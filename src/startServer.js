@@ -26,13 +26,14 @@ const createServerFromProtocol = (protocol) => {
 	throw new Error(`unsupported protocol ${protocol}`)
 }
 
-export const startServer = ({ url, handler, autoCloseOnExit = true } = {}) => {
+export const startServer = ({ url, autoCloseOnExit = true, autoCloseOnCrash = true } = {}) => {
 	url = new URL(url)
 
 	const protocol = url.protocol
 	const hostname = url.hostname
 	const port = url.port
 	const nodeServer = createServerFromProtocol(protocol)
+
 	const connections = new Set()
 	nodeServer.on("connection", (connection) => {
 		connection.on("close", () => {
@@ -40,8 +41,15 @@ export const startServer = ({ url, handler, autoCloseOnExit = true } = {}) => {
 		})
 		connections.add(connection)
 	})
+
+	const clients = new Set()
 	nodeServer.on("request", (request, response) => {
-		handler(request, response)
+		const client = { request, response }
+
+		clients.add(client)
+		response.on("finish", () => {
+			clients.delete(client)
+		})
 	})
 
 	let status = "opening"
@@ -55,38 +63,85 @@ export const startServer = ({ url, handler, autoCloseOnExit = true } = {}) => {
 		const port = nodeServer.address().port
 		url.port = port
 
-		const close = () => {
+		const closeClients = (reason) => {
+			return Promise.all(
+				Array.from(clients).map(({ response }) => {
+					return new Promise((resolve) => {
+						if (response.headersSent === false) {
+							if (reason) {
+								response.writeHead(500)
+							} else {
+								response.writeHead(503) // unavailable
+							}
+						}
+						if (response.finished === false) {
+							response.on("finish", () => resolve())
+							response.end(reason)
+						} else {
+							resolve()
+						}
+					})
+				}),
+			)
+		}
+
+		const closeConnections = (reason) => {
+			// should we do this async ?
+			// should we do this before closing the server ?
+			connections.forEach((connection) => {
+				connection.destroy(reason)
+			})
+		}
+
+		const closeServer = () => {
+			return new Promise((resolve, reject) => {
+				nodeServer.close(createExecutorCallback(resolve, reject))
+			})
+		}
+
+		let close = (reason) => {
 			if (status !== "opened") {
 				throw new Error(`server status must be "opened" during close() (got ${status}`)
 			}
 
 			status = "closing"
-			return new Promise((resolve, reject) => {
-				nodeServer.close(createExecutorCallback(resolve, reject))
-			}).then(() => {
-				status = "closed"
-
-				connections.forEach((connection) => {
-					connection.destroy()
+			return closeClients(reason)
+				.then(() => closeServer())
+				.then(() => closeConnections(reason))
+				.then(() => {
+					status = "closed"
 				})
-			})
+		}
+
+		const addRequestHandler = (requestHandler) => {
+			nodeServer.on("request", requestHandler)
 		}
 
 		const properties = {
 			url,
+			nodeServer,
+			addRequestHandler,
 		}
 
 		if (autoCloseOnExit) {
 			const removeAutoClose = listenNodeBeforeExit(close)
-			return {
-				...properties,
-				close: () => {
-					removeAutoClose()
-					return close()
-				},
+			const wrappedClose = close
+			close = () => {
+				removeAutoClose()
+				return wrappedClose()
 			}
+		}
+
+		if (autoCloseOnCrash) {
+			process.on("uncaughtException", () => {
+				close()
+			})
 		}
 
 		return { ...properties, close }
 	})
+}
+
+export const listenRequest = (nodeServer, requestHandler) => {
+	nodeServer.on("request", requestHandler)
 }
