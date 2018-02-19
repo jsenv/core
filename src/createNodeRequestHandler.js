@@ -12,12 +12,12 @@ export const createRequestFromNodeRequest = (nodeRequest, serverURL) => {
 		method === "POST" || method === "PUT" || method === "PATCH" ? nodeRequest : undefined,
 	)
 
-	return {
+	return Object.freeze({
 		method,
 		url,
 		headers,
 		body,
-	}
+	})
 }
 
 export const populateNodeResponse = (nodeResponse, { status, reason, headers, body }) => {
@@ -27,24 +27,39 @@ export const populateNodeResponse = (nodeResponse, { status, reason, headers, bo
 	body.pipeTo(nodeResponse, { preventClose: keepAlive })
 }
 
+const createResponse = (
+	{ method },
+	{ status, reason, headers = createHeaders(), body = createBody() },
+) => {
+	if (method === "HEAD") {
+		// don't send body for HEAD requests
+		body = createBody()
+	}
+
+	return Object.freeze({ status, reason, headers, body })
+}
+
 export const createNodeRequestHandler = (handler) => {
 	return (nodeRequest, nodeResponse) => {
 		const request = createRequestFromNodeRequest(nodeRequest)
 		console.log(request.method, request.url.toString())
 
-		return handler(request)
+		return Promise.resolve(handler(request))
 			.catch((e) => {
+				// I'm not fan of this because currently server will continue to be up in an unexpected state
+				// so @dmail/action should be favored and exception ignored
+				// instead a process should spawn the server and listen when it crashes to respond with 500
+				// maybe an easy way to do this would be to use a proxy?
+				// or even simpler the process in charge of providing a response is not a server
+				// so it's allowed to throw and be killed but in that case server will only respond with 500
 				return {
 					status: 500,
-					headers: createHeaders(),
+					reason: "internal server error",
 					body: createBody(String(e)),
 				}
 			})
 			.then((response) => {
-				if (request.method === "HEAD") {
-					// don't send body for HEAD requests
-					response.body = createBody()
-				}
+				response = createResponse(request, response)
 				console.log(`${response.status} ${request.url}`)
 				populateNodeResponse(nodeResponse, response)
 			})
