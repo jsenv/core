@@ -1,4 +1,6 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
+import { transform } from "babel-core"
+import path from "path"
 
 const minifyPlugins = {
 	"minify-constant-folding": {},
@@ -20,9 +22,12 @@ const minifyPlugins = {
 	"transform-undefined-to-void": {},
 }
 
+// https://babeljs.io/docs/plugins/
 const defaultPlugins = {
-	"transform-async-to-generator": {},
+	// "transform-async-to-generator": {},
 	"transform-es2015-arrow-functions": {},
+	"transform-es2015-block-scoped-functions": {},
+	"transform-es2015-block-scoping": {},
 	"transform-es2015-computed-properties": {},
 	"transform-es2015-destructuring": {},
 	"transform-es2015-for-of": {},
@@ -31,22 +36,39 @@ const defaultPlugins = {
 	"transform-es2015-shorthand-properties": {},
 	"transform-es2015-spread": {},
 	"transform-es2015-template-literals": {},
+	"transform-es2015-typeof-symbol": {},
 	"transform-exponentiation-operator": {},
-	"transform-regenerator": {},
+	// "transform-regenerator": {},
+	"transform-object-rest-spread": {},
 }
 
 const defaultOptions = {
 	minify: false,
 	module: true,
-	filename: "",
+}
+
+const createSourceMapURL = (filename) => {
+	const sourceMapBasename = `${path.basename(filename)}.map`
+	const sourceMapUrl = path.join(path.dirname(filename), sourceMapBasename)
+	return sourceMapUrl.replace(/\\/g, "/")
+}
+
+const appendSourceURL = (code, sourceURL) => {
+	return `${code}
+//# sourceURL=${sourceURL}`
+}
+
+const appendSourceMappingURL = (code, sourceMappingURL) => {
+	return `${code}
+//# sourceMappingURL=${sourceMappingURL}`
 }
 
 export const createTranspiler = (transpilerOptions = {}) => {
-	const transpile = (code, transpileOptions = {}) => {
+	const transpile = (inputCode, transpileOptions = {}) => {
 		// https://babeljs.io/docs/core-packages/#options
 		const options = { ...defaultOptions, ...transpilerOptions, ...transpileOptions }
 
-		const { minify, filename, sourceRoot, module } = options
+		const { minify, sourceRoot, module, filenameRelative, filename } = options
 
 		const plugins = { ...defaultPlugins }
 
@@ -69,6 +91,8 @@ export const createTranspiler = (transpilerOptions = {}) => {
 
 		const babelOptions = {
 			filename,
+			sourceRoot,
+			filenameRelative,
 			plugins: Object.keys(plugins)
 				.filter((name) => Boolean(plugins[name]))
 				.map((name) => [name, plugins[name]]),
@@ -77,23 +101,17 @@ export const createTranspiler = (transpilerOptions = {}) => {
 			compact,
 			comments,
 			minified,
-			sourceRoot,
 		}
 
-		const babel = require("babel-core")
-		let result
-		try {
-			result = babel.transform(code, babelOptions)
-		} catch (e) {
-			if (e.name === "SyntaxError" && options.ignoreSyntaxError !== true) {
-				console.log("the options", options)
-				console.error(e.message, "in", filename, "at\n")
-				console.error(e.codeFrame)
-			}
-			throw e
-		}
+		const { code, ast, map } = transform(inputCode, babelOptions)
+		const relativeMapPath = createSourceMapURL(filenameRelative)
 
-		return result
+		return Promise.resolve({
+			ast,
+			code: appendSourceMappingURL(appendSourceURL(code, `${filenameRelative}`), relativeMapPath),
+			map,
+			relativeMapPath,
+		})
 	}
 
 	return {

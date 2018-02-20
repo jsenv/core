@@ -64,7 +64,7 @@ export const createHeaders = (headers) => {
 
 	const getAll = (name) => {
 		name = normalizeName(name)
-		return map.has(name) ? this.map.get(name) : []
+		return map.has(name) ? map.get(name) : []
 	}
 
 	const set = (name, value) => {
@@ -115,19 +115,17 @@ export const createHeaders = (headers) => {
 	const values = () => map.values()
 
 	const forEach = (fn, bind) => {
-		for (const [headerName, headerValues] of map) {
-			headerValues.forEach(function(headerValue) {
+		Array.from(map.entries()).forEach(([headerName, headerValues]) => {
+			headerValues.forEach((headerValue) => {
 				fn.call(bind, headerName, headerValue)
 			})
-		}
+		})
 	}
 
 	const toString = () => {
-		const headers = []
-
-		for (const [headerName, headerValues] of map) {
-			headers.push(`${headerName}: ${headerValues.join()}`)
-		}
+		const headers = Array.from(map.entries()).map(([headerName, headerValues]) => {
+			return `${headerName}: ${headerValues.join()}`
+		})
 
 		return headers.join("\r\n")
 	}
@@ -135,9 +133,9 @@ export const createHeaders = (headers) => {
 	const toJSON = () => {
 		const headers = {}
 
-		for (const [headerName, headerValues] of map) {
+		Array.from(map.entries()).map(([headerName, headerValues]) => {
 			headers[headerName] = headerValues
-		}
+		})
 
 		return headers
 	}
@@ -170,39 +168,3 @@ export const createHeaders = (headers) => {
 		toJSON,
 	}
 }
-
-export const test = {
-	modules: ["@node/assert"],
-
-	main(assert) {
-		this.add("create with headers", function() {
-			var headers = {
-				"content-length": 10,
-			}
-
-			var headersA = Headers.create(headers)
-			var headersB = Headers.create(headersA)
-
-			assert.equal(headersB.has("content-length"), true)
-		})
-
-		this.add("toJSON", function() {
-			var headers = {
-				foo: ["bar"],
-			}
-
-			assert.deepEqual(Headers.create(headers).toJSON(), headers)
-		})
-
-		this.add("get", function() {
-			var headersMap = {
-				foo: "bar",
-			}
-			var headers = Headers.create(headersMap)
-
-			assert.equal(headers.get("foo"), "bar")
-		})
-	},
-}
-
-export default Headers

@@ -114,7 +114,7 @@ const createTwoWayStream = () => {
 	return stream
 }
 
-const isNodeStream = function(a) {
+const isNodeStream = (a) => {
 	if (a instanceof stream.Stream || a instanceof stream.Writable) {
 		return true
 	}
@@ -123,12 +123,12 @@ const isNodeStream = function(a) {
 
 const stringToArrayBuffer = (string) => {
 	string = String(string)
-	var buffer = new ArrayBuffer(string.length * 2) // 2 bytes for each char
-	var bufferView = new Uint16Array(buffer)
-	var i = 0
-	var j = string.length
-	for (; i < j; i++) {
+	const buffer = new ArrayBuffer(string.length * 2) // 2 bytes for each char
+	const bufferView = new Uint16Array(buffer)
+	let i = 0
+	while (i < string.length) {
 		bufferView[i] = string.charCodeAt(i)
+		i++
 	}
 	return buffer
 }
@@ -143,6 +143,8 @@ export const createBody = (body) => {
 
 			// pourquoi j'utilise un passtrhough au lieu d'écouter directement les event sdu stream?
 			// chais pas, peu importe y'avais surement une bonne raison
+			// je crois que c'est au cas où le stream est paused ou quoi
+			// pour lui indiquer qu'on est intéréssé
 			nodeStream.on("error", twoWayStream.error)
 			passStream.on("end", twoWayStream.close)
 			passStream.on("data", twoWayStream.write)

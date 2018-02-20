@@ -1,40 +1,55 @@
 import { createTranspiler } from "./createTranspiler.js"
 import { createInstrumenter } from "./createInstrumenter.js"
 import { readFileAsString } from "./readFileAsString.js"
+import { writeFileFromString } from "./writeFileFromString.js"
+import { pathIsInside } from "./pathIsInside.js"
+import path from "path"
 // import vm from "vm"
-// import path from "path"
 
 // const rootFolder = path.resolve(__dirname, "../../").replace(/\\/g, "/")
 // const projectRoot = path.resolve(rootFolder, "../").replace(/\\/g, "/")
 
-/*
-ce qu'il faut faire:
+const normalizeSeparation = (filename) => filename.replace(/\\/g, "/")
 
-- démarrer un serveur qui va compiler les fichiers à la volée quand on lui demande
-- il va mettre ces fichiers kkpart dans le filesystem genre build/* et retourner
-une version transpilé ou transpilé + instrumenté
-- ensuite nodejs aura "plus qu'à" faire un System.import() du fichier
-- nodejs renverras aussi le coverage.json à une url spécifique au besoin
+export const createCompiler = ({ packagePath, coverageGlobalVariableName = "__coverage__" }) => {
+	packagePath = normalizeSeparation(packagePath)
 
-problème: systemjs ne support par les url http sous nodejs
-il faut donc lui faire un truc vite fait pour que ça marche
-
-on utilisera le systemjs qui supporte fetch
-
-import fetch from "node-fetch"
-
-global.fetch = fetch
-*/
-
-export const createCompiler = ({ coverageGlobalVariableName = "__coverage__" } = {}) => {
 	const { transpile } = createTranspiler()
-	const compileFile = (filename) => {
-		return readFileAsString(filename)
-			.then((code) => transpile(code, { filename }))
-			.then((transpiledCode) => {
-				// écrire ce fichier dans build/transpiled/*
-				return transpiledCode
+	const compileFile = (filepath) => {
+		const filename = path.resolve(process.cwd(), filepath)
+		if (pathIsInside(filename, packagePath) === false) {
+			throw new Error(`${filepath} must be inside ${packagePath}`)
+		}
+
+		const relativeFileLocation = normalizeSeparation(path.relative(packagePath, filename))
+		const compiledRelativeFileLocation = `build/transpiled/${relativeFileLocation}`
+		const compiledFileLocation = `${packagePath}/${compiledRelativeFileLocation}`
+
+		return readFileAsString(filename).then((content) => {
+			return transpile(content, {
+				sourceRoot: packagePath,
+				filenameRelative: relativeFileLocation,
+			}).then(({ code, map, relativeMapPath }) => {
+				const compiledRelativeMapLocation = `build/transpiled/${relativeMapPath}`
+				const compiledMap = `${packagePath}/${compiledRelativeMapLocation}`
+				const mapPromise = map
+					? writeFileFromString(compiledMap, JSON.stringify(map))
+					: Promise.resolve()
+				const codePromise = writeFileFromString(compiledFileLocation, code)
+
+				return Promise.all([mapPromise, codePromise]).then(() => {
+					return {
+						root: packagePath,
+						relativeFileLocation,
+						compiledRelativeFileLocation,
+						compiledRelativeMapLocation,
+						content,
+						compiledContent: code,
+						compiledMap: map,
+					}
+				})
 			})
+		})
 	}
 
 	const { instrument } = createInstrumenter({ coverageGlobalVariableName })

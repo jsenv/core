@@ -1,4 +1,5 @@
 import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
+import { addNodeExceptionHandler } from "./unused/addExceptionHandler.js"
 import http from "http"
 import https from "https"
 import { URL } from "url"
@@ -26,7 +27,17 @@ const createServerFromProtocol = (protocol) => {
 	throw new Error(`unsupported protocol ${protocol}`)
 }
 
-export const startServer = ({ url, autoCloseOnExit = true, autoCloseOnCrash = true } = {}) => {
+export const startServer = ({
+	url,
+	// auto close the server when the process exits (terminal closed, ctrl + C)
+	autoCloseOnExit = true,
+	// auto close the server when an uncaughtException happens
+	// false by default because evenwith my strategy to react on uncaughtException
+	// stack trace is messed up and I don't like to have code executed on error
+	autoCloseOnCrash = false,
+	// auto close when server respond with a 500
+	autoCloseOnError = true,
+} = {}) => {
 	url = new URL(url)
 
 	const protocol = url.protocol
@@ -42,13 +53,55 @@ export const startServer = ({ url, autoCloseOnExit = true, autoCloseOnCrash = tr
 		connections.add(connection)
 	})
 
+	const requestHandlers = []
+	const addRequestHandler = (requestHandler) => {
+		requestHandlers.push(requestHandler)
+		nodeServer.on("request", requestHandler)
+	}
+
 	const clients = new Set()
-	nodeServer.on("request", (request, response) => {
+
+	const closeClients = ({ isError = false, reason = "closing" }) => {
+		let status
+		if (isError) {
+			status = 500
+		} else {
+			status = 503
+		}
+
+		return Promise.all(
+			Array.from(clients).map(({ response }) => {
+				return new Promise((resolve) => {
+					if (response.headersSent === false) {
+						response.writeHead(status, reason) // unavailable
+					}
+					if (response.finished === false) {
+						response.on("finish", () => resolve())
+						response.on("error", () => resolve())
+						response.destroy(reason)
+					} else {
+						resolve()
+					}
+				})
+			}),
+		)
+	}
+
+	addRequestHandler((request, response) => {
 		const client = { request, response }
 
 		clients.add(client)
 		response.on("finish", () => {
 			clients.delete(client)
+			if (autoCloseOnError && response.statusCode === 500) {
+				closeClients({
+					isError: true,
+					// we don't specify the true error object but only a string
+					// identifying the error to avoid sending stacktrace to client
+					// and right now there is no clean way to retrieve error from here
+					reason: response.statusMessage || "internal error",
+				})
+			}
 		})
 	})
 
@@ -63,26 +116,10 @@ export const startServer = ({ url, autoCloseOnExit = true, autoCloseOnCrash = tr
 		const port = nodeServer.address().port
 		url.port = port
 
-		const closeClients = (reason) => {
-			return Promise.all(
-				Array.from(clients).map(({ response }) => {
-					return new Promise((resolve) => {
-						if (response.headersSent === false) {
-							if (reason) {
-								response.writeHead(500)
-							} else {
-								response.writeHead(503) // unavailable
-							}
-						}
-						if (response.finished === false) {
-							response.on("finish", () => resolve())
-							response.end(reason)
-						} else {
-							resolve()
-						}
-					})
-				}),
-			)
+		const closeServer = () => {
+			return new Promise((resolve, reject) => {
+				nodeServer.close(createExecutorCallback(resolve, reject))
+			})
 		}
 
 		const closeConnections = (reason) => {
@@ -93,34 +130,24 @@ export const startServer = ({ url, autoCloseOnExit = true, autoCloseOnCrash = tr
 			})
 		}
 
-		const closeServer = () => {
-			return new Promise((resolve, reject) => {
-				nodeServer.close(createExecutorCallback(resolve, reject))
-			})
-		}
-
 		let close = (reason) => {
 			if (status !== "opened") {
 				throw new Error(`server status must be "opened" during close() (got ${status}`)
 			}
 
+			// ensure we don't try to handle request while server is closing
+			requestHandlers.forEach((requestHandler) => {
+				nodeServer.removeListener("request", requestHandler)
+			})
+			requestHandlers.length = 0
+
 			status = "closing"
-			return closeClients(reason)
-				.then(() => closeServer())
+			return closeServer()
+				.then(() => closeClients(reason))
 				.then(() => closeConnections(reason))
 				.then(() => {
 					status = "closed"
 				})
-		}
-
-		const addRequestHandler = (requestHandler) => {
-			nodeServer.on("request", requestHandler)
-		}
-
-		const properties = {
-			url,
-			nodeServer,
-			addRequestHandler,
 		}
 
 		if (autoCloseOnExit) {
@@ -133,12 +160,17 @@ export const startServer = ({ url, autoCloseOnExit = true, autoCloseOnCrash = tr
 		}
 
 		if (autoCloseOnCrash) {
-			process.on("uncaughtException", () => {
-				close()
+			addNodeExceptionHandler(() => {
+				return close().then(() => false)
 			})
 		}
 
-		return { ...properties, close }
+		return {
+			url,
+			nodeServer,
+			addRequestHandler,
+			close,
+		}
 	})
 }
 
