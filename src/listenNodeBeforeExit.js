@@ -1,5 +1,4 @@
 import { createSignal } from "@dmail/signal"
-import readline from "readline"
 
 export const createListenBeforeExit = ({ install, exit }) => {
 	const beforeExitSignal = createSignal({
@@ -8,7 +7,7 @@ export const createListenBeforeExit = ({ install, exit }) => {
 				const executions = emit()
 				const listenerPromises = executions.map(({ value }) => Promise.resolve(value))
 
-				return Promise.race(listenerPromises).then(() => {
+				return Promise.all(listenerPromises).then(() => {
 					// remove all listeners
 					// so that any function returned by install() (the unlistened function)
 					// gets called
@@ -24,34 +23,14 @@ export const createListenBeforeExit = ({ install, exit }) => {
 	return beforeExitSignal.listen
 }
 
-const isWindows = () => process.platform === "win32"
-
 export const listenNodeBeforeExit = createListenBeforeExit({
 	install: (callback) => {
-		if (isWindows()) {
-			// http://stackoverflow.com/questions/10021373/what-is-the-windows-equivalent-of-process-onsigint-in-node-js
-			const rl = readline.createInterface({
-				input: process.stdin,
-				output: process.stdout,
-			})
-
-			const forceEmit = () => {
-				process.emit("SIGINT")
-			}
-
-			rl.on("SIGINT", forceEmit)
-			process.on("SIGINT", callback)
-
-			return () => {
-				rl.removeListener("SIGINT", forceEmit)
-				process.removeListener("SIGINT", callback)
-			}
-		}
-
 		process.on("SIGINT", callback)
+		process.on("beforeExit", callback)
 
 		return () => {
 			process.removeListener("SIGINT", callback)
+			process.removeListener("beforeExit", callback)
 		}
 	},
 	exit: () => {

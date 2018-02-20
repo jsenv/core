@@ -20,7 +20,7 @@
 	},
 	"dependencies": {
 		"@dmail/action": "3.0.0",
-		"@dmail/signal": "3.0.0",
+		"@dmail/signal": "3.1.1",
 		"babel-core": "7.0.0-beta.0",
 		"babel-plugin-check-es2015-constants": "6.8.0",
 		"babel-plugin-minify-constant-folding": "0.0.4",
