@@ -1,5 +1,12 @@
 import stream from "stream"
 
+const isNodeStream = (a) => {
+	if (a instanceof stream.Stream || a instanceof stream.Writable) {
+		return true
+	}
+	return false
+}
+
 const createTwoWayStream = () => {
 	const stream = {}
 
@@ -59,6 +66,8 @@ const createTwoWayStream = () => {
 		if (status === "closed") {
 			if (preventClose) {
 				//
+			} else if (isNodeStream(stream)) {
+				stream.end()
 			} else {
 				stream.close()
 			}
@@ -103,22 +112,16 @@ const createTwoWayStream = () => {
 	}
 
 	Object.assign(stream, {
-		write,
 		error,
 		cancel,
+		write,
+		close,
 		pipeTo,
 		tee,
 		promise,
 	})
 
 	return stream
-}
-
-const isNodeStream = (a) => {
-	if (a instanceof stream.Stream || a instanceof stream.Writable) {
-		return true
-	}
-	return false
 }
 
 const stringToArrayBuffer = (string) => {
@@ -177,9 +180,14 @@ export const createBody = (body) => {
 		return text().then(JSON.parse)
 	}
 
+	const pipeTo = (...args) => {
+		return twoWayStream.pipeTo(...args)
+	}
+
 	return {
 		text,
 		arraybuffer,
 		json,
+		pipeTo,
 	}
 }

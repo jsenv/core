@@ -1,5 +1,5 @@
 import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
-import { addNodeExceptionHandler } from "./unused/addExceptionHandler.js"
+import { addNodeExceptionHandler } from "./unused/addNodeExceptionHandler.js"
 import http from "http"
 import https from "https"
 import { URL } from "url"
@@ -61,7 +61,7 @@ export const startServer = ({
 
 	const clients = new Set()
 
-	const closeClients = ({ isError = false, reason = "closing" }) => {
+	const closeClients = ({ isError = false, reason = "closing" } = {}) => {
 		let status
 		if (isError) {
 			status = 500
@@ -143,7 +143,7 @@ export const startServer = ({
 
 			status = "closing"
 			return closeServer()
-				.then(() => closeClients(reason))
+				.then(() => closeClients({ reason }))
 				.then(() => closeConnections(reason))
 				.then(() => {
 					status = "closed"

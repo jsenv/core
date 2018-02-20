@@ -4,6 +4,7 @@ import { URL } from "url"
 import { createBody } from "./createBody.js"
 import { createHeaders } from "./createHeaders.js"
 
+// serverURL pourrait valoir par défaut `file:///${process.cwd()}` ?
 export const createRequestFromNodeRequest = (nodeRequest, serverURL) => {
 	const { method } = nodeRequest
 	const url = new URL(nodeRequest.url, serverURL).toString()
@@ -34,14 +35,18 @@ const createResponse = (
 	if (method === "HEAD") {
 		// don't send body for HEAD requests
 		body = createBody()
+	} else {
+		body = createBody(body)
 	}
+
+	headers = createHeaders(headers)
 
 	return Object.freeze({ status, reason, headers, body })
 }
 
-export const createNodeRequestHandler = (handler) => {
+export const createNodeRequestHandler = (handler, serverURL) => {
 	return (nodeRequest, nodeResponse) => {
-		const request = createRequestFromNodeRequest(nodeRequest)
+		const request = createRequestFromNodeRequest(nodeRequest, serverURL)
 		console.log(request.method, request.url.toString())
 
 		return Promise.resolve(handler(request))
@@ -55,7 +60,7 @@ export const createNodeRequestHandler = (handler) => {
 				return {
 					status: 500,
 					reason: "internal server error",
-					body: createBody(String(e)),
+					body: String(e),
 				}
 			})
 			.then((response) => {
