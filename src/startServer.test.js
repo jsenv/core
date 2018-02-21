@@ -4,15 +4,13 @@ import fetch from "node-fetch"
 import assert from "assert"
 
 test(() => {
-	return startServer({
-		url: "http://localhost:0",
-	}).then(({ close, addRequestHandler, url }) => {
+	return startServer().then(({ addRequestHandler, url, agent, close }) => {
 		addRequestHandler((request, response) => {
 			response.writeHead(200, { "Content-Type": "text/plain" })
 			response.end("ok")
 		})
 
-		return fetch(url)
+		return fetch(url, { agent })
 			.then((response) => response.text())
 			.then((text) => {
 				assert.equal(text, "ok")

@@ -1,11 +1,9 @@
-import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
-import { addNodeExceptionHandler } from "./unused/addNodeExceptionHandler.js"
 import http from "http"
 import https from "https"
 import { URL } from "url"
-
-// note you can do this: startServer({ url: "0.0.0.0:0" })
-// it will listen any request to random port
+import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
+import { addNodeExceptionHandler } from "./unused/addNodeExceptionHandler.js"
+import { createSelfSignature } from "./createSelfSignature.js"
 
 const createExecutorCallback = (resolve, reject) => {
 	return (error) => {
@@ -17,18 +15,11 @@ const createExecutorCallback = (resolve, reject) => {
 	}
 }
 
-const createServerFromProtocol = (protocol) => {
-	if (protocol === "http:") {
-		return http.createServer()
-	}
-	if (protocol === "https:") {
-		return https.createServer()
-	}
-	throw new Error(`unsupported protocol ${protocol}`)
-}
-
 export const startServer = ({
-	url,
+	// by default listen localhost on a random port in https
+	url = "https://127.0.0.1:9000",
+	// when port is https you must provide privateKey & certificate
+	getSignature = createSelfSignature,
 	// auto close the server when the process exits (terminal closed, ctrl + C)
 	autoCloseOnExit = true,
 	// auto close the server when an uncaughtException happens
@@ -42,8 +33,33 @@ export const startServer = ({
 
 	const protocol = url.protocol
 	const hostname = url.hostname
+
+	if (hostname === "0.0.0.0" && process.platform === "win32") {
+		// https://github.com/nodejs/node/issues/14900
+		throw new Error(`listening ${hostname} any not available on window`)
+	}
+
+	let nodeServer
+	let agent
+	if (protocol === "http:") {
+		nodeServer = http.createServer()
+		agent = global.Agent
+	} else if (protocol === "https:") {
+		const { privateKey, certificate } = getSignature()
+		nodeServer = https.createServer({
+			key: privateKey,
+			cert: certificate,
+		})
+		agent = new https.Agent({
+			rejectUnauthorized: false, // allow self signed certificate
+			key: privateKey,
+			cert: certificate,
+		})
+	} else {
+		throw new Error(`unsupported protocol ${protocol}`)
+	}
+
 	const port = url.port
-	const nodeServer = createServerFromProtocol(protocol)
 
 	const connections = new Set()
 	nodeServer.on("connection", (connection) => {
@@ -169,6 +185,7 @@ export const startServer = ({
 			url,
 			nodeServer,
 			addRequestHandler,
+			agent,
 			close,
 		}
 	})
