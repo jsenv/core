@@ -1,9 +1,9 @@
 import { passed, createAction, any } from "@dmail/action"
-import { createSignal } from "@dmail/signal"
+import { createSignal, createFunctionNotDetectedBySignal } from "@dmail/signal"
 
 const createAddExceptionHandler = ({ install }) => {
 	const exceptionSignal = createSignal({
-		listened: ({ getListeners, triggerUninstall, triggerInstall }) => {
+		listened: ({ getListeners }) => {
 			let currentException
 			let recoverCurrentException
 			let crashCurrentException
@@ -50,27 +50,17 @@ const createAddExceptionHandler = ({ install }) => {
 						currentException = null
 						return
 					}
-					// uninstall to prevent catching of the next throw
-					// else the following owuld create an infinite loop
+
+					// createFunctionNotDetectedBySignal prevent catching of the next throw
+					// else the following would create an infinite loop
 					// process.on('uncaughtException', function() {
 					//     setTimeout(function() {
 					//         throw 'yo';
 					//     });
 					// });
-
-					triggerUninstall()
-					throw currentException.value // this mess up the stack trace :'(
-
-					// reinstall in case something external and crazy is preventing error from
-					// terminating the process
-					// in a browser environment you don't kill the browser so it would happen more often
-					// eslint-disable-next-line no-unreachable
-					triggerInstall(
-						install({
-							triggerException,
-							recoverWhen,
-						}),
-					)
+					createFunctionNotDetectedBySignal(() => {
+						throw currentException.value // this mess up the stack trace :'(
+					})()
 				})
 			}
 
