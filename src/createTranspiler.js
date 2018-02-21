@@ -1,6 +1,5 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 import { transform } from "babel-core"
-import path from "path"
 
 const minifyPlugins = {
 	"minify-constant-folding": {},
@@ -44,31 +43,24 @@ const defaultPlugins = {
 
 const defaultOptions = {
 	minify: false,
+	instrument: false,
 	module: true,
 }
 
-const createSourceMapURL = (filename) => {
-	const sourceMapBasename = `${path.basename(filename)}.map`
-	const sourceMapUrl = path.join(path.dirname(filename), sourceMapBasename)
-	return sourceMapUrl.replace(/\\/g, "/")
-}
-
-const appendSourceURL = (code, sourceURL) => {
-	return `${code}
-//# sourceURL=${sourceURL}`
-}
-
-const appendSourceMappingURL = (code, sourceMappingURL) => {
-	return `${code}
-//# sourceMappingURL=${sourceMappingURL}`
-}
-
 export const createTranspiler = (transpilerOptions = {}) => {
-	const transpile = (inputCode, transpileOptions = {}) => {
+	const transpile = (transpileOptions) => {
 		// https://babeljs.io/docs/core-packages/#options
 		const options = { ...defaultOptions, ...transpilerOptions, ...transpileOptions }
 
-		const { minify, sourceRoot, module, filenameRelative, filename } = options
+		const {
+			inputRoot,
+			inputCode,
+			inputCodeRelativeLocation,
+			inputCodeSourceMap,
+			module,
+			instrument,
+			minify,
+		} = options
 
 		const plugins = { ...defaultPlugins }
 
@@ -90,9 +82,8 @@ export const createTranspiler = (transpilerOptions = {}) => {
 		}
 
 		const babelOptions = {
-			filename,
-			sourceRoot,
-			filenameRelative,
+			sourceRoot: inputRoot,
+			filenameRelative: inputCodeRelativeLocation,
 			plugins: Object.keys(plugins)
 				.filter((name) => Boolean(plugins[name]))
 				.map((name) => [name, plugins[name]]),
@@ -101,16 +92,37 @@ export const createTranspiler = (transpilerOptions = {}) => {
 			compact,
 			comments,
 			minified,
+			inputSourceMap: inputCodeSourceMap,
 		}
 
-		const { code, ast, map } = transform(inputCode, babelOptions)
-		const relativeMapPath = createSourceMapURL(filenameRelative)
+		const {
+			code: transpiledCode,
+			ast: transpiledCodeAst,
+			map: transpiledCodeSourceMap,
+		} = transform(inputCode, babelOptions)
 
 		return Promise.resolve({
-			ast,
-			code: appendSourceMappingURL(appendSourceURL(code, `${filenameRelative}`), relativeMapPath),
-			map,
-			relativeMapPath,
+			transpiledCodeAst,
+			transpiledCode,
+			transpiledCodeSourceMap,
+		}).then(({ transpiledCode, transpiledCodeSourceMap }) => {
+			if (instrument === false) {
+				return {
+					outputCode: transpiledCode,
+					outputCodeSourceMap: transpiledCodeSourceMap,
+				}
+			}
+
+			return instrument({
+				inputCode: transpiledCode,
+				inputCodeRelativeLocation,
+				inputCodeSourceMap: transpiledCodeSourceMap,
+			}).then(({ instrumentedCode, instrumentedCodeSourceMap }) => {
+				return {
+					outputCode: instrumentedCode,
+					outputCodeSourceMap: instrumentedCodeSourceMap,
+				}
+			})
 		})
 	}
 

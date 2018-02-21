@@ -4,72 +4,100 @@ import { readFileAsString } from "./readFileAsString.js"
 import { writeFileFromString } from "./writeFileFromString.js"
 import { pathIsInside } from "./pathIsInside.js"
 import path from "path"
-// import vm from "vm"
-
-// const rootFolder = path.resolve(__dirname, "../../").replace(/\\/g, "/")
-// const projectRoot = path.resolve(rootFolder, "../").replace(/\\/g, "/")
 
 const normalizeSeparation = (filename) => filename.replace(/\\/g, "/")
 
-export const createCompiler = ({ packagePath, coverageGlobalVariableName = "__coverage__" }) => {
+const createSourceMapURL = (filename) => {
+	const sourceMapBasename = `${path.basename(filename)}.map`
+	const sourceMapUrl = path.join(path.dirname(filename), sourceMapBasename)
+	return normalizeSeparation(sourceMapUrl)
+}
+
+const appendSourceURL = (code, sourceURL) => {
+	return `${code}
+//# sourceURL=${sourceURL}`
+}
+
+const appendSourceMappingURL = (code, sourceMappingURL) => {
+	return `${code}
+//# sourceMappingURL=${sourceMappingURL}`
+}
+
+// const base64Encode = (string) => new Buffer(string).toString("base64")
+// // should I unescape(encodeURIComponent()) the base64 string ?
+// // apprently base64 encode is enought, no need to unescape a base64 encoded string
+// const finalMapLocation = `data:application/json;base64,${base64Encode(
+// 	JSON.stringify(instrumentedSourceMap),
+// )}`
+
+// if (filename.startsWith("file:///")) {
+// 	filename = filename.slice("file:///".length)
+// }
+
+export const createCompiler = ({ packagePath, enableCoverage = false }) => {
 	packagePath = normalizeSeparation(packagePath)
 
-	const { transpile } = createTranspiler()
-	const compileFile = (filepath) => {
-		const filename = path.resolve(process.cwd(), filepath)
-		if (pathIsInside(filename, packagePath) === false) {
-			throw new Error(`${filepath} must be inside ${packagePath}`)
+	let { transpile } = createTranspiler()
+
+	if (enableCoverage) {
+		const coverageGlobalVariableName = "__coverage__"
+		const { instrument } = createInstrumenter({ coverageGlobalVariableName })
+
+		const oldTranspile = transpile
+		transpile = (...args) => {
+			return oldTranspile(...args).then(({ outputCode, outputSourceMap }) => {
+				return instrument({ inputCode: outputCode, inputSourceMap: outputSourceMap })
+			})
+		}
+	}
+
+	const compileFile = (location) => {
+		const inputCodeLocation = path.resolve(process.cwd(), location)
+		if (pathIsInside(inputCodeLocation, packagePath) === false) {
+			throw new Error(`${location} must be inside ${packagePath}`)
 		}
 
-		const relativeFileLocation = normalizeSeparation(path.relative(packagePath, filename))
-		const compiledRelativeFileLocation = `build/transpiled/${relativeFileLocation}`
-		const compiledFileLocation = `${packagePath}/${compiledRelativeFileLocation}`
+		const inputCodeRelativeLocation = normalizeSeparation(
+			path.relative(packagePath, inputCodeLocation),
+		)
 
-		return readFileAsString(filename).then((content) => {
-			return transpile(content, {
-				sourceRoot: packagePath,
-				filenameRelative: relativeFileLocation,
-			}).then(({ code, map, relativeMapPath }) => {
-				const compiledRelativeMapLocation = `build/transpiled/${relativeMapPath}`
-				const compiledMap = `${packagePath}/${compiledRelativeMapLocation}`
-				const mapPromise = map
-					? writeFileFromString(compiledMap, JSON.stringify(map))
+		return readFileAsString(inputCodeLocation).then((content) => {
+			return transpile({
+				inputRoot: packagePath,
+				inputCode: content,
+				inputCodeRelativeLocation,
+			}).then(({ outputCode, outputCodeSourceMap }) => {
+				const outputCodeRelativeLocation = `build/transpiled/${inputCodeRelativeLocation}`
+				const outputCodeLocation = `${packagePath}/${outputCodeRelativeLocation}`
+				const outputCodeSourceMapRelativeLocation = `build/transpiled/${createSourceMapURL(
+					inputCodeRelativeLocation,
+				)}`
+				const outputCodeSourceMapLocation = `${packagePath}/${outputCodeSourceMapRelativeLocation}`
+
+				outputCode = appendSourceMappingURL(
+					appendSourceURL(outputCode, `${inputCodeRelativeLocation}`),
+					outputCodeSourceMapRelativeLocation,
+				)
+
+				const mapPromise = outputCodeSourceMap
+					? writeFileFromString(outputCodeSourceMapLocation, JSON.stringify(outputCodeSourceMap))
 					: Promise.resolve()
-				const codePromise = writeFileFromString(compiledFileLocation, code)
+				const codePromise = writeFileFromString(outputCodeLocation, outputCode)
 
 				return Promise.all([mapPromise, codePromise]).then(() => {
 					return {
 						root: packagePath,
-						relativeFileLocation,
-						compiledRelativeFileLocation,
-						compiledRelativeMapLocation,
-						content,
-						compiledContent: code,
-						compiledMap: map,
+						inputCodeRelativeLocation,
+						inputCode: content,
+						outputCodeRelativeLocation,
+						outputCode,
+						outputCodeSourceMap,
+						outputCodeSourceMapRelativeLocation,
 					}
 				})
 			})
 		})
 	}
 
-	const { instrument } = createInstrumenter({ coverageGlobalVariableName })
-	const transpileWithCoverage = (code, { filename }) => {
-		return transpile(code, { filename }).then((transpiledCode) => {
-			return instrument(transpiledCode, { filename })
-		})
-	}
-
-	const compileFileWithCoverage = (filename) => {
-		return readFileAsString(filename)
-			.then((code) => transpileWithCoverage(code, { filename }))
-			.then((transpiledAndInstrumentedSource) => {
-				// écrire dans build/instrumented/*
-				return transpiledAndInstrumentedSource
-			})
-	}
-
-	return {
-		compileFile,
-		compileFileWithCoverage,
-	}
+	return { compileFile }
 }

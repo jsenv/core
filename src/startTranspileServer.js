@@ -1,10 +1,9 @@
-import { createFileService } from "./createFileService.js"
+// import { createFileService } from "./createFileService.js"
 import { createResponseGenerator } from "./createResponseGenerator.js"
 import { createNodeRequestHandler } from "./createNodeRequestHandler.js"
 import { startServer } from "./startServer.js"
 
 const getFileTranspiledURL = () => {}
-const getFileTranspiledAndInstrumentedURL = () => {}
 
 const createTranspileService = ({ include = () => true } = {}) => {
 	return ({ method, url }) => {
@@ -13,14 +12,12 @@ const createTranspileService = ({ include = () => true } = {}) => {
 		}
 
 		if (method === "GET" || method === "HEAD") {
-			let produce = getFileTranspiledURL
+			// on a la fonction c'est cool, mais il faudrais la gestion des headers qui vont avec
+			// bon pour le moment faisons simple:
+			// 200 + content length header + no cache + le fichier
+			// ou 404
 
-			if (url.searchParams.get("intrument")) {
-				produce = getFileTranspiledAndInstrumentedURL
-			}
-
-			// si le fichier existe pas 404
-			return produce(url.pathname).then(({ filename }) => {
+			return getFileTranspiledURL(url.pathname).then(({ filename }) => {
 				return {
 					status: 302,
 					headers: {
@@ -37,19 +34,16 @@ const createTranspileService = ({ include = () => true } = {}) => {
 }
 
 export const createTranspileServer = ({ url }) => {
-	const handler = createResponseGenerator({
-		services: [
-			createTranspileService({
-				include: ({ pathname }) => pathname.startsWith("/build/") === false,
-			}),
-			createFileService({
-				// root: process.cwd(),
-				include: ({ pathname }) => pathname.startsWith("/build/"),
-			}),
-		],
+	return startServer({ url }).then(({ addRequestHandler }) => {
+		const handler = createResponseGenerator({
+			services: [
+				createTranspileService({
+					include: ({ pathname }) => typeof pathname === "string",
+				}),
+			],
+		})
+
+		const nodeRequestHandler = createNodeRequestHandler(handler)
+		addRequestHandler(nodeRequestHandler)
 	})
-
-	const nodeRequestHandler = createNodeRequestHandler(handler)
-
-	return startServer({ url, handler: nodeRequestHandler })
 }

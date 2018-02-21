@@ -17,7 +17,7 @@ const createExecutorCallback = (resolve, reject) => {
 
 export const startServer = ({
 	// by default listen localhost on a random port in https
-	url = "https://127.0.0.1:9000",
+	url = "https://127.0.0.1:0",
 	// when port is https you must provide privateKey & certificate
 	getSignature = createSelfSignature,
 	// auto close the server when the process exits (terminal closed, ctrl + C)

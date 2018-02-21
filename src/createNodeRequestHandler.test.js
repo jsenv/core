@@ -5,9 +5,7 @@ import fetch from "node-fetch"
 import assert from "assert"
 
 test(() => {
-	return startServer({
-		url: "http://localhost:0",
-	}).then(({ close, addRequestHandler, url }) => {
+	return startServer().then(({ addRequestHandler, url, agent, close }) => {
 		const nodeRequestHandler = createNodeRequestHandler(() => {
 			// as we can see the whole concept behind createNodeRequestHandler
 			// is to avoid using response methods directly but rather
@@ -23,7 +21,7 @@ test(() => {
 
 		addRequestHandler(nodeRequestHandler)
 
-		return fetch(url)
+		return fetch(url, { agent })
 			.then((response) => response.text())
 			.then((text) => {
 				assert.equal(text, "ok")

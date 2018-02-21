@@ -4,9 +4,6 @@ import path from "path"
 import assert from "assert"
 
 test(() => {
-	// ce fichier est éxécuté depuis dist MAIS
-	// il faut faire comme si il était éxécuté depuis le fichier d'origine
-	// car c'est le fichier d'origine qu'on veut compiler
 	const packagePath = path.resolve(__dirname, "../../src/__test__")
 
 	const compiler = createCompiler({
@@ -18,20 +15,20 @@ test(() => {
 		.then(
 			({
 				root,
-				relativeFileLocation,
-				compiledRelativeFileLocation,
-				compiledRelativeMapLocation,
-				content,
-				compiledContent,
-				compiledMap,
+				inputCodeRelativeLocation,
+				outputCodeRelativeLocation,
+				inputCode,
+				outputCode,
+				outputCodeSourceMap,
+				outputCodeSourceMapRelativeLocation,
 			}) => {
 				assert.equal(typeof root, "string")
-				assert.equal(relativeFileLocation, "file.js")
-				assert.equal(compiledRelativeFileLocation, "build/transpiled/file.js")
-				assert.equal(compiledRelativeMapLocation, "build/transpiled/file.js.map")
-				assert.equal(content, "export default true\n")
-				assert.equal(typeof compiledContent, "string")
-				assert.equal(typeof compiledMap, "object")
+				assert.equal(inputCodeRelativeLocation, "file.js")
+				assert.equal(outputCodeRelativeLocation, "build/transpiled/file.js")
+				assert.equal(outputCodeSourceMapRelativeLocation, "build/transpiled/file.js.map")
+				assert.equal(inputCode, "export default true\n")
+				assert.equal(typeof outputCode, "string")
+				assert.equal(typeof outputCodeSourceMap, "object")
 			},
 		)
 })
