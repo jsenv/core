@@ -2,7 +2,7 @@ import { createSignal } from "@dmail/signal"
 
 export const createListenBeforeExit = ({ install, exit }) => {
 	const beforeExitSignal = createSignal({
-		listened: ({ emit, clear }) => {
+		installer: ({ emit, clear }) => {
 			const triggerBeforeExit = () => {
 				const executions = emit()
 				const listenerPromises = executions.map(({ value }) => Promise.resolve(value))

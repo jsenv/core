@@ -3,7 +3,7 @@ import { createSignal, createFunctionNotDetectedBySignal } from "@dmail/signal"
 
 const createAddExceptionHandler = ({ install }) => {
 	const exceptionSignal = createSignal({
-		listened: ({ getListeners }) => {
+		installer: ({ getListeners }) => {
 			let currentException
 			let recoverCurrentException
 			let crashCurrentException
