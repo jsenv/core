@@ -52,8 +52,6 @@ export const startServer = ({
 		})
 		agent = new https.Agent({
 			rejectUnauthorized: false, // allow self signed certificate
-			key: privateKey,
-			cert: certificate,
 		})
 	} else {
 		throw new Error(`unsupported protocol ${protocol}`)
