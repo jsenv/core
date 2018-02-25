@@ -8,11 +8,10 @@ export const createResponseGenerator = ({ services = [] }) => {
 			return Boolean(serviceReturnValue)
 		})
 
-		if (!serviceReturnValue) {
-			return { status: 501, reason: "no implemented" }
+		if (serviceReturnValue) {
+			return serviceReturnValue
 		}
-
-		return serviceReturnValue
+		return { status: 501, reason: "no implemented" }
 	}
 
 	return generateResponse

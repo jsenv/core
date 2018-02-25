@@ -7,7 +7,7 @@ import { createHeaders } from "./createHeaders.js"
 // serverURL pourrait valoir par défaut `file:///${process.cwd()}` ?
 export const createRequestFromNodeRequest = (nodeRequest, serverURL) => {
 	const { method } = nodeRequest
-	const url = new URL(nodeRequest.url, serverURL).toString()
+	const url = new URL(nodeRequest.url, serverURL)
 	const headers = createHeaders(nodeRequest.headers)
 	const body = createBody(
 		method === "POST" || method === "PUT" || method === "PATCH" ? nodeRequest : undefined,

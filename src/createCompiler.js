@@ -52,7 +52,7 @@ export const createCompiler = ({ packagePath, enableCoverage = false }) => {
 	}
 
 	const compileFile = (location) => {
-		const inputCodeLocation = path.resolve(process.cwd(), location)
+		const inputCodeLocation = path.resolve(packagePath, location)
 		if (pathIsInside(inputCodeLocation, packagePath) === false) {
 			throw new Error(`${location} must be inside ${packagePath}`)
 		}
