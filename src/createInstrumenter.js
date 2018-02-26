@@ -1,5 +1,6 @@
 import istanbul from "istanbul"
 import { SourceMapConsumer, SourceMapGenerator } from "source-map"
+import { passed } from "@dmail/action"
 
 export const getCoverageGlobalVariableName = () => {
 	for (const key in global) {
@@ -55,7 +56,7 @@ export const createInstrumenter = ({ globalName = "__coverage__" } = {}) => {
 			instrumentedCodeSourceMap = JSON.parse(generator.toString())
 		}
 
-		return Promise.resolve({
+		return passed({
 			intrumentedCode,
 			instrumentedCodeSourceMap,
 		})

@@ -1,9 +1,8 @@
 import { createTranspiler } from "./createTranspiler.js"
 import { createInstrumenter } from "./createInstrumenter.js"
-import { readFileAsString } from "./readFileAsString.js"
 import { writeFileFromString } from "./writeFileFromString.js"
-import { pathIsInside } from "./pathIsInside.js"
 import path from "path"
+import { passed, all } from "@dmail/action"
 
 const normalizeSeparation = (filename) => filename.replace(/\\/g, "/")
 
@@ -23,20 +22,7 @@ const appendSourceMappingURL = (code, sourceMappingURL) => {
 //# sourceMappingURL=${sourceMappingURL}`
 }
 
-// const base64Encode = (string) => new Buffer(string).toString("base64")
-// // should I unescape(encodeURIComponent()) the base64 string ?
-// // apprently base64 encode is enought, no need to unescape a base64 encoded string
-// const finalMapLocation = `data:application/json;base64,${base64Encode(
-// 	JSON.stringify(instrumentedSourceMap),
-// )}`
-
-// if (filename.startsWith("file:///")) {
-// 	filename = filename.slice("file:///".length)
-// }
-
-export const createCompiler = ({ packagePath, enableCoverage = false }) => {
-	packagePath = normalizeSeparation(packagePath)
-
+export const createCompiler = ({ enableCoverage = false } = {}) => {
 	let { transpile } = createTranspiler()
 
 	if (enableCoverage) {
@@ -51,53 +37,68 @@ export const createCompiler = ({ packagePath, enableCoverage = false }) => {
 		}
 	}
 
-	const compileFile = (location) => {
-		const inputCodeLocation = path.resolve(packagePath, location)
-		if (pathIsInside(inputCodeLocation, packagePath) === false) {
-			throw new Error(`${location} must be inside ${packagePath}`)
-		}
+	const locateFile = ({ location, relativeLocation }) => {
+		return normalizeSeparation(path.resolve(location, relativeLocation))
+	}
 
-		const inputCodeRelativeLocation = normalizeSeparation(
-			path.relative(packagePath, inputCodeLocation),
-		)
+	const compile = ({
+		location,
+		inputCode,
+		inputCodeRelativeLocation,
+		outputFolderRelativeLocation = "build/transpiled",
+	}) => {
+		location = normalizeSeparation(location)
 
-		return readFileAsString(inputCodeLocation).then((content) => {
-			return transpile({
-				inputRoot: packagePath,
-				inputCode: content,
+		return transpile({
+			location,
+			inputCode,
+			inputCodeRelativeLocation,
+		}).then(({ outputCode, outputCodeSourceMap }) => {
+			const outputCodeRelativeLocation = `${outputFolderRelativeLocation}/${inputCodeRelativeLocation}`
+			const outputCodeSourceMapRelativeLocation = `${outputFolderRelativeLocation}/${createSourceMapURL(
 				inputCodeRelativeLocation,
-			}).then(({ outputCode, outputCodeSourceMap }) => {
-				const outputCodeRelativeLocation = `build/transpiled/${inputCodeRelativeLocation}`
-				const outputCodeLocation = `${packagePath}/${outputCodeRelativeLocation}`
-				const outputCodeSourceMapRelativeLocation = `build/transpiled/${createSourceMapURL(
-					inputCodeRelativeLocation,
-				)}`
-				const outputCodeSourceMapLocation = `${packagePath}/${outputCodeSourceMapRelativeLocation}`
+			)}`
 
-				outputCode = appendSourceMappingURL(
-					appendSourceURL(outputCode, `${inputCodeRelativeLocation}`),
-					outputCodeSourceMapRelativeLocation,
-				)
+			outputCode = appendSourceMappingURL(
+				appendSourceURL(outputCode, `${inputCodeRelativeLocation}`),
+				outputCodeSourceMapRelativeLocation,
+			)
 
-				const mapPromise = outputCodeSourceMap
+			const ensureOnFileSystem = () => {
+				const outputCodeLocation = `${location}/${outputCodeRelativeLocation}`
+				const codeAction = writeFileFromString(outputCodeLocation, outputCode)
+
+				const outputCodeSourceMapLocation = `${location}/${outputCodeSourceMapRelativeLocation}`
+				const mapAction = outputCodeSourceMap
 					? writeFileFromString(outputCodeSourceMapLocation, JSON.stringify(outputCodeSourceMap))
-					: Promise.resolve()
-				const codePromise = writeFileFromString(outputCodeLocation, outputCode)
+					: passed()
 
-				return Promise.all([mapPromise, codePromise]).then(() => {
-					return {
-						root: packagePath,
-						inputCodeRelativeLocation,
-						inputCode: content,
-						outputCodeRelativeLocation,
-						outputCode,
-						outputCodeSourceMap,
-						outputCodeSourceMapRelativeLocation,
-					}
-				})
-			})
+				return all([codeAction, mapAction])
+			}
+
+			return {
+				location,
+				inputCodeRelativeLocation,
+				inputCode,
+				outputCodeRelativeLocation,
+				outputCode,
+				outputCodeSourceMap,
+				outputCodeSourceMapRelativeLocation,
+				ensureOnFileSystem,
+			}
 		})
 	}
 
-	return { compileFile }
+	return { compile, locateFile }
 }
+
+// const base64Encode = (string) => new Buffer(string).toString("base64")
+// // should I unescape(encodeURIComponent()) the base64 string ?
+// // apprently base64 encode is enought, no need to unescape a base64 encoded string
+// const finalMapLocation = `data:application/json;base64,${base64Encode(
+// 	JSON.stringify(instrumentedSourceMap),
+// )}`
+
+// if (filename.startsWith("file:///")) {
+// 	filename = filename.slice("file:///".length)
+// }

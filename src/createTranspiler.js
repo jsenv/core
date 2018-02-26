@@ -1,5 +1,6 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 import { transform } from "babel-core"
+import { passed } from "@dmail/action"
 
 const minifyPlugins = {
 	"minify-constant-folding": {},
@@ -53,7 +54,7 @@ export const createTranspiler = (transpilerOptions = {}) => {
 		const options = { ...defaultOptions, ...transpilerOptions, ...transpileOptions }
 
 		const {
-			inputRoot,
+			location,
 			inputCode,
 			inputCodeRelativeLocation,
 			inputCodeSourceMap,
@@ -82,7 +83,7 @@ export const createTranspiler = (transpilerOptions = {}) => {
 		}
 
 		const babelOptions = {
-			sourceRoot: inputRoot,
+			sourceRoot: location,
 			filenameRelative: inputCodeRelativeLocation,
 			plugins: Object.keys(plugins)
 				.filter((name) => Boolean(plugins[name]))
@@ -101,7 +102,7 @@ export const createTranspiler = (transpilerOptions = {}) => {
 			map: transpiledCodeSourceMap,
 		} = transform(inputCode, babelOptions)
 
-		return Promise.resolve({
+		return passed({
 			transpiledCodeAst,
 			transpiledCode,
 			transpiledCodeSourceMap,

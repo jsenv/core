@@ -1,18 +1,15 @@
 import { createSignal } from "@dmail/signal"
+import { passed, all } from "@dmail/action"
 
 export const createListenBeforeExit = ({ install, exit }) => {
 	const beforeExitSignal = createSignal({
-		installer: ({ emit, clear }) => {
+		installer: ({ emit, removeAllWhileCalling }) => {
 			const triggerBeforeExit = () => {
 				const executions = emit()
-				const listenerPromises = executions.map(({ value }) => Promise.resolve(value))
+				const listenerActions = executions.map(({ value }) => passed(value))
 
-				return Promise.all(listenerPromises).then(() => {
-					// remove all listeners
-					// so that any function returned by install() (the unlistened function)
-					// gets called
-					clear()
-					exit()
+				return all(listenerActions).then(() => {
+					removeAllWhileCalling(exit)
 				})
 			}
 

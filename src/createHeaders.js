@@ -115,7 +115,7 @@ export const createHeaders = (headers) => {
 	const values = () => map.values()
 
 	const forEach = (fn, bind) => {
-		Array.from(map.entries()).forEach(([headerName, headerValues]) => {
+		Array.from(entries()).forEach(([headerName, headerValues]) => {
 			headerValues.forEach((headerValue) => {
 				fn.call(bind, headerName, headerValue)
 			})
@@ -123,7 +123,7 @@ export const createHeaders = (headers) => {
 	}
 
 	const toString = () => {
-		const headers = Array.from(map.entries()).map(([headerName, headerValues]) => {
+		const headers = Array.from(entries()).map(([headerName, headerValues]) => {
 			return `${headerName}: ${headerValues.join()}`
 		})
 
@@ -133,25 +133,32 @@ export const createHeaders = (headers) => {
 	const toJSON = () => {
 		const headers = {}
 
-		Array.from(map.entries()).map(([headerName, headerValues]) => {
+		Array.from(entries()).forEach(([headerName, headerValues]) => {
 			headers[headerName] = headerValues
 		})
 
 		return headers
 	}
 
-	if (headers) {
+	const populate = (headers) => {
 		if (typeof headers === "string") {
 			headers = parseHeaders(headers)
+		} else if (Symbol.iterator in headers) {
+			Array.from(headers).forEach(([name, values]) => {
+				map.set(name, values)
+			})
 		} else if (typeof headers === "object") {
-			// eslint-disable-next-line guard-for-in
-			for (const name in headers) {
+			Object.keys(headers).forEach((name) => {
 				append(name, headers[name])
-			}
+			})
 		}
 	}
 
-	return {
+	if (headers) {
+		populate(headers)
+	}
+
+	return Object.freeze({
 		has,
 		get,
 		getAll,
@@ -159,12 +166,12 @@ export const createHeaders = (headers) => {
 		append,
 		combine,
 		["delete"]: remove,
-		[Symbol.iterator]: map[Symbol.iterator],
+		[Symbol.iterator]: () => map[Symbol.iterator](),
 		entries,
 		keys,
 		values,
 		forEach,
 		toString,
 		toJSON,
-	}
+	})
 }

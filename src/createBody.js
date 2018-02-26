@@ -1,4 +1,5 @@
 import stream from "stream"
+import { createAction } from "@dmail/action"
 
 const isNodeStream = (a) => {
 	if (a instanceof stream.Stream || a instanceof stream.Writable) {
@@ -15,13 +16,7 @@ const createTwoWayStream = () => {
 	const pipes = []
 	let status = "opened"
 
-	let resolve
-	let reject
-
-	const promise = new Promise((res, rej) => {
-		resolve = res
-		reject = rej
-	})
+	const action = createAction()
 
 	let storedError
 	const error = (e) => {
@@ -30,7 +25,7 @@ const createTwoWayStream = () => {
 		pipes.forEach((pipe) => {
 			pipe.error(e)
 		})
-		reject(e)
+		throw e
 	}
 
 	const pipeTo = (
@@ -92,7 +87,7 @@ const createTwoWayStream = () => {
 		})
 		pipes.length = 0
 		status = "closed"
-		resolve(buffers)
+		action.pass(buffers)
 	}
 
 	const cancel = () => {
@@ -118,7 +113,7 @@ const createTwoWayStream = () => {
 		close,
 		pipeTo,
 		tee,
-		promise,
+		action,
 	})
 
 	return stream
@@ -165,7 +160,7 @@ export const createBody = (body) => {
 	}
 
 	const readAsString = () => {
-		return twoWayStream.promise.then((buffers) => buffers.join(""))
+		return twoWayStream.action.then((buffers) => buffers.join(""))
 	}
 
 	const text = () => {

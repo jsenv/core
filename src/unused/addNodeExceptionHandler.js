@@ -1,9 +1,9 @@
 import { passed, createAction, any } from "@dmail/action"
-import { createSignal, createFunctionNotDetectedBySignal } from "@dmail/signal"
+import { createSignal } from "@dmail/signal"
 
 const createAddExceptionHandler = ({ install }) => {
 	const exceptionSignal = createSignal({
-		installer: ({ getListeners }) => {
+		installer: ({ getListeners, removeAllWhileCalling }) => {
 			let currentException
 			let recoverCurrentException
 			let crashCurrentException
@@ -27,12 +27,14 @@ const createAddExceptionHandler = ({ install }) => {
 					recoverCurrentException = () => manualAction.pass(true)
 					crashCurrentException = () => manualAction.pass(false)
 
-					return any(manualAction, passed(listeners[index](currentException))).then((recovered) => {
-						if (recovered === false) {
-							return attemptListener(index + 1)
-						}
-						return false
-					})
+					return any([manualAction, passed(listeners[index].fn(currentException))]).then(
+						(recovered) => {
+							if (recovered === false) {
+								return attemptListener(index + 1)
+							}
+							return false
+						},
+					)
 				}
 
 				return attemptListener(0)
@@ -51,16 +53,16 @@ const createAddExceptionHandler = ({ install }) => {
 						return
 					}
 
-					// createFunctionNotDetectedBySignal prevent catching of the next throw
+					// removeAllWhileCalling prevent catching of the next throw
 					// else the following would create an infinite loop
 					// process.on('uncaughtException', function() {
 					//     setTimeout(function() {
 					//         throw 'yo';
 					//     });
 					// });
-					createFunctionNotDetectedBySignal(() => {
+					removeAllWhileCalling(() => {
 						throw currentException.value // this mess up the stack trace :'(
-					})()
+					})
 				})
 			}
 

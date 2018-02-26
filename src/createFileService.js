@@ -1,27 +1,7 @@
 import fs from "fs"
 import { URL } from "url"
 import path from "path"
-
-const createExecutorCallback = (resolve, reject) => {
-	return (error, result) => {
-		if (error) {
-			reject(error)
-		} else {
-			resolve(result)
-		}
-	}
-}
-
-const callback = (fn, ...args) => {
-	return new Promise(function(resolve, reject) {
-		args.push(createExecutorCallback(resolve, reject))
-		fn(...args)
-	})
-}
-
-const fsAsync = (methodName, ...args) => {
-	return callback(...[fs[methodName], ...args])
-}
+import { createAction, passed } from "@dmail/action"
 
 const mimetype = (fileURL) => {
 	const defaultMimetype = "application/octet-stream"
@@ -47,7 +27,7 @@ const mimetype = (fileURL) => {
 		mp3: "audio/mpeg",
 	}
 
-	const suffix = path.extname(fileURL)
+	const suffix = path.extname(String(fileURL))
 	if (suffix in mimetypes) {
 		return mimetypes[suffix]
 	}
@@ -111,13 +91,41 @@ export const convertFileSystemErrorToResponseProperties = (error) => {
 	}
 }
 
+const stat = (location) => {
+	const action = createAction()
+
+	fs.stat(location, (error, stat) => {
+		if (error) {
+			action.fail(convertFileSystemErrorToResponseProperties(error))
+		} else {
+			action.pass(stat)
+		}
+	})
+
+	return action
+}
+
+const listDirectoryContent = (location) => {
+	const action = createAction()
+
+	fs.readdir(location, (error, ressourceNames) => {
+		if (error) {
+			throw error
+		} else {
+			action.pass(ressourceNames)
+		}
+	})
+
+	return action
+}
+
 export const createFileService = ({
+	location = "",
 	include = () => true,
-	root = "",
 	index = "",
 	canReadDirectory = false,
 } = {}) => {
-	const rootURL = new URL(`file:///${root}`)
+	const locationURL = new URL(`file:///${location}`)
 
 	return ({ method, url, headers: requestHeaders }) => {
 		if (!include(url)) {
@@ -131,12 +139,12 @@ export const createFileService = ({
 
 		headers["cache-control"] = "no-store"
 
-		let promise
+		let action
 
-		if (method === "GET" && method === "HEAD") {
-			promise = Promise.resolve().then(() => {
-				const fileURL = new URL(url.pathname || index, rootURL)
-				const filename = fileURL.pathname
+		if (method === "GET" || method === "HEAD") {
+			action = passed().then(() => {
+				const fileURL = new URL(url.pathname ? url.pathname.slice(1) : index, locationURL)
+				const fileLocation = fileURL.pathname
 
 				let cachedModificationDate
 				if (requestHeaders.has("if-modified-since")) {
@@ -154,9 +162,10 @@ export const createFileService = ({
 					}
 				}
 
-				return fsAsync("stat", filename)
-					.then((stat) => {
+				return stat(fileLocation).then(
+					(stat) => {
 						const actualModificationDate = stat.mtime
+
 						headers["last-modified"] = actualModificationDate.toUTCString()
 
 						if (stat.isDirectory()) {
@@ -166,7 +175,7 @@ export const createFileService = ({
 								return
 							}
 
-							return fsAsync("readdir", filename)
+							return listDirectoryContent(fileLocation)
 								.then(JSON.stringify)
 								.then((directoryListAsJSON) => {
 									status = 200
@@ -176,41 +185,45 @@ export const createFileService = ({
 								})
 						}
 
-						if (headers.has("if-modified-since")) {
-							if (Number(cachedModificationDate) < Number(actualModificationDate)) {
-								status = 304
-								return
-							}
+						if (
+							cachedModificationDate &&
+							Number(cachedModificationDate) < Number(actualModificationDate)
+						) {
+							status = 304
+							return
 						}
 
 						status = 200
 						headers["content-type"] = mimetype(fileURL)
 						headers["content-length"] = stat.size
-						body = fs.createReadStream(filename)
-					})
-					.catch((error) => {
-						const {
-							status: responseStatus,
-							reason: responseReason,
-							headers: responseHeaders = {},
-							body: responseBody,
-						} = convertFileSystemErrorToResponseProperties(error)
+						body = fs.createReadStream(fileLocation)
+					},
+					({
+						status: responseStatus,
+						reason: responseReason,
+						headers: responseHeaders = {},
+						body: responseBody,
+					}) => {
 						status = responseStatus
 						reason = responseReason
 						Object.assign(headers, responseHeaders)
 						body = responseBody
-					})
+						return passed()
+					},
+				)
 			})
 		} else {
 			status = 501
-			promise = Promise.resolve()
+			action = passed()
 		}
 
-		return promise.then(() => ({
-			status,
-			reason,
-			headers,
-			body,
-		}))
+		return action.then(() => {
+			return {
+				status,
+				reason,
+				headers,
+				body,
+			}
+		})
 	}
 }

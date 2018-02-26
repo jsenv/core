@@ -2,27 +2,45 @@
 import { createResponseGenerator } from "./createResponseGenerator.js"
 import { createNodeRequestHandler } from "./createNodeRequestHandler.js"
 import { startServer } from "./startServer.js"
-import { convertFileSystemErrorToResponseProperties } from "./createFileService.js"
+import {
+	convertFileSystemErrorToResponseProperties,
+	createFileService,
+} from "./createFileService.js"
 import { createCompiler } from "./createCompiler.js"
-import path from "path"
+import { readFileAsString } from "./readFileAsString.js"
 
-const createTranspileService = ({ include = () => true, compiler } = {}) => {
+const createTranspileService = ({ location, include = () => true, compiler } = {}) => {
 	return ({ method, url }) => {
 		if (!include(url)) {
 			return
 		}
 
 		if (method === "GET" || method === "HEAD") {
-			return compiler.compileFile(url.pathname.slice(1)).then(({ outputCode }) => {
-				return {
-					status: 200,
-					headers: {
-						"content-length": Buffer.byteLength(outputCode),
-						"cache-control": "no-cache",
-					},
-					body: outputCode,
-				}
-			}, convertFileSystemErrorToResponseProperties)
+			const inputCodeRelativeLocation = url.pathname.slice(1)
+			const inputCodeLocation = compiler.locateFile({
+				location,
+				relativeLocation: inputCodeRelativeLocation,
+			})
+
+			return readFileAsString({
+				location: inputCodeLocation,
+				errorMapper: convertFileSystemErrorToResponseProperties,
+			}).then((inputCode) => {
+				return compiler
+					.compile({ location, inputCode, inputCodeRelativeLocation })
+					.then(({ outputCode, ensureOnFileSystem }) => {
+						return ensureOnFileSystem().then(() => {
+							return {
+								status: 200,
+								headers: {
+									"content-length": Buffer.byteLength(outputCode),
+									"cache-control": "no-cache",
+								},
+								body: outputCode,
+							}
+						})
+					})
+			})
 		}
 
 		return {
@@ -31,16 +49,17 @@ const createTranspileService = ({ include = () => true, compiler } = {}) => {
 	}
 }
 
-export const startTranspileServer = ({ url }) => {
-	const packagePath = path.resolve(__dirname, "../../src/__test__")
-
-	const compiler = createCompiler({
-		packagePath,
-	})
+export const startTranspileServer = ({ url, location }) => {
+	const compiler = createCompiler()
 
 	const handler = createResponseGenerator({
 		services: [
+			createFileService({
+				location,
+				include: ({ pathname }) => pathname.startsWith("/build/transpiled"),
+			}),
 			createTranspileService({
+				location,
 				include: ({ pathname }) => typeof pathname === "string",
 				compiler,
 			}),

@@ -3,6 +3,7 @@
 import { URL } from "url"
 import { createBody } from "./createBody.js"
 import { createHeaders } from "./createHeaders.js"
+import { passed } from "@dmail/action"
 
 // serverURL pourrait valoir par défaut `file:///${process.cwd()}` ?
 export const createRequestFromNodeRequest = (nodeRequest, serverURL) => {
@@ -49,25 +50,18 @@ export const createNodeRequestHandler = (handler, serverURL) => {
 		const request = createRequestFromNodeRequest(nodeRequest, serverURL)
 		console.log(request.method, request.url.toString())
 
-		return Promise.resolve(handler(request))
-			.catch((e) => {
-				// I'm not fan of this because currently server will continue to be up in an unexpected state
-				// so @dmail/action should be favored and exception ignored
-				// instead a process should spawn the server and listen when it crashes to respond with 500
-				// maybe an easy way to do this would be to use a proxy?
-				// or even simpler the process in charge of providing a response is not a server
-				// so it's allowed to throw and be killed but in that case server will only respond with 500
-				return {
-					status: 500,
-					reason: "internal server error",
-					body: String(e),
-				}
-			})
-			.then((response) => {
+		return passed(handler(request)).then(
+			(response) => {
 				response = createResponse(request, response)
 				console.log(`${response.status} ${request.url}`)
 				populateNodeResponse(nodeResponse, response)
-			})
+			},
+			(response) => {
+				response = createResponse(request, response)
+				console.log(`${response.status} ${request.url}`)
+				populateNodeResponse(nodeResponse, response)
+			},
+		)
 	}
 }
 

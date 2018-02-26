@@ -1,67 +1,74 @@
 import fs from "fs"
+import { createAction, sequence } from "@dmail/action"
 
 const getFileLStat = (path) => {
-	return new Promise((resolve, reject) => {
-		fs.lstat(path, (error, lstat) => {
-			if (error) {
-				return reject(error)
-			}
-			return resolve(lstat)
-		})
-	})
-}
+	const action = createAction()
 
-const createDirectory = (path) => {
-	return new Promise((resolve, reject) => {
-		fs.mkdir(path, (error) => {
-			if (error) {
-				return reject(error)
-			}
-			return resolve()
-		})
+	fs.lstat(path, (error, lstat) => {
+		if (error) {
+			throw error
+		} else {
+			action.pass(lstat)
+		}
 	})
+
+	return action
 }
 
 const createFolder = (path) => {
-	return createDirectory(path).catch((error) => {
-		// au cas ou deux script essayent de crée un dossier peu importe qui y arrive c'est ok
-		if (error.code === "EEXIST") {
-			// vérifie que c'est bien un dossier
-			return getFileLStat(path).then((stat) => {
-				if (stat) {
-					if (stat.isDirectory()) {
-						return
-					}
-					// console.log('there is a file at', path);
-					throw error
-				}
-			})
-		}
+	const action = createAction()
 
-		return Promise.reject(error)
+	fs.mkdir(path, (error) => {
+		if (error) {
+			// au cas ou deux script essayent de crée un dossier peu importe qui y arrive c'est ok
+			if (error.code === "EEXIST") {
+				return getFileLStat(path).then((stat) => {
+					if (stat.isDirectory()) {
+						return action.pass()
+					}
+					throw error
+				})
+			}
+			throw error
+		} else {
+			action.pass()
+		}
 	})
+
+	return action
 }
 
 const createFolderUntil = (path) => {
 	path = path.replace(/\\/g, "/")
+	// remove first / in case path starts with / (linux)
+	// because it would create a "" entry in folders array below
+	// tryig to create a folder at ""
+	const pathStartsWithSlash = path[0] === "/"
+	if (pathStartsWithSlash) {
+		path = path.slice(1)
+	}
 	const folders = path.split("/")
 
 	folders.pop()
 
-	return folders.reduce((previous, directory, index) => {
-		return previous.then(() => createFolder(folders.slice(0, index + 1).join("/")))
-	}, Promise.resolve())
+	return sequence(folders, (folder, index) => {
+		const folderLocation = folders.slice(0, index + 1).join("/")
+		return createFolder(`${pathStartsWithSlash ? "/" : ""}${folderLocation}`)
+	})
 }
 
 const writeFile = (path, content) => {
-	return new Promise((resolve, reject) => {
-		fs.writeFile(path, content, (error) => {
-			if (error) {
-				return reject(error)
-			}
-			resolve()
-		})
+	const action = createAction()
+
+	fs.writeFile(path, content, (error) => {
+		if (error) {
+			throw error
+		} else {
+			action.pass()
+		}
 	})
+
+	return action
 }
 
 export const writeFileFromString = (path, string) => {

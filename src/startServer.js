@@ -4,14 +4,14 @@ import { URL } from "url"
 import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
 import { addNodeExceptionHandler } from "./unused/addNodeExceptionHandler.js"
 import { createSelfSignature } from "./createSelfSignature.js"
+import { createAction, all } from "@dmail/action"
 
-const createExecutorCallback = (resolve, reject) => {
+const createExecutorCallback = ({ pass }) => {
 	return (error) => {
 		if (error) {
-			reject(error)
-		} else {
-			resolve()
+			throw error
 		}
+		return pass()
 	}
 }
 
@@ -79,24 +79,29 @@ export const startServer = ({
 		let status
 		if (isError) {
 			status = 500
+			// reason = 'shutdown because error'
 		} else {
 			status = 503
+			// reason = 'available because closing'
 		}
 
-		return Promise.all(
+		return all(
 			Array.from(clients).map(({ response }) => {
-				return new Promise((resolve) => {
-					if (response.headersSent === false) {
-						response.writeHead(status, reason) // unavailable
-					}
-					if (response.finished === false) {
-						response.on("finish", () => resolve())
-						response.on("error", () => resolve())
-						response.destroy(reason)
-					} else {
-						resolve()
-					}
-				})
+				if (response.headersSent === false) {
+					response.writeHead(status, reason)
+				}
+
+				const action = createAction()
+				const { pass } = action
+				if (response.finished === false) {
+					response.on("finish", pass)
+					response.on("error", pass)
+					response.destroy(reason)
+				} else {
+					pass()
+				}
+
+				return action
 			}),
 		)
 	}
@@ -120,21 +125,20 @@ export const startServer = ({
 	})
 
 	let status = "opening"
-	return new Promise((resolve, reject) => {
-		nodeServer.listen(port, hostname, createExecutorCallback(resolve, reject))
-	}).then(() => {
+
+	const listen = () => {
+		const action = createAction()
+		nodeServer.listen(port, hostname, createExecutorCallback(action))
+		return action
+	}
+
+	return listen().then(() => {
 		status = "opened"
 
 		// in case port is 0 (randomly assign an available port)
 		// https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
 		const port = nodeServer.address().port
 		url.port = port
-
-		const closeServer = () => {
-			return new Promise((resolve, reject) => {
-				nodeServer.close(createExecutorCallback(resolve, reject))
-			})
-		}
 
 		const closeConnections = (reason) => {
 			// should we do this async ?
@@ -156,12 +160,25 @@ export const startServer = ({
 			requestHandlers.length = 0
 
 			status = "closing"
-			return closeServer()
-				.then(() => closeClients({ reason }))
-				.then(() => closeConnections(reason))
-				.then(() => {
-					status = "closed"
-				})
+
+			const action = createAction()
+			// closing server prevent it from accepting new connections
+			// but opeed connection must be shutdown before the close event is emitted
+			nodeServer.once("close", (error) => {
+				if (error) {
+					throw error
+				} else {
+					action.pass()
+				}
+			})
+			nodeServer.close()
+			closeClients({ reason }).then(() => {
+				closeConnections(reason)
+			})
+
+			return action.then(() => {
+				status = "closed"
+			})
 		}
 
 		if (autoCloseOnExit) {

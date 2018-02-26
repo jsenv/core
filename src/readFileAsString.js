@@ -1,18 +1,24 @@
 import fs from "fs"
 import { writeFileFromString } from "./writeFileFromString.js"
+import { createAction } from "@dmail/action"
 
-export const readFileAsString = (path, defaultContent) => {
+export const readFileAsString = ({ location, defaultContent, errorMapper }) => {
 	const hasDefaultContent = defaultContent !== undefined
+	const action = createAction()
 
-	return new Promise((resolve, reject) => {
-		fs.readFile(path, (error, buffer) => {
-			if (error) {
-				if (error.code === "ENOENT" && hasDefaultContent) {
-					return writeFileFromString(path, defaultContent).then(() => defaultContent)
-				}
-				return reject(error)
+	fs.readFile(location, (error, buffer) => {
+		if (error) {
+			if (error.code === "ENOENT" && hasDefaultContent) {
+				return writeFileFromString(location, defaultContent).then(() => defaultContent)
 			}
-			return resolve(String(buffer))
-		})
+			if (errorMapper) {
+				return action.fail(errorMapper(error))
+			}
+			throw error
+		} else {
+			action.pass(String(buffer))
+		}
 	})
+
+	return action
 }
