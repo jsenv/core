@@ -8,6 +8,7 @@ import {
 } from "./createFileService.js"
 import { createCompiler } from "./createCompiler.js"
 import { readFileAsString } from "./readFileAsString.js"
+import path from "path"
 
 const createTranspileService = ({ location, include = () => true, compiler } = {}) => {
 	return ({ method, url }) => {
@@ -16,16 +17,50 @@ const createTranspileService = ({ location, include = () => true, compiler } = {
 		}
 
 		if (method === "GET" || method === "HEAD") {
-			const inputCodeRelativeLocation = url.pathname.slice(1)
-			const inputCodeLocation = compiler.locateFile({
-				location,
-				relativeLocation: inputCodeRelativeLocation,
-			})
+			const locateAndRead = () => {
+				const inputCodeRelativeLocation = url.pathname.slice(1)
+				const inputCodeLocation = compiler.locateFile({
+					location,
+					relativeLocation: inputCodeRelativeLocation,
+				})
 
-			return readFileAsString({
-				location: inputCodeLocation,
-				errorMapper: convertFileSystemErrorToResponseProperties,
-			}).then((inputCode) => {
+				return readFileAsString({
+					location: inputCodeLocation,
+					errorMapper: convertFileSystemErrorToResponseProperties,
+				}).then(
+					(inputCode) => {
+						return {
+							inputCode,
+							inputCodeRelativeLocation,
+						}
+					},
+					(response) => {
+						if (response.status === 404) {
+							try {
+								const moduleEntryLocation = require.resolve(inputCodeRelativeLocation, {
+									paths: [`${location}node_modules`],
+								})
+								const moduleEntryRelativeLocation = path.relative(location, moduleEntryLocation)
+
+								return readFileAsString({
+									location: moduleEntryLocation,
+									errorMapper: convertFileSystemErrorToResponseProperties,
+								}).then((inputCode) => {
+									return {
+										inputCode,
+										inputCodeRelativeLocation: moduleEntryRelativeLocation,
+									}
+								})
+							} catch (e) {
+								return response
+							}
+						}
+						return response
+					},
+				)
+			}
+
+			return locateAndRead().then(({ inputCode, inputCodeRelativeLocation }) => {
 				return compiler
 					.compile({ location, inputCode, inputCodeRelativeLocation })
 					.then(({ outputCode, ensureOnFileSystem }) => {

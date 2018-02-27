@@ -5,3 +5,4 @@ coverage
 coverage.lcov
 .vscode
 build
+!src/__test__/node_modules
