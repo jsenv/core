@@ -12,6 +12,10 @@ const createSourceMapURL = (filename) => {
 	return normalizeSeparation(sourceMapUrl)
 }
 
+const createOutputCodeURL = (inputCodeRelativeLocation) => {
+	return `${path.basename(inputCodeRelativeLocation, ".js")}.es5.js`
+}
+
 const appendSourceURL = (code, sourceURL) => {
 	return `${code}
 //# sourceURL=${sourceURL}`
@@ -54,32 +58,38 @@ export const createCompiler = ({ enableCoverage = false } = {}) => {
 			inputCode,
 			inputCodeRelativeLocation,
 		}).then(({ outputCode, outputCodeSourceMap }) => {
-			const outputCodeRelativeLocation = `${outputFolderRelativeLocation}/${inputCodeRelativeLocation}`
+			const inputCodeCopyRelativeLocation = `${outputFolderRelativeLocation}/${inputCodeRelativeLocation}`
+			const outputCodeFilename = createOutputCodeURL(inputCodeRelativeLocation)
+			const outputCodeRelativeLocation = `${outputFolderRelativeLocation}/${outputCodeFilename}`
 			const outputCodeSourceMapRelativeLocation = `${outputFolderRelativeLocation}/${createSourceMapURL(
-				inputCodeRelativeLocation,
+				outputCodeFilename,
 			)}`
 
 			outputCode = appendSourceMappingURL(
-				appendSourceURL(outputCode, `${inputCodeRelativeLocation}`),
+				appendSourceURL(outputCode, `${inputCodeCopyRelativeLocation}`),
 				outputCodeSourceMapRelativeLocation,
 			)
 
 			const ensureOnFileSystem = () => {
+				const inputCodeCopyLocation = `${location}/${inputCodeCopyRelativeLocation}`
+				const inputCodeCopyAction = writeFileFromString(inputCodeCopyLocation, inputCode)
+
 				const outputCodeLocation = `${location}/${outputCodeRelativeLocation}`
-				const codeAction = writeFileFromString(outputCodeLocation, outputCode)
+				const outputCodeAction = writeFileFromString(outputCodeLocation, outputCode)
 
 				const outputCodeSourceMapLocation = `${location}/${outputCodeSourceMapRelativeLocation}`
-				const mapAction = outputCodeSourceMap
+				const outputCodeSourceMapAction = outputCodeSourceMap
 					? writeFileFromString(outputCodeSourceMapLocation, JSON.stringify(outputCodeSourceMap))
 					: passed()
 
-				return all([codeAction, mapAction])
+				return all([inputCodeCopyAction, outputCodeAction, outputCodeSourceMapAction])
 			}
 
 			return {
 				location,
 				inputCodeRelativeLocation,
 				inputCode,
+				inputCodeCopyRelativeLocation,
 				outputCodeRelativeLocation,
 				outputCode,
 				outputCodeSourceMap,

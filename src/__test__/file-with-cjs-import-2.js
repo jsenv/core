@@ -1,3 +1,3 @@
-import bbb from "bbb"
+import bbb from "./node_modules/bbb/index.js"
 
 export default bbb

@@ -1,6 +1,6 @@
 import fs from "fs"
-import { URL } from "url"
 import path from "path"
+import { URL } from "url"
 import { createAction, passed } from "@dmail/action"
 
 const mimetype = (fileURL) => {
@@ -120,9 +120,8 @@ const listDirectoryContent = (location) => {
 }
 
 export const createFileService = ({
-	location = "",
+	location,
 	include = () => true,
-	index = "",
 	canReadDirectory = false,
 } = {}) => {
 	const locationURL = new URL(`file:///${location}`)
@@ -143,7 +142,7 @@ export const createFileService = ({
 
 		if (method === "GET" || method === "HEAD") {
 			action = passed().then(() => {
-				const fileURL = new URL(url.pathname ? url.pathname.slice(1) : index, locationURL)
+				const fileURL = new URL(url.pathname.slice(1), locationURL)
 				const fileLocation = fileURL.pathname
 
 				let cachedModificationDate
@@ -194,7 +193,7 @@ export const createFileService = ({
 						}
 
 						status = 200
-						headers["content-type"] = mimetype(fileURL)
+						headers["content-type"] = mimetype(url)
 						headers["content-length"] = stat.size
 						body = fs.createReadStream(fileLocation)
 					},
