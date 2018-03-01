@@ -13,7 +13,10 @@ const createSourceMapURL = (filename) => {
 }
 
 const createOutputCodeURL = (inputCodeRelativeLocation) => {
-	return `${path.basename(inputCodeRelativeLocation, ".js")}.es5.js`
+	return `${path.dirname(inputCodeRelativeLocation)}/${path.basename(
+		inputCodeRelativeLocation,
+		".js",
+	)}.es5.js`
 }
 
 const appendSourceURL = (code, sourceURL) => {
@@ -54,7 +57,7 @@ export const createCompiler = ({ enableCoverage = false } = {}) => {
 		location = normalizeSeparation(location)
 
 		return transpile({
-			location,
+			location: `${outputFolderRelativeLocation}`,
 			inputCode,
 			inputCodeRelativeLocation,
 		}).then(({ outputCode, outputCodeSourceMap }) => {
@@ -66,8 +69,8 @@ export const createCompiler = ({ enableCoverage = false } = {}) => {
 			)}`
 
 			outputCode = appendSourceMappingURL(
-				appendSourceURL(outputCode, `${inputCodeCopyRelativeLocation}`),
-				outputCodeSourceMapRelativeLocation,
+				appendSourceURL(outputCode, `/${inputCodeCopyRelativeLocation}`),
+				`/${outputCodeSourceMapRelativeLocation}`,
 			)
 
 			const ensureOnFileSystem = () => {
@@ -77,6 +80,11 @@ export const createCompiler = ({ enableCoverage = false } = {}) => {
 				const outputCodeLocation = `${location}/${outputCodeRelativeLocation}`
 				const outputCodeAction = writeFileFromString(outputCodeLocation, outputCode)
 
+				// we could remove sources content, they can be fetched from server
+				// but why removing them after all
+				// if (outputCodeSourceMap) {
+				// 	delete outputCodeSourceMap.sourcesContent
+				// }
 				const outputCodeSourceMapLocation = `${location}/${outputCodeSourceMapRelativeLocation}`
 				const outputCodeSourceMapAction = outputCodeSourceMap
 					? writeFileFromString(outputCodeSourceMapLocation, JSON.stringify(outputCodeSourceMap))

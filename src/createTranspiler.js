@@ -77,6 +77,8 @@ export const createTranspiler = (transpilerOptions = {}) => {
 		}
 
 		if (module) {
+			// babel-plugin-transform-cjs-system-wrapper
+			// https://github.com/systemjs/babel-plugin-transform-cjs-system-wrapper
 			Object.assign(plugins, {
 				"transform-es2015-modules-systemjs": {},
 			})

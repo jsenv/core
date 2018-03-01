@@ -1,4 +1,3 @@
-// import { createFileService } from "./createFileService.js"
 import { createResponseGenerator } from "./createResponseGenerator.js"
 import { createNodeRequestHandler } from "./createNodeRequestHandler.js"
 import { startServer } from "./startServer.js"
@@ -8,17 +7,59 @@ import {
 } from "./createFileService.js"
 import { createCompiler } from "./createCompiler.js"
 import { readFileAsString } from "./readFileAsString.js"
-import { passed } from "@dmail/action"
+import { passed, createAction } from "@dmail/action"
+import { URL } from "url"
+import resolveNodeModule from "resolve"
 // import path from "path"
 
 const locateNodeModule = ({ location, relativeLocation }) => {
-	try {
-		const moduleEntryLocation = require.resolve(relativeLocation, {
-			paths: [`${location}`],
-		})
-		return `${moduleEntryLocation}`
-	} catch (e) {
-		return null
+	const action = createAction()
+
+	// console.log("resolve node module", relativeLocation, "from", location)
+
+	resolveNodeModule(relativeLocation, { basedir: location }, (error, moduleLocation) => {
+		if (error) {
+			if (error.code === "MODULE_NOT_FOUND") {
+				// console.log("no module found")
+				return action.fail({ status: 404 })
+			}
+			throw error
+		} else {
+			// console.log("module found at", moduleLocation)
+			action.pass(moduleLocation)
+		}
+	})
+
+	return action
+}
+
+const getNodeDependentAndRelativeDependency = (location) => {
+	// "node_modules/aaa/main.js"
+	// returns { dependent: "": relativeDependency: "aaa/main.js"}
+
+	// "node_modules/bbb/node_modules/aaa/index.js"
+	// returns { dependent: "node_modules/bbb", relativeDependency: "aaa/index.js"}
+
+	const prefixedLocation = location[0] === "/" ? location : `/${location}`
+	const pattern = "/node_modules/"
+	const lastNodeModulesIndex = prefixedLocation.lastIndexOf(pattern)
+
+	if (lastNodeModulesIndex === 0) {
+		const dependent = ""
+		const relativeDependency = location.slice(pattern.length - 1)
+		// console.log("node location", location, "means", { dependent, relativeDependency })
+		return {
+			dependent,
+			relativeDependency,
+		}
+	}
+
+	const dependent = location.slice(0, lastNodeModulesIndex - 1)
+	const relativeDependency = location.slice(lastNodeModulesIndex + pattern.length - 1)
+	// console.log("node location", location, "means", { dependent, relativeDependency })
+	return {
+		dependent,
+		relativeDependency,
 	}
 }
 
@@ -34,41 +75,21 @@ const createTranspileService = ({ location, include = () => true, compiler } = {
 			}
 		}
 
-		/*
-		ce qu'il faut faire:
-
-		une requête vers node_modules/aaa/index.js
-		même si au final le fichier se trouve dans ../../node_modules/aaa/index.js
-		on créera
-
-		build/transpiled/node_modules/aaa/index.js
-		build/transpiled/node_modules/aaa/index.es5.js
-		build/transpiled/node_modules/aaa/index.es5.js.map
-
-		index.es5.js contiendra
-		/# sourceURL = build/transpiled/node_modules/aaa/index.js
-		/# sourceMappingURL = build/transpiled/node_modules/aaa/index.es5.js.map
-
-		index.es5.js.map on verra
-
-		donc quand une requête vers build/transpiled arrive on se prend pas la tête on sers le fichier
-
-		lorsque la requête vers https://localhost:0/node_modules/aaa/index.js arrive
-		on cherche ou ça se trouve vraiment sur le filesystem avec require.resolve()
-		juste pour pouvoir lire le fichier mais on fait comme si le fichier se trouvait vraiment là
-		*/
-
 		const locate = (relativeLocation) => {
 			if (relativeLocation.startsWith("node_modules/")) {
-				// redirect https://locahost:0/node_modules/aaa/main.js to
-				// either file:///Users/damien/github/dev-server/node_modules/aaa/main.js
-				// or even file:///Users/damien/github/node_modules/aaa/main.js
+				const { dependent, relativeDependency } = getNodeDependentAndRelativeDependency(
+					relativeLocation,
+				)
 
-				const nodeRelativeLocation = relativeLocation.slice("node_modules/".length)
-				// for something like 'node_modules/aaa/mains.js' you get 'aaa/main.js'
+				let nodeLocation = location
+				if (dependent) {
+					nodeLocation += `/${dependent}`
+				}
+				nodeLocation += `/node_modules`
+
 				return locateNodeModule({
-					location,
-					relativeLocation: nodeRelativeLocation,
+					location: nodeLocation,
+					relativeLocation: relativeDependency,
 				})
 			}
 
@@ -120,15 +141,15 @@ const createDefaultFileService = ({ defaultFile }) => {
 export const startTranspileServer = ({ url, location }) => {
 	const compiler = createCompiler()
 
-	// const transpiledFolderHref = new URL("build/transpiled", location).href
-	// debugger
-
 	const handler = createResponseGenerator({
 		services: [
 			createDefaultFileService({ defaultFile: "index.js" }),
 			createFileService({
-				location,
-				include: ({ pathname }) => pathname.startsWith("build/transpiled/"),
+				include: ({ pathname }) => pathname.startsWith("/build/transpiled/"),
+				locate: ({ url }) => {
+					const fileURL = new URL(url.pathname.slice(1), `file:///${location}/`)
+					return fileURL
+				},
 			}),
 			createTranspileService({
 				location,

@@ -14,7 +14,7 @@ import { URL } from "url"
 
 const testImport = (relativeFileLocation) => {
 	return startTranspileServer({
-		location: `${path.resolve(__dirname, "../../src/__test__")}/`,
+		location: `${path.resolve(__dirname, "../../src/__test__")}`,
 	}).then(({ url, close }) => {
 		const System = new SystemJS.constructor()
 		System.config({
@@ -39,14 +39,8 @@ test.skip(() => {
 	})
 })
 
-// comme on pouvait s'y attendre ça ne marche pas
-// surement parce que systemjs ne connait pas la location réelle de
-// bbb/node_modules/mains.js donc échoue lorsqu'il cherche à load la dépendance
-// une manière de résoudre ça pourrait tout simplement être d'écrire
-// import bbb from "node_modules/bbb/index.js"
-// au lieu du truc complètement magique import bbb from "bbb"
 test(() => {
 	return testImport("./file-with-cjs-import-2.js").then((bindings) => {
-		assert.equal(bindings.default, "bbb")
+		assert.equal(bindings.default, "aaabbb")
 	})
 })
