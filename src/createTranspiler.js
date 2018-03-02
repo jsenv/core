@@ -26,8 +26,8 @@ const minifyPlugins = {
 const defaultPlugins = {
 	// "transform-async-to-generator": {},
 	"transform-es2015-arrow-functions": {},
-	"transform-es2015-block-scoped-functions": {},
 	"transform-es2015-block-scoping": {},
+	"transform-es2015-block-scoped-functions": {},
 	"transform-es2015-computed-properties": {},
 	"transform-es2015-destructuring": {},
 	"transform-es2015-for-of": {},
@@ -40,6 +40,7 @@ const defaultPlugins = {
 	"transform-exponentiation-operator": {},
 	// "transform-regenerator": {},
 	"transform-object-rest-spread": {},
+	// https://github.com/babel/babel/tree/master/packages/babel-plugin-syntax-dynamic-import
 }
 
 const defaultOptions = {
@@ -76,20 +77,18 @@ export const createTranspiler = (transpilerOptions = {}) => {
 			Object.assign(plugins, minifyPlugins)
 		}
 
+		const babelPlugins = Object.keys(plugins)
+			.filter((name) => Boolean(plugins[name]))
+			.map((name) => [name, plugins[name]])
+
 		if (module) {
-			// babel-plugin-transform-cjs-system-wrapper
-			// https://github.com/systemjs/babel-plugin-transform-cjs-system-wrapper
-			Object.assign(plugins, {
-				"transform-es2015-modules-systemjs": {},
-			})
+			babelPlugins.unshift("transform-es2015-modules-systemjs")
 		}
 
 		const babelOptions = {
 			sourceRoot: location,
 			filenameRelative: inputCodeRelativeLocation,
-			plugins: Object.keys(plugins)
-				.filter((name) => Boolean(plugins[name]))
-				.map((name) => [name, plugins[name]]),
+			plugins: babelPlugins,
 			ast: true,
 			sourceMaps: true,
 			compact,

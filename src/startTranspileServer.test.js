@@ -17,9 +17,6 @@ const testImport = (relativeFileLocation) => {
 		location: `${path.resolve(__dirname, "../../src/__test__")}`,
 	}).then(({ url, close }) => {
 		const System = new SystemJS.constructor()
-		System.config({
-			baseURL: String(url),
-		})
 		const absoluteFileURL = new URL(relativeFileLocation, url)
 		return fromPromise(System.import(absoluteFileURL.toString())).then((value) => {
 			return close().then(() => value)
@@ -34,13 +31,13 @@ test.skip(() => {
 })
 
 test.skip(() => {
-	return testImport("./file-with-cjs-import.js").then((bindings) => {
-		assert.equal(bindings.default, "aaa")
+	return testImport("file-with-node-es6-import.js").then((bindings) => {
+		assert.equal(bindings.default, "aaabbb")
 	})
 })
 
 test(() => {
-	return testImport("./file-with-cjs-import-2.js").then((bindings) => {
-		assert.equal(bindings.default, "aaabbb")
+	return testImport("file-with-relative-cjs-import.js").then((bindings) => {
+		assert.equal(bindings.default, "cjs")
 	})
 })

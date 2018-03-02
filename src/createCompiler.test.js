@@ -3,7 +3,7 @@ import { test } from "@dmail/test"
 import path from "path"
 import assert from "assert"
 
-test(() => {
+test.skip(() => {
 	const location = path.resolve(__dirname, "../../src/__test__")
 	const inputCode = "export default true"
 	const compiler = createCompiler()
@@ -35,4 +35,13 @@ test(() => {
 				assert.equal(typeof outputCodeSourceMap, "object")
 			},
 		)
+})
+
+test(() => {
+	const compiler = createCompiler()
+	const inputCode = `const value = true`
+
+	return compiler.compile({
+		inputCode,
+	})
 })

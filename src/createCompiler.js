@@ -49,9 +49,9 @@ export const createCompiler = ({ enableCoverage = false } = {}) => {
 	}
 
 	const compile = ({
-		location,
+		location = "temp",
 		inputCode,
-		inputCodeRelativeLocation,
+		inputCodeRelativeLocation = "anonymous.js",
 		outputFolderRelativeLocation = "build/transpiled",
 	}) => {
 		location = normalizeSeparation(location)
