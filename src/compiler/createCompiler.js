@@ -1,8 +1,15 @@
-import { createTranspiler } from "./createTranspiler.js"
-import { createInstrumenter } from "./createInstrumenter.js"
-import { writeFileFromString } from "./writeFileFromString.js"
+// https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
+
+import { writeFileFromString } from "../writeFileFromString.js"
 import path from "path"
 import { passed, all } from "@dmail/action"
+import { transform } from "babel-core"
+import { defaultPlugins, minifyPlugins } from "./plugins.js"
+
+const defaultOptions = {
+	minify: false,
+	module: true,
+}
 
 const normalizeSeparation = (filename) => filename.replace(/\\/g, "/")
 
@@ -29,21 +36,7 @@ const appendSourceMappingURL = (code, sourceMappingURL) => {
 //# sourceMappingURL=${sourceMappingURL}`
 }
 
-export const createCompiler = ({ enableCoverage = false } = {}) => {
-	let { transpile } = createTranspiler()
-
-	if (enableCoverage) {
-		const coverageGlobalVariableName = "__coverage__"
-		const { instrument } = createInstrumenter({ coverageGlobalVariableName })
-
-		const oldTranspile = transpile
-		transpile = (...args) => {
-			return oldTranspile(...args).then(({ outputCode, outputSourceMap }) => {
-				return instrument({ inputCode: outputCode, inputSourceMap: outputSourceMap })
-			})
-		}
-	}
-
+export const createCompiler = ({ ...compilerOptions } = {}) => {
 	const locateFile = ({ location, relativeLocation }) => {
 		return normalizeSeparation(path.resolve(location, relativeLocation))
 	}
@@ -53,13 +46,55 @@ export const createCompiler = ({ enableCoverage = false } = {}) => {
 		inputCode,
 		inputCodeRelativeLocation = "anonymous.js",
 		outputFolderRelativeLocation = "build/transpiled",
+		...compileOptions
 	}) => {
 		location = normalizeSeparation(location)
 
-		return transpile({
-			location: `${outputFolderRelativeLocation}`,
-			inputCode,
-			inputCodeRelativeLocation,
+		// https://babeljs.io/docs/core-packages/#options
+		const options = { ...defaultOptions, ...compilerOptions, ...compileOptions }
+		const { inputCodeSourceMap, module, minify } = options
+		const plugins = { ...defaultPlugins }
+
+		let compact = false
+		let comments = false
+		let minified = false
+
+		if (minify) {
+			compact = true
+			comments = true
+			minified = true
+			Object.assign(plugins, minifyPlugins)
+		}
+
+		const babelPlugins = Object.keys(plugins)
+			.filter((name) => Boolean(plugins[name]))
+			.map((name) => [name, plugins[name]])
+
+		if (module) {
+			babelPlugins.unshift("transform-es2015-modules-systemjs")
+		}
+
+		const babelOptions = {
+			sourceRoot: outputFolderRelativeLocation,
+			filenameRelative: inputCodeRelativeLocation,
+			plugins: babelPlugins,
+			ast: true,
+			sourceMaps: true,
+			compact,
+			comments,
+			minified,
+			inputSourceMap: inputCodeSourceMap,
+		}
+
+		const {
+			code: outputCode,
+			// ast: transpiledCodeAst,
+			map: outputCodeSourceMap,
+		} = transform(inputCode, babelOptions)
+
+		return passed({
+			outputCode,
+			outputCodeSourceMap,
 		}).then(({ outputCode, outputCodeSourceMap }) => {
 			const inputCodeCopyRelativeLocation = `${outputFolderRelativeLocation}/${inputCodeRelativeLocation}`
 			const outputCodeFilename = createOutputCodeURL(inputCodeRelativeLocation)
@@ -109,14 +144,3 @@ export const createCompiler = ({ enableCoverage = false } = {}) => {
 
 	return { compile, locateFile }
 }
-
-// const base64Encode = (string) => new Buffer(string).toString("base64")
-// // should I unescape(encodeURIComponent()) the base64 string ?
-// // apprently base64 encode is enought, no need to unescape a base64 encoded string
-// const finalMapLocation = `data:application/json;base64,${base64Encode(
-// 	JSON.stringify(instrumentedSourceMap),
-// )}`
-
-// if (filename.startsWith("file:///")) {
-// 	filename = filename.slice("file:///".length)
-// }

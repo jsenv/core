@@ -1,6 +1,6 @@
 import SystemJS from "systemjs"
 // import path from "path"
-import { readFileAsString } from "./readFileAsString.js"
+import { readFileAsString } from "../readFileAsString.js"
 import vm from "vm"
 
 const getNodeFilename = (filename) => {

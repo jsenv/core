@@ -1,23 +1,24 @@
+// https://github.com/guybedford/systemjs-istanbul/blob/master/index.js
 import istanbul from "istanbul"
+import remapIstanbul from "remap-istanbul/lib/remap.js"
 import { SourceMapConsumer, SourceMapGenerator } from "source-map"
 import { passed } from "@dmail/action"
 
-export const getCoverageGlobalVariableName = () => {
-	for (const key in global) {
-		if (key.match(/\$\$cov_\d+\$\$/)) {
-			return key
-		}
-	}
-	return null
+export const getCoverage = ({ globalName }) => {
+	return global[globalName]
 }
 
-export const createInstrumenter = ({ globalName = "__coverage__" } = {}) => {
+export const remapCoverage = (coverage) => {
+	return remapIstanbul(coverage)
+}
+
+export const createCoverer = ({ globalName = "__coverage__" }) => {
 	const istanbulInstrumenter = new istanbul.Instrumenter({
 		coverageVariable: globalName,
 		esModules: true,
 	})
 
-	const instrument = ({ inputCode, inputCodeRelativeLocation, inputCodeSourceMap }) => {
+	const instrument = ({ inputCode, inputCodeSourceMap, inputCodeRelativeLocation }) => {
 		istanbulInstrumenter.opts.codeGenerationOptions = {
 			// il faut passer le fichier d'origine, sauf que ce fichier n'est pas dispo sur le fs puisque transpiled
 			// il le sera ptet par la suite
@@ -40,29 +41,40 @@ export const createInstrumenter = ({ globalName = "__coverage__" } = {}) => {
 			istanbulInstrumenter.opts.embedSource = false
 		}
 
-		const intrumentedCode = istanbulInstrumenter.instrumentSync(
-			inputCode,
-			inputCodeRelativeLocation,
-		)
+		const outputCode = istanbulInstrumenter.instrumentSync(inputCode, inputCodeRelativeLocation)
 
-		let instrumentedCodeSourceMap = istanbulInstrumenter.lastSourceMap()
+		let outputCodeSourceMap = istanbulInstrumenter.lastSourceMap()
 
 		if (inputCodeSourceMap) {
 			// https://github.com/karma-runner/karma-coverage/pull/146/files
 			const inputCodeSourceMapConsumer = new SourceMapConsumer(inputCodeSourceMap)
-			const intrumentedCodeSourceMapConsumer = new SourceMapConsumer(instrumentedCodeSourceMap)
+			const intrumentedCodeSourceMapConsumer = new SourceMapConsumer(outputCodeSourceMap)
 			const generator = SourceMapGenerator.fromSourceMap(intrumentedCodeSourceMapConsumer)
 			generator.applySourceMap(inputCodeSourceMapConsumer)
-			instrumentedCodeSourceMap = JSON.parse(generator.toString())
+			outputCodeSourceMap = JSON.parse(generator.toString())
 		}
 
 		return passed({
-			intrumentedCode,
-			instrumentedCodeSourceMap,
+			outputCode,
+			outputCodeSourceMap,
 		})
 	}
 
-	return {
-		instrument,
-	}
+	return instrument
 }
+
+export const getCoverageGlobalVariableName = () => {
+	for (const key in global) {
+		if (key.match(/\$\$cov_\d+\$\$/)) {
+			return key
+		}
+	}
+	return null
+}
+
+// const base64Encode = (string) => new Buffer(string).toString("base64")
+// // should I unescape(encodeURIComponent()) the base64 string ?
+// // apprently base64 encode is enought, no need to unescape a base64 encoded string
+// const finalMapLocation = `data:application/json;base64,${base64Encode(
+// 	JSON.stringify(instrumentedSourceMap),
+// )}`

@@ -1,19 +1,10 @@
 import http from "http"
 import https from "https"
 import { URL } from "url"
-import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
-import { addNodeExceptionHandler } from "./unused/addNodeExceptionHandler.js"
-import { createSelfSignature } from "./createSelfSignature.js"
 import { createAction, all } from "@dmail/action"
-
-const createExecutorCallback = ({ pass }) => {
-	return (error) => {
-		if (error) {
-			throw error
-		}
-		return pass()
-	}
-}
+import { createSelfSignature } from "./createSelfSignature.js"
+import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
+import { addNodeExceptionHandler } from "./addNodeExceptionHandler.js"
 
 export const startServer = ({
 	// by default listen localhost on a random port in https
@@ -128,7 +119,12 @@ export const startServer = ({
 
 	const listen = () => {
 		const action = createAction()
-		nodeServer.listen(port, hostname, createExecutorCallback(action))
+		nodeServer.listen(port, hostname, (error) => {
+			if (error) {
+				throw error
+			}
+			action.pass()
+		})
 		return action
 	}
 

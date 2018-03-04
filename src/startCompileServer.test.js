@@ -1,5 +1,5 @@
 import "./global-fetch.js"
-import { startTranspileServer } from "./startTranspileServer.js"
+import { startCompileServer } from "./startCompileServer.js"
 import SystemJS from "systemjs"
 import path from "path"
 import { fromPromise } from "@dmail/action"
@@ -13,7 +13,7 @@ import { URL } from "url"
 // le truc le plus puissant et compliqué dès maintenant
 
 const testImport = (relativeFileLocation) => {
-	return startTranspileServer({
+	return startCompileServer({
 		location: `${path.resolve(__dirname, "../../src/__test__")}`,
 	}).then(({ url, close }) => {
 		const System = new SystemJS.constructor()
