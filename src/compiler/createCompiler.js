@@ -5,6 +5,7 @@ import path from "path"
 import { passed, all } from "@dmail/action"
 import { transform } from "babel-core"
 import { defaultPlugins, minifyPlugins } from "./plugins.js"
+import moduleFormats from "js-module-formats"
 
 const defaultOptions = {
 	minify: false,
@@ -71,7 +72,17 @@ export const createCompiler = ({ ...compilerOptions } = {}) => {
 			.map((name) => [name, plugins[name]])
 
 		if (module) {
-			babelPlugins.unshift("transform-es2015-modules-systemjs")
+			// https://github.com/ModuleLoader/es-module-loader/blob/master/docs/system-register-dynamic.md
+			const format = moduleFormats.detect(inputCode)
+			if (format === "es") {
+				babelPlugins.unshift("transform-es2015-modules-systemjs")
+			} else if (format === "cjs") {
+				babelPlugins.unshift("transform-cjs-system-wrapper")
+			} else if (format === "amd") {
+				babelPlugins.unshift("transform-amd-system-wrapper")
+			} else {
+				babelPlugins.unshift("transform-global-system-wrapper")
+			}
 		}
 
 		const babelOptions = {

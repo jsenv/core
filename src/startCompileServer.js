@@ -28,7 +28,7 @@ const createCompileService = ({ include = () => true, locate, fetch, transform }
 
 		return passed(locate(inputCodeRelativeLocation)).then((inputCodeLocation) => {
 			return passed(fetch(inputCodeLocation)).then((inputCode) => {
-				return passed(transform({ location, inputCode, inputCodeRelativeLocation })).then(
+				return passed(transform({ inputCode, inputCodeRelativeLocation })).then(
 					({ outputCode, ensureOnFileSystem }) => {
 						return ensureOnFileSystem().then(() => {
 							return {
@@ -151,7 +151,7 @@ export const startCompileServer = ({ url, location }) => {
 						errorMapper: convertFileSystemErrorToResponseProperties,
 					})
 				},
-				transform: ({ location, inputCode, inputCodeRelativeLocation }) => {
+				transform: ({ inputCode, inputCodeRelativeLocation }) => {
 					return compiler.compile({
 						location,
 						inputCode,
@@ -169,3 +169,6 @@ export const startCompileServer = ({ url, location }) => {
 		return { close, url }
 	})
 }
+
+// hot reloading https://github.com/dmail-old/es6-project/blob/master/lib/start.js#L62
+// and https://github.com/dmail-old/project/blob/master/lib/sse.js
