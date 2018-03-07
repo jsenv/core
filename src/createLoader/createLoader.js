@@ -32,10 +32,5 @@ export const createLoader = ({
 
 	loader[RegisterLoader.instantiate] = instantiate
 
-	// ensure System.register & regirsterDynamic are available
-	global.System = global.System || {}
-	global.System.register = loader.register.bind(loader)
-	global.System.registerDynamic = loader.registerDynamic.bind(loader)
-
 	return loader
 }
