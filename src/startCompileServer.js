@@ -1,5 +1,5 @@
 import { createResponseGenerator } from "./startServer/createResponseGenerator.js"
-import { createNodeRequestHandler } from "./startServer/createNodeRequestHandler.js"
+import { createNodeRequestHandler, enableCORS } from "./startServer/createNodeRequestHandler.js"
 import { startServer } from "./startServer/startServer.js"
 import {
 	convertFileSystemErrorToResponseProperties,
@@ -56,7 +56,7 @@ const createDefaultFileService = ({ defaultFile }) => {
 	}
 }
 
-export const startCompileServer = ({ url, location }) => {
+export const startCompileServer = ({ url, location, cors = true }) => {
 	const compiler = createCompiler()
 	const outputFolderRelativeLocation = "build/transpiled"
 
@@ -164,7 +164,16 @@ export const startCompileServer = ({ url, location }) => {
 	})
 
 	return startServer({ url }).then(({ url, addRequestHandler, close }) => {
-		const nodeRequestHandler = createNodeRequestHandler(handler, url)
+		const nodeRequestHandler = createNodeRequestHandler({
+			handler,
+			url,
+			transform: (response) => {
+				if (cors) {
+					enableCORS(response.headers)
+				}
+				return response
+			},
+		})
 		addRequestHandler(nodeRequestHandler)
 		return { close, url }
 	})

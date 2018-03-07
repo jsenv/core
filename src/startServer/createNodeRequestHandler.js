@@ -45,23 +45,20 @@ const createResponse = (
 	return Object.freeze({ status, reason, headers, body })
 }
 
-export const createNodeRequestHandler = (handler, serverURL) => {
+export const createNodeRequestHandler = ({ handler, url, transform = (response) => response }) => {
 	return (nodeRequest, nodeResponse) => {
-		const request = createRequestFromNodeRequest(nodeRequest, serverURL)
+		const request = createRequestFromNodeRequest(nodeRequest, url)
 		console.log(request.method, request.url.toString())
 
-		return passed(handler(request)).then(
-			(response) => {
-				response = createResponse(request, response)
-				console.log(`${response.status} ${request.url}`)
-				populateNodeResponse(nodeResponse, response)
-			},
-			(response) => {
-				response = createResponse(request, response)
-				console.log(`${response.status} ${request.url}`)
-				populateNodeResponse(nodeResponse, response)
-			},
-		)
+		const handleResponse = (response) => {
+			response = createResponse(request, response)
+			passed(transform(response)).then((finalResponse) => {
+				console.log(`${finalResponse.status} ${request.url}`)
+				populateNodeResponse(nodeResponse, finalResponse)
+			})
+		}
+
+		passed(handler(request)).then(handleResponse, handleResponse)
 	}
 }
 
@@ -74,6 +71,8 @@ export const enableCORS = (headers) => {
 	}
 
 	Object.keys(corsHeaders).forEach((corsHeaderName) => {
-		headers.append(corsHeaderName, corsHeaders[corsHeaderName])
+		if (headers.has(corsHeaderName) === false) {
+			headers.append(corsHeaderName, corsHeaders[corsHeaderName])
+		}
 	})
 }
