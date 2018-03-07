@@ -5,7 +5,6 @@ import path from "path"
 import { fromPromise } from "@dmail/action"
 import { test } from "@dmail/test"
 import assert from "assert"
-import { URL } from "url"
 
 // on est pas forcé de démarrer un serveur grâce au truc utilisé dans createSystem
 // on pourrait utiliser le compiler directement dans createNodeLoader
@@ -17,9 +16,8 @@ const testImport = (relativeFileLocation) => {
 	return startCompileServer({
 		location: `${path.resolve(__dirname, "../../src/__test__")}`,
 	}).then(({ url, close }) => {
-		const loader = createNodeLoader()
-		const absoluteFileURL = String(new URL(relativeFileLocation, url))
-		return fromPromise(loader.import(absoluteFileURL)).then((value) => {
+		const loader = createNodeLoader({ base: url.href })
+		return fromPromise(loader.import(relativeFileLocation)).then((value) => {
 			return close().then(() => value)
 		})
 	})
@@ -32,19 +30,19 @@ test.skip(() => {
 })
 
 test.skip(() => {
-	return testImport("file-with-node-es6-import.js").then((bindings) => {
+	return testImport("./file-with-node-es6-import.js").then((bindings) => {
 		assert.equal(bindings.default, "aaabbb")
 	})
 })
 
-test.skip(() => {
-	return testImport("file-with-relative-cjs-import.js").then((bindings) => {
+test(() => {
+	return testImport("./file-with-relative-cjs-import.js").then((bindings) => {
 		assert.equal(bindings.default, "cjs")
 	})
 })
 
 test(() => {
-	return testImport("file-cjs-and-native-require.js").then((bindings) => {
+	return testImport("./file-cjs-and-native-require.js").then((bindings) => {
 		assert.equal(bindings.default, "createServer")
 	})
 })

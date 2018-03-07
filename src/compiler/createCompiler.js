@@ -7,6 +7,11 @@ import { transform } from "babel-core"
 import { defaultPlugins, minifyPlugins } from "./plugins.js"
 import moduleFormats from "js-module-formats"
 
+import transformESModulesPlugin from "babel-plugin-transform-es2015-modules-systemjs"
+import transformCJSModulesPlugin from "babel-plugin-transform-cjs-system-wrapper"
+import transformAMDModulesPlugin from "babel-plugin-transform-amd-system-wrapper"
+import transformGlobalModulesPlugin from "babel-plugin-transform-global-system-wrapper"
+
 const defaultOptions = {
 	minify: false,
 	module: true,
@@ -75,13 +80,13 @@ export const createCompiler = ({ ...compilerOptions } = {}) => {
 			// https://github.com/ModuleLoader/es-module-loader/blob/master/docs/system-register-dynamic.md
 			const format = moduleFormats.detect(inputCode)
 			if (format === "es") {
-				babelPlugins.unshift("transform-es2015-modules-systemjs")
+				babelPlugins.unshift(transformESModulesPlugin)
 			} else if (format === "cjs") {
-				babelPlugins.unshift("transform-cjs-system-wrapper")
+				babelPlugins.unshift(transformCJSModulesPlugin)
 			} else if (format === "amd") {
-				babelPlugins.unshift("transform-amd-system-wrapper")
+				babelPlugins.unshift(transformAMDModulesPlugin)
 			} else {
-				babelPlugins.unshift("transform-global-system-wrapper")
+				babelPlugins.unshift(transformGlobalModulesPlugin)
 			}
 		}
 
