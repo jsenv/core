@@ -7,18 +7,19 @@ import cuid from "cuid"
 import { writeFileFromString } from "./writeFileFromString.js"
 import test from "@dmail/test"
 
-const startBrowserPage = () => {
+const startClient = () => {
 	// https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
 	return fromPromise(
 		puppeteer
 			.launch({
 				ignoreHTTPSErrors: true, // because we use a self signed certificate
-				// true by default, puppeeter will auto close browser
-				// so we apparently don't have to use listenNodeBeforeExit here
 				// handleSIGINT: true,
 				// handleSIGTERM: true,
 				// handleSIGHUP: true,
+				// because the 3 above are true by default pupeeter will auto close browser
+				// so we apparently don't have to use listenNodeBeforeExit in order to close browser
+				// as we do for server
 			})
 			.then((browser) => {
 				return browser.newPage().then((page) => {
@@ -62,27 +63,21 @@ const testInBrowser = (code) => {
 		startCompileServer({
 			location: `${path.resolve(__dirname, "../../src/__test__")}`,
 		}),
-		startBrowserPage(),
+		startClient(),
 	]).then(([indexServer, compileServer, client]) => {
 		return fromPromise(
 			client.page.goto(indexServer.url.href).then(() => {
 				const loadScriptTag = (url) => {
-					if (url) {
-						return client.page.addScriptTag(url)
-					}
-					return Promise.resolve()
+					client.page.addScriptTag(url)
 				}
 
-				// ici faudrais loader un script qui fera window.createBrowserLoader = un truc
-				return loadScriptTag().then(() => {
-					return client.page.evaluate(
-						(/* compileServerHref */) => {
-							// window.System = window.createBrowserLoader({ base: compileServerHref })
-							// return fromPromise(System.import(filename))
-							return true
-						},
-						compileServer.url.href,
-					)
+				// faut que le serveur static renvoit ce fichier
+				// et pas seulement le fichier d'index
+				return loadScriptTag("./createLoader/createBrowserLoader/index.global.js").then(() => {
+					return client.page.evaluate((compileServerHref) => {
+						window.System = window.createBrowserLoader({ base: compileServerHref })
+						return fromPromise(System.import(filename))
+					}, compileServer.url.href)
 				})
 			}),
 		).then((value) => {

@@ -1,13 +1,8 @@
-// https://github.com/ModuleLoader/browser-es-module-loader
-// on devrait plutôt utiliser https://github.com/ModuleLoader/system-register-loader
-// voir ça aussi https://github.com/ModuleLoader/node-es-module-loader/blob/master/src/node-es-module-loader.js
-// on met le source de es-module-loader directement ici parce que
-// il a besoin de le compiler, y'a ptet moyen d'éviter ça en précisant à babel
-// de le compiler et en le récupérant avec ../node_modules/es-module-loader ?
+// https://github.com/ModuleLoader/es-module-loader
 
-import RegisterLoader from "./es-module-loader/core/register-loader.js"
-import { baseURI } from "./es-module-loader/core/common.js"
-import { resolveIfNotPlain } from "./es-module-loader/core/resolve.js"
+import RegisterLoader from "es-module-loader/core/register-loader.js"
+import { baseURI } from "es-module-loader/core/common.js"
+import { resolveIfNotPlain } from "es-module-loader/core/resolve.js"
 
 export const createLoader = ({
 	base,

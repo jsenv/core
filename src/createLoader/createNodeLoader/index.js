@@ -1,8 +1,10 @@
-import { createLoader } from "./createLoader.js"
+// https://github.com/ModuleLoader/node-es-module-loader
 
-import { ModuleNamespace } from "./es-module-loader/core/loader-polyfill.js"
-import { isNode, fileUrlToPath } from "./es-module-loader/core/common.js"
-import { fetchModuleFromServer, fetchModuleFromFileSystem } from "./nodeFetchModule.js"
+import { ModuleNamespace } from "es-module-loader/core/loader-polyfill.js"
+import { isNode, fileUrlToPath } from "es-module-loader/core/common.js"
+
+import { createLoader } from "../createLoader.js"
+import { fetchModuleFromServer, fetchModuleFromFileSystem } from "./fetchModule.js"
 import { isNodeBuiltinModule } from "./isNodeBuiltinModule.js"
 
 const fetchModuleSource = (key) => {
@@ -25,12 +27,10 @@ export const createNodeLoader = ({ base } = {}) => {
 		instantiate: (key, processAnonRegister) => {
 			if (isNodeBuiltinModule(key)) {
 				const nodeBuiltinModuleExports = require(key) // eslint-disable-line import/no-dynamic-require
-				return Promise.resolve(
-					new ModuleNamespace({
-						...nodeBuiltinModuleExports,
-						default: nodeBuiltinModuleExports,
-					}),
-				)
+				const bindings = Object.assign({}, nodeBuiltinModuleExports, {
+					default: nodeBuiltinModuleExports,
+				})
+				return Promise.resolve(new ModuleNamespace(bindings))
 			}
 
 			return fetchModuleSource(key).then((source) => {
