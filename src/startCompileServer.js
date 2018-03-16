@@ -9,8 +9,8 @@ import { createCompiler } from "./compiler/createCompiler.js"
 import { readFileAsString } from "./readFileAsString.js"
 import { passed, createAction } from "@dmail/action"
 import { URL } from "url"
-import resolveNodeModule from "resolve"
-// import path from "path"
+import { locateNodeModule } from "./createLoader/createNodeLoader/locateNodeModule.js"
+import path from "path"
 
 const createCompileService = ({ include = () => true, locate, fetch, transform } = {}) => {
 	return ({ method, url }) => {
@@ -47,52 +47,40 @@ const createCompileService = ({ include = () => true, locate, fetch, transform }
 	}
 }
 
-const createDefaultFileService = ({ defaultFile }) => {
+const createIndexService = ({ indexPathname }) => {
 	return ({ url }) => {
+		// nope bad idea we must send a redirect
 		const relativeLocation = url.pathname.slice(1)
 		if (relativeLocation.length === 0) {
-			url.pathname = defaultFile
+			url.pathname = indexPathname
 		}
 	}
 }
 
-export const startCompileServer = ({ url, location, cors = true }) => {
+export const startCompileServer = ({
+	url,
+	location,
+	cors = true,
+	indexLocation = "index.html",
+}) => {
 	const compiler = createCompiler()
 	const outputFolderRelativeLocation = "build/transpiled"
 
 	const handler = createResponseGenerator({
 		services: [
-			createDefaultFileService({ defaultFile: "index.js" }),
-			createFileService({
-				include: ({ pathname }) => pathname.startsWith(`/${outputFolderRelativeLocation}/`),
-				locate: ({ url }) => {
-					const fileURL = new URL(url.pathname.slice(1), `file:///${location}/`)
-					return fileURL
-				},
-			}),
+			createIndexService({ indexPathname: indexLocation }),
 			createCompileService({
-				include: () => true,
-				locate: (relativeLocation) => {
-					const locateNodeModule = ({ location, relativeLocation }) => {
-						const action = createAction()
-
-						// console.log("resolve node module", relativeLocation, "from", location)
-						resolveNodeModule(relativeLocation, { basedir: location }, (error, moduleLocation) => {
-							if (error) {
-								if (error.code === "MODULE_NOT_FOUND") {
-									// console.log("no module found")
-									return action.fail({ status: 404 })
-								}
-								throw error
-							} else {
-								// console.log("module found at", moduleLocation)
-								action.pass(moduleLocation)
-							}
-						})
-
-						return action
+				include: ({ pathname }) => {
+					if (pathname.startsWith(`/${outputFolderRelativeLocation}/`)) {
+						return false
 					}
-
+					const extname = path.extname(pathname)
+					if (extname !== ".js" && extname !== ".mjs") {
+						return false
+					}
+					return true
+				},
+				locate: (relativeLocation) => {
 					const getNodeDependentAndRelativeDependency = (location) => {
 						// "node_modules/aaa/main.js"
 						// returns { dependent: "": relativeDependency: "aaa/main.js"}
@@ -134,10 +122,21 @@ export const startCompileServer = ({ url, location, cors = true }) => {
 						}
 						nodeLocation += `/node_modules`
 
-						return locateNodeModule({
-							location: nodeLocation,
-							relativeLocation: relativeDependency,
-						})
+						const action = createAction()
+						try {
+							// console.log("resolve node module", relativeDependency, "from", nodeLocation)
+							const moduleLocation = locateNodeModule(relativeDependency, nodeLocation)
+							// console.log("module found at", moduleLocation)
+							action.pass(moduleLocation)
+						} catch (e) {
+							if (e && e.code === "MODULE_NOT_FOUND") {
+								// console.log("no module found")
+								action.fail({ status: 404 })
+							} else {
+								throw e
+							}
+						}
+						return action
 					}
 
 					return compiler.locateFile({
@@ -158,6 +157,12 @@ export const startCompileServer = ({ url, location, cors = true }) => {
 						inputCodeRelativeLocation,
 						outputFolderRelativeLocation,
 					})
+				},
+			}),
+			createFileService({
+				locate: ({ url }) => {
+					const fileURL = new URL(url.pathname.slice(1), `file:///${location}/`)
+					return fileURL
 				},
 			}),
 		],

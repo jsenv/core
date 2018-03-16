@@ -1,10 +1,10 @@
 import { startCompileServer } from "./startCompileServer.js"
-import { startServer } from "./startServer/startServer.js"
+// import { startServer } from "./startServer/startServer.js"
 import { all, fromPromise } from "@dmail/action"
 import path from "path"
 import puppeteer from "puppeteer"
-import cuid from "cuid"
-import { writeFileFromString } from "./writeFileFromString.js"
+// import cuid from "cuid"
+// import { writeFileFromString, createFolder } from "./writeFileFromString.js"
 import test from "@dmail/test"
 
 const startClient = () => {
@@ -29,71 +29,23 @@ const startClient = () => {
 	)
 }
 
-const createIndexHTML = () => {
-	return `<!doctype html>
-<head>
-		<title>startCompileServer index</title>
-		<meta charset="utf-8" />
-</head>
-
-<body>
-		<main>
-		</main>
-</body>
-
-</html>`
-}
-
-const testInBrowser = (code) => {
-	const filename = `${cuid()}.js`
-
+const testInBrowser = (filename) => {
 	return all([
-		writeFileFromString(filename, code),
-		startServer().then((indexServer) => {
-			indexServer.addRequestHandler((request, response) => {
-				const html = createIndexHTML()
-				response.writeHead(200, {
-					"content-length": Buffer.byteLength(html),
-					"content-type": "text/html",
-				})
-				response.end(html)
-			})
-			return indexServer
-		}),
 		startCompileServer({
-			location: `${path.resolve(__dirname, "../../src/__test__")}`,
+			location: `${path.resolve(__dirname, "../")}`,
 		}),
 		startClient(),
-	]).then(([indexServer, compileServer, client]) => {
+	]).then(([, compileServer, client]) => {
 		return fromPromise(
-			client.page.goto(indexServer.url.href).then(() => {
-				const loadScriptTag = (url) => {
-					client.page.addScriptTag(url)
-				}
-
-				// faut que le serveur static renvoit ce fichier
-				// et pas seulement le fichier d'index
-				return loadScriptTag("./createLoader/createBrowserLoader/index.global.js").then(() => {
-					return client.page.evaluate((compileServerHref) => {
-						window.System = window.createBrowserLoader({ base: compileServerHref })
-						return fromPromise(System.import(filename))
-					}, compileServer.url.href)
+			client.page.goto(`${compileServer.url}/src/__test__/index.html`).then(() => {
+				return client.page.evaluate(() => {
+					System.import(filename)
 				})
 			}),
 		).then((value) => {
-			return all([indexServer.close(), compileServer.close(), client.browser.close()]).then(
-				() => value,
-			)
+			return all([compileServer.close(), client.browser.close()]).then(() => value)
 		})
 	})
 }
 
-test(() =>
-	testInBrowser(`
-import value from './file.js'
-
-if (value !== true) {
-	throw new Error('must be true')
-}
-`),
-)
+test(() => testInBrowser("./src/__test/file.test.js"))

@@ -15,7 +15,7 @@ const getFileLStat = (path) => {
 	return action
 }
 
-const createFolder = (path) => {
+export const createFolder = (path) => {
 	const action = createAction()
 
 	fs.mkdir(path, (error) => {

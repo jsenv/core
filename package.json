@@ -70,9 +70,7 @@
 		"node-forge": "0.7.1",
 		"puppeteer": "1.1.1",
 		"remap-istanbul": "0.8.4",
-		"resolve": "1.5.0",
-		"source-map": "0.5.6",
-		"systemjs": "dmail/systemjs"
+		"source-map": "0.5.6"
 	},
 	"devDependencies": {
 		"@dmail/shared-config": "3.1.0",
