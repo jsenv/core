@@ -126,10 +126,16 @@ export const createCompiler = ({ ...compilerOptions } = {}) => {
 
 			const ensureOnFileSystem = () => {
 				const inputCodeCopyLocation = `${location}/${inputCodeCopyRelativeLocation}`
-				const inputCodeCopyAction = writeFileFromString(inputCodeCopyLocation, inputCode)
+				const inputCodeCopyAction = writeFileFromString({
+					location: inputCodeCopyLocation,
+					string: inputCode,
+				})
 
 				const outputCodeLocation = `${location}/${outputCodeRelativeLocation}`
-				const outputCodeAction = writeFileFromString(outputCodeLocation, outputCode)
+				const outputCodeAction = writeFileFromString({
+					location: outputCodeLocation,
+					string: outputCode,
+				})
 
 				// we could remove sources content, they can be fetched from server
 				// but why removing them after all
@@ -138,7 +144,10 @@ export const createCompiler = ({ ...compilerOptions } = {}) => {
 				// }
 				const outputCodeSourceMapLocation = `${location}/${outputCodeSourceMapRelativeLocation}`
 				const outputCodeSourceMapAction = outputCodeSourceMap
-					? writeFileFromString(outputCodeSourceMapLocation, JSON.stringify(outputCodeSourceMap))
+					? writeFileFromString({
+							location: outputCodeSourceMapLocation,
+							string: JSON.stringify(outputCodeSourceMap),
+						})
 					: passed()
 
 				return all([inputCodeCopyAction, outputCodeAction, outputCodeSourceMapAction])

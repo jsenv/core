@@ -71,6 +71,6 @@ const writeFile = (path, content) => {
 	return action
 }
 
-export const writeFileFromString = (path, string) => {
-	return createFolderUntil(path).then(() => writeFile(path, string))
+export const writeFileFromString = ({ location, string }) => {
+	return createFolderUntil(location).then(() => writeFile(location, string))
 }

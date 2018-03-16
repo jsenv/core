@@ -9,7 +9,7 @@ export const readFileAsString = ({ location, defaultContent, errorMapper }) => {
 	fs.readFile(location, (error, buffer) => {
 		if (error) {
 			if (error.code === "ENOENT" && hasDefaultContent) {
-				return writeFileFromString(location, defaultContent).then(() => defaultContent)
+				return writeFileFromString({ location, string: defaultContent }).then(() => defaultContent)
 			}
 			if (errorMapper) {
 				return action.fail(errorMapper(error))

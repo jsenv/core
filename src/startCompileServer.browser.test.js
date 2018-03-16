@@ -48,4 +48,4 @@ const testInBrowser = (filename) => {
 	})
 }
 
-test(() => testInBrowser("./src/__test/file.test.js"))
+test(() => testInBrowser("src/__test/file.test.js"))
