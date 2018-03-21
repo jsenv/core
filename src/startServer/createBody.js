@@ -28,6 +28,14 @@ const createTwoWayStream = () => {
 		throw e
 	}
 
+	const closeListener = (listener) => {
+		if (isNodeStream(listener)) {
+			listener.end()
+		} else {
+			listener.close()
+		}
+	}
+
 	const pipeTo = (
 		stream,
 		{ preventCancel = false, preventClose = false, preventError = false } = {},
@@ -61,10 +69,8 @@ const createTwoWayStream = () => {
 		if (status === "closed") {
 			if (preventClose) {
 				//
-			} else if (isNodeStream(stream)) {
-				stream.end()
 			} else {
-				stream.close()
+				closeListener(stream)
 			}
 		}
 
@@ -81,9 +87,7 @@ const createTwoWayStream = () => {
 
 	const close = () => {
 		pipes.forEach((pipe) => {
-			if (pipe.close) {
-				pipe.close()
-			}
+			closeListener(pipe)
 		})
 		pipes.length = 0
 		status = "closed"
@@ -137,22 +141,24 @@ export const createBody = (body) => {
 	const fill = (data) => {
 		if (isNodeStream(data)) {
 			const nodeStream = data
-			const passStream = new stream.PassThrough()
 
 			// pourquoi j'utilise un passtrhough au lieu d'écouter directement les event sdu stream?
 			// chais pas, peu importe y'avais surement une bonne raison
 			// je crois que c'est au cas où le stream est paused ou quoi
 			// pour lui indiquer qu'on est intéréssé
-			nodeStream.on("error", twoWayStream.error)
-			passStream.on("end", twoWayStream.close)
-			passStream.on("data", twoWayStream.write)
-			nodeStream.pipe(passStream)
-
-			return
+			nodeStream.on("error", (error) => {
+				twoWayStream.error(error)
+			})
+			nodeStream.on("data", (data) => {
+				twoWayStream.write(data)
+			})
+			nodeStream.on("end", () => {
+				twoWayStream.close()
+			})
+		} else {
+			twoWayStream.write(data)
+			twoWayStream.close()
 		}
-
-		twoWayStream.write(data)
-		twoWayStream.close()
 	}
 
 	if (body !== undefined) {

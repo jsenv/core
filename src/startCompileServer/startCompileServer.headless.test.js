@@ -1,10 +1,7 @@
 import { startCompileServer } from "./startCompileServer.js"
-// import { startServer } from "./startServer/startServer.js"
 import { all, fromPromise } from "@dmail/action"
 import path from "path"
 import puppeteer from "puppeteer"
-// import cuid from "cuid"
-// import { writeFileFromString, createFolder } from "./writeFileFromString.js"
 import test from "@dmail/test"
 
 const startClient = () => {
@@ -32,7 +29,7 @@ const startClient = () => {
 const testInBrowser = (filename) => {
 	return all([
 		startCompileServer({
-			location: `${path.resolve(__dirname, "../")}`,
+			location: `${path.resolve(__dirname, "../../")}`,
 		}),
 		startClient(),
 	]).then(([, compileServer, client]) => {

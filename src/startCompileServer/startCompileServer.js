@@ -1,51 +1,18 @@
-import { createResponseGenerator } from "./startServer/createResponseGenerator.js"
-import { createNodeRequestHandler, enableCORS } from "./startServer/createNodeRequestHandler.js"
-import { startServer } from "./startServer/startServer.js"
+/* eslint-disable import/max-dependencies */
+import { createResponseGenerator } from "../startServer/createResponseGenerator.js"
+import { createNodeRequestHandler, enableCORS } from "../startServer/createNodeRequestHandler.js"
+import { startServer } from "../startServer/startServer.js"
 import {
 	convertFileSystemErrorToResponseProperties,
 	createFileService,
-} from "./startServer/createFileService.js"
-import { createCompiler } from "./compiler/createCompiler.js"
-import { readFileAsString } from "./readFileAsString.js"
-import { passed, createAction } from "@dmail/action"
+} from "../startServer/createFileService.js"
+import { createCompiler } from "../compiler/createCompiler.js"
+import { readFileAsString } from "../readFileAsString.js"
+import { createAction } from "@dmail/action"
 import { URL } from "url"
-import { locateNodeModule } from "./createLoader/createNodeLoader/locateNodeModule.js"
+import { locateNodeModule } from "../createLoader/createNodeLoader/locateNodeModule.js"
 import path from "path"
-
-const createCompileService = ({ include = () => true, locate, fetch, transform } = {}) => {
-	return ({ method, url }) => {
-		if (!include(url)) {
-			return
-		}
-
-		if (method !== "GET" && method !== "HEAD") {
-			return {
-				status: 501,
-			}
-		}
-
-		const inputCodeRelativeLocation = url.pathname.slice(1)
-
-		return passed(locate(inputCodeRelativeLocation)).then((inputCodeLocation) => {
-			return passed(fetch(inputCodeLocation)).then((inputCode) => {
-				return passed(transform({ inputCode, inputCodeRelativeLocation })).then(
-					({ outputCode, ensureOnFileSystem }) => {
-						return ensureOnFileSystem().then(() => {
-							return {
-								status: 200,
-								headers: {
-									"content-length": Buffer.byteLength(outputCode),
-									"cache-control": "no-cache",
-								},
-								body: outputCode,
-							}
-						})
-					},
-				)
-			})
-		})
-	}
-}
+import { createCompileService } from "./createCompileService.js"
 
 const createIndexService = ({ indexPathname }) => {
 	return ({ url }) => {
@@ -70,7 +37,12 @@ export const startCompileServer = ({
 		services: [
 			createIndexService({ indexPathname: indexLocation }),
 			createCompileService({
+				location,
+				outputFolderRelativeLocation,
 				include: ({ pathname }) => {
+					// createLoader/createBrowserLoader/index.global.js
+					// matches but it's an exception because
+					// it must be served as such
 					if (pathname.startsWith(`/${outputFolderRelativeLocation}/`)) {
 						return false
 					}
@@ -150,19 +122,22 @@ export const startCompileServer = ({
 						errorMapper: convertFileSystemErrorToResponseProperties,
 					})
 				},
-				transform: ({ inputCode, inputCodeRelativeLocation }) => {
+				transform: ({ input, inputRelativeLocation }) => {
 					return compiler.compile({
-						location,
-						inputCode,
-						inputCodeRelativeLocation,
-						outputFolderRelativeLocation,
+						input,
+						inputRelativeLocation,
 					})
 				},
 			}),
 			createFileService({
 				locate: ({ url }) => {
-					const fileURL = new URL(url.pathname.slice(1), `file:///${location}/`)
-					return fileURL
+					const pathname = url.pathname.slice(1)
+					// html file are not in dist/*
+					if (location.endsWith("/dist") && pathname.endsWith(".html")) {
+						const sourceLocation = location.slice(0, -"/dist".length)
+						return new URL(pathname, `file:///${sourceLocation}/`)
+					}
+					return new URL(pathname, `file:///${location}/`)
 				},
 			}),
 		],

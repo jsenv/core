@@ -1,8 +1,7 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 
-import { writeFileFromString } from "../writeFileFromString.js"
 import path from "path"
-import { passed, all } from "@dmail/action"
+import { passed } from "@dmail/action"
 import { transform } from "babel-core"
 import { defaultPlugins, minifyPlugins } from "./plugins.js"
 import moduleFormats from "js-module-formats"
@@ -17,45 +16,14 @@ const defaultOptions = {
 	module: true,
 }
 
-const normalizeSeparation = (filename) => filename.replace(/\\/g, "/")
-
-const createSourceMapURL = (filename) => {
-	const sourceMapBasename = `${path.basename(filename)}.map`
-	const sourceMapUrl = path.join(path.dirname(filename), sourceMapBasename)
-	return normalizeSeparation(sourceMapUrl)
-}
-
-const createOutputCodeURL = (inputCodeRelativeLocation) => {
-	return `${path.dirname(inputCodeRelativeLocation)}/${path.basename(
-		inputCodeRelativeLocation,
-		".js",
-	)}.es5.js`
-}
-
-const appendSourceURL = (code, sourceURL) => {
-	return `${code}
-//# sourceURL=${sourceURL}`
-}
-
-const appendSourceMappingURL = (code, sourceMappingURL) => {
-	return `${code}
-//# sourceMappingURL=${sourceMappingURL}`
-}
+export const normalizeSeparation = (filename) => filename.replace(/\\/g, "/")
 
 export const createCompiler = ({ ...compilerOptions } = {}) => {
 	const locateFile = ({ location, relativeLocation }) => {
 		return normalizeSeparation(path.resolve(location, relativeLocation))
 	}
 
-	const compile = ({
-		location = "temp",
-		inputCode,
-		inputCodeRelativeLocation = "anonymous.js",
-		outputFolderRelativeLocation = "build/transpiled",
-		...compileOptions
-	}) => {
-		location = normalizeSeparation(location)
-
+	const compile = ({ inputRelativeLocation, input, ...compileOptions }) => {
 		// https://babeljs.io/docs/core-packages/#options
 		const options = { ...defaultOptions, ...compilerOptions, ...compileOptions }
 		const { inputCodeSourceMap, module, minify } = options
@@ -78,7 +46,7 @@ export const createCompiler = ({ ...compilerOptions } = {}) => {
 
 		if (module) {
 			// https://github.com/ModuleLoader/es-module-loader/blob/master/docs/system-register-dynamic.md
-			const format = moduleFormats.detect(inputCode)
+			const format = moduleFormats.detect(input)
 			if (format === "es") {
 				babelPlugins.unshift(transformESModulesPlugin)
 			} else if (format === "cjs") {
@@ -91,8 +59,7 @@ export const createCompiler = ({ ...compilerOptions } = {}) => {
 		}
 
 		const babelOptions = {
-			sourceRoot: outputFolderRelativeLocation,
-			filenameRelative: inputCodeRelativeLocation,
+			filenameRelative: inputRelativeLocation,
 			plugins: babelPlugins,
 			ast: true,
 			sourceMaps: true,
@@ -103,67 +70,14 @@ export const createCompiler = ({ ...compilerOptions } = {}) => {
 		}
 
 		const {
-			code: outputCode,
+			code,
 			// ast: transpiledCodeAst,
-			map: outputCodeSourceMap,
-		} = transform(inputCode, babelOptions)
+			map,
+		} = transform(input, babelOptions)
 
 		return passed({
-			outputCode,
-			outputCodeSourceMap,
-		}).then(({ outputCode, outputCodeSourceMap }) => {
-			const inputCodeCopyRelativeLocation = `${outputFolderRelativeLocation}/${inputCodeRelativeLocation}`
-			const outputCodeFilename = createOutputCodeURL(inputCodeRelativeLocation)
-			const outputCodeRelativeLocation = `${outputFolderRelativeLocation}/${outputCodeFilename}`
-			const outputCodeSourceMapRelativeLocation = `${outputFolderRelativeLocation}/${createSourceMapURL(
-				outputCodeFilename,
-			)}`
-
-			outputCode = appendSourceMappingURL(
-				appendSourceURL(outputCode, `/${inputCodeCopyRelativeLocation}`),
-				`/${outputCodeSourceMapRelativeLocation}`,
-			)
-
-			const ensureOnFileSystem = () => {
-				const inputCodeCopyLocation = `${location}/${inputCodeCopyRelativeLocation}`
-				const inputCodeCopyAction = writeFileFromString({
-					location: inputCodeCopyLocation,
-					string: inputCode,
-				})
-
-				const outputCodeLocation = `${location}/${outputCodeRelativeLocation}`
-				const outputCodeAction = writeFileFromString({
-					location: outputCodeLocation,
-					string: outputCode,
-				})
-
-				// we could remove sources content, they can be fetched from server
-				// but why removing them after all
-				// if (outputCodeSourceMap) {
-				// 	delete outputCodeSourceMap.sourcesContent
-				// }
-				const outputCodeSourceMapLocation = `${location}/${outputCodeSourceMapRelativeLocation}`
-				const outputCodeSourceMapAction = outputCodeSourceMap
-					? writeFileFromString({
-							location: outputCodeSourceMapLocation,
-							string: JSON.stringify(outputCodeSourceMap),
-						})
-					: passed()
-
-				return all([inputCodeCopyAction, outputCodeAction, outputCodeSourceMapAction])
-			}
-
-			return {
-				location,
-				inputCodeRelativeLocation,
-				inputCode,
-				inputCodeCopyRelativeLocation,
-				outputCodeRelativeLocation,
-				outputCode,
-				outputCodeSourceMap,
-				outputCodeSourceMapRelativeLocation,
-				ensureOnFileSystem,
-			}
+			code,
+			map,
 		})
 	}
 

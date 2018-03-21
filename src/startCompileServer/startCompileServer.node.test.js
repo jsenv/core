@@ -1,20 +1,14 @@
 import "./global-fetch.js"
 import { startCompileServer } from "./startCompileServer.js"
-import { createNodeLoader } from "./createLoader/createNodeLoader.js"
+import { createNodeLoader } from "../createLoader/createNodeLoader/dist/index.cjs.js"
 import path from "path"
 import { fromPromise } from "@dmail/action"
 import { test } from "@dmail/test"
 import assert from "assert"
 
-// on est pas forcé de démarrer un serveur grâce au truc utilisé dans createSystem
-// on pourrait utiliser le compiler directement dans createNodeLoader
-// au lieu de fetch le serveur
-// mais pour le browser on aura pas le choix donc autant utiliser
-// le truc le plus puissant et compliqué dès maintenant
-
 const testImport = (relativeFileLocation) => {
 	return startCompileServer({
-		location: `${path.resolve(__dirname, "../../src/__test__")}`,
+		location: `${path.resolve(__dirname, "../../../src/__test__")}`,
 	}).then(({ url, close }) => {
 		const loader = createNodeLoader({ base: url.href })
 		global.System = loader
@@ -24,7 +18,7 @@ const testImport = (relativeFileLocation) => {
 	})
 }
 
-test.skip(() => {
+test(() => {
 	return testImport("./file.js").then((bindings) => {
 		assert.equal(bindings.default, true)
 	})
@@ -36,13 +30,13 @@ test.skip(() => {
 	})
 })
 
-test(() => {
+test.skip(() => {
 	return testImport("./file-with-relative-cjs-import.js").then((bindings) => {
 		assert.equal(bindings.default, "cjs")
 	})
 })
 
-test(() => {
+test.skip(() => {
 	return testImport("./file-cjs-and-native-require.js").then((bindings) => {
 		assert.equal(bindings.default, "createServer")
 	})
