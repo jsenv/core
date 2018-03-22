@@ -28,8 +28,6 @@ export const createCompileService = ({
 			return passed(fetch(inputLocation)).then((input) => {
 				return passed(transform({ input, inputRelativeLocation })).then(({ code, map }) => {
 					const output = code
-					const sourceRelativeLocation = `${outputFolderRelativeLocation}/${inputRelativeLocation}`
-					const source = input
 					const sourceMapRelativeLocation = normalizeSeparation(
 						path.join(
 							outputFolderRelativeLocation,
@@ -48,12 +46,11 @@ export const createCompileService = ({
 
 					return writeCompilationResultOnFileSystem({
 						output,
-						source,
 						sourceMap,
 						location,
-						sourceRelativeLocation,
-						sourceMapRelativeLocation,
+						inputRelativeLocation,
 						outputRelativeLocation,
+						sourceMapRelativeLocation,
 					}).then(() => {
 						return {
 							status: 200,

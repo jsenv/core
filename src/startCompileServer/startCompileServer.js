@@ -36,22 +36,40 @@ export const startCompileServer = ({
 	const handler = createResponseGenerator({
 		services: [
 			createIndexService({ indexPathname: indexLocation }),
-			createCompileService({
-				location,
-				outputFolderRelativeLocation,
+			createFileService({
 				include: ({ pathname }) => {
-					// createLoader/createBrowserLoader/index.global.js
-					// matches but it's an exception because
-					// it must be served as such
-					if (pathname.startsWith(`/${outputFolderRelativeLocation}/`)) {
-						return false
-					}
 					const extname = path.extname(pathname)
-					if (extname !== ".js" && extname !== ".mjs") {
+					if (extname === ".js" || extname === ".mjs") {
+						// should we serve them as such?
+						if (pathname.startsWith(`/${outputFolderRelativeLocation}/`)) {
+							return true
+						}
+						// the browser build can be served as such too
+						if (pathname.startsWith("/src/createLoader/createBrowserLoader/dist/")) {
+							return true
+						}
 						return false
 					}
 					return true
 				},
+				locate: ({ url }) => {
+					const pathname = url.pathname.slice(1)
+					// html file are not in dist/*
+					// browser build does not have to be taken from dist
+					if (
+						location.endsWith("/dist") &&
+						(pathname.endsWith(".html") ||
+							pathname.startsWith("src/createLoader/createBrowserLoader/dist/"))
+					) {
+						const sourceLocation = location.slice(0, -"/dist".length)
+						return new URL(pathname, `file:///${sourceLocation}/`)
+					}
+					return new URL(pathname, `file:///${location}/`)
+				},
+			}),
+			createCompileService({
+				location,
+				outputFolderRelativeLocation,
 				locate: (relativeLocation) => {
 					const getNodeDependentAndRelativeDependency = (location) => {
 						// "node_modules/aaa/main.js"
@@ -127,17 +145,6 @@ export const startCompileServer = ({
 						input,
 						inputRelativeLocation,
 					})
-				},
-			}),
-			createFileService({
-				locate: ({ url }) => {
-					const pathname = url.pathname.slice(1)
-					// html file are not in dist/*
-					if (location.endsWith("/dist") && pathname.endsWith(".html")) {
-						const sourceLocation = location.slice(0, -"/dist".length)
-						return new URL(pathname, `file:///${sourceLocation}/`)
-					}
-					return new URL(pathname, `file:///${location}/`)
 				},
 			}),
 		],

@@ -1,9 +1,9 @@
 import { rollup } from "rollup"
 import nodeResolve from "rollup-plugin-node-resolve"
+import babel from "rollup-plugin-babel"
 import path from "path"
 import { writeCompilationResultOnFileSystem } from "../writeCompilationResultOnFileSystem.js"
-import { readFileAsString } from "../readFileAsString"
-import { all, fromPromise } from "@dmail/action"
+import { createBabelOptions } from "../compiler/createCompiler.js"
 
 const projectRoot = path.resolve(__dirname, "../../../")
 
@@ -13,7 +13,6 @@ const variables = {
 		location: `${projectRoot}/src/createLoader/createNodeLoader`,
 		inputRelativeLocation: `index.js`,
 		outputRelativeLocation: `dist/index.cjs.js`,
-		sourceRelativeLocation: "dist/index.js",
 		sourceMapRelativeLocation: `dist/index.cjs.js.map`,
 	},
 	browser: {
@@ -21,18 +20,14 @@ const variables = {
 		location: `${projectRoot}/src/createLoader/createBrowserLoader`,
 		inputRelativeLocation: `index.js`,
 		outputRelativeLocation: `dist/index.global.js`,
-		sourceRelativeLocation: "dist/index.js",
 		sourceMapRelativeLocation: `dist/index.global.js.map`,
 	},
 }
 
-export const build = ({
-	type, // node or browser
-}) => {
+export const build = ({ type = "browser", minify = false } = {}) => {
 	const {
 		location,
 		inputRelativeLocation,
-		sourceRelativeLocation,
 		outputRelativeLocation,
 		sourceMapRelativeLocation,
 		outputFormat,
@@ -40,38 +35,35 @@ export const build = ({
 
 	const inputLocation = `${location}/${inputRelativeLocation}`
 
-	return all([
-		readFileAsString({ location: inputLocation }),
-		fromPromise(
-			rollup({
-				entry: inputLocation,
-				plugins: [
-					nodeResolve({
-						module: false,
-						jsnext: false,
-					}),
-				],
-				// skip rollup warnings (specifically the eval warning)
-				onwarn: () => {},
-			}).then((bundle) => {
-				return bundle.generate({
-					format: outputFormat,
-					name: "createBrowserLoader",
-					sourcemap: true,
-				})
+	return rollup({
+		entry: inputLocation,
+		plugins: [
+			// please keep in mind babel must not try to convert
+			// require(), import or whatever module format is used because rollup takes care of that
+			babel(createBabelOptions({ minify })),
+			nodeResolve({
+				module: false,
+				jsnext: false,
 			}),
-		),
-	]).then(([input, { code, map }]) => {
-		return writeCompilationResultOnFileSystem({
-			output: code,
-			source: input,
-			sourceMap: map,
-			location,
-			outputRelativeLocation,
-			sourceRelativeLocation,
-			sourceMapRelativeLocation,
-		})
+		],
+		// skip rollup warnings (specifically the eval warning)
+		onwarn: () => {},
 	})
+		.then((bundle) => {
+			return bundle.generate({
+				format: outputFormat,
+				name: "createBrowserLoader",
+				sourcemap: true,
+			})
+		})
+		.then(({ code, map }) => {
+			return writeCompilationResultOnFileSystem({
+				output: code,
+				sourceMap: map,
+				location,
+				inputRelativeLocation,
+				outputRelativeLocation,
+				sourceMapRelativeLocation,
+			})
+		})
 }
-
-build({ type: "browser" })

@@ -18,6 +18,32 @@ const defaultOptions = {
 
 export const normalizeSeparation = (filename) => filename.replace(/\\/g, "/")
 
+export const createBabelOptions = ({ minify = false } = {}) => {
+	const plugins = { ...defaultPlugins }
+
+	let compact = false
+	let comments = false
+	let minified = false
+
+	if (minify) {
+		compact = true
+		comments = true
+		minified = true
+		Object.assign(plugins, minifyPlugins)
+	}
+
+	const babelPlugins = Object.keys(plugins)
+		.filter((name) => Boolean(plugins[name]))
+		.map((name) => [name, plugins[name]])
+
+	return {
+		compact,
+		comments,
+		minified,
+		plugins: babelPlugins,
+	}
+}
+
 export const createCompiler = ({ ...compilerOptions } = {}) => {
 	const locateFile = ({ location, relativeLocation }) => {
 		return normalizeSeparation(path.resolve(location, relativeLocation))
@@ -27,47 +53,29 @@ export const createCompiler = ({ ...compilerOptions } = {}) => {
 		// https://babeljs.io/docs/core-packages/#options
 		const options = { ...defaultOptions, ...compilerOptions, ...compileOptions }
 		const { inputCodeSourceMap, module, minify } = options
-		const plugins = { ...defaultPlugins }
-
-		let compact = false
-		let comments = false
-		let minified = false
-
-		if (minify) {
-			compact = true
-			comments = true
-			minified = true
-			Object.assign(plugins, minifyPlugins)
-		}
-
-		const babelPlugins = Object.keys(plugins)
-			.filter((name) => Boolean(plugins[name]))
-			.map((name) => [name, plugins[name]])
+		const babelOptions = { ...options, ...createBabelOptions({ minify }) }
+		const { plugins } = babelOptions
 
 		if (module) {
 			// https://github.com/ModuleLoader/es-module-loader/blob/master/docs/system-register-dynamic.md
 			const format = moduleFormats.detect(input)
 			if (format === "es") {
-				babelPlugins.unshift(transformESModulesPlugin)
+				plugins.unshift(transformESModulesPlugin)
 			} else if (format === "cjs") {
-				babelPlugins.unshift(transformCJSModulesPlugin)
+				plugins.unshift(transformCJSModulesPlugin)
 			} else if (format === "amd") {
-				babelPlugins.unshift(transformAMDModulesPlugin)
+				plugins.unshift(transformAMDModulesPlugin)
 			} else {
-				babelPlugins.unshift(transformGlobalModulesPlugin)
+				plugins.unshift(transformGlobalModulesPlugin)
 			}
 		}
 
-		const babelOptions = {
+		Object.assign(babelOptions, {
 			filenameRelative: inputRelativeLocation,
-			plugins: babelPlugins,
 			ast: true,
 			sourceMaps: true,
-			compact,
-			comments,
-			minified,
 			inputSourceMap: inputCodeSourceMap,
-		}
+		})
 
 		const {
 			code,

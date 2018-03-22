@@ -13,27 +13,18 @@ const writeSourceMapLocation = ({ code, location }) => {
 
 export const writeCompilationResultOnFileSystem = ({
 	output,
-	source,
 	sourceMap,
 	location,
+	inputRelativeLocation,
 	outputRelativeLocation,
-	sourceRelativeLocation,
 	sourceMapRelativeLocation,
 }) => {
 	const actions = []
 
-	// source
-	if (typeof source === "string" && sourceRelativeLocation) {
-		const sourceServerLocation = `${location}/${sourceRelativeLocation}`
-		const sourceClientLocation = `/${sourceRelativeLocation}`
-
+	// sourceURL
+	if (inputRelativeLocation) {
+		const sourceClientLocation = `/${inputRelativeLocation}`
 		output = writeSourceLocation({ code: output, location: sourceClientLocation })
-		actions.push(
-			writeFileFromString({
-				location: sourceServerLocation,
-				string: source,
-			}),
-		)
 	}
 
 	// sourceMap
