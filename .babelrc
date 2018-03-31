@@ -1,0 +1,3 @@
+{
+	"presets": ["@dmail/shared-config/babel-preset.js"]
+}
