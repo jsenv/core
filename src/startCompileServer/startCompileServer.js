@@ -24,6 +24,13 @@ const createIndexService = ({ indexPathname }) => {
   }
 }
 
+/*
+
+j'aimerai créer un truc genre qui fait comme si c'était un filesystem
+mais le maintient à jour
+voir même pars du principe qu'il est faux et écrit dessus
+*/
+
 export const startCompileServer = ({
   url,
   location,
