@@ -1,178 +1,256 @@
+// dynamic may not be the right name, maybe derived would be better
+
 // https://github.com/jsenv/core/blob/master/src/api/util/store.js
 
-import cuid from "cuid"
-import { createAction, all, passed } from "@dmail/action"
 import path from "path"
-import { mtimeValidator } from "./mtimeValidator.js"
-import { eTagValidator, createEtag } from "./eTagValidator.js"
+import fs from "fs"
+import cuid from "cuid"
+import { createAction, all } from "@dmail/action"
+// we use eTag as cache invalidation mecanism
+// because mtime cannot be trusted due to git, system clock, etc...
+import { createEtag } from "./createEtag.js"
+import { createDebounceSelfWithMemoize } from "./debounceSelf.js"
+import { writeFileFromString } from "../../writeFileFromString.js"
 
-// a given function is forced to wait for any previous function call to be resolved
-const createLock = () => {
-  const pendings = []
-  let locked = false
+const getFileContentOr = (location, orValue) => {
+  const action = createAction()
 
-  const monitorCall = (fn) => {
-    locked = true
-    return passed(fn()).then(() => {
-      locked = false
-      if (pendings.length > 0) {
-        const { action, fn } = pendings.shift()
-        action.pass(monitorCall(fn))
+  fs.readFile(location, (error, buffer) => {
+    if (error) {
+      if (error.code === "ENOENT") {
+        action.pass(orValue)
+      } else {
+        throw error
       }
-    })
-  }
-
-  const callAsap = (fn) => {
-    if (locked) {
-      const action = createAction()
-      pendings.push({ action, fn })
-      return action
+    } else {
+      action.pass(String(buffer))
     }
-    return monitorCall(fn)
-  }
+  })
 
-  return { callAsap }
+  return action
 }
 
-const lockMap = new WeakMap()
-const getLockForFile = (file) => {
-  if (lockMap.has(file)) {
-    return lockMap.get(file)
-  }
-  const lock = createLock()
-  lockMap.set(file, lock)
-  return lock
+const getFileContent = () => {
+  const action = createAction()
+
+  fs.readFile(location, (error, buffer) => {
+    if (error) {
+      throw error
+    } else {
+      action.pass(String(buffer))
+    }
+  })
+
+  return action
 }
 
-const getFileContentOr = () => {}
+const ressourceMap = new WeakMap()
+const debounceRessource = () => {
+  return createDebounceSelfWithMemoize({
+    read: (file) => ressourceMap.get(file),
+    write: (file, memoizedFn) => ressourceMap.set(file, memoizedFn),
+  })
+}
 
-const setFileContent = () => {}
+export const readFileCache = ({ location, folder, dynamicMeta, trackHit = true, generate }) => {
+  const staticLocation = location
+  // folder is the folder where all staticLocation cached version will be written
+  // folder/branches.json is used to keep some information about the cached version
+  // such as when they were generated, from which file eTag etc...
+  const branchesLocation = `${folder}/branches.json`
 
-export const readFileCache = ({
-  folder,
-  location,
-  data,
-  trackHit = true,
-  strategy = "eTag",
-  generate,
-}) => {
-  const branchesPath = `${folder}/branches.json`
-  const branchLock = getLockForFile(branchesPath)
-
-  if (strategy !== "eTag" && strategy !== "mtime") {
-    throw new Error(`unexpected ${strategy} strategy, must be eTag or mtime`)
+  const getDynamicLocation = ({ branch }) => {
+    return `${folder}/${branch.name}/${path.basename(location)}`
   }
 
-  const getBranches = () => getFileContentOr(branchesPath, "[]").then(JSON.parse)
-
-  const getBranch = (branches) => {
-    const matchingBranch = branches.find((branch) => {
-      return branch.data === data
-    })
-
-    if (matchingBranch) {
-      return {
-        branch: matchingBranch,
-        branchStatus: "old",
-      }
-    }
-    const newBranch = {
-      name: cuid(),
-      data,
-    }
-    branches.push(newBranch)
-    return {
-      branch: newBranch,
-      branchStatus: "new",
-    }
+  const getAssetLocation = ({ branch, asset }) => {
+    return `${folder}/${branch.name}/${asset.name}`
   }
 
-  const getEntry = ({ staticLocation, dynamicLocation, branch }) => {
-    if (strategy === "eTag") {
-      // si la branche à des assets
-      // chaque assets doit aussi vérifier la stratégie
-      return eTagValidator({
-        staticLocation,
-        dynamicLocation,
-        eTag: branch.eTag,
-      })
-    }
-    if (strategy === "mtime") {
-      return mtimeValidator({
-        staticLocation,
-        dynamicLocation,
-      })
-    }
-  }
-
-  return branchLock.callAsap(() => {
-    getBranches()
+  const getCache = () => {
+    return getFileContentOr(branchesLocation, "[]")
+      .then(JSON.parse)
       .then((branches) => {
-        let { branch, branchStatus } = getBranch(branches)
-        const staticLocation = location
-        const dynamicFolder = `${folder}/${branch.name}`
-        const dynamicLocation = `${dynamicFolder}/${path.basename(location)}`
+        const matchingBranch = branches.find((branch) => {
+          return JSON.stringify(branch.dynamicMeta) === JSON.stringify(dynamicMeta)
+        })
+        return {
+          branches,
+          branch: matchingBranch || {
+            name: cuid(),
+          },
+          status: matchingBranch ? "old" : "new",
+        }
+      })
+  }
 
-        return getEntry({ staticLocation, dynamicLocation, branch }).then((entry) => {
-          if (entry.valid) {
+  const readCache = ({ branch, status }) => {
+    if (status === "new") {
+      return getFileContent(staticLocation).then((content) => {
+        return {
+          valid: false,
+          reason: `no cache matching ${dynamicMeta}`,
+          staticContent: content,
+        }
+      })
+    }
+
+    return all([
+      getFileContent(staticLocation).then((content) => {
+        const actual = createEtag(content)
+        const expected = branch.staticMeta.eTag
+        if (actual === expected) {
+          return {
+            valid: true,
+            reason: `eTag matching on file ${staticLocation}`,
+            content,
+          }
+        }
+        return {
+          valid: false,
+          reason: `eTag mismatch on file ${staticLocation}`,
+          content,
+        }
+      }),
+      ...branch.assets.map((asset) => {
+        const assetLocation = getAssetLocation({ branch, asset })
+        return getFileContentOr(assetLocation, null).then((content) => {
+          if (content === null) {
             return {
-              branches,
-              branch,
-              branchStatus,
-              content: entry.content,
+              valid: false,
+              reason: `asset not found ${assetLocation}`,
             }
           }
-          if (branchStatus === "old") {
-            branchStatus = "modified"
+          const actual = createEtag(content)
+          const expected = asset.eTag
+          if (actual === expected) {
+            return {
+              valid: true,
+              reason: `eTag matching on asset ${assetLocation}`,
+              content,
+            }
           }
-          return generate(staticLocation).then(({ content, assets = [] }) => {
-            branch.eTag = createEtag(content)
-            // il faudrait aussi écrire les assets que retourne generate
-            // pour qu'on check que les assets existe toujours lorsqu'on valide que le cache est valide ?
-            // il faut alors aussi mettre assets eTags pour qu'on check que les assets présents sont bons
+          return {
+            valid: false,
+            reason: `eTag mismatch on asset ${assetLocation}`,
+            content,
+          }
+        })
+      }),
+    ]).then(([dynamicEntry, ...assetEntries]) => {
+      const invalidReason = dynamicEntry.valid
+        ? assetEntries.find((asset) => asset.valid === false)
+        : assetEntries.reason
 
-            return all([
-              setFileContent(dynamicLocation, content),
-              ...assets.map(({ name, content }) =>
-                setFileContent(`${dynamicFolder}/${name}`, content),
-              ),
-            ]).then(() => {
-              return {
-                branches,
-                branch,
-                branchStatus,
-                content,
-              }
-            })
-          })
+      if (invalidReason) {
+        return {
+          valid: false,
+          reason: invalidReason,
+          staticContent: dynamicEntry.staticContent,
+        }
+      }
+      const dynamicLocation = getDynamicLocation({ branch })
+      return getFileContentOr(dynamicLocation, null).then((content) => {
+        if (content === null) {
+          return {
+            valid: false,
+            reason: `dynamic file not found ${dynamicLocation}`,
+            staticContent: dynamicEntry.content,
+          }
+        }
+        return {
+          valid: true,
+          reason: "main and assets all valid",
+          staticContent: dynamicEntry.content,
+          dynamicContent: content,
+          assets: branch.assets.map(({ name }, index) => {
+            return {
+              name,
+              content: assetEntries[index].content,
+            }
+          }),
+        }
+      })
+    })
+  }
+
+  const getData = (cache) => {
+    return readCache(cache).then(({ valid, staticContent, dynamicContent, assets }) => {
+      if (valid) {
+        return {
+          status: "cache",
+          staticContent,
+          dynamicContent,
+          assets,
+        }
+      }
+      return generate(staticContent).then(({ content: dynamicContent, assets = [] }) => {
+        return all([
+          writeFileFromString({
+            location: getDynamicLocation(cache),
+            string: dynamicContent,
+          }),
+          ...assets.map((asset) =>
+            writeFileFromString({
+              location: getAssetLocation({ branch: cache.branch, asset }),
+              string: asset.content,
+            }),
+          ),
+        ]).then(() => {
+          return {
+            status: "fresh",
+            staticContent,
+            dynamicContent,
+            assets,
+          }
         })
       })
-      .then(({ branches, branch, branchStatus }) => {
-        if (branchStatus === "old" && !trackHit) {
-          return
-        }
+    })
+  }
 
-        branch.matchCount++
-        branch.lastMatchMs = Number(Date.now())
+  const updateCache = ({ branches, branch }, data) => {
+    if (data.status === "cache" && !trackHit) {
+      return
+    }
+    // must be updated because trackhit or because data are fresh
+    const isFresh = data.status === "fresh"
 
-        const compareBranch = (branchA, branchB) => {
-          const lastMatchDiff = branchA.lastMatchMs - branchB.lastMatchMs
+    Object.assign(branch, {
+      lastModifiedMs: Number(Date.now()),
+      lastMatchMs: Number(Date.now()),
+      assets: data.assets.map(({ name, content }) => {
+        return { name, eTag: createEtag(content) }
+      }),
+      staticMeta: isFresh ? { eTag: createEtag(data.dynamicContent) } : branch.staticMeta,
+      matchCount: isFresh ? 1 : branch.matchCount + 1,
+    })
 
-          if (lastMatchDiff === 0) {
-            return branchA.matchCount - branchB.matchCount
-          }
-          return lastMatchDiff
-        }
+    if (isFresh) {
+      branches.push(branch)
+    }
 
-        const sortedBranches = branches.sort(compareBranch)
-        const branchesSource = JSON.stringify(sortedBranches, null, "\t")
-        const updateAction = setFileContent(branchesPath, branchesSource)
+    const compareBranch = (branchA, branchB) => {
+      const lastMatchDiff = branchA.lastMatchMs - branchB.lastMatchMs
 
-        if (branchStatus === "modified" || branchStatus === "new") {
-          return updateAction
-        }
-        // no need to return updateAction in case we trackHit
-        // because it's not an problem if matchCount & lastMatchMs are not in sync
+      if (lastMatchDiff === 0) {
+        return branchA.matchCount - branchB.matchCount
+      }
+      return lastMatchDiff
+    }
+    branches = branches.sort(compareBranch)
+    const branchesSource = JSON.stringify(branches, null, "\t")
+
+    return writeFileFromString({
+      location: branchesLocation,
+      string: branchesSource,
+    })
+  }
+
+  return debounceRessource(() => {
+    return getCache().then((cache) => {
+      return getData(cache).then((data) => {
+        return updateCache(cache, data).then(() => data)
       })
-  })
+    })
+  })(branchesLocation)
 }
