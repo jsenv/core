@@ -1,6 +1,6 @@
 import crypto from "crypto"
 
-export const createEtag = (string) => {
+export const createETag = (string) => {
   if (string.length === 0) {
     // fast-path empty
     return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"'
