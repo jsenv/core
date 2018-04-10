@@ -1,30 +1,19 @@
 import fs from "fs"
+import rimraf from "rimraf"
 import { createAction } from "@dmail/action"
 
-export const getFileContentOr = (location, orValue) => {
+export const isFileNotFoundError = (error) => error && error.code === "ENOENT"
+
+export const readFileAsString = ({ location, errorHandler }) => {
   const action = createAction()
 
   fs.readFile(location, (error, buffer) => {
     if (error) {
-      if (error.code === "ENOENT") {
-        action.pass(orValue)
+      if (errorHandler && errorHandler(error)) {
+        action.fail(error)
       } else {
         throw error
       }
-    } else {
-      action.pass(String(buffer))
-    }
-  })
-
-  return action
-}
-
-export const getFileContent = () => {
-  const action = createAction()
-
-  fs.readFile(location, (error, buffer) => {
-    if (error) {
-      throw error
     } else {
       action.pass(String(buffer))
     }
@@ -51,6 +40,20 @@ export const removeFile = (location) => {
   const action = createAction()
 
   fs.unlink(location, (error) => {
+    if (error) {
+      throw error
+    } else {
+      action.pass()
+    }
+  })
+
+  return action
+}
+
+export const removeFolderDeep = (location) => {
+  const action = createAction()
+
+  rimraf(location, (error) => {
     if (error) {
       throw error
     } else {

@@ -1,59 +1,40 @@
-import { all } from "@dmail/action"
-import { getCacheLocation, readCache, readBranch } from "./cache.js"
-import { readFolder } from "./helpers.js"
+import { JSON_FILE } from "./cache.js"
+import { all, passed } from "@dmail/action"
+import { readFileAsString, isFileNotFoundError } from "./helpers.js"
+import { resolvePath } from "../../resolvePath.js"
+import { createETag } from "./createETag.js"
+import { list } from "./list"
 
-export const inspect = ({ rootLocation, relativeLocation }) => {
-  const cacheAbsoluteLocation = getCacheLocation({
-    rootLocation,
-    relativeLocation,
-  })
+export const inspect = ({ rootLocation, cacheFolderRelativeLocation }) => {
+  const cacheFolderLocation = resolvePath(rootLocation, cacheFolderRelativeLocation)
 
-  return all([readCache(cacheAbsoluteLocation), readFolder(cacheAbsoluteLocation)]).then(
-    ([cache, files]) => {
-      const { branches } = cache
-
-      return all(
-        branches.map((branch) => readBranch({ cache, branch, allowMissingStatic: true })),
-      ).then((branchesData) => {
-        const validBranches = branches.filter((branch, index) => branchesData[index].valid)
-
-        const getDynamicFileBranch = (file) => {
-          return branches.find((branch) => branch.name === file)
-        }
-        const getAssetBranch = (file) => {
-          return validBranches.find((branch) => branch.assets.some(({ name }) => name === file))
-        }
-        const branchIsValid = (branch) => {
-          const index = branches.indexOf(branch)
-          return branchesData[index].valid
-        }
-
-        return {
-          cache,
-          files,
-          filesStatus: files.map((file) => {
-            const dynamicFileBranch = getDynamicFileBranch(file)
-            if (dynamicFileBranch) {
-              return `dynamic-file-${
-                branchIsValid(dynamicFileBranch) ? "valid" : "invalid"
-              }-reference`
-            }
-            const assetBranch = getAssetBranch(file)
-            if (assetBranch) {
-              return `asset-${branchIsValid(dynamicFileBranch) ? "valid" : "invalid"}-reference`
-            }
-            return "no-reference"
-          }),
-          branches,
-          branchesStatus: branches.map((branch, index) => {
-            const { valid, reason } = branchesData[index]
-            if (valid) {
-              return "valid"
-            }
-            return reason
-          }),
-        }
+  return list({ rootLocation, cacheFolderRelativeLocation }).then((folders) => {
+    return all(
+      folders.map((folder) => {
+        return readFileAsString({ location: resolvePath(cacheFolderLocation, folder, JSON_FILE) })
+          .then(JSON.parse)
+          .then((cache) => {
+            const inputLocation = resolvePath(rootLocation, cache.inputRelativeLocation)
+            return readFileAsString({
+              location: inputLocation,
+              errorHandler: isFileNotFoundError,
+            }).then(
+              (content) => {
+                const actual = createETag(content)
+                const expected = cache.inputETag
+                if (actual !== expected) {
+                  return "input-file-modified"
+                }
+                return "valid"
+              },
+              () => passed("input-file-missing"),
+            )
+          })
+      }),
+    ).then((foldersStatus) => {
+      return foldersStatus.map((status, index) => {
+        return { folder: folders[index], status }
       })
-    },
-  )
+    })
+  })
 }
