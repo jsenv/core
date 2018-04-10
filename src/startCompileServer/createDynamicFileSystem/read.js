@@ -1,13 +1,16 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/store.js
 
-import { JSON_FILE } from "./cache.js"
 import cuid from "cuid"
 import path from "path"
 import { all, passed } from "@dmail/action"
-import { resolvePath } from "../../resolvePath.js"
-import { readFileAsString, isFileNotFoundError } from "./helpers.js"
-import { createETag } from "./createETag.js"
-import { writeFileFromString } from "../../writeFileFromString.js"
+import { locate, JSON_FILE } from "./cache.js"
+import {
+  resolvePath,
+  readFileAsString,
+  isFileNotFoundError,
+  createETag,
+  writeFileFromString,
+} from "./helpers.js"
 import { enqueueCallByArgs } from "./enqueueCall.js"
 
 const ressourceMap = new WeakMap()
@@ -37,6 +40,8 @@ export const read = ({
     inputRelativeLocation,
   )
 
+  const inputLocation = locate(inputRelativeLocation, rootLocation)
+
   const getCacheDataLocation = () => resolvePath(cacheFolderLocation, JSON_FILE)
 
   const getBranchLocation = (branch) => resolvePath(cacheFolderLocation, branch.name)
@@ -47,10 +52,7 @@ export const read = ({
   const getOutputAssetLocation = (branch, asset) =>
     resolvePath(getBranchLocation(branch), asset.name)
 
-  const getInputLocation = () => resolvePath(rootLocation, inputRelativeLocation)
-
   const readOutputCache = ({ branch, cache }) => {
-    const inputLocation = getInputLocation()
     return readFileAsString({ location: inputLocation }).then((input) => {
       const actual = createETag(input)
       const expected = cache.eTag
@@ -170,7 +172,7 @@ export const read = ({
       })
     }
 
-    return readFileAsString({ location: getInputLocation() }).then((input) => {
+    return readFileAsString({ location: inputLocation }).then((input) => {
       return generate(input).then((result) => {
         return {
           status: "generated",
@@ -195,6 +197,10 @@ export const read = ({
       inputRelativeLocation,
       inputETag: isCached ? cache.inputETag : createETag(data.output),
     })
+
+    if (inputLocation !== resolvePath(rootLocation, inputRelativeLocation)) {
+      cache.inputLocation = inputLocation
+    }
 
     Object.assign(branch, {
       matchCount: isCached ? branch.matchCount + 1 : 1,

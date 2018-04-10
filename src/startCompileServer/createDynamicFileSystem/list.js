@@ -1,7 +1,6 @@
 import { JSON_FILE } from "./cache.js"
 import { all } from "@dmail/action"
-import { readFolder } from "./helpers.js"
-import { resolvePath } from "../../resolvePath.js"
+import { resolvePath, readFolder } from "./helpers.js"
 
 export const list = ({ rootLocation, cacheFolderRelativeLocation }) => {
   const cacheFolderLocation = resolvePath(rootLocation, cacheFolderRelativeLocation)

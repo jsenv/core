@@ -1,8 +1,6 @@
-import { JSON_FILE } from "./cache.js"
+import { locate, JSON_FILE } from "./cache.js"
 import { all, passed } from "@dmail/action"
-import { readFileAsString, isFileNotFoundError } from "./helpers.js"
-import { resolvePath } from "../../resolvePath.js"
-import { createETag } from "./createETag.js"
+import { resolvePath, readFileAsString, isFileNotFoundError, createETag } from "./helpers.js"
 import { list } from "./list"
 
 export const inspect = ({ rootLocation, cacheFolderRelativeLocation }) => {
@@ -14,7 +12,7 @@ export const inspect = ({ rootLocation, cacheFolderRelativeLocation }) => {
         return readFileAsString({ location: resolvePath(cacheFolderLocation, folder, JSON_FILE) })
           .then(JSON.parse)
           .then((cache) => {
-            const inputLocation = resolvePath(rootLocation, cache.inputRelativeLocation)
+            const inputLocation = locate(cache.inputRelativeLocation, rootLocation)
             return readFileAsString({
               location: inputLocation,
               errorHandler: isFileNotFoundError,

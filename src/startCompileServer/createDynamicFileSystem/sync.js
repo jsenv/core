@@ -1,7 +1,6 @@
 import { all } from "@dmail/action"
 import { inspect } from "./inspect.js"
-import { removeFolderDeep } from "./helpers.js"
-import { resolvePath } from "../../resolvePath.js"
+import { resolvePath, removeFolderDeep } from "./helpers.js"
 
 export const sync = ({ rootLocation, cacheFolderRelativeLocation }) => {
   const cacheFolderLocation = resolvePath(rootLocation, cacheFolderRelativeLocation)

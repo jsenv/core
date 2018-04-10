@@ -1,6 +1,5 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 
-import path from "path"
 import { passed } from "@dmail/action"
 import { transform } from "babel-core"
 import moduleFormats from "js-module-formats"
@@ -27,10 +26,6 @@ const defaultOptions = {
 }
 
 export const createCompiler = ({ ...compilerOptions } = {}) => {
-  const locateFile = ({ location, relativeLocation }) => {
-    return normalizeSeparation(path.resolve(location, relativeLocation))
-  }
-
   const compile = ({ inputRelativeLocation, input, ...compileOptions }) => {
     // https://babeljs.io/docs/core-packages/#options
     const options = { ...defaultOptions, ...compilerOptions, ...compileOptions }
@@ -59,5 +54,5 @@ export const createCompiler = ({ ...compilerOptions } = {}) => {
     })
   }
 
-  return { compile, locateFile }
+  return { compile }
 }
