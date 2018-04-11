@@ -32,12 +32,12 @@ export const readFileAsString = ({ location, errorHandler }) => {
   fs.readFile(location, (error, buffer) => {
     if (error) {
       if (errorHandler && errorHandler(error)) {
-        action.fail(error)
+        action.pass({ error })
       } else {
         throw error
       }
     } else {
-      action.pass(String(buffer))
+      action.pass({ content: String(buffer) })
     }
   })
 

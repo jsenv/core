@@ -1,14 +1,15 @@
+import { passed, failed } from "@dmail/action"
 import { createResponseGenerator } from "../startServer/createResponseGenerator.js"
 import { createNodeRequestHandler, enableCORS } from "../startServer/createNodeRequestHandler.js"
 import { startServer } from "../startServer/startServer.js"
 import {
-  // convertFileSystemErrorToResponseProperties,
+  convertFileSystemErrorToResponseProperties,
   createFileService,
 } from "../startServer/createFileService.js"
 import { createCompiler } from "../compiler/createCompiler.js"
 import { URL } from "url"
 import path from "path"
-import { resolvePath } from "./createDynamicFileSystem/helpers.js"
+import { resolvePath, readFileAsString } from "./createDynamicFileSystem/helpers.js"
 import { read } from "./createDynamicFileSystem/index.js"
 
 const createIndexService = ({ indexPathname }) => {
@@ -96,16 +97,23 @@ export const startCompileServer = ({
   indexLocation = "index.html",
 }) => {
   const cacheFolderRelativeLocation = "build"
-  // const loaderRelativeLocation = 'createLoader.js'
+  const browserLoaderLocation = `node_modules/@dmail/module-loader/dist/src/browser/index.js`
+  const nodeLoaderLocation = `node_modules/@dmail/module-loader/dist/src/node/index.js`
 
   const handler = createResponseGenerator({
     services: [
       createIndexService({ indexPathname: indexLocation }),
       createFileService({
         include: ({ pathname }) => {
+          const relativeFilename = pathname.slice(1)
+
+          if (pathname === browserLoaderLocation || pathname === nodeLoaderLocation) {
+            return true
+          }
+
           const extname = path.extname(pathname)
           if (extname === ".js" || extname === ".mjs") {
-            if (pathname.startsWith(`/${cacheFolderRelativeLocation}/`)) {
+            if (relativeFilename.startsWith(`${cacheFolderRelativeLocation}/`)) {
               return true
             }
             return false
@@ -124,32 +132,62 @@ export const startCompileServer = ({
           return new URL(pathname, `file:///${location}/`)
         },
       }),
-      ({ method, url }) => {
+      ({ method, url, headers }) => {
         if (method !== "GET" && method !== "HEAD") {
           return { status: 501 }
         }
 
         const inputRelativeLocation = url.pathname.slice(1)
+        const cachedInputETag = headers.get("if-none-match")
+
         // si jamais y'a des erreurs filesystem pendant le read
         // faudrait les convertir en 404, 403 etc
-        // faudra aussi supporter si le client envoie des cache headers comme if-modified-since
+        // on fait pareil avec writeFileFromString
+        // et on est good :)
+
+        const errorSafeReadFileAsString = ({ location, errorHandler }) => {
+          return readFileAsString({
+            location,
+            errorHandler: () => true,
+          }).then(({ content, error }) => {
+            if (error) {
+              if (errorHandler && errorHandler(error)) {
+                return { error }
+              }
+              return failed(convertFileSystemErrorToResponseProperties(error))
+            }
+            return { content }
+          })
+        }
+
         return read({
+          readFileFromString: errorSafeReadFileAsString,
           rootLocation,
           inputRelativeLocation,
           cacheFolderRelativeLocation,
           generate: (input) => transform({ input }),
           outputMeta: {},
           trackHit: true,
-        }).then(({ output }) => {
-          return {
-            status: 200,
-            headers: {
-              "content-length": Buffer.byteLength(output),
-              "cache-control": "no-cache",
-            },
-            body: output,
-          }
-        })
+        }).then(
+          ({ status, output, inputETag }) => {
+            if (cachedInputETag && status === "cached") {
+              return {
+                status: 304,
+              }
+            }
+
+            return {
+              status: 200,
+              headers: {
+                Etag: inputETag,
+                "content-length": Buffer.byteLength(output),
+                "cache-control": "no-cache",
+              },
+              body: output,
+            }
+          },
+          (failureResponseProperties) => passed(failureResponseProperties),
+        )
       },
     ],
   })

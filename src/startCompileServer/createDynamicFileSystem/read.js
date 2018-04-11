@@ -27,6 +27,7 @@ const compareBranch = (branchA, branchB) => {
 }
 
 export const read = ({
+  inputETag,
   rootLocation,
   cacheFolderRelativeLocation,
   inputRelativeLocation,
@@ -52,14 +53,28 @@ export const read = ({
   const getOutputAssetLocation = (branch, asset) =>
     resolvePath(getBranchLocation(branch), asset.name)
 
-  const readOutputCache = ({ branch, cache }) => {
-    return readFileAsString({ location: inputLocation }).then((input) => {
-      const actual = createETag(input)
-      const expected = cache.eTag
-      if (actual !== expected) {
+  const readOutputCache = ({ branch, cache, statusOnly = false }) => {
+    return readFileAsString({ location: inputLocation }).then(({ content }) => {
+      const inputETag = createETag(content)
+      const cachedInputEtag = cache.inputETag
+
+      const data = {
+        input: content,
+        inputETag,
+      }
+
+      if (inputETag !== cachedInputEtag) {
         return {
+          ...data,
           status: `eTag modified on ${inputLocation} since it was cached`,
-          input,
+          cachedInputEtag,
+        }
+      }
+
+      if (statusOnly) {
+        return {
+          ...data,
+          status: "valid",
         }
       }
 
@@ -67,20 +82,15 @@ export const read = ({
       return readFileAsString({
         location: outputLocation,
         errorHandler: isFileNotFoundError,
-      }).then(
-        (output) => {
+      }).then(({ output, error }) => {
+        if (error) {
           return {
-            status: "valid",
-            input,
-            output,
-          }
-        },
-        () =>
-          passed({
+            ...data,
             status: `cache not found at ${outputLocation}`,
-            input,
-          }),
-      )
+          }
+        }
+        return { ...data, status: "valid", output }
+      })
     })
   }
 
@@ -90,44 +100,33 @@ export const read = ({
     return readFileAsString({
       location: outputAssetLocation,
       errorHandler: isFileNotFoundError,
-    }).then(
-      (content) => {
-        const actual = createETag(content)
-        const expected = asset.eTag
-        if (actual !== expected) {
-          return {
-            status: `unexpected ${asset.name} asset for ${inputRelativeLocation}: unexpected eTag`,
-            content,
-          }
-        }
+    }).then(({ content, error }) => {
+      if (error) {
         return {
-          status: "valid",
-          content,
-        }
-      },
-      () =>
-        passed({
           status: `asset file not found ${outputAssetLocation}`,
-        }),
-    )
-  }
-
-  const readBranch = ({ branch, cache }) => {
-    return all([
-      readOutputCache({ branch, cache }),
-      ...branch.outputAssets.map((outputAsset) => readOutputAssetCache({ branch, outputAsset })),
-    ]).then(([outputData, ...outputAssetsData]) => {
-      const data = {
-        input: outputData.input,
-        output: outputData.output,
-        outputAssets: branch.outputAssets.map(({ name }, index) => {
-          return {
-            name,
-            content: outputAssetsData[index].content,
-          }
-        }),
+        }
       }
 
+      const actual = createETag(content)
+      const expected = asset.eTag
+      if (actual !== expected) {
+        return {
+          status: `unexpected ${asset.name} asset for ${inputRelativeLocation}: unexpected eTag`,
+          content,
+        }
+      }
+      return {
+        status: "valid",
+        content,
+      }
+    })
+  }
+
+  const readBranch = ({ branch, cache, statusOnly }) => {
+    return all([
+      readOutputCache({ branch, cache, statusOnly }),
+      ...branch.outputAssets.map((outputAsset) => readOutputAssetCache({ branch, outputAsset })),
+    ]).then(([outputData, ...outputAssetsData]) => {
       let computedStatus
       if (outputData.status === "valid") {
         const invalidOutputAsset = outputAssetsData.find(
@@ -139,8 +138,14 @@ export const read = ({
       }
 
       return {
+        ...outputData,
+        outputAssets: branch.outputAssets.map(({ name }, index) => {
+          return {
+            name,
+            content: outputAssetsData[index].content,
+          }
+        }),
         status: computedStatus,
-        data,
       }
     })
   }
@@ -153,20 +158,25 @@ export const read = ({
     const cachedBranch = cache.branches.find((branch) => branchIsValid(branch))
     if (cachedBranch) {
       const branch = cachedBranch
-      return readBranch({ cache, branch }).then(({ status, data }) => {
-        if (status === "valid") {
+      return readBranch({ cache, branch, statusOnly: Boolean(inputETag) }).then((data) => {
+        if (data.status === "valid") {
           return {
-            status: "cached",
             branch,
-            data,
+            data: {
+              ...data,
+              status: "cached",
+            },
           }
         }
-        const { input } = data
-        return generate(input).then((result) => {
+        return generate(data.input).then((result) => {
           return {
-            status: "updated",
             branch,
-            data: { input, ...result },
+            data: {
+              ...data,
+              status: "updated",
+              inputETag: createETag(data.input),
+              ...result,
+            },
           }
         })
       })
@@ -175,16 +185,21 @@ export const read = ({
     return readFileAsString({ location: inputLocation }).then((input) => {
       return generate(input).then((result) => {
         return {
-          status: "generated",
           branch: { name: cuid() },
-          data: { input, ...result },
+          data: {
+            status: "generated",
+            input,
+            inputETag: createETag(input),
+            ...result,
+          },
         }
       })
     })
   }
 
-  const update = ({ cache, status, branch, data }) => {
+  const update = ({ cache, branch, data }) => {
     const { branches } = cache
+    const { status } = data
     const isCached = status === "cached"
     const isNew = status === "generated"
     const isUpdated = status === "updated"
@@ -195,7 +210,7 @@ export const read = ({
 
     Object.assign(cache, {
       inputRelativeLocation,
-      inputETag: isCached ? cache.inputETag : createETag(data.output),
+      inputETag: isCached ? cache.inputETag : data.inputETag,
     })
 
     if (inputLocation !== resolvePath(rootLocation, inputRelativeLocation)) {
@@ -251,23 +266,28 @@ export const read = ({
       location: cacheDataLocation,
       errorHandler: isFileNotFoundError,
     })
-      .then(
-        (content) => {
-          const cache = JSON.parse(content)
-          if (cache.inputRelativeLocation !== inputRelativeLocation) {
-            throw new Error(
-              `${JSON_FILE} corrupted: unexpected inputRelativeLocation ${
-                cache.inputRelativeLocation
-              }, it must be ${inputRelativeLocation}`,
-            )
+      .then(({ content, error }) => {
+        if (error) {
+          return {
+            inputRelativeLocation,
+            branches: [],
           }
-          return cache
-        },
-        () => passed({ inputRelativeLocation, branches: [] }),
-      )
+        }
+        const cache = JSON.parse(content)
+        if (cache.inputRelativeLocation !== inputRelativeLocation) {
+          throw new Error(
+            `${JSON_FILE} corrupted: unexpected inputRelativeLocation ${
+              cache.inputRelativeLocation
+            }, it must be ${inputRelativeLocation}`,
+          )
+        }
+        return cache
+      })
       .then((cache) => {
-        return getFromCacheOrGenerate(cache).then(({ status, branch, data }) => {
-          return update({ cache, status, branch, data }).then(() => data)
+        return getFromCacheOrGenerate(cache).then(({ branch, data }) => {
+          return update({ cache, branch, data }).then(() => {
+            return data
+          })
         })
       })
   }
