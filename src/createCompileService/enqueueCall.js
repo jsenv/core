@@ -7,18 +7,19 @@ const createExecutionQueue = () => {
   const enqueue = (fn, ...args) => {
     if (running) {
       const action = createAction()
-      pendings.push({ action, fn, ...args })
+      pendings.push({ action, fn, args })
       return action
     }
     running = true
     const action = passed(fn(...args))
-    action.then(() => {
+    const onPassedOrFailed = () => {
       running = false
       if (pendings.length > 0) {
-        const { action, fn, ...args } = pendings.shift()
+        const { action, fn, args } = pendings.shift()
         action.pass(enqueue(fn, ...args))
       }
-    })
+    }
+    action.then(onPassedOrFailed, onPassedOrFailed)
     return action
   }
 
@@ -36,6 +37,6 @@ export const enqueueCallByArgs = ({ fn, restoreByArgs, memoizeArgs }) => (...arg
     return memoizedEnqueue(fn, ...args)
   }
   const enqueue = createExecutionQueue()
-  memoizeArgs(...args, enqueue)
+  memoizeArgs(enqueue, ...args)
   return enqueue(fn, ...args)
 }

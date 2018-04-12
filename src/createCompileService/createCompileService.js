@@ -3,19 +3,16 @@
 import cuid from "cuid"
 import path from "path"
 import { all, passed } from "@dmail/action"
-import { locate, JSON_FILE } from "./cache.js"
-import {
-  resolvePath,
-  readFileAsString,
-  isFileNotFoundError,
-  createETag,
-  writeFileFromString,
-} from "./helpers.js"
+import { JSON_FILE } from "./cache.js"
+import { resolvePath, isFileNotFoundError, createETag } from "./helpers.js"
+import { locateFile } from "./locateFile.js"
+import { readFile } from "./readFile.js"
+import { writeFile } from "./writeFile.js"
 import { enqueueCallByArgs } from "./enqueueCall.js"
 
 const ressourceMap = new WeakMap()
 const restoreByArgs = (file) => ressourceMap.get(file)
-const memoizeArgs = (file, memoizedFn) => ressourceMap.set(file, memoizedFn)
+const memoizeArgs = (memoizedFn, file) => ressourceMap.set(file, memoizedFn)
 
 const compareBranch = (branchA, branchB) => {
   const lastMatchDiff = branchA.lastMatchMs - branchB.lastMatchMs
@@ -26,24 +23,35 @@ const compareBranch = (branchA, branchB) => {
   return lastMatchDiff
 }
 
-export const read = ({
-  readFile = readFileAsString,
-  writeFile = writeFileFromString,
-  inputETag,
+export const createCompileService = ({
   rootLocation,
   cacheFolderRelativeLocation,
-  inputRelativeLocation,
-  generate,
   outputMeta = {},
+  compile,
   trackHit = false,
-}) => {
+}) => ({ method, url, headers }) => {
+  if (method !== "GET" && method !== "HEAD") {
+    return { status: 501 }
+  }
+
+  // we could also just create something inside of dynamicfilesystem so that it works with http api
+  const inputRelativeLocation = url.pathname.slice(1)
+
+  // je crois, que, normalement
+  // il faudrait "aider" le browser pour que tout ça ait du sens
+  // genre lui envoyer une redirection vers le fichier en cache
+  // genre renvoyer 201 vers le cache lorsqu'il a été update ou créé
+  // https://developer.mozilla.org/fr/docs/Web/HTTP/Status/201
+  // renvoyer 302 ou 307 lorsque le cache existe
+  // l'intérêt c'est que si jamais le browser fait une requête vers le cache
+  // il sait à quoi ça correspond vraiment
+  // par contre ça fait 2 requête http
+
   const cacheFolderLocation = resolvePath(
     rootLocation,
     cacheFolderRelativeLocation,
     inputRelativeLocation,
   )
-
-  const inputLocation = locate(inputRelativeLocation, rootLocation)
 
   const getCacheDataLocation = () => resolvePath(cacheFolderLocation, JSON_FILE)
 
@@ -55,28 +63,35 @@ export const read = ({
   const getOutputAssetLocation = (branch, asset) =>
     resolvePath(getBranchLocation(branch), asset.name)
 
-  const readOutputCache = ({ branch, cache, statusOnly = false }) => {
+  const readOutputCache = ({ inputLocation, branch, cache }) => {
     return readFile({ location: inputLocation }).then(({ content }) => {
       const inputETag = createETag(content)
-      const cachedInputEtag = cache.inputETag
-
       const data = {
         input: content,
         inputETag,
       }
 
+      if (headers.has("if-none-match")) {
+        const requestHeaderETag = headers.get("if-none-match")
+        if (inputETag !== requestHeaderETag) {
+          return {
+            ...data,
+            status: `eTag modified on ${inputLocation} since it was cached by client`,
+            cachedInputEtag: requestHeaderETag,
+          }
+        }
+        return {
+          ...data,
+          status: "valid",
+        }
+      }
+
+      const cachedInputEtag = cache.inputETag
       if (inputETag !== cachedInputEtag) {
         return {
           ...data,
           status: `eTag modified on ${inputLocation} since it was cached`,
           cachedInputEtag,
-        }
-      }
-
-      if (statusOnly) {
-        return {
-          ...data,
-          status: "valid",
         }
       }
 
@@ -124,9 +139,9 @@ export const read = ({
     })
   }
 
-  const readBranch = ({ branch, cache, statusOnly }) => {
+  const readBranch = ({ inputLocation, branch, cache }) => {
     return all([
-      readOutputCache({ branch, cache, statusOnly }),
+      readOutputCache({ inputLocation, branch, cache }),
       ...branch.outputAssets.map((outputAsset) => readOutputAssetCache({ branch, outputAsset })),
     ]).then(([outputData, ...outputAssetsData]) => {
       let computedStatus
@@ -152,7 +167,7 @@ export const read = ({
     })
   }
 
-  const getFromCacheOrGenerate = ({ cache }) => {
+  const getFromCacheOrGenerate = ({ inputLocation, cache }) => {
     const branchIsValid = (branch) => {
       return JSON.stringify(branch.outputMeta) === JSON.stringify(outputMeta)
     }
@@ -160,7 +175,11 @@ export const read = ({
     const cachedBranch = cache.branches.find((branch) => branchIsValid(branch))
     if (cachedBranch) {
       const branch = cachedBranch
-      return readBranch({ cache, branch, statusOnly: Boolean(inputETag) }).then((data) => {
+      return readBranch({
+        inputLocation,
+        cache,
+        branch,
+      }).then((data) => {
         if (data.status === "valid") {
           return {
             branch,
@@ -170,7 +189,7 @@ export const read = ({
             },
           }
         }
-        return generate(data.input).then((result) => {
+        return compile({ input: data.input, inputRelativeLocation }).then((result) => {
           return {
             branch,
             data: {
@@ -185,11 +204,11 @@ export const read = ({
     }
 
     return readFile({ location: inputLocation }).then((input) => {
-      return generate(input).then((result) => {
+      return compile({ input, inputRelativeLocation }).then((result) => {
         return {
           branch: { name: cuid() },
           data: {
-            status: "generated",
+            status: "created",
             input,
             inputETag: createETag(input),
             ...result,
@@ -199,11 +218,11 @@ export const read = ({
     })
   }
 
-  const update = ({ cache, branch, data }) => {
+  const update = ({ inputLocation, cache, branch, data }) => {
     const { branches } = cache
     const { status } = data
     const isCached = status === "cached"
-    const isNew = status === "generated"
+    const isNew = status === "created"
     const isUpdated = status === "updated"
 
     if (isCached && !trackHit) {
@@ -264,33 +283,57 @@ export const read = ({
   }
 
   const read = (cacheDataLocation) => {
-    return readFile({
-      location: cacheDataLocation,
-      errorHandler: isFileNotFoundError,
-    })
-      .then(({ content, error }) => {
-        if (error) {
+    return locateFile(inputRelativeLocation, rootLocation)
+      .then((inputLocation) => {
+        return readFile({
+          location: cacheDataLocation,
+          errorHandler: isFileNotFoundError,
+        })
+          .then(({ content, error }) => {
+            if (error) {
+              return {
+                inputRelativeLocation,
+                branches: [],
+              }
+            }
+            const cache = JSON.parse(content)
+            if (cache.inputRelativeLocation !== inputRelativeLocation) {
+              throw new Error(
+                `${JSON_FILE} corrupted: unexpected inputRelativeLocation ${
+                  cache.inputRelativeLocation
+                }, it must be ${inputRelativeLocation}`,
+              )
+            }
+            return cache
+          })
+          .then((cache) => {
+            return getFromCacheOrGenerate({ inputLocation, cache }).then(({ branch, data }) => {
+              return update({ inputLocation, cache, branch, data }).then(() => {
+                return data
+              })
+            })
+          })
+      })
+      .then(({ status, output, inputETag }) => {
+        if (headers.has("if-none-match") && status === "cached") {
           return {
-            inputRelativeLocation,
-            branches: [],
+            status: 304,
+            headers: {
+              "cache-control": "no-store",
+            },
           }
         }
-        const cache = JSON.parse(content)
-        if (cache.inputRelativeLocation !== inputRelativeLocation) {
-          throw new Error(
-            `${JSON_FILE} corrupted: unexpected inputRelativeLocation ${
-              cache.inputRelativeLocation
-            }, it must be ${inputRelativeLocation}`,
-          )
+
+        return {
+          status: 200,
+          headers: {
+            Etag: inputETag,
+            "content-length": Buffer.byteLength(output),
+            "content-type": "application/javascript",
+            "cache-control": "no-store",
+          },
+          body: output,
         }
-        return cache
-      })
-      .then((cache) => {
-        return getFromCacheOrGenerate(cache).then(({ branch, data }) => {
-          return update({ cache, branch, data }).then(() => {
-            return data
-          })
-        })
       })
   }
 

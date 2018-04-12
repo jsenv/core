@@ -1,7 +1,7 @@
 import fs from "fs"
 import path from "path"
 import { createAction, passed } from "@dmail/action"
-import { createETag } from "../startCompileServer/createDynamicFileSystem/helpers.js"
+import { createETag } from "../createCompileService/helpers.js"
 
 const mimetype = (fileURL) => {
   const defaultMimetype = "application/octet-stream"
