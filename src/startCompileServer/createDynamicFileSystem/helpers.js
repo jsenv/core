@@ -100,21 +100,29 @@ const getFileLStat = (path) => {
   return action
 }
 
-export const createFolder = (path) => {
+const createFolder = ({ location, errorHandler }) => {
   const action = createAction()
 
-  fs.mkdir(path, (error) => {
+  fs.mkdir(location, (error) => {
     if (error) {
       // au cas ou deux script essayent de crée un dossier peu importe qui y arrive c'est ok
       if (error.code === "EEXIST") {
-        return getFileLStat(path).then((stat) => {
+        return getFileLStat(location).then((stat) => {
           if (stat.isDirectory()) {
             return action.pass()
           }
-          throw error
+          if (errorHandler && errorHandler(error)) {
+            action.pass({ error })
+          } else {
+            throw error
+          }
         })
       }
-      throw error
+      if (errorHandler && errorHandler(error)) {
+        action.pass({ error })
+      } else {
+        throw error
+      }
     } else {
       action.pass()
     }
@@ -123,8 +131,8 @@ export const createFolder = (path) => {
   return action
 }
 
-const createFolderUntil = (path) => {
-  path = normalizeSeparation(path)
+const createFolderUntil = ({ location, errorHandler }) => {
+  let path = normalizeSeparation(location)
   // remove first / in case path starts with / (linux)
   // because it would create a "" entry in folders array below
   // tryig to create a folder at ""
@@ -138,16 +146,23 @@ const createFolderUntil = (path) => {
 
   return sequence(folders, (folder, index) => {
     const folderLocation = folders.slice(0, index + 1).join("/")
-    return createFolder(`${pathStartsWithSlash ? "/" : ""}${folderLocation}`)
+    return createFolder({
+      location: `${pathStartsWithSlash ? "/" : ""}${folderLocation}`,
+      errorHandler,
+    })
   })
 }
 
-const writeFile = (path, content) => {
+const writeFile = ({ location, string, errorHandler }) => {
   const action = createAction()
 
-  fs.writeFile(path, content, (error) => {
+  fs.writeFile(location, string, (error) => {
     if (error) {
-      throw error
+      if (errorHandler && errorHandler(error)) {
+        action.pass({ error })
+      } else {
+        throw error
+      }
     } else {
       action.pass()
     }
@@ -156,6 +171,12 @@ const writeFile = (path, content) => {
   return action
 }
 
-export const writeFileFromString = ({ location, string }) => {
-  return createFolderUntil(location).then(() => writeFile(location, string))
+export const writeFileFromString = ({ location, string, errorHandler }) => {
+  return createFolderUntil({ location, errorHandler }).then(() =>
+    writeFile({
+      location,
+      string,
+      errorHandler,
+    }),
+  )
 }

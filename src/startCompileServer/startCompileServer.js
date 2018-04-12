@@ -1,4 +1,4 @@
-import { passed, failed } from "@dmail/action"
+import { failed } from "@dmail/action"
 import { createResponseGenerator } from "../startServer/createResponseGenerator.js"
 import { createNodeRequestHandler, enableCORS } from "../startServer/createNodeRequestHandler.js"
 import { startServer } from "../startServer/startServer.js"
@@ -9,7 +9,11 @@ import {
 import { createCompiler } from "../compiler/createCompiler.js"
 import { URL } from "url"
 import path from "path"
-import { resolvePath, readFileAsString } from "./createDynamicFileSystem/helpers.js"
+import {
+  resolvePath,
+  readFileAsString,
+  writeFileFromString,
+} from "./createDynamicFileSystem/helpers.js"
 import { read } from "./createDynamicFileSystem/index.js"
 
 const createIndexService = ({ indexPathname }) => {
@@ -140,11 +144,6 @@ export const startCompileServer = ({
         const inputRelativeLocation = url.pathname.slice(1)
         const cachedInputETag = headers.get("if-none-match")
 
-        // si jamais y'a des erreurs filesystem pendant le read
-        // faudrait les convertir en 404, 403 etc
-        // on fait pareil avec writeFileFromString
-        // et on est good :)
-
         const errorSafeReadFileAsString = ({ location, errorHandler }) => {
           return readFileAsString({
             location,
@@ -160,34 +159,59 @@ export const startCompileServer = ({
           })
         }
 
+        const errorSafeWriteFileFromString = ({ location, errorHandler }) => {
+          return writeFileFromString({
+            location,
+            errorHandler: () => true,
+          }).then(({ error }) => {
+            if (error) {
+              if (errorHandler && errorHandler(error)) {
+                return { error }
+              }
+              return failed({ status: 500, reason: error.message })
+            }
+          })
+        }
+
+        // je crois, que, normalement
+        // il faudrait "aider" le browser pour que tout ça ait du sens
+        // genre lui envoyer une redirection vers le fichier en cache
+        // genre renvoyer 201 vers le cache lorsqu'il a été update ou créé
+        // https://developer.mozilla.org/fr/docs/Web/HTTP/Status/201
+        // renvoyer 302 ou 307 lorsque le cache existe
+        // l'intérêt c'est que si jamais le browser fait une requête vers le cache
+        // il sait à quoi ça correspond vraiment
+        // par contre ça fait 2 requête http
+
         return read({
-          readFileFromString: errorSafeReadFileAsString,
+          readFileAsString: errorSafeReadFileAsString,
+          writeFileFromString: errorSafeWriteFileFromString,
           rootLocation,
           inputRelativeLocation,
           cacheFolderRelativeLocation,
           generate: (input) => transform({ input }),
           outputMeta: {},
           trackHit: true,
-        }).then(
-          ({ status, output, inputETag }) => {
-            if (cachedInputETag && status === "cached") {
-              return {
-                status: 304,
-              }
-            }
-
+        }).then(({ status, output, inputETag }) => {
+          if (cachedInputETag && status === "cached") {
             return {
-              status: 200,
+              status: 304,
               headers: {
-                Etag: inputETag,
-                "content-length": Buffer.byteLength(output),
-                "cache-control": "no-cache",
+                "cache-control": "no-store",
               },
-              body: output,
             }
-          },
-          (failureResponseProperties) => passed(failureResponseProperties),
-        )
+          }
+
+          return {
+            status: 200,
+            headers: {
+              Etag: inputETag,
+              "content-length": Buffer.byteLength(output),
+              "cache-control": "no-store",
+            },
+            body: output,
+          }
+        })
       },
     ],
   })

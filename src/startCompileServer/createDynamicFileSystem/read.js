@@ -27,6 +27,8 @@ const compareBranch = (branchA, branchB) => {
 }
 
 export const read = ({
+  readFile = readFileAsString,
+  writeFile = writeFileFromString,
   inputETag,
   rootLocation,
   cacheFolderRelativeLocation,
@@ -54,7 +56,7 @@ export const read = ({
     resolvePath(getBranchLocation(branch), asset.name)
 
   const readOutputCache = ({ branch, cache, statusOnly = false }) => {
-    return readFileAsString({ location: inputLocation }).then(({ content }) => {
+    return readFile({ location: inputLocation }).then(({ content }) => {
       const inputETag = createETag(content)
       const cachedInputEtag = cache.inputETag
 
@@ -79,7 +81,7 @@ export const read = ({
       }
 
       const outputLocation = getOutputLocation(branch)
-      return readFileAsString({
+      return readFile({
         location: outputLocation,
         errorHandler: isFileNotFoundError,
       }).then(({ output, error }) => {
@@ -97,7 +99,7 @@ export const read = ({
   const readOutputAssetCache = ({ branch, asset }) => {
     const outputAssetLocation = getOutputAssetLocation(branch, asset)
 
-    return readFileAsString({
+    return readFile({
       location: outputAssetLocation,
       errorHandler: isFileNotFoundError,
     }).then(({ content, error }) => {
@@ -182,7 +184,7 @@ export const read = ({
       })
     }
 
-    return readFileAsString({ location: inputLocation }).then((input) => {
+    return readFile({ location: inputLocation }).then((input) => {
       return generate(input).then((result) => {
         return {
           branch: { name: cuid() },
@@ -238,12 +240,12 @@ export const read = ({
 
     if (isNew || isUpdated) {
       actions.push(
-        writeFileFromString({
+        writeFile({
           location: getOutputLocation(branch),
           string: data.output,
         }),
         ...data.outputAssets.map((asset) =>
-          writeFileFromString({
+          writeFile({
             location: getOutputAssetLocation(branch, asset),
             string: asset.content,
           }),
@@ -252,7 +254,7 @@ export const read = ({
     }
 
     actions.push(
-      writeFileFromString({
+      writeFile({
         location: getCacheDataLocation(cache),
         string: JSON.stringify({ ...cache, branches: branches.sort(compareBranch) }, null, "\t"),
       }),
@@ -262,7 +264,7 @@ export const read = ({
   }
 
   const read = (cacheDataLocation) => {
-    return readFileAsString({
+    return readFile({
       location: cacheDataLocation,
       errorHandler: isFileNotFoundError,
     })
