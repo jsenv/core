@@ -10,7 +10,7 @@ import { readFile } from "./readFile.js"
 import { writeFile } from "./writeFile.js"
 import { enqueueCallByArgs } from "./enqueueCall.js"
 
-const ressourceMap = new WeakMap()
+const ressourceMap = new Map()
 const restoreByArgs = (file) => ressourceMap.get(file)
 const memoizeArgs = (memoizedFn, file) => ressourceMap.set(file, memoizedFn)
 
@@ -66,48 +66,48 @@ export const createCompileService = ({
   const readOutputCache = ({ inputLocation, branch, cache }) => {
     return readFile({ location: inputLocation }).then(({ content }) => {
       const inputETag = createETag(content)
-      const data = {
-        input: content,
-        inputETag,
-      }
 
-      if (headers.has("if-none-match")) {
-        const requestHeaderETag = headers.get("if-none-match")
-        if (inputETag !== requestHeaderETag) {
-          return {
-            ...data,
-            status: `eTag modified on ${inputLocation} since it was cached by client`,
-            cachedInputEtag: requestHeaderETag,
+      return passed()
+        .then(() => {
+          if (headers.has("if-none-match")) {
+            const requestHeaderETag = headers.get("if-none-match")
+            if (inputETag !== requestHeaderETag) {
+              return {
+                status: `eTag modified on ${inputLocation} since it was cached by client`,
+                cachedInputEtag: requestHeaderETag,
+              }
+            }
+            return { status: "valid" }
           }
-        }
-        return {
-          ...data,
-          status: "valid",
-        }
-      }
 
-      const cachedInputEtag = cache.inputETag
-      if (inputETag !== cachedInputEtag) {
-        return {
-          ...data,
-          status: `eTag modified on ${inputLocation} since it was cached`,
-          cachedInputEtag,
-        }
-      }
-
-      const outputLocation = getOutputLocation(branch)
-      return readFile({
-        location: outputLocation,
-        errorHandler: isFileNotFoundError,
-      }).then(({ output, error }) => {
-        if (error) {
-          return {
-            ...data,
-            status: `cache not found at ${outputLocation}`,
+          const cachedInputEtag = cache.inputETag
+          if (inputETag !== cachedInputEtag) {
+            return {
+              status: `eTag modified on ${inputLocation} since it was cached`,
+              cachedInputEtag,
+            }
           }
-        }
-        return { ...data, status: "valid", output }
-      })
+
+          const outputLocation = getOutputLocation(branch)
+          return readFile({
+            location: outputLocation,
+            errorHandler: isFileNotFoundError,
+          }).then(({ content, error }) => {
+            if (error) {
+              return {
+                status: `cache not found at ${outputLocation}`,
+              }
+            }
+            return { status: "valid", output: content }
+          })
+        })
+        .then((moreData) => {
+          return {
+            input: content,
+            inputETag,
+            ...moreData,
+          }
+        })
     })
   }
 
@@ -203,14 +203,14 @@ export const createCompileService = ({
       })
     }
 
-    return readFile({ location: inputLocation }).then((input) => {
-      return compile({ input, inputRelativeLocation }).then((result) => {
+    return readFile({ location: inputLocation }).then(({ content }) => {
+      return passed(compile({ input: content, inputRelativeLocation })).then((result) => {
         return {
           branch: { name: cuid() },
           data: {
             status: "created",
-            input,
-            inputETag: createETag(input),
+            input: content,
+            inputETag: createETag(content),
             ...result,
           },
         }
@@ -238,6 +238,8 @@ export const createCompileService = ({
       cache.inputLocation = inputLocation
     }
 
+    const { outputAssets = [] } = data
+
     Object.assign(branch, {
       matchCount: isCached ? branch.matchCount + 1 : 1,
       createdMs: isNew ? Number(Date.now()) : branch.createdMs,
@@ -246,7 +248,7 @@ export const createCompileService = ({
       outputMeta,
       outputAssets: isCached
         ? branch.outputAssets
-        : data.outputAssets.map(({ name, content }) => {
+        : outputAssets.map(({ name, content }) => {
             return { name, eTag: createETag(content) }
           }),
     })
@@ -263,7 +265,7 @@ export const createCompileService = ({
           location: getOutputLocation(branch),
           string: data.output,
         }),
-        ...data.outputAssets.map((asset) =>
+        ...outputAssets.map((asset) =>
           writeFile({
             location: getOutputAssetLocation(branch, asset),
             string: asset.content,
