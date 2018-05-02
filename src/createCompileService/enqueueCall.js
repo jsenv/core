@@ -1,4 +1,5 @@
 import { createAction, passed } from "@dmail/action"
+import { memoizeSync, createStore } from "../memoize.js"
 
 const createExecutionQueue = () => {
   const pendings = []
@@ -31,12 +32,11 @@ export const enqueueCall = (fn) => {
   return (...args) => enqueue(fn, ...args)
 }
 
-export const enqueueCallByArgs = ({ fn, restoreByArgs, memoizeArgs }) => (...args) => {
-  const memoizedEnqueue = restoreByArgs(...args)
-  if (memoizedEnqueue) {
-    return memoizedEnqueue(fn, ...args)
-  }
-  const enqueue = createExecutionQueue()
-  memoizeArgs(enqueue, ...args)
-  return enqueue(fn, ...args)
+export const enqueueCallByArgs = (fn) => {
+  return memoizeSync(
+    createExecutionQueue,
+    createStore({
+      transform: (enqueue, ...args) => enqueue(fn, ...args),
+    }),
+  )
 }

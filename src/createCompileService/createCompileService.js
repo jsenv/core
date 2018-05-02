@@ -2,17 +2,13 @@
 
 import cuid from "cuid"
 import path from "path"
-import { all, passed } from "@dmail/action"
+import { all, passed, failed } from "@dmail/action"
 import { JSON_FILE } from "./cache.js"
 import { resolvePath, isFileNotFoundError, createETag } from "./helpers.js"
 import { locateFile } from "./locateFile.js"
 import { readFile } from "./readFile.js"
 import { writeFile } from "./writeFile.js"
 import { enqueueCallByArgs } from "./enqueueCall.js"
-
-const ressourceMap = new Map()
-const restoreByArgs = (file) => ressourceMap.get(file)
-const memoizeArgs = (memoizedFn, file) => ressourceMap.set(file, memoizedFn)
 
 const compareBranch = (branchA, branchB) => {
   const lastMatchDiff = branchA.lastMatchMs - branchB.lastMatchMs
@@ -22,6 +18,10 @@ const compareBranch = (branchA, branchB) => {
   }
   return lastMatchDiff
 }
+
+const ressourceMap = new Map()
+const restoreFromFile = (file) => (ressourceMap.has(file) ? ressourceMap.get(file) : failed())
+const saveByFile = (memoizedFn, file) => ressourceMap.set(file, memoizedFn)
 
 export const createCompileService = ({
   rootLocation,
@@ -339,9 +339,5 @@ export const createCompileService = ({
       })
   }
 
-  return enqueueCallByArgs({
-    fn: read,
-    restoreByArgs,
-    memoizeArgs,
-  })(getCacheDataLocation())
+  return enqueueCallByArgs(read, restoreFromFile, saveByFile)(getCacheDataLocation())
 }
