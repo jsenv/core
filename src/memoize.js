@@ -13,22 +13,6 @@ export const memoize = (fn, { restore, save, transform = (value) => value }) => 
   }
 }
 
-export const memoizeSync = (fn, { restore, save, transform = (value) => value }) => {
-  return (...args) => {
-    const restoreAction = passed(restore(...args))
-    const restoreState = restoreAction.getState()
-    if (restoreState === "passed") {
-      return transform(restoreAction.getResult(), ...args)
-    }
-    if (restoreState === "failed") {
-      const freshValue = fn(...args)
-      save(freshValue, ...args)
-      return transform(freshValue, ...args)
-    }
-    throw new Error("restore must pass/fail synchronously")
-  }
-}
-
 export const createStore = ({
   compare = (args, savedArgs) => {
     if (savedArgs.length !== args.length) {
@@ -62,5 +46,24 @@ export const createStore = ({
   return {
     restore,
     save,
+  }
+}
+
+export const memoizeSync = (
+  fn,
+  { restore, save, transform = (value) => value } = createStore(),
+) => {
+  return (...args) => {
+    const restoreAction = passed(restore(...args))
+    const restoreState = restoreAction.getState()
+    if (restoreState === "passed") {
+      return transform(restoreAction.getResult(), ...args)
+    }
+    if (restoreState === "failed") {
+      const freshValue = fn(...args)
+      save(freshValue, ...args)
+      return transform(freshValue, ...args)
+    }
+    throw new Error("restore must pass/fail synchronously")
   }
 }

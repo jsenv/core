@@ -2,7 +2,7 @@
 
 import cuid from "cuid"
 import path from "path"
-import { all, passed, failed } from "@dmail/action"
+import { all, passed } from "@dmail/action"
 import { JSON_FILE } from "./cache.js"
 import { resolvePath, isFileNotFoundError, createETag } from "./helpers.js"
 import { locateFile } from "./locateFile.js"
@@ -18,10 +18,6 @@ const compareBranch = (branchA, branchB) => {
   }
   return lastMatchDiff
 }
-
-const ressourceMap = new Map()
-const restoreFromFile = (file) => (ressourceMap.has(file) ? ressourceMap.get(file) : failed())
-const saveByFile = (memoizedFn, file) => ressourceMap.set(file, memoizedFn)
 
 export const createCompileService = ({
   rootLocation,
@@ -339,5 +335,6 @@ export const createCompileService = ({
       })
   }
 
-  return enqueueCallByArgs(read, restoreFromFile, saveByFile)(getCacheDataLocation())
+  // all call to read will be enqueued as long as they act on the same cacheDataLocation
+  return enqueueCallByArgs(read)(getCacheDataLocation())
 }

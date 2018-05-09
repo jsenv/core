@@ -1,24 +1,27 @@
-import { createAsyncSignal, createEmitter, someAsyncListenerReturns } from "@dmail/signal"
+import { createSignal, someAsyncListenerResolvesWith } from "@dmail/signal"
 
-const exceptionEmitter = createEmitter({
-  visitor: (param) => {
-    let resolveNow
-    const shortcircuitPromise = new Promise((resolve) => {
-      resolveNow = resolve
-    })
-    const someListenerReturnsTrue = someAsyncListenerReturns((value) => value === true)(param)
-    const oneOfPromise = Promise.race([shortcircuitPromise, someListenerReturnsTrue])
-    oneOfPromise.shortcircuit = resolveNow
-    return oneOfPromise
-  },
-})
+const exceptionEmitter = () => {
+  let resolve
+  let reject
+  const recoverManualPromise = new Promise((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+
+  const visitor = (param) => {
+    const recoverListenerPromise = someAsyncListenerResolvesWith((value) => value === true)(param)
+    return Promise.race([recoverManualPromise, recoverListenerPromise])
+  }
+
+  return { visitor, resolve, reject }
+}
 
 const createAddExceptionHandler = ({ install }) => {
-  const exceptionSignal = createAsyncSignal({
+  const exceptionSignal = createSignal({
     emitter: exceptionEmitter,
     recursed: ({ emitExecution, args }) => {
       console.error(`${args[0].value} error occured while handling ${emitExecution.args[0]}`)
-      emitExecution.shortcircuit(false)
+      emitExecution.resolve(false)
     },
     installer: ({ isEmitting, getEmitExecution, emit, disableWhileCalling }) => {
       const triggerException = (exception) => {
@@ -51,7 +54,7 @@ const createAddExceptionHandler = ({ install }) => {
         if (isEmitting()) {
           const emitExecution = getEmitExecution()
           if (match(...emitExecution.getArguments())) {
-            emitExecution.shortcircuit(true)
+            emitExecution.resolve(true)
           }
         }
       }

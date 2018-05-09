@@ -1,10 +1,10 @@
 import { createAction, passed, failed, all } from "@dmail/action"
 import { createSignal } from "@dmail/signal"
 import fs from "fs"
-import { memoizeSync, createStore } from "../memoize.js"
+import { memoizeSync } from "../memoize.js"
 import { shield } from "../shield.js"
 
-const getMtime = (url) => {
+const getModificationDate = (url) => {
   const action = createAction()
 
   fs.stat(url, (error, stat) => {
@@ -18,45 +18,38 @@ const getMtime = (url) => {
   return action
 }
 
-const createModifiedGuard = (read, compare) => {
+const createChangedGuard = (read, compare) => {
   let currentValueAction = passed(read())
 
   return () => {
     const nextValueAction = passed(read())
     return all([currentValueAction, nextValueAction]).then(([value, nextValue]) => {
-      return compare(value, nextValue).then(() => {
-        currentValueAction = nextValueAction
-      })
+      currentValueAction = nextValueAction
+      return compare(value, nextValue) ? passed() : failed()
     })
   }
 }
 
-const createModifiedMtimeGuard = (url) => {
-  return createModifiedGuard(
-    () => getMtime(url),
-    (mtime, nextMtime) => (Number(mtime) === Number(nextMtime) ? failed() : passed()),
-  )
-}
-
-const defaultWatch = (url, callback) => {
-  const watcher = fs.watch(url, { persistent: false }, callback)
-  return () => watcher.close()
-}
-
-const memoizedWatch = memoizeSync(defaultWatch, createStore())
-
 const createWatchSignal = (url) => {
-  const guard = createModifiedMtimeGuard(url)
+  const guard = createChangedGuard(
+    () => getModificationDate(url),
+    (modificationDate, nextModificationDate) =>
+      Number(modificationDate) !== Number(nextModificationDate),
+  )
+
   return createSignal({
     installer: ({ emit }) => {
       // https://nodejs.org/docs/latest/api/fs.html#fs_class_fs_fswatcher
       const shieldedEmit = shield(emit, guard)
-      return memoizedWatch(url, () => shieldedEmit({ url }))
+      const watcher = fs.watch(url, { persistent: false }, (eventType, filename) => {
+        shieldedEmit({ url, eventType, filename })
+      })
+      return () => watcher.close()
     },
   })
 }
 
-const memoizedCreateWatchSignal = memoizeSync(createWatchSignal, createStore())
+const memoizedCreateWatchSignal = memoizeSync(createWatchSignal)
 
 export const watchFile = (url, fn) => {
   return memoizedCreateWatchSignal(url).listen(fn)
