@@ -1,6 +1,6 @@
 import { passed, failed } from "@dmail/action"
 
-export const memoize = (fn, { restore, save, transform = (value) => value }) => {
+export const memoize = (fn, { restore, save, transform }) => {
   return (...args) => {
     return passed(restore(...args)).then(
       (value) => transform(value, ...args),
@@ -28,6 +28,7 @@ export const createStore = ({
     })
   },
   maxLength = 100,
+  transform = (v) => v,
 }) => {
   const entries = []
 
@@ -46,13 +47,11 @@ export const createStore = ({
   return {
     restore,
     save,
+    transform,
   }
 }
 
-export const memoizeSync = (
-  fn,
-  { restore, save, transform = (value) => value } = createStore(),
-) => {
+export const memoizeSync = (fn, { restore, save, transform } = createStore()) => {
   return (...args) => {
     const restoreAction = passed(restore(...args))
     const restoreState = restoreAction.getState()

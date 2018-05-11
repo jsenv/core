@@ -1,10 +1,10 @@
+import { all, createAction } from "@dmail/action"
 import http from "http"
 import https from "https"
 import { URL } from "url"
-import { createAction, all } from "@dmail/action"
+import { addNodeExceptionHandler } from "./addNodeExceptionHandler.js"
 import { createSelfSignature } from "./createSelfSignature.js"
 import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
-import { addNodeExceptionHandler } from "./addNodeExceptionHandler.js"
 
 export const startServer = (
   {
@@ -180,10 +180,10 @@ export const startServer = (
     }
 
     if (autoCloseOnExit) {
-      const removeAutoClose = listenNodeBeforeExit(close)
+      const closeBeforeExitListener = listenNodeBeforeExit(close)
       const wrappedClose = close
       close = () => {
-        removeAutoClose()
+        closeBeforeExitListener.remove()
         return wrappedClose()
       }
     }

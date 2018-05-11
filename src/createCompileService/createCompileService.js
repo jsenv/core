@@ -1,14 +1,14 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/store.js
 
+import { all, passed } from "@dmail/action"
 import cuid from "cuid"
 import path from "path"
-import { all, passed } from "@dmail/action"
 import { JSON_FILE } from "./cache.js"
-import { resolvePath, isFileNotFoundError, createETag } from "./helpers.js"
+import { enqueueCallByArgs } from "./enqueueCall.js"
+import { createETag, isFileNotFoundError, resolvePath } from "./helpers.js"
 import { locateFile } from "./locateFile.js"
 import { readFile } from "./readFile.js"
 import { writeFile } from "./writeFile.js"
-import { enqueueCallByArgs } from "./enqueueCall.js"
 
 const compareBranch = (branchA, branchB) => {
   const lastMatchDiff = branchA.lastMatchMs - branchB.lastMatchMs
@@ -27,7 +27,7 @@ export const createCompileService = ({
   trackHit = false,
 }) => ({ method, url, headers }) => {
   if (method !== "GET" && method !== "HEAD") {
-    return { status: 501 }
+    return passed({ status: 501 })
   }
 
   // we could also just create something inside of dynamicfilesystem so that it works with http api
@@ -336,5 +336,7 @@ export const createCompileService = ({
   }
 
   // all call to read will be enqueued as long as they act on the same cacheDataLocation
-  return enqueueCallByArgs(read)(getCacheDataLocation())
+  const cacheDataLocation = getCacheDataLocation()
+  const enqueuedRead = enqueueCallByArgs(read)
+  return enqueuedRead(cacheDataLocation)
 }

@@ -1,14 +1,14 @@
-import "./global-fetch.js"
-import { startCompileServer } from "./startCompileServer.js"
-import { createNodeLoader } from "@dmail/module-loader/src/node/index.js"
-import path from "path"
 import { fromPromise } from "@dmail/action"
+import { createNodeLoader } from "@dmail/module-loader/src/node/index.js"
 import { test } from "@dmail/test"
 import assert from "assert"
+import path from "path"
+import "./global-fetch.js"
+import { startCompileServer } from "./startCompileServer.js"
 
 const testImport = (relativeFileLocation) => {
   return startCompileServer({
-    location: `${path.resolve(__dirname, "../../../src/__test__")}`,
+    rootLocation: `${path.resolve(__dirname, "../../../src/__test__")}`,
   }).then(({ url, close }) => {
     const loader = createNodeLoader({ base: url.href })
     global.System = loader

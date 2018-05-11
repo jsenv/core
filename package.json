@@ -20,10 +20,11 @@
 	},
 	"dependencies": {
 		"@dmail/action": "3.0.0",
-		"@dmail/signal": "5.3.0",
-		"@dmail/shared-config": "4.0.0",
-		"@dmail/module-loader": "dmail/module-loader",
+		"@dmail/module-loader": "github:dmail/module-loader",
+		"@dmail/shared-config": "5.0.0",
+		"@dmail/signal": "7.0.0",
 		"babel-core": "6.26.0",
+		"cuid": "2.1.1",
 		"es-module-loader": "2.0.0",
 		"istanbul": "0.4.5",
 		"js-module-formats": "0.1.2",
@@ -31,8 +32,7 @@
 		"node-forge": "0.7.1",
 		"puppeteer": "1.1.1",
 		"remap-istanbul": "0.8.4",
-		"source-map": "0.5.6",
-		"cuid": "2.1.1"
+		"source-map": "0.5.6"
 	},
 	"devDependencies": {
 		"rollup": "0.57.0",

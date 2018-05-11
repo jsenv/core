@@ -1,8 +1,8 @@
-import { createAction, passed, failed, all } from "@dmail/action"
+import { all, createAction, failed, passed } from "@dmail/action"
 import { createSignal } from "@dmail/signal"
 import fs from "fs"
+import { guardAsync } from "../guard.js"
 import { memoizeSync } from "../memoize.js"
-import { shield } from "../shield.js"
 
 const getModificationDate = (url) => {
   const action = createAction()
@@ -18,7 +18,7 @@ const getModificationDate = (url) => {
   return action
 }
 
-const createChangedGuard = (read, compare) => {
+const createChangedAsyncShield = (read, compare) => {
   let currentValueAction = passed(read())
 
   return () => {
@@ -31,7 +31,7 @@ const createChangedGuard = (read, compare) => {
 }
 
 const createWatchSignal = (url) => {
-  const guard = createChangedGuard(
+  const shield = createChangedAsyncShield(
     () => getModificationDate(url),
     (modificationDate, nextModificationDate) =>
       Number(modificationDate) !== Number(nextModificationDate),
@@ -40,9 +40,9 @@ const createWatchSignal = (url) => {
   return createSignal({
     installer: ({ emit }) => {
       // https://nodejs.org/docs/latest/api/fs.html#fs_class_fs_fswatcher
-      const shieldedEmit = shield(emit, guard)
+      const guardedEmit = guardAsync(emit, shield)
       const watcher = fs.watch(url, { persistent: false }, (eventType, filename) => {
-        shieldedEmit({ url, eventType, filename })
+        guardedEmit({ url, eventType, filename })
       })
       return () => watcher.close()
     },

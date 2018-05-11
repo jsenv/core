@@ -29,12 +29,10 @@ export const createCompiler = ({ ...compilerOptions } = {}) => {
   const compile = ({ inputRelativeLocation, input, ...compileOptions }) => {
     // https://babeljs.io/docs/core-packages/#options
     const options = { ...defaultOptions, ...compilerOptions, ...compileOptions }
-    const { inputCodeSourceMap, minify } = options
     const moduleInput = detectModuleInput(input)
     const moduleOutput = "systemjs"
     const babelOptions = {
-      ...options,
-      ...createBabelOptions({ minify, moduleInput, moduleOutput }),
+      ...createBabelOptions({ ...options, moduleInput, moduleOutput }),
       babelrc: false, // do not ready this file or any other babelrc
     }
 
@@ -42,7 +40,7 @@ export const createCompiler = ({ ...compilerOptions } = {}) => {
       filenameRelative: inputRelativeLocation,
       ast: true,
       sourceMaps: true,
-      inputSourceMap: inputCodeSourceMap,
+      inputSourceMap: options.inputCodeSourceMap,
     })
 
     const { code, ast, map } = transform(input, babelOptions)
