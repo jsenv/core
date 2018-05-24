@@ -1,43 +1,24 @@
-import { fromPromise } from "@dmail/action"
-import { createNodeLoader } from "@dmail/module-loader/src/node/index.js"
-import { test } from "@dmail/test"
-import assert from "assert"
 import path from "path"
 import "./global-fetch.js"
 import { startCompileServer } from "./startCompileServer.js"
+import { fork } from "child_process"
 
-const testImport = (relativeFileLocation) => {
-  return startCompileServer({
-    rootLocation: `${path.resolve(__dirname, "../../../src/__test__")}`,
-  }).then(({ url, close }) => {
-    const loader = createNodeLoader({ base: url.href })
-    global.System = loader
-    return fromPromise(loader.import(relativeFileLocation)).then((value) => {
-      return close().then(() => value)
-    })
+startCompileServer({
+  rootLocation: `${path.resolve(__dirname, "../../../")}`,
+}).then(({ url, close }) => {
+  const file = path.resolve(__dirname, "./index.js")
+  const child = fork(file, {
+    execArgv: [
+      // allow vscode to debug else you got port already used
+      "--inspect-brk=9225",
+    ],
+    env: {
+      location: url.href,
+      entry: "./src/__test__/test.js",
+    },
+    silent: true,
   })
-}
-
-test(() => {
-  return testImport("./file.js").then((bindings) => {
-    assert.equal(bindings.default, true)
-  })
-})
-
-test.skip(() => {
-  return testImport("./file-with-node-es6-import.js").then((bindings) => {
-    assert.equal(bindings.default, "aaabbb")
-  })
-})
-
-test.skip(() => {
-  return testImport("./file-with-relative-cjs-import.js").then((bindings) => {
-    assert.equal(bindings.default, "cjs")
-  })
-})
-
-test.skip(() => {
-  return testImport("./file-cjs-and-native-require.js").then((bindings) => {
-    assert.equal(bindings.default, "createServer")
+  child.on("close", () => {
+    close()
   })
 })

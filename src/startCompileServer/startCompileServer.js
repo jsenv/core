@@ -34,8 +34,8 @@ export const startCompileServer = ({
   indexLocation = "index.html",
 }) => {
   const cacheFolderRelativeLocation = "build"
-  const browserLoaderLocation = `node_modules/@dmail/module-loader/dist/src/browser/index.js`
-  const nodeLoaderLocation = `node_modules/@dmail/module-loader/dist/src/node/index.js`
+  const browserLoaderLocation = `node_modules/@dmail/module-loader/src/browser/index.js`
+  const nodeLoaderLocation = `node_modules/@dmail/module-loader/src/node/index.js`
 
   const compile = ({ input, inputRelativeLocation }) => {
     return createCompiler()
@@ -97,7 +97,10 @@ export const startCompileServer = ({
         include: ({ pathname }) => {
           const relativeFilename = pathname.slice(1)
 
-          if (pathname === browserLoaderLocation || pathname === nodeLoaderLocation) {
+          if (
+            relativeFilename === browserLoaderLocation ||
+            relativeFilename === nodeLoaderLocation
+          ) {
             return true
           }
 
@@ -119,7 +122,8 @@ export const startCompileServer = ({
           //   const sourceLocation = location.slice(0, -"/dist".length)
           //   return new URL(pathname, `file:///${sourceLocation}/`)
           // }
-          return new URL(pathname, `file:///${location}/`)
+          const resolvedUrl = new URL(pathname, `file:///${rootLocation}/`)
+          return resolvedUrl
         },
       }),
       createCompileService({

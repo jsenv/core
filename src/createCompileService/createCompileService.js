@@ -138,7 +138,9 @@ export const createCompileService = ({
   const readBranch = ({ inputLocation, branch, cache }) => {
     return all([
       readOutputCache({ inputLocation, branch, cache }),
-      ...branch.outputAssets.map((outputAsset) => readOutputAssetCache({ branch, outputAsset })),
+      ...branch.outputAssets.map((outputAsset) =>
+        readOutputAssetCache({ branch, asset: outputAsset }),
+      ),
     ]).then(([outputData, ...outputAssetsData]) => {
       let computedStatus
       if (outputData.status === "valid") {

@@ -1,6 +1,7 @@
 import fs from "fs"
 import path from "path"
 import { createAction, passed } from "@dmail/action"
+import { URL } from "url"
 import { createETag } from "../createCompileService/helpers.js"
 
 const mimetype = (fileURL) => {
@@ -152,6 +153,7 @@ export const createFileService = (
 
     if (method === "GET" || method === "HEAD") {
       action = passed(locate({ method, url })).then((fileURL) => {
+        fileURL = new URL(fileURL)
         const fileLocation = fileURL.pathname
 
         let cachedModificationDate

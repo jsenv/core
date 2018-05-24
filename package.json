@@ -22,7 +22,7 @@
 		"@dmail/action": "3.0.0",
 		"@dmail/module-loader": "github:dmail/module-loader",
 		"@dmail/shared-config": "5.0.0",
-		"@dmail/signal": "7.0.0",
+		"@dmail/signal": "7.0.1",
 		"babel-core": "6.26.0",
 		"cuid": "2.1.1",
 		"es-module-loader": "2.0.0",
@@ -35,9 +35,6 @@
 		"source-map": "0.5.6"
 	},
 	"devDependencies": {
-		"rollup": "0.57.0",
-		"rollup-plugin-node-resolve": "2.0.0",
-		"rollup-plugin-babel": "3.0.3",
 		"@dmail/test": "6.0.0",
 		"babel-cli": "6.26.0",
 		"babel-eslint": "8.0.0",
@@ -45,7 +42,10 @@
 		"eslint": "4.16.0",
 		"eslint-plugin-import": "2.6.0",
 		"prettier": "1.9.1",
-		"rimraf": "2.6.2"
+		"rimraf": "2.6.2",
+		"rollup": "0.57.0",
+		"rollup-plugin-babel": "3.0.3",
+		"rollup-plugin-node-resolve": "2.0.0"
 	},
 	"scripts": {
 		"code-compile": "babel . --out-dir dist --ignore=node_modules,dist --source-maps",
