@@ -1,13 +1,16 @@
 import { startCompileServer } from "./startCompileServer.js"
-import { all, fromPromise } from "@dmail/action"
 import path from "path"
 import puppeteer from "puppeteer"
-import test from "@dmail/test"
+import { createSignal } from "@dmail/signal"
 
-const startClient = () => {
-  // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
+const createExecuteFileOnBrowser = ({ serverURL }) => {
+  const indexFile = `${serverURL}src/__test__/index.html`
 
-  return fromPromise(
+  const execute = (file) => {
+    const ended = createSignal()
+    const crashed = createSignal()
+
+    // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
     puppeteer
       .launch({
         ignoreHTTPSErrors: true, // because we use a self signed certificate
@@ -20,39 +23,33 @@ const startClient = () => {
       })
       .then((browser) => {
         return browser.newPage().then((page) => {
-          return { browser, page }
+          return page.goto(indexFile).then((file) => {
+            // eslint-disable-next-line no-undef
+            return page.evaluate(System.import(file))
+          }, file)
         })
-      }),
-  )
-}
-
-const testInBrowser = (filename) => {
-  return all([
-    startCompileServer({
-      rootLocation: `${path.resolve(__dirname, "../../../")}`,
-    }),
-    startClient(),
-  ])
-    .then(([server, client]) => {
-      return { server, browser: client.browser, page: client.page }
-    })
-    .then(({ server, browser, page }) => {
-      return fromPromise(
-        // the thing is that browser will need the specific index.html
-        // file used to run what we want to run
-        // we need a way to tell the browser what we want to import
-        // and we need a way to serve that index.html file
-        page.goto(`${server.url}/src/__test__/index.html`).then(() => {
-          return page.evaluate(() => {
-            /* eslint-disable no-undef */
-            System.import(filename)
-            /* eslint-enabled no-undef */
-          })
-        }),
-      ).then((value) => {
-        return all([server.close(), browser.close()]).then(() => value)
       })
-    })
+      .then(
+        () => {
+          ended.emit()
+        },
+        (reason) => {
+          crashed.emit(reason)
+        },
+      )
+
+    return { ended, crashed }
+  }
+
+  return { execute }
 }
 
-test(() => testInBrowser("file.test.js"))
+startCompileServer({ rootLocation: path.resolve(__dirname, "../../../") }).then(
+  ({ url, close }) => {
+    const { execute } = createExecuteFileOnBrowser({ serverURL: url })
+
+    const execution = execute("./src/__test__/file.test.js")
+
+    execution.ended.listen(close)
+  },
+)
