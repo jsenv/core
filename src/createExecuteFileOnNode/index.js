@@ -1,6 +1,6 @@
 import { createNodeLoader } from "@dmail/module-loader/src/node/index.js"
 
-const System = createNodeLoader({ base: process.env.location })
+const System = createNodeLoader()
 
 global.System = System
 

@@ -13,7 +13,8 @@
 	"module": "index.js",
 	"files": [
 		"dist",
-		"src"
+		"src",
+		"index.js"
 	],
 	"engines": {
 		"node": ">=8.6.0"
@@ -23,6 +24,7 @@
 		"@dmail/module-loader": "github:dmail/module-loader",
 		"@dmail/shared-config": "5.0.0",
 		"@dmail/signal": "7.0.1",
+		"@dmail/uneval": "2.0.0",
 		"babel-core": "6.26.0",
 		"cuid": "2.1.1",
 		"es-module-loader": "2.0.0",

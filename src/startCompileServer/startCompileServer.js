@@ -7,16 +7,6 @@ import { URL } from "url"
 import path from "path"
 import { createCompileService } from "../createCompileService/index.js"
 
-const createIndexService = ({ indexPathname }) => {
-  return ({ url }) => {
-    // bad idea we should send a redirect
-    const relativeLocation = url.pathname.slice(1)
-    if (relativeLocation.length === 0) {
-      url.pathname = indexPathname
-    }
-  }
-}
-
 const writeSourceLocation = ({ code, location }) => {
   return `${code}
 //# sourceURL=${location}`
@@ -27,12 +17,7 @@ const writeSourceMapLocation = ({ code, location }) => {
 //# sourceMappingURL=${location}`
 }
 
-export const startCompileServer = ({
-  url,
-  rootLocation,
-  cors = true,
-  indexLocation = "index.html",
-}) => {
+export const startCompileServer = ({ url, rootLocation, cors = true }) => {
   const cacheFolderRelativeLocation = "build"
   const browserLoaderLocation = `node_modules/@dmail/module-loader/src/browser/index.js`
   const nodeLoaderLocation = `node_modules/@dmail/module-loader/src/node/index.js`
@@ -92,7 +77,6 @@ export const startCompileServer = ({
 
   const handler = createResponseGenerator({
     services: [
-      createIndexService({ indexPathname: indexLocation }),
       createFileService({
         include: ({ pathname }) => {
           const relativeFilename = pathname.slice(1)
