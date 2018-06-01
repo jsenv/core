@@ -2,6 +2,7 @@ import "./global-fetch.js"
 import { fork } from "child_process"
 import { createSignal } from "@dmail/signal"
 import path from "path"
+import { URL } from "url"
 
 export const createExecuteFileOnNode = ({ serverURL }) => {
   const indexFile = path.resolve(__dirname, "./index.js")
@@ -9,6 +10,7 @@ export const createExecuteFileOnNode = ({ serverURL }) => {
   const execute = (file) => {
     const ended = createSignal()
     const crashed = createSignal()
+    const entry = String(new URL(file, serverURL))
 
     const child = fork(indexFile, {
       execArgv: [
@@ -16,7 +18,7 @@ export const createExecuteFileOnNode = ({ serverURL }) => {
         "--inspect-brk=9225",
       ],
       env: {
-        entry: String(new URL(file, serverURL)),
+        entry,
       },
       silent: true,
     })

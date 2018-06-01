@@ -7,6 +7,13 @@ startCompileServer({ rootLocation: path.resolve(__dirname, "../../../") }).then(
     const { execute } = createExecuteFileOnNode({ serverURL: url })
 
     const execution = execute("./src/__test__/test.js")
-    execution.ended.listen(close)
+    execution.ended.listen(() => {
+      close()
+      console.log("done")
+    })
+    execution.crashed.listen((reason) => {
+      close()
+      console.log("crashed", reason)
+    })
   },
 )
