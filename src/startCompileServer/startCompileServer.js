@@ -125,10 +125,7 @@ export const startCompileServer = ({ url, rootLocation, cors = true }) => {
       handler,
       url,
       transform: (response) => {
-        if (cors) {
-          enableCORS(response.headers)
-        }
-        return response
+        return cors ? enableCORS(response) : response
       },
     })
     addRequestHandler(nodeRequestHandler)

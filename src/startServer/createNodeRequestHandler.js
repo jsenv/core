@@ -22,8 +22,9 @@ export const createRequestFromNodeRequest = (nodeRequest, serverURL) => {
   })
 }
 
-export const populateNodeResponse = (nodeResponse, { status, reason, headers, body }) => {
-  nodeResponse.writeHead(status, reason, headers.toJSON())
+export const populateNodeResponse = (nodeResponse, { status, reason = "", headers, body }) => {
+  const headerAsJSON = headers.toJSON()
+  nodeResponse.writeHead(status, reason, headerAsJSON)
 
   const keepAlive = headers.get("connection") === "keep-alive"
   body.pipeTo(nodeResponse, { preventClose: keepAlive })
@@ -64,7 +65,7 @@ export const createNodeRequestHandler = ({ handler, url, transform = (response) 
   }
 }
 
-export const enableCORS = (headers) => {
+export const enableCORS = (response) => {
   const corsHeaders = {
     "access-control-allow-origin": "*",
     "access-control-allow-methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"].join(", "),
@@ -72,9 +73,16 @@ export const enableCORS = (headers) => {
     "access-control-max-age": 1, // Seconds
   }
 
+  const headersWithCORS = createHeaders(response.headers)
   Object.keys(corsHeaders).forEach((corsHeaderName) => {
-    if (headers.has(corsHeaderName) === false) {
-      headers.append(corsHeaderName, corsHeaders[corsHeaderName])
+    if (response.headers.has(corsHeaderName) === false) {
+      // we should merge any existing response cors headers with the one above
+      headersWithCORS.append(corsHeaderName, corsHeaders[corsHeaderName])
     }
   })
+
+  return {
+    ...response,
+    headers: headersWithCORS,
+  }
 }
