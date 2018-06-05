@@ -4,19 +4,16 @@ import { createExecuteFileOnChromeHeadless } from "./createExecuteFileOnChromeHe
 
 startCompileServer({ rootLocation: path.resolve(__dirname, "../../../") }).then(
   ({ url, close }) => {
+    const { execute } = createExecuteFileOnChromeHeadless({ serverURL: url, autoClose: true })
     // "./src/__test__/file.test.js"
-    const fileToExecute = "./src/__test__/test.js"
-
-    console.log("dev server at", String(url), "try opening", url + fileToExecute)
-    const { execute } = createExecuteFileOnChromeHeadless({ serverURL: url })
-
-    const execution = execute(fileToExecute)
+    const execution = execute("./src/__test__/file.js")
 
     execution.ended.listen((value) => {
       close()
       console.log("execution done with", value)
     })
     execution.crashed.listen((error) => {
+      close()
       console.error("execution error", error)
     })
   },
