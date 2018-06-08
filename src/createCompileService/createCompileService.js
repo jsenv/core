@@ -23,8 +23,8 @@ export const createCompileService = ({
   rootLocation,
   cacheFolderRelativeLocation,
   sourceMap = "inline", // "inline" or "comment"
-  // minify = false, // to implement
-  // instrument = false, // to implement
+  minify = false, // to implement
+  instrument = false, // to implement
   compile,
   trackHit = false,
 }) => ({ method, url, headers }) => {
@@ -39,8 +39,8 @@ export const createCompileService = ({
 
   const outputMeta = {
     sourceMap,
-    // instrumented: instrument,
-    // minified: minify,
+    instrumented: instrument,
+    minified: minify,
   }
 
   // extract 'path/to/file.js' from 'path/to/build/path/to/file.js'

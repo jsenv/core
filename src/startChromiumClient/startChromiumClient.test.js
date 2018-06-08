@@ -3,9 +3,9 @@ import path from "path"
 import { startChromiumClient } from "./startChromiumClient.js"
 
 startCompileServer({ rootLocation: path.resolve(__dirname, "../../../") }).then((server) => {
-  const cleanAll = true
+  const cleanAll = false
 
-  return startChromiumClient({ server, headless: true }).then((chromiumClient) => {
+  return startChromiumClient({ server, headless: false }).then((chromiumClient) => {
     chromiumClient
       .execute({
         file: `${server.cacheURL}src/__test__/file.test.js`,

@@ -17,12 +17,20 @@ const writeSourceMapLocation = ({ code, location }) => {
 //# sourceMappingURL=${location}`
 }
 
-export const startCompileServer = ({ url, rootLocation, cors = true }) => {
+export const startCompileServer = ({
+  url,
+  rootLocation,
+  cors = true,
+  sourceMap = "inline", // to avoid inline sourcemap
+  // we may try to load script using <script> tag in browser instead of XMLHttpRequest ?
+  minify = false,
+  instrument = false,
+}) => {
   const cacheFolderRelativeLocation = "build"
   // const browserLoaderLocation = `node_modules/@dmail/module-loader/src/browser/index.js`
   // const nodeLoaderLocation = `node_modules/@dmail/module-loader/src/node/index.js`
 
-  const compile = ({ input, inputRelativeLocation, sourceMap }) => {
+  const compile = ({ input, inputRelativeLocation }) => {
     // const locateSourceFromCompiledLocation = () => {
     //   const compiledLocation = `${rootLocation}/${cacheFolderRelativeLocation}/${inputRelativeLocation}`
     //   const sourceLocation = `${rootLocation}/${inputRelativeLocation}`
@@ -90,9 +98,9 @@ export const startCompileServer = ({ url, rootLocation, cors = true }) => {
         rootLocation,
         cacheFolderRelativeLocation,
         compile,
-        sourceMap: "inline",
-        minify: false, // not implemented yet
-        instrument: false, // not implemented yet
+        sourceMap,
+        minify,
+        instrument,
         trackHit: true,
       }),
       createFileService({
