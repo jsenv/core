@@ -3,11 +3,10 @@ import path from "path"
 import { createCompileService } from "./createCompileService.js"
 
 const projectRoot = path.resolve(__dirname, "../../..")
-const testFolderLocation = `${projectRoot}/src/__test__`
 
 test(() => {
   const service = createCompileService({
-    rootLocation: testFolderLocation,
+    rootLocation: projectRoot,
     cacheFolderRelativeLocation: "build",
     compile: () => {
       return {
@@ -20,7 +19,7 @@ test(() => {
     method: "GET",
     headers: new Map(),
     url: {
-      pathname: "/file.js",
+      pathname: "/build/src/__test__/file.js",
     },
   }).then((properties) => {
     debugger

@@ -22,16 +22,29 @@ const compareBranch = (branchA, branchB) => {
 export const createCompileService = ({
   rootLocation,
   cacheFolderRelativeLocation,
-  outputMeta = {},
+  sourceMap = "inline", // "inline" or "comment"
+  // minify = false, // to implement
+  // instrument = false, // to implement
   compile,
   trackHit = false,
 }) => ({ method, url, headers }) => {
+  const pathname = url.pathname.slice(1)
+  if (pathname.startsWith(cacheFolderRelativeLocation) === false) {
+    return
+  }
+
   if (method !== "GET" && method !== "HEAD") {
     return passed({ status: 501 })
   }
 
-  // we could also just create something inside of dynamicfilesystem so that it works with http api
-  const inputRelativeLocation = url.pathname.slice(1)
+  const outputMeta = {
+    sourceMap,
+    // instrumented: instrument,
+    // minified: minify,
+  }
+
+  // extract 'path/to/file.js' from 'path/to/build/path/to/file.js'
+  const inputRelativeLocation = pathname.slice(cacheFolderRelativeLocation.length + 1)
 
   // je crois, que, normalement
   // il faudrait "aider" le browser pour que tout ça ait du sens
@@ -187,7 +200,11 @@ export const createCompileService = ({
             },
           }
         }
-        return compile({ input: data.input, inputRelativeLocation }).then((result) => {
+        return compile({
+          input: data.input,
+          inputRelativeLocation,
+          sourceMap: outputMeta.sourceMap,
+        }).then((result) => {
           return {
             branch,
             data: {
