@@ -21,7 +21,16 @@ export const startCompileServer = ({
   url,
   rootLocation,
   cors = true,
-  sourceMap = "inline", // to avoid inline sourcemap
+  sourceMap = "comment",
+  // comment sourceMap are not working because browser will try to fetch sthing like
+  // http://127.0.0.1/67676/build/src/__test__/file.js.map
+  // but the real location is
+  // http://127.0.0.1/67676/build/src/__test__/file.js.map/jskldjdklsjkjdlk/file.js.map
+  // I have to figure how to fix this
+  // maybe sourceURL should tell where is really the file
+  // and sourceMappingURL too
+  // yeah I'll go for that
+  // to avoid inline sourcemap
   // we may try to load script using <script> tag in browser instead of XMLHttpRequest ?
   minify = false,
   instrument = false,
@@ -67,7 +76,7 @@ export const startCompileServer = ({
               code: output,
               location: `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
             })
-          } else {
+          } else if (sourceMap === "comment") {
             const sourceMapName = `${path.basename(
               inputRelativeLocation,
               path.extname(inputRelativeLocation),

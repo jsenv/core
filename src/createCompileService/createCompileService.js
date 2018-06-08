@@ -22,7 +22,7 @@ const compareBranch = (branchA, branchB) => {
 export const createCompileService = ({
   rootLocation,
   cacheFolderRelativeLocation,
-  sourceMap = "inline", // "inline" or "comment"
+  sourceMap = "comment", // "inline", "comment", "none"
   minify = false, // to implement
   instrument = false, // to implement
   compile,
