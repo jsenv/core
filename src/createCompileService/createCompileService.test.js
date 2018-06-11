@@ -7,7 +7,6 @@ const projectRoot = path.resolve(__dirname, "../../..")
 test(() => {
   const service = createCompileService({
     rootLocation: projectRoot,
-    cacheFolderRelativeLocation: "build",
     compile: () => {
       return {
         output: `export default "compiled version"`,

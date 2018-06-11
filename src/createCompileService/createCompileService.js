@@ -21,18 +21,14 @@ const compareBranch = (branchA, branchB) => {
 
 export const createCompileService = ({
   rootLocation,
-  cacheFolderRelativeLocation,
+  cacheFolderRelativeLocation = "build",
   sourceMap = "comment", // "inline", "comment", "none"
   minify = false, // to implement
   instrument = false, // to implement
   compile,
   trackHit = false,
+  cacheEnabled = false,
 }) => ({ method, url, headers }) => {
-  const pathname = url.pathname.slice(1)
-  if (pathname.startsWith(cacheFolderRelativeLocation) === false) {
-    return
-  }
-
   if (method !== "GET" && method !== "HEAD") {
     return passed({ status: 501 })
   }
@@ -43,8 +39,7 @@ export const createCompileService = ({
     minified: minify,
   }
 
-  // extract 'path/to/file.js' from 'path/to/build/path/to/file.js'
-  const inputRelativeLocation = pathname.slice(cacheFolderRelativeLocation.length + 1)
+  const inputRelativeLocation = url.pathname.slice(1)
 
   // je crois, que, normalement
   // il faudrait "aider" le browser pour que tout ça ait du sens
@@ -64,10 +59,18 @@ export const createCompileService = ({
 
   const getCacheDataLocation = () => resolvePath(cacheFolderLocation, JSON_FILE)
 
-  const getBranchLocation = (branch) => resolvePath(cacheFolderLocation, branch.name)
+  const getBranchRelativeLocation = (branch) => {
+    return resolvePath(cacheFolderRelativeLocation, inputRelativeLocation, branch.name)
+  }
 
-  const getOutputLocation = (branch) =>
-    resolvePath(getBranchLocation(branch), path.basename(inputRelativeLocation))
+  const getOutputRelativeLocation = (branch) => {
+    const branchRelative = getBranchRelativeLocation(branch)
+    return resolvePath(branchRelative, path.basename(inputRelativeLocation))
+  }
+
+  const getBranchLocation = (branch) => resolvePath(rootLocation, getBranchRelativeLocation(branch))
+
+  const getOutputLocation = (branch) => resolvePath(rootLocation, getOutputRelativeLocation(branch))
 
   const getOutputAssetLocation = (branch, asset) =>
     resolvePath(getBranchLocation(branch), asset.name)
@@ -191,7 +194,7 @@ export const createCompileService = ({
         cache,
         branch,
       }).then((data) => {
-        if (data.status === "valid") {
+        if (cacheEnabled && data.status === "valid") {
           return {
             branch,
             data: {
@@ -204,6 +207,7 @@ export const createCompileService = ({
           input: data.input,
           inputRelativeLocation,
           sourceMap: outputMeta.sourceMap,
+          outputRelativeLocation: getOutputRelativeLocation(branch),
         }).then((result) => {
           return {
             branch,
@@ -219,9 +223,19 @@ export const createCompileService = ({
     }
 
     return readFile({ location: inputLocation }).then(({ content }) => {
-      return passed(compile({ input: content, inputRelativeLocation })).then((result) => {
+      const branch = {
+        name: cuid(),
+      }
+
+      return passed(
+        compile({
+          input: content,
+          inputRelativeLocation,
+          outputRelativeLocation: getOutputRelativeLocation(branch),
+        }),
+      ).then((result) => {
         return {
-          branch: { name: cuid() },
+          branch,
           data: {
             status: "created",
             input: content,

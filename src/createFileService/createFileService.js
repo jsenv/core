@@ -136,120 +136,118 @@ const listDirectoryContent = (location) => {
 
 export const createFileService = (
   { include = () => true, locate = ({ url }) => url, canReadDirectory = false } = {},
-) => {
-  return ({ method, url, headers: requestHeaders }) => {
-    if (!include(url)) {
-      return false
-    }
+) => ({ method, url, headers: requestHeaders }) => {
+  if (!include(url)) {
+    return false
+  }
 
-    let status
-    let reason
-    const headers = {}
-    let body
+  let status
+  let reason
+  const headers = {}
+  let body
 
-    headers["cache-control"] = "no-store"
+  headers["cache-control"] = "no-store"
 
-    let action
+  let action
 
-    if (method === "GET" || method === "HEAD") {
-      action = passed(locate({ method, url })).then((fileURL) => {
-        fileURL = new URL(fileURL)
-        const fileLocation = fileURL.pathname
+  if (method === "GET" || method === "HEAD") {
+    action = passed(locate({ method, url })).then((fileURL) => {
+      fileURL = new URL(fileURL)
+      const fileLocation = fileURL.pathname
 
-        let cachedModificationDate
-        if (requestHeaders.has("if-modified-since")) {
-          try {
-            cachedModificationDate = new Date(requestHeaders.get("if-modified-since"))
-          } catch (e) {
-            status = 400
-            reason = "if-modified-since header is not a valid date"
-            return {
-              status,
-              reason,
-              headers,
-              body,
-            }
+      let cachedModificationDate
+      if (requestHeaders.has("if-modified-since")) {
+        try {
+          cachedModificationDate = new Date(requestHeaders.get("if-modified-since"))
+        } catch (e) {
+          status = 400
+          reason = "if-modified-since header is not a valid date"
+          return {
+            status,
+            reason,
+            headers,
+            body,
           }
         }
+      }
 
-        return stat(fileLocation).then(
-          (stat) => {
-            const actualModificationDate = stat.mtime
+      return stat(fileLocation).then(
+        (stat) => {
+          const actualModificationDate = stat.mtime
 
-            headers["last-modified"] = actualModificationDate.toUTCString()
+          headers["last-modified"] = actualModificationDate.toUTCString()
 
-            if (stat.isDirectory()) {
-              if (canReadDirectory === false) {
-                status = 403
-                reason = "not allowed to read directory"
-                return
-              }
-
-              return listDirectoryContent(fileLocation)
-                .then(JSON.stringify)
-                .then((directoryListAsJSON) => {
-                  status = 200
-                  headers["content-type"] = "application/json"
-                  headers["content-length"] = directoryListAsJSON.length
-                  body = directoryListAsJSON
-                })
-            }
-
-            if (
-              cachedModificationDate &&
-              Number(cachedModificationDate) < Number(actualModificationDate)
-            ) {
-              status = 304
+          if (stat.isDirectory()) {
+            if (canReadDirectory === false) {
+              status = 403
+              reason = "not allowed to read directory"
               return
             }
 
-            headers["content-length"] = stat.size
-
-            const cachedETag = requestHeaders.get("if-none-match")
-            if (cachedETag) {
-              return readFile(fileLocation).then((content) => {
-                const eTag = createETag(content)
-                if (cachedETag === eTag) {
-                  status = 304
-                } else {
-                  status = 200
-                  headers["content-type"] = mimetype(url)
-                  headers.ETag = eTag
-                  body = content
-                }
+            return listDirectoryContent(fileLocation)
+              .then(JSON.stringify)
+              .then((directoryListAsJSON) => {
+                status = 200
+                headers["content-type"] = "application/json"
+                headers["content-length"] = directoryListAsJSON.length
+                body = directoryListAsJSON
               })
-            }
+          }
 
-            status = 200
-            headers["content-type"] = mimetype(url)
-            body = fs.createReadStream(fileLocation)
-          },
-          ({
-            status: responseStatus,
-            reason: responseReason,
-            headers: responseHeaders = {},
-            body: responseBody,
-          }) => {
-            status = responseStatus
-            reason = responseReason
-            Object.assign(headers, responseHeaders)
-            body = responseBody
-            return passed()
-          },
-        )
-      })
-    } else {
-      status = 501
-      action = passed()
-    }
+          if (
+            cachedModificationDate &&
+            Number(cachedModificationDate) < Number(actualModificationDate)
+          ) {
+            status = 304
+            return
+          }
 
-    return action.then(() => {
-      return {
-        status,
-        reason,
-        headers,
-        body,
-      }
+          headers["content-length"] = stat.size
+
+          const cachedETag = requestHeaders.get("if-none-match")
+          if (cachedETag) {
+            return readFile(fileLocation).then((content) => {
+              const eTag = createETag(content)
+              if (cachedETag === eTag) {
+                status = 304
+              } else {
+                status = 200
+                headers["content-type"] = mimetype(url)
+                headers.ETag = eTag
+                body = content
+              }
+            })
+          }
+
+          status = 200
+          headers["content-type"] = mimetype(url)
+          body = fs.createReadStream(fileLocation)
+        },
+        ({
+          status: responseStatus,
+          reason: responseReason,
+          headers: responseHeaders = {},
+          body: responseBody,
+        }) => {
+          status = responseStatus
+          reason = responseReason
+          Object.assign(headers, responseHeaders)
+          body = responseBody
+          return passed()
+        },
+      )
     })
+  } else {
+    status = 501
+    action = passed()
   }
+
+  return action.then(() => {
+    return {
+      status,
+      reason,
+      headers,
+      body,
+    }
+  })
 }

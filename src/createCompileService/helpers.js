@@ -23,7 +23,7 @@ export const isFileNotFoundError = (error) => error && error.code === "ENOENT"
 export const normalizeSeparation = (filename) => filename.replace(/\\/g, "/")
 
 export const resolvePath = (from, ...paths) => {
-  return normalizeSeparation(path.resolve(from, ...paths))
+  return normalizeSeparation(path.join(from, ...paths))
 }
 
 export const readFolder = (location) => {

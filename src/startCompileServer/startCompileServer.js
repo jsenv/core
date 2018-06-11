@@ -7,10 +7,10 @@ import { URL } from "url"
 import path from "path"
 import { createCompileService } from "../createCompileService/index.js"
 
-// const writeSourceLocation = ({ code, location }) => {
-//   return `${code}
-// //# sourceURL=${location}`
-// }
+const writeSourceLocation = ({ code, location }) => {
+  return `${code}
+//# sourceURL=${location}`
+}
 
 const writeSourceMapLocation = ({ code, location }) => {
   return `${code}
@@ -22,30 +22,15 @@ export const startCompileServer = ({
   rootLocation,
   cors = true,
   sourceMap = "comment",
-  // comment sourceMap are not working because browser will try to fetch sthing like
-  // http://127.0.0.1/67676/build/src/__test__/file.js.map
-  // but the real location is
-  // http://127.0.0.1/67676/build/src/__test__/file.js.map/jskldjdklsjkjdlk/file.js.map
-  // I have to figure how to fix this
-  // maybe sourceURL should tell where is really the file
-  // and sourceMappingURL too
-  // yeah I'll go for that
-  // to avoid inline sourcemap
-  // we may try to load script using <script> tag in browser instead of XMLHttpRequest ?
   minify = false,
   instrument = false,
 }) => {
+  const compiledFolderRelativeLocation = "compiled"
   const cacheFolderRelativeLocation = "build"
   // const browserLoaderLocation = `node_modules/@dmail/module-loader/src/browser/index.js`
   // const nodeLoaderLocation = `node_modules/@dmail/module-loader/src/node/index.js`
 
-  const compile = ({ input, inputRelativeLocation }) => {
-    // const locateSourceFromCompiledLocation = () => {
-    //   const compiledLocation = `${rootLocation}/${cacheFolderRelativeLocation}/${inputRelativeLocation}`
-    //   const sourceLocation = `${rootLocation}/${inputRelativeLocation}`
-    //   return path.relative(compiledLocation, sourceLocation)
-    // }
-
+  const compile = ({ input, inputRelativeLocation, outputRelativeLocation }) => {
     return createCompiler()
       .compile({
         input,
@@ -55,13 +40,24 @@ export const startCompileServer = ({
         let output = code
         const outputAssets = []
 
+        const appendSourceURL = Boolean(inputRelativeLocation)
+
         // sourceURL
-        // not really required because when we ask for build/file.js
-        // the file is actually at build/file.js no need to fake that
-        // if (inputRelativeLocation) {
-        //   const sourceClientLocation = locateSourceFromCompiledLocation()
-        //   output = writeSourceLocation({ code: output, location: sourceClientLocation })
-        // }
+        // if sourceMap are put as comment do not put sourceURL
+        // because it prevent chrome from fetching sourceMappingURL for some reason breaking sourcemaps
+        if (appendSourceURL && sourceMap !== "comment") {
+          // client thinks we are at compiled/folder/file.js
+          const clientLocation = path.resolve(
+            rootLocation,
+            `${compiledFolderRelativeLocation}/${inputRelativeLocation}`,
+          )
+          // but the file is at build/folder/file.js/sjklqdjkljkljlk/file.js
+          const serverLocation = path.resolve(rootLocation, outputRelativeLocation)
+          // so client can found it at ../../build/folder/file.js/sjklqdjkljkljlk/file.js
+          const relativeLocation = path.relative(clientLocation, serverLocation)
+
+          output = writeSourceLocation({ code: output, location: relativeLocation })
+        }
 
         // sourceMap
         if (typeof map === "object") {
@@ -70,6 +66,9 @@ export const startCompileServer = ({
           // removing them will decrease size of sourceMap BUT force
           // the client to fetch the source resulting in an additional http request
 
+          // we could delete map.sourceRoot to ensure clientLocation is absolute
+          // but it's not set anyway because not passed to babel during compilation
+
           if (sourceMap === "inline") {
             const mapAsBase64 = new Buffer(JSON.stringify(map)).toString("base64")
             output = writeSourceMapLocation({
@@ -77,15 +76,20 @@ export const startCompileServer = ({
               location: `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
             })
           } else if (sourceMap === "comment") {
-            const sourceMapName = `${path.basename(
-              inputRelativeLocation,
-              path.extname(inputRelativeLocation),
-            )}.map`
+            // folder/file.js -> file.js.map
+            const sourceMapName = `${path.basename(inputRelativeLocation)}.map`
 
-            const sourceMapClientLocation = `./${sourceMapName}`
-            // we could delete sourceMap.sourceRoot to ensure clientLocation is absolute
-            // but it's not set anyway because not passed to babel during compilation
-            output = writeSourceMapLocation({ code: output, location: sourceMapClientLocation })
+            // client thinks we are at compiled/folder/file.js
+            const clientLocation = path.resolve(
+              rootLocation,
+              `${compiledFolderRelativeLocation}/${inputRelativeLocation}.map`,
+            )
+            // but the file is at build/folder/file.js/sjklqdjkljkljlk/file.js
+            const serverLocation = `${path.resolve(rootLocation, outputRelativeLocation)}.map`
+            // so client can found it at ../../build/folder/file.js/sjklqdjkljkljlk/file.js.map
+            const relativeLocation = path.relative(clientLocation, serverLocation)
+
+            output = writeSourceMapLocation({ code: output, location: relativeLocation })
 
             outputAssets.push({
               name: sourceMapName,
@@ -101,37 +105,31 @@ export const startCompileServer = ({
       })
   }
 
+  const compileService = createCompileService({
+    rootLocation,
+    cacheFolderRelativeLocation,
+    compile,
+    sourceMap,
+    minify,
+    instrument,
+    trackHit: true,
+  })
+
   const handler = createResponseGenerator({
     services: [
-      createCompileService({
-        rootLocation,
-        cacheFolderRelativeLocation,
-        compile,
-        sourceMap,
-        minify,
-        instrument,
-        trackHit: true,
-      }),
+      (request) => {
+        if (request.url.pathname.startsWith(`/${compiledFolderRelativeLocation}`)) {
+          const compileURL = new URL(request.url)
+          compileURL.pathname = request.url.pathname.slice(
+            `/${compiledFolderRelativeLocation}`.length,
+          )
+          return compileService({
+            ...request,
+            url: compileURL,
+          })
+        }
+      },
       createFileService({
-        // include: ({ pathname }) => {
-        //   const relativeFilename = pathname.slice(1)
-
-        //   if (
-        //     relativeFilename === browserLoaderLocation ||
-        //     relativeFilename === nodeLoaderLocation
-        //   ) {
-        //     return true
-        //   }
-
-        //   const extname = path.extname(pathname)
-        //   if (extname === ".js" || extname === ".mjs") {
-        //     if (relativeFilename.startsWith(`${cacheFolderRelativeLocation}/`)) {
-        //       return true
-        //     }
-        //     return false
-        //   }
-        //   return true
-        // },
         locate: ({ url }) => {
           const pathname = url.pathname.slice(1)
           const resolvedUrl = new URL(pathname, `file:///${rootLocation}/`)
@@ -150,7 +148,7 @@ export const startCompileServer = ({
       },
     })
     addRequestHandler(nodeRequestHandler)
-    return { close, url, cacheURL: new URL(`${cacheFolderRelativeLocation}/`, url) }
+    return { close, url, compileURL: new URL(`${compiledFolderRelativeLocation}/`, url) }
   })
 }
 

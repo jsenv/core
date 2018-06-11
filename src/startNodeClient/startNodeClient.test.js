@@ -8,7 +8,7 @@ startCompileServer({ rootLocation: path.resolve(__dirname, "../../../") }).then(
   return startNodeClient({ server }).then((nodeClient) => {
     nodeClient
       .execute({
-        file: `${server.cacheURL}src/__test__/file.js`,
+        file: `${server.compileURL}src/__test__/file.js`,
         autoClean: cleanAll,
       })
       .then(
