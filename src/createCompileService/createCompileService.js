@@ -25,6 +25,7 @@ export const createCompileService = ({
   sourceMap = "comment", // "inline", "comment", "none"
   minify = false, // to implement
   instrument = false, // to implement
+  optimize = false, // to implement https://prepack.io/getting-started.html#options
   compile,
   trackHit = false,
   cacheEnabled = false,
@@ -37,6 +38,7 @@ export const createCompileService = ({
     sourceMap,
     instrumented: instrument,
     minified: minify,
+    optimized: optimize,
   }
 
   const inputRelativeLocation = url.pathname.slice(1)
