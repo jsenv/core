@@ -30,6 +30,17 @@ export const createCompiler = (compilerOptions = {}) => {
       babelrc: false, // do not ready this file or any other babelrc
     }
 
+    /*
+		react
+		if (inputRelativeLocation.endsWith('.jsx')) {
+			babelOptions.plugins = [
+				['babel-plugin-syntax-jsx', {}],
+				['babel-plugin-transform-react-jsx', { "pragma": "React.createElement" }],
+				...babelOptions.plugins
+			]
+		}
+		*/
+
     Object.assign(babelOptions, {
       filenameRelative: inputRelativeLocation,
       ast: true,
