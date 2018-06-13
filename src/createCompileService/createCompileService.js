@@ -20,25 +20,15 @@ const compareBranch = (branchA, branchB) => {
 }
 
 export const createCompileService = ({
+  compile,
+  compileMeta = {},
   rootLocation,
   cacheFolderRelativeLocation = "build",
-  sourceMap = "comment", // "inline", "comment", "none"
-  minify = false, // to implement
-  instrument = false, // to implement
-  optimize = false, // to implement https://prepack.io/getting-started.html#options
-  compile,
   trackHit = false,
   cacheEnabled = false,
 }) => ({ method, url, headers }) => {
   if (method !== "GET" && method !== "HEAD") {
     return passed({ status: 501 })
-  }
-
-  const outputMeta = {
-    sourceMap,
-    instrumented: instrument,
-    minified: minify,
-    optimized: optimize,
   }
 
   const inputRelativeLocation = url.pathname.slice(1)
@@ -185,7 +175,7 @@ export const createCompileService = ({
 
   const getFromCacheOrGenerate = ({ inputLocation, cache }) => {
     const branchIsValid = (branch) => {
-      return JSON.stringify(branch.outputMeta) === JSON.stringify(outputMeta)
+      return JSON.stringify(branch.outputMeta) === JSON.stringify(compileMeta)
     }
 
     const cachedBranch = cache.branches.find((branch) => branchIsValid(branch))
@@ -208,7 +198,6 @@ export const createCompileService = ({
         return compile({
           input: data.input,
           inputRelativeLocation,
-          sourceMap: outputMeta.sourceMap,
           outputRelativeLocation: getOutputRelativeLocation(branch),
         }).then((result) => {
           return {
@@ -276,7 +265,7 @@ export const createCompileService = ({
       createdMs: isNew ? Number(Date.now()) : branch.createdMs,
       lastModifiedMs: isCached ? branch.lastModifiedMs : Number(Date.now()),
       lastMatchMs: Number(Date.now()),
-      outputMeta,
+      outputMeta: compileMeta,
       outputAssets: isCached
         ? branch.outputAssets
         : outputAssets.map(({ name, content }) => {

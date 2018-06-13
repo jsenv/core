@@ -1,11 +1,16 @@
+// https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
+
 import { createResponseGenerator } from "../startServer/createResponseGenerator.js"
 import { createNodeRequestHandler, enableCORS } from "../startServer/createNodeRequestHandler.js"
 import { startServer } from "../startServer/startServer.js"
 import { createFileService } from "../createFileService/index.js"
-import { createCompiler } from "../compiler/createCompiler.js"
 import { URL } from "url"
 import path from "path"
 import { createCompileService } from "../createCompileService/index.js"
+
+import { transform } from "babel-core"
+import { passed } from "@dmail/action"
+import { createOptions } from "./createOptions.js"
 
 const writeSourceLocation = ({ code, location }) => {
   return `${code}
@@ -17,24 +22,25 @@ const writeSourceMapLocation = ({ code, location }) => {
 //# sourceMappingURL=${location}`
 }
 
-export const startCompileServer = ({
-  url,
-  rootLocation,
-  cors = true,
-  sourceMap = "comment",
-  minify = false,
-  instrument = false,
-}) => {
-  const compiledFolderRelativeLocation = "compiled"
-  const cacheFolderRelativeLocation = "build"
-  // const browserLoaderLocation = `node_modules/@dmail/module-loader/src/browser/index.js`
-  // const nodeLoaderLocation = `node_modules/@dmail/module-loader/src/node/index.js`
+const compiledFolderRelativeLocation = "compiled"
+const cacheFolderRelativeLocation = "build"
 
+const createCompiler = (
+  { rootLocation, transformOptions, sourceMap, minify, instrument, optimize } = {},
+) => {
   const compile = ({ input, inputRelativeLocation, outputRelativeLocation }) => {
-    return createCompiler()
-      .compile({
-        input,
-        inputRelativeLocation,
+    const context = { input, inputRelativeLocation }
+    const options = transformOptions(createOptions({ minify }, context), context)
+    const { code, ast, map } = transform(input, options)
+
+    return passed({
+      code,
+      ast,
+      map,
+    })
+      .then(({ code, map }) => {
+        // this is here we should do instrumentation with instanbul
+        return { code, map }
       })
       .then(({ code, map }) => {
         let output = code
@@ -105,19 +111,53 @@ export const startCompileServer = ({
       })
   }
 
-  const compileService = createCompileService({
+  // we expose compile meta which are used
+  // to differentiate different version of the same file
+  // depending with which meta it has been compiled
+  const meta = {
+    sourceMap,
+    minified: minify,
+    instrumented: instrument,
+    optimized: optimize,
+  }
+
+  return { compile, meta }
+}
+
+export const startCompileServer = ({
+  url,
+  rootLocation,
+  cors = true,
+  sourceMap = "comment", // "inline", "comment", "none"
+  minify = false,
+  instrument = false, // must have, to be implemented
+  optimize = false, // nice to have, to implement https://prepack.io/getting-started.html#options
+  transformOptions = (options) => options,
+}) => {
+  const { compile, meta } = createCompiler({
     rootLocation,
-    cacheFolderRelativeLocation,
-    compile,
     sourceMap,
     minify,
     instrument,
+    optimize,
+    transformOptions,
+  })
+
+  const compileService = createCompileService({
+    compile,
+    compileMeta: meta,
+    rootLocation,
+    cacheFolderRelativeLocation,
     trackHit: true,
   })
 
   const handler = createResponseGenerator({
     services: [
       (request) => {
+        // change pathname from 'compile/folder/file.js' to 'folder/file.js'
+        // because only server need a way to differentiate request that needs to be compiled
+        // from request that needs to be served as file
+        // compileService does not have to know about this
         if (request.url.pathname.startsWith(`/${compiledFolderRelativeLocation}`)) {
           const compileURL = new URL(request.url)
           compileURL.pathname = request.url.pathname.slice(
@@ -143,14 +183,40 @@ export const startCompileServer = ({
     const nodeRequestHandler = createNodeRequestHandler({
       handler,
       url,
-      transform: (response) => {
-        return cors ? enableCORS(response) : response
-      },
+      transform: (response) => (cors ? enableCORS(response) : response),
     })
     addRequestHandler(nodeRequestHandler)
+
     return { close, url, compileURL: new URL(`${compiledFolderRelativeLocation}/`, url) }
   })
 }
+
+// if we want to use react we must start a compileServer like that
+// the problem with this: the transformOptions is wide open so you can completely change
+// babel output but our cache only checks { minified, optimized, intrumented, sourceMap }
+// in fact transformOptions must return same options for a given context
+// note that minify could use this instead of being part of dmail/shared-config
+// also note that we assume we use babel all over the place
+// but there is competitor we may want to allow other compiler
+// such as typscript, jsx, etc
+/*
+startCompileServer({
+	transformOptions = (options, context) => {
+		const { inputRelativeLocation } = context
+		if (inputRelativeLocation.endsWith('.jsx')) {
+			return {
+				...options,
+				plugins: [
+					['babel-plugin-syntax-jsx', {}],
+					['babel-plugin-transform-react-jsx', { "pragma": "React.createElement" }],
+					...options.plugins
+				],
+			}
+		]
+		return options
+	}
+})
+*/
 
 // hot reloading https://github.com/dmail-old/es6-project/blob/master/lib/start.js#L62
 // and https://github.com/dmail-old/project/blob/master/lib/sse.js
