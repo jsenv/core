@@ -5,9 +5,7 @@ import { transform } from "babel-core"
 import moduleFormats from "js-module-formats"
 import { createBabelOptions } from "@dmail/shared-config"
 
-export const normalizeSeparation = (filename) => filename.replace(/\\/g, "/")
-
-const detectModuleInput = (input) => {
+const detectModuleFormat = (input) => {
   const format = moduleFormats.detect(input)
   if (format === "es") {
     return "es"
@@ -21,18 +19,14 @@ const detectModuleInput = (input) => {
   return "global"
 }
 
-const defaultOptions = {
-  minify: false,
-}
-
-export const createCompiler = ({ ...compilerOptions } = {}) => {
+export const createCompiler = (compilerOptions = {}) => {
   const compile = ({ inputRelativeLocation, input, ...compileOptions }) => {
     // https://babeljs.io/docs/core-packages/#options
-    const options = { ...defaultOptions, ...compilerOptions, ...compileOptions }
-    const moduleInput = detectModuleInput(input)
-    const moduleOutput = "systemjs"
+    const options = { ...compilerOptions, ...compileOptions }
+    const moduleInputFormat = detectModuleFormat(input)
+    const moduleOutputFormat = "systemjs"
     const babelOptions = {
-      ...createBabelOptions({ ...options, moduleInput, moduleOutput }),
+      ...createBabelOptions({ ...options, moduleInputFormat, moduleOutputFormat }),
       babelrc: false, // do not ready this file or any other babelrc
     }
 

@@ -22,7 +22,7 @@
 	"dependencies": {
 		"@dmail/action": "3.0.0",
 		"@dmail/module-loader": "github:dmail/module-loader",
-		"@dmail/shared-config": "5.0.0",
+		"@dmail/shared-config": "5.1.0",
 		"@dmail/signal": "7.0.1",
 		"@dmail/uneval": "4.0.0",
 		"babel-core": "6.26.0",
