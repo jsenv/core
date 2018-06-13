@@ -1,5 +1,6 @@
+import { transform as babelTransform } from "babel-core"
 import moduleFormats from "js-module-formats"
-import { createBabelOptions } from "@dmail/shared-config"
+import { createBabelOptions as createDefaultBabelOptions } from "@dmail/shared-config"
 
 const detectModuleFormat = (input) => {
   const format = moduleFormats.detect(input)
@@ -15,18 +16,26 @@ const detectModuleFormat = (input) => {
   return "global"
 }
 
-export const createOptions = (options, { input, inputRelativeLocation }) => {
+export const createBabelOptions = (
+  input,
+  { minify, inputCodeSourceMap },
+  { inputRelativeLocation },
+) => {
   // https://babeljs.io/docs/core-packages/#options
   const moduleInputFormat = detectModuleFormat(input)
   const moduleOutputFormat = "systemjs"
   const babelOptions = {
-    ...createBabelOptions({ ...options, moduleInputFormat, moduleOutputFormat }),
+    ...createDefaultBabelOptions({ minify, moduleInputFormat, moduleOutputFormat }),
     babelrc: false, // do not ready this file or any other babelrc
     filenameRelative: inputRelativeLocation,
     ast: true,
     sourceMaps: true,
-    inputSourceMap: options.inputCodeSourceMap,
+    inputSourceMap: inputCodeSourceMap,
   }
 
   return babelOptions
+}
+
+export const transform = (input, options, context) => {
+  return babelTransform(input, createBabelOptions(input, options, context))
 }
