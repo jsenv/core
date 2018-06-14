@@ -183,7 +183,30 @@ startCompileServer({
 		return defaultTransformer(result, options, context)
 	}
 })
+*/
 
+// in order to support a build specific to a given browser swe could
+/*
+startCompileServer({
+	createOptions: ({ request }) => {
+		// we could run something client side to decide which
+		// profile the client belongs to between a,b,c and send it by cookie or header
+		// or decide this using user-agent
+		const profile = request.headers.get('x-client-feature-profile')
+		return {
+			profile
+		}
+	},
+	transformer: (result, options, context) => {
+		if (options.profile === 'c') {
+			return transformFewThings(result, options, context)
+		}
+		if (options.profile === 'b') {
+			return transformSomeThings(result, options, context)
+		}
+		return transformAllThings(result, options, context)
+	}
+})
 */
 
 // hot reloading https://github.com/dmail-old/es6-project/blob/master/lib/start.js#L62
