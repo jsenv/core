@@ -26,7 +26,9 @@ export const createCompileService = ({
   cacheFolderRelativeLocation = "build",
   trackHit = false,
   cacheEnabled = false,
-}) => ({ method, url, headers }) => {
+}) => (request) => {
+  const { method, url, headers } = request
+
   if (method !== "GET" && method !== "HEAD") {
     return passed({ status: 501 })
   }
@@ -199,6 +201,7 @@ export const createCompileService = ({
           input: data.input,
           inputRelativeLocation,
           outputRelativeLocation: getOutputRelativeLocation(branch),
+          request,
         }).then((result) => {
           return {
             branch,
@@ -223,6 +226,7 @@ export const createCompileService = ({
           input: content,
           inputRelativeLocation,
           outputRelativeLocation: getOutputRelativeLocation(branch),
+          request,
         }),
       ).then((result) => {
         return {

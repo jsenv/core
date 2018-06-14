@@ -1,17 +1,20 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 
+/* eslint-disable import/max-dependencies */
 import { createResponseGenerator } from "../startServer/createResponseGenerator.js"
 import { createNodeRequestHandler, enableCORS } from "../startServer/createNodeRequestHandler.js"
 import { startServer } from "../startServer/startServer.js"
 import { createFileService } from "../createFileService/index.js"
 import { URL } from "url"
-import path from "path"
 import { createCompileService } from "../createCompileService/index.js"
 
 import { passed } from "@dmail/action"
-import { transform as defaultTransform } from "./transform.js"
-
-import { writeSourceURL, writeSourceMapBase64, writeSourceMapComment } from "./writeSourceInfo.js"
+import { transformer as defaultTransformer } from "./transformer.js"
+import { minifier as defaultMinifier } from "./minifier.js"
+import { instrumenter as defaultInstrumenter } from "./instrumenter.js"
+import { optimizer as defaultOptimizer } from "./optimizer.js"
+import { identifier } from "./identifier.js"
+import { sourceMapper } from "./sourceMapper.js"
 
 const compiledFolderRelativeLocation = "compiled"
 const cacheFolderRelativeLocation = "build"
@@ -20,77 +23,84 @@ export const startCompileServer = ({
   url,
   rootLocation,
   cors = true,
-  transform = defaultTransform,
-  sourceMap = "comment", // "inline", "comment", "none"
+  transformer = defaultTransformer,
+  transform = true,
+  minifier = defaultMinifier,
   minify = false,
-  instrument = false, // must have, to be implemented
-  optimize = false, // nice to have, to implement https://prepack.io/getting-started.html#options
+  instrumenter = defaultInstrumenter,
+  instrument = false,
+  optimizer = defaultOptimizer,
+  optimize = false,
+  sourceMap = true,
+  sourceMapLocation = "commment", // 'comment' or 'inline'
 }) => {
-  // minify should not be passed as an option
-  // minify is something we do (when true) after the transform
-  // because transform is reponsible to take something and convert it to javascript
-  // but is not necessarily babel so we cannot assume transform can/will minify
-  // that's something we want to run on transform output
-  // in the case where transform is babel or the abstract syntax tree is given to us
-  // we'll pass it during minification
-  const options = { minify }
+  const options = {
+    minify,
+    instrument,
+    optimize,
+    sourceMap,
+    sourceMapLocation,
+  }
 
-  const compile = ({ input, inputRelativeLocation, outputRelativeLocation }) => {
+  const compile = (compileContext) => {
     const context = {
       rootLocation,
       compiledFolderRelativeLocation,
-      inputRelativeLocation,
-      outputRelativeLocation,
+      ...compileContext,
     }
 
-    return passed(transform(input, options, context))
-      .then(({ code, map }) => {
-        // this is here we should do instrumentation with instanbul
-        return { code, map }
+    // if sourceMap are appended as comment do not put //#sourceURL=../../file.js
+    // because chrome will not work with something like //#sourceMappingURL=../../file.js.map
+    // thus breaking sourcemaps
+    const identify = context.inputRelativeLocation && sourceMap !== "comment"
+
+    return passed({
+      code: context.input,
+      ast: null,
+      map: null,
+    })
+      .then((result) => {
+        return transform ? transformer(result, options, context) : result
       })
-      .then(({ code, map }) => {
-        let output = code
-        const outputAssets = []
-
-        const appendSourceURL = Boolean(inputRelativeLocation)
-
-        // sourceURL
-        // if sourceMap are put as comment do not put sourceURL
-        // because it prevent chrome from fetching sourceMappingURL for some reason breaking sourcemaps
-        if (appendSourceURL && sourceMap !== "comment") {
-          output = writeSourceURL(output, context)
-        }
-
-        // sourceMap
-        if (typeof map === "object") {
-          // delete sourceMap.sourcesContent
-          // we could remove sources content, they can be fetched from server
-          // removing them will decrease size of sourceMap BUT force
-          // the client to fetch the source resulting in an additional http request
-
-          // we could delete map.sourceRoot to ensure clientLocation is absolute
-          // but it's not set anyway because not passed to babel during compilation
-
-          if (sourceMap === "inline") {
-            output = writeSourceMapBase64(output, map, context)
-          } else if (sourceMap === "comment") {
-            // folder/file.js -> file.js.map
-            const name = `${path.basename(inputRelativeLocation)}.map`
-            output = writeSourceMapComment(output, name, context)
-
-            outputAssets.push({
-              name,
-              content: JSON.stringify(map),
-            })
+      .then((result) => {
+        return instrument ? instrumenter(result, options, context) : result
+      })
+      .then((result) => {
+        return minify ? minifier(result, options, context) : result
+      })
+      .then((result) => {
+        return optimize ? optimizer(result, options, context) : result
+      })
+      .then((result) => {
+        return identify ? identifier(result, options, context) : result
+      })
+      .then((result) => {
+        return sourceMap ? sourceMapper(result, options, context) : result
+      })
+      .then(({ code, map, mapName }) => {
+        if (mapName) {
+          return {
+            output: code,
+            outputAssets: [
+              {
+                name: mapName,
+                content: JSON.stringify(map),
+              },
+            ],
           }
         }
-
         return {
-          output,
-          outputAssets,
+          output: code,
+          outputAssets: [],
         }
       })
   }
+
+  // this is not how it should work:
+  // the meta SHOULD AND MUST be aysnchronously returned by the compiler
+  // to say that for this given context the compilation will use a given set of options
+  // then we check for cache for theses options
+  // options becomes dynamic
 
   // we expose compile meta which are used
   // to differentiate different version of the same file
@@ -156,13 +166,13 @@ export const startCompileServer = ({
 // set by something, somewhere
 // this day we'll know how to map cache to the minified/instrumented versions of a file
 /*
-import { startCompileServer, defaultTransform, createBabelOptions } from "@dmail/dev-server"
+import { startCompileServer, defaultTransformer, createBabelOptions } from "@dmail/dev-server"
 
 startCompileServer({
-	transform: (input, options, context) => {
+	transformer: (result, options, context) => {
 		const { inputRelativeLocation } = context
 		if (inputRelativeLocation.endsWith('.jsx')) {
-			const babelOptions = createBabelOptions(input, options, context)
+			const babelOptions = createBabelOptions(result, options, context)
 			const babelOptionWithReact = {
 				...babelOptions,
 				plugins: [
@@ -171,9 +181,9 @@ startCompileServer({
 					...babelOptions.plugins
 				],
 			}
-			return babel.transform(input, babelOptionWithReact)
+			return babel.transform(result.code, babelOptionWithReact)
 		]
-		return defaultTransform(input, options, context)
+		return defaultTransformer(result, options, context)
 	}
 })
 
