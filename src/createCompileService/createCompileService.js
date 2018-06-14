@@ -20,8 +20,7 @@ const compareBranch = (branchA, branchB) => {
 }
 
 export const createCompileService = ({
-  compile,
-  compileMeta = {},
+  createCompiler,
   rootLocation,
   cacheFolderRelativeLocation = "build",
   trackHit = false,
@@ -145,7 +144,7 @@ export const createCompileService = ({
     })
   }
 
-  const readBranch = ({ inputLocation, branch, cache }) => {
+  const readBranch = ({ inputLocation, branch, cache, compileOptions }) => {
     return all([
       readOutputCache({ inputLocation, branch, cache }),
       ...branch.outputAssets.map((outputAsset) =>
@@ -171,73 +170,70 @@ export const createCompileService = ({
           }
         }),
         status: computedStatus,
+        compileOptions,
       }
     })
   }
 
   const getFromCacheOrGenerate = ({ inputLocation, cache }) => {
-    const branchIsValid = (branch) => {
-      return JSON.stringify(branch.outputMeta) === JSON.stringify(compileMeta)
-    }
-
-    const cachedBranch = cache.branches.find((branch) => branchIsValid(branch))
-    if (cachedBranch) {
-      const branch = cachedBranch
-      return readBranch({
-        inputLocation,
-        cache,
-        branch,
-      }).then((data) => {
-        if (cacheEnabled && data.status === "valid") {
-          return {
-            branch,
-            data: {
-              ...data,
-              status: "cached",
-            },
-          }
+    return readFile({ location: inputLocation }).then(({ content }) => {
+      return createCompiler({
+        input: content,
+        inputRelativeLocation,
+        request,
+      }).then(({ options, compile }) => {
+        const branchIsValid = (branch) => {
+          return JSON.stringify(branch.outputMeta) === JSON.stringify(options)
         }
-        return compile({
-          input: data.input,
-          inputRelativeLocation,
-          outputRelativeLocation: getOutputRelativeLocation(branch),
-          request,
-        }).then((result) => {
+
+        const cachedBranch = cache.branches.find((branch) => branchIsValid(branch))
+        if (cachedBranch) {
+          const branch = cachedBranch
+          return readBranch({
+            inputLocation,
+            cache,
+            branch,
+            compileOptions: options,
+          }).then((data) => {
+            if (cacheEnabled && data.status === "valid") {
+              return {
+                branch,
+                data: {
+                  ...data,
+                  status: "cached",
+                },
+              }
+            }
+            return compile(getOutputRelativeLocation(branch)).then((result) => {
+              return {
+                branch,
+                data: {
+                  ...data,
+                  status: "updated",
+                  inputETag: createETag(data.input),
+                  ...result,
+                },
+              }
+            })
+          })
+        }
+
+        const branch = {
+          name: cuid(),
+        }
+
+        return passed(compile(getOutputRelativeLocation(branch))).then((result) => {
           return {
             branch,
             data: {
-              ...data,
-              status: "updated",
-              inputETag: createETag(data.input),
+              compileOptions: options,
+              status: "created",
+              input: content,
+              inputETag: createETag(content),
               ...result,
             },
           }
         })
-      })
-    }
-
-    return readFile({ location: inputLocation }).then(({ content }) => {
-      const branch = {
-        name: cuid(),
-      }
-
-      return passed(
-        compile({
-          input: content,
-          inputRelativeLocation,
-          outputRelativeLocation: getOutputRelativeLocation(branch),
-          request,
-        }),
-      ).then((result) => {
-        return {
-          branch,
-          data: {
-            status: "created",
-            input: content,
-            inputETag: createETag(content),
-            ...result,
-          },
-        }
       })
     })
   }
@@ -269,7 +265,7 @@ export const createCompileService = ({
       createdMs: isNew ? Number(Date.now()) : branch.createdMs,
       lastModifiedMs: isCached ? branch.lastModifiedMs : Number(Date.now()),
       lastMatchMs: Number(Date.now()),
-      outputMeta: compileMeta,
+      outputMeta: data.compileOptions,
       outputAssets: isCached
         ? branch.outputAssets
         : outputAssets.map(({ name, content }) => {
