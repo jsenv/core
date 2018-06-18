@@ -1,10 +1,10 @@
-import { startServer } from "./startServer.js"
+import { openServer } from "./openServer.js"
 import { test } from "@dmail/test"
 import fetch from "node-fetch"
 import assert from "assert"
 
 test(() => {
-  return startServer({
+  return openServer({
     url: "http://127.0.0.1:8998",
   }).then(({ addRequestHandler, url, agent, close }) => {
     addRequestHandler((request, response) => {

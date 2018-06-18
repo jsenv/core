@@ -18,7 +18,7 @@ const detectModuleFormat = (input) => {
 
 export const createBabelOptions = ({ code, map }, { sourceMap }, { inputRelativeLocation }) => {
   // https://babeljs.io/docs/core-packages/#options
-  const moduleInputFormat = detectModuleFormat(code)
+  const moduleInputFormat = inputRelativeLocation.endsWith('.mjs') ? 'es' : detectModuleFormat(code)
   const moduleOutputFormat = "systemjs"
 
   return mergeBabelOptions(

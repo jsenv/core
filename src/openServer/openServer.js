@@ -6,7 +6,7 @@ import { addNodeExceptionHandler } from "./addNodeExceptionHandler.js"
 import { createSelfSignature } from "./createSelfSignature.js"
 import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
 
-export const startServer = (
+export const openServer = (
   {
     // by default listen localhost on a random port in https
     url = "https://127.0.0.1:0",

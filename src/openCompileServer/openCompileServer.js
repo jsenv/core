@@ -1,9 +1,9 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 
 /* eslint-disable import/max-dependencies */
-import { createResponseGenerator } from "../startServer/createResponseGenerator.js"
-import { createNodeRequestHandler, enableCORS } from "../startServer/createNodeRequestHandler.js"
-import { startServer } from "../startServer/startServer.js"
+import { openServer } from "../openServer/openServer.js"
+import { createResponseGenerator } from "../openServer/createResponseGenerator.js"
+import { createNodeRequestHandler, enableCORS } from "../openServer/createNodeRequestHandler.js"
 import { createFileService } from "../createFileService/index.js"
 import { URL } from "url"
 import { createCompileService } from "../createCompileService/index.js"
@@ -19,7 +19,7 @@ import { sourceMapper } from "./sourceMapper.js"
 const compiledFolderRelativeLocation = "compiled"
 const cacheFolderRelativeLocation = "build"
 
-export const startCompileServer = ({
+export const openCompileServer = ({
   url,
   rootLocation,
   cors = true,
@@ -149,7 +149,7 @@ export const startCompileServer = ({
     ],
   })
 
-  return startServer({ url }).then(({ url, addRequestHandler, close }) => {
+  return openServer({ url }).then(({ url, addRequestHandler, close }) => {
     const nodeRequestHandler = createNodeRequestHandler({
       handler,
       url,

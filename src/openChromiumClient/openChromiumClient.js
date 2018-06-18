@@ -1,38 +1,8 @@
 import puppeteer from "puppeteer"
-import { startServer } from "../startServer/startServer.js"
+import { createBrowserIndexHTML } from "../createBrowserIndexHTML.js"
+import { openIndexServer } from "../openIndexServer/openIndexServer.js"
 
-const createIndexHTML = ({ loaderSrc }) => `<!doctype html>
-
-<head>
-	<title>Skeleton for chrome headless</title>
-	<meta charset="utf-8" />
-	<script src="${loaderSrc}"></script>
-	<script type="text/javascript">
-		window.System = window.createBrowserLoader.createBrowserLoader()
-	</script>
-</head>
-
-<body>
-	<main></main>
-</body>
-
-</html>`
-
-export const startIndexRequestServer = ({ indexBody }) => {
-  return startServer().then((server) => {
-    server.addRequestHandler((request, response) => {
-      response.writeHead(200, {
-        "content-type": "text/html",
-        "content-length": Buffer.byteLength(indexBody),
-        "cache-control": "no-store",
-      })
-      response.end(indexBody)
-    })
-    return { url: String(server.url), close: server.close }
-  })
-}
-
-export const startIndexRequestInterception = ({ page, indexBody }) => {
+const openIndexRequestInterception = ({ page, body }) => {
   const fakeURL = "https://fake.com"
 
   return page
@@ -45,10 +15,10 @@ export const startIndexRequestInterception = ({ page, indexBody }) => {
             contentType: "text/html",
             headers: {
               "content-type": "text/html",
-              "content-length": Buffer.byteLength(indexBody),
+              "content-length": Buffer.byteLength(body),
               "cache-control": "no-store",
             },
-            body: indexBody,
+            body,
           })
           return
         }
@@ -62,15 +32,13 @@ export const startIndexRequestInterception = ({ page, indexBody }) => {
     })
 }
 
-export const startChromiumClient = ({
+export const openChromiumClient = ({
   server,
-  startIndexRequestHandler = startIndexRequestServer,
+  openIndexRequestHandler = openIndexServer,
   headless = true,
 }) => {
-  if (startIndexRequestHandler === startIndexRequestInterception) {
-    throw new Error(
-      `startIndexRequestInterception does not work, request made to other domain remains pending`,
-    )
+  if (openIndexRequestHandler === openIndexRequestInterception && headless === false) {
+    throw new Error(`openIndexRequestInterception work only in headless mode`)
   }
 
   // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
@@ -108,9 +76,9 @@ export const startChromiumClient = ({
               console[message._type](message._text)
             })
 
-            return startIndexRequestHandler({
+            return openIndexRequestHandler({
               page,
-              indexBody: createIndexHTML({
+              indexBody: createBrowserIndexHTML({
                 loaderSrc: `${server.url}node_modules/@dmail/module-loader/src/browser/index.js`,
               }),
             }).then((indexRequestHandler) => {

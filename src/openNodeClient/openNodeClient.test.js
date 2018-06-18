@@ -1,11 +1,11 @@
-import { startCompileServer } from "../startCompileServer/startCompileServer.js"
-import { startNodeClient } from "./startNodeClient.js"
+import { openCompileServer } from "../openCompileServer/openCompileServer.js"
+import { openNodeClient } from "./openNodeClient.js"
 import path from "path"
 
-startCompileServer({ rootLocation: path.resolve(__dirname, "../../../") }).then((server) => {
+openCompileServer({ rootLocation: path.resolve(__dirname, "../../../") }).then((server) => {
   const cleanAll = true
 
-  return startNodeClient({ server }).then((nodeClient) => {
+  return openNodeClient({ server }).then((nodeClient) => {
     nodeClient
       .execute({
         file: `${server.compileURL}src/__test__/file.js`,

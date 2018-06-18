@@ -2,7 +2,7 @@ import "./global-fetch.js"
 import { fork } from "child_process"
 import path from "path"
 
-export const startNodeClient = () => {
+export const openNodeClient = () => {
   return Promise.resolve().then(() => {
     const indexFile = path.resolve(__dirname, "./index.js")
     const forkDebugPort = 9226

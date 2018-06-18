@@ -1,14 +1,14 @@
-import { startCompileServer } from "../startCompileServer/startCompileServer.js"
+import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import path from "path"
-import { startChromiumClient } from "./startChromiumClient.js"
+import { openChromiumClient } from "./openChromiumClient.js"
 
-startCompileServer({
+openCompileServer({
   url: "http://127.0.0.1:9656",
   rootLocation: path.resolve(__dirname, "../../../"),
 }).then((server) => {
   const cleanAll = false
 
-  return startChromiumClient({ server, headless: false }).then((chromiumClient) => {
+  return openChromiumClient({ server, headless: false }).then((chromiumClient) => {
     chromiumClient
       .execute({
         file: `${server.compileURL}src/__test__/file.test.js`,
