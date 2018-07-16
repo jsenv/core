@@ -1,8 +1,8 @@
 # Things to do
 
-[] Create a new project called `poc-dev-signal`
-[] `poc-dev-signal` must have this project and `@dmail/signal` as dependency
-[] `poc-dev-signal/index.js` will must be something like
+- [ ] Create a new project called `poc-dev-signal`
+- [ ] `poc-dev-signal` must have this project and `@dmail/signal` as dependency
+- [ ] `poc-dev-signal/index.js` will must be something like
 
 ```javascript
 import { createSignal } from "@dmail/signal"
@@ -12,11 +12,11 @@ console.log("Hello world")
 export default createSignal.name
 ```
 
-[] Run `poc-dev-signal/index.js` on node ensuring `'Hello world'` is logged and export default is correct
-[] Run `poc-dev-signal/index.js` on chrome headless ensuring `'Hello world'` is logged and export default is correct
-[] Run `poc-dev-signal/index.js` on chrome with ui ensuring `'Hello world'` is logged and export default is correct
-[] Implement code instrumentaton for coverage in this project
-[] Create `poc-dev-signal/index.test.js` with something like this inside
+- [ ] Run `poc-dev-signal/index.js` on node ensuring `'Hello world'` is logged and export default is correct
+- [ ] Run `poc-dev-signal/index.js` on chrome headless ensuring `'Hello world'` is logged and export default is correct
+- [ ] Run `poc-dev-signal/index.js` on chrome with ui ensuring `'Hello world'` is logged and export default is correct
+- [ ] Implement code instrumentaton for coverage in this project
+- [ ] Create `poc-dev-signal/index.test.js` with something like this inside
 
 ```javascript
 import name from "./index.js"
@@ -28,16 +28,16 @@ if (name !== "createSignal") {
 console.log("poc-dev-signal tests passed")
 ```
 
-[] Run `poc-dev-signal/index.test.js` on node with coverage and ensure coverage report is correct
-[] Run `poc-dev-signal/index.test.js` on chrome headless with coverage and ensure coverage report is correct
-[] Hot reloading work in node
+- [ ] Run `poc-dev-signal/index.test.js` on node with coverage and ensure coverage report is correct
+- [ ] Run `poc-dev-signal/index.test.js` on chrome headless with coverage and ensure coverage report is correct
+- [ ] Hot reloading work in node
 
 * Run a command like `jsrun poc-dev-signal/index.test.js --watch --platform=node`.
 * Terminal opens and `poc-dev-signal tests passed` must be logged once.
 * Terminal stays open. (You can close it using ctrl+c).
 * Change `poc-dev-signal/index.test.js` using `ctrl+s`
 * Look terminal, `poc-dev-signal tests passed` must be logged twice.
-  [] make hot reloading work in chrome
+- [ ] make hot reloading work in chrome
 * Run a command like `jsrun poc-dev-signal/index.test.js --watch --platform=chrome`.
 * Terminal opens
 * Chrome opens
