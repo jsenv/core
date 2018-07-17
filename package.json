@@ -34,7 +34,7 @@
 		"node-forge": "0.7.1",
 		"puppeteer": "1.1.1",
 		"remap-istanbul": "0.8.4",
-		"selenium-webdriver": "4.0.0",
+		"selenium-webdriver": "3.6.0",
 		"source-map": "0.5.6"
 	},
 	"devDependencies": {
