@@ -34,11 +34,11 @@ export const createBabelOptions = ({ code, map }, { sourceMap }, { inputRelative
   )
 }
 
-export const transformer = (result, options, context) => {
-  const babelOptions = createBabelOptions(result, options, context)
+export const transformer = (script, options, context) => {
+  const babelOptions = createBabelOptions(script, options, context)
 
-  if (result.ast) {
-    return transformFromAst(result.ast, result.code, babelOptions)
+  if (script.ast) {
+    return transformFromAst(script.ast, script.code, babelOptions)
   }
-  return transform(result.code, babelOptions)
+  return transform(script.code, babelOptions)
 }

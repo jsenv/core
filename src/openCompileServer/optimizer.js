@@ -1,3 +1,3 @@
 // nice to have https://prepack.io/getting-started.html#options
 
-export const optimizer = (result) => result
+export const optimizer = (script) => script

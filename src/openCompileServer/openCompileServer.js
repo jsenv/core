@@ -72,23 +72,23 @@ export const openCompileServer = ({
             ast: null,
             map: null,
           })
-            .then((result) => {
-              return transform ? transformer(result, options, context) : result
+            .then((script) => {
+              return transform ? transformer(script, options, context) : script
             })
-            .then((result) => {
-              return instrument ? instrumenter(result, options, context) : result
+            .then((script) => {
+              return instrument ? instrumenter(script, options, context) : script
             })
-            .then((result) => {
-              return minify ? minifier(result, options, context) : result
+            .then((script) => {
+              return minify ? minifier(script, options, context) : script
             })
-            .then((result) => {
-              return optimize ? optimizer(result, options, context) : result
+            .then((script) => {
+              return optimize ? optimizer(script, options, context) : script
             })
-            .then((result) => {
-              return identify ? identifier(result, options, context) : result
+            .then((script) => {
+              return identify ? identifier(script, options, context) : script
             })
-            .then((result) => {
-              return sourceMap ? sourceMapper(result, options, context) : result
+            .then((script) => {
+              return sourceMap ? sourceMapper(script, options, context) : script
             })
             .then(({ code, map, mapName }) => {
               if (mapName) {
