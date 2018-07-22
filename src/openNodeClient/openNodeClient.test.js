@@ -1,6 +1,6 @@
+import path from "path"
 import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import { openNodeClient } from "./openNodeClient.js"
-import path from "path"
 
 openCompileServer({ rootLocation: path.resolve(__dirname, "../../../") }).then((server) => {
   const cleanAll = true

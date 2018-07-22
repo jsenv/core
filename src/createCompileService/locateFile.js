@@ -1,6 +1,6 @@
-import { passed, failed } from "@dmail/action"
-import { resolvePath } from "./helpers.js"
+import { failed, passed } from "@dmail/action"
 import Module from "module"
+import { resolvePath } from "./helpers.js"
 
 const locateNodeModule = (moduleLocation, location) => {
   const requireContext = new Module(location)

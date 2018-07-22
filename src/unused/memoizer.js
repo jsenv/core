@@ -8,17 +8,17 @@ https://github.com/jsenv/core/blob/959e76068b62c23d7047f6a8c7a3d6582ac25177/src/
 */
 
 export const memoize = ({ fn, set, get, identify }) => {
-	const memoized = (...args) => {
-		const id = identify(args)
-		return get(id).then(({ valid, value }) => {
-			if (valid) {
-				return value
-			}
-			return fn(...args).then((value) => {
-				return set(id, value).then(() => value)
-			})
-		})
-	}
+  const memoized = (...args) => {
+    const id = identify(args)
+    return get(id).then(({ valid, value }) => {
+      if (valid) {
+        return value
+      }
+      return fn(...args).then((value) => {
+        return set(id, value).then(() => value)
+      })
+    })
+  }
 
-	return memoized
+  return memoized
 }

@@ -1,4 +1,4 @@
-import { passed, failed } from "@dmail/action"
+import { failed, passed } from "@dmail/action"
 
 export const memoize = (fn, { restore, save, transform }) => {
   return (...args) => {

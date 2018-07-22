@@ -1,5 +1,5 @@
-import fs from "fs"
 import { createAction } from "@dmail/action"
+import fs from "fs"
 import { convertFileSystemErrorToResponseProperties } from "../createFileService/index.js"
 
 export const readFile = ({ location, errorHandler }) => {

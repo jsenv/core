@@ -5,9 +5,9 @@
 // https://github.com/jsenv/core/blob/master/more/test/playground/coverage/run.js
 // https://github.com/jsenv/core/blob/master/more/to-externalize/module-cover/index.js
 
+import { openChromiumClient } from "./src/openChromiumClient/openChromiumClient.js"
 import { openCompileServer } from "./src/openCompileServer/openCompileServer.js"
 import { openNodeClient } from "./src/openNodeClient/openNodeClient.js"
-import { openChromiumClient } from "./src/openChromiumClient/openChromiumClient.js"
 
 export const createModuleRunner = ({ location }) => {
   // if there is already a compileServer running for that location

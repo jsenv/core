@@ -1,7 +1,7 @@
-import { enqueueCall, enqueueCallByArgs } from "./enqueueCall.js"
-import { test } from "@dmail/test"
 import { createAction } from "@dmail/action"
+import { test } from "@dmail/test"
 import assert from "assert"
+import { enqueueCall, enqueueCallByArgs } from "./enqueueCall.js"
 
 const isPassed = (action) => action.getState() === "passed"
 

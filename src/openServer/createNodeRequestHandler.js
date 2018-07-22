@@ -1,9 +1,9 @@
 // https://github.com/jsenv/core/tree/master/src/util/rest
 
+import { passed } from "@dmail/action"
 import { URL } from "url"
 import { createBody } from "./createBody.js"
 import { createHeaders } from "./createHeaders.js"
-import { passed } from "@dmail/action"
 
 // serverURL pourrait valoir par défaut `file:///${process.cwd()}` ?
 export const createRequestFromNodeRequest = (nodeRequest, serverURL) => {

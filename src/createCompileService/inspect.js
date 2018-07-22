@@ -1,9 +1,9 @@
-import { JSON_FILE } from "./cache.js"
 import { all, passed } from "@dmail/action"
+import { JSON_FILE } from "./cache.js"
+import { createETag, isFileNotFoundError, resolvePath } from "./helpers.js"
+import { list } from "./list"
 import { locateFile } from "./locateFile.js"
 import { readFile } from "./readFile.js"
-import { resolvePath, isFileNotFoundError, createETag } from "./helpers.js"
-import { list } from "./list"
 
 export const inspect = ({ rootLocation, cacheFolderRelativeLocation }) => {
   const cacheFolderLocation = resolvePath(rootLocation, cacheFolderRelativeLocation)

@@ -20,7 +20,5 @@ test(() => {
     url: {
       pathname: "/build/src/__test__/file.js",
     },
-  }).then((properties) => {
-    debugger
   })
 })

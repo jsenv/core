@@ -1,6 +1,6 @@
-import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
 import { test } from "@dmail/test"
+import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
 
 test(() => {
-	listenNodeBeforeExit(() => {})
+  listenNodeBeforeExit(() => {})
 })

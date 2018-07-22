@@ -1,6 +1,7 @@
-import fs from "fs"
-import path from "path"
 import { createAction, passed } from "@dmail/action"
+import fs from "fs"
+import os from "os"
+import path from "path"
 import { URL } from "url"
 import { createETag } from "../createCompileService/helpers.js"
 
@@ -153,7 +154,15 @@ export const createFileService = (
   if (method === "GET" || method === "HEAD") {
     action = passed(locate({ method, url })).then((fileURL) => {
       fileURL = new URL(fileURL)
-      const fileLocation = fileURL.pathname
+      // since https://github.com/nodejs/node/pull/10739
+      // fs methods supports url as path
+      // otherwise keep in mind that
+      // new URL('file:///path/to/file.js').pathname returns 'path/to/file.js' on MAC
+      // new URL('file:///C:/path/to/file.js').pathname returns '/C:/path/to/file.js' on WINDOWS
+      // in order words you have to remove the leading '/' on windows
+      // it does not work let's go path removing leading '/' on windows
+      // const fileLocation = fileURL.toString()
+      const fileLocation = os.platform() === "win32" ? fileURL.pathname.slice(1) : fileURL.pathname
 
       let cachedModificationDate
       if (requestHeaders.has("if-modified-since")) {

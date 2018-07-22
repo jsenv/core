@@ -1,1 +1,1 @@
-module.exports = require("@dmail/shared-config").config("prettier", {})
+module.exports = require("@dmail/shared-config/dist/prettier.js").config

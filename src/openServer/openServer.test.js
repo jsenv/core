@@ -1,7 +1,7 @@
-import { openServer } from "./openServer.js"
 import { test } from "@dmail/test"
-import fetch from "node-fetch"
 import assert from "assert"
+import fetch from "node-fetch"
+import { openServer } from "./openServer.js"
 
 test(() => {
   return openServer({

@@ -1,194 +1,194 @@
-import stream from "stream"
 import { createAction } from "@dmail/action"
+import stream from "stream"
 
 const isNodeStream = (a) => {
-	if (a instanceof stream.Stream || a instanceof stream.Writable) {
-		return true
-	}
-	return false
+  if (a instanceof stream.Stream || a instanceof stream.Writable) {
+    return true
+  }
+  return false
 }
 
 const createTwoWayStream = () => {
-	const stream = {}
+  const stream = {}
 
-	const buffers = []
-	let length = 0
-	const pipes = []
-	let status = "opened"
+  const buffers = []
+  let length = 0
+  const pipes = []
+  let status = "opened"
 
-	const action = createAction()
+  const action = createAction()
 
-	let storedError
-	const error = (e) => {
-		status = "errored"
-		storedError = e
-		pipes.forEach((pipe) => {
-			pipe.error(e)
-		})
-		throw e
-	}
+  let storedError
+  const error = (e) => {
+    status = "errored"
+    storedError = e
+    pipes.forEach((pipe) => {
+      pipe.error(e)
+    })
+    throw e
+  }
 
-	const closeListener = (listener) => {
-		if (isNodeStream(listener)) {
-			listener.end()
-		} else {
-			listener.close()
-		}
-	}
+  const closeListener = (listener) => {
+    if (isNodeStream(listener)) {
+      listener.end()
+    } else {
+      listener.close()
+    }
+  }
 
-	const pipeTo = (
-		stream,
-		{ preventCancel = false, preventClose = false, preventError = false } = {},
-	) => {
-		if (status === "cancelled") {
-			if (preventCancel) {
-				// throw new Error('stream cancelled : it cannot pipeTo other streams')
-			} else {
-				stream.cancel()
-			}
+  const pipeTo = (
+    stream,
+    { preventCancel = false, preventClose = false, preventError = false } = {},
+  ) => {
+    if (status === "cancelled") {
+      if (preventCancel) {
+        // throw new Error('stream cancelled : it cannot pipeTo other streams')
+      } else {
+        stream.cancel()
+      }
 
-			return stream
-		}
-		if (status === "errored") {
-			if (preventError) {
-				//
-			} else {
-				stream.error(storedError)
-			}
+      return stream
+    }
+    if (status === "errored") {
+      if (preventError) {
+        //
+      } else {
+        stream.error(storedError)
+      }
 
-			return stream
-		}
+      return stream
+    }
 
-		pipes.push(stream)
-		if (length) {
-			buffers.forEach((buffer) => {
-				stream.write(buffer)
-			})
-		}
+    pipes.push(stream)
+    if (length) {
+      buffers.forEach((buffer) => {
+        stream.write(buffer)
+      })
+    }
 
-		if (status === "closed") {
-			if (preventClose) {
-				//
-			} else {
-				closeListener(stream)
-			}
-		}
+    if (status === "closed") {
+      if (preventClose) {
+        //
+      } else {
+        closeListener(stream)
+      }
+    }
 
-		return stream
-	}
+    return stream
+  }
 
-	const write = (data) => {
-		buffers.push(data)
-		length += data.length
-		pipes.forEach((pipe) => {
-			pipe.write(data)
-		})
-	}
+  const write = (data) => {
+    buffers.push(data)
+    length += data.length
+    pipes.forEach((pipe) => {
+      pipe.write(data)
+    })
+  }
 
-	const close = () => {
-		pipes.forEach((pipe) => {
-			closeListener(pipe)
-		})
-		pipes.length = 0
-		status = "closed"
-		action.pass(buffers)
-	}
+  const close = () => {
+    pipes.forEach((pipe) => {
+      closeListener(pipe)
+    })
+    pipes.length = 0
+    status = "closed"
+    action.pass(buffers)
+  }
 
-	const cancel = () => {
-		close()
-		buffers.length = 0
-		length = 0
-		status = "cancelled"
-	}
+  const cancel = () => {
+    close()
+    buffers.length = 0
+    length = 0
+    status = "cancelled"
+  }
 
-	const tee = () => {
-		const a = stream
-		const b = createTwoWayStream()
+  const tee = () => {
+    const a = stream
+    const b = createTwoWayStream()
 
-		pipeTo(b)
+    pipeTo(b)
 
-		return [a, b]
-	}
+    return [a, b]
+  }
 
-	Object.assign(stream, {
-		error,
-		cancel,
-		write,
-		close,
-		pipeTo,
-		tee,
-		action,
-	})
+  Object.assign(stream, {
+    error,
+    cancel,
+    write,
+    close,
+    pipeTo,
+    tee,
+    action,
+  })
 
-	return stream
+  return stream
 }
 
 const stringToArrayBuffer = (string) => {
-	string = String(string)
-	const buffer = new ArrayBuffer(string.length * 2) // 2 bytes for each char
-	const bufferView = new Uint16Array(buffer)
-	let i = 0
-	while (i < string.length) {
-		bufferView[i] = string.charCodeAt(i)
-		i++
-	}
-	return buffer
+  string = String(string)
+  const buffer = new ArrayBuffer(string.length * 2) // 2 bytes for each char
+  const bufferView = new Uint16Array(buffer)
+  let i = 0
+  while (i < string.length) {
+    bufferView[i] = string.charCodeAt(i)
+    i++
+  }
+  return buffer
 }
 
 export const createBody = (body) => {
-	const twoWayStream = createTwoWayStream()
+  const twoWayStream = createTwoWayStream()
 
-	const fill = (data) => {
-		if (isNodeStream(data)) {
-			const nodeStream = data
+  const fill = (data) => {
+    if (isNodeStream(data)) {
+      const nodeStream = data
 
-			// pourquoi j'utilise un passtrhough au lieu d'écouter directement les event sdu stream?
-			// chais pas, peu importe y'avais surement une bonne raison
-			// je crois que c'est au cas où le stream est paused ou quoi
-			// pour lui indiquer qu'on est intéréssé
-			nodeStream.on("error", (error) => {
-				twoWayStream.error(error)
-			})
-			nodeStream.on("data", (data) => {
-				twoWayStream.write(data)
-			})
-			nodeStream.on("end", () => {
-				twoWayStream.close()
-			})
-		} else {
-			twoWayStream.write(data)
-			twoWayStream.close()
-		}
-	}
+      // pourquoi j'utilise un passtrhough au lieu d'écouter directement les event sdu stream?
+      // chais pas, peu importe y'avais surement une bonne raison
+      // je crois que c'est au cas où le stream est paused ou quoi
+      // pour lui indiquer qu'on est intéréssé
+      nodeStream.on("error", (error) => {
+        twoWayStream.error(error)
+      })
+      nodeStream.on("data", (data) => {
+        twoWayStream.write(data)
+      })
+      nodeStream.on("end", () => {
+        twoWayStream.close()
+      })
+    } else {
+      twoWayStream.write(data)
+      twoWayStream.close()
+    }
+  }
 
-	if (body !== undefined) {
-		fill(body)
-	}
+  if (body !== undefined) {
+    fill(body)
+  }
 
-	const readAsString = () => {
-		return twoWayStream.action.then((buffers) => buffers.join(""))
-	}
+  const readAsString = () => {
+    return twoWayStream.action.then((buffers) => buffers.join(""))
+  }
 
-	const text = () => {
-		return readAsString()
-	}
+  const text = () => {
+    return readAsString()
+  }
 
-	const arraybuffer = () => {
-		return text().then(stringToArrayBuffer)
-	}
+  const arraybuffer = () => {
+    return text().then(stringToArrayBuffer)
+  }
 
-	const json = () => {
-		return text().then(JSON.parse)
-	}
+  const json = () => {
+    return text().then(JSON.parse)
+  }
 
-	const pipeTo = (...args) => {
-		return twoWayStream.pipeTo(...args)
-	}
+  const pipeTo = (...args) => {
+    return twoWayStream.pipeTo(...args)
+  }
 
-	return {
-		text,
-		arraybuffer,
-		json,
-		pipeTo,
-	}
+  return {
+    text,
+    arraybuffer,
+    json,
+    pipeTo,
+  }
 }

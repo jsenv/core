@@ -78,7 +78,7 @@ export const openChromiumClient = ({
 
             return openIndexRequestHandler({
               page,
-              indexBody: createBrowserIndexHTML({
+              body: createBrowserIndexHTML({
                 loaderSrc: `${server.url}node_modules/@dmail/module-loader/src/browser/index.js`,
               }),
             }).then((indexRequestHandler) => {

@@ -1,6 +1,6 @@
-import "./global-fetch.js"
 import { fork } from "child_process"
 import path from "path"
+import "./global-fetch.js"
 
 export const openNodeClient = () => {
   return Promise.resolve().then(() => {

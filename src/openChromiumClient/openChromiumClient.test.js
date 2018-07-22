@@ -1,5 +1,5 @@
-import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import path from "path"
+import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import { openChromiumClient } from "./openChromiumClient.js"
 
 openCompileServer({

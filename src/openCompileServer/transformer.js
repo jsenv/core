@@ -1,6 +1,11 @@
+import {
+  createConfig,
+  createModuleOptions,
+  createSyntaxOptions,
+  mergeOptions,
+} from "@dmail/shared-config/dist/babel.js"
 import { transform, transformFromAst } from "babel-core"
 import moduleFormats from "js-module-formats"
-import { mergeBabelOptions, createModuleOptions, createSyntaxOptions } from "@dmail/shared-config"
 
 const detectModuleFormat = (input) => {
   const format = moduleFormats.detect(input)
@@ -16,29 +21,23 @@ const detectModuleFormat = (input) => {
   return "global"
 }
 
-export const createBabelOptions = ({ code, map }, { sourceMap }, { inputRelativeLocation }) => {
+export const transformer = ({ code, map, ast }, { sourceMap }, { inputRelativeLocation }) => {
   // https://babeljs.io/docs/core-packages/#options
-  const moduleInputFormat = inputRelativeLocation.endsWith('.mjs') ? 'es' : detectModuleFormat(code)
-  const moduleOutputFormat = "systemjs"
+  const inputModuleFormat = inputRelativeLocation.endsWith(".mjs") ? "es" : detectModuleFormat(code)
+  const outputModuleFormat = "systemjs"
+  const moduleOptions = createModuleOptions({ inputModuleFormat, outputModuleFormat })
 
-  return mergeBabelOptions(
-    createModuleOptions({ moduleInputFormat, moduleOutputFormat }),
-    createSyntaxOptions(),
-    {
-      filenameRelative: inputRelativeLocation,
-      sourceMaps: sourceMap !== "none",
-      inputSourceMap: map,
-      babelrc: false, // trust only these options, do not read any babelrc config file
-      ast: true,
-    },
-  )
-}
+  const babelOptions = mergeOptions(moduleOptions, createSyntaxOptions(), {
+    filenameRelative: inputRelativeLocation,
+    sourceMaps: sourceMap !== "none",
+    inputSourceMap: map,
+    babelrc: false, // trust only these options, do not read any babelrc config file
+    ast: true,
+  })
+  const babelConfig = createConfig(babelOptions)
 
-export const transformer = (script, options, context) => {
-  const babelOptions = createBabelOptions(script, options, context)
-
-  if (script.ast) {
-    return transformFromAst(script.ast, script.code, babelOptions)
+  if (ast) {
+    return transformFromAst(ast, code, babelConfig)
   }
-  return transform(script.code, babelOptions)
+  return transform(code, babelConfig)
 }

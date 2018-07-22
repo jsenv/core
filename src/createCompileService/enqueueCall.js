@@ -1,5 +1,5 @@
 import { createAction, passed } from "@dmail/action"
-import { memoizeSync, createStore } from "../memoize.js"
+import { createStore, memoizeSync } from "../memoize.js"
 
 const createExecutionQueue = () => {
   const pendings = []

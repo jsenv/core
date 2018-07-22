@@ -1,5 +1,5 @@
-import fs from "fs"
 import { createAction, sequence } from "@dmail/action"
+import fs from "fs"
 import { normalizeSeparation } from "./helpers.js"
 
 const getFileLStat = (path) => {

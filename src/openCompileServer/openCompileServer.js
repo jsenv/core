@@ -1,20 +1,19 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 
 /* eslint-disable import/max-dependencies */
-import { openServer } from "../openServer/openServer.js"
-import { createResponseGenerator } from "../openServer/createResponseGenerator.js"
-import { createNodeRequestHandler, enableCORS } from "../openServer/createNodeRequestHandler.js"
-import { createFileService } from "../createFileService/index.js"
+import { passed } from "@dmail/action"
 import { URL } from "url"
 import { createCompileService } from "../createCompileService/index.js"
-
-import { passed } from "@dmail/action"
-import { transformer as defaultTransformer } from "./transformer.js"
-import { minifier as defaultMinifier } from "./minifier.js"
-import { instrumenter as defaultInstrumenter } from "./instrumenter.js"
-import { optimizer as defaultOptimizer } from "./optimizer.js"
+import { createFileService } from "../createFileService/index.js"
+import { createNodeRequestHandler, enableCORS } from "../openServer/createNodeRequestHandler.js"
+import { createResponseGenerator } from "../openServer/createResponseGenerator.js"
+import { openServer } from "../openServer/openServer.js"
 import { identifier } from "./identifier.js"
+import { instrumenter as defaultInstrumenter } from "./instrumenter.js"
+import { minifier as defaultMinifier } from "./minifier.js"
+import { optimizer as defaultOptimizer } from "./optimizer.js"
 import { sourceMapper } from "./sourceMapper.js"
+import { transformer as defaultTransformer } from "./transformer.js"
 
 const compiledFolderRelativeLocation = "compiled"
 const cacheFolderRelativeLocation = "build"
@@ -128,9 +127,10 @@ export const openCompileServer = ({
         // because only server need a way to differentiate request that needs to be compiled
         // from request that needs to be served as file
         // compileService does not have to know about this
-        if (request.url.pathname.startsWith(`/${compiledFolderRelativeLocation}`)) {
+        const requestURLPathname = request.url.pathname
+        if (requestURLPathname.startsWith(`/${compiledFolderRelativeLocation}`)) {
           const compileURL = new URL(request.url)
-          compileURL.pathname = request.url.pathname.slice(
+          compileURL.pathname = requestURLPathname.slice(
             `/${compiledFolderRelativeLocation}`.length,
           )
           return compileService({
