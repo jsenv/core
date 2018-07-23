@@ -25,7 +25,7 @@ export const createModuleRunner = ({ location }) => {
     const runInsideNode = ({ file }) => {
       return openNodeClient({ server }).then((nodeClient) => {
         return nodeClient.execute({
-          file: `${server.compileURL}/${file}`,
+          file: `${server.compileURL}${file}`,
         })
       })
     }
@@ -36,7 +36,7 @@ export const createModuleRunner = ({ location }) => {
         headless,
       }).then((chromiumClient) => {
         return chromiumClient.execute({
-          file: `${server.compileURL}/${file}`,
+          file: `${server.compileURL}${file}`,
         })
       })
     }

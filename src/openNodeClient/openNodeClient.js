@@ -5,20 +5,18 @@ import "./global-fetch.js"
 export const openNodeClient = () => {
   return Promise.resolve().then(() => {
     const indexFile = path.resolve(__dirname, "./index.js")
-    const forkDebugPort = 9226
 
     const child = fork(indexFile, {
       execArgv: [
         // allow vscode to debug else you got port already used
-        `--inspect-brk=${forkDebugPort}`,
+        `--inspect-brk`,
       ],
-      silent: true,
     })
 
     child.on("close", (code) => {
       if (code === 12) {
         throw new Error(
-          `child exited with 12: forked child wanted to use port ${forkDebugPort} for debug`,
+          `child exited with 12: forked child wanted to use a non available port for debug`,
         )
       }
     })
@@ -40,21 +38,29 @@ export const openNodeClient = () => {
           }
         })
 
-        child.once("message", (message) => {
+        const onmessage = (message) => {
+          if (message.id !== id) {
+            return
+          }
+
           const { type, data } = message
-          if (type === "execute-result" && data.id === id) {
-            if (data.result.code === 0) {
-              resolve(data.result.value)
+          if (type === "execute-result") {
+            child.removeListener("message", onmessage)
+            if (data.code === 0) {
+              resolve(data.value)
             } else {
-              reject(data.result.value)
+              console.log("rejecting")
+              reject(data.value)
             }
           }
-        })
+        }
+
+        child.on("message", onmessage)
 
         child.send({
           type: "execute",
+          id,
           data: {
-            id,
             file,
           },
         })
