@@ -1,10 +1,9 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/store.js
 
-import { all, passed } from "@dmail/action"
 import cuid from "cuid"
 import path from "path"
+import { enqueueCallByArgs } from "../enqueueCall/enqueueCall.js"
 import { JSON_FILE } from "./cache.js"
-import { enqueueCallByArgs } from "./enqueueCall.js"
 import { createETag, isFileNotFoundError, resolvePath } from "./helpers.js"
 import { locateFile } from "./locateFile.js"
 import { readFile } from "./readFile.js"
@@ -29,7 +28,7 @@ export const createCompileService = ({
   const { method, url, headers } = request
 
   if (method !== "GET" && method !== "HEAD") {
-    return passed({ status: 501 })
+    return Promise.resolve({ status: 501 })
   }
 
   const inputRelativeLocation = url.pathname.slice(1)
@@ -72,7 +71,7 @@ export const createCompileService = ({
     return readFile({ location: inputLocation }).then(({ content }) => {
       const inputETag = createETag(content)
 
-      return passed()
+      return Promise.resolve()
         .then(() => {
           if (headers.has("if-none-match")) {
             const requestHeaderETag = headers.get("if-none-match")
@@ -145,7 +144,7 @@ export const createCompileService = ({
   }
 
   const readBranch = ({ inputLocation, branch, cache, compileOptions }) => {
-    return all([
+    return Promise.all([
       readOutputCache({ inputLocation, branch, cache }),
       ...branch.outputAssets.map((outputAsset) =>
         readOutputAssetCache({ branch, asset: outputAsset }),
@@ -222,7 +221,7 @@ export const createCompileService = ({
           name: cuid(),
         }
 
-        return passed(compile(getOutputRelativeLocation(branch))).then((result) => {
+        return Promise.resolve(compile(getOutputRelativeLocation(branch))).then((result) => {
           return {
             branch,
             data: {
@@ -246,7 +245,7 @@ export const createCompileService = ({
     const isUpdated = status === "updated"
 
     if (isCached && !trackHit) {
-      return passed()
+      return Promise.resolve()
     }
 
     Object.assign(cache, {
@@ -277,10 +276,10 @@ export const createCompileService = ({
       branches.push(branch)
     }
 
-    const actions = []
+    const promises = []
 
     if (isNew || isUpdated) {
-      actions.push(
+      promises.push(
         writeFile({
           location: getOutputLocation(branch),
           string: data.output,
@@ -294,14 +293,14 @@ export const createCompileService = ({
       )
     }
 
-    actions.push(
+    promises.push(
       writeFile({
         location: getCacheDataLocation(cache),
         string: JSON.stringify({ ...cache, branches: branches.sort(compareBranch) }, null, "\t"),
       }),
     )
 
-    return all(actions)
+    return Promise.all(promises)
   }
 
   const read = (cacheDataLocation) => {

@@ -1,4 +1,3 @@
-import { createAction } from "@dmail/action"
 import crypto from "crypto"
 import fs from "fs"
 import path from "path"
@@ -27,43 +26,37 @@ export const resolvePath = (from, ...paths) => {
 }
 
 export const readFolder = (location) => {
-  const action = createAction()
-
-  fs.readdir(location, (error, filenames) => {
-    if (error) {
-      throw error
-    } else {
-      action.pass(filenames)
-    }
+  return new Promise((resolve, reject) => {
+    fs.readdir(location, (error, filenames) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(filenames)
+      }
+    })
   })
-
-  return action
 }
 
 export const removeFile = (location) => {
-  const action = createAction()
-
-  fs.unlink(location, (error) => {
-    if (error) {
-      throw error
-    } else {
-      action.pass()
-    }
+  return new Promise((resolve, reject) => {
+    fs.unlink(location, (error) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve()
+      }
+    })
   })
-
-  return action
 }
 
 export const removeFolderDeep = (location) => {
-  const action = createAction()
-
-  rimraf(location, (error) => {
-    if (error) {
-      throw error
-    } else {
-      action.pass()
-    }
+  return new Promise((resolve, reject) => {
+    rimraf(location, (error) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve()
+      }
+    })
   })
-
-  return action
 }

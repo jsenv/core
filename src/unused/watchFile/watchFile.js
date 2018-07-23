@@ -1,31 +1,30 @@
-import { all, createAction, failed, passed } from "@dmail/action"
 import { createSignal } from "@dmail/signal"
 import fs from "fs"
+import { memoizeSync } from "../../memoize.js"
 import { guardAsync } from "../guard.js"
-import { memoizeSync } from "../memoize.js"
 
 const getModificationDate = (url) => {
-  const action = createAction()
-
-  fs.stat(url, (error, stat) => {
-    if (error) {
-      throw error
-    } else {
-      action.pass(stat.mtime)
-    }
+  return new Promise((resolve, reject) => {
+    fs.stat(url, (error, stat) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(stat.mtime)
+      }
+    })
   })
-
-  return action
 }
 
 const createChangedAsyncShield = (read, compare) => {
-  let currentValueAction = passed(read())
+  let currentValuePromise = Promise.resolve(read())
 
   return () => {
-    const nextValueAction = passed(read())
-    return all([currentValueAction, nextValueAction]).then(([value, nextValue]) => {
-      currentValueAction = nextValueAction
-      return compare(value, nextValue) ? passed() : failed()
+    const nextValuePromise = Promise.resolve(read())
+    return Promise.all([currentValuePromise, nextValuePromise]).then(([value, nextValue]) => {
+      currentValuePromise = nextValuePromise
+      return {
+        shielded: compare(value, nextValue),
+      }
     })
   }
 }

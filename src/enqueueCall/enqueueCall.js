@@ -1,5 +1,5 @@
-import { createAction, passed } from "@dmail/action"
 import { createStore, memoizeSync } from "../memoize.js"
+import { createPromiseAndHooks } from "../promise.js"
 
 const createExecutionQueue = () => {
   const pendings = []
@@ -7,21 +7,25 @@ const createExecutionQueue = () => {
 
   const enqueue = (fn, ...args) => {
     if (running) {
-      const action = createAction()
-      pendings.push({ action, fn, args })
-      return action
+      const { promise, resolve, reject } = createPromiseAndHooks()
+      pendings.push({ promise, resolve, reject, fn, args })
+      return promise
     }
     running = true
-    const action = passed(fn(...args))
+
     const onPassedOrFailed = () => {
       running = false
       if (pendings.length > 0) {
-        const { action, fn, args } = pendings.shift()
-        action.pass(enqueue(fn, ...args))
+        const { resolve, fn, args } = pendings.shift()
+        resolve(enqueue(fn, ...args))
       }
     }
-    action.then(onPassedOrFailed, onPassedOrFailed)
-    return action
+
+    const promise = Promise.resolve(fn(...args))
+
+    promise.then(onPassedOrFailed, onPassedOrFailed)
+
+    return promise
   }
 
   return enqueue

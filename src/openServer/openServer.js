@@ -1,4 +1,3 @@
-import { all, createAction } from "@dmail/action"
 import http from "http"
 import https from "https"
 import { URL } from "url"
@@ -78,23 +77,21 @@ export const openServer = (
       // reason = 'available because closing'
     }
 
-    return all(
+    return Promise.all(
       Array.from(clients).map(({ response }) => {
         if (response.headersSent === false) {
           response.writeHead(status, reason)
         }
 
-        const action = createAction()
-        const { pass } = action
-        if (response.finished === false) {
-          response.on("finish", pass)
-          response.on("error", pass)
-          response.destroy(reason)
-        } else {
-          pass()
-        }
-
-        return action
+        return new Promise((resolve) => {
+          if (response.finished === false) {
+            response.on("finish", resolve)
+            response.on("error", resolve)
+            response.destroy(reason)
+          } else {
+            resolve()
+          }
+        })
       }),
     )
   }
@@ -120,14 +117,15 @@ export const openServer = (
   let status = "opening"
 
   const listen = () => {
-    const action = createAction()
-    nodeServer.listen(port, hostname, (error) => {
-      if (error) {
-        throw error
-      }
-      action.pass()
+    return new Promise((resolve, reject) => {
+      nodeServer.listen(port, hostname, (error) => {
+        if (error) {
+          reject(error)
+        } else {
+          resolve()
+        }
+      })
     })
-    return action
   }
 
   return listen().then(() => {
@@ -159,22 +157,21 @@ export const openServer = (
 
       status = "closing"
 
-      const action = createAction()
-      // closing server prevent it from accepting new connections
-      // but opened connection must be shutdown before the close event is emitted
-      nodeServer.once("close", (error) => {
-        if (error) {
-          throw error
-        } else {
-          action.pass()
-        }
-      })
-      nodeServer.close()
-      closeClients({ reason }).then(() => {
-        closeConnections(reason)
-      })
-
-      return action.then(() => {
+      return new Promise((resolve, reject) => {
+        // closing server prevent it from accepting new connections
+        // but opened connection must be shutdown before the close event is emitted
+        nodeServer.once("close", (error) => {
+          if (error) {
+            reject(error)
+          } else {
+            resolve()
+          }
+        })
+        nodeServer.close()
+        closeClients({ reason }).then(() => {
+          closeConnections(reason)
+        })
+      }).then(() => {
         status = "closed"
       })
     }

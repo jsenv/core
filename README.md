@@ -1,6 +1,8 @@
 # Things to do
 
-* [ ] deprecate usage of `@dmail/signal` in favor of promise (openCompileServer must return a promise)
+* [x] deprecate usage of `@dmail/signal` in favor of promise (openCompileServer must return a promise)
+* [ ] retest enqueueCall now it's using promise instead of actions
+* [ ] retest open compile sever now it's using promise instead of actions
 * [x] Create a new project called `poc-dev-signal`
 * [x] `poc-dev-signal` must have this project and `@dmail/signal` as dependency
 * [x] `poc-dev-signal/index.js` will must be something like

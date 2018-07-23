@@ -1,43 +1,39 @@
-import { createAction, sequence } from "@dmail/action"
 import fs from "fs"
+import sequence from "promise-sequential"
 import { normalizeSeparation } from "./helpers.js"
 
 const getFileLStat = (path) => {
-  const action = createAction()
-
-  fs.lstat(path, (error, lstat) => {
-    if (error) {
-      action.fail({ status: 500, reason: error.code })
-    } else {
-      action.pass(lstat)
-    }
+  return new Promise((resolve, reject) => {
+    fs.lstat(path, (error, lstat) => {
+      if (error) {
+        reject({ status: 500, reason: error.code })
+      } else {
+        resolve(lstat)
+      }
+    })
   })
-
-  return action
 }
 
 const createFolder = ({ location }) => {
-  const action = createAction()
-
-  fs.mkdir(location, (error) => {
-    if (error) {
-      // au cas ou deux script essayent de crée un dossier peu importe qui y arrive c'est ok
-      if (error.code === "EEXIST") {
-        return getFileLStat(location).then((stat) => {
-          if (stat.isDirectory()) {
-            action.pass()
-          } else {
-            action.fail({ status: 500, reason: "expect a directory" })
-          }
-        })
+  return new Promise((resolve, reject) => {
+    fs.mkdir(location, (error) => {
+      if (error) {
+        // au cas ou deux script essayent de crée un dossier peu importe qui y arrive c'est ok
+        if (error.code === "EEXIST") {
+          return getFileLStat(location).then((stat) => {
+            if (stat.isDirectory()) {
+              resolve()
+            } else {
+              reject({ status: 500, reason: "expect a directory" })
+            }
+          })
+        }
+        reject({ status: 500, reason: error.code })
+      } else {
+        resolve()
       }
-      action.fail({ status: 500, reason: error.code })
-    } else {
-      action.pass()
-    }
+    })
   })
-
-  return action
 }
 
 const createFolderUntil = ({ location }) => {
@@ -53,7 +49,7 @@ const createFolderUntil = ({ location }) => {
 
   folders.pop()
 
-  return sequence(folders, (folder, index) => {
+  return sequence(folders, (_, index) => {
     const folderLocation = folders.slice(0, index + 1).join("/")
     return createFolder({
       location: `${pathStartsWithSlash ? "/" : ""}${folderLocation}`,
@@ -63,16 +59,14 @@ const createFolderUntil = ({ location }) => {
 
 export const writeFile = ({ location, string }) => {
   return createFolderUntil({ location }).then(() => {
-    const action = createAction()
-
-    fs.writeFile(location, string, (error) => {
-      if (error) {
-        action.fail({ status: 500, reason: error.code })
-      } else {
-        action.pass()
-      }
+    return new Promise((resolve, reject) => {
+      fs.writeFile(location, string, (error) => {
+        if (error) {
+          reject({ status: 500, reason: error.code })
+        } else {
+          resolve()
+        }
+      })
     })
-
-    return action
   })
 }

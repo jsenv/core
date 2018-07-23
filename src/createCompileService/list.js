@@ -1,4 +1,3 @@
-import { all } from "@dmail/action"
 import { JSON_FILE } from "./cache.js"
 import { readFolder, resolvePath } from "./helpers.js"
 
@@ -14,7 +13,7 @@ export const list = ({ rootLocation, cacheFolderRelativeLocation }) => {
           folders.push(folderRelativeLocation)
           return
         }
-        return all(names.map((name) => visit(resolvePath(folderLocation, name), folders)))
+        return Promise.all(names.map((name) => visit(resolvePath(folderLocation, name), folders)))
       })
       .then(() => folders)
   }

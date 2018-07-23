@@ -1,4 +1,3 @@
-import { failed, passed } from "@dmail/action"
 import Module from "module"
 import { resolvePath } from "./helpers.js"
 
@@ -50,14 +49,14 @@ export const locateFile = (relativeLocation, absoluteLocation) => {
     nodeLocation += `/node_modules`
 
     try {
-      return passed(locateNodeModule(relativeDependency, nodeLocation))
+      return Promise.resolve(locateNodeModule(relativeDependency, nodeLocation))
     } catch (e) {
       if (e && e.code === "MODULE_NOT_FOUND") {
-        return failed({ status: 404, reason: "MODULE_NOT_FOUND" })
+        return Promise.reject({ status: 404, reason: "MODULE_NOT_FOUND" })
       }
       throw e
     }
   }
 
-  return passed(resolvePath(absoluteLocation, relativeLocation))
+  return Promise.resolve(resolvePath(absoluteLocation, relativeLocation))
 }

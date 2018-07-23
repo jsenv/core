@@ -1,6 +1,5 @@
 // https://github.com/jsenv/core/tree/master/src/util/rest
 
-import { passed } from "@dmail/action"
 import { URL } from "url"
 import { createBody } from "./createBody.js"
 import { createHeaders } from "./createHeaders.js"
@@ -32,7 +31,7 @@ export const populateNodeResponse = (nodeResponse, { status, reason = "", header
 
 const createResponse = (
   { method },
-  { status, reason, headers = createHeaders(), body = createBody() },
+  { status = 501, reason, headers = createHeaders(), body = createBody() } = {},
 ) => {
   if (method === "HEAD") {
     // don't send body for HEAD requests
@@ -51,17 +50,15 @@ export const createNodeRequestHandler = ({ handler, url, transform = (response) 
     const request = createRequestFromNodeRequest(nodeRequest, url)
     console.log(request.method, request.url.toString())
 
-    const handleResponse = (response) => {
-      response = response
-        ? createResponse(request, response)
-        : { status: 501, reason: "no response generated" }
-      passed(transform(response)).then((finalResponse) => {
+    const handleResponse = (responseProperties) => {
+      const response = createResponse(request, responseProperties)
+      Promise.resolve(transform(response)).then((finalResponse) => {
         console.log(`${finalResponse.status} ${request.url}`)
         populateNodeResponse(nodeResponse, finalResponse)
       })
     }
 
-    passed(handler(request)).then(handleResponse, handleResponse)
+    Promise.resolve(handler(request)).then(handleResponse, handleResponse)
   }
 }
 

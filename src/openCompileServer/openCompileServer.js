@@ -1,7 +1,6 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 
 /* eslint-disable import/max-dependencies */
-import { passed } from "@dmail/action"
 import { URL } from "url"
 import { createCompileService } from "../createCompileService/index.js"
 import { createFileService } from "../createFileService/index.js"
@@ -35,7 +34,7 @@ export const openCompileServer = ({
       ...compileContext,
     }
 
-    return passed(createOptions(context)).then(
+    return Promise.resolve(createOptions(context)).then(
       (
         {
           transform = true,
@@ -66,7 +65,7 @@ export const openCompileServer = ({
           // this is how compile output gets cached
           context.outputRelativeLocation = outputRelativeLocation
 
-          return passed({
+          return Promise.resolve({
             code: context.input,
             ast: null,
             map: null,

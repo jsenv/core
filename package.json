@@ -20,7 +20,6 @@
 		"node": ">=8.6.0"
 	},
 	"dependencies": {
-		"@dmail/action": "3.0.0",
 		"@dmail/module-loader": "github:dmail/module-loader",
 		"@dmail/shared-config": "6.0.0",
 		"@dmail/signal": "7.0.1",

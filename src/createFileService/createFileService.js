@@ -1,4 +1,3 @@
-import { createAction, passed } from "@dmail/action"
 import fs from "fs"
 import os from "os"
 import path from "path"
@@ -94,45 +93,39 @@ export const convertFileSystemErrorToResponseProperties = (error) => {
 }
 
 const stat = (location) => {
-  const action = createAction()
-
-  fs.stat(location, (error, stat) => {
-    if (error) {
-      action.fail(convertFileSystemErrorToResponseProperties(error))
-    } else {
-      action.pass(stat)
-    }
+  return new Promise((resolve, reject) => {
+    fs.stat(location, (error, stat) => {
+      if (error) {
+        reject(convertFileSystemErrorToResponseProperties(error))
+      } else {
+        resolve(stat)
+      }
+    })
   })
-
-  return action
 }
 
 const readFile = (location) => {
-  const action = createAction()
-
-  fs.readFile(location, (error, buffer) => {
-    if (error) {
-      action.fail(convertFileSystemErrorToResponseProperties(error))
-    } else {
-      action.pass(String(buffer))
-    }
+  return new Promise((resolve, reject) => {
+    fs.readFile(location, (error, buffer) => {
+      if (error) {
+        reject(convertFileSystemErrorToResponseProperties(error))
+      } else {
+        resolve(String(buffer))
+      }
+    })
   })
-
-  return action
 }
 
 const listDirectoryContent = (location) => {
-  const action = createAction()
-
-  fs.readdir(location, (error, ressourceNames) => {
-    if (error) {
-      throw error
-    } else {
-      action.pass(ressourceNames)
-    }
+  return new Promise((resolve, reject) => {
+    fs.readdir(location, (error, ressourceNames) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(ressourceNames)
+      }
+    })
   })
-
-  return action
 }
 
 export const createFileService = (
@@ -149,10 +142,10 @@ export const createFileService = (
 
   headers["cache-control"] = "no-store"
 
-  let action
+  let promise
 
   if (method === "GET" || method === "HEAD") {
-    action = passed(locate({ method, url })).then((fileURL) => {
+    promise = Promise.resolve(locate({ method, url })).then((fileURL) => {
       fileURL = new URL(fileURL)
       // since https://github.com/nodejs/node/pull/10739
       // fs methods supports url as path
@@ -242,16 +235,16 @@ export const createFileService = (
           reason = responseReason
           Object.assign(headers, responseHeaders)
           body = responseBody
-          return passed()
+          return Promise.resolve()
         },
       )
     })
   } else {
     status = 501
-    action = passed()
+    promise = Promise.resolve()
   }
 
-  return action.then(() => {
+  return promise.then(() => {
     return {
       status,
       reason,

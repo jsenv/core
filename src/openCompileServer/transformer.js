@@ -3,7 +3,7 @@ import {
   createModuleOptions,
   createSyntaxOptions,
   mergeOptions,
-} from "@dmail/shared-config/dist/babel.js"
+} from "@dmail/shared-config/dist/babel"
 import { transform, transformFromAst } from "babel-core"
 import moduleFormats from "js-module-formats"
 

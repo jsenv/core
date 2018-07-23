@@ -1,4 +1,3 @@
-import { all } from "@dmail/action"
 import { removeFolderDeep, resolvePath } from "./helpers.js"
 import { inspect } from "./inspect.js"
 
@@ -8,7 +7,7 @@ export const sync = ({ rootLocation, cacheFolderRelativeLocation }) => {
   return inspect({ rootLocation, cacheFolderRelativeLocation }).then((report) => {
     const foldersInvalid = report.filter(({ status }) => status !== "valid")
 
-    return all(
+    return Promise.all(
       foldersInvalid.map(({ folder }) =>
         removeFolderDeep(resolvePath(cacheFolderLocation, folder)),
       ),

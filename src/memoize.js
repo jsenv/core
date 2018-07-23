@@ -1,18 +1,3 @@
-import { failed, passed } from "@dmail/action"
-
-export const memoize = (fn, { restore, save, transform }) => {
-  return (...args) => {
-    return passed(restore(...args)).then(
-      (value) => transform(value, ...args),
-      () => {
-        const freshValue = fn(...args)
-        save(freshValue, ...args)
-        return passed(transform(freshValue, ...args))
-      },
-    )
-  }
-}
-
 export const createStore = ({
   compare = (args, savedArgs) => {
     if (savedArgs.length !== args.length) {
@@ -34,7 +19,10 @@ export const createStore = ({
 
   const restore = (...args) => {
     const foundEntry = entries.find(({ savedArgs }) => compare(args, savedArgs))
-    return foundEntry ? passed(foundEntry.value) : failed()
+    return {
+      has: Boolean(foundEntry),
+      value: foundEntry ? foundEntry.value : undefined,
+    }
   }
 
   const save = (value, ...args) => {
@@ -51,18 +39,17 @@ export const createStore = ({
   }
 }
 
-export const memoizeSync = (fn, { restore, save, transform } = createStore()) => {
+export const memoize = (fn, { restore, save, transform } = createStore()) => {
   return (...args) => {
-    const restoreAction = passed(restore(...args))
-    const restoreState = restoreAction.getState()
-    if (restoreState === "passed") {
-      return transform(restoreAction.getResult(), ...args)
-    }
-    if (restoreState === "failed") {
+    return Promise.resolve(restore(...args)).then(({ has, value }) => {
+      if (has) {
+        return transform(value, ...args)
+      }
       const freshValue = fn(...args)
       save(freshValue, ...args)
       return transform(freshValue, ...args)
-    }
-    throw new Error("restore must pass/fail synchronously")
+    })
   }
 }
+
+export const memoizeSync = memoize
