@@ -1,9 +1,9 @@
 # Things to do
 
 * [ ] deprecate usage of `@dmail/signal` in favor of promise (openCompileServer must return a promise)
-* [ ] Create a new project called `poc-dev-signal`
-* [ ] `poc-dev-signal` must have this project and `@dmail/signal` as dependency
-* [ ] `poc-dev-signal/index.js` will must be something like
+* [x] Create a new project called `poc-dev-signal`
+* [x] `poc-dev-signal` must have this project and `@dmail/signal` as dependency
+* [x] `poc-dev-signal/index.js` will must be something like
 
 ```javascript
 import { createSignal } from "@dmail/signal"
@@ -13,9 +13,9 @@ console.log("Hello world")
 export default createSignal.name
 ```
 
-* [ ] Run `poc-dev-signal/index.js` on node ensuring `'Hello world'` is logged and export default is correct
-* [ ] Run `poc-dev-signal/index.js` on chrome headless ensuring `'Hello world'` is logged and export default is correct
-* [ ] Run `poc-dev-signal/index.js` on chrome with ui ensuring `'Hello world'` is logged and export default is correct
+* [x] Run `poc-dev-signal/index.js` on node ensuring `'Hello world'` is logged and export default is correct
+* [x] Run `poc-dev-signal/index.js` on chrome headless ensuring `'Hello world'` is logged and export default is correct
+* [x] Run `poc-dev-signal/index.js` on chrome with ui ensuring `'Hello world'` is logged and export default is correct
 * [ ] Implement code instrumentaton for coverage in this project
 * [ ] Create `poc-dev-signal/index.test.js` with something like this inside
 
