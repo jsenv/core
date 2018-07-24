@@ -1,86 +1,101 @@
 import { test } from "@dmail/test"
+import assert from "assert"
+import { mockExecution } from "micmac"
 import { createPromiseAndHooks } from "../promise.js"
 import { enqueueCall, enqueueCallByArgs } from "./enqueueCall.js"
 
-const assertPromiseIsPending = () => true
+const assertPromiseIsPending = (promise) => {
+  assert(promise.status === "pending" || promise.status === "resolved")
+}
 
-const assertPromiseIsResolving = () => true
+const assertPromiseIsFulfilled = (promise) => {
+  assert.equal(promise.status, "fulfilled")
+}
 
-const assertPromiseIsRejecting = () => true
+const assertPromiseIsRejected = (promise) => {
+  assert.equal(promise.status, "rejected")
+}
 
-const assertPromiseWillResolveTo = () => true
+const assertPromiseIsFulfilledWith = (promise, value) => {
+  assertPromiseIsFulfilled(promise)
+  assert.equal(promise.value, value)
+}
 
-const assertPromiseWillRejectTo = () => true
+const assertPromiseIsRejectedWith = (promise, value) => {
+  assertPromiseIsRejected(promise)
+  assert.equal(promise.value, value)
+}
 
 test(() => {
-  const fn = (value) => value
-  const { promise, resolve } = createPromiseAndHooks()
-  const returnedPromise = enqueueCall(fn)(promise)
+  mockExecution(({ tick }) => {
+    const fn = (value) => value
+    const { promise, resolve } = createPromiseAndHooks()
+    const returnedPromise = enqueueCall(fn)(promise)
 
-  assertPromiseIsPending(returnedPromise)
-  resolve(1)
-  assertPromiseIsResolving(returnedPromise)
-  return assertPromiseWillResolveTo(returnedPromise, 1)
+    assertPromiseIsPending(returnedPromise)
+    resolve(1)
+    tick()
+    assertPromiseIsFulfilledWith(returnedPromise, 1)
+  })
 })
 
 test(() => {
-  const fn = (value) => value
-  const { promise, reject } = createPromiseAndHooks()
-  const returnedPromise = enqueueCall(fn)(promise)
+  mockExecution(({ tick }) => {
+    const fn = (value) => value
+    const { promise, reject } = createPromiseAndHooks()
+    const returnedPromise = enqueueCall(fn)(promise)
 
-  assertPromiseIsPending(returnedPromise)
-  reject(1)
-  assertPromiseIsRejecting(returnedPromise)
-  return assertPromiseWillRejectTo(returnedPromise, 1)
+    assertPromiseIsPending(returnedPromise)
+    reject(1)
+    tick()
+    assertPromiseIsRejectedWith(returnedPromise, 1)
+  })
 })
 
 // un appel attends la résolution de tout autre appel en cours
 test(() => {
-  const debounced = enqueueCall((promise, value) => promise.then(() => value))
-  const firstPromise = createPromiseAndHooks()
-  const firstCallPromise = debounced(firstPromise.promise, 1)
-  const secondPromise = createPromiseAndHooks()
-  const secondCallPromise = debounced(secondPromise.promise, 2)
+  mockExecution(({ tick }) => {
+    const debounced = enqueueCall((promise, value) => promise.then(() => value))
+    const firstPromise = createPromiseAndHooks()
+    const firstCallPromise = debounced(firstPromise.promise, 1)
+    const secondPromise = createPromiseAndHooks()
+    const secondCallPromise = debounced(secondPromise.promise, 2)
 
-  assertPromiseIsPending(firstCallPromise)
-  assertPromiseIsPending(secondCallPromise)
-  firstPromise.resolve()
-  assertPromiseIsResolving(firstCallPromise)
-  assertPromiseIsPending(secondCallPromise)
-  return assertPromiseWillResolveTo(firstCallPromise, 1).then(() => {
+    assertPromiseIsPending(firstCallPromise)
+    assertPromiseIsPending(secondCallPromise)
+    firstPromise.resolve()
+    tick()
+    assertPromiseIsFulfilledWith(firstCallPromise, 1)
+    assertPromiseIsPending(secondCallPromise)
     secondPromise.resolve()
-    assertPromiseIsResolving(secondCallPromise)
-    return assertPromiseWillResolveTo(secondCallPromise, 2)
+    tick()
+    assertPromiseIsFulfilledWith(secondCallPromise, 2)
   })
 })
 
 // un appel atttends la fin de la résolution de tout autre appel ayant les "même" arguments
 test(() => {
-  const map = new Map()
-  const restoreByArgs = (value) => map.get(value)
-  const memoizeArgs = (fn, value) => map.set(value, fn)
-  const fn = (promise, value) => promise.then(() => value)
-  const debounced = enqueueCallByArgs({ fn, restoreByArgs, memoizeArgs })
+  mockExecution(({ tick }) => {
+    const fn = (promise, value) => promise.then(() => value)
+    const debounced = enqueueCallByArgs(fn)
 
-  const firstPromise = createPromiseAndHooks()
-  const secondPromise = createPromiseAndHooks()
+    const firstPromise = createPromiseAndHooks()
+    const secondPromise = createPromiseAndHooks()
 
-  const firstCallPromise = debounced(firstPromise.promise, 1)
-  const secondCallPromise = debounced(secondPromise.promise, 2)
-  const thirdCallPromise = debounced(firstPromise.promise, 3)
+    const firstCallPromise = debounced(firstPromise.promise, 1)
+    const secondCallPromise = debounced(secondPromise.promise, 2)
+    const thirdCallPromise = debounced(firstPromise.promise, 3)
 
-  assertPromiseIsPending(firstCallPromise)
-  assertPromiseIsPending(secondCallPromise)
-  assertPromiseIsPending(thirdCallPromise)
-  firstPromise.resolve()
-  assertPromiseIsResolving(firstCallPromise)
-  return assertPromiseWillResolveTo(firstCallPromise, 1).then(() => {
+    assertPromiseIsPending(firstCallPromise)
     assertPromiseIsPending(secondCallPromise)
-    assertPromiseIsResolving(thirdCallPromise)
-    return assertPromiseWillResolveTo(thirdCallPromise, 3).then(() => {
-      secondPromise.resolve()
-      assertPromiseIsResolving(secondCallPromise)
-      return assertPromiseWillResolveTo(secondCallPromise, 2)
-    })
+    assertPromiseIsPending(thirdCallPromise)
+    firstPromise.resolve()
+    tick()
+    assertPromiseIsFulfilledWith(firstCallPromise, 1)
+    assertPromiseIsPending(secondCallPromise)
+    assertPromiseIsFulfilledWith(thirdCallPromise, 3)
+    secondPromise.resolve()
+    tick()
+    assertPromiseIsFulfilledWith(secondCallPromise, 2)
   })
 })

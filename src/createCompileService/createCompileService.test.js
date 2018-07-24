@@ -7,6 +7,8 @@ const projectRoot = path.resolve(__dirname, "../../..")
 test(() => {
   const service = createCompileService({
     rootLocation: projectRoot,
+    // compile does not exists anymore
+    // it's now createCompiler, have to extract it from openCompileServer
     compile: () => {
       return {
         output: `export default "compiled version"`,
@@ -18,7 +20,7 @@ test(() => {
     method: "GET",
     headers: new Map(),
     url: {
-      pathname: "/build/src/__test__/file.js",
+      pathname: "/src/__test__/file.js",
     },
   })
 })
