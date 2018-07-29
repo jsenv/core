@@ -1,14 +1,17 @@
 import path from "path"
 
-const writeSourceLocation = ({ code, location }) => {
-  return `${code}
+const writeSourceLocation = ({ source, location }) => {
+  return `${source}
 //# sourceURL=${location}`
 }
 
-const writeSourceURL = (
-  code,
-  { rootLocation, compiledFolderRelativeLocation, inputRelativeLocation, outputRelativeLocation },
-) => {
+export const identifier = ({
+  rootLocation,
+  compiledFolderRelativeLocation,
+  inputRelativeLocation,
+  outputRelativeLocation,
+  inputSource,
+}) => {
   // client thinks we are at compiled/folder/file.js
   const clientLocation = path.resolve(
     rootLocation,
@@ -19,12 +22,7 @@ const writeSourceURL = (
   // so client can found it at ../../build/folder/file.js/sjklqdjkljkljlk/file.js
   const relativeLocation = path.relative(clientLocation, serverLocation)
 
-  return writeSourceLocation({ code, location: relativeLocation })
-}
-
-export const identifier = ({ code, ...rest }, options, context) => {
   return {
-    code: writeSourceURL(code, context),
-    ...rest,
+    outputSource: writeSourceLocation({ source: inputSource, location: relativeLocation }),
   }
 }

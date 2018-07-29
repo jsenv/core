@@ -49,12 +49,16 @@ const createFolderUntil = ({ location }) => {
 
   folders.pop()
 
-  return sequence(folders, (_, index) => {
-    const folderLocation = folders.slice(0, index + 1).join("/")
-    return createFolder({
-      location: `${pathStartsWithSlash ? "/" : ""}${folderLocation}`,
-    })
-  })
+  return sequence(
+    folders.map((_, index) => {
+      return () => {
+        const folderLocation = folders.slice(0, index + 1).join("/")
+        return createFolder({
+          location: `${pathStartsWithSlash ? "/" : ""}${folderLocation}`,
+        })
+      }
+    }),
+  )
 }
 
 export const writeFile = ({ location, string }) => {

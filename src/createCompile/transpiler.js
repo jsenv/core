@@ -21,23 +21,42 @@ const detectModuleFormat = (input) => {
   return "global"
 }
 
-export const transformer = ({ code, map, ast }, { sourceMap }, { inputRelativeLocation }) => {
+export const transpiler = ({
+  inputRelativeLocation,
+  inputSource,
+  inputSourceMap,
+  inputAst,
+  options,
+}) => {
   // https://babeljs.io/docs/core-packages/#options
-  const inputModuleFormat = inputRelativeLocation.endsWith(".mjs") ? "es" : detectModuleFormat(code)
+  const inputModuleFormat = inputRelativeLocation.endsWith(".mjs")
+    ? "es"
+    : detectModuleFormat(inputSource)
   const outputModuleFormat = "systemjs"
   const moduleOptions = createModuleOptions({ inputModuleFormat, outputModuleFormat })
 
   const babelOptions = mergeOptions(moduleOptions, createSyntaxOptions(), {
     filenameRelative: inputRelativeLocation,
-    sourceMaps: sourceMap !== "none",
-    inputSourceMap: map,
+    sourceMaps: options.remap,
+    inputSourceMap,
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true,
   })
   const babelConfig = createConfig(babelOptions)
 
-  if (ast) {
-    return transformFromAst(ast, code, babelConfig)
+  if (inputAst) {
+    const { code, ast, map } = transformFromAst(inputAst, inputSource, babelConfig)
+    return {
+      outputSource: code,
+      outputSourceMap: map,
+      outputAst: ast,
+    }
   }
-  return transform(code, babelConfig)
+
+  const { code, ast, map } = transform(inputSource, babelConfig)
+  return {
+    outputSource: code,
+    outputSourceMap: map,
+    outputAst: ast,
+  }
 }

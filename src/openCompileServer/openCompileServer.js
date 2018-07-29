@@ -7,116 +7,17 @@ import { createFileService } from "../createFileService/index.js"
 import { createNodeRequestHandler, enableCORS } from "../openServer/createNodeRequestHandler.js"
 import { createResponseGenerator } from "../openServer/createResponseGenerator.js"
 import { openServer } from "../openServer/openServer.js"
-import { identifier } from "./identifier.js"
-import { instrumenter as defaultInstrumenter } from "./instrumenter.js"
-import { minifier as defaultMinifier } from "./minifier.js"
-import { optimizer as defaultOptimizer } from "./optimizer.js"
-import { sourceMapper } from "./sourceMapper.js"
-import { transformer as defaultTransformer } from "./transformer.js"
 
 const compiledFolderRelativeLocation = "compiled"
 const cacheFolderRelativeLocation = "build"
 
-export const openCompileServer = ({
-  url,
-  rootLocation,
-  cors = true,
-  createOptions = () => {},
-  transformer = defaultTransformer,
-  minifier = defaultMinifier,
-  instrumenter = defaultInstrumenter,
-  optimizer = defaultOptimizer,
-}) => {
-  const createCompiler = (compileContext) => {
-    const context = {
-      rootLocation,
-      compiledFolderRelativeLocation,
-      ...compileContext,
-    }
-
-    return Promise.resolve(createOptions(context)).then(
-      (
-        {
-          transform = true,
-          minify = false,
-          instrument = false,
-          optimize = false,
-          sourceMap = true,
-          sourceMapLocation = "commment", // 'comment' or 'inline'
-        } = {},
-      ) => {
-        const options = {
-          transform,
-          minify,
-          instrument,
-          optimize,
-          sourceMap,
-          sourceMapLocation,
-        }
-
-        const compile = (outputRelativeLocation) => {
-          // if sourceMap are appended as comment do not put //#sourceURL=../../file.js
-          // because chrome will not work with something like //#sourceMappingURL=../../file.js.map
-          // thus breaking sourcemaps
-          const identify = context.inputRelativeLocation && sourceMap !== "comment"
-          // outputRelativeLocation dependent from options:
-          // there is a 1/1 relationship between JSON.stringify(options) & outputRelativeLocation
-          // it means we can get options from outputRelativeLocation & vice versa
-          // this is how compile output gets cached
-          context.outputRelativeLocation = outputRelativeLocation
-
-          return Promise.resolve({
-            code: context.input,
-            ast: null,
-            map: null,
-          })
-            .then((script) => {
-              return transform ? transformer(script, options, context) : script
-            })
-            .then((script) => {
-              return instrument ? instrumenter(script, options, context) : script
-            })
-            .then((script) => {
-              return minify ? minifier(script, options, context) : script
-            })
-            .then((script) => {
-              return optimize ? optimizer(script, options, context) : script
-            })
-            .then((script) => {
-              return identify ? identifier(script, options, context) : script
-            })
-            .then((script) => {
-              return sourceMap ? sourceMapper(script, options, context) : script
-            })
-            .then(({ code, map, mapName }) => {
-              if (mapName) {
-                return {
-                  output: code,
-                  outputAssets: [
-                    {
-                      name: mapName,
-                      content: JSON.stringify(map),
-                    },
-                  ],
-                }
-              }
-              return {
-                output: code,
-                outputAssets: [],
-              }
-            })
-        }
-
-        return { options, compile }
-      },
-    )
-  }
-
+export const openCompileServer = ({ url, compile, rootLocation, cors = true }) => {
   const compileService = createCompileService({
-    createCompiler,
     rootLocation,
     cacheFolderRelativeLocation,
+    compiledFolderRelativeLocation,
     trackHit: true,
+    compile,
   })
 
   const handler = createResponseGenerator({

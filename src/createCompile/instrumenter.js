@@ -23,11 +23,13 @@ export const getCoverageGlobalVariableName = () => {
   return null
 }
 
-export const instrumenter = (
-  { code, map, ast, ...rest },
-  { coverageGlobalVariabeName = "__coverage__" },
-  { inputRelativeLocation },
-) => {
+export const instrumenter = ({
+  inputRelativeLocation,
+  inputSource,
+  inputSourceMap,
+  inputAst,
+  coverageGlobalVariabeName = "__coverage__",
+}) => {
   // http://gotwarlost.github.io/istanbul/public/apidocs/classes/Instrumenter.html
   const istanbulInstrumenter = new istanbul.Instrumenter({
     coverageVariable: coverageGlobalVariabeName,
@@ -45,34 +47,34 @@ export const instrumenter = (
       // il faut passer le fichier d'origine, sauf que ce fichier n'est pas dispo sur le fs puisque transpiled
       // il le sera ptet par la suite
       sourceMap: inputRelativeLocation,
-      sourceContent: code,
+      sourceContent: inputSource,
       sourceMapWithCode: true,
       file: inputRelativeLocation,
     },
   })
 
-  const outputCode = ast
-    ? istanbulInstrumenter.instrumentASTSync(ast, inputRelativeLocation, code)
-    : istanbulInstrumenter.instrumentSync(code, inputRelativeLocation)
-  const outputCodeSourceMap = istanbulInstrumenter.lastSourceMap()
+  const outputSource = inputAst
+    ? istanbulInstrumenter.instrumentASTSync(inputAst, inputRelativeLocation, inputSource)
+    : istanbulInstrumenter.instrumentSync(inputSource, inputRelativeLocation)
+  const outputSourceMap = istanbulInstrumenter.lastSourceMap()
 
-  if (map) {
+  if (inputSourceMap) {
     // https://github.com/karma-runner/karma-coverage/pull/146/files
-    const inputCodeSourceMapConsumer = new SourceMapConsumer(map)
-    const intrumentedCodeSourceMapConsumer = new SourceMapConsumer(outputCodeSourceMap)
+    const inputCodeSourceMapConsumer = new SourceMapConsumer(inputSourceMap)
+    const intrumentedCodeSourceMapConsumer = new SourceMapConsumer(outputSourceMap)
     const generator = SourceMapGenerator.fromSourceMap(intrumentedCodeSourceMapConsumer)
     generator.applySourceMap(inputCodeSourceMapConsumer)
 
     return {
-      code: outputCode,
-      map: JSON.parse(generator.toString()),
-      ...rest,
+      coverageGlobalVariabeName,
+      outputSource,
+      outputSourceMap: JSON.parse(generator.toString()),
     }
   }
 
   return {
-    code: outputCode,
-    map: outputCodeSourceMap,
-    ...rest,
+    coverageGlobalVariabeName,
+    outputSource,
+    outputSourceMap,
   }
 }

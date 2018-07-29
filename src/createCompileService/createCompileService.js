@@ -1,8 +1,12 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/store.js
 
+/* eslint-disable import/max-dependencies */
 import cuid from "cuid"
 import path from "path"
+import { URL } from "url"
+import { createCompile } from "../createCompile/createCompile.js"
 import { enqueueCallByArgs } from "../enqueueCall/enqueueCall.js"
+import { createHeaders } from "../openServer/createHeaders.js"
 import { JSON_FILE } from "./cache.js"
 import { createETag, isFileNotFoundError, resolvePath } from "./helpers.js"
 import { locateFile } from "./locateFile.js"
@@ -19,13 +23,17 @@ const compareBranch = (branchA, branchB) => {
 }
 
 export const createCompileService = ({
-  createCompiler,
   rootLocation,
   cacheFolderRelativeLocation = "build",
+  compiledFolderRelativeLocation = "compiled",
   trackHit = false,
   cacheEnabled = false,
-}) => (request) => {
-  const { method, url, headers } = request
+  compile = createCompile(),
+}) => ({ method, url, headers }) => {
+  url = new URL(url, "file:///")
+  headers = createHeaders(headers)
+
+  const request = { method, url, headers }
 
   if (method !== "GET" && method !== "HEAD") {
     return Promise.resolve({ status: 501 })
@@ -176,11 +184,14 @@ export const createCompileService = ({
 
   const getFromCacheOrGenerate = ({ inputLocation, cache }) => {
     return readFile({ location: inputLocation }).then(({ content }) => {
-      return createCompiler({
-        input: content,
+      return compile({
+        rootLocation,
+        cacheFolderRelativeLocation,
+        compiledFolderRelativeLocation,
         inputRelativeLocation,
+        inputSource: content,
         request,
-      }).then(({ options, compile }) => {
+      }).then(({ options, generate }) => {
         const branchIsValid = (branch) => {
           return JSON.stringify(branch.outputMeta) === JSON.stringify(options)
         }
@@ -203,7 +214,9 @@ export const createCompileService = ({
                 },
               }
             }
-            return compile(getOutputRelativeLocation(branch)).then((result) => {
+            return generate({
+              outputRelativeLocation: getOutputRelativeLocation(branch),
+            }).then((result) => {
               return {
                 branch,
                 data: {
@@ -221,7 +234,11 @@ export const createCompileService = ({
           name: cuid(),
         }
 
-        return Promise.resolve(compile(getOutputRelativeLocation(branch))).then((result) => {
+        return Promise.resolve(
+          generate({
+            outputRelativeLocation: getOutputRelativeLocation(branch),
+          }),
+        ).then((result) => {
           return {
             branch,
             data: {
@@ -361,5 +378,6 @@ export const createCompileService = ({
   // all call to read will be enqueued as long as they act on the same cacheDataLocation
   const cacheDataLocation = getCacheDataLocation()
   const enqueuedRead = enqueueCallByArgs(read)
+
   return enqueuedRead(cacheDataLocation)
 }
