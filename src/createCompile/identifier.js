@@ -11,18 +11,31 @@ export const identifier = ({
   inputRelativeLocation,
   outputRelativeLocation,
   inputSource,
+  options,
 }) => {
-  // client thinks we are at compiled/folder/file.js
-  const clientLocation = path.resolve(
-    rootLocation,
-    `${compiledFolderRelativeLocation}/${inputRelativeLocation}`,
-  )
-  // but the file is at build/folder/file.js/sjklqdjkljkljlk/file.js
-  const serverLocation = path.resolve(rootLocation, outputRelativeLocation)
-  // so client can found it at ../../build/folder/file.js/sjklqdjkljkljlk/file.js
-  const relativeLocation = path.relative(clientLocation, serverLocation)
+  if (options.identifyMethod === "relative") {
+    // client thinks we are at compiled/folder/file.js
+    const clientLocation = path.resolve(
+      rootLocation,
+      `${compiledFolderRelativeLocation}/${inputRelativeLocation}`,
+    )
+    // but the file is at build/folder/file.js/sjklqdjkljkljlk/file.js
+    const serverLocation = path.resolve(rootLocation, outputRelativeLocation)
+    // so client can found it at ../../build/folder/file.js/sjklqdjkljkljlk/file.js
+    const relativeLocation = path.relative(clientLocation, serverLocation)
 
-  return {
-    outputSource: writeSourceLocation({ source: inputSource, location: relativeLocation }),
+    return {
+      outputSource: writeSourceLocation({ source: inputSource, location: relativeLocation }),
+    }
+  }
+
+  if (options.identifyMethod === "absolute") {
+    // we will return /Users/dmail/rootLocation/relativeLocation
+    // we could also return https://ip:port/rootLocation/relativeLocation
+
+    const serverLocation = path.resolve(rootLocation, outputRelativeLocation)
+    return {
+      outputSource: writeSourceLocation({ source: inputSource, location: serverLocation }),
+    }
   }
 }

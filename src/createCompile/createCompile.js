@@ -50,21 +50,27 @@ export const createCompile = (
     return Promise.resolve(createOptions(compileContext)).then(
       (
         {
+          identify = true,
+          identifyMethod = "relative",
           transpile = true,
           minify = false,
           instrument = false,
           optimize = false,
           remap = true,
-          remapMethod = "comment", // 'comment' or 'inline'
+          remapMethod = "comment-relative", // 'comment-relative' or 'inline'
+          ...rest
         } = {},
       ) => {
         const options = {
+          identify,
+          identifyMethod,
           transpile,
           minify,
           instrument,
           optimize,
           remap,
           remapMethod,
+          ...rest,
         }
 
         const generate = ({ outputRelativeLocation }) => {
@@ -73,10 +79,16 @@ export const createCompile = (
           // it means we can get options from outputRelativeLocation & vice versa
           // this is how compile output gets cached
 
+          // no location -> cannot identify
+          if (!inputRelativeLocation) {
+            identify = false
+          }
           // if sourceMap are appended as comment do not put //#sourceURL=../../file.js
           // because chrome will not work with something like //#sourceMappingURL=../../file.js.map
           // thus breaking sourcemaps
-          const identify = inputRelativeLocation && remapMethod !== "comment"
+          if (inputRelativeLocation && remapMethod === "comment-relative") {
+            identify = false
+          }
 
           return Promise.resolve({
             ...compileContext,

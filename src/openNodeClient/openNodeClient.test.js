@@ -2,7 +2,11 @@ import path from "path"
 import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import { openNodeClient } from "./openNodeClient.js"
 
-openCompileServer({ rootLocation: path.resolve(__dirname, "../../../") }).then((server) => {
+openCompileServer({
+  rootLocation: path.resolve(__dirname, "../../../"),
+  sourceMap: "inline",
+  sourceURL: false,
+}).then((server) => {
   const cleanAll = true
 
   return openNodeClient({ server }).then((nodeClient) => {

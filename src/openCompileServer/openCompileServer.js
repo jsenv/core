@@ -2,6 +2,7 @@
 
 /* eslint-disable import/max-dependencies */
 import { URL } from "url"
+import { createCompile } from "../createCompile/createCompile.js"
 import { createCompileService } from "../createCompileService/index.js"
 import { createFileService } from "../createFileService/index.js"
 import { createNodeRequestHandler, enableCORS } from "../openServer/createNodeRequestHandler.js"
@@ -11,7 +12,53 @@ import { openServer } from "../openServer/openServer.js"
 const compiledFolderRelativeLocation = "compiled"
 const cacheFolderRelativeLocation = "build"
 
-export const openCompileServer = ({ url, compile, rootLocation, cors = true }) => {
+export const openCompileServer = ({
+  url,
+  rootLocation,
+  cors = true,
+  sourceMap = "comment", // can be "comment", "inline", "none"
+  sourceURL = true,
+}) => {
+  const compile = createCompile({
+    createOptions: ({ request }) => {
+      // we should use a token or something to prevent a browser from being taken for nodejs
+      // because will have security impact as we are going to trust this
+      const isNodeClient =
+        request.headers.has("user-agent") &&
+        request.headers.get("user-agent").startsWith("node-fetch")
+
+      const remap = sourceMap === "comment" || sourceMap === "inline"
+      let remapMethod
+      if (sourceMap === "comment") {
+        if (isNodeClient) {
+          remapMethod = "comment-absolute"
+        } else {
+          // if a browser or anything else comment-relative
+          remapMethod = "comment-relative"
+        }
+      } else if (sourceMap === "inline") {
+        remapMethod = "inline"
+      }
+
+      const identify = sourceURL
+      let identifyMethod
+      if (identify) {
+        if (isNodeClient) {
+          identifyMethod = "absolute"
+        } else {
+          identifyMethod = "relative"
+        }
+      }
+
+      return {
+        identify,
+        identifyMethod,
+        remap,
+        remapMethod,
+      }
+    },
+  })
+
   const compileService = createCompileService({
     rootLocation,
     cacheFolderRelativeLocation,
@@ -85,7 +132,7 @@ startCompileServer({
 })
 */
 
-// in order to support a build specific to a given browser swe could
+// in order to support a build specific to a given browser we could
 /*
 startCompileServer({
 	createOptions: ({ request }) => {

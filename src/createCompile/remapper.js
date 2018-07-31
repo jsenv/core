@@ -37,7 +37,21 @@ export const remapper = ({
     }
   }
 
-  if (options.remapMethod === "comment") {
+  if (options.remapMethod === "comment-absolute") {
+    const outputSourceMapName = `${path.basename(inputRelativeLocation)}.map`
+
+    // TODO: use outputSourceMapName instead of appending .map on outputRelativeLocation
+    const serverLocation = `${path.resolve(rootLocation, outputRelativeLocation)}.map`
+
+    const outputSource = writeSourceMapLocation({ source: inputSource, location: serverLocation })
+
+    return {
+      outputSource,
+      outputSourceMapName,
+    }
+  }
+
+  if (options.remapMethod === "comment-relative") {
     // folder/file.js -> file.js.map
     const outputSourceMapName = `${path.basename(inputRelativeLocation)}.map`
 
