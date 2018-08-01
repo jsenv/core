@@ -36,7 +36,10 @@ export const transpiler = ({
   const moduleOptions = createModuleOptions({ inputModuleFormat, outputModuleFormat })
 
   const babelOptions = mergeOptions(moduleOptions, createSyntaxOptions(), {
-    filenameRelative: inputRelativeLocation,
+    filename: inputRelativeLocation,
+    // filenameRelative: inputRelativeLocation,
+    sourceMapTarget: inputRelativeLocation,
+    sourceFileName: inputRelativeLocation,
     sourceMaps: options.remap,
     inputSourceMap,
     babelrc: false, // trust only these options, do not read any babelrc config file

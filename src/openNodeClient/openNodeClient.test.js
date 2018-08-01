@@ -4,12 +4,12 @@ import { openNodeClient } from "./openNodeClient.js"
 
 openCompileServer({
   rootLocation: path.resolve(__dirname, "../../../"),
-  sourceMap: "inline",
-  sourceURL: false,
+  sourceMap: "comment",
+  sourceURL: true,
 }).then((server) => {
   const cleanAll = true
 
-  return openNodeClient({ server }).then((nodeClient) => {
+  return openNodeClient({ server, detached: true }).then((nodeClient) => {
     nodeClient
       .execute({
         file: `${server.compileURL}src/__test__/file.js`,

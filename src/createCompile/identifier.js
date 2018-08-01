@@ -33,7 +33,7 @@ export const identifier = ({
     // we will return /Users/dmail/rootLocation/relativeLocation
     // we could also return https://ip:port/rootLocation/relativeLocation
 
-    const serverLocation = path.resolve(rootLocation, outputRelativeLocation)
+    const serverLocation = path.resolve(rootLocation, inputRelativeLocation)
     return {
       outputSource: writeSourceLocation({ source: inputSource, location: serverLocation }),
     }

@@ -45,8 +45,17 @@ export const remapper = ({
 
     const outputSource = writeSourceMapLocation({ source: inputSource, location: serverLocation })
 
+    const outputSourceMap = {
+      ...inputSourceMap,
+      file: normalizeSeparation(path.resolve(rootLocation, inputSourceMap.file)),
+      sources: inputSourceMap.sources.map((source) => {
+        return normalizeSeparation(path.resolve(rootLocation, source))
+      }),
+    }
+
     return {
       outputSource,
+      outputSourceMap,
       outputSourceMapName,
     }
   }

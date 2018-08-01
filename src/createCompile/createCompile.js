@@ -30,6 +30,7 @@ export const createCompile = (
     minifier = defaultMinifier,
     instrumenter = defaultInstrumenter,
     optimizer = defaultOptimizer,
+    readable = true,
   } = {},
 ) => {
   const compile = ({
@@ -106,12 +107,16 @@ export const createCompile = (
             .then((context) => (remap ? transform(context, remapper) : context))
             .then(({ outputSource, outputSourceMap, outputSourceMapName }) => {
               if (outputSourceMapName) {
+                const outputSourceMapString = readable
+                  ? JSON.stringify(outputSourceMap, null, "  ")
+                  : JSON.stringify(outputSourceMap)
+
                 return {
                   output: outputSource,
                   outputAssets: [
                     {
                       name: outputSourceMapName,
-                      content: JSON.stringify(outputSourceMap),
+                      content: outputSourceMapString,
                     },
                   ],
                 }

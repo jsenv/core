@@ -1,12 +1,28 @@
+import { createNodeLoader } from "@dmail/module-loader/src/node/index.js"
 import { fork } from "child_process"
 import path from "path"
 import "./global-fetch.js"
 
-export const openNodeClient = () => {
-  return Promise.resolve().then(() => {
-    const indexFile = path.resolve(__dirname, "./index.js")
+export const openNodeClient = ({ detached = true } = {}) => {
+  if (detached === false) {
+    return Promise.resolve().then(() => {
+      const close = () => {}
 
-    const child = fork(indexFile, {
+      const execute = ({ file }) => {
+        const System = createNodeLoader()
+        global.System = System
+        console.log("importing", file)
+        return System.import(file)
+      }
+
+      return { close, execute }
+    })
+  }
+
+  return Promise.resolve().then(() => {
+    const clientFile = path.resolve(__dirname, "./index.js")
+
+    const child = fork(clientFile, {
       execArgv: [
         // allow vscode to debug else you got port already used
         `--inspect-brk`,
