@@ -1,0 +1,9 @@
+{
+  "version": 3,
+  "sources": [
+    "/Users/d.maillard/Dev/Sandbox/npmlink/packages/dev-server/src/sourceMapTest/comment-absolute-system/file.js"
+  ],
+  "names": [],
+  "mappings": ";;;;;;AAAA;;yBAEe,I",
+  "file": "/Users/d.maillard/Dev/Sandbox/npmlink/packages/dev-server/src/sourceMapTest/comment-absolute-system/file.js"
+}
