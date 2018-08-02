@@ -47,8 +47,14 @@ const createResponse = (
 
 export const createNodeRequestHandler = ({ handler, url, transform = (response) => response }) => {
   return (nodeRequest, nodeResponse) => {
+    // should have some kind of id for a request
+    // so that logs knows whichs request they belong to
     const request = createRequestFromNodeRequest(nodeRequest, url)
     console.log(request.method, request.url.toString())
+
+    nodeRequest.on("error", (error) => {
+      console.log("error on", request.url.toString(), error)
+    })
 
     const handleResponse = (responseProperties) => {
       const response = createResponse(request, responseProperties)

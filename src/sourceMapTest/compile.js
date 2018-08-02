@@ -35,7 +35,6 @@ const compileFolder = (folderLocation) => {
     const { code, map } = babel.transform(inputSource, babelOptions)
 
     const outputSource = `${code}
-//# sourceURL=${fileLocation}
 //# sourceMappingURL=${fileOutputSourceMapLocation}`
 
     delete map.sourcesContent
@@ -48,4 +47,4 @@ const compileFolder = (folderLocation) => {
 }
 exports.compileFolder = compileFolder
 
-compileFolder(`${__dirname}/comment-absolute-system`)
+compileFolder(`${__dirname}/vscode-bug`)

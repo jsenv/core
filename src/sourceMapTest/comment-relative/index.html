@@ -1,9 +1,58 @@
 <html>
 
-<head>
-	<script src="./file.es5.js"></script>
-</head>
+<head></head>
 
-<body></body>
+<body>
+	<a href="./build/file.es5.js">./build/file.es5.js</a>
+	<script type="text/javascript">
+		const fetchUsingXHR = (url) => {
+			return new Promise((resolve, reject) => {
+				const xhr = new XMLHttpRequest()
+
+				const load = () => {
+					resolve(xhr.responseText)
+				}
+
+				const error = () => {
+					reject(
+						new Error(
+							`XHR error (status: ${xhr.status}, text: ${xhr.statusText}) loading ${url})`
+						)
+					)
+				}
+
+				xhr.onreadystatechange = () => {
+					if (xhr.readyState === 4) {
+						// in Chrome on file:/// URLs, status is 0
+						if (xhr.status === 0) {
+							if (xhr.responseText) {
+								load()
+							}
+							else {
+								// when responseText is empty, wait for load or error event
+								// to inform if it is a 404 or empty file
+								xhr.addEventListener('error', error)
+								xhr.addEventListener('load', load)
+							}
+						}
+						else if (xhr.status === 200) {
+							load()
+						}
+						else {
+							error()
+						}
+					}
+				}
+				xhr.open("GET", url, true)
+				xhr.send(null)
+			})
+		}
+
+		fetchUsingXHR('./build/file.es5.js').then((content) => {
+			eval(`${content}
+//# sourceURL=./build/file.es5.js`)
+		})
+	</script>
+</body>
 
 </html>

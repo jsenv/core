@@ -2,14 +2,20 @@ import path from "path"
 import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import { openNodeClient } from "./openNodeClient.js"
 
+const rootLocation = path.resolve(__dirname, "../../../")
 openCompileServer({
-  rootLocation: path.resolve(__dirname, "../../../"),
+  url: "http://127.0.0.1:8765",
+  rootLocation,
   sourceMap: "comment",
   sourceURL: true,
 }).then((server) => {
-  const cleanAll = true
+  const cleanAll = false
 
-  return openNodeClient({ server, detached: true }).then((nodeClient) => {
+  return openNodeClient({
+    server,
+    detached: false,
+    rootLocation,
+  }).then((nodeClient) => {
     nodeClient
       .execute({
         file: `${server.compileURL}src/__test__/file.js`,

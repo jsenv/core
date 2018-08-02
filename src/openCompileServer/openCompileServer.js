@@ -20,35 +20,18 @@ export const openCompileServer = ({
   sourceURL = true,
 }) => {
   const compile = createCompile({
-    createOptions: ({ request }) => {
+    createOptions: () => {
       // we should use a token or something to prevent a browser from being taken for nodejs
       // because will have security impact as we are going to trust this
-      const isNodeClient =
-        request.headers.has("user-agent") &&
-        request.headers.get("user-agent").startsWith("node-fetch")
+      // const isNodeClient =
+      //   request.headers.has("user-agent") &&
+      //   request.headers.get("user-agent").startsWith("node-fetch")
 
       const remap = sourceMap === "comment" || sourceMap === "inline"
-      let remapMethod
-      if (sourceMap === "comment") {
-        if (isNodeClient) {
-          remapMethod = "comment-absolute"
-        } else {
-          // if a browser or anything else comment-relative
-          remapMethod = "comment-relative"
-        }
-      } else if (sourceMap === "inline") {
-        remapMethod = "inline"
-      }
+      const remapMethod = "comment-relative"
 
       const identify = sourceURL
-      let identifyMethod
-      if (identify) {
-        if (isNodeClient) {
-          identifyMethod = "absolute"
-        } else {
-          identifyMethod = "relative"
-        }
-      }
+      const identifyMethod = "relative"
 
       return {
         identify,
@@ -96,15 +79,22 @@ export const openCompileServer = ({
     ],
   })
 
-  return openServer({ url }).then(({ url, addRequestHandler, close }) => {
+  return openServer({ url, autoCloseOnCrash: true }).then(({ url, addRequestHandler, close }) => {
     const nodeRequestHandler = createNodeRequestHandler({
       handler,
       url,
       transform: (response) => (cors ? enableCORS(response) : response),
     })
-    addRequestHandler(nodeRequestHandler)
+    addRequestHandler((request, response) => {
+      nodeRequestHandler(request, response)
+    })
 
-    return { close, url, compileURL: new URL(`${compiledFolderRelativeLocation}/`, url) }
+    return {
+      close,
+      url,
+      compileURL: new URL(`${compiledFolderRelativeLocation}/`, url),
+      rootLocation,
+    }
   })
 }
 

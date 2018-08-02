@@ -51,14 +51,14 @@ export const createCompile = (
     return Promise.resolve(createOptions(compileContext)).then(
       (
         {
-          identify = true,
+          identify = false,
           identifyMethod = "relative",
           transpile = true,
           minify = false,
           instrument = false,
           optimize = false,
           remap = true,
-          remapMethod = "comment-relative", // 'comment-relative' or 'inline'
+          remapMethod = "comment-relative", // 'comment-relative', 'comment-absolute' or 'inline'
           ...rest
         } = {},
       ) => {
@@ -84,10 +84,9 @@ export const createCompile = (
           if (!inputRelativeLocation) {
             identify = false
           }
-          // if sourceMap are appended as comment do not put //#sourceURL=../../file.js
-          // because chrome will not work with something like //#sourceMappingURL=../../file.js.map
-          // thus breaking sourcemaps
-          if (inputRelativeLocation && remapMethod === "comment-relative") {
+          // if sourceMap are appended as comment do not put any //#sourceURL=../../file.js
+          // because sourceMappingURL will try to resolve against sourceURL
+          if (remap && remapMethod === "comment-relative") {
             identify = false
           }
 

@@ -29,11 +29,13 @@ export const remapper = ({
 
   if (options.remapMethod === "inline") {
     const mapAsBase64 = new Buffer(JSON.stringify(inputSourceMap)).toString("base64")
+    const outputSource = writeSourceMapLocation({
+      source: inputSource,
+      location: `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
+    })
+
     return {
-      outputSource: writeSourceMapLocation({
-        source: inputSource,
-        location: `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
-      }),
+      outputSource,
     }
   }
 
@@ -75,8 +77,16 @@ export const remapper = ({
     const serverLocation = `${path.resolve(rootLocation, outputRelativeLocation)}.map`
     // so client can found it at ../../build/folder/file.js/sjklqdjkljkljlk/file.js.map
 
-    const relativeLocation = normalizeSeparation(path.relative(clientLocation, serverLocation))
-    const outputSource = writeSourceMapLocation({ source: inputSource, location: relativeLocation })
+    const outputSourceMapLocation = normalizeSeparation(
+      path.relative(clientLocation, serverLocation),
+    )
+
+    // const outputSourceMapLocation = `${path.dirname(outputRelativeLocation)}/${outputSourceMapName}`
+
+    const outputSource = writeSourceMapLocation({
+      source: inputSource,
+      location: outputSourceMapLocation,
+    })
 
     return {
       outputSource,

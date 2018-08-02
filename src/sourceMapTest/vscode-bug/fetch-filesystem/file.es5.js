@@ -1,4 +1,4 @@
-var value = "ok"
+var value = true
 
 debugger
 

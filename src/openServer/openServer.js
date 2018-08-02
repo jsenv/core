@@ -5,6 +5,8 @@ import { addNodeExceptionHandler } from "./addNodeExceptionHandler.js"
 import { createSelfSignature } from "./createSelfSignature.js"
 import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
 
+const REASON_CLOSING = "closing"
+
 export const openServer = (
   {
     // by default listen localhost on a random port in https
@@ -67,14 +69,14 @@ export const openServer = (
 
   const clients = new Set()
 
-  const closeClients = ({ isError = false, reason = "closing" } = {}) => {
+  const closeClients = ({ isError = false, reason = REASON_CLOSING } = {}) => {
     let status
     if (isError) {
       status = 500
       // reason = 'shutdown because error'
     } else {
       status = 503
-      // reason = 'available because closing'
+      // reason = 'unavailable because closing'
     }
 
     return Promise.all(
@@ -113,6 +115,15 @@ export const openServer = (
       }
     })
   })
+
+  // nodeServer.on("upgrade", (request, socket, head) => {
+  //   // when being requested using a websocket
+  //   // we could also answr to the request ?
+  //   // socket.end([data][, encoding])
+
+  //   console.log("upgrade", { head, request })
+  //   console.log("socket", { connecting: socket.connecting, destroyed: socket.destroyed })
+  // })
 
   let status = "opening"
 
@@ -177,17 +188,19 @@ export const openServer = (
     }
 
     if (autoCloseOnExit) {
-      const closeBeforeExitListener = listenNodeBeforeExit(close)
+      const closeBeforeExitListener = listenNodeBeforeExit(() => {
+        close("server process exiting")
+      })
       const wrappedClose = close
-      close = () => {
+      close = (...args) => {
         closeBeforeExitListener.remove()
-        return wrappedClose()
+        return wrappedClose(...args)
       }
     }
 
     if (autoCloseOnCrash) {
-      addNodeExceptionHandler(() => {
-        return close().then(() => false)
+      addNodeExceptionHandler((exception) => {
+        return close(exception).then(() => false)
       })
     }
 

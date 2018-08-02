@@ -1,18 +1,19 @@
-import { createNodeLoader } from "@dmail/module-loader/src/node/index.js"
 import { fork } from "child_process"
 import path from "path"
+import { ensureSystem } from "./ensureSystem.js"
 import "./global-fetch.js"
 
-export const openNodeClient = ({ detached = true } = {}) => {
+export const openNodeClient = ({ server, detached = true }) => {
+  const remoteRoot = server.compileURL.toString().slice(0, -1)
+  const localRoot = server.rootLocation
+
   if (detached === false) {
     return Promise.resolve().then(() => {
       const close = () => {}
 
       const execute = ({ file }) => {
-        const System = createNodeLoader()
-        global.System = System
         console.log("importing", file)
-        return System.import(file)
+        return ensureSystem({ remoteRoot, localRoot }).import(file)
       }
 
       return { close, execute }
@@ -20,7 +21,7 @@ export const openNodeClient = ({ detached = true } = {}) => {
   }
 
   return Promise.resolve().then(() => {
-    const clientFile = path.resolve(__dirname, "./index.js")
+    const clientFile = path.resolve(__dirname, "./client.js")
 
     const child = fork(clientFile, {
       execArgv: [
@@ -78,6 +79,8 @@ export const openNodeClient = ({ detached = true } = {}) => {
           id,
           data: {
             file,
+            remoteRoot,
+            localRoot,
           },
         })
       })
