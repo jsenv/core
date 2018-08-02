@@ -44,3 +44,71 @@ export const enqueueCallByArgs = (fn) => {
     }),
   )
 }
+
+const createLock = () => {
+  let unusedCallback
+  const onceUnused = (callback) => {
+    unusedCallback = callback
+  }
+
+  const pendings = []
+  let busy = false
+
+  const registerCallbackOnAvailable = (callback) => {
+    if (busy) {
+      const { promise, resolve, reject } = createPromiseAndHooks()
+      pendings.push({ promise, resolve, reject, callback })
+      return promise
+    }
+
+    busy = true
+    const promise = Promise.resolve().then(callback)
+
+    const fullfilledOrRejected = () => {
+      busy = false
+      if (pendings.length === 0) {
+        if (unusedCallback) {
+          unusedCallback()
+          unusedCallback = undefined
+        }
+      } else {
+        const { resolve, fn } = pendings.shift()
+        resolve(registerCallbackOnAvailable(fn))
+      }
+    }
+
+    promise.then(fullfilledOrRejected, fullfilledOrRejected)
+
+    return promise
+  }
+
+  return { registerCallbackOnAvailable, onceUnused }
+}
+
+const lockBindings = []
+const lockForRessource = (ressource) => {
+  const lockBinding = lockBindings.find((lockBinding) => lockBinding.ressource === ressource)
+  if (lockBinding) {
+    return lockBinding.lock
+  }
+
+  const lock = createLock()
+  lockBindings.push({
+    lock,
+    ressource,
+  })
+  // to avoid lockBindings to grow for ever
+  // we remove them from the array as soon as the ressource is not used anymore
+  lock.onceUnused(() => {
+    const index = lockBindings.indexOf(lock)
+    lockBindings.splice(index, 1)
+  })
+
+  return lock
+}
+
+const fileLock = lockForRessource("file.js")
+
+fileLock.registerCallbackOnAvailable(() => {
+  // appelle la fonction
+})

@@ -6,6 +6,8 @@ import {
 } from "@dmail/shared-config/dist/babel"
 import { transform, transformFromAst } from "babel-core"
 import moduleFormats from "js-module-formats"
+import path from "path"
+import { normalizeSeparation } from "../createCompileService/helpers.js"
 
 const detectModuleFormat = (input) => {
   const format = moduleFormats.detect(input)
@@ -22,10 +24,12 @@ const detectModuleFormat = (input) => {
 }
 
 export const transpiler = ({
+  rootLocation,
   inputRelativeLocation,
   inputSource,
   inputSourceMap,
   inputAst,
+  outputRelativeLocation,
   options,
 }) => {
   // https://babeljs.io/docs/core-packages/#options
@@ -35,11 +39,17 @@ export const transpiler = ({
   const outputModuleFormat = "systemjs"
   const moduleOptions = createModuleOptions({ inputModuleFormat, outputModuleFormat })
 
+  const inputLocation = path.resolve(rootLocation, inputRelativeLocation)
+  const outputLocation = path.resolve(rootLocation, outputRelativeLocation)
+  const inputLocationRelativeToOutputLocation = normalizeSeparation(
+    path.relative(outputLocation, inputLocation),
+  )
+
   const babelOptions = mergeOptions(moduleOptions, createSyntaxOptions(), {
     filename: inputRelativeLocation,
     // filenameRelative: inputRelativeLocation,
     sourceMapTarget: inputRelativeLocation,
-    sourceFileName: inputRelativeLocation,
+    sourceFileName: inputLocationRelativeToOutputLocation,
     sourceMaps: options.remap,
     inputSourceMap,
     babelrc: false, // trust only these options, do not read any babelrc config file

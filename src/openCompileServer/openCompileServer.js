@@ -53,10 +53,14 @@ export const openCompileServer = ({
   const handler = createResponseGenerator({
     services: [
       (request) => {
-        // change pathname from 'compile/folder/file.js' to 'folder/file.js'
+        // change pathname from 'compiled/folder/file.js' to 'folder/file.js'
         // because only server need a way to differentiate request that needs to be compiled
         // from request that needs to be served as file
         // compileService does not have to know about this
+        // but compileService must tell us where the file output will be
+        // because chrome and especially vscode will need this information
+        // compiled/folder/file.js
+        // ../../folder/file.js/iepoieeipo/file.js.map
         const requestURLPathname = request.url.pathname
         if (requestURLPathname.startsWith(`/${compiledFolderRelativeLocation}`)) {
           const compileURL = new URL(request.url)

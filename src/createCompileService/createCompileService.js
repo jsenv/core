@@ -81,22 +81,23 @@ export const createCompileService = ({
 
       return Promise.resolve()
         .then(() => {
+          // faudra pouvoir désactiver ce check lorsqu'on veut juste connaitre l'état du cache
           if (headers.has("if-none-match")) {
             const requestHeaderETag = headers.get("if-none-match")
             if (inputETag !== requestHeaderETag) {
               return {
                 status: `eTag modified on ${inputLocation} since it was cached by client`,
-                cachedInputEtag: requestHeaderETag,
+                inputEtagClient: requestHeaderETag,
               }
             }
             return { status: "valid" }
           }
 
-          const cachedInputEtag = cache.inputETag
-          if (inputETag !== cachedInputEtag) {
+          const inputEtagCached = cache.inputETag
+          if (inputETag !== inputEtagCached) {
             return {
-              status: `eTag modified on ${inputLocation} since it was cached`,
-              cachedInputEtag,
+              status: `eTag modified on ${inputLocation} since it was cached on filesystem`,
+              inputEtagCached,
             }
           }
 
@@ -125,6 +126,7 @@ export const createCompileService = ({
 
   const readOutputAssetCache = ({ branch, asset }) => {
     const outputAssetLocation = getOutputAssetLocation(branch, asset)
+    const name = asset.name
 
     return readFile({
       location: outputAssetLocation,
@@ -133,6 +135,7 @@ export const createCompileService = ({
       if (error) {
         return {
           status: `asset file not found ${outputAssetLocation}`,
+          name,
         }
       }
 
@@ -141,123 +144,133 @@ export const createCompileService = ({
       if (actual !== expected) {
         return {
           status: `unexpected ${asset.name} asset for ${inputRelativeLocation}: unexpected eTag`,
+          name,
           content,
         }
       }
       return {
         status: "valid",
+        name,
         content,
       }
     })
   }
 
-  const readBranch = ({ inputLocation, branch, cache, compileOptions }) => {
+  const readBranch = ({ inputLocation, branch, cache }) => {
     return Promise.all([
       readOutputCache({ inputLocation, branch, cache }),
       ...branch.outputAssets.map((outputAsset) =>
         readOutputAssetCache({ branch, asset: outputAsset }),
       ),
-    ]).then(([outputData, ...outputAssetsData]) => {
+    ]).then(([mainData, ...assetsData]) => {
+      const { status, input, inputEtagClient, inputEtagCached, output } = mainData
+
       let computedStatus
-      if (outputData.status === "valid") {
-        const invalidOutputAsset = outputAssetsData.find(
-          (outputAsset) => outputAsset.status !== "valid",
-        )
-        computedStatus = invalidOutputAsset ? invalidOutputAsset.status : "valid"
+      if (status === "valid") {
+        const invalidAsset = assetsData.find((assetData) => assetData.status !== "valid")
+        computedStatus = invalidAsset ? invalidAsset.status : "valid"
       } else {
-        computedStatus = outputData.status
+        computedStatus = status
       }
 
       return {
-        ...outputData,
-        outputAssets: branch.outputAssets.map(({ name }, index) => {
-          return {
-            name,
-            content: outputAssetsData[index].content,
-          }
-        }),
         status: computedStatus,
-        compileOptions,
+        input,
+        inputEtagClient,
+        inputEtagCached,
+        output,
+        outputAssets: assetsData,
       }
     })
   }
 
-  const getFromCacheOrGenerate = ({ inputLocation, cache }) => {
-    return readFile({ location: inputLocation }).then(({ content }) => {
-      return compile({
-        rootLocation,
-        cacheFolderRelativeLocation,
-        compiledFolderRelativeLocation,
-        inputRelativeLocation,
-        inputSource: content,
-        request,
-      }).then(({ options, generate }) => {
-        const branchIsValid = (branch) => {
-          return JSON.stringify(branch.outputMeta) === JSON.stringify(options)
-        }
+  const cacheDataLocation = getCacheDataLocation()
 
-        const cachedBranch = cache.branches.find((branch) => branchIsValid(branch))
-        if (cachedBranch) {
-          const branch = cachedBranch
-          return readBranch({
-            inputLocation,
-            cache,
-            branch,
-            compileOptions: options,
-          }).then((data) => {
-            if (cacheEnabled && data.status === "valid") {
+  // faut trouver un moyen d'apeller cette fonction de l'extérieur
+  // faut aussi que cette fonction utilise enqueueCallByArgs
+  // je pense que je vais simplifier l'api de enqueueCallByArgs
+  // ca ressemblera plus à quelque chose à voir enqueueCall.js
+  const getFileReport = (inputRelativeLocation, cacheDataLocation) => {
+    return Promise.all([
+      locateFile(inputRelativeLocation, rootLocation),
+      readFile({
+        location: cacheDataLocation,
+        errorHandler: isFileNotFoundError,
+      }).then(({ content, error }) => {
+        if (error) {
+          return {
+            branches: [],
+          }
+        }
+        const cache = JSON.parse(content)
+        if (cache.inputRelativeLocation !== inputRelativeLocation) {
+          throw new Error(
+            `${JSON_FILE} corrupted: unexpected inputRelativeLocation ${
+              cache.inputRelativeLocation
+            }, it must be ${inputRelativeLocation}`,
+          )
+        }
+        return cache
+      }),
+    ])
+      .then(([inputLocation, cache]) => {
+        return {
+          inputLocation,
+          cache,
+        }
+      })
+      .then(({ inputLocation, cache }) => {
+        return readFile({ location: inputLocation }).then(({ content }) => {
+          return compile({
+            rootLocation,
+            cacheFolderRelativeLocation,
+            compiledFolderRelativeLocation,
+            inputRelativeLocation,
+            inputSource: content,
+            request,
+          }).then(({ options, generate }) => {
+            const branchIsValid = (branch) => {
+              return JSON.stringify(branch.outputMeta) === JSON.stringify(options)
+            }
+
+            const cachedBranch = cache.branches.find((branch) => branchIsValid(branch))
+            if (!cachedBranch) {
               return {
-                branch,
+                status: "missing",
+                inputLocation,
+                cache,
+                options,
+                generate,
                 data: {
-                  ...data,
-                  status: "cached",
+                  input: content,
                 },
               }
             }
-            return generate({
-              outputRelativeLocation: getOutputRelativeLocation(branch),
-            }).then((result) => {
+
+            const branch = cachedBranch
+            return readBranch({
+              inputLocation,
+              cache,
+              branch,
+            }).then(({ status, ...data }) => {
               return {
+                status,
+                inputLocation,
+                cache,
+                options,
+                generate,
                 branch,
-                data: {
-                  ...data,
-                  status: "updated",
-                  inputETag: createETag(data.input),
-                  ...result,
-                },
+                data,
               }
             })
           })
-        }
-
-        const branch = {
-          name: cuid(),
-        }
-
-        return Promise.resolve(
-          generate({
-            outputRelativeLocation: getOutputRelativeLocation(branch),
-          }),
-        ).then((result) => {
-          return {
-            branch,
-            data: {
-              compileOptions: options,
-              status: "created",
-              input: content,
-              inputETag: createETag(content),
-              ...result,
-            },
-          }
         })
       })
-    })
   }
 
-  const update = ({ inputLocation, cache, branch, data }) => {
+  const update = ({ status, inputLocation, cache, options, branch, data }) => {
     const { branches } = cache
-    const { status } = data
-    const isCached = status === "cached"
+    const isCached = status === "valid"
     const isNew = status === "created"
     const isUpdated = status === "updated"
 
@@ -265,32 +278,33 @@ export const createCompileService = ({
       return Promise.resolve()
     }
 
-    Object.assign(cache, {
-      inputRelativeLocation,
-      inputETag: isCached ? cache.inputETag : data.inputETag,
-    })
-
-    if (inputLocation !== resolvePath(rootLocation, inputRelativeLocation)) {
-      cache.inputLocation = inputLocation
-    }
-
-    const { outputAssets = [] } = data
-
     Object.assign(branch, {
       matchCount: isCached ? branch.matchCount + 1 : 1,
       createdMs: isNew ? Number(Date.now()) : branch.createdMs,
       lastModifiedMs: isCached ? branch.lastModifiedMs : Number(Date.now()),
       lastMatchMs: Number(Date.now()),
-      outputMeta: data.compileOptions,
+      outputMeta: options,
       outputAssets: isCached
-        ? branch.outputAssets
-        : outputAssets.map(({ name, content }) => {
+        ? data.outputAssets.map(({ name, eTag }) => {
+            return { name, eTag }
+          })
+        : data.outputAssets.map(({ name, content }) => {
             return { name, eTag: createETag(content) }
           }),
     })
 
     if (isNew) {
       branches.push(branch)
+    }
+
+    Object.assign(cache, {
+      inputRelativeLocation,
+      inputETag: isCached ? cache.inputETag : data.inputETag,
+      branches: branches.sort(compareBranch),
+    })
+
+    if (inputLocation !== resolvePath(rootLocation, inputRelativeLocation)) {
+      cache.inputLocation = inputLocation
     }
 
     const promises = []
@@ -301,7 +315,7 @@ export const createCompileService = ({
           location: getOutputLocation(branch),
           string: data.output,
         }),
-        ...outputAssets.map((asset) =>
+        ...data.outputAssets.map((asset) =>
           writeFile({
             location: getOutputAssetLocation(branch, asset),
             string: asset.content,
@@ -313,7 +327,7 @@ export const createCompileService = ({
     promises.push(
       writeFile({
         location: getCacheDataLocation(cache),
-        string: JSON.stringify({ ...cache, branches: branches.sort(compareBranch) }, null, "\t"),
+        string: JSON.stringify(cache, null, "\t"),
       }),
     )
 
@@ -321,38 +335,73 @@ export const createCompileService = ({
   }
 
   const read = (cacheDataLocation) => {
-    return locateFile(inputRelativeLocation, rootLocation)
-      .then((inputLocation) => {
-        return readFile({
-          location: cacheDataLocation,
-          errorHandler: isFileNotFoundError,
+    return getFileReport(inputRelativeLocation, cacheDataLocation)
+      .then(({ status, inputLocation, generate, cache, branch, data }) => {
+        if (cacheEnabled === false) {
+          status = "missing"
+        }
+
+        if (status === "valid") {
+          return {
+            status: "valid",
+            inputLocation,
+            cache,
+            branch,
+            data,
+          }
+        }
+
+        if (status === "missing") {
+          branch = {
+            name: cuid(),
+          }
+
+          return Promise.resolve(
+            generate({
+              outputRelativeLocation: getOutputRelativeLocation(branch),
+            }),
+          ).then(({ output, outputAssets }) => {
+            return {
+              status: "created",
+              inputLocation,
+              cache,
+              branch,
+              data: {
+                ...data,
+                inputETag: createETag(data.input),
+                output,
+                outputAssets,
+              },
+            }
+          })
+        }
+
+        return generate({
+          outputRelativeLocation: getOutputRelativeLocation(branch),
+        }).then(({ output, outputAssets }) => {
+          return {
+            status: "updated",
+            inputLocation,
+            cache,
+            branch,
+            data: {
+              ...data,
+              inputETag: createETag(data.input),
+              output,
+              outputAssets,
+            },
+          }
         })
-          .then(({ content, error }) => {
-            if (error) {
-              return {
-                inputRelativeLocation,
-                branches: [],
-              }
-            }
-            const cache = JSON.parse(content)
-            if (cache.inputRelativeLocation !== inputRelativeLocation) {
-              throw new Error(
-                `${JSON_FILE} corrupted: unexpected inputRelativeLocation ${
-                  cache.inputRelativeLocation
-                }, it must be ${inputRelativeLocation}`,
-              )
-            }
-            return cache
-          })
-          .then((cache) => {
-            return getFromCacheOrGenerate({ inputLocation, cache }).then(({ branch, data }) => {
-              return update({ inputLocation, cache, branch, data }).then(() => {
-                return data
-              })
-            })
-          })
+      })
+      .then(({ status, inputLocation, cache, branch, data }) => {
+        return update({ status, inputLocation, cache, branch, data }).then(() => {
+          return data
+        })
       })
       .then(({ status, output, inputETag }) => {
+        // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
+        // if-none-match c'est forcément le etag du client qui a match
+        // faudra changer ça
         if (headers.has("if-none-match") && status === "cached") {
           return {
             status: 304,
@@ -376,7 +425,6 @@ export const createCompileService = ({
   }
 
   // all call to read will be enqueued as long as they act on the same cacheDataLocation
-  const cacheDataLocation = getCacheDataLocation()
   const enqueuedRead = enqueueCallByArgs(read)
 
   return enqueuedRead(cacheDataLocation)

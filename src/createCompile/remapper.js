@@ -8,7 +8,6 @@ const writeSourceMapLocation = ({ source, location }) => {
 
 export const remapper = ({
   rootLocation,
-  compiledFolderRelativeLocation,
   inputRelativeLocation,
   outputRelativeLocation,
   inputSource,
@@ -65,24 +64,7 @@ export const remapper = ({
   if (options.remapMethod === "comment-relative") {
     // folder/file.js -> file.js.map
     const outputSourceMapName = `${path.basename(inputRelativeLocation)}.map`
-
-    // client thinks we are at compiled/folder/file.js
-    const clientLocation = path.resolve(
-      rootLocation,
-      // TODO: use outputSourceMapName instead of appending .map on clientLocation
-      `${compiledFolderRelativeLocation}/${inputRelativeLocation}.map`,
-    )
-    // but the file is at build/folder/file.js/sjklqdjkljkljlk/file.js
-    // TODO: use outputSourceMapName instead of appending .map on outputRelativeLocation
-    const serverLocation = `${path.resolve(rootLocation, outputRelativeLocation)}.map`
-    // so client can found it at ../../build/folder/file.js/sjklqdjkljkljlk/file.js.map
-
-    const outputSourceMapLocation = normalizeSeparation(
-      path.relative(clientLocation, serverLocation),
-    )
-
-    // const outputSourceMapLocation = `${path.dirname(outputRelativeLocation)}/${outputSourceMapName}`
-
+    const outputSourceMapLocation = `./${outputSourceMapName}`
     const outputSource = writeSourceMapLocation({
       source: inputSource,
       location: outputSourceMapLocation,

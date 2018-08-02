@@ -1,4 +1,4 @@
-import { ensureSystem } from "./openNodeClient.js"
+import { ensureSystem } from "./ensureSystem.js"
 
 process.on("message", ({ type, id, data }) => {
   if (type === "execute") {

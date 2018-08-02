@@ -3,7 +3,7 @@
 <head></head>
 
 <body>
-	<a href="./build/file.es5.js">./build/file.es5.js</a>
+	<a href="./build-chrome/file.es5.js/file.es5.js">./build-chrome/file.es5.js/file.es5.js</a>
 	<script type="text/javascript">
 		const fetchUsingXHR = (url) => {
 			return new Promise((resolve, reject) => {
@@ -48,9 +48,9 @@
 			})
 		}
 
-		fetchUsingXHR('./build/file.es5.js').then((content) => {
+		fetchUsingXHR('./build/file.es5.js/file.es5.js').then((content) => {
 			eval(`${content}
-//# sourceURL=./build/file.es5.js`)
+//# sourceURL=./compiled/file.es5.js`)
 		})
 	</script>
 </body>

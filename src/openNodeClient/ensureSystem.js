@@ -1,5 +1,4 @@
 import { createNodeLoader } from "@dmail/module-loader/src/node/index.js"
-import path from "path"
 
 const memoize = (fn) => {
   let called = false
@@ -65,12 +64,14 @@ export const ensureSystem = memoize(({ localRoot, remoteRoot }) => {
   // https://github.com/Microsoft/vscode-chrome-debug-core/blob/fb7ce14702c835253b6e0bad26fb746a2ce0f5d3/src/sourceMaps/sourceMapFactory.ts#L136
 
   const getFilename = (key) => {
-    const filename = key.replace(remoteRoot, `${localRoot}/compiled`)
+    const filename = key.replace(remoteRoot, localRoot)
 
     // because of this line
     // https://github.com/Microsoft/vscode-chrome-debug-core/blob/fb7ce14702c835253b6e0bad26fb746a2ce0f5d3/src/sourceMaps/sourceMapUtils.ts#L137
     // we're adding a fake folder because path resolution differs from url resolution
-    return `${path.dirname(filename)}/vscodefix/${path.basename(filename)}`
+    // filename = `${path.dirname(filename)}/vscodefix/${path.basename(filename)}`
+
+    return filename
   }
 
   const System = createNodeLoader({

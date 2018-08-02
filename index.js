@@ -9,7 +9,7 @@ import { openChromiumClient } from "./src/openChromiumClient/openChromiumClient.
 import { openCompileServer } from "./src/openCompileServer/openCompileServer.js"
 import { openNodeClient } from "./src/openNodeClient/openNodeClient.js"
 
-export const createModuleRunner = ({ location, sourceMap, sourceURL }) => {
+export const createModuleRunner = (params) => {
   // if there is already a compileServer running for that location
   // they will work as long as the code which created them run in the same terminal
   // if two terminal spawns a server trying to compile a given project they will concurrently
@@ -19,16 +19,13 @@ export const createModuleRunner = ({ location, sourceMap, sourceURL }) => {
   // - save somewhere the port used for that specific project and reuse when existing
   // save used port is the easiest solution but we'll ignore this issue for now
   // and assume noone will try to open two server for the same location
-  return openCompileServer({
-    rootLocation: location,
-    sourceMap,
-    sourceURL,
-  }).then((server) => {
-    const runInsideNode = ({ file }) => {
+  return openCompileServer(params).then((server) => {
+    const runInsideNode = ({ file, ...rest }) => {
       return openNodeClient({ server }).then((nodeClient) => {
         // we should return a way to close?
         return nodeClient.execute({
           file: `${server.compileURL}${file}`,
+          ...rest,
         })
       })
     }
