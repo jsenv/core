@@ -2,7 +2,7 @@ import { test } from "@dmail/test"
 import assert from "assert"
 import { mockExecution } from "micmac"
 import { createPromiseAndHooks } from "../promise.js"
-import { enqueueCall, enqueueCallByArgs } from "./enqueueCall.js"
+import { createLockRegistry } from "./createLock.js"
 
 const assertPromiseIsPending = (promise) => {
   assert(promise.status === "pending" || promise.status === "resolved")
@@ -28,9 +28,9 @@ const assertPromiseIsRejectedWith = (promise, value) => {
 
 test(() => {
   mockExecution(({ tick }) => {
-    const fn = (value) => value
+    const lock = createLockRegistry().lockForRessource()
     const { promise, resolve } = createPromiseAndHooks()
-    const returnedPromise = enqueueCall(fn)(promise)
+    const returnedPromise = lock.chain(() => promise)
 
     assertPromiseIsPending(returnedPromise)
     resolve(1)
@@ -41,9 +41,9 @@ test(() => {
 
 test(() => {
   mockExecution(({ tick }) => {
-    const fn = (value) => value
+    const lock = createLockRegistry().lockForRessource()
     const { promise, reject } = createPromiseAndHooks()
-    const returnedPromise = enqueueCall(fn)(promise)
+    const returnedPromise = lock.chain(() => promise)
 
     assertPromiseIsPending(returnedPromise)
     reject(1)
@@ -55,11 +55,11 @@ test(() => {
 // un appel attends la résolution de tout autre appel en cours
 test(() => {
   mockExecution(({ tick }) => {
-    const debounced = enqueueCall((promise, value) => promise.then(() => value))
+    const lock = createLockRegistry().lockForRessource()
     const firstPromise = createPromiseAndHooks()
-    const firstCallPromise = debounced(firstPromise.promise, 1)
+    const firstCallPromise = lock.chain(() => firstPromise.promise.then(() => 1))
     const secondPromise = createPromiseAndHooks()
-    const secondCallPromise = debounced(secondPromise.promise, 2)
+    const secondCallPromise = lock.chain(() => secondPromise.promise.then(() => 2))
 
     assertPromiseIsPending(firstCallPromise)
     assertPromiseIsPending(secondCallPromise)
@@ -76,25 +76,26 @@ test(() => {
 // un appel atttends la fin de la résolution de tout autre appel ayant les "même" arguments
 test(() => {
   mockExecution(({ tick }) => {
-    const fn = (promise, value) => promise.then(() => value)
-    const debounced = enqueueCallByArgs(fn)
+    const registry = createLockRegistry()
+    const lock1 = registry.lockForRessource(1)
+    const lock2 = registry.lockForRessource(2)
 
     const firstPromise = createPromiseAndHooks()
     const secondPromise = createPromiseAndHooks()
 
-    const firstCallPromise = debounced(firstPromise.promise, 1)
-    const secondCallPromise = debounced(secondPromise.promise, 2)
-    const thirdCallPromise = debounced(firstPromise.promise, 3)
+    const firstCallPromise = lock1.chain(() => firstPromise.promise)
+    const secondCallPromise = lock2.chain(() => secondPromise.promise)
+    const thirdCallPromise = lock1.chain(() => firstPromise.promise)
 
     assertPromiseIsPending(firstCallPromise)
     assertPromiseIsPending(secondCallPromise)
     assertPromiseIsPending(thirdCallPromise)
-    firstPromise.resolve()
+    firstPromise.resolve(1)
     tick()
     assertPromiseIsFulfilledWith(firstCallPromise, 1)
     assertPromiseIsPending(secondCallPromise)
-    assertPromiseIsFulfilledWith(thirdCallPromise, 3)
-    secondPromise.resolve()
+    assertPromiseIsFulfilledWith(thirdCallPromise, 1)
+    secondPromise.resolve(2)
     tick()
     assertPromiseIsFulfilledWith(secondCallPromise, 2)
   })

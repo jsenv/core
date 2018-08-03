@@ -10,7 +10,7 @@ const service = createCompileService({
 
 service({
   method: "GET",
-  url: "/src/__test__/file.js",
+  url: "compiled/src/__test__/file.js",
 }).then((properties) => {
   assert.equal(properties.status, 200)
 })
