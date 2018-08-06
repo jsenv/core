@@ -34,6 +34,7 @@ export const createCompile = (
   } = {},
 ) => {
   const compile = ({
+    filename,
     inputRelativeLocation,
     inputSource,
     inputSourceMap = null,
@@ -41,6 +42,7 @@ export const createCompile = (
     ...rest
   }) => {
     const compileContext = {
+      filename,
       inputRelativeLocation,
       inputSource,
       inputSourceMap,

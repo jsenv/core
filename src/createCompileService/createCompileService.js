@@ -1,5 +1,3 @@
-// https://github.com/jsenv/core/blob/master/src/api/util/store.js
-
 /* eslint-disable import/max-dependencies */
 import cuid from "cuid"
 import path from "path"
@@ -274,6 +272,7 @@ const getFileBranch = ({
           rootLocation,
           cacheFolderRelativeLocation,
           compiledFolderRelativeLocation,
+          filename,
           inputRelativeLocation,
           inputSource: content,
         }).then(({ options, generate }) => {
@@ -313,11 +312,14 @@ const getFileReport = ({
   }).then(({ inputLocation, cache, options, generate, input, branch }) => {
     if (!branch) {
       return {
-        status: "missing",
         inputLocation,
+        status: "missing",
         cache,
         options,
         generate,
+        branch: {
+          name: cuid(),
+        },
         input,
       }
     }
@@ -333,8 +335,8 @@ const getFileReport = ({
       branch,
     }).then(({ status, input, output, outputAssets }) => {
       return {
-        status,
         inputLocation,
+        status,
         cache,
         options,
         generate,
@@ -348,12 +350,12 @@ const getFileReport = ({
 }
 
 const update = ({
-  status,
   rootLocation,
   cacheFolderRelativeLocation,
   compiledFolderRelativeLocation,
   filename,
   inputLocation,
+  status,
   cache,
   options,
   branch,
@@ -503,8 +505,8 @@ const getFileCompiled = ({
   })
     .then(
       ({
-        status,
         inputLocation,
+        status,
         cache,
         options,
         generate,
@@ -520,8 +522,8 @@ const getFileCompiled = ({
 
         if (status === "valid") {
           return {
-            status: "cached",
             inputLocation,
+            status: "cached",
             cache,
             options,
             branch,
@@ -539,34 +541,14 @@ const getFileCompiled = ({
           branch,
         })
 
-        if (status !== "missing") {
-          return Promise.resolve(generate({ outputRelativeLocation })).then(
-            ({ output, outputAssets }) => {
-              return {
-                status: "updated",
-                inputLocation,
-                cache,
-                options,
-                branch,
-                input,
-                inputETag: createETag(input),
-                output,
-                outputAssets,
-              }
-            },
-          )
-        }
-
         return Promise.resolve(generate({ outputRelativeLocation })).then(
           ({ output, outputAssets }) => {
             return {
-              status: "created",
               inputLocation,
+              status: status === "missing" ? "created" : "updated",
               cache,
               options,
-              branch: {
-                name: cuid(),
-              },
+              branch,
               input,
               inputETag: createETag(input),
               output,
@@ -578,8 +560,8 @@ const getFileCompiled = ({
     )
     .then(
       ({
-        status,
         inputLocation,
+        status,
         cache,
         options,
         branch,
@@ -589,8 +571,12 @@ const getFileCompiled = ({
         outputAssets,
       }) => {
         return update({
-          status,
+          rootLocation,
+          cacheFolderRelativeLocation,
+          compiledFolderRelativeLocation,
+          filename,
           inputLocation,
+          status,
           cache,
           options,
           branch,
@@ -686,7 +672,7 @@ export const createCompileService = ({
 
           return fileService({
             method,
-            url: new URL(`${scriptCompiledFolder}${path.basename(filename)}${url.search}`),
+            url: new URL(`file:///${scriptCompiledFolder}/${path.basename(filename)}${url.search}`),
             headers,
           })
         })

@@ -7,7 +7,7 @@ const writeSourceLocation = ({ source, location }) => {
 
 export const identifier = ({
   rootLocation,
-  compiledFolderRelativeLocation,
+  filename,
   inputRelativeLocation,
   outputRelativeLocation,
   inputSource,
@@ -15,10 +15,7 @@ export const identifier = ({
 }) => {
   if (options.identifyMethod === "relative") {
     // client thinks we are at compiled/folder/file.js
-    const clientLocation = path.resolve(
-      rootLocation,
-      `${compiledFolderRelativeLocation}/${inputRelativeLocation}`,
-    )
+    const clientLocation = filename
     // but the file is at build/folder/file.js/sjklqdjkljkljlk/file.js
     const serverLocation = path.resolve(rootLocation, outputRelativeLocation)
     // so client can found it at ../../build/folder/file.js/sjklqdjkljkljlk/file.js

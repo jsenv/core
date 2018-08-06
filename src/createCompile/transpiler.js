@@ -25,6 +25,7 @@ const detectModuleFormat = (input) => {
 
 export const transpiler = ({
   rootLocation,
+  filename,
   inputRelativeLocation,
   inputSource,
   inputSourceMap,
@@ -39,17 +40,17 @@ export const transpiler = ({
   const outputModuleFormat = "systemjs"
   const moduleOptions = createModuleOptions({ inputModuleFormat, outputModuleFormat })
 
-  const inputLocation = path.resolve(rootLocation, inputRelativeLocation)
-  const outputLocation = path.resolve(rootLocation, outputRelativeLocation)
-  const inputLocationRelativeToOutputLocation = normalizeSeparation(
-    path.relative(outputLocation, inputLocation),
+  const sourceMapLocation = path.resolve(rootLocation, `${filename}.map`)
+  const sourceLocation = path.resolve(rootLocation, outputRelativeLocation)
+  const sourceLocationRelativeToSourceMapLocation = normalizeSeparation(
+    path.relative(sourceMapLocation, sourceLocation),
   )
 
   const babelOptions = mergeOptions(moduleOptions, createSyntaxOptions(), {
-    filename: inputRelativeLocation,
+    filename,
     // filenameRelative: inputRelativeLocation,
-    sourceMapTarget: inputRelativeLocation,
-    sourceFileName: inputLocationRelativeToOutputLocation,
+    sourceMapTarget: filename,
+    sourceFileName: sourceLocationRelativeToSourceMapLocation,
     sourceMaps: options.remap,
     inputSourceMap,
     babelrc: false, // trust only these options, do not read any babelrc config file
