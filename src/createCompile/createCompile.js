@@ -60,7 +60,8 @@ export const createCompile = (
           instrument = false,
           optimize = false,
           remap = true,
-          remapMethod = "comment-relative", // 'comment-relative', 'comment-absolute' or 'inline'
+          remapMethod = "comment", // 'comment', 'inline'
+          remapByFilesystem = false,
           ...rest
         } = {},
       ) => {
@@ -73,6 +74,7 @@ export const createCompile = (
           optimize,
           remap,
           remapMethod,
+          remapByFilesystem,
           ...rest,
         }
 
@@ -88,7 +90,7 @@ export const createCompile = (
           }
           // if sourceMap are appended as comment do not put any //#sourceURL=../../file.js
           // because sourceMappingURL will try to resolve against sourceURL
-          if (remap && remapMethod === "comment-relative") {
+          if (remap) {
             identify = false
           }
 

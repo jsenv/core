@@ -1,5 +1,4 @@
 import path from "path"
-import { normalizeSeparation } from "../createCompileService/helpers.js"
 
 const writeSourceMapLocation = ({ source, location }) => {
   return `${source}
@@ -38,30 +37,22 @@ export const remapper = ({
     }
   }
 
-  if (options.remapMethod === "comment-absolute") {
-    const outputSourceMapName = `${path.basename(filename)}.map`
+  if (options.remapMethod === "comment") {
+    if (options.remapByFilesystem) {
+      const outputSourceMapName = `${path.basename(filename)}.map`
 
-    // TODO: use outputSourceMapName instead of appending .map on outputRelativeLocation
-    const serverLocation = `${path.resolve(rootLocation, outputRelativeLocation)}.map`
+      // TODO: use outputSourceMapName instead of appending .map on outputRelativeLocation
+      const serverLocation = `file://${path.resolve(rootLocation, outputRelativeLocation)}.map`
 
-    const outputSource = writeSourceMapLocation({ source: inputSource, location: serverLocation })
+      const outputSource = writeSourceMapLocation({ source: inputSource, location: serverLocation })
 
-    const outputSourceMap = {
-      ...inputSourceMap,
-      file: normalizeSeparation(path.resolve(rootLocation, inputSourceMap.file)),
-      sources: inputSourceMap.sources.map((source) => {
-        return normalizeSeparation(path.resolve(rootLocation, source))
-      }),
+      return {
+        outputSource,
+        outputSourceMap: inputSourceMap,
+        outputSourceMapName,
+      }
     }
 
-    return {
-      outputSource,
-      outputSourceMap,
-      outputSourceMapName,
-    }
-  }
-
-  if (options.remapMethod === "comment-relative") {
     // folder/file.js -> file.js.map
     const outputSourceMapName = `${path.basename(filename)}.map`
     const outputSourceMapLocation = `./${outputSourceMapName}`

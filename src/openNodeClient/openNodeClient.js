@@ -4,7 +4,7 @@ import { ensureSystem } from "./ensureSystem.js"
 import "./global-fetch.js"
 
 export const openNodeClient = ({ server, detached = true }) => {
-  const remoteRoot = server.compileURL.toString().slice(0, -1)
+  const remoteRoot = server.url.toString().slice(0, -1)
   const localRoot = server.rootLocation
 
   if (detached === false) {

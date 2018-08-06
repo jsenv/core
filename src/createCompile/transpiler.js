@@ -30,7 +30,6 @@ export const transpiler = ({
   inputSource,
   inputSourceMap,
   inputAst,
-  outputRelativeLocation,
   options,
 }) => {
   // https://babeljs.io/docs/core-packages/#options
@@ -40,17 +39,23 @@ export const transpiler = ({
   const outputModuleFormat = "systemjs"
   const moduleOptions = createModuleOptions({ inputModuleFormat, outputModuleFormat })
 
-  const sourceMapLocation = path.resolve(rootLocation, `${filename}.map`)
-  const sourceLocation = path.resolve(rootLocation, outputRelativeLocation)
-  const sourceLocationRelativeToSourceMapLocation = normalizeSeparation(
-    path.relative(sourceMapLocation, sourceLocation),
-  )
+  let sourceFileName
+  if (options.remapByFilesystem) {
+    sourceFileName = "file://" + path.resolve(rootLocation, inputRelativeLocation)
+  } else {
+    const sourceLocation = path.resolve(rootLocation, inputRelativeLocation)
+    const sourceMapAbstractLocation = path.resolve(rootLocation, `${filename}.map`)
+    const sourceLocationRelativeToSourceMapLocation = normalizeSeparation(
+      path.relative(sourceMapAbstractLocation, sourceLocation),
+    )
+    sourceFileName = sourceLocationRelativeToSourceMapLocation
+  }
 
   const babelOptions = mergeOptions(moduleOptions, createSyntaxOptions(), {
     filename,
     // filenameRelative: inputRelativeLocation,
     sourceMapTarget: filename,
-    sourceFileName: sourceLocationRelativeToSourceMapLocation,
+    sourceFileName,
     sourceMaps: options.remap,
     inputSourceMap,
     babelrc: false, // trust only these options, do not read any babelrc config file

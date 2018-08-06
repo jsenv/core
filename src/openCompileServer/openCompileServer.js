@@ -18,6 +18,7 @@ export const openCompileServer = ({
   cors = true,
   sourceMap = "comment", // can be "comment", "inline", "none"
   sourceURL = true,
+  remapByFilesystem = true, // for vscode
 }) => {
   const compile = createCompile({
     createOptions: () => {
@@ -28,7 +29,7 @@ export const openCompileServer = ({
       //   request.headers.get("user-agent").startsWith("node-fetch")
 
       const remap = sourceMap === "comment" || sourceMap === "inline"
-      const remapMethod = "comment-relative"
+      const remapMethod = sourceMap
 
       const identify = sourceURL
       const identifyMethod = "relative"
@@ -38,41 +39,20 @@ export const openCompileServer = ({
         identifyMethod,
         remap,
         remapMethod,
+        remapByFilesystem,
       }
     },
   })
 
-  const compileService = createCompileService({
-    rootLocation,
-    cacheFolderRelativeLocation,
-    compiledFolderRelativeLocation,
-    trackHit: true,
-    compile,
-  })
-
   const handler = createResponseGenerator({
     services: [
-      (request) => {
-        // change pathname from 'compiled/folder/file.js' to 'folder/file.js'
-        // because only server need a way to differentiate request that needs to be compiled
-        // from request that needs to be served as file
-        // compileService does not have to know about this
-        // but compileService must tell us where the file output will be
-        // because chrome and especially vscode will need this information
-        // compiled/folder/file.js
-        // ../../folder/file.js/iepoieeipo/file.js.map
-        const requestURLPathname = request.url.pathname
-        if (requestURLPathname.startsWith(`/${compiledFolderRelativeLocation}`)) {
-          const compileURL = new URL(request.url)
-          compileURL.pathname = requestURLPathname.slice(
-            `/${compiledFolderRelativeLocation}`.length,
-          )
-          return compileService({
-            ...request,
-            url: compileURL,
-          })
-        }
-      },
+      createCompileService({
+        rootLocation,
+        cacheFolderRelativeLocation,
+        compiledFolderRelativeLocation,
+        trackHit: true,
+        compile,
+      }),
       createFileService({
         locate: ({ url }) => {
           const pathname = url.pathname.slice(1)
