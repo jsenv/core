@@ -221,17 +221,12 @@ const readBranch = ({
   })
 }
 
-// faut trouver un moyen d'apeller cette fonction de l'extérieur
-// faut aussi que cette fonction utilise enqueueCallByArgs
-// je pense que je vais simplifier l'api de enqueueCallByArgs
-// ca ressemblera plus à quelque chose à voir enqueueCall.js
-const getFileReport = ({
+const getFileBranch = ({
   rootLocation,
   cacheFolderRelativeLocation,
   compiledFolderRelativeLocation,
   filename,
   compile,
-  inputETagClient = null,
 }) => {
   const inputRelativeLocation = getInputRelativeLocation({
     compiledFolderRelativeLocation,
@@ -287,43 +282,69 @@ const getFileReport = ({
           }
 
           const cachedBranch = cache.branches.find((branch) => branchIsValid(branch))
-          if (!cachedBranch) {
-            return {
-              status: "missing",
-              inputLocation,
-              cache,
-              options,
-              generate,
-              input: content,
-            }
-          }
 
-          const branch = cachedBranch
-          return readBranch({
-            rootLocation,
-            cacheFolderRelativeLocation,
-            compiledFolderRelativeLocation,
-            filename,
+          return {
             inputLocation,
-            inputETagClient,
             cache,
-            branch,
-          }).then(({ status, input, output, outputAssets }) => {
-            return {
-              status,
-              inputLocation,
-              cache,
-              options,
-              generate,
-              branch,
-              input,
-              output,
-              outputAssets,
-            }
-          })
+            options,
+            generate,
+            input: content,
+            branch: cachedBranch,
+          }
         })
       })
     })
+}
+
+const getFileReport = ({
+  rootLocation,
+  cacheFolderRelativeLocation,
+  compiledFolderRelativeLocation,
+  filename,
+  compile,
+  inputETagClient = null,
+}) => {
+  return getFileBranch({
+    rootLocation,
+    cacheFolderRelativeLocation,
+    compiledFolderRelativeLocation,
+    filename,
+    compile,
+  }).then(({ inputLocation, cache, options, generate, input, branch }) => {
+    if (!branch) {
+      return {
+        status: "missing",
+        inputLocation,
+        cache,
+        options,
+        generate,
+        input,
+      }
+    }
+
+    return readBranch({
+      rootLocation,
+      cacheFolderRelativeLocation,
+      compiledFolderRelativeLocation,
+      filename,
+      inputLocation,
+      inputETagClient,
+      cache,
+      branch,
+    }).then(({ status, input, output, outputAssets }) => {
+      return {
+        status,
+        inputLocation,
+        cache,
+        options,
+        generate,
+        branch,
+        input,
+        output,
+        outputAssets,
+      }
+    })
+  })
 }
 
 const update = ({
@@ -462,7 +483,7 @@ const update = ({
   return Promise.all(promises)
 }
 
-const getScriptCompiled = ({
+const getFileCompiled = ({
   rootLocation,
   cacheFolderRelativeLocation,
   compiledFolderRelativeLocation,
@@ -589,32 +610,6 @@ const getScriptCompiled = ({
     )
 }
 
-const locateScriptCompiledFolder = ({
-  rootLocation,
-  cacheFolderRelativeLocation,
-  compiledFolderRelativeLocation,
-  filename,
-  compile,
-}) => {
-  return getFileReport({
-    rootLocation,
-    cacheFolderRelativeLocation,
-    compiledFolderRelativeLocation,
-    filename,
-    compile,
-  }).then(({ branch }) => {
-    return resolvePath(
-      rootLocation,
-      getBranchRelativeLocation({
-        cacheFolderRelativeLocation,
-        compiledFolderRelativeLocation,
-        filename,
-        branch,
-      }),
-    )
-  })
-}
-
 export const createCompileService = ({
   rootLocation,
   cacheFolderRelativeLocation = "build",
@@ -666,13 +661,29 @@ export const createCompileService = ({
         // if we receive something like compiled/folder/file.js.map
         // we redirect to build/folder/file.js/jqjcijjojio/file.js.map
 
-        return locateScriptCompiledFolder({
+        return getFileBranch({
           rootLocation,
           cacheFolderRelativeLocation,
           compiledFolderRelativeLocation,
           filename: script,
           compile,
-        }).then((scriptCompiledFolder) => {
+        }).then(({ branch }) => {
+          if (!branch) {
+            return {
+              status: 404,
+            }
+          }
+
+          const scriptCompiledFolder = resolvePath(
+            rootLocation,
+            getBranchRelativeLocation({
+              cacheFolderRelativeLocation,
+              compiledFolderRelativeLocation,
+              filename: script,
+              branch,
+            }),
+          )
+
           return fileService({
             method,
             url: new URL(`${scriptCompiledFolder}${path.basename(filename)}${url.search}`),
@@ -683,7 +694,7 @@ export const createCompileService = ({
     }
 
     return fileLock.chain(() => {
-      return getScriptCompiled({
+      return getFileCompiled({
         rootLocation,
         cacheFolderRelativeLocation,
         compiledFolderRelativeLocation,
