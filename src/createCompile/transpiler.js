@@ -37,11 +37,16 @@ export const transpiler = ({
     ? "es"
     : detectModuleFormat(inputSource)
   const outputModuleFormat = "systemjs"
+  // the truth is that we don't support global, nor amd
+  // I have to check if we could support cjs but maybe we don't even support this
+  // at least we support the most important: inputFormat: "es" with outputFormat: "systemjs"
+  // https://github.com/systemjs/systemjs/blob/master/src/format-helpers.js#L5
+  // https://github.com/systemjs/babel-plugin-transform-global-system-wrapper/issues/1
   const moduleOptions = createModuleOptions({ inputModuleFormat, outputModuleFormat })
 
   let sourceFileName
   if (options.remapByFilesystem) {
-    sourceFileName = "file://" + path.resolve(rootLocation, inputRelativeLocation)
+    sourceFileName = `file://${path.resolve(rootLocation, inputRelativeLocation)}`
   } else {
     const sourceLocation = path.resolve(rootLocation, inputRelativeLocation)
     const sourceMapAbstractLocation = path.resolve(rootLocation, `${filename}.map`)

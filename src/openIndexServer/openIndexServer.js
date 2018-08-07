@@ -1,7 +1,7 @@
 import { openServer } from "../openServer/openServer.js"
 
-export const openIndexServer = ({ body }) => {
-  return openServer().then((server) => {
+export const openIndexServer = ({ url, body }) => {
+  return openServer({ url }).then((server) => {
     server.addRequestHandler((request, response) => {
       response.writeHead(200, {
         "content-type": "text/html",

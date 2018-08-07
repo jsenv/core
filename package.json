@@ -51,7 +51,11 @@
 		"rollup-plugin-babel": "3.0.3",
 		"rollup-plugin-node-resolve": "2.0.0"
 	},
+	"bin": {
+		"start": "./dist/bin/start.js"
+	},
 	"scripts": {
+		"compile-start": "babel ./bin/start.js --out-dir dist --ignore=node_modules,dist --source-maps",
 		"code-compile": "babel . --out-dir dist --ignore=node_modules,dist --source-maps",
 		"code-clean": "rimraf dist",
 		"code-build": "npm run code-clean && npm run code-compile",
