@@ -3,7 +3,6 @@ dist
 coverage
 .nyc_output
 coverage.lcov
-.vscode
 build
 !src/__test__/node_modules
 .cache.json

@@ -1,0 +1,7 @@
+{
+  "eslint.autoFixOnSave": false,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": false // it mess up formatting and folding
+  }
+}

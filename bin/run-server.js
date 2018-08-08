@@ -69,7 +69,7 @@ const compileServerURLGetMemoized = ({ root }) => {
 
       return openCompileServer({
         rootLocation: root,
-        url: "http://127.0.0.1:0", // avoid https for now because certificates are self signed
+        url: "http://127.0.0.1:3001", // avoid https for now because certificates are self signed
       }).then((compileServer) => {
         writeCache({
           ...rest,
