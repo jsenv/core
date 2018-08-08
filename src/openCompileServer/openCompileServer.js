@@ -9,12 +9,12 @@ import { createResponseGenerator } from "../openServer/createResponseGenerator.j
 import { enableCORS } from "../openServer/createNodeRequestHandler.js"
 import { openServer } from "../openServer/openServer.js"
 
-const compiledFolderRelativeLocation = "compiled"
 const cacheFolderRelativeLocation = "build"
 
 export const openCompileServer = ({
   url,
   rootLocation,
+  compiledFolderRelativeLocation = "compiled",
   cors = true,
   sourceMap = "comment", // can be "comment", "inline", "none"
   sourceURL = true,

@@ -16,6 +16,7 @@ const port = Number(getFromArguments("port") || "3000")
 
 open({
   root,
+  compiledFolder: "compiled",
   url: `http://127.0.0.1:${port}`,
 }).then(({ compileServerURL, runServerURL }) => {
   console.log("compile server listening at", compileServerURL.toString())

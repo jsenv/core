@@ -60,31 +60,7 @@ const testCacheURL = (url) => {
   return Promise.resolve(false)
 }
 
-const compileServerURLGetMemoized = ({ root }) => {
-  return readCache().then(({ compileServer, ...rest }) => {
-    return testCacheURL(compileServer ? compileServer.url : null).then((valid) => {
-      if (valid) {
-        return compileServer.url
-      }
-
-      return openCompileServer({
-        rootLocation: root,
-        url: "http://127.0.0.1:3001", // avoid https for now because certificates are self signed
-      }).then((compileServer) => {
-        writeCache({
-          ...rest,
-          compileServer: {
-            url: compileServer.url.toString(),
-          },
-        })
-
-        return compileServer.url
-      })
-    })
-  })
-}
-
-const runServerURLGetMemoized = ({ compileURL, url }) => {
+const runServerURLGetMemoized = ({ compileServerURL, compileURL, url }) => {
   return readCache().then(({ runServer, ...rest }) => {
     return testCacheURL(runServer ? runServer.url : null).then((valid) => {
       if (valid) {
@@ -92,7 +68,7 @@ const runServerURLGetMemoized = ({ compileURL, url }) => {
       }
 
       return openServer({ url }).then((runServer) => {
-        const loaderSrc = `${compileURL}node_modules/@dmail/module-loader/src/browser/index.js`
+        const loaderSrc = `${compileServerURL}node_modules/@dmail/module-loader/src/browser/index.js`
 
         runServer.addRequestHandler((request) => {
           const fileRelativeToRoot = request.url.pathname.slice(1)
@@ -104,7 +80,7 @@ const runServerURLGetMemoized = ({ compileURL, url }) => {
 						<script src="${loaderSrc}"></script>
 						<script type="text/javascript">
 							window.System = window.createBrowserLoader.createBrowserLoader()
-							window.System.import("${compileURL}compiled/${fileRelativeToRoot}")
+							window.System.import("${compileURL}${fileRelativeToRoot}")
 						</script>
 					</head>
 
@@ -139,17 +115,19 @@ const runServerURLGetMemoized = ({ compileURL, url }) => {
   })
 }
 
-export const open = ({ root, url }) => {
-  return compileServerURLGetMemoized({
-    root,
-    url: "http://127.0.0.1:0", // avoid https
-  }).then((compileServerURL) => {
+export const open = ({ root, url, compiledFolder }) => {
+  return openCompileServer({
+    rootLocation: root,
+    compiledFolderRelativeLocation: compiledFolder,
+    url: "http://127.0.0.1:3001", // avoid https for now because certificates are self signed
+  }).then((compileServer) => {
     return runServerURLGetMemoized({
-      compileURL: compileServerURL,
+      compileServerURL: compileServer.url,
+      compileURL: compileServer.compileURL,
       url,
     }).then((runServerURL) => {
       return {
-        compileServerURL,
+        compileServerURL: compileServer.url,
         runServerURL,
       }
     })

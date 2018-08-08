@@ -42,7 +42,7 @@
       "request": "launch",
       "sourceMaps": true,
       // "trace": true,
-      "webRoot": "${workspaceFolder}/compiled",
+      "webRoot": "${workspaceFolder}/any-name-works-maybe-because-path-resolution",
       "url": "http://127.0.0.1:3000/${relativeFile}",
       // "runtimeExecutable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
       "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"]
