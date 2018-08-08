@@ -25,6 +25,9 @@ export const remapper = ({
   // we could delete inputSourceMap.sourceRoot to ensure clientLocation is absolute
   // but it's not set anyway because not passed to babel during compilation
 
+  // force a browser reload
+  delete inputSourceMap.sourcesContent
+
   if (options.remapMethod === "inline") {
     const mapAsBase64 = new Buffer(JSON.stringify(inputSourceMap)).toString("base64")
     const outputSource = writeSourceMapLocation({

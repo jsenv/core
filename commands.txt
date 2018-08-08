@@ -1,3 +1,4 @@
 # command to run most basic file + sourcemap
 
 npm run compile && node ./dist/bin/start.js --file=/Users/d.maillard/Dev/Sandbox/npmlink/packages/dev-server/sourceMapTest/vscode-debug-chrome/file.js
+npm run compile && node ./dist/bin/run-server-open.js

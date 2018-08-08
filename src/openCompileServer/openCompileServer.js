@@ -5,8 +5,8 @@ import { URL } from "url"
 import { createCompile } from "../createCompile/createCompile.js"
 import { createCompileService } from "../createCompileService/index.js"
 import { createFileService } from "../createFileService/index.js"
-import { createNodeRequestHandler, enableCORS } from "../openServer/createNodeRequestHandler.js"
 import { createResponseGenerator } from "../openServer/createResponseGenerator.js"
+import { enableCORS } from "../openServer/createNodeRequestHandler.js"
 import { openServer } from "../openServer/openServer.js"
 
 const compiledFolderRelativeLocation = "compiled"
@@ -44,34 +44,27 @@ export const openCompileServer = ({
     },
   })
 
-  const handler = createResponseGenerator({
-    services: [
-      createCompileService({
-        rootLocation,
-        cacheFolderRelativeLocation,
-        compiledFolderRelativeLocation,
-        trackHit: true,
-        compile,
-      }),
-      createFileService({
-        locate: ({ url }) => {
-          const pathname = url.pathname.slice(1)
-          const resolvedUrl = new URL(pathname, `file:///${rootLocation}/`)
-          return resolvedUrl
-        },
-      }),
-    ],
-  })
-
   return openServer({ url, autoCloseOnCrash: true }).then(({ url, addRequestHandler, close }) => {
-    const nodeRequestHandler = createNodeRequestHandler({
-      handler,
-      url,
-      transform: (response) => (cors ? enableCORS(response) : response),
+    const handler = createResponseGenerator({
+      services: [
+        createCompileService({
+          rootLocation,
+          cacheFolderRelativeLocation,
+          compiledFolderRelativeLocation,
+          trackHit: true,
+          compile,
+        }),
+        createFileService({
+          locate: ({ url }) => {
+            const pathname = url.pathname.slice(1)
+            const resolvedUrl = new URL(pathname, `file:///${rootLocation}/`)
+            return resolvedUrl
+          },
+        }),
+      ],
     })
-    addRequestHandler((request, response) => {
-      nodeRequestHandler(request, response)
-    })
+
+    addRequestHandler(handler, (response) => (cors ? enableCORS(response) : response))
 
     return {
       close,

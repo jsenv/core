@@ -7,9 +7,14 @@ test(() => {
   return openServer({
     url: "http://127.0.0.1:8998",
   }).then(({ addRequestHandler, url, agent, close }) => {
-    addRequestHandler((request, response) => {
-      response.writeHead(200, { "Content-Type": "text/plain" })
-      response.end("ok")
+    addRequestHandler(() => {
+      return {
+        status: 200,
+        headers: {
+          "Content-Type": "text/plain",
+        },
+        body: "ok",
+      }
     })
 
     assert.equal(String(url), "http://127.0.0.1:8998/")

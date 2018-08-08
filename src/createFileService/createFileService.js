@@ -4,7 +4,7 @@ import path from "path"
 import { URL } from "url"
 import { createETag } from "../createCompileService/helpers.js"
 
-const mimetype = (fileURL) => {
+const mimetype = (pathname) => {
   const defaultMimetype = "application/octet-stream"
 
   const mimetypes = {
@@ -28,7 +28,7 @@ const mimetype = (fileURL) => {
     mp3: "audio/mpeg",
   }
 
-  const suffix = path.extname(String(fileURL))
+  const suffix = path.extname(pathname).slice(1)
   if (suffix in mimetypes) {
     return mimetypes[suffix]
   }
@@ -214,7 +214,7 @@ export const createFileService = (
                 status = 304
               } else {
                 status = 200
-                headers["content-type"] = mimetype(url)
+                headers["content-type"] = mimetype(url.pathname)
                 headers.ETag = eTag
                 body = content
               }
@@ -222,7 +222,7 @@ export const createFileService = (
           }
 
           status = 200
-          headers["content-type"] = mimetype(url)
+          headers["content-type"] = mimetype(url.pathname)
           body = fs.createReadStream(fileLocation)
         },
         ({

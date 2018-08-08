@@ -55,12 +55,15 @@ Promise.all([
 
   </html>`
 
-  indexServer.addRequestHandler((request, response) => {
-    response.writeHead(200, {
-      "content-type": "text/html",
-      "content-length": Buffer.byteLength(indexBody),
-      "cache-control": "no-store",
-    })
-    response.end(indexBody)
+  indexServer.addRequestHandler(() => {
+    return {
+      status: 200,
+      headers: {
+        "content-type": "text/html",
+        "content-length": Buffer.byteLength(indexBody),
+        "cache-control": "no-store",
+      },
+      body: indexBody,
+    }
   })
 })

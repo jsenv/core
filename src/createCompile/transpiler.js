@@ -5,23 +5,8 @@ import {
   mergeOptions,
 } from "@dmail/shared-config/dist/babel"
 import { transform, transformFromAst } from "babel-core"
-import moduleFormats from "js-module-formats"
 import path from "path"
 import { normalizeSeparation } from "../createCompileService/helpers.js"
-
-const detectModuleFormat = (input) => {
-  const format = moduleFormats.detect(input)
-  if (format === "es") {
-    return "es"
-  }
-  if (format === "cjs") {
-    return "cjs"
-  }
-  if (format === "amd") {
-    return "amd"
-  }
-  return "global"
-}
 
 export const transpiler = ({
   rootLocation,
@@ -32,17 +17,15 @@ export const transpiler = ({
   inputAst,
   options,
 }) => {
-  // https://babeljs.io/docs/core-packages/#options
-  const inputModuleFormat = inputRelativeLocation.endsWith(".mjs")
-    ? "es"
-    : detectModuleFormat(inputSource)
-  const outputModuleFormat = "systemjs"
   // the truth is that we don't support global, nor amd
   // I have to check if we could support cjs but maybe we don't even support this
   // at least we support the most important: inputFormat: "es" with outputFormat: "systemjs"
   // https://github.com/systemjs/systemjs/blob/master/src/format-helpers.js#L5
   // https://github.com/systemjs/babel-plugin-transform-global-system-wrapper/issues/1
-  const moduleOptions = createModuleOptions({ inputModuleFormat, outputModuleFormat })
+  const moduleOptions = createModuleOptions({
+    inputModuleFormat: "es",
+    outputModuleFormat: "systemjs",
+  })
 
   let sourceFileName
   if (options.remapByFilesystem) {

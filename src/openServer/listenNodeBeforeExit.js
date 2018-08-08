@@ -1,11 +1,11 @@
 // we should handle SIGTERM as well or is it handled by beforeExit?
 // look at terminus module on github
 
-import { asyncSimultaneousVisitor, createSignal } from "@dmail/signal"
+import { asyncSimultaneousEmitter, createSignal } from "@dmail/signal"
 
 export const createListenBeforeExit = ({ install, exit }) => {
   const beforeExitSignal = createSignal({
-    emitter: (param) => ({ visitor: asyncSimultaneousVisitor(param) }),
+    emitter: asyncSimultaneousEmitter,
     installer: ({ emit, disableWhileCalling }) => {
       const triggerBeforeExit = () => emit().then(() => disableWhileCalling(exit))
 

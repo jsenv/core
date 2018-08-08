@@ -4,6 +4,7 @@ import { URL } from "url"
 import { addNodeExceptionHandler } from "./addNodeExceptionHandler.js"
 import { createSelfSignature } from "./createSelfSignature.js"
 import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
+import { createNodeRequestHandler } from "./createNodeRequestHandler.js"
 
 const REASON_CLOSING = "closing"
 
@@ -18,7 +19,7 @@ export const openServer = (
     // auto close the server when an uncaughtException happens
     // false by default because evenwith my strategy to react on uncaughtException
     // stack trace is messed up and I don't like to have code executed on error
-    autoCloseOnCrash = false,
+    autoCloseOnCrash = true,
     // auto close when server respond with a 500
     autoCloseOnError = true,
   } = {},
@@ -62,9 +63,14 @@ export const openServer = (
   })
 
   const requestHandlers = []
-  const addRequestHandler = (requestHandler) => {
-    requestHandlers.push(requestHandler)
-    nodeServer.on("request", requestHandler)
+  const addInternalRequestHandler = (handler) => {
+    requestHandlers.push(handler)
+    nodeServer.on("request", handler)
+  }
+
+  const addRequestHandler = (handler, transform) => {
+    const nodeRequestHandler = createNodeRequestHandler({ handler, transform, url })
+    addInternalRequestHandler(nodeRequestHandler)
   }
 
   const clients = new Set()
@@ -98,19 +104,19 @@ export const openServer = (
     )
   }
 
-  addRequestHandler((request, response) => {
-    const client = { request, response }
+  addInternalRequestHandler((nodeRequest, nodeResponse) => {
+    const client = { nodeRequest, nodeResponse }
 
     clients.add(client)
-    response.on("finish", () => {
+    nodeResponse.on("finish", () => {
       clients.delete(client)
-      if (autoCloseOnError && response.statusCode === 500) {
+      if (autoCloseOnError && nodeResponse.statusCode === 500) {
         closeClients({
           isError: true,
           // we don't specify the true error object but only a string
           // identifying the error to avoid sending stacktrace to client
           // and right now there is no clean way to retrieve error from here
-          reason: response.statusMessage || "internal error",
+          reason: nodeResponse.statusMessage || "internal error",
         })
       }
     })

@@ -45,7 +45,7 @@ const createResponse = (
   return Object.freeze({ status, reason, headers, body })
 }
 
-export const createNodeRequestHandler = ({ handler, url, transform = (response) => response }) => {
+export const createNodeRequestHandler = ({ handler, transform = (response) => response, url }) => {
   return (nodeRequest, nodeResponse) => {
     // should have some kind of id for a request
     // so that logs knows whichs request they belong to
@@ -58,13 +58,15 @@ export const createNodeRequestHandler = ({ handler, url, transform = (response) 
 
     const handleResponse = (responseProperties) => {
       const response = createResponse(request, responseProperties)
-      Promise.resolve(transform(response)).then((finalResponse) => {
+      new Promise((resolve) => resolve(transform(response))).then((finalResponse) => {
         console.log(`${finalResponse.status} ${request.url}`)
         populateNodeResponse(nodeResponse, finalResponse)
       })
     }
 
-    Promise.resolve(handler(request)).then(handleResponse, handleResponse)
+    return new Promise((resolve) => {
+      resolve(handler(request))
+    }).then(handleResponse, handleResponse)
   }
 }
 
