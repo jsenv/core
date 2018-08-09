@@ -30,6 +30,7 @@
 		"istanbul": "0.4.5",
 		"js-module-formats": "0.1.2",
 		"micmac": "2.0.0",
+		"ndb": "1.0.22",
 		"node-fetch": "2.0.0",
 		"node-forge": "0.7.1",
 		"promise-sequential": "1.1.1",

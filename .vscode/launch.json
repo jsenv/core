@@ -4,6 +4,7 @@
     {
       "name": "Launch with node",
       "type": "node",
+      "protocol": "inspector",
       "request": "launch",
       "program": "${file}",
       "sourceMaps": true,
@@ -12,7 +13,7 @@
       "outputCapture": "std",
       // https://github.com/Microsoft/vscode-chrome-debug-core/commit/eb552d621f1f6fbebcfca5d2390020dc7d8877e0#diff-b4f13aa3c326d081dea7875f9c0fe84aR31
       "skipFiles": [
-        "node_modules/@dmail/action",
+        "node_modules/**",
         // https://github.com/Microsoft/vscode-react-native/issues/620
         "<node_internals>/**/*.js"
       ],
@@ -22,6 +23,7 @@
       "name": "Launch from dist",
       "type": "node",
       "request": "launch",
+      "protocol": "inspector",
       "preLaunchTask": "compile", // ensure dist is fresh (compile before running)
       "program": "${workspaceRoot}/.vscode/runFromDist.js",
       "args": ["${file}"],
@@ -31,7 +33,7 @@
         "NODE_ENV": "development",
         "NODE_PATH": "${workspaceRoot}/dist"
       },
-      "sourceMaps": true,
+      "sourceMaps": false,
       "outputCapture": "std",
       "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"],
       "autoAttachChildProcesses": true

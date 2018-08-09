@@ -1,3 +1,8 @@
+// faut vraiment que je teste ça avec https://github.com/GoogleChromeLabs/ndb
+// en gros voir si ndb va fonctionner
+// pour debug l'éxécution de nodejs avec chrome devtools
+// en utilisant system.import
+
 import { fork } from "child_process"
 import path from "path"
 import { ensureSystem } from "./ensureSystem.js"
