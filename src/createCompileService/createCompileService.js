@@ -267,6 +267,9 @@ const getFileBranch = ({
       }
     })
     .then(({ inputLocation, cache }) => {
+      // here, if readFile returns ENOENT we could/should check is there is something in cache for that file
+      // and take that chance to remove the cached version of that file
+      // but it's not supposed to happen
       return readFile({ location: inputLocation }).then(({ content }) => {
         return compile({
           rootLocation,

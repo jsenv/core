@@ -77,15 +77,15 @@ const runServerURLGetMemoized = ({ compileServerURL, compileURL, url }) => {
 					<head>
 						<title>Run ${fileRelativeToRoot}</title>
 						<meta charset="utf-8" />
-						<script src="${loaderSrc}"></script>
+					</head>
+
+					<body>
+            <main></main>
+            <script src="${loaderSrc}"></script>
 						<script type="text/javascript">
 							window.System = window.createBrowserLoader.createBrowserLoader()
 							window.System.import("${compileURL}${fileRelativeToRoot}")
 						</script>
-					</head>
-
-					<body>
-						<main></main>
 					</body>
 
 					</html>`
