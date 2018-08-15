@@ -5,7 +5,7 @@ import { URL } from "url"
 import { createCompile } from "../createCompile/createCompile.js"
 import { createHeaders } from "../openServer/createHeaders.js"
 import { JSON_FILE } from "./cache.js"
-import { createETag, isFileNotFoundError, resolvePath } from "./helpers.js"
+import { createETag, isFileNotFoundError, resolvePath, removeFolderDeep } from "./helpers.js"
 import { locateFile } from "./locateFile.js"
 import { readFile } from "./readFile.js"
 import { lockForRessource } from "./ressourceRegistry.js"
@@ -349,7 +349,7 @@ const getFileReport = ({
   })
 }
 
-const update = ({
+const updateBranch = ({
   rootLocation,
   cacheFolderRelativeLocation,
   compiledFolderRelativeLocation,
@@ -362,78 +362,13 @@ const update = ({
   inputETag,
   output,
   outputAssets,
-  trackHit,
+  cacheAutoClean,
+  cacheTrackHit,
 }) => {
   const { branches } = cache
   const isCached = status === "cached"
   const isNew = status === "created"
   const isUpdated = status === "updated"
-
-  // ici on devrait prendre cache.branches
-  // et vérifier la validité de toutes les branches
-  // chaque branche non valid serait supprimé
-  // pour éviter que le cache grossisse indéfiniment
-
-  if (isCached && !trackHit) {
-    return Promise.resolve()
-  }
-
-  if (isNew) {
-    branches.push(branch)
-  }
-
-  const updatedBranches = branches
-    .map((branchToUpdate) => {
-      if (branchToUpdate.name !== branch.name) {
-        return { ...branchToUpdate }
-      }
-      if (isCached) {
-        return {
-          ...branchToUpdate,
-          matchCount: branch.matchCount + 1,
-          lastMatchMs: Number(Date.now()),
-        }
-      }
-      if (isUpdated) {
-        return {
-          ...branchToUpdate,
-          matchCount: branch.matchCount + 1,
-          lastMatchMs: Number(Date.now()),
-          lastModifiedMs: Number(Date.now()),
-          outputAssets: outputAssets.map(({ name, content }) => {
-            return { name, eTag: createETag(content) }
-          }),
-        }
-      }
-      // new branch
-      return {
-        name: branch.name,
-        matchCount: 1,
-        createdMs: Number(Date.now()),
-        lastModifiedMs: Number(Date.now()),
-        lastMatchMs: Number(Date.now()),
-        outputMeta: options,
-        outputAssets: outputAssets.map(({ name, content }) => {
-          return { name, eTag: createETag(content) }
-        }),
-      }
-    })
-    .sort(compareBranch)
-
-  const inputRelativeLocation = getInputRelativeLocation({
-    compiledFolderRelativeLocation,
-    filename,
-  })
-
-  const updatedCache = {
-    inputRelativeLocation,
-    inputETag: isCached ? cache.inputETag : inputETag,
-    inputLocation:
-      inputLocation === resolvePath(rootLocation, inputRelativeLocation)
-        ? undefined
-        : inputLocation,
-    branches: updatedBranches,
-  }
 
   const promises = []
 
@@ -468,19 +403,102 @@ const update = ({
     )
   }
 
-  const cacheDataLocation = getCacheDataLocation({
-    rootLocation,
-    cacheFolderRelativeLocation,
-    compiledFolderRelativeLocation,
-    filename,
-  })
+  if (isNew || isUpdated || (isCached && cacheTrackHit)) {
+    if (cacheAutoClean) {
+      if (inputETag !== cache.inputETag) {
+        const branchesToRemove = branches.slice()
 
-  promises.push(
-    writeFile({
-      location: cacheDataLocation,
-      string: JSON.stringify(updatedCache, null, "  "),
-    }),
-  )
+        // no need to remove the updated branch
+        const index = branchesToRemove.indexOf(branch)
+        branchesToRemove.splice(index, 1)
+
+        branches.length = 0
+        branchesToRemove.forEach((branch) => {
+          const branchLocation = getBranchLocation({
+            rootLocation,
+            cacheFolderRelativeLocation,
+            compiledFolderRelativeLocation,
+            filename,
+            branch,
+          })
+          console.log(`file changed, remove ${branchLocation}`)
+          // the line below is async but non blocking
+          removeFolderDeep(branchLocation)
+        })
+      }
+    }
+
+    if (isNew) {
+      branches.push(branch)
+    }
+
+    const updatedBranches = branches
+      .map((branchToUpdate) => {
+        if (branchToUpdate.name !== branch.name) {
+          return { ...branchToUpdate }
+        }
+        if (isCached) {
+          return {
+            ...branchToUpdate,
+            matchCount: branch.matchCount + 1,
+            lastMatchMs: Number(Date.now()),
+          }
+        }
+        if (isUpdated) {
+          return {
+            ...branchToUpdate,
+            matchCount: branch.matchCount + 1,
+            lastMatchMs: Number(Date.now()),
+            lastModifiedMs: Number(Date.now()),
+            outputAssets: outputAssets.map(({ name, content }) => {
+              return { name, eTag: createETag(content) }
+            }),
+          }
+        }
+        // new branch
+        return {
+          name: branch.name,
+          matchCount: 1,
+          createdMs: Number(Date.now()),
+          lastModifiedMs: Number(Date.now()),
+          lastMatchMs: Number(Date.now()),
+          outputMeta: options,
+          outputAssets: outputAssets.map(({ name, content }) => {
+            return { name, eTag: createETag(content) }
+          }),
+        }
+      })
+      .sort(compareBranch)
+
+    const inputRelativeLocation = getInputRelativeLocation({
+      compiledFolderRelativeLocation,
+      filename,
+    })
+
+    const updatedCache = {
+      inputRelativeLocation,
+      inputETag: isCached ? cache.inputETag : inputETag,
+      inputLocation:
+        inputLocation === resolvePath(rootLocation, inputRelativeLocation)
+          ? undefined
+          : inputLocation,
+      branches: updatedBranches,
+    }
+
+    const cacheDataLocation = getCacheDataLocation({
+      rootLocation,
+      cacheFolderRelativeLocation,
+      compiledFolderRelativeLocation,
+      filename,
+    })
+
+    promises.push(
+      writeFile({
+        location: cacheDataLocation,
+        string: JSON.stringify(updatedCache, null, "  "),
+      }),
+    )
+  }
 
   return Promise.all(promises)
 }
@@ -493,7 +511,8 @@ const getFileCompiled = ({
   compile,
   inputETagClient,
   cacheEnabled,
-  trackHit,
+  cacheAutoClean,
+  cacheTrackHit,
 }) => {
   return getFileReport({
     rootLocation,
@@ -570,7 +589,7 @@ const getFileCompiled = ({
         output,
         outputAssets,
       }) => {
-        return update({
+        return updateBranch({
           rootLocation,
           cacheFolderRelativeLocation,
           compiledFolderRelativeLocation,
@@ -584,7 +603,8 @@ const getFileCompiled = ({
           inputETag,
           output,
           outputAssets,
-          trackHit,
+          cacheTrackHit,
+          cacheAutoClean,
         }).then(() => {
           return {
             status,
@@ -602,7 +622,8 @@ export const createCompileService = ({
   compiledFolderRelativeLocation = "compiled",
   compile = createCompile(),
   cacheEnabled = false,
-  trackHit = false,
+  cacheAutoClean = true,
+  cacheTrackHit = false,
 }) => {
   const fileService = createFileService()
 
@@ -688,7 +709,8 @@ export const createCompileService = ({
         compile,
         inputETagClient: headers.has("if-none-match") ? headers.get("if-none-match") : undefined,
         cacheEnabled,
-        trackHit,
+        cacheAutoClean,
+        cacheTrackHit,
       }).then(({ status, inputETag, output }) => {
         // here status can be "created", "updated", "cached"
 
