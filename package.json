@@ -25,6 +25,7 @@
 		"@dmail/signal": "7.0.1",
 		"@dmail/uneval": "4.0.0",
 		"babel-core": "6.26.0",
+		"babel-plugin-istanbul": "4.1.6",
 		"cuid": "2.1.1",
 		"es-module-loader": "2.0.0",
 		"istanbul": "0.4.5",

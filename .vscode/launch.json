@@ -33,9 +33,14 @@
         "NODE_ENV": "development",
         "NODE_PATH": "${workspaceRoot}/dist"
       },
-      "sourceMaps": false,
+      "sourceMaps": true,
       "outputCapture": "std",
-      "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"],
+      "skipFiles": [
+        // skip node modules
+        "node_modules/**",
+        // skip node internals
+        "<node_internals>/**/*.js"
+      ],
       "autoAttachChildProcesses": true
     },
     {

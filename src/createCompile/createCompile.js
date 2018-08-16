@@ -1,5 +1,5 @@
 import { identifier } from "./identifier.js"
-import { instrumenter as defaultInstrumenter } from "./instrumenter.js"
+import { instrumenter as defaultInstrumenter } from "./instrumenter-babel.js"
 import { minifier as defaultMinifier } from "./minifier.js"
 import { optimizer as defaultOptimizer } from "./optimizer.js"
 import { remapper } from "./remapper.js"

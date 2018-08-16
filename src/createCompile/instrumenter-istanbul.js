@@ -1,27 +1,27 @@
 // why not https://github.com/istanbuljs/babel-plugin-istanbul ?
 // https://github.com/guybedford/systemjs-istanbul/blob/master/index.js
 import istanbul from "istanbul"
-import remapIstanbul from "remap-istanbul/lib/remap"
+// import remapIstanbul from "remap-istanbul/lib/remap"
 import { SourceMapConsumer, SourceMapGenerator } from "source-map"
 
-export const getCoverage = ({ globalName }) => {
-  return global[globalName]
-}
+// const getCoverage = ({ globalName }) => {
+//   return global[globalName]
+// }
 
-// remap coverage will be needed later so that our coverage object
-// is remapped using sourcemaps
-export const remapCoverage = (coverage) => {
-  return remapIstanbul(coverage)
-}
+// // remap coverage will be needed later so that our coverage object
+// // is remapped using sourcemaps
+// const remapCoverage = (coverage) => {
+//   return remapIstanbul(coverage)
+// }
 
-export const getCoverageGlobalVariableName = () => {
-  for (const key in global) {
-    if (key.match(/\$\$cov_\d+\$\$/)) {
-      return key
-    }
-  }
-  return null
-}
+// const getCoverageGlobalVariableName = () => {
+//   for (const key in global) {
+//     if (key.match(/\$\$cov_\d+\$\$/)) {
+//       return key
+//     }
+//   }
+//   return null
+// }
 
 export const instrumenter = ({
   inputRelativeLocation,

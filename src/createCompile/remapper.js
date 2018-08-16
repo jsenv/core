@@ -13,7 +13,7 @@ export const remapper = ({
   inputSourceMap,
   options,
 }) => {
-  if (typeof inputSourceMap !== "object") {
+  if (typeof inputSourceMap !== "object" || inputSourceMap === null) {
     return
   }
 
