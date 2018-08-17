@@ -56,17 +56,25 @@ export const createNodeRequestHandler = ({ handler, transform = (response) => re
       console.log("error on", request.url.toString(), error)
     })
 
-    const handleResponse = (responseProperties) => {
-      const response = createResponse(request, responseProperties)
-      new Promise((resolve) => resolve(transform(response))).then((finalResponse) => {
+    return Promise.resolve()
+      .then(() => {
+        return handler(request)
+      })
+      .then((responseProperties) => {
+        const response = createResponse(request, responseProperties)
+        return transform(response)
+      })
+      .catch((error) => {
+        return createResponse(request, {
+          status: 500,
+          reason: "internal error",
+          body: error && error.stack ? error.stack : error,
+        })
+      })
+      .then((finalResponse) => {
         console.log(`${finalResponse.status} ${request.url}`)
         populateNodeResponse(nodeResponse, finalResponse)
       })
-    }
-
-    return new Promise((resolve) => {
-      resolve(handler(request))
-    }).then(handleResponse, handleResponse)
   }
 }
 

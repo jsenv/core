@@ -28,20 +28,12 @@ export const createResponseGenerator = ({ services = [] }) => {
       }
 
       visit(0)
-    }).then(
-      (value) => {
-        if (value) {
-          return value
-        }
-        return { status: 501, reason: "no implemented" }
-      },
-      (value) => {
-        if (value) {
-          return value
-        }
-        return { status: 501, reason: "no implemented" }
-      },
-    )
+    }).then((value) => {
+      if (value) {
+        return value
+      }
+      return { status: 501, reason: "no implemented" }
+    })
   }
 
   return generateResponse
