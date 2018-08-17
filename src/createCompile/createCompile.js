@@ -30,26 +30,9 @@ export const createCompile = (
     minifier = defaultMinifier,
     instrumenter = defaultInstrumenter,
     optimizer = defaultOptimizer,
-    readable = true,
   } = {},
 ) => {
-  const compile = ({
-    filename,
-    inputRelativeLocation,
-    inputSource,
-    inputSourceMap = null,
-    inputAst = null,
-    ...rest
-  }) => {
-    const compileContext = {
-      filename,
-      inputRelativeLocation,
-      inputSource,
-      inputSourceMap,
-      inputAst,
-      ...rest,
-    }
-
+  const compile = (compileContext) => {
     return Promise.resolve(createOptions(compileContext)).then(
       (
         {
@@ -61,7 +44,6 @@ export const createCompile = (
           optimize = false,
           remap = true,
           remapMethod = "comment", // 'comment', 'inline'
-          remapByFilesystem = false,
           ...rest
         } = {},
       ) => {
@@ -74,7 +56,6 @@ export const createCompile = (
           optimize,
           remap,
           remapMethod,
-          remapByFilesystem,
           ...rest,
         }
 
@@ -85,7 +66,7 @@ export const createCompile = (
           // this is how compile output gets cached
 
           // no location -> cannot identify
-          if (!inputRelativeLocation) {
+          if (!compileContext.inputRelativeLocation) {
             identify = false
           }
           // if sourceMap are appended as comment do not put any //#sourceURL=../../file.js
@@ -98,9 +79,9 @@ export const createCompile = (
             ...compileContext,
             options,
             outputRelativeLocation,
-            outputSource: inputSource,
-            outputSourceMap: inputSourceMap,
-            outputAst: inputAst,
+            outputSource: compileContext.inputSource,
+            outputSourceMap: compileContext.inputSourceMap,
+            outputAst: compileContext.inputAst,
           })
             .then((context) => (transpile ? transform(context, transpiler) : context))
             .then((context) => (instrument ? transform(context, instrumenter) : context))
@@ -110,16 +91,12 @@ export const createCompile = (
             .then((context) => (remap ? transform(context, remapper) : context))
             .then(({ outputSource, outputSourceMap, outputSourceMapName }) => {
               if (outputSourceMapName) {
-                const outputSourceMapString = readable
-                  ? JSON.stringify(outputSourceMap, null, "  ")
-                  : JSON.stringify(outputSourceMap)
-
                 return {
                   output: outputSource,
                   outputAssets: [
                     {
                       name: outputSourceMapName,
-                      content: outputSourceMapString,
+                      content: JSON.stringify(outputSourceMap, null, "  "),
                     },
                   ],
                 }

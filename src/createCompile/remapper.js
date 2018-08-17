@@ -5,14 +5,7 @@ const writeSourceMapLocation = ({ source, location }) => {
 //# sourceMappingURL=${location}`
 }
 
-export const remapper = ({
-  rootLocation,
-  filename,
-  outputRelativeLocation,
-  inputSource,
-  inputSourceMap,
-  options,
-}) => {
+export const remapper = ({ inputRelativeLocation, inputSource, inputSourceMap, options }) => {
   if (typeof inputSourceMap !== "object" || inputSourceMap === null) {
     return
   }
@@ -41,23 +34,8 @@ export const remapper = ({
   }
 
   if (options.remapMethod === "comment") {
-    if (options.remapByFilesystem) {
-      const outputSourceMapName = `${path.basename(filename)}.map`
-
-      // TODO: use outputSourceMapName instead of appending .map on outputRelativeLocation
-      const serverLocation = `file://${path.resolve(rootLocation, outputRelativeLocation)}.map`
-
-      const outputSource = writeSourceMapLocation({ source: inputSource, location: serverLocation })
-
-      return {
-        outputSource,
-        outputSourceMap: inputSourceMap,
-        outputSourceMapName,
-      }
-    }
-
     // folder/file.js -> file.js.map
-    const outputSourceMapName = `${path.basename(filename)}.map`
+    const outputSourceMapName = `${path.basename(inputRelativeLocation)}.map`
     const outputSourceMapLocation = `./${outputSourceMapName}`
     const outputSource = writeSourceMapLocation({
       source: inputSource,

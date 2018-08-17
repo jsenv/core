@@ -5,12 +5,10 @@ import {
   mergeOptions,
 } from "@dmail/shared-config/dist/babel"
 import { transform, transformFromAst } from "babel-core"
-import path from "path"
-import { normalizeSeparation } from "../createCompileService/helpers.js"
+import { resolvePath } from "../createCompileService/helpers.js"
 
 export const transpiler = ({
   rootLocation,
-  filename,
   inputRelativeLocation,
   inputSource,
   inputSourceMap,
@@ -27,23 +25,12 @@ export const transpiler = ({
     outputModuleFormat: "systemjs",
   })
 
-  let sourceFileName
-  if (options.remapByFilesystem) {
-    sourceFileName = `file://${path.resolve(rootLocation, inputRelativeLocation)}`
-  } else {
-    const sourceLocation = path.resolve(rootLocation, inputRelativeLocation)
-    const sourceMapAbstractLocation = path.resolve(rootLocation, `${filename}.map`)
-    const sourceLocationRelativeToSourceMapLocation = normalizeSeparation(
-      path.relative(sourceMapAbstractLocation, sourceLocation),
-    )
-    sourceFileName = sourceLocationRelativeToSourceMapLocation
-  }
+  const sourceLocation = resolvePath(rootLocation, inputRelativeLocation)
 
   const babelOptions = mergeOptions(moduleOptions, createSyntaxOptions(), {
-    filename,
-    // filenameRelative: inputRelativeLocation,
-    sourceMapTarget: filename,
-    sourceFileName,
+    filename: sourceLocation,
+    sourceMapTarget: inputRelativeLocation,
+    sourceFileName: inputRelativeLocation,
     sourceMaps: options.remap,
     inputSourceMap,
     babelrc: false, // trust only these options, do not read any babelrc config file

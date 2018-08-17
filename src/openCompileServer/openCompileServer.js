@@ -18,7 +18,6 @@ export const openCompileServer = ({
   cors = true,
   sourceMap = "comment", // can be "comment", "inline", "none"
   sourceURL = true,
-  remapByFilesystem = false, // for vscode
 }) => {
   const compile = createCompile({
     createOptions: () => {
@@ -39,7 +38,6 @@ export const openCompileServer = ({
         identifyMethod,
         remap,
         remapMethod,
-        remapByFilesystem,
       }
     },
   })

@@ -5,7 +5,13 @@ import { URL } from "url"
 import { createCompile } from "../createCompile/createCompile.js"
 import { createHeaders } from "../openServer/createHeaders.js"
 import { JSON_FILE } from "./cache.js"
-import { createETag, isFileNotFoundError, resolvePath, removeFolderDeep } from "./helpers.js"
+import {
+  createETag,
+  isFileNotFoundError,
+  resolvePath,
+  removeFolderDeep,
+  normalizeSeparation,
+} from "./helpers.js"
 import { locateFile } from "./locateFile.js"
 import { readFile } from "./readFile.js"
 import { lockForRessource } from "./ressourceRegistry.js"
@@ -273,9 +279,6 @@ const getFileBranch = ({
       return readFile({ location: inputLocation }).then(({ content }) => {
         return compile({
           rootLocation,
-          cacheFolderRelativeLocation,
-          compiledFolderRelativeLocation,
-          filename,
           inputRelativeLocation,
           inputSource: content,
         }).then(({ options, generate }) => {
@@ -398,6 +401,7 @@ const updateBranch = ({
           branch,
           asset,
         })
+
         return writeFile({
           location: assetLocation,
           string: asset.content,
@@ -565,6 +569,31 @@ const getFileCompiled = ({
 
         return Promise.resolve(generate({ outputRelativeLocation })).then(
           ({ output, outputAssets }) => {
+            const sourceMapAsset = outputAssets[0]
+            if (sourceMapAsset) {
+              const sourceMap = JSON.parse(sourceMapAsset.content)
+
+              const sourceAbstractLocation = path.resolve(rootLocation, filename)
+              const sourceMapAbstractLocation = path.join(
+                rootLocation,
+                compiledFolderRelativeLocation,
+                sourceMapAsset.name,
+              )
+              const sourceLocationRelativeToSourceMapLocation = normalizeSeparation(
+                path.relative(sourceMapAbstractLocation, sourceAbstractLocation),
+              )
+
+              const sourceMapWithAbstractLocation = {
+                ...sourceMap,
+                file: filename,
+                sources: [sourceLocationRelativeToSourceMapLocation],
+              }
+              outputAssets[0] = {
+                ...sourceMapAsset,
+                content: JSON.stringify(sourceMapWithAbstractLocation, null, "  "),
+              }
+            }
+
             return {
               inputLocation,
               status: status === "missing" ? "created" : "updated",
