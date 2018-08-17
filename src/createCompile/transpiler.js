@@ -5,15 +5,15 @@ import {
   mergeOptions,
 } from "@dmail/shared-config/dist/babel"
 import { transform, transformFromAst } from "babel-core"
-import { resolvePath } from "../createCompileService/helpers.js"
 
 export const transpiler = ({
-  rootLocation,
-  inputRelativeLocation,
   inputSource,
   inputSourceMap,
   inputAst,
   options,
+  getSourceNameForSourceMap,
+  getSourceLocationForSourceMap,
+  ...rest
 }) => {
   // the truth is that we don't support global, nor amd
   // I have to check if we could support cjs but maybe we don't even support this
@@ -25,13 +25,18 @@ export const transpiler = ({
     outputModuleFormat: "systemjs",
   })
 
-  const sourceLocation = resolvePath(rootLocation, inputRelativeLocation)
+  const remapOptions = options.remap
+    ? {
+        sourceMaps: true,
+        sourceMapTarget: getSourceNameForSourceMap(rest),
+        sourceFileName: getSourceLocationForSourceMap(rest),
+      }
+    : {
+        sourceMaps: false,
+      }
 
-  const babelOptions = mergeOptions(moduleOptions, createSyntaxOptions(), {
-    filename: sourceLocation,
-    sourceMapTarget: inputRelativeLocation,
-    sourceFileName: inputRelativeLocation,
-    sourceMaps: options.remap,
+  const babelOptions = mergeOptions(moduleOptions, createSyntaxOptions(), remapOptions, {
+    filename: rest.inputRelativeLocation,
     inputSourceMap,
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true,

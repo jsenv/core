@@ -1,22 +1,27 @@
 import { createConfig, mergeOptions } from "@dmail/shared-config/dist/babel.js"
 import { transform, transformFromAst } from "babel-core"
-import { resolvePath } from "../createCompileService/helpers.js"
 
 export const instrumenter = ({
-  rootLocation,
-  inputRelativeLocation,
   inputSource,
   inputSourceMap,
   inputAst,
   options,
+  getSourceNameForSourceMap,
+  getSourceLocationForSourceMap,
+  ...rest
 }) => {
-  const sourceLocation = resolvePath(rootLocation, inputRelativeLocation)
+  const remapOptions = options.remap
+    ? {
+        sourceMaps: true,
+        sourceMapTarget: getSourceNameForSourceMap(rest),
+        sourceFileName: getSourceLocationForSourceMap(rest),
+      }
+    : {
+        sourceMaps: false,
+      }
 
-  const babelOptions = mergeOptions({
-    filename: sourceLocation,
-    sourceMapTarget: inputRelativeLocation,
-    sourceFileName: inputRelativeLocation,
-    sourceMaps: options.remap,
+  const babelOptions = mergeOptions(remapOptions, {
+    filename: rest.inputRelativeLocation,
     inputSourceMap,
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true,

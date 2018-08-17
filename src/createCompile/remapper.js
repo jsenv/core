@@ -1,11 +1,9 @@
-import path from "path"
-
 const writeSourceMapLocation = ({ source, location }) => {
   return `${source}
 //# sourceMappingURL=${location}`
 }
 
-export const remapper = ({ inputRelativeLocation, inputSource, inputSourceMap, options }) => {
+export const remapper = ({ inputSource, inputSourceMap, options, outputSourceMapName }) => {
   if (typeof inputSourceMap !== "object" || inputSourceMap === null) {
     return
   }
@@ -34,17 +32,13 @@ export const remapper = ({ inputRelativeLocation, inputSource, inputSourceMap, o
   }
 
   if (options.remapMethod === "comment") {
-    // folder/file.js -> file.js.map
-    const outputSourceMapName = `${path.basename(inputRelativeLocation)}.map`
-    const outputSourceMapLocation = `./${outputSourceMapName}`
     const outputSource = writeSourceMapLocation({
       source: inputSource,
-      location: outputSourceMapLocation,
+      location: `./${outputSourceMapName}`,
     })
 
     return {
       outputSource,
-      outputSourceMapName,
     }
   }
 }

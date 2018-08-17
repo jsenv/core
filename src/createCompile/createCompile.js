@@ -4,6 +4,8 @@ import { minifier as defaultMinifier } from "./minifier.js"
 import { optimizer as defaultOptimizer } from "./optimizer.js"
 import { remapper } from "./remapper.js"
 import { transpiler as defaultTranspiler } from "./transpiler.js"
+import { resolvePath } from "../createCompileService/helpers.js"
+import path from "path"
 
 const transform = (context, transformer) => {
   return Promise.resolve(
@@ -76,12 +78,20 @@ export const createCompile = (
           }
 
           return Promise.resolve({
-            ...compileContext,
-            options,
-            outputRelativeLocation,
             outputSource: compileContext.inputSource,
             outputSourceMap: compileContext.inputSourceMap,
+            // folder/file.js -> file.js.map
+            outputSourceMapName: `${path.basename(compileContext.inputRelativeLocation)}.map`,
             outputAst: compileContext.inputAst,
+            getSourceNameForSourceMap: ({ rootLocation, inputRelativeLocation }) => {
+              return resolvePath(rootLocation, inputRelativeLocation)
+            },
+            getSourceLocationForSourceMap: ({ inputRelativeLocation }) => {
+              return inputRelativeLocation
+            },
+            ...compileContext,
+            outputRelativeLocation,
+            options,
           })
             .then((context) => (transpile ? transform(context, transpiler) : context))
             .then((context) => (instrument ? transform(context, instrumenter) : context))
