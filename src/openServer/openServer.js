@@ -15,6 +15,11 @@ export const openServer = (
     // when port is https you must provide privateKey & certificate
     getSignature = createSelfSignature,
     // auto close the server when the process exits (terminal closed, ctrl + C)
+    // TODO: rename this autoCloseOnShutdown which means when receiving SIGINT
+    // beforeExit is an other story
+    // and the listenNodeBeforeExit must be updated accordingly
+    // asking a process to shutdown and doing something before the process is shut down
+    // are two different concept
     autoCloseOnExit = true,
     // auto close the server when an uncaughtException happens
     // false by default because evenwith my strategy to react on uncaughtException
