@@ -16,6 +16,7 @@ const mimetype = (pathname) => {
     // application
     js: "application/javascript",
     json: "application/json",
+    map: "application/json",
     xml: "application/xml",
     gz: "application/x-gzip",
     zip: "application/zip",
