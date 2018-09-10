@@ -20,7 +20,7 @@ export const openCompileServer = ({
   sourceURL = true,
 }) => {
   const compile = createCompile({
-    createOptions: () => {
+    createOptions: ({ instrument }) => {
       // we should use a token or something to prevent a browser from being taken for nodejs
       // because will have security impact as we are going to trust this
       // const isNodeClient =
@@ -34,6 +34,7 @@ export const openCompileServer = ({
       const identifyMethod = "relative"
 
       return {
+        instrument,
         identify,
         identifyMethod,
         remap,

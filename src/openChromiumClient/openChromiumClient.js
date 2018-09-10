@@ -36,6 +36,24 @@ export const openChromiumClient = ({
   server,
   openIndexRequestHandler = openIndexServer,
   headless = true,
+  runFile = ({ page, file, instrument }) => {
+    return page.evaluate(
+      (file, instrument) => {
+        if (instrument) {
+          console.log("import with instrumentation")
+          return window.System.import(`${file}?instrument=true`).then((value) => {
+            return {
+              coverage: window.__coverage__,
+              value,
+            }
+          })
+        }
+        return window.System.import(file)
+      },
+      file,
+      instrument,
+    )
+  },
 }) => {
   if (openIndexRequestHandler === openIndexRequestInterception && headless === false) {
     throw new Error(`openIndexRequestInterception work only in headless mode`)
@@ -54,7 +72,7 @@ export const openChromiumClient = ({
       // as we do for server
     })
     .then((browser) => {
-      const execute = ({ file, autoClean = false }) => {
+      const execute = ({ file, autoClean = false, instrument = false }) => {
         return browser.newPage().then((page) => {
           const shouldClosePage = autoClean
 
@@ -84,11 +102,7 @@ export const openChromiumClient = ({
             }).then((indexRequestHandler) => {
               return page
                 .goto(indexRequestHandler.url)
-                .then(() => {
-                  return page.evaluate((file) => {
-                    return window.System.import(file)
-                  }, file)
-                })
+                .then(() => runFile({ page, file, instrument }))
                 .then(
                   (value) => {
                     if (shouldCloseIndexRequestHandler) {

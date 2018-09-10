@@ -230,6 +230,7 @@ const getFileBranch = ({
   cacheFolderRelativeLocation,
   compiledFolderRelativeLocation,
   filename,
+  instrument,
   compile,
 }) => {
   const inputRelativeLocation = getInputRelativeLocation({
@@ -279,8 +280,10 @@ const getFileBranch = ({
       return readFile({ location: inputLocation }).then(({ content }) => {
         return compile({
           rootLocation,
+          instrument,
           inputRelativeLocation,
           inputSource: content,
+          filename,
           getSourceNameForSourceMap: () => {
             return filename
           },
@@ -322,14 +325,16 @@ const getFileReport = ({
   cacheFolderRelativeLocation,
   compiledFolderRelativeLocation,
   filename,
-  compile,
   inputETagClient = null,
+  instrument = false,
+  compile,
 }) => {
   return getFileBranch({
     rootLocation,
     cacheFolderRelativeLocation,
     compiledFolderRelativeLocation,
     filename,
+    instrument,
     compile,
   }).then(({ inputLocation, cache, options, generate, input, branch }) => {
     if (!branch) {
@@ -533,6 +538,7 @@ const getFileCompiled = ({
   filename,
   compile,
   inputETagClient,
+  instrument,
   cacheEnabled,
   cacheAutoClean,
   cacheTrackHit,
@@ -544,6 +550,7 @@ const getFileCompiled = ({
     filename,
     compile,
     inputETagClient,
+    instrument,
   })
     .then(
       ({
@@ -731,6 +738,7 @@ export const createCompileService = ({
         filename,
         compile,
         inputETagClient: headers.has("if-none-match") ? headers.get("if-none-match") : undefined,
+        instrument: Boolean(url.searchParams.get("instrument")),
         cacheEnabled,
         cacheAutoClean,
         cacheTrackHit,

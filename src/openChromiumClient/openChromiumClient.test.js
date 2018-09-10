@@ -13,6 +13,7 @@ openCompileServer({
       .execute({
         file: `${server.compileURL}src/__test__/file.test.js`,
         autoClean: cleanAll,
+        instrument: true,
       })
       .then(
         (value) => {

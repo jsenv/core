@@ -10,7 +10,7 @@ const compile = createCompile({
     return {
       transpile: true,
       instrument: true,
-      remapMethod: "inline",
+      remapMethod: "comment",
     }
   },
 })
