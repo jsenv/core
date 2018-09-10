@@ -667,6 +667,8 @@ export const createCompileService = ({
 
     const pathname = url.pathname
     // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
+    // here if we get instrumented instead of compiled
+    // we instrumented and compile instead of just compile
     const filename = pathname.slice(1)
     if (filename.startsWith(compiledFolderRelativeLocation) === false) {
       return
@@ -738,6 +740,13 @@ export const createCompileService = ({
         filename,
         compile,
         inputETagClient: headers.has("if-none-match") ? headers.get("if-none-match") : undefined,
+        // it works to instrument that module
+        // but dependent module won't be instrumented because they won't have this paramm
+        // while we want to propagate this to dependent modules
+        // we could either prepend this module with instrumented/ instead of compiled/
+        // or be able to know who is requesting the module to know that the module parent
+        // is instrumented
+        // I think replacing compiled with instrumented is promising
         instrument: Boolean(url.searchParams.get("instrument")),
         cacheEnabled,
         cacheAutoClean,
