@@ -11,7 +11,7 @@ openCompileServer({
   return openChromiumClient({ server, headless: false }).then((chromiumClient) => {
     chromiumClient
       .execute({
-        file: `${server.compileURL}src/__test__/file.test.js`,
+        file: `src/__test__/file.test.js`,
         autoClean: cleanAll,
         instrument: true,
       })

@@ -1,11 +1,12 @@
 import { ensureSystem } from "./ensureSystem.js"
+import { getRemoteLocation } from "../getRemoteLocation.js"
 
 process.on("message", ({ type, id, data }) => {
   if (type === "execute") {
-    const { file, remoteRoot, localRoot } = data
+    const { remoteRoot, localRoot, file, transpile, instrument } = data
 
     ensureSystem({ remoteRoot, localRoot })
-      .import(file)
+      .import(getRemoteLocation({ remoteRoot, file, transpile, instrument }))
       .then(
         (value) => {
           process.send({

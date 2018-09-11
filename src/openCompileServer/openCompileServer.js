@@ -14,13 +14,16 @@ const cacheFolderRelativeLocation = "build"
 export const openCompileServer = ({
   url,
   rootLocation,
-  compiledFolderRelativeLocation = "compiled",
   cors = true,
   sourceMap = "comment", // can be "comment", "inline", "none"
   sourceURL = true,
+  // minify and optimize are set once for server lifetime
+  // only transpile and instrument can be decided runtime by prefixing the file location zith these folder names
+  minify = false,
+  optimize = false,
 }) => {
   const compile = createCompile({
-    createOptions: ({ instrument }) => {
+    createOptions: () => {
       // we should use a token or something to prevent a browser from being taken for nodejs
       // because will have security impact as we are going to trust this
       // const isNodeClient =
@@ -34,11 +37,12 @@ export const openCompileServer = ({
       const identifyMethod = "relative"
 
       return {
-        instrument,
         identify,
         identifyMethod,
         remap,
         remapMethod,
+        minify,
+        optimize,
       }
     },
   })
@@ -49,7 +53,6 @@ export const openCompileServer = ({
         createCompileService({
           rootLocation,
           cacheFolderRelativeLocation,
-          compiledFolderRelativeLocation,
           trackHit: true,
           compile,
         }),
@@ -68,7 +71,6 @@ export const openCompileServer = ({
     return {
       close,
       url,
-      compileURL: new URL(`${compiledFolderRelativeLocation}/`, url),
       rootLocation,
     }
   })

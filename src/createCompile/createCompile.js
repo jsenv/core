@@ -25,6 +25,32 @@ const transform = (context, transformer) => {
   })
 }
 
+const createDefaultOptions = ({ abstractFolderRelativeLocation }) => {
+  let transpile = false
+  if (abstractFolderRelativeLocation === "compiled") {
+    transpile = true
+  }
+
+  let instrument = false
+  if (abstractFolderRelativeLocation === "instrumented") {
+    transpile = true
+    instrument = true
+  }
+
+  const remap = true
+
+  return {
+    identify: false,
+    identifyMethod: "relative",
+    transpile,
+    minify: false,
+    instrument,
+    optimize: false,
+    remap,
+    remapMethod: "comment", // 'comment', 'inline'
+  }
+}
+
 export const createCompile = (
   {
     createOptions = () => {},
@@ -35,31 +61,13 @@ export const createCompile = (
   } = {},
 ) => {
   const compile = (compileContext) => {
-    return Promise.resolve(createOptions(compileContext)).then(
-      (
-        {
-          identify = false,
-          identifyMethod = "relative",
-          transpile = true,
-          minify = false,
-          instrument = false,
-          optimize = false,
-          remap = true,
-          remapMethod = "comment", // 'comment', 'inline'
-          ...rest
-        } = {},
-      ) => {
+    return Promise.all([createDefaultOptions(compileContext), createOptions(compileContext)]).then(
+      ([defaultOptions, customOptions = {}]) => {
         const options = {
-          identify,
-          identifyMethod,
-          transpile,
-          minify,
-          instrument,
-          optimize,
-          remap,
-          remapMethod,
-          ...rest,
+          ...defaultOptions,
+          ...customOptions,
         }
+        let { identify, transpile, instrument, minify, optimize, remap } = options
 
         const generate = ({ outputRelativeLocation }) => {
           // outputRelativeLocation dependent from options:

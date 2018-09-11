@@ -1,6 +1,7 @@
 import puppeteer from "puppeteer"
 import { createBrowserIndexHTML } from "../createBrowserIndexHTML.js"
 import { openIndexServer } from "../openIndexServer/openIndexServer.js"
+import { getRemoteLocation } from "../getRemoteLocation.js"
 
 const openIndexRequestInterception = ({ page, body }) => {
   const fakeURL = "https://fake.com"
@@ -36,21 +37,24 @@ export const openChromiumClient = ({
   server,
   openIndexRequestHandler = openIndexServer,
   headless = true,
-  runFile = ({ page, file, instrument }) => {
+  runFile = ({ page, remoteRoot, file, instrument, transpile }) => {
+    const remoteFile = getRemoteLocation({ remoteRoot, file, instrument, transpile })
+
     return page.evaluate(
-      (file, instrument) => {
+      (remoteFile, instrument) => {
         if (instrument) {
           console.log("import with instrumentation")
-          return window.System.import(`${file}?instrument=true`).then((value) => {
+          return window.System.import(remoteFile).then((value) => {
             return {
               coverage: window.__coverage__,
               value,
             }
           })
         }
-        return window.System.import(file)
+        // we could also import the raw version if we want
+        return window.System.import(remoteFile)
       },
-      file,
+      remoteFile,
       instrument,
     )
   },
@@ -72,7 +76,7 @@ export const openChromiumClient = ({
       // as we do for server
     })
     .then((browser) => {
-      const execute = ({ file, autoClean = false, instrument = false }) => {
+      const execute = ({ file, autoClean = false, instrument = false, transpile = true }) => {
         return browser.newPage().then((page) => {
           const shouldClosePage = autoClean
 
@@ -102,7 +106,15 @@ export const openChromiumClient = ({
             }).then((indexRequestHandler) => {
               return page
                 .goto(indexRequestHandler.url)
-                .then(() => runFile({ page, file, instrument }))
+                .then(() =>
+                  runFile({
+                    page,
+                    remoteRoot: server.url.toString().slice(0, -1),
+                    file,
+                    instrument,
+                    transpile,
+                  }),
+                )
                 .then(
                   (value) => {
                     if (shouldCloseIndexRequestHandler) {

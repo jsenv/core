@@ -18,7 +18,7 @@ openCompileServer({
   }).then((nodeClient) => {
     nodeClient
       .execute({
-        file: `${server.compileURL}src/__test__/file.js`,
+        file: `src/__test__/file.js`,
         autoClean: cleanAll,
       })
       .then(

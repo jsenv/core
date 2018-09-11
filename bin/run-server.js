@@ -50,7 +50,6 @@ export const open = ({ root, url, compiledFolder }) => {
   }).then((compileServer) => {
     return openRunServer({
       compileServerURL: compileServer.url,
-      compileURL: compileServer.compileURL,
       url,
     }).then((runServerURL) => {
       return {

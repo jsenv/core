@@ -49,7 +49,7 @@ export const openNodeClient = ({ server, detached = true }) => {
 
     let previousID = 0
 
-    const execute = ({ file }) => {
+    const execute = ({ file, transpile = true, instrument = false }) => {
       return new Promise((resolve, reject) => {
         const id = previousID + 1
         previousID = id
@@ -83,9 +83,11 @@ export const openNodeClient = ({ server, detached = true }) => {
           type: "execute",
           id,
           data: {
-            file,
             remoteRoot,
             localRoot,
+            file,
+            transpile,
+            instrument,
           },
         })
       })

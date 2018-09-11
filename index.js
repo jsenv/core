@@ -24,7 +24,7 @@ export const createModuleRunner = (params) => {
       return openNodeClient({ server }).then((nodeClient) => {
         // we should return a way to close?
         return nodeClient.execute({
-          file: `${server.compileURL}${file}`,
+          file,
           ...rest,
         })
       })
@@ -36,7 +36,7 @@ export const createModuleRunner = (params) => {
         headless,
       }).then((chromiumClient) => {
         return chromiumClient.execute({
-          file: `${server.compileURL}${file}`,
+          file,
         })
       })
     }

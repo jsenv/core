@@ -27,9 +27,9 @@ const compareBranch = (branchA, branchB) => {
   return lastMatchDiff
 }
 
-const getInputRelativeLocation = ({ compiledFolderRelativeLocation, filename }) => {
+const getInputRelativeLocation = ({ abstractFolderRelativeLocation, filename }) => {
   // 'compiled/folder/file.js' -> 'folder/file.js'
-  return filename.slice(compiledFolderRelativeLocation.length + 1)
+  return filename.slice(abstractFolderRelativeLocation.length + 1)
 }
 
 const getCacheFolderLocation = ({ rootLocation, cacheFolderRelativeLocation, ...rest }) => {
@@ -63,7 +63,7 @@ const getOutputAssetLocation = ({ asset, ...rest }) => {
 const readBranchMain = ({
   rootLocation,
   cacheFolderRelativeLocation,
-  compiledFolderRelativeLocation,
+  abstractFolderRelativeLocation,
   filename,
   inputLocation,
   inputETagClient,
@@ -97,7 +97,7 @@ const readBranchMain = ({
         const outputLocation = getOutputLocation({
           rootLocation,
           cacheFolderRelativeLocation,
-          compiledFolderRelativeLocation,
+          abstractFolderRelativeLocation,
           filename,
           branch,
         })
@@ -126,7 +126,7 @@ const readBranchMain = ({
 const readBranchAsset = ({
   rootLocation,
   cacheFolderRelativeLocation,
-  compiledFolderRelativeLocation,
+  abstractFolderRelativeLocation,
   filename,
   cache,
   branch,
@@ -135,7 +135,7 @@ const readBranchAsset = ({
   const outputAssetLocation = getOutputAssetLocation({
     rootLocation,
     cacheFolderRelativeLocation,
-    compiledFolderRelativeLocation,
+    abstractFolderRelativeLocation,
     filename,
     branch,
     asset,
@@ -175,7 +175,7 @@ const readBranchAsset = ({
 const readBranch = ({
   rootLocation,
   cacheFolderRelativeLocation,
-  compiledFolderRelativeLocation,
+  abstractFolderRelativeLocation,
   filename,
   inputLocation,
   inputETagClient,
@@ -186,7 +186,7 @@ const readBranch = ({
     readBranchMain({
       rootLocation,
       cacheFolderRelativeLocation,
-      compiledFolderRelativeLocation,
+      abstractFolderRelativeLocation,
       filename,
       inputLocation,
       inputETagClient,
@@ -197,7 +197,7 @@ const readBranch = ({
       return readBranchAsset({
         rootLocation,
         cacheFolderRelativeLocation,
-        compiledFolderRelativeLocation,
+        abstractFolderRelativeLocation,
         filename,
         cache,
         branch,
@@ -228,20 +228,19 @@ const readBranch = ({
 const getFileBranch = ({
   rootLocation,
   cacheFolderRelativeLocation,
-  compiledFolderRelativeLocation,
+  abstractFolderRelativeLocation,
   filename,
-  instrument,
   compile,
 }) => {
   const inputRelativeLocation = getInputRelativeLocation({
-    compiledFolderRelativeLocation,
+    abstractFolderRelativeLocation,
     filename,
   })
 
   const cacheDataLocation = getCacheDataLocation({
     rootLocation,
     cacheFolderRelativeLocation,
-    compiledFolderRelativeLocation,
+    abstractFolderRelativeLocation,
     filename,
   })
 
@@ -280,7 +279,7 @@ const getFileBranch = ({
       return readFile({ location: inputLocation }).then(({ content }) => {
         return compile({
           rootLocation,
-          instrument,
+          abstractFolderRelativeLocation,
           inputRelativeLocation,
           inputSource: content,
           filename,
@@ -291,7 +290,7 @@ const getFileBranch = ({
             const sourceLocation = path.resolve(rootLocation, inputRelativeLocation)
             const sourceMapAbstractLocation = path.join(
               rootLocation,
-              compiledFolderRelativeLocation,
+              abstractFolderRelativeLocation,
               path.dirname(inputRelativeLocation),
               outputSourceMapName,
             )
@@ -323,18 +322,16 @@ const getFileBranch = ({
 const getFileReport = ({
   rootLocation,
   cacheFolderRelativeLocation,
-  compiledFolderRelativeLocation,
+  abstractFolderRelativeLocation,
   filename,
   inputETagClient = null,
-  instrument = false,
   compile,
 }) => {
   return getFileBranch({
     rootLocation,
     cacheFolderRelativeLocation,
-    compiledFolderRelativeLocation,
+    abstractFolderRelativeLocation,
     filename,
-    instrument,
     compile,
   }).then(({ inputLocation, cache, options, generate, input, branch }) => {
     if (!branch) {
@@ -354,7 +351,7 @@ const getFileReport = ({
     return readBranch({
       rootLocation,
       cacheFolderRelativeLocation,
-      compiledFolderRelativeLocation,
+      abstractFolderRelativeLocation,
       filename,
       inputLocation,
       inputETagClient,
@@ -379,7 +376,7 @@ const getFileReport = ({
 const updateBranch = ({
   rootLocation,
   cacheFolderRelativeLocation,
-  compiledFolderRelativeLocation,
+  abstractFolderRelativeLocation,
   filename,
   inputLocation,
   status,
@@ -403,7 +400,7 @@ const updateBranch = ({
     const mainLocation = getOutputLocation({
       rootLocation,
       cacheFolderRelativeLocation,
-      compiledFolderRelativeLocation,
+      abstractFolderRelativeLocation,
       filename,
       branch,
     })
@@ -417,7 +414,7 @@ const updateBranch = ({
         const assetLocation = getOutputAssetLocation({
           rootLocation,
           cacheFolderRelativeLocation,
-          compiledFolderRelativeLocation,
+          abstractFolderRelativeLocation,
           filename,
           branch,
           asset,
@@ -445,7 +442,7 @@ const updateBranch = ({
           const branchLocation = getBranchLocation({
             rootLocation,
             cacheFolderRelativeLocation,
-            compiledFolderRelativeLocation,
+            abstractFolderRelativeLocation,
             filename,
             branch,
           })
@@ -499,7 +496,7 @@ const updateBranch = ({
       .sort(compareBranch)
 
     const inputRelativeLocation = getInputRelativeLocation({
-      compiledFolderRelativeLocation,
+      abstractFolderRelativeLocation,
       filename,
     })
 
@@ -516,7 +513,7 @@ const updateBranch = ({
     const cacheDataLocation = getCacheDataLocation({
       rootLocation,
       cacheFolderRelativeLocation,
-      compiledFolderRelativeLocation,
+      abstractFolderRelativeLocation,
       filename,
     })
 
@@ -534,11 +531,10 @@ const updateBranch = ({
 const getFileCompiled = ({
   rootLocation,
   cacheFolderRelativeLocation,
-  compiledFolderRelativeLocation,
+  abstractFolderRelativeLocation,
   filename,
   compile,
   inputETagClient,
-  instrument,
   cacheEnabled,
   cacheAutoClean,
   cacheTrackHit,
@@ -546,11 +542,10 @@ const getFileCompiled = ({
   return getFileReport({
     rootLocation,
     cacheFolderRelativeLocation,
-    compiledFolderRelativeLocation,
+    abstractFolderRelativeLocation,
     filename,
     compile,
     inputETagClient,
-    instrument,
   })
     .then(
       ({
@@ -585,7 +580,7 @@ const getFileCompiled = ({
 
         const outputRelativeLocation = getOutputRelativeLocation({
           cacheFolderRelativeLocation,
-          compiledFolderRelativeLocation,
+          abstractFolderRelativeLocation,
           filename,
           branch,
         })
@@ -622,7 +617,7 @@ const getFileCompiled = ({
         return updateBranch({
           rootLocation,
           cacheFolderRelativeLocation,
-          compiledFolderRelativeLocation,
+          abstractFolderRelativeLocation,
           filename,
           inputLocation,
           status,
@@ -649,7 +644,6 @@ const getFileCompiled = ({
 export const createCompileService = ({
   rootLocation,
   cacheFolderRelativeLocation = "build",
-  compiledFolderRelativeLocation = "compiled",
   compile = createCompile(),
   cacheEnabled = false,
   cacheAutoClean = true,
@@ -670,7 +664,15 @@ export const createCompileService = ({
     // here if we get instrumented instead of compiled
     // we instrumented and compile instead of just compile
     const filename = pathname.slice(1)
-    if (filename.startsWith(compiledFolderRelativeLocation) === false) {
+    const dirname = filename.slice(0, filename.indexOf("/"))
+
+    if (dirname !== "instrumented" && dirname !== "compiled") {
+      return
+    }
+
+    const abstractFolderRelativeLocation = dirname
+
+    if (filename.startsWith(abstractFolderRelativeLocation) === false) {
       return
     }
 
@@ -688,7 +690,7 @@ export const createCompileService = ({
       getCacheDataLocation({
         rootLocation,
         cacheFolderRelativeLocation,
-        compiledFolderRelativeLocation,
+        abstractFolderRelativeLocation,
         filename,
       }),
     )
@@ -703,7 +705,7 @@ export const createCompileService = ({
         return getFileBranch({
           rootLocation,
           cacheFolderRelativeLocation,
-          compiledFolderRelativeLocation,
+          abstractFolderRelativeLocation,
           filename: script,
           compile,
         }).then(({ branch }) => {
@@ -717,7 +719,7 @@ export const createCompileService = ({
             rootLocation,
             getBranchRelativeLocation({
               cacheFolderRelativeLocation,
-              compiledFolderRelativeLocation,
+              abstractFolderRelativeLocation,
               filename: script,
               branch,
             }),
@@ -736,18 +738,10 @@ export const createCompileService = ({
       return getFileCompiled({
         rootLocation,
         cacheFolderRelativeLocation,
-        compiledFolderRelativeLocation,
+        abstractFolderRelativeLocation,
         filename,
         compile,
         inputETagClient: headers.has("if-none-match") ? headers.get("if-none-match") : undefined,
-        // it works to instrument that module
-        // but dependent module won't be instrumented because they won't have this paramm
-        // while we want to propagate this to dependent modules
-        // we could either prepend this module with instrumented/ instead of compiled/
-        // or be able to know who is requesting the module to know that the module parent
-        // is instrumented
-        // I think replacing compiled with instrumented is promising
-        instrument: Boolean(url.searchParams.get("instrument")),
         cacheEnabled,
         cacheAutoClean,
         cacheTrackHit,

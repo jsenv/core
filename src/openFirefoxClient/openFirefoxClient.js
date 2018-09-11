@@ -6,10 +6,11 @@ import { Builder } from "selenium-webdriver"
 import firefox from "selenium-webdriver/firefox"
 import { createBrowserIndexHTML } from "../createBrowserIndexHTML.js"
 import { openIndexServer } from "../openIndexServer/openIndexServer.js"
+import { getRemoteLocation } from "../getRemoteLocation.js"
 
-const clientFunction = (file, instrument, done) => {
+const clientFunction = (remoteFile, instrument, done) => {
   if (instrument) {
-    window.System.import(`${file}?instrument=true`).then(
+    window.System.import(remoteFile).then(
       (value) =>
         done({
           status: "resolved",
@@ -18,7 +19,7 @@ const clientFunction = (file, instrument, done) => {
       (value) => done({ status: "rejected", value }),
     )
   } else {
-    window.System.import(file).then(
+    window.System.import(remoteFile).then(
       (value) => done({ status: "resolved", value }),
       (value) => done({ status: "rejected", value }),
     )
@@ -28,9 +29,13 @@ const clientFunction = (file, instrument, done) => {
 export const openFirefoxClient = ({
   server,
   headless = true,
-  runFile = ({ driver, file, instrument }) => {
+  runFile = ({ driver, remoteRoot, file, instrument, transpile }) => {
     return driver
-      .executeScriptAsync(`(${clientFunction.toString()}.apply(this, arguments)`, file, instrument)
+      .executeScriptAsync(
+        `(${clientFunction.toString()}.apply(this, arguments)`,
+        getRemoteLocation({ remoteRoot, file, instrument, transpile }),
+        instrument,
+      )
       .then(({ status, value }) => {
         return status === "resolved" ? value : Promise.reject(value)
       })
@@ -51,10 +56,18 @@ export const openFirefoxClient = ({
           loaderSrc: `${server.url}node_modules/@dmail/module-loader/src/browser/index.js`,
         }),
       }).then((indexRequestHandler) => {
-        const execute = ({ file, autoClean = false, instrument = false }) => {
+        const execute = ({ file, autoClean = false, instrument = false, transpile }) => {
           return driver
             .get(indexRequestHandler.url)
-            .then(() => runFile({ driver, file, instrument }))
+            .then(() =>
+              runFile({
+                driver,
+                remoteRoot: server.url.toString().slice(0, -1),
+                file,
+                instrument,
+                transpile,
+              }),
+            )
             .then(({ status, value }) => {
               if (autoClean) {
                 indexRequestHandler.stop()
