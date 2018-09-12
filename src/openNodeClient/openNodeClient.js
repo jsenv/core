@@ -8,19 +8,23 @@ import path from "path"
 import { ensureSystem } from "./ensureSystem.js"
 import "./global-fetch.js"
 import { getRemoteLocation } from "../getRemoteLocation.js"
+import { getNodeSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
 
 export const openNodeClient = ({ server, detached = true }) => {
   const remoteRoot = server.url.toString().slice(0, -1)
   const localRoot = server.rootLocation
 
   if (detached === false) {
-    // TODO: support collectCoverage
     return Promise.resolve().then(() => {
       const close = () => {}
 
-      const execute = ({ file }) => {
-        console.log("importing", file)
-        return ensureSystem({ remoteRoot, localRoot }).import(file)
+      const execute = ({ file, collectCoverage = false }) => {
+        const { setup, teardown } = getNodeSetupAndTeardowm({ collectCoverage })
+
+        setup(file)
+        return ensureSystem({ remoteRoot, localRoot })
+          .import(file)
+          .then(teardown)
       }
 
       return { close, execute }
@@ -85,22 +89,7 @@ export const openNodeClient = ({ server, detached = true }) => {
           server,
           file,
         })
-
-        const setup = () => {}
-        const teardown = collectCoverage
-          ? (value) => {
-              if ("__coverage__" in window === false) {
-                throw new Error(`missing __coverage__ after ${file} execution`)
-              }
-
-              return {
-                value,
-                coverage: window.__coverage__,
-              }
-            }
-          : (value) => {
-              return { value }
-            }
+        const { setup, teardown } = getNodeSetupAndTeardowm({ collectCoverage })
 
         child.send({
           type: "execute",
@@ -109,8 +98,8 @@ export const openNodeClient = ({ server, detached = true }) => {
             remoteRoot,
             localRoot,
             file: remoteFile,
-            setup,
-            teardown,
+            setupSource: `(${setup.toString()})`,
+            teardownSource: `(${teardown.toString()})`,
           },
         })
       })

@@ -21,12 +21,12 @@ const forceEnumerable = (value) => {
 
 process.on("message", ({ type, id, data }) => {
   if (type === "execute") {
-    const { remoteRoot, localRoot, file, setup, teardown } = data
+    const { remoteRoot, localRoot, file, setupSource, teardownSource } = data
 
-    setup()
+    eval(setupSource)(file)
     ensureSystem({ remoteRoot, localRoot })
       .import(file)
-      .then(teardown)
+      .then(eval(teardownSource))
       .then(
         (value) => {
           process.send({

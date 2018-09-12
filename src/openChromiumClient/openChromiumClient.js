@@ -2,6 +2,7 @@ import puppeteer from "puppeteer"
 import { createBrowserIndexHTML } from "../createBrowserIndexHTML.js"
 import { openIndexServer } from "../openIndexServer/openIndexServer.js"
 import { getRemoteLocation } from "../getRemoteLocation.js"
+import { getBrowserSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
 
 const openIndexRequestInterception = ({ page, body }) => {
   const fakeURL = "https://fake.com"
@@ -39,15 +40,13 @@ export const openChromiumClient = ({
   headless = true,
   runFile = ({ page, file, setup, teardown }) => {
     return page.evaluate(
-      (file, setup, teardown) => {
-        setup(file)
-        return window.System.import(file).then((value) => {
-          return teardown(value)
-        })
+      (file, setupSource, teardownSource) => {
+        eval(setupSource)(file)
+        return window.System.import(file).then(eval(teardownSource))
       },
       file,
-      setup,
-      teardown,
+      `(${setup.toString()})`,
+      `(${teardown.toString()})`,
     )
   },
 }) => {
@@ -100,21 +99,6 @@ export const openChromiumClient = ({
                 server,
                 file,
               })
-              const setup = () => {}
-              const teardown = collectCoverage
-                ? (value) => {
-                    if ("__coverage__" in window === false) {
-                      throw new Error(`missing __coverage__ after ${file} execution`)
-                    }
-
-                    return {
-                      value,
-                      coverage: window.__coverage__,
-                    }
-                  }
-                : (value) => {
-                    return { value }
-                  }
 
               return page
                 .goto(indexRequestHandler.url)
@@ -122,8 +106,7 @@ export const openChromiumClient = ({
                   runFile({
                     page,
                     file: remoteFile,
-                    setup,
-                    teardown,
+                    ...getBrowserSetupAndTeardowm({ collectCoverage }),
                   }),
                 )
                 .then(

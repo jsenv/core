@@ -8,6 +8,7 @@ openCompileServer({
   rootLocation,
   sourceMap: "comment",
   sourceURL: false,
+  instrument: true,
 }).then((server) => {
   const cleanAll = false
 
@@ -20,6 +21,7 @@ openCompileServer({
       .execute({
         file: `src/__test__/file.js`,
         autoClean: cleanAll,
+        collectCoverage: true,
       })
       .then(
         (value) => {

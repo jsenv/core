@@ -7,11 +7,12 @@ import firefox from "selenium-webdriver/firefox"
 import { createBrowserIndexHTML } from "../createBrowserIndexHTML.js"
 import { openIndexServer } from "../openIndexServer/openIndexServer.js"
 import { getRemoteLocation } from "../getRemoteLocation.js"
+import { getBrowserSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
 
-const clientFunction = (file, setup, teardown, done) => {
-  setup(file)
+const clientFunction = (file, setupSource, teardownSource, done) => {
+  eval(setupSource)(file)
   window.System.import(file)
-    .then(teardown)
+    .then(eval(teardownSource))
     .then(
       (value) => done({ status: "resolved", value }),
       (value) => done({ status: "rejected", value }),
@@ -26,8 +27,8 @@ export const openFirefoxClient = ({
       .executeScriptAsync(
         `(${clientFunction.toString()}.apply(this, arguments)`,
         file,
-        setup,
-        teardown,
+        `(${setup.toString()})`,
+        `(${teardown.toString()})`,
       )
       .then(({ status, value }) => {
         return status === "resolved" ? value : Promise.reject(value)
@@ -54,21 +55,6 @@ export const openFirefoxClient = ({
             server,
             file,
           })
-          const setup = () => {}
-          const teardown = collectCoverage
-            ? (value) => {
-                if ("__coverage__" in window === false) {
-                  throw new Error(`missing __coverage__ after ${file} execution`)
-                }
-
-                return {
-                  value,
-                  coverage: window.__coverage__,
-                }
-              }
-            : (value) => {
-                return { value }
-              }
 
           return driver
             .get(indexRequestHandler.url)
@@ -76,8 +62,7 @@ export const openFirefoxClient = ({
               runFile({
                 driver,
                 file: remoteFile,
-                setup,
-                teardown,
+                ...getBrowserSetupAndTeardowm({ collectCoverage }),
               }),
             )
             .then(({ status, value }) => {
