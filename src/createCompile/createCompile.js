@@ -51,6 +51,13 @@ const createDefaultOptions = ({ abstractFolderRelativeLocation }) => {
   }
 }
 
+const instrumentPredicate = ({ outputRelativeLocation }) => {
+  if (outputRelativeLocation.startsWith("node_modules/")) {
+    return false
+  }
+  return true
+}
+
 export const createCompile = (
   {
     createOptions = () => {},
@@ -102,7 +109,12 @@ export const createCompile = (
             options,
           })
             .then((context) => (transpile ? transform(context, transpiler) : context))
-            .then((context) => (instrument ? transform(context, instrumenter) : context))
+            .then((context) => {
+              if (instrument && instrumentPredicate(context)) {
+                return transform(context, instrumenter)
+              }
+              return context
+            })
             .then((context) => (minify ? transform(context, minifier) : context))
             .then((context) => (optimize ? transform(context, optimizer) : context))
             .then((context) => (identify ? transform(context, identifier) : context))
