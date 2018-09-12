@@ -3,7 +3,6 @@ import cuid from "cuid"
 import path from "path"
 import { URL } from "url"
 import { createCompile } from "../createCompile/createCompile.js"
-import { createHeaders } from "../openServer/createHeaders.js"
 import { JSON_FILE } from "./cache.js"
 import {
   createETag,
@@ -644,6 +643,7 @@ const getFileCompiled = ({
 export const createCompileService = ({
   rootLocation,
   cacheFolderRelativeLocation = "build",
+  abstractFolderRelativeLocation = "compiled",
   compile = createCompile(),
   cacheEnabled = false,
   cacheAutoClean = true,
@@ -652,29 +652,9 @@ export const createCompileService = ({
   const fileService = createFileService()
 
   return ({ method, url, headers }) => {
-    url = new URL(url, "file:///")
-    headers = createHeaders(headers)
-
-    if (method !== "GET" && method !== "HEAD") {
-      return Promise.resolve({ status: 501 })
-    }
-
     const pathname = url.pathname
     // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
-    // here if we get instrumented instead of compiled
-    // we instrumented and compile instead of just compile
     const filename = pathname.slice(1)
-    const dirname = filename.slice(0, filename.indexOf("/"))
-
-    if (dirname !== "instrumented" && dirname !== "compiled") {
-      return
-    }
-
-    const abstractFolderRelativeLocation = dirname
-
-    if (filename.startsWith(abstractFolderRelativeLocation) === false) {
-      return
-    }
 
     // je crois, que, normalement
     // il faudrait "aider" le browser pour que tout ça ait du sens

@@ -37,25 +37,17 @@ export const openChromiumClient = ({
   server,
   openIndexRequestHandler = openIndexServer,
   headless = true,
-  runFile = ({ page, remoteRoot, file, instrument, transpile }) => {
-    const remoteFile = getRemoteLocation({ remoteRoot, file, instrument, transpile })
-
+  runFile = ({ page, file, setup, teardown }) => {
     return page.evaluate(
-      (remoteFile, instrument) => {
-        if (instrument) {
-          console.log("import with instrumentation")
-          return window.System.import(remoteFile).then((value) => {
-            return {
-              coverage: window.__coverage__,
-              value,
-            }
-          })
-        }
-        // we could also import the raw version if we want
-        return window.System.import(remoteFile)
+      (file, setup, teardown) => {
+        setup(file)
+        return window.System.import(file).then((value) => {
+          return teardown(value)
+        })
       },
-      remoteFile,
-      instrument,
+      file,
+      setup,
+      teardown,
     )
   },
 }) => {
@@ -76,7 +68,7 @@ export const openChromiumClient = ({
       // as we do for server
     })
     .then((browser) => {
-      const execute = ({ file, autoClean = false, instrument = false, transpile = true }) => {
+      const execute = ({ file, autoClean = false, collectCoverage = false }) => {
         return browser.newPage().then((page) => {
           const shouldClosePage = autoClean
 
@@ -104,15 +96,34 @@ export const openChromiumClient = ({
                 loaderSrc: `${server.url}node_modules/@dmail/module-loader/src/browser/index.js`,
               }),
             }).then((indexRequestHandler) => {
+              const remoteFile = getRemoteLocation({
+                server,
+                file,
+              })
+              const setup = () => {}
+              const teardown = collectCoverage
+                ? (value) => {
+                    if ("__coverage__" in window === false) {
+                      throw new Error(`missing __coverage__ after ${file} execution`)
+                    }
+
+                    return {
+                      value,
+                      coverage: window.__coverage__,
+                    }
+                  }
+                : (value) => {
+                    return { value }
+                  }
+
               return page
                 .goto(indexRequestHandler.url)
                 .then(() =>
                   runFile({
                     page,
-                    remoteRoot: server.url.toString().slice(0, -1),
-                    file,
-                    instrument,
-                    transpile,
+                    file: remoteFile,
+                    setup,
+                    teardown,
                   }),
                 )
                 .then(

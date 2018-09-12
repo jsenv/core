@@ -7,12 +7,14 @@ import { fork } from "child_process"
 import path from "path"
 import { ensureSystem } from "./ensureSystem.js"
 import "./global-fetch.js"
+import { getRemoteLocation } from "../getRemoteLocation.js"
 
 export const openNodeClient = ({ server, detached = true }) => {
   const remoteRoot = server.url.toString().slice(0, -1)
   const localRoot = server.rootLocation
 
   if (detached === false) {
+    // TODO: support collectCoverage
     return Promise.resolve().then(() => {
       const close = () => {}
 
@@ -49,7 +51,7 @@ export const openNodeClient = ({ server, detached = true }) => {
 
     let previousID = 0
 
-    const execute = ({ file, transpile = true, instrument = false }) => {
+    const execute = ({ file, collectCoverage = false }) => {
       return new Promise((resolve, reject) => {
         const id = previousID + 1
         previousID = id
@@ -79,15 +81,36 @@ export const openNodeClient = ({ server, detached = true }) => {
 
         child.on("message", onmessage)
 
+        const remoteFile = getRemoteLocation({
+          server,
+          file,
+        })
+
+        const setup = () => {}
+        const teardown = collectCoverage
+          ? (value) => {
+              if ("__coverage__" in window === false) {
+                throw new Error(`missing __coverage__ after ${file} execution`)
+              }
+
+              return {
+                value,
+                coverage: window.__coverage__,
+              }
+            }
+          : (value) => {
+              return { value }
+            }
+
         child.send({
           type: "execute",
           id,
           data: {
             remoteRoot,
             localRoot,
-            file,
-            transpile,
-            instrument,
+            file: remoteFile,
+            setup,
+            teardown,
           },
         })
       })

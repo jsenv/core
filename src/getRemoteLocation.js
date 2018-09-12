@@ -1,9 +1,5 @@
-export const getRemoteLocation = ({ remoteRoot, file, transpile, instrument }) => {
-  if (instrument) {
-    return `${remoteRoot}/instrumented/${file}`
-  }
-  if (transpile) {
-    return `${remoteRoot}/compiled/${file}`
-  }
-  return `${remoteRoot}/${file}`
+export const getRemoteLocation = ({ server, file }) => {
+  const remoteRoot = server.url.toString().slice(0, -1)
+
+  return `${remoteRoot}/${server.abstractFolderRelativeLocation}/${file}`
 }

@@ -8,33 +8,26 @@ import { createBrowserIndexHTML } from "../createBrowserIndexHTML.js"
 import { openIndexServer } from "../openIndexServer/openIndexServer.js"
 import { getRemoteLocation } from "../getRemoteLocation.js"
 
-const clientFunction = (remoteFile, instrument, done) => {
-  if (instrument) {
-    window.System.import(remoteFile).then(
-      (value) =>
-        done({
-          status: "resolved",
-          value: { coverage: window.__coverage__, value },
-        }),
-      (value) => done({ status: "rejected", value }),
-    )
-  } else {
-    window.System.import(remoteFile).then(
+const clientFunction = (file, setup, teardown, done) => {
+  setup(file)
+  window.System.import(file)
+    .then(teardown)
+    .then(
       (value) => done({ status: "resolved", value }),
       (value) => done({ status: "rejected", value }),
     )
-  }
 }
 
 export const openFirefoxClient = ({
   server,
   headless = true,
-  runFile = ({ driver, remoteRoot, file, instrument, transpile }) => {
+  runFile = ({ driver, file, setup, teardown }) => {
     return driver
       .executeScriptAsync(
         `(${clientFunction.toString()}.apply(this, arguments)`,
-        getRemoteLocation({ remoteRoot, file, instrument, transpile }),
-        instrument,
+        file,
+        setup,
+        teardown,
       )
       .then(({ status, value }) => {
         return status === "resolved" ? value : Promise.reject(value)
@@ -56,16 +49,35 @@ export const openFirefoxClient = ({
           loaderSrc: `${server.url}node_modules/@dmail/module-loader/src/browser/index.js`,
         }),
       }).then((indexRequestHandler) => {
-        const execute = ({ file, autoClean = false, instrument = false, transpile }) => {
+        const execute = ({ file, autoClean = false, collectCoverage = false }) => {
+          const remoteFile = getRemoteLocation({
+            server,
+            file,
+          })
+          const setup = () => {}
+          const teardown = collectCoverage
+            ? (value) => {
+                if ("__coverage__" in window === false) {
+                  throw new Error(`missing __coverage__ after ${file} execution`)
+                }
+
+                return {
+                  value,
+                  coverage: window.__coverage__,
+                }
+              }
+            : (value) => {
+                return { value }
+              }
+
           return driver
             .get(indexRequestHandler.url)
             .then(() =>
               runFile({
                 driver,
-                remoteRoot: server.url.toString().slice(0, -1),
-                file,
-                instrument,
-                transpile,
+                file: remoteFile,
+                setup,
+                teardown,
               }),
             )
             .then(({ status, value }) => {

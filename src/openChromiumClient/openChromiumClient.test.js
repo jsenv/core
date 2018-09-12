@@ -5,6 +5,7 @@ import { openChromiumClient } from "./openChromiumClient.js"
 openCompileServer({
   url: "http://127.0.0.1:9656",
   rootLocation: path.resolve(__dirname, "../../../"),
+  instrument: true,
 }).then((server) => {
   const cleanAll = false
 
@@ -13,7 +14,7 @@ openCompileServer({
       .execute({
         file: `src/__test__/file.test.js`,
         autoClean: cleanAll,
-        instrument: true,
+        collectCoverage: true,
       })
       .then(
         (value) => {

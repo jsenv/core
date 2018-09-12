@@ -1,12 +1,32 @@
 import { ensureSystem } from "./ensureSystem.js"
-import { getRemoteLocation } from "../getRemoteLocation.js"
+
+const forceEnumerable = (value) => {
+  if (value === undefined || value === null || typeof value !== "object") {
+    return value
+  }
+
+  const enumerableValue = {}
+  Object.getOwnPropertyNames(value).forEach((name) => {
+    const descriptor = Object.getOwnPropertyDescriptor(value, name)
+
+    Object.defineProperty(enumerableValue, name, {
+      ...descriptor,
+      ...{ enumerable: true },
+      ...(descriptor.hasOwnProperty("value") ? { value: forceEnumerable(descriptor.value) } : {}),
+    })
+  })
+
+  return enumerableValue
+}
 
 process.on("message", ({ type, id, data }) => {
   if (type === "execute") {
-    const { remoteRoot, localRoot, file, transpile, instrument } = data
+    const { remoteRoot, localRoot, file, setup, teardown } = data
 
+    setup()
     ensureSystem({ remoteRoot, localRoot })
-      .import(getRemoteLocation({ remoteRoot, file, transpile, instrument }))
+      .import(file)
+      .then(teardown)
       .then(
         (value) => {
           process.send({
@@ -23,28 +43,6 @@ process.on("message", ({ type, id, data }) => {
           // but for error.message, error.stack we would like to get them
           // se we force all object properties to be enumerable
           // we could use @dmail/uneval here instead, for now let's keep it simple
-
-          const forceEnumerable = (value) => {
-            if (value === undefined || value === null || typeof value !== "object") {
-              return value
-            }
-
-            const enumerableValue = {}
-            Object.getOwnPropertyNames(value).forEach((name) => {
-              const descriptor = Object.getOwnPropertyDescriptor(value, name)
-
-              Object.defineProperty(enumerableValue, name, {
-                ...descriptor,
-                ...{ enumerable: true },
-                ...(descriptor.hasOwnProperty("value")
-                  ? { value: forceEnumerable(descriptor.value) }
-                  : {}),
-              })
-            })
-
-            return enumerableValue
-          }
-
           process.send({
             id,
             type: "execute-result",

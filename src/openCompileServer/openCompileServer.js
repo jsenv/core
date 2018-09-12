@@ -9,18 +9,22 @@ import { createResponseGenerator } from "../openServer/createResponseGenerator.j
 import { enableCORS } from "../openServer/createNodeRequestHandler.js"
 import { openServer } from "../openServer/openServer.js"
 
-const cacheFolderRelativeLocation = "build"
+const guard = (fn, shield) => (...args) => {
+  return shield(...args) ? fn(...args) : undefined
+}
 
 export const openCompileServer = ({
   url,
   rootLocation,
+  cacheFolderRelativeLocation = "build",
+  abstractFolderRelativeLocation = "compiled",
   cors = true,
+  transpile = true,
   sourceMap = "comment", // can be "comment", "inline", "none"
   sourceURL = true,
-  // minify and optimize are set once for server lifetime
-  // only transpile and instrument can be decided runtime by prefixing the file location zith these folder names
   minify = false,
   optimize = false,
+  instrument = false,
 }) => {
   const compile = createCompile({
     createOptions: () => {
@@ -39,6 +43,8 @@ export const openCompileServer = ({
       return {
         identify,
         identifyMethod,
+        transpile,
+        instrument,
         remap,
         remapMethod,
         minify,
@@ -48,21 +54,40 @@ export const openCompileServer = ({
   })
 
   return openServer({ url, autoCloseOnCrash: true }).then(({ url, addRequestHandler, close }) => {
+    const compileService = createCompileService({
+      rootLocation,
+      cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation,
+      trackHit: true,
+      compile,
+    })
+
+    const fileService = createFileService()
+
     const handler = createResponseGenerator({
       services: [
-        createCompileService({
-          rootLocation,
-          cacheFolderRelativeLocation,
-          trackHit: true,
-          compile,
+        guard(compileService, ({ method, url }) => {
+          if (method !== "GET" && method !== "HEAD") {
+            return false
+          }
+
+          const pathname = url.pathname
+          // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
+          const filename = pathname.slice(1)
+          const dirname = filename.slice(0, filename.indexOf("/"))
+
+          if (dirname !== abstractFolderRelativeLocation) {
+            return false
+          }
+
+          return true
         }),
-        createFileService({
-          locate: ({ url }) => {
-            const pathname = url.pathname.slice(1)
-            const resolvedUrl = new URL(pathname, `file:///${rootLocation}/`)
-            return resolvedUrl
-          },
-        }),
+        ({ url, ...props }) => {
+          return fileService({
+            url: new URL(url.pathname.slice(1), `file:///${rootLocation}/`),
+            ...props,
+          })
+        },
       ],
     })
 
@@ -72,6 +97,7 @@ export const openCompileServer = ({
       close,
       url,
       rootLocation,
+      abstractFolderRelativeLocation,
     }
   })
 }
