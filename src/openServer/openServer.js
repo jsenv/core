@@ -3,7 +3,7 @@ import https from "https"
 import { URL } from "url"
 import { addNodeExceptionHandler } from "./addNodeExceptionHandler.js"
 import { createSelfSignature } from "./createSelfSignature.js"
-import { listenNodeBeforeExit } from "./listenNodeBeforeExit.js"
+import { processTeardown } from "./processTeardown.js"
 import { createNodeRequestHandler } from "./createNodeRequestHandler.js"
 
 const REASON_CLOSING = "closing"
@@ -14,12 +14,7 @@ export const openServer = (
     url = "https://127.0.0.1:0",
     // when port is https you must provide privateKey & certificate
     getSignature = createSelfSignature,
-    // auto close the server when the process exits (terminal closed, ctrl + C)
-    // TODO: rename this autoCloseOnShutdown which means when receiving SIGINT
-    // beforeExit is an other story
-    // and the listenNodeBeforeExit must be updated accordingly
-    // asking a process to shutdown and doing something before the process is shut down
-    // are two different concept
+    // auto close the server when the process exits (terminal closed, ctrl + C, ...)
     autoCloseOnExit = true,
     // auto close the server when an uncaughtException happens
     // false by default because evenwith my strategy to react on uncaughtException
@@ -199,12 +194,12 @@ export const openServer = (
     }
 
     if (autoCloseOnExit) {
-      const closeBeforeExitListener = listenNodeBeforeExit(() => {
+      const teardown = processTeardown(() => {
         close("server process exiting")
       })
       const wrappedClose = close
       close = (...args) => {
-        closeBeforeExitListener.remove()
+        teardown.remove()
         return wrappedClose(...args)
       }
     }
