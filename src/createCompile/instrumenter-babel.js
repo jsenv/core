@@ -39,21 +39,22 @@ const createInstrumentPlugin = ({ filename, useInlineSourceMaps = false } = {}) 
   }
 }
 
-export const instrumenter = ({
-  filename,
-  inputSource,
-  inputSourceMap,
-  inputAst,
-  options,
-  getSourceNameForSourceMap,
-  getSourceLocationForSourceMap,
-  ...rest
-}) => {
+export const instrumenter = (context) => {
+  const {
+    inputRelativeLocation,
+    inputSource,
+    inputSourceMap,
+    inputAst,
+    options,
+    getSourceNameForSourceMap,
+    getSourceLocationForSourceMap,
+  } = context
+
   const remapOptions = options.remap
     ? {
         sourceMaps: true,
-        sourceMapTarget: getSourceNameForSourceMap(rest),
-        sourceFileName: getSourceLocationForSourceMap(rest),
+        sourceMapTarget: getSourceNameForSourceMap(context),
+        sourceFileName: getSourceLocationForSourceMap(context),
       }
     : {
         sourceMaps: false,
@@ -64,14 +65,16 @@ export const instrumenter = ({
     // we need the syntax option to enable rest spread in case it's used
     createSyntaxOptions(),
     {
-      filename: rest.inputRelativeLocation,
+      filename: inputRelativeLocation,
       inputSourceMap,
       babelrc: false, // trust only these options, do not read any babelrc config file
       ast: true,
     },
   )
   const babelConfig = createConfig(babelOptions)
-  babelConfig.plugins.push(createInstrumentPlugin({ filename, useInlineSourceMaps: false }))
+  babelConfig.plugins.push(
+    createInstrumentPlugin({ filename: inputRelativeLocation, useInlineSourceMaps: false }),
+  )
 
   if (inputAst) {
     const result = transformFromAst(inputAst, inputSource, babelConfig)

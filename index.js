@@ -15,10 +15,11 @@ export const createModuleRunner = (params) => {
   // if two terminal spawns a server trying to compile a given project they will concurrently
   // read/write filesystem.
   // To fix that we could:
-  // - update enqueueCallByArgs so that, somehow, it can queue calls from different terminals
+  // - update createLock.js so that, somehow, it can lock calls from different terminals
   // - save somewhere the port used for that specific project and reuse when existing
   // save used port is the easiest solution but we'll ignore this issue for now
   // and assume noone will try to open two server for the same location
+
   return openCompileServer(params).then((server) => {
     const runInsideNode = ({ file, ...rest }) => {
       return openNodeClient({ server }).then((nodeClient) => {
@@ -30,13 +31,14 @@ export const createModuleRunner = (params) => {
       })
     }
 
-    const runInsideChromium = ({ file, headless = true }) => {
+    const runInsideChromium = ({ file, headless = true, cover = false }) => {
       return openChromiumClient({
         server,
         headless,
       }).then((chromiumClient) => {
         return chromiumClient.execute({
           file,
+          collectCoverage: cover,
         })
       })
     }
