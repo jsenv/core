@@ -1,7 +1,13 @@
 import { createConfig, createMinifiyOptions, mergeOptions } from "@dmail/shared-config"
 import { transform, transformFromAst } from "babel-core"
 
-export const minifier = ({ inputSource, inputAst, inputSourceMap, options }) => {
+export const minifier = ({
+  inputSource,
+  inputAst,
+  inputSourceMap,
+  options,
+  outputSourceMapName,
+}) => {
   const babelConfig = createConfig(
     mergeOptions(createMinifiyOptions(), {
       sourceMaps: options.remap,
@@ -17,6 +23,9 @@ export const minifier = ({ inputSource, inputAst, inputSourceMap, options }) => 
       outputSource: code,
       outputSourceMap: map,
       outputAst: ast,
+      outputAssets: {
+        [outputSourceMapName]: JSON.stringify(map, null, "  "),
+      },
     }
   }
 
@@ -25,5 +34,8 @@ export const minifier = ({ inputSource, inputAst, inputSourceMap, options }) => 
     outputSource: code,
     outputSourceMap: map,
     outputAst: ast,
+    outputAssets: {
+      [outputSourceMapName]: JSON.stringify(map, null, "  "),
+    },
   }
 }

@@ -6,7 +6,7 @@ import { createHeaders } from "../openServer/createHeaders.js"
 
 const projectRoot = path.resolve(__dirname, "../../..")
 
-const service = createCompileService({
+const { service } = createCompileService({
   rootLocation: projectRoot,
 })
 

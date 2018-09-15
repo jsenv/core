@@ -17,11 +17,15 @@ const transform = (context, transformer) => {
     }),
   ).then((result) => {
     // for now result is expected to null, undefined, or an object with any properties named
-    // outputSource, outputAst, outputSourceMap, outputSourceMapName
-    return {
-      ...context,
-      ...result,
+    // outputSource, outputAst, outputSourceMap, outputSourceMapName, outputAssets
+
+    if (result) {
+      return {
+        ...context,
+        ...result,
+      }
     }
+    return context
   })
 }
 
@@ -51,8 +55,8 @@ const createDefaultOptions = ({ abstractFolderRelativeLocation }) => {
   }
 }
 
-const instrumentPredicate = ({ outputRelativeLocation }) => {
-  if (outputRelativeLocation.startsWith("node_modules/")) {
+const instrumentPredicate = ({ inputRelativeLocation }) => {
+  if (inputRelativeLocation.startsWith("node_modules/")) {
     return false
   }
   return true
@@ -119,21 +123,15 @@ export const createCompile = (
             .then((context) => (optimize ? transform(context, optimizer) : context))
             .then((context) => (identify ? transform(context, identifier) : context))
             .then((context) => (remap ? transform(context, remapper) : context))
-            .then(({ outputSource, outputSourceMap, outputSourceMapName }) => {
-              if (outputSourceMapName) {
-                return {
-                  output: outputSource,
-                  outputAssets: [
-                    {
-                      name: outputSourceMapName,
-                      content: JSON.stringify(outputSourceMap, null, "  "),
-                    },
-                  ],
-                }
-              }
+            .then(({ outputSource, outputAssets = {} }) => {
               return {
                 output: outputSource,
-                outputAssets: [],
+                outputAssets: Object.keys(outputAssets).map((name) => {
+                  return {
+                    name,
+                    content: outputAssets[name],
+                  }
+                }),
               }
             })
         }

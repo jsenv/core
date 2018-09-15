@@ -11,6 +11,7 @@ export const transpiler = ({
   inputSourceMap,
   inputAst,
   options,
+  outputSourceMapName,
   getSourceNameForSourceMap,
   getSourceLocationForSourceMap,
   ...rest
@@ -49,6 +50,9 @@ export const transpiler = ({
       outputSource: code,
       outputSourceMap: map,
       outputAst: ast,
+      outputAssets: {
+        [outputSourceMapName]: JSON.stringify(map, null, "  "),
+      },
     }
   }
 
@@ -57,5 +61,8 @@ export const transpiler = ({
     outputSource: code,
     outputSourceMap: map,
     outputAst: ast,
+    outputAssets: {
+      [outputSourceMapName]: JSON.stringify(map, null, "  "),
+    },
   }
 }

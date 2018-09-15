@@ -538,86 +538,81 @@ const getFileCompiled = ({
   cacheAutoClean,
   cacheTrackHit,
 }) => {
-  return getFileReport({
-    rootLocation,
-    cacheFolderRelativeLocation,
-    abstractFolderRelativeLocation,
-    filename,
-    compile,
-    inputETagClient,
-  })
-    .then(
-      ({
-        inputLocation,
-        status,
-        cache,
-        options,
-        generate,
-        branch,
-        input,
-        inputETag,
-        output,
-        outputAssets,
-      }) => {
-        if (cacheEnabled === false) {
-          status = "missing"
-        }
+  const fileLock = lockForRessource(
+    getCacheDataLocation({
+      rootLocation,
+      cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation,
+      filename,
+    }),
+  )
 
-        if (status === "valid") {
-          return {
-            inputLocation,
-            status: "cached",
-            cache,
-            options,
-            branch,
-            input,
-            inputETag,
-            output,
-            outputAssets,
-          }
-        }
-
-        const outputRelativeLocation = getOutputRelativeLocation({
-          cacheFolderRelativeLocation,
-          abstractFolderRelativeLocation,
-          filename,
+  return fileLock.chain(() => {
+    return getFileReport({
+      rootLocation,
+      cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation,
+      filename,
+      compile,
+      inputETagClient,
+    })
+      .then(
+        ({
+          inputLocation,
+          status,
+          cache,
+          options,
+          generate,
           branch,
-        })
+          input,
+          inputETag,
+          output,
+          outputAssets,
+        }) => {
+          if (cacheEnabled === false) {
+            status = "missing"
+          }
 
-        return Promise.resolve(generate({ outputRelativeLocation })).then(
-          ({ output, outputAssets }) => {
+          if (status === "valid") {
             return {
               inputLocation,
-              status: status === "missing" ? "created" : "updated",
+              status: "cached",
               cache,
               options,
               branch,
               input,
-              inputETag: createETag(input),
+              inputETag,
               output,
               outputAssets,
             }
-          },
-        )
-      },
-    )
-    .then(
-      ({
-        inputLocation,
-        status,
-        cache,
-        options,
-        branch,
-        input,
-        inputETag,
-        output,
-        outputAssets,
-      }) => {
-        return updateBranch({
-          rootLocation,
-          cacheFolderRelativeLocation,
-          abstractFolderRelativeLocation,
-          filename,
+          }
+
+          const outputRelativeLocation = getOutputRelativeLocation({
+            cacheFolderRelativeLocation,
+            abstractFolderRelativeLocation,
+            filename,
+            branch,
+          })
+
+          return Promise.resolve(generate({ outputRelativeLocation })).then(
+            ({ output, outputAssets }) => {
+              return {
+                inputLocation,
+                status: status === "missing" ? "created" : "updated",
+                cache,
+                options,
+                branch,
+                input,
+                inputETag: createETag(input),
+                output,
+                outputAssets,
+              }
+            },
+          )
+        },
+      )
+      .then(
+        ({
           inputLocation,
           status,
           cache,
@@ -627,17 +622,33 @@ const getFileCompiled = ({
           inputETag,
           output,
           outputAssets,
-          cacheTrackHit,
-          cacheAutoClean,
-        }).then(() => {
-          return {
+        }) => {
+          return updateBranch({
+            rootLocation,
+            cacheFolderRelativeLocation,
+            abstractFolderRelativeLocation,
+            filename,
+            inputLocation,
             status,
+            cache,
+            options,
+            branch,
+            input,
             inputETag,
             output,
-          }
-        })
-      },
-    )
+            outputAssets,
+            cacheTrackHit,
+            cacheAutoClean,
+          }).then(() => {
+            return {
+              status,
+              inputETag,
+              output,
+            }
+          })
+        },
+      )
+  })
 }
 
 export const createCompileService = ({
@@ -651,7 +662,7 @@ export const createCompileService = ({
 }) => {
   const fileService = createFileService()
 
-  return ({ method, url, headers }) => {
+  const service = ({ method, url, headers }) => {
     const pathname = url.pathname
     // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
     const filename = pathname.slice(1)
@@ -666,16 +677,16 @@ export const createCompileService = ({
     // il sait à quoi ça correspond vraiment
     // par contre ça fait 2 requête http
 
-    const fileLock = lockForRessource(
-      getCacheDataLocation({
-        rootLocation,
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
-        filename,
-      }),
-    )
-
     if (filename.endsWith(".map")) {
+      const fileLock = lockForRessource(
+        getCacheDataLocation({
+          rootLocation,
+          cacheFolderRelativeLocation,
+          abstractFolderRelativeLocation,
+          filename,
+        }),
+      )
+
       return fileLock.chain(() => {
         const script = filename.slice(0, -4) // 'folder/file.js.map' -> 'folder.file.js'
 
@@ -714,43 +725,55 @@ export const createCompileService = ({
       })
     }
 
-    return fileLock.chain(() => {
-      return getFileCompiled({
-        rootLocation,
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
-        filename,
-        compile,
-        inputETagClient: headers.has("if-none-match") ? headers.get("if-none-match") : undefined,
-        cacheEnabled,
-        cacheAutoClean,
-        cacheTrackHit,
-      }).then(({ status, inputETag, output }) => {
-        // here status can be "created", "updated", "cached"
+    return getFileCompiled({
+      rootLocation,
+      cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation,
+      filename,
+      compile,
+      inputETagClient: headers.has("if-none-match") ? headers.get("if-none-match") : undefined,
+      cacheEnabled,
+      cacheAutoClean,
+      cacheTrackHit,
+    }).then(({ status, inputETag, output }) => {
+      // here status can be "created", "updated", "cached"
 
-        // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
-        // if-none-match c'est forcément le etag du client qui a match
-        // faudra changer ça non?
-        if (headers.has("if-none-match") && status === "cached") {
-          return {
-            status: 304,
-            headers: {
-              "cache-control": "no-store",
-            },
-          }
-        }
-
+      // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
+      // if-none-match c'est forcément le etag du client qui a match
+      // faudra changer ça non?
+      if (headers.has("if-none-match") && status === "cached") {
         return {
-          status: 200,
+          status: 304,
           headers: {
-            Etag: inputETag,
-            "content-length": Buffer.byteLength(output),
-            "content-type": "application/javascript",
             "cache-control": "no-store",
           },
-          body: output,
         }
-      })
+      }
+
+      return {
+        status: 200,
+        headers: {
+          Etag: inputETag,
+          "content-length": Buffer.byteLength(output),
+          "content-type": "application/javascript",
+          "cache-control": "no-store",
+        },
+        body: output,
+      }
     })
   }
+
+  const compileFile = (relativeLocation) =>
+    getFileCompiled({
+      rootLocation,
+      cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation,
+      filename: `${abstractFolderRelativeLocation}/${relativeLocation}`,
+      compile,
+      cacheEnabled,
+      cacheAutoClean,
+      cacheTrackHit,
+    })
+
+  return { service, compileFile }
 }

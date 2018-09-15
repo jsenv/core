@@ -54,7 +54,7 @@ export const openCompileServer = ({
   })
 
   return openServer({ url, autoCloseOnCrash: true }).then(({ url, addRequestHandler, close }) => {
-    const compileService = createCompileService({
+    const { service: compileService, compileFile } = createCompileService({
       rootLocation,
       cacheFolderRelativeLocation,
       abstractFolderRelativeLocation,
@@ -98,6 +98,7 @@ export const openCompileServer = ({
       url,
       rootLocation,
       abstractFolderRelativeLocation,
+      compileFile,
     }
   })
 }

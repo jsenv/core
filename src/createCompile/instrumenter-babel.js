@@ -30,8 +30,8 @@ const createInstrumentPlugin = ({ filename, useInlineSourceMaps = false } = {}) 
             if (!this.__dv__) {
               return
             }
-            // eslint-disable-next-line no-unused-vars
-            const result = this.__dv__.exit(path)
+            // todo: check the line below works
+            this.metadata.coverage = this.__dv__.exit(path)
           },
         },
       },
@@ -45,6 +45,7 @@ export const instrumenter = (context) => {
     inputSource,
     inputSourceMap,
     inputAst,
+    outputSourceMapName,
     options,
     getSourceNameForSourceMap,
     getSourceLocationForSourceMap,
@@ -82,13 +83,21 @@ export const instrumenter = (context) => {
       outputSource: result.code,
       outputSourceMap: result.map,
       outputAst: result.ast,
+      outputAssets: {
+        [outputSourceMapName]: JSON.stringify(result.map, null, "  "),
+        "coverage.json": JSON.stringify(result.metadata.coverage, null, "  "),
+      },
     }
   }
 
-  const { code, ast, map } = transform(inputSource, babelConfig)
+  const { code, ast, map, metadata } = transform(inputSource, babelConfig)
   return {
     outputSource: code,
     outputSourceMap: map,
     outputAst: ast,
+    outputAssets: {
+      [outputSourceMapName]: JSON.stringify(map, null, "  "),
+      "coverage.json": JSON.stringify(metadata.coverage, null, "  "),
+    },
   }
 }
