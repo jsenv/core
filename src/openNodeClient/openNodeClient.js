@@ -9,102 +9,122 @@ import { ensureSystem } from "./ensureSystem.js"
 import "./global-fetch.js"
 import { getRemoteLocation } from "../getRemoteLocation.js"
 import { getNodeSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
+import { createSignal } from "@dmail/signal"
 
 export const openNodeClient = ({ server, detached = true }) => {
   const remoteRoot = server.url.toString().slice(0, -1)
   const localRoot = server.rootLocation
 
   if (detached === false) {
-    return Promise.resolve().then(() => {
+    const execute = ({ file, collectCoverage = false }) => {
       const close = () => {}
 
-      const execute = ({ file, collectCoverage = false }) => {
+      const promise = Promise.resolve().then(() => {
         const { setup, teardown } = getNodeSetupAndTeardowm({ collectCoverage })
 
         setup(file)
         return ensureSystem({ remoteRoot, localRoot })
           .import(file)
           .then(teardown)
-      }
+      })
 
-      return { close, execute }
-    })
+      return Promise.resolve({ promise, close })
+    }
+
+    return Promise.resolve({ execute })
   }
 
-  return Promise.resolve().then(() => {
-    const clientFile = path.resolve(__dirname, "./client.js")
+  const clientFile = path.resolve(__dirname, "./client.js")
+  let previousID = 0
 
-    const child = fork(clientFile, {
-      execArgv: [
-        // allow vscode to debug else you got port already used
-        `--inspect-brk`,
-      ],
-    })
-
-    child.on("close", (code) => {
-      if (code === 12) {
-        throw new Error(
-          `child exited with 12: forked child wanted to use a non available port for debug`,
-        )
-      }
-    })
+  const execute = ({ file, autoClose = false, collectCoverage = false }) => {
+    const closed = createSignal()
 
     const close = () => {
-      child.kill()
+      closed.emit()
     }
 
-    let previousID = 0
+    const promise = new Promise((resolve, reject) => {
+      const id = previousID + 1
+      previousID = id
 
-    const execute = ({ file, collectCoverage = false }) => {
-      return new Promise((resolve, reject) => {
-        const id = previousID + 1
-        previousID = id
+      const child = fork(clientFile, {
+        execArgv: [
+          // allow vscode to debug else you got port already used
+          `--inspect-brk`,
+        ],
+      })
 
-        child.once("close", (code) => {
-          if (code !== 0) {
-            reject(`exited with code ${code}`)
-          }
-        })
+      const kill = closed.listen(() => {
+        child.kill()
+      })
 
-        const onmessage = (message) => {
-          if (message.id !== id) {
-            return
-          }
+      child.on("close", (code) => {
+        kill.remove()
 
-          const { type, data } = message
-          if (type === "execute-result") {
-            child.removeListener("message", onmessage)
-            if (data.code === 0) {
-              resolve(data.value)
-            } else {
-              console.log("rejecting")
-              reject(data.value)
-            }
-          }
+        if (code === 12) {
+          throw new Error(
+            `child exited with 12: forked child wanted to use a non available port for debug`,
+          )
+        }
+        if (code !== 0) {
+          reject(`exited with code ${code}`)
+        }
+      })
+
+      const onmessage = (message) => {
+        if (message.id !== id) {
+          return
         }
 
-        child.on("message", onmessage)
+        const { type, data } = message
+        if (type === "execute-result") {
+          child.removeListener("message", onmessage)
+          if (data.code === 0) {
+            resolve(data.value)
+          } else {
+            console.log("rejecting")
+            reject(data.value)
+          }
+        }
+      }
 
-        const remoteFile = getRemoteLocation({
-          server,
-          file,
-        })
-        const { setup, teardown } = getNodeSetupAndTeardowm({ collectCoverage })
+      child.on("message", onmessage)
 
-        child.send({
-          type: "execute",
-          id,
-          data: {
-            remoteRoot,
-            localRoot,
-            file: remoteFile,
-            setupSource: `(${setup.toString()})`,
-            teardownSource: `(${teardown.toString()})`,
-          },
-        })
+      const remoteFile = getRemoteLocation({
+        server,
+        file,
       })
-    }
+      const { setup, teardown } = getNodeSetupAndTeardowm({ collectCoverage })
 
-    return { execute, close }
-  })
+      child.send({
+        type: "execute",
+        id,
+        data: {
+          remoteRoot,
+          localRoot,
+          file: remoteFile,
+          setupSource: `(${setup.toString()})`,
+          teardownSource: `(${teardown.toString()})`,
+        },
+      })
+    }).then(
+      (value) => {
+        if (autoClose) {
+          close()
+        }
+        return value
+      },
+      (reason) => {
+        if (autoClose) {
+          close()
+        }
+        return Promise.reject(reason)
+      },
+    )
+
+    return Promise.resolve({ promise, close })
+  }
+
+  return Promise.resolve({ execute })
 }

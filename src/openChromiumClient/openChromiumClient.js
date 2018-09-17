@@ -3,6 +3,7 @@ import { createBrowserIndexHTML } from "../createBrowserIndexHTML.js"
 import { openIndexServer } from "../openIndexServer/openIndexServer.js"
 import { getRemoteLocation } from "../getRemoteLocation.js"
 import { getBrowserSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
+import { createSignal } from "@dmail/signal"
 
 const openIndexRequestInterception = ({ page, body }) => {
   const fakeURL = "https://fake.com"
@@ -54,9 +55,8 @@ export const openChromiumClient = ({
     throw new Error(`openIndexRequestInterception work only in headless mode`)
   }
 
-  // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
-  return puppeteer
-    .launch({
+  const openBrowser = () => {
+    return puppeteer.launch({
       headless,
       ignoreHTTPSErrors: true, // because we use a self signed certificate
       // handleSIGINT: true,
@@ -66,10 +66,26 @@ export const openChromiumClient = ({
       // so we apparently don't have to use listenNodeBeforeExit in order to close browser
       // as we do for server
     })
-    .then((browser) => {
-      const execute = ({ file, autoClean = false, collectCoverage = false }) => {
+  }
+
+  // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
+  const execute = ({ file, autoClose = false, collectCoverage = false }) => {
+    const closed = createSignal()
+
+    const close = () => {
+      closed.emit()
+    }
+
+    const promise = openBrowser()
+      .then((browser) => {
+        closed.listen(() => {
+          browser.close()
+        })
+
         return browser.newPage().then((page) => {
-          const shouldClosePage = autoClean
+          closed.listen(() => {
+            // page.close() // commented until https://github.com/GoogleChrome/puppeteer/issues/2269
+          })
 
           const createPageUnexpectedBranch = (page) => {
             return new Promise((resolve, reject) => {
@@ -81,8 +97,6 @@ export const openChromiumClient = ({
           }
 
           const createPageExpectedBranch = (page) => {
-            const shouldCloseIndexRequestHandler = autoClean
-
             page.on("console", (message) => {
               // there is also message._args
               // which is an array of JSHandle{ _context, _client _remoteObject }
@@ -95,61 +109,48 @@ export const openChromiumClient = ({
                 loaderSrc: `${server.url}node_modules/@dmail/module-loader/src/browser/index.js`,
               }),
             }).then((indexRequestHandler) => {
+              closed.listen(() => {
+                indexRequestHandler.close()
+              })
+
               const remoteFile = getRemoteLocation({
                 server,
                 file,
               })
 
-              return page
-                .goto(indexRequestHandler.url)
-                .then(() =>
-                  runFile({
-                    page,
-                    file: remoteFile,
-                    ...getBrowserSetupAndTeardowm({ collectCoverage }),
-                  }),
-                )
-                .then(
-                  (value) => {
-                    if (shouldCloseIndexRequestHandler) {
-                      indexRequestHandler.close()
-                    }
-                    return value
-                  },
-                  (reason) => {
-                    if (shouldCloseIndexRequestHandler) {
-                      indexRequestHandler.close()
-                    }
-                    return Promise.reject(reason)
-                  },
-                )
+              return page.goto(indexRequestHandler.url).then(() =>
+                runFile({
+                  page,
+                  file: remoteFile,
+                  ...getBrowserSetupAndTeardowm({ collectCoverage }),
+                }),
+              )
             })
           }
 
-          return Promise.race([
-            createPageUnexpectedBranch(page),
-            createPageExpectedBranch(page),
-          ]).then(
-            (value) => {
-              if (shouldClosePage) {
-                // page.close() // commented until https://github.com/GoogleChrome/puppeteer/issues/2269
-              }
-              return value
-            },
-            (reason) => {
-              if (shouldClosePage) {
-                // page.close() // commented until https://github.com/GoogleChrome/puppeteer/issues/2269
-              }
-              return Promise.reject(reason)
-            },
-          )
+          return Promise.race([createPageUnexpectedBranch(page), createPageExpectedBranch(page)])
         })
-      }
+      })
+      .then(
+        (value) => {
+          if (autoClose) {
+            close()
+          }
+          return value
+        },
+        (reason) => {
+          if (autoClose) {
+            close()
+          }
+          return Promise.reject(reason)
+        },
+      )
 
-      const close = () => {
-        browser.close()
-      }
-
-      return { execute, close }
+    return Promise.resolve({
+      promise,
+      close,
     })
+  }
+
+  return Promise.resolve({ execute })
 }

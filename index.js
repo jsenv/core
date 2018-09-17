@@ -36,10 +36,12 @@ export const createModuleRunner = (params) => {
         server,
         headless,
       }).then((chromiumClient) => {
-        return chromiumClient.execute({
-          file,
-          collectCoverage: cover,
-        })
+        return chromiumClient
+          .execute({
+            file,
+            collectCoverage: cover,
+          })
+          .then(({ promise }) => promise)
       })
     }
 

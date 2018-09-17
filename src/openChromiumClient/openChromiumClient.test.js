@@ -13,24 +13,26 @@ openCompileServer({
     chromiumClient
       .execute({
         file: `src/__test__/file.test.js`,
-        autoClean: cleanAll,
+        autoClose: cleanAll,
         collectCoverage: true,
       })
-      .then(
-        (value) => {
-          if (cleanAll) {
-            chromiumClient.close()
-            server.close()
-          }
-          console.log("execution done with", value)
-        },
-        (error) => {
-          if (cleanAll) {
-            chromiumClient.close()
-            server.close()
-          }
-          console.error("execution error", error)
-        },
-      )
+      .then(({ promise, close }) => {
+        promise.then(
+          (value) => {
+            if (cleanAll) {
+              close()
+              server.close()
+            }
+            console.log("execution done with", value)
+          },
+          (reason) => {
+            if (cleanAll) {
+              close()
+              server.close()
+            }
+            console.error("execution error", reason)
+          },
+        )
+      })
   })
 })

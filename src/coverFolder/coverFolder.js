@@ -4,9 +4,7 @@ import { glob } from "glob-gitignore"
 import ignore from "ignore"
 import fs from "fs"
 import path from "path"
-
-// TODO; currently collectCOverage is dumb, we may wnat to control test execution
-// and not just execute the file
+import { createCoverageMap } from "istanbul-lib-coverage"
 
 export const getFolderCoverage = ({
   root = process.cwd(),
@@ -93,36 +91,24 @@ export const getFolderCoverage = ({
             .execute({
               file,
               collectCoverage: true,
+              // executeTest: true,
+              // execute test will return async result of window.__executeTest__() during teardown
+              // we have to install this hook when dmail/test is imported
+              // these test results will be returned and we will be able to log them
+              // or do something with them as we do for coverage
+              autoClose: true,
             })
+            .then(({ promise }) => promise)
             .then(({ coverage }) => coverage)
         }
 
         return Promise.all([testFiles.map((file) => getCoverageFor(file))]).then((coverages) => {
-          // here we have the list of all coverage object collected after test execution
-          // get the latest one
-          // because all coverage are execute in different pages
-          // we could just merge them ourselves ?
-          // the fact we have several test files that may cover the same source file
-          // means the coverage must be merged
-          // it is auto handled if the coverage global object is mutated
-          // otherwise we have to use istanbul merge util
-          // my instinct tells me to favor the run each test file in different page approach
-          // if we do that we're fine with the fact that chomiumClient.execute creates a new page
-          // however each test file will run independently, this is to keep in mind
-          // the console.log output (because runned in parallel) will be a mess
-          // do not forget how it would work with node, node is not forking a new process for each execute
-          // so this is a difference with chromium approach already
-          // plus running in a different page means System.import will re fetch and execute the scripts
-          // instead of hitting the cache
-          // seems not desired
-          let coverageWithMostKeys = coverages[0]
-          coverages.forEach((coverage) => {
-            if (Object.keys(coverage).length > Object.keys(coverageWithMostKeys).length) {
-              coverageWithMostKeys = coverage
-            }
-          })
-          chomiumClient.close()
-          return { coverage: coverageWithMostKeys, compileFile }
+          // https://github.com/istanbuljs/istanbuljs/blob/5405550c3868712b14fd8bfe0cbd6f2e7ac42279/packages/istanbul-lib-coverage/lib/coverage-map.js#L43
+          const mergedCoverageMap = coverages.reduce((previous, coverage) => {
+            return previous.merge(coverage)
+          }, createCoverageMap({}))
+
+          return { coverage: mergedCoverageMap.toJSON(), compileFile }
         })
       },
     )

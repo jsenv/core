@@ -1,53 +1,79 @@
-export const getBrowserSetupAndTeardowm = ({ collectCoverage }) => {
-  // keep in mind that setup and teardown will be stringified and evaluated in the context of the client
-  // you cannot use any variable from server
+// keep in mind that setup and teardown will be stringified and evaluated client side
+// you cannot use any variable from server
 
-  const setup = () => {}
+const teardownForValueAndTestAndCoverage = (value) => {
+  const globalObject = typeof window === "undefined" ? global : window
 
-  const teardown = collectCoverage
-    ? (value) => {
-        if ("__coverage__" in window === false) {
-          throw new Error(`missing window.__coverage__`)
-        }
+  if ("__executeTest__" in globalObject === false) {
+    throw new Error(`missing __executeTest__`)
+  }
 
-        return {
-          value,
-          coverage: window.__coverage__,
-        }
-      }
-    : (value) => {
-        return { value }
-      }
+  return globalObject.executeTest().then((test) => {
+    if ("__coverage__" in globalObject === false) {
+      throw new Error(`missing __coverage__`)
+    }
+
+    return {
+      value,
+      test,
+      coverage: globalObject.__coverage__,
+    }
+  })
+}
+
+const teardownForValueAndTest = (value) => {
+  const globalObject = typeof window === "undefined" ? global : window
+
+  if ("__executeTest__" in globalObject === false) {
+    throw new Error(`missing __executeTest__`)
+  }
+
+  return globalObject.executeTest().then((test) => {
+    return {
+      value,
+      test,
+    }
+  })
+}
+
+const teardownForValueAndCoverage = (value) => {
+  const globalObject = typeof window === "undefined" ? global : window
+
+  if ("__coverage__" in globalObject === false) {
+    throw new Error(`missing __coverage__`)
+  }
 
   return {
-    setup,
-    teardown,
+    value,
+    coverage: globalObject.__coverage__,
   }
 }
 
-export const getNodeSetupAndTeardowm = ({ collectCoverage }) => {
-  // keep in mind that setup and teardown will be stringified and evaluated in the context of the client
-  // you cannot use any variable from server
+const teardownForValue = (value) => {
+  return { value }
+}
 
+const getTeardown = ({ collectCoverage, executeTest }) => {
+  if (executeTest) {
+    return collectCoverage ? teardownForValueAndTestAndCoverage : teardownForValueAndTest
+  }
+  return collectCoverage ? teardownForValueAndCoverage : teardownForValue
+}
+
+export const getBrowserSetupAndTeardowm = ({ collectCoverage, executeTest }) => {
   const setup = () => {}
-
-  const teardown = collectCoverage
-    ? (value) => {
-        if ("__coverage__" in global === false) {
-          throw new Error(`missing global.__coverage__`)
-        }
-
-        return {
-          value,
-          coverage: global.__coverage__,
-        }
-      }
-    : (value) => {
-        return { value }
-      }
 
   return {
     setup,
-    teardown,
+    teardown: getTeardown({ collectCoverage, executeTest }),
+  }
+}
+
+export const getNodeSetupAndTeardowm = ({ collectCoverage, executeTest }) => {
+  const setup = () => {}
+
+  return {
+    setup,
+    teardown: getTeardown({ collectCoverage, executeTest }),
   }
 }

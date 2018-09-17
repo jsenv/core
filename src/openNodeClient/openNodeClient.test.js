@@ -20,24 +20,25 @@ openCompileServer({
     nodeClient
       .execute({
         file: `src/__test__/file.js`,
-        autoClean: cleanAll,
         collectCoverage: true,
       })
-      .then(
-        (value) => {
-          if (cleanAll) {
-            server.close()
-            nodeClient.close()
-          }
-          console.log("execution done with", value)
-        },
-        (reason) => {
-          if (cleanAll) {
-            server.close()
-            nodeClient.close()
-          }
-          console.error("execution crashed with", reason)
-        },
-      )
+      .then(({ promise, close }) => {
+        promise.then(
+          (value) => {
+            if (cleanAll) {
+              close()
+              server.close()
+            }
+            console.log("execution done with", value)
+          },
+          (reason) => {
+            if (cleanAll) {
+              close()
+              server.close()
+            }
+            console.error("execution crashed with", reason)
+          },
+        )
+      })
   })
 })
