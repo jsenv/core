@@ -6,16 +6,18 @@ import {
 } from "@dmail/shared-config/dist/babel"
 import { transform, transformFromAst } from "babel-core"
 
-export const transpiler = ({
-  inputSource,
-  inputSourceMap,
-  inputAst,
-  options,
-  outputSourceMapName,
-  getSourceNameForSourceMap,
-  getSourceLocationForSourceMap,
-  ...rest
-}) => {
+export const transpiler = (context) => {
+  const {
+    inputRelativeLocation,
+    inputSource,
+    inputSourceMap,
+    inputAst,
+    options,
+    outputSourceMapName,
+    getSourceNameForSourceMap,
+    getSourceLocationForSourceMap,
+  } = context
+
   // the truth is that we don't support global, nor amd
   // I have to check if we could support cjs but maybe we don't even support this
   // at least we support the most important: inputFormat: "es" with outputFormat: "systemjs"
@@ -29,15 +31,15 @@ export const transpiler = ({
   const remapOptions = options.remap
     ? {
         sourceMaps: true,
-        sourceMapTarget: getSourceNameForSourceMap(rest),
-        sourceFileName: getSourceLocationForSourceMap(rest),
+        sourceMapTarget: getSourceNameForSourceMap(context),
+        sourceFileName: getSourceLocationForSourceMap(context),
       }
     : {
         sourceMaps: false,
       }
 
   const babelOptions = mergeOptions(moduleOptions, createSyntaxOptions(), remapOptions, {
-    filename: rest.inputRelativeLocation,
+    filename: inputRelativeLocation,
     inputSourceMap,
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true,

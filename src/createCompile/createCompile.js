@@ -59,6 +59,12 @@ const instrumentPredicate = ({ inputRelativeLocation }) => {
   if (inputRelativeLocation.startsWith("node_modules/")) {
     return false
   }
+  // it should be passed by coverFolder
+  // because we are duplicating the logic about
+  // what is a test file and what is a source file there
+  if (inputRelativeLocation.endsWith(".test.js")) {
+    return false
+  }
   return true
 }
 

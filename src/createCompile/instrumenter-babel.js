@@ -30,8 +30,9 @@ const createInstrumentPlugin = ({ filename, useInlineSourceMaps = false } = {}) 
             if (!this.__dv__) {
               return
             }
-            // todo: check the line below works
-            this.metadata.coverage = this.__dv__.exit(path)
+            const object = this.__dv__.exit(path)
+            // object got two properties: fileCoverage and sourceMappingURL
+            this.file.metadata.coverage = object.fileCoverage
           },
         },
       },

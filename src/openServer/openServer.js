@@ -1,7 +1,7 @@
 import http from "http"
 import https from "https"
 import { URL } from "url"
-import { addNodeExceptionHandler } from "./addNodeExceptionHandler.js"
+// import { addNodeExceptionHandler } from "./addNodeExceptionHandler.js"
 import { createSelfSignature } from "./createSelfSignature.js"
 import { processTeardown } from "./processTeardown.js"
 import { createNodeRequestHandler } from "./createNodeRequestHandler.js"
@@ -66,16 +66,19 @@ export const openServer = (
   const addInternalRequestHandler = (handler) => {
     requestHandlers.push(handler)
     nodeServer.on("request", handler)
+    return () => {
+      nodeServer.removeListener("request", handler)
+    }
   }
 
   const addRequestHandler = (handler, transform) => {
     const nodeRequestHandler = createNodeRequestHandler({ handler, transform, url })
-    addInternalRequestHandler(nodeRequestHandler)
+    return addInternalRequestHandler(nodeRequestHandler)
   }
 
   const clients = new Set()
 
-  const closeClients = ({ isError = false, reason = REASON_CLOSING } = {}) => {
+  const closeClients = ({ isError, reason }) => {
     let status
     if (isError) {
       status = 500
@@ -110,15 +113,6 @@ export const openServer = (
     clients.add(client)
     nodeResponse.on("finish", () => {
       clients.delete(client)
-      if (autoCloseOnError && nodeResponse.statusCode === 500) {
-        closeClients({
-          isError: true,
-          // we don't specify the true error object but only a string
-          // identifying the error to avoid sending stacktrace to client
-          // and right now there is no clean way to retrieve error from here
-          reason: nodeResponse.statusMessage || "internal error",
-        })
-      }
     })
   })
 
@@ -161,7 +155,7 @@ export const openServer = (
       })
     }
 
-    let close = (reason) => {
+    let close = ({ isError = false, reason = REASON_CLOSING } = {}) => {
       if (status !== "opened") {
         throw new Error(`server status must be "opened" during close() (got ${status}`)
       }
@@ -185,7 +179,7 @@ export const openServer = (
           }
         })
         nodeServer.close()
-        closeClients({ reason }).then(() => {
+        closeClients({ isError, reason }).then(() => {
           closeConnections(reason)
         })
       }).then(() => {
@@ -193,21 +187,45 @@ export const openServer = (
       })
     }
 
-    if (autoCloseOnExit) {
-      const teardown = processTeardown(() => {
-        close("server process exiting")
+    if (autoCloseOnError) {
+      const removeAutoCloseOnError = addInternalRequestHandler((nodeRequest, nodeResponse) => {
+        if (nodeResponse.statusCode === 500) {
+          close({
+            isError: true,
+            // we don't specify the true error object but only a string
+            // identifying the error to avoid sending stacktrace to client
+            // and right now there is no clean way to retrieve error from here
+            reason: nodeResponse.statusMessage || "internal error",
+          })
+        }
       })
       const wrappedClose = close
       close = (...args) => {
-        teardown.remove()
+        removeAutoCloseOnError()
+        return wrappedClose(...args)
+      }
+    }
+
+    if (autoCloseOnExit) {
+      const removeTeardown = processTeardown((exitReason) => {
+        close({ reason: `server process exiting ${exitReason}` })
+      })
+      const wrappedClose = close
+      close = (...args) => {
+        removeTeardown()
         return wrappedClose(...args)
       }
     }
 
     if (autoCloseOnCrash) {
-      addNodeExceptionHandler((exception) => {
-        return close(exception).then(() => false)
-      })
+      // and if we do that we have to remove the listener
+      // while closing to avoid closing twice in case
+      // addNodeExceptionHandler((exception) => {
+      //   return close({ reason: exception }).then(
+      //     // to indicates exception is not handled
+      //     () => false,
+      //   )
+      // })
     }
 
     return {

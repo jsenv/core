@@ -12,6 +12,7 @@ import { testProject, createCoverageFromTestReport } from "./src/coverFolder/cov
 
 export { testProject, createCoverageFromTestReport }
 export { openCompileServer }
+export { openChromiumClient }
 
 export const createModuleRunner = (params) => {
   // if there is already a compileServer running for that location

@@ -39,6 +39,7 @@ export const openChromiumClient = ({
   server,
   openIndexRequestHandler = openIndexServer,
   headless = true,
+  mirrorConsole = false,
   runFile = ({ page, file, setup, teardown }) => {
     return page.evaluate(
       (file, setupSource, teardownSource) => {
@@ -69,7 +70,14 @@ export const openChromiumClient = ({
   }
 
   // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
-  const execute = ({ file, autoClose = false, collectCoverage = false, executeTest = false }) => {
+  const execute = ({
+    file,
+    autoClose = false,
+    // autoCloseOnError is different than autoClose because you often want to keep browser opened to debug error
+    autoCloseOnError = false,
+    collectCoverage = false,
+    executeTest = false,
+  }) => {
     const closed = createSignal()
 
     const close = () => {
@@ -97,11 +105,13 @@ export const openChromiumClient = ({
           }
 
           const createPageExpectedBranch = (page) => {
-            page.on("console", (message) => {
-              // there is also message._args
-              // which is an array of JSHandle{ _context, _client _remoteObject }
-              console[message._type](message._text)
-            })
+            if (mirrorConsole) {
+              page.on("console", (message) => {
+                // there is also message._args
+                // which is an array of JSHandle{ _context, _client _remoteObject }
+                console[message._type](message._text)
+              })
+            }
 
             return openIndexRequestHandler({
               page,
@@ -139,7 +149,7 @@ export const openChromiumClient = ({
           return value
         },
         (reason) => {
-          if (autoClose) {
+          if (autoCloseOnError) {
             close()
           }
           return Promise.reject(reason)

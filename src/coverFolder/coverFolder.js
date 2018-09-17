@@ -16,6 +16,7 @@ const mergeCoverage = (...coverages) => {
 
 export const testProject = ({
   server,
+  createClient = () => openChromiumClient({ server }),
   root = process.cwd(),
   beforeAll = () => {},
   beforeEach = () => {},
@@ -73,25 +74,18 @@ export const testProject = ({
       )
   }
 
-  const getChromiumClient = () => {
-    return openChromiumClient({
-      server,
-      headless: true,
-    })
-  }
-
-  return Promise.all([getChromiumClient(), getTestFiles(), getSourceFiles()]).then(
-    ([chomiumClient, testFiles, sourceFiles]) => {
+  return Promise.all([createClient(), getTestFiles(), getSourceFiles()]).then(
+    ([client, testFiles, sourceFiles]) => {
       testFiles = testFiles.map((testFile) => {
         return {
           path: testFile,
-          type: "source",
+          type: "test",
         }
       })
       sourceFiles = sourceFiles.map((sourceFile) => {
         return {
           path: sourceFile,
-          type: "test",
+          type: "source",
         }
       })
 
@@ -104,7 +98,7 @@ export const testProject = ({
         testFiles.map((testFile) => {
           beforeEach({ file: testFile })
 
-          return chomiumClient
+          return client
             .execute({
               file: testFile.path,
               collectCoverage: true,
