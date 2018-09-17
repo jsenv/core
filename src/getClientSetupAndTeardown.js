@@ -4,11 +4,11 @@
 const teardownForValueAndTestAndCoverage = (value) => {
   const globalObject = typeof window === "undefined" ? global : window
 
-  if ("__executeTest__" in globalObject === false) {
-    throw new Error(`missing __executeTest__`)
+  if ("__test__" in globalObject === false) {
+    throw new Error(`missing __test__`)
   }
 
-  return globalObject.executeTest().then((test) => {
+  return globalObject.__test__().then((test) => {
     if ("__coverage__" in globalObject === false) {
       throw new Error(`missing __coverage__`)
     }
@@ -24,11 +24,11 @@ const teardownForValueAndTestAndCoverage = (value) => {
 const teardownForValueAndTest = (value) => {
   const globalObject = typeof window === "undefined" ? global : window
 
-  if ("__executeTest__" in globalObject === false) {
-    throw new Error(`missing __executeTest__`)
+  if ("__test__" in globalObject === false) {
+    throw new Error(`missing __test__`)
   }
 
-  return globalObject.executeTest().then((test) => {
+  return globalObject.__test__().then((test) => {
     return {
       value,
       test,

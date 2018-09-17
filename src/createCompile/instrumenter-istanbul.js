@@ -1,7 +1,7 @@
 // why not https://github.com/istanbuljs/babel-plugin-istanbul ?
 // https://github.com/guybedford/systemjs-istanbul/blob/master/index.js
 import istanbul from "istanbul"
-// import remapIstanbul from "remap-istanbul/lib/remap"
+// import remapIstanbul from "remap-istanbul/lib/remap" // "remap-istanbul": "0.8.4",
 import { SourceMapConsumer, SourceMapGenerator } from "source-map"
 
 // const getCoverage = ({ globalName }) => {

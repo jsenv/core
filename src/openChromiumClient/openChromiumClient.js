@@ -69,7 +69,7 @@ export const openChromiumClient = ({
   }
 
   // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
-  const execute = ({ file, autoClose = false, collectCoverage = false }) => {
+  const execute = ({ file, autoClose = false, collectCoverage = false, executeTest = false }) => {
     const closed = createSignal()
 
     const close = () => {
@@ -122,7 +122,7 @@ export const openChromiumClient = ({
                 runFile({
                   page,
                   file: remoteFile,
-                  ...getBrowserSetupAndTeardowm({ collectCoverage }),
+                  ...getBrowserSetupAndTeardowm({ collectCoverage, executeTest }),
                 }),
               )
             })

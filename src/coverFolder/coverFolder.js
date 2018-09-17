@@ -8,10 +8,14 @@ import { createCoverageMap } from "istanbul-lib-coverage"
 
 export const getFolderCoverage = ({
   root = process.cwd(),
-  sourceInclude = ["**/*.js"],
-  testInclude = ["**/*.test.*"],
-  sourceExclude = ["**/*.map", testInclude],
-  testExclude = ["**/*.map"],
+  beforeAll = () => {},
+  beforeEach = () => {},
+  afterEach = () => {},
+  afterAll = () => {},
+  sourceInclude = ["index.js", "src/**/*.js"],
+  testInclude = ["index.test.js", "src/**/*.test.js"],
+  sourceExclude = [...testInclude],
+  testExclude = [],
   getTestIgnoreString = () => {
     const filename = path.resolve(process.cwd(), root, ".testignore")
 
@@ -82,24 +86,24 @@ export const getFolderCoverage = ({
   }
 
   const getCoverage = () => {
-    Promise.all([getChromiumClient(), getTestFiles()]).then(
+    return Promise.all([getChromiumClient(), getTestFiles()]).then(
       ([{ chomiumClient, compileFile }, testFiles]) => {
+        beforeAll({ files: testFiles })
+
         const getCoverageFor = (file) => {
-          // we must? execute coverage in the same browser page but execute creates a new page for each call
-          // otherwise the global coverage object is not updated
+          beforeEach({ file })
           return chomiumClient
             .execute({
               file,
               collectCoverage: true,
-              // executeTest: true,
-              // execute test will return async result of window.__executeTest__() during teardown
-              // we have to install this hook when dmail/test is imported
-              // these test results will be returned and we will be able to log them
-              // or do something with them as we do for coverage
+              executeTest: true,
               autoClose: true,
             })
             .then(({ promise }) => promise)
-            .then(({ coverage }) => coverage)
+            .then(({ coverage, test }) => {
+              afterEach({ file, test, coverage })
+              return coverage
+            })
         }
 
         return Promise.all([testFiles.map((file) => getCoverageFor(file))]).then((coverages) => {
@@ -108,7 +112,11 @@ export const getFolderCoverage = ({
             return previous.merge(coverage)
           }, createCoverageMap({}))
 
-          return { coverage: mergedCoverageMap.toJSON(), compileFile }
+          const coverage = mergedCoverageMap.toJSON()
+
+          afterAll({ files: testFiles, coverage })
+
+          return { coverage, compileFile }
         })
       },
     )
