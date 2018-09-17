@@ -1,63 +1,53 @@
 // keep in mind that setup and teardown will be stringified and evaluated client side
 // you cannot use any variable from server
 
-const teardownForValueAndTestAndCoverage = (value) => {
-  const globalObject = typeof window === "undefined" ? global : window
+const teardownForNamespaceAndTestAndCoverage = (namespace) => {
+  const globalObject = typeof window === "object" ? window : global
+  const __test__ = "__test__" in globalObject ? globalObject.__test__ : () => null
 
-  if ("__test__" in globalObject === false) {
-    throw new Error(`missing __test__`)
-  }
-
-  return globalObject.__test__().then((test) => {
-    if ("__coverage__" in globalObject === false) {
-      throw new Error(`missing __coverage__`)
-    }
-
-    return {
-      value,
-      test,
-      coverage: globalObject.__coverage__,
-    }
-  })
+  return Promise.resolve()
+    .then(__test__)
+    .then((test) => {
+      return {
+        namespace,
+        test,
+        coverage: "__coverage__" in globalObject ? globalObject.__coverage__ : null,
+      }
+    })
 }
 
-const teardownForValueAndTest = (value) => {
-  const globalObject = typeof window === "undefined" ? global : window
+const teardownForNamespaceAndTest = (namespace) => {
+  const globalObject = typeof window === "object" ? window : global
+  const __test__ = "__test__" in globalObject ? globalObject.__test__ : () => null
 
-  if ("__test__" in globalObject === false) {
-    throw new Error(`missing __test__`)
-  }
-
-  return globalObject.__test__().then((test) => {
-    return {
-      value,
-      test,
-    }
-  })
+  return Promise.resolve()
+    .then(__test__)
+    .then((test) => {
+      return {
+        namespace,
+        test,
+      }
+    })
 }
 
-const teardownForValueAndCoverage = (value) => {
-  const globalObject = typeof window === "undefined" ? global : window
-
-  if ("__coverage__" in globalObject === false) {
-    throw new Error(`missing __coverage__`)
-  }
+const teardownForNamespaceAndCoverage = (namespace) => {
+  const globalObject = typeof window === "object" ? window : global
 
   return {
-    value,
-    coverage: globalObject.__coverage__,
+    namespace,
+    coverage: "__coverage__" in globalObject ? globalObject.__coverage__ : null,
   }
 }
 
-const teardownForValue = (value) => {
-  return { value }
+const teardownForNamespace = (namespace) => {
+  return { namespace }
 }
 
 const getTeardown = ({ collectCoverage, executeTest }) => {
   if (executeTest) {
-    return collectCoverage ? teardownForValueAndTestAndCoverage : teardownForValueAndTest
+    return collectCoverage ? teardownForNamespaceAndTestAndCoverage : teardownForNamespaceAndTest
   }
-  return collectCoverage ? teardownForValueAndCoverage : teardownForValue
+  return collectCoverage ? teardownForNamespaceAndCoverage : teardownForNamespace
 }
 
 export const getBrowserSetupAndTeardowm = ({ collectCoverage, executeTest }) => {

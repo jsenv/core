@@ -1,12 +1,21 @@
 import { openChromiumClient } from "../openChromiumClient/openChromiumClient.js"
-import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import { glob } from "glob-gitignore"
 import ignore from "ignore"
 import fs from "fs"
 import path from "path"
 import { createCoverageMap } from "istanbul-lib-coverage"
 
-export const getFolderCoverage = ({
+const mergeCoverage = (...coverages) => {
+  // https://github.com/istanbuljs/istanbuljs/blob/5405550c3868712b14fd8bfe0cbd6f2e7ac42279/packages/istanbul-lib-coverage/lib/coverage-map.js#L43
+  const mergedCoverageMap = coverages.reduce((previous, coverage) => {
+    return previous.merge(coverage)
+  }, createCoverageMap({}))
+
+  return mergedCoverageMap.toJSON()
+}
+
+export const testProject = ({
+  server,
   root = process.cwd(),
   beforeAll = () => {},
   beforeEach = () => {},
@@ -65,95 +74,108 @@ export const getFolderCoverage = ({
   }
 
   const getChromiumClient = () => {
-    return openCompileServer({
-      rootLocation: root,
-      transpile: true,
-      sourceMap: "comment",
-      minify: false,
-      optimize: false,
-      instrument: true,
-    }).then((server) => {
-      return openChromiumClient({
-        server,
-        headless: true,
-      }).then((chromiumClient) => {
-        return {
-          chromiumClient,
-          compileFile: server.compileFile,
-        }
-      })
+    return openChromiumClient({
+      server,
+      headless: true,
     })
   }
 
-  const getCoverage = () => {
-    return Promise.all([getChromiumClient(), getTestFiles()]).then(
-      ([{ chomiumClient, compileFile }, testFiles]) => {
-        beforeAll({ files: testFiles })
+  return Promise.all([getChromiumClient(), getTestFiles(), getSourceFiles()]).then(
+    ([chomiumClient, testFiles, sourceFiles]) => {
+      testFiles = testFiles.map((testFile) => {
+        return {
+          path: testFile,
+          type: "source",
+        }
+      })
+      sourceFiles = sourceFiles.map((sourceFile) => {
+        return {
+          path: sourceFile,
+          type: "test",
+        }
+      })
 
-        const getCoverageFor = (file) => {
-          beforeEach({ file })
+      const files = [...testFiles, ...sourceFiles]
+
+      const getFileByPath = (path) => files.find((file) => file.path === path)
+
+      beforeAll({ files })
+      return Promise.all(
+        testFiles.map((testFile) => {
+          beforeEach({ file: testFile })
+
           return chomiumClient
             .execute({
-              file,
+              file: testFile.path,
               collectCoverage: true,
               executeTest: true,
               autoClose: true,
             })
             .then(({ promise }) => promise)
-            .then(({ coverage, test }) => {
-              afterEach({ file, test, coverage })
+            .then(({ namespace, test, coverage }) => {
+              // test = null means file.test.js do not set a global.__test
+              // which happens if file.test.js does not use @dmail/test or is empty for instance
+              // coverage = null means file.test.js do not set a global.__coverage__
+              // which happens if file.test.js was not instrumented.
+              // this is not supposed to happen so we should throw ?
+              testFile.namespace = namespace
+              testFile.test = test
+              Object.keys(coverage).forEach((path) => {
+                const sourceFile = getFileByPath(path)
+                sourceFile.coverage = sourceFile.coverage
+                  ? mergeCoverage(sourceFile.coverage, coverage[path])
+                  : coverage[path]
+              })
+
+              afterEach({ file: testFile })
+            })
+        }),
+      )
+        .then(() => {
+          afterAll({ files })
+
+          const untestedSourceFiles = sourceFiles.filter((sourceFile) => {
+            return !sourceFile.coverage
+          })
+
+          const getEmptyCoverageFor = (file) => {
+            // we must compileFile to get the coverage object
+            // without evaluating the file source because it would increment coverage
+            // and also execute code that is not supposed to be run
+            return server.compileFile(file).then(({ outputAssets }) => {
+              const coverageAsset = outputAssets.find((asset) => asset.name === "coverage")
+              const coverage = JSON.parse(coverageAsset.content)
+              // https://github.com/gotwarlost/istanbul/blob/bc84c315271a5dd4d39bcefc5925cfb61a3d174a/lib/command/common/run-with-cover.js#L229
+              Object.keys(coverage.s).forEach(function(key) {
+                coverage.s[key] = 0
+              })
               return coverage
             })
-        }
+          }
 
-        return Promise.all([testFiles.map((file) => getCoverageFor(file))]).then((coverages) => {
-          // https://github.com/istanbuljs/istanbuljs/blob/5405550c3868712b14fd8bfe0cbd6f2e7ac42279/packages/istanbul-lib-coverage/lib/coverage-map.js#L43
-          const mergedCoverageMap = coverages.reduce((previous, coverage) => {
-            return previous.merge(coverage)
-          }, createCoverageMap({}))
-
-          const coverage = mergedCoverageMap.toJSON()
-
-          afterAll({ files: testFiles, coverage })
-
-          return { coverage, compileFile }
+          return Promise.all(
+            untestedSourceFiles.map((sourceFile) => {
+              return getEmptyCoverageFor(sourceFile).then((missingCoverage) => {
+                sourceFile.coverage = missingCoverage
+              })
+            }),
+          )
         })
-      },
-    )
-  }
-
-  return getCoverage().then(({ coverage, compileFile }) => {
-    return getSourceFiles().then((sourceFiles) => {
-      const untestedSourceFiles = sourceFiles.filter((sourceFile) => {
-        return sourceFile in coverage === false
-      })
-
-      const getEmptyCoverageFor = (file) => {
-        // we must compileFile to get the coverage object
-        // without evaluating the file source because it would increment coverage
-        // and also execute code that is not supposed to be run
-        return compileFile(file).then(({ outputAssets }) => {
-          const coverageAsset = outputAssets.find((asset) => asset.name === "coverage")
-          const coverage = JSON.parse(coverageAsset.content)
-          // https://github.com/gotwarlost/istanbul/blob/bc84c315271a5dd4d39bcefc5925cfb61a3d174a/lib/command/common/run-with-cover.js#L229
-          Object.keys(coverage.s).forEach(function(key) {
-            coverage.s[key] = 0
-          })
-          return coverage
+        .then(() => {
+          return files
         })
-      }
+    },
+  )
+}
 
-      return Promise.all(
-        untestedSourceFiles.map((sourceFile) => getEmptyCoverageFor(sourceFile)),
-      ).then((missingCoverages) => {
-        const finalCoverage = { ...coverage }
+export const createCoverageFromTestReport = (files) => {
+  const coverage = {}
 
-        missingCoverages.forEach((missingCoverage) => {
-          finalCoverage[missingCoverage.path] = missingCoverage
-        })
-
-        return finalCoverage
-      })
-    })
+  files.forEach((file) => {
+    if (file.coverage) {
+      coverage[file.coverage.path] = file.coverage
+    }
   })
+
+  return coverage
 }

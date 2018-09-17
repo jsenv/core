@@ -8,6 +8,10 @@
 import { openChromiumClient } from "./src/openChromiumClient/openChromiumClient.js"
 import { openCompileServer } from "./src/openCompileServer/openCompileServer.js"
 import { openNodeClient } from "./src/openNodeClient/openNodeClient.js"
+import { testProject, createCoverageFromTestReport } from "./src/coverFolder/coverFolder.js"
+
+export { testProject, createCoverageFromTestReport }
+export { openCompileServer }
 
 export const createModuleRunner = (params) => {
   // if there is already a compileServer running for that location

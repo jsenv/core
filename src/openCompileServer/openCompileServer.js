@@ -14,7 +14,12 @@ const guard = (fn, shield) => (...args) => {
 }
 
 export const openCompileServer = ({
+  // server options
   url,
+  autoCloseOnExit,
+  autoCloseOnCrash,
+  autoCloseOnError,
+  // compile options
   rootLocation,
   cacheFolderRelativeLocation = "build",
   abstractFolderRelativeLocation = "compiled",
@@ -53,7 +58,12 @@ export const openCompileServer = ({
     },
   })
 
-  return openServer({ url, autoCloseOnCrash: true }).then(({ url, addRequestHandler, close }) => {
+  return openServer({
+    url,
+    autoCloseOnExit,
+    autoCloseOnCrash,
+    autoCloseOnError,
+  }).then(({ url, addRequestHandler, close }) => {
     const { service: compileService, compileFile } = createCompileService({
       rootLocation,
       cacheFolderRelativeLocation,
