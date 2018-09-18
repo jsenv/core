@@ -4,7 +4,7 @@
 import { Builder } from "selenium-webdriver"
 // https://github.com/SeleniumHQ/selenium/blob/master/javascript/node/selenium-webdriver/firefox.js#L34
 import firefox from "selenium-webdriver/firefox"
-import { createBrowserIndexHTML } from "../createBrowserIndexHTML.js"
+import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { openIndexServer } from "../openIndexServer/openIndexServer.js"
 import { getRemoteLocation } from "../getRemoteLocation.js"
 import { getBrowserSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
@@ -20,7 +20,7 @@ const clientFunction = (file, setupSource, teardownSource, done) => {
 }
 
 export const openFirefoxClient = ({
-  server,
+  compileURL,
   headless = true,
   runFile = ({ driver, file, setup, teardown }) => {
     return driver
@@ -45,43 +45,46 @@ export const openFirefoxClient = ({
     .setFirefoxOptions(options)
     .build()
     .then((driver) => {
-      return openIndexServer({
-        indexBody: createBrowserIndexHTML({
-          loaderSrc: `${server.url}node_modules/@dmail/module-loader/src/browser/index.js`,
-        }),
-      }).then((indexRequestHandler) => {
-        const execute = ({ file, autoClean = false, collectCoverage = false }) => {
-          const remoteFile = getRemoteLocation({
-            server,
-            file,
-          })
+      return createHTMLForBrowser({
+        title: "Skeleton for Firefox",
+      }).then((indexHTML) => {
+        return openIndexServer({
+          indexBody: indexHTML,
+        }).then((indexRequestHandler) => {
+          const execute = ({ file, autoClean = false, collectCoverage = false }) => {
+            const remoteFile = getRemoteLocation({
+              compileURL,
 
-          return driver
-            .get(indexRequestHandler.url)
-            .then(() =>
-              runFile({
-                driver,
-                file: remoteFile,
-                ...getBrowserSetupAndTeardowm({ collectCoverage }),
-              }),
-            )
-            .then(({ status, value }) => {
-              if (autoClean) {
-                indexRequestHandler.stop()
-              }
-
-              if (status === "resolved") {
-                return value
-              }
-              return Promise.reject(value)
+              file,
             })
-        }
 
-        const close = () => {
-          return driver.quit()
-        }
+            return driver
+              .get(indexRequestHandler.url)
+              .then(() =>
+                runFile({
+                  driver,
+                  file: remoteFile,
+                  ...getBrowserSetupAndTeardowm({ collectCoverage }),
+                }),
+              )
+              .then(({ status, value }) => {
+                if (autoClean) {
+                  indexRequestHandler.stop()
+                }
 
-        return { execute, close }
+                if (status === "resolved") {
+                  return value
+                }
+                return Promise.reject(value)
+              })
+          }
+
+          const close = () => {
+            return driver.quit()
+          }
+
+          return { execute, close }
+        })
       })
     })
 }

@@ -9,7 +9,10 @@ openCompileServer({
 }).then((server) => {
   const cleanAll = false
 
-  return openChromiumClient({ server, headless: false }).then((chromiumClient) => {
+  return openChromiumClient({
+    compileURL: server.compileURL,
+    headless: false,
+  }).then((chromiumClient) => {
     chromiumClient
       .execute({
         file: `src/__test__/file.test.js`,

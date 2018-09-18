@@ -285,16 +285,15 @@ const getFileBranch = ({
           getSourceNameForSourceMap: () => {
             return filename
           },
-          getSourceLocationForSourceMap: ({ outputSourceMapName }) => {
+          getSourceLocationForSourceMap: ({ outputRelativeLocation, outputSourceMapName }) => {
             const sourceLocation = path.resolve(rootLocation, inputRelativeLocation)
-            const sourceMapAbstractLocation = path.join(
+            const sourceMapLocation = path.join(
               rootLocation,
-              abstractFolderRelativeLocation,
-              path.dirname(inputRelativeLocation),
+              path.dirname(outputRelativeLocation),
               outputSourceMapName,
             )
             const sourceLocationRelativeToSourceMapLocation = normalizeSeparation(
-              path.relative(sourceMapAbstractLocation, sourceLocation),
+              path.relative(path.dirname(sourceMapLocation), sourceLocation),
             )
             return sourceLocationRelativeToSourceMapLocation
           },
@@ -573,6 +572,13 @@ const getFileCompiled = ({
             status = "missing"
           }
 
+          const outputRelativeLocation = getOutputRelativeLocation({
+            cacheFolderRelativeLocation,
+            abstractFolderRelativeLocation,
+            filename,
+            branch,
+          })
+
           if (status === "valid") {
             return {
               inputLocation,
@@ -582,17 +588,11 @@ const getFileCompiled = ({
               branch,
               input,
               inputETag,
+              outputRelativeLocation,
               output,
               outputAssets,
             }
           }
-
-          const outputRelativeLocation = getOutputRelativeLocation({
-            cacheFolderRelativeLocation,
-            abstractFolderRelativeLocation,
-            filename,
-            branch,
-          })
 
           return Promise.resolve(generate({ outputRelativeLocation })).then(
             ({ output, outputAssets }) => {
@@ -604,6 +604,7 @@ const getFileCompiled = ({
                 branch,
                 input,
                 inputETag: createETag(input),
+                outputRelativeLocation,
                 output,
                 outputAssets,
               }
@@ -620,6 +621,7 @@ const getFileCompiled = ({
           branch,
           input,
           inputETag,
+          outputRelativeLocation,
           output,
           outputAssets,
         }) => {
@@ -644,6 +646,7 @@ const getFileCompiled = ({
               status,
               inputETag,
               output,
+              outputRelativeLocation,
             }
           })
         },
@@ -735,7 +738,7 @@ export const createCompileService = ({
       cacheEnabled,
       cacheAutoClean,
       cacheTrackHit,
-    }).then(({ status, inputETag, output }) => {
+    }).then(({ status, inputETag, outputRelativeLocation, output }) => {
       // here status can be "created", "updated", "cached"
 
       // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
@@ -746,6 +749,7 @@ export const createCompileService = ({
           status: 304,
           headers: {
             "cache-control": "no-store",
+            "x-location": outputRelativeLocation,
           },
         }
       }
@@ -757,6 +761,7 @@ export const createCompileService = ({
           "content-length": Buffer.byteLength(output),
           "content-type": "application/javascript",
           "cache-control": "no-store",
+          "x-location": outputRelativeLocation,
         },
         body: output,
       }

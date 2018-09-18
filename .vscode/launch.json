@@ -8,9 +8,9 @@
       "request": "launch",
       "program": "${file}",
       "sourceMaps": true,
-      "trace": true,
+      // "trace": true,
       // "outFiles": ["${workspaceRoot}/build/**/*.js"],
-      "outputCapture": "std",
+      // "outputCapture": "std",
       // https://github.com/Microsoft/vscode-chrome-debug-core/commit/eb552d621f1f6fbebcfca5d2390020dc7d8877e0#diff-b4f13aa3c326d081dea7875f9c0fe84aR31
       "skipFiles": [
         "node_modules/**",
@@ -25,34 +25,45 @@
       "request": "launch",
       "protocol": "inspector",
       "preLaunchTask": "compile", // ensure dist is fresh (compile before running)
-      "program": "${workspaceRoot}/.vscode/runFromDist.js",
-      "args": ["${file}"],
-      "cwd": "${workspaceRoot}",
-      "trace": "sm",
-      "env": {
-        "NODE_ENV": "development",
-        "NODE_PATH": "${workspaceRoot}/dist"
-      },
+      "args": ["${workspaceRoot}/dist/${relativeFile}"],
+      "trace": true,
       "sourceMaps": true,
-      "outputCapture": "std",
       "skipFiles": [
         // skip node modules
-        "node_modules/**",
+        // "node_modules/**",
         // skip node internals
         "<node_internals>/**/*.js"
       ],
       "autoAttachChildProcesses": true
     },
     {
-      "name": "Launch with chrome",
+      "name": "Run with chromium",
       "type": "chrome",
       "request": "launch",
       "sourceMaps": true,
       // "trace": true,
+      // I have to comment prelaunchTask below because of
+      // https://github.com/Microsoft/vscode/issues/6209
+      // "preLaunchTask": "start chromium server",
       "webRoot": "${workspaceFolder}/any-name-works-maybe-because-path-resolution",
       "url": "http://127.0.0.1:3000/${relativeFile}",
       // "runtimeExecutable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
       "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"]
+    },
+    {
+      "name": "Run with node",
+      "type": "node",
+      "request": "launch",
+      "sourceMaps": false,
+      "program": "${workspaceFolder}/dist/bin/run-node.js",
+      "args": ["--file=${relativeFile}"],
+      "skipFiles": [
+        "node_modules/**",
+        // https://github.com/Microsoft/vscode-react-native/issues/620
+        "<node_internals>/**/*.js"
+      ],
+      "autoAttachChildProcesses": true
+      // "trace": true,
     }
   ]
 }

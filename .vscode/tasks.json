@@ -5,8 +5,8 @@
   "tasks": [
     {
       // https://github.com/Microsoft/vscode/issues/6209
-      "label": "start server for current file",
-      "command": "npm run compile-start && node ./dist/bin/start.js --file=${file} --port=3000",
+      "label": "start chromium server",
+      "command": "node ./dist/bin/start-chromium-server.js --port=3000",
       "type": "shell",
       "isBackground": true,
       "problemMatcher": {
@@ -20,8 +20,8 @@
         ],
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "^.+listening.+",
-          "endsPattern": "^.+listening.+"
+          "beginsPattern": "^chromium server listening.+",
+          "endsPattern": "^test$"
         }
       }
     },

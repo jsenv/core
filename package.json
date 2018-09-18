@@ -27,9 +27,12 @@
 		"babel-core": "6.26.0",
 		"cuid": "2.1.1",
 		"es-module-loader": "2.0.0",
+		"glob-gitignore": "1.0.5",
+		"ignore": "3.3.5",
 		"istanbul": "0.4.5",
-		"istanbul-lib-instrument": "1.10.1",
 		"istanbul-lib-coverage": "2.0.1",
+		"istanbul-lib-instrument": "1.10.1",
+		"kill-port": "1.3.2",
 		"micmac": "2.0.0",
 		"ndb": "1.0.22",
 		"node-fetch": "2.0.0",
@@ -37,9 +40,7 @@
 		"promise-sequential": "1.1.1",
 		"puppeteer": "1.1.1",
 		"selenium-webdriver": "3.6.0",
-		"source-map": "0.5.6",
-		"glob-gitignore": "1.0.5",
-		"ignore": "3.3.5"
+		"source-map": "0.5.6"
 	},
 	"devDependencies": {
 		"@dmail/test": "6.0.0",

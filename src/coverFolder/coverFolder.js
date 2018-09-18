@@ -16,7 +16,7 @@ const mergeCoverage = (...coverages) => {
 
 export const testProject = ({
   server,
-  createClient = () => openChromiumClient({ server }),
+  createClient = () => openChromiumClient({ compileURL: server.compileURL }),
   root = process.cwd(),
   beforeAll = () => {},
   beforeEach = () => {},

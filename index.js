@@ -38,7 +38,7 @@ export const createModuleRunner = (params) => {
 
     const runInsideChromium = ({ file, headless = true, cover = false }) => {
       return openChromiumClient({
-        server,
+        compileURL: server.compileURL,
         headless,
       }).then((chromiumClient) => {
         return chromiumClient

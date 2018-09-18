@@ -11,21 +11,26 @@ import { getRemoteLocation } from "../getRemoteLocation.js"
 import { getNodeSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
 import { createSignal } from "@dmail/signal"
 
-export const openNodeClient = ({ server, detached = true }) => {
-  const remoteRoot = server.url.toString().slice(0, -1)
-  const localRoot = server.rootLocation
-
+export const openNodeClient = ({ compileURL, remoteRoot, localRoot, detached = true }) => {
   if (detached === false) {
-    const execute = ({ file, collectCoverage = false }) => {
+    const execute = ({ file, collectCoverage = false, executeTest = false }) => {
       const close = () => {}
 
       const promise = Promise.resolve().then(() => {
-        const { setup, teardown } = getNodeSetupAndTeardowm({ collectCoverage })
+        const remoteFile = getRemoteLocation({
+          compileURL,
+          file,
+        })
 
-        setup(file)
-        return ensureSystem({ remoteRoot, localRoot })
-          .import(file)
-          .then(teardown)
+        const { setup, teardown } = getNodeSetupAndTeardowm({ collectCoverage, executeTest })
+
+        Promise.resolve(remoteFile)
+          .then(setup)
+          .then(() => {
+            return ensureSystem({ remoteRoot, localRoot })
+              .import(remoteFile)
+              .then(teardown)
+          })
       })
 
       return Promise.resolve({ promise, close })
@@ -37,7 +42,13 @@ export const openNodeClient = ({ server, detached = true }) => {
   const clientFile = path.resolve(__dirname, "./client.js")
   let previousID = 0
 
-  const execute = ({ file, autoClose = false, collectCoverage = false }) => {
+  const execute = ({
+    file,
+    autoClose = false,
+    autoCloseOnError = false,
+    executeTest = false,
+    collectCoverage = false,
+  }) => {
     const closed = createSignal()
 
     const close = () => {
@@ -92,10 +103,10 @@ export const openNodeClient = ({ server, detached = true }) => {
       child.on("message", onmessage)
 
       const remoteFile = getRemoteLocation({
-        server,
+        compileURL,
         file,
       })
-      const { setup, teardown } = getNodeSetupAndTeardowm({ collectCoverage })
+      const { setup, teardown } = getNodeSetupAndTeardowm({ collectCoverage, executeTest })
 
       child.send({
         type: "execute",
@@ -116,7 +127,7 @@ export const openNodeClient = ({ server, detached = true }) => {
         return value
       },
       (reason) => {
-        if (autoClose) {
+        if (autoCloseOnError) {
           close()
         }
         return Promise.reject(reason)

@@ -23,10 +23,13 @@ process.on("message", ({ type, id, data }) => {
   if (type === "execute") {
     const { remoteRoot, localRoot, file, setupSource, teardownSource } = data
 
-    eval(setupSource)(file)
-    ensureSystem({ remoteRoot, localRoot })
-      .import(file)
-      .then(eval(teardownSource))
+    Promise.resolve(file)
+      .then(eval(setupSource))
+      .then(() => {
+        return ensureSystem({ remoteRoot, localRoot })
+          .import(file)
+          .then(eval(teardownSource))
+      })
       .then(
         (value) => {
           process.send({

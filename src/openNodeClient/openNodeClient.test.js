@@ -3,6 +3,7 @@ import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import { openNodeClient } from "./openNodeClient.js"
 
 const rootLocation = path.resolve(__dirname, "../../../")
+
 openCompileServer({
   url: "http://127.0.0.1:8765",
   rootLocation,
@@ -13,8 +14,10 @@ openCompileServer({
   const cleanAll = false
 
   return openNodeClient({
-    server,
-    detached: false,
+    compileURL: server.compileURL,
+    remoteRoot: "http://127.0.0.1:8765",
+    localRoot: rootLocation,
+    detached: false, // true,
     rootLocation,
   }).then((nodeClient) => {
     nodeClient

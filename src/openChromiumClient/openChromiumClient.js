@@ -1,11 +1,9 @@
 import puppeteer from "puppeteer"
-import { createBrowserIndexHTML } from "../createBrowserIndexHTML.js"
+import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { openIndexServer } from "../openIndexServer/openIndexServer.js"
 import { getRemoteLocation } from "../getRemoteLocation.js"
 import { getBrowserSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
 import { createSignal } from "@dmail/signal"
-import fs from "fs"
-import path from "path"
 
 const openIndexRequestInterception = ({ page, body }) => {
   const fakeURL = "https://fake.com"
@@ -37,25 +35,8 @@ const openIndexRequestInterception = ({ page, body }) => {
     })
 }
 
-const readBrowserLoader = () => {
-  return new Promise((resolve, reject) => {
-    const filename = path.resolve(
-      __dirname,
-      // we add an additional ../ to get rid of dist/
-      "../../../node_modules/@dmail/module-loader/src/browser/index.js",
-    )
-    fs.readFile(filename, (error, buffer) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve(buffer.toString())
-      }
-    })
-  })
-}
-
 export const openChromiumClient = ({
-  server,
+  compileURL,
   openIndexRequestHandler = openIndexServer,
   headless = true,
   mirrorConsole = false,
@@ -132,17 +113,19 @@ export const openChromiumClient = ({
               })
             }
 
-            return readBrowserLoader().then((loaderSource) => {
+            return createHTMLForBrowser({
+              title: "Skeleton for Chromium",
+            }).then((html) => {
               return openIndexRequestHandler({
                 page,
-                body: createBrowserIndexHTML({ loaderSource }),
+                body: html,
               }).then((indexRequestHandler) => {
                 closed.listen(() => {
                   indexRequestHandler.close()
                 })
 
                 const remoteFile = getRemoteLocation({
-                  server,
+                  compileURL,
                   file,
                 })
 
