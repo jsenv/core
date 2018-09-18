@@ -4,6 +4,8 @@ import { openIndexServer } from "../openIndexServer/openIndexServer.js"
 import { getRemoteLocation } from "../getRemoteLocation.js"
 import { getBrowserSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
 import { createSignal } from "@dmail/signal"
+import fs from "fs"
+import path from "path"
 
 const openIndexRequestInterception = ({ page, body }) => {
   const fakeURL = "https://fake.com"
@@ -33,6 +35,23 @@ const openIndexRequestInterception = ({ page, body }) => {
         close: () => page.setRequestInterception(false),
       }
     })
+}
+
+const readBrowserLoader = () => {
+  return new Promise((resolve, reject) => {
+    const filename = path.resolve(
+      __dirname,
+      // we add an additional ../ to get rid of dist/
+      "../../../node_modules/@dmail/module-loader/src/browser/index.js",
+    )
+    fs.readFile(filename, (error, buffer) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(buffer.toString())
+      }
+    })
+  })
 }
 
 export const openChromiumClient = ({
@@ -113,28 +132,28 @@ export const openChromiumClient = ({
               })
             }
 
-            return openIndexRequestHandler({
-              page,
-              body: createBrowserIndexHTML({
-                loaderSrc: `${server.url}node_modules/@dmail/module-loader/src/browser/index.js`,
-              }),
-            }).then((indexRequestHandler) => {
-              closed.listen(() => {
-                indexRequestHandler.close()
-              })
+            return readBrowserLoader().then((loaderSource) => {
+              return openIndexRequestHandler({
+                page,
+                body: createBrowserIndexHTML({ loaderSource }),
+              }).then((indexRequestHandler) => {
+                closed.listen(() => {
+                  indexRequestHandler.close()
+                })
 
-              const remoteFile = getRemoteLocation({
-                server,
-                file,
-              })
+                const remoteFile = getRemoteLocation({
+                  server,
+                  file,
+                })
 
-              return page.goto(indexRequestHandler.url).then(() =>
-                runFile({
-                  page,
-                  file: remoteFile,
-                  ...getBrowserSetupAndTeardowm({ collectCoverage, executeTest }),
-                }),
-              )
+                return page.goto(indexRequestHandler.url).then(() =>
+                  runFile({
+                    page,
+                    file: remoteFile,
+                    ...getBrowserSetupAndTeardowm({ collectCoverage, executeTest }),
+                  }),
+                )
+              })
             })
           }
 

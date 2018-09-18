@@ -5,6 +5,7 @@ import { openServer } from "../src/openServer/openServer.js"
 
 const openRunServer = ({ compileServerURL, compileURL, url }) => {
   return openServer({ url }).then((runServer) => {
+    // we could fs.read this and inject it to save an http request
     const loaderSrc = `${compileServerURL}node_modules/@dmail/module-loader/src/browser/index.js`
 
     runServer.addRequestHandler((request) => {
