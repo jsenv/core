@@ -304,7 +304,7 @@ const getFileBranch = ({
           inputSource: content,
           filename,
           getSourceNameForSourceMap: () => {
-            return inputRelativeLocation
+            return filename
           },
           getSourceLocationForSourceMap: (context) => {
             const sourceMapUseAbsoluteLocation = true
@@ -320,8 +320,8 @@ const getFileBranch = ({
             const sourceLocationRelativeToSourceMapLocation = normalizeSeparation(
               path.relative(path.dirname(sourceMapLocation), sourceLocation),
             )
+
             return sourceLocationRelativeToSourceMapLocation
-            // return "../../src/__test__/file.js"
           },
         }).then(({ options, generate }) => {
           const branchIsValid = (branch) => {

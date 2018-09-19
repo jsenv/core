@@ -43,5 +43,4 @@ openServer({ url: `http://127.0.0.1:${port}` }).then((runServer) => {
   })
 
   console.log(`chromium server listening at ${runServer.url}`)
-  console.log(`test`)
 })

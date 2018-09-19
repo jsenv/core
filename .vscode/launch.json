@@ -37,22 +37,35 @@
         "<node_internals>/**/*.js"
       ],
       "autoAttachChildProcesses": true,
-
       "trace": true
     },
     {
       "name": "Run with chromium",
       "type": "chrome",
       "request": "launch",
-      "sourceMaps": true,
-      // "trace": true,
       // I have to comment prelaunchTask below because of
       // https://github.com/Microsoft/vscode/issues/6209
       // "preLaunchTask": "start chromium server",
-      "webRoot": "${workspaceFolder}/any-name-works-maybe-because-path-resolution",
       "url": "http://127.0.0.1:3000/${relativeFile}",
       // "runtimeExecutable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-      "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"]
+      "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"],
+      // do not specify webroot, otherwise remote files like
+      // http://http://127.0.0.1:3001/compiled/file.js will be considered as being at
+      // ${workspaceRoot}/compiled/file.js
+      // but the compiled folder is empty
+      // let vscode think the file is distant and use sourceMapPathOverrides so that
+      // vscode can track source files
+      // "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "/*": "${workspaceRoot}/*"
+      },
+      "skipFiles": [
+        "node_modules/**",
+        // https://github.com/Microsoft/vscode-react-native/issues/620
+        "<node_internals>/**/*.js"
+      ],
+      "trace": true
     },
     {
       "name": "Run with node",
@@ -63,14 +76,14 @@
       "sourceMapPathOverrides": {
         "/*": "${workspaceRoot}/*"
       },
-      "program": "${workspaceFolder}/dist/bin/run-node.js",
-      "args": ["--file=${relativeFile}"],
       "skipFiles": [
         "node_modules/**",
         // https://github.com/Microsoft/vscode-react-native/issues/620
         "<node_internals>/**/*.js"
       ],
-      "autoAttachChildProcesses": true
+      "autoAttachChildProcesses": true,
+      "program": "${workspaceFolder}/dist/bin/run-node.js",
+      "args": ["--file=${relativeFile}"]
       // "trace": true
     }
   ]
