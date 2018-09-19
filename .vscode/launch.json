@@ -84,7 +84,6 @@
         // https://github.com/Microsoft/vscode-react-native/issues/620
         "<node_internals>/**/*.js"
       ]
-      // "trace": true
     }
   ]
 }
