@@ -7,8 +7,8 @@
       "protocol": "inspector",
       "request": "launch",
       "program": "${file}",
+      "autoAttachChildProcesses": true,
       "sourceMaps": true,
-      // "trace": true,
       // "outFiles": ["${workspaceRoot}/build/**/*.js"],
       // "outputCapture": "std",
       // https://github.com/Microsoft/vscode-chrome-debug-core/commit/eb552d621f1f6fbebcfca5d2390020dc7d8877e0#diff-b4f13aa3c326d081dea7875f9c0fe84aR31
@@ -16,8 +16,8 @@
         "node_modules/**",
         // https://github.com/Microsoft/vscode-react-native/issues/620
         "<node_internals>/**/*.js"
-      ],
-      "autoAttachChildProcesses": true
+      ]
+      // "trace": true,
     },
     {
       "name": "Launch from dist",
@@ -26,6 +26,7 @@
       "protocol": "inspector",
       "preLaunchTask": "compile", // ensure dist is fresh (compile before running)
       "args": ["${workspaceRoot}/dist/${relativeFile}"],
+      "autoAttachChildProcesses": true,
       "sourceMaps": true,
       "sourceMapPathOverrides": {
         "/*": "${workspaceRoot}/*"
@@ -35,9 +36,8 @@
         "node_modules/**",
         // skip node internals
         "<node_internals>/**/*.js"
-      ],
-      "autoAttachChildProcesses": true,
-      "trace": true
+      ]
+      // "trace": true
     },
     {
       "name": "Run with chromium",
@@ -64,14 +64,17 @@
         "node_modules/**",
         // https://github.com/Microsoft/vscode-react-native/issues/620
         "<node_internals>/**/*.js"
-      ],
-      "trace": true
+      ]
+      // "trace": true
     },
     {
       "name": "Run with node",
       "type": "node",
       "request": "launch",
       "protocol": "inspector",
+      "program": "${workspaceFolder}/dist/bin/run-node.js",
+      "args": ["--file=${relativeFile}"],
+      "autoAttachChildProcesses": true,
       "sourceMaps": true,
       "sourceMapPathOverrides": {
         "/*": "${workspaceRoot}/*"
@@ -80,10 +83,7 @@
         "node_modules/**",
         // https://github.com/Microsoft/vscode-react-native/issues/620
         "<node_internals>/**/*.js"
-      ],
-      "autoAttachChildProcesses": true,
-      "program": "${workspaceFolder}/dist/bin/run-node.js",
-      "args": ["--file=${relativeFile}"]
+      ]
       // "trace": true
     }
   ]
