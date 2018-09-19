@@ -18,7 +18,6 @@ openCompileServer({
     remoteRoot: "http://127.0.0.1:8765",
     localRoot: rootLocation,
     detached: false, // true,
-    rootLocation,
   }).then((nodeClient) => {
     nodeClient
       .execute({

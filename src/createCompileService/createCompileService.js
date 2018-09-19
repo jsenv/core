@@ -224,6 +224,27 @@ const readBranch = ({
   })
 }
 
+const getSourceAbstractLocation = ({ rootLocation, inputRelativeLocation }) =>
+  resolvePath(rootLocation, inputRelativeLocation)
+
+const getSourceMapLocation = ({ rootLocation, outputRelativeLocation, outputSourceMapName }) =>
+  resolvePath(rootLocation, path.dirname(outputRelativeLocation), outputSourceMapName)
+
+const sourceMapKnowsExactLocation = false
+
+const getSourceMapAbstractpLocation = ({
+  rootLocation,
+  abstractFolderRelativeLocation,
+  inputRelativeLocation,
+  outputSourceMapName,
+}) =>
+  resolvePath(
+    rootLocation,
+    abstractFolderRelativeLocation,
+    path.dirname(inputRelativeLocation),
+    outputSourceMapName,
+  )
+
 const getFileBranch = ({
   rootLocation,
   cacheFolderRelativeLocation,
@@ -283,19 +304,24 @@ const getFileBranch = ({
           inputSource: content,
           filename,
           getSourceNameForSourceMap: () => {
-            return filename
+            return inputRelativeLocation
           },
-          getSourceLocationForSourceMap: ({ outputRelativeLocation, outputSourceMapName }) => {
-            const sourceLocation = path.resolve(rootLocation, inputRelativeLocation)
-            const sourceMapLocation = path.join(
-              rootLocation,
-              path.dirname(outputRelativeLocation),
-              outputSourceMapName,
-            )
+          getSourceLocationForSourceMap: (context) => {
+            const sourceMapUseAbsoluteLocation = true
+
+            if (sourceMapUseAbsoluteLocation) {
+              return `/${context.inputRelativeLocation}`
+            }
+
+            const sourceLocation = getSourceAbstractLocation(context)
+            const sourceMapLocation = sourceMapKnowsExactLocation
+              ? getSourceMapLocation(context)
+              : getSourceMapAbstractpLocation(context)
             const sourceLocationRelativeToSourceMapLocation = normalizeSeparation(
               path.relative(path.dirname(sourceMapLocation), sourceLocation),
             )
             return sourceLocationRelativeToSourceMapLocation
+            // return "../../src/__test__/file.js"
           },
         }).then(({ options, generate }) => {
           const branchIsValid = (branch) => {

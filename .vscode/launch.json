@@ -26,15 +26,19 @@
       "protocol": "inspector",
       "preLaunchTask": "compile", // ensure dist is fresh (compile before running)
       "args": ["${workspaceRoot}/dist/${relativeFile}"],
-      "trace": true,
       "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "/*": "${workspaceRoot}/*"
+      },
       "skipFiles": [
         // skip node modules
-        // "node_modules/**",
+        "node_modules/**",
         // skip node internals
         "<node_internals>/**/*.js"
       ],
-      "autoAttachChildProcesses": true
+      "autoAttachChildProcesses": true,
+
+      "trace": true
     },
     {
       "name": "Run with chromium",
@@ -54,7 +58,11 @@
       "name": "Run with node",
       "type": "node",
       "request": "launch",
-      "sourceMaps": false,
+      "protocol": "inspector",
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "/*": "${workspaceRoot}/*"
+      },
       "program": "${workspaceFolder}/dist/bin/run-node.js",
       "args": ["--file=${relativeFile}"],
       "skipFiles": [
@@ -63,7 +71,7 @@
         "<node_internals>/**/*.js"
       ],
       "autoAttachChildProcesses": true
-      // "trace": true,
+      // "trace": true
     }
   ]
 }
