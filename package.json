@@ -58,7 +58,7 @@
 		"mock-fs": "4.4.2"
 	},
 	"bin": {
-		"start": "./dist/bin/start.js"
+		"jsrun": "./dist/bin/jsrun.js"
 	},
 	"scripts": {
 		"compile-start": "babel ./bin/start.js --out-dir dist --ignore=node_modules,dist --source-maps",

@@ -30,6 +30,9 @@ export const openCompileServer = ({
   minify = false,
   optimize = false,
   instrument = false,
+  // https://github.com/dmail-old/http-eventsource/tree/master/lib
+  // when watching files, the server will tell to every interested source that file changed
+  // watch = false,
 }) => {
   const compile = createCompile({
     createOptions: () => {

@@ -1,20 +1,22 @@
-export const createStore = ({
-  compare = (args, savedArgs) => {
-    if (savedArgs.length !== args.length) {
-      return false
-    }
-    return savedArgs.every((savedArg, index) => {
-      const arg = args[index]
-      if (arg !== savedArg) {
-        // should be a bit more powerfull to compare shallow here
+export const createStore = (
+  {
+    compare = (args, savedArgs) => {
+      if (savedArgs.length !== args.length) {
         return false
       }
-      return true
-    })
-  },
-  maxLength = 100,
-  transform = (v) => v,
-}) => {
+      return savedArgs.every((savedArg, index) => {
+        const arg = args[index]
+        if (arg !== savedArg) {
+          // should be a bit more powerfull to compare shallow here
+          return false
+        }
+        return true
+      })
+    },
+    maxLength = 100,
+    transform = (v) => v,
+  } = {},
+) => {
   const entries = []
 
   const restore = (...args) => {
@@ -52,4 +54,14 @@ export const memoize = (fn, { restore, save, transform } = createStore()) => {
   }
 }
 
-export const memoizeSync = memoize
+export const memoizeSync = (fn, { restore, save, transform } = createStore()) => {
+  return (...args) => {
+    const { has, value } = restore(...args)
+    if (has) {
+      return transform(value, ...args)
+    }
+    const freshValue = fn(...args)
+    save(freshValue, ...args)
+    return transform(freshValue, ...args)
+  }
+}

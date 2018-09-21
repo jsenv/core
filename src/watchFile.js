@@ -1,6 +1,6 @@
 import { createSignal } from "@dmail/signal"
 import fs from "fs"
-import { memoizeSync } from "../../memoize.js"
+import { memoizeSync } from "./memoize.js"
 
 const getModificationDate = (url) => {
   return new Promise((resolve, reject) => {
@@ -47,8 +47,8 @@ const createWatchSignal = (url) => {
           Number(modificationDate) !== Number(nextModificationDate),
       })
 
-      // https://nodejs.org/docs/latest/api/fs.html#fs_class_fs_fswatcher
       const guardedEmit = guardAsync(emit, shield)
+      // https://nodejs.org/docs/latest/api/fs.html#fs_fs_watch_filename_options_listener
       const watcher = fs.watch(url, { persistent: false }, (eventType, filename) => {
         guardedEmit({ url, eventType, filename })
       })

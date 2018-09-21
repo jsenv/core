@@ -2,32 +2,24 @@
 // you cannot use any variable from server
 
 const teardownForNamespaceAndTestAndCoverage = (namespace) => {
-  const globalObject = typeof window === "object" ? window : global
-  const __test__ = "__test__" in globalObject ? globalObject.__test__ : () => null
+  return Promise.resolve(namespace.output).then((test) => {
+    const globalObject = typeof window === "object" ? window : global
 
-  return Promise.resolve()
-    .then(__test__)
-    .then((test) => {
-      return {
-        namespace,
-        test,
-        coverage: "__coverage__" in globalObject ? globalObject.__coverage__ : null,
-      }
-    })
+    return {
+      namespace,
+      test,
+      coverage: "__coverage__" in globalObject ? globalObject.__coverage__ : null,
+    }
+  })
 }
 
 const teardownForNamespaceAndTest = (namespace) => {
-  const globalObject = typeof window === "object" ? window : global
-  const __test__ = "__test__" in globalObject ? globalObject.__test__ : () => null
-
-  return Promise.resolve()
-    .then(__test__)
-    .then((test) => {
-      return {
-        namespace,
-        test,
-      }
-    })
+  return Promise.resolve(namespace.output).then((test) => {
+    return {
+      namespace,
+      test,
+    }
+  })
 }
 
 const teardownForNamespaceAndCoverage = (namespace) => {
@@ -43,27 +35,27 @@ const teardownForNamespace = (namespace) => {
   return { namespace }
 }
 
-const getTeardown = ({ collectCoverage, executeTest }) => {
-  if (executeTest) {
+const getTeardown = ({ collectCoverage, collectTest }) => {
+  if (collectTest) {
     return collectCoverage ? teardownForNamespaceAndTestAndCoverage : teardownForNamespaceAndTest
   }
   return collectCoverage ? teardownForNamespaceAndCoverage : teardownForNamespace
 }
 
-export const getBrowserSetupAndTeardowm = ({ collectCoverage, executeTest }) => {
+export const getBrowserSetupAndTeardowm = ({ collectCoverage, collectTest }) => {
   const setup = () => {}
 
   return {
     setup,
-    teardown: getTeardown({ collectCoverage, executeTest }),
+    teardown: getTeardown({ collectCoverage, collectTest }),
   }
 }
 
-export const getNodeSetupAndTeardowm = ({ collectCoverage, executeTest }) => {
+export const getNodeSetupAndTeardowm = ({ collectCoverage, collectTest }) => {
   const setup = () => {}
 
   return {
     setup,
-    teardown: getTeardown({ collectCoverage, executeTest }),
+    teardown: getTeardown({ collectCoverage, collectTest }),
   }
 }

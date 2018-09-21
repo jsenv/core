@@ -9,35 +9,27 @@ openCompileServer({
   rootLocation,
   sourceMap: "comment",
   sourceURL: false,
-  instrument: true,
+  instrument: false,
 }).then((server) => {
-  const cleanAll = false
-
   return openNodeClient({
     compileURL: server.compileURL,
     remoteRoot: "http://127.0.0.1:8765",
     localRoot: rootLocation,
-    detached: false, // true,
+    detached: true, // true,
   }).then((nodeClient) => {
     nodeClient
       .execute({
         file: `src/__test__/file.js`,
-        collectCoverage: true,
+        collectCoverage: false,
       })
       .then(({ promise, close }) => {
         promise.then(
           (value) => {
-            if (cleanAll) {
-              close()
-              server.close()
-            }
+            close()
+            server.close()
             console.log("execution done with", value)
           },
           (reason) => {
-            if (cleanAll) {
-              close()
-              server.close()
-            }
             console.error("execution crashed with", reason)
           },
         )

@@ -11,7 +11,7 @@ import { getRemoteLocation } from "../getRemoteLocation.js"
 import { getNodeSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
 import { createSignal } from "@dmail/signal"
 
-export const openNodeClient = ({ compileURL, remoteRoot, localRoot, detached = true }) => {
+export const openNodeClient = ({ compileURL, remoteRoot, localRoot, detached = false }) => {
   if (detached === false) {
     const execute = ({ file, collectCoverage = false, executeTest = false }) => {
       const close = () => {}

@@ -9,7 +9,7 @@ rm -rf /var/folders/_y/_qf0g2dd2yn44pj45w1yj68c0000gp/T/com.microsoft.VSCode/nod
 # do not run like this, run with vscode using "Run with node" being on that file
 # node ./dist/bin/run-node --file=/Users/d.maillard/Dev/Sandbox/npmlink/packages/dev-server/src/__test__/file.js
 
-node ./dist/bin/chromium-server-start.js
+node ./dist/bin/chromium-vscode-server-start.js
 http://127.0.0.1:3000/src/__test__/file.js
 
 lsof -i :3001
