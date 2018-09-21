@@ -1,5 +1,6 @@
 import stream from "stream"
 import { createPromiseAndHooks } from "../promise.js"
+import { createSignal } from "@dmail/signal"
 
 const isNodeStream = (a) => {
   if (a instanceof stream.Stream || a instanceof stream.Writable) {
@@ -17,6 +18,8 @@ const createTwoWayStream = () => {
   let status = "opened"
 
   const { promise, resolve } = createPromiseAndHooks()
+
+  const closed = createSignal()
 
   let storedError
   const error = (e) => {
@@ -92,6 +95,7 @@ const createTwoWayStream = () => {
     pipes.length = 0
     status = "closed"
     resolve(buffers)
+    closed.emit()
   }
 
   const cancel = () => {
@@ -118,6 +122,7 @@ const createTwoWayStream = () => {
     pipeTo,
     tee,
     promise,
+    closed,
   })
 
   return stream

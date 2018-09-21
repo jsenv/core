@@ -8,6 +8,8 @@ import { createFileService } from "../createFileService/index.js"
 import { createResponseGenerator } from "../openServer/createResponseGenerator.js"
 import { enableCORS } from "../openServer/createNodeRequestHandler.js"
 import { openServer } from "../openServer/openServer.js"
+import { createSSERoom } from "./event-source-server.js"
+import { watchFile } from "../watchFile.js"
 
 const guard = (fn, shield) => (...args) => {
   return shield(...args) ? fn(...args) : undefined
@@ -66,7 +68,7 @@ export const openCompileServer = ({
     autoCloseOnExit,
     autoCloseOnCrash,
     autoCloseOnError,
-  }).then(({ url, addRequestHandler, close }) => {
+  }).then(({ url, addRequestHandler, close, closed }) => {
     const { service: compileService, compileFile } = createCompileService({
       rootLocation,
       cacheFolderRelativeLocation,
@@ -75,10 +77,22 @@ export const openCompileServer = ({
       compile,
     })
 
+    const fileChangedSSE = createSSERoom()
+    const watchedFiles = new Map()
+    closed.listenOnce(() => {
+      watchedFiles.forEach((closeWatcher) => closeWatcher())
+      watchedFiles.clear()
+    })
+
     const fileService = createFileService()
 
     const handler = createResponseGenerator({
       services: [
+        ({ headers }) => {
+          if (headers.get("accept") === "text/event-stream") {
+            return fileChangedSSE.connect()
+          }
+        },
         guard(compileService, ({ method, url }) => {
           if (method !== "GET" && method !== "HEAD") {
             return false
@@ -96,8 +110,21 @@ export const openCompileServer = ({
           return true
         }),
         ({ url, ...props }) => {
+          const fileURL = new URL(url.pathname.slice(1), `file:///${rootLocation}/`)
+          const filename = fileURL.toString()
+
+          if (watchedFiles.has(filename) === false) {
+            const fileWatcher = watchFile(filename, () => {
+              fileChangedSSE.sendEvent({
+                type: "file-changed",
+                data: url,
+              })
+            })
+            watchedFiles.set(url, fileWatcher)
+          }
+
           return fileService({
-            url: new URL(url.pathname.slice(1), `file:///${rootLocation}/`),
+            url: fileURL,
             ...props,
           })
         },

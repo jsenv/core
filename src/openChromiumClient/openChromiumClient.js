@@ -43,6 +43,11 @@ export const openChromiumClient = ({
   runFile = ({ page, file, setup, teardown }) => {
     return page.evaluate(
       (file, setupSource, teardownSource) => {
+        const evtSource = new EventSource(window.location.href)
+        evtSource.onmessage = (e) => {
+          console.log("received event", e)
+        }
+
         eval(setupSource)(file)
         return window.System.import(file).then(eval(teardownSource))
       },

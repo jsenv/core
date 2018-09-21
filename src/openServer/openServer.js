@@ -5,6 +5,7 @@ import { URL } from "url"
 import { createSelfSignature } from "./createSelfSignature.js"
 import { processTeardown } from "./processTeardown.js"
 import { createNodeRequestHandler } from "./createNodeRequestHandler.js"
+import { createSignal } from "@dmail/signal"
 
 const REASON_CLOSING = "closing"
 
@@ -139,6 +140,8 @@ export const openServer = (
     })
   }
 
+  const closed = createSignal()
+
   return listen().then(() => {
     status = "opened"
 
@@ -184,6 +187,7 @@ export const openServer = (
         })
       }).then(() => {
         status = "closed"
+        closed.emit()
       })
     }
 
@@ -234,6 +238,7 @@ export const openServer = (
       addRequestHandler,
       agent,
       close,
+      closed,
     }
   })
 }

@@ -1,5 +1,9 @@
+import { createBody } from "../openServer/createBody.js"
+
 // https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
 // https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
+
+// https://github.com/dmail-old/http-eventsource/blob/master/lib/event-source.js
 
 // http://html5doctor.com/server-sent-events/
 const stringifySourceEvent = ({ data, type = "message", id, retry }) => {
@@ -52,33 +56,6 @@ const createEventHistory = ({ limit } = {}) => {
   return { add, since, reset }
 }
 
-// en gros chaque fois au'un client reauest un fichier on le watch
-/*
-const fileChangedSSE = createSSERoom()
-const watchedFiles = new Map()
-
-if (watchedFiles.has(url) === false) {
-	const fileWatcher = watchFile(url, () => {
-		fileChangedSSE.sendEvent({
-			type: 'file-changed',
-			data: url
-		})
-	})
-
-	watchedFiles.set(url, fileChangedSSE)
-
-	// lorsque le serveur se close on fera
-	watchedFiles.forEach((closeWatcher) => closeWatcher())
-	watchedFiles.reset()
-}
-
-// coté serveur, on aura un service qui fera
-const isRequestForFileChangedSSE = () => false
-
-if (isRequestForFileChangedSSE(request)) {
-	return fileChangedSSE.connect(request.connection)
-}
-*/
 export const createSSERoom = (
   {
     keepaliveDuration = 30000,
@@ -93,7 +70,7 @@ export const createSSERoom = (
   let state = "closed"
   let interval
 
-  const connect = (connection, lastEventId) => {
+  const connect = (lastEventId) => {
     if (connections.size > maxLength) {
       return {
         status: 503,
@@ -105,8 +82,9 @@ export const createSSERoom = (
       }
     }
 
+    const connection = createBody()
     connections.add(connection)
-    connection.once("close", () => {
+    connection.closed.listen(() => {
       connections.delete(connection)
     })
     // send events which occured between lastEventId & now
