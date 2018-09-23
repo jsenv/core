@@ -21,6 +21,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "d
   var cleanAll = false;
 
   return (0, _openChromiumClient.openChromiumClient)({
+    server: server,
     compileURL: server.compileURL,
     headless: false
   }).then(function (chromiumClient) {

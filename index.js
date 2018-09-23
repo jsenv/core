@@ -8,11 +8,13 @@
 import { openChromiumClient } from "./src/openChromiumClient/openChromiumClient.js"
 import { openCompileServer } from "./src/openCompileServer/openCompileServer.js"
 import { openNodeClient } from "./src/openNodeClient/openNodeClient.js"
+import { openBrowserServer } from "./src/openBrowserServer/openBrowserServer.js"
 import { testProject, createCoverageFromTestReport } from "./src/coverFolder/coverFolder.js"
 import { run } from "./src/run/run.js"
 
 export { testProject, createCoverageFromTestReport }
 export { openCompileServer }
+export { openBrowserServer }
 export { openChromiumClient }
 export { run }
 

@@ -1,13 +1,6 @@
-#!/usr/bin/env node
-
-import { getFromProcessArguments } from "./getFromProcessArguments.js"
-import { openCompileServer } from "../src/openCompileServer/openCompileServer.js"
-import { openServer } from "../src/openServer/openServer.js"
-import { createHTMLForBrowser } from "../src/createHTMLForBrowser.js"
-import killPort from "kill-port"
-
-const port = Number(getFromProcessArguments("port") || "3000")
-const root = getFromProcessArguments("root") || process.cwd()
+import { openCompileServer } from "../openCompileServer/openCompileServer.js"
+import { openServer } from "../openServer/openServer.js"
+import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 
 const getClientScript = ({ compileURL, url }) => {
   const fileRelativeToRoot = url.pathname.slice(1)
@@ -15,13 +8,19 @@ const getClientScript = ({ compileURL, url }) => {
   return `window.System.import("${compileURL}/${fileRelativeToRoot}")`
 }
 
-const open = () => {
-  openCompileServer({
-    url: "http://127.0.0.1:0",
+export const openBrowserServer = ({ root, port = 0 }) => {
+  return openCompileServer({
+    url: `http://127.0.0.1:0`,
     rootLocation: root,
   }).then((server) => {
-    openServer({ url: `http://127.0.0.1:${port}` }).then((runServer) => {
+    console.log(`compiling ${root} at ${server.url}`)
+    return openServer({ url: `http://127.0.0.1:${port}` }).then((runServer) => {
       runServer.addRequestHandler((request) => {
+        if (request.url.pathname === "/") {
+          // on voudrait ptet servir du html
+          // pour expliquer comment run les fichier etc
+        }
+
         return createHTMLForBrowser({
           script: getClientScript({ compileURL: server.compileURL, url: request.url }),
         }).then((html) => {
@@ -37,9 +36,9 @@ const open = () => {
         })
       })
 
-      console.log(`chromium server listening at ${runServer.url}`)
+      console.log(`executing ${root} at ${runServer.url}`)
+
+      return runServer
     })
   })
 }
-
-killPort(port).then(open)

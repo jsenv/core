@@ -13,6 +13,7 @@ openCompileServer({
   const cleanAll = false
 
   return openChromiumClient({
+    server,
     compileURL: server.compileURL,
     headless: false,
   }).then((chromiumClient) => {

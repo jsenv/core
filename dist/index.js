@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createModuleRunner = exports.run = exports.openChromiumClient = exports.openCompileServer = exports.createCoverageFromTestReport = exports.testProject = undefined;
+exports.createModuleRunner = exports.run = exports.openChromiumClient = exports.openBrowserServer = exports.openCompileServer = exports.createCoverageFromTestReport = exports.testProject = undefined;
 
 var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
@@ -12,6 +12,8 @@ var _openChromiumClient = require("./src/openChromiumClient/openChromiumClient.j
 var _openCompileServer = require("./src/openCompileServer/openCompileServer.js");
 
 var _openNodeClient = require("./src/openNodeClient/openNodeClient.js");
+
+var _openBrowserServer = require("./src/openBrowserServer/openBrowserServer.js");
 
 var _coverFolder = require("./src/coverFolder/coverFolder.js");
 
@@ -27,6 +29,7 @@ function _objectWithoutProperties(obj, keys) { var target = {}; for (var i in ob
 exports.testProject = _coverFolder.testProject;
 exports.createCoverageFromTestReport = _coverFolder.createCoverageFromTestReport;
 exports.openCompileServer = _openCompileServer.openCompileServer;
+exports.openBrowserServer = _openBrowserServer.openBrowserServer;
 exports.openChromiumClient = _openChromiumClient.openChromiumClient;
 exports.run = _run.run;
 var createModuleRunner = function createModuleRunner(params) {

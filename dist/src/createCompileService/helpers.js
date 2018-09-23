@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.removeFolderDeep = exports.removeFile = exports.readFolder = exports.resolvePath = exports.normalizeSeparation = exports.isFileNotFoundError = exports.createETag = undefined;
+exports.removeFolderDeep = exports.removeFile = exports.readFolder = exports.isFolder = exports.resolvePath = exports.normalizeSeparation = exports.isFileNotFoundError = exports.createETag = undefined;
 
 var _crypto = require("crypto");
 
@@ -51,6 +51,18 @@ var resolvePath = exports.resolvePath = function resolvePath(from) {
   }
 
   return normalizeSeparation(_path2["default"].join.apply(_path2["default"], [from].concat(paths)));
+};
+
+var isFolder = exports.isFolder = function isFolder(filename) {
+  return new Promise(function (resolve, reject) {
+    _fs2["default"].lstat(filename, function (error, stat) {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(stat.isDirectory());
+      }
+    });
+  });
 };
 
 var readFolder = exports.readFolder = function readFolder(location) {

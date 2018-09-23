@@ -90,16 +90,16 @@ export const openServer = (
     }
 
     return Promise.all(
-      Array.from(clients).map(({ response }) => {
-        if (response.headersSent === false) {
-          response.writeHead(status, reason)
+      Array.from(clients).map(({ nodeResponse }) => {
+        if (nodeResponse.headersSent === false) {
+          nodeResponse.writeHead(status, reason)
         }
 
         return new Promise((resolve) => {
-          if (response.finished === false) {
-            response.on("finish", resolve)
-            response.on("error", resolve)
-            response.destroy(reason)
+          if (nodeResponse.finished === false) {
+            nodeResponse.on("finish", resolve)
+            nodeResponse.on("error", resolve)
+            nodeResponse.destroy(reason)
           } else {
             resolve()
           }

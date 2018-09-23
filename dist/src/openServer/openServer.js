@@ -112,17 +112,17 @@ var openServer = exports.openServer = function openServer() {
     }
 
     return Promise.all(Array.from(clients).map(function (_ref3) {
-      var response = _ref3.response;
+      var nodeResponse = _ref3.nodeResponse;
 
-      if (response.headersSent === false) {
-        response.writeHead(status, reason);
+      if (nodeResponse.headersSent === false) {
+        nodeResponse.writeHead(status, reason);
       }
 
       return new Promise(function (resolve) {
-        if (response.finished === false) {
-          response.on("finish", resolve);
-          response.on("error", resolve);
-          response.destroy(reason);
+        if (nodeResponse.finished === false) {
+          nodeResponse.on("finish", resolve);
+          nodeResponse.on("error", resolve);
+          nodeResponse.destroy(reason);
         } else {
           resolve();
         }

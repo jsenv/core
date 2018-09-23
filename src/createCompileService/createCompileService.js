@@ -296,7 +296,9 @@ const getFileBranch = ({
       // here, if readFile returns ENOENT we could/should check is there is something in cache for that file
       // and take that chance to remove the cached version of that file
       // but it's not supposed to happen
-      return readFile({ location: inputLocation }).then(({ content }) => {
+      return readFile({
+        location: inputLocation,
+      }).then(({ content }) => {
         return compile({
           rootLocation,
           abstractFolderRelativeLocation,
@@ -728,29 +730,41 @@ export const createCompileService = ({
           abstractFolderRelativeLocation,
           filename: script,
           compile,
-        }).then(({ branch }) => {
-          if (!branch) {
-            return {
-              status: 404,
+        }).then(
+          ({ branch }) => {
+            if (!branch) {
+              return {
+                status: 404,
+              }
             }
-          }
 
-          const scriptCompiledFolder = resolvePath(
-            rootLocation,
-            getBranchRelativeLocation({
-              cacheFolderRelativeLocation,
-              abstractFolderRelativeLocation,
-              filename: script,
-              branch,
-            }),
-          )
+            const scriptCompiledFolder = resolvePath(
+              rootLocation,
+              getBranchRelativeLocation({
+                cacheFolderRelativeLocation,
+                abstractFolderRelativeLocation,
+                filename: script,
+                branch,
+              }),
+            )
 
-          return fileService({
-            method,
-            url: new URL(`file:///${scriptCompiledFolder}/${path.basename(filename)}${url.search}`),
-            headers,
-          })
-        })
+            return fileService({
+              method,
+              url: new URL(
+                `file:///${scriptCompiledFolder}/${path.basename(filename)}${url.search}`,
+              ),
+              headers,
+            })
+          },
+          (error) => {
+            if (error && error.reason === "Unexpected directory operation") {
+              return {
+                status: 403,
+              }
+            }
+            return Promise.reject(error)
+          },
+        )
       })
     }
 
@@ -764,34 +778,44 @@ export const createCompileService = ({
       cacheEnabled,
       cacheAutoClean,
       cacheTrackHit,
-    }).then(({ status, inputETag, outputRelativeLocation, output }) => {
-      // here status can be "created", "updated", "cached"
+    }).then(
+      ({ status, inputETag, outputRelativeLocation, output }) => {
+        // here status can be "created", "updated", "cached"
 
-      // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
-      // if-none-match c'est forcément le etag du client qui a match
-      // faudra changer ça non?
-      if (headers.has("if-none-match") && status === "cached") {
+        // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
+        // if-none-match c'est forcément le etag du client qui a match
+        // faudra changer ça non?
+        if (headers.has("if-none-match") && status === "cached") {
+          return {
+            status: 304,
+            headers: {
+              "cache-control": "no-store",
+              "x-location": outputRelativeLocation,
+            },
+          }
+        }
+
         return {
-          status: 304,
+          status: 200,
           headers: {
+            Etag: inputETag,
+            "content-length": Buffer.byteLength(output),
+            "content-type": "application/javascript",
             "cache-control": "no-store",
             "x-location": outputRelativeLocation,
           },
+          body: output,
         }
-      }
-
-      return {
-        status: 200,
-        headers: {
-          Etag: inputETag,
-          "content-length": Buffer.byteLength(output),
-          "content-type": "application/javascript",
-          "cache-control": "no-store",
-          "x-location": outputRelativeLocation,
-        },
-        body: output,
-      }
-    })
+      },
+      (error) => {
+        if (error && error.reason === "Unexpected directory operation") {
+          return {
+            status: 403,
+          }
+        }
+        return Promise.reject(error)
+      },
+    )
   }
 
   const compileFile = (relativeLocation) =>

@@ -79,7 +79,7 @@ var createNodeRequestHandler = exports.createNodeRequestHandler = function creat
 
   return function (nodeRequest, nodeResponse) {
     var closed = (0, _signal.createSignal)({ smart: true });
-    nodeResponse.connection.once("close", function () {
+    nodeResponse.once("close", function () {
       return closed.emit();
     });
 

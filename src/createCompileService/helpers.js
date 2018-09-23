@@ -25,6 +25,18 @@ export const resolvePath = (from, ...paths) => {
   return normalizeSeparation(path.join(from, ...paths))
 }
 
+export const isFolder = (filename) => {
+  return new Promise((resolve, reject) => {
+    fs.lstat(filename, (error, stat) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(stat.isDirectory())
+      }
+    })
+  })
+}
+
 export const readFolder = (location) => {
   return new Promise((resolve, reject) => {
     fs.readdir(location, (error, filenames) => {

@@ -359,7 +359,9 @@ var getFileBranch = function getFileBranch(_ref19) {
     // here, if readFile returns ENOENT we could/should check is there is something in cache for that file
     // and take that chance to remove the cached version of that file
     // but it's not supposed to happen
-    return (0, _readFile.readFile)({ location: inputLocation }).then(function (_ref24) {
+    return (0, _readFile.readFile)({
+      location: inputLocation
+    }).then(function (_ref24) {
       var content = _ref24.content;
 
       return compile({
@@ -823,6 +825,13 @@ var createCompileService = exports.createCompileService = function createCompile
             url: new _url.URL("file:///" + scriptCompiledFolder + "/" + _path2["default"].basename(filename) + url.search),
             headers: headers
           });
+        }, function (error) {
+          if (error && error.reason === "Unexpected directory operation") {
+            return {
+              status: 403
+            };
+          }
+          return Promise.reject(error);
         });
       });
     }
@@ -869,6 +878,13 @@ var createCompileService = exports.createCompileService = function createCompile
         },
         body: output
       };
+    }, function (error) {
+      if (error && error.reason === "Unexpected directory operation") {
+        return {
+          status: 403
+        };
+      }
+      return Promise.reject(error);
     });
   };
 

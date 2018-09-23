@@ -165,6 +165,7 @@ export const openCompileServer = ({
 
     return {
       close,
+      closed,
       url,
       compileURL: `${url}${abstractFolderRelativeLocation}`,
       rootLocation,

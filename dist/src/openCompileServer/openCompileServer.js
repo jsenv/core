@@ -211,6 +211,7 @@ var openCompileServer = function openCompileServer(_ref) {
 
     return {
       close: close,
+      closed: closed,
       url: url,
       compileURL: "" + url + abstractFolderRelativeLocation,
       rootLocation: rootLocation,

@@ -16,6 +16,6 @@ var rootLocation = _path2["default"].resolve(__dirname, "../../../");
 }).then(function (_ref) {
   var url = _ref.url;
 
-  console.log("server listening, waiting for client at " + url);
+  console.log("compiling " + rootLocation + " at " + url);
 });
 //# sourceMappingURL=openCompileServer.test.js.map

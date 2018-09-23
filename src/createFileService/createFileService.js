@@ -87,6 +87,13 @@ export const convertFileSystemErrorToResponseProperties = (error) => {
     }
   }
 
+  if (isErrorWithCode(error, "EISDIR")) {
+    return {
+      status: 500,
+      reason: "Unexpected directory operation",
+    }
+  }
+
   return {
     status: 500,
     reason: "unknown file system error",

@@ -49,7 +49,7 @@ const createResponse = (
 export const createNodeRequestHandler = ({ handler, transform = (response) => response, url }) => {
   return (nodeRequest, nodeResponse) => {
     const closed = createSignal({ smart: true })
-    nodeResponse.connection.once("close", () => closed.emit())
+    nodeResponse.once("close", () => closed.emit())
 
     // should have some kind of id for a request
     // so that logs knows whichs request they belong to
