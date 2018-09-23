@@ -20,11 +20,11 @@
 		"node": ">=8.6.0"
 	},
 	"dependencies": {
+		"@babel/core": "7.1.0",
 		"@dmail/module-loader": "github:dmail/module-loader",
-		"@dmail/shared-config": "6.0.0",
+		"@dmail/shared-config": "7.0.0",
 		"@dmail/signal": "7.0.1",
 		"@dmail/uneval": "4.0.0",
-		"babel-core": "6.26.0",
 		"cuid": "2.1.1",
 		"es-module-loader": "2.0.0",
 		"glob-gitignore": "1.0.5",
@@ -38,24 +38,18 @@
 		"node-fetch": "2.0.0",
 		"node-forge": "0.7.1",
 		"promise-sequential": "1.1.1",
-		"puppeteer": "1.1.1",
-		"selenium-webdriver": "3.6.0",
 		"source-map": "0.5.6"
 	},
 	"devDependencies": {
+		"@babel/cli": "7.1.0",
 		"@dmail/test": "6.0.0",
 		"@dmail/test-cheap": "0.0.2",
-		"babel-cli": "6.26.0",
-		"babel-eslint": "8.0.0",
 		"codecov": "2.3.0",
 		"eslint": "4.16.0",
 		"eslint-plugin-import": "2.6.0",
+		"mock-fs": "4.4.2",
 		"prettier": "1.9.1",
-		"rimraf": "2.6.2",
-		"rollup": "0.57.0",
-		"rollup-plugin-babel": "3.0.3",
-		"rollup-plugin-node-resolve": "2.0.0",
-		"mock-fs": "4.4.2"
+		"rimraf": "2.6.2"
 	},
 	"bin": {
 		"jsrun": "./dist/bin/jsrun.js"
