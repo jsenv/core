@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../src/__test__/file.js"],"names":["value","console","log"],"mappings":";;;;;AAAA,IAAMA,QAAQ,IAAd;;AAEAC,QAAQC,GAAR,CAAY,kBAAZ;;AAEA;;qBAEeF,K","file":"file.js","sourcesContent":["const value = true\n\nconsole.log(\"------HEY-------\")\n\ndebugger\n\nexport default value\n"]}

@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../sourceMapTest/vscode-bug/fetch-filesystem/index.js"],"names":["require"],"mappings":";;AAAAA,QAAQ,eAAR","file":"index.js","sourcesContent":["require(\"./file.es5.js\")\n"]}

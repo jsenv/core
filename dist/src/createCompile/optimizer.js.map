@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../src/createCompile/optimizer.js"],"names":["optimizer"],"mappings":";;;;;AAAA;;AAEO,IAAMA,gCAAY,SAAZA,SAAY;AAAA,SAAM,IAAN;AAAA,CAAlB","file":"optimizer.js","sourcesContent":["// nice to have https://prepack.io/getting-started.html#options\n\nexport const optimizer = () => null\n"]}

@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../src/run/run.test.js"],"names":["file","platform","watch"],"mappings":";;AAAA;;AAEA,cAAI;AACFA,QAAM,sBADJ;AAEFC,YAAU,UAFR;AAGFC,SAAO;AAHL,CAAJ","file":"run.test.js","sourcesContent":["import { run } from \"./run.js\"\n\nrun({\n  file: \"src/__test__/file.js\",\n  platform: \"chromium\",\n  watch: true,\n})\n"]}

@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../src/__test__/file-cjs-and-native-require.js"],"names":["require","createServer","module","exports","name"],"mappings":";;eAAyBA,QAAQ,MAAR,C;IAAjBC,Y,YAAAA,Y;;AAERC,OAAOC,OAAP,GAAiBF,aAAaG,IAA9B","file":"file-cjs-and-native-require.js","sourcesContent":["const { createServer } = require(\"http\")\n\nmodule.exports = createServer.name\n"]}

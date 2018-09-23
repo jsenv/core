@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../src/__test__/file-with-relative-cjs-import.js"],"names":[],"mappings":";;;;;;AAAA","file":"file-with-relative-cjs-import.js","sourcesContent":["import value from \"./cjs-module.js\"\n\nexport default value\n"]}
