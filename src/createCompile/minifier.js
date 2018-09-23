@@ -1,4 +1,8 @@
-import { createConfig, createMinifiyOptions, mergeOptions } from "@dmail/shared-config"
+import {
+  createConfig,
+  createMinifiyOptions,
+  mergeOptions,
+} from "@dmail/shared-config/dist/babel.js"
 import { transform, transformFromAst } from "babel-core"
 
 export const minifier = ({

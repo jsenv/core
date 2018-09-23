@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.transpiler = undefined;
 
-var _babel = require("@dmail/shared-config/dist/babel");
+var _babel = require("@dmail/shared-config/dist/babel.js");
 
 var _babelCore = require("babel-core");
 

@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.minifier = undefined;
 
-var _sharedConfig = require("@dmail/shared-config");
+var _babel = require("@dmail/shared-config/dist/babel.js");
 
 var _babelCore = require("babel-core");
 
@@ -18,7 +18,7 @@ var minifier = exports.minifier = function minifier(_ref) {
       options = _ref.options,
       outputSourceMapName = _ref.outputSourceMapName;
 
-  var babelConfig = (0, _sharedConfig.createConfig)((0, _sharedConfig.mergeOptions)((0, _sharedConfig.createMinifiyOptions)(), {
+  var babelConfig = (0, _babel.createConfig)((0, _babel.mergeOptions)((0, _babel.createMinifiyOptions)(), {
     sourceMaps: options.remap,
     inputSourceMap: inputSourceMap,
     babelrc: false, // trust only these options, do not read any babelrc config file

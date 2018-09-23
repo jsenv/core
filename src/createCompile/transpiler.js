@@ -3,7 +3,7 @@ import {
   createModuleOptions,
   createSyntaxOptions,
   mergeOptions,
-} from "@dmail/shared-config/dist/babel"
+} from "@dmail/shared-config/dist/babel.js"
 import { transform, transformFromAst } from "babel-core"
 
 export const transpiler = (context) => {
