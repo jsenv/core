@@ -6,6 +6,7 @@ import {
 import { transform, transformFromAst } from "babel-core"
 
 export const minifier = ({
+  rootLocation,
   inputSource,
   inputAst,
   inputSourceMap,
@@ -16,6 +17,7 @@ export const minifier = ({
     mergeOptions(createMinifiyOptions(), {
       sourceMaps: options.remap,
       inputSourceMap,
+      root: rootLocation,
       babelrc: false, // trust only these options, do not read any babelrc config file
       ast: true,
     }),

@@ -42,6 +42,7 @@ const createInstrumentPlugin = ({ filename, useInlineSourceMaps = false } = {}) 
 
 export const instrumenter = (context) => {
   const {
+    rootLocation,
     inputRelativeLocation,
     inputSource,
     inputSourceMap,
@@ -67,6 +68,7 @@ export const instrumenter = (context) => {
     // we need the syntax option to enable rest spread in case it's used
     createSyntaxOptions(),
     {
+      root: rootLocation,
       filename: inputRelativeLocation,
       inputSourceMap,
       babelrc: false, // trust only these options, do not read any babelrc config file

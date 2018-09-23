@@ -60,7 +60,8 @@ var createInstrumentPlugin = function createInstrumentPlugin() {
 var instrumenter = exports.instrumenter = function instrumenter(context) {
   var _outputAssets2;
 
-  var inputRelativeLocation = context.inputRelativeLocation,
+  var rootLocation = context.rootLocation,
+      inputRelativeLocation = context.inputRelativeLocation,
       inputSource = context.inputSource,
       inputSourceMap = context.inputSourceMap,
       inputAst = context.inputAst,
@@ -81,6 +82,7 @@ var instrumenter = exports.instrumenter = function instrumenter(context) {
   var babelOptions = (0, _babel.mergeOptions)(remapOptions,
   // we need the syntax option to enable rest spread in case it's used
   (0, _babel.createSyntaxOptions)(), {
+    root: rootLocation,
     filename: inputRelativeLocation,
     inputSourceMap: inputSourceMap,
     babelrc: false, // trust only these options, do not read any babelrc config file

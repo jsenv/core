@@ -3,5 +3,9 @@
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.organizeImports": false // it mess up formatting and folding
+  },
+  "search.exclude": {
+    "build/**": true,
+    "dist/**": true
   }
 }

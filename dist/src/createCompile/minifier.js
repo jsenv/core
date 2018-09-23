@@ -12,7 +12,8 @@ var _babelCore = require("babel-core");
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 var minifier = exports.minifier = function minifier(_ref) {
-  var inputSource = _ref.inputSource,
+  var rootLocation = _ref.rootLocation,
+      inputSource = _ref.inputSource,
       inputAst = _ref.inputAst,
       inputSourceMap = _ref.inputSourceMap,
       options = _ref.options,
@@ -21,6 +22,7 @@ var minifier = exports.minifier = function minifier(_ref) {
   var babelConfig = (0, _babel.createConfig)((0, _babel.mergeOptions)((0, _babel.createMinifiyOptions)(), {
     sourceMaps: options.remap,
     inputSourceMap: inputSourceMap,
+    root: rootLocation,
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true
   }));
