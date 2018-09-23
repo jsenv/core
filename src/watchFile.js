@@ -17,20 +17,37 @@ const getModificationDate = (url) => {
 const guardAsync = (fn, shield) => (...args) => {
   return Promise.resolve()
     .then(() => shield(...args))
-    .then((shielded) => (shielded ? undefined : fn(...args)))
+    .then((shielded) => {
+      return shielded ? undefined : fn(...args)
+    })
 }
 
 const createChangedAsyncShield = ({ value, get, compare }) => {
   let lastValue
 
-  return () => {
+  return (...args) => {
     return Promise.all([
       lastValue === undefined ? value : lastValue,
-      Promise.resolve().then(get),
+      Promise.resolve().then(() => get(...args)),
     ]).then(([previousValue, value]) => {
       lastValue = value
-      return compare(previousValue, value)
+      return !compare(previousValue, value)
     })
+  }
+}
+
+const limitRate = (fn, ms) => {
+  let canBeCalled = true
+  return (...args) => {
+    if (!canBeCalled) {
+      return undefined
+    }
+
+    canBeCalled = false
+    setTimeout(() => {
+      canBeCalled = true
+    }, ms)
+    return fn(...args)
   }
 }
 
@@ -43,15 +60,20 @@ const createWatchSignal = (url) => {
       const shield = createChangedAsyncShield({
         value: mtime,
         get: () => getModificationDate(url),
-        compare: (modificationDate, nextModificationDate) =>
-          Number(modificationDate) !== Number(nextModificationDate),
+        compare: (modificationDate, nextModificationDate) => {
+          return Number(modificationDate) !== Number(nextModificationDate)
+        },
       })
 
       const guardedEmit = guardAsync(emit, shield)
       // https://nodejs.org/docs/latest/api/fs.html#fs_fs_watch_filename_options_listener
-      const watcher = fs.watch(url, { persistent: false }, (eventType, filename) => {
-        guardedEmit({ url, eventType, filename })
-      })
+      const watcher = fs.watch(
+        url,
+        { persistent: false },
+        limitRate((eventType, filename) => {
+          guardedEmit({ url, eventType, filename })
+        }, 100),
+      )
       return () => watcher.close()
     },
   })

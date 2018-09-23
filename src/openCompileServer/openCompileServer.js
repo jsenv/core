@@ -8,7 +8,7 @@ import { createFileService } from "../createFileService/index.js"
 import { createResponseGenerator } from "../openServer/createResponseGenerator.js"
 import { enableCORS } from "../openServer/createNodeRequestHandler.js"
 import { openServer } from "../openServer/openServer.js"
-import { createSSERoom } from "./event-source-server.js"
+import { createSSERoom } from "./createSSERoom.js"
 import { watchFile } from "../watchFile.js"
 
 const guard = (fn, shield) => (...args) => {
@@ -21,6 +21,7 @@ export const openCompileServer = ({
   autoCloseOnExit,
   autoCloseOnCrash,
   autoCloseOnError,
+  watch = false,
   // compile options
   rootLocation,
   cacheFolderRelativeLocation = "build",
@@ -32,102 +33,131 @@ export const openCompileServer = ({
   minify = false,
   optimize = false,
   instrument = false,
-  // https://github.com/dmail-old/http-eventsource/tree/master/lib
-  // when watching files, the server will tell to every interested source that file changed
-  // watch = false,
 }) => {
-  const compile = createCompile({
-    createOptions: () => {
-      // we should use a token or something to prevent a browser from being taken for nodejs
-      // because will have security impact as we are going to trust this
-      // const isNodeClient =
-      //   request.headers.has("user-agent") &&
-      //   request.headers.get("user-agent").startsWith("node-fetch")
-
-      const remap = sourceMap === "comment" || sourceMap === "inline"
-      const remapMethod = sourceMap
-
-      const identify = sourceURL
-      const identifyMethod = "relative"
-
-      return {
-        identify,
-        identifyMethod,
-        transpile,
-        instrument,
-        remap,
-        remapMethod,
-        minify,
-        optimize,
-      }
-    },
-  })
-
   return openServer({
     url,
     autoCloseOnExit,
     autoCloseOnCrash,
     autoCloseOnError,
   }).then(({ url, addRequestHandler, close, closed }) => {
-    const { service: compileService, compileFile } = createCompileService({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      trackHit: true,
-      compile,
-    })
+    const createWatchServices = () => {
+      // https://github.com/dmail-old/http-eventsource/tree/master/lib
 
-    const fileChangedSSE = createSSERoom()
-    const watchedFiles = new Map()
-    closed.listenOnce(() => {
-      watchedFiles.forEach((closeWatcher) => closeWatcher())
-      watchedFiles.clear()
-    })
+      const fileChangedSSE = createSSERoom()
+      fileChangedSSE.open()
+      const watchedFiles = new Map()
+      closed.listenOnce(() => {
+        watchedFiles.forEach((closeWatcher) => closeWatcher())
+        watchedFiles.clear()
+        fileChangedSSE.close()
+      })
+      const watchPredicate = (relativeFilename) => {
+        // for now watch only js files (0 not favicon or .map files)
+        return relativeFilename.endsWith(".js")
+      }
 
-    const fileService = createFileService()
-
-    const handler = createResponseGenerator({
-      services: [
+      return [
         ({ headers }) => {
           if (headers.get("accept") === "text/event-stream") {
-            return fileChangedSSE.connect()
+            return fileChangedSSE.connect(headers.get("last-event-id"))
           }
         },
-        guard(compileService, ({ method, url }) => {
-          if (method !== "GET" && method !== "HEAD") {
-            return false
+        ({ url }) => {
+          let relativeFilename = url.pathname.slice(1)
+          const dirname = relativeFilename.slice(0, relativeFilename.indexOf("/"))
+          if (dirname === abstractFolderRelativeLocation) {
+            // when I ask for a compiled file, watch the corresponding file on filesystem
+            relativeFilename = relativeFilename.slice(abstractFolderRelativeLocation.length + 1)
           }
 
-          const pathname = url.pathname
-          // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
-          const filename = pathname.slice(1)
-          const dirname = filename.slice(0, filename.indexOf("/"))
+          const filename = `${rootLocation}/${relativeFilename}`
 
-          if (dirname !== abstractFolderRelativeLocation) {
-            return false
-          }
-
-          return true
-        }),
-        ({ url, ...props }) => {
-          const fileURL = new URL(url.pathname.slice(1), `file:///${rootLocation}/`)
-          const filename = fileURL.toString()
-
-          if (watchedFiles.has(filename) === false) {
+          if (watchedFiles.has(filename) === false && watchPredicate(relativeFilename)) {
             const fileWatcher = watchFile(filename, () => {
               fileChangedSSE.sendEvent({
                 type: "file-changed",
-                data: url,
+                data: relativeFilename,
               })
             })
             watchedFiles.set(url, fileWatcher)
           }
-
-          return fileService({
-            url: fileURL,
-            ...props,
-          })
         },
+      ]
+    }
+
+    let compileFileFromCompileService
+    const createCompileServiceCustom = () => {
+      const compile = createCompile({
+        createOptions: () => {
+          // we should use a token or something to prevent a browser from being taken for nodejs
+          // because will have security impact as we are going to trust this
+          // const isNodeClient =
+          //   request.headers.has("user-agent") &&
+          //   request.headers.get("user-agent").startsWith("node-fetch")
+
+          const remap = sourceMap === "comment" || sourceMap === "inline"
+          const remapMethod = sourceMap
+
+          const identify = sourceURL
+          const identifyMethod = "relative"
+
+          return {
+            identify,
+            identifyMethod,
+            transpile,
+            instrument,
+            remap,
+            remapMethod,
+            minify,
+            optimize,
+          }
+        },
+      })
+      const { service: compileService, compileFile } = createCompileService({
+        rootLocation,
+        cacheFolderRelativeLocation,
+        abstractFolderRelativeLocation,
+        trackHit: true,
+        compile,
+      })
+      compileFileFromCompileService = compileFile
+
+      return guard(compileService, ({ method, url }) => {
+        if (method !== "GET" && method !== "HEAD") {
+          return false
+        }
+
+        const pathname = url.pathname
+        // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
+        const filename = pathname.slice(1)
+        const dirname = filename.slice(0, filename.indexOf("/"))
+
+        if (dirname !== abstractFolderRelativeLocation) {
+          return false
+        }
+
+        return true
+      })
+    }
+
+    const createFileServiceCustom = () => {
+      const fileService = createFileService()
+      const previousFileService = fileService
+      return ({ url, ...props }) => {
+        const fileURL = new URL(url.pathname.slice(1), `file:///${rootLocation}/`)
+
+        return previousFileService({
+          url: fileURL,
+          ...props,
+        })
+      }
+    }
+
+    const handler = createResponseGenerator({
+      services: [
+        ...(watch ? createWatchServices() : []),
+        createCompileServiceCustom(),
+        createFileServiceCustom(),
       ],
     })
 
@@ -139,7 +169,7 @@ export const openCompileServer = ({
       compileURL: `${url}${abstractFolderRelativeLocation}`,
       rootLocation,
       abstractFolderRelativeLocation,
-      compileFile,
+      compileFile: compileFileFromCompileService,
     }
   })
 }

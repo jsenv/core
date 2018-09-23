@@ -9,123 +9,107 @@ const isNodeStream = (a) => {
   return false
 }
 
-const createTwoWayStream = () => {
-  const stream = {}
+const closeStream = (stream) => {
+  if (isNodeStream(stream)) {
+    stream.end()
+  } else {
+    stream.close()
+  }
+}
 
+const createTwoWayStream = () => {
   const buffers = []
   let length = 0
-  const pipes = []
   let status = "opened"
 
   const { promise, resolve } = createPromiseAndHooks()
 
-  const closed = createSignal()
+  const errored = createSignal({ smart: true })
+  const cancelled = createSignal({ smart: true })
+  const closed = createSignal({ smart: true })
+  const writed = createSignal()
 
-  let storedError
   const error = (e) => {
     status = "errored"
-    storedError = e
-    pipes.forEach((pipe) => {
-      pipe.error(e)
-    })
+    errored.emit(e)
     throw e
   }
 
-  const closeListener = (listener) => {
-    if (isNodeStream(listener)) {
-      listener.end()
-    } else {
-      listener.close()
-    }
-  }
-
-  const pipeTo = (
-    stream,
-    { preventCancel = false, preventClose = false, preventError = false } = {},
-  ) => {
+  const cancel = () => {
     if (status === "cancelled") {
-      if (preventCancel) {
-        // throw new Error('stream cancelled : it cannot pipeTo other streams')
-      } else {
-        stream.cancel()
-      }
-
-      return stream
+      return
     }
-    if (status === "errored") {
-      if (preventError) {
-        //
-      } else {
-        stream.error(storedError)
-      }
-
-      return stream
-    }
-
-    pipes.push(stream)
-    if (length) {
-      buffers.forEach((buffer) => {
-        stream.write(buffer)
-      })
-    }
-
-    if (status === "closed") {
-      if (preventClose) {
-        //
-      } else {
-        closeListener(stream)
-      }
-    }
-
-    return stream
-  }
-
-  const write = (data) => {
-    buffers.push(data)
-    length += data.length
-    pipes.forEach((pipe) => {
-      pipe.write(data)
-    })
+    status = "cancelled"
+    buffers.length = 0
+    length = 0
+    cancelled.emit()
   }
 
   const close = () => {
-    pipes.forEach((pipe) => {
-      closeListener(pipe)
-    })
-    pipes.length = 0
+    if (status === "closed") {
+      return
+    }
     status = "closed"
     resolve(buffers)
     closed.emit()
   }
 
-  const cancel = () => {
-    close()
-    buffers.length = 0
-    length = 0
-    status = "cancelled"
+  const write = (data) => {
+    buffers.push(data)
+    length += data.length
+    writed.emit(data)
   }
 
-  const tee = () => {
-    const a = stream
-    const b = createTwoWayStream()
+  const pipeTo = (
+    stream,
+    {
+      propagateData = true,
+      propagateCancel = true,
+      propagateClose = true,
+      propagateError = true,
+    } = {},
+  ) => {
+    if (propagateCancel) {
+      cancelled.listenOnce(() => {
+        stream.cancel()
+      })
+    }
+    if (propagateError) {
+      errored.listenOnce((error) => {
+        stream.error(error)
+      })
+    }
+    if (propagateData) {
+      if (length) {
+        buffers.forEach((buffer) => {
+          stream.write(buffer)
+        })
+      }
+      writed.listen((buffer) => {
+        stream.write(buffer)
+      })
+    }
+    if (propagateClose) {
+      closed.listenOnce(() => {
+        closeStream(stream)
+      })
+    }
 
-    pipeTo(b)
-
-    return [a, b]
+    return stream
   }
 
-  Object.assign(stream, {
+  return Object.freeze({
     error,
+    errored,
     cancel,
-    write,
+    cancelled,
     close,
-    pipeTo,
-    tee,
-    promise,
     closed,
+    write,
+    writed,
+    pipeTo,
+    promise,
   })
-
-  return stream
 }
 
 const stringToArrayBuffer = (string) => {
@@ -147,19 +131,18 @@ export const createBody = (body) => {
     if (isNodeStream(data)) {
       const nodeStream = data
 
-      // pourquoi j'utilise un passtrhough au lieu d'écouter directement les event sdu stream?
-      // chais pas, peu importe y'avais surement une bonne raison
-      // je crois que c'est au cas où le stream est paused ou quoi
-      // pour lui indiquer qu'on est intéréssé
-      nodeStream.on("error", (error) => {
+      // nodeStream.resume() ?
+      nodeStream.once("error", (error) => {
         twoWayStream.error(error)
       })
       nodeStream.on("data", (data) => {
         twoWayStream.write(data)
       })
-      nodeStream.on("end", () => {
+      nodeStream.once("end", () => {
         twoWayStream.close()
       })
+    } else if (data && data.pipeTo) {
+      data.pipeTo(twoWayStream)
     } else {
       twoWayStream.write(data)
       twoWayStream.close()
@@ -186,14 +169,10 @@ export const createBody = (body) => {
     return text().then(JSON.parse)
   }
 
-  const pipeTo = (...args) => {
-    return twoWayStream.pipeTo(...args)
-  }
-
   return {
+    ...twoWayStream,
     text,
     arraybuffer,
     json,
-    pipeTo,
   }
 }

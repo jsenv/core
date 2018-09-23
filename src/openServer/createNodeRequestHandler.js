@@ -27,7 +27,7 @@ export const populateNodeResponse = (nodeResponse, { status, reason = "", header
   nodeResponse.writeHead(status, reason, headerAsJSON)
 
   const keepAlive = headers.get("connection") === "keep-alive"
-  body.pipeTo(nodeResponse, { preventClose: keepAlive })
+  body.pipeTo(nodeResponse, { propagateClose: !keepAlive })
 }
 
 const createResponse = (

@@ -16,3 +16,6 @@ lsof -i :3001
 
 // https://github.com/tiaanduplessis/kill-port/blob/24b14373fd828da6f87141c2f93fddfa64aa46d2/index.js#L19
 lsof -i tcp:8765 | grep LISTEN | awk '{print $2}' | xargs kill -9
+
+var source = new EventSource('http://127.0.0.1:57732');
+source.onmessage = () => console.log('here')

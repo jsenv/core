@@ -13,6 +13,6 @@ export const openIndexServer = ({ url, body }) => {
         body,
       }
     })
-    return { url: String(server.url), close: server.close }
+    return { url: server.url, close: server.close }
   })
 }

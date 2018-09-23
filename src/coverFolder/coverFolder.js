@@ -106,14 +106,13 @@ export const testProject = ({
               autoClose: true,
             })
             .then(({ promise }) => promise)
-            .then(({ namespace, test, coverage }) => {
+            .then(({ output, coverage }) => {
               // test = null means file.test.js do not set a global.__test
               // which happens if file.test.js does not use @dmail/test or is empty for instance
               // coverage = null means file.test.js do not set a global.__coverage__
               // which happens if file.test.js was not instrumented.
               // this is not supposed to happen so we should throw ?
-              testFile.namespace = namespace
-              testFile.test = test
+              testFile.output = output
               Object.keys(coverage).forEach((path) => {
                 const sourceFile = getFileByPath(path)
                 sourceFile.coverage = sourceFile.coverage

@@ -5,14 +5,12 @@ import { getRemoteLocation } from "../getRemoteLocation.js"
 import { getBrowserSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
 import { createSignal } from "@dmail/signal"
 
-const openIndexRequestInterception = ({ page, body }) => {
-  const fakeURL = "https://fake.com"
-
+const openIndexRequestInterception = ({ url, page, body }) => {
   return page
     .setRequestInterception(true)
     .then(() => {
       page.on("request", (interceptedRequest) => {
-        if (interceptedRequest.url().startsWith(fakeURL)) {
+        if (interceptedRequest.url().startsWith(url)) {
           interceptedRequest.respond({
             status: 200,
             contentType: "text/html",
@@ -29,28 +27,33 @@ const openIndexRequestInterception = ({ page, body }) => {
     })
     .then(() => {
       return {
-        url: fakeURL,
+        url,
         close: () => page.setRequestInterception(false),
       }
     })
 }
 
 export const openChromiumClient = ({
+  url = "https://127.0.0.1:0",
+  server,
   compileURL,
   openIndexRequestHandler = openIndexServer,
   headless = true,
   mirrorConsole = false,
-  runFile = ({ page, file, setup, teardown }) => {
+  runFile = ({ serverURL, page, file, setup, teardown }) => {
     return page.evaluate(
-      (file, setupSource, teardownSource) => {
-        const evtSource = new EventSource(window.location.href)
-        evtSource.onmessage = (e) => {
+      (compileRoot, file, setupSource, teardownSource) => {
+        const evtSource = new EventSource(compileRoot)
+        evtSource.addEventListener("message", (e) => {
           console.log("received event", e)
-        }
+        })
 
-        eval(setupSource)(file)
-        return window.System.import(file).then(eval(teardownSource))
+        return Promise.resolve(file)
+          .then(eval(setupSource))
+          .then(() => window.System.import(file))
+          .then(eval(teardownSource))
       },
+      serverURL.href,
       file,
       `(${setup.toString()})`,
       `(${teardown.toString()})`,
@@ -122,6 +125,7 @@ export const openChromiumClient = ({
               title: "Skeleton for Chromium",
             }).then((html) => {
               return openIndexRequestHandler({
+                url,
                 page,
                 body: html,
               }).then((indexRequestHandler) => {
@@ -134,8 +138,9 @@ export const openChromiumClient = ({
                   file,
                 })
 
-                return page.goto(indexRequestHandler.url).then(() =>
+                return page.goto(String(indexRequestHandler.url)).then(() =>
                   runFile({
+                    serverURL: server.url,
                     page,
                     file: remoteFile,
                     ...getBrowserSetupAndTeardowm({ collectCoverage, executeTest }),

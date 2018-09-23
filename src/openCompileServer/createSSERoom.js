@@ -7,23 +7,23 @@ import { createBody } from "../openServer/createBody.js"
 
 // http://html5doctor.com/server-sent-events/
 const stringifySourceEvent = ({ data, type = "message", id, retry }) => {
-  const parts = []
+  let string = ""
 
-  if (retry) {
-    parts.push(`retry:${retry}`)
+  if (id !== undefined) {
+    string += `id:${id}\n`
   }
 
-  if (id) {
-    parts.push(`id:${id}`)
+  if (retry) {
+    string += `retry:${retry}\n`
   }
 
   if (type !== "message") {
-    parts.push(`event:${type}`)
+    string += `event:${type}\n`
   }
 
-  parts.push(`data:${data}`)
+  string += `data:${data}\n\n`
 
-  return `${parts.join("\n")}\n\n`
+  return string
 }
 
 const createEventHistory = ({ limit } = {}) => {
@@ -56,6 +56,7 @@ const createEventHistory = ({ limit } = {}) => {
   return { add, since, reset }
 }
 
+// https://www.html5rocks.com/en/tutorials/eventsource/basics/
 export const createSSERoom = (
   {
     keepaliveDuration = 30000,
@@ -82,26 +83,40 @@ export const createSSERoom = (
       }
     }
 
-    const connection = createBody()
-    connections.add(connection)
-    connection.closed.listen(() => {
-      connections.delete(connection)
-    })
-    // send events which occured between lastEventId & now
-    if (lastEventId !== undefined) {
-      history.since(lastEventId).forEach((event) => {
-        connection.write(stringifySourceEvent(event))
-      })
-    }
-
     const joinEvent = {
-      type: "join",
-      data: new Date(),
-      retry: retryDuration,
       id: lastEventId,
+      retry: retryDuration,
+      type: "join",
+      data: new Date().toLocaleTimeString(),
     }
     lastEventId++
     history.add(joinEvent)
+
+    const events = [
+      joinEvent,
+      // send events which occured between lastEventId & now
+      ...(lastEventId === undefined ? [] : history.since(lastEventId)),
+    ]
+
+    const connection = createBody()
+    connections.add(connection)
+    connection.closed.listen(() => {
+      console.log(
+        `client disconnected, number of client connected to event source: ${connections.size}`,
+      )
+      connections.delete(connection)
+    })
+
+    console.log(
+      `client joined, number of client connected to event source: ${
+        connections.size
+      }, max allowed: ${maxLength}`,
+    )
+
+    events.forEach((event) => {
+      console.log(`send ${event.type} event to this new client`)
+      connection.write(stringifySourceEvent(event))
+    })
 
     return {
       status: 200,
@@ -110,7 +125,7 @@ export const createSSERoom = (
         "cache-control": "no-cache",
         connection: "keep-alive",
       },
-      body: stringifySourceEvent(joinEvent),
+      body: connection,
     }
   }
 
@@ -122,6 +137,9 @@ export const createSSERoom = (
 
   const sendEvent = (event) => {
     if (event.type !== "comment") {
+      console.log(
+        `send ${event.type} event, number of client listening event source: ${connections.size}`,
+      )
       event.id = lastEventId
       lastEventId++
       history.add(event)
@@ -131,9 +149,13 @@ export const createSSERoom = (
   }
 
   const keepAlive = () => {
+    // maybe that, when an event occurs, we can delay the keep alive event
+    console.log(
+      `send keep alive event, number of client listening event source: ${connections.size}`,
+    )
     sendEvent({
       type: "comment",
-      data: new Date(),
+      data: new Date().toLocaleTimeString(),
     })
   }
 

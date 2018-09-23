@@ -33,7 +33,7 @@
       },
       "skipFiles": [
         // skip node modules
-        "node_modules/**",
+        "node_modules/**"
         // skip node internals
         "<node_internals>/**/*.js"
       ]
