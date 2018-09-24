@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../src/openCompileServer/optimizer.js"],"names":["optimizer","script"],"mappings":";;;;;AAAA;;AAEO,IAAMA,gCAAY,SAAZA,SAAY,CAACC,MAAD;AAAA,SAAYA,MAAZ;AAAA,CAAlB","file":"optimizer.js","sourcesContent":["// nice to have https://prepack.io/getting-started.html#options\n\nexport const optimizer = (script) => script\n"]}

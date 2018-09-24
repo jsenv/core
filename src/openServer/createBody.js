@@ -124,10 +124,10 @@ const stringToArrayBuffer = (string) => {
   return buffer
 }
 
-export const createBody = (body) => {
+export const createBody = (data) => {
   const twoWayStream = createTwoWayStream()
 
-  const fill = (data) => {
+  if (data !== undefined) {
     if (isNodeStream(data)) {
       const nodeStream = data
 
@@ -145,12 +145,7 @@ export const createBody = (body) => {
       data.pipeTo(twoWayStream)
     } else {
       twoWayStream.write(data)
-      twoWayStream.close()
     }
-  }
-
-  if (body !== undefined) {
-    fill(body)
   }
 
   const readAsString = () => {

@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../src/sourceMapTest/comment-absolute-system/file.js"],"names":[],"mappings":";;;;;AAAA;;qBAEe,I","file":"file.js","sourcesContent":["debugger\n\nexport default true\n"]}

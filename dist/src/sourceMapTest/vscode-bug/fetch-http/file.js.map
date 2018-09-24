@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../../src/sourceMapTest/vscode-bug/fetch-http/file.js"],"names":["value","console","log"],"mappings":";;AAAA,IAAMA,QAAQ,IAAd;;AAEA;;AAEAC,QAAQC,GAAR,CAAYF,KAAZ","file":"file.js","sourcesContent":["const value = true\n\ndebugger\n\nconsole.log(value)\n"]}
