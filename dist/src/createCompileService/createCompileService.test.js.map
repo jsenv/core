@@ -1,1 +1,29 @@
-{"version":3,"sources":["../../../src/createCompileService/createCompileService.test.js"],"names":["projectRoot","resolve","__dirname","rootLocation","service","method","url","headers","then","properties","equal","status","console","log"],"mappings":";;AAAA;;;;AACA;;;;AACA;;AACA;;AACA;;;;AAEA,IAAMA,cAAc,kBAAKC,OAAL,CAAaC,SAAb,EAAwB,UAAxB,CAApB;;4BAEoB,iDAAqB;AACvCC,gBAAcH;AADyB,CAArB,C;IAAZI,O,yBAAAA,O;;AAIRA,QAAQ;AACNC,UAAQ,KADF;AAENC,OAAK,aAAQ,+BAAR,EAAyC,UAAzC,CAFC;AAGNC,WAAS;AAHH,CAAR,EAIGC,IAJH,CAIQ,UAACC,UAAD,EAAgB;AACtB,sBAAOC,KAAP,CAAaD,WAAWE,MAAxB,EAAgC,GAAhC;AACAC,UAAQC,GAAR,CAAY,IAAZ;AACD,CAPD;;AASAT,QAAQ;AACNC,UAAQ,KADF;AAENC,OAAK,aAAQ,mCAAR,EAA6C,UAA7C,CAFC;AAGNC,WAAS;AAHH,CAAR,EAIGC,IAJH,CAIQ,UAACC,UAAD,EAAgB;AACtB,sBAAOC,KAAP,CAAaD,WAAWE,MAAxB,EAAgC,GAAhC;AACAC,UAAQC,GAAR,CAAY,IAAZ;AACD,CAPD","file":"createCompileService.test.js","sourcesContent":["import assert from \"assert\"\nimport path from \"path\"\nimport { createCompileService } from \"./createCompileService.js\"\nimport { URL } from \"url\"\nimport { createHeaders } from \"../openServer/createHeaders.js\"\n\nconst projectRoot = path.resolve(__dirname, \"../../..\")\n\nconst { service } = createCompileService({\n  rootLocation: projectRoot,\n})\n\nservice({\n  method: \"GET\",\n  url: new URL(\"compiled/src/__test__/file.js\", \"file:///\"),\n  headers: createHeaders(),\n}).then((properties) => {\n  assert.equal(properties.status, 200)\n  console.log(\"ok\")\n})\n\nservice({\n  method: \"GET\",\n  url: new URL(\"compiled/src/__test__/file.js.map\", \"file:///\"),\n  headers: createHeaders(),\n}).then((properties) => {\n  assert.equal(properties.status, 200)\n  console.log(\"ok\")\n})\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/createCompileService/createCompileService.test.js"
+  ],
+  "names": [
+    "projectRoot",
+    "path",
+    "resolve",
+    "__dirname",
+    "service",
+    "rootLocation",
+    "method",
+    "url",
+    "URL",
+    "headers",
+    "then",
+    "properties",
+    "assert",
+    "equal",
+    "status",
+    "console",
+    "log"
+  ],
+  "mappings": ";;AAAA;;AACA;;AACA;;AACA;;AACA;;;;AAEA,MAAMA,WAAW,GAAGC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,UAAxB,CAApB;;AAEA,MAAM;AAAEC,EAAAA;AAAF,IAAc,gDAAqB;AACvCC,EAAAA,YAAY,EAAEL;AADyB,CAArB,CAApB;AAIAI,OAAO,CAAC;AACNE,EAAAA,MAAM,EAAE,KADF;AAENC,EAAAA,GAAG,EAAE,IAAIC,QAAJ,CAAQ,+BAAR,EAAyC,UAAzC,CAFC;AAGNC,EAAAA,OAAO,EAAE;AAHH,CAAD,CAAP,CAIGC,IAJH,CAISC,UAAD,IAAgB;AACtBC,kBAAOC,KAAP,CAAaF,UAAU,CAACG,MAAxB,EAAgC,GAAhC;;AACAC,EAAAA,OAAO,CAACC,GAAR,CAAY,IAAZ;AACD,CAPD;AASAZ,OAAO,CAAC;AACNE,EAAAA,MAAM,EAAE,KADF;AAENC,EAAAA,GAAG,EAAE,IAAIC,QAAJ,CAAQ,mCAAR,EAA6C,UAA7C,CAFC;AAGNC,EAAAA,OAAO,EAAE;AAHH,CAAD,CAAP,CAIGC,IAJH,CAISC,UAAD,IAAgB;AACtBC,kBAAOC,KAAP,CAAaF,UAAU,CAACG,MAAxB,EAAgC,GAAhC;;AACAC,EAAAA,OAAO,CAACC,GAAR,CAAY,IAAZ;AACD,CAPD",
+  "sourcesContent": [
+    "import assert from \"assert\"\nimport path from \"path\"\nimport { createCompileService } from \"./createCompileService.js\"\nimport { URL } from \"url\"\nimport { createHeaders } from \"../openServer/createHeaders.js\"\n\nconst projectRoot = path.resolve(__dirname, \"../../..\")\n\nconst { service } = createCompileService({\n  rootLocation: projectRoot,\n})\n\nservice({\n  method: \"GET\",\n  url: new URL(\"compiled/src/__test__/file.js\", \"file:///\"),\n  headers: createHeaders(),\n}).then((properties) => {\n  assert.equal(properties.status, 200)\n  console.log(\"ok\")\n})\n\nservice({\n  method: \"GET\",\n  url: new URL(\"compiled/src/__test__/file.js.map\", \"file:///\"),\n  headers: createHeaders(),\n}).then((properties) => {\n  assert.equal(properties.status, 200)\n  console.log(\"ok\")\n})\n"
+  ]
+}

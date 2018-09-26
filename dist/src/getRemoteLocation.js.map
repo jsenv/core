@@ -1,1 +1,15 @@
-{"version":3,"sources":["../../src/getRemoteLocation.js"],"names":["getRemoteLocation","compileURL","file"],"mappings":";;;;;AAAO,IAAMA,gDAAoB,SAApBA,iBAAoB,OAA0B;AAAA,MAAvBC,UAAuB,QAAvBA,UAAuB;AAAA,MAAXC,IAAW,QAAXA,IAAW;;AACzD,SAAUD,UAAV,SAAwBC,IAAxB;AACD,CAFM","file":"getRemoteLocation.js","sourcesContent":["export const getRemoteLocation = ({ compileURL, file }) => {\n  return `${compileURL}/${file}`\n}\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../src/getRemoteLocation.js"
+  ],
+  "names": [
+    "getRemoteLocation",
+    "compileURL",
+    "file"
+  ],
+  "mappings": ";;;;;;;AAAO,MAAMA,iBAAiB,GAAG,CAAC;AAAEC,EAAAA,UAAF;AAAcC,EAAAA;AAAd,CAAD,KAA0B;AACzD,SAAQ,GAAED,UAAW,IAAGC,IAAK,EAA7B;AACD,CAFM",
+  "sourcesContent": [
+    "export const getRemoteLocation = ({ compileURL, file }) => {\n  return `${compileURL}/${file}`\n}\n"
+  ]
+}

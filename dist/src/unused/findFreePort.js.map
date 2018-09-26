@@ -1,1 +1,34 @@
-{"version":3,"sources":["../../../src/unused/findFreePort.js"],"names":["findFreePort","ip","min","max","generateNext","port","test","Promise","resolve","reject","server","createServer","listen","on","close","error","code","testPort","then","free","Error"],"mappings":";;;;;;;AAAA;;;;;;AAEO,IAAMA,sCAAe,SAAfA,YAAe,GAEvB;AAAA,iFAD6E,EAC7E;AAAA,qBADDC,EACC;AAAA,MADDA,EACC,2BADI,WACJ;AAAA,sBADiBC,GACjB;AAAA,MADiBA,GACjB,4BADuB,CACvB;AAAA,sBAD0BC,GAC1B;AAAA,MAD0BA,GAC1B,4BADgC,KAChC;AAAA,+BADuCC,YACvC;AAAA,MADuCA,YACvC,qCADsD,UAACC,IAAD;AAAA,WAAUA,OAAO,CAAjB;AAAA,GACtD;;AACH,MAAMC,OAAO,SAAPA,IAAO,CAACD,IAAD,EAAOJ,EAAP,EAAc;AACzB,WAAO,IAAIM,OAAJ,CAAY,UAACC,OAAD,EAAUC,MAAV,EAAqB;AACtC,UAAMC,SAAS,iBAAIC,YAAJ,GAAmBC,MAAnB,CAA0BP,IAA1B,EAAgCJ,EAAhC,CAAf;AACAS,aAAOG,EAAP,CAAU,WAAV,EAAuB,YAAM;AAC3BH,eAAOI,KAAP,CAAa,YAAM;AACjBN,kBAAQ,IAAR;AACD,SAFD;AAGD,OAJD;AAKAE,aAAOG,EAAP,CAAU,OAAV,EAAmB,UAACE,KAAD,EAAW;AAC5B,YAAIA,SAASA,MAAMC,IAAN,KAAe,YAA5B,EAA0C;AACxC,iBAAOR,QAAQ,KAAR,CAAP;AACD;AACD,YAAIO,SAASA,MAAMC,IAAN,KAAe,QAA5B,EAAsC;AACpC,iBAAOR,QAAQ,KAAR,CAAP;AACD;AACD,eAAOC,OAAOM,KAAP,CAAP;AACD,OARD;AASD,KAhBM,CAAP;AAiBD,GAlBD;;AAoBA,MAAME,WAAW,SAAXA,QAAW,CAACZ,IAAD,EAAOJ,EAAP,EAAc;AAC7B,WAAOK,KAAKD,IAAL,EAAWJ,EAAX,EAAeiB,IAAf,CAAoB,UAACC,IAAD,EAAU;AACnC,UAAIA,IAAJ,EAAU;AACR,eAAOd,IAAP;AACD;AACDA,aAAOD,aAAaC,IAAb,CAAP;;AAEA,UAAIA,OAAOF,GAAX,EAAgB;AACd,cAAM,IAAIiB,KAAJ,gCAAuClB,GAAvC,aAAkDC,GAAlD,iBAAiEF,EAAjE,CAAN;AACD;;AAED,aAAOgB,SAASZ,IAAT,EAAeJ,EAAf,CAAP;AACD,KAXM,CAAP;AAYD,GAbD;;AAeA,SAAOgB,SAASf,GAAT,EAAcD,EAAd,CAAP;AACD,CAvCM","file":"findFreePort.js","sourcesContent":["import net from \"net\"\n\nexport const findFreePort = (\n  { ip = \"localhost\", min = 1, max = 65534, generateNext = (port) => port + 1 } = {},\n) => {\n  const test = (port, ip) => {\n    return new Promise((resolve, reject) => {\n      const server = net.createServer().listen(port, ip)\n      server.on(\"listening\", () => {\n        server.close(() => {\n          resolve(true)\n        })\n      })\n      server.on(\"error\", (error) => {\n        if (error && error.code === \"EADDRINUSE\") {\n          return resolve(false)\n        }\n        if (error && error.code === \"EACCES\") {\n          return resolve(false)\n        }\n        return reject(error)\n      })\n    })\n  }\n\n  const testPort = (port, ip) => {\n    return test(port, ip).then((free) => {\n      if (free) {\n        return port\n      }\n      port = generateNext(port)\n\n      if (port > max) {\n        throw new Error(`no available port between ${min} and ${max} with ip ${ip}`)\n      }\n\n      return testPort(port, ip)\n    })\n  }\n\n  return testPort(min, ip)\n}\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/unused/findFreePort.js"
+  ],
+  "names": [
+    "findFreePort",
+    "ip",
+    "min",
+    "max",
+    "generateNext",
+    "port",
+    "test",
+    "Promise",
+    "resolve",
+    "reject",
+    "server",
+    "net",
+    "createServer",
+    "listen",
+    "on",
+    "close",
+    "error",
+    "code",
+    "testPort",
+    "then",
+    "free",
+    "Error"
+  ],
+  "mappings": ";;;;;;;AAAA;;;;AAEO,MAAMA,YAAY,GAAG,CAC1B;AAAEC,EAAAA,EAAE,GAAG,WAAP;AAAoBC,EAAAA,GAAG,GAAG,CAA1B;AAA6BC,EAAAA,GAAG,GAAG,KAAnC;AAA0CC,EAAAA,YAAY,GAAIC,IAAD,IAAUA,IAAI,GAAG;AAA1E,IAAgF,EADtD,KAEvB;AACH,QAAMC,IAAI,GAAG,CAACD,IAAD,EAAOJ,EAAP,KAAc;AACzB,WAAO,IAAIM,OAAJ,CAAY,CAACC,OAAD,EAAUC,MAAV,KAAqB;AACtC,YAAMC,MAAM,GAAGC,aAAIC,YAAJ,GAAmBC,MAAnB,CAA0BR,IAA1B,EAAgCJ,EAAhC,CAAf;;AACAS,MAAAA,MAAM,CAACI,EAAP,CAAU,WAAV,EAAuB,MAAM;AAC3BJ,QAAAA,MAAM,CAACK,KAAP,CAAa,MAAM;AACjBP,UAAAA,OAAO,CAAC,IAAD,CAAP;AACD,SAFD;AAGD,OAJD;AAKAE,MAAAA,MAAM,CAACI,EAAP,CAAU,OAAV,EAAoBE,KAAD,IAAW;AAC5B,YAAIA,KAAK,IAAIA,KAAK,CAACC,IAAN,KAAe,YAA5B,EAA0C;AACxC,iBAAOT,OAAO,CAAC,KAAD,CAAd;AACD;;AACD,YAAIQ,KAAK,IAAIA,KAAK,CAACC,IAAN,KAAe,QAA5B,EAAsC;AACpC,iBAAOT,OAAO,CAAC,KAAD,CAAd;AACD;;AACD,eAAOC,MAAM,CAACO,KAAD,CAAb;AACD,OARD;AASD,KAhBM,CAAP;AAiBD,GAlBD;;AAoBA,QAAME,QAAQ,GAAG,CAACb,IAAD,EAAOJ,EAAP,KAAc;AAC7B,WAAOK,IAAI,CAACD,IAAD,EAAOJ,EAAP,CAAJ,CAAekB,IAAf,CAAqBC,IAAD,IAAU;AACnC,UAAIA,IAAJ,EAAU;AACR,eAAOf,IAAP;AACD;;AACDA,MAAAA,IAAI,GAAGD,YAAY,CAACC,IAAD,CAAnB;;AAEA,UAAIA,IAAI,GAAGF,GAAX,EAAgB;AACd,cAAM,IAAIkB,KAAJ,CAAW,6BAA4BnB,GAAI,QAAOC,GAAI,YAAWF,EAAG,EAApE,CAAN;AACD;;AAED,aAAOiB,QAAQ,CAACb,IAAD,EAAOJ,EAAP,CAAf;AACD,KAXM,CAAP;AAYD,GAbD;;AAeA,SAAOiB,QAAQ,CAAChB,GAAD,EAAMD,EAAN,CAAf;AACD,CAvCM",
+  "sourcesContent": [
+    "import net from \"net\"\n\nexport const findFreePort = (\n  { ip = \"localhost\", min = 1, max = 65534, generateNext = (port) => port + 1 } = {},\n) => {\n  const test = (port, ip) => {\n    return new Promise((resolve, reject) => {\n      const server = net.createServer().listen(port, ip)\n      server.on(\"listening\", () => {\n        server.close(() => {\n          resolve(true)\n        })\n      })\n      server.on(\"error\", (error) => {\n        if (error && error.code === \"EADDRINUSE\") {\n          return resolve(false)\n        }\n        if (error && error.code === \"EACCES\") {\n          return resolve(false)\n        }\n        return reject(error)\n      })\n    })\n  }\n\n  const testPort = (port, ip) => {\n    return test(port, ip).then((free) => {\n      if (free) {\n        return port\n      }\n      port = generateNext(port)\n\n      if (port > max) {\n        throw new Error(`no available port between ${min} and ${max} with ip ${ip}`)\n      }\n\n      return testPort(port, ip)\n    })\n  }\n\n  return testPort(min, ip)\n}\n"
+  ]
+}

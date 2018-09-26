@@ -1,1 +1,15 @@
-{"version":3,"sources":["../../../src/__test__/cjs.js"],"names":["require","module","exports"],"mappings":";;AAAAA,QAAQ,MAAR;;AAEAC,OAAOC,OAAP,GAAiB,KAAjB","file":"cjs.js","sourcesContent":["require(\"http\")\n\nmodule.exports = \"cjs\"\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/__test__/cjs.js"
+  ],
+  "names": [
+    "require",
+    "module",
+    "exports"
+  ],
+  "mappings": ";;AAAAA,OAAO,CAAC,MAAD,CAAP;;AAEAC,MAAM,CAACC,OAAP,GAAiB,KAAjB",
+  "sourcesContent": [
+    "require(\"http\")\n\nmodule.exports = \"cjs\"\n"
+  ]
+}

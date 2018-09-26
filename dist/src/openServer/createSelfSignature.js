@@ -3,29 +3,28 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createSelfSignature = undefined;
+exports.createSelfSignature = void 0;
 
-var _nodeForge = require("node-forge");
+var _nodeForge = _interopRequireDefault(require("node-forge"));
 
-var _nodeForge2 = _interopRequireDefault(_nodeForge);
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-var createSelfSignature = exports.createSelfSignature = function createSelfSignature() {
-  var pki = _nodeForge2["default"].pki;
-
-  var _pki$rsa$generateKeyP = pki.rsa.generateKeyPair(1024),
-      privateKey = _pki$rsa$generateKeyP.privateKey,
-      publicKey = _pki$rsa$generateKeyP.publicKey;
-
-  var cert = pki.createCertificate();
+// https://github.com/digitalbazaar/forge/blob/master/examples/create-cert.js
+const createSelfSignature = () => {
+  const {
+    pki
+  } = _nodeForge.default;
+  const {
+    privateKey,
+    publicKey
+  } = pki.rsa.generateKeyPair(1024);
+  const cert = pki.createCertificate();
   cert.publicKey = publicKey;
   cert.serialNumber = "01";
   cert.validity.notBefore = new Date();
   cert.validity.notAfter = new Date();
   cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 1);
-
-  var attrs = [{
+  const attrs = [{
     name: "commonName",
     value: "example.org"
   }, {
@@ -75,24 +74,28 @@ var createSelfSignature = exports.createSelfSignature = function createSelfSigna
   }, {
     name: "subjectAltName",
     altNames: [{
-      type: 6, // URI
+      type: 6,
+      // URI
       value: "http://example.org/webid#me"
     }, {
-      type: 7, // IP
+      type: 7,
+      // IP
       ip: "127.0.0.1"
     }]
   }, {
     name: "subjectKeyIdentifier"
-  }]);
-  // FIXME: add authorityKeyIdentifier extension
-
+  }]); // FIXME: add authorityKeyIdentifier extension
   // self-sign certificate
-  cert.sign(privateKey /* , forge.md.sha256.create()*/);
 
+  cert.sign(privateKey
+  /* , forge.md.sha256.create()*/
+  );
   return {
     privateKey: pki.privateKeyToPem(privateKey),
     publicKey: pki.publicKeyToPem(publicKey),
     certificate: pki.certificateToPem(cert)
   };
-}; // https://github.com/digitalbazaar/forge/blob/master/examples/create-cert.js
+};
+
+exports.createSelfSignature = createSelfSignature;
 //# sourceMappingURL=createSelfSignature.js.map

@@ -1,1 +1,13 @@
-{"version":3,"sources":["../../../src/createCompileService/ressourceRegistry.js"],"names":["lockForRessource"],"mappings":";;;;;;;AAAA;;0BAE6B,qC;IAArBA,gB,uBAAAA,gB;;QAECA,gB,GAAAA,gB","file":"ressourceRegistry.js","sourcesContent":["import { createLockRegistry } from \"../createLock/createLock.js\"\n\nconst { lockForRessource } = createLockRegistry()\n\nexport { lockForRessource }\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/createCompileService/ressourceRegistry.js"
+  ],
+  "names": [
+    "lockForRessource"
+  ],
+  "mappings": ";;;;;;;AAAA;;AAEA,MAAM;AAAEA,EAAAA;AAAF,IAAuB,qCAA7B",
+  "sourcesContent": [
+    "import { createLockRegistry } from \"../createLock/createLock.js\"\n\nconst { lockForRessource } = createLockRegistry()\n\nexport { lockForRessource }\n"
+  ]
+}

@@ -1,1 +1,21 @@
-{"version":3,"sources":["../../../src/openServer/createHeaders.test.js"],"names":["headersPOJO","foo","headers","equal","has","deepEqual","toJSON","get"],"mappings":";;AAAA;;AACA;;;;AACA;;;;AAEA,gBAAK,YAAM;AACT,MAAMA,cAAc;AAClB,sBAAkB,EADA;AAElBC,SAAK,CAAC,KAAD;AAFa,GAApB;AAIA,MAAMC,UAAU,kCAAcF,WAAd,CAAhB;;AAEA,sBAAOG,KAAP,CAAaD,QAAQE,GAAR,CAAY,gBAAZ,CAAb,EAA4C,IAA5C;AACA,sBAAOC,SAAP,CAAiBH,QAAQI,MAAR,EAAjB,EAAmCN,WAAnC;AACA,sBAAOG,KAAP,CAAaD,QAAQK,GAAR,CAAY,KAAZ,CAAb,EAAiC,KAAjC;AACD,CAVD","file":"createHeaders.test.js","sourcesContent":["import { test } from \"@dmail/test\"\nimport assert from \"assert\"\nimport { createHeaders } from \"./createHeaders.js\"\n\ntest(() => {\n  const headersPOJO = {\n    \"content-length\": 10,\n    foo: [\"bar\"],\n  }\n  const headers = createHeaders(headersPOJO)\n\n  assert.equal(headers.has(\"content-length\"), true)\n  assert.deepEqual(headers.toJSON(), headersPOJO)\n  assert.equal(headers.get(\"foo\"), \"bar\")\n})\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/openServer/createHeaders.test.js"
+  ],
+  "names": [
+    "headersPOJO",
+    "foo",
+    "headers",
+    "assert",
+    "equal",
+    "has",
+    "deepEqual",
+    "toJSON",
+    "get"
+  ],
+  "mappings": ";;AAAA;;AACA;;AACA;;;;AAEA,gBAAK,MAAM;AACT,QAAMA,WAAW,GAAG;AAClB,sBAAkB,EADA;AAElBC,IAAAA,GAAG,EAAE,CAAC,KAAD;AAFa,GAApB;AAIA,QAAMC,OAAO,GAAG,kCAAcF,WAAd,CAAhB;;AAEAG,kBAAOC,KAAP,CAAaF,OAAO,CAACG,GAAR,CAAY,gBAAZ,CAAb,EAA4C,IAA5C;;AACAF,kBAAOG,SAAP,CAAiBJ,OAAO,CAACK,MAAR,EAAjB,EAAmCP,WAAnC;;AACAG,kBAAOC,KAAP,CAAaF,OAAO,CAACM,GAAR,CAAY,KAAZ,CAAb,EAAiC,KAAjC;AACD,CAVD",
+  "sourcesContent": [
+    "import { test } from \"@dmail/test\"\nimport assert from \"assert\"\nimport { createHeaders } from \"./createHeaders.js\"\n\ntest(() => {\n  const headersPOJO = {\n    \"content-length\": 10,\n    foo: [\"bar\"],\n  }\n  const headers = createHeaders(headersPOJO)\n\n  assert.equal(headers.has(\"content-length\"), true)\n  assert.deepEqual(headers.toJSON(), headersPOJO)\n  assert.equal(headers.get(\"foo\"), \"bar\")\n})\n"
+  ]
+}

@@ -1,1 +1,49 @@
-{"version":3,"sources":["../../../src/createCompile/createCompile.test.js"],"names":["compile","instrumenter","createOptions","transpile","instrument","remapMethod","projectRoot","resolve","__dirname","filename","rootLocation","inputRelativeLocation","inputSource","readFileSync","toString","then","generate","outputRelativeLocation","output","outputAssets","global","System","register","dependencies","fn","execute","eval","collector","Collector","add","__coverage__","reporter","Reporter","write"],"mappings":";;AAAA;;AACA;;AACA;;;;AACA;;;;AACA;;;;;;AAEA,IAAMA,UAAU,kCAAc;AAC5BC,+CAD4B;AAE5BC,iBAAe,yBAAM;AACnB,WAAO;AACLC,iBAAW,IADN;AAELC,kBAAY,IAFP;AAGLC,mBAAa;AAHR,KAAP;AAKD;AAR2B,CAAd,CAAhB;;AAWA,IAAMC,cAAc,kBAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAApB;AACA,IAAMC,WAAcH,WAAd,+BAAN;;AAEAN,QAAQ;AACNU,gBAAcJ,WADR;AAENG,oBAFM;AAGNE,yBAAuB,2BAHjB;AAINC,eAAa,gBAAGC,YAAH,CAAgBJ,QAAhB,EAA0BK,QAA1B;AAJP,CAAR,EAKGC,IALH,CAKQ,gBAAkB;AAAA,MAAfC,QAAe,QAAfA,QAAe;;AACxB,SAAOA,SAAS;AACdC,4BAAwB;AADV,GAAT,EAEJF,IAFI,CAEC,iBAA8B;AAAA,QAA3BG,MAA2B,SAA3BA,MAA2B;AAAA,QAAnBC,YAAmB,SAAnBA,YAAmB;;AACpCC,WAAOC,MAAP,GAAgB;AACdC,gBAAU,kBAACC,YAAD,EAAeC,EAAf,EAAsB;AAC9BA,WAAG,YAAM,CAAE,CAAX,EAAa,EAAb,EAAiBC,OAAjB;AACD;AAHa,KAAhB;;AAMAC,SAAKR,MAAL;AACA,QAAMS,YAAY,IAAI,sBAASC,SAAb,EAAlB;AACAD,cAAUE,GAAV,CAAcT,OAAOU,YAArB;AACA;AACA,QAAMC,WAAW,IAAI,sBAASC,QAAb,EAAjB;;AAEAD,aAASF,GAAT,CAAa,MAAb;AACAE,aAASF,GAAT,CAAa,MAAb;AACAE,aAASE,KAAT,CAAeN,SAAf,EAA0B,KAA1B,EAAiC,YAAM,CAAE,CAAzC;AACD,GAlBM,CAAP;AAmBD,CAzBD","file":"createCompile.test.js","sourcesContent":["import { createCompile } from \"./createCompile.js\"\nimport { instrumenter } from \"./instrumenter-babel.js\"\nimport istanbul from \"istanbul\"\nimport fs from \"fs\"\nimport path from \"path\"\n\nconst compile = createCompile({\n  instrumenter,\n  createOptions: () => {\n    return {\n      transpile: true,\n      instrument: true,\n      remapMethod: \"comment\",\n    }\n  },\n})\n\nconst projectRoot = path.resolve(__dirname, \"../../../\")\nconst filename = `${projectRoot}/src/createCompile/file.js`\n\ncompile({\n  rootLocation: projectRoot,\n  filename,\n  inputRelativeLocation: \"src/createCompile/file.js\",\n  inputSource: fs.readFileSync(filename).toString(),\n}).then(({ generate }) => {\n  return generate({\n    outputRelativeLocation: \"file.compiled.js\",\n  }).then(({ output, outputAssets }) => {\n    global.System = {\n      register: (dependencies, fn) => {\n        fn(() => {}, {}).execute()\n      },\n    }\n\n    eval(output)\n    const collector = new istanbul.Collector()\n    collector.add(global.__coverage__)\n    // const finalCoverage = collector.getFinalCoverage()\n    const reporter = new istanbul.Reporter()\n\n    reporter.add(\"text\")\n    reporter.add(\"html\")\n    reporter.write(collector, false, () => {})\n  })\n})\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/createCompile/createCompile.test.js"
+  ],
+  "names": [
+    "compile",
+    "instrumenter",
+    "createOptions",
+    "transpile",
+    "instrument",
+    "remapMethod",
+    "projectRoot",
+    "path",
+    "resolve",
+    "__dirname",
+    "filename",
+    "rootLocation",
+    "inputRelativeLocation",
+    "inputSource",
+    "fs",
+    "readFileSync",
+    "toString",
+    "then",
+    "generate",
+    "outputRelativeLocation",
+    "output",
+    "outputAssets",
+    "global",
+    "System",
+    "register",
+    "dependencies",
+    "fn",
+    "execute",
+    "eval",
+    "collector",
+    "istanbul",
+    "Collector",
+    "add",
+    "__coverage__",
+    "reporter",
+    "Reporter",
+    "write"
+  ],
+  "mappings": ";;AAAA;;AACA;;AACA;;AACA;;AACA;;;;AAEA,MAAMA,OAAO,GAAG,kCAAc;AAC5BC,EAAAA,YAAY,EAAZA,+BAD4B;AAE5BC,EAAAA,aAAa,EAAE,MAAM;AACnB,WAAO;AACLC,MAAAA,SAAS,EAAE,IADN;AAELC,MAAAA,UAAU,EAAE,IAFP;AAGLC,MAAAA,WAAW,EAAE;AAHR,KAAP;AAKD;AAR2B,CAAd,CAAhB;;AAWA,MAAMC,WAAW,GAAGC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAApB;;AACA,MAAMC,QAAQ,GAAI,GAAEJ,WAAY,4BAAhC;AAEAN,OAAO,CAAC;AACNW,EAAAA,YAAY,EAAEL,WADR;AAENI,EAAAA,QAFM;AAGNE,EAAAA,qBAAqB,EAAE,2BAHjB;AAINC,EAAAA,WAAW,EAAEC,YAAGC,YAAH,CAAgBL,QAAhB,EAA0BM,QAA1B;AAJP,CAAD,CAAP,CAKGC,IALH,CAKQ,CAAC;AAAEC,EAAAA;AAAF,CAAD,KAAkB;AACxB,SAAOA,QAAQ,CAAC;AACdC,IAAAA,sBAAsB,EAAE;AADV,GAAD,CAAR,CAEJF,IAFI,CAEC,CAAC;AAAEG,IAAAA,MAAF;AAAUC,IAAAA;AAAV,GAAD,KAA8B;AACpCC,IAAAA,MAAM,CAACC,MAAP,GAAgB;AACdC,MAAAA,QAAQ,EAAE,CAACC,YAAD,EAAeC,EAAf,KAAsB;AAC9BA,QAAAA,EAAE,CAAC,MAAM,CAAE,CAAT,EAAW,EAAX,CAAF,CAAiBC,OAAjB;AACD;AAHa,KAAhB;AAMAC,IAAAA,IAAI,CAACR,MAAD,CAAJ;AACA,UAAMS,SAAS,GAAG,IAAIC,kBAASC,SAAb,EAAlB;AACAF,IAAAA,SAAS,CAACG,GAAV,CAAcV,MAAM,CAACW,YAArB,EAToC,CAUpC;;AACA,UAAMC,QAAQ,GAAG,IAAIJ,kBAASK,QAAb,EAAjB;AAEAD,IAAAA,QAAQ,CAACF,GAAT,CAAa,MAAb;AACAE,IAAAA,QAAQ,CAACF,GAAT,CAAa,MAAb;AACAE,IAAAA,QAAQ,CAACE,KAAT,CAAeP,SAAf,EAA0B,KAA1B,EAAiC,MAAM,CAAE,CAAzC;AACD,GAlBM,CAAP;AAmBD,CAzBD",
+  "sourcesContent": [
+    "import { createCompile } from \"./createCompile.js\"\nimport { instrumenter } from \"./instrumenter-babel.js\"\nimport istanbul from \"istanbul\"\nimport fs from \"fs\"\nimport path from \"path\"\n\nconst compile = createCompile({\n  instrumenter,\n  createOptions: () => {\n    return {\n      transpile: true,\n      instrument: true,\n      remapMethod: \"comment\",\n    }\n  },\n})\n\nconst projectRoot = path.resolve(__dirname, \"../../../\")\nconst filename = `${projectRoot}/src/createCompile/file.js`\n\ncompile({\n  rootLocation: projectRoot,\n  filename,\n  inputRelativeLocation: \"src/createCompile/file.js\",\n  inputSource: fs.readFileSync(filename).toString(),\n}).then(({ generate }) => {\n  return generate({\n    outputRelativeLocation: \"file.compiled.js\",\n  }).then(({ output, outputAssets }) => {\n    global.System = {\n      register: (dependencies, fn) => {\n        fn(() => {}, {}).execute()\n      },\n    }\n\n    eval(output)\n    const collector = new istanbul.Collector()\n    collector.add(global.__coverage__)\n    // const finalCoverage = collector.getFinalCoverage()\n    const reporter = new istanbul.Reporter()\n\n    reporter.add(\"text\")\n    reporter.add(\"html\")\n    reporter.write(collector, false, () => {})\n  })\n})\n"
+  ]
+}

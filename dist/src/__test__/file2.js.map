@@ -1,1 +1,14 @@
-{"version":3,"sources":["../../../src/__test__/file2.js"],"names":["console","log"],"mappings":";;AAAA;;AAEA;;AAEAA,QAAQC,GAAR,CAAY,QAAZ","file":"file2.js","sourcesContent":["import \"./file.js\"\n\ndebugger\n\nconsole.log(\"YESSSS\")\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/__test__/file2.js"
+  ],
+  "names": [
+    "console",
+    "log"
+  ],
+  "mappings": ";;AAAA;;AAEA;AAEAA,OAAO,CAACC,GAAR,CAAY,QAAZ",
+  "sourcesContent": [
+    "import \"./file.js\"\n\ndebugger\n\nconsole.log(\"YESSSS\")\n"
+  ]
+}

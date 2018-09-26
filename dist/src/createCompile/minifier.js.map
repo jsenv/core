@@ -1,1 +1,33 @@
-{"version":3,"sources":["../../../src/createCompile/minifier.js"],"names":["minifier","rootLocation","inputSource","inputAst","inputSourceMap","options","outputSourceMapName","babelConfig","sourceMaps","remap","root","babelrc","ast","code","map","outputSource","outputSourceMap","outputAst","outputAssets","JSON","stringify"],"mappings":";;;;;;;AAAA;;AAKA;;;;AAEO,IAAMA,8BAAW,SAAXA,QAAW,OAOlB;AAAA,MANJC,YAMI,QANJA,YAMI;AAAA,MALJC,WAKI,QALJA,WAKI;AAAA,MAJJC,QAII,QAJJA,QAII;AAAA,MAHJC,cAGI,QAHJA,cAGI;AAAA,MAFJC,OAEI,QAFJA,OAEI;AAAA,MADJC,mBACI,QADJA,mBACI;;AACJ,MAAMC,cAAc,yBAClB,yBAAa,kCAAb,EAAqC;AACnCC,gBAAYH,QAAQI,KADe;AAEnCL,kCAFmC;AAGnCM,UAAMT,YAH6B;AAInCU,aAAS,KAJ0B,EAInB;AAChBC,SAAK;AAL8B,GAArC,CADkB,CAApB;;AAUA,MAAIT,QAAJ,EAAc;AAAA,4BACe,iCAAiBA,QAAjB,EAA2BD,WAA3B,EAAwCK,WAAxC,CADf;AAAA,QACJM,KADI,qBACJA,IADI;AAAA,QACED,IADF,qBACEA,GADF;AAAA,QACOE,IADP,qBACOA,GADP;;AAEZ,WAAO;AACLC,oBAAcF,KADT;AAELG,uBAAiBF,IAFZ;AAGLG,iBAAWL,IAHN;AAILM,wCACGZ,mBADH,EACyBa,KAAKC,SAAL,CAAeN,IAAf,EAAoB,IAApB,EAA0B,IAA1B,CADzB;AAJK,KAAP;AAQD;;AArBG,mBAuBuB,0BAAUZ,WAAV,EAAuBK,WAAvB,CAvBvB;AAAA,MAuBIM,IAvBJ,cAuBIA,IAvBJ;AAAA,MAuBUD,GAvBV,cAuBUA,GAvBV;AAAA,MAuBeE,GAvBf,cAuBeA,GAvBf;;AAwBJ,SAAO;AACLC,kBAAcF,IADT;AAELG,qBAAiBF,GAFZ;AAGLG,eAAWL,GAHN;AAILM,sCACGZ,mBADH,EACyBa,KAAKC,SAAL,CAAeN,GAAf,EAAoB,IAApB,EAA0B,IAA1B,CADzB;AAJK,GAAP;AAQD,CAvCM","file":"minifier.js","sourcesContent":["import {\n  createConfig,\n  createMinifiyOptions,\n  mergeOptions,\n} from \"@dmail/shared-config/dist/babel.js\"\nimport { transform, transformFromAst } from \"babel-core\"\n\nexport const minifier = ({\n  rootLocation,\n  inputSource,\n  inputAst,\n  inputSourceMap,\n  options,\n  outputSourceMapName,\n}) => {\n  const babelConfig = createConfig(\n    mergeOptions(createMinifiyOptions(), {\n      sourceMaps: options.remap,\n      inputSourceMap,\n      root: rootLocation,\n      babelrc: false, // trust only these options, do not read any babelrc config file\n      ast: true,\n    }),\n  )\n\n  if (inputAst) {\n    const { code, ast, map } = transformFromAst(inputAst, inputSource, babelConfig)\n    return {\n      outputSource: code,\n      outputSourceMap: map,\n      outputAst: ast,\n      outputAssets: {\n        [outputSourceMapName]: JSON.stringify(map, null, \"  \"),\n      },\n    }\n  }\n\n  const { code, ast, map } = transform(inputSource, babelConfig)\n  return {\n    outputSource: code,\n    outputSourceMap: map,\n    outputAst: ast,\n    outputAssets: {\n      [outputSourceMapName]: JSON.stringify(map, null, \"  \"),\n    },\n  }\n}\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/createCompile/minifier.js"
+  ],
+  "names": [
+    "minifier",
+    "rootLocation",
+    "inputSource",
+    "inputAst",
+    "inputSourceMap",
+    "options",
+    "outputSourceMapName",
+    "babelConfig",
+    "sourceMaps",
+    "remap",
+    "root",
+    "babelrc",
+    "ast",
+    "code",
+    "map",
+    "outputSource",
+    "outputSourceMap",
+    "outputAst",
+    "outputAssets",
+    "JSON",
+    "stringify"
+  ],
+  "mappings": ";;;;;;;AAAA;;AAKA;;AAEO,MAAMA,QAAQ,GAAG,CAAC;AACvBC,EAAAA,YADuB;AAEvBC,EAAAA,WAFuB;AAGvBC,EAAAA,QAHuB;AAIvBC,EAAAA,cAJuB;AAKvBC,EAAAA,OALuB;AAMvBC,EAAAA;AANuB,CAAD,KAOlB;AACJ,QAAMC,WAAW,GAAG,yBAClB,yBAAa,kCAAb,EAAqC;AACnCC,IAAAA,UAAU,EAAEH,OAAO,CAACI,KADe;AAEnCL,IAAAA,cAFmC;AAGnCM,IAAAA,IAAI,EAAET,YAH6B;AAInCU,IAAAA,OAAO,EAAE,KAJ0B;AAInB;AAChBC,IAAAA,GAAG,EAAE;AAL8B,GAArC,CADkB,CAApB;;AAUA,MAAIT,QAAJ,EAAc;AACZ,UAAM;AAAEU,MAAAA,IAAF;AAAQD,MAAAA,GAAR;AAAaE,MAAAA;AAAb,QAAqB,iCAAiBX,QAAjB,EAA2BD,WAA3B,EAAwCK,WAAxC,CAA3B;AACA,WAAO;AACLQ,MAAAA,YAAY,EAAEF,IADT;AAELG,MAAAA,eAAe,EAAEF,GAFZ;AAGLG,MAAAA,SAAS,EAAEL,GAHN;AAILM,MAAAA,YAAY,EAAE;AACZ,SAACZ,mBAAD,GAAuBa,IAAI,CAACC,SAAL,CAAeN,GAAf,EAAoB,IAApB,EAA0B,IAA1B;AADX;AAJT,KAAP;AAQD;;AAED,QAAM;AAAED,IAAAA,IAAF;AAAQD,IAAAA,GAAR;AAAaE,IAAAA;AAAb,MAAqB,0BAAUZ,WAAV,EAAuBK,WAAvB,CAA3B;AACA,SAAO;AACLQ,IAAAA,YAAY,EAAEF,IADT;AAELG,IAAAA,eAAe,EAAEF,GAFZ;AAGLG,IAAAA,SAAS,EAAEL,GAHN;AAILM,IAAAA,YAAY,EAAE;AACZ,OAACZ,mBAAD,GAAuBa,IAAI,CAACC,SAAL,CAAeN,GAAf,EAAoB,IAApB,EAA0B,IAA1B;AADX;AAJT,GAAP;AAQD,CAvCM",
+  "sourcesContent": [
+    "import {\n  createConfig,\n  createMinifiyOptions,\n  mergeOptions,\n} from \"@dmail/shared-config/dist/babel.js\"\nimport { transform, transformFromAst } from \"babel-core\"\n\nexport const minifier = ({\n  rootLocation,\n  inputSource,\n  inputAst,\n  inputSourceMap,\n  options,\n  outputSourceMapName,\n}) => {\n  const babelConfig = createConfig(\n    mergeOptions(createMinifiyOptions(), {\n      sourceMaps: options.remap,\n      inputSourceMap,\n      root: rootLocation,\n      babelrc: false, // trust only these options, do not read any babelrc config file\n      ast: true,\n    }),\n  )\n\n  if (inputAst) {\n    const { code, ast, map } = transformFromAst(inputAst, inputSource, babelConfig)\n    return {\n      outputSource: code,\n      outputSourceMap: map,\n      outputAst: ast,\n      outputAssets: {\n        [outputSourceMapName]: JSON.stringify(map, null, \"  \"),\n      },\n    }\n  }\n\n  const { code, ast, map } = transform(inputSource, babelConfig)\n  return {\n    outputSource: code,\n    outputSourceMap: map,\n    outputAst: ast,\n    outputAssets: {\n      [outputSourceMapName]: JSON.stringify(map, null, \"  \"),\n    },\n  }\n}\n"
+  ]
+}

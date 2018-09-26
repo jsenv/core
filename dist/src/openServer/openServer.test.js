@@ -2,28 +2,24 @@
 
 var _test = require("@dmail/test");
 
-var _assert = require("assert");
+var _assert = _interopRequireDefault(require("assert"));
 
-var _assert2 = _interopRequireDefault(_assert);
-
-var _nodeFetch = require("node-fetch");
-
-var _nodeFetch2 = _interopRequireDefault(_nodeFetch);
+var _nodeFetch = _interopRequireDefault(require("node-fetch"));
 
 var _openServer = require("./openServer.js");
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-(0, _test.test)(function () {
+(0, _test.test)(() => {
   return (0, _openServer.openServer)({
     url: "http://127.0.0.1:8998"
-  }).then(function (_ref) {
-    var addRequestHandler = _ref.addRequestHandler,
-        url = _ref.url,
-        agent = _ref.agent,
-        close = _ref.close;
-
-    addRequestHandler(function () {
+  }).then(({
+    addRequestHandler,
+    url,
+    agent,
+    close
+  }) => {
+    addRequestHandler(() => {
       return {
         status: 200,
         headers: {
@@ -33,18 +29,17 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "d
       };
     });
 
-    _assert2["default"].equal(String(url), "http://127.0.0.1:8998/");
+    _assert.default.equal(String(url), "http://127.0.0.1:8998/");
 
-    return (0, _nodeFetch2["default"])(url, { agent: agent }).then(function (response) {
-      return response.text();
-    }).then(function (text) {
-      _assert2["default"].equal(text, "ok");
+    return (0, _nodeFetch.default)(url, {
+      agent
+    }).then(response => response.text()).then(text => {
+      _assert.default.equal(text, "ok");
+
       return close();
     });
   });
-});
-
-// ici on testera que quand on kill le child à différent moment
+}); // ici on testera que quand on kill le child à différent moment
 // on obtient bien la réponse attendu coté client
 // test(() => {
 // 	return startServer({

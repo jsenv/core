@@ -3,19 +3,13 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var guardAsync = exports.guardAsync = function guardAsync(fn, shield) {
-  return function () {
-    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
+exports.guard = exports.guardAsync = void 0;
 
-    return Promise.resolve().then(function () {
-      return shield.apply(undefined, args);
-    }).then(function (shielded) {
-      return shielded ? undefined : fn.apply(undefined, args);
-    });
-  };
+const guardAsync = (fn, shield) => (...args) => {
+  return Promise.resolve().then(() => shield(...args)).then(shielded => shielded ? undefined : fn(...args));
 };
 
-var guard = exports.guard = guardAsync;
+exports.guardAsync = guardAsync;
+const guard = guardAsync;
+exports.guard = guard;
 //# sourceMappingURL=guard.js.map

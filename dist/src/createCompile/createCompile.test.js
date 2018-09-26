@@ -4,23 +4,17 @@ var _createCompile = require("./createCompile.js");
 
 var _instrumenterBabel = require("./instrumenter-babel.js");
 
-var _istanbul = require("istanbul");
+var _istanbul = _interopRequireDefault(require("istanbul"));
 
-var _istanbul2 = _interopRequireDefault(_istanbul);
+var _fs = _interopRequireDefault(require("fs"));
 
-var _fs = require("fs");
+var _path = _interopRequireDefault(require("path"));
 
-var _fs2 = _interopRequireDefault(_fs);
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var _path = require("path");
-
-var _path2 = _interopRequireDefault(_path);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-var compile = (0, _createCompile.createCompile)({
+const compile = (0, _createCompile.createCompile)({
   instrumenter: _instrumenterBabel.instrumenter,
-  createOptions: function createOptions() {
+  createOptions: () => {
     return {
       transpile: true,
       instrument: true,
@@ -29,38 +23,36 @@ var compile = (0, _createCompile.createCompile)({
   }
 });
 
-var projectRoot = _path2["default"].resolve(__dirname, "../../../");
-var filename = projectRoot + "/src/createCompile/file.js";
+const projectRoot = _path.default.resolve(__dirname, "../../../");
 
+const filename = `${projectRoot}/src/createCompile/file.js`;
 compile({
   rootLocation: projectRoot,
-  filename: filename,
+  filename,
   inputRelativeLocation: "src/createCompile/file.js",
-  inputSource: _fs2["default"].readFileSync(filename).toString()
-}).then(function (_ref) {
-  var generate = _ref.generate;
-
+  inputSource: _fs.default.readFileSync(filename).toString()
+}).then(({
+  generate
+}) => {
   return generate({
     outputRelativeLocation: "file.compiled.js"
-  }).then(function (_ref2) {
-    var output = _ref2.output,
-        outputAssets = _ref2.outputAssets;
-
+  }).then(({
+    output,
+    outputAssets
+  }) => {
     global.System = {
-      register: function register(dependencies, fn) {
-        fn(function () {}, {}).execute();
+      register: (dependencies, fn) => {
+        fn(() => {}, {}).execute();
       }
     };
-
     eval(output);
-    var collector = new _istanbul2["default"].Collector();
-    collector.add(global.__coverage__);
-    // const finalCoverage = collector.getFinalCoverage()
-    var reporter = new _istanbul2["default"].Reporter();
+    const collector = new _istanbul.default.Collector();
+    collector.add(global.__coverage__); // const finalCoverage = collector.getFinalCoverage()
 
+    const reporter = new _istanbul.default.Reporter();
     reporter.add("text");
     reporter.add("html");
-    reporter.write(collector, false, function () {});
+    reporter.write(collector, false, () => {});
   });
 });
 //# sourceMappingURL=createCompile.test.js.map

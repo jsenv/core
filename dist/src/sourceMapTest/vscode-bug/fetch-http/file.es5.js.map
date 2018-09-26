@@ -1,1 +1,0 @@
-{"version":3,"sources":["../../../../../src/sourceMapTest/vscode-bug/fetch-http/file.es5.js"],"names":["value","console","log"],"mappings":";;AAAA,IAAIA,QAAQ,IAAZ;;AAEA;;AAEAC,QAAQC,GAAR,CAAYF,KAAZ;AACA","file":"file.es5.js","sourcesContent":["var value = true\n\ndebugger\n\nconsole.log(value)\n//# sourceMappingURL=http://127.0.0.1:8567/file.es5.js.map\n"]}

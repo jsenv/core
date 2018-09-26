@@ -1,1 +1,35 @@
-{"version":3,"sources":["../../../src/openChromiumClient/openChromiumClient.test.js"],"names":["url","rootLocation","resolve","__dirname","instrument","then","server","cleanAll","compileURL","headless","chromiumClient","execute","file","autoClose","collectCoverage","promise","close","value","console","log","reason","error"],"mappings":";;AAAA;;;;AACA;;AACA;;;;AAEA;;AAEA;AACA,0CAAkB;AAChBA,OAAK,uBADW;AAEhBC,gBAAc,kBAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAFE;AAGhBC,cAAY,KAHI,CAGG;AAHH,CAAlB,EAIGC,IAJH,CAIQ,UAACC,MAAD,EAAY;AAClB,MAAMC,WAAW,KAAjB;;AAEA,SAAO,4CAAmB;AACxBD,kBADwB;AAExBE,gBAAYF,OAAOE,UAFK;AAGxBC,cAAU;AAHc,GAAnB,EAIJJ,IAJI,CAIC,UAACK,cAAD,EAAoB;AAC1BA,mBACGC,OADH,CACW;AACPC,uCADO;AAEPC,iBAAWN,QAFJ;AAGPO,uBAAiB;AAHV,KADX,EAMGT,IANH,CAMQ,gBAAwB;AAAA,UAArBU,OAAqB,QAArBA,OAAqB;AAAA,UAAZC,KAAY,QAAZA,KAAY;;AAC5BD,cAAQV,IAAR,CACE,UAACY,KAAD,EAAW;AACT,YAAIV,QAAJ,EAAc;AACZS;AACAV,iBAAOU,KAAP;AACD;AACDE,gBAAQC,GAAR,CAAY,qBAAZ,EAAmCF,KAAnC;AACD,OAPH,EAQE,UAACG,MAAD,EAAY;AACV,YAAIb,QAAJ,EAAc;AACZS;AACAV,iBAAOU,KAAP;AACD;AACDE,gBAAQG,KAAR,CAAc,iBAAd,EAAiCD,MAAjC;AACD,OAdH;AAgBD,KAvBH;AAwBD,GA7BM,CAAP;AA8BD,CArCD","file":"openChromiumClient.test.js","sourcesContent":["import path from \"path\"\nimport { openCompileServer } from \"../openCompileServer/openCompileServer.js\"\nimport { openChromiumClient } from \"./openChromiumClient.js\"\n\n// System.import('http://127.0.0.1:9656/compiled/src/__test__/file.js')\n\n// retester\nopenCompileServer({\n  url: \"http://127.0.0.1:9656\",\n  rootLocation: path.resolve(__dirname, \"../../../\"),\n  instrument: false, // apparently it breaks sourcempa, to be tested\n}).then((server) => {\n  const cleanAll = false\n\n  return openChromiumClient({\n    server,\n    compileURL: server.compileURL,\n    headless: false,\n  }).then((chromiumClient) => {\n    chromiumClient\n      .execute({\n        file: `src/__test__/file.test.js`,\n        autoClose: cleanAll,\n        collectCoverage: true,\n      })\n      .then(({ promise, close }) => {\n        promise.then(\n          (value) => {\n            if (cleanAll) {\n              close()\n              server.close()\n            }\n            console.log(\"execution done with\", value)\n          },\n          (reason) => {\n            if (cleanAll) {\n              close()\n              server.close()\n            }\n            console.error(\"execution error\", reason)\n          },\n        )\n      })\n  })\n})\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/openChromiumClient/openChromiumClient.test.js"
+  ],
+  "names": [
+    "url",
+    "rootLocation",
+    "path",
+    "resolve",
+    "__dirname",
+    "instrument",
+    "then",
+    "server",
+    "cleanAll",
+    "compileURL",
+    "headless",
+    "chromiumClient",
+    "execute",
+    "file",
+    "autoClose",
+    "collectCoverage",
+    "promise",
+    "close",
+    "value",
+    "console",
+    "log",
+    "reason",
+    "error"
+  ],
+  "mappings": ";;AAAA;;AACA;;AACA;;;;AAEA;AAEA;AACA,0CAAkB;AAChBA,EAAAA,GAAG,EAAE,uBADW;AAEhBC,EAAAA,YAAY,EAAEC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAFE;AAGhBC,EAAAA,UAAU,EAAE,KAHI,CAGG;;AAHH,CAAlB,EAIGC,IAJH,CAISC,MAAD,IAAY;AAClB,QAAMC,QAAQ,GAAG,KAAjB;AAEA,SAAO,4CAAmB;AACxBD,IAAAA,MADwB;AAExBE,IAAAA,UAAU,EAAEF,MAAM,CAACE,UAFK;AAGxBC,IAAAA,QAAQ,EAAE;AAHc,GAAnB,EAIJJ,IAJI,CAIEK,cAAD,IAAoB;AAC1BA,IAAAA,cAAc,CACXC,OADH,CACW;AACPC,MAAAA,IAAI,EAAG,2BADA;AAEPC,MAAAA,SAAS,EAAEN,QAFJ;AAGPO,MAAAA,eAAe,EAAE;AAHV,KADX,EAMGT,IANH,CAMQ,CAAC;AAAEU,MAAAA,OAAF;AAAWC,MAAAA;AAAX,KAAD,KAAwB;AAC5BD,MAAAA,OAAO,CAACV,IAAR,CACGY,KAAD,IAAW;AACT,YAAIV,QAAJ,EAAc;AACZS,UAAAA,KAAK;AACLV,UAAAA,MAAM,CAACU,KAAP;AACD;;AACDE,QAAAA,OAAO,CAACC,GAAR,CAAY,qBAAZ,EAAmCF,KAAnC;AACD,OAPH,EAQGG,MAAD,IAAY;AACV,YAAIb,QAAJ,EAAc;AACZS,UAAAA,KAAK;AACLV,UAAAA,MAAM,CAACU,KAAP;AACD;;AACDE,QAAAA,OAAO,CAACG,KAAR,CAAc,iBAAd,EAAiCD,MAAjC;AACD,OAdH;AAgBD,KAvBH;AAwBD,GA7BM,CAAP;AA8BD,CArCD",
+  "sourcesContent": [
+    "import path from \"path\"\nimport { openCompileServer } from \"../openCompileServer/openCompileServer.js\"\nimport { openChromiumClient } from \"./openChromiumClient.js\"\n\n// System.import('http://127.0.0.1:9656/compiled/src/__test__/file.js')\n\n// retester\nopenCompileServer({\n  url: \"http://127.0.0.1:9656\",\n  rootLocation: path.resolve(__dirname, \"../../../\"),\n  instrument: false, // apparently it breaks sourcempa, to be tested\n}).then((server) => {\n  const cleanAll = false\n\n  return openChromiumClient({\n    server,\n    compileURL: server.compileURL,\n    headless: false,\n  }).then((chromiumClient) => {\n    chromiumClient\n      .execute({\n        file: `src/__test__/file.test.js`,\n        autoClose: cleanAll,\n        collectCoverage: true,\n      })\n      .then(({ promise, close }) => {\n        promise.then(\n          (value) => {\n            if (cleanAll) {\n              close()\n              server.close()\n            }\n            console.log(\"execution done with\", value)\n          },\n          (reason) => {\n            if (cleanAll) {\n              close()\n              server.close()\n            }\n            console.error(\"execution error\", reason)\n          },\n        )\n      })\n  })\n})\n"
+  ]
+}

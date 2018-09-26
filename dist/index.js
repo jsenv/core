@@ -3,9 +3,43 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createModuleRunner = exports.run = exports.openChromiumClient = exports.openBrowserServer = exports.openCompileServer = exports.createCoverageFromTestReport = exports.testProject = undefined;
-
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+Object.defineProperty(exports, "openChromiumClient", {
+  enumerable: true,
+  get: function () {
+    return _openChromiumClient.openChromiumClient;
+  }
+});
+Object.defineProperty(exports, "openCompileServer", {
+  enumerable: true,
+  get: function () {
+    return _openCompileServer.openCompileServer;
+  }
+});
+Object.defineProperty(exports, "openBrowserServer", {
+  enumerable: true,
+  get: function () {
+    return _openBrowserServer.openBrowserServer;
+  }
+});
+Object.defineProperty(exports, "testProject", {
+  enumerable: true,
+  get: function () {
+    return _coverFolder.testProject;
+  }
+});
+Object.defineProperty(exports, "createCoverageFromTestReport", {
+  enumerable: true,
+  get: function () {
+    return _coverFolder.createCoverageFromTestReport;
+  }
+});
+Object.defineProperty(exports, "run", {
+  enumerable: true,
+  get: function () {
+    return _run.run;
+  }
+});
+exports.createModuleRunner = void 0;
 
 var _openChromiumClient = require("./src/openChromiumClient/openChromiumClient.js");
 
@@ -19,20 +53,15 @@ var _coverFolder = require("./src/coverFolder/coverFolder.js");
 
 var _run = require("./src/run/run.js");
 
-function _objectWithoutProperties(obj, keys) { var target = {}; for (var i in obj) { if (keys.indexOf(i) >= 0) continue; if (!Object.prototype.hasOwnProperty.call(obj, i)) continue; target[i] = obj[i]; } return target; } // https://github.com/jsenv/core/blob/master/src/api/api.js
-// https://github.com/ModuleLoader/system-register-loader/blob/master/src/system-register-loader.js
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
 
-// pour le coverage
-// https://github.com/jsenv/core/blob/master/more/test/playground/coverage/run.js
-// https://github.com/jsenv/core/blob/master/more/to-externalize/module-cover/index.js
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-exports.testProject = _coverFolder.testProject;
-exports.createCoverageFromTestReport = _coverFolder.createCoverageFromTestReport;
-exports.openCompileServer = _openCompileServer.openCompileServer;
-exports.openBrowserServer = _openBrowserServer.openBrowserServer;
-exports.openChromiumClient = _openChromiumClient.openChromiumClient;
-exports.run = _run.run;
-var createModuleRunner = function createModuleRunner(params) {
+function _objectWithoutProperties(source, excluded) { if (source == null) return {}; var target = _objectWithoutPropertiesLoose(source, excluded); var key, i; if (Object.getOwnPropertySymbols) { var sourceSymbolKeys = Object.getOwnPropertySymbols(source); for (i = 0; i < sourceSymbolKeys.length; i++) { key = sourceSymbolKeys[i]; if (excluded.indexOf(key) >= 0) continue; if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue; target[key] = source[key]; } } return target; }
+
+function _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }
+
+const createModuleRunner = params => {
   // if there is already a compileServer running for that location
   // they will work as long as the code which created them run in the same terminal
   // if two terminal spawns a server trying to compile a given project they will concurrently
@@ -42,43 +71,47 @@ var createModuleRunner = function createModuleRunner(params) {
   // - save somewhere the port used for that specific project and reuse when existing
   // save used port is the easiest solution but we'll ignore this issue for now
   // and assume noone will try to open two server for the same location
-
-  return (0, _openCompileServer.openCompileServer)(params).then(function (server) {
-    var runInsideNode = function runInsideNode(_ref) {
-      var file = _ref.file,
+  return (0, _openCompileServer.openCompileServer)(params).then(server => {
+    const runInsideNode = (_ref) => {
+      let {
+        file
+      } = _ref,
           rest = _objectWithoutProperties(_ref, ["file"]);
 
-      return (0, _openNodeClient.openNodeClient)({ server: server }).then(function (nodeClient) {
+      return (0, _openNodeClient.openNodeClient)({
+        server
+      }).then(nodeClient => {
         // we should return a way to close?
-        return nodeClient.execute(_extends({
-          file: file
+        return nodeClient.execute(_objectSpread({
+          file
         }, rest));
       });
     };
 
-    var runInsideChromium = function runInsideChromium(_ref2) {
-      var file = _ref2.file,
-          _ref2$headless = _ref2.headless,
-          headless = _ref2$headless === undefined ? true : _ref2$headless,
-          _ref2$cover = _ref2.cover,
-          cover = _ref2$cover === undefined ? false : _ref2$cover;
-
+    const runInsideChromium = ({
+      file,
+      headless = true,
+      cover = false
+    }) => {
       return (0, _openChromiumClient.openChromiumClient)({
         compileURL: server.compileURL,
-        headless: headless
-      }).then(function (chromiumClient) {
+        headless
+      }).then(chromiumClient => {
         return chromiumClient.execute({
-          file: file,
+          file,
           collectCoverage: cover
-        }).then(function (_ref3) {
-          var promise = _ref3.promise;
-          return promise;
-        });
+        }).then(({
+          promise
+        }) => promise);
       });
     };
 
-    return { runInsideNode: runInsideNode, runInsideChromium: runInsideChromium };
+    return {
+      runInsideNode,
+      runInsideChromium
+    };
   });
 };
+
 exports.createModuleRunner = createModuleRunner;
 //# sourceMappingURL=index.js.map

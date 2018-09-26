@@ -1,1 +1,13 @@
-{"version":3,"sources":["../../../src/__test__/file-with-node-es6-import.js"],"names":[],"mappings":";;;;;;AAAA","file":"file-with-node-es6-import.js","sourcesContent":["import bbb from \"./node_modules/bbb/index.js\"\n\nexport default bbb\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/__test__/file-with-node-es6-import.js"
+  ],
+  "names": [
+    "bbb"
+  ],
+  "mappings": ";;;;;;;AAAA;;;;eAEeA,c",
+  "sourcesContent": [
+    "import bbb from \"./node_modules/bbb/index.js\"\n\nexport default bbb\n"
+  ]
+}

@@ -1,1 +1,23 @@
-{"version":3,"sources":["../../../src/unused/memoizer.js"],"names":["memoize","fn","set","get","identify","memoized","args","id","then","valid","value"],"mappings":";;;;;AAAA;;;;;;;;;AASO,IAAMA,4BAAU,SAAVA,OAAU,OAAgC;AAAA,MAA7BC,EAA6B,QAA7BA,EAA6B;AAAA,MAAzBC,GAAyB,QAAzBA,GAAyB;AAAA,MAApBC,GAAoB,QAApBA,GAAoB;AAAA,MAAfC,QAAe,QAAfA,QAAe;;AACrD,MAAMC,WAAW,SAAXA,QAAW,GAAa;AAAA,sCAATC,IAAS;AAATA,UAAS;AAAA;;AAC5B,QAAMC,KAAKH,SAASE,IAAT,CAAX;AACA,WAAOH,IAAII,EAAJ,EAAQC,IAAR,CAAa,iBAAsB;AAAA,UAAnBC,KAAmB,SAAnBA,KAAmB;AAAA,UAAZC,KAAY,SAAZA,KAAY;;AACxC,UAAID,KAAJ,EAAW;AACT,eAAOC,KAAP;AACD;AACD,aAAOT,oBAAMK,IAAN,EAAYE,IAAZ,CAAiB,UAACE,KAAD,EAAW;AACjC,eAAOR,IAAIK,EAAJ,EAAQG,KAAR,EAAeF,IAAf,CAAoB;AAAA,iBAAME,KAAN;AAAA,SAApB,CAAP;AACD,OAFM,CAAP;AAGD,KAPM,CAAP;AAQD,GAVD;;AAYA,SAAOL,QAAP;AACD,CAdM","file":"memoizer.js","sourcesContent":["/*\n\non pourras largemtent s'inspirer de:\n\nhttps://github.com/jsenv/core/blob/959e76068b62c23d7047f6a8c7a3d6582ac25177/src/api/util/store.js\nhttps://github.com/jsenv/core/blob/959e76068b62c23d7047f6a8c7a3d6582ac25177/src/api/util/memoize.js\n\n*/\n\nexport const memoize = ({ fn, set, get, identify }) => {\n  const memoized = (...args) => {\n    const id = identify(args)\n    return get(id).then(({ valid, value }) => {\n      if (valid) {\n        return value\n      }\n      return fn(...args).then((value) => {\n        return set(id, value).then(() => value)\n      })\n    })\n  }\n\n  return memoized\n}\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/unused/memoizer.js"
+  ],
+  "names": [
+    "memoize",
+    "fn",
+    "set",
+    "get",
+    "identify",
+    "memoized",
+    "args",
+    "id",
+    "then",
+    "valid",
+    "value"
+  ],
+  "mappings": ";;;;;;;AAAA;;;;;;;;AASO,MAAMA,OAAO,GAAG,CAAC;AAAEC,EAAAA,EAAF;AAAMC,EAAAA,GAAN;AAAWC,EAAAA,GAAX;AAAgBC,EAAAA;AAAhB,CAAD,KAAgC;AACrD,QAAMC,QAAQ,GAAG,CAAC,GAAGC,IAAJ,KAAa;AAC5B,UAAMC,EAAE,GAAGH,QAAQ,CAACE,IAAD,CAAnB;AACA,WAAOH,GAAG,CAACI,EAAD,CAAH,CAAQC,IAAR,CAAa,CAAC;AAAEC,MAAAA,KAAF;AAASC,MAAAA;AAAT,KAAD,KAAsB;AACxC,UAAID,KAAJ,EAAW;AACT,eAAOC,KAAP;AACD;;AACD,aAAOT,EAAE,CAAC,GAAGK,IAAJ,CAAF,CAAYE,IAAZ,CAAkBE,KAAD,IAAW;AACjC,eAAOR,GAAG,CAACK,EAAD,EAAKG,KAAL,CAAH,CAAeF,IAAf,CAAoB,MAAME,KAA1B,CAAP;AACD,OAFM,CAAP;AAGD,KAPM,CAAP;AAQD,GAVD;;AAYA,SAAOL,QAAP;AACD,CAdM",
+  "sourcesContent": [
+    "/*\n\non pourras largemtent s'inspirer de:\n\nhttps://github.com/jsenv/core/blob/959e76068b62c23d7047f6a8c7a3d6582ac25177/src/api/util/store.js\nhttps://github.com/jsenv/core/blob/959e76068b62c23d7047f6a8c7a3d6582ac25177/src/api/util/memoize.js\n\n*/\n\nexport const memoize = ({ fn, set, get, identify }) => {\n  const memoized = (...args) => {\n    const id = identify(args)\n    return get(id).then(({ valid, value }) => {\n      if (valid) {\n        return value\n      }\n      return fn(...args).then((value) => {\n        return set(id, value).then(() => value)\n      })\n    })\n  }\n\n  return memoized\n}\n"
+  ]
+}

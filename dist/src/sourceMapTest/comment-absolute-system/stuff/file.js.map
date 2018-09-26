@@ -1,1 +1,0 @@
-{"version":3,"sources":["../../../../../src/sourceMapTest/comment-absolute-system/stuff/file.js"],"names":["value"],"mappings":";;;;;AAAA,IAAMA,QAAQ,IAAd;;AAEA;;qBAEeA,K","file":"file.js","sourcesContent":["const value = true\n\ndebugger\n\nexport default value\n"]}

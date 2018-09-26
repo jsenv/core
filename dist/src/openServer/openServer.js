@@ -3,15 +3,11 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.listenRequest = exports.openServer = undefined;
+exports.listenRequest = exports.openServer = void 0;
 
-var _http = require("http");
+var _http = _interopRequireDefault(require("http"));
 
-var _http2 = _interopRequireDefault(_http);
-
-var _https = require("https");
-
-var _https2 = _interopRequireDefault(_https);
+var _https = _interopRequireDefault(require("https"));
 
 var _url = require("url");
 
@@ -23,102 +19,106 @@ var _createNodeRequestHandler = require("./createNodeRequestHandler.js");
 
 var _signal = require("@dmail/signal");
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // import { addNodeExceptionHandler } from "./addNodeExceptionHandler.js"
-var REASON_CLOSING = "closing";
+const REASON_CLOSING = "closing";
 
-var openServer = exports.openServer = function openServer() {
-  var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-      _ref$url = _ref.url,
-      url = _ref$url === undefined ? "https://127.0.0.1:0" : _ref$url,
-      _ref$getSignature = _ref.getSignature,
-      getSignature = _ref$getSignature === undefined ? _createSelfSignature.createSelfSignature : _ref$getSignature,
-      _ref$autoCloseOnExit = _ref.autoCloseOnExit,
-      autoCloseOnExit = _ref$autoCloseOnExit === undefined ? true : _ref$autoCloseOnExit,
-      _ref$autoCloseOnCrash = _ref.autoCloseOnCrash,
-      autoCloseOnCrash = _ref$autoCloseOnCrash === undefined ? true : _ref$autoCloseOnCrash,
-      _ref$autoCloseOnError = _ref.autoCloseOnError,
-      autoCloseOnError = _ref$autoCloseOnError === undefined ? true : _ref$autoCloseOnError;
-
+const openServer = ({
+  // by default listen localhost on a random port in https
+  url = "https://127.0.0.1:0",
+  // when port is https you must provide privateKey & certificate
+  getSignature = _createSelfSignature.createSelfSignature,
+  // auto close the server when the process exits (terminal closed, ctrl + C, ...)
+  autoCloseOnExit = true,
+  // auto close the server when an uncaughtException happens
+  // false by default because evenwith my strategy to react on uncaughtException
+  // stack trace is messed up and I don't like to have code executed on error
+  autoCloseOnCrash = true,
+  // auto close when server respond with a 500
+  autoCloseOnError = true
+} = {}) => {
   url = new _url.URL(url);
-
-  var protocol = url.protocol;
-  var hostname = url.hostname;
+  const protocol = url.protocol;
+  const hostname = url.hostname;
 
   if (hostname === "0.0.0.0" && process.platform === "win32") {
     // https://github.com/nodejs/node/issues/14900
-    throw new Error("listening " + hostname + " any not available on window");
+    throw new Error(`listening ${hostname} any not available on window`);
   }
 
-  var nodeServer = void 0;
-  var agent = void 0;
+  let nodeServer;
+  let agent;
+
   if (protocol === "http:") {
-    nodeServer = _http2["default"].createServer();
+    nodeServer = _http.default.createServer();
     agent = global.Agent;
   } else if (protocol === "https:") {
-    var _getSignature = getSignature(),
-        privateKey = _getSignature.privateKey,
-        certificate = _getSignature.certificate;
-
-    nodeServer = _https2["default"].createServer({
+    const {
+      privateKey,
+      certificate
+    } = getSignature();
+    nodeServer = _https.default.createServer({
       key: privateKey,
       cert: certificate
     });
-    agent = new _https2["default"].Agent({
+    agent = new _https.default.Agent({
       rejectUnauthorized: false // allow self signed certificate
+
     });
   } else {
-    throw new Error("unsupported protocol " + protocol);
+    throw new Error(`unsupported protocol ${protocol}`);
   }
 
-  var port = url.port;
-
-  var connections = new Set();
-  nodeServer.on("connection", function (connection) {
-    connection.on("close", function () {
-      connections["delete"](connection);
+  const port = url.port;
+  const connections = new Set();
+  nodeServer.on("connection", connection => {
+    connection.on("close", () => {
+      connections.delete(connection);
     });
     connections.add(connection);
   });
+  const requestHandlers = [];
 
-  var requestHandlers = [];
-  var addInternalRequestHandler = function addInternalRequestHandler(handler) {
+  const addInternalRequestHandler = handler => {
     requestHandlers.push(handler);
     nodeServer.on("request", handler);
-    return function () {
+    return () => {
       nodeServer.removeListener("request", handler);
     };
   };
 
-  var addRequestHandler = function addRequestHandler(handler, transform) {
-    var nodeRequestHandler = (0, _createNodeRequestHandler.createNodeRequestHandler)({ handler: handler, transform: transform, url: url });
+  const addRequestHandler = (handler, transform) => {
+    const nodeRequestHandler = (0, _createNodeRequestHandler.createNodeRequestHandler)({
+      handler,
+      transform,
+      url
+    });
     return addInternalRequestHandler(nodeRequestHandler);
   };
 
-  var clients = new Set();
+  const clients = new Set();
 
-  var closeClients = function closeClients(_ref2) {
-    var isError = _ref2.isError,
-        reason = _ref2.reason;
+  const closeClients = ({
+    isError,
+    reason
+  }) => {
+    let status;
 
-    var status = void 0;
     if (isError) {
-      status = 500;
-      // reason = 'shutdown because error'
+      status = 500; // reason = 'shutdown because error'
     } else {
-      status = 503;
-      // reason = 'unavailable because closing'
+      status = 503; // reason = 'unavailable because closing'
     }
 
-    return Promise.all(Array.from(clients).map(function (_ref3) {
-      var nodeResponse = _ref3.nodeResponse;
-
+    return Promise.all(Array.from(clients).map(({
+      nodeResponse
+    }) => {
       if (nodeResponse.headersSent === false) {
         nodeResponse.writeHead(status, reason);
       }
 
-      return new Promise(function (resolve) {
+      return new Promise(resolve => {
         if (nodeResponse.finished === false) {
           nodeResponse.on("finish", resolve);
           nodeResponse.on("error", resolve);
@@ -130,29 +130,28 @@ var openServer = exports.openServer = function openServer() {
     }));
   };
 
-  addInternalRequestHandler(function (nodeRequest, nodeResponse) {
-    var client = { nodeRequest: nodeRequest, nodeResponse: nodeResponse };
-
+  addInternalRequestHandler((nodeRequest, nodeResponse) => {
+    const client = {
+      nodeRequest,
+      nodeResponse
+    };
     clients.add(client);
-    nodeResponse.on("finish", function () {
-      clients["delete"](client);
+    nodeResponse.on("finish", () => {
+      clients.delete(client);
     });
-  });
-
-  // nodeServer.on("upgrade", (request, socket, head) => {
+  }); // nodeServer.on("upgrade", (request, socket, head) => {
   //   // when being requested using a websocket
   //   // we could also answr to the request ?
   //   // socket.end([data][, encoding])
-
   //   console.log("upgrade", { head, request })
   //   console.log("socket", { connecting: socket.connecting, destroyed: socket.destroyed })
   // })
 
-  var status = "opening";
+  let status = "opening";
 
-  var listen = function listen() {
-    return new Promise(function (resolve, reject) {
-      nodeServer.listen(port, hostname, function (error) {
+  const listen = () => {
+    return new Promise((resolve, reject) => {
+      nodeServer.listen(port, hostname, error => {
         if (error) {
           reject(error);
         } else {
@@ -162,47 +161,40 @@ var openServer = exports.openServer = function openServer() {
     });
   };
 
-  var closed = (0, _signal.createSignal)();
-
-  return listen().then(function () {
-    status = "opened";
-
-    // in case port is 0 (randomly assign an available port)
+  const closed = (0, _signal.createSignal)();
+  return listen().then(() => {
+    status = "opened"; // in case port is 0 (randomly assign an available port)
     // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-    var port = nodeServer.address().port;
+
+    const port = nodeServer.address().port;
     url.port = port;
 
-    var closeConnections = function closeConnections(reason) {
+    const closeConnections = reason => {
       // should we do this async ?
       // should we do this before closing the server ?
-      connections.forEach(function (connection) {
+      connections.forEach(connection => {
         connection.destroy(reason);
       });
     };
 
-    var close = function close() {
-      var _ref4 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-          _ref4$isError = _ref4.isError,
-          isError = _ref4$isError === undefined ? false : _ref4$isError,
-          _ref4$reason = _ref4.reason,
-          reason = _ref4$reason === undefined ? REASON_CLOSING : _ref4$reason;
-
+    let close = ({
+      isError = false,
+      reason = REASON_CLOSING
+    } = {}) => {
       if (status !== "opened") {
-        throw new Error("server status must be \"opened\" during close() (got " + status);
-      }
+        throw new Error(`server status must be "opened" during close() (got ${status}`);
+      } // ensure we don't try to handle request while server is closing
 
-      // ensure we don't try to handle request while server is closing
-      requestHandlers.forEach(function (requestHandler) {
+
+      requestHandlers.forEach(requestHandler => {
         nodeServer.removeListener("request", requestHandler);
       });
       requestHandlers.length = 0;
-
       status = "closing";
-
-      return new Promise(function (resolve, reject) {
+      return new Promise((resolve, reject) => {
         // closing server prevent it from accepting new connections
         // but opened connection must be shutdown before the close event is emitted
-        nodeServer.once("close", function (error) {
+        nodeServer.once("close", error => {
           if (error) {
             reject(error);
           } else {
@@ -210,17 +202,20 @@ var openServer = exports.openServer = function openServer() {
           }
         });
         nodeServer.close();
-        closeClients({ isError: isError, reason: reason }).then(function () {
+        closeClients({
+          isError,
+          reason
+        }).then(() => {
           closeConnections(reason);
         });
-      }).then(function () {
+      }).then(() => {
         status = "closed";
         closed.emit();
       });
     };
 
     if (autoCloseOnError) {
-      var removeAutoCloseOnError = addInternalRequestHandler(function (nodeRequest, nodeResponse) {
+      const removeAutoCloseOnError = addInternalRequestHandler((nodeRequest, nodeResponse) => {
         if (nodeResponse.statusCode === 500) {
           close({
             isError: true,
@@ -231,26 +226,29 @@ var openServer = exports.openServer = function openServer() {
           });
         }
       });
-      var wrappedClose = close;
-      close = function close() {
+      const wrappedClose = close;
+
+      close = (...args) => {
         removeAutoCloseOnError();
-        return wrappedClose.apply(undefined, arguments);
+        return wrappedClose(...args);
       };
     }
 
     if (autoCloseOnExit) {
-      var removeTeardown = (0, _processTeardown.processTeardown)(function (exitReason) {
-        close({ reason: "server process exiting " + exitReason });
+      const removeTeardown = (0, _processTeardown.processTeardown)(exitReason => {
+        close({
+          reason: `server process exiting ${exitReason}`
+        });
       });
-      var _wrappedClose = close;
-      close = function close() {
+      const wrappedClose = close;
+
+      close = (...args) => {
         removeTeardown();
-        return _wrappedClose.apply(undefined, arguments);
+        return wrappedClose(...args);
       };
     }
 
-    if (autoCloseOnCrash) {
-      // and if we do that we have to remove the listener
+    if (autoCloseOnCrash) {// and if we do that we have to remove the listener
       // while closing to avoid closing twice in case
       // addNodeExceptionHandler((exception) => {
       //   return close({ reason: exception }).then(
@@ -261,17 +259,21 @@ var openServer = exports.openServer = function openServer() {
     }
 
     return {
-      url: url,
-      nodeServer: nodeServer,
-      addRequestHandler: addRequestHandler,
-      agent: agent,
-      close: close,
-      closed: closed
+      url,
+      nodeServer,
+      addRequestHandler,
+      agent,
+      close,
+      closed
     };
   });
 };
 
-var listenRequest = exports.listenRequest = function listenRequest(nodeServer, requestHandler) {
+exports.openServer = openServer;
+
+const listenRequest = (nodeServer, requestHandler) => {
   nodeServer.on("request", requestHandler);
 };
+
+exports.listenRequest = listenRequest;
 //# sourceMappingURL=openServer.js.map

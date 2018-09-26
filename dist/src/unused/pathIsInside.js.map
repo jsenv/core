@@ -1,1 +1,26 @@
-{"version":3,"sources":["../../../src/unused/pathIsInside.js"],"names":["normalizeSep","path","replace","stripTrailingSep","thePath","length","slice","pathIsInside","potentialParent","process","platform","toLowerCase","lastIndexOf","undefined"],"mappings":";;;;;AAAA,IAAMA,eAAe,SAAfA,YAAe,CAACC,IAAD;AAAA,SAAUA,KAAKC,OAAL,CAAa,KAAb,EAAoB,GAApB,CAAV;AAAA,CAArB;;AAEA,IAAMC,mBAAmB,SAAnBA,gBAAmB,CAACC,OAAD,EAAa;AACpC,MAAIA,QAAQA,QAAQC,MAAR,GAAiB,CAAzB,MAAgC,GAApC,EAAyC;AACvC,WAAOD,QAAQE,KAAR,CAAc,CAAd,EAAiB,CAAC,CAAlB,CAAP;AACD;AACD,SAAOF,OAAP;AACD,CALD;;AAOO,IAAMG,sCAAe,SAAfA,YAAe,CAACH,OAAD,EAAUI,eAAV,EAA8B;AACxDJ,YAAUJ,aAAaI,OAAb,CAAV;AACAI,oBAAkBR,aAAaQ,eAAb,CAAlB;;AAEA;AACAJ,YAAUD,iBAAiBC,OAAjB,CAAV;AACAI,oBAAkBL,iBAAiBK,eAAjB,CAAlB;;AAEA;AACA,MAAIC,QAAQC,QAAR,KAAqB,OAAzB,EAAkC;AAChCN,cAAUA,QAAQO,WAAR,EAAV;AACAH,sBAAkBA,gBAAgBG,WAAhB,EAAlB;AACD;;AAED,SACEP,QAAQQ,WAAR,CAAoBJ,eAApB,EAAqC,CAArC,MAA4C,CAA5C,KACCJ,QAAQI,gBAAgBH,MAAxB,MAAoC,GAApC,IAA2CD,QAAQI,gBAAgBH,MAAxB,MAAoCQ,SADhF,CADF;AAID,CAlBM","file":"pathIsInside.js","sourcesContent":["const normalizeSep = (path) => path.replace(/\\\\/g, \"/\")\n\nconst stripTrailingSep = (thePath) => {\n  if (thePath[thePath.length - 1] === \"/\") {\n    return thePath.slice(0, -1)\n  }\n  return thePath\n}\n\nexport const pathIsInside = (thePath, potentialParent) => {\n  thePath = normalizeSep(thePath)\n  potentialParent = normalizeSep(potentialParent)\n\n  // For inside-directory checking, we want to allow trailing slashes, so normalize.\n  thePath = stripTrailingSep(thePath)\n  potentialParent = stripTrailingSep(potentialParent)\n\n  // Node treats only Windows as case-insensitive in its path module; we follow those conventions.\n  if (process.platform === \"win32\") {\n    thePath = thePath.toLowerCase()\n    potentialParent = potentialParent.toLowerCase()\n  }\n\n  return (\n    thePath.lastIndexOf(potentialParent, 0) === 0 &&\n    (thePath[potentialParent.length] === \"/\" || thePath[potentialParent.length] === undefined)\n  )\n}\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/unused/pathIsInside.js"
+  ],
+  "names": [
+    "normalizeSep",
+    "path",
+    "replace",
+    "stripTrailingSep",
+    "thePath",
+    "length",
+    "slice",
+    "pathIsInside",
+    "potentialParent",
+    "process",
+    "platform",
+    "toLowerCase",
+    "lastIndexOf",
+    "undefined"
+  ],
+  "mappings": ";;;;;;;AAAA,MAAMA,YAAY,GAAIC,IAAD,IAAUA,IAAI,CAACC,OAAL,CAAa,KAAb,EAAoB,GAApB,CAA/B;;AAEA,MAAMC,gBAAgB,GAAIC,OAAD,IAAa;AACpC,MAAIA,OAAO,CAACA,OAAO,CAACC,MAAR,GAAiB,CAAlB,CAAP,KAAgC,GAApC,EAAyC;AACvC,WAAOD,OAAO,CAACE,KAAR,CAAc,CAAd,EAAiB,CAAC,CAAlB,CAAP;AACD;;AACD,SAAOF,OAAP;AACD,CALD;;AAOO,MAAMG,YAAY,GAAG,CAACH,OAAD,EAAUI,eAAV,KAA8B;AACxDJ,EAAAA,OAAO,GAAGJ,YAAY,CAACI,OAAD,CAAtB;AACAI,EAAAA,eAAe,GAAGR,YAAY,CAACQ,eAAD,CAA9B,CAFwD,CAIxD;;AACAJ,EAAAA,OAAO,GAAGD,gBAAgB,CAACC,OAAD,CAA1B;AACAI,EAAAA,eAAe,GAAGL,gBAAgB,CAACK,eAAD,CAAlC,CANwD,CAQxD;;AACA,MAAIC,OAAO,CAACC,QAAR,KAAqB,OAAzB,EAAkC;AAChCN,IAAAA,OAAO,GAAGA,OAAO,CAACO,WAAR,EAAV;AACAH,IAAAA,eAAe,GAAGA,eAAe,CAACG,WAAhB,EAAlB;AACD;;AAED,SACEP,OAAO,CAACQ,WAAR,CAAoBJ,eAApB,EAAqC,CAArC,MAA4C,CAA5C,KACCJ,OAAO,CAACI,eAAe,CAACH,MAAjB,CAAP,KAAoC,GAApC,IAA2CD,OAAO,CAACI,eAAe,CAACH,MAAjB,CAAP,KAAoCQ,SADhF,CADF;AAID,CAlBM",
+  "sourcesContent": [
+    "const normalizeSep = (path) => path.replace(/\\\\/g, \"/\")\n\nconst stripTrailingSep = (thePath) => {\n  if (thePath[thePath.length - 1] === \"/\") {\n    return thePath.slice(0, -1)\n  }\n  return thePath\n}\n\nexport const pathIsInside = (thePath, potentialParent) => {\n  thePath = normalizeSep(thePath)\n  potentialParent = normalizeSep(potentialParent)\n\n  // For inside-directory checking, we want to allow trailing slashes, so normalize.\n  thePath = stripTrailingSep(thePath)\n  potentialParent = stripTrailingSep(potentialParent)\n\n  // Node treats only Windows as case-insensitive in its path module; we follow those conventions.\n  if (process.platform === \"win32\") {\n    thePath = thePath.toLowerCase()\n    potentialParent = potentialParent.toLowerCase()\n  }\n\n  return (\n    thePath.lastIndexOf(potentialParent, 0) === 0 &&\n    (thePath[potentialParent.length] === \"/\" || thePath[potentialParent.length] === undefined)\n  )\n}\n"
+  ]
+}

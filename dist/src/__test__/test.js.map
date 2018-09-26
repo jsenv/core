@@ -1,1 +1,15 @@
-{"version":3,"sources":["../../../src/__test__/test.js"],"names":["console","log"],"mappings":";;AAAA;;AAEAA,QAAQC,GAAR,CAAY,cAAZ;;AAEA;AACA;AACA;;AAEA;AACA;AACA;;AAEA;AACA;AACA;AACA;AACA;;AAEA;AACA;AACA;AACA;AACA;;AAEA;AACA;AACA;AACA;AACA;;AAEA;AACA;AACA;AACA;AACA","file":"test.js","sourcesContent":["import { createSignal } from \"../../node_modules/@dmail/signal/index.js\"\n\nconsole.log(\"createSignal\", createSignal)\n\n// import { test } from \"../../node_modules/@dmail/test/index.js\"\n// import { fromPromise } from \"../../node_modules/@dmail/action/index.js\"\n// import assert from \"assert\"\n\n// const testImport = (relativeFileLocation) => {\n//   return fromPromise(global.System.import(relativeFileLocation))\n// }\n\n// test(() => {\n//   return testImport(\"./file.js\").then((bindings) => {\n//     assert.equal(bindings.default, true)\n//   })\n// })\n\n// test.skip(() => {\n//   return testImport(\"./file-with-node-es6-import.js\").then((bindings) => {\n//     assert.equal(bindings.default, \"aaabbb\")\n//   })\n// })\n\n// test.skip(() => {\n//   return testImport(\"./file-with-relative-cjs-import.js\").then((bindings) => {\n//     assert.equal(bindings.default, \"cjs\")\n//   })\n// })\n\n// test.skip(() => {\n//   return testImport(\"./file-cjs-and-native-require.js\").then((bindings) => {\n//     assert.equal(bindings.default, \"createServer\")\n//   })\n// })\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/__test__/test.js"
+  ],
+  "names": [
+    "console",
+    "log",
+    "createSignal"
+  ],
+  "mappings": ";;AAAA;;AAEAA,OAAO,CAACC,GAAR,CAAY,cAAZ,EAA4BC,mBAA5B,E,CAEA;AACA;AACA;AAEA;AACA;AACA;AAEA;AACA;AACA;AACA;AACA;AAEA;AACA;AACA;AACA;AACA;AAEA;AACA;AACA;AACA;AACA;AAEA;AACA;AACA;AACA;AACA",
+  "sourcesContent": [
+    "import { createSignal } from \"../../node_modules/@dmail/signal/index.js\"\n\nconsole.log(\"createSignal\", createSignal)\n\n// import { test } from \"../../node_modules/@dmail/test/index.js\"\n// import { fromPromise } from \"../../node_modules/@dmail/action/index.js\"\n// import assert from \"assert\"\n\n// const testImport = (relativeFileLocation) => {\n//   return fromPromise(global.System.import(relativeFileLocation))\n// }\n\n// test(() => {\n//   return testImport(\"./file.js\").then((bindings) => {\n//     assert.equal(bindings.default, true)\n//   })\n// })\n\n// test.skip(() => {\n//   return testImport(\"./file-with-node-es6-import.js\").then((bindings) => {\n//     assert.equal(bindings.default, \"aaabbb\")\n//   })\n// })\n\n// test.skip(() => {\n//   return testImport(\"./file-with-relative-cjs-import.js\").then((bindings) => {\n//     assert.equal(bindings.default, \"cjs\")\n//   })\n// })\n\n// test.skip(() => {\n//   return testImport(\"./file-cjs-and-native-require.js\").then((bindings) => {\n//     assert.equal(bindings.default, \"createServer\")\n//   })\n// })\n"
+  ]
+}

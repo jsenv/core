@@ -1,1 +1,26 @@
-{"version":3,"sources":["../../../src/openNodeClient/ensureSystem.js"],"names":["memoize","fn","called","memoizedValue","ensureSystem","localRoot","forceFilesystem","getFilename","key","location","filename","System","global"],"mappings":";;;;;;;AAAA;;AAEA,IAAMA,UAAU,SAAVA,OAAU,CAACC,EAAD,EAAQ;AACtB,MAAIC,SAAS,KAAb;AACA,MAAIC,sBAAJ;AACA,SAAO,YAAa;AAClB,QAAID,MAAJ,EAAY;AACV,aAAOC,aAAP;AACD;AACDA,oBAAgBF,8BAAhB;AACAC,aAAS,IAAT;AACA,WAAOC,aAAP;AACD,GAPD;AAQD,CAXD;;AAaO,IAAMC,sCAAeJ,QAAQ,gBAA2C;AAAA,MAAxCK,SAAwC,QAAxCA,SAAwC;AAAA,kCAA7BC,eAA6B;AAAA,MAA7BA,eAA6B,wCAAX,IAAW;;AAC7E;AACA;AACA;AACA;AACA;;AAEA,MAAMC,cAAc,SAAdA,WAAc,CAACC,GAAD,EAAMC,QAAN,EAAmB;AACrC,QAAIH,eAAJ,EAAqB;AACnB;;AAEA;AACA;;AAEA;AACA,UAAMI,WAAcL,SAAd,SAA2BI,QAAjC;;AAEA,aAAOC,QAAP;AACD;AACD,WAAOF,GAAP;AACD,GAbD;;AAeA,MAAMG,SAAS,6BAAiB;AAC9BJ;AAD8B,GAAjB,CAAf;;AAIAK,SAAOD,MAAP,GAAgBA,MAAhB;;AAEA,SAAOA,MAAP;AACD,CA7B2B,CAArB","file":"ensureSystem.js","sourcesContent":["import { createNodeLoader } from \"@dmail/module-loader/src/node/index.js\"\n\nconst memoize = (fn) => {\n  let called = false\n  let memoizedValue\n  return (...args) => {\n    if (called) {\n      return memoizedValue\n    }\n    memoizedValue = fn(...args)\n    called = true\n    return memoizedValue\n  }\n}\n\nexport const ensureSystem = memoize(({ localRoot, forceFilesystem = true }) => {\n  // when System.import evaluates the code it has fetched\n  // it uses require('vm').runInThisContext(code, { filename }).\n  // This filename is very important because it allows the engine to be able\n  // to resolve source map location inside evaluated code like //# sourceMappingURL=./file.js.map\n  // and also to know where the file is to resolve other file when evaluating code\n\n  const getFilename = (key, location) => {\n    if (forceFilesystem) {\n      // try to force filesystem resolution\n\n      // replace https://ip:port/folder/file.js -> /Users/dmail/folder/file.js\n      // const filename = key.replace(remoteRoot, localRoot)\n\n      // replace https://ip:port/folder/file.js -> /Users/dmail/folder/file.js/d3eui56uui/file.js\n      const filename = `${localRoot}/${location}`\n\n      return filename\n    }\n    return key\n  }\n\n  const System = createNodeLoader({\n    getFilename,\n  })\n\n  global.System = System\n\n  return System\n})\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/openNodeClient/ensureSystem.js"
+  ],
+  "names": [
+    "memoize",
+    "fn",
+    "called",
+    "memoizedValue",
+    "args",
+    "ensureSystem",
+    "localRoot",
+    "forceFilesystem",
+    "getFilename",
+    "key",
+    "location",
+    "filename",
+    "System",
+    "global"
+  ],
+  "mappings": ";;;;;;;AAAA;;AAEA,MAAMA,OAAO,GAAIC,EAAD,IAAQ;AACtB,MAAIC,MAAM,GAAG,KAAb;AACA,MAAIC,aAAJ;AACA,SAAO,CAAC,GAAGC,IAAJ,KAAa;AAClB,QAAIF,MAAJ,EAAY;AACV,aAAOC,aAAP;AACD;;AACDA,IAAAA,aAAa,GAAGF,EAAE,CAAC,GAAGG,IAAJ,CAAlB;AACAF,IAAAA,MAAM,GAAG,IAAT;AACA,WAAOC,aAAP;AACD,GAPD;AAQD,CAXD;;AAaO,MAAME,YAAY,GAAGL,OAAO,CAAC,CAAC;AAAEM,EAAAA,SAAF;AAAaC,EAAAA,eAAe,GAAG;AAA/B,CAAD,KAA2C;AAC7E;AACA;AACA;AACA;AACA;AAEA,QAAMC,WAAW,GAAG,CAACC,GAAD,EAAMC,QAAN,KAAmB;AACrC,QAAIH,eAAJ,EAAqB;AACnB;AAEA;AACA;AAEA;AACA,YAAMI,QAAQ,GAAI,GAAEL,SAAU,IAAGI,QAAS,EAA1C;AAEA,aAAOC,QAAP;AACD;;AACD,WAAOF,GAAP;AACD,GAbD;;AAeA,QAAMG,MAAM,GAAG,6BAAiB;AAC9BJ,IAAAA;AAD8B,GAAjB,CAAf;AAIAK,EAAAA,MAAM,CAACD,MAAP,GAAgBA,MAAhB;AAEA,SAAOA,MAAP;AACD,CA7BkC,CAA5B",
+  "sourcesContent": [
+    "import { createNodeLoader } from \"@dmail/module-loader/src/node/index.js\"\n\nconst memoize = (fn) => {\n  let called = false\n  let memoizedValue\n  return (...args) => {\n    if (called) {\n      return memoizedValue\n    }\n    memoizedValue = fn(...args)\n    called = true\n    return memoizedValue\n  }\n}\n\nexport const ensureSystem = memoize(({ localRoot, forceFilesystem = true }) => {\n  // when System.import evaluates the code it has fetched\n  // it uses require('vm').runInThisContext(code, { filename }).\n  // This filename is very important because it allows the engine to be able\n  // to resolve source map location inside evaluated code like \n  // and also to know where the file is to resolve other file when evaluating code\n\n  const getFilename = (key, location) => {\n    if (forceFilesystem) {\n      // try to force filesystem resolution\n\n      // replace https://ip:port/folder/file.js -> /Users/dmail/folder/file.js\n      // const filename = key.replace(remoteRoot, localRoot)\n\n      // replace https://ip:port/folder/file.js -> /Users/dmail/folder/file.js/d3eui56uui/file.js\n      const filename = `${localRoot}/${location}`\n\n      return filename\n    }\n    return key\n  }\n\n  const System = createNodeLoader({\n    getFilename,\n  })\n\n  global.System = System\n\n  return System\n})\n"
+  ]
+}

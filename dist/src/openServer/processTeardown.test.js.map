@@ -1,1 +1,15 @@
-{"version":3,"sources":["../../../src/openServer/processTeardown.test.js"],"names":["reason","console","log"],"mappings":";;AAAA;;AACA;;AAEA,gBAAK,YAAM;AACT,wCAAgB,UAACA,MAAD,EAAY;AAC1BC,YAAQC,GAAR,CAAYF,MAAZ;AACD,GAFD;AAGD,CAJD","file":"processTeardown.test.js","sourcesContent":["import { test } from \"@dmail/test\"\nimport { processTeardown } from \"./processTeardown.js\"\n\ntest(() => {\n  processTeardown((reason) => {\n    console.log(reason)\n  })\n})\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/openServer/processTeardown.test.js"
+  ],
+  "names": [
+    "reason",
+    "console",
+    "log"
+  ],
+  "mappings": ";;AAAA;;AACA;;AAEA,gBAAK,MAAM;AACT,wCAAiBA,MAAD,IAAY;AAC1BC,IAAAA,OAAO,CAACC,GAAR,CAAYF,MAAZ;AACD,GAFD;AAGD,CAJD",
+  "sourcesContent": [
+    "import { test } from \"@dmail/test\"\nimport { processTeardown } from \"./processTeardown.js\"\n\ntest(() => {\n  processTeardown((reason) => {\n    console.log(reason)\n  })\n})\n"
+  ]
+}

@@ -3,32 +3,36 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.readFile = undefined;
+exports.readFile = void 0;
 
-var _fs = require("fs");
-
-var _fs2 = _interopRequireDefault(_fs);
+var _fs = _interopRequireDefault(require("fs"));
 
 var _index = require("../createFileService/index.js");
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var readFile = exports.readFile = function readFile(_ref) {
-  var location = _ref.location,
-      errorHandler = _ref.errorHandler;
-
-  return new Promise(function (resolve, reject) {
-    _fs2["default"].readFile(location, function (error, buffer) {
+const readFile = ({
+  location,
+  errorHandler
+}) => {
+  return new Promise((resolve, reject) => {
+    _fs.default.readFile(location, (error, buffer) => {
       if (error) {
         if (errorHandler && errorHandler(error)) {
-          resolve({ error: error });
+          resolve({
+            error
+          });
         } else {
           reject((0, _index.convertFileSystemErrorToResponseProperties)(error));
         }
       } else {
-        resolve({ content: String(buffer) });
+        resolve({
+          content: String(buffer)
+        });
       }
     });
   });
 };
+
+exports.readFile = readFile;
 //# sourceMappingURL=readFile.js.map

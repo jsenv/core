@@ -3,28 +3,29 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createBody = undefined;
+exports.createBody = void 0;
 
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-var _stream = require("stream");
-
-var _stream2 = _interopRequireDefault(_stream);
+var _stream = _interopRequireDefault(require("stream"));
 
 var _promise = require("../promise.js");
 
 var _signal = require("@dmail/signal");
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var isNodeStream = function isNodeStream(a) {
-  if (a instanceof _stream2["default"].Stream || a instanceof _stream2["default"].Writable) {
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+const isNodeStream = a => {
+  if (a instanceof _stream.default.Stream || a instanceof _stream.default.Writable) {
     return true;
   }
+
   return false;
 };
 
-var closeStream = function closeStream(stream) {
+const closeStream = stream => {
   if (isNodeStream(stream)) {
     stream.end();
   } else {
@@ -32,84 +33,90 @@ var closeStream = function closeStream(stream) {
   }
 };
 
-var createTwoWayStream = function createTwoWayStream() {
-  var buffers = [];
-  var length = 0;
-  var status = "opened";
+const createTwoWayStream = () => {
+  const buffers = [];
+  let length = 0;
+  let status = "opened";
+  const {
+    promise,
+    resolve
+  } = (0, _promise.createPromiseAndHooks)();
+  const errored = (0, _signal.createSignal)({
+    smart: true
+  });
+  const cancelled = (0, _signal.createSignal)({
+    smart: true
+  });
+  const closed = (0, _signal.createSignal)({
+    smart: true
+  });
+  const writed = (0, _signal.createSignal)();
 
-  var _createPromiseAndHook = (0, _promise.createPromiseAndHooks)(),
-      promise = _createPromiseAndHook.promise,
-      resolve = _createPromiseAndHook.resolve;
-
-  var errored = (0, _signal.createSignal)({ smart: true });
-  var cancelled = (0, _signal.createSignal)({ smart: true });
-  var closed = (0, _signal.createSignal)({ smart: true });
-  var writed = (0, _signal.createSignal)();
-
-  var error = function error(e) {
+  const error = e => {
     status = "errored";
     errored.emit(e);
     throw e;
   };
 
-  var cancel = function cancel() {
+  const cancel = () => {
     if (status === "cancelled") {
       return;
     }
+
     status = "cancelled";
     buffers.length = 0;
     length = 0;
     cancelled.emit();
   };
 
-  var close = function close() {
+  const close = () => {
     if (status === "closed") {
       return;
     }
+
     status = "closed";
     resolve(buffers);
     closed.emit();
   };
 
-  var write = function write(data) {
+  const write = data => {
     buffers.push(data);
     length += data.length;
     writed.emit(data);
   };
 
-  var pipeTo = function pipeTo(stream) {
-    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-        _ref$propagateData = _ref.propagateData,
-        propagateData = _ref$propagateData === undefined ? true : _ref$propagateData,
-        _ref$propagateCancel = _ref.propagateCancel,
-        propagateCancel = _ref$propagateCancel === undefined ? true : _ref$propagateCancel,
-        _ref$propagateClose = _ref.propagateClose,
-        propagateClose = _ref$propagateClose === undefined ? true : _ref$propagateClose,
-        _ref$propagateError = _ref.propagateError,
-        propagateError = _ref$propagateError === undefined ? true : _ref$propagateError;
-
+  const pipeTo = (stream, {
+    propagateData = true,
+    propagateCancel = true,
+    propagateClose = true,
+    propagateError = true
+  } = {}) => {
     if (propagateCancel) {
-      cancelled.listenOnce(function () {
+      cancelled.listenOnce(() => {
         stream.cancel();
       });
     }
+
     if (propagateError) {
-      errored.listenOnce(function (error) {
+      errored.listenOnce(error => {
         stream.error(error);
       });
     }
+
     if (propagateData) {
       if (length) {
-        buffers.forEach(function (buffer) {
+        buffers.forEach(buffer => {
           stream.write(buffer);
         });
       }
-      writed.listen(function (buffer) {
+
+      writed.listen(buffer => {
         stream.write(buffer);
       });
     }
+
     if (propagateClose) {
-      closed.listenOnce(function () {
+      closed.listenOnce(() => {
         closeStream(stream);
       });
     }
@@ -118,82 +125,79 @@ var createTwoWayStream = function createTwoWayStream() {
   };
 
   return Object.freeze({
-    error: error,
-    errored: errored,
-    cancel: cancel,
-    cancelled: cancelled,
-    close: close,
-    closed: closed,
-    write: write,
-    writed: writed,
-    pipeTo: pipeTo,
-    promise: promise
+    error,
+    errored,
+    cancel,
+    cancelled,
+    close,
+    closed,
+    write,
+    writed,
+    pipeTo,
+    promise
   });
 };
 
-var stringToArrayBuffer = function stringToArrayBuffer(string) {
+const stringToArrayBuffer = string => {
   string = String(string);
-  var buffer = new ArrayBuffer(string.length * 2); // 2 bytes for each char
-  var bufferView = new Uint16Array(buffer);
-  var i = 0;
+  const buffer = new ArrayBuffer(string.length * 2); // 2 bytes for each char
+
+  const bufferView = new Uint16Array(buffer);
+  let i = 0;
+
   while (i < string.length) {
     bufferView[i] = string.charCodeAt(i);
     i++;
   }
+
   return buffer;
 };
 
-var createBody = exports.createBody = function createBody(body) {
-  var twoWayStream = createTwoWayStream();
+const createBody = data => {
+  const twoWayStream = createTwoWayStream();
 
-  var fill = function fill(data) {
+  if (data !== undefined) {
     if (isNodeStream(data)) {
-      var nodeStream = data;
+      const nodeStream = data; // nodeStream.resume() ?
 
-      // nodeStream.resume() ?
-      nodeStream.once("error", function (error) {
+      nodeStream.once("error", error => {
         twoWayStream.error(error);
       });
-      nodeStream.on("data", function (data) {
+      nodeStream.on("data", data => {
         twoWayStream.write(data);
       });
-      nodeStream.once("end", function () {
+      nodeStream.once("end", () => {
         twoWayStream.close();
       });
     } else if (data && data.pipeTo) {
       data.pipeTo(twoWayStream);
     } else {
       twoWayStream.write(data);
-      twoWayStream.close();
     }
-  };
-
-  if (body !== undefined) {
-    fill(body);
   }
 
-  var readAsString = function readAsString() {
-    return twoWayStream.promise.then(function (buffers) {
-      return buffers.join("");
-    });
+  const readAsString = () => {
+    return twoWayStream.promise.then(buffers => buffers.join(""));
   };
 
-  var text = function text() {
+  const text = () => {
     return readAsString();
   };
 
-  var arraybuffer = function arraybuffer() {
+  const arraybuffer = () => {
     return text().then(stringToArrayBuffer);
   };
 
-  var json = function json() {
+  const json = () => {
     return text().then(JSON.parse);
   };
 
-  return _extends({}, twoWayStream, {
-    text: text,
-    arraybuffer: arraybuffer,
-    json: json
+  return _objectSpread({}, twoWayStream, {
+    text,
+    arraybuffer,
+    json
   });
 };
+
+exports.createBody = createBody;
 //# sourceMappingURL=createBody.js.map

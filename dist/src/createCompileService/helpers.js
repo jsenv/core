@@ -3,59 +3,51 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.removeFolderDeep = exports.removeFile = exports.readFolder = exports.isFolder = exports.resolvePath = exports.normalizeSeparation = exports.isFileNotFoundError = exports.createETag = undefined;
+exports.removeFolderDeep = exports.removeFile = exports.readFolder = exports.isFolder = exports.resolvePath = exports.normalizeSeparation = exports.isFileNotFoundError = exports.createETag = void 0;
 
-var _crypto = require("crypto");
+var _crypto = _interopRequireDefault(require("crypto"));
 
-var _crypto2 = _interopRequireDefault(_crypto);
+var _fs = _interopRequireDefault(require("fs"));
 
-var _fs = require("fs");
+var _path = _interopRequireDefault(require("path"));
 
-var _fs2 = _interopRequireDefault(_fs);
+var _rimraf = _interopRequireDefault(require("rimraf"));
 
-var _path = require("path");
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var _path2 = _interopRequireDefault(_path);
-
-var _rimraf = require("rimraf");
-
-var _rimraf2 = _interopRequireDefault(_rimraf);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-var createETag = exports.createETag = function createETag(string) {
+const createETag = string => {
   if (string.length === 0) {
     // fast-path empty
     return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
   }
 
-  var hash = _crypto2["default"].createHash("sha1");
+  const hash = _crypto.default.createHash("sha1");
+
   hash.update(string, "utf8");
-  var result = hash.digest("base64");
+  let result = hash.digest("base64");
   result = result.replace(/\=+$/, "");
-
-  return "\"" + string.length.toString(16) + "-" + result + "\"";
+  return `"${string.length.toString(16)}-${result}"`;
 };
 
-var isFileNotFoundError = exports.isFileNotFoundError = function isFileNotFoundError(error) {
-  return error && error.code === "ENOENT";
+exports.createETag = createETag;
+
+const isFileNotFoundError = error => error && error.code === "ENOENT";
+
+exports.isFileNotFoundError = isFileNotFoundError;
+
+const normalizeSeparation = filename => filename.replace(/\\/g, "/");
+
+exports.normalizeSeparation = normalizeSeparation;
+
+const resolvePath = (from, ...paths) => {
+  return normalizeSeparation(_path.default.join(from, ...paths));
 };
 
-var normalizeSeparation = exports.normalizeSeparation = function normalizeSeparation(filename) {
-  return filename.replace(/\\/g, "/");
-};
+exports.resolvePath = resolvePath;
 
-var resolvePath = exports.resolvePath = function resolvePath(from) {
-  for (var _len = arguments.length, paths = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-    paths[_key - 1] = arguments[_key];
-  }
-
-  return normalizeSeparation(_path2["default"].join.apply(_path2["default"], [from].concat(paths)));
-};
-
-var isFolder = exports.isFolder = function isFolder(filename) {
-  return new Promise(function (resolve, reject) {
-    _fs2["default"].lstat(filename, function (error, stat) {
+const isFolder = filename => {
+  return new Promise((resolve, reject) => {
+    _fs.default.lstat(filename, (error, stat) => {
       if (error) {
         reject(error);
       } else {
@@ -65,9 +57,11 @@ var isFolder = exports.isFolder = function isFolder(filename) {
   });
 };
 
-var readFolder = exports.readFolder = function readFolder(location) {
-  return new Promise(function (resolve, reject) {
-    _fs2["default"].readdir(location, function (error, filenames) {
+exports.isFolder = isFolder;
+
+const readFolder = location => {
+  return new Promise((resolve, reject) => {
+    _fs.default.readdir(location, (error, filenames) => {
       if (error) {
         reject(error);
       } else {
@@ -77,9 +71,11 @@ var readFolder = exports.readFolder = function readFolder(location) {
   });
 };
 
-var removeFile = exports.removeFile = function removeFile(location) {
-  return new Promise(function (resolve, reject) {
-    _fs2["default"].unlink(location, function (error) {
+exports.readFolder = readFolder;
+
+const removeFile = location => {
+  return new Promise((resolve, reject) => {
+    _fs.default.unlink(location, error => {
       if (error) {
         reject(error);
       } else {
@@ -89,9 +85,11 @@ var removeFile = exports.removeFile = function removeFile(location) {
   });
 };
 
-var removeFolderDeep = exports.removeFolderDeep = function removeFolderDeep(location) {
-  return new Promise(function (resolve, reject) {
-    (0, _rimraf2["default"])(location, function (error) {
+exports.removeFile = removeFile;
+
+const removeFolderDeep = location => {
+  return new Promise((resolve, reject) => {
+    (0, _rimraf.default)(location, error => {
       if (error) {
         reject(error);
       } else {
@@ -100,4 +98,6 @@ var removeFolderDeep = exports.removeFolderDeep = function removeFolderDeep(loca
     });
   });
 };
+
+exports.removeFolderDeep = removeFolderDeep;
 //# sourceMappingURL=helpers.js.map

@@ -1,1 +1,39 @@
-{"version":3,"sources":["../../../src/run/run.js"],"names":["run","root","process","cwd","file","port","platform","headless","watch","instrument","relativeFile","openServer","rootLocation","abstractFolderRelativeLocation","url","createClient","server","compileURL","localRoot","detached","mirrorConsole","then","console","log","client","execute","collectCoverage"],"mappings":";;;;;;;AAAA;;AACA;;AACA;;AAEO,IAAMA,oBAAM,SAANA,GAAM,OAeb;AAAA,uBAdJC,IAcI;AAAA,MAdJA,IAcI,6BAdGC,QAAQC,GAAR,EAcH;AAAA,MAbJC,IAaI,QAbJA,IAaI;AAAA,uBAZJC,IAYI;AAAA,MAZJA,IAYI,6BAZG,CAYH;AAAA,2BAXJC,QAWI;AAAA,MAXJA,QAWI,iCAXO,MAWP;AAAA,2BAVJC,QAUI;AAAA,MAVJA,QAUI,iCAVO,KAUP;AAAA,wBAFJC,KAEI;AAAA,MAFJA,KAEI,8BAFI,KAEJ;AAAA,6BADJC,UACI;AAAA,MADJA,UACI,mCADS,KACT;;AACJ,MAAMC,eAAeN,IAArB;;AAEA,MAAMO,aAAa,SAAbA,UAAa,GAAM;AACvB,WAAO,0CAAkB;AACvBC,oBAAcX,IADS;AAEvBY,sCAAgC,UAFT;AAGvBC,kCAA0BT,IAHH,EAGW;AAClCI,4BAJuB;AAKvBD;AALuB,KAAlB,CAAP;AAOD,GARD;;AAUA,MAAMO,eAAe,SAAfA,YAAe,CAACC,MAAD,EAAY;AAC/B,QAAIV,aAAa,MAAjB,EAAyB;AACvB,aAAO,oCAAe;AACpBW,oBAAYD,OAAOC,UADC;AAEpBC,mBAAWjB,IAFS;AAGpBkB,kBAAU;AACV;AAJoB,OAAf,CAAP;AAMD;AACD,QAAIb,aAAa,UAAjB,EAA6B;AAC3B,aAAO,4CAAmB;AACxBQ,oCAA0BT,IADF,EACU;AAClCW,sBAFwB;AAGxBC,oBAAYD,OAAOC,UAHK;AAIxBV,0BAJwB;AAKxBa,uBAAe;AALS,OAAnB,CAAP;AAOD;AACF,GAlBD;;AAoBA,SAAOT,aAAaU,IAAb,CAAkB,UAACL,MAAD,EAAY;AACnCM,YAAQC,GAAR,0BAAmCP,OAAOF,GAA1C;AACA,WAAOC,aAAaC,MAAb,EACJK,IADI,CACC,UAACG,MAAD,EAAY;AAChB,aAAOA,OAAOC,OAAP,CAAe;AACpBrB,cAAMM,YADc;AAEpBgB,yBAAiBjB;AAFG,OAAf,CAAP;AAID,KANI,EAOJY,IAPI,CAOC,YAAM;AACV,UAAIb,UAAU,KAAd,EAAqB;AACnB;AACD;AACF,KAXI,CAAP;AAYD,GAdM,CAAP;AAeD,CA/DM","file":"run.js","sourcesContent":["import { openCompileServer } from \"../openCompileServer/openCompileServer.js\"\nimport { openNodeClient } from \"../openNodeClient/openNodeClient.js\"\nimport { openChromiumClient } from \"../openChromiumClient/openChromiumClient.js\"\n\nexport const run = ({\n  root = process.cwd(),\n  file,\n  port = 0,\n  platform = \"node\",\n  headless = false,\n  // when watching, if we control how the code runs we need the sse service\n  // in case an external client connects to our server\n  // but we mainly need node to listen for file change\n  // so that we can reexecute code inside chromium or nodejs\n  // from here\n  // for nodejs we would kill the child and restart an other one\n  // for chromium we kill it too and restart a new one to execute our code inside it\n  watch = false,\n  instrument = false,\n}) => {\n  const relativeFile = file\n\n  const openServer = () => {\n    return openCompileServer({\n      rootLocation: root,\n      abstractFolderRelativeLocation: \"compiled\",\n      url: `http://127.0.0.1:0${port}`, // avoid https for now because certificates are self signed\n      instrument,\n      watch,\n    })\n  }\n\n  const createClient = (server) => {\n    if (platform === \"node\") {\n      return openNodeClient({\n        compileURL: server.compileURL,\n        localRoot: root,\n        detached: true,\n        // remoteRoot: \"http://127.0.0.1:3001\",\n      })\n    }\n    if (platform === \"chromium\") {\n      return openChromiumClient({\n        url: `http://127.0.0.1:0${port}`, // force http for now\n        server,\n        compileURL: server.compileURL,\n        headless,\n        mirrorConsole: true,\n      })\n    }\n  }\n\n  return openServer().then((server) => {\n    console.log(`server listening at ${server.url}`)\n    return createClient(server)\n      .then((client) => {\n        return client.execute({\n          file: relativeFile,\n          collectCoverage: instrument,\n        })\n      })\n      .then(() => {\n        if (watch === false) {\n          // server.close()\n        }\n      })\n  })\n}\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/run/run.js"
+  ],
+  "names": [
+    "run",
+    "root",
+    "process",
+    "cwd",
+    "file",
+    "port",
+    "platform",
+    "headless",
+    "watch",
+    "instrument",
+    "relativeFile",
+    "openServer",
+    "rootLocation",
+    "abstractFolderRelativeLocation",
+    "url",
+    "createClient",
+    "server",
+    "compileURL",
+    "localRoot",
+    "detached",
+    "mirrorConsole",
+    "then",
+    "console",
+    "log",
+    "client",
+    "execute",
+    "collectCoverage"
+  ],
+  "mappings": ";;;;;;;AAAA;;AACA;;AACA;;AAEO,MAAMA,GAAG,GAAG,CAAC;AAClBC,EAAAA,IAAI,GAAGC,OAAO,CAACC,GAAR,EADW;AAElBC,EAAAA,IAFkB;AAGlBC,EAAAA,IAAI,GAAG,CAHW;AAIlBC,EAAAA,QAAQ,GAAG,MAJO;AAKlBC,EAAAA,QAAQ,GAAG,KALO;AAMlB;AACA;AACA;AACA;AACA;AACA;AACA;AACAC,EAAAA,KAAK,GAAG,KAbU;AAclBC,EAAAA,UAAU,GAAG;AAdK,CAAD,KAeb;AACJ,QAAMC,YAAY,GAAGN,IAArB;;AAEA,QAAMO,UAAU,GAAG,MAAM;AACvB,WAAO,0CAAkB;AACvBC,MAAAA,YAAY,EAAEX,IADS;AAEvBY,MAAAA,8BAA8B,EAAE,UAFT;AAGvBC,MAAAA,GAAG,EAAG,qBAAoBT,IAAK,EAHR;AAGW;AAClCI,MAAAA,UAJuB;AAKvBD,MAAAA;AALuB,KAAlB,CAAP;AAOD,GARD;;AAUA,QAAMO,YAAY,GAAIC,MAAD,IAAY;AAC/B,QAAIV,QAAQ,KAAK,MAAjB,EAAyB;AACvB,aAAO,oCAAe;AACpBW,QAAAA,UAAU,EAAED,MAAM,CAACC,UADC;AAEpBC,QAAAA,SAAS,EAAEjB,IAFS;AAGpBkB,QAAAA,QAAQ,EAAE,IAHU,CAIpB;;AAJoB,OAAf,CAAP;AAMD;;AACD,QAAIb,QAAQ,KAAK,UAAjB,EAA6B;AAC3B,aAAO,4CAAmB;AACxBQ,QAAAA,GAAG,EAAG,qBAAoBT,IAAK,EADP;AACU;AAClCW,QAAAA,MAFwB;AAGxBC,QAAAA,UAAU,EAAED,MAAM,CAACC,UAHK;AAIxBV,QAAAA,QAJwB;AAKxBa,QAAAA,aAAa,EAAE;AALS,OAAnB,CAAP;AAOD;AACF,GAlBD;;AAoBA,SAAOT,UAAU,GAAGU,IAAb,CAAmBL,MAAD,IAAY;AACnCM,IAAAA,OAAO,CAACC,GAAR,CAAa,uBAAsBP,MAAM,CAACF,GAAI,EAA9C;AACA,WAAOC,YAAY,CAACC,MAAD,CAAZ,CACJK,IADI,CACEG,MAAD,IAAY;AAChB,aAAOA,MAAM,CAACC,OAAP,CAAe;AACpBrB,QAAAA,IAAI,EAAEM,YADc;AAEpBgB,QAAAA,eAAe,EAAEjB;AAFG,OAAf,CAAP;AAID,KANI,EAOJY,IAPI,CAOC,MAAM;AACV,UAAIb,KAAK,KAAK,KAAd,EAAqB,CACnB;AACD;AACF,KAXI,CAAP;AAYD,GAdM,CAAP;AAeD,CA/DM",
+  "sourcesContent": [
+    "import { openCompileServer } from \"../openCompileServer/openCompileServer.js\"\nimport { openNodeClient } from \"../openNodeClient/openNodeClient.js\"\nimport { openChromiumClient } from \"../openChromiumClient/openChromiumClient.js\"\n\nexport const run = ({\n  root = process.cwd(),\n  file,\n  port = 0,\n  platform = \"node\",\n  headless = false,\n  // when watching, if we control how the code runs we need the sse service\n  // in case an external client connects to our server\n  // but we mainly need node to listen for file change\n  // so that we can reexecute code inside chromium or nodejs\n  // from here\n  // for nodejs we would kill the child and restart an other one\n  // for chromium we kill it too and restart a new one to execute our code inside it\n  watch = false,\n  instrument = false,\n}) => {\n  const relativeFile = file\n\n  const openServer = () => {\n    return openCompileServer({\n      rootLocation: root,\n      abstractFolderRelativeLocation: \"compiled\",\n      url: `http://127.0.0.1:0${port}`, // avoid https for now because certificates are self signed\n      instrument,\n      watch,\n    })\n  }\n\n  const createClient = (server) => {\n    if (platform === \"node\") {\n      return openNodeClient({\n        compileURL: server.compileURL,\n        localRoot: root,\n        detached: true,\n        // remoteRoot: \"http://127.0.0.1:3001\",\n      })\n    }\n    if (platform === \"chromium\") {\n      return openChromiumClient({\n        url: `http://127.0.0.1:0${port}`, // force http for now\n        server,\n        compileURL: server.compileURL,\n        headless,\n        mirrorConsole: true,\n      })\n    }\n  }\n\n  return openServer().then((server) => {\n    console.log(`server listening at ${server.url}`)\n    return createClient(server)\n      .then((client) => {\n        return client.execute({\n          file: relativeFile,\n          collectCoverage: instrument,\n        })\n      })\n      .then(() => {\n        if (watch === false) {\n          // server.close()\n        }\n      })\n  })\n}\n"
+  ]
+}

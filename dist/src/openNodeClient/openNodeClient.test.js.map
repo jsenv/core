@@ -1,1 +1,37 @@
-{"version":3,"sources":["../../../src/openNodeClient/openNodeClient.test.js"],"names":["rootLocation","resolve","__dirname","url","sourceMap","sourceURL","instrument","then","server","compileURL","remoteRoot","localRoot","detached","nodeClient","execute","file","collectCoverage","promise","close","value","console","log","reason","error"],"mappings":";;AAAA;;;;AACA;;AACA;;;;AAEA,IAAMA,eAAe,kBAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAArB;;AAEA,0CAAkB;AAChBC,OAAK,uBADW;AAEhBH,4BAFgB;AAGhBI,aAAW,SAHK;AAIhBC,aAAW,KAJK;AAKhBC,cAAY;AALI,CAAlB,EAMGC,IANH,CAMQ,UAACC,MAAD,EAAY;AAClB,SAAO,oCAAe;AACpBC,gBAAYD,OAAOC,UADC;AAEpBC,gBAAY,uBAFQ;AAGpBC,eAAWX,YAHS;AAIpBY,cAAU,IAJU,CAIJ;AAJI,GAAf,EAKJL,IALI,CAKC,UAACM,UAAD,EAAgB;AACtBA,eACGC,OADH,CACW;AACPC,kCADO;AAEPC,uBAAiB;AAFV,KADX,EAKGT,IALH,CAKQ,gBAAwB;AAAA,UAArBU,OAAqB,QAArBA,OAAqB;AAAA,UAAZC,KAAY,QAAZA,KAAY;;AAC5BD,cAAQV,IAAR,CACE,UAACY,KAAD,EAAW;AACTD;AACAV,eAAOU,KAAP;AACAE,gBAAQC,GAAR,CAAY,qBAAZ,EAAmCF,KAAnC;AACD,OALH,EAME,UAACG,MAAD,EAAY;AACVF,gBAAQG,KAAR,CAAc,wBAAd,EAAwCD,MAAxC;AACD,OARH;AAUD,KAhBH;AAiBD,GAvBM,CAAP;AAwBD,CA/BD","file":"openNodeClient.test.js","sourcesContent":["import path from \"path\"\nimport { openCompileServer } from \"../openCompileServer/openCompileServer.js\"\nimport { openNodeClient } from \"./openNodeClient.js\"\n\nconst rootLocation = path.resolve(__dirname, \"../../../\")\n\nopenCompileServer({\n  url: \"http://127.0.0.1:8765\",\n  rootLocation,\n  sourceMap: \"comment\",\n  sourceURL: false,\n  instrument: false,\n}).then((server) => {\n  return openNodeClient({\n    compileURL: server.compileURL,\n    remoteRoot: \"http://127.0.0.1:8765\",\n    localRoot: rootLocation,\n    detached: true, // true,\n  }).then((nodeClient) => {\n    nodeClient\n      .execute({\n        file: `src/__test__/file.js`,\n        collectCoverage: false,\n      })\n      .then(({ promise, close }) => {\n        promise.then(\n          (value) => {\n            close()\n            server.close()\n            console.log(\"execution done with\", value)\n          },\n          (reason) => {\n            console.error(\"execution crashed with\", reason)\n          },\n        )\n      })\n  })\n})\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/openNodeClient/openNodeClient.test.js"
+  ],
+  "names": [
+    "rootLocation",
+    "path",
+    "resolve",
+    "__dirname",
+    "url",
+    "sourceMap",
+    "sourceURL",
+    "instrument",
+    "then",
+    "server",
+    "compileURL",
+    "remoteRoot",
+    "localRoot",
+    "detached",
+    "nodeClient",
+    "execute",
+    "file",
+    "collectCoverage",
+    "promise",
+    "close",
+    "value",
+    "console",
+    "log",
+    "reason",
+    "error"
+  ],
+  "mappings": ";;AAAA;;AACA;;AACA;;;;AAEA,MAAMA,YAAY,GAAGC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAArB;;AAEA,0CAAkB;AAChBC,EAAAA,GAAG,EAAE,uBADW;AAEhBJ,EAAAA,YAFgB;AAGhBK,EAAAA,SAAS,EAAE,SAHK;AAIhBC,EAAAA,SAAS,EAAE,KAJK;AAKhBC,EAAAA,UAAU,EAAE;AALI,CAAlB,EAMGC,IANH,CAMSC,MAAD,IAAY;AAClB,SAAO,oCAAe;AACpBC,IAAAA,UAAU,EAAED,MAAM,CAACC,UADC;AAEpBC,IAAAA,UAAU,EAAE,uBAFQ;AAGpBC,IAAAA,SAAS,EAAEZ,YAHS;AAIpBa,IAAAA,QAAQ,EAAE,IAJU,CAIJ;;AAJI,GAAf,EAKJL,IALI,CAKEM,UAAD,IAAgB;AACtBA,IAAAA,UAAU,CACPC,OADH,CACW;AACPC,MAAAA,IAAI,EAAG,sBADA;AAEPC,MAAAA,eAAe,EAAE;AAFV,KADX,EAKGT,IALH,CAKQ,CAAC;AAAEU,MAAAA,OAAF;AAAWC,MAAAA;AAAX,KAAD,KAAwB;AAC5BD,MAAAA,OAAO,CAACV,IAAR,CACGY,KAAD,IAAW;AACTD,QAAAA,KAAK;AACLV,QAAAA,MAAM,CAACU,KAAP;AACAE,QAAAA,OAAO,CAACC,GAAR,CAAY,qBAAZ,EAAmCF,KAAnC;AACD,OALH,EAMGG,MAAD,IAAY;AACVF,QAAAA,OAAO,CAACG,KAAR,CAAc,wBAAd,EAAwCD,MAAxC;AACD,OARH;AAUD,KAhBH;AAiBD,GAvBM,CAAP;AAwBD,CA/BD",
+  "sourcesContent": [
+    "import path from \"path\"\nimport { openCompileServer } from \"../openCompileServer/openCompileServer.js\"\nimport { openNodeClient } from \"./openNodeClient.js\"\n\nconst rootLocation = path.resolve(__dirname, \"../../../\")\n\nopenCompileServer({\n  url: \"http://127.0.0.1:8765\",\n  rootLocation,\n  sourceMap: \"comment\",\n  sourceURL: false,\n  instrument: false,\n}).then((server) => {\n  return openNodeClient({\n    compileURL: server.compileURL,\n    remoteRoot: \"http://127.0.0.1:8765\",\n    localRoot: rootLocation,\n    detached: true, // true,\n  }).then((nodeClient) => {\n    nodeClient\n      .execute({\n        file: `src/__test__/file.js`,\n        collectCoverage: false,\n      })\n      .then(({ promise, close }) => {\n        promise.then(\n          (value) => {\n            close()\n            server.close()\n            console.log(\"execution done with\", value)\n          },\n          (reason) => {\n            console.error(\"execution crashed with\", reason)\n          },\n        )\n      })\n  })\n})\n"
+  ]
+}

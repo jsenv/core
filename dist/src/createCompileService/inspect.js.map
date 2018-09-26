@@ -1,1 +1,39 @@
-{"version":3,"sources":["../../../src/createCompileService/inspect.js"],"names":["inspect","rootLocation","cacheFolderRelativeLocation","cacheFolderLocation","then","folders","Promise","all","map","folder","location","JSON","parse","cache","inputLocation","inputRelativeLocation","errorHandler","content","actual","expected","inputETag","resolve","foldersStatus","status","index"],"mappings":";;;;;;;AAAA;;AACA;;AACA;;AACA;;AACA;;AAEO,IAAMA,4BAAU,SAAVA,OAAU,OAAmD;AAAA,MAAhDC,YAAgD,QAAhDA,YAAgD;AAAA,MAAlCC,2BAAkC,QAAlCA,2BAAkC;;AACxE,MAAMC,sBAAsB,0BAAYF,YAAZ,EAA0BC,2BAA1B,CAA5B;;AAEA,SAAO,gBAAK,EAAED,0BAAF,EAAgBC,wDAAhB,EAAL,EAAoDE,IAApD,CAAyD,UAACC,OAAD,EAAa;AAC3E,WAAOC,QAAQC,GAAR,CACLF,QAAQG,GAAR,CAAY,UAACC,MAAD,EAAY;AACtB,aAAO,wBAAS,EAAEC,UAAU,0BAAYP,mBAAZ,EAAiCM,MAAjC,mBAAZ,EAAT,EACJL,IADI,CACCO,KAAKC,KADN,EAEJR,IAFI,CAEC,UAACS,KAAD,EAAW;AACf,YAAMC,gBAAgB,4BAAWD,MAAME,qBAAjB,EAAwCd,YAAxC,CAAtB;AACA,eAAO,wBAAS;AACdS,oBAAUI,aADI;AAEdE;AAFc,SAAT,EAGJZ,IAHI,CAIL,UAACa,OAAD,EAAa;AACX,cAAMC,SAAS,yBAAWD,OAAX,CAAf;AACA,cAAME,WAAWN,MAAMO,SAAvB;AACA,cAAIF,WAAWC,QAAf,EAAyB;AACvB,mBAAO,qBAAP;AACD;AACD,iBAAO,OAAP;AACD,SAXI,EAYL;AAAA,iBAAMb,QAAQe,OAAR,CAAgB,oBAAhB,CAAN;AAAA,SAZK,CAAP;AAcD,OAlBI,CAAP;AAmBD,KApBD,CADK,EAsBLjB,IAtBK,CAsBA,UAACkB,aAAD,EAAmB;AACxB,aAAOA,cAAcd,GAAd,CAAkB,UAACe,MAAD,EAASC,KAAT,EAAmB;AAC1C,eAAO,EAAEf,QAAQJ,QAAQmB,KAAR,CAAV,EAA0BD,cAA1B,EAAP;AACD,OAFM,CAAP;AAGD,KA1BM,CAAP;AA2BD,GA5BM,CAAP;AA6BD,CAhCM","file":"inspect.js","sourcesContent":["import { JSON_FILE } from \"./cache.js\"\nimport { createETag, isFileNotFoundError, resolvePath } from \"./helpers.js\"\nimport { list } from \"./list.js\"\nimport { locateFile } from \"./locateFile.js\"\nimport { readFile } from \"./readFile.js\"\n\nexport const inspect = ({ rootLocation, cacheFolderRelativeLocation }) => {\n  const cacheFolderLocation = resolvePath(rootLocation, cacheFolderRelativeLocation)\n\n  return list({ rootLocation, cacheFolderRelativeLocation }).then((folders) => {\n    return Promise.all(\n      folders.map((folder) => {\n        return readFile({ location: resolvePath(cacheFolderLocation, folder, JSON_FILE) })\n          .then(JSON.parse)\n          .then((cache) => {\n            const inputLocation = locateFile(cache.inputRelativeLocation, rootLocation)\n            return readFile({\n              location: inputLocation,\n              errorHandler: isFileNotFoundError,\n            }).then(\n              (content) => {\n                const actual = createETag(content)\n                const expected = cache.inputETag\n                if (actual !== expected) {\n                  return \"input-file-modified\"\n                }\n                return \"valid\"\n              },\n              () => Promise.resolve(\"input-file-missing\"),\n            )\n          })\n      }),\n    ).then((foldersStatus) => {\n      return foldersStatus.map((status, index) => {\n        return { folder: folders[index], status }\n      })\n    })\n  })\n}\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/createCompileService/inspect.js"
+  ],
+  "names": [
+    "inspect",
+    "rootLocation",
+    "cacheFolderRelativeLocation",
+    "cacheFolderLocation",
+    "then",
+    "folders",
+    "Promise",
+    "all",
+    "map",
+    "folder",
+    "location",
+    "JSON_FILE",
+    "JSON",
+    "parse",
+    "cache",
+    "inputLocation",
+    "inputRelativeLocation",
+    "errorHandler",
+    "isFileNotFoundError",
+    "content",
+    "actual",
+    "expected",
+    "inputETag",
+    "resolve",
+    "foldersStatus",
+    "status",
+    "index"
+  ],
+  "mappings": ";;;;;;;AAAA;;AACA;;AACA;;AACA;;AACA;;AAEO,MAAMA,OAAO,GAAG,CAAC;AAAEC,EAAAA,YAAF;AAAgBC,EAAAA;AAAhB,CAAD,KAAmD;AACxE,QAAMC,mBAAmB,GAAG,0BAAYF,YAAZ,EAA0BC,2BAA1B,CAA5B;AAEA,SAAO,gBAAK;AAAED,IAAAA,YAAF;AAAgBC,IAAAA;AAAhB,GAAL,EAAoDE,IAApD,CAA0DC,OAAD,IAAa;AAC3E,WAAOC,OAAO,CAACC,GAAR,CACLF,OAAO,CAACG,GAAR,CAAaC,MAAD,IAAY;AACtB,aAAO,wBAAS;AAAEC,QAAAA,QAAQ,EAAE,0BAAYP,mBAAZ,EAAiCM,MAAjC,EAAyCE,gBAAzC;AAAZ,OAAT,EACJP,IADI,CACCQ,IAAI,CAACC,KADN,EAEJT,IAFI,CAEEU,KAAD,IAAW;AACf,cAAMC,aAAa,GAAG,4BAAWD,KAAK,CAACE,qBAAjB,EAAwCf,YAAxC,CAAtB;AACA,eAAO,wBAAS;AACdS,UAAAA,QAAQ,EAAEK,aADI;AAEdE,UAAAA,YAAY,EAAEC;AAFA,SAAT,EAGJd,IAHI,CAIJe,OAAD,IAAa;AACX,gBAAMC,MAAM,GAAG,yBAAWD,OAAX,CAAf;AACA,gBAAME,QAAQ,GAAGP,KAAK,CAACQ,SAAvB;;AACA,cAAIF,MAAM,KAAKC,QAAf,EAAyB;AACvB,mBAAO,qBAAP;AACD;;AACD,iBAAO,OAAP;AACD,SAXI,EAYL,MAAMf,OAAO,CAACiB,OAAR,CAAgB,oBAAhB,CAZD,CAAP;AAcD,OAlBI,CAAP;AAmBD,KApBD,CADK,EAsBLnB,IAtBK,CAsBCoB,aAAD,IAAmB;AACxB,aAAOA,aAAa,CAAChB,GAAd,CAAkB,CAACiB,MAAD,EAASC,KAAT,KAAmB;AAC1C,eAAO;AAAEjB,UAAAA,MAAM,EAAEJ,OAAO,CAACqB,KAAD,CAAjB;AAA0BD,UAAAA;AAA1B,SAAP;AACD,OAFM,CAAP;AAGD,KA1BM,CAAP;AA2BD,GA5BM,CAAP;AA6BD,CAhCM",
+  "sourcesContent": [
+    "import { JSON_FILE } from \"./cache.js\"\nimport { createETag, isFileNotFoundError, resolvePath } from \"./helpers.js\"\nimport { list } from \"./list.js\"\nimport { locateFile } from \"./locateFile.js\"\nimport { readFile } from \"./readFile.js\"\n\nexport const inspect = ({ rootLocation, cacheFolderRelativeLocation }) => {\n  const cacheFolderLocation = resolvePath(rootLocation, cacheFolderRelativeLocation)\n\n  return list({ rootLocation, cacheFolderRelativeLocation }).then((folders) => {\n    return Promise.all(\n      folders.map((folder) => {\n        return readFile({ location: resolvePath(cacheFolderLocation, folder, JSON_FILE) })\n          .then(JSON.parse)\n          .then((cache) => {\n            const inputLocation = locateFile(cache.inputRelativeLocation, rootLocation)\n            return readFile({\n              location: inputLocation,\n              errorHandler: isFileNotFoundError,\n            }).then(\n              (content) => {\n                const actual = createETag(content)\n                const expected = cache.inputETag\n                if (actual !== expected) {\n                  return \"input-file-modified\"\n                }\n                return \"valid\"\n              },\n              () => Promise.resolve(\"input-file-missing\"),\n            )\n          })\n      }),\n    ).then((foldersStatus) => {\n      return foldersStatus.map((status, index) => {\n        return { folder: folders[index], status }\n      })\n    })\n  })\n}\n"
+  ]
+}

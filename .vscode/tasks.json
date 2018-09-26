@@ -34,28 +34,6 @@
         "panel": "shared"
       },
       "problemMatcher": []
-    },
-    {
-      "label": "set chrome path",
-      "identifier": "path chrome",
-      "type": "shell",
-      "command": "alias chrome='/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome'",
-      "windows": {
-        "command": ""
-      }
-    },
-    {
-      "label": "Format with prettier",
-      "type": "shell",
-      "command": "./node_modules/.bin/prettier ${file} --write",
-      "windows": {
-        "command": ".\\node_modules\\.bin\\prettier.cmd ${file} --write"
-      },
-      "group": "none",
-      "presentation": {
-        "reveal": "silent",
-        "panel": "new"
-      }
     }
   ]
 }

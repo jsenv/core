@@ -3,9 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.enableCORS = exports.createNodeRequestHandler = exports.populateNodeResponse = exports.createRequestFromNodeRequest = undefined;
-
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; // https://github.com/jsenv/core/tree/master/src/util/rest
+exports.enableCORS = exports.createNodeRequestHandler = exports.populateNodeResponse = exports.createRequestFromNodeRequest = void 0;
 
 var _url = require("url");
 
@@ -15,48 +13,53 @@ var _createHeaders = require("./createHeaders.js");
 
 var _signal = require("@dmail/signal");
 
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 // serverURL pourrait valoir par défaut `file:///${process.cwd()}` ?
-var createRequestFromNodeRequest = exports.createRequestFromNodeRequest = function createRequestFromNodeRequest(nodeRequest, serverURL) {
-  var method = nodeRequest.method;
-
-  var url = new _url.URL(nodeRequest.url, serverURL);
-  var headers = (0, _createHeaders.createHeaders)(nodeRequest.headers);
-  var body = (0, _createBody.createBody)(method === "POST" || method === "PUT" || method === "PATCH" ? nodeRequest : undefined);
-
+const createRequestFromNodeRequest = (nodeRequest, serverURL) => {
+  const {
+    method
+  } = nodeRequest;
+  const url = new _url.URL(nodeRequest.url, serverURL);
+  const headers = (0, _createHeaders.createHeaders)(nodeRequest.headers);
+  const body = (0, _createBody.createBody)(method === "POST" || method === "PUT" || method === "PATCH" ? nodeRequest : undefined);
   return Object.freeze({
-    method: method,
-    url: url,
-    headers: headers,
-    body: body
+    method,
+    url,
+    headers,
+    body
   });
 };
 
-var populateNodeResponse = exports.populateNodeResponse = function populateNodeResponse(nodeResponse, _ref) {
-  var status = _ref.status,
-      _ref$reason = _ref.reason,
-      reason = _ref$reason === undefined ? "" : _ref$reason,
-      headers = _ref.headers,
-      body = _ref.body;
+exports.createRequestFromNodeRequest = createRequestFromNodeRequest;
 
-  var headerAsJSON = headers.toJSON();
+const populateNodeResponse = (nodeResponse, {
+  status,
+  reason = "",
+  headers,
+  body
+}) => {
+  const headerAsJSON = headers.toJSON();
   nodeResponse.writeHead(status, reason, headerAsJSON);
+  body.pipeTo(nodeResponse);
 
-  var keepAlive = headers.get("connection") === "keep-alive";
-  body.pipeTo(nodeResponse, { propagateClose: !keepAlive });
+  if (headers.get("connection") !== "keep-alive") {
+    body.close();
+  }
 };
 
-var createResponse = function createResponse(_ref2) {
-  var method = _ref2.method;
+exports.populateNodeResponse = populateNodeResponse;
 
-  var _ref3 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-      _ref3$status = _ref3.status,
-      status = _ref3$status === undefined ? 501 : _ref3$status,
-      reason = _ref3.reason,
-      _ref3$headers = _ref3.headers,
-      headers = _ref3$headers === undefined ? (0, _createHeaders.createHeaders)() : _ref3$headers,
-      _ref3$body = _ref3.body,
-      body = _ref3$body === undefined ? (0, _createBody.createBody)() : _ref3$body;
-
+const createResponse = ({
+  method
+}, {
+  status = 501,
+  reason,
+  headers = (0, _createHeaders.createHeaders)(),
+  body = (0, _createBody.createBody)()
+} = {}) => {
   if (method === "HEAD") {
     // don't send body for HEAD requests
     body = (0, _createBody.createBody)();
@@ -65,48 +68,46 @@ var createResponse = function createResponse(_ref2) {
   }
 
   headers = (0, _createHeaders.createHeaders)(headers);
-
-  return Object.freeze({ status: status, reason: reason, headers: headers, body: body });
+  return Object.freeze({
+    status,
+    reason,
+    headers,
+    body
+  });
 };
 
-var createNodeRequestHandler = exports.createNodeRequestHandler = function createNodeRequestHandler(_ref4) {
-  var handler = _ref4.handler,
-      _ref4$transform = _ref4.transform,
-      transform = _ref4$transform === undefined ? function (response) {
-    return response;
-  } : _ref4$transform,
-      url = _ref4.url;
-
-  return function (nodeRequest, nodeResponse) {
-    var closed = (0, _signal.createSignal)({ smart: true });
-    nodeResponse.once("close", function () {
-      return closed.emit();
+const createNodeRequestHandler = ({
+  handler,
+  transform = response => response,
+  url
+}) => {
+  return (nodeRequest, nodeResponse) => {
+    const closed = (0, _signal.createSignal)({
+      smart: true
     });
-
-    // should have some kind of id for a request
+    nodeResponse.once("close", () => closed.emit()); // should have some kind of id for a request
     // so that logs knows whichs request they belong to
-    var request = createRequestFromNodeRequest(nodeRequest, url);
-    console.log(request.method, request.url.toString());
 
-    nodeRequest.on("error", function (error) {
+    const request = createRequestFromNodeRequest(nodeRequest, url);
+    console.log(request.method, request.url.toString());
+    nodeRequest.on("error", error => {
       console.log("error on", request.url.toString(), error);
     });
-
-    return Promise.resolve().then(function () {
+    return Promise.resolve().then(() => {
       return handler(request);
-    }).then(function (responseProperties) {
-      var response = createResponse(request, responseProperties);
+    }).then(responseProperties => {
+      const response = createResponse(request, responseProperties);
       return transform(response);
-    })["catch"](function (error) {
+    }).catch(error => {
       return createResponse(request, {
         status: 500,
         reason: "internal error",
         body: error && error.stack ? error.stack : error
       });
-    }).then(function (finalResponse) {
-      console.log(finalResponse.status + " " + request.url);
-      // ensure body is closed when client is closed
-      closed.listen(function () {
+    }).then(finalResponse => {
+      console.log(`${finalResponse.status} ${request.url}`); // ensure body is closed when client is closed
+
+      closed.listen(() => {
         finalResponse.body.close();
       });
       populateNodeResponse(nodeResponse, finalResponse);
@@ -114,24 +115,27 @@ var createNodeRequestHandler = exports.createNodeRequestHandler = function creat
   };
 };
 
-var enableCORS = exports.enableCORS = function enableCORS(response) {
-  var corsHeaders = {
+exports.createNodeRequestHandler = createNodeRequestHandler;
+
+const enableCORS = response => {
+  const corsHeaders = {
     "access-control-allow-origin": "*",
     "access-control-allow-methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"].join(", "),
     "access-control-allow-headers": ["x-requested-with", "content-type", "accept"].join(", "),
     "access-control-max-age": 1 // Seconds
-  };
 
-  var headersWithCORS = (0, _createHeaders.createHeaders)(response.headers);
-  Object.keys(corsHeaders).forEach(function (corsHeaderName) {
+  };
+  const headersWithCORS = (0, _createHeaders.createHeaders)(response.headers);
+  Object.keys(corsHeaders).forEach(corsHeaderName => {
     if (response.headers.has(corsHeaderName) === false) {
       // we should merge any existing response cors headers with the one above
       headersWithCORS.append(corsHeaderName, corsHeaders[corsHeaderName]);
     }
   });
-
-  return _extends({}, response, {
+  return _objectSpread({}, response, {
     headers: headersWithCORS
   });
 };
+
+exports.enableCORS = enableCORS;
 //# sourceMappingURL=createNodeRequestHandler.js.map

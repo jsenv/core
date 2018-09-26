@@ -1,1 +1,28 @@
-{"version":3,"sources":["../../../src/createCompile/remapper.js"],"names":["writeSourceMapLocation","source","location","remapper","inputSource","inputSourceMap","options","outputSourceMapName","sourcesContent","remapMethod","mapAsBase64","Buffer","JSON","stringify","toString","outputSource"],"mappings":";;;;;AAAA,IAAMA,yBAAyB,SAAzBA,sBAAyB,OAA0B;AAAA,MAAvBC,MAAuB,QAAvBA,MAAuB;AAAA,MAAfC,QAAe,QAAfA,QAAe;;AACvD,SAAUD,MAAV,+BACqBC,QADrB;AAED,CAHD;;AAKO,IAAMC,8BAAW,SAAXA,QAAW,QAAmE;AAAA,MAAhEC,WAAgE,SAAhEA,WAAgE;AAAA,MAAnDC,cAAmD,SAAnDA,cAAmD;AAAA,MAAnCC,OAAmC,SAAnCA,OAAmC;AAAA,MAA1BC,mBAA0B,SAA1BA,mBAA0B;;AACzF,MAAI,OAAOF,cAAP,KAA0B,QAA1B,IAAsCA,mBAAmB,IAA7D,EAAmE;AACjE;AACD;;AAED;AACA;AACA;AACA;;AAEA;AACA;;AAEA;AACA,SAAOA,eAAeG,cAAtB;;AAEA,MAAIF,QAAQG,WAAR,KAAwB,QAA5B,EAAsC;AACpC,QAAMC,cAAc,IAAIC,MAAJ,CAAWC,KAAKC,SAAL,CAAeR,cAAf,CAAX,EAA2CS,QAA3C,CAAoD,QAApD,CAApB;AACA,QAAMC,eAAef,uBAAuB;AAC1CC,cAAQG,WADkC;AAE1CF,gEAAwDQ;AAFd,KAAvB,CAArB;;AAKA,WAAO;AACLK;AADK,KAAP;AAGD;;AAED,MAAIT,QAAQG,WAAR,KAAwB,SAA5B,EAAuC;AACrC,QAAMM,gBAAef,uBAAuB;AAC1CC,cAAQG,WADkC;AAE1CF,uBAAeK;AAF2B,KAAvB,CAArB;;AAKA,WAAO;AACLQ;AADK,KAAP;AAGD;AACF,CAtCM","file":"remapper.js","sourcesContent":["const writeSourceMapLocation = ({ source, location }) => {\n  return `${source}\n//# sourceMappingURL=${location}`\n}\n\nexport const remapper = ({ inputSource, inputSourceMap, options, outputSourceMapName }) => {\n  if (typeof inputSourceMap !== \"object\" || inputSourceMap === null) {\n    return\n  }\n\n  // delete inputSourceMap.sourcesContent\n  // we could remove sources content, they can be fetched from server\n  // removing them will decrease size of sourceMap BUT force\n  // the client to fetch the source resulting in an additional http request\n\n  // we could delete inputSourceMap.sourceRoot to ensure clientLocation is absolute\n  // but it's not set anyway because not passed to babel during compilation\n\n  // force a browser reload\n  delete inputSourceMap.sourcesContent\n\n  if (options.remapMethod === \"inline\") {\n    const mapAsBase64 = new Buffer(JSON.stringify(inputSourceMap)).toString(\"base64\")\n    const outputSource = writeSourceMapLocation({\n      source: inputSource,\n      location: `data:application/json;charset=utf-8;base64,${mapAsBase64}`,\n    })\n\n    return {\n      outputSource,\n    }\n  }\n\n  if (options.remapMethod === \"comment\") {\n    const outputSource = writeSourceMapLocation({\n      source: inputSource,\n      location: `./${outputSourceMapName}`,\n    })\n\n    return {\n      outputSource,\n    }\n  }\n}\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/createCompile/remapper.js"
+  ],
+  "names": [
+    "writeSourceMapLocation",
+    "source",
+    "location",
+    "remapper",
+    "inputSource",
+    "inputSourceMap",
+    "options",
+    "outputSourceMapName",
+    "sourcesContent",
+    "remapMethod",
+    "mapAsBase64",
+    "Buffer",
+    "JSON",
+    "stringify",
+    "toString",
+    "outputSource"
+  ],
+  "mappings": ";;;;;;;AAAA,MAAMA,sBAAsB,GAAG,CAAC;AAAEC,EAAAA,MAAF;AAAUC,EAAAA;AAAV,CAAD,KAA0B;AACvD,SAAQ,GAAED,MAAO;uBACIC,QAAS,EAD9B;AAED,CAHD;;AAKO,MAAMC,QAAQ,GAAG,CAAC;AAAEC,EAAAA,WAAF;AAAeC,EAAAA,cAAf;AAA+BC,EAAAA,OAA/B;AAAwCC,EAAAA;AAAxC,CAAD,KAAmE;AACzF,MAAI,OAAOF,cAAP,KAA0B,QAA1B,IAAsCA,cAAc,KAAK,IAA7D,EAAmE;AACjE;AACD,GAHwF,CAKzF;AACA;AACA;AACA;AAEA;AACA;AAEA;;;AACA,SAAOA,cAAc,CAACG,cAAtB;;AAEA,MAAIF,OAAO,CAACG,WAAR,KAAwB,QAA5B,EAAsC;AACpC,UAAMC,WAAW,GAAG,IAAIC,MAAJ,CAAWC,IAAI,CAACC,SAAL,CAAeR,cAAf,CAAX,EAA2CS,QAA3C,CAAoD,QAApD,CAApB;AACA,UAAMC,YAAY,GAAGf,sBAAsB,CAAC;AAC1CC,MAAAA,MAAM,EAAEG,WADkC;AAE1CF,MAAAA,QAAQ,EAAG,8CAA6CQ,WAAY;AAF1B,KAAD,CAA3C;AAKA,WAAO;AACLK,MAAAA;AADK,KAAP;AAGD;;AAED,MAAIT,OAAO,CAACG,WAAR,KAAwB,SAA5B,EAAuC;AACrC,UAAMM,YAAY,GAAGf,sBAAsB,CAAC;AAC1CC,MAAAA,MAAM,EAAEG,WADkC;AAE1CF,MAAAA,QAAQ,EAAG,KAAIK,mBAAoB;AAFO,KAAD,CAA3C;AAKA,WAAO;AACLQ,MAAAA;AADK,KAAP;AAGD;AACF,CAtCM",
+  "sourcesContent": [
+    "const writeSourceMapLocation = ({ source, location }) => {\n  return `${source}\n//# sourceMappingURL=${location}`\n}\n\nexport const remapper = ({ inputSource, inputSourceMap, options, outputSourceMapName }) => {\n  if (typeof inputSourceMap !== \"object\" || inputSourceMap === null) {\n    return\n  }\n\n  // delete inputSourceMap.sourcesContent\n  // we could remove sources content, they can be fetched from server\n  // removing them will decrease size of sourceMap BUT force\n  // the client to fetch the source resulting in an additional http request\n\n  // we could delete inputSourceMap.sourceRoot to ensure clientLocation is absolute\n  // but it's not set anyway because not passed to babel during compilation\n\n  // force a browser reload\n  delete inputSourceMap.sourcesContent\n\n  if (options.remapMethod === \"inline\") {\n    const mapAsBase64 = new Buffer(JSON.stringify(inputSourceMap)).toString(\"base64\")\n    const outputSource = writeSourceMapLocation({\n      source: inputSource,\n      location: `data:application/json;charset=utf-8;base64,${mapAsBase64}`,\n    })\n\n    return {\n      outputSource,\n    }\n  }\n\n  if (options.remapMethod === \"comment\") {\n    const outputSource = writeSourceMapLocation({\n      source: inputSource,\n      location: `./${outputSourceMapName}`,\n    })\n\n    return {\n      outputSource,\n    }\n  }\n}\n"
+  ]
+}

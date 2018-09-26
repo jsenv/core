@@ -3,10 +3,14 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var getRemoteLocation = exports.getRemoteLocation = function getRemoteLocation(_ref) {
-  var compileURL = _ref.compileURL,
-      file = _ref.file;
+exports.getRemoteLocation = void 0;
 
-  return compileURL + "/" + file;
+const getRemoteLocation = ({
+  compileURL,
+  file
+}) => {
+  return `${compileURL}/${file}`;
 };
+
+exports.getRemoteLocation = getRemoteLocation;
 //# sourceMappingURL=getRemoteLocation.js.map

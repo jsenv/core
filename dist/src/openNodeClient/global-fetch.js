@@ -1,16 +1,11 @@
 "use strict";
 
-var _https = require("https");
+var _https = _interopRequireDefault(require("https"));
 
-var _https2 = _interopRequireDefault(_https);
+var _nodeFetch = _interopRequireDefault(require("node-fetch"));
 
-var _nodeFetch = require("node-fetch");
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var _nodeFetch2 = _interopRequireDefault(_nodeFetch);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-_https2["default"].globalAgent.options.rejectUnauthorized = false;
-
-global.fetch = _nodeFetch2["default"];
+_https.default.globalAgent.options.rejectUnauthorized = false;
+global.fetch = _nodeFetch.default;
 //# sourceMappingURL=global-fetch.js.map

@@ -1,1 +1,22 @@
-{"version":3,"sources":["../../src/watchFile.test.js"],"names":["process","stdin","resume","file","resolve","__dirname","param","console","log"],"mappings":";;AAAA;;AACA;;;;;;AAEAA,QAAQC,KAAR,CAAcC,MAAd;AACA,IAAMC,OAAU,kBAAKC,OAAL,CAAaC,SAAb,EAAwB,QAAxB,CAAV,sBAAN;AACA,0BAAUF,IAAV,EAAgB,UAACG,KAAD,EAAW;AACzBC,UAAQC,GAAR,CAAY,cAAZ,EAA4BF,KAA5B;AACD,CAFD","file":"watchFile.test.js","sourcesContent":["import { watchFile } from \"./watchFile.js\"\nimport path from \"path\"\n\nprocess.stdin.resume()\nconst file = `${path.resolve(__dirname, \"../../\")}/src/watchFile.js`\nwatchFile(file, (param) => {\n  console.log(\"file changed\", param)\n})\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../src/watchFile.test.js"
+  ],
+  "names": [
+    "process",
+    "stdin",
+    "resume",
+    "file",
+    "path",
+    "resolve",
+    "__dirname",
+    "param",
+    "console",
+    "log"
+  ],
+  "mappings": ";;AAAA;;AACA;;;;AAEAA,OAAO,CAACC,KAAR,CAAcC,MAAd;AACA,MAAMC,IAAI,GAAI,GAAEC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,QAAxB,CAAkC,mBAAlD;AACA,0BAAUH,IAAV,EAAiBI,KAAD,IAAW;AACzBC,EAAAA,OAAO,CAACC,GAAR,CAAY,cAAZ,EAA4BF,KAA5B;AACD,CAFD",
+  "sourcesContent": [
+    "import { watchFile } from \"./watchFile.js\"\nimport path from \"path\"\n\nprocess.stdin.resume()\nconst file = `${path.resolve(__dirname, \"../../\")}/src/watchFile.js`\nwatchFile(file, (param) => {\n  console.log(\"file changed\", param)\n})\n"
+  ]
+}

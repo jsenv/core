@@ -1,1 +1,14 @@
-{"version":3,"sources":["../../../src/createCompile/file.js"],"names":["console","log"],"mappings":";;AAAA,IAAI,IAAJ,EAAU;AACRA,UAAQC,GAAR,CAAY,IAAZ;AACD,CAFD,MAEO;AACLD,UAAQC,GAAR,CAAY,KAAZ;AACD","file":"file.js","sourcesContent":["if (true) {\n  console.log(true)\n} else {\n  console.log(false)\n}\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/createCompile/file.js"
+  ],
+  "names": [
+    "console",
+    "log"
+  ],
+  "mappings": ";;AAAA,IAAI,IAAJ,EAAU;AACRA,EAAAA,OAAO,CAACC,GAAR,CAAY,IAAZ;AACD,CAFD,MAEO;AACLD,EAAAA,OAAO,CAACC,GAAR,CAAY,KAAZ;AACD",
+  "sourcesContent": [
+    "if (true) {\n  console.log(true)\n} else {\n  console.log(false)\n}\n"
+  ]
+}

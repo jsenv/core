@@ -3,11 +3,10 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var value = true;
-
+exports.default = void 0;
+const value = true;
 console.log("------HEY-------");
-
 debugger;
-
-exports["default"] = value;
+var _default = value;
+exports.default = _default;
 //# sourceMappingURL=file.js.map

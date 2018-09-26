@@ -3,13 +3,9 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.openChromiumClient = undefined;
+exports.openChromiumClient = void 0;
 
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
-var _puppeteer = require("puppeteer");
-
-var _puppeteer2 = _interopRequireDefault(_puppeteer);
+var _puppeteer = _interopRequireDefault(require("puppeteer"));
 
 var _createHTMLForBrowser = require("../createHTMLForBrowser.js");
 
@@ -21,15 +17,19 @@ var _getClientSetupAndTeardown = require("../getClientSetupAndTeardown.js");
 
 var _signal = require("@dmail/signal");
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var openIndexRequestInterception = function openIndexRequestInterception(_ref) {
-  var url = _ref.url,
-      page = _ref.page,
-      body = _ref.body;
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
 
-  return page.setRequestInterception(true).then(function () {
-    page.on("request", function (interceptedRequest) {
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+const openIndexRequestInterception = ({
+  url,
+  page,
+  body
+}) => {
+  return page.setRequestInterception(true).then(() => {
+    page.on("request", interceptedRequest => {
       if (interceptedRequest.url().startsWith(url)) {
         interceptedRequest.respond({
           status: 200,
@@ -39,59 +39,49 @@ var openIndexRequestInterception = function openIndexRequestInterception(_ref) {
             "content-length": Buffer.byteLength(body),
             "cache-control": "no-store"
           },
-          body: body
+          body
         });
         return;
       }
     });
-  }).then(function () {
+  }).then(() => {
     return {
-      url: url,
-      close: function close() {
-        return page.setRequestInterception(false);
-      }
+      url,
+      close: () => page.setRequestInterception(false)
     };
   });
 };
 
-var openChromiumClient = exports.openChromiumClient = function openChromiumClient(_ref2) {
-  var _ref2$url = _ref2.url,
-      url = _ref2$url === undefined ? "https://127.0.0.1:0" : _ref2$url,
-      server = _ref2.server,
-      compileURL = _ref2.compileURL,
-      _ref2$openIndexReques = _ref2.openIndexRequestHandler,
-      openIndexRequestHandler = _ref2$openIndexReques === undefined ? _openIndexServer.openIndexServer : _ref2$openIndexReques,
-      _ref2$headless = _ref2.headless,
-      headless = _ref2$headless === undefined ? true : _ref2$headless,
-      _ref2$mirrorConsole = _ref2.mirrorConsole,
-      mirrorConsole = _ref2$mirrorConsole === undefined ? false : _ref2$mirrorConsole,
-      _ref2$runFile = _ref2.runFile,
-      runFile = _ref2$runFile === undefined ? function (_ref3) {
-    var serverURL = _ref3.serverURL,
-        page = _ref3.page,
-        file = _ref3.file,
-        setup = _ref3.setup,
-        teardown = _ref3.teardown;
-
-    return page.evaluate(function (compileRoot, file, setupSource, teardownSource) {
-      var evtSource = new EventSource(compileRoot);
-      evtSource.addEventListener("message", function (e) {
+const openChromiumClient = ({
+  url = "https://127.0.0.1:0",
+  server,
+  compileURL,
+  openIndexRequestHandler = _openIndexServer.openIndexServer,
+  headless = true,
+  mirrorConsole = false,
+  runFile = ({
+    serverURL,
+    page,
+    file,
+    setup,
+    teardown
+  }) => {
+    return page.evaluate((compileRoot, file, setupSource, teardownSource) => {
+      const evtSource = new EventSource(compileRoot);
+      evtSource.addEventListener("message", e => {
         console.log("received event", e);
       });
-
-      return Promise.resolve(file).then(eval(setupSource)).then(function () {
-        return window.System["import"](file);
-      }).then(eval(teardownSource));
-    }, serverURL.href, file, "(" + setup.toString() + ")", "(" + teardown.toString() + ")");
-  } : _ref2$runFile;
-
+      return Promise.resolve(file).then(eval(setupSource)).then(() => window.System.import(file)).then(eval(teardownSource));
+    }, serverURL.href, file, `(${setup.toString()})`, `(${teardown.toString()})`);
+  }
+}) => {
   if (openIndexRequestHandler === openIndexRequestInterception && headless === false) {
-    throw new Error("openIndexRequestInterception work only in headless mode");
+    throw new Error(`openIndexRequestInterception work only in headless mode`);
   }
 
-  var openBrowser = function openBrowser() {
-    return _puppeteer2["default"].launch({
-      headless: headless,
+  const openBrowser = () => {
+    return _puppeteer.default.launch({
+      headless,
       ignoreHTTPSErrors: true // because we use a self signed certificate
       // handleSIGINT: true,
       // handleSIGTERM: true,
@@ -99,49 +89,45 @@ var openChromiumClient = exports.openChromiumClient = function openChromiumClien
       // because the 3 above are true by default pupeeter will auto close browser
       // so we apparently don't have to use listenNodeBeforeExit in order to close browser
       // as we do for server
+
     });
-  };
+  }; // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
-  // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
-  var execute = function execute(_ref4) {
-    var file = _ref4.file,
-        _ref4$autoClose = _ref4.autoClose,
-        autoClose = _ref4$autoClose === undefined ? false : _ref4$autoClose,
-        _ref4$autoCloseOnErro = _ref4.autoCloseOnError,
-        autoCloseOnError = _ref4$autoCloseOnErro === undefined ? false : _ref4$autoCloseOnErro,
-        _ref4$collectCoverage = _ref4.collectCoverage,
-        collectCoverage = _ref4$collectCoverage === undefined ? false : _ref4$collectCoverage,
-        _ref4$executeTest = _ref4.executeTest,
-        executeTest = _ref4$executeTest === undefined ? false : _ref4$executeTest;
 
-    var closed = (0, _signal.createSignal)();
+  const execute = ({
+    file,
+    autoClose = false,
+    // autoCloseOnError is different than autoClose because you often want to keep browser opened to debug error
+    autoCloseOnError = false,
+    collectCoverage = false,
+    executeTest = false
+  }) => {
+    const closed = (0, _signal.createSignal)();
 
-    var close = function close() {
+    const close = () => {
       closed.emit();
     };
 
-    var promise = openBrowser().then(function (browser) {
-      closed.listen(function () {
+    const promise = openBrowser().then(browser => {
+      closed.listen(() => {
         browser.close();
       });
-
-      return browser.newPage().then(function (page) {
-        closed.listen(function () {
-          // page.close() // commented until https://github.com/GoogleChrome/puppeteer/issues/2269
+      return browser.newPage().then(page => {
+        closed.listen(() => {// page.close() // commented until https://github.com/GoogleChrome/puppeteer/issues/2269
         });
 
-        var createPageUnexpectedBranch = function createPageUnexpectedBranch(page) {
-          return new Promise(function (resolve, reject) {
+        const createPageUnexpectedBranch = page => {
+          return new Promise((resolve, reject) => {
             // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-            page.on("error", reject);
-            // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
+            page.on("error", reject); // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
+
             page.on("pageerror", reject);
           });
         };
 
-        var createPageExpectedBranch = function createPageExpectedBranch(page) {
+        const createPageExpectedBranch = page => {
           if (mirrorConsole) {
-            page.on("console", function (message) {
+            page.on("console", message => {
               // there is also message._args
               // which is an array of JSHandle{ _context, _client _remoteObject }
               console[message._type](message._text);
@@ -150,52 +136,56 @@ var openChromiumClient = exports.openChromiumClient = function openChromiumClien
 
           return (0, _createHTMLForBrowser.createHTMLForBrowser)({
             title: "Skeleton for Chromium"
-          }).then(function (html) {
+          }).then(html => {
             return openIndexRequestHandler({
-              url: url,
-              page: page,
+              url,
+              page,
               body: html
-            }).then(function (indexRequestHandler) {
-              closed.listen(function () {
+            }).then(indexRequestHandler => {
+              closed.listen(() => {
                 indexRequestHandler.close();
               });
-
-              var remoteFile = (0, _getRemoteLocation.getRemoteLocation)({
-                compileURL: compileURL,
-                file: file
+              const remoteFile = (0, _getRemoteLocation.getRemoteLocation)({
+                compileURL,
+                file
               });
-
-              return page.goto(String(indexRequestHandler.url)).then(function () {
-                return runFile(_extends({
-                  serverURL: server.url,
-                  page: page,
-                  file: remoteFile
-                }, (0, _getClientSetupAndTeardown.getBrowserSetupAndTeardowm)({ collectCoverage: collectCoverage, executeTest: executeTest })));
-              });
+              return page.goto(String(indexRequestHandler.url)).then(() => runFile(_objectSpread({
+                serverURL: server.url,
+                page,
+                file: remoteFile
+              }, (0, _getClientSetupAndTeardown.getBrowserSetupAndTeardowm)({
+                collectCoverage,
+                executeTest
+              }))));
             });
           });
         };
 
         return Promise.race([createPageUnexpectedBranch(page), createPageExpectedBranch(page)]);
       });
-    }).then(function (value) {
+    }).then(value => {
       if (autoClose) {
         close();
       }
+
       return value;
-    }, function (reason) {
+    }, reason => {
       if (autoCloseOnError) {
         close();
       }
+
       return Promise.reject(reason);
     });
-
     return Promise.resolve({
-      promise: promise,
-      close: close
+      promise,
+      close
     });
   };
 
-  return Promise.resolve({ execute: execute });
+  return Promise.resolve({
+    execute
+  });
 };
+
+exports.openChromiumClient = openChromiumClient;
 //# sourceMappingURL=openChromiumClient.js.map

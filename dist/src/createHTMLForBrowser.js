@@ -3,24 +3,20 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createHTMLForBrowser = exports.detectIndentation = undefined;
+exports.createHTMLForBrowser = exports.detectIndentation = void 0;
 
-var _fs = require("fs");
+var _fs = _interopRequireDefault(require("fs"));
 
-var _fs2 = _interopRequireDefault(_fs);
+var _path = _interopRequireDefault(require("path"));
 
-var _path = require("path");
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var _path2 = _interopRequireDefault(_path);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-var readBrowserLoader = function readBrowserLoader() {
-  return new Promise(function (resolve, reject) {
-    var filename = _path2["default"].resolve(__dirname,
-    // we add an additional ../ to get rid of dist/
+const readBrowserLoader = () => {
+  return new Promise((resolve, reject) => {
+    const filename = _path.default.resolve(__dirname, // we add an additional ../ to get rid of dist/
     "../../node_modules/@dmail/module-loader/src/browser/index.js");
-    _fs2["default"].readFile(filename, function (error, buffer) {
+
+    _fs.default.readFile(filename, (error, buffer) => {
       if (error) {
         reject(error);
       } else {
@@ -30,9 +26,10 @@ var readBrowserLoader = function readBrowserLoader() {
   });
 };
 
-var countLeading = function countLeading(string, predicate) {
-  var leading = 0;
-  var i = 0;
+const countLeading = (string, predicate) => {
+  let leading = 0;
+  let i = 0;
+
   while (i < string.length) {
     if (predicate(string[i])) {
       i++;
@@ -41,18 +38,19 @@ var countLeading = function countLeading(string, predicate) {
       break;
     }
   }
+
   return leading;
 };
 
-var detectLineSeparator = function detectLineSeparator(string) {
-  var lineSeparators = ["\r\n", "\r", "\n"];
-  return lineSeparators.find(function (separator) {
+const detectLineSeparator = string => {
+  const lineSeparators = ["\r\n", "\r", "\n"];
+  return lineSeparators.find(separator => {
     return string.indexOf(separator) > -1;
   });
 };
 
-var detectIndentation = exports.detectIndentation = function detectIndentation(lines) {
-  var firstLineWithLeadingWhiteSpace = lines.find(function (line) {
+const detectIndentation = lines => {
+  const firstLineWithLeadingWhiteSpace = lines.find(line => {
     return line[0] === " " || line[0] === "\t";
   });
 
@@ -61,54 +59,62 @@ var detectIndentation = exports.detectIndentation = function detectIndentation(l
   }
 
   if (firstLineWithLeadingWhiteSpace[0] === " ") {
-    return " ".repeat(countLeading(firstLineWithLeadingWhiteSpace), function (char) {
-      return char === " ";
-    });
+    return " ".repeat(countLeading(firstLineWithLeadingWhiteSpace), char => char === " ");
   }
 
-  return "\t".repeat(countLeading(firstLineWithLeadingWhiteSpace), function (char) {
-    return char === "\t";
-  });
+  return "\t".repeat(countLeading(firstLineWithLeadingWhiteSpace), char => char === "\t");
 };
 
-var prefixLines = function prefixLines(string) {
-  var prefix = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "  ";
+exports.detectIndentation = detectIndentation;
 
-  var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
-      _ref$lineSeparator = _ref.lineSeparator,
-      lineSeparator = _ref$lineSeparator === undefined ? "auto" : _ref$lineSeparator;
-
+const prefixLines = (string, prefix = "  ", {
+  lineSeparator = "auto"
+} = {}) => {
   if (lineSeparator === "auto") {
     lineSeparator = detectLineSeparator(string);
   }
 
-  var lines = string.split(lineSeparator);
-
-  return lines.map(function (line, index) {
-    return "" + (index === 0 ? "" : prefix) + line;
-  }).join(lineSeparator);
+  const lines = string.split(lineSeparator);
+  return lines.map((line, index) => `${index === 0 ? "" : prefix}${line}`).join(lineSeparator);
 };
 
-var renderScript = function renderScript(_ref2) {
-  var source = _ref2.source;
-
-  return "<script type=\"text/javascript\">\n  " + source + "\n</script>";
+const renderScript = ({
+  source
+}) => {
+  return `<script type="text/javascript">
+  ${source}
+</script>`;
 };
 
-var createHTMLForBrowser = exports.createHTMLForBrowser = function createHTMLForBrowser() {
-  var _ref3 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-      _ref3$title = _ref3.title,
-      title = _ref3$title === undefined ? "Untitled" : _ref3$title,
-      _ref3$charset = _ref3.charset,
-      charset = _ref3$charset === undefined ? "utf-8" : _ref3$charset,
-      script = _ref3.script;
+const createHTMLForBrowser = ({
+  title = "Untitled",
+  charset = "utf-8",
+  script
+} = {}) => {
+  return readBrowserLoader().then(loaderSource => {
+    return `<!doctype html>
 
-  return readBrowserLoader().then(function (loaderSource) {
-    return "<!doctype html>\n\n<head>\n  <title>" + title + "</title>\n  <meta charset=\"" + charset + "\" />\n</head>\n\n<body>\n  <main></main>\n  " + prefixLines(renderScript({ source: loaderSource }), "  ") + "\n  " + prefixLines(renderScript({
-      source: "window.System = window.createBrowserLoader.createBrowserLoader()"
-    }), "  ") + "\n  " + prefixLines(renderScript({
+<head>
+  <title>${title}</title>
+  <meta charset="${charset}" />
+</head>
+
+<body>
+  <main></main>
+  ${prefixLines(renderScript({
+      source: loaderSource
+    }), "  ")}
+  ${prefixLines(renderScript({
+      source: `window.System = window.createBrowserLoader.createBrowserLoader()`
+    }), "  ")}
+  ${prefixLines(renderScript({
       source: script
-    }), "  ") + "\n</body>\n\n</html>";
+    }), "  ")}
+</body>
+
+</html>`;
   });
 };
+
+exports.createHTMLForBrowser = createHTMLForBrowser;
 //# sourceMappingURL=createHTMLForBrowser.js.map

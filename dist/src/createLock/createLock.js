@@ -3,81 +3,94 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createLockRegistry = undefined;
+exports.createLockRegistry = void 0;
 
-var _promise2 = require("../promise.js");
+var _promise = require("../promise.js");
 
-var createLock = function createLock() {
-  var unusedCallback = void 0;
-  var onceUnused = function onceUnused(callback) {
+const createLock = () => {
+  let unusedCallback;
+
+  const onceUnused = callback => {
     unusedCallback = callback;
   };
 
-  var pendings = [];
-  var busy = false;
+  const pendings = [];
+  let busy = false;
 
-  var chain = function chain(callback) {
+  const chain = callback => {
     if (busy) {
-      var _createPromiseAndHook = (0, _promise2.createPromiseAndHooks)(),
-          _promise = _createPromiseAndHook.promise,
-          resolve = _createPromiseAndHook.resolve,
-          reject = _createPromiseAndHook.reject;
-
-      pendings.push({ promise: _promise, resolve: resolve, reject: reject, callback: callback });
-      return _promise;
+      const {
+        promise,
+        resolve,
+        reject
+      } = (0, _promise.createPromiseAndHooks)();
+      pendings.push({
+        promise,
+        resolve,
+        reject,
+        callback
+      });
+      return promise;
     }
 
     busy = true;
-    var promise = Promise.resolve().then(callback);
+    const promise = Promise.resolve().then(callback);
 
-    var fullfilledOrRejected = function fullfilledOrRejected() {
+    const fullfilledOrRejected = () => {
       busy = false;
+
       if (pendings.length === 0) {
         if (unusedCallback) {
           unusedCallback();
           unusedCallback = undefined;
         }
       } else {
-        var _pendings$shift = pendings.shift(),
-            _resolve = _pendings$shift.resolve,
-            _callback = _pendings$shift.callback;
-
-        _resolve(chain(_callback));
+        const {
+          resolve,
+          callback
+        } = pendings.shift();
+        resolve(chain(callback));
       }
     };
 
     promise.then(fullfilledOrRejected, fullfilledOrRejected);
-
     return promise;
   };
 
-  return { chain: chain, onceUnused: onceUnused };
+  return {
+    chain,
+    onceUnused
+  };
 };
 
-var createLockRegistry = exports.createLockRegistry = function createLockRegistry() {
-  var lockBindings = [];
-  var lockForRessource = function lockForRessource(ressource) {
-    var lockBinding = lockBindings.find(function (lockBinding) {
-      return lockBinding.ressource === ressource;
-    });
+const createLockRegistry = () => {
+  const lockBindings = [];
+
+  const lockForRessource = ressource => {
+    const lockBinding = lockBindings.find(lockBinding => lockBinding.ressource === ressource);
+
     if (lockBinding) {
       return lockBinding.lock;
     }
 
-    var lock = createLock();
+    const lock = createLock();
     lockBindings.push({
-      lock: lock,
-      ressource: ressource
-    });
-    // to avoid lockBindings to grow for ever
+      lock,
+      ressource
+    }); // to avoid lockBindings to grow for ever
     // we remove them from the array as soon as the ressource is not used anymore
-    lock.onceUnused(function () {
-      var index = lockBindings.indexOf(lock);
+
+    lock.onceUnused(() => {
+      const index = lockBindings.indexOf(lock);
       lockBindings.splice(index, 1);
     });
-
     return lock;
   };
-  return { lockForRessource: lockForRessource };
+
+  return {
+    lockForRessource
+  };
 };
+
+exports.createLockRegistry = createLockRegistry;
 //# sourceMappingURL=createLock.js.map

@@ -1,1 +1,15 @@
-{"version":3,"sources":["../../../src/__test__/file-with-node-native-import.js"],"names":["createServer","name"],"mappings":";;;;;;AAAA;;;;;;qBAEe,kBAAKA,YAAL,CAAkBC,I","file":"file-with-node-native-import.js","sourcesContent":["import http from \"@node/http\"\n\nexport default http.createServer.name\n"]}
+{
+  "version": 3,
+  "sources": [
+    "../../../src/__test__/file-with-node-native-import.js"
+  ],
+  "names": [
+    "http",
+    "createServer",
+    "name"
+  ],
+  "mappings": ";;;;;;;AAAA;;;;eAEeA,cAAKC,YAAL,CAAkBC,I",
+  "sourcesContent": [
+    "import http from \"@node/http\"\n\nexport default http.createServer.name\n"
+  ]
+}

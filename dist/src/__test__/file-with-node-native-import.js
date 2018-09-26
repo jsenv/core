@@ -3,12 +3,12 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.default = void 0;
 
-var _http = require("@node/http");
+var _http = _interopRequireDefault(require("@node/http"));
 
-var _http2 = _interopRequireDefault(_http);
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
-
-exports["default"] = _http2["default"].createServer.name;
+var _default = _http.default.createServer.name;
+exports.default = _default;
 //# sourceMappingURL=file-with-node-native-import.js.map

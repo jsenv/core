@@ -3,9 +3,10 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-// nice to have https://prepack.io/getting-started.html#options
+exports.optimizer = void 0;
 
-var optimizer = exports.optimizer = function optimizer() {
-  return null;
-};
+// nice to have https://prepack.io/getting-started.html#options
+const optimizer = () => null;
+
+exports.optimizer = optimizer;
 //# sourceMappingURL=optimizer.js.map

@@ -3,14 +3,21 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var createPromiseAndHooks = exports.createPromiseAndHooks = function createPromiseAndHooks() {
-  var resolve = void 0;
-  var reject = void 0;
-  var promise = new Promise(function (res, rej) {
+exports.createPromiseAndHooks = void 0;
+
+const createPromiseAndHooks = () => {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => {
     resolve = res;
     reject = rej;
   });
-
-  return { promise: promise, resolve: resolve, reject: reject };
+  return {
+    promise,
+    resolve,
+    reject
+  };
 };
+
+exports.createPromiseAndHooks = createPromiseAndHooks;
 //# sourceMappingURL=promise.js.map

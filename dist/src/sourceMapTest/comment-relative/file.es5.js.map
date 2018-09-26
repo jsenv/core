@@ -1,1 +1,0 @@
-{"version":3,"sources":["../../../../src/sourceMapTest/comment-relative/file.es5.js"],"names":["value","console","log"],"mappings":";;AAAA,IAAIA,QAAQ,IAAZ;;AAEA;;AAEAC,QAAQC,GAAR,CAAYF,KAAZ;AACA","file":"file.es5.js","sourcesContent":["var value = \"ok\"\n\ndebugger\n\nconsole.log(value)\n//# sourceMappingURL=./file.es5.js.map\n"]}
