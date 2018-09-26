@@ -1,5 +1,4 @@
-import { createConfig, createSyntaxOptions, mergeOptions } from "@dmail/shared-config/dist/babel.js"
-import { transform, transformFromAst } from "babel-core"
+import { transform, transformFromAst } from "@babel/core"
 import { programVisitor } from "istanbul-lib-instrument"
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
@@ -42,7 +41,6 @@ const createInstrumentPlugin = ({ filename, useInlineSourceMaps = false } = {}) 
 
 export const instrumenter = (context) => {
   const {
-    rootLocation,
     inputRelativeLocation,
     inputSource,
     inputSourceMap,
@@ -63,25 +61,20 @@ export const instrumenter = (context) => {
         sourceMaps: false,
       }
 
-  const babelOptions = mergeOptions(
-    remapOptions,
-    // we need the syntax option to enable rest spread in case it's used
-    createSyntaxOptions(),
-    {
-      root: rootLocation,
-      filename: inputRelativeLocation,
-      inputSourceMap,
-      babelrc: false, // trust only these options, do not read any babelrc config file
-      ast: true,
-    },
-  )
-  const babelConfig = createConfig(babelOptions)
-  babelConfig.plugins.push(
-    createInstrumentPlugin({ filename: inputRelativeLocation, useInlineSourceMaps: false }),
-  )
+  const babelOptions = {
+    plugins: [
+      // we are missing some plugins here, the syntax plugins are required to be able to traverse the tree no ?
+      createInstrumentPlugin({ filename: inputRelativeLocation, useInlineSourceMaps: false }),
+    ],
+    filename: inputRelativeLocation,
+    inputSourceMap,
+    babelrc: false, // trust only these options, do not read any babelrc config file
+    ast: true,
+    ...remapOptions,
+  }
 
   if (inputAst) {
-    const result = transformFromAst(inputAst, inputSource, babelConfig)
+    const result = transformFromAst(inputAst, inputSource, babelOptions)
     return {
       outputSource: result.code,
       outputSourceMap: result.map,
@@ -93,7 +86,7 @@ export const instrumenter = (context) => {
     }
   }
 
-  const { code, ast, map, metadata } = transform(inputSource, babelConfig)
+  const { code, ast, map, metadata } = transform(inputSource, babelOptions)
   return {
     outputSource: code,
     outputSourceMap: map,

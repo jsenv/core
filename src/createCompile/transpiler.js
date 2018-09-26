@@ -1,10 +1,5 @@
-import {
-  createConfig,
-  createModuleOptions,
-  createSyntaxOptions,
-  mergeOptions,
-} from "@dmail/shared-config/dist/babel.js"
-import { transform, transformFromAst } from "babel-core"
+import { getBabelPluginsFor } from "@dmail/project-structure-compile-babel"
+import { transform, transformFromAst } from "@babel/core"
 
 export const transpiler = (context) => {
   const {
@@ -18,14 +13,20 @@ export const transpiler = (context) => {
     getSourceLocationForSourceMap,
   } = context
 
-  // the truth is that we don't support global, nor amd
-  // I have to check if we could support cjs but maybe we don't even support this
-  // at least we support the most important: inputFormat: "es" with outputFormat: "systemjs"
-  // https://github.com/systemjs/systemjs/blob/master/src/format-helpers.js#L5
-  // https://github.com/systemjs/babel-plugin-transform-global-system-wrapper/issues/1
-  const moduleOptions = createModuleOptions({
-    inputModuleFormat: "es",
-    outputModuleFormat: "systemjs",
+  const plugins = getBabelPluginsFor({
+    // rename name into platformName, and version into platformVersion in @dmail/project-structure-compile-babel
+
+    // name below 'should' be dynamic and read from request user-agent to compile the right output
+    // an other problem is that the compile result will become different depending who is requesting it
+    // so we must have a smart start to cache the output
+    // we cannot create a cache entry per user agent, the cache would explode
+    // we could keep a cache per plugin set but the array returned by getBabelPluginsFor does not allow
+    // to stringify the list of plugins
+    // we could also use an other approach 'ala' browser list so that we use browser list to get the list of plugins
+    // and use it to invalidate the cache
+    name: "node",
+    version: "5.0",
+    moduleOutput: "systemjs",
   })
 
   const remapOptions = options.remap
@@ -38,16 +39,17 @@ export const transpiler = (context) => {
         sourceMaps: false,
       }
 
-  const babelOptions = mergeOptions(moduleOptions, createSyntaxOptions(), remapOptions, {
+  const babelOptions = {
+    plugins,
     filename: inputRelativeLocation,
     inputSourceMap,
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true,
-  })
-  const babelConfig = createConfig(babelOptions)
+    ...remapOptions,
+  }
 
   if (inputAst) {
-    const { code, ast, map } = transformFromAst(inputAst, inputSource, babelConfig)
+    const { code, ast, map } = transformFromAst(inputAst, inputSource, babelOptions)
     return {
       outputSource: code,
       outputSourceMap: map,
@@ -58,7 +60,7 @@ export const transpiler = (context) => {
     }
   }
 
-  const { code, ast, map } = transform(inputSource, babelConfig)
+  const { code, ast, map } = transform(inputSource, babelOptions)
   return {
     outputSource: code,
     outputSourceMap: map,

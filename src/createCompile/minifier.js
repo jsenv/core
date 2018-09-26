@@ -1,9 +1,4 @@
-import {
-  createConfig,
-  createMinifiyOptions,
-  mergeOptions,
-} from "@dmail/shared-config/dist/babel.js"
-import { transform, transformFromAst } from "babel-core"
+import { transform, transformFromAst } from "@babel/core"
 
 export const minifier = ({
   rootLocation,
@@ -13,18 +8,17 @@ export const minifier = ({
   options,
   outputSourceMapName,
 }) => {
-  const babelConfig = createConfig(
-    mergeOptions(createMinifiyOptions(), {
-      sourceMaps: options.remap,
-      inputSourceMap,
-      root: rootLocation,
-      babelrc: false, // trust only these options, do not read any babelrc config file
-      ast: true,
-    }),
-  )
+  const babelOptions = {
+    plugins: [], // we need a list of plugin that minify the outputs
+    sourceMaps: options.remap,
+    inputSourceMap,
+    root: rootLocation,
+    babelrc: false, // trust only these options, do not read any babelrc config file
+    ast: true,
+  }
 
   if (inputAst) {
-    const { code, ast, map } = transformFromAst(inputAst, inputSource, babelConfig)
+    const { code, ast, map } = transformFromAst(inputAst, inputSource, babelOptions)
     return {
       outputSource: code,
       outputSourceMap: map,
@@ -35,7 +29,7 @@ export const minifier = ({
     }
   }
 
-  const { code, ast, map } = transform(inputSource, babelConfig)
+  const { code, ast, map } = transform(inputSource, babelOptions)
   return {
     outputSource: code,
     outputSourceMap: map,

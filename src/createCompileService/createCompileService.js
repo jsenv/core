@@ -14,7 +14,7 @@ import {
 import { locateFile } from "./locateFile.js"
 import { readFile } from "./readFile.js"
 import { lockForRessource } from "./ressourceRegistry.js"
-import { writeFile } from "./writeFile.js"
+import { writeFileFromString } from "@dmail/project-structure-compile-babel"
 import { createFileService } from "../createFileService/createFileService.js"
 
 const compareBranch = (branchA, branchB) => {
@@ -432,10 +432,7 @@ const updateBranch = ({
     })
 
     promises.push(
-      writeFile({
-        location: mainLocation,
-        string: output,
-      }),
+      writeFileFromString(mainLocation, output),
       ...outputAssets.map((asset) => {
         const assetLocation = getOutputAssetLocation({
           rootLocation,
@@ -446,10 +443,7 @@ const updateBranch = ({
           asset,
         })
 
-        return writeFile({
-          location: assetLocation,
-          string: asset.content,
-        })
+        return writeFileFromString(assetLocation, asset.content)
       }),
     )
   }
@@ -543,12 +537,7 @@ const updateBranch = ({
       filename,
     })
 
-    promises.push(
-      writeFile({
-        location: cacheDataLocation,
-        string: JSON.stringify(updatedCache, null, "  "),
-      }),
-    )
+    promises.push(writeFileFromString(cacheDataLocation, JSON.stringify(updatedCache, null, "  ")))
   }
 
   return Promise.all(promises)
