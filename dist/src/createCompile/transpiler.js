@@ -5,9 +5,13 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.transpiler = void 0;
 
-var _babel = require("@dmail/shared-config/dist/babel.js");
+var _projectStructureCompileBabel = require("@dmail/project-structure-compile-babel");
 
-var _babelCore = require("babel-core");
+var _transpileWithBabel = require("./transpileWithBabel.js");
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 const transpiler = context => {
   const {
@@ -19,61 +23,36 @@ const transpiler = context => {
     outputSourceMapName,
     getSourceNameForSourceMap,
     getSourceLocationForSourceMap
-  } = context; // the truth is that we don't support global, nor amd
-  // I have to check if we could support cjs but maybe we don't even support this
-  // at least we support the most important: inputFormat: "es" with outputFormat: "systemjs"
-  // https://github.com/systemjs/systemjs/blob/master/src/format-helpers.js#L5
-  // https://github.com/systemjs/babel-plugin-transform-global-system-wrapper/issues/1
-
-  const moduleOptions = (0, _babel.createModuleOptions)({
-    inputModuleFormat: "es",
-    outputModuleFormat: "systemjs"
-  });
-  const remapOptions = options.remap ? {
-    sourceMaps: true,
-    sourceMapTarget: getSourceNameForSourceMap(context),
-    sourceFileName: getSourceLocationForSourceMap(context)
-  } : {
-    sourceMaps: false
-  };
-  const babelOptions = (0, _babel.mergeOptions)(moduleOptions, (0, _babel.createSyntaxOptions)(), remapOptions, {
+  } = context;
+  const babelOptions = {
+    plugins: (0, _projectStructureCompileBabel.getBabelPluginsFor)({
+      // platformName below 'should' be dynamic and read from request user-agent to compile the right output
+      // an other problem is that the compile result will become different depending who is requesting it
+      // so we must have a smart strategy to cache the output
+      // we cannot create a cache entry per user agent, the cache would explode
+      // we could keep a cache per plugin set but the array returned by getBabelPluginsFor
+      // cannot be stringified for now (it's an array of function)
+      // we could also use an other approach 'ala' browser list so that we use browser list to get the list of plugins
+      // and use it to invalidate the cache
+      // it would be the easisest approach
+      // we could maintain 2-3 browserlist to serve depending the user -agent requesting us
+      // we would server one of the 3 build
+      platformName: "node",
+      platformVersion: "5.0",
+      moduleOutput: "systemjs"
+    }),
     filename: inputRelativeLocation,
-    inputSourceMap,
-    babelrc: false,
-    // trust only these options, do not read any babelrc config file
-    ast: true
-  });
-  const babelConfig = (0, _babel.createConfig)(babelOptions);
-
-  if (inputAst) {
-    const {
-      code,
-      ast,
-      map
-    } = (0, _babelCore.transformFromAst)(inputAst, inputSource, babelConfig);
-    return {
-      outputSource: code,
-      outputSourceMap: map,
-      outputAst: ast,
-      outputAssets: {
-        [outputSourceMapName]: JSON.stringify(map, null, "  ")
-      }
-    };
-  }
-
-  const {
-    code,
-    ast,
-    map
-  } = (0, _babelCore.transform)(inputSource, babelConfig);
-  return {
-    outputSource: code,
-    outputSourceMap: map,
-    outputAst: ast,
-    outputAssets: {
-      [outputSourceMapName]: JSON.stringify(map, null, "  ")
-    }
+    inputSourceMap
   };
+  return (0, _transpileWithBabel.transpileWithBabel)(_objectSpread({
+    inputAst,
+    inputSource,
+    options: babelOptions
+  }, options.remap ? {
+    outputSourceMapName,
+    sourceLocationForSourceMap: getSourceLocationForSourceMap(context),
+    sourceNameForSourceMap: getSourceNameForSourceMap(context)
+  } : {}));
 };
 
 exports.transpiler = transpiler;

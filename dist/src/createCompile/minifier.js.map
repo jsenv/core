@@ -5,29 +5,24 @@
   ],
   "names": [
     "minifier",
-    "rootLocation",
+    "context",
+    "inputRelativeLocation",
     "inputSource",
     "inputAst",
     "inputSourceMap",
     "options",
     "outputSourceMapName",
-    "babelConfig",
-    "sourceMaps",
+    "getSourceNameForSourceMap",
+    "getSourceLocationForSourceMap",
+    "babelOptions",
+    "plugins",
+    "filename",
     "remap",
-    "root",
-    "babelrc",
-    "ast",
-    "code",
-    "map",
-    "outputSource",
-    "outputSourceMap",
-    "outputAst",
-    "outputAssets",
-    "JSON",
-    "stringify"
+    "sourceLocationForSourceMap",
+    "sourceNameForSourceMap"
   ],
-  "mappings": ";;;;;;;AAAA;;AAKA;;AAEO,MAAMA,QAAQ,GAAG,CAAC;AACvBC,EAAAA,YADuB;AAEvBC,EAAAA,WAFuB;AAGvBC,EAAAA,QAHuB;AAIvBC,EAAAA,cAJuB;AAKvBC,EAAAA,OALuB;AAMvBC,EAAAA;AANuB,CAAD,KAOlB;AACJ,QAAMC,WAAW,GAAG,yBAClB,yBAAa,kCAAb,EAAqC;AACnCC,IAAAA,UAAU,EAAEH,OAAO,CAACI,KADe;AAEnCL,IAAAA,cAFmC;AAGnCM,IAAAA,IAAI,EAAET,YAH6B;AAInCU,IAAAA,OAAO,EAAE,KAJ0B;AAInB;AAChBC,IAAAA,GAAG,EAAE;AAL8B,GAArC,CADkB,CAApB;;AAUA,MAAIT,QAAJ,EAAc;AACZ,UAAM;AAAEU,MAAAA,IAAF;AAAQD,MAAAA,GAAR;AAAaE,MAAAA;AAAb,QAAqB,iCAAiBX,QAAjB,EAA2BD,WAA3B,EAAwCK,WAAxC,CAA3B;AACA,WAAO;AACLQ,MAAAA,YAAY,EAAEF,IADT;AAELG,MAAAA,eAAe,EAAEF,GAFZ;AAGLG,MAAAA,SAAS,EAAEL,GAHN;AAILM,MAAAA,YAAY,EAAE;AACZ,SAACZ,mBAAD,GAAuBa,IAAI,CAACC,SAAL,CAAeN,GAAf,EAAoB,IAApB,EAA0B,IAA1B;AADX;AAJT,KAAP;AAQD;;AAED,QAAM;AAAED,IAAAA,IAAF;AAAQD,IAAAA,GAAR;AAAaE,IAAAA;AAAb,MAAqB,0BAAUZ,WAAV,EAAuBK,WAAvB,CAA3B;AACA,SAAO;AACLQ,IAAAA,YAAY,EAAEF,IADT;AAELG,IAAAA,eAAe,EAAEF,GAFZ;AAGLG,IAAAA,SAAS,EAAEL,GAHN;AAILM,IAAAA,YAAY,EAAE;AACZ,OAACZ,mBAAD,GAAuBa,IAAI,CAACC,SAAL,CAAeN,GAAf,EAAoB,IAApB,EAA0B,IAA1B;AADX;AAJT,GAAP;AAQD,CAvCM",
+  "mappings": ";;;;;;;AAAA;;;;;;AAEO,MAAMA,QAAQ,GAAIC,OAAD,IAAa;AACnC,QAAM;AACJC,IAAAA,qBADI;AAEJC,IAAAA,WAFI;AAGJC,IAAAA,QAHI;AAIJC,IAAAA,cAJI;AAKJC,IAAAA,OALI;AAMJC,IAAAA,mBANI;AAOJC,IAAAA,yBAPI;AAQJC,IAAAA;AARI,MASFR,OATJ;AAWA,QAAMS,YAAY,GAAG;AACnB;AACAC,IAAAA,OAAO,EAAE,EAFU;AAGnBC,IAAAA,QAAQ,EAAEV,qBAHS;AAInBG,IAAAA;AAJmB,GAArB;AAOA,SAAO;AACLD,IAAAA,QADK;AAELD,IAAAA,WAFK;AAGLG,IAAAA,OAAO,EAAEI;AAHJ,KAIDJ,OAAO,CAACO,KAAR,GACA;AACEN,IAAAA,mBADF;AAEEO,IAAAA,0BAA0B,EAAEL,6BAA6B,CAACR,OAAD,CAF3D;AAGEc,IAAAA,sBAAsB,EAAEP,yBAAyB,CAACP,OAAD;AAHnD,GADA,GAMA,EAVC,EAAP;AAYD,CA/BM",
   "sourcesContent": [
-    "import {\n  createConfig,\n  createMinifiyOptions,\n  mergeOptions,\n} from \"@dmail/shared-config/dist/babel.js\"\nimport { transform, transformFromAst } from \"babel-core\"\n\nexport const minifier = ({\n  rootLocation,\n  inputSource,\n  inputAst,\n  inputSourceMap,\n  options,\n  outputSourceMapName,\n}) => {\n  const babelConfig = createConfig(\n    mergeOptions(createMinifiyOptions(), {\n      sourceMaps: options.remap,\n      inputSourceMap,\n      root: rootLocation,\n      babelrc: false, // trust only these options, do not read any babelrc config file\n      ast: true,\n    }),\n  )\n\n  if (inputAst) {\n    const { code, ast, map } = transformFromAst(inputAst, inputSource, babelConfig)\n    return {\n      outputSource: code,\n      outputSourceMap: map,\n      outputAst: ast,\n      outputAssets: {\n        [outputSourceMapName]: JSON.stringify(map, null, \"  \"),\n      },\n    }\n  }\n\n  const { code, ast, map } = transform(inputSource, babelConfig)\n  return {\n    outputSource: code,\n    outputSourceMap: map,\n    outputAst: ast,\n    outputAssets: {\n      [outputSourceMapName]: JSON.stringify(map, null, \"  \"),\n    },\n  }\n}\n"
+    "import { transpileWithBabel } from \"./transpileWithBabel.js\"\n\nexport const minifier = (context) => {\n  const {\n    inputRelativeLocation,\n    inputSource,\n    inputAst,\n    inputSourceMap,\n    options,\n    outputSourceMapName,\n    getSourceNameForSourceMap,\n    getSourceLocationForSourceMap,\n  } = context\n\n  const babelOptions = {\n    // we need a list of plugin that minify the outputs\n    plugins: [],\n    filename: inputRelativeLocation,\n    inputSourceMap,\n  }\n\n  return transpileWithBabel({\n    inputAst,\n    inputSource,\n    options: babelOptions,\n    ...(options.remap\n      ? {\n          outputSourceMapName,\n          sourceLocationForSourceMap: getSourceLocationForSourceMap(context),\n          sourceNameForSourceMap: getSourceNameForSourceMap(context),\n        }\n      : {}),\n  })\n}\n"
   ]
 }

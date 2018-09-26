@@ -1,0 +1,40 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../src/createCompile/transpileWithBabel.js"
+  ],
+  "names": [
+    "stringifyMap",
+    "object",
+    "JSON",
+    "stringify",
+    "stringifyCoverage",
+    "transpile",
+    "inputAst",
+    "inputSource",
+    "options",
+    "transpileWithBabel",
+    "outputSourceMapName",
+    "sourceLocationForSourceMap",
+    "sourceNameForSourceMap",
+    "sourceMaps",
+    "Boolean",
+    "babelrc",
+    "ast",
+    "sourceFileName",
+    "then",
+    "code",
+    "map",
+    "metadata",
+    "file",
+    "outputSource",
+    "outputSourceMap",
+    "outputAst",
+    "outputAssets",
+    "coverage"
+  ],
+  "mappings": ";;;;;;;AAAA;;;;;;AAEA,MAAMA,YAAY,GAAIC,MAAD,IAAYC,IAAI,CAACC,SAAL,CAAeF,MAAf,EAAuB,IAAvB,EAA6B,IAA7B,CAAjC;;AAEA,MAAMG,iBAAiB,GAAIH,MAAD,IAAYC,IAAI,CAACC,SAAL,CAAeF,MAAf,EAAuB,IAAvB,EAA6B,IAA7B,CAAtC;;AAEA,MAAMI,SAAS,GAAG,CAAC;AAAEC,EAAAA,QAAF;AAAYC,EAAAA,WAAZ;AAAyBC,EAAAA;AAAzB,CAAD,KAAwC;AACxD,MAAIF,QAAJ,EAAc;AACZ,WAAO,iCAAsBA,QAAtB,EAAgCC,WAAhC,EAA6CC,OAA7C,CAAP;AACD;;AACD,SAAO,0BAAeD,WAAf,EAA4BC,OAA5B,CAAP;AACD,CALD;;AAOO,MAAMC,kBAAkB,GAAG,CAAC;AACjCH,EAAAA,QADiC;AAEjCC,EAAAA,WAFiC;AAGjCC,EAAAA,OAHiC;AAIjCE,EAAAA,mBAJiC;AAKjCC,EAAAA,0BALiC;AAMjCC,EAAAA;AANiC,CAAD,KAO5B;AACJ,QAAMC,UAAU,GAAGC,OAAO,CAACJ,mBAAD,CAA1B;AACAF,EAAAA,OAAO,qBACFA,OADE;AAELO,IAAAA,OAAO,EAAE,KAFJ;AAEW;AAChBC,IAAAA,GAAG,EAAE,IAHA;AAILH,IAAAA,UAJK;AAKLI,IAAAA,cAAc,EAAEN;AALX,IAAP;AAQA,SAAON,SAAS,CAAC;AAAEC,IAAAA,QAAF;AAAYC,IAAAA,WAAZ;AAAyBC,IAAAA;AAAzB,GAAD,CAAT,CAA8CU,IAA9C,CAAmD,CAAC;AAAEC,IAAAA,IAAF;AAAQH,IAAAA,GAAR;AAAaI,IAAAA,GAAb;AAAkBC,IAAAA;AAAlB,GAAD,KAAkC;AAC1F,QAAID,GAAJ,EAAS;AACPA,MAAAA,GAAG,CAACE,IAAJ,GAAWV,sBAAX;AACD;;AAED,WAAO;AACLW,MAAAA,YAAY,EAAEJ,IADT;AAELK,MAAAA,eAAe,EAAEJ,GAFZ;AAGLK,MAAAA,SAAS,EAAET,GAHN;AAILU,MAAAA,YAAY,oBACNb,UAAU,GAAG;AAAE,SAACH,mBAAD,GAAuBV,YAAY,CAACoB,GAAD;AAArC,OAAH,GAAkD,EADtD,EAENC,QAAQ,CAACM,QAAT,GAAoB;AAAE,yBAAiBvB,iBAAiB,CAACiB,QAAQ,CAACM,QAAV;AAApC,OAApB,GAAgF,EAF1E;AAJP,KAAP;AASD,GAdM,CAAP;AAeD,CAhCM",
+  "sourcesContent": [
+    "import { transformAsync, transformFromAstAsync } from \"@babel/core\"\n\nconst stringifyMap = (object) => JSON.stringify(object, null, \"  \")\n\nconst stringifyCoverage = (object) => JSON.stringify(object, null, \"  \")\n\nconst transpile = ({ inputAst, inputSource, options }) => {\n  if (inputAst) {\n    return transformFromAstAsync(inputAst, inputSource, options)\n  }\n  return transformAsync(inputSource, options)\n}\n\nexport const transpileWithBabel = ({\n  inputAst,\n  inputSource,\n  options,\n  outputSourceMapName,\n  sourceLocationForSourceMap,\n  sourceNameForSourceMap,\n}) => {\n  const sourceMaps = Boolean(outputSourceMapName)\n  options = {\n    ...options,\n    babelrc: false, // trust only these options, do not read any babelrc config file\n    ast: true,\n    sourceMaps,\n    sourceFileName: sourceLocationForSourceMap,\n  }\n\n  return transpile({ inputAst, inputSource, options }).then(({ code, ast, map, metadata }) => {\n    if (map) {\n      map.file = sourceNameForSourceMap\n    }\n\n    return {\n      outputSource: code,\n      outputSourceMap: map,\n      outputAst: ast,\n      outputAssets: {\n        ...(sourceMaps ? { [outputSourceMapName]: stringifyMap(map) } : {}),\n        ...(metadata.coverage ? { \"coverage.json\": stringifyCoverage(metadata.coverage) } : {}),\n      },\n    }\n  })\n}\n"
+  ]
+}

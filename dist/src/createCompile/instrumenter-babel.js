@@ -5,11 +5,13 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.instrumenter = void 0;
 
-var _babel = require("@dmail/shared-config/dist/babel.js");
-
-var _babelCore = require("babel-core");
-
 var _istanbulLibInstrument = require("istanbul-lib-instrument");
+
+var _transpileWithBabel = require("./transpileWithBabel.js");
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 const createInstrumentPlugin = ({
@@ -27,7 +29,8 @@ const createInstrumentPlugin = ({
             let inputSourceMap;
 
             if (useInlineSourceMaps) {
-              inputSourceMap = this.opts.inputSourceMap || this.file.opts.inputSourceMap;
+              // https://github.com/istanbuljs/babel-plugin-istanbul/commit/a9e15643d249a2985e4387e4308022053b2cd0ad#diff-1fdf421c05c1140f6d71444ea2b27638R65
+              inputSourceMap = this.opts.inputSourceMap || this.file.inputMap ? this.file.inputMap.sourcemap : null;
             } else {
               inputSourceMap = this.opts.inputSourceMap;
             }
@@ -59,7 +62,6 @@ const createInstrumentPlugin = ({
 
 const instrumenter = context => {
   const {
-    rootLocation,
     inputRelativeLocation,
     inputSource,
     inputSourceMap,
@@ -69,56 +71,25 @@ const instrumenter = context => {
     getSourceNameForSourceMap,
     getSourceLocationForSourceMap
   } = context;
-  const remapOptions = options.remap ? {
-    sourceMaps: true,
-    sourceMapTarget: getSourceNameForSourceMap(context),
-    sourceFileName: getSourceLocationForSourceMap(context)
-  } : {
-    sourceMaps: false
-  };
-  const babelOptions = (0, _babel.mergeOptions)(remapOptions, // we need the syntax option to enable rest spread in case it's used
-  (0, _babel.createSyntaxOptions)(), {
-    root: rootLocation,
+  const babelOptions = {
+    plugins: [// we are missing some plugins here, the syntax plugins are required to be able to traverse the tree no ?
+    // yes indeed, we could copy/paste all syntax plugins here
+    createInstrumentPlugin({
+      filename: inputRelativeLocation,
+      useInlineSourceMaps: false
+    })],
     filename: inputRelativeLocation,
-    inputSourceMap,
-    babelrc: false,
-    // trust only these options, do not read any babelrc config file
-    ast: true
-  });
-  const babelConfig = (0, _babel.createConfig)(babelOptions);
-  babelConfig.plugins.push(createInstrumentPlugin({
-    filename: inputRelativeLocation,
-    useInlineSourceMaps: false
-  }));
-
-  if (inputAst) {
-    const result = (0, _babelCore.transformFromAst)(inputAst, inputSource, babelConfig);
-    return {
-      outputSource: result.code,
-      outputSourceMap: result.map,
-      outputAst: result.ast,
-      outputAssets: {
-        [outputSourceMapName]: JSON.stringify(result.map, null, "  "),
-        "coverage.json": JSON.stringify(result.metadata.coverage, null, "  ")
-      }
-    };
-  }
-
-  const {
-    code,
-    ast,
-    map,
-    metadata
-  } = (0, _babelCore.transform)(inputSource, babelConfig);
-  return {
-    outputSource: code,
-    outputSourceMap: map,
-    outputAst: ast,
-    outputAssets: {
-      [outputSourceMapName]: JSON.stringify(map, null, "  "),
-      "coverage.json": JSON.stringify(metadata.coverage, null, "  ")
-    }
+    inputSourceMap
   };
+  return (0, _transpileWithBabel.transpileWithBabel)(_objectSpread({
+    inputAst,
+    inputSource,
+    options: babelOptions
+  }, options.remap ? {
+    outputSourceMapName,
+    sourceLocationForSourceMap: getSourceLocationForSourceMap(context),
+    sourceNameForSourceMap: getSourceNameForSourceMap(context)
+  } : {}));
 };
 
 exports.instrumenter = instrumenter;

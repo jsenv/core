@@ -5,7 +5,7 @@ const writeSourceMapLocation = ({ source, location }) => {
 
 export const remapper = ({ inputSource, inputSourceMap, options, outputSourceMapName }) => {
   if (typeof inputSourceMap !== "object" || inputSourceMap === null) {
-    return
+    return null
   }
 
   // delete inputSourceMap.sourcesContent
@@ -41,4 +41,6 @@ export const remapper = ({ inputSource, inputSourceMap, options, outputSourceMap
       outputSource,
     }
   }
+
+  return null
 }

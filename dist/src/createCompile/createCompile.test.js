@@ -40,6 +40,7 @@ compile({
     output,
     outputAssets
   }) => {
+    debugger;
     global.System = {
       register: (dependencies, fn) => {
         fn(() => {}, {}).execute();

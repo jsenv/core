@@ -23,7 +23,7 @@ var _readFile = require("./readFile.js");
 
 var _ressourceRegistry = require("./ressourceRegistry.js");
 
-var _writeFile = require("./writeFile.js");
+var _projectStructureCompileBabel = require("@dmail/project-structure-compile-babel");
 
 var _createFileService = require("../createFileService/createFileService.js");
 
@@ -512,10 +512,7 @@ const updateBranch = ({
       filename,
       branch
     });
-    promises.push((0, _writeFile.writeFile)({
-      location: mainLocation,
-      string: output
-    }), ...outputAssets.map(asset => {
+    promises.push((0, _projectStructureCompileBabel.writeFileFromString)(mainLocation, output), ...outputAssets.map(asset => {
       const assetLocation = getOutputAssetLocation({
         rootLocation,
         cacheFolderRelativeLocation,
@@ -524,10 +521,7 @@ const updateBranch = ({
         branch,
         asset
       });
-      return (0, _writeFile.writeFile)({
-        location: assetLocation,
-        string: asset.content
-      });
+      return (0, _projectStructureCompileBabel.writeFileFromString)(assetLocation, asset.content);
     }));
   }
 
@@ -622,10 +616,7 @@ const updateBranch = ({
       abstractFolderRelativeLocation,
       filename
     });
-    promises.push((0, _writeFile.writeFile)({
-      location: cacheDataLocation,
-      string: JSON.stringify(updatedCache, null, "  ")
-    }));
+    promises.push((0, _projectStructureCompileBabel.writeFileFromString)(cacheDataLocation, JSON.stringify(updatedCache, null, "  ")));
   }
 
   return Promise.all(promises);

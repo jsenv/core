@@ -4,6 +4,6 @@ const path = require("path")
 compileRoot({
   root: path.resolve(__dirname, "../"),
   into: "dist",
-  name: "node",
-  version: "8.0",
+  platformName: "node",
+  platformVersion: "8.0",
 })

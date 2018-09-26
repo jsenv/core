@@ -14,30 +14,18 @@
     "outputSourceMapName",
     "getSourceNameForSourceMap",
     "getSourceLocationForSourceMap",
-    "moduleOptions",
-    "inputModuleFormat",
-    "outputModuleFormat",
-    "remapOptions",
-    "remap",
-    "sourceMaps",
-    "sourceMapTarget",
-    "sourceFileName",
     "babelOptions",
+    "plugins",
+    "platformName",
+    "platformVersion",
+    "moduleOutput",
     "filename",
-    "babelrc",
-    "ast",
-    "babelConfig",
-    "code",
-    "map",
-    "outputSource",
-    "outputSourceMap",
-    "outputAst",
-    "outputAssets",
-    "JSON",
-    "stringify"
+    "remap",
+    "sourceLocationForSourceMap",
+    "sourceNameForSourceMap"
   ],
-  "mappings": ";;;;;;;AAAA;;AAMA;;AAEO,MAAMA,UAAU,GAAIC,OAAD,IAAa;AACrC,QAAM;AACJC,IAAAA,qBADI;AAEJC,IAAAA,WAFI;AAGJC,IAAAA,cAHI;AAIJC,IAAAA,QAJI;AAKJC,IAAAA,OALI;AAMJC,IAAAA,mBANI;AAOJC,IAAAA,yBAPI;AAQJC,IAAAA;AARI,MASFR,OATJ,CADqC,CAYrC;AACA;AACA;AACA;AACA;;AACA,QAAMS,aAAa,GAAG,gCAAoB;AACxCC,IAAAA,iBAAiB,EAAE,IADqB;AAExCC,IAAAA,kBAAkB,EAAE;AAFoB,GAApB,CAAtB;AAKA,QAAMC,YAAY,GAAGP,OAAO,CAACQ,KAAR,GACjB;AACEC,IAAAA,UAAU,EAAE,IADd;AAEEC,IAAAA,eAAe,EAAER,yBAAyB,CAACP,OAAD,CAF5C;AAGEgB,IAAAA,cAAc,EAAER,6BAA6B,CAACR,OAAD;AAH/C,GADiB,GAMjB;AACEc,IAAAA,UAAU,EAAE;AADd,GANJ;AAUA,QAAMG,YAAY,GAAG,yBAAaR,aAAb,EAA4B,iCAA5B,EAAmDG,YAAnD,EAAiE;AACpFM,IAAAA,QAAQ,EAAEjB,qBAD0E;AAEpFE,IAAAA,cAFoF;AAGpFgB,IAAAA,OAAO,EAAE,KAH2E;AAGpE;AAChBC,IAAAA,GAAG,EAAE;AAJ+E,GAAjE,CAArB;AAMA,QAAMC,WAAW,GAAG,yBAAaJ,YAAb,CAApB;;AAEA,MAAIb,QAAJ,EAAc;AACZ,UAAM;AAAEkB,MAAAA,IAAF;AAAQF,MAAAA,GAAR;AAAaG,MAAAA;AAAb,QAAqB,iCAAiBnB,QAAjB,EAA2BF,WAA3B,EAAwCmB,WAAxC,CAA3B;AACA,WAAO;AACLG,MAAAA,YAAY,EAAEF,IADT;AAELG,MAAAA,eAAe,EAAEF,GAFZ;AAGLG,MAAAA,SAAS,EAAEN,GAHN;AAILO,MAAAA,YAAY,EAAE;AACZ,SAACrB,mBAAD,GAAuBsB,IAAI,CAACC,SAAL,CAAeN,GAAf,EAAoB,IAApB,EAA0B,IAA1B;AADX;AAJT,KAAP;AAQD;;AAED,QAAM;AAAED,IAAAA,IAAF;AAAQF,IAAAA,GAAR;AAAaG,IAAAA;AAAb,MAAqB,0BAAUrB,WAAV,EAAuBmB,WAAvB,CAA3B;AACA,SAAO;AACLG,IAAAA,YAAY,EAAEF,IADT;AAELG,IAAAA,eAAe,EAAEF,GAFZ;AAGLG,IAAAA,SAAS,EAAEN,GAHN;AAILO,IAAAA,YAAY,EAAE;AACZ,OAACrB,mBAAD,GAAuBsB,IAAI,CAACC,SAAL,CAAeN,GAAf,EAAoB,IAApB,EAA0B,IAA1B;AADX;AAJT,GAAP;AAQD,CA7DM",
+  "mappings": ";;;;;;;AAAA;;AACA;;;;;;AAEO,MAAMA,UAAU,GAAIC,OAAD,IAAa;AACrC,QAAM;AACJC,IAAAA,qBADI;AAEJC,IAAAA,WAFI;AAGJC,IAAAA,cAHI;AAIJC,IAAAA,QAJI;AAKJC,IAAAA,OALI;AAMJC,IAAAA,mBANI;AAOJC,IAAAA,yBAPI;AAQJC,IAAAA;AARI,MASFR,OATJ;AAWA,QAAMS,YAAY,GAAG;AACnBC,IAAAA,OAAO,EAAE,sDAAmB;AAC1B;AACA;AACA;AACA;AACA;AACA;AACA;AACA;AACA;AACA;AACA;AACAC,MAAAA,YAAY,EAAE,MAZY;AAa1BC,MAAAA,eAAe,EAAE,KAbS;AAc1BC,MAAAA,YAAY,EAAE;AAdY,KAAnB,CADU;AAiBnBC,IAAAA,QAAQ,EAAEb,qBAjBS;AAkBnBE,IAAAA;AAlBmB,GAArB;AAqBA,SAAO;AACLC,IAAAA,QADK;AAELF,IAAAA,WAFK;AAGLG,IAAAA,OAAO,EAAEI;AAHJ,KAIDJ,OAAO,CAACU,KAAR,GACA;AACET,IAAAA,mBADF;AAEEU,IAAAA,0BAA0B,EAAER,6BAA6B,CAACR,OAAD,CAF3D;AAGEiB,IAAAA,sBAAsB,EAAEV,yBAAyB,CAACP,OAAD;AAHnD,GADA,GAMA,EAVC,EAAP;AAYD,CA7CM",
   "sourcesContent": [
-    "import {\n  createConfig,\n  createModuleOptions,\n  createSyntaxOptions,\n  mergeOptions,\n} from \"@dmail/shared-config/dist/babel.js\"\nimport { transform, transformFromAst } from \"babel-core\"\n\nexport const transpiler = (context) => {\n  const {\n    inputRelativeLocation,\n    inputSource,\n    inputSourceMap,\n    inputAst,\n    options,\n    outputSourceMapName,\n    getSourceNameForSourceMap,\n    getSourceLocationForSourceMap,\n  } = context\n\n  // the truth is that we don't support global, nor amd\n  // I have to check if we could support cjs but maybe we don't even support this\n  // at least we support the most important: inputFormat: \"es\" with outputFormat: \"systemjs\"\n  // https://github.com/systemjs/systemjs/blob/master/src/format-helpers.js#L5\n  // https://github.com/systemjs/babel-plugin-transform-global-system-wrapper/issues/1\n  const moduleOptions = createModuleOptions({\n    inputModuleFormat: \"es\",\n    outputModuleFormat: \"systemjs\",\n  })\n\n  const remapOptions = options.remap\n    ? {\n        sourceMaps: true,\n        sourceMapTarget: getSourceNameForSourceMap(context),\n        sourceFileName: getSourceLocationForSourceMap(context),\n      }\n    : {\n        sourceMaps: false,\n      }\n\n  const babelOptions = mergeOptions(moduleOptions, createSyntaxOptions(), remapOptions, {\n    filename: inputRelativeLocation,\n    inputSourceMap,\n    babelrc: false, // trust only these options, do not read any babelrc config file\n    ast: true,\n  })\n  const babelConfig = createConfig(babelOptions)\n\n  if (inputAst) {\n    const { code, ast, map } = transformFromAst(inputAst, inputSource, babelConfig)\n    return {\n      outputSource: code,\n      outputSourceMap: map,\n      outputAst: ast,\n      outputAssets: {\n        [outputSourceMapName]: JSON.stringify(map, null, \"  \"),\n      },\n    }\n  }\n\n  const { code, ast, map } = transform(inputSource, babelConfig)\n  return {\n    outputSource: code,\n    outputSourceMap: map,\n    outputAst: ast,\n    outputAssets: {\n      [outputSourceMapName]: JSON.stringify(map, null, \"  \"),\n    },\n  }\n}\n"
+    "import { getBabelPluginsFor } from \"@dmail/project-structure-compile-babel\"\nimport { transpileWithBabel } from \"./transpileWithBabel.js\"\n\nexport const transpiler = (context) => {\n  const {\n    inputRelativeLocation,\n    inputSource,\n    inputSourceMap,\n    inputAst,\n    options,\n    outputSourceMapName,\n    getSourceNameForSourceMap,\n    getSourceLocationForSourceMap,\n  } = context\n\n  const babelOptions = {\n    plugins: getBabelPluginsFor({\n      // platformName below 'should' be dynamic and read from request user-agent to compile the right output\n      // an other problem is that the compile result will become different depending who is requesting it\n      // so we must have a smart strategy to cache the output\n      // we cannot create a cache entry per user agent, the cache would explode\n      // we could keep a cache per plugin set but the array returned by getBabelPluginsFor\n      // cannot be stringified for now (it's an array of function)\n      // we could also use an other approach 'ala' browser list so that we use browser list to get the list of plugins\n      // and use it to invalidate the cache\n      // it would be the easisest approach\n      // we could maintain 2-3 browserlist to serve depending the user -agent requesting us\n      // we would server one of the 3 build\n      platformName: \"node\",\n      platformVersion: \"5.0\",\n      moduleOutput: \"systemjs\",\n    }),\n    filename: inputRelativeLocation,\n    inputSourceMap,\n  }\n\n  return transpileWithBabel({\n    inputAst,\n    inputSource,\n    options: babelOptions,\n    ...(options.remap\n      ? {\n          outputSourceMapName,\n          sourceLocationForSourceMap: getSourceLocationForSourceMap(context),\n          sourceNameForSourceMap: getSourceNameForSourceMap(context),\n        }\n      : {}),\n  })\n}\n"
   ]
 }

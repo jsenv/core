@@ -5,56 +5,38 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.minifier = void 0;
 
-var _babel = require("@dmail/shared-config/dist/babel.js");
+var _transpileWithBabel = require("./transpileWithBabel.js");
 
-var _babelCore = require("babel-core");
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
 
-const minifier = ({
-  rootLocation,
-  inputSource,
-  inputAst,
-  inputSourceMap,
-  options,
-  outputSourceMapName
-}) => {
-  const babelConfig = (0, _babel.createConfig)((0, _babel.mergeOptions)((0, _babel.createMinifiyOptions)(), {
-    sourceMaps: options.remap,
-    inputSourceMap,
-    root: rootLocation,
-    babelrc: false,
-    // trust only these options, do not read any babelrc config file
-    ast: true
-  }));
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-  if (inputAst) {
-    const {
-      code,
-      ast,
-      map
-    } = (0, _babelCore.transformFromAst)(inputAst, inputSource, babelConfig);
-    return {
-      outputSource: code,
-      outputSourceMap: map,
-      outputAst: ast,
-      outputAssets: {
-        [outputSourceMapName]: JSON.stringify(map, null, "  ")
-      }
-    };
-  }
-
+const minifier = context => {
   const {
-    code,
-    ast,
-    map
-  } = (0, _babelCore.transform)(inputSource, babelConfig);
-  return {
-    outputSource: code,
-    outputSourceMap: map,
-    outputAst: ast,
-    outputAssets: {
-      [outputSourceMapName]: JSON.stringify(map, null, "  ")
-    }
+    inputRelativeLocation,
+    inputSource,
+    inputAst,
+    inputSourceMap,
+    options,
+    outputSourceMapName,
+    getSourceNameForSourceMap,
+    getSourceLocationForSourceMap
+  } = context;
+  const babelOptions = {
+    // we need a list of plugin that minify the outputs
+    plugins: [],
+    filename: inputRelativeLocation,
+    inputSourceMap
   };
+  return (0, _transpileWithBabel.transpileWithBabel)(_objectSpread({
+    inputAst,
+    inputSource,
+    options: babelOptions
+  }, options.remap ? {
+    outputSourceMapName,
+    sourceLocationForSourceMap: getSourceLocationForSourceMap(context),
+    sourceNameForSourceMap: getSourceNameForSourceMap(context)
+  } : {}));
 };
 
 exports.minifier = minifier;

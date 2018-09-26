@@ -1,41 +1,34 @@
-import { transform, transformFromAst } from "@babel/core"
+import { transpileWithBabel } from "./transpileWithBabel.js"
 
-export const minifier = ({
-  rootLocation,
-  inputSource,
-  inputAst,
-  inputSourceMap,
-  options,
-  outputSourceMapName,
-}) => {
-  const babelOptions = {
-    plugins: [], // we need a list of plugin that minify the outputs
-    sourceMaps: options.remap,
+export const minifier = (context) => {
+  const {
+    inputRelativeLocation,
+    inputSource,
+    inputAst,
     inputSourceMap,
-    root: rootLocation,
-    babelrc: false, // trust only these options, do not read any babelrc config file
-    ast: true,
+    options,
+    outputSourceMapName,
+    getSourceNameForSourceMap,
+    getSourceLocationForSourceMap,
+  } = context
+
+  const babelOptions = {
+    // we need a list of plugin that minify the outputs
+    plugins: [],
+    filename: inputRelativeLocation,
+    inputSourceMap,
   }
 
-  if (inputAst) {
-    const { code, ast, map } = transformFromAst(inputAst, inputSource, babelOptions)
-    return {
-      outputSource: code,
-      outputSourceMap: map,
-      outputAst: ast,
-      outputAssets: {
-        [outputSourceMapName]: JSON.stringify(map, null, "  "),
-      },
-    }
-  }
-
-  const { code, ast, map } = transform(inputSource, babelOptions)
-  return {
-    outputSource: code,
-    outputSourceMap: map,
-    outputAst: ast,
-    outputAssets: {
-      [outputSourceMapName]: JSON.stringify(map, null, "  "),
-    },
-  }
+  return transpileWithBabel({
+    inputAst,
+    inputSource,
+    options: babelOptions,
+    ...(options.remap
+      ? {
+          outputSourceMapName,
+          sourceLocationForSourceMap: getSourceLocationForSourceMap(context),
+          sourceNameForSourceMap: getSourceNameForSourceMap(context),
+        }
+      : {}),
+  })
 }

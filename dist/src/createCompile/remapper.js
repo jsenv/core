@@ -20,7 +20,7 @@ const remapper = ({
   outputSourceMapName
 }) => {
   if (typeof inputSourceMap !== "object" || inputSourceMap === null) {
-    return;
+    return null;
   } // delete inputSourceMap.sourcesContent
   // we could remove sources content, they can be fetched from server
   // removing them will decrease size of sourceMap BUT force
@@ -52,6 +52,8 @@ const remapper = ({
       outputSource
     };
   }
+
+  return null;
 };
 
 exports.remapper = remapper;

@@ -7,15 +7,11 @@ exports.createCoverageFromTestReport = exports.testProject = void 0;
 
 var _openChromiumClient = require("../openChromiumClient/openChromiumClient.js");
 
-var _globGitignore = require("glob-gitignore");
-
-var _ignore = _interopRequireDefault(require("ignore"));
-
-var _fs = _interopRequireDefault(require("fs"));
-
 var _path = _interopRequireDefault(require("path"));
 
 var _istanbulLibCoverage = require("istanbul-lib-coverage");
+
+var _projectStructure = require("@dmail/project-structure");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -27,6 +23,11 @@ const mergeCoverage = (...coverages) => {
   return mergedCoverageMap.toJSON();
 };
 
+const metaPredicate = ({
+  cover,
+  test
+}) => cover || test;
+
 const testProject = ({
   server,
   createClient = () => (0, _openChromiumClient.openChromiumClient)({
@@ -36,64 +37,35 @@ const testProject = ({
   beforeAll = () => {},
   beforeEach = () => {},
   afterEach = () => {},
-  afterAll = () => {},
-  sourceInclude = ["index.js", "src/**/*.js"],
-  testInclude = ["index.test.js", "src/**/*.test.js"],
-  sourceExclude = [...testInclude],
-  testExclude = [],
-  getTestIgnoreString = () => {
-    const filename = _path.default.resolve(process.cwd(), root, ".testignore");
-
-    return new Promise((resolve, reject) => {
-      _fs.default.readFile(filename, (error, buffer) => {
-        if (error) {
-          if (error && error.code === "ENOENT") {
-            resolve("");
-          }
-
-          reject(error);
-        } else {
-          resolve(buffer.toString());
-        }
-      });
-    });
-  }
+  afterAll = () => {}
 }) => {
-  const absoluteLocation = _path.default.resolve(process.cwd(), root); // https://github.com/kaelzhang/node-ignore
-  // https://github.com/kaelzhang/node-glob-gitignore
-  // https://karma-runner.github.io/latest/config/plugins.html
-  // https://karma-runner.github.io/latest/dev/plugins.html
-  // https://www.npmjs.com/package/glob#options
+  const rootLocation = _path.default.resolve(process.cwd(), root);
 
-
-  const getSourceFiles = () => {
-    return (0, _globGitignore.glob)(sourceInclude, {
-      nodir: true,
-      cwd: absoluteLocation,
-      ignore: sourceExclude
-    });
-  };
-
-  const getTestFiles = () => {
-    return getTestIgnoreString().then(ignoreRules => (0, _ignore.default)().add(testExclude).add(ignoreRules)).then(ignore => (0, _globGitignore.glob)(testInclude, {
-      nodir: true,
-      cwd: absoluteLocation,
-      ignore: ignore._rules.map(({
-        origin
-      }) => origin)
-    }));
-  };
-
-  return Promise.all([createClient(), getTestFiles(), getSourceFiles()]).then(([client, testFiles, sourceFiles]) => {
-    testFiles = testFiles.map(testFile => {
+  const getRequiredFileReport = (0, _projectStructure.createRoot)({
+    root: rootLocation
+  }).then(({
+    forEachFileMatching
+  }) => {
+    return forEachFileMatching(metaPredicate, ({
+      relativeName,
+      meta
+    }) => {
       return {
-        path: testFile,
+        relativeName,
+        meta
+      };
+    });
+  });
+  return Promise.all([createClient(), getRequiredFileReport()]).then(([client, fileReport]) => {
+    const testFiles = fileReport.filter(file => file.meta.test).map(file => {
+      return {
+        path: `${rootLocation}/${file.relativeName}`,
         type: "test"
       };
     });
-    sourceFiles = sourceFiles.map(sourceFile => {
+    const sourceFiles = fileReport.filter(file => file.meta.cover).map(file => {
       return {
-        path: sourceFile,
+        path: `${rootLocation}/${file.relativeName}`,
         type: "source"
       };
     });
