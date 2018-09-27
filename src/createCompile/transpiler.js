@@ -14,6 +14,10 @@ export const transpiler = (context) => {
   } = context
 
   const babelOptions = {
+    // https://github.com/faisalman/ua-parser-js
+    // and use it together with getGroupForPlatfrom
+    // each group should be given a name used to invalidate the cache
+    // so it should be calculated before, in the getOptions
     plugins: getBabelPluginsFor({
       // platformName below 'should' be dynamic and read from request user-agent to compile the right output
       // an other problem is that the compile result will become different depending who is requesting it
