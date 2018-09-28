@@ -22,6 +22,7 @@
 	"dependencies": {
 		"@babel/core": "7.1.0",
 		"@dmail/module-loader": "github:dmail/module-loader",
+		"@dmail/project-structure": "github:dmail/project-structure",
 		"@dmail/project-structure-compile-babel": "github:dmail/project-structure-compile-babel",
 		"@dmail/signal": "7.0.1",
 		"cuid": "2.1.1",
@@ -46,7 +47,6 @@
 		"@dmail/project-prettier-config": "github:dmail/project-prettier-config",
 		"@dmail/prettiest": "github:dmail/prettiest",
 		"prettier": "1.9.1",
-		"@dmail/project-structure": "github:dmail/project-structure",
 		"rimraf": "2.6.2"
 	},
 	"bin": {

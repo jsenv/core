@@ -3,11 +3,16 @@ module.exports = {
     source: {
       "index.js": true,
       "src/**/*.js": true,
-      "src/**/*.test.js": false
+      "src/**/*.test.js": false,
+    },
+    cover: {
+      "index.js": true,
+      "src/**/*.js": true,
+      "src/**/*.test.js": false,
     },
     test: {
       "index.test.js": true,
-      "src/**/*.test.js": true
+      "src/**/*.test.js": true,
     },
     prettify: {
       "index.js": true,
@@ -17,12 +22,12 @@ module.exports = {
       "**/*.md": true,
       "**/*.json": true,
       "package.json": false,
-      "package-lock.json": false
+      "package-lock.json": false,
     },
     compile: {
       "index.js": true,
       "src/**/*.js": true,
-      "bin/**/*.js": true
-    }
-  }
-};
+      "bin/**/*.js": true,
+    },
+  },
+}
