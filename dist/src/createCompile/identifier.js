@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.identifier = void 0;
 
-const identifier = () => {}; // import path from "path"
+var identifier = function identifier() {}; // import path from "path"
 // const writeSourceLocation = ({ source, location }) => {
 //   return `${source}
 // //# sourceURL=${location}`

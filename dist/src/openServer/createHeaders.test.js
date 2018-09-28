@@ -8,12 +8,12 @@ var _createHeaders = require("./createHeaders.js");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-(0, _test.test)(() => {
-  const headersPOJO = {
+(0, _test.test)(function () {
+  var headersPOJO = {
     "content-length": 10,
     foo: ["bar"]
   };
-  const headers = (0, _createHeaders.createHeaders)(headersPOJO);
+  var headers = (0, _createHeaders.createHeaders)(headersPOJO);
 
   _assert.default.equal(headers.has("content-length"), true);
 

@@ -17,7 +17,7 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-const isNodeStream = a => {
+var isNodeStream = function isNodeStream(a) {
   if (a instanceof _stream.default.Stream || a instanceof _stream.default.Writable) {
     return true;
   }
@@ -25,7 +25,7 @@ const isNodeStream = a => {
   return false;
 };
 
-const closeStream = stream => {
+var closeStream = function closeStream(stream) {
   if (isNodeStream(stream)) {
     stream.end();
   } else {
@@ -33,32 +33,33 @@ const closeStream = stream => {
   }
 };
 
-const createTwoWayStream = () => {
-  const buffers = [];
-  let length = 0;
-  let status = "opened";
-  const {
-    promise,
-    resolve
-  } = (0, _promise.createPromiseAndHooks)();
-  const errored = (0, _signal.createSignal)({
-    smart: true
-  });
-  const cancelled = (0, _signal.createSignal)({
-    smart: true
-  });
-  const closed = (0, _signal.createSignal)({
-    smart: true
-  });
-  const writed = (0, _signal.createSignal)();
+var createTwoWayStream = function createTwoWayStream() {
+  var buffers = [];
+  var length = 0;
+  var status = "opened";
 
-  const error = e => {
+  var _createPromiseAndHook = (0, _promise.createPromiseAndHooks)(),
+      promise = _createPromiseAndHook.promise,
+      resolve = _createPromiseAndHook.resolve;
+
+  var errored = (0, _signal.createSignal)({
+    smart: true
+  });
+  var cancelled = (0, _signal.createSignal)({
+    smart: true
+  });
+  var closed = (0, _signal.createSignal)({
+    smart: true
+  });
+  var writed = (0, _signal.createSignal)();
+
+  var error = function error(e) {
     status = "errored";
     errored.emit(e);
     throw e;
   };
 
-  const cancel = () => {
+  var cancel = function cancel() {
     if (status === "cancelled") {
       return;
     }
@@ -69,7 +70,7 @@ const createTwoWayStream = () => {
     cancelled.emit();
   };
 
-  const close = () => {
+  var close = function close() {
     if (status === "closed") {
       return;
     }
@@ -79,44 +80,49 @@ const createTwoWayStream = () => {
     closed.emit();
   };
 
-  const write = data => {
+  var write = function write(data) {
     buffers.push(data);
     length += data.length;
     writed.emit(data);
   };
 
-  const pipeTo = (stream, {
-    propagateData = true,
-    propagateCancel = true,
-    propagateClose = true,
-    propagateError = true
-  } = {}) => {
+  var pipeTo = function pipeTo(stream) {
+    var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+        _ref$propagateData = _ref.propagateData,
+        propagateData = _ref$propagateData === void 0 ? true : _ref$propagateData,
+        _ref$propagateCancel = _ref.propagateCancel,
+        propagateCancel = _ref$propagateCancel === void 0 ? true : _ref$propagateCancel,
+        _ref$propagateClose = _ref.propagateClose,
+        propagateClose = _ref$propagateClose === void 0 ? true : _ref$propagateClose,
+        _ref$propagateError = _ref.propagateError,
+        propagateError = _ref$propagateError === void 0 ? true : _ref$propagateError;
+
     if (propagateCancel) {
-      cancelled.listenOnce(() => {
+      cancelled.listenOnce(function () {
         stream.cancel();
       });
     }
 
     if (propagateError) {
-      errored.listenOnce(error => {
+      errored.listenOnce(function (error) {
         stream.error(error);
       });
     }
 
     if (propagateData) {
       if (length) {
-        buffers.forEach(buffer => {
+        buffers.forEach(function (buffer) {
           stream.write(buffer);
         });
       }
 
-      writed.listen(buffer => {
+      writed.listen(function (buffer) {
         stream.write(buffer);
       });
     }
 
     if (propagateClose) {
-      closed.listenOnce(() => {
+      closed.listenOnce(function () {
         closeStream(stream);
       });
     }
@@ -125,25 +131,25 @@ const createTwoWayStream = () => {
   };
 
   return Object.freeze({
-    error,
-    errored,
-    cancel,
-    cancelled,
-    close,
-    closed,
-    write,
-    writed,
-    pipeTo,
-    promise
+    error: error,
+    errored: errored,
+    cancel: cancel,
+    cancelled: cancelled,
+    close: close,
+    closed: closed,
+    write: write,
+    writed: writed,
+    pipeTo: pipeTo,
+    promise: promise
   });
 };
 
-const stringToArrayBuffer = string => {
+var stringToArrayBuffer = function stringToArrayBuffer(string) {
   string = String(string);
-  const buffer = new ArrayBuffer(string.length * 2); // 2 bytes for each char
+  var buffer = new ArrayBuffer(string.length * 2); // 2 bytes for each char
 
-  const bufferView = new Uint16Array(buffer);
-  let i = 0;
+  var bufferView = new Uint16Array(buffer);
+  var i = 0;
 
   while (i < string.length) {
     bufferView[i] = string.charCodeAt(i);
@@ -153,20 +159,20 @@ const stringToArrayBuffer = string => {
   return buffer;
 };
 
-const createBody = data => {
-  const twoWayStream = createTwoWayStream();
+var createBody = function createBody(data) {
+  var twoWayStream = createTwoWayStream();
 
   if (data !== undefined) {
     if (isNodeStream(data)) {
-      const nodeStream = data; // nodeStream.resume() ?
+      var nodeStream = data; // nodeStream.resume() ?
 
-      nodeStream.once("error", error => {
+      nodeStream.once("error", function (error) {
         twoWayStream.error(error);
       });
-      nodeStream.on("data", data => {
+      nodeStream.on("data", function (data) {
         twoWayStream.write(data);
       });
-      nodeStream.once("end", () => {
+      nodeStream.once("end", function () {
         twoWayStream.close();
       });
     } else if (data && data.pipeTo) {
@@ -176,26 +182,28 @@ const createBody = data => {
     }
   }
 
-  const readAsString = () => {
-    return twoWayStream.promise.then(buffers => buffers.join(""));
+  var readAsString = function readAsString() {
+    return twoWayStream.promise.then(function (buffers) {
+      return buffers.join("");
+    });
   };
 
-  const text = () => {
+  var text = function text() {
     return readAsString();
   };
 
-  const arraybuffer = () => {
+  var arraybuffer = function arraybuffer() {
     return text().then(stringToArrayBuffer);
   };
 
-  const json = () => {
+  var json = function json() {
     return text().then(JSON.parse);
   };
 
   return _objectSpread({}, twoWayStream, {
-    text,
-    arraybuffer,
-    json
+    text: text,
+    arraybuffer: arraybuffer,
+    json: json
   });
 };
 

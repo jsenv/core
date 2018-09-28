@@ -11,12 +11,12 @@ var _path = _interopRequireDefault(require("path"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-const readBrowserLoader = () => {
-  return new Promise((resolve, reject) => {
-    const filename = _path.default.resolve(__dirname, // we add an additional ../ to get rid of dist/
-    "../../node_modules/@dmail/module-loader/src/browser/index.js");
+var readBrowserLoader = function readBrowserLoader() {
+  return new Promise(function (resolve, reject) {
+    var filename = _path.default.resolve(__dirname, // we add an additional ../ to get rid of dist/
+    "../../node_modules/@dmail/module-loader/browser.js");
 
-    _fs.default.readFile(filename, (error, buffer) => {
+    _fs.default.readFile(filename, function (error, buffer) {
       if (error) {
         reject(error);
       } else {
@@ -26,9 +26,9 @@ const readBrowserLoader = () => {
   });
 };
 
-const countLeading = (string, predicate) => {
-  let leading = 0;
-  let i = 0;
+var countLeading = function countLeading(string, predicate) {
+  var leading = 0;
+  var i = 0;
 
   while (i < string.length) {
     if (predicate(string[i])) {
@@ -42,15 +42,15 @@ const countLeading = (string, predicate) => {
   return leading;
 };
 
-const detectLineSeparator = string => {
-  const lineSeparators = ["\r\n", "\r", "\n"];
-  return lineSeparators.find(separator => {
+var detectLineSeparator = function detectLineSeparator(string) {
+  var lineSeparators = ["\r\n", "\r", "\n"];
+  return lineSeparators.find(function (separator) {
     return string.indexOf(separator) > -1;
   });
 };
 
-const detectIndentation = lines => {
-  const firstLineWithLeadingWhiteSpace = lines.find(line => {
+var detectIndentation = function detectIndentation(lines) {
+  var firstLineWithLeadingWhiteSpace = lines.find(function (line) {
     return line[0] === " " || line[0] === "\t";
   });
 
@@ -59,60 +59,56 @@ const detectIndentation = lines => {
   }
 
   if (firstLineWithLeadingWhiteSpace[0] === " ") {
-    return " ".repeat(countLeading(firstLineWithLeadingWhiteSpace), char => char === " ");
+    return " ".repeat(countLeading(firstLineWithLeadingWhiteSpace), function (char) {
+      return char === " ";
+    });
   }
 
-  return "\t".repeat(countLeading(firstLineWithLeadingWhiteSpace), char => char === "\t");
+  return "\t".repeat(countLeading(firstLineWithLeadingWhiteSpace), function (char) {
+    return char === "\t";
+  });
 };
 
 exports.detectIndentation = detectIndentation;
 
-const prefixLines = (string, prefix = "  ", {
-  lineSeparator = "auto"
-} = {}) => {
+var prefixLines = function prefixLines(string) {
+  var prefix = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "  ";
+
+  var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
+      _ref$lineSeparator = _ref.lineSeparator,
+      lineSeparator = _ref$lineSeparator === void 0 ? "auto" : _ref$lineSeparator;
+
   if (lineSeparator === "auto") {
     lineSeparator = detectLineSeparator(string);
   }
 
-  const lines = string.split(lineSeparator);
-  return lines.map((line, index) => `${index === 0 ? "" : prefix}${line}`).join(lineSeparator);
+  var lines = string.split(lineSeparator);
+  return lines.map(function (line, index) {
+    return "".concat(index === 0 ? "" : prefix).concat(line);
+  }).join(lineSeparator);
 };
 
-const renderScript = ({
-  source
-}) => {
-  return `<script type="text/javascript">
-  ${source}
-</script>`;
+var renderScript = function renderScript(_ref2) {
+  var source = _ref2.source;
+  return "<script type=\"text/javascript\">\n  ".concat(source, "\n</script>");
 };
 
-const createHTMLForBrowser = ({
-  title = "Untitled",
-  charset = "utf-8",
-  script
-} = {}) => {
-  return readBrowserLoader().then(loaderSource => {
-    return `<!doctype html>
+var createHTMLForBrowser = function createHTMLForBrowser() {
+  var _ref3 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      _ref3$title = _ref3.title,
+      title = _ref3$title === void 0 ? "Untitled" : _ref3$title,
+      _ref3$charset = _ref3.charset,
+      charset = _ref3$charset === void 0 ? "utf-8" : _ref3$charset,
+      script = _ref3.script;
 
-<head>
-  <title>${title}</title>
-  <meta charset="${charset}" />
-</head>
-
-<body>
-  <main></main>
-  ${prefixLines(renderScript({
+  return readBrowserLoader().then(function (loaderSource) {
+    return "<!doctype html>\n\n<head>\n  <title>".concat(title, "</title>\n  <meta charset=\"").concat(charset, "\" />\n</head>\n\n<body>\n  <main></main>\n  ").concat(prefixLines(renderScript({
       source: loaderSource
-    }), "  ")}
-  ${prefixLines(renderScript({
-      source: `window.System = window.createBrowserLoader.createBrowserLoader()`
-    }), "  ")}
-  ${prefixLines(renderScript({
+    }), "  "), "\n  ").concat(prefixLines(renderScript({
+      source: "window.System = window.createBrowserLoader.createBrowserLoader()"
+    }), "  "), "\n  ").concat(prefixLines(renderScript({
       source: script
-    }), "  ")}
-</body>
-
-</html>`;
+    }), "  "), "\n</body>\n\n</html>");
   });
 };
 

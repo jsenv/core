@@ -5,21 +5,21 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.remapper = void 0;
 
-const writeSourceMapLocation = ({
-  source,
-  location
-}) => {
-  return `${source}
-//# sourceMappingURL=${location}`;
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+var writeSourceMapLocation = function writeSourceMapLocation(_ref) {
+  var source = _ref.source,
+      location = _ref.location;
+  return "".concat(source, "\n//# sourceMappingURL=").concat(location);
 };
 
-const remapper = ({
-  inputSource,
-  inputSourceMap,
-  options,
-  outputSourceMapName
-}) => {
-  if (typeof inputSourceMap !== "object" || inputSourceMap === null) {
+var remapper = function remapper(_ref2) {
+  var inputSource = _ref2.inputSource,
+      inputSourceMap = _ref2.inputSourceMap,
+      options = _ref2.options,
+      outputSourceMapName = _ref2.outputSourceMapName;
+
+  if (_typeof(inputSourceMap) !== "object" || inputSourceMap === null) {
     return null;
   } // delete inputSourceMap.sourcesContent
   // we could remove sources content, they can be fetched from server
@@ -33,23 +33,24 @@ const remapper = ({
   delete inputSourceMap.sourcesContent;
 
   if (options.remapMethod === "inline") {
-    const mapAsBase64 = new Buffer(JSON.stringify(inputSourceMap)).toString("base64");
-    const outputSource = writeSourceMapLocation({
+    var mapAsBase64 = new Buffer(JSON.stringify(inputSourceMap)).toString("base64");
+    var outputSource = writeSourceMapLocation({
       source: inputSource,
-      location: `data:application/json;charset=utf-8;base64,${mapAsBase64}`
+      location: "data:application/json;charset=utf-8;base64,".concat(mapAsBase64)
     });
     return {
-      outputSource
+      outputSource: outputSource
     };
   }
 
   if (options.remapMethod === "comment") {
-    const outputSource = writeSourceMapLocation({
+    var _outputSource = writeSourceMapLocation({
       source: inputSource,
-      location: `./${outputSourceMapName}`
+      location: "./".concat(outputSourceMapName)
     });
+
     return {
-      outputSource
+      outputSource: _outputSource
     };
   }
 

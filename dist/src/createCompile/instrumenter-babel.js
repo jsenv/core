@@ -14,19 +14,20 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
-const createInstrumentPlugin = ({
-  filename,
-  useInlineSourceMaps = false
-} = {}) => {
-  return ({
-    types
-  }) => {
+var createInstrumentPlugin = function createInstrumentPlugin() {
+  var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      filename = _ref.filename,
+      _ref$useInlineSourceM = _ref.useInlineSourceMaps,
+      useInlineSourceMaps = _ref$useInlineSourceM === void 0 ? false : _ref$useInlineSourceM;
+
+  return function (_ref2) {
+    var types = _ref2.types;
     return {
       visitor: {
         Program: {
-          enter(path) {
+          enter: function enter(path) {
             this.__dv__ = null;
-            let inputSourceMap;
+            var inputSourceMap;
 
             if (useInlineSourceMaps) {
               // https://github.com/istanbuljs/babel-plugin-istanbul/commit/a9e15643d249a2985e4387e4308022053b2cd0ad#diff-1fdf421c05c1140f6d71444ea2b27638R65
@@ -37,41 +38,37 @@ const createInstrumentPlugin = ({
 
             this.__dv__ = (0, _istanbulLibInstrument.programVisitor)(types, filename, {
               coverageVariable: "__coverage__",
-              inputSourceMap
+              inputSourceMap: inputSourceMap
             });
 
             this.__dv__.enter(path);
           },
-
-          exit(path) {
+          exit: function exit(path) {
             if (!this.__dv__) {
               return;
             }
 
-            const object = this.__dv__.exit(path); // object got two properties: fileCoverage and sourceMappingURL
+            var object = this.__dv__.exit(path); // object got two properties: fileCoverage and sourceMappingURL
 
 
             this.file.metadata.coverage = object.fileCoverage;
           }
-
         }
       }
     };
   };
 };
 
-const instrumenter = context => {
-  const {
-    inputRelativeLocation,
-    inputSource,
-    inputSourceMap,
-    inputAst,
-    outputSourceMapName,
-    options,
-    getSourceNameForSourceMap,
-    getSourceLocationForSourceMap
-  } = context;
-  const babelOptions = {
+var instrumenter = function instrumenter(context) {
+  var inputRelativeLocation = context.inputRelativeLocation,
+      inputSource = context.inputSource,
+      inputSourceMap = context.inputSourceMap,
+      inputAst = context.inputAst,
+      outputSourceMapName = context.outputSourceMapName,
+      options = context.options,
+      getSourceNameForSourceMap = context.getSourceNameForSourceMap,
+      getSourceLocationForSourceMap = context.getSourceLocationForSourceMap;
+  var babelOptions = {
     plugins: [// we are missing some plugins here, the syntax plugins are required to be able to traverse the tree no ?
     // yes indeed, we could copy/paste all syntax plugins here
     createInstrumentPlugin({
@@ -79,14 +76,14 @@ const instrumenter = context => {
       useInlineSourceMaps: false
     })],
     filename: inputRelativeLocation,
-    inputSourceMap
+    inputSourceMap: inputSourceMap
   };
   return (0, _transpileWithBabel.transpileWithBabel)(_objectSpread({
-    inputAst,
-    inputSource,
+    inputAst: inputAst,
+    inputSource: inputSource,
     options: babelOptions
   }, options.remap ? {
-    outputSourceMapName,
+    outputSourceMapName: outputSourceMapName,
     sourceLocationForSourceMap: getSourceLocationForSourceMap(context),
     sourceNameForSourceMap: getSourceNameForSourceMap(context)
   } : {}));

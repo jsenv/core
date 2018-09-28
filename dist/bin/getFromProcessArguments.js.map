@@ -16,7 +16,7 @@
     "slice",
     "length"
   ],
-  "mappings": ";;;;;;;AAAO,MAAMA,uBAAuB,GAAIC,IAAD,IAAU;AAC/C,QAAMC,aAAa,GAAGC,OAAO,CAACC,IAAR,CAAaC,IAAb,CAAmBC,GAAD,IAAS;AAC/C,WAAOA,GAAG,KAAM,KAAIL,IAAK,EAAzB;AACD,GAFqB,CAAtB;;AAGA,MAAIC,aAAJ,EAAmB;AACjB,WAAO,IAAP;AACD;;AAED,QAAMK,WAAW,GAAGJ,OAAO,CAACC,IAAR,CAAaC,IAAb,CAAmBC,GAAD,IAAS;AAC7C,WAAOA,GAAG,CAACE,UAAJ,CAAgB,KAAIP,IAAK,GAAzB,CAAP;AACD,GAFmB,CAApB;;AAGA,MAAI,CAACM,WAAL,EAAkB;AAChB,WAAO,KAAP;AACD;;AAED,SAAOA,WAAW,CAACE,KAAZ,CAAmB,KAAIR,IAAK,GAAV,CAAaS,MAA/B,CAAP;AACD,CAhBM",
+  "mappings": ";;;;;;;AAAO,IAAMA,uBAAuB,GAAG,SAA1BA,uBAA0B,CAACC,IAAD,EAAU;AAC/C,MAAMC,aAAa,GAAGC,OAAO,CAACC,IAAR,CAAaC,IAAb,CAAkB,UAACC,GAAD,EAAS;AAC/C,WAAOA,GAAG,iBAAUL,IAAV,CAAV;AACD,GAFqB,CAAtB;;AAGA,MAAIC,aAAJ,EAAmB;AACjB,WAAO,IAAP;AACD;;AAED,MAAMK,WAAW,GAAGJ,OAAO,CAACC,IAAR,CAAaC,IAAb,CAAkB,UAACC,GAAD,EAAS;AAC7C,WAAOA,GAAG,CAACE,UAAJ,aAAoBP,IAApB,OAAP;AACD,GAFmB,CAApB;;AAGA,MAAI,CAACM,WAAL,EAAkB;AAChB,WAAO,KAAP;AACD;;AAED,SAAOA,WAAW,CAACE,KAAZ,CAAkB,YAAKR,IAAL,OAAaS,MAA/B,CAAP;AACD,CAhBM",
   "sourcesContent": [
     "export const getFromProcessArguments = (name) => {\n  const rawBooleanArg = process.argv.find((arg) => {\n    return arg === `--${name}`\n  })\n  if (rawBooleanArg) {\n    return true\n  }\n\n  const rawValueArg = process.argv.find((arg) => {\n    return arg.startsWith(`--${name}=`)\n  })\n  if (!rawValueArg) {\n    return false\n  }\n\n  return rawValueArg.slice(`--${name}=`.length)\n}\n"
   ]

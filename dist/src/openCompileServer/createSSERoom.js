@@ -7,41 +7,50 @@ exports.createSSERoom = void 0;
 
 var _createBody = require("../openServer/createBody.js");
 
+function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
+
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
+
+function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
+
+function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
+
 // https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
 // https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
 // https://github.com/dmail-old/http-eventsource/blob/master/lib/event-source.js
 // http://html5doctor.com/server-sent-events/
-const stringifySourceEvent = ({
-  data,
-  type = "message",
-  id,
-  retry
-}) => {
-  let string = "";
+var stringifySourceEvent = function stringifySourceEvent(_ref) {
+  var data = _ref.data,
+      _ref$type = _ref.type,
+      type = _ref$type === void 0 ? "message" : _ref$type,
+      id = _ref.id,
+      retry = _ref.retry;
+  var string = "";
 
   if (id !== undefined) {
-    string += `id:${id}\n`;
+    string += "id:".concat(id, "\n");
   }
 
   if (retry) {
-    string += `retry:${retry}\n`;
+    string += "retry:".concat(retry, "\n");
   }
 
   if (type !== "message") {
-    string += `event:${type}\n`;
+    string += "event:".concat(type, "\n");
   }
 
-  string += `data:${data}\n\n`;
+  string += "data:".concat(data, "\n\n");
   return string;
 };
 
-const createEventHistory = ({
-  limit
-} = {}) => {
-  const events = [];
-  let removedCount = 0;
+var createEventHistory = function createEventHistory() {
+  var _ref2 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      limit = _ref2.limit;
 
-  const add = data => {
+  var events = [];
+  var removedCount = 0;
+
+  var add = function add(data) {
     events.push(data);
 
     if (events.length >= limit) {
@@ -50,7 +59,7 @@ const createEventHistory = ({
     }
   };
 
-  const since = index => {
+  var since = function since(index) {
     index = parseInt(index);
 
     if (isNaN(index)) {
@@ -61,33 +70,37 @@ const createEventHistory = ({
     return index < 0 ? [] : events.slice(index);
   };
 
-  const reset = () => {
+  var reset = function reset() {
     events.length = 0;
     removedCount = 0;
   };
 
   return {
-    add,
-    since,
-    reset
+    add: add,
+    since: since,
+    reset: reset
   };
 }; // https://www.html5rocks.com/en/tutorials/eventsource/basics/
 
 
-const createSSERoom = ({
-  keepaliveDuration = 30000,
-  retryDuration = 1000,
-  historyLength = 1000,
-  maxLength = 100 // max 100 users accepted
+var createSSERoom = function createSSERoom() {
+  var _ref3 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      _ref3$keepaliveDurati = _ref3.keepaliveDuration,
+      keepaliveDuration = _ref3$keepaliveDurati === void 0 ? 30000 : _ref3$keepaliveDurati,
+      _ref3$retryDuration = _ref3.retryDuration,
+      retryDuration = _ref3$retryDuration === void 0 ? 1000 : _ref3$retryDuration,
+      _ref3$historyLength = _ref3.historyLength,
+      historyLength = _ref3$historyLength === void 0 ? 1000 : _ref3$historyLength,
+      _ref3$maxLength = _ref3.maxLength,
+      maxLength = _ref3$maxLength === void 0 ? 100 : _ref3$maxLength;
 
-} = {}) => {
-  const connections = new Set();
-  const history = createEventHistory(historyLength);
-  let lastEventId = 0;
-  let state = "closed";
-  let interval;
+  var connections = new Set();
+  var history = createEventHistory(historyLength);
+  var lastEventId = 0;
+  var state = "closed";
+  var interval;
 
-  const connect = lastEventId => {
+  var connect = function connect(lastEventId) {
     if (connections.size > maxLength) {
       return {
         status: 503
@@ -100,7 +113,7 @@ const createSSERoom = ({
       };
     }
 
-    const joinEvent = {
+    var joinEvent = {
       id: lastEventId,
       retry: retryDuration,
       type: "join",
@@ -108,17 +121,16 @@ const createSSERoom = ({
     };
     lastEventId++;
     history.add(joinEvent);
-    const events = [joinEvent, // send events which occured between lastEventId & now
-    ...(lastEventId === undefined ? [] : history.since(lastEventId))];
-    const connection = (0, _createBody.createBody)();
+    var events = [joinEvent].concat(_toConsumableArray(lastEventId === undefined ? [] : history.since(lastEventId)));
+    var connection = (0, _createBody.createBody)();
     connections.add(connection);
-    connection.closed.listen(() => {
-      console.log(`client disconnected, number of client connected to event source: ${connections.size}`);
+    connection.closed.listen(function () {
+      console.log("client disconnected, number of client connected to event source: ".concat(connections.size));
       connections.delete(connection);
     });
-    console.log(`client joined, number of client connected to event source: ${connections.size}, max allowed: ${maxLength}`);
-    events.forEach(event => {
-      console.log(`send ${event.type} event to this new client`);
+    console.log("client joined, number of client connected to event source: ".concat(connections.size, ", max allowed: ").concat(maxLength));
+    events.forEach(function (event) {
+      console.log("send ".concat(event.type, " event to this new client"));
       connection.write(stringifySourceEvent(event));
     });
     return {
@@ -132,15 +144,15 @@ const createSSERoom = ({
     };
   };
 
-  const write = data => {
-    connections.forEach(connection => {
+  var write = function write(data) {
+    connections.forEach(function (connection) {
       connection.write(data);
     });
   };
 
-  const sendEvent = event => {
+  var sendEvent = function sendEvent(event) {
     if (event.type !== "comment") {
-      console.log(`send ${event.type} event, number of client listening event source: ${connections.size}`);
+      console.log("send ".concat(event.type, " event, number of client listening event source: ").concat(connections.size));
       event.id = lastEventId;
       lastEventId++;
       history.add(event);
@@ -149,21 +161,21 @@ const createSSERoom = ({
     write(stringifySourceEvent(event));
   };
 
-  const keepAlive = () => {
+  var keepAlive = function keepAlive() {
     // maybe that, when an event occurs, we can delay the keep alive event
-    console.log(`send keep alive event, number of client listening event source: ${connections.size}`);
+    console.log("send keep alive event, number of client listening event source: ".concat(connections.size));
     sendEvent({
       type: "comment",
       data: new Date().toLocaleTimeString()
     });
   };
 
-  const open = () => {
+  var open = function open() {
     interval = setInterval(keepAlive, keepaliveDuration);
     state = "opened";
   };
 
-  const close = () => {
+  var close = function close() {
     // it should close every connection no?
     clearInterval(interval);
     history.reset();
@@ -171,10 +183,10 @@ const createSSERoom = ({
   };
 
   return {
-    open,
-    close,
-    connect,
-    sendEvent
+    open: open,
+    close: close,
+    connect: connect,
+    sendEvent: sendEvent
   };
 };
 

@@ -1,0 +1,42 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../src/createCompileService/buildGroup.js"
+  ],
+  "names": [
+    "stringifyGroups",
+    "groups",
+    "groupMap",
+    "forEach",
+    "group",
+    "id",
+    "pluginNames",
+    "compatMap",
+    "JSON",
+    "stringify",
+    "buildGroup",
+    "root",
+    "moduleOutput",
+    "getGroupForPlatform",
+    "getAllGroup",
+    "sortedGroups",
+    "sort",
+    "a",
+    "b",
+    "length",
+    "slice",
+    "intermediateGroup",
+    "index",
+    "getGroupIdForPlatform",
+    "platformName",
+    "platformVersion",
+    "getPluginsFromGroupId",
+    "groupId",
+    "find",
+    "plugins"
+  ],
+  "mappings": ";;;;;;;AAAA;;AAKA,IAAMA,eAAe,GAAG,SAAlBA,eAAkB,CAACC,MAAD,EAAY;AAClC,MAAMC,QAAQ,GAAG,EAAjB;AAEAD,EAAAA,MAAM,CAACE,OAAP,CAAe,UAACC,KAAD,EAAW;AACxBF,IAAAA,QAAQ,CAACE,KAAK,CAACC,EAAP,CAAR,GAAqB;AACnBC,MAAAA,WAAW,EAAEF,KAAK,CAACE,WADA;AAEnBC,MAAAA,SAAS,EAAEH,KAAK,CAACG;AAFE,KAArB;AAID,GALD;AAOA,SAAOC,IAAI,CAACC,SAAL,CAAeP,QAAf,EAAyB,IAAzB,EAA+B,IAA/B,CAAP;AACD,CAXD;;AAaO,IAAMQ,UAAU,GAAG,SAAbA,UAAa,OAAc;AAAA,MAAXC,IAAW,QAAXA,IAAW;;AAAA,8BACO,6DAA0B;AACrEC,IAAAA,YAAY,EAAE;AADuD,GAA1B,CADP;AAAA,MAC9BC,mBAD8B,yBAC9BA,mBAD8B;AAAA,MACTC,WADS,yBACTA,WADS;;AAKtC,MAAMb,MAAM,GAAGa,WAAW,EAA1B;AACA,MAAMC,YAAY,GAAGd,MAAM,CAACe,IAAP,CAAY,UAACC,CAAD,EAAIC,CAAJ;AAAA,WAAUD,CAAC,CAACX,WAAF,CAAca,MAAd,GAAuBD,CAAC,CAACZ,WAAF,CAAca,MAA/C;AAAA,GAAZ,CAArB;AAEAJ,EAAAA,YAAY,CAAC,CAAD,CAAZ,CAAgBV,EAAhB,GAAqB,OAArB;AACAU,EAAAA,YAAY,CAACK,KAAb,CAAmB,CAAnB,EAAsB,CAAC,CAAvB,EAA0BjB,OAA1B,CAAkC,UAACkB,iBAAD,EAAoBC,KAApB,EAA8B;AAC9DD,IAAAA,iBAAiB,CAAChB,EAAlB,0BAAuCiB,KAAK,GAAG,CAA/C;AACD,GAFD;AAGAP,EAAAA,YAAY,CAACA,YAAY,CAACI,MAAb,GAAsB,CAAvB,CAAZ,CAAsCd,EAAtC,GAA2C,MAA3C;AACAU,EAAAA,YAAY,CAACA,YAAY,CAACI,MAAb,GAAsB,CAAvB,CAAZ,CAAsCd,EAAtC,GAA2C,OAA3C;AAEA,mEAAuBM,IAAvB,yBAAiDX,eAAe,CAACC,MAAD,CAAhE;AAEA,SAAO;AACLsB,IAAAA,qBAAqB,EAAE,sCAAuC;AAAA,UAApCC,YAAoC,SAApCA,YAAoC;AAAA,UAAtBC,eAAsB,SAAtBA,eAAsB;AAC5D,aAAOZ,mBAAmB,CAAC;AAAEW,QAAAA,YAAY,EAAZA,YAAF;AAAgBC,QAAAA,eAAe,EAAfA;AAAhB,OAAD,CAAnB,CAAuDpB,EAA9D;AACD,KAHI;AAILqB,IAAAA,qBAAqB,EAAE,+BAACC,OAAD,EAAa;AAClC,aAAO1B,MAAM,CAAC2B,IAAP,CAAY,UAACxB,KAAD,EAAW;AAC5B,eAAOA,KAAK,CAACC,EAAN,KAAasB,OAApB;AACD,OAFM,EAEJE,OAFH;AAGD;AARI,GAAP;AAUD,CA3BM",
+  "sourcesContent": [
+    "import {\n  createGetGroupForPlatform,\n  writeFileFromString,\n} from \"@dmail/project-structure-compile-babel\"\n\nconst stringifyGroups = (groups) => {\n  const groupMap = {}\n\n  groups.forEach((group) => {\n    groupMap[group.id] = {\n      pluginNames: group.pluginNames,\n      compatMap: group.compatMap,\n    }\n  })\n\n  return JSON.stringify(groupMap, null, \"  \")\n}\n\nexport const buildGroup = ({ root }) => {\n  const { getGroupForPlatform, getAllGroup } = createGetGroupForPlatform({\n    moduleOutput: \"systemjs\",\n  })\n\n  const groups = getAllGroup()\n  const sortedGroups = groups.sort((a, b) => a.pluginNames.length - b.pluginNames.length)\n\n  sortedGroups[0].id = \"worst\"\n  sortedGroups.slice(1, -1).forEach((intermediateGroup, index) => {\n    intermediateGroup.id = `intermediate-${index + 1}`\n  })\n  sortedGroups[sortedGroups.length - 2].id = \"best\"\n  sortedGroups[sortedGroups.length - 1].id = \"ideal\"\n\n  writeFileFromString(`${root}/group.config.json`, stringifyGroups(groups))\n\n  return {\n    getGroupIdForPlatform: ({ platformName, platformVersion }) => {\n      return getGroupForPlatform({ platformName, platformVersion }).id\n    },\n    getPluginsFromGroupId: (groupId) => {\n      return groups.find((group) => {\n        return group.id === groupId\n      }).plugins\n    },\n  }\n}\n"
+  ]
+}

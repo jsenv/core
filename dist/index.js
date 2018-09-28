@@ -5,37 +5,37 @@ Object.defineProperty(exports, "__esModule", {
 });
 Object.defineProperty(exports, "openChromiumClient", {
   enumerable: true,
-  get: function () {
+  get: function get() {
     return _openChromiumClient.openChromiumClient;
   }
 });
 Object.defineProperty(exports, "openCompileServer", {
   enumerable: true,
-  get: function () {
+  get: function get() {
     return _openCompileServer.openCompileServer;
   }
 });
 Object.defineProperty(exports, "openBrowserServer", {
   enumerable: true,
-  get: function () {
+  get: function get() {
     return _openBrowserServer.openBrowserServer;
   }
 });
 Object.defineProperty(exports, "testProject", {
   enumerable: true,
-  get: function () {
+  get: function get() {
     return _coverFolder.testProject;
   }
 });
 Object.defineProperty(exports, "createCoverageFromTestReport", {
   enumerable: true,
-  get: function () {
+  get: function get() {
     return _coverFolder.createCoverageFromTestReport;
   }
 });
 Object.defineProperty(exports, "run", {
   enumerable: true,
-  get: function () {
+  get: function get() {
     return _run.run;
   }
 });
@@ -61,7 +61,7 @@ function _objectWithoutProperties(source, excluded) { if (source == null) return
 
 function _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }
 
-const createModuleRunner = params => {
+var createModuleRunner = function createModuleRunner(params) {
   // if there is already a compileServer running for that location
   // they will work as long as the code which created them run in the same terminal
   // if two terminal spawns a server trying to compile a given project they will concurrently
@@ -71,44 +71,44 @@ const createModuleRunner = params => {
   // - save somewhere the port used for that specific project and reuse when existing
   // save used port is the easiest solution but we'll ignore this issue for now
   // and assume noone will try to open two server for the same location
-  return (0, _openCompileServer.openCompileServer)(params).then(server => {
-    const runInsideNode = (_ref) => {
-      let {
-        file
-      } = _ref,
+  return (0, _openCompileServer.openCompileServer)(params).then(function (server) {
+    var runInsideNode = function runInsideNode(_ref) {
+      var file = _ref.file,
           rest = _objectWithoutProperties(_ref, ["file"]);
 
       return (0, _openNodeClient.openNodeClient)({
-        server
-      }).then(nodeClient => {
+        server: server
+      }).then(function (nodeClient) {
         // we should return a way to close?
         return nodeClient.execute(_objectSpread({
-          file
+          file: file
         }, rest));
       });
     };
 
-    const runInsideChromium = ({
-      file,
-      headless = true,
-      cover = false
-    }) => {
+    var runInsideChromium = function runInsideChromium(_ref2) {
+      var file = _ref2.file,
+          _ref2$headless = _ref2.headless,
+          headless = _ref2$headless === void 0 ? true : _ref2$headless,
+          _ref2$cover = _ref2.cover,
+          cover = _ref2$cover === void 0 ? false : _ref2$cover;
       return (0, _openChromiumClient.openChromiumClient)({
         compileURL: server.compileURL,
-        headless
-      }).then(chromiumClient => {
+        headless: headless
+      }).then(function (chromiumClient) {
         return chromiumClient.execute({
-          file,
+          file: file,
           collectCoverage: cover
-        }).then(({
-          promise
-        }) => promise);
+        }).then(function (_ref3) {
+          var promise = _ref3.promise;
+          return promise;
+        });
       });
     };
 
     return {
-      runInsideNode,
-      runInsideChromium
+      runInsideNode: runInsideNode,
+      runInsideChromium: runInsideChromium
     };
   });
 };

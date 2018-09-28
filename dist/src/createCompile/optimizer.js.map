@@ -6,7 +6,7 @@
   "names": [
     "optimizer"
   ],
-  "mappings": ";;;;;;;AAAA;AAEO,MAAMA,SAAS,GAAG,MAAM,IAAxB",
+  "mappings": ";;;;;;;AAAA;AAEO,IAAMA,SAAS,GAAG,SAAZA,SAAY;AAAA,SAAM,IAAN;AAAA,CAAlB",
   "sourcesContent": [
     "// nice to have https://prepack.io/getting-started.html#options\n\nexport const optimizer = () => null\n"
   ]

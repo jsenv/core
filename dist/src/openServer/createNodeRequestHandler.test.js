@@ -12,15 +12,14 @@ var _startServer = require("./startServer.js");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-(0, _test.test)(() => {
-  return (0, _startServer.startServer)().then(({
-    addRequestHandler,
-    url,
-    agent,
-    close
-  }) => {
-    const nodeRequestHandler = (0, _createNodeRequestHandler.createNodeRequestHandler)({
-      handler: () => {
+(0, _test.test)(function () {
+  return (0, _startServer.startServer)().then(function (_ref) {
+    var addRequestHandler = _ref.addRequestHandler,
+        url = _ref.url,
+        agent = _ref.agent,
+        close = _ref.close;
+    var nodeRequestHandler = (0, _createNodeRequestHandler.createNodeRequestHandler)({
+      handler: function handler() {
         // as we can see the whole concept behind createNodeRequestHandler
         // is to avoid using response methods directly but rather
         // return POJO that takes care of using response methods
@@ -32,12 +31,14 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
           body: "ok"
         };
       },
-      url
+      url: url
     });
     addRequestHandler(nodeRequestHandler);
     return (0, _nodeFetch.default)(url, {
-      agent
-    }).then(response => response.text()).then(text => {
+      agent: agent
+    }).then(function (response) {
+      return response.text();
+    }).then(function (text) {
       _assert.default.equal(text, "ok");
 
       return close();

@@ -5,9 +5,11 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.pathIsInside = void 0;
 
-const normalizeSep = path => path.replace(/\\/g, "/");
+var normalizeSep = function normalizeSep(path) {
+  return path.replace(/\\/g, "/");
+};
 
-const stripTrailingSep = thePath => {
+var stripTrailingSep = function stripTrailingSep(thePath) {
   if (thePath[thePath.length - 1] === "/") {
     return thePath.slice(0, -1);
   }
@@ -15,7 +17,7 @@ const stripTrailingSep = thePath => {
   return thePath;
 };
 
-const pathIsInside = (thePath, potentialParent) => {
+var pathIsInside = function pathIsInside(thePath, potentialParent) {
   thePath = normalizeSep(thePath);
   potentialParent = normalizeSep(potentialParent); // For inside-directory checking, we want to allow trailing slashes, so normalize.
 

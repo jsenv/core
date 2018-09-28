@@ -10,7 +10,7 @@ Object.keys(_createCompileService).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
   Object.defineProperty(exports, key, {
     enumerable: true,
-    get: function () {
+    get: function get() {
       return _createCompileService[key];
     }
   });
@@ -22,7 +22,7 @@ Object.keys(_inspect).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
   Object.defineProperty(exports, key, {
     enumerable: true,
-    get: function () {
+    get: function get() {
       return _inspect[key];
     }
   });
@@ -34,7 +34,7 @@ Object.keys(_list).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
   Object.defineProperty(exports, key, {
     enumerable: true,
-    get: function () {
+    get: function get() {
       return _list[key];
     }
   });
@@ -46,7 +46,7 @@ Object.keys(_sync).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
   Object.defineProperty(exports, key, {
     enumerable: true,
-    get: function () {
+    get: function get() {
       return _sync[key];
     }
   });

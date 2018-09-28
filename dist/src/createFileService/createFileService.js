@@ -17,9 +17,11 @@ var _helpers = require("../createCompileService/helpers.js");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-const mimetype = pathname => {
-  const defaultMimetype = "application/octet-stream";
-  const mimetypes = {
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+var mimetype = function mimetype(pathname) {
+  var defaultMimetype = "application/octet-stream";
+  var mimetypes = {
     // text
     txt: "text/plain",
     html: "text/html",
@@ -41,7 +43,7 @@ const mimetype = pathname => {
     mp3: "audio/mpeg"
   };
 
-  const suffix = _path.default.extname(pathname).slice(1);
+  var suffix = _path.default.extname(pathname).slice(1);
 
   if (suffix in mimetypes) {
     return mimetypes[suffix];
@@ -50,11 +52,11 @@ const mimetype = pathname => {
   return defaultMimetype;
 };
 
-const isErrorWithCode = (error, code) => {
-  return typeof error === "object" && error.code === code;
+var isErrorWithCode = function isErrorWithCode(error, code) {
+  return _typeof(error) === "object" && error.code === code;
 };
 
-const convertFileSystemErrorToResponseProperties = error => {
+var convertFileSystemErrorToResponseProperties = function convertFileSystemErrorToResponseProperties(error) {
   // https://iojs.org/api/errors.html#errors_eacces_permission_denied
   if (isErrorWithCode(error, "EACCES")) {
     return {
@@ -117,9 +119,9 @@ const convertFileSystemErrorToResponseProperties = error => {
 
 exports.convertFileSystemErrorToResponseProperties = convertFileSystemErrorToResponseProperties;
 
-const stat = location => {
-  return new Promise((resolve, reject) => {
-    _fs.default.stat(location, (error, stat) => {
+var stat = function stat(location) {
+  return new Promise(function (resolve, reject) {
+    _fs.default.stat(location, function (error, stat) {
       if (error) {
         reject(convertFileSystemErrorToResponseProperties(error));
       } else {
@@ -129,9 +131,9 @@ const stat = location => {
   });
 };
 
-const readFile = location => {
-  return new Promise((resolve, reject) => {
-    _fs.default.readFile(location, (error, buffer) => {
+var readFile = function readFile(location) {
+  return new Promise(function (resolve, reject) {
+    _fs.default.readFile(location, function (error, buffer) {
       if (error) {
         reject(convertFileSystemErrorToResponseProperties(error));
       } else {
@@ -141,9 +143,9 @@ const readFile = location => {
   });
 };
 
-const listDirectoryContent = location => {
-  return new Promise((resolve, reject) => {
-    _fs.default.readdir(location, (error, ressourceNames) => {
+var listDirectoryContent = function listDirectoryContent(location) {
+  return new Promise(function (resolve, reject) {
+    _fs.default.readdir(location, function (error, ressourceNames) {
       if (error) {
         reject(error);
       } else {
@@ -153,131 +155,140 @@ const listDirectoryContent = location => {
   });
 };
 
-const createFileService = ({
-  include = () => true,
-  locate = ({
-    url
-  }) => url,
-  canReadDirectory = false
-} = {}) => ({
-  method,
-  url,
-  headers: requestHeaders
-}) => {
-  if (!include(url)) {
-    return false;
-  }
+var createFileService = function createFileService() {
+  var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      _ref$include = _ref.include,
+      include = _ref$include === void 0 ? function () {
+    return true;
+  } : _ref$include,
+      _ref$locate = _ref.locate,
+      locate = _ref$locate === void 0 ? function (_ref2) {
+    var url = _ref2.url;
+    return url;
+  } : _ref$locate,
+      _ref$canReadDirectory = _ref.canReadDirectory,
+      canReadDirectory = _ref$canReadDirectory === void 0 ? false : _ref$canReadDirectory;
 
-  let status;
-  let reason;
-  const headers = {};
-  let body;
-  headers["cache-control"] = "no-store";
-  let promise;
+  return function (_ref3) {
+    var method = _ref3.method,
+        url = _ref3.url,
+        requestHeaders = _ref3.headers;
 
-  if (method === "GET" || method === "HEAD") {
-    promise = Promise.resolve(locate({
-      method,
-      url
-    })).then(fileURL => {
-      fileURL = new _url.URL(fileURL); // since https://github.com/nodejs/node/pull/10739
-      // fs methods supports url as path
-      // otherwise keep in mind that
-      // new URL('file:///path/to/file.js').pathname returns 'path/to/file.js' on MAC
-      // new URL('file:///C:/path/to/file.js').pathname returns '/C:/path/to/file.js' on WINDOWS
-      // in order words you have to remove the leading '/' on windows
-      // it does not work let's go path removing leading '/' on windows
-      // const fileLocation = fileURL.toString()
+    if (!include(url)) {
+      return false;
+    }
 
-      const fileLocation = _os.default.platform() === "win32" ? fileURL.pathname.slice(1) : fileURL.pathname;
-      let cachedModificationDate;
+    var status;
+    var reason;
+    var headers = {};
+    var body;
+    headers["cache-control"] = "no-store";
+    var promise;
 
-      if (requestHeaders.has("if-modified-since")) {
-        try {
-          cachedModificationDate = new Date(requestHeaders.get("if-modified-since"));
-        } catch (e) {
-          status = 400;
-          reason = "if-modified-since header is not a valid date";
-          return {
-            status,
-            reason,
-            headers,
-            body
-          };
+    if (method === "GET" || method === "HEAD") {
+      promise = Promise.resolve(locate({
+        method: method,
+        url: url
+      })).then(function (fileURL) {
+        fileURL = new _url.URL(fileURL); // since https://github.com/nodejs/node/pull/10739
+        // fs methods supports url as path
+        // otherwise keep in mind that
+        // new URL('file:///path/to/file.js').pathname returns 'path/to/file.js' on MAC
+        // new URL('file:///C:/path/to/file.js').pathname returns '/C:/path/to/file.js' on WINDOWS
+        // in order words you have to remove the leading '/' on windows
+        // it does not work let's go path removing leading '/' on windows
+        // const fileLocation = fileURL.toString()
+
+        var fileLocation = _os.default.platform() === "win32" ? fileURL.pathname.slice(1) : fileURL.pathname;
+        var cachedModificationDate;
+
+        if (requestHeaders.has("if-modified-since")) {
+          try {
+            cachedModificationDate = new Date(requestHeaders.get("if-modified-since"));
+          } catch (e) {
+            status = 400;
+            reason = "if-modified-since header is not a valid date";
+            return {
+              status: status,
+              reason: reason,
+              headers: headers,
+              body: body
+            };
+          }
         }
-      }
 
-      return stat(fileLocation).then(stat => {
-        const actualModificationDate = stat.mtime;
-        headers["last-modified"] = actualModificationDate.toUTCString();
+        return stat(fileLocation).then(function (stat) {
+          var actualModificationDate = stat.mtime;
+          headers["last-modified"] = actualModificationDate.toUTCString();
 
-        if (stat.isDirectory()) {
-          if (canReadDirectory === false) {
-            status = 403;
-            reason = "not allowed to read directory";
+          if (stat.isDirectory()) {
+            if (canReadDirectory === false) {
+              status = 403;
+              reason = "not allowed to read directory";
+              return;
+            }
+
+            return listDirectoryContent(fileLocation).then(JSON.stringify).then(function (directoryListAsJSON) {
+              status = 200;
+              headers["content-type"] = "application/json";
+              headers["content-length"] = directoryListAsJSON.length;
+              body = directoryListAsJSON;
+            });
+          }
+
+          if (cachedModificationDate && Number(cachedModificationDate) < Number(actualModificationDate)) {
+            status = 304;
             return;
           }
 
-          return listDirectoryContent(fileLocation).then(JSON.stringify).then(directoryListAsJSON => {
-            status = 200;
-            headers["content-type"] = "application/json";
-            headers["content-length"] = directoryListAsJSON.length;
-            body = directoryListAsJSON;
-          });
-        }
+          headers["content-length"] = stat.size;
+          var cachedETag = requestHeaders.get("if-none-match");
 
-        if (cachedModificationDate && Number(cachedModificationDate) < Number(actualModificationDate)) {
-          status = 304;
-          return;
-        }
+          if (cachedETag) {
+            return readFile(fileLocation).then(function (content) {
+              var eTag = (0, _helpers.createETag)(content);
 
-        headers["content-length"] = stat.size;
-        const cachedETag = requestHeaders.get("if-none-match");
+              if (cachedETag === eTag) {
+                status = 304;
+              } else {
+                status = 200;
+                headers["content-type"] = mimetype(url.pathname);
+                headers.ETag = eTag;
+                body = content;
+              }
+            });
+          }
 
-        if (cachedETag) {
-          return readFile(fileLocation).then(content => {
-            const eTag = (0, _helpers.createETag)(content);
-
-            if (cachedETag === eTag) {
-              status = 304;
-            } else {
-              status = 200;
-              headers["content-type"] = mimetype(url.pathname);
-              headers.ETag = eTag;
-              body = content;
-            }
-          });
-        }
-
-        status = 200;
-        headers["content-type"] = mimetype(url.pathname);
-        body = _fs.default.createReadStream(fileLocation);
-      }, ({
-        status: responseStatus,
-        reason: responseReason,
-        headers: responseHeaders = {},
-        body: responseBody
-      }) => {
-        status = responseStatus;
-        reason = responseReason;
-        Object.assign(headers, responseHeaders);
-        body = responseBody;
-        return Promise.resolve();
+          status = 200;
+          headers["content-type"] = mimetype(url.pathname);
+          body = _fs.default.createReadStream(fileLocation);
+        }, function (_ref4) {
+          var responseStatus = _ref4.status,
+              responseReason = _ref4.reason,
+              _ref4$headers = _ref4.headers,
+              responseHeaders = _ref4$headers === void 0 ? {} : _ref4$headers,
+              responseBody = _ref4.body;
+          status = responseStatus;
+          reason = responseReason;
+          Object.assign(headers, responseHeaders);
+          body = responseBody;
+          return Promise.resolve();
+        });
       });
-    });
-  } else {
-    status = 501;
-    promise = Promise.resolve();
-  }
+    } else {
+      status = 501;
+      promise = Promise.resolve();
+    }
 
-  return promise.then(() => {
-    return {
-      status,
-      reason,
-      headers,
-      body
-    };
-  });
+    return promise.then(function () {
+      return {
+        status: status,
+        reason: reason,
+        headers: headers,
+        body: body
+      };
+    });
+  };
 };
 
 exports.createFileService = createFileService;

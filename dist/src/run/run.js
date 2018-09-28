@@ -11,36 +11,34 @@ var _openNodeClient = require("../openNodeClient/openNodeClient.js");
 
 var _openChromiumClient = require("../openChromiumClient/openChromiumClient.js");
 
-const run = ({
-  root = process.cwd(),
-  file,
-  port = 0,
-  platform = "node",
-  headless = false,
-  // when watching, if we control how the code runs we need the sse service
-  // in case an external client connects to our server
-  // but we mainly need node to listen for file change
-  // so that we can reexecute code inside chromium or nodejs
-  // from here
-  // for nodejs we would kill the child and restart an other one
-  // for chromium we kill it too and restart a new one to execute our code inside it
-  watch = false,
-  instrument = false
-}) => {
-  const relativeFile = file;
+var run = function run(_ref) {
+  var _ref$root = _ref.root,
+      root = _ref$root === void 0 ? process.cwd() : _ref$root,
+      file = _ref.file,
+      _ref$port = _ref.port,
+      port = _ref$port === void 0 ? 0 : _ref$port,
+      _ref$platform = _ref.platform,
+      platform = _ref$platform === void 0 ? "node" : _ref$platform,
+      _ref$headless = _ref.headless,
+      headless = _ref$headless === void 0 ? false : _ref$headless,
+      _ref$watch = _ref.watch,
+      watch = _ref$watch === void 0 ? false : _ref$watch,
+      _ref$instrument = _ref.instrument,
+      instrument = _ref$instrument === void 0 ? false : _ref$instrument;
+  var relativeFile = file;
 
-  const openServer = () => {
+  var openServer = function openServer() {
     return (0, _openCompileServer.openCompileServer)({
       rootLocation: root,
       abstractFolderRelativeLocation: "compiled",
-      url: `http://127.0.0.1:0${port}`,
+      url: "http://127.0.0.1:0".concat(port),
       // avoid https for now because certificates are self signed
-      instrument,
-      watch
+      instrument: instrument,
+      watch: watch
     });
   };
 
-  const createClient = server => {
+  var createClient = function createClient(server) {
     if (platform === "node") {
       return (0, _openNodeClient.openNodeClient)({
         compileURL: server.compileURL,
@@ -52,24 +50,24 @@ const run = ({
 
     if (platform === "chromium") {
       return (0, _openChromiumClient.openChromiumClient)({
-        url: `http://127.0.0.1:0${port}`,
+        url: "http://127.0.0.1:0".concat(port),
         // force http for now
-        server,
+        server: server,
         compileURL: server.compileURL,
-        headless,
+        headless: headless,
         mirrorConsole: true
       });
     }
   };
 
-  return openServer().then(server => {
-    console.log(`server listening at ${server.url}`);
-    return createClient(server).then(client => {
+  return openServer().then(function (server) {
+    console.log("server listening at ".concat(server.url));
+    return createClient(server).then(function (client) {
       return client.execute({
         file: relativeFile,
         collectCoverage: instrument
       });
-    }).then(() => {
+    }).then(function () {
       if (watch === false) {// server.close()
       }
     });

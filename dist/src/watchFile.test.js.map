@@ -15,7 +15,7 @@
     "console",
     "log"
   ],
-  "mappings": ";;AAAA;;AACA;;;;AAEAA,OAAO,CAACC,KAAR,CAAcC,MAAd;AACA,MAAMC,IAAI,GAAI,GAAEC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,QAAxB,CAAkC,mBAAlD;AACA,0BAAUH,IAAV,EAAiBI,KAAD,IAAW;AACzBC,EAAAA,OAAO,CAACC,GAAR,CAAY,cAAZ,EAA4BF,KAA5B;AACD,CAFD",
+  "mappings": ";;AAAA;;AACA;;;;AAEAA,OAAO,CAACC,KAAR,CAAcC,MAAd;AACA,IAAMC,IAAI,aAAMC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,QAAxB,CAAN,sBAAV;AACA,0BAAUH,IAAV,EAAgB,UAACI,KAAD,EAAW;AACzBC,EAAAA,OAAO,CAACC,GAAR,CAAY,cAAZ,EAA4BF,KAA5B;AACD,CAFD",
   "sourcesContent": [
     "import { watchFile } from \"./watchFile.js\"\nimport path from \"path\"\n\nprocess.stdin.resume()\nconst file = `${path.resolve(__dirname, \"../../\")}/src/watchFile.js`\nwatchFile(file, (param) => {\n  console.log(\"file changed\", param)\n})\n"
   ]

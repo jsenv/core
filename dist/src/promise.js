@@ -5,17 +5,17 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.createPromiseAndHooks = void 0;
 
-const createPromiseAndHooks = () => {
-  let resolve;
-  let reject;
-  const promise = new Promise((res, rej) => {
+var createPromiseAndHooks = function createPromiseAndHooks() {
+  var resolve;
+  var reject;
+  var promise = new Promise(function (res, rej) {
     resolve = res;
     reject = rej;
   });
   return {
-    promise,
-    resolve,
-    reject
+    promise: promise,
+    resolve: resolve,
+    reject: reject
   };
 };
 

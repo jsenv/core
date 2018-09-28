@@ -7,8 +7,6 @@ exports.createCompileService = void 0;
 
 var _cuid = _interopRequireDefault(require("cuid"));
 
-var _path = _interopRequireDefault(require("path"));
-
 var _url = require("url");
 
 var _createCompile = require("../createCompile/createCompile.js");
@@ -27,119 +25,57 @@ var _projectStructureCompileBabel = require("@dmail/project-structure-compile-ba
 
 var _createFileService = require("../createFileService/createFileService.js");
 
+var _getPlatformAndVersionFromHeaders = require("./getPlatformAndVersionFromHeaders.js");
+
+var _locaters = require("./locaters.js");
+
+var _buildGroup2 = require("./buildGroup.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+
+function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _toArray(arr) { return _arrayWithHoles(arr) || _iterableToArray(arr) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
+function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
+
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
+
+function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
+
+function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
 
 function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-function _objectWithoutProperties(source, excluded) { if (source == null) return {}; var target = _objectWithoutPropertiesLoose(source, excluded); var key, i; if (Object.getOwnPropertySymbols) { var sourceSymbolKeys = Object.getOwnPropertySymbols(source); for (i = 0; i < sourceSymbolKeys.length; i++) { key = sourceSymbolKeys[i]; if (excluded.indexOf(key) >= 0) continue; if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue; target[key] = source[key]; } } return target; }
-
-function _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }
-
-const compareBranch = (branchA, branchB) => {
-  const lastMatchDiff = branchA.lastMatchMs - branchB.lastMatchMs;
-
-  if (lastMatchDiff === 0) {
-    return branchA.matchCount - branchB.matchCount;
-  }
-
-  return lastMatchDiff;
-};
-
-const getInputRelativeLocation = ({
-  abstractFolderRelativeLocation,
-  filename
-}) => {
-  // 'compiled/folder/file.js' -> 'folder/file.js'
-  return filename.slice(abstractFolderRelativeLocation.length + 1);
-};
-
-const getCacheFolderLocation = (_ref) => {
-  let {
-    rootLocation,
-    cacheFolderRelativeLocation
-  } = _ref,
-      rest = _objectWithoutProperties(_ref, ["rootLocation", "cacheFolderRelativeLocation"]);
-
-  return (0, _helpers.resolvePath)(rootLocation, cacheFolderRelativeLocation, getInputRelativeLocation(rest));
-};
-
-const getCacheDataLocation = param => {
-  return (0, _helpers.resolvePath)(getCacheFolderLocation(param), _cache.JSON_FILE);
-};
-
-const getBranchRelativeLocation = (_ref2) => {
-  let {
-    cacheFolderRelativeLocation,
-    branch
-  } = _ref2,
-      rest = _objectWithoutProperties(_ref2, ["cacheFolderRelativeLocation", "branch"]);
-
-  return (0, _helpers.resolvePath)(cacheFolderRelativeLocation, getInputRelativeLocation(rest), branch.name);
-};
-
-const getOutputRelativeLocation = (_ref3) => {
-  let {
-    filename
-  } = _ref3,
-      rest = _objectWithoutProperties(_ref3, ["filename"]);
-
-  return (0, _helpers.resolvePath)(getBranchRelativeLocation(_objectSpread({
-    filename
-  }, rest)), _path.default.basename(filename));
-};
-
-const getBranchLocation = (_ref4) => {
-  let {
-    rootLocation
-  } = _ref4,
-      rest = _objectWithoutProperties(_ref4, ["rootLocation"]);
-
-  return (0, _helpers.resolvePath)(rootLocation, getBranchRelativeLocation(rest));
-};
-
-const getOutputLocation = (_ref5) => {
-  let {
-    rootLocation
-  } = _ref5,
-      rest = _objectWithoutProperties(_ref5, ["rootLocation"]);
-
-  return (0, _helpers.resolvePath)(rootLocation, getOutputRelativeLocation(rest));
-};
-
-const getOutputAssetLocation = (_ref6) => {
-  let {
-    asset
-  } = _ref6,
-      rest = _objectWithoutProperties(_ref6, ["asset"]);
-
-  return (0, _helpers.resolvePath)(getBranchLocation(rest), asset.name);
-};
-
-const readBranchMain = ({
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
-  inputLocation,
-  inputETagClient,
-  cache,
-  branch
-}) => {
+var readBranchMain = function readBranchMain(_ref) {
+  var rootLocation = _ref.rootLocation,
+      cacheFolderRelativeLocation = _ref.cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation = _ref.abstractFolderRelativeLocation,
+      filename = _ref.filename,
+      inputLocation = _ref.inputLocation,
+      inputETagClient = _ref.inputETagClient,
+      cache = _ref.cache,
+      branch = _ref.branch;
   return (0, _readFile.readFile)({
     location: inputLocation
-  }).then(({
-    content
-  }) => {
-    const inputETag = (0, _helpers.createETag)(content);
-    return Promise.resolve().then(() => {
+  }).then(function (_ref2) {
+    var content = _ref2.content;
+    var inputETag = (0, _helpers.createETag)(content);
+    return Promise.resolve().then(function () {
       // faudra pouvoir désactiver ce check lorsqu'on veut juste connaitre l'état du cache
       if (inputETagClient) {
         if (inputETag !== inputETagClient) {
           return {
-            status: `eTag modified on ${inputLocation} since it was cached by client`,
-            inputETagClient
+            status: "eTag modified on ".concat(inputLocation, " since it was cached by client"),
+            inputETagClient: inputETagClient
           };
         }
 
@@ -148,32 +84,32 @@ const readBranchMain = ({
         };
       }
 
-      const inputETagCached = cache.inputETag;
+      var inputETagCached = cache.inputETag;
 
       if (inputETag !== inputETagCached) {
         return {
-          status: `eTag modified on ${inputLocation} since it was cached on filesystem`,
-          inputETagCached
+          status: "eTag modified on ".concat(inputLocation, " since it was cached on filesystem"),
+          inputETagCached: inputETagCached
         };
       }
 
-      const outputLocation = getOutputLocation({
-        rootLocation,
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
-        filename,
-        branch
+      var outputLocation = (0, _locaters.getOutputLocation)({
+        rootLocation: rootLocation,
+        cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+        abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+        filename: filename,
+        branch: branch
       });
       return (0, _readFile.readFile)({
         location: outputLocation,
         errorHandler: _helpers.isFileNotFoundError
-      }).then(({
-        content,
-        error
-      }) => {
+      }).then(function (_ref3) {
+        var content = _ref3.content,
+            error = _ref3.error;
+
         if (error) {
           return {
-            status: `cache not found at ${outputLocation}`
+            status: "cache not found at ".concat(outputLocation)
           };
         }
 
@@ -182,106 +118,108 @@ const readBranchMain = ({
           output: content
         };
       });
-    }).then(moreData => {
+    }).then(function (moreData) {
       return _objectSpread({
         input: content,
-        inputETag
+        inputETag: inputETag
       }, moreData);
     });
   });
 };
 
-const readBranchAsset = ({
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
-  cache,
-  branch,
-  asset
-}) => {
-  const outputAssetLocation = getOutputAssetLocation({
-    rootLocation,
-    cacheFolderRelativeLocation,
-    abstractFolderRelativeLocation,
-    filename,
-    branch,
-    asset
+var readBranchAsset = function readBranchAsset(_ref4) {
+  var rootLocation = _ref4.rootLocation,
+      cacheFolderRelativeLocation = _ref4.cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation = _ref4.abstractFolderRelativeLocation,
+      filename = _ref4.filename,
+      cache = _ref4.cache,
+      branch = _ref4.branch,
+      asset = _ref4.asset;
+  var outputAssetLocation = (0, _locaters.getOutputAssetLocation)({
+    rootLocation: rootLocation,
+    cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+    abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+    filename: filename,
+    branch: branch,
+    asset: asset
   });
-  const name = asset.name;
+  var name = asset.name;
   return (0, _readFile.readFile)({
     location: outputAssetLocation,
     errorHandler: _helpers.isFileNotFoundError
-  }).then(({
-    content,
-    error
-  }) => {
+  }).then(function (_ref5) {
+    var content = _ref5.content,
+        error = _ref5.error;
+
     if (error) {
       return {
-        status: `asset file not found ${outputAssetLocation}`,
-        name
+        status: "asset file not found ".concat(outputAssetLocation),
+        name: name
       };
     }
 
-    const actual = (0, _helpers.createETag)(content);
-    const expected = asset.eTag;
+    var actual = (0, _helpers.createETag)(content);
+    var expected = asset.eTag;
 
     if (actual !== expected) {
       return {
-        status: `unexpected ${asset.name} asset for ${cache.inputRelativeLocation}: unexpected eTag`,
-        name,
-        content
+        status: "unexpected ".concat(asset.name, " asset for ").concat(cache.inputRelativeLocation, ": unexpected eTag"),
+        name: name,
+        content: content
       };
     }
 
     return {
       status: "valid",
-      name,
-      content
+      name: name,
+      content: content
     };
   });
 };
 
-const readBranch = ({
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
-  inputLocation,
-  inputETagClient,
-  cache,
-  branch
-}) => {
+var readBranch = function readBranch(_ref6) {
+  var rootLocation = _ref6.rootLocation,
+      cacheFolderRelativeLocation = _ref6.cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation = _ref6.abstractFolderRelativeLocation,
+      filename = _ref6.filename,
+      inputLocation = _ref6.inputLocation,
+      inputETagClient = _ref6.inputETagClient,
+      cache = _ref6.cache,
+      branch = _ref6.branch;
   return Promise.all([readBranchMain({
-    rootLocation,
-    cacheFolderRelativeLocation,
-    abstractFolderRelativeLocation,
-    filename,
-    inputLocation,
-    inputETagClient,
-    cache,
-    branch
-  }), ...branch.outputAssets.map(outputAsset => {
+    rootLocation: rootLocation,
+    cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+    abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+    filename: filename,
+    inputLocation: inputLocation,
+    inputETagClient: inputETagClient,
+    cache: cache,
+    branch: branch
+  })].concat(_toConsumableArray(branch.outputAssets.map(function (outputAsset) {
     return readBranchAsset({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
-      cache,
-      branch,
+      rootLocation: rootLocation,
+      cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+      filename: filename,
+      cache: cache,
+      branch: branch,
       asset: outputAsset
     });
-  })]).then(([mainData, ...assetsData]) => {
-    const {
-      status,
-      input,
-      inputETag,
-      output
-    } = mainData;
-    let computedStatus;
+  })))).then(function (_ref7) {
+    var _ref8 = _toArray(_ref7),
+        mainData = _ref8[0],
+        assetsData = _ref8.slice(1);
+
+    var status = mainData.status,
+        input = mainData.input,
+        inputETag = mainData.inputETag,
+        output = mainData.output;
+    var computedStatus;
 
     if (status === "valid") {
-      const invalidAsset = assetsData.find(assetData => assetData.status !== "valid");
+      var invalidAsset = assetsData.find(function (assetData) {
+        return assetData.status !== "valid";
+      });
       computedStatus = invalidAsset ? invalidAsset.status : "valid";
     } else {
       computedStatus = status;
@@ -289,123 +227,97 @@ const readBranch = ({
 
     return {
       status: computedStatus,
-      input,
-      inputETag,
-      output,
+      input: input,
+      inputETag: inputETag,
+      output: output,
       outputAssets: assetsData
     };
   });
 };
 
-const getSourceAbstractLocation = ({
-  rootLocation,
-  inputRelativeLocation
-}) => (0, _helpers.resolvePath)(rootLocation, inputRelativeLocation);
-
-const getSourceMapLocation = ({
-  rootLocation,
-  outputRelativeLocation,
-  outputSourceMapName
-}) => (0, _helpers.resolvePath)(rootLocation, _path.default.dirname(outputRelativeLocation), outputSourceMapName);
-
-const sourceMapKnowsExactLocation = false;
-
-const getSourceMapAbstractpLocation = ({
-  rootLocation,
-  abstractFolderRelativeLocation,
-  inputRelativeLocation,
-  outputSourceMapName
-}) => (0, _helpers.resolvePath)(rootLocation, abstractFolderRelativeLocation, _path.default.dirname(inputRelativeLocation), outputSourceMapName);
-
-const getFileBranch = ({
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
-  compile
-}) => {
-  const inputRelativeLocation = getInputRelativeLocation({
-    abstractFolderRelativeLocation,
-    filename
+var getFileBranch = function getFileBranch(_ref9) {
+  var rootLocation = _ref9.rootLocation,
+      cacheFolderRelativeLocation = _ref9.cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation = _ref9.abstractFolderRelativeLocation,
+      filename = _ref9.filename,
+      groupId = _ref9.groupId,
+      compile = _ref9.compile;
+  var inputRelativeLocation = (0, _locaters.getInputRelativeLocation)({
+    abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+    filename: filename
   });
-  const cacheDataLocation = getCacheDataLocation({
-    rootLocation,
-    cacheFolderRelativeLocation,
-    abstractFolderRelativeLocation,
-    filename
+  var cacheDataLocation = (0, _locaters.getCacheDataLocation)({
+    rootLocation: rootLocation,
+    cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+    abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+    filename: filename
   });
   return Promise.all([(0, _locateFile.locateFile)(inputRelativeLocation, rootLocation), (0, _readFile.readFile)({
     location: cacheDataLocation,
     errorHandler: _helpers.isFileNotFoundError
-  }).then(({
-    content,
-    error
-  }) => {
+  }).then(function (_ref10) {
+    var content = _ref10.content,
+        error = _ref10.error;
+
     if (error) {
       return {
         branches: []
       };
     }
 
-    const cache = JSON.parse(content);
+    var cache = JSON.parse(content);
 
     if (cache.inputRelativeLocation !== inputRelativeLocation) {
-      throw new Error(`${_cache.JSON_FILE} corrupted: unexpected inputRelativeLocation ${cache.inputRelativeLocation}, it must be ${inputRelativeLocation}`);
+      throw new Error("".concat(_cache.JSON_FILE, " corrupted: unexpected inputRelativeLocation ").concat(cache.inputRelativeLocation, ", it must be ").concat(inputRelativeLocation));
     }
 
     return cache;
-  })]).then(([inputLocation, cache]) => {
+  })]).then(function (_ref11) {
+    var _ref12 = _slicedToArray(_ref11, 2),
+        inputLocation = _ref12[0],
+        cache = _ref12[1];
+
     return {
-      inputLocation,
-      cache
+      inputLocation: inputLocation,
+      cache: cache
     };
-  }).then(({
-    inputLocation,
-    cache
-  }) => {
+  }).then(function (_ref13) {
+    var inputLocation = _ref13.inputLocation,
+        cache = _ref13.cache;
     // here, if readFile returns ENOENT we could/should check is there is something in cache for that file
     // and take that chance to remove the cached version of that file
     // but it's not supposed to happen
     return (0, _readFile.readFile)({
       location: inputLocation
-    }).then(({
-      content
-    }) => {
+    }).then(function (_ref14) {
+      var content = _ref14.content;
       return compile({
-        rootLocation,
-        abstractFolderRelativeLocation,
-        inputRelativeLocation,
+        rootLocation: rootLocation,
+        abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+        inputRelativeLocation: inputRelativeLocation,
         inputSource: content,
-        filename,
-        getSourceNameForSourceMap: () => {
+        filename: filename,
+        groupId: groupId,
+        getSourceNameForSourceMap: function getSourceNameForSourceMap() {
           return filename;
         },
-        getSourceLocationForSourceMap: context => {
-          const sourceMapUseAbsoluteLocation = true;
+        getSourceLocationForSourceMap: _locaters.getSourceLocationForSourceMap
+      }).then(function (_ref15) {
+        var options = _ref15.options,
+            generate = _ref15.generate;
 
-          if (sourceMapUseAbsoluteLocation) {
-            return `/${context.inputRelativeLocation}`;
-          }
-
-          const sourceLocation = getSourceAbstractLocation(context);
-          const sourceMapLocation = sourceMapKnowsExactLocation ? getSourceMapLocation(context) : getSourceMapAbstractpLocation(context);
-          const sourceLocationRelativeToSourceMapLocation = (0, _helpers.normalizeSeparation)(_path.default.relative(_path.default.dirname(sourceMapLocation), sourceLocation));
-          return sourceLocationRelativeToSourceMapLocation;
-        }
-      }).then(({
-        options,
-        generate
-      }) => {
-        const branchIsValid = branch => {
+        var branchIsValid = function branchIsValid(branch) {
           return JSON.stringify(branch.outputMeta) === JSON.stringify(options);
         };
 
-        const cachedBranch = cache.branches.find(branch => branchIsValid(branch));
+        var cachedBranch = cache.branches.find(function (branch) {
+          return branchIsValid(branch);
+        });
         return {
-          inputLocation,
-          cache,
-          options,
-          generate,
+          inputLocation: inputLocation,
+          cache: cache,
+          options: options,
+          generate: generate,
           input: content,
           branch: cachedBranch
         };
@@ -414,134 +326,142 @@ const getFileBranch = ({
   });
 };
 
-const getFileReport = ({
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
-  inputETagClient = null,
-  compile
-}) => {
+var getFileReport = function getFileReport(_ref16) {
+  var rootLocation = _ref16.rootLocation,
+      cacheFolderRelativeLocation = _ref16.cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation = _ref16.abstractFolderRelativeLocation,
+      filename = _ref16.filename,
+      _ref16$inputETagClien = _ref16.inputETagClient,
+      inputETagClient = _ref16$inputETagClien === void 0 ? null : _ref16$inputETagClien,
+      groupId = _ref16.groupId,
+      compile = _ref16.compile;
   return getFileBranch({
-    rootLocation,
-    cacheFolderRelativeLocation,
-    abstractFolderRelativeLocation,
-    filename,
-    compile
-  }).then(({
-    inputLocation,
-    cache,
-    options,
-    generate,
-    input,
-    branch
-  }) => {
+    rootLocation: rootLocation,
+    cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+    abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+    filename: filename,
+    groupId: groupId,
+    compile: compile
+  }).then(function (_ref17) {
+    var inputLocation = _ref17.inputLocation,
+        cache = _ref17.cache,
+        options = _ref17.options,
+        generate = _ref17.generate,
+        input = _ref17.input,
+        branch = _ref17.branch;
+
     if (!branch) {
       return {
-        inputLocation,
+        inputLocation: inputLocation,
         status: "missing",
-        cache,
-        options,
-        generate,
+        cache: cache,
+        options: options,
+        generate: generate,
         branch: {
           name: (0, _cuid.default)()
         },
-        input
+        input: input
       };
     }
 
     return readBranch({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
-      inputLocation,
-      inputETagClient,
-      cache,
-      branch
-    }).then(({
-      status,
-      input,
-      output,
-      outputAssets
-    }) => {
+      rootLocation: rootLocation,
+      cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+      filename: filename,
+      inputLocation: inputLocation,
+      inputETagClient: inputETagClient,
+      cache: cache,
+      branch: branch
+    }).then(function (_ref18) {
+      var status = _ref18.status,
+          input = _ref18.input,
+          output = _ref18.output,
+          outputAssets = _ref18.outputAssets;
       return {
-        inputLocation,
-        status,
-        cache,
-        options,
-        generate,
-        branch,
-        input,
-        output,
-        outputAssets
+        inputLocation: inputLocation,
+        status: status,
+        cache: cache,
+        options: options,
+        generate: generate,
+        branch: branch,
+        input: input,
+        output: output,
+        outputAssets: outputAssets
       };
     });
   });
 };
 
-const updateBranch = ({
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
-  inputLocation,
-  status,
-  cache,
-  options,
-  branch,
-  inputETag,
-  output,
-  outputAssets,
-  cacheAutoClean,
-  cacheTrackHit
-}) => {
-  const {
-    branches
-  } = cache;
-  const isCached = status === "cached";
-  const isNew = status === "created";
-  const isUpdated = status === "updated";
-  const promises = [];
+var compareBranch = function compareBranch(branchA, branchB) {
+  var lastMatchDiff = branchA.lastMatchMs - branchB.lastMatchMs;
+
+  if (lastMatchDiff === 0) {
+    return branchA.matchCount - branchB.matchCount;
+  }
+
+  return lastMatchDiff;
+};
+
+var updateBranch = function updateBranch(_ref19) {
+  var rootLocation = _ref19.rootLocation,
+      cacheFolderRelativeLocation = _ref19.cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation = _ref19.abstractFolderRelativeLocation,
+      filename = _ref19.filename,
+      inputLocation = _ref19.inputLocation,
+      status = _ref19.status,
+      cache = _ref19.cache,
+      options = _ref19.options,
+      branch = _ref19.branch,
+      inputETag = _ref19.inputETag,
+      output = _ref19.output,
+      outputAssets = _ref19.outputAssets,
+      cacheAutoClean = _ref19.cacheAutoClean,
+      cacheTrackHit = _ref19.cacheTrackHit;
+  var branches = cache.branches;
+  var isCached = status === "cached";
+  var isNew = status === "created";
+  var isUpdated = status === "updated";
+  var promises = [];
 
   if (isNew || isUpdated) {
-    const mainLocation = getOutputLocation({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
-      branch
+    var mainLocation = (0, _locaters.getOutputLocation)({
+      rootLocation: rootLocation,
+      cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+      filename: filename,
+      branch: branch
     });
-    promises.push((0, _projectStructureCompileBabel.writeFileFromString)(mainLocation, output), ...outputAssets.map(asset => {
-      const assetLocation = getOutputAssetLocation({
-        rootLocation,
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
-        filename,
-        branch,
-        asset
+    promises.push.apply(promises, [(0, _projectStructureCompileBabel.writeFileFromString)(mainLocation, output)].concat(_toConsumableArray(outputAssets.map(function (asset) {
+      var assetLocation = (0, _locaters.getOutputAssetLocation)({
+        rootLocation: rootLocation,
+        cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+        abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+        filename: filename,
+        branch: branch,
+        asset: asset
       });
       return (0, _projectStructureCompileBabel.writeFileFromString)(assetLocation, asset.content);
-    }));
+    }))));
   }
 
   if (isNew || isUpdated || isCached && cacheTrackHit) {
     if (cacheAutoClean) {
       if (inputETag !== cache.inputETag) {
-        const branchesToRemove = branches.slice(); // no need to remove the updated branch
+        var branchesToRemove = branches.slice(); // no need to remove the updated branch
 
-        const index = branchesToRemove.indexOf(branch);
+        var index = branchesToRemove.indexOf(branch);
         branchesToRemove.splice(index, 1);
         branches.length = 0;
-        branchesToRemove.forEach(branch => {
-          const branchLocation = getBranchLocation({
-            rootLocation,
-            cacheFolderRelativeLocation,
-            abstractFolderRelativeLocation,
-            filename,
-            branch
+        branchesToRemove.forEach(function (branch) {
+          var branchLocation = (0, _locaters.getBranchLocation)({
+            rootLocation: rootLocation,
+            cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+            abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+            filename: filename,
+            branch: branch
           });
-          console.log(`file changed, remove ${branchLocation}`); // the line below is async but non blocking
+          console.log("file changed, remove ".concat(branchLocation)); // the line below is async but non blocking
 
           (0, _helpers.removeFolderDeep)(branchLocation);
         });
@@ -552,7 +472,7 @@ const updateBranch = ({
       branches.push(branch);
     }
 
-    const updatedBranches = branches.map(branchToUpdate => {
+    var updatedBranches = branches.map(function (branchToUpdate) {
       if (branchToUpdate.name !== branch.name) {
         return _objectSpread({}, branchToUpdate);
       }
@@ -569,12 +489,11 @@ const updateBranch = ({
           matchCount: branch.matchCount + 1,
           lastMatchMs: Number(Date.now()),
           lastModifiedMs: Number(Date.now()),
-          outputAssets: outputAssets.map(({
-            name,
-            content
-          }) => {
+          outputAssets: outputAssets.map(function (_ref20) {
+            var name = _ref20.name,
+                content = _ref20.content;
             return {
-              name,
+              name: name,
               eTag: (0, _helpers.createETag)(content)
             };
           })
@@ -589,32 +508,34 @@ const updateBranch = ({
         lastModifiedMs: Number(Date.now()),
         lastMatchMs: Number(Date.now()),
         outputMeta: options,
-        outputAssets: outputAssets.map(({
-          name,
-          content
-        }) => {
+        outputAssets: outputAssets.map(function (_ref21) {
+          var name = _ref21.name,
+              content = _ref21.content;
           return {
-            name,
+            name: name,
             eTag: (0, _helpers.createETag)(content)
           };
         })
       };
     }).sort(compareBranch);
-    const inputRelativeLocation = getInputRelativeLocation({
-      abstractFolderRelativeLocation,
-      filename
+    var inputRelativeLocation = (0, _locaters.getInputRelativeLocation)({
+      abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+      filename: filename
     });
-    const updatedCache = {
-      inputRelativeLocation,
+    var updatedCache = {
+      inputRelativeLocation: inputRelativeLocation,
       inputETag: isCached ? cache.inputETag : inputETag,
-      inputLocation: inputLocation === (0, _helpers.resolvePath)(rootLocation, inputRelativeLocation) ? undefined : inputLocation,
+      inputLocation: inputLocation === (0, _locaters.getSourceAbstractLocation)({
+        rootLocation: rootLocation,
+        inputRelativeLocation: inputRelativeLocation
+      }) ? undefined : inputLocation,
       branches: updatedBranches
     };
-    const cacheDataLocation = getCacheDataLocation({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename
+    var cacheDataLocation = (0, _locaters.getCacheDataLocation)({
+      rootLocation: rootLocation,
+      cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+      filename: filename
     });
     promises.push((0, _projectStructureCompileBabel.writeFileFromString)(cacheDataLocation, JSON.stringify(updatedCache, null, "  ")));
   }
@@ -622,147 +543,153 @@ const updateBranch = ({
   return Promise.all(promises);
 };
 
-const getFileCompiled = ({
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
-  compile,
-  inputETagClient,
-  cacheEnabled,
-  cacheAutoClean,
-  cacheTrackHit
-}) => {
-  const fileLock = (0, _ressourceRegistry.lockForRessource)(getCacheDataLocation({
-    rootLocation,
-    cacheFolderRelativeLocation,
-    abstractFolderRelativeLocation,
-    filename
+var getFileCompiled = function getFileCompiled(_ref22) {
+  var rootLocation = _ref22.rootLocation,
+      cacheFolderRelativeLocation = _ref22.cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation = _ref22.abstractFolderRelativeLocation,
+      filename = _ref22.filename,
+      compile = _ref22.compile,
+      inputETagClient = _ref22.inputETagClient,
+      groupId = _ref22.groupId,
+      getBabelPlugins = _ref22.getBabelPlugins,
+      cacheEnabled = _ref22.cacheEnabled,
+      cacheAutoClean = _ref22.cacheAutoClean,
+      cacheTrackHit = _ref22.cacheTrackHit;
+  var fileLock = (0, _ressourceRegistry.lockForRessource)((0, _locaters.getCacheDataLocation)({
+    rootLocation: rootLocation,
+    cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+    abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+    filename: filename
   }));
-  return fileLock.chain(() => {
+  return fileLock.chain(function () {
     return getFileReport({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
-      compile,
-      inputETagClient
-    }).then(({
-      inputLocation,
-      status,
-      cache,
-      options,
-      generate,
-      branch,
-      input,
-      inputETag,
-      output,
-      outputAssets
-    }) => {
-      if (cacheEnabled === false) {
-        status = "missing";
-      }
-
-      const outputRelativeLocation = getOutputRelativeLocation({
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
-        filename,
-        branch
+      rootLocation: rootLocation,
+      cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+      filename: filename,
+      inputETagClient: inputETagClient,
+      groupId: groupId,
+      compile: compile
+    }).then(function (_ref23) {
+      var inputLocation = _ref23.inputLocation,
+          status = _ref23.status,
+          cache = _ref23.cache,
+          options = _ref23.options,
+          generate = _ref23.generate,
+          branch = _ref23.branch,
+          input = _ref23.input,
+          inputETag = _ref23.inputETag,
+          output = _ref23.output,
+          outputAssets = _ref23.outputAssets;
+      var outputRelativeLocation = (0, _locaters.getOutputRelativeLocation)({
+        cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+        abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+        filename: filename,
+        branch: branch
       });
 
-      if (status === "valid") {
+      if (cacheEnabled && status === "valid") {
         return {
-          inputLocation,
+          inputLocation: inputLocation,
           status: "cached",
-          cache,
-          options,
-          branch,
-          input,
-          inputETag,
-          outputRelativeLocation,
-          output,
-          outputAssets
+          cache: cache,
+          options: options,
+          branch: branch,
+          input: input,
+          inputETag: inputETag,
+          outputRelativeLocation: outputRelativeLocation,
+          output: output,
+          outputAssets: outputAssets
         };
       }
 
       return Promise.resolve(generate({
-        outputRelativeLocation
-      })).then(({
-        output,
-        outputAssets
-      }) => {
+        outputRelativeLocation: outputRelativeLocation,
+        getBabelPlugins: getBabelPlugins
+      })).then(function (_ref24) {
+        var output = _ref24.output,
+            outputAssets = _ref24.outputAssets;
         return {
-          inputLocation,
+          inputLocation: inputLocation,
           status: status === "missing" ? "created" : "updated",
-          cache,
-          options,
-          branch,
-          input,
+          cache: cache,
+          options: options,
+          branch: branch,
+          input: input,
           inputETag: (0, _helpers.createETag)(input),
-          outputRelativeLocation,
-          output,
-          outputAssets
+          outputRelativeLocation: outputRelativeLocation,
+          output: output,
+          outputAssets: outputAssets
         };
       });
-    }).then(({
-      inputLocation,
-      status,
-      cache,
-      options,
-      branch,
-      input,
-      inputETag,
-      outputRelativeLocation,
-      output,
-      outputAssets
-    }) => {
+    }).then(function (_ref25) {
+      var inputLocation = _ref25.inputLocation,
+          status = _ref25.status,
+          cache = _ref25.cache,
+          options = _ref25.options,
+          branch = _ref25.branch,
+          input = _ref25.input,
+          inputETag = _ref25.inputETag,
+          outputRelativeLocation = _ref25.outputRelativeLocation,
+          output = _ref25.output,
+          outputAssets = _ref25.outputAssets;
       return updateBranch({
-        rootLocation,
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
-        filename,
-        inputLocation,
-        status,
-        cache,
-        options,
-        branch,
-        input,
-        inputETag,
-        output,
-        outputAssets,
-        cacheTrackHit,
-        cacheAutoClean
-      }).then(() => {
+        rootLocation: rootLocation,
+        cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+        abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+        filename: filename,
+        inputLocation: inputLocation,
+        status: status,
+        cache: cache,
+        options: options,
+        branch: branch,
+        input: input,
+        inputETag: inputETag,
+        output: output,
+        outputAssets: outputAssets,
+        cacheTrackHit: cacheTrackHit,
+        cacheAutoClean: cacheAutoClean
+      }).then(function () {
         return {
-          status,
-          inputETag,
-          output,
-          outputRelativeLocation
+          status: status,
+          inputETag: inputETag,
+          output: output,
+          outputRelativeLocation: outputRelativeLocation
         };
       });
     });
   });
 };
 
-const createCompileService = ({
-  rootLocation,
-  cacheFolderRelativeLocation = "build",
-  abstractFolderRelativeLocation = "compiled",
-  compile = (0, _createCompile.createCompile)(),
-  cacheEnabled = false,
-  cacheAutoClean = true,
-  cacheTrackHit = false
-}) => {
-  const fileService = (0, _createFileService.createFileService)();
+var createCompileService = function createCompileService(_ref26) {
+  var rootLocation = _ref26.rootLocation,
+      _ref26$cacheFolderRel = _ref26.cacheFolderRelativeLocation,
+      cacheFolderRelativeLocation = _ref26$cacheFolderRel === void 0 ? "build" : _ref26$cacheFolderRel,
+      _ref26$abstractFolder = _ref26.abstractFolderRelativeLocation,
+      abstractFolderRelativeLocation = _ref26$abstractFolder === void 0 ? "compiled" : _ref26$abstractFolder,
+      _ref26$compile = _ref26.compile,
+      compile = _ref26$compile === void 0 ? (0, _createCompile.createCompile)() : _ref26$compile,
+      _ref26$cacheEnabled = _ref26.cacheEnabled,
+      cacheEnabled = _ref26$cacheEnabled === void 0 ? false : _ref26$cacheEnabled,
+      _ref26$cacheAutoClean = _ref26.cacheAutoClean,
+      cacheAutoClean = _ref26$cacheAutoClean === void 0 ? true : _ref26$cacheAutoClean,
+      _ref26$cacheTrackHit = _ref26.cacheTrackHit,
+      cacheTrackHit = _ref26$cacheTrackHit === void 0 ? false : _ref26$cacheTrackHit;
+  var fileService = (0, _createFileService.createFileService)();
 
-  const service = ({
-    method,
-    url,
-    headers
-  }) => {
-    const pathname = url.pathname; // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
+  var _buildGroup = (0, _buildGroup2.buildGroup)({
+    root: rootLocation
+  }),
+      getGroupIdForPlatform = _buildGroup.getGroupIdForPlatform,
+      getPluginsFromGroupId = _buildGroup.getPluginsFromGroupId;
 
-    const filename = pathname.slice(1); // je crois, que, normalement
+  var service = function service(_ref27) {
+    var method = _ref27.method,
+        url = _ref27.url,
+        headers = _ref27.headers;
+    var pathname = url.pathname; // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
+
+    var filename = pathname.slice(1); // je crois, que, normalement
     // il faudrait "aider" le browser pour que tout ça ait du sens
     // genre lui envoyer une redirection vers le fichier en cache
     // genre renvoyer 201 vers le cache lorsqu'il a été update ou créé
@@ -773,44 +700,45 @@ const createCompileService = ({
     // par contre ça fait 2 requête http
 
     if (filename.endsWith(".map")) {
-      const fileLock = (0, _ressourceRegistry.lockForRessource)(getCacheDataLocation({
-        rootLocation,
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
-        filename
+      var fileLock = (0, _ressourceRegistry.lockForRessource)((0, _locaters.getCacheDataLocation)({
+        rootLocation: rootLocation,
+        cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+        abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+        filename: filename
       }));
-      return fileLock.chain(() => {
-        const script = filename.slice(0, -4); // 'folder/file.js.map' -> 'folder.file.js'
+      return fileLock.chain(function () {
+        var script = filename.slice(0, -4); // 'folder/file.js.map' -> 'folder.file.js'
         // if we receive something like compiled/folder/file.js.map
         // we redirect to build/folder/file.js/jqjcijjojio/file.js.map
 
         return getFileBranch({
-          rootLocation,
-          cacheFolderRelativeLocation,
-          abstractFolderRelativeLocation,
+          rootLocation: rootLocation,
+          cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+          abstractFolderRelativeLocation: abstractFolderRelativeLocation,
           filename: script,
-          compile
-        }).then(({
-          branch
-        }) => {
+          compile: compile
+        }).then(function (_ref28) {
+          var branch = _ref28.branch;
+
           if (!branch) {
             return {
               status: 404
             };
           }
 
-          const scriptCompiledFolder = (0, _helpers.resolvePath)(rootLocation, getBranchRelativeLocation({
-            cacheFolderRelativeLocation,
-            abstractFolderRelativeLocation,
-            filename: script,
-            branch
-          }));
-          return fileService({
-            method,
-            url: new _url.URL(`file:///${scriptCompiledFolder}/${_path.default.basename(filename)}${url.search}`),
-            headers
+          var outputLocation = (0, _locaters.getOutputLocation)({
+            rootLocation: rootLocation,
+            cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+            abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+            filename: filename,
+            branch: branch
           });
-        }, error => {
+          return fileService({
+            method: method,
+            url: new _url.URL("file:///".concat(outputLocation).concat(url.search)),
+            headers: headers
+          });
+        }, function (error) {
           if (error && error.reason === "Unexpected directory operation") {
             return {
               status: 403
@@ -822,22 +750,34 @@ const createCompileService = ({
       });
     }
 
+    var _getPlatformAndVersio = (0, _getPlatformAndVersionFromHeaders.getPlatformAndVersionFromHeaders)(headers),
+        platformName = _getPlatformAndVersio.platformName,
+        platformVersion = _getPlatformAndVersio.platformVersion;
+
+    var groupId = getGroupIdForPlatform({
+      platformName: platformName,
+      platformVersion: platformVersion
+    });
     return getFileCompiled({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
-      compile,
+      rootLocation: rootLocation,
+      cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+      filename: filename,
+      compile: compile,
       inputETagClient: headers.has("if-none-match") ? headers.get("if-none-match") : undefined,
-      cacheEnabled,
-      cacheAutoClean,
-      cacheTrackHit
-    }).then(({
-      status,
-      inputETag,
-      outputRelativeLocation,
-      output
-    }) => {
+      groupId: groupId,
+      getBabelPlugins: function getBabelPlugins() {
+        return getPluginsFromGroupId(groupId);
+      },
+      cacheEnabled: cacheEnabled,
+      cacheAutoClean: cacheAutoClean,
+      cacheTrackHit: cacheTrackHit
+    }).then(function (_ref29) {
+      var status = _ref29.status,
+          inputETag = _ref29.inputETag,
+          outputRelativeLocation = _ref29.outputRelativeLocation,
+          output = _ref29.output;
+
       // here status can be "created", "updated", "cached"
       // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
       // if-none-match c'est forcément le etag du client qui a match
@@ -863,7 +803,7 @@ const createCompileService = ({
         },
         body: output
       };
-    }, error => {
+    }, function (error) {
       if (error && error.reason === "Unexpected directory operation") {
         return {
           status: 403
@@ -874,20 +814,22 @@ const createCompileService = ({
     });
   };
 
-  const compileFile = relativeLocation => getFileCompiled({
-    rootLocation,
-    cacheFolderRelativeLocation,
-    abstractFolderRelativeLocation,
-    filename: `${abstractFolderRelativeLocation}/${relativeLocation}`,
-    compile,
-    cacheEnabled,
-    cacheAutoClean,
-    cacheTrackHit
-  });
+  var compileFile = function compileFile(relativeLocation) {
+    return getFileCompiled({
+      rootLocation: rootLocation,
+      cacheFolderRelativeLocation: cacheFolderRelativeLocation,
+      abstractFolderRelativeLocation: abstractFolderRelativeLocation,
+      filename: "".concat(abstractFolderRelativeLocation, "/").concat(relativeLocation),
+      compile: compile,
+      cacheEnabled: cacheEnabled,
+      cacheAutoClean: cacheAutoClean,
+      cacheTrackHit: cacheTrackHit
+    });
+  };
 
   return {
-    service,
-    compileFile
+    service: service,
+    compileFile: compileFile
   };
 };
 

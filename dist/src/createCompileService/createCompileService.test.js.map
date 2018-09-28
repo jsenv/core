@@ -8,8 +8,8 @@
     "path",
     "resolve",
     "__dirname",
-    "service",
     "rootLocation",
+    "service",
     "method",
     "url",
     "URL",
@@ -22,8 +22,8 @@
     "console",
     "log"
   ],
-  "mappings": ";;AAAA;;AACA;;AACA;;AACA;;AACA;;;;AAEA,MAAMA,WAAW,GAAGC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,UAAxB,CAApB;;AAEA,MAAM;AAAEC,EAAAA;AAAF,IAAc,gDAAqB;AACvCC,EAAAA,YAAY,EAAEL;AADyB,CAArB,CAApB;AAIAI,OAAO,CAAC;AACNE,EAAAA,MAAM,EAAE,KADF;AAENC,EAAAA,GAAG,EAAE,IAAIC,QAAJ,CAAQ,+BAAR,EAAyC,UAAzC,CAFC;AAGNC,EAAAA,OAAO,EAAE;AAHH,CAAD,CAAP,CAIGC,IAJH,CAISC,UAAD,IAAgB;AACtBC,kBAAOC,KAAP,CAAaF,UAAU,CAACG,MAAxB,EAAgC,GAAhC;;AACAC,EAAAA,OAAO,CAACC,GAAR,CAAY,IAAZ;AACD,CAPD;AASAZ,OAAO,CAAC;AACNE,EAAAA,MAAM,EAAE,KADF;AAENC,EAAAA,GAAG,EAAE,IAAIC,QAAJ,CAAQ,mCAAR,EAA6C,UAA7C,CAFC;AAGNC,EAAAA,OAAO,EAAE;AAHH,CAAD,CAAP,CAIGC,IAJH,CAISC,UAAD,IAAgB;AACtBC,kBAAOC,KAAP,CAAaF,UAAU,CAACG,MAAxB,EAAgC,GAAhC;;AACAC,EAAAA,OAAO,CAACC,GAAR,CAAY,IAAZ;AACD,CAPD",
+  "mappings": ";;AAAA;;AACA;;AACA;;AACA;;AACA;;;;AAEA,IAAMA,WAAW,GAAGC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,UAAxB,CAApB;;4BAEoB,iDAAqB;AACvCC,EAAAA,YAAY,EAAEJ;AADyB,CAArB,C;IAAZK,O,yBAAAA,O;;AAIRA,OAAO,CAAC;AACNC,EAAAA,MAAM,EAAE,KADF;AAENC,EAAAA,GAAG,EAAE,IAAIC,QAAJ,CAAQ,+BAAR,EAAyC,UAAzC,CAFC;AAGNC,EAAAA,OAAO,EAAE,kCAAc;AACrB;AADqB,GAAd;AAHH,CAAD,CAAP,CAMGC,IANH,CAMQ,UAACC,UAAD,EAAgB;AACtBC,kBAAOC,KAAP,CAAaF,UAAU,CAACG,MAAxB,EAAgC,GAAhC;;AACAC,EAAAA,OAAO,CAACC,GAAR,CAAY,IAAZ;AACD,CATD,E,CAWA;AACA;AACA;AACA;AACA;AACA;AACA;AACA;AACA;AACA",
   "sourcesContent": [
-    "import assert from \"assert\"\nimport path from \"path\"\nimport { createCompileService } from \"./createCompileService.js\"\nimport { URL } from \"url\"\nimport { createHeaders } from \"../openServer/createHeaders.js\"\n\nconst projectRoot = path.resolve(__dirname, \"../../..\")\n\nconst { service } = createCompileService({\n  rootLocation: projectRoot,\n})\n\nservice({\n  method: \"GET\",\n  url: new URL(\"compiled/src/__test__/file.js\", \"file:///\"),\n  headers: createHeaders(),\n}).then((properties) => {\n  assert.equal(properties.status, 200)\n  console.log(\"ok\")\n})\n\nservice({\n  method: \"GET\",\n  url: new URL(\"compiled/src/__test__/file.js.map\", \"file:///\"),\n  headers: createHeaders(),\n}).then((properties) => {\n  assert.equal(properties.status, 200)\n  console.log(\"ok\")\n})\n"
+    "import assert from \"assert\"\nimport path from \"path\"\nimport { createCompileService } from \"./createCompileService.js\"\nimport { URL } from \"url\"\nimport { createHeaders } from \"../openServer/createHeaders.js\"\n\nconst projectRoot = path.resolve(__dirname, \"../../..\")\n\nconst { service } = createCompileService({\n  rootLocation: projectRoot,\n})\n\nservice({\n  method: \"GET\",\n  url: new URL(\"compiled/src/__test__/file.js\", \"file:///\"),\n  headers: createHeaders({\n    \"user-agent\": `node/8.0`,\n  }),\n}).then((properties) => {\n  assert.equal(properties.status, 200)\n  console.log(\"ok\")\n})\n\n// service({\n//   method: \"GET\",\n//   url: new URL(\"compiled/src/__test__/file.js.map\", \"file:///\"),\n//   headers: createHeaders({\n//     \"user-agent\": `node/8.0`,\n//   }),\n// }).then((properties) => {\n//   assert.equal(properties.status, 200)\n//   console.log(\"ok\")\n// })\n"
   ]
 }

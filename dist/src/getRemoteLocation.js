@@ -5,11 +5,10 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.getRemoteLocation = void 0;
 
-const getRemoteLocation = ({
-  compileURL,
-  file
-}) => {
-  return `${compileURL}/${file}`;
+var getRemoteLocation = function getRemoteLocation(_ref) {
+  var compileURL = _ref.compileURL,
+      file = _ref.file;
+  return "".concat(compileURL, "/").concat(file);
 };
 
 exports.getRemoteLocation = getRemoteLocation;

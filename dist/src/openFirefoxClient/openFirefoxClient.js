@@ -23,65 +23,71 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-const clientFunction = (file, setupSource, teardownSource, done) => {
+var clientFunction = function clientFunction(file, setupSource, teardownSource, done) {
   eval(setupSource)(file);
-  window.System.import(file).then(eval(teardownSource)).then(value => done({
-    status: "resolved",
-    value
-  }), value => done({
-    status: "rejected",
-    value
-  }));
+  window.System.import(file).then(eval(teardownSource)).then(function (value) {
+    return done({
+      status: "resolved",
+      value: value
+    });
+  }, function (value) {
+    return done({
+      status: "rejected",
+      value: value
+    });
+  });
 };
 
-const openFirefoxClient = ({
-  compileURL,
-  headless = true,
-  runFile = ({
-    driver,
-    file,
-    setup,
-    teardown
-  }) => {
-    return driver.executeScriptAsync(`(${clientFunction.toString()}.apply(this, arguments)`, file, `(${setup.toString()})`, `(${teardown.toString()})`).then(({
-      status,
-      value
-    }) => {
+var openFirefoxClient = function openFirefoxClient(_ref) {
+  var compileURL = _ref.compileURL,
+      _ref$headless = _ref.headless,
+      headless = _ref$headless === void 0 ? true : _ref$headless,
+      _ref$runFile = _ref.runFile,
+      runFile = _ref$runFile === void 0 ? function (_ref2) {
+    var driver = _ref2.driver,
+        file = _ref2.file,
+        setup = _ref2.setup,
+        teardown = _ref2.teardown;
+    return driver.executeScriptAsync("(".concat(clientFunction.toString(), ".apply(this, arguments)"), file, "(".concat(setup.toString(), ")"), "(".concat(teardown.toString(), ")")).then(function (_ref3) {
+      var status = _ref3.status,
+          value = _ref3.value;
       return status === "resolved" ? value : Promise.reject(value);
     });
-  }
-}) => {
-  const options = new _firefox.default.Options();
+  } : _ref$runFile;
+  var options = new _firefox.default.Options();
 
   if (headless) {
     options.headless();
   }
 
-  return new _seleniumWebdriver.Builder().forBrowser("firefox").setFirefoxOptions(options).build().then(driver => {
+  return new _seleniumWebdriver.Builder().forBrowser("firefox").setFirefoxOptions(options).build().then(function (driver) {
     return (0, _createHTMLForBrowser.createHTMLForBrowser)({
       title: "Skeleton for Firefox"
-    }).then(indexHTML => {
+    }).then(function (indexHTML) {
       return (0, _openIndexServer.openIndexServer)({
         indexBody: indexHTML
-      }).then(indexRequestHandler => {
-        const execute = ({
-          file,
-          autoClean = false,
-          collectCoverage = false
-        }) => {
-          const remoteFile = (0, _getRemoteLocation.getRemoteLocation)({
-            compileURL,
-            file
+      }).then(function (indexRequestHandler) {
+        var execute = function execute(_ref4) {
+          var file = _ref4.file,
+              _ref4$autoClean = _ref4.autoClean,
+              autoClean = _ref4$autoClean === void 0 ? false : _ref4$autoClean,
+              _ref4$collectCoverage = _ref4.collectCoverage,
+              collectCoverage = _ref4$collectCoverage === void 0 ? false : _ref4$collectCoverage;
+          var remoteFile = (0, _getRemoteLocation.getRemoteLocation)({
+            compileURL: compileURL,
+            file: file
           });
-          return driver.get(indexRequestHandler.url).then(() => runFile(_objectSpread({
-            driver,
-            file: remoteFile
-          }, (0, _getClientSetupAndTeardown.getBrowserSetupAndTeardowm)({
-            collectCoverage
-          })))).then(({
-            status,
-            value
-          }) => {
+          return driver.get(indexRequestHandler.url).then(function () {
+            return runFile(_objectSpread({
+              driver: driver,
+              file: remoteFile
+            }, (0, _getClientSetupAndTeardown.getBrowserSetupAndTeardowm)({
+              collectCoverage: collectCoverage
+            })));
+          }).then(function (_ref5) {
+            var status = _ref5.status,
+                value = _ref5.value;
+
             if (autoClean) {
               indexRequestHandler.stop();
             }
@@ -94,13 +100,13 @@ const openFirefoxClient = ({
           });
         };
 
-        const close = () => {
+        var close = function close() {
           return driver.quit();
         };
 
         return {
-          execute,
-          close
+          execute: execute,
+          close: close
         };
       });
     });

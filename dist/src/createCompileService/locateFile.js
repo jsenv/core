@@ -11,8 +11,8 @@ var _helpers = require("./helpers.js");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-const locateNodeModule = (moduleLocation, location) => {
-  const requireContext = new _module.default(location);
+var locateNodeModule = function locateNodeModule(moduleLocation, location) {
+  var requireContext = new _module.default(location);
   requireContext.paths = _module.default._nodeModulePaths(location);
   return _module.default._resolveFilename(moduleLocation, requireContext, true);
 }; // "node_modules/aaa/main.js"
@@ -21,43 +21,45 @@ const locateNodeModule = (moduleLocation, location) => {
 // returns { dependent: "node_modules/bbb", relativeDependency: "aaa/index.js"}
 
 
-const getNodeDependentAndRelativeDependency = fileLocation => {
-  const prefixedLocation = fileLocation[0] === "/" ? fileLocation : `/${fileLocation}`;
-  const pattern = "/node_modules/";
-  const lastNodeModulesIndex = prefixedLocation.lastIndexOf(pattern);
+var getNodeDependentAndRelativeDependency = function getNodeDependentAndRelativeDependency(fileLocation) {
+  var prefixedLocation = fileLocation[0] === "/" ? fileLocation : "/".concat(fileLocation);
+  var pattern = "/node_modules/";
+  var lastNodeModulesIndex = prefixedLocation.lastIndexOf(pattern);
 
   if (lastNodeModulesIndex === 0) {
-    const dependent = "";
-    const relativeDependency = fileLocation.slice(pattern.length - 1); // console.log("node location", location, "means", { dependent, relativeDependency })
+    var _dependent = "";
+
+    var _relativeDependency = fileLocation.slice(pattern.length - 1); // console.log("node location", location, "means", { dependent, relativeDependency })
+
 
     return {
-      dependent,
-      relativeDependency
+      dependent: _dependent,
+      relativeDependency: _relativeDependency
     };
   }
 
-  const dependent = fileLocation.slice(0, lastNodeModulesIndex - 1);
-  const relativeDependency = fileLocation.slice(lastNodeModulesIndex + pattern.length - 1); // console.log("node location", location, "means", { dependent, relativeDependency })
+  var dependent = fileLocation.slice(0, lastNodeModulesIndex - 1);
+  var relativeDependency = fileLocation.slice(lastNodeModulesIndex + pattern.length - 1); // console.log("node location", location, "means", { dependent, relativeDependency })
 
   return {
-    dependent,
-    relativeDependency
+    dependent: dependent,
+    relativeDependency: relativeDependency
   };
 };
 
-const locateFile = (relativeLocation, absoluteLocation) => {
+var locateFile = function locateFile(relativeLocation, absoluteLocation) {
   if (relativeLocation.startsWith("node_modules/")) {
-    const {
-      dependent,
-      relativeDependency
-    } = getNodeDependentAndRelativeDependency(relativeLocation);
-    let nodeLocation = absoluteLocation;
+    var _getNodeDependentAndR = getNodeDependentAndRelativeDependency(relativeLocation),
+        dependent = _getNodeDependentAndR.dependent,
+        relativeDependency = _getNodeDependentAndR.relativeDependency;
+
+    var nodeLocation = absoluteLocation;
 
     if (dependent) {
-      nodeLocation += `/${dependent}`;
+      nodeLocation += "/".concat(dependent);
     }
 
-    nodeLocation += `/node_modules`;
+    nodeLocation += "/node_modules";
 
     try {
       return Promise.resolve(locateNodeModule(relativeDependency, nodeLocation));

@@ -6,7 +6,7 @@
   "names": [
     "JSON_FILE"
   ],
-  "mappings": ";;;;;;AAAO,MAAMA,SAAS,GAAG,YAAlB",
+  "mappings": ";;;;;;AAAO,IAAMA,SAAS,GAAG,YAAlB",
   "sourcesContent": [
     "export const JSON_FILE = \"cache.json\"\n"
   ]

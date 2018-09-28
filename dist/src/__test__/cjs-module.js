@@ -1,6 +1,6 @@
 "use strict";
 
-const value = require("./cjs.js");
+var value = require("./cjs.js");
 
 module.exports = value;
 //# sourceMappingURL=cjs-module.js.map
