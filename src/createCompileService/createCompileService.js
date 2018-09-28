@@ -1,63 +1,26 @@
 /* eslint-disable import/max-dependencies */
 import cuid from "cuid"
-import path from "path"
 import { URL } from "url"
 import { createCompile } from "../createCompile/createCompile.js"
 import { JSON_FILE } from "./cache.js"
-import {
-  createETag,
-  isFileNotFoundError,
-  resolvePath,
-  removeFolderDeep,
-  normalizeSeparation,
-} from "./helpers.js"
+import { createETag, isFileNotFoundError, removeFolderDeep } from "./helpers.js"
 import { locateFile } from "./locateFile.js"
 import { readFile } from "./readFile.js"
 import { lockForRessource } from "./ressourceRegistry.js"
 import { writeFileFromString } from "@dmail/project-structure-compile-babel"
 import { createFileService } from "../createFileService/createFileService.js"
-
-const compareBranch = (branchA, branchB) => {
-  const lastMatchDiff = branchA.lastMatchMs - branchB.lastMatchMs
-
-  if (lastMatchDiff === 0) {
-    return branchA.matchCount - branchB.matchCount
-  }
-  return lastMatchDiff
-}
-
-const getInputRelativeLocation = ({ abstractFolderRelativeLocation, filename }) => {
-  // 'compiled/folder/file.js' -> 'folder/file.js'
-  return filename.slice(abstractFolderRelativeLocation.length + 1)
-}
-
-const getCacheFolderLocation = ({ rootLocation, cacheFolderRelativeLocation, ...rest }) => {
-  return resolvePath(rootLocation, cacheFolderRelativeLocation, getInputRelativeLocation(rest))
-}
-
-const getCacheDataLocation = (param) => {
-  return resolvePath(getCacheFolderLocation(param), JSON_FILE)
-}
-
-const getBranchRelativeLocation = ({ cacheFolderRelativeLocation, branch, ...rest }) => {
-  return resolvePath(cacheFolderRelativeLocation, getInputRelativeLocation(rest), branch.name)
-}
-
-const getOutputRelativeLocation = ({ filename, ...rest }) => {
-  return resolvePath(getBranchRelativeLocation({ filename, ...rest }), path.basename(filename))
-}
-
-const getBranchLocation = ({ rootLocation, ...rest }) => {
-  return resolvePath(rootLocation, getBranchRelativeLocation(rest))
-}
-
-const getOutputLocation = ({ rootLocation, ...rest }) => {
-  return resolvePath(rootLocation, getOutputRelativeLocation(rest))
-}
-
-const getOutputAssetLocation = ({ asset, ...rest }) => {
-  return resolvePath(getBranchLocation(rest), asset.name)
-}
+import { getPlatformAndVersionFromHeaders } from "./getPlatformAndVersionFromHeaders.js"
+import {
+  getInputRelativeLocation,
+  getCacheDataLocation,
+  getOutputRelativeLocation,
+  getBranchLocation,
+  getOutputLocation,
+  getOutputAssetLocation,
+  getSourceAbstractLocation,
+  getSourceLocationForSourceMap,
+} from "./locaters.js"
+import { buildGroup } from "./buildGroup.js"
 
 const readBranchMain = ({
   rootLocation,
@@ -224,32 +187,12 @@ const readBranch = ({
   })
 }
 
-const getSourceAbstractLocation = ({ rootLocation, inputRelativeLocation }) =>
-  resolvePath(rootLocation, inputRelativeLocation)
-
-const getSourceMapLocation = ({ rootLocation, outputRelativeLocation, outputSourceMapName }) =>
-  resolvePath(rootLocation, path.dirname(outputRelativeLocation), outputSourceMapName)
-
-const sourceMapKnowsExactLocation = false
-
-const getSourceMapAbstractpLocation = ({
-  rootLocation,
-  abstractFolderRelativeLocation,
-  inputRelativeLocation,
-  outputSourceMapName,
-}) =>
-  resolvePath(
-    rootLocation,
-    abstractFolderRelativeLocation,
-    path.dirname(inputRelativeLocation),
-    outputSourceMapName,
-  )
-
 const getFileBranch = ({
   rootLocation,
   cacheFolderRelativeLocation,
   abstractFolderRelativeLocation,
   filename,
+  groupId,
   compile,
 }) => {
   const inputRelativeLocation = getInputRelativeLocation({
@@ -305,26 +248,11 @@ const getFileBranch = ({
           inputRelativeLocation,
           inputSource: content,
           filename,
+          groupId,
           getSourceNameForSourceMap: () => {
             return filename
           },
-          getSourceLocationForSourceMap: (context) => {
-            const sourceMapUseAbsoluteLocation = true
-
-            if (sourceMapUseAbsoluteLocation) {
-              return `/${context.inputRelativeLocation}`
-            }
-
-            const sourceLocation = getSourceAbstractLocation(context)
-            const sourceMapLocation = sourceMapKnowsExactLocation
-              ? getSourceMapLocation(context)
-              : getSourceMapAbstractpLocation(context)
-            const sourceLocationRelativeToSourceMapLocation = normalizeSeparation(
-              path.relative(path.dirname(sourceMapLocation), sourceLocation),
-            )
-
-            return sourceLocationRelativeToSourceMapLocation
-          },
+          getSourceLocationForSourceMap,
         }).then(({ options, generate }) => {
           const branchIsValid = (branch) => {
             return JSON.stringify(branch.outputMeta) === JSON.stringify(options)
@@ -351,6 +279,7 @@ const getFileReport = ({
   abstractFolderRelativeLocation,
   filename,
   inputETagClient = null,
+  groupId,
   compile,
 }) => {
   return getFileBranch({
@@ -358,6 +287,7 @@ const getFileReport = ({
     cacheFolderRelativeLocation,
     abstractFolderRelativeLocation,
     filename,
+    groupId,
     compile,
   }).then(({ inputLocation, cache, options, generate, input, branch }) => {
     if (!branch) {
@@ -397,6 +327,15 @@ const getFileReport = ({
       }
     })
   })
+}
+
+const compareBranch = (branchA, branchB) => {
+  const lastMatchDiff = branchA.lastMatchMs - branchB.lastMatchMs
+
+  if (lastMatchDiff === 0) {
+    return branchA.matchCount - branchB.matchCount
+  }
+  return lastMatchDiff
 }
 
 const updateBranch = ({
@@ -524,7 +463,7 @@ const updateBranch = ({
       inputRelativeLocation,
       inputETag: isCached ? cache.inputETag : inputETag,
       inputLocation:
-        inputLocation === resolvePath(rootLocation, inputRelativeLocation)
+        inputLocation === getSourceAbstractLocation({ rootLocation, inputRelativeLocation })
           ? undefined
           : inputLocation,
       branches: updatedBranches,
@@ -550,6 +489,8 @@ const getFileCompiled = ({
   filename,
   compile,
   inputETagClient,
+  groupId,
+  getBabelPlugins,
   cacheEnabled,
   cacheAutoClean,
   cacheTrackHit,
@@ -569,8 +510,9 @@ const getFileCompiled = ({
       cacheFolderRelativeLocation,
       abstractFolderRelativeLocation,
       filename,
-      compile,
       inputETagClient,
+      groupId,
+      compile,
     })
       .then(
         ({
@@ -585,10 +527,6 @@ const getFileCompiled = ({
           output,
           outputAssets,
         }) => {
-          if (cacheEnabled === false) {
-            status = "missing"
-          }
-
           const outputRelativeLocation = getOutputRelativeLocation({
             cacheFolderRelativeLocation,
             abstractFolderRelativeLocation,
@@ -596,7 +534,7 @@ const getFileCompiled = ({
             branch,
           })
 
-          if (status === "valid") {
+          if (cacheEnabled && status === "valid") {
             return {
               inputLocation,
               status: "cached",
@@ -611,7 +549,7 @@ const getFileCompiled = ({
             }
           }
 
-          return Promise.resolve(generate({ outputRelativeLocation })).then(
+          return Promise.resolve(generate({ outputRelativeLocation, getBabelPlugins })).then(
             ({ output, outputAssets }) => {
               return {
                 inputLocation,
@@ -682,6 +620,10 @@ export const createCompileService = ({
 }) => {
   const fileService = createFileService()
 
+  const { getGroupIdForPlatform, getPluginsFromGroupId } = buildGroup({
+    root: rootLocation,
+  })
+
   const service = ({ method, url, headers }) => {
     const pathname = url.pathname
     // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
@@ -727,21 +669,17 @@ export const createCompileService = ({
               }
             }
 
-            const scriptCompiledFolder = resolvePath(
+            const outputLocation = getOutputLocation({
               rootLocation,
-              getBranchRelativeLocation({
-                cacheFolderRelativeLocation,
-                abstractFolderRelativeLocation,
-                filename: script,
-                branch,
-              }),
-            )
+              cacheFolderRelativeLocation,
+              abstractFolderRelativeLocation,
+              filename,
+              branch,
+            })
 
             return fileService({
               method,
-              url: new URL(
-                `file:///${scriptCompiledFolder}/${path.basename(filename)}${url.search}`,
-              ),
+              url: new URL(`file:///${outputLocation}${url.search}`),
               headers,
             })
           },
@@ -757,6 +695,12 @@ export const createCompileService = ({
       })
     }
 
+    const { platformName, platformVersion } = getPlatformAndVersionFromHeaders(headers)
+    const groupId = getGroupIdForPlatform({
+      platformName,
+      platformVersion,
+    })
+
     return getFileCompiled({
       rootLocation,
       cacheFolderRelativeLocation,
@@ -764,6 +708,8 @@ export const createCompileService = ({
       filename,
       compile,
       inputETagClient: headers.has("if-none-match") ? headers.get("if-none-match") : undefined,
+      groupId,
+      getBabelPlugins: () => getPluginsFromGroupId(groupId),
       cacheEnabled,
       cacheAutoClean,
       cacheTrackHit,

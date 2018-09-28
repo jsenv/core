@@ -29,7 +29,7 @@ const transform = (context, transformer) => {
   })
 }
 
-const createDefaultOptions = ({ abstractFolderRelativeLocation }) => {
+const createDefaultOptions = ({ groupId, abstractFolderRelativeLocation }) => {
   let transpile = false
   if (abstractFolderRelativeLocation === "compiled") {
     transpile = true
@@ -44,6 +44,7 @@ const createDefaultOptions = ({ abstractFolderRelativeLocation }) => {
   const remap = true
 
   return {
+    groupId,
     identify: false,
     identifyMethod: "relative",
     transpile,
@@ -55,6 +56,7 @@ const createDefaultOptions = ({ abstractFolderRelativeLocation }) => {
   }
 }
 
+// a refaire en utilisant project structure pour regarder si ya le meta cover
 const instrumentPredicate = ({ inputRelativeLocation }) => {
   if (inputRelativeLocation.startsWith("node_modules/")) {
     return false
@@ -86,7 +88,7 @@ export const createCompile = (
         }
         let { identify, transpile, instrument, minify, optimize, remap } = options
 
-        const generate = ({ outputRelativeLocation }) => {
+        const generate = (generateContext) => {
           // outputRelativeLocation dependent from options:
           // there is a 1/1 relationship between JSON.stringify(options) & outputRelativeLocation
           // it means we can get options from outputRelativeLocation & vice versa
@@ -115,7 +117,7 @@ export const createCompile = (
               return inputRelativeLocation
             },
             ...compileContext,
-            outputRelativeLocation,
+            ...generateContext,
             options,
           })
             .then((context) => (transpile ? transform(context, transpiler) : context))

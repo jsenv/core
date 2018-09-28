@@ -20,9 +20,9 @@
 		"node": ">=8.6.0"
 	},
 	"dependencies": {
-		"@dmail/project-structure-compile-babel": "github:dmail/project-structure-compile-babel",
 		"@babel/core": "7.1.0",
 		"@dmail/module-loader": "github:dmail/module-loader",
+		"@dmail/project-structure-compile-babel": "github:dmail/project-structure-compile-babel",
 		"@dmail/signal": "7.0.1",
 		"cuid": "2.1.1",
 		"istanbul": "0.4.5",
@@ -32,7 +32,8 @@
 		"micmac": "2.0.0",
 		"node-fetch": "2.0.0",
 		"node-forge": "0.7.1",
-		"source-map": "0.5.6"
+		"source-map": "0.5.6",
+		"ua-parser-js": "0.7.18"
 	},
 	"devDependencies": {
 		"@dmail/test": "6.0.0",

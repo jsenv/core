@@ -6,7 +6,7 @@ const readBrowserLoader = () => {
     const filename = path.resolve(
       __dirname,
       // we add an additional ../ to get rid of dist/
-      "../../node_modules/@dmail/module-loader/src/browser/index.js",
+      "../../node_modules/@dmail/module-loader/browser.js",
     )
     fs.readFile(filename, (error, buffer) => {
       if (error) {

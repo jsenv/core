@@ -61,6 +61,7 @@ export const openCompileServer = ({
           if (headers.get("accept") === "text/event-stream") {
             return fileChangedSSE.connect(headers.get("last-event-id"))
           }
+          return null
         },
         ({ url }) => {
           let relativeFilename = url.pathname.slice(1)

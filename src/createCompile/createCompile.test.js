@@ -23,10 +23,12 @@ compile({
   filename,
   inputRelativeLocation: "src/createCompile/file.js",
   inputSource: fs.readFileSync(filename).toString(),
+  groupId: "nothing",
 }).then(({ generate }) => {
   return generate({
     outputRelativeLocation: "file.compiled.js",
-  }).then(({ output, outputAssets }) => {
+    getPluginsFromGroupId: () => [],
+  }).then(({ output }) => {
     global.System = {
       register: (dependencies, fn) => {
         fn(() => {}, {}).execute()

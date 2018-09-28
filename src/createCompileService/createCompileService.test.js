@@ -13,17 +13,21 @@ const { service } = createCompileService({
 service({
   method: "GET",
   url: new URL("compiled/src/__test__/file.js", "file:///"),
-  headers: createHeaders(),
+  headers: createHeaders({
+    "user-agent": `node/8.0`,
+  }),
 }).then((properties) => {
   assert.equal(properties.status, 200)
   console.log("ok")
 })
 
-service({
-  method: "GET",
-  url: new URL("compiled/src/__test__/file.js.map", "file:///"),
-  headers: createHeaders(),
-}).then((properties) => {
-  assert.equal(properties.status, 200)
-  console.log("ok")
-})
+// service({
+//   method: "GET",
+//   url: new URL("compiled/src/__test__/file.js.map", "file:///"),
+//   headers: createHeaders({
+//     "user-agent": `node/8.0`,
+//   }),
+// }).then((properties) => {
+//   assert.equal(properties.status, 200)
+//   console.log("ok")
+// })
