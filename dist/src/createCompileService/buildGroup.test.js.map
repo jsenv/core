@@ -1,0 +1,16 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../src/createCompileService/buildGroup.test.js"
+  ],
+  "names": [
+    "root",
+    "path",
+    "resolve",
+    "__dirname"
+  ],
+  "mappings": ";;AAAA;;AACA;;;;AAEA,IAAMA,IAAI,GAAGC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAAb;;AAEA,4BAAW;AACTH,EAAAA,IAAI,EAAJA;AADS,CAAX",
+  "sourcesContent": [
+    "import { buildGroup } from \"./buildGroup.js\"\nimport path from \"path\"\n\nconst root = path.resolve(__dirname, \"../../../\")\n\nbuildGroup({\n  root,\n})\n"
+  ]
+}
