@@ -15,7 +15,7 @@
     "undefined",
     "guard"
   ],
-  "mappings": ";;;;;;;AAAO,IAAMA,UAAU,GAAG,SAAbA,UAAa,CAACC,EAAD,EAAKC,MAAL;AAAA,SAAgB,YAAa;AAAA,sCAATC,IAAS;AAATA,MAAAA,IAAS;AAAA;;AACrD,WAAOC,OAAO,CAACC,OAAR,GACJC,IADI,CACC;AAAA,aAAMJ,MAAM,MAAN,SAAUC,IAAV,CAAN;AAAA,KADD,EAEJG,IAFI,CAEC,UAACC,QAAD;AAAA,aAAeA,QAAQ,GAAGC,SAAH,GAAeP,EAAE,MAAF,SAAME,IAAN,CAAtC;AAAA,KAFD,CAAP;AAGD,GAJyB;AAAA,CAAnB;;;AAMA,IAAMM,KAAK,GAAGT,UAAd",
+  "mappings": ";;;;;;;AAAO,MAAMA,UAAU,GAAG,CAACC,EAAD,EAAKC,MAAL,KAAgB,CAAC,GAAGC,IAAJ,KAAa;AACrD,SAAOC,OAAO,CAACC,OAAR,GACJC,IADI,CACC,MAAMJ,MAAM,CAAC,GAAGC,IAAJ,CADb,EAEJG,IAFI,CAEEC,QAAD,IAAeA,QAAQ,GAAGC,SAAH,GAAeP,EAAE,CAAC,GAAGE,IAAJ,CAFzC,CAAP;AAGD,CAJM;;;AAMA,MAAMM,KAAK,GAAGT,UAAd",
   "sourcesContent": [
     "export const guardAsync = (fn, shield) => (...args) => {\n  return Promise.resolve()\n    .then(() => shield(...args))\n    .then((shielded) => (shielded ? undefined : fn(...args)))\n}\n\nexport const guard = guardAsync\n"
   ]

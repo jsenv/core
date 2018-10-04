@@ -7,13 +7,14 @@ exports.openIndexServer = void 0;
 
 var _openServer = require("../openServer/openServer.js");
 
-var openIndexServer = function openIndexServer(_ref) {
-  var url = _ref.url,
-      body = _ref.body;
+const openIndexServer = ({
+  url,
+  body
+}) => {
   return (0, _openServer.openServer)({
-    url: url
-  }).then(function (server) {
-    server.addRequestHandler(function () {
+    url
+  }).then(server => {
+    server.addRequestHandler(() => {
       return {
         status: 200,
         headers: {
@@ -21,7 +22,7 @@ var openIndexServer = function openIndexServer(_ref) {
           "content-length": Buffer.byteLength(body),
           "cache-control": "no-store"
         },
-        body: body
+        body
       };
     });
     return {

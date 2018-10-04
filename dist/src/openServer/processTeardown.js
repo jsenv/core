@@ -10,110 +10,100 @@ var _signal = require("@dmail/signal");
 // when any of SIGUP, SIGINT, SIGTERM, beforeExit, exit is emitted
 // call a given function allowed to return a promise in case the teardown is async
 // it's very usefull to ensure a given server is closed when process exits
-var hangupOrDeath = (0, _signal.createSignal)({
+const hangupOrDeath = (0, _signal.createSignal)({
   emitter: _signal.asyncSimultaneousEmitter,
-  installer: function installer(_ref) {
-    var emit = _ref.emit;
-
+  installer: ({
+    emit
+  }) => {
     // SIGHUP http://man7.org/linux/man-pages/man7/signal.7.html
-    var triggerHangUpOrDeath = function triggerHangUpOrDeath() {
-      return emit("hangupOrDeath");
-    };
+    const triggerHangUpOrDeath = () => emit("hangupOrDeath");
 
     process.on("SIGUP", triggerHangUpOrDeath);
-    return function () {
+    return () => {
       process.removeListener("SIGUP", triggerHangUpOrDeath);
     };
   }
 });
 exports.hangupOrDeath = hangupOrDeath;
-var terminate = (0, _signal.createSignal)({
+const terminate = (0, _signal.createSignal)({
   emitter: _signal.asyncSimultaneousEmitter,
-  installer: function installer(_ref2) {
-    var emit = _ref2.emit;
-
+  installer: ({
+    emit
+  }) => {
     // SIGINT is CTRL+C from keyboard
     // http://man7.org/linux/man-pages/man7/signal.7.html
     // may also be sent by vscode https://github.com/Microsoft/vscode-node-debug/issues/1#issuecomment-405185642
-    var triggerTerminate = function triggerTerminate() {
-      return emit("terminate");
-    };
+    const triggerTerminate = () => emit("terminate");
 
     process.on("SIGINT", triggerTerminate);
-    return function () {
+    return () => {
       process.removeListener("SIGINT", triggerTerminate);
     };
   }
 });
 exports.terminate = terminate;
-var death = (0, _signal.createSignal)({
+const death = (0, _signal.createSignal)({
   emitter: _signal.asyncSimultaneousEmitter,
-  installer: function installer(_ref3) {
-    var emit = _ref3.emit;
-
+  installer: ({
+    emit
+  }) => {
     // is SIGTERM handled by beforeExit ? ook at terminus module on github
     // SIGTERM http://man7.org/linux/man-pages/man7/signal.7.html
-    var triggerDeath = function triggerDeath() {
-      return emit("death");
-    };
+    const triggerDeath = () => emit("death");
 
     process.on("SIGTERM", triggerDeath);
-    return function () {
+    return () => {
       process.removeListener("SIGTERM", triggerDeath);
     };
   }
 });
 exports.death = death;
-var beforeExit = (0, _signal.createSignal)({
+const beforeExit = (0, _signal.createSignal)({
   emitter: _signal.asyncSimultaneousEmitter,
-  installer: function installer(_ref4) {
-    var emit = _ref4.emit,
-        disableWhileCalling = _ref4.disableWhileCalling;
-
-    var triggerBeforeExit = function triggerBeforeExit() {
-      return emit("beforeExit").then(function () {
-        return disableWhileCalling(function () {
-          process.exit();
-        });
-      });
-    };
+  installer: ({
+    emit,
+    disableWhileCalling
+  }) => {
+    const triggerBeforeExit = () => emit("beforeExit").then(() => disableWhileCalling(() => {
+      process.exit();
+    }));
 
     process.on("beforeExit", triggerBeforeExit);
-    return function () {
+    return () => {
       process.removeListener("beforeExit", triggerBeforeExit);
     };
   }
 });
 exports.beforeExit = beforeExit;
-var exit = (0, _signal.createSignal)({
+const exit = (0, _signal.createSignal)({
   emitter: _signal.asyncSimultaneousEmitter,
-  installer: function installer(_ref5) {
-    var emit = _ref5.emit;
-
-    var triggerExit = function triggerExit() {
+  installer: ({
+    emit
+  }) => {
+    const triggerExit = () => {
       emit("exit");
     };
 
     process.on("exit", triggerExit);
-    return function () {
+    return () => {
       process.removeListener("exit", triggerExit);
     };
   }
 });
 exports.exit = exit;
-var signals = [hangupOrDeath, terminate, death, beforeExit, exit];
+const signals = [hangupOrDeath, terminate, death, beforeExit, exit];
 
-var processTeardown = function processTeardown(teardownFunction) {
-  var listeners = signals.map(function (signal) {
-    return signal.listen(function (reason) {
-      listeners.forEach(function (listener) {
+const processTeardown = teardownFunction => {
+  const listeners = signals.map(signal => {
+    return signal.listen(reason => {
+      listeners.forEach(listener => {
         listener.remove();
       });
       return teardownFunction(reason);
     });
   });
-  return function () {
-    listeners.forEach(function (listener) {
+  return () => {
+    listeners.forEach(listener => {
       listener.remove();
     });
   };

@@ -7,10 +7,11 @@
     "root",
     "path",
     "resolve",
-    "__dirname"
+    "__dirname",
+    "into"
   ],
-  "mappings": ";;AAAA;;AACA;;;;AAEA,IAAMA,IAAI,GAAGC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAAb;;AAEA,4BAAW;AACTH,EAAAA,IAAI,EAAJA;AADS,CAAX",
+  "mappings": ";;AAAA;;AACA;;;;AAEA,IAAMA,IAAI,GAAGC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAAb;;AAEA,4BAAW;AACTH,EAAAA,IAAI,EAAJA,IADS;AAETI,EAAAA,IAAI,EAAE;AAFG,CAAX",
   "sourcesContent": [
-    "import { buildGroup } from \"./buildGroup.js\"\nimport path from \"path\"\n\nconst root = path.resolve(__dirname, \"../../../\")\n\nbuildGroup({\n  root,\n})\n"
+    "import { buildGroup } from \"./buildGroup.js\"\nimport path from \"path\"\n\nconst root = path.resolve(__dirname, \"../../../\")\n\nbuildGroup({\n  root,\n  into: \"group.config.json\",\n})\n"
   ]
 }

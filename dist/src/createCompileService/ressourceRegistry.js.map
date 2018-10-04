@@ -6,7 +6,7 @@
   "names": [
     "lockForRessource"
   ],
-  "mappings": ";;;;;;;AAAA;;0BAE6B,qC;IAArBA,gB,uBAAAA,gB",
+  "mappings": ";;;;;;;AAAA;;AAEA,MAAM;AAAEA,EAAAA;AAAF,IAAuB,qCAA7B",
   "sourcesContent": [
     "import { createLockRegistry } from \"../createLock/createLock.js\"\n\nconst { lockForRessource } = createLockRegistry()\n\nexport { lockForRessource }\n"
   ]

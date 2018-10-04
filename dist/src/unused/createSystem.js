@@ -14,7 +14,7 @@ var _readFileAsString = require("../readFileAsString.js");
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // import path from "path"
-var getNodeFilename = function getNodeFilename(filename) {
+const getNodeFilename = filename => {
   filename = String(filename); // filename = path.resolve(process.cwd(), filename)
 
   filename = filename.replace(/\\/g, "/"); // this logic sucks, let's try to avoid it completely
@@ -33,25 +33,28 @@ var getNodeFilename = function getNodeFilename(filename) {
   return filename;
 };
 
-var createSystem = function createSystem(_ref) {
-  var transpile = _ref.transpile;
-  var mySystem = new _systemjs.default.constructor();
-  var instantiate = _systemjs.default.constructor.instantiate;
+const createSystem = ({
+  transpile
+}) => {
+  const mySystem = new _systemjs.default.constructor();
+  const {
+    instantiate
+  } = _systemjs.default.constructor;
 
   mySystem[instantiate] = function (key, processAnonRegister) {
     if (key.startsWith("@node/")) {
       return _systemjs.default[instantiate].apply(this, arguments);
     }
 
-    var filename = getNodeFilename(key);
-    return (0, _readFileAsString.readFileAsString)(filename).then(function (source) {
+    const filename = getNodeFilename(key);
+    return (0, _readFileAsString.readFileAsString)(filename).then(source => {
       return transpile(source, {
-        filename: filename
-      }).then(function (source) {
+        filename
+      }).then(source => {
         global.System = mySystem;
 
         _vm.default.runInThisContext(source, {
-          filename: filename
+          filename
         });
 
         delete global.System;

@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../../src/createCompileProfiles/compileProfiles/composePlatformGroups.test.js"
+  ],
+  "names": [
+    "composePlatformGroups",
+    "require",
+    "assert",
+    "chromePlatformGroups",
+    "pluginNames",
+    "Object",
+    "freeze",
+    "compatMap",
+    "chrome",
+    "firefoxPlatformGroups",
+    "firefox",
+    "actual",
+    "expected",
+    "deepEqual",
+    "console",
+    "log"
+  ],
+  "mappings": ";;AAAA,MAAM;AAAEA,EAAAA;AAAF,IAA4BC,OAAO,CAAC,4BAAD,CAAzC;;AACA,MAAMC,MAAM,GAAGD,OAAO,CAAC,QAAD,CAAtB;;AAEA;AACE,QAAME,oBAAoB,GAAG,CAC3B;AACE;AACAC,IAAAA,WAAW,EAAEC,MAAM,CAACC,MAAP,CAAc,CAAC,GAAD,CAAd,CAFf;AAGEC,IAAAA,SAAS,EAAEF,MAAM,CAACC,MAAP,CAAc;AACvBE,MAAAA,MAAM,EAAE;AADe,KAAd;AAHb,GAD2B,CAA7B;AASA,QAAMC,qBAAqB,GAAG,CAC5B;AACEL,IAAAA,WAAW,EAAEC,MAAM,CAACC,MAAP,CAAc,CAAC,GAAD,CAAd,CADf;AAEEC,IAAAA,SAAS,EAAEF,MAAM,CAACC,MAAP,CAAc;AACvBI,MAAAA,OAAO,EAAE;AADc,KAAd;AAFb,GAD4B,CAA9B;AAQA,QAAMC,MAAM,GAAGX,qBAAqB,CAACG,oBAAD,EAAuBM,qBAAvB,CAApC;AACA,QAAMG,QAAQ,GAAG,CACf;AACER,IAAAA,WAAW,EAAE,CAAC,GAAD,CADf;AAEEG,IAAAA,SAAS,EAAE;AACTC,MAAAA,MAAM,EAAE,EADC;AAETE,MAAAA,OAAO,EAAE;AAFA;AAFb,GADe,CAAjB;AASAR,EAAAA,MAAM,CAACW,SAAP,CAAiBF,MAAjB,EAAyBC,QAAzB;AACD;AAEDE,OAAO,CAACC,GAAR,CAAY,QAAZ",
+  "sourcesContent": [
+    "const { composePlatformGroups } = require(\"./composePlatformGroups.js\")\nconst assert = require(\"assert\")\n\n{\n  const chromePlatformGroups = [\n    {\n      // freeze to ensure mergePlatformGroups does not mutate\n      pluginNames: Object.freeze([\"a\"]),\n      compatMap: Object.freeze({\n        chrome: 10,\n      }),\n    },\n  ]\n  const firefoxPlatformGroups = [\n    {\n      pluginNames: Object.freeze([\"a\"]),\n      compatMap: Object.freeze({\n        firefox: 20,\n      }),\n    },\n  ]\n  const actual = composePlatformGroups(chromePlatformGroups, firefoxPlatformGroups)\n  const expected = [\n    {\n      pluginNames: [\"a\"],\n      compatMap: {\n        chrome: 10,\n        firefox: 20,\n      },\n    },\n  ]\n  assert.deepEqual(actual, expected)\n}\n\nconsole.log(\"passed\")\n"
+  ]
+}

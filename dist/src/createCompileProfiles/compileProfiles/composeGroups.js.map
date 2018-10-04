@@ -1,0 +1,35 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../../src/createCompileProfiles/compileProfiles/composeGroups.js"
+  ],
+  "names": [
+    "composePluginNames",
+    "pluginList",
+    "secondPluginList",
+    "filter",
+    "plugin",
+    "indexOf",
+    "groupReducer",
+    "previous",
+    "group",
+    "pluginNames",
+    "sort",
+    "previousCompatMap",
+    "compatMap",
+    "groupCompatMap",
+    "Object",
+    "keys",
+    "forEach",
+    "platformName",
+    "platformVersion",
+    "String",
+    "composeGroups",
+    "groups",
+    "reduce"
+  ],
+  "mappings": ";;;;;;;AAAA;;;;;;AAEA,MAAMA,kBAAkB,GAAG,CAACC,UAAD,EAAaC,gBAAb,KAAkC;AAC3D,SAAO,CAAC,GAAGD,UAAJ,EAAgB,GAAGC,gBAAgB,CAACC,MAAjB,CAAyBC,MAAD,IAAYH,UAAU,CAACI,OAAX,CAAmBD,MAAnB,MAA+B,CAAC,CAApE,CAAnB,CAAP;AACD,CAFD;;AAIA,MAAME,YAAY,GAAG,CAACC,QAAD,EAAWC,KAAX,KAAqB;AACxC,QAAMC,WAAW,GAAGT,kBAAkB,CAACO,QAAQ,CAACE,WAAV,EAAuBD,KAAK,CAACC,WAA7B,CAAlB,CAA4DC,IAA5D,EAApB;AAEA,QAAMC,iBAAiB,GAAGJ,QAAQ,CAACK,SAAnC;AACA,QAAMC,cAAc,GAAGL,KAAK,CAACI,SAA7B;;AACA,QAAMA,SAAS,qBAAQD,iBAAR,CAAf;;AACAG,EAAAA,MAAM,CAACC,IAAP,CAAYF,cAAZ,EAA4BG,OAA5B,CAAqCC,YAAD,IAAkB;AACpD,UAAMC,eAAe,GAAGL,cAAc,CAACI,YAAD,CAAtC;AACAL,IAAAA,SAAS,CAACK,YAAD,CAAT,GAA0BE,MAAM,CAC9BF,YAAY,IAAIL,SAAhB,GACI,kDAAeA,SAAS,CAACK,YAAD,CAAxB,EAAwCC,eAAxC,CADJ,GAEIA,eAH0B,CAAhC;AAKD,GAPD;AASA,SAAO;AACLT,IAAAA,WADK;AAELG,IAAAA;AAFK,GAAP;AAID,CAnBD;;AAqBO,MAAMQ,aAAa,GAAG,CAAC,GAAGC,MAAJ,KAAe;AAC1C,SAAOA,MAAM,CAACC,MAAP,CAAchB,YAAd,EAA4B;AACjCG,IAAAA,WAAW,EAAE,EADoB;AAEjCG,IAAAA,SAAS,EAAE;AAFsB,GAA5B,CAAP;AAID,CALM",
+  "sourcesContent": [
+    "import { versionHighest } from \"@dmail/project-structure-compile-babel\"\n\nconst composePluginNames = (pluginList, secondPluginList) => {\n  return [...pluginList, ...secondPluginList.filter((plugin) => pluginList.indexOf(plugin) === -1)]\n}\n\nconst groupReducer = (previous, group) => {\n  const pluginNames = composePluginNames(previous.pluginNames, group.pluginNames).sort()\n\n  const previousCompatMap = previous.compatMap\n  const groupCompatMap = group.compatMap\n  const compatMap = { ...previousCompatMap }\n  Object.keys(groupCompatMap).forEach((platformName) => {\n    const platformVersion = groupCompatMap[platformName]\n    compatMap[platformName] = String(\n      platformName in compatMap\n        ? versionHighest(compatMap[platformName], platformVersion)\n        : platformVersion,\n    )\n  })\n\n  return {\n    pluginNames,\n    compatMap,\n  }\n}\n\nexport const composeGroups = (...groups) => {\n  return groups.reduce(groupReducer, {\n    pluginNames: [],\n    compatMap: {},\n  })\n}\n"
+  ]
+}

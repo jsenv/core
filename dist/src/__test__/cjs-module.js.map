@@ -9,7 +9,7 @@
     "module",
     "exports"
   ],
-  "mappings": ";;AAAA,IAAMA,KAAK,GAAGC,OAAO,CAAC,UAAD,CAArB;;AAEAC,MAAM,CAACC,OAAP,GAAiBH,KAAjB",
+  "mappings": ";;AAAA,MAAMA,KAAK,GAAGC,OAAO,CAAC,UAAD,CAArB;;AAEAC,MAAM,CAACC,OAAP,GAAiBH,KAAjB",
   "sourcesContent": [
     "const value = require(\"./cjs.js\")\n\nmodule.exports = value\n"
   ]

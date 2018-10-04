@@ -11,15 +11,16 @@ var _index = require("../createFileService/index.js");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var readFile = function readFile(_ref) {
-  var location = _ref.location,
-      errorHandler = _ref.errorHandler;
-  return new Promise(function (resolve, reject) {
-    _fs.default.readFile(location, function (error, buffer) {
+const readFile = ({
+  location,
+  errorHandler
+}) => {
+  return new Promise((resolve, reject) => {
+    _fs.default.readFile(location, (error, buffer) => {
       if (error) {
         if (errorHandler && errorHandler(error)) {
           resolve({
-            error: error
+            error
           });
         } else {
           reject((0, _index.convertFileSystemErrorToResponseProperties)(error));

@@ -1,0 +1,17 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../src/createCompileProfiles/createCompileProfiles.test.js"
+  ],
+  "names": [
+    "root",
+    "path",
+    "resolve",
+    "__dirname",
+    "into"
+  ],
+  "mappings": ";;AAAA;;AACA;;;;AAEA,MAAMA,IAAI,GAAGC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAAb;;AAEA,kDAAsB;AACpBH,EAAAA,IADoB;AAEpBI,EAAAA,IAAI,EAAE;AAFc,CAAtB",
+  "sourcesContent": [
+    "import { createCompileProfiles } from \"./createCompileProfiles.js\"\nimport path from \"path\"\n\nconst root = path.resolve(__dirname, \"../../../\")\n\ncreateCompileProfiles({\n  root,\n  into: \"compile.config.json\",\n})\n"
+  ]
+}

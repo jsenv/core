@@ -9,7 +9,7 @@ var _uaParserJs = _interopRequireDefault(require("ua-parser-js"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var getPlatformNameAndVersionFromUserAgent = function getPlatformNameAndVersionFromUserAgent(userAgent) {
+const getPlatformNameAndVersionFromUserAgent = userAgent => {
   if (userAgent.startsWith("node/")) {
     return {
       platformName: "node",
@@ -17,14 +17,14 @@ var getPlatformNameAndVersionFromUserAgent = function getPlatformNameAndVersionF
     };
   }
 
-  var data = (0, _uaParserJs.default)(userAgent);
+  const data = (0, _uaParserJs.default)(userAgent);
   return {
     platformName: data.browser.name,
     platformVersion: data.browser.version
   };
 };
 
-var getPlatformAndVersionFromHeaders = function getPlatformAndVersionFromHeaders(headers) {
+const getPlatformAndVersionFromHeaders = headers => {
   if (headers.has("user-agent")) {
     return getPlatformNameAndVersionFromUserAgent(headers.get("user-agent"));
   }

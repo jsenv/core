@@ -1,0 +1,25 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../../src/createCompileProfiles/compileProfiles/composeGroups.test.js"
+  ],
+  "names": [
+    "firstGroup",
+    "pluginNames",
+    "compatMap",
+    "chrome",
+    "firefox",
+    "secondGroup",
+    "node",
+    "actual",
+    "expected",
+    "assert",
+    "deepEqual",
+    "console",
+    "log"
+  ],
+  "mappings": ";;AAAA;;AACA;;;;AAEA;AACE,QAAMA,UAAU,GAAG;AACjBC,IAAAA,WAAW,EAAE,CAAC,GAAD,CADI;AAEjBC,IAAAA,SAAS,EAAE;AACTC,MAAAA,MAAM,EAAE,EADC;AAETC,MAAAA,OAAO,EAAE;AAFA;AAFM,GAAnB;AAOA,QAAMC,WAAW,GAAG;AAClBJ,IAAAA,WAAW,EAAE,CAAC,GAAD,EAAM,GAAN,CADK;AAElBC,IAAAA,SAAS,EAAE;AACTC,MAAAA,MAAM,EAAE,EADC;AAETC,MAAAA,OAAO,EAAE,EAFA;AAGTE,MAAAA,IAAI,EAAE;AAHG;AAFO,GAApB;AAQA,QAAMC,MAAM,GAAG,kCAAcP,UAAd,EAA0BK,WAA1B,CAAf;AACA,QAAMG,QAAQ,GAAG;AACfP,IAAAA,WAAW,EAAE,CAAC,GAAD,EAAM,GAAN,EAAW,GAAX,CADE;AAEfC,IAAAA,SAAS,EAAE;AACTC,MAAAA,MAAM,EAAE,IADC;AAETC,MAAAA,OAAO,EAAE,IAFA;AAGTE,MAAAA,IAAI,EAAE;AAHG;AAFI,GAAjB;;AAQAG,kBAAOC,SAAP,CAAiBH,MAAjB,EAAyBC,QAAzB;AACD;AAEDG,OAAO,CAACC,GAAR,CAAY,QAAZ",
+  "sourcesContent": [
+    "import { composeGroups } from \"./composeGroups.js\"\nimport assert from \"assert\"\n\n{\n  const firstGroup = {\n    pluginNames: [\"a\"],\n    compatMap: {\n      chrome: 50,\n      firefox: 20,\n    },\n  }\n  const secondGroup = {\n    pluginNames: [\"b\", \"e\"],\n    compatMap: {\n      chrome: 49,\n      firefox: 30,\n      node: 10,\n    },\n  }\n  const actual = composeGroups(firstGroup, secondGroup)\n  const expected = {\n    pluginNames: [\"a\", \"b\", \"e\"],\n    compatMap: {\n      chrome: \"50\",\n      firefox: \"30\",\n      node: \"10\",\n    },\n  }\n  assert.deepEqual(actual, expected)\n}\n\nconsole.log(\"passed\")\n"
+  ]
+}

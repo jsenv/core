@@ -16,7 +16,7 @@
     "content",
     "String"
   ],
-  "mappings": ";;;;;;;AAAA;;AACA;;;;AAEO,IAAMA,QAAQ,GAAG,SAAXA,QAAW,OAAgC;AAAA,MAA7BC,QAA6B,QAA7BA,QAA6B;AAAA,MAAnBC,YAAmB,QAAnBA,YAAmB;AACtD,SAAO,IAAIC,OAAJ,CAAY,UAACC,OAAD,EAAUC,MAAV,EAAqB;AACtCC,gBAAGN,QAAH,CAAYC,QAAZ,EAAsB,UAACM,KAAD,EAAQC,MAAR,EAAmB;AACvC,UAAID,KAAJ,EAAW;AACT,YAAIL,YAAY,IAAIA,YAAY,CAACK,KAAD,CAAhC,EAAyC;AACvCH,UAAAA,OAAO,CAAC;AAAEG,YAAAA,KAAK,EAALA;AAAF,WAAD,CAAP;AACD,SAFD,MAEO;AACLF,UAAAA,MAAM,CAAC,uDAA2CE,KAA3C,CAAD,CAAN;AACD;AACF,OAND,MAMO;AACLH,QAAAA,OAAO,CAAC;AAAEK,UAAAA,OAAO,EAAEC,MAAM,CAACF,MAAD;AAAjB,SAAD,CAAP;AACD;AACF,KAVD;AAWD,GAZM,CAAP;AAaD,CAdM",
+  "mappings": ";;;;;;;AAAA;;AACA;;;;AAEO,MAAMA,QAAQ,GAAG,CAAC;AAAEC,EAAAA,QAAF;AAAYC,EAAAA;AAAZ,CAAD,KAAgC;AACtD,SAAO,IAAIC,OAAJ,CAAY,CAACC,OAAD,EAAUC,MAAV,KAAqB;AACtCC,gBAAGN,QAAH,CAAYC,QAAZ,EAAsB,CAACM,KAAD,EAAQC,MAAR,KAAmB;AACvC,UAAID,KAAJ,EAAW;AACT,YAAIL,YAAY,IAAIA,YAAY,CAACK,KAAD,CAAhC,EAAyC;AACvCH,UAAAA,OAAO,CAAC;AAAEG,YAAAA;AAAF,WAAD,CAAP;AACD,SAFD,MAEO;AACLF,UAAAA,MAAM,CAAC,uDAA2CE,KAA3C,CAAD,CAAN;AACD;AACF,OAND,MAMO;AACLH,QAAAA,OAAO,CAAC;AAAEK,UAAAA,OAAO,EAAEC,MAAM,CAACF,MAAD;AAAjB,SAAD,CAAP;AACD;AACF,KAVD;AAWD,GAZM,CAAP;AAaD,CAdM",
   "sourcesContent": [
     "import fs from \"fs\"\nimport { convertFileSystemErrorToResponseProperties } from \"../createFileService/index.js\"\n\nexport const readFile = ({ location, errorHandler }) => {\n  return new Promise((resolve, reject) => {\n    fs.readFile(location, (error, buffer) => {\n      if (error) {\n        if (errorHandler && errorHandler(error)) {\n          resolve({ error })\n        } else {\n          reject(convertFileSystemErrorToResponseProperties(error))\n        }\n      } else {\n        resolve({ content: String(buffer) })\n      }\n    })\n  })\n}\n"
   ]

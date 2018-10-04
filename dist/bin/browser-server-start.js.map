@@ -11,7 +11,7 @@
     "cwd",
     "then"
   ],
-  "mappings": "AAAA;;;AAEA;;AACA;;AACA;;;;AAEA,IAAMA,IAAI,GAAGC,MAAM,CAAC,sDAAwB,MAAxB,KAAmC,MAApC,CAAnB;AACA,IAAMC,IAAI,GAAG,sDAAwB,MAAxB,KAAmCC,OAAO,CAACC,GAAR,EAAhD;AAEA,uBAASJ,IAAT,EAAeK,IAAf,CAAoB,YAAM;AACxB,4CAAkB;AAChBL,IAAAA,IAAI,EAAJA,IADgB;AAEhBE,IAAAA,IAAI,EAAJA;AAFgB,GAAlB;AAID,CALD",
+  "mappings": "AAAA;;;AAEA;;AACA;;AACA;;;;AAEA,MAAMA,IAAI,GAAGC,MAAM,CAAC,sDAAwB,MAAxB,KAAmC,MAApC,CAAnB;AACA,MAAMC,IAAI,GAAG,sDAAwB,MAAxB,KAAmCC,OAAO,CAACC,GAAR,EAAhD;AAEA,uBAASJ,IAAT,EAAeK,IAAf,CAAoB,MAAM;AACxB,4CAAkB;AAChBL,IAAAA,IADgB;AAEhBE,IAAAA;AAFgB,GAAlB;AAID,CALD",
   "sourcesContent": [
     "#!/usr/bin/env node\n\nimport { getFromProcessArguments } from \"./getFromProcessArguments.js\"\nimport killPort from \"kill-port\"\nimport { openBrowserServer } from \"../src/openBrowserServer/openBrowserServer.js\"\n\nconst port = Number(getFromProcessArguments(\"port\") || \"3000\")\nconst root = getFromProcessArguments(\"root\") || process.cwd()\n\nkillPort(port).then(() => {\n  openBrowserServer({\n    port,\n    root,\n  })\n})\n"
   ]

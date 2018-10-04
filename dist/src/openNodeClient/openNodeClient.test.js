@@ -8,33 +8,34 @@ var _openNodeClient = require("./openNodeClient.js");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var rootLocation = _path.default.resolve(__dirname, "../../../");
+const rootLocation = _path.default.resolve(__dirname, "../../../");
 
 (0, _openCompileServer.openCompileServer)({
   url: "http://127.0.0.1:8765",
-  rootLocation: rootLocation,
+  rootLocation,
   sourceMap: "comment",
   sourceURL: false,
   instrument: false
-}).then(function (server) {
+}).then(server => {
   return (0, _openNodeClient.openNodeClient)({
     compileURL: server.compileURL,
     remoteRoot: "http://127.0.0.1:8765",
     localRoot: rootLocation,
     detached: true // true,
 
-  }).then(function (nodeClient) {
+  }).then(nodeClient => {
     nodeClient.execute({
-      file: "src/__test__/file.js",
+      file: `src/__test__/file.js`,
       collectCoverage: false
-    }).then(function (_ref) {
-      var promise = _ref.promise,
-          close = _ref.close;
-      promise.then(function (value) {
+    }).then(({
+      promise,
+      close
+    }) => {
+      promise.then(value => {
         close();
         server.close();
         console.log("execution done with", value);
-      }, function (reason) {
+      }, reason => {
         console.error("execution crashed with", reason);
       });
     });

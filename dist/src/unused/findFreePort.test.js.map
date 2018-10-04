@@ -9,7 +9,7 @@
     "assert",
     "equal"
   ],
-  "mappings": ";;AAAA;;AACA;;AACA;;;;;;AAEA,gBAAK,YAAM;AACT,SAAO,kCAAeA,IAAf,CAAoB,UAACC,IAAD,EAAU;AACnCC,oBAAOC,KAAP,SAAoBF,IAApB,GAA0B,QAA1B;AACD,GAFM,CAAP;AAGD,CAJD",
+  "mappings": ";;AAAA;;AACA;;AACA;;;;AAEA,gBAAK,MAAM;AACT,SAAO,kCAAeA,IAAf,CAAqBC,IAAD,IAAU;AACnCC,oBAAOC,KAAP,CAAa,OAAOF,IAApB,EAA0B,QAA1B;AACD,GAFM,CAAP;AAGD,CAJD",
   "sourcesContent": [
     "import { test } from \"@dmail/test\"\nimport assert from \"assert\"\nimport { findFreePort } from \"./findFreePort.js\"\n\ntest(() => {\n  return findFreePort().then((port) => {\n    assert.equal(typeof port, \"number\")\n  })\n})\n"
   ]

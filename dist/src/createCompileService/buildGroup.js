@@ -20,8 +20,8 @@ var stringifyGroups = function stringifyGroups(groups) {
 
 var buildGroup = function buildGroup(_ref) {
   var root = _ref.root,
-      _ref$config = _ref.config,
-      config = _ref$config === void 0 ? "group.config.json" : _ref$config;
+      _ref$into = _ref.into,
+      into = _ref$into === void 0 ? "group.config.json" : _ref$into;
 
   var _createGetGroupForPla = (0, _projectStructureCompileBabel.createGetGroupForPlatform)({
     moduleOutput: "systemjs"
@@ -30,17 +30,17 @@ var buildGroup = function buildGroup(_ref) {
       getAllGroup = _createGetGroupForPla.getAllGroup;
 
   var groups = getAllGroup();
-  debugger;
   var sortedGroups = groups.sort(function (a, b) {
-    return a.pluginNames.length - b.pluginNames.length;
+    return b.pluginNames.length - a.pluginNames.length;
   }).reverse();
-  sortedGroups[0].id = "worst";
-  sortedGroups.slice(1, -1).forEach(function (intermediateGroup, index) {
+  sortedGroups[0].id = "ideal";
+  sortedGroups[1].id = "best";
+  sortedGroups.slice(2, -1).forEach(function (intermediateGroup, index) {
     intermediateGroup.id = "intermediate-".concat(index + 1);
   });
-  sortedGroups[sortedGroups.length - 2].id = "best";
-  sortedGroups[sortedGroups.length - 1].id = "ideal";
-  (0, _projectStructureCompileBabel.writeFileFromString)("".concat(root, "/").concat(config), stringifyGroups(groups));
+  sortedGroups[sortedGroups.length - 2].id = "worst";
+  sortedGroups[sortedGroups.length - 1].id = "otherwise";
+  (0, _projectStructureCompileBabel.writeFileFromString)("".concat(root, "/").concat(into), stringifyGroups(groups));
   return {
     groups: groups,
     getGroupIdForPlatform: function getGroupIdForPlatform(_ref2) {

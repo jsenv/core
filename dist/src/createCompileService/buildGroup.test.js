@@ -9,6 +9,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 var root = _path.default.resolve(__dirname, "../../../");
 
 (0, _buildGroup.buildGroup)({
-  root: root
+  root: root,
+  into: "group.config.json"
 });
 //# sourceMappingURL=buildGroup.test.js.map

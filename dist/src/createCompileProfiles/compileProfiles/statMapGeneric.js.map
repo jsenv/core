@@ -1,0 +1,19 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../../src/createCompileProfiles/compileProfiles/statMapGeneric.js"
+  ],
+  "names": [
+    "statMapGeneric",
+    "chrome",
+    "firefox",
+    "edge",
+    "safari",
+    "node",
+    "other"
+  ],
+  "mappings": ";;;;;;AAAO,MAAMA,cAAc,GAAG;AAC5BC,EAAAA,MAAM,EAAE;AACN,UAAM,GADA;AAEN,UAAM;AAFA,GADoB;AAK5BC,EAAAA,OAAO,EAAE;AACP,UAAM,GADC;AAEP,SAAK,GAFE,CAEG;;AAFH,GALmB;AAS5BC,EAAAA,IAAI,EAAE;AACJ,UAAM,GADF;AAEJ,SAAK;AAFD,GATsB;AAa5BC,EAAAA,MAAM,EAAE;AACN,UAAM,GADA;AAEN,SAAK;AAFC,GAboB;AAiB5BC,EAAAA,IAAI,EAAE;AACJ,SAAK,GADD;AAEJ,SAAK;AAFD,GAjBsB;AAqB5BC,EAAAA,KAAK,EAAE;AArBqB,CAAvB",
+  "sourcesContent": [
+    "export const statMapGeneric = {\n  chrome: {\n    \"51\": 0.6,\n    \"44\": 0.01,\n  },\n  firefox: {\n    \"53\": 0.6,\n    \"0\": 0.1, // it means oldest version of firefox will get a score of 0.1\n  },\n  edge: {\n    \"12\": 0.1,\n    \"0\": 0.001,\n  },\n  safari: {\n    \"10\": 0.1,\n    \"0\": 0.001,\n  },\n  node: {\n    \"8\": 0.5,\n    \"0\": 0.001,\n  },\n  other: 0.001,\n}\n"
+  ]
+}

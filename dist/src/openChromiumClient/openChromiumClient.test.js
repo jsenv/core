@@ -15,28 +15,29 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
   rootLocation: _path.default.resolve(__dirname, "../../../"),
   instrument: false // apparently it breaks sourcempa, to be tested
 
-}).then(function (server) {
-  var cleanAll = false;
+}).then(server => {
+  const cleanAll = false;
   return (0, _openChromiumClient.openChromiumClient)({
-    server: server,
+    server,
     compileURL: server.compileURL,
     headless: false
-  }).then(function (chromiumClient) {
+  }).then(chromiumClient => {
     chromiumClient.execute({
-      file: "src/__test__/file.test.js",
+      file: `src/__test__/file.test.js`,
       autoClose: cleanAll,
       collectCoverage: true
-    }).then(function (_ref) {
-      var promise = _ref.promise,
-          close = _ref.close;
-      promise.then(function (value) {
+    }).then(({
+      promise,
+      close
+    }) => {
+      promise.then(value => {
         if (cleanAll) {
           close();
           server.close();
         }
 
         console.log("execution done with", value);
-      }, function (reason) {
+      }, reason => {
         if (cleanAll) {
           close();
           server.close();

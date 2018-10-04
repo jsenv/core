@@ -13,7 +13,7 @@
     "console",
     "log"
   ],
-  "mappings": ";;AAAA;;AACA;;;;AAEA,IAAMA,YAAY,GAAGC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAArB;;AAEA,0CAAkB;AAChBC,EAAAA,GAAG,EAAE,uBADW;AAEhBJ,EAAAA,YAAY,EAAZA;AAFgB,CAAlB,EAGGK,IAHH,CAGQ,gBAAa;AAAA,MAAVD,GAAU,QAAVA,GAAU;AACnBE,EAAAA,OAAO,CAACC,GAAR,qBAAyBP,YAAzB,iBAA4CI,GAA5C;AACD,CALD",
+  "mappings": ";;AAAA;;AACA;;;;AAEA,MAAMA,YAAY,GAAGC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAArB;;AAEA,0CAAkB;AAChBC,EAAAA,GAAG,EAAE,uBADW;AAEhBJ,EAAAA;AAFgB,CAAlB,EAGGK,IAHH,CAGQ,CAAC;AAAED,EAAAA;AAAF,CAAD,KAAa;AACnBE,EAAAA,OAAO,CAACC,GAAR,CAAa,aAAYP,YAAa,OAAMI,GAAI,EAAhD;AACD,CALD",
   "sourcesContent": [
     "import path from \"path\"\nimport { openCompileServer } from \"./openCompileServer.js\"\n\nconst rootLocation = path.resolve(__dirname, \"../../../\")\n\nopenCompileServer({\n  url: \"http://127.0.0.1:8998\",\n  rootLocation,\n}).then(({ url }) => {\n  console.log(`compiling ${rootLocation} at ${url}`)\n})\n"
   ]

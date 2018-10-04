@@ -1,0 +1,42 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../../src/createCompileProfiles/compileProfiles/createGetScoreForGroupCompatMap.js"
+  ],
+  "names": [
+    "createGetScoreFromVersionUsage",
+    "stats",
+    "versionNames",
+    "Object",
+    "keys",
+    "length",
+    "sortedVersions",
+    "sort",
+    "versionA",
+    "versionB",
+    "highestVersion",
+    "shift",
+    "platformVersion",
+    "closestVersion",
+    "find",
+    "version",
+    "createGetScoreFromPlatformUsage",
+    "platformNames",
+    "scoreMap",
+    "forEach",
+    "platformName",
+    "versionUsage",
+    "other",
+    "createGetScoreForGroupCompatMap",
+    "getScoreFromPlatformUsage",
+    "getPlatformScore",
+    "getScore",
+    "groupCompatMap",
+    "reduce",
+    "previous"
+  ],
+  "mappings": ";;;;;;;AAAA;;AAEA,MAAMA,8BAA8B,GAAIC,KAAD,IAAW;AAChD,QAAMC,YAAY,GAAGC,MAAM,CAACC,IAAP,CAAYH,KAAZ,CAArB;;AACA,MAAIC,YAAY,CAACG,MAAb,KAAwB,CAA5B,EAA+B;AAC7B,WAAO,MAAM,IAAb;AACD;;AACD,QAAMC,cAAc,GAAGJ,YAAY,CAACK,IAAb,CAAkB,CAACC,QAAD,EAAWC,QAAX,KACvC,kDAAeD,QAAf,EAAyBC,QAAzB,CADqB,CAAvB;AAGA,QAAMC,cAAc,GAAGJ,cAAc,CAACK,KAAf,EAAvB;AAEA,SAAQC,eAAD,IAAqB;AAC1B,QAAIA,eAAe,KAAKF,cAApB,IAAsC,kDAAeE,eAAf,EAAgCF,cAAhC,CAA1C,EAA2F;AACzF,aAAOT,KAAK,CAACS,cAAD,CAAZ;AACD;;AACD,UAAMG,cAAc,GAAGP,cAAc,CAACQ,IAAf,CAAqBC,OAAD,IAAa;AACtD,aAAOH,eAAe,KAAKG,OAApB,IAA+B,kDAAeH,eAAf,EAAgCG,OAAhC,CAAtC;AACD,KAFsB,CAAvB;AAGA,WAAOF,cAAc,GAAGZ,KAAK,CAACY,cAAD,CAAR,GAA2B,IAAhD;AACD,GARD;AASD,CAnBD;;AAqBA,MAAMG,+BAA+B,GAAIf,KAAD,IAAW;AACjD,QAAMgB,aAAa,GAAGd,MAAM,CAACC,IAAP,CAAYH,KAAZ,CAAtB;AACA,QAAMiB,QAAQ,GAAG,EAAjB;AACAD,EAAAA,aAAa,CAACE,OAAd,CAAuBC,YAAD,IAAkB;AACtCF,IAAAA,QAAQ,CAACE,YAAD,CAAR,GAAyBpB,8BAA8B,CAACC,KAAK,CAACmB,YAAD,CAAN,CAAvD;AACD,GAFD;AAGA,SAAO,CAACA,YAAD,EAAeR,eAAf,KAAmC;AACxC,QAAIQ,YAAY,IAAIF,QAApB,EAA8B;AAC5B,YAAMG,YAAY,GAAGH,QAAQ,CAACE,YAAD,CAAR,CAAuBR,eAAvB,CAArB;AACA,aAAOS,YAAY,KAAK,IAAjB,GAAwBpB,KAAK,CAACqB,KAA9B,GAAsCD,YAA7C;AACD;;AACD,WAAOpB,KAAK,CAACqB,KAAb;AACD,GAND;AAOD,CAbD;;AAeO,MAAMC,+BAA+B,GAAItB,KAAD,IAAW;AACxD,QAAMuB,yBAAyB,GAAGR,+BAA+B,CAACf,KAAD,CAAjE;;AAEA,QAAMwB,gBAAgB,GAAG,CAACL,YAAD,EAAeR,eAAf,KAAmC;AAC1D,WAAOY,yBAAyB,CAACJ,YAAD,EAAeR,eAAf,CAAhC;AACD,GAFD;;AAIA,QAAMc,QAAQ,GAAIC,cAAD,IAAoB;AACnC,WAAOxB,MAAM,CAACC,IAAP,CAAYuB,cAAZ,EAA4BC,MAA5B,CAAmC,CAACC,QAAD,EAAWT,YAAX,KAA4B;AACpE,aAAOS,QAAQ,GAAGJ,gBAAgB,CAACL,YAAD,EAAeO,cAAc,CAACP,YAAD,CAA7B,CAAlC;AACD,KAFM,EAEJ,CAFI,CAAP;AAGD,GAJD;;AAMA,SAAOM,QAAP;AACD,CAdM",
+  "sourcesContent": [
+    "import { versionIsBelow, versionIsAbove } from \"@dmail/project-structure-compile-babel\"\n\nconst createGetScoreFromVersionUsage = (stats) => {\n  const versionNames = Object.keys(stats)\n  if (versionNames.length === 0) {\n    return () => null\n  }\n  const sortedVersions = versionNames.sort((versionA, versionB) =>\n    versionIsBelow(versionA, versionB),\n  )\n  const highestVersion = sortedVersions.shift()\n\n  return (platformVersion) => {\n    if (platformVersion === highestVersion || versionIsAbove(platformVersion, highestVersion)) {\n      return stats[highestVersion]\n    }\n    const closestVersion = sortedVersions.find((version) => {\n      return platformVersion === version || versionIsAbove(platformVersion, version)\n    })\n    return closestVersion ? stats[closestVersion] : null\n  }\n}\n\nconst createGetScoreFromPlatformUsage = (stats) => {\n  const platformNames = Object.keys(stats)\n  const scoreMap = {}\n  platformNames.forEach((platformName) => {\n    scoreMap[platformName] = createGetScoreFromVersionUsage(stats[platformName])\n  })\n  return (platformName, platformVersion) => {\n    if (platformName in scoreMap) {\n      const versionUsage = scoreMap[platformName](platformVersion)\n      return versionUsage === null ? stats.other : versionUsage\n    }\n    return stats.other\n  }\n}\n\nexport const createGetScoreForGroupCompatMap = (stats) => {\n  const getScoreFromPlatformUsage = createGetScoreFromPlatformUsage(stats)\n\n  const getPlatformScore = (platformName, platformVersion) => {\n    return getScoreFromPlatformUsage(platformName, platformVersion)\n  }\n\n  const getScore = (groupCompatMap) => {\n    return Object.keys(groupCompatMap).reduce((previous, platformName) => {\n      return previous + getPlatformScore(platformName, groupCompatMap[platformName])\n    }, 0)\n  }\n\n  return getScore\n}\n"
+  ]
+}

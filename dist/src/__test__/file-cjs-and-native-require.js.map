@@ -4,13 +4,13 @@
     "../../../src/__test__/file-cjs-and-native-require.js"
   ],
   "names": [
-    "require",
     "createServer",
+    "require",
     "module",
     "exports",
     "name"
   ],
-  "mappings": ";;eAAyBA,OAAO,CAAC,MAAD,C;IAAxBC,Y,YAAAA,Y;;AAERC,MAAM,CAACC,OAAP,GAAiBF,YAAY,CAACG,IAA9B",
+  "mappings": ";;AAAA,MAAM;AAAEA,EAAAA;AAAF,IAAmBC,OAAO,CAAC,MAAD,CAAhC;;AAEAC,MAAM,CAACC,OAAP,GAAiBH,YAAY,CAACI,IAA9B",
   "sourcesContent": [
     "const { createServer } = require(\"http\")\n\nmodule.exports = createServer.name\n"
   ]

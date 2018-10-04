@@ -14,7 +14,7 @@
     "toJSON",
     "get"
   ],
-  "mappings": ";;AAAA;;AACA;;AACA;;;;AAEA,gBAAK,YAAM;AACT,MAAMA,WAAW,GAAG;AAClB,sBAAkB,EADA;AAElBC,IAAAA,GAAG,EAAE,CAAC,KAAD;AAFa,GAApB;AAIA,MAAMC,OAAO,GAAG,kCAAcF,WAAd,CAAhB;;AAEAG,kBAAOC,KAAP,CAAaF,OAAO,CAACG,GAAR,CAAY,gBAAZ,CAAb,EAA4C,IAA5C;;AACAF,kBAAOG,SAAP,CAAiBJ,OAAO,CAACK,MAAR,EAAjB,EAAmCP,WAAnC;;AACAG,kBAAOC,KAAP,CAAaF,OAAO,CAACM,GAAR,CAAY,KAAZ,CAAb,EAAiC,KAAjC;AACD,CAVD",
+  "mappings": ";;AAAA;;AACA;;AACA;;;;AAEA,gBAAK,MAAM;AACT,QAAMA,WAAW,GAAG;AAClB,sBAAkB,EADA;AAElBC,IAAAA,GAAG,EAAE,CAAC,KAAD;AAFa,GAApB;AAIA,QAAMC,OAAO,GAAG,kCAAcF,WAAd,CAAhB;;AAEAG,kBAAOC,KAAP,CAAaF,OAAO,CAACG,GAAR,CAAY,gBAAZ,CAAb,EAA4C,IAA5C;;AACAF,kBAAOG,SAAP,CAAiBJ,OAAO,CAACK,MAAR,EAAjB,EAAmCP,WAAnC;;AACAG,kBAAOC,KAAP,CAAaF,OAAO,CAACM,GAAR,CAAY,KAAZ,CAAb,EAAiC,KAAjC;AACD,CAVD",
   "sourcesContent": [
     "import { test } from \"@dmail/test\"\nimport assert from \"assert\"\nimport { createHeaders } from \"./createHeaders.js\"\n\ntest(() => {\n  const headersPOJO = {\n    \"content-length\": 10,\n    foo: [\"bar\"],\n  }\n  const headers = createHeaders(headersPOJO)\n\n  assert.equal(headers.has(\"content-length\"), true)\n  assert.deepEqual(headers.toJSON(), headersPOJO)\n  assert.equal(headers.get(\"foo\"), \"bar\")\n})\n"
   ]

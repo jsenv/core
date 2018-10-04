@@ -1,0 +1,34 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../src/createCompileProfiles/createCompileProfiles.js"
+  ],
+  "names": [
+    "stringifyResult",
+    "profiles",
+    "fallback",
+    "JSON",
+    "stringify",
+    "createCompileProfiles",
+    "root",
+    "into",
+    "Promise",
+    "resolve",
+    "then",
+    "result",
+    "moduleOutput",
+    "identify",
+    "getProfileForPlatform",
+    "getGroupIdForPlatform",
+    "args",
+    "id",
+    "getPluginsFromGroupId",
+    "groupId",
+    "profile",
+    "pluginNames"
+  ],
+  "mappings": ";;;;;;;AAAA;;AACA;;AACA;;AAEA,MAAMA,eAAe,GAAG,CAAC;AAAEC,EAAAA,QAAF;AAAYC,EAAAA;AAAZ,CAAD,KAA4B;AAClD,SAAOC,IAAI,CAACC,SAAL,CAAe,CAAC,GAAGH,QAAJ,EAAcC,QAAd,CAAf,EAAwC,IAAxC,EAA8C,IAA9C,CAAP;AACD,CAFD;;AAIO,MAAMG,qBAAqB,GAAG,CAAC;AAAEC,EAAAA,IAAF;AAAQC,EAAAA,IAAI,GAAG;AAAf,CAAD,KAA0C;AAC7E,SAAOC,OAAO,CAACC,OAAR,GAAkBC,IAAlB,CAAuB,MAAM;AAClC,UAAMC,MAAM,GAAG,sCAAgB;AAC7BC,MAAAA,YAAY,EAAE,UADe;AAE7BC,MAAAA,QAAQ,EAAE;AAFmB,KAAhB,CAAf;AAIA,2DAAqB,GAAEP,IAAK,IAAGC,IAAK,EAApC,EAAuCP,eAAe,CAACW,MAAD,CAAtD;AAEA,UAAMG,qBAAqB,GAAG,8DAA4BH,MAA5B,CAA9B;AAEA,WAAO;AACLI,MAAAA,qBAAqB,EAAE,CAAC,GAAGC,IAAJ,KAAaF,qBAAqB,CAAC,GAAGE,IAAJ,CAArB,CAA+BC,EAD9D;AAELC,MAAAA,qBAAqB,EAAGC,OAAD,IAAa;AAClC,cAAMC,OAAO,GAAG,sDAAoBT,MAApB,EAA6BS,OAAD,IAAaA,OAAO,CAACH,EAAR,KAAeE,OAAxD,CAAhB;AACA,eAAO,uDAAoBC,OAAO,CAACC,WAA5B,CAAP;AACD;AALI,KAAP;AAOD,GAhBM,CAAP;AAiBD,CAlBM",
+  "sourcesContent": [
+    "import { writeFileFromString, getPluginsFromNames } from \"@dmail/project-structure-compile-babel\"\nimport { compileProfiles } from \"./compileProfiles/compileProfiles.js\"\nimport { createGetProfileForPlatform, findProfileMatching } from \"./createGetProfileForPlatform.js\"\n\nconst stringifyResult = ({ profiles, fallback }) => {\n  return JSON.stringify([...profiles, fallback], null, \"  \")\n}\n\nexport const createCompileProfiles = ({ root, into = \"group.config.json\" }) => {\n  return Promise.resolve().then(() => {\n    const result = compileProfiles({\n      moduleOutput: \"systemjs\",\n      identify: true,\n    })\n    writeFileFromString(`${root}/${into}`, stringifyResult(result))\n\n    const getProfileForPlatform = createGetProfileForPlatform(result)\n\n    return {\n      getGroupIdForPlatform: (...args) => getProfileForPlatform(...args).id,\n      getPluginsFromGroupId: (groupId) => {\n        const profile = findProfileMatching(result, (profile) => profile.id === groupId)\n        return getPluginsFromNames(profile.pluginNames)\n      },\n    }\n  })\n}\n"
+  ]
+}

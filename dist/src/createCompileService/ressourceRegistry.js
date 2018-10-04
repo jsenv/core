@@ -7,8 +7,8 @@ exports.lockForRessource = void 0;
 
 var _createLock = require("../createLock/createLock.js");
 
-var _createLockRegistry = (0, _createLock.createLockRegistry)(),
-    lockForRessource = _createLockRegistry.lockForRessource;
-
+const {
+  lockForRessource
+} = (0, _createLock.createLockRegistry)();
 exports.lockForRessource = lockForRessource;
 //# sourceMappingURL=ressourceRegistry.js.map

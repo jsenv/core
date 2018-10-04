@@ -15,40 +15,39 @@ var _locateFile = require("./locateFile.js");
 
 var _readFile = require("./readFile.js");
 
-var inspect = function inspect(_ref) {
-  var rootLocation = _ref.rootLocation,
-      cacheFolderRelativeLocation = _ref.cacheFolderRelativeLocation;
-  var cacheFolderLocation = (0, _helpers.resolvePath)(rootLocation, cacheFolderRelativeLocation);
+const inspect = ({
+  rootLocation,
+  cacheFolderRelativeLocation
+}) => {
+  const cacheFolderLocation = (0, _helpers.resolvePath)(rootLocation, cacheFolderRelativeLocation);
   return (0, _list.list)({
-    rootLocation: rootLocation,
-    cacheFolderRelativeLocation: cacheFolderRelativeLocation
-  }).then(function (folders) {
-    return Promise.all(folders.map(function (folder) {
+    rootLocation,
+    cacheFolderRelativeLocation
+  }).then(folders => {
+    return Promise.all(folders.map(folder => {
       return (0, _readFile.readFile)({
         location: (0, _helpers.resolvePath)(cacheFolderLocation, folder, _cache.JSON_FILE)
-      }).then(JSON.parse).then(function (cache) {
-        var inputLocation = (0, _locateFile.locateFile)(cache.inputRelativeLocation, rootLocation);
+      }).then(JSON.parse).then(cache => {
+        const inputLocation = (0, _locateFile.locateFile)(cache.inputRelativeLocation, rootLocation);
         return (0, _readFile.readFile)({
           location: inputLocation,
           errorHandler: _helpers.isFileNotFoundError
-        }).then(function (content) {
-          var actual = (0, _helpers.createETag)(content);
-          var expected = cache.inputETag;
+        }).then(content => {
+          const actual = (0, _helpers.createETag)(content);
+          const expected = cache.inputETag;
 
           if (actual !== expected) {
             return "input-file-modified";
           }
 
           return "valid";
-        }, function () {
-          return Promise.resolve("input-file-missing");
-        });
+        }, () => Promise.resolve("input-file-missing"));
       });
-    })).then(function (foldersStatus) {
-      return foldersStatus.map(function (status, index) {
+    })).then(foldersStatus => {
+      return foldersStatus.map((status, index) => {
         return {
           folder: folders[index],
-          status: status
+          status
         };
       });
     });

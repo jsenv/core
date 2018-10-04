@@ -1,0 +1,37 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../../src/createCompileProfiles/compileProfiles/createPlatformGroups.js"
+  ],
+  "names": [
+    "createPlatformGroups",
+    "compatMap",
+    "platformName",
+    "platformVersions",
+    "Object",
+    "keys",
+    "filter",
+    "pluginName",
+    "map",
+    "String",
+    "concat",
+    "platformVersion",
+    "index",
+    "array",
+    "indexOf",
+    "sort",
+    "versionCompare",
+    "platformGroups",
+    "forEach",
+    "pluginNames",
+    "existingGroup",
+    "find",
+    "platformGroup",
+    "join",
+    "push"
+  ],
+  "mappings": ";;;;;;;AAAA;;AAMO,MAAMA,oBAAoB,GAAG,CAACC,SAAD,EAAYC,YAAZ,KAA6B;AAC/D,QAAMC,gBAAgB,GAAGC,MAAM,CAACC,IAAP,CAAYJ,SAAZ,EACtBK,MADsB,CACdC,UAAD,IAAgBL,YAAY,IAAID,SAAS,CAACM,UAAD,CAD1B,EAEtBC,GAFsB,CAEjBD,UAAD,IAAgBE,MAAM,CAACR,SAAS,CAACM,UAAD,CAAT,CAAsBL,YAAtB,CAAD,CAFJ,EAGtBQ,MAHsB,CAGf,OAHe,EAGN;AAHM,GAItBJ,MAJsB,CAIf,CAACK,eAAD,EAAkBC,KAAlB,EAAyBC,KAAzB,KAAmCA,KAAK,CAACC,OAAN,CAAcH,eAAd,MAAmCC,KAJvD,EAKtBG,IALsB,CAKjBC,4CALiB,CAAzB;AAOA,QAAMC,cAAc,GAAG,EAAvB;AAEAd,EAAAA,gBAAgB,CAACe,OAAjB,CAA0BP,eAAD,IAAqB;AAC5C,UAAMQ,WAAW,GAAG,6DAA0BlB,SAA1B,EAAqCC,YAArC,EAAmDS,eAAnD,EAAoEI,IAApE,EAApB;AACA,UAAMK,aAAa,GAAGH,cAAc,CAACI,IAAf,CAAqBC,aAAD,IAAmB;AAC3D,aAAOA,aAAa,CAACH,WAAd,CAA0BI,IAA1B,CAA+B,EAA/B,MAAuCJ,WAAW,CAACI,IAAZ,CAAiB,EAAjB,CAA9C;AACD,KAFqB,CAAtB;;AAGA,QAAIH,aAAJ,EAAmB;AACjBA,MAAAA,aAAa,CAACnB,SAAd,CAAwBC,YAAxB,IAAwC,kDACtCkB,aAAa,CAACnB,SAAd,CAAwBC,YAAxB,CADsC,EAEtCS,eAFsC,CAAxC;AAID,KALD,MAKO;AACLM,MAAAA,cAAc,CAACO,IAAf,CAAoB;AAClBL,QAAAA,WADkB;AAElBlB,QAAAA,SAAS,EAAE;AACT,WAACC,YAAD,GAAgBS;AADP;AAFO,OAApB;AAMD;AACF,GAlBD;AAoBA,SAAOM,cAAP;AACD,CA/BM",
+  "sourcesContent": [
+    "import {\n  versionHighest,\n  versionCompare,\n  getPluginNamesForPlatform,\n} from \"@dmail/project-structure-compile-babel\"\n\nexport const createPlatformGroups = (compatMap, platformName) => {\n  const platformVersions = Object.keys(compatMap)\n    .filter((pluginName) => platformName in compatMap[pluginName])\n    .map((pluginName) => String(compatMap[pluginName][platformName]))\n    .concat(\"0.0.0\") // at least version 0\n    .filter((platformVersion, index, array) => array.indexOf(platformVersion) === index)\n    .sort(versionCompare)\n\n  const platformGroups = []\n\n  platformVersions.forEach((platformVersion) => {\n    const pluginNames = getPluginNamesForPlatform(compatMap, platformName, platformVersion).sort()\n    const existingGroup = platformGroups.find((platformGroup) => {\n      return platformGroup.pluginNames.join(\"\") === pluginNames.join(\"\")\n    })\n    if (existingGroup) {\n      existingGroup.compatMap[platformName] = versionHighest(\n        existingGroup.compatMap[platformName],\n        platformVersion,\n      )\n    } else {\n      platformGroups.push({\n        pluginNames,\n        compatMap: {\n          [platformName]: platformVersion,\n        },\n      })\n    }\n  })\n\n  return platformGroups\n}\n"
+  ]
+}

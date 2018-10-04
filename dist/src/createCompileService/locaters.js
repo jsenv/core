@@ -21,115 +21,125 @@ function _objectWithoutProperties(source, excluded) { if (source == null) return
 
 function _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }
 
-var getInputRelativeLocation = function getInputRelativeLocation(_ref) {
-  var abstractFolderRelativeLocation = _ref.abstractFolderRelativeLocation,
-      filename = _ref.filename;
+const getInputRelativeLocation = ({
+  abstractFolderRelativeLocation,
+  filename
+}) => {
   // 'compiled/folder/file.js' -> 'folder/file.js'
   return filename.slice(abstractFolderRelativeLocation.length + 1);
 };
 
 exports.getInputRelativeLocation = getInputRelativeLocation;
 
-var getCacheFolderLocation = function getCacheFolderLocation(_ref2) {
-  var rootLocation = _ref2.rootLocation,
-      cacheFolderRelativeLocation = _ref2.cacheFolderRelativeLocation,
-      rest = _objectWithoutProperties(_ref2, ["rootLocation", "cacheFolderRelativeLocation"]);
+const getCacheFolderLocation = (_ref) => {
+  let {
+    rootLocation,
+    cacheFolderRelativeLocation
+  } = _ref,
+      rest = _objectWithoutProperties(_ref, ["rootLocation", "cacheFolderRelativeLocation"]);
 
   return (0, _helpers.resolvePath)(rootLocation, cacheFolderRelativeLocation, getInputRelativeLocation(rest));
 };
 
 exports.getCacheFolderLocation = getCacheFolderLocation;
 
-var getCacheDataLocation = function getCacheDataLocation(param) {
+const getCacheDataLocation = param => {
   return (0, _helpers.resolvePath)(getCacheFolderLocation(param), _cache.JSON_FILE);
 };
 
 exports.getCacheDataLocation = getCacheDataLocation;
 
-var getBranchRelativeLocation = function getBranchRelativeLocation(_ref3) {
-  var cacheFolderRelativeLocation = _ref3.cacheFolderRelativeLocation,
-      branch = _ref3.branch,
-      rest = _objectWithoutProperties(_ref3, ["cacheFolderRelativeLocation", "branch"]);
+const getBranchRelativeLocation = (_ref2) => {
+  let {
+    cacheFolderRelativeLocation,
+    branch
+  } = _ref2,
+      rest = _objectWithoutProperties(_ref2, ["cacheFolderRelativeLocation", "branch"]);
 
   return (0, _helpers.resolvePath)(cacheFolderRelativeLocation, getInputRelativeLocation(rest), branch.name);
 };
 
 exports.getBranchRelativeLocation = getBranchRelativeLocation;
 
-var getOutputRelativeLocation = function getOutputRelativeLocation(_ref4) {
-  var filename = _ref4.filename,
-      rest = _objectWithoutProperties(_ref4, ["filename"]);
+const getOutputRelativeLocation = (_ref3) => {
+  let {
+    filename
+  } = _ref3,
+      rest = _objectWithoutProperties(_ref3, ["filename"]);
 
   return (0, _helpers.resolvePath)(getBranchRelativeLocation(_objectSpread({
-    filename: filename
+    filename
   }, rest)), _path.default.basename(filename));
 };
 
 exports.getOutputRelativeLocation = getOutputRelativeLocation;
 
-var getBranchLocation = function getBranchLocation(_ref5) {
-  var rootLocation = _ref5.rootLocation,
-      rest = _objectWithoutProperties(_ref5, ["rootLocation"]);
+const getBranchLocation = (_ref4) => {
+  let {
+    rootLocation
+  } = _ref4,
+      rest = _objectWithoutProperties(_ref4, ["rootLocation"]);
 
   return (0, _helpers.resolvePath)(rootLocation, getBranchRelativeLocation(rest));
 };
 
 exports.getBranchLocation = getBranchLocation;
 
-var getOutputLocation = function getOutputLocation(_ref6) {
-  var rootLocation = _ref6.rootLocation,
-      rest = _objectWithoutProperties(_ref6, ["rootLocation"]);
+const getOutputLocation = (_ref5) => {
+  let {
+    rootLocation
+  } = _ref5,
+      rest = _objectWithoutProperties(_ref5, ["rootLocation"]);
 
   return (0, _helpers.resolvePath)(rootLocation, getOutputRelativeLocation(rest));
 };
 
 exports.getOutputLocation = getOutputLocation;
 
-var getOutputAssetLocation = function getOutputAssetLocation(_ref7) {
-  var asset = _ref7.asset,
-      rest = _objectWithoutProperties(_ref7, ["asset"]);
+const getOutputAssetLocation = (_ref6) => {
+  let {
+    asset
+  } = _ref6,
+      rest = _objectWithoutProperties(_ref6, ["asset"]);
 
   return (0, _helpers.resolvePath)(getBranchLocation(rest), asset.name);
 };
 
 exports.getOutputAssetLocation = getOutputAssetLocation;
 
-var getSourceAbstractLocation = function getSourceAbstractLocation(_ref8) {
-  var rootLocation = _ref8.rootLocation,
-      inputRelativeLocation = _ref8.inputRelativeLocation;
-  return (0, _helpers.resolvePath)(rootLocation, inputRelativeLocation);
-};
+const getSourceAbstractLocation = ({
+  rootLocation,
+  inputRelativeLocation
+}) => (0, _helpers.resolvePath)(rootLocation, inputRelativeLocation);
 
 exports.getSourceAbstractLocation = getSourceAbstractLocation;
 
-var getSourceMapLocation = function getSourceMapLocation(_ref9) {
-  var rootLocation = _ref9.rootLocation,
-      outputRelativeLocation = _ref9.outputRelativeLocation,
-      outputSourceMapName = _ref9.outputSourceMapName;
-  return (0, _helpers.resolvePath)(rootLocation, _path.default.dirname(outputRelativeLocation), outputSourceMapName);
-};
+const getSourceMapLocation = ({
+  rootLocation,
+  outputRelativeLocation,
+  outputSourceMapName
+}) => (0, _helpers.resolvePath)(rootLocation, _path.default.dirname(outputRelativeLocation), outputSourceMapName);
 
 exports.getSourceMapLocation = getSourceMapLocation;
 
-var getSourceMapAbstractLocation = function getSourceMapAbstractLocation(_ref10) {
-  var rootLocation = _ref10.rootLocation,
-      abstractFolderRelativeLocation = _ref10.abstractFolderRelativeLocation,
-      inputRelativeLocation = _ref10.inputRelativeLocation,
-      outputSourceMapName = _ref10.outputSourceMapName;
-  return (0, _helpers.resolvePath)(rootLocation, abstractFolderRelativeLocation, _path.default.dirname(inputRelativeLocation), outputSourceMapName);
-};
+const getSourceMapAbstractLocation = ({
+  rootLocation,
+  abstractFolderRelativeLocation,
+  inputRelativeLocation,
+  outputSourceMapName
+}) => (0, _helpers.resolvePath)(rootLocation, abstractFolderRelativeLocation, _path.default.dirname(inputRelativeLocation), outputSourceMapName);
 
 exports.getSourceMapAbstractLocation = getSourceMapAbstractLocation;
-var sourceMapKnowsExactLocation = false;
-var sourceMapUseAbsoluteLocation = true;
+const sourceMapKnowsExactLocation = false;
+const sourceMapUseAbsoluteLocation = true;
 
-var getSourceLocationForSourceMap = function getSourceLocationForSourceMap(context) {
+const getSourceLocationForSourceMap = context => {
   if (sourceMapUseAbsoluteLocation) {
-    return "/".concat(context.inputRelativeLocation);
+    return `/${context.inputRelativeLocation}`;
   }
 
-  var sourceLocation = getSourceAbstractLocation(context);
-  var sourceMapLocation = sourceMapKnowsExactLocation ? getSourceMapLocation(context) : getSourceMapAbstractLocation(context);
+  const sourceLocation = getSourceAbstractLocation(context);
+  const sourceMapLocation = sourceMapKnowsExactLocation ? getSourceMapLocation(context) : getSourceMapAbstractLocation(context);
   return (0, _helpers.normalizeSeparation)(_path.default.relative(_path.default.dirname(sourceMapLocation), sourceLocation));
 };
 

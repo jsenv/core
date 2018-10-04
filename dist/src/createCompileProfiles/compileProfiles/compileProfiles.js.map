@@ -1,0 +1,48 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../../src/createCompileProfiles/compileProfiles/compileProfiles.js"
+  ],
+  "names": [
+    "PLATFORM_NAMES",
+    "createGroupsForPlatforms",
+    "compatMap",
+    "platformNames",
+    "platformGroups",
+    "map",
+    "platformName",
+    "groups",
+    "sortGroupByComplexity",
+    "getScoreForGroupTranspilationComplexity",
+    "sortedGroups",
+    "sort",
+    "a",
+    "b",
+    "compileProfiles",
+    "stats",
+    "statMapGeneric",
+    "compatMapBabel",
+    "size",
+    "moduleOutput",
+    "identify",
+    "pluginNames",
+    "Object",
+    "keys",
+    "groupsForPlatforms",
+    "getScoreForGroupCompatMap",
+    "groupsForPlatformsSubset",
+    "groupWithEverything",
+    "profiles",
+    "fallback",
+    "id",
+    "slice",
+    "forEach",
+    "intermediateProfile",
+    "index",
+    "length"
+  ],
+  "mappings": ";;;;;;;AACA;;AAMA;;AACA;;AACA;;AACA;;AACA;;AACA;;AAZA;AAcA,MAAMA,cAAc,GAAG,CAAC,QAAD,EAAW,MAAX,EAAmB,SAAnB,EAA8B,QAA9B,EAAwC,MAAxC,EAAgD,KAAhD,EAAuD,OAAvD,EAAgE,UAAhE,CAAvB;;AAEA,MAAMC,wBAAwB,GAAG,CAACC,SAAD,EAAYC,aAAZ,KAA8B;AAC7D,QAAMC,cAAc,GAAGD,aAAa,CAACE,GAAd,CAAmBC,YAAD,IACvC,gDAAqBJ,SAArB,EAAgCI,YAAhC,CADqB,CAAvB;AAGA,QAAMC,MAAM,GAAG,kDAAsB,GAAGH,cAAzB,CAAf;AACA,SAAOG,MAAP;AACD,CAND;;AAQA,MAAMC,qBAAqB,GAAID,MAAD,IAAY;AACxC,QAAME,uCAAuC,GAAG,mGAAhD;AACA,QAAMC,YAAY,GAAGH,MAAM,CAACI,IAAP,CACnB,CAACC,CAAD,EAAIC,CAAJ,KACEJ,uCAAuC,CAACG,CAAD,CAAvC,GAA6CH,uCAAuC,CAACI,CAAD,CAFnE,CAArB;AAIA,SAAOH,YAAP;AACD,CAPD;;AASO,MAAMI,eAAe,GAAG,CAC7B;AACEC,EAAAA,KAAK,GAAGC,8BADV;AAEEd,EAAAA,SAAS,GAAGe,4CAFd;AAGEC,EAAAA,IAAI,GAAG,CAHT;AAIEf,EAAAA,aAAa,GAAGH,cAJlB;AAKEmB,EAAAA,YALF;AAMEC,EAAAA,QAAQ,GAAG,KANb;AAOEC,EAAAA,WAAW,GAAGC,MAAM,CAACC,IAAP,CAAYrB,SAAZ;AAPhB,IAQI,EATyB,KAU1B;AACHA,EAAAA,SAAS,GAAG,sDAAmBA,SAAnB,EAA8BmB,WAA9B,CAAZ;AACAnB,EAAAA,SAAS,GAAG,0DAAuBA,SAAvB,EAAkCiB,YAAlC,CAAZ;AAEA,QAAMK,kBAAkB,GAAGvB,wBAAwB,CAACC,SAAD,EAAYC,aAAZ,CAAnD;AACA,QAAMsB,yBAAyB,GAAG,sEAAgCV,KAAhC,CAAlC;AACA,QAAMW,wBAAwB,GAAG,8BAC/BF,kBAD+B,EAE/B,CAAC;AAAEtB,IAAAA;AAAF,GAAD,KAAmBuB,yBAAyB,CAACvB,SAAD,CAFb,EAG/BgB,IAH+B,CAAjC;AAKA,QAAMR,YAAY,GAAGF,qBAAqB,CAACkB,wBAAD,CAA1C;AAEA,QAAMC,mBAAmB,GAAG;AAC1BN,IAAAA,WAAW,EAAEC,MAAM,CAACC,IAAP,CAAYrB,SAAZ,CADa;AAE1BA,IAAAA,SAAS,EAAE;AAFe,GAA5B;AAKA,QAAM0B,QAAQ,GAAGlB,YAAjB;AACA,QAAMmB,QAAQ,GAAGF,mBAAjB;;AAEA,MAAIP,QAAJ,EAAc;AACZQ,IAAAA,QAAQ,CAAC,CAAD,CAAR,CAAYE,EAAZ,GAAiB,MAAjB;AACAF,IAAAA,QAAQ,CAACG,KAAT,CAAe,CAAf,EAAkB,CAAC,CAAnB,EAAsBC,OAAtB,CAA8B,CAACC,mBAAD,EAAsBC,KAAtB,KAAgC;AAC5DD,MAAAA,mBAAmB,CAACH,EAApB,GAA0B,gBAAeI,KAAK,GAAG,CAAE,EAAnD;AACD,KAFD;AAGAN,IAAAA,QAAQ,CAACA,QAAQ,CAACO,MAAT,GAAkB,CAAnB,CAAR,CAA8BL,EAA9B,GAAmC,OAAnC;AACAD,IAAAA,QAAQ,CAACC,EAAT,GAAc,WAAd;AACD;;AAED,SAAO;AAAEF,IAAAA,QAAF;AAAYC,IAAAA;AAAZ,GAAP;AACD,CAzCM",
+  "sourcesContent": [
+    "// https://github.com/babel/babel/blob/master/packages/babel-preset-env/data/plugins.json\nimport {\n  compatMapBabel,\n  getCompatMapWithModule,\n  getCompatMapSubset,\n} from \"@dmail/project-structure-compile-babel\"\n\nimport { createPlatformGroups } from \"./createPlatformGroups.js\"\nimport { composePlatformGroups } from \"./composePlatformGroups.js\"\nimport { createGetScoreForGroupTranspilationComplexity } from \"./createGetScoreForGroupTranspilationComplexity.js\"\nimport { splitGroups } from \"./splitGroups.js\"\nimport { createGetScoreForGroupCompatMap } from \"./createGetScoreForGroupCompatMap.js\"\nimport { statMapGeneric } from \"./statMapGeneric.js\"\n\nconst PLATFORM_NAMES = [\"chrome\", \"edge\", \"firefox\", \"safari\", \"node\", \"ios\", \"opera\", \"electron\"]\n\nconst createGroupsForPlatforms = (compatMap, platformNames) => {\n  const platformGroups = platformNames.map((platformName) =>\n    createPlatformGroups(compatMap, platformName),\n  )\n  const groups = composePlatformGroups(...platformGroups)\n  return groups\n}\n\nconst sortGroupByComplexity = (groups) => {\n  const getScoreForGroupTranspilationComplexity = createGetScoreForGroupTranspilationComplexity()\n  const sortedGroups = groups.sort(\n    (a, b) =>\n      getScoreForGroupTranspilationComplexity(a) - getScoreForGroupTranspilationComplexity(b),\n  )\n  return sortedGroups\n}\n\nexport const compileProfiles = (\n  {\n    stats = statMapGeneric,\n    compatMap = compatMapBabel,\n    size = 4,\n    platformNames = PLATFORM_NAMES,\n    moduleOutput,\n    identify = false,\n    pluginNames = Object.keys(compatMap),\n  } = {},\n) => {\n  compatMap = getCompatMapSubset(compatMap, pluginNames)\n  compatMap = getCompatMapWithModule(compatMap, moduleOutput)\n\n  const groupsForPlatforms = createGroupsForPlatforms(compatMap, platformNames)\n  const getScoreForGroupCompatMap = createGetScoreForGroupCompatMap(stats)\n  const groupsForPlatformsSubset = splitGroups(\n    groupsForPlatforms,\n    ({ compatMap }) => getScoreForGroupCompatMap(compatMap),\n    size,\n  )\n  const sortedGroups = sortGroupByComplexity(groupsForPlatformsSubset)\n\n  const groupWithEverything = {\n    pluginNames: Object.keys(compatMap),\n    compatMap: {},\n  }\n\n  const profiles = sortedGroups\n  const fallback = groupWithEverything\n\n  if (identify) {\n    profiles[0].id = \"best\"\n    profiles.slice(1, -1).forEach((intermediateProfile, index) => {\n      intermediateProfile.id = `intermediate-${index + 1}`\n    })\n    profiles[profiles.length - 1].id = \"worst\"\n    fallback.id = \"otherwise\"\n  }\n\n  return { profiles, fallback }\n}\n"
+  ]
+}

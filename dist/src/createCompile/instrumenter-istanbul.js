@@ -30,15 +30,15 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 //   }
 //   return null
 // }
-var instrumenter = function instrumenter(_ref) {
-  var inputRelativeLocation = _ref.inputRelativeLocation,
-      inputSource = _ref.inputSource,
-      inputSourceMap = _ref.inputSourceMap,
-      inputAst = _ref.inputAst,
-      _ref$coverageGlobalVa = _ref.coverageGlobalVariabeName,
-      coverageGlobalVariabeName = _ref$coverageGlobalVa === void 0 ? "__coverage__" : _ref$coverageGlobalVa;
+const instrumenter = ({
+  inputRelativeLocation,
+  inputSource,
+  inputSourceMap,
+  inputAst,
+  coverageGlobalVariabeName = "__coverage__"
+}) => {
   // http://gotwarlost.github.io/istanbul/public/apidocs/classes/Instrumenter.html
-  var istanbulInstrumenter = new _istanbul.default.Instrumenter({
+  const istanbulInstrumenter = new _istanbul.default.Instrumenter({
     coverageVariable: coverageGlobalVariabeName,
     esModules: true,
     // tod: put this to true if the instrumented module is anonymous
@@ -59,28 +59,28 @@ var instrumenter = function instrumenter(_ref) {
       file: inputRelativeLocation
     }
   });
-  var outputSource = inputAst ? istanbulInstrumenter.instrumentASTSync(inputAst, inputRelativeLocation, inputSource) : istanbulInstrumenter.instrumentSync(inputSource, inputRelativeLocation);
-  var outputSourceMap = istanbulInstrumenter.lastSourceMap();
+  const outputSource = inputAst ? istanbulInstrumenter.instrumentASTSync(inputAst, inputRelativeLocation, inputSource) : istanbulInstrumenter.instrumentSync(inputSource, inputRelativeLocation);
+  const outputSourceMap = istanbulInstrumenter.lastSourceMap();
 
   if (inputSourceMap) {
     // https://github.com/karma-runner/karma-coverage/pull/146/files
-    var inputCodeSourceMapConsumer = new _sourceMap.SourceMapConsumer(inputSourceMap);
-    var intrumentedCodeSourceMapConsumer = new _sourceMap.SourceMapConsumer(outputSourceMap);
+    const inputCodeSourceMapConsumer = new _sourceMap.SourceMapConsumer(inputSourceMap);
+    const intrumentedCodeSourceMapConsumer = new _sourceMap.SourceMapConsumer(outputSourceMap);
 
-    var generator = _sourceMap.SourceMapGenerator.fromSourceMap(intrumentedCodeSourceMapConsumer);
+    const generator = _sourceMap.SourceMapGenerator.fromSourceMap(intrumentedCodeSourceMapConsumer);
 
     generator.applySourceMap(inputCodeSourceMapConsumer);
     return {
-      coverageGlobalVariabeName: coverageGlobalVariabeName,
-      outputSource: outputSource,
+      coverageGlobalVariabeName,
+      outputSource,
       outputSourceMap: JSON.parse(generator.toString())
     };
   }
 
   return {
-    coverageGlobalVariabeName: coverageGlobalVariabeName,
-    outputSource: outputSource,
-    outputSourceMap: outputSourceMap
+    coverageGlobalVariabeName,
+    outputSource,
+    outputSourceMap
   };
 };
 

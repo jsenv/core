@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../../src/createCompileProfiles/compileProfiles/createGetScoreForGroupTranspilationComplexity.js"
+  ],
+  "names": [
+    "createGetScoreForGroupTranspilationComplexity",
+    "getPluginTranpilationComplexity",
+    "getGroupTranspilationComplexityScore",
+    "group",
+    "pluginNames",
+    "reduce",
+    "previous",
+    "pluginName"
+  ],
+  "mappings": ";;;;;;;AAAO,MAAMA,6CAA6C,GAAG,MAAM;AACjE,QAAMC,+BAA+B,GAAG,MAAM,CAA9C;;AAEA,QAAMC,oCAAoC,GAAIC,KAAD,IAC3CA,KAAK,CAACC,WAAN,CAAkBC,MAAlB,CACE,CAACC,QAAD,EAAWC,UAAX,KAA0BD,QAAQ,GAAGL,+BAA+B,CAACM,UAAD,CADtE,EAEE,CAFF,CADF;;AAMA,SAAOL,oCAAP;AACD,CAVM",
+  "sourcesContent": [
+    "export const createGetScoreForGroupTranspilationComplexity = () => {\n  const getPluginTranpilationComplexity = () => 1\n\n  const getGroupTranspilationComplexityScore = (group) =>\n    group.pluginNames.reduce(\n      (previous, pluginName) => previous + getPluginTranpilationComplexity(pluginName),\n      0,\n    )\n\n  return getGroupTranspilationComplexityScore\n}\n"
+  ]
+}

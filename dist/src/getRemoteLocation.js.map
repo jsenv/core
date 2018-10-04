@@ -8,7 +8,7 @@
     "compileURL",
     "file"
   ],
-  "mappings": ";;;;;;;AAAO,IAAMA,iBAAiB,GAAG,SAApBA,iBAAoB,OAA0B;AAAA,MAAvBC,UAAuB,QAAvBA,UAAuB;AAAA,MAAXC,IAAW,QAAXA,IAAW;AACzD,mBAAUD,UAAV,cAAwBC,IAAxB;AACD,CAFM",
+  "mappings": ";;;;;;;AAAO,MAAMA,iBAAiB,GAAG,CAAC;AAAEC,EAAAA,UAAF;AAAcC,EAAAA;AAAd,CAAD,KAA0B;AACzD,SAAQ,GAAED,UAAW,IAAGC,IAAK,EAA7B;AACD,CAFM",
   "sourcesContent": [
     "export const getRemoteLocation = ({ compileURL, file }) => {\n  return `${compileURL}/${file}`\n}\n"
   ]

@@ -11,27 +11,29 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var minifier = function minifier(context) {
-  var inputRelativeLocation = context.inputRelativeLocation,
-      inputSource = context.inputSource,
-      inputAst = context.inputAst,
-      inputSourceMap = context.inputSourceMap,
-      options = context.options,
-      outputSourceMapName = context.outputSourceMapName,
-      getSourceNameForSourceMap = context.getSourceNameForSourceMap,
-      getSourceLocationForSourceMap = context.getSourceLocationForSourceMap;
-  var babelOptions = {
+const minifier = context => {
+  const {
+    inputRelativeLocation,
+    inputSource,
+    inputAst,
+    inputSourceMap,
+    options,
+    outputSourceMapName,
+    getSourceNameForSourceMap,
+    getSourceLocationForSourceMap
+  } = context;
+  const babelOptions = {
     // we need a list of plugin that minify the outputs
     plugins: [],
     filename: inputRelativeLocation,
-    inputSourceMap: inputSourceMap
+    inputSourceMap
   };
   return (0, _transpileWithBabel.transpileWithBabel)(_objectSpread({
-    inputAst: inputAst,
-    inputSource: inputSource,
+    inputAst,
+    inputSource,
     options: babelOptions
   }, options.remap ? {
-    outputSourceMapName: outputSourceMapName,
+    outputSourceMapName,
     sourceLocationForSourceMap: getSourceLocationForSourceMap(context),
     sourceNameForSourceMap: getSourceNameForSourceMap(context)
   } : {}));

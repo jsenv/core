@@ -5,24 +5,24 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.getFromProcessArguments = void 0;
 
-var getFromProcessArguments = function getFromProcessArguments(name) {
-  var rawBooleanArg = process.argv.find(function (arg) {
-    return arg === "--".concat(name);
+const getFromProcessArguments = name => {
+  const rawBooleanArg = process.argv.find(arg => {
+    return arg === `--${name}`;
   });
 
   if (rawBooleanArg) {
     return true;
   }
 
-  var rawValueArg = process.argv.find(function (arg) {
-    return arg.startsWith("--".concat(name, "="));
+  const rawValueArg = process.argv.find(arg => {
+    return arg.startsWith(`--${name}=`);
   });
 
   if (!rawValueArg) {
     return false;
   }
 
-  return rawValueArg.slice("--".concat(name, "=").length);
+  return rawValueArg.slice(`--${name}=`.length);
 };
 
 exports.getFromProcessArguments = getFromProcessArguments;

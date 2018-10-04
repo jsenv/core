@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../../src/createCompileProfiles/compileProfiles/createPlatformGroups.test.js"
+  ],
+  "names": [
+    "createPlatformGroups",
+    "compatMapBabel",
+    "require",
+    "assert",
+    "actual",
+    "a",
+    "chrome",
+    "b",
+    "c",
+    "expected",
+    "pluginNames",
+    "compatMap",
+    "deepEqual",
+    "length",
+    "console",
+    "log"
+  ],
+  "mappings": ";;AAAA,MAAM;AAAEA,EAAAA,oBAAF;AAAwBC,EAAAA;AAAxB,IAA2CC,OAAO,CAAC,2BAAD,CAAxD;;AACA,MAAMC,MAAM,GAAGD,OAAO,CAAC,QAAD,CAAtB;;AAEA;AACE,QAAME,MAAM,GAAGJ,oBAAoB,CACjC;AACEK,IAAAA,CAAC,EAAE;AACDC,MAAAA,MAAM,EAAE;AADP,KADL;AAIEC,IAAAA,CAAC,EAAE,EAJL;AAKEC,IAAAA,CAAC,EAAE;AACDF,MAAAA,MAAM,EAAE;AADP;AALL,GADiC,EAUjC,QAViC,CAAnC;AAYA,QAAMG,QAAQ,GAAG,CACf;AACEC,IAAAA,WAAW,EAAE,CAAC,GAAD,EAAM,GAAN,EAAW,GAAX,CADf;AAEEC,IAAAA,SAAS,EAAE;AACTL,MAAAA,MAAM,EAAE;AADC;AAFb,GADe,EAOf;AACEI,IAAAA,WAAW,EAAE,CAAC,GAAD,EAAM,GAAN,CADf;AAEEC,IAAAA,SAAS,EAAE;AACTL,MAAAA,MAAM,EAAE;AADC;AAFb,GAPe,EAaf;AACEI,IAAAA,WAAW,EAAE,CAAC,GAAD,CADf;AAEEC,IAAAA,SAAS,EAAE;AACTL,MAAAA,MAAM,EAAE;AADC;AAFb,GAbe,CAAjB;AAoBAH,EAAAA,MAAM,CAACS,SAAP,CAAiBR,MAAjB,EAAyBK,QAAzB;AACD;AAED;AACE,QAAML,MAAM,GAAGJ,oBAAoB,CAACC,cAAD,EAAiB,QAAjB,CAAnC;AACAE,EAAAA,MAAM,CAACC,MAAM,CAACS,MAAP,GAAgB,CAAjB,CAAN;AACD;AAEDC,OAAO,CAACC,GAAR,CAAY,QAAZ",
+  "sourcesContent": [
+    "const { createPlatformGroups, compatMapBabel } = require(\"./createPlatformGroups.js\")\nconst assert = require(\"assert\")\n\n{\n  const actual = createPlatformGroups(\n    {\n      a: {\n        chrome: 10,\n      },\n      b: {},\n      c: {\n        chrome: 9,\n      },\n    },\n    \"chrome\",\n  )\n  const expected = [\n    {\n      pluginNames: [\"a\", \"b\", \"c\"],\n      compatMap: {\n        chrome: \"0.0.0\",\n      },\n    },\n    {\n      pluginNames: [\"a\", \"b\"],\n      compatMap: {\n        chrome: \"9\",\n      },\n    },\n    {\n      pluginNames: [\"b\"],\n      compatMap: {\n        chrome: \"10\",\n      },\n    },\n  ]\n  assert.deepEqual(actual, expected)\n}\n\n{\n  const actual = createPlatformGroups(compatMapBabel, \"chrome\")\n  assert(actual.length > 0)\n}\n\nconsole.log(\"passed\")\n"
+  ]
+}
