@@ -1,10 +1,10 @@
 "use strict";
 
-const {
-  composePlatformGroups
-} = require("./composePlatformGroups.js");
+var _composePlatformGroups = require("./composePlatformGroups.js");
 
-const assert = require("assert");
+var _assert = _interopRequireDefault(require("assert"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 {
   const chromePlatformGroups = [{
@@ -20,7 +20,7 @@ const assert = require("assert");
       firefox: 20
     })
   }];
-  const actual = composePlatformGroups(chromePlatformGroups, firefoxPlatformGroups);
+  const actual = (0, _composePlatformGroups.composePlatformGroups)(chromePlatformGroups, firefoxPlatformGroups);
   const expected = [{
     pluginNames: ["a"],
     compatMap: {
@@ -28,7 +28,8 @@ const assert = require("assert");
       firefox: 20
     }
   }];
-  assert.deepEqual(actual, expected);
+
+  _assert.default.deepEqual(actual, expected);
 }
 console.log("passed");
 //# sourceMappingURL=composePlatformGroups.test.js.map

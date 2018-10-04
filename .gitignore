@@ -4,4 +4,4 @@ coverage
 coverage.lcov
 build
 !src/__test__/node_modules
-group.config.json
+compile.config.json

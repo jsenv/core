@@ -1,10 +1,10 @@
 "use strict";
 
-const {
-  splitGroups
-} = require("./splitGroups.js");
+var _splitGroups = require("./splitGroups.js");
 
-const assert = require("assert");
+var _assert = _interopRequireDefault(require("assert"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 const getScore = a => a.score;
 
@@ -30,7 +30,7 @@ const getScore = a => a.score;
     },
     score: 2
   }];
-  const actual = splitGroups(groups, getScore, 2);
+  const actual = (0, _splitGroups.splitGroups)(groups, getScore, 2);
   const expected = [{
     pluginNames: ["b", "c"],
     compatMap: {
@@ -44,7 +44,8 @@ const getScore = a => a.score;
       firefox: "11"
     }
   }];
-  assert.deepEqual(actual, expected);
+
+  _assert.default.deepEqual(actual, expected);
 }
 console.log("passed");
 //# sourceMappingURL=splitGroups.test.js.map

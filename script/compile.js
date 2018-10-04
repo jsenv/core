@@ -8,4 +8,5 @@ compileFileStructure({
   into: "dist",
   platformName: "node",
   platformVersion: "8.0",
+  moduleOutput: "commonjs",
 })

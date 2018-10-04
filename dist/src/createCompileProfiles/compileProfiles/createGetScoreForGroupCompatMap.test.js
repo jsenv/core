@@ -1,17 +1,17 @@
 "use strict";
 
-const {
-  createGetScoreForGroupCompatMap
-} = require("./createGetScoreForGroupCompatMap.js");
+var _createGetScoreForGroupCompatMap = require("./createGetScoreForGroupCompatMap.js");
 
-const assert = require("assert");
+var _assert = _interopRequireDefault(require("assert"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 {
   const chrome50Score = 1;
   const chrome49Score = 2;
   const chromeBelow49Score = 4;
   const otherScore = 8;
-  const getScore = createGetScoreForGroupCompatMap({
+  const getScore = (0, _createGetScoreForGroupCompatMap.createGetScoreForGroupCompatMap)({
     chrome: {
       "50": chrome50Score,
       "49": chrome49Score,
@@ -24,28 +24,32 @@ const assert = require("assert");
       chrome: "48"
     });
     const expected = chromeBelow49Score;
-    assert.equal(actual, expected);
+
+    _assert.default.equal(actual, expected);
   }
   {
     const actual = getScore({
       chrome: "49"
     });
     const expected = chrome49Score;
-    assert.equal(actual, expected);
+
+    _assert.default.equal(actual, expected);
   }
   {
     const actual = getScore({
       chrome: "50"
     });
     const expected = chrome50Score;
-    assert.equal(actual, expected);
+
+    _assert.default.equal(actual, expected);
   }
   {
     const actual = getScore({
       chrome: "51"
     });
     const expected = chrome50Score;
-    assert.equal(actual, expected);
+
+    _assert.default.equal(actual, expected);
   }
   {
     const actual = getScore({
@@ -53,7 +57,8 @@ const assert = require("assert");
       foo: ["0"]
     });
     const expected = chrome50Score + otherScore;
-    assert.equal(actual, expected);
+
+    _assert.default.equal(actual, expected);
   }
 }
 console.log("passed");

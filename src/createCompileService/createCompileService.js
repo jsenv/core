@@ -20,7 +20,7 @@ import {
   getSourceAbstractLocation,
   getSourceLocationForSourceMap,
 } from "./locaters.js"
-import { buildGroup } from "./buildGroup.js"
+import { createCompileProfiles } from "../createCompileProfiles/createCompileProfiles.js"
 
 const readBranchMain = ({
   rootLocation,
@@ -620,7 +620,7 @@ export const createCompileService = ({
 }) => {
   const fileService = createFileService()
 
-  const { getGroupIdForPlatform, getPluginsFromGroupId } = buildGroup({
+  const compileProfilePromise = createCompileProfiles({
     root: rootLocation,
   })
 
@@ -695,62 +695,64 @@ export const createCompileService = ({
       })
     }
 
-    const { platformName, platformVersion } = getPlatformAndVersionFromHeaders(headers)
-    const groupId = getGroupIdForPlatform({
-      platformName,
-      platformVersion,
-    })
+    return compileProfilePromise.then(({ getGroupIdForPlatform, getPluginsFromGroupId }) => {
+      const { platformName, platformVersion } = getPlatformAndVersionFromHeaders(headers)
+      const groupId = getGroupIdForPlatform({
+        platformName,
+        platformVersion,
+      })
 
-    return getFileCompiled({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
-      compile,
-      inputETagClient: headers.has("if-none-match") ? headers.get("if-none-match") : undefined,
-      groupId,
-      getBabelPlugins: () => getPluginsFromGroupId(groupId),
-      cacheEnabled,
-      cacheAutoClean,
-      cacheTrackHit,
-    }).then(
-      ({ status, inputETag, outputRelativeLocation, output }) => {
-        // here status can be "created", "updated", "cached"
+      return getFileCompiled({
+        rootLocation,
+        cacheFolderRelativeLocation,
+        abstractFolderRelativeLocation,
+        filename,
+        compile,
+        inputETagClient: headers.has("if-none-match") ? headers.get("if-none-match") : undefined,
+        groupId,
+        getBabelPlugins: () => getPluginsFromGroupId(groupId),
+        cacheEnabled,
+        cacheAutoClean,
+        cacheTrackHit,
+      }).then(
+        ({ status, inputETag, outputRelativeLocation, output }) => {
+          // here status can be "created", "updated", "cached"
 
-        // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
-        // if-none-match c'est forcément le etag du client qui a match
-        // faudra changer ça non?
-        if (headers.has("if-none-match") && status === "cached") {
+          // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
+          // if-none-match c'est forcément le etag du client qui a match
+          // faudra changer ça non?
+          if (headers.has("if-none-match") && status === "cached") {
+            return {
+              status: 304,
+              headers: {
+                "cache-control": "no-store",
+                "x-location": outputRelativeLocation,
+              },
+            }
+          }
+
           return {
-            status: 304,
+            status: 200,
             headers: {
+              Etag: inputETag,
+              "content-length": Buffer.byteLength(output),
+              "content-type": "application/javascript",
               "cache-control": "no-store",
               "x-location": outputRelativeLocation,
             },
+            body: output,
           }
-        }
-
-        return {
-          status: 200,
-          headers: {
-            Etag: inputETag,
-            "content-length": Buffer.byteLength(output),
-            "content-type": "application/javascript",
-            "cache-control": "no-store",
-            "x-location": outputRelativeLocation,
-          },
-          body: output,
-        }
-      },
-      (error) => {
-        if (error && error.reason === "Unexpected directory operation") {
-          return {
-            status: 403,
+        },
+        (error) => {
+          if (error && error.reason === "Unexpected directory operation") {
+            return {
+              status: 403,
+            }
           }
-        }
-        return Promise.reject(error)
-      },
-    )
+          return Promise.reject(error)
+        },
+      )
+    })
   }
 
   const compileFile = (relativeLocation) =>

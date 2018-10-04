@@ -1,14 +1,15 @@
 "use strict";
 
-const {
-  createPlatformGroups,
-  compatMapBabel
-} = require("./createPlatformGroups.js");
+var _projectStructureCompileBabel = require("@dmail/project-structure-compile-babel");
 
-const assert = require("assert");
+var _createPlatformGroups = require("./createPlatformGroups.js");
+
+var _assert = _interopRequireDefault(require("assert"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 {
-  const actual = createPlatformGroups({
+  const actual = (0, _createPlatformGroups.createPlatformGroups)({
     a: {
       chrome: 10
     },
@@ -33,11 +34,12 @@ const assert = require("assert");
       chrome: "10"
     }
   }];
-  assert.deepEqual(actual, expected);
+
+  _assert.default.deepEqual(actual, expected);
 }
 {
-  const actual = createPlatformGroups(compatMapBabel, "chrome");
-  assert(actual.length > 0);
+  const actual = (0, _createPlatformGroups.createPlatformGroups)(_projectStructureCompileBabel.compatMapBabel, "chrome");
+  (0, _assert.default)(actual.length > 0);
 }
 console.log("passed");
 //# sourceMappingURL=createPlatformGroups.test.js.map
