@@ -18,6 +18,8 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 const isNodeStream = a => {
+  if (a === undefined) return false;
+
   if (a instanceof _stream.default.Stream || a instanceof _stream.default.Writable) {
     return true;
   }
@@ -33,7 +35,9 @@ const closeStream = stream => {
   }
 };
 
-const createTwoWayStream = () => {
+const createTwoWayStream = ({
+  willAutoClose = false
+} = {}) => {
   const buffers = [];
   let length = 0;
   let status = "opened";
@@ -80,6 +84,10 @@ const createTwoWayStream = () => {
   };
 
   const write = data => {
+    // if (status === "closed") {
+    //   return
+    // }
+    // console.log("writing", data.toString())
     buffers.push(data);
     length += data.length;
     writed.emit(data);
@@ -110,9 +118,11 @@ const createTwoWayStream = () => {
         });
       }
 
-      writed.listen(buffer => {
+      const writeListener = writed.listen(buffer => {
         stream.write(buffer);
-      });
+      }); // closed.listenOnce(() => {
+      //   writeListener.remove()
+      // })
     }
 
     if (propagateClose) {
@@ -134,7 +144,8 @@ const createTwoWayStream = () => {
     write,
     writed,
     pipeTo,
-    promise
+    promise,
+    willAutoClose
   });
 };
 
@@ -154,26 +165,37 @@ const stringToArrayBuffer = string => {
 };
 
 const createBody = data => {
-  const twoWayStream = createTwoWayStream();
+  if (data && data.pipeTo) {
+    return data;
+  }
 
-  if (data !== undefined) {
-    if (isNodeStream(data)) {
-      const nodeStream = data; // nodeStream.resume() ?
+  let twoWayStream;
 
-      nodeStream.once("error", error => {
-        twoWayStream.error(error);
-      });
-      nodeStream.on("data", data => {
-        twoWayStream.write(data);
-      });
-      nodeStream.once("end", () => {
-        twoWayStream.close();
-      });
-    } else if (data && data.pipeTo) {
-      data.pipeTo(twoWayStream);
-    } else {
+  if (data === undefined) {
+    twoWayStream = createTwoWayStream();
+  } else if (isNodeStream(data)) {
+    twoWayStream = createTwoWayStream({
+      willAutoClose: true
+    });
+    const nodeStream = data; // nodeStream.resume() ?
+
+    nodeStream.once("error", error => {
+      twoWayStream.error(error);
+    });
+    nodeStream.on("data", data => {
       twoWayStream.write(data);
-    }
+    });
+    nodeStream.once("end", () => {
+      twoWayStream.close();
+    });
+  } else if (data && data.pipeTo) {
+    twoWayStream = createTwoWayStream({
+      willAutoClose: data.willAutoClose
+    });
+    data.pipeTo(twoWayStream);
+  } else if (data !== undefined) {
+    twoWayStream = createTwoWayStream();
+    twoWayStream.write(data);
   }
 
   const readAsString = () => {

@@ -8,10 +8,13 @@
     "path",
     "resolve",
     "__dirname",
-    "into"
+    "into",
+    "then",
+    "console",
+    "log"
   ],
-  "mappings": ";;AAAA;;AACA;;;;AAEA,MAAMA,IAAI,GAAGC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAAb;;AACA;AACA,kDAAsB;AACpBH,EAAAA,IADoB;AAEpBI,EAAAA,IAAI,EAAE;AAFc,CAAtB",
+  "mappings": ";;AAAA;;AACA;;;;AAEA,MAAMA,IAAI,GAAGC,cAAKC,OAAL,CAAaC,SAAb,EAAwB,WAAxB,CAAb;;AAEA,kDAAsB;AACpBH,EAAAA,IADoB;AAEpBI,EAAAA,IAAI,EAAE;AAFc,CAAtB,EAGGC,IAHH,CAGQ,MAAM;AACZC,EAAAA,OAAO,CAACC,GAAR,CAAY,QAAZ;AACD,CALD",
   "sourcesContent": [
-    "import { createCompileProfiles } from \"./createCompileProfiles.js\"\nimport path from \"path\"\n\nconst root = path.resolve(__dirname, \"../../../\")\ndebugger\ncreateCompileProfiles({\n  root,\n  into: \"compile.config.json\",\n})\n"
+    "import { createCompileProfiles } from \"./createCompileProfiles.js\"\nimport path from \"path\"\n\nconst root = path.resolve(__dirname, \"../../../\")\n\ncreateCompileProfiles({\n  root,\n  into: \"compile.config.json\",\n}).then(() => {\n  console.log(\"passed\")\n})\n"
   ]
 }

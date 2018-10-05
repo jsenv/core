@@ -29,7 +29,7 @@ var _getPlatformAndVersionFromHeaders = require("./getPlatformAndVersionFromHead
 
 var _locaters = require("./locaters.js");
 
-var _buildGroup = require("./buildGroup.js");
+var _createCompileProfiles = require("../createCompileProfiles/createCompileProfiles.js");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -660,10 +660,7 @@ const createCompileService = ({
   cacheTrackHit = false
 }) => {
   const fileService = (0, _createFileService.createFileService)();
-  const {
-    getGroupIdForPlatform,
-    getPluginsFromGroupId
-  } = (0, _buildGroup.buildGroup)({
+  const compileProfilePromise = (0, _createCompileProfiles.createCompileProfiles)({
     root: rootLocation
   });
 
@@ -684,116 +681,128 @@ const createCompileService = ({
     // il sait à quoi ça correspond vraiment
     // par contre ça fait 2 requête http
 
-    if (filename.endsWith(".map")) {
-      const fileLock = (0, _ressourceRegistry.lockForRessource)((0, _locaters.getCacheDataLocation)({
-        rootLocation,
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
-        filename
-      }));
-      return fileLock.chain(() => {
-        const script = filename.slice(0, -4); // 'folder/file.js.map' -> 'folder.file.js'
-        // if we receive something like compiled/folder/file.js.map
-        // we redirect to build/folder/file.js/jqjcijjojio/file.js.map
+    return compileProfilePromise.then(({
+      getGroupIdForPlatform,
+      getPluginsFromGroupId
+    }) => {
+      const {
+        platformName,
+        platformVersion
+      } = (0, _getPlatformAndVersionFromHeaders.getPlatformAndVersionFromHeaders)(headers);
+      const groupId = getGroupIdForPlatform({
+        platformName,
+        platformVersion
+      });
 
-        return getFileBranch({
+      if (filename.endsWith(".map")) {
+        const fileLock = (0, _ressourceRegistry.lockForRessource)((0, _locaters.getCacheDataLocation)({
           rootLocation,
           cacheFolderRelativeLocation,
           abstractFolderRelativeLocation,
-          filename: script,
-          compile
-        }).then(({
-          branch
-        }) => {
-          if (!branch) {
-            return {
-              status: 404
-            };
-          }
+          filename
+        }));
+        return fileLock.chain(() => {
+          const script = filename.slice(0, -4); // 'folder/file.js.map' -> 'folder.file.js'
+          // if we receive something like compiled/folder/file.js.map
+          // we redirect to build/folder/file.js/jqjcijjojio/file.js.map
 
-          const outputLocation = (0, _locaters.getOutputLocation)({
+          return getFileBranch({
             rootLocation,
             cacheFolderRelativeLocation,
             abstractFolderRelativeLocation,
-            filename,
+            filename: script,
+            compile,
+            groupId
+          }).then(({
             branch
-          });
-          return fileService({
-            method,
-            url: new _url.URL(`file:///${outputLocation}${url.search}`),
-            headers
-          });
-        }, error => {
-          if (error && error.reason === "Unexpected directory operation") {
-            return {
-              status: 403
-            };
-          }
+          }) => {
+            if (!branch) {
+              return {
+                status: 404
+              };
+            }
 
-          return Promise.reject(error);
+            const outputLocation = (0, _locaters.getOutputLocation)({
+              rootLocation,
+              cacheFolderRelativeLocation,
+              abstractFolderRelativeLocation,
+              filename: script,
+              branch
+            });
+            return fileService({
+              method,
+              url: new _url.URL(`file:///${outputLocation}.map${url.search}`),
+              headers
+            }); // .then(({ status, headers = {}, body }) => {
+            //   headers.vary = [...(headers.vary ? [headers.vary] : []), "User-agent"].join(",")
+            //   return { status, headers, body }
+            // })
+          }, error => {
+            if (error && error.reason === "Unexpected directory operation") {
+              return {
+                status: 403
+              };
+            }
+
+            return Promise.reject(error);
+          });
         });
-      });
-    }
+      }
 
-    const {
-      platformName,
-      platformVersion
-    } = (0, _getPlatformAndVersionFromHeaders.getPlatformAndVersionFromHeaders)(headers);
-    const groupId = getGroupIdForPlatform({
-      platformName,
-      platformVersion
-    });
-    return getFileCompiled({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
-      compile,
-      inputETagClient: headers.has("if-none-match") ? headers.get("if-none-match") : undefined,
-      groupId,
-      getBabelPlugins: () => getPluginsFromGroupId(groupId),
-      cacheEnabled,
-      cacheAutoClean,
-      cacheTrackHit
-    }).then(({
-      status,
-      inputETag,
-      outputRelativeLocation,
-      output
-    }) => {
-      // here status can be "created", "updated", "cached"
-      // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
-      // if-none-match c'est forcément le etag du client qui a match
-      // faudra changer ça non?
-      if (headers.has("if-none-match") && status === "cached") {
+      return getFileCompiled({
+        rootLocation,
+        cacheFolderRelativeLocation,
+        abstractFolderRelativeLocation,
+        filename,
+        compile,
+        inputETagClient: headers.has("if-none-match") ? headers.get("if-none-match") : undefined,
+        groupId,
+        getBabelPlugins: () => getPluginsFromGroupId(groupId),
+        cacheEnabled,
+        cacheAutoClean,
+        cacheTrackHit
+      }).then(({
+        status,
+        inputETag,
+        outputRelativeLocation,
+        output
+      }) => {
+        // here status can be "created", "updated", "cached"
+        // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
+        // if-none-match c'est forcément le etag du client qui a match
+        // faudra changer ça non?
+        if (headers.has("if-none-match") && status === "cached") {
+          return {
+            status: 304,
+            headers: {
+              "cache-control": "no-store",
+              vary: "User-Agent",
+              "x-location": outputRelativeLocation
+            }
+          };
+        }
+
         return {
-          status: 304,
+          status: 200,
           headers: {
+            Etag: inputETag,
+            "content-length": Buffer.byteLength(output),
+            "content-type": "application/javascript",
             "cache-control": "no-store",
+            vary: "User-Agent",
             "x-location": outputRelativeLocation
-          }
+          },
+          body: output
         };
-      }
+      }, error => {
+        if (error && error.reason === "Unexpected directory operation") {
+          return {
+            status: 403
+          };
+        }
 
-      return {
-        status: 200,
-        headers: {
-          Etag: inputETag,
-          "content-length": Buffer.byteLength(output),
-          "content-type": "application/javascript",
-          "cache-control": "no-store",
-          "x-location": outputRelativeLocation
-        },
-        body: output
-      };
-    }, error => {
-      if (error && error.reason === "Unexpected directory operation") {
-        return {
-          status: 403
-        };
-      }
-
-      return Promise.reject(error);
+        return Promise.reject(error);
+      });
     });
   };
 

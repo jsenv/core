@@ -19,6 +19,8 @@ var _createNodeRequestHandler = require("./createNodeRequestHandler.js");
 
 var _signal = require("@dmail/signal");
 
+var _killPort = _interopRequireDefault(require("kill-port"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // import { addNodeExceptionHandler } from "./addNodeExceptionHandler.js"
@@ -27,6 +29,7 @@ const REASON_CLOSING = "closing";
 const openServer = ({
   // by default listen localhost on a random port in https
   url = "https://127.0.0.1:0",
+  forcePort = false,
   // when port is https you must provide privateKey & certificate
   getSignature = _createSelfSignature.createSelfSignature,
   // auto close the server when the process exits (terminal closed, ctrl + C, ...)
@@ -162,7 +165,7 @@ const openServer = ({
   };
 
   const closed = (0, _signal.createSignal)();
-  return listen().then(() => {
+  return Promise.resolve().then(() => forcePort ? (0, _killPort.default)(port) : null).then(() => listen()).then(() => {
     status = "opened"; // in case port is 0 (randomly assign an available port)
     // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
 

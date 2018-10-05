@@ -8,9 +8,10 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 const root = _path.default.resolve(__dirname, "../../../");
 
-debugger;
 (0, _createCompileProfiles.createCompileProfiles)({
   root,
   into: "compile.config.json"
+}).then(() => {
+  console.log("passed");
 });
 //# sourceMappingURL=createCompileProfiles.test.js.map

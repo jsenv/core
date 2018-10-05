@@ -37,7 +37,7 @@ compile({
 }) => {
   return generate({
     outputRelativeLocation: "file.compiled.js",
-    getPluginsFromGroupId: () => []
+    getBabelPlugins: () => []
   }).then(({
     output
   }) => {

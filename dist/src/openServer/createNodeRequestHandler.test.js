@@ -8,12 +8,12 @@ var _nodeFetch = _interopRequireDefault(require("node-fetch"));
 
 var _createNodeRequestHandler = require("./createNodeRequestHandler.js");
 
-var _startServer = require("./startServer.js");
+var _openServer = require("./openServer.js");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 (0, _test.test)(() => {
-  return (0, _startServer.startServer)().then(({
+  return (0, _openServer.openServer)().then(({
     addRequestHandler,
     url,
     agent,

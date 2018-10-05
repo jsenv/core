@@ -5,8 +5,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.openChromiumClient = void 0;
 
-var _puppeteer = _interopRequireDefault(require("puppeteer"));
-
 var _createHTMLForBrowser = require("../createHTMLForBrowser.js");
 
 var _openIndexServer = require("../openIndexServer/openIndexServer.js");
@@ -16,8 +14,6 @@ var _getRemoteLocation = require("../getRemoteLocation.js");
 var _getClientSetupAndTeardown = require("../getClientSetupAndTeardown.js");
 
 var _signal = require("@dmail/signal");
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
 
@@ -53,6 +49,7 @@ const openIndexRequestInterception = ({
 };
 
 const openChromiumClient = ({
+  puppeteer,
   url = "https://127.0.0.1:0",
   server,
   compileURL,
@@ -80,7 +77,7 @@ const openChromiumClient = ({
   }
 
   const openBrowser = () => {
-    return _puppeteer.default.launch({
+    return puppeteer.launch({
       headless,
       ignoreHTTPSErrors: true // because we use a self signed certificate
       // handleSIGINT: true,

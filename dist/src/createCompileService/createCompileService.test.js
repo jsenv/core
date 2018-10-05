@@ -29,14 +29,18 @@ service({
   _assert.default.equal(properties.status, 200);
 
   console.log("ok");
-}); // service({
-//   method: "GET",
-//   url: new URL("compiled/src/__test__/file.js.map", "file:///"),
-//   headers: createHeaders({
-//     "user-agent": `node/8.0`,
-//   }),
-// }).then((properties) => {
-//   assert.equal(properties.status, 200)
-//   console.log("ok")
-// })
+});
+service({
+  method: "GET",
+  url: new _url.URL("compiled/src/__test__/file.js.map", "file:///"),
+  headers: (0, _createHeaders.createHeaders)({
+    "user-agent": `node/8.0`
+  })
+}).then(properties => {
+  _assert.default.equal(properties.body.path.endsWith(".map"), true);
+
+  _assert.default.equal(properties.status, 200);
+
+  console.log("ok");
+});
 //# sourceMappingURL=createCompileService.test.js.map
