@@ -1,4 +1,3 @@
-import puppeteer from "puppeteer"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { openIndexServer } from "../openIndexServer/openIndexServer.js"
 import { getRemoteLocation } from "../getRemoteLocation.js"
@@ -34,6 +33,7 @@ const openIndexRequestInterception = ({ url, page, body }) => {
 }
 
 export const openChromiumClient = ({
+  puppeteer,
   url = "https://127.0.0.1:0",
   server,
   compileURL,

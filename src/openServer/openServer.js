@@ -6,6 +6,7 @@ import { createSelfSignature } from "./createSelfSignature.js"
 import { processTeardown } from "./processTeardown.js"
 import { createNodeRequestHandler } from "./createNodeRequestHandler.js"
 import { createSignal } from "@dmail/signal"
+import killPort from "kill-port"
 
 const REASON_CLOSING = "closing"
 
@@ -13,6 +14,7 @@ export const openServer = (
   {
     // by default listen localhost on a random port in https
     url = "https://127.0.0.1:0",
+    forcePort = false,
     // when port is https you must provide privateKey & certificate
     getSignature = createSelfSignature,
     // auto close the server when the process exits (terminal closed, ctrl + C, ...)
@@ -142,105 +144,108 @@ export const openServer = (
 
   const closed = createSignal()
 
-  return listen().then(() => {
-    status = "opened"
+  return Promise.resolve()
+    .then(() => (forcePort ? killPort(port) : null))
+    .then(() => listen())
+    .then(() => {
+      status = "opened"
 
-    // in case port is 0 (randomly assign an available port)
-    // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-    const port = nodeServer.address().port
-    url.port = port
+      // in case port is 0 (randomly assign an available port)
+      // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
+      const port = nodeServer.address().port
+      url.port = port
 
-    const closeConnections = (reason) => {
-      // should we do this async ?
-      // should we do this before closing the server ?
-      connections.forEach((connection) => {
-        connection.destroy(reason)
-      })
-    }
-
-    let close = ({ isError = false, reason = REASON_CLOSING } = {}) => {
-      if (status !== "opened") {
-        throw new Error(`server status must be "opened" during close() (got ${status}`)
+      const closeConnections = (reason) => {
+        // should we do this async ?
+        // should we do this before closing the server ?
+        connections.forEach((connection) => {
+          connection.destroy(reason)
+        })
       }
 
-      // ensure we don't try to handle request while server is closing
-      requestHandlers.forEach((requestHandler) => {
-        nodeServer.removeListener("request", requestHandler)
-      })
-      requestHandlers.length = 0
+      let close = ({ isError = false, reason = REASON_CLOSING } = {}) => {
+        if (status !== "opened") {
+          throw new Error(`server status must be "opened" during close() (got ${status}`)
+        }
 
-      status = "closing"
+        // ensure we don't try to handle request while server is closing
+        requestHandlers.forEach((requestHandler) => {
+          nodeServer.removeListener("request", requestHandler)
+        })
+        requestHandlers.length = 0
 
-      return new Promise((resolve, reject) => {
-        // closing server prevent it from accepting new connections
-        // but opened connection must be shutdown before the close event is emitted
-        nodeServer.once("close", (error) => {
-          if (error) {
-            reject(error)
-          } else {
-            resolve()
+        status = "closing"
+
+        return new Promise((resolve, reject) => {
+          // closing server prevent it from accepting new connections
+          // but opened connection must be shutdown before the close event is emitted
+          nodeServer.once("close", (error) => {
+            if (error) {
+              reject(error)
+            } else {
+              resolve()
+            }
+          })
+          nodeServer.close()
+          closeClients({ isError, reason }).then(() => {
+            closeConnections(reason)
+          })
+        }).then(() => {
+          status = "closed"
+          closed.emit()
+        })
+      }
+
+      if (autoCloseOnError) {
+        const removeAutoCloseOnError = addInternalRequestHandler((nodeRequest, nodeResponse) => {
+          if (nodeResponse.statusCode === 500) {
+            close({
+              isError: true,
+              // we don't specify the true error object but only a string
+              // identifying the error to avoid sending stacktrace to client
+              // and right now there is no clean way to retrieve error from here
+              reason: nodeResponse.statusMessage || "internal error",
+            })
           }
         })
-        nodeServer.close()
-        closeClients({ isError, reason }).then(() => {
-          closeConnections(reason)
-        })
-      }).then(() => {
-        status = "closed"
-        closed.emit()
-      })
-    }
-
-    if (autoCloseOnError) {
-      const removeAutoCloseOnError = addInternalRequestHandler((nodeRequest, nodeResponse) => {
-        if (nodeResponse.statusCode === 500) {
-          close({
-            isError: true,
-            // we don't specify the true error object but only a string
-            // identifying the error to avoid sending stacktrace to client
-            // and right now there is no clean way to retrieve error from here
-            reason: nodeResponse.statusMessage || "internal error",
-          })
+        const wrappedClose = close
+        close = (...args) => {
+          removeAutoCloseOnError()
+          return wrappedClose(...args)
         }
-      })
-      const wrappedClose = close
-      close = (...args) => {
-        removeAutoCloseOnError()
-        return wrappedClose(...args)
       }
-    }
 
-    if (autoCloseOnExit) {
-      const removeTeardown = processTeardown((exitReason) => {
-        close({ reason: `server process exiting ${exitReason}` })
-      })
-      const wrappedClose = close
-      close = (...args) => {
-        removeTeardown()
-        return wrappedClose(...args)
+      if (autoCloseOnExit) {
+        const removeTeardown = processTeardown((exitReason) => {
+          close({ reason: `server process exiting ${exitReason}` })
+        })
+        const wrappedClose = close
+        close = (...args) => {
+          removeTeardown()
+          return wrappedClose(...args)
+        }
       }
-    }
 
-    if (autoCloseOnCrash) {
-      // and if we do that we have to remove the listener
-      // while closing to avoid closing twice in case
-      // addNodeExceptionHandler((exception) => {
-      //   return close({ reason: exception }).then(
-      //     // to indicates exception is not handled
-      //     () => false,
-      //   )
-      // })
-    }
+      if (autoCloseOnCrash) {
+        // and if we do that we have to remove the listener
+        // while closing to avoid closing twice in case
+        // addNodeExceptionHandler((exception) => {
+        //   return close({ reason: exception }).then(
+        //     // to indicates exception is not handled
+        //     () => false,
+        //   )
+        // })
+      }
 
-    return {
-      url,
-      nodeServer,
-      addRequestHandler,
-      agent,
-      close,
-      closed,
-    }
-  })
+      return {
+        url,
+        nodeServer,
+        addRequestHandler,
+        agent,
+        close,
+        closed,
+      }
+    })
 }
 
 export const listenRequest = (nodeServer, requestHandler) => {

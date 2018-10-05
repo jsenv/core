@@ -2,10 +2,10 @@ import { test } from "@dmail/test"
 import assert from "assert"
 import fetch from "node-fetch"
 import { createNodeRequestHandler } from "./createNodeRequestHandler.js"
-import { startServer } from "./startServer.js"
+import { openServer } from "./openServer.js"
 
 test(() => {
-  return startServer().then(({ addRequestHandler, url, agent, close }) => {
+  return openServer().then(({ addRequestHandler, url, agent, close }) => {
     const nodeRequestHandler = createNodeRequestHandler({
       handler: () => {
         // as we can see the whole concept behind createNodeRequestHandler

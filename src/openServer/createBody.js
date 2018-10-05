@@ -3,6 +3,7 @@ import { createPromiseAndHooks } from "../promise.js"
 import { createSignal } from "@dmail/signal"
 
 const isNodeStream = (a) => {
+  if (a === undefined) return false
   if (a instanceof stream.Stream || a instanceof stream.Writable) {
     return true
   }
@@ -17,7 +18,7 @@ const closeStream = (stream) => {
   }
 }
 
-const createTwoWayStream = () => {
+const createTwoWayStream = ({ willAutoClose = false } = {}) => {
   const buffers = []
   let length = 0
   let status = "opened"
@@ -55,6 +56,10 @@ const createTwoWayStream = () => {
   }
 
   const write = (data) => {
+    // if (status === "closed") {
+    //   return
+    // }
+    // console.log("writing", data.toString())
     buffers.push(data)
     length += data.length
     writed.emit(data)
@@ -85,9 +90,12 @@ const createTwoWayStream = () => {
           stream.write(buffer)
         })
       }
-      writed.listen((buffer) => {
+      const writeListener = writed.listen((buffer) => {
         stream.write(buffer)
       })
+      // closed.listenOnce(() => {
+      //   writeListener.remove()
+      // })
     }
     if (propagateClose) {
       closed.listenOnce(() => {
@@ -109,6 +117,7 @@ const createTwoWayStream = () => {
     writed,
     pipeTo,
     promise,
+    willAutoClose,
   })
 }
 
@@ -125,27 +134,31 @@ const stringToArrayBuffer = (string) => {
 }
 
 export const createBody = (data) => {
-  const twoWayStream = createTwoWayStream()
+  let twoWayStream
 
-  if (data !== undefined) {
-    if (isNodeStream(data)) {
-      const nodeStream = data
+  if (data === undefined) {
+    twoWayStream = createTwoWayStream()
+  } else if (isNodeStream(data)) {
+    twoWayStream = createTwoWayStream({ willAutoClose: true })
 
-      // nodeStream.resume() ?
-      nodeStream.once("error", (error) => {
-        twoWayStream.error(error)
-      })
-      nodeStream.on("data", (data) => {
-        twoWayStream.write(data)
-      })
-      nodeStream.once("end", () => {
-        twoWayStream.close()
-      })
-    } else if (data && data.pipeTo) {
-      data.pipeTo(twoWayStream)
-    } else {
+    const nodeStream = data
+
+    // nodeStream.resume() ?
+    nodeStream.once("error", (error) => {
+      twoWayStream.error(error)
+    })
+    nodeStream.on("data", (data) => {
       twoWayStream.write(data)
-    }
+    })
+    nodeStream.once("end", () => {
+      twoWayStream.close()
+    })
+  } else if (data && data.pipeTo) {
+    twoWayStream = createTwoWayStream({ willAutoClose: data.willAutoClose })
+    data.pipeTo(twoWayStream)
+  } else if (data !== undefined) {
+    twoWayStream = createTwoWayStream()
+    twoWayStream.write(data)
   }
 
   const readAsString = () => {

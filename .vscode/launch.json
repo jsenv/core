@@ -6,6 +6,7 @@
       "type": "node",
       "protocol": "inspector",
       "request": "launch",
+      "preLaunchTask": "compile", // ensure dist is fresh (compile before running)
       "program": "${file}",
       "autoAttachChildProcesses": true,
       "sourceMaps": true,

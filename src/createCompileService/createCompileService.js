@@ -639,68 +639,72 @@ export const createCompileService = ({
     // il sait à quoi ça correspond vraiment
     // par contre ça fait 2 requête http
 
-    if (filename.endsWith(".map")) {
-      const fileLock = lockForRessource(
-        getCacheDataLocation({
-          rootLocation,
-          cacheFolderRelativeLocation,
-          abstractFolderRelativeLocation,
-          filename,
-        }),
-      )
-
-      return fileLock.chain(() => {
-        const script = filename.slice(0, -4) // 'folder/file.js.map' -> 'folder.file.js'
-
-        // if we receive something like compiled/folder/file.js.map
-        // we redirect to build/folder/file.js/jqjcijjojio/file.js.map
-
-        return getFileBranch({
-          rootLocation,
-          cacheFolderRelativeLocation,
-          abstractFolderRelativeLocation,
-          filename: script,
-          compile,
-        }).then(
-          ({ branch }) => {
-            if (!branch) {
-              return {
-                status: 404,
-              }
-            }
-
-            const outputLocation = getOutputLocation({
-              rootLocation,
-              cacheFolderRelativeLocation,
-              abstractFolderRelativeLocation,
-              filename,
-              branch,
-            })
-
-            return fileService({
-              method,
-              url: new URL(`file:///${outputLocation}${url.search}`),
-              headers,
-            })
-          },
-          (error) => {
-            if (error && error.reason === "Unexpected directory operation") {
-              return {
-                status: 403,
-              }
-            }
-            return Promise.reject(error)
-          },
-        )
-      })
-    }
-
     return compileProfilePromise.then(({ getGroupIdForPlatform, getPluginsFromGroupId }) => {
       const { platformName, platformVersion } = getPlatformAndVersionFromHeaders(headers)
       const groupId = getGroupIdForPlatform({
         platformName,
         platformVersion,
       })
+
+      if (filename.endsWith(".map")) {
+        const fileLock = lockForRessource(
+          getCacheDataLocation({
+            rootLocation,
+            cacheFolderRelativeLocation,
+            abstractFolderRelativeLocation,
+            filename,
+          }),
+        )
+
+        return fileLock.chain(() => {
+          const script = filename.slice(0, -4) // 'folder/file.js.map' -> 'folder.file.js'
+
+          // if we receive something like compiled/folder/file.js.map
+          // we redirect to build/folder/file.js/jqjcijjojio/file.js.map
+
+          return getFileBranch({
+            rootLocation,
+            cacheFolderRelativeLocation,
+            abstractFolderRelativeLocation,
+            filename: script,
+            compile,
+            groupId,
+          }).then(
+            ({ branch }) => {
+              if (!branch) {
+                return {
+                  status: 404,
+                }
+              }
+
+              const outputLocation = getOutputLocation({
+                rootLocation,
+                cacheFolderRelativeLocation,
+                abstractFolderRelativeLocation,
+                filename: script,
+                branch,
+              })
+
+              return fileService({
+                method,
+                url: new URL(`file:///${outputLocation}.map${url.search}`),
+                headers,
+              }) // .then(({ status, headers = {}, body }) => {
+              //   headers.vary = [...(headers.vary ? [headers.vary] : []), "User-agent"].join(",")
+              //   return { status, headers, body }
+              // })
+            },
+            (error) => {
+              if (error && error.reason === "Unexpected directory operation") {
+                return {
+                  status: 403,
+                }
+              }
+              return Promise.reject(error)
+            },
+          )
+        })
+      }
 
       return getFileCompiled({
         rootLocation,
@@ -726,6 +730,7 @@ export const createCompileService = ({
               status: 304,
               headers: {
                 "cache-control": "no-store",
+                vary: "User-Agent",
                 "x-location": outputRelativeLocation,
               },
             }
@@ -738,6 +743,7 @@ export const createCompileService = ({
               "content-length": Buffer.byteLength(output),
               "content-type": "application/javascript",
               "cache-control": "no-store",
+              vary: "User-Agent",
               "x-location": outputRelativeLocation,
             },
             body: output,

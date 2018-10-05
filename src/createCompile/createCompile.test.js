@@ -27,7 +27,7 @@ compile({
 }).then(({ generate }) => {
   return generate({
     outputRelativeLocation: "file.compiled.js",
-    getPluginsFromGroupId: () => [],
+    getBabelPlugins: () => [],
   }).then(({ output }) => {
     global.System = {
       register: (dependencies, fn) => {
