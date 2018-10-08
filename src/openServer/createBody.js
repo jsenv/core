@@ -56,10 +56,9 @@ const createTwoWayStream = ({ willAutoClose = false } = {}) => {
   }
 
   const write = (data) => {
-    // if (status === "closed") {
-    //   return
-    // }
-    // console.log("writing", data.toString())
+    if (status === "closed") {
+      throw new Error("write after end")
+    }
     buffers.push(data)
     length += data.length
     writed.emit(data)
@@ -93,9 +92,9 @@ const createTwoWayStream = ({ willAutoClose = false } = {}) => {
       const writeListener = writed.listen((buffer) => {
         stream.write(buffer)
       })
-      // closed.listenOnce(() => {
-      //   writeListener.remove()
-      // })
+      closed.listenOnce(() => {
+        writeListener.remove()
+      })
     }
     if (propagateClose) {
       closed.listenOnce(() => {
