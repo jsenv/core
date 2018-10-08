@@ -83,8 +83,8 @@ export const openCompileServer = ({
 
         return [
           ({ headers }) => {
-            if (headers.get("accept") === "text/event-stream") {
-              return fileChangedSSE.connect(headers.get("last-event-id"))
+            if (headers.accept === "text/event-stream") {
+              return fileChangedSSE.connect(headers["last-event-id"])
             }
             return null
           },
