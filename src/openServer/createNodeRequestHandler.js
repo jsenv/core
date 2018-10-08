@@ -21,27 +21,20 @@ export const createRequestFromNodeRequest = (nodeRequest, serverURL) => {
   })
 }
 
-export const populateNodeResponse = (nodeResponse, { status, reason = "", headers, body }) => {
-  nodeResponse.writeHead(status, reason, headers)
-  pipe(body, nodeResponse)
-}
-
-const createResponse = (
-  { method }, // this is the request method
-  { status = 501, reason, headers = {}, body = createBody() } = {},
+export const populateNodeResponse = (
+  nodeResponse,
+  { status, reason, headers, body },
+  { ignoreBody },
 ) => {
-  if (method === "HEAD") {
-    // don't send body for HEAD requests
-    body = createBody()
+  nodeResponse.writeHead(status, reason, headers)
+  if (ignoreBody) {
+    nodeResponse.end()
+  } else {
+    pipe(createBody(body), nodeResponse)
   }
-  if (body) {
-    body = createBody(body)
-  }
-
-  return Object.freeze({ status, reason, headers, body })
 }
 
-export const createNodeRequestHandler = ({ handler, transform = (response) => response, url }) => {
+export const createNodeRequestHandler = ({ handler, url }) => {
   return (nodeRequest, nodeResponse) => {
     // should have some kind of id for a request
     // so that logs knows whichs request they belong to
@@ -53,23 +46,19 @@ export const createNodeRequestHandler = ({ handler, transform = (response) => re
     })
 
     return Promise.resolve()
-      .then(() => {
-        return handler(request)
-      })
-      .then((responseProperties) => {
-        const response = createResponse(request, responseProperties)
-        return transform(response)
-      })
+      .then(() => handler(request))
       .catch((error) => {
-        return createResponse(request, {
+        return {
           status: 500,
           reason: "internal error",
           body: error && error.stack ? error.stack : error,
-        })
+        }
       })
       .then((finalResponse) => {
         console.log(`${finalResponse.status} ${request.url}`)
-        populateNodeResponse(nodeResponse, finalResponse)
+        populateNodeResponse(nodeResponse, finalResponse, {
+          ignoreBody: request.method === "HEAD",
+        })
       })
   }
 }

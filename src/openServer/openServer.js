@@ -74,8 +74,8 @@ export const openServer = (
     }
   }
 
-  const addRequestHandler = (handler, transform) => {
-    const nodeRequestHandler = createNodeRequestHandler({ handler, transform, url })
+  const addRequestHandler = (handler) => {
+    const nodeRequestHandler = createNodeRequestHandler({ handler, url })
     return addInternalRequestHandler(nodeRequestHandler)
   }
 

@@ -180,15 +180,19 @@ export const openCompileServer = ({
         }
       }
 
-      const handler = createResponseGenerator({
-        services: [
-          ...(watch ? createWatchServices() : []),
-          createCompileServiceCustom(),
-          createFileServiceCustom(),
-        ],
-      })
+      const services = [
+        ...(watch ? createWatchServices() : []),
+        createCompileServiceCustom(),
+        createFileServiceCustom(),
+      ]
 
-      server.addRequestHandler(handler, (response) => (cors ? enableCORS(response) : response))
+      const responseGenerator = createResponseGenerator(...services)
+
+      server.addRequestHandler((request) => {
+        return responseGenerator(request).then((response) => {
+          return cors ? enableCORS(response) : response
+        })
+      })
 
       return {
         ...server,
