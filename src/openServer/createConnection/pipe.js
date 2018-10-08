@@ -18,11 +18,22 @@ const listenError = (dataSource, cb) => {
   return () => {}
 }
 
+const isNodeClientRequest = (dataSource) => {
+  return isNodeStream(dataSource) && "abort" in dataSource && "flushHeaders" in dataSource
+}
+
 const listenCancel = (dataSource, cb) => {
   if (isTwoWayStream(dataSource)) {
     const listener = dataSource.cancelled.listenOnce(cb)
     return () => {
       listener.remove()
+    }
+  }
+  // https://nodejs.org/api/http.html#http_event_abort
+  if (isNodeClientRequest(dataSource)) {
+    dataSource.once("abort", cb)
+    return () => {
+      dataSource.removeListener("abort", cb)
     }
   }
   if (isNodeStream(dataSource)) {
@@ -91,9 +102,11 @@ const callCancel = (stream) => {
   if (isTwoWayStream(stream)) {
     return stream.cancel()
   }
+  if (isNodeClientRequest(stream)) {
+    return stream.abort()
+  }
   if (isNodeStream(stream)) {
-    // node stream have no cancel mecanism
-    return undefined
+    return stream.destroy()
   }
   return undefined
 }
@@ -127,7 +140,7 @@ export const pipe = (
   }
   if (pipeData) {
     // if streamA is already closed or errored or cancelled
-    // we should not attach this listener ?
+    // we should not listenData right ?
     const removeDataListener = listenData(streamA, (data) => {
       callWrite(streamB, data)
     })

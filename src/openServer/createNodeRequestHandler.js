@@ -3,7 +3,6 @@
 import { URL } from "url"
 import { createBody, pipe } from "./createConnection/index.js"
 import { headersFromObject } from "./headers.js"
-import { createSignal } from "@dmail/signal"
 
 // serverURL pourrait valoir par défaut `file:///${process.cwd()}` ?
 export const createRequestFromNodeRequest = (nodeRequest, serverURL) => {
@@ -44,9 +43,6 @@ const createResponse = (
 
 export const createNodeRequestHandler = ({ handler, transform = (response) => response, url }) => {
   return (nodeRequest, nodeResponse) => {
-    const closed = createSignal({ smart: true })
-    nodeResponse.once("close", () => closed.emit())
-
     // should have some kind of id for a request
     // so that logs knows whichs request they belong to
     const request = createRequestFromNodeRequest(nodeRequest, url)
@@ -73,10 +69,6 @@ export const createNodeRequestHandler = ({ handler, transform = (response) => re
       })
       .then((finalResponse) => {
         console.log(`${finalResponse.status} ${request.url}`)
-        // ensure body is closed when client is closed
-        closed.listen(() => {
-          finalResponse.body.close()
-        })
         populateNodeResponse(nodeResponse, finalResponse)
       })
   }

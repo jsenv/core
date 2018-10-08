@@ -21,6 +21,9 @@ export const createTwoWayStream = () => {
   const error = (e) => {
     status = "errored"
     errored.emit(e)
+    // maybe should we reset smartMemory
+    // writed.smartMemory.length = 0
+    // but I think it's better to avoid doing anything in case of error
     throw e
   }
 
