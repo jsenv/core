@@ -1,0 +1,24 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../../src/openServer/createConnection/createBody.test.js"
+  ],
+  "names": [
+    "getClosed",
+    "body",
+    "closed",
+    "listen",
+    "getText",
+    "text",
+    "writed",
+    "data",
+    "actual",
+    "expected",
+    "assert",
+    "equal"
+  ],
+  "mappings": ";;AAAA;;AACA;;;;AAEA,MAAMA,SAAS,GAAIC,IAAD,IAAU;AAC1B,MAAIC,MAAM,GAAG,KAAb;AACAD,EAAAA,IAAI,CAACC,MAAL,CAAYC,MAAZ,CAAmB,MAAM;AACvBD,IAAAA,MAAM,GAAG,IAAT;AACD,GAFD;AAGA,SAAOA,MAAP;AACD,CAND;;AAQA,MAAME,OAAO,GAAIH,IAAD,IAAU;AACxB,MAAII,IAAI,GAAG,EAAX;AACAJ,EAAAA,IAAI,CAACK,MAAL,CAAYH,MAAZ,CAAoBI,IAAD,IAAU;AAC3BF,IAAAA,IAAI,IAAIE,IAAR;AACD,GAFD;AAGA,SAAOF,IAAP;AACD,CAND;;AAQA;AACE,QAAMJ,IAAI,GAAG,6BAAb;AAEA;AACE,UAAMO,MAAM,GAAGR,SAAS,CAACC,IAAD,CAAxB;AACA,UAAMQ,QAAQ,GAAG,IAAjB;;AACAC,oBAAOC,KAAP,CAAaH,MAAb,EAAqBC,QAArB;AACD;AAED;AACE,UAAMD,MAAM,GAAGJ,OAAO,CAACH,IAAD,CAAtB;AACA,UAAMQ,QAAQ,GAAG,EAAjB;;AACAC,oBAAOC,KAAP,CAAaH,MAAb,EAAqBC,QAArB;AACD;AACF",
+  "sourcesContent": [
+    "import { createBody } from \"./createBody.js\"\nimport assert from \"assert\"\n\nconst getClosed = (body) => {\n  let closed = false\n  body.closed.listen(() => {\n    closed = true\n  })\n  return closed\n}\n\nconst getText = (body) => {\n  let text = \"\"\n  body.writed.listen((data) => {\n    text += data\n  })\n  return text\n}\n\n{\n  const body = createBody()\n\n  {\n    const actual = getClosed(body)\n    const expected = true\n    assert.equal(actual, expected)\n  }\n\n  {\n    const actual = getText(body)\n    const expected = \"\"\n    assert.equal(actual, expected)\n  }\n}\n"
+  ]
+}

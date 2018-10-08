@@ -25,8 +25,8 @@ const getPlatformNameAndVersionFromUserAgent = userAgent => {
 };
 
 const getPlatformAndVersionFromHeaders = headers => {
-  if (headers.has("user-agent")) {
-    return getPlatformNameAndVersionFromUserAgent(headers.get("user-agent"));
+  if ("user-agent" in headers) {
+    return getPlatformNameAndVersionFromUserAgent(headers["user-agent"]);
   }
 
   return {

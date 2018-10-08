@@ -1,0 +1,41 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../src/openServer/headers.js"
+  ],
+  "names": [
+    "normalizeName",
+    "headerName",
+    "String",
+    "test",
+    "TypeError",
+    "toLowerCase",
+    "normalizeValue",
+    "headerValue",
+    "headersFromString",
+    "headerString",
+    "headers",
+    "pairs",
+    "split",
+    "forEach",
+    "pair",
+    "index",
+    "indexOf",
+    "key",
+    "slice",
+    "value",
+    "headersToArray",
+    "Object",
+    "keys",
+    "map",
+    "name",
+    "headersToString",
+    "convertName",
+    "headersString",
+    "join"
+  ],
+  "mappings": ";;;;;;;AAAA;;;;AAKA,MAAMA,aAAa,GAAIC,UAAD,IAAgB;AACpCA,EAAAA,UAAU,GAAGC,MAAM,CAACD,UAAD,CAAnB;;AACA,MAAI,6BAA6BE,IAA7B,CAAkCF,UAAlC,CAAJ,EAAmD;AACjD,UAAM,IAAIG,SAAJ,CAAc,wCAAd,CAAN;AACD;;AAED,SAAOH,UAAU,CAACI,WAAX,EAAP;AACD,CAPD;;AASA,MAAMC,cAAc,GAAIC,WAAD,IAAiB;AACtC,SAAOL,MAAM,CAACK,WAAD,CAAb;AACD,CAFD,C,CAIA;;;AACO,MAAMC,iBAAiB,GAAIC,YAAD,IAAkB;AACjD,QAAMC,OAAO,GAAG,EAAhB;;AAEA,MAAID,YAAJ,EAAkB;AAChB,UAAME,KAAK,GAAGF,YAAY,CAACG,KAAb,CAAmB,MAAnB,CAAd;AACAD,IAAAA,KAAK,CAACE,OAAN,CAAeC,IAAD,IAAU;AACtB,YAAMC,KAAK,GAAGD,IAAI,CAACE,OAAL,CAAa,IAAb,CAAd;;AACA,UAAID,KAAK,GAAG,CAAZ,EAAe;AACb,cAAME,GAAG,GAAGH,IAAI,CAACI,KAAL,CAAW,CAAX,EAAcH,KAAd,CAAZ;AACA,cAAMI,KAAK,GAAGL,IAAI,CAACI,KAAL,CAAWH,KAAK,GAAG,CAAnB,CAAd;AACAL,QAAAA,OAAO,CAACV,aAAa,CAACiB,GAAD,CAAd,CAAP,GAA8BX,cAAc,CAACa,KAAD,CAA5C;AACD;AACF,KAPD;AAQD;;AAED,SAAOT,OAAP;AACD,CAhBM;;;;AAkBP,MAAMU,cAAc,GAAIV,OAAD,IAAa;AAClC,SAAOW,MAAM,CAACC,IAAP,CAAYZ,OAAZ,EAAqBa,GAArB,CAA0BC,IAAD,IAAU;AACxC,WAAO;AACLA,MAAAA,IADK;AAELL,MAAAA,KAAK,EAAET,OAAO,CAACc,IAAD;AAFT,KAAP;AAID,GALM,CAAP;AAMD,CAPD;;AASO,MAAMC,eAAe,GAAG,CAACf,OAAD,EAAU;AAAEgB,EAAAA,WAAW,GAAIF,IAAD,IAAUA;AAA1B,CAAV,KAA+C;AAC5E,QAAMG,aAAa,GAAGP,cAAc,CAACV,OAAD,CAAd,CAAwBa,GAAxB,CAA4B,CAAC;AAAEC,IAAAA,IAAF;AAAQL,IAAAA;AAAR,GAAD,KAAqB;AACrE,WAAQ,GAAEO,WAAW,CAACF,IAAD,CAAO,KAAIL,KAAM,EAAtC;AACD,GAFqB,CAAtB;AAIA,SAAOQ,aAAa,CAACC,IAAd,CAAmB,MAAnB,CAAP;AACD,CANM",
+  "sourcesContent": [
+    "/*\nhttps://developer.mozilla.org/en-US/docs/Web/API/Headers\nhttps://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch\n*/\n\nconst normalizeName = (headerName) => {\n  headerName = String(headerName)\n  if (/[^a-z0-9\\-#$%&'*+.\\^_`|~]/i.test(headerName)) {\n    throw new TypeError(\"Invalid character in header field name\")\n  }\n\n  return headerName.toLowerCase()\n}\n\nconst normalizeValue = (headerValue) => {\n  return String(headerValue)\n}\n\n// https://gist.github.com/mmazer/5404301\nexport const headersFromString = (headerString) => {\n  const headers = {}\n\n  if (headerString) {\n    const pairs = headerString.split(\"\\r\\n\")\n    pairs.forEach((pair) => {\n      const index = pair.indexOf(\": \")\n      if (index > 0) {\n        const key = pair.slice(0, index)\n        const value = pair.slice(index + 2)\n        headers[normalizeName(key)] = normalizeValue(value)\n      }\n    })\n  }\n\n  return headers\n}\n\nconst headersToArray = (headers) => {\n  return Object.keys(headers).map((name) => {\n    return {\n      name,\n      value: headers[name],\n    }\n  })\n}\n\nexport const headersToString = (headers, { convertName = (name) => name }) => {\n  const headersString = headersToArray(headers).map(({ name, value }) => {\n    return `${convertName(name)}: ${value}`\n  })\n\n  return headersString.join(\"\\r\\n\")\n}\n"
+  ]
+}

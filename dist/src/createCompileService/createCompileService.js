@@ -755,7 +755,7 @@ const createCompileService = ({
         abstractFolderRelativeLocation,
         filename,
         compile,
-        inputETagClient: headers.has("if-none-match") ? headers.get("if-none-match") : undefined,
+        inputETagClient: "if-none-match" in headers ? headers["if-none-match"] : undefined,
         groupId,
         getBabelPlugins: () => getPluginsFromGroupId(groupId),
         cacheEnabled,
@@ -771,7 +771,7 @@ const createCompileService = ({
         // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
         // if-none-match c'est forcément le etag du client qui a match
         // faudra changer ça non?
-        if (headers.has("if-none-match") && status === "cached") {
+        if ("if-none-match" in headers && status === "cached") {
           return {
             status: 304,
             headers: {

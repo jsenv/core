@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.createSSERoom = void 0;
 
-var _createBody = require("../openServer/createBody.js");
+var _index = require("../openServer/createConnection/index.js");
 
 // https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
 // https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
@@ -110,7 +110,7 @@ const createSSERoom = ({
     history.add(joinEvent);
     const events = [joinEvent, // send events which occured between lastEventId & now
     ...(lastEventId === undefined ? [] : history.since(lastEventId))];
-    const connection = (0, _createBody.createBody)();
+    const connection = (0, _index.createTwoWayStream)();
     connections.add(connection);
     connection.closed.listen(() => {
       console.log(`client disconnected, number of client connected to event source: ${connections.size}`);
@@ -164,7 +164,7 @@ const createSSERoom = ({
   };
 
   const close = () => {
-    // it should close every connection no?
+    connections.forEach(connection => connection.close());
     clearInterval(interval);
     history.reset();
     state = "closed";

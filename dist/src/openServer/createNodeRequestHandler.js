@@ -7,9 +7,9 @@ exports.enableCORS = exports.createNodeRequestHandler = exports.populateNodeResp
 
 var _url = require("url");
 
-var _createBody = require("./createBody.js");
+var _index = require("./createConnection/index.js");
 
-var _createHeaders = require("./createHeaders.js");
+var _headers = require("./headers.js");
 
 var _signal = require("@dmail/signal");
 
@@ -23,8 +23,8 @@ const createRequestFromNodeRequest = (nodeRequest, serverURL) => {
     method
   } = nodeRequest;
   const url = new _url.URL(nodeRequest.url, serverURL);
-  const headers = (0, _createHeaders.createHeaders)(nodeRequest.headers);
-  const body = (0, _createBody.createBody)(method === "POST" || method === "PUT" || method === "PATCH" ? nodeRequest : undefined);
+  const headers = (0, _headers.headersFromString)(nodeRequest.headers);
+  const body = (0, _index.createBody)(method === "POST" || method === "PUT" || method === "PATCH" ? nodeRequest : undefined);
   return Object.freeze({
     method,
     url,
@@ -41,33 +41,30 @@ const populateNodeResponse = (nodeResponse, {
   headers,
   body
 }) => {
-  const headerAsJSON = headers.toJSON();
-  nodeResponse.writeHead(status, reason, headerAsJSON);
-  body.pipeTo(nodeResponse);
-
-  if (body.willAutoClose === false && headers.get("connection") !== "keep-alive") {
-    body.close();
-  }
+  nodeResponse.writeHead(status, reason, headers);
+  (0, _index.pipe)(body, nodeResponse);
 };
 
 exports.populateNodeResponse = populateNodeResponse;
 
 const createResponse = ({
   method
-}, {
+}, // this is the request method
+{
   status = 501,
   reason,
-  headers = (0, _createHeaders.createHeaders)(),
-  body = (0, _createBody.createBody)()
+  headers = {},
+  body = (0, _index.createBody)()
 } = {}) => {
   if (method === "HEAD") {
     // don't send body for HEAD requests
-    body = (0, _createBody.createBody)();
-  } else {
-    body = (0, _createBody.createBody)(body);
+    body = (0, _index.createBody)();
   }
 
-  headers = (0, _createHeaders.createHeaders)(headers);
+  if (body) {
+    body = (0, _index.createBody)(body);
+  }
+
   return Object.freeze({
     status,
     reason,
@@ -125,15 +122,8 @@ const enableCORS = response => {
     "access-control-max-age": 1 // Seconds
 
   };
-  const headersWithCORS = (0, _createHeaders.createHeaders)(response.headers);
-  Object.keys(corsHeaders).forEach(corsHeaderName => {
-    if (response.headers.has(corsHeaderName) === false) {
-      // we should merge any existing response cors headers with the one above
-      headersWithCORS.append(corsHeaderName, corsHeaders[corsHeaderName]);
-    }
-  });
   return _objectSpread({}, response, {
-    headers: headersWithCORS
+    headers: _objectSpread({}, corsHeaders, response.headers)
   });
 };
 

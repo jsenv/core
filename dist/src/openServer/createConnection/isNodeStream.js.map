@@ -1,0 +1,18 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../../src/openServer/createConnection/isNodeStream.js"
+  ],
+  "names": [
+    "isNodeStream",
+    "a",
+    "undefined",
+    "stream",
+    "Stream",
+    "Writable"
+  ],
+  "mappings": ";;;;;;;AAAA;;;;AAEO,MAAMA,YAAY,GAAIC,CAAD,IAAO;AACjC,MAAIA,CAAC,KAAKC,SAAV,EAAqB,OAAO,KAAP;;AACrB,MAAID,CAAC,YAAYE,gBAAOC,MAApB,IAA8BH,CAAC,YAAYE,gBAAOE,QAAtD,EAAgE;AAC9D,WAAO,IAAP;AACD;;AACD,SAAO,KAAP;AACD,CANM",
+  "sourcesContent": [
+    "import stream from \"stream\"\n\nexport const isNodeStream = (a) => {\n  if (a === undefined) return false\n  if (a instanceof stream.Stream || a instanceof stream.Writable) {\n    return true\n  }\n  return false\n}\n"
+  ]
+}

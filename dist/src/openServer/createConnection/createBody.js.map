@@ -1,0 +1,35 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../../src/openServer/createConnection/createBody.js"
+  ],
+  "names": [
+    "stringToArrayBuffer",
+    "string",
+    "String",
+    "buffer",
+    "ArrayBuffer",
+    "length",
+    "bufferView",
+    "Uint16Array",
+    "i",
+    "charCodeAt",
+    "createBody",
+    "data",
+    "twoWayStream",
+    "readAsString",
+    "promise",
+    "then",
+    "buffers",
+    "join",
+    "text",
+    "arraybuffer",
+    "json",
+    "JSON",
+    "parse"
+  ],
+  "mappings": ";;;;;;;AAAA;;AACA;;;;;;AAEA,MAAMA,mBAAmB,GAAIC,MAAD,IAAY;AACtCA,EAAAA,MAAM,GAAGC,MAAM,CAACD,MAAD,CAAf;AACA,QAAME,MAAM,GAAG,IAAIC,WAAJ,CAAgBH,MAAM,CAACI,MAAP,GAAgB,CAAhC,CAAf,CAFsC,CAEY;;AAClD,QAAMC,UAAU,GAAG,IAAIC,WAAJ,CAAgBJ,MAAhB,CAAnB;AACA,MAAIK,CAAC,GAAG,CAAR;;AACA,SAAOA,CAAC,GAAGP,MAAM,CAACI,MAAlB,EAA0B;AACxBC,IAAAA,UAAU,CAACE,CAAD,CAAV,GAAgBP,MAAM,CAACQ,UAAP,CAAkBD,CAAlB,CAAhB;AACAA,IAAAA,CAAC;AACF;;AACD,SAAOL,MAAP;AACD,CAVD;;AAYO,MAAMO,UAAU,GAAIC,IAAD,IAAU;AAClC,QAAMC,YAAY,GAAG,6CAArB;AACA,kBAAKD,IAAL,EAAWC,YAAX;;AAEA,QAAMC,YAAY,GAAG,MAAM;AACzB,WAAOD,YAAY,CAACE,OAAb,CAAqBC,IAArB,CAA2BC,OAAD,IAAaA,OAAO,CAACC,IAAR,CAAa,EAAb,CAAvC,CAAP;AACD,GAFD;;AAIA,QAAMC,IAAI,GAAG,MAAM;AACjB,WAAOL,YAAY,EAAnB;AACD,GAFD;;AAIA,QAAMM,WAAW,GAAG,MAAM;AACxB,WAAOD,IAAI,GAAGH,IAAP,CAAYf,mBAAZ,CAAP;AACD,GAFD;;AAIA,QAAMoB,IAAI,GAAG,MAAM;AACjB,WAAOF,IAAI,GAAGH,IAAP,CAAYM,IAAI,CAACC,KAAjB,CAAP;AACD,GAFD;;AAIA,2BACKV,YADL;AAEEM,IAAAA,IAFF;AAGEC,IAAAA,WAHF;AAIEC,IAAAA;AAJF;AAMD,CA1BM",
+  "sourcesContent": [
+    "import { createTwoWayStream } from \"./createTwoWayStream.js\"\nimport { pipe } from \"./pipe.js\"\n\nconst stringToArrayBuffer = (string) => {\n  string = String(string)\n  const buffer = new ArrayBuffer(string.length * 2) // 2 bytes for each char\n  const bufferView = new Uint16Array(buffer)\n  let i = 0\n  while (i < string.length) {\n    bufferView[i] = string.charCodeAt(i)\n    i++\n  }\n  return buffer\n}\n\nexport const createBody = (data) => {\n  const twoWayStream = createTwoWayStream()\n  pipe(data, twoWayStream)\n\n  const readAsString = () => {\n    return twoWayStream.promise.then((buffers) => buffers.join(\"\"))\n  }\n\n  const text = () => {\n    return readAsString()\n  }\n\n  const arraybuffer = () => {\n    return text().then(stringToArrayBuffer)\n  }\n\n  const json = () => {\n    return text().then(JSON.parse)\n  }\n\n  return {\n    ...twoWayStream,\n    text,\n    arraybuffer,\n    json,\n  }\n}\n"
+  ]
+}

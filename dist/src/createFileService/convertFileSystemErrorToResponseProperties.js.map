@@ -1,0 +1,19 @@
+{
+  "version": 3,
+  "sources": [
+    "../../../src/createFileService/convertFileSystemErrorToResponseProperties.js"
+  ],
+  "names": [
+    "isErrorWithCode",
+    "error",
+    "code",
+    "convertFileSystemErrorToResponseProperties",
+    "status",
+    "reason",
+    "headers"
+  ],
+  "mappings": ";;;;;;;AAAA,MAAMA,eAAe,GAAG,CAACC,KAAD,EAAQC,IAAR,KAAiB;AACvC,SAAO,OAAOD,KAAP,KAAiB,QAAjB,IAA6BA,KAAK,CAACC,IAAN,KAAeA,IAAnD;AACD,CAFD;;AAIO,MAAMC,0CAA0C,GAAIF,KAAD,IAAW;AACnE;AACA,MAAID,eAAe,CAACC,KAAD,EAAQ,QAAR,CAAnB,EAAsC;AACpC,WAAO;AACLG,MAAAA,MAAM,EAAE,GADH;AAELC,MAAAA,MAAM,EAAE;AAFH,KAAP;AAID;;AAED,MAAIL,eAAe,CAACC,KAAD,EAAQ,OAAR,CAAnB,EAAqC;AACnC,WAAO;AACLG,MAAAA,MAAM,EAAE,GADH;AAELC,MAAAA,MAAM,EAAE;AAFH,KAAP;AAID;;AAED,MAAIL,eAAe,CAACC,KAAD,EAAQ,QAAR,CAAnB,EAAsC;AACpC,WAAO;AACLG,MAAAA,MAAM,EAAE,GADH;AAELC,MAAAA,MAAM,EAAE;AAFH,KAAP;AAID,GArBkE,CAuBnE;AACA;;;AACA,MAAIL,eAAe,CAACC,KAAD,EAAQ,OAAR,CAAnB,EAAqC;AACnC,WAAO;AACLG,MAAAA,MAAM,EAAE,GADH;AAELC,MAAAA,MAAM,EAAE,cAFH;AAGLC,MAAAA,OAAO,EAAE;AACP,uBAAe,IADR,CACc;;AADd;AAHJ,KAAP;AAOD,GAjCkE,CAmCnE;;;AACA,MAAIN,eAAe,CAACC,KAAD,EAAQ,QAAR,CAAnB,EAAsC;AACpC,WAAO;AACLG,MAAAA,MAAM,EAAE,GADH;AAELC,MAAAA,MAAM,EAAE,sBAFH;AAGLC,MAAAA,OAAO,EAAE;AACP,uBAAe,GADR,CACa;;AADb;AAHJ,KAAP;AAOD;;AAED,MAAIN,eAAe,CAACC,KAAD,EAAQ,QAAR,CAAnB,EAAsC;AACpC,WAAO;AACLG,MAAAA,MAAM,EAAE,GADH;AAELC,MAAAA,MAAM,EAAE;AAFH,KAAP;AAID;;AAED,SAAO;AACLD,IAAAA,MAAM,EAAE,GADH;AAELC,IAAAA,MAAM,EAAE;AAFH,GAAP;AAID,CAzDM",
+  "sourcesContent": [
+    "const isErrorWithCode = (error, code) => {\n  return typeof error === \"object\" && error.code === code\n}\n\nexport const convertFileSystemErrorToResponseProperties = (error) => {\n  // https://iojs.org/api/errors.html#errors_eacces_permission_denied\n  if (isErrorWithCode(error, \"EACCES\")) {\n    return {\n      status: 403,\n      reason: \"no permission to read file\",\n    }\n  }\n\n  if (isErrorWithCode(error, \"EPERM\")) {\n    return {\n      status: 403,\n      reason: \"no permission to read file\",\n    }\n  }\n\n  if (isErrorWithCode(error, \"ENOENT\")) {\n    return {\n      status: 404,\n      reason: \"file not found\",\n    }\n  }\n\n  // file access may be temporarily blocked\n  // (by an antivirus scanning it because recently modified for instance)\n  if (isErrorWithCode(error, \"EBUSY\")) {\n    return {\n      status: 503,\n      reason: \"file is busy\",\n      headers: {\n        \"retry-after\": 0.01, // retry in 10ms\n      },\n    }\n  }\n\n  // emfile means there is too many files currently opened\n  if (isErrorWithCode(error, \"EMFILE\")) {\n    return {\n      status: 503,\n      reason: \"too many file opened\",\n      headers: {\n        \"retry-after\": 0.1, // retry in 100ms\n      },\n    }\n  }\n\n  if (isErrorWithCode(error, \"EISDIR\")) {\n    return {\n      status: 500,\n      reason: \"Unexpected directory operation\",\n    }\n  }\n\n  return {\n    status: 500,\n    reason: \"unknown file system error\",\n  }\n}\n"
+  ]
+}
