@@ -2,14 +2,14 @@
 
 import { URL } from "url"
 import { createBody, pipe } from "./createConnection/index.js"
-import { headersFromString } from "./headers.js"
+import { headersFromObject } from "./headers.js"
 import { createSignal } from "@dmail/signal"
 
 // serverURL pourrait valoir par défaut `file:///${process.cwd()}` ?
 export const createRequestFromNodeRequest = (nodeRequest, serverURL) => {
   const { method } = nodeRequest
   const url = new URL(nodeRequest.url, serverURL)
-  const headers = headersFromString(nodeRequest.headers)
+  const headers = headersFromObject(nodeRequest.headers)
   const body = createBody(
     method === "POST" || method === "PUT" || method === "PATCH" ? nodeRequest : undefined,
   )

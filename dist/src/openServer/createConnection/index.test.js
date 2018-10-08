@@ -20,11 +20,11 @@ const getText = body => {
     text += data;
   });
   return text;
-};
+}; // createBody() => closed with no data
+
 
 {
-  const body = (0, _index.createBody)(); // by default body is closed with no data
-
+  const body = (0, _index.createBody)();
   {
     const actual = getClosed(body);
     const expected = true;
@@ -37,7 +37,8 @@ const getText = body => {
 
     _assert.default.equal(actual, expected);
   }
-}
+} // createBody(data) => closed with data
+
 {
   const body = (0, _index.createBody)("hello world");
   {
@@ -52,11 +53,11 @@ const getText = body => {
 
     _assert.default.equal(actual, expected);
   }
-}
+} // createBody(dataSource) => closed when dataSource is closed
+
 {
   const dataSource = (0, _index.createTwoWayStream)();
-  const body = (0, _index.createBody)(dataSource); // body is closed when data source is closed
-
+  const body = (0, _index.createBody)(dataSource);
   {
     const actual = getClosed(body);
     const expected = false;

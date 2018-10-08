@@ -23,7 +23,7 @@ const createRequestFromNodeRequest = (nodeRequest, serverURL) => {
     method
   } = nodeRequest;
   const url = new _url.URL(nodeRequest.url, serverURL);
-  const headers = (0, _headers.headersFromString)(nodeRequest.headers);
+  const headers = (0, _headers.headersFromObject)(nodeRequest.headers);
   const body = (0, _index.createBody)(method === "POST" || method === "PUT" || method === "PATCH" ? nodeRequest : undefined);
   return Object.freeze({
     method,

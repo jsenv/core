@@ -1,12 +1,11 @@
-import { test } from "@dmail/test"
 import assert from "assert"
 import fetch from "node-fetch"
 import { openServer } from "./openServer.js"
 
-test(() => {
-  return openServer({
-    url: "http://127.0.0.1:8998",
-  }).then(({ addRequestHandler, url, agent, close }) => {
+openServer({
+  url: "http://127.0.0.1:8998",
+})
+  .then(({ addRequestHandler, url, agent, close }) => {
     addRequestHandler(() => {
       return {
         status: 200,
@@ -26,7 +25,9 @@ test(() => {
         return close()
       })
   })
-})
+  .then(() => {
+    console.log("passed")
+  })
 
 // ici on testera que quand on kill le child à différent moment
 // on obtient bien la réponse attendu coté client

@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.headersToString = exports.headersFromString = void 0;
+exports.headersToString = exports.headersFromString = exports.headersFromObject = void 0;
 
 /*
 https://developer.mozilla.org/en-US/docs/Web/API/Headers
@@ -21,8 +21,18 @@ const normalizeName = headerName => {
 
 const normalizeValue = headerValue => {
   return String(headerValue);
+};
+
+const headersFromObject = headersObject => {
+  const headers = {};
+  Object.keys(headersObject).forEach(headerName => {
+    headers[normalizeName(headerName)] = normalizeValue(headersObject[headerName]);
+  });
+  return headers;
 }; // https://gist.github.com/mmazer/5404301
 
+
+exports.headersFromObject = headersFromObject;
 
 const headersFromString = headerString => {
   const headers = {};

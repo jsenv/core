@@ -16,6 +16,16 @@ const normalizeValue = (headerValue) => {
   return String(headerValue)
 }
 
+export const headersFromObject = (headersObject) => {
+  const headers = {}
+
+  Object.keys(headersObject).forEach((headerName) => {
+    headers[normalizeName(headerName)] = normalizeValue(headersObject[headerName])
+  })
+
+  return headers
+}
+
 // https://gist.github.com/mmazer/5404301
 export const headersFromString = (headerString) => {
   const headers = {}
