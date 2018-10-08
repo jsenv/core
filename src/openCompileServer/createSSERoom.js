@@ -1,4 +1,4 @@
-import { createBody } from "../openServer/createBody.js"
+import { createTwoWayStream } from "../openServer/createConnection/index.js"
 
 // https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
 // https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
@@ -98,7 +98,7 @@ export const createSSERoom = (
       ...(lastEventId === undefined ? [] : history.since(lastEventId)),
     ]
 
-    const connection = createBody()
+    const connection = createTwoWayStream()
     connections.add(connection)
     connection.closed.listen(() => {
       console.log(
@@ -165,7 +165,7 @@ export const createSSERoom = (
   }
 
   const close = () => {
-    // it should close every connection no?
+    connections.forEach((connection) => connection.close())
     clearInterval(interval)
     history.reset()
     state = "closed"

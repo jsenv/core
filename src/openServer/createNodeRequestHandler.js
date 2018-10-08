@@ -1,7 +1,7 @@
 // https://github.com/jsenv/core/tree/master/src/util/rest
 
 import { URL } from "url"
-import { createBody } from "./createBody.js"
+import { createBody, pipe } from "./createConnection/index.js"
 import { headersFromString } from "./headers.js"
 import { createSignal } from "@dmail/signal"
 
@@ -24,21 +24,18 @@ export const createRequestFromNodeRequest = (nodeRequest, serverURL) => {
 
 export const populateNodeResponse = (nodeResponse, { status, reason = "", headers, body }) => {
   nodeResponse.writeHead(status, reason, headers)
-
-  body.pipeTo(nodeResponse)
-  if (body.willAutoClose === false && headers.connection !== "keep-alive") {
-    body.close()
-  }
+  pipe(body, nodeResponse)
 }
 
 const createResponse = (
-  { method },
+  { method }, // this is the request method
   { status = 501, reason, headers = {}, body = createBody() } = {},
 ) => {
   if (method === "HEAD") {
     // don't send body for HEAD requests
     body = createBody()
-  } else {
+  }
+  if (body) {
     body = createBody(body)
   }
 
