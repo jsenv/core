@@ -5,3 +5,4 @@ coverage.lcov
 build
 !src/__test__/node_modules
 compile.config.json
+dist
