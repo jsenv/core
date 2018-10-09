@@ -1,1 +1,1 @@
-module.exports = require("@dmail/project-eslint-config").config;
+module.exports = require("@dmail/project-eslint-config").config

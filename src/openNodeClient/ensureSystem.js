@@ -1,4 +1,4 @@
-import { createNodeLoader } from "@dmail/module-loader/node.js"
+// import { createNodeLoader } from "@dmail/module-loader"
 
 const memoize = (fn) => {
   let called = false

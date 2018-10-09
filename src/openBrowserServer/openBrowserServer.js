@@ -24,6 +24,7 @@ const getIndexPageHTML = ({ root }) => {
 const getPageHTML = ({ compileServerURL, compileURL, url }) => {
   const serverRoot = compileServerURL.toString().slice(0, -1)
   const fileRelativeToRoot = url.pathname.slice(1)
+  const fileLocation = `${compileURL}/${fileRelativeToRoot}`
 
   const script = `
 var eventSource = new EventSource("${serverRoot}", { withCredentials: true })
@@ -31,10 +32,17 @@ eventSource.addEventListener("file-changed", (e) => {
 	if (e.origin !== "${serverRoot}") {
 		return
 	}
-  console.log("file changed", e)
+	var fileChanged = e.data
+	var changedFileLocation = "${compileURL}/" + fileChanged
+	// we cmay be notified from file we don't care about, reload only if needed
+	// we cannot just System.delete the file because the change may have any impact, we have to reload
+	if (System.get(changedFileLocation)) {
+		console.log(fileChanged, 'modified, reloading')
+		window.location.reload()
+  }
 })
 
-window.System.import("${compileURL}/${fileRelativeToRoot}")
+window.System.import("${fileLocation}")
 `
 
   return createHTMLForBrowser({

@@ -391,12 +391,10 @@ const updateBranch = ({
     if (cacheAutoClean) {
       if (inputETag !== cache.inputETag) {
         const branchesToRemove = branches.slice()
-
-        // no need to remove the updated branch
+        // do not remove the updated branch
         const index = branchesToRemove.indexOf(branch)
         branchesToRemove.splice(index, 1)
 
-        branches.length = 0
         branchesToRemove.forEach((branch) => {
           const branchLocation = getBranchLocation({
             rootLocation,
@@ -409,6 +407,11 @@ const updateBranch = ({
           // the line below is async but non blocking
           removeFolderDeep(branchLocation)
         })
+        branches.length = 0
+        // do not remove updated branch
+        if (isUpdated) {
+          branches.push(branch)
+        }
       }
     }
 
@@ -685,9 +688,11 @@ export const createCompileService = ({
                 branch,
               })
 
+              const mapFileURL = `file:///${outputLocation}.map${url.search}`
+
               return fileService({
                 method,
-                url: new URL(`file:///${outputLocation}.map${url.search}`),
+                url: new URL(mapFileURL),
                 headers,
               }) // .then(({ status, headers = {}, body }) => {
               //   headers.vary = [...(headers.vary ? [headers.vary] : []), "User-agent"].join(",")

@@ -1,22 +1,4 @@
-import fs from "fs"
-import path from "path"
-
-const readBrowserLoader = () => {
-  return new Promise((resolve, reject) => {
-    const filename = path.resolve(
-      __dirname,
-      // we add an additional ../ to get rid of dist/
-      "../../node_modules/@dmail/module-loader/browser.js",
-    )
-    fs.readFile(filename, (error, buffer) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve(buffer.toString())
-      }
-    })
-  })
-}
+import { getBrowserSystemSource } from "@dmail/module-loader"
 
 const countLeading = (string, predicate) => {
   let leading = 0
@@ -66,13 +48,14 @@ const prefixLines = (string, prefix = "  ", { lineSeparator = "auto" } = {}) => 
 }
 
 const renderScript = ({ source }) => {
+  // https://stackoverflow.com/questions/28643272/how-to-include-an-escapedscript-script-tag-in-a-javascript-variable/28643409#28643409
   return `<script type="text/javascript">
-  ${source.trim()}
+	${source.trim().replace(/\<\/script\>/g, "<\\/script>")}
 </script>`
 }
 
 export const createHTMLForBrowser = ({ title = "Untitled", charset = "utf-8", script } = {}) => {
-  return readBrowserLoader().then((loaderSource) => {
+  return getBrowserSystemSource().then((loaderSource) => {
     return `<!doctype html>
 
 <head>
@@ -82,13 +65,7 @@ export const createHTMLForBrowser = ({ title = "Untitled", charset = "utf-8", sc
 
 <body>
   <main></main>
-  ${prefixLines(renderScript({ source: loaderSource }), "  ")}
-  ${prefixLines(
-    renderScript({
-      source: `window.System = window.createBrowserLoader.createBrowserLoader()`,
-    }),
-    "  ",
-  )}
+  ${prefixLines(renderScript({ source: loaderSource.code }), "  ")}
   ${prefixLines(
     renderScript({
       source: script,
