@@ -67,11 +67,11 @@ export const createSSERoom = (
 ) => {
   const connections = new Set()
   const history = createEventHistory(historyLength)
-  let lastEventId = 0
+  let previousEventId
   let state = "closed"
   let interval
 
-  const connect = (lastEventId) => {
+  const connect = (lastKnownId) => {
     if (connections.size > maxLength) {
       return {
         status: 503,
@@ -84,18 +84,18 @@ export const createSSERoom = (
     }
 
     const joinEvent = {
-      id: lastEventId,
+      id: previousEventId === undefined ? 0 : previousEventId + 1,
       retry: retryDuration,
       type: "join",
       data: new Date().toLocaleTimeString(),
     }
-    lastEventId++
+    previousEventId = joinEvent.id
     history.add(joinEvent)
 
     const events = [
       joinEvent,
-      // send events which occured between lastEventId & now
-      ...(lastEventId === undefined ? [] : history.since(lastEventId)),
+      // send events which occured between lastKnownId & now
+      ...(lastKnownId === undefined ? [] : history.since(lastKnownId)),
     ]
 
     const connection = createTwoWayStream()
@@ -140,8 +140,8 @@ export const createSSERoom = (
       console.log(
         `send ${event.type} event, number of client listening event source: ${connections.size}`,
       )
-      event.id = lastEventId
-      lastEventId++
+      event.id = previousEventId === undefined ? 0 : previousEventId + 1
+      previousEventId = event.id
       history.add(event)
     }
 

@@ -61,3 +61,43 @@ export const headersToString = (headers, { convertName = (name) => name }) => {
 
   return headersString.join("\r\n")
 }
+
+export const acceptContentType = (acceptHeader, contentType) => {
+  if (typeof acceptHeader !== "string") {
+    return false
+  }
+  return acceptHeader.split(",").some((accepted) => accepted === contentType)
+}
+
+const HEADERS_USING_COMMA_SEPARATED_VALUES = [
+  "accept",
+  "accept-charset",
+  "accept-language",
+  "access-control-allow-headers",
+  "access-control-allow-methods",
+  "access-control-allow-origin",
+  // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
+  "vary",
+]
+
+const headerCanContainMultipleValue = (headerName) => {
+  return HEADERS_USING_COMMA_SEPARATED_VALUES.indexOf(headerName) > -1
+}
+
+export const headersCompose = (...headerObjects) => {
+  return headerObjects.reduce((previousHeaderObject, headerObject) => {
+    const headers = { ...previousHeaderObject }
+    Object.keys(headerObject).forEach((headerName) => {
+      if (headerName in headers && headerCanContainMultipleValue(headerName)) {
+        const previousValue = headers[headerName]
+        const currentValue = headerObject[headerName]
+        if (previousValue !== currentValue) {
+          headers[headerName] = `${previousValue}, ${currentValue}`
+        }
+      } else {
+        headers[headerName] = headerObject[headerName]
+      }
+    })
+    return headers
+  }, {})
+}

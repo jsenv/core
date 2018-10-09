@@ -4,9 +4,12 @@ import { URL } from "url"
 import { createCompile } from "../createCompile/createCompile.js"
 import { createCompileService } from "../createCompileService/index.js"
 import { createFileService } from "../createFileService/index.js"
-import { createResponseGenerator } from "../openServer/createResponseGenerator.js"
-import { enableCORS } from "../openServer/createNodeRequestHandler.js"
-import { openServer } from "../openServer/openServer.js"
+import {
+  openServer,
+  enableCORS,
+  createResponseGenerator,
+  acceptContentType,
+} from "../openServer/index.js"
 import { createSSERoom } from "./createSSERoom.js"
 import { watchFile } from "../watchFile.js"
 import { createRoot } from "@dmail/project-structure"
@@ -83,7 +86,7 @@ export const openCompileServer = ({
 
         return [
           ({ headers }) => {
-            if (headers.accept === "text/event-stream") {
+            if (acceptContentType(headers.accept, "text/event-stream")) {
               return fileChangedSSE.connect(headers["last-event-id"])
             }
             return null
@@ -190,7 +193,7 @@ export const openCompileServer = ({
 
       server.addRequestHandler((request) => {
         return responseGenerator(request).then((response) => {
-          return cors ? enableCORS(response) : response
+          return cors ? enableCORS(request, response) : response
         })
       })
 

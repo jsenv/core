@@ -67,7 +67,7 @@ const prefixLines = (string, prefix = "  ", { lineSeparator = "auto" } = {}) => 
 
 const renderScript = ({ source }) => {
   return `<script type="text/javascript">
-  ${source}
+  ${source.trim()}
 </script>`
 }
 

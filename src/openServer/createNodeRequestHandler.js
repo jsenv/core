@@ -2,7 +2,7 @@
 
 import { URL } from "url"
 import { createBody, pipe } from "./createConnection/index.js"
-import { headersFromObject } from "./headers.js"
+import { headersFromObject, headersCompose } from "./headers.js"
 
 // serverURL pourrait valoir par défaut `file:///${process.cwd()}` ?
 export const createRequestFromNodeRequest = (nodeRequest, serverURL) => {
@@ -63,19 +63,27 @@ export const createNodeRequestHandler = ({ handler, url }) => {
   }
 }
 
-export const enableCORS = (response) => {
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+export const enableCORS = (
+  request,
+  response,
+  {
+    allowedOrigins = [request.headers.origin],
+    allowedMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders = ["x-requested-with", "content-type", "accept"],
+  } = {},
+) => {
   const corsHeaders = {
-    "access-control-allow-origin": "*",
-    "access-control-allow-methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"].join(", "),
-    "access-control-allow-headers": ["x-requested-with", "content-type", "accept"].join(", "),
+    "access-control-allow-origin": allowedOrigins.join(", "),
+    "access-control-allow-methods": allowedMethods.join(", "),
+    "access-control-allow-headers": allowedHeaders.join(", "),
+    "access-control-allow-credentials": true,
     "access-control-max-age": 1, // Seconds
+    vary: "Origin",
   }
 
   return {
     ...response,
-    headers: {
-      ...corsHeaders,
-      ...response.headers,
-    },
+    headers: headersCompose(corsHeaders, response.headers),
   }
 }

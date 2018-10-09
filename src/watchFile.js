@@ -82,5 +82,9 @@ const createWatchSignal = (url) => {
 const memoizedCreateWatchSignal = memoizeSync(createWatchSignal)
 
 export const watchFile = (url, fn) => {
-  return memoizedCreateWatchSignal(url).listen(fn)
+  const signal = memoizedCreateWatchSignal(url)
+  const listener = signal.listen(fn)
+  return () => {
+    listener.remove()
+  }
 }
