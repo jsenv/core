@@ -2,6 +2,7 @@ import { openChromiumClient } from "../openChromiumClient/openChromiumClient.js"
 import path from "path"
 import { createCoverageMap } from "istanbul-lib-coverage"
 import { createFileStructure } from "@dmail/project-structure"
+import { executeParallel } from "./executeParallel.js"
 
 const mergeCoverage = (...coverages) => {
   // https://github.com/istanbuljs/istanbuljs/blob/5405550c3868712b14fd8bfe0cbd6f2e7ac42279/packages/istanbul-lib-coverage/lib/coverage-map.js#L43
@@ -12,7 +13,11 @@ const mergeCoverage = (...coverages) => {
   return mergedCoverageMap.toJSON()
 }
 
-const metaPredicate = ({ cover, test }) => cover || test
+const fileIsTestPredicate = ({ test }) => Boolean(test)
+
+const fileMustBeCoveredPredicate = ({ cover }) => Boolean(cover)
+
+const metaPredicate = (meta) => fileIsTestPredicate(meta) || fileMustBeCoveredPredicate(meta)
 
 export const testProject = ({
   server,
@@ -34,58 +39,60 @@ export const testProject = ({
   )
 
   return Promise.all([createClient(), getRequiredFileReport()]).then(([client, fileReport]) => {
-    const testFiles = fileReport.filter((file) => file.meta.test).map((file) => {
+    const testFiles = fileReport.filter(({ meta }) => fileIsTestPredicate(meta)).map((file) => {
       return {
         path: `${rootLocation}/${file.relativeName}`,
         type: "test",
       }
     })
-    const sourceFiles = fileReport.filter((file) => file.meta.cover).map((file) => {
-      return {
-        path: `${rootLocation}/${file.relativeName}`,
-        type: "source",
-      }
-    })
-    const files = [...testFiles, ...sourceFiles]
+    const mustBeCoveredFiles = fileReport
+      .filter(({ meta }) => fileMustBeCoveredPredicate(meta))
+      .map((file) => {
+        return {
+          path: `${rootLocation}/${file.relativeName}`,
+          type: "source",
+        }
+      })
+    const files = [...testFiles, ...mustBeCoveredFiles]
 
     const getFileByPath = (path) => files.find((file) => file.path === path)
 
+    const executeTestFile = (testFile) => {
+      beforeEach({ file: testFile })
+
+      return client
+        .execute({
+          file: testFile.path,
+          collectCoverage: true,
+          executeTest: true,
+          autoClose: true,
+        })
+        .then(({ promise }) => promise)
+        .then(({ output, coverage }) => {
+          // test = null means file.test.js do not set a global.__test
+          // which happens if file.test.js does not use @dmail/test or is empty for instance
+          // coverage = null means file.test.js do not set a global.__coverage__
+          // which happens if file.test.js was not instrumented.
+          // this is not supposed to happen so we should throw ?
+          testFile.output = output
+          Object.keys(coverage).forEach((path) => {
+            const sourceFile = getFileByPath(path)
+            sourceFile.coverage = sourceFile.coverage
+              ? mergeCoverage(sourceFile.coverage, coverage[path])
+              : coverage[path]
+          })
+
+          afterEach({ file: testFile })
+        })
+    }
+
     beforeAll({ files })
-    return Promise.all(
-      testFiles.map((testFile) => {
-        beforeEach({ file: testFile })
-
-        return client
-          .execute({
-            file: testFile.path,
-            collectCoverage: true,
-            executeTest: true,
-            autoClose: true,
-          })
-          .then(({ promise }) => promise)
-          .then(({ output, coverage }) => {
-            // test = null means file.test.js do not set a global.__test
-            // which happens if file.test.js does not use @dmail/test or is empty for instance
-            // coverage = null means file.test.js do not set a global.__coverage__
-            // which happens if file.test.js was not instrumented.
-            // this is not supposed to happen so we should throw ?
-            testFile.output = output
-            Object.keys(coverage).forEach((path) => {
-              const sourceFile = getFileByPath(path)
-              sourceFile.coverage = sourceFile.coverage
-                ? mergeCoverage(sourceFile.coverage, coverage[path])
-                : coverage[path]
-            })
-
-            afterEach({ file: testFile })
-          })
-      }),
-    )
+    return executeParallel(executeTestFile, testFiles, { maxParallelExecution: 5 })
       .then(() => {
         afterAll({ files })
 
-        const untestedSourceFiles = sourceFiles.filter((sourceFile) => {
-          return !sourceFile.coverage
+        const uncoveredFiles = mustBeCoveredFiles.filter((mustBeCoveredFile) => {
+          return !mustBeCoveredFile.coverage
         })
 
         const getEmptyCoverageFor = (file) => {
@@ -104,9 +111,9 @@ export const testProject = ({
         }
 
         return Promise.all(
-          untestedSourceFiles.map((sourceFile) => {
-            return getEmptyCoverageFor(sourceFile).then((missingCoverage) => {
-              sourceFile.coverage = missingCoverage
+          uncoveredFiles.map((mustBeCoveredFile) => {
+            return getEmptyCoverageFor(mustBeCoveredFile).then((emptyCoverage) => {
+              mustBeCoveredFile.coverage = emptyCoverage
             })
           }),
         )
