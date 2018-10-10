@@ -100,11 +100,17 @@ export const createSSERoom = (
 
     const connection = createTwoWayStream()
     connections.add(connection)
-    connection.closed.listen(() => {
+    connection.closed.listenOnce(() => {
+      connections.delete(connection)
+      console.log(
+        `connection closed by us, number of client connected to event source: ${connections.size}`,
+      )
+    })
+    connection.cancelled.listenOnce(() => {
+      connections.delete(connection)
       console.log(
         `client disconnected, number of client connected to event source: ${connections.size}`,
       )
-      connections.delete(connection)
     })
 
     console.log(
