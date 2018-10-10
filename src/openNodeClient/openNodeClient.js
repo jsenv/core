@@ -8,12 +8,12 @@ import path from "path"
 import { ensureSystem } from "./ensureSystem.js"
 import "./global-fetch.js"
 import { getRemoteLocation } from "../getRemoteLocation.js"
-import { getNodeSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
+// import { getNodeSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
 import { createSignal } from "@dmail/signal"
 
 export const openNodeClient = ({ compileURL, remoteRoot, localRoot, detached = false }) => {
   if (detached === false) {
-    const execute = ({ file, collectCoverage = false, executeTest = false }) => {
+    const execute = ({ file, setup = () => {}, teardown = () => {} }) => {
       const close = () => {}
 
       const promise = Promise.resolve().then(() => {
@@ -22,15 +22,11 @@ export const openNodeClient = ({ compileURL, remoteRoot, localRoot, detached = f
           file,
         })
 
-        const { setup, teardown } = getNodeSetupAndTeardowm({ collectCoverage, executeTest })
-
-        Promise.resolve(remoteFile)
+        return Promise.resolve(remoteFile)
           .then(setup)
-          .then(() => {
-            return ensureSystem({ remoteRoot, localRoot })
-              .import(remoteFile)
-              .then(teardown)
-          })
+          .then(() => ensureSystem({ remoteRoot, localRoot }))
+          .then((nodeSystem) => nodeSystem.import(remoteFile))
+          .then(teardown)
       })
 
       return Promise.resolve({ promise, close })
@@ -46,8 +42,8 @@ export const openNodeClient = ({ compileURL, remoteRoot, localRoot, detached = f
     file,
     autoClose = false,
     autoCloseOnError = false,
-    executeTest = false,
-    collectCoverage = false,
+    setup = () => {},
+    teardown = () => {},
   }) => {
     const closed = createSignal()
 
@@ -106,7 +102,6 @@ export const openNodeClient = ({ compileURL, remoteRoot, localRoot, detached = f
         compileURL,
         file,
       })
-      const { setup, teardown } = getNodeSetupAndTeardowm({ collectCoverage, executeTest })
 
       child.send({
         type: "execute",

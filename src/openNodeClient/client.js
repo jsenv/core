@@ -23,12 +23,16 @@ process.on("message", ({ type, id, data }) => {
   if (type === "execute") {
     const { remoteRoot, localRoot, file, setupSource, teardownSource } = data
 
-    Promise.resolve(file)
-      .then(eval(setupSource))
+    Promise.resolve()
       .then(() => {
-        return ensureSystem({ remoteRoot, localRoot })
-          .import(file)
-          .then(eval(teardownSource))
+        const setup = eval(setupSource)
+        const teardown = eval(teardownSource)
+
+        return Promise.resolve()
+          .then(setup)
+          .then(() => ensureSystem({ remoteRoot, localRoot }))
+          .then((nodeSystem) => nodeSystem.import(file))
+          .then(teardown)
       })
       .then(
         (value) => {

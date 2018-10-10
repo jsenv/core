@@ -2,11 +2,11 @@ import path from "path"
 import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import { openNodeClient } from "./openNodeClient.js"
 
-const rootLocation = path.resolve(__dirname, "../../../")
+const root = path.resolve(__dirname, "../../../")
 
 openCompileServer({
+  root,
   url: "http://127.0.0.1:8765",
-  rootLocation,
   sourceMap: "comment",
   sourceURL: false,
   instrument: false,
@@ -14,13 +14,12 @@ openCompileServer({
   return openNodeClient({
     compileURL: server.compileURL,
     remoteRoot: "http://127.0.0.1:8765",
-    localRoot: rootLocation,
-    detached: true, // true,
+    localRoot: root,
+    detached: true,
   }).then((nodeClient) => {
     nodeClient
       .execute({
         file: `src/__test__/file.js`,
-        collectCoverage: false,
       })
       .then(({ promise, close }) => {
         promise.then(

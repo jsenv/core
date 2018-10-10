@@ -16,27 +16,24 @@ const teardownForOutput = (namespace) => {
   return Promise.resolve(namespace.output)
 }
 
-const getTeardown = ({ collectCoverage, collectTest }) => {
-  if (collectTest) {
-    return collectCoverage ? teardownForOutputAndCoverage : teardownForOutput
-  }
+const getTeardown = ({ collectCoverage }) => {
   return collectCoverage ? teardownForOutputAndCoverage : teardownForOutput
 }
 
-export const getBrowserSetupAndTeardowm = ({ collectCoverage, collectTest }) => {
+export const getBrowserSetupAndTeardowm = (...args) => {
   const setup = () => {}
 
   return {
     setup,
-    teardown: getTeardown({ collectCoverage, collectTest }),
+    teardown: getTeardown(...args),
   }
 }
 
-export const getNodeSetupAndTeardowm = ({ collectCoverage, collectTest }) => {
+export const getNodeSetupAndTeardowm = (...args) => {
   const setup = () => {}
 
   return {
     setup,
-    teardown: getTeardown({ collectCoverage, collectTest }),
+    teardown: getTeardown(...args),
   }
 }
