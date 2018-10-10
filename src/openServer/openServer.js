@@ -1,10 +1,10 @@
 import http from "http"
 import https from "https"
 import { URL } from "url"
-// import { addNodeExceptionHandler } from "./addNodeExceptionHandler.js"
 import { createSelfSignature } from "./createSelfSignature.js"
 import { processTeardown } from "./processTeardown.js"
-import { createNodeRequestHandler } from "./createNodeRequestHandler.js"
+import { createRequestFromNodeRequest } from "./createRequestFromNodeRequest.js"
+import { populateNodeResponse } from "./populateNodeResponse.js"
 import { createSignal } from "@dmail/signal"
 import killPort from "kill-port"
 
@@ -25,6 +25,7 @@ export const openServer = (
     autoCloseOnCrash = true,
     // auto close when server respond with a 500
     autoCloseOnError = true,
+    getResponseForRequest = () => ({ status: 501 }),
   } = {},
 ) => {
   url = new URL(url)
@@ -72,11 +73,6 @@ export const openServer = (
     return () => {
       nodeServer.removeListener("request", handler)
     }
-  }
-
-  const addRequestHandler = (handler) => {
-    const nodeRequestHandler = createNodeRequestHandler({ handler, url })
-    return addInternalRequestHandler(nodeRequestHandler)
   }
 
   const clients = new Set()
@@ -154,6 +150,31 @@ export const openServer = (
       // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
       const port = nodeServer.address().port
       url.port = port
+
+      addInternalRequestHandler((nodeRequest, nodeResponse) => {
+        const request = createRequestFromNodeRequest(nodeRequest, url)
+        console.log(request.method, request.url.toString())
+
+        nodeRequest.on("error", (error) => {
+          console.log("error on", request.url.toString(), error)
+        })
+
+        return Promise.resolve()
+          .then(() => getResponseForRequest(request))
+          .catch((error) => {
+            return {
+              status: 500,
+              reason: "internal error",
+              body: error && error.stack ? error.stack : error,
+            }
+          })
+          .then((finalResponse) => {
+            console.log(`${finalResponse.status} ${request.url}`)
+            populateNodeResponse(nodeResponse, finalResponse, {
+              ignoreBody: request.method === "HEAD",
+            })
+          })
+      })
 
       const closeConnections = (reason) => {
         // should we do this async ?
@@ -240,7 +261,6 @@ export const openServer = (
       return {
         url,
         nodeServer,
-        addRequestHandler,
         agent,
         close,
         closed,

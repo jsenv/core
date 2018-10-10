@@ -1,11 +1,11 @@
 import path from "path"
 import { openCompileServer } from "./openCompileServer.js"
 
-const rootLocation = path.resolve(__dirname, "../../../")
+const root = path.resolve(__dirname, "../../../")
 
 openCompileServer({
   url: "http://127.0.0.1:8998",
-  rootLocation,
+  root,
 }).then(({ url }) => {
-  console.log(`compiling ${rootLocation} at ${url}`)
+  console.log(`compiling ${root} at ${url}`)
 })

@@ -4,18 +4,17 @@ import { openServer } from "./openServer.js"
 
 openServer({
   url: "http://127.0.0.1:8998",
+  getResponseForRequest: () => {
+    return {
+      status: 200,
+      headers: {
+        "Content-Type": "text/plain",
+      },
+      body: "ok",
+    }
+  },
 })
-  .then(({ addRequestHandler, url, agent, close }) => {
-    addRequestHandler(() => {
-      return {
-        status: 200,
-        headers: {
-          "Content-Type": "text/plain",
-        },
-        body: "ok",
-      }
-    })
-
+  .then(({ url, agent, close }) => {
     assert.equal(String(url), "http://127.0.0.1:8998/")
 
     return fetch(url, { agent })

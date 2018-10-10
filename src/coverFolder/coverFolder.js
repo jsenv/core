@@ -1,7 +1,7 @@
 import { openChromiumClient } from "../openChromiumClient/openChromiumClient.js"
 import path from "path"
 import { createCoverageMap } from "istanbul-lib-coverage"
-import { createRoot } from "@dmail/project-structure"
+import { createFileStructure } from "@dmail/project-structure"
 
 const mergeCoverage = (...coverages) => {
   // https://github.com/istanbuljs/istanbuljs/blob/5405550c3868712b14fd8bfe0cbd6f2e7ac42279/packages/istanbul-lib-coverage/lib/coverage-map.js#L43
@@ -25,7 +25,7 @@ export const testProject = ({
 }) => {
   const rootLocation = path.resolve(process.cwd(), root)
 
-  const getRequiredFileReport = createRoot({ root: rootLocation }).then(
+  const getRequiredFileReport = createFileStructure({ root: rootLocation }).then(
     ({ forEachFileMatching }) => {
       return forEachFileMatching(metaPredicate, ({ relativeName, meta }) => {
         return { relativeName, meta }

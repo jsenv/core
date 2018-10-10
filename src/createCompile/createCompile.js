@@ -114,7 +114,7 @@ export const createCompile = (
         })
           .then((context) => (transpile ? transform(context, transpiler) : context))
           .then((context) => {
-            if (instrument && instrumentPredicate(context)) {
+            if (instrument && instrumentPredicate(context.inputRelativeLocation)) {
               return transform(context, instrumenter)
             }
             return context

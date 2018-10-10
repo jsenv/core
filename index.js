@@ -12,6 +12,10 @@ import { openBrowserServer } from "./src/openBrowserServer/openBrowserServer.js"
 import { testProject, createCoverageFromTestReport } from "./src/coverFolder/coverFolder.js"
 import { run } from "./src/run/run.js"
 
+export {
+  createPredicateFromStructure,
+} from "./src/openCompileServer/createPredicateFromStructure.js"
+
 export { testProject, createCoverageFromTestReport }
 export { openCompileServer }
 export { openBrowserServer }

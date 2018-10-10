@@ -15,19 +15,21 @@ service({
   headers: {
     "user-agent": `node/8.0`,
   },
-}).then((properties) => {
-  assert.equal(properties.status, 200)
-  console.log("ok")
 })
-
-service({
-  method: "GET",
-  url: new URL("compiled/src/__test__/file.js.map", "file:///"),
-  headers: {
-    "user-agent": `node/8.0`,
-  },
-}).then((properties) => {
-  assert.equal(properties.body.path.endsWith(".map"), true)
-  assert.equal(properties.status, 200)
-  console.log("ok")
-})
+  .then((properties) => {
+    assert.equal(properties.status, 200)
+    console.log("ok")
+  })
+  .then(() => {
+    service({
+      method: "GET",
+      url: new URL("compiled/src/__test__/file.js.map", "file:///"),
+      headers: {
+        "user-agent": `node/8.0`,
+      },
+    }).then((properties) => {
+      assert.equal(properties.status, 200)
+      assert.equal(properties.body.path.endsWith(".map"), true) // nodejs readable stream to the .map file
+      console.log("ok")
+    })
+  })

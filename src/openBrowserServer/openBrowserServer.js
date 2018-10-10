@@ -1,7 +1,7 @@
 import { openCompileServer } from "../openCompileServer/openCompileServer.js"
-import { openServer } from "../openServer/openServer.js"
+import { createPredicateFromStructure } from "../openCompileServer/createPredicateFromStructure.js"
+import { openServer, createRoute, createResponseGenerator } from "../openServer/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
-import { createResponseGenerator } from "../openServer/createResponseGenerator.js"
 
 const getIndexPageHTML = ({ root }) => {
   return `<!doctype html>
@@ -50,39 +50,17 @@ window.System.import("${fileLocation}")
   })
 }
 
-const createRoute = ({ method, path = "*", handler }) => {
-  const regexp = new RegExp(`^${path.replace(/\*/g, ".*?")}$`)
-  const matchPath = (requestPathname) => {
-    return regexp.test(requestPathname)
-  }
+export const openBrowserServer = ({ root, port = 3000, forcePort = true, ...rest }) => {
+  return createPredicateFromStructure({ root }).then(({ instrumentPredicate, watchPredicate }) => {
+    return openCompileServer({
+      root,
+      url: `http://127.0.0.1:0`,
+      instrumentPredicate,
+      watchPredicate,
+      ...rest,
+    }).then((server) => {
+      console.log(`compiling ${root} at ${server.url}`)
 
-  const lowserCaseMethod = method.toLowerCase()
-  const matchMethod = (requestMethod) => {
-    if (lowserCaseMethod === "*") {
-      return true
-    }
-    return requestMethod.toLowerCase() === lowserCaseMethod
-  }
-
-  return (request) => {
-    if (matchMethod(request.method) === false) {
-      return false
-    }
-    if (matchPath(request.url.pathname) === false) {
-      return false
-    }
-    return handler(request)
-  }
-}
-
-export const openBrowserServer = ({ root, port = 3000, forcePort = true }) => {
-  return openCompileServer({
-    url: `http://127.0.0.1:0`,
-    rootLocation: root,
-    watch: true,
-  }).then((server) => {
-    console.log(`compiling ${root} at ${server.url}`)
-    return openServer({ url: `http://127.0.0.1:${port}`, forcePort }).then((runServer) => {
       const indexRoute = createRoute({
         method: "GET",
         path: "/",
@@ -125,11 +103,14 @@ export const openBrowserServer = ({ root, port = 3000, forcePort = true }) => {
         },
       })
 
-      runServer.addRequestHandler(createResponseGenerator(indexRoute, otherRoute))
-
-      console.log(`executing ${root} at ${runServer.url}`)
-
-      return runServer
+      return openServer({
+        url: `http://127.0.0.1:${port}`,
+        forcePort,
+        getResponseForRequest: createResponseGenerator(indexRoute, otherRoute),
+      }).then((runServer) => {
+        console.log(`executing ${root} at ${runServer.url}`)
+        return runServer
+      })
     })
   })
 }

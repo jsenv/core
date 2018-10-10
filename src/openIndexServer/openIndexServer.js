@@ -1,8 +1,9 @@
-import { openServer } from "../openServer/openServer.js"
+import { openServer } from "../openServer/index.js"
 
 export const openIndexServer = ({ url, body }) => {
-  return openServer({ url }).then((server) => {
-    server.addRequestHandler(() => {
+  return openServer({
+    url,
+    getResponseForRequest: () => {
       return {
         status: 200,
         headers: {
@@ -12,7 +13,6 @@ export const openIndexServer = ({ url, body }) => {
         },
         body,
       }
-    })
-    return { url: server.url, close: server.close }
+    },
   })
 }

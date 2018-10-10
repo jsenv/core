@@ -1,4 +1,4 @@
-import { createTwoWayStream } from "../openServer/createConnection/index.js"
+import { createTwoWayStream } from "./index.js"
 
 // https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
 // https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
@@ -59,8 +59,8 @@ const createEventHistory = ({ limit } = {}) => {
 // https://www.html5rocks.com/en/tutorials/eventsource/basics/
 export const createSSERoom = (
   {
-    keepaliveDuration = 30000,
-    retryDuration = 1000,
+    keepaliveDuration = 30 * 1000,
+    retryDuration = 1 * 1000,
     historyLength = 1000,
     maxLength = 100, // max 100 users accepted
   } = {},

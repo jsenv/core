@@ -88,7 +88,7 @@ const callError = (stream, value) => {
   return undefined
 }
 
-const callClose = (stream) => {
+export const callClose = (stream) => {
   if (isTwoWayStream(stream)) {
     return stream.close()
   }
@@ -98,7 +98,7 @@ const callClose = (stream) => {
   return undefined
 }
 
-const callCancel = (stream) => {
+export const callCancel = (stream) => {
   if (isTwoWayStream(stream)) {
     return stream.cancel()
   }
