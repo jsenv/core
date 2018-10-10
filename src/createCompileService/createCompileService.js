@@ -9,7 +9,7 @@ import { readFile } from "./readFile.js"
 import { lockForRessource } from "./ressourceRegistry.js"
 import { writeFileFromString } from "@dmail/project-structure-compile-babel"
 import { createFileService } from "../createFileService/createFileService.js"
-import { getPlatformAndVersionFromHeaders } from "./getPlatformAndVersionFromHeaders.js"
+import { getPlatformNameAndVersionFromHeaders } from "./getPlatformNameAndVersionFromHeaders.js"
 import {
   getInputRelativeLocation,
   getCacheDataLocation,
@@ -643,7 +643,7 @@ export const createCompileService = ({
     // par contre ça fait 2 requête http
 
     return compileProfilePromise.then(({ getGroupIdForPlatform, getPluginsFromGroupId }) => {
-      const { platformName, platformVersion } = getPlatformAndVersionFromHeaders(headers)
+      const { platformName, platformVersion } = getPlatformNameAndVersionFromHeaders(headers)
       const groupId = getGroupIdForPlatform({
         platformName,
         platformVersion,
