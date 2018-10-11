@@ -6,43 +6,43 @@ import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 const getIndexPageHTML = ({ root }) => {
   return `<!doctype html>
 
-	<head>
-		<title>${root}</title>
-		<meta charset="utf-8" />
-	</head>
+  <head>
+    <title>${root}</title>
+    <meta charset="utf-8" />
+  </head>
 
-	<body>
-		<main>
-			This is the root your project: ${root} <br />
-			You can execute file by navigating like <a href="./src/__test__/file.js">src/__test__/file.js</a>
-		</main>
-	</body>
+  <body>
+    <main>
+      This is the root your project: ${root} <br />
+      You can execute file by navigating like <a href="./src/__test__/file.js">src/__test__/file.js</a>
+    </main>
+  </body>
 
-	</html>`
+  </html>`
 }
 
-const getPageHTML = ({ compileServerURL, compileURL, url }) => {
-  const serverRoot = compileServerURL.toString().slice(0, -1)
-  const fileRelativeToRoot = url.pathname.slice(1)
-  const fileLocation = `${compileURL}/${fileRelativeToRoot}`
+const getPageHTML = ({ remoteRoot, remoteCompileDestination, file, hotreload }) => {
+  const remoteFile = `${remoteRoot}/${remoteCompileDestination}/${file}`
 
   const script = `
-var eventSource = new EventSource("${serverRoot}", { withCredentials: true })
-eventSource.addEventListener("file-changed", (e) => {
-	if (e.origin !== "${serverRoot}") {
-		return
-	}
-	var fileChanged = e.data
-	var changedFileLocation = "${compileURL}/" + fileChanged
-	// we cmay be notified from file we don't care about, reload only if needed
-	// we cannot just System.delete the file because the change may have any impact, we have to reload
-	if (System.get(changedFileLocation)) {
-		console.log(fileChanged, 'modified, reloading')
-		window.location.reload()
-  }
-})
+if (${hotreload}) {
+  var eventSource = new window.EventSource("${remoteRoot}", { withCredentials: true })
+  eventSource.addEventListener("file-changed", (e) => {
+    if (e.origin !== "${remoteRoot}") {
+      return
+    }
+    var fileChanged = e.data
+    var changedFileLocation = "${remoteRoot}/${remoteCompileDestination}/" + fileChanged
+    // we cmay be notified from file we don't care about, reload only if needed
+    // we cannot just System.delete the file because the change may have any impact, we have to reload
+    if (window.System.get(changedFileLocation)) {
+      console.log(fileChanged, 'modified, reloading')
+      window.location.reload()
+    }
+  })
+}
 
-window.System.import("${fileLocation}")
+window.System.import("${remoteFile}")
 `
 
   return createHTMLForBrowser({
@@ -50,12 +50,21 @@ window.System.import("${fileLocation}")
   })
 }
 
-export const openBrowserServer = ({ root, port = 3000, forcePort = true, ...rest }) => {
+export const openBrowserServer = ({
+  root,
+  into,
+  port = 3000,
+  forcePort = true,
+  watch = false,
+  ...rest
+}) => {
   return createPredicateFromStructure({ root }).then(({ instrumentPredicate, watchPredicate }) => {
     return openCompileServer({
       root,
+      into,
       url: `http://127.0.0.1:0`,
       instrumentPredicate,
+      watch,
       watchPredicate,
       ...rest,
     }).then((server) => {
@@ -87,7 +96,12 @@ export const openBrowserServer = ({ root, port = 3000, forcePort = true, ...rest
         handler: ({ url }) => {
           return Promise.resolve()
             .then(() =>
-              getPageHTML({ compileServerURL: server.url, compileURL: server.compileURL, url }),
+              getPageHTML({
+                remoteRoot: server.url.toString().slice(0, -1),
+                remoteCompileDestination: into,
+                file: url.pathname.slice(1),
+                hotreload: watch,
+              }),
             )
             .then((html) => {
               return {

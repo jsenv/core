@@ -24,7 +24,10 @@ export const terminate = createSignal({
     // SIGINT is CTRL+C from keyboard
     // http://man7.org/linux/man-pages/man7/signal.7.html
     // may also be sent by vscode https://github.com/Microsoft/vscode-node-debug/issues/1#issuecomment-405185642
-    const triggerTerminate = () => emit("terminate")
+    const triggerTerminate = () =>
+      emit("terminate").then(() => {
+        process.exit(process.exitCode || 0)
+      })
 
     process.on("SIGINT", triggerTerminate)
 
@@ -82,15 +85,33 @@ export const exit = createSignal({
   },
 })
 
-const signals = [hangupOrDeath, terminate, death, beforeExit, exit]
-
-export const processTeardown = (teardownFunction) => {
-  const listeners = signals.map((signal) => {
+const cleanupSignals = [hangupOrDeath, terminate, death]
+export const processCleanup = (cleanupCallback) => {
+  const listeners = cleanupSignals.map((signal) => {
     return signal.listen((reason) => {
       listeners.forEach((listener) => {
         listener.remove()
       })
-      return teardownFunction(reason)
+      return cleanupCallback(reason)
+    })
+  })
+
+  return () => {
+    listeners.forEach((listener) => {
+      listener.remove()
+    })
+  }
+}
+
+const teardownSignals = [hangupOrDeath, terminate, death, beforeExit, exit]
+
+export const processTeardown = (teardownCallback) => {
+  const listeners = teardownSignals.map((signal) => {
+    return signal.listen((reason) => {
+      listeners.forEach((listener) => {
+        listener.remove()
+      })
+      return teardownCallback(reason)
     })
   })
 

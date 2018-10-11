@@ -171,6 +171,7 @@ export const createSSERoom = (
   }
 
   const close = () => {
+    console.log(`closing, number of client to close: ${connections.size}`)
     connections.forEach((connection) => connection.close())
     clearInterval(interval)
     history.reset()

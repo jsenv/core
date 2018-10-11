@@ -28,8 +28,7 @@ export const openCompileServer = ({
   watchPredicate = () => false,
   // compile options
   root,
-  cacheFolderRelativeLocation = "build",
-  abstractFolderRelativeLocation = "compiled",
+  into,
   cors = true,
   transpile = true,
   sourceMap = "comment", // can be "comment", "inline", "none"
@@ -54,9 +53,9 @@ export const openCompileServer = ({
       return ({ url }) => {
         let relativeFilename = url.pathname.slice(1)
         const dirname = relativeFilename.slice(0, relativeFilename.indexOf("/"))
-        if (dirname === abstractFolderRelativeLocation) {
+        if (dirname === into) {
           // when I ask for a compiled file, watch the corresponding file on filesystem
-          relativeFilename = relativeFilename.slice(abstractFolderRelativeLocation.length + 1)
+          relativeFilename = relativeFilename.slice(into.length + 1)
         }
 
         const filename = `${root}/${relativeFilename}`
@@ -125,8 +124,8 @@ export const openCompileServer = ({
 
       const { service: compileService, compileFile } = createCompileService({
         rootLocation: root,
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
+        cacheFolderRelativeLocation: into,
+        abstractFolderRelativeLocation: into,
         trackHit: true,
         compile,
       })
@@ -142,7 +141,7 @@ export const openCompileServer = ({
         const filename = pathname.slice(1)
         const dirname = filename.slice(0, filename.indexOf("/"))
 
-        if (dirname !== abstractFolderRelativeLocation) {
+        if (dirname !== into) {
           return false
         }
 
@@ -188,8 +187,6 @@ export const openCompileServer = ({
 
       return {
         ...server,
-        compileURL: `${server.url}${abstractFolderRelativeLocation}`,
-        abstractFolderRelativeLocation,
         compileFile: compileFileFromCompileService,
         watchSignal,
       }

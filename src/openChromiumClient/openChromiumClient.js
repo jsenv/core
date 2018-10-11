@@ -1,7 +1,5 @@
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { openIndexServer } from "../openIndexServer/openIndexServer.js"
-import { getRemoteLocation } from "../getRemoteLocation.js"
-import { getBrowserSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
 import { createSignal } from "@dmail/signal"
 
 const openIndexRequestInterception = ({ url, page, body }) => {
@@ -33,30 +31,48 @@ const openIndexRequestInterception = ({ url, page, body }) => {
 }
 
 export const openChromiumClient = ({
-  puppeteer,
+  remoteRoot,
+  remoteCompileDestination,
   url = "https://127.0.0.1:0",
-  server,
-  compileURL,
   openIndexRequestHandler = openIndexServer,
   headless = true,
   mirrorConsole = false,
-  runFile = ({ serverURL, page, file, setup, teardown }) => {
+  runFile = ({ page, remoteRoot, remoteCompileDestination, file, setup, teardown, hotreload }) => {
     return page.evaluate(
-      (compileRoot, file, setupSource, teardownSource) => {
-        const evtSource = new EventSource(compileRoot)
-        evtSource.addEventListener("message", (e) => {
-          console.log("received event", e)
-        })
+      (remoteRoot, remoteCompileDestination, file, setupSource, teardownSource, hotreload) => {
+        const remoteFile = `${remoteRoot}/${remoteCompileDestination}/${file}`
 
-        return Promise.resolve(file)
-          .then(eval(setupSource))
-          .then(() => window.System.import(file))
-          .then(eval(teardownSource))
+        return Promise.resolve().then(() => {
+          if (hotreload) {
+            const eventSource = new window.EventSource(remoteRoot, { withCredentials: true })
+            eventSource.addEventListener("file-changed", (e) => {
+              if (e.origin !== remoteRoot) {
+                return
+              }
+              const fileChanged = e.data
+              const changedFileLocation = `${remoteRoot}/${remoteCompileDestination}/${fileChanged}`
+              if (window.System.get(changedFileLocation)) {
+                console.log(fileChanged, "modified, reloading")
+                window.location.reload()
+              }
+            })
+          }
+
+          const setup = eval(setupSource)
+          const teardown = eval(teardownSource)
+
+          return Promise.resolve()
+            .then(setup)
+            .then(() => window.System.import(remoteFile))
+            .then(teardown)
+        })
       },
-      serverURL.href,
+      remoteRoot,
+      remoteCompileDestination,
       file,
       `(${setup.toString()})`,
       `(${teardown.toString()})`,
+      hotreload,
     )
   },
 }) => {
@@ -65,6 +81,9 @@ export const openChromiumClient = ({
   }
 
   const openBrowser = () => {
+    // this module must not force dev-server to have pupeteer dependency
+    // this module must become external
+    const puppeteer = {}
     return puppeteer.launch({
       headless,
       ignoreHTTPSErrors: true, // because we use a self signed certificate
@@ -80,11 +99,12 @@ export const openChromiumClient = ({
   // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
   const execute = ({
     file,
+    setup = () => {},
+    teardown = () => {},
+    hotreload = false,
     autoClose = false,
     // autoCloseOnError is different than autoClose because you often want to keep browser opened to debug error
     autoCloseOnError = false,
-    collectCoverage = false,
-    executeTest = false,
   }) => {
     const closed = createSignal()
 
@@ -133,17 +153,15 @@ export const openChromiumClient = ({
                   indexRequestHandler.close()
                 })
 
-                const remoteFile = getRemoteLocation({
-                  compileURL,
-                  file,
-                })
-
                 return page.goto(String(indexRequestHandler.url)).then(() =>
                   runFile({
-                    serverURL: server.url,
                     page,
-                    file: remoteFile,
-                    ...getBrowserSetupAndTeardowm({ collectCoverage, executeTest }),
+                    remoteRoot,
+                    remoteCompileDestination,
+                    file,
+                    setup,
+                    teardown,
+                    hotreload,
                   }),
                 )
               })

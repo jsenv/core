@@ -5,5 +5,6 @@ const root = path.resolve(__dirname, "../")
 
 openBrowserServer({
   root,
+  into: "build",
   watch: true,
 })

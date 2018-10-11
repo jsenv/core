@@ -1,33 +1,40 @@
-// faut vraiment que je teste ça avec https://github.com/GoogleChromeLabs/ndb
-// en gros voir si ndb va fonctionner
-// pour debug l'éxécution de nodejs avec chrome devtools
-// en utilisant system.import
-
 import { fork } from "child_process"
 import path from "path"
 import { ensureSystem } from "./ensureSystem.js"
 import "./global-fetch.js"
-import { getRemoteLocation } from "../getRemoteLocation.js"
-// import { getNodeSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
 import { createSignal } from "@dmail/signal"
 
-export const openNodeClient = ({ compileURL, remoteRoot, localRoot, detached = false }) => {
+const cancellableAction = (callback, signalForAction, signalForCancel) => {
+  const actionListener = signalForAction.listen((...args) => {
+    // eslint-disable-next-line no-use-before-define
+    cancelListener.remove()
+    callback(...args)
+  })
+  const cancelListener = signalForCancel.listenOnce(() => {
+    actionListener.remove()
+  })
+}
+
+export const openNodeClient = ({
+  localRoot,
+  remoteRoot,
+  remoteCompileDestination,
+  detached = false,
+}) => {
   if (detached === false) {
     const execute = ({ file, setup = () => {}, teardown = () => {} }) => {
       const close = () => {}
 
-      const promise = Promise.resolve().then(() => {
-        const remoteFile = getRemoteLocation({
-          compileURL,
-          file,
-        })
+      const remoteFile = `${remoteRoot}/${remoteCompileDestination}/${file}`
 
-        return Promise.resolve(remoteFile)
-          .then(setup)
-          .then(() => ensureSystem({ remoteRoot, localRoot }))
-          .then((nodeSystem) => nodeSystem.import(remoteFile))
-          .then(teardown)
-      })
+      const promise = Promise.resolve()
+        .then(() => ensureSystem({ localRoot, remoteRoot }))
+        .then((nodeSystem) => {
+          return Promise.resolve()
+            .then(setup)
+            .then(() => nodeSystem.import(remoteFile))
+            .then(teardown)
+        })
 
       return Promise.resolve({ promise, close })
     }
@@ -36,100 +43,137 @@ export const openNodeClient = ({ compileURL, remoteRoot, localRoot, detached = f
   }
 
   const clientFile = path.resolve(__dirname, "./client.js")
-  let previousID = 0
+  let previousID
 
   const execute = ({
     file,
-    autoClose = false,
-    autoCloseOnError = false,
     setup = () => {},
     teardown = () => {},
+    hotreload = false,
+    autoClose = false,
+    autoCloseOnError = false,
   }) => {
-    const closed = createSignal()
+    const cancelled = createSignal()
 
-    const close = () => {
-      closed.emit()
+    const cancel = () => {
+      cancelled.emit()
     }
 
-    const promise = new Promise((resolve, reject) => {
-      const id = previousID + 1
-      previousID = id
+    const forkChild = () => {
+      const promise = new Promise((resolve, reject) => {
+        const id = previousID === undefined ? 1 : previousID + 1
+        previousID = id
 
-      const child = fork(clientFile, {
-        execArgv: [
-          // allow vscode to debug else you got port already used
-          `--inspect-brk`,
-        ],
-      })
+        const child = fork(clientFile, {
+          execArgv: [
+            // allow vscode to debug else you got port already used
+            `--inspect-brk`,
+          ],
+        })
 
-      const kill = closed.listen(() => {
-        child.kill()
-      })
-
-      child.on("close", (code) => {
-        kill.remove()
-
-        if (code === 12) {
-          throw new Error(
-            `child exited with 12: forked child wanted to use a non available port for debug`,
-          )
-        }
-        if (code !== 0) {
-          reject(`exited with code ${code}`)
-        }
-      })
-
-      const onmessage = (message) => {
-        if (message.id !== id) {
-          return
+        const sendToChild = (type, data) => {
+          child.send({
+            id,
+            type,
+            data,
+          })
         }
 
-        const { type, data } = message
-        if (type === "execute-result") {
-          child.removeListener("message", onmessage)
-          if (data.code === 0) {
-            resolve(data.value)
-          } else {
-            console.log("rejecting")
-            reject(data.value)
+        const closed = createSignal()
+        child.once("close", closed.emit)
+
+        const executed = createSignal()
+        const restartAsked = createSignal()
+        child.on("message", (message) => {
+          if (message.id !== id) {
+            return
           }
-        }
-      }
+          if (message.type === "execute-result") {
+            executed.emit(message.data)
+          }
+          if (message.type === "restart") {
+            restartAsked.emit()
+          }
+        })
 
-      child.on("message", onmessage)
+        // kill the child when cancel called except if child has closed before
+        cancellableAction(() => child.kill(child.pid, "SIGINT"), cancelled, closed)
+        // throw or reject when child is closed except if child ask to restart before
+        // (because in that case it will be handled by restart)
+        cancellableAction(
+          (code) => {
+            if (code === 12) {
+              throw new Error(
+                `child exited with 12: forked child wanted to use a non available port for debug`,
+              )
+            }
+            if (code !== 0) {
+              reject(`exited with code ${code}`)
+            }
+          },
+          closed,
+          restartAsked,
+        )
+        // resolve or reject when child has sent execution result, except if child ask to restart before
+        cancellableAction(
+          ({ code, value }) => {
+            if (code === 0) {
+              resolve(value)
+            } else {
+              console.log("rejecting")
+              reject(value)
+            }
+          },
+          executed,
+          restartAsked,
+        )
 
-      const remoteFile = getRemoteLocation({
-        compileURL,
-        file,
-      })
+        restartAsked.listenOnce(() => {
+          // fork a new child when child is closed except if cancel was called
+          cancellableAction(
+            (code) => {
+              if (code === 0) {
+                forkChild()
+              } else {
+                throw new Error(`child exited with ${code} after asking to restart`)
+              }
+            },
+            closed,
+            cancelled,
+          )
 
-      child.send({
-        type: "execute",
-        id,
-        data: {
-          remoteRoot,
+          // ask graceful shutdown to the child
+          child.kill("SIGINT")
+        })
+
+        sendToChild("execute", {
           localRoot,
-          file: remoteFile,
+          remoteRoot,
+          remoteCompileDestination,
+          file,
           setupSource: `(${setup.toString()})`,
           teardownSource: `(${teardown.toString()})`,
+          hotreload,
+        })
+      }).then(
+        (value) => {
+          if (autoClose) {
+            close()
+          }
+          return value
         },
-      })
-    }).then(
-      (value) => {
-        if (autoClose) {
-          close()
-        }
-        return value
-      },
-      (reason) => {
-        if (autoCloseOnError) {
-          close()
-        }
-        return Promise.reject(reason)
-      },
-    )
+        (reason) => {
+          if (autoCloseOnError) {
+            close()
+          }
+          return Promise.reject(reason)
+        },
+      )
 
-    return Promise.resolve({ promise, close })
+      return Promise.resolve({ promise, cancel })
+    }
+
+    return forkChild()
   }
 
   return Promise.resolve({ execute })

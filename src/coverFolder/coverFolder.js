@@ -21,7 +21,7 @@ const metaPredicate = (meta) => fileIsTestPredicate(meta) || fileMustBeCoveredPr
 
 export const testProject = ({
   server,
-  createClient = () => openChromiumClient({ compileURL: server.compileURL }),
+  createClient = () => openChromiumClient({ remoteRoot: server.url.toString().slice(0, -1) }),
   root = process.cwd(),
   beforeAll = () => {},
   beforeEach = () => {},

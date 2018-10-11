@@ -22,8 +22,8 @@ export const run = ({
 
   const openServer = () => {
     return openCompileServer({
-      rootLocation: root,
-      abstractFolderRelativeLocation: "compiled",
+      root,
+      into: "build",
       url: `http://127.0.0.1:0${port}`, // avoid https for now because certificates are self signed
       instrument,
       watch,

@@ -1,4 +1,7 @@
 import { ensureSystem } from "./ensureSystem.js"
+import { processCleanup } from "../openServer/processTeardown.js"
+import "./global-fetch.js"
+import "./global-EventSource.js"
 
 const forceEnumerable = (value) => {
   if (value === undefined || value === null || typeof value !== "object") {
@@ -21,28 +24,63 @@ const forceEnumerable = (value) => {
 
 process.on("message", ({ type, id, data }) => {
   if (type === "execute") {
-    const { remoteRoot, localRoot, file, setupSource, teardownSource } = data
+    const {
+      localRoot,
+      remoteRoot,
+      remoteCompileDestination,
+      file,
+      setupSource,
+      teardownSource,
+      hotreload,
+    } = data
+
+    const remoteFile = `${remoteRoot}/${remoteCompileDestination}/${file}`
+
+    const sendToParent = (type, data) => {
+      process.send({
+        id,
+        type,
+        data,
+      })
+    }
 
     Promise.resolve()
-      .then(() => {
+      .then(() => ensureSystem({ localRoot, remoteRoot }))
+      .then((nodeSystem) => {
+        if (hotreload) {
+          const eventSource = new global.EventSource(remoteRoot, {
+            https: { rejectUnauthorized: false },
+          })
+          eventSource.addEventListener("file-changed", (e) => {
+            if (e.origin !== remoteRoot) {
+              return
+            }
+            const fileChanged = e.data
+            const changedFileLocation = `${remoteRoot}/${remoteCompileDestination}/${fileChanged}`
+            // we may be notified from file we don't care about, reload only if needed
+            // we cannot just System.delete the file because the change may have any impact, we have to reload
+            if (nodeSystem.get(changedFileLocation)) {
+              sendToParent("restart", { fileChanged })
+            }
+          })
+          processCleanup(() => {
+            eventSource.close()
+          })
+        }
+
         const setup = eval(setupSource)
         const teardown = eval(teardownSource)
 
         return Promise.resolve()
           .then(setup)
-          .then(() => ensureSystem({ remoteRoot, localRoot }))
-          .then((nodeSystem) => nodeSystem.import(file))
+          .then(() => nodeSystem.import(remoteFile))
           .then(teardown)
       })
       .then(
         (value) => {
-          process.send({
-            id,
-            type: "execute-result",
-            data: {
-              code: 0,
-              value,
-            },
+          sendToParent("execute-result", {
+            code: 0,
+            value,
           })
         },
         (reason) => {
@@ -50,13 +88,9 @@ process.on("message", ({ type, id, data }) => {
           // but for error.message, error.stack we would like to get them
           // se we force all object properties to be enumerable
           // we could use @dmail/uneval here instead, for now let's keep it simple
-          process.send({
-            id,
-            type: "execute-result",
-            data: {
-              code: 1,
-              value: forceEnumerable(reason),
-            },
+          sendToParent("execute-result", {
+            code: 1,
+            value: forceEnumerable(reason),
           })
         },
       )

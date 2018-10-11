@@ -26,6 +26,7 @@
 		"@dmail/project-structure-compile-babel": "github:dmail/project-structure-compile-babel",
 		"@dmail/signal": "9.1.0",
 		"cuid": "2.1.1",
+		"eventsource": "1.0.7",
 		"istanbul": "0.4.5",
 		"istanbul-lib-coverage": "2.0.1",
 		"istanbul-lib-instrument": "1.10.1",

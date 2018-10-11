@@ -1,12 +1,11 @@
 // https://www.npmjs.com/package/selenium-webdriver
 
 // http://seleniumhq.github.io/selenium/docs/api/javascript/module/selenium-webdriver/index_exports_WebDriver.html
-import { Builder } from "selenium-webdriver"
+// import { Builder } from "selenium-webdriver"
 // https://github.com/SeleniumHQ/selenium/blob/master/javascript/node/selenium-webdriver/firefox.js#L34
-import firefox from "selenium-webdriver/firefox"
+// import firefox from "selenium-webdriver/firefox"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { openIndexServer } from "../openIndexServer/openIndexServer.js"
-import { getRemoteLocation } from "../getRemoteLocation.js"
 import { getBrowserSetupAndTeardowm } from "../getClientSetupAndTeardown.js"
 
 const clientFunction = (file, setupSource, teardownSource, done) => {
@@ -19,6 +18,9 @@ const clientFunction = (file, setupSource, teardownSource, done) => {
     )
 }
 
+// to update with remoteRoot, remoteCompileFolder, hotreload signature
+// also do not force dev-server to have firefox and selenium-webdriver
+// this openFirefoxClient will become an external module
 export const openFirefoxClient = ({
   compileURL,
   headless = true,
@@ -54,7 +56,6 @@ export const openFirefoxClient = ({
           const execute = ({ file, autoClean = false, collectCoverage = false }) => {
             const remoteFile = getRemoteLocation({
               compileURL,
-
               file,
             })
 
