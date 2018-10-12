@@ -44,7 +44,6 @@ export const openNodeClient = ({
     autoCloseOnError = false,
   }) => {
     const cancelled = createSignal()
-
     const cancel = () => {
       cancelled.emit()
     }

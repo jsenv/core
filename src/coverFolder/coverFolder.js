@@ -1,172 +1,137 @@
 import { createCoverageMap } from "istanbul-lib-coverage"
-import { createFileStructure } from "@dmail/project-structure"
-import { openChromiumClient } from "../openChromiumClient/openChromiumClient.js"
 import { executeParallel } from "./executeParallel.js"
+import { createSignal } from "@dmail/signal"
 
-const createOutputMapFromOutputs = (outputs) => {
-  const outputMap = {}
-  outputs.forEach(({ output, relativeName }) => {
-    outputMap[relativeName] = output
+const objectMapKey = (object, callback) => {
+  const mappedObject = {}
+  Object.keys(object).forEach((key) => {
+    mappedObject[callback(key)] = object[key]
   })
-  return outputMap
+  return mappedObject
 }
 
-const mergeCoverage = (...coverages) => {
-  // https://github.com/istanbuljs/istanbuljs/blob/5405550c3868712b14fd8bfe0cbd6f2e7ac42279/packages/istanbul-lib-coverage/lib/coverage-map.js#L43
-  const mergedCoverageMap = coverages.reduce((previous, coverage) => {
-    return previous.merge(coverage)
-  }, createCoverageMap({}))
+const objectComposeValue = (previous, object, callback) => {
+  const composedObject = {}
 
-  return mergedCoverageMap.toJSON()
+  Object.keys(object).forEach((key) => {
+    const value = object[key]
+    composedObject[key] = key in previous ? callback(value, previous[key]) : value
+  })
+
+  return composedObject
+}
+
+export const mergeCoverageMap = (...coverageMaps) => {
+  // https://github.com/istanbuljs/istanbuljs/blob/5405550c3868712b14fd8bfe0cbd6f2e7ac42279/packages/istanbul-lib-coverage/lib/coverage-map.js#L43
+  const coverageMapMerged = coverageMaps.reduce(
+    (previous, coverageMap) => previous.merge(coverageMap),
+    createCoverageMap({}),
+  )
+  return coverageMapMerged.toJSON()
+}
+
+export const composeCoverageMap = (...coverageMaps) => {
+  return coverageMaps.reduce((previous, coverageMap) => {
+    return {
+      ...previous,
+      ...objectComposeValue(previous, coverageMap, mergeCoverageMap),
+    }
+  }, {})
 }
 
 const getRelativenameFromPath = (path, root) => path.slice(root.length) + 1
 
-const createCoverageMapFromCoverages = (coverages, root) => {
-  const coverageMap = {}
-
-  coverages.forEach((coverage) => {
-    Object.keys(coverage).forEach((path) => {
-      const relativeName = getRelativenameFromPath(path, root)
-      const coverageForPath = coverage[path]
-
-      coverageMap[relativeName] =
-        relativeName in coverageMap
-          ? mergeCoverage(coverageMap[relativeName], coverageForPath)
-          : coverageForPath
-    })
-  })
-
-  return coverageMap
-}
-
-const fileIsTestPredicate = ({ test }) => Boolean(test)
-
-const fileMustBeCoveredPredicate = ({ cover }) => Boolean(cover)
-
-const metaPredicate = (meta) => fileIsTestPredicate(meta) || fileMustBeCoveredPredicate(meta)
-
-const getFiles = ({ root }) => {
-  return createFileStructure({ root }).then(({ forEachFileMatching }) => {
-    return forEachFileMatching(metaPredicate, ({ relativeName, meta }) => {
-      return {
-        relativeName,
-        test: fileIsTestPredicate(meta),
-        cover: fileMustBeCoveredPredicate(meta),
-      }
-    })
-  })
-}
-
-// je sais pas encore comment, mais certain fichier pourrait specifier
-// dans quel platform il doivent (peuvent) se run.
-// genre export const acceptPlatforms = [{ name: 'node'}, { name: 'chrome'}]
-// et donc selon ca vscode demarre chrome ou nodejs pour le debug
-// et le code coverage run le fichier dans les plateformes listées
-// a priori je verrais plus ca dans structure.config.js
-// qui va dire
-// testChrome: { pattern of file to test on chrome}
-// testFirefox: { pattern of file to test on firefox}
-// testNode: { pattern of file to test on node}
-
-export const testProject = ({
-  root,
-  server,
-  // we must not have a default createClient like that
-  // it must be specified manually from outside
-  createClient = ({ remoteRoot }) => openChromiumClient({ remoteRoot }),
+export const getCoverageMapAndOutputMapForFiles = ({
+  localRoot,
+  remoteRoot,
+  remoteCompileDestination,
+  createClient,
+  files,
+  maxParallelExecution = 5,
   beforeAll = () => {},
   beforeEach = () => {},
   afterEach = () => {},
   afterAll = () => {},
 }) => {
-  return Promise.all([
-    createClient({ locaRoot: root, remoteRoot: server.url.toString().slice(0, -1) }),
-    getFiles({ root }),
-  ]).then(([client, files]) => {
-    const testFiles = files.filter(({ test }) => test)
-    const mustBeCoveredFiles = files.filter(({ cover }) => cover)
+  const cancelled = createSignal({ smart: true })
+  const cancel = () => {
+    cancelled.emit()
+  }
 
-    const executeTestFile = (file) => {
-      beforeEach({ file })
+  const promise = createClient({ localRoot, remoteRoot, remoteCompileDestination }).then(
+    (client) => {
+      const executeTestFile = (file) => {
+        beforeEach({ file })
 
-      return client
-        .execute({
-          file: file.relativeName,
-          // teardown : faut le construire
-          autoClose: true,
-        })
-        .then(({ promise }) => promise)
-        .then(({ output, coverage }) => {
-          // test = null means file.test.js do not set a global.__test
-          // which happens if file.test.js does not use @dmail/test or is empty for instance
-          // coverage = null means file.test.js do not set a global.__coverage__
-          // which happens if file.test.js was not instrumented.
-          // this is not supposed to happen so we should throw ?
-          // testFile.output = output
-
-          afterEach({ file, output, coverage })
-
-          return { output, coverage }
-        })
-    }
-
-    beforeAll({ files: testFiles })
-    return executeParallel(executeTestFile, testFiles, { maxParallelExecution: 5 }).then(
-      (results) => {
-        afterAll({ files: testFiles, results })
-
-        const outputMap = createOutputMapFromOutputs(
-          results.map(({ output }, index) => {
-            return {
-              output,
-              relativeName: testFiles[index],
-            }
-          }),
-        )
-
-        const coverageMap = createCoverageMapFromCoverages(results.map(({ coverage }) => coverage))
-
-        const uncoveredFiles = mustBeCoveredFiles.filter(({ relativeName }) => {
-          return relativeName in coverageMap === false
-        })
-
-        const getEmptyCoverageFor = (file) => {
-          // we must compileFile to get the coverage object
-          // without evaluating the file source because it would increment coverage
-          // and also execute code that is not supposed to be run
-          return server.compileFile(file).then(({ outputAssets }) => {
-            const coverageAsset = outputAssets.find((asset) => asset.name === "coverage")
-            const coverage = JSON.parse(coverageAsset.content)
-            // https://github.com/gotwarlost/istanbul/blob/bc84c315271a5dd4d39bcefc5925cfb61a3d174a/lib/command/common/run-with-cover.js#L229
-            Object.keys(coverage.s).forEach(function(key) {
-              coverage.s[key] = 0
-            })
-            return coverage
+        return client
+          .execute({
+            file: file.relativeName,
+            // teardown : faut le construire
+            autoClose: true,
           })
-        }
+          .then(({ promise, cancel }) => {
+            cancelled.listenOnce(cancel)
+            return promise
+          })
+          .then(({ output, coverage }) => {
+            coverage = objectMapKey(coverage, (path) => getRelativenameFromPath(path, localRoot))
+            // coverage = null means file do not set a global.__coverage__
+            // which happens if file was not instrumented.
+            // this is not supposed to happen so we should throw ?
 
-        return Promise.all(
-          uncoveredFiles.map(({ relativeName }) => {
-            return getEmptyCoverageFor(relativeName).then((emptyCoverage) => {
-              coverageMap[relativeName] = emptyCoverage
-            })
-          }),
-        ).then(() => {
-          return { files, outputMap, coverageMap }
+            afterEach({ file, output, coverage })
+
+            return { output, coverage }
+          })
+      }
+
+      beforeAll({ files })
+      return executeParallel(executeTestFile, files, { maxParallelExecution }).then((results) => {
+        afterAll({ files, results })
+
+        const outputMap = {}
+        results.forEach(({ output }, index) => {
+          const relativeName = files[index]
+          outputMap[relativeName] = output
         })
-      },
-    )
-  })
+
+        const coverageMap = composeCoverageMap(results.map(({ coverage }) => coverage))
+
+        return { outputMap, coverageMap }
+      })
+    },
+  )
+
+  return { promise, cancel }
 }
 
-export const absolutizeCoverageMap = (coverageMap, root) => {
-  const coverage = {}
+export const getCoverageMapMissed = (coverageMap, files, compileFile) => {
+  const getEmptyCoverageFor = (file) => {
+    // we must compileFile to get the coverage object
+    // without evaluating the file source because it would increment coverage
+    // and also execute code that is not supposed to be run
+    return compileFile(file).then(({ outputAssets }) => {
+      const coverageAsset = outputAssets.find((asset) => asset.name === "coverage")
+      const coverage = JSON.parse(coverageAsset.content)
+      // https://github.com/gotwarlost/istanbul/blob/bc84c315271a5dd4d39bcefc5925cfb61a3d174a/lib/command/common/run-with-cover.js#L229
+      Object.keys(coverage.s).forEach(function(key) {
+        coverage.s[key] = 0
+      })
+      return coverage
+    })
+  }
 
-  // make path absolute because relative path may not work, to be verified
-  Object.keys(coverageMap).forEach((relativeName) => {
-    coverage[`${root}/${relativeName}`] = coverageMap[relativeName]
-  })
+  const coverageMapMissed = {}
+  return Promise.all(
+    files.map((file) => {
+      return getEmptyCoverageFor(file).then((emptyCoverage) => {
+        coverageMapMissed[file] = emptyCoverage
+      })
+    }),
+  ).then(() => coverageMapMissed)
+}
 
-  return coverage
+// make path absolute because relative path may not work, to be verified
+export const absolutizeCoverageMap = (relativeCoverageMap, root) => {
+  return objectMapKey(relativeCoverageMap, (relativeName) => `${root}/${relativeName}`)
 }
