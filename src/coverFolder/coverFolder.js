@@ -1,8 +1,15 @@
-import { openChromiumClient } from "../openChromiumClient/openChromiumClient.js"
-import path from "path"
 import { createCoverageMap } from "istanbul-lib-coverage"
 import { createFileStructure } from "@dmail/project-structure"
+import { openChromiumClient } from "../openChromiumClient/openChromiumClient.js"
 import { executeParallel } from "./executeParallel.js"
+
+const createOutputMapFromOutputs = (outputs) => {
+  const outputMap = {}
+  outputs.forEach(({ output, relativeName }) => {
+    outputMap[relativeName] = output
+  })
+  return outputMap
+}
 
 const mergeCoverage = (...coverages) => {
   // https://github.com/istanbuljs/istanbuljs/blob/5405550c3868712b14fd8bfe0cbd6f2e7ac42279/packages/istanbul-lib-coverage/lib/coverage-map.js#L43
@@ -13,58 +20,80 @@ const mergeCoverage = (...coverages) => {
   return mergedCoverageMap.toJSON()
 }
 
+const getRelativenameFromPath = (path, root) => path.slice(root.length) + 1
+
+const createCoverageMapFromCoverages = (coverages, root) => {
+  const coverageMap = {}
+
+  coverages.forEach((coverage) => {
+    Object.keys(coverage).forEach((path) => {
+      const relativeName = getRelativenameFromPath(path, root)
+      const coverageForPath = coverage[path]
+
+      coverageMap[relativeName] =
+        relativeName in coverageMap
+          ? mergeCoverage(coverageMap[relativeName], coverageForPath)
+          : coverageForPath
+    })
+  })
+
+  return coverageMap
+}
+
 const fileIsTestPredicate = ({ test }) => Boolean(test)
 
 const fileMustBeCoveredPredicate = ({ cover }) => Boolean(cover)
 
 const metaPredicate = (meta) => fileIsTestPredicate(meta) || fileMustBeCoveredPredicate(meta)
 
+const getFiles = ({ root }) => {
+  return createFileStructure({ root }).then(({ forEachFileMatching }) => {
+    return forEachFileMatching(metaPredicate, ({ relativeName, meta }) => {
+      return {
+        relativeName,
+        test: fileIsTestPredicate(meta),
+        cover: fileMustBeCoveredPredicate(meta),
+      }
+    })
+  })
+}
+
+// je sais pas encore comment, mais certain fichier pourrait specifier
+// dans quel platform il doivent (peuvent) se run.
+// genre export const acceptPlatforms = [{ name: 'node'}, { name: 'chrome'}]
+// et donc selon ca vscode demarre chrome ou nodejs pour le debug
+// et le code coverage run le fichier dans les plateformes listées
+// a priori je verrais plus ca dans structure.config.js
+// qui va dire
+// testChrome: { pattern of file to test on chrome}
+// testFirefox: { pattern of file to test on firefox}
+// testNode: { pattern of file to test on node}
+
 export const testProject = ({
+  root,
   server,
-  createClient = () => openChromiumClient({ remoteRoot: server.url.toString().slice(0, -1) }),
-  root = process.cwd(),
+  // we must not have a default createClient like that
+  // it must be specified manually from outside
+  createClient = ({ remoteRoot }) => openChromiumClient({ remoteRoot }),
   beforeAll = () => {},
   beforeEach = () => {},
   afterEach = () => {},
   afterAll = () => {},
 }) => {
-  const rootLocation = path.resolve(process.cwd(), root)
+  return Promise.all([
+    createClient({ locaRoot: root, remoteRoot: server.url.toString().slice(0, -1) }),
+    getFiles({ root }),
+  ]).then(([client, files]) => {
+    const testFiles = files.filter(({ test }) => test)
+    const mustBeCoveredFiles = files.filter(({ cover }) => cover)
 
-  const getRequiredFileReport = createFileStructure({ root: rootLocation }).then(
-    ({ forEachFileMatching }) => {
-      return forEachFileMatching(metaPredicate, ({ relativeName, meta }) => {
-        return { relativeName, meta }
-      })
-    },
-  )
-
-  return Promise.all([createClient(), getRequiredFileReport()]).then(([client, fileReport]) => {
-    const testFiles = fileReport.filter(({ meta }) => fileIsTestPredicate(meta)).map((file) => {
-      return {
-        path: `${rootLocation}/${file.relativeName}`,
-        type: "test",
-      }
-    })
-    const mustBeCoveredFiles = fileReport
-      .filter(({ meta }) => fileMustBeCoveredPredicate(meta))
-      .map((file) => {
-        return {
-          path: `${rootLocation}/${file.relativeName}`,
-          type: "source",
-        }
-      })
-    const files = [...testFiles, ...mustBeCoveredFiles]
-
-    const getFileByPath = (path) => files.find((file) => file.path === path)
-
-    const executeTestFile = (testFile) => {
-      beforeEach({ file: testFile })
+    const executeTestFile = (file) => {
+      beforeEach({ file })
 
       return client
         .execute({
-          file: testFile.path,
-          collectCoverage: true,
-          executeTest: true,
+          file: file.relativeName,
+          // teardown : faut le construire
           autoClose: true,
         })
         .then(({ promise }) => promise)
@@ -74,25 +103,32 @@ export const testProject = ({
           // coverage = null means file.test.js do not set a global.__coverage__
           // which happens if file.test.js was not instrumented.
           // this is not supposed to happen so we should throw ?
-          testFile.output = output
-          Object.keys(coverage).forEach((path) => {
-            const sourceFile = getFileByPath(path)
-            sourceFile.coverage = sourceFile.coverage
-              ? mergeCoverage(sourceFile.coverage, coverage[path])
-              : coverage[path]
-          })
+          // testFile.output = output
 
-          afterEach({ file: testFile })
+          afterEach({ file, output, coverage })
+
+          return { output, coverage }
         })
     }
 
-    beforeAll({ files })
-    return executeParallel(executeTestFile, testFiles, { maxParallelExecution: 5 })
-      .then(() => {
-        afterAll({ files })
+    beforeAll({ files: testFiles })
+    return executeParallel(executeTestFile, testFiles, { maxParallelExecution: 5 }).then(
+      (results) => {
+        afterAll({ files: testFiles, results })
 
-        const uncoveredFiles = mustBeCoveredFiles.filter((mustBeCoveredFile) => {
-          return !mustBeCoveredFile.coverage
+        const outputMap = createOutputMapFromOutputs(
+          results.map(({ output }, index) => {
+            return {
+              output,
+              relativeName: testFiles[index],
+            }
+          }),
+        )
+
+        const coverageMap = createCoverageMapFromCoverages(results.map(({ coverage }) => coverage))
+
+        const uncoveredFiles = mustBeCoveredFiles.filter(({ relativeName }) => {
+          return relativeName in coverageMap === false
         })
 
         const getEmptyCoverageFor = (file) => {
@@ -111,26 +147,25 @@ export const testProject = ({
         }
 
         return Promise.all(
-          uncoveredFiles.map((mustBeCoveredFile) => {
-            return getEmptyCoverageFor(mustBeCoveredFile).then((emptyCoverage) => {
-              mustBeCoveredFile.coverage = emptyCoverage
+          uncoveredFiles.map(({ relativeName }) => {
+            return getEmptyCoverageFor(relativeName).then((emptyCoverage) => {
+              coverageMap[relativeName] = emptyCoverage
             })
           }),
-        )
-      })
-      .then(() => {
-        return files
-      })
+        ).then(() => {
+          return { files, outputMap, coverageMap }
+        })
+      },
+    )
   })
 }
 
-export const createCoverageFromTestReport = (files) => {
+export const absolutizeCoverageMap = (coverageMap, root) => {
   const coverage = {}
 
-  files.forEach((file) => {
-    if (file.coverage) {
-      coverage[file.coverage.path] = file.coverage
-    }
+  // make path absolute because relative path may not work, to be verified
+  Object.keys(coverageMap).forEach((relativeName) => {
+    coverage[`${root}/${relativeName}`] = coverageMap[relativeName]
   })
 
   return coverage
