@@ -63,6 +63,8 @@ process.on("message", ({ type, id, data }) => {
               sendToParent("restart", { fileChanged })
             }
           })
+          // by listening processCleanUp we indirectly
+          // do something like process.on('SIGINT', () => process.exit())
           processCleanup(() => {
             eventSource.close()
           })

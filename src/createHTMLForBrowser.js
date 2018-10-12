@@ -37,7 +37,12 @@ export const detectIndentation = (lines) => {
   return "\t".repeat(countLeading(firstLineWithLeadingWhiteSpace), (char) => char === "\t")
 }
 
-const prefixLines = (string, prefix = "  ", { lineSeparator = "auto" } = {}) => {
+const escapeClosingScriptTag = (string) => {
+  // https://stackoverflow.com/questions/28643272/how-to-include-an-escapedscript-script-tag-in-a-javascript-variable/28643409#28643409
+  return string.replace(/\<\/script\>/g, "<\\/script>")
+}
+
+const prefixLineWith = (string, prefix = "  ", { lineSeparator = "auto" } = {}) => {
   if (lineSeparator === "auto") {
     lineSeparator = detectLineSeparator(string)
   }
@@ -48,9 +53,8 @@ const prefixLines = (string, prefix = "  ", { lineSeparator = "auto" } = {}) => 
 }
 
 const renderScript = ({ source }) => {
-  // https://stackoverflow.com/questions/28643272/how-to-include-an-escapedscript-script-tag-in-a-javascript-variable/28643409#28643409
   return `<script type="text/javascript">
-	${source.trim().replace(/\<\/script\>/g, "<\\/script>")}
+  ${escapeClosingScriptTag(source.trim())}
 </script>`
 }
 
@@ -65,13 +69,8 @@ export const createHTMLForBrowser = ({ title = "Untitled", charset = "utf-8", sc
 
 <body>
   <main></main>
-  ${prefixLines(renderScript({ source: loaderSource.code }), "  ")}
-  ${prefixLines(
-    renderScript({
-      source: script,
-    }),
-    "  ",
-  )}
+  ${prefixLineWith(renderScript({ source: loaderSource.code }), "  ")}
+  ${prefixLineWith(renderScript({ source: script }), "  ")}
 </body>
 
 </html>`

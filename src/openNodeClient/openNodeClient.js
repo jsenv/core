@@ -3,17 +3,7 @@ import path from "path"
 import { ensureSystem } from "./ensureSystem.js"
 import "./global-fetch.js"
 import { createSignal } from "@dmail/signal"
-
-const cancellableAction = (callback, signalForAction, signalForCancel) => {
-  const actionListener = signalForAction.listen((...args) => {
-    // eslint-disable-next-line no-use-before-define
-    cancelListener.remove()
-    callback(...args)
-  })
-  const cancelListener = signalForCancel.listenOnce(() => {
-    actionListener.remove()
-  })
-}
+import { cancellableAction } from "../signalHelper.js"
 
 export const openNodeClient = ({
   localRoot,
