@@ -25,7 +25,6 @@ const getClientScript = ({ remoteRoot, remoteCompileDestination, file, hotreload
   const execute = (remoteRoot, remoteCompileDestination, file, hotreload) => {
     const remoteFile = `${remoteRoot}/${remoteCompileDestination}/${file}`
     let failedImportFile
-    let allowReloadBecauseRejected = false
 
     if (hotreload) {
       var eventSource = new window.EventSource(remoteRoot, { withCredentials: true })
@@ -42,12 +41,7 @@ const getClientScript = ({ remoteRoot, remoteCompileDestination, file, hotreload
         const changedFileLocation = `${remoteRoot}/${remoteCompileDestination}/${fileChanged}`
         // we cmay be notified from file we don't care about, reload only if needed
         // we cannot just System.delete the file because the change may have any impact, we have to reload
-        if (
-          allowReloadBecauseRejected ||
-          window.System.get(changedFileLocation) ||
-          failedImportFile === fileChanged
-        ) {
-          console.log(fileChanged, "modified, reloading")
+        if (failedImportFile === fileChanged || window.System.get(changedFileLocation)) {
           window.location.reload()
         }
       })
@@ -73,37 +67,45 @@ const getClientScript = ({ remoteRoot, remoteCompileDestination, file, hotreload
       })
     }
 
-    window.System.import(remoteFile).catch((error) => {
-      // we are missing a way to know which file has throw
-      // it can be the one we import or a dependency
-      // we could trust error.stack but ...
-      // we could also change make systemjs tell us which module threw
-      // the truth is that we should not be notified by the server
-      // of file change that does not concern this module execution
-      // so any file change will allow reload
-      allowReloadBecauseRejected = true
-      let data
-
+    const getErrorMeta = (error) => {
       if (error && error.status === 500 && error.reason === "parse error") {
         const parseError = JSON.parse(error.body)
-        // we know the file  responsible in case of parse error
-        allowReloadBecauseRejected = false
-        failedImportFile = parseError.fileName
+        const file = parseError.fileName
         const message = parseError.message
-
-        data = message.replace(
-          failedImportFile,
+        const data = message.replace(
+          file,
           link(`${remoteRoot}/${failedImportFile}`, failedImportFile),
         )
-      } else if (error && error instanceof Error) {
-        data = autoLink(error.stack)
-      } else {
-        failedImportFile = file
-        data = JSON.stringify(error)
+
+        return {
+          file,
+          data,
+        }
       }
 
+      if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
+        const file = error.url.slice(`${remoteRoot}/${remoteCompileDestination}`.length) // to be tested
+        const originalError = error.error
+        return {
+          file,
+          data:
+            originalError && originalError instanceof Error
+              ? autoLink(originalError.stack)
+              : JSON.stringify(originalError),
+        }
+      }
+
+      return {
+        data: error && error instanceof Error ? autoLink(error.stack) : JSON.stringify(error),
+      }
+    }
+
+    window.System.import(remoteFile).catch((error) => {
+      const meta = getErrorMeta(error)
+      failedImportFile = meta.file
+
       document.body.innerHTML = `<h1><a href="${remoteRoot}/${file}">${file}</a> import rejected</h1>
-      <pre style="border: 1px solid black">${data}</pre>`
+      <pre style="border: 1px solid black">${meta.data}</pre>`
 
       return Promise.reject(error)
     })
