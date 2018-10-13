@@ -7,5 +7,6 @@
   "search.exclude": {
     "build/**": true,
     "dist/**": true
-  }
+  },
+  "javascript.validate.enable": false
 }
