@@ -1,1 +1,1 @@
-export { getCoverageMapFor } from "./getCoverageMapFor.js"
+export { getCoverageAndOutputForClients } from "./getCoverageAndOutputForClients.js"

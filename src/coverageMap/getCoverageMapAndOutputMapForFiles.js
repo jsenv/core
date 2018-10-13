@@ -5,10 +5,21 @@ import { objectMapKey } from "./objectHelper.js"
 
 const getRelativenameFromPath = (path, root) => path.slice(root.length) + 1
 
+const teardown = (namespace) => {
+  return Promise.resolve(namespace.output).then((output) => {
+    const globalObject = typeof window === "object" ? window : global
+
+    return {
+      output,
+      coverage: "__coverage__" in globalObject ? globalObject.__coverage__ : null,
+    }
+  })
+}
+
 export const getCoverageMapAndOutputMapForFiles = ({
   localRoot,
-  getClient,
-  getFiles,
+  execute,
+  files,
   maxParallelExecution = 5,
   beforeAll = () => {},
   beforeEach = () => {},
@@ -20,34 +31,34 @@ export const getCoverageMapAndOutputMapForFiles = ({
     cancelled.emit()
   }
 
-  const promise = Promise.all([getClient(), getFiles()]).then(([client, files]) => {
-    const executeTestFile = (file) => {
-      beforeEach({ file })
+  const executeTestFile = (file) => {
+    beforeEach({ file })
 
-      return client
-        .execute({
-          file: file.relativeName,
-          // teardown : faut le construire
-          autoClose: true,
-        })
-        .then(({ promise, cancel }) => {
-          cancelled.listenOnce(cancel)
-          return promise
-        })
-        .then(({ output, coverage }) => {
-          coverage = objectMapKey(coverage, (path) => getRelativenameFromPath(path, localRoot))
-          // coverage = null means file do not set a global.__coverage__
-          // which happens if file was not instrumented.
-          // this is not supposed to happen so we should throw ?
+    return execute({
+      file: file.relativeName,
+      teardown,
+      autoClose: true,
+    })
+      .then(({ promise, cancel }) => {
+        cancelled.listenOnce(cancel)
+        return promise
+      })
+      .then(({ output, coverage }) => {
+        coverage = objectMapKey(coverage, (path) => getRelativenameFromPath(path, localRoot))
+        // coverage = null means file do not set a global.__coverage__
+        // which happens if file was not instrumented.
+        // this is not supposed to happen so we should throw ?
 
-          afterEach({ file, output, coverage })
+        afterEach({ file, output, coverage })
 
-          return { output, coverage }
-        })
-    }
+        return { output, coverage }
+      })
+  }
 
-    beforeAll({ files })
-    return promiseConcurrent(files, executeTestFile, { maxParallelExecution }).then((results) => {
+  beforeAll({ files })
+
+  const promise = promiseConcurrent(files, executeTestFile, { maxParallelExecution }).then(
+    (results) => {
       afterAll({ files, results })
 
       const outputMap = {}
@@ -59,8 +70,8 @@ export const getCoverageMapAndOutputMapForFiles = ({
       const coverageMap = coverageMapCompose(results.map(({ coverage }) => coverage))
 
       return { outputMap, coverageMap }
-    })
-  })
+    },
+  )
 
   return { promise, cancel }
 }

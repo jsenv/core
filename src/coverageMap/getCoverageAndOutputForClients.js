@@ -5,7 +5,7 @@ import { coverageMapCompose } from "./coverageMapCompose.js"
 import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import { promiseTry, promiseSequence } from "./promiseHelper.js"
 
-export const getCoverageMapFor = ({
+export const getCoverageAndOutputForClients = ({
   root,
   into,
   instrumentPredicate,
@@ -23,7 +23,7 @@ export const getCoverageMapFor = ({
     const remoteRoot = server.url.toString().slice(0, -1)
     const remoteCompileDestination = into
 
-    const getCoverageMapForClient = ({ getExecute, getFiles }) => {
+    const getCoverageMapAndOutputMapForClient = ({ getExecute, getFiles }) => {
       return Promise.all([
         promiseTry(() => getExecute({ localRoot, remoteRoot, remoteCompileDestination })),
         promiseTry(getFiles),
@@ -38,22 +38,43 @@ export const getCoverageMapFor = ({
       })
     }
 
-    return promiseSequence(...clients.map((client) => getCoverageMapForClient(client)))
-      .then((coverageMaps) => coverageMapCompose(...coverageMaps))
-      .then((coverageMap) => {
-        return promiseTry(getFilesToCover).then((filesToCover) => {
+    // compose all coverageMaps into one
+    // and check if all files supposed to be covered where actually covered
+    // if not add empty coverage for thoose files and return
+    // a coverageMap with all this
+    const getFinalCoverageMap = (coverageMaps) => {
+      const coverageMapComposed = coverageMapCompose(...coverageMaps)
+
+      return promiseTry(getFilesToCover)
+        .then((filesToCover) => {
           return {
-            ...coverageMap,
+            ...coverageMapComposed,
             ...getCoverageMapForFilesMissed(
-              getFilesMissed(coverageMap, filesToCover),
+              getFilesMissed(coverageMapComposed, filesToCover),
               server.compileFile,
             ),
           }
         })
+        .then((coverageMap) => coverageMapAbsolute(coverageMap, root))
+    }
+
+    return promiseSequence(...clients.map((client) => getCoverageMapAndOutputMapForClient(client)))
+      .then((results) => {
+        const outputs = results.map(({ outputMap }) => outputMap)
+        const coverageMaps = results.map(({ coverageMap }) => coverageMap)
+        return {
+          outputs,
+          coverageMaps,
+        }
       })
-      .then((coverageMap) => coverageMapAbsolute(coverageMap, root))
-    // now I have the coverageMap for src/__test__/file.test.js
-    // on both nodejs and chrome, with eventually
-    // some missing coverage for source files
+      .then(({ outputs, coverageMaps }) => {
+        return getFinalCoverageMap(coverageMaps).then((coverageMap) => {
+          return {
+            outputs,
+            coverageMaps,
+            coverageMap,
+          }
+        })
+      })
   })
 }
