@@ -1,8 +1,8 @@
 package-lock.json
-coverage
+/coverage
 .nyc_output
 coverage.lcov
 build
 !src/__test__/node_modules
 compile.config.json
-dist
+/dist

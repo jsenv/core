@@ -1,4 +1,22 @@
-export const executeParallel = (callback, list, { maxParallelExecution = 5 } = {}) => {
+export const promiseTry = (callback) => {
+  return Promise.resolve().then(() => {
+    return callback()
+  })
+}
+
+export const promiseSequence = (...callbacks) => {
+  const values = []
+
+  return callbacks
+    .reduce((previous, callback) => {
+      return previous.then(callback).then((value) => {
+        values.push(value)
+      })
+    }, Promise.resolve())
+    .then(() => values)
+}
+
+export const promiseConcurrent = (list, callback, { maxParallelExecution = 5 } = {}) => {
   const results = []
   const firstChunk = list.slice(0, maxParallelExecution)
   let globalIndex = maxParallelExecution - 1

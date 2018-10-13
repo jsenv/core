@@ -1,4 +1,4 @@
 package-lock.json
 package.json
-dist
-coverage
+/dist
+/coverage
