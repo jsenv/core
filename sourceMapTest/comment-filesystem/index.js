@@ -1,30 +1,47 @@
 const http = require("http")
 const fs = require("fs")
-const vm = require("vm")
 
 const server = http.createServer()
 
-server.on("request", (request, response) => {
-  const sourceMapContent = fs.readFileSync(`${__dirname}/compiled/file.es5.js.map`).toString()
+const getContentType = (fileRelativeName) => {
+  if (fileRelativeName.endsWith(".html")) {
+    return "text/html"
+  }
+  if (fileRelativeName.endsWith(".js")) {
+    return "application/javascript"
+  }
+  return "application/octet-stream"
+}
 
+server.on("request", (request, response) => {
+  const pathname = request.url.slice(1)
+  const fileRelativeName = pathname === "" ? "index.html" : pathname
+  let fileContent
+  try {
+    fileContent = fs.readFileSync(`${__dirname}/${fileRelativeName}`).toString()
+  } catch (e) {
+    console.log(`404 ${fileRelativeName}`)
+    response.writeHead(404, {
+      "cache-control": "no-store",
+    })
+    response.end()
+    return
+  }
+  const contentType = getContentType(fileRelativeName)
+
+  console.log(`200 ${fileRelativeName}`)
   response.writeHead(200, {
-    "content-type": "application/octet-stream",
-    "content-length": Buffer.byteLength(sourceMapContent),
+    "cache-control": "no-store",
+    "content-type": contentType,
+    "content-length": Buffer.byteLength(fileContent),
   })
-  console.log("serving source map to", request.url)
-  response.end(sourceMapContent)
+  response.end(fileContent)
 })
 
 const port = 8567
 server.listen(port, "127.0.0.1", function(error) {
   if (error) {
     throw error
-  } else {
-    const concreteFilename = `${__dirname}/build/file.es5.js/file.es5.js`
-    const content = fs.readFileSync(concreteFilename).toString()
-
-    const script = new vm.Script(content, { filename: `http://127.0.0.1:${port}/compiled/file.js` })
-
-    script.runInThisContext()
   }
+  console.log(`server listening at http://127.0.0.1:${port}`)
 })

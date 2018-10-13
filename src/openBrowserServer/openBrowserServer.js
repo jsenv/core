@@ -21,32 +21,50 @@ const getIndexPageHTML = ({ root }) => {
   </html>`
 }
 
-const getPageHTML = ({ remoteRoot, remoteCompileDestination, file, hotreload }) => {
-  const remoteFile = `${remoteRoot}/${remoteCompileDestination}/${file}`
+const getClientScript = ({ remoteRoot, remoteCompileDestination, file, hotreload }) => {
+  const execute = (remoteRoot, remoteCompileDestination, file, hotreload) => {
+    const remoteFile = `${remoteRoot}/${remoteCompileDestination}/${file}`
+    let failedImportFile
 
-  const script = `
-if (${hotreload}) {
-  var eventSource = new window.EventSource("${remoteRoot}", { withCredentials: true })
-  eventSource.addEventListener("file-changed", (e) => {
-    if (e.origin !== "${remoteRoot}") {
-      return
+    if (hotreload) {
+      var eventSource = new window.EventSource(remoteRoot, { withCredentials: true })
+      eventSource.addEventListener("file-changed", (e) => {
+        if (e.origin !== remoteRoot) {
+          return
+        }
+        const fileChanged = e.data
+        const changedFileLocation = `${remoteRoot}/${remoteCompileDestination}/${fileChanged}`
+        // we cmay be notified from file we don't care about, reload only if needed
+        // we cannot just System.delete the file because the change may have any impact, we have to reload
+        if (window.System.get(changedFileLocation) || failedImportFile === fileChanged) {
+          console.log(fileChanged, "modified, reloading")
+          window.location.reload()
+        }
+      })
     }
-    var fileChanged = e.data
-    var changedFileLocation = "${remoteRoot}/${remoteCompileDestination}/" + fileChanged
-    // we cmay be notified from file we don't care about, reload only if needed
-    // we cannot just System.delete the file because the change may have any impact, we have to reload
-    if (window.System.get(changedFileLocation)) {
-      console.log(fileChanged, 'modified, reloading')
-      window.location.reload()
-    }
-  })
+
+    window.System.import(remoteFile).catch((error) => {
+      if (error && error.status === 500 && error.reason === "parse error") {
+        const parseError = JSON.parse(error.body)
+        failedImportFile = parseError.fileName
+        document.body.innerHTML = `<h1>
+          ${parseError.name} at <a href="${remoteRoot}/${parseError.fileName}">${
+          parseError.fileName
+        }</a>
+        </h1>
+        <pre style="border: 1px solid black">${parseError.message}</pre>`
+      }
+      return Promise.reject(error)
+    })
+  }
+
+  const source = `(${execute.toString()})("${remoteRoot}", "${remoteCompileDestination}", "${file}", ${hotreload})`
+  return source
 }
 
-window.System.import("${remoteFile}")
-`
-
+const getPageHTML = (options) => {
   return createHTMLForBrowser({
-    script,
+    script: getClientScript(options),
   })
 }
 

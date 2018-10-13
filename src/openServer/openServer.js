@@ -219,13 +219,13 @@ export const openServer = (
 
       if (autoCloseOnError) {
         const removeAutoCloseOnError = addInternalRequestHandler((nodeRequest, nodeResponse) => {
-          if (nodeResponse.statusCode === 500) {
+          if (nodeResponse.statusCode === 500 && nodeResponse.statusMessage === "internal error") {
             close({
               isError: true,
               // we don't specify the true error object but only a string
               // identifying the error to avoid sending stacktrace to client
               // and right now there is no clean way to retrieve error from here
-              reason: nodeResponse.statusMessage || "internal error",
+              reason: nodeResponse.statusMessage,
             })
           }
         })

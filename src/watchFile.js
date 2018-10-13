@@ -14,6 +14,15 @@ const getModificationDate = (url) => {
   })
 }
 
+const getModificationDateForWatch = (url) => {
+  return getModificationDate(url).catch((error) => {
+    if (error && error.code === "ENOENT") {
+      return new Date()
+    }
+    return Promise.reject(error)
+  })
+}
+
 const guardAsync = (fn, shield) => (...args) => {
   return Promise.resolve()
     .then(() => shield(...args))
@@ -22,15 +31,15 @@ const guardAsync = (fn, shield) => (...args) => {
     })
 }
 
-const createChangedAsyncShield = ({ value, get, compare }) => {
-  let lastValue
+const createChangedAsyncShield = ({ valuePromise, get, compare }) => {
+  let lastValuePromise
 
   return (...args) => {
     return Promise.all([
-      lastValue === undefined ? value : lastValue,
+      lastValuePromise === undefined ? valuePromise : lastValuePromise,
       Promise.resolve().then(() => get(...args)),
     ]).then(([previousValue, value]) => {
-      lastValue = value
+      lastValuePromise = value
       return !compare(previousValue, value)
     })
   }
@@ -53,13 +62,13 @@ const limitRate = (fn, ms) => {
 
 const createWatchSignal = (url) => {
   // get mtime right now
-  const mtime = getModificationDate(url)
+  const mtimePromise = getModificationDateForWatch(url)
 
   return createSignal({
     installer: ({ emit }) => {
       const shield = createChangedAsyncShield({
-        value: mtime,
-        get: () => getModificationDate(url),
+        valuePromise: mtimePromise,
+        get: () => getModificationDateForWatch(url),
         compare: (modificationDate, nextModificationDate) => {
           return Number(modificationDate) !== Number(nextModificationDate)
         },

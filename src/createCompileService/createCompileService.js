@@ -760,6 +760,20 @@ export const createCompileService = ({
               status: 403,
             }
           }
+          if (error && error.name === "PARSE_ERROR") {
+            const json = JSON.stringify(error)
+
+            return {
+              status: 500,
+              reason: "parse error",
+              headers: {
+                "content-length": Buffer.byteLength(json),
+                "content-type": "application/json",
+                "cache-control": "no-store",
+              },
+              body: json,
+            }
+          }
           return Promise.reject(error)
         },
       )

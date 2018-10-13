@@ -1,10 +1,7 @@
 {
   "version": 3,
-  "sources": [
-    "///Users/d.maillard/Dev/Sandbox/npmlink/packages/dev-server/sourceMapTest/comment-filesystem/file.js"
-  ],
+  "sources": ["file.js"],
   "names": ["value", "console", "log"],
   "mappings": "AAAA,IAAMA,QAAQ,IAAd;;AAEA;;AAEAC,QAAQC,GAAR,CAAYF,KAAZ",
-  "file": "compiled/file.js",
-  "sourcesContent": ["ok"]
+  "file": "file.js"
 }

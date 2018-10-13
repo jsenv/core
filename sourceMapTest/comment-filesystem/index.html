@@ -5,6 +5,20 @@
 <body>
 	<a href="./build-chrome/file.es5.js/file.es5.js">./build-chrome/file.es5.js/file.es5.js</a>
 	<script type="text/javascript">
+		function replaceSourceMappingURL(source, how) {
+			var sourceMappingUrlRegExp = /\/\/[#@] ?sourceMappingURL=([^\s'"]+)\s*$/mg;
+			var lastSourceMappingUrl;
+			var matchSourceMappingUrl;
+			while (matchSourceMappingUrl = sourceMappingUrlRegExp.exec(source)) {
+				debugger
+				lastSourceMappingUrl = matchSourceMappingUrl
+			}
+			if (lastSourceMappingUrl) {
+				source.slice(0, lastSourceMappingUrl.index) + source.slice(lastSourceMappingUrl.index).replace(sourceMappingUrlRegExp, how())
+			}
+			return lastSourceMappingUrl || null
+		}
+
 		const fetchUsingXHR = (url) => {
 			return new Promise((resolve, reject) => {
 				const xhr = new XMLHttpRequest()
@@ -48,9 +62,15 @@
 			})
 		}
 
-		fetchUsingXHR('./build/file.es5.js/file.es5.js').then((content) => {
-			eval(`${content}
-//# sourceURL=./compiled/file.es5.js`)
+		fetchUsingXHR('./compiled/file.es5.js').then((content) => {
+			const sourceMapURL = findSourceMappingURL(content)
+			debugger
+
+
+			content = `${content}
+			//# sourceURL=compiled/file.es5.js`
+
+			eval(content)
 		})
 	</script>
 </body>

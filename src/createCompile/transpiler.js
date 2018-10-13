@@ -2,6 +2,7 @@ import { transpileWithBabel } from "./transpileWithBabel.js"
 
 export const transpiler = (context) => {
   const {
+    rootLocation,
     inputRelativeLocation,
     inputSource,
     inputSourceMap,
@@ -20,6 +21,7 @@ export const transpiler = (context) => {
   }
 
   return transpileWithBabel({
+    root: rootLocation,
     inputAst,
     inputSource,
     options: babelOptions,
