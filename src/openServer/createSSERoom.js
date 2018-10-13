@@ -63,8 +63,16 @@ export const createSSERoom = (
     retryDuration = 1 * 1000,
     historyLength = 1000,
     maxLength = 100, // max 100 users accepted
+    verbose = false,
   } = {},
 ) => {
+  const log = (...args) => {
+    if (verbose === false) {
+      return
+    }
+    console.log(...args)
+  }
+
   const connections = new Set()
   const history = createEventHistory(historyLength)
   let previousEventId
@@ -102,25 +110,23 @@ export const createSSERoom = (
     connections.add(connection)
     connection.closed.listenOnce(() => {
       connections.delete(connection)
-      console.log(
+      log(
         `connection closed by us, number of client connected to event source: ${connections.size}`,
       )
     })
     connection.cancelled.listenOnce(() => {
       connections.delete(connection)
-      console.log(
-        `client disconnected, number of client connected to event source: ${connections.size}`,
-      )
+      log(`client disconnected, number of client connected to event source: ${connections.size}`)
     })
 
-    console.log(
+    log(
       `client joined, number of client connected to event source: ${
         connections.size
       }, max allowed: ${maxLength}`,
     )
 
     events.forEach((event) => {
-      console.log(`send ${event.type} event to this new client`)
+      log(`send ${event.type} event to this new client`)
       connection.write(stringifySourceEvent(event))
     })
 
@@ -143,9 +149,7 @@ export const createSSERoom = (
 
   const sendEvent = (event) => {
     if (event.type !== "comment") {
-      console.log(
-        `send ${event.type} event, number of client listening event source: ${connections.size}`,
-      )
+      log(`send ${event.type} event, number of client listening event source: ${connections.size}`)
       event.id = previousEventId === undefined ? 0 : previousEventId + 1
       previousEventId = event.id
       history.add(event)
@@ -156,9 +160,7 @@ export const createSSERoom = (
 
   const keepAlive = () => {
     // maybe that, when an event occurs, we can delay the keep alive event
-    console.log(
-      `send keep alive event, number of client listening event source: ${connections.size}`,
-    )
+    log(`send keep alive event, number of client listening event source: ${connections.size}`)
     sendEvent({
       type: "comment",
       data: new Date().toLocaleTimeString(),
@@ -171,7 +173,7 @@ export const createSSERoom = (
   }
 
   const close = () => {
-    console.log(`closing, number of client to close: ${connections.size}`)
+    log(`closing, number of client to close: ${connections.size}`)
     connections.forEach((connection) => connection.close())
     clearInterval(interval)
     history.reset()
