@@ -74,15 +74,35 @@ const createWatchSignal = (url) => {
         },
       })
 
-      const guardedEmit = guardAsync(emit, shield)
       // https://nodejs.org/docs/latest/api/fs.html#fs_fs_watch_filename_options_listener
-      const watcher = fs.watch(
-        url,
-        { persistent: false },
+      let watcher
+      try {
+        watcher = fs.watch(url, { persistent: false })
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          // ignore, but conceptually we would like to be notified if this file gets created no ?
+          return
+        }
+        throw encodeURI
+      }
+      const guardedEmit = guardAsync(emit, shield)
+      watcher.on("error", (error) => {
+        if (error && error.code === "ENOENT") {
+          // ignore, but conceptually we would like to be notified if this file gets created no ?
+          return
+        }
+        throw error
+      })
+      watcher.on(
+        "change",
         limitRate((eventType, filename) => {
           guardedEmit({ url, eventType, filename })
         }, 100),
       )
+      // watcher.on('close', () => {
+
+      // })
+
       return () => watcher.close()
     },
   })

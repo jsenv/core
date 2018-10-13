@@ -1,1 +1,4 @@
-export * from "./createFileService.js"
+export { createFileService } from "./createFileService.js"
+export {
+  convertFileSystemErrorToResponseProperties,
+} from "./convertFileSystemErrorToResponseProperties.js"

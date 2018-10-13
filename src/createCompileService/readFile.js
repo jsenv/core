@@ -1,5 +1,4 @@
 import fs from "fs"
-import { convertFileSystemErrorToResponseProperties } from "../createFileService/index.js"
 
 export const readFile = ({ location, errorHandler }) => {
   return new Promise((resolve, reject) => {
@@ -8,7 +7,7 @@ export const readFile = ({ location, errorHandler }) => {
         if (errorHandler && errorHandler(error)) {
           resolve({ error })
         } else {
-          reject(convertFileSystemErrorToResponseProperties(error))
+          reject(error)
         }
       } else {
         resolve({ content: String(buffer) })

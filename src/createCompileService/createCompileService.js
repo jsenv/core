@@ -8,7 +8,10 @@ import { locateFile } from "./locateFile.js"
 import { readFile } from "./readFile.js"
 import { lockForRessource } from "./ressourceRegistry.js"
 import { writeFileFromString } from "@dmail/project-structure-compile-babel"
-import { createFileService } from "../createFileService/createFileService.js"
+import {
+  createFileService,
+  convertFileSystemErrorToResponseProperties,
+} from "../createFileService/index.js"
 import { getPlatformNameAndVersionFromHeaders } from "./getPlatformNameAndVersionFromHeaders.js"
 import {
   getInputRelativeLocation,
@@ -774,7 +777,7 @@ export const createCompileService = ({
               body: json,
             }
           }
-          return Promise.reject(error)
+          return convertFileSystemErrorToResponseProperties(error)
         },
       )
     })

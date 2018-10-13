@@ -28,7 +28,7 @@ export const createResponseGenerator = (...services) => {
       }
 
       visit(0)
-    }).then(({ status = 501, reason = "not specified", headers = {}, body }) => {
+    }).then(({ status = 501, reason = "not specified", headers = {}, body = "" }) => {
       return Object.freeze({ status, reason, headers, body })
     })
   }

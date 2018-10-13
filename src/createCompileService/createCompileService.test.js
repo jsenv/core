@@ -33,3 +33,13 @@ service({
       console.log("ok")
     })
   })
+
+// service({
+//   method: "GET",
+//   url: new URL("compiled/src/__test__/file.js:100:10", "file:///"),
+//   headers: {
+//     "user-agent": `node/8.0`,
+//   },
+// }).then((properties) => {
+//   assert.equal(properties.status, 404)
+// })
