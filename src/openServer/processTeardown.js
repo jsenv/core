@@ -25,9 +25,16 @@ export const terminate = createSignal({
     // http://man7.org/linux/man-pages/man7/signal.7.html
     // may also be sent by vscode https://github.com/Microsoft/vscode-node-debug/issues/1#issuecomment-405185642
     const triggerTerminate = () =>
-      emit("terminate").then(() => {
-        process.exit(process.exitCode || 0)
-      })
+      emit("terminate").then(
+        () => {
+          process.exit(process.exitCode || 0)
+        },
+        (error) => {
+          setTimeout(() => {
+            throw error
+          })
+        },
+      )
 
     process.on("SIGINT", triggerTerminate)
 
