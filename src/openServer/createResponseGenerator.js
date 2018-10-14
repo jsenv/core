@@ -1,30 +1,21 @@
 // https://github.com/jsenv/core/blob/master/src/util/rest/helpers.js
 
+const serviceGeneratedResponsePredicate = (value) => typeof value === "object" && value !== null
+
 export const createResponseGenerator = (...services) => {
   const generateResponse = (...args) => {
     return new Promise((resolve, reject) => {
       const visit = (index) => {
         if (index >= services.length) {
-          resolve()
-        } else {
-          const service = services[index]
-          Promise.resolve(service(...args)).then(
-            (value) => {
-              if (value) {
-                resolve(value)
-              } else {
-                visit(index + 1)
-              }
-            },
-            (value) => {
-              if (value) {
-                reject(value)
-              } else {
-                visit(index + 1)
-              }
-            },
-          )
+          return resolve()
         }
+        const service = services[index]
+        return Promise.resolve(service(...args)).then((value) => {
+          if (serviceGeneratedResponsePredicate(value)) {
+            return resolve(value)
+          }
+          return visit(index + 1)
+        }, reject)
       }
 
       visit(0)
