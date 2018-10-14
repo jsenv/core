@@ -15,7 +15,9 @@ export const enableCORS = (
     "access-control-allow-methods": allowedMethods.join(", "),
     "access-control-allow-headers": allowedHeaders.join(", "),
     "access-control-allow-credentials": true,
-    "access-control-max-age": 1, // Seconds
+    // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
+    // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
+    "access-control-max-age": 1,
     vary: "Origin",
   }
 
