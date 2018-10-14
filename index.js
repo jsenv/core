@@ -9,7 +9,6 @@ import { openChromiumClient } from "./src/openChromiumClient/openChromiumClient.
 import { openCompileServer } from "./src/openCompileServer/openCompileServer.js"
 import { openNodeClient } from "./src/openNodeClient/openNodeClient.js"
 import { openBrowserServer } from "./src/openBrowserServer/openBrowserServer.js"
-import { run } from "./src/run/run.js"
 
 export {
   createPredicateFromStructure,
@@ -18,7 +17,6 @@ export {
 export { openCompileServer }
 export { openBrowserServer }
 export { openChromiumClient }
-export { run }
 
 export const createModuleRunner = (params) => {
   // if there is already a compileServer running for that location
