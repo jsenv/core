@@ -60,7 +60,7 @@ export const openFirefoxClient = ({
             })
 
             return driver
-              .get(indexRequestHandler.url)
+              .get(indexRequestHandler.origin)
               .then(() =>
                 runFile({
                   driver,

@@ -6,7 +6,9 @@ const root = path.resolve(__dirname, "../../../")
 openCompileServer({
   root,
   into: "build",
-  url: "http://127.0.0.1:8998",
+  protocol: "http",
+  ip: "127.0.0.1",
+  port: 8998,
 }).then(({ url }) => {
   console.log(`compiling ${root} at ${url}`)
 })

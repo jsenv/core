@@ -1,8 +1,10 @@
 import { openServer } from "../openServer/index.js"
 
-export const openIndexServer = ({ url, body }) => {
+export const openIndexServer = ({ protocol, ip, port, body }) => {
   return openServer({
-    url,
+    protocol,
+    ip,
+    port,
     getResponseForRequest: () => {
       return {
         status: 200,

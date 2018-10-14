@@ -1,13 +1,19 @@
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { openIndexServer } from "../openIndexServer/openIndexServer.js"
 import { createSignal } from "@dmail/signal"
+import { URL } from "url"
+import { originAsString } from "../openServer/openServer.js"
 
-const openIndexRequestInterception = ({ url, page, body }) => {
+const openIndexRequestInterception = ({ protocol, ip, port, page, body }) => {
+  const origin = originAsString({ protocol, ip, port })
+
   return page
     .setRequestInterception(true)
     .then(() => {
       page.on("request", (interceptedRequest) => {
-        if (interceptedRequest.url().startsWith(url)) {
+        const url = new URL(interceptedRequest.url())
+
+        if (url.origin === origin) {
           interceptedRequest.respond({
             status: 200,
             contentType: "text/html",
@@ -24,7 +30,7 @@ const openIndexRequestInterception = ({ url, page, body }) => {
     })
     .then(() => {
       return {
-        url,
+        origin,
         close: () => page.setRequestInterception(false),
       }
     })
@@ -33,7 +39,9 @@ const openIndexRequestInterception = ({ url, page, body }) => {
 export const openChromiumClient = ({
   remoteRoot,
   remoteCompileDestination,
-  url = "https://127.0.0.1:0",
+  protocol = "https",
+  ip = "127.0.0.1",
+  port = 0,
   openIndexRequestHandler = openIndexServer,
   headless = true,
   mirrorConsole = false,
@@ -145,7 +153,9 @@ export const openChromiumClient = ({
               title: "Skeleton for Chromium",
             }).then((html) => {
               return openIndexRequestHandler({
-                url,
+                protocol,
+                ip,
+                port,
                 page,
                 body: html,
               }).then((indexRequestHandler) => {
@@ -153,7 +163,7 @@ export const openChromiumClient = ({
                   indexRequestHandler.close()
                 })
 
-                return page.goto(String(indexRequestHandler.url)).then(() =>
+                return page.goto(indexRequestHandler.origin).then(() =>
                   runFile({
                     page,
                     remoteRoot,

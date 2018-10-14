@@ -9,16 +9,16 @@ const watch = true
 openCompileServer({
   root,
   into,
-  url: "http://127.0.0.1:8760",
-  sourceMap: "comment",
-  sourceURL: false,
+  protocol: "http",
+  ip: "127.0.0.1",
+  port: 8760,
   instrument: false,
   watch,
   watchPredicate: () => true,
 }).then((server) => {
   return openNodeClient({
     localRoot: root,
-    remoteRoot: server.url.toString().slice(0, -1),
+    remoteRoot: server.origin,
     remoteCompileDestination: into,
     detached: true,
   }).then((nodeClient) => {

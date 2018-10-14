@@ -20,7 +20,9 @@ const guard = (fn, shield) => (...args) => {
 
 export const openCompileServer = ({
   // server options
-  url,
+  protocol,
+  ip,
+  port,
   autoCloseOnExit,
   autoCloseOnCrash,
   autoCloseOnError,
@@ -177,7 +179,9 @@ export const openCompileServer = ({
     }
 
     return openServer({
-      url,
+      protocol,
+      ip,
+      port,
       autoCloseOnExit,
       autoCloseOnCrash,
       autoCloseOnError,

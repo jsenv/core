@@ -1,19 +1,52 @@
 import http from "http"
 import https from "https"
-import { URL } from "url"
 import { createSelfSignature } from "./createSelfSignature.js"
 import { processTeardown } from "./processTeardown.js"
 import { createRequestFromNodeRequest } from "./createRequestFromNodeRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
 import { createSignal } from "@dmail/signal"
 import killPort from "kill-port"
+import { URL } from "url"
 
 const REASON_CLOSING = "closing"
 
+const getNodeServerAndAgent = ({ protocol, getSignature }) => {
+  if (protocol === "http") {
+    return {
+      nodeServer: http.createServer(),
+      agent: global.Agent,
+    }
+  }
+
+  if (protocol === "https") {
+    const { privateKey, certificate } = getSignature()
+    return {
+      nodeServer: https.createServer({
+        key: privateKey,
+        cert: certificate,
+      }),
+      agent: new https.Agent({
+        rejectUnauthorized: false, // allow self signed certificate
+      }),
+    }
+  }
+
+  throw new Error(`unsupported protocol ${protocol}`)
+}
+
+export const originAsString = ({ protocol, ip, port }) => {
+  const url = new URL("https://127.0.0.1:80")
+  url.protocol = protocol
+  url.hostname = ip
+  url.port = port
+  return url.origin
+}
+
 export const openServer = (
   {
-    // by default listen localhost on a random port in https
-    url = "https://127.0.0.1:0",
+    protocol = "https",
+    ip = "127.0.0.1",
+    port = 0, // aasign a random available port
     forcePort = false,
     // when port is https you must provide privateKey & certificate
     getSignature = createSelfSignature,
@@ -28,35 +61,18 @@ export const openServer = (
     getResponseForRequest = () => ({ status: 501 }),
   } = {},
 ) => {
-  url = new URL(url)
-
-  const protocol = url.protocol
-  const hostname = url.hostname
-
-  if (hostname === "0.0.0.0" && process.platform === "win32") {
+  if (protocol !== "http" && protocol !== "https") {
+    throw new Error(`protocol must be http or https, got ${protocol}`)
+  }
+  if (ip === "0.0.0.0" && process.platform === "win32") {
     // https://github.com/nodejs/node/issues/14900
-    throw new Error(`listening ${hostname} any not available on window`)
+    throw new Error(`listening ${ip} not available on window`)
+  }
+  if (port === 0 && forcePort) {
+    throw new Error(`no need to pass forcePort when port is 0`)
   }
 
-  let nodeServer
-  let agent
-  if (protocol === "http:") {
-    nodeServer = http.createServer()
-    agent = global.Agent
-  } else if (protocol === "https:") {
-    const { privateKey, certificate } = getSignature()
-    nodeServer = https.createServer({
-      key: privateKey,
-      cert: certificate,
-    })
-    agent = new https.Agent({
-      rejectUnauthorized: false, // allow self signed certificate
-    })
-  } else {
-    throw new Error(`unsupported protocol ${protocol}`)
-  }
-
-  const port = url.port
+  const { nodeServer, agent } = getNodeServerAndAgent({ protocol, getSignature })
 
   const connections = new Set()
   nodeServer.on("connection", (connection) => {
@@ -128,7 +144,7 @@ export const openServer = (
 
   const listen = () => {
     return new Promise((resolve, reject) => {
-      nodeServer.listen(port, hostname, (error) => {
+      nodeServer.listen(port, ip, (error) => {
         if (error) {
           reject(error)
         } else {
@@ -146,13 +162,16 @@ export const openServer = (
     .then(() => {
       status = "opened"
 
-      // in case port is 0 (randomly assign an available port)
-      // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-      const port = nodeServer.address().port
-      url.port = port
+      const origin = originAsString({
+        protocol,
+        ip,
+        // in case port is 0 (randomly assign an available port)
+        // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
+        port: nodeServer.address().port,
+      })
 
       addInternalRequestHandler((nodeRequest, nodeResponse) => {
-        const request = createRequestFromNodeRequest(nodeRequest, url)
+        const request = createRequestFromNodeRequest(nodeRequest, origin)
         console.log(request.method, request.url.toString())
 
         nodeRequest.on("error", (error) => {
@@ -260,7 +279,7 @@ export const openServer = (
       }
 
       return {
-        url,
+        origin,
         nodeServer,
         agent,
         close,

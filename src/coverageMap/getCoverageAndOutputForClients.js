@@ -15,12 +15,14 @@ export const getCoverageAndOutputForClients = ({
   return openCompileServer({
     root,
     into,
-    url: "http://127.0.0.1:0",
+    protocol: "http",
+    ip: "127.0.0.1",
+    port: 0,
     instrument: true,
     instrumentPredicate,
   }).then((server) => {
     const localRoot = root
-    const remoteRoot = server.url.toString().slice(0, -1)
+    const remoteRoot = server.origin
     const remoteCompileDestination = into
 
     const getCoverageMapAndOutputMapForClient = ({ getExecute, getFiles }) => {

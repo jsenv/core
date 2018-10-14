@@ -3,7 +3,8 @@ import fetch from "node-fetch"
 import { openServer } from "./openServer.js"
 
 openServer({
-  url: "http://127.0.0.1:8998",
+  protocol: "http",
+  port: 8998,
   getResponseForRequest: () => {
     return {
       status: 200,
@@ -14,10 +15,10 @@ openServer({
     }
   },
 })
-  .then(({ url, agent, close }) => {
-    assert.equal(String(url), "http://127.0.0.1:8998/")
+  .then(({ origin, agent, close }) => {
+    assert.deepEqual(origin, "http://127.0.0.1:8998")
 
-    return fetch(url, { agent })
+    return fetch(origin, { agent })
       .then((response) => response.text())
       .then((text) => {
         assert.equal(text, "ok")

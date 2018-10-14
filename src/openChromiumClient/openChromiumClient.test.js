@@ -11,13 +11,15 @@ const into = "build"
 openCompileServer({
   root,
   into,
-  url: "http://127.0.0.1:9656",
+  protocol: "http",
+  ip: "127.0.0.1",
+  port: 9656,
   instrument: false, // apparently it breaks sourcempa, to be tested
 }).then((server) => {
   const cleanAll = false
 
   return openChromiumClient({
-    remoteRoot: server.url.toString().slice(0, -1),
+    remoteRoot: server.origin,
     remoteCompileDestination: into,
     headless: false,
   }).then((chromiumClient) => {

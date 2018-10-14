@@ -123,24 +123,30 @@ const getPageHTML = (options) => {
 }
 
 export const openBrowserServer = ({
-  root,
-  into,
+  protocol = "http",
+  ip = "127.0.0.1",
   port = 3000,
   forcePort = true,
   watch = false,
-  ...rest
+
+  root,
+  into,
+  compileProtocol = "http",
+  compileIp = "127.0.0.1",
+  compilePort = 0,
 }) => {
   return createPredicateFromStructure({ root }).then(({ instrumentPredicate, watchPredicate }) => {
     return openCompileServer({
       root,
       into,
-      url: `http://127.0.0.1:0`,
+      protocol: compileProtocol,
+      ip: compileIp,
+      port: compilePort,
       instrumentPredicate,
       watch,
       watchPredicate,
-      ...rest,
     }).then((server) => {
-      console.log(`compiling ${root} at ${server.url}`)
+      console.log(`compiling ${root} at ${server.origin}`)
 
       const indexRoute = createRoute({
         method: "GET",
@@ -170,7 +176,7 @@ export const openBrowserServer = ({
             .then(() =>
               getPageHTML({
                 localRoot: root,
-                remoteRoot: server.url.toString().slice(0, -1),
+                remoteRoot: server.origin,
                 remoteCompileDestination: into,
                 file: url.pathname.slice(1),
                 hotreload: watch,
@@ -191,11 +197,13 @@ export const openBrowserServer = ({
       })
 
       return openServer({
-        url: `http://127.0.0.1:${port}`,
+        protocol,
+        ip,
+        port,
         forcePort,
         getResponseForRequest: createResponseGenerator(indexRoute, otherRoute),
       }).then((runServer) => {
-        console.log(`executing ${root} at ${runServer.url}`)
+        console.log(`executing ${root} at ${runServer.origin}`)
         return runServer
       })
     })
