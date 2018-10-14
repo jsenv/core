@@ -36,7 +36,7 @@ const openIndexRequestInterception = ({ protocol, ip, port, page, body }) => {
     })
 }
 
-export const openChromiumClient = ({
+export const createExecuteOnChromium = ({
   remoteRoot,
   remoteCompileDestination,
   protocol = "https",
@@ -202,5 +202,5 @@ export const openChromiumClient = ({
     })
   }
 
-  return Promise.resolve({ execute })
+  return { execute }
 }

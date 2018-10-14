@@ -3,6 +3,7 @@
 // it's very usefull to ensure a given server is closed when process exits
 
 import { asyncSimultaneousEmitter, createSignal } from "@dmail/signal"
+import { signalRace } from "../signalHelper"
 
 export const hangupOrDeath = createSignal({
   emitter: asyncSimultaneousEmitter,
@@ -24,7 +25,7 @@ export const terminate = createSignal({
     // SIGINT is CTRL+C from keyboard
     // http://man7.org/linux/man-pages/man7/signal.7.html
     // may also be sent by vscode https://github.com/Microsoft/vscode-node-debug/issues/1#issuecomment-405185642
-    const triggerTerminate = () =>
+    const triggerTerminate = () => {
       emit("terminate").then(
         () => {
           process.exit(process.exitCode || 0)
@@ -35,6 +36,7 @@ export const terminate = createSignal({
           })
         },
       )
+    }
 
     process.on("SIGINT", triggerTerminate)
 
@@ -94,39 +96,12 @@ export const exit = createSignal({
 
 const cleanupSignals = [hangupOrDeath, terminate, death]
 export const processCleanup = (cleanupCallback) => {
-  const listeners = cleanupSignals.map((signal) => {
-    return signal.listen((reason) => {
-      listeners.forEach((listener) => {
-        listener.remove()
-      })
-      return cleanupCallback(reason)
-    })
-  })
-
-  return () => {
-    listeners.forEach((listener) => {
-      listener.remove()
-    })
-  }
+  return signalRace(cleanupSignals, cleanupCallback)
 }
 
 const teardownSignals = [hangupOrDeath, terminate, death, beforeExit, exit]
-
 export const processTeardown = (teardownCallback) => {
-  const listeners = teardownSignals.map((signal) => {
-    return signal.listen((reason) => {
-      listeners.forEach((listener) => {
-        listener.remove()
-      })
-      return teardownCallback(reason)
-    })
-  })
-
-  return () => {
-    listeners.forEach((listener) => {
-      listener.remove()
-    })
-  }
+  return signalRace(teardownSignals, teardownCallback)
 }
 
 // export const listenBrowserBeforeExit = createListenBeforeExit({

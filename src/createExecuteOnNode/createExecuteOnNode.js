@@ -5,11 +5,11 @@ import "./global-fetch.js"
 import { createSignal } from "@dmail/signal"
 import { cancellableAction } from "../signalHelper.js"
 
-export const openNodeClient = ({
+export const createExecuteOnNode = ({
   localRoot,
   remoteRoot,
   remoteCompileDestination,
-  detached = false,
+  detached = true,
 }) => {
   if (detached === false) {
     const execute = ({ file, setup = () => {}, teardown = () => {} }) => {
@@ -29,7 +29,7 @@ export const openNodeClient = ({
       return Promise.resolve({ promise, close })
     }
 
-    return Promise.resolve({ execute })
+    return { execute }
   }
 
   const clientFile = path.resolve(__dirname, "./client.js")
@@ -42,7 +42,14 @@ export const openNodeClient = ({
     hotreload = false,
     autoClose = false,
     autoCloseOnError = false,
+    verbose = false,
   }) => {
+    const log = (...args) => {
+      if (verbose) {
+        console.log(...args)
+      }
+    }
+
     const cancelled = createSignal()
     const cancel = () => {
       cancelled.emit()
@@ -59,8 +66,10 @@ export const openNodeClient = ({
             `--inspect-brk`,
           ],
         })
+        log(`fork a child to execute ${file}`)
 
         const sendToChild = (type, data) => {
+          log(`send to child ${type}: ${JSON.stringify(data, null, "  ")}`)
           child.send({
             id,
             type,
@@ -69,11 +78,16 @@ export const openNodeClient = ({
         }
 
         const closed = createSignal()
-        child.once("close", closed.emit)
+        child.once("close", (code) => {
+          log(`child closed with code ${code}`)
+          closed.emit(code)
+        })
 
         const executed = createSignal()
         const restartAsked = createSignal()
         child.on("message", (message) => {
+          log(`receive message from child ${JSON.stringify(message, null, "  ")}`)
+
           if (message.id !== id) {
             return
           }
@@ -81,12 +95,19 @@ export const openNodeClient = ({
             executed.emit(message.data)
           }
           if (message.type === "restart") {
-            restartAsked.emit()
+            restartAsked.emit(message.data)
           }
         })
 
         // kill the child when cancel called except if child has closed before
-        cancellableAction(() => child.kill(child.pid, "SIGINT"), cancelled, closed)
+        cancellableAction(
+          () => {
+            log(`cancel called, ask politely to the child to exit`)
+            sendToChild("exit-please")
+          },
+          cancelled,
+          closed,
+        )
         // throw or reject when child is closed except if child ask to restart before
         // (because in that case it will be handled by restart)
         cancellableAction(
@@ -121,7 +142,8 @@ export const openNodeClient = ({
           // fork a new child when child is closed except if cancel was called
           cancellableAction(
             (code) => {
-              if (code === 0) {
+              log(`restart last step: child closed with ${code}`)
+              if (code === 0 || code === null) {
                 forkChild()
               } else {
                 throw new Error(`child exited with ${code} after asking to restart`)
@@ -131,8 +153,10 @@ export const openNodeClient = ({
             cancelled,
           )
 
-          // ask graceful shutdown to the child
-          child.kill("SIGINT")
+          log(`restart first step: ask politely to the child to exit`)
+          // we have to do this instead of child.kill('SIGINT') because, on windows, it would kill the child immediatly
+          sendToChild("exit-please")
+          log(`restart second step: wait for child to close`)
         })
 
         sendToChild("execute", {
@@ -165,5 +189,5 @@ export const openNodeClient = ({
     return forkChild()
   }
 
-  return Promise.resolve({ execute })
+  return { execute }
 }

@@ -10,15 +10,21 @@ export const signalRace = (signals, callback) => {
   let emitted = false
   const listeners = []
 
+  const cancel = () => {
+    listeners.forEach((listener) => listener.remove())
+    listeners.length = 0
+  }
+
   let i = 0
   while (i < signals.length) {
     const signal = signals[i]
-    i++
     const index = i
+    i++
     // eslint-disable-next-line no-loop-func
     const listener = signal.listenOnce((...args) => {
       emitted = true
       listeners.forEach((listener) => listener.remove())
+      listeners.length = 0
       callback({ signal, index, args })
     })
     if (emitted) {
@@ -26,10 +32,12 @@ export const signalRace = (signals, callback) => {
     }
     listeners.push(listener)
   }
+
+  return cancel
 }
 
 export const cancellableAction = (callback, triggerSignal, ...cancelSignals) => {
-  signalRace([triggerSignal, ...cancelSignals], ({ index, args }) => {
+  return signalRace([triggerSignal, ...cancelSignals], ({ index, args }) => {
     if (index === 0) {
       callback(...args)
     }

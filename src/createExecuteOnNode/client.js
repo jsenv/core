@@ -23,6 +23,10 @@ const forceEnumerable = (value) => {
 }
 
 process.on("message", ({ type, id, data }) => {
+  if (type === "exit-please") {
+    process.emit("SIGINT")
+  }
+
   if (type === "execute") {
     const {
       localRoot,
@@ -47,6 +51,7 @@ process.on("message", ({ type, id, data }) => {
     Promise.resolve()
       .then(() => ensureSystem({ localRoot, remoteRoot }))
       .then((nodeSystem) => {
+        let failedImportFile
         if (hotreload) {
           const eventSource = new global.EventSource(remoteRoot, {
             https: { rejectUnauthorized: false },
@@ -59,10 +64,11 @@ process.on("message", ({ type, id, data }) => {
             const changedFileLocation = `${remoteRoot}/${remoteCompileDestination}/${fileChanged}`
             // we may be notified from file we don't care about, reload only if needed
             // we cannot just System.delete the file because the change may have any impact, we have to reload
-            if (nodeSystem.get(changedFileLocation)) {
+            if (failedImportFile === fileChanged || nodeSystem.get(changedFileLocation)) {
               sendToParent("restart", { fileChanged })
             }
           })
+
           // by listening processCleanUp we indirectly
           // do something like process.on('SIGINT', () => process.exit())
           processCleanup(() => {

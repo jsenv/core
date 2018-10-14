@@ -5,14 +5,16 @@ import { getCoverageAndOutputForClients } from "./index.js"
 
 const root = path.resolve(__dirname, "../../../")
 const into = "dist"
+const instrumentMetaPredicate = ({ instrument }) => instrument
+const coverMetaPredicate = ({ cover }) => cover
 
 createFileStructure({ root }).then(({ forEachFileMatching, getMetaForLocation }) => {
   return getCoverageAndOutputForClients({
     root,
     into,
-    instrumentPredicate: (file) => getMetaForLocation(file).instrument,
+    instrumentPredicate: (file) => instrumentMetaPredicate(getMetaForLocation(file)),
     getFilesToCover: () =>
-      forEachFileMatching(({ cover }) => cover, ({ relativeName }) => relativeName),
+      forEachFileMatching(coverMetaPredicate, ({ relativeName }) => relativeName),
     clients: [
       {
         getExecute: openNodeClient,
