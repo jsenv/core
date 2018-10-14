@@ -28,6 +28,8 @@ export const openCompileServer = ({
   autoCloseOnError,
   watch = false,
   watchPredicate = () => false,
+  cacheDisabled = false,
+  cacheTrackHit = false,
   // compile options
   root,
   into,
@@ -128,8 +130,9 @@ export const openCompileServer = ({
         rootLocation: root,
         cacheFolderRelativeLocation: into,
         abstractFolderRelativeLocation: into,
-        trackHit: true,
         compile,
+        cacheDisabled,
+        cacheTrackHit,
       })
       compileFileFromCompileService = compileFile
 

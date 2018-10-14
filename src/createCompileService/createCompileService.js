@@ -316,7 +316,7 @@ const getFileReport = ({
       inputETagClient,
       cache,
       branch,
-    }).then(({ status, input, output, outputAssets }) => {
+    }).then(({ status, input, inputETag, output, outputAssets }) => {
       return {
         inputLocation,
         status,
@@ -325,6 +325,7 @@ const getFileReport = ({
         generate,
         branch,
         input,
+        inputETag,
         output,
         outputAssets,
       }
@@ -354,7 +355,6 @@ const updateBranch = ({
   inputETag,
   output,
   outputAssets,
-  cacheAutoClean,
   cacheTrackHit,
 }) => {
   const { branches } = cache
@@ -391,30 +391,28 @@ const updateBranch = ({
   }
 
   if (isNew || isUpdated || (isCached && cacheTrackHit)) {
-    if (cacheAutoClean) {
-      if (inputETag !== cache.inputETag) {
-        const branchesToRemove = branches.slice()
-        // do not remove the updated branch
-        const index = branchesToRemove.indexOf(branch)
-        branchesToRemove.splice(index, 1)
+    if (inputETag !== cache.inputETag) {
+      const branchesToRemove = branches.slice()
+      // do not remove the updated branch
+      const index = branchesToRemove.indexOf(branch)
+      branchesToRemove.splice(index, 1)
 
-        branchesToRemove.forEach((branch) => {
-          const branchLocation = getBranchLocation({
-            rootLocation,
-            cacheFolderRelativeLocation,
-            abstractFolderRelativeLocation,
-            filename,
-            branch,
-          })
-          console.log(`file changed, remove ${branchLocation}`)
-          // the line below is async but non blocking
-          removeFolderDeep(branchLocation)
+      branchesToRemove.forEach((branch) => {
+        const branchLocation = getBranchLocation({
+          rootLocation,
+          cacheFolderRelativeLocation,
+          abstractFolderRelativeLocation,
+          filename,
+          branch,
         })
-        branches.length = 0
-        // do not remove updated branch
-        if (isUpdated) {
-          branches.push(branch)
-        }
+        console.log(`file changed, remove ${branchLocation}`)
+        // the line below is async but non blocking
+        removeFolderDeep(branchLocation)
+      })
+      branches.length = 0
+      // do not remove updated branch
+      if (isUpdated) {
+        branches.push(branch)
       }
     }
 
@@ -497,8 +495,7 @@ const getFileCompiled = ({
   inputETagClient,
   groupId,
   getBabelPlugins,
-  cacheEnabled,
-  cacheAutoClean,
+  cacheDisabled,
   cacheTrackHit,
 }) => {
   const fileLock = lockForRessource(
@@ -540,7 +537,7 @@ const getFileCompiled = ({
             branch,
           })
 
-          if (cacheEnabled && status === "valid") {
+          if (!cacheDisabled && status === "valid") {
             return {
               inputLocation,
               status: "cached",
@@ -601,7 +598,6 @@ const getFileCompiled = ({
             output,
             outputAssets,
             cacheTrackHit,
-            cacheAutoClean,
           }).then(() => {
             return {
               status,
@@ -620,8 +616,7 @@ export const createCompileService = ({
   cacheFolderRelativeLocation = "build",
   abstractFolderRelativeLocation = "compiled",
   compile = createCompile(),
-  cacheEnabled = false,
-  cacheAutoClean = true,
+  cacheDisabled = false,
   cacheTrackHit = false,
 }) => {
   const fileService = createFileService()
@@ -723,8 +718,7 @@ export const createCompileService = ({
         inputETagClient: "if-none-match" in headers ? headers["if-none-match"] : undefined,
         groupId,
         getBabelPlugins: () => getPluginsFromGroupId(groupId),
-        cacheEnabled,
-        cacheAutoClean,
+        cacheDisabled,
         cacheTrackHit,
       }).then(
         ({ status, inputETag, outputRelativeLocation, output }) => {
@@ -737,7 +731,7 @@ export const createCompileService = ({
             return {
               status: 304,
               headers: {
-                "cache-control": "no-store",
+                ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
                 vary: "User-Agent",
                 "x-location": outputRelativeLocation,
               },
@@ -747,11 +741,11 @@ export const createCompileService = ({
           return {
             status: 200,
             headers: {
-              Etag: inputETag,
+              ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
+              ETag: inputETag,
+              vary: "User-Agent",
               "content-length": Buffer.byteLength(output),
               "content-type": "application/javascript",
-              "cache-control": "no-store",
-              vary: "User-Agent",
               "x-location": outputRelativeLocation,
             },
             body: output,
@@ -770,9 +764,9 @@ export const createCompileService = ({
               status: 500,
               reason: "parse error",
               headers: {
+                "cache-control": "no-store",
                 "content-length": Buffer.byteLength(json),
                 "content-type": "application/json",
-                "cache-control": "no-store",
               },
               body: json,
             }
@@ -790,8 +784,7 @@ export const createCompileService = ({
       abstractFolderRelativeLocation,
       filename: `${abstractFolderRelativeLocation}/${relativeLocation}`,
       compile,
-      cacheEnabled,
-      cacheAutoClean,
+      cacheDisabled,
       cacheTrackHit,
     })
 
