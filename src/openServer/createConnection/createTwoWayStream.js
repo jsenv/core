@@ -1,4 +1,4 @@
-import { createPromiseAndHooks } from "../../promise.js"
+import { createPromiseAndHooks } from "../../promiseHelper.js"
 import { createSignal } from "@dmail/signal"
 
 const twoWayStreamSymbol = Symbol.for("twoWayStream")

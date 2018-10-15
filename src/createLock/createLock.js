@@ -1,4 +1,4 @@
-import { createPromiseAndHooks } from "../promise.js"
+import { createPromiseAndHooks } from "../promiseHelper.js"
 
 const createLock = () => {
   let unusedCallback

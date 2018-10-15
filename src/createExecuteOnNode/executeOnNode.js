@@ -9,6 +9,7 @@ export const executeOnNode = ({
   watchPredicate,
   instrument = false,
   instrumentPredicate,
+  cacheDisabled = false,
   verbose,
 }) => {
   return openCompileServer({
@@ -21,6 +22,7 @@ export const executeOnNode = ({
     instrumentPredicate,
     watch,
     watchPredicate,
+    cacheDisabled,
   }).then((server) => {
     const { execute } = createExecuteOnNode({
       localRoot: root,
@@ -32,15 +34,11 @@ export const executeOnNode = ({
       file,
       hotreload: watch,
       verbose,
-    }).then(({ promise, cancel }) => {
-      promise = promise.then((value) => {
-        if (watch === false) {
-          cancel()
-          server.close()
-        }
-        return value
-      })
-      return { promise, cancel }
+    }).then((value) => {
+      if (watch === false) {
+        server.close()
+      }
+      return value
     })
   })
 }

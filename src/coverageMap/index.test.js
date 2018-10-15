@@ -1,29 +1,33 @@
 import path from "path"
 import { createFileStructure } from "@dmail/project-structure"
-import { openNodeClient } from "../openNodeClient/openNodeClient.js"
+import { createExecuteOnNode } from "../createExecuteOnNode/createExecuteOnNode.js"
 import { getCoverageAndOutputForClients } from "./index.js"
 
 const root = path.resolve(__dirname, "../../../")
 const into = "dist"
 const instrumentMetaPredicate = ({ instrument }) => instrument
-const coverMetaPredicate = ({ cover }) => cover
+// const coverMetaPredicate = ({ cover }) => cover
 
-createFileStructure({ root }).then(({ forEachFileMatching, getMetaForLocation }) => {
-  return getCoverageAndOutputForClients({
-    root,
-    into,
-    instrumentPredicate: (file) => instrumentMetaPredicate(getMetaForLocation(file)),
-    getFilesToCover: () =>
-      forEachFileMatching(coverMetaPredicate, ({ relativeName }) => relativeName),
-    clients: [
-      {
-        getExecute: openNodeClient,
-        getFiles: () => ["src/__test__/file.test.js"],
-      },
-      // {
-      //   getExecute: openChromiumClient,
-      //   getFiles: () => ["src/__test__/file.test.js"]
-      // },
-    ],
+createFileStructure({ root })
+  .then(({ getMetaForLocation }) => {
+    return getCoverageAndOutputForClients({
+      root,
+      into,
+      instrumentPredicate: (file) => instrumentMetaPredicate(getMetaForLocation(file)),
+      getFilesToCover: () => ["src/__test__/file.js", "src/__test__/file2.js"],
+      // forEachFileMatching(coverMetaPredicate, ({ relativeName }) => relativeName),
+      clients: [
+        {
+          getExecute: (...args) => createExecuteOnNode(...args).execute,
+          getFiles: () => ["src/__test__/file.test.js"],
+        },
+        // {
+        //   getExecute: openChromiumClient,
+        //   getFiles: () => ["src/__test__/file.test.js"]
+        // },
+      ],
+    })
   })
-})
+  .then(({ coverageMap, outputs }) => {
+    debugger
+  })

@@ -1,18 +1,11 @@
 /* eslint-disable import/max-dependencies */
 import cuid from "cuid"
-import { URL } from "url"
-import { createCompile } from "../createCompile/createCompile.js"
 import { JSON_FILE } from "./cache.js"
 import { createETag, isFileNotFoundError, removeFolderDeep } from "./helpers.js"
 import { locateFile } from "./locateFile.js"
 import { readFile } from "./readFile.js"
 import { lockForRessource } from "./ressourceRegistry.js"
 import { writeFileFromString } from "@dmail/project-structure-compile-babel"
-import {
-  createFileService,
-  convertFileSystemErrorToResponseProperties,
-} from "../createFileService/index.js"
-import { getPlatformNameAndVersionFromHeaders } from "./getPlatformNameAndVersionFromHeaders.js"
 import {
   getInputRelativeLocation,
   getCacheDataLocation,
@@ -21,9 +14,7 @@ import {
   getOutputLocation,
   getOutputAssetLocation,
   getSourceAbstractLocation,
-  getSourceLocationForSourceMap,
 } from "./locaters.js"
-import { createCompileProfiles } from "../createCompileProfiles/createCompileProfiles.js"
 
 const readBranchMain = ({
   rootLocation,
@@ -191,12 +182,12 @@ const readBranch = ({
 }
 
 const getFileBranch = ({
+  compile,
   rootLocation,
   cacheFolderRelativeLocation,
   abstractFolderRelativeLocation,
   filename,
-  groupId,
-  compile,
+  ...rest
 }) => {
   const inputRelativeLocation = getInputRelativeLocation({
     abstractFolderRelativeLocation,
@@ -251,11 +242,7 @@ const getFileBranch = ({
           inputRelativeLocation,
           inputSource: content,
           filename,
-          groupId,
-          getSourceNameForSourceMap: () => {
-            return filename
-          },
-          getSourceLocationForSourceMap,
+          ...rest,
         }).then(({ options, generate }) => {
           const branchIsValid = (branch) => {
             return JSON.stringify(branch.outputMeta) === JSON.stringify(options)
@@ -277,21 +264,21 @@ const getFileBranch = ({
 }
 
 const getFileReport = ({
+  compile,
   rootLocation,
   cacheFolderRelativeLocation,
   abstractFolderRelativeLocation,
   filename,
   inputETagClient = null,
-  groupId,
-  compile,
+  ...rest
 }) => {
   return getFileBranch({
+    compile,
     rootLocation,
     cacheFolderRelativeLocation,
     abstractFolderRelativeLocation,
     filename,
-    groupId,
-    compile,
+    ...rest,
   }).then(({ inputLocation, cache, options, generate, input, branch }) => {
     if (!branch) {
       return {
@@ -486,108 +473,92 @@ const updateBranch = ({
   return Promise.all(promises)
 }
 
-const getFileCompiled = ({
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
+export const compileToCompiler = ({
   compile,
-  inputETagClient,
-  groupId,
-  getBabelPlugins,
-  cacheDisabled,
-  cacheTrackHit,
+  root,
+  cacheFolderRelativeLocation = "build",
+  abstractFolderRelativeLocation = "compiled",
+  cacheDisabled = false,
+  cacheTrackHit = false,
 }) => {
-  const fileLock = lockForRessource(
-    getCacheDataLocation({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
-    }),
-  )
+  const getFileCompiled = ({ file, eTag, ...rest }) => {
+    const filename = `${abstractFolderRelativeLocation}/${file}`
+    const inputETagClient = eTag
 
-  return fileLock.chain(() => {
-    return getFileReport({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
-      inputETagClient,
-      groupId,
-      compile,
-    })
-      .then(
-        ({
-          inputLocation,
-          status,
-          cache,
-          options,
-          generate,
-          branch,
-          input,
-          inputETag,
-          output,
-          outputAssets,
-        }) => {
-          const outputRelativeLocation = getOutputRelativeLocation({
-            cacheFolderRelativeLocation,
-            abstractFolderRelativeLocation,
-            filename,
+    const fileLock = lockForRessource(
+      getCacheDataLocation({
+        rootLocation: root,
+        cacheFolderRelativeLocation,
+        abstractFolderRelativeLocation,
+        filename: file,
+      }),
+    )
+
+    return fileLock.chain(() => {
+      return getFileReport({
+        compile,
+        rootLocation: root,
+        cacheFolderRelativeLocation,
+        abstractFolderRelativeLocation,
+        filename,
+        inputETagClient,
+        ...rest,
+      })
+        .then(
+          ({
+            inputLocation,
+            status,
+            cache,
+            options,
+            generate,
             branch,
-          })
-
-          if (!cacheDisabled && status === "valid") {
-            return {
-              inputLocation,
-              status: "cached",
-              cache,
-              options,
+            input,
+            inputETag,
+            output,
+            outputAssets,
+          }) => {
+            const outputRelativeLocation = getOutputRelativeLocation({
+              cacheFolderRelativeLocation,
+              abstractFolderRelativeLocation,
+              filename,
               branch,
-              input,
-              inputETag,
-              outputRelativeLocation,
-              output,
-              outputAssets,
-            }
-          }
+            })
 
-          return Promise.resolve(generate({ outputRelativeLocation, getBabelPlugins })).then(
-            ({ output, outputAssets }) => {
+            if (!cacheDisabled && status === "valid") {
               return {
                 inputLocation,
-                status: status === "missing" ? "created" : "updated",
+                status: "cached",
                 cache,
                 options,
                 branch,
                 input,
-                inputETag: createETag(input),
+                inputETag,
                 outputRelativeLocation,
                 output,
                 outputAssets,
               }
-            },
-          )
-        },
-      )
-      .then(
-        ({
-          inputLocation,
-          status,
-          cache,
-          options,
-          branch,
-          input,
-          inputETag,
-          outputRelativeLocation,
-          output,
-          outputAssets,
-        }) => {
-          return updateBranch({
-            rootLocation,
-            cacheFolderRelativeLocation,
-            abstractFolderRelativeLocation,
-            filename,
+            }
+
+            return Promise.resolve(generate({ outputRelativeLocation, ...rest })).then(
+              ({ output, outputAssets }) => {
+                return {
+                  inputLocation,
+                  status: status === "missing" ? "created" : "updated",
+                  cache,
+                  options,
+                  branch,
+                  input,
+                  inputETag: createETag(input),
+                  outputRelativeLocation,
+                  output,
+                  outputAssets,
+                }
+              },
+            )
+          },
+        )
+        .then(
+          ({
             inputLocation,
             status,
             cache,
@@ -595,198 +566,64 @@ const getFileCompiled = ({
             branch,
             input,
             inputETag,
+            outputRelativeLocation,
             output,
             outputAssets,
-            cacheTrackHit,
-          }).then(() => {
-            return {
+          }) => {
+            return updateBranch({
+              rootLocation: root,
+              cacheFolderRelativeLocation,
+              abstractFolderRelativeLocation,
+              filename,
+              inputLocation,
               status,
+              cache,
+              options,
+              branch,
+              input,
               inputETag,
               output,
-              outputRelativeLocation,
-            }
-          })
-        },
-      )
-  })
-}
-
-export const createCompileService = ({
-  rootLocation,
-  cacheFolderRelativeLocation = "build",
-  abstractFolderRelativeLocation = "compiled",
-  compile = createCompile(),
-  cacheDisabled = false,
-  cacheTrackHit = false,
-}) => {
-  const fileService = createFileService()
-
-  const compileProfilePromise = createCompileProfiles({
-    root: rootLocation,
-  })
-
-  const service = ({ method, url, headers }) => {
-    const pathname = url.pathname
-    // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
-    const filename = pathname.slice(1)
-
-    // je crois, que, normalement
-    // il faudrait "aider" le browser pour que tout ça ait du sens
-    // genre lui envoyer une redirection vers le fichier en cache
-    // genre renvoyer 201 vers le cache lorsqu'il a été update ou créé
-    // https://developer.mozilla.org/fr/docs/Web/HTTP/Status/201
-    // renvoyer 302 ou 307 lorsque le cache existe
-    // l'intérêt c'est que si jamais le browser fait une requête vers le cache
-    // il sait à quoi ça correspond vraiment
-    // par contre ça fait 2 requête http
-
-    return compileProfilePromise.then(({ getGroupIdForPlatform, getPluginsFromGroupId }) => {
-      const { platformName, platformVersion } = getPlatformNameAndVersionFromHeaders(headers)
-      const groupId = getGroupIdForPlatform({
-        platformName,
-        platformVersion,
-      })
-
-      if (filename.endsWith(".map")) {
-        const fileLock = lockForRessource(
-          getCacheDataLocation({
-            rootLocation,
-            cacheFolderRelativeLocation,
-            abstractFolderRelativeLocation,
-            filename,
-          }),
+              outputAssets,
+              cacheTrackHit,
+            }).then(() => {
+              return {
+                status,
+                inputETag,
+                output,
+                outputRelativeLocation,
+                cacheDisabled,
+              }
+            })
+          },
         )
-
-        return fileLock.chain(() => {
-          const script = filename.slice(0, -4) // 'folder/file.js.map' -> 'folder.file.js'
-
-          // if we receive something like compiled/folder/file.js.map
-          // we redirect to build/folder/file.js/jqjcijjojio/file.js.map
-
-          return getFileBranch({
-            rootLocation,
-            cacheFolderRelativeLocation,
-            abstractFolderRelativeLocation,
-            filename: script,
-            compile,
-            groupId,
-          }).then(
-            ({ branch }) => {
-              if (!branch) {
-                return {
-                  status: 404,
-                }
-              }
-
-              const outputLocation = getOutputLocation({
-                rootLocation,
-                cacheFolderRelativeLocation,
-                abstractFolderRelativeLocation,
-                filename: script,
-                branch,
-              })
-
-              const mapFileURL = `file:///${outputLocation}.map${url.search}`
-
-              return fileService({
-                method,
-                url: new URL(mapFileURL),
-                headers,
-              }) // .then(({ status, headers = {}, body }) => {
-              //   headers.vary = [...(headers.vary ? [headers.vary] : []), "User-agent"].join(",")
-              //   return { status, headers, body }
-              // })
-            },
-            (error) => {
-              if (error && error.reason === "Unexpected directory operation") {
-                return {
-                  status: 403,
-                }
-              }
-              return Promise.reject(error)
-            },
-          )
-        })
-      }
-
-      return getFileCompiled({
-        rootLocation,
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
-        filename,
-        compile,
-        inputETagClient: "if-none-match" in headers ? headers["if-none-match"] : undefined,
-        groupId,
-        getBabelPlugins: () => getPluginsFromGroupId(groupId),
-        cacheDisabled,
-        cacheTrackHit,
-      }).then(
-        ({ status, inputETag, outputRelativeLocation, output }) => {
-          // here status can be "created", "updated", "cached"
-
-          // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
-          // if-none-match c'est forcément le etag du client qui a match
-          // faudra changer ça non?
-          if ("if-none-match" in headers && status === "cached") {
-            return {
-              status: 304,
-              headers: {
-                ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
-                vary: "User-Agent",
-                "x-location": outputRelativeLocation,
-              },
-            }
-          }
-
-          return {
-            status: 200,
-            headers: {
-              ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
-              ETag: inputETag,
-              vary: "User-Agent",
-              "content-length": Buffer.byteLength(output),
-              "content-type": "application/javascript",
-              "x-location": outputRelativeLocation,
-            },
-            body: output,
-          }
-        },
-        (error) => {
-          if (error && error.reason === "Unexpected directory operation") {
-            return {
-              status: 403,
-            }
-          }
-          if (error && error.name === "PARSE_ERROR") {
-            const json = JSON.stringify(error)
-
-            return {
-              status: 500,
-              reason: "parse error",
-              headers: {
-                "cache-control": "no-store",
-                "content-length": Buffer.byteLength(json),
-                "content-type": "application/json",
-              },
-              body: json,
-            }
-          }
-          return convertFileSystemErrorToResponseProperties(error)
-        },
-      )
     })
   }
 
-  const compileFile = (relativeLocation) =>
-    getFileCompiled({
-      rootLocation,
+  const getFileCompiledAssetLocation = ({ file, asset, ...rest }) => {
+    const filename = `${abstractFolderRelativeLocation}/${file}`
+
+    return getFileBranch({
+      compile,
+      rootLocation: root,
       cacheFolderRelativeLocation,
       abstractFolderRelativeLocation,
-      filename: `${abstractFolderRelativeLocation}/${relativeLocation}`,
-      compile,
-      cacheDisabled,
-      cacheTrackHit,
-    })
+      filename,
+      ...rest,
+    }).then(({ branch }) => {
+      if (!branch) {
+        return ""
+      }
 
-  return { service, compileFile }
+      const branchLocation = getBranchLocation({
+        rootLocation: root,
+        cacheFolderRelativeLocation,
+        abstractFolderRelativeLocation,
+        branch,
+      })
+
+      return `file:///${branchLocation}${asset}`
+    })
+  }
+
+  return { getFileCompiled, getFileCompiledAssetLocation }
 }

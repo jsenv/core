@@ -1,3 +1,4 @@
 /dist
 /coverage
+/build
 src/__test__/file-with-syntax-error.js

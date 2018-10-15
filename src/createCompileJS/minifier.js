@@ -2,7 +2,7 @@ import { transpileWithBabel } from "./transpileWithBabel.js"
 
 export const minifier = (context) => {
   const {
-    inputRelativeLocation,
+    inputName,
     inputSource,
     inputAst,
     inputSourceMap,
@@ -15,7 +15,7 @@ export const minifier = (context) => {
   const babelOptions = {
     // we need a list of plugin that minify the outputs
     plugins: [],
-    filename: inputRelativeLocation,
+    filename: inputName,
     inputSourceMap,
   }
 

@@ -4,6 +4,7 @@ import { coverageMapAbsolute } from "./coverageMapAbsolute.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import { promiseTry, promiseSequence } from "./promiseHelper.js"
+import { createSignal } from "@dmail/signal"
 
 export const getCoverageAndOutputForClients = ({
   root,
@@ -12,7 +13,10 @@ export const getCoverageAndOutputForClients = ({
   getFilesToCover = () => [],
   clients = [],
 }) => {
-  return openCompileServer({
+  const cancelled = createSignal({ smart: true })
+  const cancel = cancelled.emit
+
+  const promise = openCompileServer({
     root,
     into,
     protocol: "http",
@@ -21,6 +25,8 @@ export const getCoverageAndOutputForClients = ({
     instrument: true,
     instrumentPredicate,
   }).then((server) => {
+    cancelled.listenOnce(server.close)
+
     const localRoot = root
     const remoteRoot = server.origin
     const remoteCompileDestination = into
@@ -30,13 +36,15 @@ export const getCoverageAndOutputForClients = ({
         promiseTry(() => getExecute({ localRoot, remoteRoot, remoteCompileDestination })),
         promiseTry(getFiles),
       ]).then(([execute, files]) => {
-        return getCoverageMapAndOutputMapForFiles({
+        const clientExecution = getCoverageMapAndOutputMapForFiles({
           localRoot,
           remoteRoot,
           remoteCompileDestination,
           execute,
           files,
         })
+        cancelled.listenOnce(clientExecution.cancel)
+        return clientExecution
       })
     }
 
@@ -60,7 +68,9 @@ export const getCoverageAndOutputForClients = ({
         .then((coverageMap) => coverageMapAbsolute(coverageMap, root))
     }
 
-    return promiseSequence(...clients.map((client) => getCoverageMapAndOutputMapForClient(client)))
+    return promiseSequence(
+      ...clients.map((client) => () => getCoverageMapAndOutputMapForClient(client)),
+    )
       .then((results) => {
         const outputs = results.map(({ outputMap }) => outputMap)
         const coverageMaps = results.map(({ coverageMap }) => coverageMap)
@@ -79,4 +89,7 @@ export const getCoverageAndOutputForClients = ({
         })
       })
   })
+  promise.cancel = cancel
+
+  return promise
 }

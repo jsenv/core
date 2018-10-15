@@ -56,7 +56,7 @@ const createDefaultOptions = ({ groupId, abstractFolderRelativeLocation }) => {
   }
 }
 
-export const createCompile = (
+export const createCompileJS = (
   {
     createOptions = () => {},
     transpiler = defaultTranspiler,
@@ -77,7 +77,7 @@ export const createCompile = (
     )
   }
 
-  const compile = (compileContext) => {
+  const compileJS = (compileContext) => {
     return getOptions(compileContext).then((options) => {
       let { identify, transpile, instrument, minify, optimize, remap } = options
       // no location -> cannot identify
@@ -100,13 +100,13 @@ export const createCompile = (
           outputSource: compileContext.inputSource,
           outputSourceMap: compileContext.inputSourceMap,
           // folder/file.js -> file.js.map
-          outputSourceMapName: `${path.basename(compileContext.inputRelativeLocation)}.map`,
+          outputSourceMapName: `${path.basename(compileContext.inputName)}.map`,
           outputAst: compileContext.inputAst,
-          getSourceNameForSourceMap: ({ rootLocation, inputRelativeLocation }) => {
-            return resolvePath(rootLocation, inputRelativeLocation)
+          getSourceNameForSourceMap: ({ root, inputName }) => {
+            return resolvePath(root, inputName)
           },
-          getSourceLocationForSourceMap: ({ inputRelativeLocation }) => {
-            return inputRelativeLocation
+          getSourceLocationForSourceMap: ({ inputName }) => {
+            return inputName
           },
           ...compileContext,
           ...generateContext,
@@ -114,7 +114,7 @@ export const createCompile = (
         })
           .then((context) => (transpile ? transform(context, transpiler) : context))
           .then((context) => {
-            if (instrument && instrumentPredicate(context.inputRelativeLocation)) {
+            if (instrument && instrumentPredicate(compileContext.inputName)) {
               return transform(context, instrumenter)
             }
             return context
@@ -140,5 +140,5 @@ export const createCompile = (
     })
   }
 
-  return compile
+  return compileJS
 }

@@ -13,7 +13,7 @@ export const createExecuteOnNode = ({
 }) => {
   if (detached === false) {
     const execute = ({ file, setup = () => {}, teardown = () => {} }) => {
-      const close = () => {}
+      const cancel = () => {}
 
       const remoteFile = `${remoteRoot}/${remoteCompileDestination}/${file}`
 
@@ -25,8 +25,9 @@ export const createExecuteOnNode = ({
             .then(() => nodeSystem.import(remoteFile))
             .then(teardown)
         })
+      promise.cancel = cancel
 
-      return Promise.resolve({ promise, close })
+      return promise
     }
 
     return { execute }
@@ -50,12 +51,10 @@ export const createExecuteOnNode = ({
       }
     }
 
-    const cancelled = createSignal()
-    const cancel = () => {
-      cancelled.emit()
-    }
-
     const forkChild = () => {
+      const cancelled = createSignal({ smart: true })
+      const cancel = cancelled.emit
+
       const promise = new Promise((resolve, reject) => {
         const id = previousID === undefined ? 1 : previousID + 1
         previousID = id
@@ -171,19 +170,20 @@ export const createExecuteOnNode = ({
       }).then(
         (value) => {
           if (autoClose) {
-            close()
+            cancel()
           }
           return value
         },
         (reason) => {
           if (autoCloseOnError) {
-            close()
+            cancel()
           }
           return Promise.reject(reason)
         },
       )
+      promise.cancel = cancel
 
-      return Promise.resolve({ promise, cancel })
+      return promise
     }
 
     return forkChild()

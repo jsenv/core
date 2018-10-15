@@ -37,38 +37,3 @@ export const getOutputAssetLocation = ({ asset, ...rest }) => {
 
 export const getSourceAbstractLocation = ({ rootLocation, inputRelativeLocation }) =>
   resolvePath(rootLocation, inputRelativeLocation)
-
-export const getSourceMapLocation = ({
-  rootLocation,
-  outputRelativeLocation,
-  outputSourceMapName,
-}) => resolvePath(rootLocation, path.dirname(outputRelativeLocation), outputSourceMapName)
-
-export const getSourceMapAbstractLocation = ({
-  rootLocation,
-  abstractFolderRelativeLocation,
-  inputRelativeLocation,
-  outputSourceMapName,
-}) =>
-  resolvePath(
-    rootLocation,
-    abstractFolderRelativeLocation,
-    path.dirname(inputRelativeLocation),
-    outputSourceMapName,
-  )
-
-const sourceMapKnowsExactLocation = false
-const sourceMapUseAbsoluteLocation = true
-
-export const getSourceLocationForSourceMap = (context) => {
-  if (sourceMapUseAbsoluteLocation) {
-    return `/${context.inputRelativeLocation}`
-  }
-
-  const sourceLocation = getSourceAbstractLocation(context)
-  const sourceMapLocation = sourceMapKnowsExactLocation
-    ? getSourceMapLocation(context)
-    : getSourceMapAbstractLocation(context)
-
-  return normalizeSeparation(path.relative(path.dirname(sourceMapLocation), sourceLocation))
-}

@@ -1,10 +1,10 @@
-import { createCompile } from "./createCompile.js"
+import { createCompileJS } from "./createCompileJS.js"
 import { instrumenter } from "./instrumenter-babel.js"
 import istanbul from "istanbul"
 import fs from "fs"
 import path from "path"
 
-const compile = createCompile({
+const compileJS = createCompileJS({
   instrumenter,
   createOptions: () => {
     return {
@@ -16,12 +16,12 @@ const compile = createCompile({
 })
 
 const projectRoot = path.resolve(__dirname, "../../../")
-const filename = `${projectRoot}/src/createCompile/file.js`
+const file = "src/createCompile/file.js"
+const filename = `${projectRoot}/${file}`
 
-compile({
-  rootLocation: projectRoot,
-  filename,
-  inputRelativeLocation: "src/createCompile/file.js",
+compileJS({
+  root: projectRoot,
+  inputName: file,
   inputSource: fs.readFileSync(filename).toString(),
   groupId: "nothing",
 }).then(({ generate }) => {

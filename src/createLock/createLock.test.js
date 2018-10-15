@@ -1,7 +1,7 @@
 import { test } from "@dmail/test"
 import assert from "assert"
 import { mockExecution } from "micmac"
-import { createPromiseAndHooks } from "../promise.js"
+import { createPromiseAndHooks } from "../promiseHelper.js"
 import { createLockRegistry } from "./createLock.js"
 
 const assertPromiseIsPending = (promise) => {

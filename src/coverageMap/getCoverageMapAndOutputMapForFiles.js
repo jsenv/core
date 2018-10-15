@@ -1,9 +1,11 @@
 import { createSignal } from "@dmail/signal"
 import { promiseConcurrent } from "./promiseHelper.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
-import { objectMapKey } from "./objectHelper.js"
+// import { objectMapKey } from "./objectHelper.js"
 
-const getRelativenameFromPath = (path, root) => path.slice(root.length) + 1
+// const getRelativenameFromPath = (path, root) => {
+//   return path.startsWith(root) ? path.slice(root.length) + 1 : path
+// }
 
 const teardown = (namespace) => {
   return Promise.resolve(namespace.output).then((output) => {
@@ -17,7 +19,6 @@ const teardown = (namespace) => {
 }
 
 export const getCoverageMapAndOutputMapForFiles = ({
-  localRoot,
   execute,
   files,
   maxParallelExecution = 5,
@@ -27,32 +28,27 @@ export const getCoverageMapAndOutputMapForFiles = ({
   afterAll = () => {},
 }) => {
   const cancelled = createSignal({ smart: true })
-  const cancel = () => {
-    cancelled.emit()
-  }
+  const cancel = cancelled.emit
 
   const executeTestFile = (file) => {
     beforeEach({ file })
 
-    return execute({
-      file: file.relativeName,
+    const execution = execute({
+      file,
       teardown,
       autoClose: true,
     })
-      .then(({ promise, cancel }) => {
-        cancelled.listenOnce(cancel)
-        return promise
-      })
-      .then(({ output, coverage }) => {
-        coverage = objectMapKey(coverage, (path) => getRelativenameFromPath(path, localRoot))
-        // coverage = null means file do not set a global.__coverage__
-        // which happens if file was not instrumented.
-        // this is not supposed to happen so we should throw ?
+    cancelled.listenOnce(execution.cancel)
 
-        afterEach({ file, output, coverage })
+    return execution.then(({ output, coverage }) => {
+      // coverage = null means file do not set a global.__coverage__
+      // which happens if file was not instrumented.
+      // this is not supposed to happen so we should throw ?
 
-        return { output, coverage }
-      })
+      afterEach({ file, output, coverage })
+
+      return { output, coverage }
+    })
   }
 
   beforeAll({ files })
@@ -72,6 +68,7 @@ export const getCoverageMapAndOutputMapForFiles = ({
       return { outputMap, coverageMap }
     },
   )
+  promise.cancel = cancel
 
-  return { promise, cancel }
+  return promise
 }

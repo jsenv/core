@@ -8,7 +8,12 @@ export const promiseSequence = (...callbacks) => {
   const values = []
 
   return callbacks
-    .reduce((previous, callback) => {
+    .reduce((previous, callback, index) => {
+      if (typeof callback !== "function") {
+        throw new TypeError(
+          `promiseSequence arguments must be function, got ${callback} at ${index}`,
+        )
+      }
       return previous.then(callback).then((value) => {
         values.push(value)
       })
