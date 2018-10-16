@@ -11,8 +11,8 @@ export const ressourceToExtension = (ressource) => {
   return path.extname(ressourceToPathname(ressource)).slice(1)
 }
 
-export const ressourceToDirname = (ressource) => {
+export const ressourceToFirstDirectory = (ressource) => {
   const pathname = ressourceToPathname(ressource)
-  const dirname = pathname.slice(0, pathname.indexOf("/"))
-  return dirname
+  const firstDirectory = pathname.slice(0, pathname.indexOf("/"))
+  return firstDirectory
 }

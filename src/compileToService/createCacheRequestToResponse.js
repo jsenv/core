@@ -1,8 +1,8 @@
-import { ressourceToDirname } from "../urlHelper.js"
+import { ressourceToFirstDirectory } from "../urlHelper.js"
 import { createRequestToFileResponse } from "../createRequestToFileResponse/index.js"
 
 export const isCacheRequest = (request, cacheFolder) => {
-  return ressourceToDirname(request.ressource) === cacheFolder
+  return ressourceToFirstDirectory(request.ressource) === cacheFolder
 }
 
 export const createCacheRequestToResponse = ({ root, cacheFolder, cacheIgnore, cacheStrategy }) => {

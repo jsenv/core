@@ -1,4 +1,4 @@
-import { ressourceToDirname } from "../urlHelper.js"
+import { ressourceToFirstDirectory } from "../urlHelper.js"
 import { convertFileSystemErrorToResponseProperties } from "../createRequestToFileResponse/index.js"
 
 export const compileFileResolveToResponse = ({
@@ -63,7 +63,7 @@ export const compileFilePromiseToResponse = (promise) => {
 }
 
 export const isCompileRequest = (request, compileFolder) => {
-  return ressourceToDirname(request.ressource) === compileFolder
+  return ressourceToFirstDirectory(request.ressource) === compileFolder
 }
 
 export const requestToCompileFileParam = (request, { compileFolder }) => {
