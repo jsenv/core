@@ -1,15 +1,13 @@
-import { promiseMatch } from "../promiseHelper.js"
-
-const serviceGeneratedResponsePredicate = (value) => typeof value === "object" && value !== null
+import { serviceCompose } from "./serviceCompose.js"
 
 export const createResponseGenerator = (...services) => {
-  const generateResponse = (request) => {
-    return promiseMatch(services, request, serviceGeneratedResponsePredicate).then(
-      ({ status = 501, reason = "not specified", headers = {}, body = "" }) => {
-        return Object.freeze({ status, reason, headers, body })
-      },
-    )
-  }
+  const service = serviceCompose(...services)
 
-  return generateResponse
+  return (request) => {
+    return Promise.resolve()
+      .then(() => service(request))
+      .then(({ status = 501, reason = "not specified", headers = {}, body = "" }) => {
+        return Object.freeze({ status, reason, headers, body })
+      })
+  }
 }

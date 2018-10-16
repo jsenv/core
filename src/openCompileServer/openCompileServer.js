@@ -1,7 +1,6 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 
-import { createCompile } from "../createCompile/createCompile.js"
-import { createFileService } from "../createFileService/index.js"
+import { createRequestToFileResponse } from "../createRequestToFileResponse/index.js"
 import {
   openServer,
   enableCORS,
@@ -11,11 +10,7 @@ import {
 } from "../openServer/index.js"
 import { watchFile } from "../watchFile.js"
 import { createSignal } from "@dmail/signal"
-import { urlToPathname } from "../urlHelper.js"
-
-const guard = (fn, shield) => (...args) => {
-  return shield(...args) ? fn(...args) : undefined
-}
+import { JSCreateCompileService } from "../JSCreateCompileService/JSCreateCompileService.js"
 
 export const openCompileServer = ({
   // server options
@@ -27,21 +22,24 @@ export const openCompileServer = ({
   autoCloseOnError,
   watch = false,
   watchPredicate = () => false,
-  cacheDisabled = false,
-  cacheTrackHit = false,
-  // compile options
+  preventCors = false,
+  cacheIgnore = false,
+
+  // generic compile options
   root,
   into,
-  cors = true,
+  cacheTrackHit = false,
+  cacheStrategy = "eTag",
+
+  // js compile options
   transpile = true,
-  sourceMap = "comment", // can be "comment", "inline", "none"
-  sourceURL = true,
-  minify = false,
-  optimize = false,
   instrument = false,
-  instrumentPredicate = () => false,
+  instrumentPredicate,
 }) => {
   const cleanup = createSignal()
+
+  const cacheFolder = into
+  const compileFolder = `${into}__dynamic__`
 
   return Promise.resolve().then(() => {
     const watchSignal = createSignal()
@@ -53,21 +51,19 @@ export const openCompileServer = ({
         watchedFiles.clear()
       })
 
-      return ({ url }) => {
-        let relativeFilename = urlToPathname(url).slice(1)
-        const dirname = relativeFilename.slice(0, relativeFilename.indexOf("/"))
+      return ({ ressource }) => {
+        const dirname = ressource.slice(0, ressource.indexOf("/"))
         if (dirname === into) {
           // when I ask for a compiled file, watch the corresponding file on filesystem
-          relativeFilename = relativeFilename.slice(into.length + 1)
-        }
+          const file = ressource.slice(into.length + 1)
+          const fileLocation = `${root}/${file}`
 
-        const filename = `${root}/${relativeFilename}`
-
-        if (watchedFiles.has(filename) === false && watchPredicate(relativeFilename)) {
-          const fileWatcher = watchFile(filename, () => {
-            watchSignal.emit(relativeFilename)
-          })
-          watchedFiles.set(url, fileWatcher)
+          if (watchedFiles.has(fileLocation) === false && watchPredicate(file)) {
+            const fileWatcher = watchFile(fileLocation, () => {
+              watchSignal.emit(file)
+            })
+            watchedFiles.set(fileLocation, fileWatcher)
+          }
         }
       }
     }
@@ -95,77 +91,36 @@ export const openCompileServer = ({
       }
     }
 
-    let compileFileFromCompileService
-    const createCompileServiceCustom = () => {
-      const compile = createCompile({
-        instrumentPredicate,
-        createOptions: () => {
-          // we should use a token or something to prevent a browser from being taken for nodejs
-          // because will have security impact as we are going to trust this
-          // const isNodeClient =
-          //   request.headers.has("user-agent") &&
-          //   request.headers.get("user-agent").startsWith("node-fetch")
-
-          const remap = sourceMap === "comment" || sourceMap === "inline"
-          const remapMethod = sourceMap
-
-          const identify = sourceURL
-          const identifyMethod = "relative"
-
-          return {
-            identify,
-            identifyMethod,
-            transpile,
-            instrument,
-            remap,
-            remapMethod,
-            minify,
-            optimize,
-          }
-        },
-      })
-
-      const { service: compileService, compileFile } = createCompileService({
-        rootLocation: root,
-        cacheFolderRelativeLocation: into,
-        abstractFolderRelativeLocation: into,
-        compile,
-        cacheDisabled,
-        cacheTrackHit,
-      })
-      compileFileFromCompileService = compileFile
-
-      return guard(compileService, ({ method, url }) => {
-        if (method !== "GET" && method !== "HEAD") {
-          return false
-        }
-
-        const pathname = urlToPathname(url)
-        // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
-        const filename = pathname.slice(1)
-        const dirname = filename.slice(0, filename.indexOf("/"))
-
-        if (dirname !== into) {
-          return false
-        }
-
-        return true
-      })
-    }
-
-    const services = [
-      ...(watch ? [createWatchService(), createFileChangedSSEService()] : []),
-      createCompileServiceCustom(),
-      createFileService({
-        root,
-      }),
-    ]
-
-    const responseGenerator = createResponseGenerator(...services)
+    const responseGenerator = createResponseGenerator(
+      ...[
+        ...(watch ? [createWatchService(), createFileChangedSSEService()] : []),
+        // eslint-disable-next-line new-cap
+        JSCreateCompileService({
+          root,
+          cacheFolder,
+          compileFolder,
+          cacheIgnore,
+          cacheTrackHit,
+          cacheStrategy,
+          instrumentPredicate,
+          createOptions: () => {
+            return {
+              transpile,
+              instrument,
+            }
+          },
+        }),
+        createRequestToFileResponse({
+          root,
+          cacheIgnore,
+          cacheStrategy,
+        }),
+      ],
+    )
 
     const getResponseForRequest = (request) => {
       return responseGenerator(request).then((response) => {
-        return cors ? enableCORS(request, response) : response
+        return preventCors ? response : enableCORS(request, response)
       })
     }
 
@@ -182,7 +137,6 @@ export const openCompileServer = ({
 
       return {
         ...server,
-        compileFile: compileFileFromCompileService,
         watchSignal,
       }
     })

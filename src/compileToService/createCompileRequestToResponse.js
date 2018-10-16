@@ -1,34 +1,7 @@
-import {
-  createFileService,
-  convertFileSystemErrorToResponseProperties,
-} from "../createFileService/index.js"
-import { ressourceToPathname } from "../urlHelper.js"
+import { ressourceToDirname } from "../urlHelper.js"
+import { convertFileSystemErrorToResponseProperties } from "../createRequestToFileResponse/index.js"
 
-export const requestToParam = ({ ressource, headers }, { cacheFolder, compileFolder }) => {
-  const pathname = ressourceToPathname(ressource)
-  const dirname = pathname.slice(0, pathname.indexOf("/"))
-
-  if (dirname === compileFolder) {
-    const file = pathname.slice(dirname.length + 1)
-    return {
-      type: "compile",
-      file,
-      eTag: "if-none-match" in headers ? headers["if-none-match"] : undefined,
-    }
-  }
-
-  if (dirname === cacheFolder) {
-    return {
-      type: "cache",
-    }
-  }
-
-  return {
-    type: "other",
-  }
-}
-
-export const promiseToResponse = (promise) => {
+export const compileFilePromiseToResponse = (promise) => {
   return promise.then(
     ({ status, inputETag, outputRelativeLocation, output, cacheIgnore }) => {
       // here status can be "created", "updated", "cached"
@@ -83,20 +56,22 @@ export const promiseToResponse = (promise) => {
   )
 }
 
-export const fileCompileToService = (fileCompile, { root, cacheFolder, compileFolder }) => {
-  const fileService = createFileService({ root })
+export const isCompileRequest = (request, compileFolder) => {
+  return ressourceToDirname(request.ressource) === compileFolder
+}
 
+export const requestToCompileFileParam = (request, { compileFolder }) => {
+  const file = request.ressource.slice(compileFolder.length + 1)
+  const eTag = "if-none-match" in request.headers ? request.headers["if-none-match"] : undefined
+  return { file, eTag }
+}
+
+export const createCompileRequestToResponse = ({ compileFile, compileFolder }) => {
   return (request) => {
-    const { type, ...rest } = requestToParam(request, { cacheFolder, compileFolder })
-
-    if (type === "cache") {
-      return fileService(request)
+    if (isCompileRequest(request, compileFolder)) {
+      const promise = compileFile(requestToCompileFileParam(request, { compileFolder }))
+      return compileFilePromiseToResponse(promise)
     }
-
-    if (type === "compile") {
-      return promiseToResponse(fileCompile(rest))
-    }
-
     return null
   }
 }

@@ -9,6 +9,6 @@ openCompileServer({
   protocol: "http",
   ip: "127.0.0.1",
   port: 8998,
-}).then(({ url }) => {
-  console.log(`compiling ${root} at ${url}`)
+}).then(({ origin }) => {
+  console.log(`compiling ${root} at ${origin}`)
 })

@@ -4,7 +4,6 @@ import { minifier } from "./minifier.js"
 import { optimizer } from "./optimizer.js"
 import { remapper } from "./remapper.js"
 import { transpiler } from "./transpiler.js"
-import { resolvePath } from "../compileToService/helpers.js"
 import path from "path"
 
 const transform = (context, transformer) => {
@@ -43,7 +42,7 @@ const createDefaultOptions = ({ groupId }) => {
   }
 }
 
-export const createCompileJS = (
+export const createCompile = (
   { createOptions = () => {}, instrumentPredicate = () => true } = {},
 ) => {
   const getOptions = (context) => {
@@ -83,7 +82,7 @@ export const createCompileJS = (
           outputSourceMapName: `${path.basename(compileContext.inputName)}.map`,
           outputAst: compileContext.inputAst,
           getSourceNameForSourceMap: ({ root, inputName }) => {
-            return resolvePath(root, inputName)
+            return `${root}/${inputName}`
           },
           getSourceLocationForSourceMap: ({ inputName }) => {
             return inputName

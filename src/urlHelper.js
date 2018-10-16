@@ -10,3 +10,9 @@ export const ressourceToPathname = (ressource) => {
 export const ressourceToExtension = (ressource) => {
   return path.extname(ressourceToPathname(ressource)).slice(1)
 }
+
+export const ressourceToDirname = (ressource) => {
+  const pathname = ressourceToPathname(ressource)
+  const dirname = pathname.slice(0, pathname.indexOf("/"))
+  return dirname
+}

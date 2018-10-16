@@ -1,18 +1,16 @@
-/* eslint-disable import/max-dependencies */
 import cuid from "cuid"
 import { createETag, isFileNotFoundError, removeFolderDeep } from "./helpers.js"
-import { locateFile } from "./locateFile.js"
 import { readFile } from "./readFile.js"
-import { lockForRessource } from "./ressourceRegistry.js"
 import { writeFileFromString } from "@dmail/project-structure-compile-babel"
 import {
   getCacheDataLocation,
-  getOutputRelativeLocation,
   getBranchLocation,
   getOutputLocation,
   getOutputAssetLocation,
+  getOutputRelativeLocation,
   getSourceAbstractLocation,
 } from "./locaters.js"
+import { lockForRessource } from "./ressourceRegistry.js"
 
 const readBranchMain = ({
   root,
@@ -175,7 +173,7 @@ const createCacheCorruptionError = (message) => {
   return error
 }
 
-const getFileBranch = ({ compile, root, cacheFolder, compileFolder, file, ...rest }) => {
+const getFileBranch = ({ compile, root, cacheFolder, compileFolder, file, locate, ...rest }) => {
   const cacheDataLocation = getCacheDataLocation({
     root,
     cacheFolder,
@@ -184,7 +182,7 @@ const getFileBranch = ({ compile, root, cacheFolder, compileFolder, file, ...res
   })
 
   return Promise.all([
-    locateFile(file, root),
+    locate(file, root),
     readFile({
       location: cacheDataLocation,
       errorHandler: isFileNotFoundError,
@@ -247,6 +245,7 @@ const getFileReport = ({
   cacheFolder,
   compileFolder,
   file,
+  locate,
   inputETagClient = null,
   ...rest
 }) => {
@@ -256,6 +255,7 @@ const getFileReport = ({
     cacheFolder,
     compileFolder,
     file,
+    locate,
     ...rest,
   }).then(({ inputLocation, cache, options, generate, input, branch }) => {
     if (!branch) {
@@ -444,162 +444,129 @@ const updateBranch = ({
   return Promise.all(promises)
 }
 
-export const compileToFileCompile = (
+export const compileFile = ({
   compile,
-  {
-    root,
-    cacheFolder = "build",
-    compileFolder = "compiled",
-    cacheIgnore = false,
-    cacheTrackHit = false,
-  },
-) => {
-  return ({ file, eTag, ...rest }) => {
-    const inputETagClient = eTag
-
-    const fileLock = lockForRessource(
-      getCacheDataLocation({
-        root,
-        cacheFolder,
-        compileFolder,
-        file,
-      }),
-    )
-
-    return fileLock.chain(() => {
-      return getFileReport({
-        compile,
-        root,
-        cacheFolder,
-        compileFolder,
-        file,
-        inputETagClient,
-        ...rest,
-      })
-        .then(
-          ({
-            inputLocation,
-            status,
-            cache,
-            options,
-            generate,
-            branch,
-            input,
-            inputETag,
-            output,
-            outputAssets,
-          }) => {
-            const outputRelativeLocation = getOutputRelativeLocation({
-              cacheFolder,
-              compileFolder,
-              file,
-              branch,
-            })
-
-            if (!cacheIgnore && status === "valid") {
-              return {
-                inputLocation,
-                status: "cached",
-                cache,
-                options,
-                branch,
-                input,
-                inputETag,
-                outputRelativeLocation,
-                output,
-                outputAssets,
-              }
-            }
-
-            return Promise.resolve(generate({ outputRelativeLocation, ...rest })).then(
-              ({ output, outputAssets }) => {
-                return {
-                  inputLocation,
-                  status: status === "missing" ? "created" : "updated",
-                  cache,
-                  options,
-                  branch,
-                  input,
-                  inputETag: createETag(input),
-                  outputRelativeLocation,
-                  output,
-                  outputAssets,
-                }
-              },
-            )
-          },
-        )
-        .then(
-          ({
-            inputLocation,
-            status,
-            cache,
-            options,
-            branch,
-            input,
-            inputETag,
-            outputRelativeLocation,
-            output,
-            outputAssets,
-          }) => {
-            return updateBranch({
-              root,
-              cacheFolder,
-              compileFolder,
-              file,
-              inputLocation,
-              status,
-              cache,
-              options,
-              branch,
-              input,
-              inputETag,
-              output,
-              outputAssets,
-              cacheTrackHit,
-            }).then(() => {
-              return {
-                status,
-                inputETag,
-                output,
-                outputRelativeLocation,
-                cacheIgnore,
-              }
-            })
-          },
-        )
-    })
-  }
-}
-
-// deprecated
-export const compileToFileLocateAsset = ({
-  compile,
+  locate,
   root,
-  cacheFolder = "build",
-  compileFolder = "compiled",
+  cacheFolder,
+  compileFolder,
+  file,
+  inputETagClient,
+  cacheTrackHit,
+  cacheIgnore,
+  ...rest
 }) => {
-  return ({ file, asset, ...rest }) => {
-    return getFileBranch({
+  const fileLock = lockForRessource(
+    getCacheDataLocation({
+      root,
+      cacheFolder,
+      compileFolder,
+      file,
+    }),
+  )
+
+  return fileLock.chain(() => {
+    return getFileReport({
       compile,
       root,
       cacheFolder,
       compileFolder,
       file,
+      locate,
+      inputETagClient,
       ...rest,
-    }).then(({ branch }) => {
-      if (!branch) {
-        return ""
-      }
-
-      const branchLocation = getBranchLocation({
-        root,
-        cacheFolder,
-        compileFolder,
-        branch,
-      })
-
-      return `file:///${branchLocation}${asset}`
     })
-  }
+      .then(
+        ({
+          inputLocation,
+          status,
+          cache,
+          options,
+          generate,
+          branch,
+          input,
+          inputETag,
+          output,
+          outputAssets,
+        }) => {
+          const outputRelativeLocation = getOutputRelativeLocation({
+            cacheFolder,
+            compileFolder,
+            file,
+            branch,
+          })
+
+          if (!cacheIgnore && status === "valid") {
+            return {
+              inputLocation,
+              status: "cached",
+              cache,
+              options,
+              branch,
+              input,
+              inputETag,
+              outputRelativeLocation,
+              output,
+              outputAssets,
+            }
+          }
+
+          return Promise.resolve(generate({ outputRelativeLocation, ...rest })).then(
+            ({ output, outputAssets }) => {
+              return {
+                inputLocation,
+                status: status === "missing" ? "created" : "updated",
+                cache,
+                options,
+                branch,
+                input,
+                inputETag: createETag(input),
+                outputRelativeLocation,
+                output,
+                outputAssets,
+              }
+            },
+          )
+        },
+      )
+      .then(
+        ({
+          inputLocation,
+          status,
+          cache,
+          options,
+          branch,
+          input,
+          inputETag,
+          outputRelativeLocation,
+          output,
+          outputAssets,
+        }) => {
+          return updateBranch({
+            root,
+            cacheFolder,
+            compileFolder,
+            file,
+            inputLocation,
+            status,
+            cache,
+            options,
+            branch,
+            input,
+            inputETag,
+            output,
+            outputAssets,
+            cacheTrackHit,
+          }).then(() => {
+            return {
+              status,
+              inputETag,
+              output,
+              outputRelativeLocation,
+              cacheIgnore,
+            }
+          })
+        },
+      )
+  })
 }

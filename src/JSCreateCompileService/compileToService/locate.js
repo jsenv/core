@@ -1,5 +1,5 @@
 import Module from "module"
-import { resolvePath } from "./helpers.js"
+import { resolvePath } from "../../compileToService/helpers.js"
 
 const locateNodeModule = (moduleLocation, location) => {
   const requireContext = new Module(location)
@@ -36,7 +36,7 @@ const getNodeDependentAndRelativeDependency = (fileLocation) => {
   }
 }
 
-export const locateFile = (relativeLocation, absoluteLocation) => {
+export const locate = (relativeLocation, absoluteLocation) => {
   if (relativeLocation.startsWith("node_modules/")) {
     const { dependent, relativeDependency } = getNodeDependentAndRelativeDependency(
       relativeLocation,

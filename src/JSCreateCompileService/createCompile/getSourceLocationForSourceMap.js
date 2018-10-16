@@ -1,6 +1,6 @@
 import path from "path"
-import { resolvePath, normalizeSeparation } from "../createCompileService/helpers.js"
-import { getSourceAbstractLocation } from "../createCompileService/locaters.js"
+import { resolvePath, normalizeSeparation } from "../../compileToService/helpers.js"
+import { getSourceAbstractLocation } from "../../compileToService/locaters.js"
 
 const sourceMapKnowsExactLocation = false
 const sourceMapUseAbsoluteLocation = true

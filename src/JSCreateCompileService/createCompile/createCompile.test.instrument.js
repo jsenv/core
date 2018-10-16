@@ -1,4 +1,4 @@
-import { createCompileJS } from "./createCompileJS.js"
+import { createCompile } from "./createCompile.js"
 import istanbul from "istanbul"
 import fs from "fs"
 import path from "path"
@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, "../../../")
 const file = "src/createCompileJS/file.js"
 const filename = `${root}/${file}`
 
-const compileJS = createCompileJS({
+const compileJS = createCompile({
   createOptions: () => {
     return {
       instrument: true,

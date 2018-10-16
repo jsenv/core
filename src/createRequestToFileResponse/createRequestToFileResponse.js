@@ -1,5 +1,5 @@
 import fs from "fs"
-import { createETag } from "../createCompileService/helpers.js"
+import { createETag } from "../compileToService/helpers.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
 import { ressourceToExtension } from "../urlHelper.js"
 
@@ -73,13 +73,13 @@ const listDirectoryContent = (location) => {
   })
 }
 
-export const createFileService = (
+export const createRequestToFileResponse = (
   {
     root,
     canReadDirectory = false,
     getFileStat = stat,
     getFileContentAsString = readFile,
-    cacheDisabled = false,
+    cacheIgnore = false,
     cacheStrategy = "mtime",
   } = {},
 ) => {
@@ -115,7 +115,7 @@ export const createFileService = (
               status: 403,
               reason: "not allowed to read directory",
               headers: {
-                ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
+                ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
               },
             }
           }
@@ -127,7 +127,7 @@ export const createFileService = (
               return {
                 status: 200,
                 headers: {
-                  ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
+                  ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
                   "content-type": "application/json",
                   "content-length": directoryListAsJSON.length,
                 },
@@ -159,7 +159,7 @@ export const createFileService = (
           return {
             status: 200,
             headers: {
-              ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
+              ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
               "last-modified": stat.mtime.toUTCString(),
               "content-length": stat.size,
               "content-type": mimetype(ressource),
@@ -174,7 +174,7 @@ export const createFileService = (
               return {
                 status: 304,
                 headers: {
-                  ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
+                  ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
                 },
               }
             }
@@ -182,7 +182,7 @@ export const createFileService = (
             return {
               status: 200,
               headers: {
-                ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
+                ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
                 "content-length": stat.size,
                 "content-type": mimetype(ressource),
                 ETag: eTag,
@@ -195,7 +195,7 @@ export const createFileService = (
         return {
           status: 200,
           headers: {
-            ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
+            ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
             "content-length": stat.size,
             "content-type": mimetype(ressource),
           },

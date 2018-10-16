@@ -1,6 +1,5 @@
-import { createCompileJS } from "../createCompileJS/createCompileJS.js"
-import { compileToFileCompile } from "./compileToFileCompile.js"
-import { fileCompileJSToService } from "./fileCompileJSToService.js"
+import { compileToService } from "./compileToService.js"
+import { createCompile } from "../createCompileJS/index.js"
 import assert from "assert"
 import path from "path"
 
@@ -8,20 +7,13 @@ const root = path.resolve(__dirname, "../../..")
 const cacheFolder = "build"
 const compileFolder = "build__dynamic__"
 
-const compileJS = createCompileJS()
+const compile = createCompile()
 
-const fileCompileJS = compileToFileCompile(compileJS, {
+const service = compileToService(compile, {
   root,
   cacheFolder,
   compileFolder,
   cacheIgnore: true,
-})
-
-const service = fileCompileJSToService(fileCompileJS, {
-  root,
-  cacheFolder,
-  compileFolder,
-  cacheDisabled: true,
 })
 
 service({

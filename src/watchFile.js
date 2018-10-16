@@ -60,6 +60,34 @@ const limitRate = (fn, ms) => {
   }
 }
 
+const watchFileChange = (fileLocation, callback) => {
+  // https://nodejs.org/docs/latest/api/fs.html#fs_fs_watch_filename_options_listener
+  let watcher
+  try {
+    watcher = fs.watch(fileLocation, { persistent: false })
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      // ignore, but conceptually we would like to be notified if this file gets created no ?
+      return null
+    }
+    throw e
+  }
+
+  watcher.on("error", (error) => {
+    if (error && error.code === "ENOENT") {
+      // ignore, but conceptually we would like to be notified if this file gets created no ?
+      return
+    }
+    throw error
+  })
+  watcher.on("change", callback)
+
+  // watcher.on('close', () => {})
+  return () => {
+    watcher.close()
+  }
+}
+
 const createWatchSignal = (url) => {
   // get mtime right now
   const mtimePromise = getModificationDateForWatch(url)
@@ -74,36 +102,14 @@ const createWatchSignal = (url) => {
         },
       })
 
-      // https://nodejs.org/docs/latest/api/fs.html#fs_fs_watch_filename_options_listener
-      let watcher
-      try {
-        watcher = fs.watch(url, { persistent: false })
-      } catch (e) {
-        if (e.code === "ENOENT") {
-          // ignore, but conceptually we would like to be notified if this file gets created no ?
-          return
-        }
-        throw encodeURI
-      }
       const guardedEmit = guardAsync(emit, shield)
-      watcher.on("error", (error) => {
-        if (error && error.code === "ENOENT") {
-          // ignore, but conceptually we would like to be notified if this file gets created no ?
-          return
-        }
-        throw error
-      })
-      watcher.on(
-        "change",
+
+      return watchFileChange(
+        url,
         limitRate((eventType, filename) => {
           guardedEmit({ url, eventType, filename })
         }, 100),
       )
-      // watcher.on('close', () => {
-
-      // })
-
-      return () => watcher.close()
     },
   })
 }

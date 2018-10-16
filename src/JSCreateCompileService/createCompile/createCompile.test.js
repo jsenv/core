@@ -1,9 +1,9 @@
-import { createCompileJS } from "./createCompileJS.js"
+import { createCompile } from "./createCompile.js"
 import fs from "fs"
 import path from "path"
 import assert from "assert"
 
-const compileJS = createCompileJS({
+const compileJS = createCompile({
   createOptions: () => {
     return {
       transpile: true,
