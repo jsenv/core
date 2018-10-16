@@ -4,6 +4,7 @@ export {
   createCompileRequestToResponse,
   isCompileRequest,
   requestToCompileFileParam,
-  compileFilePromiseToResponse,
+  compileFileResolveToResponse,
+  compileFileRejectToResponse,
 } from "./createCompileRequestToResponse.js"
 export { compileToService } from "./compileToService.js"

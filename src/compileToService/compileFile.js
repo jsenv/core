@@ -563,6 +563,7 @@ export const compileFile = ({
               inputETag,
               output,
               outputRelativeLocation,
+              outputAssets,
               cacheIgnore,
             }
           })

@@ -1,7 +1,8 @@
 import {
   isCompileRequest,
   requestToCompileFileParam as defaultRequestToCompileFileParam,
-  compileFilePromiseToResponse as defaultCompileFilePromiseToResponse,
+  compileFileResolveToResponse as defaultCompileFileResolveToResponse,
+  compileFileRejectToResponse as defaultCompileFileRejectToResponse,
 } from "../../compileToService/index.js"
 import { getPlatformNameAndVersionFromHeaders } from "./getPlatformNameAndVersionFromHeaders.js"
 import { responseCompose } from "../../openServer/index.js"
@@ -22,30 +23,41 @@ const requestToCompileFileParam = (request, { compileFolder, getGroupIdAndPlugin
   }
 }
 
-const compileFilePromiseToResponse = (promise) => {
-  return defaultCompileFilePromiseToResponse(promise).then(
-    (response) => {
-      // vary by user-agent because we use it to provided different file
-      return responseCompose({ headers: { vary: "User-Agent" } }, response)
-    },
-    (error) => {
-      if (error && error.name === "PARSE_ERROR") {
-        const json = JSON.stringify(error)
+const compileFileResolveToResponse = (result) => {
+  return defaultCompileFileResolveToResponse(result).then((response) => {
+    const sourceMap = result.outputAssets.find(({ name }) => name.endsWith(".map"))
 
-        return {
-          status: 500,
-          reason: "parse error",
-          headers: {
-            "cache-control": "no-store",
-            "content-length": Buffer.byteLength(json),
-            "content-type": "application/json",
-          },
-          body: json,
-        }
-      }
-      return Promise.reject(error)
-    },
-  )
+    return responseCompose(
+      {
+        headers: {
+          // vary by user-agent because we use it to provided different file
+          vary: "User-Agent",
+          // send the sourcemap name to the client so it can embed it himself
+          // using x-location/x-sourcemap-name
+          "x-sourcemap-name": sourceMap.name,
+        },
+      },
+      response,
+    )
+  })
+}
+
+const compileFileRejectToResponse = (error) => {
+  if (error && error.name === "PARSE_ERROR") {
+    const json = JSON.stringify(error)
+
+    return {
+      status: 500,
+      reason: "parse error",
+      headers: {
+        "cache-control": "no-store",
+        "content-length": Buffer.byteLength(json),
+        "content-type": "application/json",
+      },
+      body: json,
+    }
+  }
+  return compileFileRejectToResponse(error)
 }
 
 export const createCompileRequestToResponse = ({
@@ -61,7 +73,7 @@ export const createCompileRequestToResponse = ({
           getGroupIdAndPluginsForPlatform,
         }),
       )
-      return compileFilePromiseToResponse(promise)
+      return promise.then(compileFileResolveToResponse, compileFileRejectToResponse)
     }
     return null
   }

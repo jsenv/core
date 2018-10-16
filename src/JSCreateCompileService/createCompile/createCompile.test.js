@@ -8,7 +8,6 @@ const compileJS = createCompile({
     return {
       transpile: true,
       instrument: false,
-      remapMethod: "comment",
     }
   },
 })

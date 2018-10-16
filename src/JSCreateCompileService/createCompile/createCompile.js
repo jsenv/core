@@ -37,7 +37,7 @@ const createDefaultOptions = ({ groupId }) => {
     instrument: false,
     optimize: false,
     remap: true,
-    remapMethod: "comment", // 'comment', 'inline'
+    remapMethod: "none", // 'none', comment', 'inline'
     groupId,
   }
 }
