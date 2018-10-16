@@ -75,7 +75,12 @@ const listDirectoryContent = (location) => {
 }
 
 export const createFileService = (
-  { canReadDirectory = false, getFileStat = stat, getFileContentAsString = readFile } = {},
+  {
+    canReadDirectory = false,
+    getFileStat = stat,
+    getFileContentAsString = readFile,
+    cacheDisabled = false,
+  } = {},
 ) => ({ method, url, headers }) => {
   if (method !== "GET" && method !== "HEAD") {
     return {
@@ -103,7 +108,7 @@ export const createFileService = (
             status: 403,
             reason: "not allowed to read directory",
             headers: {
-              "cache-control": "no-store",
+              ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
               "last-modified": stat.mtime.toUTCString(),
             },
           }
@@ -116,7 +121,7 @@ export const createFileService = (
             return {
               status: 200,
               headers: {
-                "cache-control": "no-store",
+                ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
                 "content-type": "application/json",
                 "content-length": directoryListAsJSON.length,
               },
@@ -141,7 +146,7 @@ export const createFileService = (
           return {
             status: 304,
             headers: {
-              "cache-control": "no-store",
+              ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
             },
           }
         }
@@ -157,14 +162,14 @@ export const createFileService = (
               return {
                 status: 304,
                 headers: {
-                  "cache-control": "no-store",
+                  ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
                 },
               }
             }
             return {
               status: 200,
               headers: {
-                "cache-control": "no-store",
+                ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
                 "content-length": stat.size,
                 "content-type": mimetype(url.pathname),
                 ETag: eTag,
@@ -177,9 +182,10 @@ export const createFileService = (
       return {
         status: 200,
         headers: {
-          "cache-control": "no-store",
+          ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
           "content-length": stat.size,
           "content-type": mimetype(url.pathname),
+          "last-modified": stat.mtime.toUTCString(),
         },
         body: fs.createReadStream(fileLocation),
       }

@@ -1,12 +1,13 @@
+import { createCompileJS } from "../createCompileJS/createCompileJS.js"
+import { compileToFileCompile } from "./compileToFileCompile.js"
+import { fileCompileJSToService } from "./fileCompileJSToService.js"
 import assert from "assert"
 import path from "path"
-import { createCompileService } from "./createCompileService.js"
 import { URL } from "url"
-import { createCompile } from "../createCompile/createCompile.js"
 
 const root = path.resolve(__dirname, "../../..")
 
-const compile = createCompile({
+const compileJS = createCompileJS({
   createOptions: () => {
     return {
       transpile: true,
@@ -16,10 +17,16 @@ const compile = createCompile({
   },
 })
 
-const { service } = createCompileService({
-  rootLocation: root,
-  compile,
+const fileCompileJS = compileToFileCompile(compileJS, {
+  root,
+  cacheFolderName: "build",
+  compileFolderName: "compiled",
   cacheDisabled: true,
+})
+
+const service = fileCompileJSToService(fileCompileJS, {
+  cacheFolderName: "build",
+  compileFolderName: "compiled",
 })
 
 service({

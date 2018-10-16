@@ -7,7 +7,6 @@ import { readFile } from "./readFile.js"
 import { lockForRessource } from "./ressourceRegistry.js"
 import { writeFileFromString } from "@dmail/project-structure-compile-babel"
 import {
-  getInputRelativeLocation,
   getCacheDataLocation,
   getOutputRelativeLocation,
   getBranchLocation,
@@ -17,10 +16,10 @@ import {
 } from "./locaters.js"
 
 const readBranchMain = ({
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
+  root,
+  cacheFolder,
+  compileFolder,
+  file,
   inputLocation,
   inputETagClient,
   cache,
@@ -51,10 +50,10 @@ const readBranchMain = ({
         }
 
         const outputLocation = getOutputLocation({
-          rootLocation,
-          cacheFolderRelativeLocation,
-          abstractFolderRelativeLocation,
-          filename,
+          root,
+          cacheFolder,
+          compileFolder,
+          file,
           branch,
         })
         return readFile({
@@ -79,20 +78,12 @@ const readBranchMain = ({
   })
 }
 
-const readBranchAsset = ({
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
-  cache,
-  branch,
-  asset,
-}) => {
+const readBranchAsset = ({ root, cacheFolder, compileFolder, file, cache, branch, asset }) => {
   const outputAssetLocation = getOutputAssetLocation({
-    rootLocation,
-    cacheFolderRelativeLocation,
-    abstractFolderRelativeLocation,
-    filename,
+    root,
+    cacheFolder,
+    compileFolder,
+    file,
     branch,
     asset,
   })
@@ -113,9 +104,7 @@ const readBranchAsset = ({
     const expected = asset.eTag
     if (actual !== expected) {
       return {
-        status: `unexpected ${asset.name} asset for ${
-          cache.inputRelativeLocation
-        }: unexpected eTag`,
+        status: `unexpected ${asset.name} asset for ${cache.file}: unexpected eTag`,
         name,
         content,
       }
@@ -129,10 +118,10 @@ const readBranchAsset = ({
 }
 
 const readBranch = ({
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
+  root,
+  cacheFolder,
+  compileFolder,
+  file,
   inputLocation,
   inputETagClient,
   cache,
@@ -140,10 +129,10 @@ const readBranch = ({
 }) => {
   return Promise.all([
     readBranchMain({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
+      root,
+      cacheFolder,
+      compileFolder,
+      file,
       inputLocation,
       inputETagClient,
       cache,
@@ -151,10 +140,10 @@ const readBranch = ({
     }),
     ...branch.outputAssets.map((outputAsset) => {
       return readBranchAsset({
-        rootLocation,
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
-        filename,
+        root,
+        cacheFolder,
+        compileFolder,
+        file,
         cache,
         branch,
         asset: outputAsset,
@@ -181,28 +170,16 @@ const readBranch = ({
   })
 }
 
-const getFileBranch = ({
-  compile,
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
-  ...rest
-}) => {
-  const inputRelativeLocation = getInputRelativeLocation({
-    abstractFolderRelativeLocation,
-    filename,
-  })
-
+const getFileBranch = ({ compile, root, cacheFolder, compileFolder, file, ...rest }) => {
   const cacheDataLocation = getCacheDataLocation({
-    rootLocation,
-    cacheFolderRelativeLocation,
-    abstractFolderRelativeLocation,
-    filename,
+    root,
+    cacheFolder,
+    compileFolder,
+    file,
   })
 
   return Promise.all([
-    locateFile(inputRelativeLocation, rootLocation),
+    locateFile(file, root),
     readFile({
       location: cacheDataLocation,
       errorHandler: isFileNotFoundError,
@@ -213,11 +190,11 @@ const getFileBranch = ({
         }
       }
       const cache = JSON.parse(content)
-      if (cache.inputRelativeLocation !== inputRelativeLocation) {
+      if (cache.file !== file) {
         throw new Error(
           `${JSON_FILE} corrupted: unexpected inputRelativeLocation ${
-            cache.inputRelativeLocation
-          }, it must be ${inputRelativeLocation}`,
+            cache.file
+          }, it must be ${file}`,
         )
       }
       return cache
@@ -237,11 +214,9 @@ const getFileBranch = ({
         location: inputLocation,
       }).then(({ content }) => {
         return compile({
-          rootLocation,
-          abstractFolderRelativeLocation,
-          inputRelativeLocation,
+          root,
+          inputName: file,
           inputSource: content,
-          filename,
           ...rest,
         }).then(({ options, generate }) => {
           const branchIsValid = (branch) => {
@@ -265,19 +240,19 @@ const getFileBranch = ({
 
 const getFileReport = ({
   compile,
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
+  root,
+  cacheFolder,
+  compileFolder,
+  file,
   inputETagClient = null,
   ...rest
 }) => {
   return getFileBranch({
     compile,
-    rootLocation,
-    cacheFolderRelativeLocation,
-    abstractFolderRelativeLocation,
-    filename,
+    root,
+    cacheFolder,
+    compileFolder,
+    file,
     ...rest,
   }).then(({ inputLocation, cache, options, generate, input, branch }) => {
     if (!branch) {
@@ -295,10 +270,10 @@ const getFileReport = ({
     }
 
     return readBranch({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
+      root,
+      cacheFolder,
+      compileFolder,
+      file,
       inputLocation,
       inputETagClient,
       cache,
@@ -330,10 +305,10 @@ const compareBranch = (branchA, branchB) => {
 }
 
 const updateBranch = ({
-  rootLocation,
-  cacheFolderRelativeLocation,
-  abstractFolderRelativeLocation,
-  filename,
+  root,
+  cacheFolder,
+  compileFolder,
+  file,
   inputLocation,
   status,
   cache,
@@ -353,10 +328,10 @@ const updateBranch = ({
 
   if (isNew || isUpdated) {
     const mainLocation = getOutputLocation({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
+      root,
+      cacheFolder,
+      compileFolder,
+      file,
       branch,
     })
 
@@ -364,10 +339,10 @@ const updateBranch = ({
       writeFileFromString(mainLocation, output),
       ...outputAssets.map((asset) => {
         const assetLocation = getOutputAssetLocation({
-          rootLocation,
-          cacheFolderRelativeLocation,
-          abstractFolderRelativeLocation,
-          filename,
+          root,
+          cacheFolder,
+          compileFolder,
+          file,
           branch,
           asset,
         })
@@ -386,10 +361,10 @@ const updateBranch = ({
 
       branchesToRemove.forEach((branch) => {
         const branchLocation = getBranchLocation({
-          rootLocation,
-          cacheFolderRelativeLocation,
-          abstractFolderRelativeLocation,
-          filename,
+          root,
+          cacheFolder,
+          compileFolder,
+          file,
           branch,
         })
         console.log(`file changed, remove ${branchLocation}`)
@@ -445,26 +420,19 @@ const updateBranch = ({
       })
       .sort(compareBranch)
 
-    const inputRelativeLocation = getInputRelativeLocation({
-      abstractFolderRelativeLocation,
-      filename,
-    })
-
     const updatedCache = {
-      inputRelativeLocation,
+      file,
       inputETag: isCached ? cache.inputETag : inputETag,
       inputLocation:
-        inputLocation === getSourceAbstractLocation({ rootLocation, inputRelativeLocation })
-          ? undefined
-          : inputLocation,
+        inputLocation === getSourceAbstractLocation({ root, file }) ? undefined : inputLocation,
       branches: updatedBranches,
     }
 
     const cacheDataLocation = getCacheDataLocation({
-      rootLocation,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
+      root,
+      cacheFolder,
+      compileFolder,
+      file,
     })
 
     promises.push(writeFileFromString(cacheDataLocation, JSON.stringify(updatedCache, null, "  ")))
@@ -473,34 +441,33 @@ const updateBranch = ({
   return Promise.all(promises)
 }
 
-export const compileToCompiler = ({
+export const compileToFileCompile = ({
   compile,
   root,
-  cacheFolderRelativeLocation = "build",
-  abstractFolderRelativeLocation = "compiled",
+  cacheFolder = "build",
+  compileFolder = "compiled",
   cacheDisabled = false,
   cacheTrackHit = false,
 }) => {
-  const getFileCompiled = ({ file, eTag, ...rest }) => {
-    const filename = `${abstractFolderRelativeLocation}/${file}`
+  return ({ file, eTag, ...rest }) => {
     const inputETagClient = eTag
 
     const fileLock = lockForRessource(
       getCacheDataLocation({
-        rootLocation: root,
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
-        filename: file,
+        root,
+        cacheFolder,
+        compileFolder,
+        file,
       }),
     )
 
     return fileLock.chain(() => {
       return getFileReport({
         compile,
-        rootLocation: root,
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
-        filename,
+        root,
+        cacheFolder,
+        compileFolder,
+        file,
         inputETagClient,
         ...rest,
       })
@@ -518,9 +485,9 @@ export const compileToCompiler = ({
             outputAssets,
           }) => {
             const outputRelativeLocation = getOutputRelativeLocation({
-              cacheFolderRelativeLocation,
-              abstractFolderRelativeLocation,
-              filename,
+              cacheFolder,
+              compileFolder,
+              file,
               branch,
             })
 
@@ -571,10 +538,10 @@ export const compileToCompiler = ({
             outputAssets,
           }) => {
             return updateBranch({
-              rootLocation: root,
-              cacheFolderRelativeLocation,
-              abstractFolderRelativeLocation,
-              filename,
+              root,
+              cacheFolder,
+              compileFolder,
+              file,
               inputLocation,
               status,
               cache,
@@ -598,16 +565,22 @@ export const compileToCompiler = ({
         )
     })
   }
+}
 
-  const getFileCompiledAssetLocation = ({ file, asset, ...rest }) => {
-    const filename = `${abstractFolderRelativeLocation}/${file}`
-
+// deprecated
+export const compileToFileLocateAsset = ({
+  compile,
+  root,
+  cacheFolder = "build",
+  compileFolder = "compiled",
+}) => {
+  return ({ file, asset, ...rest }) => {
     return getFileBranch({
       compile,
-      rootLocation: root,
-      cacheFolderRelativeLocation,
-      abstractFolderRelativeLocation,
-      filename,
+      root,
+      cacheFolder,
+      compileFolder,
+      file,
       ...rest,
     }).then(({ branch }) => {
       if (!branch) {
@@ -615,15 +588,13 @@ export const compileToCompiler = ({
       }
 
       const branchLocation = getBranchLocation({
-        rootLocation: root,
-        cacheFolderRelativeLocation,
-        abstractFolderRelativeLocation,
+        root,
+        cacheFolder,
+        compileFolder,
         branch,
       })
 
       return `file:///${branchLocation}${asset}`
     })
   }
-
-  return { getFileCompiled, getFileCompiledAssetLocation }
 }

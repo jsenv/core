@@ -1,12 +1,40 @@
-import { convertFileSystemErrorToResponseProperties } from "../createFileService/index.js"
+import {
+  createFileService,
+  convertFileSystemErrorToResponseProperties,
+} from "../createFileService/index.js"
 
-export const getFileCompiledToResponseForRequest = (getFileCompiled, request) => {
-  const { url, headers } = request
+const requestIsFor = ({ url }, { cacheFolderName, compileFolderName }) => {
+  const pathname = url.pathname
+  // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
+  const filename = pathname.slice(1)
+  const dirname = filename.slice(0, filename.indexOf("/"))
 
-  return getFileCompiled({
+  if (dirname === cacheFolderName) {
+    return "cache"
+  }
+  if (dirname === compileFolderName) {
+    return "compile"
+  }
+  return "other"
+}
+
+export const requestIsForCompile = (request, param) => {
+  return requestIsFor(request, param) === "compile"
+}
+
+export const requestIsForCache = (request, param) => {
+  return requestIsFor(request, param) === "cache"
+}
+
+export const requestToParam = ({ url, headers }) => {
+  return {
     file: url.pathname.slice(1),
     eTag: "if-none-match" in headers ? headers["if-none-match"] : undefined,
-  }).then(
+  }
+}
+
+export const promiseToResponse = (promise) => {
+  return promise.then(
     ({ status, inputETag, outputRelativeLocation, output, cacheDisabled }) => {
       // here status can be "created", "updated", "cached"
 
@@ -22,13 +50,11 @@ export const getFileCompiledToResponseForRequest = (getFileCompiled, request) =>
 
       // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
       // if-none-match c'est forcément le etag du client qui a match
-      // faudra changer ça non?
-      if ("if-none-match" in headers && status === "cached") {
+      if (status === "cached") {
         return {
           status: 304,
           headers: {
-            ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
-            vary: "User-Agent",
+            // do I have to send that ? browser cache should be sufficient
             "x-location": outputRelativeLocation,
           },
         }
@@ -39,7 +65,6 @@ export const getFileCompiledToResponseForRequest = (getFileCompiled, request) =>
         headers: {
           ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
           ETag: inputETag,
-          vary: "User-Agent",
           "content-length": Buffer.byteLength(output),
           "content-type": "application/javascript",
           "x-location": outputRelativeLocation,
@@ -53,21 +78,21 @@ export const getFileCompiledToResponseForRequest = (getFileCompiled, request) =>
           status: 403,
         }
       }
-      if (error && error.name === "PARSE_ERROR") {
-        const json = JSON.stringify(error)
-
-        return {
-          status: 500,
-          reason: "parse error",
-          headers: {
-            "cache-control": "no-store",
-            "content-length": Buffer.byteLength(json),
-            "content-type": "application/json",
-          },
-          body: json,
-        }
-      }
       return convertFileSystemErrorToResponseProperties(error)
     },
   )
+}
+
+export const fileCompileToService = (fileCompile, { cacheFolderName, compileFolderName }) => {
+  const fileService = createFileService()
+
+  return (request) => {
+    if (requestIsForCache(request, { compileFolderName, cacheFolderName })) {
+      return fileService(request)
+    }
+    if (requestIsForCompile(request, compileFolderName)) {
+      return promiseToResponse(fileCompile(requestToParam(request)))
+    }
+    return null
+  }
 }

@@ -29,27 +29,16 @@ const transform = (context, transformer) => {
   })
 }
 
-const createDefaultOptions = ({ groupId, abstractFolderRelativeLocation }) => {
-  let transpile = false
-  if (abstractFolderRelativeLocation === "compiled") {
-    transpile = true
-  }
-
-  let instrument = false
-  if (abstractFolderRelativeLocation === "instrumented") {
-    transpile = true
-    instrument = true
-  }
-
+const createDefaultOptions = ({ groupId }) => {
   const remap = true
 
   return {
     groupId,
     identify: false,
     identifyMethod: "relative",
-    transpile,
+    transpile: true,
     minify: false,
-    instrument,
+    instrument: false,
     optimize: false,
     remap,
     remapMethod: "comment", // 'comment', 'inline'

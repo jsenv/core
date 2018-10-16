@@ -1,4 +1,4 @@
-import { headersCompose } from "./headers.js"
+import { responseCompose } from "./responseCompose.js"
 
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 export const enableCORS = (
@@ -21,8 +21,5 @@ export const enableCORS = (
     vary: "Origin",
   }
 
-  return {
-    ...response,
-    headers: headersCompose(corsHeaders, response.headers),
-  }
+  return responseCompose({ headers: corsHeaders }, response)
 }

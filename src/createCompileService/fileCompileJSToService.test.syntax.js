@@ -1,12 +1,24 @@
+import { createCompileJS } from "../createCompileJS/createCompileJS.js"
+import { compileToFileCompile } from "./compileToFileCompile.js"
+import { fileCompileJSToService } from "./fileCompileJSToService.js"
 import assert from "assert"
 import path from "path"
-import { createCompileService } from "./createCompileService.js"
 import { URL } from "url"
 
 const root = path.resolve(__dirname, "../../..")
 
-const { service } = createCompileService({
-  rootLocation: root,
+const compileJS = createCompileJS()
+
+const fileCompileJS = compileToFileCompile(compileJS, {
+  root,
+  cacheFolderName: "build",
+  compileFolderName: "compiled",
+  cacheDisabled: true,
+})
+
+const service = fileCompileJSToService(fileCompileJS, {
+  cacheFolderName: "build",
+  compileFolderName: "compiled",
 })
 
 service({
