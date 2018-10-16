@@ -3,27 +3,30 @@ import { compileToFileCompile } from "./compileToFileCompile.js"
 import { fileCompileJSToService } from "./fileCompileJSToService.js"
 import assert from "assert"
 import path from "path"
-import { URL } from "url"
 
 const root = path.resolve(__dirname, "../../..")
+const cacheFolder = "build"
+const compileFolder = "build__dynamic__"
 
 const compileJS = createCompileJS()
 
 const fileCompileJS = compileToFileCompile(compileJS, {
   root,
-  cacheFolderName: "build",
-  compileFolderName: "compiled",
-  cacheDisabled: true,
+  cacheFolder,
+  compileFolder,
+  cacheIgnore: true,
 })
 
 const service = fileCompileJSToService(fileCompileJS, {
-  cacheFolderName: "build",
-  compileFolderName: "compiled",
+  root,
+  cacheFolder,
+  compileFolder,
+  cacheDisabled: true,
 })
 
 service({
+  ressource: `${compileFolder}/src/__test__/file-with-syntax-error.js`,
   method: "GET",
-  url: new URL("compiled/src/__test__/file-with-syntax-error.js", "file:///"),
   headers: {
     "user-agent": `node/8.0`,
   },

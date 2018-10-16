@@ -1,11 +1,9 @@
 import fs from "fs"
-import os from "os"
-import path from "path"
-import { URL } from "url"
 import { createETag } from "../createCompileService/helpers.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
+import { ressourceToExtension } from "../urlHelper.js"
 
-const mimetype = (pathname) => {
+const mimetype = (ressource) => {
   const defaultMimetype = "application/octet-stream"
 
   const mimetypes = {
@@ -30,9 +28,10 @@ const mimetype = (pathname) => {
     mp3: "audio/mpeg",
   }
 
-  const suffix = path.extname(pathname).slice(1)
-  if (suffix in mimetypes) {
-    return mimetypes[suffix]
+  const extension = ressourceToExtension(ressource)
+
+  if (extension in mimetypes) {
+    return mimetypes[extension]
   }
 
   return defaultMimetype
@@ -76,89 +75,102 @@ const listDirectoryContent = (location) => {
 
 export const createFileService = (
   {
+    root,
     canReadDirectory = false,
     getFileStat = stat,
     getFileContentAsString = readFile,
     cacheDisabled = false,
+    cacheStrategy = "mtime",
   } = {},
-) => ({ method, url, headers }) => {
-  if (method !== "GET" && method !== "HEAD") {
-    return {
-      status: 501,
-    }
+) => {
+  const cacheWithMtime = cacheStrategy === "mtime"
+  const cacheWithETag = cacheStrategy === "eTag"
+
+  const getContentAndETag = (fileLocation) => {
+    return Promise.resolve()
+      .then(() => getFileContentAsString(fileLocation))
+      .then((content) => {
+        return {
+          content,
+          eTag: createETag(content),
+        }
+      })
   }
 
-  const fileURL = new URL(url)
-  // since https://github.com/nodejs/node/pull/10739
-  // fs methods supports url as path
-  // otherwise keep in mind that
-  // new URL('file:///path/to/file.js').pathname returns 'path/to/file.js' on MAC
-  // new URL('file:///C:/path/to/file.js').pathname returns '/C:/path/to/file.js' on WINDOWS
-  // in order words you have to remove the leading '/' on windows
-  // it does not work let's go path removing leading '/' on windows
-  // const fileLocation = fileURL.toString()
-  const fileLocation = os.platform() === "win32" ? fileURL.pathname.slice(1) : fileURL.pathname
+  return ({ ressource, method, headers }) => {
+    if (method !== "GET" && method !== "HEAD") {
+      return {
+        status: 501,
+      }
+    }
 
-  return Promise.resolve()
-    .then(() => getFileStat(fileLocation))
-    .then((stat) => {
-      if (stat.isDirectory()) {
-        if (canReadDirectory === false) {
+    const fileLocation = `${root}/${ressource}`
+
+    return Promise.resolve()
+      .then(() => getFileStat(fileLocation))
+      .then((stat) => {
+        if (stat.isDirectory()) {
+          if (canReadDirectory === false) {
+            return {
+              status: 403,
+              reason: "not allowed to read directory",
+              headers: {
+                ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
+              },
+            }
+          }
+
+          return Promise.resolve()
+            .then(() => listDirectoryContent(fileLocation))
+            .then(JSON.stringify)
+            .then((directoryListAsJSON) => {
+              return {
+                status: 200,
+                headers: {
+                  ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
+                  "content-type": "application/json",
+                  "content-length": directoryListAsJSON.length,
+                },
+                body: directoryListAsJSON,
+              }
+            })
+        }
+
+        if (cacheWithMtime) {
+          if ("if-modified-since" in headers) {
+            let cachedModificationDate
+            try {
+              cachedModificationDate = new Date(headers["if-modified-since"])
+            } catch (e) {
+              return {
+                status: 400,
+                reason: "if-modified-since header is not a valid date",
+              }
+            }
+
+            const actualModificationDate = stat.mtime
+            if (Number(cachedModificationDate) < Number(actualModificationDate)) {
+              return {
+                status: 304,
+              }
+            }
+          }
+
           return {
-            status: 403,
-            reason: "not allowed to read directory",
+            status: 200,
             headers: {
               ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
               "last-modified": stat.mtime.toUTCString(),
+              "content-length": stat.size,
+              "content-type": mimetype(ressource),
             },
+            body: fs.createReadStream(fileLocation),
           }
         }
 
-        return Promise.resolve()
-          .then(() => listDirectoryContent(fileLocation))
-          .then(JSON.stringify)
-          .then((directoryListAsJSON) => {
-            return {
-              status: 200,
-              headers: {
-                ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
-                "content-type": "application/json",
-                "content-length": directoryListAsJSON.length,
-              },
-              body: directoryListAsJSON,
-            }
-          })
-      }
-
-      if ("if-modified-since" in headers) {
-        let cachedModificationDate
-        try {
-          cachedModificationDate = new Date(headers["if-modified-since"])
-        } catch (e) {
-          return {
-            status: 400,
-            reason: "if-modified-since header is not a valid date",
-          }
-        }
-
-        const actualModificationDate = stat.mtime
-        if (Number(cachedModificationDate) < Number(actualModificationDate)) {
-          return {
-            status: 304,
-            headers: {
-              ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
-            },
-          }
-        }
-      }
-
-      if ("if-none-match" in headers) {
-        const cachedETag = headers["if-none-match"]
-        return Promise.resolve()
-          .then(() => getFileContentAsString(fileLocation))
-          .then((content) => {
-            const eTag = createETag(content)
-            if (cachedETag === eTag) {
+        if (cacheWithETag) {
+          return getContentAndETag(fileLocation).then(({ content, eTag }) => {
+            if ("if-none-match" in headers && headers["if-none-match"] === eTag) {
               return {
                 status: 304,
                 headers: {
@@ -166,28 +178,29 @@ export const createFileService = (
                 },
               }
             }
+
             return {
               status: 200,
               headers: {
                 ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
                 "content-length": stat.size,
-                "content-type": mimetype(url.pathname),
+                "content-type": mimetype(ressource),
                 ETag: eTag,
               },
               body: content,
             }
           }, convertFileSystemErrorToResponseProperties)
-      }
+        }
 
-      return {
-        status: 200,
-        headers: {
-          ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
-          "content-length": stat.size,
-          "content-type": mimetype(url.pathname),
-          "last-modified": stat.mtime.toUTCString(),
-        },
-        body: fs.createReadStream(fileLocation),
-      }
-    }, convertFileSystemErrorToResponseProperties)
+        return {
+          status: 200,
+          headers: {
+            ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
+            "content-length": stat.size,
+            "content-type": mimetype(ressource),
+          },
+          body: fs.createReadStream(fileLocation),
+        }
+      }, convertFileSystemErrorToResponseProperties)
+  }
 }

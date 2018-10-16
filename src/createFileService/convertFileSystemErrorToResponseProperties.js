@@ -55,8 +55,5 @@ export const convertFileSystemErrorToResponseProperties = (error) => {
     }
   }
 
-  return {
-    status: 500,
-    reason: "unknown file system error",
-  }
+  return Promise.reject(error)
 }

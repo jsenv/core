@@ -1,10 +1,10 @@
 import { identifier } from "./identifier.js"
-import { instrumenter as defaultInstrumenter } from "./instrumenter-babel.js"
-import { minifier as defaultMinifier } from "./minifier.js"
-import { optimizer as defaultOptimizer } from "./optimizer.js"
+import { instrumenter } from "./instrumenter-babel.js"
+import { minifier } from "./minifier.js"
+import { optimizer } from "./optimizer.js"
 import { remapper } from "./remapper.js"
-import { transpiler as defaultTranspiler } from "./transpiler.js"
-import { resolvePath } from "../createCompileService/helpers.js"
+import { transpiler } from "./transpiler.js"
+import { resolvePath } from "../compileToService/helpers.js"
 import path from "path"
 
 const transform = (context, transformer) => {
@@ -30,30 +30,21 @@ const transform = (context, transformer) => {
 }
 
 const createDefaultOptions = ({ groupId }) => {
-  const remap = true
-
   return {
-    groupId,
     identify: false,
     identifyMethod: "relative",
     transpile: true,
     minify: false,
     instrument: false,
     optimize: false,
-    remap,
+    remap: true,
     remapMethod: "comment", // 'comment', 'inline'
+    groupId,
   }
 }
 
 export const createCompileJS = (
-  {
-    createOptions = () => {},
-    transpiler = defaultTranspiler,
-    minifier = defaultMinifier,
-    instrumenter = defaultInstrumenter,
-    optimizer = defaultOptimizer,
-    instrumentPredicate = () => true,
-  } = {},
+  { createOptions = () => {}, instrumentPredicate = () => true } = {},
 ) => {
   const getOptions = (context) => {
     return Promise.all([createDefaultOptions(context), createOptions(context)]).then(
@@ -103,7 +94,7 @@ export const createCompileJS = (
         })
           .then((context) => (transpile ? transform(context, transpiler) : context))
           .then((context) => {
-            if (instrument && instrumentPredicate(compileContext.inputName)) {
+            if (instrument && instrumentPredicate(context.inputName)) {
               return transform(context, instrumenter)
             }
             return context

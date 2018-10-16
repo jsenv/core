@@ -1,6 +1,7 @@
-import { JSON_FILE } from "./cache.js"
 import { resolvePath } from "./helpers.js"
 import path from "path"
+
+export const JSON_FILE = "cache.json"
 
 export const getCompileRelativeLocation = ({ compiledFolder, file }) => {
   return resolvePath(compiledFolder, file)

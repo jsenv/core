@@ -2,6 +2,7 @@ import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import { createPredicateFromStructure } from "../openCompileServer/createPredicateFromStructure.js"
 import { openServer, createRoute, createResponseGenerator } from "../openServer/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
+import { urlToPathname } from "../urlHelper.js"
 
 const getIndexPageHTML = ({ root }) => {
   return `<!doctype html>
@@ -178,7 +179,7 @@ export const openBrowserServer = ({
                 localRoot: root,
                 remoteRoot: server.origin,
                 remoteCompileDestination: into,
-                file: url.pathname.slice(1),
+                file: urlToPathname(url).slice(1),
                 hotreload: watch,
               }),
             )

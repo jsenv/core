@@ -1,26 +1,21 @@
 import { createCompileJS } from "./createCompileJS.js"
-import { instrumenter } from "./instrumenter-babel.js"
 import istanbul from "istanbul"
 import fs from "fs"
 import path from "path"
 import { getPluginsFromNames } from "@dmail/project-structure-compile-babel"
 
 const babelPlugins = getPluginsFromNames(["transform-block-scoping"])
+const root = path.resolve(__dirname, "../../../")
+const file = "src/createCompileJS/file.js"
+const filename = `${root}/${file}`
 
 const compileJS = createCompileJS({
-  instrumenter,
   createOptions: () => {
     return {
-      transpile: true,
       instrument: true,
-      remapMethod: "comment",
     }
   },
 })
-
-const root = path.resolve(__dirname, "../../../")
-const file = "src/createCompile/file.js"
-const filename = `${root}/${file}`
 
 compileJS({
   root,

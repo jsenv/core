@@ -1,41 +1,51 @@
 import {
   promiseToResponse as defaultPromiseToResponse,
-  requestToParam as defaultRequestToParan,
-  requestIsForCache,
-  requestIsForCompile,
+  requestToParam as defaultRequestToParam,
 } from "./fileCompileToService.js"
 import { getPlatformNameAndVersionFromHeaders } from "./getPlatformNameAndVersionFromHeaders.js"
 import { responseCompose } from "../openServer/index.js"
 import { createFileService } from "../createFileService/index.js"
 
 export const fileCompileJSToService = (
-  compileJS,
+  fileCompileJS,
   {
+    root,
+    cacheFolder = "",
+    compileFolder = "",
+    cacheDisabled,
     // the helper below can be passed to fileCompileJSToService
     // import { createCompileProfiles } from "./createCompileProfiles/createCompileProfiles.js"
     // const {getGroupIdForPlatform, getPluginsFromGroupId} = createCompileProfiles({ root, into: 'group.config.json'})
     // in order to have dynamic babel plugins
     getGroupIdForPlatform = () => "anonymous",
     getPluginsFromGroupId = () => [],
-    compileFolderName = "",
-    cacheFolderName = "",
   },
 ) => {
-  const fileService = createFileService()
+  const cacheFileService = createFileService({ root, cacheDisabled })
 
-  const requestToParam = (request) => {
-    const { headers } = request
-    const { platformName, platformVersion } = getPlatformNameAndVersionFromHeaders(headers)
-    const groupId = getGroupIdForPlatform({
-      platformName,
-      platformVersion,
-    })
-    const getBabelPlugins = () => getPluginsFromGroupId(groupId)
+  const requestToParam = (request, options) => {
+    const { type, ...rest } = defaultRequestToParam(request, options)
+
+    if (type === "compile") {
+      const { headers } = request
+      const { platformName, platformVersion } = getPlatformNameAndVersionFromHeaders(headers)
+      const groupId = getGroupIdForPlatform({
+        platformName,
+        platformVersion,
+      })
+      const getBabelPlugins = () => getPluginsFromGroupId(groupId)
+
+      return {
+        type,
+        ...rest,
+        groupId,
+        getBabelPlugins,
+      }
+    }
 
     return {
-      groupId,
-      getBabelPlugins,
-      ...defaultRequestToParan(request),
+      type,
+      ...rest,
     }
   }
 
@@ -66,14 +76,16 @@ export const fileCompileJSToService = (
   }
 
   return (request) => {
-    if (requestIsForCache(request, { compileFolderName, cacheFolderName })) {
-      return fileService(request).then((response) => {
+    const { type, ...rest } = requestToParam(request, { cacheFolder, compileFolder })
+
+    if (type === "cache") {
+      return cacheFileService(request).then((response) => {
         return responseCompose({ headers: { vary: "User-Agent" } }, response)
       })
     }
 
-    if (requestIsForCompile(request, { compileFolderName, cacheFolderName })) {
-      return promiseToResponse(compileJS(requestToParam(request)))
+    if (type === "compile") {
+      return promiseToResponse(fileCompileJS(rest))
     }
 
     return null

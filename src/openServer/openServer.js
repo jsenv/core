@@ -172,10 +172,10 @@ export const openServer = (
 
       addInternalRequestHandler((nodeRequest, nodeResponse) => {
         const request = createRequestFromNodeRequest(nodeRequest, origin)
-        console.log(request.method, request.url.toString())
+        console.log(request.method, request.ressource)
 
         nodeRequest.on("error", (error) => {
-          console.log("error on", request.url.toString(), error)
+          console.log("error on", request.ressource, error)
         })
 
         return Promise.resolve()
@@ -188,7 +188,7 @@ export const openServer = (
             }
           })
           .then((finalResponse) => {
-            console.log(`${finalResponse.status} ${request.url}`)
+            console.log(`${finalResponse.status} ${request.ressource}`)
             populateNodeResponse(nodeResponse, finalResponse, {
               ignoreBody: request.method === "HEAD",
             })

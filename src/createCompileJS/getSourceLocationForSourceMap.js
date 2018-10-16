@@ -5,17 +5,17 @@ import { getSourceAbstractLocation } from "../createCompileService/locaters.js"
 const sourceMapKnowsExactLocation = false
 const sourceMapUseAbsoluteLocation = true
 
-const getSourceMapLocation = ({ rootLocation, outputRelativeLocation, outputSourceMapName }) =>
-  resolvePath(rootLocation, path.dirname(outputRelativeLocation), outputSourceMapName)
+const getSourceMapLocation = ({ root, outputRelativeLocation, outputSourceMapName }) =>
+  resolvePath(root, path.dirname(outputRelativeLocation), outputSourceMapName)
 
 const getSourceMapAbstractLocation = ({
-  rootLocation,
+  root,
   abstractFolderRelativeLocation,
   inputRelativeLocation,
   outputSourceMapName,
 }) =>
   resolvePath(
-    rootLocation,
+    root,
     abstractFolderRelativeLocation,
     path.dirname(inputRelativeLocation),
     outputSourceMapName,

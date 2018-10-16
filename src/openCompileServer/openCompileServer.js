@@ -1,8 +1,6 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 
-import { URL } from "url"
 import { createCompile } from "../createCompile/createCompile.js"
-import { createCompileService } from "../createCompileService/index.js"
 import { createFileService } from "../createFileService/index.js"
 import {
   openServer,
@@ -13,6 +11,7 @@ import {
 } from "../openServer/index.js"
 import { watchFile } from "../watchFile.js"
 import { createSignal } from "@dmail/signal"
+import { urlToPathname } from "../urlHelper.js"
 
 const guard = (fn, shield) => (...args) => {
   return shield(...args) ? fn(...args) : undefined
@@ -55,7 +54,7 @@ export const openCompileServer = ({
       })
 
       return ({ url }) => {
-        let relativeFilename = url.pathname.slice(1)
+        let relativeFilename = urlToPathname(url).slice(1)
         const dirname = relativeFilename.slice(0, relativeFilename.indexOf("/"))
         if (dirname === into) {
           // when I ask for a compiled file, watch the corresponding file on filesystem
@@ -141,7 +140,7 @@ export const openCompileServer = ({
           return false
         }
 
-        const pathname = url.pathname
+        const pathname = urlToPathname(url)
         // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
         const filename = pathname.slice(1)
         const dirname = filename.slice(0, filename.indexOf("/"))
@@ -154,23 +153,12 @@ export const openCompileServer = ({
       })
     }
 
-    const createFileServiceCustom = () => {
-      const fileService = createFileService()
-      const previousFileService = fileService
-      return ({ url, ...props }) => {
-        const fileURL = new URL(url.pathname.slice(1), `file:///${root}/`)
-
-        return previousFileService({
-          url: fileURL,
-          ...props,
-        })
-      }
-    }
-
     const services = [
       ...(watch ? [createWatchService(), createFileChangedSSEService()] : []),
       createCompileServiceCustom(),
-      createFileServiceCustom(),
+      createFileService({
+        root,
+      }),
     ]
 
     const responseGenerator = createResponseGenerator(...services)

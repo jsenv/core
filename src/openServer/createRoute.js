@@ -1,3 +1,5 @@
+import { ressourceToPathname } from "../urlHelper.js"
+
 export const createRoute = ({ method, path = "*", handler }) => {
   const regexp = new RegExp(`^${path.replace(/\*/g, ".*?")}$`)
   const matchPath = (requestPathname) => {
@@ -16,7 +18,7 @@ export const createRoute = ({ method, path = "*", handler }) => {
     if (matchMethod(request.method) === false) {
       return false
     }
-    if (matchPath(request.url.pathname) === false) {
+    if (matchPath(ressourceToPathname(request.ressource)) === false) {
       return false
     }
     return handler(request)

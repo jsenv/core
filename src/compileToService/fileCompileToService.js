@@ -2,40 +2,35 @@ import {
   createFileService,
   convertFileSystemErrorToResponseProperties,
 } from "../createFileService/index.js"
+import { ressourceToPathname } from "../urlHelper.js"
 
-const requestIsFor = ({ url }, { cacheFolderName, compileFolderName }) => {
-  const pathname = url.pathname
-  // '/compiled/folder/file.js' -> 'compiled/folder/file.js'
-  const filename = pathname.slice(1)
-  const dirname = filename.slice(0, filename.indexOf("/"))
+export const requestToParam = ({ ressource, headers }, { cacheFolder, compileFolder }) => {
+  const pathname = ressourceToPathname(ressource)
+  const dirname = pathname.slice(0, pathname.indexOf("/"))
 
-  if (dirname === cacheFolderName) {
-    return "cache"
+  if (dirname === compileFolder) {
+    const file = pathname.slice(dirname.length + 1)
+    return {
+      type: "compile",
+      file,
+      eTag: "if-none-match" in headers ? headers["if-none-match"] : undefined,
+    }
   }
-  if (dirname === compileFolderName) {
-    return "compile"
+
+  if (dirname === cacheFolder) {
+    return {
+      type: "cache",
+    }
   }
-  return "other"
-}
 
-export const requestIsForCompile = (request, param) => {
-  return requestIsFor(request, param) === "compile"
-}
-
-export const requestIsForCache = (request, param) => {
-  return requestIsFor(request, param) === "cache"
-}
-
-export const requestToParam = ({ url, headers }) => {
   return {
-    file: url.pathname.slice(1),
-    eTag: "if-none-match" in headers ? headers["if-none-match"] : undefined,
+    type: "other",
   }
 }
 
 export const promiseToResponse = (promise) => {
   return promise.then(
-    ({ status, inputETag, outputRelativeLocation, output, cacheDisabled }) => {
+    ({ status, inputETag, outputRelativeLocation, output, cacheIgnore }) => {
       // here status can be "created", "updated", "cached"
 
       // je crois, que, normalement
@@ -63,7 +58,7 @@ export const promiseToResponse = (promise) => {
       return {
         status: 200,
         headers: {
-          ...(cacheDisabled ? { "cache-control": "no-store" } : {}),
+          ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
           ETag: inputETag,
           "content-length": Buffer.byteLength(output),
           "content-type": "application/javascript",
@@ -78,21 +73,30 @@ export const promiseToResponse = (promise) => {
           status: 403,
         }
       }
+      if (error && error.code === "CACHE_CORRUPTION_ERROR") {
+        return {
+          status: 500,
+        }
+      }
       return convertFileSystemErrorToResponseProperties(error)
     },
   )
 }
 
-export const fileCompileToService = (fileCompile, { cacheFolderName, compileFolderName }) => {
-  const fileService = createFileService()
+export const fileCompileToService = (fileCompile, { root, cacheFolder, compileFolder }) => {
+  const fileService = createFileService({ root })
 
   return (request) => {
-    if (requestIsForCache(request, { compileFolderName, cacheFolderName })) {
+    const { type, ...rest } = requestToParam(request, { cacheFolder, compileFolder })
+
+    if (type === "cache") {
       return fileService(request)
     }
-    if (requestIsForCompile(request, compileFolderName)) {
-      return promiseToResponse(fileCompile(requestToParam(request)))
+
+    if (type === "compile") {
+      return promiseToResponse(fileCompile(rest))
     }
+
     return null
   }
 }

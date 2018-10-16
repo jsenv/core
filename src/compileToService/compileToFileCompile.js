@@ -1,6 +1,5 @@
 /* eslint-disable import/max-dependencies */
 import cuid from "cuid"
-import { JSON_FILE } from "./cache.js"
 import { createETag, isFileNotFoundError, removeFolderDeep } from "./helpers.js"
 import { locateFile } from "./locateFile.js"
 import { readFile } from "./readFile.js"
@@ -170,6 +169,12 @@ const readBranch = ({
   })
 }
 
+const createCacheCorruptionError = (message) => {
+  const error = new Error(message)
+  error.code = "CACHE_CORRUPTION_ERROR"
+  return error
+}
+
 const getFileBranch = ({ compile, root, cacheFolder, compileFolder, file, ...rest }) => {
   const cacheDataLocation = getCacheDataLocation({
     root,
@@ -191,10 +196,8 @@ const getFileBranch = ({ compile, root, cacheFolder, compileFolder, file, ...res
       }
       const cache = JSON.parse(content)
       if (cache.file !== file) {
-        throw new Error(
-          `${JSON_FILE} corrupted: unexpected inputRelativeLocation ${
-            cache.file
-          }, it must be ${file}`,
+        throw createCacheCorruptionError(
+          `${cacheDataLocation} corrupted: cache.file should be ${file}, got ${cache.file}s`,
         )
       }
       return cache
@@ -441,14 +444,16 @@ const updateBranch = ({
   return Promise.all(promises)
 }
 
-export const compileToFileCompile = ({
+export const compileToFileCompile = (
   compile,
-  root,
-  cacheFolder = "build",
-  compileFolder = "compiled",
-  cacheDisabled = false,
-  cacheTrackHit = false,
-}) => {
+  {
+    root,
+    cacheFolder = "build",
+    compileFolder = "compiled",
+    cacheIgnore = false,
+    cacheTrackHit = false,
+  },
+) => {
   return ({ file, eTag, ...rest }) => {
     const inputETagClient = eTag
 
@@ -491,7 +496,7 @@ export const compileToFileCompile = ({
               branch,
             })
 
-            if (!cacheDisabled && status === "valid") {
+            if (!cacheIgnore && status === "valid") {
               return {
                 inputLocation,
                 status: "cached",
@@ -558,7 +563,7 @@ export const compileToFileCompile = ({
                 inputETag,
                 output,
                 outputRelativeLocation,
-                cacheDisabled,
+                cacheIgnore,
               }
             })
           },

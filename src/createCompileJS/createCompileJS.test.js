@@ -1,26 +1,24 @@
 import { createCompileJS } from "./createCompileJS.js"
-import { instrumenter } from "./instrumenter-babel.js"
-import istanbul from "istanbul"
 import fs from "fs"
 import path from "path"
+import assert from "assert"
 
 const compileJS = createCompileJS({
-  instrumenter,
   createOptions: () => {
     return {
       transpile: true,
-      instrument: true,
+      instrument: false,
       remapMethod: "comment",
     }
   },
 })
 
-const projectRoot = path.resolve(__dirname, "../../../")
-const file = "src/createCompile/file.js"
-const filename = `${projectRoot}/${file}`
+const root = path.resolve(__dirname, "../../../")
+const file = "src/createCompileJS/file.js"
+const filename = `${root}/${file}`
 
 compileJS({
-  root: projectRoot,
+  root,
   inputName: file,
   inputSource: fs.readFileSync(filename).toString(),
   groupId: "nothing",
@@ -28,21 +26,9 @@ compileJS({
   return generate({
     outputRelativeLocation: "file.compiled.js",
     getBabelPlugins: () => [],
-  }).then(({ output }) => {
-    global.System = {
-      register: (dependencies, fn) => {
-        fn(() => {}, {}).execute()
-      },
-    }
-
-    eval(output)
-    const collector = new istanbul.Collector()
-    collector.add(global.__coverage__)
-    // const finalCoverage = collector.getFinalCoverage()
-    const reporter = new istanbul.Reporter()
-
-    reporter.add("text")
-    reporter.add("html")
-    reporter.write(collector, false, () => {})
+  }).then(({ output, outputAssets }) => {
+    assert.equal(typeof output, "string")
+    assert.equal(outputAssets[0].name, "file.js.map")
+    console.log("passed")
   })
 })
