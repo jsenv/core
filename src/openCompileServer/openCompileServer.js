@@ -27,18 +27,16 @@ export const openCompileServer = ({
 
   // generic compile options
   root,
-  into,
+  cacheFolder,
+  compileFolder,
   cacheTrackHit = false,
-  cacheStrategy = "eTag",
+  cacheStrategy = "etag",
 
   // js compile options
   instrument = false,
   instrumentPredicate,
 }) => {
   const cleanup = createSignal()
-
-  const cacheFolder = into
-  const compileFolder = `${into}__dynamic__`
 
   return Promise.resolve().then(() => {
     const watchSignal = createSignal()
@@ -52,9 +50,9 @@ export const openCompileServer = ({
 
       return ({ ressource }) => {
         const dirname = ressource.slice(0, ressource.indexOf("/"))
-        if (dirname === into) {
+        if (dirname === compileFolder) {
           // when I ask for a compiled file, watch the corresponding file on filesystem
-          const file = ressource.slice(into.length + 1)
+          const file = ressource.slice(compileFolder.length + 1)
           const fileLocation = `${root}/${file}`
 
           if (watchedFiles.has(fileLocation) === false && watchPredicate(file)) {

@@ -2,7 +2,7 @@ import { ressourceToFirstDirectory } from "../urlHelper.js"
 import { convertFileSystemErrorToResponseProperties } from "../createRequestToFileResponse/index.js"
 
 export const compileFileResolveToResponse = ({
-  status,
+  remoteETagValid,
   inputETag,
   outputName,
   output,
@@ -20,14 +20,12 @@ export const compileFileResolveToResponse = ({
   // il sait à quoi ça correspond vraiment
   // par contre ça fait 2 requête http
 
-  // c'est un peu optimiste ici de se dire que si c'est cached et qu'on a
-  // if-none-match c'est forcément le etag du client qui a match
-  if (status === "cached") {
+  if (remoteETagValid) {
     return {
       status: 304,
       headers: {
         // do I have to send that ? browser cache should be sufficient
-        "x-location": outputName,
+        // "x-location": outputName,
       },
     }
   }
@@ -36,7 +34,7 @@ export const compileFileResolveToResponse = ({
     status: 200,
     headers: {
       ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
-      ETag: inputETag,
+      etag: inputETag,
       "content-length": Buffer.byteLength(output),
       "content-type": "application/javascript",
       "x-location": outputName,

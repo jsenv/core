@@ -1,5 +1,5 @@
 import { transformAsync, transformFromAstAsync } from "@babel/core"
-import { regexpEscape } from "./regexpEscape.js"
+import { regexpEscape } from "../../regexpEscape.js"
 import path from "path"
 
 const stringifyMap = (object) => JSON.stringify(object, null, "  ")

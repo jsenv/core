@@ -24,22 +24,24 @@ const requestToCompileFileParam = (request, { compileFolder, getGroupIdAndPlugin
 }
 
 const compileFileResolveToResponse = (result) => {
-  return defaultCompileFileResolveToResponse(result).then((response) => {
-    const sourceMap = result.outputAssets.find(({ name }) => name.endsWith(".map"))
+  return Promise.resolve()
+    .then(() => defaultCompileFileResolveToResponse(result))
+    .then((response) => {
+      const sourceMap = result.outputAssets.find(({ name }) => name.endsWith(".map"))
 
-    return responseCompose(
-      {
-        headers: {
-          // vary by user-agent because we use it to provided different file
-          vary: "User-Agent",
-          // send the sourcemap name to the client so it can embed it himself
-          // using x-location/x-sourcemap-name
-          "x-sourcemap-name": sourceMap.name,
+      return responseCompose(
+        {
+          headers: {
+            // vary by user-agent because we use it to provided different file
+            vary: "User-Agent",
+            // send the sourcemap name to the client so it can embed it himself
+            // using x-location/x-sourcemap-name
+            "x-sourcemap-name": sourceMap.name,
+          },
         },
-      },
-      response,
-    )
-  })
+        response,
+      )
+    })
 }
 
 const compileFileRejectToResponse = (error) => {

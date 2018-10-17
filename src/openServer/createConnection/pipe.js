@@ -93,7 +93,11 @@ export const callClose = (stream) => {
     return stream.close()
   }
   if (isNodeStream(stream)) {
-    return stream.end()
+    if (stream.end) {
+      // only writable stream got end method
+      return stream.end()
+    }
+    return undefined
   }
   return undefined
 }

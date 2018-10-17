@@ -3,6 +3,32 @@ import { createETag } from "../compileToCompileFile/helpers.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
 import { ressourceToExtension } from "../urlHelper.js"
 
+// https://github.com/restify/node-restify/blob/d4cb86591ccc45f005ff174d0ae887fd1dc6db9c/lib/response.js#L58
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+const dateToUTC = (date) => {
+  const pad = (val) => {
+    if (parseInt(val, 10) < 10) val = `0 ${val}`
+    return val
+  }
+
+  const UTCDay = DAYS[date.getUTCDay()]
+  const UTCDate = pad(date.getUTCDate())
+  const UTCMonth = MONTHS[date.getUTCMonth()]
+  const UTCFullYear = date.getUTCFullYear()
+  const UTCHours = pad(date.getUTCHours())
+  const UTCMinutes = pad(date.getUTCMinutes())
+  const UTCSeconds = pad(date.getUTCSeconds())
+
+  return `${UTCDay}, ${UTCDate} ${UTCMonth} ${UTCFullYear} ${UTCHours}:${UTCMinutes}:${UTCSeconds} GMT`
+}
+
+const dateToSecondsPrecision = (date) => {
+  const dateWithSecondsPrecision = new Date(date)
+  dateWithSecondsPrecision.setMilliseconds(0)
+  return dateWithSecondsPrecision
+}
+
 const mimetype = (ressource) => {
   const defaultMimetype = "application/octet-stream"
 
@@ -84,7 +110,7 @@ export const createRequestToFileResponse = (
   } = {},
 ) => {
   const cacheWithMtime = cacheStrategy === "mtime"
-  const cacheWithETag = cacheStrategy === "eTag"
+  const cacheWithETag = cacheStrategy === "etag"
 
   const getContentAndETag = (fileLocation) => {
     return Promise.resolve()
@@ -97,7 +123,7 @@ export const createRequestToFileResponse = (
       })
   }
 
-  return ({ ressource, method, headers }) => {
+  return ({ ressource, method, headers = {} }) => {
     if (method !== "GET" && method !== "HEAD") {
       return {
         status: 501,
@@ -148,8 +174,8 @@ export const createRequestToFileResponse = (
               }
             }
 
-            const actualModificationDate = stat.mtime
-            if (Number(cachedModificationDate) < Number(actualModificationDate)) {
+            const actualModificationDate = dateToSecondsPrecision(stat.mtime)
+            if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
               return {
                 status: 304,
               }
@@ -160,7 +186,7 @@ export const createRequestToFileResponse = (
             status: 200,
             headers: {
               ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
-              "last-modified": stat.mtime.toUTCString(),
+              "last-modified": dateToUTC(stat.mtime),
               "content-length": stat.size,
               "content-type": mimetype(ressource),
             },
@@ -185,7 +211,7 @@ export const createRequestToFileResponse = (
                 ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
                 "content-length": stat.size,
                 "content-type": mimetype(ressource),
-                ETag: eTag,
+                etag: eTag,
               },
               body: content,
             }

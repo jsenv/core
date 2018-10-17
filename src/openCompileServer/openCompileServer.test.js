@@ -5,7 +5,8 @@ const root = path.resolve(__dirname, "../../../")
 
 openCompileServer({
   root,
-  into: "build",
+  cacheFolder: "build",
+  compileFolder: "build__dynamic__",
   protocol: "http",
   ip: "127.0.0.1",
   port: 8998,

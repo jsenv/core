@@ -16,8 +16,8 @@ const readBranchMain = ({
   cacheFolder,
   compileFolder,
   inputName,
+  eTag,
   inputLocation,
-  inputETagClient,
   cache,
   branch,
 }) => {
@@ -26,23 +26,16 @@ const readBranchMain = ({
 
     return Promise.resolve()
       .then(() => {
-        // faudra pouvoir désactiver ce check lorsqu'on veut juste connaitre l'état du cache
-        if (inputETagClient) {
-          if (inputETag !== inputETagClient) {
-            return {
-              status: `eTag modified on ${inputLocation} since it was cached by client`,
-              inputETagClient,
-            }
+        if (eTag) {
+          if (eTag !== inputETag) {
+            return { status: `remote eTag outdated` }
           }
           return { status: "valid" }
         }
 
-        const eTagCached = cache.eTag
-        if (inputETag !== eTagCached) {
-          return {
-            status: `eTag modified on ${inputLocation} since it was cached on filesystem`,
-            eTagCached,
-          }
+        const eTagLocal = cache.eTag
+        if (inputETag !== eTagLocal) {
+          return { status: `local eTag outdated` }
         }
 
         const outputLocation = getOutputLocation({
@@ -57,18 +50,17 @@ const readBranchMain = ({
           errorHandler: isFileNotFoundError,
         }).then(({ content, error }) => {
           if (error) {
-            return {
-              status: `cache not found at ${outputLocation}`,
-            }
+            return { status: `cache not found at ${outputLocation}` }
           }
           return { status: "valid", output: content }
         })
       })
-      .then((moreData) => {
+      .then(({ status, output }) => {
         return {
           input: content,
           inputETag,
-          ...moreData,
+          status,
+          output,
         }
       })
   })
@@ -118,8 +110,8 @@ const readBranch = ({
   cacheFolder,
   compileFolder,
   inputName,
+  eTag,
   inputLocation,
-  inputETagClient,
   cache,
   branch,
 }) => {
@@ -129,8 +121,8 @@ const readBranch = ({
       cacheFolder,
       compileFolder,
       inputName,
+      eTag,
       inputLocation,
-      inputETagClient,
       cache,
       branch,
     }),
@@ -250,21 +242,22 @@ const getFileBranch = ({
 
 const getFileReport = ({
   compile,
+  locate,
   root,
   cacheFolder,
   compileFolder,
   inputName,
-  locate,
-  inputETagClient = null,
+  eTag,
   ...rest
 }) => {
   return getFileBranch({
     compile,
+    locate,
     root,
     cacheFolder,
     compileFolder,
     inputName,
-    locate,
+    eTag,
     ...rest,
   }).then(({ inputLocation, cache, options, generate, input, branch }) => {
     if (!branch) {
@@ -286,8 +279,8 @@ const getFileReport = ({
       cacheFolder,
       compileFolder,
       inputName,
+      eTag,
       inputLocation,
-      inputETagClient,
       cache,
       branch,
     }).then(({ status, input, inputETag, output, outputAssets }) => {
@@ -459,7 +452,7 @@ export const compileFile = ({
   cacheFolder,
   compileFolder,
   file,
-  inputETagClient,
+  eTag,
   cacheTrackHit,
   cacheIgnore,
   ...rest
@@ -477,12 +470,12 @@ export const compileFile = ({
   return fileLock.chain(() => {
     return getFileReport({
       compile,
+      locate,
       root,
       cacheFolder,
       compileFolder,
       inputName,
-      locate,
-      inputETagClient,
+      eTag,
       ...rest,
     })
       .then(
@@ -505,6 +498,8 @@ export const compileFile = ({
             branch,
           })
 
+          const remoteETagValid = !cacheIgnore && eTag && status === "valid"
+
           if (!cacheIgnore && status === "valid") {
             return {
               inputLocation,
@@ -512,6 +507,7 @@ export const compileFile = ({
               cache,
               options,
               branch,
+              remoteETagValid,
               input,
               inputETag,
               outputName,
@@ -528,6 +524,7 @@ export const compileFile = ({
                 cache,
                 options,
                 branch,
+                remoteETagValid,
                 input,
                 inputETag: createETag(input),
                 outputName,
@@ -545,6 +542,7 @@ export const compileFile = ({
           cache,
           options,
           branch,
+          remoteETagValid,
           input,
           inputETag,
           outputName,
@@ -569,6 +567,7 @@ export const compileFile = ({
           }).then(() => {
             return {
               status,
+              remoteETagValid,
               inputETag,
               output,
               outputName,

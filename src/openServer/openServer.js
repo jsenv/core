@@ -59,6 +59,7 @@ export const openServer = (
     // auto close when server respond with a 500
     autoCloseOnError = true,
     getResponseForRequest = () => null,
+    verbose = true,
   } = {},
 ) => {
   if (protocol !== "http" && protocol !== "https") {
@@ -70,6 +71,12 @@ export const openServer = (
   }
   if (port === 0 && forcePort) {
     throw new Error(`no need to pass forcePort when port is 0`)
+  }
+
+  const log = (...args) => {
+    if (verbose) {
+      console.log(...args)
+    }
   }
 
   const { nodeServer, agent } = getNodeServerAndAgent({ protocol, getSignature })
@@ -172,10 +179,10 @@ export const openServer = (
 
       addInternalRequestHandler((nodeRequest, nodeResponse) => {
         const request = createRequestFromNodeRequest(nodeRequest, origin)
-        console.log(request.method, request.ressource)
+        log(`${request.method} ${origin}/${request.ressource}`)
 
         nodeRequest.on("error", (error) => {
-          console.log("error on", request.ressource, error)
+          log("error on", request.ressource, error)
         })
 
         return Promise.resolve()
@@ -188,7 +195,7 @@ export const openServer = (
             }
           })
           .then(({ status = 501, reason = "not specified", headers = {}, body = "" }) => {
-            console.log(`${status} ${request.ressource}`)
+            log(`${status} ${origin}/${request.ressource}`)
             const response = Object.freeze({ status, reason, headers, body })
             populateNodeResponse(nodeResponse, response, {
               ignoreBody: request.method === "HEAD",
@@ -258,7 +265,7 @@ export const openServer = (
 
       if (autoCloseOnExit) {
         const removeTeardown = processTeardown((exitReason) => {
-          console.log(`close server because process will exit because ${exitReason}`)
+          log(`close server because process will exit because ${exitReason}`)
           close({ reason: `server process exiting ${exitReason}` })
         })
         const wrappedClose = close

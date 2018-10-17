@@ -1,20 +1,25 @@
-import { openCompileServer } from "../openCompileServer/openCompileServer.js"
-import { createPredicateFromStructure } from "../openCompileServer/createPredicateFromStructure.js"
 import { openServer, createRoute, serviceCompose } from "../openServer/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 
-const getIndexPageHTML = ({ root }) => {
+const getIndexPageHTML = ({ root, files = [] }) => {
   return `<!doctype html>
 
   <head>
-    <title>${root}</title>
+    <title>Project root</title>
     <meta charset="utf-8" />
   </head>
 
   <body>
     <main>
-      This is the root your project: ${root} <br />
-      You can execute file by navigating like <a href="./src/__test__/file.js">src/__test__/file.js</a>
+			<h1>${root}</h1>
+			<p>Sample file to execute: </p>
+			<ul>
+				${files
+          .map((file) => {
+            return `<li><a href="/${file}">${file}</a></li>`
+          })
+          .join("")}
+			</ul>
     </main>
   </body>
 
@@ -27,7 +32,7 @@ const getClientScript = ({ remoteRoot, remoteCompileDestination, file, hotreload
     let failedImportFile
 
     if (hotreload) {
-      var eventSource = new window.EventSource(remoteRoot, { withCredentials: true })
+      const eventSource = new window.EventSource(remoteRoot, { withCredentials: true })
       eventSource.onerror = () => {
         // we could try to reconnect several times before giving up
         // but dont keep it open as it would try to reconnect forever
@@ -123,6 +128,8 @@ const getPageHTML = (options) => {
 }
 
 export const openBrowserServer = ({
+  openCompileServer,
+
   protocol = "http",
   ip = "127.0.0.1",
   port = 3000,
@@ -131,81 +138,78 @@ export const openBrowserServer = ({
 
   root,
   into,
-  compileProtocol = "http",
-  compileIp = "127.0.0.1",
-  compilePort = 0,
+  ...rest
 }) => {
-  return createPredicateFromStructure({ root }).then(({ instrumentPredicate, watchPredicate }) => {
-    return openCompileServer({
-      root,
-      into,
-      protocol: compileProtocol,
-      ip: compileIp,
-      port: compilePort,
-      instrumentPredicate,
-      watch,
-      watchPredicate,
-    }).then((server) => {
-      console.log(`compiling ${root} at ${server.origin}`)
+  const cacheFolder = into
+  const compileFolder = `${into}__dynamic__`
 
-      const indexRoute = createRoute({
-        method: "GET",
-        path: "/",
-        handler: () => {
-          return Promise.resolve()
-            .then(() => getIndexPageHTML({ root }))
-            .then((html) => {
-              return {
-                status: 200,
-                headers: {
-                  "cache-control": "no-store",
-                  "content-type": "text/html",
-                  "content-length": Buffer.byteLength(html),
-                },
-                body: html,
-              }
-            })
-        },
-      })
+  return openCompileServer({
+    root,
+    cacheFolder,
+    compileFolder,
+    watch,
+    protocol, // if not specified, reuse browser protocol
+    ...rest,
+  }).then((server) => {
+    console.log(`compiling ${root} at ${server.origin}`)
 
-      const otherRoute = createRoute({
-        method: "GET",
-        path: "*",
-        handler: ({ ressource }) => {
-          return Promise.resolve()
-            .then(() =>
-              getPageHTML({
-                localRoot: root,
-                remoteRoot: server.origin,
-                remoteCompileDestination: into,
-                file: ressource,
-                hotreload: watch,
-              }),
-            )
-            .then((html) => {
-              return {
-                status: 200,
-                headers: {
-                  "cache-control": "no-store",
-                  "content-type": "text/html",
-                  "content-length": Buffer.byteLength(html),
-                },
-                body: html,
-              }
-            })
-        },
-      })
+    const indexRoute = createRoute({
+      ressource: "",
+      method: "GET",
+      handler: () => {
+        return Promise.resolve()
+          .then(() => getIndexPageHTML({ root, files: ["src/__test__/file.js"] }))
+          .then((html) => {
+            return {
+              status: 200,
+              headers: {
+                "cache-control": "no-store",
+                "content-type": "text/html",
+                "content-length": Buffer.byteLength(html),
+              },
+              body: html,
+            }
+          })
+      },
+    })
 
-      return openServer({
-        protocol,
-        ip,
-        port,
-        forcePort,
-        getResponseForRequest: serviceCompose(indexRoute, otherRoute),
-      }).then((runServer) => {
-        console.log(`executing ${root} at ${runServer.origin}`)
-        return runServer
-      })
+    const otherRoute = createRoute({
+      ressource: "*",
+      method: "GET",
+      handler: ({ ressource }) => {
+        return Promise.resolve()
+          .then(() =>
+            getPageHTML({
+              localRoot: root,
+              remoteRoot: server.origin,
+              remoteCompileDestination: compileFolder,
+              file: ressource,
+              hotreload: watch,
+            }),
+          )
+          .then((html) => {
+            return {
+              status: 200,
+              headers: {
+                "cache-control": "no-store",
+                "content-type": "text/html",
+                "content-length": Buffer.byteLength(html),
+              },
+              body: html,
+            }
+          })
+      },
+    })
+
+    return openServer({
+      protocol,
+      ip,
+      port,
+      forcePort,
+      getResponseForRequest: serviceCompose(indexRoute, otherRoute),
+    }).then((runServer) => {
+      console.log(`executing ${root} at ${runServer.origin}`)
+      return runServer
     })
   })
 }
