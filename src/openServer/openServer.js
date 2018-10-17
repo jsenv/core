@@ -58,7 +58,7 @@ export const openServer = (
     autoCloseOnCrash = true,
     // auto close when server respond with a 500
     autoCloseOnError = true,
-    getResponseForRequest = () => ({ status: 501 }),
+    getResponseForRequest = () => null,
   } = {},
 ) => {
   if (protocol !== "http" && protocol !== "https") {
@@ -187,9 +187,10 @@ export const openServer = (
               body: error && error.stack ? error.stack : error,
             }
           })
-          .then((finalResponse) => {
-            console.log(`${finalResponse.status} ${request.ressource}`)
-            populateNodeResponse(nodeResponse, finalResponse, {
+          .then(({ status = 501, reason = "not specified", headers = {}, body = "" }) => {
+            console.log(`${status} ${request.ressource}`)
+            const response = Object.freeze({ status, reason, headers, body })
+            populateNodeResponse(nodeResponse, response, {
               ignoreBody: request.method === "HEAD",
             })
           })

@@ -2,10 +2,9 @@ import { responseCompose } from "./responseCompose.js"
 
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 export const enableCORS = (
-  request,
   response,
   {
-    allowedOrigins = [request.headers.origin],
+    allowedOrigins = ["*"],
     allowedMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders = ["x-requested-with", "content-type", "accept"],
   } = {},

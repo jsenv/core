@@ -1,8 +1,7 @@
 import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import { createPredicateFromStructure } from "../openCompileServer/createPredicateFromStructure.js"
-import { openServer, createRoute, createResponseGenerator } from "../openServer/index.js"
+import { openServer, createRoute, serviceCompose } from "../openServer/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
-import { urlToPathname } from "../urlHelper.js"
 
 const getIndexPageHTML = ({ root }) => {
   return `<!doctype html>
@@ -172,14 +171,14 @@ export const openBrowserServer = ({
       const otherRoute = createRoute({
         method: "GET",
         path: "*",
-        handler: ({ url }) => {
+        handler: ({ ressource }) => {
           return Promise.resolve()
             .then(() =>
               getPageHTML({
                 localRoot: root,
                 remoteRoot: server.origin,
                 remoteCompileDestination: into,
-                file: urlToPathname(url).slice(1),
+                file: ressource,
                 hotreload: watch,
               }),
             )
@@ -202,7 +201,7 @@ export const openBrowserServer = ({
         ip,
         port,
         forcePort,
-        getResponseForRequest: createResponseGenerator(indexRoute, otherRoute),
+        getResponseForRequest: serviceCompose(indexRoute, otherRoute),
       }).then((runServer) => {
         console.log(`executing ${root} at ${runServer.origin}`)
         return runServer

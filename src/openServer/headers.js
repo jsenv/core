@@ -3,6 +3,8 @@ https://developer.mozilla.org/en-US/docs/Web/API/Headers
 https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
 */
 
+import { composeMapToCompose } from "../objectHelper.js"
+
 const normalizeName = (headerName) => {
   headerName = String(headerName)
   if (/[^a-z0-9\-#$%&'*+.\^_`|~]/i.test(headerName)) {
@@ -69,35 +71,17 @@ export const acceptContentType = (acceptHeader, contentType) => {
   return acceptHeader.split(",").some((accepted) => accepted === contentType)
 }
 
-const HEADERS_USING_COMMA_SEPARATED_VALUES = [
-  "accept",
-  "accept-charset",
-  "accept-language",
-  "access-control-allow-headers",
-  "access-control-allow-methods",
-  "access-control-allow-origin",
+const composeHeaderValues = (value, nextValue) => `${value}, ${nextValue}`
+
+const headerComposeMap = {
+  accept: composeHeaderValues,
+  "accept-charset": composeHeaderValues,
+  "accept-language": composeHeaderValues,
+  "access-control-allow-headers": composeHeaderValues,
+  "access-control-allow-methods": composeHeaderValues,
+  "access-control-allow-origin": composeHeaderValues,
   // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
-  "vary",
-]
-
-const headerCanContainMultipleValue = (headerName) => {
-  return HEADERS_USING_COMMA_SEPARATED_VALUES.indexOf(headerName) > -1
+  vary: composeHeaderValues,
 }
 
-export const headersCompose = (...headerObjects) => {
-  return headerObjects.reduce((previousHeaderObject, headerObject) => {
-    const headers = { ...previousHeaderObject }
-    Object.keys(headerObject).forEach((headerName) => {
-      if (headerName in headers && headerCanContainMultipleValue(headerName)) {
-        const previousValue = headers[headerName]
-        const currentValue = headerObject[headerName]
-        if (previousValue !== currentValue) {
-          headers[headerName] = `${previousValue}, ${currentValue}`
-        }
-      } else {
-        headers[headerName] = headerObject[headerName]
-      }
-    })
-    return headers
-  }, {})
-}
+export const headersCompose = composeMapToCompose(headerComposeMap)

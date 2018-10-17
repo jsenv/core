@@ -4,13 +4,13 @@ import { createRequestToFileResponse } from "../createRequestToFileResponse/inde
 import {
   openServer,
   enableCORS,
-  createResponseGenerator,
+  serviceCompose,
   acceptContentType,
   createSSERoom,
 } from "../openServer/index.js"
 import { watchFile } from "../watchFile.js"
 import { createSignal } from "@dmail/signal"
-import { JSCreateCompileService } from "../JSCreateCompileService/JSCreateCompileService.js"
+import { jsCreateCompileService } from "../jsCreateCompileService/jsCreateCompileService.js"
 
 export const openCompileServer = ({
   // server options
@@ -32,7 +32,6 @@ export const openCompileServer = ({
   cacheStrategy = "eTag",
 
   // js compile options
-  transpile = true,
   instrument = false,
   instrumentPredicate,
 }) => {
@@ -91,11 +90,10 @@ export const openCompileServer = ({
       }
     }
 
-    const responseGenerator = createResponseGenerator(
+    const service = serviceCompose(
       ...[
         ...(watch ? [createWatchService(), createFileChangedSSEService()] : []),
-        // eslint-disable-next-line new-cap
-        JSCreateCompileService({
+        jsCreateCompileService({
           root,
           cacheFolder,
           compileFolder,
@@ -103,12 +101,7 @@ export const openCompileServer = ({
           cacheTrackHit,
           cacheStrategy,
           instrumentPredicate,
-          createOptions: () => {
-            return {
-              transpile,
-              instrument,
-            }
-          },
+          instrument,
         }),
         createRequestToFileResponse({
           root,
@@ -119,8 +112,10 @@ export const openCompileServer = ({
     )
 
     const getResponseForRequest = (request) => {
-      return responseGenerator(request).then((response) => {
-        return preventCors ? response : enableCORS(request, response)
+      return service(request).then((response) => {
+        return preventCors
+          ? response
+          : enableCORS(response, { allowedOrigins: [request.headers.origin] })
       })
     }
 

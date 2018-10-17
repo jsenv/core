@@ -41,3 +41,40 @@ export const objectComposeValue = (previous, object, callback) => {
 
   return composedObject
 }
+
+const composeMapToKeyComposer = (composeMap) => (key, object, nextObject) => {
+  if (key in object === false) {
+    return nextObject[key]
+  }
+
+  if (key in composeMap === false) {
+    return nextObject[key]
+  }
+
+  return composeMap[key](object[key], nextObject[key])
+}
+
+const keyComposerToReducer = (keyComposer) => {
+  return (previous, object) => {
+    if (typeof object !== "object" || object === null) {
+      return { ...previous }
+    }
+
+    const composed = { ...previous }
+    Object.keys(object).forEach((key) => {
+      composed[key] = keyComposer(key, previous, object)
+    })
+    return composed
+  }
+}
+
+const composeMapToReducer = (composeMap) => {
+  return keyComposerToReducer(composeMapToKeyComposer(composeMap))
+}
+
+export const composeMapToCompose = (composeMap) => {
+  const composeReducer = composeMapToReducer(composeMap)
+  return (...objects) => {
+    return objects.reduce(composeReducer, {})
+  }
+}
