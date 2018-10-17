@@ -39,6 +39,7 @@ export const compileFileResolveToResponse = ({
       "content-type": "application/javascript",
       "x-location": outputName,
     },
+    body: output,
   }
 }
 
