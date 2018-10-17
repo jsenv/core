@@ -1,5 +1,5 @@
 import { compileToService } from "./compileToService.js"
-import { createCompile } from "../createCompileJS/index.js"
+import { createCompile } from "../createCompile/index.js"
 import assert from "assert"
 import path from "path"
 

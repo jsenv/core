@@ -24,7 +24,7 @@ compileJS({
   groupId: "nothing",
 }).then(({ generate }) => {
   return generate({
-    outputRelativeLocation: "file.compiled.js",
+    outputName: "file.compiled.js",
     getBabelPlugins: () => babelPlugins,
   }).then(({ output }) => {
     eval(output)

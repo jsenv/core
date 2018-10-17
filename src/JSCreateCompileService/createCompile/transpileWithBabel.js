@@ -36,23 +36,38 @@ export const transpileWithBabel = ({
   inputAst,
   inputSource,
   options,
-  outputSourceMapName,
+  remap,
+  sourceMapName,
   sourceLocationForSourceMap,
   sourceNameForSourceMap,
 }) => {
-  const sourceMaps = Boolean(outputSourceMapName)
   options = {
     ...options,
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true,
-    sourceMaps,
-    sourceFileName: sourceLocationForSourceMap,
+    sourceMaps: remap,
   }
 
   return transpile({ inputAst, inputSource, options }).then(
     ({ code, ast, map, metadata }) => {
       if (map) {
+        delete map.sourceRoot
+        // we don't need sourceRoot because our path are relative or absolute to the current location
+        // we could comment this line because it is not set by babel because not passed during transform
+
+        delete map.sourcesContent
+        // removing sourcesContent from map decrease the sourceMap
+        // it also means client have to fetch source from server (additional http request)
+        // This is the most complex scenario.
+        // some client ignroe the sourcesContent property such as vscode-chrome-debugger
+        // Because it's the most complex scenario and we want to ensure lcient is always able
+        // to find source from the sourcemap, we explicitely delete nmap.sourcesContent
+
+        map.sources[0] = sourceLocationForSourceMap
+        // the source can be found at sourceLocationForSourceMap
+
         map.file = sourceNameForSourceMap
+        // this file name supposed to appear in dev tools
       }
 
       return {
@@ -60,7 +75,7 @@ export const transpileWithBabel = ({
         outputSourceMap: map,
         outputAst: ast,
         outputAssets: {
-          ...(sourceMaps ? { [outputSourceMapName]: stringifyMap(map) } : {}),
+          ...(remap ? { [sourceMapName]: stringifyMap(map) } : {}),
           ...(metadata.coverage ? { "coverage.json": stringifyCoverage(metadata.coverage) } : {}),
         },
       }

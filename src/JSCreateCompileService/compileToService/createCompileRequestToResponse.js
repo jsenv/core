@@ -57,7 +57,7 @@ const compileFileRejectToResponse = (error) => {
       body: json,
     }
   }
-  return compileFileRejectToResponse(error)
+  return defaultCompileFileRejectToResponse(error)
 }
 
 export const createCompileRequestToResponse = ({

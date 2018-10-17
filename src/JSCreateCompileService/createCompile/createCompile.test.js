@@ -23,7 +23,7 @@ compileJS({
   groupId: "nothing",
 }).then(({ generate }) => {
   return generate({
-    outputRelativeLocation: "file.compiled.js",
+    outputName: "file.compiled.js",
     getBabelPlugins: () => [],
   }).then(({ output, outputAssets }) => {
     assert.equal(typeof output, "string")

@@ -1,5 +1,5 @@
 import Module from "module"
-import { resolvePath } from "../../compileToService/helpers.js"
+import { resolvePath } from "../../compileToCompileFile/helpers.js"
 
 const locateNodeModule = (moduleLocation, location) => {
   const requireContext = new Module(location)

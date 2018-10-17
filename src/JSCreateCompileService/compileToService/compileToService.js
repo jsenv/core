@@ -1,7 +1,7 @@
+import { compileToCompileFile } from "../../compileToCompileFile/index.js"
 import { createCacheRequestToResponse } from "./createCacheRequestToResponse.js"
 import { createCompileRequestToResponse } from "./createCompileRequestToResponse.js"
 import { serviceCompose } from "../../openServer/index.js"
-import { compileToCompileFile } from "../../compileToService/index.js"
 import { locate } from "./locate.js"
 
 export const compileToService = (

@@ -4,7 +4,7 @@ import { convertFileSystemErrorToResponseProperties } from "../createRequestToFi
 export const compileFileResolveToResponse = ({
   status,
   inputETag,
-  outputRelativeLocation,
+  outputName,
   output,
   cacheIgnore,
 }) => {
@@ -27,7 +27,7 @@ export const compileFileResolveToResponse = ({
       status: 304,
       headers: {
         // do I have to send that ? browser cache should be sufficient
-        "x-location": outputRelativeLocation,
+        "x-location": outputName,
       },
     }
   }
@@ -39,7 +39,7 @@ export const compileFileResolveToResponse = ({
       ETag: inputETag,
       "content-length": Buffer.byteLength(output),
       "content-type": "application/javascript",
-      "x-location": outputRelativeLocation,
+      "x-location": outputName,
     },
   }
 }

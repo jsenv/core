@@ -1,96 +1,67 @@
-import { identifier } from "./identifier.js"
 import { instrumenter } from "./instrumenter-babel.js"
 import { minifier } from "./minifier.js"
 import { optimizer } from "./optimizer.js"
 import { remapper } from "./remapper.js"
 import { transpiler } from "./transpiler.js"
-import path from "path"
+import { contextToSourceMapMeta } from "./contextToSourceMapMeta.js"
 
 const transform = (context, transformer) => {
-  return Promise.resolve(
-    transformer({
-      ...context,
-      inputSource: context.outputSource,
-      inputSourceMap: context.outputSourceMap,
-      inputAst: context.outputAst,
-    }),
-  ).then((result) => {
-    // for now result is expected to null, undefined, or an object with any properties named
-    // outputSource, outputAst, outputSourceMap, outputSourceMapName, outputAssets
-
-    if (result) {
-      return {
+  return Promise.resolve()
+    .then(() =>
+      transformer({
         ...context,
-        ...result,
-      }
-    }
-    return context
-  })
-}
-
-const createDefaultOptions = ({ groupId }) => {
-  return {
-    identify: false,
-    identifyMethod: "relative",
-    transpile: true,
-    minify: false,
-    instrument: false,
-    optimize: false,
-    remap: true,
-    remapMethod: "none", // 'none', comment', 'inline'
-    groupId,
-  }
-}
-
-export const createCompile = (
-  { createOptions = () => {}, instrumentPredicate = () => true } = {},
-) => {
-  const getOptions = (context) => {
-    return Promise.all([createDefaultOptions(context), createOptions(context)]).then(
-      ([defaultOptions, customOptions = {}]) => {
-        return {
-          ...defaultOptions,
-          ...customOptions,
-        }
-      },
+        inputSource: context.outputSource,
+        inputSourceMap: context.outputSourceMap,
+        inputAst: context.outputAst,
+      }),
     )
+    .then((result) => {
+      // result is expected to null, undefined, or an object with some or all properties named
+      // outputSource, outputAst, outputSourceMap, outputAssets
+
+      if (result) {
+        return {
+          ...context,
+          ...result,
+        }
+      }
+
+      return context
+    })
+}
+
+export const createCompile = ({ options = {}, instrumentPredicate = () => true } = {}) => {
+  const getOptions = ({ groupId }) => {
+    return {
+      transpile: true,
+      minify: false,
+      instrument: false,
+      optimize: false,
+      remap: true,
+      remapMethod: "comment", // 'comment', 'inline'
+      groupId,
+      ...options,
+    }
   }
 
   const compileJS = (compileContext) => {
     return getOptions(compileContext).then((options) => {
-      let { identify, transpile, instrument, minify, optimize, remap } = options
-      // no location -> cannot identify
-      if (!compileContext.inputRelativeLocation) {
-        identify = false
-      }
-      // if sourceMap are appended as comment do not put any //#sourceURL=../../file.js
-      // because sourceMappingURL will try to resolve against sourceURL
-      if (remap) {
-        identify = false
-      }
+      const { transpile, instrument, minify, optimize, remap } = options
 
       const generate = (generateContext) => {
-        // generateContext.outputRelativeLocation dependent from options:
-        // there is a 1/1 relationship between JSON.stringify(options) & outputRelativeLocation
-        // it means we can get options from outputRelativeLocation & vice versa
-        // this is how compile output gets cached
-
-        return Promise.resolve({
+        const context = {
           outputSource: compileContext.inputSource,
           outputSourceMap: compileContext.inputSourceMap,
-          // folder/file.js -> file.js.map
-          outputSourceMapName: `${path.basename(compileContext.inputName)}.map`,
           outputAst: compileContext.inputAst,
-          getSourceNameForSourceMap: ({ root, inputName }) => {
-            return `${root}/${inputName}`
-          },
-          getSourceLocationForSourceMap: ({ inputName }) => {
-            return inputName
-          },
           ...compileContext,
           ...generateContext,
           options,
-        })
+        }
+        if (remap) {
+          Object.assign(context, contextToSourceMapMeta(context))
+        }
+
+        return Promise.resolve()
           .then((context) => (transpile ? transform(context, transpiler) : context))
           .then((context) => {
             if (instrument && instrumentPredicate(context.inputName)) {
@@ -100,7 +71,6 @@ export const createCompile = (
           })
           .then((context) => (minify ? transform(context, minifier) : context))
           .then((context) => (optimize ? transform(context, optimizer) : context))
-          .then((context) => (identify ? transform(context, identifier) : context))
           .then((context) => (remap ? transform(context, remapper) : context))
           .then(({ outputSource, outputAssets = {} }) => {
             return {

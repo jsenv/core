@@ -7,9 +7,9 @@ export const minifier = (context) => {
     inputAst,
     inputSourceMap,
     options,
-    outputSourceMapName,
-    getSourceNameForSourceMap,
-    getSourceLocationForSourceMap,
+    sourceMapName,
+    sourceMapLocationForSource,
+    sourceNameForSourceMap,
   } = context
 
   const babelOptions = {
@@ -23,12 +23,9 @@ export const minifier = (context) => {
     inputAst,
     inputSource,
     options: babelOptions,
-    ...(options.remap
-      ? {
-          outputSourceMapName,
-          sourceLocationForSourceMap: getSourceLocationForSourceMap(context),
-          sourceNameForSourceMap: getSourceNameForSourceMap(context),
-        }
-      : {}),
+    remap: options.remap,
+    sourceMapName,
+    sourceMapLocationForSource,
+    sourceNameForSourceMap,
   })
 }

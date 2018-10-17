@@ -1,5 +1,5 @@
 import fs from "fs"
-import { createETag } from "../compileToService/helpers.js"
+import { createETag } from "../compileToCompileFile/helpers.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
 import { ressourceToExtension } from "../urlHelper.js"
 
