@@ -96,12 +96,12 @@ export const exit = createSignal({
 
 const cleanupSignals = [hangupOrDeath, terminate, death]
 export const processCleanup = (cleanupCallback) => {
-  return signalRace(cleanupSignals, cleanupCallback)
+  return signalRace(cleanupSignals, ({ args }) => cleanupCallback(...args))
 }
 
 const teardownSignals = [hangupOrDeath, terminate, death, beforeExit, exit]
 export const processTeardown = (teardownCallback) => {
-  return signalRace(teardownSignals, teardownCallback)
+  return signalRace(teardownSignals, ({ args }) => teardownCallback(...args))
 }
 
 // export const listenBrowserBeforeExit = createListenBeforeExit({

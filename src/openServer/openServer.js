@@ -258,7 +258,7 @@ export const openServer = (
 
       if (autoCloseOnExit) {
         const removeTeardown = processTeardown((exitReason) => {
-          console.log("close server on process teardown")
+          console.log(`close server because process will exit because ${exitReason}`)
           close({ reason: `server process exiting ${exitReason}` })
         })
         const wrappedClose = close
