@@ -4,16 +4,11 @@ import path from "path"
 import assert from "assert"
 
 const compileJS = createCompile({
-  createOptions: () => {
-    return {
-      transpile: true,
-      instrument: false,
-    }
-  },
+  transpile: true,
 })
 
 const root = path.resolve(__dirname, "../../../")
-const file = "src/createCompileJS/file.js"
+const file = "src/createCompile/file.js"
 const filename = `${root}/${file}`
 
 compileJS({
@@ -23,11 +18,14 @@ compileJS({
   groupId: "nothing",
 }).then(({ generate }) => {
   return generate({
-    outputName: "file.compiled.js",
+    outputName: "dist/src/createCompile/file.compiled.js",
     getBabelPlugins: () => [],
   }).then(({ output, outputAssets }) => {
     assert.equal(typeof output, "string")
     assert.equal(outputAssets[0].name, "file.js.map")
+    const sourceMap = JSON.parse(outputAssets[0].content)
+    assert.equal(sourceMap.file, file)
+    assert.deepEqual(sourceMap.sources, [`/${file}`])
     console.log("passed")
   })
 })

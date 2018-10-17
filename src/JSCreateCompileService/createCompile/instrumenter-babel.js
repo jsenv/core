@@ -49,8 +49,9 @@ export const instrumenter = (context) => {
     inputSource,
     inputSourceMap,
     inputAst,
+    options,
     sourceMapName,
-    sourceMapLocationForSource,
+    sourceLocationForSourceMap,
     sourceNameForSourceMap,
   } = context
 
@@ -69,8 +70,9 @@ export const instrumenter = (context) => {
     inputAst,
     inputSource,
     options: babelOptions,
+    remap: options.remap,
     sourceMapName,
-    sourceMapLocationForSource,
+    sourceLocationForSourceMap,
     sourceNameForSourceMap,
   })
 }

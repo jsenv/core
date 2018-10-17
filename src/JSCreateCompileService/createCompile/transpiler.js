@@ -10,7 +10,7 @@ export const transpiler = (context) => {
     options,
     getBabelPlugins,
     sourceMapName,
-    sourceMapLocationForSource,
+    sourceLocationForSourceMap,
     sourceNameForSourceMap,
   } = context
 
@@ -27,7 +27,7 @@ export const transpiler = (context) => {
     options: babelOptions,
     remap: options.remap,
     sourceMapName,
-    sourceMapLocationForSource,
+    sourceLocationForSourceMap,
     sourceNameForSourceMap,
   })
 }

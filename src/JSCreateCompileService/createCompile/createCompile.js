@@ -30,7 +30,7 @@ const transform = (context, transformer) => {
     })
 }
 
-export const createCompile = ({ options = {}, instrumentPredicate = () => true } = {}) => {
+export const createCompile = ({ instrumentPredicate = () => true, ...rest } = {}) => {
   const getOptions = ({ groupId }) => {
     return {
       transpile: true,
@@ -40,53 +40,55 @@ export const createCompile = ({ options = {}, instrumentPredicate = () => true }
       remap: true,
       remapMethod: "comment", // 'comment', 'inline'
       groupId,
-      ...options,
+      ...rest,
     }
   }
 
   const compileJS = (compileContext) => {
-    return getOptions(compileContext).then((options) => {
-      const { transpile, instrument, minify, optimize, remap } = options
+    return Promise.resolve()
+      .then(() => getOptions(compileContext))
+      .then((options) => {
+        const { transpile, instrument, minify, optimize, remap } = options
 
-      const generate = (generateContext) => {
-        const context = {
-          outputSource: compileContext.inputSource,
-          outputSourceMap: compileContext.inputSourceMap,
-          outputAst: compileContext.inputAst,
-          ...compileContext,
-          ...generateContext,
-          options,
+        const generate = (generateContext) => {
+          const context = {
+            outputSource: compileContext.inputSource,
+            outputSourceMap: compileContext.inputSourceMap,
+            outputAst: compileContext.inputAst,
+            ...compileContext,
+            ...generateContext,
+            options,
+          }
+          if (remap) {
+            Object.assign(context, contextToSourceMapMeta(context))
+          }
+
+          return Promise.resolve(context)
+            .then((context) => (transpile ? transform(context, transpiler) : context))
+            .then((context) => {
+              if (instrument && instrumentPredicate(context.inputName)) {
+                return transform(context, instrumenter)
+              }
+              return context
+            })
+            .then((context) => (minify ? transform(context, minifier) : context))
+            .then((context) => (optimize ? transform(context, optimizer) : context))
+            .then((context) => (remap ? transform(context, remapper) : context))
+            .then(({ outputSource, outputAssets = {} }) => {
+              return {
+                output: outputSource,
+                outputAssets: Object.keys(outputAssets).map((name) => {
+                  return {
+                    name,
+                    content: outputAssets[name],
+                  }
+                }),
+              }
+            })
         }
-        if (remap) {
-          Object.assign(context, contextToSourceMapMeta(context))
-        }
 
-        return Promise.resolve()
-          .then((context) => (transpile ? transform(context, transpiler) : context))
-          .then((context) => {
-            if (instrument && instrumentPredicate(context.inputName)) {
-              return transform(context, instrumenter)
-            }
-            return context
-          })
-          .then((context) => (minify ? transform(context, minifier) : context))
-          .then((context) => (optimize ? transform(context, optimizer) : context))
-          .then((context) => (remap ? transform(context, remapper) : context))
-          .then(({ outputSource, outputAssets = {} }) => {
-            return {
-              output: outputSource,
-              outputAssets: Object.keys(outputAssets).map((name) => {
-                return {
-                  name,
-                  content: outputAssets[name],
-                }
-              }),
-            }
-          })
-      }
-
-      return { options, generate }
-    })
+        return { options, generate }
+      })
   }
 
   return compileJS

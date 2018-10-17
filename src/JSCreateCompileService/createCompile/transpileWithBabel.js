@@ -63,7 +63,7 @@ export const transpileWithBabel = ({
         // Because it's the most complex scenario and we want to ensure lcient is always able
         // to find source from the sourcemap, we explicitely delete nmap.sourcesContent
 
-        map.sources[0] = sourceLocationForSourceMap
+        map.sources = [sourceLocationForSourceMap]
         // the source can be found at sourceLocationForSourceMap
 
         map.file = sourceNameForSourceMap

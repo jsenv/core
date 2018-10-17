@@ -8,7 +8,10 @@ export const contextToSourceMapMeta = ({ inputName, outputName }) => {
   const sourceMapName = `${path.basename(inputName)}.map`
 
   // it will be located at `${compileServer.origin}/build/src/file.js/e3uiyi456&/file.js.map`
-  const sourceMapLocationForSource = `/${path.dirname(outputName)}/${sourceMapName}`
+  const sourceMapLocationForSource =
+    outputName.indexOf("/") === -1
+      ? `/${sourceMapName}`
+      : `/${path.dirname(outputName)}/${sourceMapName}`
 
   // the name of the source is set to src/file.js
   const sourceNameForSourceMap = inputName

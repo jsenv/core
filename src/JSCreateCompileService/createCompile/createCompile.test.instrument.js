@@ -3,18 +3,16 @@ import istanbul from "istanbul"
 import fs from "fs"
 import path from "path"
 import { getPluginsFromNames } from "@dmail/project-structure-compile-babel"
+import { objectMap } from "../../coverageMap/objectHelper.js"
+import assert from "assert"
 
 const babelPlugins = getPluginsFromNames(["transform-block-scoping"])
 const root = path.resolve(__dirname, "../../../")
-const file = "src/createCompileJS/file.js"
+const file = "src/createCompile/file.js"
 const filename = `${root}/${file}`
 
 const compileJS = createCompile({
-  createOptions: () => {
-    return {
-      instrument: true,
-    }
-  },
+  instrument: true,
 })
 
 compileJS({
@@ -26,10 +24,18 @@ compileJS({
   return generate({
     outputName: "file.compiled.js",
     getBabelPlugins: () => babelPlugins,
-  }).then(({ output }) => {
+  }).then(({ output, outputAssets }) => {
     eval(output)
+    const coverage = global.__coverage__
+    assert.equal(outputAssets.length, 2)
+    assert.equal(outputAssets[1].name, "coverage.json")
+    const absoluteCoverage = objectMap(coverage, (file, coverage) => {
+      return {
+        [`${root}/${file}`]: { ...coverage, path: `${root}/${file}` },
+      }
+    })
     const collector = new istanbul.Collector()
-    collector.add(global.__coverage__)
+    collector.add(absoluteCoverage)
     // const finalCoverage = collector.getFinalCoverage()
     const reporter = new istanbul.Reporter()
 
