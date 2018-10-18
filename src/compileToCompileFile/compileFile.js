@@ -11,6 +11,18 @@ import {
 } from "./locaters.js"
 import { lockForRessource } from "./ressourceRegistry.js"
 
+/*
+OMG en fait je pense que le systeme de cache actuel est pas ouf
+en fait il faudrait que le client envoie une requete genre
+
+hey je suis firefox 10, passe moi une url ou je vais demander les fichiers que je veux execute
+et on lui repond un truc genre http://127.0.0.0.1/build/buildId
+ensuite pour avoir le fichier on fera System.import('http://127.0.0.0.1/build/buildId/compiled/src/file.js')
+si on veut une version instrumenté on fera
+System.import('http://127.0.0.0.1/build/buildId/instrumented/src/file.js')
+
+*/
+
 const readBranchMain = ({
   root,
   cacheFolder,
