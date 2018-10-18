@@ -1,33 +1,33 @@
-import { openCompileServer } from "../openCompileServer/index.js"
 import { createExecuteOnNode } from "./createExecuteOnNode.js"
 
 export const executeOnNode = ({
+  openCompileServer,
+  protocol = "http",
+
   root,
   into,
+
   file,
   watch = false,
-  watchPredicate,
-  instrument = false,
-  instrumentPredicate,
-  cacheDisabled = false,
   verbose,
+
+  ...rest
 }) => {
+  const cacheFolder = into
+  const compileFolder = `${into}__dynamic__`
+
   return openCompileServer({
     root,
-    into,
-    protocol: "http",
-    ip: "127.0.0.1",
-    port: 8760,
-    instrument,
-    instrumentPredicate,
+    cacheFolder,
+    compileFolder,
+    protocol,
     watch,
-    watchPredicate,
-    cacheDisabled,
+    ...rest,
   }).then((server) => {
     const { execute } = createExecuteOnNode({
       localRoot: root,
       remoteRoot: server.origin,
-      remoteCompileDestination: into,
+      remoteCompileDestination: compileFolder,
     })
 
     return execute({

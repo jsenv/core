@@ -1,9 +1,9 @@
-import { instrumenter } from "./instrumenter-babel.js"
 import { minifier } from "./minifier.js"
 import { optimizer } from "./optimizer.js"
 import { remapper } from "./remapper.js"
 import { transpiler } from "./transpiler.js"
 import { contextToSourceMapMeta } from "./contextToSourceMapMeta.js"
+import { createInstrumentPlugin } from "./instrumenter.js"
 
 const transform = (context, transformer) => {
   return Promise.resolve()
@@ -62,15 +62,13 @@ export const createCompile = ({ instrumentPredicate = () => true, ...rest } = {}
           if (remap) {
             Object.assign(context, contextToSourceMapMeta(context))
           }
+          if (instrument && instrumentPredicate(context)) {
+            const getBabelPlugins = context.getBabelPlugins
+            context.getBabelPlugins = () => [...getBabelPlugins(), createInstrumentPlugin(context)]
+          }
 
           return Promise.resolve(context)
             .then((context) => (transpile ? transform(context, transpiler) : context))
-            .then((context) => {
-              if (instrument && instrumentPredicate(context.inputName)) {
-                return transform(context, instrumenter)
-              }
-              return context
-            })
             .then((context) => (minify ? transform(context, minifier) : context))
             .then((context) => (optimize ? transform(context, optimizer) : context))
             .then((context) => (remap ? transform(context, remapper) : context))

@@ -8,7 +8,7 @@ const compileJS = createCompile({
 })
 
 const root = path.resolve(__dirname, "../../../")
-const file = "src/createCompile/file.js"
+const file = "src/jsCreateCompileService/createCompile/fixtures/file.js"
 const filename = `${root}/${file}`
 
 compileJS({

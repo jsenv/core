@@ -3,7 +3,7 @@ import { transpileWithBabel } from "./transpileWithBabel.js"
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 
-const createInstrumentPlugin = ({ filename, useInlineSourceMaps = false } = {}) => {
+export const createInstrumentPlugin = ({ inputName, useInlineSourceMaps = false } = {}) => {
   return ({ types }) => {
     return {
       visitor: {
@@ -21,7 +21,7 @@ const createInstrumentPlugin = ({ filename, useInlineSourceMaps = false } = {}) 
               inputSourceMap = opts.inputSourceMap
             }
 
-            this.__dv__ = programVisitor(types, filename, {
+            this.__dv__ = programVisitor(types, inputName, {
               coverageVariable: "__coverage__",
               inputSourceMap,
             })
@@ -59,7 +59,7 @@ export const instrumenter = (context) => {
     plugins: [
       // we are missing some plugins here, the syntax plugins are required to be able to traverse the tree no ?
       // yes indeed, we could copy/paste all syntax plugins here
-      createInstrumentPlugin({ filename: inputName, useInlineSourceMaps: false }),
+      createInstrumentPlugin({ inputName, useInlineSourceMaps: false }),
     ],
     filename: inputName,
     inputSourceMap,
