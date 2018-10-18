@@ -1,38 +1,9 @@
 import { fork } from "child_process"
 import path from "path"
-import { ensureSystem } from "./ensureSystem.js"
-import "./global-fetch.js"
 import { createSignal } from "@dmail/signal"
 import { cancellableAction } from "../signalHelper.js"
 
-export const createExecuteOnNode = ({
-  localRoot,
-  remoteRoot,
-  remoteCompileDestination,
-  detached = true,
-}) => {
-  if (detached === false) {
-    const execute = ({ file, setup = () => {}, teardown = () => {} }) => {
-      const cancel = () => {}
-
-      const remoteFile = `${remoteRoot}/${remoteCompileDestination}/${file}`
-
-      const promise = Promise.resolve()
-        .then(() => ensureSystem({ localRoot, remoteRoot }))
-        .then((nodeSystem) => {
-          return Promise.resolve()
-            .then(setup)
-            .then(() => nodeSystem.import(remoteFile))
-            .then(teardown)
-        })
-      promise.cancel = cancel
-
-      return promise
-    }
-
-    return { execute }
-  }
-
+export const createExecuteOnNode = ({ localRoot, remoteRoot, remoteCompileDestination }) => {
   const clientFile = path.resolve(__dirname, "./client.js")
   let previousID
 
