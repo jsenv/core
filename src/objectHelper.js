@@ -8,6 +8,16 @@ export const objectMapKey = (object, callback) => {
   return mappedObject
 }
 
+export const objectMapValue = (object, callback) => {
+  const mappedObject = {}
+
+  Object.keys(object).forEach((key) => {
+    mappedObject[key] = callback(object[key])
+  })
+
+  return mappedObject
+}
+
 export const objectMap = (object, callback) => {
   const mappedObject = {}
 

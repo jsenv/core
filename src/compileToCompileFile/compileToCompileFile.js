@@ -3,27 +3,20 @@ import { compileFile } from "./compileFile.js"
 
 export const compileToCompileFile = (
   compile,
-  {
-    root,
-    cacheFolder = "build",
-    compileFolder = "compiled",
-    cacheIgnore = false,
-    cacheTrackHit = false,
-    locate = (file, root) => `${root}/${file}`,
-  },
+  { root, into, group, groupParams, locate = (file, root) => `${root}/${file}` },
 ) => {
-  return ({ file, eTag, ...rest }) => {
+  return ({ file, eTag, cacheIgnore = false, cacheTrackHit = false }) => {
     return compileFile({
       compile,
-      locate,
       root,
-      cacheFolder,
-      compileFolder,
-      file,
+      into,
+      group,
+      groupParams,
+      locate,
       cacheIgnore,
       cacheTrackHit,
-      inputETagClient: eTag,
-      ...rest,
+      file,
+      eTag,
     })
   }
 }

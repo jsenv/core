@@ -1,71 +1,41 @@
-import cuid from "cuid"
-import { createETag, isFileNotFoundError, removeFolderDeep } from "./helpers.js"
+import { createETag, isFileNotFoundError } from "./helpers.js"
 import { readFile } from "./readFile.js"
 import { writeFileFromString } from "@dmail/project-structure-compile-babel"
-import {
-  getCacheDataLocation,
-  getBranchLocation,
-  getOutputLocation,
-  getOutputAssetLocation,
-  getOutputName,
-} from "./locaters.js"
+import { getMetaLocation, getOutputLocation, getAssetLocation, getOutputName } from "./locaters.js"
 import { lockForRessource } from "./ressourceRegistry.js"
+import { objectMapValue } from "../objectHelper.js"
 
-/*
-OMG en fait je pense que le systeme de cache actuel est pas ouf
-en fait il faudrait que le client envoie une requete genre
-
-hey je suis firefox 10, passe moi une url ou je vais demander les fichiers que je veux execute
-et on lui repond un truc genre http://127.0.0.0.1/build/buildId
-ensuite pour avoir le fichier on fera System.import('http://127.0.0.0.1/build/buildId/compiled/src/file.js')
-si on veut une version instrumenté on fera
-System.import('http://127.0.0.0.1/build/buildId/instrumented/src/file.js')
-
-*/
-
-const readBranchMain = ({
-  root,
-  cacheFolder,
-  compileFolder,
-  inputName,
-  eTag,
-  inputLocation,
-  cache,
-  branch,
-}) => {
+const getSourceCacheReport = ({ root, into, group, file, inputLocation, remoteEtag, eTag }) => {
   return readFile({ location: inputLocation }).then(({ content }) => {
     const inputETag = createETag(content)
 
-    return Promise.resolve()
-      .then(() => {
-        if (eTag) {
-          if (eTag !== inputETag) {
-            return { status: `remote eTag outdated` }
-          }
-          return { status: "valid" }
-        }
+    if (remoteEtag) {
+      if (remoteEtag !== inputETag) {
+        return { status: `remote eTag outdated` }
+      }
+      return { status: "valid" }
+    }
 
-        const eTagLocal = cache.eTag
-        if (inputETag !== eTagLocal) {
-          return { status: `local eTag outdated` }
-        }
+    if (inputETag !== eTag) {
+      return { status: `local eTag outdated` }
+    }
 
-        const outputLocation = getOutputLocation({
-          root,
-          cacheFolder,
-          compileFolder,
-          inputName,
-          branch,
-        })
-        return readFile({
-          location: outputLocation,
-          errorHandler: isFileNotFoundError,
-        }).then(({ content, error }) => {
-          if (error) {
-            return { status: `cache not found at ${outputLocation}` }
-          }
-          return { status: "valid", output: content }
-        })
+    const outputLocation = getOutputLocation({
+      root,
+      into,
+      group,
+      file,
+    })
+
+    return readFile({
+      location: outputLocation,
+      errorHandler: isFileNotFoundError,
+    })
+      .then(({ content, error }) => {
+        if (error) {
+          return { status: `cache not found at ${outputLocation}` }
+        }
+        return { status: "valid", output: content }
       })
       .then(({ status, output }) => {
         return {
@@ -78,83 +48,71 @@ const readBranchMain = ({
   })
 }
 
-const readBranchAsset = ({ root, cacheFolder, compileFolder, inputName, cache, branch, asset }) => {
-  const outputAssetLocation = getOutputAssetLocation({
+const getAssetCacheReport = ({ root, into, group, file, asset, eTag }) => {
+  const assetLocation = getAssetLocation({
     root,
-    cacheFolder,
-    compileFolder,
-    inputName,
-    branch,
+    into,
+    group,
+    file,
     asset,
   })
-  const name = asset.name
 
   return readFile({
-    location: outputAssetLocation,
+    location: assetLocation,
     errorHandler: isFileNotFoundError,
   }).then(({ content, error }) => {
     if (error) {
       return {
-        status: `asset file not found ${outputAssetLocation}`,
-        name,
+        status: `asset not found at ${assetLocation}`,
       }
     }
 
     const actual = createETag(content)
-    const expected = asset.eTag
-    if (actual !== expected) {
+    if (actual !== eTag) {
       return {
-        status: `unexpected ${asset.name} asset for ${cache.file}: unexpected eTag`,
-        name,
+        status: `eTag mismatch on ${asset} for file ${file}`,
         content,
       }
     }
     return {
       status: "valid",
-      name,
       content,
     }
   })
 }
 
-const readBranch = ({
-  root,
-  cacheFolder,
-  compileFolder,
-  inputName,
-  eTag,
-  inputLocation,
-  cache,
-  branch,
-}) => {
+const getFileCacheReport = ({ root, into, group, file, inputLocation, remoteETag, meta }) => {
   return Promise.all([
-    readBranchMain({
+    getSourceCacheReport({
       root,
-      cacheFolder,
-      compileFolder,
-      inputName,
-      eTag,
+      into,
+      group,
+      file,
       inputLocation,
-      cache,
-      branch,
+      eTag: meta.eTag,
+      remoteETag,
     }),
-    ...branch.outputAssets.map((outputAsset) => {
-      return readBranchAsset({
+    ...Object.keys(meta.assetEtagMap).map((asset) => {
+      return getAssetCacheReport({
         root,
-        cacheFolder,
-        compileFolder,
-        inputName,
-        cache,
-        branch,
-        asset: outputAsset,
+        into,
+        group,
+        file,
+        asset,
+        eTag: meta.assetEtagMap[asset],
       })
     }),
-  ]).then(([mainData, ...assetsData]) => {
-    const { status, input, inputETag, output } = mainData
+  ]).then(([sourceReport, ...assetReports]) => {
+    const { status, input, inputETag, output } = sourceReport
+
+    const assetMap = {}
+    assetReports.forEach(({ content }, index) => {
+      assetMap[Object.keys(meta.assetEtagMap)[index]] = content
+    })
 
     let computedStatus
     if (status === "valid") {
-      const invalidAsset = assetsData.find((assetData) => assetData.status !== "valid")
+      const invalidAsset = assetReports.find((assetReport) => assetReport.status !== "valid")
       computedStatus = invalidAsset ? invalidAsset.status : "valid"
     } else {
       computedStatus = status
@@ -165,7 +123,7 @@ const readBranch = ({
       input,
       inputETag,
       output,
-      outputAssets: assetsData,
+      assetMap,
     }
   })
 }
@@ -176,167 +134,108 @@ const createCacheCorruptionError = (message) => {
   return error
 }
 
-const getFileBranch = ({
-  compile,
-  root,
-  cacheFolder,
-  compileFolder,
-  inputName,
-  locate,
-  ...rest
-}) => {
-  const cacheDataLocation = getCacheDataLocation({
+const getFileMeta = ({ root, into, group, file, locate }) => {
+  const metaLocation = getMetaLocation({
     root,
-    cacheFolder,
-    compileFolder,
-    inputName,
+    into,
+    group,
+    file,
   })
 
   return Promise.all([
-    locate(inputName, root),
+    locate(file, root),
     readFile({
-      location: cacheDataLocation,
+      location: metaLocation,
       errorHandler: isFileNotFoundError,
     }).then(({ content, error }) => {
       if (error) {
-        return {
-          branches: [],
-        }
+        // means meta file not found
+        return null
       }
-      const cache = JSON.parse(content)
-      if (cache.inputName !== inputName) {
+      const meta = JSON.parse(content)
+      if (meta.file !== file) {
         throw createCacheCorruptionError(
-          `${cacheDataLocation} corrupted: cache.inputName should be ${inputName}, got ${
-            cache.inputName
-          }`,
+          `${metaLocation} corrupted: file should be ${file}, got ${meta.file}`,
         )
       }
-      return cache
+      return meta
     }),
   ])
-    .then(([inputLocation, cache]) => {
+    .then(([inputLocation, meta]) => {
       return {
         inputLocation,
-        cache,
+        meta,
       }
     })
-    .then(({ inputLocation, cache }) => {
+    .then(({ inputLocation, meta }) => {
       // here, if readFile returns ENOENT we could/should check is there is something in cache for that file
       // and take that chance to remove the cached version of that file
       // but it's not supposed to happen
       return readFile({
         location: inputLocation,
       }).then(({ content }) => {
-        return compile({
-          root,
-          inputName,
-          inputSource: content,
-          ...rest,
-        }).then(({ options, generate }) => {
-          const branchIsValid = (branch) => {
-            return JSON.stringify(branch.outputMeta) === JSON.stringify(options)
-          }
-
-          const cachedBranch = cache.branches.find((branch) => branchIsValid(branch))
-
-          return {
-            inputLocation,
-            cache,
-            options,
-            generate,
-            input: content,
-            branch: cachedBranch,
-          }
-        })
+        return {
+          inputLocation,
+          meta,
+          input: content,
+        }
       })
     })
 }
 
-const getFileReport = ({
-  compile,
-  locate,
-  root,
-  cacheFolder,
-  compileFolder,
-  inputName,
-  eTag,
-  ...rest
-}) => {
-  return getFileBranch({
+const getFileReport = ({ compile, root, into, group, file, locate, remoteETag }) => {
+  return getFileMeta({
     compile,
-    locate,
     root,
-    cacheFolder,
-    compileFolder,
-    inputName,
-    eTag,
-    ...rest,
-  }).then(({ inputLocation, cache, options, generate, input, branch }) => {
-    if (!branch) {
+    into,
+    group,
+    file,
+    locate,
+    remoteETag,
+  }).then(({ inputLocation, meta, input }) => {
+    if (!meta) {
       return {
         inputLocation,
         status: "missing",
-        cache,
-        options,
-        generate,
-        branch: {
-          name: cuid(),
-        },
         input,
       }
     }
 
-    return readBranch({
+    return getFileCacheReport({
       root,
-      cacheFolder,
-      compileFolder,
-      inputName,
-      eTag,
+      into,
+      group,
+      file,
       inputLocation,
-      cache,
-      branch,
-    }).then(({ status, input, inputETag, output, outputAssets }) => {
+      remoteETag,
+      meta,
+    }).then(({ status, input, inputETag, output, assetMap }) => {
       return {
         inputLocation,
         status,
-        cache,
-        options,
-        generate,
-        branch,
+        meta,
         input,
         inputETag,
         output,
-        outputAssets,
+        assetMap,
       }
     })
   })
 }
 
-const compareBranch = (branchA, branchB) => {
-  const lastMatchDiff = branchA.lastMatchMs - branchB.lastMatchMs
-
-  if (lastMatchDiff === 0) {
-    return branchA.matchCount - branchB.matchCount
-  }
-  return lastMatchDiff
-}
-
-const updateBranch = ({
+const updateMeta = ({
   root,
-  cacheFolder,
-  compileFolder,
-  inputName,
+  into,
+  group,
+  file,
   inputLocation,
   status,
-  cache,
-  options,
-  branch,
+  meta,
   inputETag,
   output,
-  outputAssets,
+  assetMap,
   cacheTrackHit,
 }) => {
-  const { branches } = cache
   const isCached = status === "cached"
   const isNew = status === "created"
   const isUpdated = status === "updated"
@@ -346,112 +245,66 @@ const updateBranch = ({
   if (isNew || isUpdated) {
     const mainLocation = getOutputLocation({
       root,
-      cacheFolder,
-      compileFolder,
-      inputName,
-      branch,
+      into,
+      group,
+      file,
     })
 
     promises.push(
       writeFileFromString(mainLocation, output),
-      ...outputAssets.map((asset) => {
-        const assetLocation = getOutputAssetLocation({
+      ...Object.keys(assetMap).map((asset) => {
+        const assetLocation = getAssetLocation({
           root,
-          cacheFolder,
-          compileFolder,
-          inputName,
-          branch,
+          into,
+          group,
+          file,
           asset,
         })
 
-        return writeFileFromString(assetLocation, asset.content)
+        return writeFileFromString(assetLocation, assetMap[asset])
       }),
     )
   }
 
   if (isNew || isUpdated || (isCached && cacheTrackHit)) {
-    if (inputETag !== cache.eTag) {
-      const branchesToRemove = branches.slice()
-      // do not remove the updated branch
-      const index = branchesToRemove.indexOf(branch)
-      branchesToRemove.splice(index, 1)
-
-      branchesToRemove.forEach((branch) => {
-        const branchLocation = getBranchLocation({
-          root,
-          cacheFolder,
-          compileFolder,
-          inputName,
-          branch,
-        })
-        console.log(`file changed, remove ${branchLocation}`)
-        // the line below is async but non blocking
-        removeFolderDeep(branchLocation)
-      })
-      branches.length = 0
-      // do not remove updated branch
-      if (isUpdated) {
-        branches.push(branch)
+    if (isNew) {
+      meta = {
+        file,
+        inputLocation,
+        eTag: inputETag,
+        matchCount: 1,
+        createdMs: Number(Date.now()),
+        lastModifiedMs: Number(Date.now()),
+        lastMatchMs: Number(Date.now()),
+        assetEtagMap: objectMapValue(assetMap, (value) => createETag(value)),
+      }
+    } else if (isUpdated) {
+      meta = {
+        ...meta,
+        eTag: inputETag,
+        inputLocation, // may change because of locate
+        matchCount: meta.matchCount + 1,
+        lastMatchMs: Number(Date.now()),
+        lastModifiedMs: Number(Date.now()),
+        assetEtagMap: objectMapValue(assetMap, (value) => createETag(value)),
+      }
+    } else {
+      meta = {
+        ...meta,
+        inputLocation, // may change because of locate
+        matchCount: meta.matchCount + 1,
+        lastMatchMs: Number(Date.now()),
       }
     }
 
-    if (isNew) {
-      branches.push(branch)
-    }
-
-    const updatedBranches = branches
-      .map((branchToUpdate) => {
-        if (branchToUpdate.name !== branch.name) {
-          return { ...branchToUpdate }
-        }
-        if (isCached) {
-          return {
-            ...branchToUpdate,
-            matchCount: branch.matchCount + 1,
-            lastMatchMs: Number(Date.now()),
-          }
-        }
-        if (isUpdated) {
-          return {
-            ...branchToUpdate,
-            matchCount: branch.matchCount + 1,
-            lastMatchMs: Number(Date.now()),
-            lastModifiedMs: Number(Date.now()),
-            outputAssets: outputAssets.map(({ name, content }) => {
-              return { name, eTag: createETag(content) }
-            }),
-          }
-        }
-        // new branch
-        return {
-          name: branch.name,
-          matchCount: 1,
-          createdMs: Number(Date.now()),
-          lastModifiedMs: Number(Date.now()),
-          lastMatchMs: Number(Date.now()),
-          outputMeta: options,
-          outputAssets: outputAssets.map(({ name, content }) => {
-            return { name, eTag: createETag(content) }
-          }),
-        }
-      })
-      .sort(compareBranch)
-
-    const updatedCache = {
-      inputName,
-      eTag: isCached ? cache.eTag : inputETag,
-      inputLocation,
-      branches: updatedBranches,
-    }
-
-    const cacheDataLocation = getCacheDataLocation({
+    const metaLocation = getMetaLocation({
       root,
-      cacheFolder,
-      compileFolder,
-      inputName,
+      into,
+      group,
+      file,
     })
 
-    promises.push(writeFileFromString(cacheDataLocation, JSON.stringify(updatedCache, null, "  ")))
+    promises.push(writeFileFromString(metaLocation, JSON.stringify(meta, null, "  ")))
   }
 
   return Promise.all(promises)
@@ -459,132 +312,106 @@ const updateBranch = ({
 
 export const compileFile = ({
   compile,
-  locate,
   root,
-  cacheFolder,
-  compileFolder,
-  file,
-  eTag,
+  into,
+  group,
+  groupParams,
+  locate,
   cacheTrackHit,
   cacheIgnore,
-  ...rest
+  file,
+  eTag,
 }) => {
-  const inputName = file
   const fileLock = lockForRessource(
-    getCacheDataLocation({
+    getMetaLocation({
       root,
-      cacheFolder,
-      compileFolder,
-      inputName,
+      into,
+      group,
+      file,
     }),
   )
 
   return fileLock.chain(() => {
     return getFileReport({
       compile,
-      locate,
       root,
-      cacheFolder,
-      compileFolder,
-      inputName,
-      eTag,
-      ...rest,
+      into,
+      group,
+      file,
+      locate,
+      remoteETag: eTag,
     })
-      .then(
-        ({
-          inputLocation,
-          status,
-          cache,
-          options,
-          generate,
-          branch,
-          input,
-          inputETag,
-          output,
-          outputAssets,
-        }) => {
-          const outputName = getOutputName({
-            cacheFolder,
-            compileFolder,
-            inputName,
-            branch,
-          })
+      .then(({ inputLocation, status, meta, input, inputETag, output, assetMap }) => {
+        const outputName = getOutputName({
+          into,
+          group,
+          file,
+        })
 
-          const remoteETagValid = !cacheIgnore && eTag && status === "valid"
+        const remoteETagValid = !cacheIgnore && eTag && status === "valid"
 
-          if (!cacheIgnore && status === "valid") {
-            return {
-              inputLocation,
-              status: "cached",
-              cache,
-              options,
-              branch,
-              remoteETagValid,
-              input,
-              inputETag,
-              outputName,
-              output,
-              outputAssets,
-            }
+        if (!cacheIgnore && status === "valid") {
+          return {
+            inputLocation,
+            status: "cached",
+            meta,
+            remoteETagValid,
+            input,
+            inputETag,
+            outputName,
+            output,
+            assetMap,
           }
+        }
 
-          return Promise.resolve(generate({ outputName, ...rest })).then(
-            ({ output, outputAssets }) => {
-              return {
-                inputLocation,
-                status: status === "missing" ? "created" : "updated",
-                cache,
-                options,
-                branch,
-                remoteETagValid,
-                input,
-                inputETag: createETag(input),
-                outputName,
-                output,
-                outputAssets,
-              }
-            },
-          )
-        },
-      )
+        return Promise.resolve(
+          compile({ inputName: file, inputSource: output, outputName, ...groupParams }),
+        ).then(({ output, assetMap = {} }) => {
+          return {
+            inputLocation,
+            status: status === "missing" ? "created" : "updated",
+            meta,
+            remoteETagValid,
+            input,
+            inputETag: createETag(input),
+            outputName,
+            output,
+            assetMap,
+          }
+        })
+      })
       .then(
         ({
           inputLocation,
           status,
-          cache,
-          options,
-          branch,
+          meta,
           remoteETagValid,
           input,
           inputETag,
           outputName,
           output,
-          outputAssets,
+          assetMap,
         }) => {
-          return updateBranch({
+          return updateMeta({
             root,
-            cacheFolder,
-            compileFolder,
-            inputName,
+            into,
+            group,
+            file,
             inputLocation,
             status,
-            cache,
-            options,
-            branch,
+            meta,
             input,
             inputETag,
             output,
-            outputAssets,
+            assetMap,
             cacheTrackHit,
           }).then(() => {
             return {
-              status,
-              remoteETagValid,
-              inputETag,
+              eTagValid: Boolean(remoteETagValid),
+              eTag: inputETag,
               output,
               outputName,
-              outputAssets,
-              cacheIgnore,
+              assetMap,
             }
           })
         },

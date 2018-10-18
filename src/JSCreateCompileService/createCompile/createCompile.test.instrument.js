@@ -44,6 +44,7 @@ const filename = `${root}/${file}`
 
 const compileJS = createCompile({
   instrument: false,
+  plugins: babelPlugins,
 })
 
 compileJS({
@@ -51,27 +52,23 @@ compileJS({
   inputName: file,
   inputSource: fs.readFileSync(filename).toString(),
   groupId: "nothing",
-}).then(({ generate }) => {
-  return generate({
-    outputName: "file.compiled.js",
-    getBabelPlugins: () => babelPlugins,
-  }).then(({ output, outputAssets }) => {
-    eval(output)
-    const coverage = global.__coverage__
-    assert.equal(outputAssets.length, 2)
-    assert.equal(outputAssets[1].name, "coverage.json")
-    const absoluteCoverage = objectMap(coverage, (file, coverage) => {
-      return {
-        [`${root}/${file}`]: { ...coverage, path: `${root}/${file}` },
-      }
-    })
-    const collector = new istanbul.Collector()
-    collector.add(absoluteCoverage)
-    // const finalCoverage = collector.getFinalCoverage()
-    const reporter = new istanbul.Reporter()
-
-    reporter.add("text")
-    reporter.add("html")
-    reporter.write(collector, false, () => {})
+  outputName: "file.compiled.js",
+}).then(({ output, outputAssets }) => {
+  eval(output)
+  const coverage = global.__coverage__
+  assert.equal(outputAssets.length, 2)
+  assert.equal(outputAssets[1].name, "coverage.json")
+  const absoluteCoverage = objectMap(coverage, (file, coverage) => {
+    return {
+      [`${root}/${file}`]: { ...coverage, path: `${root}/${file}` },
+    }
   })
+  const collector = new istanbul.Collector()
+  collector.add(absoluteCoverage)
+  // const finalCoverage = collector.getFinalCoverage()
+  const reporter = new istanbul.Reporter()
+
+  reporter.add("text")
+  reporter.add("html")
+  reporter.write(collector, false, () => {})
 })
