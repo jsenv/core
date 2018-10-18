@@ -34,6 +34,13 @@ const getNodeServerAndAgent = ({ protocol, getSignature }) => {
   throw new Error(`unsupported protocol ${protocol}`)
 }
 
+const createContentLengthMismatchError = (message) => {
+  const error = new Error(message)
+  error.code = "CONTENT_LENGTH_MISMATCH"
+  error.name = error.code
+  return error
+}
+
 export const originAsString = ({ protocol, ip, port }) => {
   const url = new URL("https://127.0.0.1:80")
   url.protocol = protocol
@@ -187,17 +194,34 @@ export const openServer = (
 
         return Promise.resolve()
           .then(() => getResponseForRequest(request))
+          .then(({ status = 501, reason = "not specified", headers = {}, body = "" }) =>
+            Object.freeze({ status, reason, headers, body }),
+          )
+          .then((response) => {
+            if (
+              request.method !== "HEAD" &&
+              response.headers["content-length"] > 0 &&
+              response.body === ""
+            ) {
+              throw createContentLengthMismatchError(
+                `content-length header is ${response.headers["content-length"]} but body is empty`,
+              )
+            }
+
+            return response
+          })
           .catch((error) => {
-            return {
+            return Object.freeze({
               status: 500,
               reason: "internal error",
+              headers: {},
               body: error && error.stack ? error.stack : error,
-            }
+            })
           })
-          .then(({ status = 501, reason = "not specified", headers = {}, body = "" }) => {
+          .then((response) => {
             log(`${status} ${origin}/${request.ressource}`)
-            const response = Object.freeze({ status, reason, headers, body })
-            populateNodeResponse(nodeResponse, response, {
+
+            return populateNodeResponse(nodeResponse, response, {
               ignoreBody: request.method === "HEAD",
             })
           })
