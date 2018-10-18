@@ -51,9 +51,8 @@ compileJS({
   root,
   inputName: file,
   inputSource: fs.readFileSync(filename).toString(),
-  groupId: "nothing",
   outputName: "file.compiled.js",
-}).then(({ output, outputAssets }) => {
+}).then(({ output, assetMap }) => {
   eval(output)
   const coverage = global.__coverage__
   assert.equal(outputAssets.length, 2)

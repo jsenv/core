@@ -1,5 +1,6 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 
+/* eslint-disable import/max-dependencies */
 import { createRequestToFileResponse } from "../createRequestToFileResponse/index.js"
 import {
   openServer,
@@ -11,6 +12,29 @@ import {
 import { watchFile } from "../watchFile.js"
 import { createSignal } from "@dmail/signal"
 import { jsCreateCompileService } from "../jsCreateCompileService/jsCreateCompileService.js"
+import { getGroupData, DEFAULT_GROUP_ID } from "./getGroupData.js"
+import { getPlatformNameAndVersionFromHeaders } from "./getPlatformNameAndVersionFromHeaders.js"
+import { getPluginsFromNames } from "@dmail/project-structure-compile-babel"
+import { platformMatchCompatMap } from "./createCompileProfiles/index.js"
+import { ressourceToGroupAndFile } from "../compileFileToService/compileFileToService.js"
+
+const requestToGroupId = (groupData, request) => {
+  const { platformName, platformVersion } = getPlatformNameAndVersionFromHeaders(request.headers)
+
+  const groupId =
+    Object.keys(groupData).find((id) => {
+      const { compatMap } = groupData[id]
+      return platformMatchCompatMap({ compatMap, platformName, platformVersion })
+    }) || DEFAULT_GROUP_ID
+
+  return groupId
+}
+
+const groupIdToParam = (groupData, groupId) => {
+  return {
+    plugins: getPluginsFromNames(groupData[groupId].pluginNames),
+  }
+}
 
 export const openCompileServer = ({
   // server options
@@ -27,18 +51,24 @@ export const openCompileServer = ({
 
   // generic compile options
   root,
-  cacheFolder,
-  compileFolder,
-  cacheTrackHit = false,
-  cacheStrategy = "etag",
+  into,
+  compiledCacheTrackHit = false,
+  compiledCacheStrategy = "etag",
+  assetCacheStrategy = "etag",
+  assetCacheIgnore = false,
+  sourceCacheStrategy = "etag",
+  sourceCacheIgnore = false,
 
   // js compile options
-  instrument = false,
+  // bon ce truc est relou, en gros pour lui il faut l4instancier d'une maiere speciale
+  // pour pas qu'il instrumente tout
   instrumentPredicate,
 }) => {
   const cleanup = createSignal()
 
-  return Promise.resolve().then(() => {
+  return getGroupData().then((groupData) => {
+    const groupMap = Object.keys(groupData).map((id) => groupIdToParam(id))
+
     const watchSignal = createSignal()
 
     const createWatchService = () => {
@@ -49,18 +79,18 @@ export const openCompileServer = ({
       })
 
       return ({ ressource }) => {
-        const dirname = ressource.slice(0, ressource.indexOf("/"))
-        if (dirname === compileFolder) {
-          // when I ask for a compiled file, watch the corresponding file on filesystem
-          const file = ressource.slice(compileFolder.length + 1)
-          const fileLocation = `${root}/${file}`
+        const { file } = ressourceToGroupAndFile(ressource, into, groupMap)
+        if (!file) {
+          return
+        }
 
-          if (watchedFiles.has(fileLocation) === false && watchPredicate(file)) {
-            const fileWatcher = watchFile(fileLocation, () => {
-              watchSignal.emit(file)
-            })
-            watchedFiles.set(fileLocation, fileWatcher)
-          }
+        // when I ask for a compiled file, watch the corresponding file on filesystem
+        const fileLocation = `${root}/${file}`
+        if (watchedFiles.has(fileLocation) === false && watchPredicate(file)) {
+          const fileWatcher = watchFile(fileLocation, () => {
+            watchSignal.emit(file)
+          })
+          watchedFiles.set(fileLocation, fileWatcher)
         }
       }
     }
@@ -88,23 +118,45 @@ export const openCompileServer = ({
       }
     }
 
+    const createBalanceService = () => {
+      return (request) => {
+        if (request.ressource !== `${into}`) {
+          return null
+        }
+
+        const group = JSON.stringify(requestToGroupId(request))
+
+        return {
+          headers: {
+            // vary by user-agent because we use it to provided different file
+            vary: "User-Agent",
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(group),
+          },
+          body: group,
+        }
+      }
+    }
+
     const service = serviceCompose(
       ...[
+        createBalanceService(),
         ...(watch ? [createWatchService(), createFileChangedSSEService()] : []),
         jsCreateCompileService({
           root,
-          cacheFolder,
-          compileFolder,
+          into,
+          groupMap,
           cacheIgnore,
-          cacheTrackHit,
-          cacheStrategy,
+          cacheTrackHit: compiledCacheTrackHit,
+          cacheStrategy: compiledCacheStrategy,
+          assetCacheIgnore,
+          assetCacheStrategy,
           instrumentPredicate,
-          instrument,
         }),
         createRequestToFileResponse({
           root,
-          cacheIgnore,
-          cacheStrategy,
+          cacheIgnore: sourceCacheIgnore,
+          cacheStrategy: sourceCacheStrategy,
         }),
       ],
     )

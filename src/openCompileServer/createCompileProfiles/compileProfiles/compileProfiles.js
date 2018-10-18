@@ -38,7 +38,6 @@ export const compileProfiles = (
     size = 4,
     platformNames = PLATFORM_NAMES,
     moduleOutput,
-    identify = false,
     pluginNames = Object.keys(compatMap),
   } = {},
 ) => {
@@ -61,15 +60,6 @@ export const compileProfiles = (
 
   const profiles = sortedGroups
   const fallback = groupWithEverything
-
-  if (identify) {
-    profiles[0].id = "best"
-    profiles.slice(1, -1).forEach((intermediateProfile, index) => {
-      intermediateProfile.id = `intermediate-${index + 1}`
-    })
-    profiles[profiles.length - 1].id = "worst"
-    fallback.id = "otherwise"
-  }
 
   return { profiles, fallback }
 }

@@ -27,11 +27,14 @@ const compile = ({ content }) => {
 const compileFile = compileToCompileFile(compile, {
   root,
   into,
-  group,
-  groupParams,
 })
 
-compileFile({ file: "src/file.txt", cacheIgnore: true }).then((actual) => {
+compileFile({
+  group,
+  groupParams,
+  file,
+  cacheIgnore: true,
+}).then((actual) => {
   assert.deepEqual(actual, {
     eTagValid: false,
     outputName: expectedOutputName,
@@ -40,7 +43,12 @@ compileFile({ file: "src/file.txt", cacheIgnore: true }).then((actual) => {
     assetMap,
   })
 
-  return compileFile({ file: "src/file.txt", cacheIgnore: false }).then((actual) => {
+  return compileFile({
+    group,
+    groupParams,
+    file,
+    cacheIgnore: false,
+  }).then((actual) => {
     assert.equal(callCount, 1)
     assert.deepEqual(actual, {
       eTagValid: false,
@@ -50,19 +58,23 @@ compileFile({ file: "src/file.txt", cacheIgnore: true }).then((actual) => {
       assetMap,
     })
 
-    return compileFile({ file: "src/file.txt", cacheIgnore: false, eTag: expectedEtag }).then(
-      (actual) => {
-        assert.equal(callCount, 1)
-        assert.deepEqual(actual, {
-          eTagValid: true,
-          outputName: expectedOutputName,
-          eTag: expectedEtag,
-          output,
-          assetMap,
-        })
+    return compileFile({
+      group,
+      groupParams,
+      file,
+      cacheIgnore: false,
+      eTag: expectedEtag,
+    }).then((actual) => {
+      assert.equal(callCount, 1)
+      assert.deepEqual(actual, {
+        eTagValid: true,
+        outputName: expectedOutputName,
+        eTag: expectedEtag,
+        output,
+        assetMap,
+      })
 
-        console.log("passed")
-      },
-    )
+      console.log("passed")
+    })
   })
 })

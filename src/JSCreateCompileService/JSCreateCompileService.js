@@ -1,34 +1,29 @@
-import { createCompile } from "./createCompile/index.js"
-import { compileToService } from "./compileToService/index.js"
-import { createCompileProfiles } from "./createCompileProfiles/index.js"
+import { compileFileToService } from "./compileFileToService/index.js"
+import { compileToCompileFile } from "../compileToCompileFile/index.js"
+import { compile } from "./compile/index.js"
+import { locate } from "./locate.js"
 
 export const jsCreateCompileService = ({
-  // compile options
-  instrument,
-  instrumentPredicate,
   // compileFile options
   root,
-  cacheFolder,
-  compileFolder,
+  into,
+  // compileFileToService options
+  groupMap,
   cacheIgnore,
   cacheTrackHit,
-  cacheStrategy,
+  assetCacheIgnore,
+  assetCacheStrategy,
 }) => {
-  const compile = createCompile({ instrument, instrumentPredicate })
+  const compileFile = compileToCompileFile(compile, { root, into, locate })
 
-  const { getGroupIdAndPluginsForPlatform } = createCompileProfiles({
+  const service = compileFileToService(compileFile, {
     root,
-    into: "group.config.json",
-  })
-
-  const service = compileToService(compile, {
-    root,
-    cacheFolder,
-    compileFolder,
+    into,
+    groupMap,
     cacheIgnore,
     cacheTrackHit,
-    cacheStrategy,
-    getGroupIdAndPluginsForPlatform,
+    assetCacheIgnore,
+    assetCacheStrategy,
   })
 
   return service

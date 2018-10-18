@@ -1,5 +1,4 @@
 import Module from "module"
-import { resolvePath } from "../../compileToCompileFile/helpers.js"
 
 const locateNodeModule = (moduleLocation, location) => {
   const requireContext = new Module(location)
@@ -58,5 +57,5 @@ export const locate = (relativeLocation, absoluteLocation) => {
     }
   }
 
-  return Promise.resolve(resolvePath(absoluteLocation, relativeLocation))
+  return `${absoluteLocation}/${relativeLocation}`
 }
