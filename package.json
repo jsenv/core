@@ -25,6 +25,7 @@
 		"@dmail/project-structure": "github:dmail/project-structure",
 		"@dmail/project-structure-compile-babel": "github:dmail/project-structure-compile-babel",
 		"@dmail/signal": "9.1.0",
+		"@dmail/uneval": "4.1.0",
 		"cuid": "2.1.1",
 		"eventsource": "1.0.7",
 		"istanbul": "0.4.5",

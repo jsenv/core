@@ -5,15 +5,15 @@ import assert from "assert"
 const projectRoot = path.resolve(__dirname, "../../../")
 const root = `${projectRoot}/src/compileToCompileFile/fixtures`
 const into = "build"
-const group = "group"
+const compileId = "group"
 const output = "foo"
-const groupParams = { content: output }
+const compileIdToCompileParams = () => ({ content: output })
 const assetMap = {
   "asset.map": "bar",
 }
 const file = "src/file.txt"
 const expectedEtag = `"3-C+7Hteo/D9vJXQ3UfzxbwnXaijM"`
-const expectedOutputName = `${into}/${group}/${file}`
+const expectedOutputName = `${into}/${compileId}/${file}`
 let callCount = 0
 
 const compile = ({ content }) => {
@@ -30,8 +30,8 @@ const compileFile = compileToCompileFile(compile, {
 })
 
 compileFile({
-  group,
-  groupParams,
+  compileId,
+  compileIdToCompileParams,
   file,
   cacheIgnore: true,
 }).then((actual) => {
@@ -44,8 +44,8 @@ compileFile({
   })
 
   return compileFile({
-    group,
-    groupParams,
+    compileId,
+    compileIdToCompileParams,
     file,
     cacheIgnore: false,
   }).then((actual) => {
@@ -59,8 +59,8 @@ compileFile({
     })
 
     return compileFile({
-      group,
-      groupParams,
+      compileId,
+      compileIdToCompileParams,
       file,
       cacheIgnore: false,
       eTag: expectedEtag,

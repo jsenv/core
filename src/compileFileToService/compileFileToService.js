@@ -3,7 +3,7 @@ import {
   convertFileSystemErrorToResponseProperties,
 } from "../createRequestToFileResponse/index.js"
 
-export const ressourceToGroupAndFile = (ressource, into, groupMap) => {
+export const ressourceToCompileIdAndFile = (ressource, into) => {
   const parts = ressource.split("/")
   const firstPart = parts[0]
 
@@ -12,9 +12,6 @@ export const ressourceToGroupAndFile = (ressource, into, groupMap) => {
   }
 
   const secondPart = parts[1]
-  if (secondPart in groupMap === false) {
-    return null
-  }
 
   if (parts[2].length === 0) {
     return null
@@ -24,13 +21,13 @@ export const ressourceToGroupAndFile = (ressource, into, groupMap) => {
 
   if (file.match(/^[^\/]+__meta__\/.+$/)) {
     return {
-      group: secondPart,
+      compileId: secondPart,
       asset: file,
     }
   }
 
   return {
-    group: secondPart,
+    compileId: secondPart,
     file,
   }
 }
@@ -40,7 +37,7 @@ export const compileFileToService = (
   {
     root,
     into,
-    groupMap,
+    compileIdToCompileParams,
     cacheIgnore = false,
     cacheTrackHit = false,
     assetCacheIgnore = false,
@@ -54,17 +51,16 @@ export const compileFileToService = (
   })
 
   return (request) => {
-    // si y'a pas de groupe faudrait servir le fichier tel quel
-    // si on demande un asset faut le servir tel quel
-    const { group, file } = ressourceToGroupAndFile(request.ressource, into, groupMap)
+    const { compileId, file } = ressourceToCompileIdAndFile(request.ressource, into)
 
-    if (!group || !file) {
+    // no compileId or no asset we server the file without compiling it
+    if (!compileId || !file) {
       return fileService(request)
     }
 
     const promise = compileFile({
-      group,
-      groupParams: groupMap[group],
+      compileId,
+      compileIdToCompileParams,
       file,
       eTag: "if-none-match" in request.headers ? request.headers["if-none-match"] : undefined,
       cacheIgnore,

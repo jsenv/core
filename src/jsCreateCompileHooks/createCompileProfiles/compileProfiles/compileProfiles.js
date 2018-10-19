@@ -1,8 +1,8 @@
 // https://github.com/babel/babel/blob/master/packages/babel-preset-env/data/plugins.json
 import {
   compatMapBabel,
-  getCompatMapWithModule,
-  getCompatMapSubset,
+  compatMapToCompatMapWithModule,
+  compatMapWithout,
 } from "@dmail/project-structure-compile-babel"
 
 import { createPlatformGroups } from "./createPlatformGroups.js"
@@ -41,8 +41,8 @@ export const compileProfiles = (
     pluginNames = Object.keys(compatMap),
   } = {},
 ) => {
-  compatMap = getCompatMapSubset(compatMap, pluginNames)
-  compatMap = getCompatMapWithModule(compatMap, moduleOutput)
+  compatMap = compatMapWithout(compatMap, pluginNames)
+  compatMap = compatMapToCompatMapWithModule(compatMap, moduleOutput)
 
   const groupsForPlatforms = createGroupsForPlatforms(compatMap, platformNames)
   const getScoreForGroupCompatMap = createGetScoreForGroupCompatMap(stats)

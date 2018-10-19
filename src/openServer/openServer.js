@@ -65,7 +65,7 @@ export const openServer = (
     autoCloseOnCrash = true,
     // auto close when server respond with a 500
     autoCloseOnError = true,
-    getResponseForRequest = () => null,
+    requestToResponse = () => null,
     verbose = true,
   } = {},
 ) => {
@@ -193,7 +193,7 @@ export const openServer = (
         })
 
         return Promise.resolve()
-          .then(() => getResponseForRequest(request))
+          .then(() => requestToResponse(request))
           .then(({ status = 501, reason = "not specified", headers = {}, body = "" }) =>
             Object.freeze({ status, reason, headers, body }),
           )

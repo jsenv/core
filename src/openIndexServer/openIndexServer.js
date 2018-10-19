@@ -5,7 +5,7 @@ export const openIndexServer = ({ protocol, ip, port, body }) => {
     protocol,
     ip,
     port,
-    getResponseForRequest: () => {
+    requestToResponse: () => {
       return {
         status: 200,
         headers: {

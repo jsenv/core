@@ -7,8 +7,10 @@
 
 import { createFileStructure } from "@dmail/project-structure"
 
-export { openCompileServer } from "./src/openCompileServer/openCompileServer.js"
-export { openBrowserServer } from "./src/openBrowserServer/openBrowserServer.js"
+export { openCompileServer } from "./src/openCompileServer/index.js"
+export { openBrowserServer } from "./src/openBrowserServer/index.js"
+export { jsCreateCompileHooks } from "./src/jsCreateCompileHooks/index.js"
+export { jsCreateCompileService } from "./src/jsCreateCompileService/index.js"
 
 export const createPredicateFromStructure = ({ root }) => {
   return createFileStructure({

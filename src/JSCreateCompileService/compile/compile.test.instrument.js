@@ -1,8 +1,8 @@
-import { createCompile } from "./createCompile.js"
+import { compile } from "./compile.js"
 import istanbul from "istanbul"
 import fs from "fs"
 import path from "path"
-import { getPluginsFromNames } from "@dmail/project-structure-compile-babel"
+import { pluginNameToPlugin } from "@dmail/project-structure-compile-babel"
 import { objectMap } from "../../objectHelper.js"
 import assert from "assert"
 
@@ -37,7 +37,7 @@ const pluginNames = [
   "transform-typeof-symbol",
   "transform-unicode-regex",
 ]
-const babelPlugins = getPluginsFromNames(pluginNames)
+const babelPlugins = pluginNames.map(pluginNameToPlugin)
 const root = path.resolve(__dirname, "../../../")
 const file = "src/jsCreateCompileService/createCompile/fixtures/file.js"
 const filename = `${root}/${file}`

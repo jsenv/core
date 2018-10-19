@@ -5,14 +5,21 @@ export const compileToCompileFile = (
   compile,
   { root, into, locate = (file, root) => `${root}/${file}` },
 ) => {
-  return ({ group, groupParams, file, eTag, cacheIgnore = false, cacheTrackHit = false }) => {
+  return ({
+    compileId,
+    compileIdToCompileParams,
+    file,
+    eTag,
+    cacheIgnore = false,
+    cacheTrackHit = false,
+  }) => {
     return compileFile({
       compile,
       root,
       into,
       locate,
-      group,
-      groupParams,
+      compileId,
+      compileIdToCompileParams,
       file,
       eTag,
       cacheIgnore,

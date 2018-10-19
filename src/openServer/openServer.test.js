@@ -5,7 +5,7 @@ import { openServer } from "./openServer.js"
 openServer({
   protocol: "http",
   port: 8998,
-  getResponseForRequest: () => {
+  requestToResponse: () => {
     return {
       status: 200,
       headers: {

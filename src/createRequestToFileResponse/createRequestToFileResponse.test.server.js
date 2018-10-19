@@ -12,7 +12,7 @@ const ressource = "src/__test__/file.js"
 openServer({
   protocol: "http",
   port: 3000,
-  getResponseForRequest: service,
+  requestToResponse: service,
 }).then((server) => {
   console.log("server opened at", server.origin)
   console.log(`open ${server.origin}/${ressource} in a browser`)

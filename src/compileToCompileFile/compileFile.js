@@ -1,11 +1,11 @@
 import { createETag, isFileNotFoundError } from "./helpers.js"
 import { readFile } from "./readFile.js"
-import { writeFileFromString } from "@dmail/project-structure-compile-babel"
+import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
 import { getMetaLocation, getOutputLocation, getAssetLocation, getOutputName } from "./locaters.js"
 import { lockForRessource } from "./ressourceRegistry.js"
 import { objectMapValue } from "../objectHelper.js"
 
-const getSourceCacheReport = ({ root, into, group, file, inputLocation, remoteEtag, eTag }) => {
+const getSourceCacheReport = ({ root, into, compileId, file, inputLocation, remoteEtag, eTag }) => {
   return readFile({ location: inputLocation }).then(({ content }) => {
     const inputETag = createETag(content)
 
@@ -23,7 +23,7 @@ const getSourceCacheReport = ({ root, into, group, file, inputLocation, remoteEt
     const outputLocation = getOutputLocation({
       root,
       into,
-      group,
+      compileId,
       file,
     })
 
@@ -48,11 +48,11 @@ const getSourceCacheReport = ({ root, into, group, file, inputLocation, remoteEt
   })
 }
 
-const getAssetCacheReport = ({ root, into, group, file, asset, eTag }) => {
+const getAssetCacheReport = ({ root, into, compileId, file, asset, eTag }) => {
   const assetLocation = getAssetLocation({
     root,
     into,
-    group,
+    compileId,
     file,
     asset,
   })
@@ -81,12 +81,12 @@ const getAssetCacheReport = ({ root, into, group, file, asset, eTag }) => {
   })
 }
 
-const getFileCacheReport = ({ root, into, group, file, inputLocation, remoteETag, meta }) => {
+const getFileCacheReport = ({ root, into, compileId, file, inputLocation, remoteETag, meta }) => {
   return Promise.all([
     getSourceCacheReport({
       root,
       into,
-      group,
+      compileId,
       file,
       inputLocation,
       eTag: meta.eTag,
@@ -96,7 +96,7 @@ const getFileCacheReport = ({ root, into, group, file, inputLocation, remoteETag
       return getAssetCacheReport({
         root,
         into,
-        group,
+        compileId,
         file,
         asset,
         eTag: meta.assetEtagMap[asset],
@@ -134,11 +134,11 @@ const createCacheCorruptionError = (message) => {
   return error
 }
 
-const getFileMeta = ({ root, into, group, file, locate }) => {
+const getFileMeta = ({ root, into, compileId, file, locate }) => {
   const metaLocation = getMetaLocation({
     root,
     into,
-    group,
+    compileId,
     file,
   })
 
@@ -183,12 +183,12 @@ const getFileMeta = ({ root, into, group, file, locate }) => {
     })
 }
 
-const getFileReport = ({ compile, root, into, group, file, locate, remoteETag }) => {
+const getFileReport = ({ compile, root, into, compileId, file, locate, remoteETag }) => {
   return getFileMeta({
     compile,
     root,
     into,
-    group,
+    compileId,
     file,
     locate,
     remoteETag,
@@ -204,7 +204,7 @@ const getFileReport = ({ compile, root, into, group, file, locate, remoteETag })
     return getFileCacheReport({
       root,
       into,
-      group,
+      compileId,
       file,
       inputLocation,
       remoteETag,
@@ -226,7 +226,7 @@ const getFileReport = ({ compile, root, into, group, file, locate, remoteETag })
 const updateMeta = ({
   root,
   into,
-  group,
+  compileId,
   file,
   inputLocation,
   status,
@@ -246,22 +246,22 @@ const updateMeta = ({
     const mainLocation = getOutputLocation({
       root,
       into,
-      group,
+      compileId,
       file,
     })
 
     promises.push(
-      writeFileFromString(mainLocation, output),
+      fileWriteFromString(mainLocation, output),
       ...Object.keys(assetMap).map((asset) => {
         const assetLocation = getAssetLocation({
           root,
           into,
-          group,
+          compileId,
           file,
           asset,
         })
 
-        return writeFileFromString(assetLocation, assetMap[asset])
+        return fileWriteFromString(assetLocation, assetMap[asset])
       }),
     )
   }
@@ -300,11 +300,11 @@ const updateMeta = ({
     const metaLocation = getMetaLocation({
       root,
       into,
-      group,
+      compileId,
       file,
     })
 
-    promises.push(writeFileFromString(metaLocation, JSON.stringify(meta, null, "  ")))
+    promises.push(fileWriteFromString(metaLocation, JSON.stringify(meta, null, "  ")))
   }
 
   return Promise.all(promises)
@@ -314,8 +314,8 @@ export const compileFile = ({
   compile,
   root,
   into,
-  group,
-  groupParams,
+  compileId,
+  compileIdToCompileParams,
   locate,
   cacheTrackHit,
   cacheIgnore,
@@ -326,7 +326,7 @@ export const compileFile = ({
     getMetaLocation({
       root,
       into,
-      group,
+      compileId,
       file,
     }),
   )
@@ -336,7 +336,7 @@ export const compileFile = ({
       compile,
       root,
       into,
-      group,
+      compileId,
       file,
       locate,
       remoteETag: eTag,
@@ -344,7 +344,7 @@ export const compileFile = ({
       .then(({ inputLocation, status, meta, input, inputETag, output, assetMap }) => {
         const outputName = getOutputName({
           into,
-          group,
+          compileId,
           file,
         })
 
@@ -365,7 +365,12 @@ export const compileFile = ({
         }
 
         return Promise.resolve(
-          compile({ inputName: file, inputSource: output, outputName, ...groupParams }),
+          compile({
+            inputName: file,
+            inputSource: output,
+            outputName,
+            ...compileIdToCompileParams(compileId),
+          }),
         ).then(({ output, assetMap = {} }) => {
           return {
             inputLocation,
@@ -395,7 +400,7 @@ export const compileFile = ({
           return updateMeta({
             root,
             into,
-            group,
+            compileId,
             file,
             inputLocation,
             status,

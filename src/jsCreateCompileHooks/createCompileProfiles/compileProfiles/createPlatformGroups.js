@@ -1,7 +1,7 @@
 import {
   versionHighest,
   versionCompare,
-  getPluginNamesForPlatform,
+  platformToPluginNames,
 } from "@dmail/project-structure-compile-babel"
 
 export const createPlatformGroups = (compatMap, platformName) => {
@@ -15,7 +15,7 @@ export const createPlatformGroups = (compatMap, platformName) => {
   const platformGroups = []
 
   platformVersions.forEach((platformVersion) => {
-    const pluginNames = getPluginNamesForPlatform(compatMap, platformName, platformVersion).sort()
+    const pluginNames = platformToPluginNames(compatMap, platformName, platformVersion).sort()
     const existingGroup = platformGroups.find((platformGroup) => {
       return platformGroup.pluginNames.join("") === pluginNames.join("")
     })
