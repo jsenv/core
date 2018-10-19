@@ -3,10 +3,10 @@ import path from "path"
 import { createSignal } from "@dmail/signal"
 import { cancellableAction } from "../signalHelper.js"
 
-export const createExecuteOnNode = ({ localRoot, remoteRoot, remoteCompileDestination }) => {
-  const clientFile = path.resolve(__dirname, "./client.js")
-  let previousID
+const root = path.resolve(__dirname, "../../../")
+const nodeClientFile = `${root}/src/platformCompileClient/platform/node/index.js`
 
+export const createExecuteOnNode = ({ localRoot, remoteRoot, remoteCompileDestination }) => {
   const execute = ({
     file,
     setup = () => {},
@@ -27,10 +27,7 @@ export const createExecuteOnNode = ({ localRoot, remoteRoot, remoteCompileDestin
       const cancel = cancelled.emit
 
       const promise = new Promise((resolve, reject) => {
-        const id = previousID === undefined ? 1 : previousID + 1
-        previousID = id
-
-        const child = fork(clientFile, {
+        const child = fork(nodeClientFile, {
           execArgv: [
             // allow vscode to debug else you got port already used
             `--inspect-brk`,
@@ -41,7 +38,6 @@ export const createExecuteOnNode = ({ localRoot, remoteRoot, remoteCompileDestin
         const sendToChild = (type, data) => {
           log(`send to child ${type}: ${JSON.stringify(data, null, "  ")}`)
           child.send({
-            id,
             type,
             data,
           })
@@ -58,9 +54,6 @@ export const createExecuteOnNode = ({ localRoot, remoteRoot, remoteCompileDestin
         child.on("message", (message) => {
           log(`receive message from child ${JSON.stringify(message, null, "  ")}`)
 
-          if (message.id !== id) {
-            return
-          }
           if (message.type === "execute-result") {
             executed.emit(message.data)
           }
@@ -130,13 +123,16 @@ export const createExecuteOnNode = ({ localRoot, remoteRoot, remoteCompileDestin
         })
 
         sendToChild("execute", {
-          localRoot,
-          remoteRoot,
-          remoteCompileDestination,
-          file,
+          LOCAL_SOURCE_ROOT: localRoot,
+          COMPILE_ORIGIN: remoteRoot,
+          COMPILE_INTO: remoteCompileDestination,
+          COMPAT_MAP,
+          COMPAT_MAP_DEFAULT_ID,
+          HOTRELOAD: hotreload,
+          HOTRELOAD_SSE_ROOT,
+          FILE: file,
           setupSource: `(${setup.toString()})`,
           teardownSource: `(${teardown.toString()})`,
-          hotreload,
         })
       }).then(
         (value) => {

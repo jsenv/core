@@ -13,7 +13,6 @@ const watch = true
 createPredicateFromStructure({ root }).then(({ instrumentPredicate, watchPredicate }) => {
   return jsCreateCompileHooks({
     configLocation: `${root}/${into}/compatGroupMap.config.json`,
-    protocol: "http", // well dunno how to handle that properly for now let's ignore
   }).then(({ compileIdToCompileParams, getCompileIdSource }) => {
     const jsCompileService = jsCreateCompileService({
       root,
