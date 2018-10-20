@@ -12,7 +12,7 @@ export const objectMapValue = (object, callback) => {
   const mapped = {}
 
   Object.keys(object).forEach((key) => {
-    mapped[key] = callback(object[key])
+    mapped[key] = callback(object[key], key, object)
   })
 
   return mapped
@@ -51,16 +51,18 @@ export const objectComposeValue = (previous, object, callback) => {
   return composed
 }
 
-const composeMapToKeyComposer = (composeMap) => (key, object, nextObject) => {
-  if (key in object === false) {
-    return nextObject[key]
-  }
+const composeMapToKeyComposer = (composeMap) => {
+  return (key, object, nextObject) => {
+    if (key in object === false) {
+      return nextObject[key]
+    }
 
-  if (key in composeMap === false) {
-    return nextObject[key]
-  }
+    if (key in composeMap === false) {
+      return nextObject[key]
+    }
 
-  return composeMap[key](object[key], nextObject[key])
+    return composeMap[key](object[key], nextObject[key])
+  }
 }
 
 const keyComposerToReducer = (keyComposer) => {
@@ -82,8 +84,36 @@ const composeMapToReducer = (composeMap) => {
 }
 
 export const composeMapToCompose = (composeMap, createInitial = () => ({})) => {
-  const composeReducer = composeMapToReducer(composeMap)
+  const reducer = composeMapToReducer(composeMap)
   return (...objects) => {
-    return objects.reduce(composeReducer, createInitial())
+    return objects.reduce(reducer, createInitial())
+  }
+}
+
+const composeMapToStrictReducer = (composeMap) => {
+  return (previous, object) => {
+    if (typeof object !== "object" || object === null) {
+      return { ...previous }
+    }
+
+    return objectMapValue(composeMap, (value, key) => {
+      if (key in previous && key in object) {
+        return value(previous[key], object[key], key, previous, object)
+      }
+      if (key in previous && key in object === false) {
+        return previous[key]
+      }
+      if (key in previous === false && key in object) {
+        return object[key]
+      }
+      return undefined
+    })
+  }
+}
+
+export const composeMapToComposeStrict = (composeMap, createInitial = () => ({})) => {
+  const reducer = composeMapToStrictReducer(composeMap)
+  return (...objects) => {
+    return objects.reduce(reducer, createInitial())
   }
 }

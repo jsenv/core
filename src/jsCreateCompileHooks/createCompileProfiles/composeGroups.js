@@ -1,17 +1,31 @@
 import { versionHighest } from "@dmail/project-structure-compile-babel"
-import { composeMapToCompose, objectComposeValue } from "../../objectHelper.js"
+import {
+  composeMapToComposeStrict,
+  objectComposeValue,
+  objectMapValue,
+} from "../../objectHelper.js"
 
 const composePluginNames = (pluginList, secondPluginList) => {
-  return [...pluginList, ...secondPluginList.filter((plugin) => pluginList.indexOf(plugin) === -1)]
+  return [
+    ...pluginList,
+    ...secondPluginList.filter((plugin) => pluginList.indexOf(plugin) === -1),
+  ].sort()
 }
 
-const composeCompatMap = (previousCompatMap, compatMap) => {
-  return objectComposeValue(previousCompatMap, compatMap, (previousVersion, version) => {
-    return versionHighest(previousVersion, version)
+const normalizeCompatMapVersion = (compatMap) => {
+  return objectMapValue(compatMap, (value) => String(value))
+}
+
+const composeCompatMap = (compatMap, secondCompatMap) => {
+  compatMap = normalizeCompatMapVersion(compatMap)
+  secondCompatMap = normalizeCompatMapVersion(secondCompatMap)
+
+  return objectComposeValue(compatMap, secondCompatMap, (version, secondVersion) => {
+    return versionHighest(version, secondVersion)
   })
 }
 
-export const composeGroups = composeMapToCompose(
+export const composeGroups = composeMapToComposeStrict(
   {
     pluginNames: composePluginNames,
     compatMap: composeCompatMap,
