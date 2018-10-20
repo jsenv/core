@@ -1,35 +1,34 @@
-import { compileToService } from "./compileToService.js"
-import { createCompile } from "../createCompile/index.js"
+import { compileFileToService } from "./compileFileToService.js"
+import { compile, createInstrumentPlugin } from "../compile/index.js"
+import { compileToCompileFile } from "../compileToCompileFile.js"
 import assert from "assert"
 import path from "path"
 
-const root = path.resolve(__dirname, "../../..")
-const cacheFolder = "build"
-const compileFolder = "build__dynamic__"
+const root = path.resolve(__dirname, "../../../../")
+const into = "build"
+const compileId = "compileId"
 
-const compile = createCompile({
-  createOptions: () => {
-    return {
-      instrument: true,
-    }
-  },
-})
-
-const service = compileToService(compile, {
+const compileFile = compileToCompileFile(compile, {
   root,
-  cacheFolder,
-  compileFolder,
+  into,
+})
+const service = compileFileToService(compileFile, {
+  root,
+  into,
+  compileParamMap: {
+    [compileId]: {
+      plugins: [createInstrumentPlugin()],
+    },
+  },
   cacheIgnore: true,
 })
 
 service({
-  ressource: `${compileFolder}/src/__test__/file.js`,
+  ressource: `${into}/${compileId}/src/__test__/file.js`,
   method: "GET",
-  headers: {
-    "user-agent": `node/8.0`,
-  },
-}).then((properties) => {
-  assert.equal(properties.status, 200)
+}).then((response) => {
+  assert.equal(response.status, 200)
+  assert.equal(response.body.indexOf("__coverage__") > -1, true)
 
   console.log("passed")
 })

@@ -1,7 +1,6 @@
 import { compileFileToService } from "./compileFileToService.js"
 import { compile } from "../compile/index.js"
 import { compileToCompileFile } from "../compileToCompileFile.js"
-import { pluginNameToPlugin } from "@dmail/project-structure-compile-babel"
 import assert from "assert"
 import path from "path"
 
@@ -12,11 +11,6 @@ const compileId = "compileId"
 const compileFile = compileToCompileFile(compile, {
   root,
   into,
-  compileParamMap: {
-    [compileId]: {
-      plugins: [pluginNameToPlugin("transform-block-scoping")],
-    },
-  },
 })
 const service = compileFileToService(compileFile, {
   root,
