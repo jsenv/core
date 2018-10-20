@@ -18,6 +18,7 @@ export const compileFileToService = (...args) => {
           body: json,
         }
       }
+      return Promise.reject(error)
     })
   }
 }

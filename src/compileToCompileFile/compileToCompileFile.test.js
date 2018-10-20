@@ -7,7 +7,11 @@ const root = `${projectRoot}/src/compileToCompileFile/fixtures`
 const into = "build"
 const compileId = "group"
 const output = "foo"
-const compileIdToCompileParams = () => ({ content: output })
+const compileParamMap = {
+  [compileId]: {
+    content: output,
+  },
+}
 const assetMap = {
   "asset.map": "bar",
 }
@@ -19,7 +23,7 @@ let callCount = 0
 const compile = ({ content }) => {
   callCount++
   return {
-    output: content,
+    outputSource: content,
     assetMap,
   }
 }
@@ -31,7 +35,7 @@ const compileFile = compileToCompileFile(compile, {
 
 compileFile({
   compileId,
-  compileIdToCompileParams,
+  compileParamMap,
   file,
   cacheIgnore: true,
 }).then((actual) => {
@@ -45,7 +49,7 @@ compileFile({
 
   return compileFile({
     compileId,
-    compileIdToCompileParams,
+    compileParamMap,
     file,
     cacheIgnore: false,
   }).then((actual) => {
@@ -60,7 +64,7 @@ compileFile({
 
     return compileFile({
       compileId,
-      compileIdToCompileParams,
+      compileParamMap,
       file,
       cacheIgnore: false,
       eTag: expectedEtag,

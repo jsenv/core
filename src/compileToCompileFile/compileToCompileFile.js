@@ -7,7 +7,7 @@ export const compileToCompileFile = (
 ) => {
   return ({
     compileId,
-    compileIdToCompileParams,
+    compileParamMap,
     file,
     eTag,
     cacheIgnore = false,
@@ -19,7 +19,7 @@ export const compileToCompileFile = (
       into,
       locate,
       compileId,
-      compileIdToCompileParams,
+      compileParamMap,
       file,
       eTag,
       cacheIgnore,

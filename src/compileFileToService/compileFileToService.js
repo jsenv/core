@@ -11,23 +11,25 @@ export const ressourceToCompileIdAndFile = (ressource, into) => {
     return null
   }
 
-  const secondPart = parts[1]
-
-  if (parts[2].length === 0) {
+  const compileId = parts[1]
+  if (compileId.length === 0) {
     return null
   }
 
   const file = parts.slice(2).join("/")
+  if (file.length === 0) {
+    return null
+  }
 
-  if (file.match(/^[^\/]+__meta__\/.+$/)) {
+  if (file.match(/[^\/]+__meta__\/.+$/)) {
     return {
-      compileId: secondPart,
+      compileId,
       asset: file,
     }
   }
 
   return {
-    compileId: secondPart,
+    compileId,
     file,
   }
 }
@@ -37,7 +39,7 @@ export const compileFileToService = (
   {
     root,
     into,
-    compileIdToCompileParams,
+    compileParamMap,
     cacheIgnore = false,
     cacheTrackHit = false,
     assetCacheIgnore = false,
@@ -50,25 +52,25 @@ export const compileFileToService = (
     cacheStrategy: assetCacheStrategy,
   })
 
-  return (request) => {
-    const { compileId, file } = ressourceToCompileIdAndFile(request.ressource, into)
+  return ({ ressource, method, headers = {}, body }) => {
+    const { compileId, file } = ressourceToCompileIdAndFile(ressource, into)
 
     // no compileId or no asset we server the file without compiling it
     if (!compileId || !file) {
-      return fileService(request)
+      return fileService({ ressource, method, headers, body })
     }
 
     const promise = compileFile({
       compileId,
-      compileIdToCompileParams,
+      compileParamMap,
       file,
-      eTag: "if-none-match" in request.headers ? request.headers["if-none-match"] : undefined,
+      eTag: "if-none-match" in headers ? headers["if-none-match"] : undefined,
       cacheIgnore,
       cacheTrackHit,
     })
 
     return promise.then(
-      ({ eTagValid, eTag, outputName, output }) => {
+      ({ eTagValid, eTag, output }) => {
         // here status can be "created", "updated", "cached"
 
         // je crois, que, normalement
@@ -84,10 +86,6 @@ export const compileFileToService = (
         if (eTagValid) {
           return {
             status: 304,
-            headers: {
-              // do I have to send that ? browser cache should be sufficient
-              // "x-location": outputName,
-            },
           }
         }
 
@@ -98,7 +96,6 @@ export const compileFileToService = (
             etag: eTag,
             "content-length": Buffer.byteLength(output),
             "content-type": "application/javascript",
-            "x-location": outputName,
           },
           body: output,
         }

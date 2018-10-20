@@ -16,13 +16,12 @@ export const transpiler = (context) => {
 
   const babelOptions = {
     plugins,
-    filename: `${root}/${inputName}`,
+    filename: root ? `${root}/${inputName}` : inputName,
     filenameRelative: inputName,
     inputSourceMap,
   }
 
   return transpileWithBabel({
-    root,
     inputAst,
     inputSource,
     options: babelOptions,

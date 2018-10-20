@@ -315,7 +315,7 @@ export const compileFile = ({
   root,
   into,
   compileId,
-  compileIdToCompileParams,
+  compileParamMap,
   locate,
   cacheTrackHit,
   cacheIgnore,
@@ -364,14 +364,18 @@ export const compileFile = ({
           }
         }
 
+        const compileParam =
+          compileParamMap && compileId in compileParamMap ? compileParamMap[compileId] : {}
+
         return Promise.resolve(
           compile({
+            root,
             inputName: file,
-            inputSource: output,
+            inputSource: input,
             outputName,
-            ...compileIdToCompileParams(compileId),
+            ...compileParam,
           }),
-        ).then(({ output, assetMap = {} }) => {
+        ).then(({ outputSource, assetMap = {} }) => {
           return {
             inputLocation,
             status: status === "missing" ? "created" : "updated",
@@ -380,7 +384,7 @@ export const compileFile = ({
             input,
             inputETag: createETag(input),
             outputName,
-            output,
+            output: outputSource,
             assetMap,
           }
         })

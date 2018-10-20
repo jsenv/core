@@ -22,21 +22,18 @@ export const jsCreateCompileHooks = ({
     platformNames,
     pluginNames: Object.keys(pluginMap),
   }).then((compatGroupMap) => {
-    const pluginNameToPlugin = (pluginName) => pluginMap[pluginName]
+    const compileParamMap = objectMapValue(compatGroupMap, ({ pluginNames }) => {
+      return {
+        plugins: pluginNames.map((pluginName) => pluginMap[pluginName]),
+      }
+    })
 
     return {
       VARS: {
         COMPAT_MAP: compatGroupMapToClientCompatGroupMap(compatGroupMap),
         COMPAT_MAP_DEFAULT_ID: DEFAULT_ID,
       },
-      compileIdToCompileParams: (compileId) => {
-        const pluginNames = compatGroupMap[compileId].pluginNames
-
-        return {
-          // this is how babel expect us to pass option to plugin
-          plugins: pluginNames.map((pluginName) => pluginNameToPlugin(pluginName)),
-        }
-      },
+      compileParamMap,
     }
   })
 }

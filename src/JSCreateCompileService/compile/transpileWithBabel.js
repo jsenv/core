@@ -13,7 +13,7 @@ const transpile = ({ inputAst, inputSource, options }) => {
   return transformAsync(inputSource, options)
 }
 
-const transformBabelParseErrorMessage = (babelParseErrorMessage, root, relativeName) => {
+const transformBabelParseErrorMessage = (babelParseErrorMessage, filename, relativeName) => {
   // the babelParseErrorMessage looks somehow like that:
   /*
   `${absoluteFilename}: Unexpected token(${lineNumber}:${columnNumber}})
@@ -24,7 +24,7 @@ const transformBabelParseErrorMessage = (babelParseErrorMessage, root, relativeN
   */
   // and the idea is to replace absoluteFilename by something relative
 
-  const filenameAbsolute = `${root}${path.sep}${relativeName.replace(/\//g, path.sep)}`
+  const filenameAbsolute = path.sep === "/" ? filename : filename.replace(/\//g, "\\")
   const filenameAbsoluteRegexp = new RegExp(regexpEscape(filenameAbsolute), "gi")
   const filenameRelative = `${relativeName}`.replace(/\\/g, "/")
   const parseErrorMessage = babelParseErrorMessage.replace(filenameAbsoluteRegexp, filenameRelative)
@@ -32,7 +32,6 @@ const transformBabelParseErrorMessage = (babelParseErrorMessage, root, relativeN
 }
 
 export const transpileWithBabel = ({
-  root,
   inputAst,
   inputSource,
   options,
@@ -84,8 +83,12 @@ export const transpileWithBabel = ({
       if (error && error.code === "BABEL_PARSE_ERROR") {
         return Promise.reject({
           name: "PARSE_ERROR",
-          message: transformBabelParseErrorMessage(error.message, root, options.filename),
-          fileName: options.filename,
+          message: transformBabelParseErrorMessage(
+            error.message,
+            options.filename,
+            options.filenameRelative,
+          ),
+          fileName: options.filenameRelative,
           lineNumber: error.loc.line,
           columnNumber: error.loc.column,
           // stack: error.stack
