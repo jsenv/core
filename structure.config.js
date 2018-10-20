@@ -37,6 +37,7 @@ module.exports = {
       "index.js": true,
       "src/**/*.js": true,
       "bin/**/*.js": true,
+      "src/__test__/file-with-syntax-error.js": false,
     },
   },
 }
