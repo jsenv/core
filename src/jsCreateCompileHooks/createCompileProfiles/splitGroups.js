@@ -17,11 +17,11 @@ const getChunkSizes = (array, size) => {
   return chunkSizes
 }
 
-export const splitGroups = (groups, getScoreForGroup, count = 4) => {
+export const splitGroups = (groups, groupToScore, count = 4) => {
   let i = 0
   const chunkSizes = getChunkSizes(groups, count).reverse()
   const finalGroups = []
-  const sortedGroups = groups.sort((a, b) => getScoreForGroup(b) - getScoreForGroup(a))
+  const sortedGroups = groups.sort((a, b) => groupToScore(b) - groupToScore(a))
   let remainingGroups = sortedGroups
 
   while (i < chunkSizes.length) {

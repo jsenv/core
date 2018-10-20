@@ -3,11 +3,10 @@ const {
   jsCreateCompileService,
   jsCreateCompileHooks,
 } = require("../dist/index.js")
-const { isPluginNameCore, pluginNameToPlugin } = require("@dmail/project-structure-compile-babel")
+const { createCorePluginMap } = require("@dmail/project-structure-compile-babel")
 
 const into = "build"
-const pluginMap = {}
-const pluginOptionMap = {
+const pluginMap = createCorePluginMap({
   "proposal-async-generator-functions": {},
   "proposal-json-strings": {},
   "proposal-object-rest-spread": {},
@@ -37,12 +36,6 @@ const pluginOptionMap = {
   "transform-template-literals": {},
   "transform-typeof-symbol": {},
   "transform-unicode-regex": {},
-}
-Object.keys(pluginOptionMap).forEach((pluginName) => {
-  if (isPluginNameCore) {
-    pluginMap[name] = [pluginNameToPlugin(pluginName), pluginOptionMap[pluginName]]
-  }
-  throw new Error(`unknown plugin ${pluginName}`)
 })
 
 export const createJSCompileServiceForProject = ({ root }) => {
