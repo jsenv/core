@@ -1,9 +1,8 @@
 import { programVisitor } from "istanbul-lib-instrument"
-import { transpileWithBabel } from "./transpileWithBabel.js"
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 
-export const createInstrumentPlugin = ({ inputName, useInlineSourceMaps = false } = {}) => {
+export const createInstrumentPlugin = ({ useInlineSourceMaps = false } = {}) => {
   return ({ types }) => {
     return {
       visitor: {
@@ -21,7 +20,8 @@ export const createInstrumentPlugin = ({ inputName, useInlineSourceMaps = false 
               inputSourceMap = opts.inputSourceMap
             }
 
-            this.__dv__ = programVisitor(types, inputName, {
+            const filename = opts.filenameRelative || opts.filename
+            this.__dv__ = programVisitor(types, filename, {
               coverageVariable: "__coverage__",
               inputSourceMap,
             })
@@ -40,39 +40,4 @@ export const createInstrumentPlugin = ({ inputName, useInlineSourceMaps = false 
       },
     }
   }
-}
-
-export const instrumenter = (context) => {
-  const {
-    root,
-    inputName,
-    inputSource,
-    inputSourceMap,
-    inputAst,
-    options,
-    sourceMapName,
-    sourceLocationForSourceMap,
-    sourceNameForSourceMap,
-  } = context
-
-  const babelOptions = {
-    plugins: [
-      // we are missing some plugins here, the syntax plugins are required to be able to traverse the tree no ?
-      // yes indeed, we could copy/paste all syntax plugins here
-      createInstrumentPlugin({ inputName, useInlineSourceMaps: false }),
-    ],
-    filename: inputName,
-    inputSourceMap,
-  }
-
-  return transpileWithBabel({
-    root,
-    inputAst,
-    inputSource,
-    options: babelOptions,
-    remap: options.remap,
-    sourceMapName,
-    sourceLocationForSourceMap,
-    sourceNameForSourceMap,
-  })
 }

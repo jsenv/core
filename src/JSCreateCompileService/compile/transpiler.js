@@ -16,7 +16,8 @@ export const transpiler = (context) => {
 
   const babelOptions = {
     plugins,
-    filename: inputName,
+    filename: `${root}/${inputName}`,
+    filenameRelative: inputName,
     inputSourceMap,
   }
 

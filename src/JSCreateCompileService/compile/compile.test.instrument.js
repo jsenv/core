@@ -5,6 +5,7 @@ import path from "path"
 import { pluginNameToPlugin } from "@dmail/project-structure-compile-babel"
 import { objectMap } from "../../objectHelper.js"
 import assert from "assert"
+import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
 
 const pluginNames = [
   "proposal-async-generator-functions",
@@ -38,25 +39,24 @@ const pluginNames = [
   "transform-unicode-regex",
 ]
 const babelPlugins = pluginNames.map(pluginNameToPlugin)
+babelPlugins.push(createInstrumentPlugin())
 const root = path.resolve(__dirname, "../../../")
-const file = "src/jsCreateCompileService/createCompile/fixtures/file.js"
+const file = "src/jsCreateCompileService/compile/fixtures/file.js"
 const filename = `${root}/${file}`
 
-const compileJS = createCompile({
-  instrument: false,
-  plugins: babelPlugins,
-})
-
-compileJS({
+compile({
   root,
+  plugins: babelPlugins,
   inputName: file,
+  instrument: true,
   inputSource: fs.readFileSync(filename).toString(),
   outputName: "file.compiled.js",
-}).then(({ output, assetMap }) => {
-  eval(output)
+}).then(({ outputSource, assetMap }) => {
+  eval(outputSource)
   const coverage = global.__coverage__
-  assert.equal(outputAssets.length, 2)
-  assert.equal(outputAssets[1].name, "coverage.json")
+  assert.equal(typeof assetMap["file.js.map"], "string")
+  assert.equal(typeof assetMap["coverage.json"], "string")
+
   const absoluteCoverage = objectMap(coverage, (file, coverage) => {
     return {
       [`${root}/${file}`]: { ...coverage, path: `${root}/${file}` },
@@ -70,4 +70,6 @@ compileJS({
   reporter.add("text")
   reporter.add("html")
   reporter.write(collector, false, () => {})
+
+  console.log("passed")
 })
