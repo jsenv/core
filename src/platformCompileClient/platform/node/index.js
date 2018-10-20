@@ -12,9 +12,8 @@ process.on("message", ({ type, data }) => {
 
   if (type === "execute") {
     const {
-      // SOURCE_ROOT,
       LOCAL_SOURCE_ROOT,
-      COMPILE_ORIGIN,
+      SOURCE_ROOT,
       COMPILE_INTO,
       COMPAT_MAP,
       COMPAT_MAP_DEFAULT_ID,
@@ -30,7 +29,7 @@ process.on("message", ({ type, data }) => {
       platforVersion: process.version.slice(1),
     })
 
-    const COMPILE_ROOT = `${COMPILE_ORIGIN}/${COMPILE_INTO}/${COMPILE_ID}`
+    const COMPILE_ROOT = `${SOURCE_ROOT}/${COMPILE_INTO}/${COMPILE_ID}`
 
     const LOCAL_COMPILE_ROOT = `${LOCAL_SOURCE_ROOT}/${COMPILE_INTO}/${COMPILE_ID}`
 

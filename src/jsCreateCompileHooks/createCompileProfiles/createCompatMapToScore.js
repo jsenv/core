@@ -1,6 +1,6 @@
 import { versionIsBelow, versionIsAbove } from "@dmail/project-structure-compile-babel"
 
-const createGetScoreFromVersionUsage = (stats) => {
+const createVersionToUsageScore = (stats) => {
   const versionNames = Object.keys(stats)
   if (versionNames.length === 0) {
     return () => null
@@ -21,33 +21,31 @@ const createGetScoreFromVersionUsage = (stats) => {
   }
 }
 
-const createGetScoreFromPlatformUsage = (stats) => {
+const createPlatformToUsageScore = (stats) => {
   const platformNames = Object.keys(stats)
+
   const scoreMap = {}
   platformNames.forEach((platformName) => {
-    scoreMap[platformName] = createGetScoreFromVersionUsage(stats[platformName])
+    scoreMap[platformName] = createVersionToUsageScore(stats[platformName])
   })
+
   return (platformName, platformVersion) => {
     if (platformName in scoreMap) {
-      const versionUsage = scoreMap[platformName](platformVersion)
-      return versionUsage === null ? stats.other : versionUsage
+      const versionScore = scoreMap[platformName](platformVersion)
+      return versionScore === null ? stats.other : versionScore
     }
     return stats.other
   }
 }
 
-export const createGetScoreForGroupCompatMap = (stats) => {
-  const getScoreFromPlatformUsage = createGetScoreFromPlatformUsage(stats)
+export const createCompatMapToScore = (stats) => {
+  const platformToUsageScore = createPlatformToUsageScore(stats)
 
-  const getPlatformScore = (platformName, platformVersion) => {
-    return getScoreFromPlatformUsage(platformName, platformVersion)
-  }
-
-  const getScore = (groupCompatMap) => {
+  const compatMapToScore = (groupCompatMap) => {
     return Object.keys(groupCompatMap).reduce((previous, platformName) => {
-      return previous + getPlatformScore(platformName, groupCompatMap[platformName])
+      return previous + platformToUsageScore(platformName, groupCompatMap[platformName])
     }, 0)
   }
 
-  return getScore
+  return compatMapToScore
 }

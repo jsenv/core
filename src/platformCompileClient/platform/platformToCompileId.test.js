@@ -1,5 +1,5 @@
-import { compileProfiles } from "./compileProfiles/compileProfiles.js"
-import { getProfileForPlatform } from "./getProfileForPlatform.js"
+import { compileProfiles } from "../../jsCreateCompileHooks/createCompileProfiles/index.js"
+import { platformToCompileId } from "./platformToCompileId.js"
 import assert from "assert"
 
 {
@@ -12,7 +12,7 @@ import assert from "assert"
   })
 
   {
-    const actual = getProfileForPlatform(profiles, {
+    const actual = platformToProfile(profiles, {
       platformName: "chrome",
       platformVersion: "39",
     }).pluginNames
@@ -21,7 +21,7 @@ import assert from "assert"
   }
 
   {
-    const actual = getProfileForPlatform(profiles, {
+    const actual = platformToProfile(profiles, {
       platformName: "chrome",
       platformVersion: "41",
     }).pluginNames
@@ -30,7 +30,7 @@ import assert from "assert"
   }
 
   {
-    const actual = getProfileForPlatform(profiles, {
+    const actual = platformToProfile(profiles, {
       platformName: "chrome",
       platformVersion: "42",
     }).pluginNames
@@ -40,7 +40,7 @@ import assert from "assert"
 }
 
 {
-  const profiles = compileProfiles({
+  const profiles = platformToProfile({
     compatMap: {
       a: {
         chrome: "41",
@@ -52,7 +52,7 @@ import assert from "assert"
     size: 1,
   })
 
-  const actual = getProfileForPlatform(profiles, {
+  const actual = platformToProfile(profiles, {
     platformName: "chrome",
     platformVersion: "41", // even if chrome 41, we serve a because in same group than chrome 42
   }).pluginNames
@@ -71,7 +71,7 @@ import assert from "assert"
     size: 1,
   })
 
-  const actual = getProfileForPlatform(profiles, {
+  const actual = platformToProfile(profiles, {
     platformName: "firefox",
     platformVersion: "70",
   }).pluginNames
@@ -87,7 +87,7 @@ import assert from "assert"
     size: 1,
   })
 
-  const actual = getProfileForPlatform(profiles, {
+  const actual = platformToProfile(profiles, {
     platformName: "chrome",
     platformVersion: "50",
   }).pluginNames
@@ -105,7 +105,7 @@ import assert from "assert"
     size: 1,
   })
 
-  const actual = getProfileForPlatform(profiles, {
+  const actual = platformToProfile(profiles, {
     platformName: "chrome",
     platformVersion: "41", // even if chrome 41, we serve a because in same group than chrome 42
   }).pluginNames
@@ -125,7 +125,7 @@ import assert from "assert"
     size: 4,
   })
 
-  const actual = getProfileForPlatform(profiles, {
+  const actual = platformToProfile(profiles, {
     platformName: "chrome",
     platformVersion: "45",
   }).pluginNames
@@ -139,7 +139,7 @@ import assert from "assert"
     platformNames: ["node"],
   })
 
-  const actual = getProfileForPlatform(profiles, {
+  const actual = platformToProfile(profiles, {
     platformName: "node",
     platformVersion: "8.0",
   }).pluginNames

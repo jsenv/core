@@ -1,19 +1,5 @@
-import { pluginNameToPlugin as defaultPluginNameToPlugin } from "@dmail/project-structure-compile-babel"
 import { getCompatGroupMap, DEFAULT_ID } from "./getCompatGroupMap.js"
 import { objectMapValue } from "../objectHelper.js"
-
-const createCompileIdToParam = (compatGroupMap, pluginNameToPlugin, pluginNameToOptions) => {
-  return (compileId) => {
-    const pluginNames = compatGroupMap[compileId].pluginNames
-
-    return {
-      // this is how babel expect us to pass option to plugin
-      plugins: pluginNames.map((pluginName) => {
-        return [pluginNameToPlugin(pluginName), pluginNameToOptions(pluginName) || {}]
-      }),
-    }
-  }
-}
 
 const compatGroupMapToClientCompatGroupMap = (compatGroupMap) => {
   return objectMapValue(compatGroupMap, ({ compatMap }) => compatMap)
@@ -26,11 +12,7 @@ export const jsCreateCompileHooks = ({
   compatMap,
   size,
   platformNames,
-  moduleOutput = "systemjs",
-  pluginNames,
-
-  pluginNameToPlugin = defaultPluginNameToPlugin,
-  pluginNameToOptions = () => {},
+  pluginMap,
 }) => {
   return getCompatGroupMap({
     configLocation,
@@ -38,19 +20,23 @@ export const jsCreateCompileHooks = ({
     compatMap,
     size,
     platformNames,
-    moduleOutput,
-    pluginNames,
+    pluginNames: Object.keys(pluginMap),
   }).then((compatGroupMap) => {
+    const pluginNameToPlugin = (pluginName) => pluginMap[pluginName]
+
     return {
-      clientVariables: {
-        SERVER_COMPAT_MAP: compatGroupMapToClientCompatGroupMap(compatGroupMap),
-        SERVER_COMPAT_MAP_DEFAULT_ID: DEFAULT_ID,
+      VARS: {
+        COMPAT_MAP: compatGroupMapToClientCompatGroupMap(compatGroupMap),
+        COMPAT_MAP_DEFAULT_ID: DEFAULT_ID,
       },
-      compileIdToCompileParams: createCompileIdToParam(
-        compatGroupMap,
-        pluginNameToPlugin,
-        pluginNameToOptions,
-      ),
+      compileIdToCompileParams: (compileId) => {
+        const pluginNames = compatGroupMap[compileId].pluginNames
+
+        return {
+          // this is how babel expect us to pass option to plugin
+          plugins: pluginNames.map((pluginName) => pluginNameToPlugin(pluginName)),
+        }
+      },
     }
   })
 }

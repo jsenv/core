@@ -15,7 +15,7 @@ const babel = require("rollup-plugin-babel")
 const root = path.resolve(__dirname, "../../../../")
 const inputFile = `${root}/src/platformCompileClient/platform/browser/index.js`
 
-export const compileForBrowser = ({ SERVER_VARS, name = "unknown", version = "0.0.0" } = {}) => {
+export const compileForBrowser = ({ VARS, name = "unknown", version = "0.0.0" } = {}) => {
   const pluginNames = platformToPluginNames(compatMapBabel, name, version)
   const babelPlugins = pluginNames.map(pluginNameToPlugin)
 
@@ -23,7 +23,7 @@ export const compileForBrowser = ({ SERVER_VARS, name = "unknown", version = "0.
     input: inputFile,
     plugins: [
       replace({
-        values: objectMap(SERVER_VARS, (value) => uneval(value)),
+        values: objectMap(VARS, (value) => uneval(value)),
       }),
       babel({
         babelrc: false,

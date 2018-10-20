@@ -6,7 +6,7 @@ import { cancellableAction } from "../signalHelper.js"
 const root = path.resolve(__dirname, "../../../")
 const nodeClientFile = `${root}/src/platformCompileClient/platform/node/index.js`
 
-export const createExecuteOnNode = ({ localRoot, remoteRoot, remoteCompileDestination }) => {
+export const createExecuteOnNode = ({ LOCAL_ROOT, REMOTE_ROOT, COMPILE_INTO, VARS }) => {
   const execute = ({
     file,
     setup = () => {},
@@ -123,16 +123,14 @@ export const createExecuteOnNode = ({ localRoot, remoteRoot, remoteCompileDestin
         })
 
         sendToChild("execute", {
-          LOCAL_SOURCE_ROOT: localRoot,
-          COMPILE_ORIGIN: remoteRoot,
-          COMPILE_INTO: remoteCompileDestination,
-          COMPAT_MAP,
-          COMPAT_MAP_DEFAULT_ID,
+          LOCAL_ROOT,
+          REMOTE_ROOT,
+          COMPILE_INTO,
           HOTRELOAD: hotreload,
-          HOTRELOAD_SSE_ROOT,
           FILE: file,
           setupSource: `(${setup.toString()})`,
           teardownSource: `(${teardown.toString()})`,
+          ...VARS,
         })
       }).then(
         (value) => {

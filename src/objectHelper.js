@@ -1,55 +1,54 @@
 export const objectMapKey = (object, callback) => {
-  const mappedObject = {}
+  const mapped = {}
 
   Object.keys(object).forEach((key) => {
-    mappedObject[callback(key)] = object[key]
+    mapped[callback(key)] = object[key]
   })
 
-  return mappedObject
+  return mapped
 }
 
 export const objectMapValue = (object, callback) => {
-  const mappedObject = {}
+  const mapped = {}
 
   Object.keys(object).forEach((key) => {
-    mappedObject[key] = callback(object[key])
+    mapped[key] = callback(object[key])
   })
 
-  return mappedObject
+  return mapped
 }
 
 export const objectMap = (object, callback) => {
-  const mappedObject = {}
+  const mapped = {}
 
   Object.keys(object).forEach((key) => {
-    Object.assign(mappedObject, callback(key, object[key], object))
+    Object.assign(mapped, callback(key, object[key], object))
   })
 
-  return mappedObject
+  return mapped
 }
 
 export const ojectFilter = (object, callback) => {
-  const filteredObject = {}
+  const filtered = {}
 
   Object.keys(object).forEach((key) => {
     const value = object[key]
     if (callback(key, value, object)) {
-      filteredObject[key] = value
+      filtered[key] = value
     }
   })
 
-  return filteredObject
+  return filtered
 }
 
 export const objectComposeValue = (previous, object, callback) => {
-  const composedObject = {}
+  const composed = { ...previous }
 
   Object.keys(object).forEach((key) => {
-    const value = object[key]
-    composedObject[key] = key in previous ? callback(value, previous[key]) : value
+    composed[key] = key in composed ? callback(composed[key], object[key]) : object[key]
   })
 
-  return composedObject
+  return composed
 }
 
 const composeMapToKeyComposer = (composeMap) => (key, object, nextObject) => {
@@ -82,9 +81,9 @@ const composeMapToReducer = (composeMap) => {
   return keyComposerToReducer(composeMapToKeyComposer(composeMap))
 }
 
-export const composeMapToCompose = (composeMap) => {
+export const composeMapToCompose = (composeMap, createInitial = () => ({})) => {
   const composeReducer = composeMapToReducer(composeMap)
   return (...objects) => {
-    return objects.reduce(composeReducer, {})
+    return objects.reduce(composeReducer, createInitial())
   }
 }

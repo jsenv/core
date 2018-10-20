@@ -1,7 +1,7 @@
 import { ressourceToPathname } from "../urlHelper.js"
 import { regexpEscape } from "../regexpEscape.js"
 
-export const createRoute = ({ ressource = "*", method, handler }) => {
+export const createRequestPredicate = ({ ressource = "*", method }) => {
   // 'a\\*c'.replace(/\\\*/g, 'ok')
   const ressourcePatternEscaped = regexpEscape(ressource)
   const ressourcePattern = ressourcePatternEscaped.replace(/\\\*/g, ".*?")
@@ -26,6 +26,6 @@ export const createRoute = ({ ressource = "*", method, handler }) => {
     if (matchRessource(ressourceToPathname(request.ressource)) === false) {
       return false
     }
-    return handler(request)
+    return true
   }
 }

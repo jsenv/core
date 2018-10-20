@@ -1,5 +1,5 @@
 export { openServer } from "./openServer.js"
-export { createRoute } from "./createRoute.js"
+export { createRequestPredicate } from "./createRequestPredicate.js"
 export { enableCORS } from "./enableCORS.js"
 export { acceptContentType } from "./headers.js"
 export { createTwoWayStream } from "./createConnection/createTwoWayStream.js"

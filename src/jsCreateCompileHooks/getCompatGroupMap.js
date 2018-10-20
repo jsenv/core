@@ -18,12 +18,25 @@ const BEST_ID = "best"
 const WORST_ID = "worst"
 export const DEFAULT_ID = "otherwise"
 
-export const getCompatGroupMap = ({ configLocation, ...rest }) => {
+export const getCompatGroupMap = ({
+  configLocation,
+  stats,
+  compatMap,
+  size,
+  platformNames,
+  pluginNames,
+}) => {
   return readFile(configLocation).then(
     (content) => JSON.parse(content),
     (error) => {
       if (error && error.code === "ENOENT") {
-        const { profiles, fallback } = compileProfiles(rest)
+        const { profiles, fallback } = compileProfiles({
+          stats,
+          compatMap,
+          size,
+          platformNames,
+          pluginNames,
+        })
 
         const compatGroupMap = {}
 

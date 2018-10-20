@@ -1,4 +1,4 @@
-import { createGetScoreForGroupCompatMap } from "./createGetScoreForGroupCompatMap.js"
+import { createCompatMapToScore } from "./createCompatMapToScore.js"
 import assert from "assert"
 
 {
@@ -6,7 +6,7 @@ import assert from "assert"
   const chrome49Score = 2
   const chromeBelow49Score = 4
   const otherScore = 8
-  const getScore = createGetScoreForGroupCompatMap({
+  const compatMapToScore = createCompatMapToScore({
     chrome: {
       "50": chrome50Score,
       "49": chrome49Score,
@@ -16,7 +16,7 @@ import assert from "assert"
   })
 
   {
-    const actual = getScore({
+    const actual = compatMapToScore({
       chrome: "48",
     })
     const expected = chromeBelow49Score
@@ -24,7 +24,7 @@ import assert from "assert"
   }
 
   {
-    const actual = getScore({
+    const actual = compatMapToScore({
       chrome: "49",
     })
     const expected = chrome49Score
@@ -32,7 +32,7 @@ import assert from "assert"
   }
 
   {
-    const actual = getScore({
+    const actual = compatMapToScore({
       chrome: "50",
     })
     const expected = chrome50Score
@@ -40,7 +40,7 @@ import assert from "assert"
   }
 
   {
-    const actual = getScore({
+    const actual = compatMapToScore({
       chrome: "51",
     })
     const expected = chrome50Score
@@ -48,7 +48,7 @@ import assert from "assert"
   }
 
   {
-    const actual = getScore({
+    const actual = compatMapToScore({
       chrome: "51",
       foo: ["0"],
     })

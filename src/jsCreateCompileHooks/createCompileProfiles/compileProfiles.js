@@ -1,15 +1,11 @@
 // https://github.com/babel/babel/blob/master/packages/babel-preset-env/data/plugins.json
-import {
-  compatMapBabel,
-  compatMapToCompatMapWithModule,
-  compatMapWithout,
-} from "@dmail/project-structure-compile-babel"
+import { compatMapBabel, compatMapWithOnly } from "@dmail/project-structure-compile-babel"
 
 import { createPlatformGroups } from "./createPlatformGroups.js"
 import { composePlatformGroups } from "./composePlatformGroups.js"
-import { createGetScoreForGroupTranspilationComplexity } from "./createGetScoreForGroupTranspilationComplexity.js"
+import { createPluginNamesToScore } from "./createPluginNamesToScore.js"
 import { splitGroups } from "./splitGroups.js"
-import { createGetScoreForGroupCompatMap } from "./createGetScoreForGroupCompatMap.js"
+import { createCompatMapToScore } from "./createCompatMapToScore.js"
 import { statMapGeneric } from "./statMapGeneric.js"
 
 const PLATFORM_NAMES = ["chrome", "edge", "firefox", "safari", "node", "ios", "opera", "electron"]
@@ -23,10 +19,9 @@ const createGroupsForPlatforms = (compatMap, platformNames) => {
 }
 
 const sortGroupByComplexity = (groups) => {
-  const getScoreForGroupTranspilationComplexity = createGetScoreForGroupTranspilationComplexity()
+  const pluginNamesToScore = createPluginNamesToScore()
   const sortedGroups = groups.sort(
-    (a, b) =>
-      getScoreForGroupTranspilationComplexity(a) - getScoreForGroupTranspilationComplexity(b),
+    (a, b) => pluginNamesToScore(a.pluginNames) - pluginNamesToScore(b.pluginNames),
   )
   return sortedGroups
 }
@@ -37,18 +32,16 @@ export const compileProfiles = (
     compatMap = compatMapBabel,
     size = 4,
     platformNames = PLATFORM_NAMES,
-    moduleOutput,
     pluginNames = Object.keys(compatMap),
   } = {},
 ) => {
-  compatMap = compatMapWithout(compatMap, pluginNames)
-  compatMap = compatMapToCompatMapWithModule(compatMap, moduleOutput)
+  compatMap = compatMapWithOnly(compatMap, pluginNames)
 
   const groupsForPlatforms = createGroupsForPlatforms(compatMap, platformNames)
-  const getScoreForGroupCompatMap = createGetScoreForGroupCompatMap(stats)
+  const compatMapToScore = createCompatMapToScore(stats)
   const groupsForPlatformsSubset = splitGroups(
     groupsForPlatforms,
-    ({ compatMap }) => getScoreForGroupCompatMap(compatMap),
+    ({ compatMap }) => compatMapToScore(compatMap),
     size,
   )
   const sortedGroups = sortGroupByComplexity(groupsForPlatformsSubset)

@@ -13,58 +13,40 @@ import { watchFile } from "../watchFile.js"
 import { createSignal } from "@dmail/signal"
 import { ressourceToCompileIdAndFile } from "../compileFileToService/compileFileToService.js"
 
-// hum je pense qu'en fait il vaudrait mieux donner la possibilité
-// a jsCompileService de watch ses fichiers
-// le client ouvrira un sse sur le js qu'on compile et redemarre
-// si y'a du JSON par exemple
-// on voudrait restart aussi
-// donc on a bien une sorte de service par default
-// qui watch et restart, ou alors il faudrait que ce soit explicite pour les fichiers
-// non js
-// en fonction des services qu'on a demarre le client se connecte differement au serveur
-// en modifiant le code qu'on lui sers
-// mais tout ca devient complexe
-
 export const openCompileServer = ({
   // server options
   protocol,
   ip,
   port,
-  autoCloseOnExit,
-  autoCloseOnCrash,
-  autoCloseOnError,
   watch = false,
   watchPredicate = () => false,
+  watchSSE = true,
   preventCors = false,
 
   // generic compile options
-  root,
-  into,
-
+  LOCAL_ROOT,
+  COMPILE_INTO,
   sourceCacheStrategy = "etag",
   sourceCacheIgnore = false,
 
+  // the compile service
   compileService,
 }) => {
   const cleanup = createSignal()
 
-  const watchSignal = createSignal()
-
   const createWatchService = () => {
+    const watchSignal = createSignal()
+
     const watchedFiles = new Map()
     cleanup.listenOnce(() => {
       watchedFiles.forEach((closeWatcher) => closeWatcher())
       watchedFiles.clear()
     })
 
-    return ({ ressource }) => {
-      const { file } = ressourceToCompileIdAndFile(ressource, into)
-      if (!file) {
-        return
-      }
-
+    const watchService = (request) => {
+      const { file } = ressourceToCompileIdAndFile(request.ressource, COMPILE_INTO)
       // when I ask for a compiled file, watch the corresponding file on filesystem
-      const fileLocation = `${root}/${file}`
+      const fileLocation = `${LOCAL_ROOT}/${file}`
       if (watchedFiles.has(fileLocation) === false && watchPredicate(file)) {
         const fileWatcher = watchFile(fileLocation, () => {
           watchSignal.emit(file)
@@ -72,42 +54,55 @@ export const openCompileServer = ({
         watchedFiles.set(fileLocation, fileWatcher)
       }
     }
+
+    const createWatchSSEService = () => {
+      const fileChangedSSE = createSSERoom()
+
+      fileChangedSSE.open()
+      cleanup.listenOnce(() => {
+        fileChangedSSE.close()
+      })
+
+      watchSignal.listen((relativeFilename) => {
+        fileChangedSSE.sendEvent({
+          type: "file-changed",
+          data: relativeFilename,
+        })
+      })
+
+      return ({ headers }) => {
+        if (acceptContentType(headers.accept, "text/event-stream")) {
+          return fileChangedSSE.connect(headers["last-event-id"])
+        }
+        return null
+      }
+    }
+
+    if (watchSSE) {
+      return serviceCompose(watchService, createWatchSSEService())
+    }
+    return watchService
   }
 
-  const createFileChangedSSEService = () => {
-    const fileChangedSSE = createSSERoom()
+  if (watch) {
+    compileService = serviceCompose(createWatchService(), compileService)
+  }
 
-    fileChangedSSE.open()
-    cleanup.listenOnce(() => {
-      fileChangedSSE.close()
-    })
-
-    watchSignal.listen((relativeFilename) => {
-      fileChangedSSE.sendEvent({
-        type: "file-changed",
-        data: relativeFilename,
-      })
-    })
-
-    return ({ headers }) => {
-      if (acceptContentType(headers.accept, "text/event-stream")) {
-        return fileChangedSSE.connect(headers["last-event-id"])
-      }
+  const wrappedCompileService = (request) => {
+    const { file } = ressourceToCompileIdAndFile(request.ressource, COMPILE_INTO)
+    if (!file) {
       return null
     }
+    return compileService(request)
   }
 
-  const service = serviceCompose(
-    ...[
-      ...(watch ? [createWatchService(), createFileChangedSSEService()] : []),
-      compileService,
-      createRequestToFileResponse({
-        root,
-        cacheIgnore: sourceCacheIgnore,
-        cacheStrategy: sourceCacheStrategy,
-      }),
-    ],
-  )
+  const sourceService = createRequestToFileResponse({
+    root: LOCAL_ROOT,
+    cacheIgnore: sourceCacheIgnore,
+    cacheStrategy: sourceCacheStrategy,
+  })
+
+  const service = serviceCompose(wrappedCompileService, sourceService)
 
   const requestToResponse = (request) => {
     return service(request).then((response) => {
@@ -121,16 +116,10 @@ export const openCompileServer = ({
     protocol,
     ip,
     port,
-    autoCloseOnExit,
-    autoCloseOnCrash,
-    autoCloseOnError,
     requestToResponse,
   }).then((server) => {
     server.closed.listenOnce(cleanup.emit)
 
-    return {
-      ...server,
-      watchSignal,
-    }
+    return server
   })
 }

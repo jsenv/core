@@ -8,7 +8,7 @@ export const jsCreateCompileService = ({
   root,
   into,
   // compileFileToService options
-  groupMap,
+  compileIdToCompileParams,
   cacheIgnore,
   cacheTrackHit,
   assetCacheIgnore,
@@ -19,7 +19,7 @@ export const jsCreateCompileService = ({
   const service = compileFileToService(compileFile, {
     root,
     into,
-    groupMap,
+    compileIdToCompileParams,
     cacheIgnore,
     cacheTrackHit,
     assetCacheIgnore,

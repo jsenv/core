@@ -1,38 +1,20 @@
-const {
-  openBrowserServer,
-  createPredicateFromStructure,
-  jsCreateCompileService,
-  jsCreateCompileHooks,
-} = require("../dist/index.js")
+const { openBrowserServer, createFunctionsForProject } = require("../dist/index.js")
+
 const path = require("path")
 
 const root = path.resolve(__dirname, "../")
-const into = "build"
+
 const watch = true
 
-createPredicateFromStructure({ root }).then(({ instrumentPredicate, watchPredicate }) => {
-  return jsCreateCompileHooks({
-    configLocation: `${root}/${into}/compatGroupMap.config.json`,
-  }).then(({ compileIdToCompileParams, getCompileIdSource }) => {
-    const jsCompileService = jsCreateCompileService({
-      root,
-      into,
-      compileIdToCompileParams,
-      cacheIgnore: false,
-      cacheTrackHit: true,
-      cacheStrategy: "etag",
-      assetCacheIgnore: false,
-      assetCacheStrategy: "etag",
-      instrumentPredicate,
-    })
-
+createFunctionsForProject({ root }).then(
+  ({ watchPredicate, jsCompileService, LOCAL_ROOT, COMPILE_INTO, VARS }) => {
     return openBrowserServer({
-      root,
-      into,
+      LOCAL_ROOT,
+      COMPILE_INTO,
+      VARS,
       watch,
       watchPredicate,
       compileService: jsCompileService,
-      getCompileIdSource,
     })
-  })
-})
+  },
+)

@@ -1,8 +1,11 @@
-import { openServer, createRoute, serviceCompose } from "../openServer/index.js"
+import { openServer, createRequestPredicate, serviceCompose } from "../openServer/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { openCompileServer } from "../openCompileServer/index.js"
+import { guard } from "../guard.js"
 
-const getIndexPageHTML = ({ root, files = [] }) => {
+const getIndexPageHTML = ({ LOCAL_ROOT }) => {
+  const files = ["src/__test__/file.js"]
+
   return `<!doctype html>
 
   <head>
@@ -12,7 +15,7 @@ const getIndexPageHTML = ({ root, files = [] }) => {
 
   <body>
     <main>
-			<h1>${root}</h1>
+			<h1>${LOCAL_ROOT}</h1>
 			<p>Sample file to execute: </p>
 			<ul>
 				${files
@@ -36,34 +39,41 @@ const getPageHTML = (options) => {
 }
 
 export const openBrowserServer = ({
+  LOCAL_ROOT,
+  COMPILE_INTO,
+  VARS,
+
   protocol = "http",
   ip = "127.0.0.1",
   port = 3000,
   forcePort = true,
-  watch = false,
 
-  root,
-  into,
   compileService,
-  getCompileIdSource,
-  ...rest
+  watch = false,
+  watchPredicate,
+  sourceCacheStrategy,
+  sourceCacheIgnore,
 }) => {
   return openCompileServer({
-    root,
-    into,
-    watch,
-    protocol, // if not specified, reuse browser protocol
+    LOCAL_ROOT,
+    COMPILE_INTO,
+    protocol, // reuse browser protocol
     compileService,
-    ...rest,
+    watch,
+    watchPredicate,
+    sourceCacheStrategy,
+    sourceCacheIgnore,
   }).then((server) => {
-    console.log(`compiling ${root} at ${server.origin}`)
+    console.log(`compiling ${LOCAL_ROOT} at ${server.origin}`)
 
-    const indexRoute = createRoute({
-      ressource: "",
-      method: "GET",
-      handler: () => {
+    const indexRoute = guard(
+      createRequestPredicate({
+        ressource: "",
+        method: "GET",
+      }),
+      () => {
         return Promise.resolve()
-          .then(() => getIndexPageHTML({ root, files: ["src/__test__/file.js"] }))
+          .then(() => getIndexPageHTML({ LOCAL_ROOT }))
           .then((html) => {
             return {
               status: 200,
@@ -76,21 +86,22 @@ export const openBrowserServer = ({
             }
           })
       },
-    })
+    )
 
-    const otherRoute = createRoute({
-      ressource: "*",
-      method: "GET",
-      handler: ({ ressource }) => {
+    const otherRoute = guard(
+      createRequestPredicate({
+        ressource: "*",
+        method: "GET",
+      }),
+      ({ ressource }) => {
         return Promise.resolve()
           .then(() =>
             getPageHTML({
-              localRoot: root,
-              remoteRoot: server.origin,
-              remoteCompileDestination: into,
-              file: ressource,
-              hotreload: watch,
-              getCompileIdSource,
+              REMOTE_ROOT: server.origin,
+              HOTRELOAD: watch,
+              HOTRELOAD_SSE_ROOT: server.origin,
+              FILE: ressource,
+              ...VARS,
             }),
           )
           .then((html) => {
@@ -105,7 +116,7 @@ export const openBrowserServer = ({
             }
           })
       },
-    })
+    )
 
     return openServer({
       protocol,
@@ -114,7 +125,7 @@ export const openBrowserServer = ({
       forcePort,
       requestToResponse: serviceCompose(indexRoute, otherRoute),
     }).then((runServer) => {
-      console.log(`executing ${root} at ${runServer.origin}`)
+      console.log(`executing ${VARS.SOURCE_ROOT} at ${runServer.origin}`)
       return runServer
     })
   })

@@ -1,4 +1,4 @@
-import { getPlatformNameAndVersionFromUserAgent } from "./getPlatformNameAndVersionFromHeaders.js"
+import { getPlatformNameAndVersionFromUserAgent } from "./getPlatformNameAndVersionFromUserAgent.js"
 import assert from "assert"
 
 {
