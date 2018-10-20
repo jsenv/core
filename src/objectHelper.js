@@ -28,7 +28,7 @@ export const objectMap = (object, callback) => {
   return mapped
 }
 
-export const ojectFilter = (object, callback) => {
+export const objectFilter = (object, callback) => {
   const filtered = {}
 
   Object.keys(object).forEach((key) => {

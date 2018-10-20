@@ -7,15 +7,15 @@ export const transpiler = (context) => {
     inputSource,
     inputSourceMap,
     inputAst,
-    options,
-    getBabelPlugins,
+    plugins,
+    remap,
     sourceMapName,
     sourceLocationForSourceMap,
     sourceNameForSourceMap,
   } = context
 
   const babelOptions = {
-    plugins: getBabelPlugins(),
+    plugins,
     filename: inputName,
     inputSourceMap,
   }
@@ -25,7 +25,7 @@ export const transpiler = (context) => {
     inputAst,
     inputSource,
     options: babelOptions,
-    remap: options.remap,
+    remap,
     sourceMapName,
     sourceLocationForSourceMap,
     sourceNameForSourceMap,

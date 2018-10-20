@@ -1,28 +1,25 @@
-import { createCompile } from "./createCompile.js"
+import { compile } from "./compile.js"
 import fs from "fs"
 import path from "path"
 import assert from "assert"
 
-const compile = createCompile({
-  transpile: true,
-})
-
 const root = path.resolve(__dirname, "../../../")
-const file = "src/jsCreateCompileService/createCompile/fixtures/file.js"
+const file = "src/jsCreateCompileService/compile/fixtures/file.js"
 const filename = `${root}/${file}`
+const inputSource = fs.readFileSync(filename).toString()
 
 compile({
   root,
   inputName: file,
-  inputSource: fs.readFileSync(filename).toString(),
-	outputName: "dist/src/createCompile/file.compiled.js",
-	babelPlugins: () => [],
-}).then(({ output, assetMap }) => {
-    assert.equal(typeof output, "string")
-    assert.equal(outputAssets[0].name, "file.js.map")
-    const sourceMap = JSON.parse(outputAssets[0].content)
-    assert.equal(sourceMap.file, file)
-    assert.deepEqual(sourceMap.sources, [`/${file}`])
-    console.log("passed")
-  })
+  inputSource,
+  plugins: [],
+  outputName: "dist/src/createCompile/file.compiled.js",
+}).then(({ outputSource, assetMap }) => {
+  assert.equal(typeof outputSource, "string")
+  assert.equal(outputSource.length > 0, true)
+  assert.equal("file.js.map" in assetMap, true)
+  const sourceMap = JSON.parse(assetMap["file.js.map"])
+  assert.equal(sourceMap.file, file)
+  assert.deepEqual(sourceMap.sources, [`/${file}`])
+  console.log("passed")
 })

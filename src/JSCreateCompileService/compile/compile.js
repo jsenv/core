@@ -2,44 +2,18 @@ import { transpiler } from "./transpiler.js"
 import { remapper } from "./remapper.js"
 import { contextToSourceMapMeta } from "./contextToSourceMapMeta.js"
 
-const transform = (context, transformer) => {
-  return Promise.resolve()
-    .then(() =>
-      transformer({
-        ...context,
-        inputSource: context.outputSource,
-        inputSourceMap: context.outputSourceMap,
-        inputAst: context.outputAst,
-      }),
-    )
-    .then(
-      ({
-        code = context.outputSource,
-        ast = context.outputAst,
-        map = context.outputSourceMap,
-        assetMap = context.assetMap,
-      }) => {
-        return {
-          ...context,
-          outputSource: code,
-          outputAst: ast,
-          outputSourceMap: map,
-          ...assetMap,
-        }
-      },
-    )
-}
-
 export const compile = ({
   inputName,
   inputSource,
-  inputSourceMap = null,
-  inputAst = null,
+  inputSourceMap,
+  inputAst,
 
   transpile = true,
   plugins = [],
   remap = true,
   remapMethod = "comment", // 'comment', 'inline'
+
+  outputName,
 }) => {
   const context = {
     inputName,
@@ -50,13 +24,41 @@ export const compile = ({
     plugins,
     remap,
     remapMethod,
+    outputName,
   }
 
   if (remap) {
     Object.assign(context, contextToSourceMapMeta(context))
   }
 
-  return Promise.resolve(context)
-    .then((context) => (transpile ? transform(context, transpiler) : context))
-    .then((context) => (remap ? transform(context, remapper) : context))
+  const transformers = [...(transpile ? [transpiler] : []), ...(remap ? [remapper] : [])]
+
+  return transformers
+    .reduce(
+      (previous, transformer) => {
+        return previous.then(({ outputSource, outputAst, outputSourceMap, assetMap }) => {
+          return transformer({
+            ...context,
+            inputSource: outputSource,
+            inputSourceMap: outputSourceMap,
+            inputAst: outputAst,
+            assetMap,
+          })
+        })
+      },
+      Promise.resolve({
+        outputSource: inputSource,
+        outputAst: inputAst,
+        outputSourceMap: inputSourceMap,
+        assetMap: {},
+      }),
+    )
+    .then(({ outputSource, outputSourceMap, outputAst, assetMap }) => {
+      return {
+        outputSource,
+        outputSourceMap,
+        outputAst,
+        assetMap,
+      }
+    })
 }

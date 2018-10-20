@@ -71,9 +71,9 @@ export const transpileWithBabel = ({
       }
 
       return {
-        code,
-        map,
-        ast,
+        outputSource: code,
+        outputSourceMap: map,
+        outputAst: ast,
         assetMap: {
           ...(remap ? { [sourceMapName]: stringifyMap(map) } : {}),
           ...(metadata.coverage ? { "coverage.json": stringifyCoverage(metadata.coverage) } : {}),
