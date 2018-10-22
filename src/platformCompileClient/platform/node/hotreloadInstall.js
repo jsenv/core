@@ -1,5 +1,5 @@
 import "./EventSource-global.js"
-import { processCleanup } from "../../../openServer/processTeardown.js"
+import { processTeardown } from "../../../openServer/processTeardown.js"
 import { sendToParent } from "./sendToParent.js"
 import { isFileImported } from "../importTracker.js"
 
@@ -30,9 +30,9 @@ export const hotReloadInstall = ({ HOTRELOAD_SSE_ROOT }) => {
     }
   })
 
-  // by listening processCleanUp we indirectly
+  // by listening processTeardown we indirectly
   // do something like process.on('SIGINT', () => process.exit())
-  processCleanup(() => {
+  processTeardown(() => {
     eventSource.close()
   })
 }

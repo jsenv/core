@@ -2,8 +2,7 @@
 // call a given function allowed to return a promise in case the teardown is async
 // it's very usefull to ensure a given server is closed when process exits
 
-import { asyncSimultaneousEmitter, createSignal } from "@dmail/signal"
-import { signalRace } from "../signalHelper"
+import { asyncSimultaneousEmitter, createSignal, race } from "@dmail/signal"
 
 export const hangupOrDeath = createSignal({
   emitter: asyncSimultaneousEmitter,
@@ -94,27 +93,7 @@ export const exit = createSignal({
   },
 })
 
-const cleanupSignals = [hangupOrDeath, terminate, death]
-export const processCleanup = (cleanupCallback) => {
-  return signalRace(cleanupSignals, ({ args }) => cleanupCallback(...args))
-}
-
 const teardownSignals = [hangupOrDeath, terminate, death, beforeExit, exit]
 export const processTeardown = (teardownCallback) => {
-  return signalRace(teardownSignals, ({ args }) => teardownCallback(...args))
+  return race(teardownSignals, ({ args }) => teardownCallback(...args))
 }
-
-// export const listenBrowserBeforeExit = createListenBeforeExit({
-//   install: (callback) => {
-//     const { onbeforeunload } = window
-//     window.onbeforeunload = callback
-
-//     return () => {
-//       window.onbeforeunload = onbeforeunload
-//     }
-//   },
-//   exit: () => {
-//     // in the browser this may not be called
-//     // because you cannot prevent user from leaving your page
-//   },
-// })
