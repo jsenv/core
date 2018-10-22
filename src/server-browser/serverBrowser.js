@@ -1,6 +1,6 @@
-import { open, createRequestPredicate, serviceCompose } from "../server/index.js"
+import { open as serverOpen, createRequestPredicate, serviceCompose } from "../server/index.js"
+import { open as serverCompileOpen } from "../server-compile/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
-import { openCompileServer } from "../openCompileServer/index.js"
 import { guard } from "../guard.js"
 
 const getIndexPageHTML = ({ LOCAL_ROOT }) => {
@@ -38,7 +38,7 @@ const getPageHTML = (options) => {
   })
 }
 
-export const openBrowserServer = ({
+export const open = ({
   LOCAL_ROOT,
   COMPILE_INTO,
   VARS,
@@ -54,7 +54,7 @@ export const openBrowserServer = ({
   sourceCacheStrategy,
   sourceCacheIgnore,
 }) => {
-  return openCompileServer({
+  return serverCompileOpen({
     LOCAL_ROOT,
     COMPILE_INTO,
     protocol, // reuse browser protocol
@@ -118,7 +118,7 @@ export const openBrowserServer = ({
       },
     )
 
-    return open({
+    return serverOpen({
       protocol,
       ip,
       port,

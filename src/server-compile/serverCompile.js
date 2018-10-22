@@ -3,7 +3,7 @@
 /* eslint-disable import/max-dependencies */
 import { createRequestToFileResponse } from "../createRequestToFileResponse/index.js"
 import {
-  open,
+  open as serverOpen,
   enableCORS,
   serviceCompose,
   acceptContentType,
@@ -13,7 +13,7 @@ import { watchFile } from "../watchFile.js"
 import { createSignal } from "@dmail/signal"
 import { ressourceToCompileIdAndFile } from "../compileFileToService/compileFileToService.js"
 
-export const openCompileServer = ({
+export const open = ({
   // server options
   protocol,
   ip,
@@ -112,7 +112,7 @@ export const openCompileServer = ({
     })
   }
 
-  return open({
+  return serverOpen({
     protocol,
     ip,
     port,
