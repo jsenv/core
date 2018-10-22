@@ -1,26 +1,11 @@
-import fs from "fs"
 import { createETag } from "../compileToCompileFile/helpers.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
-import { ressourceToExtension } from "../urlHelper.js"
+import { ressourceToContentType } from "./ressourceToContentType.js"
+import { stat, readFile, listDirectoryContent, fileToReadableStream } from "./fileHelper.js"
 
-// https://github.com/restify/node-restify/blob/d4cb86591ccc45f005ff174d0ae887fd1dc6db9c/lib/response.js#L58
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-const dateToUTC = (date) => {
-  const pad = (val) => {
-    if (parseInt(val, 10) < 10) val = `0 ${val}`
-    return val
-  }
-
-  const UTCDay = DAYS[date.getUTCDay()]
-  const UTCDate = pad(date.getUTCDate())
-  const UTCMonth = MONTHS[date.getUTCMonth()]
-  const UTCFullYear = date.getUTCFullYear()
-  const UTCHours = pad(date.getUTCHours())
-  const UTCMinutes = pad(date.getUTCMinutes())
-  const UTCSeconds = pad(date.getUTCSeconds())
-
-  return `${UTCDay}, ${UTCDate} ${UTCMonth} ${UTCFullYear} ${UTCHours}:${UTCMinutes}:${UTCSeconds} GMT`
+const dateToUTCString = (date) => {
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
+  return date.toUTCString()
 }
 
 const dateToSecondsPrecision = (date) => {
@@ -29,82 +14,13 @@ const dateToSecondsPrecision = (date) => {
   return dateWithSecondsPrecision
 }
 
-const mimetype = (ressource) => {
-  const defaultMimetype = "application/octet-stream"
-
-  const mimetypes = {
-    // text
-    txt: "text/plain",
-    html: "text/html",
-    css: "text/css",
-    appcache: "text/cache-manifest",
-    // application
-    js: "application/javascript",
-    json: "application/json",
-    map: "application/json",
-    xml: "application/xml",
-    gz: "application/x-gzip",
-    zip: "application/zip",
-    pdf: "application/pdf",
-    // image
-    png: "image/png",
-    gif: "image/gif",
-    jpg: "image/jpeg",
-    // audio
-    mp3: "audio/mpeg",
-  }
-
-  const extension = ressourceToExtension(ressource)
-
-  if (extension in mimetypes) {
-    return mimetypes[extension]
-  }
-
-  return defaultMimetype
-}
-
-const stat = (location) => {
-  return new Promise((resolve, reject) => {
-    fs.stat(location, (error, stat) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve(stat)
-      }
-    })
-  })
-}
-
-const readFile = (location) => {
-  return new Promise((resolve, reject) => {
-    fs.readFile(location, (error, buffer) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve(String(buffer))
-      }
-    })
-  })
-}
-
-const listDirectoryContent = (location) => {
-  return new Promise((resolve, reject) => {
-    fs.readdir(location, (error, ressourceNames) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve(ressourceNames)
-      }
-    })
-  })
-}
-
 export const createRequestToFileResponse = (
   {
     root,
     canReadDirectory = false,
     getFileStat = stat,
     getFileContentAsString = readFile,
+    fileToBody = fileToReadableStream,
     cacheIgnore = false,
     cacheStrategy = "mtime",
   } = {},
@@ -186,11 +102,11 @@ export const createRequestToFileResponse = (
             status: 200,
             headers: {
               ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
-              "last-modified": dateToUTC(stat.mtime),
+              "last-modified": dateToUTCString(stat.mtime),
               "content-length": stat.size,
-              "content-type": mimetype(ressource),
+              "content-type": ressourceToContentType(ressource),
             },
-            body: fs.createReadStream(fileLocation),
+            body: fileToBody(fileLocation),
           }
         }
 
@@ -210,7 +126,7 @@ export const createRequestToFileResponse = (
               headers: {
                 ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
                 "content-length": stat.size,
-                "content-type": mimetype(ressource),
+                "content-type": ressourceToContentType(ressource),
                 etag: eTag,
               },
               body: content,
@@ -223,9 +139,9 @@ export const createRequestToFileResponse = (
           headers: {
             ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
             "content-length": stat.size,
-            "content-type": mimetype(ressource),
+            "content-type": ressourceToContentType(ressource),
           },
-          body: fs.createReadStream(fileLocation),
+          body: fileToBody(fileLocation),
         }
       }, convertFileSystemErrorToResponseProperties)
   }
