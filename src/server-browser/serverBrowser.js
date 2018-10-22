@@ -2,8 +2,10 @@ import { open as serverOpen, createRequestPredicate, serviceCompose } from "../s
 import { open as serverCompileOpen } from "../server-compile/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { guard } from "../guard.js"
+import { uneval } from "@dmail/uneval"
+import { getBrowserSystemRemoteURL, getBrowserPlatformRemoteURL } from "./compile.js"
 
-const getIndexPageHTML = ({ LOCAL_ROOT }) => {
+const getIndexPageHTML = ({ localRoot }) => {
   const files = ["src/__test__/file.js"]
 
   return `<!doctype html>
@@ -15,7 +17,7 @@ const getIndexPageHTML = ({ LOCAL_ROOT }) => {
 
   <body>
     <main>
-			<h1>${LOCAL_ROOT}</h1>
+			<h1>${localRoot}</h1>
 			<p>Sample file to execute: </p>
 			<ul>
 				${files
@@ -30,18 +32,33 @@ const getIndexPageHTML = ({ LOCAL_ROOT }) => {
   </html>`
 }
 
-const getClientScript = () => {}
-
-const getPageHTML = (options) => {
-  return createHTMLForBrowser({
-    script: getClientScript(options),
-  })
+const getClientScript = ({
+  remoteRoot,
+  compileInto,
+  compatMap,
+  compatMapDefaultId,
+  hotreload,
+  hotreloadSSERoot,
+  file,
+}) => {
+  return `
+  window.__platform__ = window.__createPlatform__({
+		remoteRoot: ${uneval(remoteRoot)},
+		compileInto: ${uneval(compileInto)},
+		compatMap: ${uneval(compatMap)},
+		compatMapDefaultId: ${uneval(compatMapDefaultId)},
+		hotreload: ${uneval(hotreload)},
+		hotreloadSSERoot: ${uneval(hotreloadSSERoot)}
+	})
+  window.__platform__.executeFile(${uneval(file)})
+`
 }
 
 export const open = ({
-  LOCAL_ROOT,
-  COMPILE_INTO,
-  VARS,
+  localRoot,
+  compileInto,
+  compatMap,
+  compatMapDefaultId,
 
   protocol = "http",
   ip = "127.0.0.1",
@@ -55,8 +72,8 @@ export const open = ({
   sourceCacheIgnore,
 }) => {
   return serverCompileOpen({
-    LOCAL_ROOT,
-    COMPILE_INTO,
+    localRoot,
+    compileInto,
     protocol, // reuse browser protocol
     compileService,
     watch,
@@ -64,7 +81,8 @@ export const open = ({
     sourceCacheStrategy,
     sourceCacheIgnore,
   }).then((server) => {
-    console.log(`compiling ${LOCAL_ROOT} at ${server.origin}`)
+    const remoteRoot = server.origin
+    console.log(`compiling ${localRoot} at ${remoteRoot}`)
 
     const indexRoute = guard(
       createRequestPredicate({
@@ -73,7 +91,11 @@ export const open = ({
       }),
       () => {
         return Promise.resolve()
-          .then(() => getIndexPageHTML({ LOCAL_ROOT }))
+          .then(() =>
+            getIndexPageHTML({
+              localRoot,
+            }),
+          )
           .then((html) => {
             return {
               status: 200,
@@ -95,15 +117,28 @@ export const open = ({
       }),
       ({ ressource }) => {
         return Promise.resolve()
-          .then(() =>
-            getPageHTML({
-              REMOTE_ROOT: server.origin,
-              HOTRELOAD: watch,
-              HOTRELOAD_SSE_ROOT: server.origin,
-              FILE: ressource,
-              ...VARS,
-            }),
-          )
+          .then(() => {
+            return createHTMLForBrowser({
+              scriptRemoteList: [
+                { url: getBrowserSystemRemoteURL({ remoteRoot, compileInto }) },
+                { url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) },
+              ],
+              scriptInlineList: [
+                {
+                  source: getClientScript({
+                    localRoot,
+                    remoteRoot,
+                    compileInto,
+                    compatMap,
+                    compatMapDefaultId,
+                    hotreload: watch,
+                    hotreloadSSERoot: remoteRoot,
+                    file: ressource,
+                  }),
+                },
+              ],
+            })
+          })
           .then((html) => {
             return {
               status: 200,
@@ -125,7 +160,7 @@ export const open = ({
       forcePort,
       requestToResponse: serviceCompose(indexRoute, otherRoute),
     }).then((runServer) => {
-      console.log(`executing ${VARS.SOURCE_ROOT} at ${runServer.origin}`)
+      console.log(`executing ${remoteRoot} at ${runServer.origin}`)
       return runServer
     })
   })

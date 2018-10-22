@@ -1,13 +1,15 @@
-const {
+import {
   pluginOptionMapToPluginMap,
   pluginMapToPluginsForPlatform,
-  compileFileStructure,
-} = require("@dmail/project-structure-compile-babel")
-const path = require("path")
+} from "@dmail/project-structure-compile-babel"
+import path from "path"
 
+const { rollup } = require("rollup")
+const babel = require("rollup-plugin-babel")
+
+const root = path.resolve(__dirname, "../../../")
+const inputFile = `${root}/src/platform/type/browser/index.js`
 const pluginMap = pluginOptionMapToPluginMap({
-  "transform-modules-commonjs": {},
-
   "proposal-async-generator-functions": {},
   "proposal-json-strings": {},
   "proposal-object-rest-spread": {},
@@ -37,12 +39,28 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-typeof-symbol": {},
   "transform-unicode-regex": {},
 })
-const plugins = pluginMapToPluginsForPlatform(pluginMap, "node", "8.0")
 
-compileFileStructure({
-  root: path.resolve(__dirname, "../"),
-  config: "structure.config.js",
-  predicate: ({ compile }) => compile,
-  into: "dist",
-  plugins,
-})
+export const compileForBrowser = ({ name = "unknown", version = "0.0.0" } = {}) => {
+  const plugins = pluginMapToPluginsForPlatform(pluginMap, name, version)
+
+  const bundlePromise = rollup({
+    input: inputFile,
+    plugins: [
+      babel({
+        babelrc: false,
+        exclude: "node_modules/**",
+        plugins,
+      }),
+    ],
+    // skip rollup warnings
+    // onwarn: () => {},
+  })
+
+  return bundlePromise.then((bundle) => {
+    return bundle.generate({
+      format: "iife",
+      name: "__createPlatform__",
+      sourcemap: true,
+    })
+  })
+}

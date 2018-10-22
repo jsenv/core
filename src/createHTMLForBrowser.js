@@ -1,5 +1,3 @@
-import { getBrowserSystemSource } from "@dmail/module-loader"
-
 const countLeading = (string, predicate) => {
   let leading = 0
   let i = 0
@@ -52,15 +50,20 @@ const prefixLineWith = (string, prefix = "  ", { lineSeparator = "auto" } = {}) 
   return lines.map((line, index) => `${index === 0 ? "" : prefix}${line}`).join(lineSeparator)
 }
 
-const renderScript = ({ source }) => {
+const inlineScriptToHTML = ({ source }) => {
   return `<script type="text/javascript">
   ${escapeClosingScriptTag(source.trim())}
 </script>`
 }
 
-export const createHTMLForBrowser = ({ title = "Untitled", charset = "utf-8", script } = {}) => {
-  return getBrowserSystemSource().then((loaderSource) => {
-    return `<!doctype html>
+const remoteScriptToHTML = ({ url, async = true }) => {
+  return `<script src="${url}" ${async ? "async " : ""}></script>`
+}
+
+export const createHTMLForBrowser = (
+  { title = "Untitled", charset = "utf-8", scriptRemoteList = [], scriptInlineList = [] } = {},
+) => {
+  return `<!doctype html>
 
 <head>
   <title>${title}</title>
@@ -69,10 +72,9 @@ export const createHTMLForBrowser = ({ title = "Untitled", charset = "utf-8", sc
 
 <body>
   <main></main>
-  ${prefixLineWith(renderScript({ source: loaderSource.code }), "  ")}
-  ${prefixLineWith(renderScript({ source: script }), "  ")}
+  ${scriptRemoteList.map((script) => remoteScriptToHTML(script)).join("\n")}
+  ${scriptInlineList.map((script) => prefixLineWith(inlineScriptToHTML(script), "  ")).join("\n")}
 </body>
 
 </html>`
-  })
 }
