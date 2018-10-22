@@ -1,7 +1,7 @@
-import { openServer } from "../openServer/index.js"
+import { open } from "../server/index.js"
 
 export const openIndexServer = ({ protocol, ip, port, body }) => {
-  return openServer({
+  return open({
     protocol,
     ip,
     port,

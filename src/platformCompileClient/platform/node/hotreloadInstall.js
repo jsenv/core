@@ -1,5 +1,5 @@
 import "./EventSource-global.js"
-import { processTeardown } from "../../../openServer/processTeardown.js"
+import { processTeardown } from "../../../server/index.js"
 import { sendToParent } from "./sendToParent.js"
 import { isFileImported } from "../importTracker.js"
 

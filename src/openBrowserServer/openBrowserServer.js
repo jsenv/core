@@ -1,4 +1,4 @@
-import { openServer, createRequestPredicate, serviceCompose } from "../openServer/index.js"
+import { open, createRequestPredicate, serviceCompose } from "../server/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { openCompileServer } from "../openCompileServer/index.js"
 import { guard } from "../guard.js"
@@ -118,7 +118,7 @@ export const openBrowserServer = ({
       },
     )
 
-    return openServer({
+    return open({
       protocol,
       ip,
       port,

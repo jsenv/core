@@ -1,6 +1,5 @@
 import http from "http"
 import https from "https"
-import { createSelfSignature } from "./createSelfSignature.js"
 import { processTeardown } from "./processTeardown.js"
 import { createRequestFromNodeRequest } from "./createRequestFromNodeRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
@@ -10,7 +9,7 @@ import { URL } from "url"
 
 const REASON_CLOSING = "closing"
 
-const getNodeServerAndAgent = ({ protocol, getSignature }) => {
+const getNodeServerAndAgent = ({ protocol, signature }) => {
   if (protocol === "http") {
     return {
       nodeServer: http.createServer(),
@@ -19,7 +18,11 @@ const getNodeServerAndAgent = ({ protocol, getSignature }) => {
   }
 
   if (protocol === "https") {
-    const { privateKey, certificate } = getSignature()
+    const { privateKey, certificate } = signature
+    if (!privateKey || !certificate) {
+      throw new Error(`missing signature for https server`)
+    }
+
     return {
       nodeServer: https.createServer({
         key: privateKey,
@@ -49,14 +52,14 @@ export const originAsString = ({ protocol, ip, port }) => {
   return url.origin
 }
 
-export const openServer = (
+export const open = (
   {
-    protocol = "https",
+    protocol = "http",
     ip = "127.0.0.1",
     port = 0, // aasign a random available port
     forcePort = false,
-    // when port is https you must provide privateKey & certificate
-    getSignature = createSelfSignature,
+    // when port is https you must provide { privateKey, certificate } under signature
+    signature,
     // auto close the server when the process exits (terminal closed, ctrl + C, ...)
     autoCloseOnExit = true,
     // auto close the server when an uncaughtException happens
@@ -86,7 +89,7 @@ export const openServer = (
     }
   }
 
-  const { nodeServer, agent } = getNodeServerAndAgent({ protocol, getSignature })
+  const { nodeServer, agent } = getNodeServerAndAgent({ protocol, signature })
 
   const connections = new Set()
   nodeServer.on("connection", (connection) => {
@@ -318,8 +321,4 @@ export const openServer = (
         closed,
       }
     })
-}
-
-export const listenRequest = (nodeServer, requestHandler) => {
-  nodeServer.on("request", requestHandler)
 }

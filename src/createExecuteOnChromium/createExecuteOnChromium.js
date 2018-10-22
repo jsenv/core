@@ -2,7 +2,7 @@ import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { openIndexServer } from "../openIndexServer/openIndexServer.js"
 import { createSignal } from "@dmail/signal"
 import { URL } from "url"
-import { originAsString } from "../openServer/openServer.js"
+import { originAsString } from "../server/index.js"
 
 const openIndexRequestInterception = ({ protocol, ip, port, page, body }) => {
   const origin = originAsString({ protocol, ip, port })

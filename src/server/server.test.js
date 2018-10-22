@@ -1,8 +1,8 @@
 import assert from "assert"
 import fetch from "node-fetch"
-import { openServer } from "./openServer.js"
+import { open } from "./server.js"
 
-openServer({
+open({
   protocol: "http",
   port: 8998,
   requestToResponse: () => {

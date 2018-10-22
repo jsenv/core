@@ -1,4 +1,4 @@
-import { openServer } from "../openServer/index.js"
+import { open } from "../server/index.js"
 import { createRequestToFileResponse } from "./createRequestToFileResponse.js"
 import path from "path"
 
@@ -9,7 +9,7 @@ const service = createRequestToFileResponse({
 })
 const ressource = "src/__test__/file.js"
 
-openServer({
+open({
   protocol: "http",
   port: 3000,
   requestToResponse: service,

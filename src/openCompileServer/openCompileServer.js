@@ -3,12 +3,12 @@
 /* eslint-disable import/max-dependencies */
 import { createRequestToFileResponse } from "../createRequestToFileResponse/index.js"
 import {
-  openServer,
+  open,
   enableCORS,
   serviceCompose,
   acceptContentType,
   createSSERoom,
-} from "../openServer/index.js"
+} from "../server/index.js"
 import { watchFile } from "../watchFile.js"
 import { createSignal } from "@dmail/signal"
 import { ressourceToCompileIdAndFile } from "../compileFileToService/compileFileToService.js"
@@ -112,7 +112,7 @@ export const openCompileServer = ({
     })
   }
 
-  return openServer({
+  return open({
     protocol,
     ip,
     port,
