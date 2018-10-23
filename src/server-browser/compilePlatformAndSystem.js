@@ -6,7 +6,7 @@ export const getBrowserSystemRemoteURL = ({ remoteRoot, compileInto }) => {
   return `${remoteRoot}/${compileInto}/browserSystem.js`
 }
 
-export const browserSystemGetLocalURL = ({ localRoot, compileInto }) => {
+export const getBrowserSystemLocalURL = ({ localRoot, compileInto }) => {
   return `${localRoot}/${compileInto}/browserSystem.js`
 }
 
@@ -30,9 +30,9 @@ export const compilePlatform = (localURL) => {
     .then((result) => compileResultToFileSysten(result, localURL))
 }
 
-export const compile = ({ browserSystemLocalURL, platformSystemLocalURL }) => {
+export const compilePlatformAndSystem = ({ browserSystemLocalURL, browserPlatformLocalURL }) => {
   return Promise.all([
     compileBrowserSystem(browserSystemLocalURL),
-    compilePlatform(platformSystemLocalURL),
+    compilePlatform(browserPlatformLocalURL),
   ])
 }

@@ -1,6 +1,6 @@
 import { createImportTracker } from "../createImportTracker.js"
 import { createExecuteFile } from "./createExecuteFile.js"
-import { getPlatformNameAndVersionFromUserAgent } from "./getPlatformNameAndVersionFromUserAgent.js"
+import { parse } from "./userAgent.js"
 import { platformToCompileId } from "../platformToCompileId.js"
 import { open } from "./hotreload.js"
 
@@ -12,15 +12,13 @@ export default ({
   hotreload = false,
   hotreloadSSERoot,
 }) => {
-  const { platformName, platformVersion } = getPlatformNameAndVersionFromUserAgent(
-    window.navigator.userAgent,
-  )
+  const browser = parse(window.navigator.userAgent)
 
   const compileId = platformToCompileId({
     compatMap,
     defaultId: compatMapDefaultId,
-    platformName,
-    platformVersion,
+    platformName: browser.name,
+    platformVersion: browser.version,
   })
 
   const compileRoot = `${remoteRoot}/${compileInto}/${compileId}`

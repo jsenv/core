@@ -3,8 +3,8 @@ import path from "path"
 import assert from "assert"
 
 const projectRoot = path.resolve(__dirname, "../../../")
-const root = `${projectRoot}/src/compileToCompileFile/fixtures`
-const into = "build"
+const localRoot = `${projectRoot}/src/compileToCompileFile/fixtures`
+const compileInto = "build"
 const compileId = "group"
 const output = "foo"
 const compileParamMap = {
@@ -17,7 +17,7 @@ const assetMap = {
 }
 const file = "src/file.txt"
 const expectedEtag = `"3-C+7Hteo/D9vJXQ3UfzxbwnXaijM"`
-const expectedOutputName = `${into}/${compileId}/${file}`
+const expectedOutputName = `${compileInto}/${compileId}/${file}`
 let callCount = 0
 
 const compile = ({ content }) => {
@@ -29,8 +29,8 @@ const compile = ({ content }) => {
 }
 
 const compileFile = compileToCompileFile(compile, {
-  root,
-  into,
+  localRoot,
+  compileInto,
 })
 
 compileFile({

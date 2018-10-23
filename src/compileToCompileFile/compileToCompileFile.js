@@ -3,7 +3,7 @@ import { compileFile } from "./compileFile.js"
 
 export const compileToCompileFile = (
   compile,
-  { root, into, locate = (file, root) => `${root}/${file}` },
+  { localRoot, compileInto, locate = (file, root) => `${root}/${file}` },
 ) => {
   return ({
     compileId,
@@ -15,8 +15,8 @@ export const compileToCompileFile = (
   }) => {
     return compileFile({
       compile,
-      root,
-      into,
+      localRoot,
+      compileInto,
       locate,
       compileId,
       compileParamMap,

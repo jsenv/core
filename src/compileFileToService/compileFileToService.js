@@ -8,17 +8,17 @@ export const ressourceToCompileIdAndFile = (ressource, into) => {
   const firstPart = parts[0]
 
   if (firstPart !== into) {
-    return null
+    return {}
   }
 
   const compileId = parts[1]
   if (compileId.length === 0) {
-    return null
+    return {}
   }
 
   const file = parts.slice(2).join("/")
   if (file.length === 0) {
-    return null
+    return {}
   }
 
   if (file.match(/[^\/]+__meta__\/.+$/)) {
@@ -37,8 +37,8 @@ export const ressourceToCompileIdAndFile = (ressource, into) => {
 export const compileFileToService = (
   compileFile,
   {
-    root,
-    into,
+    localRoot,
+    compileInto,
     compileParamMap,
     cacheIgnore = false,
     cacheTrackHit = false,
@@ -47,13 +47,13 @@ export const compileFileToService = (
   },
 ) => {
   const fileService = createRequestToFileResponse({
-    root,
+    root: localRoot,
     cacheIgnore: assetCacheIgnore,
     cacheStrategy: assetCacheStrategy,
   })
 
   return ({ ressource, method, headers = {}, body }) => {
-    const { compileId, file } = ressourceToCompileIdAndFile(ressource, into)
+    const { compileId, file } = ressourceToCompileIdAndFile(ressource, compileInto)
 
     // no compileId or no asset we server the file without compiling it
     if (!compileId || !file) {

@@ -1,158 +1,50 @@
-import { compileProfiles } from "../../jsCreateCompileHooks/createCompileProfiles/index.js"
+// won't work because rollup needs path to @dmail/project-structure-compile-babel/src/versionCompare.js
+// but we will no support export token
 import { platformToCompileId } from "./platformToCompileId.js"
 import assert from "assert"
 
 {
-  const profiles = compileProfiles({
+  const actual = platformToCompileId({
     compatMap: {
-      a: {
+      foo: {
         chrome: "41",
       },
     },
+    defaultId: "bar",
+    platformName: "chrome",
+    platformVersion: "39",
   })
-
-  {
-    const actual = platformToProfile(profiles, {
-      platformName: "chrome",
-      platformVersion: "39",
-    }).pluginNames
-    const expected = ["a"]
-    assert.deepEqual(actual, expected)
-  }
-
-  {
-    const actual = platformToProfile(profiles, {
-      platformName: "chrome",
-      platformVersion: "41",
-    }).pluginNames
-    const expected = []
-    assert.deepEqual(actual, expected)
-  }
-
-  {
-    const actual = platformToProfile(profiles, {
-      platformName: "chrome",
-      platformVersion: "42",
-    }).pluginNames
-    const expected = []
-    assert.deepEqual(actual, expected)
-  }
+  const expected = "foo"
+  assert.deepEqual(actual, expected)
 }
 
 {
-  const profiles = platformToProfile({
+  const actual = platformToCompileId({
     compatMap: {
-      a: {
+      foo: {
         chrome: "41",
       },
-      b: {
-        chrome: "42",
+    },
+    defaultId: "bar",
+    platformName: "chrome",
+    platformVersion: "41",
+  })
+  const expected = "bar"
+  assert.deepEqual(actual, expected)
+}
+
+{
+  const actual = platformToCompileId({
+    compatMap: {
+      foo: {
+        chrome: "41",
       },
     },
-    size: 1,
-  })
-
-  const actual = platformToProfile(profiles, {
+    defaultId: "bar",
     platformName: "chrome",
-    platformVersion: "41", // even if chrome 41, we serve a because in same group than chrome 42
-  }).pluginNames
-  const expected = ["a", "b"]
-
-  assert.deepEqual(actual, expected)
-}
-
-{
-  const profiles = compileProfiles({
-    compatMap: {
-      a: {
-        chrome: "60",
-      },
-    },
-    size: 1,
+    platformVersion: "42",
   })
-
-  const actual = platformToProfile(profiles, {
-    platformName: "firefox",
-    platformVersion: "70",
-  }).pluginNames
-  const expected = ["a"]
-  assert.deepEqual(actual, expected)
-}
-
-{
-  const profiles = compileProfiles({
-    compatMap: {
-      a: {},
-    },
-    size: 1,
-  })
-
-  const actual = platformToProfile(profiles, {
-    platformName: "chrome",
-    platformVersion: "50",
-  }).pluginNames
-  const expected = ["a"]
-  assert.deepEqual(actual, expected)
-}
-
-{
-  const profiles = compileProfiles({
-    compatMap: {
-      a: {
-        chrome: "42",
-      },
-    },
-    size: 1,
-  })
-
-  const actual = platformToProfile(profiles, {
-    platformName: "chrome",
-    platformVersion: "41", // even if chrome 41, we serve a because in same group than chrome 42
-  }).pluginNames
-  const expected = ["a"]
-
-  assert.deepEqual(actual, expected)
-}
-
-{
-  const profiles = compileProfiles({
-    compatMap: {
-      a: {
-        chrome: "42",
-      },
-      b: {},
-    },
-    size: 4,
-  })
-
-  const actual = platformToProfile(profiles, {
-    platformName: "chrome",
-    platformVersion: "45",
-  }).pluginNames
-  const expected = ["b"]
-
-  assert.deepEqual(actual, expected)
-}
-
-{
-  const profiles = compileProfiles({
-    platformNames: ["node"],
-  })
-
-  const actual = platformToProfile(profiles, {
-    platformName: "node",
-    platformVersion: "8.0",
-  }).pluginNames
-  const expected = [
-    "proposal-async-generator-functions",
-    "proposal-json-strings",
-    "proposal-object-rest-spread",
-    "proposal-optional-catch-binding",
-    "proposal-unicode-property-regex",
-    "transform-async-to-generator",
-    "transform-dotall-regex",
-    "transform-exponentiation-operator",
-  ]
+  const expected = "bar"
   assert.deepEqual(actual, expected)
 }
 

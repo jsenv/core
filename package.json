@@ -25,7 +25,7 @@
 		"@dmail/project-structure": "github:dmail/project-structure",
 		"@dmail/project-structure-compile-babel": "github:dmail/project-structure-compile-babel",
 		"@dmail/signal": "9.2.0",
-		"@dmail/uneval": "4.1.0",
+		"@dmail/uneval": "4.0.0",
 		"cuid": "2.1.1",
 		"eventsource": "1.0.7",
 		"istanbul": "0.4.5",
@@ -37,9 +37,9 @@
 		"node-forge": "0.7.1",
 		"rollup": "0.66.2",
 		"rollup-plugin-babel": "4.0.3",
+		"rollup-plugin-node-resolve": "3.4.0",
 		"rollup-plugin-replace": "2.0.0",
-		"source-map": "0.5.6",
-		"ua-parser-js": "0.7.18"
+		"source-map": "0.5.6"
 	},
 	"devDependencies": {
 		"@dmail/test": "6.0.0",

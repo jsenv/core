@@ -32,8 +32,8 @@ const plugins = pluginMapToPluginsForPlatform(pluginMap, "node", "8.0")
 
 compileFileStructure({
   root: path.resolve(__dirname, "../"),
+  into: "dist",
   config: "structure.config.js",
   predicate: ({ compile }) => compile,
-  into: "dist",
   plugins,
 })

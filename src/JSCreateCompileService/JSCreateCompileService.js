@@ -5,21 +5,21 @@ import { locate } from "./locate.js"
 
 export const jsCreateCompileService = ({
   // compileFile options
-  root,
-  into,
+  localRoot,
+  compileInto,
   // compileFileToService options
-  compileIdToCompileParams,
+  compileParamMap,
   cacheIgnore,
   cacheTrackHit,
   assetCacheIgnore,
   assetCacheStrategy,
 }) => {
-  const compileFile = compileToCompileFile(compile, { root, into, locate })
+  const compileFile = compileToCompileFile(compile, { localRoot, compileInto, locate })
 
   const service = compileFileToService(compileFile, {
-    root,
-    into,
-    compileIdToCompileParams,
+    localRoot,
+    compileInto,
+    compileParamMap,
     cacheIgnore,
     cacheTrackHit,
     assetCacheIgnore,

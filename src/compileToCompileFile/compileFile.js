@@ -1,91 +1,101 @@
 import { createETag, isFileNotFoundError } from "./helpers.js"
-import { readFile } from "./readFile.js"
+import { readFile } from "../fileHelper.js"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
 import { getMetaLocation, getOutputLocation, getAssetLocation, getOutputName } from "./locaters.js"
 import { lockForRessource } from "./ressourceRegistry.js"
 import { objectMapValue } from "../objectHelper.js"
 
-const getSourceCacheReport = ({ root, into, compileId, file, inputLocation, remoteEtag, eTag }) => {
-  return readFile({ location: inputLocation }).then(({ content }) => {
-    const inputETag = createETag(content)
+const getSourceCacheReport = ({
+  localRoot,
+  compileInto,
+  compileId,
+  file,
+  inputLocation,
+  remoteEtag,
+  eTag,
+}) => {
+  return readFile(inputLocation).then((input) => {
+    const inputETag = createETag(input)
 
     if (remoteEtag) {
       if (remoteEtag !== inputETag) {
-        return { status: `remote eTag outdated` }
+        return { status: `remote eTag outdated`, input, inputETag }
       }
-      return { status: "valid" }
+      return { status: "valid", input, inputETag }
     }
 
     if (inputETag !== eTag) {
-      return { status: `local eTag outdated` }
+      return { status: `local eTag outdated`, input, inputETag }
     }
 
     const outputLocation = getOutputLocation({
-      root,
-      into,
+      localRoot,
+      compileInto,
       compileId,
       file,
     })
 
-    return readFile({
-      location: outputLocation,
-      errorHandler: isFileNotFoundError,
-    })
-      .then(({ content, error }) => {
-        if (error) {
-          return { status: `cache not found at ${outputLocation}` }
+    return readFile(outputLocation).then(
+      (output) => {
+        return { status: "valid", input, inputETag, output }
+      },
+      (error) => {
+        if (isFileNotFoundError(error)) {
+          return { status: `cache not found at ${outputLocation}`, input, inputETag }
         }
-        return { status: "valid", output: content }
-      })
-      .then(({ status, output }) => {
-        return {
-          input: content,
-          inputETag,
-          status,
-          output,
-        }
-      })
+        return Promise.reject(error)
+      },
+    )
   })
 }
 
-const getAssetCacheReport = ({ root, into, compileId, file, asset, eTag }) => {
+const getAssetCacheReport = ({ localRoot, compileInto, compileId, file, asset, eTag }) => {
   const assetLocation = getAssetLocation({
-    root,
-    into,
+    localRoot,
+    compileInto,
     compileId,
     file,
     asset,
   })
 
-  return readFile({
-    location: assetLocation,
-    errorHandler: isFileNotFoundError,
-  }).then(({ content, error }) => {
-    if (error) {
-      return {
-        status: `asset not found at ${assetLocation}`,
+  return readFile(assetLocation).then(
+    (content) => {
+      const actual = createETag(content)
+      if (actual !== eTag) {
+        return {
+          status: `eTag mismatch on ${asset} for file ${file}`,
+          content,
+        }
       }
-    }
-
-    const actual = createETag(content)
-    if (actual !== eTag) {
       return {
-        status: `eTag mismatch on ${asset} for file ${file}`,
+        status: "valid",
         content,
       }
-    }
-    return {
-      status: "valid",
-      content,
-    }
-  })
+    },
+    (error) => {
+      if (isFileNotFoundError(error)) {
+        return {
+          status: `asset not found at ${assetLocation}`,
+        }
+      }
+      return Promise.reject(error)
+    },
+  )
 }
 
-const getFileCacheReport = ({ root, into, compileId, file, inputLocation, remoteETag, meta }) => {
+const getFileCacheReport = ({
+  localRoot,
+  compileInto,
+  compileId,
+  file,
+  inputLocation,
+  remoteETag,
+  meta,
+}) => {
   return Promise.all([
     getSourceCacheReport({
-      root,
-      into,
+      localRoot,
+      compileInto,
       compileId,
       file,
       inputLocation,
@@ -94,8 +104,8 @@ const getFileCacheReport = ({ root, into, compileId, file, inputLocation, remote
     }),
     ...Object.keys(meta.assetEtagMap).map((asset) => {
       return getAssetCacheReport({
-        root,
-        into,
+        localRoot,
+        compileInto,
         compileId,
         file,
         asset,
@@ -134,60 +144,61 @@ const createCacheCorruptionError = (message) => {
   return error
 }
 
-const getFileMeta = ({ root, into, compileId, file, locate }) => {
+const getFileMeta = ({ localRoot, compileInto, compileId, file, locate }) => {
   const metaLocation = getMetaLocation({
-    root,
-    into,
+    localRoot,
+    compileInto,
     compileId,
     file,
   })
 
   return Promise.all([
-    locate(file, root),
-    readFile({
-      location: metaLocation,
-      errorHandler: isFileNotFoundError,
-    }).then(({ content, error }) => {
-      if (error) {
-        // means meta file not found
-        return null
-      }
-      const meta = JSON.parse(content)
-      if (meta.file !== file) {
-        throw createCacheCorruptionError(
-          `${metaLocation} corrupted: file should be ${file}, got ${meta.file}`,
-        )
-      }
-      return meta
-    }),
-  ])
-    .then(([inputLocation, meta]) => {
+    locate(file, localRoot),
+    readFile(metaLocation).then(
+      (content) => {
+        const meta = JSON.parse(content)
+        if (meta.file !== file) {
+          throw createCacheCorruptionError(
+            `${metaLocation} corrupted: file should be ${file}, got ${meta.file}`,
+          )
+        }
+        return meta
+      },
+      (error) => {
+        if (isFileNotFoundError(error)) {
+          // means meta file not found
+          return null
+        }
+        return Promise.reject(error)
+      },
+    ),
+  ]).then(([inputLocation, meta]) => {
+    // here, if readFile returns ENOENT we could/should check is there is something in cache for that file
+    // and take that chance to remove the cached version of that file
+    // but it's not supposed to happen
+    return readFile(inputLocation).then((input) => {
       return {
         inputLocation,
         meta,
+        input,
       }
     })
-    .then(({ inputLocation, meta }) => {
-      // here, if readFile returns ENOENT we could/should check is there is something in cache for that file
-      // and take that chance to remove the cached version of that file
-      // but it's not supposed to happen
-      return readFile({
-        location: inputLocation,
-      }).then(({ content }) => {
-        return {
-          inputLocation,
-          meta,
-          input: content,
-        }
-      })
-    })
+  })
 }
 
-const getFileReport = ({ compile, root, into, compileId, file, locate, remoteETag }) => {
+const getFileReport = ({
+  compile,
+  localRoot,
+  compileInto,
+  compileId,
+  file,
+  locate,
+  remoteETag,
+}) => {
   return getFileMeta({
     compile,
-    root,
-    into,
+    localRoot,
+    compileInto,
     compileId,
     file,
     locate,
@@ -202,8 +213,8 @@ const getFileReport = ({ compile, root, into, compileId, file, locate, remoteETa
     }
 
     return getFileCacheReport({
-      root,
-      into,
+      localRoot,
+      compileInto,
       compileId,
       file,
       inputLocation,
@@ -224,8 +235,8 @@ const getFileReport = ({ compile, root, into, compileId, file, locate, remoteETa
 }
 
 const updateMeta = ({
-  root,
-  into,
+  localRoot,
+  compileInto,
   compileId,
   file,
   inputLocation,
@@ -244,8 +255,8 @@ const updateMeta = ({
 
   if (isNew || isUpdated) {
     const mainLocation = getOutputLocation({
-      root,
-      into,
+      localRoot,
+      compileInto,
       compileId,
       file,
     })
@@ -254,8 +265,8 @@ const updateMeta = ({
       fileWriteFromString(mainLocation, output),
       ...Object.keys(assetMap).map((asset) => {
         const assetLocation = getAssetLocation({
-          root,
-          into,
+          localRoot,
+          compileInto,
           compileId,
           file,
           asset,
@@ -298,8 +309,8 @@ const updateMeta = ({
     }
 
     const metaLocation = getMetaLocation({
-      root,
-      into,
+      localRoot,
+      compileInto,
       compileId,
       file,
     })
@@ -312,8 +323,8 @@ const updateMeta = ({
 
 export const compileFile = ({
   compile,
-  root,
-  into,
+  localRoot,
+  compileInto,
   compileId,
   compileParamMap,
   locate,
@@ -324,8 +335,8 @@ export const compileFile = ({
 }) => {
   const fileLock = lockForRessource(
     getMetaLocation({
-      root,
-      into,
+      localRoot,
+      compileInto,
       compileId,
       file,
     }),
@@ -334,8 +345,8 @@ export const compileFile = ({
   return fileLock.chain(() => {
     return getFileReport({
       compile,
-      root,
-      into,
+      localRoot,
+      compileInto,
       compileId,
       file,
       locate,
@@ -343,7 +354,7 @@ export const compileFile = ({
     })
       .then(({ inputLocation, status, meta, input, inputETag, output, assetMap }) => {
         const outputName = getOutputName({
-          into,
+          compileInto,
           compileId,
           file,
         })
@@ -369,7 +380,7 @@ export const compileFile = ({
 
         return Promise.resolve(
           compile({
-            root,
+            localRoot,
             inputName: file,
             inputSource: input,
             outputName,
@@ -402,8 +413,8 @@ export const compileFile = ({
           assetMap,
         }) => {
           return updateMeta({
-            root,
-            into,
+            localRoot,
+            compileInto,
             compileId,
             file,
             inputLocation,

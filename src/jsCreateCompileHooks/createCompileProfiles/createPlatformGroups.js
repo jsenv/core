@@ -1,7 +1,7 @@
 import {
   versionHighest,
   versionCompare,
-  platformToPluginNames,
+  pluginMapToPluginsForPlatform,
 } from "@dmail/project-structure-compile-babel"
 
 export const createPlatformGroups = (compatMap, platformName) => {
@@ -15,10 +15,22 @@ export const createPlatformGroups = (compatMap, platformName) => {
   const platformGroups = []
 
   platformVersions.forEach((platformVersion) => {
-    const pluginNames = platformToPluginNames(compatMap, platformName, platformVersion).sort()
-    const existingGroup = platformGroups.find((platformGroup) => {
-      return platformGroup.pluginNames.join("") === pluginNames.join("")
+    const pluginMap = {}
+    Object.keys(compatMap).forEach((pluginName) => {
+      pluginMap[pluginName] = pluginName
     })
+
+    const platformPluginNames = pluginMapToPluginsForPlatform(
+      pluginMap,
+      platformName,
+      platformVersion,
+      compatMap,
+    ).sort()
+
+    const existingGroup = platformGroups.find((platformGroup) => {
+      return platformGroup.pluginNames.join("") === platformPluginNames.join("")
+    })
+
     if (existingGroup) {
       existingGroup.compatMap[platformName] = versionHighest(
         existingGroup.compatMap[platformName],
@@ -26,7 +38,7 @@ export const createPlatformGroups = (compatMap, platformName) => {
       )
     } else {
       platformGroups.push({
-        pluginNames,
+        pluginNames: platformPluginNames,
         compatMap: {
           [platformName]: platformVersion,
         },

@@ -3,7 +3,13 @@ import { open as serverCompileOpen } from "../server-compile/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { guard } from "../guard.js"
 import { uneval } from "@dmail/uneval"
-import { getBrowserSystemRemoteURL, getBrowserPlatformRemoteURL } from "./compile.js"
+import {
+  getBrowserSystemLocalURL,
+  getBrowserPlatformLocalURL,
+  compilePlatformAndSystem,
+  getBrowserSystemRemoteURL,
+  getBrowserPlatformRemoteURL,
+} from "./compilePlatformAndSystem.js"
 
 const getIndexPageHTML = ({ localRoot }) => {
   const files = ["src/__test__/file.js"]
@@ -71,97 +77,102 @@ export const open = ({
   sourceCacheStrategy,
   sourceCacheIgnore,
 }) => {
-  return serverCompileOpen({
-    localRoot,
-    compileInto,
-    protocol, // reuse browser protocol
-    compileService,
-    watch,
-    watchPredicate,
-    sourceCacheStrategy,
-    sourceCacheIgnore,
-  }).then((server) => {
-    const remoteRoot = server.origin
-    console.log(`compiling ${localRoot} at ${remoteRoot}`)
+  return compilePlatformAndSystem({
+    browserSystemLocalURL: getBrowserSystemLocalURL({ localRoot, compileInto }),
+    browserPlatformLocalURL: getBrowserPlatformLocalURL({ localRoot, compileInto }),
+  }).then(() => {
+    return serverCompileOpen({
+      localRoot,
+      compileInto,
+      protocol, // reuse browser protocol
+      compileService,
+      watch,
+      watchPredicate,
+      sourceCacheStrategy,
+      sourceCacheIgnore,
+    }).then((server) => {
+      const remoteRoot = server.origin
+      console.log(`compiling ${localRoot} at ${remoteRoot}`)
 
-    const indexRoute = guard(
-      createRequestPredicate({
-        ressource: "",
-        method: "GET",
-      }),
-      () => {
-        return Promise.resolve()
-          .then(() =>
-            getIndexPageHTML({
-              localRoot,
-            }),
-          )
-          .then((html) => {
-            return {
-              status: 200,
-              headers: {
-                "cache-control": "no-store",
-                "content-type": "text/html",
-                "content-length": Buffer.byteLength(html),
-              },
-              body: html,
-            }
-          })
-      },
-    )
-
-    const otherRoute = guard(
-      createRequestPredicate({
-        ressource: "*",
-        method: "GET",
-      }),
-      ({ ressource }) => {
-        return Promise.resolve()
-          .then(() => {
-            return createHTMLForBrowser({
-              scriptRemoteList: [
-                { url: getBrowserSystemRemoteURL({ remoteRoot, compileInto }) },
-                { url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) },
-              ],
-              scriptInlineList: [
-                {
-                  source: getClientScript({
-                    localRoot,
-                    remoteRoot,
-                    compileInto,
-                    compatMap,
-                    compatMapDefaultId,
-                    hotreload: watch,
-                    hotreloadSSERoot: remoteRoot,
-                    file: ressource,
-                  }),
+      const indexRoute = guard(
+        createRequestPredicate({
+          ressource: "",
+          method: "GET",
+        }),
+        () => {
+          return Promise.resolve()
+            .then(() =>
+              getIndexPageHTML({
+                localRoot,
+              }),
+            )
+            .then((html) => {
+              return {
+                status: 200,
+                headers: {
+                  "cache-control": "no-store",
+                  "content-type": "text/html",
+                  "content-length": Buffer.byteLength(html),
                 },
-              ],
+                body: html,
+              }
             })
-          })
-          .then((html) => {
-            return {
-              status: 200,
-              headers: {
-                "cache-control": "no-store",
-                "content-type": "text/html",
-                "content-length": Buffer.byteLength(html),
-              },
-              body: html,
-            }
-          })
-      },
-    )
+        },
+      )
 
-    return serverOpen({
-      protocol,
-      ip,
-      port,
-      forcePort,
-      requestToResponse: serviceCompose(indexRoute, otherRoute),
-    }).then((runServer) => {
-      console.log(`executing ${remoteRoot} at ${runServer.origin}`)
-      return runServer
+      const otherRoute = guard(
+        createRequestPredicate({
+          ressource: "*",
+          method: "GET",
+        }),
+        ({ ressource }) => {
+          return Promise.resolve()
+            .then(() => {
+              return createHTMLForBrowser({
+                scriptRemoteList: [
+                  { url: getBrowserSystemRemoteURL({ remoteRoot, compileInto }) },
+                  { url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) },
+                ],
+                scriptInlineList: [
+                  {
+                    source: getClientScript({
+                      localRoot,
+                      remoteRoot,
+                      compileInto,
+                      compatMap,
+                      compatMapDefaultId,
+                      hotreload: watch,
+                      hotreloadSSERoot: remoteRoot,
+                      file: ressource,
+                    }),
+                  },
+                ],
+              })
+            })
+            .then((html) => {
+              return {
+                status: 200,
+                headers: {
+                  "cache-control": "no-store",
+                  "content-type": "text/html",
+                  "content-length": Buffer.byteLength(html),
+                },
+                body: html,
+              }
+            })
+        },
+      )
+
+      return serverOpen({
+        protocol,
+        ip,
+        port,
+        forcePort,
+        requestToResponse: serviceCompose(indexRoute, otherRoute),
+      }).then((runServer) => {
+        console.log(`executing ${localRoot} at ${runServer.origin}`)
+        return runServer
+      })
     })
   })
 }

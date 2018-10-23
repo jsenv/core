@@ -1,5 +1,5 @@
 // https://github.com/babel/babel/blob/master/packages/babel-preset-env/data/plugins.json
-import { compatMapBabel, compatMapWithOnly } from "@dmail/project-structure-compile-babel"
+import { compatMap as defaultCompatMap } from "@dmail/project-structure-compile-babel"
 
 import { createPlatformGroups } from "./createPlatformGroups.js"
 import { composePlatformGroups } from "./composePlatformGroups.js"
@@ -28,16 +28,19 @@ const sortGroupByComplexity = (groups) => {
 
 export const compileProfiles = (
   {
-    stats = statMapGeneric,
-    compatMap = compatMapBabel,
-    size = 4,
+    pluginNames = [],
     platformNames = PLATFORM_NAMES,
-    pluginNames = Object.keys(compatMap),
+    size = 4,
+    stats = statMapGeneric,
+    compatMap = defaultCompatMap,
   } = {},
 ) => {
-  compatMap = compatMapWithOnly(compatMap, pluginNames)
+  const compatMapFiltered = {}
+  pluginNames.forEach((pluginName) => {
+    compatMapFiltered[pluginName] = pluginName in compatMap ? compatMap[pluginName] : {}
+  })
 
-  const groupsForPlatforms = createGroupsForPlatforms(compatMap, platformNames)
+  const groupsForPlatforms = createGroupsForPlatforms(compatMapFiltered, platformNames)
   const compatMapToScore = createCompatMapToScore(stats)
   const groupsForPlatformsSubset = splitGroups(
     groupsForPlatforms,
@@ -47,7 +50,7 @@ export const compileProfiles = (
   const sortedGroups = sortGroupByComplexity(groupsForPlatformsSubset)
 
   const groupWithEverything = {
-    pluginNames: Object.keys(compatMap),
+    pluginNames: Object.keys(compatMapFiltered),
     compatMap: {},
   }
 

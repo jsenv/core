@@ -56,7 +56,7 @@ const inlineScriptToHTML = ({ source }) => {
 </script>`
 }
 
-const remoteScriptToHTML = ({ url, async = true }) => {
+const remoteScriptToHTML = ({ url, async = false }) => {
   return `<script src="${url}" ${async ? "async " : ""}></script>`
 }
 
@@ -72,8 +72,8 @@ export const createHTMLForBrowser = (
 
 <body>
   <main></main>
-  ${scriptRemoteList.map((script) => remoteScriptToHTML(script)).join("\n")}
-  ${scriptInlineList.map((script) => prefixLineWith(inlineScriptToHTML(script), "  ")).join("\n")}
+  ${scriptRemoteList.map((script) => remoteScriptToHTML(script)).join("\n  ")}
+  ${scriptInlineList.map((script) => prefixLineWith(inlineScriptToHTML(script), "  ")).join("\n  ")}
 </body>
 
 </html>`

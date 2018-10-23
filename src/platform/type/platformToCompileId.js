@@ -1,4 +1,4 @@
-import { versionIsBelowOrEqual } from "@dmail/project-structure-compile-babel"
+import { versionIsBelowOrEqual } from "@dmail/project-structure-compile-babel/src/versionCompare.js"
 
 const platformMatchCompatMap = ({ platformName, platformVersion, compatMap }) => {
   if (platformName in compatMap === false) {
@@ -12,7 +12,7 @@ export const platformToCompileId = ({ compatMap, defaultId, platformName, platfo
   const compileId =
     Object.keys(compatMap).find((id) => {
       const platformCompatMap = compatMap[id]
-      return platformMatchCompatMap({ platformCompatMap, platformName, platformVersion })
+      return platformMatchCompatMap({ platformName, platformVersion, compatMap: platformCompatMap })
     }) || defaultId
 
   return compileId

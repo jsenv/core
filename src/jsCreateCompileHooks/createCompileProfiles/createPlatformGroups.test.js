@@ -1,4 +1,4 @@
-import { compatMapBabel } from "@dmail/project-structure-compile-babel"
+import { compatMap } from "@dmail/project-structure-compile-babel"
 import { createPlatformGroups } from "./createPlatformGroups.js"
 import assert from "assert"
 
@@ -39,7 +39,7 @@ import assert from "assert"
 }
 
 {
-  const actual = createPlatformGroups(compatMapBabel, "chrome")
+  const actual = createPlatformGroups(compatMap, "chrome")
   assert(actual.length > 0)
 }
 

@@ -1,4 +1,8 @@
 export const open = (url, callback) => {
+  if (typeof window.EventSource !== "function") {
+    return
+  }
+
   const eventSource = new window.EventSource(url, { withCredentials: true })
   eventSource.onerror = () => {
     // we could try to reconnect several times before giving up

@@ -24,8 +24,8 @@ export const open = ({
   preventCors = false,
 
   // generic compile options
-  LOCAL_ROOT,
-  COMPILE_INTO,
+  localRoot,
+  compileInto,
   sourceCacheStrategy = "etag",
   sourceCacheIgnore = false,
 
@@ -44,9 +44,13 @@ export const open = ({
     })
 
     const watchService = (request) => {
-      const { file } = ressourceToCompileIdAndFile(request.ressource, COMPILE_INTO)
+      const { file } = ressourceToCompileIdAndFile(request.ressource, compileInto)
+      if (!file) {
+        return null
+      }
+
       // when I ask for a compiled file, watch the corresponding file on filesystem
-      const fileLocation = `${LOCAL_ROOT}/${file}`
+      const fileLocation = `${localRoot}/${file}`
       if (watchedFiles.has(fileLocation) === false && watchPredicate(file)) {
         const fileWatcher = watchFile(fileLocation, () => {
           watchSignal.emit(file)
@@ -84,25 +88,23 @@ export const open = ({
     return watchService
   }
 
-  if (watch) {
-    compileService = serviceCompose(createWatchService(), compileService)
-  }
-
-  const wrappedCompileService = (request) => {
-    const { file } = ressourceToCompileIdAndFile(request.ressource, COMPILE_INTO)
-    if (!file) {
-      return null
-    }
-    return compileService(request)
-  }
-
-  const sourceService = createRequestToFileResponse({
-    root: LOCAL_ROOT,
-    cacheIgnore: sourceCacheIgnore,
-    cacheStrategy: sourceCacheStrategy,
-  })
-
-  const service = serviceCompose(wrappedCompileService, sourceService)
+  const service = serviceCompose(
+    ...[
+      ...(watch ? [createWatchService()] : []),
+      (request) => {
+        const { file } = ressourceToCompileIdAndFile(request.ressource, compileInto)
+        if (!file) {
+          return null
+        }
+        return compileService(request)
+      },
+      createRequestToFileResponse({
+        root: localRoot,
+        cacheIgnore: sourceCacheIgnore,
+        cacheStrategy: sourceCacheStrategy,
+      }),
+    ],
+  )
 
   const requestToResponse = (request) => {
     return service(request).then((response) => {
