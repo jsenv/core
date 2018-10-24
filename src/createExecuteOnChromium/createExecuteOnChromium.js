@@ -8,6 +8,7 @@ import {
   getBrowserSystemRemoteURL,
   getBrowserPlatformRemoteURL,
 } from "../compilePlatformAndSystem.js"
+import { promiseToCancellablePromise } from "../cancellable/index.js"
 
 const openIndexRequestInterception = ({ protocol, ip, port, page, body }) => {
   const origin = originAsString({ protocol, ip, port })
@@ -77,16 +78,15 @@ export const createExecuteOnChromium = ({
 
   // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
   const execute = ({ file, instrument = false, setup = () => {}, teardown = () => {} }) => {
-    const closed = createSignal({ smart: true })
-    const close = closed.emit
+    const cancelled = createSignal({ smart: true })
 
     const promise = openBrowser().then((browser) => {
-      closed.listen(() => {
+      cancelled.listen(() => {
         browser.close()
       })
 
       return browser.newPage().then((page) => {
-        closed.listen(() => {
+        cancelled.listen(() => {
           // page.close() // commented until https://github.com/GoogleChrome/puppeteer/issues/2269
         })
 
@@ -132,7 +132,7 @@ export const createExecuteOnChromium = ({
               page,
               body: html,
             }).then((indexRequestHandler) => {
-              closed.listen(() => {
+              cancelled.listen(() => {
                 indexRequestHandler.close()
               })
 
@@ -160,8 +160,7 @@ export const createExecuteOnChromium = ({
       })
     })
 
-    promise.cancel = close
-    return promise
+    return promiseToCancellablePromise(promise, cancelled)
   }
 
   return { execute }

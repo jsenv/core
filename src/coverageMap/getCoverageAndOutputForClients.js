@@ -5,6 +5,7 @@ import { coverageMapCompose } from "./coverageMapCompose.js"
 import { open as serverCompileOpen } from "../server-compile/index.js"
 import { promiseTry, promiseSequence } from "../promiseHelper.js"
 import { createSignal } from "@dmail/signal"
+import { promiseToCancellablePromise } from "../cancellable/index.js"
 
 export const getCoverageAndOutputForClients = ({
   root,
@@ -14,7 +15,6 @@ export const getCoverageAndOutputForClients = ({
   clients = [],
 }) => {
   const cancelled = createSignal({ smart: true })
-  const cancel = cancelled.emit
 
   const promise = serverCompileOpen({
     root,
@@ -89,7 +89,6 @@ export const getCoverageAndOutputForClients = ({
         })
       })
   })
-  promise.cancel = cancel
 
-  return promise
+  return promiseToCancellablePromise(promise, cancelled)
 }

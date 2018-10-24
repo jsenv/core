@@ -2,6 +2,8 @@ import { createSignal } from "@dmail/signal"
 import { promiseConcurrent } from "../promiseHelper.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 import { teardownForOutputAndCoverage } from "../platformTeardown.js"
+import { promiseToCancellablePromise } from "../cancellable/index.js"
+
 // import { objectMapKey } from "./objectHelper.js"
 
 // const getRelativenameFromPath = (path, root) => {
@@ -18,7 +20,6 @@ export const getCoverageMapAndOutputMapForFiles = ({
   afterAll = () => {},
 }) => {
   const cancelled = createSignal({ smart: true })
-  const cancel = cancelled.emit
 
   const executeTestFile = (file) => {
     beforeEach({ file })
@@ -57,7 +58,6 @@ export const getCoverageMapAndOutputMapForFiles = ({
       return { outputMap, coverageMap }
     },
   )
-  promise.cancel = cancel
 
-  return promise
+  return promiseToCancellablePromise(promise, cancelled)
 }
