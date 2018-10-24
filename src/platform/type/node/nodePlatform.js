@@ -1,7 +1,12 @@
 import { versionIsBelowOrEqual } from "@dmail/project-structure-compile-babel"
 import { open } from "./hotreload.js"
-import { install } from "./system.js"
 import { createImportTracker } from "../createImportTracker.js"
+import https from "https"
+import fetch from "node-fetch"
+import EventSource from "eventsource"
+import { createNodeSystem } from "@dmail/module-loader"
+import { valueInstall } from "./valueInstall.js"
+import { createLocaters } from "../createLocaters.js"
 
 export const nodeVersionToGroupId = (version, groupMap) => {
   return Object.keys(groupMap).find((id) => {
@@ -23,30 +28,42 @@ export const createNodePlatform = ({
   hotreloadSSERoot,
   hotreloadCallback,
 }) => {
+  const cleanupCallbacks = []
+  const clean = () => {
+    cleanupCallbacks.forEach((callback) => {
+      callback()
+    })
+    cleanupCallbacks.length = 0
+  }
+  const onceClean = (callback) => {
+    cleanupCallbacks.push(callback)
+  }
+
   const compileId = nodeVersionToGroupId(process.version.slice(1), groupMap) || "otherwise"
 
-  const localCompileRoot = `${localRoot}/${compileInto}/${compileId}`
-
-  const remoteCompileRoot = `${remoteRoot}/${compileInto}/${compileId}`
-
-  const fileToRemoteCompiledFile = (file) => `${remoteCompileRoot}/${file}`
-
-  // const fileToRemoteSourceFile = (file) => `${remoteRoot}/${file}`
-
-  const isRemoteCompiledFile = (string) => string.startsWith(remoteCompileRoot)
-
-  const remoteCompiledFileToFile = (remoteCompiledFile) => {
-    return remoteCompiledFile.slice(remoteCompileRoot.length + 1)
-  }
-
-  const remoteCompiledFileToLocalCompiledFile = (remoteCompiledFile) => {
-    const file = remoteCompiledFileToFile(remoteCompiledFile)
-    return `${localCompileRoot}/${file}`
-  }
+  const {
+    fileToRemoteCompiledFile,
+    fileToRemoteInstrumentedFile,
+    hrefToLocalFile,
+  } = createLocaters({
+    localRoot,
+    remoteRoot,
+    compileInto,
+    compileId,
+  })
 
   const { markFileAsImported, isFileImported } = createImportTracker()
 
-  install({ isRemoteCompiledFile, remoteCompiledFileToLocalCompiledFile })
+  const nodeSystem = createNodeSystem({
+    urlToFilename: (url) => {
+      return hrefToLocalFile(url)
+    },
+  })
+
+  onceClean(valueInstall(https.globalAgent.options, "rejectUnauthorized", false))
+  onceClean(valueInstall(global, "fetch", fetch))
+  onceClean(valueInstall(global, "System", nodeSystem))
+  onceClean(valueInstall(global, "EventSource", EventSource))
 
   if (hotreload) {
     // we can be notified from file we don't care about, reload only if needed
@@ -57,27 +74,38 @@ export const createNodePlatform = ({
         return true
       }
 
-      const remoteCompiledFile = file
-      return Boolean(global.System.get(remoteCompiledFile))
+      const remoteCompiledFile = fileToRemoteCompiledFile(file)
+      if (global.System.get(remoteCompiledFile)) {
+        return true
+      }
+
+      const remoteInstrumentedFile = fileToRemoteInstrumentedFile(file)
+      if (global.System.get(remoteInstrumentedFile)) {
+        return true
+      }
+
+      return false
     }
 
-    open(hotreloadSSERoot, (fileChanged) => {
-      if (hotreloadPredicate(fileChanged)) {
-        hotreloadCallback({ file: fileChanged })
-      }
-    })
+    onceClean(
+      open(hotreloadSSERoot, (fileChanged) => {
+        if (hotreloadPredicate(fileChanged)) {
+          hotreloadCallback({ file: fileChanged })
+        }
+      }),
+    )
   }
 
-  const executeFile = (file, setup = () => {}, teardown = () => {}) => {
+  const executeFile = ({ file, instrument = false, setup = () => {}, teardown = () => {} }) => {
     markFileAsImported(file)
 
-    const remoteCompiledFile = fileToRemoteCompiledFile(file)
+    const fileURL = instrument ? fileToRemoteInstrumentedFile(file) : fileToRemoteCompiledFile(file)
 
     return Promise.resolve()
       .then(setup)
-      .then(() => global.System.import(remoteCompiledFile))
+      .then(() => global.System.import(fileURL))
       .then(teardown)
   }
 
-  return { executeFile }
+  return { executeFile, clean }
 }

@@ -1,5 +1,5 @@
-import path from "path"
 import { executeOnNode } from "./executeOnNode.js"
+import path from "path"
 import { createJSCompileServiceForProject } from "../createJSCompileServiceForProject.js"
 
 const localRoot = path.resolve(__dirname, "../../../")

@@ -26,6 +26,7 @@ process.on("message", ({ type, data }) => {
       hotreload,
       hotreloadSSERoot,
       file,
+      instrument,
       setup,
       teardown,
     } = eval(`(${data})`)
@@ -44,7 +45,14 @@ process.on("message", ({ type, data }) => {
         sendToParent("restart", data)
       },
     })
-    executeFile(file, setup, teardown).then(
+
+    if (hotreload === false) {
+      process.on("SIGINT", () => {
+        process.exit(0)
+      })
+    }
+
+    executeFile({ file, instrument, setup, teardown }).then(
       (value) => {
         sendToParent("execute-result", {
           code: 0,

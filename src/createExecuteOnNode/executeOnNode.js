@@ -15,6 +15,9 @@ export const executeOnNode = ({
   sourceCacheIgnore,
 
   file,
+  instrument = false,
+  setup,
+  teardown,
   verbose,
 }) => {
   return compileServerOpen({
@@ -38,11 +41,17 @@ export const executeOnNode = ({
       hotreloadSSERoot: server.origin,
     })
 
-    return execute({
+    const execution = execute({
       file,
+      instrument,
+      setup,
+      teardown,
       verbose,
-    }).then((value) => {
+    })
+
+    return execution.then((value) => {
       if (watch === false) {
+        execution.cancel()
         server.close()
       }
       return value

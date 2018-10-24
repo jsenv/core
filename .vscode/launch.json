@@ -32,6 +32,7 @@
       "sourceMapPathOverrides": {
         "/*": "${workspaceRoot}/*"
       },
+      "smartStep": true,
       "skipFiles": [
         // skip node modules
         "node_modules/**",
@@ -42,8 +43,8 @@
         "src/fileHelper.js",
         "src/jsCreateCompileService/compile/transpileWithBabel.js",
         "src/createRequestToFileResponse/convertFileSystemErrorToResponseProperties.js"
-      ]
-      // "trace": true
+      ],
+      "trace": false
     },
     {
       "name": "Run with chromium",

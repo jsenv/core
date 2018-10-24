@@ -3,6 +3,7 @@ import { createImportTracker } from "../createImportTracker.js"
 import { detect } from "./browserDetect/index.js"
 import { open } from "./hotreload.js"
 import { stringToStringWithLink, link } from "./stringToStringWithLink.js"
+import { createLocaters } from "../createLocaters.js"
 
 const parseErrorToMeta = (error, { fileToRemoteSourceFile }) => {
   const parseError = JSON.parse(error.body)
@@ -22,20 +23,20 @@ const errorToMeta = (error) => {
   }
 }
 
-const rejectionValueToMeta = (error, { fileToRemoteSourceFile, remoteCompiledFileToFile }) => {
+const rejectionValueToMeta = (error, { fileToRemoteSourceFile, hrefToFile }) => {
   if (error && error.status === 500 && error.reason === "parse error") {
     return parseErrorToMeta(error, { fileToRemoteSourceFile })
   }
 
   if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-    const file = remoteCompiledFileToFile(error.url)
+    const file = hrefToFile(error.url)
     const originalError = error.error
     return {
       file,
       // eslint-disable-next-line no-use-before-define
       data: rejectionValueToMeta(originalError, {
         fileToRemoteSourceFile,
-        remoteCompiledFileToFile,
+        hrefToFile,
       }),
     }
   }
@@ -73,16 +74,16 @@ export const createBrowserPlatform = ({
 
   const compileId = browserToGroupId(browser, groupMap) || "otherwise"
 
-  const compileRoot = `${remoteRoot}/${compileInto}/${compileId}`
-
-  const fileToRemoteCompiledFile = (file) => `${compileRoot}/${file}`
-
-  const fileToRemoteSourceFile = (file) => `${remoteRoot}/${file}`
-
-  // const isRemoteCompiledFile = (string) => string.startsWith(compileRoot)
-
-  const remoteCompiledFileToFile = (remoteCompiledFile) =>
-    remoteCompiledFile.slice(compileRoot.length)
+  const {
+    fileToRemoteCompiledFile,
+    fileToRemoteInstrumentedFile,
+    fileToRemoteSourceFile,
+    hrefToFile,
+  } = createLocaters({
+    remoteRoot,
+    compileInto,
+    compileId,
+  })
 
   const { markFileAsImported, isFileImported } = createImportTracker()
 
@@ -105,21 +106,30 @@ export const createBrowserPlatform = ({
     })
   }
 
-  const executeFile = (file) => {
+  const executeFile = ({ file, instrument, setup = () => {}, teardown = () => {} }) => {
     markFileAsImported(file)
 
-    const remoteCompiledFile = fileToRemoteCompiledFile(file)
+    const remoteCompiledFile = instrument
+      ? fileToRemoteCompiledFile(file)
+      : fileToRemoteInstrumentedFile(file)
 
-    return window.System.import(remoteCompiledFile).catch((error) => {
-      const meta = rejectionValueToMeta(error, { fileToRemoteSourceFile, remoteCompiledFileToFile })
+    return Promise.resolve()
+      .then(setup)
+      .then(() => window.System.import(remoteCompiledFile))
+      .catch((error) => {
+        const meta = rejectionValueToMeta(error, {
+          fileToRemoteSourceFile,
+          hrefToFile,
+        })
 
-      document.body.innerHTML = `<h1><a href="${fileToRemoteSourceFile(
-        file,
-      )}">${file}</a> import rejected</h1>
-	<pre style="border: 1px solid black">${meta.data}</pre>`
+        document.body.innerHTML = `<h1><a href="${fileToRemoteSourceFile(
+          file,
+        )}">${file}</a> import rejected</h1>
+		<pre style="border: 1px solid black">${meta.data}</pre>`
 
-      return Promise.reject(error)
-    })
+        return Promise.reject(error)
+      })
+      .then(teardown)
   }
 
   return { executeFile }

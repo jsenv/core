@@ -2,17 +2,26 @@ import { programVisitor } from "istanbul-lib-instrument"
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 
-export const createInstrumentPlugin = ({ useInlineSourceMaps = false } = {}) => {
+export const createInstrumentPlugin = (
+  { useInlineSourceMaps = false, predicate = () => false } = {},
+) => {
   return ({ types }) => {
     return {
       visitor: {
         Program: {
           enter(path) {
+            const { file } = this
+            const { opts } = file
+            const filename = opts.filenameRelative || opts.filename
+
+            if (!predicate(filename)) {
+              return
+            }
+
             this.__dv__ = null
 
             let inputSourceMap
-            const { file } = this
-            const { opts } = file
+
             if (useInlineSourceMaps) {
               // https://github.com/istanbuljs/babel-plugin-istanbul/commit/a9e15643d249a2985e4387e4308022053b2cd0ad#diff-1fdf421c05c1140f6d71444ea2b27638R65
               inputSourceMap = opts.inputSourceMap || file.inputMap ? file.inputMap.sourcemap : null
@@ -20,7 +29,6 @@ export const createInstrumentPlugin = ({ useInlineSourceMaps = false } = {}) => 
               inputSourceMap = opts.inputSourceMap
             }
 
-            const filename = opts.filenameRelative || opts.filename
             this.__dv__ = programVisitor(types, filename, {
               coverageVariable: "__coverage__",
               inputSourceMap,

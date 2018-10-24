@@ -1,6 +1,11 @@
 import { processTeardown } from "../../../server/index.js"
 
 export const open = (url, callback) => {
+  if (typeof global.EventSource !== "function") {
+    console.warn(`cannot connect to sse at ${url}: global.EventSource is not a function`)
+    return () => {}
+  }
+
   const eventSource = new global.EventSource(url, {
     https: { rejectUnauthorized: false },
   })

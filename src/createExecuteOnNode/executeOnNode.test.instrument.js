@@ -1,25 +1,36 @@
-import path from "path"
-import { openCompileServer } from "../openCompileServer/index.js"
 import { executeOnNode } from "./executeOnNode.js"
+import path from "path"
+import { createJSCompileServiceForProject } from "../createJSCompileServiceForProject.js"
+import { teardownForOutputAndCoverage } from "../platformTeardown.js"
+import assert from "assert"
 
-const root = path.resolve(__dirname, "../../../")
-const into = "build"
-const watch = true
-const watchPredicate = () => true
+const localRoot = path.resolve(__dirname, "../../../")
+const compileInto = "build"
+const watch = false
 const instrument = true
-const instrumentPredicate = () => true
 // const file = "src/__test__/file.js"
 const file = `src/createExecuteOnNode/fixtures/file.js`
 
-executeOnNode({
-  openCompileServer,
-  root,
-  into,
-  file,
-  instrument,
-  instrumentPredicate,
-  watch,
-  watchPredicate,
-  cacheDisabled: true,
-  verbose: true,
-})
+createJSCompileServiceForProject({ localRoot, compileInto })
+  .then(({ compileService, watchPredicate, groupMapFile }) => {
+    return executeOnNode({
+      localRoot,
+      compileInto,
+      compileService,
+      groupMapFile,
+
+      watch,
+      watchPredicate,
+
+      file,
+      instrument,
+      teardown: teardownForOutputAndCoverage,
+      verbose: true,
+    })
+  })
+  .then((result) => {
+    assert.equal(result.output, "foo")
+    assert.equal(file in result.coverage, true)
+
+    console.log("passed")
+  })

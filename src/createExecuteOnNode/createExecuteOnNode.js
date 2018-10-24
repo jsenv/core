@@ -17,10 +17,9 @@ export const createExecuteOnNode = ({
 }) => {
   const execute = ({
     file,
+    instrument = false,
     setup = () => {},
     teardown = () => {},
-    autoClose = false,
-    autoCloseOnError = false,
     verbose = false,
   }) => {
     const log = (...args) => {
@@ -139,27 +138,17 @@ export const createExecuteOnNode = ({
           hotreload,
           hotreloadSSERoot,
           file,
+          instrument,
           setup,
           teardown,
         })
-      }).then(
-        (value) => {
-          if (autoClose) {
-            cancel()
-          }
-          return value
-        },
-        (error) => {
-          const localError = new Error(error.message)
-          Object.assign(localError, error)
-          console.error(localError)
+      }).catch((error) => {
+        const localError = new Error(error.message)
+        Object.assign(localError, error)
+        console.error(localError)
 
-          if (autoCloseOnError) {
-            cancel()
-          }
-          return Promise.reject(localError)
-        },
-      )
+        return Promise.reject(localError)
+      })
       promise.cancel = cancel
 
       return promise

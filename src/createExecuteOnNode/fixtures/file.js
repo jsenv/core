@@ -6,3 +6,5 @@ if (value) {
 } else {
   console.log(false)
 }
+
+export const output = "foo"
