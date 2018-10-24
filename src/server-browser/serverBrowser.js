@@ -65,17 +65,17 @@ const getClientScript = ({
 }
 
 export const open = ({
-  localRoot,
-  compileInto,
-  groupMap,
-  groupMapDefaultId,
-
   protocol = "http",
   ip = "127.0.0.1",
   port = 3000,
   forcePort = true,
 
+  localRoot,
+  compileInto,
   compileService,
+  groupMap,
+  groupMapDefaultId,
+
   watch = false,
   watchPredicate,
   sourceCacheStrategy,

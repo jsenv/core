@@ -10,11 +10,12 @@ createJSCompileServiceForProject({ localRoot, compileInto }).then(
     return serverBrowserOpen({
       localRoot,
       compileInto,
-      watch,
-      watchPredicate,
       compileService,
       groupMap,
       groupMapDefaultId,
+
+      watch,
+      watchPredicate,
     })
   },
 )

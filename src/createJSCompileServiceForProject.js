@@ -5,19 +5,7 @@ import {
   pluginOptionMapToPluginMap,
   fileWriteFromString,
 } from "@dmail/project-structure-compile-babel"
-import fs from "fs"
-
-const readFile = (location) => {
-  return new Promise((resolve, reject) => {
-    fs.readFile(location, (error, buffer) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve(String(buffer))
-      }
-    })
-  })
-}
+import { readFile } from "./fileHelper.js"
 
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -87,30 +75,28 @@ const createPredicateFromStructure = ({ root }) => {
 export const createJSCompileServiceForProject = ({ localRoot, compileInto }) => {
   return createPredicateFromStructure({ root: localRoot }).then(
     ({ instrumentPredicate, watchPredicate }) => {
-      return getGroupMapForProject(`${localRoot}/${compileInto}/compatGroupMap.config.json`).then(
-        (groupMap) => {
-          const compileParamMap = groupMapToCompileParamMap(groupMap, pluginMap)
+      return getGroupMapForProject(`${localRoot}/${compileInto}/groupMap.json`).then((groupMap) => {
+        const compileParamMap = groupMapToCompileParamMap(groupMap, pluginMap)
 
-          const compileService = jsCreateCompileService({
-            localRoot,
-            compileInto,
-            compileParamMap,
-            cacheIgnore: false,
-            cacheTrackHit: true,
-            cacheStrategy: "etag",
-            assetCacheIgnore: false,
-            assetCacheStrategy: "etag",
-            instrumentPredicate,
-          })
+        const compileService = jsCreateCompileService({
+          localRoot,
+          compileInto,
+          compileParamMap,
+          cacheIgnore: false,
+          cacheTrackHit: true,
+          cacheStrategy: "etag",
+          assetCacheIgnore: false,
+          assetCacheStrategy: "etag",
+          instrumentPredicate,
+        })
 
-          return {
-            compileService,
-            watchPredicate,
-            groupMap,
-            groupMapDefaultId,
-          }
-        },
-      )
+        return {
+          compileService,
+          groupMap,
+          groupMapDefaultId,
+          watchPredicate,
+        }
+      })
     },
   )
 }
