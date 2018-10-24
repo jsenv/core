@@ -1,5 +1,5 @@
 import { createCoverageMap } from "istanbul-lib-coverage"
-import { objectComposeValue } from './objectHelper.js'
+import { objectComposeValue } from "../objectHelper.js"
 
 const coverageMapMerge = (...coverageMaps) => {
   // https://github.com/istanbuljs/istanbuljs/blob/5405550c3868712b14fd8bfe0cbd6f2e7ac42279/packages/istanbul-lib-coverage/lib/coverage-map.js#L43

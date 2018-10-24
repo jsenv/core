@@ -1,5 +1,5 @@
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
-import { openIndexServer } from "../openIndexServer/openIndexServer.js"
+import { open as serverIndexOpen } from "../server-index/serverIndex.js"
 import { createSignal } from "@dmail/signal"
 import { URL } from "url"
 import { originAsString } from "../server/index.js"
@@ -42,7 +42,7 @@ export const createExecuteOnChromium = ({
   protocol = "https",
   ip = "127.0.0.1",
   port = 0,
-  openIndexRequestHandler = openIndexServer,
+  openIndexRequestHandler = serverIndexOpen,
   headless = true,
   mirrorConsole = false,
   runFile = ({ page, remoteRoot, remoteCompileDestination, file, setup, teardown, hotreload }) => {
@@ -114,11 +114,8 @@ export const createExecuteOnChromium = ({
     // autoCloseOnError is different than autoClose because you often want to keep browser opened to debug error
     autoCloseOnError = false,
   }) => {
-    const closed = createSignal()
-
-    const close = () => {
-      closed.emit()
-    }
+    const closed = createSignal({ smart: true })
+    const close = closed.emit
 
     const promise = openBrowser()
       .then((browser) => {
@@ -196,10 +193,8 @@ export const createExecuteOnChromium = ({
         },
       )
 
-    return Promise.resolve({
-      promise,
-      close,
-    })
+    promise.cancel = close
+    return promise
   }
 
   return { execute }

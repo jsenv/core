@@ -1,4 +1,4 @@
-import { promiseConcurrent } from "./promiseHelper.js"
+import { promiseConcurrent } from "./coverageMap/promiseHelper.js"
 import assert from "assert"
 
 promiseConcurrent((a) => a + 1, [0, 1, 2, 3, 4], { maxParallelExecution: 2 }).then((actual) => {

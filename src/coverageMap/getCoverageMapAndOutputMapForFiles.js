@@ -1,22 +1,12 @@
 import { createSignal } from "@dmail/signal"
-import { promiseConcurrent } from "./promiseHelper.js"
+import { promiseConcurrent } from "../promiseHelper.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
+import { teardownForOutputAndCoverage } from "../platformTeardown.js"
 // import { objectMapKey } from "./objectHelper.js"
 
 // const getRelativenameFromPath = (path, root) => {
 //   return path.startsWith(root) ? path.slice(root.length) + 1 : path
 // }
-
-const teardown = (namespace) => {
-  return Promise.resolve(namespace.output).then((output) => {
-    const globalObject = typeof window === "object" ? window : global
-
-    return {
-      output,
-      coverage: "__coverage__" in globalObject ? globalObject.__coverage__ : null,
-    }
-  })
-}
 
 export const getCoverageMapAndOutputMapForFiles = ({
   execute,
@@ -35,8 +25,7 @@ export const getCoverageMapAndOutputMapForFiles = ({
 
     const execution = execute({
       file,
-      teardown,
-      autoClose: true,
+      teardown: teardownForOutputAndCoverage,
     })
     cancelled.listenOnce(execution.cancel)
 

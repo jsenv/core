@@ -2,8 +2,8 @@ import { getCoverageMapAndOutputMapForFiles } from "./getCoverageMapAndOutputMap
 import { getCoverageMapForFilesMissed, getFilesMissed } from "./getCoverageMapForFilesMissed.js"
 import { coverageMapAbsolute } from "./coverageMapAbsolute.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
-import { openCompileServer } from "../openCompileServer/openCompileServer.js"
-import { promiseTry, promiseSequence } from "./promiseHelper.js"
+import { open as serverCompileOpen } from "../server-compile/index.js"
+import { promiseTry, promiseSequence } from "../promiseHelper.js"
 import { createSignal } from "@dmail/signal"
 
 export const getCoverageAndOutputForClients = ({
@@ -16,7 +16,7 @@ export const getCoverageAndOutputForClients = ({
   const cancelled = createSignal({ smart: true })
   const cancel = cancelled.emit
 
-  const promise = openCompileServer({
+  const promise = serverCompileOpen({
     root,
     into,
     protocol: "http",
