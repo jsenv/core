@@ -73,3 +73,15 @@ export const promiseConcurrent = (list, callback, { maxParallelExecution = 5 } =
   const promises = firstChunk.map((data, index) => execute(data, index))
   return Promise.all(promises).then(() => results)
 }
+
+export const objectToPromiseAll = (object) => {
+  const result = {}
+
+  const promises = Object.keys(object).map((name) => {
+    return Promise.resolve(object[name]).then((value) => {
+      result[name] = value
+    })
+  })
+
+  return Promise.all(promises).then(() => result)
+}

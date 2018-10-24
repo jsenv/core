@@ -16,13 +16,14 @@ export const readFile = (location) => {
 
 export const compileResultToFileSysten = ({ code, map }, filename) => {
   if (map) {
-    const sourceMapName = `${path.basename(filename)}.map`
+    const sourceMapBasename = `${path.basename(filename)}.map`
     code = `${code}
-${"//#"} sourceMappingURL=${sourceMapName}`
+${"//#"} sourceMappingURL=${sourceMapBasename}`
+    const sourceMapFilename = `${path.dirname(filename)}/${sourceMapBasename}`
 
     return Promise.all([
       fileWriteFromString(filename, code),
-      fileWriteFromString(sourceMapName, JSON.stringify(map, null, "  ")),
+      fileWriteFromString(sourceMapFilename, JSON.stringify(map, null, "  ")),
     ]).then(() => ({
       code,
       map,

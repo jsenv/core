@@ -6,6 +6,12 @@ import {
   fileWriteFromString,
 } from "@dmail/project-structure-compile-babel"
 import { readFile } from "./fileHelper.js"
+import { objectToPromiseAll } from "./promiseHelper.js"
+import {
+  compilePlatformAndSystem,
+  getBrowserSystemLocalURL,
+  getBrowserPlatformLocalURL,
+} from "./compilePlatformAndSystem.js"
 
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -73,32 +79,36 @@ const createPredicateFromStructure = ({ root }) => {
 }
 
 export const createJSCompileServiceForProject = ({ localRoot, compileInto }) => {
-  return createPredicateFromStructure({ root: localRoot }).then(
-    ({ instrumentPredicate, watchPredicate }) => {
-      const groupMapFile = "groupMap.json"
-      const groupMapLocation = `${localRoot}/${compileInto}/${groupMapFile}`
-      return getGroupMapForProject(groupMapLocation).then((groupMap) => {
-        const compileParamMap = groupMapToCompileParamMap(groupMap, pluginMap)
+  const groupMapFile = "groupMap.json"
+  const groupMapLocation = `${localRoot}/${compileInto}/${groupMapFile}`
 
-        const compileService = jsCreateCompileService({
-          localRoot,
-          compileInto,
-          compileParamMap,
-          cacheIgnore: false,
-          cacheTrackHit: true,
-          cacheStrategy: "etag",
-          assetCacheIgnore: false,
-          assetCacheStrategy: "etag",
-          instrumentPredicate,
-        })
+  return objectToPromiseAll({
+    platformAndSystem: compilePlatformAndSystem({
+      browserSystemLocalURL: getBrowserSystemLocalURL({ localRoot, compileInto }),
+      browserPlatformLocalURL: getBrowserPlatformLocalURL({ localRoot, compileInto }),
+    }),
+    predicateMap: createPredicateFromStructure({ root: localRoot }),
+    groupMap: getGroupMapForProject(groupMapLocation),
+  }).then(({ predicateMap, groupMap }) => {
+    const compileParamMap = groupMapToCompileParamMap(groupMap, pluginMap)
 
-        return {
-          compileService,
-          groupMap,
-          groupMapFile,
-          watchPredicate,
-        }
-      })
-    },
-  )
+    const compileService = jsCreateCompileService({
+      localRoot,
+      compileInto,
+      compileParamMap,
+      cacheIgnore: false,
+      cacheTrackHit: true,
+      cacheStrategy: "etag",
+      assetCacheIgnore: false,
+      assetCacheStrategy: "etag",
+      instrumentPredicate: predicateMap.instrumentPredicate,
+    })
+
+    return {
+      compileService,
+      groupMap,
+      groupMapFile,
+      watchPredicate: predicateMap.watchPredicate,
+    }
+  })
 }

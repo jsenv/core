@@ -1,6 +1,6 @@
 import { getBrowserSystemSource } from "@dmail/module-loader"
-import { compileResultToFileSysten } from "../fileHelper.js"
-import { compileForBrowser } from "../platform/index.js"
+import { compileResultToFileSysten } from "./fileHelper.js"
+import { compileForBrowser } from "./platform/index.js"
 
 export const getBrowserSystemRemoteURL = ({ remoteRoot, compileInto }) => {
   return `${remoteRoot}/${compileInto}/browserSystem.js`
