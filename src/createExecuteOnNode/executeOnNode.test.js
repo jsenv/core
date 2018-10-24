@@ -8,13 +8,12 @@ const watch = true
 const file = `src/__test__/file.js`
 
 createJSCompileServiceForProject({ localRoot, compileInto }).then(
-  ({ compileService, watchPredicate, groupMap, groupMapDefaultId }) => {
+  ({ compileService, watchPredicate, groupMapFile }) => {
     return executeOnNode({
       localRoot,
       compileInto,
       compileService,
-      groupMap,
-      groupMapDefaultId,
+      groupMapFile,
 
       watch,
       watchPredicate,

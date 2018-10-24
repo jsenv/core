@@ -22,6 +22,33 @@ const errorToMeta = (error) => {
   }
 }
 
+const rejectionValueToMeta = (error, { fileToRemoteSourceFile, remoteCompiledFileToFile }) => {
+  if (error && error.status === 500 && error.reason === "parse error") {
+    return parseErrorToMeta(error, { fileToRemoteSourceFile })
+  }
+
+  if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
+    const file = remoteCompiledFileToFile(error.url)
+    const originalError = error.error
+    return {
+      file,
+      // eslint-disable-next-line no-use-before-define
+      data: rejectionValueToMeta(originalError, {
+        fileToRemoteSourceFile,
+        remoteCompiledFileToFile,
+      }),
+    }
+  }
+
+  if (error && error instanceof Error) {
+    return errorToMeta(error)
+  }
+
+  return {
+    data: JSON.stringify(error),
+  }
+}
+
 const browserToGroupId = ({ name, version }, groupMap) => {
   return Object.keys(groupMap).find((id) => {
     const { compatMap } = groupMap[id]
@@ -38,14 +65,13 @@ export const createBrowserPlatform = ({
   remoteRoot,
   compileInto,
   groupMap,
-  groupMapDefaultId,
   hotreload = false,
   hotreloadSSERoot,
   hotreloadCallback,
 }) => {
   const browser = detect()
 
-  const compileId = browserToGroupId(browser, groupMap) || groupMapDefaultId
+  const compileId = browserToGroupId(browser, groupMap) || "otherwise"
 
   const compileRoot = `${remoteRoot}/${compileInto}/${compileId}`
 
@@ -79,37 +105,13 @@ export const createBrowserPlatform = ({
     })
   }
 
-  const rejectionValueToMeta = (error) => {
-    if (error && error.status === 500 && error.reason === "parse error") {
-      return parseErrorToMeta(error, { fileToRemoteSourceFile })
-    }
-
-    if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-      const file = remoteCompiledFileToFile(error.url) // to be tested
-      const originalError = error.error
-      return {
-        file,
-        // eslint-disable-next-line no-use-before-define
-        data: rejectionValueToMeta(originalError),
-      }
-    }
-
-    if (error && error instanceof Error) {
-      return errorToMeta(error)
-    }
-
-    return {
-      data: JSON.stringify(error),
-    }
-  }
-
   const executeFile = (file) => {
     markFileAsImported(file)
 
     const remoteCompiledFile = fileToRemoteCompiledFile(file)
 
     return window.System.import(remoteCompiledFile).catch((error) => {
-      const meta = rejectionValueToMeta(error)
+      const meta = rejectionValueToMeta(error, { fileToRemoteSourceFile, remoteCompiledFileToFile })
 
       document.body.innerHTML = `<h1><a href="${fileToRemoteSourceFile(
         file,

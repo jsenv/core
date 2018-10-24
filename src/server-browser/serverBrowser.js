@@ -42,7 +42,6 @@ const getClientScript = ({
   remoteRoot,
   compileInto,
   groupMap,
-  groupMapDefaultId,
   hotreload,
   hotreloadSSERoot,
   file,
@@ -52,7 +51,6 @@ const getClientScript = ({
     remoteRoot: ${uneval(remoteRoot)},
     compileInto: ${uneval(compileInto)},
     groupMap: ${uneval(groupMap)},
-    groupMapDefaultId: ${uneval(groupMapDefaultId)},
     hotreload: ${uneval(hotreload)},
     hotreloadSSERoot: ${uneval(hotreloadSSERoot)},
     hotreloadCallback: function() {
@@ -74,7 +72,6 @@ export const open = ({
   compileInto,
   compileService,
   groupMap,
-  groupMapDefaultId,
 
   watch = false,
   watchPredicate,
@@ -144,7 +141,6 @@ export const open = ({
                       remoteRoot,
                       compileInto,
                       groupMap,
-                      groupMapDefaultId,
                       hotreload: watch,
                       hotreloadSSERoot: remoteRoot,
                       file: ressource,

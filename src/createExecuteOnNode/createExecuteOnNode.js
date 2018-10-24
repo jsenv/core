@@ -5,14 +5,13 @@ import { cancellableAction } from "../signalHelper.js"
 import { uneval } from "@dmail/uneval"
 
 const root = path.resolve(__dirname, "../../../")
-const nodeClientFile = `${root}/src/createExecuteOnNode/client.js`
+const nodeClientFile = `${root}/dist/src/createExecuteOnNode/client.js`
 
 export const createExecuteOnNode = ({
   localRoot,
   remoteRoot,
   compileInto,
-  groupMap,
-  groupMapDefaultId,
+  groupMapFile,
   hotreload = false,
   hotreloadSSERoot,
 }) => {
@@ -41,13 +40,14 @@ export const createExecuteOnNode = ({
             `--inspect-brk`,
           ],
         })
-        log(`fork a child to execute ${file}`)
+        log(`fork ${nodeClientFile} to execute ${file}`)
 
         const sendToChild = (type, data) => {
-          log(`send to child ${type}: ${JSON.stringify(data, null, "  ")}`)
+          const source = uneval(data, { showFunctionBody: true })
+          log(`send to child ${type}: ${source}`)
           child.send({
             type,
-            data: uneval(data),
+            data: source,
           })
         }
 
@@ -60,13 +60,15 @@ export const createExecuteOnNode = ({
         const executed = createSignal()
         const restartAsked = createSignal()
         child.on("message", (message) => {
-          log(`receive message from child ${JSON.stringify(message, null, "  ")}`)
+          const source = message.data
+
+          log(`receive message from child ${source}`)
 
           if (message.type === "execute-result") {
-            executed.emit(message.data)
+            executed.emit(eval(`(${source})`))
           }
           if (message.type === "restart") {
-            restartAsked.emit(message.data)
+            restartAsked.emit(eval(`(${source})`))
           }
         })
 
@@ -101,7 +103,6 @@ export const createExecuteOnNode = ({
             if (code === 0) {
               resolve(value)
             } else {
-              console.log("rejecting")
               reject(value)
             }
           },
@@ -134,8 +135,7 @@ export const createExecuteOnNode = ({
           localRoot,
           remoteRoot,
           compileInto,
-          groupMap,
-          groupMapDefaultId,
+          groupMapFile,
           hotreload,
           hotreloadSSERoot,
           file,
@@ -149,11 +149,15 @@ export const createExecuteOnNode = ({
           }
           return value
         },
-        (reason) => {
+        (error) => {
+          const localError = new Error(error.message)
+          Object.assign(localError, error)
+          console.error(localError)
+
           if (autoCloseOnError) {
             cancel()
           }
-          return Promise.reject(reason)
+          return Promise.reject(localError)
         },
       )
       promise.cancel = cancel

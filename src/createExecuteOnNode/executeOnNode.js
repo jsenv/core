@@ -7,8 +7,7 @@ export const executeOnNode = ({
   localRoot,
   compileInto,
   compileService,
-  groupMap,
-  groupMapDefaultId,
+  groupMapFile,
 
   watch = false,
   watchPredicate,
@@ -34,8 +33,7 @@ export const executeOnNode = ({
       localRoot,
       remoteRoot: server.origin,
       compileInto,
-      groupMap,
-      groupMapDefaultId,
+      groupMapFile,
       hotreload: watch,
       hotreloadSSERoot: server.origin,
     })

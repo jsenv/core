@@ -19,12 +19,11 @@ export const createNodePlatform = ({
   remoteRoot,
   compileInto,
   groupMap,
-  groupMapDefaultId,
   hotreload,
   hotreloadSSERoot,
   hotreloadCallback,
 }) => {
-  const compileId = nodeVersionToGroupId(process.version.slice(1), groupMap) || groupMapDefaultId
+  const compileId = nodeVersionToGroupId(process.version.slice(1), groupMap) || "otherwise"
 
   const localCompileRoot = `${localRoot}/${compileInto}/${compileId}`
 
@@ -32,29 +31,22 @@ export const createNodePlatform = ({
 
   const fileToRemoteCompiledFile = (file) => `${remoteCompileRoot}/${file}`
 
-  const fileToRemoteSourceFile = (file) => `${remoteRoot}/${file}`
+  // const fileToRemoteSourceFile = (file) => `${remoteRoot}/${file}`
 
   const isRemoteCompiledFile = (string) => string.startsWith(remoteCompileRoot)
 
-  const remoteCompiledFileToFile = (remoteCompiledFile) =>
-    remoteCompiledFile.slice(remoteCompileRoot.length)
+  const remoteCompiledFileToFile = (remoteCompiledFile) => {
+    return remoteCompiledFile.slice(remoteCompileRoot.length + 1)
+  }
 
-  const remoteCompiledFileToLocalCompiledFile = (remoteCompiledFile) =>
-    `${localCompileRoot}/${remoteCompiledFileToFile(remoteCompiledFile)}`
+  const remoteCompiledFileToLocalCompiledFile = (remoteCompiledFile) => {
+    const file = remoteCompiledFileToFile(remoteCompiledFile)
+    return `${localCompileRoot}/${file}`
+  }
 
   const { markFileAsImported, isFileImported } = createImportTracker()
 
-  const context = {
-    fileToRemoteCompiledFile,
-    fileToRemoteSourceFile,
-    isRemoteCompiledFile,
-    remoteCompiledFileToFile,
-    remoteCompiledFileToLocalCompiledFile,
-    isFileImported,
-    markFileAsImported,
-  }
-
-  install(context)
+  install({ isRemoteCompiledFile, remoteCompiledFileToLocalCompiledFile })
 
   if (hotreload) {
     // we can be notified from file we don't care about, reload only if needed

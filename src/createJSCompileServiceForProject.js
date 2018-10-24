@@ -1,6 +1,6 @@
 import { readProjectMetaMap, ressourceToMeta } from "@dmail/project-structure"
 import { jsCreateCompileService } from "./jsCreateCompileService/index.js"
-import { getGroupMap, groupMapToCompileParamMap, groupMapDefaultId } from "./groupMap/index.js"
+import { getGroupMap, groupMapToCompileParamMap } from "./groupMap/index.js"
 import {
   pluginOptionMapToPluginMap,
   fileWriteFromString,
@@ -75,7 +75,9 @@ const createPredicateFromStructure = ({ root }) => {
 export const createJSCompileServiceForProject = ({ localRoot, compileInto }) => {
   return createPredicateFromStructure({ root: localRoot }).then(
     ({ instrumentPredicate, watchPredicate }) => {
-      return getGroupMapForProject(`${localRoot}/${compileInto}/groupMap.json`).then((groupMap) => {
+      const groupMapFile = "groupMap.json"
+      const groupMapLocation = `${localRoot}/${compileInto}/${groupMapFile}`
+      return getGroupMapForProject(groupMapLocation).then((groupMap) => {
         const compileParamMap = groupMapToCompileParamMap(groupMap, pluginMap)
 
         const compileService = jsCreateCompileService({
@@ -93,7 +95,7 @@ export const createJSCompileServiceForProject = ({ localRoot, compileInto }) => 
         return {
           compileService,
           groupMap,
-          groupMapDefaultId,
+          groupMapFile,
           watchPredicate,
         }
       })

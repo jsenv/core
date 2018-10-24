@@ -34,11 +34,14 @@
       },
       "skipFiles": [
         // skip node modules
-        // "node_modules/**",
+        "node_modules/**",
         // skip node internals
         "<node_internals>/**/*.js",
         "node_modules/rollup-plugin-node-resolve/dist/rollup-plugin-node-resolve.cjs.js",
-        "node_modules/@babel/template/lib/builder.js"
+        "node_modules/@babel/template/lib/builder.js",
+        "src/fileHelper.js",
+        "src/jsCreateCompileService/compile/transpileWithBabel.js",
+        "src/createRequestToFileResponse/convertFileSystemErrorToResponseProperties.js"
       ]
       // "trace": true
     },
