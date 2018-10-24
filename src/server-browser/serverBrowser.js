@@ -49,13 +49,17 @@ const getClientScript = ({
 }) => {
   return `
   window.__platform__ = window.__createPlatform__({
-		remoteRoot: ${uneval(remoteRoot)},
-		compileInto: ${uneval(compileInto)},
-		compatMap: ${uneval(compatMap)},
-		compatMapDefaultId: ${uneval(compatMapDefaultId)},
-		hotreload: ${uneval(hotreload)},
-		hotreloadSSERoot: ${uneval(hotreloadSSERoot)}
-	})
+    remoteRoot: ${uneval(remoteRoot)},
+    compileInto: ${uneval(compileInto)},
+    compatMap: ${uneval(compatMap)},
+    compatMapDefaultId: ${uneval(compatMapDefaultId)},
+    hotreload: ${uneval(hotreload)},
+    hotreloadSSERoot: ${uneval(hotreloadSSERoot)},
+    hotreloadCallback: function() {
+      // we cannot just System.delete the file because the change may have any impact, we have to reload
+      window.location.reload()
+    }
+  })
   window.__platform__.executeFile(${uneval(file)})
 `
 }

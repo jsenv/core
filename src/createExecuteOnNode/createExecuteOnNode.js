@@ -2,11 +2,12 @@ import { fork } from "child_process"
 import path from "path"
 import { createSignal } from "@dmail/signal"
 import { cancellableAction } from "../signalHelper.js"
+import { uneval } from "@dmail/uneval"
 
 const root = path.resolve(__dirname, "../../../")
-const nodeClientFile = `${root}/src/platformCompileClient/platform/node/index.js`
+const nodeClientFile = `${root}/src/createExecuteOnNode/client.js`
 
-export const createExecuteOnNode = ({ LOCAL_ROOT, REMOTE_ROOT, COMPILE_INTO, VARS }) => {
+export const createExecuteOnNode = ({ localRoot, remoteRoot, compileInto, hotreloadSSERoot }) => {
   const execute = ({
     file,
     setup = () => {},
@@ -39,7 +40,7 @@ export const createExecuteOnNode = ({ LOCAL_ROOT, REMOTE_ROOT, COMPILE_INTO, VAR
           log(`send to child ${type}: ${JSON.stringify(data, null, "  ")}`)
           child.send({
             type,
-            data,
+            data: uneval(data),
           })
         }
 
@@ -123,14 +124,14 @@ export const createExecuteOnNode = ({ LOCAL_ROOT, REMOTE_ROOT, COMPILE_INTO, VAR
         })
 
         sendToChild("execute", {
-          LOCAL_ROOT,
-          REMOTE_ROOT,
-          COMPILE_INTO,
-          HOTRELOAD: hotreload,
-          FILE: file,
-          setupSource: `(${setup.toString()})`,
-          teardownSource: `(${teardown.toString()})`,
-          ...VARS,
+          localRoot,
+          remoteRoot,
+          compileInto,
+          hotreload,
+          hotreloadSSERoot,
+          file,
+          setup,
+          teardown,
         })
       }).then(
         (value) => {
