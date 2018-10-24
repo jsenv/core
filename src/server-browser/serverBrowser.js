@@ -45,6 +45,13 @@ const getClientScript = ({
   hotreload,
   hotreloadSSERoot,
   file,
+  // if we want to instrument the code we are running we'll need a way
+  // to show the coverage output somehow
+  // we could create a special page able to display the coverage result
+  // not in the MVP so we'll do that later
+  instrument = false,
+  setup = () => {},
+  teardown = () => {},
 }) => {
   return `
   window.__platform__ = window.__browserPlatform__.createBrowserPlatform({
@@ -58,7 +65,12 @@ const getClientScript = ({
       window.location.reload()
     }
   })
-  window.__platform__.executeFile(${uneval(file)})
+  window.__platform__.executeFile({
+		file: ${uneval(file)},
+		instrument: ${uneval(instrument)},
+		setup: ${uneval(setup)},
+		teardown: ${uneval(teardown)},
+	})
 `
 }
 

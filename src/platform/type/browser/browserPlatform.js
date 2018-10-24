@@ -106,7 +106,7 @@ export const createBrowserPlatform = ({
     })
   }
 
-  const executeFile = ({ file, instrument, setup = () => {}, teardown = () => {} }) => {
+  const executeFile = ({ file, instrument = false, setup = () => {}, teardown = () => {} }) => {
     markFileAsImported(file)
 
     const remoteCompiledFile = instrument
