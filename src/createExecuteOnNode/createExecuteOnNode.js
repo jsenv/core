@@ -3,7 +3,7 @@ import path from "path"
 import { createSignal } from "@dmail/signal"
 import { cancellableAction } from "../signalHelper.js"
 import { uneval } from "@dmail/uneval"
-import { promiseToCancellablePromise } from "../cancellable/index.js"
+import { createCancellable, promiseToCancellablePromise } from "../cancellable/index.js"
 
 const root = path.resolve(__dirname, "../../../")
 const nodeClientFile = `${root}/dist/src/createExecuteOnNode/client.js`
@@ -30,7 +30,9 @@ export const createExecuteOnNode = ({
     }
 
     const forkChild = () => {
-      const cancelled = createSignal({ smart: true })
+      const cancellable = createCancellable()
+      const cancelled = createSignal()
+      cancellable.promise.then(cancelled.emit)
 
       const promise = new Promise((resolve, reject) => {
         const child = fork(nodeClientFile, {
@@ -150,7 +152,7 @@ export const createExecuteOnNode = ({
         return Promise.reject(localError)
       })
 
-      return promiseToCancellablePromise(promise, cancelled)
+      return promiseToCancellablePromise(promise, cancellable)
     }
 
     return forkChild()

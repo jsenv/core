@@ -4,8 +4,7 @@ import { coverageMapAbsolute } from "./coverageMapAbsolute.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 import { open as serverCompileOpen } from "../server-compile/index.js"
 import { promiseTry, promiseSequence } from "../promiseHelper.js"
-import { createSignal } from "@dmail/signal"
-import { promiseToCancellablePromise } from "../cancellable/index.js"
+import { createCancellable, promiseToCancellablePromise } from "../cancellable/index.js"
 
 export const getCoverageAndOutputForClients = ({
   root,
@@ -14,7 +13,7 @@ export const getCoverageAndOutputForClients = ({
   getFilesToCover = () => [],
   clients = [],
 }) => {
-  const cancelled = createSignal({ smart: true })
+  const cancellable = createCancellable()
 
   const promise = serverCompileOpen({
     root,
@@ -25,7 +24,7 @@ export const getCoverageAndOutputForClients = ({
     instrument: true,
     instrumentPredicate,
   }).then((server) => {
-    cancelled.listenOnce(server.close)
+    cancellable.teardown(server.close)
 
     const localRoot = root
     const remoteRoot = server.origin
@@ -43,7 +42,7 @@ export const getCoverageAndOutputForClients = ({
           execute,
           files,
         })
-        cancelled.listenOnce(clientExecution.cancel)
+        cancellable.teardown(clientExecution.cancel)
         return clientExecution
       })
     }
@@ -90,5 +89,5 @@ export const getCoverageAndOutputForClients = ({
       })
   })
 
-  return promiseToCancellablePromise(promise, cancelled)
+  return promiseToCancellablePromise(promise, cancellable)
 }

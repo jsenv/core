@@ -1,6 +1,5 @@
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { open as serverIndexOpen } from "../server-index/serverIndex.js"
-import { createSignal } from "@dmail/signal"
 import { URL } from "url"
 import { originAsString } from "../server/index.js"
 import { createBrowserPlatformSource } from "../createBrowserSource.js"
@@ -8,7 +7,7 @@ import {
   getBrowserSystemRemoteURL,
   getBrowserPlatformRemoteURL,
 } from "../compilePlatformAndSystem.js"
-import { promiseToCancellablePromise } from "../cancellable/index.js"
+import { createCancellable, promiseToCancellablePromise } from "../cancellable/index.js"
 
 const openIndexRequestInterception = ({ protocol, ip, port, page, body }) => {
   const origin = originAsString({ protocol, ip, port })
@@ -78,15 +77,15 @@ export const createExecuteOnChromium = ({
 
   // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
   const execute = ({ file, instrument = false, setup = () => {}, teardown = () => {} }) => {
-    const cancelled = createSignal({ smart: true })
+    const cancellable = createCancellable()
 
     const promise = openBrowser().then((browser) => {
-      cancelled.listen(() => {
+      cancellable.teardown(() => {
         browser.close()
       })
 
       return browser.newPage().then((page) => {
-        cancelled.listen(() => {
+        cancellable.teardown(() => {
           // page.close() // commented until https://github.com/GoogleChrome/puppeteer/issues/2269
         })
 
@@ -132,9 +131,7 @@ export const createExecuteOnChromium = ({
               page,
               body: html,
             }).then((indexRequestHandler) => {
-              cancelled.listen(() => {
-                indexRequestHandler.close()
-              })
+              cancellable.teardown(() => indexRequestHandler.close())
 
               return page.goto(indexRequestHandler.origin).then(() => {
                 return page.evaluate(
@@ -160,7 +157,7 @@ export const createExecuteOnChromium = ({
       })
     })
 
-    return promiseToCancellablePromise(promise, cancelled)
+    return promiseToCancellablePromise(promise, cancellable)
   }
 
   return { execute }

@@ -1,8 +1,7 @@
-import { createSignal } from "@dmail/signal"
 import { promiseConcurrent } from "../promiseHelper.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 import { teardownForOutputAndCoverage } from "../platformTeardown.js"
-import { promiseToCancellablePromise } from "../cancellable/index.js"
+import { createCancellable, promiseToCancellablePromise } from "../cancellable/index.js"
 
 // import { objectMapKey } from "./objectHelper.js"
 
@@ -19,7 +18,7 @@ export const getCoverageMapAndOutputMapForFiles = ({
   afterEach = () => {},
   afterAll = () => {},
 }) => {
-  const cancelled = createSignal({ smart: true })
+  const cancellable = createCancellable()
 
   const executeTestFile = (file) => {
     beforeEach({ file })
@@ -28,7 +27,7 @@ export const getCoverageMapAndOutputMapForFiles = ({
       file,
       teardown: teardownForOutputAndCoverage,
     })
-    cancelled.listenOnce(execution.cancel)
+    cancellable.teardown(execution.cancel)
 
     return execution.then(({ output, coverage }) => {
       // coverage = null means file do not set a global.__coverage__
@@ -59,5 +58,5 @@ export const getCoverageMapAndOutputMapForFiles = ({
     },
   )
 
-  return promiseToCancellablePromise(promise, cancelled)
+  return promiseToCancellablePromise(promise, cancellable)
 }
