@@ -7,12 +7,19 @@ import { uneval } from "@dmail/uneval"
 const root = path.resolve(__dirname, "../../../")
 const nodeClientFile = `${root}/src/createExecuteOnNode/client.js`
 
-export const createExecuteOnNode = ({ localRoot, remoteRoot, compileInto, hotreloadSSERoot }) => {
+export const createExecuteOnNode = ({
+  localRoot,
+  remoteRoot,
+  compileInto,
+  groupMap,
+  groupMapDefaultId,
+  hotreload = false,
+  hotreloadSSERoot,
+}) => {
   const execute = ({
     file,
     setup = () => {},
     teardown = () => {},
-    hotreload = false,
     autoClose = false,
     autoCloseOnError = false,
     verbose = false,
@@ -127,6 +134,8 @@ export const createExecuteOnNode = ({ localRoot, remoteRoot, compileInto, hotrel
           localRoot,
           remoteRoot,
           compileInto,
+          groupMap,
+          groupMapDefaultId,
           hotreload,
           hotreloadSSERoot,
           file,

@@ -222,7 +222,7 @@ export const open = (
             })
           })
           .then((response) => {
-            log(`${status} ${origin}/${request.ressource}`)
+            log(`${response.status} ${origin}/${request.ressource}`)
 
             return populateNodeResponse(nodeResponse, response, {
               ignoreBody: request.method === "HEAD",

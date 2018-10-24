@@ -6,15 +6,15 @@ const compileInto = "build"
 const watch = true
 
 createJSCompileServiceForProject({ localRoot, compileInto }).then(
-  ({ compileService, watchPredicate, compatMap, compatMapDefaultId }) => {
+  ({ compileService, watchPredicate, groupMap, groupMapDefaultId }) => {
     return serverBrowserOpen({
       localRoot,
       compileInto,
       watch,
       watchPredicate,
       compileService,
-      compatMap,
-      compatMapDefaultId,
+      groupMap,
+      groupMapDefaultId,
     })
   },
 )

@@ -41,18 +41,18 @@ const getIndexPageHTML = ({ localRoot }) => {
 const getClientScript = ({
   remoteRoot,
   compileInto,
-  compatMap,
-  compatMapDefaultId,
+  groupMap,
+  groupMapDefaultId,
   hotreload,
   hotreloadSSERoot,
   file,
 }) => {
   return `
-  window.__platform__ = window.__createPlatform__({
+  window.__platform__ = window.__browserPlatform__.createBrowserPlatform({
     remoteRoot: ${uneval(remoteRoot)},
     compileInto: ${uneval(compileInto)},
-    compatMap: ${uneval(compatMap)},
-    compatMapDefaultId: ${uneval(compatMapDefaultId)},
+    groupMap: ${uneval(groupMap)},
+    groupMapDefaultId: ${uneval(groupMapDefaultId)},
     hotreload: ${uneval(hotreload)},
     hotreloadSSERoot: ${uneval(hotreloadSSERoot)},
     hotreloadCallback: function() {
@@ -67,8 +67,8 @@ const getClientScript = ({
 export const open = ({
   localRoot,
   compileInto,
-  compatMap,
-  compatMapDefaultId,
+  groupMap,
+  groupMapDefaultId,
 
   protocol = "http",
   ip = "127.0.0.1",
@@ -143,8 +143,8 @@ export const open = ({
                       localRoot,
                       remoteRoot,
                       compileInto,
-                      compatMap,
-                      compatMapDefaultId,
+                      groupMap,
+                      groupMapDefaultId,
                       hotreload: watch,
                       hotreloadSSERoot: remoteRoot,
                       file: ressource,

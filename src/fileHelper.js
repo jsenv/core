@@ -1,5 +1,6 @@
 import fs from "fs"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
+import path from "path"
 
 export const readFile = (location) => {
   return new Promise((resolve, reject) => {
@@ -14,11 +15,19 @@ export const readFile = (location) => {
 }
 
 export const compileResultToFileSysten = ({ code, map }, filename) => {
-  return Promise.all([
-    fileWriteFromString(filename, code),
-    map ? fileWriteFromString(`${filename}.map`, JSON.stringify(map, null, "  ")) : null,
-  ]).then(() => ({
-    code,
-    map,
-  }))
+  if (map) {
+    const sourceMapName = `${path.basename(filename)}.map`
+    code = `${code}
+${"//#"} sourceMappingURL=${sourceMapName}`
+
+    return Promise.all([
+      fileWriteFromString(filename, code),
+      fileWriteFromString(sourceMapName, JSON.stringify(map, null, "  ")),
+    ]).then(() => ({
+      code,
+      map,
+    }))
+  }
+
+  return fileWriteFromString(filename, code).then(() => ({ code, map }))
 }

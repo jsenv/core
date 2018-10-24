@@ -4,7 +4,7 @@ const BEST_ID = "best"
 const WORST_ID = "worst"
 export const DEFAULT_ID = "otherwise"
 
-export const getCompatGroupMap = ({ stats, size, platformNames, pluginNames, compatMap }) => {
+export const getGroupMap = ({ stats, size, platformNames, pluginNames, compatMap }) => {
   const { profiles, fallback } = compileProfiles({
     stats,
     size,
@@ -13,14 +13,14 @@ export const getCompatGroupMap = ({ stats, size, platformNames, pluginNames, com
     compatMap,
   })
 
-  const compatGroupMap = {}
+  const groupMap = {}
 
-  compatGroupMap[BEST_ID] = profiles[0]
+  groupMap[BEST_ID] = profiles[0]
   profiles.slice(1, -1).forEach((intermediateProfile, index) => {
-    compatGroupMap[`intermediate-${index + 1}`] = intermediateProfile
+    groupMap[`intermediate-${index + 1}`] = intermediateProfile
   })
-  compatGroupMap[WORST_ID] = profiles[profiles.length - 1]
-  compatGroupMap[DEFAULT_ID] = fallback
+  groupMap[WORST_ID] = profiles[profiles.length - 1]
+  groupMap[DEFAULT_ID] = fallback
 
-  return compatGroupMap
+  return groupMap
 }

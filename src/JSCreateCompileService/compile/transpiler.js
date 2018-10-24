@@ -2,7 +2,7 @@ import { transpileWithBabel } from "./transpileWithBabel.js"
 
 export const transpiler = (context) => {
   const {
-    root,
+    localRoot,
     inputName,
     inputSource,
     inputSourceMap,
@@ -16,7 +16,7 @@ export const transpiler = (context) => {
 
   const babelOptions = {
     plugins,
-    filename: root ? `${root}/${inputName}` : inputName,
+    filename: localRoot ? `${localRoot}/${inputName}` : inputName,
     filenameRelative: inputName,
     inputSourceMap,
   }

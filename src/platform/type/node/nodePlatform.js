@@ -1,24 +1,30 @@
+import { versionIsBelowOrEqual } from "@dmail/project-structure-compile-babel"
 import { open } from "./hotreload.js"
 import { install } from "./system.js"
-import { platformToCompileId } from "../platformToCompileId.js"
 import { createImportTracker } from "../createImportTracker.js"
+
+export const nodeVersionToGroupId = (version, groupMap) => {
+  return Object.keys(groupMap).find((id) => {
+    const { compatMap } = groupMap[id]
+    if ("node" in compatMap === false) {
+      return false
+    }
+    const versionForGroup = compatMap.node
+    return versionIsBelowOrEqual(versionForGroup, version)
+  })
+}
 
 export const createNodePlatform = ({
   localRoot,
   remoteRoot,
   compileInto,
-  compatMap,
-  compatMapDefaultId,
+  groupMap,
+  groupMapDefaultId,
   hotreload,
   hotreloadSSERoot,
   hotreloadCallback,
 }) => {
-  const compileId = platformToCompileId({
-    compatMap,
-    defaultId: compatMapDefaultId,
-    platformName: "node",
-    platforVersion: process.version.slice(1),
-  })
+  const compileId = nodeVersionToGroupId(process.version.slice(1), groupMap) || groupMapDefaultId
 
   const localCompileRoot = `${localRoot}/${compileInto}/${compileId}`
 

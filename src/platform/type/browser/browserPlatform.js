@@ -1,4 +1,4 @@
-import { platformToCompileId } from "../platformToCompileId.js"
+import { versionIsBelowOrEqual } from "@dmail/project-structure-compile-babel/src/versionCompare.js"
 import { createImportTracker } from "../createImportTracker.js"
 import { detect } from "./browserDetect/index.js"
 import { open } from "./hotreload.js"
@@ -22,23 +22,30 @@ const errorToMeta = (error) => {
   }
 }
 
+const browserToGroupId = ({ name, version }, groupMap) => {
+  return Object.keys(groupMap).find((id) => {
+    const { compatMap } = groupMap[id]
+
+    if (name in compatMap === false) {
+      return false
+    }
+    const versionForGroup = compatMap[name]
+    return versionIsBelowOrEqual(versionForGroup, version)
+  })
+}
+
 export const createBrowserPlatform = ({
   remoteRoot,
   compileInto,
-  compatMap,
-  compatMapDefaultId,
+  groupMap,
+  groupMapDefaultId,
   hotreload = false,
   hotreloadSSERoot,
   hotreloadCallback,
 }) => {
   const browser = detect()
 
-  const compileId = platformToCompileId({
-    compatMap,
-    defaultId: compatMapDefaultId,
-    platformName: browser.name,
-    platformVersion: browser.version,
-  })
+  const compileId = browserToGroupId(browser, groupMap) || groupMapDefaultId
 
   const compileRoot = `${remoteRoot}/${compileInto}/${compileId}`
 
@@ -72,7 +79,7 @@ export const createBrowserPlatform = ({
     })
   }
 
-  const rejectionValueToMeta = ({ error }) => {
+  const rejectionValueToMeta = (error) => {
     if (error && error.status === 500 && error.reason === "parse error") {
       return parseErrorToMeta(error, { fileToRemoteSourceFile })
     }

@@ -1,44 +1,55 @@
 import { createExecuteOnNode } from "./createExecuteOnNode.js"
+import { open as compileServerOpen } from "../server-compile/index.js"
+import { createJSCompileServiceForProject } from "../createJSCompileServiceForProject.js"
 
 export const executeOnNode = ({
-  openCompileServer,
   protocol = "http",
 
-  root,
-  into,
+  localRoot,
+  compileInto,
+
+  watch = false,
+  watchPredicate,
+  verbose,
+  sourceCacheStrategy,
+  sourceCacheIgnore,
 
   file,
-  watch = false,
-  verbose,
-
-  ...rest
 }) => {
-  const cacheFolder = into
-  const compileFolder = `${into}__dynamic__`
+  return createJSCompileServiceForProject({ localRoot, compileInto }).then(
+    ({ compileService, groupMap, groupMapDefaultId }) => {
+      return compileServerOpen({
+        protocol,
 
-  return openCompileServer({
-    root,
-    cacheFolder,
-    compileFolder,
-    protocol,
-    watch,
-    ...rest,
-  }).then((server) => {
-    const { execute } = createExecuteOnNode({
-      localRoot: root,
-      remoteRoot: server.origin,
-      remoteCompileDestination: compileFolder,
-    })
+        localRoot,
+        compileInto,
+        compileService,
 
-    return execute({
-      file,
-      hotreload: watch,
-      verbose,
-    }).then((value) => {
-      if (watch === false) {
-        server.close()
-      }
-      return value
-    })
-  })
+        watch,
+        watchPredicate,
+        sourceCacheStrategy,
+        sourceCacheIgnore,
+      }).then((server) => {
+        const { execute } = createExecuteOnNode({
+          localRoot,
+          remoteRoot: server.origin,
+          compileInto,
+          groupMap,
+          groupMapDefaultId,
+          hotreload: watch,
+          hotreloadSSERoot: server.origin,
+        })
+
+        return execute({
+          file,
+          verbose,
+        }).then((value) => {
+          if (watch === false) {
+            server.close()
+          }
+          return value
+        })
+      })
+    },
+  )
 }

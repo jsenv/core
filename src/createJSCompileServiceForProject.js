@@ -1,6 +1,6 @@
 import { readProjectMetaMap, ressourceToMeta } from "@dmail/project-structure"
 import { jsCreateCompileService } from "./jsCreateCompileService/index.js"
-import { jsCreateCompileHooks, getCompatGroupMap } from "./jsCreateCompileHooks/index.js"
+import { getGroupMap, groupMapToCompileParamMap, groupMapDefaultId } from "./groupMap/index.js"
 import {
   pluginOptionMapToPluginMap,
   fileWriteFromString,
@@ -52,16 +52,16 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-unicode-regex": {},
 })
 
-const getCompatGroupMapForProject = (config) => {
+const getGroupMapForProject = (config) => {
   return readFile(config).then(
     (content) => JSON.parse(content),
     (error) => {
       if (error && error.code === "ENOENT") {
-        const compatGroupMap = getCompatGroupMap({ pluginNames: Object.keys(pluginMap) })
+        const groupMap = getGroupMap({ pluginNames: Object.keys(pluginMap) })
 
-        fileWriteFromString(config, JSON.stringify(compatGroupMap, null, "  "))
+        fileWriteFromString(config, JSON.stringify(groupMap, null, "  "))
 
-        return compatGroupMap
+        return groupMap
       }
       return Promise.reject(error)
     },
@@ -87,33 +87,30 @@ const createPredicateFromStructure = ({ root }) => {
 export const createJSCompileServiceForProject = ({ localRoot, compileInto }) => {
   return createPredicateFromStructure({ root: localRoot }).then(
     ({ instrumentPredicate, watchPredicate }) => {
-      return getCompatGroupMapForProject(
-        `${localRoot}/${compileInto}/compatGroupMap.config.json`,
-      ).then((compatGroupMap) => {
-        const { compatMap, compatMapDefaultId, compileParamMap } = jsCreateCompileHooks({
-          compatGroupMap,
-          pluginMap,
-        })
+      return getGroupMapForProject(`${localRoot}/${compileInto}/compatGroupMap.config.json`).then(
+        (groupMap) => {
+          const compileParamMap = groupMapToCompileParamMap(groupMap, pluginMap)
 
-        const compileService = jsCreateCompileService({
-          localRoot,
-          compileInto,
-          compileParamMap,
-          cacheIgnore: false,
-          cacheTrackHit: true,
-          cacheStrategy: "etag",
-          assetCacheIgnore: false,
-          assetCacheStrategy: "etag",
-          instrumentPredicate,
-        })
+          const compileService = jsCreateCompileService({
+            localRoot,
+            compileInto,
+            compileParamMap,
+            cacheIgnore: false,
+            cacheTrackHit: true,
+            cacheStrategy: "etag",
+            assetCacheIgnore: false,
+            assetCacheStrategy: "etag",
+            instrumentPredicate,
+          })
 
-        return {
-          compileService,
-          watchPredicate,
-          compatMap,
-          compatMapDefaultId,
-        }
-      })
+          return {
+            compileService,
+            watchPredicate,
+            groupMap,
+            groupMapDefaultId,
+          }
+        },
+      )
     },
   )
 }

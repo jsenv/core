@@ -9,7 +9,7 @@ const babel = require("rollup-plugin-babel")
 const nodeResolve = require("rollup-plugin-node-resolve")
 
 const root = path.resolve(__dirname, "../../../")
-const inputFile = `${root}/src/platform/type/browser/index.js`
+const inputFile = `${root}/src/platform/type/browser/browserPlatform.js`
 const pluginMap = pluginOptionMapToPluginMap({
   "proposal-object-rest-spread": {},
   "proposal-optional-catch-binding": {},
@@ -55,7 +55,7 @@ export const compileForBrowser = ({ name = "unknown", version = "0.0.0" } = {}) 
   return bundlePromise.then((bundle) => {
     return bundle.generate({
       format: "iife",
-      name: "__createPlatform__",
+      name: "__browserPlatform__",
       sourcemap: true,
     })
   })

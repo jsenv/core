@@ -5,9 +5,11 @@ import assert from "assert"
 
 {
   const actual = platformToCompileId({
-    compatMap: {
+    groupMap: {
       foo: {
-        chrome: "41",
+        compatMap: {
+          chrome: "41",
+        },
       },
     },
     defaultId: "bar",
@@ -20,9 +22,11 @@ import assert from "assert"
 
 {
   const actual = platformToCompileId({
-    compatMap: {
+    groupMap: {
       foo: {
-        chrome: "41",
+        compatMap: {
+          chrome: "41",
+        },
       },
     },
     defaultId: "bar",
@@ -35,9 +39,11 @@ import assert from "assert"
 
 {
   const actual = platformToCompileId({
-    compatMap: {
+    groupMap: {
       foo: {
-        chrome: "41",
+        compatMap: {
+          chrome: "41",
+        },
       },
     },
     defaultId: "bar",

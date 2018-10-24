@@ -18,19 +18,18 @@ export const open = ({
   protocol,
   ip,
   port,
+  preventCors = false,
+
+  localRoot,
+  compileInto,
+  compileService,
+
+  // compile options
   watch = false,
   watchPredicate = () => false,
   watchSSE = true,
-  preventCors = false,
-
-  // generic compile options
-  localRoot,
-  compileInto,
   sourceCacheStrategy = "etag",
   sourceCacheIgnore = false,
-
-  // the compile service
-  compileService,
 }) => {
   const cleanup = createSignal()
 

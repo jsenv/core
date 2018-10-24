@@ -7,6 +7,5 @@
 
 export { open as serverCompileOpen } from "./src/server-compile/index.js"
 export { open as serverBrowserOpen } from "./src/server-browser/index.js"
-export { jsCreateCompileHooks } from "./src/jsCreateCompileHooks/index.js"
 export { jsCreateCompileService } from "./src/jsCreateCompileService/index.js"
 export { createJSCompileServiceForProject } from "./src/createJSCompileServiceForProject.js"

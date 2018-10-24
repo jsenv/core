@@ -3,7 +3,7 @@ import { remapper } from "./remapper.js"
 import { contextToSourceMapMeta } from "./contextToSourceMapMeta.js"
 
 export const compile = ({
-  root,
+  localRoot,
   inputName,
   inputSource,
   inputSourceMap,
@@ -17,7 +17,7 @@ export const compile = ({
   outputName,
 }) => {
   const context = {
-    root,
+    localRoot,
     inputName,
     inputSource,
     inputSourceMap,
