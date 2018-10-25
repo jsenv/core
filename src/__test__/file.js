@@ -1,6 +1,6 @@
 const value = true
 
-console.log("------HEY-------")
+console.log("------HeY-------")
 
 debugger
 

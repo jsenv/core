@@ -23,50 +23,44 @@ export const executeOnNode = ({
 }) => {
   const cancellable = createCancellable()
 
-  const execution = cancellable.map(
-    compileServerOpen({
-      protocol,
+  return cancellable
+    .map(
+      compileServerOpen({
+        protocol,
 
-      localRoot,
-      compileInto,
-      compileService,
-
-      watch,
-      watchPredicate,
-      sourceCacheStrategy,
-      sourceCacheIgnore,
-    }).then((server) => {
-      const { execute } = createExecuteOnNode({
         localRoot,
-        remoteRoot: server.origin,
         compileInto,
-        groupMapFile,
-        hotreload: watch,
-        hotreloadSSERoot: server.origin,
-      })
+        compileService,
 
-      return cancellable.map(
-        execute({
-          file,
-          instrument,
-          setup,
-          teardown,
-          verbose,
-        }),
-      )
-    }),
-  )
+        watch,
+        watchPredicate,
+        sourceCacheStrategy,
+        sourceCacheIgnore,
+      }).then((server) => {
+        const { execute } = createExecuteOnNode({
+          localRoot,
+          remoteRoot: server.origin,
+          compileInto,
+          groupMapFile,
+          hotreload: watch,
+          hotreloadSSERoot: server.origin,
+        })
 
-  // this final promise is not mapped by the cancellable
-  // because we don't want it to be cancellable
-  // this is just that we want to cancel anything that is still runng because watch is false
-  const promise = execution.then((value) => {
-    if (watch === false) {
-      cancellable.cancel()
-    }
-    return value
-  })
-  promise.cancel = cancellable.cancel
-
-  return promise
+        return cancellable.map(
+          execute({
+            file,
+            instrument,
+            setup,
+            teardown,
+            verbose,
+          }),
+        )
+      }),
+    )
+    .then((value) => {
+      if (watch === false) {
+        cancellable.cancel()
+      }
+      return value
+    })
 }

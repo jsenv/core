@@ -65,12 +65,12 @@ export const open = ({
       const fileChangedSSE = createSSERoom()
 
       fileChangedSSE.open()
-      cancellable.addCancellingTask(fileChangedSSE.close())
+      cancellable.addCancellingTask(fileChangedSSE.close)
 
-      watchSignal.listen((relativeFilename) => {
+      watchSignal.listen((file) => {
         fileChangedSSE.sendEvent({
           type: "file-changed",
-          data: relativeFilename,
+          data: file,
         })
       })
 
