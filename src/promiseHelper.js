@@ -85,3 +85,44 @@ export const objectToPromiseAll = (object) => {
 
   return Promise.all(promises).then(() => result)
 }
+
+export const millisecondToResolved = (millisecond) => {
+  return new Promise((resolve) => {
+    setTimeout(resolve, millisecond)
+  })
+}
+
+export const reduceToFirstOrPending = (values) => {
+  return new Promise((resolve, reject) => {
+    let otherResolved = false
+
+    const visit = (index) => {
+      const value = values[index]
+      Promise.resolve(value).then((value) => {
+        if (otherResolved) {
+          return
+        }
+        if (index === 0) {
+          resolve(value)
+          return
+        }
+        otherResolved = true
+      }, reject)
+    }
+
+    let i = values.length
+    while (i--) {
+      visit(i)
+    }
+  })
+}
+
+const flag = {}
+export const mapPending = (promise, callback) => {
+  return Promise.race([promise, flag]).then((value) => {
+    if (value === flag) {
+      return callback()
+    }
+    return value
+  })
+}

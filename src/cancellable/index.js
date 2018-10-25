@@ -1,32 +1,25 @@
-const cancelTokenSymbol = Symbol.for("cancelToken")
-
-export const isCancelToken = (value) => {
-  return value && typeof value === "object" && cancelTokenSymbol in value
-}
-
-const dataToCancelToken = (data) => {
-  return {
-    [cancelTokenSymbol]: true,
-    data,
-  }
-}
-
-export const cancelTokenToData = (cancelToken) => cancelToken.data
-
 export const createCancellable = () => {
-  let resolve
-  const promise = new Promise((res) => {
-    resolve = res
+  let cancellingPromiseResolved = false
+  let cancellingResolve
+  const cancelling = new Promise((resolve) => {
+    cancellingResolve = (value) => {
+      cancellingPromiseResolved = true
+      resolve(value)
+    }
   })
 
   const callbacks = []
-  let cancelled = false
-  const teardown = (callback) => {
-    if (cancelled) {
+  const addCancellingTask = (callback) => {
+    if (cancellingPromiseResolved) {
       return () => {}
     }
 
-    callbacks.push(callback)
+    // add in reverse order because when using this api
+    // you add more dependent cancelling task as you go
+    // so we must cancel the more nested task first
+    // and then cancel the higher level task
+    callbacks.unshift(callback)
+
     return () => {
       const index = callbacks.indexOf(callback)
       if (index > -1) {
@@ -35,36 +28,30 @@ export const createCancellable = () => {
     }
   }
 
-  const cancel = (value) => {
-    if (cancelled) {
-      return promise
-    }
+  let cancelledResolve
+  const cancelled = new Promise((res) => {
+    cancelledResolve = res
+  })
 
-    cancelled = true
-    resolve(
+  const cancel = (value) => {
+    if (cancellingPromiseResolved) {
+      return cancelled
+    }
+    cancellingResolve(value)
+
+    cancelledResolve(
       callbacks
         .reduce((previous, callback) => previous.then(() => callback(value)), Promise.resolve())
         .then(() => value),
     )
     callbacks.length = 0
 
-    return promise
+    return cancelled
   }
 
   return {
-    teardown,
+    addCancellingTask,
+    cancelling,
     cancel,
-    promise,
   }
-}
-
-export const promiseToCancellablePromise = (promise, cancellable) => {
-  const cancelledPromise = cancellable.promise.then((value) =>
-    Promise.reject(dataToCancelToken(value)),
-  )
-
-  const promiseWithCancel = Promise.race([cancelledPromise, promise])
-  promiseWithCancel.cancel = cancellable.cancel
-
-  return promiseWithCancel
 }

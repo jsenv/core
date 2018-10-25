@@ -1,9 +1,8 @@
 import { fork } from "child_process"
 import path from "path"
-import { createSignal } from "@dmail/signal"
-import { cancellableAction } from "../signalHelper.js"
 import { uneval } from "@dmail/uneval"
-import { createCancellable, promiseToCancellablePromise } from "../cancellable/index.js"
+import { createCancellable } from "../cancellable/index.js"
+import { reduceToFirstOrPending, mapPending } from "../promiseHelper.js"
 
 const root = path.resolve(__dirname, "../../../")
 const nodeClientFile = `${root}/dist/src/createExecuteOnNode/client.js`
@@ -30,9 +29,7 @@ export const createExecuteOnNode = ({
     }
 
     const forkChild = () => {
-      const cancellable = createCancellable()
-      const cancelled = createSignal()
-      cancellable.promise.then(cancelled.emit)
+      const { addCancellingTask, cancel, cancelling } = createCancellable()
 
       const promise = new Promise((resolve, reject) => {
         const child = fork(nodeClientFile, {
@@ -42,6 +39,9 @@ export const createExecuteOnNode = ({
           ],
         })
         log(`fork ${nodeClientFile} to execute ${file}`)
+        child.on("message", (message) => {
+          log(`receive message from child ${message.data}`)
+        })
 
         const sendToChild = (type, data) => {
           const source = uneval(data, { showFunctionBody: true })
@@ -52,83 +52,79 @@ export const createExecuteOnNode = ({
           })
         }
 
-        const closed = createSignal()
-        child.once("close", (code) => {
-          log(`child closed with code ${code}`)
-          closed.emit(code)
+        const closed = new Promise((resolve) => {
+          child.once("close", (code) => {
+            log(`child closed with code ${code}`)
+            resolve(code)
+          })
         })
 
-        const executed = createSignal()
-        const restartAsked = createSignal()
-        child.on("message", (message) => {
-          const source = message.data
-
-          log(`receive message from child ${source}`)
-
-          if (message.type === "execute-result") {
-            executed.emit(eval(`(${source})`))
-          }
-          if (message.type === "restart") {
-            restartAsked.emit(eval(`(${source})`))
-          }
+        const executed = new Promise((resolve) => {
+          child.on("message", (message) => {
+            const source = message.data
+            if (message.type === "execute-result") {
+              resolve(eval(`(${source})`))
+            }
+          })
         })
 
-        // kill the child when cancel called except if child has closed before
-        cancellableAction(
-          () => {
-            log(`cancel called, ask politely to the child to exit`)
+        const restartAsked = new Promise((resolve) => {
+          child.on("message", (message) => {
+            if (message.type === "restart") {
+              resolve(eval(`(${message.data})`))
+            }
+          })
+        })
+
+        const childExit = () => {
+          // if closed hapened, no need to close
+          return mapPending(closed, () => {
+            // we have to do this instead of child.kill('SIGINT') because
+            // on windows, it would kill the child immediatly
             sendToChild("exit-please")
-          },
-          cancelled,
-          closed,
-        )
+            return closed
+          })
+        }
+
+        // kill the child when cancel called
+        addCancellingTask(() => {
+          log(`cancel called, ask politely to the child to exit`)
+          return childExit()
+        })
+
         // throw or reject when child is closed except if child ask to restart before
         // (because in that case it will be handled by restart)
-        cancellableAction(
-          (code) => {
-            if (code === 12) {
-              throw new Error(
-                `child exited with 12: forked child wanted to use a non available port for debug`,
-              )
-            }
-            if (code !== 0) {
-              reject(`exited with code ${code}`)
-            }
-          },
-          closed,
-          restartAsked,
-        )
+        reduceToFirstOrPending([closed, restartAsked]).then((code) => {
+          if (code === 12) {
+            throw new Error(
+              `child exited with 12: forked child wanted to use a non available port for debug`,
+            )
+          }
+          if (code !== 0) {
+            reject(`exited with code ${code}`)
+          }
+        })
+
         // resolve or reject when child has sent execution result, except if child ask to restart before
-        cancellableAction(
-          ({ code, value }) => {
-            if (code === 0) {
-              resolve(value)
-            } else {
-              reject(value)
-            }
-          },
-          executed,
-          restartAsked,
-        )
+        reduceToFirstOrPending([executed, restartAsked]).then(({ code, value }) => {
+          if (code === 0) {
+            resolve(value)
+          } else {
+            reject(value)
+          }
+        })
 
-        restartAsked.listenOnce(() => {
-          // fork a new child when child is closed except if cancel was called
-          cancellableAction(
-            (code) => {
-              log(`restart last step: child closed with ${code}`)
-              if (code === 0 || code === null) {
-                forkChild()
-              } else {
-                throw new Error(`child exited with ${code} after asking to restart`)
-              }
-            },
-            closed,
-            cancelled,
-          )
-
+        restartAsked.then(() => {
           log(`restart first step: ask politely to the child to exit`)
-          // we have to do this instead of child.kill('SIGINT') because, on windows, it would kill the child immediatly
-          sendToChild("exit-please")
+          // fork a new child when child is closed except if cancel was called
+          reduceToFirstOrPending([childExit(), cancelling]).then((code) => {
+            log(`restart last step: child closed with ${code}`)
+            if (code === 0 || code === null) {
+              forkChild()
+            } else {
+              throw new Error(`child exited with ${code} after asking to restart`)
+            }
+          })
           log(`restart second step: wait for child to close`)
         })
 
@@ -152,7 +148,9 @@ export const createExecuteOnNode = ({
         return Promise.reject(localError)
       })
 
-      return promiseToCancellablePromise(promise, cancellable)
+      const promiseCancellable = reduceToFirstOrPending([promise, cancelling])
+      promiseCancellable.cancel = cancel
+      return promiseCancellable
     }
 
     return forkChild()
