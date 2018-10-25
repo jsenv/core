@@ -12,6 +12,7 @@ import {
 import { watchFile } from "../watchFile.js"
 import { createSignal } from "@dmail/signal"
 import { ressourceToCompileIdAndFile } from "../compileFileToService/compileFileToService.js"
+import { createCancellable } from "../cancellable/index.js"
 
 export const open = ({
   // server options
@@ -31,13 +32,13 @@ export const open = ({
   sourceCacheStrategy = "etag",
   sourceCacheIgnore = false,
 }) => {
-  const cleanup = createSignal()
+  const cancellable = createCancellable()
 
   const createWatchService = () => {
     const watchSignal = createSignal()
 
     const watchedFiles = new Map()
-    cleanup.listenOnce(() => {
+    cancellable.addCancellingTask(() => {
       watchedFiles.forEach((closeWatcher) => closeWatcher())
       watchedFiles.clear()
     })
@@ -56,15 +57,15 @@ export const open = ({
         })
         watchedFiles.set(fileLocation, fileWatcher)
       }
+
+      return null
     }
 
     const createWatchSSEService = () => {
       const fileChangedSSE = createSSERoom()
 
       fileChangedSSE.open()
-      cleanup.listenOnce(() => {
-        fileChangedSSE.close()
-      })
+      cancellable.addCancellingTask(fileChangedSSE.close())
 
       watchSignal.listen((relativeFilename) => {
         fileChangedSSE.sendEvent({
@@ -113,14 +114,12 @@ export const open = ({
     })
   }
 
-  return serverOpen({
-    protocol,
-    ip,
-    port,
-    requestToResponse,
-  }).then((server) => {
-    server.closed.listenOnce(cleanup.emit)
-
-    return server
-  })
+  return cancellable.map(
+    serverOpen({
+      protocol,
+      ip,
+      port,
+      requestToResponse,
+    }),
+  )
 }

@@ -1,7 +1,7 @@
 import { promiseConcurrent } from "../promiseHelper.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 import { teardownForOutputAndCoverage } from "../platformTeardown.js"
-import { createCancellable, promiseToCancellablePromise } from "../cancellable/index.js"
+import { createCancellable } from "../cancellable/index.js"
 
 // import { objectMapKey } from "./objectHelper.js"
 
@@ -23,27 +23,30 @@ export const getCoverageMapAndOutputMapForFiles = ({
   const executeTestFile = (file) => {
     beforeEach({ file })
 
-    const execution = execute({
-      file,
-      teardown: teardownForOutputAndCoverage,
-    })
-    cancellable.teardown(execution.cancel)
+    return cancellable
+      .wrap(
+        execute({
+          file,
+          teardown: teardownForOutputAndCoverage,
+        }),
+      )
+      .then(({ output, coverage }) => {
+        // coverage = null means file do not set a global.__coverage__
+        // which happens if file was not instrumented.
+        // this is not supposed to happen so we should throw ?
 
-    return execution.then(({ output, coverage }) => {
-      // coverage = null means file do not set a global.__coverage__
-      // which happens if file was not instrumented.
-      // this is not supposed to happen so we should throw ?
+        afterEach({ file, output, coverage })
 
-      afterEach({ file, output, coverage })
-
-      return { output, coverage }
-    })
+        return { output, coverage }
+      })
   }
 
   beforeAll({ files })
 
-  const promise = promiseConcurrent(files, executeTestFile, { maxParallelExecution }).then(
-    (results) => {
+  return cancellable.wrap(
+    promiseConcurrent(files, executeTestFile, {
+      maxParallelExecution,
+    }).then((results) => {
       afterAll({ files, results })
 
       const outputMap = {}
@@ -55,8 +58,6 @@ export const getCoverageMapAndOutputMapForFiles = ({
       const coverageMap = coverageMapCompose(results.map(({ coverage }) => coverage))
 
       return { outputMap, coverageMap }
-    },
+    }),
   )
-
-  return promiseToCancellablePromise(promise, cancellable)
 }

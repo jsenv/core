@@ -6,6 +6,7 @@ import { populateNodeResponse } from "./populateNodeResponse.js"
 import { createSignal } from "@dmail/signal"
 import killPort from "kill-port"
 import { URL } from "url"
+import { createCancellable } from "../cancellable/index.js"
 
 const REASON_CLOSING = "closing"
 
@@ -88,6 +89,8 @@ export const open = (
       console.log(...args)
     }
   }
+
+  const cancellable = createCancellable()
 
   const { nodeServer, agent } = getNodeServerAndAgent({ protocol, signature })
 
@@ -173,152 +176,161 @@ export const open = (
 
   const closed = createSignal()
 
-  return Promise.resolve()
-    .then(() => (forcePort ? killPort(port) : null))
-    .then(() => listen())
-    .then(() => {
-      status = "opened"
+  return cancellable.map(
+    Promise.resolve()
+      .then(() => (forcePort ? killPort(port) : null))
+      .then(() => listen())
+      .then(() => {
+        status = "opened"
 
-      const origin = originAsString({
-        protocol,
-        ip,
-        // in case port is 0 (randomly assign an available port)
-        // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-        port: nodeServer.address().port,
-      })
-
-      addInternalRequestHandler((nodeRequest, nodeResponse) => {
-        const request = createRequestFromNodeRequest(nodeRequest, origin)
-        log(`${request.method} ${origin}/${request.ressource}`)
-
-        nodeRequest.on("error", (error) => {
-          log("error on", request.ressource, error)
+        const origin = originAsString({
+          protocol,
+          ip,
+          // in case port is 0 (randomly assign an available port)
+          // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
+          port: nodeServer.address().port,
         })
 
-        return Promise.resolve()
-          .then(() => requestToResponse(request))
-          .then(({ status = 501, reason = "not specified", headers = {}, body = "" }) =>
-            Object.freeze({ status, reason, headers, body }),
-          )
-          .then((response) => {
-            if (
-              request.method !== "HEAD" &&
-              response.headers["content-length"] > 0 &&
-              response.body === ""
-            ) {
-              throw createContentLengthMismatchError(
-                `content-length header is ${response.headers["content-length"]} but body is empty`,
-              )
-            }
+        addInternalRequestHandler((nodeRequest, nodeResponse) => {
+          const request = createRequestFromNodeRequest(nodeRequest, origin)
+          log(`${request.method} ${origin}/${request.ressource}`)
 
-            return response
+          nodeRequest.on("error", (error) => {
+            log("error on", request.ressource, error)
           })
-          .catch((error) => {
-            return Object.freeze({
-              status: 500,
-              reason: "internal error",
-              headers: {},
-              body: error && error.stack ? error.stack : error,
+
+          return Promise.resolve()
+            .then(() => requestToResponse(request))
+            .then(({ status = 501, reason = "not specified", headers = {}, body = "" }) =>
+              Object.freeze({ status, reason, headers, body }),
+            )
+            .then((response) => {
+              if (
+                request.method !== "HEAD" &&
+                response.headers["content-length"] > 0 &&
+                response.body === ""
+              ) {
+                throw createContentLengthMismatchError(
+                  `content-length header is ${
+                    response.headers["content-length"]
+                  } but body is empty`,
+                )
+              }
+
+              return response
             })
-          })
-          .then((response) => {
-            log(`${response.status} ${origin}/${request.ressource}`)
-
-            return populateNodeResponse(nodeResponse, response, {
-              ignoreBody: request.method === "HEAD",
+            .catch((error) => {
+              return Object.freeze({
+                status: 500,
+                reason: "internal error",
+                headers: {},
+                body: error && error.stack ? error.stack : error,
+              })
             })
-          })
-      })
+            .then((response) => {
+              log(`${response.status} ${origin}/${request.ressource}`)
 
-      const closeConnections = (reason) => {
-        // should we do this async ?
-        // should we do this before closing the server ?
-        connections.forEach((connection) => {
-          connection.destroy(reason)
+              return populateNodeResponse(nodeResponse, response, {
+                ignoreBody: request.method === "HEAD",
+              })
+            })
         })
-      }
 
-      let close = ({ isError = false, reason = REASON_CLOSING } = {}) => {
-        if (status !== "opened") {
-          throw new Error(`server status must be "opened" during close() (got ${status}`)
+        const closeConnections = (reason) => {
+          // should we do this async ?
+          // should we do this before closing the server ?
+          connections.forEach((connection) => {
+            connection.destroy(reason)
+          })
         }
 
-        // ensure we don't try to handle request while server is closing
-        requestHandlers.forEach((requestHandler) => {
-          nodeServer.removeListener("request", requestHandler)
-        })
-        requestHandlers.length = 0
-
-        status = "closing"
-
-        return new Promise((resolve, reject) => {
-          // closing server prevent it from accepting new connections
-          // but opened connection must be shutdown before the close event is emitted
-          nodeServer.once("close", (error) => {
-            if (error) {
-              reject(error)
-            } else {
-              resolve()
-            }
-          })
-          nodeServer.close()
-          closeClients({ isError, reason }).then(() => {
-            closeConnections(reason)
-          })
-        }).then(() => {
-          status = "closed"
-          closed.emit()
-        })
-      }
-
-      if (autoCloseOnError) {
-        const removeAutoCloseOnError = addInternalRequestHandler((nodeRequest, nodeResponse) => {
-          if (nodeResponse.statusCode === 500 && nodeResponse.statusMessage === "internal error") {
-            close({
-              isError: true,
-              // we don't specify the true error object but only a string
-              // identifying the error to avoid sending stacktrace to client
-              // and right now there is no clean way to retrieve error from here
-              reason: nodeResponse.statusMessage,
-            })
+        let close = ({ isError = false, reason = REASON_CLOSING } = {}) => {
+          if (status !== "opened") {
+            throw new Error(`server status must be "opened" during close() (got ${status}`)
           }
-        })
-        const wrappedClose = close
-        close = (...args) => {
-          removeAutoCloseOnError()
-          return wrappedClose(...args)
+
+          // ensure we don't try to handle request while server is closing
+          requestHandlers.forEach((requestHandler) => {
+            nodeServer.removeListener("request", requestHandler)
+          })
+          requestHandlers.length = 0
+
+          status = "closing"
+
+          return new Promise((resolve, reject) => {
+            // closing server prevent it from accepting new connections
+            // but opened connection must be shutdown before the close event is emitted
+            nodeServer.once("close", (error) => {
+              if (error) {
+                reject(error)
+              } else {
+                resolve()
+              }
+            })
+            nodeServer.close()
+            closeClients({ isError, reason }).then(() => {
+              closeConnections(reason)
+            })
+          }).then(() => {
+            status = "closed"
+            closed.emit()
+          })
         }
-      }
 
-      if (autoCloseOnExit) {
-        const removeTeardown = processTeardown((exitReason) => {
-          log(`close server because process will exit because ${exitReason}`)
-          close({ reason: `server process exiting ${exitReason}` })
-        })
-        const wrappedClose = close
-        close = (...args) => {
-          removeTeardown()
-          return wrappedClose(...args)
+        if (autoCloseOnError) {
+          const removeAutoCloseOnError = addInternalRequestHandler((nodeRequest, nodeResponse) => {
+            if (
+              nodeResponse.statusCode === 500 &&
+              nodeResponse.statusMessage === "internal error"
+            ) {
+              close({
+                isError: true,
+                // we don't specify the true error object but only a string
+                // identifying the error to avoid sending stacktrace to client
+                // and right now there is no clean way to retrieve error from here
+                reason: nodeResponse.statusMessage,
+              })
+            }
+          })
+          const wrappedClose = close
+          close = (...args) => {
+            removeAutoCloseOnError()
+            return wrappedClose(...args)
+          }
         }
-      }
 
-      if (autoCloseOnCrash) {
-        // and if we do that we have to remove the listener
-        // while closing to avoid closing twice in case
-        // addNodeExceptionHandler((exception) => {
-        //   return close({ reason: exception }).then(
-        //     // to indicates exception is not handled
-        //     () => false,
-        //   )
-        // })
-      }
+        if (autoCloseOnExit) {
+          const removeTeardown = processTeardown((exitReason) => {
+            log(`close server because process will exit because ${exitReason}`)
+            close({ reason: `server process exiting ${exitReason}` })
+          })
+          const wrappedClose = close
+          close = (...args) => {
+            removeTeardown()
+            return wrappedClose(...args)
+          }
+        }
 
-      return {
-        origin,
-        nodeServer,
-        agent,
-        close,
-        closed,
-      }
-    })
+        if (autoCloseOnCrash) {
+          // and if we do that we have to remove the listener
+          // while closing to avoid closing twice in case
+          // addNodeExceptionHandler((exception) => {
+          //   return close({ reason: exception }).then(
+          //     // to indicates exception is not handled
+          //     () => false,
+          //   )
+          // })
+        }
+
+        cancellable.addCancellingTask(close)
+
+        return {
+          origin,
+          nodeServer,
+          agent,
+          close,
+          closed,
+        }
+      }),
+  )
 }

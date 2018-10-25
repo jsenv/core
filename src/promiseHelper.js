@@ -52,6 +52,11 @@ export const promiseSequence = (...callbacks) => {
 }
 
 export const promiseConcurrent = (list, callback, { maxParallelExecution = 5 } = {}) => {
+  let cancelled = false
+  const cancel = () => {
+    cancelled = true
+  }
+
   const results = []
   const firstChunk = list.slice(0, maxParallelExecution)
   let globalIndex = maxParallelExecution - 1
@@ -60,6 +65,10 @@ export const promiseConcurrent = (list, callback, { maxParallelExecution = 5 } =
     return Promise.resolve()
       .then(() => callback(data))
       .then((value) => {
+        if (cancelled) {
+          return undefined
+        }
+
         results[index] = value
 
         if (globalIndex < list.length - 1) {
@@ -71,7 +80,9 @@ export const promiseConcurrent = (list, callback, { maxParallelExecution = 5 } =
   }
 
   const promises = firstChunk.map((data, index) => execute(data, index))
-  return Promise.all(promises).then(() => results)
+  const promise = Promise.all(promises).then(() => results)
+  promise.cancel = cancel
+  return promise
 }
 
 export const objectToPromiseAll = (object) => {

@@ -3,8 +3,8 @@ import { getCoverageMapForFilesMissed, getFilesMissed } from "./getCoverageMapFo
 import { coverageMapAbsolute } from "./coverageMapAbsolute.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 import { open as serverCompileOpen } from "../server-compile/index.js"
-import { promiseTry, promiseSequence } from "../promiseHelper.js"
-import { createCancellable, promiseToCancellablePromise } from "../cancellable/index.js"
+import { promiseTry, promiseSequence, reduceToFirstOrPending } from "../promiseHelper.js"
+import { createCancellable } from "../cancellable/index.js"
 
 export const getCoverageAndOutputForClients = ({
   root,
@@ -13,7 +13,7 @@ export const getCoverageAndOutputForClients = ({
   getFilesToCover = () => [],
   clients = [],
 }) => {
-  const cancellable = createCancellable()
+  const { addCancellingTask, cancelling, cancel } = createCancellable()
 
   const promise = serverCompileOpen({
     root,
@@ -24,7 +24,7 @@ export const getCoverageAndOutputForClients = ({
     instrument: true,
     instrumentPredicate,
   }).then((server) => {
-    cancellable.teardown(server.close)
+    addCancellingTask(server.close)
 
     const localRoot = root
     const remoteRoot = server.origin
@@ -42,7 +42,7 @@ export const getCoverageAndOutputForClients = ({
           execute,
           files,
         })
-        cancellable.teardown(clientExecution.cancel)
+        addCancellingTask(clientExecution.cancel)
         return clientExecution
       })
     }
@@ -89,5 +89,7 @@ export const getCoverageAndOutputForClients = ({
       })
   })
 
-  return promiseToCancellablePromise(promise, cancellable)
+  const promiseCancellable = reduceToFirstOrPending([promise, cancelling])
+  promiseCancellable.cancel = cancel
+  return promiseCancellable
 }

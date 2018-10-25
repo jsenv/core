@@ -1,3 +1,5 @@
+import { reduceToFirstOrPending } from "../promiseHelper.js"
+
 export const createCancellable = () => {
   let cancellingPromiseResolved = false
   let cancellingResolve
@@ -49,9 +51,44 @@ export const createCancellable = () => {
     return cancelled
   }
 
+  const map = (value) => {
+    if (
+      value &&
+      (typeof value === "object" || typeof value === "function") &&
+      "cancel" in value &&
+      typeof value.cancel === "function"
+    ) {
+      addCancellingTask(() => value.cancel)
+    }
+
+    // we infect promise so that then and catch still have the pointer to cancel
+    const infectPromise = (promise) => {
+      const thenPure = promise.then
+      const thenInfected = function(...args) {
+        return infectPromise(thenPure.apply(this, args))
+      }
+      promise.then = thenInfected
+
+      const catchPure = promise.catch
+      const catchInfected = function(...args) {
+        return infectPromise(catchPure.apply(this, args))
+      }
+      promise.catch = catchInfected
+
+      // maybe we should infect finally too
+
+      promise.cancel = cancel
+
+      return promise
+    }
+
+    return infectPromise(reduceToFirstOrPending([value, cancelling]))
+  }
+
   return {
     addCancellingTask,
     cancelling,
     cancel,
+    map,
   }
 }

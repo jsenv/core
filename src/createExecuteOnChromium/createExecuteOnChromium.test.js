@@ -1,3 +1,6 @@
+// also have ot write a test for cancel
+// to ensure it cancels what's hapenning and resolve when its done
+
 import path from "path"
 import { openCompileServer } from "../openCompileServer/openCompileServer.js"
 import { createExecuteOnChromium } from "./createExecuteOnChromium.js"

@@ -7,6 +7,7 @@ import {
   getBrowserPlatformRemoteURL,
 } from "../compilePlatformAndSystem.js"
 import { createBrowserPlatformSource, createBrowserExecuteSource } from "../createBrowserSource.js"
+import { createCancellable } from "../cancellable/index.js"
 
 const getIndexPageHTML = ({ localRoot }) => {
   const files = ["src/__test__/file.js"]
@@ -51,99 +52,109 @@ export const open = ({
   sourceCacheStrategy,
   sourceCacheIgnore,
 }) => {
-  return serverCompileOpen({
-    localRoot,
-    compileInto,
-    protocol, // reuse browser protocol
-    compileService,
-    watch,
-    watchPredicate,
-    sourceCacheStrategy,
-    sourceCacheIgnore,
-  }).then((server) => {
-    const remoteRoot = server.origin
-    console.log(`compiling ${localRoot} at ${remoteRoot}`)
+  const cancellable = createCancellable()
 
-    const indexRoute = guard(
-      createRequestPredicate({
-        ressource: "",
-        method: "GET",
+  return cancellable
+    .map(
+      serverCompileOpen({
+        localRoot,
+        compileInto,
+        protocol, // reuse browser protocol
+        compileService,
+        watch,
+        watchPredicate,
+        sourceCacheStrategy,
+        sourceCacheIgnore,
       }),
-      () => {
-        return Promise.resolve()
-          .then(() =>
-            getIndexPageHTML({
-              localRoot,
-            }),
-          )
-          .then((html) => {
-            return {
-              status: 200,
-              headers: {
-                "cache-control": "no-store",
-                "content-type": "text/html",
-                "content-length": Buffer.byteLength(html),
-              },
-              body: html,
-            }
-          })
-      },
     )
+    .then((server) => {
+      const remoteRoot = server.origin
+      console.log(`compiling ${localRoot} at ${remoteRoot}`)
 
-    const otherRoute = guard(
-      createRequestPredicate({
-        ressource: "*",
-        method: "GET",
-      }),
-      ({ ressource }) => {
-        return Promise.resolve()
-          .then(() => {
-            return createHTMLForBrowser({
-              scriptRemoteList: [
-                { url: getBrowserSystemRemoteURL({ remoteRoot, compileInto }) },
-                { url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) },
-              ],
-              scriptInlineList: [
-                {
-                  source: createBrowserPlatformSource({
-                    remoteRoot,
-                    compileInto,
-                    groupMap,
-                    hotreload: watch,
-                    hotreloadSSERoot: remoteRoot,
-                  }),
+      const indexRoute = guard(
+        createRequestPredicate({
+          ressource: "",
+          method: "GET",
+        }),
+        () => {
+          return Promise.resolve()
+            .then(() =>
+              getIndexPageHTML({
+                localRoot,
+              }),
+            )
+            .then((html) => {
+              return {
+                status: 200,
+                headers: {
+                  "cache-control": "no-store",
+                  "content-type": "text/html",
+                  "content-length": Buffer.byteLength(html),
                 },
-                {
-                  source: createBrowserExecuteSource({
-                    file: ressource,
-                  }),
-                },
-              ],
+                body: html,
+              }
             })
-          })
-          .then((html) => {
-            return {
-              status: 200,
-              headers: {
-                "cache-control": "no-store",
-                "content-type": "text/html",
-                "content-length": Buffer.byteLength(html),
-              },
-              body: html,
-            }
-          })
-      },
-    )
+        },
+      )
 
-    return serverOpen({
-      protocol,
-      ip,
-      port,
-      forcePort,
-      requestToResponse: serviceCompose(indexRoute, otherRoute),
-    }).then((runServer) => {
-      console.log(`executing ${localRoot} at ${runServer.origin}`)
-      return runServer
+      const otherRoute = guard(
+        createRequestPredicate({
+          ressource: "*",
+          method: "GET",
+        }),
+        ({ ressource }) => {
+          return Promise.resolve()
+            .then(() => {
+              return createHTMLForBrowser({
+                scriptRemoteList: [
+                  { url: getBrowserSystemRemoteURL({ remoteRoot, compileInto }) },
+                  { url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) },
+                ],
+                scriptInlineList: [
+                  {
+                    source: createBrowserPlatformSource({
+                      remoteRoot,
+                      compileInto,
+                      groupMap,
+                      hotreload: watch,
+                      hotreloadSSERoot: remoteRoot,
+                    }),
+                  },
+                  {
+                    source: createBrowserExecuteSource({
+                      file: ressource,
+                    }),
+                  },
+                ],
+              })
+            })
+            .then((html) => {
+              return {
+                status: 200,
+                headers: {
+                  "cache-control": "no-store",
+                  "content-type": "text/html",
+                  "content-length": Buffer.byteLength(html),
+                },
+                body: html,
+              }
+            })
+        },
+      )
+
+      return cancellable
+        .map(
+          serverOpen({
+            protocol,
+            ip,
+            port,
+            forcePort,
+            requestToResponse: serviceCompose(indexRoute, otherRoute),
+          }),
+        )
+        .then((runServer) => {
+          console.log(`executing ${localRoot} at ${runServer.origin}`)
+          return runServer
+        })
     })
-  })
 }
