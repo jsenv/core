@@ -7,7 +7,6 @@ import {
   getBrowserPlatformRemoteURL,
 } from "../compilePlatformAndSystem.js"
 import { createBrowserPlatformSource, createBrowserExecuteSource } from "../createBrowserSource.js"
-import { createCancellable } from "../cancellable/index.js"
 
 const getIndexPageHTML = ({ localRoot }) => {
   const files = ["src/__test__/file.js"]
