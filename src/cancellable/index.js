@@ -1,3 +1,20 @@
+// var val = (function() {
+//   var promise = new Promise(function(resolve) {
+//     resolve(42)
+//   })
+//   promise.constructor = function(exec) {
+//     exec(function() {}, function() {})
+//   }
+//   var FakePromise1 = promise.constructor
+//   var FakePromise2 = function(exec) {
+//     exec(function() {}, function() {})
+//   }
+
+//   FakePromise1[Symbol.species] = FakePromise2
+
+//   return promise.then(function() {}) instanceof FakePromise2
+// })()
+
 // KEEP THIS IN MIND:
 // when promise resolve before cancelling
 // cancelling could be considered useless
@@ -6,39 +23,86 @@
 // so calling cancel() even if the task is done
 // must call the cancellingTasks
 
-const canHaveProperty = (value) =>
-  value && (typeof value === "object" || typeof value === "function")
+const isThenable = (value) => {
+  if (value) {
+    return typeof value.then === "function"
+  }
+  return false
+}
 
-// const valuePropertyToThenable = (value, property) => {
-//   if (!canHaveProperty(value)) {
-//     return false
-//   }
-//   const propertyValue = value[property]
-//   if (!canHaveProperty(propertyValue)) {
-//     return false
-//   }
-//   if (!"then" in propertyValue) {
-//     return false
-//   }
-//   const then = propertyValue.then
-//   if (typeof then !== "function") {
-//     return false
-//   }
-//   return propertyValue
-// }
+const isCancellable = (value) => {
+  if (value) {
+    return typeof value.cancel === "function"
+  }
+  return false
+}
 
-const valuePropertyToFunction = (value, property) => {
-  if (!canHaveProperty(value)) {
-    return false
+// as long as cancel is not called the main flow can go on
+// as soon as cancel is called, we wait for the current promise to resolve (if any)
+// and we call the callbacks
+// further then must return a thenable pending forever
+
+export const cancellable = (execute) => {
+  let cancelling = false
+
+  const cancelCallbacks = new Set()
+  const cancelCallback = (callback) => {
+    cancelCallbacks.add(callback)
   }
-  if (!property in value) {
-    return false
+
+  const pipeCancel = (value) => {
+    if (isCancellable(value)) {
+      if (cancelling) {
+        value.cancel()
+      } else {
+        cancelCallback(value.cancel)
+      }
+    }
+
+    return value
   }
-  const propertyValue = value[property]
-  if (typeof propertyValue !== "function") {
-    return false
+
+  const promise = new Promise((resolve) => {
+    resolve(pipeCancel(execute({ cancelCallback })))
+  })
+
+  let cancelResolve
+  const cancelPromise = new Promise((resolve) => {
+    cancelResolve = resolve
+  })
+
+  const cancel = () => {
+    if (cancelling) {
+      return cancelPromise
+    }
+    cancelling = true
+
+    promise.then(() => {
+      const callbacks = Array.from(cancelCallbacks.values()).reverse()
+      cancelCallbacks.clear()
+      // faudrait appeler tous les callbacks etc
+      cancelResolve(callbacks)
+    })
+
+    return cancelPromise
   }
-  return propertyValue
+
+  const then = (valueCallback, errorCallback) => {
+    const thenPromise = new Promise((resolve, reject) => {
+      promise.then((value) => {
+        if (cancelling === false) {
+          resolve(valueCallback ? pipeCancel(valueCallback(value)) : value)
+        }
+      }, errorCallback ? (error) => reject(errorCallback(error)) : reject)
+    })
+    return thenPromise
+  }
+
+  return {
+    // [Symbol.species]: function () {}
+    cancel,
+    then,
+  }
 }
 
 export const createCancellable = () => {
