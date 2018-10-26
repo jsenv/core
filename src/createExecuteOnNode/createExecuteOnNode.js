@@ -1,7 +1,7 @@
 import { fork } from "child_process"
 import path from "path"
 import { uneval } from "@dmail/uneval"
-import { createCancellable } from "../cancellable/index.js"
+import { cancellable } from "../cancellable/index.js"
 import { reduceToFirstOrPending, mapPending } from "../promiseHelper.js"
 
 const root = path.resolve(__dirname, "../../../")
@@ -29,10 +29,8 @@ export const createExecuteOnNode = ({
     }
 
     const forkChild = () => {
-      const cancellable = createCancellable()
-
-      return cancellable.map(
-        new Promise((resolve, reject) => {
+      return cancellable((cleanup) => {
+        return new Promise((resolve, reject) => {
           const child = fork(nodeClientFile, {
             execArgv: [
               // allow vscode to debug else you got port already used
@@ -60,6 +58,22 @@ export const createExecuteOnNode = ({
             })
           })
 
+          const childExit = () => {
+            // if closed hapened, no need to close
+            return mapPending(closed, () => {
+              // we have to do this instead of child.kill('SIGINT') because
+              // on windows, it would kill the child immediatly
+              sendToChild("exit-please")
+              return closed
+            })
+          }
+
+          // kill the child when cancel called
+          cleanup(() => {
+            log(`cancel called, ask politely to the child to exit`)
+            return childExit()
+          })
+
           const executed = new Promise((resolve) => {
             child.on("message", (message) => {
               const source = message.data
@@ -75,22 +89,6 @@ export const createExecuteOnNode = ({
                 resolve(eval(`(${message.data})`))
               }
             })
-          })
-
-          const childExit = () => {
-            // if closed hapened, no need to close
-            return mapPending(closed, () => {
-              // we have to do this instead of child.kill('SIGINT') because
-              // on windows, it would kill the child immediatly
-              sendToChild("exit-please")
-              return closed
-            })
-          }
-
-          // kill the child when cancel called
-          cancellable.addCancellingTask(() => {
-            log(`cancel called, ask politely to the child to exit`)
-            return childExit()
           })
 
           // throw or reject when child is closed except if child ask to restart before
@@ -118,7 +116,12 @@ export const createExecuteOnNode = ({
           restartAsked.then(() => {
             log(`restart first step: ask politely to the child to exit`)
             // fork a new child when child is closed except if cancel was called
-            reduceToFirstOrPending([childExit(), cancellable.cancelling]).then((code) => {
+            // if we call cancel
+            const cancelled = new Promise((resolve) => {
+              cleanup(resolve)
+            })
+
+            reduceToFirstOrPending([childExit(), cancelled]).then((code) => {
               log(`restart last step: child closed with ${code}`)
               if (code === 0 || code === null) {
                 forkChild()
@@ -147,12 +150,12 @@ export const createExecuteOnNode = ({
           console.error(localError)
 
           return Promise.reject(localError)
-        }),
-      )
+        })
+      })
     }
 
     return forkChild()
   }
 
-  return { execute }
+  return execute
 }

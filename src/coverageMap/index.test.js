@@ -18,7 +18,7 @@ createFileStructure({ root })
       // forEachFileMatching(coverMetaPredicate, ({ relativeName }) => relativeName),
       clients: [
         {
-          getExecute: (...args) => createExecuteOnNode(...args).execute,
+          getExecute: (...args) => createExecuteOnNode(...args),
           getFiles: () => ["src/__test__/file.test.js"],
         },
         // {

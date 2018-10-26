@@ -1,7 +1,7 @@
 import { promiseConcurrent } from "../promiseHelper.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 import { teardownForOutputAndCoverage } from "../platformTeardown.js"
-import { createCancellable } from "../cancellable/index.js"
+import { cancellable } from "../cancellable/index.js"
 
 // import { objectMapKey } from "./objectHelper.js"
 
@@ -18,19 +18,17 @@ export const getCoverageMapAndOutputMapForFiles = ({
   afterEach = () => {},
   afterAll = () => {},
 }) => {
-  const cancellable = createCancellable()
+  return cancellable((cleanup) => {
+    const executeTestFile = (file) => {
+      beforeEach({ file })
 
-  const executeTestFile = (file) => {
-    beforeEach({ file })
+      const execution = execute({
+        file,
+        teardown: teardownForOutputAndCoverage,
+      })
+      cleanup(execution.cancel)
 
-    return cancellable
-      .wrap(
-        execute({
-          file,
-          teardown: teardownForOutputAndCoverage,
-        }),
-      )
-      .then(({ output, coverage }) => {
+      return execution.then(({ output, coverage }) => {
         // coverage = null means file do not set a global.__coverage__
         // which happens if file was not instrumented.
         // this is not supposed to happen so we should throw ?
@@ -39,14 +37,16 @@ export const getCoverageMapAndOutputMapForFiles = ({
 
         return { output, coverage }
       })
-  }
+    }
 
-  beforeAll({ files })
+    beforeAll({ files })
 
-  return cancellable.wrap(
-    promiseConcurrent(files, executeTestFile, {
+    const promise = promiseConcurrent(files, executeTestFile, {
       maxParallelExecution,
-    }).then((results) => {
+    })
+    cleanup(promise.cancel)
+
+    return promise.then((results) => {
       afterAll({ files, results })
 
       const outputMap = {}
@@ -58,6 +58,6 @@ export const getCoverageMapAndOutputMapForFiles = ({
       const coverageMap = coverageMapCompose(results.map(({ coverage }) => coverage))
 
       return { outputMap, coverageMap }
-    }),
-  )
+    })
+  })
 }
