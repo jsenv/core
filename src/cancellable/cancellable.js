@@ -5,8 +5,15 @@ const isCancellable = (value) => {
   return false
 }
 
-export const cancellable = (execute) => {
+export const cancellable = () => {
   const cleanupCallbackSet = new Set()
+
+  const addCancelCallback = (callback) => {
+    cleanupCallbackSet.add(callback)
+    return () => {
+      cleanupCallbackSet.remove(callback)
+    }
+  }
 
   const startCancellation = (reason) => {
     const callbacks = Array.from(cleanupCallbackSet.values()).reverse()
@@ -29,25 +36,13 @@ export const cancellable = (execute) => {
     return cancelledPromise
   }
 
-  const track = (execute) => {
-    // in case cancel is called during execute()
-    // we ensure the globalExecutionPromise already waits for execute
-    // to resolve so that we will have gathered all the cleanupCallback
-    // before calling startCancellation()
-    let executionResolve
-    const executionPromise = new Promise((resolve) => {
-      executionResolve = resolve
-    })
-    globalExecutionPromise = executionPromise.then(() => executionPromise)
-
-    const returnValue = execute((cleanupCallback) => {
-      cleanupCallbackSet.add(cleanupCallback)
-    })
-    executionResolve(returnValue)
-
-    if (isCancellable(returnValue)) {
-      cleanupCallbackSet.add(returnValue.cancel)
+  const cancellableStep = (value) => {
+    if (isCancellable(value)) {
+      addCancelCallback(value.cancel)
     }
+
+    const executionPromise = Promise.resolve(value)
+    globalExecutionPromise = globalExecutionPromise.then(() => executionPromise)
 
     const cancellablePromise = new Promise((resolve) => {
       executionPromise.then((value) => {
@@ -57,33 +52,23 @@ export const cancellable = (execute) => {
         resolve(value)
       })
     })
-    cancellablePromise.then = (valueCallback) => {
-      // when cancelled then/cancel contract still available but noop
-      if (canceled) {
-        const pending = new Promise(() => {})
-        pending.cancel = cancel
-        return pending
+
+    const infectPromise = (promise) => {
+      const CancellablePromiseConstructor = function(execute) {
+        // eslint-disable-next-line no-use-before-define
+        const promise = new Promise(execute)
+        promise.cancel = cancel
+        return promise
       }
+      CancellablePromiseConstructor[Symbol.species] = CancellablePromiseConstructor
 
-      const nestedPromise = new Promise((resolve) => {
-        executionPromise.then((value) => {
-          if (canceled) {
-            return
-          }
-          if (valueCallback) {
-            resolve(track(() => valueCallback(value)))
-            return
-          }
-          resolve(value)
-        })
-      })
-      nestedPromise.cancel = cancel
-      return nestedPromise
+      promise.constructor = CancellablePromiseConstructor
+      promise.cancel = cancel
+      return promise
     }
-    cancellablePromise.cancel = cancel
 
-    return cancellablePromise
+    return infectPromise(cancellablePromise)
   }
 
-  return track(execute)
+  return { cancel, cancellableStep, addCancelCallback }
 }

@@ -2,17 +2,23 @@ import { cancellable } from "../cancellable.js"
 import assert from "assert"
 
 const calls = []
-const execution = cancellable((cleanup) => {
+
+const execute = () => {
+  const { cancellableStep, addCancelCallback } = cancellable()
+
   calls.push("body")
-  cleanup(() => {
+  addCancelCallback(() => {
     calls.push("cleanup")
   })
+  return cancellableStep(
+    Promise.resolve().then((value) => {
+      calls.push("done")
+      return value
+    }),
+  )
+}
 
-  return Promise.resolve().then((value) => {
-    calls.push("done")
-    return value
-  })
-})
+const execution = execute()
 
 execution.cancel().then(() => {
   const actual = calls
