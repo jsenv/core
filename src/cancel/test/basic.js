@@ -1,16 +1,16 @@
-import { cancellable } from "../cancellable.js"
+import { createCancel } from "../cancel.js"
 import assert from "assert"
 
 const calls = []
 
 const execute = () => {
-  const { cancellableStep, addCancelCallback } = cancellable()
+  const { cancellable, addCancelCallback } = createCancel()
 
   calls.push("body")
   addCancelCallback(() => {
     calls.push("cleanup")
   })
-  return cancellableStep(
+  return cancellable(
     Promise.resolve().then((value) => {
       calls.push("done")
       return value

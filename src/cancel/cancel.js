@@ -5,7 +5,7 @@ const isCancellable = (value) => {
   return false
 }
 
-export const cancellable = () => {
+export const createCancel = () => {
   const cleanupCallbackSet = new Set()
 
   const addCancelCallback = (callback) => {
@@ -26,17 +26,17 @@ export const cancellable = () => {
 
   let globalExecutionPromise = Promise.resolve()
   let canceled = false
-  let cancelledPromise
+  let canceledPromise
   const cancel = (reason) => {
     if (canceled) {
-      return cancelledPromise
+      return canceledPromise
     }
     canceled = true
-    cancelledPromise = globalExecutionPromise.then(() => startCancellation(reason))
-    return cancelledPromise
+    canceledPromise = globalExecutionPromise.then(() => startCancellation(reason))
+    return canceledPromise
   }
 
-  const cancellableStep = (value) => {
+  const cancellable = (value) => {
     if (isCancellable(value)) {
       addCancelCallback(value.cancel)
     }
@@ -54,9 +54,31 @@ export const cancellable = () => {
     })
 
     const infectPromise = (promise) => {
+      const thenPure = promise.then
+      const thenInfected = function(valueCallback, errorCallback) {
+        const nestedPromise = thenPure.call(
+          this,
+          (value) => {
+            if (canceled) {
+              return new this.constructor[Symbol.species](() => {})
+            }
+            return valueCallback ? valueCallback(value) : value
+          },
+          errorCallback,
+        )
+        return nestedPromise
+      }
+
       const CancellablePromiseConstructor = function(execute) {
-        // eslint-disable-next-line no-use-before-define
-        const promise = new Promise(execute)
+        const promise = new Promise((resolve, reject) => {
+          execute((value) => {
+            if (canceled) {
+              return
+            }
+            resolve(value)
+          }, reject)
+        })
+        promise.then = thenInfected
         promise.cancel = cancel
         return promise
       }
@@ -64,11 +86,13 @@ export const cancellable = () => {
 
       promise.constructor = CancellablePromiseConstructor
       promise.cancel = cancel
+      promise.then = thenInfected
+
       return promise
     }
 
     return infectPromise(cancellablePromise)
   }
 
-  return { cancel, cancellableStep, addCancelCallback }
+  return { cancel, cancellable, addCancelCallback }
 }
