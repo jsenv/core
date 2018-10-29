@@ -1,3 +1,10 @@
+// propagating cancellation from server to client:
+// server could execute a global function client side to request cancellation
+// or client to connect to a server SSE asking for cancellation
+// BUT this feature is not very important for now I guess
+// client will just be killed if node controls it (chromium)
+// otherwise we don't care
+
 import { versionIsBelowOrEqual } from "@dmail/project-structure-compile-babel/src/versionCompare.js"
 import { createImportTracker } from "../createImportTracker.js"
 import { detect } from "./browserDetect/index.js"
