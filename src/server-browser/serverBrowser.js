@@ -36,7 +36,7 @@ const getIndexPageHTML = ({ localRoot }) => {
   </html>`
 }
 
-export const open = ({
+export const open = async ({
   cancellation = cancellationNone,
   protocol = "http",
   ip = "127.0.0.1",
@@ -53,7 +53,7 @@ export const open = ({
   sourceCacheStrategy,
   sourceCacheIgnore,
 }) => {
-  return serverCompileOpen({
+  const server = await serverCompileOpen({
     cancellation,
     localRoot,
     compileInto,
@@ -63,89 +63,89 @@ export const open = ({
     watchPredicate,
     sourceCacheStrategy,
     sourceCacheIgnore,
-  }).then((server) => {
-    const remoteRoot = server.origin
+  })
 
-    const indexRoute = guard(
-      createRequestPredicate({
-        ressource: "",
-        method: "GET",
-      }),
-      () => {
-        return Promise.resolve()
-          .then(() =>
-            getIndexPageHTML({
-              localRoot,
-            }),
-          )
-          .then((html) => {
-            return {
-              status: 200,
-              headers: {
-                "cache-control": "no-store",
-                "content-type": "text/html",
-                "content-length": Buffer.byteLength(html),
+  const remoteRoot = server.origin
+
+  const indexRoute = guard(
+    createRequestPredicate({
+      ressource: "",
+      method: "GET",
+    }),
+    () => {
+      return Promise.resolve()
+        .then(() =>
+          getIndexPageHTML({
+            localRoot,
+          }),
+        )
+        .then((html) => {
+          return {
+            status: 200,
+            headers: {
+              "cache-control": "no-store",
+              "content-type": "text/html",
+              "content-length": Buffer.byteLength(html),
+            },
+            body: html,
+          }
+        })
+    },
+  )
+
+  const otherRoute = guard(
+    createRequestPredicate({
+      ressource: "*",
+      method: "GET",
+    }),
+    ({ ressource }) => {
+      return Promise.resolve()
+        .then(() => {
+          return createHTMLForBrowser({
+            scriptRemoteList: [
+              { url: getBrowserSystemRemoteURL({ remoteRoot, compileInto }) },
+              { url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) },
+            ],
+            scriptInlineList: [
+              {
+                source: createBrowserPlatformSource({
+                  remoteRoot,
+                  compileInto,
+                  groupMap,
+                  hotreload: watch,
+                  hotreloadSSERoot: remoteRoot,
+                }),
               },
-              body: html,
-            }
-          })
-      },
-    )
-
-    const otherRoute = guard(
-      createRequestPredicate({
-        ressource: "*",
-        method: "GET",
-      }),
-      ({ ressource }) => {
-        return Promise.resolve()
-          .then(() => {
-            return createHTMLForBrowser({
-              scriptRemoteList: [
-                { url: getBrowserSystemRemoteURL({ remoteRoot, compileInto }) },
-                { url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) },
-              ],
-              scriptInlineList: [
-                {
-                  source: createBrowserPlatformSource({
-                    remoteRoot,
-                    compileInto,
-                    groupMap,
-                    hotreload: watch,
-                    hotreloadSSERoot: remoteRoot,
-                  }),
-                },
-                {
-                  source: createBrowserExecuteSource({
-                    file: ressource,
-                  }),
-                },
-              ],
-            })
-          })
-          .then((html) => {
-            return {
-              status: 200,
-              headers: {
-                "cache-control": "no-store",
-                "content-type": "text/html",
-                "content-length": Buffer.byteLength(html),
+              {
+                source: createBrowserExecuteSource({
+                  file: ressource,
+                }),
               },
-              body: html,
-            }
+            ],
           })
-      },
-    )
+        })
+        .then((html) => {
+          return {
+            status: 200,
+            headers: {
+              "cache-control": "no-store",
+              "content-type": "text/html",
+              "content-length": Buffer.byteLength(html),
+            },
+            body: html,
+          }
+        })
+    },
+  )
 
-    return serverOpen({
-      cancellation,
-      protocol,
-      ip,
-      port,
-      forcePort,
-      requestToResponse: serviceCompose(indexRoute, otherRoute),
-      openedMessage: ({ origin }) => `executing ${localRoot} at ${origin}`,
-      closedMessage: (reason) => `browser server closed because ${reason}`,
-    })
+  return serverOpen({
+    cancellation,
+    protocol,
+    ip,
+    port,
+    forcePort,
+    requestToResponse: serviceCompose(indexRoute, otherRoute),
+    openedMessage: ({ origin }) => `executing ${localRoot} at ${origin}`,
+    closedMessage: (reason) => `browser server closed because ${reason}`,
   })
 }
