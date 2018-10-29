@@ -23,7 +23,7 @@ const createCancellation = ({ waitFor, isCanceled }, behaviour) => {
   const register = (callback) => {
     callbackSet.add(callback)
     return () => {
-      callbackSet.remove(callback)
+      callbackSet.delete(callback)
     }
   }
 

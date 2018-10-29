@@ -67,7 +67,7 @@ export const open = ({
         const fileChangedSSE = createSSERoom()
 
         fileChangedSSE.open()
-        closeCallbacks(fileChangedSSE.close)
+        closeCallbacks.push(fileChangedSSE.close)
 
         watchSignal.listen((file) => {
           fileChangedSSE.sendEvent({
@@ -126,6 +126,8 @@ export const open = ({
       ip,
       port,
       requestToResponse,
+      openedMessage: ({ origin }) => `compiling ${localRoot} at ${origin}`,
+      closedMessage: (reason) => `compile server closed because ${reason}`,
     })
   })
 }

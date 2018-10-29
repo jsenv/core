@@ -65,7 +65,6 @@ export const open = ({
     sourceCacheIgnore,
   }).then((server) => {
     const remoteRoot = server.origin
-    console.log(`compiling ${localRoot} at ${remoteRoot}`)
 
     const indexRoute = guard(
       createRequestPredicate({
@@ -145,9 +144,8 @@ export const open = ({
       port,
       forcePort,
       requestToResponse: serviceCompose(indexRoute, otherRoute),
-    }).then((runServer) => {
-      console.log(`executing ${localRoot} at ${runServer.origin}`)
-      return runServer
+      openedMessage: ({ origin }) => `executing ${localRoot} at ${origin}`,
+      closedMessage: (reason) => `browser server closed because ${reason}`,
     })
   })
 }

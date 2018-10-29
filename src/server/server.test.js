@@ -9,6 +9,7 @@ open({
   cancellation,
   protocol: "http",
   port: 8998,
+  verbose: true,
   requestToResponse: () => {
     return {
       status: 200,
@@ -34,7 +35,7 @@ open({
   })
 
 process.on("SIGINT", () => {
-  cancel().then(() => {
+  cancel("process interrupt").then(() => {
     process.exit(0)
   })
 })

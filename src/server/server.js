@@ -45,6 +45,18 @@ const createContentLengthMismatchError = (message) => {
   return error
 }
 
+const listen = ({ server, port, ip }) => {
+  return new Promise((resolve, reject) => {
+    server.listen(port, ip, (error) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve()
+      }
+    })
+  })
+}
+
 export const originAsString = ({ protocol, ip, port }) => {
   const url = new URL("https://127.0.0.1:80")
   url.protocol = protocol
@@ -72,260 +84,249 @@ export const open = (
     autoCloseOnError = true,
     requestToResponse = () => null,
     verbose = true,
+    openedMessage = ({ origin }) => `server listening at ${origin}`,
+    closedMessage = (reason) => `close server because ${reason}`,
   } = {},
 ) => {
-  if (protocol !== "http" && protocol !== "https") {
-    throw new Error(`protocol must be http or https, got ${protocol}`)
-  }
-  if (ip === "0.0.0.0" && process.platform === "win32") {
-    // https://github.com/nodejs/node/issues/14900
-    throw new Error(`listening ${ip} not available on window`)
-  }
-  if (port === 0 && forcePort) {
-    throw new Error(`no need to pass forcePort when port is 0`)
-  }
-
-  const log = (...args) => {
-    if (verbose) {
-      console.log(...args)
+  return cancellation.wrap(async (register) => {
+    if (protocol !== "http" && protocol !== "https") {
+      throw new Error(`protocol must be http or https, got ${protocol}`)
     }
-  }
-
-  const { nodeServer, agent } = getNodeServerAndAgent({ protocol, signature })
-
-  const connections = new Set()
-  nodeServer.on("connection", (connection) => {
-    connection.on("close", () => {
-      connections.delete(connection)
-    })
-    connections.add(connection)
-  })
-
-  const requestHandlers = []
-  const addInternalRequestHandler = (handler) => {
-    requestHandlers.push(handler)
-    nodeServer.on("request", handler)
-    return () => {
-      nodeServer.removeListener("request", handler)
+    if (ip === "0.0.0.0" && process.platform === "win32") {
+      // https://github.com/nodejs/node/issues/14900
+      throw new Error(`listening ${ip} not available on window`)
     }
-  }
-
-  const clients = new Set()
-
-  const closeClients = ({ isError, reason }) => {
-    let status
-    if (isError) {
-      status = 500
-      // reason = 'shutdown because error'
-    } else {
-      status = 503
-      // reason = 'unavailable because closing'
+    if (port === 0 && forcePort) {
+      throw new Error(`no need to pass forcePort when port is 0`)
     }
 
-    return Promise.all(
-      Array.from(clients).map(({ nodeResponse }) => {
-        if (nodeResponse.headersSent === false) {
-          nodeResponse.writeHead(status, reason)
-        }
+    const log = (...args) => {
+      if (verbose) {
+        console.log(...args)
+      }
+    }
 
-        return new Promise((resolve) => {
-          if (nodeResponse.finished === false) {
-            nodeResponse.on("finish", resolve)
-            nodeResponse.on("error", resolve)
-            nodeResponse.destroy(reason)
-          } else {
-            resolve()
-          }
-        })
-      }),
-    )
-  }
+    const { nodeServer, agent } = getNodeServerAndAgent({ protocol, signature })
 
-  addInternalRequestHandler((nodeRequest, nodeResponse) => {
-    const client = { nodeRequest, nodeResponse }
-
-    clients.add(client)
-    nodeResponse.on("finish", () => {
-      clients.delete(client)
+    const connections = new Set()
+    nodeServer.on("connection", (connection) => {
+      connection.on("close", () => {
+        connections.delete(connection)
+      })
+      connections.add(connection)
     })
-  })
 
-  // nodeServer.on("upgrade", (request, socket, head) => {
-  //   // when being requested using a websocket
-  //   // we could also answr to the request ?
-  //   // socket.end([data][, encoding])
+    const requestHandlers = []
+    const addInternalRequestHandler = (handler) => {
+      requestHandlers.push(handler)
+      nodeServer.on("request", handler)
+      return () => {
+        nodeServer.removeListener("request", handler)
+      }
+    }
 
-  //   console.log("upgrade", { head, request })
-  //   console.log("socket", { connecting: socket.connecting, destroyed: socket.destroyed })
-  // })
+    const clients = new Set()
 
-  let status = "opening"
-
-  const listen = () => {
-    return new Promise((resolve, reject) => {
-      nodeServer.listen(port, ip, (error) => {
-        if (error) {
-          reject(error)
-        } else {
-          resolve()
-        }
-      })
-    })
-  }
-
-  const closed = createSignal()
-
-  const open = (register) => {
-    const killPortPromise = forcePort ? killPort(port) : Promise.resolve()
-
-    return killPortPromise.then(() => listen()).then(() => {
-      status = "opened"
-
-      const origin = originAsString({
-        protocol,
-        ip,
-        // in case port is 0 (randomly assign an available port)
-        // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-        port: nodeServer.address().port,
-      })
-
-      addInternalRequestHandler((nodeRequest, nodeResponse) => {
-        const request = createRequestFromNodeRequest(nodeRequest, origin)
-        log(`${request.method} ${origin}/${request.ressource}`)
-
-        nodeRequest.on("error", (error) => {
-          log("error on", request.ressource, error)
-        })
-
-        return Promise.resolve()
-          .then(() => requestToResponse(request))
-          .then(({ status = 501, reason = "not specified", headers = {}, body = "" }) =>
-            Object.freeze({ status, reason, headers, body }),
-          )
-          .then((response) => {
-            if (
-              request.method !== "HEAD" &&
-              response.headers["content-length"] > 0 &&
-              response.body === ""
-            ) {
-              throw createContentLengthMismatchError(
-                `content-length header is ${response.headers["content-length"]} but body is empty`,
-              )
-            }
-
-            return response
-          })
-          .catch((error) => {
-            return Object.freeze({
-              status: 500,
-              reason: "internal error",
-              headers: {},
-              body: error && error.stack ? error.stack : error,
-            })
-          })
-          .then((response) => {
-            log(`${response.status} ${origin}/${request.ressource}`)
-
-            return populateNodeResponse(nodeResponse, response, {
-              ignoreBody: request.method === "HEAD",
-            })
-          })
-      })
-
-      const closeConnections = (reason) => {
-        // should we do this async ?
-        // should we do this before closing the server ?
-        connections.forEach((connection) => {
-          connection.destroy(reason)
-        })
+    const closeClients = (reason) => {
+      let status
+      if (reason === "internal error") {
+        status = 500
+        // reason = 'shutdown because error'
+      } else {
+        status = 503
+        // reason = 'unavailable because closing'
       }
 
-      let close = ({ isError = false, reason = REASON_CLOSING } = {}) => {
-        if (status !== "opened") {
-          throw new Error(`server status must be "opened" during close() (got ${status}`)
-        }
+      return Promise.all(
+        Array.from(clients).map(({ nodeResponse }) => {
+          if (nodeResponse.headersSent === false) {
+            nodeResponse.writeHead(status, reason)
+          }
 
-        // ensure we don't try to handle request while server is closing
-        requestHandlers.forEach((requestHandler) => {
-          nodeServer.removeListener("request", requestHandler)
-        })
-        requestHandlers.length = 0
-
-        status = "closing"
-
-        return new Promise((resolve, reject) => {
-          // closing server prevent it from accepting new connections
-          // but opened connection must be shutdown before the close event is emitted
-          nodeServer.once("close", (error) => {
-            if (error) {
-              reject(error)
+          return new Promise((resolve) => {
+            if (nodeResponse.finished === false) {
+              nodeResponse.on("finish", resolve)
+              nodeResponse.on("error", resolve)
+              nodeResponse.destroy(reason)
             } else {
               resolve()
             }
           })
-          nodeServer.close()
-          closeClients({ isError, reason }).then(() => {
-            closeConnections(reason)
-          })
-        }).then(() => {
-          status = "closed"
-          closed.emit()
+        }),
+      )
+    }
+
+    addInternalRequestHandler((nodeRequest, nodeResponse) => {
+      const client = { nodeRequest, nodeResponse }
+
+      clients.add(client)
+      nodeResponse.on("finish", () => {
+        clients.delete(client)
+      })
+    })
+
+    // nodeServer.on("upgrade", (request, socket, head) => {
+    //   // when being requested using a websocket
+    //   // we could also answr to the request ?
+    //   // socket.end([data][, encoding])
+
+    //   console.log("upgrade", { head, request })
+    //   console.log("socket", { connecting: socket.connecting, destroyed: socket.destroyed })
+    // })
+
+    let status = "opening"
+
+    const closed = createSignal()
+
+    await (forcePort ? killPort(port) : Promise.resolve())
+    await listen({ server: nodeServer, port, ip })
+    status = "opened"
+
+    const origin = originAsString({
+      protocol,
+      ip,
+      // in case port is 0 (randomly assign an available port)
+      // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
+      port: nodeServer.address().port,
+    })
+
+    log(openedMessage({ origin }))
+
+    addInternalRequestHandler((nodeRequest, nodeResponse) => {
+      const request = createRequestFromNodeRequest(nodeRequest, origin)
+      log(`${request.method} ${origin}/${request.ressource}`)
+
+      nodeRequest.on("error", (error) => {
+        log("error on", request.ressource, error)
+      })
+
+      return Promise.resolve()
+        .then(() => requestToResponse(request))
+        .then(({ status = 501, reason = "not specified", headers = {}, body = "" }) =>
+          Object.freeze({ status, reason, headers, body }),
+        )
+        .then((response) => {
+          if (
+            request.method !== "HEAD" &&
+            response.headers["content-length"] > 0 &&
+            response.body === ""
+          ) {
+            throw createContentLengthMismatchError(
+              `content-length header is ${response.headers["content-length"]} but body is empty`,
+            )
+          }
+
+          return response
         })
+        .catch((error) => {
+          return Object.freeze({
+            status: 500,
+            reason: "internal error",
+            headers: {},
+            body: error && error.stack ? error.stack : error,
+          })
+        })
+        .then((response) => {
+          log(`${response.status} ${origin}/${request.ressource}`)
+
+          return populateNodeResponse(nodeResponse, response, {
+            ignoreBody: request.method === "HEAD",
+          })
+        })
+    })
+
+    const closeConnections = (reason) => {
+      // should we do this async ?
+      // should we do this before closing the server ?
+      connections.forEach((connection) => {
+        connection.destroy(reason)
+      })
+    }
+
+    let close = (reason = REASON_CLOSING) => {
+      if (status !== "opened") {
+        throw new Error(`server status must be "opened" during close() (got ${status}`)
       }
 
-      if (autoCloseOnError) {
-        const removeAutoCloseOnError = addInternalRequestHandler((nodeRequest, nodeResponse) => {
-          if (nodeResponse.statusCode === 500 && nodeResponse.statusMessage === "internal error") {
-            close({
-              isError: true,
-              // we don't specify the true error object but only a string
-              // identifying the error to avoid sending stacktrace to client
-              // and right now there is no clean way to retrieve error from here
-              reason: nodeResponse.statusMessage,
-            })
+      log(closedMessage(reason))
+
+      // ensure we don't try to handle request while server is closing
+      requestHandlers.forEach((requestHandler) => {
+        nodeServer.removeListener("request", requestHandler)
+      })
+      requestHandlers.length = 0
+
+      status = "closing"
+
+      return new Promise((resolve, reject) => {
+        // closing server prevent it from accepting new connections
+        // but opened connection must be shutdown before the close event is emitted
+        nodeServer.once("close", (error) => {
+          if (error) {
+            reject(error)
+          } else {
+            resolve()
           }
         })
-        const wrappedClose = close
-        close = (...args) => {
-          removeAutoCloseOnError()
-          return wrappedClose(...args)
-        }
-      }
-
-      if (autoCloseOnExit) {
-        const removeTeardown = processTeardown((exitReason) => {
-          log(`close server because process will exit because ${exitReason}`)
-          close({ reason: `server process exiting ${exitReason}` })
+        nodeServer.close()
+        closeClients(reason).then(() => {
+          closeConnections(reason)
         })
-        const wrappedClose = close
-        close = (...args) => {
-          removeTeardown()
-          return wrappedClose(...args)
-        }
-      }
+      }).then(() => {
+        status = "closed"
+        closed.emit()
+      })
+    }
 
-      if (autoCloseOnCrash) {
-        // and if we do that we have to remove the listener
-        // while closing to avoid closing twice in case
-        // addNodeExceptionHandler((exception) => {
-        //   return close({ reason: exception }).then(
-        //     // to indicates exception is not handled
-        //     () => false,
-        //   )
-        // })
-      }
+    const unregisterClose = register(close)
+    const wrappedClose = close
+    close = (...args) => {
+      unregisterClose()
+      return wrappedClose(...args)
+    }
 
-      register(close)
+    const autoClosePromises = []
+    if (autoCloseOnError) {
+      const errorPromise = new Promise((resolve) => {
+        addInternalRequestHandler((nodeRequest, nodeResponse) => {
+          if (nodeResponse.statusCode === 500 && nodeResponse.statusMessage === "internal error") {
+            resolve("server internal error")
+          }
+        })
+      })
+      autoClosePromises.push(errorPromise)
+    }
 
-      return {
-        origin,
-        nodeServer,
-        agent,
-        close,
-        closed,
+    if (autoCloseOnExit) {
+      const teardownPromise = new Promise((resolve) => {
+        processTeardown((reason) => resolve(`server process ${reason}`))
+      })
+      autoClosePromises.push(teardownPromise)
+    }
+
+    if (autoCloseOnCrash) {
+      // const crashPromise = new Promise(resolve => {
+      // 	addNodeExceptionHandler((exception) => {
+      // 		resolve()
+      // 		// exception is not handled
+      // 		return false
+      // 	})
+      // })
+      // autoClosePromises.push(crashPromise)
+    }
+
+    Promise.race(autoClosePromises).then(() => {
+      if (status === "opened") {
+        close()
       }
     })
-  }
 
-  return cancellation.wrap(open)
+    return {
+      origin,
+      nodeServer,
+      agent,
+      close,
+      closed,
+    }
+  })
 }
