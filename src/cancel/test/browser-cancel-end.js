@@ -2,33 +2,26 @@ import { createCancel } from "../cancel.js"
 import assert from "assert"
 
 const calls = []
-
 const serverCompile = {}
 const server = {}
 
-const serverCompileOpen = () => {
-  const { cancellable, addCancelCallback } = createCancel()
-
-  addCancelCallback(() => {
+const serverCompileOpen = (cancellation) => {
+  cancellation.register(() => {
     calls.push("kill compile server")
   })
-  return cancellable(Promise.resolve(serverCompile))
+  return cancellation.wrap(() => Promise.resolve(serverCompile))
 }
 
-const serverOpen = () => {
-  const { cancellable, addCancelCallback } = createCancel()
-
-  addCancelCallback(() => {
+const serverOpen = (cancellation) => {
+  cancellation.register(() => {
     calls.push("kill server")
   })
-  return cancellable(Promise.resolve(server))
+  return cancellation.wrap(() => Promise.resolve(server))
 }
 
-const serverBrowserOpen = () => {
-  const { cancellable } = createCancel()
-
-  return cancellable(serverCompileOpen()).then((serverCompile) => {
-    return cancellable(serverOpen()).then((server) => {
+const serverBrowserOpen = (cancellation) => {
+  return serverCompileOpen(cancellation).then((serverCompile) => {
+    return serverOpen(cancellation).then((server) => {
       return {
         serverCompile,
         server,
@@ -37,13 +30,14 @@ const serverBrowserOpen = () => {
   })
 }
 
-const execution = serverBrowserOpen()
+const { cancellation, cancel } = createCancel()
+const execution = serverBrowserOpen(cancellation)
 
 execution.then((actual) => {
   const expected = { serverCompile, server }
   assert.deepEqual(actual, expected)
 
-  execution.cancel().then(() => {
+  cancel().then(() => {
     const actual = calls
     const expected = ["kill server", "kill compile server"]
     assert.deepEqual(actual, expected)

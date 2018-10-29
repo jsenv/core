@@ -3,41 +3,37 @@ import assert from "assert"
 
 const calls = []
 
-const execute = () => {
-  const { addCancelCallback, cancellable } = createCancel()
-
+const execute = (cancellation) => {
   calls.push("body")
-  addCancelCallback(() => {
+  cancellation.register(() => {
     calls.push("cleanup")
   })
 
-  return cancellable(
-    Promise.resolve().then(() => {
+  return cancellation.wrap(() => {
+    return Promise.resolve().then(() => {
       calls.push("done")
-    }),
-  )
+    })
+  })
 }
 
-const nestedExecute = () => {
-  const { addCancelCallback, cancellable } = createCancel()
-
+const nestedExecute = (cancellation) => {
   calls.push("body-nested")
-  addCancelCallback(() => {
+  cancellation.register(() => {
     calls.push("cleanup-nested")
   })
-  return cancellable(
-    Promise.resolve().then(() => {
+  return cancellation.wrap(() => {
+    return Promise.resolve().then(() => {
       calls.push("done-nested")
-    }),
-  )
+    })
+  })
 }
 
-const { cancellable } = createCancel()
+const { cancellation, cancel } = createCancel()
 
-const execution = cancellable(execute()).then(() => {
-  const nestedExecution = cancellable(nestedExecute())
+const execution = execute(cancellation).then(() => {
+  const nestedExecution = nestedExecute(cancellation)
 
-  execution.cancel().then(() => {
+  cancel().then(() => {
     const actual = calls
     const expected = ["body", "done", "body-nested", "done-nested", "cleanup-nested", "cleanup"]
     assert.deepEqual(actual, expected)

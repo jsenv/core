@@ -1,7 +1,7 @@
 import { fork } from "child_process"
 import path from "path"
 import { uneval } from "@dmail/uneval"
-import { cancellable } from "../cancellable/index.js"
+import { cancellationNone } from "../cancel/index.js"
 import { reduceToFirstOrPending, mapPending } from "../promiseHelper.js"
 
 const root = path.resolve(__dirname, "../../../")
@@ -16,6 +16,7 @@ export const createExecuteOnNode = ({
   hotreloadSSERoot,
 }) => {
   const execute = ({
+    cancellation = cancellationNone,
     file,
     instrument = false,
     setup = () => {},
@@ -29,7 +30,7 @@ export const createExecuteOnNode = ({
     }
 
     const forkChild = () => {
-      return cancellable((cleanup) => {
+      return cancellation.wrap(() => {
         return new Promise((resolve, reject) => {
           const child = fork(nodeClientFile, {
             execArgv: [
@@ -69,7 +70,7 @@ export const createExecuteOnNode = ({
           }
 
           // kill the child when cancel called
-          cleanup(() => {
+          cancellation.register(() => {
             log(`cancel called, ask politely to the child to exit`)
             return childExit()
           })
@@ -118,7 +119,7 @@ export const createExecuteOnNode = ({
             // fork a new child when child is closed except if cancel was called
             // if we call cancel
             const cancelled = new Promise((resolve) => {
-              cleanup(resolve)
+              cancellation.register(resolve)
             })
 
             reduceToFirstOrPending([childExit(), cancelled]).then((code) => {

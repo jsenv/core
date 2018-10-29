@@ -7,6 +7,7 @@ import {
   getBrowserPlatformRemoteURL,
 } from "../compilePlatformAndSystem.js"
 import { createBrowserPlatformSource, createBrowserExecuteSource } from "../createBrowserSource.js"
+import { cancellationNone } from "../cancel/index.js"
 
 const getIndexPageHTML = ({ localRoot }) => {
   const files = ["src/__test__/file.js"]
@@ -36,6 +37,7 @@ const getIndexPageHTML = ({ localRoot }) => {
 }
 
 export const open = ({
+  cancellation = cancellationNone,
   protocol = "http",
   ip = "127.0.0.1",
   port = 3000,
@@ -51,8 +53,8 @@ export const open = ({
   sourceCacheStrategy,
   sourceCacheIgnore,
 }) => {
-  // comme serverCompileOpen est cancellable on peut direct ecrire ca
   return serverCompileOpen({
+    cancellation,
     localRoot,
     compileInto,
     protocol, // reuse browser protocol
@@ -62,8 +64,6 @@ export const open = ({
     sourceCacheStrategy,
     sourceCacheIgnore,
   }).then((server) => {
-    // de sorte qu'ici si on cancel ce then ne doit pas sexecute
-
     const remoteRoot = server.origin
     console.log(`compiling ${localRoot} at ${remoteRoot}`)
 
@@ -138,8 +138,8 @@ export const open = ({
       },
     )
 
-    // mais s'il le fait il recup un autre cancellable de toute facon
     return serverOpen({
+      cancellation,
       protocol,
       ip,
       port,

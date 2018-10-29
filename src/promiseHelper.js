@@ -1,3 +1,5 @@
+import { cancellationNone } from "./cancel/index.js"
+
 export const promiseMatch = (callbacks, data, predicate) => {
   return new Promise((resolve, reject) => {
     const visit = (index) => {
@@ -34,7 +36,7 @@ export const promiseTry = (callback) => {
   })
 }
 
-export const promiseSequence = (...callbacks) => {
+export const promiseSequence = (callbacks, cancellation = cancellationNone) => {
   const values = []
 
   return callbacks
@@ -44,45 +46,41 @@ export const promiseSequence = (...callbacks) => {
           `promiseSequence arguments must be function, got ${callback} at ${index}`,
         )
       }
-      return previous.then(callback).then((value) => {
-        values.push(value)
+      return cancellation.wrap(() => {
+        return previous.then(callback).then((value) => {
+          values.push(value)
+        })
       })
     }, Promise.resolve())
     .then(() => values)
 }
 
-export const promiseConcurrent = (list, callback, { maxParallelExecution = 5 } = {}) => {
-  let cancelled = false
-  const cancel = () => {
-    cancelled = true
-  }
-
+export const promiseConcurrent = (
+  list,
+  callback,
+  { cancellation = cancellationNone, maxParallelExecution = 5 } = {},
+) => {
   const results = []
   const firstChunk = list.slice(0, maxParallelExecution)
   let globalIndex = maxParallelExecution - 1
 
   const execute = (data, index) => {
-    return Promise.resolve()
-      .then(() => callback(data))
-      .then((value) => {
-        if (cancelled) {
-          return undefined
-        }
+    return cancellation.wrap(() => callback(data)).then((value) => {
+      results[index] = value
 
-        results[index] = value
-
-        if (globalIndex < list.length - 1) {
-          globalIndex++
-          return execute(list[globalIndex], globalIndex)
-        }
-        return undefined
-      })
+      if (globalIndex < list.length - 1) {
+        globalIndex++
+        return execute(list[globalIndex], globalIndex)
+      }
+      return undefined
+    })
   }
 
-  const promises = firstChunk.map((data, index) => execute(data, index))
-  const promise = Promise.all(promises).then(() => results)
-  promise.cancel = cancel
-  return promise
+  return cancellation.wrap(() => {
+    const promises = firstChunk.map((data, index) => execute(data, index))
+    const promise = Promise.all(promises).then(() => results)
+    return promise
+  })
 }
 
 export const objectToPromiseAll = (object) => {

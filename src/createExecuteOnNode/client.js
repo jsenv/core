@@ -1,4 +1,5 @@
 import { createNodePlatform } from "../platform/index.js"
+import { createCancel } from "../cancel/index.js"
 import { uneval } from "@dmail/uneval"
 
 const sendToParent = (type, data) => {
@@ -12,29 +13,47 @@ const sendToParent = (type, data) => {
   })
 }
 
-process.on("message", ({ type, data }) => {
-  if (type === "exit-please") {
-    process.emit("SIGINT")
+const listenParent = (type, callback) => {
+  const listener = (event) => {
+    if (event.type === type) {
+      callback(eval(`(${event.data})`))
+    }
   }
 
-  if (type === "execute") {
-    const {
-      localRoot,
-      remoteRoot,
-      compileInto,
-      groupMapFile,
-      hotreload,
-      hotreloadSSERoot,
-      file,
-      instrument,
-      setup,
-      teardown,
-    } = eval(`(${data})`)
+  process.on("message", listener)
 
+  return () => {
+    process.removeListener("message", listener)
+  }
+}
+
+const { cancel, cancellation } = createCancel()
+
+listenParent("exit-please", () => {
+  cancel().then(() => {
+    process.exit(0)
+  })
+})
+
+listenParent(
+  "execute",
+  ({
+    localRoot,
+    remoteRoot,
+    compileInto,
+    groupMapFile,
+    hotreload,
+    hotreloadSSERoot,
+    file,
+    instrument,
+    setup,
+    teardown,
+  }) => {
     // eslint-disable-next-line import/no-dynamic-require
     const groupMap = require(`${localRoot}/${compileInto}/${groupMapFile}`)
 
     const { executeFile } = createNodePlatform({
+      cancellation,
       localRoot,
       remoteRoot,
       compileInto,
@@ -46,13 +65,7 @@ process.on("message", ({ type, data }) => {
       },
     })
 
-    if (hotreload === false) {
-      process.on("SIGINT", () => {
-        process.exit(0)
-      })
-    }
-
-    executeFile({ file, instrument, setup, teardown }).then(
+    executeFile({ cancellation, file, instrument, setup, teardown }).then(
       (value) => {
         sendToParent("execute-result", {
           code: 0,
@@ -86,5 +99,5 @@ process.on("message", ({ type, data }) => {
         })
       },
     )
-  }
-})
+  },
+)

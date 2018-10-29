@@ -1,8 +1,12 @@
 import assert from "assert"
 import fetch from "node-fetch"
 import { open } from "./server.js"
+import { createCancel } from "../cancel/index.js"
+
+const { cancel, cancellation } = createCancel()
 
 open({
+  cancellation,
   protocol: "http",
   port: 8998,
   requestToResponse: () => {
@@ -28,6 +32,12 @@ open({
   .then(() => {
     console.log("passed")
   })
+
+process.on("SIGINT", () => {
+  cancel().then(() => {
+    process.exit(0)
+  })
+})
 
 // ici on testera que quand on kill le child à différent moment
 // on obtient bien la réponse attendu coté client

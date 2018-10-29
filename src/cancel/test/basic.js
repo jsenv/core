@@ -3,24 +3,24 @@ import assert from "assert"
 
 const calls = []
 
-const execute = () => {
-  const { cancellable, addCancelCallback } = createCancel()
-
+const execute = (cancellation) => {
   calls.push("body")
-  addCancelCallback(() => {
+  cancellation.register(() => {
     calls.push("cleanup")
   })
-  return cancellable(
-    Promise.resolve().then((value) => {
+
+  return cancellation.wrap(() => {
+    return Promise.resolve().then((value) => {
       calls.push("done")
       return value
-    }),
-  )
+    })
+  })
 }
 
-const execution = execute()
+const { cancel, cancellation } = createCancel()
+const execution = execute(cancellation)
 
-execution.cancel().then(() => {
+cancel().then(() => {
   const actual = calls
   const expected = ["body", "done", "cleanup"]
   assert.deepEqual(actual, expected)

@@ -2,21 +2,21 @@ import { createCancel } from "../cancel.js"
 import assert from "assert"
 
 const calls = []
-const execute = () => {
-  const { cancellable, addCancelCallback } = createCancel()
-
+const execute = (cancellation) => {
   calls.push("body")
-  addCancelCallback(() => {
+  cancellation.register(() => {
     calls.push("cleanup")
   })
-  return cancellable(
-    Promise.resolve().then((value) => {
+  return cancellation.wrap(() => {
+    return Promise.resolve().then((value) => {
       calls.push("done")
       return value
-    }),
-  )
+    })
+  })
 }
-const execution = execute()
+
+const { cancellation, cancel } = createCancel()
+const execution = execute(cancellation)
 
 execution.then(() => {
   return Promise.resolve(10).then(() => {
@@ -24,7 +24,7 @@ execution.then(() => {
   })
 })
 execution.then(() => {
-  execution.cancel().then(() => {
+  cancel().then(() => {
     const actual = calls
     const expected = ["body", "done", "consumer-a", "cleanup"]
     assert.deepEqual(actual, expected)

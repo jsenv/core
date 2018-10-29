@@ -6,7 +6,7 @@ import { populateNodeResponse } from "./populateNodeResponse.js"
 import { createSignal } from "@dmail/signal"
 import killPort from "kill-port"
 import { URL } from "url"
-import { cancellable } from "../cancellable/index.js"
+import { cancellationNone } from "../cancel/index.js"
 
 const REASON_CLOSING = "closing"
 
@@ -55,13 +55,14 @@ export const originAsString = ({ protocol, ip, port }) => {
 
 export const open = (
   {
+    cancellation = cancellationNone,
     protocol = "http",
     ip = "127.0.0.1",
     port = 0, // aasign a random available port
     forcePort = false,
     // when port is https you must provide { privateKey, certificate } under signature
     signature,
-    // auto close the server when the process exits (terminal closed, ctrl + C, ...)
+    // auto close the server when the process exits
     autoCloseOnExit = true,
     // auto close the server when an uncaughtException happens
     // false by default because evenwith my strategy to react on uncaughtException
@@ -174,7 +175,7 @@ export const open = (
 
   const closed = createSignal()
 
-  return cancellable((cleanup) => {
+  const open = () => {
     const killPortPromise = forcePort ? killPort(port) : Promise.resolve()
 
     return killPortPromise.then(() => listen()).then(() => {
@@ -314,7 +315,7 @@ export const open = (
         // })
       }
 
-      cleanup(close)
+      cancellation.register(close)
 
       return {
         origin,
@@ -324,5 +325,7 @@ export const open = (
         closed,
       }
     })
-  })
+  }
+
+  return cancellation.wrap(open)
 }

@@ -18,33 +18,6 @@ export const hangupOrDeath = createSignal({
   },
 })
 
-export const terminate = createSignal({
-  emitter: asyncSimultaneousEmitter,
-  installer: ({ emit }) => {
-    // SIGINT is CTRL+C from keyboard
-    // http://man7.org/linux/man-pages/man7/signal.7.html
-    // may also be sent by vscode https://github.com/Microsoft/vscode-node-debug/issues/1#issuecomment-405185642
-    const triggerTerminate = () => {
-      emit("terminate").then(
-        () => {
-          process.exit(process.exitCode || 0)
-        },
-        (error) => {
-          setTimeout(() => {
-            throw error
-          })
-        },
-      )
-    }
-
-    process.on("SIGINT", triggerTerminate)
-
-    return () => {
-      process.removeListener("SIGINT", triggerTerminate)
-    }
-  },
-})
-
 export const death = createSignal({
   emitter: asyncSimultaneousEmitter,
   installer: ({ emit }) => {
@@ -93,7 +66,7 @@ export const exit = createSignal({
   },
 })
 
-const teardownSignals = [hangupOrDeath, terminate, death, beforeExit, exit]
+const teardownSignals = [hangupOrDeath, death, beforeExit, exit]
 export const processTeardown = (teardownCallback) => {
   return race(teardownSignals, ({ args }) => teardownCallback(...args))
 }

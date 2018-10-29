@@ -7,6 +7,7 @@ import EventSource from "eventsource"
 import { createNodeSystem } from "@dmail/module-loader"
 import { valueInstall } from "./valueInstall.js"
 import { createLocaters } from "../createLocaters.js"
+import { cancellationNone } from "../../../cancel/index.js"
 
 export const nodeVersionToGroupId = (version, groupMap) => {
   return Object.keys(groupMap).find((id) => {
@@ -20,6 +21,7 @@ export const nodeVersionToGroupId = (version, groupMap) => {
 }
 
 export const createNodePlatform = ({
+  cancellation = cancellationNone,
   localRoot,
   remoteRoot,
   compileInto,
@@ -28,17 +30,6 @@ export const createNodePlatform = ({
   hotreloadSSERoot,
   hotreloadCallback,
 }) => {
-  const cleanupCallbacks = []
-  const clean = () => {
-    cleanupCallbacks.forEach((callback) => {
-      callback()
-    })
-    cleanupCallbacks.length = 0
-  }
-  const onceClean = (callback) => {
-    cleanupCallbacks.push(callback)
-  }
-
   const compileId = nodeVersionToGroupId(process.version.slice(1), groupMap) || "otherwise"
 
   const {
@@ -60,10 +51,10 @@ export const createNodePlatform = ({
     },
   })
 
-  onceClean(valueInstall(https.globalAgent.options, "rejectUnauthorized", false))
-  onceClean(valueInstall(global, "fetch", fetch))
-  onceClean(valueInstall(global, "System", nodeSystem))
-  onceClean(valueInstall(global, "EventSource", EventSource))
+  cancellation.register(valueInstall(https.globalAgent.options, "rejectUnauthorized", false))
+  cancellation.register(valueInstall(global, "fetch", fetch))
+  cancellation.register(valueInstall(global, "System", nodeSystem))
+  cancellation.register(valueInstall(global, "EventSource", EventSource))
 
   if (hotreload) {
     // we can be notified from file we don't care about, reload only if needed
@@ -87,7 +78,7 @@ export const createNodePlatform = ({
       return false
     }
 
-    onceClean(
+    cancellation.register(
       open(hotreloadSSERoot, (fileChanged) => {
         if (hotreloadPredicate(fileChanged)) {
           hotreloadCallback({ file: fileChanged })
@@ -96,16 +87,26 @@ export const createNodePlatform = ({
     )
   }
 
-  const executeFile = ({ file, instrument = false, setup = () => {}, teardown = () => {} }) => {
-    markFileAsImported(file)
+  const executeFile = ({
+    cancellation = cancellationNone,
+    file,
+    instrument = false,
+    setup = () => {},
+    teardown = () => {},
+  }) => {
+    return cancellation.wrap(() => {
+      markFileAsImported(file)
 
-    const fileURL = instrument ? fileToRemoteInstrumentedFile(file) : fileToRemoteCompiledFile(file)
+      const fileURL = instrument
+        ? fileToRemoteInstrumentedFile(file)
+        : fileToRemoteCompiledFile(file)
 
-    return Promise.resolve()
-      .then(setup)
-      .then(() => global.System.import(fileURL))
-      .then(teardown)
+      return Promise.resolve()
+        .then(setup)
+        .then(() => global.System.import(fileURL))
+        .then(teardown)
+    })
   }
 
-  return { executeFile, clean }
+  return { executeFile }
 }

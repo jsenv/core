@@ -2,13 +2,13 @@
 
 import { createCancel } from "./cancel.js"
 
-const { cancel, cancellable } = createCancel()
-
-const execute = async (cancellable) => {
-  await cancellable(Promise.resolve())
+const execute = async (cancellation) => {
+  await cancellation.wrap(() => Promise.resolve())
 }
 
-execute(cancellable).then(() => {
-  // will never happen because cancel( claled below)
+const { cancel, cancellation } = createCancel()
+
+execute(cancellation).then(() => {
+  // will never happen because cancel (called below)
 })
 cancel()

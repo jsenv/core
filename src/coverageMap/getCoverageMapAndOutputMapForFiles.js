@@ -1,7 +1,7 @@
 import { promiseConcurrent } from "../promiseHelper.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 import { teardownForOutputAndCoverage } from "../platformTeardown.js"
-import { cancellable } from "../cancellable/index.js"
+import { cancellationNone } from "../cancel/index.js"
 
 // import { objectMapKey } from "./objectHelper.js"
 
@@ -10,6 +10,7 @@ import { cancellable } from "../cancellable/index.js"
 // }
 
 export const getCoverageMapAndOutputMapForFiles = ({
+  cancellation = cancellationNone,
   execute,
   files,
   maxParallelExecution = 5,
@@ -18,46 +19,40 @@ export const getCoverageMapAndOutputMapForFiles = ({
   afterEach = () => {},
   afterAll = () => {},
 }) => {
-  return cancellable((cleanup) => {
-    const executeTestFile = (file) => {
-      beforeEach({ file })
+  const executeTestFile = (file) => {
+    beforeEach({ file })
 
-      const execution = execute({
-        file,
-        teardown: teardownForOutputAndCoverage,
-      })
-      cleanup(execution.cancel)
+    return execute({
+      cancellation,
+      file,
+      teardown: teardownForOutputAndCoverage,
+    }).then(({ output, coverage }) => {
+      // coverage = null means file do not set a global.__coverage__
+      // which happens if file was not instrumented.
+      // this is not supposed to happen so we should throw ?
 
-      return execution.then(({ output, coverage }) => {
-        // coverage = null means file do not set a global.__coverage__
-        // which happens if file was not instrumented.
-        // this is not supposed to happen so we should throw ?
+      afterEach({ file, output, coverage })
 
-        afterEach({ file, output, coverage })
-
-        return { output, coverage }
-      })
-    }
-
-    beforeAll({ files })
-
-    const promise = promiseConcurrent(files, executeTestFile, {
-      maxParallelExecution,
+      return { output, coverage }
     })
-    cleanup(promise.cancel)
+  }
 
-    return promise.then((results) => {
-      afterAll({ files, results })
+  beforeAll({ files })
 
-      const outputMap = {}
-      results.forEach(({ output }, index) => {
-        const relativeName = files[index]
-        outputMap[relativeName] = output
-      })
+  return promiseConcurrent(files, executeTestFile, {
+    cancellation,
+    maxParallelExecution,
+  }).then((results) => {
+    afterAll({ files, results })
 
-      const coverageMap = coverageMapCompose(results.map(({ coverage }) => coverage))
-
-      return { outputMap, coverageMap }
+    const outputMap = {}
+    results.forEach(({ output }, index) => {
+      const relativeName = files[index]
+      outputMap[relativeName] = output
     })
+
+    const coverageMap = coverageMapCompose(results.map(({ coverage }) => coverage))
+
+    return { outputMap, coverageMap }
   })
 }
