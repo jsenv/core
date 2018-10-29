@@ -30,6 +30,9 @@ const listenParent = (type, callback) => {
 const { cancel, cancellation } = createCancel()
 
 listenParent("exit-please", () => {
+  // on doit aussi close le eventSource de hotreloading
+  // mais je sais pas trop qui a la responsabilite de ca en fait
+  // c'est subtil
   cancel().then(() => {
     process.exit(0)
   })

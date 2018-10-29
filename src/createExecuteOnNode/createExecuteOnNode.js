@@ -30,7 +30,7 @@ export const createExecuteOnNode = ({
     }
 
     const forkChild = () => {
-      return cancellation.wrap(() => {
+      return cancellation.wrap((register) => {
         return new Promise((resolve, reject) => {
           const child = fork(nodeClientFile, {
             execArgv: [
@@ -69,10 +69,13 @@ export const createExecuteOnNode = ({
             })
           }
 
-          // kill the child when cancel called
-          cancellation.register(() => {
-            log(`cancel called, ask politely to the child to exit`)
-            return childExit()
+          const cancelled = new Promise((resolve) => {
+            // kill the child when cancel called
+            register(() => {
+              resolve()
+              log(`cancel called, ask politely to the child to exit`)
+              return childExit()
+            })
           })
 
           const executed = new Promise((resolve) => {
@@ -117,10 +120,6 @@ export const createExecuteOnNode = ({
           restartAsked.then(() => {
             log(`restart first step: ask politely to the child to exit`)
             // fork a new child when child is closed except if cancel was called
-            // if we call cancel
-            const cancelled = new Promise((resolve) => {
-              cancellation.register(resolve)
-            })
 
             reduceToFirstOrPending([childExit(), cancelled]).then((code) => {
               log(`restart last step: child closed with ${code}`)

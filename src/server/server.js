@@ -1,6 +1,6 @@
 import http from "http"
 import https from "https"
-import { processTeardown } from "./processTeardown.js"
+import { processTeardown } from "../process-teardown/index.js"
 import { createRequestFromNodeRequest } from "./createRequestFromNodeRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
 import { createSignal } from "@dmail/signal"
@@ -175,7 +175,7 @@ export const open = (
 
   const closed = createSignal()
 
-  const open = () => {
+  const open = (register) => {
     const killPortPromise = forcePort ? killPort(port) : Promise.resolve()
 
     return killPortPromise.then(() => listen()).then(() => {
@@ -315,7 +315,7 @@ export const open = (
         // })
       }
 
-      cancellation.register(close)
+      register(close)
 
       return {
         origin,

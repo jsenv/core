@@ -33,91 +33,99 @@ export const open = ({
   sourceCacheStrategy = "etag",
   sourceCacheIgnore = false,
 }) => {
-  const createWatchService = () => {
-    const watchSignal = createSignal()
+  return cancellation.wrap((register) => {
+    const closeCallbacks = []
 
-    const watchedFiles = new Map()
-    cancellation.register(() => {
-      watchedFiles.forEach((closeWatcher) => closeWatcher())
-      watchedFiles.clear()
-    })
+    const createWatchService = () => {
+      const watchSignal = createSignal()
 
-    const watchService = (request) => {
-      const { file } = ressourceToCompileIdAndFile(request.ressource, compileInto)
-      if (!file) {
-        return null
-      }
-
-      // when I ask for a compiled file, watch the corresponding file on filesystem
-      const fileLocation = `${localRoot}/${file}`
-      if (watchedFiles.has(fileLocation) === false && watchPredicate(file)) {
-        const fileWatcher = watchFile(fileLocation, () => {
-          watchSignal.emit(file)
-        })
-        watchedFiles.set(fileLocation, fileWatcher)
-      }
-
-      return null
-    }
-
-    const createWatchSSEService = () => {
-      const fileChangedSSE = createSSERoom()
-
-      fileChangedSSE.open()
-      cancellation.register(fileChangedSSE.close)
-
-      watchSignal.listen((file) => {
-        fileChangedSSE.sendEvent({
-          type: "file-changed",
-          data: file,
-        })
+      const watchedFiles = new Map()
+      closeCallbacks.push(() => {
+        watchedFiles.forEach((closeWatcher) => closeWatcher())
+        watchedFiles.clear()
       })
 
-      return ({ headers }) => {
-        if (acceptContentType(headers.accept, "text/event-stream")) {
-          return fileChangedSSE.connect(headers["last-event-id"])
-        }
-        return null
-      }
-    }
-
-    if (watchSSE) {
-      return serviceCompose(watchService, createWatchSSEService())
-    }
-    return watchService
-  }
-
-  const service = serviceCompose(
-    ...[
-      ...(watch ? [createWatchService()] : []),
-      (request) => {
+      const watchService = (request) => {
         const { file } = ressourceToCompileIdAndFile(request.ressource, compileInto)
         if (!file) {
           return null
         }
-        return compileService(request)
-      },
-      createRequestToFileResponse({
-        root: localRoot,
-        cacheIgnore: sourceCacheIgnore,
-        cacheStrategy: sourceCacheStrategy,
-      }),
-    ],
-  )
 
-  const requestToResponse = (request) => {
-    return service(request).then((response) => {
-      return preventCors
-        ? response
-        : enableCORS(response, { allowedOrigins: [request.headers.origin] })
+        // when I ask for a compiled file, watch the corresponding file on filesystem
+        const fileLocation = `${localRoot}/${file}`
+        if (watchedFiles.has(fileLocation) === false && watchPredicate(file)) {
+          const fileWatcher = watchFile(fileLocation, () => {
+            watchSignal.emit(file)
+          })
+          watchedFiles.set(fileLocation, fileWatcher)
+        }
+
+        return null
+      }
+
+      const createWatchSSEService = () => {
+        const fileChangedSSE = createSSERoom()
+
+        fileChangedSSE.open()
+        closeCallbacks(fileChangedSSE.close)
+
+        watchSignal.listen((file) => {
+          fileChangedSSE.sendEvent({
+            type: "file-changed",
+            data: file,
+          })
+        })
+
+        return ({ headers }) => {
+          if (acceptContentType(headers.accept, "text/event-stream")) {
+            return fileChangedSSE.connect(headers["last-event-id"])
+          }
+          return null
+        }
+      }
+
+      if (watchSSE) {
+        return serviceCompose(watchService, createWatchSSEService())
+      }
+      return watchService
+    }
+
+    const service = serviceCompose(
+      ...[
+        ...(watch ? [createWatchService()] : []),
+        (request) => {
+          const { file } = ressourceToCompileIdAndFile(request.ressource, compileInto)
+          if (!file) {
+            return null
+          }
+          return compileService(request)
+        },
+        createRequestToFileResponse({
+          root: localRoot,
+          cacheIgnore: sourceCacheIgnore,
+          cacheStrategy: sourceCacheStrategy,
+        }),
+      ],
+    )
+
+    const requestToResponse = (request) => {
+      return service(request).then((response) => {
+        return preventCors
+          ? response
+          : enableCORS(response, { allowedOrigins: [request.headers.origin] })
+      })
+    }
+
+    register(() => {
+      closeCallbacks.forEach((callback) => callback())
     })
-  }
 
-  return serverOpen({
-    cancellation,
-    protocol,
-    ip,
-    port,
-    requestToResponse,
+    return serverOpen({
+      cancellation,
+      protocol,
+      ip,
+      port,
+      requestToResponse,
+    })
   })
 }

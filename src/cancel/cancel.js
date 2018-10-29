@@ -33,18 +33,9 @@ const createCancellation = ({ waitFor, isCanceled }, behaviour) => {
     return callbacks
   }
 
-  const wrap = (fn) => {
-    if (isCanceled()) {
-      return behaviour()
-    }
-
-    const executionPromise = new Promise((resolve) => {
-      resolve(fn())
-    })
-    waitFor(executionPromise)
-
+  const promiseToCancellablePromise = (promise) => {
     const cancellablePromise = new Promise((resolve) => {
-      executionPromise.then((value) => {
+      promise.then((value) => {
         if (isCanceled()) {
           resolve(behaviour())
           return
@@ -93,7 +84,41 @@ const createCancellation = ({ waitFor, isCanceled }, behaviour) => {
     return infectPromise(cancellablePromise)
   }
 
-  return { register, getRegisteredCallbacks, wrap }
+  const wrap = (fn) => {
+    if (isCanceled()) {
+      return behaviour()
+    }
+
+    let executionPromise
+    let executionDone = false
+    const registerPromise = new Promise((resolve) => {
+      executionPromise = new Promise((executionResolve) => {
+        let registerCalled = false
+        const scopedRegister = (callback) => {
+          if (registerCalled) {
+            throw new Error("register must be called once per wrap")
+          }
+          if (executionDone) {
+            throw new Error("register cannot be called once wrapped call has resolved")
+          }
+          resolve()
+          registerCalled = true
+          return register(callback)
+        }
+
+        executionResolve(fn(scopedRegister))
+      })
+      executionPromise.then(() => {
+        executionDone = true
+        resolve()
+      })
+    })
+    waitFor(registerPromise)
+
+    return promiseToCancellablePromise(executionPromise)
+  }
+
+  return { wrap, getRegisteredCallbacks }
 }
 
 export const createCancel = ({ behaviour = behaviourPending } = {}) => {
@@ -108,7 +133,7 @@ export const createCancel = ({ behaviour = behaviourPending } = {}) => {
     globalExecutionPromise = globalExecutionPromise.then(() => promise)
   }
 
-  const { register, wrap, getRegisteredCallbacks } = createCancellation(
+  const { wrap, getRegisteredCallbacks } = createCancellation(
     {
       waitFor,
       isCanceled,
@@ -123,9 +148,15 @@ export const createCancel = ({ behaviour = behaviourPending } = {}) => {
     }
     canceled = true
     canceledPromise = globalExecutionPromise.then(() => {
+      const values = []
       return getRegisteredCallbacks()
         .reverse()
-        .reduce((previous, callback) => previous.then(() => callback(reason)), Promise.resolve())
+        .reduce((previous, callback, index) => {
+          return previous.then(() => callback(reason)).then((value) => {
+            values[index] = value
+          })
+        }, Promise.resolve())
+        .then(() => values)
     })
     return canceledPromise
   }
@@ -133,7 +164,6 @@ export const createCancel = ({ behaviour = behaviourPending } = {}) => {
   return {
     cancellation: {
       isRequested: isCanceled,
-      register,
       wrap,
     },
     cancel,
@@ -142,9 +172,8 @@ export const createCancel = ({ behaviour = behaviourPending } = {}) => {
 
 export const cancellationNone = {
   isRequested: () => false,
-  register: () => () => {},
   wrap: (fn) =>
     new Promise((resolve) => {
-      resolve(fn())
+      resolve(fn(() => () => {}))
     }),
 }

@@ -21,7 +21,6 @@ export const nodeVersionToGroupId = (version, groupMap) => {
 }
 
 export const createNodePlatform = ({
-  cancellation = cancellationNone,
   localRoot,
   remoteRoot,
   compileInto,
@@ -51,10 +50,12 @@ export const createNodePlatform = ({
     },
   })
 
-  cancellation.register(valueInstall(https.globalAgent.options, "rejectUnauthorized", false))
-  cancellation.register(valueInstall(global, "fetch", fetch))
-  cancellation.register(valueInstall(global, "System", nodeSystem))
-  cancellation.register(valueInstall(global, "EventSource", EventSource))
+  const cleanupCallbacks = []
+
+  cleanupCallbacks.push(valueInstall(https.globalAgent.options, "rejectUnauthorized", false))
+  cleanupCallbacks.push(valueInstall(global, "fetch", fetch))
+  cleanupCallbacks.push(valueInstall(global, "System", nodeSystem))
+  cleanupCallbacks.push(valueInstall(global, "EventSource", EventSource))
 
   if (hotreload) {
     // we can be notified from file we don't care about, reload only if needed
@@ -78,13 +79,17 @@ export const createNodePlatform = ({
       return false
     }
 
-    cancellation.register(
+    cleanupCallbacks.push(
       open(hotreloadSSERoot, (fileChanged) => {
         if (hotreloadPredicate(fileChanged)) {
           hotreloadCallback({ file: fileChanged })
         }
       }),
     )
+  }
+
+  const close = () => {
+    cleanupCallbacks.forEach((callback) => callback())
   }
 
   const executeFile = ({
@@ -108,5 +113,5 @@ export const createNodePlatform = ({
     })
   }
 
-  return { executeFile }
+  return { executeFile, close }
 }

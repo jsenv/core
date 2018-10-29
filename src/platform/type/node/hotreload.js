@@ -1,5 +1,3 @@
-import { processTeardown } from "../../../server/index.js"
-
 export const open = (url, callback) => {
   if (typeof global.EventSource !== "function") {
     console.warn(`cannot connect to sse at ${url}: global.EventSource is not a function`)
@@ -13,10 +11,6 @@ export const open = (url, callback) => {
   const close = () => {
     eventSource.close()
   }
-
-  // by listening processTeardown we indirectly
-  // do something like process.on('SIGINT', () => process.exit())
-  processTeardown(close)
 
   eventSource.addEventListener("file-changed", (e) => {
     if (e.origin !== url) {

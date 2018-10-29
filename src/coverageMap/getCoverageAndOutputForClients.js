@@ -53,7 +53,7 @@ export const getCoverageAndOutputForClients = ({
       const coverageMapComposed = coverageMapCompose(...coverageMaps)
 
       return cancellation
-        .wrap(getFilesToCover)
+        .wrap(() => getFilesToCover())
         .then((filesToCover) => {
           return {
             ...coverageMapComposed,

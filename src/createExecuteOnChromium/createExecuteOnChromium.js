@@ -16,9 +16,9 @@ const puppeteer = {}
 const openIndexRequestInterception = ({ cancellation, protocol, ip, port, page, body }) => {
   const origin = originAsString({ protocol, ip, port })
 
-  return cancellation.wrap(() => {
+  return cancellation.wrap((register) => {
     page.setRequestInterception(true).then(() => {
-      cancellation.register(() => page.setRequestInterception(false))
+      register(() => page.setRequestInterception(false))
 
       page.on("request", (interceptedRequest) => {
         const url = new URL(interceptedRequest.url())
@@ -65,7 +65,7 @@ export const createExecuteOnChromium = ({
   }
 
   const openBrowser = () => {
-    return cancellation.wrap(() => {
+    return cancellation.wrap((register) => {
       return puppeteer
         .launch({
           headless,
@@ -78,16 +78,16 @@ export const createExecuteOnChromium = ({
           // as we do for server
         })
         .then((browser) => {
-          cancellation.register(() => browser.close())
+          register(() => browser.close())
           return browser
         })
     })
   }
 
   const openPage = (browser) => {
-    return cancellation.wrap(() => {
+    return cancellation.wrap((register) => {
       browser.newPage().then((page) => {
-        cancellation.register(() => {
+        register(() => {
           // page.close() // commented until https://github.com/GoogleChrome/puppeteer/issues/2269
         })
         return page

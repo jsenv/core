@@ -4,12 +4,11 @@ import assert from "assert"
 const calls = []
 
 const execute = (cancellation) => {
-  calls.push("body")
-  cancellation.register(() => {
-    calls.push("cleanup")
-  })
-
-  return cancellation.wrap(() => {
+  return cancellation.wrap((register) => {
+    calls.push("body")
+    register(() => {
+      calls.push("cleanup")
+    })
     return Promise.resolve().then((value) => {
       calls.push("done")
       return value

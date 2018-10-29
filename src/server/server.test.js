@@ -39,8 +39,7 @@ process.on("SIGINT", () => {
   })
 })
 
-// ici on testera que quand on kill le child à différent moment
-// on obtient bien la réponse attendu coté client
+// we should test than close/cancel server gives expected response client side
 // test(() => {
 // 	return startServer({
 // 		url: "http://localhost:0",

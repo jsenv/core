@@ -6,17 +6,21 @@ const serverCompile = {}
 const server = {}
 
 const serverCompileOpen = (cancellation) => {
-  cancellation.register(() => {
-    calls.push("kill compile server")
+  return cancellation.wrap((register) => {
+    register(() => {
+      calls.push("kill compile server")
+    })
+    return Promise.resolve(serverCompile)
   })
-  return cancellation.wrap(() => Promise.resolve(serverCompile))
 }
 
 const serverOpen = (cancellation) => {
-  cancellation.register(() => {
-    calls.push("kill server")
+  return cancellation.wrap((register) => {
+    register(() => {
+      calls.push("kill server")
+    })
+    return Promise.resolve(server)
   })
-  return cancellation.wrap(() => Promise.resolve(server))
 }
 
 const serverBrowserOpen = (cancellation) => {

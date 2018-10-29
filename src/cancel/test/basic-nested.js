@@ -5,11 +5,10 @@ const calls = []
 
 const execute = (cancellation) => {
   calls.push("body")
-  cancellation.register(() => {
-    calls.push("cleanup")
-  })
-
-  return cancellation.wrap(() => {
+  return cancellation.wrap((register) => {
+    register(() => {
+      calls.push("cleanup")
+    })
     return Promise.resolve().then(() => {
       calls.push("done")
     })
@@ -18,10 +17,10 @@ const execute = (cancellation) => {
 
 const nestedExecute = (cancellation) => {
   calls.push("body-nested")
-  cancellation.register(() => {
-    calls.push("cleanup-nested")
-  })
-  return cancellation.wrap(() => {
+  return cancellation.wrap((register) => {
+    register(() => {
+      calls.push("cleanup-nested")
+    })
     return Promise.resolve().then(() => {
       calls.push("done-nested")
     })
