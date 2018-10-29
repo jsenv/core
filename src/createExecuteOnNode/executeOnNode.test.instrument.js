@@ -11,26 +11,32 @@ const instrument = true
 // const file = "src/__test__/file.js"
 const file = `src/createExecuteOnNode/fixtures/file.js`
 
-createJSCompileServiceForProject({ localRoot, compileInto })
-  .then(({ compileService, watchPredicate, groupMapFile }) => {
-    return executeOnNode({
-      localRoot,
-      compileInto,
-      compileService,
-      groupMapFile,
-
-      watch,
-      watchPredicate,
-
-      file,
-      instrument,
-      teardown: teardownForOutputAndCoverage,
-      verbose: true,
-    })
+const exec = async ({ cancellation }) => {
+  const { compileService, watchPredicate, groupMapFile } = await createJSCompileServiceForProject({
+    cancellation,
+    localRoot,
+    compileInto,
   })
-  .then((result) => {
-    assert.equal(result.output, "foo")
-    assert.equal(file in result.coverage, true)
 
-    console.log("passed")
+  return executeOnNode({
+    cancellation,
+    localRoot,
+    compileInto,
+    compileService,
+    groupMapFile,
+
+    watch,
+    watchPredicate,
+
+    file,
+    instrument,
+    teardown: teardownForOutputAndCoverage,
+    verbose: true,
   })
+}
+
+exec({}).then(({ output, coverage }) => {
+  assert.equal(output, "foo")
+  assert.equal(file in coverage, true)
+  console.log("passed")
+})

@@ -1,7 +1,9 @@
 import { createExecuteOnNode } from "./createExecuteOnNode.js"
 import { open as compileServerOpen } from "../server-compile/index.js"
+import { cancellationNone, createCancel } from "../cancel/index.js"
 
-export const executeOnNode = ({
+export const executeOnNode = async ({
+  cancellation,
   protocol = "http",
 
   localRoot,
@@ -20,7 +22,22 @@ export const executeOnNode = ({
   teardown,
   verbose,
 }) => {
-  const execution = compileServerOpen({
+  // if nothing is going to cancel us
+  // and we are not watching the file changes
+  // we autocancel, close server etc, once the file is executed
+  let autoCancel
+  if (cancellation === undefined) {
+    if (watch) {
+      cancellation = cancellationNone
+    } else {
+      const cancel = createCancel()
+      cancellation = cancel.cancellation
+      autoCancel = cancel.cancel
+    }
+  }
+
+  const server = await compileServerOpen({
+    cancellation,
     protocol,
 
     localRoot,
@@ -32,30 +49,28 @@ export const executeOnNode = ({
     sourceCacheStrategy,
     sourceCacheIgnore,
   })
-    .then((server) => {
-      const execute = createExecuteOnNode({
-        localRoot,
-        remoteRoot: server.origin,
-        compileInto,
-        groupMapFile,
-        hotreload: watch,
-        hotreloadSSERoot: server.origin,
-      })
 
-      return execute({
-        file,
-        instrument,
-        setup,
-        teardown,
-        verbose,
-      })
-    })
-    .then((value) => {
-      if (watch === false) {
-        execution.cancel()
-      }
-      return value
-    })
+  const execute = createExecuteOnNode({
+    localRoot,
+    remoteRoot: server.origin,
+    compileInto,
+    groupMapFile,
+    hotreload: watch,
+    hotreloadSSERoot: server.origin,
+  })
 
-  return execution
+  const value = await execute({
+    cancellation,
+    file,
+    instrument,
+    setup,
+    teardown,
+    verbose,
+  })
+
+  if (autoCancel) {
+    await autoCancel()
+  }
+
+  return value
 }

@@ -5,7 +5,7 @@ import { getMetaLocation, getOutputLocation, getAssetLocation, getOutputName } f
 import { lockForRessource } from "./ressourceRegistry.js"
 import { objectMapValue } from "../objectHelper.js"
 
-const getSourceCacheReport = ({
+const getSourceCacheReport = async ({
   localRoot,
   compileInto,
   compileId,
@@ -14,42 +14,40 @@ const getSourceCacheReport = ({
   remoteEtag,
   eTag,
 }) => {
-  return readFile(inputLocation).then((input) => {
-    const inputETag = createETag(input)
+  const input = await readFile(inputLocation)
 
-    if (remoteEtag) {
-      if (remoteEtag !== inputETag) {
-        return { status: `remote eTag outdated`, input, inputETag }
-      }
-      return { status: "valid", input, inputETag }
+  const inputETag = createETag(input)
+
+  if (remoteEtag) {
+    if (remoteEtag !== inputETag) {
+      return { status: `remote eTag outdated`, input, inputETag }
     }
+    return { status: "valid", input, inputETag }
+  }
 
-    if (inputETag !== eTag) {
-      return { status: `local eTag outdated`, input, inputETag }
-    }
+  if (inputETag !== eTag) {
+    return { status: `local eTag outdated`, input, inputETag }
+  }
 
-    const outputLocation = getOutputLocation({
-      localRoot,
-      compileInto,
-      compileId,
-      file,
-    })
-
-    return readFile(outputLocation).then(
-      (output) => {
-        return { status: "valid", input, inputETag, output }
-      },
-      (error) => {
-        if (isFileNotFoundError(error)) {
-          return { status: `cache not found at ${outputLocation}`, input, inputETag }
-        }
-        return Promise.reject(error)
-      },
-    )
+  const outputLocation = getOutputLocation({
+    localRoot,
+    compileInto,
+    compileId,
+    file,
   })
+
+  try {
+    const output = await readFile(outputLocation)
+    return { status: "valid", input, inputETag, output }
+  } catch (error) {
+    if (isFileNotFoundError(error)) {
+      return { status: `cache not found at ${outputLocation}`, input, inputETag }
+    }
+    return Promise.reject(error)
+  }
 }
 
-const getAssetCacheReport = ({ localRoot, compileInto, compileId, file, asset, eTag }) => {
+const getAssetCacheReport = async ({ localRoot, compileInto, compileId, file, asset, eTag }) => {
   const assetLocation = getAssetLocation({
     localRoot,
     compileInto,
@@ -58,32 +56,32 @@ const getAssetCacheReport = ({ localRoot, compileInto, compileId, file, asset, e
     asset,
   })
 
-  return readFile(assetLocation).then(
-    (content) => {
-      const actual = createETag(content)
-      if (actual !== eTag) {
-        return {
-          status: `eTag mismatch on ${asset} for file ${file}`,
-          content,
-        }
-      }
+  let content
+  try {
+    content = await readFile(assetLocation)
+  } catch (error) {
+    if (isFileNotFoundError(error)) {
       return {
-        status: "valid",
-        content,
+        status: `asset not found at ${assetLocation}`,
       }
-    },
-    (error) => {
-      if (isFileNotFoundError(error)) {
-        return {
-          status: `asset not found at ${assetLocation}`,
-        }
-      }
-      return Promise.reject(error)
-    },
-  )
+    }
+    return Promise.reject(error)
+  }
+
+  const actual = createETag(content)
+  if (actual !== eTag) {
+    return {
+      status: `eTag mismatch on ${asset} for file ${file}`,
+      content,
+    }
+  }
+  return {
+    status: "valid",
+    content,
+  }
 }
 
-const getFileCacheReport = ({
+const getFileCacheReport = async ({
   localRoot,
   compileInto,
   compileId,
@@ -92,7 +90,7 @@ const getFileCacheReport = ({
   remoteETag,
   meta,
 }) => {
-  return Promise.all([
+  const [sourceReport, ...assetReports] = await Promise.all([
     getSourceCacheReport({
       localRoot,
       compileInto,
@@ -112,30 +110,30 @@ const getFileCacheReport = ({
         eTag: meta.assetEtagMap[asset],
       })
     }),
-  ]).then(([sourceReport, ...assetReports]) => {
-    const { status, input, inputETag, output } = sourceReport
+  ])
 
-    const assetMap = {}
-    assetReports.forEach(({ content }, index) => {
-      assetMap[Object.keys(meta.assetEtagMap)[index]] = content
-    })
+  const { status, input, inputETag, output } = sourceReport
 
-    let computedStatus
-    if (status === "valid") {
-      const invalidAsset = assetReports.find((assetReport) => assetReport.status !== "valid")
-      computedStatus = invalidAsset ? invalidAsset.status : "valid"
-    } else {
-      computedStatus = status
-    }
-
-    return {
-      status: computedStatus,
-      input,
-      inputETag,
-      output,
-      assetMap,
-    }
+  const assetMap = {}
+  assetReports.forEach(({ content }, index) => {
+    assetMap[Object.keys(meta.assetEtagMap)[index]] = content
   })
+
+  let computedStatus
+  if (status === "valid") {
+    const invalidAsset = assetReports.find((assetReport) => assetReport.status !== "valid")
+    computedStatus = invalidAsset ? invalidAsset.status : "valid"
+  } else {
+    computedStatus = status
+  }
+
+  return {
+    status: computedStatus,
+    input,
+    inputETag,
+    output,
+    assetMap,
+  }
 }
 
 const createCacheCorruptionError = (message) => {
@@ -144,7 +142,7 @@ const createCacheCorruptionError = (message) => {
   return error
 }
 
-const getFileMeta = ({ localRoot, compileInto, compileId, file, locate }) => {
+const getFileMeta = async ({ localRoot, compileInto, compileId, file, locate }) => {
   const metaLocation = getMetaLocation({
     localRoot,
     compileInto,
@@ -152,7 +150,7 @@ const getFileMeta = ({ localRoot, compileInto, compileId, file, locate }) => {
     file,
   })
 
-  return Promise.all([
+  const [inputLocation, meta] = await Promise.all([
     locate(file, localRoot),
     readFile(metaLocation).then(
       (content) => {
@@ -172,21 +170,21 @@ const getFileMeta = ({ localRoot, compileInto, compileId, file, locate }) => {
         return Promise.reject(error)
       },
     ),
-  ]).then(([inputLocation, meta]) => {
-    // here, if readFile returns ENOENT we could/should check is there is something in cache for that file
-    // and take that chance to remove the cached version of that file
-    // but it's not supposed to happen
-    return readFile(inputLocation).then((input) => {
-      return {
-        inputLocation,
-        meta,
-        input,
-      }
-    })
-  })
+  ])
+
+  // here, if readFile returns ENOENT we could/should check is there is something in cache for that file
+  // and take that chance to remove the cached version of that file
+  // but it's not supposed to happen
+  const input = await readFile(inputLocation)
+
+  return {
+    inputLocation,
+    meta,
+    input,
+  }
 }
 
-const getFileReport = ({
+const getFileReport = async ({
   compile,
   localRoot,
   compileInto,
@@ -195,7 +193,7 @@ const getFileReport = ({
   locate,
   remoteETag,
 }) => {
-  return getFileMeta({
+  const { inputLocation, meta, input } = await getFileMeta({
     compile,
     localRoot,
     compileInto,
@@ -203,35 +201,34 @@ const getFileReport = ({
     file,
     locate,
     remoteETag,
-  }).then(({ inputLocation, meta, input }) => {
-    if (!meta) {
-      return {
-        inputLocation,
-        status: "missing",
-        input,
-      }
-    }
-
-    return getFileCacheReport({
-      localRoot,
-      compileInto,
-      compileId,
-      file,
-      inputLocation,
-      remoteETag,
-      meta,
-    }).then(({ status, input, inputETag, output, assetMap }) => {
-      return {
-        inputLocation,
-        status,
-        meta,
-        input,
-        inputETag,
-        output,
-        assetMap,
-      }
-    })
   })
+
+  if (!meta) {
+    return {
+      inputLocation,
+      status: "missing",
+      input,
+    }
+  }
+
+  const { status, inputETag, output, assetMap } = await getFileCacheReport({
+    localRoot,
+    compileInto,
+    compileId,
+    file,
+    inputLocation,
+    remoteETag,
+    meta,
+  })
+  return {
+    inputLocation,
+    status,
+    meta,
+    input,
+    inputETag,
+    output,
+    assetMap,
+  }
 }
 
 const updateMeta = ({
@@ -239,13 +236,13 @@ const updateMeta = ({
   compileInto,
   compileId,
   file,
+  cacheTrackHit,
   inputLocation,
   status,
   meta,
   inputETag,
   output,
   assetMap,
-  cacheTrackHit,
 }) => {
   const isCached = status === "cached"
   const isNew = status === "created"
@@ -342,99 +339,104 @@ export const compileFile = ({
     }),
   )
 
-  return fileLock.chain(() => {
-    return getFileReport({
-      compile,
+  return fileLock.chain(async () => {
+    const outputName = getOutputName({
+      compileInto,
+      compileId,
+      file,
+    })
+
+    const fromCacheOrCompile = async () => {
+      const {
+        inputLocation,
+        status,
+        meta,
+        input,
+        inputETag,
+        output,
+        assetMap,
+      } = await getFileReport({
+        compile,
+        localRoot,
+        compileInto,
+        compileId,
+        file,
+        locate,
+        remoteETag: eTag,
+      })
+
+      const remoteETagValid = Boolean(!cacheIgnore && eTag && status === "valid")
+
+      if (!cacheIgnore && status === "valid") {
+        return {
+          inputLocation,
+          status: "cached",
+          meta,
+          input,
+          inputETag,
+          output,
+          assetMap,
+          remoteETagValid,
+        }
+      }
+
+      const compileParam =
+        compileParamMap && compileId in compileParamMap ? compileParamMap[compileId] : {}
+
+      const compileResult = await Promise.resolve(
+        compile({
+          localRoot,
+          inputName: file,
+          inputSource: input,
+          outputName,
+          ...compileParam,
+        }),
+      )
+
+      return {
+        inputLocation,
+        status: status === "missing" ? "created" : "updated",
+        meta,
+        input,
+        inputETag: createETag(input),
+        output: compileResult.outputSource,
+        assetMap: compileResult.assetMap,
+        remoteETagValid,
+      }
+    }
+
+    const {
+      inputLocation,
+      meta,
+      status,
+      input,
+      inputETag,
+      output,
+      assetMap,
+      remoteETagValid,
+    } = await fromCacheOrCompile()
+
+    await updateMeta({
       localRoot,
       compileInto,
       compileId,
       file,
-      locate,
-      remoteETag: eTag,
+      cacheTrackHit,
+      inputLocation,
+      status,
+      meta,
+      input,
+      inputETag,
+      output,
+      assetMap,
     })
-      .then(({ inputLocation, status, meta, input, inputETag, output, assetMap }) => {
-        const outputName = getOutputName({
-          compileInto,
-          compileId,
-          file,
-        })
 
-        const remoteETagValid = !cacheIgnore && eTag && status === "valid"
-
-        if (!cacheIgnore && status === "valid") {
-          return {
-            inputLocation,
-            status: "cached",
-            meta,
-            remoteETagValid,
-            input,
-            inputETag,
-            outputName,
-            output,
-            assetMap,
-          }
-        }
-
-        const compileParam =
-          compileParamMap && compileId in compileParamMap ? compileParamMap[compileId] : {}
-
-        return Promise.resolve(
-          compile({
-            localRoot,
-            inputName: file,
-            inputSource: input,
-            outputName,
-            ...compileParam,
-          }),
-        ).then(({ outputSource, assetMap = {} }) => {
-          return {
-            inputLocation,
-            status: status === "missing" ? "created" : "updated",
-            meta,
-            remoteETagValid,
-            input,
-            inputETag: createETag(input),
-            outputName,
-            output: outputSource,
-            assetMap,
-          }
-        })
-      })
-      .then(
-        ({
-          inputLocation,
-          status,
-          meta,
-          remoteETagValid,
-          input,
-          inputETag,
-          outputName,
-          output,
-          assetMap,
-        }) => {
-          return updateMeta({
-            localRoot,
-            compileInto,
-            compileId,
-            file,
-            inputLocation,
-            status,
-            meta,
-            input,
-            inputETag,
-            output,
-            assetMap,
-            cacheTrackHit,
-          }).then(() => {
-            return {
-              eTagValid: Boolean(remoteETagValid),
-              eTag: inputETag,
-              output,
-              outputName,
-              assetMap,
-            }
-          })
-        },
-      )
+    return {
+      eTagValid: remoteETagValid,
+      eTag: inputETag,
+      output,
+      outputName,
+      assetMap,
+    }
   })
 }
