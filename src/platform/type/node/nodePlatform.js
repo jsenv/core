@@ -21,6 +21,7 @@ export const nodeVersionToGroupId = (version, groupMap) => {
 }
 
 export const createNodePlatform = ({
+  cancellation = cancellationNone,
   localRoot,
   remoteRoot,
   compileInto,
@@ -50,12 +51,10 @@ export const createNodePlatform = ({
     },
   })
 
-  const cleanupCallbacks = []
-
-  cleanupCallbacks.push(valueInstall(https.globalAgent.options, "rejectUnauthorized", false))
-  cleanupCallbacks.push(valueInstall(global, "fetch", fetch))
-  cleanupCallbacks.push(valueInstall(global, "System", nodeSystem))
-  cleanupCallbacks.push(valueInstall(global, "EventSource", EventSource))
+  cancellation.register(valueInstall(https.globalAgent.options, "rejectUnauthorized", false))
+  cancellation.register(valueInstall(global, "fetch", fetch))
+  cancellation.register(valueInstall(global, "System", nodeSystem))
+  cancellation.register(valueInstall(global, "EventSource", EventSource))
 
   if (hotreload) {
     // we can be notified from file we don't care about, reload only if needed
@@ -79,7 +78,7 @@ export const createNodePlatform = ({
       return false
     }
 
-    cleanupCallbacks.push(
+    cancellation.register(
       open(hotreloadSSERoot, (fileChanged) => {
         if (hotreloadPredicate(fileChanged)) {
           hotreloadCallback({ file: fileChanged })
@@ -88,30 +87,24 @@ export const createNodePlatform = ({
     )
   }
 
-  const close = () => {
-    cleanupCallbacks.forEach((callback) => callback())
-  }
-
-  const executeFile = ({
+  const executeFile = async ({
     cancellation = cancellationNone,
     file,
     instrument = false,
     setup = () => {},
     teardown = () => {},
   }) => {
-    return cancellation.wrap(() => {
-      markFileAsImported(file)
+    await cancellation.toPromise()
 
-      const fileURL = instrument
-        ? fileToRemoteInstrumentedFile(file)
-        : fileToRemoteCompiledFile(file)
+    markFileAsImported(file)
 
-      return Promise.resolve()
-        .then(setup)
-        .then(() => global.System.import(fileURL))
-        .then(teardown)
-    })
+    await setup()
+    const fileURL = instrument ? fileToRemoteInstrumentedFile(file) : fileToRemoteCompiledFile(file)
+    const namespace = await global.System.import(fileURL)
+    const value = await teardown(namespace)
+
+    return value
   }
 
-  return { executeFile, close }
+  return { executeFile }
 }

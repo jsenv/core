@@ -27,12 +27,40 @@ const listenParent = (type, callback) => {
   }
 }
 
+const errorToObject = (error) => {
+  if (error && error.status === 500 && error.reason === "parse error") {
+    return JSON.parse(error.body)
+  }
+  if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
+    return errorToObject(error.error)
+  }
+  if (error && error instanceof Error) {
+    const object = {}
+    Object.getOwnPropertyNames(error).forEach((name) => {
+      object[name] = error[name]
+    })
+    return object
+  }
+
+  return {
+    message: `rejected with ${JSON.stringify(error, null, "  ")}`,
+  }
+}
+
 const { cancel, cancellation } = createCancel()
 
+// vscode is sending sigint to the child when you ask for it
+// from the parent process
+// it makes me wonder if the child process should not just be responsible to execuet the file
+// but the parent would connect for hotreloading
+// well nevermind let's keep going
+process.on("SIGINT", () => {
+  cancel("child process interrupt").then(() => {
+    process.exit(0)
+  })
+})
+
 listenParent("exit-please", (reason) => {
-  // on doit aussi close le eventSource de hotreloading
-  // mais je sais pas trop qui a la responsabilite de ca en fait
-  // c'est subtil
   cancel(reason).then(() => {
     process.exit(0)
   })
@@ -70,36 +98,10 @@ listenParent(
 
     executeFile({ cancellation, file, instrument, setup, teardown }).then(
       (value) => {
-        sendToParent("execute-result", {
-          code: 0,
-          value,
-        })
+        sendToParent("execute", value)
       },
       (error) => {
-        const errorToObject = (error) => {
-          if (error && error.status === 500 && error.reason === "parse error") {
-            return JSON.parse(error.body)
-          }
-          if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-            return errorToObject(error.error)
-          }
-          if (error && error instanceof Error) {
-            const object = {}
-            Object.getOwnPropertyNames(error).forEach((name) => {
-              object[name] = error[name]
-            })
-            return object
-          }
-
-          return {
-            message: `rejected with ${JSON.stringify(error, null, "  ")}`,
-          }
-        }
-
-        sendToParent("execute-result", {
-          code: 1,
-          value: errorToObject(error),
-        })
+        sendToParent("error", errorToObject(error))
       },
     )
   },

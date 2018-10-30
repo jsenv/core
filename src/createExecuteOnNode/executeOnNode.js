@@ -69,7 +69,7 @@ export const executeOnNode = async ({
   })
 
   if (autoCancel) {
-    await autoCancel()
+    await autoCancel("file executed")
   }
 
   return value

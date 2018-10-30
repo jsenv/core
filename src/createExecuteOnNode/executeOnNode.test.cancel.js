@@ -32,4 +32,9 @@ const exec = async ({ cancellation }) => {
 
 const { cancellation, cancel } = createCancel()
 exec({ cancellation })
-cancel()
+
+process.on("SIGINT", () => {
+  cancel("process interrupt").then(() => {
+    process.exit(0)
+  })
+})

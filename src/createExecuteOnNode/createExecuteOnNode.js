@@ -35,6 +35,9 @@ export const createExecuteOnNode = ({
       const child = fork(nodeClientFile, {
         execArgv: [
           // allow vscode to debug else you got port already used
+          // don't pass this if nothing is going to connect to the debugger protocol
+          // on command line for instance don't do this
+          // use it only for vscodefsigint
           `--inspect-brk`,
         ],
       })
@@ -80,7 +83,7 @@ export const createExecuteOnNode = ({
         return new Promise((resolve, reject) => {
           closeRegister((code) => {
             if (code === 0 || code === null) {
-              resolve()
+              resolve(code)
             } else {
               reject()
             }
@@ -144,20 +147,19 @@ export const createExecuteOnNode = ({
             register: restartRegister,
             callback: (reason) => resolve(restart(reason)),
           },
-          execute: {
-            register: (callback) => registerChildEvent("execute-result", callback),
-            callback: ({ code, value }) => {
-              // child is executed as expected
-              if (code === 0) {
-                resolve(value)
-              } else {
-                const localError = new Error(value.message)
-                Object.assign(localError, value)
-                console.error(localError)
+          error: {
+            register: (callback) => registerChildEvent("error", callback),
+            callback: (error) => {
+              const localError = new Error(error.message)
+              Object.assign(localError, error)
+              console.error(localError)
 
-                reject(localError)
-              }
+              reject(localError)
             },
+          },
+          execute: {
+            register: (callback) => registerChildEvent("execute", callback),
+            callback: resolve,
           },
         })
 
