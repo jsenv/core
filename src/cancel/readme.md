@@ -21,11 +21,13 @@ Cancellation is opt-in and once you provide a cancellation you can cancel at any
 import { cancellationNone } from "@dmail/cancel"
 import { http } from "http"
 
-const startServer = ({ cancellation = cancellationNone } = {}) => {
-  return cancellation.wrap((register) => {
-    const server = http.createServer()
+const startServer = async ({ cancellation = cancellationNone } = {}) => {
+  await cancellation.toPromise()
 
-    const listen = new Promise((resolve, reject) => {
+  const server = http.createServer()
+
+  const listen = () =>
+    new Promise((resolve, reject) => {
       server.listen(0, "127.0.0.1", (error) => {
         if (error) {
           reject(error)
@@ -35,9 +37,8 @@ const startServer = ({ cancellation = cancellationNone } = {}) => {
       })
     })
 
-    await listen()
-
-    const close = (reason) => new Promise((resolve, reject) => {
+  const close = (reason) =>
+    new Promise((resolve, reject) => {
       server.once("close", (error) => {
         if (error) {
           reject(error)
@@ -47,35 +48,39 @@ const startServer = ({ cancellation = cancellationNone } = {}) => {
       })
       server.close()
     })
-    register(close)
 
-    server.on("request", (request, response) => {
-      response.writeHead(200)
-      response.end()
-    })
+  const listenPromise = listen()
+
+  cancellation.register((reason) => listenPromise.then(() => close(reason)))
+
+  await listenPromise
+  server.on("request", (request, response) => {
+    response.writeHead(200)
+    response.end()
   })
 }
 
 const requestServer = ({ cancellation = cancellationNone } = {}) => {
-  return cancellation.wrap((register) => {
-    const request = http.request("http://127.0.0.1:300")
-    const abort = (reason) => new Promise((resolve) => {
+  await cancellation.toPromise()
+
+  const request = http.request("http://127.0.0.1:300")
+  const abort = (reason) =>
+    new Promise((resolve) => {
       request.on("abort", () => {
         resolve(`request aborted because ${reason}`)
       })
       request.abort()
     })
-    const unregister = register(abort)
+  const unregister = register(abort)
 
-    return new Promise((resolve, reject) => {
-      request.on("response", (response) => {
-        resolve(response)
-        unregister()
-      })
-      request.on("error", (error) => {
-        reject(error)
-        unregister()
-      })
+  return new Promise((resolve, reject) => {
+    request.on("response", (response) => {
+      unregister()
+      resolve(response)
+    })
+    request.on("error", (error) => {
+      unregister()
+      reject(error)
     })
   })
 }
@@ -100,14 +105,16 @@ await responsePromise
 ```js
 const { cancellation, cancel } = createCancel()
 
-const cancelPromise = cancel()
+const cancelPromise = cancel('cancel')
 const serverPromise = startServer({ cancellation })
 await serverPromise
+const responsePromise = requestServer({ cancellation })
+await responsePromise
 ```
 
 * cancel() does nothing special
-* cancellation.wrap() inside startServer returns a promise pending forever
-* serverPromise is pending forever
+* inside startServer, cancellation.toPromise() returns a promise pending forever
+* await serverPromise will never settle
 * cancelPromise is resolved to `[]`
 
 ### Cancel during startServer
@@ -118,14 +125,17 @@ const { cancellation, cancel } = createCancel()
 const serverPromise = startServer({ cancellation })
 const cancelPromise = cancel('cancel')
 await serverPromise
+const responsePromise = requestServer({ cancellation })
+await responsePromise
 ```
 
-* cancellation.wrap() inside startServer returns serverPromise
 * server starts to listen (it's not listening)
-* cancel() forces serverPromise to be pending forever
-* cancellation.wrap() inside startServer force cancel to wait server to be listening before cancelling
+* cancel() waits for server to be listening before closing it
 * server is listening
+* await serverPromise is resolved
 * server starts to close
+* inside requestServer, cancellation.toPromise() returns a promise pending forever
+* await responsePromise will never settle
 * server is closed
 * cancelPromise is resolved to `["server closed because cancel"]`
 
@@ -137,13 +147,13 @@ const { cancellation, cancel } = createCancel()
 const serverPromise = startServer({ cancellation })
 await serverPromise
 const cancelPromise = cancel('cancel')
-const requestPromise = requestServer({ cancellation })
+const responsePromise = requestServer({ cancellation })
+await responsePromise
 ```
 
-* server is listening
 * cancel() starts to close server
-* cancellation.wrap() inside requestServer returns a promise pending forever
-* requestPromise is pending forever
+* inside requestServer, cancellation.toPromise() returns a promise pending forever
+* await responsePromise will never settle
 * server is closed
 * cancelPromise is resolved to `["server closed because cancel"]`
 
@@ -154,14 +164,14 @@ const { cancellation, cancel } = createCancel()
 
 const serverPromise = startServer({ cancellation })
 await serverPromise
-const requestPromise = requestServer({ cancellation })
+const responsePromise = requestServer({ cancellation })
 const cancelPromise = cancel()
+await responsePromise
 ```
 
-* cancellation.wrap() inside requestServer returns a special promise
 * requestServer() create an http request
-* cancel() forces requestPromise to be pending forever
 * cancel() calls request.abort()
+* await responsePromise will never settle because responsePromise will never resolve/reject
 * request starts to abort
 * request is aborted
 * server starts to close
@@ -175,12 +185,11 @@ const { cancellation, cancel } = createCancel()
 
 const serverPromise = startServer({ cancellation })
 await serverPromise
-const requestPromise = requestServer({ cancellation })
-await requestPromise
+const responsePromise = requestServer({ cancellation })
+await responsePromise
 const cancelPromise = cancel()
 ```
 
-* server is litening and request is done
 * cancel() start closing server
 * server is closed
 * cancelPromise is resolved to `["server closed because cancel"]`
