@@ -16,7 +16,36 @@ const exceptionEmitter = () => {
   return { visitor, resolve, reject }
 }
 
-const createAddExceptionHandler = ({ install }) => {
+const install = ({ triggerException, recoverWhen }) => {
+  const onError = (error) => {
+    triggerException({
+      value: error,
+    })
+  }
+
+  const onUnhandledRejection = (value, promise) => {
+    triggerException({
+      value,
+      origin: promise,
+    })
+  }
+
+  const onRejectionHandled = (promise) => {
+    recoverWhen(({ origin }) => origin === promise)
+  }
+
+  process.on("unhandledRejection", onUnhandledRejection)
+  process.on("rejectionHandled", onRejectionHandled)
+  process.on("uncaughtException", onError)
+
+  return () => {
+    process.removeListener("unhandledRejection", onUnhandledRejection)
+    process.removeListener("rejectionHandled", onRejectionHandled)
+    process.removeListener("uncaughtException", onError)
+  }
+}
+
+export const processUnhandledException = () => {
   const exceptionSignal = createSignal({
     emitter: exceptionEmitter,
     recursed: ({ emitExecution, args }) => {
@@ -66,36 +95,10 @@ const createAddExceptionHandler = ({ install }) => {
     },
   })
 
-  return exceptionSignal.listen
-}
-
-export const addNodeExceptionHandler = createAddExceptionHandler({
-  install: ({ triggerException, recoverWhen }) => {
-    const onError = (error) => {
-      triggerException({
-        value: error,
-      })
-    }
-
-    const onUnhandledRejection = (value, promise) => {
-      triggerException({
-        value,
-        origin: promise,
-      })
-    }
-
-    const onRejectionHandled = (promise) => {
-      recoverWhen(({ origin }) => origin === promise)
-    }
-
-    process.on("unhandledRejection", onUnhandledRejection)
-    process.on("rejectionHandled", onRejectionHandled)
-    process.on("uncaughtException", onError)
-
+  return (callback) => {
+    const listener = exceptionSignal.listen(callback)
     return () => {
-      process.removeListener("unhandledRejection", onUnhandledRejection)
-      process.removeListener("rejectionHandled", onRejectionHandled)
-      process.removeListener("uncaughtException", onError)
+      listener.remove()
     }
-  },
-})
+  }
+}

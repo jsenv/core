@@ -59,22 +59,22 @@ export const createExecuteOnNode = ({
             })
           })
 
-          const childExit = () => {
+          const childExit = (reason) => {
             // if closed hapened, no need to close
             return mapPending(closed, () => {
               // we have to do this instead of child.kill('SIGINT') because
               // on windows, it would kill the child immediatly
-              sendToChild("exit-please")
+              sendToChild("exit-please", { reason })
               return closed
             })
           }
 
           const cancelled = new Promise((resolve) => {
             // kill the child when cancel called
-            register(() => {
-              resolve()
+            register((reason) => {
+              resolve(reason)
               log(`cancel called, ask politely to the child to exit`)
-              return childExit()
+              return childExit(reason)
             })
           })
 
