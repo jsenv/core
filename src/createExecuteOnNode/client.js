@@ -29,11 +29,11 @@ const listenParent = (type, callback) => {
 
 const { cancel, cancellation } = createCancel()
 
-listenParent("exit-please", () => {
+listenParent("exit-please", (reason) => {
   // on doit aussi close le eventSource de hotreloading
   // mais je sais pas trop qui a la responsabilite de ca en fait
   // c'est subtil
-  cancel().then(() => {
+  cancel(reason).then(() => {
     process.exit(0)
   })
 })
@@ -63,8 +63,8 @@ listenParent(
       groupMap,
       hotreload,
       hotreloadSSERoot,
-      hotreloadCallback: (data) => {
-        sendToParent("restart", data)
+      hotreloadCallback: ({ file }) => {
+        sendToParent("restart", `file changed: ${file}`)
       },
     })
 

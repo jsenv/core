@@ -2,7 +2,7 @@ import { fork } from "child_process"
 import path from "path"
 import { uneval } from "@dmail/uneval"
 import { cancellationNone } from "../cancel/index.js"
-import { reduceToFirstOrPending, mapPending } from "../promiseHelper.js"
+import { registerEvent, eventRace } from "../eventHelper.js"
 
 const root = path.resolve(__dirname, "../../../")
 const nodeClientFile = `${root}/dist/src/createExecuteOnNode/client.js`
@@ -29,128 +29,161 @@ export const createExecuteOnNode = ({
       }
     }
 
-    const forkChild = () => {
-      return cancellation.wrap((register) => {
-        return new Promise((resolve, reject) => {
-          const child = fork(nodeClientFile, {
-            execArgv: [
-              // allow vscode to debug else you got port already used
-              `--inspect-brk`,
-            ],
-          })
-          log(`fork ${nodeClientFile} to execute ${file}`)
-          child.on("message", (message) => {
-            log(`receive message from child ${message.data}`)
-          })
+    const forkChild = async () => {
+      await cancellation.toPromise()
 
-          const sendToChild = (type, data) => {
-            const source = uneval(data, { showFunctionBody: true })
-            log(`send to child ${type}: ${source}`)
-            child.send({
-              type,
-              data: source,
-            })
+      const child = fork(nodeClientFile, {
+        execArgv: [
+          // allow vscode to debug else you got port already used
+          `--inspect-brk`,
+        ],
+      })
+      log(`fork ${nodeClientFile} to execute ${file}`)
+
+      const childMessageRegister = (callback) => registerEvent(child, "message", callback)
+
+      const closeRegister = (callback) => registerEvent(child, "close", callback)
+
+      const registerChildEvent = (name, callback) => {
+        return registerEvent(child, "message", ({ type, data }) => {
+          if (name === type) {
+            callback(eval(`(${data})`))
           }
-
-          const closed = new Promise((resolve) => {
-            child.once("close", (code) => {
-              log(`child closed with code ${code}`)
-              resolve(code)
-            })
-          })
-
-          const childExit = (reason) => {
-            // if closed hapened, no need to close
-            return mapPending(closed, () => {
-              // we have to do this instead of child.kill('SIGINT') because
-              // on windows, it would kill the child immediatly
-              sendToChild("exit-please", { reason })
-              return closed
-            })
-          }
-
-          const cancelled = new Promise((resolve) => {
-            // kill the child when cancel called
-            register((reason) => {
-              resolve(reason)
-              log(`cancel called, ask politely to the child to exit`)
-              return childExit(reason)
-            })
-          })
-
-          const executed = new Promise((resolve) => {
-            child.on("message", (message) => {
-              const source = message.data
-              if (message.type === "execute-result") {
-                resolve(eval(`(${source})`))
-              }
-            })
-          })
-
-          const restartAsked = new Promise((resolve) => {
-            child.on("message", (message) => {
-              if (message.type === "restart") {
-                resolve(eval(`(${message.data})`))
-              }
-            })
-          })
-
-          // throw or reject when child is closed except if child ask to restart before
-          // (because in that case it will be handled by restart)
-          reduceToFirstOrPending([closed, restartAsked]).then((code) => {
-            if (code === 12) {
-              throw new Error(
-                `child exited with 12: forked child wanted to use a non available port for debug`,
-              )
-            }
-            if (code !== 0) {
-              reject(`exited with code ${code}`)
-            }
-          })
-
-          // resolve or reject when child has sent execution result, except if child ask to restart before
-          reduceToFirstOrPending([executed, restartAsked]).then(({ code, value }) => {
-            if (code === 0) {
-              resolve(value)
-            } else {
-              reject(value)
-            }
-          })
-
-          restartAsked.then(() => {
-            log(`restart first step: ask politely to the child to exit`)
-            // fork a new child when child is closed except if cancel was called
-
-            reduceToFirstOrPending([childExit(), cancelled]).then((code) => {
-              log(`restart last step: child closed with ${code}`)
-              if (code === 0 || code === null) {
-                forkChild()
-              } else {
-                throw new Error(`child exited with ${code} after asking to restart`)
-              }
-            })
-            log(`restart second step: wait for child to close`)
-          })
-
-          sendToChild("execute", {
-            localRoot,
-            remoteRoot,
-            compileInto,
-            groupMapFile,
-            hotreload,
-            hotreloadSSERoot,
-            file,
-            instrument,
-            setup,
-            teardown,
-          })
-        }).catch((error) => {
-          const localError = new Error(error.message)
-          Object.assign(localError, error)
-          console.error(localError)
-
-          return Promise.reject(localError)
         })
+      }
+
+      const restartRegister = (callback) => registerChildEvent("restart", callback)
+
+      childMessageRegister(({ type, data }) => {
+        log(`receive message from child ${type}:${data}`)
+      })
+      closeRegister((code) => {
+        log(`child closed with code ${code}`)
+      })
+
+      const sendToChild = (type, data) => {
+        const source = uneval(data, { showFunctionBody: true })
+        log(`send to child ${type}: ${source}`)
+        child.send({
+          type,
+          data: source,
+        })
+      }
+
+      const childExit = (reason) => {
+        sendToChild("exit-please", reason)
+      }
+
+      const close = (reason) => {
+        childExit(reason)
+
+        return new Promise((resolve, reject) => {
+          closeRegister((code) => {
+            if (code === 0 || code === null) {
+              resolve()
+            } else {
+              reject()
+            }
+          })
+        })
+      }
+
+      const restart = (reason) => {
+        // if we first receive restart we fork a new child
+        log(`restart first step: ask politely to the child to exit`)
+        childExit(reason)
+        log(`restart second step: wait for child to close`)
+
+        return new Promise((resolve, reject) => {
+          eventRace({
+            cancel: {
+              register: cancellation.register,
+              callback: (reason) => {
+                log(`restart cancelled because ${reason}`)
+                // we have nothing to do, the child will close
+                // and we won't fork a new one
+              },
+            },
+            close: {
+              register: closeRegister,
+              callback: (code) => {
+                log(`restart last step: child closed with ${code}`)
+                if (code === 0 || code === null) {
+                  resolve(forkChild())
+                } else {
+                  reject(new Error(`child exited with ${code} after asking to restart`))
+                }
+              },
+            },
+          })
+        })
+      }
+
+      await new Promise((resolve, reject) => {
+        eventRace({
+          cancel: {
+            register: cancellation.register,
+            callback: close,
+          },
+          close: {
+            register: closeRegister,
+            callback: (code) => {
+              // child is not expected to close, we reject when it happens
+              if (code === 12) {
+                reject(
+                  new Error(
+                    `child exited with 12: forked child wanted to use a non available port for debug`,
+                  ),
+                )
+                return
+              }
+              reject(`unexpected child close with code: ${code}`)
+            },
+          },
+          restart: {
+            register: restartRegister,
+            callback: (reason) => resolve(restart(reason)),
+          },
+          execute: {
+            register: (callback) => registerChildEvent("execute-result", callback),
+            callback: ({ code, value }) => {
+              // child is executed as expected
+              if (code === 0) {
+                resolve(value)
+              } else {
+                const localError = new Error(value.message)
+                Object.assign(localError, value)
+                console.error(localError)
+
+                reject(localError)
+              }
+            },
+          },
+        })
+
+        sendToChild("execute", {
+          localRoot,
+          remoteRoot,
+          compileInto,
+          groupMapFile,
+          hotreload,
+          hotreloadSSERoot,
+          file,
+          instrument,
+          setup,
+          teardown,
+        })
+      })
+
+      eventRace({
+        cancel: {
+          register: cancellation.register,
+          callback: close,
+        },
+        restart: {
+          register: restartRegister,
+          callback: restart,
+        },
       })
     }
 
