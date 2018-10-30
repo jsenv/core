@@ -46,12 +46,11 @@ export const promiseSequence = (callbacks, cancellation = cancellationNone) => {
           `promiseSequence arguments must be function, got ${callback} at ${index}`,
         )
       }
-      return cancellation.wrap(() => {
-        return previous.then(callback).then((value) => {
-          values.push(value)
-        })
+      return previous.then(() => callback()).then((value) => {
+        values.push(value)
+        return cancellation.toPromise()
       })
-    }, Promise.resolve())
+    }, cancellation.toPromise())
     .then(() => values)
 }
 
@@ -65,18 +64,20 @@ export const promiseConcurrent = (
   let globalIndex = maxParallelExecution - 1
 
   const execute = (data, index) => {
-    return cancellation.wrap(() => callback(data)).then((value) => {
+    return promiseTry(() => callback(data)).then((value) => {
       results[index] = value
 
-      if (globalIndex < list.length - 1) {
-        globalIndex++
-        return execute(list[globalIndex], globalIndex)
-      }
-      return undefined
+      return cancellation.toPromise().then(() => {
+        if (globalIndex < list.length - 1) {
+          globalIndex++
+          return execute(list[globalIndex], globalIndex)
+        }
+        return undefined
+      })
     })
   }
 
-  return cancellation.wrap(() => {
+  return cancellation.toPromise().then(() => {
     const promises = firstChunk.map((data, index) => execute(data, index))
     const promise = Promise.all(promises).then(() => results)
     return promise

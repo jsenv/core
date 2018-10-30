@@ -1,85 +1,50 @@
 import { getCoverageMapAndOutputMapForFiles } from "./getCoverageMapAndOutputMapForFiles.js"
 import { getCoverageMapForFilesMissed, getFilesMissed } from "./getCoverageMapForFilesMissed.js"
-import { coverageMapAbsolute } from "./coverageMapAbsolute.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
-import { open as serverCompileOpen } from "../server-compile/index.js"
-import { promiseTry, promiseSequence } from "../promiseHelper.js"
+import { promiseSequence } from "../promiseHelper.js"
 import { cancellationNone } from "../cancel/index.js"
 
-export const getCoverageAndOutputForClients = ({
+export const getCoverageAndOutputForClients = async ({
   cancellation = cancellationNone,
-  root,
-  into,
-  instrumentPredicate,
-  getFilesToCover = () => [],
+  compileFile,
+  filesToCover = [],
   clients = [],
 }) => {
-  return serverCompileOpen({
+  const results = await promiseSequence(
+    clients.map(({ execute, files }) => () => {
+      return getCoverageMapAndOutputMapForFiles({
+        cancellation,
+        execute,
+        files,
+      })
+    }),
     cancellation,
-    root,
-    into,
-    protocol: "http",
-    ip: "127.0.0.1",
-    port: 0,
-    instrument: true,
-    instrumentPredicate,
-  }).then((server) => {
-    const localRoot = root
-    const remoteRoot = server.origin
-    const remoteCompileDestination = into
+  )
 
-    const getCoverageMapAndOutputMapForClient = ({ getExecute, getFiles }) => {
-      return promiseTry(getFiles).then((files) => {
-        const execute = getExecute({ localRoot, remoteRoot, remoteCompileDestination })
+  // compose all coverageMaps into one
+  // and check if all files supposed to be covered where actually covered
+  // if not add empty coverage for thoose files and return
+  // a coverageMap with all this
+  const getFinalCoverageMap = (coverageMaps) => {
+    const coverageMapComposed = coverageMapCompose(...coverageMaps)
 
-        const clientExecution = getCoverageMapAndOutputMapForFiles({
-          cancellation,
-          localRoot,
-          remoteRoot,
-          remoteCompileDestination,
-          execute,
-          files,
-        })
-
-        return clientExecution
-      })
+    return {
+      ...coverageMapComposed,
+      ...getCoverageMapForFilesMissed({
+        cancellation,
+        filesMissed: getFilesMissed(coverageMapComposed, filesToCover),
+        compileFile,
+      }),
     }
+  }
 
-    // compose all coverageMaps into one
-    // and check if all files supposed to be covered where actually covered
-    // if not add empty coverage for thoose files and return
-    // a coverageMap with all this
-    const getFinalCoverageMap = (coverageMaps) => {
-      const coverageMapComposed = coverageMapCompose(...coverageMaps)
+  const outputs = results.map(({ outputMap }) => outputMap)
+  const coverageMaps = results.map(({ coverageMap }) => coverageMap)
+  const coverageMap = getFinalCoverageMap(coverageMaps)
 
-      return cancellation
-        .wrap(() => getFilesToCover())
-        .then((filesToCover) => {
-          return {
-            ...coverageMapComposed,
-            ...getCoverageMapForFilesMissed({
-              cancellation,
-              filesMissed: getFilesMissed(coverageMapComposed, filesToCover),
-              compileFile: server.compileFile,
-            }),
-          }
-        })
-        .then((coverageMap) => coverageMapAbsolute(coverageMap, root))
-    }
-
-    return promiseSequence(
-      clients.map((client) => () => getCoverageMapAndOutputMapForClient(client)),
-      cancellation,
-    ).then((results) => {
-      const outputs = results.map(({ outputMap }) => outputMap)
-      const coverageMaps = results.map(({ coverageMap }) => coverageMap)
-      return getFinalCoverageMap(coverageMaps).then((coverageMap) => {
-        return {
-          outputs,
-          coverageMaps,
-          coverageMap,
-        }
-      })
-    })
-  })
+  return {
+    outputs,
+    coverageMaps,
+    coverageMap,
+  }
 }
