@@ -262,10 +262,13 @@ export const open = async (
   const clientTracker = trackClients(nodeServer)
   const requestHandlerTracker = trackRequestHandlers(nodeServer)
   const closed = createSignal()
+  const closeSignal = createSignal()
+
   const close = (reason = REASON_CLOSING) => {
     if (status !== "opened") {
       throw new Error(`server status must be "opened" during close(), got ${status}`)
     }
+    closeSignal.emit()
     status = "closing"
 
     log(closedMessage(reason))
@@ -291,10 +294,21 @@ export const open = async (
       closed.emit()
     })
   }
+
   eventRace({
     cancel: {
       register: cancellation.register,
       callback: close,
+    },
+    close: {
+      register: (callback) => {
+        const listener = closeSignal.listen(callback)
+        return () => listener.remove()
+      },
+      callback: () => {
+        // noop it's just to prevent close from being auto called
+        // or called during cancel when it was already called
+      },
     },
     ...(autoCloseOnError
       ? {
@@ -332,11 +346,7 @@ export const open = async (
                 return false // exception is not handled
               })
             },
-            callback: (reason) => {
-              if (status === "opened") {
-                close(reason)
-              }
-            },
+            callback: close,
           },
         }
       : {}),

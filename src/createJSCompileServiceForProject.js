@@ -78,37 +78,37 @@ const createPredicateFromStructure = ({ root }) => {
   })
 }
 
-export const createJSCompileServiceForProject = ({ localRoot, compileInto }) => {
+export const createJSCompileServiceForProject = async ({ localRoot, compileInto }) => {
   const groupMapFile = "groupMap.json"
   const groupMapLocation = `${localRoot}/${compileInto}/${groupMapFile}`
 
-  return objectToPromiseAll({
+  const { predicateMap, groupMap } = await objectToPromiseAll({
     platformAndSystem: compilePlatformAndSystem({
       browserSystemLocalURL: getBrowserSystemLocalURL({ localRoot, compileInto }),
       browserPlatformLocalURL: getBrowserPlatformLocalURL({ localRoot, compileInto }),
     }),
     predicateMap: createPredicateFromStructure({ root: localRoot }),
     groupMap: getGroupMapForProject(groupMapLocation),
-  }).then(({ predicateMap, groupMap }) => {
-    const compileParamMap = groupMapToCompileParamMap(groupMap, pluginMap)
-
-    const compileService = jsCreateCompileService({
-      localRoot,
-      compileInto,
-      compileParamMap,
-      cacheIgnore: false,
-      cacheTrackHit: true,
-      cacheStrategy: "etag",
-      assetCacheIgnore: false,
-      assetCacheStrategy: "etag",
-      instrumentPredicate: predicateMap.instrumentPredicate,
-    })
-
-    return {
-      compileService,
-      groupMap,
-      groupMapFile,
-      watchPredicate: predicateMap.watchPredicate,
-    }
   })
+
+  const compileParamMap = groupMapToCompileParamMap(groupMap, pluginMap)
+
+  const compileService = jsCreateCompileService({
+    localRoot,
+    compileInto,
+    compileParamMap,
+    cacheIgnore: false,
+    cacheTrackHit: true,
+    cacheStrategy: "etag",
+    assetCacheIgnore: false,
+    assetCacheStrategy: "etag",
+    instrumentPredicate: predicateMap.instrumentPredicate,
+  })
+
+  return {
+    compileService,
+    groupMap,
+    groupMapFile,
+    watchPredicate: predicateMap.watchPredicate,
+  }
 }
