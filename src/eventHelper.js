@@ -5,6 +5,30 @@ export const registerEvent = (object, name, callback) => {
   }
 }
 
+export const registerThen = (promise, callback) => {
+  let registered = true
+  promise.then((value) => {
+    if (registered) {
+      callback(value)
+    }
+  })
+  return () => {
+    registered = false
+  }
+}
+
+export const registerCatch = (promise, callback) => {
+  let registered = true
+  promise.catch((error) => {
+    if (registered) {
+      callback(error)
+    }
+  })
+  return () => {
+    registered = false
+  }
+}
+
 export const eventRace = (eventMap) => {
   const names = Object.keys(eventMap)
   const unregisterMap = {}
