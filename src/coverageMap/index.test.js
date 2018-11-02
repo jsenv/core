@@ -1,6 +1,6 @@
 import path from "path"
 import { createExecuteOnNode } from "../createExecuteOnNode/createExecuteOnNode.js"
-import { getCoverageAndOutputForClients } from "./index.js"
+import { testDescriptorToCoverageMap } from "./index.js"
 import { jsCreateCompileServiceForProject } from "../jsCreateCompileServiceForProject.js"
 import { createCancel } from "../cancel/index.js"
 import { open as serverCompileOpen } from "../server-compile/index.js"
@@ -22,18 +22,10 @@ const testDescriptorToInstrumentPredicate = (testDescriptor) => {
   return (file) => testFiles.has(file) === false
 }
 
-const exec = async ({ cancellation, sourceCacheStrategy, sourceCacheIgnore }) => {
-  const testDescriptor = {
-    node: {
-      createExecute: createExecuteOnNode,
-      files: ["src/__test__/file.test.js"],
-    },
-    chrome: {
-      createExecute: () => {},
-      files: [], // ["src/__test__/file.test.js"]
-    },
-  }
-
+const testDescriptorToCoverageMapForProject = async (
+  testDescriptor,
+  { cancellation, sourceCacheStrategy, sourceCacheIgnore },
+) => {
   const instrumentPredicate = testDescriptorToInstrumentPredicate(testDescriptor)
 
   const {
@@ -48,51 +40,50 @@ const exec = async ({ cancellation, sourceCacheStrategy, sourceCacheIgnore }) =>
     instrumentPredicate,
   })
 
-  const { origin: remoteRoot } = await serverCompileOpen({
+  const [server, filesToCover] = await Promise.all([
+    serverCompileOpen({
+      cancellation,
+      protocol: "http",
+      ip: "127.0.0.1",
+      port: 0,
+      localRoot,
+      compileInto,
+      compileService,
+      watch,
+      watchPredicate,
+      sourceCacheStrategy,
+      sourceCacheIgnore,
+    }),
+    forEachRessourceMatching(
+      localRoot,
+      projectMetaMap,
+      ({ cover }) => cover,
+      ({ relativeName }) => relativeName,
+    ),
+  ])
+
+  return testDescriptorToCoverageMap(testDescriptor, {
     cancellation,
-    protocol: "http",
-    ip: "127.0.0.1",
-    port: 0,
     localRoot,
     compileInto,
-    compileService,
+    remoteRoot: server.origin,
+    groupMapFile,
     watch,
-    watchPredicate,
-    sourceCacheStrategy,
-    sourceCacheIgnore,
-  })
-
-  // filesToCover will come from projectMetaMap because to painful to maintain
-  // and I think we can assume the default behaviour is that every file should be covered except test files
-  // const filesToCover = ["src/__test__/file.js", "src/__test__/file2.js"]
-  const filesToCover = await forEachRessourceMatching(
-    localRoot,
-    projectMetaMap,
-    ({ cover }) => cover,
-    ({ relativeName }) => relativeName,
-  )
-
-  const clients = Object.keys(testDescriptor).map((name) => {
-    const { createExecute, files } = testDescriptor[name]
-    const execute = createExecute({
-      localRoot,
-      remoteRoot,
-      compileInto,
-      groupMapFile,
-      hotreload: watch,
-      hotreloadSSERoot: remoteRoot,
-    })
-
-    return { execute, files }
-  })
-
-  return getCoverageAndOutputForClients({
-    cancellation,
-    localRoot,
-    filesToCover,
-    clients,
+    filesToCover: ["index.js"], // for now, to avoid too many coverage
   })
 }
 
+const testDescriptor = {
+  node: {
+    createExecute: createExecuteOnNode,
+    files: ["src/__test__/file.test.js"],
+  },
+  chrome: {
+    createExecute: () => {},
+    files: [], // ["src/__test__/file.test.js"]
+  },
+}
 const { cancellation } = createCancel()
-exec({ cancellation })
+testDescriptorToCoverageMapForProject(testDescriptor, { cancellation }).then((coverageMap) => {
+  debugger
+})

@@ -31,17 +31,17 @@ const getEmptyCoverageFor = async ({ cancellation, localRoot, file }) => {
   return coverage
 }
 
-export const getCoverageMapForFilesMissed = async ({
+export const filesMissedToCoverageMap = async ({
+  files,
   localRoot,
   cancellation = cancellationNone,
-  files,
 }) => {
-  const coverageMapMissed = {}
+  const coverageMap = {}
   await Promise.all(
     files.map(async (file) => {
       const emptyCoverage = await getEmptyCoverageFor({ cancellation, localRoot, file })
-      coverageMapMissed[file] = emptyCoverage
+      coverageMap[file] = emptyCoverage
     }),
   )
-  return coverageMapMissed
+  return coverageMap
 }

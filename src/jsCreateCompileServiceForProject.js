@@ -85,11 +85,11 @@ export const jsCreateCompileServiceForProject = async ({
   })
 
   instrumentPredicate = predicateCompose(instrumentPredicate, (file) => {
-    return Boolean(ressourceToMeta(projectMetaMap, file).cover)
+    return ressourceToMeta(projectMetaMap, file).cover
   })
 
   const watchPredicate = (file) => {
-    return Boolean(ressourceToMeta(projectMetaMap, file).watch)
+    return ressourceToMeta(projectMetaMap, file).watch
   }
 
   const compileParamMap = groupMapToCompileParamMap(groupMap, pluginMap)

@@ -1,1 +1,1 @@
-export { getCoverageAndOutputForClients } from "./getCoverageAndOutputForClients.js"
+export { testDescriptorToCoverageMap } from "./testDescriptorToCoverageMap.js"

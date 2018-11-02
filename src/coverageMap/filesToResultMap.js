@@ -1,30 +1,26 @@
 import { promiseConcurrent } from "../promiseHelper.js"
-import { coverageMapCompose } from "./coverageMapCompose.js"
 import { teardownForOutputAndCoverage } from "../platformTeardown.js"
 import { cancellationNone } from "../cancel/index.js"
 
-// import { objectMapKey } from "./objectHelper.js"
-
-// const getRelativenameFromPath = (path, root) => {
-//   return path.startsWith(root) ? path.slice(root.length) + 1 : path
-// }
-
-export const getCoverageMapAndOutputMapForFiles = ({
-  cancellation = cancellationNone,
-  execute,
+export const filesToResultMap = (
   files,
-  maxParallelExecution = 5,
-  beforeAll = () => {},
-  beforeEach = () => {},
-  afterEach = () => {},
-  afterAll = () => {},
-}) => {
+  execute,
+  {
+    cancellation = cancellationNone,
+    maxParallelExecution = 5,
+    beforeAll = () => {},
+    beforeEach = () => {},
+    afterEach = () => {},
+    afterAll = () => {},
+  } = {},
+) => {
   const executeTestFile = (file) => {
     beforeEach({ file })
 
     return execute({
       cancellation,
       file,
+      instrument: true,
       teardown: teardownForOutputAndCoverage,
     }).then(({ output, coverage }) => {
       // coverage = null means file do not set a global.__coverage__
@@ -45,14 +41,15 @@ export const getCoverageMapAndOutputMapForFiles = ({
   }).then((results) => {
     afterAll({ files, results })
 
-    const outputMap = {}
-    results.forEach(({ output }, index) => {
-      const relativeName = files[index]
-      outputMap[relativeName] = output
+    const resultMap = {}
+    files.forEach((file, index) => {
+      const result = results[index]
+      resultMap[file] = {
+        output: result.output,
+        coverageMap: result.coverage,
+      }
     })
 
-    const coverageMap = coverageMapCompose(results.map(({ coverage }) => coverage))
-
-    return { outputMap, coverageMap }
+    return resultMap
   })
 }

@@ -1,18 +1,15 @@
 module.exports = {
   metas: {
-    source: {
+    compile: {
       "index.js": true,
       "src/**/*.js": true,
-      "src/**/*.test.js": false,
+      "bin/**/*.js": true,
+      "src/__test__/file-with-syntax-error.js": false,
     },
     cover: {
       "index.js": true,
       "src/**/*.js": true,
-      "src/**/*.test.js": false,
-    },
-    test: {
-      "index.test.js": true,
-      "src/**/*.test.js": true,
+      // "bin/**/*.js": true,
     },
     watch: {
       // watcher are created on demand when you do an http request to compile server
@@ -32,12 +29,6 @@ module.exports = {
       "**/*.json": true,
       "package.json": false,
       "package-lock.json": false,
-    },
-    compile: {
-      "index.js": true,
-      "src/**/*.js": true,
-      "bin/**/*.js": true,
-      "src/__test__/file-with-syntax-error.js": false,
     },
   },
 }
