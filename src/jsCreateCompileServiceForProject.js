@@ -14,6 +14,7 @@ import {
   getBrowserSystemLocalURL,
   getBrowserPlatformLocalURL,
 } from "./compilePlatformAndSystem.js"
+import { predicateCompose } from "./functionHelper.js"
 
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -64,7 +65,11 @@ const getGroupMapForProject = (config) => {
   )
 }
 
-export const jsCreateCompileServiceForProject = async ({ localRoot, compileInto }) => {
+export const jsCreateCompileServiceForProject = async ({
+  localRoot,
+  compileInto,
+  instrumentPredicate = () => true,
+}) => {
   const groupMapFile = "groupMap.json"
   const groupMapLocation = `${localRoot}/${compileInto}/${groupMapFile}`
 
@@ -79,9 +84,9 @@ export const jsCreateCompileServiceForProject = async ({ localRoot, compileInto 
     groupMap: getGroupMapForProject(groupMapLocation),
   })
 
-  const instrumentPredicate = (file) => {
+  instrumentPredicate = predicateCompose(instrumentPredicate, (file) => {
     return Boolean(ressourceToMeta(projectMetaMap, file).cover)
-  }
+  })
 
   const watchPredicate = (file) => {
     return Boolean(ressourceToMeta(projectMetaMap, file).watch)

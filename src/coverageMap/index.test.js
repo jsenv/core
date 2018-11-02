@@ -10,7 +10,32 @@ const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = "dist"
 const watch = false
 
+const testDescriptorToInstrumentPredicate = (testDescriptor) => {
+  const testFiles = new Set()
+
+  Object.keys(testDescriptor).forEach((name) => {
+    testDescriptor[name].files.forEach((file) => {
+      testFiles.add(file)
+    })
+  })
+
+  return (file) => testFiles.has(file) === false
+}
+
 const exec = async ({ cancellation, sourceCacheStrategy, sourceCacheIgnore }) => {
+  const testDescriptor = {
+    node: {
+      createExecute: createExecuteOnNode,
+      files: ["src/__test__/file.test.js"],
+    },
+    chrome: {
+      createExecute: () => {},
+      files: [], // ["src/__test__/file.test.js"]
+    },
+  }
+
+  const instrumentPredicate = testDescriptorToInstrumentPredicate(testDescriptor)
+
   const {
     compileService,
     watchPredicate,
@@ -20,6 +45,7 @@ const exec = async ({ cancellation, sourceCacheStrategy, sourceCacheIgnore }) =>
     cancellation,
     localRoot,
     compileInto,
+    instrumentPredicate,
   })
 
   const { origin: remoteRoot } = await serverCompileOpen({
@@ -46,29 +72,25 @@ const exec = async ({ cancellation, sourceCacheStrategy, sourceCacheIgnore }) =>
     ({ relativeName }) => relativeName,
   )
 
+  const clients = Object.keys(testDescriptor).map((name) => {
+    const { createExecute, files } = testDescriptor[name]
+    const execute = createExecute({
+      localRoot,
+      remoteRoot,
+      compileInto,
+      groupMapFile,
+      hotreload: watch,
+      hotreloadSSERoot: remoteRoot,
+    })
+
+    return { execute, files }
+  })
+
   return getCoverageAndOutputForClients({
     cancellation,
     localRoot,
     filesToCover,
-    clients: [
-      {
-        execute: createExecuteOnNode({
-          localRoot,
-          remoteRoot,
-          compileInto,
-          groupMapFile,
-          hotreload: watch,
-          hotreloadSSERoot: remoteRoot,
-        }),
-        // ces fichier ne devront pas etre instrument
-        // cela doit modifier le instrument predicate
-        files: ["src/__test__/file.test.js"],
-      },
-      // {
-      //   execute: createExecuteOnChromium({}),
-      //   files: ["src/__test__/file.test.js"]
-      // },
-    ],
+    clients,
   })
 }
 
