@@ -144,7 +144,7 @@ const trackRequestHandlers = (nodeServer) => {
   return { add, close }
 }
 
-const closeJustAfterListen = (server) => {
+export const closeJustAfterListen = (server) => {
   return new Promise((resolve, reject) => {
     registerEvent(server, "close", (error) => {
       if (error) {
@@ -157,7 +157,7 @@ const closeJustAfterListen = (server) => {
   })
 }
 
-const listen = ({ cancellation = cancellationNone, server, port, ip }) => {
+export const listen = ({ cancellation = cancellationNone, server, port, ip }) => {
   return new Promise((resolve, reject) => {
     eventRace({
       cancel: {
