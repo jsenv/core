@@ -1,5 +1,7 @@
 import { readProjectMetaMap, ressourceToMeta } from "@dmail/project-structure"
-import { jsCreateCompileService } from "./jsCreateCompileService/index.js"
+import { jsCompile } from "./jsCompile/index.js"
+import { jsCompileToCompileFile } from "./jsCompileToCompileFile/index.js"
+import { jsCompileFileToService } from "./jsCompileFileToService/index.js"
 import { getGroupMap, groupMapToCompileParamMap } from "./groupMap/index.js"
 import {
   pluginOptionMapToPluginMap,
@@ -62,53 +64,46 @@ const getGroupMapForProject = (config) => {
   )
 }
 
-const createPredicateFromStructure = ({ root }) => {
-  return readProjectMetaMap({
-    root,
-  }).then((metaMap) => {
-    const instrumentPredicate = (file) => {
-      return Boolean(ressourceToMeta(metaMap, file).cover)
-    }
-
-    const watchPredicate = (file) => {
-      return Boolean(ressourceToMeta(metaMap, file).watch)
-    }
-
-    return { instrumentPredicate, watchPredicate }
-  })
-}
-
-export const createJSCompileServiceForProject = async ({ localRoot, compileInto }) => {
+export const jsCreateCompileServiceForProject = async ({ localRoot, compileInto }) => {
   const groupMapFile = "groupMap.json"
   const groupMapLocation = `${localRoot}/${compileInto}/${groupMapFile}`
 
-  const { predicateMap, groupMap } = await objectToPromiseAll({
+  const { projectMetaMap, groupMap } = await objectToPromiseAll({
+    // we should not have to compile thoose static files
+    // we would just have to move them to compileInto/
     platformAndSystem: compilePlatformAndSystem({
       browserSystemLocalURL: getBrowserSystemLocalURL({ localRoot, compileInto }),
       browserPlatformLocalURL: getBrowserPlatformLocalURL({ localRoot, compileInto }),
     }),
-    predicateMap: createPredicateFromStructure({ root: localRoot }),
+    projectMetaMap: readProjectMetaMap({ root: localRoot }),
     groupMap: getGroupMapForProject(groupMapLocation),
   })
 
-  const compileParamMap = groupMapToCompileParamMap(groupMap, pluginMap)
+  const instrumentPredicate = (file) => {
+    return Boolean(ressourceToMeta(projectMetaMap, file).cover)
+  }
 
-  const compileService = jsCreateCompileService({
-    localRoot,
-    compileInto,
+  const watchPredicate = (file) => {
+    return Boolean(ressourceToMeta(projectMetaMap, file).watch)
+  }
+
+  const compileParamMap = groupMapToCompileParamMap(groupMap, pluginMap)
+  const jsCompileFile = jsCompileToCompileFile(jsCompile)
+  const jsCompileService = jsCompileFileToService(jsCompileFile, {
     compileParamMap,
     cacheIgnore: false,
     cacheTrackHit: true,
     cacheStrategy: "etag",
     assetCacheIgnore: false,
     assetCacheStrategy: "etag",
-    instrumentPredicate: predicateMap.instrumentPredicate,
+    instrumentPredicate,
   })
 
   return {
-    compileService,
+    compileService: jsCompileService,
     groupMap,
     groupMapFile,
-    watchPredicate: predicateMap.watchPredicate,
+    watchPredicate,
+    projectMetaMap,
   }
 }

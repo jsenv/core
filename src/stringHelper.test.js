@@ -1,4 +1,4 @@
-import { regexpEscape } from "./regexpEscape.js"
+import { regexpEscape } from "./stringHelper.js"
 import assert from "assert"
 
 assert.equal(regexpEscape("/"), "\\/")

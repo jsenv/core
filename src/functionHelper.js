@@ -1,3 +1,13 @@
+export const guard = (predicate, fn) => (...args) => {
+  if (predicate(...args)) {
+    return fn(...args)
+  }
+  return undefined
+}
+
+export const predicateCompose = (...predicates) => (...args) =>
+  predicates.every((predicate) => predicate(...args))
+
 export const createStore = (
   {
     compare = (args, savedArgs) => {

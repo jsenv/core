@@ -1,7 +1,7 @@
 import { open as serverOpen, createRequestPredicate, serviceCompose } from "../server/index.js"
 import { open as serverCompileOpen } from "../server-compile/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
-import { guard } from "../guard.js"
+import { guard } from "../functionHelper.js"
 import {
   getBrowserSystemRemoteURL,
   getBrowserPlatformRemoteURL,

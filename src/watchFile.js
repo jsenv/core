@@ -1,6 +1,6 @@
 import { createSignal } from "@dmail/signal"
 import fs from "fs"
-import { memoizeSync } from "./memoize.js"
+import { memoizeSync } from "./functionHelper.js"
 
 const getModificationDate = (url) => {
   return new Promise((resolve, reject) => {

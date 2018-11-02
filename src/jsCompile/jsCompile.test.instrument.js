@@ -1,9 +1,9 @@
-import { compile } from "./compile.js"
+import { jsCompile } from "./jsCompile.js"
 import istanbul from "istanbul"
 import fs from "fs"
 import path from "path"
 import { pluginNameToPlugin } from "@dmail/project-structure-compile-babel"
-import { objectMap } from "../../objectHelper.js"
+import { objectMap } from "../objectHelper.js"
 import assert from "assert"
 import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
 
@@ -41,10 +41,10 @@ const pluginNames = [
 const babelPlugins = pluginNames.map(pluginNameToPlugin)
 babelPlugins.push(createInstrumentPlugin())
 const root = path.resolve(__dirname, "../../../")
-const file = "src/jsCreateCompileService/compile/fixtures/file.js"
+const file = "src/jsCompile/fixtures/file.js"
 const filename = `${root}/${file}`
 
-compile({
+jsCompile({
   root,
   plugins: babelPlugins,
   inputName: file,

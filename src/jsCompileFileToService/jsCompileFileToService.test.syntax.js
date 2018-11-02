@@ -1,6 +1,6 @@
-import { compileFileToService } from "./compileFileToService.js"
-import { compile } from "../compile/index.js"
-import { compileToCompileFile } from "../compileToCompileFile.js"
+import { jsCompileFileToService } from "./jsCompileFileToService.js"
+import { jsCompile } from "../jsCompile/index.js"
+import { jsCompileToCompileFile } from "../jsCompileToCompileFile/index.js"
 import assert from "assert"
 import path from "path"
 
@@ -8,17 +8,17 @@ const root = path.resolve(__dirname, "../../../../")
 const into = "build"
 const compileId = "compileId"
 
-const compileFile = compileToCompileFile(compile, {
+const jsCompileFile = jsCompileToCompileFile(jsCompile, {
   root,
   into,
 })
-const service = compileFileToService(compileFile, {
+const jsService = jsCompileFileToService(jsCompileFile, {
   root,
   into,
   cacheIgnore: true,
 })
 
-service({
+jsService({
   ressource: `${into}/${compileId}/src/__test__/file-with-syntax-error.js`,
   method: "GET",
 }).then((response) => {

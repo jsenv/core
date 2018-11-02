@@ -1,5 +1,5 @@
 import { ressourceToPathname } from "../urlHelper.js"
-import { regexpEscape } from "../regexpEscape.js"
+import { regexpEscape } from "../stringHelper.js"
 
 export const createRequestPredicate = ({ ressource = "*", method }) => {
   // 'a\\*c'.replace(/\\\*/g, 'ok')

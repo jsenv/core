@@ -3,7 +3,7 @@ import { programVisitor } from "istanbul-lib-instrument"
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 
 export const createInstrumentPlugin = (
-  { useInlineSourceMaps = false, predicate = () => false } = {},
+  { useInlineSourceMaps = false, predicate = () => true } = {},
 ) => {
   return ({ types }) => {
     return {

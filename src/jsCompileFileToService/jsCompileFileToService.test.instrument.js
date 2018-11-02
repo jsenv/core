@@ -1,6 +1,6 @@
-import { compileFileToService } from "./compileFileToService.js"
-import { compile, createInstrumentPlugin } from "../compile/index.js"
-import { compileToCompileFile } from "../compileToCompileFile.js"
+import { jsCompileFileToService } from "./jsCompileFileToService.js"
+import { jsCompile, createInstrumentPlugin } from "../jsCompile/index.js"
+import { jsCompileToCompileFile } from "../jsCompileToCompileFile/index.js"
 import assert from "assert"
 import path from "path"
 
@@ -8,11 +8,11 @@ const root = path.resolve(__dirname, "../../../../")
 const into = "build"
 const compileId = "compileId"
 
-const compileFile = compileToCompileFile(compile, {
+const compileFile = jsCompileToCompileFile(jsCompile, {
   root,
   into,
 })
-const service = compileFileToService(compileFile, {
+const jsService = jsCompileFileToService(compileFile, {
   root,
   into,
   compileParamMap: {
@@ -23,7 +23,7 @@ const service = compileFileToService(compileFile, {
   cacheIgnore: true,
 })
 
-service({
+jsService({
   ressource: `${into}/${compileId}/src/__test__/file.js`,
   method: "GET",
 }).then((response) => {

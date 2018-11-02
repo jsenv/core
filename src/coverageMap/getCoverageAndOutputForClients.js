@@ -5,8 +5,8 @@ import { promiseSequence } from "../promiseHelper.js"
 import { cancellationNone } from "../cancel/index.js"
 
 export const getCoverageAndOutputForClients = async ({
+  localRoot,
   cancellation = cancellationNone,
-  compileFile,
   filesToCover = [],
   clients = [],
 }) => {
@@ -31,9 +31,9 @@ export const getCoverageAndOutputForClients = async ({
     return {
       ...coverageMapComposed,
       ...getCoverageMapForFilesMissed({
+        localRoot,
         cancellation,
         filesMissed: getFilesMissed(coverageMapComposed, filesToCover),
-        compileFile,
       }),
     }
   }

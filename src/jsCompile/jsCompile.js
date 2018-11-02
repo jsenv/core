@@ -2,7 +2,7 @@ import { transpiler } from "./transpiler.js"
 import { remapper } from "./remapper.js"
 import { contextToSourceMapMeta } from "./contextToSourceMapMeta.js"
 
-export const compile = ({
+export const jsCompile = ({
   localRoot,
   inputName,
   inputSource,

@@ -1,2 +1,2 @@
-export { compile } from "./compile.js"
+export { jsCompile } from "./jsCompile.js"
 export { createInstrumentPlugin } from "./createInstrumentPlugin.js"

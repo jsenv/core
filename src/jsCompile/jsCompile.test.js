@@ -1,19 +1,19 @@
-import { compile } from "./compile.js"
+import { jsCompile } from "./jsCompile.js"
 import fs from "fs"
 import path from "path"
 import assert from "assert"
 
 const root = path.resolve(__dirname, "../../../")
-const file = "src/jsCreateCompileService/compile/fixtures/file.js"
+const file = "src/jsCompile/fixtures/file.js"
 const filename = `${root}/${file}`
 const inputSource = fs.readFileSync(filename).toString()
 
-compile({
+jsCompile({
   root,
   inputName: file,
   inputSource,
   plugins: [],
-  outputName: "dist/src/createCompile/file.compiled.js",
+  outputName: "dist/src/jsCompile/file.compiled.js",
 }).then(({ outputSource, assetMap }) => {
   assert.equal(typeof outputSource, "string")
   assert.equal(outputSource.length > 0, true)
