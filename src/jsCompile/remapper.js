@@ -1,4 +1,4 @@
-import { objectFilter } from "../../objectHelper.js"
+import { objectFilter } from "../objectHelper.js"
 
 const writeSourceMapLocation = ({ source, location }) => {
   return `${source}

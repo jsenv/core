@@ -62,19 +62,19 @@ const processExecArgvToDebugMeta = (argv) => {
   return {}
 }
 
-const createChildExecArgv = async () => {
+const createChildExecArgv = async ({ cancellation } = {}) => {
   const execArgv = process.execArgv
   const childExecArgv = execArgv.slice()
   const { type, index, port } = processExecArgvToDebugMeta(execArgv)
 
   if (type === "inspect") {
     // allow vscode to debug child, otherwise you have port already used
-    const childPort = await findFreePort(port)
+    const childPort = await findFreePort(port, { cancellation })
     childExecArgv[index] = `--inspect=${childPort}`
   }
   if (type === "inspect-break") {
     // allow vscode to debug child, otherwise you have port already used
-    const childPort = await findFreePort(port)
+    const childPort = await findFreePort(port, { cancellation })
     childExecArgv[index] = `--inspect-brk=${childPort}`
   }
 
@@ -105,7 +105,7 @@ export const createExecuteOnNode = ({
 
     const forkChild = async () => {
       await cancellation.toPromise()
-      const execArgv = await createChildExecArgv()
+      const execArgv = await createChildExecArgv({ cancellation })
 
       const child = fork(nodeClientFile, { execArgv })
       log(`fork ${nodeClientFile} to execute ${file}`)
@@ -189,7 +189,7 @@ export const createExecuteOnNode = ({
         })
       }
 
-      await new Promise((resolve, reject) => {
+      const promise = new Promise((resolve, reject) => {
         eventRace({
           cancel: {
             register: cancellation.register,
@@ -244,16 +244,21 @@ export const createExecuteOnNode = ({
         })
       })
 
-      eventRace({
-        cancel: {
-          register: cancellation.register,
-          callback: close,
-        },
-        restart: {
-          register: restartRegister,
-          callback: restart,
-        },
+      promise.then(() => {
+        // once we have executed, we still isten for cancel and restart
+        eventRace({
+          cancel: {
+            register: cancellation.register,
+            callback: close,
+          },
+          restart: {
+            register: restartRegister,
+            callback: restart,
+          },
+        })
       })
+
+      return promise
     }
 
     return forkChild()

@@ -41,8 +41,9 @@
         "node_modules/rollup-plugin-node-resolve/dist/rollup-plugin-node-resolve.cjs.js",
         "node_modules/@babel/template/lib/builder.js",
         "src/fileHelper.js",
+        "src/eventHelper.js",
         "src/promiseHelper.js",
-        "src/jsCreateCompileService/compile/transpileWithBabel.js",
+        "src/jsCompile/transpileWithBabel.js",
         "src/createRequestToFileResponse/convertFileSystemErrorToResponseProperties.js"
       ],
       "trace": false

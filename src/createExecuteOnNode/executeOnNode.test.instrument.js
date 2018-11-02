@@ -1,6 +1,6 @@
 import { executeOnNode } from "./executeOnNode.js"
 import path from "path"
-import { createJSCompileServiceForProject } from "../createJSCompileServiceForProject.js"
+import { jsCreateCompileServiceForProject } from "../jsCreateCompileServiceForProject.js"
 import { teardownForOutputAndCoverage } from "../platformTeardown.js"
 import assert from "assert"
 
@@ -12,13 +12,13 @@ const instrument = true
 const file = `src/createExecuteOnNode/fixtures/file.js`
 
 const exec = async ({ cancellation }) => {
-  const { compileService, watchPredicate, groupMapFile } = await createJSCompileServiceForProject({
+  const { compileService, watchPredicate, groupMapFile } = await jsCreateCompileServiceForProject({
     cancellation,
     localRoot,
     compileInto,
   })
 
-  return executeOnNode({
+  const result = await executeOnNode({
     cancellation,
     localRoot,
     compileInto,
@@ -33,6 +33,8 @@ const exec = async ({ cancellation }) => {
     teardown: teardownForOutputAndCoverage,
     verbose: true,
   })
+
+  return result
 }
 
 exec({}).then(({ output, coverage }) => {

@@ -4,17 +4,17 @@ import { jsCompileToCompileFile } from "../jsCompileToCompileFile/index.js"
 import assert from "assert"
 import path from "path"
 
-const root = path.resolve(__dirname, "../../../../")
-const into = "build"
+const localRoot = path.resolve(__dirname, "../../../")
+const compileInto = "build"
 const compileId = "compileId"
 
 const compileFile = jsCompileToCompileFile(jsCompile, {
-  root,
-  into,
+  localRoot,
+  compileInto,
 })
 const jsService = jsCompileFileToService(compileFile, {
-  root,
-  into,
+  localRoot,
+  compileInto,
   compileParamMap: {
     [compileId]: {
       plugins: [createInstrumentPlugin()],
@@ -24,7 +24,7 @@ const jsService = jsCompileFileToService(compileFile, {
 })
 
 jsService({
-  ressource: `${into}/${compileId}/src/__test__/file.js`,
+  ressource: `${compileInto}/${compileId}/src/__test__/file.js`,
   method: "GET",
 }).then((response) => {
   assert.equal(response.status, 200)

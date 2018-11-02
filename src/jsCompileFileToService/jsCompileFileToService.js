@@ -6,7 +6,7 @@ export const jsCompileFileToService = (
   {
     localRoot,
     compileInto,
-    compileParamMap,
+    compileParamMap = {},
     cacheIgnore,
     cacheTrackHit,
     assetCacheIgnore,

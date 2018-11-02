@@ -1,5 +1,6 @@
 import net from "net"
 import { listen, closeJustAfterListen } from "./server.js"
+import { cancellationNone } from "../cancel/index.js"
 
 const portIsFree = ({ cancellation, port, ip }) => {
   const server = net.createServer()
@@ -30,7 +31,13 @@ const portIsFree = ({ cancellation, port, ip }) => {
 
 export const findFreePort = async (
   initialPort = 1,
-  { cancellation, ip = "127.0.0.1", min = 1, max = 65534, next = (port) => port + 1 } = {},
+  {
+    cancellation = cancellationNone,
+    ip = "127.0.0.1",
+    min = 1,
+    max = 65534,
+    next = (port) => port + 1,
+  } = {},
 ) => {
   const testUntil = async (port, ip) => {
     const free = await portIsFree({ cancellation, port, ip })

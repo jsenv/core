@@ -28,15 +28,102 @@ export const createRequestToFileResponse = (
   const cacheWithMtime = cacheStrategy === "mtime"
   const cacheWithETag = cacheStrategy === "etag"
 
-  const getContentAndETag = (fileLocation) => {
-    return Promise.resolve()
-      .then(() => getFileContentAsString(fileLocation))
-      .then((content) => {
+  const service = async ({ ressource, headers }) => {
+    const fileLocation = `${root}/${ressource}`
+
+    const stat = await getFileStat(fileLocation)
+
+    if (stat.isDirectory()) {
+      if (canReadDirectory === false) {
         return {
-          content,
-          eTag: createETag(content),
+          status: 403,
+          reason: "not allowed to read directory",
+          headers: {
+            ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
+          },
         }
-      })
+      }
+
+      const files = await listDirectoryContent(fileLocation)
+      const filesAsJSON = JSON.stringify(files)
+
+      return {
+        status: 200,
+        headers: {
+          ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
+          "content-type": "application/json",
+          "content-length": filesAsJSON.length,
+        },
+        body: filesAsJSON,
+      }
+    }
+
+    if (cacheWithMtime) {
+      if ("if-modified-since" in headers) {
+        let cachedModificationDate
+        try {
+          cachedModificationDate = new Date(headers["if-modified-since"])
+        } catch (e) {
+          return {
+            status: 400,
+            reason: "if-modified-since header is not a valid date",
+          }
+        }
+
+        const actualModificationDate = dateToSecondsPrecision(stat.mtime)
+        if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
+          return {
+            status: 304,
+          }
+        }
+      }
+
+      return {
+        status: 200,
+        headers: {
+          ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
+          "last-modified": dateToUTCString(stat.mtime),
+          "content-length": stat.size,
+          "content-type": ressourceToContentType(ressource),
+        },
+        body: fileToBody(fileLocation),
+      }
+    }
+
+    if (cacheWithETag) {
+      const content = await getFileContentAsString(fileLocation)
+      const eTag = createETag(content)
+
+      if ("if-none-match" in headers && headers["if-none-match"] === eTag) {
+        return {
+          status: 304,
+          headers: {
+            ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
+          },
+        }
+      }
+
+      return {
+        status: 200,
+        headers: {
+          ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
+          "content-length": stat.size,
+          "content-type": ressourceToContentType(ressource),
+          etag: eTag,
+        },
+        body: content,
+      }
+    }
+
+    return {
+      status: 200,
+      headers: {
+        ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
+        "content-length": stat.size,
+        "content-type": ressourceToContentType(ressource),
+      },
+      body: fileToBody(fileLocation),
+    }
   }
 
   return ({ ressource, method, headers = {} }) => {
@@ -46,103 +133,6 @@ export const createRequestToFileResponse = (
       }
     }
 
-    const fileLocation = `${root}/${ressource}`
-
-    return Promise.resolve()
-      .then(() => getFileStat(fileLocation))
-      .then((stat) => {
-        if (stat.isDirectory()) {
-          if (canReadDirectory === false) {
-            return {
-              status: 403,
-              reason: "not allowed to read directory",
-              headers: {
-                ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
-              },
-            }
-          }
-
-          return Promise.resolve()
-            .then(() => listDirectoryContent(fileLocation))
-            .then(JSON.stringify)
-            .then((directoryListAsJSON) => {
-              return {
-                status: 200,
-                headers: {
-                  ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
-                  "content-type": "application/json",
-                  "content-length": directoryListAsJSON.length,
-                },
-                body: directoryListAsJSON,
-              }
-            })
-        }
-
-        if (cacheWithMtime) {
-          if ("if-modified-since" in headers) {
-            let cachedModificationDate
-            try {
-              cachedModificationDate = new Date(headers["if-modified-since"])
-            } catch (e) {
-              return {
-                status: 400,
-                reason: "if-modified-since header is not a valid date",
-              }
-            }
-
-            const actualModificationDate = dateToSecondsPrecision(stat.mtime)
-            if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
-              return {
-                status: 304,
-              }
-            }
-          }
-
-          return {
-            status: 200,
-            headers: {
-              ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
-              "last-modified": dateToUTCString(stat.mtime),
-              "content-length": stat.size,
-              "content-type": ressourceToContentType(ressource),
-            },
-            body: fileToBody(fileLocation),
-          }
-        }
-
-        if (cacheWithETag) {
-          return getContentAndETag(fileLocation).then(({ content, eTag }) => {
-            if ("if-none-match" in headers && headers["if-none-match"] === eTag) {
-              return {
-                status: 304,
-                headers: {
-                  ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
-                },
-              }
-            }
-
-            return {
-              status: 200,
-              headers: {
-                ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
-                "content-length": stat.size,
-                "content-type": ressourceToContentType(ressource),
-                etag: eTag,
-              },
-              body: content,
-            }
-          }, convertFileSystemErrorToResponseProperties)
-        }
-
-        return {
-          status: 200,
-          headers: {
-            ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
-            "content-length": stat.size,
-            "content-type": ressourceToContentType(ressource),
-          },
-          body: fileToBody(fileLocation),
-        }
-      }, convertFileSystemErrorToResponseProperties)
+    return service({ ressource, method, headers }).catch(convertFileSystemErrorToResponseProperties)
   }
 }

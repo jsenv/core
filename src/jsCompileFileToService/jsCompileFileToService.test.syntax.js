@@ -4,22 +4,22 @@ import { jsCompileToCompileFile } from "../jsCompileToCompileFile/index.js"
 import assert from "assert"
 import path from "path"
 
-const root = path.resolve(__dirname, "../../../../")
-const into = "build"
+const localRoot = path.resolve(__dirname, "../../../")
+const compileInto = "build"
 const compileId = "compileId"
 
 const jsCompileFile = jsCompileToCompileFile(jsCompile, {
-  root,
-  into,
+  localRoot,
+  compileInto,
 })
 const jsService = jsCompileFileToService(jsCompileFile, {
-  root,
-  into,
+  localRoot,
+  compileInto,
   cacheIgnore: true,
 })
 
 jsService({
-  ressource: `${into}/${compileId}/src/__test__/file-with-syntax-error.js`,
+  ressource: `${compileInto}/${compileId}/src/__test__/file-with-syntax-error.js`,
   method: "GET",
 }).then((response) => {
   // le serveur doit repondre un truc mais quoi

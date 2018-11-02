@@ -4,22 +4,22 @@ import { jsCompileToCompileFile } from "../jsCompileToCompileFile/index.js"
 import assert from "assert"
 import path from "path"
 
-const root = path.resolve(__dirname, "../../../../")
-const into = "build"
+const localRoot = path.resolve(__dirname, "../../../")
+const compileInto = "build"
 const compileId = "test"
 
 const jsCompileFile = jsCompileToCompileFile(jsCompile, {
-  root,
-  into,
+  localRoot,
+  compileInto,
 })
 const jsService = jsCompileFileToService(jsCompileFile, {
-  root,
-  into,
+  localRoot,
+  compileInto,
   cacheIgnore: true,
 })
 
 jsService({
-  ressource: `${into}/${compileId}/src/__test__/file.js`,
+  ressource: `${compileInto}/${compileId}/src/__test__/file.js`,
   method: "GET",
 })
   .then((response) => {
@@ -27,7 +27,7 @@ jsService({
     assert(typeof response.headers.etag, "string")
 
     return jsService({
-      ressource: `${into}/${compileId}/src/__test__/file.js__meta__/file.js.map`,
+      ressource: `${compileInto}/${compileId}/src/__test__/file.js__meta__/file.js.map`,
       method: "GET",
     }).then((response) => {
       assert.equal(response.status, 200)
@@ -37,7 +37,7 @@ jsService({
   .then(() => {
     // ensure 404 on file not found
     return jsService({
-      ressource: `${into}/${compileId}/src/__test__/file.js:10`,
+      ressource: `${compileInto}/${compileId}/src/__test__/file.js:10`,
       method: "GET",
     }).then((response) => {
       assert.equal(response.status, 404)

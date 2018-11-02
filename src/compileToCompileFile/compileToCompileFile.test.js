@@ -33,26 +33,30 @@ const compileFile = compileToCompileFile(compile, {
   compileInto,
 })
 
-compileFile({
-  compileId,
-  compileParamMap,
-  file,
-  cacheIgnore: true,
-}).then((actual) => {
-  assert.deepEqual(actual, {
-    eTagValid: false,
-    outputName: expectedOutputName,
-    eTag: expectedEtag,
-    output,
-    assetMap,
-  })
+const test = async () => {
+  {
+    const actual = await compileFile({
+      compileId,
+      compileParamMap,
+      file,
+      cacheIgnore: true,
+    })
+    assert.deepEqual(actual, {
+      eTagValid: false,
+      outputName: expectedOutputName,
+      eTag: expectedEtag,
+      output,
+      assetMap,
+    })
+  }
 
-  return compileFile({
-    compileId,
-    compileParamMap,
-    file,
-    cacheIgnore: false,
-  }).then((actual) => {
+  {
+    const actual = await compileFile({
+      compileId,
+      compileParamMap,
+      file,
+      cacheIgnore: false,
+    })
     assert.equal(callCount, 1)
     assert.deepEqual(actual, {
       eTagValid: false,
@@ -61,24 +65,44 @@ compileFile({
       output,
       assetMap,
     })
+  }
 
-    return compileFile({
+  {
+    const actual = await compileFile({
       compileId,
       compileParamMap,
       file,
       cacheIgnore: false,
       eTag: expectedEtag,
-    }).then((actual) => {
-      assert.equal(callCount, 1)
-      assert.deepEqual(actual, {
-        eTagValid: true,
-        outputName: expectedOutputName,
-        eTag: expectedEtag,
-        output,
-        assetMap,
-      })
-
-      console.log("passed")
     })
-  })
-})
+    assert.equal(callCount, 1)
+    assert.deepEqual(actual, {
+      eTagValid: true,
+      outputName: expectedOutputName,
+      eTag: expectedEtag,
+      output,
+      assetMap,
+    })
+  }
+
+  {
+    const actual = await compileFile({
+      compileId,
+      compileParamMap,
+      file,
+      cacheIgnore: false,
+      eTag: null,
+    })
+    assert.deepEqual(actual, {
+      eTagValid: false,
+      outputName: expectedOutputName,
+      eTag: expectedEtag,
+      output,
+      assetMap,
+    })
+  }
+
+  console.log("passed")
+}
+
+test()

@@ -93,8 +93,10 @@ export const jsCreateCompileServiceForProject = async ({
   }
 
   const compileParamMap = groupMapToCompileParamMap(groupMap, pluginMap)
-  const jsCompileFile = jsCompileToCompileFile(jsCompile)
+  const jsCompileFile = jsCompileToCompileFile(jsCompile, { localRoot, compileInto })
   const jsCompileService = jsCompileFileToService(jsCompileFile, {
+    localRoot,
+    compileInto,
     compileParamMap,
     cacheIgnore: false,
     cacheTrackHit: true,
