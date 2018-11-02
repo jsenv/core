@@ -2,50 +2,66 @@
 // to ensure it cancels what's hapenning and resolve when its done
 
 import path from "path"
-import { openCompileServer } from "../openCompileServer/openCompileServer.js"
+import { open } from "../server-compile/index.js"
 import { createExecuteOnChromium } from "./createExecuteOnChromium.js"
+import { jsCreateCompileServiceForProject } from "../jsCreateCompileServiceForProject.js"
+import { createCancel } from "../cancel/index.js"
 
 // System.import('http://127.0.0.1:9656/compiled/src/__test__/file.js')
 
-const root = path.resolve(__dirname, "../../../")
-const into = "build"
+const localRoot = path.resolve(__dirname, "../../../")
+const compileInto = "build"
+const watch = true
 
-// retester
-openCompileServer({
-  root,
-  into,
-  protocol: "http",
-  ip: "127.0.0.1",
-  port: 9656,
-  instrument: false, // apparently it breaks sourcempa, to be tested
-}).then((server) => {
-  const cleanAll = false
+const test = async ({ cancellation }) => {
+  const {
+    compileService,
+    watchPredicate,
+    groupMapFile,
+    groupMap,
+  } = await jsCreateCompileServiceForProject({
+    cancellation,
+    localRoot,
+    compileInto,
+  })
 
-  const { execute } = createExecuteOnChromium({
+  const server = await open({
+    cancellation,
+    localRoot,
+    compileInto,
+    compileService,
+    watch,
+    watchPredicate,
+    protocol: "http",
+    ip: "127.0.0.1",
+  })
+
+  const execute = createExecuteOnChromium({
+    cancellation,
+    localRoot,
+    compileInto,
     remoteRoot: server.origin,
-    remoteCompileDestination: into,
+    groupMapFile,
+    groupMap,
     headless: false,
   })
 
-  return execute({
+  const result = await execute({
+    cancellation,
     file: `src/__test__/file.test.js`,
-    autoClose: cleanAll,
-  }).then(({ promise, close }) => {
-    promise.then(
-      (value) => {
-        if (cleanAll) {
-          close()
-          server.close()
-        }
-        console.log("execution done with", value)
-      },
-      (reason) => {
-        if (cleanAll) {
-          close()
-          server.close()
-        }
-        console.error("execution error", reason)
-      },
-    )
   })
-})
+
+  return result
+}
+
+const { cancellation, cancel } = createCancel()
+test({ cancellation }).then(
+  (value) => {
+    cancel("execution done")
+    console.log("execution done with", value)
+  },
+  (reason) => {
+    cancel("execution done")
+    console.error("execution error", reason)
+  },
+)

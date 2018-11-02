@@ -16,7 +16,7 @@ const REASON_INTERNAL_ERROR = "internal error"
 
 const reasonIsInternalError = (reason) => reason === REASON_INTERNAL_ERROR
 
-const getNodeServerAndAgent = ({ protocol, signature }) => {
+const getNodeServerAndAgent = ({ protocol, signature = {} }) => {
   if (protocol === "http") {
     return {
       nodeServer: http.createServer(),
@@ -216,7 +216,7 @@ export const open = async (
     requestToResponse = () => null,
     verbose = true,
     openedMessage = ({ origin }) => `server listening at ${origin}`,
-    closedMessage = (reason) => `close server because ${reason}`,
+    closedMessage = (reason) => `server closed because ${reason}`,
   } = {},
 ) => {
   if (port === 0 && forcePort) {

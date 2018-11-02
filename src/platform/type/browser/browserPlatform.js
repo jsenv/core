@@ -77,6 +77,10 @@ export const createBrowserPlatform = ({
   hotreloadSSERoot,
   hotreloadCallback,
 }) => {
+  if (typeof groupMap !== "object") {
+    throw new TypeError(`createBrowserPlatform groupMap must be an object, got ${groupMap}`)
+  }
+
   const browser = detect()
 
   const compileId = browserToGroupId(browser, groupMap) || "otherwise"

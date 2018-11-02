@@ -9,10 +9,7 @@ import {
 } from "../compilePlatformAndSystem.js"
 import { cancellationNone } from "../cancel/index.js"
 import { eventRace, registerEvent, registerThen, registerCatch } from "../eventHelper.js"
-
-// this module must not force dev-server to have pupeteer dependency
-// this module must become external
-const puppeteer = {}
+import puppeteer from "puppeteer"
 
 const openIndexRequestInterception = async ({ cancellation, protocol, ip, port, page, body }) => {
   await cancellation.toPromise()
@@ -54,15 +51,22 @@ export const createExecuteOnChromium = ({
   hotreload = false,
   hotreloadSSERoot,
 
-  protocol = "https",
+  protocol = "http",
   ip = "127.0.0.1",
   port = 0,
   openIndexRequestHandler = serverIndexOpen,
   headless = true,
   mirrorConsole = false,
+  verbose = true,
 }) => {
   if (openIndexRequestHandler === openIndexRequestInterception && headless === false) {
     throw new Error(`openIndexRequestInterception work only in headless mode`)
+  }
+
+  const log = (...args) => {
+    if (verbose) {
+      console.log(...args)
+    }
   }
 
   const openBrowser = async () => {
@@ -78,7 +82,11 @@ export const createExecuteOnChromium = ({
       // so we apparently don't have to use listenNodeBeforeExit in order to close browser
       // as we do for server
     })
-    cancellation.register(browserPromise.then((browser) => browser.close()))
+    cancellation.register(async (reason) => {
+      const browser = await browserPromise
+      await browser.close()
+      log(`chromium closed because ${reason}`)
+    })
 
     return browserPromise
   }
