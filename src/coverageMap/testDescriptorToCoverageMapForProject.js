@@ -17,7 +17,7 @@ const testDescriptorToIsTestFile = (testDescriptor) => {
 
 export const testDescriptorToCoverageMapForProject = async (
   testDescriptor,
-  { cancellation, localRoot, compileInto, watch = false, sourceCacheStrategy, sourceCacheIgnore },
+  { cancellation, localRoot, compileInto, watch = false },
 ) => {
   const isTestFile = testDescriptorToIsTestFile(testDescriptor)
 
@@ -44,8 +44,6 @@ export const testDescriptorToCoverageMapForProject = async (
       compileService,
       watch,
       watchPredicate,
-      sourceCacheStrategy,
-      sourceCacheIgnore,
     }),
     forEachRessourceMatching(
       localRoot,

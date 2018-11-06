@@ -15,6 +15,7 @@ import {
   getBrowserPlatformLocalURL,
 } from "./compilePlatformAndSystem.js"
 import { predicateCompose } from "./functionHelper.js"
+import transformReactJSX from "@babel/plugin-transform-react-jsx"
 
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -48,6 +49,18 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-typeof-symbol": {},
   "transform-unicode-regex": {},
 })
+
+// well I guess it would work to enable this plugin on any file
+// but we should enable it only on .jsx file ?
+// and we have to make pragma configurable too...
+pluginMap["transform-react-jsx"] = [
+  transformReactJSX,
+  {
+    pragma: "React.createElement",
+    pragmaFrag: "React.Fragment",
+    throwIfNamespace: true,
+  },
+]
 
 const getGroupMapForProject = (config) => {
   return readFile(config).then(
