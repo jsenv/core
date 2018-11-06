@@ -1,14 +1,18 @@
 import { coverageMapCompose } from "./coverageMapCompose.js"
 
 export const platformResultMapToCoverageMap = (platformResultMap) => {
-  const coverageMaps = []
+  const coverageMapList = []
 
   Object.keys(platformResultMap).forEach((platformName) => {
     const fileResultMap = platformResultMap[platformName]
     Object.keys(fileResultMap).forEach((file) => {
-      coverageMaps.push(fileResultMap[file].coverageMap)
+      const fileResult = fileResultMap[file]
+      const fileCoverageMap = fileResult.coverageMap
+      if (fileCoverageMap) {
+        coverageMapList.push(fileCoverageMap)
+      }
     })
   })
 
-  return coverageMapCompose(...coverageMaps)
+  return coverageMapCompose(...coverageMapList)
 }

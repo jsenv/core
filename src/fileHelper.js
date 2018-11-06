@@ -2,6 +2,8 @@ import fs from "fs"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
 import path from "path"
 
+export { fileWriteFromString }
+
 export const readFile = (location) => {
   return new Promise((resolve, reject) => {
     fs.readFile(location, (error, buffer) => {

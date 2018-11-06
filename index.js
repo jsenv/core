@@ -18,3 +18,7 @@ export { createCancel } from "./src/cancel/index.js"
 export {
   testDescriptorToCoverageMapForProject,
 } from "./src/coverageMap/testDescriptorToCoverageMapForProject.js"
+export { coverageMapToAbsolute } from "./src/coverageMap/coverageMapToAbsolute.js"
+export { coverageMapLog, coverageMapHTML } from "./src/coverageMap/index.js"
+
+export { fileWriteFromString, readFile } from "./src/fileHelper.js"

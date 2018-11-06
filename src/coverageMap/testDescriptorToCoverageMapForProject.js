@@ -3,7 +3,7 @@ import { jsCreateCompileServiceForProject } from "../jsCreateCompileServiceForPr
 import { open as serverCompileOpen } from "../server-compile/index.js"
 import { forEachRessourceMatching } from "@dmail/project-structure"
 
-const testDescriptorToInstrumentPredicate = (testDescriptor) => {
+const testDescriptorToIsTestFile = (testDescriptor) => {
   const testFiles = new Set()
 
   Object.keys(testDescriptor).forEach((name) => {
@@ -12,14 +12,14 @@ const testDescriptorToInstrumentPredicate = (testDescriptor) => {
     })
   })
 
-  return (file) => testFiles.has(file) === false
+  return (file) => testFiles.has(file)
 }
 
 export const testDescriptorToCoverageMapForProject = async (
   testDescriptor,
   { cancellation, localRoot, compileInto, watch = false, sourceCacheStrategy, sourceCacheIgnore },
 ) => {
-  const instrumentPredicate = testDescriptorToInstrumentPredicate(testDescriptor)
+  const isTestFile = testDescriptorToIsTestFile(testDescriptor)
 
   const {
     compileService,
@@ -30,7 +30,7 @@ export const testDescriptorToCoverageMapForProject = async (
     cancellation,
     localRoot,
     compileInto,
-    instrumentPredicate,
+    instrumentPredicate: (file) => isTestFile(file) === false,
   })
 
   const [server, filesToCover] = await Promise.all([
@@ -62,6 +62,6 @@ export const testDescriptorToCoverageMapForProject = async (
     remoteRoot: server.origin,
     groupMapFile,
     watch,
-    filesToCover,
+    filesToCover: filesToCover.filter((file) => isTestFile(file) === false),
   })
 }

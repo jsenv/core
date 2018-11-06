@@ -3,9 +3,10 @@ import { createExecuteOnNode } from "../createExecuteOnNode/createExecuteOnNode.
 import { createExecuteOnChromium } from "../createExecuteOnChromium/createExecuteOnChromium.js"
 import { testDescriptorToCoverageMapForProject } from "./testDescriptorToCoverageMapForProject.js"
 import { createCancel } from "../cancel/index.js"
+import assert from "assert"
 
 const localRoot = path.resolve(__dirname, "../../../")
-const compileInto = "dist"
+const compileInto = "build"
 const watch = false
 const testDescriptor = {
   node: {
@@ -24,5 +25,19 @@ testDescriptorToCoverageMapForProject(testDescriptor, {
   compileInto,
   watch,
 }).then((coverageMap) => {
-  debugger
+  assert.deepEqual(coverageMap["index.js"], {
+    b: {},
+    branchMap: {},
+    f: {},
+    fnMap: {},
+    path: "index.js",
+    s: {},
+    statementMap: {},
+  })
+  assert.deepEqual(coverageMap["src/__test__/file.js"].s, {
+    0: 1,
+    1: 1,
+    2: 1,
+  })
+  console.log("passed")
 })

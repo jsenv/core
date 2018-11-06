@@ -1,5 +1,5 @@
 import { promiseConcurrent } from "../promiseHelper.js"
-import { teardownForOutputAndCoverage } from "../platformTeardown.js"
+import { teardownForOutputAndCoverageMap } from "../platformTeardown.js"
 import { cancellationNone } from "../cancel/index.js"
 
 export const filesToResultMap = (
@@ -21,15 +21,20 @@ export const filesToResultMap = (
       cancellation,
       file,
       instrument: true,
-      teardown: teardownForOutputAndCoverage,
-    }).then(({ output, coverage }) => {
-      // coverage = null means file do not set a global.__coverage__
-      // which happens if file was not instrumented.
-      // this is not supposed to happen so we should throw ?
+      teardown: teardownForOutputAndCoverageMap,
+    }).then(({ output, coverageMap }) => {
+      if (coverageMap === null) {
+        // coverageMap can be null for 2 reason:
+        // - test file import a source file which is not instrumented
+        // here we should throw
+        // - test file import nothing so global__coverage__ is not set
+        // here it's totally normal
+        // throw new Error(`missing coverageMap after ${file} execution, it was not instrumented`)
+      }
 
-      afterEach({ file, output, coverage })
+      afterEach({ file, output, coverageMap })
 
-      return { output, coverage }
+      return { output, coverageMap }
     })
   }
 
@@ -44,10 +49,7 @@ export const filesToResultMap = (
     const resultMap = {}
     files.forEach((file, index) => {
       const result = results[index]
-      resultMap[file] = {
-        output: result.output,
-        coverageMap: result.coverage,
-      }
+      resultMap[file] = result
     })
 
     return resultMap
