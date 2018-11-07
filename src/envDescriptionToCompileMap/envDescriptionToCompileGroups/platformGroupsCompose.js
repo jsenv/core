@@ -29,6 +29,6 @@ const platformGroupReducer = (previous, platformGroup) => {
   return groups
 }
 
-export const composePlatformGroups = (...platformGroups) => {
+export const platformGroupsCompose = (...platformGroups) => {
   return platformGroups.reduce(platformGroupReducer, [])
 }

@@ -1,11 +1,11 @@
 import { platformsToResultMap } from "./platformsToResultMap.js"
 
-const testDescriptorToPlatforms = (
-  testDescriptor,
+const testDescriptionToPlatforms = (
+  testDescription,
   { localRoot, compileInto, remoteRoot, groupMapFile, watch },
 ) => {
-  return Object.keys(testDescriptor).map((platformName) => {
-    const { createExecute, files } = testDescriptor[platformName]
+  return Object.keys(testDescription).map((platformName) => {
+    const { createExecute, files } = testDescription[platformName]
 
     return {
       name: platformName,
@@ -22,11 +22,11 @@ const testDescriptorToPlatforms = (
   })
 }
 
-export const testDescriptorToPlatformResultMap = (
-  testDescriptor,
+export const testDescriptionToPlatformResultMap = (
+  testDescription,
   { cancellation, localRoot, compileInto, remoteRoot, groupMapFile, watch },
 ) => {
-  const platforms = testDescriptorToPlatforms(testDescriptor, {
+  const platforms = testDescriptionToPlatforms(testDescription, {
     localRoot,
     compileInto,
     remoteRoot,

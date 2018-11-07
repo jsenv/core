@@ -46,7 +46,6 @@ export const open = async ({
   localRoot,
   compileInto,
   compileService,
-  groupMap,
 
   watch = false,
   watchPredicate,
@@ -111,7 +110,6 @@ export const open = async ({
                 source: createBrowserPlatformSource({
                   remoteRoot,
                   compileInto,
-                  groupMap,
                   hotreload: watch,
                   hotreloadSSERoot: remoteRoot,
                 }),

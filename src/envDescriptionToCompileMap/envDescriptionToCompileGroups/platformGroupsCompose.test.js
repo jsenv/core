@@ -1,4 +1,4 @@
-import { composePlatformGroups } from "./composePlatformGroups.js"
+import { platformGroupsCompose } from "./platformGroupsCompose.js"
 import assert from "assert"
 
 {
@@ -19,7 +19,7 @@ import assert from "assert"
       }),
     },
   ]
-  const actual = composePlatformGroups(chromePlatformGroups, firefoxPlatformGroups)
+  const actual = platformGroupsCompose(chromePlatformGroups, firefoxPlatformGroups)
   const expected = [
     {
       pluginNames: ["a"],

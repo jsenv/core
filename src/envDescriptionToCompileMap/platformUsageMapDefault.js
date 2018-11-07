@@ -1,4 +1,4 @@
-export const statMapGeneric = {
+export const platformUsageMapDefault = {
   chrome: {
     "51": 0.6,
     "44": 0.01,

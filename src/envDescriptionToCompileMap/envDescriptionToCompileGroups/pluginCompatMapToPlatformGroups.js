@@ -4,10 +4,10 @@ import {
   pluginMapToPluginsForPlatform,
 } from "@dmail/project-structure-compile-babel"
 
-export const createPlatformGroups = (compatMap, platformName) => {
-  const platformVersions = Object.keys(compatMap)
-    .filter((pluginName) => platformName in compatMap[pluginName])
-    .map((pluginName) => String(compatMap[pluginName][platformName]))
+export const pluginCompatMapToPlatformGroups = (pluginCompatMap, platformName) => {
+  const platformVersions = Object.keys(pluginCompatMap)
+    .filter((pluginName) => platformName in pluginCompatMap[pluginName])
+    .map((pluginName) => String(pluginCompatMap[pluginName][platformName]))
     .concat("0.0.0") // at least version 0
     .filter((platformVersion, index, array) => array.indexOf(platformVersion) === index)
     .sort(versionCompare)
@@ -16,7 +16,7 @@ export const createPlatformGroups = (compatMap, platformName) => {
 
   platformVersions.forEach((platformVersion) => {
     const pluginMap = {}
-    Object.keys(compatMap).forEach((pluginName) => {
+    Object.keys(pluginCompatMap).forEach((pluginName) => {
       pluginMap[pluginName] = pluginName
     })
 
@@ -24,7 +24,7 @@ export const createPlatformGroups = (compatMap, platformName) => {
       pluginMap,
       platformName,
       platformVersion,
-      compatMap,
+      pluginCompatMap,
     ).sort()
 
     const existingGroup = platformGroups.find((platformGroup) => {
@@ -32,14 +32,14 @@ export const createPlatformGroups = (compatMap, platformName) => {
     })
 
     if (existingGroup) {
-      existingGroup.compatMap[platformName] = versionHighest(
-        existingGroup.compatMap[platformName],
+      existingGroup.platformCompatMap[platformName] = versionHighest(
+        existingGroup.platformCompatMap[platformName],
         platformVersion,
       )
     } else {
       platformGroups.push({
         pluginNames: platformPluginNames,
-        compatMap: {
+        platformCompatMap: {
           [platformName]: platformVersion,
         },
       })

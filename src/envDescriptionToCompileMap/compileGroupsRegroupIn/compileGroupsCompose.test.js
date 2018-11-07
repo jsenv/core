@@ -1,4 +1,4 @@
-import { composeGroups } from "./composeGroups.js"
+import { compileGroupsCompose } from "./compileGroupsCompose.js"
 import assert from "assert"
 
 {
@@ -17,7 +17,7 @@ import assert from "assert"
       node: 10,
     },
   }
-  const actual = composeGroups(firstGroup, secondGroup)
+  const actual = compileGroupsCompose(firstGroup, secondGroup)
   const expected = {
     pluginNames: ["a", "b", "e"],
     compatMap: {

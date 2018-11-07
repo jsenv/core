@@ -13,19 +13,20 @@ const composePluginNames = (pluginList, secondPluginList) => {
 }
 
 const normalizeCompatMapVersion = (compatMap) => {
-  return objectMapValue(compatMap, (value) => String(value))
+  return objectMapValue(compatMap, (version) => String(version))
 }
 
 const composeCompatMap = (compatMap, secondCompatMap) => {
-  compatMap = normalizeCompatMapVersion(compatMap)
-  secondCompatMap = normalizeCompatMapVersion(secondCompatMap)
-
-  return objectComposeValue(compatMap, secondCompatMap, (version, secondVersion) => {
-    return versionHighest(version, secondVersion)
-  })
+  return objectComposeValue(
+    normalizeCompatMapVersion(compatMap),
+    normalizeCompatMapVersion(secondCompatMap),
+    (version, secondVersion) => {
+      return versionHighest(version, secondVersion)
+    },
+  )
 }
 
-export const composeGroups = composeMapToComposeStrict(
+export const compileGroupsCompose = composeMapToComposeStrict(
   {
     pluginNames: composePluginNames,
     compatMap: composeCompatMap,

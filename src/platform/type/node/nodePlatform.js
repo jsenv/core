@@ -9,9 +9,9 @@ import { valueInstall } from "./valueInstall.js"
 import { createLocaters } from "../createLocaters.js"
 import { cancellationNone } from "../../../cancel/index.js"
 
-export const nodeVersionToGroupId = (version, groupMap) => {
-  return Object.keys(groupMap).find((id) => {
-    const { compatMap } = groupMap[id]
+export const nodeVersionToGroupId = (version, compileMap) => {
+  return Object.keys(compileMap).find((id) => {
+    const { compatMap } = compileMap[id]
     if ("node" in compatMap === false) {
       return false
     }
@@ -25,12 +25,12 @@ export const createNodePlatform = ({
   localRoot,
   remoteRoot,
   compileInto,
-  groupMap,
+  compileMap,
   hotreload,
   hotreloadSSERoot,
   hotreloadCallback,
 }) => {
-  const compileId = nodeVersionToGroupId(process.version.slice(1), groupMap) || "otherwise"
+  const compileId = nodeVersionToGroupId(process.version.slice(1), compileMap) || "otherwise"
 
   const {
     fileToRemoteCompiledFile,

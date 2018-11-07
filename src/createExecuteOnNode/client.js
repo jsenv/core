@@ -1,6 +1,7 @@
 import { createNodePlatform } from "../platform/index.js"
 import { createCancel } from "../cancel/index.js"
 import { uneval } from "@dmail/uneval"
+import { getCompileMapLocalURL } from "../compilePlatformAndSystem.js"
 
 const sendToParent = (type, data) => {
   // process.send algorithm does not send non enumerable values
@@ -72,7 +73,6 @@ listenParent(
     localRoot,
     remoteRoot,
     compileInto,
-    groupMapFile,
     hotreload,
     hotreloadSSERoot,
     file,
@@ -80,15 +80,16 @@ listenParent(
     setup,
     teardown,
   }) => {
+    const compileMapLocalURL = getCompileMapLocalURL({ localRoot, compileInto })
     // eslint-disable-next-line import/no-dynamic-require
-    const groupMap = require(`${localRoot}/${compileInto}/${groupMapFile}`)
+    const compileMap = require(compileMapLocalURL)
 
     const { executeFile } = createNodePlatform({
       cancellation,
       localRoot,
       remoteRoot,
       compileInto,
-      groupMap,
+      compileMap,
       hotreload,
       hotreloadSSERoot,
       hotreloadCallback: ({ file }) => {

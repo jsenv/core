@@ -36,3 +36,11 @@ export const compilePlatformAndSystem = ({ browserSystemLocalURL, browserPlatfor
     compilePlatform(browserPlatformLocalURL),
   ])
 }
+
+export const getCompileMapLocalURL = ({ localRoot, compileInto }) => {
+  return `${localRoot}/${compileInto}/compileMap.json`
+}
+
+export const getCompileMapRemoteURL = ({ remoteRoot, compileInto }) => {
+  return `${remoteRoot}/${compileInto}/compileMap.json`
+}

@@ -1,9 +1,9 @@
 import { compatMap } from "@dmail/project-structure-compile-babel"
-import { createPlatformGroups } from "./createPlatformGroups.js"
+import { pluginCompatMapToPlatformGroups } from "./pluginCompatMapToPlatformGroups.js"
 import assert from "assert"
 
 {
-  const actual = createPlatformGroups(
+  const actual = pluginCompatMapToPlatformGroups(
     {
       a: {
         chrome: 10,
@@ -18,19 +18,19 @@ import assert from "assert"
   const expected = [
     {
       pluginNames: ["a", "b", "c"],
-      compatMap: {
+      platformCompatMap: {
         chrome: "0.0.0",
       },
     },
     {
       pluginNames: ["a", "b"],
-      compatMap: {
+      platformCompatMap: {
         chrome: "9",
       },
     },
     {
       pluginNames: ["b"],
-      compatMap: {
+      platformCompatMap: {
         chrome: "10",
       },
     },
@@ -39,7 +39,7 @@ import assert from "assert"
 }
 
 {
-  const actual = createPlatformGroups(compatMap, "chrome")
+  const actual = pluginCompatMapToPlatformGroups(compatMap, "chrome")
   assert(actual.length > 0)
 }
 
