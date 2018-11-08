@@ -69,12 +69,12 @@ const createChildExecArgv = async ({ cancellation } = {}) => {
 
   if (type === "inspect") {
     // allow vscode to debug child, otherwise you have port already used
-    const childPort = await findFreePort(port, { cancellation })
+    const childPort = await findFreePort(port + 1, { cancellation })
     childExecArgv[index] = `--inspect=${childPort}`
   }
   if (type === "inspect-break") {
     // allow vscode to debug child, otherwise you have port already used
-    const childPort = await findFreePort(port, { cancellation })
+    const childPort = await findFreePort(port + 1, { cancellation })
     childExecArgv[index] = `--inspect-brk=${childPort}`
   }
 
