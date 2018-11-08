@@ -35,6 +35,7 @@ export const createNodePlatform = ({
   const {
     fileToRemoteCompiledFile,
     fileToRemoteInstrumentedFile,
+    fileToLocalFile,
     hrefToLocalFile,
   } = createLocaters({
     localRoot,
@@ -100,7 +101,18 @@ export const createNodePlatform = ({
 
     await setup()
     const fileURL = instrument ? fileToRemoteInstrumentedFile(file) : fileToRemoteCompiledFile(file)
-    const namespace = await global.System.import(fileURL)
+    let namespace
+    try {
+      namespace = await global.System.import(fileURL)
+    } catch (error) {
+      if (error && error.status === 500 && error.reason === "parse error") {
+        const data = JSON.parse(error.body)
+        const parseError = new Error()
+        Object.assign(parseError, data)
+        parseError.message = data.message.replace(file, fileToLocalFile(file))
+        throw parseError
+      }
+    }
     const value = await teardown(namespace)
 
     return value

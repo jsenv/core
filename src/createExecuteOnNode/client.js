@@ -29,8 +29,8 @@ const listenParent = (type, callback) => {
 }
 
 const errorToObject = (error) => {
-  if (error && error.status === 500 && error.reason === "parse error") {
-    return JSON.parse(error.body)
+  if (error && error.code === "PARSE_ERROR") {
+    return error
   }
   if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
     return errorToObject(error.error)

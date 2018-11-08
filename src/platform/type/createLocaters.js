@@ -9,6 +9,8 @@ export const createLocaters = ({ localRoot, remoteRoot, compileInto, compileId }
 
   const fileToRemoteSourceFile = (file) => `${remoteRoot}/${file}`
 
+  const fileToLocalFile = (file) => `${localRoot}/${file}`
+
   const hrefToMeta = (href) => {
     if (href.startsWith(`${remoteInstrumentRoot}/`)) {
       return {
@@ -57,6 +59,7 @@ export const createLocaters = ({ localRoot, remoteRoot, compileInto, compileId }
     fileToRemoteCompiledFile,
     fileToRemoteInstrumentedFile,
     fileToRemoteSourceFile,
+    fileToLocalFile,
     hrefToFile,
     hrefToLocalFile,
   }

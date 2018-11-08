@@ -218,7 +218,6 @@ export const createExecuteOnNode = ({
             callback: (error) => {
               const localError = new Error(error.message)
               Object.assign(localError, error)
-              console.error(localError)
 
               reject(localError)
             },
