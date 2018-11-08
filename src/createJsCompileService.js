@@ -1,7 +1,9 @@
 import { jsCompile } from "./jsCompile/index.js"
-import { compileToCompileFile } from "./compileToCompileFile/index.js"
-import { jsCompileFileToService } from "./jsCompileFileToService/index.js"
-import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
+import { jsCompileToService } from "./jsCompileToService/index.js"
+import {
+  fileWriteFromString,
+  pluginOptionMapToPluginMap,
+} from "@dmail/project-structure-compile-babel"
 import { objectToPromiseAll } from "./promiseHelper.js"
 import {
   compilePlatformAndSystem,
@@ -20,10 +22,14 @@ const compileMapToCompileParamMap = (compileMap, pluginMap) => {
   })
 }
 
+const pluginMapDefault = pluginOptionMapToPluginMap({
+  "transform-modules-systemjs": {},
+})
+
 export const createJsCompileService = async ({
   localRoot,
   compileInto,
-  pluginMap,
+  pluginMap = pluginMapDefault,
   platformUsageMap,
   localCacheDisabled,
   localCacheTrackHit,
@@ -52,10 +58,8 @@ export const createJsCompileService = async ({
 
   const instrumentPredicate = (file) => filesToCover.indexOf(file) > -1
 
-  const jsCompileFile = compileToCompileFile(jsCompile, { localRoot, compileInto })
-
   const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
-  const jsCompileService = jsCompileFileToService(jsCompileFile, {
+  const jsCompileService = jsCompileToService(jsCompile, {
     localRoot,
     compileInto,
     compileParamMap,

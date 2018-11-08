@@ -11,7 +11,7 @@ import {
 } from "../server/index.js"
 import { watchFile } from "../watchFile.js"
 import { createSignal } from "@dmail/signal"
-import { ressourceToCompileIdAndFile } from "../compileFileToService/compileFileToService.js"
+import { ressourceToCompileIdAndFile } from "../compileToService/compileToService.js"
 import { cancellationNone } from "../cancel/index.js"
 
 export const open = async ({

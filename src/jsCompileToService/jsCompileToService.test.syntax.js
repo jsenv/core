@@ -1,6 +1,5 @@
-import { jsCompileFileToService } from "./jsCompileFileToService.js"
+import { jsCompileToService } from "./jsCompileToService.js"
 import { jsCompile } from "../jsCompile/index.js"
-import { jsCompileToCompileFile } from "../jsCompileToCompileFile/index.js"
 import assert from "assert"
 import path from "path"
 
@@ -8,20 +7,16 @@ const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = "build"
 const compileId = "compileId"
 
-const jsCompileFile = jsCompileToCompileFile(jsCompile, {
-  localRoot,
-  compileInto,
-})
-const jsService = jsCompileFileToService(jsCompileFile, {
-  localRoot,
-  compileInto,
-  cacheIgnore: true,
-})
+const test = async () => {
+  const jsService = jsCompileToService(jsCompile, {
+    localRoot,
+    compileInto,
+  })
 
-jsService({
-  ressource: `${compileInto}/${compileId}/src/__test__/file-with-syntax-error.js`,
-  method: "GET",
-}).then((response) => {
+  const response = await jsService({
+    ressource: `${compileInto}/${compileId}/src/__test__/file-with-syntax-error.js`,
+    method: "GET",
+  })
   // le serveur doit repondre un truc mais quoi
   // je me vois mal repondre 200, mais a part ca j'ai aue 500
   // sauf que sur 500 le serveur se ferme puisqu'il croit a une erreur imprevue
@@ -39,4 +34,6 @@ jsService({
   })
 
   console.log("passed")
-})
+}
+
+test()

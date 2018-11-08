@@ -5,8 +5,9 @@ import { createCancel } from "../cancel/index.js"
 
 const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = "build"
-const watch = true
+const watch = false
 const file = `src/__test__/file.js`
+const { cancellation, cancel } = createCancel()
 
 const exec = async ({ cancellation }) => {
   const jsCompileService = await createJsCompileService({
@@ -20,19 +21,12 @@ const exec = async ({ cancellation }) => {
     localRoot,
     compileInto,
     compileService: jsCompileService,
-
     watch,
-
     file,
     verbose: true,
+  }).then(() => {
+    cancel("executed")
   })
 }
 
-const { cancellation, cancel } = createCancel()
 exec({ cancellation })
-
-process.on("SIGINT", () => {
-  cancel("process interrupt").then(() => {
-    process.exit(0)
-  })
-})

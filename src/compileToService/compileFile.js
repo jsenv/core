@@ -336,7 +336,6 @@ export const compileFile = async ({
     })
 
     if (!meta) {
-      debugger
       const input = await readFile(inputFile)
       const { outputSource, assetMap } = await generate({ input })
 

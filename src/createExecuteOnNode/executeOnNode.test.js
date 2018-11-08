@@ -1,6 +1,6 @@
 import { executeOnNode } from "./executeOnNode.js"
 import path from "path"
-import { jsCreateCompileServiceForProject } from "../jsCreateCompileServiceForProject.js"
+import { createJsCompileService } from "../createJsCompileService.js"
 
 const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = "build"
@@ -8,7 +8,7 @@ const watch = true
 const file = `src/__test__/file.js`
 
 const exec = async ({ cancellation }) => {
-  const { compileService, watchPredicate, groupMapFile } = await jsCreateCompileServiceForProject({
+  const jsCompileService = await createJsCompileService({
     cancellation,
     localRoot,
     compileInto,
@@ -18,12 +18,8 @@ const exec = async ({ cancellation }) => {
     cancellation,
     localRoot,
     compileInto,
-    compileService,
-    groupMapFile,
-
+    compileService: jsCompileService,
     watch,
-    watchPredicate,
-
     file,
     verbose: true,
   })

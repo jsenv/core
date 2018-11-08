@@ -1,8 +1,8 @@
-import { compileFileToService } from "../compileFileToService/index.js"
+import { compileToService } from "../compileToService/index.js"
 import { createInstrumentPlugin } from "../jsCompile/index.js"
 import { locate } from "./locate.js"
 
-export const jsCompileFileToService = (
+export const jsCompileToService = (
   compileFile,
   {
     localRoot,
@@ -25,7 +25,7 @@ export const jsCompileFileToService = (
     }
   })
 
-  const service = compileFileToService(compileFile, {
+  const service = compileToService(compileFile, {
     localRoot,
     compileInto,
     locate,

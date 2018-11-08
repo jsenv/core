@@ -85,7 +85,6 @@ export const createExecuteOnNode = ({
   localRoot,
   remoteRoot,
   compileInto,
-  groupMapFile,
   hotreload = false,
   hotreloadSSERoot,
 }) => {
@@ -234,7 +233,7 @@ export const createExecuteOnNode = ({
           localRoot,
           remoteRoot,
           compileInto,
-          groupMapFile,
+
           hotreload,
           hotreloadSSERoot,
           file,

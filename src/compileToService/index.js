@@ -1,1 +1,1 @@
-export { compileFileToService } from "./compileFileToService.js"
+export { compileToService } from "./compileToService.js"

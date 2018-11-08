@@ -9,7 +9,6 @@ export const executeOnNode = async ({
   localRoot,
   compileInto,
   compileService,
-  groupMapFile,
 
   watch = false,
   watchPredicate,
@@ -17,7 +16,7 @@ export const executeOnNode = async ({
   sourceCacheIgnore,
 
   file,
-  instrument = false,
+  instrument,
   setup,
   teardown,
   verbose,
@@ -54,7 +53,6 @@ export const executeOnNode = async ({
     localRoot,
     remoteRoot: server.origin,
     compileInto,
-    groupMapFile,
     hotreload: watch,
     hotreloadSSERoot: server.origin,
   })

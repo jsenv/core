@@ -2,7 +2,7 @@ import { platformsToResultMap } from "./platformsToResultMap.js"
 
 const testDescriptionToPlatforms = (
   testDescription,
-  { localRoot, compileInto, remoteRoot, groupMapFile, watch },
+  { localRoot, compileInto, remoteRoot, watch },
 ) => {
   return Object.keys(testDescription).map((platformName) => {
     const { createExecute, files } = testDescription[platformName]
@@ -13,7 +13,6 @@ const testDescriptionToPlatforms = (
         localRoot,
         remoteRoot,
         compileInto,
-        groupMapFile,
         hotreload: watch,
         hotreloadSSERoot: remoteRoot,
       }),
@@ -24,13 +23,12 @@ const testDescriptionToPlatforms = (
 
 export const testDescriptionToPlatformResultMap = (
   testDescription,
-  { cancellation, localRoot, compileInto, remoteRoot, groupMapFile, watch },
+  { cancellation, localRoot, compileInto, remoteRoot, watch },
 ) => {
   const platforms = testDescriptionToPlatforms(testDescription, {
     localRoot,
     compileInto,
     remoteRoot,
-    groupMapFile,
     watch,
   })
 
