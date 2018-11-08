@@ -5,9 +5,9 @@
 // https://github.com/jsenv/core/blob/master/more/test/playground/coverage/run.js
 // https://github.com/jsenv/core/blob/master/more/to-externalize/module-cover/index.js
 
-export { envDescriptionToCompileMap } from "./src/envDescriptionToCompileMap/index.js"
+export { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 
-export { projectConfigToJsCompileService } from "./src/createJsCompileService.js"
+export { envDescriptionToCompileMap } from "./src/envDescriptionToCompileMap/index.js"
 
 export { open as serverCompileOpen } from "./src/server-compile/index.js"
 export { open as serverBrowserOpen } from "./src/server-browser/index.js"
