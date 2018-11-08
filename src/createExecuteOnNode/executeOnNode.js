@@ -57,7 +57,7 @@ export const executeOnNode = async ({
     hotreloadSSERoot: server.origin,
   })
 
-  const value = await execute({
+  let executePromise = execute({
     cancellation,
     file,
     instrument,
@@ -65,10 +65,26 @@ export const executeOnNode = async ({
     teardown,
     verbose,
   })
-
   if (autoCancel) {
-    await autoCancel("file executed")
+    executePromise.then(() => {
+      autoCancel("file executed")
+    })
+  }
+  if (watch) {
+    const catchChildError = (error) => {
+      // child error occurring while watching are non fatal
+      if (watch) {
+        if (error && error.name === "CHILD_ERROR") {
+          console.warn(error)
+          return null
+        }
+      }
+      return Promise.reject(error)
+    }
+    const { afterPromise } = executePromise
+    executePromise = executePromise.catch(catchChildError)
+    executePromise.afterPromise = afterPromise.catch(catchChildError)
   }
 
-  return value
+  return executePromise
 }

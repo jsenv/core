@@ -1,5 +1,4 @@
 import { createNodePlatform } from "../platform/index.js"
-import { createCancel } from "../cancel/index.js"
 import { uneval } from "@dmail/uneval"
 import { getCompileMapLocalURL } from "../compilePlatformAndSystem.js"
 
@@ -14,9 +13,11 @@ const sendToParent = (type, data) => {
   })
 }
 
-const listenParent = (type, callback) => {
+const listenParentOnce = (type, callback) => {
   const listener = (event) => {
     if (event.type === type) {
+      // why do we want to let child process die ?
+      // process.removeListener("message", listener)
       callback(eval(`(${event.data})`))
     }
   }
@@ -28,82 +29,37 @@ const listenParent = (type, callback) => {
   }
 }
 
-const errorToObject = (error) => {
-  if (error && error.code === "PARSE_ERROR") {
-    return error
-  }
-  if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-    return errorToObject(error.error)
-  }
-  if (error && error instanceof Error) {
-    const object = {}
-    Object.getOwnPropertyNames(error).forEach((name) => {
-      object[name] = error[name]
-    })
-    return object
-  }
+process.on("unhandledRejection", (error) => {
+  throw error
+})
 
-  return {
-    message: `rejected with ${JSON.stringify(error, null, "  ")}`,
-  }
-}
-
-const { cancel, cancellation } = createCancel()
-
-// vscode is sending sigint to the child when you ask for it
-// from the parent process
-// it makes me wonder if the child process should not just be responsible to execuet the file
-// but the parent would connect for hotreloading
-// well nevermind let's keep going
 process.on("SIGINT", () => {
-  cancel("child process interrupt").then(() => {
+  if (process.listeners("SIGINT").length === 1) {
     process.exit(0)
-  })
+  }
+  // otherwise let any custom "SIGINT" listener do exit
 })
 
-listenParent("exit-please", (reason) => {
-  cancel(reason).then(() => {
-    process.exit(0)
-  })
+listenParentOnce("exit-please", () => {
+  process.emit("SIGINT")
 })
 
-listenParent(
+listenParentOnce(
   "execute",
-  ({
-    localRoot,
-    remoteRoot,
-    compileInto,
-    hotreload,
-    hotreloadSSERoot,
-    file,
-    instrument,
-    setup,
-    teardown,
-  }) => {
+  ({ localRoot, remoteRoot, compileInto, file, instrument, setup, teardown }) => {
     const compileMapLocalURL = getCompileMapLocalURL({ localRoot, compileInto })
     // eslint-disable-next-line import/no-dynamic-require
     const compileMap = require(compileMapLocalURL)
 
     const { executeFile } = createNodePlatform({
-      cancellation,
       localRoot,
       remoteRoot,
       compileInto,
       compileMap,
-      hotreload,
-      hotreloadSSERoot,
-      hotreloadCallback: ({ file }) => {
-        sendToParent("restart", `file changed: ${file}`)
-      },
     })
 
-    executeFile({ cancellation, file, instrument, setup, teardown }).then(
-      (value) => {
-        sendToParent("execute", value)
-      },
-      (error) => {
-        sendToParent("error", errorToObject(error))
-      },
-    )
+    executeFile({ file, instrument, setup, teardown }).then((value) => {
+      sendToParent("execute", value)
+    })
   },
 )

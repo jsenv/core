@@ -3,91 +3,49 @@ import path from "path"
 import { uneval } from "@dmail/uneval"
 import { cancellationNone } from "../cancel/index.js"
 import { registerEvent, eventRace } from "../eventHelper.js"
-import { findFreePort } from "../server/index.js"
+import { open } from "./hotreload.js"
+import { createSignal } from "@dmail/signal"
+import { createChildExecArgv } from "./createChildExecArgv.js"
+import {
+  createCloseDuringExecutionError,
+  createCrashAfterExecutedError,
+  createCrashAfterInterruptedError,
+  createCrashAfterCancelError,
+} from "./createChildError.js"
 
 const root = path.resolve(__dirname, "../../../")
 const nodeClientFile = `${root}/dist/src/createExecuteOnNode/client.js`
 
-export const processIsExecutedByVSCode = () => {
-  return typeof process.env.VSCODE_PID === "string"
-}
-
-const stringSliceAfter = (string, substring) => {
-  const index = string.indexOf(substring)
-  return index === -1 ? "" : string.slice(index + substring.length)
-}
-
-const processExecArgvToDebugMeta = (argv) => {
-  let i = 0
-  while (i < argv.length) {
-    const arg = argv[i]
-
-    // https://nodejs.org/en/docs/guides/debugging-getting-started/
-    if (arg === "--inspect") {
-      return {
-        index: i,
-        type: "inspect",
-        port: process.debugPort,
-      }
-    }
-    const inspectPortAsString = stringSliceAfter(arg, "--inspect=")
-    if (inspectPortAsString.length) {
-      return {
-        index: i,
-        type: "inspect",
-        port: Number(inspectPortAsString),
-      }
-    }
-
-    if (arg === "--inspect-brk") {
-      return {
-        index: i,
-        type: "inspect-break",
-        port: process.debugPort,
-      }
-    }
-
-    const inspectBreakPortAsString = stringSliceAfter(arg, "--inspect-brk=")
-    if (inspectBreakPortAsString.length) {
-      return {
-        index: i,
-        type: "inspect-break",
-        port: Number(inspectBreakPortAsString),
-      }
-    }
-
-    i++
-  }
-
-  return {}
-}
-
-const createChildExecArgv = async ({ cancellation } = {}) => {
-  const execArgv = process.execArgv
-  const childExecArgv = execArgv.slice()
-  const { type, index, port } = processExecArgvToDebugMeta(execArgv)
-
-  if (type === "inspect") {
-    // allow vscode to debug child, otherwise you have port already used
-    const childPort = await findFreePort(port + 1, { cancellation })
-    childExecArgv[index] = `--inspect=${childPort}`
-  }
-  if (type === "inspect-break") {
-    // allow vscode to debug child, otherwise you have port already used
-    const childPort = await findFreePort(port + 1, { cancellation })
-    childExecArgv[index] = `--inspect-brk=${childPort}`
-  }
-
-  return childExecArgv
-}
-
 export const createExecuteOnNode = ({
+  cancellation = cancellationNone,
   localRoot,
   remoteRoot,
   compileInto,
   hotreload = false,
   hotreloadSSERoot,
 }) => {
+  const fileChangedSignal = createSignal()
+  if (hotreload) {
+    const hotreloadPredicate = () => {
+      // for now I don't know how parent
+      // will decide what trigger hotreload vs what does not
+      return true
+    }
+
+    cancellation.register(
+      open(hotreloadSSERoot, (fileChanged) => {
+        if (hotreloadPredicate(fileChanged)) {
+          fileChangedSignal.emit(fileChanged)
+        }
+      }),
+    )
+  }
+
+  const hotreloadRegister = (callback) => {
+    const listener = fileChangedSignal.listen(callback)
+    return () => listener.remove()
+  }
+
   const execute = ({
     cancellation = cancellationNone,
     file,
@@ -102,6 +60,15 @@ export const createExecuteOnNode = ({
       }
     }
 
+    // once we have executed, we still listen for cancel, close, hotreload, restart
+    // but we resolve only when child close
+    let afterResolve
+    let afterReject
+    const afterPromise = new Promise((resolve, reject) => {
+      afterResolve = resolve
+      afterReject = reject
+    })
+
     const forkChild = async () => {
       await cancellation.toPromise()
       const execArgv = await createChildExecArgv({ cancellation })
@@ -112,6 +79,9 @@ export const createExecuteOnNode = ({
       const childMessageRegister = (callback) => registerEvent(child, "message", callback)
 
       const closeRegister = (callback) => registerEvent(child, "close", callback)
+
+      // should i call child.disconnect at some point ?
+      // https://nodejs.org/api/child_process.html#child_process_subprocess_disconnect
 
       const registerChildEvent = (name, callback) => {
         return registerEvent(child, "message", ({ type, data }) => {
@@ -139,28 +109,27 @@ export const createExecuteOnNode = ({
         })
       }
 
-      const childExit = (reason) => {
-        sendToChild("exit-please", reason)
+      const childInterrupt = () => {
+        sendToChild("exit-please")
       }
 
-      const close = (reason) => {
-        childExit(reason)
-
+      const closeAfterCancel = (reason) => {
         return new Promise((resolve, reject) => {
           closeRegister((code) => {
             if (code === 0 || code === null) {
               resolve(code)
             } else {
-              reject()
+              reject(createCrashAfterCancelError(code))
             }
           })
+          childInterrupt(reason)
         })
       }
 
       const restart = (reason) => {
         // if we first receive restart we fork a new child
-        log(`restart first step: ask politely to the child to exit`)
-        childExit(reason)
+        log(`restart because ${reason}: interrupt child`)
+        childInterrupt(reason)
         log(`restart second step: wait for child to close`)
 
         return new Promise((resolve, reject) => {
@@ -180,7 +149,7 @@ export const createExecuteOnNode = ({
                 if (code === 0 || code === null) {
                   resolve(forkChild())
                 } else {
-                  reject(new Error(`child exited with ${code} after asking to restart`))
+                  reject(createCrashAfterInterruptedError(code))
                 }
               },
             },
@@ -192,39 +161,30 @@ export const createExecuteOnNode = ({
         eventRace({
           cancel: {
             register: cancellation.register,
-            callback: close,
+            callback: closeAfterCancel,
           },
           close: {
             register: closeRegister,
             callback: (code) => {
               // child is not expected to close, we reject when it happens
-              if (code === 12) {
-                reject(
-                  new Error(
-                    `child exited with 12: forked child wanted to use a non available port for debug`,
-                  ),
-                )
-                return
-              }
-              reject(`unexpected child close with code: ${code}`)
+              reject(createCloseDuringExecutionError(code))
             },
+          },
+          hotreload: {
+            register: hotreloadRegister,
+            callback: (file) => resolve(restart(`${file} changed`)),
           },
           restart: {
             register: restartRegister,
             callback: (reason) => resolve(restart(reason)),
           },
-          error: {
-            register: (callback) => registerChildEvent("error", callback),
-            callback: (error) => {
-              const localError = new Error(error.message)
-              Object.assign(localError, error)
-
-              reject(localError)
-            },
-          },
           execute: {
             register: (callback) => registerChildEvent("execute", callback),
-            callback: resolve,
+            callback: (data) => {
+              // no need to keep child connected
+              // child.disconnect()
+              resolve(data)
+            },
           },
         })
 
@@ -233,8 +193,6 @@ export const createExecuteOnNode = ({
           remoteRoot,
           compileInto,
 
-          hotreload,
-          hotreloadSSERoot,
           file,
           instrument,
           setup,
@@ -243,23 +201,42 @@ export const createExecuteOnNode = ({
       })
 
       promise.then(() => {
-        // once we have executed, we still isten for cancel and restart
         eventRace({
           cancel: {
             register: cancellation.register,
-            callback: close,
+            callback: closeAfterCancel,
+          },
+          close: {
+            register: closeRegister,
+            callback: (code) => {
+              if (code === 0 || code === null) {
+                afterResolve()
+              } else {
+                afterReject(createCrashAfterExecutedError(code))
+              }
+            },
+          },
+          hotreload: {
+            register: hotreloadRegister,
+            callback: (file) => {
+              restart(`${file} changed`)
+            },
           },
           restart: {
             register: restartRegister,
-            callback: restart,
+            callback: (reason) => restart(reason),
           },
         })
       })
 
+      promise.afterPromise = afterPromise
+
       return promise
     }
 
-    return forkChild()
+    const forkPromise = forkChild()
+    forkPromise.afterPromise = afterPromise
+    return forkPromise
   }
 
   return execute
