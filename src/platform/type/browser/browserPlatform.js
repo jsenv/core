@@ -57,9 +57,9 @@ const rejectionValueToMeta = (error, { fileToRemoteSourceFile, hrefToFile }) => 
   }
 }
 
-const browserToGroupId = ({ name, version }, groupMap) => {
-  return Object.keys(groupMap).find((id) => {
-    const { compatMap } = groupMap[id]
+export const browserToCompileId = ({ name, version }, compileMap) => {
+  return Object.keys(compileMap).find((id) => {
+    const { compatMap } = compileMap[id]
 
     if (name in compatMap === false) {
       return false
@@ -72,18 +72,18 @@ const browserToGroupId = ({ name, version }, groupMap) => {
 export const createBrowserPlatform = ({
   remoteRoot,
   compileInto,
-  groupMap,
+  compileMap,
   hotreload = false,
   hotreloadSSERoot,
   hotreloadCallback,
 }) => {
-  if (typeof groupMap !== "object") {
-    throw new TypeError(`createBrowserPlatform groupMap must be an object, got ${groupMap}`)
+  if (typeof compileMap !== "object") {
+    throw new TypeError(`createBrowserPlatform compileMap must be an object, got ${compileMap}`)
   }
 
   const browser = detect()
 
-  const compileId = browserToGroupId(browser, groupMap) || "otherwise"
+  const compileId = browserToCompileId(browser, compileMap) || "otherwise"
 
   const {
     fileToRemoteCompiledFile,

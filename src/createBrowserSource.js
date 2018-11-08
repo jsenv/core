@@ -3,13 +3,15 @@ import { uneval } from "@dmail/uneval"
 export const createBrowserPlatformSource = ({
   remoteRoot,
   compileInto,
+  compileMap = {},
   hotreload,
   hotreloadSSERoot,
 }) => {
   return `
   window.__platform__ = window.__browserPlatform__.createBrowserPlatform({
     remoteRoot: ${uneval(remoteRoot)},
-    compileInto: ${uneval(compileInto)},
+		compileInto: ${uneval(compileInto)},
+		compileMap: ${uneval(compileMap)},
     hotreload: ${uneval(hotreload)},
     hotreloadSSERoot: ${uneval(hotreloadSSERoot)},
     hotreloadCallback: function() {

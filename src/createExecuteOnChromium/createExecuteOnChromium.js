@@ -6,10 +6,12 @@ import { createBrowserPlatformSource } from "../createBrowserSource.js"
 import {
   getBrowserSystemRemoteURL,
   getBrowserPlatformRemoteURL,
+  getCompileMapLocalURL,
 } from "../compilePlatformAndSystem.js"
 import { cancellationNone } from "../cancel/index.js"
 import { eventRace, registerEvent, registerThen, registerCatch } from "../eventHelper.js"
 import puppeteer from "puppeteer"
+import { readFile } from "../fileHelper.js"
 
 const openIndexRequestInterception = async ({ cancellation, protocol, ip, port, page, body }) => {
   await cancellation.toPromise()
@@ -45,9 +47,9 @@ const openIndexRequestInterception = async ({ cancellation, protocol, ip, port, 
 
 export const createExecuteOnChromium = ({
   cancellation = cancellationNone,
+  localRoot,
   remoteRoot,
   compileInto,
-  groupMap,
   hotreload = false,
   hotreloadSSERoot,
 
@@ -110,6 +112,7 @@ export const createExecuteOnChromium = ({
     teardown = () => {},
   }) => {
     const browser = await openBrowser()
+    const compileMap = JSON.parse(await readFile(getCompileMapLocalURL({ localRoot, compileInto })))
     const [page, html] = await Promise.all([
       openPage(browser),
       createHTMLForBrowser({
@@ -122,7 +125,7 @@ export const createExecuteOnChromium = ({
             source: createBrowserPlatformSource({
               remoteRoot,
               compileInto,
-              groupMap,
+              compileMap,
               hotreload,
               hotreloadSSERoot,
             }),

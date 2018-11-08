@@ -5,9 +5,11 @@ import { guard } from "../functionHelper.js"
 import {
   getBrowserSystemRemoteURL,
   getBrowserPlatformRemoteURL,
+  getCompileMapLocalURL,
 } from "../compilePlatformAndSystem.js"
 import { createBrowserPlatformSource, createBrowserExecuteSource } from "../createBrowserSource.js"
 import { cancellationNone } from "../cancel/index.js"
+import { readFile } from "../fileHelper.js"
 
 const getIndexPageHTML = ({ localRoot }) => {
   const files = ["src/__test__/file.js"]
@@ -71,24 +73,20 @@ export const open = async ({
       ressource: "",
       method: "GET",
     }),
-    () => {
-      return Promise.resolve()
-        .then(() =>
-          getIndexPageHTML({
-            localRoot,
-          }),
-        )
-        .then((html) => {
-          return {
-            status: 200,
-            headers: {
-              "cache-control": "no-store",
-              "content-type": "text/html",
-              "content-length": Buffer.byteLength(html),
-            },
-            body: html,
-          }
-        })
+    async () => {
+      const html = await getIndexPageHTML({
+        localRoot,
+      })
+
+      return {
+        status: 200,
+        headers: {
+          "cache-control": "no-store",
+          "content-type": "text/html",
+          "content-length": Buffer.byteLength(html),
+        },
+        body: html,
+      }
     },
   )
 
@@ -97,42 +95,43 @@ export const open = async ({
       ressource: "*",
       method: "GET",
     }),
-    ({ ressource }) => {
-      return Promise.resolve()
-        .then(() => {
-          return createHTMLForBrowser({
-            scriptRemoteList: [
-              { url: getBrowserSystemRemoteURL({ remoteRoot, compileInto }) },
-              { url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) },
-            ],
-            scriptInlineList: [
-              {
-                source: createBrowserPlatformSource({
-                  remoteRoot,
-                  compileInto,
-                  hotreload: watch,
-                  hotreloadSSERoot: remoteRoot,
-                }),
-              },
-              {
-                source: createBrowserExecuteSource({
-                  file: ressource,
-                }),
-              },
-            ],
-          })
-        })
-        .then((html) => {
-          return {
-            status: 200,
-            headers: {
-              "cache-control": "no-store",
-              "content-type": "text/html",
-              "content-length": Buffer.byteLength(html),
-            },
-            body: html,
-          }
-        })
+    async ({ ressource }) => {
+      const compileMap = JSON.parse(
+        await readFile(getCompileMapLocalURL({ localRoot, compileInto })),
+      )
+
+      const html = await createHTMLForBrowser({
+        scriptRemoteList: [
+          { url: getBrowserSystemRemoteURL({ remoteRoot, compileInto }) },
+          { url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) },
+        ],
+        scriptInlineList: [
+          {
+            source: createBrowserPlatformSource({
+              remoteRoot,
+              compileInto,
+              compileMap,
+              hotreload: watch,
+              hotreloadSSERoot: remoteRoot,
+            }),
+          },
+          {
+            source: createBrowserExecuteSource({
+              file: ressource,
+            }),
+          },
+        ],
+      })
+
+      return {
+        status: 200,
+        headers: {
+          "cache-control": "no-store",
+          "content-type": "text/html",
+          "content-length": Buffer.byteLength(html),
+        },
+        body: html,
+      }
     },
   )
 
