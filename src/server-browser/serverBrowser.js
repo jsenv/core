@@ -10,9 +10,22 @@ import {
 import { createBrowserPlatformSource, createBrowserExecuteSource } from "../createBrowserSource.js"
 import { cancellationNone } from "../cancel/index.js"
 import { readFile } from "../fileHelper.js"
+import { forEachRessourceMatching } from "@dmail/project-structure"
 
-const getIndexPageHTML = ({ localRoot }) => {
-  const files = ["src/__test__/file.js"]
+export const listFilesToExecute = (localRoot) => {
+  return forEachRessourceMatching(
+    localRoot,
+    {
+      "index.js": { js: true },
+      "src/**/*.js": { js: true },
+    },
+    ({ js }) => js,
+    ({ relativeName }) => relativeName,
+  )
+}
+
+const getIndexPageHTML = async ({ localRoot }) => {
+  const files = await listFilesToExecute(localRoot)
 
   return `<!doctype html>
 

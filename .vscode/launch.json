@@ -44,7 +44,7 @@
         "src/fileHelper.js",
         "src/eventHelper.js",
         "src/promiseHelper.js",
-        "src/jsCompile/transpileWithBabel.js"
+        "src/jsCompile/transpileWithBabel.js",
         "src/createRequestToFileResponse/convertFileSystemErrorToResponseProperties.js"
       ],
       "trace": false

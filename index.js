@@ -7,8 +7,6 @@
 
 export { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 
-export { envDescriptionToCompileMap } from "./src/envDescriptionToCompileMap/index.js"
-
 export { open as serverCompileOpen } from "./src/server-compile/index.js"
 export { open as serverBrowserOpen } from "./src/server-browser/index.js"
 export { executeOnNode } from "./src/createExecuteOnNode/executeOnNode.js"
@@ -16,6 +14,7 @@ export { createExecuteOnNode } from "./src/createExecuteOnNode/createExecuteOnNo
 export { createExecuteOnChromium } from "./src/createExecuteOnChromium/createExecuteOnChromium.js"
 
 export { createCancel } from "./src/cancel/index.js"
+export { createJsCompileService } from "./src/createJsCompileService.js"
 
 export {
   testDescriptionToCoverageMap,
