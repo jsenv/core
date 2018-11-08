@@ -1,4 +1,4 @@
-import { projectConfigToJsCompileService } from "../projectConfigToJsCompileService.js"
+import { projectConfigToJsCompileService } from "../createJsCompileService.js"
 import { open as serverCompileOpen } from "../server-compile/index.js"
 import { predicateCompose } from "../functionHelper.js"
 import { testDescriptionToPlatformResultMap } from "./testDescriptionToPlatformResultMap.js"

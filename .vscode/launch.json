@@ -40,10 +40,11 @@
         "<node_internals>/**/*.js",
         "node_modules/rollup-plugin-node-resolve/dist/rollup-plugin-node-resolve.cjs.js",
         "node_modules/@babel/template/lib/builder.js",
+        "src/createLock/createLock.js",
         "src/fileHelper.js",
         "src/eventHelper.js",
         "src/promiseHelper.js",
-        "src/jsCompile/transpileWithBabel.js",
+        "src/jsCompile/transpileWithBabel.js"
         "src/createRequestToFileResponse/convertFileSystemErrorToResponseProperties.js"
       ],
       "trace": false

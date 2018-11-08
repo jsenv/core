@@ -6,41 +6,41 @@ import assert from "assert"
 {
   const groups = [
     {
-      pluginNames: ["a"],
-      platformCompatMap: {
+      pluginNames: ["b", "c"],
+      compatMap: {
         chrome: 50,
+        firefox: 10,
       },
-      score: 0,
+      score: 2,
     },
     {
       pluginNames: ["b", "e"],
-      platformCompatMap: {
+      compatMap: {
         chrome: 50,
         firefox: 11,
       },
       score: 1,
     },
     {
-      pluginNames: ["b", "c"],
-      platformCompatMap: {
+      pluginNames: ["a"],
+      compatMap: {
         chrome: 50,
-        firefox: 10,
       },
-      score: 2,
+      score: 0,
     },
   ]
   const actual = compileGroupsRegroupIn(groups, 2)
   const expected = [
     {
       pluginNames: ["b", "c"],
-      platformCompatMap: {
+      compatMap: {
         chrome: "50",
         firefox: "10",
       },
     },
     {
       pluginNames: ["a", "b", "e"],
-      platformCompatMap: {
+      compatMap: {
         chrome: "50",
         firefox: "11",
       },

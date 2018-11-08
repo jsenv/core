@@ -1,7 +1,7 @@
-import { createETag } from "../compileToCompileFile/helpers.js"
+import { createETag } from "../compileToService/helpers.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
 import { ressourceToContentType } from "./ressourceToContentType.js"
-import { stat, readFile, listDirectoryContent, fileToReadableStream } from "./fileHelper.js"
+import { stat, readFile, listDirectoryContent, fileToReadableStream } from "../fileHelper.js"
 
 const dateToUTCString = (date) => {
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
@@ -21,12 +21,12 @@ export const createRequestToFileResponse = (
     getFileStat = stat,
     getFileContentAsString = readFile,
     fileToBody = fileToReadableStream,
-    cacheIgnore = false,
     cacheStrategy = "mtime",
   } = {},
 ) => {
   const cacheWithMtime = cacheStrategy === "mtime"
   const cacheWithETag = cacheStrategy === "etag"
+  const cachedDisabled = cacheStrategy === "none"
 
   const service = async ({ ressource, headers }) => {
     const fileLocation = `${root}/${ressource}`
@@ -39,7 +39,7 @@ export const createRequestToFileResponse = (
           status: 403,
           reason: "not allowed to read directory",
           headers: {
-            ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
+            ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
           },
         }
       }
@@ -50,7 +50,7 @@ export const createRequestToFileResponse = (
       return {
         status: 200,
         headers: {
-          ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
+          ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
           "content-type": "application/json",
           "content-length": filesAsJSON.length,
         },
@@ -81,7 +81,7 @@ export const createRequestToFileResponse = (
       return {
         status: 200,
         headers: {
-          ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
+          ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
           "last-modified": dateToUTCString(stat.mtime),
           "content-length": stat.size,
           "content-type": ressourceToContentType(ressource),
@@ -98,7 +98,7 @@ export const createRequestToFileResponse = (
         return {
           status: 304,
           headers: {
-            ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
+            ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
           },
         }
       }
@@ -106,7 +106,7 @@ export const createRequestToFileResponse = (
       return {
         status: 200,
         headers: {
-          ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
+          ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
           "content-length": stat.size,
           "content-type": ressourceToContentType(ressource),
           etag: eTag,
@@ -118,7 +118,7 @@ export const createRequestToFileResponse = (
     return {
       status: 200,
       headers: {
-        ...(cacheIgnore ? { "cache-control": "no-store" } : {}),
+        "cache-control": "no-store",
         "content-length": stat.size,
         "content-type": ressourceToContentType(ressource),
       },

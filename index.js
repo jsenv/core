@@ -7,7 +7,7 @@
 
 export { envDescriptionToCompileMap } from "./src/envDescriptionToCompileMap/index.js"
 
-export { projectConfigToJsCompileService } from "./src/projectConfigToJsCompileService.js"
+export { projectConfigToJsCompileService } from "./src/createJsCompileService.js"
 
 export { open as serverCompileOpen } from "./src/server-compile/index.js"
 export { open as serverBrowserOpen } from "./src/server-browser/index.js"

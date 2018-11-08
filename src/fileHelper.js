@@ -34,3 +34,43 @@ ${"//#"} sourceMappingURL=${sourceMapBasename}`
 
   return fileWriteFromString(filename, code).then(() => ({ code, map }))
 }
+
+export const stat = (location) => {
+  return new Promise((resolve, reject) => {
+    fs.stat(location, (error, stat) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(stat)
+      }
+    })
+  })
+}
+
+export const listDirectoryContent = (location) => {
+  return new Promise((resolve, reject) => {
+    fs.readdir(location, (error, ressourceNames) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(ressourceNames)
+      }
+    })
+  })
+}
+
+export const fileToReadableStream = (file) => {
+  return fs.createReadStream(file)
+}
+
+export const removeFile = (location) => {
+  return new Promise((resolve, reject) => {
+    fs.unlink(location, (error) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve()
+      }
+    })
+  })
+}

@@ -1,3 +1,5 @@
+import { compatMapCompose } from "../compatMapCompose.js"
+
 const platformGroupReducer = (previous, platformGroup) => {
   const groups = []
 
@@ -14,13 +16,13 @@ const platformGroupReducer = (previous, platformGroup) => {
       return pluginNames.join("") === platformGroup.pluginNames.join("")
     })
     if (existingGroup) {
-      existingGroup.compatMap = {
-        ...existingGroup.compatMap,
-        ...secondPlatformGroup.compatMap,
-      }
+      existingGroup.compatMap = compatMapCompose(
+        existingGroup.compatMap,
+        secondPlatformGroup.compatMap,
+      )
     } else {
       groups.push({
-        pluginNames: secondPlatformGroup.pluginNames.slice(),
+        pluginNames: pluginNames.slice(),
         compatMap: { ...secondPlatformGroup.compatMap },
       })
     }

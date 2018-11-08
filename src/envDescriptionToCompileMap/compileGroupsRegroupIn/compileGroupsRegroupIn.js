@@ -27,9 +27,7 @@ export const compileGroupsRegroupIn = (compileGroups, count = 4) => {
     const compileGroupsToMerge = remainingCompileGroups.slice(0, chunkSizes[i])
     remainingCompileGroups = remainingCompileGroups.slice(chunkSizes[i])
     const mergedGroup = compileGroupsCompose(...compileGroupsToMerge)
-    if (Object.keys(mergedGroup.platformCompatMap).length) {
-      compileGroupsRegrouped.push(mergedGroup)
-    }
+    compileGroupsRegrouped.push(mergedGroup)
     i++
   }
 

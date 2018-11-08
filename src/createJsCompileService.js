@@ -1,5 +1,5 @@
 import { jsCompile } from "./jsCompile/index.js"
-import { jsCompileToCompileFile } from "./jsCompileToCompileFile/index.js"
+import { compileToCompileFile } from "./compileToCompileFile/index.js"
 import { jsCompileFileToService } from "./jsCompileFileToService/index.js"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
 import { objectToPromiseAll } from "./promiseHelper.js"
@@ -10,6 +10,7 @@ import {
   getCompileMapLocalURL,
 } from "./compilePlatformAndSystem.js"
 import { objectMapValue } from "./objectHelper.js"
+import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.js"
 
 const compileMapToCompileParamMap = (compileMap, pluginMap) => {
   return objectMapValue(compileMap, ({ pluginNames }) => {
@@ -19,19 +20,23 @@ const compileMapToCompileParamMap = (compileMap, pluginMap) => {
   })
 }
 
-export const projectConfigToJsCompileService = async ({
+export const createJsCompileService = async ({
   localRoot,
   compileInto,
   pluginMap,
-  compileMap,
-  instrumentPredicate = () => true,
-  cacheIgnore = false,
-  cacheTrackHit = true,
-  cacheStrategy = "etag",
-  assetCacheIgnore = false,
-  assetCacheStrategy = "etag",
+  platformUsageMap,
+  localCacheDisabled,
+  localCacheTrackHit,
+  cacheStrategy,
+  assetCacheStrategy,
+  listFilesToCover = () => [],
 }) => {
-  await objectToPromiseAll({
+  const compileMap = envDescriptionToCompileMap({
+    pluginNames: Object.keys(pluginMap),
+    platformUsageMap,
+  })
+
+  const { filesToCover } = await objectToPromiseAll({
     // we should not have to compile thoose static files
     // we would just have to move them to compileInto/
     compilePlatformAndSystem: compilePlatformAndSystem({
@@ -42,19 +47,21 @@ export const projectConfigToJsCompileService = async ({
       getCompileMapLocalURL({ localRoot, compileInto }),
       JSON.stringify(compileMap, null, "  "),
     ),
+    filesToCover: listFilesToCover(),
   })
 
-  const jsCompileFile = jsCompileToCompileFile(jsCompile, { localRoot, compileInto })
+  const instrumentPredicate = (file) => filesToCover.indexOf(file) > -1
+
+  const jsCompileFile = compileToCompileFile(jsCompile, { localRoot, compileInto })
 
   const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
   const jsCompileService = jsCompileFileToService(jsCompileFile, {
     localRoot,
     compileInto,
     compileParamMap,
-    cacheIgnore,
-    cacheTrackHit,
+    localCacheDisabled,
+    localCacheTrackHit,
     cacheStrategy,
-    assetCacheIgnore,
     assetCacheStrategy,
     instrumentPredicate,
   })

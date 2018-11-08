@@ -32,14 +32,14 @@ export const pluginCompatMapToPlatformGroups = (pluginCompatMap, platformName) =
     })
 
     if (existingGroup) {
-      existingGroup.platformCompatMap[platformName] = versionHighest(
-        existingGroup.platformCompatMap[platformName],
+      existingGroup.compatMap[platformName] = versionHighest(
+        existingGroup.compatMap[platformName],
         platformVersion,
       )
     } else {
       platformGroups.push({
         pluginNames: platformPluginNames,
-        platformCompatMap: {
+        compatMap: {
           [platformName]: platformVersion,
         },
       })

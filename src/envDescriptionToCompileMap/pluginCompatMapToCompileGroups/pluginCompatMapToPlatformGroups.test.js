@@ -18,19 +18,19 @@ import assert from "assert"
   const expected = [
     {
       pluginNames: ["a", "b", "c"],
-      platformCompatMap: {
+      compatMap: {
         chrome: "0.0.0",
       },
     },
     {
       pluginNames: ["a", "b"],
-      platformCompatMap: {
+      compatMap: {
         chrome: "9",
       },
     },
     {
       pluginNames: ["b"],
-      platformCompatMap: {
+      compatMap: {
         chrome: "10",
       },
     },

@@ -1,5 +1,6 @@
 import { compileFileToService } from "../compileFileToService/index.js"
 import { createInstrumentPlugin } from "../jsCompile/index.js"
+import { locate } from "./locate.js"
 
 export const jsCompileFileToService = (
   compileFile,
@@ -7,11 +8,11 @@ export const jsCompileFileToService = (
     localRoot,
     compileInto,
     compileParamMap = {},
-    cacheIgnore,
-    cacheTrackHit,
-    assetCacheIgnore,
-    assetCacheStrategy,
-    instrumentPredicate,
+    localCacheStrategy = "etag",
+    localCacheTrackHit = true,
+    cacheStrategy = "etag",
+    assetCacheStrategy = "eTag",
+    instrumentPredicate = () => true,
   },
 ) => {
   const instrumentPlugin = createInstrumentPlugin({ predicate: instrumentPredicate })
@@ -27,10 +28,11 @@ export const jsCompileFileToService = (
   const service = compileFileToService(compileFile, {
     localRoot,
     compileInto,
+    locate,
     compileParamMap: compileParamMapWithInstrumentation,
-    cacheIgnore,
-    cacheTrackHit,
-    assetCacheIgnore,
+    localCacheStrategy,
+    localCacheTrackHit,
+    cacheStrategy,
     assetCacheStrategy,
   })
 

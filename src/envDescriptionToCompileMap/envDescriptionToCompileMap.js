@@ -1,8 +1,7 @@
 // https://github.com/babel/babel/blob/master/packages/babel-preset-env/data/plugins.json
-import { objectFilter } from "../objectHelper.js"
 import { compatMap as pluginCompatMapDefault } from "@dmail/project-structure-compile-babel"
 
-import { envDescriptionToCompileGroups } from "./envDescriptionToCompileGroups/index.js"
+import { pluginCompatMapToCompileGroups } from "./pluginCompatMapToCompileGroups/index.js"
 import { compatMapToUsageScore } from "./compatMapToUsageScore.js"
 import { platformUsageMapDefault } from "./platformUsageMapDefault.js"
 import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn/compileGroupsRegroupIn.js"
@@ -14,24 +13,23 @@ export const DEFAULT_ID = "otherwise"
 
 export const envDescriptionToCompileMap = (
   {
-    pluginCompatMap = pluginCompatMapDefault,
-    platformUsageMap = platformUsageMapDefault,
     pluginNames = [],
-    platformNames = [],
+    platformUsageMap = platformUsageMapDefault,
+    pluginCompatMap = pluginCompatMapDefault,
   } = {},
   { size = 4 } = {},
 ) => {
-  pluginCompatMap = objectFilter(
-    pluginCompatMap,
-    (pluginName) => pluginNames.indexOf(pluginName) > -1,
-  )
+  const pluginCompatMapFiltered = {}
+  pluginNames.forEach((pluginName) => {
+    pluginCompatMapFiltered[pluginName] =
+      pluginName in pluginCompatMap ? pluginCompatMap[pluginName] : {}
+  })
 
   const pluginGroupToUsageScore = ({ compatMap }) =>
     compatMapToUsageScore(compatMap, platformUsageMap)
-  const allCompileGroups = envDescriptionToCompileGroups({
-    pluginCompatMap,
-    platformNames,
-  }).sort((a, b) => pluginGroupToUsageScore(b) - pluginGroupToUsageScore(a))
+  const allCompileGroups = pluginCompatMapToCompileGroups(pluginCompatMapFiltered).sort(
+    (a, b) => pluginGroupToUsageScore(b) - pluginGroupToUsageScore(a),
+  )
 
   const compileGroupToComplexityScore = ({ pluginNames }) => pluginNamesToScore(pluginNames)
   const compileGroups = compileGroupsRegroupIn(allCompileGroups, size).sort(
@@ -39,7 +37,7 @@ export const envDescriptionToCompileMap = (
   )
 
   const groupWithEverything = {
-    pluginNames: Object.keys(pluginCompatMap),
+    pluginNames: pluginNames.sort(),
     compatMap: {},
   }
 

@@ -6,10 +6,6 @@ const platformToUsageScore = (platformName, platformVersion, platformUsageMap) =
   }
 
   const versionUsageMap = platformUsageMap[platformName]
-  if (platformVersion in versionUsageMap === false) {
-    return platformUsageMap.other
-  }
-
   const versionNames = Object.keys(versionUsageMap)
   if (versionNames.length === 0) {
     return platformUsageMap.other
