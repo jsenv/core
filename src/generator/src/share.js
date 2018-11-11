@@ -53,18 +53,14 @@ export const share = (generator) => {
 
   let syncPreviousCalls
 
-  const sharedGenerator = ({ next, error, done }) => {
+  const sharedGenerator = ({ start, next, error, done }) => {
     callCount++
-    if (syncPreviousCalls) {
-      const fn = syncPreviousCalls
-      syncPreviousCalls = undefined
-      fn({ next, error, done })
-    }
-    nextCallbacks.push(next)
-    errorCallbacks.push(error)
-    doneCallbacks.push(done)
 
     if (callCount === 1) {
+      nextCallbacks.push(next)
+      errorCallbacks.push(error)
+      doneCallbacks.push(done)
+
       let storeCalls = true
 
       const sharedNext = (value) => {
@@ -92,6 +88,7 @@ export const share = (generator) => {
       }
 
       sharedSubscription = subscribe(generator, {
+        start,
         next: sharedNext,
         error: sharedError,
         done: sharedDone,
@@ -101,6 +98,33 @@ export const share = (generator) => {
         storeCalls = false
         syncPreviousCalls = undefined
       })
+    } else {
+      if (start) {
+        let closed = false
+        start({
+          closed: false,
+          unsubscribe: () => {
+            closed = true
+            callCount--
+            if (callCount === 0) {
+              return sharedSubscription.unsubscribe()
+            }
+            return undefined
+          },
+        })
+        if (closed) {
+          return () => undefined
+        }
+      }
+
+      if (syncPreviousCalls) {
+        const fn = syncPreviousCalls
+        syncPreviousCalls = undefined
+        fn({ next, error, done })
+      }
+      nextCallbacks.push(next)
+      errorCallbacks.push(error)
+      doneCallbacks.push(done)
     }
 
     return () => {

@@ -12,13 +12,21 @@ const documentClick = ({ next }) => {
   return () => document.removeEventListener("click", next)
 }
 
-const bodyClick = filter(documentClick, (e) => e.target === document.body)
+const bodyClick = share(filter(documentClick, (e) => e.target === document.body))
 
-subscribe(bodyClick, {
+const subscription = subscribe(bodyClick, {
   next: (e) => {
     console.log(`clicked on body at ${e.pageX}:${e.pageY}`)
   },
 })
+
+const subscriptionB = subscribe(bodyClick, {
+  next: (e) => {
+    console.log(`clicked on body at ${e.pageX}:${e.pageY}`)
+  },
+})
+
+subscription.unsubscribe()
 ```
 
 # API
