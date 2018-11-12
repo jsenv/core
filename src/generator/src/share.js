@@ -107,7 +107,9 @@ export const share = (generator) => {
             closed = true
             callCount--
             if (callCount === 0) {
-              return sharedSubscription.unsubscribe()
+              const { unsubscribe } = sharedSubscription
+              sharedSubscription = undefined
+              return unsubscribe()
             }
             return undefined
           },
@@ -133,7 +135,9 @@ export const share = (generator) => {
       doneCallbacks = arrayWithout(doneCallbacks, done)
       callCount--
       if (callCount === 0) {
-        return sharedSubscription.unsubscribe()
+        const { unsubscribe } = sharedSubscription
+        sharedSubscription = undefined
+        return unsubscribe()
       }
       return undefined
     }
