@@ -3,8 +3,6 @@ import { uneval } from "@dmail/uneval"
 import { getCompileMapLocalURL } from "../compilePlatformAndSystem.js"
 import { createCancel } from "../cancel/index.js"
 
-const { cancellation, cancel } = createCancel()
-
 const sendToParent = (type, data) => {
   // process.send algorithm does not send non enumerable values
   // because it works with JSON.stringify I guess so use uneval
@@ -15,6 +13,30 @@ const sendToParent = (type, data) => {
     data: source,
   })
 }
+
+const exceptionToObject = (exception) => {
+  if (exception && exception instanceof Error) {
+    const object = {}
+    Object.getOwnPropertyNames(exception).forEach((name) => {
+      object[name] = exception[name]
+    })
+    return object
+  }
+
+  return {
+    message: exception,
+  }
+}
+
+process.on("uncaughtException", (valueThrowed) => {
+  sendToParent("error", exceptionToObject(valueThrowed))
+  process.exit(1)
+})
+
+process.on("unhandledRejection", (valueRejected) => {
+  sendToParent("error", exceptionToObject(valueRejected))
+  process.exit(1)
+})
 
 const listenParent = (type, callback) => {
   const listener = (event) => {
@@ -30,13 +52,8 @@ const listenParent = (type, callback) => {
   }
 }
 
-process.on("unhandledRejection", (error) => {
-  throw error
-})
+const { cancellation, cancel } = createCancel()
 
-// keep checking how https://github.com/dmail/dev-server/commit/a971e5dde3dd275ffa0c5a90220b3d6b514a7461
-// impacted hotreload and stufff
-// we must move again hotreloading here instead of parent
 process.on("SIGINT", () => {
   // cancel will remove listener to process.on('message')
   // which is sufficient to let child process die
@@ -51,7 +68,7 @@ process.on("SIGINT", () => {
 })
 
 cancellation.register(
-  listenParent("exit-please", () => {
+  listenParent("interrupt", () => {
     process.emit("SIGINT")
   }),
 )
@@ -59,7 +76,17 @@ cancellation.register(
 cancellation.register(
   listenParent(
     "execute",
-    ({ localRoot, remoteRoot, compileInto, file, instrument, setup, teardown }) => {
+    ({
+      localRoot,
+      remoteRoot,
+      compileInto,
+      hotreload,
+      hotreloadSSERoot,
+      file,
+      instrument,
+      setup,
+      teardown,
+    }) => {
       const compileMapLocalURL = getCompileMapLocalURL({ localRoot, compileInto })
       // eslint-disable-next-line import/no-dynamic-require
       const compileMap = require(compileMapLocalURL)
@@ -70,10 +97,15 @@ cancellation.register(
         remoteRoot,
         compileInto,
         compileMap,
+        hotreload,
+        hotreloadSSERoot,
+        hotreloadCallback: ({ file }) => {
+          sendToParent("restart-request", `file changed: ${file}`)
+        },
       })
 
       executeFile({ file, instrument, setup, teardown }).then((value) => {
-        sendToParent("execute", value)
+        sendToParent("done", value)
       })
     },
   ),

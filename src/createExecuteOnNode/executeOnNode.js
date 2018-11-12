@@ -10,8 +10,8 @@ export const executeOnNode = async ({
   compileInto,
   compileService,
 
-  watch = false,
-  watchPredicate,
+  hotreload = false,
+  restartStart,
   sourceCacheStrategy,
   sourceCacheIgnore,
 
@@ -26,7 +26,7 @@ export const executeOnNode = async ({
   // we autocancel, close server etc, once the file is executed
   let autoCancel
   if (cancellation === undefined) {
-    if (watch) {
+    if (hotreload) {
       cancellation = cancellationNone
     } else {
       const cancel = createCancel()
@@ -43,8 +43,6 @@ export const executeOnNode = async ({
     compileInto,
     compileService,
 
-    watch,
-    watchPredicate,
     sourceCacheStrategy,
     sourceCacheIgnore,
   })
@@ -53,11 +51,12 @@ export const executeOnNode = async ({
     localRoot,
     remoteRoot: server.origin,
     compileInto,
-    hotreload: watch,
+    hotreload,
     hotreloadSSERoot: server.origin,
+    restartStart,
   })
 
-  let executePromise = execute({
+  let promise = execute({
     cancellation,
     file,
     instrument,
@@ -66,25 +65,17 @@ export const executeOnNode = async ({
     verbose,
   })
   if (autoCancel) {
-    executePromise.then(() => {
+    promise.then(() => {
       autoCancel("file executed")
     })
   }
-  if (watch) {
-    const catchChildError = (error) => {
-      // child error occurring while watching are non fatal
-      if (watch) {
-        if (error && error.name === "CHILD_ERROR") {
-          console.warn(error)
-          return null
-        }
-      }
-      return Promise.reject(error)
-    }
-    const { afterPromise } = executePromise
-    executePromise = executePromise.catch(catchChildError)
-    executePromise.afterPromise = afterPromise.catch(catchChildError)
+  if (hotreload) {
+    // script error occuring during hotreloading are non fatal
+    promise = promise.catch((error) => {
+      console.warn(error)
+      return null
+    })
   }
 
-  return executePromise
+  return promise
 }

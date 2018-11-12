@@ -24,6 +24,9 @@ export const createNodePlatform = ({
   remoteRoot,
   compileInto,
   compileMap,
+  hotreload,
+  hotreloadSSERoot,
+  hotreloadCallback,
 }) => {
   const compileId = nodeVersionToCompileId(process.version.slice(1), compileMap) || "otherwise"
 
@@ -39,7 +42,7 @@ export const createNodePlatform = ({
     compileId,
   })
 
-  const { markFileAsImported } = createImportTracker()
+  const { markFileAsImported, isFileImported } = createImportTracker()
 
   const nodeSystem = createNodeSystem({
     urlToFilename: (url) => {
@@ -50,6 +53,33 @@ export const createNodePlatform = ({
   cancellation.register(valueInstall(https.globalAgent.options, "rejectUnauthorized", false))
   cancellation.register(valueInstall(global, "fetch", fetch))
   cancellation.register(valueInstall(global, "System", nodeSystem))
+
+  if (hotreload) {
+    // we can be notified from file we don't care about, reload only if needed
+    const hotreloadPredicate = (file) => {
+      // isFileImported is useful in case the file was imported but is not
+      // in System registry because it has a parse error or insantiate error
+      if (isFileImported(file)) {
+        return true
+      }
+      const remoteCompiledFile = fileToRemoteCompiledFile(file)
+      if (global.System.get(remoteCompiledFile)) {
+        return true
+      }
+      const remoteInstrumentedFile = fileToRemoteInstrumentedFile(file)
+      if (global.System.get(remoteInstrumentedFile)) {
+        return true
+      }
+      return false
+    }
+    cancellation.register(
+      open(hotreloadSSERoot, (fileChanged) => {
+        if (hotreloadPredicate(fileChanged)) {
+          hotreloadCallback({ file: fileChanged })
+        }
+      }),
+    )
+  }
 
   const parentCancellation = cancellation
 
