@@ -77,20 +77,25 @@ export const compileToService = (
         }
 
         const refererRessource = hrefToRessource(referer)
-        const refererCompileInfo = ressourceToCompileInfo(refererRessource, compileInto)
 
-        if (refererCompileInfo.compileId !== compileId) {
-          return {
-            status: 400,
-            reason: `${refererHeaderName} header must be inside ${compileId}, got ${
-              refererCompileInfo.compileId
-            }`,
+        if (refererRessource === ressource) {
+          refererFile = file
+        } else {
+          const refererCompileInfo = ressourceToCompileInfo(refererRessource, compileInto)
+
+          if (refererCompileInfo.compileId !== compileId) {
+            return {
+              status: 400,
+              reason: `${refererHeaderName} header must be inside ${compileId}, got ${
+                refererCompileInfo.compileId
+              }`,
+            }
           }
-        }
 
-        refererFile = refererCompileInfo.file
-        const refererFolder = path.dirname(refererFile)
-        file = file.slice(`${refererFolder}/`.length)
+          refererFile = refererCompileInfo.file
+          const refererFolder = path.dirname(refererFile)
+          file = file.slice(`${refererFolder}/`.length)
+        }
       } catch (e) {
         return {
           status: 400,
@@ -98,7 +103,10 @@ export const compileToService = (
         }
       }
 
-      localFile = await locate(file, `${localRoot}/${refererFile}`)
+      localFile = await locate(
+        file,
+        refererFile === file ? localRoot : `${localRoot}/${refererFile}`,
+      )
     } else {
       localFile = await locate(file, localRoot)
     }
