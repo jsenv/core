@@ -1,6 +1,15 @@
 import path from "path"
+import { URL } from "url"
 
 // https://gist.github.com/dmail/54677cc3eae1661813e3a87840666f83#file-url-js
+
+export const hrefToOrigin = (href) => {
+  return new URL(href).origin
+}
+
+export const hrefToRessource = (href) => {
+  return new URL(href).pathname.slice(1)
+}
 
 export const ressourceToPathname = (ressource) => {
   const searchSeparatorIndex = ressource.indexOf("?")

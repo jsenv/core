@@ -354,7 +354,7 @@ export const open = async (
 
   requestHandlerTracker.add((nodeRequest, nodeResponse) => {
     const request = createRequestFromNodeRequest(nodeRequest, origin)
-    log(`${request.method} ${origin}/${request.ressource}`)
+    log(`${request.method} ${request.origin}/${request.ressource}`)
 
     nodeRequest.on("error", (error) => {
       log("error on", request.ressource, error)
@@ -387,7 +387,7 @@ export const open = async (
         })
       })
       .then((response) => {
-        log(`${response.status} ${origin}/${request.ressource}`)
+        log(`${response.status} ${request.origin}/${request.ressource}`)
 
         return populateNodeResponse(nodeResponse, response, {
           ignoreBody: request.method === "HEAD",

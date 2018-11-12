@@ -1,19 +1,16 @@
-const {
-  serverBrowserOpen,
-  jsCreateCompileServiceForProject,
-  createCancel,
-} = require("../dist/index.js")
+const { serverBrowserOpen, createJsCompileService, createCancel } = require("../dist/index.js")
 const path = require("path")
 
 const localRoot = path.resolve(__dirname, "../")
 const compileInto = "build"
-const watch = true
+const hotreload = true
 
 const exec = async ({ cancellation }) => {
-  const { compileService, watchPredicate, groupMap } = await jsCreateCompileServiceForProject({
+  const compileService = await createJsCompileService({
     cancellation,
     localRoot,
     compileInto,
+    watch: hotreload,
   })
 
   return serverBrowserOpen({
@@ -21,10 +18,8 @@ const exec = async ({ cancellation }) => {
     localRoot,
     compileInto,
     compileService,
-    groupMap,
 
-    watch,
-    watchPredicate,
+    hotreload,
   })
 }
 

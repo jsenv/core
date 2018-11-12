@@ -61,9 +61,8 @@ export const open = async ({
   localRoot,
   compileInto,
   compileService,
+  hotreload = false,
 
-  watch = false,
-  watchPredicate,
   sourceCacheStrategy,
   sourceCacheIgnore,
 }) => {
@@ -73,8 +72,6 @@ export const open = async ({
     compileInto,
     protocol, // reuse browser protocol
     compileService,
-    watch,
-    watchPredicate,
     sourceCacheStrategy,
     sourceCacheIgnore,
   })
@@ -124,7 +121,7 @@ export const open = async ({
               remoteRoot,
               compileInto,
               compileMap,
-              hotreload: watch,
+              hotreload,
               hotreloadSSERoot: remoteRoot,
             }),
           },

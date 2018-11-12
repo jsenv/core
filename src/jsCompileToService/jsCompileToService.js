@@ -5,6 +5,7 @@ import { locate } from "./locate.js"
 export const jsCompileToService = (
   compileFile,
   {
+    cancellation,
     localRoot,
     compileInto,
     compileParamMap = {},
@@ -13,6 +14,8 @@ export const jsCompileToService = (
     cacheStrategy = "etag",
     assetCacheStrategy = "eTag",
     instrumentPredicate = () => true,
+    watch,
+    watchPredicate,
   },
 ) => {
   const instrumentPlugin = createInstrumentPlugin({ predicate: instrumentPredicate })
@@ -26,6 +29,7 @@ export const jsCompileToService = (
   })
 
   const service = compileToService(compileFile, {
+    cancellation,
     localRoot,
     compileInto,
     locate,
@@ -34,6 +38,8 @@ export const jsCompileToService = (
     localCacheTrackHit,
     cacheStrategy,
     assetCacheStrategy,
+    watch,
+    watchPredicate,
   })
 
   const jsService = (request) => {

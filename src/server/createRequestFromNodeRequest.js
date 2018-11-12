@@ -2,7 +2,7 @@ import { createBody } from "./createConnection/index.js"
 import { headersFromObject } from "./headers.js"
 
 // serverURL pourrait valoir par défaut `file:///${process.cwd()}` ?
-export const createRequestFromNodeRequest = (nodeRequest) => {
+export const createRequestFromNodeRequest = (nodeRequest, origin) => {
   const ressource = nodeRequest.url.slice(1)
   const { method } = nodeRequest
   const headers = headersFromObject(nodeRequest.headers)
@@ -11,6 +11,7 @@ export const createRequestFromNodeRequest = (nodeRequest) => {
   )
 
   return Object.freeze({
+    origin,
     ressource,
     method,
     headers,

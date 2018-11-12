@@ -27,6 +27,7 @@ const pluginMapDefault = pluginOptionMapToPluginMap({
 })
 
 export const createJsCompileService = async ({
+  cancellation,
   localRoot,
   compileInto,
   pluginMap = pluginMapDefault,
@@ -35,6 +36,8 @@ export const createJsCompileService = async ({
   localCacheTrackHit,
   cacheStrategy,
   assetCacheStrategy,
+  watch,
+  watchPredicate,
   listFilesToCover = () => [],
 }) => {
   const compileMap = envDescriptionToCompileMap({
@@ -60,6 +63,7 @@ export const createJsCompileService = async ({
 
   const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
   const jsCompileService = jsCompileToService(jsCompile, {
+    cancellation,
     localRoot,
     compileInto,
     compileParamMap,
@@ -68,6 +72,8 @@ export const createJsCompileService = async ({
     cacheStrategy,
     assetCacheStrategy,
     instrumentPredicate,
+    watch,
+    watchPredicate,
   })
 
   return jsCompileService

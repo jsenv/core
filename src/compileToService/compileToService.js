@@ -6,51 +6,32 @@ import { stat, readFile } from "../fileHelper.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { createETag } from "./helpers.js"
 import { compileFile } from "./compileFile.js"
-
-export const ressourceToCompileIdAndFile = (ressource, into) => {
-  const parts = ressource.split("/")
-  const firstPart = parts[0]
-
-  if (firstPart !== into) {
-    return {}
-  }
-
-  const compileId = parts[1]
-  if (compileId.length === 0) {
-    return {}
-  }
-
-  const file = parts.slice(2).join("/")
-  if (file.length === 0) {
-    return {}
-  }
-
-  if (file.match(/[^\/]+__meta__\/.+$/)) {
-    return {
-      compileId,
-      asset: file,
-    }
-  }
-
-  return {
-    compileId,
-    file,
-  }
-}
+import { ressourceToCompileInfo } from "./requestToCompileInfo.js"
+import { watchFile } from "../watchFile.js"
+import { createSignal } from "@dmail/signal"
+import { acceptContentType, createSSERoom, serviceCompose } from "../server/index.js"
+import { cancellationNone } from "../cancel/index.js"
+import { hrefToOrigin, hrefToRessource } from "../urlHelper.js"
+import path from "path"
 
 export const compileToService = (
   compile,
   {
+    cancellation = cancellationNone,
     localRoot,
     compileInto,
-    locate = (file, root) => `${root}/${file}`,
+    locate = (file, localDependentFile) => `${localDependentFile}/${file}`,
     compileParamMap,
     localCacheStrategy,
     localCacheTrackHit,
     cacheStrategy = "etag",
     assetCacheStrategy = "etag",
+
+    watch = false,
+    watchPredicate = () => false,
   },
 ) => {
+  const watchSignal = createSignal()
   const fileService = createRequestToFileResponse({
     root: localRoot,
     cacheStrategy: assetCacheStrategy,
@@ -60,15 +41,75 @@ export const compileToService = (
   const cacheWithETag = cacheStrategy === "etag"
   const cachedDisabled = cacheStrategy === "none"
 
-  return async ({ ressource, method, headers = {}, body }) => {
-    const { compileId, file } = ressourceToCompileIdAndFile(ressource, compileInto)
+  const watchedFiles = new Map()
+  cancellation.register(() => {
+    watchedFiles.forEach((closeWatcher) => closeWatcher())
+    watchedFiles.clear()
+  })
 
-    // no compileId or no asset we server the file without compiling it
-    if (!compileId || !file) {
+  const compileService = async ({ origin, ressource, method, headers = {}, body }) => {
+    let { isAsset, compileId, file } = ressourceToCompileInfo(ressource, compileInto)
+
+    // serve asset
+    if (isAsset) {
       return fileService({ ressource, method, headers, body })
     }
 
-    const inputFile = await locate(file, localRoot)
+    // we don't handle
+    if (!compileId || !file) {
+      return null
+    }
+
+    let localFile
+    const refererHeaderName = "x-module-referer" in headers ? "x-module-referer" : "referer"
+    if (refererHeaderName in headers) {
+      const referer = headers[refererHeaderName]
+
+      let refererFile
+      try {
+        const refererOrigin = hrefToOrigin(referer)
+
+        if (refererOrigin !== origin) {
+          return {
+            status: 400,
+            reason: `${refererHeaderName} header origin must be ${origin}, got ${origin}`,
+          }
+        }
+
+        const refererRessource = hrefToRessource(referer)
+        const refererCompileInfo = ressourceToCompileInfo(refererRessource, compileInto)
+
+        if (refererCompileInfo.compileId !== compileId) {
+          return {
+            status: 400,
+            reason: `${refererHeaderName} header must be inside ${compileId}, got ${
+              refererCompileInfo.compileId
+            }`,
+          }
+        }
+
+        refererFile = refererCompileInfo.file
+        const refererFolder = path.dirname(refererFile)
+        file = file.slice(`${refererFolder}/`.length)
+      } catch (e) {
+        return {
+          status: 400,
+          reason: `${refererHeaderName} header is invalid`,
+        }
+      }
+
+      localFile = await locate(file, `${localRoot}/${refererFile}`)
+    } else {
+      localFile = await locate(file, localRoot)
+    }
+
+    // when I ask for a compiled file, watch the corresponding file on filesystem
+    if (watch && watchedFiles.has(localFile) === false && watchPredicate(file)) {
+      const fileWatcher = watchFile(localFile, () => {
+        watchSignal.emit(file)
+      })
+      watchedFiles.set(localFile, fileWatcher)
+    }
 
     const compileService = async () => {
       const { output } = await compileFile({
@@ -78,7 +119,7 @@ export const compileToService = (
         compileId,
         compileParamMap,
         file,
-        inputFile,
+        inputFile: localFile,
         cacheStrategy: localCacheStrategy,
         cacheTrackHit: localCacheTrackHit,
       })
@@ -96,7 +137,7 @@ export const compileToService = (
 
     try {
       if (cacheWithMtime) {
-        const { mtime } = await stat(inputFile)
+        const { mtime } = await stat(localFile)
 
         if ("if-modified-since" in headers) {
           const ifModifiedSince = headers["if-modified-since"]
@@ -123,7 +164,7 @@ export const compileToService = (
       }
 
       if (cacheWithETag) {
-        const content = await readFile(inputFile)
+        const content = await readFile(localFile)
         const eTag = createETag(content)
 
         if ("if-none-match" in headers) {
@@ -156,4 +197,31 @@ export const compileToService = (
       return convertFileSystemErrorToResponseProperties(error)
     }
   }
+
+  const createWatchSSEService = () => {
+    const fileChangedSSE = createSSERoom()
+
+    fileChangedSSE.open()
+    cancellation.register(fileChangedSSE.close)
+
+    watchSignal.listen((file) => {
+      fileChangedSSE.sendEvent({
+        type: "file-changed",
+        data: file,
+      })
+    })
+
+    return ({ headers }) => {
+      if (acceptContentType(headers.accept, "text/event-stream")) {
+        return fileChangedSSE.connect(headers["last-event-id"])
+      }
+      return null
+    }
+  }
+
+  if (watch) {
+    return serviceCompose(createWatchSSEService(), compileService)
+  }
+
+  return compileService
 }
