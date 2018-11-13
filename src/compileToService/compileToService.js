@@ -14,6 +14,28 @@ import { cancellationNone } from "../cancel/index.js"
 import { hrefToOrigin, hrefToRessource } from "../urlHelper.js"
 import path from "path"
 
+const refererToDependentFile = (referer, { origin, ressource, compileInto, compileId }) => {
+  const refererOrigin = hrefToOrigin(referer)
+
+  if (refererOrigin !== origin) {
+    return null
+  }
+
+  const refererRessource = hrefToRessource(referer)
+
+  if (refererRessource === ressource) {
+    return null
+  }
+
+  const refererCompileInfo = ressourceToCompileInfo(refererRessource, compileInto)
+
+  if (refererCompileInfo.compileId !== compileId) {
+    return null
+  }
+
+  return refererCompileInfo.file
+}
+
 export const compileToService = (
   compile,
   {
@@ -28,7 +50,7 @@ export const compileToService = (
     assetCacheStrategy = "etag",
 
     watch = false,
-    watchPredicate = () => false,
+    watchPredicate = () => true,
   },
 ) => {
   const watchSignal = createSignal()
@@ -60,42 +82,19 @@ export const compileToService = (
       return null
     }
 
-    let localFile
+    let localDependentFile
     const refererHeaderName = "x-module-referer" in headers ? "x-module-referer" : "referer"
     if (refererHeaderName in headers) {
       const referer = headers[refererHeaderName]
 
-      let refererFile
+      let dependentFile
       try {
-        const refererOrigin = hrefToOrigin(referer)
-
-        if (refererOrigin !== origin) {
-          return {
-            status: 400,
-            reason: `${refererHeaderName} header origin must be ${origin}, got ${origin}`,
-          }
-        }
-
-        const refererRessource = hrefToRessource(referer)
-
-        if (refererRessource === ressource) {
-          refererFile = file
-        } else {
-          const refererCompileInfo = ressourceToCompileInfo(refererRessource, compileInto)
-
-          if (refererCompileInfo.compileId !== compileId) {
-            return {
-              status: 400,
-              reason: `${refererHeaderName} header must be inside ${compileId}, got ${
-                refererCompileInfo.compileId
-              }`,
-            }
-          }
-
-          refererFile = refererCompileInfo.file
-          const refererFolder = path.dirname(refererFile)
-          file = file.slice(`${refererFolder}/`.length)
-        }
+        dependentFile = refererToDependentFile(referer, {
+          origin,
+          ressource,
+          compileInto,
+          compileId,
+        })
       } catch (e) {
         return {
           status: 400,
@@ -103,13 +102,18 @@ export const compileToService = (
         }
       }
 
-      localFile = await locate(
-        file,
-        refererFile === file ? localRoot : `${localRoot}/${refererFile}`,
-      )
+      if (dependentFile) {
+        const localDependentFolder = path.dirname(dependentFile)
+        file = file.slice(`${localDependentFolder}/`.length)
+        localDependentFile = `${localRoot}/${dependentFile}`
+      } else {
+        localDependentFile = localRoot
+      }
     } else {
-      localFile = await locate(file, localRoot)
+      localDependentFile = localRoot
     }
+
+    const localFile = await locate(file, localDependentFile)
 
     // when I ask for a compiled file, watch the corresponding file on filesystem
     if (watch && watchedFiles.has(localFile) === false && watchPredicate(file)) {
