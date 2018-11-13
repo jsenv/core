@@ -43,13 +43,12 @@ export const labelize = (outcomeMap) => {
 
   return (settle) => {
     let cleanupMap = {}
-    let called = false
+    let settled = false
 
     const visit = (name) => {
       const outcome = outcomeMap[name]
       const cleanup = fork(outcome, (value) => {
-        called = true
-        cleanupMap = undefined
+        settled = true
         return settle({ name, value })
       })
       cleanupMap[name] = cleanup
@@ -60,14 +59,27 @@ export const labelize = (outcomeMap) => {
       const name = names[i]
       i++
       visit(name)
-      if (called) break
+      if (settled) break
     }
 
+    let cleaned = false
     return () => {
+      if (cleaned) return
+      cleaned = true
       Object.keys(cleanupMap).forEach((name) => {
         cleanupMap[name]()
       })
       cleanupMap = undefined
+    }
+  }
+}
+
+export const anyOf = (...outcomes) => {
+  return (settle) => {
+    const cleanups = outcomes.map((outcome) => fork(outcome, settle))
+
+    return () => {
+      cleanups.forEach((cleanup) => cleanup())
     }
   }
 }

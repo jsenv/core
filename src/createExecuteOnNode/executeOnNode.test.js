@@ -4,7 +4,7 @@ import { createJsCompileService } from "../createJsCompileService.js"
 
 const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = "build"
-const watch = true
+const hotreload = true
 const file = `src/__test__/file.js`
 
 const exec = async ({ cancellation }) => {
@@ -12,6 +12,7 @@ const exec = async ({ cancellation }) => {
     cancellation,
     localRoot,
     compileInto,
+    watch: hotreload,
   })
 
   return executeOnNode({
@@ -19,7 +20,7 @@ const exec = async ({ cancellation }) => {
     localRoot,
     compileInto,
     compileService: jsCompileService,
-    watch,
+    hotreload,
     file,
     verbose: true,
   })

@@ -1,10 +1,7 @@
-export const open = (url, callback) => {
-  if (typeof global.EventSource !== "function") {
-    console.warn(`cannot connect to sse at ${url}: global.EventSource is not a function`)
-    return () => {}
-  }
+import EventSource from "eventsource"
 
-  const eventSource = new global.EventSource(url, {
+export const hotreloadOpen = (url, callback) => {
+  const eventSource = new EventSource(url, {
     https: { rejectUnauthorized: false },
   })
 

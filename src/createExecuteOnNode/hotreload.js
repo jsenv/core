@@ -1,6 +1,6 @@
 import EventSource from "eventsource"
 
-export const open = (url, callback) => {
+export const hotreloadOpen = (url, callback) => {
   const eventSource = new EventSource(url, {
     https: { rejectUnauthorized: false },
   })
