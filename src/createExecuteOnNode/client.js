@@ -30,17 +30,21 @@ const exceptionToObject = (exception) => {
 
 process.on("uncaughtException", (valueThrowed) => {
   sendToParent("error", exceptionToObject(valueThrowed))
+  // once errored, the child must die
   process.exit(1)
 })
 
 process.on("unhandledRejection", (valueRejected) => {
   sendToParent("error", exceptionToObject(valueRejected))
+  // once errored, the child must die
   process.exit(1)
 })
 
-const listenParent = (type, callback) => {
+const listenParentOnce = (type, callback) => {
   const listener = (event) => {
     if (event.type === type) {
+      // commenting line below keep this process alive
+      process.removeListener("message", listener)
       callback(eval(`(${event.data})`))
     }
   }
@@ -67,26 +71,16 @@ process.on("SIGINT", () => {
   })
 })
 
-cancellation.register(
-  listenParent("interrupt", () => {
-    process.emit("SIGINT")
-  }),
-)
+// cancellation.register(
+//   listenParentOnce("interrupt", () => {
+//     process.emit("SIGINT")
+//   }),
+// )
 
 cancellation.register(
-  listenParent(
+  listenParentOnce(
     "execute",
-    ({
-      localRoot,
-      remoteRoot,
-      compileInto,
-      hotreload,
-      hotreloadSSERoot,
-      file,
-      instrument,
-      setup,
-      teardown,
-    }) => {
+    ({ localRoot, remoteRoot, compileInto, file, instrument, setup, teardown }) => {
       const compileMapLocalURL = getCompileMapLocalURL({ localRoot, compileInto })
       // eslint-disable-next-line import/no-dynamic-require
       const compileMap = require(compileMapLocalURL)
@@ -97,11 +91,6 @@ cancellation.register(
         remoteRoot,
         compileInto,
         compileMap,
-        hotreload,
-        hotreloadSSERoot,
-        hotreloadCallback: ({ file }) => {
-          sendToParent("restart-request", `file changed: ${file}`)
-        },
       })
 
       executeFile({ file, instrument, setup, teardown }).then((value) => {
