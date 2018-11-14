@@ -1,11 +1,11 @@
 import net from "net"
 import { listen, closeJustAfterListen } from "./server.js"
-import { cancellationNone } from "../cancel/index.js"
+import { createCancellationToken } from "../cancel/index.js"
 
-const portIsFree = ({ cancellation, port, ip }) => {
+const portIsFree = ({ cancellationToken, port, ip }) => {
   const server = net.createServer()
   return listen({
-    cancellation,
+    cancellationToken,
     server,
     port,
     ip,
@@ -14,7 +14,7 @@ const portIsFree = ({ cancellation, port, ip }) => {
       const closePromise = closeJustAfterListen(server)
       // cancellation must wait for server to be closed before considering
       // cancellation as done
-      cancellation.register(() => closePromise)
+      cancellationToken.register(() => closePromise)
       return closePromise.then(() => true)
     },
     (error) => {
@@ -32,7 +32,7 @@ const portIsFree = ({ cancellation, port, ip }) => {
 export const findFreePort = async (
   initialPort = 1,
   {
-    cancellation = cancellationNone,
+    cancellationToken = createCancellationToken(),
     ip = "127.0.0.1",
     min = 1,
     max = 65534,
@@ -40,7 +40,7 @@ export const findFreePort = async (
   } = {},
 ) => {
   const testUntil = async (port, ip) => {
-    const free = await portIsFree({ cancellation, port, ip })
+    const free = await portIsFree({ cancellationToken, port, ip })
     if (free) {
       return port
     }

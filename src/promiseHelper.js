@@ -1,4 +1,4 @@
-import { cancellationNone } from "./cancel/index.js"
+import { createCancellationToken } from "./cancellation-source/index.js"
 
 export const promiseMatch = (callbacks, data, predicate) => {
   return new Promise((resolve, reject) => {
@@ -36,7 +36,7 @@ export const promiseTry = (callback) => {
   })
 }
 
-export const promiseSequence = (callbacks, cancellation = cancellationNone) => {
+export const promiseSequence = (callbacks, cancellationToken = createCancellationToken()) => {
   const values = []
 
   return callbacks
@@ -48,16 +48,16 @@ export const promiseSequence = (callbacks, cancellation = cancellationNone) => {
       }
       return previous.then(() => callback()).then((value) => {
         values.push(value)
-        return cancellation.toPromise()
+        return cancellationToken.toPromise()
       })
-    }, cancellation.toPromise())
+    }, cancellationToken.toPromise())
     .then(() => values)
 }
 
 export const promiseConcurrent = (
   list,
   callback,
-  { cancellation = cancellationNone, maxParallelExecution = 5 } = {},
+  { cancellationToken = createCancellationToken(), maxParallelExecution = 5 } = {},
 ) => {
   const results = []
   const firstChunk = list.slice(0, maxParallelExecution)
@@ -67,7 +67,7 @@ export const promiseConcurrent = (
     return promiseTry(() => callback(data)).then((value) => {
       results[index] = value
 
-      return cancellation.toPromise().then(() => {
+      return cancellationToken.toPromise().then(() => {
         if (globalIndex < list.length - 1) {
           globalIndex++
           return execute(list[globalIndex], globalIndex)
@@ -77,7 +77,7 @@ export const promiseConcurrent = (
     })
   }
 
-  return cancellation.toPromise().then(() => {
+  return cancellationToken.toPromise().then(() => {
     const promises = firstChunk.map((data, index) => execute(data, index))
     const promise = Promise.all(promises).then(() => results)
     return promise

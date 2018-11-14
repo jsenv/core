@@ -23,7 +23,7 @@ const testDescriptionToPlatforms = (
 
 export const testDescriptionToPlatformResultMap = (
   testDescription,
-  { cancellation, localRoot, compileInto, remoteRoot, watch },
+  { cancellationToken, localRoot, compileInto, remoteRoot, watch },
 ) => {
   const platforms = testDescriptionToPlatforms(testDescription, {
     localRoot,
@@ -33,7 +33,7 @@ export const testDescriptionToPlatformResultMap = (
   })
 
   return platformsToResultMap({
-    cancellation,
+    cancellationToken,
     platforms,
   })
 }

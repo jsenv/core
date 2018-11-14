@@ -10,14 +10,14 @@ import { ressourceToCompileInfo } from "./ressourceToCompileInfo.js"
 import { watchFile } from "../watchFile.js"
 import { createSignal } from "@dmail/signal"
 import { acceptContentType, createSSERoom, serviceCompose } from "../server/index.js"
-import { cancellationNone } from "../cancel/index.js"
+import { createCancellationToken } from "../cancellation-source/index.js"
 import { hrefToOrigin, hrefToRessource } from "../urlHelper.js"
 import { ressourceToLocateParam } from "./ressourceToLocateParam.js"
 
 export const compileToService = (
   compile,
   {
-    cancellation = cancellationNone,
+    cancellationToken = createCancellationToken(),
     localRoot,
     compileInto,
     locate = ({ dependentFolder, file }) => {
@@ -44,7 +44,7 @@ export const compileToService = (
   const cachedDisabled = cacheStrategy === "none"
 
   const watchedFiles = new Map()
-  cancellation.register(() => {
+  cancellationToken.register(() => {
     watchedFiles.forEach((closeWatcher) => closeWatcher())
     watchedFiles.clear()
   })
@@ -202,7 +202,7 @@ export const compileToService = (
     const fileChangedSSE = createSSERoom()
 
     fileChangedSSE.open()
-    cancellation.register(fileChangedSSE.close)
+    cancellationToken.register(fileChangedSSE.close)
 
     watchSignal.listen((file) => {
       fileChangedSSE.sendEvent({

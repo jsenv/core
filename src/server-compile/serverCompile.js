@@ -3,10 +3,10 @@
 /* eslint-disable import/max-dependencies */
 import { createRequestToFileResponse } from "../createRequestToFileResponse/index.js"
 import { open as serverOpen, enableCORS, serviceCompose } from "../server/index.js"
-import { cancellationNone } from "../cancel/index.js"
+import { createCancellationToken } from "../cancellation-source/index.js"
 
 export const open = async ({
-  cancellation = cancellationNone,
+  cancellationToken = createCancellationToken(),
   // server options
   protocol,
   ip,
@@ -38,7 +38,7 @@ export const open = async ({
   }
 
   return serverOpen({
-    cancellation,
+    cancellationToken,
     protocol,
     ip,
     port,

@@ -1,5 +1,10 @@
 import { fork, forkMatch, labelize, anyOf } from "../outcome/index.js"
-import { cancellationNone } from "../cancel/index.js"
+import { createCancellationToken, cancellationTokenCompose } from "../cancellation-source/index.js"
+import {
+  createRestartSource,
+  createRestartToken,
+  restartTokenCompose,
+} from "../restart-source/index.js"
 import { hotreloadOpen } from "./hotreload.js"
 import { createSignal } from "@dmail/signal"
 
@@ -9,7 +14,7 @@ import { createSignal } from "@dmail/signal"
 const ALLOCATED_MS_FOR_CLOSE = 10 * 60 * 10 * 1000
 
 export const createPlatformController = ({
-  cancellation = cancellationNone,
+  cancellationToken = createCancellationToken(),
   platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
   hotreload = false,
   hotreloadSSERoot,
@@ -19,14 +24,12 @@ export const createPlatformController = ({
   const fileChangedSignal = createSignal()
 
   if (hotreload) {
-    cancellation.register(
+    cancellationToken.register(
       hotreloadOpen(hotreloadSSERoot, (fileChanged) => {
         fileChangedSignal.emit({ file: fileChanged })
       }),
     )
   }
-
-  const controllerCancellation = cancellation
 
   const log = (...args) => {
     if (verbose) {
@@ -34,33 +37,59 @@ export const createPlatformController = ({
     }
   }
 
-  const cancelled = (settle) => {
-    return cancellation.register(settle)
-  }
+  const { restart: hotreloadRestart, token: hotreloadToken } = createRestartSource()
 
-  const modified = (settle) => {
-    const { remove } = fileChangedSignal.listen(({ file }) => {
-      settle(file)
-    })
-    return remove
-  }
+  fileChangedSignal.listen(({ file }) => {
+    hotreloadRestart(`file changed: ${file}`)
+  })
+
+  const platformCancellationToken = cancellationToken
+  const platformRestartToken = hotreloadToken
 
   const execute = ({
-    cancellation = controllerCancellation,
+    cancellationToken = createCancellationToken(),
+    restartToken = createRestartToken(),
     file,
     instrument = false,
     setup = () => {},
     teardown = () => {},
   }) => {
-    let scriptResolve
-    let scriptReject
-    const scriptPromise = new Promise((resolve, reject) => {
-      scriptResolve = resolve
-      scriptReject = reject
-    })
+    const executionCancellationToken = cancellationTokenCompose(
+      platformCancellationToken,
+      cancellationToken,
+    )
+    restartToken = restartTokenCompose(platformRestartToken, restartToken)
+
+    const cancelled = (settle) => {
+      return executionCancellationToken.register(settle)
+    }
+
+    const restarted = (settle) => {
+      return restartToken.register(settle)
+    }
+
+    let currentExecutionResolve
+    let currentExecutionReject
+    let currentExecutionPromise
+    const nextExecutionPromise = () => {
+      currentExecutionPromise = new Promise((resolve, reject) => {
+        currentExecutionResolve = resolve
+        currentExecutionReject = reject
+      })
+    }
+    const executionResolve = (value) => {
+      currentExecutionResolve(value)
+      nextExecutionPromise()
+    }
+    const executionReject = (error) => {
+      currentExecutionReject(error)
+      nextExecutionPromise()
+    }
+    nextExecutionPromise()
+    restartToken.setPromise(currentExecutionPromise)
 
     const startPlatform = async () => {
-      await cancellation.toPromise()
+      await cancellationToken.toPromise()
       log(`start ${platformTypeForLog} to execute ${file}`)
 
       let unregisterPlatformCancellation
@@ -83,13 +112,9 @@ export const createPlatformController = ({
       // for platform to close before considering cancellation is done
       // We listen for platformPromise that will be resolved/rejected on platform
       // close or error
-      unregisterPlatformCancellation = cancellation.register(() => platformPromise)
+      unregisterPlatformCancellation = cancellationToken.register(() => platformPromise)
 
-      const { errored, closed, done, close, closeForce, executeFile } = await launchPlatform({
-        cancellation,
-        scriptResolve,
-        scriptReject,
-      })
+      const { errored, closed, close, closeForce, executeFile } = await launchPlatform()
 
       const stop = (reason) => {
         log(`stop ${platformTypeForLog}`)
@@ -102,8 +127,7 @@ export const createPlatformController = ({
         }
       }
 
-      const restartAfterModified = (file) => {
-        const reason = `file changed: ${file}`
+      const restart = (reason) => {
         log(`${platformTypeForLog} restart because ${reason}`)
 
         platformPromise.then(startPlatform)
@@ -118,15 +142,19 @@ export const createPlatformController = ({
         }
       }
 
+      const listenRestart = () => {
+        log("listen restart")
+        fork(restarted, restart)
+      }
+
       const onCancelledAfterStarted = (reason) => {
         stop(reason)
       }
 
       const onErroredAfterStarted = (error) => {
         platformReject(error)
-        scriptReject(error)
-        log("will restart on filechange")
-        fork(modified, restartAfterModified)
+        executionReject(error)
+        listenRestart()
       }
 
       const onClosedAfterStarted = () => {
@@ -134,13 +162,8 @@ export const createPlatformController = ({
           `${platformTypeForLog} unexpectedtly closed while executing ${file}`,
         )
         platformReject(error)
-        scriptReject(error)
-        log("will restart on filechange")
-        fork(modified, restartAfterModified)
-      }
-
-      const onModifiedAfterStarted = (file) => {
-        restartAfterModified(file)
+        executionReject(error)
+        listenRestart()
       }
 
       const onDoneAfterStarted = (value) => {
@@ -150,39 +173,25 @@ export const createPlatformController = ({
 
         const onErroredAfterDone = (error) => {
           platformReject(error)
-          log("will restart on filechange")
-          fork(modified, restartAfterModified)
+          listenRestart()
         }
 
         const onClosedAfterDone = () => {
           platformResolve()
-          log("will restart on filechange")
-          fork(modified, restartAfterModified)
-        }
-
-        const onModifiedAfterDone = (file) => {
-          restartAfterModified(file)
+          listenRestart()
         }
 
         // should I call child.disconnect() at some point ?
         // https://nodejs.org/api/child_process.html#child_process_subprocess_disconnect
-        scriptResolve(value)
-        log("will restart on filechange")
-        forkMatch(labelize({ cancelled, errored, closed, modified }), {
+        executionResolve(value)
+        log("listen restart")
+        forkMatch(labelize({ cancelled, errored, closed, restarted }), {
           cancelled: onCancelledAfterDone,
           errored: onErroredAfterDone,
           closed: onClosedAfterDone,
-          modified: onModifiedAfterDone,
+          restarted: restart,
         })
       }
-
-      forkMatch(labelize({ cancelled, errored, closed, modified, done }), {
-        cancelled: onCancelledAfterStarted,
-        errored: onErroredAfterStarted,
-        closed: onClosedAfterStarted,
-        modified: onModifiedAfterStarted,
-        done: onDoneAfterStarted,
-      })
 
       log(`execute ${file} on ${platformTypeForLog}`)
       forkMatch(labelize({ errored, closed }), {
@@ -193,15 +202,21 @@ export const createPlatformController = ({
           log(`${platformTypeForLog} closed`)
         },
       })
+      const { done } = executeFile(file, { instrument, setup, teardown })
       fork(done, (value) => {
         log(`${file} execution on ${platformTypeForLog} done with ${value}`)
       })
-      executeFile(file, { instrument, setup, teardown })
-
-      return scriptPromise
+      forkMatch(labelize({ cancelled, errored, closed, restarted, done }), {
+        cancelled: onCancelledAfterStarted,
+        errored: onErroredAfterStarted,
+        closed: onClosedAfterStarted,
+        restarted: restart,
+        done: onDoneAfterStarted,
+      })
     }
+    startPlatform()
 
-    return startPlatform()
+    return currentExecutionPromise
   }
 
   return execute

@@ -17,8 +17,9 @@ const createClosedWithFailureCodeError = (code) => {
   return new Error(`child exited with ${code}`)
 }
 
-const launchNode = async ({ cancellation, localRoot, remoteRoot, compileInto }) => {
-  const execArgv = await createChildExecArgv({ cancellation })
+const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInto }) => {
+  const execArgv = await createChildExecArgv({ cancellationToken })
+
   const child = forkChildProcess(nodeClientFile, { execArgv })
 
   const addChildMessageListener = (callback) => {
@@ -29,14 +30,6 @@ const launchNode = async ({ cancellation, localRoot, remoteRoot, compileInto }) 
     return () => {
       child.removeListener("message", messageListener)
     }
-  }
-
-  const sendToChild = (type, data) => {
-    const source = uneval(data, { showFunctionBody: true })
-    child.send({
-      type,
-      data: source,
-    })
   }
 
   const errorReceived = (settle) => {
@@ -69,20 +62,20 @@ const launchNode = async ({ cancellation, localRoot, remoteRoot, compileInto }) 
     return () => child.removeListener("close", closedListener)
   }
 
-  const done = (settle) => {
-    return addChildMessageListener(({ type, data }) => {
-      if (type === "done") {
-        settle(data)
-      }
-    })
-  }
-
   const close = () => {
     child.kill("SIGINT")
   }
 
   const closeForce = () => {
     child.kill()
+  }
+
+  const sendToChild = (type, data) => {
+    const source = uneval(data, { showFunctionBody: true })
+    child.send({
+      type,
+      data: source,
+    })
   }
 
   const executeFile = (file, { instrument, setup, teardown }) => {
@@ -96,12 +89,22 @@ const launchNode = async ({ cancellation, localRoot, remoteRoot, compileInto }) 
       setup,
       teardown,
     })
+
+    const done = (settle) => {
+      return addChildMessageListener(({ type, data }) => {
+        if (type === "done") {
+          // ensure done is not settled to early
+          setTimeout(() => settle(data), 10)
+        }
+      })
+    }
+
+    return { done }
   }
 
   return {
     errored,
     closed,
-    done,
     close,
     closeForce,
     executeFile,
@@ -109,7 +112,7 @@ const launchNode = async ({ cancellation, localRoot, remoteRoot, compileInto }) 
 }
 
 export const createExecuteOnNode = ({
-  cancellation,
+  cancellationToken,
   localRoot,
   remoteRoot,
   compileInto,
@@ -118,11 +121,11 @@ export const createExecuteOnNode = ({
   verbose,
 }) => {
   return createPlatformController({
-    cancellation,
+    cancellationToken,
     platformTypeForLog: "node",
     hotreload,
     hotreloadSSERoot,
     verbose,
-    launchPlatform: () => launchNode({ cancellation, localRoot, remoteRoot, compileInto }),
+    launchPlatform: () => launchNode({ cancellationToken, localRoot, remoteRoot, compileInto }),
   })
 }

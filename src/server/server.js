@@ -7,7 +7,7 @@ import { populateNodeResponse } from "./populateNodeResponse.js"
 import { createSignal } from "@dmail/signal"
 import killPort from "kill-port"
 import { URL } from "url"
-import { cancellationNone } from "../cancel/index.js"
+import { createCancellationToken } from "../cancel/index.js"
 import { eventRace, registerEvent } from "../eventHelper.js"
 import { processUnhandledException } from "./processUnhandledException.js"
 
@@ -157,11 +157,11 @@ export const closeJustAfterListen = (server) => {
   })
 }
 
-export const listen = ({ cancellation = cancellationNone, server, port, ip }) => {
+export const listen = ({ cancellationToken = createCancellationToken(), server, port, ip }) => {
   return new Promise((resolve, reject) => {
     eventRace({
       cancel: {
-        register: cancellation.register,
+        register: cancellationToken.register,
         callback: async () => {
           // we must wait for the server to be listening before being able to close it
           await new Promise((resolve) => {
@@ -196,7 +196,7 @@ export const originAsString = ({ protocol, ip, port }) => {
 
 export const open = async (
   {
-    cancellation = cancellationNone,
+    cancellationToken = createCancellationToken(),
     protocol = "http",
     ip = "127.0.0.1",
     port = 0, // aasign a random available port
@@ -236,14 +236,14 @@ export const open = async (
     }
   }
 
-  await cancellation.toPromise()
+  await cancellationToken.toPromise()
   await (forcePort ? killPort(port) : Promise.resolve())
-  await cancellation.toPromise()
+  await cancellationToken.toPromise()
 
   const { nodeServer, agent } = getNodeServerAndAgent({ protocol, signature })
 
   let status = "opening"
-  port = await listen({ cancellation, server: nodeServer, port, ip })
+  port = await listen({ cancellationToken, server: nodeServer, port, ip })
   status = "opened"
 
   const origin = originAsString({ protocol, ip, port })
@@ -297,7 +297,7 @@ export const open = async (
 
   eventRace({
     cancel: {
-      register: cancellation.register,
+      register: cancellationToken.register,
       callback: close,
     },
     close: {

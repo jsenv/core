@@ -1,13 +1,16 @@
 import { filesToResultMap } from "./filesToResultMap.js"
 import { promiseSequence } from "../promiseHelper.js"
-import { cancellationNone } from "../cancel/index.js"
+import { createCancellationToken } from "../cancellation-source/index.js"
 
-export const platformsToResultMap = async ({ cancellation = cancellationNone, platforms }) => {
+export const platformsToResultMap = async ({
+  cancellationToken = createCancellationToken(),
+  platforms,
+}) => {
   const results = await promiseSequence(
     platforms.map(({ files, execute }) => () => {
-      return filesToResultMap(files, execute, { cancellation })
+      return filesToResultMap(files, execute, { cancellationToken })
     }),
-    cancellation,
+    cancellationToken,
   )
 
   const platformResultMap = {}

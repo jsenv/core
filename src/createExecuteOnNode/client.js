@@ -1,7 +1,7 @@
 import { createNodePlatform } from "../platform/index.js"
 import { uneval } from "@dmail/uneval"
 import { getCompileMapLocalURL } from "../compilePlatformAndSystem.js"
-import { createCancel } from "../cancel/index.js"
+import { createCancellationSource } from "../cancellation-source/index.js"
 
 const sendToParent = (type, data) => {
   // process.send algorithm does not send non enumerable values
@@ -56,7 +56,7 @@ const listenParentOnce = (type, callback) => {
   }
 }
 
-const { cancellation, cancel } = createCancel()
+const { token, cancel } = createCancellationSource()
 
 process.on("SIGINT", () => {
   // cancel will remove listener to process.on('message')
@@ -77,7 +77,7 @@ process.on("SIGINT", () => {
 //   }),
 // )
 
-cancellation.register(
+token.register(
   listenParentOnce(
     "execute",
     ({ localRoot, remoteRoot, compileInto, file, instrument, setup, teardown }) => {
@@ -86,7 +86,7 @@ cancellation.register(
       const compileMap = require(compileMapLocalURL)
 
       const { executeFile } = createNodePlatform({
-        cancellation,
+        cancellationToken: token,
         localRoot,
         remoteRoot,
         compileInto,

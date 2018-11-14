@@ -1,12 +1,12 @@
 import assert from "assert"
 import fetch from "node-fetch"
 import { open } from "./server.js"
-import { createCancel } from "../cancel/index.js"
+import { createCancellationSource } from "../cancel/index.js"
 
-const { cancel, cancellation } = createCancel()
+const { cancel, token } = createCancellationSource()
 
 open({
-  cancellation,
+  cancellationToken: token,
   protocol: "http",
   port: 8998,
   verbose: true,
@@ -33,6 +33,11 @@ open({
   .then(() => {
     console.log("passed")
   })
+
+const timer = setTimeout(() => {}, 100000000)
+token.register(() => {
+  clearTimeout(timer)
+})
 
 process.on("SIGINT", () => {
   cancel("process interrupt").then(() => {

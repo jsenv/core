@@ -5,7 +5,10 @@ import fetch from "node-fetch"
 import { createNodeSystem } from "@dmail/module-loader"
 import { valueInstall } from "./valueInstall.js"
 import { createLocaters } from "../createLocaters.js"
-import { cancellationNone } from "../../../cancel/index.js"
+import {
+  createCancellationToken,
+  cancellationTokenCompose,
+} from "../../../cancellation-source/index.js"
 
 export const nodeVersionToCompileId = (version, compileMap) => {
   return Object.keys(compileMap).find((id) => {
@@ -19,7 +22,7 @@ export const nodeVersionToCompileId = (version, compileMap) => {
 }
 
 export const createNodePlatform = ({
-  cancellation = cancellationNone,
+  cancellationToken = createCancellationToken(),
   localRoot,
   remoteRoot,
   compileInto,
@@ -47,20 +50,22 @@ export const createNodePlatform = ({
     },
   })
 
-  cancellation.register(valueInstall(https.globalAgent.options, "rejectUnauthorized", false))
-  cancellation.register(valueInstall(global, "fetch", fetch))
-  cancellation.register(valueInstall(global, "System", nodeSystem))
+  cancellationToken.register(valueInstall(https.globalAgent.options, "rejectUnauthorized", false))
+  cancellationToken.register(valueInstall(global, "fetch", fetch))
+  cancellationToken.register(valueInstall(global, "System", nodeSystem))
 
-  const parentCancellation = cancellation
+  const platformCancellationToken = cancellationToken
 
   const executeFile = async ({
-    cancellation = parentCancellation,
+    cancellationToken = createCancellationToken(),
     file,
     instrument = false,
     setup = () => {},
     teardown = () => {},
   }) => {
-    await cancellation.toPromise()
+    cancellationToken = cancellationTokenCompose(platformCancellationToken, cancellationToken)
+
+    await cancellationToken.toPromise()
 
     markFileAsImported(file)
 

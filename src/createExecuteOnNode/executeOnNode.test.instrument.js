@@ -11,15 +11,15 @@ const instrument = true
 // const file = "src/__test__/file.js"
 const file = `src/createExecuteOnNode/fixtures/file.js`
 
-const exec = async ({ cancellation }) => {
+const exec = async ({ cancellationToken }) => {
   const jsCompileService = await createJsCompileService({
-    cancellation,
+    cancellationToken,
     localRoot,
     compileInto,
   })
 
   const result = await executeOnNode({
-    cancellation,
+    cancellationToken,
     localRoot,
     compileInto,
     compileService: jsCompileService,

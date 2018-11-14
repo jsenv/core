@@ -7,16 +7,16 @@ const compileInto = "build"
 const hotreload = true
 const file = `src/__test__/file.js`
 
-const exec = async ({ cancellation }) => {
+const exec = async ({ cancellationToken }) => {
   const jsCompileService = await createJsCompileService({
-    cancellation,
+    cancellationToken,
     localRoot,
     compileInto,
     watch: hotreload,
   })
 
   return executeOnNode({
-    cancellation,
+    cancellationToken,
     localRoot,
     compileInto,
     compileService: jsCompileService,

@@ -1,9 +1,9 @@
 import { createExecuteOnNode } from "./createExecuteOnNode.js"
 import { open as compileServerOpen } from "../server-compile/index.js"
-import { cancellationNone, createCancel } from "../cancel/index.js"
+import { createCancellationSource, createCancellationToken } from "../cancellation-source/index.js"
 
 export const executeOnNode = async ({
-  cancellation,
+  cancellationToken,
   protocol = "http",
 
   localRoot,
@@ -25,18 +25,18 @@ export const executeOnNode = async ({
   // and we are not watching the file changes
   // we autocancel, close server etc, once the file is executed
   let autoCancel
-  if (cancellation === undefined) {
+  if (cancellationToken === undefined) {
     if (hotreload) {
-      cancellation = cancellationNone
+      cancellationToken = createCancellationToken()
     } else {
-      const cancel = createCancel()
-      cancellation = cancel.cancellation
-      autoCancel = cancel.cancel
+      const autoCancelSource = createCancellationSource()
+      cancellationToken = autoCancelSource.token
+      autoCancel = autoCancelSource.cancel
     }
   }
 
   const server = await compileServerOpen({
-    cancellation,
+    cancellationToken,
     protocol,
 
     localRoot,
@@ -58,7 +58,7 @@ export const executeOnNode = async ({
   })
 
   let promise = execute({
-    cancellation,
+    cancellationToken,
     file,
     instrument,
     setup,

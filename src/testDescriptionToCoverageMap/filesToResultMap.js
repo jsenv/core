@@ -1,12 +1,12 @@
 import { promiseConcurrent } from "../promiseHelper.js"
 import { teardownForOutputAndCoverageMap } from "../platformTeardown.js"
-import { cancellationNone } from "../cancel/index.js"
+import { createCancellationToken } from "../cancellation-source/index.js"
 
 export const filesToResultMap = (
   files,
   execute,
   {
-    cancellation = cancellationNone,
+    cancellationToken = createCancellationToken,
     maxParallelExecution = 5,
     beforeAll = () => {},
     beforeEach = () => {},
@@ -18,7 +18,7 @@ export const filesToResultMap = (
     beforeEach({ file })
 
     return execute({
-      cancellation,
+      cancellationToken,
       file,
       instrument: true,
       teardown: teardownForOutputAndCoverageMap,
@@ -41,7 +41,7 @@ export const filesToResultMap = (
   beforeAll({ files })
 
   return promiseConcurrent(files, executeTestFile, {
-    cancellation,
+    cancellationToken,
     maxParallelExecution,
   }).then((results) => {
     afterAll({ files, results })

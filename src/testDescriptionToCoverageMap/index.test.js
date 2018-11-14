@@ -2,7 +2,7 @@ import path from "path"
 import { createExecuteOnNode } from "../createExecuteOnNode/createExecuteOnNode.js"
 import { createExecuteOnChromium } from "../createExecuteOnChromium/createExecuteOnChromium.js"
 import { testDescriptorToCoverageMapForProject } from "./testDescriptorToCoverageMapForProject.js"
-import { createCancel } from "../cancel/index.js"
+import { createCancellationSource } from "../cancellation-source/index.js"
 import assert from "assert"
 
 const localRoot = path.resolve(__dirname, "../../../")
@@ -18,9 +18,9 @@ const testDescriptor = {
     files: [], // ["src/__test__/file.test.js"]
   },
 }
-const { cancellation } = createCancel()
+const { token } = createCancellationSource()
 testDescriptorToCoverageMapForProject(testDescriptor, {
-  cancellation,
+  cancellationToken: token,
   localRoot,
   compileInto,
   watch,

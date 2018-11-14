@@ -8,7 +8,7 @@ import {
   getCompileMapLocalURL,
 } from "../compilePlatformAndSystem.js"
 import { createBrowserPlatformSource, createBrowserExecuteSource } from "../createBrowserSource.js"
-import { cancellationNone } from "../cancel/index.js"
+import { createCancellationToken } from "../cancellation-source/index.js"
 import { readFile } from "../fileHelper.js"
 import { forEachRessourceMatching } from "@dmail/project-structure"
 
@@ -52,7 +52,7 @@ const getIndexPageHTML = async ({ localRoot }) => {
 }
 
 export const open = async ({
-  cancellation = cancellationNone,
+  cancellationToken = createCancellationToken(),
   protocol = "http",
   ip = "127.0.0.1",
   port = 3000,
@@ -67,7 +67,7 @@ export const open = async ({
   sourceCacheIgnore,
 }) => {
   const server = await serverCompileOpen({
-    cancellation,
+    cancellationToken,
     localRoot,
     compileInto,
     protocol, // reuse browser protocol
@@ -146,7 +146,7 @@ export const open = async ({
   )
 
   return serverOpen({
-    cancellation,
+    cancellationToken,
     protocol,
     ip,
     port,

@@ -5,7 +5,7 @@ import { locate } from "./locate.js"
 export const jsCompileToService = (
   compileFile,
   {
-    cancellation,
+    cancellationToken,
     localRoot,
     compileInto,
     compileParamMap = {},
@@ -29,7 +29,7 @@ export const jsCompileToService = (
   })
 
   const service = compileToService(compileFile, {
-    cancellation,
+    cancellationToken,
     localRoot,
     compileInto,
     locate,

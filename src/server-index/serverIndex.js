@@ -1,8 +1,8 @@
 import { open as serverOpen } from "../server/index.js"
 
-export const open = ({ cancellation, protocol, ip, port, body }) => {
+export const open = ({ cancellationToken, protocol, ip, port, body }) => {
   return serverOpen({
-    cancellation,
+    cancellationToken,
     protocol,
     ip,
     port,

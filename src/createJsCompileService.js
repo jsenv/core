@@ -27,7 +27,7 @@ const pluginMapDefault = pluginOptionMapToPluginMap({
 })
 
 export const createJsCompileService = async ({
-  cancellation,
+  cancellationToken,
   localRoot,
   compileInto,
   pluginMap = pluginMapDefault,
@@ -63,7 +63,7 @@ export const createJsCompileService = async ({
 
   const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
   const jsCompileService = jsCompileToService(jsCompile, {
-    cancellation,
+    cancellationToken,
     localRoot,
     compileInto,
     compileParamMap,

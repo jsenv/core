@@ -1,23 +1,23 @@
 import { executeOnNode } from "./executeOnNode.js"
 import path from "path"
 import { createJsCompileService } from "../createJsCompileService.js"
-import { createCancel } from "../cancel/index.js"
+import { createCancellationSource } from "../cancellation-source/index.js"
 
 const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = "build"
 const watch = false
 const file = `src/__test__/file.js`
-const { cancellation, cancel } = createCancel()
+const { token, cancel } = createCancellationSource()
 
-const exec = async ({ cancellation }) => {
+const exec = async ({ cancellationToken }) => {
   const jsCompileService = await createJsCompileService({
-    cancellation,
+    cancellationToken,
     localRoot,
     compileInto,
   })
 
   return executeOnNode({
-    cancellation,
+    cancellationToken,
     localRoot,
     compileInto,
     compileService: jsCompileService,
@@ -29,4 +29,4 @@ const exec = async ({ cancellation }) => {
   })
 }
 
-exec({ cancellation })
+exec({ cancellationToken: token })

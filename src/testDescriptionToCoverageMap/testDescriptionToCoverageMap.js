@@ -33,7 +33,7 @@ export const testDescriptionToCoverageMap = async (
     watchPredicate = () => true,
     listFilesToCover = () => [],
   },
-  { cancellation, watch = false },
+  { cancellationToken, watch = false },
 ) => {
   const isTestFile = testDescriptionToIsTestFile(testDescription)
   const jsCompileService = await projectConfigToJsCompileService({
@@ -54,7 +54,7 @@ export const testDescriptionToCoverageMap = async (
 
   const [server, filesToCover] = await Promise.all([
     serverCompileOpen({
-      cancellation,
+      cancellationToken,
       protocol: "http",
       ip: "127.0.0.1",
       port: 0,
@@ -68,7 +68,7 @@ export const testDescriptionToCoverageMap = async (
   ])
 
   const platformResultMap = await testDescriptionToPlatformResultMap(testDescription, {
-    cancellation,
+    cancellationToken,
     localRoot,
     compileInto,
     remoteRoot: server.origin,
@@ -78,7 +78,7 @@ export const testDescriptionToCoverageMap = async (
   const platformCoverageMap = platformResultMapToCoverageMap(platformResultMap)
 
   const coverageMap = await platformCoverageMapToCoverageMap(platformCoverageMap, {
-    cancellation,
+    cancellationToken,
     localRoot,
     filesToCover: filesToCover.filter((file) => isTestFile(file) === false),
   })

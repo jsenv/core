@@ -13,7 +13,7 @@ export const cancellationToRejectedPromise = (reason) => Promise.reject(createCa
 // It may lead to memroy leak but it has to be tested
 const cancellationToPromise = cancellationToPendingPromise
 
-const createCancellation = () => {
+const createAutoCleanedRegistrable = () => {
   const callbackSet = new Set()
 
   const register = (callback) => {
@@ -32,14 +32,12 @@ const createCancellation = () => {
   return { register, getRegisteredCallbacks }
 }
 
-export const createCancel = () => {
+export const createCancellationSource = () => {
   let canceled = false
 
-  const isCanceled = () => {
-    return canceled
-  }
+  const isCanceled = () => canceled
 
-  const { register, getRegisteredCallbacks } = createCancellation()
+  const { register, getRegisteredCallbacks } = createAutoCleanedRegistrable()
 
   let canceledPromise
   let cancelReason
@@ -67,7 +65,7 @@ export const createCancel = () => {
   }
 
   return {
-    cancellation: {
+    token: {
       register,
       isRequested: isCanceled,
       toPromise,
@@ -76,8 +74,35 @@ export const createCancel = () => {
   }
 }
 
-export const cancellationNone = {
-  register: () => () => {},
-  isRequested: () => false,
-  toPromise: () => Promise.resolve(),
+export const cancellationTokenCompose = (...tokens) => {
+  const register = (callback) => {
+    const unregisters = tokens.map((token) => token.register(callback))
+    return () => unregisters.forEach((unregister) => unregister())
+  }
+
+  const isRequested = () => tokens.some((token) => token.isRequested())
+
+  const toPromise = () => (isRequested() ? cancellationToPromise() : Promise.resolve())
+
+  return {
+    register,
+    isRequested,
+    toPromise,
+  }
 }
+
+export const createCancellationToken = () => {
+  const { register } = createAutoCleanedRegistrable()
+
+  return {
+    register,
+    isRequested: () => false,
+    toPromise: () => Promise.resolve(),
+  }
+}
+
+// export const cancelllationTokenCanceled = {
+//   register: () => () => {},
+//   isRequested: () => true,
+//   toPromise: () => cancellationToPromise(),
+// }

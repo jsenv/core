@@ -1,20 +1,24 @@
-const { serverBrowserOpen, createJsCompileService, createCancel } = require("../dist/index.js")
+const {
+  serverBrowserOpen,
+  createJsCompileService,
+  createCancellationSource,
+} = require("../dist/index.js")
 const path = require("path")
 
 const localRoot = path.resolve(__dirname, "../")
 const compileInto = "build"
 const hotreload = true
 
-const exec = async ({ cancellation }) => {
+const exec = async ({ cancellationToken }) => {
   const compileService = await createJsCompileService({
-    cancellation,
+    cancellationToken,
     localRoot,
     compileInto,
     watch: hotreload,
   })
 
   return serverBrowserOpen({
-    cancellation,
+    cancellationToken,
     localRoot,
     compileInto,
     compileService,
@@ -23,8 +27,8 @@ const exec = async ({ cancellation }) => {
   })
 }
 
-const { cancellation, cancel } = createCancel()
-exec({ cancellation })
+const { cancel, token } = createCancellationSource()
+exec({ cancellationToken: token })
 process.on("SIGINT", () => {
   cancel("process interrupt").then(() => process.exit(0))
 })

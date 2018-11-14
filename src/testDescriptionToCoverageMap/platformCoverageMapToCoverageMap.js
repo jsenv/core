@@ -4,8 +4,8 @@ import { readFile } from "../fileHelper.js"
 const platformCoverageMapToFilesMissed = (coverageMap, filesToCover) =>
   filesToCover.filter((file) => file in coverageMap === false)
 
-const fileToEmptyCoverage = async ({ cancellation, localRoot, file }) => {
-  await cancellation.toPromise()
+const fileToEmptyCoverage = async ({ cancellationToken, localRoot, file }) => {
+  await cancellationToken.toPromise()
 
   try {
     const inputSource = await readFile(`${localRoot}/${file}`)
@@ -40,7 +40,7 @@ const fileToEmptyCoverage = async ({ cancellation, localRoot, file }) => {
 
 export const platformCoverageMapToCoverageMap = async (
   platformCoverageMap,
-  { cancellation, localRoot, filesToCover = [] },
+  { cancellationToken, localRoot, filesToCover = [] },
 ) => {
   const filesMissed = platformCoverageMapToFilesMissed(platformCoverageMap, filesToCover)
 
@@ -48,7 +48,7 @@ export const platformCoverageMapToCoverageMap = async (
 
   await Promise.all(
     filesMissed.map(async (file) => {
-      const emptyCoverage = await fileToEmptyCoverage({ cancellation, localRoot, file })
+      const emptyCoverage = await fileToEmptyCoverage({ cancellationToken, localRoot, file })
       missedCoverageMap[file] = emptyCoverage
     }),
   )
