@@ -53,6 +53,7 @@ export const executeOnNode = async ({
     compileInto,
     hotreload,
     hotreloadSSERoot: server.origin,
+    verbose,
     restartStart,
   })
 
@@ -62,7 +63,6 @@ export const executeOnNode = async ({
     instrument,
     setup,
     teardown,
-    verbose,
   })
   if (autoCancel) {
     promise.then(() => {

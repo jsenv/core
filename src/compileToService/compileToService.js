@@ -91,7 +91,7 @@ export const compileToService = (
     // with referer node_modules/package/index.js
     // may be found at node_modules/package/node_modules/dependency/index.js
     // in that case, send temporary redirect to client
-    if (localFile !== ressource) {
+    if (localFile !== file) {
       return {
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
         status: 307,
