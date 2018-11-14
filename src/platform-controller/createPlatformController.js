@@ -37,14 +37,13 @@ export const createPlatformController = ({
     }
   }
 
-  const { restart: hotreloadRestart, token: hotreloadToken } = createRestartSource()
-
-  fileChangedSignal.listen(({ file }) => {
-    hotreloadRestart(`file changed: ${file}`)
-  })
-
   const platformCancellationToken = cancellationToken
-  const platformRestartToken = hotreloadToken
+
+  const hotreloadRestartSource = createRestartSource()
+  fileChangedSignal.listen(({ file }) => {
+    hotreloadRestartSource.restart(`file changed: ${file}`)
+  })
+  const platformRestartToken = hotreloadRestartSource.token
 
   const execute = ({
     cancellationToken = createCancellationToken(),
