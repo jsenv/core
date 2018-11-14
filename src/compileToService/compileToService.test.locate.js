@@ -34,6 +34,30 @@ const test = async () => {
     }
   }
 
+  // locate responding 307
+  {
+    const compileService = compileToService(() => {}, {
+      localRoot: "root",
+      compileInto: "build",
+      locate: () => "root/node_modules/package/index.js",
+    })
+
+    const actual = await compileService({
+      origin: "http://127.0.0.1",
+      ressource: "build/foo/node_modules/dependency/node_modules/package/index.js",
+      headers: {
+        referer: "http://127.0.0.1/build/foo/node_modules/dependency/index.js",
+      },
+    })
+    const expected = {
+      status: 307,
+      headers: {
+        location: "http://127.0.0.1/build/foo/node_modules/package/index.js",
+      },
+    }
+    assert.deepEqual(actual, expected)
+  }
+
   console.log("passed")
 }
 

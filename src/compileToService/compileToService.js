@@ -115,6 +115,22 @@ export const compileToService = (
 
     const localFile = await locate(file, localDependentFile)
 
+    if (localFile.startsWith(`${localRoot}/`)) {
+      const localRelativeFile = localFile.slice(localRoot.length + 1)
+      // a request to node_modules/package/node_modules/dependency/index.js
+      // may be found at node_modules/dependency/index.js
+      // in that case, send temporary redirect to client
+      if (localRelativeFile !== ressource) {
+        return {
+          // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
+          status: 307,
+          headers: {
+            location: `${origin}/${compileInto}/${compileId}/${localRelativeFile}`,
+          },
+        }
+      }
+    }
+
     // when I ask for a compiled file, watch the corresponding file on filesystem
     if (watch && watchedFiles.has(localFile) === false && watchPredicate(file)) {
       const fileWatcher = watchFile(localFile, () => {
