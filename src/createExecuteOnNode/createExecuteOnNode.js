@@ -3,7 +3,7 @@ import path from "path"
 import { uneval } from "@dmail/uneval"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 import { anyOf } from "../outcome/index.js"
-import { createPlatformController } from "./createPlatformController.js"
+import { createPlatformController } from "../platform-controller/createPlatformController.js"
 
 const root = path.resolve(__dirname, "../../../")
 const nodeClientFile = `${root}/dist/src/createExecuteOnNode/client.js`
