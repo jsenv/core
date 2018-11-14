@@ -6,35 +6,13 @@ import { stat, readFile } from "../fileHelper.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { createETag } from "./helpers.js"
 import { compileFile } from "./compileFile.js"
-import { ressourceToCompileInfo } from "./requestToCompileInfo.js"
+import { ressourceToCompileInfo } from "./ressourceToCompileInfo.js"
 import { watchFile } from "../watchFile.js"
 import { createSignal } from "@dmail/signal"
 import { acceptContentType, createSSERoom, serviceCompose } from "../server/index.js"
 import { cancellationNone } from "../cancel/index.js"
 import { hrefToOrigin, hrefToRessource } from "../urlHelper.js"
-import path from "path"
-
-const refererToDependentFile = (referer, { origin, ressource, compileInto, compileId }) => {
-  const refererOrigin = hrefToOrigin(referer)
-
-  if (refererOrigin !== origin) {
-    return null
-  }
-
-  const refererRessource = hrefToRessource(referer)
-
-  if (refererRessource === ressource) {
-    return null
-  }
-
-  const refererCompileInfo = ressourceToCompileInfo(refererRessource, compileInto)
-
-  if (refererCompileInfo.compileId !== compileId) {
-    return null
-  }
-
-  return refererCompileInfo.file
-}
+import { ressourceToLocateParam } from "./ressourceToLocateParam.js"
 
 export const compileToService = (
   compile,
@@ -42,7 +20,9 @@ export const compileToService = (
     cancellation = cancellationNone,
     localRoot,
     compileInto,
-    locate = (file, localDependentFile) => `${localDependentFile}/${file}`,
+    locate = ({ dependentFolder, file }) => {
+      return dependentFolder ? `${dependentFolder}/${file}` : file
+    },
     compileParamMap,
     localCacheStrategy,
     localCacheTrackHit,
@@ -70,7 +50,7 @@ export const compileToService = (
   })
 
   const compileService = async ({ origin, ressource, method, headers = {}, body }) => {
-    let { isAsset, compileId, file } = ressourceToCompileInfo(ressource, compileInto)
+    const { isAsset, compileId, file } = ressourceToCompileInfo(ressource, compileInto)
 
     // serve asset
     if (isAsset) {
@@ -82,61 +62,53 @@ export const compileToService = (
       return null
     }
 
-    let localDependentFile
+    let dependentRessource
     const refererHeaderName = "x-module-referer" in headers ? "x-module-referer" : "referer"
     if (refererHeaderName in headers) {
       const referer = headers[refererHeaderName]
 
-      let dependentFile
       try {
-        dependentFile = refererToDependentFile(referer, {
-          origin,
-          ressource,
-          compileInto,
-          compileId,
-        })
+        const refererOrigin = hrefToOrigin(referer)
+        if (refererOrigin === origin) {
+          dependentRessource = hrefToRessource(referer)
+        }
       } catch (e) {
         return {
           status: 400,
           reason: `${refererHeaderName} header is invalid`,
         }
       }
-
-      if (dependentFile) {
-        const localDependentFolder = path.dirname(dependentFile)
-        file = file.slice(`${localDependentFolder}/`.length)
-        localDependentFile = `${localRoot}/${dependentFile}`
-      } else {
-        localDependentFile = localRoot
-      }
-    } else {
-      localDependentFile = localRoot
     }
 
-    const localFile = await locate(file, localDependentFile)
+    const localFile = await locate({
+      localRoot,
+      ...ressourceToLocateParam(ressource, dependentRessource, compileInto),
+    })
 
-    if (localFile.startsWith(`${localRoot}/`)) {
-      const localRelativeFile = localFile.slice(localRoot.length + 1)
-      // a request to node_modules/package/node_modules/dependency/index.js
-      // may be found at node_modules/dependency/index.js
-      // in that case, send temporary redirect to client
-      if (localRelativeFile !== ressource) {
-        return {
-          // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
-          status: 307,
-          headers: {
-            location: `${origin}/${compileInto}/${compileId}/${localRelativeFile}`,
-          },
-        }
+    // a request to node_modules/package/node_modules/dependency/index.js
+    // may be found at node_modules/dependency/index.js
+    // or a request to node_modules/dependency/index.js
+    // with referer node_modules/package/index.js
+    // may be found at node_modules/package/node_modules/dependency/index.js
+    // in that case, send temporary redirect to client
+    if (localFile !== ressource) {
+      return {
+        // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
+        status: 307,
+        headers: {
+          location: `${origin}/${compileInto}/${compileId}/${localFile}`,
+        },
       }
     }
+
+    const localFileAbsolute = `${localRoot}/${localFile}`
 
     // when I ask for a compiled file, watch the corresponding file on filesystem
-    if (watch && watchedFiles.has(localFile) === false && watchPredicate(file)) {
-      const fileWatcher = watchFile(localFile, () => {
+    if (watch && watchedFiles.has(localFileAbsolute) === false && watchPredicate(localFile)) {
+      const fileWatcher = watchFile(localFileAbsolute, () => {
         watchSignal.emit(file)
       })
-      watchedFiles.set(localFile, fileWatcher)
+      watchedFiles.set(localFileAbsolute, fileWatcher)
     }
 
     const compileService = async () => {
@@ -147,7 +119,7 @@ export const compileToService = (
         compileId,
         compileParamMap,
         file,
-        inputFile: localFile,
+        inputFile: localFileAbsolute,
         cacheStrategy: localCacheStrategy,
         cacheTrackHit: localCacheTrackHit,
       })
@@ -165,7 +137,7 @@ export const compileToService = (
 
     try {
       if (cacheWithMtime) {
-        const { mtime } = await stat(localFile)
+        const { mtime } = await stat(localFileAbsolute)
 
         if ("if-modified-since" in headers) {
           const ifModifiedSince = headers["if-modified-since"]
@@ -192,7 +164,7 @@ export const compileToService = (
       }
 
       if (cacheWithETag) {
-        const content = await readFile(localFile)
+        const content = await readFile(localFileAbsolute)
         const eTag = createETag(content)
 
         if ("if-none-match" in headers) {

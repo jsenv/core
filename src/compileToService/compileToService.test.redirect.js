@@ -2,44 +2,37 @@ import { compileToService } from "./compileToService.js"
 import assert from "assert"
 
 const test = async () => {
-  // locate with referer
+  // locate 307 on module more nested than expected
   {
     const compileService = compileToService(() => {}, {
       localRoot: "root",
       compileInto: "build",
-      locate: (file, localDependentFile) =>
-        Promise.reject({
-          code: "LOCATE_ERROR",
-          file,
-          localDependentFile,
-        }),
+      locate: () => "node_modules/dependency/node_modules/package/index.js",
     })
 
-    try {
-      await compileService({
-        origin: "http://127.0.0.1",
-        ressource: "build/foo/node_modules/dependency/node_modules/package/index.js",
-        headers: {
-          referer: "http://127.0.0.1/build/foo/node_modules/dependency/index.js",
-        },
-      })
-      assert.fail("must not be called")
-    } catch (actual) {
-      const expected = {
-        code: "LOCATE_ERROR",
-        file: "node_modules/package/index.js",
-        localDependentFile: "root/node_modules/dependency/index.js",
-      }
-      assert.deepEqual(actual, expected)
+    const actual = await compileService({
+      origin: "http://127.0.0.1",
+      ressource: "build/foo/package/index.js",
+      headers: {
+        referer: "http://127.0.0.1/build/foo/node_modules/dependency/index.js",
+      },
+    })
+    const expected = {
+      status: 307,
+      headers: {
+        location:
+          "http://127.0.0.1/build/foo/node_modules/dependency/node_modules/package/index.js",
+      },
     }
+    assert.deepEqual(actual, expected)
   }
 
-  // locate responding 307
+  // locate 307 on module less nested than expected
   {
     const compileService = compileToService(() => {}, {
       localRoot: "root",
       compileInto: "build",
-      locate: () => "root/node_modules/package/index.js",
+      locate: () => "node_modules/package/index.js",
     })
 
     const actual = await compileService({
