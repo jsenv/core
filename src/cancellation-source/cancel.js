@@ -1,4 +1,5 @@
 // https://github.com/tc39/proposal-cancellation/tree/master/stage0
+import { createOnceSignal } from "../functionHelper.js"
 
 export const createCanceledError = (reason) => {
   const canceledError = new Error(`canceled because ${reason}`)
@@ -13,31 +14,12 @@ export const cancellationToRejectedPromise = (reason) => Promise.reject(createCa
 // It may lead to memroy leak but it has to be tested
 const cancellationToPromise = cancellationToPendingPromise
 
-const createAutoCleanedRegistrable = () => {
-  const callbackSet = new Set()
-
-  const register = (callback) => {
-    callbackSet.add(callback)
-    return () => {
-      callbackSet.delete(callback)
-    }
-  }
-
-  const getRegisteredCallbacks = () => {
-    const callbacks = Array.from(callbackSet.values())
-    callbackSet.clear()
-    return callbacks
-  }
-
-  return { register, getRegisteredCallbacks }
-}
-
 export const createCancellationSource = () => {
   let canceled = false
 
   const isCanceled = () => canceled
 
-  const { register, getRegisteredCallbacks } = createAutoCleanedRegistrable()
+  const { register, getRegisteredCallbacks } = createOnceSignal()
 
   let canceledPromise
   let cancelReason
@@ -92,7 +74,7 @@ export const cancellationTokenCompose = (...tokens) => {
 }
 
 export const createCancellationToken = () => {
-  const { register } = createAutoCleanedRegistrable()
+  const { register } = createOnceSignal()
 
   return {
     register,

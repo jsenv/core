@@ -75,3 +75,22 @@ export const memoizeSync = (fn, { restore, save, transform } = createStore()) =>
     return transform(freshValue, ...args)
   }
 }
+
+export const createOnceSignal = () => {
+  const callbackSet = new Set()
+
+  const register = (callback) => {
+    callbackSet.add(callback)
+    return () => {
+      callbackSet.delete(callback)
+    }
+  }
+
+  const getRegisteredCallbacks = () => {
+    const callbacks = Array.from(callbackSet.values())
+    callbackSet.clear()
+    return callbacks
+  }
+
+  return { register, getRegisteredCallbacks }
+}

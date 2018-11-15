@@ -1,10 +1,6 @@
 import { fork, forkMatch, labelize, anyOf } from "../outcome/index.js"
 import { createCancellationToken, cancellationTokenCompose } from "../cancellation-source/index.js"
-import {
-  createRestartSource,
-  createRestartToken,
-  restartTokenCompose,
-} from "../restart-source/index.js"
+import { createRestartSource, createRestartToken, restartTokenCompose } from "../restart/index.js"
 import { hotreloadOpen } from "./hotreload.js"
 import { createSignal } from "@dmail/signal"
 
@@ -63,10 +59,6 @@ export const createPlatformController = ({
       return executionCancellationToken.register(settle)
     }
 
-    const restarted = (settle) => {
-      return restartToken.register(settle)
-    }
-
     let currentExecutionResolve
     let currentExecutionReject
     let currentExecutionPromise
@@ -85,7 +77,6 @@ export const createPlatformController = ({
       nextExecutionPromise()
     }
     nextExecutionPromise()
-    restartToken.setPromise(currentExecutionPromise)
 
     const startPlatform = async () => {
       await cancellationToken.toPromise()
@@ -126,10 +117,12 @@ export const createPlatformController = ({
         }
       }
 
-      const restart = (reason) => {
+      log("open restart")
+      const closeRestart = restartToken.open((reason) => {
         log(`${platformTypeForLog} restart because ${reason}`)
 
-        platformPromise.then(startPlatform)
+        const restartExecutionPromise = platformPromise.then(startPlatform)
+
         if (platformAlive) {
           forkMatch(labelize({ errored, closed }), {
             errored: platformReject,
@@ -139,11 +132,15 @@ export const createPlatformController = ({
           })
           stop(reason)
         }
-      }
 
-      const listenRestart = () => {
-        log("listen restart")
-        fork(restarted, restart)
+        return restartExecutionPromise
+      })
+      cancellationToken.register((reason) => {
+        log(`close restart because ${reason}`)
+        return closeRestart(reason)
+      })
+      const restarted = (settle) => {
+        return restartToken.register(settle)
       }
 
       const onCancelledAfterStarted = (reason) => {
@@ -153,7 +150,6 @@ export const createPlatformController = ({
       const onErroredAfterStarted = (error) => {
         platformReject(error)
         executionReject(error)
-        listenRestart()
       }
 
       const onClosedAfterStarted = () => {
@@ -162,7 +158,6 @@ export const createPlatformController = ({
         )
         platformReject(error)
         executionReject(error)
-        listenRestart()
       }
 
       const onDoneAfterStarted = (value) => {
@@ -172,23 +167,20 @@ export const createPlatformController = ({
 
         const onErroredAfterDone = (error) => {
           platformReject(error)
-          listenRestart()
         }
 
         const onClosedAfterDone = () => {
           platformResolve()
-          listenRestart()
         }
 
         // should I call child.disconnect() at some point ?
         // https://nodejs.org/api/child_process.html#child_process_subprocess_disconnect
         executionResolve(value)
-        log("listen restart")
         forkMatch(labelize({ cancelled, errored, closed, restarted }), {
           cancelled: onCancelledAfterDone,
           errored: onErroredAfterDone,
           closed: onClosedAfterDone,
-          restarted: restart,
+          restarted: () => {},
         })
       }
 
@@ -209,9 +201,11 @@ export const createPlatformController = ({
         cancelled: onCancelledAfterStarted,
         errored: onErroredAfterStarted,
         closed: onClosedAfterStarted,
-        restarted: restart,
+        restarted: () => {},
         done: onDoneAfterStarted,
       })
+
+      return currentExecutionPromise
     }
     startPlatform()
 
