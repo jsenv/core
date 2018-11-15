@@ -84,17 +84,17 @@ export const anyOf = (...outcomes) => {
   }
 }
 
-export const forkMatch = (outcome, callbackMap) => {
+export const forkMatch = (outcome, reactionMap) => {
   return fork(outcome, ({ name, value }) => {
-    if (name in callbackMap === false) {
+    if (name in reactionMap === false) {
       return undefined
     }
 
-    const callback = callbackMap[name]
-    if (typeof callback !== "function") {
-      throw new TypeError(`${name} must be a function, got ${callback}`)
+    const reaction = reactionMap[name]
+    if (typeof reaction !== "function") {
+      return reaction
     }
 
-    return callback(value)
+    return reaction(value)
   })
 }

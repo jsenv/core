@@ -176,11 +176,16 @@ export const createPlatformController = ({
         // should I call child.disconnect() at some point ?
         // https://nodejs.org/api/child_process.html#child_process_subprocess_disconnect
         executionResolve(value)
-        forkMatch(labelize({ cancelled, errored, closed, restarted }), {
+        forkMatch(labelize({ cancelled, restarted, errored, closed }), {
           cancelled: onCancelledAfterDone,
+          // restarted is here to prevent reacting to errored/closed
+          // but I guess we still want to perform associated action (maybe)
+          // and also restart
+          // if an error occurs during restart we may want to be notified
+          // but it certainly complexifies sutff let's keep it like that
+          restarted: null,
           errored: onErroredAfterDone,
           closed: onClosedAfterDone,
-          restarted: () => {},
         })
       }
 
@@ -197,11 +202,16 @@ export const createPlatformController = ({
       fork(done, (value) => {
         log(`${file} execution on ${platformTypeForLog} done with ${value}`)
       })
-      forkMatch(labelize({ cancelled, errored, closed, restarted, done }), {
+      forkMatch(labelize({ cancelled, restarted, errored, closed, done }), {
         cancelled: onCancelledAfterStarted,
+        // restarted is here to prevent reacting to errored/closed/done
+        // but I guess we still want to perform associated action (maybe)
+        // and also restart
+        // if an error occurs during restart we may want to be notified
+        // but it certainly complexifies sutff let's keep it like that
+        restarted: null,
         errored: onErroredAfterStarted,
         closed: onClosedAfterStarted,
-        restarted: () => {},
         done: onDoneAfterStarted,
       })
 
