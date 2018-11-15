@@ -3,7 +3,7 @@
 /* eslint-disable import/max-dependencies */
 import { createRequestToFileResponse } from "../createRequestToFileResponse/index.js"
 import { open as serverOpen, enableCORS, serviceCompose } from "../server/index.js"
-import { createCancellationToken } from "../cancellation-source/index.js"
+import { createCancellationToken } from "../cancellation/index.js"
 
 export const open = async ({
   cancellationToken = createCancellationToken(),

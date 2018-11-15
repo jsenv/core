@@ -1,6 +1,6 @@
 import { createExecuteOnNode } from "./createExecuteOnNode.js"
 import { open as compileServerOpen } from "../server-compile/index.js"
-import { createCancellationSource, createCancellationToken } from "../cancellation-source/index.js"
+import { createCancellationSource, createCancellationToken } from "../cancellation/index.js"
 
 export const executeOnNode = async ({
   cancellationToken,

@@ -1,6 +1,6 @@
 import { filesToResultMap } from "./filesToResultMap.js"
 import { promiseSequence } from "../promiseHelper.js"
-import { createCancellationToken } from "../cancellation-source/index.js"
+import { createCancellationToken } from "../cancellation/index.js"
 
 export const platformsToResultMap = async ({
   cancellationToken = createCancellationToken(),

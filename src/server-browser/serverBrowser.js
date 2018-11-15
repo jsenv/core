@@ -8,7 +8,7 @@ import {
   getCompileMapLocalURL,
 } from "../compilePlatformAndSystem.js"
 import { createBrowserPlatformSource, createBrowserExecuteSource } from "../createBrowserSource.js"
-import { createCancellationToken } from "../cancellation-source/index.js"
+import { createCancellationToken } from "../cancellation/index.js"
 import { readFile } from "../fileHelper.js"
 import { forEachRessourceMatching } from "@dmail/project-structure"
 

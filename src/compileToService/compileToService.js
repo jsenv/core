@@ -10,7 +10,7 @@ import { ressourceToCompileInfo } from "./ressourceToCompileInfo.js"
 import { watchFile } from "../watchFile.js"
 import { createSignal } from "@dmail/signal"
 import { acceptContentType, createSSERoom, serviceCompose } from "../server/index.js"
-import { createCancellationToken } from "../cancellation-source/index.js"
+import { createCancellationToken } from "../cancellation/index.js"
 import { hrefToOrigin, hrefToRessource } from "../urlHelper.js"
 import { ressourceToLocateParam } from "./ressourceToLocateParam.js"
 

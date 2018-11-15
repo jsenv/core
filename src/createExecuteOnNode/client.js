@@ -1,7 +1,7 @@
 import { createNodePlatform } from "../platform/index.js"
 import { uneval } from "@dmail/uneval"
 import { getCompileMapLocalURL } from "../compilePlatformAndSystem.js"
-import { createCancellationSource } from "../cancellation-source/index.js"
+import { createCancellationSource } from "../cancellation/index.js"
 
 const sendToParent = (type, data) => {
   // process.send algorithm does not send non enumerable values

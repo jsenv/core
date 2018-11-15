@@ -1,5 +1,5 @@
 import { fork, forkMatch, labelize, anyOf } from "../outcome/index.js"
-import { createCancellationToken, cancellationTokenCompose } from "../cancellation-source/index.js"
+import { createCancellationToken, cancellationTokenCompose } from "../cancellation/index.js"
 import { createRestartSource, createRestartToken, restartTokenCompose } from "../restart/index.js"
 import { hotreloadOpen } from "./hotreload.js"
 import { createSignal } from "@dmail/signal"
