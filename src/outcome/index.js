@@ -87,14 +87,14 @@ export const anyOf = (...outcomes) => {
 export const forkMatch = (outcome, reactionMap) => {
   return fork(outcome, ({ name, value }) => {
     if (name in reactionMap === false) {
-      return undefined
+      return
     }
 
     const reaction = reactionMap[name]
     if (typeof reaction !== "function") {
-      return reaction
+      return
     }
 
-    return reaction(value)
+    reaction(value)
   })
 }
