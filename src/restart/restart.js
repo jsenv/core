@@ -1,47 +1,62 @@
-import { createOnceSignal } from "../functionHelper.js"
-
 export const createRestartSource = () => {
-  const { register, getRegisteredCallbacks } = createOnceSignal()
-
-  let opened = false
-  const isOpened = () => opened
-
   let restartImplementation
-  let restartPromise
+  let restartReason
+  let opened = false
+  let requested = false
+  const restartResolveList = []
+
+  let requestedResolve
+  let requestedPromise
+  const nextRequestedPromise = () => {
+    requestedPromise = new Promise((resolve) => {
+      requestedResolve = resolve
+    })
+  }
+  nextRequestedPromise()
+
+  const onOpenedAndRequested = () => {
+    const sharedRestartPromise = Promise.resolve().then(() => restartImplementation(restartReason))
+    restartImplementation.then(() => {
+      // restart is done, next call to restart
+      nextRequestedPromise()
+    })
+    const resolveListCopy = restartResolveList.slice()
+    restartResolveList.length = 0
+    resolveListCopy.forEach((resolve) => resolve(sharedRestartPromise))
+  }
+
   const open = (callback) => {
     opened = true
-    // you can provide the restartImplementation
-    // even if currently restarting, it's ok
     restartImplementation = callback
-    restartPromise = undefined
 
-    let closed = false // repeated call to close must be ignored
+    if (requested) {
+      onOpenedAndRequested()
+    }
+
     return () => {
-      if (closed) return
-      closed = true
       opened = false
-      restartImplementation = undefined
-      restartPromise = undefined
     }
   }
 
   const restart = (reason) => {
-    if (opened === false) {
-      return Promise.resolve()
-    }
-    if (restartPromise) {
-      return restartPromise
-    }
+    requested = true
+    restartReason = reason
+    requestedResolve(reason)
+    const restartPromise = new Promise((resolve) => {
+      restartResolveList.push(resolve)
+    })
 
-    getRegisteredCallbacks().forEach((callback) => callback(reason))
-    restartPromise = Promise.resolve().then(() => restartImplementation(reason))
+    if (opened) {
+      onOpenedAndRequested()
+    }
 
     return restartPromise
   }
 
+  const toRequestedPromise = () => requestedPromise
+
   const token = {
-    register,
-    isOpened,
+    toRequestedPromise,
     open,
   }
 
@@ -49,23 +64,23 @@ export const createRestartSource = () => {
 }
 
 export const createRestartToken = () => {
-  const { register } = createOnceSignal()
-
   return {
-    register,
-    isOpened: () => false,
+    toRequestedPromise: () => new Promise(() => {}),
     open: () => () => {},
   }
 }
 
 export const restartTokenCompose = (...restartTokens) => {
   const restartToken = {
-    register: (callback) => {
-      const unregisters = restartTokens.map((restartToken) => restartToken.register(callback))
-      return () => unregisters.forEach((unregister) => unregister())
+    toRequestedPromise: () => {
+      return Promise.race([restartTokens.map((restartToken) => restartToken.toRequestedPromise())])
     },
-    isOpened: () => restartTokens.some((restartToken) => restartToken.isOpened()),
-    open: (callback) => restartTokens.forEach((restartToken) => restartToken.open(callback)),
+    open: (callback) => {
+      const closeList = restartTokens.map((restartToken) => restartToken.open(callback))
+      return () => {
+        closeList.forEach((close) => close())
+      }
+    },
   }
 
   return restartToken

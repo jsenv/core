@@ -7,7 +7,7 @@ import { populateNodeResponse } from "./populateNodeResponse.js"
 import { createSignal } from "@dmail/signal"
 import killPort from "kill-port"
 import { URL } from "url"
-import { createCancellationToken } from "../cancel/index.js"
+import { createCancellationToken, cancellationTokenToPromise } from "../cancellation/index.js"
 import { eventRace, registerEvent } from "../eventHelper.js"
 import { processUnhandledException } from "./processUnhandledException.js"
 
@@ -236,9 +236,9 @@ export const open = async (
     }
   }
 
-  await cancellationToken.toPromise()
+  await cancellationTokenToPromise(cancellationToken)
   await (forcePort ? killPort(port) : Promise.resolve())
-  await cancellationToken.toPromise()
+  await cancellationTokenToPromise(cancellationToken)
 
   const { nodeServer, agent } = getNodeServerAndAgent({ protocol, signature })
 

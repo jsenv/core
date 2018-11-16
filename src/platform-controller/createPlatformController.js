@@ -1,8 +1,12 @@
-import { fork, forkMatch, labelize, anyOf } from "../outcome/index.js"
-import { createCancellationToken, cancellationTokenCompose } from "../cancellation/index.js"
+import {
+  createCancellationToken,
+  cancellationTokenCompose,
+  cancellationTokenToPromise,
+} from "../cancellation/index.js"
 import { createRestartSource, createRestartToken, restartTokenCompose } from "../restart/index.js"
 import { hotreloadOpen } from "./hotreload.js"
 import { createSignal } from "@dmail/signal"
+import { namedPromiseMatch } from "../promiseHelper.js"
 
 // when launchPlatform returns close/closeForce
 // the launched platform have that amount of ms to close
@@ -55,9 +59,7 @@ export const createPlatformController = ({
     )
     restartToken = restartTokenCompose(platformRestartToken, restartToken)
 
-    const cancelled = (settle) => {
-      return executionCancellationToken.register(settle)
-    }
+    const cancelled = executionCancellationToken.toRequestedPromise()
 
     let currentExecutionResolve
     let currentExecutionReject
@@ -79,41 +81,26 @@ export const createPlatformController = ({
     nextExecutionPromise()
 
     const startPlatform = async () => {
-      await cancellationToken.toPromise()
+      await cancellationTokenToPromise(cancellationToken)
+
       log(`start ${platformTypeForLog} to execute ${file}`)
 
-      let unregisterPlatformCancellation
-      let platformAlive = true
-      let platformResolve
-      let platformReject
-      const platformPromise = new Promise((resolve, reject) => {
-        platformResolve = (value) => {
-          unregisterPlatformCancellation()
-          platformAlive = false
-          resolve(value)
-        }
-        platformReject = (error) => {
-          unregisterPlatformCancellation()
-          platformAlive = false
-          reject(error)
-        }
-      })
+      const { errored, closed, close, closeForce, executeFile } = await launchPlatform()
+
+      const platformDead = Promise.race([errored, closed])
+
       // the platform will be started, cancellation must wait
       // for platform to close before considering cancellation is done
-      // We listen for platformPromise that will be resolved/rejected on platform
-      // close or error
-      unregisterPlatformCancellation = cancellationToken.register(() => platformPromise)
-
-      const { errored, closed, close, closeForce, executeFile } = await launchPlatform()
+      // We listen for platformDead that will be resolved when platform dies
+      const unregisterPlatformCancellation = cancellationToken.register(() => platformDead)
+      platformDead.then(() => unregisterPlatformCancellation())
 
       const stop = (reason) => {
         log(`stop ${platformTypeForLog}`)
         close(reason)
         if (closeForce) {
           const id = setTimeout(closeForce, ALLOCATED_MS_FOR_CLOSE)
-          fork(anyOf(errored, closed), () => {
-            clearTimeout(id)
-          })
+          platformDead.then(() => clearTimeout(id))
         }
       }
 
@@ -121,34 +108,23 @@ export const createPlatformController = ({
       const closeRestart = restartToken.open((reason) => {
         log(`${platformTypeForLog} restart because ${reason}`)
 
-        const restartExecutionPromise = platformPromise.then(startPlatform)
-
-        if (platformAlive) {
-          forkMatch(labelize({ errored, closed }), {
-            errored: platformReject,
-            closed: platformResolve,
-            // modified is ignored
-            // done is ignored
-          })
+        if (platformDead.isSettled() === false) {
           stop(reason)
         }
 
-        return restartExecutionPromise
+        return platformDead.then(startPlatform)
       })
       cancellationToken.register((reason) => {
         log(`close restart because ${reason}`)
         return closeRestart(reason)
       })
-      const restarted = (settle) => {
-        return restartToken.register(settle)
-      }
+      const restarted = restartToken.toRequestedPromise()
 
       const onCancelledAfterStarted = (reason) => {
         stop(reason)
       }
 
       const onErroredAfterStarted = (error) => {
-        platformReject(error)
         executionReject(error)
       }
 
@@ -156,64 +132,43 @@ export const createPlatformController = ({
         const error = new Error(
           `${platformTypeForLog} unexpectedtly closed while executing ${file}`,
         )
-        platformReject(error)
         executionReject(error)
       }
 
       const onDoneAfterStarted = (value) => {
-        const onCancelledAfterDone = (reason) => {
-          close(reason)
-        }
-
-        const onErroredAfterDone = (error) => {
-          platformReject(error)
-        }
-
-        const onClosedAfterDone = () => {
-          platformResolve()
-        }
-
         // should I call child.disconnect() at some point ?
         // https://nodejs.org/api/child_process.html#child_process_subprocess_disconnect
         executionResolve(value)
-        forkMatch(labelize({ cancelled, restarted, errored, closed }), {
-          cancelled: onCancelledAfterDone,
-          // restarted is here to prevent reacting to errored/closed
-          // but I guess we still want to perform associated action (maybe)
-          // and also restart
-          // if an error occurs during restart we may want to be notified
-          // but it certainly complexifies sutff let's keep it like that
-          restarted: null,
-          errored: onErroredAfterDone,
-          closed: onClosedAfterDone,
-        })
+        cancelled.register(close)
       }
 
       log(`execute ${file} on ${platformTypeForLog}`)
-      forkMatch(labelize({ errored, closed }), {
-        errored: (error) => {
-          log(`${platformTypeForLog} error: ${error}`)
+      namedPromiseMatch(
+        { errored, closed },
+        {
+          errored: (error) => {
+            log(`${platformTypeForLog} error: ${error}`)
+          },
+          closed: () => {
+            log(`${platformTypeForLog} closed`)
+          },
         },
-        closed: () => {
-          log(`${platformTypeForLog} closed`)
-        },
-      })
+      )
       const { done } = executeFile(file, { instrument, setup, teardown })
-      fork(done, (value) => {
+      done.register((value) => {
         log(`${file} execution on ${platformTypeForLog} done with ${value}`)
       })
-      forkMatch(labelize({ cancelled, restarted, errored, closed, done }), {
-        cancelled: onCancelledAfterStarted,
-        // restarted is here to prevent reacting to errored/closed/done
-        // but I guess we still want to perform associated action (maybe)
-        // and also restart
-        // if an error occurs during restart we may want to be notified
-        // but it certainly complexifies sutff let's keep it like that
-        restarted: null,
-        errored: onErroredAfterStarted,
-        closed: onClosedAfterStarted,
-        done: onDoneAfterStarted,
-      })
+      namedPromiseMatch(
+        { cancelled, restarted, errored, closed, done },
+        {
+          cancelled: onCancelledAfterStarted,
+          // restarted is here to prevent reacting to errored/closed/done
+          restarted: null,
+          errored: onErroredAfterStarted,
+          closed: onClosedAfterStarted,
+          done: onDoneAfterStarted,
+        },
+      )
 
       return currentExecutionPromise
     }

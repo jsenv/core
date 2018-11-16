@@ -1,11 +1,12 @@
 import { jsCompile, createInstrumentPlugin } from "../jsCompile/index.js"
 import { readFile } from "../fileHelper.js"
+import { cancellationTokenToPromise } from "../cancellation/index.js"
 
 const platformCoverageMapToFilesMissed = (coverageMap, filesToCover) =>
   filesToCover.filter((file) => file in coverageMap === false)
 
 const fileToEmptyCoverage = async ({ cancellationToken, localRoot, file }) => {
-  await cancellationToken.toPromise()
+  await cancellationTokenToPromise(cancellationToken)
 
   try {
     const inputSource = await readFile(`${localRoot}/${file}`)

@@ -1,4 +1,4 @@
-import { createCancellationToken } from "./cancellation/index.js"
+import { createCancellationToken, cancellationTokenToPromise } from "./cancellation/index.js"
 
 export const promiseMatch = (callbacks, data, predicate) => {
   return new Promise((resolve, reject) => {
@@ -48,9 +48,9 @@ export const promiseSequence = (callbacks, cancellationToken = createCancellatio
       }
       return previous.then(() => callback()).then((value) => {
         values.push(value)
-        return cancellationToken.toPromise()
+        return cancellationTokenToPromise(cancellationToken)
       })
-    }, cancellationToken.toPromise())
+    }, cancellationTokenToPromise(cancellationToken))
     .then(() => values)
 }
 
@@ -67,7 +67,7 @@ export const promiseConcurrent = (
     return promiseTry(() => callback(data)).then((value) => {
       results[index] = value
 
-      return cancellationToken.toPromise().then(() => {
+      return cancellationTokenToPromise(cancellationToken).then(() => {
         if (globalIndex < list.length - 1) {
           globalIndex++
           return execute(list[globalIndex], globalIndex)
@@ -77,7 +77,7 @@ export const promiseConcurrent = (
     })
   }
 
-  return cancellationToken.toPromise().then(() => {
+  return cancellationTokenToPromise(cancellationToken).then(() => {
     const promises = firstChunk.map((data, index) => execute(data, index))
     const promise = Promise.all(promises).then(() => results)
     return promise
@@ -134,5 +134,34 @@ export const mapPending = (promise, callback) => {
       return callback()
     }
     return value
+  })
+}
+
+export const namedPromiseMatch = (namedPromise, namedThen) => {
+  return new Promise((resolve, reject) => {
+    const names = Object.keys(namedPromise)
+
+    const visit = (i) => {
+      const name = names[i]
+      const promise = namedPromise[name]
+      promise.then((value) => {
+        if (name in namedThen === false) {
+          resolve(value)
+          return
+        }
+        const then = namedThen[name]
+        if (typeof then !== "function") {
+          resolve(then)
+          return
+        }
+
+        resolve(then(value))
+      }, reject)
+    }
+
+    let i = 0
+    while (i < names.length) {
+      visit(i++)
+    }
   })
 }

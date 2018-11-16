@@ -2,7 +2,6 @@ import { fork as forkChildProcess } from "child_process"
 import path from "path"
 import { uneval } from "@dmail/uneval"
 import { createChildExecArgv } from "./createChildExecArgv.js"
-import { anyOf } from "../outcome/index.js"
 import { createPlatformController } from "../platform-controller/createPlatformController.js"
 
 const root = path.resolve(__dirname, "../../../")
@@ -32,35 +31,31 @@ const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInt
     }
   }
 
-  const errorReceived = (settle) => {
-    return addChildMessageListener(({ type, data }) => {
+  const errorReceived = new Promise((resolve) => {
+    addChildMessageListener(({ type, data }) => {
       if (type === "error") {
-        settle(data)
+        resolve(data)
       }
     })
-  }
+  })
 
-  const closedWithFailureCode = (settle) => {
-    const crashedListener = (code) => {
+  const closedWithFailureCode = new Promise((resolve) => {
+    child.on("close", (code) => {
       if (code !== 0 && code !== null) {
-        settle(createClosedWithFailureCodeError(code))
+        resolve(createClosedWithFailureCodeError(code))
       }
-    }
-    child.on("close", crashedListener)
-    return () => child.removeListener("close", crashedListener)
-  }
+    })
+  })
 
-  const errored = anyOf(errorReceived, closedWithFailureCode)
+  const errored = Promise.race([errorReceived, closedWithFailureCode])
 
-  const closed = (settle) => {
-    const closedListener = (code) => {
+  const closed = new Promise((resolve) => {
+    child.on("close", (code) => {
       if (code === 0 || code === null) {
-        settle()
+        resolve()
       }
-    }
-    child.on("close", closedListener)
-    return () => child.removeListener("close", closedListener)
-  }
+    })
+  })
 
   const close = () => {
     child.kill("SIGINT")
@@ -90,14 +85,14 @@ const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInt
       teardown,
     })
 
-    const done = (settle) => {
-      return addChildMessageListener(({ type, data }) => {
+    const done = new Promise((resolve) => {
+      addChildMessageListener(({ type, data }) => {
         if (type === "done") {
           // ensure done is not settled to early
-          setTimeout(() => settle(data), 10)
+          resolve(data)
         }
       })
-    }
+    })
 
     return { done }
   }

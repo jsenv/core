@@ -18,11 +18,11 @@ The code below starts a server at `http://120.0.0.1:3000` and request it afterwa
 Cancellation is opt-in and once you provide a cancellation you can cancel at any time.
 
 ```js
-import { cancellationNone } from "@dmail/cancel"
+import { createCancellationToken, cancellationTokenToPromise } from "@dmail/cancel"
 import { http } from "http"
 
-const startServer = async ({ cancellation = cancellationNone } = {}) => {
-  await cancellation.toPromise()
+const startServer = async ({ cancellationToken = createCancellationToken() } = {}) => {
+  await cancellationTokenToPromise(cancellation)
 
   const server = http.createServer()
 
@@ -51,7 +51,7 @@ const startServer = async ({ cancellation = cancellationNone } = {}) => {
 
   const listenPromise = listen()
 
-  cancellation.register((reason) => listenPromise.then(() => close(reason)))
+  cancellationToken.register((reason) => listenPromise.then(() => close(reason)))
 
   await listenPromise
   server.on("request", (request, response) => {
@@ -60,8 +60,8 @@ const startServer = async ({ cancellation = cancellationNone } = {}) => {
   })
 }
 
-const requestServer = ({ cancellation = cancellationNone } = {}) => {
-  await cancellation.toPromise()
+const requestServer = ({ cancellationToken = createCancellationToken() } = {}) => {
+  await cancellationTokenToPromise(cancellation)
 
   const request = http.request("http://127.0.0.1:300")
   const abort = (reason) =>
@@ -71,7 +71,7 @@ const requestServer = ({ cancellation = cancellationNone } = {}) => {
       })
       request.abort()
     })
-  const unregister = register(abort)
+  const unregister = cancellationToken.register(abort)
 
   return new Promise((resolve, reject) => {
     request.on("response", (response) => {
@@ -103,7 +103,7 @@ await responsePromise
 ### Cancel before startServer
 
 ```js
-const { cancellation, cancel } = createCancel()
+const { cancellation, cancel } = createCancellationSource()
 
 const cancelPromise = cancel('cancel')
 const serverPromise = startServer({ cancellation })
@@ -120,12 +120,12 @@ await responsePromise
 ### Cancel during startServer
 
 ```js
-const { cancellation, cancel } = createCancel()
+const { token: cancellationToken, cancel } = createCancellationSource()
 
-const serverPromise = startServer({ cancellation })
+const serverPromise = startServer({ cancellationToken })
 const cancelPromise = cancel('cancel')
 await serverPromise
-const responsePromise = requestServer({ cancellation })
+const responsePromise = requestServer({ cancellationToken })
 await responsePromise
 ```
 
@@ -142,12 +142,12 @@ await responsePromise
 ### Cancel after startSserver
 
 ```js
-const { cancellation, cancel } = createCancel()
+const { token: cancellationToken, cancel } = createCancellationSource()
 
-const serverPromise = startServer({ cancellation })
+const serverPromise = startServer({ cancellationToken })
 await serverPromise
 const cancelPromise = cancel('cancel')
-const responsePromise = requestServer({ cancellation })
+const responsePromise = requestServer({ cancellationToken })
 await responsePromise
 ```
 
@@ -160,11 +160,11 @@ await responsePromise
 ### Cancel during request
 
 ```js
-const { cancellation, cancel } = createCancel()
+const { token: cancellationToken, cancel } = createCancellationSource()
 
-const serverPromise = startServer({ cancellation })
+const serverPromise = startServer({ cancellationToken })
 await serverPromise
-const responsePromise = requestServer({ cancellation })
+const responsePromise = requestServer({ cancellationToken })
 const cancelPromise = cancel()
 await responsePromise
 ```
@@ -181,11 +181,11 @@ await responsePromise
 ### Cancel after request
 
 ```js
-const { cancellation, cancel } = createCancel()
+const { token: cancellationToken, cancel } = createCancellationSource()
 
-const serverPromise = startServer({ cancellation })
+const serverPromise = startServer({ cancellationToken })
 await serverPromise
-const responsePromise = requestServer({ cancellation })
+const responsePromise = requestServer({ cancellationToken })
 await responsePromise
 const cancelPromise = cancel()
 ```

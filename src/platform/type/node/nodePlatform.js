@@ -5,7 +5,11 @@ import fetch from "node-fetch"
 import { createNodeSystem } from "@dmail/module-loader"
 import { valueInstall } from "./valueInstall.js"
 import { createLocaters } from "../createLocaters.js"
-import { createCancellationToken, cancellationTokenCompose } from "../../../cancellation/index.js"
+import {
+  createCancellationToken,
+  cancellationTokenCompose,
+  cancellationTokenToPromise,
+} from "../../../cancellation/index.js"
 
 export const nodeVersionToCompileId = (version, compileMap) => {
   return Object.keys(compileMap).find((id) => {
@@ -62,7 +66,7 @@ export const createNodePlatform = ({
   }) => {
     cancellationToken = cancellationTokenCompose(platformCancellationToken, cancellationToken)
 
-    await cancellationToken.toPromise()
+    await cancellationTokenToPromise(cancellationToken)
 
     markFileAsImported(file)
 

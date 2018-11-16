@@ -1,56 +1,66 @@
-// https://github.com/tc39/proposal-cancellation/tree/master/stage0
-import { createOnceSignal } from "../functionHelper.js"
+import { arrayWithout } from "../arrayHelper.js"
 
+// https://github.com/tc39/proposal-cancellation/tree/master/stage0
 export const createCanceledError = (reason) => {
   const canceledError = new Error(`canceled because ${reason}`)
   canceledError.name = "CANCELED_ERROR"
   return canceledError
 }
 
-export const cancellationToPendingPromise = () => new Promise(() => {})
-
 export const cancellationToRejectedPromise = (reason) => Promise.reject(createCanceledError(reason))
 
-// It may lead to memroy leak but it has to be tested
-const cancellationToPromise = cancellationToPendingPromise
+// It may lead to memory leak but it has to be tested
+export const cancellationToPendingPromise = () => new Promise(() => {})
+
+export const cancellationTokenToPromise = ({ toRequestedPromise }) => {
+  return Promise.race([
+    toRequestedPromise().then(cancellationToPendingPromise),
+    new Promise((resolve) => resolve()),
+  ])
+}
 
 export const createCancellationSource = () => {
   let canceled = false
+  let callbacks = []
+  let requestedResolve
+  let cancelPromise
+  const requestedPromise = new Promise((resolve) => {
+    requestedResolve = resolve
+  })
 
-  const isCanceled = () => canceled
+  const toRequestedPromise = () => requestedPromise
 
-  const { register, getRegisteredCallbacks } = createOnceSignal()
-
-  let canceledPromise
-  let cancelReason
   const cancel = (reason) => {
-    if (canceled) {
-      return canceledPromise
-    }
+    if (canceled) return cancelPromise
     canceled = true
-    cancelReason = reason
+    requestedResolve(reason)
 
     const values = []
-    canceledPromise = getRegisteredCallbacks()
-      .reverse()
+    cancelPromise = callbacks
       .reduce((previous, callback, index) => {
         return previous.then(() => callback(reason)).then((value) => {
           values[index] = value
         })
       }, Promise.resolve())
       .then(() => values)
-    return canceledPromise
+    return cancelPromise
   }
 
-  const toPromise = () => {
-    return canceled ? cancellationToPromise(cancelReason) : Promise.resolve()
+  const register = (callback) => {
+    const index = callbacks.indexOf(callback)
+    if (index === -1) {
+      callbacks = [callback, ...callbacks]
+      return () => {
+        arrayWithout(callbacks, callback)
+      }
+    }
+    return () => {}
   }
 
   return {
     token: {
+      toRequestedPromise,
       register,
-      isRequested: isCanceled,
-      toPromise,
     },
     cancel,
   }
@@ -62,24 +72,20 @@ export const cancellationTokenCompose = (...tokens) => {
     return () => unregisters.forEach((unregister) => unregister())
   }
 
-  const isRequested = () => tokens.some((token) => token.isRequested())
-
-  const toPromise = () => (isRequested() ? cancellationToPromise() : Promise.resolve())
+  const toRequestedPromise = () => {
+    return Promise.race([tokens.map((token) => token.toRequestedPromise())])
+  }
 
   return {
+    toRequestedPromise,
     register,
-    isRequested,
-    toPromise,
   }
 }
 
 export const createCancellationToken = () => {
-  const { register } = createOnceSignal()
-
   return {
-    register,
-    isRequested: () => false,
-    toPromise: () => Promise.resolve(),
+    toRequestedPromise: () => new Promise(() => {}),
+    register: () => () => {},
   }
 }
 

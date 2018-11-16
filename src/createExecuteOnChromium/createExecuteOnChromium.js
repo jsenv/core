@@ -8,18 +8,25 @@ import {
   getBrowserPlatformRemoteURL,
   getCompileMapLocalURL,
 } from "../compilePlatformAndSystem.js"
-import { cancellationNone } from "../cancel/index.js"
+import { createCancellationToken, cancellationTokenToPromise } from "../cancellation/index.js"
 import { eventRace, registerEvent, registerThen, registerCatch } from "../eventHelper.js"
 import puppeteer from "puppeteer"
 import { readFile } from "../fileHelper.js"
 
-const openIndexRequestInterception = async ({ cancellation, protocol, ip, port, page, body }) => {
-  await cancellation.toPromise()
+const openIndexRequestInterception = async ({
+  cancellationToken,
+  protocol,
+  ip,
+  port,
+  page,
+  body,
+}) => {
+  await cancellationTokenToPromise(cancellationToken)
 
   const origin = originAsString({ protocol, ip, port })
 
   const setPromise = page.setRequestInterception(true)
-  cancellation.register(() => setPromise.then(() => page.setRequestInterception(false)))
+  cancellationToken.register(() => setPromise.then(() => page.setRequestInterception(false)))
 
   await setPromise
 
@@ -46,7 +53,7 @@ const openIndexRequestInterception = async ({ cancellation, protocol, ip, port, 
 }
 
 export const createExecuteOnChromium = ({
-  cancellation = cancellationNone,
+  cancellationToken = createCancellationToken(),
   localRoot,
   remoteRoot,
   compileInto,
@@ -72,7 +79,7 @@ export const createExecuteOnChromium = ({
   }
 
   const openBrowser = async () => {
-    await cancellation.toPromise()
+    await cancellationTokenToPromise(cancellationToken)
 
     const browserPromise = puppeteer.launch({
       headless,
@@ -84,7 +91,7 @@ export const createExecuteOnChromium = ({
       // so we apparently don't have to use listenNodeBeforeExit in order to close browser
       // as we do for server
     })
-    cancellation.register(async (reason) => {
+    cancellationToken.register(async (reason) => {
       const browser = await browserPromise
       await browser.close()
       log(`chromium closed because ${reason}`)
@@ -94,10 +101,10 @@ export const createExecuteOnChromium = ({
   }
 
   const openPage = async (browser) => {
-    await cancellation.toPromise()
+    await cancellationTokenToPromise(cancellationToken)
 
     const pagePromise = browser.newPage()
-    cancellation.register(() => {
+    cancellationToken.register(() => {
       // page.close() // commented until https://github.com/GoogleChrome/puppeteer/issues/2269
     })
     return pagePromise
@@ -105,7 +112,7 @@ export const createExecuteOnChromium = ({
 
   // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
   const execute = async ({
-    cancellation = cancellationNone,
+    cancellationToken = createCancellationToken(),
     file,
     instrument = false,
     setup = () => {},
@@ -145,7 +152,7 @@ export const createExecuteOnChromium = ({
     return new Promise((resolve, reject) => {
       const execute = async () => {
         const { origin } = await openIndexRequestHandler({
-          cancellation,
+          cancellationToken,
           protocol,
           ip,
           port,
