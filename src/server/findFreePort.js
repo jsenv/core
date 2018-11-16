@@ -1,6 +1,6 @@
 import net from "net"
-import { listen, closeJustAfterListen } from "./server.js"
-import { createCancellationToken } from "../cancel/index.js"
+import { listen, closeServer } from "./server.js"
+import { createCancellationToken } from "../cancellation/index.js"
 
 const portIsFree = ({ cancellationToken, port, ip }) => {
   const server = net.createServer()
@@ -11,7 +11,7 @@ const portIsFree = ({ cancellationToken, port, ip }) => {
     ip,
   }).then(
     () => {
-      const closePromise = closeJustAfterListen(server)
+      const closePromise = closeServer(server)
       // cancellation must wait for server to be closed before considering
       // cancellation as done
       cancellationToken.register(() => closePromise)
