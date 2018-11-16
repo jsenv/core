@@ -14,7 +14,7 @@ import assert from "assert"
   exec().then(({ statusCode }) => {
     assert.equal(statusCode, 200)
     cancel("cancel").then((values) => {
-      assert.deepEqual(values, ["request done: abort ignored", "server closed because cancel"])
+      assert.deepEqual(values, ["server closed because cancel"])
       console.log("passed")
     })
   })

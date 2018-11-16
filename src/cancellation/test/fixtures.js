@@ -4,7 +4,6 @@ import {
   cancellationTokenWrapPromise,
 } from "../index.js"
 import http from "http"
-import "../../promiseHelper.js" // for finally
 
 export const startServer = async ({ cancellationToken = createCancellationToken() } = {}) => {
   await cancellationTokenToPromise(cancellationToken)
@@ -53,7 +52,6 @@ export const requestServer = async ({ cancellationToken = createCancellationToke
     hostname: "127.0.0.1",
   })
 
-  let pending = true
   let aborting = false
   const responded = cancellationTokenWrapPromise(
     cancellationToken,
@@ -71,25 +69,20 @@ export const requestServer = async ({ cancellationToken = createCancellationToke
         }
         reject(error)
       })
-    }).finally(() => {
-      pending = false
     }),
   )
 
-  const abort = (reason) => {
-    if (!pending) return Promise.resolve("request done: abort ignored")
+  request.end()
+  const unregisterAbortCancellation = cancellationToken.register((reason) => {
     aborting = true
     return new Promise((resolve) => {
       request.on("abort", () => {
         resolve(`request aborted because ${reason}`)
       })
-
       request.abort()
     })
-  }
-
-  request.end()
-  cancellationToken.register(abort)
+  })
+  responded.then(() => unregisterAbortCancellation())
 
   return responded
 }

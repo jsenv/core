@@ -7,7 +7,7 @@ export const arrayWithout = (array, item) => {
     if (value === item) {
       continue
     }
-    arrayWithoutItem[i] = value
+    arrayWithoutItem.push(value)
   }
   return arrayWithoutItem
 }
