@@ -1,7 +1,7 @@
 import assert from "assert"
 import fetch from "node-fetch"
 import { open } from "./server.js"
-import { createCancellationSource } from "../cancel/index.js"
+import { createCancellationSource } from "../cancellation/index.js"
 
 const { cancel, token } = createCancellationSource()
 

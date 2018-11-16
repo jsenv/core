@@ -4,12 +4,16 @@ import https from "https"
 import { processTeardown } from "../process-teardown/index.js"
 import { createRequestFromNodeRequest } from "./createRequestFromNodeRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
-import { createSignal } from "@dmail/signal"
 import killPort from "kill-port"
 import { URL } from "url"
-import { createCancellationToken, cancellationTokenToPromise } from "../cancellation/index.js"
-import { eventRace, registerEvent } from "../eventHelper.js"
+import {
+  createCancellationToken,
+  cancellationTokenToPromise,
+  cancellationTokenWrapPromise,
+} from "../cancellation/index.js"
 import { processUnhandledException } from "./processUnhandledException.js"
+import { promiseNamedRace } from "../promiseHelper.js"
+import { memoizeOnce } from "../functionHelper.js"
 
 const REASON_CLOSING = "closing"
 const REASON_INTERNAL_ERROR = "internal error"
@@ -144,46 +148,34 @@ const trackRequestHandlers = (nodeServer) => {
   return { add, close }
 }
 
-export const closeJustAfterListen = (server) => {
+export const closeServer = (server) => {
   return new Promise((resolve, reject) => {
-    registerEvent(server, "close", (error) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve()
-      }
-    })
+    server.on("error", reject)
+    server.on("close", resolve)
     server.close()
   })
 }
 
 export const listen = ({ cancellationToken = createCancellationToken(), server, port, ip }) => {
-  return new Promise((resolve, reject) => {
-    eventRace({
-      cancel: {
-        register: cancellationToken.register,
-        callback: async () => {
-          // we must wait for the server to be listening before being able to close it
-          await new Promise((resolve) => {
-            registerEvent(server, "listening", resolve)
-          })
-          return closeJustAfterListen(server)
-        },
-      },
-      error: {
-        register: (callback) => registerEvent(server, "error", callback),
-        callback: reject,
-      },
-      listen: {
-        register: (callback) => registerEvent(server, "listening", callback),
-        // in case port is 0 (randomly assign an available port)
-        // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-        callback: () => resolve(server.address().port),
-      },
+  const listening = new Promise((resolve, reject) => {
+    server.on("error", reject)
+    server.on("listening", () => {
+      // in case port is 0 (randomly assign an available port)
+      // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
+      resolve(server.address().port)
     })
 
     server.listen(port, ip)
   })
+
+  const close = async () => {
+    await listening
+    return closeServer(server)
+  }
+
+  cancellationToken.register(close)
+
+  return cancellationTokenWrapPromise(cancellationToken, listening)
 }
 
 export const originAsString = ({ protocol, ip, port }) => {
@@ -261,98 +253,69 @@ export const open = async (
   const connectionTracker = trackConnections(nodeServer)
   const clientTracker = trackClients(nodeServer)
   const requestHandlerTracker = trackRequestHandlers(nodeServer)
-  const closed = createSignal()
-  const closeSignal = createSignal()
 
-  const close = (reason = REASON_CLOSING) => {
-    if (status !== "opened") {
-      throw new Error(`server status must be "opened" during close(), got ${status}`)
-    }
-    closeSignal.emit()
+  // close can be called in all these cases:
+  /*
+	- cancel()
+	- autoCloseOnCrash is true and server process crash
+	- autoCloseOnError is true and server respond with 500 'internal error'
+	- autoCloseOnExit is true and server process exits
+	- external code calls close
+
+	in all those cases we would like to get the close promise
+	*/
+
+  let closedResolve
+  const closed = new Promise((resolve) => {
+    closedResolve = resolve
+  })
+  const close = memoizeOnce(async (reason = REASON_CLOSING) => {
     status = "closing"
-
     log(closedMessage(reason))
+
     // ensure we don't try to handle request while server is closing
     requestHandlerTracker.close(reason)
 
-    return new Promise((resolve, reject) => {
-      nodeServer.once("close", (error) => {
-        if (error) {
-          reject(error)
-        } else {
-          resolve()
-        }
-      })
-      // close prevent server from accepting new connections
-      nodeServer.close()
-      clientTracker.close(reason).then(() => {
-        // opened connection must be shutdown before the close event is emitted
-        connectionTracker.close(reason)
-      })
-    }).then(() => {
-      status = "closed"
-      closed.emit()
+    // opened connection must be shutdown before the close event is emitted
+    clientTracker.close(reason).then(() => {
+      connectionTracker.close(reason)
     })
-  }
-
-  eventRace({
-    cancel: {
-      register: cancellationToken.register,
-      callback: close,
-    },
-    close: {
-      register: (callback) => {
-        const listener = closeSignal.listen(callback)
-        return () => listener.remove()
-      },
-      callback: () => {
-        // noop it's just to prevent close from being auto called
-        // or called during cancel when it was already called
-      },
-    },
-    ...(autoCloseOnError
-      ? {
-          error: {
-            register: (callback) => {
-              return requestHandlerTracker.add((nodeRequest, nodeResponse) => {
-                if (
-                  nodeResponse.statusCode === 500 &&
-                  reasonIsInternalError(nodeResponse.statusMessage)
-                ) {
-                  callback("server internal error")
-                }
-              })
-            },
-            callback: close,
-          },
-        }
-      : {}),
-    ...(autoCloseOnExit
-      ? {
-          exit: {
-            register: (callback) => {
-              return processTeardown((reason) => callback(`server process ${reason}`))
-            },
-            callback: close,
-          },
-        }
-      : {}),
-    ...(autoCloseOnCrash
-      ? {
-          crash: {
-            register: (callback) => {
-              return processUnhandledException(() => {
-                callback()
-                return false // exception is not handled
-              })
-            },
-            callback: close,
-          },
-        }
-      : {}),
+    await closeServer(nodeServer)
+    status = "closed"
+    closedResolve()
   })
 
-  requestHandlerTracker.add((nodeRequest, nodeResponse) => {
+  const createErrored = () =>
+    new Promise((resolve) => {
+      requestHandlerTracker.add((nodeRequest, nodeResponse) => {
+        if (nodeResponse.statusCode === 500 && reasonIsInternalError(nodeResponse.statusMessage)) {
+          resolve("server internal error")
+        }
+      })
+    })
+
+  const createExited = () =>
+    new Promise((resolve) => {
+      processTeardown((reason) => resolve(`server process ${reason}`))
+    })
+
+  const createCrashed = () =>
+    new Promise((resolve) => {
+      processUnhandledException((error) => {
+        resolve(error)
+        return false // exception is not handled
+      })
+    })
+  cancellationToken.register(close)
+  promiseNamedRace({
+    ...(autoCloseOnCrash ? { crashed: createCrashed() } : {}),
+    ...(autoCloseOnError ? { errored: createErrored() } : {}),
+    ...(autoCloseOnExit ? { exited: createExited() } : {}),
+  }).then(({ value }) => {
+    close(value)
+  })
+
+  requestHandlerTracker.add(async (nodeRequest, nodeResponse) => {
     const request = createRequestFromNodeRequest(nodeRequest, origin)
     log(`${request.method} ${request.origin}/${request.ressource}`)
 
@@ -360,42 +323,42 @@ export const open = async (
       log("error on", request.ressource, error)
     })
 
-    return Promise.resolve()
-      .then(() => requestToResponse(request))
-      .then(({ status = 501, reason = "not specified", headers = {}, body = "" }) =>
-        Object.freeze({ status, reason, headers, body }),
-      )
-      .then((response) => {
-        if (
-          request.method !== "HEAD" &&
-          response.headers["content-length"] > 0 &&
-          response.body === ""
-        ) {
-          throw createContentLengthMismatchError(
-            `content-length header is ${response.headers["content-length"]} but body is empty`,
-          )
-        }
+    let response
+    try {
+      const {
+        status = 501,
+        reason = "not specified",
+        headers = {},
+        body = "",
+      } = await requestToResponse(request)
+      response = Object.freeze({ status, reason, headers, body })
 
-        return response
+      if (
+        request.method !== "HEAD" &&
+        response.headers["content-length"] > 0 &&
+        response.body === ""
+      ) {
+        throw createContentLengthMismatchError(
+          `content-length header is ${response.headers["content-length"]} but body is empty`,
+        )
+      }
+    } catch (error) {
+      response = Object.freeze({
+        status: 500,
+        reason: REASON_INTERNAL_ERROR,
+        headers: {},
+        body: error && error.stack ? error.stack : error,
       })
-      .catch((error) => {
-        return Object.freeze({
-          status: 500,
-          reason: REASON_INTERNAL_ERROR,
-          headers: {},
-          body: error && error.stack ? error.stack : error,
-        })
-      })
-      .then((response) => {
-        log(`${response.status} ${request.origin}/${request.ressource}`)
+    }
 
-        return populateNodeResponse(nodeResponse, response, {
-          ignoreBody: request.method === "HEAD",
-        })
-      })
+    log(`${response.status} ${request.origin}/${request.ressource}`)
+    populateNodeResponse(nodeResponse, response, {
+      ignoreBody: request.method === "HEAD",
+    })
   })
 
   return {
+    getStatus: () => status,
     origin,
     nodeServer,
     agent,

@@ -3,4 +3,5 @@ export {
   createCancellationSource,
   cancellationTokenCompose,
   cancellationTokenToPromise,
+  cancellationTokenWrapPromise,
 } from "./cancel.js"

@@ -7,16 +7,16 @@ export const createCanceledError = (reason) => {
   return canceledError
 }
 
-export const cancellationToRejectedPromise = (reason) => Promise.reject(createCanceledError(reason))
+export const toRejectedPromise = (reason) => Promise.reject(createCanceledError(reason))
 
 // It may lead to memory leak but it has to be tested
-export const cancellationToPendingPromise = () => new Promise(() => {})
+export const toPendingPromise = () => new Promise(() => {})
 
+const pendingFlag = {}
 export const cancellationTokenToPromise = ({ toRequestedPromise }) => {
-  return Promise.race([
-    toRequestedPromise().then(cancellationToPendingPromise),
-    new Promise((resolve) => resolve()),
-  ])
+  return Promise.race([toRequestedPromise(), Promise.resolve(pendingFlag)]).then((value) => {
+    return value === pendingFlag ? undefined : toPendingPromise(value)
+  })
 }
 
 export const createCancellationSource = () => {
@@ -87,6 +87,10 @@ export const createCancellationToken = () => {
     toRequestedPromise: () => new Promise(() => {}),
     register: () => () => {},
   }
+}
+
+export const cancellationTokenWrapPromise = (cancellationToken, promise) => {
+  return Promise.race([promise, cancellationToken.toRequestedPromise().then(toPendingPromise)])
 }
 
 // export const cancelllationTokenCanceled = {

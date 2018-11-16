@@ -75,3 +75,44 @@ export const memoizeSync = (fn, { restore, save, transform } = createStore()) =>
     return transform(freshValue, ...args)
   }
 }
+
+export const memoizeOnce = (compute) => {
+  let locked = false
+  let lockValue
+
+  return (...args) => {
+    if (locked) return lockValue
+    // if compute is recursive wait for it to be fully done before storing the lockValue
+    // so set locked later
+    lockValue = compute(...args)
+    locked = true
+    return lockValue
+  }
+}
+
+export const memoizeReturn = (compute) => {
+  let locked
+  let lockValue
+
+  return (...args) => {
+    if (locked) {
+      return lockValue
+    }
+    locked = true
+
+    let promiseResolve
+    // well in case compute is recursive, we ensure lockValue
+    // returns the right promise
+    lockValue = new Promise((resolve) => {
+      promiseResolve = resolve
+    })
+    Promise.resolve().then(() => {
+      promiseResolve(compute(...args))
+    })
+    lockValue.then(() => {
+      locked = false
+    })
+
+    return lockValue
+  }
+}

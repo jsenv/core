@@ -3,10 +3,10 @@ import {
   cancellationTokenCompose,
   cancellationTokenToPromise,
 } from "../cancellation/index.js"
-import { createRestartSource, createRestartToken, restartTokenCompose } from "../restart/index.js"
 import { hotreloadOpen } from "./hotreload.js"
 import { createSignal } from "@dmail/signal"
-import { namedPromiseMatch } from "../promiseHelper.js"
+import { promiseNamedRace } from "../promiseHelper.js"
+import { memoizeReturn, memoizeOnce } from "../functionHelper.js"
 
 // when launchPlatform returns close/closeForce
 // the launched platform have that amount of ms to close
@@ -39,15 +39,19 @@ export const createPlatformController = ({
 
   const platformCancellationToken = cancellationToken
 
-  const hotreloadRestartSource = createRestartSource()
-  fileChangedSignal.listen(({ file }) => {
-    hotreloadRestartSource.restart(`file changed: ${file}`)
+  // by default restart do nothing
+  let restartImplementation = () => Promise.resolve()
+  const restart = memoizeReturn((reason) => {
+    return restartImplementation(reason)
   })
-  const platformRestartToken = hotreloadRestartSource.token
+  const { remove } = fileChangedSignal.listen(({ file }) => {
+    restart.trigger(`file changed: ${file}`)
+  })
+  cancellationToken.register(remove)
 
   const execute = ({
     cancellationToken = createCancellationToken(),
-    restartToken = createRestartToken(),
+    restartSource,
     file,
     instrument = false,
     setup = () => {},
@@ -57,7 +61,6 @@ export const createPlatformController = ({
       platformCancellationToken,
       cancellationToken,
     )
-    restartToken = restartTokenCompose(platformRestartToken, restartToken)
 
     const cancelled = executionCancellationToken.toRequestedPromise()
 
@@ -87,86 +90,73 @@ export const createPlatformController = ({
 
       const { errored, closed, close, closeForce, executeFile } = await launchPlatform()
 
-      const platformDead = Promise.race([errored, closed])
+      const stopped = Promise.race([errored, closed])
 
-      // the platform will be started, cancellation must wait
-      // for platform to close before considering cancellation is done
-      // We listen for platformDead that will be resolved when platform dies
-      const unregisterPlatformCancellation = cancellationToken.register(() => platformDead)
-      platformDead.then(() => unregisterPlatformCancellation())
-
-      const stop = (reason) => {
+      const stop = memoizeOnce((reason) => {
         log(`stop ${platformTypeForLog}`)
         close(reason)
         if (closeForce) {
           const id = setTimeout(closeForce, ALLOCATED_MS_FOR_CLOSE)
-          platformDead.then(() => clearTimeout(id))
+          stopped.then(() => clearTimeout(id))
         }
-      }
+        return stopped
+      })
+      // the platform will be started, cancellation must wait
+      // for platform to close before considering cancellation is done
+      // We listen for platformDead that will be resolved when platform dies
+      const unregisterStopOnCancel = cancellationToken.register(stop)
+      stopped.then(() => unregisterStopOnCancel())
 
       log("open restart")
-      const closeRestart = restartToken.open((reason) => {
-        log(`${platformTypeForLog} restart because ${reason}`)
-
-        if (platformDead.isSettled() === false) {
-          stop(reason)
+      if (restartSource) {
+        restartSource(restart)
+      }
+      const restarting = new Promise((resolve) => {
+        restartImplementation = (reason) => {
+          resolve()
+          return stop(reason).then(startPlatform)
         }
-
-        return platformDead.then(startPlatform)
       })
-      cancellationToken.register((reason) => {
-        log(`close restart because ${reason}`)
-        return closeRestart(reason)
+      cancellationToken.register(() => {
+        restartImplementation = null
       })
-      const restarted = restartToken.toRequestedPromise()
-
-      const onCancelledAfterStarted = (reason) => {
-        stop(reason)
-      }
-
-      const onErroredAfterStarted = (error) => {
-        executionReject(error)
-      }
-
-      const onClosedAfterStarted = () => {
-        const error = new Error(
-          `${platformTypeForLog} unexpectedtly closed while executing ${file}`,
-        )
-        executionReject(error)
-      }
-
-      const onDoneAfterStarted = (value) => {
-        // should I call child.disconnect() at some point ?
-        // https://nodejs.org/api/child_process.html#child_process_subprocess_disconnect
-        executionResolve(value)
-        cancelled.register(close)
-      }
 
       log(`execute ${file} on ${platformTypeForLog}`)
-      namedPromiseMatch(
-        { errored, closed },
-        {
-          errored: (error) => {
-            log(`${platformTypeForLog} error: ${error}`)
-          },
-          closed: () => {
-            log(`${platformTypeForLog} closed`)
-          },
-        },
-      )
       const { done } = executeFile(file, { instrument, setup, teardown })
-      done.register((value) => {
+      done.then((value) => {
         log(`${file} execution on ${platformTypeForLog} done with ${value}`)
       })
-      namedPromiseMatch(
-        { cancelled, restarted, errored, closed, done },
-        {
-          cancelled: onCancelledAfterStarted,
-          // restarted is here to prevent reacting to errored/closed/done
-          restarted: null,
-          errored: onErroredAfterStarted,
-          closed: onClosedAfterStarted,
-          done: onDoneAfterStarted,
+      promiseNamedRace({ errored, closed }).then(({ winner, value }) => {
+        if (winner === errored) {
+          log(`${platformTypeForLog} error: ${value}`)
+        } else {
+          log(`${platformTypeForLog} closed`)
+        }
+      })
+
+      promiseNamedRace({ cancelled, restarting, errored, closed, done }).then(
+        ({ winner, value }) => {
+          // restarting is here to prevent reacting to errored/closed/done
+          if (winner === restarting) {
+            return
+          }
+          if (winner === errored) {
+            executionReject(value)
+            return
+          }
+          if (winner === closed) {
+            const error = new Error(
+              `${platformTypeForLog} unexpectedtly closed while executing ${file}`,
+            )
+            executionReject(error)
+            return
+          }
+          if (winner === done) {
+            // should I call child.disconnect() at some point ?
+            // https://nodejs.org/api/child_process.html#child_process_subprocess_disconnect
+            executionResolve(value)
+            cancelled.register(close)
+          }
         },
       )
 
