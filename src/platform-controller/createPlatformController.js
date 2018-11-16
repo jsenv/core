@@ -6,7 +6,7 @@ import {
 import { hotreloadOpen } from "./hotreload.js"
 import { createSignal } from "@dmail/signal"
 import { promiseNamedRace } from "../promiseHelper.js"
-import { memoizeReturn, memoizeOnce } from "../functionHelper.js"
+import { memoizeOnce } from "../functionHelper.js"
 
 // when launchPlatform returns close/closeForce
 // the launched platform have that amount of ms to close
@@ -41,17 +41,14 @@ export const createPlatformController = ({
 
   // by default restart do nothing
   let restartImplementation = () => Promise.resolve()
-  const restart = memoizeReturn((reason) => {
-    return restartImplementation(reason)
-  })
+  const restart = memoizeOnce((reason) => restartImplementation(reason))
   const { remove } = fileChangedSignal.listen(({ file }) => {
-    restart.trigger(`file changed: ${file}`)
+    restart(`file changed: ${file}`)
   })
   cancellationToken.register(remove)
 
   const execute = ({
     cancellationToken = createCancellationToken(),
-    restartSource,
     file,
     instrument = false,
     setup = () => {},
@@ -108,9 +105,8 @@ export const createPlatformController = ({
       stopped.then(() => unregisterStopOnCancel())
 
       log("open restart")
-      if (restartSource) {
-        restartSource(restart)
-      }
+
+      restart.deleteCache()
       const restarting = new Promise((resolve) => {
         restartImplementation = (reason) => {
           resolve()
@@ -118,7 +114,7 @@ export const createPlatformController = ({
         }
       })
       cancellationToken.register(() => {
-        restartImplementation = null
+        restartImplementation = () => Promise.resolve()
       })
 
       log(`execute ${file} on ${platformTypeForLog}`)

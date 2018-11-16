@@ -80,7 +80,7 @@ export const memoizeOnce = (compute) => {
   let locked = false
   let lockValue
 
-  return (...args) => {
+  const memoized = (...args) => {
     if (locked) return lockValue
     // if compute is recursive wait for it to be fully done before storing the lockValue
     // so set locked later
@@ -88,6 +88,13 @@ export const memoizeOnce = (compute) => {
     locked = true
     return lockValue
   }
+
+  memoized.deleteCache = () => {
+    locked = false
+    lockValue = undefined
+  }
+
+  return memoized
 }
 
 export const memoizeReturn = (compute) => {
@@ -103,6 +110,37 @@ export const memoizeReturn = (compute) => {
     let promiseResolve
     // well in case compute is recursive, we ensure lockValue
     // returns the right promise
+    lockValue = new Promise((resolve) => {
+      promiseResolve = resolve
+    })
+    Promise.resolve().then(() => {
+      promiseResolve(compute(...args))
+    })
+    lockValue.then(() => {
+      locked = false
+    })
+
+    return lockValue
+  }
+}
+
+export const memoizeWhile = (compute, { opened, closed }) => {
+  let locked
+  let lockValue
+
+  opened(() => {
+    locked = true
+  })
+  closed(() => {
+    locked = false
+  })
+
+  return (...args) => {
+    if (locked) {
+      return lockValue
+    }
+
+    let promiseResolve
     lockValue = new Promise((resolve) => {
       promiseResolve = resolve
     })
