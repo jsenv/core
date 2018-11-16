@@ -48,13 +48,15 @@ export const createCancellationSource = () => {
 
   const register = (callback) => {
     const index = callbacks.indexOf(callback)
-    if (index === -1) {
-      callbacks = [callback, ...callbacks]
+    if (index > -1) {
       return () => {
-        arrayWithout(callbacks, callback)
+        callbacks = arrayWithout(callbacks, callback)
       }
     }
-    return () => {}
+    callbacks = [callback, ...callbacks]
+    return () => {
+      callbacks = arrayWithout(callbacks, callback)
+    }
   }
 
   return {
