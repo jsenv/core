@@ -35,9 +35,11 @@ export const createPlatformController = ({
   // calling restartOpen means next call to restart will call a new function once
   // if you close, restart goes back to doing nothing
   const restartOpen = (implementation) => {
+    log("open restart")
     restart.deleteCache()
     restartImplementation = implementation
     return () => {
+      log("close restart")
       restartImplementation = () => Promise.resolve()
     }
   }
@@ -83,12 +85,14 @@ export const createPlatformController = ({
       stopped.then(unregisterStopOnCancel)
 
       const restarting = new Promise((resolve) => {
-        log("open restart")
+        let unregisterCloseRestartOnCancel
         const restartClose = restartOpen((reason) => {
           resolve()
+          restartClose()
+          unregisterCloseRestartOnCancel()
           return stop(reason).then(startPlatform)
         })
-        stopped.then(() => restartClose())
+        unregisterCloseRestartOnCancel = cancellationToken.register(() => restartClose())
       })
 
       log(`execute ${file} on ${platformTypeForLog}`)
