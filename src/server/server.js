@@ -1,18 +1,18 @@
 /* eslint-disable import/max-dependencies */
 import http from "http"
 import https from "https"
-import { processTeardown } from "../process-teardown/index.js"
-import { createRequestFromNodeRequest } from "./createRequestFromNodeRequest.js"
-import { populateNodeResponse } from "./populateNodeResponse.js"
 import killPort from "kill-port"
 import { URL } from "url"
+import { processTeardown } from "../process-teardown/index.js"
 import {
   createCancellationToken,
   cancellationTokenToPromise,
   cancellationTokenWrapPromise,
 } from "../cancellation/index.js"
+import { trackConnections, trackClients, trackRequestHandlers } from "./trackers.js"
+import { createRequestFromNodeRequest } from "./createRequestFromNodeRequest.js"
+import { populateNodeResponse } from "./populateNodeResponse.js"
 import { processUnhandledException } from "./processUnhandledException.js"
-import { promiseNamedRace } from "../promiseHelper.js"
 import { memoizeOnce } from "../functionHelper.js"
 
 const REASON_CLOSING = "closing"
@@ -53,99 +53,6 @@ const createContentLengthMismatchError = (message) => {
   error.code = "CONTENT_LENGTH_MISMATCH"
   error.name = error.code
   return error
-}
-
-const trackConnections = (nodeServer) => {
-  const connections = new Set()
-
-  const connectionListener = (connection) => {
-    connection.on("close", () => {
-      connections.delete(connection)
-    })
-    connections.add(connection)
-  }
-
-  nodeServer.on("connection", connectionListener)
-
-  const close = (reason) => {
-    nodeServer.removeListener("connection", connectionListener)
-
-    // should we do this async ?
-    // should we do this before closing the server ?
-    connections.forEach((connection) => {
-      connection.destroy(reason)
-    })
-  }
-
-  return { close }
-}
-
-const trackClients = (nodeServer) => {
-  const clients = new Set()
-
-  const clientListener = (nodeRequest, nodeResponse) => {
-    const client = { nodeRequest, nodeResponse }
-
-    clients.add(client)
-    nodeResponse.on("finish", () => {
-      clients.delete(client)
-    })
-  }
-
-  nodeServer.on("request", clientListener)
-
-  const close = (reason) => {
-    nodeServer.removeListener("request", clientListener)
-
-    let status
-    if (reasonIsInternalError(reason)) {
-      status = 500
-      // reason = 'shutdown because error'
-    } else {
-      status = 503
-      // reason = 'unavailable because closing'
-    }
-
-    return Promise.all(
-      Array.from(clients).map(({ nodeResponse }) => {
-        if (nodeResponse.headersSent === false) {
-          nodeResponse.writeHead(status, reason)
-        }
-
-        return new Promise((resolve) => {
-          if (nodeResponse.finished === false) {
-            nodeResponse.on("finish", resolve)
-            nodeResponse.on("error", resolve)
-            nodeResponse.destroy(reason)
-          } else {
-            resolve()
-          }
-        })
-      }),
-    )
-  }
-
-  return { close }
-}
-
-const trackRequestHandlers = (nodeServer) => {
-  const requestHandlers = []
-  const add = (handler) => {
-    requestHandlers.push(handler)
-    nodeServer.on("request", handler)
-    return () => {
-      nodeServer.removeListener("request", handler)
-    }
-  }
-
-  const close = () => {
-    requestHandlers.forEach((requestHandler) => {
-      nodeServer.removeListener("request", requestHandler)
-    })
-    requestHandlers.length = 0
-  }
-
-  return { add, close }
 }
 
 export const closeServer = (server) => {
@@ -269,7 +176,12 @@ export const open = async (
   const closed = new Promise((resolve) => {
     closedResolve = resolve
   })
+  let closingResolve
+  const closing = new Promise((resolve) => {
+    closingResolve = resolve
+  })
   const close = memoizeOnce(async (reason = REASON_CLOSING) => {
+    closingResolve(reason)
     status = "closing"
     log(closedMessage(reason))
 
@@ -277,7 +189,15 @@ export const open = async (
     requestHandlerTracker.close(reason)
 
     // opened connection must be shutdown before the close event is emitted
-    clientTracker.close(reason).then(() => {
+    let responseStatus
+    if (reasonIsInternalError(reason)) {
+      responseStatus = 500
+      // reason = 'shutdown because error'
+    } else {
+      responseStatus = 503
+      // reason = 'unavailable because closing'
+    }
+    clientTracker.close({ status: responseStatus, reason }).then(() => {
       connectionTracker.close(reason)
     })
     await closeServer(nodeServer)
@@ -285,35 +205,39 @@ export const open = async (
     closedResolve()
   })
 
-  const createErrored = () =>
-    new Promise((resolve) => {
-      requestHandlerTracker.add((nodeRequest, nodeResponse) => {
+  const unregisterCloseOnCancel = cancellationToken.register(close)
+  closed.then(unregisterCloseOnCancel)
+
+  const closePromises = []
+  if (autoCloseOnCrash) {
+    const crashed = new Promise((resolve) => {
+      const unregister = processUnhandledException((error) => {
+        resolve(error)
+        return false // exception is not handled
+      })
+      closing.then(unregister)
+    })
+    closePromises.push(crashed)
+  }
+  if (autoCloseOnError) {
+    const errored = new Promise((resolve) => {
+      const unregister = requestHandlerTracker.add((nodeRequest, nodeResponse) => {
         if (nodeResponse.statusCode === 500 && reasonIsInternalError(nodeResponse.statusMessage)) {
           resolve("server internal error")
         }
       })
+      closing.then(unregister)
     })
-
-  const createExited = () =>
-    new Promise((resolve) => {
-      processTeardown((reason) => resolve(`server process ${reason}`))
+    closePromises.push(errored)
+  }
+  if (autoCloseOnExit) {
+    const exited = new Promise((resolve) => {
+      const unregister = processTeardown((reason) => resolve(`server process ${reason}`))
+      closing.then(unregister)
     })
-
-  const createCrashed = () =>
-    new Promise((resolve) => {
-      processUnhandledException((error) => {
-        resolve(error)
-        return false // exception is not handled
-      })
-    })
-  cancellationToken.register(close)
-  promiseNamedRace({
-    ...(autoCloseOnCrash ? { crashed: createCrashed() } : {}),
-    ...(autoCloseOnError ? { errored: createErrored() } : {}),
-    ...(autoCloseOnExit ? { exited: createExited() } : {}),
-  }).then(({ value }) => {
-    close(value)
-  })
+    closePromises.push(exited)
+  }
+  Promise.race(closePromises).then(close)
 
   requestHandlerTracker.add(async (nodeRequest, nodeResponse) => {
     const request = createRequestFromNodeRequest(nodeRequest, origin)

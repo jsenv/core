@@ -137,14 +137,12 @@ export const mapPending = (promise, callback) => {
   })
 }
 
-export const promiseNamedRace = (namedPromises) => {
+export const promiseTrackRace = (promises) => {
   return new Promise((resolve, reject) => {
-    const names = Object.keys(namedPromises)
     let resolved = false
 
     const visit = (i) => {
-      const name = names[i]
-      const promise = namedPromises[name]
+      const promise = promises[i]
       promise.then((value) => {
         if (resolved) return
         resolved = true
@@ -153,39 +151,7 @@ export const promiseNamedRace = (namedPromises) => {
     }
 
     let i = 0
-    while (i < names.length) {
-      visit(i++)
-    }
-  })
-}
-
-export const namedPromiseMatch = (namedPromise, namedThen) => {
-  return new Promise((resolve, reject) => {
-    const names = Object.keys(namedPromise)
-    let resolved = false
-
-    const visit = (i) => {
-      const name = names[i]
-      const promise = namedPromise[name]
-      promise.then((value) => {
-        if (resolved) return
-        resolved = true
-        if (name in namedThen === false) {
-          resolve(value)
-          return
-        }
-        const then = namedThen[name]
-        if (typeof then !== "function") {
-          resolve(then)
-          return
-        }
-
-        resolve(then(value))
-      }, reject)
-    }
-
-    let i = 0
-    while (i < names.length) {
+    while (i < promises.length) {
       visit(i++)
     }
   })

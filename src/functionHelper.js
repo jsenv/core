@@ -90,8 +90,10 @@ export const memoizeOnce = (compute) => {
   }
 
   memoized.deleteCache = () => {
+    const value = lockValue
     locked = false
     lockValue = undefined
+    return value
   }
 
   return memoized

@@ -31,23 +31,18 @@ const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInt
     }
   }
 
-  const errorReceived = new Promise((resolve) => {
+  const errored = new Promise((resolve) => {
     addChildMessageListener(({ type, data }) => {
       if (type === "error") {
         resolve(data)
       }
     })
-  })
-
-  const closedWithFailureCode = new Promise((resolve) => {
     child.on("close", (code) => {
       if (code !== 0 && code !== null) {
         resolve(createClosedWithFailureCodeError(code))
       }
     })
   })
-
-  const errored = Promise.race([errorReceived, closedWithFailureCode])
 
   const closed = new Promise((resolve) => {
     child.on("close", (code) => {
@@ -88,7 +83,6 @@ const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInt
     const done = new Promise((resolve) => {
       addChildMessageListener(({ type, data }) => {
         if (type === "done") {
-          // ensure done is not settled to early
           resolve(data)
         }
       })
