@@ -28,7 +28,7 @@
     {
       "type": "npm",
       "script": "code-compile",
-      "identifier": "compile",
+      "label": "compile",
       "presentation": {
         "reveal": "silent",
         "panel": "shared"

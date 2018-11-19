@@ -2,7 +2,13 @@ const { rollup } = require("rollup")
 const babel = require("rollup-plugin-babel")
 const nodeResolve = require("rollup-plugin-node-resolve")
 
-export const packager = async ({ fileAbsolute, plugins, remap }) => {
+const modulePluginNames = ["transform-modules-systemjs", "transform-module-common-js"]
+
+export const packager = async ({ fileAbsolute, pluginMap, remap }) => {
+  const plugins = Object.keys(pluginMap)
+    .filter((pluginName) => modulePluginNames.indexOf(pluginName) === -1)
+    .map((pluginName) => pluginMap[pluginName])
+
   const bundle = await rollup({
     input: fileAbsolute,
     plugins: [
@@ -18,13 +24,16 @@ export const packager = async ({ fileAbsolute, plugins, remap }) => {
     // skip rollup warnings
     // onwarn: () => {},
   })
-  debugger
 
-  // bundle.generate({
-  //   format: "iife",
-  //   name: "__browserPlatform__",
-  //   sourcemap: remap,
-  // })
+  const { code, map } = await bundle.generate({
+    format: "iife",
+    name: "__browserPlatform__",
+    sourcemap: remap,
+    // file: outputFile,
+  })
 
-  return bundle
+  return {
+    code,
+    map,
+  }
 }

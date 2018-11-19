@@ -1,6 +1,7 @@
-import { createETag, isFileNotFoundError } from "./helpers.js"
-import { readFile } from "../fileHelper.js"
+import path from "path"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
+import { readFile } from "../fileHelper.js"
+import { createETag, isFileNotFoundError } from "./helpers.js"
 import { getMetaLocation, getOutputLocation, getAssetLocation, getOutputFile } from "./locaters.js"
 import { lockForRessource } from "./ressourceRegistry.js"
 
@@ -57,7 +58,7 @@ const validateAssets = async ({ localRoot, compileInto, compileId, file, meta })
 }
 
 const validateSource = async ({ localRoot, source, eTag }) => {
-  const sourceAbsolute = `${localRoot}/${source}`
+  const sourceAbsolute = path.resolve(localRoot, source)
   const sourceContent = await readFile(sourceAbsolute)
   const sourceETag = createETag(source)
 

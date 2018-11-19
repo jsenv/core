@@ -117,3 +117,7 @@ export const composeMapToComposeStrict = (composeMap, createInitial = () => ({})
     return objects.reduce(reducer, createInitial())
   }
 }
+
+export const objectValues = (object) => {
+  return Object.keys(object).map((key) => object[key])
+}
