@@ -122,7 +122,7 @@ export const compileToService = (
         compileId,
         compileParamMap,
         file,
-        inputFile: localFileAbsolute,
+        fileAbsolute: localFileAbsolute,
         cacheStrategy: localCacheStrategy,
         cacheTrackHit: localCacheTrackHit,
       })

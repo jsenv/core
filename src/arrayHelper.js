@@ -11,3 +11,17 @@ export const arrayWithout = (array, item) => {
   }
   return arrayWithoutItem
 }
+
+export const arrayWithoutIndex = (array, index) => {
+  const arrayWithoutIndex = []
+  let i = 0
+  while (i < array.length) {
+    const currentIndex = i
+    i++
+    if (currentIndex === index) {
+      continue
+    }
+    arrayWithoutIndex.push(array[currentIndex])
+  }
+  return arrayWithoutIndex
+}

@@ -1,5 +1,3 @@
-import { copyFile } from "./fileHelper.js"
-
 export const getBrowserPlatformRemoteURL = ({ remoteRoot, compileInto }) => {
   return `${remoteRoot}/${compileInto}/browserPlatform.js`
 }

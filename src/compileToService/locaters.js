@@ -12,6 +12,6 @@ export const getOutputLocation = ({ localRoot, compileInto, compileId, file }) =
   return resolvePath(localRoot, compileInto, compileId, file)
 }
 
-export const getOutputName = ({ compileInto, compileId, file }) => {
+export const getOutputFile = ({ compileInto, compileId, file }) => {
   return resolvePath(compileInto, compileId, file)
 }
