@@ -7,11 +7,7 @@ import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { open as serverIndexOpen } from "../server-index/serverIndex.js"
 import { originAsString } from "../server/index.js"
 import { createBrowserPlatformSource } from "../createBrowserSource.js"
-import {
-  getBrowserSystemRemoteURL,
-  getBrowserPlatformRemoteURL,
-  getCompileMapLocalURL,
-} from "../compilePlatformAndSystem.js"
+import { getBrowserPlatformRemoteURL, getCompileMapLocalURL } from "../compilePlatform.js"
 import { eventRace, registerEvent, registerThen, registerCatch } from "../eventHelper.js"
 import { readFile } from "../fileHelper.js"
 
@@ -125,10 +121,7 @@ export const createExecuteOnChromium = ({
     const [page, html] = await Promise.all([
       openPage(browser),
       createHTMLForBrowser({
-        scriptRemoteList: [
-          { url: getBrowserSystemRemoteURL({ remoteRoot, compileInto }) },
-          { url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) },
-        ],
+        scriptRemoteList: [{ url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) }],
         scriptInlineList: [
           {
             source: createBrowserPlatformSource({

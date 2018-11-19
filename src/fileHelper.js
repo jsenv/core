@@ -16,6 +16,18 @@ export const readFile = (location) => {
   })
 }
 
+export const copyFile = (from, to) => {
+  return new Promise((resolve, reject) => {
+    fs.copyFile(from, to, (error) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve()
+      }
+    })
+  })
+}
+
 export const compileResultToFileSysten = ({ code, map }, filename) => {
   if (map) {
     const sourceMapBasename = `${path.basename(filename)}.map`

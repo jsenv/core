@@ -6,11 +6,10 @@ import {
 } from "@dmail/project-structure-compile-babel"
 import { objectToPromiseAll } from "./promiseHelper.js"
 import {
-  compilePlatformAndSystem,
-  getBrowserSystemLocalURL,
+  compilePlatform,
   getBrowserPlatformLocalURL,
   getCompileMapLocalURL,
-} from "./compilePlatformAndSystem.js"
+} from "./compilePlatform.js"
 import { objectMapValue } from "./objectHelper.js"
 import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.js"
 
@@ -48,10 +47,7 @@ export const createJsCompileService = async ({
   const { filesToCover } = await objectToPromiseAll({
     // we should not have to compile thoose static files
     // we would just have to move them to compileInto/
-    compilePlatformAndSystem: compilePlatformAndSystem({
-      browserSystemLocalURL: getBrowserSystemLocalURL({ localRoot, compileInto }),
-      browserPlatformLocalURL: getBrowserPlatformLocalURL({ localRoot, compileInto }),
-    }),
+    compilePlatform: compilePlatform(getBrowserPlatformLocalURL({ localRoot, compileInto })),
     writeCompileMap: fileWriteFromString(
       getCompileMapLocalURL({ localRoot, compileInto }),
       JSON.stringify(compileMap, null, "  "),

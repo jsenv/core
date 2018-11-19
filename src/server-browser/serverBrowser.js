@@ -4,11 +4,7 @@ import { open as serverOpen, createRequestPredicate, serviceCompose } from "../s
 import { open as serverCompileOpen } from "../server-compile/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { guard } from "../functionHelper.js"
-import {
-  getBrowserSystemRemoteURL,
-  getBrowserPlatformRemoteURL,
-  getCompileMapLocalURL,
-} from "../compilePlatformAndSystem.js"
+import { getBrowserPlatformRemoteURL, getCompileMapLocalURL } from "../compilePlatform.js"
 import { createBrowserPlatformSource, createBrowserExecuteSource } from "../createBrowserSource.js"
 import { readFile } from "../fileHelper.js"
 
@@ -111,10 +107,7 @@ export const open = async ({
       )
 
       const html = await createHTMLForBrowser({
-        scriptRemoteList: [
-          { url: getBrowserSystemRemoteURL({ remoteRoot, compileInto }) },
-          { url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) },
-        ],
+        scriptRemoteList: [{ url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) }],
         scriptInlineList: [
           {
             source: createBrowserPlatformSource({

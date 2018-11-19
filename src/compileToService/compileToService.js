@@ -14,6 +14,7 @@ import { watchFile } from "../watchFile.js"
 import { createETag } from "./helpers.js"
 import { compileFile } from "./compileFile.js"
 import { ressourceToCompileInfo } from "./ressourceToCompileInfo.js"
+// eslint-disable-next-line import/max-dependencies
 import { ressourceToLocateParam } from "./ressourceToLocateParam.js"
 
 export const compileToService = (
