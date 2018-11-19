@@ -1,9 +1,14 @@
+const { forEachRessourceMatching, configToMetaMap } = require("@dmail/project-structure")
 const {
   pluginOptionMapToPluginMap,
   pluginMapToPluginsForPlatform,
-  compileFileStructure,
+  compileFile,
+  writeCompileResultInto,
 } = require("@dmail/project-structure-compile-babel")
+const structureConfig = require("../structure.config.js")
 const path = require("path")
+
+const localRoot = path.resolve(__dirname, "../")
 
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-commonjs": {},
@@ -30,10 +35,13 @@ const pluginMap = pluginOptionMapToPluginMap({
 })
 const plugins = pluginMapToPluginsForPlatform(pluginMap, "node", "8.0")
 
-compileFileStructure({
-  root: path.resolve(__dirname, "../"),
-  into: "dist",
-  config: "structure.config.js",
-  predicate: ({ compile }) => compile,
-  plugins,
-})
+forEachRessourceMatching(
+  localRoot,
+  configToMetaMap(structureConfig),
+  ({ compile }) => compile,
+  async (ressource) => {
+    const compileResult = await compileFile(ressource, { localRoot, plugins })
+    await writeCompileResultInto(ressource, compileResult, { localRoot, into: "dist" })
+    console.log(`${ressource} -> dist/${ressource} `)
+  },
+)
