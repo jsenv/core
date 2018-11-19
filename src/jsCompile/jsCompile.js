@@ -1,5 +1,6 @@
 import path from "path"
 import { transpiler } from "./transpiler.js"
+import { packager } from "./packager.js"
 
 const writeSourceMapLocation = ({ source, location }) => {
   return `${source}
@@ -11,8 +12,8 @@ const stringifyMap = (object) => JSON.stringify(object, null, "  ")
 const stringifyCoverage = (object) => JSON.stringify(object, null, "  ")
 
 export const jsCompile = async ({
-  localRoot,
   file,
+  fileAbsolute,
   inputAst,
   input,
   inputMap,
@@ -32,9 +33,14 @@ export const jsCompile = async ({
   // would fail to find it for comparing to cache
   // that's why locate must return the right local file for __platform__.js
 
+  if (file === "__platform__.js") {
+    const result = await packager({ fileAbsolute, plugins, remap })
+    debugger
+  }
+
   const result = await transpiler({
-    localRoot,
     file,
+    fileAbsolute,
     inputAst,
     input,
     inputMap,

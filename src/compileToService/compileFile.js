@@ -314,6 +314,7 @@ export const compileFile = async ({
     return compile({
       localRoot,
       file,
+      fileAbsolute,
       input,
       outputFile,
       ...compileParam,

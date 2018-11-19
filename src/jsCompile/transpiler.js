@@ -28,8 +28,8 @@ const transformBabelParseErrorMessage = (babelParseErrorMessage, filename, relat
 }
 
 export const transpiler = async ({
-  localRoot,
   file,
+  fileAbsolute,
   inputAst,
   input,
   inputMap,
@@ -38,7 +38,7 @@ export const transpiler = async ({
 }) => {
   const options = {
     plugins,
-    filename: localRoot ? `${localRoot}/${file}` : file,
+    filename: fileAbsolute || file,
     filenameRelative: file,
     inputSourceMap: inputMap,
     babelrc: false, // trust only these options, do not read any babelrc config file
