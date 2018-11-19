@@ -1,8 +1,8 @@
-import { executeOnNode } from "./executeOnNode.js"
 import path from "path"
+import assert from "assert"
 import { createJsCompileService } from "../createJsCompileService.js"
 import { teardownForOutputAndCoverageMap } from "../platformTeardown.js"
-import assert from "assert"
+import { executeOnNode } from "./executeOnNode.js"
 
 const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = "build"

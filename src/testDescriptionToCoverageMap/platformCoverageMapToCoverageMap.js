@@ -1,6 +1,6 @@
+import { cancellationTokenToPromise } from "@dmail/cancellation"
 import { jsCompile, createInstrumentPlugin } from "../jsCompile/index.js"
 import { readFile } from "../fileHelper.js"
-import { cancellationTokenToPromise } from "../cancellation/index.js"
 
 const platformCoverageMapToFilesMissed = (coverageMap, filesToCover) =>
   filesToCover.filter((file) => file in coverageMap === false)

@@ -1,6 +1,10 @@
+import { URL } from "url"
+
+import puppeteer from "puppeteer"
+import { createCancellationToken, cancellationTokenToPromise } from "@dmail/cancellation"
+
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { open as serverIndexOpen } from "../server-index/serverIndex.js"
-import { URL } from "url"
 import { originAsString } from "../server/index.js"
 import { createBrowserPlatformSource } from "../createBrowserSource.js"
 import {
@@ -8,9 +12,7 @@ import {
   getBrowserPlatformRemoteURL,
   getCompileMapLocalURL,
 } from "../compilePlatformAndSystem.js"
-import { createCancellationToken, cancellationTokenToPromise } from "../cancellation/index.js"
 import { eventRace, registerEvent, registerThen, registerCatch } from "../eventHelper.js"
-import puppeteer from "puppeteer"
 import { readFile } from "../fileHelper.js"
 
 const openIndexRequestInterception = async ({

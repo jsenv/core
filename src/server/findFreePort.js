@@ -1,6 +1,6 @@
 import net from "net"
+import { createCancellationToken } from "@dmail/cancellation"
 import { listen, closeServer } from "./server.js"
-import { createCancellationToken } from "../cancellation/index.js"
 
 const portIsFree = ({ cancellationToken, port, ip }) => {
   const server = net.createServer()

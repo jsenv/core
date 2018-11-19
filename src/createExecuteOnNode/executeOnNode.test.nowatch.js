@@ -1,7 +1,7 @@
-import { executeOnNode } from "./executeOnNode.js"
 import path from "path"
+import { createCancellationSource } from "@dmail/cancellation"
 import { createJsCompileService } from "../createJsCompileService.js"
-import { createCancellationSource } from "../cancellation/index.js"
+import { executeOnNode } from "./executeOnNode.js"
 
 const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = "build"

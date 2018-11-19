@@ -1,6 +1,6 @@
+import { createCancellationToken } from "@dmail/cancellation"
 import { promiseConcurrent } from "../promiseHelper.js"
 import { teardownForOutputAndCoverageMap } from "../platformTeardown.js"
-import { createCancellationToken } from "../cancellation/index.js"
 
 export const filesToResultMap = (
   files,

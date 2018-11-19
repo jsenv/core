@@ -1,9 +1,8 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 
-/* eslint-disable import/max-dependencies */
+import { createCancellationToken } from "@dmail/cancellation"
 import { createRequestToFileResponse } from "../createRequestToFileResponse/index.js"
 import { open as serverOpen, enableCORS, serviceCompose } from "../server/index.js"
-import { createCancellationToken } from "../cancellation/index.js"
 
 export const open = async ({
   cancellationToken = createCancellationToken(),

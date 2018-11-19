@@ -1,4 +1,4 @@
-import { createCancellationToken, cancellationTokenToPromise } from "./cancellation/index.js"
+import { createCancellationToken, cancellationTokenToPromise } from "@dmail/cancellation"
 
 export const promiseMatch = (callbacks, data, predicate) => {
   return new Promise((resolve, reject) => {

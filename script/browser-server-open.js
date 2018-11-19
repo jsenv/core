@@ -1,8 +1,5 @@
-const {
-  serverBrowserOpen,
-  createJsCompileService,
-  createCancellationSource,
-} = require("../dist/index.js")
+const { createCancellationSource } = require("@dmail/cancellation")
+const { serverBrowserOpen, createJsCompileService } = require("../dist/index.js")
 const path = require("path")
 
 const localRoot = path.resolve(__dirname, "../")

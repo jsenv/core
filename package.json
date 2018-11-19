@@ -21,6 +21,7 @@
 	},
 	"dependencies": {
 		"@babel/core": "7.1.0",
+		"@dmail/cancellation": "github:dmail/cancellation",
 		"@dmail/module-loader": "github:dmail/module-loader",
 		"@dmail/project-structure": "github:dmail/project-structure",
 		"@dmail/project-structure-compile-babel": "github:dmail/project-structure-compile-babel",

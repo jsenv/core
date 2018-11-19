@@ -1,9 +1,9 @@
+import assert from "assert"
 import path from "path"
+import { createCancellationSource } from "@dmail/cancellation"
 import { createExecuteOnNode } from "../createExecuteOnNode/createExecuteOnNode.js"
 import { createExecuteOnChromium } from "../createExecuteOnChromium/createExecuteOnChromium.js"
 import { testDescriptorToCoverageMapForProject } from "./testDescriptorToCoverageMapForProject.js"
-import { createCancellationSource } from "../cancellation/index.js"
-import assert from "assert"
 
 const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = "build"
