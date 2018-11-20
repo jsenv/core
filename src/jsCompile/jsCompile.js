@@ -15,6 +15,7 @@ const selfLocalRoot = path.resolve(__dirname, "../../../")
 
 export const jsCompile = async ({
   localRoot,
+  resolveSource,
   file,
   fileAbsolute,
   inputAst,
@@ -48,11 +49,21 @@ export const jsCompile = async ({
   // source can be fetched at `${compileServer.origin}/src/file.js`
   const sourceToSourceForSourceMap = (source) => `/${source}`
 
-  if (file === "node_module/dev-server/src/platform/browser/index.js") {
-    const result = await packager({ localRoot, fileAbsolute, pluginMap, remap })
+  if (file === "node_modules/dev-server/src/platform/browser/index.js") {
+    const result = await packager({ fileAbsolute, pluginMap, remap })
 
     map = result.map
     output = result.code
+
+    const selfExecuted = localRoot === selfLocalRoot
+    if (selfExecuted === false) {
+      if (localRoot.startsWith(selfLocalRoot) === false) {
+        throw new Error(`dev-server must be inside ${localRoot}`)
+      }
+    }
+
+    map.sources = map.sources.map((source) => resolveSource(source))
+    debugger
 
     sources.push(...map.sources)
     sourcesContent.push(...map.sourcesContent)
