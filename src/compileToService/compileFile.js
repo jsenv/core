@@ -134,7 +134,7 @@ const readCache = async ({ localRoot, compileInto, compileId, file, eTag, meta }
 
   const [sourcesValidations, assetValidations] = await Promise.all([
     validateSources({ localRoot, meta }),
-    validateAssets({ localRoot, meta }),
+    validateAssets({ localRoot, compileInto, compileId, file, meta }),
   ])
 
   const invalidSource = sourcesValidations.find(({ valid }) => !valid)
@@ -240,6 +240,7 @@ const updateMeta = ({
         fileAbsolute,
         sources,
         sourcesEtag: sourcesContent.map((sourceContent) => createETag(sourceContent)),
+        assets,
         assetsEtag: assetsContent.map((assetContent) => createETag(assetContent)),
         createdMs: Number(Date.now()),
         lastModifiedMs: Number(Date.now()),
@@ -256,6 +257,7 @@ const updateMeta = ({
         fileAbsolute, // may change because of locate
         sources,
         sourcesEtag: sourcesContent.map((sourceContent) => createETag(sourceContent)),
+        assets,
         assetsEtag: assetsContent.map((assetContent) => createETag(assetContent)),
         lastModifiedMs: Number(Date.now()),
         ...(cacheTrackHit
@@ -312,7 +314,13 @@ export const compileFile = async ({
     const compileParam =
       compileParamMap && compileId in compileParamMap ? compileParamMap[compileId] : {}
 
-    return compile({
+    const {
+      sources = [],
+      sourcesContent = [],
+      assets = [],
+      assetsContent = [],
+      output,
+    } = await compile({
       localRoot,
       file,
       fileAbsolute,
@@ -320,6 +328,14 @@ export const compileFile = async ({
       outputFile,
       ...compileParam,
     })
+
+    return {
+      sources,
+      sourcesContent,
+      assets,
+      assetsContent,
+      output,
+    }
   }
 
   if (cacheStrategy === "none") {
@@ -332,13 +348,15 @@ export const compileFile = async ({
   }
 
   const fromCacheOrCompile = async () => {
-    const meta = await readFileMeta({
-      localRoot,
-      compileInto,
-      compileId,
-      file,
-    })
-    const input = await readFile(fileAbsolute)
+    const [meta, input] = await Promise.all([
+      readFileMeta({
+        localRoot,
+        compileInto,
+        compileId,
+        file,
+      }),
+      readFile(fileAbsolute),
+    ])
     const eTag = createETag(input)
 
     if (!meta) {
@@ -369,7 +387,7 @@ export const compileFile = async ({
       }
     }
 
-    const generateResult = generate({ input })
+    const generateResult = await generate({ input })
     return {
       status: "updated",
       meta,

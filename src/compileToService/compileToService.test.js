@@ -13,16 +13,16 @@ const compileParamMap = {
     content: output,
   },
 }
-const assetMap = {
-  "asset.map": "bar",
-}
 const file = "src/file.txt"
 const expectedEtag = `"3-C+7Hteo/D9vJXQ3UfzxbwnXaijM"`
 
 const compile = ({ content }) => {
   return {
-    outputSource: content,
-    assetMap,
+    sources: [file],
+    sourcesContent: [content],
+    assets: ["asset.map"],
+    assetsContent: ["bar"],
+    output: content,
   }
 }
 
