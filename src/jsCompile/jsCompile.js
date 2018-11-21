@@ -14,6 +14,10 @@ const stringifyCoverage = (object) => JSON.stringify(object, null, "  ")
 
 const selfLocalRoot = path.resolve(__dirname, "../../../")
 
+export const getBrowserPlatformFile = () => {
+  return "node_modules/dev-server/src/platform/browser/index.js"
+}
+
 export const jsCompile = async ({
   localRoot,
   file,

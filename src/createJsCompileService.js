@@ -5,13 +5,9 @@ import {
   pluginOptionMapToPluginMap,
 } from "@dmail/project-structure-compile-babel"
 import { objectToPromiseAll } from "./promiseHelper.js"
-import {
-  compilePlatform,
-  getBrowserPlatformLocalURL,
-  getCompileMapLocalURL,
-} from "./compilePlatform.js"
 import { objectMapValue } from "./objectHelper.js"
 import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.js"
+import { getCompileMapLocal } from "./browserLocaters.js"
 
 const compileMapToCompileParamMap = (compileMap, pluginMap) => {
   return objectMapValue(compileMap, ({ pluginNames }) => {
@@ -45,11 +41,8 @@ export const createJsCompileService = async ({
   })
 
   const { filesToCover } = await objectToPromiseAll({
-    // we should not have to compile thoose static files
-    // we would just have to move them to compileInto/
-    compilePlatform: compilePlatform(getBrowserPlatformLocalURL({ localRoot, compileInto })),
     writeCompileMap: fileWriteFromString(
-      getCompileMapLocalURL({ localRoot, compileInto }),
+      getCompileMapLocal({ localRoot, compileInto }),
       JSON.stringify(compileMap, null, "  "),
     ),
     filesToCover: listFilesToCover(),

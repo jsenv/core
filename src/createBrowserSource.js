@@ -1,25 +1,27 @@
 import { uneval } from "@dmail/uneval"
 
-export const createBrowserPlatformSource = ({
+export const createBrowserSetupSource = ({
+  compileMap = {},
+  platformFile,
   remoteRoot,
   compileInto,
-  compileMap = {},
   hotreload,
   hotreloadSSERoot,
 }) => {
   return `
-  window.__platform__ = window.__browserPlatform__.createBrowserPlatform({
-    remoteRoot: ${uneval(remoteRoot)},
-		compileInto: ${uneval(compileInto)},
-		compileMap: ${uneval(compileMap)},
-    hotreload: ${uneval(hotreload)},
-    hotreloadSSERoot: ${uneval(hotreloadSSERoot)},
-    hotreloadCallback: function() {
-      // we cannot just System.delete the file because the change may have any impact, we have to reload
-      window.location.reload()
-    }
-	})
-`
+	  window.__platformPromise__ = window.__browserLoader__.load({
+			compileMap: ${uneval(compileMap)},
+			platformFile: ${uneval(platformFile)},
+			remoteRoot: ${uneval(remoteRoot)},
+			compileInto: ${uneval(compileInto)},
+			hotreload: ${uneval(hotreload)},
+			hotreloadSSERoot: ${uneval(hotreloadSSERoot)},
+			hotreloadCallback: function() {
+				// we cannot just System.delete the file because the change may have any impact, we have to reload
+				window.location.reload()
+			}
+		})
+	`
 }
 
 export const createBrowserExecuteSource = ({
@@ -29,14 +31,10 @@ export const createBrowserExecuteSource = ({
   // we could create a special page able to display the coverage result
   // not in the MVP so we'll do that later
   instrument = false,
-  setup = () => {},
-  teardown = () => {},
 }) => {
   return `
-  window.__platform__.executeFile({
-    file: ${uneval(file)},
-    instrument: ${uneval(instrument)},
-    setup: ${uneval(setup)},
-    teardown: ${uneval(teardown)},
-  })`
+  window.__platformPromise__.then((platform) => {
+		platform.executeFile(${uneval(file)}, { instrument: ${uneval(instrument)} })
+	})
+`
 }

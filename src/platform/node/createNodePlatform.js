@@ -7,8 +7,8 @@ import {
   cancellationTokenToPromise,
 } from "@dmail/cancellation"
 import { createImportTracker } from "../createImportTracker.js"
-import { createNodeSystem } from "../../platform-system/node/createNodeSystem.js"
 import { createLocaters } from "../createLocaters.js"
+import { createNodeSystem } from "./system/createNodeSystem.js"
 import { valueInstall } from "./valueInstall.js"
 
 export const nodeVersionToCompileId = (version, compileMap) => {

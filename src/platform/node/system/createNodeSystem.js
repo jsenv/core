@@ -1,5 +1,6 @@
+import "systemjs/dist/system.js"
 import { Script } from "vm"
-import { getNamespaceToRegister } from "../getNamespaceToRegister.js"
+import { getNamespaceToRegister } from "../../getNamespaceToRegister.js"
 import { isNodeBuiltinModule } from "./isNodeBuiltinModule.js"
 import { fetchModule } from "./fetchModule.js"
 
@@ -21,6 +22,8 @@ export const createNodeSystem = ({ urlToFilename = (url) => url }) => {
       if (status < 200 || status >= 300) {
         return Promise.reject({ status, reason, headers, body })
       }
+
+      // we're missing JSON.parse here
 
       // This filename is very important because it allows the engine (like vscode) to be know
       // that the evluated file is in fact on the filesystem

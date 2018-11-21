@@ -4,9 +4,10 @@ import { open as serverOpen, createRequestPredicate, serviceCompose } from "../s
 import { open as serverCompileOpen } from "../server-compile/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { guard } from "../functionHelper.js"
-import { getBrowserPlatformRemoteURL, getCompileMapLocalURL } from "../compilePlatform.js"
-import { createBrowserPlatformSource, createBrowserExecuteSource } from "../createBrowserSource.js"
+import { getBrowserPlatformFile } from "../jsCompile/jsCompile.js"
+import { createBrowserSetupSource, createBrowserExecuteSource } from "../createBrowserSource.js"
 import { readFile } from "../fileHelper.js"
+import { getCompileMapLocal, getLoaderLocal } from "../browserLocaters.js"
 
 export const listFilesToExecute = (localRoot) => {
   return forEachRessourceMatching(
@@ -102,18 +103,21 @@ export const open = async ({
       method: "GET",
     }),
     async ({ ressource }) => {
-      const compileMap = JSON.parse(
-        await readFile(getCompileMapLocalURL({ localRoot, compileInto })),
-      )
+      const compileMap = JSON.parse(await readFile(getCompileMapLocal({ localRoot, compileInto })))
+      const loaderSource = await readFile(getLoaderLocal({ localRoot }))
 
       const html = await createHTMLForBrowser({
-        scriptRemoteList: [{ url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) }],
+        // scriptRemoteList: [{ url: getBrowserPlatformFile({ remoteRoot, compileInto }) }],
         scriptInlineList: [
           {
-            source: createBrowserPlatformSource({
+            source: loaderSource(),
+          },
+          {
+            source: createBrowserSetupSource({
+              compileMap,
+              platformFile: getBrowserPlatformFile(),
               remoteRoot,
               compileInto,
-              compileMap,
               hotreload,
               hotreloadSSERoot: remoteRoot,
             }),
