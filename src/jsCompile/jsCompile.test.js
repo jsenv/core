@@ -48,12 +48,15 @@ jsCompile({
   input,
   pluginMap,
 }).then(({ sources, sourcesContent, assets, assetsContent, output }) => {
-  debugger
-  assert.equal(typeof outputSource, "string")
-  assert.equal(outputSource.length > 0, true)
-  assert.equal("file.js.map" in assetMap, true)
-  const sourceMap = JSON.parse(assetMap["file.js.map"])
-  assert.equal(sourceMap.file, file)
-  assert.deepEqual(sourceMap.sources, [`/${file}`])
+  assert.deepEqual(sources, [file])
+  assert.deepEqual(sourcesContent, [input])
+  assert.deepEqual(assets, ["file.js.map"])
+  const map = JSON.parse(assetsContent[0])
+  assert.deepEqual(map.file, file)
+  assert.deepEqual(map.sources, [`/${file}`])
+  assert.deepEqual(map.sourcesContent, undefined)
+  assert.deepEqual(typeof output, "string")
+  assert.deepEqual(output.length > 0, true)
+
   console.log("passed")
 })

@@ -65,6 +65,7 @@ export const jsCompile = async ({
     const plugins = packagerPluginNames.map((pluginName) => pluginMap[pluginName])
 
     const result = await packager({
+      file,
       fileAbsolute,
       plugins,
       remap,
@@ -80,6 +81,7 @@ export const jsCompile = async ({
       }
     }
   } else {
+    const plugins = Object.keys(pluginMap).map((pluginName) => pluginMap[pluginName])
     const result = await transpiler({
       localRoot,
       file,
@@ -87,7 +89,7 @@ export const jsCompile = async ({
       inputAst,
       input,
       inputMap,
-      plugins: Object.keys(pluginMap).map((pluginName) => pluginMap[pluginName]),
+      plugins,
       remap,
     })
 
@@ -99,9 +101,6 @@ export const jsCompile = async ({
   // we don't need sourceRoot because our path are relative or absolute to the current location
   // we could comment this line because it is not set by babel because not passed during transform
   delete map.sourceRoot
-
-  // this file name supposed to appear in dev tools
-  map.file = file
 
   sources.push(...map.sources)
   map.sources = map.sources.map((source) => sourceToSourceForSourceMap(source))
@@ -125,7 +124,11 @@ export const jsCompile = async ({
       // sourceMap will be named file.js.map
       const sourceMapName = `${path.basename(file)}.map`
       // it will be located at `${compileServer.origin}/build/src/file.js/e3uiyi456&/file.js.map`
-      const sourceMapLocationForSource = `${path.dirname(file)}__meta__/${sourceMapName}`
+      const folder = path.dirname(file)
+      const folderWithSepOrNothing = folder ? `${folder}/` : ""
+      const sourceMapLocationForSource = `${folderWithSepOrNothing}${path.basename(
+        file,
+      )}__meta__/${sourceMapName}`
 
       output = writeSourceMapLocation({
         source: output,

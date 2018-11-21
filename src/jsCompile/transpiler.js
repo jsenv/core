@@ -2,11 +2,11 @@ import { transformAsync, transformFromAstAsync } from "@babel/core"
 import { regexpEscape } from "../stringHelper.js"
 import path from "path"
 
-const transpile = ({ inputAst, inputSource, options }) => {
-  if (inputAst) {
-    return transformFromAstAsync(inputAst, inputSource, options)
+const transpile = ({ ast, code, options }) => {
+  if (ast) {
+    return transformFromAstAsync(ast, code, options)
   }
-  return transformAsync(inputSource, options)
+  return transformAsync(code, options)
 }
 
 const transformBabelParseErrorMessage = (babelParseErrorMessage, filename, relativeName) => {
@@ -36,6 +36,7 @@ export const transpiler = async ({
   plugins,
   remap,
 }) => {
+  // https://babeljs.io/docs/en/options
   const options = {
     plugins,
     filename: fileAbsolute || file,
@@ -44,10 +45,13 @@ export const transpiler = async ({
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true,
     sourceMaps: remap,
+    sourceFileName: file,
   }
 
   try {
-    return await transpile({ ast: inputAst, code: input, options })
+    const result = await transpile({ ast: inputAst, code: input, options })
+    // result.map.sources = []
+    return result
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
       return Promise.reject({
