@@ -4,7 +4,7 @@ import { getNamespaceToRegister } from "../../getNamespaceToRegister.js"
 import { isNodeBuiltinModule } from "./isNodeBuiltinModule.js"
 import { fetchModule } from "./fetchModule.js"
 
-export const createNodeSystem = ({ urlToFilename = (url) => url }) => {
+export const createNodeSystem = ({ hrefToLocalFile = (url) => url }) => {
   const nodeSystem = new global.System.constructor()
 
   nodeSystem.instantiate = (url, parent) => {
@@ -28,7 +28,7 @@ export const createNodeSystem = ({ urlToFilename = (url) => url }) => {
       // This filename is very important because it allows the engine (like vscode) to be know
       // that the evluated file is in fact on the filesystem
       // (very important for debugging and sourcenap resolution)
-      const filename = urlToFilename(url)
+      const filename = hrefToLocalFile(url)
       const script = new Script(body, { filename })
       try {
         script.runInThisContext()

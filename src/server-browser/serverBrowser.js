@@ -110,6 +110,7 @@ export const open = async ({
         // scriptRemoteList: [{ url: getBrowserPlatformFile({ remoteRoot, compileInto }) }],
         scriptInlineList: [
           {
+            // it could be a remote script
             source: loaderSource(),
           },
           {

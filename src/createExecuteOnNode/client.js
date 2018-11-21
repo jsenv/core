@@ -1,7 +1,6 @@
 import { createCancellationSource } from "@dmail/cancellation"
 import { uneval } from "@dmail/uneval"
-import { createNodePlatform } from "@dmail/module-loader"
-
+import { loadNodePlatform } from "../platform/node/loadNodePlatform.js"
 import { getCompileMapLocalURL } from "../compilePlatformAndSystem.js"
 
 const sendToParent = (type, data) => {
@@ -86,17 +85,24 @@ token.register(
       // eslint-disable-next-line import/no-dynamic-require
       const compileMap = require(compileMapLocalURL)
 
-      const { executeFile } = createNodePlatform({
+      loadNodePlatform({
         cancellationToken: token,
         localRoot,
         remoteRoot,
         compileInto,
         compileMap,
       })
-
-      executeFile({ file, instrument, setup, teardown }).then((value) => {
-        sendToParent("done", value)
-      })
+        .then((platform) => {
+          return platform.executeFile({
+            file,
+            instrument,
+            setup,
+            teardown,
+          })
+        })
+        .then((value) => {
+          sendToParent("done", value)
+        })
     },
   ),
 )

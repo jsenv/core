@@ -7,7 +7,6 @@
 
 import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 import { createLocaters } from "../createLocaters.js"
-import { createImportTracker } from "../createImportTracker.js"
 import { detect } from "./browserDetect/index.js"
 import { browserToCompileId } from "./browserToCompileId.js"
 import { fetchSource } from "./fetchSource.js"
@@ -31,7 +30,7 @@ const onExecuteError = (error, { file, fileToRemoteSourceFile, hrefToFile }) => 
   return Promise.reject(error)
 }
 
-export const load = ({
+export const loadBrowserPlatform = ({
   compileMap,
   platformFile,
   remoteRoot,
@@ -46,34 +45,28 @@ export const load = ({
 
   const browser = detect()
   const compileId = browserToCompileId(browser, compileMap) || "otherwise"
+  const {
+    fileToRemoteCompiledFile,
+    fileToRemoteInstrumentedFile,
+    fileToRemoteSourceFile,
+    hrefToFile,
+  } = createLocaters({
+    remoteRoot,
+    compileInto,
+    compileId,
+  })
   const platformURL = `${compileId}/${platformFile}`
 
   return fetchSource(platformURL).then(({ instantiate }) => {
-    const createExecuteFile = instantiate()
-    const executeFileImplementation = createExecuteFile({ fetchSource })
-
-    const {
-      fileToRemoteCompiledFile,
-      fileToRemoteInstrumentedFile,
-      fileToRemoteSourceFile,
-      hrefToFile,
-    } = createLocaters({
-      remoteRoot,
-      compileInto,
-      compileId,
-    })
-    const { markFileAsImported, isFileImported } = createImportTracker()
+    const createPlaformHooks = instantiate()
+    const platformHooks = createPlaformHooks({ fetchSource })
 
     if (hotreload) {
       const hotreloadPredicate = (file) => {
-        // isFileImported is useful in case the file was imported but is not
-        // in System registry because it has a parse error or insantiate error
-        if (isFileImported(file)) {
-          return true
+        if (platformHooks.isFileImported) {
+          return platformHooks.isFileImported(file)
         }
-
-        const remoteCompiledFile = fileToRemoteCompiledFile(file)
-        return Boolean(window.System.get(remoteCompiledFile))
+        return true
       }
 
       open(hotreloadSSERoot, (file) => {
@@ -84,13 +77,11 @@ export const load = ({
     }
 
     const executeFile = (file, { instrument = false } = {}) => {
-      markFileAsImported(file)
-
       const remoteCompiledFile = instrument
         ? fileToRemoteCompiledFile(file)
         : fileToRemoteInstrumentedFile(file)
 
-      return executeFileImplementation(remoteCompiledFile).catch((error) => {
+      return platformHooks.executeFile(remoteCompiledFile).catch((error) => {
         return onExecuteError(error, {
           file,
           fileToRemoteSourceFile,

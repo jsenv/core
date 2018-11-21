@@ -1,10 +1,7 @@
 import { fork as forkChildProcess } from "child_process"
 import path from "path"
-
 import { uneval } from "@dmail/uneval"
-
 import { createPlatformController } from "../platform-controller/createPlatformController.js"
-
 import { createChildExecArgv } from "./createChildExecArgv.js"
 
 const root = path.resolve(__dirname, "../../../")

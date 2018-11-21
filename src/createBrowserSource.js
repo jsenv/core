@@ -9,7 +9,7 @@ export const createBrowserSetupSource = ({
   hotreloadSSERoot,
 }) => {
   return `
-	  window.__platformPromise__ = window.__browserLoader__.load({
+	  window.__platformPromise__ = window.__browserLoader__.loadBrowserPlatform({
 			compileMap: ${uneval(compileMap)},
 			platformFile: ${uneval(platformFile)},
 			remoteRoot: ${uneval(remoteRoot)},
