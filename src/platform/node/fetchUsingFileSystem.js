@@ -15,7 +15,7 @@ const fileUrlToPath = (fileUrl) => {
   return fileUrl.substr(7)
 }
 
-export const fetchModuleFromFileSystem = (key) => {
+export const fetchUsingFileSystem = (key) => {
   const filePath = fileUrlToPath(key)
   return new Promise((resolve, reject) => {
     fs.readFile(filePath, (error, buffer) => {

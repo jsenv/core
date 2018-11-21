@@ -7,7 +7,9 @@ import { guard } from "../functionHelper.js"
 import { getBrowserPlatformFile } from "../jsCompile/jsCompile.js"
 import { createBrowserSetupSource, createBrowserExecuteSource } from "../createBrowserSource.js"
 import { readFile } from "../fileHelper.js"
-import { getCompileMapLocal, getLoaderLocal } from "../browserLocaters.js"
+import { getCompileMapLocal } from "../getCompileMapLocal.js"
+// eslint-disable-next-line import/max-dependencies
+import { getBrowserLoaderLocal } from "../getBrowserLoaderLocal.js"
 
 export const listFilesToExecute = (localRoot) => {
   return forEachRessourceMatching(
@@ -104,7 +106,7 @@ export const open = async ({
     }),
     async ({ ressource }) => {
       const compileMap = JSON.parse(await readFile(getCompileMapLocal({ localRoot, compileInto })))
-      const loaderSource = await readFile(getLoaderLocal({ localRoot }))
+      const loaderSource = await readFile(getBrowserLoaderLocal({ localRoot }))
 
       const html = await createHTMLForBrowser({
         // scriptRemoteList: [{ url: getBrowserPlatformFile({ remoteRoot, compileInto }) }],

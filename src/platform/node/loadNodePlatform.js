@@ -1,6 +1,7 @@
 import { createLocaters } from "../createLocaters.js"
 import { nodeToCompileId } from "./nodeToCompileId.js"
 import { createPlatformHooks } from "./createPlatformHooksUsingSystem.js"
+import { fetchSource } from "./fetchSource.js"
 
 const onExecuteError = (error, { file, fileToLocalFile }) => {
   if (error && error.status === 500 && error.reason === "parse error") {
@@ -30,7 +31,11 @@ export const loadNodePlatform = ({ compileMap, localRoot, remoteRoot, compileInt
     compileInto,
     compileId,
   })
-  const platformHooks = createPlatformHooks({ hrefToLocalFile, fileToRemoteCompiledFile })
+  const platformHooks = createPlatformHooks({
+    fetchSource,
+    hrefToLocalFile,
+    fileToRemoteCompiledFile,
+  })
 
   const executeFile = (file, { instrument = false } = {}) => {
     const remoteCompiledFile = instrument

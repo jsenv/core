@@ -11,7 +11,7 @@ const getHeaderMapFromResponse = (response) => {
   return headerMap
 }
 
-export const fetchModuleFromServer = async (url, parent) => {
+export const fetchUsingHttp = async (url, parent) => {
   const response = await fetch(url, {
     headers: {
       "x-module-referer": parent || url,

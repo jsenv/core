@@ -1,10 +1,10 @@
 import { createBrowserSystem } from "./system/createBrowserSystem.js"
 import { createImportTracker } from "../createImportTracker.js"
 
-export const createPlatformHooks = ({ fetchModule, fileToRemoteCompiledFile }) => {
+export const createPlatformHooks = ({ fetchSource, hrefToLocalFile, fileToRemoteCompiledFile }) => {
   const importTracker = createImportTracker()
 
-  const browserSystem = createBrowserSystem(fetchModule)
+  const browserSystem = createBrowserSystem({ fetchSource, hrefToLocalFile })
   window.System = browserSystem
 
   const executeFile = (file) => {

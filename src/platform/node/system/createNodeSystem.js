@@ -1,37 +1,19 @@
 import "systemjs/dist/system.js"
-import { Script } from "vm"
-import { getNamespaceToRegister } from "../../getNamespaceToRegister.js"
-import { isNodeBuiltinModule } from "./isNodeBuiltinModule.js"
-import { fetchModule } from "./fetchModule.js"
+import { moduleToRegisterGetter } from "./moduleToRegisterGetter.js"
 
-export const createNodeSystem = ({ hrefToLocalFile = (url) => url }) => {
+export const createNodeSystem = ({ fetchSource, evalSource, hrefToLocalFile }) => {
   const nodeSystem = new global.System.constructor()
 
   nodeSystem.instantiate = (url, parent) => {
-    if (isNodeBuiltinModule(url)) {
-      return getNamespaceToRegister(() => {
-        const nodeBuiltinModuleExports = require(url) // eslint-disable-line import/no-dynamic-require
-        return {
-          ...nodeBuiltinModuleExports,
-          default: nodeBuiltinModuleExports,
-        }
-      })
-    }
-
-    return fetchModule(url, parent).then(({ status, reason, headers, body }) => {
-      if (status < 200 || status >= 300) {
-        return Promise.reject({ status, reason, headers, body })
-      }
-
-      // we're missing JSON.parse here
-
-      // This filename is very important because it allows the engine (like vscode) to be know
-      // that the evluated file is in fact on the filesystem
-      // (very important for debugging and sourcenap resolution)
-      const filename = hrefToLocalFile(url)
-      const script = new Script(body, { filename })
+    return moduleToRegisterGetter({
+      fetchSource,
+      evalSource,
+      remoteFile: url,
+      remoteParent: parent,
+      localFile: hrefToLocalFile(url),
+    }).then((registerGetter) => {
       try {
-        script.runInThisContext()
+        return registerGetter(nodeSystem)
       } catch (error) {
         return Promise.reject({
           code: "MODULE_INSTANTIATE_ERROR",
@@ -40,8 +22,6 @@ export const createNodeSystem = ({ hrefToLocalFile = (url) => url }) => {
           parent,
         })
       }
-
-      return nodeSystem.getRegister()
     })
   }
 

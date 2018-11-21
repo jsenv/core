@@ -1,7 +1,6 @@
 import { createCancellationSource } from "@dmail/cancellation"
 import { uneval } from "@dmail/uneval"
 import { loadNodePlatform } from "../platform/node/loadNodePlatform.js"
-import { getCompileMapLocalURL } from "../compilePlatformAndSystem.js"
 
 const sendToParent = (type, data) => {
   // process.send algorithm does not send non enumerable values
@@ -71,26 +70,15 @@ process.on("SIGINT", () => {
   })
 })
 
-// cancellation.register(
-//   listenParentOnce("interrupt", () => {
-//     process.emit("SIGINT")
-//   }),
-// )
-
 token.register(
   listenParentOnce(
     "execute",
-    ({ localRoot, remoteRoot, compileInto, file, instrument, setup, teardown }) => {
-      const compileMapLocalURL = getCompileMapLocalURL({ localRoot, compileInto })
-      // eslint-disable-next-line import/no-dynamic-require
-      const compileMap = require(compileMapLocalURL)
-
+    ({ compileMap, localRoot, remoteRoot, compileInto, file, instrument, setup, teardown }) => {
       loadNodePlatform({
-        cancellationToken: token,
+        compileMap,
         localRoot,
         remoteRoot,
         compileInto,
-        compileMap,
       })
         .then((platform) => {
           return platform.executeFile({

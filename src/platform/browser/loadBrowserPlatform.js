@@ -10,6 +10,7 @@ import { createLocaters } from "../createLocaters.js"
 import { detect } from "./browserDetect/index.js"
 import { browserToCompileId } from "./browserToCompileId.js"
 import { fetchSource } from "./fetchSource.js"
+import { evalSource } from "./evalSource.js"
 import { open } from "./hotreload.js"
 
 const onExecuteError = (error, { file, fileToRemoteSourceFile, hrefToFile }) => {
@@ -50,6 +51,7 @@ export const loadBrowserPlatform = ({
     fileToRemoteInstrumentedFile,
     fileToRemoteSourceFile,
     hrefToFile,
+    hrefToLocalFile,
   } = createLocaters({
     remoteRoot,
     compileInto,
@@ -57,9 +59,19 @@ export const loadBrowserPlatform = ({
   })
   const platformURL = `${compileId}/${platformFile}`
 
-  return fetchSource(platformURL).then(({ instantiate }) => {
-    const createPlaformHooks = instantiate()
-    const platformHooks = createPlaformHooks({ fetchSource })
+  return fetchSource(platformURL).then(({ status, reason, headers, body }) => {
+    if (status < 200 || status >= 400) {
+      return Promise.reject({ status, reason, headers, body })
+    }
+
+    evalSource(body, platformURL)
+    const createPlatformHooks = window.__createPlatformHooks__
+    const platformHooks = createPlatformHooks({
+      fetchSource,
+      evalSource,
+      hrefToLocalFile,
+      fileToRemoteCompiledFile,
+    })
 
     if (hotreload) {
       const hotreloadPredicate = (file) => {

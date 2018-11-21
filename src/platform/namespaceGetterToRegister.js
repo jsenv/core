@@ -1,4 +1,4 @@
-export const getNamespaceToRegister = (getNamespace) => {
+export const namespaceGetterToRegister = (getNamespace) => {
   return [
     [],
     (_export) => {

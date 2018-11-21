@@ -1,25 +1,19 @@
 import "systemjs/dist/system.js"
-import { getNamespaceToRegister } from "../../getNamespaceToRegister.js"
+import { moduleToRegisterGetter } from "./moduleToRegisterGetter.js"
 
-export const createBrowserSystem = ({ fetchModuleSource }) => {
+export const createBrowserSystem = ({ fetchSource, evalSource, hrefToLocalFile }) => {
   const browserSystem = new window.System.constructor()
 
   browserSystem.instantiate = (url, parent) => {
-    return fetchModuleSource(url, parent).then(({ instantiate, type }) => {
+    return moduleToRegisterGetter({
+      fetchSource,
+      evalSource,
+      remoteFile: url,
+      remoteParent: parent,
+      localFile: hrefToLocalFile(url),
+    }).then((registerGetter) => {
       try {
-        const value = instantiate()
-
-        if (type === "js") {
-          return browserSystem.getRegister()
-        }
-        if (type === "json") {
-          return getNamespaceToRegister(() => {
-            return {
-              default: value,
-            }
-          })
-        }
-        return null
+        return registerGetter(browserSystem)
       } catch (error) {
         return Promise.reject({
           code: "MODULE_INSTANTIATE_ERROR",

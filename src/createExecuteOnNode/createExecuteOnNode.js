@@ -2,6 +2,7 @@ import { fork as forkChildProcess } from "child_process"
 import path from "path"
 import { uneval } from "@dmail/uneval"
 import { createPlatformController } from "../platform-controller/createPlatformController.js"
+import { getCompileMapLocal } from "../getCompileMapLocal.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 
 const root = path.resolve(__dirname, "../../../")
@@ -69,7 +70,11 @@ const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInt
   }
 
   const executeFile = (file, { instrument, setup, teardown }) => {
+    const compileMapLocalURL = getCompileMapLocal({ localRoot, compileInto })
+    // eslint-disable-next-line import/no-dynamic-require
+    const compileMap = require(compileMapLocalURL)
     sendToChild("execute", {
+      compileMap,
       localRoot,
       remoteRoot,
       compileInto,
