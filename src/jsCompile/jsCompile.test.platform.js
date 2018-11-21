@@ -39,14 +39,28 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-unicode-regex": {},
 })
 
+/*
+depuis dev-server-poc
+
+on fera donc
+
+node_module/dev-server/src/platform/browser/index.js
+
+ce qui fera locate et trouvera le fichier dans 'node_module/dev-server/src/platform/browser/index.js'
+voir ailleurs en fait, l'important c'est le file de depart
+
+ensuite donc le sourcemap devra indiquer le file, ca ok
+et il devra dire ou sont ses sources
+elle devront indiquer node_module/dev-server/src/platform/dependency.js par ex
+
+a verifier
+
 const selfLocalRoot =
   "/Users/d.maillard/Dev/Sandbox/npmlink/packages/dev-server-poc/node_modules/dev-server"
 const projectLocalRoot = "/Users/d.maillard/Dev/Sandbox/npmlink/packages/dev-server-poc"
 const selfFolder = selfLocalRoot.slice(projectLocalRoot.length + 1)
 
-jsCompile({
-  localRoot,
-  resolveSource: (source) => {
+resolveSource: (source) => {
     if (source.indexOf("project-structure") > -1) {
       debugger
     }
@@ -58,10 +72,20 @@ jsCompile({
     const resolved = path.resolve(sourceRelative, selfLocalRoot)
     // faut refaire relative bordel de merde
     return resolved
-  },
+  }
+*/
+
+jsCompile({
+  localRoot,
   file,
   fileAbsolute,
   pluginMap,
-}).then(({}) => {
-  debugger
+}).then(({ sources, sourcesContent, assets, assetsContent, output }) => {
+  assert.deepEqual(Array.isArray(sources), true)
+  assert.deepEqual(Array.isArray(sourcesContent), true)
+  assert.deepEqual(assets, ["index.js.map"])
+  const map = JSON.parse(assetsContent)
+  assert.deepEqual(map.file, "node_modules/dev-server/src/platform/browser/index.js")
+  assert.deepEqual(typeof output, "string")
+  console.log("passed")
 })

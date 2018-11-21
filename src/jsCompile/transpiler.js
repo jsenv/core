@@ -33,11 +33,11 @@ export const transpiler = async ({
   inputAst,
   input,
   inputMap,
-  pluginMap,
+  plugins,
   remap,
 }) => {
   const options = {
-    plugins: Object.keys(pluginMap).map((pluginName) => pluginMap[pluginName]),
+    plugins,
     filename: fileAbsolute || file,
     filenameRelative: file,
     inputSourceMap: inputMap,

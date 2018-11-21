@@ -47,7 +47,7 @@ jsCompile({
   fileAbsolute,
   input,
   pluginMap,
-}).then((result) => {
+}).then(({ sources, sourcesContent, assets, assetsContent, output }) => {
   debugger
   assert.equal(typeof outputSource, "string")
   assert.equal(outputSource.length > 0, true)
