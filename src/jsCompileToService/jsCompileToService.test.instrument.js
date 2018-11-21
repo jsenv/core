@@ -13,7 +13,9 @@ const test = async () => {
     compileInto,
     compileParamMap: {
       [compileId]: {
-        plugins: [createInstrumentPlugin()],
+        pluginMap: {
+          "transform-instrument": createInstrumentPlugin(),
+        },
       },
     },
   })
