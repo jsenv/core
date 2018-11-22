@@ -11,7 +11,7 @@ export const createTwoWayStream = () => {
   let length = 0
   let status = "opened"
 
-  const { promise, resolve } = createPromiseAndHooks()
+  const promise = createPromiseAndHooks()
 
   const errored = createSignal({ smart: true })
   const cancelled = createSignal({ smart: true })
@@ -42,7 +42,7 @@ export const createTwoWayStream = () => {
       return
     }
     status = "closed"
-    resolve(writed.smartMemory.map(([buffer]) => buffer))
+    promise.resolve(writed.smartMemory.map(([buffer]) => buffer))
     closed.emit()
   }
 

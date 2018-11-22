@@ -1,2 +1,2 @@
 require("./compile-source.js")
-require("./compile-browser-loader.js")
+// require("./compile-browser-loader.js")

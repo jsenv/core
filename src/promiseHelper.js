@@ -26,8 +26,10 @@ export const createPromiseAndHooks = () => {
     resolve = res
     reject = rej
   })
+  promise.resolve = resolve
+  promise.reject = reject
 
-  return { promise, resolve, reject }
+  return promise
 }
 
 export const promiseTry = (callback) => {

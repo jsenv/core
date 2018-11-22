@@ -1,7 +1,7 @@
 import { fork as forkChildProcess } from "child_process"
 import path from "path"
 import { uneval } from "@dmail/uneval"
-import { createPlatformController } from "../platform-controller/createPlatformController.js"
+import { createPlatformController } from "../platform-controller/launchPlatformToExecute.js"
 import { getCompileMapLocal } from "../getCompileMapLocal.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 

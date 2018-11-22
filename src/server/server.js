@@ -3,12 +3,8 @@ import http from "http"
 import https from "https"
 import killPort from "kill-port"
 import { URL } from "url"
+import { createCancellationToken, trackOperation } from "@dmail/cancellation"
 import { processTeardown } from "../process-teardown/index.js"
-import {
-  createCancellationToken,
-  cancellationTokenToPromise,
-  cancellationTokenWrapPromise,
-} from "../cancellation/index.js"
 import { trackConnections, trackClients, trackRequestHandlers } from "./trackers.js"
 import { createRequestFromNodeRequest } from "./createRequestFromNodeRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
@@ -75,14 +71,9 @@ export const listen = ({ cancellationToken = createCancellationToken(), server, 
     server.listen(port, ip)
   })
 
-  const close = async () => {
-    await listening
-    return closeServer(server)
-  }
+  const close = () => closeServer(server)
 
-  cancellationToken.register(close)
-
-  return cancellationTokenWrapPromise(cancellationToken, listening)
+  return trackOperation(cancellationToken, listening, { close })
 }
 
 export const originAsString = ({ protocol, ip, port }) => {
@@ -135,31 +126,14 @@ export const open = async (
     }
   }
 
-  await cancellationTokenToPromise(cancellationToken)
+  cancellationToken.throwIfRequested()
   await (forcePort ? killPort(port) : Promise.resolve())
-  await cancellationTokenToPromise(cancellationToken)
+  cancellationToken.throwIfRequested()
 
   const { nodeServer, agent } = getNodeServerAndAgent({ protocol, signature })
 
   let status = "opening"
-  port = await listen({ cancellationToken, server: nodeServer, port, ip })
-  status = "opened"
-
-  const origin = originAsString({ protocol, ip, port })
-  log(openedMessage({ origin }))
-
-  // nodeServer.on("upgrade", (request, socket, head) => {
-  //   // when being requested using a websocket
-  //   // we could also answr to the request ?
-  //   // socket.end([data][, encoding])
-
-  //   console.log("upgrade", { head, request })
-  //   console.log("socket", { connecting: socket.connecting, destroyed: socket.destroyed })
-  // })
-
-  const connectionTracker = trackConnections(nodeServer)
-  const clientTracker = trackClients(nodeServer)
-  const requestHandlerTracker = trackRequestHandlers(nodeServer)
+  const opened = listen({ cancellationToken, server: nodeServer, port, ip })
 
   // close can be called in all these cases:
   /*
@@ -172,13 +146,17 @@ export const open = async (
 	in all those cases we would like to get the close promise
 	*/
 
-  let closedResolve
-  const closed = new Promise((resolve) => {
-    closedResolve = resolve
-  })
+  const connectionTracker = trackConnections(nodeServer)
+  const clientTracker = trackClients(nodeServer)
+  const requestHandlerTracker = trackRequestHandlers(nodeServer)
+
   let closingResolve
   const closing = new Promise((resolve) => {
     closingResolve = resolve
+  })
+  let closedResolve
+  const closed = new Promise((resolve) => {
+    closedResolve = resolve
   })
   const close = memoizeOnce(async (reason = REASON_CLOSING) => {
     closingResolve(reason)
@@ -204,9 +182,7 @@ export const open = async (
     status = "closed"
     closedResolve()
   })
-
-  const unregisterCloseOnCancel = cancellationToken.register(close)
-  closed.then(unregisterCloseOnCancel)
+  trackOperation(cancellationToken, opened, { close })
 
   const closePromises = []
   if (autoCloseOnCrash) {
@@ -238,6 +214,20 @@ export const open = async (
     closePromises.push(exited)
   }
   Promise.race(closePromises).then(close)
+
+  port = await opened
+  status = "opened"
+  const origin = originAsString({ protocol, ip, port })
+  log(openedMessage({ origin }))
+
+  // nodeServer.on("upgrade", (request, socket, head) => {
+  //   // when being requested using a websocket
+  //   // we could also answr to the request ?
+  //   // socket.end([data][, encoding])
+
+  //   console.log("upgrade", { head, request })
+  //   console.log("socket", { connecting: socket.connecting, destroyed: socket.destroyed })
+  // })
 
   requestHandlerTracker.add(async (nodeRequest, nodeResponse) => {
     const request = createRequestFromNodeRequest(nodeRequest, origin)

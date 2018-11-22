@@ -29,11 +29,11 @@ const assertPromiseIsRejectedWith = (promise, value) => {
 test(() => {
   mockExecution(({ tick }) => {
     const lock = createLockRegistry().lockForRessource()
-    const { promise, resolve } = createPromiseAndHooks()
+    const promise = createPromiseAndHooks()
     const returnedPromise = lock.chain(() => promise)
 
     assertPromiseIsPending(returnedPromise)
-    resolve(1)
+    promise.resolve(1)
     tick()
     assertPromiseIsFulfilledWith(returnedPromise, 1)
   })
@@ -42,11 +42,11 @@ test(() => {
 test(() => {
   mockExecution(({ tick }) => {
     const lock = createLockRegistry().lockForRessource()
-    const { promise, reject } = createPromiseAndHooks()
+    const promise = createPromiseAndHooks()
     const returnedPromise = lock.chain(() => promise)
 
     assertPromiseIsPending(returnedPromise)
-    reject(1)
+    promise.reject(1)
     tick()
     assertPromiseIsRejectedWith(returnedPromise, 1)
   })
@@ -57,9 +57,9 @@ test(() => {
   mockExecution(({ tick }) => {
     const lock = createLockRegistry().lockForRessource()
     const firstPromise = createPromiseAndHooks()
-    const firstCallPromise = lock.chain(() => firstPromise.promise.then(() => 1))
+    const firstCallPromise = lock.chain(() => firstPromise.then(() => 1))
     const secondPromise = createPromiseAndHooks()
-    const secondCallPromise = lock.chain(() => secondPromise.promise.then(() => 2))
+    const secondCallPromise = lock.chain(() => secondPromise.then(() => 2))
 
     assertPromiseIsPending(firstCallPromise)
     assertPromiseIsPending(secondCallPromise)
@@ -83,9 +83,9 @@ test(() => {
     const firstPromise = createPromiseAndHooks()
     const secondPromise = createPromiseAndHooks()
 
-    const firstCallPromise = lock1.chain(() => firstPromise.promise)
-    const secondCallPromise = lock2.chain(() => secondPromise.promise)
-    const thirdCallPromise = lock1.chain(() => firstPromise.promise)
+    const firstCallPromise = lock1.chain(() => firstPromise)
+    const secondCallPromise = lock2.chain(() => secondPromise)
+    const thirdCallPromise = lock1.chain(() => firstPromise)
 
     assertPromiseIsPending(firstCallPromise)
     assertPromiseIsPending(secondCallPromise)
