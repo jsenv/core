@@ -31,7 +31,7 @@ export const launchPlatformToExecute = (
     hotreload = false,
     hotreloadSSERoot,
     verbose = false,
-  },
+  } = {},
 ) => {
   const log = (...args) => {
     if (verbose) {
@@ -118,8 +118,10 @@ export const launchPlatformToExecute = (
         })
       })
 
+      await platformOperation
+
       log(`execute ${file} on ${platformTypeForLog}`)
-      const { done } = executeFile(file, { instrument, setup, teardown })
+      const { fileExecuted } = executeFile(file, { instrument, setup, teardown })
 
       const { winner, value } = await promiseTrackRace([
         // cancellationTokenToPromise will reject with a cancelError to prevent
@@ -128,7 +130,7 @@ export const launchPlatformToExecute = (
         restarting,
         errored,
         closed,
-        done,
+        fileExecuted,
       ])
 
       if (winner === restarting) {
@@ -144,7 +146,7 @@ export const launchPlatformToExecute = (
           new Error(`${platformTypeForLog} unexpectedtly closed while executing ${file}`),
         )
       }
-      // done
+      // fileExecuted
       // should I call child.disconnect() at some point ?
       // https://nodejs.org/api/child_process.html#child_process_subprocess_disconnect
       log(`${file} execution on ${platformTypeForLog} done with ${value}`)
