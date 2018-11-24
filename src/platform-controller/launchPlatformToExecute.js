@@ -5,8 +5,13 @@ import {
   createCancelError,
 } from "@dmail/cancellation"
 import { promiseTrackRace } from "../promiseHelper.js"
-import { memoizeOnce } from "../functionHelper.js"
 import { hotreloadOpen } from "./hotreload.js"
+import {
+  createRestartToken,
+  restartTokenCompose,
+  createRestartController,
+  createRestartSource,
+} from "./restartable.js"
 
 // when launchPlatform returns close/closeForce
 // the launched platform have that amount of ms to close
@@ -27,6 +32,7 @@ export const launchPlatformToExecute = (
   launchPlatform,
   {
     cancellationToken = createCancellationToken(),
+    restartToken = createRestartToken(),
     platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
     hotreload = false,
     hotreloadSSERoot,
@@ -39,35 +45,26 @@ export const launchPlatformToExecute = (
     }
   }
 
-  const platformCancellationToken = cancellationToken
-
-  // by default restart do nothing
-  let restartImplementation = () => Promise.resolve()
-  const restartClose = (reason) => {
-    log("close restart")
-    restartImplementation = () => Promise.resolve()
-    return `closing restart because ${reason}`
-  }
-  const restart = memoizeOnce((reason) => {
-    const fn = restartImplementation
-    restartClose("restarting")
-    return fn(reason)
-  })
-  // calling restartOpen means next call to restart will call a new function once
-  // if you close, restart goes back to doing nothing
-  const restartOpen = (implementation) => {
-    log("open restart")
-    restart.deleteCache()
-    restartImplementation = implementation
-    return restartClose
-  }
   if (hotreload) {
+    const hotreloadRestartController = createRestartController()
     cancellationToken.register(
       hotreloadOpen(hotreloadSSERoot, (fileChanged) => {
-        restart(`file changed: ${fileChanged}`)
+        hotreloadRestartController.restart(`file changed: ${fileChanged}`)
       }),
     )
+    restartToken = restartTokenCompose(restartToken, hotreloadRestartController.token)
   }
+
+  const restartSource = createRestartSource()
+  restartSource.onopen = (reason) => {
+    log(`open restart because ${reason}`)
+  }
+  restartSource.onclose = (reason) => {
+    log(`close restart because ${reason}`)
+  }
+  restartToken.setRestartSource(restartSource)
+
+  const platformCancellationToken = cancellationToken
 
   const execute = (
     file,
@@ -105,17 +102,14 @@ export const launchPlatformToExecute = (
         },
       })
 
-      let restartPromise
+      // if we cancel, prevent restart
+      const restartCloseRegistration = cancellationToken.register(restartSource.close)
+      restartSource.open((reason) => {
+        restartCloseRegistration.unregister()
+        return platformOperation.cancel(reason).then(startPlatform)
+      })
       const restarting = new Promise((resolve) => {
-        // if we cancel, prevent restart
-        const restartCloseRegistration = cancellationToken.register(restartClose)
-
-        restartOpen((reason) => {
-          restartCloseRegistration.unregister()
-          resolve(reason)
-          restartPromise = platformOperation.cancel(reason).then(startPlatform)
-          return restartPromise
-        })
+        restartSource.onrestart = resolve
       })
 
       await platformOperation
@@ -134,7 +128,7 @@ export const launchPlatformToExecute = (
       ])
 
       if (winner === restarting) {
-        return restartPromise
+        return value.restartReturnValue
       }
       if (winner === errored) {
         log(`${platformTypeForLog} error: ${value}`)
