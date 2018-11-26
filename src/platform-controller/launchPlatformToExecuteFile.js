@@ -6,12 +6,7 @@ import {
 } from "@dmail/cancellation"
 import { promiseTrackRace } from "../promiseHelper.js"
 import { hotreloadOpen } from "./hotreload.js"
-import {
-  createRestartToken,
-  restartTokenCompose,
-  createRestartController,
-  createRestartSource,
-} from "./restartable.js"
+import { createRestartSource, createRestartToken, createRestartable } from "./restartable.js"
 
 // when launchPlatform returns close/closeForce
 // the launched platform have that amount of ms to close
@@ -28,7 +23,7 @@ const cancellationTokenToPromise = (cancellationToken) => {
   })
 }
 
-export const launchPlatformToExecute = (
+export const launchPlatformToExecuteFile = (
   launchPlatform,
   {
     cancellationToken = createCancellationToken(),
@@ -45,28 +40,28 @@ export const launchPlatformToExecute = (
     }
   }
 
-  if (hotreload) {
-    const hotreloadRestartController = createRestartController()
-    cancellationToken.register(
-      hotreloadOpen(hotreloadSSERoot, (fileChanged) => {
-        hotreloadRestartController.restart(`file changed: ${fileChanged}`)
-      }),
-    )
-    restartToken = restartTokenCompose(restartToken, hotreloadRestartController.token)
-  }
-
-  const restartSource = createRestartSource()
-  restartSource.onopen = (reason) => {
+  const restartable = createRestartable()
+  restartable.onopen = (reason) => {
     log(`open restart because ${reason}`)
   }
-  restartSource.onclose = (reason) => {
+  restartable.onclose = (reason) => {
     log(`close restart because ${reason}`)
   }
-  restartToken.setRestartSource(restartSource)
+  restartable.addToken(restartToken)
+
+  if (hotreload) {
+    const hotreloadRestartSource = createRestartSource()
+    cancellationToken.register(
+      hotreloadOpen(hotreloadSSERoot, (fileChanged) => {
+        hotreloadRestartSource.restart(`file changed: ${fileChanged}`)
+      }),
+    )
+    restartable.addToken(hotreloadRestartSource.token)
+  }
 
   const platformCancellationToken = cancellationToken
 
-  const execute = (
+  const executeFile = (
     file,
     {
       cancellationToken = createCancellationToken(),
@@ -84,7 +79,7 @@ export const launchPlatformToExecute = (
       executionCancellationToken.throwIfRequested()
 
       log(`start ${platformTypeForLog} to execute ${file}`)
-      const { started, errored, closed, close, closeForce, executeFile } = await launchPlatform()
+      const { started, errored, closed, close, closeForce, fileToExecuted } = await launchPlatform()
 
       const platformOperation = createOperation({
         cancellationToken: executionCancellationToken,
@@ -103,19 +98,19 @@ export const launchPlatformToExecute = (
       })
 
       // if we cancel, prevent restart
-      const restartCloseRegistration = cancellationToken.register(restartSource.close)
-      restartSource.open((reason) => {
+      const restartCloseRegistration = cancellationToken.register(restartable.close)
+      restartable.open((reason) => {
         restartCloseRegistration.unregister()
         return platformOperation.cancel(reason).then(startPlatform)
       })
       const restarting = new Promise((resolve) => {
-        restartSource.onrestart = resolve
+        restartable.onrestart(resolve)
       })
 
       await platformOperation
 
       log(`execute ${file} on ${platformTypeForLog}`)
-      const { fileExecuted } = executeFile(file, { instrument, setup, teardown })
+      const executed = fileToExecuted(file, { instrument, setup, teardown })
 
       const { winner, value } = await promiseTrackRace([
         // cancellationTokenToPromise will reject with a cancelError to prevent
@@ -124,7 +119,7 @@ export const launchPlatformToExecute = (
         restarting,
         errored,
         closed,
-        fileExecuted,
+        executed,
       ])
 
       if (winner === restarting) {
@@ -140,7 +135,7 @@ export const launchPlatformToExecute = (
           new Error(`${platformTypeForLog} unexpectedtly closed while executing ${file}`),
         )
       }
-      // fileExecuted
+      // executed
       // should I call child.disconnect() at some point ?
       // https://nodejs.org/api/child_process.html#child_process_subprocess_disconnect
       log(`${file} execution on ${platformTypeForLog} done with ${value}`)
@@ -150,5 +145,5 @@ export const launchPlatformToExecute = (
     return startPlatform()
   }
 
-  return execute
+  return executeFile
 }

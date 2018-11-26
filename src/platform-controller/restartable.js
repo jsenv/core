@@ -1,42 +1,24 @@
-export const createRestartController = () => {
-  let restartSource
+export const createRestartSource = () => {
+  let restartCallback = () => undefined
 
   const token = {
-    setRestartSource: (value) => {
-      restartSource = value
+    setRestartCallback: (callback) => {
+      restartCallback = callback
     },
   }
 
-  const restart = (reason) => {
-    if (restartSource) {
-      if (restartSource.canBeRestarted()) {
-        return restartSource.restart(reason)
-      }
-      return undefined
-    }
-    return undefined
-  }
+  const restart = (reason) => restartCallback(reason)
 
   return { token, restart }
 }
 
 export const createRestartToken = () => {
-  const setRestartSource = () => {}
+  const setRestartCallback = () => {}
 
-  return { setRestartSource }
+  return { setRestartCallback }
 }
 
-export const restartTokenCompose = (...restartTokens) => {
-  const setRestartSource = (restartSource) => {
-    restartTokens.forEach((restartToken) => {
-      restartToken.setRestartSource(restartSource)
-    })
-  }
-
-  return { setRestartSource }
-}
-
-export const createRestartSource = () => {
+export const createRestartable = () => {
   let howToRestart
   let opened = false
   let restartReturnValue
@@ -59,8 +41,6 @@ export const createRestartSource = () => {
     openCallback = callback
   }
   const open = (restartImplementation) => {
-    if (opened) throw new Error(`restart source already opened`)
-
     opened = true
     howToRestart = (reason) => {
       close(`restart requested`)
@@ -89,13 +69,21 @@ export const createRestartSource = () => {
     return restartReturnValue
   }
 
+  const addToken = (restartToken) => {
+    restartToken.setRestartCallback((reason) => {
+      if (canBeRestarted()) {
+        return restart(reason)
+      }
+      return undefined
+    })
+  }
+
   return {
-    canBeRestarted,
     onclose,
     close,
     onopen,
     open,
     onrestart,
-    restart,
+    addToken,
   }
 }
