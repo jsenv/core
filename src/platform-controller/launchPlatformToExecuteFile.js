@@ -1,36 +1,25 @@
 import {
   createCancellationToken,
   cancellationTokenCompose,
+  cancellationTokenToPromise,
   createOperation,
-  createCancelError,
 } from "@dmail/cancellation"
 import { promiseTrackRace } from "../promiseHelper.js"
-import { hotreloadOpen } from "./hotreload.js"
-import { createRestartSource, createRestartToken, createRestartable } from "./restartable.js"
+// import { hotreloadOpen } from "./hotreload.js"
+import { createRestartHook, createRestartable } from "./restartable.js"
 
 // when launchPlatform returns close/closeForce
 // the launched platform have that amount of ms to close
 // before we call closeForce
 const ALLOCATED_MS_FOR_CLOSE = 10 * 60 * 10 * 1000
 
-const cancellationTokenToPromise = (cancellationToken) => {
-  return new Promise((reoslve, reject) => {
-    cancellationToken.throwIfRequested()
-    const rejectRegistration = cancellationToken.register((reason) => {
-      rejectRegistration.unregister()
-      reject(createCancelError(reason))
-    })
-  })
-}
-
 export const launchPlatformToExecuteFile = (
   launchPlatform,
   {
     cancellationToken = createCancellationToken(),
-    restartToken = createRestartToken(),
     platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
-    hotreload = false,
-    hotreloadSSERoot,
+    // hotreload = false,
+    // hotreloadSSERoot,
     verbose = false,
   } = {},
 ) => {
@@ -40,24 +29,16 @@ export const launchPlatformToExecuteFile = (
     }
   }
 
-  const restartable = createRestartable()
-  restartable.onopen = (reason) => {
-    log(`open restart because ${reason}`)
-  }
-  restartable.onclose = (reason) => {
-    log(`close restart because ${reason}`)
-  }
-  restartable.addToken(restartToken)
-
-  if (hotreload) {
-    const hotreloadRestartSource = createRestartSource()
-    cancellationToken.register(
-      hotreloadOpen(hotreloadSSERoot, (fileChanged) => {
-        hotreloadRestartSource.restart(`file changed: ${fileChanged}`)
-      }),
-    )
-    restartable.addToken(hotreloadRestartSource.token)
-  }
+  // remove hotreloading for now
+  // it can be externalized anyway
+  // if (hotreload) {
+  //   const hotreloadRestartSource = createRestartSource()
+  //   cancellationToken.register(
+  //     hotreloadOpen(hotreloadSSERoot, (fileChanged) => {
+  //       hotreloadRestartSource.restart(`file changed: ${fileChanged}`)
+  //     }),
+  //   )
+  // }
 
   const platformCancellationToken = cancellationToken
 
@@ -65,6 +46,7 @@ export const launchPlatformToExecuteFile = (
     file,
     {
       cancellationToken = createCancellationToken(),
+      restartHook = createRestartHook(),
       instrument = false,
       setup = () => {},
       teardown = () => {},
@@ -74,6 +56,17 @@ export const launchPlatformToExecuteFile = (
       platformCancellationToken,
       cancellationToken,
     )
+
+    const restartable = createRestartable()
+    restartable.onopen = (reason) => {
+      log(`open restart because ${reason}`)
+    }
+    restartable.onclose = (reason) => {
+      log(`close restart because ${reason}`)
+    }
+    // si je hotreload je l'écoute que ici apres tout
+    // restartable.addToken(hotreloadRestartSource.token)
+    restartable.addHook(restartHook)
 
     const startPlatform = async () => {
       executionCancellationToken.throwIfRequested()
@@ -97,20 +90,18 @@ export const launchPlatformToExecuteFile = (
         },
       })
 
-      // if we cancel, prevent restart
-      const restartCloseRegistration = cancellationToken.register(restartable.close)
-      restartable.open((reason) => {
-        restartCloseRegistration.unregister()
-        return platformOperation.cancel(reason).then(startPlatform)
-      })
-      const restarting = new Promise((resolve) => {
-        restartable.onrestart(resolve)
-      })
-
       await platformOperation
 
       log(`execute ${file} on ${platformTypeForLog}`)
       const executed = fileToExecuted(file, { instrument, setup, teardown })
+
+      const restarting = new Promise((resolve) => restartable.onrestart(resolve))
+      // if we cancel, prevent restart
+      const restartableCloseRegistration = cancellationToken.register(restartable.close)
+      restartable.open((reason) => {
+        restartableCloseRegistration.unregister()
+        return platformOperation.stop(reason).then(startPlatform)
+      })
 
       const { winner, value } = await promiseTrackRace([
         // cancellationTokenToPromise will reject with a cancelError to prevent

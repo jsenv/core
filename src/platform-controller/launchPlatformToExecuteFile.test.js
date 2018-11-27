@@ -3,17 +3,23 @@ import { createPromiseAndHooks } from "../promiseHelper.js"
 import { launchPlatformToExecuteFile } from "./launchPlatformToExecuteFile.js"
 import { createRestartSource } from "./restartable.js"
 
+const createFakePlatform = () => {
+  const platform = {
+    started: createPromiseAndHooks(),
+    errored: createPromiseAndHooks(),
+    closed: createPromiseAndHooks(),
+    executed: createPromiseAndHooks(),
+    close: () => platform.closed,
+    fileToExecuted: () => platform.executed,
+  }
+
+  return platform
+}
+
 const test = async () => {
   // executed resolved
   {
-    const platform = {
-      started: createPromiseAndHooks(),
-      errored: createPromiseAndHooks(),
-      closed: createPromiseAndHooks(),
-      executed: createPromiseAndHooks(),
-      close: () => platform.closed,
-      fileToExecuted: () => platform.executed,
-    }
+    const platform = createFakePlatform()
     const launchPlatform = () => platform
     const executeFile = launchPlatformToExecuteFile(launchPlatform)
 
@@ -25,14 +31,7 @@ const test = async () => {
 
   // executed rejected
   {
-    const platform = {
-      started: createPromiseAndHooks(),
-      errored: createPromiseAndHooks(),
-      closed: createPromiseAndHooks(),
-      executed: createPromiseAndHooks(),
-      close: () => platform.closed,
-      fileToExecuted: () => platform.executed,
-    }
+    const platform = createFakePlatform()
     const launchPlatform = () => platform
     const executeFile = launchPlatformToExecuteFile(launchPlatform)
 
@@ -48,41 +47,24 @@ const test = async () => {
 
   // restart before fileExecuted
   {
-    const firstPlatform = {
-      started: createPromiseAndHooks(),
-      errored: createPromiseAndHooks(),
-      closed: createPromiseAndHooks(),
-      executed: createPromiseAndHooks(),
-      close: () => firstPlatform.closed,
-      fileToExecuted: () => firstPlatform.executed,
-    }
-    const secondPlatform = {
-      started: createPromiseAndHooks(),
-      errored: createPromiseAndHooks(),
-      closed: createPromiseAndHooks(),
-      executed: createPromiseAndHooks(),
-      close: () => {},
-      fileToExecuted: () => secondPlatform.executed,
-    }
-
+    const firstPlatform = createFakePlatform()
+    const secondPlatform = createFakePlatform()()
     let callIndex = 0
     const launchPlatform = () => {
       callIndex++
       return callIndex === 1 ? firstPlatform : secondPlatform
     }
     const restartSource = createRestartSource()
-    const executeFile = launchPlatformToExecuteFile(launchPlatform, {
-      restartToken: restartSource.token,
-    })
+    const executeFile = launchPlatformToExecuteFile(launchPlatform)
 
     firstPlatform.started.resolve()
-    const firstExecuted = executeFile("file.js")
+    const firstExecuted = executeFile("file.js", { restartHook: restartSource.hook })
     await new Promise((resolve) => setTimeout(resolve, 10))
     const restarted = restartSource.restart("restart")
     firstPlatform.closed.resolve()
 
     secondPlatform.started.resolve()
-    const secondExecuted = executeFile()
+    const secondExecuted = executeFile("file.js")
     secondPlatform.executed.resolve(10)
 
     const firstValue = await firstExecuted

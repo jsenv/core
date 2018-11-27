@@ -1,7 +1,7 @@
 export const createRestartSource = () => {
   let restartCallback = () => undefined
 
-  const token = {
+  const hook = {
     setRestartCallback: (callback) => {
       restartCallback = callback
     },
@@ -9,10 +9,10 @@ export const createRestartSource = () => {
 
   const restart = (reason) => restartCallback(reason)
 
-  return { token, restart }
+  return { hook, restart }
 }
 
-export const createRestartToken = () => {
+export const createRestartHook = () => {
   const setRestartCallback = () => {}
 
   return { setRestartCallback }
@@ -69,8 +69,8 @@ export const createRestartable = () => {
     return restartReturnValue
   }
 
-  const addToken = (restartToken) => {
-    restartToken.setRestartCallback((reason) => {
+  const addHook = (restartHook) => {
+    restartHook.setRestartCallback((reason) => {
       if (canBeRestarted()) {
         return restart(reason)
       }
@@ -84,6 +84,6 @@ export const createRestartable = () => {
     onopen,
     open,
     onrestart,
-    addToken,
+    addHook,
   }
 }
