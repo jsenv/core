@@ -26,7 +26,7 @@
       "request": "launch",
       "protocol": "inspector",
       "preLaunchTask": "compile", // ensure dist is fresh (compile before running)
-      "args": ["${workspaceRoot}/dist/${relativeFile}"],
+      "args": ["--trace-warnings", "${workspaceRoot}/dist/${relativeFile}"],
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
       "sourceMapPathOverrides": {
@@ -44,6 +44,7 @@
         "src/fileHelper.js",
         "src/eventHelper.js",
         "src/promiseHelper.js",
+        "src/unused/thenable.js",
         "src/jsCompile/transpileWithBabel.js",
         "src/createRequestToFileResponse/convertFileSystemErrorToResponseProperties.js"
       ],

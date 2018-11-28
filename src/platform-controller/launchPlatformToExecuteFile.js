@@ -6,7 +6,7 @@ import {
 } from "@dmail/cancellation"
 import { promiseTrackRace } from "../promiseHelper.js"
 // import { hotreloadOpen } from "./hotreload.js"
-import { createRestartHook, createRestartable } from "./restartable.js"
+import { createRestartSignal } from "./restartController.js"
 
 // when launchPlatform returns close/closeForce
 // the launched platform have that amount of ms to close
@@ -46,7 +46,7 @@ export const launchPlatformToExecuteFile = (
     file,
     {
       cancellationToken = createCancellationToken(),
-      restartHook = createRestartHook(),
+      restartSignal = createRestartSignal(),
       instrument = false,
       setup = () => {},
       teardown = () => {},
@@ -57,26 +57,15 @@ export const launchPlatformToExecuteFile = (
       cancellationToken,
     )
 
-    const restartable = createRestartable()
-    restartable.onopen = (reason) => {
-      log(`open restart because ${reason}`)
-    }
-    restartable.onclose = (reason) => {
-      log(`close restart because ${reason}`)
-    }
-    // si je hotreload je l'écoute que ici apres tout
-    // restartable.addToken(hotreloadRestartSource.token)
-    restartable.addHook(restartHook)
-
     const startPlatform = async () => {
       executionCancellationToken.throwIfRequested()
 
-      log(`start ${platformTypeForLog} to execute ${file}`)
-      const { started, errored, closed, close, closeForce, fileToExecuted } = await launchPlatform()
+      log(`launch ${platformTypeForLog} to execute ${file}`)
+      const { opened, errored, closed, close, closeForce, fileToExecuted } = await launchPlatform()
 
       const platformOperation = createOperation({
         cancellationToken: executionCancellationToken,
-        promise: started,
+        promise: opened,
         stop: (reason) => {
           log(`stop ${platformTypeForLog}`)
           close(reason)
@@ -84,7 +73,7 @@ export const launchPlatformToExecuteFile = (
           const stopped = Promise.race([errored, closed])
           if (closeForce) {
             const id = setTimeout(closeForce, ALLOCATED_MS_FOR_CLOSE)
-            stopped.then(() => clearTimeout(id))
+            stopped.finally(() => clearTimeout(id))
           }
           return stopped
         },
@@ -93,28 +82,24 @@ export const launchPlatformToExecuteFile = (
       await platformOperation
 
       log(`execute ${file} on ${platformTypeForLog}`)
-      const executed = fileToExecuted(file, { instrument, setup, teardown })
 
-      const restarting = new Promise((resolve) => restartable.onrestart(resolve))
-      // if we cancel, prevent restart
-      const restartableCloseRegistration = cancellationToken.register(restartable.close)
-      restartable.open((reason) => {
-        restartableCloseRegistration.unregister()
-        return platformOperation.stop(reason).then(startPlatform)
+      const executed = fileToExecuted(file, { instrument, setup, teardown })
+      const canceled = cancellationTokenToPromise(executionCancellationToken)
+      const restarted = new Promise((resolve) => {
+        restartSignal.onrestart = resolve
       })
 
       const { winner, value } = await promiseTrackRace([
-        // cancellationTokenToPromise will reject with a cancelError to prevent
-        // and prevent other promise to happen
-        cancellationTokenToPromise(executionCancellationToken),
-        restarting,
+        // canceled will reject in case of cancellation
+        canceled,
+        restarted,
         errored,
         closed,
         executed,
       ])
 
-      if (winner === restarting) {
-        return value.restartReturnValue
+      if (winner === restarted) {
+        return platformOperation.stop(value).then(startPlatform)
       }
       if (winner === errored) {
         log(`${platformTypeForLog} error: ${value}`)
