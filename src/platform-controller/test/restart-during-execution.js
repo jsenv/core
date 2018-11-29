@@ -37,8 +37,18 @@ we wait for cancel to resolve before calling executeFile.
 */
 
 const test = async () => {
-  // restart called during execution
-  // executed rejection
+  // platorm opened rejection
+  {
+    const { firstPlatform, secondPlatform, executed, restart } = createMaterial()
+    firstPlatform.opened.reject()
+
+    try {
+      await firstPlatform.opened
+      assert.fail("")
+    } catch (e) {}
+  }
+
+  // file executed rejection
   {
     const { firstPlatform, secondPlatform, executed, restart } = createMaterial()
 
