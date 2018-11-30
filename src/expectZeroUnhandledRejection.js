@@ -1,5 +1,5 @@
+import { assert } from "@dmail/assert"
 import { arrayWithoutIndex } from "./arrayHelper.js"
-import assert from "assert"
 
 export const expectZeroUnhandledRejection = () => {
   let unhandledRejections = []
@@ -19,7 +19,13 @@ export const expectZeroUnhandledRejection = () => {
 
   process.on("exit", () => {
     if (process.exitCode === 0 || process.exitCode === undefined) {
-      assert.deepEqual(unhandledRejections, [], "unexpected unhandled rejection")
+      const actual = unhandledRejections
+      const expected = []
+      assert({
+        should: "should have zero unhandled rejection",
+        actual,
+        expected,
+      })
     }
   })
 }

@@ -5,8 +5,21 @@ import {
   createOperation,
 } from "@dmail/cancellation"
 import { promiseTrackRace } from "../promiseHelper.js"
-// import { hotreloadOpen } from "./hotreload.js"
 import { createRestartSignal } from "./restartController.js"
+
+/*
+hot reloading will work that way:
+
+we listen for file change.
+we track file currently being executed.
+we create a restart controller per file execution
+we create a cancel token per file execution
+
+if the file is modified while being executed we call the restart controller.
+if the file is executed we call cancel on file execution in case platform must be closed.
+Because the current running file may have side effect until it's completely closed
+we wait for cancel to resolve before calling executeFile.
+*/
 
 // when launchPlatform returns close/closeForce
 // the launched platform have that amount of ms to close
@@ -18,8 +31,6 @@ export const launchPlatformToExecuteFile = (
   {
     cancellationToken = createCancellationToken(),
     platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
-    // hotreload = false,
-    // hotreloadSSERoot,
     verbose = false,
   } = {},
 ) => {
@@ -28,17 +39,6 @@ export const launchPlatformToExecuteFile = (
       console.log(...args)
     }
   }
-
-  // remove hotreloading for now
-  // it can be externalized anyway
-  // if (hotreload) {
-  //   const hotreloadRestartSource = createRestartSource()
-  //   cancellationToken.register(
-  //     hotreloadOpen(hotreloadSSERoot, (fileChanged) => {
-  //       hotreloadRestartSource.restart(`file changed: ${fileChanged}`)
-  //     }),
-  //   )
-  // }
 
   const platformCancellationToken = cancellationToken
 
@@ -57,11 +57,22 @@ export const launchPlatformToExecuteFile = (
       cancellationToken,
     )
 
+    const createPlatformClosedDuringExecutionError = () => {
+      const error = new Error(`${platformTypeForLog} unexpectedtly closed while executing ${file}`)
+      error.code = "PLATFORM_CLOSED_DURING_EXECUTION_ERROR"
+      return error
+    }
+
     const startPlatform = async () => {
       executionCancellationToken.throwIfRequested()
 
       log(`launch ${platformTypeForLog} to execute ${file}`)
-      const { opened, errored, closed, close, closeForce, fileToExecuted } = await launchPlatform()
+      let { opened, closed, close, closeForce, fileToExecuted } = await launchPlatform()
+
+      closed = closed.catch((e) => {
+        log(`${platformTypeForLog} error: ${e}`)
+        return Promise.reject(e)
+      })
 
       const platformOperation = createOperation({
         cancellationToken: executionCancellationToken,
@@ -70,47 +81,37 @@ export const launchPlatformToExecuteFile = (
           log(`stop ${platformTypeForLog}`)
           close(reason)
 
-          const stopped = Promise.race([errored, closed])
           if (closeForce) {
             const id = setTimeout(closeForce, ALLOCATED_MS_FOR_CLOSE)
-            stopped.finally(() => clearTimeout(id))
+            closed.finally(() => clearTimeout(id))
           }
-          return stopped
+          return closed
         },
       })
 
       await platformOperation
 
       log(`execute ${file} on ${platformTypeForLog}`)
-
       const executed = fileToExecuted(file, { instrument, setup, teardown })
+
+      // canceled will reject in case of cancellation
       const canceled = cancellationTokenToPromise(executionCancellationToken)
+
       const restarted = new Promise((resolve) => {
         restartSignal.onrestart = resolve
       })
 
-      const { winner, value } = await promiseTrackRace([
-        // canceled will reject in case of cancellation
-        canceled,
-        restarted,
-        errored,
-        closed,
-        executed,
-      ])
+      const { winner, value } = await promiseTrackRace([canceled, restarted, closed, executed])
 
       if (winner === restarted) {
         return platformOperation.stop(value).then(startPlatform)
       }
-      if (winner === errored) {
-        log(`${platformTypeForLog} error: ${value}`)
-        return Promise.reject(value)
-      }
+
       if (winner === closed) {
         log(`${platformTypeForLog} closed`)
-        return Promise.reject(
-          new Error(`${platformTypeForLog} unexpectedtly closed while executing ${file}`),
-        )
+        return Promise.reject(createPlatformClosedDuringExecutionError())
       }
+
       // executed
       // should I call child.disconnect() at some point ?
       // https://nodejs.org/api/child_process.html#child_process_subprocess_disconnect
