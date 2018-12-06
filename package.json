@@ -55,27 +55,15 @@
 		"rimraf": "2.6.2"
 	},
 	"scripts": {
-		"code-compile": "node ./script/compile.js",
-		"code-clean": "rimraf dist",
-		"code-build": "npm run code-clean && npm run code-compile",
-		"code-lint": "eslint .",
-		"code-format": "prettiest",
-		"test-before": "npm run code-clean && npm run code-lint && npm run code-format && npm run code-compile",
-		"test-list": "test-list",
-		"test-run": "test-run",
-		"test": "npm run test-before && npm run test-run",
-		"test-cover": "npm run test-before && nyc npm run test-run",
-		"test-cover-clean": "rimraf .nyc_output && rimraf coverage && rimraf coverage.lcov",
-		"test-cover-html": "nyc report --reporter=lcov",
-		"test-cover-text": "nyc report --reporter=text-summary",
-		"test-cover-table": "nyc report --reporter=text",
-		"test-cover-lcov": "nyc report --reporter=text-lcov > coverage.lcov",
-		"test-cover-upload": "codecov --token=30d76e30-c2e3-4d8e-9c63-0610b8ccae5c",
-		"repo-reset": "npm run code-clean && npm run test-cover-clean && rimraf node_modules",
-		"repo-reinstall": "npm run repo-reset && npm install",
-		"build": "npm run code-build",
-		"compile": "npm run code-compile",
-		"prepublishOnly": "npm run code-build",
-		"reinstall": "npm run repo-reinstall"
+		"lint": "eslint .",
+		"format": "prettiest",
+		"compile": "node ./script/compile.js",
+		"clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
+		"dist": "npm run clean && npm run compile",
+		"test": "npm run dist && node ./dist/index.test.js",
+		"cover": "npm run dist && nyc node ./dist/index.test.js",
+		"coverage-upload": "codecov",
+		"prepublishOnly": "npm run dist",
+		"reinstall": "npm run clean && rimraf node_modules && npm install"
 	}
 }

@@ -1,47 +1,33 @@
-const path = require("path")
-const { forEachRessourceMatching, configToMetaMap } = require("@dmail/project-structure")
+const { forEachRessourceMatching } = require("@dmail/project-structure")
 const {
-  pluginOptionMapToPluginMap,
-  pluginMapToPluginsForPlatform,
   compileFile,
   fileSystemWriteCompileResult,
 } = require("@dmail/project-structure-compile-babel")
-const structureConfig = require("../structure.config.js")
+const projectConfig = require("../project.config.js")
 
-const localRoot = path.resolve(__dirname, "../")
-
-const pluginMap = pluginOptionMapToPluginMap({
-  "transform-modules-commonjs": {},
-
-  "proposal-json-strings": {},
-  "proposal-object-rest-spread": {},
-  "proposal-optional-catch-binding": {},
-  "proposal-unicode-property-regex": {},
-  "transform-arrow-functions": {},
-  "transform-block-scoped-functions": {},
-  "transform-block-scoping": {},
-  "transform-computed-properties": {},
-  "transform-destructuring": {},
-  "transform-dotall-regex": {},
-  "transform-duplicate-keys": {},
-  "transform-exponentiation-operator": {},
-  "transform-function-name": {},
-  "transform-literals": {},
-  "transform-parameters": {},
-  "transform-shorthand-properties": {},
-  "transform-spread": {},
-  "transform-template-literals": {},
-  "transform-typeof-symbol": {},
-})
-const plugins = pluginMapToPluginsForPlatform(pluginMap, "node", "8.0")
+const { localRoot, metaMap, plugins } = projectConfig
+const outputFolder = `dist`
 
 forEachRessourceMatching(
   localRoot,
-  configToMetaMap(structureConfig),
+  metaMap,
   ({ compile }) => compile,
   async (ressource) => {
-    const compileResult = await compileFile(ressource, { localRoot, plugins })
-    await fileSystemWriteCompileResult(compileResult, ressource, `${localRoot}/dist`)
-    console.log(`${ressource} -> dist/${ressource} `)
+    const { code, map } = await compileFile(ressource, {
+      localRoot,
+      plugins,
+    })
+    await fileSystemWriteCompileResult(
+      {
+        code,
+        map,
+      },
+      {
+        localRoot,
+        outputFile: ressource,
+        outputFolder,
+      },
+    )
+    console.log(`${ressource} -> ${outputFolder}/${ressource}`)
   },
 )

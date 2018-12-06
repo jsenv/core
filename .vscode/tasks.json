@@ -27,7 +27,7 @@
     },
     {
       "type": "npm",
-      "script": "code-compile",
+      "script": "compile",
       "label": "compile",
       "presentation": {
         "reveal": "silent",
