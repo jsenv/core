@@ -22,7 +22,7 @@ export const expectZeroUnhandledRejection = () => {
       const actual = unhandledRejections
       const expected = []
       assert({
-        should: "should have zero unhandled rejection",
+        message: "should have zero unhandled rejection",
         actual,
         expected,
       })

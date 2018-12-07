@@ -53,11 +53,10 @@ export const launchPlatformToExecuteFile = (
       executionCancellationToken.throwIfRequested()
 
       log(`launch ${platformTypeForLog} to execute ${file}`)
-      let { opened, closed, close, closeForce, fileToExecuted } = await launchPlatform()
+      const { opened, closed, close, closeForce, fileToExecuted } = await launchPlatform()
 
-      closed = closed.catch((e) => {
+      closed.catch((e) => {
         log(`${platformTypeForLog} error: ${e}`)
-        return Promise.reject(e)
       })
 
       const platformOperation = createOperation({

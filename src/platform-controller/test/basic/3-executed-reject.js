@@ -1,6 +1,6 @@
 import { assert } from "@dmail/assert"
-import { createMaterial } from "./material.js"
-import { expectZeroUnhandledRejection } from "../../expectZeroUnhandledRejection.js"
+import { createMaterial } from "../material.js"
+import { expectZeroUnhandledRejection } from "../../../expectZeroUnhandledRejection.js"
 
 expectZeroUnhandledRejection()
 

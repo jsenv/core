@@ -1,7 +1,7 @@
 import { fork as forkChildProcess } from "child_process"
 import path from "path"
 import { uneval } from "@dmail/uneval"
-import { createPlatformController } from "../platform-controller/launchPlatformToExecute.js"
+import { launchPlatformToExecuteFile } from "../platform-controller/launchPlatformToExecuteFile.js"
 import { getCompileMapLocal } from "../getCompileMapLocal.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 
@@ -105,21 +105,10 @@ const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInt
   }
 }
 
-export const createExecuteOnNode = ({
-  cancellationToken,
-  localRoot,
-  remoteRoot,
-  compileInto,
-  hotreload,
-  hotreloadSSERoot,
-  verbose,
-}) => {
+export const createExecuteOnNode = ({ cancellationToken, localRoot, remoteRoot, compileInto }) => {
   return createPlatformController({
     cancellationToken,
     platformTypeForLog: "node",
-    hotreload,
-    hotreloadSSERoot,
-    verbose,
     launchPlatform: () => launchNode({ cancellationToken, localRoot, remoteRoot, compileInto }),
   })
 }

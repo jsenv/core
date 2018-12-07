@@ -42,7 +42,7 @@
 		"rollup-plugin-replace": "2.0.0"
 	},
 	"devDependencies": {
-		"@dmail/test": "6.0.0",
+		"@dmail/assert": "1.0.0",
 		"codecov": "2.3.0",
 		"mock-fs": "4.4.2",
 		"@dmail/project-eslint-config": "github:dmail/project-eslint-config",

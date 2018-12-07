@@ -1,3 +1,4 @@
+import { createCancellationSource } from "@dmail/cancellation"
 import { createPromiseAndHooks } from "../../promiseHelper.js"
 import { launchPlatformToExecuteFile } from "../launchPlatformToExecuteFile.js"
 import { createRestartController } from "../restartController.js"
@@ -9,7 +10,9 @@ export const createFakePlatform = () => {
     closed: createPromiseAndHooks(),
     executed,
     fileToExecuted: () => executed,
-    close: () => {},
+    close: (reason) => {
+      platform.closed.resolve(reason)
+    },
   }
 
   return platform
@@ -25,8 +28,19 @@ export const createMaterial = () => {
     callIndex++
     return callIndex === 1 ? firstPlatform : secondPlatform
   }
+  const cancellationSource = createCancellationSource()
   const restartController = createRestartController()
   const executeFile = launchPlatformToExecuteFile(launchPlatform)
-  const execution = executeFile("file.js", { restartSignal: restartController.signal })
-  return { execution, restart: restartController.restart, wait, firstPlatform, secondPlatform }
+  const execution = executeFile("file.js", {
+    restartSignal: restartController.signal,
+    cancellationToken: cancellationSource.token,
+  })
+  return {
+    execution,
+    restart: restartController.restart,
+    cancel: cancellationSource.cancel,
+    wait,
+    firstPlatform,
+    secondPlatform,
+  }
 }
