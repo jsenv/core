@@ -1,1 +1,1 @@
-module.exports = require("@dmail/project-prettier-config");
+module.exports = require("./config/project.config.js").prettier
