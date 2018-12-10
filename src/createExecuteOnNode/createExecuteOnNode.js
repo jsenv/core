@@ -1,12 +1,11 @@
 import { fork as forkChildProcess } from "child_process"
-import path from "path"
 import { uneval } from "@dmail/uneval"
-import { launchPlatformToExecuteFile } from "../platform-controller/launchPlatformToExecuteFile.js"
+import { localRoot } from "../../config/project.config.js"
+import { executeFileOnPlatform } from "../executeFileOnPlatform/executeFileOnPlatform.js"
 import { getCompileMapLocal } from "../getCompileMapLocal.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 
-const root = path.resolve(__dirname, "../../../")
-const nodeClientFile = `${root}/dist/src/createExecuteOnNode/client.js`
+const nodeClientFile = `${localRoot}/dist/src/createExecuteOnNode/client.js`
 
 const createClosedWithFailureCodeError = (code) => {
   if (code === 12) {
@@ -105,10 +104,9 @@ const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInt
   }
 }
 
-export const createExecuteOnNode = ({ cancellationToken, localRoot, remoteRoot, compileInto }) => {
-  return createPlatformController({
-    cancellationToken,
+export const executeFileOnNode = (file, options = {}) =>
+  executeFileOnPlatform(file, {
     platformTypeForLog: "node",
-    launchPlatform: () => launchNode({ cancellationToken, localRoot, remoteRoot, compileInto }),
+    launchPlatform: launchNode,
+    ...options,
   })
-}

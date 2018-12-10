@@ -10,6 +10,8 @@ const nodeResolve = require("rollup-plugin-node-resolve")
 
 const localRoot = path.resolve(__dirname, "../")
 const inputFile = `src/platform/browser/loader.js`
+const outputFile = `browser-loader.js`
+const outputFolder = "dist"
 const pluginMap = pluginOptionMapToPluginMap({
   "proposal-async-generator-functions": {},
   "proposal-json-strings": {},
@@ -40,7 +42,6 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-typeof-symbol": {},
   "transform-unicode-regex": {},
 })
-const outputFile = `browser-loader.js`
 
 const compile = async () => {
   const plugins = pluginMapToPluginsForPlatform(pluginMap, "unknown", "0.0.0")
@@ -66,8 +67,12 @@ const compile = async () => {
     sourcemap: true,
   })
 
-  await fileSystemWriteCompileResult(compileResult, outputFile, `${localRoot}/dist`)
-  console.log(`${inputFile} -> dist/${outputFile}`)
+  await fileSystemWriteCompileResult(compileResult, {
+    localRoot,
+    outputFile,
+    outputFolder,
+  })
+  console.log(`${inputFile} -> ${outputFolder}/${outputFile}`)
 }
 
 compile()

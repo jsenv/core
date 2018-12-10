@@ -3,7 +3,7 @@ const {
   compileFile,
   fileSystemWriteCompileResult,
 } = require("@dmail/project-structure-compile-babel")
-const projectConfig = require("../project.config.js")
+const projectConfig = require("../config/project.config.js")
 
 const { localRoot, metaMap, plugins } = projectConfig
 const outputFolder = `dist`

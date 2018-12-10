@@ -7,7 +7,10 @@ import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { open as serverIndexOpen } from "../server-index/serverIndex.js"
 import { originAsString } from "../server/index.js"
 import { createBrowserPlatformSource } from "../createBrowserSource.js"
-import { getBrowserPlatformRemoteURL, getCompileMapLocalURL } from "../compilePlatform.js"
+import {
+  getBrowserPlatformRemoteURL,
+  getCompileMapLocalURL,
+} from "../compileBrowserPlatform/index.js"
 import { eventRace, registerEvent, registerThen, registerCatch } from "../eventHelper.js"
 import { readFile } from "../fileHelper.js"
 
