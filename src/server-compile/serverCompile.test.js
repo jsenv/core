@@ -1,7 +1,5 @@
+import { localRoot } from "../localRoot.js"
 import { open } from "./serverCompile.js"
-import path from "path"
-
-const localRoot = path.resolve(__dirname, "../../../")
 
 open({
   localRoot,

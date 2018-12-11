@@ -1,7 +1,6 @@
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@dmail/uneval"
-import { localRoot } from "../../config/project.config.js"
-import { executeFileOnPlatform } from "../executeFileOnPlatform/executeFileOnPlatform.js"
+import { localRoot } from "../localRoot.js"
 import { getCompileMapLocal } from "../getCompileMapLocal.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 
@@ -16,7 +15,7 @@ const createClosedWithFailureCodeError = (code) => {
   return new Error(`child exited with ${code}`)
 }
 
-const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInto }) => {
+export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInto }) => {
   const execArgv = await createChildExecArgv({ cancellationToken })
 
   const child = forkChildProcess(nodeClientFile, { execArgv })
@@ -31,24 +30,28 @@ const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInt
     }
   }
 
-  const errored = new Promise((resolve) => {
+  const opened = Promise.resolve()
+
+  const closed = new Promise((resolve, reject) => {
+    let lastError
     addChildMessageListener(({ type, data }) => {
       if (type === "error") {
-        resolve(data)
+        lastError = remoteErrorToLocalError(data)
       }
     })
-    child.on("close", (code) => {
-      if (code !== 0 && code !== null) {
-        resolve(createClosedWithFailureCodeError(code))
-      }
-    })
-  })
 
-  const closed = new Promise((resolve) => {
     child.on("close", (code) => {
       if (code === 0 || code === null) {
         resolve()
+        return
       }
+
+      if (lastError) {
+        reject(lastError)
+        return
+      }
+
+      reject(createClosedWithFailureCodeError(code))
     })
   })
 
@@ -68,7 +71,7 @@ const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInt
     })
   }
 
-  const executeFile = (file, { instrument, setup, teardown }) => {
+  const fileToExecuted = (file, { instrument, setup, teardown }) => {
     const compileMapLocalURL = getCompileMapLocal({ localRoot, compileInto })
     // eslint-disable-next-line import/no-dynamic-require
     const compileMap = require(compileMapLocalURL)
@@ -84,29 +87,33 @@ const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInt
       teardown,
     })
 
-    const done = new Promise((resolve) => {
+    const executed = new Promise((resolve, reject) => {
       addChildMessageListener(({ type, data }) => {
-        if (type === "done") {
+        if (type === "execute-resolve") {
           resolve(data)
+          return
+        }
+        if (type === "execute-reject") {
+          reject(data)
+          return
         }
       })
     })
 
-    return { done }
+    return executed
   }
 
   return {
-    errored,
+    opened,
     closed,
     close,
     closeForce,
-    executeFile,
+    fileToExecuted,
   }
 }
 
-export const executeFileOnNode = (file, options = {}) =>
-  executeFileOnPlatform(file, {
-    platformTypeForLog: "node",
-    launchPlatform: launchNode,
-    ...options,
-  })
+const remoteErrorToLocalError = ({ message, stack }) => {
+  const localError = new Error(message)
+  localError.stack = stack
+  return localError
+}

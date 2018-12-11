@@ -4,25 +4,16 @@ import { moduleToRegisterGetter } from "./moduleToRegisterGetter.js"
 export const createNodeSystem = ({ fetchSource, evalSource, hrefToLocalFile }) => {
   const nodeSystem = new global.System.constructor()
 
-  nodeSystem.instantiate = (url, parent) => {
-    return moduleToRegisterGetter({
+  nodeSystem.instantiate = async (url, parent) => {
+    const registerGetter = await moduleToRegisterGetter({
       fetchSource,
       evalSource,
       remoteFile: url,
       remoteParent: parent,
       localFile: hrefToLocalFile(url),
-    }).then((registerGetter) => {
-      try {
-        return registerGetter(nodeSystem)
-      } catch (error) {
-        return Promise.reject({
-          code: "MODULE_INSTANTIATE_ERROR",
-          error,
-          url,
-          parent,
-        })
-      }
     })
+
+    return registerGetter(nodeSystem)
   }
 
   return nodeSystem

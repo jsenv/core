@@ -1,6 +1,7 @@
 import https from "https"
 import fetch from "node-fetch"
 
+// ideally we should only pass this to the fetch below
 https.globalAgent.options.rejectUnauthorized = false
 
 const getHeaderMapFromResponse = (response) => {

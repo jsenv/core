@@ -4,12 +4,9 @@ import { createPlatformHooks } from "./createPlatformHooksUsingSystem.js"
 import { fetchSource } from "./fetchSource.js"
 
 const onExecuteError = (error, { file, fileToLocalFile }) => {
-  if (error && error.status === 500 && error.reason === "parse error") {
-    const data = JSON.parse(error.body)
-    const parseError = new Error()
-    Object.assign(parseError, data)
-    parseError.message = data.message.replace(file, fileToLocalFile(file))
-    throw parseError
+  if (error && error.code === "MODULE_PARSE_ERROR") {
+    error.message = error.message.replace(file, fileToLocalFile(file))
+    throw error
   }
   if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
     throw error.error

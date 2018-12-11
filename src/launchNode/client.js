@@ -28,12 +28,16 @@ const exceptionToObject = (exception) => {
 }
 
 process.on("uncaughtException", (valueThrowed) => {
+  console.log("exception")
+  // debugger
   sendToParent("error", exceptionToObject(valueThrowed))
   // once errored, the child must die
   process.exit(1)
 })
 
 process.on("unhandledRejection", (valueRejected) => {
+  console.log("rejection")
+  // debugger
   sendToParent("error", exceptionToObject(valueRejected))
   // once errored, the child must die
   process.exit(1)
@@ -73,24 +77,39 @@ process.on("SIGINT", () => {
 token.register(
   listenParentOnce(
     "execute",
-    ({ compileMap, localRoot, remoteRoot, compileInto, file, instrument, setup, teardown }) => {
-      loadNodePlatform({
+    async ({
+      compileMap,
+      localRoot,
+      remoteRoot,
+      compileInto,
+      file,
+      instrument,
+      setup,
+      teardown,
+    }) => {
+      debugger
+      const platform = await loadNodePlatform({
         compileMap,
         localRoot,
         remoteRoot,
         compileInto,
       })
-        .then((platform) => {
-          return platform.executeFile({
-            file,
-            instrument,
-            setup,
-            teardown,
-          })
+
+      platform
+        .executeFile({
+          file,
+          instrument,
+          setup,
+          teardown,
         })
-        .then((value) => {
-          sendToParent("done", value)
-        })
+        .then(
+          (value) => {
+            sendToParent("execute-resolve", value)
+          },
+          (error) => {
+            sendToParent("execute-reject", error)
+          },
+        )
     },
   ),
 )

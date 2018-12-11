@@ -3,13 +3,13 @@ import http from "http"
 import https from "https"
 import killPort from "kill-port"
 import { URL } from "url"
-import { createCancellationToken, trackOperation } from "@dmail/cancellation"
+import { createCancellationToken, createOperation } from "@dmail/cancellation"
 import { processTeardown } from "../process-teardown/index.js"
+import { memoizeOnce } from "../functionHelper.js"
 import { trackConnections, trackClients, trackRequestHandlers } from "./trackers.js"
 import { createRequestFromNodeRequest } from "./createRequestFromNodeRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
 import { processUnhandledException } from "./processUnhandledException.js"
-import { memoizeOnce } from "../functionHelper.js"
 
 const REASON_CLOSING = "closing"
 const REASON_INTERNAL_ERROR = "internal error"
@@ -59,8 +59,8 @@ export const closeServer = (server) => {
   })
 }
 
-export const listen = ({ cancellationToken = createCancellationToken(), server, port, ip }) => {
-  const listening = new Promise((resolve, reject) => {
+export const listen = ({ cancellationToken, server, port, ip }) => {
+  const promise = new Promise((resolve, reject) => {
     server.on("error", reject)
     server.on("listening", () => {
       // in case port is 0 (randomly assign an available port)
@@ -71,9 +71,9 @@ export const listen = ({ cancellationToken = createCancellationToken(), server, 
     server.listen(port, ip)
   })
 
-  const close = () => closeServer(server)
+  const stop = () => closeServer(server)
 
-  return trackOperation(cancellationToken, listening, { close })
+  return createOperation({ cancellationToken, stop, promise })
 }
 
 export const originAsString = ({ protocol, ip, port }) => {
@@ -182,7 +182,7 @@ export const open = async (
     status = "closed"
     closedResolve()
   })
-  trackOperation(cancellationToken, opened, { close })
+  createOperation({ cancellationToken, stop: close, promise: opened })
 
   const closePromises = []
   if (autoCloseOnCrash) {

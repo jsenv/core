@@ -44,7 +44,7 @@ export const executeFileOnPlatform = (
 
     closed.catch((e) => {
       log(`${platformTypeForLog} error: ${e}`)
-		})
+    })
 
     const platformOperation = createOperation({
       cancellationToken,
