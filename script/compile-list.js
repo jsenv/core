@@ -1,15 +1,14 @@
-const { readProjectMetaMap, forEachRessourceMatching } = require("@dmail/project-structure")
-const path = require("path")
+const { forEachRessourceMatching } = require("@dmail/project-structure")
+const projectConfig = require("../config/project.config.js")
 
-const root = path.resolve(__dirname, "../")
-const config = "structure.config.js"
-const predicate = ({ compile }) => compile
+const { localRoot, metaMap } = projectConfig
 
-readProjectMetaMap({ root, config }).then((metaMap) => {
-  return forEachRessourceMatching(root, metaMap, predicate, (data) => {
-    return data.relativeName
-  }).then((files) => {
-    console.log("list of file to compile:")
-    console.log(files.join("\n"))
-  })
+forEachRessourceMatching(
+  localRoot,
+  metaMap,
+  ({ compile }) => compile,
+  (ressource) => ressource,
+).then((files) => {
+  console.log("list of file to compile:")
+  console.log(files.join("\n"))
 })

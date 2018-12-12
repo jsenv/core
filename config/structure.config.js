@@ -5,6 +5,7 @@ module.exports = {
       "src/**/*.js": true,
       "bin/**/*.js": true,
       "src/__test__/file-with-syntax-error.js": false,
+      "src/platform/browser/createPlatformHooksUsingImport.js": false,
     },
     cover: {
       "index.js": true,

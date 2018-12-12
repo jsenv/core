@@ -77,17 +77,7 @@ process.on("SIGINT", () => {
 token.register(
   listenParentOnce(
     "execute",
-    async ({
-      compileMap,
-      localRoot,
-      remoteRoot,
-      compileInto,
-      file,
-      instrument,
-      setup,
-      teardown,
-    }) => {
-      debugger
+    async ({ compileMap, localRoot, remoteRoot, compileInto, file, ...rest }) => {
       const platform = await loadNodePlatform({
         compileMap,
         localRoot,
@@ -95,21 +85,14 @@ token.register(
         compileInto,
       })
 
-      platform
-        .executeFile({
-          file,
-          instrument,
-          setup,
-          teardown,
-        })
-        .then(
-          (value) => {
-            sendToParent("execute-resolve", value)
-          },
-          (error) => {
-            sendToParent("execute-reject", error)
-          },
-        )
+      platform.executeFile(file, rest).then(
+        (value) => {
+          sendToParent("execute-resolve", value)
+        },
+        (error) => {
+          sendToParent("execute-reject", error)
+        },
+      )
     },
   ),
 )

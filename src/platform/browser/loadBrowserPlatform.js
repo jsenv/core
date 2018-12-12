@@ -13,24 +13,6 @@ import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
 import { open } from "./hotreload.js"
 
-const onExecuteError = (error, { file, fileToRemoteSourceFile, hrefToFile }) => {
-  const meta = rejectionValueToMeta(error, {
-    fileToRemoteSourceFile,
-    hrefToFile,
-  })
-
-  const html = `
-<h1>
-  <a href="${fileToRemoteSourceFile(file)}">${file}</a> import rejected
-</h1>
-<pre style="border: 1px solid black">${meta.data}</pre>
-`
-
-  document.body.innerHTML = html
-
-  return Promise.reject(error)
-}
-
 export const loadBrowserPlatform = ({
   compileMap,
   platformFile,
@@ -104,4 +86,22 @@ export const loadBrowserPlatform = ({
 
     return { executeFile }
   })
+}
+
+const onExecuteError = (error, { file, fileToRemoteSourceFile, hrefToFile }) => {
+  const meta = rejectionValueToMeta(error, {
+    fileToRemoteSourceFile,
+    hrefToFile,
+  })
+
+  const html = `
+<h1>
+  <a href="${fileToRemoteSourceFile(file)}">${file}</a> import rejected
+</h1>
+<pre style="border: 1px solid black">${meta.data}</pre>
+`
+
+  document.body.innerHTML = html
+
+  return Promise.reject(error)
 }

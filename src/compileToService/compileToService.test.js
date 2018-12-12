@@ -1,9 +1,8 @@
-import { compileToService } from "./compileToService.js"
-import path from "path"
-import assert from "assert"
+import { assert } from "@dmail/assert"
+import { localRoot as projectRoot } from "../localRoot.js"
 import { stat } from "../fileHelper.js"
+import { compileToService } from "./compileToService.js"
 
-const projectRoot = path.resolve(__dirname, "../../../")
 const localRoot = `${projectRoot}/src/compileToService/fixtures`
 const compileInto = "build"
 const compileId = "group"
@@ -39,14 +38,17 @@ const test = async () => {
     const actual = await compileService({
       ressource: `${compileInto}/${compileId}/${file}`,
     })
-    assert.deepEqual(actual, {
-      status: 200,
-      headers: {
-        "cache-control": "no-store",
-        "content-length": 3,
-        "content-type": "application/javascript",
+    assert({
+      actual,
+      expected: {
+        status: 200,
+        headers: {
+          "cache-control": "no-store",
+          "content-length": 3,
+          "content-type": "application/javascript",
+        },
+        body: output,
       },
-      body: output,
     })
   }
 
@@ -66,14 +68,17 @@ const test = async () => {
           "if-none-match": '"wrong-etag"',
         },
       })
-      assert.deepEqual(actual, {
-        status: 200,
-        headers: {
-          "content-length": 3,
-          "content-type": "application/javascript",
-          eTag: expectedEtag,
+      assert({
+        actual,
+        expected: {
+          status: 200,
+          headers: {
+            "content-length": 3,
+            "content-type": "application/javascript",
+            eTag: expectedEtag,
+          },
+          body: output,
         },
-        body: output,
       })
     }
 
@@ -84,8 +89,11 @@ const test = async () => {
           "if-none-match": expectedEtag,
         },
       })
-      assert.deepEqual(actual, {
-        status: 304,
+      assert({
+        actual,
+        expected: {
+          status: 304,
+        },
       })
     }
   }
@@ -107,14 +115,17 @@ const test = async () => {
         },
       })
       const { mtime } = await stat(`${localRoot}/${file}`)
-      assert.deepEqual(actual, {
-        status: 200,
-        headers: {
-          "content-length": 3,
-          "content-type": "application/javascript",
-          "last-modified": mtime.toUTCString(),
+      assert({
+        actual,
+        expected: {
+          status: 200,
+          headers: {
+            "content-length": 3,
+            "content-type": "application/javascript",
+            "last-modified": mtime.toUTCString(),
+          },
+          body: output,
         },
-        body: output,
       })
     }
 
@@ -125,8 +136,11 @@ const test = async () => {
           "if-modified-since": new Date().toUTCString(),
         },
       })
-      assert.deepEqual(actual, {
-        status: 304,
+      assert({
+        actual,
+        expected: {
+          status: 304,
+        },
       })
     }
   }

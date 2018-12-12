@@ -1,9 +1,8 @@
-import path from "path"
-import assert from "assert"
+import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { jsCompile } from "./jsCompile.js"
+import { localRoot } from "../../localRoot.js"
+import { jsCompile } from "../jsCompile.js"
 
-const localRoot = path.resolve(__dirname, "../../../")
 const file = `node_modules/dev-server/src/platform/browser/index.js`
 const fileAbsolute = `${localRoot}/src/platform/browser/index.js`
 const pluginMap = pluginOptionMapToPluginMap({
@@ -81,11 +80,11 @@ jsCompile({
   fileAbsolute,
   pluginMap,
 }).then(({ sources, sourcesContent, assets, assetsContent, output }) => {
-  assert.deepEqual(Array.isArray(sources), true)
-  assert.deepEqual(Array.isArray(sourcesContent), true)
-  assert.deepEqual(assets, ["index.js.map"])
+  assert({ actual: Array.isArray(sources), expected: true })
+  assert({ actual: Array.isArray(sourcesContent), expected: true })
+  assert({ actual: assets, expected: ["index.js.map"] })
   const map = JSON.parse(assetsContent)
-  assert.deepEqual(map.file, "node_modules/dev-server/src/platform/browser/index.js")
-  assert.deepEqual(typeof output, "string")
+  assert({ actual: map.file, expected: "node_modules/dev-server/src/platform/browser/index.js" })
+  assert({ actual: typeof output, expected: "string" })
   console.log("passed")
 })

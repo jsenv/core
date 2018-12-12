@@ -17,11 +17,9 @@ export const executeFileOnPlatform = (
     launchPlatform,
     cancellationToken = createCancellationToken(),
     restartSignal = createRestartSignal(),
-    instrument = false,
-    setup = () => {},
-    teardown = () => {},
     platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
     verbose = false,
+    ...rest
   } = {},
 ) => {
   const log = (...args) => {
@@ -64,7 +62,7 @@ export const executeFileOnPlatform = (
     await platformOperation
 
     log(`execute ${file} on ${platformTypeForLog}`)
-    const executed = fileToExecuted(file, { instrument, setup, teardown })
+    const executed = fileToExecuted(file, rest)
 
     // canceled will reject in case of cancellation
     const canceled = cancellationTokenToPromise(cancellationToken)

@@ -4,7 +4,7 @@ import { localRoot } from "../localRoot.js"
 import { getCompileMapLocal } from "../getCompileMapLocal.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 
-const nodeClientFile = `${localRoot}/dist/src/createExecuteOnNode/client.js`
+const nodeClientFile = `${localRoot}/dist/src/launchNode/client.js`
 
 const createClosedWithFailureCodeError = (code) => {
   if (code === 12) {
@@ -71,7 +71,10 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
     })
   }
 
-  const fileToExecuted = (file, { instrument, setup, teardown }) => {
+  const fileToExecuted = (
+    file,
+    { instrument = false, collectCoverage = false, collectOutput = false },
+  ) => {
     const compileMapLocalURL = getCompileMapLocal({ localRoot, compileInto })
     // eslint-disable-next-line import/no-dynamic-require
     const compileMap = require(compileMapLocalURL)
@@ -83,8 +86,8 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
 
       file,
       instrument,
-      setup,
-      teardown,
+      collectCoverage,
+      collectOutput,
     })
 
     const executed = new Promise((resolve, reject) => {

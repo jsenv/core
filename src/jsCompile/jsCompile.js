@@ -3,20 +3,7 @@ import { transpiler } from "./transpiler.js"
 import { packager } from "./packager.js"
 import { arrayWithout } from "../arrayHelper.js"
 
-const writeSourceMapLocation = ({ source, location }) => {
-  return `${source}
-${"//#"} sourceMappingURL=${location}`
-}
-
-const stringifyMap = (object) => JSON.stringify(object, null, "  ")
-
-const stringifyCoverage = (object) => JSON.stringify(object, null, "  ")
-
 const selfLocalRoot = path.resolve(__dirname, "../../../")
-
-export const getBrowserPlatformFile = () => {
-  return "node_modules/dev-server/src/platform/browser/index.js"
-}
 
 export const jsCompile = async ({
   localRoot,
@@ -53,6 +40,7 @@ export const jsCompile = async ({
   // source can be fetched at `${compileServer.origin}/src/file.js`
   const sourceToSourceForSourceMap = (source) => `/${source}`
 
+  // path is not this one, it should be loadBrowserPlatform.js I guess
   if (file === "node_modules/dev-server/src/platform/browser/index.js") {
     const pluginNames = Object.keys(pluginMap)
     let packagerPluginNames
@@ -158,4 +146,17 @@ export const jsCompile = async ({
     assetsContent,
     output,
   }
+}
+
+const writeSourceMapLocation = ({ source, location }) => {
+  return `${source}
+${"//#"} sourceMappingURL=${location}`
+}
+
+const stringifyMap = (object) => JSON.stringify(object, null, "  ")
+
+const stringifyCoverage = (object) => JSON.stringify(object, null, "  ")
+
+export const getBrowserPlatformFile = () => {
+  return "node_modules/dev-server/src/platform/browser/index.js"
 }

@@ -1,12 +1,17 @@
 import { createNodeSystem } from "./system/createNodeSystem.js"
 import { valueInstall } from "./valueInstall.js"
 
-export const createPlatformHooks = ({ fetchSource, hrefToLocalFile, fileToRemoteCompiledFile }) => {
-  const nodeSystem = createNodeSystem({ fetchSource, hrefToLocalFile })
+export const createPlatformHooks = ({
+  fetchSource,
+  evalSource,
+  hrefToLocalFile,
+  fileToRemoteCompiledFile,
+}) => {
+  const nodeSystem = createNodeSystem({ fetchSource, evalSource, hrefToLocalFile })
 
   valueInstall(global, "System", nodeSystem)
 
-  const executeFile = (file) => {
+  const importFile = (file) => {
     return nodeSystem.import(file)
   }
 
@@ -15,5 +20,5 @@ export const createPlatformHooks = ({ fetchSource, hrefToLocalFile, fileToRemote
     return Boolean(nodeSystem.get(remoteCompiledFile))
   }
 
-  return { executeFile, isFileImported }
+  return { importFile, isFileImported }
 }

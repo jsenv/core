@@ -11,12 +11,7 @@ export const moduleToRegisterGetter = async ({
     try {
       return fn(...args)
     } catch (error) {
-      return Promise.reject({
-        code: "MODULE_INSTANTIATE_ERROR",
-        error,
-        url: remoteFile,
-        parent: remoteParent,
-      })
+      return Promise.reject(createInstantiateError(remoteFile, remoteParent, error))
     }
   }
 
@@ -38,20 +33,15 @@ export const moduleToRegisterGetter = async ({
   })
 
   if (status === 404) {
-    const error = new Error(`${remoteFile} not found`)
-    error.code = "MODULE_NOT_FOUND_ERROR"
-    return Promise.reject(error)
+    return Promise.reject(createNotFoundError(remoteFile))
   }
 
   if (status === 500 && reason === "parse error") {
-    const data = JSON.parse(error.body)
-    const error = new Error(data.message)
-    error.code = "MODULE_PARSE_ERROR"
-    error.data = data
-    return Promise.reject(error)
+    return Promise.reject(createParseError(remoteFile, remoteParent, JSON.parse(body)))
   }
 
   if (status < 200 || status >= 300) {
+    // should I create an error instead of rejecting with the response object ?
     return Promise.reject({ status, reason, headers, body })
   }
 
@@ -71,6 +61,28 @@ export const moduleToRegisterGetter = async ({
   }
 
   return () => undefined
+}
+
+const createInstantiateError = (url, parent, error) => {
+  const instantiateError = new Error(`error while instantiating ${url}`)
+  instantiateError.code = "MODULE_INSTANTIATE_ERROR"
+  instantiateError.error = error
+  instantiateError.url = url
+  instantiateError.parent = parent
+  return instantiateError
+}
+
+const createNotFoundError = (url) => {
+  const notFoundError = new Error(`${url} not found`)
+  notFoundError.code = "MODULE_NOT_FOUND_ERROR"
+  return notFoundError
+}
+
+const createParseError = (url, parent, data) => {
+  const parseError = new Error(data.message)
+  parseError.code = "MODULE_PARSE_ERROR"
+  parseError.data = data
+  return parseError
 }
 
 const namespaceToRegister = (namespace) => {

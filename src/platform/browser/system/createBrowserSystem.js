@@ -12,16 +12,7 @@ export const createBrowserSystem = ({ fetchSource, evalSource, hrefToLocalFile }
       remoteParent: parent,
       localFile: hrefToLocalFile(url),
     }).then((registerGetter) => {
-      try {
-        return registerGetter(browserSystem)
-      } catch (error) {
-        return Promise.reject({
-          code: "MODULE_INSTANTIATE_ERROR",
-          error,
-          url,
-          parent,
-        })
-      }
+      return registerGetter(browserSystem)
     })
   }
 

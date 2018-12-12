@@ -1,7 +1,4 @@
-// keep in mind that setup and teardown will be stringified and evaluated client side
-// you cannot use any variable from server
-
-export const teardownForOutput = () => (namespace) => {
+export const teardownForOutput = (namespace) => {
   return namespace.output
 }
 
