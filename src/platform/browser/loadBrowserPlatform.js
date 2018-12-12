@@ -5,6 +5,7 @@
 // client will just be killed if node controls it (chromium)
 // otherwise we don't care
 
+import { teardownForOutput, teardownForOutputAndCoverageMap } from "../platformTeardown.js"
 import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 import { createLocaters } from "../createLocaters.js"
 import { detect } from "./browserDetect/index.js"
@@ -70,18 +71,26 @@ export const loadBrowserPlatform = ({
       })
     }
 
-    const executeFile = (file, { instrument = false } = {}) => {
+    const executeFile = (file, { instrument = false, collectCoverage = false } = {}) => {
       const remoteCompiledFile = instrument
         ? fileToRemoteCompiledFile(file)
         : fileToRemoteInstrumentedFile(file)
 
-      return platformHooks.executeFile(remoteCompiledFile).catch((error) => {
-        return onExecuteError(error, {
-          file,
-          fileToRemoteSourceFile,
-          hrefToFile,
-        })
-      })
+      return platformHooks.importFile(remoteCompiledFile).then(
+        (namespace) => {
+          if (collectCoverage) {
+            return teardownForOutputAndCoverageMap(namespace)
+          }
+          return teardownForOutput(namespace)
+        },
+        (error) => {
+          return onExecuteError(error, {
+            file,
+            fileToRemoteSourceFile,
+            hrefToFile,
+          })
+        },
+      )
     }
 
     return { executeFile }

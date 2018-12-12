@@ -7,7 +7,7 @@ export const createPlatformHooks = ({ fetchSource, hrefToLocalFile, fileToRemote
   const browserSystem = createBrowserSystem({ fetchSource, hrefToLocalFile })
   window.System = browserSystem
 
-  const executeFile = (file) => {
+  const importFile = (file) => {
     importTracker.markFileAsImported(file)
     return browserSystem.import(file)
   }
@@ -22,5 +22,5 @@ export const createPlatformHooks = ({ fetchSource, hrefToLocalFile, fileToRemote
     return Boolean(browserSystem.get(remoteCompiledFile))
   }
 
-  return { executeFile, isFileImported }
+  return { importFile, isFileImported }
 }

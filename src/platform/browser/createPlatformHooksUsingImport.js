@@ -1,5 +1,5 @@
 export const createPlatformHooks = () => {
-  const executeFile = (file) => {
+  const importFile = (file) => {
     // we'll have to check how it behaves if server responds with 500
     // of if it throw on execution
     return import(file)
@@ -10,5 +10,5 @@ export const createPlatformHooks = () => {
     return true
   }
 
-  return { executeFile, fileIsImported }
+  return { importFile, fileIsImported }
 }
