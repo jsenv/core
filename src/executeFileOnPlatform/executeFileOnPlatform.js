@@ -1,8 +1,4 @@
-import {
-  createCancellationToken,
-  cancellationTokenToPromise,
-  createOperation,
-} from "@dmail/cancellation"
+import { createCancellationToken, createOperation } from "@dmail/cancellation"
 import { promiseTrackRace } from "../promiseHelper.js"
 import { createRestartSignal } from "./restartController.js"
 
@@ -35,23 +31,42 @@ export const executeFileOnPlatform = (
   }
 
   const startPlatform = async () => {
-    cancellationToken.throwIfRequested()
-
     log(`launch ${platformTypeForLog} to execute ${file}`)
-    const {
-      disconnected,
-      errored,
-      opened,
-      closed,
-      close,
-      closeForce,
-      fileToExecuted,
-    } = await launchPlatform()
-
     const platformOperation = createOperation({
       cancellationToken,
-      promise: new Promise(async (resolve) => {
-        const { winner, value } = await promiseTrackRace([disconnected, errored, opened])
+      start: () => launchPlatform(),
+      stop: ({ close, closeForce }) => {
+        // if we are disconnected we can't act on the platform anymore
+        log(`stop ${platformTypeForLog}`)
+        close()
+
+        if (closeForce) {
+          const id = setTimeout(closeForce, ALLOCATED_MS_FOR_CLOSE)
+          closed.finally(() => clearTimeout(id))
+        }
+        return closed
+      },
+    })
+    const { disconnected, errored, closed, fileToExecuted } = await platformOperation
+    log(`${platformTypeForLog} opened`)
+
+    log(`execute ${file} on ${platformTypeForLog}`)
+    const executeOperation = createOperation({
+      cancellationToken,
+      start: async () => {
+        const restarted = new Promise((resolve) => {
+          restartSignal.onrestart = resolve
+        })
+        const executed = fileToExecuted(file, rest)
+
+        const { winner, value } = await promiseTrackRace([
+          disconnected,
+          errored,
+          restarted,
+          closed,
+          executed,
+        ])
+
         if (winner === disconnected) {
           log(`${platformTypeForLog} disconnected`)
           throw createDisconnectedError()
@@ -61,64 +76,23 @@ export const executeFileOnPlatform = (
           throw value
         }
 
-        resolve()
-      }),
-      stop: (reason) => {
-        // if we are disconnected we can't act on the platform anymore
-        log(`stop ${platformTypeForLog}`)
-        close(reason)
-
-        if (closeForce) {
-          const id = setTimeout(closeForce, ALLOCATED_MS_FOR_CLOSE)
-          closed.finally(() => clearTimeout(id))
+        if (winner === restarted) {
+          return platformOperation.stop(value).then(startPlatform)
         }
-        return closed
+
+        if (winner === closed) {
+          return Promise.reject(createPlatformClosedDuringExecutionError())
+        }
+
+        log(`${file} execution on ${platformTypeForLog} done with ${value}`)
+        closed.then(() => {
+          log(`${platformTypeForLog} closed`)
+        })
+        return value
       },
+      stop: () => {},
     })
-    await platformOperation
-    log(`${platformTypeForLog} opened`)
-
-    // canceled will reject in case of cancellation
-    const canceled = cancellationTokenToPromise(cancellationToken)
-
-    const restarted = new Promise((resolve) => {
-      restartSignal.onrestart = resolve
-    })
-
-    log(`execute ${file} on ${platformTypeForLog}`)
-    const executed = fileToExecuted(file, rest)
-
-    const { winner, value } = await promiseTrackRace([
-      disconnected,
-      errored,
-      canceled,
-      restarted,
-      closed,
-      executed,
-    ])
-
-    if (winner === disconnected) {
-      log(`${platformTypeForLog} disconnected`)
-      throw createDisconnectedError()
-    }
-
-    if (winner === errored) {
-      throw value
-    }
-
-    if (winner === restarted) {
-      return platformOperation.stop(value).then(startPlatform)
-    }
-
-    if (winner === closed) {
-      return Promise.reject(createPlatformClosedDuringExecutionError())
-    }
-
-    log(`${file} execution on ${platformTypeForLog} done with ${value}`)
-    closed.then(() => {
-      log(`${platformTypeForLog} closed`)
-    })
-    return value
+    return executeOperation
   }
 
   return startPlatform()

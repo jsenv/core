@@ -50,8 +50,6 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
     })
   })
 
-  const opened = Promise.resolve()
-
   const closed = new Promise((resolve) => {
     const exitEventRegistration = registerChildEvent(child, "exit", (code) => {
       exitEventRegistration.unregister()
@@ -67,19 +65,11 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
     child.kill()
   }
 
-  const sendToChild = (type, data) => {
-    const source = uneval(data, { showFunctionBody: true })
-    child.send({
-      type,
-      data: source,
-    })
-  }
-
   const fileToExecuted = (file, options) => {
     const compileMapLocalURL = getCompileMapLocal({ localRoot, compileInto })
     // eslint-disable-next-line import/no-dynamic-require
     const compileMap = require(compileMapLocalURL)
-    sendToChild("execute", {
+    sendToChild(child, "execute", {
       compileMap,
       localRoot,
       remoteRoot,
@@ -112,15 +102,15 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
     return executed
   }
 
-  return {
-    disconnected,
-    errored,
-    opened,
-    closed,
-    close,
-    closeForce,
-    fileToExecuted,
-  }
+  return { disconnected, errored, close, closeForce, closed, fileToExecuted }
+}
+
+const sendToChild = (child, type, data) => {
+  const source = uneval(data, { showFunctionBody: true })
+  child.send({
+    type,
+    data: source,
+  })
 }
 
 const registerChildMessage = (child, type, callback) => {
