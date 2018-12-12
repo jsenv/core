@@ -38,16 +38,33 @@ export const executeFileOnPlatform = (
     cancellationToken.throwIfRequested()
 
     log(`launch ${platformTypeForLog} to execute ${file}`)
-    const { opened, closed, close, closeForce, fileToExecuted } = await launchPlatform()
-
-    closed.catch((e) => {
-      log(`${platformTypeForLog} error: ${e}`)
-    })
+    const {
+      disconnected,
+      errored,
+      opened,
+      closed,
+      close,
+      closeForce,
+      fileToExecuted,
+    } = await launchPlatform()
 
     const platformOperation = createOperation({
       cancellationToken,
-      promise: opened,
+      promise: new Promise(async (resolve) => {
+        const { winner, value } = await promiseTrackRace([disconnected, errored, opened])
+        if (winner === disconnected) {
+          log(`${platformTypeForLog} disconnected`)
+          throw createDisconnectedError()
+        }
+
+        if (winner === errored) {
+          throw value
+        }
+
+        resolve()
+      }),
       stop: (reason) => {
+        // if we are disconnected we can't act on the platform anymore
         log(`stop ${platformTypeForLog}`)
         close(reason)
 
@@ -58,11 +75,8 @@ export const executeFileOnPlatform = (
         return closed
       },
     })
-
     await platformOperation
-
-    log(`execute ${file} on ${platformTypeForLog}`)
-    const executed = fileToExecuted(file, rest)
+    log(`${platformTypeForLog} opened`)
 
     // canceled will reject in case of cancellation
     const canceled = cancellationTokenToPromise(cancellationToken)
@@ -71,23 +85,45 @@ export const executeFileOnPlatform = (
       restartSignal.onrestart = resolve
     })
 
-    const { winner, value } = await promiseTrackRace([canceled, restarted, closed, executed])
+    log(`execute ${file} on ${platformTypeForLog}`)
+    const executed = fileToExecuted(file, rest)
+
+    const { winner, value } = await promiseTrackRace([
+      disconnected,
+      errored,
+      canceled,
+      restarted,
+      closed,
+      executed,
+    ])
+
+    if (winner === disconnected) {
+      log(`${platformTypeForLog} disconnected`)
+      throw createDisconnectedError()
+    }
+
+    if (winner === errored) {
+      throw value
+    }
 
     if (winner === restarted) {
       return platformOperation.stop(value).then(startPlatform)
     }
 
     if (winner === closed) {
-      log(`${platformTypeForLog} closed`)
       return Promise.reject(createPlatformClosedDuringExecutionError())
     }
 
-    // executed
-    // should I call child.disconnect() at some point ?
-    // https://nodejs.org/api/child_process.html#child_process_subprocess_disconnect
     log(`${file} execution on ${platformTypeForLog} done with ${value}`)
+    closed.then(() => {
+      log(`${platformTypeForLog} closed`)
+    })
     return value
   }
 
   return startPlatform()
+}
+
+const createDisconnectedError = () => {
+  return new Error(`platform disconnected`)
 }

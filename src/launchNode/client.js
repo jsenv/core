@@ -28,7 +28,7 @@ const exceptionToObject = (exception) => {
 }
 
 process.on("uncaughtException", (valueThrowed) => {
-  console.log("exception")
+  // console.log("exception")
   // debugger
   sendToParent("error", exceptionToObject(valueThrowed))
   // once errored, the child must die
@@ -36,7 +36,7 @@ process.on("uncaughtException", (valueThrowed) => {
 })
 
 process.on("unhandledRejection", (valueRejected) => {
-  console.log("rejection")
+  // console.log("rejection")
   // debugger
   sendToParent("error", exceptionToObject(valueRejected))
   // once errored, the child must die
@@ -47,21 +47,23 @@ const listenParentOnce = (type, callback) => {
   const listener = (event) => {
     if (event.type === type) {
       // commenting line below keep this process alive
-      process.removeListener("message", listener)
+      removeListener()
       callback(eval(`(${event.data})`))
     }
   }
 
-  process.on("message", listener)
-
-  return () => {
+  const removeListener = () => {
     process.removeListener("message", listener)
   }
+
+  process.on("message", listener)
+  return removeListener
 }
 
 const { token, cancel } = createCancellationSource()
 
 process.on("SIGINT", () => {
+  console.log("sigint")
   // cancel will remove listener to process.on('message')
   // which is sufficient to let child process die
   // assuming nothing else keeps it alive
@@ -77,7 +79,7 @@ process.on("SIGINT", () => {
 token.register(
   listenParentOnce(
     "execute",
-    async ({ compileMap, localRoot, remoteRoot, compileInto, file, ...rest }) => {
+    async ({ compileMap, localRoot, remoteRoot, compileInto, file, options }) => {
       const platform = await loadNodePlatform({
         compileMap,
         localRoot,
@@ -85,12 +87,12 @@ token.register(
         compileInto,
       })
 
-      platform.executeFile(file, rest).then(
+      platform.executeFile(file, options).then(
         (value) => {
-          sendToParent("execute-resolve", value)
+          sendToParent("execute-result", { failed: false, value })
         },
         (error) => {
-          sendToParent("execute-reject", error)
+          sendToParent("execute-result", { failed: true, value: error })
         },
       )
     },

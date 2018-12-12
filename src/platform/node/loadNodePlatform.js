@@ -26,7 +26,7 @@ export const loadNodePlatform = ({ compileMap, localRoot, remoteRoot, compileInt
     fileToRemoteCompiledFile,
   })
 
-  const executeFile = (file, { instrument = false, collectCoverage = false }) => {
+  const executeFile = (file, { instrument = false, collectCoverage = false } = {}) => {
     const remoteCompiledFile = instrument
       ? fileToRemoteInstrumentedFile(file)
       : fileToRemoteCompiledFile(file)

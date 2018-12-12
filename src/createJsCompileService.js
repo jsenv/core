@@ -3,7 +3,7 @@ import {
   pluginOptionMapToPluginMap,
 } from "@dmail/project-structure-compile-babel"
 import { objectToPromiseAll } from "./promiseHelper.js"
-import { objectMapValue } from "./objectHelper.js"
+import { objectMapValue, objectFilter } from "./objectHelper.js"
 import { jsCompile } from "./jsCompile/index.js"
 import { jsCompileToService } from "./jsCompileToService/index.js"
 import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.js"
@@ -12,7 +12,7 @@ import { getCompileMapLocalURL } from "./compileBrowserPlatform/index.js"
 const compileMapToCompileParamMap = (compileMap, pluginMap) => {
   return objectMapValue(compileMap, ({ pluginNames }) => {
     return {
-      plugins: pluginNames.map((pluginName) => pluginMap[pluginName]),
+      pluginMap: objectFilter(pluginMap, (pluginName) => pluginNames.includes(pluginName)),
     }
   })
 }
