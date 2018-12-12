@@ -60,20 +60,21 @@ export const closeServer = (server) => {
 }
 
 export const listen = ({ cancellationToken, server, port, ip }) => {
-  const promise = new Promise((resolve, reject) => {
-    server.on("error", reject)
-    server.on("listening", () => {
-      // in case port is 0 (randomly assign an available port)
-      // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-      resolve(server.address().port)
-    })
+  return createOperation({
+    cancellationToken,
+    start: () =>
+      new Promise((resolve, reject) => {
+        server.on("error", reject)
+        server.on("listening", () => {
+          // in case port is 0 (randomly assign an available port)
+          // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
+          resolve(server.address().port)
+        })
 
-    server.listen(port, ip)
+        server.listen(port, ip)
+      }),
+    stop: () => closeServer(server),
   })
-
-  const stop = () => closeServer(server)
-
-  return createOperation({ cancellationToken, stop, promise })
 }
 
 export const originAsString = ({ protocol, ip, port }) => {
@@ -133,7 +134,6 @@ export const open = async (
   const { nodeServer, agent } = getNodeServerAndAgent({ protocol, signature })
 
   let status = "opening"
-  const opened = listen({ cancellationToken, server: nodeServer, port, ip })
 
   // close can be called in all these cases:
   /*
@@ -182,7 +182,11 @@ export const open = async (
     status = "closed"
     closedResolve()
   })
-  createOperation({ cancellationToken, stop: close, promise: opened })
+  const openOperation = createOperation({
+    cancellationToken,
+    start: () => listen({ cancellationToken, server: nodeServer, port, ip }),
+    stop: close,
+  })
 
   const closePromises = []
   if (autoCloseOnCrash) {
@@ -215,7 +219,7 @@ export const open = async (
   }
   Promise.race(closePromises).then(close)
 
-  port = await opened
+  port = await openOperation
   status = "opened"
   const origin = originAsString({ protocol, ip, port })
   log(openedMessage({ origin }))
