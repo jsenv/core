@@ -1,14 +1,13 @@
+const { rollup } = require("rollup")
+const babel = require("rollup-plugin-babel")
+const nodeResolve = require("rollup-plugin-node-resolve")
 const {
   pluginOptionMapToPluginMap,
   pluginMapToPluginsForPlatform,
   fileSystemWriteCompileResult,
 } = require("@dmail/project-structure-compile-babel")
-const path = require("path")
-const { rollup } = require("rollup")
-const babel = require("rollup-plugin-babel")
-const nodeResolve = require("rollup-plugin-node-resolve")
+const { localRoot } = require("../config/project.config.js")
 
-const localRoot = path.resolve(__dirname, "../")
 const inputFile = `src/platform/browser/loader.js`
 const outputFile = `browser-loader.js`
 const outputFolder = "dist"

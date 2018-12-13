@@ -1,11 +1,11 @@
 import "systemjs/dist/system.js"
-import { moduleToRegisterGetter } from "./moduleToRegisterGetter.js"
+import { fromRemoteFile } from "../../registerParamFrom.js"
 
 export const createBrowserSystem = ({ fetchSource, evalSource, hrefToLocalFile }) => {
   const browserSystem = new window.System.constructor()
 
   browserSystem.instantiate = (url, parent) => {
-    return moduleToRegisterGetter({
+    return fromRemoteFile({
       fetchSource,
       evalSource,
       remoteFile: url,

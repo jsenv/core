@@ -1,11 +1,24 @@
 import "systemjs/dist/system.js"
-import { moduleToRegisterGetter } from "./moduleToRegisterGetter.js"
+import { fromRemoteFile, fromFunctionReturningNamespace } from "../../registerParamFrom.js"
+import { isNodeBuiltinModule } from "./isNodeBuiltinModule.js"
 
 export const createNodeSystem = ({ fetchSource, evalSource, hrefToLocalFile }) => {
   const nodeSystem = new global.System.constructor()
 
   nodeSystem.instantiate = async (url, parent) => {
-    const registerGetter = await moduleToRegisterGetter({
+    if (isNodeBuiltinModule(url)) {
+      return fromFunctionReturningNamespace(url, parent, () => {
+        // eslint-disable-next-line import/no-dynamic-require
+        const nodeBuiltinModuleExports = require(url)
+        return {
+          ...nodeBuiltinModuleExports,
+          default: nodeBuiltinModuleExports,
+        }
+      })
+    }
+
+    const registerParam = await fromRemoteFile({
+      System: nodeSystem,
       fetchSource,
       evalSource,
       remoteFile: url,
@@ -13,7 +26,7 @@ export const createNodeSystem = ({ fetchSource, evalSource, hrefToLocalFile }) =
       localFile: hrefToLocalFile(url),
     })
 
-    return registerGetter(nodeSystem)
+    return registerParam
   }
 
   return nodeSystem
