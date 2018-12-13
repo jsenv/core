@@ -41,6 +41,11 @@ export const jsCompile = async ({
   const sourceToSourceForSourceMap = (source) => `/${source}`
 
   // path is not this one, it should be loadBrowserPlatform.js I guess
+  // to remove. this is not here that we should handle
+  // thoose files are already compiled, they just have to be served
+  // to the client
+  // however pluginNames.indexOf("transform-modules-systemjs")
+  // can be used to serve either native-importer or system-importer
   if (file === "node_modules/dev-server/src/platform/browser/index.js") {
     const pluginNames = Object.keys(pluginMap)
     let packagerPluginNames

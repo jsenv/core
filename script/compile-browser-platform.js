@@ -8,9 +8,10 @@ const {
 } = require("@dmail/project-structure-compile-babel")
 const { localRoot } = require("../config/project.config.js")
 
-const inputFile = `src/platform/browser/loader.js`
-const outputFile = `browser-loader.js`
+const inputFile = `src/platform/browser/browserPlatform.js`
+const outputFile = `browserPlatform.js`
 const outputFolder = "dist"
+const globalName = "__browserPlatform__"
 const pluginMap = pluginOptionMapToPluginMap({
   "proposal-async-generator-functions": {},
   "proposal-json-strings": {},
@@ -56,13 +57,14 @@ const compile = async () => {
         exclude: "node_modules/**",
         plugins,
       }),
-    ], // comment line below to skip rollup warnings
+    ],
+    // comment line below to skip rollup warnings
     // onwarn: () => {},
   })
 
   const compileResult = await bundle.generate({
     format: "iife",
-    name: "__browserLoader__",
+    name: globalName,
     sourcemap: true,
   })
 

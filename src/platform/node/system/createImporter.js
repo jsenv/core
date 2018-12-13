@@ -1,7 +1,7 @@
-import { createNodeSystem } from "./system/createNodeSystem.js"
-import { valueInstall } from "./valueInstall.js"
+import { createNodeSystem } from "./createNodeSystem.js"
+import { valueInstall } from "../valueInstall.js"
 
-export const createPlatformHooks = ({
+export const createImporter = ({
   fetchSource,
   evalSource,
   hrefToLocalFile,

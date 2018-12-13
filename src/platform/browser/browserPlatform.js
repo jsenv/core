@@ -1,21 +1,21 @@
-// propagating cancellation from server to client:
-// server could execute a global function client side to request cancellation
-// or client to connect to a server SSE asking for cancellation
-// BUT this feature is not very important for now I guess
-// client will just be killed if node controls it (chromium)
-// otherwise we don't care
-
 import { teardownForOutput, teardownForOutputAndCoverageMap } from "../platformTeardown.js"
-import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 import { createLocaters } from "../createLocaters.js"
 import { detect } from "./browserDetect/index.js"
+import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 import { browserToCompileId } from "./browserToCompileId.js"
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
 import { open } from "./hotreload.js"
 
-export const loadBrowserPlatform = ({
+export const browserPlatform = {
+  load,
+}
+
+const load = ({
   compileMap,
+  // I'm not sure this is the server that should control
+  // which platform file do we load
+  // we will just fetch either native or system depending what we support
   platformFile,
   remoteRoot,
   compileInto,
@@ -48,8 +48,8 @@ export const loadBrowserPlatform = ({
     }
 
     evalSource(body, platformURL)
-    const createPlatformHooks = window.__createPlatformHooks__
-    const platformHooks = createPlatformHooks({
+
+    const importer = window.__createImporter__({
       fetchSource,
       evalSource,
       hrefToLocalFile,
@@ -58,8 +58,8 @@ export const loadBrowserPlatform = ({
 
     if (hotreload) {
       const hotreloadPredicate = (file) => {
-        if (platformHooks.isFileImported) {
-          return platformHooks.isFileImported(file)
+        if (importer.fileIsImported) {
+          return importer.fileIsImported(file)
         }
         return true
       }
@@ -76,7 +76,7 @@ export const loadBrowserPlatform = ({
         ? fileToRemoteCompiledFile(file)
         : fileToRemoteInstrumentedFile(file)
 
-      return platformHooks.importFile(remoteCompiledFile).then(
+      return importer.importFile(remoteCompiledFile).then(
         (namespace) => {
           if (collectCoverage) {
             return teardownForOutputAndCoverageMap(namespace)

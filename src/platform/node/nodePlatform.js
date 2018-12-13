@@ -1,11 +1,15 @@
 import { teardownForOutput, teardownForOutputAndCoverageMap } from "../platformTeardown.js"
 import { createLocaters } from "../createLocaters.js"
 import { nodeToCompileId } from "./nodeToCompileId.js"
-import { createPlatformHooks } from "./createPlatformHooksUsingSystem.js"
+import { createImporter } from "./system/createImporter.js"
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
 
-export const loadNodePlatform = ({ compileMap, localRoot, remoteRoot, compileInto }) => {
+export const nodePlatform = {
+  load,
+}
+
+const load = ({ compileMap, localRoot, remoteRoot, compileInto }) => {
   const compileId =
     nodeToCompileId({ name: "node", version: process.version.slice(1) }, compileMap) || "otherwise"
   const {
@@ -19,7 +23,7 @@ export const loadNodePlatform = ({ compileMap, localRoot, remoteRoot, compileInt
     compileInto,
     compileId,
   })
-  const platformHooks = createPlatformHooks({
+  const importer = createImporter({
     fetchSource,
     evalSource,
     hrefToLocalFile,
@@ -31,7 +35,7 @@ export const loadNodePlatform = ({ compileMap, localRoot, remoteRoot, compileInt
       ? fileToRemoteInstrumentedFile(file)
       : fileToRemoteCompiledFile(file)
 
-    return platformHooks.importFile(remoteCompiledFile).then(
+    return importer.importFile(remoteCompiledFile).then(
       (namespace) => {
         if (collectCoverage) {
           return teardownForOutputAndCoverageMap(namespace)

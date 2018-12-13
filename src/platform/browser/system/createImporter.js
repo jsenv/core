@@ -1,7 +1,7 @@
-import { createBrowserSystem } from "./system/createBrowserSystem.js"
-import { createImportTracker } from "../createImportTracker.js"
+import { createBrowserSystem } from "./createBrowserSystem.js"
+import { createImportTracker } from "../../createImportTracker.js"
 
-export const createPlatformHooks = ({ fetchSource, hrefToLocalFile, fileToRemoteCompiledFile }) => {
+export const createImporter = ({ fetchSource, hrefToLocalFile, fileToRemoteCompiledFile }) => {
   const importTracker = createImportTracker()
 
   const browserSystem = createBrowserSystem({ fetchSource, hrefToLocalFile })
@@ -12,7 +12,7 @@ export const createPlatformHooks = ({ fetchSource, hrefToLocalFile, fileToRemote
     return browserSystem.import(file)
   }
 
-  const isFileImported = (file) => {
+  const fileIsImported = (file) => {
     // isFileImported is useful in case the file was imported but is not
     // in System registry because it has a parse error or insantiate error
     if (importTracker.isFileImported(file)) {
@@ -22,5 +22,5 @@ export const createPlatformHooks = ({ fetchSource, hrefToLocalFile, fileToRemote
     return Boolean(browserSystem.get(remoteCompiledFile))
   }
 
-  return { importFile, isFileImported }
+  return { importFile, fileIsImported }
 }
