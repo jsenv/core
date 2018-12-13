@@ -11,17 +11,6 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
 
   const child = forkChildProcess(nodeClientFile, { execArgv })
 
-  // https://nodejs.org/api/child_process.html#child_process_event_disconnect
-  // il y a une subtilité entre disconnect et closed qu' il faut gérer
-  // si on se retrouver disconnected
-  // on ne pourra plus agir sur la plateforme
-  const disconnected = new Promise((resolve) => {
-    const disconnectRegistration = registerChildEvent(child, "disconnect", () => {
-      disconnectRegistration.unregister()
-      resolve()
-    })
-  })
-
   const errored = new Promise((resolve) => {
     // https://nodejs.org/api/child_process.html#child_process_event_error
     const errorEventRegistration = registerChildEvent(child, "error", (error) => {
@@ -47,6 +36,14 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
         exitErrorRegistration.unregister()
         resolve(createClosedWithFailureCodeError(code))
       }
+    })
+  })
+
+  // https://nodejs.org/api/child_process.html#child_process_event_disconnect
+  const disconnected = new Promise((resolve) => {
+    const disconnectRegistration = registerChildEvent(child, "disconnect", () => {
+      disconnectRegistration.unregister()
+      resolve()
     })
   })
 
@@ -102,7 +99,15 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
     return executed
   }
 
-  return { disconnected, errored, close, closeForce, closed, fileToExecuted }
+  return {
+    openDetail: { execArgv },
+    errored,
+    disconnected,
+    close,
+    closeForce,
+    closed,
+    fileToExecuted,
+  }
 }
 
 const sendToChild = (child, type, data) => {

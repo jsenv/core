@@ -9,14 +9,15 @@ import {
   getCompileMapLocalURL,
 } from "../compileBrowserPlatform/index.js"
 import { readFile } from "../fileHelper.js"
+import { createPromiseAndHooks } from "../promiseHelper.js"
+
+// https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
   localRoot,
   remoteRoot,
   compileInto,
-  hotreload = false,
-  hotreloadSSERoot,
 
   protocol = "http",
   ip = "127.0.0.1",
@@ -24,19 +25,11 @@ export const launchChromium = async ({
   openIndexRequestHandler = serverIndexOpen,
   headless = true,
   mirrorConsole = false,
-  verbose = true,
 }) => {
   if (openIndexRequestHandler === openIndexRequestInterception && headless === false) {
     throw new Error(`openIndexRequestInterception work only in headless mode`)
   }
 
-  const log = (...args) => {
-    if (verbose) {
-      console.log(...args)
-    }
-  }
-
-  // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
   const browser = await createOperation({
     cancellationToken,
     start: () =>
@@ -50,60 +43,31 @@ export const launchChromium = async ({
         // so we apparently don't have to use listenNodeBeforeExit in order to close browser
         // as we do for server
       }),
-    stop: (browser) => {
-      log(`closing chromium`)
-      return browser.close()
-    },
+    stop: (browser) => browser.close(),
   })
 
-  const page = await createOperation({
-    cancellationToken,
-    start: () => browser.newPage(),
-    stop: () => {
-      // commented until https://github.com/GoogleChrome/puppeteer/issues/2269
-      // I think we may uncomment it if we are sure
-      // every page.close is awaited before
-      // calling browser.close()
-      // which cancelllationToken should do by default
-      // return page.close()
-    },
-  })
+  const pageTracker = createPageTracker(browser)
 
-  const disconnected = new Promise((resolve) => {
-    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
-    browser.on("disconnected", resolve)
-  })
+  const disconnected = createPromiseAndHooks()
+  // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
+  browser.on("disconnected", disconnected.resolve)
 
-  const errored = new Promise((resolve) => {
+  const errored = createPromiseAndHooks()
+
+  const closed = createPromiseAndHooks()
+  // yeah closed and disconnected are the same.. is this a problem ?
+  browser.on("disconnected", closed.resolve)
+
+  const close = async (reason) => {
+    await pageTracker.close(reason)
+    return browser.close()
+  }
+
+  browser.on("targetcreated", (page) => {
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-    page.on("error", resolve)
+    page.on("error", errored.resolve)
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-    page.on("pageerror", resolve)
-  })
-
-  const closed = new Promise((resolve) => {
-    // yeah closed and disconnected are the same.. is this a problem ?
-    browser.on("disconnected", resolve)
-  })
-
-  const close = () => browser.close()
-
-  const fileToExecuted = async (file, options) => {
-    const compileMap = JSON.parse(await readFile(getCompileMapLocalURL({ localRoot, compileInto })))
-    const html = await createHTMLForBrowser({
-      scriptRemoteList: [{ url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) }],
-      scriptInlineList: [
-        {
-          source: createBrowserPlatformSource({
-            remoteRoot,
-            compileInto,
-            compileMap,
-            hotreload,
-            hotreloadSSERoot,
-          }),
-        },
-      ],
-    })
+    page.on("pageerror", errored.resolve)
 
     if (mirrorConsole) {
       page.on("console", (message) => {
@@ -112,6 +76,25 @@ export const launchChromium = async ({
         console[message._type](message._text)
       })
     }
+  })
+
+  const fileToExecuted = async (file, options) => {
+    const compileMap = JSON.parse(await readFile(getCompileMapLocalURL({ localRoot, compileInto })))
+
+    // todo: promise.all on page and html
+    const page = await browser.newPage()
+    const html = await createHTMLForBrowser({
+      scriptRemoteList: [{ url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) }],
+      scriptInlineList: [
+        {
+          source: createBrowserPlatformSource({
+            remoteRoot,
+            compileInto,
+            compileMap,
+          }),
+        },
+      ],
+    })
 
     const { origin } = await openIndexRequestHandler({
       cancellationToken,
@@ -132,6 +115,21 @@ export const launchChromium = async ({
   return { disconnected, errored, closed, close, fileToExecuted }
 }
 
+const createPageTracker = (browser) => {
+  const pages = []
+
+  browser.on("targetcreated", (page) => {
+    pages.push(page)
+  })
+
+  const close = () => {
+    // in case of bug do not forget https://github.com/GoogleChrome/puppeteer/issues/2269
+    return Promise.all(pages.map((page) => page.close()))
+  }
+
+  return { close }
+}
+
 const openIndexRequestInterception = async ({
   cancellationToken,
   protocol,
@@ -140,8 +138,6 @@ const openIndexRequestInterception = async ({
   page,
   body,
 }) => {
-  cancellationToken.throwIfRequested()
-
   const origin = originAsString({ protocol, ip, port })
 
   const interceptionOperation = createOperation({
@@ -153,7 +149,6 @@ const openIndexRequestInterception = async ({
 
   page.on("request", (interceptedRequest) => {
     const url = new URL(interceptedRequest.url())
-
     if (url.origin !== origin) return
 
     interceptedRequest.respond({

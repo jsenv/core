@@ -11,72 +11,6 @@ import { createRequestFromNodeRequest } from "./createRequestFromNodeRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
 import { processUnhandledException } from "./processUnhandledException.js"
 
-const REASON_CLOSING = "closing"
-const REASON_INTERNAL_ERROR = "internal error"
-
-const reasonIsInternalError = (reason) => reason === REASON_INTERNAL_ERROR
-
-const getNodeServerAndAgent = ({ protocol, signature = {} }) => {
-  if (protocol === "http") {
-    return {
-      nodeServer: http.createServer(),
-      agent: global.Agent,
-    }
-  }
-
-  if (protocol === "https") {
-    const { privateKey, certificate } = signature
-    if (!privateKey || !certificate) {
-      throw new Error(`missing signature for https server`)
-    }
-
-    return {
-      nodeServer: https.createServer({
-        key: privateKey,
-        cert: certificate,
-      }),
-      agent: new https.Agent({
-        rejectUnauthorized: false, // allow self signed certificate
-      }),
-    }
-  }
-
-  throw new Error(`unsupported protocol ${protocol}`)
-}
-
-const createContentLengthMismatchError = (message) => {
-  const error = new Error(message)
-  error.code = "CONTENT_LENGTH_MISMATCH"
-  error.name = error.code
-  return error
-}
-
-export const closeServer = (server) => {
-  return new Promise((resolve, reject) => {
-    server.on("error", reject)
-    server.on("close", resolve)
-    server.close()
-  })
-}
-
-export const listen = ({ cancellationToken, server, port, ip }) => {
-  return createOperation({
-    cancellationToken,
-    start: () =>
-      new Promise((resolve, reject) => {
-        server.on("error", reject)
-        server.on("listening", () => {
-          // in case port is 0 (randomly assign an available port)
-          // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-          resolve(server.address().port)
-        })
-
-        server.listen(port, ip)
-      }),
-    stop: () => closeServer(server),
-  })
-}
-
 export const originAsString = ({ protocol, ip, port }) => {
   const url = new URL("https://127.0.0.1:80")
   url.protocol = protocol
@@ -163,10 +97,6 @@ export const open = async (
     status = "closing"
     log(closedMessage(reason))
 
-    // ensure we don't try to handle request while server is closing
-    requestHandlerTracker.close(reason)
-
-    // opened connection must be shutdown before the close event is emitted
     let responseStatus
     if (reasonIsInternalError(reason)) {
       responseStatus = 500
@@ -175,10 +105,13 @@ export const open = async (
       responseStatus = 503
       // reason = 'unavailable because closing'
     }
-    clientTracker.close({ status: responseStatus, reason }).then(() => {
-      connectionTracker.close(reason)
-    })
-    await closeServer(nodeServer)
+
+    // ensure we don't try to handle request while server is closing
+    requestHandlerTracker.close(reason)
+    // opened connection must be shutdown before the close event is emitted
+    await clientTracker.close({ status: responseStatus, reason })
+    await connectionTracker.close(reason)
+    await listenStop(nodeServer)
     status = "closed"
     closedResolve()
   })
@@ -283,4 +216,70 @@ export const open = async (
     close,
     closed,
   }
+}
+
+export const listen = ({ cancellationToken, server, port, ip }) => {
+  return createOperation({
+    cancellationToken,
+    start: () => listenStart(server, port, ip),
+    stop: () => listenStop(server),
+  })
+}
+
+const listenStart = (server, port, ip) =>
+  new Promise((resolve, reject) => {
+    server.on("error", reject)
+    server.on("listening", () => {
+      // in case port is 0 (randomly assign an available port)
+      // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
+      resolve(server.address().port)
+    })
+    server.listen(port, ip)
+  })
+
+const listenStop = (server) =>
+  new Promise((resolve, reject) => {
+    server.on("error", reject)
+    server.on("close", resolve)
+    server.close()
+  })
+
+const REASON_CLOSING = "closing"
+const REASON_INTERNAL_ERROR = "internal error"
+
+const reasonIsInternalError = (reason) => reason === REASON_INTERNAL_ERROR
+
+const getNodeServerAndAgent = ({ protocol, signature = {} }) => {
+  if (protocol === "http") {
+    return {
+      nodeServer: http.createServer(),
+      agent: global.Agent,
+    }
+  }
+
+  if (protocol === "https") {
+    const { privateKey, certificate } = signature
+    if (!privateKey || !certificate) {
+      throw new Error(`missing signature for https server`)
+    }
+
+    return {
+      nodeServer: https.createServer({
+        key: privateKey,
+        cert: certificate,
+      }),
+      agent: new https.Agent({
+        rejectUnauthorized: false, // allow self signed certificate
+      }),
+    }
+  }
+
+  throw new Error(`unsupported protocol ${protocol}`)
+}
+
+const createContentLengthMismatchError = (message) => {
+  const error = new Error(message)
+  error.code = "CONTENT_LENGTH_MISMATCH"
+  error.name = error.code
+  return error
 }

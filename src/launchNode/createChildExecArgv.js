@@ -1,8 +1,22 @@
 import { findFreePort } from "../server/index.js"
 
-const stringSliceAfter = (string, substring) => {
-  const index = string.indexOf(substring)
-  return index === -1 ? "" : string.slice(index + substring.length)
+export const createChildExecArgv = async ({ cancellationToken } = {}) => {
+  const execArgv = process.execArgv
+  const childExecArgv = execArgv.slice()
+  const { type, index, port } = processExecArgvToDebugMeta(execArgv)
+
+  if (type === "inspect") {
+    // allow vscode to debug child, otherwise you have port already used
+    const childPort = await findFreePort(port + 1, { cancellationToken })
+    childExecArgv[index] = `--inspect=${childPort}`
+  }
+  if (type === "inspect-break") {
+    // allow vscode to debug child, otherwise you have port already used
+    const childPort = await findFreePort(port + 1, { cancellationToken })
+    childExecArgv[index] = `--inspect-brk=${childPort}`
+  }
+
+  return childExecArgv
 }
 
 const processExecArgvToDebugMeta = (argv) => {
@@ -50,23 +64,9 @@ const processExecArgvToDebugMeta = (argv) => {
   return {}
 }
 
-export const createChildExecArgv = async ({ cancellationToken } = {}) => {
-  const execArgv = process.execArgv
-  const childExecArgv = execArgv.slice()
-  const { type, index, port } = processExecArgvToDebugMeta(execArgv)
-
-  if (type === "inspect") {
-    // allow vscode to debug child, otherwise you have port already used
-    const childPort = await findFreePort(port + 1, { cancellationToken })
-    childExecArgv[index] = `--inspect=${childPort}`
-  }
-  if (type === "inspect-break") {
-    // allow vscode to debug child, otherwise you have port already used
-    const childPort = await findFreePort(port + 1, { cancellationToken })
-    childExecArgv[index] = `--inspect-brk=${childPort}`
-  }
-
-  return childExecArgv
+const stringSliceAfter = (string, substring) => {
+  const index = string.indexOf(substring)
+  return index === -1 ? "" : string.slice(index + substring.length)
 }
 
 export const processIsExecutedByVSCode = () => {

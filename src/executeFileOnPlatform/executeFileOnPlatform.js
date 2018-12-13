@@ -24,19 +24,12 @@ export const executeFileOnPlatform = (
     }
   }
 
-  const createPlatformClosedDuringExecutionError = () => {
-    const error = new Error(`${platformTypeForLog} unexpectedtly closed while executing ${file}`)
-    error.code = "PLATFORM_CLOSED_DURING_EXECUTION_ERROR"
-    return error
-  }
-
   const startPlatform = async () => {
     log(`launch ${platformTypeForLog} to execute ${file}`)
-    const platformOperation = createOperation({
+    const launchOperation = createOperation({
       cancellationToken,
       start: () => launchPlatform(),
       stop: ({ close, closeForce }) => {
-        // if we are disconnected we can't act on the platform anymore
         log(`stop ${platformTypeForLog}`)
         close()
 
@@ -47,8 +40,8 @@ export const executeFileOnPlatform = (
         return closed
       },
     })
-    const { disconnected, errored, closed, fileToExecuted } = await platformOperation
-    log(`${platformTypeForLog} opened`)
+    const { openDetail, errored, disconnected, closed, fileToExecuted } = await launchOperation
+    log(`${platformTypeForLog} opened ${JSON.stringify(openDetail)}`)
 
     log(`execute ${file} on ${platformTypeForLog}`)
     const executeOperation = createOperation({
@@ -60,31 +53,33 @@ export const executeFileOnPlatform = (
         const executed = fileToExecuted(file, rest)
 
         const { winner, value } = await promiseTrackRace([
-          disconnected,
           errored,
-          restarted,
+          disconnected,
           closed,
+          restarted,
           executed,
         ])
-
-        if (winner === disconnected) {
-          log(`${platformTypeForLog} disconnected`)
-          throw createDisconnectedError()
-        }
 
         if (winner === errored) {
           throw value
         }
 
-        if (winner === restarted) {
-          return platformOperation.stop(value).then(startPlatform)
+        if (winner === disconnected) {
+          throw createDisconnectedDuringExecutionError(file, platformTypeForLog)
         }
 
         if (winner === closed) {
-          return Promise.reject(createPlatformClosedDuringExecutionError())
+          throw createClosedDuringExecutionError(file, platformTypeForLog)
+        }
+
+        if (winner === restarted) {
+          return launchOperation.stop(value).then(startPlatform)
         }
 
         log(`${file} execution on ${platformTypeForLog} done with ${value}`)
+        disconnected.then(() => {
+          log(`${platformTypeForLog} disconnected`)
+        })
         closed.then(() => {
           log(`${platformTypeForLog} closed`)
         })
@@ -98,6 +93,14 @@ export const executeFileOnPlatform = (
   return startPlatform()
 }
 
-const createDisconnectedError = () => {
-  return new Error(`platform disconnected`)
+const createDisconnectedDuringExecutionError = (file, platformType) => {
+  const error = new Error(`${platformType} disconnected while executing ${file}`)
+  error.code = "PLATFORM_DISCONNECTED_DURING_EXECUTION_ERROR"
+  return error
+}
+
+const createClosedDuringExecutionError = (file, platformType) => {
+  const error = new Error(`${platformType} unexpectedtly closed while executing ${file}`)
+  error.code = "PLATFORM_CLOSED_DURING_EXECUTION_ERROR"
+  return error
 }
