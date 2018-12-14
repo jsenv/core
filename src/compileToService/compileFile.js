@@ -1,4 +1,5 @@
 import path from "path"
+import lockfile from "proper-lockfile"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
 import { readFile } from "../fileHelper.js"
 import { createETag, isFileNotFoundError } from "./helpers.js"
@@ -402,7 +403,14 @@ export const compileFile = async ({
     file,
   })
 
-  return lockForRessource(metaLocation).chain(async () => {
+  // in case this process try to concurrently access meta we wait for previous to be done
+  const unlockLocal = await lockForRessource(metaLocation)
+  // after that we use a lock file to be sure we don't conflict with other process
+  // trying to do the same (mapy happen when spawining multiple server for instance)
+  const unlockGlobal = await lockfile.lock(metaLocation)
+  // we use two lock because the local lock is very fast, it's a sort of perf improvement
+
+  try {
     const {
       status,
       meta,
@@ -437,5 +445,9 @@ export const compileFile = async ({
       output,
       outputFile,
     }
-  })
+  } finally {
+    // we want to unlock in case of rejection too
+    unlockLocal()
+    unlockGlobal()
+  }
 }

@@ -1,66 +1,26 @@
-import { createPromiseAndHooks } from "../promiseHelper.js"
-
-const createLock = () => {
-  let unusedCallback
-  const onceUnused = (callback) => {
-    unusedCallback = callback
-  }
-
-  const pendings = []
-  let busy = false
-
-  const chain = (callback) => {
-    if (busy) {
-      const { promise, resolve, reject } = createPromiseAndHooks()
-      pendings.push({ promise, resolve, reject, callback })
-      return promise
-    }
-
-    busy = true
-    const promise = Promise.resolve().then(callback)
-
-    const fullfilledOrRejected = () => {
-      busy = false
-      if (pendings.length === 0) {
-        if (unusedCallback) {
-          unusedCallback()
-          unusedCallback = undefined
-        }
-      } else {
-        const { resolve, callback } = pendings.shift()
-        resolve(chain(callback))
-      }
-    }
-
-    promise.then(fullfilledOrRejected, fullfilledOrRejected)
-
-    return promise
-  }
-
-  return { chain, onceUnused }
-}
+import { arrayWithout } from "../arrayHelper.js"
 
 export const createLockRegistry = () => {
-  const lockBindings = []
-  const lockForRessource = (ressource) => {
-    const lockBinding = lockBindings.find((lockBinding) => lockBinding.ressource === ressource)
-    if (lockBinding) {
-      return lockBinding.lock
+  let lockArray = []
+  const lockForRessource = async (ressource) => {
+    let unlockResolve
+    const unlocked = new Promise((resolve) => {
+      unlockResolve = resolve
+    })
+    const lock = {
+      ressource,
+      unlocked,
     }
 
-    const lock = createLock()
-    lockBindings.push({
-      lock,
-      ressource,
-    })
-    // to avoid lockBindings to grow for ever
-    // we remove them from the array as soon as the ressource is not used anymore
-    lock.onceUnused(() => {
-      const index = lockBindings.indexOf(lock)
-      lockBindings.splice(index, 1)
-    })
+    lockArray = [...lockArray, lock]
+    const currentLock = lockArray.find((lock) => lock.ressource === ressource)
+    if (currentLock) await currentLock.unlocked
 
-    return lock
+    const unlock = () => {
+      lockArray = arrayWithout(lockArray, lock)
+      unlockResolve()
+    }
+    return unlock
   }
   return { lockForRessource }
 }
