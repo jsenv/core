@@ -1,9 +1,5 @@
 import path from "path"
 import { transpiler } from "./transpiler.js"
-import { packager } from "./packager.js"
-import { arrayWithout } from "../arrayHelper.js"
-
-const selfLocalRoot = path.resolve(__dirname, "../../../")
 
 export const jsCompile = async ({
   localRoot,
@@ -28,10 +24,6 @@ export const jsCompile = async ({
   // would fail to find it for comparing to cache
   // that's why locate must return the right local file for __platform__.js
 
-  let map
-  let coverage
-  let output
-
   const sources = []
   const sourcesContent = []
   const assets = []
@@ -40,60 +32,18 @@ export const jsCompile = async ({
   // source can be fetched at `${compileServer.origin}/src/file.js`
   const sourceToSourceForSourceMap = (source) => `/${source}`
 
-  // path is not this one, it should be loadBrowserPlatform.js I guess
-  // to remove. this is not here that we should handle
-  // thoose files are already compiled, they just have to be served
-  // to the client
-  // however pluginNames.indexOf("transform-modules-systemjs")
-  // can be used to serve either native-importer or system-importer
-  if (file === "node_modules/dev-server/src/platform/browser/index.js") {
-    const pluginNames = Object.keys(pluginMap)
-    let packagerPluginNames
-
-    if (pluginNames.indexOf("transform-modules-systemjs") > -1) {
-      // serve the browser platform relying on window.System.import to load file
-      packagerPluginNames = arrayWithout(pluginNames, "transform-modules-systemjs")
-    } else if (pluginNames.indexOf("transform-modules-commonjs") > -1) {
-      throw new Error(`browser not compatible with commonjs modules`)
-    } else {
-      // serve the browser platform relying on native import() to load file
-    }
-
-    const plugins = packagerPluginNames.map((pluginName) => pluginMap[pluginName])
-
-    const result = await packager({
-      file,
-      fileAbsolute,
-      plugins,
-      remap,
-    })
-
-    map = result.map
-    output = result.code
-
-    const selfExecuted = localRoot === selfLocalRoot
-    if (selfExecuted === false) {
-      if (localRoot.startsWith(selfLocalRoot) === false) {
-        throw new Error(`dev-server must be inside ${localRoot}`)
-      }
-    }
-  } else {
-    const plugins = Object.keys(pluginMap).map((pluginName) => pluginMap[pluginName])
-    const result = await transpiler({
-      localRoot,
-      file,
-      fileAbsolute,
-      inputAst,
-      input,
-      inputMap,
-      plugins,
-      remap,
-    })
-
-    map = result.map
-    coverage = result.metadata.coverage
-    output = result.code
-  }
+  const plugins = Object.keys(pluginMap).map((pluginName) => pluginMap[pluginName])
+  let { map, output, metadata } = await transpiler({
+    localRoot,
+    file,
+    fileAbsolute,
+    inputAst,
+    input,
+    inputMap,
+    plugins,
+    remap,
+  })
+  const coverage = metadata.coverage
 
   // we don't need sourceRoot because our path are relative or absolute to the current location
   // we could comment this line because it is not set by babel because not passed during transform

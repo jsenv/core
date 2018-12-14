@@ -7,7 +7,7 @@ import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
 import { open } from "./hotreload.js"
 
-const platform = {
+export const platform = {
   setup,
   importFile: () => {
     throw new Error(`platform importFile must be called after setup`)

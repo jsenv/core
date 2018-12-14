@@ -1,5 +1,5 @@
+import { assert } from "@dmail/assert"
 import { compileToService } from "./compileToService.js"
-import assert from "assert"
 
 const test = async () => {
   // locate 307 on module more nested than expected
@@ -7,7 +7,7 @@ const test = async () => {
     const compileService = compileToService(() => {}, {
       localRoot: "root",
       compileInto: "build",
-      locate: () => "node_modules/dependency/node_modules/package/index.js",
+      locate: () => "root/node_modules/dependency/node_modules/package/index.js",
     })
 
     const actual = await compileService({
@@ -24,7 +24,7 @@ const test = async () => {
           "http://127.0.0.1/build/foo/node_modules/dependency/node_modules/package/index.js",
       },
     }
-    assert.deepEqual(actual, expected)
+    assert({ actual, expected })
   }
 
   // locate 307 on module less nested than expected
@@ -32,7 +32,7 @@ const test = async () => {
     const compileService = compileToService(() => {}, {
       localRoot: "root",
       compileInto: "build",
-      locate: () => "node_modules/package/index.js",
+      locate: () => "root/node_modules/package/index.js",
     })
 
     const actual = await compileService({
@@ -48,7 +48,7 @@ const test = async () => {
         location: "http://127.0.0.1/build/foo/node_modules/package/index.js",
       },
     }
-    assert.deepEqual(actual, expected)
+    assert({ actual, expected })
   }
 
   console.log("passed")

@@ -23,9 +23,7 @@ export const compileToService = (
     cancellationToken = createCancellationToken(),
     localRoot,
     compileInto,
-    locate = ({ dependentFolder, file }) => {
-      return dependentFolder ? `${dependentFolder}/${file}` : file
-    },
+    locate = locateDefault,
     compileParamMap,
     localCacheStrategy,
     localCacheTrackHit,
@@ -86,45 +84,57 @@ export const compileToService = (
     // faudrais retourner deux choses:
     // le chemin vers le fichier pour le client (qu'on peut modifier ce qui signifie un redirect)
     // le chemin vers le fichier sur le filesystem (qui peut etre different de localRoot/file)
-    const localFile = await locate({
+    const fileAbsoluteLocation = await locate({
       localRoot,
-      ...ressourceToLocateParam(ressource, dependentRessource, compileInto),
+      ressource,
+      dependentRessource,
+      compileParamMap,
+      compileInto,
+      compileId,
+      ...ressourceToLocateParam({
+        compileInto,
+        ressource,
+        dependentRessource,
+      }),
     })
 
-    // le genre de redirect qui peut se produire:
-    // a request to 'node_modules/package/node_modules/dependency/index.js'
-    // may be found at 'node_modules/dependency/index.js'
-
-    // a request to 'node_modules/dependency/index.js'
-    // with referer 'node_modules/package/index.js'
-    // may be found at 'node_modules/package/node_modules/dependency/index.js'
-
-    if (!localFile) {
+    if (!fileAbsoluteLocation) {
       return {
         status: 404,
         reason: "file not found",
       }
     }
 
-    // in that case, send temporary redirect to client
-    if (localFile !== file) {
+    let fileLocated
+    if (fileAbsoluteLocation.startsWith(`${localRoot}/`)) {
+      fileLocated = fileAbsoluteLocation.slice(`${localRoot}/`.length)
+    } else {
+      fileLocated = file
+    }
+
+    // a request to 'node_modules/package/node_modules/dependency/index.js'
+    // may be found at 'node_modules/dependency/index.js'
+
+    // a request to 'node_modules/dependency/index.js'
+    // with referer 'node_modules/package/index.js'
+    // may be found at 'node_modules/package/node_modules/dependency/index.js'
+    if (fileLocated !== file) {
+      // in that case, send temporary redirect to client
       return {
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
         status: 307,
         headers: {
-          location: `${origin}/${compileInto}/${compileId}/${localFile}`,
+          location: `${origin}/${compileInto}/${compileId}/${fileLocated}`,
         },
       }
     }
 
-    const localFileAbsolute = `${localRoot}/${localFile}`
-
     // when I ask for a compiled file, watch the corresponding file on filesystem
-    if (watch && watchedFiles.has(localFileAbsolute) === false && watchPredicate(localFile)) {
-      const fileWatcher = watchFile(localFileAbsolute, () => {
+    if (watch && watchedFiles.has(fileAbsoluteLocation) === false && watchPredicate(fileLocated)) {
+      const fileWatcher = watchFile(fileAbsoluteLocation, () => {
         watchSignal.emit(file)
       })
-      watchedFiles.set(localFileAbsolute, fileWatcher)
+      watchedFiles.set(fileAbsoluteLocation, fileWatcher)
     }
 
     const compileService = async () => {
@@ -135,7 +145,7 @@ export const compileToService = (
         compileId,
         compileParamMap,
         file,
-        fileAbsolute: localFileAbsolute,
+        fileAbsolute: fileAbsoluteLocation,
         cacheStrategy: localCacheStrategy,
         cacheTrackHit: localCacheTrackHit,
       })
@@ -153,7 +163,7 @@ export const compileToService = (
 
     try {
       if (cacheWithMtime) {
-        const { mtime } = await stat(localFileAbsolute)
+        const { mtime } = await stat(fileAbsoluteLocation)
 
         if ("if-modified-since" in headers) {
           const ifModifiedSince = headers["if-modified-since"]
@@ -180,7 +190,7 @@ export const compileToService = (
       }
 
       if (cacheWithETag) {
-        const content = await readFile(localFileAbsolute)
+        const content = await readFile(fileAbsoluteLocation)
         const eTag = createETag(content)
 
         if ("if-none-match" in headers) {
@@ -240,4 +250,8 @@ export const compileToService = (
   }
 
   return compileService
+}
+
+export const locateDefault = ({ localRoot, file, dependentFolder }) => {
+  return dependentFolder ? `${localRoot}/${dependentFolder}/${file}` : `${localRoot}/${file}`
 }

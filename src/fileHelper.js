@@ -28,6 +28,18 @@ export const copyFile = (from, to) => {
   })
 }
 
+export const symlink = (from, to) => {
+  return new Promise((resolve, reject) => {
+    fs.symlink(from, to, (error) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve()
+      }
+    })
+  })
+}
+
 export const compileResultToFileSysten = ({ code, map }, filename) => {
   if (map) {
     const sourceMapBasename = `${path.basename(filename)}.map`

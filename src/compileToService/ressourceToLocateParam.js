@@ -1,7 +1,7 @@
 import { ressourceToCompileInfo } from "./ressourceToCompileInfo.js"
 import path from "path"
 
-export const ressourceToLocateParam = (ressource, dependentRessource, compileInto) => {
+export const ressourceToLocateParam = ({ ressource, dependentRessource, compileInto }) => {
   const { file, compileId } = ressourceToCompileInfo(ressource, compileInto)
 
   if (!dependentRessource) {
