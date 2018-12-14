@@ -7,21 +7,20 @@ import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
 import { open } from "./hotreload.js"
 
-export const browserPlatform = {
-  load,
+const platform = {
+  setup,
+  importFile: () => {
+    throw new Error(`platform importFile must be called after setup`)
+  },
 }
 
-const load = ({
+const setup = ({
   compileMap,
-  // I'm not sure this is the server that should control
-  // which platform file do we load
-  // we will just fetch either native or system depending what we support
   platformFile,
   remoteRoot,
   compileInto,
   hotreload = false,
   hotreloadSSERoot,
-  hotreloadCallback,
 }) => {
   if (typeof compileMap !== "object") {
     throw new TypeError(`createBrowserPlatform compileMap must be an object, got ${compileMap}`)
@@ -40,38 +39,19 @@ const load = ({
     compileInto,
     compileId,
   })
-  const platformURL = `${compileId}/${platformFile}`
 
-  return fetchSource(platformURL).then(({ status, reason, headers, body }) => {
-    if (status < 200 || status >= 400) {
-      return Promise.reject({ status, reason, headers, body })
-    }
-
-    evalSource(body, platformURL)
-
-    const importer = window.__createImporter__({
-      fetchSource,
-      evalSource,
-      hrefToLocalFile,
-      fileToRemoteCompiledFile,
+  if (hotreload) {
+    open(hotreloadSSERoot, (/*file*/) => {
+      // we cannot just System.delete the file because
+      // the change may have any impact, we have to reload
+      // moreover we may be in an environement with native import
+      // where we don't have access to module cache
+      window.location.reload()
     })
+  }
 
-    if (hotreload) {
-      const hotreloadPredicate = (file) => {
-        if (importer.fileIsImported) {
-          return importer.fileIsImported(file)
-        }
-        return true
-      }
-
-      open(hotreloadSSERoot, (file) => {
-        if (hotreloadPredicate(file)) {
-          hotreloadCallback({ file })
-        }
-      })
-    }
-
-    const executeFile = (file, { instrument = false, collectCoverage = false } = {}) => {
+  platform.importFile = (file, { instrument = false, collectCoverage = false } = {}) => {
+    return loadImporter().then((importer) => {
       const remoteCompiledFile = instrument
         ? fileToRemoteCompiledFile(file)
         : fileToRemoteInstrumentedFile(file)
@@ -84,33 +64,46 @@ const load = ({
           return teardownForOutput(namespace)
         },
         (error) => {
-          return onExecuteError(error, {
-            file,
+          const meta = rejectionValueToMeta(error, {
             fileToRemoteSourceFile,
             hrefToFile,
           })
+
+          const html = `
+          <h1>
+            <a href="${fileToRemoteSourceFile(file)}">${file}</a> import rejected
+          </h1>
+          <pre style="border: 1px solid black">${meta.data}</pre>
+          `
+
+          document.body.innerHTML = html
+
+          return Promise.reject(error)
         },
       )
-    }
+    })
+  }
 
-    return { executeFile }
-  })
-}
+  let importerPromise
+  const loadImporter = () => {
+    if (importerPromise) return importerPromise
 
-const onExecuteError = (error, { file, fileToRemoteSourceFile, hrefToFile }) => {
-  const meta = rejectionValueToMeta(error, {
-    fileToRemoteSourceFile,
-    hrefToFile,
-  })
+    const platformURL = `${compileId}/${platformFile}`
+    importerPromise = fetchSource(platformURL).then(({ status, reason, headers, body }) => {
+      if (status < 200 || status >= 400) {
+        return Promise.reject({ status, reason, headers, body })
+      }
 
-  const html = `
-<h1>
-  <a href="${fileToRemoteSourceFile(file)}">${file}</a> import rejected
-</h1>
-<pre style="border: 1px solid black">${meta.data}</pre>
-`
+      evalSource(body, platformURL)
+      const importer = window.__createImporter__({
+        fetchSource,
+        evalSource,
+        hrefToLocalFile,
+        fileToRemoteCompiledFile,
+      })
 
-  document.body.innerHTML = html
-
-  return Promise.reject(error)
+      return importer
+    })
+    return importerPromise
+  }
 }

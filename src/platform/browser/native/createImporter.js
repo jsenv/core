@@ -5,10 +5,5 @@ export const createImporter = () => {
     return import(file)
   }
 
-  const fileIsImported = () => {
-    // I don't think we can track if the file was imported or not
-    return true
-  }
-
-  return { importFile, fileIsImported }
+  return { importFile }
 }

@@ -10,6 +10,7 @@ import {
 } from "../compileBrowserPlatform/index.js"
 import { readFile } from "../fileHelper.js"
 import { createPromiseAndHooks } from "../promiseHelper.js"
+import { createPlatformSetupSource } from "../platform/browser/platformSource.js"
 
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
@@ -87,7 +88,7 @@ export const launchChromium = async ({
       scriptRemoteList: [{ url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) }],
       scriptInlineList: [
         {
-          source: createBrowserPlatformSource({
+          source: createPlatformSetupSource({
             remoteRoot,
             compileInto,
             compileMap,
@@ -106,7 +107,7 @@ export const launchChromium = async ({
     })
     await page.goto(origin)
     return page.evaluate(
-      (file, options) => window.__platform__.executeFile(file, options),
+      (file, options) => window.__platform__.importFile(file, options),
       file,
       options,
     )

@@ -11,7 +11,7 @@ const { localRoot } = require("../config/project.config.js")
 const inputFile = `src/platform/browser/browserPlatform.js`
 const outputFile = `browserPlatform.js`
 const outputFolder = "dist"
-const globalName = "__browserPlatform__"
+const globalName = "__platform__"
 const pluginMap = pluginOptionMapToPluginMap({
   "proposal-async-generator-functions": {},
   "proposal-json-strings": {},

@@ -1,6 +1,6 @@
 import { createCancellationSource } from "@dmail/cancellation"
 import { uneval } from "@dmail/uneval"
-import { loadNodePlatform } from "../platform/node/loadNodePlatform.js"
+import { platform } from "../platform/node/nodePlatform.js"
 
 const sendToParent = (type, data) => {
   // process.send algorithm does not send non enumerable values
@@ -80,14 +80,13 @@ token.register(
   listenParentOnce(
     "execute",
     async ({ compileMap, localRoot, remoteRoot, compileInto, file, options }) => {
-      const platform = await loadNodePlatform({
+      platform.setup({
         compileMap,
         localRoot,
         remoteRoot,
         compileInto,
       })
-
-      platform.executeFile(file, options).then(
+      platform.importFile(file, options).then(
         (value) => {
           sendToParent("execute-result", { failed: false, value })
         },

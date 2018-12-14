@@ -5,13 +5,17 @@ import { createImporter } from "./system/createImporter.js"
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
 
-export const nodePlatform = {
-  load,
+export const platform = {
+  setup,
+  importFile: () => {
+    throw new Error(`platform importFile must be called after setup`)
+  },
 }
 
-const load = ({ compileMap, localRoot, remoteRoot, compileInto }) => {
+const setup = ({ compileMap, localRoot, remoteRoot, compileInto }) => {
   const compileId =
     nodeToCompileId({ name: "node", version: process.version.slice(1) }, compileMap) || "otherwise"
+
   const {
     fileToRemoteCompiledFile,
     fileToRemoteInstrumentedFile,
@@ -23,6 +27,7 @@ const load = ({ compileMap, localRoot, remoteRoot, compileInto }) => {
     compileInto,
     compileId,
   })
+
   const importer = createImporter({
     fetchSource,
     evalSource,
@@ -30,7 +35,7 @@ const load = ({ compileMap, localRoot, remoteRoot, compileInto }) => {
     fileToRemoteCompiledFile,
   })
 
-  const executeFile = (file, { instrument = false, collectCoverage = false } = {}) => {
+  platform.importFile = (file, { instrument = false, collectCoverage = false } = {}) => {
     const remoteCompiledFile = instrument
       ? fileToRemoteInstrumentedFile(file)
       : fileToRemoteCompiledFile(file)
@@ -43,24 +48,15 @@ const load = ({ compileMap, localRoot, remoteRoot, compileInto }) => {
         return teardownForOutput(namespace)
       },
       (error) => {
-        return onExecuteError(error, {
-          file,
-          fileToLocalFile,
-        })
+        if (error && error.code === "MODULE_PARSE_ERROR") {
+          error.message = error.message.replace(file, fileToLocalFile(file))
+          throw error
+        }
+        if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
+          throw error.error
+        }
+        throw error
       },
     )
   }
-
-  return Promise.resolve({ executeFile })
-}
-
-const onExecuteError = (error, { file, fileToLocalFile }) => {
-  if (error && error.code === "MODULE_PARSE_ERROR") {
-    error.message = error.message.replace(file, fileToLocalFile(file))
-    throw error
-  }
-  if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-    throw error.error
-  }
-  throw error
 }
