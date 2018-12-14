@@ -83,16 +83,29 @@ export const compileToService = (
       }
     }
 
+    // faudrais retourner deux choses:
+    // le chemin vers le fichier pour le client (qu'on peut modifier ce qui signifie un redirect)
+    // le chemin vers le fichier sur le filesystem (qui peut etre different de localRoot/file)
     const localFile = await locate({
       localRoot,
       ...ressourceToLocateParam(ressource, dependentRessource, compileInto),
     })
 
-    // a request to node_modules/package/node_modules/dependency/index.js
-    // may be found at node_modules/dependency/index.js
-    // or a request to node_modules/dependency/index.js
-    // with referer node_modules/package/index.js
-    // may be found at node_modules/package/node_modules/dependency/index.js
+    // le genre de redirect qui peut se produire:
+    // a request to 'node_modules/package/node_modules/dependency/index.js'
+    // may be found at 'node_modules/dependency/index.js'
+
+    // a request to 'node_modules/dependency/index.js'
+    // with referer 'node_modules/package/index.js'
+    // may be found at 'node_modules/package/node_modules/dependency/index.js'
+
+    if (!localFile) {
+      return {
+        status: 404,
+        reason: "file not found",
+      }
+    }
+
     // in that case, send temporary redirect to client
     if (localFile !== file) {
       return {

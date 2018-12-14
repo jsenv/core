@@ -14,6 +14,14 @@ const compileInto = "build"
 const watch = true
 
 const test = async ({ cancellation }) => {
+  // lorsque le browser demande build/compileId/browserPlatform.js
+  // on copie 'sil n'existe pas dist/browserPlatform.js
+  // lorsqu'il demnde build/compileId/browserImporter.js
+  // on copier dist/browserNativeImporter.js ou dist/browserSystemImporter.js
+  // on doit donc modifier compile pour qu'il retourne ce qu'on trouve dans dist
+  // et ajouter la possibilité que le fichier localAbsolute se trouve ailleurs
+  // que ou on le requete
+
   const {
     compileService,
     watchPredicate,

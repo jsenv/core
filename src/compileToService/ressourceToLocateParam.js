@@ -31,8 +31,8 @@ export const ressourceToLocateParam = (ressource, dependentRessource, compileInt
   }
 
   return {
+    file: file.slice(`${dependentFolder}/`.length),
     dependentFile,
     dependentFolder,
-    file: file.slice(`${dependentFolder}/`.length),
   }
 }
