@@ -4,6 +4,7 @@ import { nodeToCompileId } from "./nodeToCompileId.js"
 import { createImporter } from "./system/createImporter.js"
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
+import { getCompileMapLocalURL } from "../../compileProject/index.js"
 
 export const platform = {
   setup,
@@ -12,7 +13,11 @@ export const platform = {
   },
 }
 
-const setup = ({ compileMap, localRoot, remoteRoot, compileInto }) => {
+const setup = ({ localRoot, remoteRoot, compileInto }) => {
+  const compileMapLocalURL = getCompileMapLocalURL({ localRoot, compileInto })
+  // eslint-disable-next-line import/no-dynamic-require
+  const compileMap = require(compileMapLocalURL)
+
   const compileId =
     nodeToCompileId({ name: "node", version: process.version.slice(1) }, compileMap) || "otherwise"
 

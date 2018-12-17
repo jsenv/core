@@ -4,11 +4,7 @@ import { createCancellationToken, createOperation } from "@dmail/cancellation"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { open as serverIndexOpen } from "../server-index/serverIndex.js"
 import { originAsString } from "../server/index.js"
-import {
-  getBrowserPlatformRemoteURL,
-  getCompileMapLocalURL,
-} from "../compileBrowserPlatform/index.js"
-import { readFile } from "../fileHelper.js"
+import { getBrowserPlatformRemoteURL } from "../compileProject/index.js"
 import { createPromiseAndHooks } from "../promiseHelper.js"
 import { createPlatformSetupSource } from "../platform/browser/platformSource.js"
 
@@ -80,8 +76,6 @@ export const launchChromium = async ({
   })
 
   const fileToExecuted = async (file, options) => {
-    const compileMap = JSON.parse(await readFile(getCompileMapLocalURL({ localRoot, compileInto })))
-
     // todo: promise.all on page and html
     const page = await browser.newPage()
     const html = await createHTMLForBrowser({
@@ -89,9 +83,9 @@ export const launchChromium = async ({
       scriptInlineList: [
         {
           source: createPlatformSetupSource({
+            localRoot,
             remoteRoot,
             compileInto,
-            compileMap,
           }),
         },
       ],

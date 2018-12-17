@@ -77,23 +77,19 @@ process.on("SIGINT", () => {
 })
 
 token.register(
-  listenParentOnce(
-    "execute",
-    async ({ compileMap, localRoot, remoteRoot, compileInto, file, options }) => {
-      platform.setup({
-        compileMap,
-        localRoot,
-        remoteRoot,
-        compileInto,
-      })
-      platform.importFile(file, options).then(
-        (value) => {
-          sendToParent("execute-result", { failed: false, value })
-        },
-        (error) => {
-          sendToParent("execute-result", { failed: true, value: error })
-        },
-      )
-    },
-  ),
+  listenParentOnce("execute", async ({ localRoot, remoteRoot, compileInto, file, options }) => {
+    platform.setup({
+      localRoot,
+      remoteRoot,
+      compileInto,
+    })
+    platform.importFile(file, options).then(
+      (value) => {
+        sendToParent("execute-result", { failed: false, value })
+      },
+      (error) => {
+        sendToParent("execute-result", { failed: true, value: error })
+      },
+    )
+  }),
 )

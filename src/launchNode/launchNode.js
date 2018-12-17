@@ -1,7 +1,6 @@
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@dmail/uneval"
 import { localRoot } from "../localRoot.js"
-import { getCompileMapLocal } from "../getCompileMapLocal.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 
 const nodeClientFile = `${localRoot}/dist/src/launchNode/client.js`
@@ -63,11 +62,7 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
   }
 
   const fileToExecuted = (file, options) => {
-    const compileMapLocalURL = getCompileMapLocal({ localRoot, compileInto })
-    // eslint-disable-next-line import/no-dynamic-require
-    const compileMap = require(compileMapLocalURL)
     sendToChild(child, "execute", {
-      compileMap,
       localRoot,
       remoteRoot,
       compileInto,
