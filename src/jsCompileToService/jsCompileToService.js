@@ -12,8 +12,8 @@ export const jsCompileToService = (
     localCacheStrategy = "etag",
     localCacheTrackHit = true,
     cacheStrategy = "etag",
-    assetCacheStrategy = "eTag",
     instrumentPredicate = () => true,
+    compilePredicate = () => true,
     watch,
     watchPredicate,
   },
@@ -40,7 +40,11 @@ export const jsCompileToService = (
     localCacheStrategy,
     localCacheTrackHit,
     cacheStrategy,
-    assetCacheStrategy,
+    compilePredicate: (file, fileAbsolute) => {
+      if (fileAbsolute === `browserPlatform.js`) return false
+      if (fileAbsolute === `browserSystemImporter.js`) return false
+      return compilePredicate(file, fileAbsolute)
+    },
     watch,
     watchPredicate,
   })

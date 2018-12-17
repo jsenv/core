@@ -12,6 +12,7 @@ const localRoot = path.resolve(__dirname, "../")
 
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-commonjs": {},
+  "syntax-dynamic-import": {},
 
   "proposal-json-strings": {},
   "proposal-object-rest-spread": {},

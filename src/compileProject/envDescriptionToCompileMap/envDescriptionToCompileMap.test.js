@@ -1,5 +1,5 @@
-import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
 import assert from "assert"
+import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
 
 {
   const pluginNames = ["transform-block-scoping", "transform-modules-systemjs"]

@@ -1,5 +1,5 @@
-import { compatMapToUsageScore } from "./compatMapToUsageScore.js"
 import assert from "assert"
+import { compatMapToUsageScore } from "./compatMapToUsageScore.js"
 
 {
   const chrome50Score = 1

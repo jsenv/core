@@ -1,32 +1,13 @@
-import {
-  fileWriteFromString,
-  pluginOptionMapToPluginMap,
-} from "@dmail/project-structure-compile-babel"
-import { objectToPromiseAll } from "./promiseHelper.js"
 import { objectMapValue, objectFilter } from "./objectHelper.js"
 import { jsCompile } from "./jsCompile/index.js"
 import { jsCompileToService } from "./jsCompileToService/index.js"
-import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.js"
-import { getCompileMapLocalURL } from "./compileBrowserPlatform/index.js"
-
-const compileMapToCompileParamMap = (compileMap, pluginMap) => {
-  return objectMapValue(compileMap, ({ pluginNames }) => {
-    return {
-      pluginMap: objectFilter(pluginMap, (pluginName) => pluginNames.includes(pluginName)),
-    }
-  })
-}
-
-const pluginMapDefault = pluginOptionMapToPluginMap({
-  "transform-modules-systemjs": {},
-})
+import { getCompileMapLocalURL } from "./compileProject/index.js"
 
 export const createJsCompileService = async ({
   cancellationToken,
   localRoot,
   compileInto,
-  pluginMap = pluginMapDefault,
-  platformUsageMap,
+  pluginMap,
   localCacheDisabled,
   localCacheTrackHit,
   cacheStrategy,
@@ -35,22 +16,14 @@ export const createJsCompileService = async ({
   watchPredicate,
   listFilesToCover = () => [],
 }) => {
-  const compileMap = envDescriptionToCompileMap({
-    pluginNames: Object.keys(pluginMap),
-    platformUsageMap,
-  })
+  // eslint-disable-next-line import/no-dynamic-require
+  const compileMap = require(getCompileMapLocalURL({ localRoot, compileInto }))
+  const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
 
-  const { filesToCover } = await objectToPromiseAll({
-    writeCompileMap: fileWriteFromString(
-      getCompileMapLocalURL({ localRoot, compileInto }),
-      JSON.stringify(compileMap, null, "  "),
-    ),
-    filesToCover: listFilesToCover(),
-  })
+  const filesToCover = await listFilesToCover()
 
   const instrumentPredicate = (file) => filesToCover.indexOf(file) > -1
 
-  const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
   const jsCompileService = jsCompileToService(jsCompile, {
     cancellationToken,
     localRoot,
@@ -66,4 +39,12 @@ export const createJsCompileService = async ({
   })
 
   return jsCompileService
+}
+
+const compileMapToCompileParamMap = (compileMap, pluginMap) => {
+  return objectMapValue(compileMap, ({ pluginNames }) => {
+    return {
+      pluginMap: objectFilter(pluginMap, (pluginName) => pluginNames.includes(pluginName)),
+    }
+  })
 }

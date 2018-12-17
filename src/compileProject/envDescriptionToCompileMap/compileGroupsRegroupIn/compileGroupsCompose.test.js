@@ -1,5 +1,5 @@
-import { compileGroupsCompose } from "./compileGroupsCompose.js"
 import assert from "assert"
+import { compileGroupsCompose } from "./compileGroupsCompose.js"
 
 {
   const firstGroup = {

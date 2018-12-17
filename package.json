@@ -60,6 +60,7 @@
 		"format": "prettiest",
 		"compile": "node ./script/compile.js",
 		"compile-list": "node ./script/compile-list.js",
+		"compile-project": "node ./script/compile-project.js",
 		"clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
 		"dist": "npm run clean && npm run compile",
 		"test": "npm run dist && node ./dist/index.test.js",

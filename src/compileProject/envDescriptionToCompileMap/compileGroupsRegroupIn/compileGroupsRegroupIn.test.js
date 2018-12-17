@@ -1,5 +1,5 @@
-import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn.js"
 import assert from "assert"
+import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn.js"
 
 // const getScore = (a) => a.score
 

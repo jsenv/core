@@ -1,6 +1,5 @@
 // https://github.com/babel/babel/blob/master/packages/babel-preset-env/data/plugins.json
 import { compatMap as pluginCompatMapDefault } from "@dmail/project-structure-compile-babel"
-
 import { pluginCompatMapToCompileGroups } from "./pluginCompatMapToCompileGroups/index.js"
 import { compatMapToUsageScore } from "./compatMapToUsageScore.js"
 import { platformUsageMapDefault } from "./platformUsageMapDefault.js"

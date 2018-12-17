@@ -1,4 +1,4 @@
-import { composeMapToComposeStrict } from "../../objectHelper.js"
+import { composeMapToComposeStrict } from "../../../objectHelper.js"
 import { compatMapCompose } from "../compatMapCompose.js"
 
 const composePluginNames = (pluginList, secondPluginList) => {

@@ -1,16 +1,11 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { createSignal } from "@dmail/signal"
-
-import {
-  createRequestToFileResponse,
-  convertFileSystemErrorToResponseProperties,
-} from "../createRequestToFileResponse/index.js"
+import { convertFileSystemErrorToResponseProperties } from "../createRequestToFileResponse/index.js"
 import { stat, readFile } from "../fileHelper.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { hrefToOrigin, hrefToRessource } from "../urlHelper.js"
 import { acceptContentType, createSSERoom, serviceCompose } from "../server/index.js"
 import { watchFile } from "../watchFile.js"
-
 import { createETag } from "./helpers.js"
 import { compileFile } from "./compileFile.js"
 import { ressourceToCompileInfo } from "./ressourceToCompileInfo.js"
@@ -28,17 +23,14 @@ export const compileToService = (
     localCacheStrategy,
     localCacheTrackHit,
     cacheStrategy = "etag",
-    assetCacheStrategy = "etag",
+
+    compilePredicate = () => true,
 
     watch = false,
     watchPredicate = () => true,
   },
 ) => {
   const watchSignal = createSignal()
-  const fileService = createRequestToFileResponse({
-    root: localRoot,
-    cacheStrategy: assetCacheStrategy,
-  })
 
   const cacheWithMtime = cacheStrategy === "mtime"
   const cacheWithETag = cacheStrategy === "etag"
@@ -50,18 +42,14 @@ export const compileToService = (
     watchedFiles.clear()
   })
 
-  const compileService = async ({ origin, ressource, method, headers = {}, body }) => {
+  const compileService = async ({ origin, ressource, headers = {} }) => {
     const { isAsset, compileId, file } = ressourceToCompileInfo(ressource, compileInto)
 
-    // serve asset
-    if (isAsset) {
-      return fileService({ ressource, method, headers, body })
-    }
+    // asset -> we don't compile asset
+    if (isAsset) return null
 
-    // we don't handle
-    if (!compileId || !file) {
-      return null
-    }
+    // no file -> nothing to compile
+    if (!compileId || !file) return null
 
     let dependentRessource
     const refererHeaderName = "x-module-referer" in headers ? "x-module-referer" : "referer"
@@ -81,7 +69,6 @@ export const compileToService = (
       }
     }
 
-    // faudrais retourner deux choses:
     // le chemin vers le fichier pour le client (qu'on peut modifier ce qui signifie un redirect)
     // le chemin vers le fichier sur le filesystem (qui peut etre different de localRoot/file)
     const fileAbsoluteLocation = await locate({
@@ -98,12 +85,8 @@ export const compileToService = (
       }),
     })
 
-    if (!fileAbsoluteLocation) {
-      return {
-        status: 404,
-        reason: "file not found",
-      }
-    }
+    // cannot locate a file -> we don't know what to compile
+    if (!fileAbsoluteLocation) return null
 
     let fileLocated
     if (fileAbsoluteLocation.startsWith(`${localRoot}/`)) {
@@ -111,6 +94,9 @@ export const compileToService = (
     } else {
       fileLocated = file
     }
+
+    // file must not be compiled (.html, .css, dist/browserLoader.js)
+    if (!compilePredicate(fileLocated, fileAbsoluteLocation)) return null
 
     // a request to 'node_modules/package/node_modules/dependency/index.js'
     // may be found at 'node_modules/dependency/index.js'

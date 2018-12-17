@@ -1,3 +1,4 @@
+/* global compileMap */
 import { teardownForOutput, teardownForOutputAndCoverageMap } from "../platformTeardown.js"
 import { createLocaters } from "../createLocaters.js"
 import { detect } from "./browserDetect/index.js"
@@ -7,6 +8,10 @@ import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
 import { open } from "./hotreload.js"
 
+if (typeof compileMap !== "object") {
+  throw new TypeError(`compileMap must be an object, got ${compileMap}`)
+}
+
 export const platform = {
   setup,
   importFile: () => {
@@ -14,18 +19,7 @@ export const platform = {
   },
 }
 
-const setup = ({
-  compileMap,
-  platformFile,
-  remoteRoot,
-  compileInto,
-  hotreload = false,
-  hotreloadSSERoot,
-}) => {
-  if (typeof compileMap !== "object") {
-    throw new TypeError(`createBrowserPlatform compileMap must be an object, got ${compileMap}`)
-  }
-
+const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot }) => {
   const browser = detect()
   const compileId = browserToCompileId(browser, compileMap) || "otherwise"
   const {
@@ -88,22 +82,34 @@ const setup = ({
   const loadImporter = () => {
     if (importerPromise) return importerPromise
 
-    const platformURL = `${compileId}/${platformFile}`
-    importerPromise = fetchSource(platformURL).then(({ status, reason, headers, body }) => {
-      if (status < 200 || status >= 400) {
-        return Promise.reject({ status, reason, headers, body })
-      }
+    const pluginNames = compileMap[compileId]
+    if (pluginNames.indexOf("transform-modules-systemjs") > -1) {
+      const importerHref = `${remoteRoot}/${compileInto}/${compileId}/browserSystemImporter.js`
+      importerPromise = fetchSource(importerHref).then(({ status, reason, headers, body }) => {
+        if (status < 200 || status >= 400) {
+          return Promise.reject({ status, reason, headers, body })
+        }
 
-      evalSource(body, platformURL)
-      const importer = window.__createImporter__({
-        fetchSource,
-        evalSource,
-        hrefToLocalFile,
-        fileToRemoteCompiledFile,
+        evalSource(body, importerHref)
+        const importer = window.__createImporter__({
+          fetchSource,
+          evalSource,
+          hrefToLocalFile,
+          fileToRemoteCompiledFile,
+        })
+
+        return importer
       })
+    } else {
+      importerPromise = Promise.resolve({
+        import: (file) => {
+          // we'll have to check how it behaves if server responds with 500
+          // of if it throw on execution
+          return import(file)
+        },
+      })
+    }
 
-      return importer
-    })
     return importerPromise
   }
 }

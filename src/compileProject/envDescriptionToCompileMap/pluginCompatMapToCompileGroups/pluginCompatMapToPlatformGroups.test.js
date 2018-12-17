@@ -1,6 +1,6 @@
+import assert from "assert"
 import { compatMap } from "@dmail/project-structure-compile-babel"
 import { pluginCompatMapToPlatformGroups } from "./pluginCompatMapToPlatformGroups.js"
-import assert from "assert"
 
 {
   const actual = pluginCompatMapToPlatformGroups(

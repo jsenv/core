@@ -1,5 +1,5 @@
-import { platformGroupsCompose } from "./platformGroupsCompose.js"
 import assert from "assert"
+import { platformGroupsCompose } from "./platformGroupsCompose.js"
 
 {
   const chromePlatformGroups = [

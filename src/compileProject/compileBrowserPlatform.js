@@ -1,18 +1,19 @@
-const { rollup } = require("rollup")
-const babel = require("rollup-plugin-babel")
-const nodeResolve = require("rollup-plugin-node-resolve")
-const {
+import path from "path"
+import { rollup } from "rollup"
+import babel from "rollup-plugin-babel"
+import nodeResolve from "rollup-plugin-node-resolve"
+import {
   pluginOptionMapToPluginMap,
   pluginMapToPluginsForPlatform,
   fileSystemWriteCompileResult,
-} = require("@dmail/project-structure-compile-babel")
-const { localRoot } = require("../config/project.config.js")
+} from "@dmail/project-structure-compile-babel"
 
-const inputFile = `src/platform/browser/system/createImporter.js`
-const outputFile = `browserSystemImporter.js`
-const outputFolder = "dist"
-const globalName = "__browserImporter__"
+const selfLocalRoot = path.resolve(__dirname, "../../../")
+const inputFile = `${selfLocalRoot}/src/platform/browser/browserPlatform.js`
+const outputFile = `browserPlatform.js`
+const globalName = "__platform__"
 const pluginMap = pluginOptionMapToPluginMap({
+  "syntax-dynamic-import": {},
   "proposal-async-generator-functions": {},
   "proposal-json-strings": {},
   "proposal-object-rest-spread": {},
@@ -43,11 +44,12 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-unicode-regex": {},
 })
 
-const compile = async () => {
+export const compileBrowserPlatform = async ({ compileMap, localRoot, compileInto }) => {
+  const outputFolder = `${compileInto}`
   const plugins = pluginMapToPluginsForPlatform(pluginMap, "unknown", "0.0.0")
 
   const bundle = await rollup({
-    input: `${localRoot}/${inputFile}`,
+    input: inputFile,
     plugins: [
       nodeResolve({
         module: true,
@@ -64,6 +66,7 @@ const compile = async () => {
 
   const compileResult = await bundle.generate({
     format: "iife",
+    intro: `var compileMap = ${JSON.stringify(compileMap)};`,
     name: globalName,
     sourcemap: true,
   })
@@ -75,5 +78,3 @@ const compile = async () => {
   })
   console.log(`${inputFile} -> ${outputFolder}/${outputFile}`)
 }
-
-compile()
