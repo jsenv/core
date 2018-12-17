@@ -29,7 +29,7 @@ const exec = async ({ cancellationToken }) => {
   const verbose = true
   return executeFileOnPlatform(file, {
     launchPlatform: () => launchNode({ cancellationToken, localRoot, remoteRoot, compileInto }),
-    platformTypeForLog: "node",
+    platformTypeForLog: "node process",
     cancellationToken,
     verbose,
   }).finally(() => {

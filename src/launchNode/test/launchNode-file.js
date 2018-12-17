@@ -1,3 +1,4 @@
+import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../localRoot.js"
 import { createJsCompileService } from "../../createJsCompileService.js"
 import { open as compileServerOpen } from "../../server-compile/index.js"
@@ -7,10 +8,14 @@ import { launchNode } from "../launchNode.js"
 const file = `src/launchNode/test/fixtures/file.js`
 const compileInto = "build"
 const hotreload = false
+const pluginMap = pluginOptionMapToPluginMap({
+  "transform-modules-systemjs": {},
+})
 
 const exec = async ({ cancellationToken }) => {
   const jsCompileService = await createJsCompileService({
     cancellationToken,
+    pluginMap,
     localRoot,
     compileInto,
     watch: hotreload,
@@ -29,7 +34,7 @@ const exec = async ({ cancellationToken }) => {
   const verbose = true
   return executeFileOnPlatform(file, {
     launchPlatform: () => launchNode({ cancellationToken, localRoot, remoteRoot, compileInto }),
-    platformTypeForLog: "node",
+    platformTypeForLog: "node process",
     cancellationToken,
     verbose,
   }).finally(() => {

@@ -6,13 +6,6 @@ import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
 import { getCompileMapLocalURL } from "../../compileProject/index.js"
 
-export const platform = {
-  setup,
-  importFile: () => {
-    throw new Error(`platform importFile must be called after setup`)
-  },
-}
-
 const setup = ({ localRoot, remoteRoot, compileInto }) => {
   const compileMapLocalURL = getCompileMapLocalURL({ localRoot, compileInto })
   // eslint-disable-next-line import/no-dynamic-require
@@ -64,4 +57,11 @@ const setup = ({ localRoot, remoteRoot, compileInto }) => {
       },
     )
   }
+}
+
+export const platform = {
+  setup,
+  importFile: () => {
+    throw new Error(`platform importFile must be called after setup`)
+  },
 }

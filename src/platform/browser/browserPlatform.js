@@ -12,13 +12,6 @@ if (typeof compileMap !== "object") {
   throw new TypeError(`compileMap must be an object, got ${compileMap}`)
 }
 
-export const platform = {
-  setup,
-  importFile: () => {
-    throw new Error(`platform importFile must be called after setup`)
-  },
-}
-
 const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot }) => {
   const browser = detect()
   const compileId = browserToCompileId(browser, compileMap) || "otherwise"
@@ -112,4 +105,11 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
 
     return importerPromise
   }
+}
+
+export const platform = {
+  setup,
+  importFile: () => {
+    throw new Error(`platform importFile must be called after setup`)
+  },
 }
