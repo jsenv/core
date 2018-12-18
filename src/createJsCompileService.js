@@ -1,13 +1,17 @@
+import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
+import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.js"
+import { objectToPromiseAll } from "./promiseHelper.js"
 import { objectMapValue } from "./objectHelper.js"
 import { jsCompile } from "./jsCompile/index.js"
 import { jsCompileToService } from "./jsCompileToService/index.js"
-import { getCompileMapLocalURL } from "./compileProject/index.js"
 
 export const createJsCompileService = async ({
   cancellationToken,
   localRoot,
   compileInto,
   pluginMap,
+  platformUsageMap,
+  pluginCompatMap,
   localCacheDisabled,
   localCacheTrackHit,
   cacheStrategy,
@@ -16,11 +20,23 @@ export const createJsCompileService = async ({
   watchPredicate,
   listFilesToCover = () => [],
 }) => {
-  // eslint-disable-next-line import/no-dynamic-require
-  const compileMap = require(getCompileMapLocalURL({ localRoot, compileInto }))
-  const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
+  if (!pluginMap) throw new Error(`pluginMap is required`)
 
-  const filesToCover = await listFilesToCover()
+  const compileMap = envDescriptionToCompileMap({
+    pluginNames: Object.keys(pluginMap),
+    platformUsageMap,
+    pluginCompatMap,
+  })
+
+  const { filesToCover } = await objectToPromiseAll({
+    writeCompileMap: fileWriteFromString(
+      `${localRoot}/${compileInto}/compileMap.json`,
+      JSON.stringify(compileMap, null, "  "),
+    ),
+    filesToCover: listFilesToCover(),
+  })
+
+  const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
 
   const instrumentPredicate = (file) => filesToCover.indexOf(file) > -1
 

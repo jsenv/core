@@ -8,7 +8,7 @@ const projectConfig = require("../config/project.config.js")
 const { localRoot, metaMap, plugins } = projectConfig
 const outputFolder = `dist`
 
-forEachRessourceMatching(
+module.exports = forEachRessourceMatching(
   localRoot,
   metaMap,
   ({ compile }) => compile,

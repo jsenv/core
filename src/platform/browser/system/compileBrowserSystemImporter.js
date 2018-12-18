@@ -1,4 +1,3 @@
-import path from "path"
 import { rollup } from "rollup"
 import babel from "rollup-plugin-babel"
 import nodeResolve from "rollup-plugin-node-resolve"
@@ -7,9 +6,10 @@ import {
   pluginMapToPluginsForPlatform,
   fileSystemWriteCompileResult,
 } from "@dmail/project-structure-compile-babel"
+import { localRoot } from "../../../localRoot.js"
 
-const selfLocalRoot = path.resolve(__dirname, "../../../")
-const inputFile = `${selfLocalRoot}/src/platform/browser/system/createImporter.js`
+const inputFile = `src/platform/browser/system/createSystemImporter.js`
+const outputFolder = "dist"
 const outputFile = `browserSystemImporter.js`
 const globalName = "__browserImporter__"
 const pluginMap = pluginOptionMapToPluginMap({
@@ -43,12 +43,11 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-unicode-regex": {},
 })
 
-export const compileBrowserSystemImporter = async ({ localRoot, compileInto }) => {
-  const outputFolder = compileInto
+export const compileBrowserSystemImporter = async () => {
   const plugins = pluginMapToPluginsForPlatform(pluginMap, "unknown", "0.0.0")
 
   const bundle = await rollup({
-    input: inputFile,
+    input: `${localRoot}/${inputFile}`,
     plugins: [
       nodeResolve({
         module: true,
@@ -76,8 +75,3 @@ export const compileBrowserSystemImporter = async ({ localRoot, compileInto }) =
   })
   console.log(`${inputFile} -> ${outputFolder}/${outputFile}`)
 }
-
-// compileBrowserSystemImporter({
-//   localRoot: path.resolve(__dirname, "../../../"),
-//   compileInto: "build",
-// })

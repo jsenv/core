@@ -1,5 +1,4 @@
 import { memoizeOnce } from "../../functionHelper.js"
-import { getCompileMapRemoteURL } from "../../compileProject/index.js"
 import { teardownForOutput, teardownForOutputAndCoverageMap } from "../platformTeardown.js"
 import { createLocaters } from "../createLocaters.js"
 import { detect } from "./browserDetect/index.js"
@@ -8,10 +7,7 @@ import { browserToCompileId } from "./browserToCompileId.js"
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
 import { open } from "./hotreload.js"
-
-const getImporterHref = ({ remoteRoot }) => {
-  return `${remoteRoot}/node_modules/dev-server/dist/browserSystemImporter.js`
-}
+import { getCompileMapRemoteURL, getBrowserSystemImporterRemoteURL } from "./remoteURL.js"
 
 const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot }) => {
   if (hotreload) {
@@ -53,14 +49,14 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
 
     const pluginNames = compileMap[compileId]
     if (pluginNames.indexOf("transform-modules-systemjs") > -1) {
-      const importerHref = getImporterHref({ remoteRoot })
+      const importerHref = getBrowserSystemImporterRemoteURL({ remoteRoot })
       const importerResponse = await fetchSource(importerHref)
       if (importerResponse.status < 200 || importerResponse.status >= 400) {
         return Promise.reject(importerResponse)
       }
 
       evalSource(importerResponse.body, importerHref)
-      const systemImporter = window.__createSystemImporter__({
+      const systemImporter = window.__browserImporter__.createSystemImporter({
         fetchSource,
         evalSource,
         hrefToLocalFile,
