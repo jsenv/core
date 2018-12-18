@@ -1,10 +1,10 @@
+import { getCompileMapLocalURL } from "../../compileProject/index.js"
 import { teardownForOutput, teardownForOutputAndCoverageMap } from "../platformTeardown.js"
 import { createLocaters } from "../createLocaters.js"
 import { nodeToCompileId } from "./nodeToCompileId.js"
 import { createImporter } from "./system/createImporter.js"
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
-import { getCompileMapLocalURL } from "../../compileProject/index.js"
 
 const setup = ({ localRoot, remoteRoot, compileInto }) => {
   const compileMapLocalURL = getCompileMapLocalURL({ localRoot, compileInto })

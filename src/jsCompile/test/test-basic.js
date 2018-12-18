@@ -12,13 +12,15 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-block-scoping": {},
 })
 
-jsCompile({
-  localRoot,
-  file,
-  fileAbsolute,
-  input,
-  pluginMap,
-}).then(({ sources, sourcesContent, assets, assetsContent, output }) => {
+const test = async () => {
+  const { sources, sourcesContent, assets, assetsContent, output } = await jsCompile({
+    localRoot,
+    file,
+    fileAbsolute,
+    input,
+    pluginMap,
+  })
+
   assert({ actual: sources, expected: [file] })
   assert({ actual: sourcesContent, expected: [input] })
   assert({ actual: assets, expected: ["file.js.map"] })
@@ -34,6 +36,9 @@ jsCompile({
   })
 
   assert({ actual: typeof output, expected: "string" })
-  assert({ actual: output.length > 0, expected: true })
+  assert({ actual: output.indexOf("var value = true"), expected: 0 })
+
   console.log("passed")
-})
+}
+
+test()

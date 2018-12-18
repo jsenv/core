@@ -1,12 +1,7 @@
 import { createNodeSystem } from "./createNodeSystem.js"
 import { valueInstall } from "../valueInstall.js"
 
-export const createImporter = ({
-  fetchSource,
-  evalSource,
-  hrefToLocalFile,
-  fileToRemoteCompiledFile,
-}) => {
+export const createImporter = ({ fetchSource, evalSource, hrefToLocalFile }) => {
   const nodeSystem = createNodeSystem({ fetchSource, evalSource, hrefToLocalFile })
 
   valueInstall(global, "System", nodeSystem)
@@ -15,10 +10,5 @@ export const createImporter = ({
     return nodeSystem.import(file)
   }
 
-  const isFileImported = (file) => {
-    const remoteCompiledFile = fileToRemoteCompiledFile(file)
-    return Boolean(nodeSystem.get(remoteCompiledFile))
-  }
-
-  return { importFile, isFileImported }
+  return { importFile }
 }

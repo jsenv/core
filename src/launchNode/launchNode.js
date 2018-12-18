@@ -42,8 +42,7 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
   const disconnected = new Promise((resolve) => {
     const disconnectRegistration = registerChildEvent(child, "disconnect", () => {
       disconnectRegistration.unregister()
-      // setTimeout is here to let 'exit' event a chance
-      setTimeout(() => resolve())
+      resolve()
     })
   })
 

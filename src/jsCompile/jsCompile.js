@@ -33,7 +33,7 @@ export const jsCompile = async ({
   const sourceToSourceForSourceMap = (source) => `/${source}`
 
   const plugins = Object.keys(pluginMap).map((pluginName) => pluginMap[pluginName])
-  let { map, output, metadata } = await transpiler({
+  const { map, code, metadata } = await transpiler({
     localRoot,
     file,
     fileAbsolute,
@@ -44,6 +44,7 @@ export const jsCompile = async ({
     remap,
   })
   const coverage = metadata.coverage
+  let output = code
 
   // we don't need sourceRoot because our path are relative or absolute to the current location
   // we could comment this line because it is not set by babel because not passed during transform
