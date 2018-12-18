@@ -1,9 +1,9 @@
 import { assert } from "@dmail/assert"
-import { localRoot as projectRoot } from "../localRoot.js"
-import { stat } from "../fileHelper.js"
-import { compileToService } from "./compileToService.js"
+import { localRoot as projectRoot } from "../../localRoot.js"
+import { stat } from "../../fileHelper.js"
+import { compileToService } from "../compileToService.js"
 
-const localRoot = `${projectRoot}/src/compileToService/fixtures`
+const localRoot = `${projectRoot}/src/compileToService/test/fixtures`
 const compileInto = "build"
 const compileId = "group"
 const output = "foo"

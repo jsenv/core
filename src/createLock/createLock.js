@@ -3,6 +3,7 @@ import { arrayWithout } from "../arrayHelper.js"
 export const createLockRegistry = () => {
   let lockArray = []
   const lockForRessource = async (ressource) => {
+    const currentLock = lockArray.find((lock) => lock.ressource === ressource)
     let unlockResolve
     const unlocked = new Promise((resolve) => {
       unlockResolve = resolve
@@ -11,9 +12,8 @@ export const createLockRegistry = () => {
       ressource,
       unlocked,
     }
-
     lockArray = [...lockArray, lock]
-    const currentLock = lockArray.find((lock) => lock.ressource === ressource)
+
     if (currentLock) await currentLock.unlocked
 
     const unlock = () => {

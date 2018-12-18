@@ -1,5 +1,5 @@
 import { assert } from "@dmail/assert"
-import { compileToService } from "./compileToService.js"
+import { compileToService } from "../compileToService.js"
 
 const test = async () => {
   // locate 307 on module more nested than expected
