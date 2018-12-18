@@ -3,10 +3,8 @@ import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemE
 import { ressourceToContentType } from "./ressourceToContentType.js"
 import { stat, readFile, listDirectoryContent, fileToReadableStream } from "../fileHelper.js"
 
-const dateToUTCString = (date) => {
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
-  return date.toUTCString()
-}
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
+const dateToUTCString = (date) => date.toUTCString()
 
 const dateToSecondsPrecision = (date) => {
   const dateWithSecondsPrecision = new Date(date)
@@ -14,24 +12,58 @@ const dateToSecondsPrecision = (date) => {
   return dateWithSecondsPrecision
 }
 
-export const createRequestToFileResponse = (
+export const requestToFileResponse = async (
+  { origin, ressource, method, headers = {} },
   {
-    root,
+    localRoot,
+    locate = ({ file, localRoot }) => `${localRoot}/${file}`,
     canReadDirectory = false,
     getFileStat = stat,
     getFileContentAsString = readFile,
     fileToBody = fileToReadableStream,
     cacheStrategy = "mtime",
-  } = {},
+  },
 ) => {
-  const cacheWithMtime = cacheStrategy === "mtime"
-  const cacheWithETag = cacheStrategy === "etag"
-  const cachedDisabled = cacheStrategy === "none"
+  if (method !== "GET" && method !== "HEAD") {
+    return {
+      status: 501,
+    }
+  }
 
-  const service = async ({ ressource, headers }) => {
-    const fileLocation = `${root}/${ressource}`
+  try {
+    const file = await locate({ file: ressource, localRoot, remoteRoot: origin })
 
-    const stat = await getFileStat(fileLocation)
+    if (!file) {
+      return {
+        status: 404,
+      }
+    }
+
+    // redirection to other origin
+    if (!file.startsWith(`${localRoot}/`)) {
+      return {
+        status: 307,
+        headers: {
+          location: file,
+        },
+      }
+    }
+
+    // redirection to same origin
+    const fileRessource = file.slice(`${localRoot}/`.length)
+    if (fileRessource !== ressource) {
+      return {
+        status: 307,
+        headers: {
+          location: `${origin}/${fileRessource}`,
+        },
+      }
+    }
+
+    const cacheWithMtime = cacheStrategy === "mtime"
+    const cacheWithETag = cacheStrategy === "etag"
+    const cachedDisabled = cacheStrategy === "none"
+    const stat = await getFileStat(file)
 
     if (stat.isDirectory()) {
       if (canReadDirectory === false) {
@@ -44,7 +76,7 @@ export const createRequestToFileResponse = (
         }
       }
 
-      const files = await listDirectoryContent(fileLocation)
+      const files = await listDirectoryContent(file)
       const filesAsJSON = JSON.stringify(files)
 
       return {
@@ -86,12 +118,12 @@ export const createRequestToFileResponse = (
           "content-length": stat.size,
           "content-type": ressourceToContentType(ressource),
         },
-        body: fileToBody(fileLocation),
+        body: fileToBody(file),
       }
     }
 
     if (cacheWithETag) {
-      const content = await getFileContentAsString(fileLocation)
+      const content = await getFileContentAsString(file)
       const eTag = createETag(content)
 
       if ("if-none-match" in headers && headers["if-none-match"] === eTag) {
@@ -122,17 +154,9 @@ export const createRequestToFileResponse = (
         "content-length": stat.size,
         "content-type": ressourceToContentType(ressource),
       },
-      body: fileToBody(fileLocation),
+      body: fileToBody(file),
     }
-  }
-
-  return ({ ressource, method, headers = {} }) => {
-    if (method !== "GET" && method !== "HEAD") {
-      return {
-        status: 501,
-      }
-    }
-
-    return service({ ressource, method, headers }).catch(convertFileSystemErrorToResponseProperties)
+  } catch (e) {
+    return convertFileSystemErrorToResponseProperties(e)
   }
 }

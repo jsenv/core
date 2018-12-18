@@ -1,4 +1,4 @@
-export { createRequestToFileResponse } from "./createRequestToFileResponse.js"
+export { requestToFileResponse } from "./requestToFileResponse.js"
 export {
   convertFileSystemErrorToResponseProperties,
 } from "./convertFileSystemErrorToResponseProperties.js"

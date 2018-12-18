@@ -4,8 +4,8 @@ import { createCancellationToken, createOperation } from "@dmail/cancellation"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { open as serverIndexOpen } from "../server-index/serverIndex.js"
 import { originAsString } from "../server/index.js"
-import { getBrowserPlatformRemoteURL } from "../compileProject/index.js"
 import { createPromiseAndHooks } from "../promiseHelper.js"
+import { getBrowserPlatformRemoteURL } from "../platform/browser/remoteURL.js"
 import { createPlatformSetupSource } from "../platform/browser/platformSource.js"
 
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
@@ -60,18 +60,22 @@ export const launchChromium = async ({
     return browser.close()
   }
 
-  browser.on("targetcreated", (page) => {
-    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-    page.on("error", errored.resolve)
-    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-    page.on("pageerror", errored.resolve)
+  browser.on("targetcreated", async (target) => {
+    // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
+    if (target.type === "page") {
+      const page = await target.page()
+      // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
+      page.on("error", errored.resolve)
+      // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
+      page.on("pageerror", errored.resolve)
 
-    if (mirrorConsole) {
-      page.on("console", (message) => {
-        // there is also message._args
-        // which is an array of JSHandle{ _context, _client _remoteObject }
-        console[message._type](message._text)
-      })
+      if (mirrorConsole) {
+        page.on("console", (message) => {
+          // there is also message._args
+          // which is an array of JSHandle{ _context, _client _remoteObject }
+          console[message._type](message._text)
+        })
+      }
     }
   })
 

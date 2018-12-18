@@ -1,8 +1,9 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 
 import { createCancellationToken } from "@dmail/cancellation"
-import { createRequestToFileResponse } from "../createRequestToFileResponse/index.js"
+import { requestToFileResponse } from "../requestToFileResponse/index.js"
 import { open as serverOpen, enableCORS, serviceCompose } from "../server/index.js"
+import { locate } from "../jsCompileToService/locate.js"
 
 export const open = async ({
   cancellationToken = createCancellationToken(),
@@ -19,10 +20,10 @@ export const open = async ({
   sourceCacheStrategy = "etag",
   sourceCacheIgnore = false,
 }) => {
-  const service = serviceCompose(
-    compileService,
-    createRequestToFileResponse({
-      root: localRoot,
+  const service = serviceCompose(compileService, (request) =>
+    requestToFileResponse(request, {
+      localRoot,
+      locate,
       cacheIgnore: sourceCacheIgnore,
       cacheStrategy: sourceCacheStrategy,
     }),

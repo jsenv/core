@@ -46,7 +46,7 @@
         "src/promiseHelper.js",
         "src/unused/thenable.js",
         "src/jsCompile/transpileWithBabel.js",
-        "src/createRequestToFileResponse/convertFileSystemErrorToResponseProperties.js"
+        "src/requestToFileResponse/convertFileSystemErrorToResponseProperties.js"
       ],
       "trace": false
     },

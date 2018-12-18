@@ -4,12 +4,11 @@ import { open as serverOpen, createRequestPredicate, serviceCompose } from "../s
 import { open as serverCompileOpen } from "../server-compile/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { guard } from "../functionHelper.js"
-import { getBrowserPlatformFile } from "../jsCompile/jsCompile.js"
-import { createBrowserSetupSource, createBrowserExecuteSource } from "../createBrowserSource.js"
-import { readFile } from "../fileHelper.js"
-import { getCompileMapLocal } from "../getCompileMapLocal.js"
-// eslint-disable-next-line import/max-dependencies
-import { getBrowserLoaderLocal } from "../getBrowserLoaderLocal.js"
+import {
+  createPlatformSetupSource,
+  createPlatformImportFileSource,
+} from "../platform/browser/platformSource.js"
+import { getBrowserPlatformRemoteURL } from "../platform/browser/remoteURL.js"
 
 export const listFilesToExecute = (localRoot) => {
   return forEachRessourceMatching(
@@ -19,7 +18,7 @@ export const listFilesToExecute = (localRoot) => {
       "src/**/*.js": { js: true },
     },
     ({ js }) => js,
-    ({ relativeName }) => relativeName,
+    (file) => file,
   )
 }
 
@@ -105,28 +104,17 @@ export const open = async ({
       method: "GET",
     }),
     async ({ ressource }) => {
-      const compileMap = JSON.parse(await readFile(getCompileMapLocal({ localRoot, compileInto })))
-      const loaderSource = await readFile(getBrowserLoaderLocal({ localRoot }))
-
       const html = await createHTMLForBrowser({
-        // scriptRemoteList: [{ url: getBrowserPlatformFile({ remoteRoot, compileInto }) }],
+        scriptRemoteList: [{ url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) }],
         scriptInlineList: [
           {
-            // it could be a remote script
-            source: loaderSource(),
-          },
-          {
-            source: createBrowserSetupSource({
-              compileMap,
-              platformFile: getBrowserPlatformFile(),
+            source: createPlatformSetupSource({
               remoteRoot,
               compileInto,
-              hotreload,
-              hotreloadSSERoot: remoteRoot,
             }),
           },
           {
-            source: createBrowserExecuteSource({
+            source: createPlatformImportFileSource({
               file: ressource,
             }),
           },

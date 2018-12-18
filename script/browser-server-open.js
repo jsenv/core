@@ -1,14 +1,19 @@
+const { pluginOptionMapToPluginMap } = require("@dmail/project-structure-compile-babel")
 const { createCancellationSource } = require("@dmail/cancellation")
-const { serverBrowserOpen, createJsCompileService } = require("../dist/index.js")
-const path = require("path")
+const { open: serverBrowserOpen } = require("../dist/src/server-browser/index.js")
+const { createJsCompileService } = require("../dist/src/createJsCompileService.js")
+const { localRoot } = require("../dist/src/localRoot.js")
 
-const localRoot = path.resolve(__dirname, "../")
+const pluginMap = pluginOptionMapToPluginMap({
+  "transform-modules-systemjs": {},
+})
 const compileInto = "build"
-const hotreload = true
+const hotreload = false
 
 const exec = async ({ cancellationToken }) => {
   const compileService = await createJsCompileService({
     cancellationToken,
+    pluginMap,
     localRoot,
     compileInto,
     watch: hotreload,

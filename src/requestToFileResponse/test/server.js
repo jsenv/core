@@ -1,10 +1,10 @@
-import { open } from "../server/index.js"
-import { createRequestToFileResponse } from "./createRequestToFileResponse.js"
+import { open } from "../../server/index.js"
+import { createRequestToFileResponse } from "../createRequestToFileResponse.js"
 import path from "path"
 
 const root = path.resolve(__dirname, "../../../")
 const service = createRequestToFileResponse({
-  root,
+  localRoot: root,
   cacheStrategy: "etag",
 })
 const ressource = "src/__test__/file.js"

@@ -1,6 +1,6 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { createSignal } from "@dmail/signal"
-import { convertFileSystemErrorToResponseProperties } from "../createRequestToFileResponse/index.js"
+import { convertFileSystemErrorToResponseProperties } from "../requestToFileResponse/index.js"
 import { stat, readFile } from "../fileHelper.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { hrefToOrigin, hrefToRessource } from "../urlHelper.js"
