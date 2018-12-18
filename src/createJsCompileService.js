@@ -1,4 +1,4 @@
-import { objectMapValue, objectFilter } from "./objectHelper.js"
+import { objectMapValue } from "./objectHelper.js"
 import { jsCompile } from "./jsCompile/index.js"
 import { jsCompileToService } from "./jsCompileToService/index.js"
 import { getCompileMapLocalURL } from "./compileProject/index.js"
@@ -41,10 +41,17 @@ export const createJsCompileService = async ({
   return jsCompileService
 }
 
-const compileMapToCompileParamMap = (compileMap, pluginMap) => {
+const compileMapToCompileParamMap = (compileMap, pluginMap = {}) => {
   return objectMapValue(compileMap, ({ pluginNames }) => {
+    const pluginMapSubset = {}
+    pluginNames.forEach((pluginName) => {
+      if (pluginName in pluginMap === false) {
+        throw new Error(`missing ${pluginName} plugin in pluginMap`)
+      }
+      pluginMapSubset[pluginName] = pluginMap[pluginName]
+    })
     return {
-      pluginMap: objectFilter(pluginMap, (pluginName) => pluginNames.includes(pluginName)),
+      pluginMap: pluginMapSubset,
     }
   })
 }

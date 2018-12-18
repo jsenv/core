@@ -44,7 +44,7 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-unicode-regex": {},
 })
 
-export const compileBrowserPlatform = async ({ compileMap, localRoot, compileInto }) => {
+export const compileBrowserPlatform = async ({ localRoot, compileInto }) => {
   const outputFolder = `${compileInto}`
   const plugins = pluginMapToPluginsForPlatform(pluginMap, "unknown", "0.0.0")
 
@@ -66,7 +66,7 @@ export const compileBrowserPlatform = async ({ compileMap, localRoot, compileInt
 
   const compileResult = await bundle.generate({
     format: "iife",
-    intro: `var compileMap = ${JSON.stringify(compileMap)};`,
+    // intro: `var compileMap = ${JSON.stringify(compileMap)};`,
     name: globalName,
     sourcemap: true,
   })

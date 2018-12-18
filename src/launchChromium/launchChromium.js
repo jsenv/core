@@ -12,7 +12,7 @@ import { createPlatformSetupSource } from "../platform/browser/platformSource.js
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
-  localRoot,
+  // localRoot,
   remoteRoot,
   compileInto,
 
@@ -83,7 +83,6 @@ export const launchChromium = async ({
       scriptInlineList: [
         {
           source: createPlatformSetupSource({
-            localRoot,
             remoteRoot,
             compileInto,
           }),

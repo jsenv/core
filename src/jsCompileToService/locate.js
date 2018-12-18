@@ -1,8 +1,20 @@
 import Module from "module"
 // import { symlink } from "../fileHelper.js"
 import { locateDefault } from "../compileToService/compileToService.js"
+import { localRoot as selfLocalRoot } from "../localRoot.js"
 
 export const locate = async ({ localRoot, dependentFolder, file }) => {
+  // future consumer of dev-server will use
+  // 'node_modules/dev-server/dist/browserSystemImporter.js'
+  // to get file from this module
+  // in order to test this behaviour, when we are working on this module
+  // 'node_modules/dev-server` is an alias to localRoot
+  if (localRoot === selfLocalRoot) {
+    if (file.startsWith("node_modules/dev-server/")) {
+      file = file.slice("node_modules/dev-server/".length)
+    }
+  }
+
   if (file.startsWith("node_modules/")) {
     try {
       const dependency = file.slice("node_modules/".length)

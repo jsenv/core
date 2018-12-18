@@ -1,10 +1,10 @@
 import { createBrowserSystem } from "./createBrowserSystem.js"
 import { createImportTracker } from "../../createImportTracker.js"
 
-export const createImporter = ({ fetchSource, hrefToLocalFile }) => {
+export const createSystemImporter = (param) => {
   const importTracker = createImportTracker()
 
-  const browserSystem = createBrowserSystem({ fetchSource, hrefToLocalFile })
+  const browserSystem = createBrowserSystem(param)
   window.System = browserSystem
 
   const importFile = (file) => {
