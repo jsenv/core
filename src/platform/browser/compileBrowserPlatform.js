@@ -4,23 +4,24 @@ import nodeResolve from "rollup-plugin-node-resolve"
 import {
   pluginOptionMapToPluginMap,
   pluginMapToPluginsForPlatform,
-  fileSystemWriteCompileResult,
+  fileWriteFromString,
 } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../localRoot.js"
+import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 
-const inputFile = `src/platform/browser/browserPlatform.js`
-const outputFolder = "dist"
-const outputFile = `browserPlatform.js`
+const inputRessource = `src/platform/browser/browserPlatform.js`
+const outputFolder = `${localRoot}/dist`
+const outputRessource = `browserPlatform.js`
+const inputFile = `${localRoot}/${inputRessource}`
+const outputFile = `${outputFolder}/${outputRessource}`
 const globalName = "__platform__"
 const pluginMap = pluginOptionMapToPluginMap({
   "syntax-dynamic-import": {},
-  "proposal-async-generator-functions": {},
   "proposal-json-strings": {},
   "proposal-object-rest-spread": {},
   "proposal-optional-catch-binding": {},
   "proposal-unicode-property-regex": {},
   "transform-arrow-functions": {},
-  "transform-async-to-generator": {},
   "transform-block-scoped-functions": {},
   "transform-block-scoping": {},
   "transform-classes": {},
@@ -35,7 +36,6 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-new-target": {},
   "transform-object-super": {},
   "transform-parameters": {},
-  "transform-regenerator": {},
   "transform-shorthand-properties": {},
   "transform-spread": {},
   "transform-sticky-regex": {},
@@ -43,12 +43,13 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-typeof-symbol": {},
   "transform-unicode-regex": {},
 })
+pluginMap["transform-async-to-promises"] = [transformAsyncToPromises, {}]
 
 export const compileBrowserPlatform = async () => {
   const plugins = pluginMapToPluginsForPlatform(pluginMap, "unknown", "0.0.0")
 
   const bundle = await rollup({
-    input: `${localRoot}/${inputFile}`,
+    input: inputFile,
     plugins: [
       nodeResolve({
         module: true,
@@ -63,17 +64,28 @@ export const compileBrowserPlatform = async () => {
     // onwarn: () => {},
   })
 
-  const compileResult = await bundle.generate({
+  const { code, map } = await bundle.generate({
     format: "iife",
     // intro: `var compileMap = ${JSON.stringify(compileMap)};`,
     name: globalName,
     sourcemap: true,
   })
 
-  await fileSystemWriteCompileResult(compileResult, {
-    localRoot,
-    outputFile,
-    outputFolder,
-  })
-  console.log(`${inputFile} -> ${outputFolder}/${outputFile}`)
+  // const sourceLocationForSourceMap = `${path.relative(outputFolder, localRoot)}/${inputRessource}`
+  // map.sources = [sourceLocationForSourceMap]
+  // delete map.sourcesContent
+
+  await Promise.all([
+    fileWriteFromString(outputFile, appendSourceMappingURL(code, "./browserPlatform.js.map")),
+    fileWriteFromString(`${outputFolder}/browserPlatform.js.map`, JSON.stringify(map, null, "  ")),
+  ])
+
+  console.log(`${inputFile} -> ${outputFolder}/${inputRessource}`)
 }
+
+const appendSourceMappingURL = (code, sourceMappingURL) => {
+  return `${code}
+//# ${"sourceMappingURL"}=${sourceMappingURL}`
+}
+
+compileBrowserPlatform()

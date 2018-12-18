@@ -4,6 +4,8 @@ import { createLocaters } from "../createLocaters.js"
 import { detect } from "./browserDetect/index.js"
 import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 import { browserToCompileId } from "./browserToCompileId.js"
+// TODO: use fetchUSingXHR instead of fetchSource for loading
+// informer and importer because fetchSource is only for module
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
 import { open } from "./hotreload.js"
@@ -66,15 +68,17 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
     }
 
     const nativeImporter = {
-      importFile: (file) => {
-        // we'll have to check how it behaves if server responds with 500
-        // of if it throw on execution
-        return import(file)
-      },
+      // we'll have to check how it behaves if server responds with 500
+      // of if it throw on execution
+      importFile: createNativeImportFile(),
     }
 
     return nativeImporter
   })
+
+  // eval to avoid syntaxError because import allowed only inside module
+  // for browser without dynamic import
+  const createNativeImportFile = () => eval(`(function importFile(file){ return import(file) })`)
 
   platform.importFile = async (file, { instrument = false, collectCoverage = false } = {}) => {
     const [

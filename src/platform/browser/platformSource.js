@@ -6,5 +6,5 @@ window.__platform__.setup(${uneval(data)})`
 }
 
 export const createPlatformImportFileSource = (file, options) => {
-  return `window__platform__.importFile(${uneval(file)}, ${uneval(options)})`
+  return `window.__platform__.importFile(${uneval(file)}, ${uneval(options)})`
 }
