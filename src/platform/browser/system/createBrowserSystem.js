@@ -6,13 +6,12 @@ export const createBrowserSystem = ({ fetchSource, evalSource, hrefToLocalFile }
 
   browserSystem.instantiate = (url, parent) => {
     return fromRemoteFile({
+      System: browserSystem,
       fetchSource,
       evalSource,
       remoteFile: url,
       remoteParent: parent,
       localFile: hrefToLocalFile(url),
-    }).then((registerGetter) => {
-      return registerGetter(browserSystem)
     })
   }
 
