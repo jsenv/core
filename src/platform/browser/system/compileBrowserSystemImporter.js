@@ -1,16 +1,20 @@
+import path from "path"
 import { rollup } from "rollup"
 import babel from "rollup-plugin-babel"
 import nodeResolve from "rollup-plugin-node-resolve"
 import {
   pluginOptionMapToPluginMap,
   pluginMapToPluginsForPlatform,
-  fileSystemWriteCompileResult,
+  fileWriteFromString,
 } from "@dmail/project-structure-compile-babel"
+import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 import { localRoot } from "../../../localRoot.js"
 
-const inputFile = `src/platform/browser/system/createSystemImporter.js`
-const outputFolder = "dist"
-const outputFile = `browserSystemImporter.js`
+const inputRessource = `src/platform/browser/system/createSystemImporter.js`
+const outputFolder = `${localRoot}/dist`
+const outputRessource = `browserSystemImporter.js`
+const inputFile = `${localRoot}/${inputRessource}`
+const outputFile = `${outputFolder}/${outputRessource}`
 const globalName = "__browserImporter__"
 const pluginMap = pluginOptionMapToPluginMap({
   "proposal-json-strings": {},
@@ -39,12 +43,13 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-typeof-symbol": {},
   "transform-unicode-regex": {},
 })
+pluginMap["transform-async-to-promises"] = [transformAsyncToPromises, {}]
 
 export const compileBrowserSystemImporter = async () => {
   const plugins = pluginMapToPluginsForPlatform(pluginMap, "unknown", "0.0.0")
 
   const bundle = await rollup({
-    input: `${localRoot}/${inputFile}`,
+    input: inputFile,
     plugins: [
       nodeResolve({
         module: true,
@@ -59,16 +64,29 @@ export const compileBrowserSystemImporter = async () => {
     // onwarn: () => {},
   })
 
-  const compileResult = await bundle.generate({
+  const { code, map } = await bundle.generate({
     format: "iife",
     name: globalName,
     sourcemap: true,
   })
 
-  await fileSystemWriteCompileResult(compileResult, {
-    localRoot,
-    outputFile,
-    outputFolder,
+  map.sources = map.sources.map((source) => {
+    return `${path.relative(outputFolder, localRoot)}/${source}`
   })
-  console.log(`${inputFile} -> ${outputFolder}/${outputFile}`)
+  delete map.sourcesContent
+
+  await Promise.all([
+    fileWriteFromString(outputFile, appendSourceMappingURL(code, "./browserSystemImporter.js.map")),
+    fileWriteFromString(
+      `${outputFolder}/browserSystemImporter.js.map`,
+      JSON.stringify(map, null, "  "),
+    ),
+  ])
+
+  console.log(`${inputFile} -> ${outputFolder}/${inputRessource}`)
+}
+
+const appendSourceMappingURL = (code, sourceMappingURL) => {
+  return `${code}
+//# ${"sourceMappingURL"}=${sourceMappingURL}`
 }

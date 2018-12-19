@@ -1,3 +1,4 @@
+import path from "path"
 import { rollup } from "rollup"
 import babel from "rollup-plugin-babel"
 import nodeResolve from "rollup-plugin-node-resolve"
@@ -71,9 +72,10 @@ export const compileBrowserPlatform = async () => {
     sourcemap: true,
   })
 
-  // const sourceLocationForSourceMap = `${path.relative(outputFolder, localRoot)}/${inputRessource}`
-  // map.sources = [sourceLocationForSourceMap]
-  // delete map.sourcesContent
+  map.sources = map.sources.map((source) => {
+    return `${path.relative(outputFolder, localRoot)}/${source}`
+  })
+  delete map.sourcesContent
 
   await Promise.all([
     fileWriteFromString(outputFile, appendSourceMappingURL(code, "./browserPlatform.js.map")),
@@ -87,5 +89,3 @@ const appendSourceMappingURL = (code, sourceMappingURL) => {
   return `${code}
 //# ${"sourceMappingURL"}=${sourceMappingURL}`
 }
-
-compileBrowserPlatform()

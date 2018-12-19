@@ -4,9 +4,7 @@ import { createLocaters } from "../createLocaters.js"
 import { detect } from "./browserDetect/index.js"
 import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 import { browserToCompileId } from "./browserToCompileId.js"
-// TODO: use fetchUSingXHR instead of fetchSource for loading
-// informer and importer because fetchSource is only for module
-import { fetchSource } from "./fetchSource.js"
+import { fetchUsingXHR } from "./fetchUsingXHR.js"
 import { evalSource } from "./evalSource.js"
 import { open } from "./hotreload.js"
 import { getCompileMapRemoteURL, getBrowserSystemImporterRemoteURL } from "./remoteURL.js"
@@ -24,7 +22,7 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
 
   const loadInformer = memoizeOnce(async () => {
     const compileMapHref = getCompileMapRemoteURL({ remoteRoot, compileInto })
-    const compileMapResponse = await fetchSource(compileMapHref)
+    const compileMapResponse = await fetchUsingXHR(compileMapHref)
     if (compileMapResponse.status < 200 || compileMapResponse.status >= 400) {
       return Promise.reject(compileMapResponse)
     }
@@ -49,15 +47,16 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
     // importer depends on informer, but this is an implementation detail
     const { compileMap, compileId, hrefToLocalFile } = await loadInformer()
 
-    const pluginNames = compileMap[compileId]
+    const { pluginNames } = compileMap[compileId]
     if (pluginNames.indexOf("transform-modules-systemjs") > -1) {
       const importerHref = getBrowserSystemImporterRemoteURL({ remoteRoot })
-      const importerResponse = await fetchSource(importerHref)
+      const importerResponse = await fetchUsingXHR(importerHref)
       if (importerResponse.status < 200 || importerResponse.status >= 400) {
         return Promise.reject(importerResponse)
       }
 
-      evalSource(importerResponse.body, importerHref)
+      evalSource(importerResponse.body, { remoteFile: importerHref })
+
       const systemImporter = window.__browserImporter__.createSystemImporter({
         fetchSource,
         evalSource,
@@ -92,8 +91,8 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
     ] = await Promise.all([loadInformer(), loadImporter()])
 
     const remoteCompiledFile = instrument
-      ? fileToRemoteCompiledFile(file)
-      : fileToRemoteInstrumentedFile(file)
+      ? fileToRemoteInstrumentedFile(file)
+      : fileToRemoteCompiledFile(file)
 
     return importFile(remoteCompiledFile).then(
       (namespace) => {
@@ -114,13 +113,30 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
           </h1>
           <pre style="border: 1px solid black">${meta.data}</pre>
           `
-
-        document.body.innerHTML = html
+        appendHMTL(html, document.body)
 
         return Promise.reject(error)
       },
     )
   }
+}
+
+const appendHMTL = (html, parentNode) => {
+  const temoraryParent = document.createElement("div")
+  temoraryParent.innerHTML = html
+  transferChildren(temoraryParent, parentNode)
+}
+
+const transferChildren = (fromNode, toNode) => {
+  while (fromNode.firstChild) {
+    toNode.appendChild(fromNode.firstChild)
+  }
+}
+
+const fetchSource = ({ remoteFile, remoteParent }) => {
+  return fetchUsingXHR(remoteFile, {
+    "x-module-referer": remoteParent || remoteFile,
+  })
 }
 
 export const platform = {

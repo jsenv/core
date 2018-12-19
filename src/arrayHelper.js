@@ -25,3 +25,19 @@ export const arrayWithoutIndex = (array, index) => {
   }
   return arrayWithoutIndex
 }
+
+export const arrayWithoutDuplicate = (array, compare = (a, b) => a === b) => {
+  const arrayWithoutDuplicate = []
+
+  let i = 0
+  while (i < array.length) {
+    const value = array[i]
+    i++
+    const existingIndex = arrayWithoutDuplicate.findIndex((existing) => compare(existing, value))
+    if (existingIndex === -1) {
+      arrayWithoutDuplicate.push(value)
+    }
+  }
+
+  return arrayWithoutDuplicate
+}

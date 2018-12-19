@@ -1,33 +1,4 @@
-// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/getAllResponseHeaders#Example
-const getHeadersFromXHR = (xhr) => {
-  const headersString = xhr.getAllResponseHeaders()
-  if (headersString === "") {
-    return {}
-  }
-
-  const lines = headersString.trim().split(/[\r\n]+/)
-
-  const headerMap = {}
-  lines.forEach((line) => {
-    const parts = line.split(": ")
-    const name = parts.shift()
-    const value = parts.join(": ")
-    headerMap[name.toLowerCase()] = value
-  })
-
-  return headerMap
-}
-
-const normalizeXhr = (xhr) => {
-  return {
-    status: xhr.status,
-    reason: xhr.statusText,
-    headers: getHeadersFromXHR(xhr),
-    body: xhr.responseText,
-  }
-}
-
-const fetchUsingXHR = (url, headers = {}) => {
+export const fetchUsingXHR = (url, headers = {}) => {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
 
@@ -79,8 +50,29 @@ const fetchUsingXHR = (url, headers = {}) => {
   })
 }
 
-export const fetchSource = ({ remoteFile, remoteParent }) => {
-  return fetchUsingXHR(remoteFile, {
-    "x-module-referer": remoteParent || remoteFile,
+const normalizeXhr = (xhr) => {
+  return {
+    status: xhr.status,
+    reason: xhr.statusText,
+    headers: getHeadersFromXHR(xhr),
+    body: xhr.responseText,
+  }
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/getAllResponseHeaders#Example
+const getHeadersFromXHR = (xhr) => {
+  const headerMap = {}
+
+  const headersString = xhr.getAllResponseHeaders()
+  if (headersString === "") return headerMap
+
+  const lines = headersString.trim().split(/[\r\n]+/)
+  lines.forEach((line) => {
+    const parts = line.split(": ")
+    const name = parts.shift()
+    const value = parts.join(": ")
+    headerMap[name.toLowerCase()] = value
   })
+
+  return headerMap
 }

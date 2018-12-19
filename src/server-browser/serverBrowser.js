@@ -114,9 +114,7 @@ export const open = async ({
             }),
           },
           {
-            source: createPlatformImportFileSource({
-              file: ressource,
-            }),
+            source: createPlatformImportFileSource(ressource, {}),
           },
         ],
       })
