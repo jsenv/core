@@ -1,10 +1,170 @@
 import path from "path"
 import lockfile from "proper-lockfile"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
-import { readFile } from "../fileHelper.js"
+import { readFile, ensureFolderLeadingTo } from "../fileHelper.js"
 import { createETag, isFileNotFoundError } from "./helpers.js"
 import { getMetaLocation, getOutputLocation, getAssetLocation, getOutputFile } from "./locaters.js"
 import { lockForRessource } from "./ressourceRegistry.js"
+
+export const compileFile = async ({
+  compile,
+  localRoot,
+  compileInto,
+  compileId,
+  compileParamMap = {},
+  file,
+  fileAbsolute,
+  cacheStrategy = "etag",
+  cacheTrackHit = false,
+}) => {
+  const outputFile = getOutputFile({
+    compileInto,
+    compileId,
+    file,
+  })
+
+  const generate = async ({ input }) => {
+    const compileParam =
+      compileParamMap && compileId in compileParamMap ? compileParamMap[compileId] : {}
+
+    const {
+      sources = [],
+      sourcesContent = [],
+      assets = [],
+      assetsContent = [],
+      output,
+    } = await compile({
+      localRoot,
+      file,
+      fileAbsolute,
+      input,
+      outputFile,
+      ...compileParam,
+    })
+
+    return {
+      sources,
+      sourcesContent,
+      assets,
+      assetsContent,
+      output,
+    }
+  }
+
+  if (cacheStrategy === "none") {
+    const input = await readFile(fileAbsolute)
+    const compileResult = generate({ input })
+    return {
+      ...compileResult,
+      outputFile,
+    }
+  }
+
+  const fromCacheOrCompile = async () => {
+    const [meta, input] = await Promise.all([
+      readFileMeta({
+        localRoot,
+        compileInto,
+        compileId,
+        file,
+      }),
+      readFile(fileAbsolute),
+    ])
+    const eTag = createETag(input)
+
+    if (!meta) {
+      const generateResult = await generate({ input })
+      return {
+        status: "created",
+        ...generateResult,
+      }
+    }
+
+    const cache = await readCache({
+      localRoot,
+      compileInto,
+      compileId,
+      file,
+      fileAbsolute,
+      eTag,
+      meta,
+    })
+    if (cache) {
+      return {
+        status: "cached",
+        meta,
+        sources: meta.sources,
+        assets: meta.assets,
+        sourcesContent: cache.sourcesContent,
+        assetsContent: cache.assetsContent,
+      }
+    }
+
+    const generateResult = await generate({ input })
+    return {
+      status: "updated",
+      meta,
+      ...generateResult,
+    }
+  }
+
+  const metaLocation = getMetaLocation({
+    localRoot,
+    compileInto,
+    compileId,
+    file,
+  })
+
+  // in case this process try to concurrently access meta we wait for previous to be done
+  const unlockLocal = await lockForRessource(metaLocation)
+  // after that we use a lock file to be sure we don't conflict with other process
+  // trying to do the same (mapy happen when spawining multiple server for instance)
+  // https://github.com/moxystudio/node-proper-lockfile/issues/69
+  await ensureFolderLeadingTo(metaLocation)
+  const unlockGlobal = await lockfile.lock(metaLocation, { realpath: false })
+  // we use two lock because the local lock is very fast, it's a sort of perf improvement
+
+  try {
+    const {
+      status,
+      meta,
+      sources,
+      sourcesContent,
+      assets,
+      assetsContent,
+      output,
+    } = await fromCacheOrCompile()
+
+    await updateMeta({
+      localRoot,
+      compileInto,
+      compileId,
+      file,
+      fileAbsolute,
+      cacheTrackHit,
+      status,
+      meta,
+      sources,
+      sourcesContent,
+      assets,
+      assetsContent,
+      output,
+    })
+
+    return {
+      sources,
+      sourcesContent,
+      assets,
+      assetsContent,
+      output,
+      outputFile,
+    }
+  } finally {
+    // we want to unlock in case of rejection too
+    unlockLocal()
+    unlockGlobal()
+  }
+}
 
 const validateAsset = async ({ localRoot, compileInto, compileId, file, asset, eTag }) => {
   const assetLocation = getAssetLocation({
@@ -292,162 +452,4 @@ const updateMeta = ({
   }
 
   return Promise.all(promises)
-}
-
-export const compileFile = async ({
-  compile,
-  localRoot,
-  compileInto,
-  compileId,
-  compileParamMap = {},
-  file,
-  fileAbsolute,
-  cacheStrategy = "etag",
-  cacheTrackHit = false,
-}) => {
-  const outputFile = getOutputFile({
-    compileInto,
-    compileId,
-    file,
-  })
-
-  const generate = async ({ input }) => {
-    const compileParam =
-      compileParamMap && compileId in compileParamMap ? compileParamMap[compileId] : {}
-
-    const {
-      sources = [],
-      sourcesContent = [],
-      assets = [],
-      assetsContent = [],
-      output,
-    } = await compile({
-      localRoot,
-      file,
-      fileAbsolute,
-      input,
-      outputFile,
-      ...compileParam,
-    })
-
-    return {
-      sources,
-      sourcesContent,
-      assets,
-      assetsContent,
-      output,
-    }
-  }
-
-  if (cacheStrategy === "none") {
-    const input = await readFile(fileAbsolute)
-    const compileResult = generate({ input })
-    return {
-      ...compileResult,
-      outputFile,
-    }
-  }
-
-  const fromCacheOrCompile = async () => {
-    const [meta, input] = await Promise.all([
-      readFileMeta({
-        localRoot,
-        compileInto,
-        compileId,
-        file,
-      }),
-      readFile(fileAbsolute),
-    ])
-    const eTag = createETag(input)
-
-    if (!meta) {
-      const generateResult = await generate({ input })
-      return {
-        status: "created",
-        ...generateResult,
-      }
-    }
-
-    const cache = await readCache({
-      localRoot,
-      compileInto,
-      compileId,
-      file,
-      fileAbsolute,
-      eTag,
-      meta,
-    })
-    if (cache) {
-      return {
-        status: "cached",
-        meta,
-        sources: meta.sources,
-        assets: meta.assets,
-        sourcesContent: cache.sourcesContent,
-        assetsContent: cache.assetsContent,
-      }
-    }
-
-    const generateResult = await generate({ input })
-    return {
-      status: "updated",
-      meta,
-      ...generateResult,
-    }
-  }
-
-  const metaLocation = getMetaLocation({
-    localRoot,
-    compileInto,
-    compileId,
-    file,
-  })
-
-  // in case this process try to concurrently access meta we wait for previous to be done
-  const unlockLocal = await lockForRessource(metaLocation)
-  // after that we use a lock file to be sure we don't conflict with other process
-  // trying to do the same (mapy happen when spawining multiple server for instance)
-  const unlockGlobal = await lockfile.lock(metaLocation)
-  // we use two lock because the local lock is very fast, it's a sort of perf improvement
-
-  try {
-    const {
-      status,
-      meta,
-      sources,
-      sourcesContent,
-      assets,
-      assetsContent,
-      output,
-    } = await fromCacheOrCompile()
-
-    await updateMeta({
-      localRoot,
-      compileInto,
-      compileId,
-      file,
-      fileAbsolute,
-      cacheTrackHit,
-      status,
-      meta,
-      sources,
-      sourcesContent,
-      assets,
-      assetsContent,
-      output,
-    })
-
-    return {
-      sources,
-      sourcesContent,
-      assets,
-      assetsContent,
-      output,
-      outputFile,
-    }
-  } finally {
-    // we want to unlock in case of rejection too
-    unlockLocal()
-    unlockGlobal()
-  }
 }

@@ -25,6 +25,8 @@ export const open = async ({
   sourceCacheStrategy = "etag",
   sourceCacheIgnore = false,
 }) => {
+  if (typeof compileService !== "function") throw new TypeError(`compileService must be a function`)
+
   const service = serviceCompose(compileService, (request) =>
     requestToFileResponse(request, {
       localRoot,
