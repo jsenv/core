@@ -1,4 +1,8 @@
-import { createCancellationToken, createOperation } from "@dmail/cancellation"
+import {
+  createCancellationToken,
+  createOperation,
+  createStoppableOperation,
+} from "@dmail/cancellation"
 import { promiseTrackRace } from "../promiseHelper.js"
 import { createRestartSignal } from "./restartController.js"
 
@@ -26,7 +30,7 @@ export const executeFileOnPlatform = (
 
   const startPlatform = async () => {
     log(`launch ${platformTypeForLog} to execute ${file}`)
-    const launchOperation = createOperation({
+    const launchOperation = createStoppableOperation({
       cancellationToken,
       start: () => launchPlatform(),
       stop: ({ close, closeForce }) => {
@@ -85,7 +89,6 @@ export const executeFileOnPlatform = (
         })
         return value
       },
-      stop: () => {},
     })
     return executeOperation
   }

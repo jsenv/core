@@ -3,7 +3,7 @@ import http from "http"
 import https from "https"
 import killPort from "kill-port"
 import { URL } from "url"
-import { createCancellationToken, createOperation } from "@dmail/cancellation"
+import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
 import { processTeardown } from "../process-teardown/index.js"
 import { memoizeOnce } from "../functionHelper.js"
 import { trackConnections, trackClients, trackRequestHandlers } from "./trackers.js"
@@ -115,10 +115,10 @@ export const open = async (
     status = "closed"
     closedResolve()
   })
-  const openOperation = createOperation({
+  const openOperation = createStoppableOperation({
     cancellationToken,
     start: () => listen({ cancellationToken, server: nodeServer, port, ip }),
-    stop: close,
+    stop: (_, reason) => close(reason),
   })
 
   const closePromises = []
@@ -219,7 +219,7 @@ export const open = async (
 }
 
 export const listen = ({ cancellationToken, server, port, ip }) => {
-  return createOperation({
+  return createStoppableOperation({
     cancellationToken,
     start: () => listenStart(server, port, ip),
     stop: () => listenStop(server),

@@ -1,3 +1,4 @@
+import { createCancellationSource } from "@dmail/cancellation"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../localRoot.js"
 import { createJsCompileService } from "../../createJsCompileService.js"
@@ -12,7 +13,9 @@ const file = `src/launchChromium/test/fixtures/file.js`
 const compileInto = "build"
 const hotreload = false
 
-const exec = async ({ cancellationToken }) => {
+const exec = async () => {
+  const { token: cancellationToken, cancel } = createCancellationSource()
+
   const jsCompileService = await createJsCompileService({
     cancellationToken,
     pluginMap,
@@ -39,9 +42,8 @@ const exec = async ({ cancellationToken }) => {
     cancellationToken,
     verbose,
   }).finally(() => {
-    // close server to let process end if child ends
-    server.close()
+    cancel("done")
   })
 }
 
-exec({})
+exec()

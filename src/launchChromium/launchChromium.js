@@ -1,6 +1,6 @@
 import { URL } from "url"
 import puppeteer from "puppeteer"
-import { createCancellationToken, createOperation } from "@dmail/cancellation"
+import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { open as serverIndexOpen } from "../server-index/serverIndex.js"
 import { originAsString } from "../server/index.js"
@@ -27,7 +27,7 @@ export const launchChromium = async ({
     throw new Error(`openIndexRequestInterception work only in headless mode`)
   }
 
-  const browser = await createOperation({
+  const browser = await createStoppableOperation({
     cancellationToken,
     start: () =>
       puppeteer.launch({
@@ -43,7 +43,7 @@ export const launchChromium = async ({
     stop: (browser) => browser.close(),
   })
 
-  const pageTracker = createPageTracker(browser)
+  const targetTracker = createTargetTracker(browser)
 
   const disconnected = createPromiseAndHooks()
   // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
@@ -56,7 +56,7 @@ export const launchChromium = async ({
   browser.on("disconnected", closed.resolve)
 
   const close = async (reason) => {
-    await pageTracker.close(reason)
+    await targetTracker.close(reason)
     return browser.close()
   }
 
@@ -113,16 +113,32 @@ export const launchChromium = async ({
   return { disconnected, errored, closed, close, fileToExecuted }
 }
 
-const createPageTracker = (browser) => {
-  const pages = []
+const createTargetTracker = (browser) => {
+  const closeCallbackArray = []
 
-  browser.on("targetcreated", (page) => {
-    pages.push(page)
+  // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
+  browser.on("targetcreated", (target) => {
+    if (target.type === "browser") {
+      const childBrowser = target.browser()
+      const childTargetTracker = createTargetTracker(childBrowser)
+      closeCallbackArray.push((reason) => {
+        return childTargetTracker.close(reason)
+      })
+    }
+    if (target.type === "page" || target.type === "background_page") {
+      // in case of bug do not forget https://github.com/GoogleChrome/puppeteer/issues/2269
+      closeCallbackArray.push(async () => {
+        const page = await target.page()
+        return page.close()
+      })
+      return
+    }
   })
 
-  const close = () => {
-    // in case of bug do not forget https://github.com/GoogleChrome/puppeteer/issues/2269
-    return Promise.all(pages.map((page) => page.close()))
+  const close = (reason) => {
+    const callbacks = closeCallbackArray.slice()
+    closeCallbackArray.length = 0
+    return Promise.all(callbacks.map((callback) => callback(reason)))
   }
 
   return { close }
@@ -138,7 +154,7 @@ const openIndexRequestInterception = async ({
 }) => {
   const origin = originAsString({ protocol, ip, port })
 
-  const interceptionOperation = createOperation({
+  const interceptionOperation = createStoppableOperation({
     cancellationToken,
     start: () => page.setRequestInterception(true),
     stop: () => page.setRequestInterception(false),
