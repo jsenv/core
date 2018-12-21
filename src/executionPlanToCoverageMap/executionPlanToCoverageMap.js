@@ -4,8 +4,10 @@ import { platformResultMapToCoverageMap } from "./platformResultMapToCoverageMap
 
 export const executionPlanToCoverageMap = async (
   executionPlan,
-  { cancellationToken, localRoot, filesToCover },
+  { cancellationToken, localRoot, listFilesToCover },
 ) => {
+  const filesToCover = await listFilesToCover()
+
   filesToCover.forEach((file) => {
     Object.keys(executionPlan).some((platformName) => {
       if (executionPlan[platformName].files.includes(file)) {
@@ -23,8 +25,8 @@ export const executionPlanToCoverageMap = async (
   const platformCoverageMap = platformResultMapToCoverageMap(platformResultMap)
 
   const coverageMap = await platformCoverageMapToCoverageMap({
-    platformCoverageMap,
     cancellationToken,
+    platformCoverageMap,
     localRoot,
     filesToCover,
   })

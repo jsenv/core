@@ -7,7 +7,7 @@ import { localRoot } from "../localRoot.js"
 import { createJsCompileService } from "../createJsCompileService.js"
 import { open as serverCompileOpen } from "../server-compile/index.js"
 
-const test = async ({ filesToCover }) => {
+const test = async ({ listFilesToCover }) => {
   const compileInto = "build"
   const pluginMap = pluginOptionMapToPluginMap({
     "transform-modules-systemjs": {},
@@ -17,7 +17,6 @@ const test = async ({ filesToCover }) => {
     localRoot,
     compileInto,
     pluginMap,
-    instrumentPredicate: (file) => filesToCover.includes(file),
   })
 
   const server = await serverCompileOpen({
@@ -39,6 +38,7 @@ const test = async ({ filesToCover }) => {
       files: [], // ["src/__test__/file.test.js"]
     },
   }
+  const filesToCover = listFilesToCover()
   const coverageMap = await executionPlanToCoverageMap(executionPlan, {
     localRoot,
     compileInto,
