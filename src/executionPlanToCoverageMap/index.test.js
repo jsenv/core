@@ -1,44 +1,51 @@
-import assert from "assert"
-import path from "path"
-import { createCancellationSource } from "@dmail/cancellation"
-import { createExecuteOnNode } from "../createExecuteOnNode/createExecuteOnNode.js"
-import { createExecuteOnChromium } from "../createExecuteOnChromium/createExecuteOnChromium.js"
-import { testDescriptorToCoverageMapForProject } from "./testDescriptorToCoverageMapForProject.js"
+import { assert } from "@dmail/assert"
+import { launchNode } from "../launchNode/index.js"
+import { launchChromium } from "../launchChromium/index.js"
+import { executionPlanToCoverageMap } from "./executionPlanToCoverageMap.js"
+import { localRoot } from "../localRoot.js"
 
-const localRoot = path.resolve(__dirname, "../../../")
-const compileInto = "build"
-const watch = false
-// todo: rename executionPlan, pass launchPlatform instead of createExecue
-const testDescriptor = {
-  node: {
-    createExecute: createExecuteOnNode,
-    files: ["src/__test__/file.test.js"],
-  },
-  chromium: {
-    createExecute: createExecuteOnChromium,
-    files: [], // ["src/__test__/file.test.js"]
-  },
+const test = async () => {
+  const compileInto = "build"
+  // executeFileOnPlatform ne va rien passer de special a launchPlatform
+  // autrement dit launchPlatform doit deja connaitre remoteRoot, localRoot etc
+  // et executionPlan n'a pas connaissance qu'on demarre un serveur etc
+  // donc pour le moment on va par avoir un executionPlan propre nickel
+  // on va tout écrire pour voir comment ça s'agence
+  const executionPlan = {
+    node: {
+      launchPlatform: launchNode,
+      files: ["src/__test__/file.test.js"],
+    },
+    chromium: {
+      launchPlatform: launchChromium,
+      files: [], // ["src/__test__/file.test.js"]
+    },
+  }
+  const coverageMap = await executionPlanToCoverageMap(executionPlan, {
+    localRoot,
+    compileInto,
+  })
+
+  assert({
+    actual: coverageMap["index.js"],
+    expected: {
+      b: {},
+      branchMap: {},
+      f: {},
+      fnMap: {},
+      path: "index.js",
+      s: {},
+      statementMap: {},
+    },
+  })
+  assert({
+    actual: coverageMap["src/__test__/file.js"].s,
+    expected: {
+      0: 1,
+      1: 1,
+      2: 1,
+    },
+  })
 }
-const { token } = createCancellationSource()
-testDescriptorToCoverageMapForProject(testDescriptor, {
-  cancellationToken: token,
-  localRoot,
-  compileInto,
-  watch,
-}).then((coverageMap) => {
-  assert.deepEqual(coverageMap["index.js"], {
-    b: {},
-    branchMap: {},
-    f: {},
-    fnMap: {},
-    path: "index.js",
-    s: {},
-    statementMap: {},
-  })
-  assert.deepEqual(coverageMap["src/__test__/file.js"].s, {
-    0: 1,
-    1: 1,
-    2: 1,
-  })
-  console.log("passed")
-})
+
+test()

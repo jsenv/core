@@ -86,16 +86,18 @@ export const promiseConcurrent = (
   })
 }
 
-export const objectToPromiseAll = (object) => {
+export const namedPromiseAll = async (promiseMap) => {
   const result = {}
 
-  const promises = Object.keys(object).map((name) => {
-    return Promise.resolve(object[name]).then((value) => {
+  await Promise.all(
+    Object.keys(promiseMap).map(async (name) => {
+      const value = await promiseMap[name]
       result[name] = value
-    })
-  })
+      return value
+    }),
+  )
 
-  return Promise.all(promises).then(() => result)
+  return result
 }
 
 export const millisecondToResolved = (millisecond) => {

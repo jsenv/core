@@ -1,9 +1,10 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { promiseConcurrent } from "../promiseHelper.js"
+import { executeFileOnPlatform } from "../executeFileOnPlatform/index.js"
 
 export const filesToResultMap = async (
   files,
-  execute,
+  launchPlatform,
   {
     cancellationToken = createCancellationToken,
     maxParallelExecution = 5,
@@ -13,20 +14,21 @@ export const filesToResultMap = async (
     afterAll = () => {},
   } = {},
 ) => {
+  const resultMap = {}
+
   beforeAll({ files })
-  const results = await promiseConcurrent(
+  await promiseConcurrent(
     files,
     async (file) => {
       beforeEach({ file })
-
-      // todo: certainly not execute anymore but we'll receive lancuhPlatform
-      // and we will use executeFileOnPlatform()
-      const { output, coverageMap } = execute({
+      const result = await executeFileOnPlatform(file, launchPlatform, {
         cancellationToken,
-        file,
         instrument: true,
         collectCoverage: true,
       })
+      afterEach({ file, output, coverageMap })
+
+      const { output, coverageMap } = result
       if (coverageMap === null) {
         // coverageMap can be null for 2 reason:
         // - test file import a source file which is not instrumented
@@ -35,23 +37,15 @@ export const filesToResultMap = async (
         // here it's totally normal
         // throw new Error(`missing coverageMap after ${file} execution, it was not instrumented`)
       }
-
-      afterEach({ file, output, coverageMap })
-
-      return { output, coverageMap }
+      resultMap[file] = result
+      return result
     },
     {
       cancellationToken,
       maxParallelExecution,
     },
   )
-  afterAll({ files, results })
-
-  const resultMap = {}
-  files.forEach((file, index) => {
-    const result = results[index]
-    resultMap[file] = result
-  })
+  afterAll({ files, resultMap })
 
   return resultMap
 }

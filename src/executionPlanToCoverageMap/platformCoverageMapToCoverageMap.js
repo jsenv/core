@@ -8,11 +8,11 @@ export const platformCoverageMapToCoverageMap = async (
   const filesMissed = platformCoverageMapToFilesMissed(platformCoverageMap, filesToCover)
 
   const missedCoverageMap = {}
-
   await Promise.all(
     filesMissed.map(async (file) => {
       const emptyCoverage = await fileToEmptyCoverage({ cancellationToken, localRoot, file })
       missedCoverageMap[file] = emptyCoverage
+      return emptyCoverage
     }),
   )
 
@@ -34,7 +34,6 @@ const fileToEmptyCoverage = async ({ cancellationToken, localRoot, file }) => {
     // we must compile to get the coverage object
     // without evaluating the file because it would increment coverage
     // and execute code that can be doing anything
-
     const { assetMap } = await jsCompile({
       localRoot,
       inputName: file,

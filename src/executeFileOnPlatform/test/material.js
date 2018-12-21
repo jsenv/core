@@ -30,8 +30,7 @@ export const createMaterial = () => {
   }
   const cancellationSource = createCancellationSource()
   const restartController = createRestartController()
-  const execution = executeFileOnPlatform("file.js", {
-    launchPlatform,
+  const execution = executeFileOnPlatform("file.js", launchPlatform, {
     restartSignal: restartController.signal,
     cancellationToken: cancellationSource.token,
   })

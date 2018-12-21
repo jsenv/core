@@ -13,8 +13,8 @@ const ALLOCATED_MS_FOR_CLOSE = 10 * 60 * 10 * 1000
 
 export const executeFileOnPlatform = (
   file,
+  launchPlatform,
   {
-    launchPlatform,
     cancellationToken = createCancellationToken(),
     restartSignal = createRestartSignal(),
     platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'

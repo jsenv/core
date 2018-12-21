@@ -1,21 +1,10 @@
-import { projectConfigToJsCompileService } from "../createJsCompileService.js"
+import { createJsCompileService } from "../createJsCompileService.js"
 import { open as serverCompileOpen } from "../server-compile/index.js"
 import { predicateCompose } from "../functionHelper.js"
+import { namedPromiseAll } from "../promiseHelper.js"
 import { executionPlanToPlatformResultMap } from "./executionPlanToPlatformResultMap.js"
 import { platformCoverageMapToCoverageMap } from "./platformCoverageMapToCoverageMap.js"
 import { platformResultMapToCoverageMap } from "./platformResultMapToCoverageMap.js"
-
-const executionPlanToFileIsInsidePlan = (executionPlan) => {
-  const files = new Set()
-
-  Object.keys(executionPlan).forEach((name) => {
-    executionPlan[name].files.forEach((file) => {
-      files.add(file)
-    })
-  })
-
-  return (file) => files.has(file)
-}
 
 export const executionPlanToCoverageMap = async (
   executionPlan,
@@ -34,33 +23,36 @@ export const executionPlanToCoverageMap = async (
   { cancellationToken, watch = false },
 ) => {
   const fileIsInsidePlan = executionPlanToFileIsInsidePlan(executionPlan)
-  const jsCompileService = await projectConfigToJsCompileService({
-    localRoot,
-    compileInto,
-    pluginMap,
-    instrumentPredicate: predicateCompose(
-      instrumentPredicate,
-      (file) => fileIsInsidePlan(file) === false,
-    ),
-    cacheIgnore,
-    cacheTrackHit,
-    cacheStrategy,
-  })
 
-  const [server, filesToCover] = await Promise.all([
-    serverCompileOpen({
-      cancellationToken,
-      protocol: "http",
-      ip: "127.0.0.1",
-      port: 0,
-      localRoot,
-      compileInto,
-      compileService: jsCompileService,
-      watchPredicate,
-      watch,
-    }),
-    listFilesToCover(),
-  ])
+  const { server, filesToCover } = await namedPromiseAll({
+    server: (async () => {
+      const jsCompileService = await createJsCompileService({
+        localRoot,
+        compileInto,
+        pluginMap,
+        instrumentPredicate: predicateCompose(
+          instrumentPredicate,
+          (file) => fileIsInsidePlan(file) === false,
+        ),
+        cacheIgnore,
+        cacheTrackHit,
+        cacheStrategy,
+      })
+
+      return serverCompileOpen({
+        cancellationToken,
+        protocol: "http",
+        ip: "127.0.0.1",
+        port: 0,
+        localRoot,
+        compileInto,
+        compileService: jsCompileService,
+        watchPredicate,
+        watch,
+      })
+    })(),
+    filesToCover: listFilesToCover(),
+  })
 
   const platformResultMap = await executionPlanToPlatformResultMap(executionPlan, {
     cancellationToken,
@@ -79,4 +71,16 @@ export const executionPlanToCoverageMap = async (
   })
 
   return coverageMap
+}
+
+const executionPlanToFileIsInsidePlan = (executionPlan) => {
+  const files = new Set()
+
+  Object.keys(executionPlan).forEach((name) => {
+    executionPlan[name].files.forEach((file) => {
+      files.add(file)
+    })
+  })
+
+  return (file) => files.has(file)
 }

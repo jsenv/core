@@ -1,6 +1,6 @@
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
 import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.js"
-import { objectToPromiseAll } from "./promiseHelper.js"
+import { namedPromiseAll } from "./promiseHelper.js"
 import { objectMapValue } from "./objectHelper.js"
 import { jsCompile } from "./jsCompile/index.js"
 import { jsCompileToService } from "./jsCompileToService/index.js"
@@ -28,7 +28,7 @@ export const createJsCompileService = async ({
     pluginCompatMap,
   })
 
-  const { filesToCover } = await objectToPromiseAll({
+  const { filesToCover } = await namedPromiseAll({
     writeCompileMap: fileWriteFromString(
       `${localRoot}/${compileInto}/compileMap.json`,
       JSON.stringify(compileMap, null, "  "),

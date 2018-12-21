@@ -35,13 +35,16 @@ const exec = async () => {
 
   const remoteRoot = server.origin
   const verbose = true
-  return executeFileOnPlatform(file, {
-    launchPlatform: () =>
+  return executeFileOnPlatform(
+    file,
+    () =>
       launchChromium({ cancellationToken, localRoot, headless: false, remoteRoot, compileInto }),
-    platformTypeForLog: "chromium browser",
-    cancellationToken,
-    verbose,
-  }).finally(() => {
+    {
+      platformTypeForLog: "chromium browser",
+      cancellationToken,
+      verbose,
+    },
+  ).finally(() => {
     cancel("done")
   })
 }
