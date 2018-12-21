@@ -1,35 +1,17 @@
+// https://github.com/jshttp/mime-db/blob/master/src/apache-types.json
+
 import { ressourceToExtension } from "../urlHelper.js"
+import contentTypeMap from "./contentTypeMap.json"
 
 const contentTypeDefault = "application/octet-stream"
-
-const extensionToContentTypeMap = {
-  // text
-  txt: "text/plain",
-  html: "text/html",
-  css: "text/css",
-  appcache: "text/cache-manifest",
-  // application
-  js: "application/javascript",
-  json: "application/json",
-  map: "application/json",
-  xml: "application/xml",
-  gz: "application/x-gzip",
-  zip: "application/zip",
-  pdf: "application/pdf",
-  // image
-  png: "image/png",
-  gif: "image/gif",
-  jpg: "image/jpeg",
-  // audio
-  mp3: "audio/mpeg",
-}
 
 export const ressourceToContentType = (ressource) => {
   const extension = ressourceToExtension(ressource)
 
-  if (extension in extensionToContentTypeMap) {
-    return extensionToContentTypeMap[extension]
-  }
+  const contentTypeForExtension = Object.keys(contentTypeMap).find((contentTypeName) => {
+    const contentType = contentTypeMap[contentTypeName]
+    return contentType.extensions && contentTypeMap.extensions.indexOf(extension) > -1
+  })
 
-  return contentTypeDefault
+  return contentTypeForExtension || contentTypeDefault
 }
