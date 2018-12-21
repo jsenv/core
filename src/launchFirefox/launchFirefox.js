@@ -1,3 +1,4 @@
+// to be rewritten, maybe using https://www.npmjs.com/package/puppeteer-firefox ?
 // https://www.npmjs.com/package/selenium-webdriver
 
 // http://seleniumhq.github.io/selenium/docs/api/javascript/module/selenium-webdriver/index_exports_WebDriver.html
