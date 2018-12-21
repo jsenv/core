@@ -1,55 +1,50 @@
 import { projectConfigToJsCompileService } from "../createJsCompileService.js"
 import { open as serverCompileOpen } from "../server-compile/index.js"
 import { predicateCompose } from "../functionHelper.js"
-import { testDescriptionToPlatformResultMap } from "./testDescriptionToPlatformResultMap.js"
+import { executionPlanToPlatformResultMap } from "./executionPlanToPlatformResultMap.js"
 import { platformCoverageMapToCoverageMap } from "./platformCoverageMapToCoverageMap.js"
 import { platformResultMapToCoverageMap } from "./platformResultMapToCoverageMap.js"
 
-const testDescriptionToIsTestFile = (testDescription) => {
-  const testFiles = new Set()
+const executionPlanToFileIsInsidePlan = (executionPlan) => {
+  const files = new Set()
 
-  Object.keys(testDescription).forEach((name) => {
-    testDescription[name].files.forEach((file) => {
-      testFiles.add(file)
+  Object.keys(executionPlan).forEach((name) => {
+    executionPlan[name].files.forEach((file) => {
+      files.add(file)
     })
   })
 
-  return (file) => testFiles.has(file)
+  return (file) => files.has(file)
 }
 
-export const testDescriptionToCoverageMap = async (
-  testDescription,
+export const executionPlanToCoverageMap = async (
+  executionPlan,
   {
     localRoot,
     compileInto,
     pluginMap,
-    compileMap,
+
     instrumentPredicate,
     cacheIgnore,
     cacheTrackHit,
     cacheStrategy,
-    assetCacheIgnore,
-    assetCacheStrategy,
     watchPredicate = () => true,
     listFilesToCover = () => [],
   },
   { cancellationToken, watch = false },
 ) => {
-  const isTestFile = testDescriptionToIsTestFile(testDescription)
+  const fileIsInsidePlan = executionPlanToFileIsInsidePlan(executionPlan)
   const jsCompileService = await projectConfigToJsCompileService({
     localRoot,
     compileInto,
     pluginMap,
-    compileMap,
     instrumentPredicate: predicateCompose(
       instrumentPredicate,
-      (file) => isTestFile(file) === false,
+      (file) => fileIsInsidePlan(file) === false,
     ),
     cacheIgnore,
     cacheTrackHit,
     cacheStrategy,
-    assetCacheIgnore,
-    assetCacheStrategy,
   })
 
   const [server, filesToCover] = await Promise.all([
@@ -67,7 +62,7 @@ export const testDescriptionToCoverageMap = async (
     listFilesToCover(),
   ])
 
-  const platformResultMap = await testDescriptionToPlatformResultMap(testDescription, {
+  const platformResultMap = await executionPlanToPlatformResultMap(executionPlan, {
     cancellationToken,
     localRoot,
     compileInto,
@@ -80,7 +75,7 @@ export const testDescriptionToCoverageMap = async (
   const coverageMap = await platformCoverageMapToCoverageMap(platformCoverageMap, {
     cancellationToken,
     localRoot,
-    filesToCover: filesToCover.filter((file) => isTestFile(file) === false),
+    filesToCover: filesToCover.filter((file) => fileIsInsidePlan(file) === false),
   })
 
   return coverageMap

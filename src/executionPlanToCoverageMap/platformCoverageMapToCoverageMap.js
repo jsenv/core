@@ -1,12 +1,32 @@
-import { cancellationTokenToPromise } from "@dmail/cancellation"
 import { jsCompile, createInstrumentPlugin } from "../jsCompile/index.js"
 import { readFile } from "../fileHelper.js"
+
+export const platformCoverageMapToCoverageMap = async (
+  platformCoverageMap,
+  { cancellationToken, localRoot, filesToCover = [] },
+) => {
+  const filesMissed = platformCoverageMapToFilesMissed(platformCoverageMap, filesToCover)
+
+  const missedCoverageMap = {}
+
+  await Promise.all(
+    filesMissed.map(async (file) => {
+      const emptyCoverage = await fileToEmptyCoverage({ cancellationToken, localRoot, file })
+      missedCoverageMap[file] = emptyCoverage
+    }),
+  )
+
+  return {
+    ...platformCoverageMap,
+    ...missedCoverageMap,
+  }
+}
 
 const platformCoverageMapToFilesMissed = (coverageMap, filesToCover) =>
   filesToCover.filter((file) => file in coverageMap === false)
 
 const fileToEmptyCoverage = async ({ cancellationToken, localRoot, file }) => {
-  await cancellationTokenToPromise(cancellationToken)
+  cancellationToken.throwIfRequested()
 
   try {
     const inputSource = await readFile(`${localRoot}/${file}`)
@@ -32,30 +52,11 @@ const fileToEmptyCoverage = async ({ cancellationToken, localRoot, file }) => {
 
     return coverage
   } catch (e) {
+    // why do we consider parse error returns an empty coveragemap ?
+    // I think this is a valid reason to throw and we should not ignore that error
     if (e && e.name === "PARSE_ERROR") {
       return {}
     }
     throw e
-  }
-}
-
-export const platformCoverageMapToCoverageMap = async (
-  platformCoverageMap,
-  { cancellationToken, localRoot, filesToCover = [] },
-) => {
-  const filesMissed = platformCoverageMapToFilesMissed(platformCoverageMap, filesToCover)
-
-  const missedCoverageMap = {}
-
-  await Promise.all(
-    filesMissed.map(async (file) => {
-      const emptyCoverage = await fileToEmptyCoverage({ cancellationToken, localRoot, file })
-      missedCoverageMap[file] = emptyCoverage
-    }),
-  )
-
-  return {
-    ...platformCoverageMap,
-    ...missedCoverageMap,
   }
 }

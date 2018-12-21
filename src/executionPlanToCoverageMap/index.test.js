@@ -8,6 +8,7 @@ import { testDescriptorToCoverageMapForProject } from "./testDescriptorToCoverag
 const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = "build"
 const watch = false
+// todo: rename executionPlan, pass launchPlatform instead of createExecue
 const testDescriptor = {
   node: {
     createExecute: createExecuteOnNode,

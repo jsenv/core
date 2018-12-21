@@ -1,31 +1,10 @@
 import { platformsToResultMap } from "./platformsToResultMap.js"
 
-const testDescriptionToPlatforms = (
-  testDescription,
-  { localRoot, compileInto, remoteRoot, watch },
-) => {
-  return Object.keys(testDescription).map((platformName) => {
-    const { createExecute, files } = testDescription[platformName]
-
-    return {
-      name: platformName,
-      execute: createExecute({
-        localRoot,
-        remoteRoot,
-        compileInto,
-        hotreload: watch,
-        hotreloadSSERoot: remoteRoot,
-      }),
-      files,
-    }
-  })
-}
-
-export const testDescriptionToPlatformResultMap = (
-  testDescription,
+export const executionPlanToPlatformResultMap = (
+  executionPlan,
   { cancellationToken, localRoot, compileInto, remoteRoot, watch },
 ) => {
-  const platforms = testDescriptionToPlatforms(testDescription, {
+  const platforms = executionPlanToPlatforms(executionPlan, {
     localRoot,
     compileInto,
     remoteRoot,
@@ -35,6 +14,25 @@ export const testDescriptionToPlatformResultMap = (
   return platformsToResultMap({
     cancellationToken,
     platforms,
+  })
+}
+
+const executionPlanToPlatforms = (executionPlan, { localRoot, compileInto, remoteRoot, watch }) => {
+  return Object.keys(executionPlan).map((platformName) => {
+    const { createExecute, files } = executionPlan[platformName]
+
+    return {
+      name: platformName,
+      // todo: this is not createExecute anymore but sthing like launchPlatform
+      execute: createExecute({
+        localRoot,
+        remoteRoot,
+        compileInto,
+        hotreload: watch,
+        hotreloadSSERoot: remoteRoot,
+      }),
+      files,
+    }
   })
 }
 

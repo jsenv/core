@@ -7,6 +7,7 @@ export const platformsToResultMap = async ({
   platforms,
 }) => {
   const results = await promiseSequence(
+    // todo: not execute, but launchPlatform
     platforms.map(({ files, execute }) => () => {
       return filesToResultMap(files, execute, { cancellationToken })
     }),

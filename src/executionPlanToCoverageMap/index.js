@@ -16,4 +16,4 @@ export const coverageMapHTML = (coverageMap) => {
   reporter.write(collector, false, () => {})
 }
 
-export { testDescriptionToCoverageMap } from "./testDescriptionToCoverageMap.js"
+export { executionPlanToCoverageMap } from "./executionPlanToCoverageMap.js"
