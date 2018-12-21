@@ -36,8 +36,8 @@ const exec = async ({ cancellationToken }) => {
     file,
     () => launchNode({ cancellationToken, localRoot, remoteRoot, compileInto }),
     {
-      platformTypeForLog: "node process",
       cancellationToken,
+      platformTypeForLog: "node process",
       verbose,
     },
   ).finally(() => {

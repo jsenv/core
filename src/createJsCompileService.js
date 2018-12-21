@@ -1,6 +1,5 @@
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
 import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.js"
-import { namedPromiseAll } from "./promiseHelper.js"
 import { objectMapValue } from "./objectHelper.js"
 import { jsCompile } from "./jsCompile/index.js"
 import { jsCompileToService } from "./jsCompileToService/index.js"
@@ -10,15 +9,14 @@ export const createJsCompileService = async ({
   localRoot,
   compileInto,
   pluginMap,
-  platformUsageMap,
   pluginCompatMap,
-  localCacheDisabled,
+  platformUsageMap,
+  localCacheStrategy,
   localCacheTrackHit,
   cacheStrategy,
-  assetCacheStrategy,
+  instrumentPredicate,
   watch,
   watchPredicate,
-  listFilesToCover = () => [],
 }) => {
   if (!pluginMap) throw new Error(`pluginMap is required`)
 
@@ -27,28 +25,20 @@ export const createJsCompileService = async ({
     platformUsageMap,
     pluginCompatMap,
   })
-
-  const { filesToCover } = await namedPromiseAll({
-    writeCompileMap: fileWriteFromString(
-      `${localRoot}/${compileInto}/compileMap.json`,
-      JSON.stringify(compileMap, null, "  "),
-    ),
-    filesToCover: listFilesToCover(),
-  })
-
   const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
-
-  const instrumentPredicate = (file) => filesToCover.indexOf(file) > -1
+  await fileWriteFromString(
+    `${localRoot}/${compileInto}/compileMap.json`,
+    JSON.stringify(compileMap, null, "  "),
+  )
 
   const jsCompileService = jsCompileToService(jsCompile, {
     cancellationToken,
     localRoot,
     compileInto,
     compileParamMap,
-    localCacheDisabled,
+    localCacheStrategy,
     localCacheTrackHit,
     cacheStrategy,
-    assetCacheStrategy,
     instrumentPredicate,
     watch,
     watchPredicate,

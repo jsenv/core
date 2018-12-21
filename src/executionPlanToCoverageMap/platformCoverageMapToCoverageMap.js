@@ -1,10 +1,12 @@
 import { jsCompile, createInstrumentPlugin } from "../jsCompile/index.js"
 import { readFile } from "../fileHelper.js"
 
-export const platformCoverageMapToCoverageMap = async (
+export const platformCoverageMapToCoverageMap = async ({
+  cancellationToken,
+  localRoot,
   platformCoverageMap,
-  { cancellationToken, localRoot, filesToCover = [] },
-) => {
+  filesToCover,
+}) => {
   const filesMissed = platformCoverageMapToFilesMissed(platformCoverageMap, filesToCover)
 
   const missedCoverageMap = {}
