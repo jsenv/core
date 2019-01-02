@@ -37,10 +37,11 @@ const plugins = pluginMapToPluginsForPlatform(pluginMap, "node", "8.0.0")
 const metaMap = patternGroupToMetaMap({
   compile: {
     "**/*.js": true,
+    "**/*.js/**": false,
+    "src/__test__/file-with-syntax-error.js": false,
     node_modules: false, // eslint-disable-line camelcase
     dist: false,
     script: false,
-    config: false,
     ".eslintrc.js": false,
     "prettier.config.js": false,
   },
