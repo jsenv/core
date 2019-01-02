@@ -8,25 +8,23 @@ export const guard = (predicate, fn) => (...args) => {
 export const predicateCompose = (...predicates) => (...args) =>
   predicates.every((predicate) => predicate(...args))
 
-export const createStore = (
-  {
-    compare = (args, savedArgs) => {
-      if (savedArgs.length !== args.length) {
+export const createStore = ({
+  compare = (args, savedArgs) => {
+    if (savedArgs.length !== args.length) {
+      return false
+    }
+    return savedArgs.every((savedArg, index) => {
+      const arg = args[index]
+      if (arg !== savedArg) {
+        // should be a bit more powerfull to compare shallow here
         return false
       }
-      return savedArgs.every((savedArg, index) => {
-        const arg = args[index]
-        if (arg !== savedArg) {
-          // should be a bit more powerfull to compare shallow here
-          return false
-        }
-        return true
-      })
-    },
-    maxLength = 100,
-    transform = (v) => v,
-  } = {},
-) => {
+      return true
+    })
+  },
+  maxLength = 100,
+  transform = (v) => v,
+} = {}) => {
   const entries = []
 
   const restore = (...args) => {

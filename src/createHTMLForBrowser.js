@@ -60,9 +60,12 @@ const remoteScriptToHTML = ({ url, async = false }) => {
   return `<script src="${url}" ${async ? "async " : ""}></script>`
 }
 
-export const createHTMLForBrowser = (
-  { title = "Untitled", charset = "utf-8", scriptRemoteList = [], scriptInlineList = [] } = {},
-) => {
+export const createHTMLForBrowser = ({
+  title = "Untitled",
+  charset = "utf-8",
+  scriptRemoteList = [],
+  scriptInlineList = [],
+} = {}) => {
   return `<!doctype html>
 
 <head>

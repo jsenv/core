@@ -57,15 +57,13 @@ const createEventHistory = ({ limit } = {}) => {
 }
 
 // https://www.html5rocks.com/en/tutorials/eventsource/basics/
-export const createSSERoom = (
-  {
-    keepaliveDuration = 30 * 1000,
-    retryDuration = 1 * 1000,
-    historyLength = 1000,
-    maxLength = 100, // max 100 users accepted
-    verbose = false,
-  } = {},
-) => {
+export const createSSERoom = ({
+  keepaliveDuration = 30 * 1000,
+  retryDuration = 1 * 1000,
+  historyLength = 1000,
+  maxLength = 100, // max 100 users accepted
+  verbose = false,
+} = {}) => {
   const log = (...args) => {
     if (verbose === false) {
       return

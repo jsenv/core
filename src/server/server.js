@@ -19,31 +19,29 @@ export const originAsString = ({ protocol, ip, port }) => {
   return url.origin
 }
 
-export const open = async (
-  {
-    cancellationToken = createCancellationToken(),
-    protocol = "http",
-    ip = "127.0.0.1",
-    port = 0, // aasign a random available port
-    forcePort = false,
-    // when port is https you must provide { privateKey, certificate } under signature
-    signature,
-    // auto close the server when the process exits
-    autoCloseOnExit = true,
-    // auto close when server respond with a 500
-    autoCloseOnError = true,
-    // auto close the server when an uncaughtException happens
-    // false by default because stack trace is messed up
-    // and I don't like to have code executed on error
-    // and the processUnhandledException implementation is a bit old
-    // and complex. it would deserve a rewrite
-    autoCloseOnCrash = false,
-    requestToResponse = () => null,
-    verbose = true,
-    openedMessage = ({ origin }) => `server listening at ${origin}`,
-    closedMessage = (reason) => `server closed because ${reason}`,
-  } = {},
-) => {
+export const open = async ({
+  cancellationToken = createCancellationToken(),
+  protocol = "http",
+  ip = "127.0.0.1",
+  port = 0, // aasign a random available port
+  forcePort = false,
+  // when port is https you must provide { privateKey, certificate } under signature
+  signature,
+  // auto close the server when the process exits
+  autoCloseOnExit = true,
+  // auto close when server respond with a 500
+  autoCloseOnError = true,
+  // auto close the server when an uncaughtException happens
+  // false by default because stack trace is messed up
+  // and I don't like to have code executed on error
+  // and the processUnhandledException implementation is a bit old
+  // and complex. it would deserve a rewrite
+  autoCloseOnCrash = false,
+  requestToResponse = () => null,
+  verbose = true,
+  openedMessage = ({ origin }) => `server listening at ${origin}`,
+  closedMessage = (reason) => `server closed because ${reason}`,
+} = {}) => {
   if (port === 0 && forcePort) {
     throw new Error(`no need to pass forcePort when port is 0`)
   }

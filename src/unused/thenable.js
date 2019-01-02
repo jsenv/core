@@ -47,14 +47,12 @@ const callThenable = (thenable, valueCallback, errorCallback) => {
   }
 }
 
-export const createThenableConstructor = (
-  {
-    addMicrotask = defaultOptions.addMicrotask,
-    provideFinally = defaultOptions.provideFinally,
-    rejectionUnhandled,
-    rejectionHandled,
-  } = {},
-) => {
+export const createThenableConstructor = ({
+  addMicrotask = defaultOptions.addMicrotask,
+  provideFinally = defaultOptions.provideFinally,
+  rejectionUnhandled,
+  rejectionHandled,
+} = {}) => {
   const ThenableConstructor = function(execute) {
     // eslint-disable-next-line no-use-before-define
     return createThenable(execute)

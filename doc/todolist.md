@@ -1,11 +1,11 @@
 # Things to do
 
-* [x] deprecate usage of `@dmail/signal` in favor of promise (openCompileServer must return a promise)
-* [x] retest enqueueCall now it's using promise instead of actions
-* [x] retest open compile sever now it's using promise instead of actions
-* [x] Create a new project called `poc-dev-signal`
-* [x] `poc-dev-signal` must have this project and `@dmail/signal` as dependency
-* [x] `poc-dev-signal/index.js` will must be something like
+- [x] deprecate usage of `@dmail/signal` in favor of promise (openCompileServer must return a promise)
+- [x] retest enqueueCall now it's using promise instead of actions
+- [x] retest open compile sever now it's using promise instead of actions
+- [x] Create a new project called `poc-dev-signal`
+- [x] `poc-dev-signal` must have this project and `@dmail/signal` as dependency
+- [x] `poc-dev-signal/index.js` will must be something like
 
 ```javascript
 import { createSignal } from "@dmail/signal"
@@ -15,11 +15,11 @@ console.log("Hello world")
 export default createSignal.name
 ```
 
-* [x] Run `poc-dev-signal/index.js` on node ensuring `'Hello world'` is logged and export default is correct
-* [x] Run `poc-dev-signal/index.js` on chrome headless ensuring `'Hello world'` is logged and export default is correct
-* [x] Run `poc-dev-signal/index.js` on chrome with ui ensuring `'Hello world'` is logged and export default is correct
-* [ ] Implement code instrumentaton for coverage in this project
-* [ ] Create `poc-dev-signal/index.test.js` with something like this inside
+- [x] Run `poc-dev-signal/index.js` on node ensuring `'Hello world'` is logged and export default is correct
+- [x] Run `poc-dev-signal/index.js` on chrome headless ensuring `'Hello world'` is logged and export default is correct
+- [x] Run `poc-dev-signal/index.js` on chrome with ui ensuring `'Hello world'` is logged and export default is correct
+- [ ] Implement code instrumentaton for coverage in this project
+- [ ] Create `poc-dev-signal/index.test.js` with something like this inside
 
 ```javascript
 import name from "./index.js"
@@ -31,27 +31,27 @@ if (name !== "createSignal") {
 console.log("poc-dev-signal tests passed")
 ```
 
-* [ ] Run `poc-dev-signal/index.test.js` on node with coverage and ensure coverage report is correct
-* [ ] Run `poc-dev-signal/index.test.js` on chrome headless with coverage and ensure coverage report is correct
-* [ ] Hot reloading work in node
+- [ ] Run `poc-dev-signal/index.test.js` on node with coverage and ensure coverage report is correct
+- [ ] Run `poc-dev-signal/index.test.js` on chrome headless with coverage and ensure coverage report is correct
+- [ ] Hot reloading work in node
 
-- Run a command like `jsrun poc-dev-signal/index.test.js --watch --platform=node`.
-- Terminal opens and `poc-dev-signal tests passed` must be logged once.
-- Terminal stays open. (You can close it using ctrl+c).
-- Change `poc-dev-signal/index.test.js` using `ctrl+s`
-- Look terminal, `poc-dev-signal tests passed` must be logged twice.
+* Run a command like `jsrun poc-dev-signal/index.test.js --watch --platform=node`.
+* Terminal opens and `poc-dev-signal tests passed` must be logged once.
+* Terminal stays open. (You can close it using ctrl+c).
+* Change `poc-dev-signal/index.test.js` using `ctrl+s`
+* Look terminal, `poc-dev-signal tests passed` must be logged twice.
 
-* [ ] make hot reloading work in chrome
+- [ ] make hot reloading work in chrome
 
-- Run a command like `jsrun poc-dev-signal/index.test.js --watch --platform=chrome`.
-- Terminal opens
-- Chrome opens
-- Look chrome console, `poc-dev-signal tests passed` must be logged once.
-- Look terminal, `poc-dev-signal tests passed` must be logged once.
-- Terminal stays open. (You can close it using ctrl+c).
-- Change `poc-dev-signal/index.test.js` using `ctrl+s`.
-- Look chrome console `poc-dev-signal tests passed` must be logged twice.
-- Look terminal, `poc-dev-signal tests passed` must be logged twice.
+* Run a command like `jsrun poc-dev-signal/index.test.js --watch --platform=chrome`.
+* Terminal opens
+* Chrome opens
+* Look chrome console, `poc-dev-signal tests passed` must be logged once.
+* Look terminal, `poc-dev-signal tests passed` must be logged once.
+* Terminal stays open. (You can close it using ctrl+c).
+* Change `poc-dev-signal/index.test.js` using `ctrl+s`.
+* Look chrome console `poc-dev-signal tests passed` must be logged twice.
+* Look terminal, `poc-dev-signal tests passed` must be logged twice.
 
 ## Planned features
 
@@ -82,7 +82,7 @@ export const bar = "bar"
   <head></head>
   <body>
     <script type="module">
-      import { foo } from './a.js'
+      import { foo } from "./a.js"
 
       alert(foo)
     </script>
@@ -101,5 +101,5 @@ export const bar = "bar"
 
 Be careful here:
 
-* static `import { foo } from './a.js'` will have its `export const bar = 'bar'` removed by tree shaking.
-* dynamic `import('./a.js')` need an other representation of `a.js` because it needs both `foo` and `bar` export.
+- static `import { foo } from './a.js'` will have its `export const bar = 'bar'` removed by tree shaking.
+- dynamic `import('./a.js')` need an other representation of `a.js` because it needs both `foo` and `bar` export.

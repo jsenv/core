@@ -48,10 +48,12 @@ export const promiseSequence = (callbacks, cancellationToken = createCancellatio
           `promiseSequence arguments must be function, got ${callback} at ${index}`,
         )
       }
-      return previous.then(() => callback()).then((value) => {
-        values.push(value)
-        return cancellationTokenToPromise(cancellationToken)
-      })
+      return previous
+        .then(() => callback())
+        .then((value) => {
+          values.push(value)
+          return cancellationTokenToPromise(cancellationToken)
+        })
     }, cancellationTokenToPromise(cancellationToken))
     .then(() => values)
 }

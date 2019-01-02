@@ -26,7 +26,10 @@ export const populateNodeResponse = (
     callCancel(body)
     nodeResponse.end()
   } else {
-    pipe(body, nodeResponse)
+    pipe(
+      body,
+      nodeResponse,
+    )
     nodeResponse.once("close", () => {
       // close body in case nodeResponse is prematurely closed
       // while body is writing

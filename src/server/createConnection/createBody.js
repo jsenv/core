@@ -15,7 +15,10 @@ const stringToArrayBuffer = (string) => {
 
 export const createBody = (data) => {
   const twoWayStream = createTwoWayStream()
-  pipe(data, twoWayStream)
+  pipe(
+    data,
+    twoWayStream,
+  )
 
   const readAsString = () => {
     return twoWayStream.promise.then((buffers) => buffers.join(""))

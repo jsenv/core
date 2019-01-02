@@ -53,6 +53,11 @@ module.exports = forEachRessourceMatching({
   metaMap,
   predicate: ({ compile }) => compile,
   callback: async (ressource) => {
+    // we should have an option so that when file contains a syntaxError
+    // it is not a problem, the file is copied with the syntaxError
+    // and is not transpiled because
+    // some file needs to be in dist with the syntaxError
+    // for testing
     const { code, map } = await compileFile(ressource, {
       localRoot,
       plugins,
