@@ -43,7 +43,7 @@
 		"systemjs": "2.0.2"
 	},
 	"devDependencies": {
-		"@dmail/assert": "1.0.0",
+		"@dmail/assert": "github:dmail/assert",
 		"@dmail/prettiest": "github:dmail/prettiest",
 		"@dmail/project-eslint-config": "github:dmail/project-eslint-config",
 		"@dmail/project-prettier-config": "github:dmail/project-prettier-config",
@@ -53,15 +53,13 @@
 		"eslint": "5.1.0",
 		"eslint-plugin-import": "2.6.0",
 		"mock-fs": "4.4.2",
-		"prettier": "1.9.1",
+		"prettier": "1.15.3",
 		"rimraf": "2.6.2"
 	},
 	"scripts": {
 		"lint": "eslint .",
-		"format": "prettiest",
+		"format": "node ./script/format.js",
 		"compile": "node ./script/compile.js",
-		"compile-list": "node ./script/compile-list.js",
-		"compile-project": "node ./script/compile-project.js",
 		"clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
 		"dist": "npm run clean && npm run compile",
 		"test": "npm run dist && node ./dist/index.test.js",

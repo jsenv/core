@@ -1,12 +1,5 @@
 module.exports = {
   metas: {
-    compile: {
-      "index.js": true,
-      "src/**/*.js": true,
-      "bin/**/*.js": true,
-      "src/__test__/file-with-syntax-error.js": false,
-      "src/platform/browser/createPlatformHooksUsingImport.js": false,
-    },
     cover: {
       "index.js": true,
       "src/**/*.js": true,
@@ -20,16 +13,6 @@ module.exports = {
       // eslint-disable-next-line camelcase
       // node_modules: false,
       "**/*.map": false,
-    },
-    prettify: {
-      "index.js": true,
-      "src/**/*.js": true,
-      "bin/**/*.js": true,
-      "script/**/*.js": true,
-      "**/*.md": true,
-      "**/*.json": true,
-      "package.json": false,
-      "package-lock.json": false,
     },
   },
 }
