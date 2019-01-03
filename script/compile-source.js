@@ -1,13 +1,16 @@
 const { transformAsync } = require("@babel/core")
-const { patternGroupToMetaMap, forEachRessourceMatching } = require("@dmail/project-structure")
+const {
+  patternGroupToMetaMap,
+  forEachRessourceMatching,
+  ressourceToMeta,
+} = require("@dmail/project-structure")
 const {
   fileSystemWriteCompileResult,
   pluginOptionMapToPluginMap,
   pluginMapToPluginsForPlatform,
 } = require("@dmail/project-structure-compile-babel")
-const { fileWriteFromString } = require("../dist/src/fileHelper.js")
+const { fileRead, fileWrite, fileCopy } = require("@dmail/helper")
 const { localRoot } = require("./util.js")
-const { readFile } = require("./readFile.js")
 
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-commonjs": {},
@@ -39,6 +42,7 @@ const plugins = pluginMapToPluginsForPlatform(pluginMap, "node", "8.0.0")
 const metaMap = patternGroupToMetaMap({
   compile: {
     "**/*.js": true,
+    "**/*.json": "copy",
     node_modules: false, // eslint-disable-line camelcase
     dist: false,
     build: false,
@@ -56,7 +60,13 @@ module.exports = forEachRessourceMatching({
   metaMap,
   predicate: ({ compile }) => compile,
   callback: async (ressource) => {
-    const source = await readFile(`${localRoot}/${ressource}`)
+    const meta = ressourceToMeta(metaMap, ressource)
+    if (meta.compile === "copy") {
+      await fileCopy(`${localRoot}/${ressource}`, `${localRoot}/${outputFolder}/${ressource}`)
+      return
+    }
+
+    const source = await fileRead(`${localRoot}/${ressource}`)
 
     try {
       const { code, map } = await transformAsync(source, {
@@ -82,7 +92,7 @@ module.exports = forEachRessourceMatching({
     } catch (e) {
       if (e && e.code === "BABEL_PARSE_ERROR") {
         console.warn(`syntax error in ${ressource}`)
-        await fileWriteFromString(`${localRoot}/${outputFolder}/${ressource}`, source)
+        await fileWrite(`${localRoot}/${outputFolder}/${ressource}`, source)
         console.log(`${ressource} -> ${outputFolder}/${ressource}`)
       } else {
         throw e

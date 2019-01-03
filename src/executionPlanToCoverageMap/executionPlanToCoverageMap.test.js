@@ -28,14 +28,18 @@ const test = async ({ listFilesToCover }) => {
     compileService: jsCompileService,
   })
 
+  const remoteRoot = server.origin
+
+  const nodeLaunch = () => launchNode({ remoteRoot, localRoot, compileInto })
+  const chromiumLaunch = () => launchChromium({ remoteRoot, localRoot, compileInto })
+
   const executionPlan = {
     "src/__test__/file.test.js": {
       node: {
-        // that launch here must receive the localRoot etc...
-        launch: launchNode,
+        launch: nodeLaunch,
       },
       chromium: {
-        launch: launchChromium,
+        launch: chromiumLaunch,
       },
     },
   }
@@ -45,7 +49,6 @@ const test = async ({ listFilesToCover }) => {
     compileInto,
     filesToCover,
   })
-  debugger
 
   assert({
     actual: coverageMap["index.js"],
