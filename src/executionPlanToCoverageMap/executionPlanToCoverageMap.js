@@ -6,9 +6,9 @@ export const executionPlanToCoverageMap = async (
   executionPlan,
   { cancellationToken, localRoot, filesToCover = [] },
 ) => {
-  const fileToExecuteAndCover = filesToCover.find((file) => file in executionPlan)
-  if (fileToExecuteAndCover)
-    throw new Error(`${fileToExecuteAndCover} must be covered but is also part of execution plan`)
+  // I think it is an error, it would be strange, for a given file
+  // to be both covered and executed
+  ensureNoFileIsBothCoveredAndExecuted({ filesToCover, executionPlan })
 
   const result = await executePlan(executionPlan, {
     cancellationToken,
@@ -43,4 +43,10 @@ export const executionPlanToCoverageMap = async (
   }
 
   return coverageMap
+}
+
+const ensureNoFileIsBothCoveredAndExecuted = ({ filesToCover, executionPlan }) => {
+  const fileToExecuteAndCover = filesToCover.find((file) => file in executionPlan)
+  if (fileToExecuteAndCover)
+    throw new Error(`${fileToExecuteAndCover} must be covered but is also part of execution plan`)
 }
