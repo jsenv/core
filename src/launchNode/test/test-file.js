@@ -32,18 +32,20 @@ const exec = async ({ cancellationToken }) => {
 
   const remoteRoot = server.origin
   const verbose = true
-  return executeFileOnPlatform(
-    file,
-    () => launchNode({ cancellationToken, localRoot, remoteRoot, compileInto }),
-    {
-      cancellationToken,
-      platformTypeForLog: "node process",
-      verbose,
-    },
-  ).finally(() => {
+  try {
+    await executeFileOnPlatform(
+      file,
+      () => launchNode({ cancellationToken, localRoot, remoteRoot, compileInto }),
+      {
+        cancellationToken,
+        platformTypeForLog: "node process",
+        verbose,
+      },
+    )
+  } finally {
     // close server to let process end if child ends
     server.close()
-  })
+  }
 }
 
 exec({})

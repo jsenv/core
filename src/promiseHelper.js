@@ -1,4 +1,4 @@
-import { createCancellationToken, cancellationTokenToPromise } from "@dmail/cancellation"
+import { createCancellationToken, createOperation } from "@dmail/cancellation"
 
 export const promiseMatch = (callbacks, data, predicate) => {
   return new Promise((resolve, reject) => {
@@ -38,24 +38,24 @@ export const promiseTry = (callback) => {
   })
 }
 
-export const promiseSequence = (callbacks, cancellationToken = createCancellationToken()) => {
+export const promiseSequence = async (callbacks, cancellationToken = createCancellationToken()) => {
   const values = []
 
-  return callbacks
-    .reduce((previous, callback, index) => {
-      if (typeof callback !== "function") {
-        throw new TypeError(
-          `promiseSequence arguments must be function, got ${callback} at ${index}`,
-        )
-      }
-      return previous
-        .then(() => callback())
-        .then((value) => {
-          values.push(value)
-          return cancellationTokenToPromise(cancellationToken)
-        })
-    }, cancellationTokenToPromise(cancellationToken))
-    .then(() => values)
+  await callbacks.reduce((previous, callback, index) => {
+    if (typeof callback !== "function")
+      throw new TypeError(`promiseSequence arguments must be function, got ${callback} at ${index}`)
+
+    return createOperation({
+      cancellationToken,
+      start: async () => {
+        await previous
+        const value = await callback()
+        values.push(value)
+      },
+    })
+  }, Promise.resolve())
+
+  return values
 }
 
 export const promiseConcurrent = (
@@ -67,24 +67,28 @@ export const promiseConcurrent = (
   const firstChunk = list.slice(0, maxParallelExecution)
   let globalIndex = maxParallelExecution - 1
 
-  const execute = (data, index) => {
-    return promiseTry(() => callback(data)).then((value) => {
-      results[index] = value
-
-      return cancellationTokenToPromise(cancellationToken).then(() => {
+  const execute = async (data, index) => {
+    return createOperation({
+      cancellationToken,
+      start: async () => {
+        const value = await callback(data)
+        results[index] = value
         if (globalIndex < list.length - 1) {
           globalIndex++
           return execute(list[globalIndex], globalIndex)
         }
         return undefined
-      })
+      },
     })
   }
 
-  return cancellationTokenToPromise(cancellationToken).then(() => {
-    const promises = firstChunk.map((data, index) => execute(data, index))
-    const promise = Promise.all(promises).then(() => results)
-    return promise
+  return createOperation({
+    cancellationToken,
+    start: async () => {
+      const promises = firstChunk.map((data, index) => execute(data, index))
+      await Promise.all(promises)
+      return results
+    },
   })
 }
 
