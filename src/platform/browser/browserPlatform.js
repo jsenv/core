@@ -94,30 +94,27 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
       ? fileToRemoteInstrumentedFile(file)
       : fileToRemoteCompiledFile(file)
 
-    return importFile(remoteCompiledFile).then(
-      (namespace) => {
-        if (collectCoverage) {
-          return teardownForOutputAndCoverageMap(namespace)
-        }
-        return teardownForOutput(namespace)
-      },
-      (error) => {
-        const meta = rejectionValueToMeta(error, {
-          fileToRemoteSourceFile,
-          hrefToFile,
-        })
+    try {
+      const namespace = await importFile(remoteCompiledFile)
+      if (collectCoverage) {
+        return teardownForOutputAndCoverageMap(namespace)
+      }
+      return teardownForOutput(namespace)
+    } catch (error) {
+      const meta = rejectionValueToMeta(error, {
+        fileToRemoteSourceFile,
+        hrefToFile,
+      })
 
-        const html = `
-          <h1>
-            <a href="${fileToRemoteSourceFile(file)}">${file}</a> import rejected
-          </h1>
-          <pre style="border: 1px solid black">${meta.data}</pre>
-          `
-        appendHMTL(html, document.body)
-
-        return Promise.reject(error)
-      },
-    )
+      const html = `
+        <h1>
+          <a href="${fileToRemoteSourceFile(file)}">${file}</a> import rejected
+        </h1>
+        <pre style="border: 1px solid black">${meta.data}</pre>
+        `
+      appendHMTL(html, document.body)
+      throw error
+    }
   }
 }
 

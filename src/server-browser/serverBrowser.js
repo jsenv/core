@@ -11,15 +11,14 @@ import {
 import { getBrowserPlatformRemoteURL } from "../platform/browser/remoteURL.js"
 
 export const listFilesToExecute = (localRoot) => {
-  return forEachRessourceMatching(
+  return forEachRessourceMatching({
     localRoot,
-    {
+    metaMap: {
       "index.js": { js: true },
       "src/**/*.js": { js: true },
     },
-    ({ js }) => js,
-    (file) => file,
-  )
+    predicate: ({ js }) => js,
+  })
 }
 
 const getIndexPageHTML = async ({ localRoot }) => {

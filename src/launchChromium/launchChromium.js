@@ -103,11 +103,12 @@ export const launchChromium = async ({
       body: html,
     })
     await page.goto(origin)
-    return page.evaluate(
+    const result = await page.evaluate(
       (file, options) => window.__platform__.importFile(file, options),
       file,
       options,
     )
+    return result
   }
 
   return { disconnected, errored, closed, close, fileToExecuted }

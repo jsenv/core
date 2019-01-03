@@ -1,18 +1,22 @@
+import { assert } from "@dmail/assert"
+import { createCancellationSource } from "@dmail/cancellation"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../localRoot.js"
 import { createJsCompileService } from "../../createJsCompileService.js"
 import { open as compileServerOpen } from "../../server-compile/index.js"
 import { executeFileOnPlatform } from "../../executeFileOnPlatform/executeFileOnPlatform.js"
-import { launchNode } from "../launchNode.js"
+import { launchChromium } from "../launchChromium.js"
 
-const file = `src/launchNode/test/fixtures/file.js`
-const compileInto = "build"
-const hotreload = false
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
 })
+const file = `src/launchChromium/test/fixtures/file.js`
+const compileInto = "build"
+const hotreload = false
 
-const exec = async ({ cancellationToken }) => {
+const exec = async () => {
+  const { token: cancellationToken, cancel } = createCancellationSource()
+
   const jsCompileService = await createJsCompileService({
     cancellationToken,
     pluginMap,
@@ -32,19 +36,32 @@ const exec = async ({ cancellationToken }) => {
 
   const remoteRoot = server.origin
   const verbose = true
-
-  await executeFileOnPlatform(
+  const result = await executeFileOnPlatform(
     file,
-    () => launchNode({ cancellationToken, localRoot, remoteRoot, compileInto }),
+    () =>
+      launchChromium({
+        cancellationToken,
+        localRoot,
+        headless: false,
+        remoteRoot,
+        compileInto,
+        instrument: true,
+        collectCoverage: true,
+      }),
     {
+      platformTypeForLog: "chromium browser",
       cancellationToken,
-      platformTypeForLog: "node process",
       verbose,
     },
   )
-
-  // close server to let process end if child ends
-  server.close()
+  assert({
+    actua: result,
+    expected: {
+      output: undefined,
+      coverageMap: result.coverageMap,
+    },
+  })
+  cancel("done")
 }
 
-exec({})
+exec()

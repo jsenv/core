@@ -1,3 +1,4 @@
+import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../localRoot.js"
 import { createJsCompileService } from "../../createJsCompileService.js"
@@ -33,15 +34,30 @@ const exec = async ({ cancellationToken }) => {
   const remoteRoot = server.origin
   const verbose = true
 
-  await executeFileOnPlatform(
+  const result = await executeFileOnPlatform(
     file,
     () => launchNode({ cancellationToken, localRoot, remoteRoot, compileInto }),
     {
       cancellationToken,
       platformTypeForLog: "node process",
       verbose,
+      instrument: true,
+      collectCoverage: true,
     },
   )
+
+  assert({
+    actual: result,
+    expected: {
+      coverageMap: {
+        "src/launchNode/test/fixtures/file.js": {
+          ...result.coverageMap["src/launchNode/test/fixtures/file.js"],
+          path: "src/launchNode/test/fixtures/file.js",
+        },
+      },
+      output: undefined,
+    },
+  })
 
   // close server to let process end if child ends
   server.close()
