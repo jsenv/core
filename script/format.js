@@ -5,7 +5,6 @@ const { localRoot } = require("./util.js")
 const metaMap = patternGroupToMetaMap({
   format: {
     "**/*.js": true,
-    "**/*.js/**": false,
     "**/*.json": true,
     "**/*.md": true,
     sourceMapTest: false,
