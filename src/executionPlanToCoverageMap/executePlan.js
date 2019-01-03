@@ -1,5 +1,4 @@
-import { createCancellationToken } from "@dmail/cancellation"
-import { promiseConcurrent } from "../promiseHelper.js"
+import { createCancellationToken, createConcurrentOperations } from "@dmail/cancellation"
 import { executeFileOnPlatform } from "../executeFileOnPlatform/index.js"
 
 export const executePlan = async (
@@ -28,9 +27,11 @@ export const executePlan = async (
   })
 
   const planResult = {}
-  await promiseConcurrent(
-    plannedExecutionArray,
-    async ({ file, name, launch }) => {
+  await createConcurrentOperations({
+    cancellationToken,
+    maxParallelExecution,
+    array: plannedExecutionArray,
+    start: async ({ file, name, launch }) => {
       beforeEach({ file, name })
       // TODO: if the test fails to execute it should not prevent
       // subsequent execution (or an option should control that)
@@ -57,10 +58,6 @@ export const executePlan = async (
         // throw new Error(`missing coverageMap after ${file} execution, it was not instrumented`)
       }
     },
-    {
-      cancellationToken,
-      maxParallelExecution,
-    },
-  )
+  })
   return planResult
 }
