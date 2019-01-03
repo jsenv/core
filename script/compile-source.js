@@ -1,11 +1,13 @@
+const { transformAsync } = require("@babel/core")
 const { patternGroupToMetaMap, forEachRessourceMatching } = require("@dmail/project-structure")
 const {
-  compileFile,
   fileSystemWriteCompileResult,
   pluginOptionMapToPluginMap,
   pluginMapToPluginsForPlatform,
 } = require("@dmail/project-structure-compile-babel")
+const { fileWriteFromString } = require("../dist/src/fileHelper.js")
 const { localRoot } = require("./util.js")
+const { readFile } = require("./readFile.js")
 
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-commonjs": {},
@@ -37,11 +39,11 @@ const plugins = pluginMapToPluginsForPlatform(pluginMap, "node", "8.0.0")
 const metaMap = patternGroupToMetaMap({
   compile: {
     "**/*.js": true,
-    "**/*.js/**": false,
-    "src/__test__/file-with-syntax-error.js": false,
     node_modules: false, // eslint-disable-line camelcase
     dist: false,
+    build: false,
     script: false,
+    sourceMapTest: false,
     ".eslintrc.js": false,
     "prettier.config.js": false,
   },
@@ -54,26 +56,37 @@ module.exports = forEachRessourceMatching({
   metaMap,
   predicate: ({ compile }) => compile,
   callback: async (ressource) => {
-    // we should have an option so that when file contains a syntaxError
-    // it is not a problem, the file is copied with the syntaxError
-    // and is not transpiled because
-    // some file needs to be in dist with the syntaxError
-    // for testing
-    const { code, map } = await compileFile(ressource, {
-      localRoot,
-      plugins,
-    })
-    await fileSystemWriteCompileResult(
-      {
-        code,
-        map,
-      },
-      {
-        localRoot,
-        outputFile: ressource,
-        outputFolder,
-      },
-    )
-    console.log(`${ressource} -> ${outputFolder}/${ressource}`)
+    const source = await readFile(`${localRoot}/${ressource}`)
+
+    try {
+      const { code, map } = await transformAsync(source, {
+        plugins,
+        filenameRelative: ressource,
+        filename: `${localRoot}/${ressource}`,
+        sourceMaps: true,
+        sourceFileName: ressource,
+      })
+
+      await fileSystemWriteCompileResult(
+        {
+          code,
+          map,
+        },
+        {
+          localRoot,
+          outputFile: ressource,
+          outputFolder,
+        },
+      )
+      console.log(`${ressource} -> ${outputFolder}/${ressource}`)
+    } catch (e) {
+      if (e && e.code === "BABEL_PARSE_ERROR") {
+        console.warn(`syntax error in ${ressource}`)
+        await fileWriteFromString(`${localRoot}/${outputFolder}/${ressource}`, source)
+        console.log(`${ressource} -> ${outputFolder}/${ressource}`)
+      } else {
+        throw e
+      }
+    }
   },
 })
