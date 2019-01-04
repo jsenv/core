@@ -45,19 +45,19 @@ const exec = async () => {
         headless: false,
         remoteRoot,
         compileInto,
-        instrument: true,
-        collectCoverage: true,
       }),
     {
       platformTypeForLog: "chromium browser",
       cancellationToken,
       verbose,
+      instrument: true,
+      collectCoverage: true,
     },
   )
   assert({
-    actua: result,
+    actual: result,
     expected: {
-      output: undefined,
+      namespace: { default: true },
       coverageMap: result.coverageMap,
     },
   })

@@ -49,13 +49,13 @@ const exec = async ({ cancellationToken }) => {
   assert({
     actual: result,
     expected: {
+      namespace: { default: true },
       coverageMap: {
         "src/launchNode/test/fixtures/file.js": {
           ...result.coverageMap["src/launchNode/test/fixtures/file.js"],
           path: "src/launchNode/test/fixtures/file.js",
         },
       },
-      output: undefined,
     },
   })
 

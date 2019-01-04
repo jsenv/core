@@ -1,6 +1,5 @@
-import { getCompileMapLocalURL } from "../../compileProject/index.js"
-import { teardownForOutput, teardownForOutputAndCoverageMap } from "../platformTeardown.js"
 import { createLocaters } from "../createLocaters.js"
+import { getCompileMapLocalURL } from "./localURL.js"
 import { nodeToCompileId } from "./nodeToCompileId.js"
 import { createImporter } from "./system/createImporter.js"
 import { fetchSource } from "./fetchSource.js"
@@ -33,29 +32,31 @@ const setup = ({ localRoot, remoteRoot, compileInto }) => {
     fileToRemoteCompiledFile,
   })
 
-  platform.importFile = (file, { instrument = false, collectCoverage = false } = {}) => {
+  platform.importFile = async (file, { instrument = false, collectCoverage = false } = {}) => {
     const remoteCompiledFile = instrument
       ? fileToRemoteInstrumentedFile(file)
       : fileToRemoteCompiledFile(file)
 
-    return importer.importFile(remoteCompiledFile).then(
-      (namespace) => {
-        if (collectCoverage) {
-          return teardownForOutputAndCoverageMap(namespace)
+    try {
+      const namespace = await importer.importFile(remoteCompiledFile)
+      if (collectCoverage) {
+        await namespace.output
+        return {
+          namespace,
+          coverageMap: window.__coverage__,
         }
-        return teardownForOutput(namespace)
-      },
-      (error) => {
-        if (error && error.code === "MODULE_PARSE_ERROR") {
-          error.message = error.message.replace(file, fileToLocalFile(file))
-          throw error
-        }
-        if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-          throw error.error
-        }
+      }
+      return { namespace }
+    } catch (error) {
+      if (error && error.code === "MODULE_PARSE_ERROR") {
+        error.message = error.message.replace(file, fileToLocalFile(file))
         throw error
-      },
-    )
+      }
+      if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
+        throw error.error
+      }
+      throw error
+    }
   }
 }
 

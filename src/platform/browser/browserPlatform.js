@@ -1,5 +1,4 @@
 import { memoizeOnce } from "../../functionHelper.js"
-import { teardownForOutput, teardownForOutputAndCoverageMap } from "../platformTeardown.js"
 import { createLocaters } from "../createLocaters.js"
 import { detect } from "./browserDetect/index.js"
 import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
@@ -97,9 +96,13 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
     try {
       const namespace = await importFile(remoteCompiledFile)
       if (collectCoverage) {
-        return teardownForOutputAndCoverageMap(namespace)
+        await namespace.output
+        return {
+          namespace,
+          coverageMap: window.__coverage__,
+        }
       }
-      return teardownForOutput(namespace)
+      return { namespace }
     } catch (error) {
       const meta = rejectionValueToMeta(error, {
         fileToRemoteSourceFile,
