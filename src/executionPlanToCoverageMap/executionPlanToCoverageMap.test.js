@@ -7,6 +7,10 @@ import { localRoot } from "../localRoot.js"
 import { createJsCompileService } from "../createJsCompileService.js"
 import { open as serverCompileOpen } from "../server-compile/index.js"
 
+process.on("unhandledRejection", (value) => {
+  throw value
+})
+
 const test = async () => {
   const filesToCover = []
   const compileInto = "build"
