@@ -55,27 +55,17 @@ const test = async () => {
   })
 
   assert({
-    actual: coverageMap["index.js"],
+    actual: coverageMap,
     expected: {
-      b: {},
-      branchMap: {},
-      f: {},
-      fnMap: {},
-      path: "index.js",
-      s: {},
-      statementMap: {},
-    },
-  })
-  assert({
-    actual: coverageMap["src/__test__/file.js"].s,
-    expected: {
-      0: 1,
-      1: 1,
-      2: 1,
+      "src/__test__/file.js": {
+        ...coverageMap["src/__test__/file.js"],
+        s: { 0: 2, 1: 2, 2: 2 },
+      },
+      // il ne faut pas de coverage pour le fichier de test
     },
   })
 
-  // server.close()
+  server.close()
 }
 
 test()
