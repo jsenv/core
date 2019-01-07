@@ -9,7 +9,7 @@ import { memoizeOnce } from "../functionHelper.js"
 import { trackConnections, trackClients, trackRequestHandlers } from "./trackers.js"
 import { createRequestFromNodeRequest } from "./createRequestFromNodeRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
-import { processUnhandledException } from "./processUnhandledException.js"
+import { registerProcessCrash } from "./registerProcessCrash.js"
 
 export const originAsString = ({ protocol, ip, port }) => {
   const url = new URL("https://127.0.0.1:80")
@@ -32,10 +32,9 @@ export const open = async ({
   // auto close when server respond with a 500
   autoCloseOnError = true,
   // auto close the server when an uncaughtException happens
-  // false by default because stack trace is messed up
-  // and I don't like to have code executed on error
-  // and the processUnhandledException implementation is a bit old
-  // and complex. it would deserve a rewrite
+  // it mess up stack trace
+  // and execute code on uncaughtException/unhandledRejection so
+  // it should not be used at all
   autoCloseOnCrash = false,
   requestToResponse = () => null,
   verbose = true,
@@ -122,9 +121,8 @@ export const open = async ({
   const closePromises = []
   if (autoCloseOnCrash) {
     const crashed = new Promise((resolve) => {
-      const unregister = processUnhandledException((error) => {
-        resolve(error)
-        return false // exception is not handled
+      const unregister = registerProcessCrash((reason) => {
+        resolve(reason.value)
       })
       closing.then(unregister)
     })
@@ -143,7 +141,9 @@ export const open = async ({
   }
   if (autoCloseOnExit) {
     const exited = new Promise((resolve) => {
-      const unregister = processTeardown((reason) => resolve(`server process ${reason}`))
+      const unregister = processTeardown((reason) => {
+        resolve(`server process ${reason}`)
+      })
       closing.then(unregister)
     })
     closePromises.push(exited)
