@@ -15,16 +15,17 @@ export const executionPlanToCoverageMap = async (
     cover: true,
   })
 
-  const coverageMapList = []
+  const coverageMapArray = []
   Object.keys(result).forEach((file) => {
-    Object.keys(result[file]).forEach((name) => {
-      const { coverageMap } = result[file][name]
+    const fileResult = result[file]
+    Object.keys(fileResult).forEach((name) => {
+      const { coverageMap } = fileResult[name]
       if (coverageMap) {
-        coverageMapList.push(coverageMap)
+        coverageMapArray.push(coverageMap)
       }
     })
   })
-  const executionCoverageMap = coverageMapCompose(...coverageMapList)
+  const executionCoverageMap = coverageMapCompose(...coverageMapArray)
 
   const filesMissed = filesToCover.filter((file) => file in executionCoverageMap === false)
 
