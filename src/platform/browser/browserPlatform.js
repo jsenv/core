@@ -78,7 +78,10 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
   // for browser without dynamic import
   const createNativeImportFile = () => eval(`(function importFile(file){ return import(file) })`)
 
-  platform.importFile = async (file, { instrument = false, collectCoverage = false } = {}) => {
+  platform.importFile = async (
+    file,
+    { collectNamespace = false, collectCoverage = false, instrument = collectCoverage } = {},
+  ) => {
     const [
       {
         fileToRemoteCompiledFile,
@@ -97,12 +100,11 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
       const namespace = await importFile(remoteCompiledFile)
       if (collectCoverage) {
         await namespace.output
-        return {
-          namespace,
-          coverageMap: window.__coverage__,
-        }
       }
-      return { namespace }
+      return {
+        ...(collectNamespace ? { namespace } : {}),
+        ...(collectCoverage ? { coverageMap: window.__coverage__ } : {}),
+      }
     } catch (error) {
       const meta = rejectionValueToMeta(error, {
         fileToRemoteSourceFile,

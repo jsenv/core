@@ -50,7 +50,7 @@ const exec = async () => {
       platformTypeForLog: "chromium browser",
       cancellationToken,
       verbose,
-      instrument: true,
+      collectNamespace: true,
       collectCoverage: true,
     },
   )
@@ -58,7 +58,10 @@ const exec = async () => {
     actual: result,
     expected: {
       namespace: { default: true },
-      coverageMap: result.coverageMap,
+      coverageMap: {
+        "src/launchChromium/test/fixtures/file.js":
+          result.coverageMap["src/launchChromium/test/fixtures/file.js"],
+      },
     },
   })
   cancel("done")

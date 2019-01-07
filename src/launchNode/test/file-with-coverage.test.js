@@ -41,7 +41,7 @@ const exec = async ({ cancellationToken }) => {
       cancellationToken,
       platformTypeForLog: "node process",
       verbose,
-      instrument: true,
+      collectNamespace: true,
       collectCoverage: true,
     },
   )
@@ -51,10 +51,8 @@ const exec = async ({ cancellationToken }) => {
     expected: {
       namespace: { default: true },
       coverageMap: {
-        "src/launchNode/test/fixtures/file.js": {
-          ...result.coverageMap["src/launchNode/test/fixtures/file.js"],
-          path: "src/launchNode/test/fixtures/file.js",
-        },
+        "src/launchNode/test/fixtures/file.js":
+          result.coverageMap["src/launchNode/test/fixtures/file.js"],
       },
     },
   })

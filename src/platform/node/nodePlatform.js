@@ -32,7 +32,10 @@ const setup = ({ localRoot, remoteRoot, compileInto }) => {
     fileToRemoteCompiledFile,
   })
 
-  platform.importFile = async (file, { instrument = false, collectCoverage = false } = {}) => {
+  platform.importFile = async (
+    file,
+    { collectNamespace = false, collectCoverage = false, instrument = collectCoverage } = {},
+  ) => {
     const remoteCompiledFile = instrument
       ? fileToRemoteInstrumentedFile(file)
       : fileToRemoteCompiledFile(file)
@@ -41,12 +44,11 @@ const setup = ({ localRoot, remoteRoot, compileInto }) => {
       const namespace = await importer.importFile(remoteCompiledFile)
       if (collectCoverage) {
         await namespace.output
-        return {
-          namespace,
-          coverageMap: window.__coverage__,
-        }
       }
-      return { namespace }
+      return {
+        ...(collectNamespace ? { namespace } : {}),
+        ...(collectCoverage ? { coverageMap: global.__coverage__ } : {}),
+      }
     } catch (error) {
       if (error && error.code === "MODULE_PARSE_ERROR") {
         error.message = error.message.replace(file, fileToLocalFile(file))
