@@ -1,51 +1,30 @@
 import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../localRoot.js"
-import { createJsCompileService } from "../../createJsCompileService.js"
-import { open as compileServerOpen } from "../../server-compile/index.js"
-import { executeFileOnPlatform } from "../../executeFileOnPlatform/executeFileOnPlatform.js"
 import { launchChromium } from "../launchChromium.js"
+import { executeFileOnPlatform } from "../../executeFileOnPlatform.js"
 
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
 })
 const file = `src/launchChromium/test/fixtures/file.js`
 const compileInto = "build"
-const hotreload = false
 
-const exec = async ({ cancellationToken }) => {
-  const jsCompileService = await createJsCompileService({
-    cancellationToken,
-    pluginMap,
-    localRoot,
-    compileInto,
-    watch: hotreload,
-  })
-
-  const { origin: remoteRoot } = await compileServerOpen({
-    cancellationToken,
-    protocol: "http",
-
-    localRoot,
-    compileInto,
-    compileService: jsCompileService,
-  })
-
-  const verbose = true
+;(async () => {
   const result = await executeFileOnPlatform(
     file,
-    () =>
+    (options) =>
       launchChromium({
-        cancellationToken,
-        localRoot,
         headless: false,
-        remoteRoot,
-        compileInto,
+        ...options,
       }),
     {
+      localRoot,
+      compileInto,
+      pluginMap,
       platformTypeForLog: "chromium browser",
-      cancellationToken,
-      verbose,
+      stopOnceExecuted: true,
+      verbose: true,
       collectNamespace: true,
       collectCoverage: true,
     },
@@ -60,6 +39,4 @@ const exec = async ({ cancellationToken }) => {
       },
     },
   })
-}
-
-exec({})
+})()

@@ -1,1 +1,1 @@
-export { open } from "./serverBrowser.js"
+export { openBrowserServer } from "./serverBrowser.js"

@@ -1,10 +1,13 @@
-// https://github.com/jsenv/core/blob/master/src/api/api.js
-// https://github.com/ModuleLoader/system-register-loader/blob/master/src/system-register-loader.js
-
-export { openCompileServer } from "./src/server-compile/index.js"
-export { open as openBrowserServer } from "./src/server-browser/index.js"
-export { launchChromium } from "./src/launchChromium/index.js"
-export { launchNode, executeFileOnNode } from "./src/launchNode/index.js"
 export { createJsCompileService } from "./src/createJsCompileService.js"
+export { openCompileServer } from "./src/server-compile/index.js"
+export { launchAndExecute } from "./src/launchAndExecute/index.js"
+export { executeFile } from "./src/executeFile.js"
+// browser served need own repo?
+export { openBrowserServer } from "./src/server-browser/index.js"
+// may be moved in own repo ?
 export { executionPlanToCoverageMap } from "./src/executionPlanToCoverageMap/index.js"
-export { executeFileOnPlatform } from "./src/executeFileOnPlatform/index.js"
+
+// must be moved in own repo
+export { launchChromium } from "./src/launchChromium/index.js"
+// must be moved in own repo
+export { launchNode } from "./src/launchNode/index.js"

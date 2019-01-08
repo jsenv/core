@@ -3,14 +3,13 @@ import {
   createCancellationToken,
   cancellationTokenCompose,
 } from "@dmail/cancellation"
-import { createJsCompileService } from "../createJsCompileService.js"
-import { executeFileOnPlatform } from "../executeFileOnPlatform/index.js"
-import { openCompileServer } from "../server-compile/index.js"
-import { launchNode } from "./launchNode.js"
+import { createJsCompileService } from "./createJsCompileService.js"
+import { launchAndExecute } from "./launchAndExecute/index.js"
+import { openCompileServer } from "./server-compile/index.js"
 
-export const executeFileOnNode = async (
+export const executeFile = async (
   file,
-  { cancellationToken = createCancellationToken(), cancelSIGINT = true, ...rest },
+  { launchPlatform, cancellationToken = createCancellationToken(), cancelSIGINT = true, ...rest },
 ) => {
   if (cancelSIGINT) {
     const SIGINTCancelSource = createCancellationSource()
@@ -29,7 +28,9 @@ export const executeFileOnNode = async (
     ...rest,
   })
 
-  return executeFileOnPlatform(file, () => launchNode({ cancellationToken, remoteRoot, ...rest }), {
+  const launch = () => launchPlatform({ cancellationToken, remoteRoot, ...rest })
+
+  return launchAndExecute(launch, file, {
     cancellationToken,
     ...rest,
   })

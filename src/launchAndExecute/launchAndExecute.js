@@ -11,9 +11,9 @@ import { createRestartSignal } from "./restartController.js"
 // before we call closeForce
 const ALLOCATED_MS_FOR_CLOSE = 10 * 60 * 10 * 1000
 
-export const executeFileOnPlatform = (
-  file,
+export const launchAndExecute = (
   launchPlatform,
+  file,
   {
     cancellationToken = createCancellationToken(),
     restartSignal = createRestartSignal(),

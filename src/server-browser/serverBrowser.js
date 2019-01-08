@@ -1,7 +1,7 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { forEachRessourceMatching } from "@dmail/project-structure"
 import { open as serverOpen, createRequestPredicate, serviceCompose } from "../server/index.js"
-import { open as serverCompileOpen } from "../server-compile/index.js"
+import { openCompileServer } from "../server-compile/index.js"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { guard } from "../functionHelper.js"
 import {
@@ -48,7 +48,7 @@ const getIndexPageHTML = async ({ localRoot }) => {
   </html>`
 }
 
-export const open = async ({
+export const openBrowserServer = async ({
   cancellationToken = createCancellationToken(),
   protocol = "http",
   ip = "127.0.0.1",
@@ -63,7 +63,7 @@ export const open = async ({
   sourceCacheStrategy,
   sourceCacheIgnore,
 }) => {
-  const server = await serverCompileOpen({
+  const { origin: remoteRoot } = await openCompileServer({
     cancellationToken,
     localRoot,
     compileInto,
@@ -72,8 +72,6 @@ export const open = async ({
     sourceCacheStrategy,
     sourceCacheIgnore,
   })
-
-  const remoteRoot = server.origin
 
   const indexRoute = guard(
     createRequestPredicate({
