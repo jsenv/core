@@ -10,7 +10,7 @@ import {
 } from "../server/index.js"
 import { locate } from "../jsCompileToService/locate.js"
 
-export const open = async ({
+export const openCompileServer = async ({
   cancellationToken = createCancellationToken(),
   // server options
   protocol,

@@ -1,1 +1,1 @@
-export { open } from "./serverCompile.js"
+export { openCompileServer } from "./serverCompile.js"
