@@ -138,7 +138,5 @@ export const openBrowserServer = async ({
     openedMessage: ({ origin }) => `executing ${localRoot} at ${origin}`,
     closedMessage: (reason) => `browser server closed because ${reason}`,
   })
-  // https://nodejs.org/api/net.html#net_server_unref
-  browserServer.nodeServer.unref()
   return browserServer
 }
