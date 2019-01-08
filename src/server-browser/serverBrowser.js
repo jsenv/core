@@ -58,7 +58,7 @@ export const open = async ({
   localRoot,
   compileInto,
   compileService,
-  hotreload = false,
+  // hotreload = false,
 
   sourceCacheStrategy,
   sourceCacheIgnore,
@@ -130,7 +130,7 @@ export const open = async ({
     },
   )
 
-  return serverOpen({
+  const browserServer = await serverOpen({
     cancellationToken,
     protocol,
     ip,
@@ -140,4 +140,7 @@ export const open = async ({
     openedMessage: ({ origin }) => `executing ${localRoot} at ${origin}`,
     closedMessage: (reason) => `browser server closed because ${reason}`,
   })
+  // https://nodejs.org/api/net.html#net_server_unref
+  browserServer.nodeServer.unref()
+  return browserServer
 }

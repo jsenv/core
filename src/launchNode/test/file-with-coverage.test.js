@@ -22,7 +22,7 @@ const exec = async ({ cancellationToken }) => {
     watch: hotreload,
   })
 
-  const server = await compileServerOpen({
+  const { origin: remoteRoot } = await compileServerOpen({
     cancellationToken,
     protocol: "http",
 
@@ -31,7 +31,6 @@ const exec = async ({ cancellationToken }) => {
     compileService: jsCompileService,
   })
 
-  const remoteRoot = server.origin
   const verbose = true
 
   const result = await executeFileOnPlatform(
@@ -56,9 +55,6 @@ const exec = async ({ cancellationToken }) => {
       },
     },
   })
-
-  // close server to let process end if child ends
-  server.close()
 }
 
 exec({})

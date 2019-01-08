@@ -1,4 +1,3 @@
-import { createCancellationSource } from "@dmail/cancellation"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../localRoot.js"
 import { createJsCompileService } from "../../createJsCompileService.js"
@@ -13,9 +12,7 @@ const file = `src/launchChromium/test/fixtures/file.js`
 const compileInto = "build"
 const hotreload = false
 
-const exec = async () => {
-  const { token: cancellationToken, cancel } = createCancellationSource()
-
+const exec = async ({ cancellationToken }) => {
   const jsCompileService = await createJsCompileService({
     cancellationToken,
     pluginMap,
@@ -24,7 +21,7 @@ const exec = async () => {
     watch: hotreload,
   })
 
-  const server = await compileServerOpen({
+  const { origin: remoteRoot } = await compileServerOpen({
     cancellationToken,
     protocol: "http",
 
@@ -33,9 +30,8 @@ const exec = async () => {
     compileService: jsCompileService,
   })
 
-  const remoteRoot = server.origin
   const verbose = true
-  await executeFileOnPlatform(
+  executeFileOnPlatform(
     file,
     () =>
       launchChromium({ cancellationToken, localRoot, headless: false, remoteRoot, compileInto }),
@@ -43,9 +39,9 @@ const exec = async () => {
       platformTypeForLog: "chromium browser",
       cancellationToken,
       verbose,
+      stopOnceExecuted: true,
     },
   )
-  cancel("done")
 }
 
-exec()
+exec({})

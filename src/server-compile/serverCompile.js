@@ -57,7 +57,7 @@ export const open = async ({
         return enableCORS(response, accessControlAllowedInfo)
       }
 
-  return serverOpen({
+  const compileServer = await serverOpen({
     cancellationToken,
     protocol,
     ip,
@@ -66,4 +66,8 @@ export const open = async ({
     openedMessage: ({ origin }) => `compiling ${localRoot} at ${origin}`,
     closedMessage: (reason) => `compile server closed because ${reason}`,
   })
+  // https://nodejs.org/api/net.html#net_server_unref
+  compileServer.nodeServer.unref()
+
+  return compileServer
 }

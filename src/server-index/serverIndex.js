@@ -1,7 +1,7 @@
 import { open as serverOpen } from "../server/index.js"
 
-export const open = ({ cancellationToken, protocol, ip, port, body }) => {
-  return serverOpen({
+export const open = async ({ cancellationToken, protocol, ip, port, body }) => {
+  const indexServer = await serverOpen({
     cancellationToken,
     protocol,
     ip,
@@ -18,4 +18,7 @@ export const open = ({ cancellationToken, protocol, ip, port, body }) => {
       }
     },
   })
+  // https://nodejs.org/api/net.html#net_server_unref
+  indexServer.nodeServer.unref()
+  return indexServer
 }
