@@ -27,6 +27,7 @@ export const open = async ({
   forcePort = false,
   // when port is https you must provide { privateKey, certificate } under signature
   signature,
+  autoCloseOnSIGINT = true,
   // auto close the server when the process exits
   autoCloseOnExit = true,
   // auto close when server respond with a 500
@@ -147,6 +148,16 @@ export const open = async ({
       closing.then(unregister)
     })
     closePromises.push(exited)
+  }
+  if (autoCloseOnSIGINT) {
+    const sigint = new Promise((resolve) => {
+      const onsigint = () => resolve("process sigint")
+      process.once("SIGINT", onsigint)
+      closing.then(() => {
+        process.removeListener("SIGINT", onsigint)
+      })
+      closePromises.push(sigint)
+    })
   }
   Promise.race(closePromises).then(close)
 
