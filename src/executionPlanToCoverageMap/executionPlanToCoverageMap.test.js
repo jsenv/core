@@ -5,7 +5,7 @@ import { launchChromium } from "../launchChromium/index.js"
 import { executionPlanToCoverageMap } from "./executionPlanToCoverageMap.js"
 import { localRoot } from "../localRoot.js"
 import { createJsCompileService } from "../createJsCompileService.js"
-import { open as serverCompileOpen } from "../server-compile/index.js"
+import { openCompileServer } from "../server-compile/index.js"
 
 process.on("unhandledRejection", (value) => {
   throw value
@@ -24,7 +24,7 @@ const test = async () => {
     pluginMap,
   })
 
-  const server = await serverCompileOpen({
+  const { origin: remoteRoot } = await openCompileServer({
     protocol: "http",
     ip: "127.0.0.1",
     port: 0,
@@ -32,8 +32,6 @@ const test = async () => {
     compileInto,
     compileService: jsCompileService,
   })
-
-  const remoteRoot = server.origin
 
   const nodeLaunch = () => launchNode({ remoteRoot, localRoot, compileInto })
   const chromiumLaunch = () => launchChromium({ remoteRoot, localRoot, compileInto })
@@ -64,8 +62,6 @@ const test = async () => {
       // il ne faut pas de coverage pour le fichier de test
     },
   })
-
-  server.close()
 }
 
 test()

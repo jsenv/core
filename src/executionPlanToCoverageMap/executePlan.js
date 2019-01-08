@@ -1,5 +1,5 @@
 import { createCancellationToken, createConcurrentOperations } from "@dmail/cancellation"
-import { executeFileOnPlatform } from "../executeFileOnPlatform/index.js"
+import { launchAndExecute } from "../launchAndExecute/index.js"
 
 export const executePlan = async (
   executionPlan,
@@ -38,7 +38,7 @@ export const executePlan = async (
       // in other words I think I have to catch
       // and wrap result into passed: true/false, value: {namespace, coverageMap}
 
-      const result = await executeFileOnPlatform(file, launch, {
+      const result = await launchAndExecute(launch, file, {
         cancellationToken,
         collectCoverage: cover,
         stopOnceExecuted: true, // ensure platform is closed

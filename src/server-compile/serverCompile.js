@@ -67,6 +67,7 @@ export const openCompileServer = async ({
     closedMessage: (reason) => `compile server closed because ${reason}`,
   })
   // https://nodejs.org/api/net.html#net_server_unref
+  // but while debugging it may close the server too soon, to be tested
   compileServer.nodeServer.unref()
 
   return compileServer
