@@ -55,8 +55,9 @@ export const launchChromium = async ({
   // yeah closed and disconnected are the same.. is this a problem ?
   browser.on("disconnected", closed.resolve)
 
+  let closeIndex = () => {}
   const close = async (reason) => {
-    await targetTracker.close(reason)
+    await Promise.all([targetTracker.close(reason), closeIndex(reason)])
     return browser.close()
   }
 
@@ -94,7 +95,7 @@ export const launchChromium = async ({
       ],
     })
 
-    const { origin } = await openIndexRequestHandler({
+    const { origin: indexOrigin, close: indexClose } = await openIndexRequestHandler({
       cancellationToken,
       protocol,
       ip,
@@ -102,7 +103,9 @@ export const launchChromium = async ({
       page,
       body: html,
     })
-    await page.goto(origin)
+    closeIndex = indexClose
+
+    await page.goto(indexOrigin)
     const result = await page.evaluate(
       (file, options) => window.__platform__.importFile(file, options),
       file,
@@ -178,7 +181,10 @@ const openIndexRequestInterception = async ({
     })
   })
 
+  const close = interceptionOperation.stop
+
   return {
     origin,
+    close,
   }
 }

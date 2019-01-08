@@ -36,11 +36,12 @@ export const executePlan = async (
       // TODO: if the test fails to execute it should not prevent
       // subsequent execution (or an option should control that)
       // in other words I think I have to catch
-      // and wrap result into passed: true/false, value: {output, coverageMap}
+      // and wrap result into passed: true/false, value: {namespace, coverageMap}
+
       const result = await executeFileOnPlatform(file, launch, {
         cancellationToken,
-        instrument: cover,
         collectCoverage: cover,
+        stopOnceExecuted: true, // ensure platform is closed
       })
       afterEach({ file, name, result })
 

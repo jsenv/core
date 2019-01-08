@@ -14,7 +14,7 @@ const compileInto = "build"
 const hotreload = false
 
 const exec = async () => {
-  const { token: cancellationToken, cancel } = createCancellationSource()
+  const { token: cancellationToken } = createCancellationSource()
 
   const jsCompileService = await createJsCompileService({
     cancellationToken,
@@ -35,7 +35,7 @@ const exec = async () => {
 
   const remoteRoot = server.origin
   const verbose = true
-  return executeFileOnPlatform(
+  await executeFileOnPlatform(
     file,
     () =>
       launchChromium({ cancellationToken, localRoot, headless: false, remoteRoot, compileInto }),
@@ -43,10 +43,10 @@ const exec = async () => {
       platformTypeForLog: "chromium browser",
       cancellationToken,
       verbose,
+      stopOnceExecuted: true,
     },
-  ).finally(() => {
-    cancel("done")
-  })
+  )
+  server.close()
 }
 
 exec()

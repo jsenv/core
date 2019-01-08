@@ -19,6 +19,7 @@ export const executeFileOnPlatform = (
     restartSignal = createRestartSignal(),
     platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
     verbose = false,
+    stopOnceExecuted = false,
     ...rest
   } = {},
 ) => {
@@ -87,6 +88,11 @@ export const executeFileOnPlatform = (
         closed.then(() => {
           log(`${platformTypeForLog} closed`)
         })
+
+        if (stopOnceExecuted) {
+          launchOperation.stop("stopOnceExecuted")
+        }
+
         return value
       },
     })
