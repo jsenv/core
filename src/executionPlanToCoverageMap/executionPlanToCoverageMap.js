@@ -1,18 +1,35 @@
-import { executePlan } from "./executePlan.js"
+import {
+  createCancellationSource,
+  createCancellationToken,
+  cancellationTokenCompose,
+} from "@dmail/cancellation"
+import { executePlan } from "../executePlan/index.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 import { fileToEmptyCoverage } from "./fileToEmptyCoverage.js"
 
 export const executionPlanToCoverageMap = async (
   executionPlan,
-  { cancellationToken, localRoot, filesToCover = [] },
+  {
+    cancellationToken = createCancellationToken(),
+    localRoot,
+    filesToCover = [],
+    cancelSIGINT = true,
+  },
 ) => {
   // I think it is an error, it would be strange, for a given file
   // to be both covered and executed
   ensureNoFileIsBothCoveredAndExecuted({ filesToCover, executionPlan })
 
+  if (cancelSIGINT) {
+    const SIGINTCancelSource = createCancellationSource()
+    process.on("SIGINT", () => SIGINTCancelSource.cancel("process interruption"))
+    cancellationToken = cancellationTokenCompose(cancellationToken, SIGINTCancelSource.token)
+  }
+
   const result = await executePlan(executionPlan, {
     cancellationToken,
     cover: true,
+    cancelSIGINT: false, // already handled by this one
   })
 
   const coverageMapArray = []
