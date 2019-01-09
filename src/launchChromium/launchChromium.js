@@ -27,19 +27,21 @@ export const launchChromium = async ({
     throw new Error(`startIndexRequestInterception work only in headless mode`)
   }
 
+  const options = {
+    headless,
+    // because we use a self signed certificate
+    ignoreHTTPSErrors: true,
+    // handleSIGINT: true,
+    // handleSIGTERM: true,
+    // handleSIGHUP: true,
+    // because the 3 above are true by default pupeeter will auto close browser
+    // so we apparently don't have to use listenNodeBeforeExit in order to close browser
+    // as we do for server
+  }
+
   const browser = await createStoppableOperation({
     cancellationToken,
-    start: () =>
-      puppeteer.launch({
-        headless,
-        ignoreHTTPSErrors: true, // because we use a self signed certificate
-        // handleSIGINT: true,
-        // handleSIGTERM: true,
-        // handleSIGHUP: true,
-        // because the 3 above are true by default pupeeter will auto close browser
-        // so we apparently don't have to use listenNodeBeforeExit in order to close browser
-        // as we do for server
-      }),
+    start: () => puppeteer.launch(options),
     stop: (browser) => browser.close(),
   })
 
@@ -51,14 +53,10 @@ export const launchChromium = async ({
 
   const errored = createPromiseAndHooks()
 
-  const closed = createPromiseAndHooks()
-  // yeah closed and disconnected are the same.. is this a problem ?
-  browser.on("disconnected", closed.resolve)
-
-  let closeIndex = () => {}
-  const close = async (reason) => {
-    await Promise.all([targetTracker.close(reason), closeIndex(reason)])
-    return browser.close()
+  let stopIndexServer = () => {}
+  const stop = async (reason) => {
+    await Promise.all([targetTracker.stop(reason), stopIndexServer(reason)])
+    await browser.close()
   }
 
   browser.on("targetcreated", async (target) => {
@@ -81,19 +79,20 @@ export const launchChromium = async ({
   })
 
   const fileToExecuted = async (file, options) => {
-    // todo: promise.all on page and html
-    const page = await browser.newPage()
-    const html = await createHTMLForBrowser({
-      scriptRemoteList: [{ url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) }],
-      scriptInlineList: [
-        {
-          source: createPlatformSetupSource({
-            remoteRoot,
-            compileInto,
-          }),
-        },
-      ],
-    })
+    const [page, html] = await Promise.all([
+      browser.newPage(),
+      createHTMLForBrowser({
+        scriptRemoteList: [{ url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) }],
+        scriptInlineList: [
+          {
+            source: createPlatformSetupSource({
+              remoteRoot,
+              compileInto,
+            }),
+          },
+        ],
+      }),
+    ])
 
     const { origin: indexOrigin, stop: indexStop } = await startIndexRequestHandler({
       cancellationToken,
@@ -103,7 +102,7 @@ export const launchChromium = async ({
       page,
       body: html,
     })
-    closeIndex = indexStop
+    stopIndexServer = indexStop
 
     await page.goto(indexOrigin)
     const result = await page.evaluate(
@@ -114,38 +113,39 @@ export const launchChromium = async ({
     return result
   }
 
-  return { disconnected, errored, closed, close, fileToExecuted }
+  return { options, disconnected, errored, stop, fileToExecuted }
 }
 
 const createTargetTracker = (browser) => {
-  const closeCallbackArray = []
+  let stopCallbackArray = []
 
   // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
   browser.on("targetcreated", (target) => {
     if (target.type === "browser") {
       const childBrowser = target.browser()
       const childTargetTracker = createTargetTracker(childBrowser)
-      closeCallbackArray.push((reason) => {
-        return childTargetTracker.close(reason)
-      })
+      stopCallbackArray = [...stopCallbackArray, (reason) => childTargetTracker.stop(reason)]
     }
     if (target.type === "page" || target.type === "background_page") {
       // in case of bug do not forget https://github.com/GoogleChrome/puppeteer/issues/2269
-      closeCallbackArray.push(async () => {
-        const page = await target.page()
-        return page.close()
-      })
+      stopCallbackArray = [
+        ...stopCallbackArray,
+        async () => {
+          const page = await target.page()
+          return page.close()
+        },
+      ]
       return
     }
   })
 
-  const close = (reason) => {
-    const callbacks = closeCallbackArray.slice()
-    closeCallbackArray.length = 0
-    return Promise.all(callbacks.map((callback) => callback(reason)))
+  const stop = async (reason) => {
+    const callbacks = stopCallbackArray.slice()
+    stopCallbackArray.length = 0
+    await Promise.all(callbacks.map((callback) => callback(reason)))
   }
 
-  return { close }
+  return { stop }
 }
 
 const startIndexRequestInterception = async ({
@@ -181,10 +181,10 @@ const startIndexRequestInterception = async ({
     })
   })
 
-  const close = interceptionOperation.stop
+  const stop = interceptionOperation.stop
 
   return {
     origin,
-    close,
+    stop,
   }
 }

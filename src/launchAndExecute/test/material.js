@@ -4,14 +4,13 @@ import { launchAndExecute } from "../launchAndExecute.js"
 import { createRestartController } from "../restartController.js"
 
 export const createFakePlatform = () => {
-  const executed = createPromiseAndHooks()
   const platform = {
-    opened: createPromiseAndHooks(),
-    closed: createPromiseAndHooks(),
-    executed,
-    fileToExecuted: () => executed,
-    close: (reason) => {
-      platform.closed.resolve(reason)
+    started: createPromiseAndHooks(),
+    disconnected: createPromiseAndHooks(),
+    executed: createPromiseAndHooks(),
+    fileToExecuted: () => platform.executed,
+    stop: (reason) => {
+      platform.disconnected.resolve(reason)
     },
   }
 

@@ -33,7 +33,7 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
         errorEventRegistration.unregister()
         errorMessageRegistration.unregister()
         exitErrorRegistration.unregister()
-        resolve(createClosedWithFailureCodeError(code))
+        resolve(createExitWithFailureCodeError(code))
       }
     })
   })
@@ -46,18 +46,11 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
     })
   })
 
-  const closed = new Promise((resolve) => {
-    const exitEventRegistration = registerChildEvent(child, "exit", (code) => {
-      exitEventRegistration.unregister()
-      resolve(code)
-    })
-  })
-
-  const close = () => {
+  const stop = () => {
     child.kill("SIGINT")
   }
 
-  const closeForce = () => {
+  const stopForce = () => {
     child.kill()
   }
 
@@ -95,12 +88,11 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
   }
 
   return {
-    openDetail: { execArgv },
+    options: { execArgv },
     errored,
     disconnected,
-    close,
-    closeForce,
-    closed,
+    stop,
+    stopForce,
     fileToExecuted,
   }
 }
@@ -134,7 +126,7 @@ const registerChildEvent = (child, type, callback) => {
   return registration
 }
 
-const createClosedWithFailureCodeError = (code) => {
+const createExitWithFailureCodeError = (code) => {
   if (code === 12) {
     return new Error(
       `child exited with 12: forked child wanted to use a non available port for debug`,

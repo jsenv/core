@@ -6,10 +6,10 @@ import {
 import { promiseTrackRace } from "../promiseHelper.js"
 import { createRestartSignal } from "./restartController.js"
 
-// when launchPlatform returns close/closeForce
-// the launched platform have that amount of ms to close
-// before we call closeForce
-const ALLOCATED_MS_FOR_CLOSE = 10 * 60 * 10 * 1000
+// when launchPlatform returns { disocnnected, stop, stopForce }
+// the launched platform have that amount of ms for disconnected to resolve
+// before we call stopForce
+const ALLOCATED_MS_BEFORE_FORCE_STOP = 10 * 60 * 10 * 1000
 
 export const launchAndExecute = (
   launchPlatform,
@@ -34,19 +34,19 @@ export const launchAndExecute = (
     const launchOperation = createStoppableOperation({
       cancellationToken,
       start: () => launchPlatform(),
-      stop: ({ close, closeForce }) => {
+      stop: ({ stop, stopForce }) => {
         log(`stop ${platformTypeForLog}`)
-        close()
+        stop()
 
-        if (closeForce) {
-          const id = setTimeout(closeForce, ALLOCATED_MS_FOR_CLOSE)
-          closed.finally(() => clearTimeout(id))
+        if (stopForce) {
+          const id = setTimeout(stopForce, ALLOCATED_MS_BEFORE_FORCE_STOP)
+          disconnected.finally(() => clearTimeout(id))
         }
-        return closed
+        return disconnected
       },
     })
-    const { openDetail, errored, disconnected, closed, fileToExecuted } = await launchOperation
-    log(`${platformTypeForLog} opened ${JSON.stringify(openDetail)}`)
+    const { options, errored, disconnected, fileToExecuted } = await launchOperation
+    log(`${platformTypeForLog} started ${JSON.stringify(options)}`)
 
     log(`execute ${file} on ${platformTypeForLog}`)
     const executeOperation = createOperation({
@@ -60,7 +60,6 @@ export const launchAndExecute = (
         const { winner, value } = await promiseTrackRace([
           errored,
           disconnected,
-          closed,
           restarted,
           executed,
         ])
@@ -73,10 +72,6 @@ export const launchAndExecute = (
           throw createDisconnectedDuringExecutionError(file, platformTypeForLog)
         }
 
-        if (winner === closed) {
-          throw createClosedDuringExecutionError(file, platformTypeForLog)
-        }
-
         if (winner === restarted) {
           return launchOperation.stop(value).then(startPlatform)
         }
@@ -84,9 +79,6 @@ export const launchAndExecute = (
         log(`${file} execution on ${platformTypeForLog} done with ${value}`)
         disconnected.then(() => {
           log(`${platformTypeForLog} disconnected`)
-        })
-        closed.then(() => {
-          log(`${platformTypeForLog} closed`)
         })
 
         if (stopOnceExecuted) {
@@ -105,11 +97,5 @@ export const launchAndExecute = (
 const createDisconnectedDuringExecutionError = (file, platformType) => {
   const error = new Error(`${platformType} disconnected while executing ${file}`)
   error.code = "PLATFORM_DISCONNECTED_DURING_EXECUTION_ERROR"
-  return error
-}
-
-const createClosedDuringExecutionError = (file, platformType) => {
-  const error = new Error(`${platformType} unexpectedtly closed while executing ${file}`)
-  error.code = "PLATFORM_CLOSED_DURING_EXECUTION_ERROR"
   return error
 }
