@@ -3,9 +3,8 @@ import {
   createCancellationToken,
   cancellationTokenCompose,
 } from "@dmail/cancellation"
-import { createJsCompileService } from "./createJsCompileService.js"
 import { launchAndExecute } from "./launchAndExecute/index.js"
-import { openCompileServer } from "./server-compile/index.js"
+import { startCompileServer } from "./server-compile/index.js"
 
 export const executeFile = async (
   file,
@@ -17,14 +16,8 @@ export const executeFile = async (
     cancellationToken = cancellationTokenCompose(cancellationToken, SIGINTCancelSource.token)
   }
 
-  const jsCompileService = await createJsCompileService({
+  const { origin: remoteRoot } = await startCompileServer({
     cancellationToken,
-    ...rest,
-  })
-
-  const { origin: remoteRoot } = await openCompileServer({
-    cancellationToken,
-    compileService: jsCompileService,
     ...rest,
   })
 

@@ -4,8 +4,7 @@ import { launchNode } from "../launchNode/index.js"
 import { launchChromium } from "../launchChromium/index.js"
 import { executionPlanToCoverageMap } from "./executionPlanToCoverageMap.js"
 import { localRoot } from "../localRoot.js"
-import { createJsCompileService } from "../createJsCompileService.js"
-import { openCompileServer } from "../server-compile/index.js"
+import { startCompileServer } from "../server-compile/index.js"
 
 process.on("unhandledRejection", (value) => {
   throw value
@@ -18,19 +17,13 @@ const test = async () => {
     "transform-modules-systemjs": {},
   })
 
-  const jsCompileService = await createJsCompileService({
+  const { origin: remoteRoot } = await startCompileServer({
     localRoot,
     compileInto,
     pluginMap,
-  })
-
-  const { origin: remoteRoot } = await openCompileServer({
     protocol: "http",
     ip: "127.0.0.1",
     port: 0,
-    localRoot,
-    compileInto,
-    compileService: jsCompileService,
   })
 
   const nodeLaunch = () => launchNode({ remoteRoot, localRoot, compileInto })
