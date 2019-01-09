@@ -4,7 +4,7 @@ import { URL } from "url"
 import puppeteer from "puppeteer"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
 import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
-import { open as serverIndexOpen } from "../server-index/serverIndex.js"
+import { startIndexServer } from "../server-index/startIndexServer.js"
 import { originAsString } from "../server/index.js"
 import { createPromiseAndHooks } from "../promiseHelper.js"
 import { getBrowserPlatformRemoteURL } from "../platform/browser/remoteURL.js"
@@ -19,12 +19,12 @@ export const launchChromium = async ({
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
-  openIndexRequestHandler = serverIndexOpen,
+  startIndexRequestHandler = startIndexServer,
   headless = true,
   mirrorConsole = false,
 }) => {
-  if (openIndexRequestHandler === openIndexRequestInterception && headless === false) {
-    throw new Error(`openIndexRequestInterception work only in headless mode`)
+  if (startIndexRequestHandler === startIndexRequestInterception && headless === false) {
+    throw new Error(`startIndexRequestInterception work only in headless mode`)
   }
 
   const browser = await createStoppableOperation({
@@ -95,7 +95,7 @@ export const launchChromium = async ({
       ],
     })
 
-    const { origin: indexOrigin, close: indexClose } = await openIndexRequestHandler({
+    const { origin: indexOrigin, stop: indexStop } = await startIndexRequestHandler({
       cancellationToken,
       protocol,
       ip,
@@ -103,7 +103,7 @@ export const launchChromium = async ({
       page,
       body: html,
     })
-    closeIndex = indexClose
+    closeIndex = indexStop
 
     await page.goto(indexOrigin)
     const result = await page.evaluate(
@@ -148,7 +148,7 @@ const createTargetTracker = (browser) => {
   return { close }
 }
 
-const openIndexRequestInterception = async ({
+const startIndexRequestInterception = async ({
   cancellationToken,
   protocol,
   ip,

@@ -1,7 +1,7 @@
-import { open as serverOpen } from "../server/index.js"
+import { startServer } from "../server/index.js"
 
-export const open = async ({ cancellationToken, protocol, ip, port, body }) => {
-  const indexServer = await serverOpen({
+export const startIndexServer = async ({ cancellationToken, protocol, ip, port, body }) => {
+  const indexServer = await startServer({
     cancellationToken,
     protocol,
     ip,

@@ -11,6 +11,9 @@ import { createRequestFromNodeRequest } from "./createRequestFromNodeRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
 import { registerProcessCrash } from "./registerProcessCrash.js"
 
+const REASON_NOT_SPECIFIED = "not specified"
+const REASON_INTERNAL_ERROR = "internal error"
+
 export const originAsString = ({ protocol, ip, port }) => {
   const url = new URL("https://127.0.0.1:80")
   url.protocol = protocol
@@ -19,7 +22,7 @@ export const originAsString = ({ protocol, ip, port }) => {
   return url.origin
 }
 
-export const open = async ({
+export const startServer = async ({
   cancellationToken = createCancellationToken(),
   protocol = "http",
   ip = "127.0.0.1",
@@ -27,31 +30,27 @@ export const open = async ({
   forcePort = false,
   // when port is https you must provide { privateKey, certificate } under signature
   signature,
-  autoCloseOnSIGINT = true,
+  stopOnSIGINT = true,
   // auto close the server when the process exits
-  autoCloseOnExit = true,
+  stopOnExit = true,
   // auto close when server respond with a 500
-  autoCloseOnError = true,
+  stopOnError = true,
   // auto close the server when an uncaughtException happens
   // it mess up stack trace
   // and execute code on uncaughtException/unhandledRejection so
   // it should not be used at all
-  autoCloseOnCrash = false,
+  stopOnCrash = false,
   requestToResponse = () => null,
   verbose = true,
-  openedMessage = ({ origin }) => `server listening at ${origin}`,
-  closedMessage = (reason) => `server closed because ${reason}`,
+  startedMessage = ({ origin }) => `server started at ${origin}`,
+  stoppedMessage = (reason) => `server stopped because ${reason}`,
 } = {}) => {
-  if (port === 0 && forcePort) {
-    throw new Error(`no need to pass forcePort when port is 0`)
-  }
-  if (protocol !== "http" && protocol !== "https") {
+  if (port === 0 && forcePort) throw new Error(`no need to pass forcePort when port is 0`)
+  if (protocol !== "http" && protocol !== "https")
     throw new Error(`protocol must be http or https, got ${protocol}`)
-  }
-  if (ip === "0.0.0.0" && process.platform === "win32") {
-    // https://github.com/nodejs/node/issues/14900
+  // https://github.com/nodejs/node/issues/14900
+  if (ip === "0.0.0.0" && process.platform === "win32")
     throw new Error(`listening ${ip} not available on window`)
-  }
 
   const log = (...args) => {
     if (verbose) {
@@ -65,35 +64,24 @@ export const open = async ({
 
   const { nodeServer, agent } = getNodeServerAndAgent({ protocol, signature })
 
-  let status = "opening"
-
-  // close can be called in all these cases:
-  /*
-	- cancel()
-	- autoCloseOnCrash is true and server process crash
-	- autoCloseOnError is true and server respond with 500 'internal error'
-	- autoCloseOnExit is true and server process exits
-	- external code calls close
-
-	in all those cases we would like to get the close promise
-	*/
+  let status = "starting"
 
   const connectionTracker = trackConnections(nodeServer)
   const clientTracker = trackClients(nodeServer)
   const requestHandlerTracker = trackRequestHandlers(nodeServer)
 
-  let closingResolve
-  const closing = new Promise((resolve) => {
-    closingResolve = resolve
+  let stoppingResolve
+  const stopping = new Promise((resolve) => {
+    stoppingResolve = resolve
   })
-  let closedResolve
-  const closed = new Promise((resolve) => {
-    closedResolve = resolve
+  let stoppedResolve
+  const stopped = new Promise((resolve) => {
+    stoppedResolve = resolve
   })
-  const close = memoizeOnce(async (reason = REASON_CLOSING) => {
-    closingResolve(reason)
+  const stop = memoizeOnce(async (reason = REASON_NOT_SPECIFIED) => {
+    stoppingResolve(reason)
     status = "closing"
-    log(closedMessage(reason))
+    log(stoppedMessage(reason))
 
     let responseStatus
     if (reasonIsInternalError(reason)) {
@@ -105,66 +93,66 @@ export const open = async ({
     }
 
     // ensure we don't try to handle request while server is closing
-    requestHandlerTracker.close(reason)
+    requestHandlerTracker.stop(reason)
     // opened connection must be shutdown before the close event is emitted
-    await clientTracker.close({ status: responseStatus, reason })
-    await connectionTracker.close(reason)
+    await clientTracker.stop({ status: responseStatus, reason })
+    await connectionTracker.stop(reason)
     await listenStop(nodeServer)
-    status = "closed"
-    closedResolve()
+    status = "stopped"
+    stoppedResolve()
   })
-  const openOperation = createStoppableOperation({
+  const startOperation = createStoppableOperation({
     cancellationToken,
     start: () => listen({ cancellationToken, server: nodeServer, port, ip }),
-    stop: (_, reason) => close(reason),
+    stop: (_, reason) => stop(reason),
   })
 
-  const closePromises = []
-  if (autoCloseOnCrash) {
-    const crashed = new Promise((resolve) => {
+  const stopRequestedPromises = []
+  if (stopOnCrash) {
+    const stopRequestedByCrash = new Promise((resolve) => {
       const unregister = registerProcessCrash((reason) => {
         resolve(reason.value)
       })
-      closing.then(unregister)
+      stopping.then(unregister)
     })
-    closePromises.push(crashed)
+    stopRequestedPromises.push(stopRequestedByCrash)
   }
-  if (autoCloseOnError) {
-    const errored = new Promise((resolve) => {
+  if (stopOnError) {
+    const stopRequestedByError = new Promise((resolve) => {
       const unregister = requestHandlerTracker.add((nodeRequest, nodeResponse) => {
         if (nodeResponse.statusCode === 500 && reasonIsInternalError(nodeResponse.statusMessage)) {
           resolve("server internal error")
         }
       })
-      closing.then(unregister)
+      stopping.then(unregister)
     })
-    closePromises.push(errored)
+    stopRequestedPromises.push(stopRequestedByError)
   }
-  if (autoCloseOnExit) {
-    const exited = new Promise((resolve) => {
+  if (stopOnExit) {
+    const stopRequestedByExit = new Promise((resolve) => {
       const unregister = processTeardown((reason) => {
         resolve(`server process ${reason}`)
       })
-      closing.then(unregister)
+      stopping.then(unregister)
     })
-    closePromises.push(exited)
+    stopRequestedPromises.push(stopRequestedByExit)
   }
-  if (autoCloseOnSIGINT) {
-    const sigint = new Promise((resolve) => {
+  if (stopOnSIGINT) {
+    const stopRequestedBySIGINT = new Promise((resolve) => {
       const onsigint = () => resolve("process sigint")
       process.once("SIGINT", onsigint)
-      closing.then(() => {
+      stopping.then(() => {
         process.removeListener("SIGINT", onsigint)
       })
-      closePromises.push(sigint)
+      stopRequestedPromises.push(stopRequestedBySIGINT)
     })
   }
-  Promise.race(closePromises).then(close)
+  Promise.race(stopRequestedPromises).then(stop)
 
-  port = await openOperation
+  port = await startOperation
   status = "opened"
   const origin = originAsString({ protocol, ip, port })
-  log(openedMessage({ origin }))
+  log(startedMessage({ origin }))
 
   // nodeServer.on("upgrade", (request, socket, head) => {
   //   // when being requested using a websocket
@@ -222,8 +210,8 @@ export const open = async ({
     origin,
     nodeServer,
     agent,
-    close,
-    closed,
+    stop,
+    stopped,
   }
 }
 
@@ -252,9 +240,6 @@ const listenStop = (server) =>
     server.on("close", resolve)
     server.close()
   })
-
-const REASON_CLOSING = "closing"
-const REASON_INTERNAL_ERROR = "internal error"
 
 const reasonIsInternalError = (reason) => reason === REASON_INTERNAL_ERROR
 

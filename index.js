@@ -1,10 +1,9 @@
-export { createJsCompileService } from "./src/createJsCompileService.js"
-export { openCompileServer } from "./src/server-compile/index.js"
+export { startCompileServer } from "./src/server-compile/index.js"
 export { launchAndExecute } from "./src/launchAndExecute/index.js"
 export { executeFile } from "./src/executeFile.js"
 export { executePlan } from "./src/executePlan/index.js"
 // browser served need own repo?
-export { openBrowserServer } from "./src/server-browser/index.js"
+export { startBrowserServer } from "./src/server-browser/index.js"
 // may be moved in own repo ?
 export { executionPlanToCoverageMap } from "./src/executionPlanToCoverageMap/index.js"
 

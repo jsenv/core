@@ -1,31 +1,30 @@
+const { forEachRessourceMatching } = require("@dmail/project-structure")
 const { pluginOptionMapToPluginMap } = require("@dmail/project-structure-compile-babel")
 const { createCancellationSource } = require("@dmail/cancellation")
-const { open: serverBrowserOpen } = require("../dist/src/server-browser/index.js")
-const { createJsCompileService } = require("../dist/src/createJsCompileService.js")
+const { startBrowserServer } = require("../dist/src/server-browser/index.js")
 const { localRoot } = require("../dist/src/localRoot.js")
 
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
 })
 const compileInto = "build"
-const hotreload = false
 
 const exec = async ({ cancellationToken }) => {
-  const compileService = await createJsCompileService({
-    cancellationToken,
-    pluginMap,
+  const executableFiles = await forEachRessourceMatching({
     localRoot,
-    compileInto,
-    watch: hotreload,
+    metaMap: {
+      "index.js": { js: true },
+      "src/**/*.js": { js: true },
+    },
+    predicate: ({ js }) => js,
   })
 
-  return serverBrowserOpen({
+  return startBrowserServer({
     cancellationToken,
     localRoot,
     compileInto,
-    compileService,
-
-    hotreload,
+    pluginMap,
+    executableFiles,
   })
 }
 

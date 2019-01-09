@@ -1,4 +1,4 @@
-export { open, originAsString } from "./server.js"
+export { startServer, originAsString } from "./server.js"
 export { findFreePort } from "./findFreePort.js"
 export { createRequestPredicate } from "./createRequestPredicate.js"
 export { enableCORS, requestToAccessControlAllowedInfo } from "./enableCORS.js"

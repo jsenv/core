@@ -1,11 +1,12 @@
+import { createCancellationToken } from "@dmail/cancellation"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
-import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.js"
-import { objectMapValue } from "./objectHelper.js"
-import { jsCompile } from "./jsCompile/index.js"
-import { jsCompileToService } from "./jsCompileToService/index.js"
+import { envDescriptionToCompileMap } from "../envDescriptionToCompileMap/index.js"
+import { objectMapValue } from "../objectHelper.js"
+import { jsCompile } from "../jsCompile/index.js"
+import { jsCompileToService } from "../jsCompileToService/index.js"
 
 export const createJsCompileService = async ({
-  cancellationToken,
+  cancellationToken = createCancellationToken(),
   localRoot,
   compileInto,
   pluginMap,
@@ -25,7 +26,9 @@ export const createJsCompileService = async ({
     platformUsageMap,
     pluginCompatMap,
   })
+
   const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
+
   await fileWriteFromString(
     `${localRoot}/${compileInto}/compileMap.json`,
     JSON.stringify(compileMap, null, "  "),

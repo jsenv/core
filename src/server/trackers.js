@@ -10,7 +10,7 @@ export const trackConnections = (nodeServer) => {
 
   nodeServer.on("connection", connectionListener)
 
-  const close = (reason) => {
+  const stop = (reason) => {
     nodeServer.removeListener("connection", connectionListener)
 
     // should we do this async ?
@@ -20,7 +20,7 @@ export const trackConnections = (nodeServer) => {
     })
   }
 
-  return { close }
+  return { stop }
 }
 
 export const trackClients = (nodeServer) => {
@@ -37,7 +37,7 @@ export const trackClients = (nodeServer) => {
 
   nodeServer.on("request", clientListener)
 
-  const close = ({ status, reason }) => {
+  const stop = ({ status, reason }) => {
     nodeServer.removeListener("request", clientListener)
 
     return Promise.all(
@@ -59,7 +59,7 @@ export const trackClients = (nodeServer) => {
     )
   }
 
-  return { close }
+  return { stop }
 }
 
 export const trackRequestHandlers = (nodeServer) => {
@@ -72,12 +72,12 @@ export const trackRequestHandlers = (nodeServer) => {
     }
   }
 
-  const close = () => {
+  const stop = () => {
     requestHandlers.forEach((requestHandler) => {
       nodeServer.removeListener("request", requestHandler)
     })
     requestHandlers.length = 0
   }
 
-  return { add, close }
+  return { add, stop }
 }
