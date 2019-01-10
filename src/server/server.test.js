@@ -1,7 +1,7 @@
 import { assert } from "@dmail/assert"
 import fetch from "node-fetch"
 import { createCancellationSource } from "@dmail/cancellation"
-import { open } from "./server.js"
+import { startServer } from "./server.js"
 
 const test = async () => {
   const { cancel, token } = createCancellationSource()
@@ -10,14 +10,9 @@ const test = async () => {
   token.register(() => {
     clearTimeout(timer)
   })
+  process.on("SIGINT", () => cancel("process interrupt"))
 
-  process.on("SIGINT", () => {
-    cancel("process interrupt").then(() => {
-      process.exit(0)
-    })
-  })
-
-  const { origin, agent, close } = await open({
+  const { origin, agent, stop } = await startServer({
     cancellationToken: token,
     protocol: "http",
     port: 8998,
@@ -37,8 +32,9 @@ const test = async () => {
   const response = await fetch(origin, { agent })
   const text = await response.text()
   assert({ actual: text, expected: "ok" })
-  await close()
-  console.log("passed")
+
+  stop()
+  cancel("done")
 }
 test()
 

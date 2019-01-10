@@ -28,6 +28,7 @@ export const createTwoWayStream = () => {
   }
   const write = (data) => {
     if (status === "ended") throw new Error("write after end")
+    if (data === undefined || data === null) return
 
     length += data.length
     dataArray.push(data)
@@ -57,11 +58,13 @@ export const createTwoWayStream = () => {
 
   let end
   const ended = new Promise((resolve) => {
-    if (status === "ended") return
-    status = "ended"
-    const result = dataArray.slice()
-    // clear() // should we clear ?
-    resolve(result)
+    end = () => {
+      if (status === "ended") return
+      status = "ended"
+      const result = dataArray.slice()
+      clear()
+      resolve(result)
+    }
   })
 
   const getLength = () => length

@@ -144,8 +144,8 @@ export const startServer = async ({
       stopping.then(() => {
         process.removeListener("SIGINT", onsigint)
       })
-      stopRequestedPromises.push(stopRequestedBySIGINT)
     })
+    stopRequestedPromises.push(stopRequestedBySIGINT)
   }
   Promise.race(stopRequestedPromises).then(stop)
 
