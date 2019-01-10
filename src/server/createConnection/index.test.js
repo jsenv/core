@@ -1,4 +1,4 @@
-import { createBody, createTwoWayStream } from "./index.js"
+import { createBody } from "./index.js"
 import assert from "assert"
 
 const getClosed = (body) => {
@@ -53,7 +53,7 @@ const getText = (body) => {
 
 // createBody(dataSource) => closed when dataSource is closed
 {
-  const dataSource = createTwoWayStream()
+  const dataSource = createBody()
   const body = createBody(dataSource)
 
   {

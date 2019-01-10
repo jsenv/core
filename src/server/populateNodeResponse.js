@@ -1,4 +1,4 @@
-import { pipe, callCancel, callClose } from "./createConnection/index.js"
+import { pipe, cancel, end } from "./createConnection/index.js"
 
 const mapping = {
   // "content-length": "Content-Length",
@@ -23,7 +23,7 @@ export const populateNodeResponse = (
 ) => {
   nodeResponse.writeHead(status, reason, headersToNodeHeaders(headers))
   if (ignoreBody) {
-    callCancel(body)
+    cancel(body)
     nodeResponse.end()
   } else {
     pipe(
@@ -36,7 +36,7 @@ export const populateNodeResponse = (
       // it may happen in case of server sent event
       // where body is kept open to write to client
       // and the browser is reloaded or closed for instance
-      callClose(body)
+      end(body)
     })
   }
 }

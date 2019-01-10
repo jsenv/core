@@ -7,7 +7,7 @@ import { createCancellationToken, createStoppableOperation } from "@dmail/cancel
 import { processTeardown } from "../process-teardown/index.js"
 import { memoizeOnce } from "../functionHelper.js"
 import { trackConnections, trackClients, trackRequestHandlers } from "./trackers.js"
-import { createRequestFromNodeRequest } from "./createRequestFromNodeRequest.js"
+import { nodeRequestToRequest } from "./nodeRequestToRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
 import { registerProcessCrash } from "./registerProcessCrash.js"
 
@@ -164,7 +164,7 @@ export const startServer = async ({
   // })
 
   requestHandlerTracker.add(async (nodeRequest, nodeResponse) => {
-    const request = createRequestFromNodeRequest(nodeRequest, origin)
+    const request = nodeRequestToRequest(nodeRequest, origin)
     log(`${request.method} ${request.origin}/${request.ressource}`)
 
     nodeRequest.on("error", (error) => {

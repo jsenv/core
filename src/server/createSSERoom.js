@@ -1,4 +1,4 @@
-import { createTwoWayStream } from "./index.js"
+import { createBody } from "./index.js"
 
 // https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
 // https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
@@ -104,7 +104,7 @@ export const createSSERoom = ({
       ...(lastKnownId === undefined ? [] : history.since(lastKnownId)),
     ]
 
-    const connection = createTwoWayStream()
+    const connection = createBody()
     connections.add(connection)
     connection.closed.listenOnce(() => {
       connections.delete(connection)

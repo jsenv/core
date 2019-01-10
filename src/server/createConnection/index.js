@@ -1,3 +1,3 @@
-export { pipe, callCancel, callClose } from "./pipe.js"
+export { cancel, end } from "./interface/interface.js"
+export { pipe } from "./pipe.js"
 export { createBody } from "./createBody.js"
-export { createTwoWayStream } from "./createTwoWayStream.js"

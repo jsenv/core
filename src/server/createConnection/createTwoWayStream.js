@@ -1,74 +1,81 @@
-import { createPromiseAndHooks } from "../../promiseHelper.js"
-import { createSignal } from "@dmail/signal"
+import { arrayWithout } from "../../arrayHelper.js"
 
-const twoWayStreamSymbol = Symbol.for("twoWayStream")
-
-export const isTwoWayStream = (a) => {
-  return a && typeof a === "object" && twoWayStreamSymbol in a
-}
+export const twoWayStreamSymbol = Symbol.for("twoWayStream")
 
 export const createTwoWayStream = () => {
   let length = 0
-  let status = "opened"
+  let status = "pending"
 
-  const promise = createPromiseAndHooks()
+  const dataArray = []
+  let dataListeners = []
+  const listenData = (cb) => {
+    // if errored, canceled, ended, no data can emit and
+    // we should not emit the current data neither
+    if (status !== "pending") return () => {}
 
-  const errored = createSignal({ smart: true })
-  const cancelled = createSignal({ smart: true })
-  const closed = createSignal({ smart: true })
-  const writed = createSignal({ smart: true })
-
-  const error = (e) => {
-    status = "errored"
-    errored.emit(e)
-    // maybe should we reset smartMemory
-    // writed.smartMemory.length = 0
-    // but I think it's better to avoid doing anything in case of error
-    throw e
+    dataListeners = [...dataListeners, cb]
+    dataArray.forEach((data) => {
+      cb(data)
+    })
+    return () => {
+      dataListeners = arrayWithout(dataListeners, cb)
+    }
   }
 
-  const cancel = () => {
-    if (status === "cancelled") {
-      return
-    }
-    status = "cancelled"
-    writed.smartMemory.length = 0
+  const clear = () => {
     length = 0
-    cancelled.emit()
+    dataArray.length = 0
   }
-
-  const close = () => {
-    if (status === "closed") {
-      return
-    }
-    status = "closed"
-    promise.resolve(writed.smartMemory.map(([buffer]) => buffer))
-    closed.emit()
-  }
-
   const write = (data) => {
-    if (status === "closed") {
-      throw new Error("write after end")
-    }
-    if (data) {
-      length += data.length
-      writed.emit(data)
-    }
+    if (status === "ended") throw new Error("write after end")
+
+    length += data.length
+    dataArray.push(data)
+    dataListeners.forEach((listener) => listener(data))
   }
+
+  let error
+  const errored = new Promise((resolve) => {
+    error = (e) => {
+      status = "errored"
+      resolve(e)
+      // maybe we should clear()
+      // but it's better to do nothing on error I guess
+      throw e
+    }
+  })
+
+  let cancel
+  const cancelled = new Promise((resolve) => {
+    cancel = (reason) => {
+      if (status === "canceled") return
+      status = "canceled"
+      clear()
+      resolve(reason)
+    }
+  })
+
+  let end
+  const ended = new Promise((resolve) => {
+    if (status === "ended") return
+    status = "ended"
+    const result = dataArray.slice()
+    // clear() // should we clear ?
+    resolve(result)
+  })
 
   const getLength = () => length
 
   return Object.freeze({
     [twoWayStreamSymbol]: true,
+    listenData,
+    write,
     error,
     errored,
     cancel,
     cancelled,
-    close,
-    closed,
-    write,
-    writed,
+    end,
+    ended,
     getLength,
-    promise,
   })
 }
