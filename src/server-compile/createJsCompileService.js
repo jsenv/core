@@ -1,9 +1,9 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
-import { envDescriptionToCompileMap } from "../envDescriptionToCompileMap/index.js"
 import { objectMapValue } from "../objectHelper.js"
 import { jsCompile } from "../jsCompile/index.js"
 import { jsCompileToService } from "../jsCompileToService/index.js"
+import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.js"
 
 export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),

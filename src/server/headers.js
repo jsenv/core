@@ -3,8 +3,6 @@ https://developer.mozilla.org/en-US/docs/Web/API/Headers
 https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
 */
 
-import { composeMapToCompose } from "../objectHelper.js"
-
 const normalizeName = (headerName) => {
   headerName = String(headerName)
   if (/[^a-z0-9\-#$%&'*+.\^_`|~]/i.test(headerName)) {
@@ -70,18 +68,3 @@ export const acceptContentType = (acceptHeader, contentType) => {
   }
   return acceptHeader.split(",").some((accepted) => accepted === contentType)
 }
-
-const composeHeaderValues = (value, nextValue) => `${value}, ${nextValue}`
-
-const headerComposeMap = {
-  accept: composeHeaderValues,
-  "accept-charset": composeHeaderValues,
-  "accept-language": composeHeaderValues,
-  "access-control-allow-headers": composeHeaderValues,
-  "access-control-allow-methods": composeHeaderValues,
-  "access-control-allow-origin": composeHeaderValues,
-  // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
-  vary: composeHeaderValues,
-}
-
-export const headersCompose = composeMapToCompose(headerComposeMap)

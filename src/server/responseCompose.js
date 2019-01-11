@@ -1,8 +1,23 @@
-import { composeMapToCompose } from "../objectHelper.js"
-import { headersCompose } from "./headers.js"
+import { compositionMappingToComposeStrict, compositionMappingToCompose } from "@dmail/helper"
 
-const responseComposeMap = {
-  headers: headersCompose,
+const composeHeaderValues = (value, nextValue) => `${value}, ${nextValue}`
+
+const headerCompositionMapping = {
+  accept: composeHeaderValues,
+  "accept-charset": composeHeaderValues,
+  "accept-language": composeHeaderValues,
+  "access-control-allow-headers": composeHeaderValues,
+  "access-control-allow-methods": composeHeaderValues,
+  "access-control-allow-origin": composeHeaderValues,
+  // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
+  vary: composeHeaderValues,
 }
 
-export const responseCompose = composeMapToCompose(responseComposeMap)
+const responseCompositionMapping = {
+  status: (prevStatus, status) => status,
+  reason: (prevReason, reason) => reason,
+  headers: compositionMappingToCompose(headerCompositionMapping),
+  body: (prevBody, body) => body,
+}
+
+export const responseCompose = compositionMappingToComposeStrict(responseCompositionMapping)

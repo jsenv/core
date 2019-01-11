@@ -1,5 +1,9 @@
 import { compatMapCompose } from "../compatMapCompose.js"
 
+export const platformGroupsCompose = (...platformGroups) => {
+  return platformGroups.reduce(platformGroupReducer, [])
+}
+
 const platformGroupReducer = (previous, platformGroup) => {
   const groups = []
 
@@ -29,8 +33,4 @@ const platformGroupReducer = (previous, platformGroup) => {
   })
 
   return groups
-}
-
-export const platformGroupsCompose = (...platformGroups) => {
-  return platformGroups.reduce(platformGroupReducer, [])
 }

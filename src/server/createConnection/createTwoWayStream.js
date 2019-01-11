@@ -1,4 +1,4 @@
-import { arrayWithoutValue } from "../../arrayHelper.js"
+import { arrayWithoutValue } from "@dmail/helper"
 
 export const twoWayStreamSymbol = Symbol.for("twoWayStream")
 

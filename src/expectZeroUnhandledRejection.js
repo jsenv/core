@@ -1,5 +1,5 @@
 import { assert } from "@dmail/assert"
-import { arrayWithout } from "./arrayHelper.js"
+import { arrayWithout } from "@dmail/helper"
 
 export const expectZeroUnhandledRejection = () => {
   let unhandledRejections = []

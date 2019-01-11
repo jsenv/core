@@ -1,4 +1,4 @@
-import { arrayWithoutDuplicate } from "../arrayHelper.js"
+import { arrayWithoutDuplicate } from "@dmail/helper"
 import { hrefToOrigin } from "../urlHelper.js"
 
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
