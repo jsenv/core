@@ -1,7 +1,7 @@
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../localRoot.js"
-import { launchNode } from "../launchNode.js"
 import { executeFile } from "../../executeFile.js"
+import { launchNode } from "../launchNode.js"
 
 const file = `src/launchNode/test/fixtures/file.js`
 const compileInto = "build"

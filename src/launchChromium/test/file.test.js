@@ -1,7 +1,7 @@
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../localRoot.js"
+import { executeFile } from "../../executeFile.js"
 import { launchChromium } from "../launchChromium.js"
-import { executeFileOnPlatform } from "../../executeFileOnPlatform.js"
 
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -9,12 +9,12 @@ const pluginMap = pluginOptionMapToPluginMap({
 const file = `src/launchChromium/test/fixtures/file.js`
 const compileInto = "build"
 
-executeFileOnPlatform(file, (options) => launchChromium({ headless: false, ...options }), {
+executeFile(file, {
   localRoot,
   compileInto,
   pluginMap,
+  launchPlatform: (options) => launchChromium({ headless: false, ...options }),
   platformTypeForLog: "chromium browser",
-
   verbose: true,
   stopOnceExecuted: true,
 })

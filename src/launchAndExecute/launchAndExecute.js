@@ -3,7 +3,7 @@ import {
   createOperation,
   createStoppableOperation,
 } from "@dmail/cancellation"
-import { promiseTrackRace } from "../promiseHelper.js"
+import { promiseTrackRace } from "@dmail/helper"
 import { createRestartSignal } from "./restartController.js"
 
 // when launchPlatform returns { disocnnected, stop, stopForce }

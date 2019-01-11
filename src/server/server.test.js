@@ -1,5 +1,5 @@
-import { assert } from "@dmail/assert"
 import fetch from "node-fetch"
+import { assert } from "@dmail/assert"
 import { createCancellationSource } from "@dmail/cancellation"
 import { startServer } from "./server.js"
 
