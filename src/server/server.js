@@ -4,12 +4,13 @@ import https from "https"
 import killPort from "kill-port"
 import { URL } from "url"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
-import { processTeardown } from "../process-teardown/index.js"
+import { registerProcessInterruptCallback } from "../process-interrupt/index.js"
+import { registerUngaranteedProcessTeardown } from "../process-teardown/index.js"
+import { registerUnadvisedProcessCrashCallback } from "../process-crash/index.js"
 import { memoizeOnce } from "../functionHelper.js"
 import { trackConnections, trackClients, trackRequestHandlers } from "./trackers.js"
 import { nodeRequestToRequest } from "./nodeRequestToRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
-import { registerProcessCrash } from "./registerProcessCrash.js"
 
 const REASON_NOT_SPECIFIED = "not specified"
 const REASON_INTERNAL_ERROR = "internal error"
@@ -36,9 +37,6 @@ export const startServer = async ({
   // auto close when server respond with a 500
   stopOnError = true,
   // auto close the server when an uncaughtException happens
-  // it mess up stack trace
-  // and execute code on uncaughtException/unhandledRejection so
-  // it should not be used at all
   stopOnCrash = false,
   requestToResponse = () => null,
   verbose = true,
@@ -110,7 +108,7 @@ export const startServer = async ({
   const stopRequestedPromises = []
   if (stopOnCrash) {
     const stopRequestedByCrash = new Promise((resolve) => {
-      const unregister = registerProcessCrash((reason) => {
+      const unregister = registerUnadvisedProcessCrashCallback((reason) => {
         resolve(reason.value)
       })
       stopping.then(unregister)
@@ -130,8 +128,8 @@ export const startServer = async ({
   }
   if (stopOnExit) {
     const stopRequestedByExit = new Promise((resolve) => {
-      const unregister = processTeardown((reason) => {
-        resolve(`server process ${reason}`)
+      const unregister = registerUngaranteedProcessTeardown((reason) => {
+        resolve(`process ${reason}`)
       })
       stopping.then(unregister)
     })
@@ -139,11 +137,10 @@ export const startServer = async ({
   }
   if (stopOnSIGINT) {
     const stopRequestedBySIGINT = new Promise((resolve) => {
-      const onsigint = () => resolve("process sigint")
-      process.once("SIGINT", onsigint)
-      stopping.then(() => {
-        process.removeListener("SIGINT", onsigint)
+      const unregister = registerProcessInterruptCallback(() => {
+        resolve("process sigint")
       })
+      stopping.then(unregister)
     })
     stopRequestedPromises.push(stopRequestedBySIGINT)
   }
