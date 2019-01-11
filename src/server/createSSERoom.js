@@ -1,4 +1,4 @@
-import { createBody } from "./index.js"
+import { subscribeToObservable } from "../observable/index.js"
 
 // https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
 // https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
@@ -60,8 +60,8 @@ const createEventHistory = ({ limit } = {}) => {
 export const createSSERoom = ({
   keepaliveDuration = 30 * 1000,
   retryDuration = 1 * 1000,
-  historyLength = 1000,
-  maxLength = 100, // max 100 users accepted
+  historyLength = 1 * 1000,
+  maxConnectionAllowed = 100, // max 100 users accepted
   verbose = false,
 } = {}) => {
   const log = (...args) => {
@@ -72,13 +72,16 @@ export const createSSERoom = ({
   }
 
   const connections = new Set()
+  // what about history that keeps growing ?
+  // we should add some limit
+  // one limit could be that an event older than 24h is be deleted
   const history = createEventHistory(historyLength)
   let previousEventId
   let state = "closed"
   let interval
 
   const connect = (lastKnownId) => {
-    if (connections.size > maxLength) {
+    if (connections.size > maxConnectionAllowed) {
       return {
         status: 503,
       }
@@ -104,29 +107,37 @@ export const createSSERoom = ({
       ...(lastKnownId === undefined ? [] : history.since(lastKnownId)),
     ]
 
-    const connection = createBody()
-    connections.add(connection)
-    connection.closed.listenOnce(() => {
-      connections.delete(connection)
-      log(
-        `connection closed by us, number of client connected to event source: ${connections.size}`,
-      )
-    })
-    connection.cancelled.listenOnce(() => {
-      connections.delete(connection)
-      log(`client disconnected, number of client connected to event source: ${connections.size}`)
+    const body = subscribeToObservable(({ next }) => {
+      events.forEach((event) => {
+        log(`send ${event.type} event to this new client`)
+        next(stringifySourceEvent(event))
+      })
+
+      const connection = {
+        write: next,
+        unsubscribe,
+      }
+
+      const unsubscribe = () => {
+        connections.delete(connection)
+        log(
+          `connection closed by us, number of client connected to event source: ${
+            connections.size
+          }`,
+        )
+      }
+
+      connections.add(connection)
+      return {
+        unsubscribe,
+      }
     })
 
     log(
       `client joined, number of client connected to event source: ${
         connections.size
-      }, max allowed: ${maxLength}`,
+      }, max allowed: ${maxConnectionAllowed}`,
     )
-
-    events.forEach((event) => {
-      log(`send ${event.type} event to this new client`)
-      connection.write(stringifySourceEvent(event))
-    })
 
     return {
       status: 200,
@@ -135,7 +146,7 @@ export const createSSERoom = ({
         "cache-control": "no-cache",
         connection: "keep-alive",
       },
-      body: connection,
+      body,
     }
   }
 
@@ -165,18 +176,18 @@ export const createSSERoom = ({
     })
   }
 
-  const open = () => {
+  const start = () => {
+    state = "started"
     interval = setInterval(keepAlive, keepaliveDuration)
-    state = "opened"
   }
 
-  const close = () => {
-    log(`closing, number of client to close: ${connections.size}`)
-    connections.forEach((connection) => connection.close())
+  const stop = () => {
+    log(`stopping, number of client to close: ${connections.size}`)
+    connections.forEach((connection) => connection.unsubscribe())
     clearInterval(interval)
     history.reset()
-    state = "closed"
+    state = "stopped"
   }
 
-  return { open, close, connect, sendEvent }
+  return { start, stop, connect, sendEvent }
 }

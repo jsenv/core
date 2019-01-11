@@ -31,3 +31,15 @@ export const regexpEscape = (string) => {
   }
   return escapedString
 }
+
+export const stringToArrayBuffer = (string) => {
+  string = String(string)
+  const buffer = new ArrayBuffer(string.length * 2) // 2 bytes for each char
+  const bufferView = new Uint16Array(buffer)
+  let i = 0
+  while (i < string.length) {
+    bufferView[i] = string.charCodeAt(i)
+    i++
+  }
+  return buffer
+}
