@@ -1,4 +1,4 @@
-import { memoizeOnce } from "../../functionHelper.js"
+import { memoizeOnce } from "@dmail/helper"
 import { createLocaters } from "../createLocaters.js"
 import { detect } from "./browserDetect/index.js"
 import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
