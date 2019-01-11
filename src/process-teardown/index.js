@@ -1,1 +1,1 @@
-export { processTeardown } from "./processTeardown.js"
+export { registerUngaranteedProcessTeardown } from "./registerUngaranteedProcessTeardown.js"
