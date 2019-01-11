@@ -1,4 +1,4 @@
-import { arrayWithout } from "../arrayHelper.js"
+import { arrayWithoutValue } from "../arrayHelper.js"
 
 export const createLockRegistry = () => {
   let lockArray = []
@@ -17,7 +17,7 @@ export const createLockRegistry = () => {
     if (currentLock) await currentLock.unlocked
 
     const unlock = () => {
-      lockArray = arrayWithout(lockArray, lock)
+      lockArray = arrayWithoutValue(lockArray, lock)
       unlockResolve()
     }
     return unlock

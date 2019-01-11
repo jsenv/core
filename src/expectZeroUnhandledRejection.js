@@ -1,20 +1,17 @@
 import { assert } from "@dmail/assert"
-import { arrayWithoutIndex } from "./arrayHelper.js"
+import { arrayWithout } from "./arrayHelper.js"
 
 export const expectZeroUnhandledRejection = () => {
   let unhandledRejections = []
-  let unhandledPromises = []
 
   process.on("unhandledRejection", (error, promise) => {
-    unhandledRejections = [...unhandledRejections, error]
-    unhandledPromises = [...unhandledPromises, promise]
+    unhandledRejections = [...unhandledRejections, { error, promise }]
   })
   process.on("rejectionHandled", (promise) => {
-    const promiseIndex = unhandledPromises.indexOf(promise)
-    if (promiseIndex === -1) return
-
-    unhandledRejections = arrayWithoutIndex(unhandledRejections, promiseIndex)
-    unhandledPromises = arrayWithoutIndex(unhandledPromises, promiseIndex)
+    unhandledRejections = arrayWithout(
+      unhandledRejections,
+      (unhandledRejection) => unhandledRejection.promise === promise,
+    )
   })
 
   process.on("exit", () => {

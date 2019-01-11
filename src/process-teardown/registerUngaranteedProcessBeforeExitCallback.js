@@ -1,4 +1,4 @@
-import { arrayWithout } from "../arrayHelper.js"
+import { arrayWithoutValue } from "../arrayHelper.js"
 
 let beforeExitCallbackArray = []
 let uninstall
@@ -9,7 +9,7 @@ export const registerUngaranteedProcessBeforeExitCallback = (callback) => {
 
   return () => {
     if (beforeExitCallbackArray.length === 0) return
-    beforeExitCallbackArray = arrayWithout(beforeExitCallbackArray, callback)
+    beforeExitCallbackArray = arrayWithoutValue(beforeExitCallbackArray, callback)
     if (beforeExitCallbackArray.length === 0) uninstall()
   }
 }

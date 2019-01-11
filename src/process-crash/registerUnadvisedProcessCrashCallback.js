@@ -1,4 +1,4 @@
-import { arrayWithout } from "../arrayHelper.js"
+import { arrayWithoutValue } from "../arrayHelper.js"
 import { promiseMatch } from "../promiseHelper.js"
 
 let recoverCallbackArray = []
@@ -22,7 +22,7 @@ export const registerUnadvisedProcessCrashCallback = (recoverCallback) => {
   recoverCallbackArray = [...recoverCallbackArray, recoverCallback]
   return () => {
     if (recoverCallbackArray.length === 0) return
-    recoverCallbackArray = arrayWithout(recoverCallbackArray, recoverCallback)
+    recoverCallbackArray = arrayWithoutValue(recoverCallbackArray, recoverCallback)
     if (recoverCallbackArray.length === 0) uninstall()
   }
 }

@@ -1,4 +1,4 @@
-import { arrayWithout } from "../../arrayHelper.js"
+import { arrayWithoutValue } from "../../arrayHelper.js"
 
 export const twoWayStreamSymbol = Symbol.for("twoWayStream")
 
@@ -18,7 +18,7 @@ export const createTwoWayStream = () => {
       cb(data)
     })
     return () => {
-      dataListeners = arrayWithout(dataListeners, cb)
+      dataListeners = arrayWithoutValue(dataListeners, cb)
     }
   }
 
