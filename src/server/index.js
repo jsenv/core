@@ -1,7 +1,7 @@
 export { startServer, originAsString } from "./server.js"
 export { findFreePort } from "./findFreePort.js"
 export { createRequestPredicate } from "./createRequestPredicate.js"
-export { enableCORS, requestToAccessControlAllowedInfo } from "./enableCORS.js"
+export { requestToAccessControlHeaders } from "./requestToAccessControlHeaders.js"
 export { acceptContentType } from "./headers.js"
 export { createBody } from "./createConnection/index.js"
 export { createSSERoom } from "./createSSERoom.js"

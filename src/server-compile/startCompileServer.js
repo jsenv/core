@@ -4,9 +4,9 @@ import { createCancellationToken } from "@dmail/cancellation"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
 import {
   startServer,
-  enableCORS,
-  requestToAccessControlAllowedInfo,
+  requestToAccessControlHeaders,
   serviceCompose,
+  responseCompose,
 } from "../server/index.js"
 import { createJsCompileService } from "./createJsCompileService.js"
 import { locate } from "../jsCompileToService/locate.js"
@@ -59,22 +59,21 @@ export const startCompileServer = async ({
   const requestToResponse = preventCors
     ? service
     : async (request) => {
-        const accessControlAllowedInfo = requestToAccessControlAllowedInfo(request)
+        const accessControlHeaders = requestToAccessControlHeaders(request)
 
         if (request.method === "OPTIONS") {
-          return enableCORS(
-            {
-              status: 200,
-              headers: {
-                "content-length": 0,
-              },
+          return {
+            status: 200,
+            headers: {
+              ...accessControlHeaders,
+              "content-length": 0,
             },
-            accessControlAllowedInfo,
-          )
+          }
         }
 
         const response = await service(request)
-        return enableCORS(response, accessControlAllowedInfo)
+
+        return responseCompose({ headers: accessControlHeaders }, response)
       }
 
   const compileServer = await startServer({
