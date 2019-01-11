@@ -40,6 +40,6 @@ export const requestToAccessControlHeaders = (
     "access-control-allow-headers": allowedHeaders.join(", "),
     "access-control-allow-credentials": allowCredentials,
     "access-control-max-age": maxAge,
-    vary: vary.join(","),
+    ...(vary ? { vary: vary.join(",") } : {}),
   }
 }
