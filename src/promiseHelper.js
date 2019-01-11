@@ -1,24 +1,5 @@
 import { createCancellationToken, createOperation } from "@dmail/cancellation"
 
-export const promiseMatch = (callbacks, data, predicate) => {
-  return new Promise((resolve, reject) => {
-    const visit = (index) => {
-      if (index >= callbacks.length) {
-        return resolve()
-      }
-      const callback = callbacks[index]
-      return Promise.resolve(callback(data)).then((value) => {
-        if (predicate(value)) {
-          return resolve(value)
-        }
-        return visit(index + 1)
-      }, reject)
-    }
-
-    visit(0)
-  })
-}
-
 export const createPromiseAndHooks = () => {
   let resolve
   let reject
@@ -92,20 +73,6 @@ export const promiseConcurrent = (
   })
 }
 
-export const namedPromiseAll = async (promiseMap) => {
-  const result = {}
-
-  await Promise.all(
-    Object.keys(promiseMap).map(async (name) => {
-      const value = await promiseMap[name]
-      result[name] = value
-      return value
-    }),
-  )
-
-  return result
-}
-
 export const millisecondToResolved = (millisecond) => {
   return new Promise((resolve) => {
     setTimeout(resolve, millisecond)
@@ -144,26 +111,6 @@ export const mapPending = (promise, callback) => {
       return callback()
     }
     return value
-  })
-}
-
-export const promiseTrackRace = (promises) => {
-  return new Promise((resolve, reject) => {
-    let resolved = false
-
-    const visit = (i) => {
-      const promise = promises[i]
-      promise.then((value) => {
-        if (resolved) return
-        resolved = true
-        resolve({ winner: promise, value })
-      }, reject)
-    }
-
-    let i = 0
-    while (i < promises.length) {
-      visit(i++)
-    }
   })
 }
 

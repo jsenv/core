@@ -1,4 +1,4 @@
-import { promiseMatch } from "../promiseHelper.js"
+import { asyncFunctionCandidatesToElectedValuePromise } from "@dmail/helper"
 
 const serviceGeneratedResponsePredicate = (value) => {
   if (value === null) {
@@ -9,6 +9,10 @@ const serviceGeneratedResponsePredicate = (value) => {
 
 export const serviceCompose = (...callbacks) => {
   return (request) => {
-    return promiseMatch(callbacks, request, serviceGeneratedResponsePredicate)
+    return asyncFunctionCandidatesToElectedValuePromise(
+      callbacks,
+      request,
+      serviceGeneratedResponsePredicate,
+    )
   }
 }

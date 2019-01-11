@@ -1,5 +1,4 @@
-import { arrayWithoutValue } from "@dmail/helper"
-import { promiseMatch } from "../promiseHelper.js"
+import { asyncFunctionCandidatesToElectedValuePromise, arrayWithoutValue } from "@dmail/helper"
 
 let recoverCallbackArray = []
 let uninstall
@@ -72,7 +71,7 @@ const crash = async (reason) => {
   const externalRecoverPromise = new Promise((resolve) => {
     resolveRecovering = resolve
   })
-  const callbackRecoverPromise = promiseMatch(
+  const callbackRecoverPromise = asyncFunctionCandidatesToElectedValuePromise(
     recoverCallbackArray,
     reason,
     (recovered) => typeof recovered === "boolean",
