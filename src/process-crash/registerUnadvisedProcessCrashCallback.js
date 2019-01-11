@@ -4,7 +4,20 @@ import { promiseMatch } from "../promiseHelper.js"
 let recoverCallbackArray = []
 let uninstall
 
-export const registerProcessCrash = (recoverCallback) => {
+/*
+why unadvised ?
+- First because you should not do anything when a process uncaughtException
+or unhandled rejection happens.
+You cannot assume assume or trust the state of your process so you're
+likely going to throw an other error trying to handle the first one.
+- Second because the error stack trace will be modified making it harder
+to reach back what cause the error
+
+Instead you should monitor your process with an other one
+and when the monitored process die, here you can do what you want
+like analysing logs to find what cause process to die, ping a log server, ...
+*/
+export const registerUnadvisedProcessCrashCallback = (recoverCallback) => {
   if (recoverCallbackArray.length === 0) uninstall = install()
   recoverCallbackArray = [...recoverCallbackArray, recoverCallback]
   return () => {
