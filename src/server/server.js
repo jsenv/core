@@ -4,7 +4,11 @@ import https from "https"
 import killPort from "kill-port"
 import { URL } from "url"
 import { memoizeOnce } from "@dmail/helper"
-import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
+import {
+  createCancellationToken,
+  createOperation,
+  createStoppableOperation,
+} from "@dmail/cancellation"
 import {
   registerProcessInterruptCallback,
   registerUnadvisedProcessCrashCallback,
@@ -58,9 +62,12 @@ export const startServer = async ({
     }
   }
 
-  cancellationToken.throwIfRequested()
-  await (forcePort ? killPort(port) : Promise.resolve())
-  cancellationToken.throwIfRequested()
+  if (forcePort) {
+    await createOperation({
+      cancellationToken,
+      start: () => killPort(port),
+    })
+  }
 
   const { nodeServer, agent } = getNodeServerAndAgent({ protocol, signature })
 
@@ -174,11 +181,11 @@ export const startServer = async ({
     try {
       const {
         status = 501,
-        reason = "not specified",
+        statusText = "not specified",
         headers = {},
         body = "",
       } = await requestToResponse(request)
-      response = Object.freeze({ status, reason, headers, body })
+      response = Object.freeze({ status, statusText, headers, body })
 
       if (
         request.method !== "HEAD" &&

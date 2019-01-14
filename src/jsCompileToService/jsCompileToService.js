@@ -49,10 +49,13 @@ export const jsCompileToService = (
     watchPredicate,
   })
 
-  const jsService = (request) => {
-    return service(request).catch((error) => {
-      if (error && error.name === "PARSE_ERROR") {
-        const json = JSON.stringify(error)
+  const jsService = async (request) => {
+    try {
+      const response = await service(request)
+      return response
+    } catch (e) {
+      if (e && e.name === "PARSE_ERROR") {
+        const json = JSON.stringify(e)
 
         return {
           status: 500,
@@ -65,8 +68,8 @@ export const jsCompileToService = (
           body: json,
         }
       }
-      return Promise.reject(error)
-    })
+      throw e
+    }
   }
 
   return jsService
