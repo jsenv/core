@@ -2,10 +2,10 @@ import path from "path"
 import { rollup } from "rollup"
 import babel from "rollup-plugin-babel"
 import nodeResolve from "rollup-plugin-node-resolve"
+import { fileWrite } from "@dmail/helper"
 import {
   pluginOptionMapToPluginMap,
   pluginMapToPluginsForPlatform,
-  fileWriteFromString,
 } from "@dmail/project-structure-compile-babel"
 import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 import { localRoot } from "../../../localRoot.js"
@@ -76,11 +76,8 @@ export const compileBrowserSystemImporter = async () => {
   delete map.sourcesContent
 
   await Promise.all([
-    fileWriteFromString(outputFile, appendSourceMappingURL(code, "./browserSystemImporter.js.map")),
-    fileWriteFromString(
-      `${outputFolder}/browserSystemImporter.js.map`,
-      JSON.stringify(map, null, "  "),
-    ),
+    fileWrite(outputFile, appendSourceMappingURL(code, "./browserSystemImporter.js.map")),
+    fileWrite(`${outputFolder}/browserSystemImporter.js.map`, JSON.stringify(map, null, "  ")),
   ])
 
   console.log(`${inputFile} -> ${outputFolder}/${inputRessource}`)

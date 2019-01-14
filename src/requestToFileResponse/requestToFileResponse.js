@@ -1,7 +1,8 @@
+import { createReadStream } from "fs"
+import { folderRead, fileStat, fileRead } from "@dmail/helper"
 import { createETag } from "../compileToService/helpers.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
 import { ressourceToContentType } from "./ressourceToContentType.js"
-import { stat, readFile, listDirectoryContent, fileToReadableStream } from "../fileHelper.js"
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
 const dateToUTCString = (date) => date.toUTCString()
@@ -18,9 +19,9 @@ export const requestToFileResponse = async (
     localRoot,
     locate = ({ file, localRoot }) => `${localRoot}/${file}`,
     canReadDirectory = false,
-    getFileStat = stat,
-    getFileContentAsString = readFile,
-    fileToBody = fileToReadableStream,
+    getFileStat = fileStat,
+    getFileContentAsString = fileRead,
+    fileToBody = createReadStream,
     cacheStrategy = "mtime",
   },
 ) => {
@@ -76,7 +77,7 @@ export const requestToFileResponse = async (
         }
       }
 
-      const files = await listDirectoryContent(file)
+      const files = await folderRead(file)
       const filesAsJSON = JSON.stringify(files)
 
       return {

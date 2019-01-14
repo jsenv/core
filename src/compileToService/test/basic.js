@@ -1,6 +1,6 @@
 import { assert } from "@dmail/assert"
+import { fileStat } from "@dmail/helper"
 import { localRoot as projectRoot } from "../../localRoot.js"
-import { stat } from "../../fileHelper.js"
 import { compileToService } from "../compileToService.js"
 
 const localRoot = `${projectRoot}/src/compileToService/test/fixtures`
@@ -114,7 +114,7 @@ const test = async () => {
           "if-modified-since": new Date(0).toUTCString(),
         },
       })
-      const { mtime } = await stat(`${localRoot}/${file}`)
+      const { mtime } = await fileStat(`${localRoot}/${file}`)
       assert({
         actual,
         expected: {

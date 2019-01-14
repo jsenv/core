@@ -1,7 +1,7 @@
 import path from "path"
 import lockfile from "proper-lockfile"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
-import { readFile, ensureFolderLeadingTo } from "../fileHelper.js"
+import { fileRead, fileMakeDirname } from "@dmail/helper"
 import { createETag, isFileNotFoundError } from "./helpers.js"
 import { getMetaLocation, getOutputLocation, getAssetLocation, getOutputFile } from "./locaters.js"
 import { lockForRessource } from "./ressourceRegistry.js"
@@ -52,7 +52,7 @@ export const compileFile = async ({
   }
 
   if (cacheStrategy === "none") {
-    const input = await readFile(fileAbsolute)
+    const input = await fileRead(fileAbsolute)
     const compileResult = generate({ input })
     return {
       ...compileResult,
@@ -68,7 +68,7 @@ export const compileFile = async ({
         compileId,
         file,
       }),
-      readFile(fileAbsolute),
+      fileRead(fileAbsolute),
     ])
     const eTag = createETag(input)
 
@@ -120,7 +120,7 @@ export const compileFile = async ({
   // after that we use a lock file to be sure we don't conflict with other process
   // trying to do the same (mapy happen when spawining multiple server for instance)
   // https://github.com/moxystudio/node-proper-lockfile/issues/69
-  await ensureFolderLeadingTo(metaLocation)
+  await fileMakeDirname(metaLocation)
   const unlockGlobal = await lockfile.lock(metaLocation, { realpath: false })
   // we use two lock because the local lock is very fast, it's a sort of perf improvement
 
@@ -176,7 +176,7 @@ const validateAsset = async ({ localRoot, compileInto, compileId, file, asset, e
   })
 
   try {
-    const content = await readFile(assetLocation)
+    const content = await fileRead(assetLocation)
     const contentETag = createETag(content)
 
     if (eTag !== contentETag) {
@@ -220,7 +220,7 @@ const validateAssets = async ({ localRoot, compileInto, compileId, file, meta })
 
 const validateSource = async ({ localRoot, source, eTag }) => {
   const sourceAbsolute = path.resolve(localRoot, source)
-  const sourceContent = await readFile(sourceAbsolute)
+  const sourceContent = await fileRead(sourceAbsolute)
   const sourceETag = createETag(source)
 
   if (sourceETag !== eTag) {
@@ -259,7 +259,7 @@ const validateCache = async ({ localRoot, compileInto, compileId, file }) => {
   })
 
   try {
-    const content = await readFile(outputLocation)
+    const content = await fileRead(outputLocation)
     return {
       valid: true,
       reason: "cache found",
@@ -332,7 +332,7 @@ const readFileMeta = async ({ localRoot, compileInto, compileId, file }) => {
   })
 
   try {
-    const content = await readFile(metaLocation)
+    const content = await fileRead(metaLocation)
     const meta = JSON.parse(content)
     if (meta.file !== file) {
       throw createCacheCorruptionError(

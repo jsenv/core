@@ -1,10 +1,10 @@
+import { fileRead } from "@dmail/helper"
 import { jsCompile, createInstrumentPlugin } from "../jsCompile/index.js"
-import { readFile } from "../fileHelper.js"
 
 export const fileToEmptyCoverage = async (file, { cancellationToken, localRoot }) => {
   cancellationToken.throwIfRequested()
 
-  const input = await readFile(`${localRoot}/${file}`)
+  const input = await fileRead(`${localRoot}/${file}`)
 
   // we must compile to get the coverage object
   // without evaluating the file because it would increment coverage

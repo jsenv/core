@@ -1,7 +1,7 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { createSignal } from "@dmail/signal"
+import { fileRead, fileStat } from "@dmail/helper"
 import { convertFileSystemErrorToResponseProperties } from "../requestToFileResponse/index.js"
-import { stat, readFile } from "../fileHelper.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { hrefToOrigin, hrefToRessource } from "../urlHelper.js"
 import { acceptContentType, createSSERoom, serviceCompose } from "../server/index.js"
@@ -149,7 +149,7 @@ export const compileToService = (
 
     try {
       if (cacheWithMtime) {
-        const { mtime } = await stat(fileAbsoluteLocation)
+        const { mtime } = await fileStat(fileAbsoluteLocation)
 
         if ("if-modified-since" in headers) {
           const ifModifiedSince = headers["if-modified-since"]
@@ -176,7 +176,7 @@ export const compileToService = (
       }
 
       if (cacheWithETag) {
-        const content = await readFile(fileAbsoluteLocation)
+        const content = await fileRead(fileAbsoluteLocation)
         const eTag = createETag(content)
 
         if ("if-none-match" in headers) {

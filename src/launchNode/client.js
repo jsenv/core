@@ -1,6 +1,9 @@
+// import sourceMapSupport from "source-map-support"
 import { createCancellationSource } from "@dmail/cancellation"
 import { uneval } from "@dmail/uneval"
 import { platform } from "../platform/node/nodePlatform.js"
+
+// sourceMapSupport.install()
 
 const sendToParent = (type, data) => {
   // process.send algorithm does not send non enumerable values

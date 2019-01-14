@@ -77,6 +77,9 @@ export const launchAndExecute = (
         }
 
         log(`${file} execution on ${platformTypeForLog} done with ${value}`)
+        errored.then((value) => {
+          throw value
+        })
         disconnected.then(() => {
           log(`${platformTypeForLog} disconnected`)
         })
