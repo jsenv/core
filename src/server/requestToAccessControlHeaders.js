@@ -27,6 +27,7 @@ export const requestToAccessControlHeaders = (
     ...["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     ...("access-control-request-method" in headers ? headers["access-control-request-method"] : []),
   ])
+
   const allowedHeaders = arrayWithoutDuplicate([
     ...["x-requested-with", "content-type", "accept"],
     ...("access-control-request-headers" in headers

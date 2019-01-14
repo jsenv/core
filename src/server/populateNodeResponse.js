@@ -3,22 +3,6 @@ import { isObservable, subscribe } from "../observable/index.js"
 import { nodeStreamToObservable } from "./nodeStreamToObservable.js"
 import { valueToObservable } from "./valueToObservable.js"
 
-const mapping = {
-  // "content-length": "Content-Length",
-  // "last-modified": "Last-Modified",
-}
-
-const headersToNodeHeaders = (headers) => {
-  const nodeHeaders = {}
-
-  Object.keys(headers).forEach((name) => {
-    const nodeHeaderName = name in mapping ? mapping[name] : name
-    nodeHeaders[nodeHeaderName] = headers[name]
-  })
-
-  return nodeHeaders
-}
-
 export const populateNodeResponse = (
   nodeResponse,
   { status, statusText, headers, body },
@@ -50,6 +34,22 @@ export const populateNodeResponse = (
     // and the browser is reloaded or closed for instance
     subscription.unsubscribe()
   })
+}
+
+const mapping = {
+  // "content-type": "Content-Type",
+  // "last-modified": "Last-Modified",
+}
+
+const headersToNodeHeaders = (headers) => {
+  const nodeHeaders = {}
+
+  Object.keys(headers).forEach((name) => {
+    const nodeHeaderName = name in mapping ? mapping[name] : name
+    nodeHeaders[nodeHeaderName] = headers[name]
+  })
+
+  return nodeHeaders
 }
 
 const bodyToObservable = (body) => {

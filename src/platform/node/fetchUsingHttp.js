@@ -4,14 +4,6 @@ import fetch from "node-fetch"
 // ideally we should only pass this to the fetch below
 https.globalAgent.options.rejectUnauthorized = false
 
-const getHeaderMapFromResponse = (response) => {
-  const headerMap = {}
-  response.headers.forEach((value, name) => {
-    headerMap[name] = value
-  })
-  return headerMap
-}
-
 export const fetchUsingHttp = async (url, parent) => {
   const response = await fetch(url, {
     headers: {
@@ -23,7 +15,15 @@ export const fetchUsingHttp = async (url, parent) => {
   return {
     status: response.status,
     statusText: response.statusText,
-    headers: getHeaderMapFromResponse(response),
+    headers: responseToHeaderMap(response),
     body: text,
   }
+}
+
+const responseToHeaderMap = (response) => {
+  const headerMap = {}
+  response.headers.forEach((value, name) => {
+    headerMap[name] = value
+  })
+  return headerMap
 }

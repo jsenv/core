@@ -1,6 +1,12 @@
-import { compositionMappingToComposeStrict, compositionMappingToCompose } from "@dmail/helper"
+import {
+  arrayWithoutDuplicate,
+  compositionMappingToComposeStrict,
+  compositionMappingToCompose,
+} from "@dmail/helper"
 
-const composeHeaderValues = (value, nextValue) => `${value}, ${nextValue}`
+const composeHeaderValues = (value, nextValue) => {
+  return arrayWithoutDuplicate([...value.split(", "), ...nextValue.split(", ")]).join(", ")
+}
 
 const headerCompositionMapping = {
   accept: composeHeaderValues,
