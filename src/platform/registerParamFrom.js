@@ -13,16 +13,15 @@ export const fromRemoteFile = async ({
   })
 
   if (status === 404) {
-    return Promise.reject(createNotFoundError(remoteFile))
+    throw createNotFoundError(remoteFile)
   }
 
   if (status === 500 && statusText === "parse error") {
-    return Promise.reject(createParseError(remoteFile, remoteParent, JSON.parse(body)))
+    throw createParseError(remoteFile, remoteParent, JSON.parse(body))
   }
 
   if (status < 200 || status >= 300) {
-    // should I create an error instead of rejecting with the response object ?
-    return Promise.reject({ status, statusText, headers, body })
+    throw createResponseError({ status, statusText, headers, body }, remoteFile)
   }
 
   if ("content-type" in headers === false)
@@ -59,6 +58,12 @@ const createParseError = (url, parent, data) => {
   parseError.code = "MODULE_PARSE_ERROR"
   parseError.data = data
   return parseError
+}
+
+const createResponseError = ({ status }, file) => {
+  const responseError = new Error(`received status ${status} for ${file}`)
+  responseError.code = "RESPONSE_ERROR"
+  return responseError
 }
 
 export const fromFunctionReturningParam = (url, parent, fn) => {

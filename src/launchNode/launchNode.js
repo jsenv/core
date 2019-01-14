@@ -55,21 +55,7 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
   }
 
   const fileToExecuted = (file, options) => {
-    sendToChild(child, "execute", {
-      localRoot,
-      remoteRoot,
-      compileInto,
-
-      file,
-      options,
-    })
-
-    const executed = new Promise((resolve, reject) => {
-      // executed
-      // should I call child.disconnect() at some point ?
-      // https://nodejs.org/api/child_process.html#child_process_subprocess_disconnect
-      // I don't think so, the purpose is to keep control of the child
-
+    return new Promise((resolve, reject) => {
       const executResultRegistration = registerChildMessage(
         child,
         "execute-result",
@@ -82,9 +68,16 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
           }
         },
       )
-    })
 
-    return executed
+      sendToChild(child, "execute", {
+        localRoot,
+        remoteRoot,
+        compileInto,
+
+        file,
+        options,
+      })
+    })
   }
 
   return {
