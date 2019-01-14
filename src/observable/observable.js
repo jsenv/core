@@ -4,19 +4,14 @@ if ("observable" in Symbol === false) {
 
 export const subscribeToObservable = (subscribe) => {
   const observable = {
-    [Symbol.observable]: () => {
-      const hooks = {
-        subscribe,
-        [Symbol.observable]: () => hooks,
-      }
-      return hooks
-    },
+    [Symbol.observable]: () => observable,
+    subscribe,
   }
   return observable
 }
 
 export const subscribe = (
-  observableObject,
+  observable,
   {
     next = () => {},
     error = (value) => {
@@ -25,7 +20,7 @@ export const subscribe = (
     complete = () => {},
   },
 ) => {
-  const { subscribe } = observableObject[Symbol.observable]()
+  const { subscribe } = observable[Symbol.observable]()
   const subscription = subscribe({
     next,
     error,
