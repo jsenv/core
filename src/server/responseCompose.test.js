@@ -26,10 +26,15 @@ import { responseCompose } from "./responseCompose.js"
 {
   const response = responseCompose(
     {
-      headers: { "access-control-allow-headers": "a, b" },
+      headers: {
+        "access-control-allow-headers": "a, b",
+      },
     },
     {
-      headers: { "access-control-allow-headers": "c, a" },
+      headers: {
+        "access-control-allow-headers": "c, a",
+        "content-type": "application/javascript",
+      },
     },
   )
   assert({
@@ -39,6 +44,7 @@ import { responseCompose } from "./responseCompose.js"
       statusText: undefined,
       headers: {
         "access-control-allow-headers": "a, b, c",
+        "content-type": "application/javascript",
       },
       body: undefined,
     },

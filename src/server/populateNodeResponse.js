@@ -8,7 +8,14 @@ export const populateNodeResponse = (
   { status, statusText, headers, body },
   { ignoreBody },
 ) => {
-  nodeResponse.writeHead(status, statusText, headersToNodeHeaders(headers))
+  const nodeHeaders = headersToNodeHeaders(headers)
+  // nodejs strange signature for writeHead force this
+  // https://nodejs.org/api/http.html#http_response_writehead_statuscode_statusmessage_headers
+  if (statusText === undefined) {
+    nodeResponse.writeHead(status, nodeHeaders)
+  } else {
+    nodeResponse.writeHead(status, statusText, nodeHeaders)
+  }
   if (ignoreBody) {
     nodeResponse.end()
     return
