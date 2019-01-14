@@ -36,7 +36,7 @@ export const transpiler = async ({
     return result
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
-      throw babelParseErrorToParseError(error, { options })
+      throw babelParseErrorToParseError(error, options)
     }
     throw error
   }
