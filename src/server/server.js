@@ -5,9 +5,11 @@ import killPort from "kill-port"
 import { URL } from "url"
 import { memoizeOnce } from "@dmail/helper"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
-import { registerProcessInterruptCallback } from "../process-interrupt/index.js"
-import { registerUngaranteedProcessTeardown } from "../process-teardown/index.js"
-import { registerUnadvisedProcessCrashCallback } from "../process-crash/index.js"
+import {
+  registerProcessInterruptCallback,
+  registerUnadvisedProcessCrashCallback,
+  registerUngaranteedProcessTeardown,
+} from "../process-signal/index.js"
 import { trackConnections, trackClients, trackRequestHandlers } from "./trackers.js"
 import { nodeRequestToRequest } from "./nodeRequestToRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
