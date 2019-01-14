@@ -25,6 +25,9 @@ export const fromRemoteFile = async ({
     return Promise.reject({ status, statusText, headers, body })
   }
 
+  if ("content-type" in headers === false)
+    throw new Error(`missing content-type header for ${remoteFile}`)
+
   const contentType = headers["content-type"]
 
   if (contentType === "application/javascript") {
