@@ -22,7 +22,7 @@ export const fetchUsingHttp = async (url, parent) => {
   const text = await response.text()
   return {
     status: response.status,
-    reason: response.statusText,
+    statusText: response.statusText,
     headers: getHeaderMapFromResponse(response),
     body: text,
   }

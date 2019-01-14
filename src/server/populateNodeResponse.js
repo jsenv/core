@@ -21,10 +21,10 @@ const headersToNodeHeaders = (headers) => {
 
 export const populateNodeResponse = (
   nodeResponse,
-  { status, reason, headers, body },
+  { status, statusText, headers, body },
   { ignoreBody },
 ) => {
-  nodeResponse.writeHead(status, reason, headersToNodeHeaders(headers))
+  nodeResponse.writeHead(status, statusText, headersToNodeHeaders(headers))
   if (ignoreBody) {
     nodeResponse.end()
     return

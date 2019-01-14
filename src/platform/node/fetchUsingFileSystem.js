@@ -1,4 +1,4 @@
-import fs from "fs"
+import { fileRead } from "@dmail/helper"
 
 const isWindows =
   typeof process !== "undefined" &&
@@ -15,17 +15,8 @@ const fileUrlToPath = (fileUrl) => {
   return fileUrl.substr(7)
 }
 
-export const fetchUsingFileSystem = (key) => {
+export const fetchUsingFileSystem = async (key) => {
   const filePath = fileUrlToPath(key)
-  return new Promise((resolve, reject) => {
-    fs.readFile(filePath, (error, buffer) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve(String(buffer))
-      }
-    })
-  }).then((source) => {
-    return { status: 200, reason: "", headers: {}, body: source }
-  })
+  const source = await fileRead(filePath)
+  return { status: 200, statusText: "", headers: {}, body: source }
 }

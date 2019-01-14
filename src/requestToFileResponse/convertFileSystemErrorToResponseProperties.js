@@ -7,21 +7,21 @@ export const convertFileSystemErrorToResponseProperties = (error) => {
   if (isErrorWithCode(error, "EACCES")) {
     return {
       status: 403,
-      reason: "no permission to read file",
+      statusText: "no permission to read file",
     }
   }
 
   if (isErrorWithCode(error, "EPERM")) {
     return {
       status: 403,
-      reason: "no permission to read file",
+      statusText: "no permission to read file",
     }
   }
 
   if (isErrorWithCode(error, "ENOENT")) {
     return {
       status: 404,
-      reason: "file not found",
+      statusText: "file not found",
     }
   }
 
@@ -30,7 +30,7 @@ export const convertFileSystemErrorToResponseProperties = (error) => {
   if (isErrorWithCode(error, "EBUSY")) {
     return {
       status: 503,
-      reason: "file is busy",
+      statusText: "file is busy",
       headers: {
         "retry-after": 0.01, // retry in 10ms
       },
@@ -41,7 +41,7 @@ export const convertFileSystemErrorToResponseProperties = (error) => {
   if (isErrorWithCode(error, "EMFILE")) {
     return {
       status: 503,
-      reason: "too many file opened",
+      statusText: "too many file opened",
       headers: {
         "retry-after": 0.1, // retry in 100ms
       },
@@ -51,7 +51,7 @@ export const convertFileSystemErrorToResponseProperties = (error) => {
   if (isErrorWithCode(error, "EISDIR")) {
     return {
       status: 500,
-      reason: "Unexpected directory operation",
+      statusText: "Unexpected directory operation",
     }
   }
 

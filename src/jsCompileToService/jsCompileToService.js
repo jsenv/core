@@ -56,7 +56,7 @@ export const jsCompileToService = (
 
         return {
           status: 500,
-          reason: "parse error",
+          statusText: "parse error",
           headers: {
             "cache-control": "no-store",
             "content-length": Buffer.byteLength(json),

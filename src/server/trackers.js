@@ -14,7 +14,6 @@ export const trackConnections = (nodeServer) => {
     nodeServer.removeListener("connection", connectionListener)
 
     // should we do this async ?
-    // should we do this before closing the server ?
     connections.forEach((connection) => {
       connection.destroy(reason)
     })

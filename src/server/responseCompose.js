@@ -15,7 +15,7 @@ const headerCompositionMapping = {
 
 const responseCompositionMapping = {
   status: (prevStatus, status) => status,
-  reason: (prevReason, reason) => reason,
+  statusText: (prevStatusText, statusText) => statusText,
   headers: compositionMappingToCompose(headerCompositionMapping),
   body: (prevBody, body) => body,
 }

@@ -119,7 +119,7 @@ export const startServer = async ({
     const stopRequestedByError = new Promise((resolve) => {
       const unregister = requestHandlerTracker.add((nodeRequest, nodeResponse) => {
         if (nodeResponse.statusCode === 500 && reasonIsInternalError(nodeResponse.statusMessage)) {
-          resolve("server internal error")
+          resolve(REASON_INTERNAL_ERROR)
         }
       })
       stopping.then(unregister)
@@ -190,7 +190,7 @@ export const startServer = async ({
     } catch (error) {
       response = Object.freeze({
         status: 500,
-        reason: REASON_INTERNAL_ERROR,
+        statusText: REASON_INTERNAL_ERROR,
         headers: {},
         body: error && error.stack ? error.stack : error,
       })

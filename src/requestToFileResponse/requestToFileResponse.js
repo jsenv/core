@@ -69,7 +69,7 @@ export const requestToFileResponse = async (
       if (canReadDirectory === false) {
         return {
           status: 403,
-          reason: "not allowed to read directory",
+          statusText: "not allowed to read directory",
           headers: {
             ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
           },
@@ -98,7 +98,7 @@ export const requestToFileResponse = async (
         } catch (e) {
           return {
             status: 400,
-            reason: "if-modified-since header is not a valid date",
+            statusText: "if-modified-since header is not a valid date",
           }
         }
 

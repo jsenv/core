@@ -53,7 +53,7 @@ export const fetchUsingXHR = (url, headers = {}) => {
 const normalizeXhr = (xhr) => {
   return {
     status: xhr.status,
-    reason: xhr.statusText,
+    statusText: xhr.statusText,
     headers: getHeadersFromXHR(xhr),
     body: xhr.responseText,
   }

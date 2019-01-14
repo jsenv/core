@@ -64,7 +64,7 @@ export const compileToService = (
       } catch (e) {
         return {
           status: 400,
-          reason: `${refererHeaderName} header is invalid`,
+          statusText: `${refererHeaderName} header is invalid`,
         }
       }
     }
@@ -159,7 +159,7 @@ export const compileToService = (
           } catch (e) {
             return {
               status: 400,
-              reason: "if-modified-since header is not a valid date",
+              statusText: "if-modified-since header is not a valid date",
             }
           }
 
@@ -196,7 +196,7 @@ export const compileToService = (
 
       return compileService()
     } catch (error) {
-      if (error && error.reason === "Unexpected directory operation") {
+      if (error && error.statusText === "Unexpected directory operation") {
         return {
           status: 403,
         }

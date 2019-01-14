@@ -104,7 +104,7 @@ const getFileLStat = (path) => {
   return new Promise((resolve, reject) => {
     fs.lstat(path, (error, lstat) => {
       if (error) {
-        reject({ status: 500, reason: error.code })
+        reject({ status: 500, statusText: error.code })
       } else {
         resolve(lstat)
       }
@@ -122,11 +122,11 @@ const createFolder = (folder) => {
             if (stat.isDirectory()) {
               resolve()
             } else {
-              reject({ status: 500, reason: "expect a directory" })
+              reject({ status: 500, statusText: "expect a directory" })
             }
           })
         } else {
-          reject({ status: 500, reason: error.code })
+          reject({ status: 500, statusText: error.code })
         }
       } else {
         resolve()

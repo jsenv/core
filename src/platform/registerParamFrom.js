@@ -6,7 +6,7 @@ export const fromRemoteFile = async ({
   remoteParent,
   localFile,
 }) => {
-  const { status, reason, headers, body } = await fetchSource({
+  const { status, statusText, headers, body } = await fetchSource({
     remoteFile,
     remoteParent,
     localFile,
@@ -16,13 +16,13 @@ export const fromRemoteFile = async ({
     return Promise.reject(createNotFoundError(remoteFile))
   }
 
-  if (status === 500 && reason === "parse error") {
+  if (status === 500 && statusText === "parse error") {
     return Promise.reject(createParseError(remoteFile, remoteParent, JSON.parse(body)))
   }
 
   if (status < 200 || status >= 300) {
     // should I create an error instead of rejecting with the response object ?
-    return Promise.reject({ status, reason, headers, body })
+    return Promise.reject({ status, statusText, headers, body })
   }
 
   const contentType = headers["content-type"]
