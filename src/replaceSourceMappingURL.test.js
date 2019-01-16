@@ -1,5 +1,5 @@
 import assert from "assert"
-import { sourceMappingURLMap } from "./sourceMappingURLMap.js"
+import { sourceMappingURLMap } from "./replaceSourceMappingURL.js"
 
 {
   const source = `${"//#"} sourceMappingURL=a.js`

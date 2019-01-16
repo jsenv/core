@@ -20,6 +20,9 @@ export const launchAndExecute = (
     platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
     verbose = false,
     stopOnceExecuted = false,
+    errorCallback = (error) => {
+      console.log("child error", error)
+    },
     ...rest
   } = {},
 ) => {
@@ -77,9 +80,7 @@ export const launchAndExecute = (
         }
 
         log(`${file} execution on ${platformTypeForLog} done with ${value}`)
-        errored.then((value) => {
-          throw value
-        })
+        errored.then(errorCallback)
         disconnected.then(() => {
           log(`${platformTypeForLog} disconnected`)
         })
