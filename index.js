@@ -11,3 +11,5 @@ export { executionPlanToCoverageMap } from "./src/executionPlanToCoverageMap/ind
 export { launchChromium } from "./src/launchChromium/index.js"
 // must be moved in own repo
 export { launchNode } from "./src/launchNode/index.js"
+
+export { locate } from "./src/compileToService/index.js"
