@@ -1,6 +1,5 @@
 import { compileToService } from "../compileToService/index.js"
 import { createInstrumentPlugin } from "../jsCompile/index.js"
-import { locate } from "./locate.js"
 
 export const jsCompileToService = (
   compileFile,
@@ -35,7 +34,6 @@ export const jsCompileToService = (
     cancellationToken,
     localRoot,
     compileInto,
-    locate,
     compileParamMap: compileParamMapWithInstrumentation,
     localCacheStrategy,
     localCacheTrackHit,

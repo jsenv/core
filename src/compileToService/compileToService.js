@@ -1,3 +1,4 @@
+/* eslint-disable import/max-dependencies */
 import { createCancellationToken } from "@dmail/cancellation"
 import { createSignal } from "@dmail/signal"
 import { fileRead, fileStat } from "@dmail/helper"
@@ -8,9 +9,9 @@ import { acceptContentType, createSSERoom, serviceCompose } from "../server/inde
 import { watchFile } from "../watchFile.js"
 import { createETag } from "./helpers.js"
 import { compileFile } from "./compileFile.js"
-import { ressourceToCompileInfo } from "./ressourceToCompileInfo.js"
-// eslint-disable-next-line import/max-dependencies
-import { ressourceToLocateParam } from "./ressourceToLocateParam.js"
+import { locate as locateDefault } from "./locate.js"
+
+const fileIsAsset = (file) => file.match(/[^\/]+__meta__\/.+$/)
 
 export const compileToService = (
   compile,
@@ -43,15 +44,7 @@ export const compileToService = (
   })
 
   const compileService = async ({ origin, ressource, headers = {} }) => {
-    const { isAsset, compileId, file } = ressourceToCompileInfo(ressource, compileInto)
-
-    // asset -> we don't compile asset
-    if (isAsset) return null
-
-    // no file -> nothing to compile
-    if (!compileId || !file) return null
-
-    let dependentRessource
+    let refererFile
     const refererHeaderName = "x-module-referer" in headers ? "x-module-referer" : "referer"
     if (refererHeaderName in headers) {
       const referer = headers[refererHeaderName]
@@ -59,7 +52,7 @@ export const compileToService = (
       try {
         const refererOrigin = hrefToOrigin(referer)
         if (refererOrigin === origin) {
-          dependentRessource = hrefToRessource(referer)
+          refererFile = hrefToRessource(referer)
         }
       } catch (e) {
         return {
@@ -71,32 +64,22 @@ export const compileToService = (
 
     // le chemin vers le fichier pour le client (qu'on peut modifier ce qui signifie un redirect)
     // le chemin vers le fichier sur le filesystem (qui peut etre different de localRoot/file)
-    const fileAbsoluteLocation = await locate({
-      localRoot,
-      ressource,
-      dependentRessource,
-      compileParamMap,
+    const { compileId, projectFile, file } = await locate({
+      requestFile: ressource,
+      refererFile,
       compileInto,
-      compileId,
-      ...ressourceToLocateParam({
-        compileInto,
-        ressource,
-        dependentRessource,
-      }),
+      localRoot,
     })
 
     // cannot locate a file -> we don't know what to compile
-    if (!fileAbsoluteLocation) return null
+    if (!projectFile) return null
 
-    let fileLocated
-    if (fileAbsoluteLocation.startsWith(`${localRoot}/`)) {
-      fileLocated = fileAbsoluteLocation.slice(`${localRoot}/`.length)
-    } else {
-      fileLocated = file
+    if (fileIsAsset(projectFile)) return null
+
+    // we don't want to read anything outside of the project
+    if (fileIsOutsideFolder(file, localRoot)) {
+      return { status: 403, statusText: `cannot acces file outside project` }
     }
-
-    // file must not be compiled (.html, .css, dist/browserLoader.js)
-    if (!compilePredicate(fileLocated, fileAbsoluteLocation)) return null
 
     // a request to 'node_modules/package/node_modules/dependency/index.js'
     // may be found at 'node_modules/dependency/index.js'
@@ -104,23 +87,27 @@ export const compileToService = (
     // a request to 'node_modules/dependency/index.js'
     // with referer 'node_modules/package/index.js'
     // may be found at 'node_modules/package/node_modules/dependency/index.js'
-    if (fileLocated !== file) {
+    const locatedProjectFile = file.slice(`${localRoot}/`.length)
+    if (locatedProjectFile !== projectFile) {
       // in that case, send temporary redirect to client
       return {
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
         status: 307,
         headers: {
-          location: `${origin}/${compileInto}/${compileId}/${fileLocated}`,
+          location: `${origin}/${compileInto}/${compileId}/${locatedProjectFile}`,
         },
       }
     }
 
+    // file must not be compiled (.html, .css, dist/browserLoader.js)
+    if (!compilePredicate(locatedProjectFile, file)) return null
+
     // when I ask for a compiled file, watch the corresponding file on filesystem
-    if (watch && watchedFiles.has(fileAbsoluteLocation) === false && watchPredicate(fileLocated)) {
-      const fileWatcher = watchFile(fileAbsoluteLocation, () => {
-        watchSignal.emit(file)
+    if (watch && watchedFiles.has(file) === false && watchPredicate(projectFile)) {
+      const fileWatcher = watchFile(file, () => {
+        watchSignal.emit(projectFile)
       })
-      watchedFiles.set(fileAbsoluteLocation, fileWatcher)
+      watchedFiles.set(file, fileWatcher)
     }
 
     const compileService = async () => {
@@ -130,8 +117,8 @@ export const compileToService = (
         compileInto,
         compileId,
         compileParamMap,
-        file,
-        fileAbsolute: fileAbsoluteLocation,
+        file: projectFile,
+        fileAbsolute: file,
         cacheStrategy: localCacheStrategy,
         cacheTrackHit: localCacheTrackHit,
       })
@@ -149,7 +136,7 @@ export const compileToService = (
 
     try {
       if (cacheWithMtime) {
-        const { mtime } = await fileStat(fileAbsoluteLocation)
+        const { mtime } = await fileStat(file)
 
         if ("if-modified-since" in headers) {
           const ifModifiedSince = headers["if-modified-since"]
@@ -176,7 +163,7 @@ export const compileToService = (
       }
 
       if (cacheWithETag) {
-        const content = await fileRead(fileAbsoluteLocation)
+        const content = await fileRead(file)
         const eTag = createETag(content)
 
         if ("if-none-match" in headers) {
@@ -238,6 +225,6 @@ export const compileToService = (
   return compileService
 }
 
-export const locateDefault = ({ localRoot, file, dependentFolder }) => {
-  return dependentFolder ? `${localRoot}/${dependentFolder}/${file}` : `${localRoot}/${file}`
-}
+const fileIsInsideFolder = (file, folder) => file.startsWith(`${folder}/`)
+
+const fileIsOutsideFolder = (file, folder) => !fileIsInsideFolder(file, folder)

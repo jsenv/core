@@ -9,7 +9,6 @@ import {
   responseCompose,
 } from "../server/index.js"
 import { createJsCompileService } from "./createJsCompileService.js"
-import { locate } from "../jsCompileToService/locate.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -50,7 +49,6 @@ export const startCompileServer = async ({
   const service = serviceCompose(jsCompileService, (request) =>
     requestToFileResponse(request, {
       localRoot,
-      locate,
       cacheIgnore: sourceCacheIgnore,
       cacheStrategy: sourceCacheStrategy,
     }),

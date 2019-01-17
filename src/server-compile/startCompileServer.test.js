@@ -24,7 +24,7 @@ const test = async () => {
   assert({
     actual: {
       status: response.status,
-      // {... } because response.headers.raw() an object create with Object.create(null)
+      // { ... } because response.headers.raw() an object create with Object.create(null)
       headers: { ...response.headers.raw() },
     },
     expected: {
@@ -39,7 +39,7 @@ const test = async () => {
         "content-length": ["310"],
         "content-type": ["application/javascript"],
         date: [response.headers.get("date")],
-        etag: [`"54-Yd2c2D1VgsR7OyJD1YIUp5mwb54"`],
+        etag: [`"136-GIFV9GrTzr7XuulsY3J7DuWtAT4"`],
       },
     },
   })
