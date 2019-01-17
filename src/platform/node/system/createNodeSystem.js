@@ -2,8 +2,19 @@ import "systemjs/dist/system.js"
 import { fromRemoteFile, fromFunctionReturningNamespace } from "../../registerParamFrom.js"
 import { isNodeBuiltinModule } from "./isNodeBuiltinModule.js"
 
-export const createNodeSystem = ({ fetchSource, evalSource, hrefToLocalFile }) => {
+export const createNodeSystem = ({
+  fetchSource,
+  evalSource,
+  fileToRemoteCompiledFile,
+  hrefToLocalFile,
+}) => {
   const nodeSystem = new global.System.constructor()
+
+  const resolve = nodeSystem.resolve
+  nodeSystem.resolve = async (url, parent) => {
+    if (url[0] === "/") return fileToRemoteCompiledFile(url.slice(1))
+    return resolve(url, parent)
+  }
 
   nodeSystem.instantiate = async (url, parent) => {
     if (isNodeBuiltinModule(url)) {

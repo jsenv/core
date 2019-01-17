@@ -21,7 +21,10 @@ export const launchAndExecute = (
     verbose = false,
     stopOnceExecuted = false,
     errorCallback = (error) => {
-      console.log("child error", error)
+      console.log(`${platformTypeForLog} error ${error.stack}`)
+    },
+    disconnectCallback = () => {
+      console.log(`${platformTypeForLog} disconnected`)
     },
     ...rest
   } = {},
@@ -68,11 +71,13 @@ export const launchAndExecute = (
         ])
 
         if (winner === errored) {
-          throw value
+          errorCallback(value)
+          return { status: "errored", value }
         }
 
         if (winner === disconnected) {
-          throw createDisconnectedDuringExecutionError(file, platformTypeForLog)
+          disconnectCallback()
+          return { status: "disconnected" }
         }
 
         if (winner === restarted) {
@@ -81,15 +86,13 @@ export const launchAndExecute = (
 
         log(`${file} execution on ${platformTypeForLog} done with ${value}`)
         errored.then(errorCallback)
-        disconnected.then(() => {
-          log(`${platformTypeForLog} disconnected`)
-        })
+        disconnected.then(disconnectCallback)
 
         if (stopOnceExecuted) {
           launchOperation.stop("stopOnceExecuted")
         }
 
-        return value
+        return { status: "executed", value }
       },
     })
     return executeOperation

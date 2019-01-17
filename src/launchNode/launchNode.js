@@ -55,19 +55,11 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
   }
 
   const fileToExecuted = (file, options) => {
-    return new Promise((resolve, reject) => {
-      const executResultRegistration = registerChildMessage(
-        child,
-        "execute-result",
-        ({ failed, value }) => {
-          executResultRegistration.unregister()
-          if (failed) {
-            reject(value)
-          } else {
-            resolve(value)
-          }
-        },
-      )
+    return new Promise((resolve) => {
+      const executResultRegistration = registerChildMessage(child, "execute-result", (value) => {
+        executResultRegistration.unregister()
+        resolve(value)
+      })
 
       sendToChild(child, "execute", {
         localRoot,
