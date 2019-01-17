@@ -17,11 +17,14 @@ const resolve = (source, file) => {
     console.log(`-> core`)
     return { found: true, path: null }
   }
-  if (source[0] === "/") {
-    source = source.slice(1)
-  }
   if (source.startsWith("node_modules/")) {
     source = source.slice("node_modules/".length)
+  }
+  if (source.startsWith("/node_modules/")) {
+    source = `${localRoot}/${source.slice("/node_modules/".length)}`
+  }
+  if (source[0] === "/") {
+    source = `${localRoot}/${source.slice(1)}`
   }
 
   try {
