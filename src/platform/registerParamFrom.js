@@ -4,12 +4,11 @@ export const fromRemoteFile = async ({
   evalSource,
   remoteFile,
   remoteParent,
-  localFile,
+  hrefToLocalFile,
 }) => {
-  const { status, statusText, headers, body } = await fetchSource({
+  const { url, status, statusText, headers, body } = await fetchSource({
     remoteFile,
     remoteParent,
-    localFile,
   })
 
   if (status === 404) {
@@ -31,7 +30,8 @@ export const fromRemoteFile = async ({
 
   if (contentType === "application/javascript") {
     return fromFunctionReturningParam(remoteFile, remoteParent, () => {
-      evalSource(body, { remoteFile, remoteParent, localFile })
+      debugger
+      evalSource(body, { remoteFile, remoteParent, localFile: hrefToLocalFile(url) })
       return System.getRegister()
     })
   }

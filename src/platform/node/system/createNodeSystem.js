@@ -34,7 +34,7 @@ export const createNodeSystem = ({
       evalSource,
       remoteFile: url,
       remoteParent: parent,
-      localFile: hrefToLocalFile(url),
+      hrefToLocalFile,
     })
 
     return registerParam

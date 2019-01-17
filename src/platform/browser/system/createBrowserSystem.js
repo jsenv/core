@@ -11,7 +11,7 @@ export const createBrowserSystem = ({ fetchSource, evalSource, hrefToLocalFile }
       evalSource,
       remoteFile: url,
       remoteParent: parent,
-      localFile: hrefToLocalFile(url),
+      hrefToLocalFile,
     })
   }
 

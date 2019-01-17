@@ -52,6 +52,8 @@ export const fetchUsingXHR = (url, headers = {}) => {
 
 const normalizeXhr = (xhr) => {
   return {
+    // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/responseURL
+    url: xhr.responseURL,
     status: xhr.status,
     statusText: xhr.statusText,
     headers: getHeadersFromXHR(xhr),

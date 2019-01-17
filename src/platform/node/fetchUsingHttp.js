@@ -13,6 +13,7 @@ export const fetchUsingHttp = async (url, parent) => {
 
   const text = await response.text()
   return {
+    url: response.url,
     status: response.status,
     statusText: response.statusText,
     headers: responseToHeaderMap(response),
