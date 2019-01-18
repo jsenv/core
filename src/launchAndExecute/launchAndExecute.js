@@ -61,16 +61,36 @@ export const launchAndExecute = (
         const restarted = new Promise((resolve) => {
           restartSignal.onrestart = resolve
         })
+
         const executed = fileToExecuted(file, rest)
+        const executionCompleted = new Promise((resolve) => {
+          executed.then(
+            (value) => {
+              resolve(value)
+            },
+            () => {},
+          )
+        })
+        const executionErrored = new Promise((resolve) => {
+          executed.catch((error) => {
+            resolve(error)
+          })
+        })
 
         const { winner, value } = await promiseTrackRace([
           errored,
           disconnected,
           restarted,
-          executed,
+          executionErrored,
+          executionCompleted,
         ])
 
         if (winner === errored) {
+          errorCallback(value)
+          return { status: "errored", value }
+        }
+
+        if (winner === executionErrored) {
           errorCallback(value)
           return { status: "errored", value }
         }
@@ -92,7 +112,7 @@ export const launchAndExecute = (
           launchOperation.stop("stopOnceExecuted")
         }
 
-        return { status: "executed", value }
+        return { status: "completed", value }
       },
     })
     return executeOperation
@@ -101,8 +121,9 @@ export const launchAndExecute = (
   return startPlatform()
 }
 
-const createDisconnectedDuringExecutionError = (file, platformType) => {
-  const error = new Error(`${platformType} disconnected while executing ${file}`)
-  error.code = "PLATFORM_DISCONNECTED_DURING_EXECUTION_ERROR"
-  return error
-}
+// well this is unexpected but haven't decided yet how we will handle that
+// const createDisconnectedDuringExecutionError = (file, platformType) => {
+//   const error = new Error(`${platformType} disconnected while executing ${file}`)
+//   error.code = "PLATFORM_DISCONNECTED_DURING_EXECUTION_ERROR"
+//   return error
+// }
