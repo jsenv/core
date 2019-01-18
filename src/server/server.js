@@ -17,6 +17,7 @@ import {
 import { trackConnections, trackClients, trackRequestHandlers } from "./trackers.js"
 import { nodeRequestToRequest } from "./nodeRequestToRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
+import { colorizeResponseStatus } from "./colorizeResponseStatus.js"
 
 const REASON_NOT_SPECIFIED = "not specified"
 const REASON_INTERNAL_ERROR = "internal error"
@@ -205,7 +206,7 @@ export const startServer = async ({
       })
     }
 
-    log(`${response.status} ${request.origin}/${request.ressource}`)
+    log(`${colorizeResponseStatus(response.status)} ${request.origin}/${request.ressource}`)
     populateNodeResponse(nodeResponse, response, {
       ignoreBody: request.method === "HEAD",
     })
