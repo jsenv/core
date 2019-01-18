@@ -30,7 +30,6 @@ export const fromRemoteFile = async ({
 
   if (contentType === "application/javascript") {
     return fromFunctionReturningParam(remoteFile, remoteParent, () => {
-      debugger
       evalSource(body, { remoteFile, remoteParent, localFile: hrefToLocalFile(url) })
       return System.getRegister()
     })
