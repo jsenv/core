@@ -21,7 +21,7 @@ export const launchChromium = async ({
   port = 0,
   startIndexRequestHandler = startIndexServer,
   headless = true,
-  mirrorConsole = false,
+  mirrorConsole = true,
 }) => {
   if (startIndexRequestHandler === startIndexRequestInterception && headless === false) {
     throw new Error(`startIndexRequestInterception work only in headless mode`)
@@ -51,31 +51,39 @@ export const launchChromium = async ({
   // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
   browser.on("disconnected", disconnected.resolve)
 
-  const errored = createPromiseAndHooks()
-
   let stopIndexServer = () => {}
   const stop = async (reason) => {
     await Promise.all([targetTracker.stop(reason), stopIndexServer(reason)])
     await browser.close()
   }
 
-  browser.on("targetcreated", async (target) => {
-    // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
-    if (target.type === "page") {
-      const page = await target.page()
-      // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-      page.on("error", errored.resolve)
-      // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-      page.on("pageerror", errored.resolve)
+  const errored = new Promise((resolve) => {
+    const trackPage = (browser) => {
+      browser.on("targetcreated", async (target) => {
+        if (target.type === "browser") {
+          const childBrowser = target.browser()
+          trackPage(childBrowser)
+        }
 
-      if (mirrorConsole) {
-        page.on("console", (message) => {
-          // there is also message._args
-          // which is an array of JSHandle{ _context, _client _remoteObject }
-          console[message._type](message._text)
-        })
-      }
+        // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
+        if (target.type === "page") {
+          const page = await target.page()
+          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
+          page.on("error", resolve)
+          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
+          page.on("pageerror", resolve)
+
+          if (mirrorConsole) {
+            page.on("console", (message) => {
+              // there is also message._args
+              // which is an array of JSHandle{ _context, _client _remoteObject }
+              console[message._type](message._text)
+            })
+          }
+        }
+      })
     }
+    trackPage(browser)
   })
 
   const fileToExecuted = async (file, options) => {
