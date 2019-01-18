@@ -8,6 +8,8 @@ import {
   serviceCompose,
   responseCompose,
 } from "../server/index.js"
+import { projectFileToNodeModuleFile } from "../projectFileToNodeModuleFile.js"
+import { localRoot as selfLocalRoot } from "../localRoot.js"
 import { createJsCompileService } from "./createJsCompileService.js"
 
 export const startCompileServer = async ({
@@ -49,6 +51,7 @@ export const startCompileServer = async ({
   const service = serviceCompose(jsCompileService, (request) =>
     requestToFileResponse(request, {
       localRoot,
+      locate,
       cacheIgnore: sourceCacheIgnore,
       cacheStrategy: sourceCacheStrategy,
     }),
@@ -89,4 +92,22 @@ export const startCompileServer = async ({
   compileServer.nodeServer.unref()
 
   return compileServer
+}
+
+const locate = ({ requestFile, localRoot }) => {
+  // future consumer of dev-server will use
+  // 'node_modules/dev-server/dist/browserSystemImporter.js'
+  // to get file from dev-server module
+  // in order to test this behaviour, when we are working on this module
+  // 'node_modules/dev-server` is an alias to localRoot
+  if (localRoot === selfLocalRoot && requestFile.startsWith("node_modules/dev-server/")) {
+    requestFile = requestFile.slice("node_modules/dev-server/".length)
+  }
+
+  if (requestFile.startsWith("node_modules/")) {
+    const nodeModuleFile = projectFileToNodeModuleFile(requestFile, `${localRoot}/${requestFile}`)
+    return nodeModuleFile
+  }
+
+  return `${localRoot}/${requestFile}`
 }

@@ -17,7 +17,7 @@ export const requestToFileResponse = async (
   { origin, ressource, method, headers = {} },
   {
     localRoot,
-    locate = ({ file, localRoot }) => `${localRoot}/${file}`,
+    locate = ({ requestFile, localRoot }) => `${localRoot}/${requestFile}`,
     canReadDirectory = false,
     getFileStat = fileStat,
     getFileContentAsString = fileRead,
@@ -32,7 +32,7 @@ export const requestToFileResponse = async (
   }
 
   try {
-    const file = await locate({ file: ressource, localRoot, remoteRoot: origin })
+    const file = await locate({ requestFile: ressource, localRoot, remoteRoot: origin })
 
     if (!file) {
       return {

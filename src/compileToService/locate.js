@@ -1,6 +1,4 @@
-import path from "path"
-import Module from "module"
-import { localRoot as selfLocalRoot } from "../localRoot.js"
+import { projectFileToNodeModuleFile } from "../projectFileToNodeModuleFile.js"
 
 export const locate = ({ requestFile, refererFile, compileInto, localRoot }) => {
   const {
@@ -12,18 +10,7 @@ export const locate = ({ requestFile, refererFile, compileInto, localRoot }) => 
   if (!requestProjectFile) return {}
 
   const compileId = requestCompileId
-  let projectFile = requestProjectFile
-
-  // future consumer of dev-server will use
-  // 'node_modules/dev-server/dist/browserSystemImporter.js'
-  // to get file from this module
-  // in order to test this behaviour, when we are working on this module
-  // 'node_modules/dev-server` is an alias to localRoot
-  if (localRoot === selfLocalRoot) {
-    if (projectFile.startsWith("node_modules/dev-server/")) {
-      projectFile = projectFile.slice("node_modules/dev-server/".length)
-    }
-  }
+  const projectFile = requestProjectFile
 
   if (projectFile.startsWith("node_modules/")) {
     const {
@@ -39,18 +26,14 @@ export const locate = ({ requestFile, refererFile, compileInto, localRoot }) => 
         : null
 
     if (importerProjectFile) {
-      const importerProjectFolder = path.dirname(importerProjectFile)
       const nodeModuleFile = projectFileToNodeModuleFile(
         projectFile,
-        `${localRoot}/${importerProjectFolder}`,
+        `${localRoot}/${importerProjectFile}`,
       )
       return { compileId, projectFile, file: nodeModuleFile }
     }
 
-    const nodeModuleFile = projectFileToNodeModuleFile(
-      projectFile,
-      `${localRoot}/${path.dirname(projectFile)}`,
-    )
+    const nodeModuleFile = projectFileToNodeModuleFile(projectFile, `${localRoot}/${projectFile}`)
     return { compileId, projectFile, file: nodeModuleFile }
   }
 
@@ -90,22 +73,5 @@ const requestFileToCompileIdAndProjectFile = (requestFile = "", compileInto) => 
   return {
     compileId,
     projectFile,
-  }
-}
-
-const projectFileToNodeModuleFile = (projectFile, importerProjectFolder) => {
-  const dependency = projectFile.slice("node_modules/".length)
-
-  const requireContext = new Module(importerProjectFolder)
-  requireContext.paths = Module._nodeModulePaths(importerProjectFolder)
-
-  try {
-    const file = Module._resolveFilename(dependency, requireContext, true)
-    return file
-  } catch (e) {
-    if (e && e.code === "MODULE_NOT_FOUND") {
-      return null
-    }
-    throw e
   }
 }
