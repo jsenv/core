@@ -20,6 +20,10 @@ export const launchAndExecute = (
     platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
     verbose = false,
     stopOnceExecuted = false,
+    // could be interesting but seems better to keep it opened
+    // to be able to debug, however unit test would pass true
+    // to let process ends
+    // stopOnError = false,
     errorCallback = (error) => {
       console.log(`${platformTypeForLog} error ${error.stack}`)
     },
