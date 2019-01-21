@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
-import http from "http"
-import https from "https"
+import { createServer as createNodeServer, STATUS_CODES } from "http"
+import { createServer as createNodeSecureServer, Agent as SecureAgent } from "https"
 import killPort from "kill-port"
 import { URL } from "url"
 import { memoizeOnce } from "@dmail/helper"
@@ -172,7 +172,6 @@ export const startServer = async ({
 
   requestHandlerTracker.add(async (nodeRequest, nodeResponse) => {
     const request = nodeRequestToRequest(nodeRequest, origin)
-    log(`${request.method} ${request.origin}/${request.ressource}`)
 
     nodeRequest.on("error", (error) => {
       log("error on", request.ressource, error)
@@ -182,7 +181,7 @@ export const startServer = async ({
     try {
       const {
         status = 501,
-        statusText = "not specified",
+        statusText = statusToStatusText(status),
         headers = {},
         body = "",
       } = await requestToResponse(request)
@@ -206,7 +205,8 @@ export const startServer = async ({
       })
     }
 
-    log(`${colorizeResponseStatus(response.status)} ${request.origin}/${request.ressource}`)
+    log(`${request.method} ${request.origin}/${request.ressource}`)
+    log(`${colorizeResponseStatus(response.status)} ${response.statusText}`)
     populateNodeResponse(nodeResponse, response, {
       ignoreBody: request.method === "HEAD",
     })
@@ -221,6 +221,8 @@ export const startServer = async ({
     stopped,
   }
 }
+
+const statusToStatusText = (status) => STATUS_CODES[status] || "not specified"
 
 export const listen = ({ cancellationToken, server, port, ip }) => {
   return createStoppableOperation({
@@ -253,7 +255,7 @@ const reasonIsInternalError = (reason) => reason === REASON_INTERNAL_ERROR
 const getNodeServerAndAgent = ({ protocol, signature = {} }) => {
   if (protocol === "http") {
     return {
-      nodeServer: http.createServer(),
+      nodeServer: createNodeServer(),
       agent: global.Agent,
     }
   }
@@ -265,11 +267,11 @@ const getNodeServerAndAgent = ({ protocol, signature = {} }) => {
     }
 
     return {
-      nodeServer: https.createServer({
+      nodeServer: createNodeSecureServer({
         key: privateKey,
         cert: certificate,
       }),
-      agent: new https.Agent({
+      agent: new SecureAgent({
         rejectUnauthorized: false, // allow self signed certificate
       }),
     }
