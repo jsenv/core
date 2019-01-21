@@ -5,15 +5,14 @@ import { isNodeBuiltinModule } from "./isNodeBuiltinModule.js"
 export const createNodeSystem = ({
   fetchSource,
   evalSource,
-  fileToRemoteCompiledFile,
+  fileToRemoteFile,
   hrefToLocalFile,
 }) => {
   const nodeSystem = new global.System.constructor()
 
   const resolve = nodeSystem.resolve
   nodeSystem.resolve = async (url, parent) => {
-    // here, we should respect instrumentation if parent is instrumented
-    if (url[0] === "/") return fileToRemoteCompiledFile(url.slice(1))
+    if (url[0] === "/") return fileToRemoteFile(url.slice(1), parent)
     return resolve(url, parent)
   }
 

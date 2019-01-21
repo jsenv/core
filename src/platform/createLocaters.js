@@ -3,9 +3,20 @@ export const createLocaters = ({ localRoot, remoteRoot, compileInto, compileId }
 
   const remoteInstrumentRoot = `${remoteRoot}/${compileInto}/${compileId}-instrumented`
 
-  const fileToRemoteCompiledFile = (file) => `${remoteCompileRoot}/${file}`
-
   const fileToRemoteInstrumentedFile = (file) => `${remoteInstrumentRoot}/${file}`
+
+  const fileToRemoteFile = (file, parent) => {
+    if (parent) {
+      const compileId = remoteFileToCompileId(parent)
+      return `${remoteRoot}/${compileInto}/${compileId}/${file}`
+    }
+    return `${remoteRoot}/${compileInto}/${compileId}/${file}`
+  }
+
+  const remoteFileToCompileId = (file) => {
+    const afterCompileFolder = file.slice(`${remoteRoot}/${compileInto}/`.length)
+    return afterCompileFolder.slice(0, afterCompileFolder.indexOf("/"))
+  }
 
   const fileToRemoteSourceFile = (file) => `${remoteRoot}/${file}`
 
@@ -56,7 +67,7 @@ export const createLocaters = ({ localRoot, remoteRoot, compileInto, compileId }
   }
 
   return {
-    fileToRemoteCompiledFile,
+    fileToRemoteFile,
     fileToRemoteInstrumentedFile,
     fileToRemoteSourceFile,
     fileToLocalFile,

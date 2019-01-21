@@ -27,20 +27,15 @@ const pluginMap = pluginOptionMapToPluginMap({
     value: {
       namespace: {},
       coverageMap: {
-        "src/launchNode/test/fixtures/node_modules/ask/ask.js":
-          actual.value.coverageMap["src/launchNode/test/fixtures/node_modules/ask/ask.js"],
         "src/launchNode/test/fixtures/ask-absolute.js":
           actual.value.coverageMap["src/launchNode/test/fixtures/ask-absolute.js"],
+        "src/launchNode/test/fixtures/modules/ask.js":
+          actual.value.coverageMap["src/launchNode/test/fixtures/modules/ask.js"],
+        "src/launchNode/test/fixtures/modules/respond.js":
+          actual.value.coverageMap["src/launchNode/test/fixtures/modules/respond.js"],
       },
     },
   }
-  // TODO:we are missing some coverage because instrumentation is not forwarded
-  // for absolute dependency
-  // we could create a specific System for instrumented code
-  // or find a solution to avoid that
-  // it could also avoid having to rewrite System.resolve for '/'
-  // a possible fix could be to forward instrumeneted if parent is instrumented
-  debugger
   assert({
     actual,
     expected,

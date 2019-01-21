@@ -4,14 +4,14 @@ import { fromRemoteFile } from "../../registerParamFrom.js"
 export const createBrowserSystem = ({
   fetchSource,
   evalSource,
-  fileToRemoteCompiledFile,
+  fileToRemoteFile,
   hrefToLocalFile,
 }) => {
   const browserSystem = new window.System.constructor()
 
   const resolve = browserSystem.resolve
   browserSystem.resolve = async (url, parent) => {
-    if (url[0] === "/") return fileToRemoteCompiledFile(url.slice(1))
+    if (url[0] === "/") return fileToRemoteFile(url.slice(1), parent)
     return resolve(url, parent)
   }
 

@@ -14,7 +14,7 @@ const setup = ({ localRoot, remoteRoot, compileInto }) => {
     nodeToCompileId({ name: "node", version: process.version.slice(1) }, compileMap) || "otherwise"
 
   const {
-    fileToRemoteCompiledFile,
+    fileToRemoteFile,
     fileToRemoteInstrumentedFile,
     fileToLocalFile,
     hrefToLocalFile,
@@ -29,7 +29,7 @@ const setup = ({ localRoot, remoteRoot, compileInto }) => {
     fetchSource,
     evalSource,
     hrefToLocalFile,
-    fileToRemoteCompiledFile,
+    fileToRemoteFile,
   })
 
   platform.importFile = async (
@@ -38,7 +38,7 @@ const setup = ({ localRoot, remoteRoot, compileInto }) => {
   ) => {
     const remoteCompiledFile = instrument
       ? fileToRemoteInstrumentedFile(file)
-      : fileToRemoteCompiledFile(file)
+      : fileToRemoteFile(file)
 
     try {
       const namespace = await importer.importFile(remoteCompiledFile)
