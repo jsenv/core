@@ -3,46 +3,79 @@
 // https://github.com/olalonde/eslint-import-resolver-babel-root-import
 
 const path = require("path")
-// eslint-disable-next-line
+const { existsSync } = require("fs")
 const nodeResolve = require("resolve")
 
 const localRoot = __dirname
+const resolveNonRelativeWithNodeModule = true
 
-// il faut que / on le cherche dans localroot/
-// que /node_nodules on cherche a le resoudre
-// avec la logic node de node modules
 const resolve = (source, file) => {
   console.log(`resolving "${source}" dependency inside ${file}`)
+
   if (nodeResolve.isCore(source)) {
     console.log(`-> core`)
     return { found: true, path: null }
   }
-  if (source.startsWith("node_modules/")) {
-    source = source.slice("node_modules/".length)
+
+  // following to be deactived in a project using jsenv
+  if (resolveNonRelativeWithNodeModule && source[0] !== "." && source[0] !== "/") {
+    try {
+      console.log(`resolve ${source}`)
+      const sourceResolved = nodeResolve.sync(source, {
+        extensions: [".mjs", ".js", ".json"],
+        basedir: path.dirname(file),
+      })
+      console.log(`-> found at ${sourceResolved}`)
+      return { found: true, path: sourceResolved }
+    } catch (e) {
+      if (e && e.code === "MODULE_NOT_FOUND") {
+        console.log("-> not found")
+        return { found: false }
+      }
+      console.log("-> error", e)
+      throw e
+    }
   }
-  if (source.startsWith("/node_modules/")) {
-    source = `${localRoot}/${source.slice("/node_modules/".length)}`
-  }
+
   if (source[0] === "/") {
     source = `${localRoot}/${source.slice(1)}`
   }
 
-  try {
-    const basedir = path.dirname(path.resolve(file))
-    console.log(`search node module from ${basedir}`)
-    const sourceResolved = nodeResolve.sync(source, {
-      extensions: [".mjs", ".js", ".json"],
-      basedir,
-    })
-    console.log(`-> found at ${sourceResolved}`)
-    return { found: true, path: sourceResolved }
-  } catch (e) {
-    if (e && e.code === "MODULE_NOT_FOUND") {
-      console.log("-> not found")
-      return { found: false }
+  const sourceFile = path.resolve(path.dirname(file), source)
+  const nodeModuleIndex = sourceFile.indexOf("node_modules/")
+  if (nodeModuleIndex > -1) {
+    const nodeModuleFolderParent = sourceFile.slice(0, nodeModuleIndex - 1)
+    const nodeModuleImport = sourceFile.slice(nodeModuleIndex + "node_modules/".length)
+
+    try {
+      console.log(`resolve node module from ${nodeModuleFolderParent}`)
+      const sourceResolved = nodeResolve.sync(nodeModuleImport, {
+        extensions: [".mjs", ".js", ".json"],
+        basedir: nodeModuleFolderParent,
+      })
+      console.log(`-> found at ${sourceResolved}`)
+      return { found: true, path: sourceResolved }
+    } catch (e) {
+      if (e && e.code === "MODULE_NOT_FOUND") {
+        console.log("-> not found")
+        return { found: false }
+      }
+      console.log("-> error", e)
+      throw e
     }
-    console.log("-> error", e)
-    throw e
+  }
+
+  if (existsSync(sourceFile)) {
+    console.log(`-> found at ${sourceFile}`)
+    return {
+      found: true,
+      path: sourceFile,
+    }
+  }
+  console.log(`-> not found at ${sourceFile}`)
+  return {
+    found: false,
+    path: sourceFile,
   }
 }
 
