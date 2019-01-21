@@ -3,7 +3,7 @@ import { localRoot } from "../../../localRoot.js"
 import { executeFile } from "../../../executeFile.js"
 import { launchNode } from "../../launchNode.js"
 
-const file = `src/launchNode/test/fixtures/file-root-dependency-throw.js`
+const file = `src/launchNode/test/fixtures/throw-.js`
 const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},

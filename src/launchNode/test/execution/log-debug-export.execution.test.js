@@ -3,7 +3,7 @@ import { localRoot } from "../../../localRoot.js"
 import { executeFile } from "../../../executeFile.js"
 import { launchNode } from "../../launchNode.js"
 
-const file = `src/launchNode/test/fixtures/file.js`
+const file = `src/launchNode/test/fixtures/log-debug-export.js`
 const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
