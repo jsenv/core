@@ -10,7 +10,6 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
 })
 
-// TODO: must be tested
 ;(async () => {
   const actual = await executeFile(file, {
     localRoot,
@@ -28,10 +27,12 @@ const pluginMap = pluginOptionMapToPluginMap({
     value: {
       namespace: {},
       coverageMap: {
-        "src/launchNode/test/fixtures/ask.js":
-          actual.value.coverageMap["src/launchNode/test/fixtures/ask.js"],
         "src/launchNode/test/fixtures/ask-node-module.js":
           actual.value.coverageMap["src/launchNode/test/fixtures/ask-node-module.js"],
+        "src/launchNode/test/fixtures/node_modules/ask/ask.js":
+          actual.value.coverageMap["src/launchNode/test/fixtures/node_modules/ask/ask.js"],
+        "src/launchNode/test/fixtures/node_modules/respond/respond.js":
+          actual.value.coverageMap["src/launchNode/test/fixtures/node_modules/respond/respond.js"],
       },
     },
   }
