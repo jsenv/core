@@ -4,7 +4,7 @@ import { localRoot } from "../../../localRoot.js"
 import { executeFile } from "../../../executeFile.js"
 import { launchNode } from "../../launchNode.js"
 
-const file = `src/launchNode/test/fixtures/file-root-dependency.js`
+const file = `src/launchNode/test/fixtures/ask-absolute.js`
 const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -27,10 +27,10 @@ const pluginMap = pluginOptionMapToPluginMap({
     value: {
       namespace: {},
       coverageMap: {
-        "src/launchNode/test/fixtures/ask.js":
-          actual.value.coverageMap["src/launchNode/test/fixtures/ask.js"],
-        "src/launchNode/test/fixtures/file-root-dependency.js":
-          actual.value.coverageMap["src/launchNode/test/fixtures/file-root-dependency.js"],
+        "src/launchNode/test/fixtures/node_modules/ask/ask.js":
+          actual.value.coverageMap["src/launchNode/test/fixtures/node_modules/ask/ask.js"],
+        "src/launchNode/test/fixtures/ask-absolute.js":
+          actual.value.coverageMap["src/launchNode/test/fixtures/ask-absolute.js"],
       },
     },
   }

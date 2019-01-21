@@ -4,7 +4,7 @@ import { localRoot } from "../../../localRoot.js"
 import { launchNode } from "../../launchNode.js"
 import { executeFile } from "../../../executeFile.js"
 
-const file = `src/launchNode/test/fixtures/file.js`
+const file = `src/launchNode/test/fixtures/log-debug-export.js`
 const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -28,8 +28,8 @@ const pluginMap = pluginOptionMapToPluginMap({
     expected: {
       namespace: { default: true },
       coverageMap: {
-        "src/launchNode/test/fixtures/file.js":
-          result.coverageMap["src/launchNode/test/fixtures/file.js"],
+        "src/launchNode/test/fixtures/log-debug-export.js":
+          result.coverageMap["src/launchNode/test/fixtures/log-debug-export.js"],
       },
     },
   })
