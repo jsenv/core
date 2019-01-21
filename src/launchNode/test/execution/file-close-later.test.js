@@ -1,7 +1,7 @@
-import { localRoot } from "../../localRoot.js"
-import { startCompileServer } from "../../server-compile/index.js"
+import { localRoot } from "../../../localRoot.js"
+import { startCompileServer } from "../../../server-compile/index.js"
 import { executeFileOnPlatform } from "../../executeFileOnPlatform/executeFileOnPlatform.js"
-import { launchNode } from "../launchNode.js"
+import { launchNode } from "../../launchNode.js"
 
 const file = `src/launchNode/test/fixtures/close-later.js`
 const compileInto = "build"

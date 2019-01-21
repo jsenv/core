@@ -11,7 +11,7 @@ const pluginMap = pluginOptionMapToPluginMap({
 })
 
 ;(async () => {
-  const result = await executeFile(file, {
+  const actual = await executeFile(file, {
     localRoot,
     compileInto,
     pluginMap,
@@ -22,16 +22,20 @@ const pluginMap = pluginOptionMapToPluginMap({
     collectCoverage: true,
     stopOnceExecuted: true,
   })
-  debugger
-
-  assert({
-    actual: result,
-    expected: {
-      namespace: { default: true },
+  const expected = {
+    status: "completed",
+    value: {
+      namespace: {},
       coverageMap: {
-        "src/launchNode/test/fixtures/file.js":
-          result.coverageMap["src/launchNode/test/fixtures/file.js"],
+        "src/launchNode/test/fixtures/ask.js":
+          actual.value.coverageMap["src/launchNode/test/fixtures/ask.js"],
+        "src/launchNode/test/fixtures/file-root-dependency.js":
+          actual.value.coverageMap["src/launchNode/test/fixtures/file-root-dependency.js"],
       },
     },
+  }
+  assert({
+    actual,
+    expected,
   })
 })()

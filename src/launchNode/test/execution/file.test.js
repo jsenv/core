@@ -1,9 +1,9 @@
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { localRoot } from "../../localRoot.js"
-import { executeFile } from "../../executeFile.js"
-import { launchNode } from "../launchNode.js"
+import { localRoot } from "../../../localRoot.js"
+import { executeFile } from "../../../executeFile.js"
+import { launchNode } from "../../launchNode.js"
 
-const file = `src/launchNode/test/fixtures/throw-after-executed.js`
+const file = `src/launchNode/test/fixtures/file.js`
 const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},

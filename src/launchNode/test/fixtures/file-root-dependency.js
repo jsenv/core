@@ -1,3 +1,6 @@
-import { triggerError } from "/src/launchNode/test/fixtures/trigger-error.js"
+import { ask } from "./ask.js"
 
-triggerError()
+const answer = ask()
+console.log(answer)
+
+debugger

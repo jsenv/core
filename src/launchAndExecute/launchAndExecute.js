@@ -4,6 +4,7 @@ import {
   createStoppableOperation,
 } from "@dmail/cancellation"
 import { promiseTrackRace } from "@dmail/helper"
+import "../promise-finally.js"
 import { createRestartSignal } from "./restartController.js"
 
 // when launchPlatform returns { disocnnected, stop, stopForce }
