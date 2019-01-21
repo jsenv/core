@@ -1,8 +1,8 @@
 import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { localRoot } from "../../localRoot.js"
-import { launchNode } from "../launchNode.js"
-import { executeFile } from "../../executeFile.js"
+import { localRoot } from "../../../localRoot.js"
+import { launchNode } from "../../launchNode.js"
+import { executeFile } from "../../../executeFile.js"
 
 const file = `src/launchNode/test/fixtures/file.js`
 const compileInto = "build"
