@@ -12,6 +12,7 @@ export const createNodeSystem = ({
 
   const resolve = nodeSystem.resolve
   nodeSystem.resolve = async (url, parent) => {
+    // here, we should respect instrumentation if parent is instrumented
     if (url[0] === "/") return fileToRemoteCompiledFile(url.slice(1))
     return resolve(url, parent)
   }

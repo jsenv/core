@@ -10,6 +10,7 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
 })
 
+// TODO: must be tested
 ;(async () => {
   const actual = await executeFile(file, {
     localRoot,

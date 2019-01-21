@@ -34,6 +34,13 @@ const pluginMap = pluginOptionMapToPluginMap({
       },
     },
   }
+  // TODO:we are missing some coverage because instrumentation is not forwarded
+  // for absolute dependency
+  // we could create a specific System for instrumented code
+  // or find a solution to avoid that
+  // it could also avoid having to rewrite System.resolve for '/'
+  // a possible fix could be to forward instrumeneted if parent is instrumented
+  debugger
   assert({
     actual,
     expected,
