@@ -1,13 +1,13 @@
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { localRoot } from "../../localRoot.js"
-import { executeFile } from "../../executeFile.js"
-import { launchChromium } from "../launchChromium.js"
+import { localRoot } from "../../../localRoot.js"
+import { executeFile } from "../../../executeFile.js"
+import { launchChromium } from "../../launchChromium.js"
 
+const file = `src/launchChromium/test/fixtures/ask-absolute.js`
+const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
 })
-const file = `src/launchChromium/test/fixtures/file.js`
-const compileInto = "build"
 
 executeFile(file, {
   localRoot,

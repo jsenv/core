@@ -1,3 +1,3 @@
 export const triggerError = () => {
-  throw new Error("here")
+  throw new Error("error")
 }
