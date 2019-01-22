@@ -3,6 +3,11 @@ import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-bab
 import { localRoot } from "../../../localRoot.js"
 import { launchChromium } from "../../launchChromium.js"
 import { executeFile } from "../../../executeFile.js"
+import {
+  coverageMapToAbsolute,
+  coverageMapLog,
+  coverageMapHTML,
+} from "../../../executionPlanToCoverageMap/index.js"
 
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -31,8 +36,8 @@ const compileInto = "build"
     value: {
       namespace: { default: true },
       coverageMap: {
-        "src/launchChromium/test/fixtures/file.js":
-          actual.value.coverageMap["src/launchChromium/test/fixtures/file.js"],
+        "src/launchChromium/test/fixtures/log-debug-export.js":
+          actual.value.coverageMap["src/launchChromium/test/fixtures/log-debug-export.js"],
       },
     },
   }
@@ -41,4 +46,8 @@ const compileInto = "build"
     actual,
     expected,
   })
+
+  const absoluteCoverageMap = coverageMapToAbsolute(actual.value.coverageMap, localRoot)
+  coverageMapLog(absoluteCoverageMap)
+  coverageMapHTML(absoluteCoverageMap)
 })()
