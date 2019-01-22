@@ -67,6 +67,8 @@ export const executionPlanToCoverageMap = async (
   const coverageMap = {}
   Object.keys(fullCoverageMap).forEach((file) => {
     if (file in executionPlan) return
+
+    // oh yeah we should also exclude node_modules files
     coverageMap[file] = fullCoverageMap[file]
   })
 
