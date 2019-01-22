@@ -107,11 +107,31 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
         hrefToFile,
       })
 
+      const css = `
+      .jsenv-console pre[data-theme="dark"] {
+        background: #1E1E1E;
+        border: 1px solid black
+      }
+
+      .jsenv-console pre[data-theme="light"] {
+        background: #1E1E1E;
+        border: 1px solid white;
+        color: #EEEEEE;
+      }
+
+      .jsenv-console pre[data-theme="light"] a {
+        color: inherit;
+      }
+      `
+
       const html = `
-        <h1>
-          <a href="${fileToRemoteSourceFile(file)}">${file}</a> import rejected
-        </h1>
-        <pre style="border: 1px solid black">${meta.data}</pre>
+        <style type="text/css">${css}></style>
+        <div class="jsenv-console">
+          <h1>
+            <a href="${fileToRemoteSourceFile(file)}">${file}</a> import rejected
+          </h1>
+          <pre data-theme="${meta.dataTheme || "dark"}">${meta.data}</pre>
+        </div>
         `
       appendHMTL(html, document.body)
       throw error

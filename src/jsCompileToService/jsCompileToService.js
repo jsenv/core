@@ -1,5 +1,6 @@
 import { compileToService } from "../compileToService/index.js"
 import { createInstrumentPlugin } from "../jsCompile/index.js"
+import { ansiToHTML } from "../ansiToHTML.js"
 
 export const jsCompileToService = (
   compileFile,
@@ -53,6 +54,7 @@ export const jsCompileToService = (
       return response
     } catch (e) {
       if (e && e.name === "PARSE_ERROR") {
+        e.messageHTML = ansiToHTML(e.message)
         const json = JSON.stringify(e)
 
         return {

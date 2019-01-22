@@ -1,4 +1,4 @@
-import { stringToStringWithLink, link } from "./stringToStringWithLink.js"
+import { stringToStringWithLink, link } from "../../stringToStringWithLink.js"
 
 export const rejectionValueToMeta = (error, { fileToRemoteSourceFile, hrefToFile }) => {
   if (error && error.code === "MODULE_PARSE_ERROR") {
@@ -24,13 +24,14 @@ export const rejectionValueToMeta = (error, { fileToRemoteSourceFile, hrefToFile
 }
 
 const parseErrorToMeta = (error, { fileToRemoteSourceFile }) => {
-  const file = error.fileName
-  const message = error.message
+  const file = error.data.fileName
+  const message = error.data.messageHTML || error.data.message
   const data = message.replace(file, link(`${fileToRemoteSourceFile(file)}`, file))
 
   return {
     file,
     data,
+    dataTheme: "light",
   }
 }
 
