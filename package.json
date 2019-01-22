@@ -38,7 +38,6 @@
 		"node-forge": "0.7.1",
 		"proper-lockfile": "3.2.0",
 		"puppeteer": "1.10.0",
-		"resolve": "1.9.0",
 		"rollup": "0.66.2",
 		"rollup-plugin-babel": "4.0.3",
 		"rollup-plugin-node-resolve": "3.4.0",
@@ -47,6 +46,7 @@
 		"systemjs": "2.0.2"
 	},
 	"devDependencies": {
+		"@jsenv/eslint-import-resolver": "github:jsenv/eslint-import-resolver",
 		"@dmail/assert": "github:dmail/assert",
 		"@dmail/prettiest": "github:dmail/prettiest",
 		"@dmail/project-eslint-config": "github:dmail/project-eslint-config",
