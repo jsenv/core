@@ -1,3 +1,3 @@
-import { triggerError } from "/src/launchNode/test/fixtures/modules/trigger-error.js"
+import { triggerError } from "/src/launchChromium/test/fixtures/modules/trigger-error.js"
 
 triggerError()
