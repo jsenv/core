@@ -1,19 +1,20 @@
-import istanbul from "istanbul"
+import { Collector, Reporter } from "istanbul"
+
+export { coverageMapToAbsolute } from "./coverageMapToAbsolute.js"
+export { executionPlanToCoverageMap } from "./executionPlanToCoverageMap.js"
 
 export const coverageMapLog = (coverageMap) => {
-  const collector = new istanbul.Collector()
+  const collector = new Collector()
   collector.add(coverageMap)
-  const reporter = new istanbul.Reporter()
+  const reporter = new Reporter()
   reporter.add("text")
   reporter.write(collector, false, () => {})
 }
 
 export const coverageMapHTML = (coverageMap) => {
-  const collector = new istanbul.Collector()
+  const collector = new Collector()
   collector.add(coverageMap)
-  const reporter = new istanbul.Reporter()
+  const reporter = new Reporter()
   reporter.add("html")
   reporter.write(collector, false, () => {})
 }
-
-export { executionPlanToCoverageMap } from "./executionPlanToCoverageMap.js"

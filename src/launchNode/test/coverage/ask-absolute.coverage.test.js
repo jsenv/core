@@ -3,6 +3,11 @@ import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-bab
 import { localRoot } from "../../../localRoot.js"
 import { executeFile } from "../../../executeFile.js"
 import { launchNode } from "../../launchNode.js"
+import {
+  coverageMapToAbsolute,
+  coverageMapLog,
+  coverageMapHTML,
+} from "../../../executionPlanToCoverageMap/index.js"
 
 const file = `src/launchNode/test/fixtures/ask-absolute.js`
 const compileInto = "build"
@@ -40,4 +45,8 @@ const pluginMap = pluginOptionMapToPluginMap({
     actual,
     expected,
   })
+
+  const absoluteCoverageMap = coverageMapToAbsolute(actual.value.coverageMap, localRoot)
+  coverageMapLog(absoluteCoverageMap)
+  coverageMapHTML(absoluteCoverageMap)
 })()
