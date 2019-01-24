@@ -8,5 +8,7 @@
     "build/**": true,
     "dist/**": true
   },
-  "javascript.validate.enable": false
+  "javascript.validate.enable": false,
+  "javascript.preferences.importModuleSpecifier": "relative",
+  "path-intellisense.extensionOnImport": true
 }
