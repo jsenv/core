@@ -46,7 +46,7 @@
 		"systemjs": "2.0.2"
 	},
 	"devDependencies": {
-		"@jsenv/eslint-import-resolver": "github:jsenv/eslint-import-resolver",
+		"@jsenv/module-resolution": "github:jsenv/module-resolution",
 		"@dmail/assert": "github:dmail/assert",
 		"@dmail/prettiest": "github:dmail/prettiest",
 		"@dmail/project-eslint-config": "github:dmail/project-eslint-config",
