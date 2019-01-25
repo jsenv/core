@@ -8,7 +8,7 @@ export const overrideSystemResolve = ({ System, remoteRoot, compileInto, compile
       return resolveAbsoluteModuleSpecifier({
         moduleSpecifier,
         file: moduleSpecifierFile,
-        localRoot: moduleSpecifierFileToRoot({
+        root: moduleSpecifierFileToRoot({
           moduleSpecifierFile,
           remoteRoot,
           compileInto,
