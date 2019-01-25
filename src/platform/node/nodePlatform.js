@@ -19,19 +19,23 @@ const setup = ({ localRoot, remoteRoot, compileInto }) => {
 
   const importer = createImporter({
     remoteRoot,
+    localRoot,
     compileInto,
     compileId,
     fetchSource,
     evalSource,
   })
 
+  // maybe rename importProjectRessource or something specific
+  // because you can only import file from your localRoot
+  // you cannot import file:// or http:// or whatever
   platform.importFile = async (
     file,
     { collectNamespace = false, collectCoverage = false, instrument = collectCoverage } = {},
   ) => {
     const remoteCompiledFile = instrument
-      ? ressourceToRemoteInstrumentedFile(file)
-      : ressourceToRemoteCompiledFile(file)
+      ? ressourceToRemoteInstrumentedFile({ ressource: file, remoteRoot, compileInto, compileId })
+      : ressourceToRemoteCompiledFile({ ressource: file, remoteRoot, compileInto, compileId })
 
     try {
       const namespace = await importer.importFile(remoteCompiledFile)

@@ -8,7 +8,7 @@ import { detect } from "./browserDetect/index.js"
 import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 import { browserToCompileId } from "./browserToCompileId.js"
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
-import { evalSource } from "./evalSource.js"
+import { evalSource, evalSourceAt } from "./evalSource.js"
 import { open } from "./hotreload.js"
 import { getCompileMapRemoteURL, getBrowserSystemImporterRemoteURL } from "./remoteURL.js"
 
@@ -52,7 +52,7 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
         return Promise.reject(importerResponse)
       }
 
-      evalSource(importerResponse.body, { remoteFile: importerHref })
+      evalSourceAt(importerResponse.body, importerHref)
 
       const systemImporter = window.__browserImporter__.createSystemImporter({
         fetchSource,
