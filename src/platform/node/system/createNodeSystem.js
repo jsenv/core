@@ -1,23 +1,38 @@
 import "systemjs/dist/system.js"
+import { isCoreNodeModuleSpecifier, resolveAbsoluteModuleSpecifier } from "@jsenv/module-resolution"
 import { fromRemoteFile, fromFunctionReturningNamespace } from "../../registerParamFrom.js"
-import { isNodeBuiltinModule } from "./isNodeBuiltinModule.js"
+import { hrefToMeta } from "../../locaters.js"
 
 export const createNodeSystem = ({
   fetchSource,
   evalSource,
-  fileToRemoteFile,
-  hrefToLocalFile,
+  remoteRoot,
+  compileInto,
+  compileId,
 }) => {
   const nodeSystem = new global.System.constructor()
 
+  const moduleSpecifierFileToCompileId = (moduleSpecifierFile) => {
+    if (!moduleSpecifierFile) return null
+    const { compileId } = hrefToMeta({ href: moduleSpecifierFile, remoteRoot, compileInto })
+    return compileId
+  }
+
   const resolve = nodeSystem.resolve
   nodeSystem.resolve = async (url, parent) => {
-    if (url[0] === "/") return fileToRemoteFile(url.slice(1), parent)
+    if (url[0] === "/") {
+      return resolveAbsoluteModuleSpecifier({
+        moduleSpecifier: url,
+        file: parent,
+        localRoot: `${remoteRoot}/${compileInto}/${moduleSpecifierFileToCompileId(parent) ||
+          compileId}`,
+      })
+    }
     return resolve(url, parent)
   }
 
   nodeSystem.instantiate = async (url, parent) => {
-    if (isNodeBuiltinModule(url)) {
+    if (isCoreNodeModuleSpecifier(url)) {
       return fromFunctionReturningNamespace(url, parent, () => {
         // eslint-disable-next-line import/no-dynamic-require
         const nodeBuiltinModuleExports = require(url)
@@ -34,7 +49,6 @@ export const createNodeSystem = ({
       evalSource,
       remoteFile: url,
       remoteParent: parent,
-      hrefToLocalFile,
     })
 
     return registerParam

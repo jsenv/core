@@ -1,10 +1,13 @@
+import { remoteFileToLocalSourceFile } from "./locaters.js"
+
 export const fromRemoteFile = async ({
   System,
   fetchSource,
   evalSource,
   remoteFile,
   remoteParent,
-  hrefToLocalFile,
+  localRoot,
+  remoteRoot,
 }) => {
   const { url, status, statusText, headers, body } = await fetchSource({
     remoteFile,
@@ -30,7 +33,15 @@ export const fromRemoteFile = async ({
 
   if (contentType === "application/javascript") {
     return fromFunctionReturningParam(remoteFile, remoteParent, () => {
-      evalSource(body, { remoteFile: url, remoteParent, localFile: hrefToLocalFile(url) })
+      evalSource(body, {
+        remoteFile: url,
+        remoteParent,
+        localFile: remoteFileToLocalSourceFile({
+          file: url,
+          localRoot,
+          remoteRoot,
+        }),
+      })
       return System.getRegister()
     })
   }

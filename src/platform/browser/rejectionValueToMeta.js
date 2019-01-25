@@ -1,19 +1,20 @@
+import { hrefToMeta, ressourceToRemoteSourceFile } from "../locaters.js"
 import { stringToStringWithLink, link } from "../../stringToStringWithLink.js"
 
-export const rejectionValueToMeta = (error, { fileToRemoteSourceFile, hrefToFile }) => {
+export const rejectionValueToMeta = (error, { remoteRoot, compileInto }) => {
   if (error && error.code === "MODULE_PARSE_ERROR") {
-    return parseErrorToMeta(error, { fileToRemoteSourceFile })
+    return parseErrorToMeta(error, { remoteRoot })
   }
 
   if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-    const file = hrefToFile(error.url)
+    const file = hrefToMeta({ href: error.url, remoteRoot, compileInto }).ressource
     const originalError = error.error
     return {
       file,
       // eslint-disable-next-line no-use-before-define
       data: rejectionToData(originalError, {
-        fileToRemoteSourceFile,
-        hrefToFile,
+        remoteRoot,
+        compileInto,
       }),
     }
   }
@@ -23,10 +24,13 @@ export const rejectionValueToMeta = (error, { fileToRemoteSourceFile, hrefToFile
   }
 }
 
-const parseErrorToMeta = (error, { fileToRemoteSourceFile }) => {
+const parseErrorToMeta = (error, { remoteRoot }) => {
   const file = error.data.fileName
   const message = error.data.messageHTML || error.data.message
-  const data = message.replace(file, link(`${fileToRemoteSourceFile(file)}`, file))
+  const data = message.replace(
+    file,
+    link(`${ressourceToRemoteSourceFile({ ressource: file, remoteRoot })}`, file),
+  )
 
   return {
     file,

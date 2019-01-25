@@ -94,10 +94,12 @@ export const compileToService = (
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
         status: 307,
         headers: {
+          // maybe should send vary: 'referer',
           location: `${origin}/${compileInto}/${compileId}/${locatedProjectFile}`,
         },
       }
     }
+    // if the file at this location is a symlink we should send 307 too
 
     // file must not be compiled (.html, .css, dist/browserLoader.js)
     if (!compilePredicate(locatedProjectFile, file)) return null

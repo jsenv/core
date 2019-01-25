@@ -1,5 +1,6 @@
 // https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
 
+import { resolveNodeModuleSpecifier } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
 import {
@@ -8,7 +9,6 @@ import {
   serviceCompose,
   responseCompose,
 } from "../server/index.js"
-import { projectFileToNodeModuleFile } from "../projectFileToNodeModuleFile.js"
 import { localRoot as selfLocalRoot } from "../localRoot.js"
 import { createJsCompileService } from "./createJsCompileService.js"
 
@@ -105,7 +105,11 @@ const locate = ({ requestFile, localRoot }) => {
   }
 
   if (requestFile.startsWith("node_modules/")) {
-    const nodeModuleFile = projectFileToNodeModuleFile(requestFile, `${localRoot}/${requestFile}`)
+    const moduleSpecifier = requestFile.slice("node_modules/".length)
+    const nodeModuleFile = resolveNodeModuleSpecifier({
+      moduleSpecifier,
+      file: `${localRoot}/${requestFile}`,
+    })
     return nodeModuleFile
   }
 

@@ -1,5 +1,9 @@
 import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
-import { createLocaters } from "../createLocaters.js"
+import {
+  ressourceToRemoteInstrumentedFile,
+  ressourceToRemoteCompiledFile,
+  ressourceToRemoteSourceFile,
+} from "../locaters.js"
 import { detect } from "./browserDetect/index.js"
 import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 import { browserToCompileId } from "./browserToCompileId.js"
@@ -29,16 +33,10 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
     const compileMap = JSON.parse(compileMapResponse.body)
     const browser = detect()
     const compileId = browserToCompileId(browser, compileMap) || "otherwise"
-    const locater = createLocaters({
-      remoteRoot,
-      compileInto,
-      compileId,
-    })
 
     return {
       compileMap,
       compileId,
-      ...locater,
     }
   })
 
@@ -83,14 +81,11 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
     file,
     { collectNamespace = false, collectCoverage = false, instrument = collectCoverage } = {},
   ) => {
-    const [
-      { fileToRemoteFile, fileToRemoteInstrumentedFile, fileToRemoteSourceFile, hrefToFile },
-      { importFile },
-    ] = await Promise.all([loadInformer(), loadImporter()])
+    const [{ compileId }, { importFile }] = await Promise.all([loadInformer(), loadImporter()])
 
     const remoteCompiledFile = instrument
-      ? fileToRemoteInstrumentedFile(file)
-      : fileToRemoteFile(file)
+      ? ressourceToRemoteInstrumentedFile({ ressource: file, remoteRoot, compileInto, compileId })
+      : ressourceToRemoteCompiledFile({ ressource: file, remoteRoot, compileInto, compileId })
 
     try {
       const namespace = await importFile(remoteCompiledFile)
@@ -103,8 +98,8 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
       }
     } catch (error) {
       const meta = rejectionValueToMeta(error, {
-        fileToRemoteSourceFile,
-        hrefToFile,
+        remoteRoot,
+        compileInto,
       })
 
       const css = `
@@ -128,7 +123,10 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
         <style type="text/css">${css}></style>
         <div class="jsenv-console">
           <h1>
-            <a href="${fileToRemoteSourceFile(file)}">${file}</a> import rejected
+            <a href="${ressourceToRemoteSourceFile({
+              ressource: file,
+              remoteRoot,
+            })}">${file}</a> import rejected
           </h1>
           <pre data-theme="${meta.dataTheme || "dark"}">${meta.data}</pre>
         </div>
