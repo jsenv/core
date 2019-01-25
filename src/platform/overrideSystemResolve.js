@@ -1,7 +1,12 @@
-import { resolveAbsoluteModuleSpecifier } from "@jsenv/module-resolution"
 import { hrefToMeta } from "./locaters.js"
 
-export const overrideSystemResolve = ({ System, remoteRoot, compileInto, compileId }) => {
+export const overrideSystemResolve = ({
+  System,
+  resolveAbsoluteModuleSpecifier,
+  remoteRoot,
+  compileInto,
+  compileId,
+}) => {
   const resolve = System.resolve
   System.resolve = async (moduleSpecifier, moduleSpecifierFile) => {
     if (moduleSpecifier[0] === "/") {

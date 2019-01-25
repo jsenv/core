@@ -42,7 +42,7 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
 
   const loadImporter = memoizeOnce(async () => {
     // importer depends on informer, but this is an implementation detail
-    const { compileMap, compileId, fileToRemoteFile, hrefToLocalFile } = await loadInformer()
+    const { compileMap, compileId } = await loadInformer()
 
     const { pluginNames } = compileMap[compileId]
     if (pluginNames.indexOf("transform-modules-systemjs") > -1) {
@@ -55,10 +55,11 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
       evalSourceAt(importerResponse.body, importerHref)
 
       const systemImporter = window.__browserImporter__.createSystemImporter({
+        remoteRoot,
+        compileInto,
+        compileId,
         fetchSource,
         evalSource,
-        fileToRemoteFile,
-        hrefToLocalFile,
       })
 
       return systemImporter
@@ -104,7 +105,7 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
 
       const css = `
       .jsenv-console pre[data-theme="dark"] {
-        background: #1E1E1E;
+        background: transparent;
         border: 1px solid black
       }
 
