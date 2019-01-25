@@ -74,6 +74,8 @@ export const compileToService = (
     // cannot locate a file -> we don't know what to compile
     if (!projectFile) return null
 
+    if (!file) return null
+
     if (fileIsAsset(projectFile)) return null
 
     // we don't want to read anything outside of the project

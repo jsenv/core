@@ -35,7 +35,7 @@
       "smartStep": true,
       "skipFiles": [
         // skip node modules
-        "node_modules/**",
+        "./node_modules/**",
         // skip node internals
         "<node_internals>/**/*.js",
         "node_modules/rollup-plugin-node-resolve/dist/rollup-plugin-node-resolve.cjs.js",
