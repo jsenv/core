@@ -14,10 +14,15 @@ export const bundle = async ({ ressource, into, root, babelPlugins = [] }) => {
       jsenvResolve({ root }),
       babel({
         babelrc: false,
+        // https://babeljs.io/docs/en/options#parseropts
+        parserOpts: {
+          allowAwaitOutsideFunction: true,
+        },
         exclude: "node_modules/**",
         plugins: babelPlugins,
       }),
     ],
+    experimentalTopLevelAwait: true, // required here so that acorn can parse the module
     // skip rollup warnings
     // onwarn: () => {},
   }
