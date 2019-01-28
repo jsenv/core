@@ -2,6 +2,7 @@
 
 todo list
 
+- an api to bundle js into dist
 - Avoid node_modules in coverageMap
 - covering with error in the midlde of execution must not prevent next file execution
 - covering when platform is disconnected in the middle of execution
