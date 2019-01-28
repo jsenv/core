@@ -2,6 +2,14 @@ import { rollup } from "rollup"
 import babel from "rollup-plugin-babel"
 import jsenvResolve from "../rollup-plugin-jsenv-resolve/index.js"
 
+// list of things to do in order:
+// - dynamic import and associated chunk generation
+// - using babel plugins to transform async to promise or const
+// - check sourcemap generated are correct
+// - multiple bundle generation (with different babel plugins configuration)
+// - create an entry file to decide which bundle to load on node
+// - same on browser
+
 export const bundle = async ({ ressource, into, root, babelPlugins = [] }) => {
   if (!ressource) throw new TypeError(`bundle expect a ressource, got ${ressource}`)
   if (!into) throw new TypeError(`bundle expect into, got ${into}`)
