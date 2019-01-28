@@ -2,15 +2,22 @@ import syntaxDynamicImport from "@babel/plugin-syntax-dynamic-import"
 import { rollup } from "rollup"
 import babel from "rollup-plugin-babel"
 import jsenvResolve from "../rollup-plugin-jsenv-resolve/index.js"
+import { transformAsync } from "@babel/core"
+import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 
 // list of things to do in order:
-// - using babel plugins to transform async to promise or const
 // - check sourcemap generated are correct
 // - multiple bundle generation (with different babel plugins configuration)
 // - create an entry file to decide which bundle to load on node
 // - same on browser
 
-export const bundle = async ({ ressource, into, root, babelPlugins = [] }) => {
+export const bundle = async ({
+  ressource,
+  into,
+  root,
+  babelPlugins = [],
+  transformAsyncToPromise = false,
+}) => {
   if (!ressource) throw new TypeError(`bundle expect a ressource, got ${ressource}`)
   if (!into) throw new TypeError(`bundle expect into, got ${into}`)
   if (!root) throw new TypeError(`bundle expect root, got ${root}`)
@@ -38,6 +45,26 @@ export const bundle = async ({ ressource, into, root, babelPlugins = [] }) => {
       //   return false
       // },
       // },
+      {
+        // https://rollupjs.org/guide/en#renderchunk
+        // needed to transform top level await
+        // and also the async keyword used here
+        // https://github.com/rollup/rollup/blob/38f3ca676ba67d740ef5cd2967f8412f80feeafe/src/finalisers/system.ts#L185
+        renderChunk: async (code, chunk) => {
+          // renderChunk does not provide sourceMap, is this a bug ?
+          // should open an issue here: https://github.com/rollup/rollup/issues
+          if (!transformAsyncToPromise) return null
+
+          const { code: chunkCode, map } = await transformAsync(code, {
+            babelrc: false,
+            filename: chunk.facadeModuleId,
+            plugins: [transformAsyncToPromises],
+            sourceMaps: true,
+          })
+
+          return { code: chunkCode, map }
+        },
+      },
     ],
     experimentalTopLevelAwait: true, // required here so that acorn can parse the module
     // skip rollup warnings
