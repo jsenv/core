@@ -26,6 +26,7 @@ export const bundle = async ({ ressource, into, root, babelPlugins = [] }) => {
         parserOpts: {
           allowAwaitOutsideFunction: true,
         },
+        // we must add dynamic import no ?
         exclude: "node_modules/**",
         plugins: babelPlugins,
       }),
