@@ -2,14 +2,16 @@
 
 import { resolveImport } from "@jsenv/module-resolution"
 
-export const createJsenvResolvePlugin = (/*options = {} */) => {
+export const createJsenvResolvePlugin = ({ root } = {}) => {
   return {
     name: "jsenv-resolve",
 
     resolveId(importee, importer) {
+      if (!importer) return importee
       return resolveImport({
         moduleSpecifier: importee,
         file: importer,
+        root,
         useNodeModuleResolutionInsideDedicatedFolder: true,
       })
     },
