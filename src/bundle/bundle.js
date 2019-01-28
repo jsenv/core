@@ -33,12 +33,12 @@ export const bundle = async ({ ressource, into, root, babelPlugins = [] }) => {
         exclude: "node_modules/**",
         plugins: babelPlugins,
       }),
-      {
-        // https://rollupjs.org/guide/en#resolvedynamicimport
-        resolveDynamicImport: () => {
-          return false
-        },
-      },
+      // {
+      // https://rollupjs.org/guide/en#resolvedynamicimport
+      // resolveDynamicImport: () => {
+      //   return false
+      // },
+      // },
     ],
     experimentalTopLevelAwait: true, // required here so that acorn can parse the module
     // skip rollup warnings
