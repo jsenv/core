@@ -16,6 +16,20 @@ export const bundle = async ({
   root,
   babelPlugins = [],
   transformAsyncToPromise = false,
+
+  // here I should start a compileServer and
+  // use it to get the transpiled file
+  // so that we would benefit from filesystem cache
+  // and avoid having different way of transpiling files
+  // (can renove the babel stuff entirely)
+  // jsenvResolve will also move here because it's easier
+  // to do this I could add a load hook as described here:
+  // https://rollupjs.org/guide/en#plugins
+
+  // compileGroupCount
+  // pluginMap // instead of babelPlugins array
+  // pluginCompatMap,
+  // platformUsageMap,
 }) => {
   if (!ressource) throw new TypeError(`bundle expect a ressource, got ${ressource}`)
   if (!into) throw new TypeError(`bundle expect into, got ${into}`)

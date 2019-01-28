@@ -9,6 +9,7 @@ export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),
   localRoot,
   compileInto,
+  compileGroupCount,
   pluginMap,
   pluginCompatMap,
   platformUsageMap,
@@ -25,6 +26,7 @@ export const createJsCompileService = async ({
     pluginNames: Object.keys(pluginMap),
     platformUsageMap,
     pluginCompatMap,
+    compileGroupCount,
   })
 
   const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)

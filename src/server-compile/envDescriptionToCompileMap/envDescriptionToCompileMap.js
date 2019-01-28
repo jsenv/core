@@ -10,14 +10,12 @@ const BEST_ID = "best"
 const WORST_ID = "worst"
 export const DEFAULT_ID = "otherwise"
 
-export const envDescriptionToCompileMap = (
-  {
-    pluginNames = [],
-    platformUsageMap = platformUsageMapDefault,
-    pluginCompatMap = pluginCompatMapDefault,
-  } = {},
-  { size = 4 } = {},
-) => {
+export const envDescriptionToCompileMap = ({
+  pluginNames = [],
+  platformUsageMap = platformUsageMapDefault,
+  pluginCompatMap = pluginCompatMapDefault,
+  compileGroupCount = 4,
+} = {}) => {
   const pluginCompatMapFiltered = {}
   pluginNames.forEach((pluginName) => {
     pluginCompatMapFiltered[pluginName] =
@@ -31,7 +29,7 @@ export const envDescriptionToCompileMap = (
   )
 
   const compileGroupToComplexityScore = ({ pluginNames }) => pluginNamesToScore(pluginNames)
-  const compileGroups = compileGroupsRegroupIn(allCompileGroups, size).sort(
+  const compileGroups = compileGroupsRegroupIn(allCompileGroups, compileGroupCount).sort(
     (a, b) => compileGroupToComplexityScore(a) - compileGroupToComplexityScore(b),
   )
 
