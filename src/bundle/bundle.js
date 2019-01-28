@@ -1,3 +1,4 @@
+import syntaxDynamicImport from "@babel/plugin-syntax-dynamic-import"
 import { rollup } from "rollup"
 import babel from "rollup-plugin-babel"
 import jsenvResolve from "../rollup-plugin-jsenv-resolve/index.js"
@@ -15,6 +16,8 @@ export const bundle = async ({ ressource, into, root, babelPlugins = [] }) => {
   if (!into) throw new TypeError(`bundle expect into, got ${into}`)
   if (!root) throw new TypeError(`bundle expect root, got ${root}`)
 
+  babelPlugins.unshift(syntaxDynamicImport)
+
   const file = `${root}/${ressource}`
   const options = {
     input: file,
@@ -30,6 +33,12 @@ export const bundle = async ({ ressource, into, root, babelPlugins = [] }) => {
         exclude: "node_modules/**",
         plugins: babelPlugins,
       }),
+      {
+        // https://rollupjs.org/guide/en#resolvedynamicimport
+        resolveDynamicImport: () => {
+          return false
+        },
+      },
     ],
     experimentalTopLevelAwait: true, // required here so that acorn can parse the module
     // skip rollup warnings
