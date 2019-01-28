@@ -64,11 +64,12 @@ export const compileBrowserSystemImporter = async () => {
     // onwarn: () => {},
   })
 
-  const { code, map } = await bundle.generate({
+  const { output } = await bundle.generate({
     format: "iife",
     name: globalName,
     sourcemap: true,
   })
+  const { code, map } = output[0]
 
   map.sources = map.sources.map((source) => {
     return `${path.relative(outputFolder, localRoot)}/${source}`

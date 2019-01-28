@@ -65,12 +65,13 @@ export const compileBrowserPlatform = async () => {
     // onwarn: () => {},
   })
 
-  const { code, map } = await bundle.generate({
+  const { output } = await bundle.generate({
     format: "iife",
     // intro: `var compileMap = ${JSON.stringify(compileMap)};`,
     name: globalName,
     sourcemap: true,
   })
+  const { code, map } = output[0]
 
   map.sources = map.sources.map((source) => {
     return `${path.relative(outputFolder, localRoot)}/${source}`
@@ -90,4 +91,4 @@ const appendSourceMappingURL = (code, sourceMappingURL) => {
 //# ${"sourceMappingURL"}=${sourceMappingURL}`
 }
 
-compileBrowserPlatform()
+// compileBrowserPlatform()
