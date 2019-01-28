@@ -6,7 +6,6 @@ import { transformAsync } from "@babel/core"
 import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 
 // list of things to do in order:
-// - check sourcemap generated are correct
 // - multiple bundle generation (with different babel plugins configuration)
 // - create an entry file to decide which bundle to load on node
 // - same on browser
