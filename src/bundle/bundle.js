@@ -4,7 +4,6 @@ import babel from "rollup-plugin-babel"
 import jsenvResolve from "../rollup-plugin-jsenv-resolve/index.js"
 
 // list of things to do in order:
-// - dynamic import and associated chunk generation
 // - using babel plugins to transform async to promise or const
 // - check sourcemap generated are correct
 // - multiple bundle generation (with different babel plugins configuration)
