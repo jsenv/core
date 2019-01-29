@@ -1,4 +1,4 @@
-import assert from "assert"
+import { assert } from "@dmail/assert"
 import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
 
 {
@@ -37,7 +37,5 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
       compatMap: {},
     },
   }
-  assert.deepEqual(actual, expected)
+  assert({ actual, expected })
 }
-
-console.log("passed")

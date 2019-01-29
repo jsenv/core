@@ -44,7 +44,9 @@ export const envDescriptionToCompileMap = ({
   compileGroups.slice(1, -1).forEach((intermediatePluginGroup, index) => {
     compileMap[`intermediate-${index + 1}`] = intermediatePluginGroup
   })
-  compileMap[WORST_ID] = compileGroups[compileGroups.length - 1]
+  if (compileGroups.length > 1) {
+    compileMap[WORST_ID] = compileGroups[compileGroups.length - 1]
+  }
   compileMap[DEFAULT_ID] = groupWithEverything
 
   return compileMap
