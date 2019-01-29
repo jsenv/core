@@ -25,7 +25,7 @@ const compile = ({ content }) => {
   }
 }
 
-const test = async () => {
+;(async () => {
   // cacheStrategy: 'none'
   {
     const compileService = compileToService(compile, {
@@ -145,7 +145,5 @@ const test = async () => {
     }
   }
 
-  console.log("passed")
-}
-
-test()
+  // with different compileInto
+})()
