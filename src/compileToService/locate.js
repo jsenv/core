@@ -24,16 +24,17 @@ export const locate = ({ requestFile, compileInto, localRoot }) => {
 }
 
 const requestFileToCompileIdAndProjectFile = (requestFile = "", compileInto) => {
-  const parts = requestFile.split("/")
-  const firstPart = parts[0]
-  if (firstPart !== compileInto) {
+  if (requestFile.startsWith(`${compileInto}/`) === false) {
     return {
       compileId: null,
       projectFile: null,
     }
   }
 
-  const compileId = parts[1]
+  const afterCompileInto = requestFile.slice(`${compileInto}/`.length)
+  const parts = afterCompileInto.split("/")
+
+  const compileId = parts[0]
   if (compileId.length === 0) {
     return {
       compileId: null,
@@ -41,7 +42,7 @@ const requestFileToCompileIdAndProjectFile = (requestFile = "", compileInto) => 
     }
   }
 
-  const projectFile = parts.slice(2).join("/")
+  const projectFile = parts.slice(1).join("/")
   if (projectFile.length === 0) {
     return {
       compileId: null,

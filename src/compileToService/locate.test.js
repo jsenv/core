@@ -1,6 +1,21 @@
 import { assert } from "@dmail/assert"
 import { locate } from "./locate.js"
 
+{
+  const actual = locate({
+    requestFile: "build/cache/best/index.js",
+    refererFile: "",
+    compileInto: "build/cache",
+    localRoot: "/root",
+  })
+  const expected = {
+    compileId: "best",
+    projectFile: "index.js",
+    file: "/root/index.js",
+  }
+  assert({ actual, expected })
+}
+
 // refererFile different compileInto
 // {
 //   const actual = locate({
