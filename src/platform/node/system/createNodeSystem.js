@@ -44,6 +44,9 @@ export const createNodeSystem = ({
     }
     return instantiate(moduleSpecifier, moduleSpecifierFile)
   }
-
+  // https://github.com/systemjs/systemjs/blob/master/docs/hooks.md#createcontexturl---object
+  nodeSystem.createContext = (url) => {
+    return { url }
+  }
   return nodeSystem
 }

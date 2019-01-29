@@ -1,6 +1,7 @@
 import path from "path"
 import { transformAsync, transformFromAstAsync } from "@babel/core"
 import syntaxDynamicImport from "@babel/plugin-syntax-dynamic-import"
+import syntaxImportMeta from "@babel/plugin-syntax-import-meta"
 import { arrayWithoutValue } from "@dmail/helper"
 import { regexpEscape } from "../stringHelper.js"
 
@@ -62,14 +63,18 @@ export const transpiler = async ({
     },
   }
 
-  if (transformModuleIntoSystemFormat && allowTopLevelAwait) {
+  if (transformModuleIntoSystemFormat && allowTopLevelAwait && asyncPluginName) {
     const pluginNames = arrayWithoutValue(Object.keys(pluginMap), asyncPluginName)
     const result = await transpile({
       ast: inputAst,
       code: input,
       options: {
         ...options,
-        plugins: [syntaxDynamicImport, ...pluginNames.map((pluginName) => pluginMap[pluginName])],
+        plugins: [
+          syntaxImportMeta,
+          syntaxDynamicImport,
+          ...pluginNames.map((pluginName) => pluginMap[pluginName]),
+        ],
       },
     })
     // required to transpile top level await and systemjs async execute
@@ -79,7 +84,7 @@ export const transpiler = async ({
       options: {
         ...options,
         inputSourceMap: result.map,
-        plugins: [syntaxDynamicImport, pluginMap[asyncPluginName]],
+        plugins: [syntaxImportMeta, syntaxDynamicImport, pluginMap[asyncPluginName]],
       },
     })
   }
@@ -90,7 +95,11 @@ export const transpiler = async ({
     code: input,
     options: {
       ...options,
-      plugins: [syntaxDynamicImport, ...pluginNames.map((pluginName) => pluginMap[pluginName])],
+      plugins: [
+        syntaxImportMeta,
+        syntaxDynamicImport,
+        ...pluginNames.map((pluginName) => pluginMap[pluginName]),
+      ],
     },
   })
 }

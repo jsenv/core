@@ -22,8 +22,9 @@
 	"dependencies": {
 		"@babel/core": "7.2.2",
 		"@babel/helper-hoist-variables": "7.2.0",
-    "@babel/helper-plugin-utils": "7.2.0",
+		"@babel/helper-plugin-utils": "7.2.0",
 		"@babel/plugin-syntax-dynamic-import": "7.2.0",
+		"@babel/plugin-syntax-import-meta": "7.2.0",
 		"@babel/plugin-transform-block-scoping": "7.2.0",
 		"@dmail/cancellation": "github:dmail/cancellation",
 		"@dmail/helper": "github:dmail/helper",
