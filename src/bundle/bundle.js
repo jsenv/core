@@ -9,7 +9,6 @@ import { transpiler } from "../jsCompile/transpiler.js"
 import { resolveURL } from "./resolveURL.js"
 
 // list of things to do in order:
-// - multiple bundle generation looping though compileMap.json profiles
 // - create an entry file to decide which bundle to load (inside node and inside browser)
 // - make asyncAwaitIsRequired depends on compileMap.json -> check if every browser
 // for that compileId inside compileMap.json support async/await
