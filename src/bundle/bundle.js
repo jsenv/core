@@ -1,6 +1,6 @@
 import { rollup } from "rollup"
-import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 import { resolveImport } from "@jsenv/module-resolution"
+import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 import transformModulesSystemJs from "../babel-plugin-transform-modules-systemjs/index.js"
 import { startCompileServer } from "../server-compile/index.js"
 import { fetchUsingHttp } from "../platform/node/fetchUsingHttp.js"
@@ -10,8 +10,68 @@ import { resolveURL } from "./resolveURL.js"
 
 // list of things to do in order:
 // - create an entry file to decide which bundle to load (inside node and inside browser)
-// - make asyncAwaitIsRequired depends on compileMap.json -> check if every browser
-// for that compileId inside compileMap.json support async/await
+/*
+ce fichier commencerait par regarder s'il est dans browser ou nodejs
+en fonction il loaderais un autre fichier d'entrée
+
+bundle/
+  index.js
+    si executé depuis node fait require('./index.node.js')
+    si depuis browser inject un script './index.browser.js'
+
+  index.node.js
+    load compileMap.json
+    load nodeSystem
+    System.import('./best/index.js')
+
+  index.browser.js
+    load compileMap.json
+    load browserSystem
+    System.import('./best/index.js')
+
+  compileMap.json
+    contient des infos sur best,worst,otherwise
+  best/
+    les fichiers compilé pour le profile best
+  worst/
+    les fichiers compilé pour le profile worst
+  otherwise/
+    les fichiers compilé pour le profile otherwise
+
+but truth is like this:
+
+because nodejs needs systemjs to operate and does not works with top level await
+we will certainly launch nodejs code using the dedicated launch-node process
+
+because browser needs anyway an index.html to operate, we will just output
+index.browser.js that is already available somehow in
+startBrowserServer.js or launchChromium
+
+to have an index.html file able to run the bundled code
+we would need the following architecture
+
+dist/
+  bundle/
+    best/
+      index.js
+    worst/
+      index.js
+  compileMap.json
+  main-browser.js
+    would inject a script tag for systemjs
+    would fetch compileMap.json
+    would decide which file to load according to current context and compileMap.json
+    would do System.import('./bundle/${compileId}/index.js')
+  main-node.js
+    could create a nodeSystem
+    but here we need to instantiate file using file system instead of remote server
+    would load compileMap.json as well
+    would module.exports = System.import('./bundle/${compileId}/index.js')
+
+- you could define an index.html injecting dist/main-browser.js and it would work
+- you could write const main = require('main-node.js')
+but you would have to await main to get the exports
+*/
 
 export const bundle = async ({
   ressource,
@@ -112,28 +172,19 @@ const bundleGroup = async ({
     if (!allowTopLevelAwait) return null
 
     const fileAbsolute = chunk.facadeModuleId
-    let map
 
     const result = await transpiler({
       input: code,
       fileAbsolute,
-      plugins: [[transformModulesSystemJs, { topLevelAwait: true }]],
+      pluginMap: {
+        // if every browser for that compileId inside compileMap.json supports
+        "transform-modules-systemjs": [transformModulesSystemJs, { topLevelAwait: true }],
+        // async/await, no need to pass transform-async-to-promises below
+        "transform-async-to-promises": [transformAsyncToPromises],
+      },
     })
     code = result.code
-    map = result.map
-
-    // must check if required using some api +
-    // compileMap.json
-    const asyncAwaitIsRequired = true
-    if (asyncAwaitIsRequired) {
-      const result = await transpiler({
-        input: code,
-        fileAbsolute,
-        plugins: [transformAsyncToPromises],
-      })
-      code = result.code
-      map = result.map
-    }
+    const map = result.map
 
     return { code, map }
   }

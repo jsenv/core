@@ -32,7 +32,6 @@ export const jsCompile = async ({
   // source can be fetched at `${compileServer.origin}/src/file.js`
   const sourceToSourceForSourceMap = (source) => `/${source}`
 
-  const plugins = Object.keys(pluginMap).map((pluginName) => pluginMap[pluginName])
   const { map, code, metadata } = await transpiler({
     localRoot,
     file,
@@ -40,7 +39,7 @@ export const jsCompile = async ({
     inputAst,
     input,
     inputMap,
-    plugins,
+    pluginMap,
     remap,
   })
   const coverage = metadata.coverage

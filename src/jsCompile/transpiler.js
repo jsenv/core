@@ -1,13 +1,21 @@
 import path from "path"
 import { transformAsync, transformFromAstAsync } from "@babel/core"
 import syntaxDynamicImport from "@babel/plugin-syntax-dynamic-import"
+import { arrayWithoutValue } from "@dmail/helper"
 import { regexpEscape } from "../stringHelper.js"
 
 const transpile = ({ ast, code, options }) => {
-  if (ast) {
-    return transformFromAstAsync(ast, code, options)
+  try {
+    if (ast) {
+      return transformFromAstAsync(ast, code, options)
+    }
+    return transformAsync(code, options)
+  } catch (error) {
+    if (error && error.code === "BABEL_PARSE_ERROR") {
+      throw babelParseErrorToParseError(error, options)
+    }
+    throw error
   }
-  return transformAsync(code, options)
 }
 
 export const transpiler = async ({
@@ -16,13 +24,31 @@ export const transpiler = async ({
   inputAst,
   input,
   inputMap,
-  plugins,
+  pluginMap,
   remap,
 }) => {
-  plugins.unshift(syntaxDynamicImport)
+  let transformModuleIntoSystemFormat
+  let allowTopLevelAwait
+  if ("transform-modules-systemjs" in pluginMap) {
+    transformModuleIntoSystemFormat = true
+    allowTopLevelAwait = (pluginMap["transform-modules-systemjs"][1] || { topLevelAwait: false })
+      .topLevelAwait
+  } else {
+    transformModuleIntoSystemFormat = false
+    allowTopLevelAwait = false
+  }
+
+  let asyncPluginName
+  if ("transform-async-to-promises" in pluginMap) {
+    asyncPluginName = "transform-async-to-promises"
+  } else if ("transform-async-to-generator" in pluginMap) {
+    asyncPluginName = "transform-async-to-generator"
+  } else {
+    asyncPluginName = ""
+  }
+
   // https://babeljs.io/docs/en/options
   const options = {
-    plugins,
     filename: fileAbsolute || file,
     filenameRelative: file,
     inputSourceMap: inputMap,
@@ -32,20 +58,41 @@ export const transpiler = async ({
     sourceFileName: file,
     // https://babeljs.io/docs/en/options#parseropts
     parserOpts: {
-      allowAwaitOutsideFunction: true,
+      allowAwaitOutsideFunction: allowTopLevelAwait,
     },
   }
 
-  try {
-    const result = await transpile({ ast: inputAst, code: input, options })
-    // result.map.sources = []
-    return result
-  } catch (error) {
-    if (error && error.code === "BABEL_PARSE_ERROR") {
-      throw babelParseErrorToParseError(error, options)
-    }
-    throw error
+  if (transformModuleIntoSystemFormat && allowTopLevelAwait) {
+    const pluginNames = arrayWithoutValue(Object.keys(pluginMap), asyncPluginName)
+    const result = await transpile({
+      ast: inputAst,
+      code: input,
+      options: {
+        ...options,
+        plugins: [syntaxDynamicImport, ...pluginNames.map((pluginName) => pluginMap[pluginName])],
+      },
+    })
+    // required to transpile top level await and systemjs async execute
+    return await transpile({
+      ast: result.ast,
+      code: result.code,
+      options: {
+        ...options,
+        inputSourceMap: result.map,
+        plugins: [syntaxDynamicImport, pluginMap[asyncPluginName]],
+      },
+    })
   }
+
+  const pluginNames = Object.keys(pluginMap)
+  return transpile({
+    ast: inputAst,
+    code: input,
+    options: {
+      ...options,
+      plugins: [syntaxDynamicImport, ...pluginNames.map((pluginName) => pluginMap[pluginName])],
+    },
+  })
 }
 
 const babelParseErrorToParseError = (babelParseError, { filename, filenameRelative }) => {
