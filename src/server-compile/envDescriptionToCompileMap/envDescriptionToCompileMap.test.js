@@ -19,7 +19,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
       },
     },
     worst: {
-      pluginNames,
+      pluginNames: pluginNames.slice(),
       compatMap: {
         android: "0.0.0",
         chrome: "0.0.0",
@@ -33,7 +33,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
       },
     },
     otherwise: {
-      pluginNames,
+      pluginNames: pluginNames.slice(),
       compatMap: {},
     },
   }
