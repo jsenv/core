@@ -3,7 +3,6 @@
 import { URL } from "url"
 import puppeteer from "puppeteer"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
-import { createHTMLForBrowser } from "../createHTMLForBrowser.js"
 import { startIndexServer } from "../server-index/startIndexServer.js"
 import { originAsString } from "../server/index.js"
 import { createPromiseAndHooks } from "../promiseHelper.js"
@@ -23,6 +22,27 @@ export const launchChromium = async ({
   startIndexRequestHandler = startIndexServer,
   headless = true,
   mirrorConsole = true,
+  generateHTML = ({ remoteRoot, compileInto, browserPlatformRemoteURL }) => {
+    return `<!doctype html>
+
+<head>
+  <title>Untitled</title>
+  <meta charset="utf-8" />
+</head>
+
+<body>
+  <main></main>
+  <script src="${browserPlatformRemoteURL}"></script>
+  <script type="text/javascript">
+    window.__platform__ = window.__platform__.platform
+    window.__platform__.setup({
+      "remoteRoot": ${uneval(remoteRoot)},
+      "compileInto": ${uneval(compileInto)}
+    })
+  </script>
+</body>
+
+</html>`
 }) => {
   if (startIndexRequestHandler === startIndexRequestInterception && headless === false) {
     throw new Error(`startIndexRequestInterception work only in headless mode`)
@@ -106,16 +126,10 @@ export const launchChromium = async ({
   const fileToExecuted = async (file, options) => {
     const [page, html] = await Promise.all([
       browser.newPage(),
-      createHTMLForBrowser({
-        scriptRemoteList: [{ url: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }) }],
-        scriptInlineList: [
-          {
-            source: createPlatformSetupSource({
-              remoteRoot,
-              compileInto,
-            }),
-          },
-        ],
+      generateHTML({
+        remoteRoot,
+        compileInto,
+        browserPlatformRemoteURL: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }),
       }),
     ])
 
