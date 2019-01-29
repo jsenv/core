@@ -17,3 +17,11 @@ export const replaceSourceMappingURL = (source, callback) => {
   }
   return source
 }
+
+export const readSourceMappingURL = (source) => {
+  let sourceMappingURL
+  replaceSourceMappingURL(source, (value) => {
+    sourceMappingURL = value
+  })
+  return sourceMappingURL
+}

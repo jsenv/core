@@ -5,7 +5,7 @@ import { createCancellationSource } from "@dmail/cancellation"
 import { uneval } from "@dmail/uneval"
 import { platform } from "../platform/node/nodePlatform.js"
 import { registerProcessInterruptCallback } from "../process-signal/index.js"
-import { replaceSourceMappingURL } from "../replaceSourceMappingURL.js"
+import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 
 const execute = async ({ localRoot, remoteRoot, compileInto, file, options }) => {
   /*
@@ -49,10 +49,7 @@ const execute = async ({ localRoot, remoteRoot, compileInto, file, options }) =>
         return null
       }
 
-      let sourceMappingURL
-      replaceSourceMappingURL(content, (value) => {
-        sourceMappingURL = value
-      })
+      const sourceMappingURL = readSourceMappingURL(content)
       if (!sourceMappingURL) return null
       const sourceMapFile = path.resolve(path.dirname(source), sourceMappingURL)
       const sourceMapContent = fs.readFileSync(sourceMapFile, "utf8")

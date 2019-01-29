@@ -1,6 +1,7 @@
-import { transformAsync, transformFromAstAsync } from "@babel/core"
-import { regexpEscape } from "../stringHelper.js"
 import path from "path"
+import { transformAsync, transformFromAstAsync } from "@babel/core"
+import syntaxDynamicImport from "@babel/plugin-syntax-dynamic-import"
+import { regexpEscape } from "../stringHelper.js"
 
 const transpile = ({ ast, code, options }) => {
   if (ast) {
@@ -18,6 +19,7 @@ export const transpiler = async ({
   plugins,
   remap,
 }) => {
+  plugins.unshift(syntaxDynamicImport)
   // https://babeljs.io/docs/en/options
   const options = {
     plugins,
@@ -28,6 +30,10 @@ export const transpiler = async ({
     ast: true,
     sourceMaps: remap,
     sourceFileName: file,
+    // https://babeljs.io/docs/en/options#parseropts
+    parserOpts: {
+      allowAwaitOutsideFunction: true,
+    },
   }
 
   try {

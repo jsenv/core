@@ -5,4 +5,7 @@ bundle({
   ressource: "src/bundle/test/fixtures/top-level-await.js",
   root: localRoot,
   into: "bundle",
+  pluginMap: {
+    "transform-async-to-promises": [transformAsyncToPromises, {}],
+  },
 })
