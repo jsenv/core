@@ -1,3 +1,4 @@
+import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../../localRoot.js"
 import { executeFile } from "../../../executeFile.js"
@@ -9,11 +10,18 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
 })
 
-executeFile(file, {
-  localRoot,
-  compileInto,
-  pluginMap,
-  launchPlatform: launchNode,
-  platformTypeForLog: "node process",
-  verbose: true,
-})
+;(async () => {
+  const actual = await executeFile(file, {
+    localRoot,
+    compileInto,
+    pluginMap,
+    launchPlatform: launchNode,
+    platformTypeForLog: "node process",
+    verbose: true,
+  })
+  const expected = {
+    status: "errored",
+    value: new Error("error"),
+  }
+  assert({ actual, expected })
+})()
