@@ -20,11 +20,14 @@ export const launchAndExecute = (
     restartSignal = createRestartSignal(),
     platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
     verbose = false,
+    // stopOnceExecuted false by default because you want to keep browser alive
+    // or nodejs process
+    // however unit test will pass true because they want to move on
     stopOnceExecuted = false,
-    // could be interesting but seems better to keep it opened
-    // to be able to debug, however unit test would pass true
-    // to let process ends
-    // stopOnError = false,
+    // stopOnError is false by default because it's better to keep process/browser alive
+    // to debug the error to the its consequences
+    // however unit test will pass true because they want to move on
+    stopOnError = false,
     errorCallback = (error) => {
       console.log(`${platformTypeForLog} error ${error.stack}`)
     },
@@ -59,6 +62,13 @@ export const launchAndExecute = (
     const { options, errored, disconnected, fileToExecuted } = await launchOperation
     log(`${platformTypeForLog} started ${JSON.stringify(options)}`)
 
+    const onError = (error) => {
+      errorCallback(error)
+      if (stopOnError) {
+        launchOperation.stop("stopOnError")
+      }
+    }
+
     log(`execute ${file} on ${platformTypeForLog}`)
     const executeOperation = createOperation({
       cancellationToken,
@@ -91,12 +101,12 @@ export const launchAndExecute = (
         ])
 
         if (winner === errored) {
-          errorCallback(value)
+          onError(value)
           return { status: "errored", value }
         }
 
         if (winner === executionErrored) {
-          errorCallback(value)
+          onError(value)
           return { status: "errored", value }
         }
 
@@ -110,7 +120,7 @@ export const launchAndExecute = (
         }
 
         log(`${file} execution on ${platformTypeForLog} done with ${value}`)
-        errored.then(errorCallback)
+        errored.then(onError)
         disconnected.then(disconnectCallback)
 
         if (stopOnceExecuted) {
