@@ -5,7 +5,17 @@ import { createChildExecArgv } from "./createChildExecArgv.js"
 
 const nodeClientFile = `${localRoot}/dist/src/launchNode/client.js`
 
-export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInto }) => {
+export const launchNode = async ({
+  cancellationToken,
+  localRoot,
+  remoteRoot,
+  compileInto,
+  // mirror and capture to be implemented
+  // si mirror est false faut spawn differement le child je crois
+  // pour capture c'est "facile" il suffit d'écouter stdout + stderr
+  // mirrorConsole,
+  // captureConsole,
+}) => {
   const execArgv = await createChildExecArgv({ cancellationToken })
 
   const child = forkChildProcess(nodeClientFile, { execArgv })
