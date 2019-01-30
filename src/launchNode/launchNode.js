@@ -24,24 +24,14 @@ export const launchNode = async ({
     // https://nodejs.org/api/child_process.html#child_process_event_error
     const errorEventRegistration = registerChildEvent(child, "error", (error) => {
       errorEventRegistration.unregister()
-      errorMessageRegistration.unregister()
       exitErrorRegistration.unregister()
       resolve(error)
-    })
-
-    // uncaughException, unhandledRejection
-    const errorMessageRegistration = registerChildMessage(child, "error", (error) => {
-      errorEventRegistration.unregister()
-      errorMessageRegistration.unregister()
-      exitErrorRegistration.unregister()
-      resolve(remoteErrorToLocalError(error))
     })
 
     // process.exit(1) from child
     const exitErrorRegistration = registerChildEvent(child, "exit", (code) => {
       if (code !== 0 && code !== null) {
         errorEventRegistration.unregister()
-        errorMessageRegistration.unregister()
         exitErrorRegistration.unregister()
         resolve(createExitWithFailureCodeError(code))
       }
@@ -64,22 +54,33 @@ export const launchNode = async ({
     child.kill()
   }
 
-  const fileToExecuted = (file, options) => {
-    return new Promise((resolve) => {
-      const executResultRegistration = registerChildMessage(child, "execute-result", (value) => {
-        executResultRegistration.unregister()
-        resolve(value)
+  const fileToExecuted = async (file, options) => {
+    const execute = () =>
+      new Promise((resolve) => {
+        const executResultRegistration = registerChildMessage(child, "execute-result", (value) => {
+          executResultRegistration.unregister()
+          resolve(value)
+        })
+
+        sendToChild(child, "execute", {
+          localRoot,
+          remoteRoot,
+          compileInto,
+
+          file,
+          options,
+        })
       })
 
-      sendToChild(child, "execute", {
-        localRoot,
-        remoteRoot,
-        compileInto,
-
-        file,
-        options,
-      })
-    })
+    const { status, statusData, namespace, coverageMap } = await execute()
+    if (status === "rejected") {
+      return {
+        status,
+        statusData: errorToLocalError(statusData, { file, localRoot }),
+        coverageMap,
+      }
+    }
+    return { status, statusData, namespace, coverageMap }
   }
 
   return {
@@ -130,8 +131,17 @@ const createExitWithFailureCodeError = (code) => {
   return new Error(`child exited with ${code}`)
 }
 
-const remoteErrorToLocalError = ({ message, stack }) => {
-  const localError = new Error(message)
-  localError.stack = stack
-  return localError
+const errorToLocalError = (error, { file, localRoot }) => {
+  if (error && error.code === "MODULE_PARSE_ERROR") {
+    const localError = new Error(error.message.replace(file, `${localRoot}/${file}`))
+    return localError
+  }
+
+  if (error && typeof error === "object") {
+    const localError = new Error(error.message)
+    localError.stack = error.stack
+    return localError
+  }
+
+  return error
 }

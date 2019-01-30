@@ -82,21 +82,22 @@ const execute = async ({ localRoot, remoteRoot, compileInto, file, options }) =>
     remoteRoot,
     compileInto,
   })
-  platform.importFile(file, options).then(emitResult, emitError)
-}
 
-const emitResult = (value) => sendToParent("execute-result", value)
-
-const emitError = (error) => sendToParent("error", exceptionToObject(error))
-
-const sendToParent = (type, data) => {
-  // process.send algorithm does not send non enumerable values
-  // because it works with JSON.stringify I guess so use uneval
-  const source = uneval(data)
-
-  process.send({
-    type,
-    data: source,
+  const { status, statusData, namespace, coverageMap } = await platform.importFile(file, options)
+  if (status === "rejected") {
+    sendToParent("execute-result", {
+      status,
+      statusData: exceptionToObject(statusData),
+      namespace,
+      coverageMap,
+    })
+    return
+  }
+  sendToParent("execute-result", {
+    status,
+    statusData,
+    namespace,
+    coverageMap,
   })
 }
 
@@ -116,6 +117,17 @@ const exceptionToObject = (exception) => {
   return {
     message: exception,
   }
+}
+
+const sendToParent = (type, data) => {
+  // process.send algorithm does not send non enumerable values
+  // because it works with JSON.stringify I guess so use uneval
+  const source = uneval(data)
+
+  process.send({
+    type,
+    data: source,
+  })
 }
 
 const onceExecutionRequested = (callback) => listenParentOnce("execute", callback)

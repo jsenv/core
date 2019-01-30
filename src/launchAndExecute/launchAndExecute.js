@@ -102,12 +102,12 @@ export const launchAndExecute = (
 
         if (winner === errored) {
           onError(value)
-          return { status: "errored", value }
+          return { status: "errored", statusData: value }
         }
 
         if (winner === executionErrored) {
           onError(value)
-          return { status: "errored", value }
+          return { status: "errored", statusData: value }
         }
 
         if (winner === disconnected) {
@@ -127,7 +127,11 @@ export const launchAndExecute = (
           launchOperation.stop("stopOnceExecuted")
         }
 
-        return { status: "completed", value }
+        const { status, statusData, namespace, coverageMap } = value
+        if (status === "resolved") {
+          return { status: "completed", statusData, namespace, coverageMap }
+        }
+        return { status: "errored", statusData, coverageMap }
       },
     })
     return executeOperation

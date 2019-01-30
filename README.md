@@ -3,10 +3,14 @@
 todo list
 
 - follow up https://github.com/systemjs/systemjs/issues/1898
-- implement mirrorConsole and captureCOnsole in launchNode
+- implement mirrorConsole and captureConsole in launchNode
 - implement mirrorConsole and captureConsole in launchChromium
 - during executionPlanToCoverageMap implement and test log output
   that should look like that
+
+we need to handle cancellation too
+basically we need something in the log saying everything is canceled
+and something catching cancel error to avoid crashing the process
 
 ```
 ✔ src/index.test.js
@@ -57,8 +61,3 @@ statusText: "platform disconnected before execution completed"
 
 - Avoid node_modules in coverageMap
 - an api to bundle js into dist
-
-Nice to have
-
-- we should still try to collect coverageMap if file execution throw
-  (this way we would have a partial coverage until error was thrown)

@@ -16,8 +16,7 @@ export const launchChromium = async ({
   remoteRoot,
   compileInto,
   mirrorConsole,
-  // capture console to be implemented
-  // captureConsole,
+  captureConsole,
 
   protocol = "http",
   ip = "127.0.0.1",
@@ -51,6 +50,8 @@ export const launchChromium = async ({
     throw new Error(`startIndexRequestInterception work only in headless mode`)
   }
 
+  let capturedConsole = ""
+
   const options = {
     headless,
     // because we use a self signed certificate
@@ -81,21 +82,9 @@ export const launchChromium = async ({
     await browser.close()
   }
 
-  const chromeErrorToLocalError = (error) => {
-    // does not truly work
-    // error stack should be remapped either client side or here
-    // error is correctly remapped inside chrome devtools
-    // but the error we receive here is not remapped
-    // client side would be better but here could be enough
-    const remoteRootRegexp = new RegExp(regexpEscape(remoteRoot), "g")
-    error.stack = error.stack.replace(remoteRootRegexp, localRoot)
-    error.message = error.message.replace(remoteRootRegexp, localRoot)
-    return error
-  }
-
   const errored = new Promise((resolve) => {
     const emitError = (error) => {
-      resolve(chromeErrorToLocalError(error))
+      resolve(error)
     }
 
     const trackPage = (browser) => {
@@ -113,11 +102,17 @@ export const launchChromium = async ({
           // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
           page.on("pageerror", emitError)
 
+          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
           if (mirrorConsole) {
             page.on("console", (message) => {
               // there is also message._args
               // which is an array of JSHandle{ _context, _client _remoteObject }
               console[message._type](message._text)
+            })
+          }
+          if (captureConsole) {
+            page.on("console", (message) => {
+              capturedConsole += message._text
             })
           }
         }
@@ -146,19 +141,40 @@ export const launchChromium = async ({
     })
     stopIndexServer = indexStop
 
-    await page.goto(indexOrigin)
-    try {
+    const execute = async () => {
+      await page.goto(indexOrigin)
       return await page.evaluate(
         (file, options) => window.__platform__.importFile(file, options),
         file,
         options,
       )
-    } catch (e) {
-      throw chromeErrorToLocalError(e)
     }
+
+    const { status, statusData, namespace, coverageMap } = execute()
+    if (status === "rejected") {
+      return {
+        status,
+        statusData: errorToLocalError(statusData, { localRoot, remoteRoot }),
+        coverageMap,
+        capturedConsole,
+      }
+    }
+    return { status, statusData, namespace, coverageMap, capturedConsole }
   }
 
   return { options, disconnected, errored, stop, fileToExecuted }
+}
+
+const errorToLocalError = (error, { remoteRoot, localRoot }) => {
+  // does not truly work
+  // error stack should be remapped either client side or here
+  // error is correctly remapped inside chrome devtools
+  // but the error we receive here is not remapped
+  // client side would be better but here could be enough
+  const remoteRootRegexp = new RegExp(regexpEscape(remoteRoot), "g")
+  error.stack = error.stack.replace(remoteRootRegexp, localRoot)
+  error.message = error.message.replace(remoteRootRegexp, localRoot)
+  return error
 }
 
 const createTargetTracker = (browser) => {

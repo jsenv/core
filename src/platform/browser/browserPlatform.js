@@ -88,54 +88,75 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
       ? ressourceToRemoteInstrumentedFile({ ressource: file, remoteRoot, compileInto, compileId })
       : ressourceToRemoteCompiledFile({ ressource: file, remoteRoot, compileInto, compileId })
 
+    const getCoverageMapOrEmpty = () => {
+      return collectCoverage ? { coverageMap: global.__coverage__ } : {}
+    }
+
     try {
       const namespace = await importFile(remoteCompiledFile)
       if (collectCoverage) {
         await namespace.output
       }
       return {
+        status: "resolved",
         ...(collectNamespace ? { namespace } : {}),
-        ...(collectCoverage ? { coverageMap: window.__coverage__ } : {}),
+        ...getCoverageMapOrEmpty(),
       }
     } catch (error) {
-      const meta = rejectionValueToMeta(error, {
-        remoteRoot,
-        compileInto,
-      })
-
-      const css = `
-      .jsenv-console pre[data-theme="dark"] {
-        background: transparent;
-        border: 1px solid black
+      onError(error, { remoteRoot, compileInto, file })
+      return {
+        status: "rejected",
+        statusData: transformError(error),
+        ...getCoverageMapOrEmpty(),
       }
-
-      .jsenv-console pre[data-theme="light"] {
-        background: #1E1E1E;
-        border: 1px solid white;
-        color: #EEEEEE;
-      }
-
-      .jsenv-console pre[data-theme="light"] a {
-        color: inherit;
-      }
-      `
-
-      const html = `
-        <style type="text/css">${css}></style>
-        <div class="jsenv-console">
-          <h1>
-            <a href="${ressourceToRemoteSourceFile({
-              ressource: file,
-              remoteRoot,
-            })}">${file}</a> import rejected
-          </h1>
-          <pre data-theme="${meta.dataTheme || "dark"}">${meta.data}</pre>
-        </div>
-        `
-      appendHMTL(html, document.body)
-      throw error
     }
   }
+}
+
+const transformError = (error) => {
+  if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
+    return error.error
+  }
+  return error
+}
+
+const onError = (error, { remoteRoot, compileInto, file }) => {
+  const meta = rejectionValueToMeta(error, {
+    remoteRoot,
+    compileInto,
+  })
+
+  const css = `
+  .jsenv-console pre[data-theme="dark"] {
+    background: transparent;
+    border: 1px solid black
+  }
+
+  .jsenv-console pre[data-theme="light"] {
+    background: #1E1E1E;
+    border: 1px solid white;
+    color: #EEEEEE;
+  }
+
+  .jsenv-console pre[data-theme="light"] a {
+    color: inherit;
+  }
+  `
+
+  const html = `
+    <style type="text/css">${css}></style>
+    <div class="jsenv-console">
+      <h1>
+        <a href="${ressourceToRemoteSourceFile({
+          ressource: file,
+          remoteRoot,
+        })}">${file}</a> import rejected
+      </h1>
+      <pre data-theme="${meta.dataTheme || "dark"}">${meta.data}</pre>
+    </div>
+    `
+  appendHMTL(html, document.body)
+  console.error(error)
 }
 
 const appendHMTL = (html, parentNode) => {

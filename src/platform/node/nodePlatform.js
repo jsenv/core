@@ -1,8 +1,4 @@
-import {
-  ressourceToRemoteCompiledFile,
-  ressourceToRemoteInstrumentedFile,
-  ressourceToLocalSourceFile,
-} from "../locaters.js"
+import { ressourceToRemoteCompiledFile, ressourceToRemoteInstrumentedFile } from "../locaters.js"
 import { getCompileMapLocalURL } from "./localURL.js"
 import { nodeToCompileId } from "./nodeToCompileId.js"
 import { createImporter } from "./system/createImporter.js"
@@ -37,29 +33,40 @@ const setup = ({ localRoot, remoteRoot, compileInto }) => {
       ? ressourceToRemoteInstrumentedFile({ ressource: file, remoteRoot, compileInto, compileId })
       : ressourceToRemoteCompiledFile({ ressource: file, remoteRoot, compileInto, compileId })
 
+    const getCoverageMapOrEmpty = () => {
+      return collectCoverage ? { coverageMap: global.__coverage__ } : {}
+    }
+
     try {
       const namespace = await importer.importFile(remoteCompiledFile)
       if (collectCoverage) {
         await namespace.output
       }
       return {
+        status: "resolved",
         ...(collectNamespace ? { namespace } : {}),
-        ...(collectCoverage ? { coverageMap: global.__coverage__ } : {}),
+        ...getCoverageMapOrEmpty(),
       }
     } catch (error) {
-      if (error && error.code === "MODULE_PARSE_ERROR") {
-        error.message = error.message.replace(
-          file,
-          ressourceToLocalSourceFile({ ressource: file, localRoot }),
-        )
-        throw error
+      onError(error)
+      return {
+        status: "rejected",
+        statusData: transformError(error),
+        ...getCoverageMapOrEmpty(),
       }
-      if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-        throw error.error
-      }
-      throw error
     }
   }
+}
+
+const onError = (error) => {
+  console.error(error)
+}
+
+const transformError = (error) => {
+  if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
+    return error.error
+  }
+  return error
 }
 
 export const platform = {
