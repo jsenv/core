@@ -34,6 +34,7 @@ export const launchAndExecute = (
     disconnectCallback = () => {
       console.log(`${platformTypeForLog} disconnected`)
     },
+    mirrorConsole = false,
     captureConsole = false,
     ...executionOptions
   } = {},
@@ -73,6 +74,15 @@ export const launchAndExecute = (
     if (captureConsole) {
       registerConsoleCallback(({ text }) => {
         capturedConsole += text
+      })
+    }
+    if (mirrorConsole) {
+      registerConsoleCallback(({ type, text }) => {
+        if (type === "error") {
+          process.stderr.write(text)
+          return
+        }
+        process.stdout.write(text)
       })
     }
 

@@ -5,15 +5,7 @@ import { createChildExecArgv } from "./createChildExecArgv.js"
 
 const nodeClientFile = `${localRoot}/dist/src/launchNode/client.js`
 
-export const launchNode = async ({
-  cancellationToken,
-  localRoot,
-  remoteRoot,
-  compileInto,
-  // mirror to be implemented
-  // si mirror est false faut spawn differement le child je crois
-  // mirrorConsole,
-}) => {
+export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInto }) => {
   // theorically listening 'data' on stdout + stderr should do the trick
   const consoleCallbackArray = []
   const registerConsoleCallback = (callback) => {
@@ -22,7 +14,30 @@ export const launchNode = async ({
 
   const execArgv = await createChildExecArgv({ cancellationToken })
 
-  const child = forkChildProcess(nodeClientFile, { execArgv })
+  const child = forkChildProcess(nodeClientFile, {
+    execArgv,
+    // silent: true
+    stdio: "pipe",
+  })
+  // beware that we may receive ansi output here, should not be a problem but keep that in mind
+  child.stdout.on("data", (chunk) => {
+    const text = String(chunk)
+    consoleCallbackArray.forEach((callback) => {
+      callback({
+        type: "log",
+        text,
+      })
+    })
+  })
+  child.stderr.on("data", (chunk) => {
+    const text = String(chunk)
+    consoleCallbackArray.forEach((callback) => {
+      callback({
+        type: "error",
+        text,
+      })
+    })
+  })
 
   const errored = new Promise((resolve) => {
     // https://nodejs.org/api/child_process.html#child_process_event_error
@@ -76,15 +91,15 @@ export const launchNode = async ({
         })
       })
 
-    const { status, statusData, ...rest } = await execute()
+    const { status, ...rest } = await execute()
     if (status === "rejected") {
       return {
         status,
-        statusData: errorToLocalError(statusData, { file, localRoot }),
         ...rest,
+        statusData: errorToLocalError(rest.statusData, { file, localRoot }),
       }
     }
-    return { status, statusData, ...rest }
+    return { status, ...rest }
   }
 
   return {

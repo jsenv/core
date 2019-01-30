@@ -15,7 +15,6 @@ export const launchChromium = async ({
   localRoot,
   remoteRoot,
   compileInto,
-  mirrorConsole,
 
   protocol = "http",
   ip = "127.0.0.1",
@@ -105,15 +104,10 @@ export const launchChromium = async ({
           page.on("pageerror", emitError)
 
           // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
-          if (mirrorConsole) {
-            page.on("console", (message) => {
-              // there is also message._args
-              // which is an array of JSHandle{ _context, _client _remoteObject }
-              console[message._type](message._text)
-            })
-          }
-
           page.on("console", (message) => {
+            // there is also message._args
+            // which is an array of JSHandle{ _context, _client _remoteObject }
+
             consoleCallbackArray.forEach((callback) => {
               callback({
                 type: message._type,

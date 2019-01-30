@@ -4,7 +4,7 @@ import { localRoot } from "../../../localRoot.js"
 import { executeFile } from "../../../executeFile.js"
 import { launchNode } from "../../launchNode.js"
 
-const file = `src/launchNode/test/fixtures/throw-absolute.js`
+const file = `src/launchNode/test/fixtures/log.js`
 const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -22,8 +22,7 @@ const pluginMap = pluginOptionMapToPluginMap({
     mirrorConsole: true,
   })
   const expected = {
-    status: "errored",
-    statusData: new Error("error"),
+    status: "completed",
     capturedConsole: actual.capturedConsole,
   }
   assert({ actual, expected })

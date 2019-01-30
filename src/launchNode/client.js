@@ -83,21 +83,18 @@ const execute = async ({ localRoot, remoteRoot, compileInto, file, options }) =>
     compileInto,
   })
 
-  const { status, statusData, namespace, coverageMap } = await platform.importFile(file, options)
+  const { status, ...rest } = await platform.importFile(file, options)
   if (status === "rejected") {
     sendToParent("execute-result", {
       status,
-      statusData: exceptionToObject(statusData),
-      namespace,
-      coverageMap,
+      ...rest,
+      statusData: exceptionToObject(rest.statusData),
     })
     return
   }
   sendToParent("execute-result", {
     status,
-    statusData,
-    namespace,
-    coverageMap,
+    ...rest,
   })
 }
 
