@@ -26,13 +26,13 @@ export const executePlan = async (
   const plannedExecutionArray = []
   Object.keys(executionPlan).forEach((file) => {
     const fileExecutionPlan = executionPlan[file]
-    Object.keys(fileExecutionPlan).forEach((name) => {
+    Object.keys(fileExecutionPlan).forEach((executionName) => {
       // TODO: add allocatedMs { launch, allocatedMs }
       // and pass it
-      const { launch } = fileExecutionPlan[name]
+      const { launch } = fileExecutionPlan[executionName]
       plannedExecutionArray.push({
         file,
-        name,
+        executionName,
         launch,
       })
     })
@@ -43,13 +43,17 @@ export const executePlan = async (
     cancellationToken,
     maxParallelExecution,
     array: plannedExecutionArray,
-    start: async ({ file, name, launch }) => {
-      beforeEach({ file, name })
+    start: async ({ file, executionName, launch }) => {
+      beforeEach({ file, executionName })
 
       const result = await launchAndExecute(launch, file, {
         cancellationToken,
         collectCoverage: cover,
+        // mirrorConsole: false because file will be executed in parallel
+        // so log would be a mess to read
         mirrorConsole: false,
+        // instead use captureConsole: true, we will wait for the file
+        // to be executed before displaying the whole corresponding console output
         captureConsole: true,
         // stopOnError: true to ensure platform is stopped on error
         // because we know what we want: execution has failed
@@ -60,12 +64,12 @@ export const executePlan = async (
         // we have associated coverageMap and capturedConsole
         stopOnceExecuted: true,
       })
-      afterEach({ file, name, result })
+      afterEach({ file, executionName, ...result })
 
       if (file in planResult === false) {
         planResult[file] = {}
       }
-      planResult[file][name] = result
+      planResult[file][executionName] = result
 
       // if (cover && result.value.coverageMap === null) {
       // coverageMap can be null for 2 reason:
