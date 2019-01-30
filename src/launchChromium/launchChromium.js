@@ -16,7 +16,6 @@ export const launchChromium = async ({
   remoteRoot,
   compileInto,
   mirrorConsole,
-  captureConsole,
 
   protocol = "http",
   ip = "127.0.0.1",
@@ -50,8 +49,6 @@ export const launchChromium = async ({
     throw new Error(`startIndexRequestInterception work only in headless mode`)
   }
 
-  let capturedConsole = ""
-
   const options = {
     headless,
     // because we use a self signed certificate
@@ -62,6 +59,11 @@ export const launchChromium = async ({
     // because the 3 above are true by default pupeeter will auto close browser
     // so we apparently don't have to use listenNodeBeforeExit in order to close browser
     // as we do for server
+  }
+
+  const consoleCallbackArray = []
+  const registerConsoleCallback = (callback) => {
+    consoleCallbackArray.push(callback)
   }
 
   const browser = await createStoppableOperation({
@@ -110,11 +112,15 @@ export const launchChromium = async ({
               console[message._type](message._text)
             })
           }
-          if (captureConsole) {
-            page.on("console", (message) => {
-              capturedConsole += message._text
+
+          page.on("console", (message) => {
+            consoleCallbackArray.forEach((callback) => {
+              callback({
+                type: message._type,
+                text: message._text,
+              })
             })
-          }
+          })
         }
       })
     }
@@ -150,19 +156,18 @@ export const launchChromium = async ({
       )
     }
 
-    const { status, statusData, namespace, coverageMap } = execute()
+    const { status, statusData, ...rest } = execute()
     if (status === "rejected") {
       return {
         status,
         statusData: errorToLocalError(statusData, { localRoot, remoteRoot }),
-        coverageMap,
-        capturedConsole,
+        ...rest,
       }
     }
-    return { status, statusData, namespace, coverageMap, capturedConsole }
+    return { status, statusData, ...rest }
   }
 
-  return { options, disconnected, errored, stop, fileToExecuted }
+  return { options, disconnected, errored, stop, fileToExecuted, registerConsoleCallback }
 }
 
 const errorToLocalError = (error, { remoteRoot, localRoot }) => {

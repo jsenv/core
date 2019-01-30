@@ -10,12 +10,16 @@ export const launchNode = async ({
   localRoot,
   remoteRoot,
   compileInto,
-  // mirror and capture to be implemented
+  // mirror to be implemented
   // si mirror est false faut spawn differement le child je crois
-  // pour capture c'est "facile" il suffit d'écouter stdout + stderr
   // mirrorConsole,
-  // captureConsole,
 }) => {
+  // theorically listening 'data' on stdout + stderr should do the trick
+  const consoleCallbackArray = []
+  const registerConsoleCallback = (callback) => {
+    consoleCallbackArray.push(callback)
+  }
+
   const execArgv = await createChildExecArgv({ cancellationToken })
 
   const child = forkChildProcess(nodeClientFile, { execArgv })
@@ -72,15 +76,15 @@ export const launchNode = async ({
         })
       })
 
-    const { status, statusData, namespace, coverageMap } = await execute()
+    const { status, statusData, ...rest } = await execute()
     if (status === "rejected") {
       return {
         status,
         statusData: errorToLocalError(statusData, { file, localRoot }),
-        coverageMap,
+        ...rest,
       }
     }
-    return { status, statusData, namespace, coverageMap }
+    return { status, statusData, ...rest }
   }
 
   return {
@@ -90,6 +94,7 @@ export const launchNode = async ({
     stop,
     stopForce,
     fileToExecuted,
+    registerConsoleCallback,
   }
 }
 

@@ -34,7 +34,8 @@ export const launchAndExecute = (
     disconnectCallback = () => {
       console.log(`${platformTypeForLog} disconnected`)
     },
-    ...rest
+    captureConsole = false,
+    ...executionOptions
   } = {},
 ) => {
   const log = (...args) => {
@@ -59,8 +60,25 @@ export const launchAndExecute = (
         return disconnected
       },
     })
-    const { options, errored, disconnected, fileToExecuted } = await launchOperation
+    const {
+      options,
+      errored,
+      disconnected,
+      fileToExecuted,
+      registerConsoleCallback,
+    } = await launchOperation
     log(`${platformTypeForLog} started ${JSON.stringify(options)}`)
+
+    let capturedConsole = ""
+    if (captureConsole) {
+      registerConsoleCallback(({ text }) => {
+        capturedConsole += text
+      })
+    }
+
+    const getCapturedConsoleOrEmpty = () => {
+      return captureConsole ? { capturedConsole } : {}
+    }
 
     const onError = (error) => {
       errorCallback(error)
@@ -77,7 +95,7 @@ export const launchAndExecute = (
           restartSignal.onrestart = resolve
         })
 
-        const executed = fileToExecuted(file, rest)
+        const executed = fileToExecuted(file, executionOptions)
         const executionCompleted = new Promise((resolve) => {
           executed.then(
             (value) => {
@@ -127,11 +145,11 @@ export const launchAndExecute = (
           launchOperation.stop("stopOnceExecuted")
         }
 
-        const { status, statusData, namespace, coverageMap } = value
+        const { status, ...rest } = value
         if (status === "resolved") {
-          return { status: "completed", statusData, namespace, coverageMap }
+          return { status: "completed", ...rest, ...getCapturedConsoleOrEmpty() }
         }
-        return { status: "errored", statusData, coverageMap }
+        return { status: "errored", ...rest, ...getCapturedConsoleOrEmpty() }
       },
     })
     return executeOperation
