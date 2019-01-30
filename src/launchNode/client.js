@@ -66,14 +66,15 @@ const execute = async ({ localRoot, remoteRoot, compileInto, file, options }) =>
     },
   })
 
-  process.once("uncaughtException", (valueThrowed) => {
-    emitError(valueThrowed)
-    process.exit(1)
-  })
+  // process.once("uncaughtException", (valueThrowed) => {
+  //   emitError(valueThrowed)
+  //   process.exit(1)
+  // })
 
   process.once("unhandledRejection", (valueRejected) => {
-    emitError(valueRejected)
-    process.exit(1)
+    throw valueRejected
+    // emitError(valueRejected)
+    // process.exit(1)
   })
 
   platform.setup({
