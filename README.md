@@ -2,14 +2,59 @@
 
 todo list
 
-- covering with error in the midlde of execution must not prevent next file execution
-- covering when platform is disconnected in the middle of execution
-- ensure logs are not a mess because files are execute in parallel
-  ideally log should be captured and become part of an executionReport object
-  that we can log properly once execution is done
-  think the same than when creating a response for a request in a server
-  -> in that case we wait for response before logging the request/response data
-- nice log output a bit like the one from prettiest
+- follow up https://github.com/systemjs/systemjs/issues/1898
+- implement mirrorConsole and captureCOnsole in launchNode
+- implement mirrorConsole and captureConsole in launchChromium
+- during executionPlanToCoverageMap implement and test log output
+  that should look like that
+
+```
+✔ src/index.test.js
+----------- console ----------
+------------------------------
+platform: "node"
+status: "passed"
+
+✔ src/file.test.js
+----------- console ---------
+Hello world
+-----------------------------
+platform: "chromium"
+status: "passed"
+
+☓ src/file.test.js
+----------- console ---------
+Error: cannot read property foo of undefined.
+-----------------------------
+platform: "node"
+status: "errored"
+
+☓ src/bar.test.js
+----------- console ---------
+log a
+log b
+-----------------------------
+platform: "node"
+status: "timedout"
+statusText: "execution takes more than 5000ms to complete"
+
+☓ src/foo.test.js
+----------- console ---------
+foo
+-----------------------------
+platform: "node"
+status: "disconnected"
+statusText: "platform disconnected before execution completed"
+
+------ execution summary ---------
+10 file execution launched
+- 5 completed
+- 2 errored
+- 3 timedout
+- 1 disconnected
+----------------------------------
+```
+
 - Avoid node_modules in coverageMap
 - an api to bundle js into dist
 
