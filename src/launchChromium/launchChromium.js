@@ -2,12 +2,12 @@
 
 import { URL } from "url"
 import puppeteer from "puppeteer"
+import { uneval } from "@dmail/uneval"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
 import { startIndexServer } from "../server-index/startIndexServer.js"
 import { originAsString } from "../server/index.js"
 import { createPromiseAndHooks } from "../promiseHelper.js"
 import { getBrowserPlatformRemoteURL } from "../platform/browser/remoteURL.js"
-import { createPlatformSetupSource } from "../platform/browser/platformSource.js"
 import { regexpEscape } from "../stringHelper.js"
 
 export const launchChromium = async ({
@@ -15,13 +15,15 @@ export const launchChromium = async ({
   localRoot,
   remoteRoot,
   compileInto,
+  mirrorConsole,
+  // capture console to be implemented
+  // captureConsole,
 
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
   startIndexRequestHandler = startIndexServer,
   headless = true,
-  mirrorConsole = true,
   generateHTML = ({ remoteRoot, compileInto, browserPlatformRemoteURL }) => {
     return `<!doctype html>
 
@@ -43,6 +45,7 @@ export const launchChromium = async ({
 </body>
 
 </html>`
+  },
 }) => {
   if (startIndexRequestHandler === startIndexRequestInterception && headless === false) {
     throw new Error(`startIndexRequestInterception work only in headless mode`)
