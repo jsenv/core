@@ -45,17 +45,20 @@ export const executePlan = async (
     array: plannedExecutionArray,
     start: async ({ file, name, launch }) => {
       beforeEach({ file, name })
-      // TODO: if the test fails to execute it should not prevent
-      // subsequent execution (or an option should control that)
-      // in other words I think I have to catch
-      // and wrap result into passed: true/false, value: {namespace, coverageMap}
 
       const result = await launchAndExecute(launch, file, {
         cancellationToken,
         collectCoverage: cover,
-        stopOnceExecuted: true, // ensure platform is closed
-        captureConsole: true, // does not exists yet, but will be needed
-        // and will add something like result.capturedConsole
+        mirrorConsole: false,
+        captureConsole: true,
+        // stopOnError: true to ensure platform is stopped on error
+        // because we know what we want: execution has failed
+        // and we can use capturedConsole to know how it failed
+        stopOnError: true,
+        // stopOnceExecuted: true to ensure platform is stopped once executed
+        // because we have what we wants: execution is completed and
+        // we have associated coverageMap and capturedConsole
+        stopOnceExecuted: true,
       })
       afterEach({ file, name, result })
 
