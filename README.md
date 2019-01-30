@@ -3,8 +3,6 @@
 todo list
 
 - follow up https://github.com/systemjs/systemjs/issues/1898
-- implement mirrorConsole and captureConsole in launchNode
-- implement mirrorConsole and captureConsole in launchChromium
 - during executionPlanToCoverageMap implement and test log output
   that should look like that
 
