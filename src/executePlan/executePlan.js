@@ -54,6 +54,8 @@ export const executePlan = async (
         cancellationToken,
         collectCoverage: cover,
         stopOnceExecuted: true, // ensure platform is closed
+        captureConsole: true, // does not exists yet, but will be needed
+        // and will add something like result.capturedConsole
       })
       afterEach({ file, name, result })
 
@@ -62,14 +64,14 @@ export const executePlan = async (
       }
       planResult[file][name] = result
 
-      if (cover && result.coverageMap === null) {
-        // coverageMap can be null for 2 reason:
-        // - test file import a source file which is not instrumented
-        // here we should throw
-        // - test file import nothing so global__coverage__ is not set
-        // here it's totally normal
-        // throw new Error(`missing coverageMap after ${file} execution, it was not instrumented`)
-      }
+      // if (cover && result.value.coverageMap === null) {
+      // coverageMap can be null for 2 reason:
+      // - test file import a source file which is not instrumented
+      // here we should throw
+      // - test file import nothing so global__coverage__ is not set
+      // here it's totally normal
+      // throw new Error(`missing coverageMap after ${file} execution, it was not instrumented`)
+      // }
     },
   })
   return planResult

@@ -26,20 +26,21 @@ export const executionPlanToCoverageMap = async (
     cancellationToken = cancellationTokenCompose(cancellationToken, SIGINTCancelSource.token)
   }
 
-  const result = await executePlan(executionPlan, {
+  const allExecutionResult = await executePlan(executionPlan, {
     cancellationToken,
     cover: true,
     cancelSIGINT: false, // already handled by this one
   })
 
   const coverageMapArray = []
-  Object.keys(result).forEach((file) => {
-    const fileResult = result[file]
-    Object.keys(fileResult).forEach((name) => {
-      const { coverageMap } = fileResult[name]
-      if (coverageMap) {
-        coverageMapArray.push(coverageMap)
-      }
+  Object.keys(allExecutionResult).forEach((file) => {
+    const allExecutionResultForFile = allExecutionResult[file]
+    Object.keys(allExecutionResultForFile).forEach((executionName) => {
+      const executionResult = allExecutionResultForFile[executionName]
+      if (!executionResult.status === "completed") return
+      const { coverageMap } = executionResult.value
+      if (!coverageMap) return
+      coverageMapArray.push(coverageMap)
     })
   })
   const executionCoverageMap = coverageMapCompose(...coverageMapArray)
