@@ -6,6 +6,10 @@ import {
 import { executePlan } from "../executePlan/index.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 import { fileToEmptyCoverage } from "./fileToEmptyCoverage.js"
+import {
+  createFileExecutionResultMessage,
+  createExecutionResultMessage,
+} from "./createExecutionMessage.js"
 
 export const executionPlanToCoverageMap = async (
   executionPlan,
@@ -14,8 +18,6 @@ export const executionPlanToCoverageMap = async (
     localRoot,
     filesToCover = [],
     cancelSIGINT = true,
-    logProgression = true,
-    logSummary = true,
   },
 ) => {
   // I think it is an error, it would be strange, for a given file
@@ -32,22 +34,12 @@ export const executionPlanToCoverageMap = async (
     cancellationToken,
     cover: true,
     cancelSIGINT: false, // already handled by this one
-    afterEach: ({ file, platformName, status, capturedConsole }) => {
-      if (!logProgression) return
-      if (status === "passed") {
-        console.log(createPassedLog({ file, platformName, status, capturedConsole }))
-        return
-      }
-      if (status === "errored") {
-        console.log(createErroredLog({ file, platformName, status, capturedConsole }))
-        return
-      }
-      // missing timedout and disconnected
+    afterEach: (fileExecutionResult) => {
+      console.log(createFileExecutionResultMessage(fileExecutionResult))
     },
   })
-  if (logSummary) {
-    console.log(createSummaryLog({ executionPlan, executionResult: allExecutionResult }))
-  }
+
+  console.log(createExecutionResultMessage({ executionPlan, executionResult: allExecutionResult }))
 
   const coverageMapArray = []
   Object.keys(allExecutionResult).forEach((file) => {
@@ -91,75 +83,6 @@ export const executionPlanToCoverageMap = async (
   })
 
   return coverageMap
-}
-
-const createPassedLog = ({ file, capturedConsole, platformName }) => {
-  const green = "\x1b[32m"
-  const checkmark = "✔" // "\u2714"
-  const close = "\x1b[0m"
-
-  return `${green}${checkmark} ${file}${close}
------------ console ----------
-${capturedConsole}
-------------------------------
-platform: "${platformName}"
-status: "passed"
-`
-}
-
-const createErroredLog = ({ file, capturedConsole, platformName }) => {
-  const red = "\x1b[31m"
-  const cross = "☓" // "\u2613"
-  const close = "\x1b[0m"
-
-  return `${red}${cross} ${file}${close}
------------ console ----------
-${capturedConsole}
-------------------------------
-platform: "${platformName}"
-status: "errored"
-`
-}
-
-const createSummaryLog = ({ executionResult }) => {
-  const fileNames = Object.keys(executionResult)
-  const executionCount = fileNames.reduce((previous, fileName) => {
-    return previous + Object.keys(executionResult[fileName]).length
-  }, 0)
-
-  const countResultMatching = (predicate) => {
-    fileNames.reduce((previous, fileName) => {
-      const fileExecutionResult = executionResult[fileName]
-
-      return (
-        previous +
-        Object.keys(fileExecutionResult).filter((platformName) => {
-          const fileExecutionResultForPlatform = fileExecutionResult[platformName]
-          return predicate(fileExecutionResultForPlatform)
-        }).length
-      )
-    }, 0)
-  }
-
-  const completedCount = countResultMatching(({ status }) => status === "completed")
-  const erroredCount = countResultMatching(({ status }) => status === "errored")
-  const timedoutCount = countResultMatching(({ status }) => status === "timedout")
-  const disconnectedCount = countResultMatching(({ status }) => status === "disconnected")
-
-  const close = "\x1b[0m"
-  const red = "\x1b[31m"
-  const green = "\x1b[32m"
-  const yellow = "\x1b[33m"
-  // const blue = "\x1b[34m"
-  const magenta = "\x1b[35m"
-
-  return `------ execution summary ---------
-${executionCount} file execution launched
-- ${yellow}${disconnectedCount} disconnected${close}
-- ${red}${erroredCount} errored${close}
-- ${magenta}${timedoutCount} timedout${close}
-- ${green}${completedCount} completed${close}
-----------------------------------`
 }
 
 const ensureNoFileIsBothCoveredAndExecuted = ({ filesToCover, executionPlan }) => {
