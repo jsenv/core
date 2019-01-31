@@ -117,6 +117,10 @@ const exceptionToObject = (exception) => {
 }
 
 const sendToParent = (type, data) => {
+  // https://nodejs.org/api/process.html#process_process_connected
+  // not connected anymore, cannot communicate with parent
+  if (!process.connected) return
+
   // process.send algorithm does not send non enumerable values
   // because it works with JSON.stringify I guess so use uneval
   const source = uneval(data)
