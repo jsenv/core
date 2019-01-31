@@ -21,8 +21,8 @@
 	},
 	"dependencies": {
 		"@babel/core": "7.2.2",
-		"@babel/helper-hoist-variables": "7.2.0",
-		"@babel/helper-plugin-utils": "7.2.0",
+		"@babel/helper-hoist-variables": "7.0.0",
+		"@babel/helper-plugin-utils": "7.0.0",
 		"@babel/plugin-syntax-dynamic-import": "7.2.0",
 		"@babel/plugin-syntax-import-meta": "7.2.0",
 		"@babel/plugin-transform-block-scoping": "7.2.0",
@@ -62,7 +62,7 @@
 		"eslint": "5.1.0",
 		"eslint-plugin-import": "2.6.0",
 		"mock-fs": "4.4.2",
-		"prettier": "1.15.3",
+		"prettier": "1.16.3",
 		"rimraf": "2.6.2"
 	},
 	"scripts": {
