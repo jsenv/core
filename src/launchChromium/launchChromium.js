@@ -65,6 +65,11 @@ export const launchChromium = async ({
     consoleCallbackArray.push(callback)
   }
 
+  const errorCallbackArray = []
+  const registerErrorCallback = (callback) => {
+    errorCallbackArray.push(callback)
+  }
+
   const browser = await createStoppableOperation({
     cancellationToken,
     start: () => puppeteer.launch(options),
@@ -83,43 +88,43 @@ export const launchChromium = async ({
     await browser.close()
   }
 
-  const errored = new Promise((resolve) => {
-    const emitError = (error) => {
-      resolve(error)
-    }
+  const emitError = (error) => {
+    errorCallbackArray.forEach((callback) => {
+      callback(error)
+    })
+  }
 
-    const trackPage = (browser) => {
-      browser.on("targetcreated", async (target) => {
-        if (target.type === "browser") {
-          const childBrowser = target.browser()
-          trackPage(childBrowser)
-        }
+  const trackPage = (browser) => {
+    browser.on("targetcreated", async (target) => {
+      if (target.type === "browser") {
+        const childBrowser = target.browser()
+        trackPage(childBrowser)
+      }
 
-        // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
-        if (target.type === "page") {
-          const page = await target.page()
-          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-          page.on("error", emitError)
-          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-          page.on("pageerror", emitError)
+      // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
+      if (target.type === "page") {
+        const page = await target.page()
+        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
+        page.on("error", emitError)
+        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
+        page.on("pageerror", emitError)
 
-          // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
-          page.on("console", (message) => {
-            // there is also message._args
-            // which is an array of JSHandle{ _context, _client _remoteObject }
+        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
+        page.on("console", (message) => {
+          // there is also message._args
+          // which is an array of JSHandle{ _context, _client _remoteObject }
 
-            consoleCallbackArray.forEach((callback) => {
-              callback({
-                type: message._type,
-                text: message._text,
-              })
+          consoleCallbackArray.forEach((callback) => {
+            callback({
+              type: message._type,
+              text: message._text,
             })
           })
-        }
-      })
-    }
-    trackPage(browser)
-  })
+        })
+      }
+    })
+  }
+  trackPage(browser)
 
   const fileToExecuted = async (file, options) => {
     const [page, html] = await Promise.all([
@@ -150,18 +155,25 @@ export const launchChromium = async ({
       )
     }
 
-    const { status, statusData, ...rest } = execute()
+    const { status, ...rest } = execute()
     if (status === "rejected") {
       return {
         status,
-        statusData: errorToLocalError(statusData, { localRoot, remoteRoot }),
         ...rest,
+        statusData: errorToLocalError(rest.statusData, { localRoot, remoteRoot }),
       }
     }
-    return { status, statusData, ...rest }
+    return { status, ...rest }
   }
 
-  return { options, disconnected, errored, stop, fileToExecuted, registerConsoleCallback }
+  return {
+    options,
+    disconnected,
+    stop,
+    fileToExecuted,
+    registerErrorCallback,
+    registerConsoleCallback,
+  }
 }
 
 const errorToLocalError = (error, { remoteRoot, localRoot }) => {

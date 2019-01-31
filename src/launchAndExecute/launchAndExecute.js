@@ -63,9 +63,9 @@ export const launchAndExecute = (
     })
     const {
       options,
-      errored,
       disconnected,
       fileToExecuted,
+      registerErrorCallback,
       registerConsoleCallback,
     } = await launchOperation
     log(`${platformTypeForLog} started ${JSON.stringify(options)}`)
@@ -119,6 +119,10 @@ export const launchAndExecute = (
           })
         })
 
+        const errored = new Promise((resolve) => {
+          registerErrorCallback(resolve)
+        })
+
         const { winner, value } = await promiseTrackRace([
           errored,
           disconnected,
@@ -129,16 +133,16 @@ export const launchAndExecute = (
 
         if (winner === errored) {
           onError(value)
-          return { status: "errored", statusData: value }
+          return { status: "errored", statusData: value, ...getCapturedConsoleOrEmpty() }
         }
 
         if (winner === executionErrored) {
           onError(value)
-          return { status: "errored", statusData: value }
+          return { status: "errored", statusData: value, ...getCapturedConsoleOrEmpty() }
         }
 
         if (winner === disconnected) {
-          return { status: "disconnected" }
+          return { status: "disconnected", ...getCapturedConsoleOrEmpty() }
         }
 
         if (winner === restarted) {
@@ -146,7 +150,7 @@ export const launchAndExecute = (
         }
 
         log(`${file} execution on ${platformTypeForLog} done with ${value}`)
-        errored.then((error) => {
+        registerErrorCallback((error) => {
           errorAfterExecutedCallback(error)
           onError(error)
         })

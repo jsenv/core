@@ -6,12 +6,6 @@ import { createChildExecArgv } from "./createChildExecArgv.js"
 const nodeClientFile = `${localRoot}/dist/src/launchNode/client.js`
 
 export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInto }) => {
-  // theorically listening 'data' on stdout + stderr should do the trick
-  const consoleCallbackArray = []
-  const registerConsoleCallback = (callback) => {
-    consoleCallbackArray.push(callback)
-  }
-
   const execArgv = await createChildExecArgv({ cancellationToken })
 
   const child = forkChildProcess(nodeClientFile, {
@@ -19,6 +13,11 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
     // silent: true
     stdio: "pipe",
   })
+
+  const consoleCallbackArray = []
+  const registerConsoleCallback = (callback) => {
+    consoleCallbackArray.push(callback)
+  }
   // beware that we may receive ansi output here, should not be a problem but keep that in mind
   child.stdout.on("data", (chunk) => {
     const text = String(chunk)
@@ -39,22 +38,28 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
     })
   })
 
-  const errored = new Promise((resolve) => {
-    // https://nodejs.org/api/child_process.html#child_process_event_error
-    const errorEventRegistration = registerChildEvent(child, "error", (error) => {
+  const errorCallbackArray = []
+  const registerErrorCallback = (callback) => {
+    errorCallbackArray.push(callback)
+  }
+  const emitError = (error) => {
+    errorCallbackArray.forEach((callback) => {
+      callback(error)
+    })
+  }
+  // https://nodejs.org/api/child_process.html#child_process_event_error
+  const errorEventRegistration = registerChildEvent(child, "error", (error) => {
+    errorEventRegistration.unregister()
+    exitErrorRegistration.unregister()
+    emitError(error)
+  })
+  // process.exit(1) from child
+  const exitErrorRegistration = registerChildEvent(child, "exit", (code) => {
+    if (code !== 0 && code !== null) {
       errorEventRegistration.unregister()
       exitErrorRegistration.unregister()
-      resolve(error)
-    })
-
-    // process.exit(1) from child
-    const exitErrorRegistration = registerChildEvent(child, "exit", (code) => {
-      if (code !== 0 && code !== null) {
-        errorEventRegistration.unregister()
-        exitErrorRegistration.unregister()
-        resolve(createExitWithFailureCodeError(code))
-      }
-    })
+      emitError(createExitWithFailureCodeError(code))
+    }
   })
 
   // https://nodejs.org/api/child_process.html#child_process_event_disconnect
@@ -104,12 +109,12 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
 
   return {
     options: { execArgv },
-    errored,
     disconnected,
     stop,
     stopForce,
-    fileToExecuted,
+    registerErrorCallback,
     registerConsoleCallback,
+    fileToExecuted,
   }
 }
 
