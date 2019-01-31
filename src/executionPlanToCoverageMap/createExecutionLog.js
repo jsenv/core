@@ -7,7 +7,7 @@ const magenta = "\x1b[35m"
 const red = "\x1b[31m"
 const green = "\x1b[32m"
 
-export const createFileExecutionResultMessage = ({
+export const createFileExecutionResultLog = ({
   file,
   platformName,
   status,
@@ -15,11 +15,11 @@ export const createFileExecutionResultMessage = ({
   capturedConsole,
 }) => {
   if (status === "disconnected") {
-    return createDisconnectedMessage({ file, platformName, output: capturedConsole })
+    return createDisconnectedLog({ file, platformName, output: capturedConsole })
   }
 
   if (status === "timedout") {
-    return createTimedoutMessage({
+    return createTimedoutLog({
       file,
       platformName,
       allocatedMs: statusData,
@@ -28,17 +28,17 @@ export const createFileExecutionResultMessage = ({
   }
 
   if (status === "errored") {
-    return createErroredMessage({ file, platformName, output: capturedConsole })
+    return createErroredLog({ file, platformName, output: capturedConsole })
   }
 
-  if (status === "passed") {
-    return createPassedMessage({ file, platformName, output: capturedConsole })
+  if (status === "completed") {
+    return createCompletedLog({ file, platformName, output: capturedConsole })
   }
 
   return `unexpected status ${status}`
 }
 
-const createDisconnectedMessage = ({ file, output, platformName }) => {
+const createDisconnectedLog = ({ file, output, platformName }) => {
   const color = yellow
   const icon = cross
 
@@ -51,7 +51,7 @@ status: "disconnected"
 `
 }
 
-const createTimedoutMessage = ({ file, output, platformName, allocatedMs }) => {
+const createTimedoutLog = ({ file, output, platformName, allocatedMs }) => {
   const color = magenta
   const icon = cross
 
@@ -65,7 +65,7 @@ statusText: "execution takes more than ${allocatedMs}ms to complete"
 `
 }
 
-const createErroredMessage = ({ file, output, platformName }) => {
+const createErroredLog = ({ file, output, platformName }) => {
   const color = red
   const icon = cross
 
@@ -78,7 +78,7 @@ status: "errored"
 `
 }
 
-const createPassedMessage = ({ file, output, platformName }) => {
+const createCompletedLog = ({ file, output, platformName }) => {
   const color = green
   const icon = checkmark
 
@@ -87,11 +87,11 @@ const createPassedMessage = ({ file, output, platformName }) => {
 ${output}
 ------------------------------
 platform: "${platformName}"
-status: "passed"
+status: "completed"
 `
 }
 
-export const createExecutionResultMessage = ({ executionResult }) => {
+export const createExecutionResultLog = ({ executionResult }) => {
   const fileNames = Object.keys(executionResult)
   const executionCount = fileNames.reduce((previous, fileName) => {
     return previous + Object.keys(executionResult[fileName]).length
