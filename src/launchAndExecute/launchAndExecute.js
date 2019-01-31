@@ -28,10 +28,10 @@ export const launchAndExecute = (
     // to debug the error to the its consequences
     // however unit test will pass true because they want to move on
     stopOnError = false,
-    errorCallback = (error) => {
+    errorAfterExecutedCallback = (error) => {
       console.log(`${platformTypeForLog} error ${error.stack}`)
     },
-    disconnectCallback = () => {
+    disconnectAfterExecutedCallback = () => {
       console.log(`${platformTypeForLog} disconnected`)
     },
     mirrorConsole = false,
@@ -90,8 +90,7 @@ export const launchAndExecute = (
       return captureConsole ? { capturedConsole } : {}
     }
 
-    const onError = (error) => {
-      errorCallback(error)
+    const onError = () => {
       if (stopOnError) {
         launchOperation.stop("stopOnError")
       }
@@ -139,7 +138,6 @@ export const launchAndExecute = (
         }
 
         if (winner === disconnected) {
-          disconnectCallback()
           return { status: "disconnected" }
         }
 
@@ -148,8 +146,13 @@ export const launchAndExecute = (
         }
 
         log(`${file} execution on ${platformTypeForLog} done with ${value}`)
-        errored.then(onError)
-        disconnected.then(disconnectCallback)
+        errored.then((error) => {
+          errorAfterExecutedCallback(error)
+          onError(error)
+        })
+        disconnected.then(() => {
+          disconnectAfterExecutedCallback()
+        })
 
         if (stopOnceExecuted) {
           launchOperation.stop("stopOnceExecuted")
