@@ -3,7 +3,6 @@ import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-bab
 import { localRoot } from "../../../localRoot.js"
 import { executeFile } from "../../../executeFile.js"
 import { launchChromium } from "../../launchChromium.js"
-import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
 const file = `src/launchChromium/test/fixtures/log.js`
 const compileInto = "build"
@@ -23,11 +22,11 @@ const pluginMap = pluginOptionMapToPluginMap({
     captureConsole: true,
     mirrorConsole: true,
   })
-  debugger
-  actual.capturedConsole = removeDebuggerLog(actual.capturedConsole)
   const expected = {
     status: "completed",
-    capturedConsole: "",
+    capturedConsole: `foo
+bar
+`,
   }
   assert({ actual, expected })
 })()

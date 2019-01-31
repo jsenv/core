@@ -96,13 +96,14 @@ export const launchChromium = async ({
 
   const trackPage = (browser) => {
     browser.on("targetcreated", async (target) => {
-      if (target.type === "browser") {
+      const type = target.type()
+      if (type === "browser") {
         const childBrowser = target.browser()
         trackPage(childBrowser)
       }
 
       // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
-      if (target.type === "page") {
+      if (type === "page") {
         const page = await target.page()
         // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
         page.on("error", emitError)
@@ -117,7 +118,8 @@ export const launchChromium = async ({
           consoleCallbackArray.forEach((callback) => {
             callback({
               type: message._type,
-              text: message._text,
+              text: `${message._text}
+`,
             })
           })
         })
@@ -155,7 +157,7 @@ export const launchChromium = async ({
       )
     }
 
-    const { status, ...rest } = execute()
+    const { status, ...rest } = await execute()
     if (status === "rejected") {
       return {
         status,
@@ -193,12 +195,13 @@ const createTargetTracker = (browser) => {
 
   // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
   browser.on("targetcreated", (target) => {
-    if (target.type === "browser") {
+    const type = target.type()
+    if (type === "browser") {
       const childBrowser = target.browser()
       const childTargetTracker = createTargetTracker(childBrowser)
       stopCallbackArray = [...stopCallbackArray, (reason) => childTargetTracker.stop(reason)]
     }
-    if (target.type === "page" || target.type === "background_page") {
+    if (type === "page" || type === "background_page") {
       // in case of bug do not forget https://github.com/GoogleChrome/puppeteer/issues/2269
       stopCallbackArray = [
         ...stopCallbackArray,
