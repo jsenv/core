@@ -33,6 +33,7 @@ export const startCompileServer = async ({
   ip,
   port,
   signature,
+  verbose,
 }) => {
   const jsCompileService = await createJsCompileService({
     cancellationToken,
@@ -86,6 +87,7 @@ export const startCompileServer = async ({
     port,
     signature,
     requestToResponse,
+    verbose,
     startedMessage: ({ origin }) => `compile server started for ${localRoot} at ${origin}`,
     stoppedMessage: (reason) => `compile server stopped because ${reason}`,
   })

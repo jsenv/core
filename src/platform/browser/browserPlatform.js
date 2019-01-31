@@ -89,7 +89,7 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
       : ressourceToRemoteCompiledFile({ ressource: file, remoteRoot, compileInto, compileId })
 
     const getCoverageMapOrEmpty = () => {
-      return collectCoverage ? { coverageMap: global.__coverage__ } : {}
+      return collectCoverage ? { coverageMap: window.__coverage__ } : {}
     }
 
     try {

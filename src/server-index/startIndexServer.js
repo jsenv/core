@@ -17,6 +17,7 @@ export const startIndexServer = async ({ cancellationToken, protocol, ip, port, 
         body,
       }
     },
+    verbose: false,
   })
   // https://nodejs.org/api/net.html#net_server_unref
   indexServer.nodeServer.unref()

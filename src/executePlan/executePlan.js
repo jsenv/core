@@ -26,13 +26,13 @@ export const executePlan = async (
   const plannedExecutionArray = []
   Object.keys(executionPlan).forEach((file) => {
     const fileExecutionPlan = executionPlan[file]
-    Object.keys(fileExecutionPlan).forEach((executionName) => {
+    Object.keys(fileExecutionPlan).forEach((platformName) => {
       // TODO: add allocatedMs { launch, allocatedMs }
       // and pass it
-      const { launch } = fileExecutionPlan[executionName]
+      const { launch } = fileExecutionPlan[platformName]
       plannedExecutionArray.push({
         file,
-        executionName,
+        platformName,
         launch,
       })
     })
@@ -43,8 +43,8 @@ export const executePlan = async (
     cancellationToken,
     maxParallelExecution,
     array: plannedExecutionArray,
-    start: async ({ file, executionName, launch }) => {
-      beforeEach({ file, executionName })
+    start: async ({ file, platformName, launch }) => {
+      beforeEach({ file, platformName })
 
       const result = await launchAndExecute(launch, file, {
         cancellationToken,
@@ -63,13 +63,15 @@ export const executePlan = async (
         // because we have what we wants: execution is completed and
         // we have associated coverageMap and capturedConsole
         stopOnceExecuted: true,
+        // no need to log when disconnected
+        disconnectAfterExecutedCallback: () => {},
       })
-      afterEach({ file, executionName, ...result })
+      afterEach({ file, platformName, ...result })
 
       if (file in planResult === false) {
         planResult[file] = {}
       }
-      planResult[file][executionName] = result
+      planResult[file][platformName] = result
 
       // if (cover && result.value.coverageMap === null) {
       // coverageMap can be null for 2 reason:

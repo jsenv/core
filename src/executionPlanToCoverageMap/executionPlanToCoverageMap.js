@@ -41,10 +41,10 @@ export const executionPlanToCoverageMap = async (
   const coverageMapArray = []
   Object.keys(allExecutionResult).forEach((file) => {
     const allExecutionResultForFile = allExecutionResult[file]
-    Object.keys(allExecutionResultForFile).forEach((executionName) => {
-      const executionResult = allExecutionResultForFile[executionName]
+    Object.keys(allExecutionResultForFile).forEach((platformName) => {
+      const executionResult = allExecutionResultForFile[platformName]
       if (!executionResult.status === "completed") return
-      const { coverageMap } = executionResult.value
+      const { coverageMap } = executionResult
       if (!coverageMap) return
       coverageMapArray.push(coverageMap)
     })

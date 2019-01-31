@@ -20,6 +20,7 @@ const pluginMap = pluginOptionMapToPluginMap({
     protocol: "http",
     ip: "127.0.0.1",
     port: 0,
+    verbose: false,
   })
 
   const nodeLaunch = () => launchNode({ remoteRoot, localRoot, compileInto })

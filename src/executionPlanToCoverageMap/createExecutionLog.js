@@ -42,12 +42,11 @@ const createDisconnectedLog = ({ file, output, platformName }) => {
   const color = yellow
   const icon = cross
 
-  return `${color}${icon} ${file}${close}
------------ console ----------
+  return `
+${color}${icon} ${file}${close}
+platform: ${platformName}
+message: platform disconnected during file execution.
 ${output}
-------------------------------
-platform: "${platformName}"
-status: "disconnected"
 `
 }
 
@@ -55,13 +54,11 @@ const createTimedoutLog = ({ file, output, platformName, allocatedMs }) => {
   const color = magenta
   const icon = cross
 
-  return `${color}${icon} ${file}${close}
------------ console ----------
+  return `
+${color}${icon} ${file}${close}
+platform: ${platformName}
+message: file execution took more than ${allocatedMs}ms to complete.
 ${output}
-------------------------------
-platform: "${platformName}"
-status: "timedout"
-statusText: "execution takes more than ${allocatedMs}ms to complete"
 `
 }
 
@@ -69,12 +66,11 @@ const createErroredLog = ({ file, output, platformName }) => {
   const color = red
   const icon = cross
 
-  return `${color}${icon} ${file}${close}
------------ console ----------
+  return `
+${color}${icon} ${file}${close}
+platform: ${platformName}
+message: error occured during file execution.
 ${output}
-------------------------------
-platform: "${platformName}"
-status: "errored"
 `
 }
 
@@ -82,12 +78,10 @@ const createCompletedLog = ({ file, output, platformName }) => {
   const color = green
   const icon = checkmark
 
-  return `${color}${icon} ${file}${close}
------------ console ----------
+  return `
+${color}${icon} ${file}${close}
+platform: ${platformName}
 ${output}
-------------------------------
-platform: "${platformName}"
-status: "completed"
 `
 }
 
@@ -98,7 +92,7 @@ export const createExecutionResultLog = ({ executionResult }) => {
   }, 0)
 
   const countResultMatching = (predicate) => {
-    fileNames.reduce((previous, fileName) => {
+    return fileNames.reduce((previous, fileName) => {
       const fileExecutionResult = executionResult[fileName]
 
       return (
@@ -121,6 +115,5 @@ ${executionCount} file execution launched
 - ${yellow}${disconnectedCount} disconnected${close}
 - ${magenta}${timedoutCount} timedout${close}
 - ${red}${erroredCount} errored${close}
-- ${green}${completedCount} completed${close}
-----------------------------------`
+- ${green}${completedCount} completed${close}`
 }
