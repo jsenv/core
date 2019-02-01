@@ -1,10 +1,10 @@
 import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { launchNode } from "../../launchNode/index.js"
-import { launchChromium } from "../../launchChromium/index.js"
-import { executionPlanToCoverageMap } from "../executionPlanToCoverageMap.js"
-import { localRoot } from "../../localRoot.js"
-import { startCompileServer } from "../../server-compile/index.js"
+import { launchNode } from "../../../launchNode/index.js"
+import { launchChromium } from "../../../launchChromium/index.js"
+import { executionPlanToCoverageMap } from "../../executionPlanToCoverageMap.js"
+import { localRoot } from "../../../localRoot.js"
+import { startCompileServer } from "../../../server-compile/index.js"
 
 const filesToCover = []
 const compileInto = "build"
@@ -27,7 +27,7 @@ const pluginMap = pluginOptionMapToPluginMap({
   const chromiumLaunch = () => launchChromium({ remoteRoot, localRoot, compileInto })
 
   const executionPlan = {
-    "src/executionPlanToCoverageMap/test/fixtures/file-consumer.js": {
+    "src/executionPlanToCoverageMap/test/node-and-chrome/node-and-chrome.js": {
       node: {
         launch: nodeLaunch,
       },
@@ -45,11 +45,11 @@ const pluginMap = pluginOptionMapToPluginMap({
   assert({
     actual: coverageMap,
     expected: {
-      "src/executionPlanToCoverageMap/test/fixtures/file.js": {
-        ...coverageMap["src/executionPlanToCoverageMap/test/fixtures/file.js"],
+      "src/executionPlanToCoverageMap/test/node-and-chrome/file.js": {
+        ...coverageMap["src/executionPlanToCoverageMap/test/node-and-chrome/file.js"],
         s: { 0: 2, 1: 2, 2: 2 },
       },
-      // il ne faut pas de coverage pour file-consumer.js
+      // we don't expect a coverage for node-and-chrome.js
     },
   })
 })()
