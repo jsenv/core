@@ -9,7 +9,7 @@ import {
   coverageMapHTML,
 } from "../../../executionPlanToCoverageMap/index.js"
 
-const file = `src/launchNode/test/fixtures/ask-absolute.js`
+const file = `src/launchNode/test/absolute-import/absolute-import.js`
 const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -29,16 +29,15 @@ const pluginMap = pluginOptionMapToPluginMap({
   })
   const expected = {
     status: "completed",
-    value: {
-      namespace: {},
-      coverageMap: {
-        "src/launchNode/test/fixtures/ask-absolute.js":
-          actual.value.coverageMap["src/launchNode/test/fixtures/ask-absolute.js"],
-        "src/launchNode/test/fixtures/modules/ask.js":
-          actual.value.coverageMap["src/launchNode/test/fixtures/modules/ask.js"],
-        "src/launchNode/test/fixtures/modules/respond.js":
-          actual.value.coverageMap["src/launchNode/test/fixtures/modules/respond.js"],
-      },
+
+    namespace: {
+      default: 42,
+    },
+    coverageMap: {
+      "src/launchNode/test/absolute-import/absolute-import.js":
+        actual.coverageMap["src/launchNode/test/absolute-import/absolute-import.js"],
+      "src/launchNode/test/absolute-import/dependency.js":
+        actual.coverageMap["src/launchNode/test/absolute-import/dependency.js"],
     },
   }
   assert({
@@ -46,7 +45,7 @@ const pluginMap = pluginOptionMapToPluginMap({
     expected,
   })
 
-  const absoluteCoverageMap = coverageMapToAbsolute(actual.value.coverageMap, localRoot)
+  const absoluteCoverageMap = coverageMapToAbsolute(actual.coverageMap, localRoot)
   coverageMapLog(absoluteCoverageMap)
   coverageMapHTML(absoluteCoverageMap)
 })()
