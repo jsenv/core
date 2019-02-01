@@ -5,7 +5,7 @@ import { localRoot } from "../../../localRoot.js"
 import { launchNode } from "../../launchNode.js"
 import { executeFile } from "../../../executeFile.js"
 
-const file = `src/launchNode/test/fixtures/dynamic-import.js`
+const file = `src/launchNode/test/dynamic-import/dynamic-import.js`
 const compileInto = "build"
 const pluginMap = {
   "transform-modules-systemjs": [transformModulesSystemJs, { topLevelAwait: true }],
@@ -24,11 +24,10 @@ const pluginMap = {
   })
   const expected = {
     status: "completed",
-    value: {
-      namespace: {
-        default: 42,
-      },
+    namespace: {
+      default: 42,
     },
+    coverageMap: undefined,
   }
   assert({ actual, expected })
 })()
