@@ -6,83 +6,101 @@ const close = "\x1b[0m"
 const magenta = "\x1b[35m"
 const red = "\x1b[31m"
 const green = "\x1b[32m"
+const grey = "\x1b[39m"
 
 export const createFileExecutionResultLog = ({
   file,
-  platformName,
   status,
-  statusData,
-  capturedConsole,
+  platformName,
+  platformLog,
+  startMs,
+  endMs,
+  allocatedMs,
 }) => {
   if (status === "disconnected") {
-    return createDisconnectedLog({ file, platformName, output: capturedConsole })
+    return createDisconnectedLog({ file, platformName, platformLog, startMs, endMs })
   }
 
   if (status === "timedout") {
     return createTimedoutLog({
       file,
       platformName,
-      allocatedMs: statusData,
-      output: capturedConsole,
+      platformLog,
+      startMs,
+      endMs,
+      allocatedMs,
     })
   }
 
   if (status === "errored") {
-    return createErroredLog({ file, platformName, output: capturedConsole })
+    return createErroredLog({ file, platformName, platformLog, startMs, endMs })
   }
 
   if (status === "completed") {
-    return createCompletedLog({ file, platformName, output: capturedConsole })
+    return createCompletedLog({ file, platformName, platformLog, startMs, endMs })
   }
 
   return `unexpected status ${status}`
 }
 
-const createDisconnectedLog = ({ file, output, platformName }) => {
-  const color = yellow
-  const icon = cross
-
-  return `
-${color}${icon} ${file}${close}
-platform: ${platformName}
-message: platform disconnected during file execution.
-${output}
-`
-}
-
-const createTimedoutLog = ({ file, output, platformName, allocatedMs }) => {
+const createDisconnectedLog = ({ file, platformName, platformLog, startMs, endMs }) => {
   const color = magenta
   const icon = cross
 
   return `
-${color}${icon} ${file}${close}
+${createHorizontalSeparator()}
+${color}${icon} disconnected during file execution${close}
+file: ${file}
 platform: ${platformName}
-message: file execution took more than ${allocatedMs}ms to complete.
-${output}
-`
+duration: ${formatDuration(endMs - startMs)}
+${createHorizontalSeparator()}
+${platformLog}`
 }
 
-const createErroredLog = ({ file, output, platformName }) => {
+const createTimedoutLog = ({ file, platformName, platformLog, startMs, endMs, allocatedMs }) => {
+  const color = yellow
+  const icon = cross
+
+  return `
+${createHorizontalSeparator()}
+${color}${icon} file execution takes more than ${allocatedMs}ms${close}
+file: ${file}
+platform: ${platformName}
+duration: ${formatDuration(endMs - startMs)}
+${createHorizontalSeparator()}
+${platformLog}`
+}
+
+const createErroredLog = ({ file, platformName, platformLog, startMs, endMs }) => {
   const color = red
   const icon = cross
 
   return `
-${color}${icon} ${file}${close}
+${createHorizontalSeparator()}
+${color}${icon} error during file execution${close}
+file: ${file}
 platform: ${platformName}
-message: error occured during file execution.
-${output}
-`
+duration: ${formatDuration(endMs - startMs)}
+${createHorizontalSeparator()}
+${platformLog}`
 }
 
-const createCompletedLog = ({ file, output, platformName }) => {
+const createCompletedLog = ({ file, platformName, platformLog, startMs, endMs }) => {
   const color = green
   const icon = checkmark
 
   return `
-${color}${icon} ${file}${close}
+${createHorizontalSeparator()}
+${color}${icon} file execution completed${close}
+file: ${file}
 platform: ${platformName}
-${output}
-`
+duration: ${formatDuration(endMs - startMs)}
+${createHorizontalSeparator()}
+${platformLog}`
+}
+
+const createHorizontalSeparator = () => {
+  return `${grey}---------------------------------------------------------${close}`
 }
 
 export const createExecutionResultLog = ({ executionResult }) => {
@@ -110,10 +128,19 @@ export const createExecutionResultLog = ({ executionResult }) => {
   const erroredCount = countResultMatching(({ status }) => status === "errored")
   const completedCount = countResultMatching(({ status }) => status === "completed")
 
-  return `------ execution summary ---------
+  return `
+---------------- execution summary -------------------
 ${executionCount} file execution launched
-- ${yellow}${disconnectedCount} disconnected${close}
-- ${magenta}${timedoutCount} timedout${close}
+- ${magenta}${disconnectedCount} disconnected${close}
+- ${yellow}${timedoutCount} timedout${close}
 - ${red}${erroredCount} errored${close}
-- ${green}${completedCount} completed${close}`
+- ${green}${completedCount} completed${close}
+------------------------------------------------------`
+}
+
+const formatDuration = (duration) => {
+  const seconds = duration / 1000
+  const secondsWithTwoDecimalPrecision = Math.floor(seconds * 100) / 100
+
+  return `${secondsWithTwoDecimalPrecision}s`
 }

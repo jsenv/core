@@ -33,10 +33,6 @@ const setup = ({ localRoot, remoteRoot, compileInto }) => {
       ? ressourceToRemoteInstrumentedFile({ ressource: file, remoteRoot, compileInto, compileId })
       : ressourceToRemoteCompiledFile({ ressource: file, remoteRoot, compileInto, compileId })
 
-    const getCoverageMapOrEmpty = () => {
-      return collectCoverage ? { coverageMap: global.__coverage__ } : {}
-    }
-
     try {
       const namespace = await importer.importFile(remoteCompiledFile)
       if (collectCoverage) {
@@ -44,15 +40,15 @@ const setup = ({ localRoot, remoteRoot, compileInto }) => {
       }
       return {
         status: "resolved",
-        ...(collectNamespace ? { namespace } : {}),
-        ...getCoverageMapOrEmpty(),
+        namespace: collectNamespace ? namespace : undefined,
+        coverageMap: collectCoverage ? global.__coverage__ : undefined,
       }
     } catch (error) {
       onError(error)
       return {
         status: "rejected",
-        statusData: transformError(error),
-        ...getCoverageMapOrEmpty(),
+        error: transformError(error),
+        coverageMap: collectCoverage ? global.__coverage__ : undefined,
       }
     }
   }

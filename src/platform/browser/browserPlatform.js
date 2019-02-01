@@ -88,10 +88,6 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
       ? ressourceToRemoteInstrumentedFile({ ressource: file, remoteRoot, compileInto, compileId })
       : ressourceToRemoteCompiledFile({ ressource: file, remoteRoot, compileInto, compileId })
 
-    const getCoverageMapOrEmpty = () => {
-      return collectCoverage ? { coverageMap: window.__coverage__ } : {}
-    }
-
     try {
       const namespace = await importFile(remoteCompiledFile)
       if (collectCoverage) {
@@ -99,15 +95,15 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
       }
       return {
         status: "resolved",
-        ...(collectNamespace ? { namespace } : {}),
-        ...getCoverageMapOrEmpty(),
+        namespace: collectNamespace ? namespace : undefined,
+        coverageMap: collectCoverage ? window.__coverage__ : {},
       }
     } catch (error) {
       onError(error, { remoteRoot, compileInto, file })
       return {
         status: "rejected",
-        statusData: transformError(error),
-        ...getCoverageMapOrEmpty(),
+        error: transformError(error),
+        coverageMap: collectCoverage ? window.__coverage__ : {},
       }
     }
   }

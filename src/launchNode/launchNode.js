@@ -63,12 +63,9 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
   })
 
   // https://nodejs.org/api/child_process.html#child_process_event_disconnect
-  const disconnected = new Promise((resolve) => {
-    const disconnectRegistration = registerChildEvent(child, "disconnect", () => {
-      disconnectRegistration.unregister()
-      resolve()
-    })
-  })
+  const registerDisconnectCallback = (callback) => {
+    registerChildEvent(child, "disconnect", callback)
+  }
 
   const stop = () => {
     child.kill("SIGINT")
@@ -78,7 +75,7 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
     child.kill()
   }
 
-  const fileToExecuted = async (file, options) => {
+  const executeFile = async (file, options) => {
     const execute = () =>
       new Promise((resolve) => {
         const executResultRegistration = registerChildMessage(child, "execute-result", (value) => {
@@ -96,25 +93,25 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
         })
       })
 
-    const { status, ...rest } = await execute()
+    const { status, coverageMap, error, namespace } = await execute()
     if (status === "rejected") {
       return {
         status,
-        ...rest,
-        statusData: errorToLocalError(rest.statusData, { file, localRoot }),
+        coverageMap,
+        error: errorToLocalError(error, { file, localRoot }),
       }
     }
-    return { status, ...rest }
+    return { status, coverageMap, namespace }
   }
 
   return {
     options: { execArgv },
-    disconnected,
     stop,
     stopForce,
+    registerDisconnectCallback,
     registerErrorCallback,
     registerConsoleCallback,
-    fileToExecuted,
+    executeFile,
   }
 }
 

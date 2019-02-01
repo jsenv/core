@@ -6,7 +6,6 @@ import { uneval } from "@dmail/uneval"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
 import { startIndexServer } from "../server-index/startIndexServer.js"
 import { originAsString } from "../server/index.js"
-import { createPromiseAndHooks } from "../promiseHelper.js"
 import { getBrowserPlatformRemoteURL } from "../platform/browser/remoteURL.js"
 import { regexpEscape } from "../stringHelper.js"
 
@@ -78,9 +77,10 @@ export const launchChromium = async ({
 
   const targetTracker = createTargetTracker(browser)
 
-  const disconnected = createPromiseAndHooks()
-  // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
-  browser.on("disconnected", disconnected.resolve)
+  const registerDisconnectCallback = (callback) => {
+    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
+    browser.on("disconnected", callback)
+  }
 
   let stopIndexServer = () => {}
   const stop = async (reason) => {
@@ -128,7 +128,7 @@ export const launchChromium = async ({
   }
   trackPage(browser)
 
-  const fileToExecuted = async (file, options) => {
+  const executeFile = async (file, options) => {
     const [page, html] = await Promise.all([
       browser.newPage(),
       generateHTML({
@@ -157,24 +157,24 @@ export const launchChromium = async ({
       )
     }
 
-    const { status, ...rest } = await execute()
+    const { status, coverageMap, error, namespace } = await execute()
     if (status === "rejected") {
       return {
         status,
-        ...rest,
-        statusData: errorToLocalError(rest.statusData, { localRoot, remoteRoot }),
+        coverageMap,
+        error: errorToLocalError(error, { localRoot, remoteRoot }),
       }
     }
-    return { status, ...rest }
+    return { status, coverageMap, namespace }
   }
 
   return {
     options,
-    disconnected,
     stop,
-    fileToExecuted,
+    registerDisconnectCallback,
     registerErrorCallback,
     registerConsoleCallback,
+    executeFile,
   }
 }
 

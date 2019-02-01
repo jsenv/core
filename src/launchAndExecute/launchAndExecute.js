@@ -6,8 +6,6 @@ import {
 import { promiseTrackRace } from "@dmail/helper"
 import "../promise-finally.js"
 
-// TODO: rename statusData into allocatedMs and error
-
 // when launchPlatform returns { disconnected, stop, stopForce }
 // the launched platform have that amount of ms for disconnected to resolve
 // before we call stopForce
@@ -48,179 +46,246 @@ export const launchAndExecute = async (
     }
   }
 
-  let capturedConsole = ""
-  const getCapturedConsoleOrEmpty = () => {
-    return captureConsole ? { capturedConsole } : {}
-  }
+  let platformLog = ""
 
-  const startMs = Number(new Date())
-  const createResult = ({ status }) => {
-    const endMs = Number(new Date())
-    return { status, ...getCapturedConsoleOrEmpty(), consumedMs: endMs - startMs }
-  }
+  const startMs = Date.now()
 
-  const timeoutWhenExceedsAllocatedMs = async (promise) => {
-    if (typeof allocatedMs !== "number") {
-      const value = await promise
-      return { timeout: false, value }
-    }
+  const computeResult = async () => {
+    log(`launch ${platformTypeForLog} to execute ${file}`)
+    const launchOperation = createStoppableOperation({
+      cancellationToken,
+      start: async () => {
+        const value = await launchPlatform()
+        startedCallback()
+        return value
+      },
+      stop: ({ stop, stopForce, registerDisconnectCallback }) => {
+        // external code can cancel using canlleationToken
+        // and listen for stoppedCallback before restarting the launchAndExecute operation.
+        // it is important to keep that code here because once cancelled
+        // all code after the operation won't execute because it will be rejected with
+        // the cancellation error
+        registerDisconnectCallback(stoppedCallback)
 
-    let timeoutCancel = () => {}
-    const timeoutPromise = new Promise((resolve) => {
-      const consumedMs = Date.now() - startMs
-      const remainingMs = allocatedMs - consumedMs
-      const id = setTimeout(resolve, remainingMs)
-      timeoutCancel = () => clearTimeout(id)
-      cancellationToken.register(timeoutCancel)
-    })
+        log(`stop ${platformTypeForLog}`)
+        stop()
 
-    const { winner, value } = await promiseTrackRace({
-      timeoutPromise,
-      promise,
-    })
-    timeoutCancel()
+        if (stopForce) {
+          const id = setTimeout(stopForce, ALLOCATED_MS_BEFORE_FORCE_STOP)
+          registerDisconnectCallback(() => {
+            clearTimeout(id)
+          })
+        }
 
-    if (winner === timeoutPromise) {
-      return { timeout: true }
-    }
-    return { timeout: false, value }
-  }
-
-  log(`launch ${platformTypeForLog} to execute ${file}`)
-  const launchOperation = createStoppableOperation({
-    cancellationToken,
-    start: async () => {
-      const value = await launchPlatform()
-      startedCallback()
-      return value
-    },
-    stop: ({ stop, stopForce }) => {
-      // external code can cancel using canlleationToken
-      // and listen for stoppedCallback before restarting the launchAndExecute operation.
-      // it is important to keep that code here because once cancelled
-      // all code after the operation won't execute because it will be rejected with
-      // the cancellation error
-      disconnected.then(stoppedCallback)
-
-      log(`stop ${platformTypeForLog}`)
-      stop()
-
-      if (stopForce) {
-        const id = setTimeout(stopForce, ALLOCATED_MS_BEFORE_FORCE_STOP)
-        disconnected.finally(() => clearTimeout(id))
-      }
-      return disconnected
-    },
-  })
-
-  const { timeout, value: launchValue } = await timeoutWhenExceedsAllocatedMs(launchOperation)
-  if (timeout) {
-    return createResult({ status: "timedout", statusData: allocatedMs })
-  }
-
-  const {
-    options,
-    disconnected,
-    fileToExecuted,
-    registerErrorCallback,
-    registerConsoleCallback,
-  } = launchValue
-
-  log(`${platformTypeForLog} started ${JSON.stringify(options)}`)
-
-  if (captureConsole) {
-    registerConsoleCallback(({ text }) => {
-      capturedConsole += text
-    })
-  }
-  if (mirrorConsole) {
-    registerConsoleCallback(({ type, text }) => {
-      if (type === "error") {
-        process.stderr.write(text)
-        return
-      }
-      process.stdout.write(text)
-    })
-  }
-
-  const onError = () => {
-    if (stopOnError) {
-      launchOperation.stop("stopOnError")
-    }
-  }
-
-  log(`execute ${file} on ${platformTypeForLog}`)
-  const executeOperation = createOperation({
-    cancellationToken,
-    start: async () => {
-      const executed = fileToExecuted(file, executionOptions)
-      const executionCompleted = new Promise((resolve) => {
-        executed.then(
-          (value) => {
-            resolve(value)
-          },
-          () => {},
-        )
-      })
-      const executionErrored = new Promise((resolve) => {
-        executed.catch((error) => {
-          resolve(error)
+        return new Promise((resolve) => {
+          registerDisconnectCallback(resolve)
         })
+      },
+    })
+
+    const {
+      options,
+      executeFile,
+      registerErrorCallback,
+      registerConsoleCallback,
+      registerDisconnectCallback,
+    } = await launchOperation
+
+    log(`${platformTypeForLog} started ${JSON.stringify(options)}`)
+
+    if (captureConsole) {
+      registerConsoleCallback(({ text }) => {
+        platformLog += text
       })
-
-      const errored = new Promise((resolve) => {
-        registerErrorCallback(resolve)
+    }
+    if (mirrorConsole) {
+      registerConsoleCallback(({ type, text }) => {
+        if (type === "error") {
+          process.stderr.write(text)
+          return
+        }
+        process.stdout.write(text)
       })
+    }
 
-      const executionPromise = promiseTrackRace([
-        disconnected,
-        errored,
-        executionErrored,
-        executionCompleted,
-      ])
-
-      const { timeout, value: raceValue } = timeoutWhenExceedsAllocatedMs(executionPromise)
-      if (timeout) {
-        return createResult({ status: "timedout", statusData: allocatedMs })
+    const onError = () => {
+      if (stopOnError) {
+        launchOperation.stop("stopOnError")
       }
+    }
 
-      const { winner, value } = raceValue
-      if (winner === disconnected) {
-        return createResult({ status: "disconnected" })
-      }
+    log(`execute ${file} on ${platformTypeForLog}`)
+    const executionResult = await createOperation({
+      cancellationToken,
+      start: async () => {
+        const disconnected = new Promise((resolve) => {
+          registerDisconnectCallback(resolve)
+        })
 
-      if (winner === errored) {
-        onError(value)
-        return createResult({ status: "errored", statusData: value })
-      }
+        const errored = new Promise((resolve) => {
+          registerErrorCallback(resolve)
+        })
 
-      if (winner === executionErrored) {
-        onError(value)
-        return createResult({ status: "errored", statusData: value })
-      }
+        const executionPromise = executeFile(file, executionOptions)
+        const executionCompleted = new Promise((resolve) => {
+          executionPromise.then(
+            (value) => {
+              resolve(value)
+            },
+            () => {},
+          )
+        })
 
-      log(`${file} execution on ${platformTypeForLog} done with ${value}`)
-      registerErrorCallback((error) => {
-        errorAfterExecutedCallback(error)
-        onError(error)
-      })
-      disconnected.then(() => {
-        disconnectAfterExecutedCallback()
-      })
+        const executionErrored = new Promise((resolve) => {
+          executionPromise.catch((error) => {
+            resolve(error)
+          })
+        })
 
-      if (stopOnceExecuted) {
-        launchOperation.stop("stopOnceExecuted")
-      }
+        const { winner, value } = await promiseTrackRace([
+          disconnected,
+          errored,
+          executionErrored,
+          executionCompleted,
+        ])
 
-      const { status, ...rest } = value
-      if (status === "resolved") {
-        return createResult({ status: "completed", ...rest })
-      }
-      return createResult({ status: "errored", ...rest })
-    },
+        if (winner === disconnected) {
+          return createDisconnectedExecutionResult({
+            startMs,
+            endMs: Date.now(),
+            platformLog,
+          })
+        }
+
+        if (winner === errored) {
+          onError(value)
+          return createErroredExecutionResult({
+            startMs,
+            endMs: Date.now(),
+            error: value,
+            platformLog,
+          })
+        }
+
+        if (winner === executionErrored) {
+          onError(value)
+          return createErroredExecutionResult({
+            startMs,
+            endMs: Date.now(),
+            error: value,
+            platformLog,
+          })
+        }
+
+        log(`${file} execution on ${platformTypeForLog} done with ${value}`)
+        registerErrorCallback((error) => {
+          errorAfterExecutedCallback(error)
+          onError(error)
+        })
+        disconnected.then(() => {
+          disconnectAfterExecutedCallback()
+        })
+
+        if (stopOnceExecuted) {
+          launchOperation.stop("stopOnceExecuted")
+        }
+
+        const { status, coverageMap, error, namespace } = value
+        if (status === "rejected") {
+          return createErroredExecutionResult({
+            startMs,
+            endMs: Date.now(),
+            error,
+            platformLog,
+            coverageMap,
+          })
+        }
+
+        return createCompletedExecutionResult({
+          startMs,
+          endMs: Date.now(),
+          platformLog,
+          coverageMap,
+          namespace,
+        })
+      },
+    })
+
+    return executionResult
+  }
+
+  const resultPromise = computeResult()
+
+  if (typeof allocatedMs !== "number") return resultPromise
+
+  let timeoutCancel = () => {}
+  const timeoutPromise = new Promise((resolve) => {
+    const consumedMs = Date.now() - startMs
+    const remainingMs = allocatedMs - consumedMs
+    const id = setTimeout(resolve, remainingMs)
+    timeoutCancel = () => clearTimeout(id)
+    cancellationToken.register(timeoutCancel)
   })
 
-  return executeOperation
+  const { winner, value } = await promiseTrackRace({
+    timeoutPromise,
+    resultPromise,
+  })
+
+  if (winner === timeoutPromise)
+    return createTimedoutExecutionResult({
+      allocatedMs,
+      platformLog,
+    })
+
+  timeoutCancel()
+  return value
+}
+
+const createTimedoutExecutionResult = ({ startMs, endMs, platformLog }) => {
+  return {
+    status: "timedout",
+    startMs,
+    endMs,
+    platformLog,
+  }
+}
+
+const createDisconnectedExecutionResult = ({ startMs, endMs, platformLog }) => {
+  return {
+    status: "disconnected",
+    startMs,
+    endMs,
+    platformLog,
+  }
+}
+
+const createErroredExecutionResult = ({ startMs, endMs, platformLog, coverageMap, error }) => {
+  return {
+    status: "errored",
+    startMs,
+    endMs,
+    platformLog,
+    coverageMap,
+    error,
+  }
+}
+
+const createCompletedExecutionResult = ({
+  startMs,
+  endMs,
+  platformLog,
+  coverageMap,
+  namespace,
+}) => {
+  return {
+    status: "completed",
+    startMs,
+    endMs,
+    platformLog,
+    coverageMap,
+    namespace,
+  }
 }
 
 // well this is unexpected but haven't decided yet how we will handle that
