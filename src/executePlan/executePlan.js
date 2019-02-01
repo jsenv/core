@@ -52,6 +52,7 @@ export const executePlan = async (
         cancellationToken,
         allocatedMs,
         collectCoverage: cover,
+        measureDuration: true,
         // mirrorConsole: false because file will be executed in parallel
         // so log would be a mess to read
         mirrorConsole: false,
