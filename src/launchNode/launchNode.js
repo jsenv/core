@@ -64,7 +64,9 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
 
   // https://nodejs.org/api/child_process.html#child_process_event_disconnect
   const registerDisconnectCallback = (callback) => {
-    registerChildEvent(child, "disconnect", callback)
+    registerChildEvent(child, "disconnect", () => {
+      callback()
+    })
   }
 
   const stop = () => {

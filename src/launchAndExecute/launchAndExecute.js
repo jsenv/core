@@ -16,6 +16,7 @@ export const launchAndExecute = async (
     allocatedMs,
     captureConsole = false,
     mirrorConsole = false,
+    measureDuration = false,
     ...rest
   } = {},
 ) => {
@@ -33,61 +34,81 @@ export const launchAndExecute = async (
     }
   }
 
+  const startMs = Date.now()
+  const executionResult = await computeRawExecutionResult({
+    cancellationToken,
+    allocatedMs,
+    launchPlatform,
+    file,
+    consoleCallback,
+    ...rest,
+  })
+  const endMs = Date.now()
+  if (measureDuration) {
+    executionResult.startMs = startMs
+    executionResult.endMs = endMs
+  }
+  if (captureConsole) {
+    executionResult.platformLog = platformLog
+  }
+  return executionResult
+}
+
+const computeRawExecutionResult = async ({
+  cancellationToken,
+  allocatedMs,
+  launchPlatform,
+  file,
+  consoleCallback,
+  ...rest
+}) => {
   const hasAllocatedMs = typeof allocatedMs === "number"
 
-  const computeExecutionResultWithoutPlatformLog = async () => {
-    if (!hasAllocatedMs) {
-      return computeExecutionResult({
-        launchPlatform,
-        file,
-        cancellationToken,
-        consoleCallback,
-        ...rest,
-      })
-    }
-
-    const TIMEOUT_CANCEL_REASON = "timeout"
-    const id = setTimeout(() => {
-      timeoutCancellationSource.cancel(TIMEOUT_CANCEL_REASON)
-    }, allocatedMs)
-    const timeoutCancel = () => clearTimeout(id)
-    cancellationToken.register(timeoutCancel)
-
-    const timeoutCancellationSource = createCancellationSource()
-    const externalOrTimeoutCancellationToken = cancellationTokenCompose(
+  if (!hasAllocatedMs) {
+    return computeExecutionResult({
+      launchPlatform,
+      file,
       cancellationToken,
-      timeoutCancellationSource.token,
-    )
-
-    try {
-      const executionResult = await computeExecutionResult({
-        launchPlatform,
-        file,
-        cancellationToken: externalOrTimeoutCancellationToken,
-        consoleCallback,
-        ...rest,
-      })
-      timeoutCancel()
-      return executionResult
-    } catch (e) {
-      if (errorToCancelReason(e) === TIMEOUT_CANCEL_REASON) {
-        return createTimedoutExecutionResult({
-          allocatedMs,
-        })
-      }
-      throw e
-    }
+      consoleCallback,
+      ...rest,
+    })
   }
 
-  const executionResult = await computeExecutionResultWithoutPlatformLog()
-  executionResult.platformLog = platformLog
-  return platformLog
+  const TIMEOUT_CANCEL_REASON = "timeout"
+  const id = setTimeout(() => {
+    timeoutCancellationSource.cancel(TIMEOUT_CANCEL_REASON)
+  }, allocatedMs)
+  const timeoutCancel = () => clearTimeout(id)
+  cancellationToken.register(timeoutCancel)
+
+  const timeoutCancellationSource = createCancellationSource()
+  const externalOrTimeoutCancellationToken = cancellationTokenCompose(
+    cancellationToken,
+    timeoutCancellationSource.token,
+  )
+
+  try {
+    const executionResult = await computeExecutionResult({
+      launchPlatform,
+      file,
+      cancellationToken: externalOrTimeoutCancellationToken,
+      consoleCallback,
+      ...rest,
+    })
+    timeoutCancel()
+    return executionResult
+  } catch (e) {
+    if (errorToCancelReason(e) === TIMEOUT_CANCEL_REASON) {
+      return createTimedoutExecutionResult()
+    }
+    throw e
+  }
 }
 
 // when launchPlatform returns { disconnected, stop, stopForce }
 // the launched platform have that amount of ms for disconnected to resolve
 // before we call stopForce
-const ALLOCATED_MS_BEFORE_FORCE_STOP = 10 * 60 * 10 * 1000
+const ALLOCATED_MS_BEFORE_FORCE_STOP = 8000
 
 const computeExecutionResult = async ({
   cancellationToken,
@@ -114,8 +135,6 @@ const computeExecutionResult = async ({
   consoleCallback = () => {},
   ...executionOptions
 }) => {
-  const startMs = Date.now()
-
   const log = (...args) => {
     if (verbose) {
       console.log(...args)
@@ -208,17 +227,12 @@ const computeExecutionResult = async ({
       ])
 
       if (winner === disconnected) {
-        return createDisconnectedExecutionResult({
-          startMs,
-          endMs: Date.now(),
-        })
+        return createDisconnectedExecutionResult({})
       }
 
       if (winner === errored) {
         onError(value)
         return createErroredExecutionResult({
-          startMs,
-          endMs: Date.now(),
           error: value,
         })
       }
@@ -226,8 +240,6 @@ const computeExecutionResult = async ({
       if (winner === executionErrored) {
         onError(value)
         return createErroredExecutionResult({
-          startMs,
-          endMs: Date.now(),
           error: value,
         })
       }
@@ -248,16 +260,12 @@ const computeExecutionResult = async ({
       const { status, coverageMap, error, namespace } = value
       if (status === "rejected") {
         return createErroredExecutionResult({
-          startMs,
-          endMs: Date.now(),
           error,
           coverageMap,
         })
       }
 
       return createCompletedExecutionResult({
-        startMs,
-        endMs: Date.now(),
         coverageMap,
         namespace,
       })
@@ -267,45 +275,29 @@ const computeExecutionResult = async ({
   return executionResult
 }
 
-const createTimedoutExecutionResult = ({ startMs, endMs }) => {
+const createTimedoutExecutionResult = () => {
   return {
     status: "timedout",
-    startMs,
-    endMs,
   }
 }
 
-const createDisconnectedExecutionResult = ({ startMs, endMs }) => {
+const createDisconnectedExecutionResult = () => {
   return {
     status: "disconnected",
-    startMs,
-    endMs,
   }
 }
 
-const createErroredExecutionResult = ({ startMs, endMs, coverageMap, error }) => {
+const createErroredExecutionResult = ({ coverageMap, error }) => {
   return {
     status: "errored",
-    startMs,
-    endMs,
-
     coverageMap,
     error,
   }
 }
 
-const createCompletedExecutionResult = ({
-  startMs,
-  endMs,
-
-  coverageMap,
-  namespace,
-}) => {
+const createCompletedExecutionResult = ({ coverageMap, namespace }) => {
   return {
     status: "completed",
-    startMs,
-    endMs,
-
     coverageMap,
     namespace,
   }
