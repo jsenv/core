@@ -58,11 +58,29 @@ const createNotFoundError = (url) => {
   return notFoundError
 }
 
-const createParseError = (url, parent, data) => {
-  const parseError = new Error(data.message)
-  parseError.code = "MODULE_PARSE_ERROR"
-  parseError.data = data
+const createParseError = (
+  url,
+  parent,
+  { message, columnNumber, fileName, lineNumber, messageHTML },
+) => {
+  const parseError = new Error(message)
+  defineNonEnumerableProperties(parseError, {
+    code: "MODULE_PARSE_ERROR",
+    columnNumber,
+    fileName,
+    lineNumber,
+    messageHTML,
+  })
   return parseError
+}
+
+const defineNonEnumerableProperties = (object, properties) => {
+  Object.keys(properties).forEach((name) => {
+    Object.defineProperty(object, name, {
+      value: properties[name],
+      enumerable: false,
+    })
+  })
 }
 
 const createResponseError = ({ status }, file) => {

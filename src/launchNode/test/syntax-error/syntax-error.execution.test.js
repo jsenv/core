@@ -26,15 +26,11 @@ const pluginMap = pluginOptionMapToPluginMap({
     error: {
       code: "MODULE_PARSE_ERROR",
       message: actual.error.message,
+      messageHTML: actual.error.messageHTML,
       stack: actual.error.stack,
-      data: {
-        name: "PARSE_ERROR",
-        columnNumber: 14,
-        fileName: "src/launchNode/test/syntax-error/syntax-error.js",
-        lineNumber: 1,
-        message: actual.error.data.message,
-        messageHTML: actual.error.data.messageHTML,
-      },
+      columnNumber: 14,
+      fileName: "src/launchNode/test/syntax-error/syntax-error.js",
+      lineNumber: 1,
     },
   }
   assert({ actual, expected })
