@@ -3,8 +3,9 @@ import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-bab
 import { localRoot } from "../../../localRoot.js"
 import { executeFile } from "../../../executeFile.js"
 import { launchNode } from "../../launchNode.js"
+import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
-const file = `src/launchNode/test/fixtures/log.js`
+const file = `src/launchNode/test/log/log.js`
 const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -19,11 +20,15 @@ const pluginMap = pluginOptionMapToPluginMap({
     platformTypeForLog: "node process",
     verbose: true,
     captureConsole: true,
-    mirrorConsole: true,
   })
+  actual.platformLog = removeDebuggerLog(actual.platformLog)
   const expected = {
     status: "completed",
-    capturedConsole: actual.capturedConsole,
+    coverageMap: undefined,
+    namespace: undefined,
+    platformLog: `foo
+bar
+`,
   }
   assert({ actual, expected })
 })()
