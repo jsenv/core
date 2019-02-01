@@ -8,7 +8,13 @@ import { startCompileServer } from "./server-compile/index.js"
 
 export const executeFile = async (
   file,
-  { launchPlatform, cancellationToken = createCancellationToken(), cancelSIGINT = true, ...rest },
+  {
+    launchPlatform,
+    cancellationToken = createCancellationToken(),
+    cancelSIGINT = true,
+    mirrorConsole = true,
+    ...rest
+  },
 ) => {
   if (cancelSIGINT) {
     const SIGINTCancelSource = createCancellationSource()
@@ -25,6 +31,7 @@ export const executeFile = async (
 
   return launchAndExecute(launch, file, {
     cancellationToken,
+    mirrorConsole,
     ...rest,
   })
 }
