@@ -10,7 +10,7 @@ const file = `src/launchNode/test/timeout/timeout.js`
 const compileInto = "build"
 const pluginMap = {
   "transform-modules-systemjs": [transformModulesSystemJs, { topLevelAwait: true }],
-  // "transform-async-to-promises": [transformAsyncToPromises],
+  "transform-async-to-promises": [transformAsyncToPromises],
 }
 
 ;(async () => {
