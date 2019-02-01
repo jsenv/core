@@ -5,12 +5,12 @@ import syntaxImportMeta from "@babel/plugin-syntax-import-meta"
 import { arrayWithoutValue } from "@dmail/helper"
 import { regexpEscape } from "../stringHelper.js"
 
-const transpile = ({ ast, code, options }) => {
+const transpile = async ({ ast, code, options }) => {
   try {
     if (ast) {
-      return transformFromAstAsync(ast, code, options)
+      return await transformFromAstAsync(ast, code, options)
     }
-    return transformAsync(code, options)
+    return await transformAsync(code, options)
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
       throw babelParseErrorToParseError(error, options)

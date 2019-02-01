@@ -157,14 +157,12 @@ const createExitWithFailureCodeError = (code) => {
 
 const errorToLocalError = (error, { file, localRoot }) => {
   if (error && error.code === "MODULE_PARSE_ERROR") {
-    const localError = new Error(error.message.replace(file, `${localRoot}/${file}`))
-    return localError
+    error.message = error.message.replace(file, `${localRoot}/${file}`)
+    return error
   }
 
   if (error && typeof error === "object") {
-    const localError = new Error(error.message)
-    localError.stack = error.stack
-    return localError
+    return error
   }
 
   return error
