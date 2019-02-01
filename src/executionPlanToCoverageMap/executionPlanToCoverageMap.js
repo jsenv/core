@@ -6,7 +6,6 @@ import {
 import { executePlan } from "../executePlan/index.js"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 import { fileToEmptyCoverage } from "./fileToEmptyCoverage.js"
-import { createFileExecutionResultLog, createExecutionResultLog } from "./createExecutionLog.js"
 
 export const executionPlanToCoverageMap = async (
   executionPlan,
@@ -31,12 +30,7 @@ export const executionPlanToCoverageMap = async (
     cancellationToken,
     cover: true,
     cancelSIGINT: false, // already handled by this one
-    afterEach: (fileExecutionResult) => {
-      console.log(createFileExecutionResultLog(fileExecutionResult))
-    },
   })
-
-  console.log(createExecutionResultLog({ executionPlan, executionResult: allExecutionResult }))
 
   const coverageMapArray = []
   Object.keys(allExecutionResult).forEach((file) => {

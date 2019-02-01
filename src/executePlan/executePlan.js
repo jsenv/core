@@ -5,6 +5,7 @@ import {
   createConcurrentOperations,
 } from "@dmail/cancellation"
 import { launchAndExecute } from "../launchAndExecute/index.js"
+import { createFileExecutionResultLog, createPlanResultLog } from "./createExecutionLog.js"
 
 export const executePlan = async (
   executionPlan,
@@ -13,7 +14,9 @@ export const executePlan = async (
     cover = false,
     maxParallelExecution = 5,
     beforeEach = () => {},
-    afterEach = () => {},
+    afterEach = (fileExecutionResult) => {
+      console.log(createFileExecutionResultLog(fileExecutionResult))
+    },
     cancelSIGINT = true,
   } = {},
 ) => {
@@ -27,13 +30,12 @@ export const executePlan = async (
   Object.keys(executionPlan).forEach((file) => {
     const fileExecutionPlan = executionPlan[file]
     Object.keys(fileExecutionPlan).forEach((platformName) => {
-      // TODO: add allocatedMs { launch, allocatedMs }
-      // and pass it
-      const { launch } = fileExecutionPlan[platformName]
+      const { launch, allocatedMs } = fileExecutionPlan[platformName]
       plannedExecutionArray.push({
         file,
         platformName,
         launch,
+        allocatedMs,
       })
     })
   })
@@ -43,11 +45,12 @@ export const executePlan = async (
     cancellationToken,
     maxParallelExecution,
     array: plannedExecutionArray,
-    start: async ({ file, platformName, launch }) => {
+    start: async ({ file, platformName, launch, allocatedMs }) => {
       beforeEach({ file, platformName })
 
       const result = await launchAndExecute(launch, file, {
         cancellationToken,
+        allocatedMs,
         collectCoverage: cover,
         // mirrorConsole: false because file will be executed in parallel
         // so log would be a mess to read
@@ -66,7 +69,7 @@ export const executePlan = async (
         // no need to log when disconnected
         disconnectAfterExecutedCallback: () => {},
       })
-      afterEach({ file, platformName, ...result })
+      afterEach({ file, platformName, allocatedMs, ...result })
 
       if (file in planResult === false) {
         planResult[file] = {}
@@ -83,5 +86,8 @@ export const executePlan = async (
       // }
     },
   })
+
+  console.log(createPlanResultLog({ executionPlan, planResult }))
+
   return planResult
 }

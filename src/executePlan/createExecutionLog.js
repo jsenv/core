@@ -103,15 +103,15 @@ const createHorizontalSeparator = () => {
   return `${grey}---------------------------------------------------------${close}`
 }
 
-export const createExecutionResultLog = ({ executionResult }) => {
-  const fileNames = Object.keys(executionResult)
+export const createPlanResultLog = ({ planResult }) => {
+  const fileNames = Object.keys(planResult)
   const executionCount = fileNames.reduce((previous, fileName) => {
-    return previous + Object.keys(executionResult[fileName]).length
+    return previous + Object.keys(planResult[fileName]).length
   }, 0)
 
   const countResultMatching = (predicate) => {
     return fileNames.reduce((previous, fileName) => {
-      const fileExecutionResult = executionResult[fileName]
+      const fileExecutionResult = planResult[fileName]
 
       return (
         previous +

@@ -16,6 +16,7 @@ export const launchAndExecute = async (
   file,
   {
     cancellationToken = createCancellationToken(),
+    allocatedMs,
     platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
     verbose = false,
     // stopOnceExecuted false by default because you want to keep browser alive
@@ -36,7 +37,6 @@ export const launchAndExecute = async (
     stoppedCallback = () => {},
     mirrorConsole = false,
     captureConsole = false,
-    allocatedMs,
     ...executionOptions
   } = {},
 ) => {
