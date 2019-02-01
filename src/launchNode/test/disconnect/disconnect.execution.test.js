@@ -5,7 +5,7 @@ import { executeFile } from "../../../executeFile.js"
 import { launchNode } from "../../launchNode.js"
 import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
-const file = `src/launchNode/test/fixtures/disconnect.js`
+const file = `src/launchNode/test/disconnect/disconnect.js`
 const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -21,10 +21,10 @@ const pluginMap = pluginOptionMapToPluginMap({
     verbose: true,
     captureConsole: true,
   })
-  actual.capturedConsole = removeDebuggerLog(actual.capturedConsole)
+  actual.platformLog = removeDebuggerLog(actual.platformLog)
   const expected = {
     status: "disconnected",
-    capturedConsole: `here
+    platformLog: `here
 `,
   }
   assert({ actual, expected })
