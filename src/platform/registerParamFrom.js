@@ -76,22 +76,41 @@ export const fromRemoteFile = async ({
 }
 
 const createNotFoundError = ({ ressource, remoteFile }) => {
-  const notFoundError = new Error(`${ressource} not found`)
-  notFoundError.url = remoteFile
-  notFoundError.code = "MODULE_NOT_FOUND_ERROR"
-  return notFoundError
+  return createError(`${ressource} not found`, {
+    code: "MODULE_NOT_FOUND_ERROR",
+    url: remoteFile,
+  })
 }
 
 const createParseError = (_, { message, columnNumber, fileName, lineNumber, messageHTML }) => {
-  const parseError = new Error(message)
-  defineNonEnumerableProperties(parseError, {
+  return createError(message, {
     code: "MODULE_PARSE_ERROR",
     columnNumber,
     fileName,
     lineNumber,
     messageHTML,
   })
-  return parseError
+}
+
+const createResponseError = ({ status }, { ressource, remoteFile }) => {
+  return createError(`received status ${status} for ${ressource} at ${remoteFile}`, {
+    code: "RESPONSE_ERROR",
+  })
+}
+
+const createInstantiateError = (error, { remoteFile, remoteParent }) => {
+  return createError(`error while instantiating ${remoteFile}`, {
+    code: "MODULE_INSTANTIATE_ERROR",
+    error,
+    url: remoteFile,
+    remoteParent,
+  })
+}
+
+const createError = (message, properties = {}) => {
+  const error = new Error(message)
+  defineNonEnumerableProperties(error, properties)
+  return error
 }
 
 const defineNonEnumerableProperties = (object, properties) => {
@@ -103,27 +122,12 @@ const defineNonEnumerableProperties = (object, properties) => {
   })
 }
 
-const createResponseError = ({ status }, { ressource, remoteFile }) => {
-  const responseError = new Error(`received status ${status} for ${ressource} at ${remoteFile}`)
-  responseError.code = "RESPONSE_ERROR"
-  return responseError
-}
-
 export const fromFunctionReturningParam = (fn, context) => {
   try {
     return fn()
   } catch (error) {
     return Promise.reject(createInstantiateError(error, context))
   }
-}
-
-const createInstantiateError = (error, { remoteFile, remoteParent }) => {
-  const instantiateError = new Error(`error while instantiating ${remoteFile}`)
-  instantiateError.code = "MODULE_INSTANTIATE_ERROR"
-  instantiateError.error = error
-  instantiateError.url = remoteFile
-  instantiateError.remoteParent = remoteParent
-  return instantiateError
 }
 
 export const fromFunctionReturningNamespace = (fn, context) => {

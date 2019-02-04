@@ -22,7 +22,6 @@ const pluginMap = pluginOptionMapToPluginMap({
   })
   const expected = {
     status: "errored",
-    coverageMap: undefined,
     error: {
       code: "MODULE_PARSE_ERROR",
       message: actual.error.message,
