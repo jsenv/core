@@ -40,6 +40,7 @@
         "<node_internals>/**/*.js",
         "node_modules/rollup-plugin-node-resolve/dist/rollup-plugin-node-resolve.cjs.js",
         "node_modules/@babel/template/lib/builder.js",
+        "node_modules/puppeteer/**",
         "src/createLock/createLock.js",
         "src/fileHelper.js",
         "src/eventHelper.js",

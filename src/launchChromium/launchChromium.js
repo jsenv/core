@@ -57,6 +57,11 @@ export const launchChromium = async ({
     // because the 3 above are true by default pupeeter will auto close browser
     // so we apparently don't have to use listenNodeBeforeExit in order to close browser
     // as we do for server
+    args: [
+      // https://github.com/GoogleChrome/puppeteer/issues/1834
+      // https://github.com/GoogleChrome/puppeteer/blob/master/docs/troubleshooting.md#tips
+      // "--disable-dev-shm-usage",
+    ],
   }
 
   const consoleCallbackArray = []
@@ -69,23 +74,23 @@ export const launchChromium = async ({
     errorCallbackArray.push(callback)
   }
 
-  const browser = await createStoppableOperation({
+  let stopIndexServer = () => {}
+  const browserOperation = createStoppableOperation({
     cancellationToken,
     start: () => puppeteer.launch(options),
-    stop: (browser) => browser.close(),
-  })
+    stop: async (browser, reason) => {
+      const targetTracker = createTargetTracker(browser)
 
-  const targetTracker = createTargetTracker(browser)
+      await Promise.all([targetTracker.stop(reason), stopIndexServer(reason)])
+      await browser.close()
+    },
+  })
+  const { stop } = browserOperation
+  const browser = await browserOperation
 
   const registerDisconnectCallback = (callback) => {
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
     browser.on("disconnected", callback)
-  }
-
-  let stopIndexServer = () => {}
-  const stop = async (reason) => {
-    await Promise.all([targetTracker.stop(reason), stopIndexServer(reason)])
-    await browser.close()
   }
 
   const emitError = (error) => {
@@ -174,19 +179,31 @@ export const launchChromium = async ({
         { collectNamespace, collectCoverage, instrument },
       )
     }
-
-    const { status, coverageMap, error, namespace } = await execute()
-    if (status === "rejected") {
+    try {
+      const { status, coverageMap, error, namespace } = await execute()
+      if (status === "rejected") {
+        return {
+          status,
+          error: errorToLocalError(error, { localRoot, remoteRoot }),
+          coverageMap,
+        }
+      }
       return {
         status,
-        error: errorToLocalError(error, { localRoot, remoteRoot }),
         coverageMap,
+        namespace,
       }
-    }
-    return {
-      status,
-      coverageMap,
-      namespace,
+    } catch (e) {
+      // if browser is closed due to cancellation
+      // before it is able to finish evaluate we can safely ignore
+      // and rethrow with current cancelError
+      if (
+        e.message === "Protocol error (Runtime.callFunctionOn): Target closed." &&
+        cancellationToken.cancellationRequested
+      ) {
+        cancellationToken.throwIfRequested()
+      }
+      throw e
     }
   }
 
