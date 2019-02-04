@@ -4,7 +4,7 @@ import { localRoot } from "../../../localRoot.js"
 import { executeFile } from "../../../executeFile.js"
 import { launchNode } from "../../launchNode.js"
 
-const file = `src/launchNode/test/fixtures/node_modules/use-scoped-answer/use-scoped-answer.js`
+const file = `src/launchNode/test/scoped-node-module/scoped-node-module.js`
 const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -22,11 +22,10 @@ const pluginMap = pluginOptionMapToPluginMap({
   })
   const expected = {
     status: "completed",
-    value: {
-      namespace: {
-        default: 43,
-      },
+    namespace: {
+      foo: "scoped-foo",
     },
   }
+  debugger
   assert({ actual, expected })
 })()
