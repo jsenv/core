@@ -1,6 +1,5 @@
 export { startCompileServer } from "./src/server-compile/index.js"
 export { launchAndExecute } from "./src/launchAndExecute/index.js"
-export { executeFile } from "./src/executeFile.js"
 export { executePlan } from "./src/executePlan/index.js"
 // browser served need own repo?
 export { startBrowserServer } from "./src/server-browser/index.js"

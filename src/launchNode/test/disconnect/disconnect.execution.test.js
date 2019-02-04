@@ -1,7 +1,8 @@
 import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../../localRoot.js"
-import { executeFile } from "../../../executeFile.js"
+import { launchAndExecute } from "../../../launchAndExecute/index.js"
+import { startCompileServer } from "../../../server-compile/index.js"
 import { launchNode } from "../../launchNode.js"
 import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
@@ -12,15 +13,21 @@ const pluginMap = pluginOptionMapToPluginMap({
 })
 
 ;(async () => {
-  const actual = await executeFile(file, {
+  const { origin: remoteRoot } = await startCompileServer({
     localRoot,
     compileInto,
     pluginMap,
-    launchPlatform: launchNode,
-    platformTypeForLog: "node process",
-    verbose: true,
-    captureConsole: true,
   })
+
+  const actual = await launchAndExecute(
+    () => launchNode({ localRoot, remoteRoot, compileInto }),
+    file,
+    {
+      platformTypeForLog: "node process",
+      verbose: true,
+      captureConsole: true,
+    },
+  )
   actual.platformLog = removeDebuggerLog(actual.platformLog)
   const expected = {
     status: "disconnected",

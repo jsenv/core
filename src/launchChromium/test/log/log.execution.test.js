@@ -1,7 +1,8 @@
 import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../../localRoot.js"
-import { executeFile } from "../../../executeFile.js"
+import { startCompileServer } from "../../../server-compile/index.js"
+import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { launchChromium } from "../../launchChromium.js"
 
 const file = `src/launchChromium/test/log/log.js`
@@ -11,17 +12,22 @@ const pluginMap = pluginOptionMapToPluginMap({
 })
 
 ;(async () => {
-  const actual = await executeFile(file, {
+  const { origin: remoteRoot } = await startCompileServer({
     localRoot,
     compileInto,
     pluginMap,
-    launchPlatform: (options) => launchChromium({ headless: false, ...options }),
-    platformTypeForLog: "chromium browser",
-    verbose: true,
-    stopOnceExecuted: true,
-    captureConsole: true,
-    mirrorConsole: true,
   })
+
+  const actual = await launchAndExecute(
+    () => launchChromium({ localRoot, remoteRoot, compileInto, headless: false }),
+    file,
+    {
+      platformTypeForLog: "node process",
+      verbose: true,
+      mirrorConsole: true,
+      captureConsole: true,
+    },
+  )
   const expected = {
     status: "completed",
     platformLog: `foo
