@@ -26,6 +26,5 @@ const pluginMap = pluginOptionMapToPluginMap({
       foo: "scoped-foo",
     },
   }
-  debugger
   assert({ actual, expected })
 })()
