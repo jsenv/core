@@ -5,7 +5,7 @@ import { startCompileServer } from "../../../server-compile/index.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { launchChromium } from "../../launchChromium.js"
 
-const file = `src/launchChromium/test/not-found/not-found.js`
+const file = `src/launchChromium/test/syntax-error/syntax-error.js`
 const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -31,10 +31,13 @@ const pluginMap = pluginOptionMapToPluginMap({
   const expected = {
     status: "errored",
     error: {
-      code: "MODULE_NOT_FOUND_ERROR",
-      message: `src/launchChromium/test/not-found/foo.js not found`,
+      code: "MODULE_PARSE_ERROR",
+      message: actual.error.message,
+      messageHTML: actual.error.messageHTML,
       stack: actual.error.stack,
-      url: `${remoteRoot}/${compileInto}/best/src/launchChromium/test/not-found/foo.js`,
+      columnNumber: 17,
+      fileName: "src/launchChromium/test/syntax-error/syntax-error.js",
+      lineNumber: 1,
     },
   }
   assert({ actual, expected })

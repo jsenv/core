@@ -115,12 +115,29 @@ export const launchChromium = async ({
           // there is also message._args
           // which is an array of JSHandle{ _context, _client _remoteObject }
 
-          consoleCallbackArray.forEach((callback) => {
-            callback({
-              type: message._type,
-              text: `${message._text}
-`,
-            })
+          consoleCallbackArray.forEach(async (callback) => {
+            const type = message.type()
+            const text = message.text()
+            // https://github.com/GoogleChrome/puppeteer/issues/3397#issuecomment-434970058
+            // https://github.com/GoogleChrome/puppeteer/issues/2083
+            if (text === "JSHandle@error") {
+              const errorHandle = message._args[0]
+              const stack = await errorHandle.executionContext().evaluate((value) => {
+                if (value instanceof Error) {
+                  return value.stack
+                }
+                return value
+              }, errorHandle)
+              callback({
+                type: "error",
+                text: appendNewLine(stack),
+              })
+            } else {
+              callback({
+                type,
+                text: appendNewLine(text),
+              })
+            }
           })
         })
       }
@@ -267,4 +284,9 @@ const startIndexRequestInterception = async ({
     origin,
     stop,
   }
+}
+
+const appendNewLine = (string) => {
+  return `${string}
+`
 }
