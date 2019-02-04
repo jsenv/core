@@ -35,7 +35,7 @@ export const ressourceToRemoteSourceFile = ({ ressource, remoteRoot }) =>
 
 export const ressourceToLocalSourceFile = ({ ressource, localRoot }) => `${localRoot}/${ressource}`
 
-export const hrefToMeta = ({ href, remoteRoot, compileInto }) => {
+export const hrefToMeta = (href, { remoteRoot, compileInto }) => {
   if (href === remoteRoot) return { type: "remote-root" }
 
   if (!href.startsWith(`${remoteRoot}/`)) return { type: "other", ressource: href }
@@ -59,7 +59,7 @@ export const hrefToMeta = ({ href, remoteRoot, compileInto }) => {
   }
 
   const remoteRessourceCompileId = compiledRessource.slice(0, nextSlashIndex)
-  const ressource = compiledRessource.slice(nextSlashIndex)
+  const ressource = compiledRessource.slice(nextSlashIndex + 1)
 
   return {
     type: "remote-compiled-ressource",
@@ -68,10 +68,10 @@ export const hrefToMeta = ({ href, remoteRoot, compileInto }) => {
   }
 }
 
-export const remoteFileToRessource = ({ file, remoteRoot, compileInto, compileId }) =>
-  hrefToMeta({ file, remoteRoot, compileInto, compileId }).ressource
+export const remoteFileToRessource = (remoteFile, { remoteRoot, compileInto, compileId }) =>
+  hrefToMeta(remoteFile, { remoteRoot, compileInto, compileId }).ressource
 
-export const remoteFileToLocalSourceFile = ({ file, localRoot, remoteRoot }) => {
+export const remoteFileToLocalSourceFile = (file, { localRoot, remoteRoot }) => {
   if (!localRoot) return file
   if (!file.startsWith(`${remoteRoot}/`)) return file
   const ressource = file.slice(`${remoteRoot}/`.length)

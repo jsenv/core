@@ -1,27 +1,43 @@
+import { remoteFileToRessource } from "./locaters.js"
+
 export const fromRemoteFile = async ({
   remoteFile,
   remoteParent,
   localRoot,
   remoteRoot,
+  compileInto,
+  compileId,
   System,
   fetchSource,
   evalSource,
 }) => {
+  const ressource = remoteFileToRessource(remoteFile, {
+    localRoot,
+    remoteRoot,
+    compileInto,
+    compileId,
+  })
   const { url, status, statusText, headers, body } = await fetchSource({
     remoteFile,
     remoteParent,
   })
 
   if (status === 404) {
-    throw createNotFoundError(remoteFile)
+    throw createNotFoundError({ ressource, remoteFile })
   }
 
   if (status === 500 && statusText === "parse error") {
-    throw createParseError(remoteFile, remoteParent, JSON.parse(body))
+    throw createParseError(
+      {
+        remoteFile,
+        remoteParent,
+      },
+      JSON.parse(body),
+    )
   }
 
   if (status < 200 || status >= 300) {
-    throw createResponseError({ status, statusText, headers, body }, remoteFile)
+    throw createResponseError({ status, statusText, headers, body }, { ressource, remoteFile })
   }
 
   if ("content-type" in headers === false)
@@ -30,39 +46,43 @@ export const fromRemoteFile = async ({
   const contentType = headers["content-type"]
 
   if (contentType === "application/javascript") {
-    return fromFunctionReturningParam(remoteFile, remoteParent, () => {
-      evalSource(body, {
-        remoteFile: url,
-        remoteParent,
-        localRoot,
-        remoteRoot,
-      })
+    return fromFunctionReturningParam(() => {
+      evalSource(
+        body,
+        {
+          remoteFile: url,
+          remoteParent,
+          localRoot,
+          remoteRoot,
+        },
+        { remoteFile, remoteParent },
+      )
       return System.getRegister()
     })
   }
 
   if (contentType === "application/json") {
-    return fromFunctionReturningNamespace(remoteFile, remoteParent, () => {
-      return {
-        default: JSON.parse(body),
-      }
-    })
+    return fromFunctionReturningNamespace(
+      () => {
+        return {
+          default: JSON.parse(body),
+        }
+      },
+      { remoteFile, remoteParent },
+    )
   }
 
   throw new Error(`unexpected ${contentType} content-type for ${remoteFile}`)
 }
 
-const createNotFoundError = (url) => {
-  const notFoundError = new Error(`${url} not found`)
+const createNotFoundError = ({ ressource, remoteFile }) => {
+  const notFoundError = new Error(`${ressource} not found`)
+  notFoundError.url = remoteFile
   notFoundError.code = "MODULE_NOT_FOUND_ERROR"
   return notFoundError
 }
 
-const createParseError = (
-  url,
-  parent,
-  { message, columnNumber, fileName, lineNumber, messageHTML },
-) => {
+const createParseError = (_, { message, columnNumber, fileName, lineNumber, messageHTML }) => {
   const parseError = new Error(message)
   defineNonEnumerableProperties(parseError, {
     code: "MODULE_PARSE_ERROR",
@@ -83,31 +103,31 @@ const defineNonEnumerableProperties = (object, properties) => {
   })
 }
 
-const createResponseError = ({ status }, file) => {
-  const responseError = new Error(`received status ${status} for ${file}`)
+const createResponseError = ({ status }, { ressource, remoteFile }) => {
+  const responseError = new Error(`received status ${status} for ${ressource} at ${remoteFile}`)
   responseError.code = "RESPONSE_ERROR"
   return responseError
 }
 
-export const fromFunctionReturningParam = (url, parent, fn) => {
+export const fromFunctionReturningParam = (fn, context) => {
   try {
     return fn()
   } catch (error) {
-    return Promise.reject(createInstantiateError(url, parent, error))
+    return Promise.reject(createInstantiateError(error, context))
   }
 }
 
-const createInstantiateError = (url, parent, error) => {
-  const instantiateError = new Error(`error while instantiating ${url}`)
+const createInstantiateError = (error, { remoteFile, remoteParent }) => {
+  const instantiateError = new Error(`error while instantiating ${remoteFile}`)
   instantiateError.code = "MODULE_INSTANTIATE_ERROR"
   instantiateError.error = error
-  instantiateError.url = url
-  instantiateError.parent = parent
+  instantiateError.url = remoteFile
+  instantiateError.remoteParent = remoteParent
   return instantiateError
 }
 
-export const fromFunctionReturningNamespace = (url, parent, fn) => {
-  return fromFunctionReturningParam(url, parent, () => {
+export const fromFunctionReturningNamespace = (fn, context) => {
+  return fromFunctionReturningParam(() => {
     // should we compute the namespace here
     // or as it is done below, defer to execute ?
     // I think defer to execute is better
@@ -121,5 +141,5 @@ export const fromFunctionReturningNamespace = (url, parent, fn) => {
         }
       },
     ]
-  })
+  }, context)
 }

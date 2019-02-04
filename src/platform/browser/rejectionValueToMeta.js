@@ -7,7 +7,7 @@ export const rejectionValueToMeta = (error, { remoteRoot, compileInto }) => {
   }
 
   if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-    const file = hrefToMeta({ href: error.url, remoteRoot, compileInto }).ressource
+    const file = hrefToMeta(error.url, { remoteRoot, compileInto }).ressource
     const originalError = error.error
     return {
       file,
@@ -25,8 +25,8 @@ export const rejectionValueToMeta = (error, { remoteRoot, compileInto }) => {
 }
 
 const parseErrorToMeta = (error, { remoteRoot }) => {
-  const file = error.data.fileName
-  const message = error.data.messageHTML || error.data.message
+  const file = error.fileName
+  const message = error.messageHTML || error.message
   const data = message.replace(
     file,
     link(`${ressourceToRemoteSourceFile({ ressource: file, remoteRoot })}`, file),

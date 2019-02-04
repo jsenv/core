@@ -32,9 +32,6 @@ const setup = ({ localRoot, remoteRoot, compileInto }) => {
 
     try {
       const namespace = await importer.importFile(remoteCompiledFile)
-      if (collectCoverage) {
-        await namespace.output
-      }
       return {
         status: "resolved",
         namespace: collectNamespace ? namespace : undefined,

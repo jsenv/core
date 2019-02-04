@@ -2,8 +2,7 @@ import { Script } from "vm"
 import { remoteFileToLocalSourceFile } from "../locaters.js"
 
 export const evalSource = (code, { remoteFile, remoteRoot, localRoot }) => {
-  const localFile = remoteFileToLocalSourceFile({
-    file: remoteFile,
+  const localFile = remoteFileToLocalSourceFile(remoteFile, {
     localRoot,
     remoteRoot,
   })

@@ -27,8 +27,7 @@ export const overrideSystemResolve = ({
 
 const moduleSpecifierFileToRoot = ({ moduleSpecifierFile, remoteRoot, compileInto, compileId }) => {
   if (!moduleSpecifierFile) return `${remoteRoot}/${compileInto}/${compileId}`
-  const { compileId: moduleSpecifiedFileCompileId } = hrefToMeta({
-    href: moduleSpecifierFile,
+  const { compileId: moduleSpecifiedFileCompileId } = hrefToMeta(moduleSpecifierFile, {
     remoteRoot,
     compileInto,
   })

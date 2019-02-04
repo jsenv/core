@@ -87,9 +87,6 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
 
     try {
       const namespace = await importFile(remoteCompiledFile)
-      if (collectCoverage) {
-        await namespace.output
-      }
       return {
         status: "resolved",
         namespace: collectNamespace ? namespace : undefined,
@@ -108,9 +105,24 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
 
 const transformError = (error) => {
   if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-    return error.error
+    return exceptionToObject(error.error)
   }
-  return error
+  return exceptionToObject(error)
+}
+
+const exceptionToObject = (exception) => {
+  // we need to convert error to an object to make it stringifiable
+  if (exception && exception instanceof Error) {
+    const object = {}
+    Object.getOwnPropertyNames(exception).forEach((name) => {
+      object[name] = exception[name]
+    })
+    return object
+  }
+
+  return {
+    message: exception,
+  }
 }
 
 const onError = (error, { remoteRoot, compileInto, file }) => {
