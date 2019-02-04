@@ -29,7 +29,6 @@ const pluginMap = pluginOptionMapToPluginMap({
   })
   const expected = {
     status: "completed",
-
     namespace: {
       default: 42,
     },
