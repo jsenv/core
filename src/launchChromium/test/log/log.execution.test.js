@@ -4,7 +4,7 @@ import { localRoot } from "../../../localRoot.js"
 import { executeFile } from "../../../executeFile.js"
 import { launchChromium } from "../../launchChromium.js"
 
-const file = `src/launchChromium/test/fixtures/log.js`
+const file = `src/launchChromium/test/log/log.js`
 const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -24,7 +24,7 @@ const pluginMap = pluginOptionMapToPluginMap({
   })
   const expected = {
     status: "completed",
-    capturedConsole: `foo
+    platformLog: `foo
 bar
 `,
   }
