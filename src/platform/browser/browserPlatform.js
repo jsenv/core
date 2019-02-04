@@ -78,10 +78,7 @@ const setup = ({ remoteRoot, compileInto, hotreload = false, hotreloadSSERoot })
   // for browser without dynamic import
   const createNativeImportFile = () => eval(`(function importFile(file){ return import(file) })`)
 
-  platform.importFile = async (
-    file,
-    { collectNamespace = false, collectCoverage = false, instrument = collectCoverage } = {},
-  ) => {
+  platform.importFile = async (file, { collectNamespace, collectCoverage, instrument } = {}) => {
     const [{ compileId }, { importFile }] = await Promise.all([loadInformer(), loadImporter()])
 
     const remoteCompiledFile = instrument

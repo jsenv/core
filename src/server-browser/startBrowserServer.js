@@ -46,7 +46,7 @@ export const startBrowserServer = async ({
       "remoteRoot": ${uneval(remoteRoot)},
       "compileInto": ${uneval(compileInto)}
     })
-    window.__platform__.importFile(${uneval(file)}, {})
+    window.__platform__.importFile(${uneval(file)})
   </script>
 </body>
 

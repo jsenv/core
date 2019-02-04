@@ -77,7 +77,7 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
     child.kill()
   }
 
-  const executeFile = async (file, options) => {
+  const executeFile = async (file, { collectNamespace, collectCoverage, instrument }) => {
     const execute = () =>
       new Promise((resolve) => {
         const executResultRegistration = registerChildMessage(child, "execute-result", (value) => {
@@ -91,7 +91,9 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
           compileInto,
 
           file,
-          options,
+          collectNamespace,
+          collectCoverage,
+          instrument,
         })
       })
 
@@ -99,11 +101,15 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
     if (status === "rejected") {
       return {
         status,
-        coverageMap,
         error: errorToLocalError(error, { file, localRoot }),
+        coverageMap,
       }
     }
-    return { status, coverageMap, namespace }
+    return {
+      status,
+      coverageMap,
+      namespace,
+    }
   }
 
   return {

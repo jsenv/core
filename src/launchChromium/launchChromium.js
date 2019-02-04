@@ -128,7 +128,7 @@ export const launchChromium = async ({
   }
   trackPage(browser)
 
-  const executeFile = async (file, options) => {
+  const executeFile = async (file, { collectNamespace, collectCoverage, instrument }) => {
     const [page, html] = await Promise.all([
       browser.newPage(),
       generateHTML({
@@ -151,9 +151,10 @@ export const launchChromium = async ({
     const execute = async () => {
       await page.goto(indexOrigin)
       return await page.evaluate(
-        (file, options) => window.__platform__.importFile(file, options),
+        (file, { collectNamespace, collectCoverage, instrument }) =>
+          window.__platform__.importFile(file, { collectNamespace, collectCoverage, instrument }),
         file,
-        options,
+        { collectNamespace, collectCoverage, instrument },
       )
     }
 
@@ -161,11 +162,15 @@ export const launchChromium = async ({
     if (status === "rejected") {
       return {
         status,
-        coverageMap,
         error: errorToLocalError(error, { localRoot, remoteRoot }),
+        coverageMap,
       }
     }
-    return { status, coverageMap, namespace }
+    return {
+      status,
+      coverageMap,
+      namespace,
+    }
   }
 
   return {

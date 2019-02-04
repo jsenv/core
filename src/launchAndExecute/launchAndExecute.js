@@ -133,7 +133,9 @@ const computeExecutionResult = async ({
   startedCallback = () => {},
   stoppedCallback = () => {},
   consoleCallback = () => {},
-  ...executionOptions
+  collectNamespace = false,
+  collectCoverage = false,
+  instrument = collectCoverage,
 }) => {
   const log = (...args) => {
     if (verbose) {
@@ -203,7 +205,7 @@ const computeExecutionResult = async ({
         registerErrorCallback(resolve)
       })
 
-      const executionPromise = executeFile(file, executionOptions)
+      const executionPromise = executeFile(file, { collectNamespace, collectCoverage, instrument })
       const executionCompleted = new Promise((resolve) => {
         executionPromise.then(
           (value) => {
@@ -259,16 +261,19 @@ const computeExecutionResult = async ({
 
       const { status, coverageMap, error, namespace } = value
       if (status === "rejected") {
-        return createErroredExecutionResult({
-          error,
-          coverageMap,
-        })
+        return {
+          ...createErroredExecutionResult({
+            error,
+          }),
+          ...(collectCoverage ? { coverageMap } : {}),
+        }
       }
 
-      return createCompletedExecutionResult({
-        coverageMap,
-        namespace,
-      })
+      return {
+        ...createCompletedExecutionResult(),
+        ...(collectNamespace ? { namespace } : {}),
+        ...(collectCoverage ? { coverageMap } : {}),
+      }
     },
   })
 
@@ -287,19 +292,16 @@ const createDisconnectedExecutionResult = () => {
   }
 }
 
-const createErroredExecutionResult = ({ coverageMap, error }) => {
+const createErroredExecutionResult = ({ error }) => {
   return {
     status: "errored",
-    coverageMap,
     error,
   }
 }
 
-const createCompletedExecutionResult = ({ coverageMap, namespace }) => {
+const createCompletedExecutionResult = () => {
   return {
     status: "completed",
-    coverageMap,
-    namespace,
   }
 }
 
