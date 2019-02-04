@@ -1,5 +1,5 @@
-import { triggerError } from "./modules/trigger-error.js"
+import { triggerError } from "./trigger-error.js"
 
 setTimeout(() => {
   triggerError()
-})
+}, 100)
