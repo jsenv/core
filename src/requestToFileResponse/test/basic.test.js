@@ -5,7 +5,7 @@ import { requestToFileResponse } from "../requestToFileResponse.js"
 
 const test = async () => {
   {
-    const ressource = "src/__test__/file.js"
+    const ressource = "src/requestToFileResponse/test/file.js"
     const actual = await requestToFileResponse(
       {
         method: "GET",

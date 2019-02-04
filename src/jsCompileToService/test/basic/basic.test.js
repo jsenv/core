@@ -1,13 +1,13 @@
 import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { localRoot } from "../localRoot.js"
-import { jsCompile } from "../jsCompile/index.js"
-import { jsCompileToService } from "./jsCompileToService.js"
+import { localRoot } from "../../../localRoot.js"
+import { jsCompile } from "../../../jsCompile/index.js"
+import { jsCompileToService } from "../../jsCompileToService.js"
 
 const compileInto = "build"
 const compileId = "test"
 
-const test = async () => {
+;(async () => {
   const jsService = jsCompileToService(jsCompile, {
     localRoot,
     compileInto,
@@ -22,7 +22,7 @@ const test = async () => {
 
   {
     const response = await jsService({
-      ressource: `${compileInto}/${compileId}/src/__test__/file.js`,
+      ressource: `${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js`,
       method: "GET",
     })
 
@@ -33,7 +33,7 @@ const test = async () => {
         status: 200,
         headers: {
           ...response.headers,
-          "content-length": 280,
+          "content-length": 269,
           "content-type": "application/javascript",
           eTag: `"54-Yd2c2D1VgsR7OyJD1YIUp5mwb54"`,
         },
@@ -45,24 +45,22 @@ const test = async () => {
 
   {
     const response = await jsService({
-      ressource: `${compileInto}/${compileId}/src/__test__/file.js__meta__/file.js.map`,
+      ressource: `${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js__meta__/file.js.map`,
       method: "GET",
     })
 
-    assert({ actual: response.status, expected: 200 })
-    assert({ actual: response.headers["content-type"], expected: "application/json" })
+    // now handled by an other file service
+    assert({ actual: response, expected: null })
   }
 
   // ensure 404 on file not found
   {
     const response = await jsService({
-      ressource: `${compileInto}/${compileId}/src/__test__/file.js:10`,
+      ressource: `${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js:10`,
       method: "GET",
     })
     assert({ actual: response.status, expected: 404 })
   }
 
   console.log("passed")
-}
-
-test()
+})()

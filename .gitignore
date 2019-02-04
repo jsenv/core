@@ -4,6 +4,5 @@ package-lock.json
 .nyc_output
 coverage.lcov
 build
-!src/__test__/node_modules
 /dist
 /bundle

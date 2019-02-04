@@ -12,7 +12,6 @@ const metaMap = patternGroupToMetaMap({
     dist: false,
     build: false,
     "src/compileToService/test/fixtures/build": false,
-    "src/__test__/file-with-syntax-error.js": false,
     "package.json": false,
     "package-lock.json": false,
   },

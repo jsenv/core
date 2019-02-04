@@ -1,7 +1,7 @@
-import { jsCompileToService } from "./jsCompileToService.js"
-import { jsCompile, createInstrumentPlugin } from "../jsCompile/index.js"
-import assert from "assert"
 import path from "path"
+import assert from "assert"
+import { jsCompileToService } from "../../jsCompileToService.js"
+import { jsCompile, createInstrumentPlugin } from "../../../jsCompile/index.js"
 
 const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = "build"
@@ -21,7 +21,7 @@ const test = async () => {
   })
 
   const response = await jsService({
-    ressource: `${compileInto}/${compileId}/src/__test__/file.js`,
+    ressource: `${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js`,
     method: "GET",
   })
   assert.equal(response.status, 200)

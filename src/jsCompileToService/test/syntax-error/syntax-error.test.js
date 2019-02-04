@@ -1,7 +1,7 @@
 import path from "path"
 import { assert } from "@dmail/assert"
-import { jsCompileToService } from "./jsCompileToService.js"
-import { jsCompile } from "../jsCompile/index.js"
+import { jsCompileToService } from "../../jsCompileToService.js"
+import { jsCompile } from "../../../jsCompile/index.js"
 
 const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = "build"
@@ -14,7 +14,7 @@ const test = async () => {
   })
 
   const response = await jsService({
-    ressource: `${compileInto}/${compileId}/src/__test__/file-with-syntax-error.js`,
+    ressource: `${compileInto}/${compileId}/src/jsCompileToService/test/syntax-error/syntax-error.js`,
     method: "GET",
   })
   const body = JSON.parse(response.body)
@@ -35,7 +35,7 @@ const test = async () => {
       body: {
         name: "PARSE_ERROR",
         message: body.message,
-        fileName: "src/__test__/file-with-syntax-error.js",
+        fileName: "src/jsCompileToService/test/syntax-error/syntax-error.js",
         lineNumber: 2,
         columnNumber: 0,
       },
