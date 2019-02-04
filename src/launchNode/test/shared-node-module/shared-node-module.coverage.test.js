@@ -9,7 +9,7 @@ import {
   coverageMapHTML,
 } from "../../../executionPlanToCoverageMap/index.js"
 
-const file = `src/launchNode/test/fixtures/ask-node-module.js`
+const file = `src/launchNode/test/shared-node-module/shared-node-module.js`
 const compileInto = "build"
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-modules-systemjs": {},
@@ -29,16 +29,16 @@ const pluginMap = pluginOptionMapToPluginMap({
   })
   const expected = {
     status: "completed",
-    value: {
-      namespace: {},
-      coverageMap: {
-        "src/launchNode/test/fixtures/ask-node-module.js":
-          actual.value.coverageMap["src/launchNode/test/fixtures/ask-node-module.js"],
-        "src/launchNode/test/fixtures/node_modules/ask/ask.js":
-          actual.value.coverageMap["src/launchNode/test/fixtures/node_modules/ask/ask.js"],
-        "src/launchNode/test/fixtures/node_modules/respond/respond.js":
-          actual.value.coverageMap["src/launchNode/test/fixtures/node_modules/respond/respond.js"],
-      },
+    namespace: { foo: "foo" },
+    coverageMap: {
+      "src/launchNode/test/shared-node-module/node_modules/foo/foo.js":
+        actual.coverageMap["src/launchNode/test/shared-node-module/node_modules/foo/foo.js"],
+      "src/launchNode/test/shared-node-module/node_modules/use-shared-foo/use-shared-foo.js":
+        actual.coverageMap[
+          "src/launchNode/test/shared-node-module/node_modules/use-shared-foo/use-shared-foo.js"
+        ],
+      "src/launchNode/test/shared-node-module/shared-node-module.js":
+        actual.coverageMap["src/launchNode/test/shared-node-module/shared-node-module.js"],
     },
   }
   assert({
@@ -46,7 +46,7 @@ const pluginMap = pluginOptionMapToPluginMap({
     expected,
   })
 
-  const absoluteCoverageMap = coverageMapToAbsolute(actual.value.coverageMap, localRoot)
+  const absoluteCoverageMap = coverageMapToAbsolute(actual.coverageMap, localRoot)
   coverageMapLog(absoluteCoverageMap)
   coverageMapHTML(absoluteCoverageMap)
 })()
