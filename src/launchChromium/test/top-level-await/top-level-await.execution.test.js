@@ -2,12 +2,11 @@ import { assert } from "@dmail/assert"
 import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 import transformModulesSystemJs from "../../../babel-plugin-transform-modules-systemjs/index.js"
 import { localRoot } from "../../../localRoot.js"
-import { launchNode } from "../../launchNode.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
-import { removeDebuggerLog } from "../removeDebuggerLog.js"
+import { launchChromium } from "../../launchChromium.js"
 
-const file = `src/launchNode/test/timeout/timeout.js`
+const file = `src/launchChromium/test/top-level-await/top-level-await.js`
 const compileInto = "build"
 const pluginMap = {
   "transform-modules-systemjs": [transformModulesSystemJs, { topLevelAwait: true }],
@@ -22,20 +21,20 @@ const pluginMap = {
   })
 
   const actual = await launchAndExecute(
-    (options) => launchNode({ ...options, localRoot, remoteRoot, compileInto }),
+    (options) => launchChromium({ ...options, localRoot, remoteRoot, compileInto }),
     file,
     {
-      platformTypeForLog: "node process",
+      platformTypeForLog: "chromium browser",
       verbose: true,
-      allocatedMs: 5000,
-      captureConsole: true,
+      collectNamespace: true,
+      stopOnceExecuted: true,
     },
   )
-  actual.platformLog = removeDebuggerLog(actual.platformLog)
   const expected = {
-    status: "timedout",
-    platformLog: `foo
-`,
+    status: "completed",
+    namespace: {
+      default: 10,
+    },
   }
   assert({ actual, expected })
 })()

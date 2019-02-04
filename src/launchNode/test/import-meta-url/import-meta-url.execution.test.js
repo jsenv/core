@@ -16,11 +16,10 @@ const pluginMap = {
     localRoot,
     compileInto,
     pluginMap,
-    port: 4500,
   })
 
   const actual = await launchAndExecute(
-    () => launchNode({ localRoot, remoteRoot, compileInto }),
+    (options) => launchNode({ ...options, localRoot, remoteRoot, compileInto }),
     file,
     {
       platformTypeForLog: "node process",
@@ -31,10 +30,8 @@ const pluginMap = {
   )
   const expected = {
     status: "completed",
-    coverageMap: undefined,
     namespace: {
-      default:
-        "http://127.0.0.1:4500/build/best/src/launchNode/test/import-meta-url/import-meta-url.js",
+      default: `${remoteRoot}/${compileInto}/best/${file}`,
     },
   }
   assert({ actual, expected })
