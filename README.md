@@ -10,4 +10,3 @@ todo list
   to catch cancellation error and log when it happens
 - Avoid node_modules in coverageMap
 - an api to bundle js into dist
-- should replace `__meta__` with `__asset__`

@@ -45,7 +45,7 @@ const compileId = "test"
 
   {
     const response = await jsService({
-      ressource: `${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js__meta__/file.js.map`,
+      ressource: `${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js__asset__/file.js.map`,
       method: "GET",
     })
 

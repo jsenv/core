@@ -11,7 +11,7 @@ import { createETag } from "./helpers.js"
 import { compileFile } from "./compileFile.js"
 import { locate as locateDefault } from "./locate.js"
 
-const fileIsAsset = (file) => file.match(/[^\/]+__meta__\/.+$/)
+const fileIsAsset = (file) => file.match(/[^\/]+__asset__\/.+$/)
 
 export const compileToService = (
   compile,

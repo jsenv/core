@@ -73,7 +73,7 @@ export const jsCompile = async ({
       // it will be located at `${compileServer.origin}/build/src/file.js/e3uiyi456&/file.js.map`
       // const folder = path.dirname(file)
       // const folderWithSepOrNothing = folder ? `${folder}/` : ""
-      const sourceMapLocationForSource = `./${path.basename(file)}__meta__/${sourceMapName}`
+      const sourceMapLocationForSource = `./${path.basename(file)}__asset__/${sourceMapName}`
 
       output = writeSourceMapLocation({
         source: output,

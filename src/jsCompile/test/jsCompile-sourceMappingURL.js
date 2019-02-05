@@ -16,6 +16,6 @@ jsCompile({
   assert({
     actual: output,
     expected: `true;
-//# sourceMappingURL=/folder/file.js__meta__/file.js.map`,
+//# sourceMappingURL=/folder/file.js__asset__/file.js.map`,
   })
 })
