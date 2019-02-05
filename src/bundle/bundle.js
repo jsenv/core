@@ -8,6 +8,50 @@ import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 import { transpiler } from "../jsCompile/transpiler.js"
 import { resolveURL } from "./resolveURL.js"
 
+/* OTHER PROPOSAL
+
+## index.html
+
+<script src="system.dist.js"></script>
+<script>
+  // 1: load compileGroup.json
+  // 2: deduce compileId
+  // 3: load and execute bundle/${compileId}/__main-module-static-dependencies-cache__.js
+  // 4: import main module
+  const mainModule = `${bundle}/${compileId}/index.js`
+  // mainModule and static dependencies are already available thanks to
+  // evaluation of bundle/${compileId}/__main-module-static-dependencies-cache__.js
+  System.import(mainModule)
+</script>
+
+## Consequences
+
+- dynamic import would not be concatened
+- no tree shaking
+
+## Why
+
+I think that:
+
+- Dynamic import with bundling is complex and not robust.
+- What matters most is initial rendering.
+
+And assuming dynamically imported code comes to add functionnality to a running application.
+
+- There is less speed pressure on dynamically imported code than static one
+
+In the end
+- dynamic import use browser cache
+- dynamic import are more robust because not coupled with the bundling mecasnim
+
+## How
+
+- Create or empty a bundle folder
+- a function receive main module path and compile himself + all his **static import**
+for all registered profiles into bundle
+- generate all corresponding __main-module-static-dependencies-cache__.js
+*/
+
 // list of things to do in order:
 // - create an entry file to decide which bundle to load (inside node and inside browser)
 /*
