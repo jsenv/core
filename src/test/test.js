@@ -1,12 +1,18 @@
-import { executePlan } from "../executePlan/index.js"
-import { patternMappingToExecutionPlan } from "../patternMappingToExecutionPlan.js"
 import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
+import { patternMappingToExecutionPlan } from "../patternMappingToExecutionPlan.js"
+import { executePlan } from "../executePlan/index.js"
 
-export const test = catchAsyncFunctionCancellation(
-  async ({ localRoot, compileInto, pluginMap, testPatternMapping }) => {
+export const test = async ({
+  localRoot,
+  compileInto,
+  pluginMap,
+  testPatternMapping,
+  maxParallelExecution,
+}) =>
+  catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const executionPlan = await patternMappingToExecutionPlan({
@@ -17,6 +23,5 @@ export const test = catchAsyncFunctionCancellation(
       patternMapping: testPatternMapping,
     })
 
-    return executePlan(executionPlan, { cancellationToken })
-  },
-)
+    return executePlan(executionPlan, { cancellationToken, maxParallelExecution })
+  })

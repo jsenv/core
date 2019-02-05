@@ -1,5 +1,5 @@
-import { startCompileServer } from "./server-compile/index.js"
 import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
+import { startCompileServer } from "./server-compile/index.js"
 
 export const patternMappingToExecutionPlan = async ({
   cancellationToken,
@@ -24,11 +24,12 @@ export const patternMappingToExecutionPlan = async ({
     cancellationToken,
     localRoot,
     metaMap,
-    predicate: ({ test }) => test,
-    callback: ({ ressource, meta }) => {
+    predicate: ({ execute }) => execute,
+    callback: (ressource, meta) => {
+      const executionMeta = meta.execute
       const fileExecutionPlan = {}
-      Object.keys(meta.test).forEach((platformName) => {
-        const platformExecutionPlan = meta.test[platformName]
+      Object.keys(executionMeta).forEach((platformName) => {
+        const platformExecutionPlan = executionMeta[platformName]
         const { launch, allocatedMs } = platformExecutionPlan
         fileExecutionPlan[platformName] = {
           launch: () =>
