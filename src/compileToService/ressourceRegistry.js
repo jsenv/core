@@ -1,4 +1,4 @@
-import { createLockRegistry } from "../createLock/createLock.js"
+import { createLockRegistry } from "./createLock/createLock.js"
 
 const { lockForRessource } = createLockRegistry()
 

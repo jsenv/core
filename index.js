@@ -4,14 +4,17 @@ export { startCompileServer } from "./src/server-compile/index.js"
 // belong to core
 export { launchAndExecute } from "./src/launchAndExecute/index.js"
 
-// I would say methods (used inside dependent scripts) belong to core
-export { execute, format, test, cover } from "./src/script/index.js"
+// belong to core
+export { execute } from "./src/execute/execute.js"
 
-// to be removed because used internally by test and cover
-export { executePlan } from "./src/executePlan/index.js"
+// belong to core
+export { format } from "./src/format/format.js"
 
-// to be removed because used internally only by cover
-export { executionPlanResultToCoverageMap } from "./src/executionPlanResultToCoverageMap/index.js"
+// belong to core
+export { test } from "./src/test/test.js"
+
+// belong to core
+export { cover } from "./src/cover/cover.js"
 
 // may be moved to jsenv/browser-server
 export { startBrowserServer } from "./src/server-browser/index.js"
