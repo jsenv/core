@@ -1,4 +1,6 @@
-const config = require("@dmail/project-eslint-config").config
+const { createConfig } = require("@dmail/project-eslint-config")
+
+const config = createConfig()
 
 // config.settings["import/resolver"] = {
 //   "@jsenv/eslint-import-resolver/dist/src/resolver.js": {

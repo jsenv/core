@@ -56,7 +56,6 @@
 		"@dmail/project-eslint-config": "github:dmail/project-eslint-config",
 		"@dmail/project-prettier-config": "github:dmail/project-prettier-config",
 		"@jsenv/module-resolution": "github:jsenv/module-resolution",
-		"babel-eslint": "github:dmail-fork/babel-eslint#allow-await-outside-function",
 		"babel-plugin-transform-async-to-promises": "0.8.4",
 		"codecov": "2.3.0",
 		"eslint": "5.1.0",
