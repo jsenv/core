@@ -106,8 +106,8 @@ const locateFileSystem = ({ requestFile, localRoot }) => {
   // to get file from dev-server module
   // in order to test this behaviour, when we are working on this module
   // 'node_modules/dev-server` is an alias to localRoot
-  if (localRoot === selfLocalRoot && requestFile.startsWith("node_modules/dev-server/")) {
-    requestFile = requestFile.slice("node_modules/dev-server/".length)
+  if (localRoot === selfLocalRoot && requestFile.startsWith("node_modules/@dmail/dev-server/")) {
+    requestFile = requestFile.slice("node_modules/@dmail/dev-server/".length)
   }
 
   if (requestFile.startsWith("node_modules/")) {
