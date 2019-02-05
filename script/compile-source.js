@@ -46,6 +46,7 @@ const metaMap = patternGroupToMetaMap({
     node_modules: false, // eslint-disable-line camelcase
     dist: false,
     build: false,
+    bundle: false,
     script: false,
     sourceMapTest: false,
     ".eslintrc.js": false,

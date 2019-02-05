@@ -34,6 +34,16 @@
         "panel": "shared"
       },
       "problemMatcher": []
+    },
+    {
+      "type": "npm",
+      "script": "dist",
+      "label": "dist",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
     }
   ]
 }

@@ -6,7 +6,7 @@
       "type": "node",
       "protocol": "inspector",
       "request": "launch",
-      "preLaunchTask": "compile", // ensure dist is fresh (compile before running)
+      "preLaunchTask": "dist", // ensure dist is fresh (compile before running)
       "program": "${file}",
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
@@ -25,7 +25,7 @@
       "type": "node",
       "request": "launch",
       "protocol": "inspector",
-      "preLaunchTask": "compile", // ensure dist is fresh (compile before running)
+      "preLaunchTask": "dist", // ensure dist is fresh (compile before running)
       "args": ["--trace-warnings", "${workspaceRoot}/dist/${relativeFile}"],
       "autoAttachChildProcesses": true,
       "sourceMaps": true,

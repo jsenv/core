@@ -5,8 +5,8 @@ import {
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
 
-export const format = catchAsyncFunctionCancellation(
-  async ({ localRoot, formatPatternMapping }) => {
+export const format = ({ localRoot, formatPatternMapping }) =>
+  catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const metaMap = patternGroupToMetaMap({
@@ -21,5 +21,4 @@ export const format = catchAsyncFunctionCancellation(
     })
 
     return prettiest({ cancellationToken, localRoot, ressources })
-  },
-)
+  })
