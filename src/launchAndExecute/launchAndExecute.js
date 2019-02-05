@@ -17,7 +17,27 @@ export const launchAndExecute = async (
     captureConsole = false,
     mirrorConsole = false,
     measureDuration = false,
-    ...rest
+    platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
+    verbose = false,
+    // stopOnceExecuted false by default because you want to keep browser alive
+    // or nodejs process
+    // however unit test will pass true because they want to move on
+    stopOnceExecuted = false,
+    // stopOnError is false by default because it's better to keep process/browser alive
+    // to debug the error to the its consequences
+    // however unit test will pass true because they want to move on
+    stopOnError = false,
+    errorAfterExecutedCallback = (error) => {
+      console.log(`${platformTypeForLog} error ${error.stack}`)
+    },
+    disconnectAfterExecutedCallback = () => {
+      console.log(`${platformTypeForLog} disconnected`)
+    },
+    startedCallback = () => {},
+    stoppedCallback = () => {},
+    collectNamespace = false,
+    collectCoverage = false,
+    instrument = collectCoverage,
   } = {},
 ) => {
   let platformLog = ""
@@ -41,7 +61,16 @@ export const launchAndExecute = async (
     launchPlatform,
     file,
     consoleCallback,
-    ...rest,
+    verbose,
+    stopOnceExecuted,
+    stopOnError,
+    errorAfterExecutedCallback,
+    disconnectAfterExecutedCallback,
+    startedCallback,
+    stoppedCallback,
+    collectNamespace,
+    collectCoverage,
+    instrument,
   })
   const endMs = Date.now()
   if (measureDuration) {
@@ -114,28 +143,18 @@ const computeExecutionResult = async ({
   cancellationToken,
   launchPlatform,
   file,
-  platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
-  verbose = false,
-  // stopOnceExecuted false by default because you want to keep browser alive
-  // or nodejs process
-  // however unit test will pass true because they want to move on
-  stopOnceExecuted = false,
-  // stopOnError is false by default because it's better to keep process/browser alive
-  // to debug the error to the its consequences
-  // however unit test will pass true because they want to move on
-  stopOnError = false,
-  errorAfterExecutedCallback = (error) => {
-    console.log(`${platformTypeForLog} error ${error.stack}`)
-  },
-  disconnectAfterExecutedCallback = () => {
-    console.log(`${platformTypeForLog} disconnected`)
-  },
-  startedCallback = () => {},
-  stoppedCallback = () => {},
-  consoleCallback = () => {},
-  collectNamespace = false,
-  collectCoverage = false,
-  instrument = collectCoverage,
+  verbose,
+  platformTypeForLog,
+  startedCallback,
+  stoppedCallback,
+  consoleCallback,
+  errorAfterExecutedCallback,
+  disconnectAfterExecutedCallback,
+  stopOnError,
+  stopOnceExecuted,
+  collectNamespace,
+  collectCoverage,
+  instrument,
 }) => {
   const log = (...args) => {
     if (verbose) {

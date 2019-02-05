@@ -2,6 +2,7 @@ import { createCancellationToken } from "@dmail/cancellation"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 import { fileToEmptyCoverage } from "./fileToEmptyCoverage.js"
 
+// maybe we'll move this to the cover script instead of here
 export const executionPlanResultToCoverageMap = async (
   executionPlanResult,
   { cancellationToken = createCancellationToken(), localRoot, filesToCover = [] },
