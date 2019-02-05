@@ -1,6 +1,6 @@
-import { executePlan } from "../../executePlan/index.js"
-import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap/index.js"
 import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
+import { executePlan } from "../executePlan/index.js"
+import { executionPlanResultToCoverageMap } from "../executionPlanResultToCoverageMap/index.js"
 import { patternMappingToExecutionPlan } from "../patternMappingToExecutionPlan.js"
 import {
   catchAsyncFunctionCancellation,

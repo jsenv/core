@@ -1,23 +1,24 @@
-import { startCompileServer } from "../../server-compile/index.js"
-import { launchAndExecute } from "../../launchAndExecute/index.js"
+import { startCompileServer } from "../server-compile/index.js"
+import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
   createProcessInterruptionCancellationToken,
   catchAsyncFunctionCancellation,
 } from "../cancellationHelper.js"
 
-export const execute = catchAsyncFunctionCancellation(
-  async ({
-    file,
-    launch,
-    localRoot,
-    compileInto,
-    pluginMap,
-    protocol,
-    ip,
-    port,
-    verbose,
-    stopOnceExecuted,
-  }) => {
+export const execute = async ({
+  file,
+  localRoot,
+  compileInto,
+  pluginMap,
+  protocol,
+  ip,
+  port,
+  verbose,
+  launch,
+  mirrorConsole = true,
+  stopOnceExecuted,
+}) =>
+  catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const { origin: remoteRoot } = await startCompileServer({
@@ -36,8 +37,8 @@ export const execute = catchAsyncFunctionCancellation(
       file,
       {
         cancellationToken,
+        mirrorConsole,
         stopOnceExecuted,
       },
     )
-  },
-)
+  })

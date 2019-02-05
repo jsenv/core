@@ -1,4 +1,4 @@
-import { executePlan } from "../../executePlan/index.js"
+import { executePlan } from "../executePlan/index.js"
 import { patternMappingToExecutionPlan } from "../patternMappingToExecutionPlan.js"
 import {
   catchAsyncFunctionCancellation,

@@ -1,4 +1,4 @@
-import { startCompileServer } from "../server-compile/index.js"
+import { startCompileServer } from "./server-compile/index.js"
 import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
 
 export const patternMappingToExecutionPlan = async ({
