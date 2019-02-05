@@ -17,7 +17,7 @@ export { test } from "./src/test/test.js"
 export { cover } from "./src/cover/cover.js"
 
 // may be moved to jsenv/browser-server
-export { startBrowserServer } from "./src/server-browser/index.js"
+export { startBrowserExecutionServer } from "./src/server-browser/startBrowserExecutionServer.js"
 
 // must be moved later to jsenv/chromium-launcher
 export { launchChromium } from "./src/launchChromium/index.js"
