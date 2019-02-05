@@ -7,8 +7,14 @@ import {
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
 
-export const cover = catchAsyncFunctionCancellation(
-  async ({ localRoot, compileInto, pluginMap, executePatternMapping, coverPatternMapping }) => {
+export const cover = async ({
+  localRoot,
+  compileInto,
+  pluginMap,
+  executePatternMapping,
+  coverPatternMapping,
+}) =>
+  catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const [ressourcesToCover, executionPlanResult] = await Promise.all([
@@ -29,8 +35,7 @@ export const cover = catchAsyncFunctionCancellation(
     })
 
     return coverageMap
-  },
-)
+  })
 
 const listRessourcesToCover = async ({ cancellationToken, localRoot, coverPatternMapping }) => {
   const coverMetaMap = patternGroupToMetaMap({

@@ -13,7 +13,7 @@ export const execute = async ({
   protocol,
   ip,
   port,
-  verbose,
+  verbose = false,
   launch,
   mirrorConsole = true,
   stopOnceExecuted,

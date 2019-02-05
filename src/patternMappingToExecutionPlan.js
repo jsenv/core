@@ -7,12 +7,14 @@ export const patternMappingToExecutionPlan = async ({
   compileInto,
   pluginMap,
   patternMapping,
+  verbose = false,
 }) => {
   const { origin: remoteRoot } = await startCompileServer({
     cancellationToken,
     localRoot,
     compileInto,
     pluginMap,
+    verbose,
   })
 
   const metaMap = patternGroupToMetaMap({
