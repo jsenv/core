@@ -1,9 +1,4 @@
-import {
-  createCancellationSource,
-  createCancellationToken,
-  cancellationTokenCompose,
-  createConcurrentOperations,
-} from "@dmail/cancellation"
+import { createCancellationToken, createConcurrentOperations } from "@dmail/cancellation"
 import { launchAndExecute } from "../launchAndExecute/index.js"
 import { createFileExecutionResultLog, createPlanResultLog } from "./createExecutionLog.js"
 
@@ -17,15 +12,8 @@ export const executePlan = async (
     afterEach = (fileExecutionResult) => {
       console.log(createFileExecutionResultLog(fileExecutionResult))
     },
-    cancelSIGINT = true,
   } = {},
 ) => {
-  if (cancelSIGINT) {
-    const SIGINTCancelSource = createCancellationSource()
-    process.on("SIGINT", () => SIGINTCancelSource.cancel("process interruption"))
-    cancellationToken = cancellationTokenCompose(cancellationToken, SIGINTCancelSource.token)
-  }
-
   const plannedExecutionArray = []
   Object.keys(executionPlan).forEach((file) => {
     const fileExecutionPlan = executionPlan[file]

@@ -2,9 +2,10 @@ import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { launchNode } from "../../../launchNode/index.js"
 import { launchChromium } from "../../../launchChromium/index.js"
-import { executionPlanToCoverageMap } from "../../executionPlanToCoverageMap.js"
+import { executePlan } from "../../../executePlan/index.js"
 import { localRoot } from "../../../localRoot.js"
 import { startCompileServer } from "../../../server-compile/index.js"
+import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap.js"
 
 const filesToCover = []
 const compileInto = "build"
@@ -23,11 +24,12 @@ const pluginMap = pluginOptionMapToPluginMap({
     verbose: false,
   })
 
-  const nodeLaunch = () => launchNode({ remoteRoot, localRoot, compileInto })
-  const chromiumLaunch = () => launchChromium({ remoteRoot, localRoot, compileInto })
+  const nodeLaunch = (options) => launchNode({ ...options, remoteRoot, localRoot, compileInto })
+  const chromiumLaunch = (options) =>
+    launchChromium({ ...options, remoteRoot, localRoot, compileInto })
 
   const executionPlan = {
-    "src/executionPlanToCoverageMap/test/node-and-chrome/node-and-chrome.js": {
+    "src/executionPlanResultToCoverageMap/test/node-and-chrome/node-and-chrome.js": {
       node: {
         launch: nodeLaunch,
       },
@@ -36,7 +38,12 @@ const pluginMap = pluginOptionMapToPluginMap({
       },
     },
   }
-  const coverageMap = await executionPlanToCoverageMap(executionPlan, {
+
+  const executionPlanResult = await executePlan(executionPlan, {
+    cover: true,
+  })
+
+  const coverageMap = await executionPlanResultToCoverageMap(executionPlanResult, {
     localRoot,
     compileInto,
     filesToCover,
@@ -45,8 +52,8 @@ const pluginMap = pluginOptionMapToPluginMap({
   assert({
     actual: coverageMap,
     expected: {
-      "src/executionPlanToCoverageMap/test/node-and-chrome/file.js": {
-        ...coverageMap["src/executionPlanToCoverageMap/test/node-and-chrome/file.js"],
+      "src/executionPlanResultToCoverageMap/test/node-and-chrome/file.js": {
+        ...coverageMap["src/executionPlanResultToCoverageMap/test/node-and-chrome/file.js"],
         s: { 0: 2, 1: 2, 2: 2 },
       },
       // we don't expect a coverage for node-and-chrome.js

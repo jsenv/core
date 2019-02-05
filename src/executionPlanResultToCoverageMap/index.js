@@ -1,7 +1,7 @@
 import { Collector, Reporter } from "istanbul"
 
 export { coverageMapToAbsolute } from "./coverageMapToAbsolute.js"
-export { executionPlanToCoverageMap } from "./executionPlanToCoverageMap.js"
+export { executionPlanResultToCoverageMap } from "./executionPlanResultToCoverageMap.js"
 
 export const coverageMapLog = (coverageMap) => {
   const collector = new Collector()
