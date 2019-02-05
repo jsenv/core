@@ -44,9 +44,11 @@ export const executionPlanResultToCoverageMap = async (
   // instrumented folder and exclude them from coverage here
   const coverageMap = {}
   Object.keys(fullCoverageMap).forEach((file) => {
+    // exclude executed files
     if (file in executionPlanResult) return
+    // exclude node module files
+    if (file.indexOf("node_modules/") > -1) return
 
-    // oh yeah we should also exclude node_modules files
     coverageMap[file] = fullCoverageMap[file]
   })
 
