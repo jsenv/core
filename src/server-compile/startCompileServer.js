@@ -16,6 +16,7 @@ export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
   localRoot,
   compileInto,
+  locate,
   compileGroupCount,
   pluginMap,
   pluginCompatMap,
@@ -39,6 +40,7 @@ export const startCompileServer = async ({
     cancellationToken,
     localRoot,
     compileInto,
+    locate,
     compileGroupCount,
     pluginMap,
     pluginCompatMap,
@@ -54,7 +56,7 @@ export const startCompileServer = async ({
   const service = serviceCompose(jsCompileService, (request) =>
     requestToFileResponse(request, {
       localRoot,
-      locate,
+      locate: locateFileSystem,
       cacheIgnore: sourceCacheIgnore,
       cacheStrategy: sourceCacheStrategy,
     }),
@@ -98,7 +100,7 @@ export const startCompileServer = async ({
   return compileServer
 }
 
-const locate = ({ requestFile, localRoot }) => {
+const locateFileSystem = ({ requestFile, localRoot }) => {
   // future consumer of dev-server will use
   // 'node_modules/dev-server/dist/browserSystemImporter.js'
   // to get file from dev-server module
