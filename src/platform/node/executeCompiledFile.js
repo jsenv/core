@@ -3,6 +3,7 @@ import { loadCompileMeta } from "./loadCompileMeta.js"
 import { loadImporter } from "./loadImporter.js"
 
 export const executeCompiledFile = ({
+  localRoot,
   compileInto,
   remoteRoot,
   file,
@@ -11,8 +12,8 @@ export const executeCompiledFile = ({
   instrument = {},
 }) =>
   genericExecuteCompiledFile({
-    loadCompileMeta,
-    loadImporter,
+    loadCompileMeta: () => loadCompileMeta({ localRoot, compileInto }),
+    loadImporter: () => loadImporter({ localRoot, compileInto, remoteRoot }),
     readCoverage,
     onError,
     transformError,

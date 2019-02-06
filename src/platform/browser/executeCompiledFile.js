@@ -13,8 +13,8 @@ export const executeCompiledFile = ({
   instrument = {},
 }) =>
   genericExecuteCompiledFile({
-    loadCompileMeta,
-    loadImporter,
+    loadCompileMeta: () => loadCompileMeta({ compileInto, remoteRoot }),
+    loadImporter: () => loadImporter({ compileInto, remoteRoot }),
     readCoverage,
     onError,
     transformError,

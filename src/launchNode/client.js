@@ -87,8 +87,8 @@ const execute = async ({
 
   const { status, coverageMap, error, namespace } = await executeCompiledFile({
     localRoot,
-    remoteRoot,
     compileInto,
+    remoteRoot,
     file,
     collectNamespace,
     collectCoverage,

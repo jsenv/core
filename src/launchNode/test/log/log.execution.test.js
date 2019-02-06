@@ -31,8 +31,6 @@ const pluginMap = pluginOptionMapToPluginMap({
   actual.platformLog = removeDebuggerLog(actual.platformLog)
   const expected = {
     status: "completed",
-    coverageMap: undefined,
-    namespace: undefined,
     platformLog: `foo
 bar
 `,
