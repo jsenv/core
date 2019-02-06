@@ -23,6 +23,14 @@
     of course window.modulePromise is configurable to avoid clash
     and could be something like `window.__assertModulePromise__`
 
+    keep in mind `using-jsenv/dist/browser-main.js` must consider
+    remoteRoot as being `${window.origin}/node_modules/using-jsenv`
+    instead of winodw.origin
+    so it needs a way to know where he is.
+    it could detect the script tag or consider by default
+    that it will be inside `node_modules/moduleName/dist/browser-main.js`
+    and compute remoteRoot accordingly
+
 - update code, especially browserPlatform to avoid thinking we can avoid
 
   Systemjs when browser/node supports import/export syntax.
