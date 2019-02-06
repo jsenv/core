@@ -16,7 +16,12 @@ const fileUrlToPath = (fileUrl) => {
 }
 
 export const fetchUsingFileSystem = async (key) => {
+  // if we found a symlink we should send 307 ?
+  // nope but we should update the returned url: key to the symlink target
+
   const filePath = fileUrlToPath(key)
   const source = await fileRead(filePath)
-  return { status: 200, statusText: "", headers: {}, body: source }
+
+  // on pourrait ajouter des info dans headers comme le mtime, e-tag ?
+  return { url: key, status: 200, statusText: "OK", headers: {}, body: source }
 }

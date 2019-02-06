@@ -10,6 +10,12 @@ export const fromRemoteFile = async ({
   System,
   fetchSource,
   evalSource,
+  // we need this function that will be passed by browser and node
+  // and return how to remove it
+  // so that System does not stay in the global scope during evaluation
+  // inside createImporter I must not do the global.System = nodeSystem
+  // but do it before every evalSource, and clean it up just after
+  // installSystemGlobally
 }) => {
   const ressource = remoteFileToRessource(remoteFile, {
     localRoot,
