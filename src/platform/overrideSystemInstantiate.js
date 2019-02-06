@@ -1,25 +1,25 @@
-import { fromRemoteFile } from "./registerParamFrom.js"
+import { fromRemoteFile } from "./registerModuleFrom.js"
 
 export const overrideSystemInstantiate = ({
-  System,
-  remoteRoot,
   localRoot,
   compileInto,
   compileId,
+  remoteRoot,
   fetchSource,
-  evalSource,
+  platformSystem,
+  moduleSourceToSystemRegisteredModule,
 }) => {
-  System.instantiate = (moduleSpecifier, moduleSpecifierFile) => {
+  platformSystem.instantiate = (moduleSpecifier, moduleSpecifierFile) => {
     return fromRemoteFile({
-      System,
-      remoteRoot,
       localRoot,
       compileInto,
       compileId,
+      remoteRoot,
+      fetchSource,
+      platformSystem,
+      moduleSourceToSystemRegisteredModule,
       remoteFile: moduleSpecifier,
       remoteParent: moduleSpecifierFile,
-      fetchSource,
-      evalSource,
     })
   }
 }

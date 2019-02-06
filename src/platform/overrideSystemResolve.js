@@ -1,14 +1,14 @@
 import { hrefToMeta } from "./locaters.js"
 
 export const overrideSystemResolve = ({
-  System,
-  resolveAbsoluteModuleSpecifier,
-  remoteRoot,
   compileInto,
   compileId,
+  remoteRoot,
+  platformSystem,
+  resolveAbsoluteModuleSpecifier,
 }) => {
-  const resolve = System.resolve
-  System.resolve = async (moduleSpecifier, moduleSpecifierFile) => {
+  const resolve = platformSystem.resolve
+  platformSystem.resolve = async (moduleSpecifier, moduleSpecifierFile) => {
     if (moduleSpecifier[0] === "/") {
       return resolveAbsoluteModuleSpecifier({
         moduleSpecifier,

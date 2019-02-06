@@ -1,10 +1,7 @@
 import { createNodeSystem } from "./createNodeSystem.js"
-import { valueInstall } from "../valueInstall.js"
 
-export const createImporter = (param) => {
-  const nodeSystem = createNodeSystem(param)
-
-  valueInstall(global, "System", nodeSystem)
+export const createImporter = ({ localRoot, compileInto, compileId, remoteRoot }) => {
+  const nodeSystem = createNodeSystem({ localRoot, compileInto, compileId, remoteRoot })
 
   const importFile = (file) => {
     return nodeSystem.import(file)

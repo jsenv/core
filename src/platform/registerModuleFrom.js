@@ -1,21 +1,15 @@
 import { remoteFileToRessource } from "./locaters.js"
 
 export const fromRemoteFile = async ({
-  remoteFile,
-  remoteParent,
   localRoot,
   remoteRoot,
   compileInto,
   compileId,
-  System,
   fetchSource,
-  evalSource,
-  // we need this function that will be passed by browser and node
-  // and return how to remove it
-  // so that System does not stay in the global scope during evaluation
-  // inside createImporter I must not do the global.System = nodeSystem
-  // but do it before every evalSource, and clean it up just after
-  // installSystemGlobally
+  platformSystem,
+  moduleSourceToSystemRegisteredModule,
+  remoteFile,
+  remoteParent,
 }) => {
   const ressource = remoteFileToRessource(remoteFile, {
     localRoot,
@@ -52,18 +46,14 @@ export const fromRemoteFile = async ({
   const contentType = headers["content-type"]
 
   if (contentType === "application/javascript") {
-    return fromFunctionReturningParam(() => {
-      evalSource(
-        body,
-        {
-          remoteFile: url,
-          remoteParent,
-          localRoot,
-          remoteRoot,
-        },
-        { remoteFile, remoteParent },
-      )
-      return System.getRegister()
+    return fromFunctionReturningRegisteredModule(() => {
+      return moduleSourceToSystemRegisteredModule(body, {
+        localRoot,
+        remoteRoot,
+        remoteFile: url,
+        remoteParent,
+        platformSystem,
+      })
     })
   }
 
@@ -128,7 +118,7 @@ const defineNonEnumerableProperties = (object, properties) => {
   })
 }
 
-export const fromFunctionReturningParam = (fn, context) => {
+export const fromFunctionReturningRegisteredModule = (fn, context) => {
   try {
     return fn()
   } catch (error) {
@@ -137,7 +127,7 @@ export const fromFunctionReturningParam = (fn, context) => {
 }
 
 export const fromFunctionReturningNamespace = (fn, context) => {
-  return fromFunctionReturningParam(() => {
+  return fromFunctionReturningRegisteredModule(() => {
     // should we compute the namespace here
     // or as it is done below, defer to execute ?
     // I think defer to execute is better
