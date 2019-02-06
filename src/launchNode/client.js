@@ -3,7 +3,7 @@ import path from "path"
 import sourceMapSupport from "source-map-support"
 import { createCancellationSource } from "@dmail/cancellation"
 import { uneval } from "@dmail/uneval"
-import { platform } from "../platform/node/nodePlatform.js"
+import { executeCompiledFile } from "../platform/node/executeCompiledFile.js"
 import { registerProcessInterruptCallback } from "../process-signal/index.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 
@@ -85,13 +85,11 @@ const execute = async ({
     // process.exit(1)
   })
 
-  platform.setup({
+  const { status, coverageMap, error, namespace } = await executeCompiledFile({
     localRoot,
     remoteRoot,
     compileInto,
-  })
-
-  const { status, coverageMap, error, namespace } = await platform.importFile(file, {
+    file,
     collectNamespace,
     collectCoverage,
     instrument,

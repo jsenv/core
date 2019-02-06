@@ -41,12 +41,11 @@ export const startBrowserServer = async ({
   <main></main>
   <script src="${browserPlatformRemoteURL}"></script>
   <script type="text/javascript">
-    window.__platform__ = window.__platform__.platform
-    window.__platform__.setup({
+    window.__platform__.importCompiledFile({
+      "compileInto": ${uneval(compileInto)},
       "remoteRoot": ${uneval(remoteRoot)},
-      "compileInto": ${uneval(compileInto)}
+      "file": ${uneval(file)}
     })
-    window.__platform__.importFile(${uneval(file)})
   </script>
 </body>
 

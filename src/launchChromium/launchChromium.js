@@ -2,7 +2,6 @@
 
 import { URL } from "url"
 import puppeteer from "puppeteer"
-import { uneval } from "@dmail/uneval"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
 import { startIndexServer } from "../server-index/startIndexServer.js"
 import { originAsString } from "../server/index.js"
@@ -20,7 +19,7 @@ export const launchChromium = async ({
   port = 0,
   startIndexRequestHandler = startIndexServer,
   headless = true,
-  generateHTML = ({ remoteRoot, compileInto, browserPlatformRemoteURL }) => {
+  generateHTML = ({ browserPlatformRemoteURL }) => {
     return `<!doctype html>
 
 <head>
@@ -31,13 +30,6 @@ export const launchChromium = async ({
 <body>
   <main></main>
   <script src="${browserPlatformRemoteURL}"></script>
-  <script type="text/javascript">
-    window.__platform__ = window.__platform__.platform
-    window.__platform__.setup({
-      "remoteRoot": ${uneval(remoteRoot)},
-      "compileInto": ${uneval(compileInto)}
-    })
-  </script>
 </body>
 
 </html>`
@@ -173,10 +165,17 @@ export const launchChromium = async ({
     const execute = async () => {
       await page.goto(indexOrigin)
       return await page.evaluate(
-        (file, { collectNamespace, collectCoverage, instrument }) =>
-          window.__platform__.importFile(file, { collectNamespace, collectCoverage, instrument }),
-        file,
-        { collectNamespace, collectCoverage, instrument },
+        ({ compileInto, remoteRoot, file, collectNamespace, collectCoverage, instrument }) => {
+          return window.__platform__.executeCompiledFile({
+            compileInto,
+            remoteRoot,
+            file,
+            collectNamespace,
+            collectCoverage,
+            instrument,
+          })
+        },
+        { file, collectNamespace, collectCoverage, instrument },
       )
     }
     try {
