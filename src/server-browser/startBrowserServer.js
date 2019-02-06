@@ -149,7 +149,10 @@ const getIndexPageHTML = async ({ localRoot, executableFiles }) => {
       <h1>${localRoot}</h1>
       <p>List of executable file: </p>
       <ul>
-        ${executableFiles.map((file) => `<li><a href="/${file}">${file}</a></li>`).join("")}
+        ${executableFiles
+          .sort()
+          .map((file) => `<li><a href="/${file}">${file}</a></li>`)
+          .join("")}
       </ul>
     </main>
   </body>

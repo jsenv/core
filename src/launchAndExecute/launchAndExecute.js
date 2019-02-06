@@ -27,14 +27,10 @@ export const launchAndExecute = async (
     // to debug the error to the its consequences
     // however unit test will pass true because they want to move on
     stopOnError = false,
-    errorAfterExecutedCallback = (error) => {
-      console.log(`${platformTypeForLog} error ${error.stack}`)
-    },
-    disconnectAfterExecutedCallback = () => {
-      console.log(`${platformTypeForLog} disconnected`)
-    },
     startedCallback = () => {},
     stoppedCallback = () => {},
+    errorAfterExecutedCallback = () => {},
+    disconnectAfterExecutedCallback = () => {},
     collectNamespace = false,
     collectCoverage = false,
     instrument = collectCoverage,
@@ -61,6 +57,7 @@ export const launchAndExecute = async (
     launchPlatform,
     file,
     consoleCallback,
+    platformTypeForLog,
     verbose,
     stopOnceExecuted,
     stopOnError,
@@ -267,10 +264,12 @@ const computeExecutionResult = async ({
 
       log(`${file} execution on ${platformTypeForLog} done with ${value}`)
       registerErrorCallback((error) => {
+        log(`${platformTypeForLog} error ${error.stack}`)
         errorAfterExecutedCallback(error)
         onError(error)
       })
       registerDisconnectCallback(() => {
+        log(`${platformTypeForLog} disconnected`)
         disconnectAfterExecutedCallback()
       })
 

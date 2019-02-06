@@ -22,10 +22,11 @@ const pluginMap = pluginOptionMapToPluginMap({
     () => launchChromium({ localRoot, remoteRoot, compileInto, headless: false }),
     file,
     {
-      platformTypeForLog: "node process",
+      platformTypeForLog: "chromium browser",
       verbose: true,
       mirrorConsole: true,
       captureConsole: true,
+      stopOnceExecuted: true,
     },
   )
   const expected = {

@@ -175,7 +175,7 @@ export const launchChromium = async ({
             instrument,
           })
         },
-        { file, collectNamespace, collectCoverage, instrument },
+        { compileInto, remoteRoot, file, collectNamespace, collectCoverage, instrument },
       )
     }
     try {
