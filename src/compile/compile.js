@@ -106,17 +106,17 @@ const compileGroup = async ({
 
 const generateNodeMainSource = ({ compileInto, main }) => `
 const path = require("path")
-const { createNodeSystem, compileIdFromCompileMap } = require("@dmail/dev-server")
-const compileMap = require("./compileMap.json")
+const { importCompiledFile } = require("@dmail/dev-server")
 
-const compileId = compileIdFromCompileMap(compileMap)
 const compileFolder = __dirname
 const rootDirname = compileFolder.slice(0, -"${compileInto}".length - 1)
-const nodeSystem = createNodeSystem({
+const namespacePromise = importCompiledFile({
   localRoot: \`file://\${rootDirname}\`,
   remoteRoot: \`file://\${compileFolder}/\`,
+  compileInto: "${compileInto}",
+  file: "${main}"
 })
-module.exports = nodeSystem.import(\`./\${compileId}/${main}\`)`
+module.exports = namespacePromise`
 
 const generateBrowserMainSource = ({ globalName }) => {
   /*
