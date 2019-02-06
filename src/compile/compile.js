@@ -119,36 +119,5 @@ const namespacePromise = importCompiledFile({
 module.exports = namespacePromise`
 
 const generateBrowserMainSource = ({ globalName }) => {
-  /*
-  celui la je sais pas encore
-  je vais avoir besoin de rollup pour inline
-  browserSystem
-  mais une fois que je l'ai je pourrais trés bien l'utiliser directement
-  dans un html genre
-
-  <script src="@jsenv/dist/browserSystem.js"></script>
-  <script>
-    window.System.import('')
-  </script>
-
-  en fait non parce que chaque projet pourrait spécifier des
-  compile profile différent
-  mais en fait c'est bete, c'est le projet principal qui compile toutes
-  ses dépendances donc c'est lui qui choisit
-  autrement dit on ne fait pas de dist pour le browser
-
-  si on veut l'utiliser dans un browser
-  on est obligé du'utiliser jsenv
-  mais c'est ce que je veux éviter justement
-  pouvoir générer un dist qui ne dépend pas de jsenv
-
-  pour cela il faudrait donc avoir un window[`${moduleName}Promise`]
-  lorsqu'on utilise une balise script
-
-  ce script contiendrais donc browserSystem +
-  le import nécéssaire et ne surchargerais pas window
-
-  on aurait donc bien besoin de compileMap je dirais
-  */
   return ``
 }
