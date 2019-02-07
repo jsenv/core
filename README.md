@@ -38,19 +38,16 @@ the node module algorithm won't be implemented because we use either
 a filesystem for nodejs or even the browser
 or a CDN without specific logic
 
-the idea would be to add symlink for node_modules that are not where we would expect them.
-to do that we should parse the whole tree, check package.json
-dependencies + devDependencies and write a symlink to the actual file location
-when module is not where we would expect it
+to fix that we'll use import mapping.
 
-this script could be runned postinstall
-we should also ensure that content of dist folder contains the symlink
-(when you locate a file and found it elsewhere -> a symlink is created inside dist folder)
-when compile finds a synlink it must copy it and that's all
+about how to compile the whole node module folder:
+compile will receive { root, main = 'index.js' }
+and will parse index.js static dependencies recursively (by parsing import)
 
-think about https://www.npmjs.com/package/require-symlink
-and https://github.com/timoxley/linklocal/issues/15
-https://docs.npmjs.com/misc/scripts
+if dynamic dependency are encountered a warning is emitted so that
+user can manually supply the dynamicDependency to compile
+so compile will also accept a dynamicDependencies array
+(or dynamicDependenciesPatternMapping) to force compilation of these dependencies
 
 - update code, especially browserPlatform to avoid thinking we can avoidSystemjs when browser/node supports import/export syntax.
   This is not true because of

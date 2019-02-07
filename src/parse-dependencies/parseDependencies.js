@@ -1,6 +1,15 @@
 import { resolveModuleSpecifier, resolveAPossibleNodeModuleFile } from "@jsenv/module-resolution"
 import { parseRawDependencies } from "./parseRawDependencies.js"
 
+// abstract/real pairs
+// will be used to create a mapping for file that are not where
+// we would expect them (because of node module)
+// check systemjs import map, especially scopes
+// https://github.com/systemjs/systemjs/blob/master/docs/import-maps.md#scopes
+
+// still to be tested: a structure with node_modules
+// where abstract/real would differ
+
 export const parseDependencies = async ({
   root,
   ressource,
