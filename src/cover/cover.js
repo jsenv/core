@@ -12,6 +12,9 @@ export const cover = async ({
   compileInto,
   pluginMap,
   executePatternMapping,
+  // coverPatternMapping will be replaced by
+  // getRessourcesToCover: an async function returning a list of
+  // ressource to cover
   coverPatternMapping,
 }) =>
   catchAsyncFunctionCancellation(async () => {

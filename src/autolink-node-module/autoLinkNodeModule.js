@@ -1,4 +1,6 @@
 // to externalize in its own module
+// deprecated: useless for now
+
 // for now a private @dmail/autolink-node-module
 // that may be move to jsenv later
 // to check with way more complex structure with dependencies

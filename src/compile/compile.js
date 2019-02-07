@@ -1,3 +1,41 @@
+/*
+
+let's do this:
+
+a script capable to parse an entry file
+and return the static, dynamic import
+dynamic import with static path will be compiled
+dynamic import with dynamic content will not be compiled and emit a warning
+static import will be compiled
+
+all compiled file static/dynamic import will be recursively parsed and compiled
+
+during that process import will be resolved
+if any import is resolved somewhere unexpected it will be registered
+in a pathmapping
+
+this function must be generic enough to be passed to
+cover function and be used to detect al the file you want to cover
+just by passing an entry file
+and dynamic/static import would be parsed to be considered as file to cover
+-> we will start with this function
+
+check if something exists
+otherwise can find inspiration in eslint-plugin-import
+
+advantages:
+no need to specifiy what file you use inside package.json or whatever
+
+inconvenient:
+won't work for cjs, umd or whatever module format
+
+
+next version:
+you can provide a list of ressources (that would match your dynamic import with dynamic path)
+that will be compiled as well
+
+*/
+
 import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
 import { fileCopy, fileWrite } from "@dmail/helper"
 import { startCompileServer } from "../server-compile/index.js"
