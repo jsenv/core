@@ -6,6 +6,11 @@ export const parseDependencies = async ({
   ressource,
   resolve = resolveModuleSpecifier,
   dynamicDependenciesCallback = (dynamicDependencies, ressource) => {
+    // we warn and we don't throw because
+    // user must know these won't be compiled
+    // but this is not critical.
+    // user know the logic behind the dynamic dependency
+    // and can force compilation of underlying file when using compile
     console.warn(`found ${dynamicDependencies.length} in ${ressource}`)
   },
 }) => {
