@@ -34,6 +34,14 @@ next version:
 you can provide a list of ressources (that would match your dynamic import with dynamic path)
 that will be compiled as well
 
+how to determine dynamic value inside dynamic import :
+https://github.com/benmosher/eslint-plugin-import/blob/bdc05aa1d029b70125ae415e5ca5dca22250858b/src/rules/no-dynamic-require.js#L11
+
+to parse import and stuff this is gold:
+https://github.com/dmail/task-and-more/blob/629d37f30ea0ab7573b14816012dba3ddc78bfdf/packages/compile/parse/babel-plugin-parse-ressources/create-parse-ressources.js#L1
+
+but we'll need a more powerful version to support dynamic import
+and recursive parsing but we got the main stuff
 */
 
 import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
