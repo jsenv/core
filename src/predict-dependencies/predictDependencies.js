@@ -9,6 +9,8 @@ import { parseDependencies } from "./parseDependencies.js"
 // https://github.com/systemjs/systemjs/blob/master/docs/import-maps.md#scopes
 
 /*
+should be renamed predictLocalDependencies
+
 predictDependencies returns something like
 
 {
@@ -95,12 +97,30 @@ const predictRessourceDependencies = async ({
 
   const predictableDependencies = dependencies.filter(({ type }) => type === "static")
 
-  return predictableDependencies.map(({ specifier, file }) => {
+  const localPredictableDependencies = []
+
+  const foundLocalPredictableDependency = ({ specifier, abstractFile, realFile }) => {
+    const abstract = fileToRessource({ root, file: abstractFile })
+    const real = fileToRessource({ root, file: realFile })
+    if (real === ressource) {
+      throw createSelfDependencyError({
+        root,
+        ressource,
+        specifier,
+      })
+    }
+    localPredictableDependencies.push({ abstract, real })
+  }
+
+  predictableDependencies.forEach(({ specifier, file }) => {
     const dependencyFile = resolve({
       root,
       moduleSpecifier: specifier,
       file,
     })
+
+    if (fileIsRemote(dependencyFile)) return
+
     if (fileIsOutsideRoot({ file: dependencyFile, root })) {
       throw createDependencyFileOutsideRootError({
         root,
@@ -120,37 +140,25 @@ const predictRessourceDependencies = async ({
           dependencyFile: nodeModuleFile,
         })
       }
-
-      const abstract = fileToRessource({ root, file: dependencyFile })
-      const real = fileToRessource({ root, file: nodeModuleFile })
-      if (real === ressource) {
-        throw createSelfDependencyError({
-          root,
-          ressource,
-          specifier,
-        })
-      }
-
-      return {
-        abstract,
-        real,
-      }
-    }
-
-    const abstract = fileToRessource({ root, file: dependencyFile })
-    const real = fileToRessource({ root, file: nodeModuleFile })
-    if (real === ressource) {
-      throw createSelfDependencyError({
-        root,
-        ressource,
-        specifier,
+      foundLocalPredictableDependency({
+        abstractFile: dependencyFile,
+        realFile: nodeModuleFile,
+      })
+    } else {
+      foundLocalPredictableDependency({
+        abstractFile: dependencyFile,
+        realFile: dependencyFile,
       })
     }
-    return {
-      abstract,
-      real,
-    }
   })
+
+  return localPredictableDependencies
+}
+
+const fileIsRemote = (file) => {
+  if (file.startsWith("http://")) return true
+  if (file.startsWith("https://")) return true
+  return false
 }
 
 const fileToRessource = ({ root, file }) => {
