@@ -15,7 +15,11 @@ export const fetchSource = ({ remoteFile, remoteParent }) => {
   }
 
   if (protocolIsHttpOrHttps(remoteFile)) {
-    return fetchUsingHttp(remoteFile, remoteParent)
+    return fetchUsingHttp(remoteFile, {
+      headers: {
+        "x-module-referer": remoteParent || remoteFile,
+      },
+    })
   }
 
   throw new Error(`unsupported protocol for module ${remoteFile}`)

@@ -1,14 +1,14 @@
 import https from "https"
 import fetch from "node-fetch"
+import AbortController from "abort-controller"
 
 // ideally we should only pass this to the fetch below
 https.globalAgent.options.rejectUnauthorized = false
 
-export const fetchUsingHttp = async (url, parent) => {
+export const fetchUsingHttp = async (url, { cancellationToken, ...rest } = {}) => {
   const response = await fetch(url, {
-    headers: {
-      "x-module-referer": parent || url,
-    },
+    ...(cancellationToken ? { signal: cancellationTokenToAbortSignal(cancellationToken) } : {}),
+    ...rest,
   })
 
   const text = await response.text()
@@ -19,6 +19,15 @@ export const fetchUsingHttp = async (url, parent) => {
     headers: responseToHeaderMap(response),
     body: text,
   }
+}
+
+// https://github.com/bitinn/node-fetch#request-cancellation-with-abortsignal
+const cancellationTokenToAbortSignal = (cancellationToken) => {
+  const abortController = new AbortController()
+  cancellationToken.register((reason) => {
+    abortController.abort(reason)
+  })
+  return abortController.signal
 }
 
 const responseToHeaderMap = (response) => {
