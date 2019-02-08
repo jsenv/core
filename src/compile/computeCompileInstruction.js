@@ -1,3 +1,4 @@
+import { resolveModuleSpecifier } from "@jsenv/module-resolution"
 import { predictLocalDependencies } from "../predict-local-dependencies/predictLocalDependencies.js"
 import { ensureDependenciesInsideRoot } from "./ensureDependenciesInsideRoot.js"
 import { resolveDependenciesRealFile } from "./resolveDependenciesRealFile.js"
@@ -33,8 +34,9 @@ export const computeCompilationInstruction = async ({
 const getMainCompilationInstruction = async ({ cancellationToken, localRoot, main }) => {
   const mainDependencies = await predictLocalDependencies({
     cancellationToken,
-    root: localRoot,
-    ressource: main,
+    file: `${localRoot}/${main}`,
+    resolve: ({ specifier, specifierFile }) =>
+      resolveModuleSpecifier({ root: localRoot, moduleSpecifier: specifier, file: specifierFile }),
   })
 
   const dependencies = resolveDependenciesRealFile(mainDependencies)

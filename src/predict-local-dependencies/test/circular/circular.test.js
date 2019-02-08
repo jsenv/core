@@ -1,7 +1,7 @@
+import { resolveModuleSpecifier } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
 import { predictLocalDependencies } from "../../predictLocalDependencies.js"
 import { localRoot } from "../../../localRoot.js"
-import { resolveModuleSpecifier } from "@jsenv/module-resolution"
 
 const testRoot = `src/predict-local-dependencies/test/circular`
 const ressource = `${testRoot}/circular.js`
