@@ -22,7 +22,7 @@ predictDependencies returns something like
 }
 */
 
-export const predictDependencies = async ({
+export const predictLocalDependencies = async ({
   cancellationToken = createCancellationToken(),
   root,
   ressource,
