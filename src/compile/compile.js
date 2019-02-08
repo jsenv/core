@@ -1,5 +1,4 @@
 import { createOperation } from "@dmail/cancellation"
-import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
 import { fileCopy, fileWrite } from "@dmail/helper"
 import { startCompileServer } from "../server-compile/index.js"
 import { fetchUsingHttp } from "../platform/node/fetchUsingHttp.js"
@@ -7,7 +6,7 @@ import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
-import { predictDependencies } from "../predict-dependencies/predictDependencies.js"
+import { computeCompilationInstruction } from "./computeCompileInstruction.js"
 
 export const compile = async ({
   localRoot,
@@ -28,19 +27,11 @@ export const compile = async ({
 
     const cancellationToken = createProcessInterruptionCancellationToken()
 
-    const [
-      mainCompilationInstruction,
-      additionalCompilationInstruction,
-      server,
-    ] = await Promise.all([
-      getMainCompilationInstruction({
+    const [compilationInstruction, server] = await Promise.all([
+      computeCompilationInstruction({
         cancellationToken,
         localRoot,
         main,
-      }),
-      getAdditionalCompilationInstruction({
-        cancellationToken,
-        localRoot,
         compilePatternMapping,
       }),
       startCompileServer({
@@ -53,13 +44,6 @@ export const compile = async ({
       }),
     ])
 
-    // compilationInstruction must also (mostly for main)
-    // return a list of mapping in case
-    // the file can be found somewhere else
-    const compilationInstruction = {
-      ...mainCompilationInstruction,
-      ...additionalCompilationInstruction,
-    }
     const remoteRoot = server.origin
     const compileMapResponse = await fetchUsingHttp(`${remoteRoot}/${compileInto}/compileMap.json`)
     const compileMap = JSON.parse(compileMapResponse.body)
@@ -72,7 +56,7 @@ export const compile = async ({
           compileInto,
           compileId,
           remoteRoot,
-          compilationInstruction,
+          compileMap: compilationInstruction.files,
         }),
       ),
     )
@@ -88,59 +72,20 @@ export const compile = async ({
     )
   })
 
-const getMainCompilationInstruction = async ({ cancellationToken, localRoot, main }) => {
-  const mainDependencies = await predictDependencies({
-    cancellationToken,
-    root: localRoot,
-    ressource: main,
-  })
-
-  const compilationInstruction = {}
-
-  Object.keys(mainDependencies).forEach((ressource) => {
-    compilationInstruction[ressource] = "compile"
-  })
-
-  return compilationInstruction
-}
-
-const getAdditionalCompilationInstruction = async ({
-  cancellationToken,
-  localRoot,
-  compilePatternMapping,
-}) => {
-  const metaMap = patternGroupToMetaMap({
-    compile: compilePatternMapping,
-  })
-
-  const compilationInstruction = {}
-
-  await forEachRessourceMatching({
-    cancellationToken,
-    localRoot,
-    metaMap,
-    predicate: (meta) => meta.compile,
-    callback: (ressource, meta) => {
-      compilationInstruction[ressource] = meta.compile
-    },
-  })
-
-  return compilationInstruction
-}
-
 const compileGroup = async ({
   cancellationToken,
   localRoot,
   compileInto,
   compileId,
   remoteRoot,
-  compilationInstruction,
+  compileMap,
 }) => {
   await Promise.all(
-    Object.keys(compilationInstruction).map(async (ressource) => {
-      const compileInstruction = compilationInstruction[ressource]
+    Object.keys(compileMap).map(async (file) => {
+      const compileData = compileMap[file]
+      const ressource = fileToRessource({ localRoot, file })
 
-      if (compileInstruction === "copy") {
+      if (compileData.type === "copy") {
         await createOperation({
           cancellationToken,
           start: () =>
@@ -150,14 +95,18 @@ const compileGroup = async ({
             ),
         })
       }
-      if (compileInstruction === "compile") {
+      if (compileData.type === "compile") {
         const remoteURL = `${remoteRoot}/${compileInto}/${compileId}/${ressource}`
         await fetchUsingHttp(remoteURL, { cancellationToken })
       }
 
-      throw new Error(`unexpected compileInstruction, got ${compileInstruction}`)
+      throw new Error(`unexpected compileData.type, got ${compileData.type}`)
     }),
   )
+}
+
+const fileToRessource = ({ localRoot, file }) => {
+  return file.slice(localRoot.length + 1)
 }
 
 // importCompiledFile is not exported by @dmail/dev-server
