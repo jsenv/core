@@ -1,8 +1,8 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { resolveModuleSpecifier, resolveAPossibleNodeModuleFile } from "@jsenv/module-resolution"
-import { predictLocalDependencies } from "../predict-local-dependencies/predictLocalDependencies.js"
-import { ensureDependenciesInsideRoot } from "./ensureDependenciesInsideRoot.js"
-import { dependenciesToMapping } from "./dependenciesToMapping.js"
+import { scanReferencedRessourcesInFile } from "../scan-ressources/scanReferencedRessourcesInFile.js"
+import { ensureRessourcesInsideRoot } from "./ensureRessourcesInsideRoot.js"
+import { localRessourcesToMapping } from "./localRessourcesToMapping.js"
 import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
 
 export const computeCompileInstruction = async ({
@@ -32,7 +32,7 @@ export const computeCompileInstruction = async ({
 }
 
 const getMainCompilationInstruction = async ({ cancellationToken, root, main }) => {
-  const mainDependencies = await predictLocalDependencies({
+  const mainReferencedRessources = await scanReferencedRessourcesInFile({
     cancellationToken,
     file: `${root}/${main}`,
     resolve: ({ specifier, specifierFile }) =>
@@ -40,21 +40,31 @@ const getMainCompilationInstruction = async ({ cancellationToken, root, main }) 
     resolveReal: (file) => resolveAPossibleNodeModuleFile(file) || file,
   })
 
-  ensureDependenciesInsideRoot({ root, ressource: main, dependencies: mainDependencies })
+  const mainUnpredictableRessources = mainReferencedRessources.unpredictable
+  if (mainUnpredictableRessources.length) {
+    // should warn about these unpredictable ressources
+  }
 
-  const mapping = dependenciesToMapping({ root, main, dependencies: mainDependencies })
-  const ressources = {}
-  Object.keys(mainDependencies).forEach((dependency) => {
-    ressources[fileToRessource({ root, file: dependency.realFile })] = { type: "compile" }
+  const mainLocalRessources = mainReferencedRessources.localPredictable
+
+  ensureRessourcesInsideRoot({
+    root,
+    ressources: mainLocalRessources,
+  })
+
+  const mapping = localRessourcesToMapping({ root, ressources: mainLocalRessources })
+  const files = {}
+  Object.keys(mainLocalRessources).forEach((file) => {
+    files[fileToRelativeFile({ root, file })] = { type: "compile" }
   })
 
   return {
     mapping,
-    ressources,
+    files,
   }
 }
 
-const fileToRessource = ({ root, file }) => {
+const fileToRelativeFile = ({ root, file }) => {
   return file.slice(root.length + 1)
 }
 
@@ -68,17 +78,17 @@ const getAdditionalCompilationInstruction = async ({
   })
 
   const mapping = {}
-  const ressources = {}
+  const files = {}
 
   await forEachRessourceMatching({
     cancellationToken,
     localRoot: root,
     metaMap,
     predicate: (meta) => meta.compile,
-    callback: (ressource, meta) => {
-      ressources[ressource] = meta.compile
+    callback: (file, meta) => {
+      files[file] = meta.compile
     },
   })
 
-  return { mapping, ressources }
+  return { mapping, files }
 }

@@ -5,12 +5,23 @@ import { parseFileDependencies } from "./parseFileDependencies.js"
 collectReferencesMapping returns something like
 
 {
-  '/Users/dmail/folder/main.js': [{
-    specifier: './dependency.js',
-    specifierFile: '/Users/dmail/folder/main.js',
-    file: '/Users/dmail/folder/dependency.js'
-  }],
-  '/Users/dmail/folder/dependency.js': []
+  '/Users/dmail/folder/main.js': {
+    unpredictable: [],
+    remotePredictable: [],
+    localPredictable: [
+      {
+        specifier: './dependency.js',
+        specifierFile: '/Users/dmail/folder/main.js',
+        file: '/Users/dmail/folder/dependency.js',
+        realFile: '/Users/dmail/folder/dependency.js',
+      },
+    ],
+  },
+  '/Users/dmail/folder/dependency.js': {
+    unpredictable: [],
+    remotePredictable: [],
+    localPredictable: []
+  }
 }
 */
 
@@ -53,7 +64,7 @@ export const scanReferencedRessourcesInFile = async ({
     referencedRessources[file] = categorizedRessources
     await Promise.all(
       categorizedRessources.localPredictable.map((dependency) =>
-        scanFile(dependency.file, {
+        scanFile(dependency.realFile, {
           referencedByFile: file,
           referencedBySpecifier: dependency.specifier,
         }),

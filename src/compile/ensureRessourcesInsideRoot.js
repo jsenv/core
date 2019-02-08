@@ -1,6 +1,6 @@
-export const ensureDependenciesInsideRoot = ({ root, dependencies }) => {
-  Object.keys(dependencies).forEach((file) => {
-    const dependency = dependencies[file]
+export const ensureRessourcesInsideRoot = ({ root, ressources }) => {
+  Object.keys(ressources).forEach((file) => {
+    const dependency = ressources[file]
     if (fileIsOutsideRoot({ file: dependency.file, root })) {
       throw createDependencyFileOutsideRootError({
         root,
