@@ -163,7 +163,6 @@ const compileGroup = async ({
 // importCompiledFile is not exported by @dmail/dev-server
 // we need that export if we do what is below
 const generateNodeMainSource = ({ compileInto, main }) => `
-const path = require("path")
 const { importCompiledFile } = require("@dmail/dev-server")
 
 const compileFolder = __dirname

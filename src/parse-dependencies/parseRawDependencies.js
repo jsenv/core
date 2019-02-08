@@ -11,7 +11,6 @@ export const parseRawDependencies = async ({
 }) => {
   const file = `${root}/${ressource}`
 
-  // nice to have try/catch this to throw a better error than node native file not found
   const code = await createOperation({
     cancellationToken,
     start: () => fileRead(file),
@@ -51,6 +50,14 @@ export const parseRawDependencies = async ({
 // https://github.com/jamiebuilds/babel-handbook/blob/master/translations/nl/plugin-handbook.md#toc-visitors
 // https://github.com/babel/babel/blob/master/packages/babel-plugin-transform-block-scoping/src/index.js
 const createParseDependenciesBabelPlugin = ({ dependencies }) => {
+  const foundUnpredictableStaticSpecifierAndStaticFile = ({ specifier, file }) => {
+    dependencies.push({
+      type: "unpredictable-static",
+      specifier,
+      file,
+    })
+  }
+
   const foundStaticSpecifierAndStaticFile = ({ specifier, file }) => {
     dependencies.push({
       type: "static",
@@ -139,10 +146,17 @@ const createParseDependenciesBabelPlugin = ({ dependencies }) => {
     const firstArgIsStatic = isStaticValue(firstArg)
 
     if (firstArgIsStatic) {
-      foundStaticSpecifierAndStaticFile({
-        specifier: nodeToStaticValue(firstArg),
-        file: state.filename,
-      })
+      if (staticDependencyInDynamicImportIsPredictable(path)) {
+        foundStaticSpecifierAndStaticFile({
+          specifier: nodeToStaticValue(firstArg),
+          file: state.filename,
+        })
+      } else {
+        foundUnpredictableStaticSpecifierAndStaticFile({
+          specifier: nodeToStaticValue(firstArg),
+          file: state.filename,
+        })
+      }
     } else {
       foundDynamicSpecifierAndStaticFile({
         specifier: firstArg,
@@ -158,10 +172,17 @@ const createParseDependenciesBabelPlugin = ({ dependencies }) => {
     const secondArgIsStatic = isStaticValue(secondArg)
 
     if (firstArgIsStatic && secondArgIsStatic) {
-      foundStaticSpecifierAndStaticFile({
-        specifier: nodeToStaticValue(firstArg),
-        file: nodeToStaticValue(secondArg),
-      })
+      if (staticDependencyInDynamicImportIsPredictable(path)) {
+        foundStaticSpecifierAndStaticFile({
+          specifier: nodeToStaticValue(firstArg),
+          file: nodeToStaticValue(secondArg),
+        })
+      } else {
+        foundUnpredictableStaticSpecifierAndStaticFile({
+          specifier: nodeToStaticValue(firstArg),
+          file: nodeToStaticValue(secondArg),
+        })
+      }
     }
 
     if (firstArgIsStatic && !secondArgIsStatic) {
@@ -189,6 +210,12 @@ const createParseDependenciesBabelPlugin = ({ dependencies }) => {
   return {
     visitor,
   }
+}
+
+const staticDependencyInDynamicImportIsPredictable = (path) => {
+  // https://github.com/jamiebuilds/babel-handbook/blob/master/translations/en/plugin-handbook.md#find-a-specific-parent-path
+  // https://github.com/babel/babel/blob/045d019149e40fd9424efad445b92a04f5f1f7e4/packages/babel-traverse/src/path/introspection.js#L402
+  return path.getStatementParent().parent.type === "Program"
 }
 
 const isStaticValue = (node) => {

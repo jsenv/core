@@ -8,6 +8,18 @@ import { parseRawDependencies } from "./parseRawDependencies.js"
 // check systemjs import map, especially scopes
 // https://github.com/systemjs/systemjs/blob/master/docs/import-maps.md#scopes
 
+/*
+parseDependencies returns something like
+
+{
+  'main.js': [{
+    abstract: 'dependency.js',
+    real: 'dependency.js'
+  }],
+  'dependency.js': []
+}
+*/
+
 export const parseDependencies = async ({
   cancellationToken = createCancellationToken(),
   root,
@@ -24,19 +36,38 @@ export const parseDependencies = async ({
 }) => {
   const ressourceMap = {}
   const ressourceSeen = {}
-  const visitRessource = async (ressource) => {
+  const visitRessource = async (ressource, parent) => {
     if (ressource in ressourceSeen) return
     ressourceSeen[ressource] = true
 
-    const dependencies = await parseRessourceDependencies({
-      cancellationToken,
-      root,
-      ressource,
-      resolve,
-      dynamicDependenciesCallback,
-    })
+    let dependencies
+
+    try {
+      dependencies = await parseRessourceDependencies({
+        cancellationToken,
+        root,
+        ressource,
+        resolve,
+        dynamicDependenciesCallback,
+      })
+    } catch (e) {
+      if (e && e.code === "ENOENT") {
+        if (parent) {
+          throw createDependencyNotFoundError({
+            root,
+            ressource,
+            dependency: parent,
+          })
+        }
+        throw createRessourceNotFoundError({
+          root,
+          ressource,
+        })
+      }
+      throw e
+    }
     ressourceMap[ressource] = dependencies
-    await Promise.all(dependencies.map(({ real }) => visitRessource(real)))
+    await Promise.all(dependencies.map(({ real }) => visitRessource(real, ressource)))
   }
   await visitRessource(ressource)
   return ressourceMap
@@ -53,6 +84,7 @@ const parseRessourceDependencies = async ({
 
   const dynamicDependencies = rawDependencies.filter(
     ({ type }) =>
+      type === "static-unpredictable" ||
       type === "dynamic-specifier" ||
       type === "dynamic-file" ||
       type === "dynamic-specifier-and-dynamic-file",
@@ -125,6 +157,19 @@ const parseRessourceDependencies = async ({
 
 const fileToRessource = ({ root, file }) => {
   return file.slice(root.length + 1)
+}
+
+const createRessourceNotFoundError = ({ root, ressource }) => {
+  return new Error(`ressource not found.
+root: ${root}
+ressource: ${ressource}`)
+}
+
+const createDependencyNotFoundError = ({ root, ressource, dependency }) => {
+  return new Error(`dependency not found.
+root: ${root}
+ressource: ${ressource}
+dependency: ${dependency}`)
 }
 
 const createSelfDependencyError = ({ root, ressource, specifier }) => {
