@@ -9,9 +9,7 @@ import { parseDependencies } from "./parseDependencies.js"
 // https://github.com/systemjs/systemjs/blob/master/docs/import-maps.md#scopes
 
 /*
-should be renamed predictLocalDependencies
-
-predictDependencies returns something like
+predictLocalDependencies returns something like
 
 {
   'main.js': [{
