@@ -1,86 +1,83 @@
 import { createCancellationToken } from "@dmail/cancellation"
-import { resolveModuleSpecifier, resolveAPossibleNodeModuleFile } from "@jsenv/module-resolution"
 import { parseDependencies } from "./parseDependencies.js"
-
-// abstract/real pairs
-// will be used to create a mapping for file that are not where
-// we would expect them (because of node module)
-// check systemjs import map, especially scopes
-// https://github.com/systemjs/systemjs/blob/master/docs/import-maps.md#scopes
 
 /*
 predictLocalDependencies returns something like
 
 {
-  'main.js': [{
-    abstract: 'dependency.js',
-    real: 'dependency.js'
+  '/Users/dmail/folder/main.js': [{
+    specifier: './dependency.js',
+    specifierFile: '/Users/dmail/folder/main.js',
+    file: '/Users/dmail/folder/dependency.js'
   }],
-  'dependency.js': []
+  '/Users/dmail/folder/dependency.js': []
 }
 */
 
 export const predictLocalDependencies = async ({
   cancellationToken = createCancellationToken(),
-  root,
-  ressource,
-  resolve = resolveModuleSpecifier,
-  unpredictableDependenciesCallback = (dynamicDependencies, ressource) => {
+  file,
+  resolve,
+  unpredictableDependenciesCallback = (dynamicDependencies, file) => {
     // we warn and we don't throw because
     // user must know these won't be compiled
     // but this is not critical.
     // user know the logic behind the dynamic dependency
     // and can force compilation of underlying file when using compile
-    console.warn(`found ${dynamicDependencies.length} in ${ressource}`)
+    console.warn(`found ${dynamicDependencies.length} in ${file}`)
   },
 }) => {
-  const ressourceMap = {}
-  const ressourceSeen = {}
-  const visitRessource = async (ressource, parent) => {
-    if (ressource in ressourceSeen) return
-    ressourceSeen[ressource] = true
+  const dependenciesMap = {}
+
+  const seenMap = {}
+  const visitFile = async (file, { parentFile, parentSpecifier } = {}) => {
+    if (file in seenMap) return
+    seenMap[file] = true
 
     let dependencies
 
     try {
       dependencies = await predictRessourceDependencies({
         cancellationToken,
-        root,
-        ressource,
+        file,
         resolve,
-        unpredictableDependenciesCallback,
+        unpredictableDependenciesCallback: (unpredictableDependencies) =>
+          unpredictableDependenciesCallback(unpredictableDependencies, file),
       })
     } catch (e) {
       if (e && e.code === "ENOENT") {
         if (parent) {
-          throw createDependencyNotFoundError({
-            root,
-            ressource,
-            dependency: parent,
+          throw createDependencyFileNotFoundError({
+            file,
+            specifier: parentSpecifier,
+            dependencyFile: parentFile,
           })
         }
-        throw createRessourceNotFoundError({
-          root,
-          ressource,
+        throw createFileNotFoundError({
+          file,
         })
       }
       throw e
     }
-    ressourceMap[ressource] = dependencies
-    await Promise.all(dependencies.map(({ real }) => visitRessource(real, ressource)))
+    dependenciesMap[file] = dependencies
+    await Promise.all(
+      dependencies.map((dependency) =>
+        visitFile(dependency.file, { parentSpecifier: dependency.specifier, parentFile: file }),
+      ),
+    )
   }
-  await visitRessource(ressource)
-  return ressourceMap
+  await visitFile(file)
+
+  return dependenciesMap
 }
 
 const predictRessourceDependencies = async ({
   cancellationToken,
-  root,
-  ressource,
+  file,
   resolve,
   unpredictableDependenciesCallback,
 }) => {
-  const dependencies = await parseDependencies({ cancellationToken, root, ressource })
+  const dependencies = await parseDependencies({ cancellationToken, file })
 
   const unpredictableDependencies = dependencies.filter(
     ({ type }) =>
@@ -90,64 +87,32 @@ const predictRessourceDependencies = async ({
       type === "dynamic-specifier-and-dynamic-file",
   )
   if (unpredictableDependencies.length) {
-    unpredictableDependenciesCallback(unpredictableDependencies, ressource)
+    unpredictableDependenciesCallback(unpredictableDependencies)
   }
 
   const predictableDependencies = dependencies.filter(({ type }) => type === "static")
 
   const localPredictableDependencies = []
 
-  const foundLocalPredictableDependency = ({ specifier, abstractFile, realFile }) => {
-    const abstract = fileToRessource({ root, file: abstractFile })
-    const real = fileToRessource({ root, file: realFile })
-    if (real === ressource) {
+  const foundLocalPredictableDependencyFile = ({ specifier, specifierFile }, dependencyFile) => {
+    if (dependencyFile === file) {
       throw createSelfDependencyError({
-        root,
-        ressource,
+        file,
         specifier,
       })
     }
-    localPredictableDependencies.push({ abstract, real })
+    localPredictableDependencies.push({
+      specifier,
+      specifierFile,
+      file: dependencyFile,
+    })
   }
 
-  predictableDependencies.forEach(({ specifier, file }) => {
-    const dependencyFile = resolve({
-      root,
-      moduleSpecifier: specifier,
-      file,
-    })
+  predictableDependencies.forEach((dependency) => {
+    const dependencyFile = resolve(dependency)
 
     if (fileIsRemote(dependencyFile)) return
-
-    if (fileIsOutsideRoot({ file: dependencyFile, root })) {
-      throw createDependencyFileOutsideRootError({
-        root,
-        ressource,
-        specifier,
-        dependencyFile,
-      })
-    }
-
-    const nodeModuleFile = resolveAPossibleNodeModuleFile(dependencyFile)
-    if (nodeModuleFile && nodeModuleFile !== dependencyFile) {
-      if (fileIsOutsideRoot({ file: nodeModuleFile, root })) {
-        throw createDependencyFileOutsideRootError({
-          root,
-          ressource,
-          specifier,
-          dependencyFile: nodeModuleFile,
-        })
-      }
-      foundLocalPredictableDependency({
-        abstractFile: dependencyFile,
-        realFile: nodeModuleFile,
-      })
-    } else {
-      foundLocalPredictableDependency({
-        abstractFile: dependencyFile,
-        realFile: dependencyFile,
-      })
-    }
+    foundLocalPredictableDependencyFile(dependency, dependencyFile)
   })
 
   return localPredictableDependencies
@@ -159,38 +124,20 @@ const fileIsRemote = (file) => {
   return false
 }
 
-const fileToRessource = ({ root, file }) => {
-  return file.slice(root.length + 1)
+const createFileNotFoundError = ({ file }) => {
+  return new Error(`file not found.
+file: ${file}`)
 }
 
-const createRessourceNotFoundError = ({ root, ressource }) => {
-  return new Error(`ressource not found.
-root: ${root}
-ressource: ${ressource}`)
-}
-
-const createDependencyNotFoundError = ({ root, ressource, dependency }) => {
+const createDependencyFileNotFoundError = ({ file, specifier, dependencyFile }) => {
   return new Error(`dependency not found.
-root: ${root}
-ressource: ${ressource}
-dependency: ${dependency}`)
-}
-
-const createSelfDependencyError = ({ root, ressource, specifier }) => {
-  return new Error(`unexpected self dependency.
-root: ${root}
-ressource: ${ressource}
-specifier: ${specifier}`)
-}
-
-const createDependencyFileOutsideRootError = ({ root, ressource, specifier, dependencyFile }) => {
-  return new Error(`unexpected dependency outside root.
-root: ${root}
-ressource: ${ressource}
+file: ${file}
 specifier: ${specifier}
 dependencyFile: ${dependencyFile}`)
 }
 
-const fileIsOutsideRoot = ({ root, file }) => {
-  return !file.startsWith(`${root}`)
+const createSelfDependencyError = ({ file, specifier }) => {
+  return new Error(`unexpected self dependency.
+file: ${file}
+specifier: ${specifier}`)
 }

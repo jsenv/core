@@ -6,11 +6,8 @@ import { createCancellationToken, createOperation } from "@dmail/cancellation"
 
 export const parseDependencies = async ({
   cancellationToken = createCancellationToken(),
-  root,
-  ressource,
+  file,
 }) => {
-  const file = `${root}/${ressource}`
-
   const code = await createOperation({
     cancellationToken,
     start: () => fileRead(file),
@@ -20,7 +17,6 @@ export const parseDependencies = async ({
 
   const babelOptions = {
     filename: file,
-    filenameRelative: ressource,
     babelrc: false,
     ast: true,
     sourceMaps: false,
@@ -50,43 +46,43 @@ export const parseDependencies = async ({
 // https://github.com/jamiebuilds/babel-handbook/blob/master/translations/nl/plugin-handbook.md#toc-visitors
 // https://github.com/babel/babel/blob/master/packages/babel-plugin-transform-block-scoping/src/index.js
 const createParseDependenciesBabelPlugin = ({ dependencies }) => {
-  const foundUnpredictableStaticSpecifierAndStaticFile = ({ specifier, file }) => {
+  const foundUnpredictableStaticSpecifierAndStaticFile = ({ specifier, specifierFile }) => {
     dependencies.push({
       type: "unpredictable-static",
       specifier,
-      file,
+      specifierFile,
     })
   }
 
-  const foundStaticSpecifierAndStaticFile = ({ specifier, file }) => {
+  const foundStaticSpecifierAndStaticFile = ({ specifier, specifierFile }) => {
     dependencies.push({
       type: "static",
       specifier,
-      file,
+      specifierFile,
     })
   }
 
-  const foundStaticSpecifierAndDynamicFile = ({ specifier, file }) => {
+  const foundStaticSpecifierAndDynamicFile = ({ specifier, specifierFile }) => {
     dependencies.push({
       type: "dynamic-file",
       specifier,
-      file,
+      specifierFile,
     })
   }
 
-  const foundDynamicSpecifierAndStaticFile = ({ specifier, file }) => {
+  const foundDynamicSpecifierAndStaticFile = ({ specifier, specifierFile }) => {
     dependencies.push({
       type: "dynamic-specifier",
       specifier,
-      file,
+      specifierFile,
     })
   }
 
-  const foundDynamicSpecifierAndDynamicFile = ({ specifier, file }) => {
+  const foundDynamicSpecifierAndDynamicFile = ({ specifier, specifierFile }) => {
     dependencies.push({
       type: "dynamic-specifier-and-dynamic-file",
       specifier,
-      file,
+      specifierFile,
     })
   }
 
@@ -101,7 +97,7 @@ const createParseDependenciesBabelPlugin = ({ dependencies }) => {
     ImportDeclaration(path, state) {
       foundStaticSpecifierAndStaticFile({
         specifier: nodeToStaticValue(path.node.source),
-        file: state.filename,
+        specifierFile: state.filename,
       })
     },
 
@@ -109,7 +105,7 @@ const createParseDependenciesBabelPlugin = ({ dependencies }) => {
     ExportAllDeclaration(path, state) {
       foundStaticSpecifierAndStaticFile({
         specifier: nodeToStaticValue(path.node.source),
-        file: state.filename,
+        specifierFile: state.filename,
       })
     },
 
@@ -118,7 +114,7 @@ const createParseDependenciesBabelPlugin = ({ dependencies }) => {
       if (!path.node.source) return
       foundStaticSpecifierAndStaticFile({
         specifier: nodeToStaticValue(path.node.source),
-        file: state.filename,
+        specifierFile: state.filename,
       })
     },
 
@@ -149,18 +145,18 @@ const createParseDependenciesBabelPlugin = ({ dependencies }) => {
       if (staticDependencyInDynamicImportIsPredictable(path)) {
         foundStaticSpecifierAndStaticFile({
           specifier: nodeToStaticValue(firstArg),
-          file: state.filename,
+          specifierFile: state.filename,
         })
       } else {
         foundUnpredictableStaticSpecifierAndStaticFile({
           specifier: nodeToStaticValue(firstArg),
-          file: state.filename,
+          specifierFile: state.filename,
         })
       }
     } else {
       foundDynamicSpecifierAndStaticFile({
         specifier: firstArg,
-        file: state.filename,
+        specifierFile: state.filename,
       })
     }
   }
@@ -175,12 +171,12 @@ const createParseDependenciesBabelPlugin = ({ dependencies }) => {
       if (staticDependencyInDynamicImportIsPredictable(path)) {
         foundStaticSpecifierAndStaticFile({
           specifier: nodeToStaticValue(firstArg),
-          file: nodeToStaticValue(secondArg),
+          specifierFile: nodeToStaticValue(secondArg),
         })
       } else {
         foundUnpredictableStaticSpecifierAndStaticFile({
           specifier: nodeToStaticValue(firstArg),
-          file: nodeToStaticValue(secondArg),
+          specifierFile: nodeToStaticValue(secondArg),
         })
       }
     }
@@ -188,21 +184,21 @@ const createParseDependenciesBabelPlugin = ({ dependencies }) => {
     if (firstArgIsStatic && !secondArgIsStatic) {
       foundStaticSpecifierAndDynamicFile({
         specifier: nodeToStaticValue(firstArg),
-        file: secondArg,
+        specifierFile: secondArg,
       })
     }
 
     if (!firstArgIsStatic && secondArgIsStatic) {
       foundDynamicSpecifierAndStaticFile({
         specifier: firstArg,
-        file: nodeToStaticValue(secondArg),
+        specifierFile: nodeToStaticValue(secondArg),
       })
     }
 
     if (!firstArgIsStatic && !secondArgIsStatic) {
       foundDynamicSpecifierAndDynamicFile({
         specifier: firstArg,
-        file: secondArg,
+        specifierFile: secondArg,
       })
     }
   }

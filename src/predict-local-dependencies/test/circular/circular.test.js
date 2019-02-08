@@ -1,28 +1,35 @@
 import { assert } from "@dmail/assert"
 import { predictLocalDependencies } from "../../predictLocalDependencies.js"
 import { localRoot } from "../../../localRoot.js"
+import { resolveModuleSpecifier } from "@jsenv/module-resolution"
 
 const testRoot = `src/predict-local-dependencies/test/circular`
 const ressource = `${testRoot}/circular.js`
 
 ;(async () => {
   const root = localRoot
+  const file = `${root}/${ressource}`
 
   const actual = await predictLocalDependencies({
-    root,
-    ressource,
+    file,
+    resolve: ({ specifier, specifierFile }) =>
+      resolveModuleSpecifier({ root, moduleSpecifier: specifier, file: specifierFile }),
   })
+
+  const dependencyFile = `${root}/${testRoot}/dependency.js`
   const expected = {
-    [ressource]: [
+    [file]: [
       {
-        abstract: `${testRoot}/dependency.js`,
-        real: `${testRoot}/dependency.js`,
+        specifier: "./dependency.js",
+        specifierFile: file,
+        file: dependencyFile,
       },
     ],
-    [`${testRoot}/dependency.js`]: [
+    [dependencyFile]: [
       {
-        abstract: ressource,
-        real: ressource,
+        specifier: "./circular.js",
+        specifierFile: dependencyFile,
+        file,
       },
     ],
   }
