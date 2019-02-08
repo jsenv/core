@@ -2,12 +2,20 @@ import { transformAsync } from "@babel/core"
 import syntaxDynamicImport from "@babel/plugin-syntax-dynamic-import"
 import syntaxImportMeta from "@babel/plugin-syntax-import-meta"
 import { fileRead } from "@dmail/helper"
+import { createCancellationToken, createOperation } from "@dmail/cancellation"
 
-export const parseRawDependencies = async ({ root, ressource }) => {
+export const parseRawDependencies = async ({
+  cancellationToken = createCancellationToken(),
+  root,
+  ressource,
+}) => {
   const file = `${root}/${ressource}`
 
   // nice to have try/catch this to throw a better error than node native file not found
-  const code = await fileRead(file)
+  const code = await createOperation({
+    cancellationToken,
+    start: () => fileRead(file),
+  })
 
   const dependencies = []
 
@@ -30,7 +38,10 @@ export const parseRawDependencies = async ({ root, ressource }) => {
   }
 
   // const { ast } = await transformAsync(code, babelOptions)
-  await transformAsync(code, babelOptions)
+  await createOperation({
+    cancellationToken,
+    start: () => transformAsync(code, babelOptions),
+  })
 
   return dependencies
 }

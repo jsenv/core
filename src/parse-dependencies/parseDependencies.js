@@ -1,3 +1,4 @@
+import { createCancellationToken } from "@dmail/cancellation"
 import { resolveModuleSpecifier, resolveAPossibleNodeModuleFile } from "@jsenv/module-resolution"
 import { parseRawDependencies } from "./parseRawDependencies.js"
 
@@ -7,10 +8,8 @@ import { parseRawDependencies } from "./parseRawDependencies.js"
 // check systemjs import map, especially scopes
 // https://github.com/systemjs/systemjs/blob/master/docs/import-maps.md#scopes
 
-// still to be tested: a structure with node_modules
-// where abstract/real would differ
-
 export const parseDependencies = async ({
+  cancellationToken = createCancellationToken(),
   root,
   ressource,
   resolve = resolveModuleSpecifier,
@@ -30,6 +29,7 @@ export const parseDependencies = async ({
     ressourceSeen[ressource] = true
 
     const dependencies = await parseRessourceDependencies({
+      cancellationToken,
       root,
       ressource,
       resolve,
@@ -43,12 +43,13 @@ export const parseDependencies = async ({
 }
 
 const parseRessourceDependencies = async ({
+  cancellationToken,
   root,
   ressource,
   resolve,
   dynamicDependenciesCallback,
 }) => {
-  const rawDependencies = await parseRawDependencies({ root, ressource })
+  const rawDependencies = await parseRawDependencies({ cancellationToken, root, ressource })
 
   const dynamicDependencies = rawDependencies.filter(
     ({ type }) =>
