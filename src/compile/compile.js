@@ -1,50 +1,4 @@
-/*
-
-let's do this:
-
-a script capable to parse an entry file
-and return the static, dynamic import
-dynamic import with static path will be compiled
-dynamic import with dynamic content will not be compiled and emit a warning
-static import will be compiled
-
-all compiled file static/dynamic import will be recursively parsed and compiled
-
-during that process import will be resolved
-if any import is resolved somewhere unexpected it will be registered
-in a pathmapping
-
-this function must be generic enough to be passed to
-cover function and be used to detect al the file you want to cover
-just by passing an entry file
-and dynamic/static import would be parsed to be considered as file to cover
--> we will start with this function
-
-check if something exists
-otherwise can find inspiration in eslint-plugin-import
-
-advantages:
-no need to specifiy what file you use inside package.json or whatever
-
-inconvenient:
-won't work for cjs, umd or whatever module format
-
-
-next version:
-you can provide a list of ressources (that would match your dynamic import with dynamic path)
-that will be compiled as well
-
-how to determine dynamic value inside dynamic import :
-https://github.com/benmosher/eslint-plugin-import/blob/bdc05aa1d029b70125ae415e5ca5dca22250858b/src/rules/no-dynamic-require.js#L11
-
-to parse import and stuff this is gold:
-
-https://github.com/dmail/task-and-more/blob/629d37f30ea0ab7573b14816012dba3ddc78bfdf/packages/compile/parse/parse.js#L1
-
-but we'll need a more powerful version to support dynamic import
-and recursive parsing but we got the main stuff
-*/
-
+import { createOperation } from "@dmail/cancellation"
 import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
 import { fileCopy, fileWrite } from "@dmail/helper"
 import { startCompileServer } from "../server-compile/index.js"
@@ -53,16 +7,17 @@ import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
+import { parseDependencies } from "../parse-dependencies/parseDependencies.js"
 
 export const compile = async ({
-  main = "index.js",
   localRoot,
   compileInto,
   pluginMap = {},
   compileGroupCount = 1,
   pluginCompatMap,
   platformUsageMap,
-  compilePatternMapping,
+  main = "index.js",
+  compilePatternMapping = {},
 }) =>
   catchAsyncFunctionCancellation(async () => {
     if (typeof localRoot !== "string")
@@ -73,19 +28,20 @@ export const compile = async ({
 
     const cancellationToken = createProcessInterruptionCancellationToken()
 
-    const metaMap = patternGroupToMetaMap({
-      compile: compilePatternMapping,
-    })
-
-    const [ressourceAndCompileMetaArray, server] = await Promise.all([
-      forEachRessourceMatching({
+    const [
+      mainCompilationInstruction,
+      additionalCompilationInstruction,
+      server,
+    ] = await Promise.all([
+      getMainCompilationInstruction({
         cancellationToken,
         localRoot,
-        metaMap,
-        predicate: (meta) => meta.compile,
-        callback: (ressource, meta) => {
-          return { ressource, compileMeta: meta.compile }
-        },
+        main,
+      }),
+      getAdditionalCompilationInstruction({
+        cancellationToken,
+        localRoot,
+        compilePatternMapping,
       }),
       startCompileServer({
         localRoot,
@@ -97,21 +53,28 @@ export const compile = async ({
       }),
     ])
 
+    // compilationInstruction must also (mostly for main)
+    // return a list of mapping in case
+    // the file can be found somewhere else
+    const compilationInstruction = {
+      ...mainCompilationInstruction,
+      ...additionalCompilationInstruction,
+    }
     const remoteRoot = server.origin
     const compileMapResponse = await fetchUsingHttp(`${remoteRoot}/${compileInto}/compileMap.json`)
     const compileMap = JSON.parse(compileMapResponse.body)
 
     await Promise.all(
-      Object.keys(compileMap).map((compileId) => {
-        return compileGroup({
+      Object.keys(compileMap).map((compileId) =>
+        compileGroup({
           cancellationToken,
-          ressourceAndCompileMetaArray,
-          remoteRoot,
           localRoot,
           compileInto,
           compileId,
-        })
-      }),
+          remoteRoot,
+          compilationInstruction,
+        }),
+      ),
     )
 
     server.stop()
@@ -125,28 +88,74 @@ export const compile = async ({
     )
   })
 
+const getMainCompilationInstruction = async ({ cancellationToken, localRoot, main }) => {
+  const mainDependencies = await parseDependencies({
+    cancellationToken,
+    root: localRoot,
+    ressource: main,
+  })
+
+  const compilationInstruction = {}
+
+  Object.keys(mainDependencies).forEach((ressource) => {
+    compilationInstruction[ressource] = "compile"
+  })
+
+  return compilationInstruction
+}
+
+const getAdditionalCompilationInstruction = async ({
+  cancellationToken,
+  localRoot,
+  compilePatternMapping,
+}) => {
+  const metaMap = patternGroupToMetaMap({
+    compile: compilePatternMapping,
+  })
+
+  const compilationInstruction = {}
+
+  await forEachRessourceMatching({
+    cancellationToken,
+    localRoot,
+    metaMap,
+    predicate: (meta) => meta.compile,
+    callback: (ressource, meta) => {
+      compilationInstruction[ressource] = meta.compile
+    },
+  })
+
+  return compilationInstruction
+}
+
 const compileGroup = async ({
-  // cancellationToken,
-  ressourceAndCompileMetaArray,
-  remoteRoot,
+  cancellationToken,
   localRoot,
   compileInto,
   compileId,
+  remoteRoot,
+  compilationInstruction,
 }) => {
   await Promise.all(
-    ressourceAndCompileMetaArray.map(async ({ ressource, compileMeta }) => {
-      if (compileMeta === "copy") {
-        await fileCopy(
-          `${localRoot}/${ressource}`,
-          `${localRoot}/${compileInto}/${compileId}/${ressource}`,
-        )
-        return
+    Object.keys(compilationInstruction).map(async (ressource) => {
+      const compileInstruction = compilationInstruction[ressource]
+
+      if (compileInstruction === "copy") {
+        await createOperation({
+          cancellationToken,
+          start: () =>
+            fileCopy(
+              `${localRoot}/${ressource}`,
+              `${localRoot}/${compileInto}/${compileId}/${ressource}`,
+            ),
+        })
+      }
+      if (compileInstruction === "compile") {
+        const remoteURL = `${remoteRoot}/${compileInto}/${compileId}/${ressource}`
+        await fetchUsingHttp(remoteURL, { cancellationToken })
       }
 
-      const remoteURL = `${remoteRoot}/${compileInto}/${compileId}/${ressource}`
-      // if fetch using http supported cancellation we could give it cancellationToken
-      await fetchUsingHttp(remoteURL)
-      return
+      throw new Error(`unexpected compileInstruction, got ${compileInstruction}`)
     }),
   )
 }
