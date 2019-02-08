@@ -1,5 +1,5 @@
 import { assert } from "@dmail/assert"
-import { predictLocalDependencies } from "../../predictLocalDependencies.js"
+import { scanReferencedRessourcesInFile } from "../../scanReferencedRessourcesInFile.js"
 import { localRoot } from "../../../localRoot.js"
 
 const ressource = "src/predict-local-dependencies/test/self/self.js"
@@ -8,7 +8,7 @@ const ressource = "src/predict-local-dependencies/test/self/self.js"
   const root = localRoot
 
   try {
-    await predictLocalDependencies({
+    await scanReferencedRessourcesInFile({
       root,
       ressource,
     })

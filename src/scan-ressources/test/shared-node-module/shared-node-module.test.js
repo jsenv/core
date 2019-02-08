@@ -1,5 +1,5 @@
 import { assert } from "@dmail/assert"
-import { predictLocalDependencies } from "../../predictLocalDependencies.js"
+import { scanReferencedRessourcesInFile } from "../../scanReferencedRessourcesInFile.js"
 import { localRoot } from "../../../localRoot.js"
 
 const testRoot = "src/predict-local-dependencies/test/shared-node-module"
@@ -8,7 +8,7 @@ const ressource = `${testRoot}/shared-node-module.js`
 ;(async () => {
   const root = localRoot
 
-  const actual = await predictLocalDependencies({
+  const actual = await scanReferencedRessourcesInFile({
     root,
     ressource,
   })
