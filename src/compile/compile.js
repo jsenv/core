@@ -6,7 +6,7 @@ import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
-import { computeCompilationInstruction } from "./computeCompileInstruction.js"
+import { computeCompileInstruction } from "./computeCompileInstruction.js"
 
 export const compile = async ({
   localRoot,
@@ -27,8 +27,8 @@ export const compile = async ({
 
     const cancellationToken = createProcessInterruptionCancellationToken()
 
-    const [compilationInstruction, server] = await Promise.all([
-      computeCompilationInstruction({
+    const [compileInstruction, server] = await Promise.all([
+      computeCompileInstruction({
         cancellationToken,
         localRoot,
         main,
@@ -56,7 +56,7 @@ export const compile = async ({
           compileInto,
           compileId,
           remoteRoot,
-          ressourceMap: compilationInstruction.ressources,
+          ressourceMap: compileInstruction.ressources,
         }),
       ),
     )

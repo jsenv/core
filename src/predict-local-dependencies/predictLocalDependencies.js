@@ -18,6 +18,7 @@ export const predictLocalDependencies = async ({
   cancellationToken = createCancellationToken(),
   file,
   resolve,
+  resolveReal,
   unpredictableDependenciesCallback = (dynamicDependencies, file) => {
     // we warn and we don't throw because
     // user must know these won't be compiled
@@ -41,12 +42,13 @@ export const predictLocalDependencies = async ({
         cancellationToken,
         file,
         resolve,
+        resolveReal,
         unpredictableDependenciesCallback: (unpredictableDependencies) =>
           unpredictableDependenciesCallback(unpredictableDependencies, file),
       })
     } catch (e) {
       if (e && e.code === "ENOENT") {
-        if (parent) {
+        if (parentFile) {
           throw createDependencyFileNotFoundError({
             file,
             specifier: parentSpecifier,
@@ -75,6 +77,7 @@ const predictRessourceDependencies = async ({
   cancellationToken,
   file,
   resolve,
+  resolveReal,
   unpredictableDependenciesCallback,
 }) => {
   const dependencies = await parseDependencies({ cancellationToken, file })
@@ -94,7 +97,11 @@ const predictRessourceDependencies = async ({
 
   const localPredictableDependencies = []
 
-  const foundLocalPredictableDependencyFile = ({ specifier, specifierFile }, dependencyFile) => {
+  const foundLocalPredictableDependencyFile = (
+    { specifier, specifierFile },
+    dependencyFile,
+    dependencyAbstractFile,
+  ) => {
     if (dependencyFile === file) {
       throw createSelfDependencyError({
         file,
@@ -105,14 +112,17 @@ const predictRessourceDependencies = async ({
       specifier,
       specifierFile,
       file: dependencyFile,
+      abstractFile: dependencyAbstractFile,
     })
   }
 
   predictableDependencies.forEach((dependency) => {
-    const dependencyFile = resolve(dependency)
+    const dependencyAbstractFile = resolve(dependency)
 
-    if (fileIsRemote(dependencyFile)) return
-    foundLocalPredictableDependencyFile(dependency, dependencyFile)
+    if (fileIsRemote(dependencyAbstractFile)) return
+
+    const dependencyFile = resolveReal(dependencyAbstractFile)
+    foundLocalPredictableDependencyFile(dependency, dependencyFile, dependencyAbstractFile)
   })
 
   return localPredictableDependencies

@@ -1,25 +1,25 @@
-import { resolveModuleSpecifier } from "@jsenv/module-resolution"
+import { createCancellationToken } from "@dmail/cancellation"
+import { resolveModuleSpecifier, resolveAPossibleNodeModuleFile } from "@jsenv/module-resolution"
 import { predictLocalDependencies } from "../predict-local-dependencies/predictLocalDependencies.js"
 import { ensureDependenciesInsideRoot } from "./ensureDependenciesInsideRoot.js"
-import { resolveDependenciesRealFile } from "./resolveDependenciesRealFile.js"
 import { dependenciesToMapping } from "./dependenciesToMapping.js"
 import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
 
-export const computeCompilationInstruction = async ({
-  cancellationToken,
-  localRoot,
-  main,
-  compilePatternMapping,
+export const computeCompileInstruction = async ({
+  cancellationToken = createCancellationToken(),
+  root,
+  main = "index.js",
+  compilePatternMapping = {},
 }) => {
   const [mainCompilationInstruction, additionalCompilationInstruction] = await Promise.all([
     getMainCompilationInstruction({
       cancellationToken,
-      localRoot,
+      root,
       main,
     }),
     getAdditionalCompilationInstruction({
       cancellationToken,
-      localRoot,
+      root,
       compilePatternMapping,
     }),
   ])
@@ -31,21 +31,21 @@ export const computeCompilationInstruction = async ({
   return compilationInstruction
 }
 
-const getMainCompilationInstruction = async ({ cancellationToken, localRoot, main }) => {
+const getMainCompilationInstruction = async ({ cancellationToken, root, main }) => {
   const mainDependencies = await predictLocalDependencies({
     cancellationToken,
-    file: `${localRoot}/${main}`,
+    file: `${root}/${main}`,
     resolve: ({ specifier, specifierFile }) =>
-      resolveModuleSpecifier({ root: localRoot, moduleSpecifier: specifier, file: specifierFile }),
+      resolveModuleSpecifier({ root, moduleSpecifier: specifier, file: specifierFile }),
+    resolveReal: (file) => resolveAPossibleNodeModuleFile(file) || file,
   })
 
-  const dependencies = resolveDependenciesRealFile(mainDependencies)
-  ensureDependenciesInsideRoot({ root: localRoot, ressource: main, dependencies })
+  ensureDependenciesInsideRoot({ root, ressource: main, dependencies: mainDependencies })
 
-  const mapping = dependenciesToMapping({ localRoot, main, dependencies })
+  const mapping = dependenciesToMapping({ root, main, dependencies: mainDependencies })
   const ressources = {}
-  Object.keys(dependencies).forEach((dependency) => {
-    ressources[fileToRessource({ localRoot, file: dependency.realFile })] = { type: "compile" }
+  Object.keys(mainDependencies).forEach((dependency) => {
+    ressources[fileToRessource({ root, file: dependency.realFile })] = { type: "compile" }
   })
 
   return {
@@ -54,13 +54,13 @@ const getMainCompilationInstruction = async ({ cancellationToken, localRoot, mai
   }
 }
 
-const fileToRessource = ({ localRoot, file }) => {
-  return file.slice(localRoot.length + 1)
+const fileToRessource = ({ root, file }) => {
+  return file.slice(root.length + 1)
 }
 
 const getAdditionalCompilationInstruction = async ({
   cancellationToken,
-  localRoot,
+  root,
   compilePatternMapping,
 }) => {
   const metaMap = patternGroupToMetaMap({
@@ -72,7 +72,7 @@ const getAdditionalCompilationInstruction = async ({
 
   await forEachRessourceMatching({
     cancellationToken,
-    localRoot,
+    localRoot: root,
     metaMap,
     predicate: (meta) => meta.compile,
     callback: (ressource, meta) => {
