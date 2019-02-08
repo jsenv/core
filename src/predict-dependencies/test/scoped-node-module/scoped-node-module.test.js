@@ -1,19 +1,19 @@
 import { assert } from "@dmail/assert"
-import { parseDependencies } from "../../parseDependencies.js"
+import { predictDependencies } from "../../predictDependencies.js"
 import { localRoot } from "../../../localRoot.js"
 
-const testRoot = "src/parse-dependencies/test/scoped-node-module"
+const testRoot = "src/predict-dependencies/test/scoped-node-module"
 const ressource = `${testRoot}/scoped-node-module.js`
 
 ;(async () => {
   const root = localRoot
 
-  const actual = await parseDependencies({
+  const actual = await predictDependencies({
     root,
     ressource,
   })
   const expected = {
-    [`${testRoot}/scoped-node-module.js`]: [
+    [ressource]: [
       {
         abstract: `${testRoot}/node_modules/use-scoped-foo/use-scoped-foo.js`,
         real: `${testRoot}/node_modules/use-scoped-foo/use-scoped-foo.js`,

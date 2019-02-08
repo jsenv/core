@@ -1,6 +1,6 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { resolveModuleSpecifier, resolveAPossibleNodeModuleFile } from "@jsenv/module-resolution"
-import { parseRawDependencies } from "./parseRawDependencies.js"
+import { parseDependencies } from "./parseDependencies.js"
 
 // abstract/real pairs
 // will be used to create a mapping for file that are not where
@@ -9,7 +9,7 @@ import { parseRawDependencies } from "./parseRawDependencies.js"
 // https://github.com/systemjs/systemjs/blob/master/docs/import-maps.md#scopes
 
 /*
-parseDependencies returns something like
+predictDependencies returns something like
 
 {
   'main.js': [{
@@ -20,12 +20,12 @@ parseDependencies returns something like
 }
 */
 
-export const parseDependencies = async ({
+export const predictDependencies = async ({
   cancellationToken = createCancellationToken(),
   root,
   ressource,
   resolve = resolveModuleSpecifier,
-  dynamicDependenciesCallback = (dynamicDependencies, ressource) => {
+  unpredictableDependenciesCallback = (dynamicDependencies, ressource) => {
     // we warn and we don't throw because
     // user must know these won't be compiled
     // but this is not critical.
@@ -43,12 +43,12 @@ export const parseDependencies = async ({
     let dependencies
 
     try {
-      dependencies = await parseRessourceDependencies({
+      dependencies = await predictRessourceDependencies({
         cancellationToken,
         root,
         ressource,
         resolve,
-        dynamicDependenciesCallback,
+        unpredictableDependenciesCallback,
       })
     } catch (e) {
       if (e && e.code === "ENOENT") {
@@ -73,29 +73,29 @@ export const parseDependencies = async ({
   return ressourceMap
 }
 
-const parseRessourceDependencies = async ({
+const predictRessourceDependencies = async ({
   cancellationToken,
   root,
   ressource,
   resolve,
-  dynamicDependenciesCallback,
+  unpredictableDependenciesCallback,
 }) => {
-  const rawDependencies = await parseRawDependencies({ cancellationToken, root, ressource })
+  const dependencies = await parseDependencies({ cancellationToken, root, ressource })
 
-  const dynamicDependencies = rawDependencies.filter(
+  const unpredictableDependencies = dependencies.filter(
     ({ type }) =>
       type === "static-unpredictable" ||
       type === "dynamic-specifier" ||
       type === "dynamic-file" ||
       type === "dynamic-specifier-and-dynamic-file",
   )
-  if (dynamicDependencies.length) {
-    dynamicDependenciesCallback(dynamicDependencies, ressource)
+  if (unpredictableDependencies.length) {
+    unpredictableDependenciesCallback(unpredictableDependencies, ressource)
   }
 
-  const staticDependencies = rawDependencies.filter(({ type }) => type === "static")
+  const predictableDependencies = dependencies.filter(({ type }) => type === "static")
 
-  const dependencies = staticDependencies.map(({ specifier, file }) => {
+  return predictableDependencies.map(({ specifier, file }) => {
     const dependencyFile = resolve({
       root,
       moduleSpecifier: specifier,
@@ -151,8 +151,6 @@ const parseRessourceDependencies = async ({
       real,
     }
   })
-
-  return dependencies
 }
 
 const fileToRessource = ({ root, file }) => {

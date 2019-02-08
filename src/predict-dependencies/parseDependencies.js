@@ -4,7 +4,7 @@ import syntaxImportMeta from "@babel/plugin-syntax-import-meta"
 import { fileRead } from "@dmail/helper"
 import { createCancellationToken, createOperation } from "@dmail/cancellation"
 
-export const parseRawDependencies = async ({
+export const parseDependencies = async ({
   cancellationToken = createCancellationToken(),
   root,
   ressource,

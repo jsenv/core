@@ -1,14 +1,14 @@
 import { assert } from "@dmail/assert"
-import { parseDependencies } from "../../parseDependencies.js"
+import { predictDependencies } from "../../predictDependencies.js"
 import { localRoot } from "../../../localRoot.js"
 
-const ressource = "src/parse-dependencies/test/self/self.js"
+const ressource = "src/predict-dependencies/test/self/self.js"
 
 ;(async () => {
   const root = localRoot
 
   try {
-    await parseDependencies({
+    await predictDependencies({
       root,
       ressource,
     })

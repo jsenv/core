@@ -7,7 +7,7 @@ import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
-import { parseDependencies } from "../parse-dependencies/parseDependencies.js"
+import { predictDependencies } from "../predict-dependencies/predictDependencies.js"
 
 export const compile = async ({
   localRoot,
@@ -89,7 +89,7 @@ export const compile = async ({
   })
 
 const getMainCompilationInstruction = async ({ cancellationToken, localRoot, main }) => {
-  const mainDependencies = await parseDependencies({
+  const mainDependencies = await predictDependencies({
     cancellationToken,
     root: localRoot,
     ressource: main,
