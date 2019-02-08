@@ -56,7 +56,7 @@ export const compile = async ({
           compileInto,
           compileId,
           remoteRoot,
-          compileMap: compilationInstruction.files,
+          ressourceMap: compilationInstruction.ressources,
         }),
       ),
     )
@@ -78,12 +78,11 @@ const compileGroup = async ({
   compileInto,
   compileId,
   remoteRoot,
-  compileMap,
+  ressourceMap,
 }) => {
   await Promise.all(
-    Object.keys(compileMap).map(async (file) => {
-      const compileData = compileMap[file]
-      const ressource = fileToRessource({ localRoot, file })
+    Object.keys(ressourceMap).map(async (ressource) => {
+      const compileData = ressourceMap[ressource]
 
       if (compileData.type === "copy") {
         await createOperation({
@@ -103,10 +102,6 @@ const compileGroup = async ({
       throw new Error(`unexpected compileData.type, got ${compileData.type}`)
     }),
   )
-}
-
-const fileToRessource = ({ localRoot, file }) => {
-  return file.slice(localRoot.length + 1)
 }
 
 // importCompiledFile is not exported by @dmail/dev-server

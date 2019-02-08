@@ -41,15 +41,19 @@ const getMainCompilationInstruction = async ({ cancellationToken, localRoot, mai
   ensureDependenciesInsideRoot({ root: localRoot, ressource: main, dependencies })
 
   const mapping = dependenciesToMapping({ localRoot, main, dependencies })
-  const files = {}
+  const ressources = {}
   Object.keys(dependencies).forEach((dependency) => {
-    files[dependency.realFile] = { type: "compile" }
+    ressources[fileToRessource({ localRoot, file: dependency.realFile })] = { type: "compile" }
   })
 
   return {
     mapping,
-    files,
+    ressources,
   }
+}
+
+const fileToRessource = ({ localRoot, file }) => {
+  return file.slice(localRoot.length + 1)
 }
 
 const getAdditionalCompilationInstruction = async ({
@@ -62,7 +66,7 @@ const getAdditionalCompilationInstruction = async ({
   })
 
   const mapping = {}
-  const files = {}
+  const ressources = {}
 
   await forEachRessourceMatching({
     cancellationToken,
@@ -70,9 +74,9 @@ const getAdditionalCompilationInstruction = async ({
     metaMap,
     predicate: (meta) => meta.compile,
     callback: (ressource, meta) => {
-      files[`${localRoot}/${ressource}`] = meta.compile
+      ressources[ressource] = meta.compile
     },
   })
 
-  return { mapping, files }
+  return { mapping, ressources }
 }
