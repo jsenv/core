@@ -10,7 +10,15 @@ const root = `${localRoot}/${testRoot}`
     root,
   })
   const expected = {
-    mapping: {},
+    mapping: {
+      // according to https://github.com/systemjs/systemjs/blob/master/docs/import-maps.md#scopes
+      // this is so that bar import inside foo can be found
+      scopes: {
+        "/node_modules/foo/foo.js": {
+          "/node_modules/bar/bar.js": "/node_modules/bar/bar.js",
+        },
+      },
+    },
     files: {
       "index.js": { type: "compile" },
       "node_modules/bar/bar.js": { type: "compile" },
