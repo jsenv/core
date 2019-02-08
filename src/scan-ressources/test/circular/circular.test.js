@@ -20,6 +20,8 @@ const ressource = `${testRoot}/circular.js`
   const dependencyFile = `${root}/${testRoot}/dependency.js`
   const expected = {
     [file]: {
+      referencedByFile: undefined,
+      referencedBySpecifier: undefined,
       unpredictable: [],
       remotePredictable: [],
       localPredictable: [
@@ -32,6 +34,8 @@ const ressource = `${testRoot}/circular.js`
       ],
     },
     [dependencyFile]: {
+      referencedByFile: file,
+      referencedBySpecifier: "./dependency.js",
       unpredictable: [],
       remotePredictable: [],
       localPredictable: [

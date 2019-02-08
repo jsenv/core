@@ -1,8 +1,6 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { resolveModuleSpecifier, resolveAPossibleNodeModuleFile } from "@jsenv/module-resolution"
 import { scanReferencedRessourcesInFile } from "../scan-ressources/scanReferencedRessourcesInFile.js"
-import { ensureRessourcesInsideRoot } from "./ensureRessourcesInsideRoot.js"
-import { localRessourcesToMapping } from "./localRessourcesToMapping.js"
 import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
 
 export const computeCompileInstruction = async ({
@@ -24,11 +22,10 @@ export const computeCompileInstruction = async ({
     }),
   ])
 
-  const compilationInstruction = {
-    ...mainCompilationInstruction,
-    ...additionalCompilationInstruction,
+  return {
+    mapping: { ...mainCompilationInstruction.mapping, ...additionalCompilationInstruction.mapping },
+    files: { ...mainCompilationInstruction.files, ...additionalCompilationInstruction.files },
   }
-  return compilationInstruction
 }
 
 const getMainCompilationInstruction = async ({ cancellationToken, root, main }) => {
@@ -40,28 +37,48 @@ const getMainCompilationInstruction = async ({ cancellationToken, root, main }) 
     resolveReal: (file) => resolveAPossibleNodeModuleFile(file) || file,
   })
 
-  const mainUnpredictableRessources = mainReferencedRessources.unpredictable
-  if (mainUnpredictableRessources.length) {
-    // should warn about these unpredictable ressources
-  }
-
-  const mainLocalRessources = mainReferencedRessources.localPredictable
-
-  ensureRessourcesInsideRoot({
-    root,
-    ressources: mainLocalRessources,
-  })
-
-  const mapping = localRessourcesToMapping({ root, ressources: mainLocalRessources })
+  const mapping = {}
   const files = {}
-  Object.keys(mainLocalRessources).forEach((file) => {
+  Object.keys(mainReferencedRessources).forEach((file) => {
+    const { unpredictable, referencedByFile, referencedBySpecifier } = mainReferencedRessources[
+      file
+    ]
+
+    if (fileIsOutsideRoot({ file, root })) {
+      throw createFileOutsideRootError({
+        root,
+        file: fileToRelativeFile({ root, file }),
+        referencedByFile,
+        referencedBySpecifier,
+      })
+    }
+
+    if (unpredictable.length) {
+      // should warn about these unpredictable ressources
+    }
+
     files[fileToRelativeFile({ root, file })] = { type: "compile" }
+
+    // should handle mapping too
+    // https://github.com/systemjs/systemjs/blob/master/docs/import-maps.md#scopes
   })
 
   return {
     mapping,
     files,
   }
+}
+
+const fileIsOutsideRoot = ({ root, file }) => {
+  return !file.startsWith(`${root}`)
+}
+
+const createFileOutsideRootError = ({ root, file, referencedByFile, referencedBySpecifier }) => {
+  return new Error(`unexpected file outside root.
+root: ${root}
+file: ${file}
+referencedByFile: ${referencedByFile}
+referencedBySpecifier: ${referencedBySpecifier}`)
 }
 
 const fileToRelativeFile = ({ root, file }) => {

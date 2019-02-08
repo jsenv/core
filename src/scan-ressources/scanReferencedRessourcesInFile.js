@@ -61,9 +61,18 @@ export const scanReferencedRessourcesInFile = async ({
       }
       throw e
     }
-    referencedRessources[file] = categorizedRessources
+
+    const { unpredictable, remotePredictable, localPredictable } = categorizedRessources
+
+    referencedRessources[file] = {
+      unpredictable,
+      remotePredictable,
+      localPredictable,
+      referencedByFile,
+      referencedBySpecifier,
+    }
     await Promise.all(
-      categorizedRessources.localPredictable.map((dependency) =>
+      localPredictable.map((dependency) =>
         scanFile(dependency.realFile, {
           referencedByFile: file,
           referencedBySpecifier: dependency.specifier,

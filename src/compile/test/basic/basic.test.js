@@ -9,7 +9,13 @@ const root = `${localRoot}/${testRoot}`
   const actual = await computeCompileInstruction({
     root,
   })
-  debugger
-  const expected = {}
+  const expected = {
+    mapping: {},
+    files: {
+      "index.js": { type: "compile" },
+      "node_modules/bar/bar.js": { type: "compile" },
+      "node_modules/foo/foo.js": { type: "compile" },
+    },
+  }
   assert({ actual, expected })
 })()
