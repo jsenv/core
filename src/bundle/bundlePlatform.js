@@ -7,8 +7,8 @@ export const bundlePlatform = async ({
   bundleInto,
   entryPointObject,
   compileMap,
-  platformType,
   compileParamMap,
+  rollupOptions,
 }) => {
   await Promise.all(
     Object.keys(compileMap).map((compileId) => {
@@ -17,8 +17,8 @@ export const bundlePlatform = async ({
         bundleInto,
         entryPointObject,
         compileId,
-        platformType,
         compileIdPluginMap: compileParamMap[compileId].pluginMap,
+        rollupOptions,
       })
     }),
   )
@@ -29,8 +29,8 @@ const bundlePlatformGroup = async ({
   bundleInto,
   entryPointObject,
   compileId,
-  platformType,
   compileIdPluginMap,
+  rollupOptions,
 }) => {
   const resolveId = (importee, importer) => {
     if (!importer) return importee
@@ -81,13 +81,12 @@ const bundlePlatformGroup = async ({
   const result = await rollupBundle.write({
     // https://rollupjs.org/guide/en#output-dir
     dir: `${localRoot}/${bundleInto}/${compileId}`,
-    // https://rollupjs.org/guide/en#output-format
-    format: platformType === "browser" ? "iife" : "cjs",
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources: true,
     // https://rollupjs.org/guide/en#experimentaltoplevelawait
     experimentalTopLevelAwait: true,
+    ...rollupOptions,
   })
 
   return result

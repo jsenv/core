@@ -43,14 +43,20 @@ export const bundleNode = async ({
 
   const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
 
+  const rollupOptions = {
+    format: "cjs",
+    sourcemapExcludeSources: false,
+  }
+
   await Promise.all([
     bundlePlatform({
       localRoot,
       bundleInto,
       entryPointObject,
       compileMap,
-      platformType: "node",
       compileParamMap,
+      // https://rollupjs.org/guide/en#output-format
+      rollupOptions,
     }),
     bundleMain({
       localRoot,
@@ -58,6 +64,7 @@ export const bundleNode = async ({
       entryPointObject,
       compileMap,
       compileParamMap,
+      rollupOptions,
     }),
   ])
 }

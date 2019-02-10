@@ -50,14 +50,21 @@ export const bundleBrowser = async ({
 
   const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
 
+  const rollupOptions = {
+    format: "iife",
+    name: globalName,
+    sourcemapExcludeSources: true,
+  }
+
   await Promise.all([
     bundlePlatform({
       localRoot,
       bundleInto,
       entryPointObject,
+      globalName,
       compileMap,
       compileParamMap,
-      platformType: "browser",
+      rollupOptions,
     }),
     bundleMain({
       localRoot,
@@ -66,6 +73,7 @@ export const bundleBrowser = async ({
       globalName,
       compileMap,
       compileParamMap,
+      rollupOptions,
     }),
   ])
 }

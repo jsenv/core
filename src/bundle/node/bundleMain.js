@@ -9,6 +9,7 @@ export const bundleMain = async ({
   entryPointObject,
   compileMap,
   compileParamMap,
+  rollupOptions,
 }) => {
   return Promise.all(
     Object.keys(entryPointObject).map((entryPoint) => {
@@ -18,6 +19,7 @@ export const bundleMain = async ({
         entryPoint: `${entryPoint}.js`,
         compileMap,
         compileParamMap,
+        rollupOptions,
       })
     }),
   )
@@ -29,6 +31,7 @@ const bundleEntryPoint = async ({
   entryPoint,
   compileMap,
   compileParamMap,
+  rollupOptions,
 }) => {
   const bundleNodeOptionsModuleSource = `
   export const compileMap = ${uneval(compileMap)}
@@ -71,7 +74,7 @@ const bundleEntryPoint = async ({
   const rollupBundle = await rollup(options)
   await rollupBundle.write({
     file: `${localRoot}/${bundleInto}/${entryPoint}`,
-    format: "cjs",
     sourcemap: true,
+    ...rollupOptions,
   })
 }

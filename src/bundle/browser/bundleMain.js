@@ -10,6 +10,7 @@ export const bundleMain = async ({
   globalName,
   compileMap,
   compileParamMap,
+  rollupOptions,
 }) => {
   if (typeof globalName !== "string")
     throw new TypeError(`bundleMain expect globalName to be a string, got ${globalName}`)
@@ -23,6 +24,7 @@ export const bundleMain = async ({
         globalName,
         compileMap,
         compileParamMap,
+        rollupOptions,
       })
     }),
   )
@@ -32,9 +34,9 @@ const bundleEntryPoint = async ({
   localRoot,
   bundleInto,
   entryPoint,
-  globalName,
   compileMap,
   compileParamMap,
+  rollupOptions,
 }) => {
   const bundleBrowserOptionsModuleSource = `
   export const compileMap = ${uneval(compileMap)}
@@ -77,9 +79,7 @@ const bundleEntryPoint = async ({
   const rollupBundle = await rollup(options)
   await rollupBundle.write({
     file: `${localRoot}/${bundleInto}/${entryPoint}`,
-    format: "iife",
-    name: globalName,
     sourcemap: true,
-    sourcemapExcludeSources: true,
+    ...rollupOptions,
   })
 }
