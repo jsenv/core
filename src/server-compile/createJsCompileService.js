@@ -21,21 +21,19 @@ export const createJsCompileService = async ({
   watch,
   watchPredicate,
 }) => {
-  if (!pluginMap) throw new Error(`pluginMap is required`)
-
-  const compileMap = envDescriptionToCompileMap({
-    pluginNames: Object.keys(pluginMap),
+  const compileMap = generateCompileMap({
+    pluginMap,
     platformUsageMap,
     pluginCompatMap,
     compileGroupCount,
   })
 
-  const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
-
   await fileWriteFromString(
     `${localRoot}/${compileInto}/compileMap.json`,
     JSON.stringify(compileMap, null, "  "),
   )
+
+  const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
 
   const jsCompileService = jsCompileToService(jsCompile, {
     cancellationToken,
@@ -54,7 +52,25 @@ export const createJsCompileService = async ({
   return jsCompileService
 }
 
-const compileMapToCompileParamMap = (compileMap, pluginMap = {}) => {
+export const generateCompileMap = ({
+  pluginMap,
+  platformUsageMap,
+  pluginCompatMap,
+  compileGroupCount,
+}) => {
+  if (!pluginMap) throw new Error(`pluginMap is required`)
+
+  const compileMap = envDescriptionToCompileMap({
+    pluginNames: Object.keys(pluginMap),
+    platformUsageMap,
+    pluginCompatMap,
+    compileGroupCount,
+  })
+
+  return compileMap
+}
+
+export const compileMapToCompileParamMap = (compileMap, pluginMap = {}) => {
   return objectMapValue(compileMap, ({ pluginNames }) => {
     const pluginMapSubset = {}
     pluginNames.forEach((pluginName) => {
