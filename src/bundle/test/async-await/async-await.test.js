@@ -1,8 +1,8 @@
-import { bundle } from "../../bundle.js"
+import { bundleNode } from "../../node/bundleNode.js/index.js"
 import { localRoot } from "../../../localRoot.js"
 import blockScoping from "@babel/plugin-transform-block-scoping"
 
-bundle({
+bundleNode({
   root: localRoot,
   into: "bundle",
   pluginMap: {

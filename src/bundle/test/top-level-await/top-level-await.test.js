@@ -1,8 +1,8 @@
 import blockScoping from "@babel/plugin-transform-block-scoping"
-import { bundle } from "../../bundle.js"
+import { bundleNode } from "../../node/bundleNode.js/index.js"
 import { localRoot } from "../../../localRoot.js"
 
-bundle({
+bundleNode({
   root: localRoot,
   into: "bundle",
   entryPointObject: {
