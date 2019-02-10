@@ -7,15 +7,20 @@ export const bundleMain = async ({
   localRoot,
   bundleInto,
   entryPointObject,
+  globalName,
   compileMap,
   compileParamMap,
 }) => {
+  if (typeof globalName !== "string")
+    throw new TypeError(`bundleMain expect globalName to be a string, got ${globalName}`)
+
   return Promise.all(
     Object.keys(entryPointObject).map((entryPoint) => {
       return bundleEntryPoint({
         localRoot,
         bundleInto,
         entryPoint: `${entryPoint}.js`,
+        globalName,
         compileMap,
         compileParamMap,
       })
@@ -27,25 +32,26 @@ const bundleEntryPoint = async ({
   localRoot,
   bundleInto,
   entryPoint,
+  globalName,
   compileMap,
   compileParamMap,
 }) => {
-  const bundleNodeOptionsModuleSource = `
+  const bundleBrowserOptionsModuleSource = `
   export const compileMap = ${uneval(compileMap)}
   export const entryPoint = ${uneval(entryPoint)}`
 
   const plugin = {
-    name: "jsenv-genereate-node-main",
+    name: "jsenv-generate-browser-main",
     resolveId: (id) => {
-      if (id === "bundle-node-options") {
-        return "bundle-node-options"
+      if (id === "bundle-browser-options") {
+        return "bundle-browser-options"
       }
       return null
     },
 
     load: async (id) => {
-      if (id === "bundle-node-options") {
-        return bundleNodeOptionsModuleSource
+      if (id === "bundle-browser-options") {
+        return bundleBrowserOptionsModuleSource
       }
       return null
     },
@@ -64,14 +70,16 @@ const bundleEntryPoint = async ({
   }
 
   const options = {
-    input: `${selfRoot}/src/bundle/node/entry-template.js`,
+    input: `${selfRoot}/src/bundle/browser/entry-template.js`,
     plugins: [plugin],
   }
 
   const rollupBundle = await rollup(options)
   await rollupBundle.write({
     file: `${localRoot}/${bundleInto}/${entryPoint}`,
-    format: "cjs",
+    format: "iife",
+    name: globalName,
     sourcemap: true,
+    sourcemapExcludeSources: true,
   })
 }

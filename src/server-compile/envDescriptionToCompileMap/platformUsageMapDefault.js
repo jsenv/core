@@ -1,11 +1,13 @@
+// https://www.statista.com/statistics/268299/most-popular-internet-browsers/
+
 export const platformUsageMapDefault = {
   chrome: {
-    "51": 0.6,
-    "44": 0.01,
+    "71": 0.3,
+    "69": 0.19,
+    "0": 0.01, // it means oldest version of chrome will get a score of 0.01
   },
   firefox: {
-    "53": 0.6,
-    "0": 0.1, // it means oldest version of firefox will get a score of 0.1
+    "61": 0.3,
   },
   edge: {
     "12": 0.1,
