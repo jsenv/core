@@ -2,38 +2,35 @@ import { rollup } from "rollup"
 import createRollupBabelPlugin from "rollup-plugin-babel"
 import { resolveImport } from "@jsenv/module-resolution"
 
-export const bundlePlatform = async ({
+export const generateEntryFoldersForPlatform = async ({
   localRoot,
   bundleInto,
   entryPointObject,
   compileMap,
   compileParamMap,
   rollupOptions,
-  experimentalExplicitNodeModule,
 }) => {
   await Promise.all(
     Object.keys(compileMap).map((compileId) => {
-      return bundlePlatformGroup({
+      return generateEntryFolderForPlatform({
         localRoot,
         bundleInto,
         entryPointObject,
         compileId,
         compileIdPluginMap: compileParamMap[compileId].pluginMap,
         rollupOptions,
-        experimentalExplicitNodeModule,
       })
     }),
   )
 }
 
-const bundlePlatformGroup = async ({
+const generateEntryFolderForPlatform = async ({
   localRoot,
   bundleInto,
   entryPointObject,
   compileId,
   compileIdPluginMap,
   rollupOptions,
-  experimentalExplicitNodeModule,
 }) => {
   const resolveId = (importee, importer) => {
     if (!importer) return importee
@@ -42,8 +39,14 @@ const bundlePlatformGroup = async ({
       moduleSpecifier: importee,
       file: importer,
       root: localRoot,
-      useNodeModuleResolutionOnRelative: !experimentalExplicitNodeModule,
-      useNodeModuleResolutionInsideDedicatedFolder: experimentalExplicitNodeModule,
+      useNodeModuleResolutionOnRelative: false,
+      // once you have decided to bundle using jsenv
+      // you must stick to jsenv module resolution
+      // so that jsenv knows where to find the source file to bundle
+      // because it will bundle node_modules as well
+      // (to get proper babel plugin applied)
+      // but won't rely on stuff like having a module inside your package.json
+      useNodeModuleResolutionInsideDedicatedFolder: true,
     })
   }
 

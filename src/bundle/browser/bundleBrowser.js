@@ -1,6 +1,6 @@
 import { generateCompileMap, compileMapToCompileParamMap } from "../../server-compile/index.js"
-import { bundlePlatform } from "../bundlePlatform.js"
-import { generateBrowserEntryFiles } from "./generateBrowserEntryFiles.js"
+import { generateEntryFoldersForPlatform } from "../generateEntryFoldersForPlatform.js"
+import { generateBalancerFilesForBrowser } from "./generateBalancerFilesForBrowser.js"
 
 export const bundleBrowser = async ({
   // todo: add cancellationToken stuff
@@ -33,7 +33,6 @@ export const bundleBrowser = async ({
     other: 0.001,
   },
   compileGroupCount = 2,
-  experimentalExplicitNodeModule = false,
 }) => {
   if (!root) throw new TypeError(`bundle expect root, got ${root}`)
   if (!bundleInto) throw new TypeError(`bundle expect bundleInto, got ${bundleInto}`)
@@ -58,7 +57,7 @@ export const bundleBrowser = async ({
   }
 
   await Promise.all([
-    bundlePlatform({
+    generateEntryFoldersForPlatform({
       localRoot,
       bundleInto,
       entryPointObject,
@@ -66,9 +65,8 @@ export const bundleBrowser = async ({
       compileMap,
       compileParamMap,
       rollupOptions,
-      experimentalExplicitNodeModule,
     }),
-    generateBrowserEntryFiles({
+    generateBalancerFilesForBrowser({
       localRoot,
       bundleInto,
       entryPointObject,
@@ -76,7 +74,6 @@ export const bundleBrowser = async ({
       compileMap,
       compileParamMap,
       rollupOptions,
-      experimentalExplicitNodeModule,
     }),
   ])
 }

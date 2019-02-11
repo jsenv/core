@@ -1,6 +1,6 @@
 import { generateCompileMap, compileMapToCompileParamMap } from "../../server-compile/index.js"
-import { bundlePlatform } from "../bundlePlatform.js"
-import { generateNodeEntryFiles } from "./generateNodeEntryFiles.js"
+import { generateEntryFoldersForPlatform } from "../generateEntryFoldersForPlatform.js"
+import { generateBalancerFilesForNode } from "./generateBalancerFilesForNode.js"
 
 // todo: try with debugger to ensure sourcemap ok
 // todo: try code splitting
@@ -26,7 +26,6 @@ export const bundleNode = async ({
     11: 0.25,
   },
   compileGroupCount = 2,
-  experimentalExplicitNodeModule = false,
 }) => {
   if (!root) throw new TypeError(`bundle expect root, got ${root}`)
   if (!bundleInto) throw new TypeError(`bundle expect bundleInto, got ${bundleInto}`)
@@ -50,7 +49,7 @@ export const bundleNode = async ({
   }
 
   await Promise.all([
-    bundlePlatform({
+    generateEntryFoldersForPlatform({
       localRoot,
       bundleInto,
       entryPointObject,
@@ -58,16 +57,14 @@ export const bundleNode = async ({
       compileParamMap,
       // https://rollupjs.org/guide/en#output-format
       rollupOptions,
-      experimentalExplicitNodeModule,
     }),
-    generateNodeEntryFiles({
+    generateBalancerFilesForNode({
       localRoot,
       bundleInto,
       entryPointObject,
       compileMap,
       compileParamMap,
       rollupOptions,
-      experimentalExplicitNodeModule,
     }),
   ])
 }

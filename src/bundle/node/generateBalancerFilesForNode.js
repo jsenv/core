@@ -3,7 +3,7 @@ import createRollupBabelPlugin from "rollup-plugin-babel"
 import { uneval } from "@dmail/uneval"
 import { localRoot as selfRoot } from "../../localRoot.js"
 
-export const generateNodeEntryFiles = async ({
+export const generateBalancerFilesForNode = async ({
   localRoot,
   bundleInto,
   entryPointObject,
@@ -15,7 +15,7 @@ export const generateNodeEntryFiles = async ({
     Object.keys(entryPointObject).map((entryName) => {
       const entryFile = `${entryName}.js`
 
-      return generateEntryFile({
+      return generateBalancerFileForNode({
         localRoot,
         bundleInto,
         entryFile,
@@ -27,7 +27,7 @@ export const generateNodeEntryFiles = async ({
   )
 }
 
-const generateEntryFile = async ({
+const generateBalancerFileForNode = async ({
   localRoot,
   bundleInto,
   entryFile,
@@ -41,10 +41,13 @@ const generateEntryFile = async ({
 
   const rollupJsenvPlugin = {
     name: "jsenv-generate-node-main",
-    resolveId: (id) => {
-      if (id === "bundle-node-options") {
+    resolveId: (importee) => {
+      if (importee === "bundle-node-options") {
         return "bundle-node-options"
       }
+      // this repository was not written with
+      // the explicitNodeMoudle approach so it cannot
+      // jsenv module resolution
       return null
     },
 
@@ -65,7 +68,7 @@ const generateEntryFile = async ({
   })
 
   const options = {
-    input: `${selfRoot}/src/bundle/node/entry-template.js`,
+    input: `${selfRoot}/src/bundle/node/node-balancer-template.js`,
     plugins: [rollupJsenvPlugin, rollupBabelPlugin],
   }
 

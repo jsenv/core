@@ -5,7 +5,7 @@ import { uneval } from "@dmail/uneval"
 import { fileWrite } from "@dmail/helper"
 import { localRoot as selfRoot } from "../../localRoot.js"
 
-export const generateBrowserEntryFiles = async ({
+export const generateBalancerFilesForBrowser = async ({
   localRoot,
   bundleInto,
   entryPointObject,
@@ -23,7 +23,7 @@ export const generateBrowserEntryFiles = async ({
       const entryFile = `${entryName}.js`
 
       return Promise.all([
-        generateEntryFile({
+        generateBalancerFileForBrowser({
           localRoot,
           bundleInto,
           entryFile,
@@ -33,7 +33,7 @@ export const generateBrowserEntryFiles = async ({
           rollupOptions,
           experimentalExplicitNodeModule,
         }),
-        generateEntryPage({
+        generateBalancerPage({
           localRoot,
           bundleInto,
           entryName,
@@ -45,7 +45,7 @@ export const generateBrowserEntryFiles = async ({
   )
 }
 
-const generateEntryFile = async ({
+const generateBalancerFileForBrowser = async ({
   localRoot,
   bundleInto,
   entryFile,
@@ -106,7 +106,7 @@ export const entryFile = ${uneval(entryFile)}
   })
 }
 
-const generateEntryPage = async ({ localRoot, bundleInto, entryFile, entryName }) => {
+const generateBalancerPage = async ({ localRoot, bundleInto, entryFile, entryName }) => {
   const html = `<!doctype html>
 
 <head>
