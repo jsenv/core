@@ -75,6 +75,7 @@ const generateBalancerFileForNode = async ({
   })
 
   return writeRollupBundle({
+    cancellationToken,
     inputOptions: {
       input: `${selfRoot}/src/bundle/node/node-balancer-template.js`,
       plugins: [rollupJsenvPlugin, rollupBabelPlugin],
