@@ -1,6 +1,6 @@
 import { generateCompileMap, compileMapToCompileParamMap } from "../../server-compile/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
-import { bundleMain } from "./bundleMain.js"
+import { generateNodeEntryFiles } from "./generateNodeEntryFiles.js"
 
 // todo: try with debugger to ensure sourcemap ok
 // todo: try code splitting
@@ -60,7 +60,7 @@ export const bundleNode = async ({
       rollupOptions,
       experimentalExplicitNodeModule,
     }),
-    bundleMain({
+    generateNodeEntryFiles({
       localRoot,
       bundleInto,
       entryPointObject,

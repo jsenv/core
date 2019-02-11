@@ -1,10 +1,10 @@
 // eslint-disable-next-line import/no-unresolved
-import { compileMap, entryPointFile } from "bundle-browser-options"
+import { compileMap, entryFile } from "bundle-browser-options"
 import { detect } from "../../platform/browser/browserDetect/index.js"
 import { browserToCompileId } from "../../platform/browser/browserToCompileId.js"
 
 const compileId = browserToCompileId(detect(), compileMap)
-const scriptSrc = `./${compileId}/${entryPointFile}`
+const scriptSrc = `./${compileId}/${entryFile}`
 
 // document.write force browser to wait for the script to load
 // before doing anything else.

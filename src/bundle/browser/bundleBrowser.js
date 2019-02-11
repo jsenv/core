@@ -1,6 +1,6 @@
 import { generateCompileMap, compileMapToCompileParamMap } from "../../server-compile/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
-import { bundleMain } from "./bundleMain.js"
+import { generateBrowserEntryFiles } from "./generateBrowserEntryFiles.js"
 
 export const bundleBrowser = async ({
   // todo: add cancellationToken stuff
@@ -68,7 +68,7 @@ export const bundleBrowser = async ({
       rollupOptions,
       experimentalExplicitNodeModule,
     }),
-    bundleMain({
+    generateBrowserEntryFiles({
       localRoot,
       bundleInto,
       entryPointObject,

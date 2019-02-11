@@ -5,7 +5,7 @@ import { uneval } from "@dmail/uneval"
 import { fileWrite } from "@dmail/helper"
 import { localRoot as selfRoot } from "../../localRoot.js"
 
-export const bundleMain = async ({
+export const generateBrowserEntryFiles = async ({
   localRoot,
   bundleInto,
   entryPointObject,
@@ -19,25 +19,25 @@ export const bundleMain = async ({
     throw new TypeError(`bundleMain expect globalName to be a string, got ${globalName}`)
 
   return Promise.all(
-    Object.keys(entryPointObject).map((entryPointName) => {
-      const entryPointFile = `${entryPointName}.js`
+    Object.keys(entryPointObject).map((entryName) => {
+      const entryFile = `${entryName}.js`
 
       return Promise.all([
-        genereateEntryPointFile({
+        generateEntryFile({
           localRoot,
           bundleInto,
-          entryPointFile,
+          entryFile,
           globalName,
           compileMap,
           compileParamMap,
           rollupOptions,
           experimentalExplicitNodeModule,
         }),
-        generateEntryPointPage({
+        generateEntryPage({
           localRoot,
           bundleInto,
-          entryPointName,
-          entryPointFile,
+          entryName,
+          entryFile,
           globalName,
         }),
       ])
@@ -45,10 +45,10 @@ export const bundleMain = async ({
   )
 }
 
-const genereateEntryPointFile = async ({
+const generateEntryFile = async ({
   localRoot,
   bundleInto,
-  entryPointFile,
+  entryFile,
   compileMap,
   compileParamMap,
   rollupOptions,
@@ -56,7 +56,7 @@ const genereateEntryPointFile = async ({
 }) => {
   const bundleBrowserOptionsModuleSource = `
 export const compileMap = ${uneval(compileMap)}
-export const entryPointFile = ${uneval(entryPointFile)}
+export const entryFile = ${uneval(entryFile)}
 `
 
   const rollupJsenvPlugin = {
@@ -100,18 +100,13 @@ export const entryPointFile = ${uneval(entryPointFile)}
 
   const rollupBundle = await rollup(options)
   await rollupBundle.write({
-    file: `${localRoot}/${bundleInto}/${entryPointFile}`,
+    file: `${localRoot}/${bundleInto}/${entryFile}`,
     sourcemap: true,
     ...rollupOptions,
   })
 }
 
-const generateEntryPointPage = async ({
-  localRoot,
-  bundleInto,
-  entryPointFile,
-  entryPointName,
-}) => {
+const generateEntryPage = async ({ localRoot, bundleInto, entryFile, entryName }) => {
   const html = `<!doctype html>
 
 <head>
@@ -121,10 +116,10 @@ const generateEntryPointPage = async ({
 
 <body>
   <main></main>
-  <script src="./${entryPointFile}"></script>
+  <script src="./${entryFile}"></script>
 </body>
 
 </html>`
 
-  await fileWrite(`${localRoot}/${bundleInto}/${entryPointName}.html`, html)
+  await fileWrite(`${localRoot}/${bundleInto}/${entryName}.html`, html)
 }

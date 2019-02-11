@@ -3,7 +3,7 @@ import createRollupBabelPlugin from "rollup-plugin-babel"
 import { uneval } from "@dmail/uneval"
 import { localRoot as selfRoot } from "../../localRoot.js"
 
-export const bundleMain = async ({
+export const generateNodeEntryFiles = async ({
   localRoot,
   bundleInto,
   entryPointObject,
@@ -12,13 +12,13 @@ export const bundleMain = async ({
   rollupOptions,
 }) => {
   return Promise.all(
-    Object.keys(entryPointObject).map((entryPointName) => {
-      const entryPointFile = `${entryPointName}.js`
+    Object.keys(entryPointObject).map((entryName) => {
+      const entryFile = `${entryName}.js`
 
-      return bundleEntryPoint({
+      return generateEntryFile({
         localRoot,
         bundleInto,
-        entryPointFile,
+        entryFile,
         compileMap,
         compileParamMap,
         rollupOptions,
@@ -27,17 +27,17 @@ export const bundleMain = async ({
   )
 }
 
-const bundleEntryPoint = async ({
+const generateEntryFile = async ({
   localRoot,
   bundleInto,
-  entryPointFile,
+  entryFile,
   compileMap,
   compileParamMap,
   rollupOptions,
 }) => {
   const bundleNodeOptionsModuleSource = `
   export const compileMap = ${uneval(compileMap)}
-  export const entryPointFile = ${uneval(entryPointFile)}`
+  export const entryFile = ${uneval(entryFile)}`
 
   const rollupJsenvPlugin = {
     name: "jsenv-generate-node-main",
@@ -71,7 +71,7 @@ const bundleEntryPoint = async ({
 
   const rollupBundle = await rollup(options)
   await rollupBundle.write({
-    file: `${localRoot}/${bundleInto}/${entryPointFile}`,
+    file: `${localRoot}/${bundleInto}/${entryFile}`,
     sourcemap: true,
     ...rollupOptions,
   })
