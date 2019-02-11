@@ -1,6 +1,6 @@
 import { rollup } from "rollup"
+import createRollupBabelPlugin from "rollup-plugin-babel"
 import { uneval } from "@dmail/uneval"
-import { transpiler } from "../../jsCompile/transpiler.js"
 import { localRoot as selfRoot } from "../../localRoot.js"
 
 export const bundleMain = async ({
@@ -12,11 +12,13 @@ export const bundleMain = async ({
   rollupOptions,
 }) => {
   return Promise.all(
-    Object.keys(entryPointObject).map((entryPoint) => {
+    Object.keys(entryPointObject).map((entryPointName) => {
+      const entryPointFile = `${entryPointName}.js`
+
       return bundleEntryPoint({
         localRoot,
         bundleInto,
-        entryPoint: `${entryPoint}.js`,
+        entryPointFile,
         compileMap,
         compileParamMap,
         rollupOptions,
@@ -28,17 +30,17 @@ export const bundleMain = async ({
 const bundleEntryPoint = async ({
   localRoot,
   bundleInto,
-  entryPoint,
+  entryPointFile,
   compileMap,
   compileParamMap,
   rollupOptions,
 }) => {
   const bundleNodeOptionsModuleSource = `
   export const compileMap = ${uneval(compileMap)}
-  export const entryPoint = ${uneval(entryPoint)}`
+  export const entryPointFile = ${uneval(entryPointFile)}`
 
-  const plugin = {
-    name: "jsenv-genereate-node-main",
+  const rollupJsenvPlugin = {
+    name: "jsenv-generate-node-main",
     resolveId: (id) => {
       if (id === "bundle-node-options") {
         return "bundle-node-options"
@@ -52,28 +54,24 @@ const bundleEntryPoint = async ({
       }
       return null
     },
-
-    transform: async (moduleCode, id) => {
-      const { map, code } = await transpiler({
-        localRoot,
-        file: id,
-        fileAbsolute: id,
-        input: moduleCode,
-        pluginMap: compileParamMap.otherwise.pluginMap, // compile using the wors possible scenario
-        remap: true,
-      })
-      return { code, map }
-    },
   }
+
+  const compilePluginMap = compileParamMap.otherwise.pluginMap
+  const babelPlugins = Object.keys(compilePluginMap).map((name) => compilePluginMap[name])
+
+  const rollupBabelPlugin = createRollupBabelPlugin({
+    babelrc: false,
+    plugins: babelPlugins,
+  })
 
   const options = {
     input: `${selfRoot}/src/bundle/node/entry-template.js`,
-    plugins: [plugin],
+    plugins: [rollupJsenvPlugin, rollupBabelPlugin],
   }
 
   const rollupBundle = await rollup(options)
   await rollupBundle.write({
-    file: `${localRoot}/${bundleInto}/${entryPoint}`,
+    file: `${localRoot}/${bundleInto}/${entryPointFile}`,
     sourcemap: true,
     ...rollupOptions,
   })

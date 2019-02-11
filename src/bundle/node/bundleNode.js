@@ -26,6 +26,7 @@ export const bundleNode = async ({
     11: 0.25,
   },
   compileGroupCount = 2,
+  experimentalExplicitNodeModule = false,
 }) => {
   if (!root) throw new TypeError(`bundle expect root, got ${root}`)
   if (!bundleInto) throw new TypeError(`bundle expect bundleInto, got ${bundleInto}`)
@@ -57,6 +58,7 @@ export const bundleNode = async ({
       compileParamMap,
       // https://rollupjs.org/guide/en#output-format
       rollupOptions,
+      experimentalExplicitNodeModule,
     }),
     bundleMain({
       localRoot,
@@ -65,6 +67,7 @@ export const bundleNode = async ({
       compileMap,
       compileParamMap,
       rollupOptions,
+      experimentalExplicitNodeModule,
     }),
   ])
 }
