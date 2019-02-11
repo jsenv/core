@@ -1,6 +1,6 @@
 import { rollup } from "rollup"
+import createRollupBabelPlugin from "rollup-plugin-babel"
 import { resolveImport } from "@jsenv/module-resolution"
-import { transpiler } from "../jsCompile/transpiler.js"
 
 export const bundlePlatform = async ({
   localRoot,
@@ -9,6 +9,7 @@ export const bundlePlatform = async ({
   compileMap,
   compileParamMap,
   rollupOptions,
+  experimentalExplicitNodeModule,
 }) => {
   await Promise.all(
     Object.keys(compileMap).map((compileId) => {
@@ -19,6 +20,7 @@ export const bundlePlatform = async ({
         compileId,
         compileIdPluginMap: compileParamMap[compileId].pluginMap,
         rollupOptions,
+        experimentalExplicitNodeModule,
       })
     }),
   )
@@ -31,6 +33,7 @@ const bundlePlatformGroup = async ({
   compileId,
   compileIdPluginMap,
   rollupOptions,
+  experimentalExplicitNodeModule,
 }) => {
   const resolveId = (importee, importer) => {
     if (!importer) return importee
@@ -39,40 +42,27 @@ const bundlePlatformGroup = async ({
       moduleSpecifier: importee,
       file: importer,
       root: localRoot,
-      useNodeModuleResolutionInsideDedicatedFolder: true,
+      useNodeModuleResolutionOnRelative: !experimentalExplicitNodeModule,
+      useNodeModuleResolutionInsideDedicatedFolder: experimentalExplicitNodeModule,
     })
   }
 
-  // https://rollupjs.org/guide/en#transform
-  const transform = async (moduleCode, id) => {
-    const { map, code } = await transpiler({
-      localRoot,
-      file: id,
-      fileAbsolute: id,
-      input: moduleCode,
-      pluginMap: compileIdPluginMap,
-      remap: true,
-    })
-
-    return { code, map }
-  }
-
-  const jsenvRollupPlugin = {
+  const rollupJsenvPlugin = {
     name: "jsenv",
-    // not really required, we can read from filesystem
-    // load: async (id) => {
-    // },
     resolveId,
-    // https://rollupjs.org/guide/en#resolvedynamicimport
-    // resolveDynamicImport: () => {
-    //   return false
-    // },
-    transform,
   }
+
+  const babelPlugins = Object.keys(compileIdPluginMap).map((name) => compileIdPluginMap[name])
+
+  // https://github.com/rollup/rollup-plugin-babel
+  const rollupBabelPlugin = createRollupBabelPlugin({
+    babelrc: false,
+    plugins: babelPlugins,
+  })
 
   const options = {
     input: entryPointObject,
-    plugins: [jsenvRollupPlugin],
+    plugins: [rollupJsenvPlugin, rollupBabelPlugin],
     // skip rollup warnings
     onwarn: () => {},
   }

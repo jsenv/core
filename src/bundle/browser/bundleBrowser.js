@@ -33,6 +33,7 @@ export const bundleBrowser = async ({
     other: 0.001,
   },
   compileGroupCount = 2,
+  experimentalExplicitNodeModule = false,
 }) => {
   if (!root) throw new TypeError(`bundle expect root, got ${root}`)
   if (!bundleInto) throw new TypeError(`bundle expect bundleInto, got ${bundleInto}`)
@@ -65,6 +66,7 @@ export const bundleBrowser = async ({
       compileMap,
       compileParamMap,
       rollupOptions,
+      experimentalExplicitNodeModule,
     }),
     bundleMain({
       localRoot,
@@ -74,6 +76,7 @@ export const bundleBrowser = async ({
       compileMap,
       compileParamMap,
       rollupOptions,
+      experimentalExplicitNodeModule,
     }),
   ])
 }
