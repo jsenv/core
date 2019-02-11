@@ -1,16 +1,32 @@
 import https from "https"
 import fetch from "node-fetch"
 import AbortController from "abort-controller"
+import { createOperation } from "@dmail/cancellation"
 
 // ideally we should only pass this to the fetch below
 https.globalAgent.options.rejectUnauthorized = false
 
 export const fetchUsingHttp = async (url, { cancellationToken, ...rest } = {}) => {
-  const response = await fetch(url, {
-    ...(cancellationToken ? { signal: cancellationTokenToAbortSignal(cancellationToken) } : {}),
-    ...rest,
-  })
+  if (cancellationToken) {
+    // a cancelled fetch will never resolve, while cancellation api
+    // expect to get a rejected promise.
+    // createOperation ensure we'll get a promise rejected with a cancelError
+    const response = await createOperation({
+      cancellationToken,
+      start: () =>
+        fetch(url, {
+          signal: cancellationTokenToAbortSignal(cancellationToken),
+          ...rest,
+        }),
+    })
+    return normalizeResponse(response)
+  }
 
+  const response = await fetch(url, rest)
+  return normalizeResponse(response)
+}
+
+const normalizeResponse = async (response) => {
   const text = await response.text()
   return {
     url: response.url,
