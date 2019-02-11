@@ -3,6 +3,7 @@ import createRollupBabelPlugin from "rollup-plugin-babel"
 import { uneval } from "@dmail/uneval"
 import { fileWrite } from "@dmail/helper"
 import { localRoot as selfRoot } from "../../localRoot.js"
+import { compileMapToBabelPlugins } from "../compileMapToBabelPlugins.js"
 
 export const generateBalancerFilesForBrowser = async ({
   localRoot,
@@ -74,9 +75,9 @@ export const entryFile = ${uneval(entryFile)}
     },
   }
 
-  // compile using the wors possible scenario
+  // compile using the worst possible scenario
   const compilePluginMap = compileParamMap.otherwise.pluginMap
-  const babelPlugins = Object.keys(compilePluginMap).map((name) => compilePluginMap[name])
+  const babelPlugins = compileMapToBabelPlugins(compilePluginMap)
 
   const rollupBabelPlugin = createRollupBabelPlugin({
     babelrc: false,

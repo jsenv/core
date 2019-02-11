@@ -2,6 +2,7 @@ import { rollup } from "rollup"
 import createRollupBabelPlugin from "rollup-plugin-babel"
 import { uneval } from "@dmail/uneval"
 import { localRoot as selfRoot } from "../../localRoot.js"
+import { compileMapToBabelPlugins } from "../compileMapToBabelPlugins.js"
 
 export const generateBalancerFilesForNode = async ({
   localRoot,
@@ -60,11 +61,14 @@ const generateBalancerFileForNode = async ({
   }
 
   const compilePluginMap = compileParamMap.otherwise.pluginMap
-  const babelPlugins = Object.keys(compilePluginMap).map((name) => compilePluginMap[name])
+  const babelPlugins = compileMapToBabelPlugins(compilePluginMap)
 
   const rollupBabelPlugin = createRollupBabelPlugin({
     babelrc: false,
     plugins: babelPlugins,
+    parserOpts: {
+      allowAwaitOutsideFunction: true,
+    },
   })
 
   const options = {

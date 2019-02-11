@@ -1,6 +1,7 @@
 import { rollup } from "rollup"
 import createRollupBabelPlugin from "rollup-plugin-babel"
 import { resolveImport } from "@jsenv/module-resolution"
+import { compileMapToBabelPlugins } from "./compileMapToBabelPlugins.js"
 
 export const generateEntryFoldersForPlatform = async ({
   localRoot,
@@ -55,12 +56,15 @@ const generateEntryFolderForPlatform = async ({
     resolveId,
   }
 
-  const babelPlugins = Object.keys(compileIdPluginMap).map((name) => compileIdPluginMap[name])
+  const babelPlugins = compileMapToBabelPlugins(compileIdPluginMap)
 
   // https://github.com/rollup/rollup-plugin-babel
   const rollupBabelPlugin = createRollupBabelPlugin({
     babelrc: false,
     plugins: babelPlugins,
+    parserOpts: {
+      allowAwaitOutsideFunction: true,
+    },
   })
 
   const options = {
@@ -68,6 +72,7 @@ const generateEntryFolderForPlatform = async ({
     plugins: [rollupJsenvPlugin, rollupBabelPlugin],
     // skip rollup warnings
     onwarn: () => {},
+    experimentalTopLevelAwait: true,
   }
   const rollupBundle = await rollup(options)
 
