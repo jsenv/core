@@ -1,5 +1,4 @@
 import { resolve } from "url"
-import { rollup } from "rollup"
 import createRollupBabelPlugin from "rollup-plugin-babel"
 import { resolveImport } from "@jsenv/module-resolution"
 import { fileRead } from "@dmail/helper"
@@ -7,6 +6,7 @@ import { createCancellationToken, createOperation } from "@dmail/cancellation"
 import { compileMapToBabelPlugins } from "./compileMapToBabelPlugins.js"
 import { fetchUsingHttp } from "../platform/node/fetchUsingHttp.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
+import { writeRollupBundle } from "./writeRollupBundle.js"
 
 export const generateEntryFoldersForPlatform = async ({
   cancellationToken = createCancellationToken(),
@@ -125,32 +125,24 @@ const generateEntryFolderForPlatform = async ({
     },
   })
 
-  const options = {
-    input: entryPointObject,
-    plugins: [rollupJsenvPlugin, rollupBabelPlugin],
-    // skip rollup warnings
-    onwarn: () => {},
-    experimentalTopLevelAwait: true,
-  }
-  const rollupBundle = await createOperation({
+  return writeRollupBundle({
     cancellationToken,
-    start: () => rollup(options),
+    inputOptions: {
+      input: entryPointObject,
+      plugins: [rollupJsenvPlugin, rollupBabelPlugin],
+      // skip rollup warnings
+      onwarn: () => {},
+      experimentalTopLevelAwait: true,
+    },
+    outputOptions: {
+      // https://rollupjs.org/guide/en#output-dir
+      dir: `${localRoot}/${bundleInto}/${compileId}`,
+      // https://rollupjs.org/guide/en#output-sourcemap
+      sourcemap: true,
+      sourcemapExcludeSources: true,
+      // https://rollupjs.org/guide/en#experimentaltoplevelawait
+      experimentalTopLevelAwait: true,
+      ...rollupOptions,
+    },
   })
-
-  const result = await createOperation({
-    cancellationToken,
-    start: () =>
-      rollupBundle.write({
-        // https://rollupjs.org/guide/en#output-dir
-        dir: `${localRoot}/${bundleInto}/${compileId}`,
-        // https://rollupjs.org/guide/en#output-sourcemap
-        sourcemap: true,
-        sourcemapExcludeSources: true,
-        // https://rollupjs.org/guide/en#experimentaltoplevelawait
-        experimentalTopLevelAwait: true,
-        ...rollupOptions,
-      }),
-  })
-
-  return result
 }

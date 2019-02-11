@@ -1,4 +1,3 @@
-import { rollup } from "rollup"
 import createBabelRollupPlugin from "rollup-plugin-babel"
 import createNodeResolveRollupPlugin from "rollup-plugin-node-resolve"
 import { uneval } from "@dmail/uneval"
@@ -6,6 +5,7 @@ import { createOperation } from "@dmail/cancellation"
 import { fileWrite } from "@dmail/helper"
 import { localRoot as selfRoot } from "../../localRoot.js"
 import { compileMapToBabelPlugins } from "../compileMapToBabelPlugins.js"
+import { writeRollupBundle } from "../writeRollupBundle.js"
 
 export const generateBalancerFilesForBrowser = async ({
   cancellationToken,
@@ -90,23 +90,17 @@ export const entryFile = ${uneval(entryFile)}
     plugins: babelPlugins,
   })
 
-  const options = {
-    input: `${selfRoot}/src/bundle/browser/browser-balancer-template.js`,
-    plugins: [jsenvRollupPlugin, nodeResolveRollupPlugin, babelRollupPlugin],
-  }
-
-  const rollupBundle = await createOperation({
+  return writeRollupBundle({
     cancellationToken,
-    start: () => rollup(options),
-  })
-  await createOperation({
-    cancellationToken,
-    start: () =>
-      rollupBundle.write({
-        file: `${localRoot}/${bundleInto}/${entryFile}`,
-        sourcemap: true,
-        ...rollupOptions,
-      }),
+    inputOptions: {
+      input: `${selfRoot}/src/bundle/browser/browser-balancer-template.js`,
+      plugins: [jsenvRollupPlugin, nodeResolveRollupPlugin, babelRollupPlugin],
+    },
+    outputOptions: {
+      file: `${localRoot}/${bundleInto}/${entryFile}`,
+      sourcemap: true,
+      ...rollupOptions,
+    },
   })
 }
 
