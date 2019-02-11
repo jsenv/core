@@ -1,5 +1,4 @@
 import { assert } from "@dmail/assert"
-import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../../localRoot.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
@@ -7,9 +6,7 @@ import { launchNode } from "../../launchNode.js"
 
 const file = `src/launchNode/test/syntax-error/syntax-error.js`
 const compileInto = "build"
-const pluginMap = pluginOptionMapToPluginMap({
-  "transform-modules-systemjs": {},
-})
+const pluginMap = {}
 
 ;(async () => {
   const { origin: remoteRoot } = await startCompileServer({

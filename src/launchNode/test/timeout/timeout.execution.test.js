@@ -1,6 +1,5 @@
 import { assert } from "@dmail/assert"
 import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
-import transformModulesSystemJs from "../../../babel-plugin-transform-modules-systemjs/index.js"
 import { localRoot } from "../../../localRoot.js"
 import { launchNode } from "../../launchNode.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
@@ -10,7 +9,6 @@ import { removeDebuggerLog } from "../removeDebuggerLog.js"
 const file = `src/launchNode/test/timeout/timeout.js`
 const compileInto = "build"
 const pluginMap = {
-  "transform-modules-systemjs": [transformModulesSystemJs, { topLevelAwait: true }],
   "transform-async-to-promises": [transformAsyncToPromises],
 }
 

@@ -1,5 +1,4 @@
 import { assert } from "@dmail/assert"
-import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { localRoot } from "../../../localRoot.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
@@ -7,10 +6,7 @@ import { launchChromium } from "../../launchChromium.js"
 
 const file = `src/launchNode/test/scoped-node-module/scoped-node-module.js`
 const compileInto = "build"
-const pluginMap = pluginOptionMapToPluginMap({
-  "transform-modules-systemjs": {},
-})
-
+const pluginMap = {}
 ;(async () => {
   const { origin: remoteRoot } = await startCompileServer({
     localRoot,

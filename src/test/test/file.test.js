@@ -1,4 +1,3 @@
-import transformModulesSystemJs from "../../babel-plugin-transform-modules-systemjs/index.js"
 import { localRoot } from "../../localRoot.js"
 import { launchNode } from "../../launchNode/index.js"
 import { launchChromium } from "../../launchChromium/index.js"
@@ -20,8 +19,6 @@ const testPatternMapping = {
 test({
   localRoot,
   compileInto: "build",
-  pluginMap: {
-    "transform-modules-systemjs": [transformModulesSystemJs, { topLevelAwait: true }],
-  },
+  pluginMap: {},
   testPatternMapping,
 })

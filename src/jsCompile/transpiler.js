@@ -3,6 +3,7 @@ import { transformAsync, transformFromAstAsync } from "@babel/core"
 import syntaxDynamicImport from "@babel/plugin-syntax-dynamic-import"
 import syntaxImportMeta from "@babel/plugin-syntax-import-meta"
 import { arrayWithoutValue } from "@dmail/helper"
+import transformModulesSystemJs from "../babel-plugin-transform-modules-systemjs/index.js"
 import { regexpEscape } from "../stringHelper.js"
 
 const transpile = async ({ ast, code, options }) => {
@@ -28,16 +29,8 @@ export const transpiler = async ({
   pluginMap,
   remap,
 }) => {
-  let transformModuleIntoSystemFormat
-  let allowTopLevelAwait
-  if ("transform-modules-systemjs" in pluginMap) {
-    transformModuleIntoSystemFormat = true
-    allowTopLevelAwait = (pluginMap["transform-modules-systemjs"][1] || { topLevelAwait: false })
-      .topLevelAwait
-  } else {
-    transformModuleIntoSystemFormat = false
-    allowTopLevelAwait = false
-  }
+  const transformModuleIntoSystemFormat = true
+  const allowTopLevelAwait = true
 
   let asyncPluginName
   if ("transform-async-to-promises" in pluginMap) {
@@ -74,6 +67,7 @@ export const transpiler = async ({
           syntaxImportMeta,
           syntaxDynamicImport,
           ...pluginNames.map((pluginName) => pluginMap[pluginName]),
+          transformModulesSystemJs,
         ],
       },
     })

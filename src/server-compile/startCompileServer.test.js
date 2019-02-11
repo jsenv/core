@@ -1,14 +1,11 @@
 import fetch from "node-fetch"
-import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { assert } from "@dmail/assert"
 import { localRoot } from "../localRoot.js"
 import { startCompileServer } from "./startCompileServer.js"
 
 const test = async () => {
   const compileInto = "build"
-  const pluginMap = pluginOptionMapToPluginMap({
-    "transform-modules-systemjs": {},
-  })
+  const pluginMap = {}
 
   const compileServer = await startCompileServer({
     localRoot,

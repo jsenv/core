@@ -1,5 +1,4 @@
 import { assert } from "@dmail/assert"
-import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { launchNode } from "../../../launchNode/index.js"
 import { launchChromium } from "../../../launchChromium/index.js"
 import { executePlan } from "../../../executePlan/index.js"
@@ -9,9 +8,7 @@ import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCov
 
 const filesToCover = []
 const compileInto = "build"
-const pluginMap = pluginOptionMapToPluginMap({
-  "transform-modules-systemjs": {},
-})
+const pluginMap = {}
 
 ;(async () => {
   const { origin: remoteRoot } = await startCompileServer({

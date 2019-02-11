@@ -1,13 +1,10 @@
-const { pluginOptionMapToPluginMap } = require("@dmail/project-structure-compile-babel")
 const {
   startBrowserExecutionServer,
 } = require("../dist/src/server-browser/startBrowserExecutionServer.js")
 const { localRoot } = require("../dist/src/localRoot.js")
 
 const compileInto = "build"
-const pluginMap = pluginOptionMapToPluginMap({
-  "transform-modules-systemjs": {},
-})
+const pluginMap = {}
 
 startBrowserExecutionServer({
   executablePatternMapping: {
