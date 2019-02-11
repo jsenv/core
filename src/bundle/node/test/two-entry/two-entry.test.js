@@ -5,7 +5,8 @@ import { bundleNode } from "../../bundleNode.js"
 bundleNode({
   root: localRoot,
   entryPointObject: {
-    main: "src/bundle/node/test/dynamic-import/dynamic-import.js",
+    a: "src/bundle/node/test/two-entry/a.js",
+    b: "src/bundle/node/test/two-entry/b.js",
   },
   pluginMap: {
     "transform-block-scoping": [blockScoping],
