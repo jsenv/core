@@ -1,5 +1,6 @@
 import { rollup } from "rollup"
-import createRollupBabelPlugin from "rollup-plugin-babel"
+import createBabelRollupPlugin from "rollup-plugin-babel"
+import createNodeResolveRollupPlugin from "rollup-plugin-node-resolve"
 import { uneval } from "@dmail/uneval"
 import { fileWrite } from "@dmail/helper"
 import { localRoot as selfRoot } from "../../localRoot.js"
@@ -14,9 +15,6 @@ export const generateBalancerFilesForBrowser = async ({
   compileParamMap,
   rollupOptions,
 }) => {
-  if (typeof globalName !== "string")
-    throw new TypeError(`bundleMain expect globalName to be a string, got ${globalName}`)
-
   return Promise.all(
     Object.keys(entryPointObject).map((entryName) => {
       const entryFile = `${entryName}.js`
@@ -56,14 +54,13 @@ export const compileMap = ${uneval(compileMap)}
 export const entryFile = ${uneval(entryFile)}
 `
 
-  const rollupJsenvPlugin = {
+  const jsenvRollupPlugin = {
     name: "jsenv-generate-browser-main",
     resolveId: (importee, importer) => {
       if (importee === "bundle-browser-options") {
         return "bundle-browser-options"
       }
       if (!importer) return importee
-      // todo: check with an http/https import how rollup behaves with them?
       return null
     },
 
@@ -75,18 +72,22 @@ export const entryFile = ${uneval(entryFile)}
     },
   }
 
+  const nodeResolveRollupPlugin = createNodeResolveRollupPlugin({
+    module: true,
+  })
+
   // compile using the worst possible scenario
   const compilePluginMap = compileParamMap.otherwise.pluginMap
   const babelPlugins = compileMapToBabelPlugins(compilePluginMap)
 
-  const rollupBabelPlugin = createRollupBabelPlugin({
+  const babelRollupPlugin = createBabelRollupPlugin({
     babelrc: false,
     plugins: babelPlugins,
   })
 
   const options = {
-    input: `${selfRoot}/src/bundle/browser/entry-template.js`,
-    plugins: [rollupJsenvPlugin, rollupBabelPlugin],
+    input: `${selfRoot}/src/bundle/browser/browser-balancer-template.js`,
+    plugins: [jsenvRollupPlugin, nodeResolveRollupPlugin, babelRollupPlugin],
   }
 
   const rollupBundle = await rollup(options)
