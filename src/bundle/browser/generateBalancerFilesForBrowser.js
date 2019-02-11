@@ -1,6 +1,5 @@
 import { rollup } from "rollup"
 import createRollupBabelPlugin from "rollup-plugin-babel"
-import { resolveImport } from "@jsenv/module-resolution"
 import { uneval } from "@dmail/uneval"
 import { fileWrite } from "@dmail/helper"
 import { localRoot as selfRoot } from "../../localRoot.js"
@@ -13,7 +12,6 @@ export const generateBalancerFilesForBrowser = async ({
   compileMap,
   compileParamMap,
   rollupOptions,
-  experimentalExplicitNodeModule,
 }) => {
   if (typeof globalName !== "string")
     throw new TypeError(`bundleMain expect globalName to be a string, got ${globalName}`)
@@ -31,7 +29,6 @@ export const generateBalancerFilesForBrowser = async ({
           compileMap,
           compileParamMap,
           rollupOptions,
-          experimentalExplicitNodeModule,
         }),
         generateBalancerPage({
           localRoot,
@@ -52,7 +49,6 @@ const generateBalancerFileForBrowser = async ({
   compileMap,
   compileParamMap,
   rollupOptions,
-  experimentalExplicitNodeModule,
 }) => {
   const bundleBrowserOptionsModuleSource = `
 export const compileMap = ${uneval(compileMap)}
@@ -67,13 +63,7 @@ export const entryFile = ${uneval(entryFile)}
       }
       if (!importer) return importee
       // todo: check with an http/https import how rollup behaves with them?
-      return resolveImport({
-        moduleSpecifier: importee,
-        file: importer,
-        root: localRoot,
-        useNodeModuleResolutionOnRelative: !experimentalExplicitNodeModule,
-        useNodeModuleResolutionInsideDedicatedFolder: experimentalExplicitNodeModule,
-      })
+      return null
     },
 
     load: async (id) => {
