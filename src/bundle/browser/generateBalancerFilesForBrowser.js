@@ -2,11 +2,13 @@ import { rollup } from "rollup"
 import createBabelRollupPlugin from "rollup-plugin-babel"
 import createNodeResolveRollupPlugin from "rollup-plugin-node-resolve"
 import { uneval } from "@dmail/uneval"
+import { createOperation } from "@dmail/cancellation"
 import { fileWrite } from "@dmail/helper"
 import { localRoot as selfRoot } from "../../localRoot.js"
 import { compileMapToBabelPlugins } from "../compileMapToBabelPlugins.js"
 
 export const generateBalancerFilesForBrowser = async ({
+  cancellationToken,
   localRoot,
   bundleInto,
   entryPointObject,
@@ -21,6 +23,7 @@ export const generateBalancerFilesForBrowser = async ({
 
       return Promise.all([
         generateBalancerFileForBrowser({
+          cancellationToken,
           localRoot,
           bundleInto,
           entryFile,
@@ -30,6 +33,7 @@ export const generateBalancerFilesForBrowser = async ({
           rollupOptions,
         }),
         generateBalancerPage({
+          cancellationToken,
           localRoot,
           bundleInto,
           entryName,
@@ -42,6 +46,7 @@ export const generateBalancerFilesForBrowser = async ({
 }
 
 const generateBalancerFileForBrowser = async ({
+  cancellationToken,
   localRoot,
   bundleInto,
   entryFile,
@@ -90,15 +95,28 @@ export const entryFile = ${uneval(entryFile)}
     plugins: [jsenvRollupPlugin, nodeResolveRollupPlugin, babelRollupPlugin],
   }
 
-  const rollupBundle = await rollup(options)
-  await rollupBundle.write({
-    file: `${localRoot}/${bundleInto}/${entryFile}`,
-    sourcemap: true,
-    ...rollupOptions,
+  const rollupBundle = await createOperation({
+    cancellationToken,
+    start: () => rollup(options),
+  })
+  await createOperation({
+    cancellationToken,
+    start: () =>
+      rollupBundle.write({
+        file: `${localRoot}/${bundleInto}/${entryFile}`,
+        sourcemap: true,
+        ...rollupOptions,
+      }),
   })
 }
 
-const generateBalancerPage = async ({ localRoot, bundleInto, entryFile, entryName }) => {
+const generateBalancerPage = async ({
+  cancellationToken,
+  localRoot,
+  bundleInto,
+  entryFile,
+  entryName,
+}) => {
   const html = `<!doctype html>
 
 <head>
@@ -113,5 +131,8 @@ const generateBalancerPage = async ({ localRoot, bundleInto, entryFile, entryNam
 
 </html>`
 
-  await fileWrite(`${localRoot}/${bundleInto}/${entryName}.html`, html)
+  await createOperation({
+    cancellationToken,
+    start: () => fileWrite(`${localRoot}/${bundleInto}/${entryName}.html`, html),
+  })
 }

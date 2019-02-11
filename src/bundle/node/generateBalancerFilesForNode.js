@@ -1,10 +1,12 @@
 import { rollup } from "rollup"
 import createRollupBabelPlugin from "rollup-plugin-babel"
 import { uneval } from "@dmail/uneval"
+import { createOperation } from "@dmail/cancellation"
 import { localRoot as selfRoot } from "../../localRoot.js"
 import { compileMapToBabelPlugins } from "../compileMapToBabelPlugins.js"
 
 export const generateBalancerFilesForNode = async ({
+  cancellationToken,
   localRoot,
   bundleInto,
   entryPointObject,
@@ -17,6 +19,7 @@ export const generateBalancerFilesForNode = async ({
       const entryFile = `${entryName}.js`
 
       return generateBalancerFileForNode({
+        cancellationToken,
         localRoot,
         bundleInto,
         entryFile,
@@ -29,6 +32,7 @@ export const generateBalancerFilesForNode = async ({
 }
 
 const generateBalancerFileForNode = async ({
+  cancellationToken,
   localRoot,
   bundleInto,
   entryFile,
@@ -76,10 +80,17 @@ const generateBalancerFileForNode = async ({
     plugins: [rollupJsenvPlugin, rollupBabelPlugin],
   }
 
-  const rollupBundle = await rollup(options)
-  await rollupBundle.write({
-    file: `${localRoot}/${bundleInto}/${entryFile}`,
-    sourcemap: true,
-    ...rollupOptions,
+  const rollupBundle = await createOperation({
+    cancellationToken,
+    start: async () => rollup(options),
+  })
+  await createOperation({
+    cancellationToken,
+    start: () =>
+      rollupBundle.write({
+        file: `${localRoot}/${bundleInto}/${entryFile}`,
+        sourcemap: true,
+        ...rollupOptions,
+      }),
   })
 }

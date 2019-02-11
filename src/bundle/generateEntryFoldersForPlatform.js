@@ -3,11 +3,13 @@ import { rollup } from "rollup"
 import createRollupBabelPlugin from "rollup-plugin-babel"
 import { resolveImport } from "@jsenv/module-resolution"
 import { fileRead } from "@dmail/helper"
+import { createCancellationToken, createOperation } from "@dmail/cancellation"
 import { compileMapToBabelPlugins } from "./compileMapToBabelPlugins.js"
 import { fetchUsingHttp } from "../platform/node/fetchUsingHttp.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 
 export const generateEntryFoldersForPlatform = async ({
+  cancellationToken = createCancellationToken(),
   localRoot,
   bundleInto,
   entryPointObject,
@@ -18,6 +20,7 @@ export const generateEntryFoldersForPlatform = async ({
   await Promise.all(
     Object.keys(compileMap).map((compileId) => {
       return generateEntryFolderForPlatform({
+        cancellationToken,
         localRoot,
         bundleInto,
         entryPointObject,
@@ -30,6 +33,7 @@ export const generateEntryFoldersForPlatform = async ({
 }
 
 const generateEntryFolderForPlatform = async ({
+  cancellationToken,
   localRoot,
   bundleInto,
   entryPointObject,
@@ -84,17 +88,20 @@ const generateEntryFolderForPlatform = async ({
 
   const fetchHref = async (href) => {
     if (href.startsWith("http://")) {
-      const response = await fetchUsingHttp(href)
+      const response = await fetchUsingHttp(href, { cancellationToken })
       ensureResponseSuccess(response)
       return response.body
     }
     if (href.startsWith("https://")) {
-      const response = await fetchUsingHttp(href)
+      const response = await fetchUsingHttp(href, { cancellationToken })
       ensureResponseSuccess(response)
       return response.body
     }
     if (href.startsWith("file:///")) {
-      const code = await fileRead(href.slice("file://".length))
+      const code = await createOperation({
+        cancellationToken,
+        start: () => fileRead(href.slice("file://".length)),
+      })
       return code
     }
 
@@ -125,17 +132,24 @@ const generateEntryFolderForPlatform = async ({
     onwarn: () => {},
     experimentalTopLevelAwait: true,
   }
-  const rollupBundle = await rollup(options)
+  const rollupBundle = await createOperation({
+    cancellationToken,
+    start: () => rollup(options),
+  })
 
-  const result = await rollupBundle.write({
-    // https://rollupjs.org/guide/en#output-dir
-    dir: `${localRoot}/${bundleInto}/${compileId}`,
-    // https://rollupjs.org/guide/en#output-sourcemap
-    sourcemap: true,
-    sourcemapExcludeSources: true,
-    // https://rollupjs.org/guide/en#experimentaltoplevelawait
-    experimentalTopLevelAwait: true,
-    ...rollupOptions,
+  const result = await createOperation({
+    cancellationToken,
+    start: () =>
+      rollupBundle.write({
+        // https://rollupjs.org/guide/en#output-dir
+        dir: `${localRoot}/${bundleInto}/${compileId}`,
+        // https://rollupjs.org/guide/en#output-sourcemap
+        sourcemap: true,
+        sourcemapExcludeSources: true,
+        // https://rollupjs.org/guide/en#experimentaltoplevelawait
+        experimentalTopLevelAwait: true,
+        ...rollupOptions,
+      }),
   })
 
   return result
