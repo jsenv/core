@@ -4,7 +4,7 @@ import {
   pathnameToFileHref,
 } from "@jsenv/module-resolution"
 
-export const locate = ({ localRoot, compileInto, requestPathname }) => {
+export const locate = ({ root, compileInto, requestPathname }) => {
   const {
     compileId: requestCompileId,
     projectPathname: requestProjectPathname,
@@ -15,7 +15,7 @@ export const locate = ({ localRoot, compileInto, requestPathname }) => {
 
   const compileId = requestCompileId
   const projectPathname = requestProjectPathname
-  const modulePathname = `${localRoot}/${projectPathname}`
+  const modulePathname = `${root}/${projectPathname}`
   // it is possible that the file is in fact somewhere else
   // due to node_module resolution algorithm
   const moduleHrefOrNodeModuleHref = resolveAPossibleNodeModuleFile(

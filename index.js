@@ -22,8 +22,8 @@ export { bundleNode } from "./src/bundle/node/bundleNode.js"
 // belong to core (let's keep it in core because way easier to manage)
 export { bundleBrowser } from "./src/bundle/browser/bundleBrowser.js"
 
-// may be moved to jsenv/browser-server
-export { startBrowserExecutionServer } from "./src/server-browser/startBrowserExecutionServer.js"
+// may be moved to jsenv/browsing-server
+export { startBrowsingServer } from "./src/browsing-server/index.js"
 
 // must be moved later to jsenv/chromium-launcher
 export { launchChromium } from "./src/launchChromium/index.js"

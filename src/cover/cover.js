@@ -1,53 +1,53 @@
 import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
 import { executePlan } from "../executePlan/index.js"
 import { executionPlanResultToCoverageMap } from "../executionPlanResultToCoverageMap/index.js"
-import { patternMappingToExecutionPlan } from "../patternMappingToExecutionPlan.js"
+import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
 import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
 
 export const cover = async ({
-  localRoot,
+  root,
   compileInto,
   pluginMap,
-  executePatternMapping,
-  // coverPatternMapping will be replaced by
-  // getRessourcesToCover: an async function returning a list of
-  // ressource to cover
-  coverPatternMapping,
+  // coverDescription could be deduced from passing
+  // an entryPointObject and collecting all dependencies
+  // for now we stick to coverDescription using project-structure api
+  coverDescription,
+  executeDescription,
 }) =>
   catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const [ressourcesToCover, executionPlanResult] = await Promise.all([
-      listRessourcesToCover({ cancellationToken, localRoot, coverPatternMapping }),
+      listRessourcesToCover({ cancellationToken, root, coverDescription }),
       executeAndCoverPatternMapping({
         cancellationToken,
-        localRoot,
+        root,
         compileInto,
         pluginMap,
-        patternMapping: executePatternMapping,
+        executeDescription,
       }),
     ])
 
     const coverageMap = await executionPlanResultToCoverageMap(executionPlanResult, {
       cancellationToken,
-      localRoot,
+      localRoot: root,
       filesToCover: ressourcesToCover,
     })
 
     return coverageMap
   })
 
-const listRessourcesToCover = async ({ cancellationToken, localRoot, coverPatternMapping }) => {
+const listRessourcesToCover = async ({ cancellationToken, root, coverDescription }) => {
   const coverMetaMap = patternGroupToMetaMap({
-    cover: coverPatternMapping,
+    cover: coverDescription,
   })
 
   const ressources = await forEachRessourceMatching({
     cancellationToken,
-    localRoot,
+    localRoot: root,
     metaMap: coverMetaMap,
     predicate: ({ cover }) => cover,
   })
@@ -57,17 +57,17 @@ const listRessourcesToCover = async ({ cancellationToken, localRoot, coverPatter
 
 const executeAndCoverPatternMapping = async ({
   cancellationToken,
-  localRoot,
+  root,
   compileInto,
   pluginMap,
-  patternMapping,
+  executeDescription,
 }) => {
-  const executionPlan = await patternMappingToExecutionPlan({
+  const executionPlan = await executeDescriptionToExecutionPlan({
     cancellationToken,
-    localRoot,
+    root,
     compileInto,
     pluginMap,
-    patternMapping,
+    executeDescription,
   })
 
   const executionPlanResult = await executePlan(executionPlan, {

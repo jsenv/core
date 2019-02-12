@@ -1,3 +1,4 @@
+import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
 import { uneval } from "@dmail/uneval"
 import { createCancellationToken } from "@dmail/cancellation"
 import { startServer, createRequestPredicate, serviceCompose } from "../server/index.js"
@@ -5,10 +6,11 @@ import { startCompileServer } from "../server-compile/index.js"
 import { guard } from "../functionHelper.js"
 import { getBrowserPlatformRemoteURL } from "../platform/browser/remoteURL.js"
 
-export const startBrowserServer = async ({
+export const startBrowsingServer = async ({
   cancellationToken = createCancellationToken(),
-  localRoot,
+  root,
   compileInto,
+  browsableDescription,
   compileGroupCount,
   pluginMap,
   pluginCompatMap,
@@ -27,7 +29,6 @@ export const startBrowserServer = async ({
   port = 3000,
   forcePort = true,
   signature,
-  executableFiles = [],
 
   generateHTML = ({ file, remoteRoot, compileInto, browserPlatformRemoteURL }) => {
     return `<!doctype html>
@@ -52,9 +53,19 @@ export const startBrowserServer = async ({
 </html>`
   },
 }) => {
+  const metaMap = patternGroupToMetaMap({
+    browsable: browsableDescription,
+  })
+
+  const browsablePathnameArray = await forEachRessourceMatching({
+    localRoot: root,
+    metaMap,
+    predicate: ({ browsable }) => browsable,
+  })
+
   const { origin: remoteRoot } = await startCompileServer({
     cancellationToken,
-    localRoot,
+    root,
     compileInto,
     compileGroupCount,
     pluginMap,
@@ -83,7 +94,7 @@ export const startBrowserServer = async ({
     }),
     async () => {
       const html = await getIndexPageHTML({
-        executableFiles,
+        browsablePathnameArray,
       })
 
       return {
@@ -130,13 +141,13 @@ export const startBrowserServer = async ({
     port,
     forcePort,
     requestToResponse: serviceCompose(indexRoute, otherRoute),
-    startedMessage: ({ origin }) => `browser server started for ${localRoot} at ${origin}`,
+    startedMessage: ({ origin }) => `browser server started for ${root} at ${origin}`,
     stoppedMessage: (reason) => `browser server stopped because ${reason}`,
   })
   return browserServer
 }
 
-const getIndexPageHTML = async ({ localRoot, executableFiles }) => {
+const getIndexPageHTML = async ({ root, browsablePathnameArray }) => {
   return `<!doctype html>
 
   <head>
@@ -146,16 +157,15 @@ const getIndexPageHTML = async ({ localRoot, executableFiles }) => {
 
   <body>
     <main>
-      <h1>${localRoot}</h1>
-      <p>List of executable file: </p>
+      <h1>${root}</h1>
+      <p>List of path to browse: </p>
       <ul>
-        ${executableFiles
+        ${browsablePathnameArray
           .sort()
-          .map((file) => `<li><a href="/${file}">${file}</a></li>`)
+          .map((pathname) => `<li><a href="/${pathname}">${pathname}</a></li>`)
           .join("")}
       </ul>
     </main>
   </body>
-
   </html>`
 }

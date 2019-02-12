@@ -16,8 +16,8 @@ const dateToSecondsPrecision = (date) => {
 export const requestToFileResponse = async (
   { origin, ressource, method, headers = {} },
   {
-    localRoot,
-    locate = ({ requestFile, localRoot }) => `${localRoot}/${requestFile}`,
+    root,
+    locate = ({ requestFile, root }) => `${root}/${requestFile}`,
     canReadDirectory = false,
     getFileStat = fileStat,
     getFileContentAsString = fileRead,
@@ -32,7 +32,7 @@ export const requestToFileResponse = async (
   }
 
   try {
-    const file = await locate({ requestFile: ressource, localRoot, remoteRoot: origin })
+    const file = await locate({ requestFile: ressource, root, remoteRoot: origin })
 
     if (!file) {
       return {
@@ -41,7 +41,7 @@ export const requestToFileResponse = async (
     }
 
     // redirection to other origin
-    if (!file.startsWith(`${localRoot}/`)) {
+    if (!file.startsWith(`${root}/`)) {
       return {
         status: 307,
         headers: {
@@ -51,7 +51,7 @@ export const requestToFileResponse = async (
     }
 
     // redirection to same origin
-    const fileRessource = file.slice(`${localRoot}/`.length)
+    const fileRessource = file.slice(`${root}/`.length)
     if (fileRessource !== ressource) {
       return {
         status: 307,

@@ -11,7 +11,7 @@ const ressource = "src/__test__/file.js"
     port: 3000,
     requestToResponse: (request) =>
       requestToFileResponse(request, {
-        localRoot: root,
+        root,
         cacheStrategy: "etag",
       }),
   })

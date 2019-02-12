@@ -7,7 +7,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.j
 
 export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),
-  localRoot,
+  root,
   compileInto,
   locate,
   compileGroupCount,
@@ -29,7 +29,7 @@ export const createJsCompileService = async ({
   })
 
   await fileWriteFromString(
-    `${localRoot}/${compileInto}/compileMap.json`,
+    `${root}/${compileInto}/compileMap.json`,
     JSON.stringify(compileMap, null, "  "),
   )
 
@@ -37,7 +37,7 @@ export const createJsCompileService = async ({
 
   const jsCompileService = jsCompileToService(jsCompile, {
     cancellationToken,
-    localRoot,
+    root,
     compileInto,
     locate,
     compileParamMap,

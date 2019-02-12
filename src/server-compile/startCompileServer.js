@@ -9,12 +9,12 @@ import {
   serviceCompose,
   responseCompose,
 } from "../server/index.js"
-import { localRoot as selfLocalRoot } from "../localRoot.js"
+import { localRoot as selfRoot } from "../localRoot.js"
 import { createJsCompileService } from "./createJsCompileService.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
-  localRoot,
+  root,
   compileInto,
   locate,
   compileGroupCount,
@@ -38,7 +38,7 @@ export const startCompileServer = async ({
 }) => {
   const jsCompileService = await createJsCompileService({
     cancellationToken,
-    localRoot,
+    root,
     compileInto,
     locate,
     compileGroupCount,
@@ -55,7 +55,7 @@ export const startCompileServer = async ({
 
   const service = serviceCompose(jsCompileService, (request) =>
     requestToFileResponse(request, {
-      localRoot,
+      root,
       locate: locateFileSystem,
       cacheIgnore: sourceCacheIgnore,
       cacheStrategy: sourceCacheStrategy,
@@ -90,7 +90,7 @@ export const startCompileServer = async ({
     signature,
     requestToResponse,
     verbose,
-    startedMessage: ({ origin }) => `compile server started for ${localRoot} at ${origin}`,
+    startedMessage: ({ origin }) => `compile server started for ${root} at ${origin}`,
     stoppedMessage: (reason) => `compile server stopped because ${reason}`,
   })
   // https://nodejs.org/api/net.html#net_server_unref
@@ -100,24 +100,24 @@ export const startCompileServer = async ({
   return compileServer
 }
 
-const locateFileSystem = ({ requestFile, localRoot }) => {
+const locateFileSystem = ({ requestFile, root }) => {
   // future consumer of dev-server will use
   // 'node_modules/dev-server/dist/browserSystemImporter.js'
   // to get file from dev-server module
   // in order to test this behaviour, when we are working on this module
   // 'node_modules/dev-server` is an alias to localRoot
-  if (localRoot === selfLocalRoot && requestFile.startsWith("node_modules/@dmail/dev-server/")) {
+  if (root === selfRoot && requestFile.startsWith("node_modules/@dmail/dev-server/")) {
     requestFile = requestFile.slice("node_modules/@dmail/dev-server/".length)
   }
 
   if (requestFile.startsWith("node_modules/")) {
     const moduleSpecifier = requestFile.slice("node_modules/".length)
     const nodeModuleFile = resolveNodeModuleSpecifier({
-      moduleSpecifier,
-      file: `${localRoot}/${requestFile}`,
+      specifier: moduleSpecifier,
+      importer: `${root}/${requestFile}`,
     })
     return nodeModuleFile
   }
 
-  return `${localRoot}/${requestFile}`
+  return `${root}/${requestFile}`
 }
