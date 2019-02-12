@@ -1,10 +1,9 @@
 import { createReadStream } from "fs"
 import { folderRead, fileStat, fileRead } from "@dmail/helper"
+import { fileHrefToFilename, filenameToFileHref } from "@jsenv/module-resolution"
 import { createETag } from "../compileToService/helpers.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
 import { ressourceToContentType } from "./ressourceToContentType.js"
-import { pathnameToFileHref } from "@jsenv/module-resolution/dist/src/pathnameToFileHref"
-import { fileHrefToPathname } from "@jsenv/module-resolution"
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
 const dateToUTCString = (date) => date.toUTCString()
@@ -18,8 +17,8 @@ const dateToSecondsPrecision = (date) => {
 export const requestToFileResponse = async (
   { origin, ressource, method, headers = {} },
   {
-    rootPathname,
-    locate = ({ rootHref, requestPathname }) => `${rootHref}/${requestPathname}`,
+    rootname,
+    locate = ({ rootHref, filenameRelative }) => `${rootHref}/${filenameRelative}`,
     canReadDirectory = false,
     getFileStat = fileStat,
     getFileContentAsString = fileRead,
@@ -33,11 +32,11 @@ export const requestToFileResponse = async (
     }
   }
 
-  const rootHref = pathnameToFileHref(rootPathname)
+  const rootHref = filenameToFileHref(rootname)
 
   try {
-    const requestPathname = ressource
-    const href = await locate({ origin, rootHref, requestPathname })
+    const filenameRelative = ressource
+    const href = await locate({ origin, rootHref, filenameRelative })
 
     if (!href) {
       return {
@@ -56,22 +55,22 @@ export const requestToFileResponse = async (
     }
 
     // redirection to same origin
-    const fileRelativePathname = href.slice(`${rootHref}/`.length)
-    if (fileRelativePathname !== requestPathname) {
+    const resolvedFilename = href.slice(`${rootHref}/`.length)
+    if (resolvedFilename !== filenameRelative) {
       return {
         status: 307,
         headers: {
-          location: `${origin}/${fileRelativePathname}`,
+          location: `${origin}/${resolvedFilename}`,
         },
       }
     }
 
-    const filePathname = fileHrefToPathname(href)
+    const filename = fileHrefToFilename(href)
 
     const cacheWithMtime = cacheStrategy === "mtime"
     const cacheWithETag = cacheStrategy === "etag"
     const cachedDisabled = cacheStrategy === "none"
-    const stat = await getFileStat(filePathname)
+    const stat = await getFileStat(filename)
 
     if (stat.isDirectory()) {
       if (canReadDirectory === false) {
@@ -84,7 +83,7 @@ export const requestToFileResponse = async (
         }
       }
 
-      const files = await folderRead(filePathname)
+      const files = await folderRead(filename)
       const filesAsJSON = JSON.stringify(files)
 
       return {
@@ -126,12 +125,12 @@ export const requestToFileResponse = async (
           "content-length": stat.size,
           "content-type": ressourceToContentType(ressource),
         },
-        body: fileToBody(filePathname),
+        body: fileToBody(filename),
       }
     }
 
     if (cacheWithETag) {
-      const content = await getFileContentAsString(filePathname)
+      const content = await getFileContentAsString(filename)
       const eTag = createETag(content)
 
       if ("if-none-match" in headers && headers["if-none-match"] === eTag) {
@@ -162,7 +161,7 @@ export const requestToFileResponse = async (
         "content-length": stat.size,
         "content-type": ressourceToContentType(ressource),
       },
-      body: fileToBody(filePathname),
+      body: fileToBody(filename),
     }
   } catch (e) {
     return convertFileSystemErrorToResponseProperties(e)

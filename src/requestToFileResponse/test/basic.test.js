@@ -1,6 +1,6 @@
 import fs from "fs"
 import { assert } from "@dmail/assert"
-import { root } from "../../root.js"
+import { rootname } from "../../rootname.js"
 import { requestToFileResponse } from "../requestToFileResponse.js"
 
 const test = async () => {
@@ -12,11 +12,11 @@ const test = async () => {
         ressource,
       },
       {
-        root,
+        rootname,
         cacheStrategy: "etag",
       },
     )
-    const content = String(fs.readFileSync(`${root}/${ressource}`))
+    const content = String(fs.readFileSync(`${rootname}/${ressource}`))
     const length = Buffer.byteLength(content)
     const expected = {
       status: 200,
@@ -38,7 +38,7 @@ const test = async () => {
         ressource,
         origin: "http://domain.com",
       },
-      { root, locate: () => `${root}/otherfolder/otherfile` },
+      { rootname, locate: ({ rootHref }) => `${rootHref}/otherfolder/otherfile` },
     )
     const expected = {
       status: 307,
@@ -48,8 +48,6 @@ const test = async () => {
     }
     assert({ actual, expected })
   }
-
-  console.log("passed")
 }
 
 test()
