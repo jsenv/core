@@ -1,11 +1,11 @@
-import { localRoot } from "../../localRoot.js"
 import { launchChromium } from "../../launchChromium/index.js"
+import { root } from "../../root.js"
 import { execute } from "../execute.js"
 
 execute({
-  file: "src/execute/test/file.js",
-  localRoot,
+  root,
   compileInto: "build",
   launch: launchChromium,
   stopOnceExecuted: true,
+  file: "src/execute/test/file.js",
 })

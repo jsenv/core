@@ -1,12 +1,12 @@
 import fs from "fs"
 import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { localRoot as projectRoot } from "../../localRoot.js"
+import { root as selfRoot } from "../../root.js"
 import { jsCompile } from "../jsCompile.js"
 
-const localRoot = `${projectRoot}/src/jsCompile/test/fixtures`
+const root = `${selfRoot}/src/jsCompile/test/fixtures`
 const file = "file.js"
-const fileAbsolute = `${localRoot}/${file}`
+const fileAbsolute = `${root}/${file}`
 const input = fs.readFileSync(fileAbsolute).toString()
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-block-scoping": {},
@@ -14,7 +14,7 @@ const pluginMap = pluginOptionMapToPluginMap({
 
 const test = async () => {
   const { sources, sourcesContent, assets, assetsContent, output } = await jsCompile({
-    localRoot,
+    localRoot: root,
     file,
     fileAbsolute,
     input,

@@ -1,9 +1,9 @@
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@dmail/uneval"
-import { localRoot } from "../localRoot.js"
+import { root } from "../root.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 
-const nodeClientFile = `${localRoot}/dist/src/launchNode/client.js`
+const nodeClientFile = `${root}/dist/src/launchNode/client.js`
 
 export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInto }) => {
   const execArgv = await createChildExecArgv({ cancellationToken })

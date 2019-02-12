@@ -1,6 +1,6 @@
 import { assert } from "@dmail/assert"
 import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
-import { localRoot } from "../../../localRoot.js"
+import { root } from "../../../root.js"
 import { launchNode } from "../../launchNode.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
@@ -13,13 +13,13 @@ const pluginMap = {
 
 ;(async () => {
   const { origin: remoteRoot } = await startCompileServer({
-    localRoot,
+    root,
     compileInto,
     pluginMap,
   })
 
   const actual = await launchAndExecute({
-    launch: (options) => launchNode({ ...options, localRoot, compileInto, remoteRoot }),
+    launch: (options) => launchNode({ ...options, root, compileInto, remoteRoot }),
     collectNamespace: true,
     file,
     verbose: true,

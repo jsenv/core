@@ -2,21 +2,21 @@ import fs from "fs"
 import istanbul from "istanbul"
 import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { localRoot as projectRoot } from "../../localRoot.js"
+import { root as selfRoot } from "../../root.js"
 import { objectMap } from "../../objectHelper.js"
 import { createInstrumentPlugin } from "../createInstrumentPlugin.js"
 import { jsCompile } from "../jsCompile.js"
 
-const localRoot = `${projectRoot}/src/jsCompile/test/fixtures`
+const root = `${selfRoot}/src/jsCompile/test/fixtures`
 const file = "file.js"
-const fileAbsolute = `${localRoot}/${file}`
+const fileAbsolute = `${root}/${file}`
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-block-scoping": {},
 })
 pluginMap["transform-instrument"] = createInstrumentPlugin()
 
 jsCompile({
-  localRoot,
+  localRoot: root,
   file,
   fileAbsolute,
   input: fs.readFileSync(fileAbsolute).toString(),
@@ -29,7 +29,7 @@ jsCompile({
   const coverage = global.__coverage__
   const absoluteCoverage = objectMap(coverage, (file, coverage) => {
     return {
-      [`${localRoot}/${file}`]: { ...coverage, path: `${localRoot}/${file}` },
+      [`${root}/${file}`]: { ...coverage, path: `${root}/${file}` },
     }
   })
   const collector = new istanbul.Collector()

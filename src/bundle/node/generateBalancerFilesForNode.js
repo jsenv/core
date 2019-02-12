@@ -1,6 +1,6 @@
 import createRollupBabelPlugin from "rollup-plugin-babel"
 import { uneval } from "@dmail/uneval"
-import { localRoot as selfRoot } from "../../localRoot.js"
+import { root as selfRoot } from "../../root.js"
 import { compileMapToBabelPlugins } from "../compileMapToBabelPlugins.js"
 import { writeRollupBundle } from "../writeRollupBundle.js"
 

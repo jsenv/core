@@ -1,5 +1,5 @@
 import { assert } from "@dmail/assert"
-import { localRoot } from "../../../localRoot.js"
+import { root } from "../../../root.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchNode } from "../../launchNode.js"
@@ -10,13 +10,13 @@ const pluginMap = {}
 
 ;(async () => {
   const { origin: remoteRoot } = await startCompileServer({
-    localRoot,
+    root,
     compileInto,
     pluginMap,
   })
 
   const actual = await launchAndExecute({
-    launch: (options) => launchNode({ ...options, localRoot, remoteRoot, compileInto }),
+    launch: (options) => launchNode({ ...options, root, compileInto, remoteRoot }),
     mirrorConsole: true,
     collectNamespace: true,
     file,

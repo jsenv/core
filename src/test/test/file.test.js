@@ -1,11 +1,11 @@
-import { localRoot } from "../../localRoot.js"
+import { root } from "../../root.js"
 import { launchNode } from "../../launchNode/index.js"
 import { launchChromium } from "../../launchChromium/index.js"
 import { test } from "../test.js"
 
 const launchChromiumWithUI = (options) => launchChromium({ ...options, headless: false })
 
-const testPatternMapping = {
+const testDescription = {
   "src/test/test/file.js": {
     node: {
       launch: launchNode,
@@ -17,8 +17,8 @@ const testPatternMapping = {
 }
 
 test({
-  localRoot,
+  root,
   compileInto: "build",
   pluginMap: {},
-  testPatternMapping,
+  executeDescription: testDescription,
 })

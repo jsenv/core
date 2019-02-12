@@ -1,6 +1,6 @@
 import fs from "fs"
 import { assert } from "@dmail/assert"
-import { localRoot as root } from "../../localRoot.js"
+import { root } from "../../root.js"
 import { requestToFileResponse } from "../requestToFileResponse.js"
 
 const test = async () => {

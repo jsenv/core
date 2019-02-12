@@ -1,11 +1,11 @@
 import { assert } from "@dmail/assert"
-import { localRoot } from "../../localRoot.js"
+import { root } from "../../root.js"
 import { launchNode } from "../../launchNode/index.js"
 import { launchChromium } from "../../launchChromium/index.js"
 import { cover } from "../cover.js"
 
 cover({
-  localRoot,
+  root,
   compileInto: "build",
   executePatternMapping: {
     "src/cover/test/use-file.js": {

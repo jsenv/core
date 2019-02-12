@@ -2,7 +2,7 @@ import { assert } from "@dmail/assert"
 import { launchNode } from "../../../launchNode/index.js"
 import { launchChromium } from "../../../launchChromium/index.js"
 import { executePlan } from "../../../executePlan/index.js"
-import { localRoot } from "../../../localRoot.js"
+import { root } from "../../../root.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap.js"
 
@@ -12,7 +12,7 @@ const pluginMap = {}
 
 ;(async () => {
   const { origin: remoteRoot } = await startCompileServer({
-    localRoot,
+    root,
     compileInto,
     pluginMap,
     protocol: "http",
@@ -21,9 +21,8 @@ const pluginMap = {}
     verbose: false,
   })
 
-  const nodeLaunch = (options) => launchNode({ ...options, remoteRoot, localRoot, compileInto })
-  const chromiumLaunch = (options) =>
-    launchChromium({ ...options, remoteRoot, localRoot, compileInto })
+  const nodeLaunch = (options) => launchNode({ ...options, remoteRoot, root, compileInto })
+  const chromiumLaunch = (options) => launchChromium({ ...options, remoteRoot, root, compileInto })
 
   const executionPlan = {
     "src/executionPlanResultToCoverageMap/test/node-and-chrome/node-and-chrome.js": {
@@ -41,7 +40,7 @@ const pluginMap = {}
   })
 
   const coverageMap = await executionPlanResultToCoverageMap(executionPlanResult, {
-    localRoot,
+    root,
     compileInto,
     filesToCover,
   })

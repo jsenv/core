@@ -3,7 +3,7 @@ import createNodeResolveRollupPlugin from "rollup-plugin-node-resolve"
 import { uneval } from "@dmail/uneval"
 import { createOperation } from "@dmail/cancellation"
 import { fileWrite } from "@dmail/helper"
-import { localRoot as selfRoot } from "../../localRoot.js"
+import { root as selfRoot } from "../../root.js"
 import { compileMapToBabelPlugins } from "../compileMapToBabelPlugins.js"
 import { writeRollupBundle } from "../writeRollupBundle.js"
 

@@ -1,10 +1,10 @@
-import { localRoot } from "../../localRoot.js"
+import { root } from "../../root.js"
 import { launchNode } from "../../launchNode/index.js"
 import { execute } from "../execute.js"
 
 execute({
-  file: "src/execute/test/file.js",
-  localRoot,
+  root,
   compileInto: "build",
   launch: launchNode,
+  file: "src/execute/test/file.js",
 })

@@ -1,14 +1,14 @@
 import { assert } from "@dmail/assert"
-import { localRoot as projectRoot } from "../../localRoot.js"
+import { root as selfRoot } from "../../root.js"
 import { jsCompile } from "../jsCompile.js"
 
-const localRoot = `${projectRoot}/src/jsCompile/test/fixtures`
+const root = `${selfRoot}/src/jsCompile/test/fixtures`
 const file = "folder/file.js"
-const fileAbsolute = `${localRoot}/${file}`
+const fileAbsolute = `${root}/${file}`
 const input = `true`
 
 jsCompile({
-  localRoot,
+  localRoot: root,
   file,
   fileAbsolute,
   input,

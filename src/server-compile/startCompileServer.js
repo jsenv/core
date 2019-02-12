@@ -1,6 +1,8 @@
-// https://github.com/jsenv/core/blob/master/src/api/util/transpiler.js
-
-import { resolveNodeModuleSpecifier } from "@jsenv/module-resolution"
+import {
+  resolveNodeModuleSpecifier,
+  pathnameToFileHref,
+  fileHrefToPathname,
+} from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
 import {
@@ -9,7 +11,7 @@ import {
   serviceCompose,
   responseCompose,
 } from "../server/index.js"
-import { localRoot as selfRoot } from "../localRoot.js"
+import { root as selfRoot } from "../root.js"
 import { createJsCompileService } from "./createJsCompileService.js"
 
 export const startCompileServer = async ({
@@ -96,24 +98,24 @@ export const startCompileServer = async ({
   return compileServer
 }
 
-const locateFileSystem = ({ requestFile, root }) => {
+const locateFileSystem = ({ requestPathname, root }) => {
   // future consumer of dev-server will use
   // 'node_modules/dev-server/dist/browserSystemImporter.js'
   // to get file from dev-server module
   // in order to test this behaviour, when we are working on this module
   // 'node_modules/dev-server` is an alias to localRoot
-  if (root === selfRoot && requestFile.startsWith("node_modules/@dmail/dev-server/")) {
-    requestFile = requestFile.slice("node_modules/@dmail/dev-server/".length)
+  if (root === selfRoot && requestPathname.startsWith("node_modules/@dmail/dev-server/")) {
+    requestPathname = requestPathname.slice("node_modules/@dmail/dev-server/".length)
   }
 
-  if (requestFile.startsWith("node_modules/")) {
-    const moduleSpecifier = requestFile.slice("node_modules/".length)
-    const nodeModuleFile = resolveNodeModuleSpecifier({
+  if (requestPathname.startsWith("node_modules/")) {
+    const moduleSpecifier = requestPathname.slice("node_modules/".length)
+    const nodeModuleHref = resolveNodeModuleSpecifier({
       specifier: moduleSpecifier,
-      importer: `${root}/${requestFile}`,
+      importer: pathnameToFileHref(`${root}/${requestPathname}`),
     })
-    return nodeModuleFile
+    return fileHrefToPathname(nodeModuleHref)
   }
 
-  return `${root}/${requestFile}`
+  return `${root}/${requestPathname}`
 }

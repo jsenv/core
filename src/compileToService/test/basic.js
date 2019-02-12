@@ -1,9 +1,9 @@
 import { assert } from "@dmail/assert"
 import { fileStat } from "@dmail/helper"
-import { localRoot as projectRoot } from "../../localRoot.js"
+import { root as selfRoot } from "../../root.js"
 import { compileToService } from "../compileToService.js"
 
-const localRoot = `${projectRoot}/src/compileToService/test/fixtures`
+const root = `${selfRoot}/src/compileToService/test/fixtures`
 const compileInto = "build"
 const compileId = "group"
 const output = "foo"
@@ -29,7 +29,7 @@ const compile = ({ content }) => {
   // cacheStrategy: 'none'
   {
     const compileService = compileToService(compile, {
-      localRoot,
+      root,
       compileInto,
       compileParamMap,
       cacheStrategy: "none",
@@ -55,7 +55,7 @@ const compile = ({ content }) => {
   // cacheStrategy: 'etag'
   {
     const compileService = compileToService(compile, {
-      localRoot,
+      root,
       compileInto,
       compileParamMap,
       cacheStrategy: "etag",
@@ -101,7 +101,7 @@ const compile = ({ content }) => {
   // cacheStrategy: 'mtime'
   {
     const compileService = compileToService(compile, {
-      localRoot,
+      root,
       compileInto,
       compileParamMap,
       cacheStrategy: "mtime",
@@ -114,7 +114,7 @@ const compile = ({ content }) => {
           "if-modified-since": new Date(0).toUTCString(),
         },
       })
-      const { mtime } = await fileStat(`${localRoot}/${file}`)
+      const { mtime } = await fileStat(`${root}/${file}`)
       assert({
         actual,
         expected: {

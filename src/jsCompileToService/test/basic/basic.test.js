@@ -1,6 +1,6 @@
 import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { localRoot } from "../../../localRoot.js"
+import { root } from "../../../root.js"
 import { jsCompile } from "../../../jsCompile/index.js"
 import { jsCompileToService } from "../../jsCompileToService.js"
 
@@ -9,7 +9,7 @@ const compileId = "test"
 
 ;(async () => {
   const jsService = jsCompileToService(jsCompile, {
-    localRoot,
+    root,
     compileInto,
     compileParamMap: {
       [compileId]: {

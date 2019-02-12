@@ -1,6 +1,6 @@
 import { assert } from "@dmail/assert"
 import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
-import { localRoot } from "../../../localRoot.js"
+import { root } from "../../../root.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchChromium } from "../../launchChromium"
@@ -13,14 +13,14 @@ const pluginMap = {
 
 ;(async () => {
   const { origin: remoteRoot } = await startCompileServer({
-    localRoot,
+    root,
     compileInto,
     pluginMap,
   })
 
   const actual = await launchAndExecute({
     launch: ({ cancellationToken }) =>
-      launchChromium({ cancellationToken, localRoot, compileInto, remoteRoot, headless: false }),
+      launchChromium({ cancellationToken, root, compileInto, remoteRoot, headless: false }),
     allocatedMs: 5000,
     stopOnceExecuted: true,
     captureConsole: true,

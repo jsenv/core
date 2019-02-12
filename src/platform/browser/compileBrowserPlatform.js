@@ -1,4 +1,5 @@
 import path from "path"
+import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 import { rollup } from "rollup"
 import babel from "rollup-plugin-babel"
 import nodeResolve from "rollup-plugin-node-resolve"
@@ -7,13 +8,12 @@ import {
   pluginOptionMapToPluginMap,
   pluginMapToPluginsForPlatform,
 } from "@dmail/project-structure-compile-babel"
-import { localRoot } from "../../localRoot.js"
-import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
+import { root } from "../../root.js"
 
 const inputRessource = `src/platform/browser/browserPlatform.js`
-const outputFolder = `${localRoot}/dist`
+const outputFolder = `${root}/dist`
 const outputRessource = `browserPlatform.js`
-const inputFile = `${localRoot}/${inputRessource}`
+const inputFile = `${root}/${inputRessource}`
 const outputFile = `${outputFolder}/${outputRessource}`
 const globalName = "__platform__"
 const pluginMap = pluginOptionMapToPluginMap({
@@ -74,7 +74,7 @@ export const compileBrowserPlatform = async () => {
   const { code, map } = output[0]
 
   map.sources = map.sources.map((source) => {
-    return `${path.relative(outputFolder, localRoot)}/${source}`
+    return `${path.relative(outputFolder, root)}/${source}`
   })
   delete map.sourcesContent
 
