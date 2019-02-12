@@ -16,6 +16,12 @@ export { test } from "./src/test/test.js"
 // belong to core
 export { cover } from "./src/cover/cover.js"
 
+// belong to core (let's keep it in core because way easier to manage)
+export { bundleNode } from "./src/bundle/node/bundleNode.js"
+
+// belong to core (let's keep it in core because way easier to manage)
+export { bundleBrowser } from "./src/bundle/browser/bundleBrowser.js"
+
 // may be moved to jsenv/browser-server
 export { startBrowserExecutionServer } from "./src/server-browser/startBrowserExecutionServer.js"
 
