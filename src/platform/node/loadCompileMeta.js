@@ -1,12 +1,12 @@
 import { memoizeOnce } from "@dmail/helper"
-import { fileHrefToPathname } from "@jsenv/module-resolution"
+import { fileHrefToFilename } from "@jsenv/module-resolution"
 import { getCompileMapHref } from "./localURL.js"
 import { detect } from "./nodeDetect/index.js"
 import { nodeToCompileId } from "./nodeToCompileId.js"
 
-export const loadCompileMeta = memoizeOnce(({ sourceRootHref, compileServerOrigin }) => {
-  const compileMapHref = getCompileMapHref({ sourceRootHref, compileServerOrigin })
-  const compileMapPathname = fileHrefToPathname(compileMapHref)
+export const loadCompileMeta = memoizeOnce(({ compileInto, sourceRootHref }) => {
+  const compileMapHref = getCompileMapHref({ compileInto, sourceRootHref })
+  const compileMapPathname = fileHrefToFilename(compileMapHref)
 
   // eslint-disable-next-line import/no-dynamic-require
   const compileMap = require(compileMapPathname)

@@ -34,6 +34,13 @@ export const launchAndExecute = async ({
   collectCoverage = false,
   instrument = collectCoverage,
 } = {}) => {
+  if (typeof launch !== "function")
+    throw new TypeError(`launchAndExecute launch must be a function, got ${launch}`)
+  if (typeof filenameRelative !== "string")
+    throw new TypeError(
+      `launchAndExecute filenameRelative must be a string, got ${filenameRelative}`,
+    )
+
   let platformLog = ""
   const consoleCallback = ({ type, text }) => {
     if (captureConsole) {
