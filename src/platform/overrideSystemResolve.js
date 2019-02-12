@@ -5,31 +5,34 @@ export const overrideSystemResolve = ({
   compileId,
   remoteRoot,
   platformSystem,
-  resolveAbsoluteModuleSpecifier,
+  resolveRootRelativeSpecifier,
 }) => {
   const resolve = platformSystem.resolve
-  platformSystem.resolve = async (moduleSpecifier, moduleSpecifierFile) => {
-    if (moduleSpecifier[0] === "/") {
-      return resolveAbsoluteModuleSpecifier({
-        moduleSpecifier,
-        file: moduleSpecifierFile,
-        root: moduleSpecifierFileToRoot({
-          moduleSpecifierFile,
-          remoteRoot,
+  platformSystem.resolve = async (specifier, importer) => {
+    if (specifier[0] === "/") {
+      // todo: test what is importer here because it should
+      // start with http:// otherwise resolution will kinda fail
+      // no?
+      return resolveRootRelativeSpecifier({
+        root: importerToRoot({
           compileInto,
           compileId,
+          remoteRoot,
+          importer,
         }),
+        importer,
+        specifier,
       })
     }
-    return resolve(moduleSpecifier, moduleSpecifierFile)
+    return resolve(specifier, importer)
   }
 }
 
-const moduleSpecifierFileToRoot = ({ moduleSpecifierFile, remoteRoot, compileInto, compileId }) => {
-  if (!moduleSpecifierFile) return `${remoteRoot}/${compileInto}/${compileId}`
-  const { compileId: moduleSpecifiedFileCompileId } = hrefToMeta(moduleSpecifierFile, {
-    remoteRoot,
+const importerToRoot = ({ compileInto, compileId, remoteRoot, importer }) => {
+  if (!importer) return `${remoteRoot}/${compileInto}/${compileId}`
+  const { compileId: moduleSpecifiedFileCompileId } = hrefToMeta(importer, {
     compileInto,
+    remoteRoot,
   })
   if (!moduleSpecifiedFileCompileId) return `${remoteRoot}/${compileInto}/${compileId}`
   return `${remoteRoot}/${compileInto}/${moduleSpecifiedFileCompileId}`

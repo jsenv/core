@@ -1,5 +1,5 @@
 import "systemjs/dist/system.js"
-import { resolveAbsoluteModuleSpecifier } from "@jsenv/module-resolution/src/resolveAbsoluteModuleSpecifier.js"
+import { resolveRootRelativeSpecifier } from "@jsenv/module-resolution/src/resolveRootRelativeSpecifier.js"
 import { overrideSystemResolve } from "../../overrideSystemResolve.js"
 import { overrideSystemInstantiate } from "../../overrideSystemInstantiate.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
@@ -18,7 +18,7 @@ export const createBrowserSystem = ({
     compileId,
     remoteRoot,
     platformSystem: browserSystem,
-    resolveAbsoluteModuleSpecifier,
+    resolveRootRelativeSpecifier,
   })
 
   overrideSystemInstantiate({

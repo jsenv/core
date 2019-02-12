@@ -1,5 +1,5 @@
 import "systemjs/dist/system.js"
-import { isCoreNodeModuleSpecifier, resolveAbsoluteModuleSpecifier } from "@jsenv/module-resolution"
+import { isCoreNodeModuleSpecifier, resolveRootRelativeSpecifier } from "@jsenv/module-resolution"
 import { overrideSystemResolve } from "../../overrideSystemResolve.js"
 import { overrideSystemInstantiate } from "../../overrideSystemInstantiate.js"
 import { fromFunctionReturningNamespace } from "../../registerModuleFrom.js"
@@ -14,7 +14,7 @@ export const createNodeSystem = ({ localRoot, compileInto, compileId, remoteRoot
     compileId,
     remoteRoot,
     platformSystem: nodeSystem,
-    resolveAbsoluteModuleSpecifier,
+    resolveRootRelativeSpecifier,
   })
 
   overrideSystemInstantiate({
