@@ -2,7 +2,6 @@
 import { compatMap as pluginCompatMapDefault } from "@dmail/project-structure-compile-babel"
 import { pluginCompatMapToCompileGroups } from "./pluginCompatMapToCompileGroups/index.js"
 import { compatMapToUsageScore } from "./compatMapToUsageScore.js"
-import { platformUsageMapDefault } from "./platformUsageMapDefault.js"
 import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn/compileGroupsRegroupIn.js"
 import { pluginNamesToScore } from "./pluginNamesToScore.js"
 
@@ -11,10 +10,10 @@ const WORST_ID = "worst"
 export const DEFAULT_ID = "otherwise"
 
 export const envDescriptionToCompileMap = ({
-  pluginNames = [],
-  platformUsageMap = platformUsageMapDefault,
-  pluginCompatMap = pluginCompatMapDefault,
   compileGroupCount = 4,
+  pluginNames = [],
+  pluginCompatMap = pluginCompatMapDefault,
+  platformUsageMap,
 } = {}) => {
   const pluginCompatMapFiltered = {}
   pluginNames.forEach((pluginName) => {

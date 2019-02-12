@@ -1,19 +1,24 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
-import { objectMapValue } from "../objectHelper.js"
 import { jsCompile } from "../jsCompile/index.js"
 import { jsCompileToService } from "../jsCompileToService/index.js"
-import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.js"
+import {
+  generateCompileMap,
+  compileMapToCompileParamMap,
+  browserUsageMap as browserDefaultUsageMap,
+  nodeUsageMap as nodeDefaultUsageMap,
+} from "../compile-group/index.js"
 
 export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),
   root,
   compileInto,
-  locate,
   compileGroupCount,
   pluginMap,
   pluginCompatMap,
-  platformUsageMap,
+  locate,
+  browserUsageMap = browserDefaultUsageMap,
+  nodeUsageMap = nodeDefaultUsageMap,
   localCacheStrategy,
   localCacheTrackHit,
   cacheStrategy,
@@ -22,10 +27,10 @@ export const createJsCompileService = async ({
   watchPredicate,
 }) => {
   const compileMap = generateCompileMap({
-    pluginMap,
-    platformUsageMap,
-    pluginCompatMap,
     compileGroupCount,
+    pluginMap,
+    pluginCompatMap,
+    platformUsageMap: { ...browserUsageMap, ...nodeUsageMap },
   })
 
   await fileWriteFromString(
@@ -39,48 +44,15 @@ export const createJsCompileService = async ({
     cancellationToken,
     root,
     compileInto,
-    locate,
-    compileParamMap,
     localCacheStrategy,
     localCacheTrackHit,
     cacheStrategy,
     instrumentPredicate,
     watch,
     watchPredicate,
+    locate,
+    compileParamMap,
   })
 
   return jsCompileService
-}
-
-export const generateCompileMap = ({
-  pluginMap,
-  platformUsageMap,
-  pluginCompatMap,
-  compileGroupCount,
-}) => {
-  if (!pluginMap) throw new Error(`pluginMap is required`)
-
-  const compileMap = envDescriptionToCompileMap({
-    pluginNames: Object.keys(pluginMap),
-    platformUsageMap,
-    pluginCompatMap,
-    compileGroupCount,
-  })
-
-  return compileMap
-}
-
-export const compileMapToCompileParamMap = (compileMap, pluginMap = {}) => {
-  return objectMapValue(compileMap, ({ pluginNames }) => {
-    const pluginMapSubset = {}
-    pluginNames.forEach((pluginName) => {
-      if (pluginName in pluginMap === false) {
-        throw new Error(`missing ${pluginName} plugin in pluginMap`)
-      }
-      pluginMapSubset[pluginName] = pluginMap[pluginName]
-    })
-    return {
-      pluginMap: pluginMapSubset,
-    }
-  })
 }

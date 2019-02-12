@@ -1,4 +1,8 @@
-import { generateCompileMap, compileMapToCompileParamMap } from "../../server-compile/index.js"
+import {
+  generateCompileMap,
+  compileMapToCompileParamMap,
+  nodeUsageMap,
+} from "../../compile-group/index.js"
 import { generateEntryFoldersForPlatform } from "../generateEntryFoldersForPlatform.js"
 import { generateBalancerFilesForNode } from "./generateBalancerFilesForNode.js"
 import {
@@ -9,22 +13,11 @@ import {
 export const bundleNode = catchAsyncFunctionCancellation(
   async ({
     root,
-    into = "bundle/node", // later update this to 'dist/node'
-    entryPointsDescription = { main: "index.js" },
-    pluginMap = {},
+    into,
+    entryPointsDescription,
+    pluginMap,
     pluginCompatMap,
-    // https://nodejs.org/metrics/summaries/version/nodejs.org-access.log.csv
-    usageMap = {
-      "0.10": 0.02,
-      "0.12": 0.01,
-      4: 0.1,
-      6: 0.25,
-      7: 0.1,
-      8: 1,
-      9: 0.1,
-      10: 0.5,
-      11: 0.25,
-    },
+    usageMap = nodeUsageMap,
     compileGroupCount = 2,
   }) => {
     if (typeof root !== "string")
