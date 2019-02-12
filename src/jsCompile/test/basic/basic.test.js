@@ -1,44 +1,42 @@
 import fs from "fs"
 import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { root as selfRoot } from "../../root.js"
-import { jsCompile } from "../jsCompile.js"
+import { rootname as selfRootname } from "../../../rootname.js"
+import { jsCompile } from "../../jsCompile.js"
 
-const root = `${selfRoot}/src/jsCompile/test/fixtures`
-const file = "file.js"
-const fileAbsolute = `${root}/${file}`
-const input = fs.readFileSync(fileAbsolute).toString()
+const rootname = `${selfRootname}/src/jsCompile/test/basic`
+const filenameRelative = "basic.js"
+const filename = `${rootname}/${filenameRelative}`
+const input = fs.readFileSync(filename).toString()
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-block-scoping": {},
 })
 
 const test = async () => {
   const { sources, sourcesContent, assets, assetsContent, output } = await jsCompile({
-    localRoot: root,
-    file,
-    fileAbsolute,
     input,
+    filename,
+    filenameRelative,
+    rootname,
     pluginMap,
   })
 
-  assert({ actual: sources, expected: [file] })
+  assert({ actual: sources, expected: [filenameRelative] })
   assert({ actual: sourcesContent, expected: [input] })
-  assert({ actual: assets, expected: ["file.js.map"] })
+  assert({ actual: assets, expected: [`${filenameRelative}.map`] })
 
   const map = JSON.parse(assetsContent[0])
   assert({
     actual: map,
     expected: {
       ...map,
-      sources: [`/${file}`],
+      sources: [`/${filenameRelative}`],
       version: 3,
     },
   })
 
   assert({ actual: typeof output, expected: "string" })
-  assert({ actual: output.indexOf("var value = true"), expected: 0 })
-
-  console.log("passed")
+  assert({ actual: output.includes("var value"), expected: true })
 }
 
 test()

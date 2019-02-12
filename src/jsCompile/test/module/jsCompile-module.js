@@ -1,7 +1,7 @@
 import fs from "fs"
 import { assert } from "@dmail/assert"
 import { root as selfRoot } from "../../root.js"
-import { jsCompile } from "../jsCompile.js"
+import { jsCompile } from "../../jsCompile.js"
 
 const root = `${selfRoot}/src/jsCompile/test/fixtures`
 const file = "module.js"
