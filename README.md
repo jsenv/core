@@ -12,5 +12,11 @@
   the naming should either reflect this difference or
   and localRoot should become an url like remoteRoot ?
 
+  root should be renamed rootPathname and be '/Users/me/folder' for instance
+  localRoot should be renamed rootHref and be 'file:///Users/me/folder'
+  remoteRoot should be renamed compiledRootHref and be 'http://ip:port/'
+
+  check locaters to see the renaming impact
+
 - create an other repo using dev-server-poc bundled files
   test the other repo can bundle dev-server-poc too
