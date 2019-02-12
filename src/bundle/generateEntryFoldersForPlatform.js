@@ -1,6 +1,6 @@
 import { resolve } from "url"
 import createRollupBabelPlugin from "rollup-plugin-babel"
-import { resolveImport } from "@jsenv/module-resolution"
+import { resolveImport, pathnameToFileHref, fileHrefToPathname } from "@jsenv/module-resolution"
 import { fileRead } from "@dmail/helper"
 import { createCancellationToken, createOperation } from "@dmail/cancellation"
 import { compileMapToBabelPlugins } from "./compileMapToBabelPlugins.js"
@@ -44,7 +44,7 @@ const generateEntryFolderForPlatform = async ({
   const rollupJsenvPlugin = {
     name: "jsenv",
     resolveId: (importee, importer) => {
-      const root = `file://${localRoot}`
+      const root = pathnameToFileHref(localRoot)
       // hotfix because entry file has no importer
       // so it would be resolved against root which is a folder
       // and url resolution would not do what we expect
@@ -100,7 +100,7 @@ const generateEntryFolderForPlatform = async ({
     if (href.startsWith("file:///")) {
       const code = await createOperation({
         cancellationToken,
-        start: () => fileRead(href.slice("file://".length)),
+        start: () => fileRead(fileHrefToPathname(href)),
       })
       return code
     }
