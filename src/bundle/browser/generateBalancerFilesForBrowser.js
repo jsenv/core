@@ -11,14 +11,14 @@ export const generateBalancerFilesForBrowser = async ({
   cancellationToken,
   localRoot,
   bundleInto,
-  entryPointObject,
+  entryPointsDescription,
   globalName,
   compileMap,
   compileParamMap,
   rollupOptions,
 }) => {
   return Promise.all(
-    Object.keys(entryPointObject).map((entryName) => {
+    Object.keys(entryPointsDescription).map((entryName) => {
       const entryFile = `${entryName}.js`
 
       return Promise.all([

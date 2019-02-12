@@ -10,9 +10,9 @@ import { writeRollupBundle } from "./writeRollupBundle.js"
 
 export const generateEntryFoldersForPlatform = async ({
   cancellationToken = createCancellationToken(),
-  localRoot,
-  bundleInto,
-  entryPointObject,
+  root,
+  into,
+  entryPointsDescription,
   compileMap,
   compileParamMap,
   rollupOptions,
@@ -21,9 +21,9 @@ export const generateEntryFoldersForPlatform = async ({
     Object.keys(compileMap).map((compileId) => {
       return generateEntryFolderForPlatform({
         cancellationToken,
-        localRoot,
-        bundleInto,
-        entryPointObject,
+        root,
+        into,
+        entryPointsDescription,
         compileId,
         compileIdPluginMap: compileParamMap[compileId].pluginMap,
         rollupOptions,
@@ -34,9 +34,9 @@ export const generateEntryFoldersForPlatform = async ({
 
 const generateEntryFolderForPlatform = async ({
   cancellationToken,
-  localRoot,
-  bundleInto,
-  entryPointObject,
+  root,
+  into,
+  entryPointsDescription,
   compileId,
   compileIdPluginMap,
   rollupOptions,
@@ -44,14 +44,14 @@ const generateEntryFolderForPlatform = async ({
   const rollupJsenvPlugin = {
     name: "jsenv",
     resolveId: (importee, importer) => {
-      const root = pathnameToFileHref(localRoot)
+      const rootHref = pathnameToFileHref(root)
       // hotfix because entry file has no importer
       // so it would be resolved against root which is a folder
       // and url resolution would not do what we expect
-      if (!importer) return `${root}/${importee}`
+      if (!importer) return `${rootHref}/${importee}`
 
       const id = resolveImport({
-        root,
+        root: rootHref,
         importer,
         specifier: importee,
         useNodeModuleResolutionOnRelative: false,
@@ -128,7 +128,7 @@ const generateEntryFolderForPlatform = async ({
   return writeRollupBundle({
     cancellationToken,
     inputOptions: {
-      input: entryPointObject,
+      input: entryPointsDescription,
       plugins: [rollupJsenvPlugin, rollupBabelPlugin],
       // skip rollup warnings
       onwarn: () => {},
@@ -136,7 +136,7 @@ const generateEntryFolderForPlatform = async ({
     },
     outputOptions: {
       // https://rollupjs.org/guide/en#output-dir
-      dir: `${localRoot}/${bundleInto}/${compileId}`,
+      dir: `${root}/${into}/${compileId}`,
       // https://rollupjs.org/guide/en#output-sourcemap
       sourcemap: true,
       sourcemapExcludeSources: true,

@@ -9,8 +9,8 @@ import {
 export const bundleNode = catchAsyncFunctionCancellation(
   async ({
     root,
-    bundleInto = "bundle/node", // later update this to 'dist/node'
-    entryPointObject = { main: "index.js" },
+    into = "bundle/node", // later update this to 'dist/node'
+    entryPointsDescription = { main: "index.js" },
     pluginMap = {},
     pluginCompatMap,
     // https://nodejs.org/metrics/summaries/version/nodejs.org-access.log.csv
@@ -27,14 +27,16 @@ export const bundleNode = catchAsyncFunctionCancellation(
     },
     compileGroupCount = 2,
   }) => {
-    if (!root) throw new TypeError(`bundle expect root, got ${root}`)
-    if (!bundleInto) throw new TypeError(`bundle expect bundleInto, got ${bundleInto}`)
-    if (typeof entryPointObject !== "object")
-      throw new TypeError(`bundle expect a entryPointObject, got ${entryPointObject}`)
+    if (typeof root !== "string")
+      throw new TypeError(`bundleNode root must be a string, got ${root}`)
+    if (typeof into !== "string")
+      throw new TypeError(`bundleNode into must be a string, got ${into}`)
+    if (typeof entryPointsDescription !== "object")
+      throw new TypeError(
+        `bundleNode entryPointsDescription must be an object, got ${entryPointsDescription}`,
+      )
 
     const cancellationToken = createProcessInterruptionCancellationToken()
-
-    const localRoot = root
 
     const compileMap = generateCompileMap({
       pluginMap,
@@ -53,9 +55,9 @@ export const bundleNode = catchAsyncFunctionCancellation(
     await Promise.all([
       generateEntryFoldersForPlatform({
         cancellationToken,
-        localRoot,
-        bundleInto,
-        entryPointObject,
+        root,
+        into,
+        entryPointsDescription,
         compileMap,
         compileParamMap,
         // https://rollupjs.org/guide/en#output-format
@@ -63,9 +65,9 @@ export const bundleNode = catchAsyncFunctionCancellation(
       }),
       generateBalancerFilesForNode({
         cancellationToken,
-        localRoot,
-        bundleInto,
-        entryPointObject,
+        root,
+        into,
+        entryPointsDescription,
         compileMap,
         compileParamMap,
         rollupOptions,

@@ -9,8 +9,8 @@ import {
 export const bundleBrowser = catchAsyncFunctionCancellation(
   async ({
     root,
-    bundleInto = "bundle/browser", // later update this to 'dist/browser'
-    entryPointObject = { main: "index.js" },
+    into = "bundle/browser", // later update this to 'dist/browser'
+    entryPointsDescription = { main: "index.js" },
     globalName,
     pluginMap = {},
     pluginCompatMap,
@@ -38,14 +38,16 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
     },
     compileGroupCount = 2,
   }) => {
-    if (!root) throw new TypeError(`bundle expect root, got ${root}`)
-    if (!bundleInto) throw new TypeError(`bundle expect bundleInto, got ${bundleInto}`)
-    if (typeof entryPointObject !== "object")
-      throw new TypeError(`bundle expect a entryPointObject, got ${entryPointObject}`)
+    if (typeof root !== "string")
+      throw new TypeError(`bundleBrowser root must be a string, got ${root}`)
+    if (typeof into !== "string")
+      throw new TypeError(`bundleBrowser into must be a string, got ${into}`)
+    if (typeof entryPointsDescription !== "object")
+      throw new TypeError(
+        `bundleBrowser entryPointsDescription must be an object, got ${entryPointsDescription}`,
+      )
 
     const cancellationToken = createProcessInterruptionCancellationToken()
-
-    const localRoot = root
 
     const compileMap = generateCompileMap({
       pluginMap,
@@ -65,9 +67,9 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
     await Promise.all([
       generateEntryFoldersForPlatform({
         cancellationToken,
-        localRoot,
-        bundleInto,
-        entryPointObject,
+        root,
+        into,
+        entryPointsDescription,
         globalName,
         compileMap,
         compileParamMap,
@@ -75,9 +77,9 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
       }),
       generateBalancerFilesForBrowser({
         cancellationToken,
-        localRoot,
-        bundleInto,
-        entryPointObject,
+        root,
+        into,
+        entryPointsDescription,
         globalName,
         compileMap,
         compileParamMap,

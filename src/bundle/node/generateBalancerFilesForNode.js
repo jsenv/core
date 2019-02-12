@@ -6,21 +6,21 @@ import { writeRollupBundle } from "../writeRollupBundle.js"
 
 export const generateBalancerFilesForNode = async ({
   cancellationToken,
-  localRoot,
-  bundleInto,
-  entryPointObject,
+  root,
+  into,
+  entryPointsDescription,
   compileMap,
   compileParamMap,
   rollupOptions,
 }) => {
   return Promise.all(
-    Object.keys(entryPointObject).map((entryName) => {
+    Object.keys(entryPointsDescription).map((entryName) => {
       const entryFile = `${entryName}.js`
 
       return generateBalancerFileForNode({
         cancellationToken,
-        localRoot,
-        bundleInto,
+        root,
+        into,
         entryFile,
         compileMap,
         compileParamMap,
@@ -32,8 +32,8 @@ export const generateBalancerFilesForNode = async ({
 
 const generateBalancerFileForNode = async ({
   cancellationToken,
-  localRoot,
-  bundleInto,
+  root,
+  into,
   entryFile,
   compileMap,
   compileParamMap,
@@ -81,7 +81,7 @@ const generateBalancerFileForNode = async ({
       plugins: [rollupJsenvPlugin, rollupBabelPlugin],
     },
     outputOptions: {
-      file: `${localRoot}/${bundleInto}/${entryFile}`,
+      file: `${root}/${into}/${entryFile}`,
       sourcemap: true,
       ...rollupOptions,
     },
