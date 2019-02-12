@@ -10,19 +10,18 @@ export const overrideSystemResolve = ({
   const resolve = platformSystem.resolve
   platformSystem.resolve = async (specifier, importer) => {
     if (specifier[0] === "/") {
-      // todo: test what is importer here because it should
-      // start with http:// otherwise resolution will kinda fail
-      // no?
-      return resolveRootRelativeSpecifier({
-        root: importerToRoot({
-          compileInto,
-          compileId,
-          remoteRoot,
-          importer,
-        }),
+      const root = importerToRoot({
+        compileInto,
+        compileId,
+        remoteRoot,
+        importer,
+      })
+      const href = resolveRootRelativeSpecifier({
+        root,
         importer,
         specifier,
       })
+      return href
     }
     return resolve(specifier, importer)
   }

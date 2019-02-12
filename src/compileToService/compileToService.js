@@ -11,7 +11,7 @@ import { createETag } from "./helpers.js"
 import { compileFile } from "./compileFile.js"
 import { locate as locateDefault } from "./locate.js"
 
-const fileIsAsset = (file) => file.match(/[^\/]+__asset__\/.+$/)
+const pathnameIsAsset = (pathname) => pathname.match(/[^\/]+__asset__\/.+$/)
 
 export const compileToService = (
   compile,
@@ -64,22 +64,22 @@ export const compileToService = (
 
     // le chemin vers le fichier pour le client (qu'on peut modifier ce qui signifie un redirect)
     // le chemin vers le fichier sur le filesystem (qui peut etre different de localRoot/file)
-    const { compileId, projectFile, file } = await locate({
-      requestFile: ressource,
-      refererFile,
-      compileInto,
+    const { compileId, projectPathname, filePathname } = await locate({
       localRoot,
+      compileInto,
+      requestPathname: ressource,
+      refererFile,
     })
 
     // cannot locate a file -> we don't know what to compile
-    if (!projectFile) return null
+    if (!projectPathname) return null
 
-    if (!file) return null
+    if (!filePathname) return null
 
-    if (fileIsAsset(projectFile)) return null
+    if (pathnameIsAsset(projectPathname)) return null
 
     // we don't want to read anything outside of the project
-    if (fileIsOutsideFolder(file, localRoot)) {
+    if (pathnameIsOutsideFolder(filePathname, localRoot)) {
       return { status: 403, statusText: `cannot acces file outside project` }
     }
 
@@ -89,29 +89,29 @@ export const compileToService = (
     // a request to 'node_modules/dependency/index.js'
     // with referer 'node_modules/package/index.js'
     // may be found at 'node_modules/package/node_modules/dependency/index.js'
-    const locatedProjectFile = file.slice(`${localRoot}/`.length)
-    if (locatedProjectFile !== projectFile) {
+    const locatedProjectPathname = filePathname.slice(`${localRoot}/`.length)
+    if (locatedProjectPathname !== projectPathname) {
       // in that case, send temporary redirect to client
       return {
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
         status: 307,
         headers: {
           // maybe should send vary: 'referer',
-          location: `${origin}/${compileInto}/${compileId}/${locatedProjectFile}`,
+          location: `${origin}/${compileInto}/${compileId}/${locatedProjectPathname}`,
         },
       }
     }
     // if the file at this location is a symlink we should send 307 too
 
     // file must not be compiled (.html, .css, dist/browserLoader.js)
-    if (!compilePredicate(locatedProjectFile, file)) return null
+    if (!compilePredicate(locatedProjectPathname, filePathname)) return null
 
     // when I ask for a compiled file, watch the corresponding file on filesystem
-    if (watch && watchedFiles.has(file) === false && watchPredicate(projectFile)) {
-      const fileWatcher = watchFile(file, () => {
-        watchSignal.emit(projectFile)
+    if (watch && watchedFiles.has(filePathname) === false && watchPredicate(projectPathname)) {
+      const fileWatcher = watchFile(filePathname, () => {
+        watchSignal.emit(projectPathname)
       })
-      watchedFiles.set(file, fileWatcher)
+      watchedFiles.set(filePathname, fileWatcher)
     }
 
     const compileService = async () => {
@@ -121,8 +121,8 @@ export const compileToService = (
         compileInto,
         compileId,
         compileParamMap,
-        file: projectFile,
-        fileAbsolute: file,
+        file: projectPathname,
+        fileAbsolute: filePathname,
         cacheStrategy: localCacheStrategy,
         cacheTrackHit: localCacheTrackHit,
       })
@@ -140,7 +140,7 @@ export const compileToService = (
 
     try {
       if (cacheWithMtime) {
-        const { mtime } = await fileStat(file)
+        const { mtime } = await fileStat(filePathname)
 
         if ("if-modified-since" in headers) {
           const ifModifiedSince = headers["if-modified-since"]
@@ -167,7 +167,7 @@ export const compileToService = (
       }
 
       if (cacheWithETag) {
-        const content = await fileRead(file)
+        const content = await fileRead(filePathname)
         const eTag = createETag(content)
 
         if ("if-none-match" in headers) {
@@ -207,10 +207,10 @@ export const compileToService = (
     fileChangedSSE.open()
     cancellationToken.register(fileChangedSSE.close)
 
-    watchSignal.listen((file) => {
+    watchSignal.listen((modulePathname) => {
       fileChangedSSE.sendEvent({
         type: "file-changed",
-        data: file,
+        data: modulePathname,
       })
     })
 
@@ -229,6 +229,6 @@ export const compileToService = (
   return compileService
 }
 
-const fileIsInsideFolder = (file, folder) => file.startsWith(`${folder}/`)
+const pathnameIsInsideFolder = (pathname, folder) => pathname.startsWith(`${folder}/`)
 
-const fileIsOutsideFolder = (file, folder) => !fileIsInsideFolder(file, folder)
+const pathnameIsOutsideFolder = (pathname, folder) => !pathnameIsInsideFolder(pathname, folder)

@@ -1,58 +1,64 @@
-import { resolveAPossibleNodeModuleFile } from "@jsenv/module-resolution"
+import {
+  resolveAPossibleNodeModuleFile,
+  fileHrefToPathname,
+  pathnameToFileHref,
+} from "@jsenv/module-resolution"
 
-export const locate = ({ requestFile, compileInto, localRoot }) => {
+export const locate = ({ localRoot, compileInto, requestPathname }) => {
   const {
     compileId: requestCompileId,
-    projectFile: requestProjectFile,
-  } = requestFileToCompileIdAndProjectFile(requestFile, compileInto)
+    projectPathname: requestProjectPathname,
+  } = requestPathnameToCompileIdAndProjectPathname(requestPathname, compileInto)
 
   if (!requestCompileId) return {}
-  if (!requestProjectFile) return {}
+  if (!requestProjectPathname) return {}
 
   const compileId = requestCompileId
-  const projectFile = requestProjectFile
-  const moduleFile = `${localRoot}/${projectFile}`
+  const projectPathname = requestProjectPathname
+  const modulePathname = `${localRoot}/${projectPathname}`
   // it is possible that the file is in fact somewhere else
   // due to node_module resolution algorithm
-  const moduleFileOrNodeModuleFile = resolveAPossibleNodeModuleFile(moduleFile)
+  const moduleHrefOrNodeModuleHref = resolveAPossibleNodeModuleFile(
+    pathnameToFileHref(modulePathname),
+  )
 
   return {
     compileId,
-    projectFile,
-    file: moduleFileOrNodeModuleFile,
+    projectPathname,
+    filePathname: fileHrefToPathname(moduleHrefOrNodeModuleHref),
   }
 }
 
-const requestFileToCompileIdAndProjectFile = (requestFile = "", compileInto) => {
-  if (requestFile.startsWith(`${compileInto}/`) === false) {
+const requestPathnameToCompileIdAndProjectPathname = (requestPathname = "", compileInto) => {
+  if (requestPathname.startsWith(`${compileInto}/`) === false) {
     return {
       compileId: null,
-      projectFile: null,
+      projectPathname: null,
     }
   }
 
-  const afterCompileInto = requestFile.slice(`${compileInto}/`.length)
+  const afterCompileInto = requestPathname.slice(`${compileInto}/`.length)
   const parts = afterCompileInto.split("/")
 
   const compileId = parts[0]
   if (compileId.length === 0) {
     return {
       compileId: null,
-      projectFile: null,
+      projectPathname: null,
     }
   }
 
-  const projectFile = parts.slice(1).join("/")
-  if (projectFile.length === 0) {
+  const projectPathname = parts.slice(1).join("/")
+  if (projectPathname.length === 0) {
     return {
       compileId: null,
-      projectFile,
+      projectPathname,
     }
   }
 
   return {
     compileId,
-    projectFile,
+    projectPathname,
   }
 }
 

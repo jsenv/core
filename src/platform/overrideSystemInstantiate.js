@@ -9,7 +9,7 @@ export const overrideSystemInstantiate = ({
   platformSystem,
   moduleSourceToSystemRegisteredModule,
 }) => {
-  platformSystem.instantiate = (moduleSpecifier, moduleSpecifierFile) => {
+  platformSystem.instantiate = (href, importer) => {
     return fromRemoteFile({
       localRoot,
       compileInto,
@@ -18,8 +18,8 @@ export const overrideSystemInstantiate = ({
       fetchSource,
       platformSystem,
       moduleSourceToSystemRegisteredModule,
-      remoteFile: moduleSpecifier,
-      remoteParent: moduleSpecifierFile,
+      remoteFile: href,
+      remoteParent: importer,
     })
   }
 }
