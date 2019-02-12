@@ -6,8 +6,7 @@ import {
 } from "../cancellationHelper.js"
 
 export const execute = async ({
-  file,
-  localRoot,
+  root,
   compileInto,
   pluginMap,
   protocol,
@@ -17,13 +16,14 @@ export const execute = async ({
   launch,
   mirrorConsole = true,
   stopOnceExecuted,
+  file,
 }) =>
   catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const { origin: remoteRoot } = await startCompileServer({
       cancellationToken,
-      localRoot,
+      root,
       compileInto,
       pluginMap,
       protocol,
@@ -33,7 +33,7 @@ export const execute = async ({
     })
 
     return launchAndExecute({
-      launch: (options) => launch({ ...options, localRoot, compileInto, remoteRoot }),
+      launch: (options) => launch({ ...options, localRoot: root, compileInto, remoteRoot }),
       cancellationToken,
       mirrorConsole,
       stopOnceExecuted,

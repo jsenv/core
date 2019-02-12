@@ -3,16 +3,16 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.j
 export const generateCompileMap = ({
   compileGroupCount,
   pluginMap = {},
-  pluginCompatMap,
   platformUsageMap,
+  pluginCompatMap,
 }) => {
   if (!pluginMap) throw new Error(`pluginMap is required`)
 
   const compileMap = envDescriptionToCompileMap({
     compileGroupCount,
     pluginNames: Object.keys(pluginMap),
-    pluginCompatMap,
     platformUsageMap,
+    pluginCompatMap,
   })
 
   return compileMap

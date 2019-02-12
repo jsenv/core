@@ -12,14 +12,13 @@ import {
 
 export const bundleBrowser = catchAsyncFunctionCancellation(
   async ({
+    entryPointsDescription,
     root,
     into,
-    entryPointsDescription,
     globalName,
     pluginMap,
-    pluginCompatMap,
-    usageMap = browserUsageMap,
     compileGroupCount = 2,
+    usageMap = browserUsageMap,
   }) => {
     if (typeof root !== "string")
       throw new TypeError(`bundleBrowser root must be a string, got ${root}`)
@@ -33,10 +32,9 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const compileMap = generateCompileMap({
-      pluginMap,
-      pluginCompatMap,
-      platformUsageMap: usageMap,
       compileGroupCount,
+      pluginMap,
+      platformUsageMap: usageMap,
     })
 
     const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)

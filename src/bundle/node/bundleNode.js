@@ -12,13 +12,12 @@ import {
 
 export const bundleNode = catchAsyncFunctionCancellation(
   async ({
+    entryPointsDescription,
     root,
     into,
-    entryPointsDescription,
     pluginMap,
-    pluginCompatMap,
-    usageMap = nodeUsageMap,
     compileGroupCount = 2,
+    usageMap = nodeUsageMap,
   }) => {
     if (typeof root !== "string")
       throw new TypeError(`bundleNode root must be a string, got ${root}`)
@@ -32,10 +31,9 @@ export const bundleNode = catchAsyncFunctionCancellation(
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const compileMap = generateCompileMap({
-      pluginMap,
-      pluginCompatMap,
-      platformUsageMap: usageMap,
       compileGroupCount,
+      pluginMap,
+      platformUsageMap: usageMap,
     })
 
     const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
