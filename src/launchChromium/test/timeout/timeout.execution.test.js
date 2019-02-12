@@ -18,18 +18,16 @@ const pluginMap = {
     pluginMap,
   })
 
-  const actual = await launchAndExecute(
-    ({ cancellationToken }) =>
-      launchChromium({ cancellationToken, localRoot, remoteRoot, compileInto, headless: false }),
+  const actual = await launchAndExecute({
+    launch: ({ cancellationToken }) =>
+      launchChromium({ cancellationToken, localRoot, compileInto, remoteRoot, headless: false }),
+    allocatedMs: 5000,
+    stopOnceExecuted: true,
+    captureConsole: true,
     file,
-    {
-      platformTypeForLog: "chromium browser",
-      stopOnceExecuted: true,
-      verbose: true,
-      allocatedMs: 5000,
-      captureConsole: true,
-    },
-  )
+    verbose: true,
+    platformTypeForLog: "chromium browser",
+  })
   const expected = {
     status: "timedout",
     platformLog: `foo

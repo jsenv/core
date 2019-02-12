@@ -18,16 +18,14 @@ const pluginMap = {
     pluginMap,
   })
 
-  const actual = await launchAndExecute(
-    (options) => launchChromium({ ...options, localRoot, remoteRoot, compileInto }),
+  const actual = await launchAndExecute({
+    launch: (options) => launchChromium({ ...options, localRoot, remoteRoot, compileInto }),
+    platformTypeForLog: "node process",
+    verbose: true,
+    stopOnceExecuted: true,
+    collectNamespace: true,
     file,
-    {
-      platformTypeForLog: "node process",
-      verbose: true,
-      collectNamespace: true,
-      stopOnceExecuted: true,
-    },
-  )
+  })
   const expected = {
     status: "completed",
     namespace: {

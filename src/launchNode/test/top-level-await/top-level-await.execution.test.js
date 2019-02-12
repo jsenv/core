@@ -18,15 +18,13 @@ const pluginMap = {
     pluginMap,
   })
 
-  const actual = await launchAndExecute(
-    () => launchNode({ localRoot, remoteRoot, compileInto }),
+  const actual = await launchAndExecute({
+    launch: () => launchNode({ localRoot, compileInto, remoteRoot }),
+    collectNamespace: true,
     file,
-    {
-      platformTypeForLog: "node process",
-      verbose: true,
-      collectNamespace: true,
-    },
-  )
+    verbose: true,
+    platformTypeForLog: "node process",
+  })
   const expected = {
     status: "completed",
     value: {

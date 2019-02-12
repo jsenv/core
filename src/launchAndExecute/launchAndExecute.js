@@ -8,34 +8,32 @@ import {
 } from "@dmail/cancellation"
 import { promiseTrackRace } from "@dmail/helper"
 
-export const launchAndExecute = async (
-  launchPlatform,
+export const launchAndExecute = async ({
+  cancellationToken = createCancellationToken(),
+  launch,
+  allocatedMs,
+  captureConsole = false,
+  mirrorConsole = false,
+  measureDuration = false,
+  // stopOnceExecuted false by default because you want to keep browser alive
+  // or nodejs process
+  // however unit test will pass true because they want to move on
+  stopOnceExecuted = false,
+  // stopOnError is false by default because it's better to keep process/browser alive
+  // to debug the error to the its consequences
+  // however unit test will pass true because they want to move on
+  stopOnError = false,
+  verbose = false,
+  platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
+  startedCallback = () => {},
+  stoppedCallback = () => {},
+  errorAfterExecutedCallback = () => {},
+  disconnectAfterExecutedCallback = () => {},
+  collectNamespace = false,
+  collectCoverage = false,
+  instrument = collectCoverage,
   file,
-  {
-    cancellationToken = createCancellationToken(),
-    allocatedMs,
-    captureConsole = false,
-    mirrorConsole = false,
-    measureDuration = false,
-    platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
-    verbose = false,
-    // stopOnceExecuted false by default because you want to keep browser alive
-    // or nodejs process
-    // however unit test will pass true because they want to move on
-    stopOnceExecuted = false,
-    // stopOnError is false by default because it's better to keep process/browser alive
-    // to debug the error to the its consequences
-    // however unit test will pass true because they want to move on
-    stopOnError = false,
-    startedCallback = () => {},
-    stoppedCallback = () => {},
-    errorAfterExecutedCallback = () => {},
-    disconnectAfterExecutedCallback = () => {},
-    collectNamespace = false,
-    collectCoverage = false,
-    instrument = collectCoverage,
-  } = {},
-) => {
+} = {}) => {
   let platformLog = ""
   const consoleCallback = ({ type, text }) => {
     if (captureConsole) {
@@ -52,10 +50,9 @@ export const launchAndExecute = async (
 
   const startMs = Date.now()
   const executionResult = await computeRawExecutionResult({
+    launch,
     cancellationToken,
     allocatedMs,
-    launchPlatform,
-    file,
     consoleCallback,
     platformTypeForLog,
     verbose,
@@ -65,6 +62,7 @@ export const launchAndExecute = async (
     disconnectAfterExecutedCallback,
     startedCallback,
     stoppedCallback,
+    file,
     collectNamespace,
     collectCoverage,
     instrument,
@@ -81,21 +79,21 @@ export const launchAndExecute = async (
 }
 
 const computeRawExecutionResult = async ({
+  launch,
   cancellationToken,
   allocatedMs,
-  launchPlatform,
-  file,
   consoleCallback,
+  file,
   ...rest
 }) => {
   const hasAllocatedMs = typeof allocatedMs === "number"
 
   if (!hasAllocatedMs) {
     return computeExecutionResult({
-      launchPlatform,
-      file,
+      launch,
       cancellationToken,
       consoleCallback,
+      file,
       ...rest,
     })
   }
@@ -115,10 +113,10 @@ const computeRawExecutionResult = async ({
 
   try {
     const executionResult = await computeExecutionResult({
-      launchPlatform,
-      file,
+      launch,
       cancellationToken: externalOrTimeoutCancellationToken,
       consoleCallback,
+      file,
       ...rest,
     })
     timeoutCancel()
@@ -137,9 +135,8 @@ const computeRawExecutionResult = async ({
 const ALLOCATED_MS_BEFORE_FORCE_STOP = 8000
 
 const computeExecutionResult = async ({
+  launch,
   cancellationToken,
-  launchPlatform,
-  file,
   verbose,
   platformTypeForLog,
   startedCallback,
@@ -149,6 +146,7 @@ const computeExecutionResult = async ({
   disconnectAfterExecutedCallback,
   stopOnError,
   stopOnceExecuted,
+  file,
   collectNamespace,
   collectCoverage,
   instrument,
@@ -163,7 +161,7 @@ const computeExecutionResult = async ({
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
-      const value = await launchPlatform({ cancellationToken })
+      const value = await launch({ cancellationToken })
       startedCallback()
       return value
     },

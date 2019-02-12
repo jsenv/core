@@ -16,15 +16,13 @@ const pluginMap = {}
     pluginMap,
   })
 
-  const actual = await launchAndExecute(
-    () => launchNode({ localRoot, remoteRoot, compileInto }),
+  const actual = await launchAndExecute({
+    launch: (options) => launchNode({ ...options, localRoot, compileInto, remoteRoot }),
+    captureConsole: true,
+    verbose: true,
+    platformTypeForLog: "node process",
     file,
-    {
-      platformTypeForLog: "node process",
-      verbose: true,
-      captureConsole: true,
-    },
-  )
+  })
   actual.platformLog = removeDebuggerLog(actual.platformLog)
   const expected = {
     status: "errored",

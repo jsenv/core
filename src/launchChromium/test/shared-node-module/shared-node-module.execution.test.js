@@ -15,17 +15,15 @@ const pluginMap = {}
     pluginMap,
   })
 
-  const actual = await launchAndExecute(
-    () => launchChromium({ localRoot, remoteRoot, compileInto, headless: false }),
+  const actual = await launchAndExecute({
+    launch: () => launchChromium({ localRoot, compileInto, remoteRoot, headless: false }),
+    stopOnceExecuted: true,
+    mirrorConsole: true,
+    collectNamespace: true,
     file,
-    {
-      platformTypeForLog: "chromium browser",
-      verbose: true,
-      stopOnceExecuted: true,
-      mirrorConsole: true,
-      collectNamespace: true,
-    },
-  )
+    verbose: true,
+    platformTypeForLog: "chromium browser",
+  })
   const expected = {
     status: "completed",
     namespace: {

@@ -32,13 +32,11 @@ export const execute = async ({
       verbose,
     })
 
-    return launchAndExecute(
-      (options) => launch({ ...options, localRoot, remoteRoot, compileInto }),
+    return launchAndExecute({
+      launch: (options) => launch({ ...options, localRoot, compileInto, remoteRoot }),
+      cancellationToken,
+      mirrorConsole,
+      stopOnceExecuted,
       file,
-      {
-        cancellationToken,
-        mirrorConsole,
-        stopOnceExecuted,
-      },
-    )
+    })
   })

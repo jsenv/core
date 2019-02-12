@@ -36,10 +36,10 @@ export const executePlan = async (
     start: async ({ file, platformName, launch, allocatedMs }) => {
       beforeEach({ file, platformName })
 
-      const result = await launchAndExecute(launch, file, {
+      const result = await launchAndExecute({
+        launch,
         cancellationToken,
         allocatedMs,
-        collectCoverage: cover,
         measureDuration: true,
         // mirrorConsole: false because file will be executed in parallel
         // so log would be a mess to read
@@ -57,6 +57,8 @@ export const executePlan = async (
         stopOnceExecuted: true,
         // no need to log when disconnected
         disconnectAfterExecutedCallback: () => {},
+        file,
+        collectCoverage: cover,
       })
       afterEach({ file, platformName, allocatedMs, ...result })
 

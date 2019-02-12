@@ -19,16 +19,14 @@ const pluginMap = {
     pluginMap,
   })
 
-  const actual = await launchAndExecute(
-    (options) => launchNode({ ...options, localRoot, remoteRoot, compileInto }),
+  const actual = await launchAndExecute({
+    launch: (options) => launchNode({ ...options, localRoot, compileInto, remoteRoot }),
+    allocatedMs: 5000,
+    captureConsole: true,
     file,
-    {
-      platformTypeForLog: "node process",
-      verbose: true,
-      allocatedMs: 5000,
-      captureConsole: true,
-    },
-  )
+    verbose: true,
+    platformTypeForLog: "node process",
+  })
   actual.platformLog = removeDebuggerLog(actual.platformLog)
   const expected = {
     status: "timedout",
