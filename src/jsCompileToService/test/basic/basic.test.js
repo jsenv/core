@@ -1,6 +1,5 @@
 import { assert } from "@dmail/assert"
-import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { root } from "../../../root.js"
+import { rootname } from "../../../rootname.js"
 import { jsCompile } from "../../../jsCompile/index.js"
 import { jsCompileToService } from "../../jsCompileToService.js"
 
@@ -9,13 +8,11 @@ const compileId = "test"
 
 ;(async () => {
   const jsService = jsCompileToService(jsCompile, {
-    root,
+    rootname,
     compileInto,
     compileParamMap: {
       [compileId]: {
-        pluginMap: pluginOptionMapToPluginMap({
-          "transform-modules-commonjs": {},
-        }),
+        pluginMap: {},
       },
     },
   })
@@ -33,9 +30,7 @@ const compileId = "test"
         status: 200,
         headers: {
           ...response.headers,
-          "content-length": 269,
           "content-type": "application/javascript",
-          eTag: `"54-Yd2c2D1VgsR7OyJD1YIUp5mwb54"`,
         },
       },
     })
@@ -61,6 +56,4 @@ const compileId = "test"
     })
     assert({ actual: response.status, expected: 404 })
   }
-
-  console.log("passed")
 })()
