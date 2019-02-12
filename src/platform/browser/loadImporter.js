@@ -4,9 +4,9 @@ import { evalSource } from "./evalSource.js"
 import { getBrowserSystemImporterHref } from "./remoteURL.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 
-export const loadImporter = memoizeOnce(async ({ compileInto, compiledRootHref }) => {
+export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigin }) => {
   // importer depends on informer, but this is an implementation detail
-  const { compileMap, compileId } = await loadCompileMeta({ compileInto, compiledRootHref })
+  const { compileMap, compileId } = await loadCompileMeta({ compileInto, compileServerOrigin })
 
   // one day maybe we'll be able to use nativeImporter but
   // for now transform-modules-systemjs is not inside compileMap because
@@ -24,7 +24,7 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compiledRootHref }
     return nativeImporter
   }
 
-  const importerHref = getBrowserSystemImporterHref({ compiledRootHref })
+  const importerHref = getBrowserSystemImporterHref({ compileServerOrigin })
   const importerResponse = await fetchUsingXHR(importerHref)
   if (importerResponse.status < 200 || importerResponse.status >= 400) {
     return Promise.reject(importerResponse)
@@ -34,7 +34,7 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compiledRootHref }
 
   const systemImporter = window.__browserImporter__.createSystemImporter({
     compileInto,
-    compiledRootHref,
+    compileServerOrigin,
     compileId,
     fetchSource,
   })

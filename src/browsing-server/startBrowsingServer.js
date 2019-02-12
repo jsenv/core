@@ -4,11 +4,11 @@ import { createCancellationToken } from "@dmail/cancellation"
 import { startServer, createRequestPredicate, serviceCompose } from "../server/index.js"
 import { startCompileServer } from "../server-compile/index.js"
 import { guard } from "../functionHelper.js"
-import { getBrowserPlatformRemoteURL } from "../platform/browser/remoteURL.js"
+import { getBrowserPlatformHref } from "../platform/browser/remoteURL.js"
 
 export const startBrowsingServer = async ({
   cancellationToken = createCancellationToken(),
-  root,
+  rootname,
   compileInto,
   compileGroupCount,
   pluginMap,
@@ -28,7 +28,7 @@ export const startBrowsingServer = async ({
   forcePort = true,
   signature,
 
-  generateHTML = ({ file, remoteRoot, compileInto, browserPlatformRemoteURL }) => {
+  generateHTML = ({ compileInto, compileServerOrigin, filenameRelative, browserPlatformHref }) => {
     return `<!doctype html>
 
 <head>
@@ -38,12 +38,12 @@ export const startBrowsingServer = async ({
 
 <body>
   <main></main>
-  <script src="${browserPlatformRemoteURL}"></script>
+  <script src="${browserPlatformHref}"></script>
   <script type="text/javascript">
     window.__platform__.importCompiledFile({
       "compileInto": ${uneval(compileInto)},
-      "remoteRoot": ${uneval(remoteRoot)},
-      "file": ${uneval(file)}
+      "compileServerOrigin": ${uneval(compileServerOrigin)},
+      "filenameRelative": ${uneval(filenameRelative)}
     })
   </script>
 </body>
@@ -56,14 +56,14 @@ export const startBrowsingServer = async ({
   })
 
   const browsablePathnameArray = await forEachRessourceMatching({
-    localRoot: root,
+    localRoot: rootname,
     metaMap,
     predicate: ({ browsable }) => browsable,
   })
 
-  const { origin: remoteRoot } = await startCompileServer({
+  const { origin: compiledSourceHref } = await startCompileServer({
     cancellationToken,
-    root,
+    rootname,
     compileInto,
     compileGroupCount,
     pluginMap,
@@ -112,10 +112,10 @@ export const startBrowsingServer = async ({
     }),
     async ({ ressource }) => {
       const html = await generateHTML({
-        file: ressource,
-        remoteRoot,
         compileInto,
-        browserPlatformRemoteURL: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }),
+        compiledSourceHref,
+        browserPlatformHref: getBrowserPlatformHref({ compileInto, compiledSourceHref }),
+        filenameRelative: ressource,
       })
 
       return {
@@ -137,7 +137,7 @@ export const startBrowsingServer = async ({
     port,
     forcePort,
     requestToResponse: serviceCompose(indexRoute, otherRoute),
-    startedMessage: ({ origin }) => `browser server started for ${root} at ${origin}`,
+    startedMessage: ({ origin }) => `browser server started for ${rootname} at ${origin}`,
     stoppedMessage: (reason) => `browser server stopped because ${reason}`,
   })
   return browserServer

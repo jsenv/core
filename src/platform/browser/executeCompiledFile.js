@@ -1,26 +1,26 @@
 import { genericExecuteCompiledFile } from "../genericExecuteCompiledFile.js"
-import { pathnameToSourceHref } from "../locaters.js"
+import { filenameRelativeToSourceHref } from "../filenameRelativeToSourceHref.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 import { loadImporter } from "./loadImporter.js"
 import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 
 export const executeCompiledFile = ({
   compileInto,
-  compiledRootHref,
+  compileServerOrigin,
+  filenameRelative,
   collectNamespace,
   collectCoverage,
   instrument = {},
-  pathname,
 }) =>
   genericExecuteCompiledFile({
-    loadCompileMeta: () => loadCompileMeta({ compileInto, compiledRootHref }),
-    loadImporter: () => loadImporter({ compileInto, compiledRootHref }),
+    loadCompileMeta: () => loadCompileMeta({ compileInto, compileServerOrigin }),
+    loadImporter: () => loadImporter({ compileInto, compileServerOrigin }),
     compileInto,
-    compiledRootHref,
+    compileServerOrigin,
+    filenameRelative,
     collectNamespace,
     collectCoverage,
     instrument,
-    pathname,
     readCoverage,
     onError,
     transformError,
@@ -50,10 +50,10 @@ const exceptionToObject = (exception) => {
   }
 }
 
-const onError = (error, { compileInto, compiledRootHref, pathname }) => {
+const onError = (error, { compileInto, compileServerOrigin, filenameRelative }) => {
   const meta = rejectionValueToMeta(error, {
     compileInto,
-    compiledRootHref,
+    compileServerOrigin,
   })
 
   const css = `
@@ -77,10 +77,10 @@ const onError = (error, { compileInto, compiledRootHref, pathname }) => {
       <style type="text/css">${css}></style>
       <div class="jsenv-console">
         <h1>
-          <a href="${pathnameToSourceHref({
-            pathname,
-            compiledRootHref,
-          })}">${pathname}</a> import rejected
+          <a href="${filenameRelativeToSourceHref({
+            compileServerOrigin,
+            filenameRelative,
+          })}">${filenameRelative}</a> import rejected
         </h1>
         <pre data-theme="${meta.dataTheme || "dark"}">${meta.data}</pre>
       </div>

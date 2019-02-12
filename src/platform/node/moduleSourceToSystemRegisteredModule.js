@@ -1,24 +1,23 @@
-import { hrefToSourceHref } from "../locaters.js"
+import { hrefToFilenameRelative } from "../hrefToFilenameRelative.js"
 import { valueInstall } from "../valueInstall.js"
 import { evalSource } from "./evalSource.js"
-import { fileHrefToPathname } from "@jsenv/module-resolution"
 
 export const moduleSourceToSystemRegisteredModule = (
   code,
-  { sourceRootHref, compiledRootHref, href, platformSystem },
+  { compileInto, sourceRootHref, compileServerOrigin, href, platformSystem },
 ) => {
   // This filename is very important because it allows the engine (like vscode) to know
   // that the evaluated file is in fact on the filesystem
   // (very important for debugging and sourcenap resolution)
-  const sourceHref = hrefToSourceHref(href, {
-    sourceRootHref,
-    compiledRootHref,
+  const filenameRelative = hrefToFilenameRelative(href, {
+    compileInto,
+    compileServerOrigin,
   })
-  const sourcePathname = fileHrefToPathname(sourceHref)
+  const filename = `${sourceRootHref}/${filenameRelative}`
 
   const uninstallSystemGlobal = valueInstall(global, "System", platformSystem)
   try {
-    evalSource(code, sourcePathname)
+    evalSource(code, filename)
   } finally {
     uninstallSystemGlobal()
   }

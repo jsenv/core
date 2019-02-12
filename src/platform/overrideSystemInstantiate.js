@@ -3,7 +3,7 @@ import { fromHref } from "./registerModuleFrom.js"
 export const overrideSystemInstantiate = ({
   compileInto,
   sourceRootHref,
-  compiledRootHref,
+  compileServerOrigin,
   compileId,
   fetchSource,
   platformSystem,
@@ -13,7 +13,7 @@ export const overrideSystemInstantiate = ({
     return fromHref({
       compileInto,
       sourceRootHref,
-      compiledRootHref,
+      compileServerOrigin,
       compileId,
       fetchSource,
       platformSystem,

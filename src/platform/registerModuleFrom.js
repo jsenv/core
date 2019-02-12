@@ -1,9 +1,9 @@
-import { hrefToPathname } from "./locaters.js"
+import { hrefToFilenameRelative } from "./hrefToFilenameRelative.js"
 
 export const fromHref = async ({
   compileInto,
   sourceRootHref,
-  compiledRootHref,
+  compileServerOrigin,
   compileId,
   fetchSource,
   platformSystem,
@@ -15,16 +15,16 @@ export const fromHref = async ({
     href,
     importer,
   })
-  const pathname = hrefToPathname(href, {
+  const filenameRelative = hrefToFilenameRelative(href, {
     compileInto,
     sourceRootHref,
-    compiledRootHref,
+    compileServerOrigin,
     compileId,
   })
   const realHref = url
 
   if (status === 404) {
-    throw createNotFoundError({ pathname, href: realHref })
+    throw createNotFoundError({ filenameRelative, href: realHref })
   }
 
   if (status === 500 && statusText === "parse error") {
@@ -38,7 +38,10 @@ export const fromHref = async ({
   }
 
   if (status < 200 || status >= 300) {
-    throw createResponseError({ status, statusText, headers, body }, { pathname, href: realHref })
+    throw createResponseError(
+      { status, statusText, headers, body },
+      { filenameRelative, href: realHref },
+    )
   }
 
   if ("content-type" in headers === false)
@@ -49,8 +52,9 @@ export const fromHref = async ({
   if (contentType === "application/javascript") {
     return fromFunctionReturningRegisteredModule(() => {
       return moduleSourceToSystemRegisteredModule(body, {
+        compileInto,
         sourceRootHref,
-        compiledRootHref,
+        compileServerOrigin,
         href: realHref,
         importer,
         platformSystem,
@@ -72,8 +76,8 @@ export const fromHref = async ({
   throw new Error(`unexpected ${contentType} content-type for ${href}`)
 }
 
-const createNotFoundError = ({ pathname, href }) => {
-  return createError(`${pathname} not found`, {
+const createNotFoundError = ({ filenameRelative, href }) => {
+  return createError(`${filenameRelative} not found`, {
     code: "MODULE_NOT_FOUND_ERROR",
     href,
   })
@@ -89,8 +93,8 @@ const createParseError = (_, { message, columnNumber, fileName, lineNumber, mess
   })
 }
 
-const createResponseError = ({ status }, { pathname, href }) => {
-  return createError(`received status ${status} for ${pathname} at ${href}`, {
+const createResponseError = ({ status }, { filenameRelative, href }) => {
+  return createError(`received status ${status} for ${filenameRelative} at ${href}`, {
     code: "RESPONSE_ERROR",
   })
 }

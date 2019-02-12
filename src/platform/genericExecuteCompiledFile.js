@@ -1,28 +1,34 @@
-import { pathnameToInstrumentedHref, pathnameToCompiledHref } from "./locaters.js"
+import { filenameRelativeToInstrumentedHref } from "./filenameRelativeToInstrumentedHref.js"
+import { filenameRelativeToCompiledHref } from "./filenameRelativeToCompiledHref.js"
 
 export const genericExecuteCompiledFile = async ({
   loadCompileMeta,
   loadImporter,
-  onError,
-  transformError,
-  readCoverage,
   compileInto,
-  compiledRootHref,
-  pathname,
+  compileServerOrigin,
+  filenameRelative,
   collectNamespace,
   collectCoverage,
   instrument,
+  onError,
+  transformError,
+  readCoverage,
 }) => {
   const [{ compileId }, { importFile }] = await Promise.all([loadCompileMeta(), loadImporter()])
 
   const fileHref = instrument
-    ? pathnameToInstrumentedHref({
-        pathname,
+    ? filenameRelativeToInstrumentedHref({
         compileInto,
-        compiledRootHref,
+        compileServerOrigin,
         compileId,
+        filenameRelative,
       })
-    : pathnameToCompiledHref({ pathname, compileInto, compiledRootHref, compileId })
+    : filenameRelativeToCompiledHref({
+        compileInto,
+        compileServerOrigin,
+        compileId,
+        filenameRelative,
+      })
 
   try {
     const namespace = await importFile(fileHref)

@@ -10,7 +10,7 @@ import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 const execute = async ({
   compileInto,
   sourceRootHref,
-  compiledRootHref,
+  compileServerOrigin,
   filenameRelative,
   collectNamespace,
   collectCoverage,
@@ -88,7 +88,7 @@ const execute = async ({
   const { status, coverageMap, error, namespace } = await executeCompiledFile({
     compileInto,
     sourceRootHref,
-    compiledRootHref,
+    compileServerOrigin,
     filenameRelative,
     collectNamespace,
     collectCoverage,

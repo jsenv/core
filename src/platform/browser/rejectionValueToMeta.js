@@ -1,20 +1,21 @@
-import { hrefToMeta, pathnameToSourceHref } from "../locaters.js"
+import { hrefToFilenameRelative } from "../hrefToFilenameRelative.js"
+import { filenameRelativeToSourceHref } from "../filenameRelativeToSourceHref.js"
 import { stringToStringWithLink, link } from "../../stringToStringWithLink.js"
 
-export const rejectionValueToMeta = (error, { compileInto, compiledRootHref }) => {
+export const rejectionValueToMeta = (error, { compileInto, compileServerOrigin }) => {
   if (error && error.code === "MODULE_PARSE_ERROR") {
-    return parseErrorToMeta(error, { compiledRootHref })
+    return parseErrorToMeta(error, { compileServerOrigin })
   }
 
   if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-    const pathname = hrefToMeta(error.url, { compileInto, compiledRootHref }).pathname
+    const filenameRelative = hrefToFilenameRelative(error.url, { compileInto, compileServerOrigin })
     const originalError = error.error
     return {
-      file: pathname,
+      file: filenameRelative,
       // eslint-disable-next-line no-use-before-define
       data: rejectionToData(originalError, {
         compileInto,
-        pathname,
+        filenameRelative,
       }),
     }
   }
@@ -24,12 +25,12 @@ export const rejectionValueToMeta = (error, { compileInto, compiledRootHref }) =
   }
 }
 
-const parseErrorToMeta = (error, { compiledRootHref }) => {
+const parseErrorToMeta = (error, { compileServerOrigin }) => {
   const file = error.fileName
   const message = error.messageHTML || error.message
   const data = message.replace(
     file,
-    link(`${pathnameToSourceHref({ pathname: file, compiledRootHref })}`, file),
+    link(`${filenameRelativeToSourceHref({ compileServerOrigin, filenameRelative: file })}`, file),
   )
 
   return {

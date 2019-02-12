@@ -5,24 +5,24 @@ import { loadImporter } from "./loadImporter.js"
 export const executeCompiledFile = ({
   compileInto,
   sourceRootHref,
-  compiledRootHref,
+  compileServerOrigin,
+  filenameRelative,
   collectNamespace,
   collectCoverage,
   instrument = {},
-  pathname,
 }) =>
   genericExecuteCompiledFile({
     loadCompileMeta: () => loadCompileMeta({ compileInto, sourceRootHref }),
-    loadImporter: () => loadImporter({ compileInto, sourceRootHref, compiledRootHref }),
+    loadImporter: () => loadImporter({ compileInto, sourceRootHref, compileServerOrigin }),
     compileInto,
-    readCoverage,
-    onError,
-    transformError,
-    compiledRootHref,
+    compileServerOrigin,
+    filenameRelative,
     collectNamespace,
     collectCoverage,
     instrument,
-    pathname,
+    readCoverage,
+    onError,
+    transformError,
   })
 
 const readCoverage = () => global.__coverage__

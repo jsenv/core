@@ -2,11 +2,16 @@ import { genericImportCompiledFile } from "../genericImportCompiledFile.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 import { loadImporter } from "./loadImporter.js"
 
-export const importCompiledFile = ({ compileInto, sourceRootHref, compiledRootHref, pathname }) =>
+export const importCompiledFile = ({
+  compileInto,
+  sourceRootHref,
+  compileServerOrigin,
+  filenameRelative,
+}) =>
   genericImportCompiledFile({
     loadCompileMeta: () => loadCompileMeta({ compileInto, sourceRootHref }),
-    loadImporter: () => loadImporter({ compileInto, sourceRootHref, compiledRootHref }),
+    loadImporter: () => loadImporter({ compileInto, sourceRootHref, compileServerOrigin }),
     compileInto,
-    compiledRootHref,
-    pathname,
+    compileServerOrigin,
+    filenameRelative,
   })

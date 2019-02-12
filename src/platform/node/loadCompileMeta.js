@@ -4,8 +4,8 @@ import { getCompileMapHref } from "./localURL.js"
 import { detect } from "./nodeDetect/index.js"
 import { nodeToCompileId } from "./nodeToCompileId.js"
 
-export const loadCompileMeta = memoizeOnce(({ sourceRootHref, compiledRootHref }) => {
-  const compileMapHref = getCompileMapHref({ sourceRootHref, compiledRootHref })
+export const loadCompileMeta = memoizeOnce(({ sourceRootHref, compileServerOrigin }) => {
+  const compileMapHref = getCompileMapHref({ sourceRootHref, compileServerOrigin })
   const compileMapPathname = fileHrefToPathname(compileMapHref)
 
   // eslint-disable-next-line import/no-dynamic-require

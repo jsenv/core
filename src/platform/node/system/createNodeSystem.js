@@ -6,13 +6,13 @@ import { fromFunctionReturningNamespace } from "../../registerModuleFrom.js"
 import { fetchSource } from "../fetchSource.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
 
-export const createNodeSystem = ({ compileInto, sourceRootHref, compiledRootHref, compileId }) => {
+export const createNodeSystem = ({ compileInto, sourceRootHref, compileServerOrigin, compileId }) => {
   const nodeSystem = new global.System.constructor()
 
   overrideSystemResolve({
     compileInto,
     sourceRootHref,
-    compiledRootHref,
+    compileServerOrigin,
     compileId,
     platformSystem: nodeSystem,
     resolveRootRelativeSpecifier,
@@ -21,7 +21,7 @@ export const createNodeSystem = ({ compileInto, sourceRootHref, compiledRootHref
   overrideSystemInstantiate({
     compileInto,
     sourceRootHref,
-    compiledRootHref,
+    compileServerOrigin,
     compileId,
     fetchSource,
     platformSystem: nodeSystem,

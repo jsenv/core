@@ -79,7 +79,7 @@ export const compileToService = (
     if (pathnameIsAsset(filenameRelative)) return null
 
     // we don't want to read anything outside of the project
-    if (pathnameIsOutsideFolder(filename, rootname)) {
+    if (fileIsOutsideFolder(filename, rootname)) {
       return { status: 403, statusText: `cannot acces file outside project` }
     }
 
@@ -89,22 +89,21 @@ export const compileToService = (
     // a request to 'node_modules/dependency/index.js'
     // with referer 'node_modules/package/index.js'
     // may be found at 'node_modules/package/node_modules/dependency/index.js'
-    const locatedProjectPathname = filename.slice(`${rootname}/`.length)
-    if (locatedProjectPathname !== filenameRelative) {
+    const locatedFilenameRelative = filename.slice(`${rootname}/`.length)
+    if (locatedFilenameRelative !== filenameRelative) {
       // in that case, send temporary redirect to client
       return {
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
         status: 307,
         headers: {
           // maybe should send vary: 'referer',
-          location: `${origin}/${compileInto}/${compileId}/${locatedProjectPathname}`,
+          location: `${origin}/${compileInto}/${compileId}/${locatedFilenameRelative}`,
         },
       }
     }
-    // if the file at this location is a symlink we should send 307 too
 
-    // file must not be compiled (.html, .css, dist/browserLoader.js)
-    if (!compilePredicate(locatedProjectPathname, filename)) return null
+    // some file must not be compiled (.html, .css, dist/browserLoader.js)
+    if (!compilePredicate(filenameRelative, filename)) return null
 
     // when I ask for a compiled file, watch the corresponding file on filesystem
     if (watch && watchedFiles.has(filename) === false && watchPredicate(filenameRelative)) {
@@ -207,10 +206,10 @@ export const compileToService = (
     fileChangedSSE.open()
     cancellationToken.register(fileChangedSSE.close)
 
-    watchSignal.listen((modulePathname) => {
+    watchSignal.listen((filename) => {
       fileChangedSSE.sendEvent({
         type: "file-changed",
-        data: modulePathname,
+        data: filename,
       })
     })
 
@@ -229,6 +228,6 @@ export const compileToService = (
   return compileService
 }
 
-const pathnameIsInsideFolder = (pathname, folder) => pathname.startsWith(`${folder}/`)
+const fileIsInsideFolder = (filename, folder) => filename.startsWith(`${folder}/`)
 
-const pathnameIsOutsideFolder = (pathname, folder) => !pathnameIsInsideFolder(pathname, folder)
+const fileIsOutsideFolder = (filename, folder) => !fileIsInsideFolder(filename, folder)

@@ -12,7 +12,7 @@ export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
   compileInto,
   sourceRootHref,
-  compiledRootHref,
+  compileServerOrigin,
 
   protocol = "http",
   ip = "127.0.0.1",
@@ -150,8 +150,8 @@ export const launchChromium = async ({
       browser.newPage(),
       generateHTML({
         compileInto,
-        compiledRootHref,
-        browserPlatformRemoteURL: getBrowserPlatformHref({ compileInto, compiledRootHref }),
+        compileServerOrigin,
+        browserPlatformRemoteURL: getBrowserPlatformHref({ compileInto, compileServerOrigin }),
       }),
     ])
 
@@ -170,7 +170,7 @@ export const launchChromium = async ({
       return await page.evaluate(
         ({
           compileInto,
-          compiledRootHref,
+          compileServerOrigin,
           filenameRelative,
           collectNamespace,
           collectCoverage,
@@ -178,7 +178,7 @@ export const launchChromium = async ({
         }) => {
           return window.__platform__.executeCompiledFile({
             compileInto,
-            compiledRootHref,
+            compileServerOrigin,
             filenameRelative,
             collectNamespace,
             collectCoverage,
@@ -187,7 +187,7 @@ export const launchChromium = async ({
         },
         {
           compileInto,
-          compiledRootHref,
+          compileServerOrigin,
           filenameRelative,
           collectNamespace,
           collectCoverage,
@@ -200,7 +200,7 @@ export const launchChromium = async ({
       if (status === "rejected") {
         return {
           status,
-          error: errorToSourceError(error, { sourceRootHref, compiledRootHref }),
+          error: errorToSourceError(error, { sourceRootHref, compileServerOrigin }),
           coverageMap,
         }
       }
@@ -233,13 +233,13 @@ export const launchChromium = async ({
   }
 }
 
-const errorToSourceError = (error, { sourceRootHref, compiledRootHref }) => {
+const errorToSourceError = (error, { sourceRootHref, compileServerOrigin }) => {
   // does not truly work
   // error stack should be remapped either client side or here
   // error is correctly remapped inside chrome devtools
   // but the error we receive here is not remapped
   // client side would be better but here could be enough
-  const remoteRootRegexp = new RegExp(regexpEscape(compiledRootHref), "g")
+  const remoteRootRegexp = new RegExp(regexpEscape(compileServerOrigin), "g")
   error.stack = error.stack.replace(remoteRootRegexp, sourceRootHref)
   error.message = error.message.replace(remoteRootRegexp, sourceRootHref)
   return error

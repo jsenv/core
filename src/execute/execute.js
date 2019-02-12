@@ -24,7 +24,7 @@ export const execute = async ({
 
     const sourceRootHref = pathnameToFileHref(rootname)
 
-    const { origin: compiledRootHref } = await startCompileServer({
+    const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
       rootname,
       compileInto,
@@ -36,7 +36,7 @@ export const execute = async ({
     })
 
     return launchAndExecute({
-      launch: (options) => launch({ ...options, compileInto, sourceRootHref, compiledRootHref }),
+      launch: (options) => launch({ ...options, compileInto, sourceRootHref, compileServerOrigin }),
       cancellationToken,
       mirrorConsole,
       stopOnceExecuted,

@@ -1,19 +1,19 @@
-import { pathnameToCompiledHref } from "./locaters.js"
+import { filenameRelativeToCompiledHref } from "./filenameRelativeToCompiledHref.js"
 
 export const genericImportCompiledFile = async ({
   loadCompileMeta,
   loadImporter,
   compileInto,
-  compiledRootHref,
-  pathname,
+  compileServerOrigin,
+  filenameRelative,
 }) => {
   const [{ compileId }, { importFile }] = await Promise.all([loadCompileMeta(), loadImporter()])
 
-  const compiledHref = pathnameToCompiledHref({
+  const compiledHref = filenameRelativeToCompiledHref({
     compileInto,
-    compiledRootHref,
+    compileServerOrigin,
     compileId,
-    pathname,
+    filenameRelative,
   })
 
   return importFile(compiledHref)

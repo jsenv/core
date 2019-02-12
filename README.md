@@ -12,7 +12,7 @@
 
   root should be renamed rootname and be '/Users/me/folder' for instance
   localRoot should be renamed sourceRootHref and be 'file:///Users/me/folder'
-  remoteRoot should be renamed compiledRootHref and be 'http://ip:port/'
+  remoteRoot should be renamed compileServerOrigin and be 'http://ip:port/'
 
 - follow up https://github.com/systemjs/systemjs/issues/1898
 - test all stuff inside dev-server-poc

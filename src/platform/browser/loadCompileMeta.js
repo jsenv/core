@@ -4,8 +4,8 @@ import { browserToCompileId } from "./browserToCompileId.js"
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
 import { getCompileMapHref } from "./remoteURL.js"
 
-export const loadCompileMeta = memoizeOnce(async ({ compileInto, compiledRootHref }) => {
-  const compileMapHref = getCompileMapHref({ compileInto, compiledRootHref })
+export const loadCompileMeta = memoizeOnce(async ({ compileInto, compileServerOrigin }) => {
+  const compileMapHref = getCompileMapHref({ compileInto, compileServerOrigin })
   const compileMapResponse = await fetchUsingXHR(compileMapHref)
   if (compileMapResponse.status < 200 || compileMapResponse.status >= 400) {
     return Promise.reject(compileMapResponse)

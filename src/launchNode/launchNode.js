@@ -9,7 +9,7 @@ export const launchNode = async ({
   cancellationToken,
   compileInto,
   sourceRootHref,
-  compiledRootHref,
+  compileServerOrigin,
 }) => {
   const execArgv = await createChildExecArgv({ cancellationToken })
 
@@ -95,7 +95,7 @@ export const launchNode = async ({
 
         sendToChild(child, "execute", {
           sourceRootHref,
-          compiledRootHref,
+          compileServerOrigin,
           compileInto,
 
           filenameRelative,

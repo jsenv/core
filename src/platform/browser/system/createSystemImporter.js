@@ -1,12 +1,12 @@
 import { createBrowserSystem } from "./createBrowserSystem.js"
 import { createImportTracker } from "../../createImportTracker.js"
 
-export const createSystemImporter = ({ compileInto, compiledRootHref, compileId, fetchSource }) => {
+export const createSystemImporter = ({ compileInto, compileServerOrigin, compileId, fetchSource }) => {
   const importTracker = createImportTracker()
 
   const browserSystem = createBrowserSystem({
     compileInto,
-    compiledRootHref,
+    compileServerOrigin,
     compileId,
     fetchSource,
   })
