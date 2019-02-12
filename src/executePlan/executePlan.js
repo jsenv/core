@@ -20,10 +20,10 @@ export const executePlan = async (
     Object.keys(fileExecutionPlan).forEach((platformName) => {
       const { launch, allocatedMs } = fileExecutionPlan[platformName]
       plannedExecutionArray.push({
-        file,
-        platformName,
         launch,
         allocatedMs,
+        platformName,
+        file,
       })
     })
   })
@@ -33,8 +33,8 @@ export const executePlan = async (
     cancellationToken,
     maxParallelExecution,
     array: plannedExecutionArray,
-    start: async ({ file, platformName, launch, allocatedMs }) => {
-      beforeEach({ file, platformName })
+    start: async ({ launch, allocatedMs, platformName, file }) => {
+      beforeEach({ allocatedMs, platformName, file })
 
       const result = await launchAndExecute({
         launch,
@@ -60,7 +60,7 @@ export const executePlan = async (
         file,
         collectCoverage: cover,
       })
-      afterEach({ file, platformName, allocatedMs, ...result })
+      afterEach({ allocatedMs, platformName, file, ...result })
 
       if (file in planResult === false) {
         planResult[file] = {}

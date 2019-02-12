@@ -8,7 +8,7 @@ import {
 } from "../cancellationHelper.js"
 
 export const cover = async ({
-  root,
+  rootname,
   compileInto,
   pluginMap,
   // coverDescription could be deduced from passing
@@ -21,10 +21,10 @@ export const cover = async ({
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const [ressourcesToCover, executionPlanResult] = await Promise.all([
-      listRessourcesToCover({ cancellationToken, root, coverDescription }),
+      listRessourcesToCover({ cancellationToken, rootname, coverDescription }),
       executeAndCoverPatternMapping({
         cancellationToken,
-        root,
+        rootname,
         compileInto,
         pluginMap,
         executeDescription,
@@ -33,21 +33,21 @@ export const cover = async ({
 
     const coverageMap = await executionPlanResultToCoverageMap(executionPlanResult, {
       cancellationToken,
-      localRoot: root,
+      localRoot: rootname,
       filesToCover: ressourcesToCover,
     })
 
     return coverageMap
   })
 
-const listRessourcesToCover = async ({ cancellationToken, root, coverDescription }) => {
+const listRessourcesToCover = async ({ cancellationToken, rootname, coverDescription }) => {
   const coverMetaMap = patternGroupToMetaMap({
     cover: coverDescription,
   })
 
   const ressources = await forEachRessourceMatching({
     cancellationToken,
-    localRoot: root,
+    localRoot: rootname,
     metaMap: coverMetaMap,
     predicate: ({ cover }) => cover,
   })
@@ -57,14 +57,14 @@ const listRessourcesToCover = async ({ cancellationToken, root, coverDescription
 
 const executeAndCoverPatternMapping = async ({
   cancellationToken,
-  root,
+  rootname,
   compileInto,
   pluginMap,
   executeDescription,
 }) => {
   const executionPlan = await executeDescriptionToExecutionPlan({
     cancellationToken,
-    root,
+    rootname,
     compileInto,
     pluginMap,
     executeDescription,

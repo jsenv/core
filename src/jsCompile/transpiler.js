@@ -21,10 +21,10 @@ const transpile = async ({ ast, code, options }) => {
 }
 
 export const transpiler = async ({
-  file,
-  fileAbsolute,
-  inputAst,
   input,
+  filename,
+  filenameRelative,
+  inputAst,
   inputMap,
   pluginMap,
   remap,
@@ -43,13 +43,13 @@ export const transpiler = async ({
 
   // https://babeljs.io/docs/en/options
   const options = {
-    filename: fileAbsolute || file,
-    filenameRelative: file,
+    filename: filename || filenameRelative,
+    filenameRelative,
     inputSourceMap: inputMap,
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true,
     sourceMaps: remap,
-    sourceFileName: file,
+    sourceFileName: filenameRelative,
     // https://babeljs.io/docs/en/options#parseropts
     parserOpts: {
       allowAwaitOutsideFunction: allowTopLevelAwait,

@@ -4,28 +4,26 @@ import {
   pathnameToFileHref,
 } from "@jsenv/module-resolution"
 
-export const locate = ({ root, compileInto, requestPathname }) => {
+export const locate = ({ rootname, compileInto, requestPathname }) => {
   const {
     compileId: requestCompileId,
-    projectPathname: requestProjectPathname,
+    filenameRelative: requestFilenameRelative,
   } = requestPathnameToCompileIdAndProjectPathname(requestPathname, compileInto)
 
   if (!requestCompileId) return {}
-  if (!requestProjectPathname) return {}
+  if (!requestFilenameRelative) return {}
 
   const compileId = requestCompileId
-  const projectPathname = requestProjectPathname
-  const modulePathname = `${root}/${projectPathname}`
+  const filenameRelative = requestFilenameRelative
+  const filename = `${rootname}/${filenameRelative}`
   // it is possible that the file is in fact somewhere else
   // due to node_module resolution algorithm
-  const moduleHrefOrNodeModuleHref = resolveAPossibleNodeModuleFile(
-    pathnameToFileHref(modulePathname),
-  )
+  const moduleHrefOrNodeModuleHref = resolveAPossibleNodeModuleFile(pathnameToFileHref(filename))
 
   return {
     compileId,
-    projectPathname,
-    filePathname: fileHrefToPathname(moduleHrefOrNodeModuleHref),
+    filenameRelative,
+    filename: fileHrefToPathname(moduleHrefOrNodeModuleHref),
   }
 }
 
@@ -33,7 +31,7 @@ const requestPathnameToCompileIdAndProjectPathname = (requestPathname = "", comp
   if (requestPathname.startsWith(`${compileInto}/`) === false) {
     return {
       compileId: null,
-      projectPathname: null,
+      filenameRelative: null,
     }
   }
 
@@ -44,21 +42,21 @@ const requestPathnameToCompileIdAndProjectPathname = (requestPathname = "", comp
   if (compileId.length === 0) {
     return {
       compileId: null,
-      projectPathname: null,
+      filenameRelative: null,
     }
   }
 
-  const projectPathname = parts.slice(1).join("/")
-  if (projectPathname.length === 0) {
+  const filenameRelative = parts.slice(1).join("/")
+  if (filenameRelative.length === 0) {
     return {
       compileId: null,
-      projectPathname,
+      filenameRelative,
     }
   }
 
   return {
     compileId,
-    projectPathname,
+    filenameRelative,
   }
 }
 

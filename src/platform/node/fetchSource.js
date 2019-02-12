@@ -9,18 +9,18 @@ const protocolIsHttpOrHttps = (url) => {
   return url.indexOf("http:") === 0 || url.indexOf("https:") === 0
 }
 
-export const fetchSource = ({ remoteFile, remoteParent }) => {
-  if (protocolIsFile(remoteFile)) {
-    return fetchUsingFileSystem(remoteFile, remoteParent)
+export const fetchSource = ({ href, importer }) => {
+  if (protocolIsFile(href)) {
+    return fetchUsingFileSystem(href, importer)
   }
 
-  if (protocolIsHttpOrHttps(remoteFile)) {
-    return fetchUsingHttp(remoteFile, {
+  if (protocolIsHttpOrHttps(href)) {
+    return fetchUsingHttp(href, {
       headers: {
-        "x-module-referer": remoteParent || remoteFile,
+        "x-module-referer": importer || href,
       },
     })
   }
 
-  throw new Error(`unsupported protocol for module ${remoteFile}`)
+  throw new Error(`unsupported protocol for module ${href}`)
 }

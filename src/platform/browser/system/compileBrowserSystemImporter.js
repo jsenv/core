@@ -8,12 +8,12 @@ import {
   pluginMapToPluginsForPlatform,
 } from "@dmail/project-structure-compile-babel"
 import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
-import { root } from "../../../root.js"
+import { rootname } from "../../../rootname.js"
 
 const inputRessource = `src/platform/browser/system/createSystemImporter.js`
-const outputFolder = `${root}/dist`
+const outputFolder = `${rootname}/dist`
 const outputRessource = `browserSystemImporter.js`
-const inputFile = `${root}/${inputRessource}`
+const inputFile = `${rootname}/${inputRessource}`
 const outputFile = `${outputFolder}/${outputRessource}`
 const globalName = "__browserImporter__"
 const pluginMap = pluginOptionMapToPluginMap({
@@ -72,7 +72,7 @@ export const compileBrowserSystemImporter = async () => {
   const { code, map } = output[0]
 
   map.sources = map.sources.map((source) => {
-    return `${path.relative(outputFolder, root)}/${source}`
+    return `${path.relative(outputFolder, rootname)}/${source}`
   })
   delete map.sourcesContent
 

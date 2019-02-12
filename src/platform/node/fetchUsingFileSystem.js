@@ -5,7 +5,7 @@ const isWindows =
   typeof process.platform === "string" &&
   process.platform.match(/^win/)
 
-const fileUrlToPath = (fileUrl) => {
+const fileUrlToPathname = (fileUrl) => {
   if (fileUrl.substr(0, 7) !== "file://") {
     throw new RangeError(`${fileUrl} is not a valid file url`)
   }
@@ -15,13 +15,13 @@ const fileUrlToPath = (fileUrl) => {
   return fileUrl.substr(7)
 }
 
-export const fetchUsingFileSystem = async (key) => {
+export const fetchUsingFileSystem = async (href) => {
   // if we found a symlink we should send 307 ?
   // nope but we should update the returned url: key to the symlink target
 
-  const filePath = fileUrlToPath(key)
-  const source = await fileRead(filePath)
+  const pathname = fileUrlToPathname(href)
+  const source = await fileRead(pathname)
 
   // on pourrait ajouter des info dans headers comme le mtime, e-tag ?
-  return { url: key, status: 200, statusText: "OK", headers: {}, body: source }
+  return { url: href, status: 200, statusText: "OK", headers: {}, body: source }
 }

@@ -1,8 +1,8 @@
-export const getBrowserPlatformRemoteURL = ({ remoteRoot }) =>
-  `${remoteRoot}/node_modules/@dmail/dev-server/dist/browserPlatform.js`
+export const getBrowserPlatformHref = ({ compiledRootHref }) =>
+  `${compiledRootHref}/node_modules/@dmail/dev-server/dist/browserPlatform.js`
 
-export const getBrowserSystemImporterRemoteURL = ({ remoteRoot }) =>
-  `${remoteRoot}/node_modules/@dmail/dev-server/dist/browserSystemImporter.js`
+export const getBrowserSystemImporterHref = ({ compiledRootHref }) =>
+  `${compiledRootHref}/node_modules/@dmail/dev-server/dist/browserSystemImporter.js`
 
-export const getCompileMapRemoteURL = ({ remoteRoot, compileInto }) =>
-  `${remoteRoot}/${compileInto}/compileMap.json`
+export const getCompileMapHref = ({ compileInto, compiledRootHref }) =>
+  `${compiledRootHref}/${compileInto}/compileMap.json`

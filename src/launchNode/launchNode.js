@@ -1,11 +1,16 @@
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@dmail/uneval"
-import { root } from "../root.js"
+import { rootname } from "../rootname.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 
-const nodeClientFile = `${root}/dist/src/launchNode/client.js`
+const nodeClientFile = `${rootname}/dist/src/launchNode/client.js`
 
-export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, compileInto }) => {
+export const launchNode = async ({
+  cancellationToken,
+  compileInto,
+  sourceRootHref,
+  compiledRootHref,
+}) => {
   const execArgv = await createChildExecArgv({ cancellationToken })
 
   const child = forkChildProcess(nodeClientFile, {
@@ -77,7 +82,10 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
     child.kill()
   }
 
-  const executeFile = async (file, { collectNamespace, collectCoverage, instrument }) => {
+  const executeFile = async (
+    filenameRelative,
+    { collectNamespace, collectCoverage, instrument },
+  ) => {
     const execute = () =>
       new Promise((resolve) => {
         const executResultRegistration = registerChildMessage(child, "execute-result", (value) => {
@@ -86,11 +94,11 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
         })
 
         sendToChild(child, "execute", {
-          localRoot,
-          remoteRoot,
+          sourceRootHref,
+          compiledRootHref,
           compileInto,
 
-          file,
+          filenameRelative,
           collectNamespace,
           collectCoverage,
           instrument,
@@ -101,7 +109,7 @@ export const launchNode = async ({ cancellationToken, localRoot, remoteRoot, com
     if (status === "rejected") {
       return {
         status,
-        error: errorToLocalError(error, { file, localRoot }),
+        error: errorToSourceError(error, { filenameRelative, sourceRootHref }),
         coverageMap,
       }
     }
@@ -161,9 +169,9 @@ const createExitWithFailureCodeError = (code) => {
   return new Error(`child exited with ${code}`)
 }
 
-const errorToLocalError = (error, { file, localRoot }) => {
+const errorToSourceError = (error, { filenameRelative, sourceRootHref }) => {
   if (error && error.code === "MODULE_PARSE_ERROR") {
-    error.message = error.message.replace(file, `${localRoot}/${file}`)
+    error.message = error.message.replace(filenameRelative, `${sourceRootHref}/${filenameRelative}`)
     return error
   }
 

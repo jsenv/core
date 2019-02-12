@@ -1,7 +1,7 @@
 import {
   resolveNodeModuleSpecifier,
-  pathnameToFileHref,
-  fileHrefToPathname,
+  filenameToFileHref,
+  fileHrefToFilename,
 } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
@@ -11,12 +11,12 @@ import {
   serviceCompose,
   responseCompose,
 } from "../server/index.js"
-import { root as selfRoot } from "../root.js"
+import { rootname as selfRootname } from "../rootname.js"
 import { createJsCompileService } from "./createJsCompileService.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
-  root,
+  rootname,
   compileInto,
   compileGroupCount,
   pluginMap,
@@ -38,7 +38,7 @@ export const startCompileServer = async ({
 }) => {
   const jsCompileService = await createJsCompileService({
     cancellationToken,
-    root,
+    rootname,
     compileInto,
     compileGroupCount,
     pluginMap,
@@ -53,7 +53,7 @@ export const startCompileServer = async ({
 
   const service = serviceCompose(jsCompileService, (request) =>
     requestToFileResponse(request, {
-      root,
+      rootname,
       locate: locateFileSystem,
       cacheIgnore: sourceCacheIgnore,
       cacheStrategy: sourceCacheStrategy,
@@ -88,7 +88,7 @@ export const startCompileServer = async ({
     signature,
     requestToResponse,
     verbose,
-    startedMessage: ({ origin }) => `compile server started for ${root} at ${origin}`,
+    startedMessage: ({ origin }) => `compile server started for ${rootname} at ${origin}`,
     stoppedMessage: (reason) => `compile server stopped because ${reason}`,
   })
   // https://nodejs.org/api/net.html#net_server_unref
@@ -98,13 +98,16 @@ export const startCompileServer = async ({
   return compileServer
 }
 
-const locateFileSystem = ({ requestPathname, root }) => {
+const locateFileSystem = ({ rootHref, requestPathname }) => {
   // future consumer of dev-server will use
   // 'node_modules/dev-server/dist/browserSystemImporter.js'
   // to get file from dev-server module
   // in order to test this behaviour, when we are working on this module
   // 'node_modules/dev-server` is an alias to localRoot
-  if (root === selfRoot && requestPathname.startsWith("node_modules/@dmail/dev-server/")) {
+  if (
+    rootHref === filenameToFileHref(selfRootname) &&
+    requestPathname.startsWith("node_modules/@dmail/dev-server/")
+  ) {
     requestPathname = requestPathname.slice("node_modules/@dmail/dev-server/".length)
   }
 
@@ -112,10 +115,10 @@ const locateFileSystem = ({ requestPathname, root }) => {
     const moduleSpecifier = requestPathname.slice("node_modules/".length)
     const nodeModuleHref = resolveNodeModuleSpecifier({
       specifier: moduleSpecifier,
-      importer: pathnameToFileHref(`${root}/${requestPathname}`),
+      importer: `${rootHref}/${requestPathname}`,
     })
-    return fileHrefToPathname(nodeModuleHref)
+    return fileHrefToFilename(nodeModuleHref)
   }
 
-  return `${root}/${requestPathname}`
+  return `${rootHref}/${requestPathname}`
 }

@@ -1,17 +1,20 @@
+import { filenameToFileHref } from "@jsenv/module-resolution"
 import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
 import { startCompileServer } from "./server-compile/index.js"
 
 export const executeDescriptionToExecutionPlan = async ({
   cancellationToken,
-  root,
+  rootname,
   compileInto,
   pluginMap,
   executeDescription,
   verbose = false,
 }) => {
-  const { origin: remoteRoot } = await startCompileServer({
+  const sourceRootHref = filenameToFileHref(rootname)
+
+  const { origin: compiledRootHref } = await startCompileServer({
     cancellationToken,
-    localRoot: root,
+    rootname,
     compileInto,
     pluginMap,
     verbose,
@@ -24,7 +27,7 @@ export const executeDescriptionToExecutionPlan = async ({
   const executionPlan = {}
   await forEachRessourceMatching({
     cancellationToken,
-    localRoot: root,
+    localRoot: rootname,
     metaMap,
     predicate: ({ execute }) => execute,
     callback: (ressource, meta) => {
@@ -38,9 +41,9 @@ export const executeDescriptionToExecutionPlan = async ({
             launch({
               ...options,
               cancellationToken,
-              localRoot: root,
               compileInto,
-              remoteRoot,
+              sourceRootHref,
+              compiledRootHref,
             }),
           allocatedMs,
         }

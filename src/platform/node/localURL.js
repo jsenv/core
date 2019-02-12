@@ -1,3 +1,3 @@
-export const getCompileMapLocalURL = ({ localRoot, compileInto }) => {
-  return `${localRoot}/${compileInto}/compileMap.json`
+export const getCompileMapHref = ({ compileInto, sourceRootHref }) => {
+  return `${sourceRootHref}/${compileInto}/compileMap.json`
 }

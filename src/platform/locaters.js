@@ -1,12 +1,12 @@
-export const ressourceToRemoteCompiledFile = ({ ressource, remoteRoot, compileInto, compileId }) =>
-  `${getRemoteCompiledFolder({ remoteRoot, compileInto, compileId })}/${ressource}`
+export const pathnameToCompiledHref = ({ pathname, compileInto, compileId, compiledRootHref }) =>
+  `${getCompiledFolderHref({ compiledRootHref, compileInto, compileId })}/${pathname}`
 
-export const ressourceToRemoteInstrumentedFile = ({
-  ressource,
-  remoteRoot,
+export const pathnameToInstrumentedHref = ({
+  pathname,
   compileInto,
+  compiledRootHref,
   compileId,
-}) => `${getRemoteInstrumentedFolder({ remoteRoot, compileInto, compileId })}/${ressource}`
+}) => `${getInstrumentedFolderHref({ compiledRootHref, compileInto, compileId })}/${pathname}`
 
 export const ressourceToLocalInstrumentedFile = ({
   ressource,
@@ -18,11 +18,11 @@ export const ressourceToLocalInstrumentedFile = ({
 export const ressourceToLocalCompiledFile = ({ ressource, localRoot, compileInto, compileId }) =>
   `${getLocalCompiledFolder({ localRoot, compileInto, compileId })}/${ressource}`
 
-const getRemoteCompiledFolder = ({ remoteRoot, compileInto, compileId }) =>
-  `${remoteRoot}/${compileInto}/${compileId}`
+const getCompiledFolderHref = ({ compileInto, compileId, compiledRootHref }) =>
+  `${compiledRootHref}/${compileInto}/${compileId}`
 
-const getRemoteInstrumentedFolder = ({ remoteRoot, compileInto, compileId }) =>
-  `${remoteRoot}/${compileInto}/${compileId}-instrumented`
+const getInstrumentedFolderHref = ({ compileInto, compiledRootHref, compileId }) =>
+  `${compiledRootHref}/${compileInto}/${compileId}-instrumented`
 
 const getLocalInstrumentedFolder = ({ localRoot, compileInto, compileId }) =>
   `${localRoot}/${compileInto}/${compileId}-instrumented`
@@ -33,7 +33,7 @@ const getLocalCompiledFolder = ({ localRoot, compileInto, compileId }) =>
 export const ressourceToRemoteSourceFile = ({ ressource, remoteRoot }) =>
   `${remoteRoot}/${ressource}`
 
-export const ressourceToLocalSourceFile = ({ ressource, localRoot }) => `${localRoot}/${ressource}`
+export const pathnameToSourceHref = ({ pathname, rootHref }) => `${rootHref}/${pathname}`
 
 export const hrefToMeta = (href, { remoteRoot, compileInto }) => {
   if (href === remoteRoot) return { type: "remote-root" }
@@ -68,12 +68,12 @@ export const hrefToMeta = (href, { remoteRoot, compileInto }) => {
   }
 }
 
-export const remoteFileToRessource = (remoteFile, { remoteRoot, compileInto, compileId }) =>
-  hrefToMeta(remoteFile, { remoteRoot, compileInto, compileId }).ressource
+export const hrefToPathname = (href, { compileInto, compiledRootHref, compileId }) =>
+  hrefToMeta(href, { compileInto, compiledRootHref, compileId }).pathname
 
-export const remoteFileToLocalSourceFile = (file, { localRoot, remoteRoot }) => {
-  if (!localRoot) return file
-  if (!file.startsWith(`${remoteRoot}/`)) return file
-  const ressource = file.slice(`${remoteRoot}/`.length)
-  return ressourceToLocalSourceFile({ ressource, localRoot })
+export const hrefToSourceHref = (href, { rootHref, compiledRootHref }) => {
+  if (!rootHref) return href
+  if (!href.startsWith(`${compiledRootHref}/`)) return href
+  const pathname = href.slice(`${compiledRootHref}/`.length)
+  return pathnameToSourceHref({ pathname, rootHref })
 }

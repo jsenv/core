@@ -6,7 +6,7 @@ import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecut
 import { executePlan } from "../executePlan/index.js"
 
 export const test = async ({
-  root,
+  rootname,
   compileInto,
   pluginMap,
   executeDescription,
@@ -17,7 +17,7 @@ export const test = async ({
 
     const executionPlan = await executeDescriptionToExecutionPlan({
       cancellationToken,
-      root,
+      rootname,
       compileInto,
       pluginMap,
       executeDescription,

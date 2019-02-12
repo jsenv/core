@@ -1,25 +1,25 @@
-import { fromRemoteFile } from "./registerModuleFrom.js"
+import { fromHref } from "./registerModuleFrom.js"
 
 export const overrideSystemInstantiate = ({
-  localRoot,
   compileInto,
+  sourceRootHref,
+  compiledRootHref,
   compileId,
-  remoteRoot,
   fetchSource,
   platformSystem,
   moduleSourceToSystemRegisteredModule,
 }) => {
   platformSystem.instantiate = (href, importer) => {
-    return fromRemoteFile({
-      localRoot,
+    return fromHref({
       compileInto,
+      sourceRootHref,
+      compiledRootHref,
       compileId,
-      remoteRoot,
       fetchSource,
       platformSystem,
       moduleSourceToSystemRegisteredModule,
-      remoteFile: href,
-      remoteParent: importer,
+      href,
+      importer,
     })
   }
 }

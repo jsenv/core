@@ -1,20 +1,20 @@
-import { ressourceToRemoteCompiledFile } from "./locaters.js"
+import { pathnameToCompiledHref } from "./locaters.js"
 
 export const genericImportCompiledFile = async ({
   loadCompileMeta,
   loadImporter,
-  remoteRoot,
   compileInto,
-  file,
+  compiledRootHref,
+  pathname,
 }) => {
   const [{ compileId }, { importFile }] = await Promise.all([loadCompileMeta(), loadImporter()])
 
-  const remoteCompiledFile = ressourceToRemoteCompiledFile({
-    ressource: file,
-    remoteRoot,
+  const compiledHref = pathnameToCompiledHref({
     compileInto,
+    compiledRootHref,
     compileId,
+    pathname,
   })
 
-  return importFile(remoteCompiledFile)
+  return importFile(compiledHref)
 }

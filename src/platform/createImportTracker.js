@@ -1,13 +1,13 @@
 export const createImportTracker = () => {
   const importedMap = {}
 
-  const markFileAsImported = (file) => {
-    importedMap[file] = true
+  const markHrefAsImported = (href) => {
+    importedMap[href] = true
   }
 
-  const isFileImported = (file) => {
-    return file in importedMap && importedMap[file] === true
+  const isHrefImported = (href) => {
+    return href in importedMap && importedMap[href] === true
   }
 
-  return { markFileAsImported, isFileImported }
+  return { markHrefAsImported, isHrefImported }
 }

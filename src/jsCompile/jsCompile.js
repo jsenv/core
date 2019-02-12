@@ -2,28 +2,16 @@ import path from "path"
 import { transpiler } from "./transpiler.js"
 
 export const jsCompile = async ({
-  localRoot,
-  file,
-  fileAbsolute,
-  inputAst,
   input,
+  filename,
+  filenameRelative,
+  rootname,
+  inputAst,
   inputMap,
-
-  // transpile = true,
   pluginMap = {},
   remap = true,
   remapMethod = "comment", // 'comment', 'inline'
 }) => {
-  // ideally we would fetch browser platform from server
-  // to sthing like 'build/compileId/__platform__.js'
-  // and here we would dynamically generate a rollup for that compileId
-  // could it work if we simply do sthing like
-  // if (file === '__platform__.js') returns a rollup output
-  // we would have a prob because the source file does not exists
-  // I mean there is no file like __platform__.js existing for the project so it
-  // would fail to find it for comparing to cache
-  // that's why locate must return the right local file for __platform__.js
-
   const sources = []
   const sourcesContent = []
   const assets = []
@@ -33,11 +21,11 @@ export const jsCompile = async ({
   const sourceToSourceForSourceMap = (source) => `/${source}`
 
   const { map, code, metadata } = await transpiler({
-    localRoot,
-    file,
-    fileAbsolute,
-    inputAst,
     input,
+    filename,
+    filenameRelative,
+    rootname,
+    inputAst,
     inputMap,
     pluginMap,
     remap,
@@ -69,11 +57,13 @@ export const jsCompile = async ({
       })
     } else if (remapMethod === "comment") {
       // sourceMap will be named file.js.map
-      const sourceMapName = `${path.basename(file)}.map`
+      const sourceMapName = `${path.basename(filenameRelative)}.map`
       // it will be located at `${compileServer.origin}/build/src/file.js/e3uiyi456&/file.js.map`
       // const folder = path.dirname(file)
       // const folderWithSepOrNothing = folder ? `${folder}/` : ""
-      const sourceMapLocationForSource = `./${path.basename(file)}__asset__/${sourceMapName}`
+      const sourceMapLocationForSource = `./${path.basename(
+        filenameRelative,
+      )}__asset__/${sourceMapName}`
 
       output = writeSourceMapLocation({
         source: output,
@@ -83,7 +73,7 @@ export const jsCompile = async ({
       assetsContent.push(stringifyMap(map))
     }
   } else {
-    sources.push(file)
+    sources.push(filenameRelative)
     sourcesContent.push(input)
   }
 

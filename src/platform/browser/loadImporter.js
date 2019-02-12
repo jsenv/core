@@ -1,12 +1,12 @@
 import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
 import { evalSource } from "./evalSource.js"
-import { getBrowserSystemImporterRemoteURL } from "./remoteURL.js"
+import { getBrowserSystemImporterHref } from "./remoteURL.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 
-export const loadImporter = memoizeOnce(async ({ remoteRoot, compileInto }) => {
+export const loadImporter = memoizeOnce(async ({ compileInto, compiledRootHref }) => {
   // importer depends on informer, but this is an implementation detail
-  const { compileMap, compileId } = await loadCompileMeta({ remoteRoot, compileInto })
+  const { compileMap, compileId } = await loadCompileMeta({ compileInto, compiledRootHref })
 
   // one day maybe we'll be able to use nativeImporter but
   // for now transform-modules-systemjs is not inside compileMap because
@@ -24,7 +24,7 @@ export const loadImporter = memoizeOnce(async ({ remoteRoot, compileInto }) => {
     return nativeImporter
   }
 
-  const importerHref = getBrowserSystemImporterRemoteURL({ remoteRoot })
+  const importerHref = getBrowserSystemImporterHref({ compiledRootHref })
   const importerResponse = await fetchUsingXHR(importerHref)
   if (importerResponse.status < 200 || importerResponse.status >= 400) {
     return Promise.reject(importerResponse)
@@ -34,8 +34,8 @@ export const loadImporter = memoizeOnce(async ({ remoteRoot, compileInto }) => {
 
   const systemImporter = window.__browserImporter__.createSystemImporter({
     compileInto,
+    compiledRootHref,
     compileId,
-    remoteRoot,
     fetchSource,
   })
 

@@ -17,7 +17,7 @@ export const compileToService = (
   compile,
   {
     cancellationToken = createCancellationToken(),
-    root,
+    rootname,
     compileInto,
     locate = locateDefault,
     compileParamMap,
@@ -64,22 +64,22 @@ export const compileToService = (
 
     // le chemin vers le fichier pour le client (qu'on peut modifier ce qui signifie un redirect)
     // le chemin vers le fichier sur le filesystem (qui peut etre different de localRoot/file)
-    const { compileId, projectPathname, filePathname } = await locate({
-      root,
+    const { compileId, filenameRelative, filename } = await locate({
+      rootname,
       compileInto,
       requestPathname: ressource,
       refererFile,
     })
 
     // cannot locate a file -> we don't know what to compile
-    if (!projectPathname) return null
+    if (!filenameRelative) return null
 
-    if (!filePathname) return null
+    if (!filename) return null
 
-    if (pathnameIsAsset(projectPathname)) return null
+    if (pathnameIsAsset(filenameRelative)) return null
 
     // we don't want to read anything outside of the project
-    if (pathnameIsOutsideFolder(filePathname, root)) {
+    if (pathnameIsOutsideFolder(filename, rootname)) {
       return { status: 403, statusText: `cannot acces file outside project` }
     }
 
@@ -89,8 +89,8 @@ export const compileToService = (
     // a request to 'node_modules/dependency/index.js'
     // with referer 'node_modules/package/index.js'
     // may be found at 'node_modules/package/node_modules/dependency/index.js'
-    const locatedProjectPathname = filePathname.slice(`${root}/`.length)
-    if (locatedProjectPathname !== projectPathname) {
+    const locatedProjectPathname = filename.slice(`${rootname}/`.length)
+    if (locatedProjectPathname !== filenameRelative) {
       // in that case, send temporary redirect to client
       return {
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
@@ -104,25 +104,25 @@ export const compileToService = (
     // if the file at this location is a symlink we should send 307 too
 
     // file must not be compiled (.html, .css, dist/browserLoader.js)
-    if (!compilePredicate(locatedProjectPathname, filePathname)) return null
+    if (!compilePredicate(locatedProjectPathname, filename)) return null
 
     // when I ask for a compiled file, watch the corresponding file on filesystem
-    if (watch && watchedFiles.has(filePathname) === false && watchPredicate(projectPathname)) {
-      const fileWatcher = watchFile(filePathname, () => {
-        watchSignal.emit(projectPathname)
+    if (watch && watchedFiles.has(filename) === false && watchPredicate(filenameRelative)) {
+      const fileWatcher = watchFile(filename, () => {
+        watchSignal.emit(filenameRelative)
       })
-      watchedFiles.set(filePathname, fileWatcher)
+      watchedFiles.set(filename, fileWatcher)
     }
 
     const compileService = async () => {
       const { output } = await compileFile({
         compile,
-        root,
+        rootname,
         compileInto,
         compileId,
         compileParamMap,
-        file: projectPathname,
-        fileAbsolute: filePathname,
+        filenameRelative,
+        filename,
         cacheStrategy: localCacheStrategy,
         cacheTrackHit: localCacheTrackHit,
       })
@@ -140,7 +140,7 @@ export const compileToService = (
 
     try {
       if (cacheWithMtime) {
-        const { mtime } = await fileStat(filePathname)
+        const { mtime } = await fileStat(filename)
 
         if ("if-modified-since" in headers) {
           const ifModifiedSince = headers["if-modified-since"]
@@ -167,7 +167,7 @@ export const compileToService = (
       }
 
       if (cacheWithETag) {
-        const content = await fileRead(filePathname)
+        const content = await fileRead(filename)
         const eTag = createETag(content)
 
         if ("if-none-match" in headers) {

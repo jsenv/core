@@ -29,10 +29,10 @@ export const launchAndExecute = async ({
   stoppedCallback = () => {},
   errorAfterExecutedCallback = () => {},
   disconnectAfterExecutedCallback = () => {},
+  filenameRelative,
   collectNamespace = false,
   collectCoverage = false,
   instrument = collectCoverage,
-  file,
 } = {}) => {
   let platformLog = ""
   const consoleCallback = ({ type, text }) => {
@@ -62,7 +62,7 @@ export const launchAndExecute = async ({
     disconnectAfterExecutedCallback,
     startedCallback,
     stoppedCallback,
-    file,
+    filenameRelative,
     collectNamespace,
     collectCoverage,
     instrument,
@@ -83,7 +83,7 @@ const computeRawExecutionResult = async ({
   cancellationToken,
   allocatedMs,
   consoleCallback,
-  file,
+  filenameRelative,
   ...rest
 }) => {
   const hasAllocatedMs = typeof allocatedMs === "number"
@@ -93,7 +93,7 @@ const computeRawExecutionResult = async ({
       launch,
       cancellationToken,
       consoleCallback,
-      file,
+      filenameRelative,
       ...rest,
     })
   }
@@ -116,7 +116,7 @@ const computeRawExecutionResult = async ({
       launch,
       cancellationToken: externalOrTimeoutCancellationToken,
       consoleCallback,
-      file,
+      filenameRelative,
       ...rest,
     })
     timeoutCancel()
@@ -146,7 +146,7 @@ const computeExecutionResult = async ({
   disconnectAfterExecutedCallback,
   stopOnError,
   stopOnceExecuted,
-  file,
+  filenameRelative,
   collectNamespace,
   collectCoverage,
   instrument,
@@ -157,7 +157,7 @@ const computeExecutionResult = async ({
     }
   }
 
-  log(`launch ${platformTypeForLog} to execute ${file}`)
+  log(`launch ${platformTypeForLog} to execute ${filenameRelative}`)
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
@@ -207,7 +207,7 @@ const computeExecutionResult = async ({
     }
   }
 
-  log(`execute ${file} on ${platformTypeForLog}`)
+  log(`execute ${filenameRelative} on ${platformTypeForLog}`)
   const executionResult = await createOperation({
     cancellationToken,
     start: async () => {
@@ -219,7 +219,11 @@ const computeExecutionResult = async ({
         registerErrorCallback(resolve)
       })
 
-      const executionPromise = executeFile(file, { collectNamespace, collectCoverage, instrument })
+      const executionPromise = executeFile(filenameRelative, {
+        collectNamespace,
+        collectCoverage,
+        instrument,
+      })
       const executionCompleted = new Promise((resolve) => {
         executionPromise.then(
           (value) => {
@@ -260,7 +264,7 @@ const computeExecutionResult = async ({
         })
       }
 
-      log(`${file} execution on ${platformTypeForLog} done with ${value}`)
+      log(`${filenameRelative} execution on ${platformTypeForLog} done with ${value}`)
       registerErrorCallback((error) => {
         log(`${platformTypeForLog} error ${error.stack}`)
         errorAfterExecutedCallback(error)

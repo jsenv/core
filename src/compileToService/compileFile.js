@@ -3,24 +3,29 @@ import lockfile from "proper-lockfile"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
 import { fileRead, fileMakeDirname } from "@dmail/helper"
 import { createETag, isFileNotFoundError } from "./helpers.js"
-import { getMetaLocation, getOutputLocation, getAssetLocation, getOutputFile } from "./locaters.js"
+import {
+  getMetaFilename,
+  getOutputFilename,
+  getAssetFilename,
+  getOutputFilenameRelative,
+} from "./locaters.js"
 import { lockForRessource } from "./ressourceRegistry.js"
 
 export const compileFile = async ({
   compile,
-  localRoot,
+  rootname,
   compileInto,
   compileId,
   compileParamMap = {},
-  file,
-  fileAbsolute,
+  filenameRelative,
+  filename,
   cacheStrategy = "etag",
   cacheTrackHit = false,
 }) => {
-  const outputFile = getOutputFile({
+  const outputFilenameRelative = getOutputFilenameRelative({
     compileInto,
     compileId,
-    file,
+    filenameRelative,
   })
 
   const generate = async ({ input }) => {
@@ -34,11 +39,11 @@ export const compileFile = async ({
       assetsContent = [],
       output,
     } = await compile({
-      localRoot,
-      file,
-      fileAbsolute,
+      rootname,
+      filenameRelative,
+      filename,
       input,
-      outputFile,
+      outputFilenameRelative,
       ...compileParam,
     })
 
@@ -52,23 +57,23 @@ export const compileFile = async ({
   }
 
   if (cacheStrategy === "none") {
-    const input = await fileRead(fileAbsolute)
+    const input = await fileRead(filename)
     const compileResult = generate({ input })
     return {
       ...compileResult,
-      outputFile,
+      outputFilenameRelative,
     }
   }
 
   const fromCacheOrCompile = async () => {
     const [meta, input] = await Promise.all([
       readFileMeta({
-        localRoot,
+        rootname,
         compileInto,
         compileId,
-        file,
+        filenameRelative,
       }),
-      fileRead(fileAbsolute),
+      fileRead(filename),
     ])
     const eTag = createETag(input)
 
@@ -81,11 +86,11 @@ export const compileFile = async ({
     }
 
     const cache = await readCache({
-      localRoot,
+      rootname,
       compileInto,
       compileId,
-      file,
-      fileAbsolute,
+      filenameRelative,
+      filename,
       eTag,
       meta,
     })
@@ -108,20 +113,20 @@ export const compileFile = async ({
     }
   }
 
-  const metaLocation = getMetaLocation({
-    localRoot,
+  const metaFilename = getMetaFilename({
+    rootname,
     compileInto,
     compileId,
-    file,
+    filenameRelative,
   })
 
   // in case this process try to concurrently access meta we wait for previous to be done
-  const unlockLocal = await lockForRessource(metaLocation)
-  // after that we use a lock file to be sure we don't conflict with other process
+  const unlockLocal = await lockForRessource(metaFilename)
+  // after that we use a lock filenameRelative to be sure we don't conflict with other process
   // trying to do the same (mapy happen when spawining multiple server for instance)
   // https://github.com/moxystudio/node-proper-lockfile/issues/69
-  await fileMakeDirname(metaLocation)
-  const unlockGlobal = await lockfile.lock(metaLocation, { realpath: false })
+  await fileMakeDirname(metaFilename)
+  const unlockGlobal = await lockfile.lock(metaFilename, { realpath: false })
   // we use two lock because the local lock is very fast, it's a sort of perf improvement
 
   try {
@@ -136,11 +141,11 @@ export const compileFile = async ({
     } = await fromCacheOrCompile()
 
     await updateMeta({
-      localRoot,
+      rootname,
       compileInto,
       compileId,
-      file,
-      fileAbsolute,
+      filenameRelative,
+      filename,
       cacheTrackHit,
       status,
       meta,
@@ -157,7 +162,7 @@ export const compileFile = async ({
       assets,
       assetsContent,
       output,
-      outputFile,
+      outputFilenameRelative,
     }
   } finally {
     // we want to unlock in case of rejection too
@@ -166,23 +171,30 @@ export const compileFile = async ({
   }
 }
 
-const validateAsset = async ({ localRoot, compileInto, compileId, file, asset, eTag }) => {
-  const assetLocation = getAssetLocation({
-    localRoot,
+const validateAsset = async ({
+  rootname,
+  compileInto,
+  compileId,
+  filenameRelative,
+  asset,
+  eTag,
+}) => {
+  const assetFilename = getAssetFilename({
+    rootname,
     compileInto,
     compileId,
-    file,
+    filenameRelative,
     asset,
   })
 
   try {
-    const content = await fileRead(assetLocation)
+    const content = await fileRead(assetFilename)
     const contentETag = createETag(content)
 
     if (eTag !== contentETag) {
       return {
         valid: false,
-        reason: `eTag mismatch on ${asset} for file ${file}`,
+        reason: `eTag mismatch on ${asset} for filenameRelative ${filenameRelative}`,
         data: content,
       }
     }
@@ -196,21 +208,21 @@ const validateAsset = async ({ localRoot, compileInto, compileId, file, asset, e
     if (isFileNotFoundError(error)) {
       return {
         valid: false,
-        reason: `asset not found at ${assetLocation}`,
+        reason: `asset not found at ${assetFilename}`,
       }
     }
     return Promise.reject(error)
   }
 }
 
-const validateAssets = async ({ localRoot, compileInto, compileId, file, meta }) => {
+const validateAssets = async ({ rootname, compileInto, compileId, filenameRelative, meta }) => {
   return Promise.all(
     meta.assets.map((asset, index) => {
       return validateAsset({
-        localRoot,
+        rootname,
         compileInto,
         compileId,
-        file,
+        filenameRelative,
         asset,
         eTag: meta.assetsEtag[index],
       })
@@ -218,8 +230,8 @@ const validateAssets = async ({ localRoot, compileInto, compileId, file, meta })
   )
 }
 
-const validateSource = async ({ localRoot, source, eTag }) => {
-  const sourceAbsolute = path.resolve(localRoot, source)
+const validateSource = async ({ rootname, source, eTag }) => {
+  const sourceAbsolute = path.resolve(rootname, source)
   const sourceContent = await fileRead(sourceAbsolute)
   const sourceETag = createETag(source)
 
@@ -238,11 +250,11 @@ const validateSource = async ({ localRoot, source, eTag }) => {
   }
 }
 
-const validateSources = async ({ localRoot, meta }) => {
+const validateSources = async ({ rootname, meta }) => {
   return await Promise.all(
     meta.sources.map((source, index) => {
       return validateSource({
-        localRoot,
+        rootname,
         source,
         eTag: meta.sourcesEtag[index],
       })
@@ -250,16 +262,16 @@ const validateSources = async ({ localRoot, meta }) => {
   )
 }
 
-const validateCache = async ({ localRoot, compileInto, compileId, file }) => {
-  const outputLocation = getOutputLocation({
-    localRoot,
+const validateCache = async ({ rootname, compileInto, compileId, filenameRelative }) => {
+  const outputFilename = getOutputFilename({
+    rootname,
     compileInto,
     compileId,
-    file,
+    filenameRelative,
   })
 
   try {
-    const content = await fileRead(outputLocation)
+    const content = await fileRead(outputFilename)
     return {
       valid: true,
       reason: "cache found",
@@ -269,19 +281,19 @@ const validateCache = async ({ localRoot, compileInto, compileId, file }) => {
     if (isFileNotFoundError(error)) {
       return {
         valid: false,
-        reason: `cache not found at ${outputLocation}`,
+        reason: `cache not found at ${outputFilename}`,
       }
     }
     return Promise.reject(error)
   }
 }
 
-const readCache = async ({ localRoot, compileInto, compileId, file, eTag, meta }) => {
+const readCache = async ({ rootname, compileInto, compileId, filenameRelative, eTag, meta }) => {
   const cacheValidation = await validateCache({
-    localRoot,
+    rootname,
     compileInto,
     compileId,
-    file,
+    filenameRelative,
   })
 
   if (!cacheValidation.valid) {
@@ -294,8 +306,8 @@ const readCache = async ({ localRoot, compileInto, compileId, file, eTag, meta }
   }
 
   const [sourcesValidations, assetValidations] = await Promise.all([
-    validateSources({ localRoot, meta }),
-    validateAssets({ localRoot, compileInto, compileId, file, meta }),
+    validateSources({ rootname, meta }),
+    validateAssets({ rootname, compileInto, compileId, filenameRelative, meta }),
   ])
 
   const invalidSource = sourcesValidations.find(({ valid }) => !valid)
@@ -323,26 +335,28 @@ const createCacheCorruptionError = (message) => {
   return error
 }
 
-const readFileMeta = async ({ localRoot, compileInto, compileId, file }) => {
-  const metaLocation = getMetaLocation({
-    localRoot,
+const readFileMeta = async ({ rootname, compileInto, compileId, filenameRelative }) => {
+  const metaFilename = getMetaFilename({
+    rootname,
     compileInto,
     compileId,
-    file,
+    filenameRelative,
   })
 
   try {
-    const content = await fileRead(metaLocation)
+    const content = await fileRead(metaFilename)
     const meta = JSON.parse(content)
-    if (meta.file !== file) {
+    if (meta.filenameRelative !== filenameRelative) {
       throw createCacheCorruptionError(
-        `${metaLocation} corrupted: file should be ${file}, got ${meta.file}`,
+        `${metaFilename} corrupted: filenameRelative should be ${filenameRelative}, got ${
+          meta.filenameRelative
+        }`,
       )
     }
     return meta
   } catch (error) {
     if (isFileNotFoundError(error)) {
-      // means meta file not found
+      // means meta filenameRelative not found
       return null
     }
     return Promise.reject(error)
@@ -350,11 +364,11 @@ const readFileMeta = async ({ localRoot, compileInto, compileId, file }) => {
 }
 
 const updateMeta = ({
-  localRoot,
+  rootname,
   compileInto,
   compileId,
-  file,
-  fileAbsolute,
+  filenameRelative,
+  filename,
   cacheTrackHit,
   status,
   meta,
@@ -371,25 +385,25 @@ const updateMeta = ({
   const promises = []
 
   if (isNew || isUpdated) {
-    const mainLocation = getOutputLocation({
-      localRoot,
+    const mainLocation = getOutputFilename({
+      rootname,
       compileInto,
       compileId,
-      file,
+      filenameRelative,
     })
 
     promises.push(
       fileWriteFromString(mainLocation, output),
       ...assets.map((asset, index) => {
-        const assetLocation = getAssetLocation({
-          localRoot,
+        const assetFilename = getAssetFilename({
+          rootname,
           compileInto,
           compileId,
-          file,
+          filenameRelative,
           asset,
         })
 
-        return fileWriteFromString(assetLocation, assetsContent[index])
+        return fileWriteFromString(assetFilename, assetsContent[index])
       }),
     )
   }
@@ -397,8 +411,8 @@ const updateMeta = ({
   if (isNew || isUpdated || (isCached && cacheTrackHit)) {
     if (isNew) {
       meta = {
-        file,
-        fileAbsolute,
+        filenameRelative,
+        filename,
         sources,
         sourcesEtag: sourcesContent.map((sourceContent) => createETag(sourceContent)),
         assets,
@@ -415,7 +429,7 @@ const updateMeta = ({
     } else if (isUpdated) {
       meta = {
         ...meta,
-        fileAbsolute, // may change because of locate
+        filename, // may change because of locate
         sources,
         sourcesEtag: sourcesContent.map((sourceContent) => createETag(sourceContent)),
         assets,
@@ -431,7 +445,7 @@ const updateMeta = ({
     } else {
       meta = {
         ...meta,
-        fileAbsolute, // may change because of locate
+        filename, // may change because of locate
         ...(cacheTrackHit
           ? {
               matchCount: meta.matchCount + 1,
@@ -441,14 +455,14 @@ const updateMeta = ({
       }
     }
 
-    const metaLocation = getMetaLocation({
-      localRoot,
+    const metaFilename = getMetaFilename({
+      rootname,
       compileInto,
       compileId,
-      file,
+      filenameRelative,
     })
 
-    promises.push(fileWriteFromString(metaLocation, JSON.stringify(meta, null, "  ")))
+    promises.push(fileWriteFromString(metaFilename, JSON.stringify(meta, null, "  ")))
   }
 
   return Promise.all(promises)

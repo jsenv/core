@@ -5,27 +5,27 @@ import { overrideSystemInstantiate } from "../../overrideSystemInstantiate.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
 
 export const createBrowserSystem = ({
-  localRoot, // in browser it is undefined because it could be a sensitive information
   compileInto,
+  sourceRootHref, // in browser it is undefined because it could be a sensitive information
+  compiledRootHref,
   compileId,
-  remoteRoot,
   fetchSource,
 }) => {
   const browserSystem = new window.System.constructor()
 
   overrideSystemResolve({
     compileInto,
+    compiledRootHref,
     compileId,
-    remoteRoot,
     platformSystem: browserSystem,
     resolveRootRelativeSpecifier,
   })
 
   overrideSystemInstantiate({
-    localRoot,
     compileInto,
+    sourceRootHref,
+    compiledRootHref,
     compileId,
-    remoteRoot,
     fetchSource,
     platformSystem: browserSystem,
     moduleSourceToSystemRegisteredModule,

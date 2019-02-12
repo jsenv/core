@@ -1,20 +1,20 @@
-import { hrefToMeta, ressourceToRemoteSourceFile } from "../locaters.js"
+import { hrefToMeta, pathnameToSourceHref } from "../locaters.js"
 import { stringToStringWithLink, link } from "../../stringToStringWithLink.js"
 
-export const rejectionValueToMeta = (error, { remoteRoot, compileInto }) => {
+export const rejectionValueToMeta = (error, { compileInto, compiledRootHref }) => {
   if (error && error.code === "MODULE_PARSE_ERROR") {
-    return parseErrorToMeta(error, { remoteRoot })
+    return parseErrorToMeta(error, { compiledRootHref })
   }
 
   if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-    const file = hrefToMeta(error.url, { remoteRoot, compileInto }).ressource
+    const pathname = hrefToMeta(error.url, { compileInto, compiledRootHref }).pathname
     const originalError = error.error
     return {
-      file,
+      file: pathname,
       // eslint-disable-next-line no-use-before-define
       data: rejectionToData(originalError, {
-        remoteRoot,
         compileInto,
+        pathname,
       }),
     }
   }
@@ -24,12 +24,12 @@ export const rejectionValueToMeta = (error, { remoteRoot, compileInto }) => {
   }
 }
 
-const parseErrorToMeta = (error, { remoteRoot }) => {
+const parseErrorToMeta = (error, { compiledRootHref }) => {
   const file = error.fileName
   const message = error.messageHTML || error.message
   const data = message.replace(
     file,
-    link(`${ressourceToRemoteSourceFile({ ressource: file, remoteRoot })}`, file),
+    link(`${pathnameToSourceHref({ pathname: file, compiledRootHref })}`, file),
   )
 
   return {

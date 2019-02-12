@@ -5,21 +5,21 @@ import puppeteer from "puppeteer"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
 import { startIndexServer } from "../server-index/startIndexServer.js"
 import { originAsString } from "../server/index.js"
-import { getBrowserPlatformRemoteURL } from "../platform/browser/remoteURL.js"
+import { getBrowserPlatformHref } from "../platform/browser/remoteURL.js"
 import { regexpEscape } from "../stringHelper.js"
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
-  localRoot,
-  remoteRoot,
   compileInto,
+  sourceRootHref,
+  compiledRootHref,
 
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
   startIndexRequestHandler = startIndexServer,
   headless = true,
-  generateHTML = ({ browserPlatformRemoteURL }) => {
+  generateHTML = ({ browserPlatformRemoteHRef }) => {
     return `<!doctype html>
 
 <head>
@@ -29,7 +29,7 @@ export const launchChromium = async ({
 
 <body>
   <main></main>
-  <script src="${browserPlatformRemoteURL}"></script>
+  <script src="${browserPlatformRemoteHRef}"></script>
 </body>
 
 </html>`
@@ -142,13 +142,16 @@ export const launchChromium = async ({
   }
   trackPage(browser)
 
-  const executeFile = async (file, { collectNamespace, collectCoverage, instrument }) => {
+  const executeFile = async (
+    filenameRelative,
+    { collectNamespace, collectCoverage, instrument },
+  ) => {
     const [page, html] = await Promise.all([
       browser.newPage(),
       generateHTML({
-        remoteRoot,
         compileInto,
-        browserPlatformRemoteURL: getBrowserPlatformRemoteURL({ remoteRoot, compileInto }),
+        compiledRootHref,
+        browserPlatformRemoteURL: getBrowserPlatformHref({ compileInto, compiledRootHref }),
       }),
     ])
 
@@ -165,17 +168,31 @@ export const launchChromium = async ({
     const execute = async () => {
       await page.goto(indexOrigin)
       return await page.evaluate(
-        ({ compileInto, remoteRoot, file, collectNamespace, collectCoverage, instrument }) => {
+        ({
+          compileInto,
+          compiledRootHref,
+          filenameRelative,
+          collectNamespace,
+          collectCoverage,
+          instrument,
+        }) => {
           return window.__platform__.executeCompiledFile({
             compileInto,
-            remoteRoot,
-            file,
+            compiledRootHref,
+            filenameRelative,
             collectNamespace,
             collectCoverage,
             instrument,
           })
         },
-        { compileInto, remoteRoot, file, collectNamespace, collectCoverage, instrument },
+        {
+          compileInto,
+          compiledRootHref,
+          filenameRelative,
+          collectNamespace,
+          collectCoverage,
+          instrument,
+        },
       )
     }
     try {
@@ -183,7 +200,7 @@ export const launchChromium = async ({
       if (status === "rejected") {
         return {
           status,
-          error: errorToLocalError(error, { localRoot, remoteRoot }),
+          error: errorToSourceError(error, { sourceRootHref, compiledRootHref }),
           coverageMap,
         }
       }
@@ -216,15 +233,15 @@ export const launchChromium = async ({
   }
 }
 
-const errorToLocalError = (error, { remoteRoot, localRoot }) => {
+const errorToSourceError = (error, { sourceRootHref, compiledRootHref }) => {
   // does not truly work
   // error stack should be remapped either client side or here
   // error is correctly remapped inside chrome devtools
   // but the error we receive here is not remapped
   // client side would be better but here could be enough
-  const remoteRootRegexp = new RegExp(regexpEscape(remoteRoot), "g")
-  error.stack = error.stack.replace(remoteRootRegexp, localRoot)
-  error.message = error.message.replace(remoteRootRegexp, localRoot)
+  const remoteRootRegexp = new RegExp(regexpEscape(compiledRootHref), "g")
+  error.stack = error.stack.replace(remoteRootRegexp, sourceRootHref)
+  error.message = error.message.replace(remoteRootRegexp, sourceRootHref)
   return error
 }
 

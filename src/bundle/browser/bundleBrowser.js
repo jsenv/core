@@ -13,15 +13,15 @@ import {
 export const bundleBrowser = catchAsyncFunctionCancellation(
   async ({
     entryPointsDescription,
-    root,
+    rootname,
     into,
     globalName,
     pluginMap,
     compileGroupCount = 2,
     usageMap = browserUsageMap,
   }) => {
-    if (typeof root !== "string")
-      throw new TypeError(`bundleBrowser root must be a string, got ${root}`)
+    if (typeof rootname !== "string")
+      throw new TypeError(`bundleBrowser root must be a string, got ${rootname}`)
     if (typeof into !== "string")
       throw new TypeError(`bundleBrowser into must be a string, got ${into}`)
     if (typeof entryPointsDescription !== "object")
@@ -48,7 +48,7 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
     await Promise.all([
       generateEntryFoldersForPlatform({
         cancellationToken,
-        root,
+        rootname,
         into,
         entryPointsDescription,
         globalName,
@@ -58,7 +58,7 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
       }),
       generateBalancerFilesForBrowser({
         cancellationToken,
-        root,
+        rootname,
         into,
         entryPointsDescription,
         globalName,

@@ -1,3 +1,4 @@
+import { pathnameToFileHref } from "@jsenv/module-resolution"
 import { startCompileServer } from "../server-compile/index.js"
 import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
@@ -6,7 +7,7 @@ import {
 } from "../cancellationHelper.js"
 
 export const execute = async ({
-  root,
+  rootname,
   compileInto,
   pluginMap,
   protocol,
@@ -21,9 +22,11 @@ export const execute = async ({
   catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
-    const { origin: remoteRoot } = await startCompileServer({
+    const sourceRootHref = pathnameToFileHref(rootname)
+
+    const { origin: compiledRootHref } = await startCompileServer({
       cancellationToken,
-      root,
+      rootname,
       compileInto,
       pluginMap,
       protocol,
@@ -33,7 +36,7 @@ export const execute = async ({
     })
 
     return launchAndExecute({
-      launch: (options) => launch({ ...options, localRoot: root, compileInto, remoteRoot }),
+      launch: (options) => launch({ ...options, compileInto, sourceRootHref, compiledRootHref }),
       cancellationToken,
       mirrorConsole,
       stopOnceExecuted,

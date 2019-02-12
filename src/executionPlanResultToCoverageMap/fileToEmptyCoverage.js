@@ -1,16 +1,16 @@
 import { fileRead } from "@dmail/helper"
 import { jsCompile, createInstrumentPlugin } from "../jsCompile/index.js"
 
-export const fileToEmptyCoverage = async (file, { cancellationToken, localRoot }) => {
+export const fileToEmptyCoverage = async (file, { cancellationToken, rootname }) => {
   cancellationToken.throwIfRequested()
 
-  const input = await fileRead(`${localRoot}/${file}`)
+  const input = await fileRead(`${rootname}/${file}`)
 
   // we must compile to get the coverage object
   // without evaluating the file because it would increment coverage
   // and execute code that can be doing anything
   const { assetMap } = await jsCompile({
-    localRoot,
+    rootname,
     file,
     input,
     pluginMap: {

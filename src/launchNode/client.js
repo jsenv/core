@@ -8,10 +8,10 @@ import { registerProcessInterruptCallback } from "../process-signal/index.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 
 const execute = async ({
-  localRoot,
-  remoteRoot,
   compileInto,
-  file,
+  sourceRootHref,
+  compiledRootHref,
+  filenameRelative,
   collectNamespace,
   collectCoverage,
   instrument,
@@ -64,7 +64,7 @@ const execute = async ({
       const sourceMap = JSON.parse(sourceMapContent)
       const absoluteSourceMap = {
         ...sourceMap,
-        sources: sourceMap.sources.map((source) => `${localRoot}${source}`),
+        sources: sourceMap.sources.map((source) => `${sourceRootHref}${source}`),
       }
 
       return {
@@ -86,10 +86,10 @@ const execute = async ({
   })
 
   const { status, coverageMap, error, namespace } = await executeCompiledFile({
-    localRoot,
     compileInto,
-    remoteRoot,
-    file,
+    sourceRootHref,
+    compiledRootHref,
+    filenameRelative,
     collectNamespace,
     collectCoverage,
     instrument,

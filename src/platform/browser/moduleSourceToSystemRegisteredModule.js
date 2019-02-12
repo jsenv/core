@@ -1,10 +1,10 @@
 import { valueInstall } from "../valueInstall.js"
 import { evalSource } from "./evalSource.js"
 
-export const moduleSourceToSystemRegisteredModule = (code, { remoteFile, platformSystem }) => {
+export const moduleSourceToSystemRegisteredModule = (code, { href, platformSystem }) => {
   const uninstallSystemGlobal = valueInstall(window, "System", platformSystem)
   try {
-    evalSource(code, remoteFile)
+    evalSource(code, href)
   } finally {
     uninstallSystemGlobal()
   }

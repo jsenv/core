@@ -6,7 +6,7 @@ export const jsCompileToService = (
   compileFile,
   {
     cancellationToken,
-    root,
+    rootname,
     compileInto,
     locate,
     compileParamMap = {},
@@ -34,17 +34,17 @@ export const jsCompileToService = (
 
   const service = compileToService(compileFile, {
     cancellationToken,
-    root,
+    rootname,
     compileInto,
     locate,
     compileParamMap: compileParamMapWithInstrumentation,
     localCacheStrategy,
     localCacheTrackHit,
     cacheStrategy,
-    compilePredicate: (file, fileAbsolute) => {
-      if (fileAbsolute === `browserPlatform.js`) return false
-      if (fileAbsolute === `browserSystemImporter.js`) return false
-      return compilePredicate(file, fileAbsolute)
+    compilePredicate: (filenameRelative, filename) => {
+      if (filenameRelative === `browserPlatform.js`) return false
+      if (filenameRelative === `browserSystemImporter.js`) return false
+      return compilePredicate(filenameRelative, filename)
     },
     watch,
     watchPredicate,

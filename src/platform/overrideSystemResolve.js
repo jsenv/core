@@ -2,22 +2,22 @@ import { hrefToMeta } from "./locaters.js"
 
 export const overrideSystemResolve = ({
   compileInto,
+  compiledRootHref,
   compileId,
-  remoteRoot,
   platformSystem,
   resolveRootRelativeSpecifier,
 }) => {
   const resolve = platformSystem.resolve
   platformSystem.resolve = async (specifier, importer) => {
     if (specifier[0] === "/") {
-      const root = importerToRoot({
+      const scopedCompiledRootHref = importerToScopedCompiledRootHref({
         compileInto,
+        compiledRootHref,
         compileId,
-        remoteRoot,
         importer,
       })
       const href = resolveRootRelativeSpecifier({
-        root,
+        root: scopedCompiledRootHref,
         importer,
         specifier,
       })
@@ -27,12 +27,17 @@ export const overrideSystemResolve = ({
   }
 }
 
-const importerToRoot = ({ compileInto, compileId, remoteRoot, importer }) => {
-  if (!importer) return `${remoteRoot}/${compileInto}/${compileId}`
+const importerToScopedCompiledRootHref = ({
+  compileInto,
+  compiledRootHref,
+  compileId,
+  importer,
+}) => {
+  if (!importer) return `${compiledRootHref}/${compileInto}/${compileId}`
   const { compileId: moduleSpecifiedFileCompileId } = hrefToMeta(importer, {
     compileInto,
-    remoteRoot,
+    compiledRootHref,
   })
-  if (!moduleSpecifiedFileCompileId) return `${remoteRoot}/${compileInto}/${compileId}`
-  return `${remoteRoot}/${compileInto}/${moduleSpecifiedFileCompileId}`
+  if (!moduleSpecifiedFileCompileId) return `${compiledRootHref}/${compileInto}/${compileId}`
+  return `${compiledRootHref}/${compileInto}/${moduleSpecifiedFileCompileId}`
 }

@@ -5,7 +5,7 @@ import {
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
 
-export const format = ({ root, formatDescription }) =>
+export const format = ({ rootname, formatDescription }) =>
   catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
@@ -15,10 +15,10 @@ export const format = ({ root, formatDescription }) =>
 
     const ressources = await forEachRessourceMatching({
       cancellationToken,
-      localRoot: root,
+      localRoot: rootname,
       metaMap,
       predicate: (meta) => meta.format,
     })
 
-    return prettiest({ cancellationToken, localRoot: root, ressources })
+    return prettiest({ cancellationToken, localRoot: rootname, ressources })
   })

@@ -1,4 +1,4 @@
-import { ressourceToRemoteCompiledFile, ressourceToRemoteInstrumentedFile } from "./locaters.js"
+import { pathnameToInstrumentedHref, pathnameToCompiledHref } from "./locaters.js"
 
 export const genericExecuteCompiledFile = async ({
   loadCompileMeta,
@@ -6,21 +6,26 @@ export const genericExecuteCompiledFile = async ({
   onError,
   transformError,
   readCoverage,
-  remoteRoot,
   compileInto,
-  file,
+  compiledRootHref,
+  pathname,
   collectNamespace,
   collectCoverage,
   instrument,
 }) => {
   const [{ compileId }, { importFile }] = await Promise.all([loadCompileMeta(), loadImporter()])
 
-  const remoteCompiledFile = instrument
-    ? ressourceToRemoteInstrumentedFile({ ressource: file, remoteRoot, compileInto, compileId })
-    : ressourceToRemoteCompiledFile({ ressource: file, remoteRoot, compileInto, compileId })
+  const fileHref = instrument
+    ? pathnameToInstrumentedHref({
+        pathname,
+        compileInto,
+        compiledRootHref,
+        compileId,
+      })
+    : pathnameToCompiledHref({ pathname, compileInto, compiledRootHref, compileId })
 
   try {
-    const namespace = await importFile(remoteCompiledFile)
+    const namespace = await importFile(fileHref)
     return {
       status: "resolved",
       namespace: collectNamespace ? namespace : undefined,

@@ -10,7 +10,7 @@ import { writeRollupBundle } from "./writeRollupBundle.js"
 
 export const generateEntryFoldersForPlatform = async ({
   cancellationToken = createCancellationToken(),
-  root,
+  rootname,
   into,
   entryPointsDescription,
   compileMap,
@@ -21,7 +21,7 @@ export const generateEntryFoldersForPlatform = async ({
     Object.keys(compileMap).map((compileId) => {
       return generateEntryFolderForPlatform({
         cancellationToken,
-        root,
+        rootname,
         into,
         entryPointsDescription,
         compileId,
@@ -34,7 +34,7 @@ export const generateEntryFoldersForPlatform = async ({
 
 const generateEntryFolderForPlatform = async ({
   cancellationToken,
-  root,
+  rootname,
   into,
   entryPointsDescription,
   compileId,
@@ -44,7 +44,7 @@ const generateEntryFolderForPlatform = async ({
   const rollupJsenvPlugin = {
     name: "jsenv",
     resolveId: (importee, importer) => {
-      const rootHref = pathnameToFileHref(root)
+      const rootHref = pathnameToFileHref(rootname)
       // hotfix because entry file has no importer
       // so it would be resolved against root which is a folder
       // and url resolution would not do what we expect
@@ -136,7 +136,7 @@ const generateEntryFolderForPlatform = async ({
     },
     outputOptions: {
       // https://rollupjs.org/guide/en#output-dir
-      dir: `${root}/${into}/${compileId}`,
+      dir: `${rootname}/${into}/${compileId}`,
       // https://rollupjs.org/guide/en#output-sourcemap
       sourcemap: true,
       sourcemapExcludeSources: true,

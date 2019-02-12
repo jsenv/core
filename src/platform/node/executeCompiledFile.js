@@ -3,26 +3,26 @@ import { loadCompileMeta } from "./loadCompileMeta.js"
 import { loadImporter } from "./loadImporter.js"
 
 export const executeCompiledFile = ({
-  localRoot,
   compileInto,
-  remoteRoot,
-  file,
+  sourceRootHref,
+  compiledRootHref,
   collectNamespace,
   collectCoverage,
   instrument = {},
+  pathname,
 }) =>
   genericExecuteCompiledFile({
-    loadCompileMeta: () => loadCompileMeta({ localRoot, compileInto }),
-    loadImporter: () => loadImporter({ localRoot, compileInto, remoteRoot }),
+    loadCompileMeta: () => loadCompileMeta({ compileInto, sourceRootHref }),
+    loadImporter: () => loadImporter({ compileInto, sourceRootHref, compiledRootHref }),
+    compileInto,
     readCoverage,
     onError,
     transformError,
-    remoteRoot,
-    compileInto,
-    file,
+    compiledRootHref,
     collectNamespace,
     collectCoverage,
     instrument,
+    pathname,
   })
 
 const readCoverage = () => global.__coverage__

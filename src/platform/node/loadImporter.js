@@ -2,14 +2,14 @@ import { memoizeOnce } from "@dmail/helper"
 import { createImporter } from "./system/createImporter.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 
-export const loadImporter = memoizeOnce(({ localRoot, compileInto, remoteRoot }) => {
-  const { compileId } = loadCompileMeta({ localRoot, compileInto })
+export const loadImporter = memoizeOnce(({ compileInto, sourceRootHref, compiledRootHref }) => {
+  const { compileId } = loadCompileMeta({ compileInto, sourceRootHref, compiledRootHref })
 
   const importer = createImporter({
-    localRoot,
     compileInto,
+    sourceRootHref,
+    compiledRootHref,
     compileId,
-    remoteRoot,
   })
 
   return importer

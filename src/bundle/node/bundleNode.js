@@ -13,14 +13,14 @@ import {
 export const bundleNode = catchAsyncFunctionCancellation(
   async ({
     entryPointsDescription,
-    root,
+    rootname,
     into,
     pluginMap,
     compileGroupCount = 2,
     usageMap = nodeUsageMap,
   }) => {
-    if (typeof root !== "string")
-      throw new TypeError(`bundleNode root must be a string, got ${root}`)
+    if (typeof rootname !== "string")
+      throw new TypeError(`bundleNode rootname must be a string, got ${rootname}`)
     if (typeof into !== "string")
       throw new TypeError(`bundleNode into must be a string, got ${into}`)
     if (typeof entryPointsDescription !== "object")
@@ -46,7 +46,7 @@ export const bundleNode = catchAsyncFunctionCancellation(
     await Promise.all([
       generateEntryFoldersForPlatform({
         cancellationToken,
-        root,
+        rootname,
         into,
         entryPointsDescription,
         compileMap,
@@ -56,7 +56,7 @@ export const bundleNode = catchAsyncFunctionCancellation(
       }),
       generateBalancerFilesForNode({
         cancellationToken,
-        root,
+        rootname,
         into,
         entryPointsDescription,
         compileMap,

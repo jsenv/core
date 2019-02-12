@@ -1,57 +1,58 @@
-import { remoteFileToRessource } from "./locaters.js"
+import { hrefToPathname } from "./locaters.js"
 
-export const fromRemoteFile = async ({
-  localRoot,
-  remoteRoot,
+export const fromHref = async ({
   compileInto,
+  sourceRootHref,
+  compiledRootHref,
   compileId,
   fetchSource,
   platformSystem,
   moduleSourceToSystemRegisteredModule,
-  remoteFile,
-  remoteParent,
+  href,
+  importer,
 }) => {
-  const ressource = remoteFileToRessource(remoteFile, {
-    localRoot,
-    remoteRoot,
+  const { url, status, statusText, headers, body } = await fetchSource({
+    href,
+    importer,
+  })
+  const pathname = hrefToPathname(href, {
     compileInto,
+    sourceRootHref,
+    compiledRootHref,
     compileId,
   })
-  const { url, status, statusText, headers, body } = await fetchSource({
-    remoteFile,
-    remoteParent,
-  })
+  const realHref = url
 
   if (status === 404) {
-    throw createNotFoundError({ ressource, remoteFile })
+    throw createNotFoundError({ pathname, href: realHref })
   }
 
   if (status === 500 && statusText === "parse error") {
     throw createParseError(
       {
-        remoteFile,
-        remoteParent,
+        href,
+        importer,
       },
       JSON.parse(body),
     )
   }
 
   if (status < 200 || status >= 300) {
-    throw createResponseError({ status, statusText, headers, body }, { ressource, remoteFile })
+    throw createResponseError({ status, statusText, headers, body }, { pathname, href: realHref })
   }
 
   if ("content-type" in headers === false)
-    throw new Error(`missing content-type header for ${remoteFile}`)
+    throw new Error(`missing content-type header for ${href}`)
 
   const contentType = headers["content-type"]
 
   if (contentType === "application/javascript") {
     return fromFunctionReturningRegisteredModule(() => {
       return moduleSourceToSystemRegisteredModule(body, {
-        localRoot,
-        remoteRoot,
-        remoteFile: url,
-        remoteParent,
+        sourceRootHref,
+        compiledRootHref,
+        href: realHref,
+        importer,
         platformSystem,
       })
     })
@@ -64,17 +65,17 @@ export const fromRemoteFile = async ({
           default: JSON.parse(body),
         }
       },
-      { remoteFile, remoteParent },
+      { href: realHref, importer },
     )
   }
 
-  throw new Error(`unexpected ${contentType} content-type for ${remoteFile}`)
+  throw new Error(`unexpected ${contentType} content-type for ${href}`)
 }
 
-const createNotFoundError = ({ ressource, remoteFile }) => {
-  return createError(`${ressource} not found`, {
+const createNotFoundError = ({ pathname, href }) => {
+  return createError(`${pathname} not found`, {
     code: "MODULE_NOT_FOUND_ERROR",
-    url: remoteFile,
+    href,
   })
 }
 
@@ -88,18 +89,18 @@ const createParseError = (_, { message, columnNumber, fileName, lineNumber, mess
   })
 }
 
-const createResponseError = ({ status }, { ressource, remoteFile }) => {
-  return createError(`received status ${status} for ${ressource} at ${remoteFile}`, {
+const createResponseError = ({ status }, { pathname, href }) => {
+  return createError(`received status ${status} for ${pathname} at ${href}`, {
     code: "RESPONSE_ERROR",
   })
 }
 
-const createInstantiateError = (error, { remoteFile, remoteParent }) => {
-  return createError(`error while instantiating ${remoteFile}`, {
+const createInstantiateError = (error, { href, importer }) => {
+  return createError(`error while instantiating ${href}`, {
     code: "MODULE_INSTANTIATE_ERROR",
     error,
-    url: remoteFile,
-    remoteParent,
+    href,
+    importer,
   })
 }
 

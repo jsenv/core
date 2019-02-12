@@ -1,29 +1,29 @@
 import { genericExecuteCompiledFile } from "../genericExecuteCompiledFile.js"
-import { ressourceToRemoteSourceFile } from "../locaters.js"
+import { pathnameToSourceHref } from "../locaters.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 import { loadImporter } from "./loadImporter.js"
 import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 
 export const executeCompiledFile = ({
-  remoteRoot,
   compileInto,
-  file,
+  compiledRootHref,
   collectNamespace,
   collectCoverage,
   instrument = {},
+  pathname,
 }) =>
   genericExecuteCompiledFile({
-    loadCompileMeta: () => loadCompileMeta({ compileInto, remoteRoot }),
-    loadImporter: () => loadImporter({ compileInto, remoteRoot }),
-    readCoverage,
-    onError,
-    transformError,
-    remoteRoot,
+    loadCompileMeta: () => loadCompileMeta({ compileInto, compiledRootHref }),
+    loadImporter: () => loadImporter({ compileInto, compiledRootHref }),
     compileInto,
-    file,
+    compiledRootHref,
     collectNamespace,
     collectCoverage,
     instrument,
+    pathname,
+    readCoverage,
+    onError,
+    transformError,
   })
 
 const readCoverage = () => window.__coverage__
@@ -50,10 +50,10 @@ const exceptionToObject = (exception) => {
   }
 }
 
-const onError = (error, { remoteRoot, compileInto, file }) => {
+const onError = (error, { compileInto, compiledRootHref, pathname }) => {
   const meta = rejectionValueToMeta(error, {
-    remoteRoot,
     compileInto,
+    compiledRootHref,
   })
 
   const css = `
@@ -77,10 +77,10 @@ const onError = (error, { remoteRoot, compileInto, file }) => {
       <style type="text/css">${css}></style>
       <div class="jsenv-console">
         <h1>
-          <a href="${ressourceToRemoteSourceFile({
-            ressource: file,
-            remoteRoot,
-          })}">${file}</a> import rejected
+          <a href="${pathnameToSourceHref({
+            pathname,
+            compiledRootHref,
+          })}">${pathname}</a> import rejected
         </h1>
         <pre data-theme="${meta.dataTheme || "dark"}">${meta.data}</pre>
       </div>
