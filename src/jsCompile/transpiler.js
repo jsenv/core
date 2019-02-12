@@ -93,6 +93,7 @@ export const transpiler = async ({
         syntaxImportMeta,
         syntaxDynamicImport,
         ...pluginNames.map((pluginName) => pluginMap[pluginName]),
+        transformModulesSystemJs,
       ],
     },
   })
