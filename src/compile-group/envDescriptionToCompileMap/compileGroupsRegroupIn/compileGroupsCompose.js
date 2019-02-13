@@ -6,11 +6,11 @@ const composePluginNames = (prevPluginList, pluginList) =>
 
 export const compileGroupsCompose = compositionMappingToComposeStrict(
   {
-    pluginNames: composePluginNames,
+    babelPluginNameArray: composePluginNames,
     compatMap: compatMapCompose,
   },
   () => ({
-    pluginNames: [],
+    babelPluginNameArray: [],
     compatMap: {},
   }),
 )

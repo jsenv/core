@@ -17,19 +17,19 @@ import { pluginCompatMapToPlatformGroups } from "./pluginCompatMapToPlatformGrou
   )
   const expected = [
     {
-      pluginNames: ["a", "b", "c"],
+      babelPluginNameArray: ["a", "b", "c"],
       compatMap: {
         chrome: "0.0.0",
       },
     },
     {
-      pluginNames: ["a", "b"],
+      babelPluginNameArray: ["a", "b"],
       compatMap: {
         chrome: "9",
       },
     },
     {
-      pluginNames: ["b"],
+      babelPluginNameArray: ["b"],
       compatMap: {
         chrome: "10",
       },

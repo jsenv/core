@@ -3,7 +3,7 @@ import { compatMap as pluginCompatMapDefault } from "@dmail/project-structure-co
 import { pluginCompatMapToCompileGroups } from "./pluginCompatMapToCompileGroups/index.js"
 import { compatMapToScore } from "./compatMapToScore.js"
 import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn/compileGroupsRegroupIn.js"
-import { pluginNamesToScore } from "./pluginNamesToScore.js"
+import { babelPluginNameArrayToScore } from "./babelPluginNameArrayToScore.js"
 
 const BEST_ID = "best"
 const WORST_ID = "worst"
@@ -11,12 +11,12 @@ export const DEFAULT_ID = "otherwise"
 
 export const envDescriptionToCompileMap = ({
   compileGroupCount = 4,
-  pluginNames = [],
+  babelPluginNameArray = [],
   pluginCompatMap = pluginCompatMapDefault,
   platformScoring,
 } = {}) => {
   const pluginCompatMapFiltered = {}
-  pluginNames.forEach((pluginName) => {
+  babelPluginNameArray.forEach((pluginName) => {
     pluginCompatMapFiltered[pluginName] =
       pluginName in pluginCompatMap ? pluginCompatMap[pluginName] : {}
   })
@@ -26,13 +26,14 @@ export const envDescriptionToCompileMap = ({
     (a, b) => pluginGroupToScore(b) - pluginGroupToScore(a),
   )
 
-  const compileGroupToComplexityScore = ({ pluginNames }) => pluginNamesToScore(pluginNames)
+  const compileGroupToComplexityScore = ({ babelPluginNameArray }) =>
+    babelPluginNameArrayToScore(babelPluginNameArray)
   const compileGroups = compileGroupsRegroupIn(allCompileGroups, compileGroupCount).sort(
     (a, b) => compileGroupToComplexityScore(a) - compileGroupToComplexityScore(b),
   )
 
   const groupWithEverything = {
-    pluginNames: pluginNames.sort(),
+    babelPluginNameArray: babelPluginNameArray.sort(),
     compatMap: {},
   }
 

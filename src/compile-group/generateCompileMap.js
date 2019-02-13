@@ -10,7 +10,7 @@ export const generateCompileMap = ({
 
   const compileMap = envDescriptionToCompileMap({
     compileGroupCount,
-    pluginNames: Object.keys(babelPluginDescription),
+    babelPluginNameArray: Object.keys(babelPluginDescription),
     platformScoring,
     pluginCompatMap,
   })

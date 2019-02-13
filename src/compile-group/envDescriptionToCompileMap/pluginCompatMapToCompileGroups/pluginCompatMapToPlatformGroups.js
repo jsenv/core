@@ -28,7 +28,7 @@ export const pluginCompatMapToPlatformGroups = (pluginCompatMap, platformName) =
     ).sort()
 
     const existingGroup = platformGroups.find((platformGroup) => {
-      return platformGroup.pluginNames.join("") === platformPluginNames.join("")
+      return platformGroup.babelPluginNameArray.join("") === platformPluginNames.join("")
     })
 
     if (existingGroup) {
@@ -38,7 +38,7 @@ export const pluginCompatMapToPlatformGroups = (pluginCompatMap, platformName) =
       )
     } else {
       platformGroups.push({
-        pluginNames: platformPluginNames,
+        babelPluginNameArray: platformPluginNames,
         compatMap: {
           [platformName]: platformVersion,
         },

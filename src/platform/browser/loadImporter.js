@@ -14,7 +14,7 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigi
   // they day a native solution can bring top level await, custom
   // resolve, catch syntax error etc we may use nativeImporter
   const canUseNativeImporter =
-    false && compileMap[compileId].pluginNames.indexOf("transform-modules-systemjs") === -1
+    false && compileMap[compileId].babelPluginNameArray.indexOf("transform-modules-systemjs") === -1
 
   if (canUseNativeImporter) {
     const nativeImporter = {

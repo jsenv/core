@@ -5,7 +5,7 @@ import { platformGroupsCompose } from "./platformGroupsCompose.js"
   const chromePlatformGroups = [
     {
       // freeze to ensure mergePlatformGroups does not mutate
-      pluginNames: Object.freeze(["a"]),
+      babelPluginNameArray: Object.freeze(["a"]),
       compatMap: Object.freeze({
         chrome: 10,
       }),
@@ -13,7 +13,7 @@ import { platformGroupsCompose } from "./platformGroupsCompose.js"
   ]
   const firefoxPlatformGroups = [
     {
-      pluginNames: Object.freeze(["a"]),
+      babelPluginNameArray: Object.freeze(["a"]),
       compatMap: Object.freeze({
         firefox: 20,
       }),
@@ -22,7 +22,7 @@ import { platformGroupsCompose } from "./platformGroupsCompose.js"
   const actual = platformGroupsCompose(chromePlatformGroups, firefoxPlatformGroups)
   const expected = [
     {
-      pluginNames: ["a"],
+      babelPluginNameArray: ["a"],
       compatMap: {
         chrome: 10,
         firefox: 20,

@@ -9,15 +9,15 @@ const platformGroupReducer = (previous, platformGroup) => {
 
   previous.forEach((firstPlatformGroup) => {
     groups.push({
-      pluginNames: firstPlatformGroup.pluginNames.slice(),
+      babelPluginNameArray: firstPlatformGroup.babelPluginNameArray.slice(),
       compatMap: { ...firstPlatformGroup.compatMap },
     })
   })
 
   platformGroup.forEach((secondPlatformGroup) => {
-    const pluginNames = secondPlatformGroup.pluginNames
+    const babelPluginNameArray = secondPlatformGroup.babelPluginNameArray
     const existingGroup = groups.find((platformGroup) => {
-      return pluginNames.join("") === platformGroup.pluginNames.join("")
+      return babelPluginNameArray.join("") === platformGroup.babelPluginNameArray.join("")
     })
     if (existingGroup) {
       existingGroup.compatMap = compatMapCompose(
@@ -26,7 +26,7 @@ const platformGroupReducer = (previous, platformGroup) => {
       )
     } else {
       groups.push({
-        pluginNames: pluginNames.slice(),
+        babelPluginNameArray: babelPluginNameArray.slice(),
         compatMap: { ...secondPlatformGroup.compatMap },
       })
     }

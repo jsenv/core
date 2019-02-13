@@ -6,7 +6,7 @@ import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn.js"
 {
   const groups = [
     {
-      pluginNames: ["b", "c"],
+      babelPluginNameArray: ["b", "c"],
       compatMap: {
         chrome: 50,
         firefox: 10,
@@ -14,7 +14,7 @@ import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn.js"
       score: 2,
     },
     {
-      pluginNames: ["b", "e"],
+      babelPluginNameArray: ["b", "e"],
       compatMap: {
         chrome: 50,
         firefox: 11,
@@ -22,7 +22,7 @@ import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn.js"
       score: 1,
     },
     {
-      pluginNames: ["a"],
+      babelPluginNameArray: ["a"],
       compatMap: {
         chrome: 50,
       },
@@ -32,14 +32,14 @@ import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn.js"
   const actual = compileGroupsRegroupIn(groups, 2)
   const expected = [
     {
-      pluginNames: ["b", "c"],
+      babelPluginNameArray: ["b", "c"],
       compatMap: {
         chrome: "50",
         firefox: "10",
       },
     },
     {
-      pluginNames: ["a", "b", "e"],
+      babelPluginNameArray: ["a", "b", "e"],
       compatMap: {
         chrome: "50",
         firefox: "11",

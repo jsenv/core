@@ -2,11 +2,11 @@ import { assert } from "@dmail/assert"
 import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
 
 {
-  const pluginNames = ["transform-block-scoping"]
-  const actual = envDescriptionToCompileMap({ pluginNames, compileGroupCount: 2 })
+  const babelPluginNameArray = ["transform-block-scoping"]
+  const actual = envDescriptionToCompileMap({ babelPluginNameArray, compileGroupCount: 2 })
   const expected = {
     best: {
-      pluginNames: [],
+      babelPluginNameArray: [],
       compatMap: {
         chrome: "49",
         edge: "14",
@@ -19,7 +19,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
       },
     },
     worst: {
-      pluginNames: pluginNames.slice(),
+      babelPluginNameArray: babelPluginNameArray.slice(),
       compatMap: {
         android: "0.0.0",
         chrome: "0.0.0",
@@ -33,7 +33,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
       },
     },
     otherwise: {
-      pluginNames: pluginNames.slice(),
+      babelPluginNameArray: babelPluginNameArray.slice(),
       compatMap: {},
     },
   }
@@ -41,11 +41,11 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
 }
 
 {
-  const pluginNames = ["transform-block-scoping", "transform-modules-systemjs"]
-  const actual = envDescriptionToCompileMap({ pluginNames })
+  const babelPluginNameArray = ["transform-block-scoping", "transform-modules-systemjs"]
+  const actual = envDescriptionToCompileMap({ babelPluginNameArray })
   const expected = {
     best: {
-      pluginNames: ["transform-modules-systemjs"],
+      babelPluginNameArray: ["transform-modules-systemjs"],
       compatMap: {
         chrome: "49",
         safari: "10",
@@ -58,7 +58,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
       },
     },
     worst: {
-      pluginNames: pluginNames.slice(),
+      babelPluginNameArray: babelPluginNameArray.slice(),
       compatMap: {
         android: "0.0.0",
         chrome: "0.0.0",
@@ -72,7 +72,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
       },
     },
     otherwise: {
-      pluginNames: pluginNames.slice(),
+      babelPluginNameArray: babelPluginNameArray.slice(),
       compatMap: {},
     },
   }
