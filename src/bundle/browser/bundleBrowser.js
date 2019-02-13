@@ -1,8 +1,8 @@
 import {
-  generateCompileMap,
-  compileMapToCompileDescription,
+  generateGroupDescription,
+  groupDescriptionToCompileDescription,
   browserScoring,
-} from "../../compile-group/index.js"
+} from "../../group-description/index.js"
 import { generateEntryFoldersForPlatform } from "../generateEntryFoldersForPlatform.js"
 import { generateBalancerFilesForBrowser } from "./generateBalancerFilesForBrowser.js"
 import {
@@ -33,13 +33,16 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
 
     const cancellationToken = createProcessInterruptionCancellationToken()
 
-    const compileMap = generateCompileMap({
-      compileGroupCount,
+    const groupDescription = generateGroupDescription({
       babelPluginDescription,
       platformScoring,
+      groupCount: compileGroupCount,
     })
 
-    const compileDescription = compileMapToCompileDescription(compileMap, babelPluginDescription)
+    const compileDescription = groupDescriptionToCompileDescription(
+      groupDescription,
+      babelPluginDescription,
+    )
 
     const rollupOptions = {
       format: "iife",
@@ -54,7 +57,6 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
         into,
         entryPointsDescription,
         globalName,
-        compileMap,
         compileDescription,
         rollupOptions,
       }),
@@ -64,7 +66,7 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
         into,
         entryPointsDescription,
         globalName,
-        compileMap,
+        groupDescription,
         compileDescription,
         rollupOptions,
       }),

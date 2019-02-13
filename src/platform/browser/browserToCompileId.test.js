@@ -11,7 +11,7 @@ import { browserToCompileId } from "./browserToCompileId.js"
     },
     {
       foo: {
-        compatibilityDescription: {
+        compatibility: {
           chrome: "41",
         },
       },
@@ -29,7 +29,7 @@ import { browserToCompileId } from "./browserToCompileId.js"
     },
     {
       foo: {
-        compatibilityDescription: {
+        compatibility: {
           chrome: "41",
         },
       },
@@ -47,7 +47,7 @@ import { browserToCompileId } from "./browserToCompileId.js"
     },
     {
       foo: {
-        compatibilityDescription: {
+        compatibility: {
           chrome: "41",
         },
       },
@@ -56,5 +56,3 @@ import { browserToCompileId } from "./browserToCompileId.js"
   const expected = null
   assert.deepEqual(actual, expected)
 }
-
-console.log("passed")

@@ -6,15 +6,19 @@ import { loadCompileMeta } from "./loadCompileMeta.js"
 
 export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigin }) => {
   // importer depends on informer, but this is an implementation detail
-  const { compileMap, compileId } = await loadCompileMeta({ compileInto, compileServerOrigin })
+  const { groupDescription, compileId } = await loadCompileMeta({
+    compileInto,
+    compileServerOrigin,
+  })
 
   // one day maybe we'll be able to use nativeImporter but
-  // for now transform-modules-systemjs is not inside compileMap because
+  // for now transform-modules-systemjs is not inside groupDescription because
   // we have to use it no matter what
   // they day a native solution can bring top level await, custom
   // resolve, catch syntax error etc we may use nativeImporter
   const canUseNativeImporter =
-    false && compileMap[compileId].babelPluginNameArray.indexOf("transform-modules-systemjs") === -1
+    false &&
+    groupDescription[compileId].babelPluginNameArray.indexOf("transform-modules-systemjs") === -1
 
   if (canUseNativeImporter) {
     const nativeImporter = {

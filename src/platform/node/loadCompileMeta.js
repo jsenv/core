@@ -1,17 +1,17 @@
 import { memoizeOnce } from "@dmail/helper"
 import { fileHrefToFilename } from "@jsenv/module-resolution"
-import { getCompileMapHref } from "./getCompileMapHref.js"
+import { getGroupDescriptionHref } from "../getGroupDescriptionHref.js"
 import { detect } from "./nodeDetect/index.js"
 import { nodeToCompileId } from "./nodeToCompileId.js"
 
 export const loadCompileMeta = memoizeOnce(({ compileInto, compileServerOrigin }) => {
-  const compileMapHref = getCompileMapHref({ compileInto, compileServerOrigin })
-  const compileMapPathname = fileHrefToFilename(compileMapHref)
+  const groupDescriptionHref = getGroupDescriptionHref({ compileInto, compileServerOrigin })
+  const groupDescriptionPathname = fileHrefToFilename(groupDescriptionHref)
 
   // eslint-disable-next-line import/no-dynamic-require
-  const compileMap = require(compileMapPathname)
+  const groupDescription = require(groupDescriptionPathname)
   const node = detect()
-  const compileId = nodeToCompileId(node, compileMap) || "otherwise"
+  const compileId = nodeToCompileId(node, groupDescription) || "otherwise"
 
-  return { compileMap, compileId }
+  return { groupDescription, compileId }
 })

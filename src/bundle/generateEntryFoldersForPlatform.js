@@ -14,12 +14,11 @@ export const generateEntryFoldersForPlatform = async ({
   projectFolder,
   into,
   entryPointsDescription,
-  compileMap,
   compileDescription,
   rollupOptions,
 }) => {
   await Promise.all(
-    Object.keys(compileMap).map((compileId) => {
+    Object.keys(compileDescription).map((compileId) => {
       return generateEntryFolderForPlatform({
         cancellationToken,
         projectFolder,

@@ -1,6 +1,6 @@
-import { compatibilityCompose } from "../compatibilityCompose.js"
+import { composeCompatibility } from "../compatibility/composeCompatibility.js"
 
-export const groupArrayCompose = (...arrayOfGroupArray) => {
+export const composeGroupArray = (...arrayOfGroupArray) => {
   return arrayOfGroupArray.reduce(groupArrayReducer, [])
 }
 
@@ -19,7 +19,7 @@ const groupArrayReducer = (previousGroupArray, groupArray) => {
       groupHaveSameBabelPlugin(group, existingGroupCandidate),
     )
     if (groupWithSameBabelPlugin) {
-      groupWithSameBabelPlugin.compatibility = compatibilityCompose(
+      groupWithSameBabelPlugin.compatibility = composeCompatibility(
         groupWithSameBabelPlugin.compatibility,
         group.compatibility,
       )

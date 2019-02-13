@@ -4,7 +4,7 @@ export const browserScoring = {
   // we could improve these default usage score using better stats
   // and keep in mind this should be updated time to time or even better
   // come from your specific audience
-
+  android: 0.001,
   chrome: {
     "71": 0.3,
     "69": 0.19,
@@ -16,8 +16,11 @@ export const browserScoring = {
   edge: {
     "12": 0.1,
   },
+  electron: 0.001,
+  ios: 0.001,
+  opera: 0.001,
+  other: 0.001,
   safari: {
     "10": 0.1,
   },
-  other: 0.001,
 }

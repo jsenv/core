@@ -14,7 +14,7 @@ export const generateBalancerFilesForBrowser = async ({
   into,
   entryPointsDescription,
   globalName,
-  compileMap,
+  groupDescription,
   compileDescription,
   rollupOptions,
 }) => {
@@ -29,7 +29,7 @@ export const generateBalancerFilesForBrowser = async ({
           into,
           entryFile,
           globalName,
-          compileMap,
+          groupDescription,
           compileDescription,
           rollupOptions,
         }),
@@ -51,12 +51,12 @@ const generateBalancerFileForBrowser = async ({
   projectFolder,
   into,
   entryFile,
-  compileMap,
+  groupDescription,
   compileDescription,
   rollupOptions,
 }) => {
   const bundleBrowserOptionsModuleSource = `
-export const compileMap = ${uneval(compileMap)}
+export const groupDescription = ${uneval(groupDescription)}
 export const entryFile = ${uneval(entryFile)}
 `
 

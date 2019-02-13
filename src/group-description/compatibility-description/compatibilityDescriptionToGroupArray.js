@@ -1,21 +1,9 @@
 import { compatibilityDescriptionToGroupArrayForPlatform } from "./compatibilityDescriptionToGroupArrayForPlatform.js"
-import { groupArrayCompose } from "./groupArrayCompose.js"
-
-const defaultPlatformNames = [
-  "chrome",
-  "safari",
-  "firefox",
-  "edge",
-  "opera",
-  "android",
-  "ios",
-  "node",
-  "electron",
-]
+import { composeGroupArray } from "../group-array/composeGroupArray.js"
 
 export const compatibilityDescriptionToGroupArray = ({
   compatibilityDescription,
-  platformNames = defaultPlatformNames,
+  platformNames,
 }) => {
   const arrayOfGroupArray = platformNames.map((platformName) =>
     compatibilityDescriptionToGroupArrayForPlatform({
@@ -23,6 +11,6 @@ export const compatibilityDescriptionToGroupArray = ({
       platformName,
     }),
   )
-  const groupArray = groupArrayCompose(...arrayOfGroupArray)
+  const groupArray = composeGroupArray(...arrayOfGroupArray)
   return groupArray
 }

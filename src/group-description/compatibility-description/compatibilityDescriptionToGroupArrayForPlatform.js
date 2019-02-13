@@ -9,9 +9,12 @@ export const compatibilityDescriptionToGroupArrayForPlatform = ({
   platformName,
 }) => {
   const babelPluginNameArray = Object.keys(compatibilityDescription)
-  const platformVersions = babelPluginNameArray
+  const babelPluginNameArrayWithCompatibility = babelPluginNameArray.filter(
+    (babelPluginName) => platformName in compatibilityDescription[babelPluginName],
+  )
+
+  const platformVersions = babelPluginNameArrayWithCompatibility
     .map((babelPluginName) => String(compatibilityDescription[babelPluginName][platformName]))
-    .filter((babelPluginName) => platformName in compatibilityDescription[babelPluginName])
     .concat("0.0.0") // at least version 0
     // filter is to have unique version I guess
     .filter((platformVersion, index, array) => array.indexOf(platformVersion) === index)

@@ -1,5 +1,5 @@
 import assert from "assert"
-import { compatibilityDescriptionToScore } from "./compatibilityDescriptionToScore.js"
+import { compatibilityToScore } from "./compatibilityToScore.js"
 
 {
   const chrome50Score = 1
@@ -16,7 +16,7 @@ import { compatibilityDescriptionToScore } from "./compatibilityDescriptionToSco
   }
 
   {
-    const actual = compatibilityDescriptionToScore(
+    const actual = compatibilityToScore(
       {
         chrome: "48",
       },
@@ -27,7 +27,7 @@ import { compatibilityDescriptionToScore } from "./compatibilityDescriptionToSco
   }
 
   {
-    const actual = compatibilityDescriptionToScore(
+    const actual = compatibilityToScore(
       {
         chrome: "49",
       },
@@ -38,7 +38,7 @@ import { compatibilityDescriptionToScore } from "./compatibilityDescriptionToSco
   }
 
   {
-    const actual = compatibilityDescriptionToScore(
+    const actual = compatibilityToScore(
       {
         chrome: "50",
       },
@@ -49,7 +49,7 @@ import { compatibilityDescriptionToScore } from "./compatibilityDescriptionToSco
   }
 
   {
-    const actual = compatibilityDescriptionToScore(
+    const actual = compatibilityToScore(
       {
         chrome: "51",
       },
@@ -60,7 +60,7 @@ import { compatibilityDescriptionToScore } from "./compatibilityDescriptionToSco
   }
 
   {
-    const actual = compatibilityDescriptionToScore(
+    const actual = compatibilityToScore(
       {
         chrome: "51",
         foo: ["0"],

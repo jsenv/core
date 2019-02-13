@@ -1,7 +1,10 @@
 import { objectMapValue } from "../objectHelper.js"
 
-export const compileMapToCompileDescription = (compileMap, babelPluginDescription = {}) => {
-  return objectMapValue(compileMap, ({ babelPluginNameArray }) => {
+export const groupDescriptionToCompileDescription = (
+  groupDescription,
+  babelPluginDescription = {},
+) => {
+  return objectMapValue(groupDescription, ({ babelPluginNameArray }) => {
     const specificBabelPluginDescription = {}
     babelPluginNameArray.forEach((pluginName) => {
       if (pluginName in babelPluginDescription === false) {

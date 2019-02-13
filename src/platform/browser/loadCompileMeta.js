@@ -2,21 +2,21 @@ import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
 import { detect } from "./browserDetect/index.js"
 import { browserToCompileId } from "./browserToCompileId.js"
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
-import { getCompileMapHref } from "./remoteURL.js"
+import { getGroupDescriptionHref } from "../getGroupDescriptionHref.js"
 
 export const loadCompileMeta = memoizeOnce(async ({ compileInto, compileServerOrigin }) => {
-  const compileMapHref = getCompileMapHref({ compileInto, compileServerOrigin })
-  const compileMapResponse = await fetchUsingXHR(compileMapHref)
-  if (compileMapResponse.status < 200 || compileMapResponse.status >= 400) {
-    return Promise.reject(compileMapResponse)
+  const compileMapHref = getGroupDescriptionHref({ compileInto, compileServerOrigin })
+  const groupDescriptionResponse = await fetchUsingXHR(compileMapHref)
+  if (groupDescriptionResponse.status < 200 || groupDescriptionResponse.status >= 400) {
+    return Promise.reject(groupDescriptionResponse)
   }
 
-  const compileMap = JSON.parse(compileMapResponse.body)
+  const groupDescription = JSON.parse(groupDescriptionResponse.body)
   const browser = detect()
-  const compileId = browserToCompileId(browser, compileMap) || "otherwise"
+  const compileId = browserToCompileId(browser, groupDescription) || "otherwise"
 
   return {
-    compileMap,
+    groupDescription,
     compileId,
   }
 })

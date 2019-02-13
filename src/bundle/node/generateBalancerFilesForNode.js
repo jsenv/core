@@ -9,7 +9,7 @@ export const generateBalancerFilesForNode = async ({
   projectFolder,
   into,
   entryPointsDescription,
-  compileMap,
+  groupDescription,
   compileDescription,
   rollupOptions,
 }) => {
@@ -22,7 +22,7 @@ export const generateBalancerFilesForNode = async ({
         projectFolder,
         into,
         entryFile,
-        compileMap,
+        groupDescription,
         compileDescription,
         rollupOptions,
       })
@@ -35,12 +35,12 @@ const generateBalancerFileForNode = async ({
   projectFolder,
   into,
   entryFile,
-  compileMap,
+  groupDescription,
   compileDescription,
   rollupOptions,
 }) => {
   const bundleNodeOptionsModuleSource = `
-  export const compileMap = ${uneval(compileMap)}
+  export const groupDescription = ${uneval(groupDescription)}
   export const entryFile = ${uneval(entryFile)}`
 
   const rollupJsenvPlugin = {

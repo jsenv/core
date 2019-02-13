@@ -1,5 +1,5 @@
 import assert from "assert"
-import { groupCompose } from "./groupCompose.js"
+import { composeGroup } from "./composeGroup.js"
 
 {
   const firstGroup = {
@@ -17,7 +17,7 @@ import { groupCompose } from "./groupCompose.js"
       node: 10,
     },
   }
-  const actual = groupCompose(firstGroup, secondGroup)
+  const actual = composeGroup(firstGroup, secondGroup)
   const expected = {
     babelPluginNameArray: ["a", "b", "e"],
     compatibilityDescription: {

@@ -1,12 +1,12 @@
 import { versionIsBelowOrEqual } from "@dmail/project-structure-compile-babel"
 
-export const nodeToCompileId = ({ name, version }, compileMap) => {
-  return Object.keys(compileMap).find((id) => {
-    const { compatibilityDescription } = compileMap[id]
-    if (name in compatibilityDescription === false) {
+export const nodeToCompileId = ({ name, version }, groupDescription) => {
+  return Object.keys(groupDescription).find((compileIdCandidate) => {
+    const { compatibility } = groupDescription[compileIdCandidate]
+    if (name in compatibility === false) {
       return false
     }
-    const versionForGroup = compatibilityDescription[name]
+    const versionForGroup = compatibility[name]
     return versionIsBelowOrEqual(versionForGroup, version)
   })
 }

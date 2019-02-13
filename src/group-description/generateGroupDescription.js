@@ -1,29 +1,33 @@
-// https://github.com/babel/babel/blob/master/packages/babel-preset-env/data/plugins.json
+import { arrayWithoutValue } from "@dmail/helper"
+import { decreaseArrayByComposingValues } from "../decreaseArrayByComposingValues.js"
 import { babelPluginCompatibilityDescription as defaultBabelPluginCompatibilityDescription } from "./babelPluginCompatibilityDescription.js"
-import { compatibilityDescriptionToGroupArray } from "./compatibilityDescriptionToGroupArray/index.js"
-import { compatibilityDescriptionToScore } from "./compatibilityDescriptionToScore.js"
-import { decreaseArrayByComposingValues } from "../../decreaseArrayByComposingValues.js"
-import { babelPluginNameArrayToScore } from "./babelPluginNameArrayToScore.js"
-import { groupCompose } from "./groupCompose.js"
+import { compatibilityDescriptionToGroupArray } from "./compatibility-description/compatibilityDescriptionToGroupArray.js"
+import { compatibilityToScore } from "./compatibility/compatibilityToScore.js"
+import { babelPluginNameArrayToScore } from "./babel-plugin-name-array/babelPluginNameArrayToScore.js"
+import { composeGroup } from "./group/composeGroup.js"
 
 const BEST_ID = "best"
 const OTHERWISE_ID = "otherwise"
 
-// rename envDescriptionm this is strange
-// maybe compileMap too
-// group naming is too generic as well but couldn't find a better name for now
-export const envDescriptionToCompileMap = ({
-  compileGroupCount = 4,
-  babelPluginNameArray = [],
-  babelPluginCompatibilityDescription = defaultBabelPluginCompatibilityDescription,
+export const generateGroupDescription = ({
+  babelPluginDescription,
   platformScoring,
-} = {}) => {
+  groupCount = 4,
+  babelPluginCompatibilityDescription = defaultBabelPluginCompatibilityDescription,
+}) => {
+  if (typeof babelPluginDescription !== "object")
+    throw new TypeError(`babelPluginDescription must be an object, got ${babelPluginDescription}`)
+  if (typeof platformScoring !== "object")
+    throw new TypeError(`platformScoring must be an object, got ${platformScoring}`)
+
+  const babelPluginNameArray = Object.keys(babelPluginDescription)
+
   const groupWithEverything = {
     babelPluginNameArray: babelPluginNameArray.sort(),
     compatibility: {},
   }
 
-  if (compileGroupCount === 1) {
+  if (groupCount === 1) {
     return {
       [OTHERWISE_ID]: groupWithEverything,
     }
@@ -39,18 +43,18 @@ export const envDescriptionToCompileMap = ({
 
   const groupArrayWithEveryCombination = compatibilityDescriptionToGroupArray({
     compatibilityDescription: specificBabelPluginCompatibilityDescription,
+    platformNames: arrayWithoutValue(Object.keys(platformScoring), "other"),
   })
 
-  const groupToScore = ({ compatibilityDescription }) =>
-    compatibilityDescriptionToScore(compatibilityDescription, platformScoring)
+  const groupToScore = ({ compatibility }) => compatibilityToScore(compatibility, platformScoring)
   const groupArrayWithEveryCombinationSortedByPlatformScore = groupArrayWithEveryCombination.sort(
     (a, b) => groupToScore(b) - groupToScore(a),
   )
 
   const groupArrayDecreased = decreaseArrayByComposingValues({
     array: groupArrayWithEveryCombinationSortedByPlatformScore,
-    length: compileGroupCount,
-    composer: groupCompose,
+    length: groupCount,
+    composer: composeGroup,
   })
 
   const groupToComplexityScore = ({ babelPluginNameArray }) =>
@@ -63,15 +67,15 @@ export const envDescriptionToCompileMap = ({
   const length = groupArrayDecreasedSortedByCompexityScore.length
   groupArrayDecreasedSortedByCompexityScore[length - 1] = groupWithEverything
 
-  const compileMap = {}
+  const groupDescription = {}
 
-  compileMap[BEST_ID] = groupArrayDecreasedSortedByCompexityScore[0]
+  groupDescription[BEST_ID] = groupArrayDecreasedSortedByCompexityScore[0]
   groupArrayDecreasedSortedByCompexityScore
     .slice(1, -1)
     .forEach((intermediatePluginGroup, index) => {
-      compileMap[`intermediate-${index + 1}`] = intermediatePluginGroup
+      groupDescription[`intermediate-${index + 1}`] = intermediatePluginGroup
     })
-  compileMap[OTHERWISE_ID] = groupArrayDecreasedSortedByCompexityScore[length - 1]
+  groupDescription[OTHERWISE_ID] = groupArrayDecreasedSortedByCompexityScore[length - 1]
 
-  return compileMap
+  return groupDescription
 }

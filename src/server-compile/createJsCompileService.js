@@ -3,11 +3,11 @@ import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
 import { jsCompile } from "../jsCompile/index.js"
 import { jsCompileToService } from "../jsCompileToService/index.js"
 import {
-  generateCompileMap,
-  compileMapToCompileDescription,
+  generateGroupDescription,
+  groupDescriptionToCompileDescription,
   browserScoring as browserDefaultScoring,
   nodeScoring as nodeDefaultScoring,
-} from "../compile-group/index.js"
+} from "../group-description/index.js"
 
 export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),
@@ -15,7 +15,7 @@ export const createJsCompileService = async ({
   compileInto,
   compileGroupCount,
   babelPluginDescription,
-  pluginCompatMap,
+  babelPluginCompatibilityDescription,
   locate,
   browserScoring = browserDefaultScoring,
   nodeScoring = nodeDefaultScoring,
@@ -26,19 +26,22 @@ export const createJsCompileService = async ({
   watch,
   watchPredicate,
 }) => {
-  const compileMap = generateCompileMap({
-    compileGroupCount,
+  const groupDescription = generateGroupDescription({
     babelPluginDescription,
-    pluginCompatMap,
     platformScoring: { ...browserScoring, ...nodeScoring },
+    groupCount: compileGroupCount,
+    babelPluginCompatibilityDescription,
   })
 
   await fileWriteFromString(
-    `${projectFolder}/${compileInto}/compileMap.json`,
-    JSON.stringify(compileMap, null, "  "),
+    `${projectFolder}/${compileInto}/groupDescription.json`,
+    JSON.stringify(groupDescription, null, "  "),
   )
 
-  const compileDescription = compileMapToCompileDescription(compileMap, babelPluginDescription)
+  const compileDescription = groupDescriptionToCompileDescription(
+    groupDescription,
+    babelPluginDescription,
+  )
 
   const jsCompileService = jsCompileToService(jsCompile, {
     cancellationToken,

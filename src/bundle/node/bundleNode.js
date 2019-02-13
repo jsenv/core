@@ -1,8 +1,8 @@
 import {
-  generateCompileMap,
-  compileMapToCompileDescription,
+  generateGroupDescription,
+  groupDescriptionToCompileDescription,
   nodeScoring,
-} from "../../compile-group/index.js"
+} from "../../group-description/index.js"
 import { generateEntryFoldersForPlatform } from "../generateEntryFoldersForPlatform.js"
 import { generateBalancerFilesForNode } from "./generateBalancerFilesForNode.js"
 import {
@@ -32,13 +32,16 @@ export const bundleNode = catchAsyncFunctionCancellation(
 
     const cancellationToken = createProcessInterruptionCancellationToken()
 
-    const compileMap = generateCompileMap({
-      compileGroupCount,
+    const groupDescription = generateGroupDescription({
       babelPluginDescription,
       platformScoring,
+      groupCount: compileGroupCount,
     })
 
-    const compileDescription = compileMapToCompileDescription(compileMap, babelPluginDescription)
+    const compileDescription = groupDescriptionToCompileDescription(
+      groupDescription,
+      babelPluginDescription,
+    )
 
     const rollupOptions = {
       format: "cjs",
@@ -51,7 +54,7 @@ export const bundleNode = catchAsyncFunctionCancellation(
         projectFolder,
         into,
         entryPointsDescription,
-        compileMap,
+        groupDescription,
         compileDescription,
         // https://rollupjs.org/guide/en#output-format
         rollupOptions,
@@ -61,7 +64,7 @@ export const bundleNode = catchAsyncFunctionCancellation(
         projectFolder,
         into,
         entryPointsDescription,
-        compileMap,
+        groupDescription,
         compileDescription,
         rollupOptions,
       }),

@@ -1,5 +1,5 @@
 import assert from "assert"
-import { groupArrayCompose } from "./groupArrayCompose.js"
+import { composeGroupArray } from "./composeGroupArray.js"
 
 {
   const chromePlatformGroups = [
@@ -19,7 +19,7 @@ import { groupArrayCompose } from "./groupArrayCompose.js"
       }),
     },
   ]
-  const actual = groupArrayCompose(chromePlatformGroups, firefoxPlatformGroups)
+  const actual = composeGroupArray(chromePlatformGroups, firefoxPlatformGroups)
   const expected = [
     {
       babelPluginNameArray: ["a"],

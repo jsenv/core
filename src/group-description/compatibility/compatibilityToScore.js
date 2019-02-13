@@ -1,8 +1,8 @@
 import { versionIsBelow, versionIsAbove } from "@dmail/project-structure-compile-babel"
 
-export const compatibilityDescriptionToScore = (compatibilityDescription, platformScoring) => {
-  return Object.keys(compatibilityDescription).reduce((previous, platformName) => {
-    const platformVersion = compatibilityDescription[platformName]
+export const compatibilityToScore = (compatibility, platformScoring) => {
+  return Object.keys(compatibility).reduce((previous, platformName) => {
+    const platformVersion = compatibility[platformName]
     return previous + platformToScore(platformName, platformVersion, platformScoring)
   }, 0)
 }
