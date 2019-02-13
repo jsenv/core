@@ -19,7 +19,7 @@ export const launchChromium = async ({
   port = 0,
   startIndexRequestHandler = startIndexServer,
   headless = true,
-  generateHTML = ({ browserPlatformRemoteHRef }) => {
+  generateHTML = ({ browserPlatformHref }) => {
     return `<!doctype html>
 
 <head>
@@ -29,7 +29,7 @@ export const launchChromium = async ({
 
 <body>
   <main></main>
-  <script src="${browserPlatformRemoteHRef}"></script>
+  <script src="${browserPlatformHref}"></script>
 </body>
 
 </html>`
@@ -151,7 +151,7 @@ export const launchChromium = async ({
       generateHTML({
         compileInto,
         compileServerOrigin,
-        browserPlatformRemoteURL: getBrowserPlatformHref({ compileInto, compileServerOrigin }),
+        browserPlatformHref: getBrowserPlatformHref({ compileInto, compileServerOrigin }),
       }),
     ])
 
