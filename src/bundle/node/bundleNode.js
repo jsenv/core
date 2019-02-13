@@ -1,6 +1,6 @@
 import {
   generateCompileMap,
-  compileMapToCompileParamMap,
+  compileMapToCompileDescription,
   nodeScoring,
 } from "../../compile-group/index.js"
 import { generateEntryFoldersForPlatform } from "../generateEntryFoldersForPlatform.js"
@@ -38,7 +38,7 @@ export const bundleNode = catchAsyncFunctionCancellation(
       platformScoring,
     })
 
-    const compileDescription = compileMapToCompileParamMap(compileMap, babelPluginDescription)
+    const compileDescription = compileMapToCompileDescription(compileMap, babelPluginDescription)
 
     const rollupOptions = {
       format: "cjs",

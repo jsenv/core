@@ -1,6 +1,6 @@
 import {
   generateCompileMap,
-  compileMapToCompileParamMap,
+  compileMapToCompileDescription,
   browserScoring,
 } from "../../compile-group/index.js"
 import { generateEntryFoldersForPlatform } from "../generateEntryFoldersForPlatform.js"
@@ -39,7 +39,7 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
       platformScoring,
     })
 
-    const compileDescription = compileMapToCompileParamMap(compileMap, babelPluginDescription)
+    const compileDescription = compileMapToCompileDescription(compileMap, babelPluginDescription)
 
     const rollupOptions = {
       format: "iife",

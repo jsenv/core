@@ -4,7 +4,7 @@ import { jsCompile } from "../jsCompile/index.js"
 import { jsCompileToService } from "../jsCompileToService/index.js"
 import {
   generateCompileMap,
-  compileMapToCompileParamMap,
+  compileMapToCompileDescription,
   browserScoring as browserDefaultScoring,
   nodeScoring as nodeDefaultScoring,
 } from "../compile-group/index.js"
@@ -38,7 +38,7 @@ export const createJsCompileService = async ({
     JSON.stringify(compileMap, null, "  "),
   )
 
-  const compileDescription = compileMapToCompileParamMap(compileMap, babelPluginDescription)
+  const compileDescription = compileMapToCompileDescription(compileMap, babelPluginDescription)
 
   const jsCompileService = jsCompileToService(jsCompile, {
     cancellationToken,
