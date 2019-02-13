@@ -1,14 +1,21 @@
 import { versionIsBelow, versionIsAbove } from "@dmail/project-structure-compile-babel"
 
-const platformToUsageScore = (platformName, platformVersion, platformUsageMap) => {
-  if (platformName in platformUsageMap === false) {
-    return platformUsageMap.other
+export const compatMapToScore = (compatMap, platformScoring) => {
+  return Object.keys(compatMap).reduce((previous, platformName) => {
+    const platformVersion = compatMap[platformName]
+    return previous + platformToScore(platformName, platformVersion, platformScoring)
+  }, 0)
+}
+
+const platformToScore = (platformName, platformVersion, platformScoring) => {
+  if (platformName in platformScoring === false) {
+    return platformScoring.other
   }
 
-  const versionUsageMap = platformUsageMap[platformName]
+  const versionUsageMap = platformScoring[platformName]
   const versionNames = Object.keys(versionUsageMap)
   if (versionNames.length === 0) {
-    return platformUsageMap.other
+    return platformScoring.other
   }
 
   const sortedVersions = versionNames.sort((versionA, versionB) =>
@@ -24,15 +31,8 @@ const platformToUsageScore = (platformName, platformVersion, platformUsageMap) =
     return platformVersion === version || versionIsAbove(platformVersion, version)
   })
   if (!closestVersion) {
-    return platformUsageMap.other
+    return platformScoring.other
   }
 
   return versionUsageMap[closestVersion]
-}
-
-export const compatMapToUsageScore = (compatMap, platformUsageMap) => {
-  return Object.keys(compatMap).reduce((previous, platformName) => {
-    const platformVersion = compatMap[platformName]
-    return previous + platformToUsageScore(platformName, platformVersion, platformUsageMap)
-  }, 0)
 }

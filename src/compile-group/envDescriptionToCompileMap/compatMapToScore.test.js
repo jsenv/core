@@ -1,12 +1,12 @@
 import assert from "assert"
-import { compatMapToUsageScore } from "./compatMapToUsageScore.js"
+import { compatMapToScore } from "./compatMapToScore.js"
 
 {
   const chrome50Score = 1
   const chrome49Score = 2
   const chromeBelow49Score = 4
   const otherScore = 8
-  const platformUsageMap = {
+  const platformScoring = {
     chrome: {
       "50": chrome50Score,
       "49": chrome49Score,
@@ -16,56 +16,56 @@ import { compatMapToUsageScore } from "./compatMapToUsageScore.js"
   }
 
   {
-    const actual = compatMapToUsageScore(
+    const actual = compatMapToScore(
       {
         chrome: "48",
       },
-      platformUsageMap,
+      platformScoring,
     )
     const expected = chromeBelow49Score
     assert.equal(actual, expected)
   }
 
   {
-    const actual = compatMapToUsageScore(
+    const actual = compatMapToScore(
       {
         chrome: "49",
       },
-      platformUsageMap,
+      platformScoring,
     )
     const expected = chrome49Score
     assert.equal(actual, expected)
   }
 
   {
-    const actual = compatMapToUsageScore(
+    const actual = compatMapToScore(
       {
         chrome: "50",
       },
-      platformUsageMap,
+      platformScoring,
     )
     const expected = chrome50Score
     assert.equal(actual, expected)
   }
 
   {
-    const actual = compatMapToUsageScore(
+    const actual = compatMapToScore(
       {
         chrome: "51",
       },
-      platformUsageMap,
+      platformScoring,
     )
     const expected = chrome50Score
     assert.equal(actual, expected)
   }
 
   {
-    const actual = compatMapToUsageScore(
+    const actual = compatMapToScore(
       {
         chrome: "51",
         foo: ["0"],
       },
-      platformUsageMap,
+      platformScoring,
     )
     const expected = chrome50Score + otherScore
     assert.equal(actual, expected)

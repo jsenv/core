@@ -1,7 +1,7 @@
 import {
   generateCompileMap,
   compileMapToCompileParamMap,
-  browserUsageMap,
+  browserScoring,
 } from "../../compile-group/index.js"
 import { generateEntryFoldersForPlatform } from "../generateEntryFoldersForPlatform.js"
 import { generateBalancerFilesForBrowser } from "./generateBalancerFilesForBrowser.js"
@@ -18,7 +18,7 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
     globalName,
     babelPluginDescription,
     compileGroupCount = 2,
-    usageMap = browserUsageMap,
+    platformScoring = browserScoring,
   }) => {
     if (typeof projectFolder !== "string")
       throw new TypeError(`bundleBrowser root must be a string, got ${projectFolder}`)
@@ -34,7 +34,7 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
     const compileMap = generateCompileMap({
       compileGroupCount,
       babelPluginDescription,
-      platformUsageMap: usageMap,
+      platformScoring,
     })
 
     const compileDescription = compileMapToCompileParamMap(compileMap, babelPluginDescription)

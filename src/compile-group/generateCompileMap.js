@@ -3,7 +3,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap/index.j
 export const generateCompileMap = ({
   compileGroupCount,
   babelPluginDescription = {},
-  platformUsageMap,
+  platformScoring,
   pluginCompatMap,
 }) => {
   if (!babelPluginDescription) throw new Error(`babelPluginDescription is required`)
@@ -11,7 +11,7 @@ export const generateCompileMap = ({
   const compileMap = envDescriptionToCompileMap({
     compileGroupCount,
     pluginNames: Object.keys(babelPluginDescription),
-    platformUsageMap,
+    platformScoring,
     pluginCompatMap,
   })
 

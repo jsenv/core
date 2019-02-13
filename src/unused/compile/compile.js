@@ -14,7 +14,7 @@ export const compile = async ({
   babelPluginDescription = {},
   compileGroupCount = 1,
   pluginCompatMap,
-  platformUsageMap,
+  platformScoring,
   main = "index.js",
   compilePatternMapping = {},
 }) =>
@@ -40,7 +40,7 @@ export const compile = async ({
         compileGroupCount,
         babelPluginDescription,
         pluginCompatMap,
-        platformUsageMap,
+        platformScoring,
       }),
     ])
 

@@ -5,8 +5,8 @@ import { jsCompileToService } from "../jsCompileToService/index.js"
 import {
   generateCompileMap,
   compileMapToCompileParamMap,
-  browserUsageMap as browserDefaultUsageMap,
-  nodeUsageMap as nodeDefaultUsageMap,
+  browserScoring as browserDefaultScoring,
+  nodeScoring as nodeDefaultScoring,
 } from "../compile-group/index.js"
 
 export const createJsCompileService = async ({
@@ -17,8 +17,8 @@ export const createJsCompileService = async ({
   babelPluginDescription,
   pluginCompatMap,
   locate,
-  browserUsageMap = browserDefaultUsageMap,
-  nodeUsageMap = nodeDefaultUsageMap,
+  browserScoring = browserDefaultScoring,
+  nodeScoring = nodeDefaultScoring,
   localCacheStrategy,
   localCacheTrackHit,
   cacheStrategy,
@@ -30,7 +30,7 @@ export const createJsCompileService = async ({
     compileGroupCount,
     babelPluginDescription,
     pluginCompatMap,
-    platformUsageMap: { ...browserUsageMap, ...nodeUsageMap },
+    platformScoring: { ...browserScoring, ...nodeScoring },
   })
 
   await fileWriteFromString(

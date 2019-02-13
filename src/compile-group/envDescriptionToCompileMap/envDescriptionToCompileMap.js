@@ -1,7 +1,7 @@
 // https://github.com/babel/babel/blob/master/packages/babel-preset-env/data/plugins.json
 import { compatMap as pluginCompatMapDefault } from "@dmail/project-structure-compile-babel"
 import { pluginCompatMapToCompileGroups } from "./pluginCompatMapToCompileGroups/index.js"
-import { compatMapToUsageScore } from "./compatMapToUsageScore.js"
+import { compatMapToScore } from "./compatMapToScore.js"
 import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn/compileGroupsRegroupIn.js"
 import { pluginNamesToScore } from "./pluginNamesToScore.js"
 
@@ -13,7 +13,7 @@ export const envDescriptionToCompileMap = ({
   compileGroupCount = 4,
   pluginNames = [],
   pluginCompatMap = pluginCompatMapDefault,
-  platformUsageMap,
+  platformScoring,
 } = {}) => {
   const pluginCompatMapFiltered = {}
   pluginNames.forEach((pluginName) => {
@@ -21,10 +21,9 @@ export const envDescriptionToCompileMap = ({
       pluginName in pluginCompatMap ? pluginCompatMap[pluginName] : {}
   })
 
-  const pluginGroupToUsageScore = ({ compatMap }) =>
-    compatMapToUsageScore(compatMap, platformUsageMap)
+  const pluginGroupToScore = ({ compatMap }) => compatMapToScore(compatMap, platformScoring)
   const allCompileGroups = pluginCompatMapToCompileGroups(pluginCompatMapFiltered).sort(
-    (a, b) => pluginGroupToUsageScore(b) - pluginGroupToUsageScore(a),
+    (a, b) => pluginGroupToScore(b) - pluginGroupToScore(a),
   )
 
   const compileGroupToComplexityScore = ({ pluginNames }) => pluginNamesToScore(pluginNames)

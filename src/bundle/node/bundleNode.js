@@ -1,7 +1,7 @@
 import {
   generateCompileMap,
   compileMapToCompileParamMap,
-  nodeUsageMap,
+  nodeScoring,
 } from "../../compile-group/index.js"
 import { generateEntryFoldersForPlatform } from "../generateEntryFoldersForPlatform.js"
 import { generateBalancerFilesForNode } from "./generateBalancerFilesForNode.js"
@@ -17,7 +17,7 @@ export const bundleNode = catchAsyncFunctionCancellation(
     into,
     babelPluginDescription,
     compileGroupCount = 2,
-    usageMap = nodeUsageMap,
+    platformScoring = nodeScoring,
   }) => {
     if (typeof projectFolder !== "string")
       throw new TypeError(`bundleNode projectFolder must be a string, got ${projectFolder}`)
@@ -33,7 +33,7 @@ export const bundleNode = catchAsyncFunctionCancellation(
     const compileMap = generateCompileMap({
       compileGroupCount,
       babelPluginDescription,
-      platformUsageMap: usageMap,
+      platformScoring,
     })
 
     const compileDescription = compileMapToCompileParamMap(compileMap, babelPluginDescription)
