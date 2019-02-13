@@ -26,16 +26,16 @@ export const transpiler = async ({
   filenameRelative,
   inputAst,
   inputMap,
-  pluginMap,
+  babelPluginDescription,
   remap,
 }) => {
   const transformModuleIntoSystemFormat = true
   const allowTopLevelAwait = true
 
   let asyncPluginName
-  if ("transform-async-to-promises" in pluginMap) {
+  if ("transform-async-to-promises" in babelPluginDescription) {
     asyncPluginName = "transform-async-to-promises"
-  } else if ("transform-async-to-generator" in pluginMap) {
+  } else if ("transform-async-to-generator" in babelPluginDescription) {
     asyncPluginName = "transform-async-to-generator"
   } else {
     asyncPluginName = ""
@@ -57,7 +57,7 @@ export const transpiler = async ({
   }
 
   if (transformModuleIntoSystemFormat && allowTopLevelAwait && asyncPluginName) {
-    const pluginNames = arrayWithoutValue(Object.keys(pluginMap), asyncPluginName)
+    const pluginNames = arrayWithoutValue(Object.keys(babelPluginDescription), asyncPluginName)
     const result = await transpile({
       ast: inputAst,
       code: input,
@@ -66,7 +66,7 @@ export const transpiler = async ({
         plugins: [
           syntaxImportMeta,
           syntaxDynamicImport,
-          ...pluginNames.map((pluginName) => pluginMap[pluginName]),
+          ...pluginNames.map((pluginName) => babelPluginDescription[pluginName]),
           transformModulesSystemJs,
         ],
       },
@@ -78,12 +78,12 @@ export const transpiler = async ({
       options: {
         ...options,
         inputSourceMap: result.map,
-        plugins: [syntaxImportMeta, syntaxDynamicImport, pluginMap[asyncPluginName]],
+        plugins: [syntaxImportMeta, syntaxDynamicImport, babelPluginDescription[asyncPluginName]],
       },
     })
   }
 
-  const pluginNames = Object.keys(pluginMap)
+  const pluginNames = Object.keys(babelPluginDescription)
   return transpile({
     ast: inputAst,
     code: input,
@@ -92,7 +92,7 @@ export const transpiler = async ({
       plugins: [
         syntaxImportMeta,
         syntaxDynamicImport,
-        ...pluginNames.map((pluginName) => pluginMap[pluginName]),
+        ...pluginNames.map((pluginName) => babelPluginDescription[pluginName]),
         transformModulesSystemJs,
       ],
     },

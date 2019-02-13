@@ -6,13 +6,13 @@ import { launchNode } from "../../launchNode.js"
 
 const file = `src/launchNode/test/not-found/not-found.js`
 const compileInto = "build"
-const pluginMap = {}
+const babelPluginDescription = {}
 
 ;(async () => {
   const { origin: remoteRoot } = await startCompileServer({
     root,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
   })
 
   const actual = await launchAndExecute({

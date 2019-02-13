@@ -7,7 +7,7 @@ bundleNode({
     main: "src/bundle/node/test/debugger/debugger.js",
   },
   root,
-  pluginMap: {
+  babelPluginDescription: {
     "transform-block-scoping": [blockScoping],
   },
 })

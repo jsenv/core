@@ -16,7 +16,7 @@ const outputRessource = `browserSystemImporter.js`
 const inputFile = `${projectFolder}/${inputRessource}`
 const outputFile = `${outputFolder}/${outputRessource}`
 const globalName = "__browserImporter__"
-const pluginMap = pluginOptionMapToPluginMap({
+const babelPluginDescription = pluginOptionMapToPluginMap({
   "proposal-json-strings": {},
   "proposal-object-rest-spread": {},
   "proposal-optional-catch-binding": {},
@@ -43,10 +43,10 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-typeof-symbol": {},
   "transform-unicode-regex": {},
 })
-pluginMap["transform-async-to-promises"] = [transformAsyncToPromises, {}]
+babelPluginDescription["transform-async-to-promises"] = [transformAsyncToPromises, {}]
 
 export const compileBrowserSystemImporter = async () => {
-  const plugins = pluginMapToPluginsForPlatform(pluginMap, "unknown", "0.0.0")
+  const plugins = pluginMapToPluginsForPlatform(babelPluginDescription, "unknown", "0.0.0")
 
   const bundle = await rollup({
     input: inputFile,

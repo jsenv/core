@@ -8,7 +8,7 @@ const projectFolder = `${selfProjectFolder}/src/jsCompile/test/basic`
 const filenameRelative = "basic.js"
 const filename = `${projectFolder}/${filenameRelative}`
 const input = fs.readFileSync(filename).toString()
-const pluginMap = pluginOptionMapToPluginMap({
+const babelPluginDescription = pluginOptionMapToPluginMap({
   "transform-block-scoping": {},
 })
 
@@ -18,7 +18,7 @@ const test = async () => {
     filename,
     filenameRelative,
     projectFolder,
-    pluginMap,
+    babelPluginDescription,
   })
 
   assert({ actual: sources, expected: [filenameRelative] })

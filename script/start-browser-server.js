@@ -4,7 +4,7 @@ const {
 const { localRoot } = require("../dist/src/localRoot.js")
 
 const compileInto = "build"
-const pluginMap = {}
+const babelPluginDescription = {}
 
 startBrowserExecutionServer({
   executablePatternMapping: {
@@ -13,5 +13,5 @@ startBrowserExecutionServer({
   },
   localRoot,
   compileInto,
-  pluginMap,
+  babelPluginDescription,
 })

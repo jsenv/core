@@ -6,7 +6,7 @@ export const executeDescriptionToExecutionPlan = async ({
   cancellationToken,
   projectFolder,
   compileInto,
-  pluginMap,
+  babelPluginDescription,
   executeDescription,
   verbose = false,
 }) => {
@@ -16,7 +16,7 @@ export const executeDescriptionToExecutionPlan = async ({
     cancellationToken,
     projectFolder,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
     verbose,
   })
 

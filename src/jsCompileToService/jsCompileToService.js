@@ -25,8 +25,8 @@ export const jsCompileToService = (
     const param = compileParamMap[groupId]
     compileParamMapWithInstrumentation[`${groupId}-instrumented`] = {
       ...param,
-      pluginMap: {
-        ...param.pluginMap,
+      babelPluginDescription: {
+        ...param.babelPluginDescription,
         "transform-instrument": instrumentPlugin,
       },
     }

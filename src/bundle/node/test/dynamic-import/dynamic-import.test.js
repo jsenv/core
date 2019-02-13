@@ -7,7 +7,7 @@ bundleNode({
     main: "src/bundle/node/test/dynamic-import/dynamic-import.js",
   },
   root,
-  pluginMap: {
+  babelPluginDescription: {
     "transform-block-scoping": [blockScoping],
   },
 })

@@ -7,7 +7,7 @@ import { launchChromium } from "../../launchChromium"
 
 const file = `src/launchChromium/test/timeout/timeout.js`
 const compileInto = "build"
-const pluginMap = {
+const babelPluginDescription = {
   "transform-async-to-promises": [transformAsyncToPromises],
 }
 
@@ -15,7 +15,7 @@ const pluginMap = {
   const { origin: remoteRoot } = await startCompileServer({
     root,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
   })
 
   const actual = await launchAndExecute({

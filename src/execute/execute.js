@@ -9,7 +9,7 @@ import {
 export const execute = async ({
   projectFolder,
   compileInto,
-  pluginMap,
+  babelPluginDescription,
   protocol,
   ip,
   port,
@@ -28,7 +28,7 @@ export const execute = async ({
       cancellationToken,
       projectFolder,
       compileInto,
-      pluginMap,
+      babelPluginDescription,
       protocol,
       ip,
       port,

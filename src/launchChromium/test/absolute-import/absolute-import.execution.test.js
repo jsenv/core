@@ -6,13 +6,13 @@ import { launchChromium } from "../../launchChromium.js"
 
 const file = `src/launchChromium/test/absolute-import/absolute-import.js`
 const compileInto = "build"
-const pluginMap = {}
+const babelPluginDescription = {}
 
 ;(async () => {
   const { origin: remoteRoot } = await startCompileServer({
     root,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
   })
 
   const actual = await launchAndExecute({

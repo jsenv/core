@@ -5,12 +5,12 @@ import { startCompileServer } from "../../startCompileServer.js"
 
 const test = async () => {
   const compileInto = "build"
-  const pluginMap = {}
+  const babelPluginDescription = {}
 
   const compileServer = await startCompileServer({
     projectFolder,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
     protocol: "http",
     ip: "127.0.0.1",
     port: 8998,

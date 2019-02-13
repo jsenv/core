@@ -13,7 +13,7 @@ const test = async () => {
     compileInto,
     compileParamMap: {
       [compileId]: {
-        pluginMap: {
+        babelPluginDescription: {
           "transform-instrument": createInstrumentPlugin(),
         },
       },

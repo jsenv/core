@@ -25,7 +25,7 @@ export const generateEntryFoldersForPlatform = async ({
         into,
         entryPointsDescription,
         compileId,
-        compileIdPluginMap: compileParamMap[compileId].pluginMap,
+        compileIdPluginMap: compileParamMap[compileId].babelPluginDescription,
         rollupOptions,
       })
     }),

@@ -7,14 +7,14 @@ const root = `${selfRoot}/src/jsCompile/test/fixtures`
 const file = "module.js"
 const fileAbsolute = `${root}/${file}`
 const input = fs.readFileSync(fileAbsolute).toString()
-const pluginMap = {}
+const babelPluginDescription = {}
 
 jsCompile({
   root,
   file,
   fileAbsolute,
   input,
-  pluginMap,
+  babelPluginDescription,
 }).then(({ output }) => {
   assert({ actual: output.includes("System.register"), expected: true })
 })

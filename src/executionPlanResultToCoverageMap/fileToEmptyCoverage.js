@@ -13,7 +13,7 @@ export const fileToEmptyCoverage = async (file, { cancellationToken, projectFold
     projectFolder,
     file,
     input,
-    pluginMap: {
+    babelPluginDescription: {
       instrument: [createInstrumentPlugin({ predicate: () => true })],
     },
     remap: false,

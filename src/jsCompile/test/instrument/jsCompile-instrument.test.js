@@ -10,17 +10,17 @@ import { jsCompile } from "../../jsCompile.js"
 const root = `${selfRoot}/src/jsCompile/test/fixtures`
 const file = "file.js"
 const fileAbsolute = `${root}/${file}`
-const pluginMap = pluginOptionMapToPluginMap({
+const babelPluginDescription = pluginOptionMapToPluginMap({
   "transform-block-scoping": {},
 })
-pluginMap["transform-instrument"] = createInstrumentPlugin()
+babelPluginDescription["transform-instrument"] = createInstrumentPlugin()
 
 jsCompile({
   localRoot: root,
   file,
   fileAbsolute,
   input: fs.readFileSync(fileAbsolute).toString(),
-  pluginMap,
+  babelPluginDescription,
   instrument: true,
 }).then(({ assets, output }) => {
   assert({ actual: assets, expected: ["file.js.map", "coverage.json"] })

@@ -11,7 +11,7 @@ import { computeCompileInstruction } from "./computeCompileInstruction.js"
 export const compile = async ({
   localRoot,
   compileInto,
-  pluginMap = {},
+  babelPluginDescription = {},
   compileGroupCount = 1,
   pluginCompatMap,
   platformUsageMap,
@@ -38,7 +38,7 @@ export const compile = async ({
         localRoot,
         compileInto,
         compileGroupCount,
-        pluginMap,
+        babelPluginDescription,
         pluginCompatMap,
         platformUsageMap,
       }),

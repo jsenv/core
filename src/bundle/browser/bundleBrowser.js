@@ -16,7 +16,7 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
     projectFolder,
     into,
     globalName,
-    pluginMap,
+    babelPluginDescription,
     compileGroupCount = 2,
     usageMap = browserUsageMap,
   }) => {
@@ -33,11 +33,11 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
 
     const compileMap = generateCompileMap({
       compileGroupCount,
-      pluginMap,
+      babelPluginDescription,
       platformUsageMap: usageMap,
     })
 
-    const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
+    const compileParamMap = compileMapToCompileParamMap(compileMap, babelPluginDescription)
 
     const rollupOptions = {
       format: "iife",

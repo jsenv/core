@@ -8,13 +8,13 @@ import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCov
 
 const filesToCover = []
 const compileInto = "build"
-const pluginMap = {}
+const babelPluginDescription = {}
 
 ;(async () => {
   const { origin: remoteRoot } = await startCompileServer({
     root,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
     protocol: "http",
     ip: "127.0.0.1",
     port: 0,

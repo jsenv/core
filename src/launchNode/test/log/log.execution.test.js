@@ -8,7 +8,7 @@ import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
 const filenameRelative = `src/launchNode/test/log/log.js`
 const compileInto = "build"
-const pluginMap = {}
+const babelPluginDescription = {}
 
 ;(async () => {
   const sourceOrigin = filenameToFileHref(projectFolder)
@@ -16,7 +16,7 @@ const pluginMap = {}
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
   })
 
   const actual = await launchAndExecute({

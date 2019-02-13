@@ -82,7 +82,7 @@ export const entryFile = ${uneval(entryFile)}
   })
 
   // compile using the worst possible scenario
-  const compilePluginMap = compileParamMap.otherwise.pluginMap
+  const compilePluginMap = compileParamMap.otherwise.babelPluginDescription
   const babelPlugins = compileMapToBabelPlugins(compilePluginMap)
 
   const babelRollupPlugin = createBabelRollupPlugin({

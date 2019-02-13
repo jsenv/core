@@ -8,7 +8,7 @@ export const jsCompile = async ({
   projectFolder,
   inputAst,
   inputMap,
-  pluginMap = {},
+  babelPluginDescription = {},
   remap = true,
   remapMethod = "comment", // 'comment', 'inline'
 }) => {
@@ -27,7 +27,7 @@ export const jsCompile = async ({
     projectFolder,
     inputAst,
     inputMap,
-    pluginMap,
+    babelPluginDescription,
     remap,
   })
   const coverage = metadata.coverage

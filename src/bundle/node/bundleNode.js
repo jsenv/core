@@ -15,7 +15,7 @@ export const bundleNode = catchAsyncFunctionCancellation(
     entryPointsDescription,
     projectFolder,
     into,
-    pluginMap,
+    babelPluginDescription,
     compileGroupCount = 2,
     usageMap = nodeUsageMap,
   }) => {
@@ -32,11 +32,11 @@ export const bundleNode = catchAsyncFunctionCancellation(
 
     const compileMap = generateCompileMap({
       compileGroupCount,
-      pluginMap,
+      babelPluginDescription,
       platformUsageMap: usageMap,
     })
 
-    const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
+    const compileParamMap = compileMapToCompileParamMap(compileMap, babelPluginDescription)
 
     const rollupOptions = {
       format: "cjs",

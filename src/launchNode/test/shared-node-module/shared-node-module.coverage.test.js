@@ -11,13 +11,13 @@ import {
 
 const file = `src/launchNode/test/shared-node-module/shared-node-module.js`
 const compileInto = "build"
-const pluginMap = {}
+const babelPluginDescription = {}
 
 ;(async () => {
   const { origin: remoteRoot } = await startCompileServer({
     root,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
   })
 
   const actual = await launchAndExecute({

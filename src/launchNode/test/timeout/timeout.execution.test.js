@@ -8,7 +8,7 @@ import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
 const file = `src/launchNode/test/timeout/timeout.js`
 const compileInto = "build"
-const pluginMap = {
+const babelPluginDescription = {
   "transform-async-to-promises": [transformAsyncToPromises],
 }
 
@@ -16,7 +16,7 @@ const pluginMap = {
   const { origin: remoteRoot } = await startCompileServer({
     root,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
   })
 
   const actual = await launchAndExecute({

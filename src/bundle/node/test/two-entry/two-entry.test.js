@@ -8,7 +8,7 @@ bundleNode({
     b: "src/bundle/node/test/two-entry/b.js",
   },
   root,
-  pluginMap: {
+  babelPluginDescription: {
     "transform-block-scoping": [blockScoping],
   },
 })

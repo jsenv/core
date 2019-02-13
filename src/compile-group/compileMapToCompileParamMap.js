@@ -1,16 +1,16 @@
 import { objectMapValue } from "../objectHelper.js"
 
-export const compileMapToCompileParamMap = (compileMap, pluginMap = {}) => {
+export const compileMapToCompileParamMap = (compileMap, babelPluginDescription = {}) => {
   return objectMapValue(compileMap, ({ pluginNames }) => {
     const pluginMapSubset = {}
     pluginNames.forEach((pluginName) => {
-      if (pluginName in pluginMap === false) {
-        throw new Error(`missing ${pluginName} plugin in pluginMap`)
+      if (pluginName in babelPluginDescription === false) {
+        throw new Error(`missing ${pluginName} plugin in babelPluginDescription`)
       }
-      pluginMapSubset[pluginName] = pluginMap[pluginName]
+      pluginMapSubset[pluginName] = babelPluginDescription[pluginName]
     })
     return {
-      pluginMap: pluginMapSubset,
+      babelPluginDescription: pluginMapSubset,
     }
   })
 }

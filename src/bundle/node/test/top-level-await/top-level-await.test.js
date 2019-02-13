@@ -7,7 +7,7 @@ bundleNode({
     main: "src/bundle/node/test/top-level-await/top-level-await.js",
   },
   root,
-  pluginMap: {
+  babelPluginDescription: {
     "transform-block-scoping": [blockScoping],
   },
 })

@@ -7,7 +7,7 @@ import { launchChromium } from "../../launchChromium.js"
 
 const file = `src/launchChromium/test/top-level-await/top-level-await.js`
 const compileInto = "build"
-const pluginMap = {
+const babelPluginDescription = {
   "transform-async-to-promises": [transformAsyncToPromises],
 }
 
@@ -15,7 +15,7 @@ const pluginMap = {
   const { origin: remoteRoot } = await startCompileServer({
     root,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
   })
 
   const actual = await launchAndExecute({

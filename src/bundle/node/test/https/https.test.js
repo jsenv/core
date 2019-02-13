@@ -7,7 +7,7 @@ bundleNode({
     main: "src/bundle/node/test/https/https.js",
   },
   root,
-  pluginMap: {
+  babelPluginDescription: {
     "transform-block-scoping": [blockScoping],
   },
 })

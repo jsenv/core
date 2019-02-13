@@ -63,7 +63,7 @@ const generateBalancerFileForNode = async ({
     },
   }
 
-  const compilePluginMap = compileParamMap.otherwise.pluginMap
+  const compilePluginMap = compileParamMap.otherwise.babelPluginDescription
   const babelPlugins = compileMapToBabelPlugins(compilePluginMap)
 
   const rollupBabelPlugin = createRollupBabelPlugin({

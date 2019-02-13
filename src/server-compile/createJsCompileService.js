@@ -14,7 +14,7 @@ export const createJsCompileService = async ({
   projectFolder,
   compileInto,
   compileGroupCount,
-  pluginMap,
+  babelPluginDescription,
   pluginCompatMap,
   locate,
   browserUsageMap = browserDefaultUsageMap,
@@ -28,7 +28,7 @@ export const createJsCompileService = async ({
 }) => {
   const compileMap = generateCompileMap({
     compileGroupCount,
-    pluginMap,
+    babelPluginDescription,
     pluginCompatMap,
     platformUsageMap: { ...browserUsageMap, ...nodeUsageMap },
   })
@@ -38,7 +38,7 @@ export const createJsCompileService = async ({
     JSON.stringify(compileMap, null, "  "),
   )
 
-  const compileParamMap = compileMapToCompileParamMap(compileMap, pluginMap)
+  const compileParamMap = compileMapToCompileParamMap(compileMap, babelPluginDescription)
 
   const jsCompileService = jsCompileToService(jsCompile, {
     cancellationToken,

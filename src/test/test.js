@@ -8,7 +8,7 @@ import { executePlan } from "../executePlan/index.js"
 export const test = async ({
   projectFolder,
   compileInto,
-  pluginMap,
+  babelPluginDescription,
   executeDescription,
   maxParallelExecution,
 }) =>
@@ -19,7 +19,7 @@ export const test = async ({
       cancellationToken,
       projectFolder,
       compileInto,
-      pluginMap,
+      babelPluginDescription,
       executeDescription,
     })
 

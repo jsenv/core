@@ -6,13 +6,13 @@ import { launchChromium } from "../../launchChromium.js"
 
 const file = `src/launchChromium/test/not-found/not-found.js`
 const compileInto = "build"
-const pluginMap = {}
+const babelPluginDescription = {}
 
 ;(async () => {
   const { origin: remoteRoot } = await startCompileServer({
     root,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
   })
 
   const actual = await launchAndExecute({

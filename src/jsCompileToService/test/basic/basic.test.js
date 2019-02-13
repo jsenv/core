@@ -12,7 +12,7 @@ const compileId = "test"
     compileInto,
     compileParamMap: {
       [compileId]: {
-        pluginMap: {},
+        babelPluginDescription: {},
       },
     },
   })

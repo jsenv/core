@@ -8,7 +8,7 @@ bundleBrowser({
   },
   root,
   globalName: "basic",
-  pluginMap: {
+  babelPluginDescription: {
     "transform-block-scoping": [blockScoping],
   },
 })

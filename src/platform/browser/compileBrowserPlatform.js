@@ -16,7 +16,7 @@ const outputRessource = `browserPlatform.js`
 const inputFile = `${projectFolder}/${inputRessource}`
 const outputFile = `${outputFolder}/${outputRessource}`
 const globalName = "__platform__"
-const pluginMap = pluginOptionMapToPluginMap({
+const babelPluginDescription = pluginOptionMapToPluginMap({
   "syntax-dynamic-import": {},
   "proposal-json-strings": {},
   "proposal-object-rest-spread": {},
@@ -44,10 +44,10 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-typeof-symbol": {},
   "transform-unicode-regex": {},
 })
-pluginMap["transform-async-to-promises"] = [transformAsyncToPromises, {}]
+babelPluginDescription["transform-async-to-promises"] = [transformAsyncToPromises, {}]
 
 export const compileBrowserPlatform = async () => {
-  const plugins = pluginMapToPluginsForPlatform(pluginMap, "unknown", "0.0.0")
+  const plugins = pluginMapToPluginsForPlatform(babelPluginDescription, "unknown", "0.0.0")
 
   const bundle = await rollup({
     input: inputFile,

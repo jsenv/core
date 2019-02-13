@@ -10,7 +10,7 @@ import {
 export const cover = async ({
   projectFolder,
   compileInto,
-  pluginMap,
+  babelPluginDescription,
   // coverDescription could be deduced from passing
   // an entryPointObject and collecting all dependencies
   // for now we stick to coverDescription using project-structure api
@@ -26,7 +26,7 @@ export const cover = async ({
         cancellationToken,
         projectFolder,
         compileInto,
-        pluginMap,
+        babelPluginDescription,
         executeDescription,
       }),
     ])
@@ -59,14 +59,14 @@ const executeAndCoverPatternMapping = async ({
   cancellationToken,
   projectFolder,
   compileInto,
-  pluginMap,
+  babelPluginDescription,
   executeDescription,
 }) => {
   const executionPlan = await executeDescriptionToExecutionPlan({
     cancellationToken,
     projectFolder,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
     executeDescription,
   })
 

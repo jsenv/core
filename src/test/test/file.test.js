@@ -19,6 +19,6 @@ const testDescription = {
 test({
   root,
   compileInto: "build",
-  pluginMap: {},
+  babelPluginDescription: {},
   executeDescription: testDescription,
 })

@@ -15,13 +15,13 @@ export const pluginCompatMapToPlatformGroups = (pluginCompatMap, platformName) =
   const platformGroups = []
 
   platformVersions.forEach((platformVersion) => {
-    const pluginMap = {}
+    const babelPluginDescription = {}
     Object.keys(pluginCompatMap).forEach((pluginName) => {
-      pluginMap[pluginName] = pluginName
+      babelPluginDescription[pluginName] = pluginName
     })
 
     const platformPluginNames = pluginMapToPluginsForPlatform(
-      pluginMap,
+      babelPluginDescription,
       platformName,
       platformVersion,
       pluginCompatMap,

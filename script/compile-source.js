@@ -12,7 +12,7 @@ const {
 const { fileRead, fileWrite, fileCopy } = require("@dmail/helper")
 const { localRoot } = require("./util.js")
 
-const pluginMap = pluginOptionMapToPluginMap({
+const babelPluginDescription = pluginOptionMapToPluginMap({
   "transform-modules-commonjs": {},
   "syntax-dynamic-import": {},
 
@@ -37,7 +37,7 @@ const pluginMap = pluginOptionMapToPluginMap({
   "transform-typeof-symbol": {},
 })
 
-const plugins = pluginMapToPluginsForPlatform(pluginMap, "node", "8.0.0")
+const babelPluginArray = pluginMapToPluginsForPlatform(babelPluginDescription, "node", "8.0.0")
 
 const metaMap = patternGroupToMetaMap({
   compile: {
@@ -71,7 +71,7 @@ module.exports = forEachRessourceMatching({
 
     try {
       const { code, map } = await transformAsync(source, {
-        plugins,
+        plugins: babelPluginArray,
         filenameRelative: ressource,
         filename: `${localRoot}/${ressource}`,
         sourceMaps: true,

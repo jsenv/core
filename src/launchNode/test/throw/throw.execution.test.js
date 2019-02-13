@@ -7,13 +7,13 @@ import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
 const file = `src/launchNode/test/throw/throw.js`
 const compileInto = "build"
-const pluginMap = {}
+const babelPluginDescription = {}
 
 ;(async () => {
   const { origin: remoteRoot } = await startCompileServer({
     root,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
   })
 
   const actual = await launchAndExecute({

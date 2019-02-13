@@ -7,7 +7,7 @@ import { startCompileServer } from "../../../server-compile/index.js"
 
 const file = `src/launchNode/test/dynamic-import/dynamic-import.js`
 const compileInto = "build"
-const pluginMap = {
+const babelPluginDescription = {
   "transform-async-to-promises": [transformAsyncToPromises],
 }
 
@@ -15,7 +15,7 @@ const pluginMap = {
   const { origin: remoteRoot } = await startCompileServer({
     root,
     compileInto,
-    pluginMap,
+    babelPluginDescription,
   })
 
   const actual = await launchAndExecute({
