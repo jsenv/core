@@ -61,7 +61,7 @@ export const startBrowsingServer = async ({
     predicate: ({ browsable }) => browsable,
   })
 
-  const { origin: compiledSourceHref } = await startCompileServer({
+  const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
     projectFolder,
     compileInto,
@@ -113,8 +113,8 @@ export const startBrowsingServer = async ({
     async ({ ressource }) => {
       const html = await generateHTML({
         compileInto,
-        compiledSourceHref,
-        browserPlatformHref: getBrowserPlatformHref({ compileInto, compiledSourceHref }),
+        compileServerOrigin,
+        browserPlatformHref: getBrowserPlatformHref({ compileInto, compileServerOrigin }),
         filenameRelative: ressource,
       })
 
