@@ -4,17 +4,17 @@ import { startCompileServer } from "./server-compile/index.js"
 
 export const executeDescriptionToExecutionPlan = async ({
   cancellationToken,
-  rootname,
+  projectFolder,
   compileInto,
   pluginMap,
   executeDescription,
   verbose = false,
 }) => {
-  const sourceOrigin = filenameToFileHref(rootname)
+  const sourceOrigin = filenameToFileHref(projectFolder)
 
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
-    rootname,
+    projectFolder,
     compileInto,
     pluginMap,
     verbose,
@@ -27,7 +27,7 @@ export const executeDescriptionToExecutionPlan = async ({
   const executionPlan = {}
   await forEachRessourceMatching({
     cancellationToken,
-    localRoot: rootname,
+    localRoot: projectFolder,
     metaMap,
     predicate: ({ execute }) => execute,
     callback: (ressource, meta) => {

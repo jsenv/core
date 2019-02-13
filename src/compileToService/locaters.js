@@ -1,15 +1,15 @@
 import { resolvePath } from "./helpers.js"
 
-export const getMetaFilename = ({ rootname, compileInto, compileId, filenameRelative }) => {
-  return resolvePath(rootname, compileInto, compileId, `${filenameRelative}__asset__`, "meta.json")
+export const getMetaFilename = ({ projectFolder, compileInto, compileId, filenameRelative }) => {
+  return resolvePath(projectFolder, compileInto, compileId, `${filenameRelative}__asset__`, "meta.json")
 }
 
-export const getAssetFilename = ({ rootname, compileInto, compileId, filenameRelative, asset }) => {
-  return resolvePath(rootname, compileInto, compileId, `${filenameRelative}__asset__`, asset)
+export const getAssetFilename = ({ projectFolder, compileInto, compileId, filenameRelative, asset }) => {
+  return resolvePath(projectFolder, compileInto, compileId, `${filenameRelative}__asset__`, asset)
 }
 
-export const getOutputFilename = ({ rootname, compileInto, compileId, filenameRelative }) => {
-  return resolvePath(rootname, compileInto, compileId, filenameRelative)
+export const getOutputFilename = ({ projectFolder, compileInto, compileId, filenameRelative }) => {
+  return resolvePath(projectFolder, compileInto, compileId, filenameRelative)
 }
 
 export const getOutputFilenameRelative = ({ compileInto, compileId, filenameRelative }) => {

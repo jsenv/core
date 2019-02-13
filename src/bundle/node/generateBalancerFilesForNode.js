@@ -1,12 +1,12 @@
 import createRollupBabelPlugin from "rollup-plugin-babel"
 import { uneval } from "@dmail/uneval"
-import { rootname as selfRootname } from "../../rootname.js"
+import { projectFolder as selfProjectFolder } from "../../projectFolder.js"
 import { compileMapToBabelPlugins } from "../compileMapToBabelPlugins.js"
 import { writeRollupBundle } from "../writeRollupBundle.js"
 
 export const generateBalancerFilesForNode = async ({
   cancellationToken,
-  rootname,
+  projectFolder,
   into,
   entryPointsDescription,
   compileMap,
@@ -19,7 +19,7 @@ export const generateBalancerFilesForNode = async ({
 
       return generateBalancerFileForNode({
         cancellationToken,
-        rootname,
+        projectFolder,
         into,
         entryFile,
         compileMap,
@@ -32,7 +32,7 @@ export const generateBalancerFilesForNode = async ({
 
 const generateBalancerFileForNode = async ({
   cancellationToken,
-  rootname,
+  projectFolder,
   into,
   entryFile,
   compileMap,
@@ -77,11 +77,11 @@ const generateBalancerFileForNode = async ({
   return writeRollupBundle({
     cancellationToken,
     inputOptions: {
-      input: `${selfRootname}/src/bundle/node/node-balancer-template.js`,
+      input: `${selfProjectFolder}/src/bundle/node/node-balancer-template.js`,
       plugins: [rollupJsenvPlugin, rollupBabelPlugin],
     },
     outputOptions: {
-      file: `${rootname}/${into}/${entryFile}`,
+      file: `${projectFolder}/${into}/${entryFile}`,
       sourcemap: true,
       ...rollupOptions,
     },

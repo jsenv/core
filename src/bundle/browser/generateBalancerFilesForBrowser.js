@@ -3,13 +3,13 @@ import createNodeResolveRollupPlugin from "rollup-plugin-node-resolve"
 import { uneval } from "@dmail/uneval"
 import { createOperation } from "@dmail/cancellation"
 import { fileWrite } from "@dmail/helper"
-import { rootname as selfRootname } from "../../rootname.js"
+import { projectFolder as selfProjectFolder } from "../../projectFolder.js"
 import { compileMapToBabelPlugins } from "../compileMapToBabelPlugins.js"
 import { writeRollupBundle } from "../writeRollupBundle.js"
 
 export const generateBalancerFilesForBrowser = async ({
   cancellationToken,
-  rootname,
+  projectFolder,
   into,
   entryPointsDescription,
   globalName,
@@ -24,7 +24,7 @@ export const generateBalancerFilesForBrowser = async ({
       return Promise.all([
         generateBalancerFileForBrowser({
           cancellationToken,
-          rootname,
+          projectFolder,
           into,
           entryFile,
           globalName,
@@ -34,7 +34,7 @@ export const generateBalancerFilesForBrowser = async ({
         }),
         generateBalancerPage({
           cancellationToken,
-          rootname,
+          projectFolder,
           into,
           entryName,
           entryFile,
@@ -47,7 +47,7 @@ export const generateBalancerFilesForBrowser = async ({
 
 const generateBalancerFileForBrowser = async ({
   cancellationToken,
-  rootname,
+  projectFolder,
   into,
   entryFile,
   compileMap,
@@ -93,11 +93,11 @@ export const entryFile = ${uneval(entryFile)}
   return writeRollupBundle({
     cancellationToken,
     inputOptions: {
-      input: `${selfRootname}/src/bundle/browser/browser-balancer-template.js`,
+      input: `${selfProjectFolder}/src/bundle/browser/browser-balancer-template.js`,
       plugins: [jsenvRollupPlugin, nodeResolveRollupPlugin, babelRollupPlugin],
     },
     outputOptions: {
-      file: `${rootname}/${into}/${entryFile}`,
+      file: `${projectFolder}/${into}/${entryFile}`,
       sourcemap: true,
       ...rollupOptions,
     },
@@ -106,7 +106,7 @@ export const entryFile = ${uneval(entryFile)}
 
 const generateBalancerPage = async ({
   cancellationToken,
-  rootname,
+  projectFolder,
   into,
   entryFile,
   entryName,
@@ -127,6 +127,6 @@ const generateBalancerPage = async ({
 
   await createOperation({
     cancellationToken,
-    start: () => fileWrite(`${rootname}/${into}/${entryName}.html`, html),
+    start: () => fileWrite(`${projectFolder}/${into}/${entryName}.html`, html),
   })
 }

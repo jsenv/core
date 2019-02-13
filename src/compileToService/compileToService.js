@@ -17,7 +17,7 @@ export const compileToService = (
   compile,
   {
     cancellationToken = createCancellationToken(),
-    rootname,
+    projectFolder,
     compileInto,
     locate = locateDefault,
     compileParamMap,
@@ -65,7 +65,7 @@ export const compileToService = (
     // le chemin vers le fichier pour le client (qu'on peut modifier ce qui signifie un redirect)
     // le chemin vers le fichier sur le filesystem (qui peut etre different de localRoot/file)
     const { compileId, filenameRelative, filename } = await locate({
-      rootname,
+      projectFolder,
       compileInto,
       requestPathname: ressource,
       refererFile,
@@ -79,7 +79,7 @@ export const compileToService = (
     if (pathnameIsAsset(filenameRelative)) return null
 
     // we don't want to read anything outside of the project
-    if (fileIsOutsideFolder(filename, rootname)) {
+    if (fileIsOutsideFolder(filename, projectFolder)) {
       return { status: 403, statusText: `cannot acces file outside project` }
     }
 
@@ -89,7 +89,7 @@ export const compileToService = (
     // a request to 'node_modules/dependency/index.js'
     // with referer 'node_modules/package/index.js'
     // may be found at 'node_modules/package/node_modules/dependency/index.js'
-    const locatedFilenameRelative = filename.slice(`${rootname}/`.length)
+    const locatedFilenameRelative = filename.slice(`${projectFolder}/`.length)
     if (locatedFilenameRelative !== filenameRelative) {
       // in that case, send temporary redirect to client
       return {
@@ -116,7 +116,7 @@ export const compileToService = (
     const compileService = async () => {
       const { output } = await compileFile({
         compile,
-        rootname,
+        projectFolder,
         compileInto,
         compileId,
         compileParamMap,

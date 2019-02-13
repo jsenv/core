@@ -5,7 +5,7 @@ import { fileToEmptyCoverage } from "./fileToEmptyCoverage.js"
 // maybe we'll move this to the cover script instead of here
 export const executionPlanResultToCoverageMap = async (
   executionPlanResult,
-  { cancellationToken = createCancellationToken(), rootname, filesToCover = [] },
+  { cancellationToken = createCancellationToken(), projectFolder, filesToCover = [] },
 ) => {
   // I think it is an error, it would be strange, for a given file
   // to be both covered and executed
@@ -28,7 +28,7 @@ export const executionPlanResultToCoverageMap = async (
   const missedCoverageMap = {}
   await Promise.all(
     filesMissed.map(async (file) => {
-      const emptyCoverage = await fileToEmptyCoverage(file, { cancellationToken, rootname })
+      const emptyCoverage = await fileToEmptyCoverage(file, { cancellationToken, projectFolder })
       missedCoverageMap[file] = emptyCoverage
       return emptyCoverage
     }),

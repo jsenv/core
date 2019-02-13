@@ -1,6 +1,6 @@
 import fetch from "node-fetch"
 import { assert } from "@dmail/assert"
-import { rootname } from "../../../rootname.js"
+import { projectFolder } from "../../../projectFolder.js"
 import { startCompileServer } from "../../startCompileServer.js"
 
 const test = async () => {
@@ -8,7 +8,7 @@ const test = async () => {
   const pluginMap = {}
 
   const compileServer = await startCompileServer({
-    rootname,
+    projectFolder,
     compileInto,
     pluginMap,
     protocol: "http",

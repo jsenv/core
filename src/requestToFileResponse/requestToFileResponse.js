@@ -17,7 +17,7 @@ const dateToSecondsPrecision = (date) => {
 export const requestToFileResponse = async (
   { origin, ressource, method, headers = {} },
   {
-    rootname,
+    projectFolder,
     locate = ({ rootHref, filenameRelative }) => `${rootHref}/${filenameRelative}`,
     canReadDirectory = false,
     getFileStat = fileStat,
@@ -32,7 +32,7 @@ export const requestToFileResponse = async (
     }
   }
 
-  const rootHref = filenameToFileHref(rootname)
+  const rootHref = filenameToFileHref(projectFolder)
 
   try {
     const filenameRelative = ressource

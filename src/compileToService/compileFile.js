@@ -13,7 +13,7 @@ import { lockForRessource } from "./ressourceRegistry.js"
 
 export const compileFile = async ({
   compile,
-  rootname,
+  projectFolder,
   compileInto,
   compileId,
   compileParamMap = {},
@@ -39,7 +39,7 @@ export const compileFile = async ({
       assetsContent = [],
       output,
     } = await compile({
-      rootname,
+      projectFolder,
       filenameRelative,
       filename,
       input,
@@ -68,7 +68,7 @@ export const compileFile = async ({
   const fromCacheOrCompile = async () => {
     const [meta, input] = await Promise.all([
       readFileMeta({
-        rootname,
+        projectFolder,
         compileInto,
         compileId,
         filenameRelative,
@@ -86,7 +86,7 @@ export const compileFile = async ({
     }
 
     const cache = await readCache({
-      rootname,
+      projectFolder,
       compileInto,
       compileId,
       filenameRelative,
@@ -114,7 +114,7 @@ export const compileFile = async ({
   }
 
   const metaFilename = getMetaFilename({
-    rootname,
+    projectFolder,
     compileInto,
     compileId,
     filenameRelative,
@@ -141,7 +141,7 @@ export const compileFile = async ({
     } = await fromCacheOrCompile()
 
     await updateMeta({
-      rootname,
+      projectFolder,
       compileInto,
       compileId,
       filenameRelative,
@@ -172,7 +172,7 @@ export const compileFile = async ({
 }
 
 const validateAsset = async ({
-  rootname,
+  projectFolder,
   compileInto,
   compileId,
   filenameRelative,
@@ -180,7 +180,7 @@ const validateAsset = async ({
   eTag,
 }) => {
   const assetFilename = getAssetFilename({
-    rootname,
+    projectFolder,
     compileInto,
     compileId,
     filenameRelative,
@@ -215,11 +215,11 @@ const validateAsset = async ({
   }
 }
 
-const validateAssets = async ({ rootname, compileInto, compileId, filenameRelative, meta }) => {
+const validateAssets = async ({ projectFolder, compileInto, compileId, filenameRelative, meta }) => {
   return Promise.all(
     meta.assets.map((asset, index) => {
       return validateAsset({
-        rootname,
+        projectFolder,
         compileInto,
         compileId,
         filenameRelative,
@@ -230,8 +230,8 @@ const validateAssets = async ({ rootname, compileInto, compileId, filenameRelati
   )
 }
 
-const validateSource = async ({ rootname, source, eTag }) => {
-  const sourceAbsolute = path.resolve(rootname, source)
+const validateSource = async ({ projectFolder, source, eTag }) => {
+  const sourceAbsolute = path.resolve(projectFolder, source)
   const sourceContent = await fileRead(sourceAbsolute)
   const sourceETag = createETag(source)
 
@@ -250,11 +250,11 @@ const validateSource = async ({ rootname, source, eTag }) => {
   }
 }
 
-const validateSources = async ({ rootname, meta }) => {
+const validateSources = async ({ projectFolder, meta }) => {
   return await Promise.all(
     meta.sources.map((source, index) => {
       return validateSource({
-        rootname,
+        projectFolder,
         source,
         eTag: meta.sourcesEtag[index],
       })
@@ -262,9 +262,9 @@ const validateSources = async ({ rootname, meta }) => {
   )
 }
 
-const validateCache = async ({ rootname, compileInto, compileId, filenameRelative }) => {
+const validateCache = async ({ projectFolder, compileInto, compileId, filenameRelative }) => {
   const outputFilename = getOutputFilename({
-    rootname,
+    projectFolder,
     compileInto,
     compileId,
     filenameRelative,
@@ -288,9 +288,9 @@ const validateCache = async ({ rootname, compileInto, compileId, filenameRelativ
   }
 }
 
-const readCache = async ({ rootname, compileInto, compileId, filenameRelative, eTag, meta }) => {
+const readCache = async ({ projectFolder, compileInto, compileId, filenameRelative, eTag, meta }) => {
   const cacheValidation = await validateCache({
-    rootname,
+    projectFolder,
     compileInto,
     compileId,
     filenameRelative,
@@ -306,8 +306,8 @@ const readCache = async ({ rootname, compileInto, compileId, filenameRelative, e
   }
 
   const [sourcesValidations, assetValidations] = await Promise.all([
-    validateSources({ rootname, meta }),
-    validateAssets({ rootname, compileInto, compileId, filenameRelative, meta }),
+    validateSources({ projectFolder, meta }),
+    validateAssets({ projectFolder, compileInto, compileId, filenameRelative, meta }),
   ])
 
   const invalidSource = sourcesValidations.find(({ valid }) => !valid)
@@ -335,9 +335,9 @@ const createCacheCorruptionError = (message) => {
   return error
 }
 
-const readFileMeta = async ({ rootname, compileInto, compileId, filenameRelative }) => {
+const readFileMeta = async ({ projectFolder, compileInto, compileId, filenameRelative }) => {
   const metaFilename = getMetaFilename({
-    rootname,
+    projectFolder,
     compileInto,
     compileId,
     filenameRelative,
@@ -364,7 +364,7 @@ const readFileMeta = async ({ rootname, compileInto, compileId, filenameRelative
 }
 
 const updateMeta = ({
-  rootname,
+  projectFolder,
   compileInto,
   compileId,
   filenameRelative,
@@ -386,7 +386,7 @@ const updateMeta = ({
 
   if (isNew || isUpdated) {
     const mainLocation = getOutputFilename({
-      rootname,
+      projectFolder,
       compileInto,
       compileId,
       filenameRelative,
@@ -396,7 +396,7 @@ const updateMeta = ({
       fileWriteFromString(mainLocation, output),
       ...assets.map((asset, index) => {
         const assetFilename = getAssetFilename({
-          rootname,
+          projectFolder,
           compileInto,
           compileId,
           filenameRelative,
@@ -456,7 +456,7 @@ const updateMeta = ({
     }
 
     const metaFilename = getMetaFilename({
-      rootname,
+      projectFolder,
       compileInto,
       compileId,
       filenameRelative,

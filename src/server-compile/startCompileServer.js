@@ -11,12 +11,12 @@ import {
   serviceCompose,
   responseCompose,
 } from "../server/index.js"
-import { rootname as selfRootname } from "../rootname.js"
+import { projectFolder as selfProjectFolder } from "../projectFolder.js"
 import { createJsCompileService } from "./createJsCompileService.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
-  rootname,
+  projectFolder,
   compileInto,
   compileGroupCount,
   pluginMap,
@@ -38,7 +38,7 @@ export const startCompileServer = async ({
 }) => {
   const jsCompileService = await createJsCompileService({
     cancellationToken,
-    rootname,
+    projectFolder,
     compileInto,
     compileGroupCount,
     pluginMap,
@@ -53,7 +53,7 @@ export const startCompileServer = async ({
 
   const service = serviceCompose(jsCompileService, (request) =>
     requestToFileResponse(request, {
-      rootname,
+      projectFolder,
       locate: locateFileSystem,
       cacheIgnore: sourceCacheIgnore,
       cacheStrategy: sourceCacheStrategy,
@@ -88,7 +88,7 @@ export const startCompileServer = async ({
     signature,
     requestToResponse,
     verbose,
-    startedMessage: ({ origin }) => `compile server started for ${rootname} at ${origin}`,
+    startedMessage: ({ origin }) => `compile server started for ${projectFolder} at ${origin}`,
     stoppedMessage: (reason) => `compile server stopped because ${reason}`,
   })
   // https://nodejs.org/api/net.html#net_server_unref
@@ -105,7 +105,7 @@ const locateFileSystem = ({ rootHref, requestPathname }) => {
   // in order to test this behaviour, when we are working on this module
   // 'node_modules/dev-server` is an alias to localRoot
   if (
-    rootHref === filenameToFileHref(selfRootname) &&
+    rootHref === filenameToFileHref(selfProjectFolder) &&
     requestPathname.startsWith("node_modules/@dmail/dev-server/")
   ) {
     requestPathname = requestPathname.slice("node_modules/@dmail/dev-server/".length)

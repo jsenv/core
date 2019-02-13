@@ -11,7 +11,7 @@ import {
 
 export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),
-  rootname,
+  projectFolder,
   compileInto,
   compileGroupCount,
   pluginMap,
@@ -34,7 +34,7 @@ export const createJsCompileService = async ({
   })
 
   await fileWriteFromString(
-    `${rootname}/${compileInto}/compileMap.json`,
+    `${projectFolder}/${compileInto}/compileMap.json`,
     JSON.stringify(compileMap, null, "  "),
   )
 
@@ -42,7 +42,7 @@ export const createJsCompileService = async ({
 
   const jsCompileService = jsCompileToService(jsCompile, {
     cancellationToken,
-    rootname,
+    projectFolder,
     compileInto,
     localCacheStrategy,
     localCacheTrackHit,

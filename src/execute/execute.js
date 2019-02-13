@@ -7,7 +7,7 @@ import {
 } from "../cancellationHelper.js"
 
 export const execute = async ({
-  rootname,
+  projectFolder,
   compileInto,
   pluginMap,
   protocol,
@@ -22,11 +22,11 @@ export const execute = async ({
   catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
-    const sourceOrigin = pathnameToFileHref(rootname)
+    const sourceOrigin = pathnameToFileHref(projectFolder)
 
     const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
-      rootname,
+      projectFolder,
       compileInto,
       pluginMap,
       protocol,

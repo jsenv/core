@@ -8,7 +8,7 @@ import { getBrowserPlatformHref } from "../platform/browser/remoteURL.js"
 
 export const startBrowsingServer = async ({
   cancellationToken = createCancellationToken(),
-  rootname,
+  projectFolder,
   compileInto,
   compileGroupCount,
   pluginMap,
@@ -56,14 +56,14 @@ export const startBrowsingServer = async ({
   })
 
   const browsablePathnameArray = await forEachRessourceMatching({
-    localRoot: rootname,
+    localRoot: projectFolder,
     metaMap,
     predicate: ({ browsable }) => browsable,
   })
 
   const { origin: compiledSourceHref } = await startCompileServer({
     cancellationToken,
-    rootname,
+    projectFolder,
     compileInto,
     compileGroupCount,
     pluginMap,
@@ -137,7 +137,7 @@ export const startBrowsingServer = async ({
     port,
     forcePort,
     requestToResponse: serviceCompose(indexRoute, otherRoute),
-    startedMessage: ({ origin }) => `browser server started for ${rootname} at ${origin}`,
+    startedMessage: ({ origin }) => `browser server started for ${projectFolder} at ${origin}`,
     stoppedMessage: (reason) => `browser server stopped because ${reason}`,
   })
   return browserServer

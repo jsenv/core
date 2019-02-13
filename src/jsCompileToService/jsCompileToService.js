@@ -6,7 +6,7 @@ export const jsCompileToService = (
   compileFile,
   {
     cancellationToken,
-    rootname,
+    projectFolder,
     compileInto,
     locate,
     compileParamMap = {},
@@ -34,7 +34,7 @@ export const jsCompileToService = (
 
   const service = compileToService(compileFile, {
     cancellationToken,
-    rootname,
+    projectFolder,
     compileInto,
     locate,
     compileParamMap: compileParamMapWithInstrumentation,

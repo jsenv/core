@@ -1,6 +1,6 @@
 import fs from "fs"
 import { assert } from "@dmail/assert"
-import { rootname } from "../../rootname.js"
+import { projectFolder } from "../../projectFolder.js"
 import { requestToFileResponse } from "../requestToFileResponse.js"
 
 const test = async () => {
@@ -12,11 +12,11 @@ const test = async () => {
         ressource,
       },
       {
-        rootname,
+        projectFolder,
         cacheStrategy: "etag",
       },
     )
-    const content = String(fs.readFileSync(`${rootname}/${ressource}`))
+    const content = String(fs.readFileSync(`${projectFolder}/${ressource}`))
     const length = Buffer.byteLength(content)
     const expected = {
       status: 200,
@@ -38,7 +38,7 @@ const test = async () => {
         ressource,
         origin: "http://domain.com",
       },
-      { rootname, locate: ({ rootHref }) => `${rootHref}/otherfolder/otherfile` },
+      { projectFolder, locate: ({ rootHref }) => `${rootHref}/otherfolder/otherfile` },
     )
     const expected = {
       status: 307,

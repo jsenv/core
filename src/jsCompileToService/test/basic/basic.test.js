@@ -1,5 +1,5 @@
 import { assert } from "@dmail/assert"
-import { rootname } from "../../../rootname.js"
+import { projectFolder } from "../../../projectFolder.js"
 import { jsCompile } from "../../../jsCompile/index.js"
 import { jsCompileToService } from "../../jsCompileToService.js"
 
@@ -8,7 +8,7 @@ const compileId = "test"
 
 ;(async () => {
   const jsService = jsCompileToService(jsCompile, {
-    rootname,
+    projectFolder,
     compileInto,
     compileParamMap: {
       [compileId]: {

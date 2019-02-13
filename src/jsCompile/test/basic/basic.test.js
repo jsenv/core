@@ -1,12 +1,12 @@
 import fs from "fs"
 import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { rootname as selfRootname } from "../../../rootname.js"
+import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
 import { jsCompile } from "../../jsCompile.js"
 
-const rootname = `${selfRootname}/src/jsCompile/test/basic`
+const projectFolder = `${selfProjectFolder}/src/jsCompile/test/basic`
 const filenameRelative = "basic.js"
-const filename = `${rootname}/${filenameRelative}`
+const filename = `${projectFolder}/${filenameRelative}`
 const input = fs.readFileSync(filename).toString()
 const pluginMap = pluginOptionMapToPluginMap({
   "transform-block-scoping": {},
@@ -17,7 +17,7 @@ const test = async () => {
     input,
     filename,
     filenameRelative,
-    rootname,
+    projectFolder,
     pluginMap,
   })
 

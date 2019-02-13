@@ -8,12 +8,12 @@ import {
   pluginOptionMapToPluginMap,
   pluginMapToPluginsForPlatform,
 } from "@dmail/project-structure-compile-babel"
-import { rootname } from "../../rootname.js"
+import { projectFolder } from "../../projectFolder.js"
 
 const inputRessource = `src/platform/browser/browserPlatform.js`
-const outputFolder = `${rootname}/dist`
+const outputFolder = `${projectFolder}/dist`
 const outputRessource = `browserPlatform.js`
-const inputFile = `${rootname}/${inputRessource}`
+const inputFile = `${projectFolder}/${inputRessource}`
 const outputFile = `${outputFolder}/${outputRessource}`
 const globalName = "__platform__"
 const pluginMap = pluginOptionMapToPluginMap({
@@ -74,7 +74,7 @@ export const compileBrowserPlatform = async () => {
   const { code, map } = output[0]
 
   map.sources = map.sources.map((source) => {
-    return `${path.relative(outputFolder, rootname)}/${source}`
+    return `${path.relative(outputFolder, projectFolder)}/${source}`
   })
   delete map.sourcesContent
 
