@@ -2,12 +2,12 @@ import { versionIsBelowOrEqual } from "@dmail/project-structure-compile-babel/sr
 
 export const browserToCompileId = ({ name, version }, compileMap) => {
   return Object.keys(compileMap).find((id) => {
-    const { compatMap } = compileMap[id]
+    const { compatibilityDescription } = compileMap[id]
 
-    if (name in compatMap === false) {
+    if (name in compatibilityDescription === false) {
       return false
     }
-    const versionForGroup = compatMap[name]
+    const versionForGroup = compatibilityDescription[name]
     return versionIsBelowOrEqual(versionForGroup, version)
   })
 }

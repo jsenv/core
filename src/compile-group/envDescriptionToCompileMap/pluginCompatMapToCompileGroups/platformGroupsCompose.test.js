@@ -6,7 +6,7 @@ import { platformGroupsCompose } from "./platformGroupsCompose.js"
     {
       // freeze to ensure mergePlatformGroups does not mutate
       babelPluginNameArray: Object.freeze(["a"]),
-      compatMap: Object.freeze({
+      compatibilityDescription: Object.freeze({
         chrome: 10,
       }),
     },
@@ -14,7 +14,7 @@ import { platformGroupsCompose } from "./platformGroupsCompose.js"
   const firefoxPlatformGroups = [
     {
       babelPluginNameArray: Object.freeze(["a"]),
-      compatMap: Object.freeze({
+      compatibilityDescription: Object.freeze({
         firefox: 20,
       }),
     },
@@ -23,7 +23,7 @@ import { platformGroupsCompose } from "./platformGroupsCompose.js"
   const expected = [
     {
       babelPluginNameArray: ["a"],
-      compatMap: {
+      compatibilityDescription: {
         chrome: 10,
         firefox: 20,
       },

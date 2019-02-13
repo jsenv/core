@@ -32,14 +32,14 @@ export const pluginCompatMapToPlatformGroups = (pluginCompatMap, platformName) =
     })
 
     if (existingGroup) {
-      existingGroup.compatMap[platformName] = versionHighest(
-        existingGroup.compatMap[platformName],
+      existingGroup.compatibilityDescription[platformName] = versionHighest(
+        existingGroup.compatibilityDescription[platformName],
         platformVersion,
       )
     } else {
       platformGroups.push({
         babelPluginNameArray: platformPluginNames,
-        compatMap: {
+        compatibilityDescription: {
           [platformName]: platformVersion,
         },
       })

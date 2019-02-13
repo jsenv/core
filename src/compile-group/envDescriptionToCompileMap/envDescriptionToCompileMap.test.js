@@ -7,7 +7,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
   const expected = {
     best: {
       babelPluginNameArray: [],
-      compatMap: {
+      compatibilityDescription: {
         chrome: "49",
         edge: "14",
         electron: "1",
@@ -20,7 +20,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
     },
     worst: {
       babelPluginNameArray: babelPluginNameArray.slice(),
-      compatMap: {
+      compatibilityDescription: {
         android: "0.0.0",
         chrome: "0.0.0",
         edge: "0.0.0",
@@ -34,7 +34,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
     },
     otherwise: {
       babelPluginNameArray: babelPluginNameArray.slice(),
-      compatMap: {},
+      compatibilityDescription: {},
     },
   }
   assert({ actual, expected })
@@ -46,7 +46,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
   const expected = {
     best: {
       babelPluginNameArray: ["transform-modules-systemjs"],
-      compatMap: {
+      compatibilityDescription: {
         chrome: "49",
         safari: "10",
         firefox: "51",
@@ -59,7 +59,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
     },
     worst: {
       babelPluginNameArray: babelPluginNameArray.slice(),
-      compatMap: {
+      compatibilityDescription: {
         android: "0.0.0",
         chrome: "0.0.0",
         edge: "0.0.0",
@@ -73,7 +73,7 @@ import { envDescriptionToCompileMap } from "./envDescriptionToCompileMap.js"
     },
     otherwise: {
       babelPluginNameArray: babelPluginNameArray.slice(),
-      compatMap: {},
+      compatibilityDescription: {},
     },
   }
   assert({ actual, expected })

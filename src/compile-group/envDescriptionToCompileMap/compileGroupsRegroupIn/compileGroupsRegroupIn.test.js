@@ -7,7 +7,7 @@ import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn.js"
   const groups = [
     {
       babelPluginNameArray: ["b", "c"],
-      compatMap: {
+      compatibilityDescription: {
         chrome: 50,
         firefox: 10,
       },
@@ -15,7 +15,7 @@ import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn.js"
     },
     {
       babelPluginNameArray: ["b", "e"],
-      compatMap: {
+      compatibilityDescription: {
         chrome: 50,
         firefox: 11,
       },
@@ -23,7 +23,7 @@ import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn.js"
     },
     {
       babelPluginNameArray: ["a"],
-      compatMap: {
+      compatibilityDescription: {
         chrome: 50,
       },
       score: 0,
@@ -33,14 +33,14 @@ import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn.js"
   const expected = [
     {
       babelPluginNameArray: ["b", "c"],
-      compatMap: {
+      compatibilityDescription: {
         chrome: "50",
         firefox: "10",
       },
     },
     {
       babelPluginNameArray: ["a", "b", "e"],
-      compatMap: {
+      compatibilityDescription: {
         chrome: "50",
         firefox: "11",
       },

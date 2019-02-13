@@ -1,16 +1,16 @@
 import { compositionMappingToComposeStrict, arrayWithoutDuplicate } from "@dmail/helper"
-import { compatMapCompose } from "../compatMapCompose.js"
+import { compatibilityDescriptionCompose } from "../compatibilityDescriptionCompose.js"
 
-const composePluginNames = (prevPluginList, pluginList) =>
+const babelPluginNameArrayCompose = (prevPluginList, pluginList) =>
   arrayWithoutDuplicate([...prevPluginList, ...pluginList]).sort()
 
 export const compileGroupsCompose = compositionMappingToComposeStrict(
   {
-    babelPluginNameArray: composePluginNames,
-    compatMap: compatMapCompose,
+    babelPluginNameArray: babelPluginNameArrayCompose,
+    compatibilityDescription: compatibilityDescriptionCompose,
   },
   () => ({
     babelPluginNameArray: [],
-    compatMap: {},
+    compatibilityDescription: {},
   }),
 )

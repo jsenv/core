@@ -11,7 +11,7 @@ import { browserToCompileId } from "./browserToCompileId.js"
     },
     {
       foo: {
-        compatMap: {
+        compatibilityDescription: {
           chrome: "41",
         },
       },
@@ -29,7 +29,7 @@ import { browserToCompileId } from "./browserToCompileId.js"
     },
     {
       foo: {
-        compatMap: {
+        compatibilityDescription: {
           chrome: "41",
         },
       },
@@ -47,7 +47,7 @@ import { browserToCompileId } from "./browserToCompileId.js"
     },
     {
       foo: {
-        compatMap: {
+        compatibilityDescription: {
           chrome: "41",
         },
       },

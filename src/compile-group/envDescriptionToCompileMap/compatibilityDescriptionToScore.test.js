@@ -1,5 +1,5 @@
 import assert from "assert"
-import { compatMapToScore } from "./compatMapToScore.js"
+import { compatibilityDescriptionToScore } from "./compatibilityDescriptionToScore.js"
 
 {
   const chrome50Score = 1
@@ -16,7 +16,7 @@ import { compatMapToScore } from "./compatMapToScore.js"
   }
 
   {
-    const actual = compatMapToScore(
+    const actual = compatibilityDescriptionToScore(
       {
         chrome: "48",
       },
@@ -27,7 +27,7 @@ import { compatMapToScore } from "./compatMapToScore.js"
   }
 
   {
-    const actual = compatMapToScore(
+    const actual = compatibilityDescriptionToScore(
       {
         chrome: "49",
       },
@@ -38,7 +38,7 @@ import { compatMapToScore } from "./compatMapToScore.js"
   }
 
   {
-    const actual = compatMapToScore(
+    const actual = compatibilityDescriptionToScore(
       {
         chrome: "50",
       },
@@ -49,7 +49,7 @@ import { compatMapToScore } from "./compatMapToScore.js"
   }
 
   {
-    const actual = compatMapToScore(
+    const actual = compatibilityDescriptionToScore(
       {
         chrome: "51",
       },
@@ -60,7 +60,7 @@ import { compatMapToScore } from "./compatMapToScore.js"
   }
 
   {
-    const actual = compatMapToScore(
+    const actual = compatibilityDescriptionToScore(
       {
         chrome: "51",
         foo: ["0"],

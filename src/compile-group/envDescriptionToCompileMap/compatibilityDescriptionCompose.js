@@ -1,14 +1,14 @@
 import { versionHighest } from "@dmail/project-structure-compile-babel"
 import { objectComposeValue, objectMapValue } from "../../objectHelper.js"
 
-const normalizeCompatMapVersion = (compatMap) => {
-  return objectMapValue(compatMap, (version) => String(version))
-}
-
-export const compatMapCompose = (compatMap, secondCompatMap) => {
+export const compatibilityDescriptionCompose = (compatibilityDescription, secondCompatMap) => {
   return objectComposeValue(
-    normalizeCompatMapVersion(compatMap),
+    normalizeCompatMapVersion(compatibilityDescription),
     normalizeCompatMapVersion(secondCompatMap),
     (version, secondVersion) => versionHighest(version, secondVersion),
   )
+}
+
+const normalizeCompatMapVersion = (compatibilityDescription) => {
+  return objectMapValue(compatibilityDescription, (version) => String(version))
 }

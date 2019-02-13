@@ -1,4 +1,4 @@
-import { compatMapCompose } from "../compatMapCompose.js"
+import { compatibilityDescriptionCompose } from "../compatibilityDescriptionCompose.js"
 
 export const platformGroupsCompose = (...platformGroups) => {
   return platformGroups.reduce(platformGroupReducer, [])
@@ -10,7 +10,7 @@ const platformGroupReducer = (previous, platformGroup) => {
   previous.forEach((firstPlatformGroup) => {
     groups.push({
       babelPluginNameArray: firstPlatformGroup.babelPluginNameArray.slice(),
-      compatMap: { ...firstPlatformGroup.compatMap },
+      compatibilityDescription: { ...firstPlatformGroup.compatibilityDescription },
     })
   })
 
@@ -20,14 +20,14 @@ const platformGroupReducer = (previous, platformGroup) => {
       return babelPluginNameArray.join("") === platformGroup.babelPluginNameArray.join("")
     })
     if (existingGroup) {
-      existingGroup.compatMap = compatMapCompose(
-        existingGroup.compatMap,
-        secondPlatformGroup.compatMap,
+      existingGroup.compatibilityDescription = compatibilityDescriptionCompose(
+        existingGroup.compatibilityDescription,
+        secondPlatformGroup.compatibilityDescription,
       )
     } else {
       groups.push({
         babelPluginNameArray: babelPluginNameArray.slice(),
-        compatMap: { ...secondPlatformGroup.compatMap },
+        compatibilityDescription: { ...secondPlatformGroup.compatibilityDescription },
       })
     }
   })

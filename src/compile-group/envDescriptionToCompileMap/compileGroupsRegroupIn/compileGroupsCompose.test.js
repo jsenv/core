@@ -4,14 +4,14 @@ import { compileGroupsCompose } from "./compileGroupsCompose.js"
 {
   const firstGroup = {
     babelPluginNameArray: ["a"],
-    compatMap: {
+    compatibilityDescription: {
       chrome: 50,
       firefox: 20,
     },
   }
   const secondGroup = {
     babelPluginNameArray: ["b", "e"],
-    compatMap: {
+    compatibilityDescription: {
       chrome: 49,
       firefox: 30,
       node: 10,
@@ -20,7 +20,7 @@ import { compileGroupsCompose } from "./compileGroupsCompose.js"
   const actual = compileGroupsCompose(firstGroup, secondGroup)
   const expected = {
     babelPluginNameArray: ["a", "b", "e"],
-    compatMap: {
+    compatibilityDescription: {
       chrome: "50",
       firefox: "30",
       node: "10",

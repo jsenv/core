@@ -1,5 +1,5 @@
 import assert from "assert"
-import { compatMap } from "@dmail/project-structure-compile-babel"
+import { compatibilityDescription } from "@dmail/project-structure-compile-babel"
 import { pluginCompatMapToPlatformGroups } from "./pluginCompatMapToPlatformGroups.js"
 
 {
@@ -18,19 +18,19 @@ import { pluginCompatMapToPlatformGroups } from "./pluginCompatMapToPlatformGrou
   const expected = [
     {
       babelPluginNameArray: ["a", "b", "c"],
-      compatMap: {
+      compatibilityDescription: {
         chrome: "0.0.0",
       },
     },
     {
       babelPluginNameArray: ["a", "b"],
-      compatMap: {
+      compatibilityDescription: {
         chrome: "9",
       },
     },
     {
       babelPluginNameArray: ["b"],
-      compatMap: {
+      compatibilityDescription: {
         chrome: "10",
       },
     },
@@ -39,7 +39,7 @@ import { pluginCompatMapToPlatformGroups } from "./pluginCompatMapToPlatformGrou
 }
 
 {
-  const actual = pluginCompatMapToPlatformGroups(compatMap, "chrome")
+  const actual = pluginCompatMapToPlatformGroups(compatibilityDescription, "chrome")
   assert(actual.length > 0)
 }
 
