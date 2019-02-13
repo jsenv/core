@@ -1,9 +1,9 @@
 import assert from "assert"
 import { compatibilityDescription } from "@dmail/project-structure-compile-babel"
-import { pluginCompatMapToPlatformGroups } from "./pluginCompatMapToPlatformGroups.js"
+import { compatibilityDescriptionToGroupArrayForPlatform } from "./compatibilityDescriptionToGroupArrayForPlatform.js"
 
 {
-  const actual = pluginCompatMapToPlatformGroups(
+  const actual = compatibilityDescriptionToGroupArrayForPlatform(
     {
       a: {
         chrome: 10,
@@ -39,8 +39,6 @@ import { pluginCompatMapToPlatformGroups } from "./pluginCompatMapToPlatformGrou
 }
 
 {
-  const actual = pluginCompatMapToPlatformGroups(compatibilityDescription, "chrome")
+  const actual = compatibilityDescriptionToGroupArrayForPlatform(compatibilityDescription, "chrome")
   assert(actual.length > 0)
 }
-
-console.log("passed")

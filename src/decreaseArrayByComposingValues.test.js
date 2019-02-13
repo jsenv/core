@@ -1,5 +1,5 @@
 import assert from "assert"
-import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn.js"
+import { decreaseArrayByComposingValues } from "./decreaseArrayByComposingValues.js"
 
 // const getScore = (a) => a.score
 
@@ -29,7 +29,7 @@ import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn.js"
       score: 0,
     },
   ]
-  const actual = compileGroupsRegroupIn(groups, 2)
+  const actual = decreaseArrayByComposingValues(groups, 2)
   const expected = [
     {
       babelPluginNameArray: ["b", "c"],

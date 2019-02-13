@@ -1,6 +1,5 @@
 # dev-server
 
-- return the right amount of compileGroup instead of +1
 - inside bundle if compileGroupCount is 1 do not generate any compileGroup
   nor the balancer files
 - consider updating fromHref inside registreModuleFrom to

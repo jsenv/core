@@ -1,53 +1,77 @@
 // https://github.com/babel/babel/blob/master/packages/babel-preset-env/data/plugins.json
-import { compatibilityDescription as pluginCompatMapDefault } from "@dmail/project-structure-compile-babel"
-import { pluginCompatMapToCompileGroups } from "./pluginCompatMapToCompileGroups/index.js"
+import { babelPluginCompatibilityDescription as defaultBabelPluginCompatibilityDescription } from "./babelPluginCompatibilityDescription.js"
+import { compatibilityDescriptionToGroupArray } from "./compatibilityDescriptionToGroupArray/index.js"
 import { compatibilityDescriptionToScore } from "./compatibilityDescriptionToScore.js"
-import { compileGroupsRegroupIn } from "./compileGroupsRegroupIn/compileGroupsRegroupIn.js"
+import { decreaseArrayByComposingValues } from "../../decreaseArrayByComposingValues.js"
 import { babelPluginNameArrayToScore } from "./babelPluginNameArrayToScore.js"
+import { groupCompose } from "./groupCompose.js"
 
 const BEST_ID = "best"
-const WORST_ID = "worst"
-export const DEFAULT_ID = "otherwise"
+const OTHERWISE_ID = "otherwise"
 
+// rename envDescriptionm this is strange
+// maybe compileMap too
+// group naming is too generic as well but couldn't find a better name for now
 export const envDescriptionToCompileMap = ({
   compileGroupCount = 4,
   babelPluginNameArray = [],
-  pluginCompatMap = pluginCompatMapDefault,
+  babelPluginCompatibilityDescription = defaultBabelPluginCompatibilityDescription,
   platformScoring,
 } = {}) => {
-  const pluginCompatMapFiltered = {}
-  babelPluginNameArray.forEach((pluginName) => {
-    pluginCompatMapFiltered[pluginName] =
-      pluginName in pluginCompatMap ? pluginCompatMap[pluginName] : {}
-  })
-
-  const pluginGroupToScore = ({ compatibilityDescription }) =>
-    compatibilityDescriptionToScore(compatibilityDescription, platformScoring)
-  const allCompileGroups = pluginCompatMapToCompileGroups(pluginCompatMapFiltered).sort(
-    (a, b) => pluginGroupToScore(b) - pluginGroupToScore(a),
-  )
-
-  const compileGroupToComplexityScore = ({ babelPluginNameArray }) =>
-    babelPluginNameArrayToScore(babelPluginNameArray)
-  const compileGroups = compileGroupsRegroupIn(allCompileGroups, compileGroupCount).sort(
-    (a, b) => compileGroupToComplexityScore(a) - compileGroupToComplexityScore(b),
-  )
-
   const groupWithEverything = {
     babelPluginNameArray: babelPluginNameArray.sort(),
-    compatibilityDescription: {},
+    compatibility: {},
   }
+
+  if (compileGroupCount === 1) {
+    return {
+      [OTHERWISE_ID]: groupWithEverything,
+    }
+  }
+
+  const specificBabelPluginCompatibilityDescription = {}
+  babelPluginNameArray.forEach((babelPluginName) => {
+    specificBabelPluginCompatibilityDescription[babelPluginName] =
+      babelPluginName in babelPluginCompatibilityDescription
+        ? babelPluginCompatibilityDescription[babelPluginName]
+        : {}
+  })
+
+  const groupArrayWithEveryCombination = compatibilityDescriptionToGroupArray({
+    compatibilityDescription: specificBabelPluginCompatibilityDescription,
+  })
+
+  const groupToScore = ({ compatibilityDescription }) =>
+    compatibilityDescriptionToScore(compatibilityDescription, platformScoring)
+  const groupArrayWithEveryCombinationSortedByPlatformScore = groupArrayWithEveryCombination.sort(
+    (a, b) => groupToScore(b) - groupToScore(a),
+  )
+
+  const groupArrayDecreased = decreaseArrayByComposingValues({
+    array: groupArrayWithEveryCombinationSortedByPlatformScore,
+    length: compileGroupCount,
+    composer: groupCompose,
+  })
+
+  const groupToComplexityScore = ({ babelPluginNameArray }) =>
+    babelPluginNameArrayToScore(babelPluginNameArray)
+  const groupArrayDecreasedSortedByCompexityScore = groupArrayDecreased.sort(
+    (a, b) => groupToComplexityScore(a) - groupToComplexityScore(b),
+  )
+
+  // replace last group with the everything group
+  const length = groupArrayDecreasedSortedByCompexityScore.length
+  groupArrayDecreasedSortedByCompexityScore[length - 1] = groupWithEverything
 
   const compileMap = {}
 
-  compileMap[BEST_ID] = compileGroups[0]
-  compileGroups.slice(1, -1).forEach((intermediatePluginGroup, index) => {
-    compileMap[`intermediate-${index + 1}`] = intermediatePluginGroup
-  })
-  if (compileGroups.length > 1) {
-    compileMap[WORST_ID] = compileGroups[compileGroups.length - 1]
-  }
-  compileMap[DEFAULT_ID] = groupWithEverything
+  compileMap[BEST_ID] = groupArrayDecreasedSortedByCompexityScore[0]
+  groupArrayDecreasedSortedByCompexityScore
+    .slice(1, -1)
+    .forEach((intermediatePluginGroup, index) => {
+      compileMap[`intermediate-${index + 1}`] = intermediatePluginGroup
+    })
+  compileMap[OTHERWISE_ID] = groupArrayDecreasedSortedByCompexityScore[length - 1]
 
   return compileMap
 }

@@ -1,12 +1,12 @@
 import assert from "assert"
-import { platformGroupsCompose } from "./platformGroupsCompose.js"
+import { groupArrayCompose } from "./groupArrayCompose.js"
 
 {
   const chromePlatformGroups = [
     {
       // freeze to ensure mergePlatformGroups does not mutate
       babelPluginNameArray: Object.freeze(["a"]),
-      compatibilityDescription: Object.freeze({
+      compatibility: Object.freeze({
         chrome: 10,
       }),
     },
@@ -14,16 +14,16 @@ import { platformGroupsCompose } from "./platformGroupsCompose.js"
   const firefoxPlatformGroups = [
     {
       babelPluginNameArray: Object.freeze(["a"]),
-      compatibilityDescription: Object.freeze({
+      compatibility: Object.freeze({
         firefox: 20,
       }),
     },
   ]
-  const actual = platformGroupsCompose(chromePlatformGroups, firefoxPlatformGroups)
+  const actual = groupArrayCompose(chromePlatformGroups, firefoxPlatformGroups)
   const expected = [
     {
       babelPluginNameArray: ["a"],
-      compatibilityDescription: {
+      compatibility: {
         chrome: 10,
         firefox: 20,
       },

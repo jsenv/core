@@ -1,23 +1,23 @@
 import assert from "assert"
-import { compileGroupsCompose } from "./compileGroupsCompose.js"
+import { groupCompose } from "./groupCompose.js"
 
 {
   const firstGroup = {
     babelPluginNameArray: ["a"],
-    compatibilityDescription: {
+    compatibility: {
       chrome: 50,
       firefox: 20,
     },
   }
   const secondGroup = {
     babelPluginNameArray: ["b", "e"],
-    compatibilityDescription: {
+    compatibility: {
       chrome: 49,
       firefox: 30,
       node: 10,
     },
   }
-  const actual = compileGroupsCompose(firstGroup, secondGroup)
+  const actual = groupCompose(firstGroup, secondGroup)
   const expected = {
     babelPluginNameArray: ["a", "b", "e"],
     compatibilityDescription: {
