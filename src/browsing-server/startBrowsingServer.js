@@ -40,7 +40,7 @@ export const startBrowsingServer = async ({
   <main></main>
   <script src="${browserPlatformHref}"></script>
   <script type="text/javascript">
-    window.__platform__.importCompiledFile({
+    window.__platform__.executeCompiledFile({
       "compileInto": ${uneval(compileInto)},
       "compileServerOrigin": ${uneval(compileServerOrigin)},
       "filenameRelative": ${uneval(filenameRelative)}

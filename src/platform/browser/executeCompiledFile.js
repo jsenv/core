@@ -22,7 +22,7 @@ export const executeCompiledFile = ({
     collectCoverage,
     instrument,
     readCoverage,
-    onError,
+    onError: (error) => onError(error, { compileInto, compileServerOrigin, filenameRelative }),
     transformError,
   })
 

@@ -1,4 +1,4 @@
-import "systemjs/dist/system.js"
+import "../../../systemjs/system.js" // awaiting https://github.com/systemjs/systemjs/issues/1898
 import { resolveRootRelativeSpecifier } from "@jsenv/module-resolution/src/resolveRootRelativeSpecifier.js"
 import { overrideSystemResolve } from "../../overrideSystemResolve.js"
 import { overrideSystemInstantiate } from "../../overrideSystemInstantiate.js"
