@@ -1,24 +1,27 @@
 import { assert } from "@dmail/assert"
-import { root } from "../../../root.js"
+import { filenameToFileHref } from "@jsenv/module-resolution"
+import { projectFolder } from "../../../projectFolder.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchNode } from "../../launchNode.js"
 
-const file = `src/launchNode/test/absolute-import/absolute-import.js`
+const filenameRelative = `src/launchNode/test/absolute-import/absolute-import.js`
 const compileInto = "build"
 const babelPluginDescription = {}
 
 ;(async () => {
-  const { origin: remoteRoot } = await startCompileServer({
-    root,
+  const sourceOrigin = filenameToFileHref(projectFolder)
+
+  const { origin: compileServerOrigin } = await startCompileServer({
+    projectFolder,
     compileInto,
     babelPluginDescription,
   })
 
   const actual = await launchAndExecute({
-    launch: (options) => launchNode({ ...options, root, remoteRoot, compileInto }),
-    file,
+    launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
     collectNamespace: true,
+    filenameRelative,
     verbose: true,
     platformTypeForLog: "node process",
   })
@@ -28,7 +31,6 @@ const babelPluginDescription = {}
     namespace: {
       default: 42,
     },
-    coverageMap: undefined,
   }
   assert({ actual, expected })
 })()
