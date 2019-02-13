@@ -27,6 +27,8 @@ export const bundleNode = catchAsyncFunctionCancellation(
       throw new TypeError(
         `bundleNode entryPointsDescription must be an object, got ${entryPointsDescription}`,
       )
+    if (compileGroupCount < 1)
+      throw new Error(`bundleNode compileGroupCount must be > 1, got ${compileGroupCount}`)
 
     const cancellationToken = createProcessInterruptionCancellationToken()
 
