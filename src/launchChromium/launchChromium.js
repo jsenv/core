@@ -11,7 +11,7 @@ import { regexpEscape } from "../stringHelper.js"
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
   compileInto,
-  sourceRootHref,
+  sourceOrigin,
   compileServerOrigin,
 
   protocol = "http",
@@ -200,7 +200,7 @@ export const launchChromium = async ({
       if (status === "rejected") {
         return {
           status,
-          error: errorToSourceError(error, { sourceRootHref, compileServerOrigin }),
+          error: errorToSourceError(error, { sourceOrigin, compileServerOrigin }),
           coverageMap,
         }
       }
@@ -233,15 +233,15 @@ export const launchChromium = async ({
   }
 }
 
-const errorToSourceError = (error, { sourceRootHref, compileServerOrigin }) => {
+const errorToSourceError = (error, { sourceOrigin, compileServerOrigin }) => {
   // does not truly work
   // error stack should be remapped either client side or here
   // error is correctly remapped inside chrome devtools
   // but the error we receive here is not remapped
   // client side would be better but here could be enough
   const remoteRootRegexp = new RegExp(regexpEscape(compileServerOrigin), "g")
-  error.stack = error.stack.replace(remoteRootRegexp, sourceRootHref)
-  error.message = error.message.replace(remoteRootRegexp, sourceRootHref)
+  error.stack = error.stack.replace(remoteRootRegexp, sourceOrigin)
+  error.message = error.message.replace(remoteRootRegexp, sourceOrigin)
   return error
 }
 

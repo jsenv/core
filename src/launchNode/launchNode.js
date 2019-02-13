@@ -8,7 +8,7 @@ const nodeClientFile = `${rootname}/dist/src/launchNode/client.js`
 export const launchNode = async ({
   cancellationToken,
   compileInto,
-  sourceRootHref,
+  sourceOrigin,
   compileServerOrigin,
 }) => {
   const execArgv = await createChildExecArgv({ cancellationToken })
@@ -94,7 +94,7 @@ export const launchNode = async ({
         })
 
         sendToChild(child, "execute", {
-          sourceRootHref,
+          sourceOrigin,
           compileServerOrigin,
           compileInto,
 
@@ -109,7 +109,7 @@ export const launchNode = async ({
     if (status === "rejected") {
       return {
         status,
-        error: errorToSourceError(error, { filenameRelative, sourceRootHref }),
+        error: errorToSourceError(error, { filenameRelative, sourceOrigin }),
         coverageMap,
       }
     }
@@ -169,9 +169,9 @@ const createExitWithFailureCodeError = (code) => {
   return new Error(`child exited with ${code}`)
 }
 
-const errorToSourceError = (error, { filenameRelative, sourceRootHref }) => {
+const errorToSourceError = (error, { filenameRelative, sourceOrigin }) => {
   if (error && error.code === "MODULE_PARSE_ERROR") {
-    error.message = error.message.replace(filenameRelative, `${sourceRootHref}/${filenameRelative}`)
+    error.message = error.message.replace(filenameRelative, `${sourceOrigin}/${filenameRelative}`)
     return error
   }
 

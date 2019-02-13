@@ -2,7 +2,7 @@ import { hrefToFilenameRelative } from "./hrefToFilenameRelative.js"
 
 export const fromHref = async ({
   compileInto,
-  sourceRootHref,
+  sourceOrigin,
   compileServerOrigin,
   compileId,
   fetchSource,
@@ -17,7 +17,7 @@ export const fromHref = async ({
   })
   const filenameRelative = hrefToFilenameRelative(href, {
     compileInto,
-    sourceRootHref,
+    sourceOrigin,
     compileServerOrigin,
     compileId,
   })
@@ -53,7 +53,7 @@ export const fromHref = async ({
     return fromFunctionReturningRegisteredModule(() => {
       return moduleSourceToSystemRegisteredModule(body, {
         compileInto,
-        sourceRootHref,
+        sourceOrigin,
         compileServerOrigin,
         href: realHref,
         importer,

@@ -10,7 +10,7 @@ export const executeDescriptionToExecutionPlan = async ({
   executeDescription,
   verbose = false,
 }) => {
-  const sourceRootHref = filenameToFileHref(rootname)
+  const sourceOrigin = filenameToFileHref(rootname)
 
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
@@ -42,7 +42,7 @@ export const executeDescriptionToExecutionPlan = async ({
               ...options,
               cancellationToken,
               compileInto,
-              sourceRootHref,
+              sourceOrigin,
               compileServerOrigin,
             }),
           allocatedMs,

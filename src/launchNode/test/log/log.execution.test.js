@@ -11,7 +11,7 @@ const compileInto = "build"
 const pluginMap = {}
 
 ;(async () => {
-  const sourceRootHref = filenameToFileHref(rootname)
+  const sourceOrigin = filenameToFileHref(rootname)
 
   const { origin: compileServerOrigin } = await startCompileServer({
     rootname,
@@ -21,7 +21,7 @@ const pluginMap = {}
 
   const actual = await launchAndExecute({
     launch: (options) =>
-      launchNode({ ...options, compileInto, sourceRootHref, compileServerOrigin }),
+      launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
     captureConsole: true,
     filenameRelative,
     verbose: true,

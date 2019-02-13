@@ -4,7 +4,7 @@ import { evalSource } from "./evalSource.js"
 
 export const moduleSourceToSystemRegisteredModule = (
   code,
-  { compileInto, sourceRootHref, compileServerOrigin, href, platformSystem },
+  { compileInto, sourceOrigin, compileServerOrigin, href, platformSystem },
 ) => {
   // This filename is very important because it allows the engine (like vscode) to know
   // that the evaluated file is in fact on the filesystem
@@ -13,7 +13,7 @@ export const moduleSourceToSystemRegisteredModule = (
     compileInto,
     compileServerOrigin,
   })
-  const filename = `${sourceRootHref}/${filenameRelative}`
+  const filename = `${sourceOrigin}/${filenameRelative}`
 
   const uninstallSystemGlobal = valueInstall(global, "System", platformSystem)
   try {

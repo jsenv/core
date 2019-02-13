@@ -4,13 +4,13 @@ import { loadImporter } from "./loadImporter.js"
 
 export const importCompiledFile = ({
   compileInto,
-  sourceRootHref,
+  sourceOrigin,
   compileServerOrigin,
   filenameRelative,
 }) =>
   genericImportCompiledFile({
-    loadCompileMeta: () => loadCompileMeta({ compileInto, sourceRootHref }),
-    loadImporter: () => loadImporter({ compileInto, sourceRootHref, compileServerOrigin }),
+    loadCompileMeta: () => loadCompileMeta({ compileInto, sourceOrigin }),
+    loadImporter: () => loadImporter({ compileInto, sourceOrigin, compileServerOrigin }),
     compileInto,
     compileServerOrigin,
     filenameRelative,

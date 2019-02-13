@@ -1,21 +1,16 @@
 # dev-server
 
-- root/remoteRoot/localRoot are error prone
-  root is /User/folder
-  localRoot is /User/folder
-  remoteRoot is http://ip:port/
+- possibly rename rootname into projectFolder
+- rename pluginMap babelPluginDescription
+- inside bundle throw if compileGroupCount is 0
+- inside bundle if compileGroupCount is 1 do not generate any compileGroup
+  nor the balancer files
+- consider updating fromHref inside registreModuleFrom to
+  avoid evaluating base on response content-type ?
+  It apparently could be a vulnerability issue in case of man in the middle. We could rely on file extension instead
 
-  remoteRoot is an url
-  localRoot is the pathname portion of a file url
-  the naming should either reflect this difference or
-  and localRoot should become an url like remoteRoot ?
+* follow up https://github.com/systemjs/systemjs/issues/1898
+* test all stuff inside dev-server-poc
 
-  root should be renamed rootname and be '/Users/me/folder' for instance
-  localRoot should be renamed sourceRootHref and be 'file:///Users/me/folder'
-  remoteRoot should be renamed compileServerOrigin and be 'http://ip:port/'
-
-- follow up https://github.com/systemjs/systemjs/issues/1898
-- test all stuff inside dev-server-poc
-
-- create an other repo using dev-server-poc bundled files
+* create an other repo using dev-server-poc bundled files
   test the other repo can bundle dev-server-poc too

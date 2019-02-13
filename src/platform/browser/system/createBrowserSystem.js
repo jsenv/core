@@ -6,7 +6,7 @@ import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemReg
 
 export const createBrowserSystem = ({
   compileInto,
-  sourceRootHref, // in browser it is undefined because it could be a sensitive information
+  sourceOrigin, // in browser it is undefined because it could be a sensitive information
   compileServerOrigin,
   compileId,
   fetchSource,
@@ -23,7 +23,7 @@ export const createBrowserSystem = ({
 
   overrideSystemInstantiate({
     compileInto,
-    sourceRootHref,
+    sourceOrigin,
     compileServerOrigin,
     compileId,
     fetchSource,

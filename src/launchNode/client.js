@@ -9,7 +9,7 @@ import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 
 const execute = async ({
   compileInto,
-  sourceRootHref,
+  sourceOrigin,
   compileServerOrigin,
   filenameRelative,
   collectNamespace,
@@ -64,7 +64,7 @@ const execute = async ({
       const sourceMap = JSON.parse(sourceMapContent)
       const absoluteSourceMap = {
         ...sourceMap,
-        sources: sourceMap.sources.map((source) => `${sourceRootHref}${source}`),
+        sources: sourceMap.sources.map((source) => `${sourceOrigin}${source}`),
       }
 
       return {
@@ -87,7 +87,7 @@ const execute = async ({
 
   const { status, coverageMap, error, namespace } = await executeCompiledFile({
     compileInto,
-    sourceRootHref,
+    sourceOrigin,
     compileServerOrigin,
     filenameRelative,
     collectNamespace,

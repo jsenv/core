@@ -4,7 +4,7 @@ import { loadImporter } from "./loadImporter.js"
 
 export const executeCompiledFile = ({
   compileInto,
-  sourceRootHref,
+  sourceOrigin,
   compileServerOrigin,
   filenameRelative,
   collectNamespace,
@@ -12,8 +12,8 @@ export const executeCompiledFile = ({
   instrument = {},
 }) =>
   genericExecuteCompiledFile({
-    loadCompileMeta: () => loadCompileMeta({ compileInto, sourceRootHref }),
-    loadImporter: () => loadImporter({ compileInto, sourceRootHref, compileServerOrigin }),
+    loadCompileMeta: () => loadCompileMeta({ compileInto, sourceOrigin }),
+    loadImporter: () => loadImporter({ compileInto, sourceOrigin, compileServerOrigin }),
     compileInto,
     compileServerOrigin,
     filenameRelative,

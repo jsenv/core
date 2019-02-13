@@ -22,7 +22,7 @@ export const execute = async ({
   catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
-    const sourceRootHref = pathnameToFileHref(rootname)
+    const sourceOrigin = pathnameToFileHref(rootname)
 
     const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
@@ -36,7 +36,7 @@ export const execute = async ({
     })
 
     return launchAndExecute({
-      launch: (options) => launch({ ...options, compileInto, sourceRootHref, compileServerOrigin }),
+      launch: (options) => launch({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
       cancellationToken,
       mirrorConsole,
       stopOnceExecuted,
