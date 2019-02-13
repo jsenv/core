@@ -4,7 +4,7 @@ import { uneval } from "@dmail/uneval"
 import { createOperation } from "@dmail/cancellation"
 import { fileWrite } from "@dmail/helper"
 import { projectFolder as selfProjectFolder } from "../../projectFolder.js"
-import { compileMapToBabelPlugins } from "../compileMapToBabelPlugins.js"
+import { compileMapToBabelPluginArray } from "../compileMapToBabelPluginArray.js"
 import { writeRollupBundle } from "../writeRollupBundle.js"
 
 export const generateBalancerFilesForBrowser = async ({
@@ -83,11 +83,11 @@ export const entryFile = ${uneval(entryFile)}
 
   // compile using the worst possible scenario
   const compilePluginMap = compileParamMap.otherwise.babelPluginDescription
-  const babelPlugins = compileMapToBabelPlugins(compilePluginMap)
+  const babelPluginArray = compileMapToBabelPluginArray(compilePluginMap)
 
   const babelRollupPlugin = createBabelRollupPlugin({
     babelrc: false,
-    plugins: babelPlugins,
+    plugins: babelPluginArray,
   })
 
   return writeRollupBundle({

@@ -3,7 +3,7 @@ import createRollupBabelPlugin from "rollup-plugin-babel"
 import { resolveImport, filenameToFileHref, fileHrefToFilename } from "@jsenv/module-resolution"
 import { fileRead } from "@dmail/helper"
 import { createCancellationToken, createOperation } from "@dmail/cancellation"
-import { compileMapToBabelPlugins } from "./compileMapToBabelPlugins.js"
+import { compileMapToBabelPluginArray } from "./compileMapToBabelPluginArray.js"
 import { fetchUsingHttp } from "../platform/node/fetchUsingHttp.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 import { writeRollupBundle } from "./writeRollupBundle.js"
@@ -114,12 +114,12 @@ const generateEntryFolderForPlatform = async ({
     }
   }
 
-  const babelPlugins = compileMapToBabelPlugins(compileIdPluginMap)
+  const babelPluginArray = compileMapToBabelPluginArray(compileIdPluginMap)
 
   // https://github.com/rollup/rollup-plugin-babel
   const rollupBabelPlugin = createRollupBabelPlugin({
     babelrc: false,
-    plugins: babelPlugins,
+    plugins: babelPluginArray,
     parserOpts: {
       allowAwaitOutsideFunction: true,
     },
