@@ -62,7 +62,7 @@ export const transpiler = async ({
     })
     const babelPluginArray = [
       ...babelPluginDescriptionToBabelPluginArray(babelPluginDescriptionWithoutAsyncPlugin),
-      transformModulesSystemJs,
+      [transformModulesSystemJs, { topLevelAwait: true }],
     ]
     const result = await transpile({
       ast: inputAst,
@@ -74,7 +74,7 @@ export const transpiler = async ({
     })
     // required to transpile top level await and systemjs async execute
     const babelPluginArrayToTranspileTopLevelAwait = babelPluginDescriptionToBabelPluginArray({
-      [asyncPluginName]: [babelPluginDescription[asyncPluginName]],
+      [asyncPluginName]: babelPluginDescription[asyncPluginName],
     })
     return await transpile({
       ast: result.ast,
@@ -89,7 +89,7 @@ export const transpiler = async ({
 
   const babelPluginArray = [
     ...babelPluginDescriptionToBabelPluginArray(babelPluginDescription),
-    transformModulesSystemJs,
+    [transformModulesSystemJs, { topLevelAwait: true }],
   ]
   return transpile({
     ast: inputAst,
