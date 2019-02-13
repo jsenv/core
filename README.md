@@ -1,7 +1,5 @@
 # dev-server
 
-- inside bundle if compileGroupCount is 1 do not generate any compileGroup
-  nor the balancer files
 - consider updating fromHref inside registreModuleFrom to
   avoid evaluating base on response content-type ?
   It apparently could be a vulnerability issue in case of man in the middle. We could rely on file extension instead

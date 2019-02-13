@@ -2,42 +2,17 @@ import { resolve } from "url"
 import createRollupBabelPlugin from "rollup-plugin-babel"
 import { resolveImport, filenameToFileHref, fileHrefToFilename } from "@jsenv/module-resolution"
 import { fileRead } from "@dmail/helper"
-import { createCancellationToken, createOperation } from "@dmail/cancellation"
+import { createOperation } from "@dmail/cancellation"
 import { babelPluginDescriptionToBabelPluginArray } from "../jsCompile/babelPluginDescriptionToBabelPluginArray.js"
 import { fetchUsingHttp } from "../platform/node/fetchUsingHttp.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 import { writeRollupBundle } from "./writeRollupBundle.js"
 
-// rename generateEntryPointsFolderForPlatfrom ?
-export const generateEntryFoldersForPlatform = async ({
-  cancellationToken = createCancellationToken(),
-  projectFolder,
-  into,
-  entryPointsDescription,
-  compileDescription,
-  rollupOptions,
-}) => {
-  await Promise.all(
-    Object.keys(compileDescription).map((compileId) => {
-      return generateEntryFolderForPlatform({
-        cancellationToken,
-        projectFolder,
-        into,
-        entryPointsDescription,
-        compileId,
-        babelPluginDescription: compileDescription[compileId].babelPluginDescription,
-        rollupOptions,
-      })
-    }),
-  )
-}
-
-const generateEntryFolderForPlatform = async ({
+export const generateEntryPointsForPlatform = async ({
   cancellationToken,
   projectFolder,
   into,
   entryPointsDescription,
-  compileId,
   babelPluginDescription,
   rollupOptions,
 }) => {
@@ -136,7 +111,7 @@ const generateEntryFolderForPlatform = async ({
     },
     outputOptions: {
       // https://rollupjs.org/guide/en#output-dir
-      dir: `${projectFolder}/${into}/${compileId}`,
+      dir: `${projectFolder}/${into}`,
       // https://rollupjs.org/guide/en#output-sourcemap
       sourcemap: true,
       sourcemapExcludeSources: true,
