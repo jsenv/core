@@ -9,7 +9,7 @@ export const importCompiledFile = ({
   filenameRelative,
 }) =>
   genericImportCompiledFile({
-    loadCompileMeta: () => loadCompileMeta({ compileInto, sourceOrigin }),
+    loadCompileMeta: () => loadCompileMeta({ compileInto, sourceOrigin, compileServerOrigin }),
     loadImporter: () => loadImporter({ compileInto, sourceOrigin, compileServerOrigin }),
     compileInto,
     compileServerOrigin,
