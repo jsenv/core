@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../file.js"],
-  "names": ["value", "console", "log"],
-  "mappings": "AAAA,IAAMA,QAAQ,IAAd;;AAEA;;AAEAC,QAAQC,GAAR,CAAYF,KAAZ",
-  "file": "foo/file.js"
-}

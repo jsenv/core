@@ -1,9 +1,0 @@
-{
-  "version": 3,
-  "sources": [
-    "file:///Users/d.maillard/Dev/Sandbox/npmlink/packages/dev-server/sourceMapTest/debug-node/file.js"
-  ],
-  "names": ["value", "console", "log"],
-  "mappings": "AAAA,IAAMA,QAAQ,IAAd;;AAEA;;AAEAC,QAAQC,GAAR,CAAYF,KAAZ",
-  "file": "file.js"
-}
