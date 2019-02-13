@@ -1,7 +1,6 @@
 # dev-server
 
 - rename platformUsageMap into platformScoring
-- compileParamMap rename into compileDescription
 - inside bundle throw if compileGroupCount is 0
 - inside bundle if compileGroupCount is 1 do not generate any compileGroup
   nor the balancer files

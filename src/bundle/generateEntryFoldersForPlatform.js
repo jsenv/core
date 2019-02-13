@@ -3,18 +3,19 @@ import createRollupBabelPlugin from "rollup-plugin-babel"
 import { resolveImport, filenameToFileHref, fileHrefToFilename } from "@jsenv/module-resolution"
 import { fileRead } from "@dmail/helper"
 import { createCancellationToken, createOperation } from "@dmail/cancellation"
-import { compileMapToBabelPluginArray } from "./compileMapToBabelPluginArray.js"
+import { babelPluginDescriptionToBabelPluginArray } from "../jsCompile/babelPluginDescriptionToBabelPluginArray.js"
 import { fetchUsingHttp } from "../platform/node/fetchUsingHttp.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 import { writeRollupBundle } from "./writeRollupBundle.js"
 
+// rename generateEntryPointsFolderForPlatfrom ?
 export const generateEntryFoldersForPlatform = async ({
   cancellationToken = createCancellationToken(),
   projectFolder,
   into,
   entryPointsDescription,
   compileMap,
-  compileParamMap,
+  compileDescription,
   rollupOptions,
 }) => {
   await Promise.all(
@@ -25,7 +26,7 @@ export const generateEntryFoldersForPlatform = async ({
         into,
         entryPointsDescription,
         compileId,
-        compileIdPluginMap: compileParamMap[compileId].babelPluginDescription,
+        babelPluginDescription: compileDescription[compileId].babelPluginDescription,
         rollupOptions,
       })
     }),
@@ -38,7 +39,7 @@ const generateEntryFolderForPlatform = async ({
   into,
   entryPointsDescription,
   compileId,
-  compileIdPluginMap,
+  babelPluginDescription,
   rollupOptions,
 }) => {
   const rollupJsenvPlugin = {
@@ -114,7 +115,7 @@ const generateEntryFolderForPlatform = async ({
     }
   }
 
-  const babelPluginArray = compileMapToBabelPluginArray(compileIdPluginMap)
+  const babelPluginArray = babelPluginDescriptionToBabelPluginArray(babelPluginDescription)
 
   // https://github.com/rollup/rollup-plugin-babel
   const rollupBabelPlugin = createRollupBabelPlugin({

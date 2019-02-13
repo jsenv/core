@@ -7,7 +7,7 @@ const root = `${selfRoot}/src/compileToService/test/fixtures`
 const compileInto = "build"
 const compileId = "group"
 const output = "foo"
-const compileParamMap = {
+const compileDescription = {
   [compileId]: {
     content: output,
   },
@@ -31,7 +31,7 @@ const compile = ({ content }) => {
     const compileService = compileToService(compile, {
       root,
       compileInto,
-      compileParamMap,
+      compileDescription,
       cacheStrategy: "none",
     })
 
@@ -57,7 +57,7 @@ const compile = ({ content }) => {
     const compileService = compileToService(compile, {
       root,
       compileInto,
-      compileParamMap,
+      compileDescription,
       cacheStrategy: "etag",
     })
 
@@ -103,7 +103,7 @@ const compile = ({ content }) => {
     const compileService = compileToService(compile, {
       root,
       compileInto,
-      compileParamMap,
+      compileDescription,
       cacheStrategy: "mtime",
     })
 

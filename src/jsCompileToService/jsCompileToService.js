@@ -9,7 +9,7 @@ export const jsCompileToService = (
     projectFolder,
     compileInto,
     locate,
-    compileParamMap = {},
+    compileDescription = {},
     localCacheStrategy = "etag",
     localCacheTrackHit = true,
     cacheStrategy = "etag",
@@ -20,9 +20,9 @@ export const jsCompileToService = (
   },
 ) => {
   const instrumentPlugin = createInstrumentPlugin({ predicate: instrumentPredicate })
-  const compileParamMapWithInstrumentation = { ...compileParamMap }
-  Object.keys(compileParamMap).forEach((groupId) => {
-    const param = compileParamMap[groupId]
+  const compileParamMapWithInstrumentation = { ...compileDescription }
+  Object.keys(compileDescription).forEach((groupId) => {
+    const param = compileDescription[groupId]
     compileParamMapWithInstrumentation[`${groupId}-instrumented`] = {
       ...param,
       babelPluginDescription: {
@@ -37,7 +37,7 @@ export const jsCompileToService = (
     projectFolder,
     compileInto,
     locate,
-    compileParamMap: compileParamMapWithInstrumentation,
+    compileDescription: compileParamMapWithInstrumentation,
     localCacheStrategy,
     localCacheTrackHit,
     cacheStrategy,

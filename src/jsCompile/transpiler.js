@@ -1,10 +1,8 @@
 import path from "path"
 import { transformAsync, transformFromAstAsync } from "@babel/core"
-import syntaxDynamicImport from "@babel/plugin-syntax-dynamic-import"
-import syntaxImportMeta from "@babel/plugin-syntax-import-meta"
-import { arrayWithoutValue } from "@dmail/helper"
 import transformModulesSystemJs from "../babel-plugin-transform-modules-systemjs/index.js"
 import { regexpEscape } from "../stringHelper.js"
+import { babelPluginDescriptionToBabelPluginArray } from "./babelPluginDescriptionToBabelPluginArray.js"
 
 const transpile = async ({ ast, code, options }) => {
   try {
@@ -57,11 +55,13 @@ export const transpiler = async ({
   }
 
   if (transformModuleIntoSystemFormat && allowTopLevelAwait && asyncPluginName) {
-    const pluginNames = arrayWithoutValue(Object.keys(babelPluginDescription), asyncPluginName)
+    const babelPluginDescriptionWithoutAsyncPlugin = {}
+    Object.keys(babelPluginDescription).forEach((name) => {
+      if (name !== asyncPluginName)
+        babelPluginDescriptionWithoutAsyncPlugin[name] = babelPluginDescription[name]
+    })
     const babelPluginArray = [
-      syntaxImportMeta,
-      syntaxDynamicImport,
-      ...pluginNames.map((pluginName) => babelPluginDescription[pluginName]),
+      ...babelPluginDescriptionToBabelPluginArray(babelPluginDescriptionWithoutAsyncPlugin),
       transformModulesSystemJs,
     ]
     const result = await transpile({
@@ -73,11 +73,9 @@ export const transpiler = async ({
       },
     })
     // required to transpile top level await and systemjs async execute
-    const babelPluginArrayToTranspileTopLevelAwait = [
-      syntaxImportMeta,
-      syntaxDynamicImport,
-      babelPluginDescription[asyncPluginName],
-    ]
+    const babelPluginArrayToTranspileTopLevelAwait = babelPluginDescriptionToBabelPluginArray({
+      [asyncPluginName]: [babelPluginDescription[asyncPluginName]],
+    })
     return await transpile({
       ast: result.ast,
       code: result.code,
@@ -89,11 +87,8 @@ export const transpiler = async ({
     })
   }
 
-  const pluginNames = Object.keys(babelPluginDescription)
   const babelPluginArray = [
-    syntaxImportMeta,
-    syntaxDynamicImport,
-    ...pluginNames.map((pluginName) => babelPluginDescription[pluginName]),
+    ...babelPluginDescriptionToBabelPluginArray(babelPluginDescription),
     transformModulesSystemJs,
   ]
   return transpile({

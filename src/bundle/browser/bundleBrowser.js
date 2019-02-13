@@ -37,7 +37,7 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
       platformUsageMap: usageMap,
     })
 
-    const compileParamMap = compileMapToCompileParamMap(compileMap, babelPluginDescription)
+    const compileDescription = compileMapToCompileParamMap(compileMap, babelPluginDescription)
 
     const rollupOptions = {
       format: "iife",
@@ -53,7 +53,7 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
         entryPointsDescription,
         globalName,
         compileMap,
-        compileParamMap,
+        compileDescription,
         rollupOptions,
       }),
       generateBalancerFilesForBrowser({
@@ -63,7 +63,7 @@ export const bundleBrowser = catchAsyncFunctionCancellation(
         entryPointsDescription,
         globalName,
         compileMap,
-        compileParamMap,
+        compileDescription,
         rollupOptions,
       }),
     ])

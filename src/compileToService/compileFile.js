@@ -16,7 +16,7 @@ export const compileFile = async ({
   projectFolder,
   compileInto,
   compileId,
-  compileParamMap = {},
+  compileDescription = {},
   filenameRelative,
   filename,
   cacheStrategy = "etag",
@@ -30,7 +30,7 @@ export const compileFile = async ({
 
   const generate = async ({ input }) => {
     const compileParam =
-      compileParamMap && compileId in compileParamMap ? compileParamMap[compileId] : {}
+      compileDescription && compileId in compileDescription ? compileDescription[compileId] : {}
 
     const {
       sources = [],

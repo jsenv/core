@@ -36,7 +36,7 @@ export const bundleNode = catchAsyncFunctionCancellation(
       platformUsageMap: usageMap,
     })
 
-    const compileParamMap = compileMapToCompileParamMap(compileMap, babelPluginDescription)
+    const compileDescription = compileMapToCompileParamMap(compileMap, babelPluginDescription)
 
     const rollupOptions = {
       format: "cjs",
@@ -50,7 +50,7 @@ export const bundleNode = catchAsyncFunctionCancellation(
         into,
         entryPointsDescription,
         compileMap,
-        compileParamMap,
+        compileDescription,
         // https://rollupjs.org/guide/en#output-format
         rollupOptions,
       }),
@@ -60,7 +60,7 @@ export const bundleNode = catchAsyncFunctionCancellation(
         into,
         entryPointsDescription,
         compileMap,
-        compileParamMap,
+        compileDescription,
         rollupOptions,
       }),
     ])

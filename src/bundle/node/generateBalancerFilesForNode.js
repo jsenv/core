@@ -1,7 +1,7 @@
 import createRollupBabelPlugin from "rollup-plugin-babel"
 import { uneval } from "@dmail/uneval"
 import { projectFolder as selfProjectFolder } from "../../projectFolder.js"
-import { compileMapToBabelPluginArray } from "../compileMapToBabelPluginArray.js"
+import { babelPluginDescriptionToBabelPluginArray } from "../../jsCompile/babelPluginDescriptionToBabelPluginArray.js"
 import { writeRollupBundle } from "../writeRollupBundle.js"
 
 export const generateBalancerFilesForNode = async ({
@@ -10,7 +10,7 @@ export const generateBalancerFilesForNode = async ({
   into,
   entryPointsDescription,
   compileMap,
-  compileParamMap,
+  compileDescription,
   rollupOptions,
 }) => {
   return Promise.all(
@@ -23,7 +23,7 @@ export const generateBalancerFilesForNode = async ({
         into,
         entryFile,
         compileMap,
-        compileParamMap,
+        compileDescription,
         rollupOptions,
       })
     }),
@@ -36,7 +36,7 @@ const generateBalancerFileForNode = async ({
   into,
   entryFile,
   compileMap,
-  compileParamMap,
+  compileDescription,
   rollupOptions,
 }) => {
   const bundleNodeOptionsModuleSource = `
@@ -63,8 +63,8 @@ const generateBalancerFileForNode = async ({
     },
   }
 
-  const compilePluginMap = compileParamMap.otherwise.babelPluginDescription
-  const babelPluginArray = compileMapToBabelPluginArray(compilePluginMap)
+  const { babelPluginDescription } = compileDescription.otherwise
+  const babelPluginArray = babelPluginDescriptionToBabelPluginArray(babelPluginDescription)
 
   const rollupBabelPlugin = createRollupBabelPlugin({
     babelrc: false,

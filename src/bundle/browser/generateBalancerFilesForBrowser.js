@@ -4,9 +4,10 @@ import { uneval } from "@dmail/uneval"
 import { createOperation } from "@dmail/cancellation"
 import { fileWrite } from "@dmail/helper"
 import { projectFolder as selfProjectFolder } from "../../projectFolder.js"
-import { compileMapToBabelPluginArray } from "../compileMapToBabelPluginArray.js"
+import { babelPluginDescriptionToBabelPluginArray } from "../../jsCompile/babelPluginDescriptionToBabelPluginArray.js"
 import { writeRollupBundle } from "../writeRollupBundle.js"
 
+// rename generateEntryPointsBalancerFileForBrowser ?
 export const generateBalancerFilesForBrowser = async ({
   cancellationToken,
   projectFolder,
@@ -14,7 +15,7 @@ export const generateBalancerFilesForBrowser = async ({
   entryPointsDescription,
   globalName,
   compileMap,
-  compileParamMap,
+  compileDescription,
   rollupOptions,
 }) => {
   return Promise.all(
@@ -29,7 +30,7 @@ export const generateBalancerFilesForBrowser = async ({
           entryFile,
           globalName,
           compileMap,
-          compileParamMap,
+          compileDescription,
           rollupOptions,
         }),
         generateBalancerPage({
@@ -51,7 +52,7 @@ const generateBalancerFileForBrowser = async ({
   into,
   entryFile,
   compileMap,
-  compileParamMap,
+  compileDescription,
   rollupOptions,
 }) => {
   const bundleBrowserOptionsModuleSource = `
@@ -82,8 +83,8 @@ export const entryFile = ${uneval(entryFile)}
   })
 
   // compile using the worst possible scenario
-  const compilePluginMap = compileParamMap.otherwise.babelPluginDescription
-  const babelPluginArray = compileMapToBabelPluginArray(compilePluginMap)
+  const { babelPluginDescription } = compileDescription.otherwise
+  const babelPluginArray = babelPluginDescriptionToBabelPluginArray(babelPluginDescription)
 
   const babelRollupPlugin = createBabelRollupPlugin({
     babelrc: false,

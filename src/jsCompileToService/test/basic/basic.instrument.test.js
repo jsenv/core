@@ -11,7 +11,7 @@ const test = async () => {
   const jsService = jsCompileToService(jsCompile, {
     localRoot,
     compileInto,
-    compileParamMap: {
+    compileDescription: {
       [compileId]: {
         babelPluginDescription: {
           "transform-instrument": createInstrumentPlugin(),

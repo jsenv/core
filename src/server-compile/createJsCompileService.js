@@ -38,7 +38,7 @@ export const createJsCompileService = async ({
     JSON.stringify(compileMap, null, "  "),
   )
 
-  const compileParamMap = compileMapToCompileParamMap(compileMap, babelPluginDescription)
+  const compileDescription = compileMapToCompileParamMap(compileMap, babelPluginDescription)
 
   const jsCompileService = jsCompileToService(jsCompile, {
     cancellationToken,
@@ -51,7 +51,7 @@ export const createJsCompileService = async ({
     watch,
     watchPredicate,
     locate,
-    compileParamMap,
+    compileDescription,
   })
 
   return jsCompileService

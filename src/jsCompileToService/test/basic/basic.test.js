@@ -10,7 +10,7 @@ const compileId = "test"
   const jsService = jsCompileToService(jsCompile, {
     projectFolder,
     compileInto,
-    compileParamMap: {
+    compileDescription: {
       [compileId]: {
         babelPluginDescription: {},
       },
