@@ -9,16 +9,16 @@ import {
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
 
-export const bundlePlatform = catchAsyncFunctionCancellation(
-  async ({
-    entryPointsDescription,
-    projectFolder,
-    into,
-    babelPluginDescription,
-    compileGroupCount = 2,
-    platformScoring,
-    genereateBalancerFilesForPlatform,
-  }) => {
+export const bundlePlatform = ({
+  entryPointsDescription,
+  projectFolder,
+  into,
+  babelPluginDescription,
+  compileGroupCount = 2,
+  platformScoring,
+  genereateBalancerFilesForPlatform,
+}) =>
+  catchAsyncFunctionCancellation(async () => {
     if (typeof projectFolder !== "string")
       throw new TypeError(`bundleBrowser root must be a string, got ${projectFolder}`)
     if (typeof into !== "string")
@@ -81,5 +81,4 @@ export const bundlePlatform = catchAsyncFunctionCancellation(
         rollupOptions,
       }),
     ])
-  },
-)
+  })

@@ -21,9 +21,7 @@ export const fetchUsingXHR = (url, headers = {}) => {
 
         return
       }
-      resolve({
-        ...normalizeXhr(xhr),
-      })
+      resolve(normalizeXhr(xhr))
     }
 
     xhr.onreadystatechange = () => {

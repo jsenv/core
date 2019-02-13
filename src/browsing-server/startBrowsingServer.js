@@ -25,7 +25,7 @@ export const startBrowsingServer = async ({
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
-  forcePort = true,
+  forcePort = false,
   signature,
 
   generateHTML = ({ compileInto, compileServerOrigin, filenameRelative, browserPlatformHref }) => {

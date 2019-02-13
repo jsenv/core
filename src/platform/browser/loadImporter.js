@@ -50,8 +50,8 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigi
 // for browser without dynamic import
 const createNativeImportFile = () => eval(`(function importFile(file){ return import(file) })`)
 
-const fetchSource = ({ remoteFile, remoteParent }) => {
-  return fetchUsingXHR(remoteFile, {
-    "x-module-referer": remoteParent || remoteFile,
+const fetchSource = ({ href, importer }) => {
+  return fetchUsingXHR(href, {
+    "x-module-referer": importer || href,
   })
 }
