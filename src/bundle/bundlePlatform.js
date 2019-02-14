@@ -18,6 +18,7 @@ export const bundlePlatform = ({
   computeRollupOptionsWithoutBalancing,
   computeRollupOptionsWithBalancing,
   computeRollupOptionsForBalancer,
+  verbose = false,
 }) =>
   catchAsyncFunctionCancellation(async () => {
     if (typeof projectFolder !== "string")
@@ -31,11 +32,14 @@ export const bundlePlatform = ({
     if (compileGroupCount < 1)
       throw new Error(`bundlePlatform compileGroupCount must be > 1, got ${compileGroupCount}`)
 
+    // const log = verbose ? (...args) => console.log(...args) : () => {}
+
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     if (compileGroupCount === 1) {
       await bundleWithRollup({
         cancellationToken,
+        verbose,
         ...computeRollupOptionsWithoutBalancing({ cancellationToken }),
       })
       return

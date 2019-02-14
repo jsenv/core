@@ -13,6 +13,8 @@ export const bundleBrowser = async ({
   babelPluginDescription,
   compileGroupCount = 2,
   platformScoring = browserScoring,
+  autoWrapEntryInPromise = false,
+  verbose,
 }) => {
   if (typeof globalName !== "string")
     throw new TypeError(`bundleBrowser globalName must be a string, got ${globalName}`)
@@ -26,6 +28,7 @@ export const bundleBrowser = async ({
       babelPluginDescription,
       compileGroupCount,
       platformScoring,
+      verbose,
       computeRollupOptionsWithoutBalancing: (context) =>
         computeRollupOptionsWithoutBalancing({
           projectFolder,
@@ -33,6 +36,7 @@ export const bundleBrowser = async ({
           globalName,
           entryPointsDescription,
           babelPluginDescription,
+          autoWrapEntryInPromise,
           ...context,
         }),
       computeRollupOptionsWithBalancing: (context) =>

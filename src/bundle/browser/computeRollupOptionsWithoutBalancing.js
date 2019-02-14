@@ -10,30 +10,37 @@ export const computeRollupOptionsWithoutBalancing = ({
   globalName,
   entryPointsDescription,
   babelPluginDescription,
+  autoWrapEntryInPromise,
 }) => {
+  const rollupPluginArray = [
+    createJsenvRollupPlugin({
+      cancellationToken,
+      projectFolder,
+    }),
+    babelPluginDescriptionToRollupPlugin({
+      babelPluginDescription,
+    }),
+    ...(autoWrapEntryInPromise
+      ? [
+          createIIFEPromiseRollupPlugin({
+            projectFolder,
+            globalName,
+          }),
+        ]
+      : []),
+  ]
+
   return {
     rollupParseOptions: {
       input: entryPointsDescription,
-      rollupPluginArray: [
-        createJsenvRollupPlugin({
-          cancellationToken,
-          projectFolder,
-        }),
-        createIIFEPromiseRollupPlugin({
-          projectFolder,
-          globalName,
-        }),
-        babelPluginDescriptionToRollupPlugin({
-          babelPluginDescription,
-        }),
-      ],
+      plugins: rollupPluginArray,
     },
     rollupGenerateOptions: {
       // https://rollupjs.org/guide/en#output-dir
       dir: `${projectFolder}/${into}`,
       // https://rollupjs.org/guide/en#output-format
       format: "iife",
-      name,
+      name: globalName,
       // https://rollupjs.org/guide/en#output-sourcemap
       sourcemap: true,
       sourceMapExcludeSources: true,

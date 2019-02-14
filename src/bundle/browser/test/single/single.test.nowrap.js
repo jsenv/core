@@ -13,6 +13,6 @@ bundleBrowser({
     "transform-block-scoping": [blockScoping],
   },
   compileGroupCount: 1,
-  autoWrapEntryInPromise: true,
+  autoWrapEntryInPromise: false,
   verbose: true,
 })
