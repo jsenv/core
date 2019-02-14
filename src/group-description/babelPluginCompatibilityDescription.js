@@ -1,9 +1,12 @@
-// copied from @babel/preset-env/data/plugins.json.
+// copied from
+// https://github.com/babel/babel/blob/85ea5b0b50bca952b26f895e56bf2165ab9fcc92/packages/babel-preset-env/data/plugins.json#L1
 // Because this is an hidden implementation detail of @babel/preset-env
 // it could be deprecated or moved anytime.
 // For that reason it makes more sens to have it inlined here
 // than importing it from an undocumented location.
 // Ideally it would be documented or a separate module
+
+// TODO: add a transform-async-to-promise compatibility
 
 export const babelPluginCompatibilityDescription = {
   "transform-template-literals": {
