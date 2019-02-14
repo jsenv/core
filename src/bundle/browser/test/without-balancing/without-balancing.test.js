@@ -5,14 +5,14 @@ import { bundleBrowser } from "../../bundleBrowser.js"
 bundleBrowser({
   projectFolder,
   into: "bundle/browser",
-  globalName: "single",
+  globalName: "withoutBalancing",
   entryPointsDescription: {
-    main: "src/bundle/browser/test/single/single.js",
+    main: "src/bundle/browser/test/without-balancing/without-balancing.js",
   },
   babelPluginDescription: {
     "transform-block-scoping": [blockScoping],
   },
   compileGroupCount: 1,
-  autoWrapEntryInPromise: false,
+  autoWrapEntryInPromise: true,
   verbose: true,
 })

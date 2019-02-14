@@ -1,18 +1,16 @@
 import blockScoping from "@babel/plugin-transform-block-scoping"
 import { projectFolder } from "../../../../projectFolder.js"
-import { bundleBrowser } from "../../bundleBrowser.js"
+import { bundleNode } from "../../bundleNode.js"
 
-bundleBrowser({
+bundleNode({
   projectFolder,
-  into: "bundle/browser",
-  globalName: "single",
+  into: "bundle/node",
   entryPointsDescription: {
-    main: "src/bundle/browser/test/single/single.js",
+    main: "src/bundle/node/test/without-balancing/without-balancing.js",
   },
   babelPluginDescription: {
     "transform-block-scoping": [blockScoping],
   },
   compileGroupCount: 1,
-  autoWrapEntryInPromise: true,
   verbose: true,
 })

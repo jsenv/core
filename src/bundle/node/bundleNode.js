@@ -1,22 +1,48 @@
 import { nodeScoring } from "../../group-description/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
-import { generateBalancerFilesForNode } from "./generateBalancerFilesForNode.js"
+import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
+import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBalancing.js"
+import { computeRollupOptionsForBalancer } from "./computeRollupOptionsForBalancer.js"
 
-export const bundleNode = ({
-  entryPointsDescription,
+export const bundleNode = async ({
   projectFolder,
   into,
+  entryPointsDescription,
   babelPluginDescription,
   compileGroupCount = 2,
   platformScoring = nodeScoring,
+  verbose,
 }) => {
-  return bundlePlatform({
+  return await bundlePlatform({
     entryPointsDescription,
     projectFolder,
     into,
     babelPluginDescription,
     compileGroupCount,
     platformScoring,
-    generateBalancerFilesForPlatform: generateBalancerFilesForNode,
+    verbose,
+    computeRollupOptionsWithoutBalancing: (context) =>
+      computeRollupOptionsWithoutBalancing({
+        projectFolder,
+        into,
+        entryPointsDescription,
+        babelPluginDescription,
+        ...context,
+      }),
+    computeRollupOptionsWithBalancing: (context) =>
+      computeRollupOptionsWithBalancing({
+        projectFolder,
+        into,
+        entryPointsDescription,
+        babelPluginDescription,
+        ...context,
+      }),
+    computeRollupOptionsForBalancer: (context) =>
+      computeRollupOptionsForBalancer({
+        projectFolder,
+        into,
+        babelPluginDescription,
+        ...context,
+      }),
   })
 }
