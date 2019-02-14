@@ -52,6 +52,9 @@ export const createJsenvRollupPlugin = ({ cancellationToken, projectFolder }) =>
   }
 
   const fetchHref = async (href) => {
+    // this code allow you to have http/https dependency for convenience
+    // but maybe we should warn about this.
+    // it could also be vastly improved using a basic in memory cache
     if (href.startsWith("http://")) {
       const response = await fetchUsingHttp(href, { cancellationToken })
       ensureResponseSuccess(response)
