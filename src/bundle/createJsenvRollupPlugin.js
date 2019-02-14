@@ -1,21 +1,11 @@
 import { resolve } from "url"
-import createRollupBabelPlugin from "rollup-plugin-babel"
-import { resolveImport, filenameToFileHref, fileHrefToFilename } from "@jsenv/module-resolution"
 import { fileRead } from "@dmail/helper"
 import { createOperation } from "@dmail/cancellation"
-import { babelPluginDescriptionToBabelPluginArray } from "../jsCompile/babelPluginDescriptionToBabelPluginArray.js"
+import { resolveImport, filenameToFileHref, fileHrefToFilename } from "@jsenv/module-resolution"
 import { fetchUsingHttp } from "../platform/node/fetchUsingHttp.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
-import { writeRollupBundle } from "./writeRollupBundle.js"
 
-export const generateEntryPointsForPlatform = async ({
-  cancellationToken,
-  projectFolder,
-  into,
-  entryPointsDescription,
-  babelPluginDescription,
-  rollupOptions,
-}) => {
+export const createJsenvRollupPlugin = ({ cancellationToken, projectFolder }) => {
   const rollupJsenvPlugin = {
     name: "jsenv",
     resolveId: (importee, importer) => {
@@ -89,35 +79,5 @@ export const generateEntryPointsForPlatform = async ({
     }
   }
 
-  const babelPluginArray = babelPluginDescriptionToBabelPluginArray(babelPluginDescription)
-
-  // https://github.com/rollup/rollup-plugin-babel
-  const rollupBabelPlugin = createRollupBabelPlugin({
-    babelrc: false,
-    plugins: babelPluginArray,
-    parserOpts: {
-      allowAwaitOutsideFunction: true,
-    },
-  })
-
-  return writeRollupBundle({
-    cancellationToken,
-    inputOptions: {
-      input: entryPointsDescription,
-      plugins: [rollupJsenvPlugin, rollupBabelPlugin],
-      // skip rollup warnings
-      onwarn: () => {},
-      experimentalTopLevelAwait: true,
-    },
-    outputOptions: {
-      // https://rollupjs.org/guide/en#output-dir
-      dir: `${projectFolder}/${into}`,
-      // https://rollupjs.org/guide/en#output-sourcemap
-      sourcemap: true,
-      sourcemapExcludeSources: true,
-      // https://rollupjs.org/guide/en#experimentaltoplevelawait
-      experimentalTopLevelAwait: true,
-      ...rollupOptions,
-    },
-  })
+  return rollupJsenvPlugin
 }

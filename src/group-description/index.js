@@ -1,4 +1,5 @@
 export { generateGroupDescription } from "./generateGroupDescription.js"
 export { groupDescriptionToCompileDescription } from "./groupDescriptionToCompileDescription.js"
+export { groupToBabelPluginDescription } from "./group/groupToBabelPluginDescription.js"
 export { browserScoring } from "./browserScoring.js"
 export { nodeScoring } from "./nodeScoring.js"

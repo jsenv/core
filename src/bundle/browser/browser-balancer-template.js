@@ -1,15 +1,13 @@
 // eslint-disable-next-line import/no-unresolved
-import { groupDescription, entryFile } from "bundle-browser-options"
+import { globalName, entryFilenameRelative, groupDescription } from "bundle-browser-options"
 import { detect } from "../../platform/browser/browserDetect/index.js"
 import { browserToCompileId } from "../../platform/browser/browserToCompileId.js"
+import { globalNameToPromiseGlobalName } from "./globalNameToPromiseGlobalName.js"
+import { loadUsingScript } from "./loadUsingScript.js"
 
 const compileId = browserToCompileId(detect(), groupDescription)
-const scriptSrc = `./${compileId}/${entryFile}`
+const scriptSrc = `./${compileId}/${entryFilenameRelative}`
 
-// document.write force browser to wait for the script to load
-// before doing anything else.
-// it allows to use the library immediatly without having to wait for DOMContentLoaded
-// it requires to escape the closing script tag
-document.write(
-  `<script type="text/javascript" charset="utf-8" crossOrigin="anonymous" src="${scriptSrc}">${"</script>"}`,
-)
+window[globalNameToPromiseGlobalName(globalName)] = loadUsingScript(scriptSrc).then(() => {
+  return window[globalName]
+})

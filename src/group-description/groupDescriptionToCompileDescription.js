@@ -1,19 +1,13 @@
 import { objectMapValue } from "../objectHelper.js"
+import { groupToBabelPluginDescription } from "./group/groupToBabelPluginDescription.js"
 
 export const groupDescriptionToCompileDescription = (
   groupDescription,
   babelPluginDescription = {},
 ) => {
-  return objectMapValue(groupDescription, ({ babelPluginNameArray }) => {
-    const specificBabelPluginDescription = {}
-    babelPluginNameArray.forEach((pluginName) => {
-      if (pluginName in babelPluginDescription === false) {
-        throw new Error(`missing ${pluginName} plugin in babelPluginDescription`)
-      }
-      specificBabelPluginDescription[pluginName] = babelPluginDescription[pluginName]
-    })
+  return objectMapValue(groupDescription, (group) => {
     return {
-      babelPluginDescription: specificBabelPluginDescription,
+      babelPluginDescription: groupToBabelPluginDescription(group, babelPluginDescription),
     }
   })
 }

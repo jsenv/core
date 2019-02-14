@@ -1,51 +1,42 @@
 import {
-  generateGroupDescription,
-  groupDescriptionToCompileDescription,
-} from "../group-description/index.js"
-import { generateEntryPointsForPlatform } from "./generateEntryPointsForPlatform.js"
-import { generateEntryPointsFoldersForPlatform } from "./generateEntryPointsFoldersForPlatform.js"
-import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
+import {
+  generateGroupDescription,
+  groupDescriptionToCompileDescription,
+} from "../group-description/index.js"
+import { bundleWithRollup } from "./bundleWithRollup.js"
 
 export const bundlePlatform = ({
-  entryPointsDescription,
   projectFolder,
   into,
+  entryPointsDescription,
   babelPluginDescription,
   compileGroupCount = 2,
   platformScoring,
-  genereateBalancerFilesForPlatform,
+  computeRollupOptionsWithoutBalancing,
+  computeRollupOptionsWithBalancing,
+  computeRollupOptionsForBalancer,
 }) =>
   catchAsyncFunctionCancellation(async () => {
     if (typeof projectFolder !== "string")
-      throw new TypeError(`bundleBrowser root must be a string, got ${projectFolder}`)
+      throw new TypeError(`bundlePlatform root must be a string, got ${projectFolder}`)
     if (typeof into !== "string")
-      throw new TypeError(`bundleBrowser into must be a string, got ${into}`)
+      throw new TypeError(`bundlePlatform into must be a string, got ${into}`)
     if (typeof entryPointsDescription !== "object")
       throw new TypeError(
-        `bundleBrowser entryPointsDescription must be an object, got ${entryPointsDescription}`,
+        `bundlePlatform entryPointsDescription must be an object, got ${entryPointsDescription}`,
       )
     if (compileGroupCount < 1)
-      throw new Error(`bundleBrowser compileGroupCount must be > 1, got ${compileGroupCount}`)
+      throw new Error(`bundlePlatform compileGroupCount must be > 1, got ${compileGroupCount}`)
 
     const cancellationToken = createProcessInterruptionCancellationToken()
 
-    // https://rollupjs.org/guide/en#output-format
-    const rollupOptions = {
-      format: "cjs",
-      sourcemapExcludeSources: false,
-    }
-
     if (compileGroupCount === 1) {
-      await generateEntryPointsForPlatform({
+      await bundleWithRollup({
         cancellationToken,
-        projectFolder,
-        into,
-        entryPointsDescription,
-        babelPluginDescription,
-        rollupOptions,
+        ...computeRollupOptionsWithoutBalancing({ cancellationToken }),
       })
       return
     }
@@ -62,23 +53,59 @@ export const bundlePlatform = ({
     )
 
     await Promise.all([
-      generateEntryPointsFoldersForPlatform({
+      generateEntryPointsFolders({
         cancellationToken,
-        projectFolder,
-        into,
-        entryPointsDescription,
-        groupDescription,
         compileDescription,
-        rollupOptions,
+        computeRollupOptionsWithBalancing,
       }),
-      genereateBalancerFilesForPlatform({
+      generateEntryPointsBalancerFiles({
         cancellationToken,
-        projectFolder,
-        into,
         entryPointsDescription,
         groupDescription,
-        compileDescription,
-        rollupOptions,
+        computeRollupOptionsForBalancer,
       }),
     ])
   })
+
+const generateEntryPointsFolders = async ({
+  cancellationToken,
+  compileDescription,
+  computeRollupOptionsWithBalancing,
+}) => {
+  await Promise.all(
+    Object.keys(compileDescription).map((compileId) => {
+      return bundleWithRollup({
+        cancellationToken,
+        ...computeRollupOptionsWithBalancing({
+          cancellationToken,
+          compileId,
+        }),
+      })
+    }),
+  )
+}
+
+const generateEntryPointsBalancerFiles = ({
+  cancellationToken,
+  entryPointsDescription,
+  groupDescription,
+  computeRollupOptionsForBalancer,
+}) => {
+  return Promise.all(
+    Object.keys(entryPointsDescription).map((entryName) => {
+      const entryFilenameRelative = `${entryName}.js`
+
+      return Promise.all([
+        bundleWithRollup({
+          cancellationToken,
+          ...computeRollupOptionsForBalancer({
+            cancellationToken,
+            groupDescription,
+            entryName,
+            entryFilenameRelative,
+          }),
+        }),
+      ])
+    }),
+  )
+}
