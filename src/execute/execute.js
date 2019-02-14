@@ -17,7 +17,7 @@ export const execute = async ({
   launch,
   mirrorConsole = true,
   stopOnceExecuted,
-  file,
+  filenameRelative,
 }) =>
   catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
@@ -40,6 +40,6 @@ export const execute = async ({
       cancellationToken,
       mirrorConsole,
       stopOnceExecuted,
-      file,
+      filenameRelative,
     })
   })
