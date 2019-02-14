@@ -25,6 +25,7 @@ export const generateGroupDescription = ({
     throw new TypeError(`babelPluginDescription must be an object, got ${babelPluginDescription}`)
   if (typeof platformScoring !== "object")
     throw new TypeError(`platformScoring must be an object, got ${platformScoring}`)
+  if (typeof groupCount < 1) throw new TypeError(`groupCount must be above 1, got ${groupCount}`)
 
   const babelPluginNameArray = Object.keys(babelPluginDescription)
 
@@ -51,6 +52,11 @@ export const generateGroupDescription = ({
     compatibilityDescription: specificBabelPluginCompatibilityDescription,
     platformNames: arrayWithoutValue(Object.keys(platformScoring), "other"),
   })
+  if (groupArrayWithEveryCombination.length === 0) {
+    return {
+      [OTHERWISE_ID]: groupWithEverything,
+    }
+  }
 
   const groupToScore = ({ compatibility }) => compatibilityToScore(compatibility, platformScoring)
   const groupArrayWithEveryCombinationSortedByPlatformScore = groupArrayWithEveryCombination.sort(
@@ -69,19 +75,24 @@ export const generateGroupDescription = ({
     (a, b) => groupToComplexityScore(a) - groupToComplexityScore(b),
   )
 
-  // replace last group with the everything group
   const length = groupArrayDecreasedSortedByCompexityScore.length
-  groupArrayDecreasedSortedByCompexityScore[length - 1] = groupWithEverything
-
   const groupDescription = {}
 
   groupDescription[BEST_ID] = groupArrayDecreasedSortedByCompexityScore[0]
   groupArrayDecreasedSortedByCompexityScore
-    .slice(1, -1)
+    .slice(
+      // the first group is already marked as being the best
+      1,
+      // if we have a lot of group, the last group must be replaced by
+      // the groupWithEverything to ensure all plugins are enabled
+      // when we cannot detect the platform or it is not compatible
+      // but if we have few groups, we can keep the last one
+      length === groupCount ? -1 : groupArrayDecreasedSortedByCompexityScore.length,
+    )
     .forEach((intermediatePluginGroup, index) => {
       groupDescription[`intermediate-${index + 1}`] = intermediatePluginGroup
     })
-  groupDescription[OTHERWISE_ID] = groupArrayDecreasedSortedByCompexityScore[length - 1]
+  groupDescription[OTHERWISE_ID] = groupWithEverything
 
   return groupDescription
 }

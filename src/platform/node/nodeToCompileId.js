@@ -1,4 +1,4 @@
-import { versionIsBelowOrEqual } from "@dmail/project-structure-compile-babel"
+import { versionIsBelowOrEqual } from "../../semantic-versioning/index.js"
 
 export const nodeToCompileId = ({ name, version }, groupDescription) => {
   return Object.keys(groupDescription).find((compileIdCandidate) => {

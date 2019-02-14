@@ -1,6 +1,24 @@
 import { assert } from "@dmail/assert"
 import { generateGroupDescription } from "./generateGroupDescription.js"
 import { browserScoring } from "./browserScoring.js"
+import { nodeScoring } from "./nodeScoring.js"
+
+{
+  const babelPluginDescription = { "transform-block-scoping": [] }
+  const actual = generateGroupDescription({
+    babelPluginDescription,
+    platformScoring: nodeScoring,
+    groupCount: 2,
+  })
+  const expected = {
+    best: { babelPluginNameArray: [], compatibility: { node: "6" } },
+    otherwise: {
+      babelPluginNameArray: Object.keys(babelPluginDescription),
+      compatibility: {},
+    },
+  }
+  assert({ actual, expected })
+}
 
 {
   const babelPluginDescription = { "transform-block-scoping": [] }
