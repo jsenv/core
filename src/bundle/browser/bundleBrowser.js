@@ -43,7 +43,9 @@ export const bundleBrowser = async ({
         computeRollupOptionsWithBalancing({
           projectFolder,
           into,
+          globalName,
           entryPointsDescription,
+          babelPluginDescription,
           ...context,
         }),
       computeRollupOptionsForBalancer: (context) =>
@@ -51,6 +53,7 @@ export const bundleBrowser = async ({
           projectFolder,
           into,
           globalName,
+          babelPluginDescription,
           ...context,
         }),
     }),

@@ -10,7 +10,9 @@ export const computeRollupOptionsForBalancer = ({
   globalName,
   babelPluginDescription,
   groupDescription,
+  entryName,
   entryFilenameRelative,
+  log,
 }) => {
   const balancerOptionSource = generateBalancerOptionsSource({
     globalName,
@@ -21,15 +23,17 @@ export const computeRollupOptionsForBalancer = ({
   const browserBalancerRollupPlugin = {
     name: "browser-balancer",
     resolveId: (importee, importer) => {
-      if (importee === "bundle-browser-options") {
-        return "bundle-browser-options"
+      // it's important to keep the extension so that
+      // rollup-plugin-babel transpiles bundle-browser-options.js too
+      if (importee === "bundle-browser-options.js") {
+        return "bundle-browser-options.js"
       }
       if (!importer) return importee
       return null
     },
 
     load: async (id) => {
-      if (id === "bundle-browser-options") {
+      if (id === "bundle-browser-options.js") {
         return balancerOptionSource
       }
       return null
@@ -48,13 +52,22 @@ export const computeRollupOptionsForBalancer = ({
     babelPluginDescription: otherwiseBabelPluginDescription,
   })
 
+  const file = `${projectFolder}/${into}/${entryFilenameRelative}`
+
+  log(`
+bundle balancer file for browser
+entryName: ${entryName}
+babelPluginNameArray: ${Object.keys(otherwiseBabelPluginDescription)}
+file: ${file}
+`)
+
   return {
     rollupParseOptions: {
       input: `${selfProjectFolder}/src/bundle/browser/browser-balancer-template.js`,
       plugins: [browserBalancerRollupPlugin, nodeResolveRollupPlugin, babelRollupPlugin],
     },
     rollupGenerateOptions: {
-      output: `${projectFolder}/${into}/${entryFilenameRelative}`,
+      file,
       format: "iife",
       name: null,
       sourcemap: true,

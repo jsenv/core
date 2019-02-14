@@ -11,7 +11,17 @@ export const computeRollupOptionsWithoutBalancing = ({
   entryPointsDescription,
   babelPluginDescription,
   autoWrapEntryInPromise,
+  log,
 }) => {
+  const dir = `${projectFolder}/${into}`
+
+  log(`
+bundle entry points for browser without balancing.
+entryNameArray: ${Object.keys(entryPointsDescription)}
+babelPluginNameArray: ${Object.keys(babelPluginDescription)}
+dir: ${dir}
+`)
+
   const rollupPluginArray = [
     createJsenvRollupPlugin({
       cancellationToken,
@@ -37,7 +47,7 @@ export const computeRollupOptionsWithoutBalancing = ({
     },
     rollupGenerateOptions: {
       // https://rollupjs.org/guide/en#output-dir
-      dir: `${projectFolder}/${into}`,
+      dir,
       // https://rollupjs.org/guide/en#output-format
       format: "iife",
       name: globalName,

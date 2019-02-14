@@ -32,15 +32,15 @@ export const bundlePlatform = ({
     if (compileGroupCount < 1)
       throw new Error(`bundlePlatform compileGroupCount must be > 1, got ${compileGroupCount}`)
 
-    // const log = verbose ? (...args) => console.log(...args) : () => {}
+    const log = verbose ? (...args) => console.log(...args) : () => {}
 
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     if (compileGroupCount === 1) {
       await bundleWithRollup({
         cancellationToken,
-        verbose,
-        ...computeRollupOptionsWithoutBalancing({ cancellationToken }),
+        log,
+        ...computeRollupOptionsWithoutBalancing({ cancellationToken, log }),
       })
       return
     }
@@ -51,19 +51,16 @@ export const bundlePlatform = ({
       groupCount: compileGroupCount,
     })
 
-    const compileDescription = groupDescriptionToCompileDescription(
-      groupDescription,
-      babelPluginDescription,
-    )
-
     await Promise.all([
       generateEntryPointsFolders({
         cancellationToken,
-        compileDescription,
+        log,
+        groupDescription,
         computeRollupOptionsWithBalancing,
       }),
       generateEntryPointsBalancerFiles({
         cancellationToken,
+        log,
         entryPointsDescription,
         groupDescription,
         computeRollupOptionsForBalancer,
@@ -73,15 +70,19 @@ export const bundlePlatform = ({
 
 const generateEntryPointsFolders = async ({
   cancellationToken,
-  compileDescription,
+  log,
+  groupDescription,
   computeRollupOptionsWithBalancing,
 }) => {
   await Promise.all(
-    Object.keys(compileDescription).map((compileId) => {
+    Object.keys(groupDescription).map((compileId) => {
       return bundleWithRollup({
         cancellationToken,
+        log,
         ...computeRollupOptionsWithBalancing({
           cancellationToken,
+          log,
+          groupDescription,
           compileId,
         }),
       })
@@ -91,6 +92,7 @@ const generateEntryPointsFolders = async ({
 
 const generateEntryPointsBalancerFiles = ({
   cancellationToken,
+  log,
   entryPointsDescription,
   groupDescription,
   computeRollupOptionsForBalancer,
@@ -102,8 +104,10 @@ const generateEntryPointsBalancerFiles = ({
       return Promise.all([
         bundleWithRollup({
           cancellationToken,
+          log,
           ...computeRollupOptionsForBalancer({
             cancellationToken,
+            log,
             groupDescription,
             entryName,
             entryFilenameRelative,

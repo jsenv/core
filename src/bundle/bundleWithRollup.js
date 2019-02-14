@@ -5,12 +5,12 @@ export const bundleWithRollup = async ({
   cancellationToken,
   rollupParseOptions,
   rollupGenerateOptions,
-  verbose = false,
+  // verbose = false,
 }) => {
-  const log = verbose ? (...args) => console.log(...args) : () => {}
+  // const log = verbose ? (...args) => console.log(...args) : () => {}
 
-  log(`parse with rollup`)
-  log(rollupParseOptions)
+  // log(`parse with rollup`)
+  // log(rollupParseOptions)
 
   const rollupBundle = await createOperation({
     cancellationToken,
@@ -31,8 +31,8 @@ export const bundleWithRollup = async ({
       }),
   })
 
-  log(`generate with rollup`)
-  log(rollupGenerateOptions)
+  // log(`generate with rollup`)
+  // log(rollupGenerateOptions)
 
   const rollupOutputArray = await createOperation({
     cancellationToken,
