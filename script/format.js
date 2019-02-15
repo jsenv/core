@@ -10,11 +10,10 @@ const metaDescription = namedValueDescriptionToMetaDescription({
     "**/*.js": true,
     "**/*.json": true,
     "**/*.md": true,
-    sourceMapTest: false,
     node_modules: false, // eslint-disable-line camelcase
     dist: false,
     build: false,
-    "src/compileToService/test/fixtures/build": false,
+    bundle: false,
     "package.json": false,
     "package-lock.json": false,
   },
