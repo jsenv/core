@@ -13,5 +13,9 @@
   and fileHrefToPathname
   because we can't assume it leads to a file, it could be a folder
   this is misleading
+- small typo in projectStructure when checking metaDescription presence
+  in selectFileInsideFolder
+- prettiest should be renamed into checkAllFileFormatInsideFolder
+  and expect a pathname instead of folder
 
 - follow up https://github.com/systemjs/systemjs/issues/1898

@@ -1,6 +1,10 @@
 import { createCancellationToken, createConcurrentOperations } from "@dmail/cancellation"
 import { launchAndExecute } from "../launchAndExecute/index.js"
-import { createFileExecutionResultLog, createPlanResultLog } from "./createExecutionLog.js"
+import {
+  createExecutionPlanStartLog,
+  createExecutionResultLog,
+  createExecutionPlanResultLog,
+} from "./createExecutionLog.js"
 
 export const executePlan = async (
   executionPlan,
@@ -8,33 +12,35 @@ export const executePlan = async (
     cancellationToken = createCancellationToken(),
     cover = false,
     maxParallelExecution = 5,
-    beforeEach = () => {},
-    afterEach = (fileExecutionResult) => {
-      console.log(createFileExecutionResultLog(fileExecutionResult))
+    beforeEachExecutionCallback = () => {},
+    afterEachExecutionCallback = (executionResult) => {
+      console.log(createExecutionResultLog(executionResult))
     },
   } = {},
 ) => {
   const plannedExecutionArray = []
-  Object.keys(executionPlan).forEach((file) => {
-    const fileExecutionPlan = executionPlan[file]
+  Object.keys(executionPlan).forEach((filenameRelative) => {
+    const fileExecutionPlan = executionPlan[filenameRelative]
     Object.keys(fileExecutionPlan).forEach((platformName) => {
       const { launch, allocatedMs } = fileExecutionPlan[platformName]
       plannedExecutionArray.push({
         launch,
         allocatedMs,
         platformName,
-        file,
+        filenameRelative,
       })
     })
   })
+
+  console.log(createExecutionPlanStartLog({ executionPlan }))
 
   const planResult = {}
   await createConcurrentOperations({
     cancellationToken,
     maxParallelExecution,
     array: plannedExecutionArray,
-    start: async ({ launch, allocatedMs, platformName, file }) => {
-      beforeEach({ allocatedMs, platformName, file })
+    start: async ({ launch, allocatedMs, platformName, filenameRelative }) => {
+      beforeEachExecutionCallback({ allocatedMs, platformName, filenameRelative })
 
       const result = await launchAndExecute({
         launch,
@@ -57,15 +63,15 @@ export const executePlan = async (
         stopOnceExecuted: true,
         // no need to log when disconnected
         disconnectAfterExecutedCallback: () => {},
-        file,
+        filenameRelative,
         collectCoverage: cover,
       })
-      afterEach({ allocatedMs, platformName, file, ...result })
+      afterEachExecutionCallback({ allocatedMs, platformName, filenameRelative, ...result })
 
-      if (file in planResult === false) {
-        planResult[file] = {}
+      if (filenameRelative in planResult === false) {
+        planResult[filenameRelative] = {}
       }
-      planResult[file][platformName] = result
+      planResult[filenameRelative][platformName] = result
 
       // if (cover && result.value.coverageMap === null) {
       // coverageMap can be null for 2 reason:
@@ -78,7 +84,7 @@ export const executePlan = async (
     },
   })
 
-  console.log(createPlanResultLog({ executionPlan, planResult }))
+  console.log(createExecutionPlanResultLog({ executionPlan, planResult }))
 
   return planResult
 }

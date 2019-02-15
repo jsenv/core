@@ -15,7 +15,7 @@ export const cover = async ({
   compileInto,
   babelPluginDescription,
   // coverDescription could be deduced from passing
-  // an entryPointObject and collecting all dependencies
+  // an entryPointsDescription and collecting all dependencies
   // for now we stick to coverDescription using project-structure api
   coverDescription,
   executeDescription,
@@ -51,7 +51,7 @@ const listFilesToCover = async ({ cancellationToken, projectFolder, coverDescrip
   const arrayOfFilenameRelativeToCover = await selectAllFileInsideFolder({
     cancellationToken,
     pathname: projectFolder,
-    metaMap: metaDescriptionForCover,
+    metaDescription: metaDescriptionForCover,
     predicate: ({ cover }) => cover,
     transformFile: ({ filenameRelative }) => filenameRelative,
   })

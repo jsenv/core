@@ -7,6 +7,7 @@ import { cover } from "../cover.js"
 cover({
   projectFolder,
   compileInto: "build",
+  babelPluginDescription: {},
   coverDescription: {
     "src/cover/test/file.js": true,
   },

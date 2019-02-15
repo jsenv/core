@@ -1,4 +1,7 @@
-import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
+import {
+  namedValueDescriptionToMetaDescription,
+  selectAllFileInsideFolder,
+} from "@dmail/project-structure"
 import { uneval } from "@dmail/uneval"
 import { createCancellationToken } from "@dmail/cancellation"
 import { startServer, createRequestPredicate, serviceCompose } from "../server/index.js"
@@ -51,14 +54,15 @@ export const startBrowsingServer = async ({
 </html>`
   },
 }) => {
-  const metaMap = patternGroupToMetaMap({
+  const metaDescription = namedValueDescriptionToMetaDescription({
     browsable: browsableDescription,
   })
 
-  const browsablePathnameArray = await forEachRessourceMatching({
-    localRoot: projectFolder,
-    metaMap,
+  const browsableFilenameRelativeArray = await selectAllFileInsideFolder({
+    pathname: projectFolder,
+    metaDescription,
     predicate: ({ browsable }) => browsable,
+    transformFile: ({ filenameRelative }) => filenameRelative,
   })
 
   const { origin: compileServerOrigin } = await startCompileServer({
@@ -90,7 +94,7 @@ export const startBrowsingServer = async ({
     }),
     async () => {
       const html = await getIndexPageHTML({
-        browsablePathnameArray,
+        browsableFilenameRelativeArray,
       })
 
       return {
@@ -143,7 +147,7 @@ export const startBrowsingServer = async ({
   return browserServer
 }
 
-const getIndexPageHTML = async ({ root, browsablePathnameArray }) => {
+const getIndexPageHTML = async ({ root, browsableFilenameRelativeArray }) => {
   return `<!doctype html>
 
   <head>
@@ -156,9 +160,11 @@ const getIndexPageHTML = async ({ root, browsablePathnameArray }) => {
       <h1>${root}</h1>
       <p>List of path to browse: </p>
       <ul>
-        ${browsablePathnameArray
+        ${browsableFilenameRelativeArray
           .sort()
-          .map((pathname) => `<li><a href="/${pathname}">${pathname}</a></li>`)
+          .map(
+            (filenameRelative) => `<li><a href="/${filenameRelative}">${filenameRelative}</a></li>`,
+          )
           .join("")}
       </ul>
     </main>

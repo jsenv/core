@@ -1,5 +1,8 @@
 import { filenameToFileHref } from "@jsenv/module-resolution"
-import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
+import {
+  namedValueDescriptionToMetaDescription,
+  selectAllFileInsideFolder,
+} from "@dmail/project-structure"
 import { startCompileServer } from "./server-compile/index.js"
 
 export const executeDescriptionToExecutionPlan = async ({
@@ -20,17 +23,17 @@ export const executeDescriptionToExecutionPlan = async ({
     verbose,
   })
 
-  const metaMap = patternGroupToMetaMap({
+  const metaDescription = namedValueDescriptionToMetaDescription({
     execute: executeDescription,
   })
 
   const executionPlan = {}
-  await forEachRessourceMatching({
+  await selectAllFileInsideFolder({
     cancellationToken,
-    localRoot: projectFolder,
-    metaMap,
+    pathname: projectFolder,
+    metaDescription,
     predicate: ({ execute }) => execute,
-    callback: (ressource, meta) => {
+    transformFile: ({ filenameRelative, meta }) => {
       const executionMeta = meta.execute
       const fileExecutionPlan = {}
       Object.keys(executionMeta).forEach((platformName) => {
@@ -49,7 +52,7 @@ export const executeDescriptionToExecutionPlan = async ({
         }
       })
 
-      executionPlan[ressource] = fileExecutionPlan
+      executionPlan[filenameRelative] = fileExecutionPlan
     },
   })
   return executionPlan
