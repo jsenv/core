@@ -1,10 +1,11 @@
-import { root } from "../../root.js"
+import { projectFolder } from "../../projectFolder.js"
 import { launchNode } from "../../launchNode/index.js"
 import { execute } from "../execute.js"
 
 execute({
-  root,
+  projectFolder,
   compileInto: "build",
+  babelPluginDescription: {},
   launch: launchNode,
-  file: "src/execute/test/file.js",
+  filenameRelative: "src/execute/test/file.js",
 })
