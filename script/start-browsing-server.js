@@ -1,7 +1,6 @@
 // eslint-disable-next-line import/no-unresolved
 const { startBrowsingServer } = require("../dist/index.js")
-// eslint-disable-next-line import/no-unresolved
-const { projectFolder } = require("../dist/src/projectFolder.js")
+const { projectFolder } = require("./projectFolder.js")
 
 const compileInto = "build"
 const babelPluginDescription = {}

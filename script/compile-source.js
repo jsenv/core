@@ -1,8 +1,7 @@
 const { transformAsync } = require("@babel/core")
 const {
-  patternGroupToMetaMap,
-  forEachRessourceMatching,
-  ressourceToMeta,
+  namedValueDescriptionToMetaDescription,
+  selectAllFileInsideFolder,
 } = require("@dmail/project-structure")
 const {
   fileSystemWriteCompileResult,
@@ -10,7 +9,7 @@ const {
   pluginMapToPluginsForPlatform,
 } = require("@dmail/project-structure-compile-babel")
 const { fileRead, fileWrite, fileCopy } = require("@dmail/helper")
-const { localRoot } = require("./util.js")
+const { projectFolder } = require("./projectFolder.js")
 
 const babelPluginDescription = pluginOptionMapToPluginMap({
   "transform-modules-commonjs": {},
@@ -39,7 +38,7 @@ const babelPluginDescription = pluginOptionMapToPluginMap({
 
 const babelPluginArray = pluginMapToPluginsForPlatform(babelPluginDescription, "node", "8.0.0")
 
-const metaMap = patternGroupToMetaMap({
+const metaDescription = namedValueDescriptionToMetaDescription({
   compile: {
     "**/*.js": true,
     "**/*.json": "copy",
@@ -56,26 +55,27 @@ const metaMap = patternGroupToMetaMap({
 
 const outputFolder = `dist`
 
-module.exports = forEachRessourceMatching({
-  localRoot,
-  metaMap,
+module.exports = selectAllFileInsideFolder({
+  pathname: projectFolder,
+  metaDescription,
   predicate: ({ compile }) => compile,
-  callback: async (ressource) => {
-    const meta = ressourceToMeta(metaMap, ressource)
+  transformFile: async ({ filenameRelative, meta }) => {
+    const filename = `${projectFolder}/${filenameRelative}`
+
     if (meta.compile === "copy") {
-      await fileCopy(`${localRoot}/${ressource}`, `${localRoot}/${outputFolder}/${ressource}`)
+      await fileCopy(filename, `${projectFolder}/${outputFolder}/${filenameRelative}`)
       return
     }
 
-    const source = await fileRead(`${localRoot}/${ressource}`)
+    const source = await fileRead(filename)
 
     try {
       const { code, map } = await transformAsync(source, {
         plugins: babelPluginArray,
-        filenameRelative: ressource,
-        filename: `${localRoot}/${ressource}`,
+        filenameRelative,
+        filename,
         sourceMaps: true,
-        sourceFileName: ressource,
+        sourceFileName: filenameRelative,
       })
 
       await fileSystemWriteCompileResult(
@@ -84,17 +84,17 @@ module.exports = forEachRessourceMatching({
           map,
         },
         {
-          localRoot,
-          outputFile: ressource,
+          localRoot: projectFolder,
+          outputFile: filenameRelative,
           outputFolder,
         },
       )
-      console.log(`${ressource} -> ${outputFolder}/${ressource}`)
+      console.log(`${filenameRelative} -> ${outputFolder}/${filenameRelative}`)
     } catch (e) {
       if (e && e.code === "BABEL_PARSE_ERROR") {
-        console.warn(`syntax error in ${ressource}`)
-        await fileWrite(`${localRoot}/${outputFolder}/${ressource}`, source)
-        console.log(`${ressource} -> ${outputFolder}/${ressource}`)
+        console.warn(`syntax error in ${filenameRelative}`)
+        await fileWrite(`${projectFolder}/${outputFolder}/${filenameRelative}`, source)
+        console.log(`${filenameRelative} -> ${outputFolder}/${filenameRelative}`)
       } else {
         throw e
       }
