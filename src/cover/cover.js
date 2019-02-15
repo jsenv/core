@@ -1,4 +1,7 @@
-import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
+import {
+  namedValueDescriptionToMetaDescription,
+  selectAllFileInsideFolder,
+} from "@dmail/project-structure"
 import { executePlan } from "../executePlan/index.js"
 import { executionPlanResultToCoverageMap } from "../executionPlanResultToCoverageMap/index.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
@@ -20,8 +23,8 @@ export const cover = async ({
   catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
-    const [ressourcesToCover, executionPlanResult] = await Promise.all([
-      listRessourcesToCover({ cancellationToken, projectFolder, coverDescription }),
+    const [arrayOfFilenameRelativeToCover, executionPlanResult] = await Promise.all([
+      listFilesToCover({ cancellationToken, projectFolder, coverDescription }),
       executeAndCoverPatternMapping({
         cancellationToken,
         projectFolder,
@@ -33,26 +36,27 @@ export const cover = async ({
 
     const coverageMap = await executionPlanResultToCoverageMap(executionPlanResult, {
       cancellationToken,
-      localRoot: projectFolder,
-      filesToCover: ressourcesToCover,
+      projectFolder,
+      arrayOfFilenameRelativeToCover,
     })
 
     return coverageMap
   })
 
-const listRessourcesToCover = async ({ cancellationToken, projectFolder, coverDescription }) => {
-  const coverMetaMap = patternGroupToMetaMap({
+const listFilesToCover = async ({ cancellationToken, projectFolder, coverDescription }) => {
+  const metaDescriptionForCover = namedValueDescriptionToMetaDescription({
     cover: coverDescription,
   })
 
-  const ressources = await forEachRessourceMatching({
+  const arrayOfFilenameRelativeToCover = await selectAllFileInsideFolder({
     cancellationToken,
-    localRoot: projectFolder,
-    metaMap: coverMetaMap,
+    pathname: projectFolder,
+    metaMap: metaDescriptionForCover,
     predicate: ({ cover }) => cover,
+    transformFile: ({ filenameRelative }) => filenameRelative,
   })
 
-  return ressources
+  return arrayOfFilenameRelativeToCover
 }
 
 const executeAndCoverPatternMapping = async ({

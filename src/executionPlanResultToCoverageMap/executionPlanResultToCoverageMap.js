@@ -1,15 +1,15 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { coverageMapCompose } from "./coverageMapCompose.js"
-import { fileToEmptyCoverage } from "./fileToEmptyCoverage.js"
+import { filenameRelativeToEmptyCoverage } from "./filenameRelativeToEmptyCoverage.js"
 
 // maybe we'll move this to the cover script instead of here
 export const executionPlanResultToCoverageMap = async (
   executionPlanResult,
-  { cancellationToken = createCancellationToken(), projectFolder, filesToCover = [] },
+  { cancellationToken = createCancellationToken(), projectFolder, arrayOfFilenameRelativeToCover },
 ) => {
   // I think it is an error, it would be strange, for a given file
   // to be both covered and executed
-  ensureNoFileIsBothCoveredAndExecuted({ filesToCover, executionPlanResult })
+  ensureNoFileIsBothCoveredAndExecuted({ arrayOfFilenameRelativeToCover, executionPlanResult })
 
   const coverageMapArray = []
   Object.keys(executionPlanResult).forEach((file) => {
@@ -23,13 +23,19 @@ export const executionPlanResultToCoverageMap = async (
   })
   const executionCoverageMap = coverageMapCompose(...coverageMapArray)
 
-  const filesMissed = filesToCover.filter((file) => file in executionCoverageMap === false)
+  const arrayOfFilenameRelativeMissingCoverage = arrayOfFilenameRelativeToCover.filter(
+    (filenameRelative) => filenameRelative in executionCoverageMap === false,
+  )
 
   const missedCoverageMap = {}
   await Promise.all(
-    filesMissed.map(async (file) => {
-      const emptyCoverage = await fileToEmptyCoverage(file, { cancellationToken, projectFolder })
-      missedCoverageMap[file] = emptyCoverage
+    arrayOfFilenameRelativeMissingCoverage.map(async (filenameRelative) => {
+      const emptyCoverage = await filenameRelativeToEmptyCoverage({
+        cancellationToken,
+        projectFolder,
+        filenameRelative,
+      })
+      missedCoverageMap[filenameRelative] = emptyCoverage
       return emptyCoverage
     }),
   )
@@ -44,20 +50,25 @@ export const executionPlanResultToCoverageMap = async (
   // but it's way more simple to instrument everything under
   // instrumented folder and exclude them from coverage here
   const coverageMap = {}
-  Object.keys(fullCoverageMap).forEach((file) => {
+  Object.keys(fullCoverageMap).forEach((filenameRelative) => {
     // exclude executed files
-    if (file in executionPlanResult) return
+    if (filenameRelative in executionPlanResult) return
     // exclude node module files
-    if (file.indexOf("node_modules/") > -1) return
+    if (filenameRelative.indexOf("node_modules/") > -1) return
 
-    coverageMap[file] = fullCoverageMap[file]
+    coverageMap[filenameRelative] = fullCoverageMap[filenameRelative]
   })
 
   return coverageMap
 }
 
-const ensureNoFileIsBothCoveredAndExecuted = ({ filesToCover, executionPlanResult }) => {
-  const fileToExecuteAndCover = filesToCover.find((file) => file in executionPlanResult)
+const ensureNoFileIsBothCoveredAndExecuted = ({
+  arrayOfFilenameRelativeToCover,
+  executionPlanResult,
+}) => {
+  const fileToExecuteAndCover = arrayOfFilenameRelativeToCover.find(
+    (filenameRelative) => filenameRelative in executionPlanResult,
+  )
   if (fileToExecuteAndCover)
     throw new Error(`${fileToExecuteAndCover} must be covered but was also executed`)
 }

@@ -1,13 +1,16 @@
 import { assert } from "@dmail/assert"
-import { root } from "../../root.js"
+import { projectFolder } from "../../projectFolder.js"
 import { launchNode } from "../../launchNode/index.js"
 import { launchChromium } from "../../launchChromium/index.js"
 import { cover } from "../cover.js"
 
 cover({
-  root,
+  projectFolder,
   compileInto: "build",
-  executePatternMapping: {
+  coverDescription: {
+    "src/cover/test/file.js": true,
+  },
+  executeDescription: {
     "src/cover/test/use-file.js": {
       node: {
         launch: launchNode,
@@ -16,9 +19,6 @@ cover({
         launch: launchChromium,
       },
     },
-  },
-  coverPatternMapping: {
-    "src/cover/test/file.js": true,
   },
 }).then((coverageMap) => {
   assert({

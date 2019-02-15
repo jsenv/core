@@ -4,10 +4,10 @@ import { createFileCoverage } from "istanbul-lib-coverage"
 export const coverageMapCompose = (...coverageMaps) => {
   const finalCoverageMap = {}
   coverageMaps.forEach((coverageMap) => {
-    Object.keys(coverageMap).forEach((file) => {
-      const coverage = coverageMap[file]
-      finalCoverageMap[file] =
-        file in finalCoverageMap ? merge(finalCoverageMap[file], coverage) : coverage
+    Object.keys(coverageMap).forEach((filename) => {
+      const coverage = coverageMap[filename]
+      finalCoverageMap[filename] =
+        filename in finalCoverageMap ? merge(finalCoverageMap[filename], coverage) : coverage
     })
   })
   return finalCoverageMap

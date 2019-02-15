@@ -1,5 +1,6 @@
 import { assert } from "@dmail/assert"
-import { root } from "../../../root.js"
+import { filenameToFileHref } from "@jsenv/module-resolution"
+import { projectFolder } from "../../../projectFolder.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchNode } from "../../launchNode.js"
@@ -7,24 +8,26 @@ import {
   coverageMapToAbsolute,
   coverageMapLog,
   coverageMapHTML,
-} from "../../../executionPlanToCoverageMap/index.js"
+} from "../../../executionPlanResultToCoverageMap/index.js"
 
-const file = `src/launchNode/test/absolute-import/absolute-import.js`
+const filenameRelative = `src/launchNode/test/absolute-import/absolute-import.js`
 const compileInto = "build"
 const babelPluginDescription = {}
 
 ;(async () => {
-  const { origin: remoteRoot } = await startCompileServer({
-    root,
+  const sourceOrigin = filenameToFileHref(projectFolder)
+
+  const { origin: compileServerOrigin } = await startCompileServer({
+    projectFolder,
     compileInto,
     babelPluginDescription,
   })
 
   const actual = await launchAndExecute({
-    launch: (options) => launchNode({ ...options, root, compileInto, remoteRoot }),
+    launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
     collectNamespace: true,
     collectCoverage: true,
-    file,
+    filenameRelative,
     verbose: true,
     platformTypeForLog: "node process",
   })
@@ -45,7 +48,7 @@ const babelPluginDescription = {}
     expected,
   })
 
-  const absoluteCoverageMap = coverageMapToAbsolute(actual.coverageMap, localRoot)
+  const absoluteCoverageMap = coverageMapToAbsolute(actual.coverageMap, projectFolder)
   coverageMapLog(absoluteCoverageMap)
   coverageMapHTML(absoluteCoverageMap)
 })()
