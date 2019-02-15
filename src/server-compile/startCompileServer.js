@@ -1,7 +1,7 @@
 import {
   resolveNodeModuleSpecifier,
-  filenameToFileHref,
-  fileHrefToFilename,
+  pathnameToFileHref,
+  fileHrefToPathname,
 } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
@@ -105,7 +105,7 @@ const locateFileSystem = ({ rootHref, filenameRelative }) => {
   // in order to test this behaviour, when we are working on this module
   // 'node_modules/dev-server` is an alias to localRoot
   if (
-    rootHref === filenameToFileHref(selfProjectFolder) &&
+    rootHref === pathnameToFileHref(selfProjectFolder) &&
     filenameRelative.startsWith("node_modules/@dmail/dev-server/")
   ) {
     filenameRelative = filenameRelative.slice("node_modules/@dmail/dev-server/".length)
@@ -117,7 +117,7 @@ const locateFileSystem = ({ rootHref, filenameRelative }) => {
       specifier: moduleSpecifier,
       importer: `${rootHref}/${filenameRelative}`,
     })
-    return fileHrefToFilename(nodeModuleHref)
+    return fileHrefToPathname(nodeModuleHref)
   }
 
   return `${rootHref}/${filenameRelative}`

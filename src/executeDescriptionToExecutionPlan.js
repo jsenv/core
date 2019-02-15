@@ -1,4 +1,4 @@
-import { filenameToFileHref } from "@jsenv/module-resolution"
+import { pathnameToFileHref } from "@jsenv/module-resolution"
 import {
   namedValueDescriptionToMetaDescription,
   selectAllFileInsideFolder,
@@ -13,7 +13,7 @@ export const executeDescriptionToExecutionPlan = async ({
   executeDescription,
   verbose = false,
 }) => {
-  const sourceOrigin = filenameToFileHref(projectFolder)
+  const sourceOrigin = pathnameToFileHref(projectFolder)
 
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,

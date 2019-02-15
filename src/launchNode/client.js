@@ -3,7 +3,7 @@ import path from "path"
 import sourceMapSupport from "source-map-support"
 import { createCancellationSource } from "@dmail/cancellation"
 import { uneval } from "@dmail/uneval"
-import { fileHrefToFilename } from "@jsenv/module-resolution"
+import { fileHrefToPathname } from "@jsenv/module-resolution"
 import { executeCompiledFile } from "../platform/node/executeCompiledFile.js"
 import { registerProcessInterruptCallback } from "../process-signal/index.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
@@ -65,7 +65,7 @@ const execute = async ({
       const sourceMap = JSON.parse(sourceMapContent)
       const absoluteSourceMap = {
         ...sourceMap,
-        sources: sourceMap.sources.map((source) => fileHrefToFilename(`${sourceOrigin}/${source}`)),
+        sources: sourceMap.sources.map((source) => fileHrefToPathname(`${sourceOrigin}/${source}`)),
       }
 
       return {

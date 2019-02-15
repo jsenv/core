@@ -1,4 +1,4 @@
-import { fileHrefToFilename } from "@jsenv/module-resolution"
+import { fileHrefToPathname } from "@jsenv/module-resolution"
 import { hrefToMeta } from "../hrefToMeta.js"
 import { valueInstall } from "../valueInstall.js"
 import { evalSource } from "./evalSource.js"
@@ -17,7 +17,7 @@ export const moduleSourceToSystemRegisteredModule = (
   // (very important for debugging and sourcemap resolution)
   const filename =
     meta.type === "compile-server-compiled-file"
-      ? fileHrefToFilename(`${sourceOrigin}/${compileInto}/${meta.compileId}/${meta.ressource}`)
+      ? fileHrefToPathname(`${sourceOrigin}/${compileInto}/${meta.compileId}/${meta.ressource}`)
       : href
 
   const uninstallSystemGlobal = valueInstall(global, "System", platformSystem)
