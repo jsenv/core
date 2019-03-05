@@ -19,14 +19,6 @@ export const createJsenvRollupPlugin = ({ cancellationToken, projectFolder }) =>
         root: rootHref,
         importer,
         specifier: importee,
-        useNodeModuleResolutionOnRelative: false,
-        // once you have decided to bundle using jsenv
-        // you must stick to jsenv module resolution
-        // so that jsenv knows where to find the source file to bundle
-        // because it will bundle node_modules as well
-        // (to get proper babel plugin applied)
-        // but won't rely on stuff like having a module inside your package.json
-        useNodeModuleResolutionInsideDedicatedFolder: true,
       })
       return id
     },

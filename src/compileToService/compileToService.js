@@ -4,7 +4,6 @@ import { createSignal } from "@dmail/signal"
 import { fileRead, fileStat } from "@dmail/helper"
 import { convertFileSystemErrorToResponseProperties } from "../requestToFileResponse/index.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
-import { hrefToOrigin, hrefToRessource } from "../urlHelper.js"
 import { acceptContentType, createSSERoom, serviceCompose } from "../server/index.js"
 import { watchFile } from "../watchFile.js"
 import { createETag } from "./helpers.js"
@@ -44,23 +43,8 @@ export const compileToService = (
   })
 
   const compileService = async ({ origin, ressource, headers = {} }) => {
-    let refererFile
     const refererHeaderName = "x-module-referer" in headers ? "x-module-referer" : "referer"
-    if (refererHeaderName in headers) {
-      const referer = headers[refererHeaderName]
-
-      try {
-        const refererOrigin = hrefToOrigin(referer)
-        if (refererOrigin === origin) {
-          refererFile = hrefToRessource(referer)
-        }
-      } catch (e) {
-        return {
-          status: 400,
-          statusText: `${refererHeaderName} header is invalid`,
-        }
-      }
-    }
+    const requestReferer = refererHeaderName in headers ? headers[refererHeaderName] : undefined
 
     // le chemin vers le fichier pour le client (qu'on peut modifier ce qui signifie un redirect)
     // le chemin vers le fichier sur le filesystem (qui peut etre different de localRoot/file)
@@ -68,7 +52,7 @@ export const compileToService = (
       projectFolder,
       compileInto,
       requestPathname: ressource,
-      refererFile,
+      requestReferer,
     })
 
     // cannot locate a file -> we don't know what to compile

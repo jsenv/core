@@ -1,33 +1,42 @@
-import {
-  resolveAPossibleNodeModuleFile,
-  fileHrefToPathname,
-  pathnameToFileHref,
-} from "@jsenv/module-resolution"
+import { locateModuleFilename, pathnameToFileHref } from "@jsenv/module-resolution"
 
-export const locate = ({ projectFolder, compileInto, requestPathname }) => {
+export const locate = ({ projectFolder, compileInto, requestPathname, requestReferer }) => {
   const {
-    compileId: requestCompileId,
-    filenameRelative: requestFilenameRelative,
-  } = requestPathnameToCompileIdAndProjectPathname(requestPathname, compileInto)
+    compileId: moduleCompileId,
+    filenameRelative: moduleFilenameRelative,
+  } = pathnameToCompileIdAndFileNameRelative(requestPathname, compileInto)
 
-  if (!requestCompileId) return {}
-  if (!requestFilenameRelative) return {}
+  if (!moduleCompileId) return {}
+  if (!moduleFilenameRelative) return {}
 
-  const compileId = requestCompileId
-  const filenameRelative = requestFilenameRelative
-  const filename = `${projectFolder}/${filenameRelative}`
-  // it is possible that the file is in fact somewhere else
-  // due to node_module resolution algorithm
-  const moduleHrefOrNodeModuleHref = resolveAPossibleNodeModuleFile(pathnameToFileHref(filename))
+  const {
+    compileId: importerCompileId,
+    filenameRelative: importerFilenameRelative,
+  } = pathnameToCompileIdAndFileNameRelative(requestReferer, compileInto)
+
+  const moduleFilename = locateModuleFilename({
+    sourceOrigin: pathnameToFileHref(projectFolder),
+    moduleFilenameRelative,
+    importerFilenameRelative,
+  })
+
+  if (!moduleFilename.startsWith(projectFolder)) {
+    throw createModuleOutsideProjectError({
+      projectFolder,
+      filename: moduleFilename,
+    })
+  }
 
   return {
-    compileId,
-    filenameRelative,
-    filename: fileHrefToPathname(moduleHrefOrNodeModuleHref),
+    // compileId of the importer overrides moduleCompileId
+    // so that an instrumented importer also instruments what it imports
+    compileId: importerCompileId || moduleCompileId,
+    filenameRelative: moduleFilename.slice(projectFolder.length),
+    filename: moduleFilename,
   }
 }
 
-const requestPathnameToCompileIdAndProjectPathname = (requestPathname = "", compileInto) => {
+const pathnameToCompileIdAndFileNameRelative = (requestPathname = "", compileInto) => {
   if (requestPathname.startsWith(`${compileInto}/`) === false) {
     return {
       compileId: null,
@@ -60,24 +69,8 @@ const requestPathnameToCompileIdAndProjectPathname = (requestPathname = "", comp
   }
 }
 
-// unused now, referer now has zero impact on response
-// const refererFileToModuleSpecifierFile = ({
-//   refererFile,
-//   projectFile,
-//   compileInto,
-//   compileId,
-//   localRoot,
-// }) => {
-//   if (!refererFile) return null
-
-//   const {
-//     compileId: refererCompileId,
-//     projectFile: refererProjectFile,
-//   } = requestFileToCompileIdAndProjectFile(refererFile, compileInto)
-
-//   if (!refererProjectFile) return null
-//   if (refererProjectFile === projectFile) return null
-//   if (refererCompileId !== compileId) return null
-
-//   return `${localRoot}/${refererProjectFile}`
-// }
+const createModuleOutsideProjectError = ({ projectFolder, filename }) => {
+  return new Error(`module cannot be outside project.
+projectFolder: ${projectFolder}
+filename: ${filename}`)
+}

@@ -1,6 +1,4 @@
 import "../../../systemjs/system.js" // awaiting https://github.com/systemjs/systemjs/issues/1898
-import { resolveRootRelativeSpecifier } from "@jsenv/module-resolution/src/resolveRootRelativeSpecifier.js"
-import { overrideSystemResolve } from "../../overrideSystemResolve.js"
 import { overrideSystemInstantiate } from "../../overrideSystemInstantiate.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
 
@@ -12,14 +10,6 @@ export const createBrowserSystem = ({
   fetchSource,
 }) => {
   const browserSystem = new window.System.constructor()
-
-  overrideSystemResolve({
-    compileInto,
-    compileServerOrigin,
-    compileId,
-    platformSystem: browserSystem,
-    resolveRootRelativeSpecifier,
-  })
 
   overrideSystemInstantiate({
     compileInto,
