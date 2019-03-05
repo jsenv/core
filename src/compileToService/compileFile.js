@@ -215,7 +215,13 @@ const validateAsset = async ({
   }
 }
 
-const validateAssets = async ({ projectFolder, compileInto, compileId, filenameRelative, meta }) => {
+const validateAssets = async ({
+  projectFolder,
+  compileInto,
+  compileId,
+  filenameRelative,
+  meta,
+}) => {
   return Promise.all(
     meta.assets.map((asset, index) => {
       return validateAsset({
@@ -288,7 +294,14 @@ const validateCache = async ({ projectFolder, compileInto, compileId, filenameRe
   }
 }
 
-const readCache = async ({ projectFolder, compileInto, compileId, filenameRelative, eTag, meta }) => {
+const readCache = async ({
+  projectFolder,
+  compileInto,
+  compileId,
+  filenameRelative,
+  eTag,
+  meta,
+}) => {
   const cacheValidation = await validateCache({
     projectFolder,
     compileInto,

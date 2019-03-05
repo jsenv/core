@@ -6,6 +6,7 @@ import { convertFileSystemErrorToResponseProperties } from "../requestToFileResp
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { acceptContentType, createSSERoom, serviceCompose } from "../server/index.js"
 import { watchFile } from "../watchFile.js"
+import { originToHostname } from "../urlHelper.js"
 import { createETag } from "./helpers.js"
 import { compileFile } from "./compileFile.js"
 import { locate as locateDefault } from "./locate.js"
@@ -43,45 +44,47 @@ export const compileToService = (
   })
 
   const compileService = async ({ origin, ressource, headers = {} }) => {
-    const refererHeaderName = "x-module-referer" in headers ? "x-module-referer" : "referer"
-    const requestReferer = refererHeaderName in headers ? headers[refererHeaderName] : undefined
+    const compileId = originToCompileId({ origin, compileDescription })
+    if (!compileId) return null
 
-    // le chemin vers le fichier pour le client (qu'on peut modifier ce qui signifie un redirect)
-    // le chemin vers le fichier sur le filesystem (qui peut etre different de localRoot/file)
-    const { compileId, filenameRelative, filename } = await locate({
+    const refererHeaderName = "x-module-referer" in headers ? "x-module-referer" : "referer"
+    const requestReferer = refererHeaderName in headers ? headers[refererHeaderName] : ""
+
+    if (requestReferer && !requestReferer.startsWith(origin)) {
+      return { status: 400, statusText: `referer origin must be inside ${origin}` }
+    }
+
+    const requestPathname = ressource
+    const unlocatedFilenameRelative = ressource.slice(1)
+
+    if (pathnameIsAsset(unlocatedFilenameRelative)) return null
+
+    const { filename } = await locate({
       projectFolder,
-      compileInto,
-      requestPathname: ressource,
-      requestReferer,
+      refererPathname: requestReferer ? requestReferer.slice(origin.length) : "",
+      requestPathname,
     })
 
     // cannot locate a file -> we don't know what to compile
-    if (!filenameRelative) return null
-
     if (!filename) return null
-
-    if (pathnameIsAsset(filenameRelative)) return null
 
     // we don't want to read anything outside of the project
     if (fileIsOutsideFolder(filename, projectFolder)) {
-      return { status: 403, statusText: `cannot acces file outside project` }
+      return { status: 403, statusText: `cannot access file outside project` }
     }
 
-    // a request to 'node_modules/package/node_modules/dependency/index.js'
-    // may be found at 'node_modules/dependency/index.js'
-
+    const filenameRelative = filename.slice(projectFolder.length + 1)
     // a request to 'node_modules/dependency/index.js'
     // with referer 'node_modules/package/index.js'
     // may be found at 'node_modules/package/node_modules/dependency/index.js'
-    const locatedFilenameRelative = filename.slice(`${projectFolder}/`.length)
-    if (locatedFilenameRelative !== filenameRelative) {
+    if (filenameRelative !== unlocatedFilenameRelative) {
       // in that case, send temporary redirect to client
       return {
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
         status: 307,
         headers: {
-          // maybe should send vary: 'referer',
-          location: `${origin}/${compileInto}/${compileId}/${locatedFilenameRelative}`,
+          vary: refererHeaderName,
+          location: `${origin}/${filenameRelative}`,
         },
       }
     }
@@ -113,7 +116,7 @@ export const compileToService = (
       return {
         status: 200,
         headers: {
-          ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
+          ...(cachedDisabled ? { "cache-control": "no-store" } : { vary: refererHeaderName }),
           "content-length": Buffer.byteLength(output),
           "content-type": "application/javascript",
         },
@@ -140,6 +143,7 @@ export const compileToService = (
           if (ifModifiedSinceDate >= dateToSecondsPrecision(mtime)) {
             return {
               status: 304,
+              headers: { vary: refererHeaderName },
             }
           }
         }
@@ -159,6 +163,7 @@ export const compileToService = (
           if (ifNoneMatch === eTag) {
             return {
               status: 304,
+              headers: { vary: refererHeaderName },
             }
           }
         }
@@ -210,6 +215,12 @@ export const compileToService = (
   }
 
   return compileService
+}
+
+const originToCompileId = ({ origin, compileDescription }) => {
+  const hostname = originToHostname(origin)
+  const firstLowerLevelDomain = hostname.split(".")[0]
+  return firstLowerLevelDomain in compileDescription ? firstLowerLevelDomain : null
 }
 
 const fileIsInsideFolder = (filename, folder) => filename.startsWith(`${folder}/`)

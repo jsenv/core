@@ -3,6 +3,10 @@ import { URL } from "url"
 
 // https://gist.github.com/dmail/54677cc3eae1661813e3a87840666f83#file-url-js
 
+export const originToHostname = (origin) => {
+  return new URL(origin).hostname
+}
+
 export const hrefToOrigin = (href) => {
   return new URL(href).origin
 }

@@ -1,9 +1,9 @@
 import { assert } from "@dmail/assert"
 import { fileStat } from "@dmail/helper"
-import { root as selfRoot } from "../../root.js"
-import { compileToService } from "../compileToService.js"
+import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
+import { compileToService } from "../../compileToService.js"
 
-const root = `${selfRoot}/src/compileToService/test/fixtures`
+const projectFolder = `${selfProjectFolder}/src/compileToService/test/basic`
 const compileInto = "build"
 const compileId = "group"
 const output = "foo"
@@ -12,12 +12,12 @@ const compileDescription = {
     content: output,
   },
 }
-const file = "src/file.txt"
+const filenameRelative = "file.txt"
 const expectedEtag = `"3-C+7Hteo/D9vJXQ3UfzxbwnXaijM"`
 
 const compile = ({ content }) => {
   return {
-    sources: [file],
+    sources: [filenameRelative],
     sourcesContent: [content],
     assets: ["asset.map"],
     assetsContent: ["bar"],
@@ -29,14 +29,14 @@ const compile = ({ content }) => {
   // cacheStrategy: 'none'
   {
     const compileService = compileToService(compile, {
-      root,
+      projectFolder,
       compileInto,
       compileDescription,
       cacheStrategy: "none",
     })
 
     const actual = await compileService({
-      ressource: `${compileInto}/${compileId}/${file}`,
+      ressource: `${compileInto}/${compileId}/${filenameRelative}`,
     })
     assert({
       actual,
@@ -55,7 +55,7 @@ const compile = ({ content }) => {
   // cacheStrategy: 'etag'
   {
     const compileService = compileToService(compile, {
-      root,
+      projectFolder,
       compileInto,
       compileDescription,
       cacheStrategy: "etag",
@@ -63,7 +63,7 @@ const compile = ({ content }) => {
 
     {
       const actual = await compileService({
-        ressource: `${compileInto}/${compileId}/${file}`,
+        ressource: `${compileInto}/${compileId}/${filenameRelative}`,
         headers: {
           "if-none-match": '"wrong-etag"',
         },
@@ -84,7 +84,7 @@ const compile = ({ content }) => {
 
     {
       const actual = await compileService({
-        ressource: `${compileInto}/${compileId}/${file}`,
+        ressource: `${compileInto}/${compileId}/${filenameRelative}`,
         headers: {
           "if-none-match": expectedEtag,
         },
@@ -101,7 +101,7 @@ const compile = ({ content }) => {
   // cacheStrategy: 'mtime'
   {
     const compileService = compileToService(compile, {
-      root,
+      projectFolder,
       compileInto,
       compileDescription,
       cacheStrategy: "mtime",
@@ -109,12 +109,12 @@ const compile = ({ content }) => {
 
     {
       const actual = await compileService({
-        ressource: `${compileInto}/${compileId}/${file}`,
+        ressource: `${compileInto}/${compileId}/${filenameRelative}`,
         headers: {
           "if-modified-since": new Date(0).toUTCString(),
         },
       })
-      const { mtime } = await fileStat(`${root}/${file}`)
+      const { mtime } = await fileStat(`${projectFolder}/${filenameRelative}`)
       assert({
         actual,
         expected: {
@@ -131,7 +131,7 @@ const compile = ({ content }) => {
 
     {
       const actual = await compileService({
-        ressource: `${compileInto}/${compileId}/${file}`,
+        ressource: `${compileInto}/${compileId}/${filenameRelative}`,
         headers: {
           "if-modified-since": new Date().toUTCString(),
         },
