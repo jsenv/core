@@ -1,5 +1,5 @@
 import "systemjs/dist/system.js"
-import { isBareSpecifier } from "@jsenv/module-resolution"
+import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution"
 import { overrideSystemInstantiate } from "../../overrideSystemInstantiate.js"
 import { fromFunctionReturningNamespace } from "../../registerModuleFrom.js"
 import { fetchSource } from "../fetchSource.js"
@@ -18,9 +18,15 @@ export const createNodeSystem = ({ compileInto, sourceOrigin, compileServerOrigi
     moduleSourceToSystemRegisteredModule,
   })
 
+  const resolve = nodeSystem.resolve
+  nodeSystem.resolve = (specifier, importer) => {
+    if (isNativeNodeModuleBareSpecifier(specifier)) return specifier
+    return resolve(specifier, importer)
+  }
+
   const instantiate = nodeSystem.instantiate
   nodeSystem.instantiate = async (href, importer) => {
-    if (isBareSpecifier(href)) {
+    if (isNativeNodeModuleBareSpecifier(href)) {
       return fromFunctionReturningNamespace(
         () => {
           // eslint-disable-next-line import/no-dynamic-require
