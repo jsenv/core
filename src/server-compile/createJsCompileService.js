@@ -40,6 +40,10 @@ export const createJsCompileService = async ({
       `${projectFolder}/${compileInto}/groupDescription.json`,
       JSON.stringify(groupDescription, null, "  "),
     ),
+    fileWriteFromString(
+      `${projectFolder}/${compileInto}/importMap.json`,
+      JSON.stringify(importMap, null, "  "),
+    ),
     ...Object.keys(groupDescription).map((compileId) =>
       writeGroupImportMapFile({
         importMap,

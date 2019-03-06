@@ -6,8 +6,12 @@
   appropriate importMap.json
   this function result will write something like build/importMap.node-module.json
 
-- a function capable to merge importMap and
-  will generate build/importMap.json
+here we have several approach available
+we could allow bare import to be remapped to real node module
+even if we want do discourage this.
+but no in an automatic way.
+the function for now would just be to allow scoped node modules
+so every node module shared should be remapped
 
 - test all stuff inside dev-server-poc
 - create an other repo using dev-server-poc bundled files
