@@ -5,7 +5,7 @@ import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
 const projectFolder = `${selfProjectFolder}/src/compileToService/test/node-module`
 const compileInto = "build"
 const compileId = "group"
-const origin = `http://${compileId}.127.0.0.1`
+const origin = `http://127.0.0.1`
 const compileDescription = { [compileId]: {} }
 const compile = () => {
   return { output: "yo" }
@@ -21,9 +21,9 @@ const compile = () => {
 
     const actual = await compileService({
       origin,
-      ressource: `/node_modules/bar/src/bar.js`,
+      ressource: `/${compileInto}/${compileId}/node_modules/bar/src/bar.js`,
       headers: {
-        referer: `${origin}/node_modules/foo/src/foo.js`,
+        referer: `${origin}/${compileInto}/${compileId}/node_modules/foo/src/foo.js`,
       },
     })
     const expected = {

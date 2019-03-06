@@ -1,9 +1,5 @@
 # dev-server
 
-- we must rollback to putting files inside
-  build/compileId/
-  because subdomain will fail to load source file using /
-
 - browser and node system resolve must be overriden
   to use remapResolvedImport after systemjs has resolved
 

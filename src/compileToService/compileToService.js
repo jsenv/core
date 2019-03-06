@@ -6,7 +6,6 @@ import { convertFileSystemErrorToResponseProperties } from "../requestToFileResp
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { acceptContentType, createSSERoom, serviceCompose } from "../server/index.js"
 import { watchFile } from "../watchFile.js"
-import { originToHostname } from "../urlHelper.js"
 import { createETag } from "./helpers.js"
 import { compileFile } from "./compileFile.js"
 import { locate as locateDefault } from "./locate.js"
@@ -44,9 +43,6 @@ export const compileToService = (
   })
 
   const compileService = async ({ origin, ressource, headers = {} }) => {
-    const compileId = originToCompileId({ origin, compileDescription })
-    if (!compileId) return null
-
     const refererHeaderName = "x-module-referer" in headers ? "x-module-referer" : "referer"
     const requestReferer = refererHeaderName in headers ? headers[refererHeaderName] : ""
 
@@ -55,12 +51,12 @@ export const compileToService = (
     }
 
     const requestPathname = ressource
-    const unlocatedFilenameRelative = ressource.slice(1)
 
-    if (pathnameIsAsset(unlocatedFilenameRelative)) return null
+    if (pathnameIsAsset(ressource)) return null
 
-    const { filename } = await locate({
+    const { compileId, filename } = await locate({
       projectFolder,
+      compileInto,
       refererPathname: requestReferer ? requestReferer.slice(origin.length) : "",
       requestPathname,
     })
@@ -74,10 +70,11 @@ export const compileToService = (
     }
 
     const filenameRelative = filename.slice(projectFolder.length + 1)
+    const expectedFilenameRelative = ressource.slice(`/${compileInto}/${compileId}/`.length)
     // a request to 'node_modules/dependency/index.js'
     // with referer 'node_modules/package/index.js'
     // may be found at 'node_modules/package/node_modules/dependency/index.js'
-    if (filenameRelative !== unlocatedFilenameRelative) {
+    if (filenameRelative !== expectedFilenameRelative) {
       // in that case, send temporary redirect to client
       return {
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
@@ -215,12 +212,6 @@ export const compileToService = (
   }
 
   return compileService
-}
-
-const originToCompileId = ({ origin, compileDescription }) => {
-  const hostname = originToHostname(origin)
-  const firstLowerLevelDomain = hostname.split(".")[0]
-  return firstLowerLevelDomain in compileDescription ? firstLowerLevelDomain : null
 }
 
 const fileIsInsideFolder = (filename, folder) => filename.startsWith(`${folder}/`)
