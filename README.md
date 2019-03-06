@@ -1,15 +1,5 @@
 # dev-server
 
-- find when importMap are goign to be written inside
-  build/best/importMap.best.json
-  I guess it should be done during generation of groupDescription.json
-  which is written by createJsCompileService
-
-- a function capabable of wrapping import map inside a folder (like build/best)
-  will generate something like
-  build/importMap.best.json
-  build/importMap.worst.json
-
 - a function capable of generating importMap for node module
   "just" by passing it a folderPath
   it will read package.json and compare the filesystem structure to generate
