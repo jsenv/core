@@ -205,7 +205,7 @@ export const startServer = async ({
       })
     }
 
-    log(`${request.method} ${request.origin}/${request.ressource}`)
+    log(`${request.method} ${request.origin}${request.ressource}`)
     log(`${colorizeResponseStatus(response.status)} ${response.statusText}`)
     populateNodeResponse(nodeResponse, response, {
       ignoreBody: request.method === "HEAD",

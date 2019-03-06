@@ -14,7 +14,7 @@ const test = async () => {
   })
 
   const response = await jsService({
-    ressource: `${compileInto}/${compileId}/src/jsCompileToService/test/syntax-error/syntax-error.js`,
+    ressource: `/${compileInto}/${compileId}/src/jsCompileToService/test/syntax-error/syntax-error.js`,
     method: "GET",
   })
   const body = JSON.parse(response.body)

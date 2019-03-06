@@ -3,7 +3,7 @@ import { startServer } from "../../server/index.js"
 import { requestToFileResponse } from "../requestToFileResponse.js"
 
 const root = path.resolve(__dirname, "../../../")
-const ressource = "src/__test__/file.js"
+const filenameRelative = "src/__test__/file.js"
 
 ;(async () => {
   const server = await startServer({
@@ -17,5 +17,5 @@ const ressource = "src/__test__/file.js"
   })
 
   console.log("server opened at", server.origin)
-  console.log(`open ${server.origin}/${ressource} in a browser`)
+  console.log(`open ${server.origin}/${filenameRelative} in a browser`)
 })()

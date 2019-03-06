@@ -10,11 +10,11 @@ import {
 } from "@dmail/project-structure-compile-babel"
 import { projectFolder } from "../../projectFolder.js"
 
-const inputRessource = `src/platform/browser/browserPlatform.js`
+const inputFilenameRelative = `src/platform/browser/browserPlatform.js`
 const outputFolder = `${projectFolder}/dist`
-const outputRessource = `browserPlatform.js`
-const inputFile = `${projectFolder}/${inputRessource}`
-const outputFile = `${outputFolder}/${outputRessource}`
+const outputFilenameRelative = `browserPlatform.js`
+const inputFile = `${projectFolder}/${inputFilenameRelative}`
+const outputFile = `${outputFolder}/${outputFilenameRelative}`
 const globalName = "__platform__"
 const babelPluginDescription = pluginOptionMapToPluginMap({
   "syntax-dynamic-import": {},
@@ -83,7 +83,7 @@ export const compileBrowserPlatform = async () => {
     fileWrite(`${outputFolder}/browserPlatform.js.map`, JSON.stringify(map, null, "  ")),
   ])
 
-  console.log(`${inputFile} -> ${outputFolder}/${inputRessource}`)
+  console.log(`${inputFile} -> ${outputFolder}/${inputFilenameRelative}`)
 }
 
 const appendSourceMappingURL = (code, sourceMappingURL) => {

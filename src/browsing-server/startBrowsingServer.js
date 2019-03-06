@@ -119,7 +119,7 @@ export const startBrowsingServer = async ({
         compileInto,
         compileServerOrigin,
         browserPlatformHref: getBrowserPlatformHref({ compileInto, compileServerOrigin }),
-        filenameRelative: ressource,
+        filenameRelative: ressource.slice(1),
       })
 
       return {

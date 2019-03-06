@@ -5,7 +5,7 @@ import { requestToFileResponse } from "../requestToFileResponse.js"
 
 const test = async () => {
   {
-    const ressource = "src/requestToFileResponse/test/file.js"
+    const ressource = "/src/requestToFileResponse/test/file.js"
     const actual = await requestToFileResponse(
       {
         method: "GET",
@@ -16,7 +16,7 @@ const test = async () => {
         cacheStrategy: "etag",
       },
     )
-    const content = String(fs.readFileSync(`${projectFolder}/${ressource}`))
+    const content = String(fs.readFileSync(`${projectFolder}${ressource}`))
     const length = Buffer.byteLength(content)
     const expected = {
       status: 200,
@@ -31,7 +31,7 @@ const test = async () => {
   }
 
   {
-    const ressource = "folder/file"
+    const ressource = "/folder/file"
     const actual = await requestToFileResponse(
       {
         method: "GET",

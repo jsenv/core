@@ -11,10 +11,6 @@ export const hrefToOrigin = (href) => {
   return new URL(href).origin
 }
 
-export const hrefToRessource = (href) => {
-  return new URL(href).pathname.slice(1)
-}
-
 export const ressourceToPathname = (ressource) => {
   const searchSeparatorIndex = ressource.indexOf("?")
   return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex)

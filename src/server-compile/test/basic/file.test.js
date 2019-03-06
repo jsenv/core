@@ -3,10 +3,10 @@ import { assert } from "@dmail/assert"
 import { projectFolder } from "../../../projectFolder.js"
 import { startCompileServer } from "../../startCompileServer.js"
 
-const test = async () => {
-  const compileInto = "build"
-  const babelPluginDescription = {}
+const compileInto = "build"
+const babelPluginDescription = {}
 
+;(async () => {
   const compileServer = await startCompileServer({
     projectFolder,
     compileInto,
@@ -17,7 +17,7 @@ const test = async () => {
   })
 
   const response = await fetch(
-    `${compileServer.origin}/build/best/src/server-compile/test/basic/file.js`,
+    `${compileServer.origin}/${compileInto}/best/src/server-compile/test/basic/file.js`,
   )
   // { ... } because response.headers.raw() an object create with Object.create(null)
   const actualHeaders = { ...response.headers.raw() }
@@ -43,6 +43,4 @@ const test = async () => {
   })
 
   compileServer.stop()
-}
-
-test()
+})()

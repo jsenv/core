@@ -10,11 +10,11 @@ import {
 import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 import { projectFolder } from "../../../projectFolder.js"
 
-const inputRessource = `src/platform/browser/system/createSystemImporter.js`
+const inputFilenameRelative = `src/platform/browser/system/createSystemImporter.js`
 const outputFolder = `${projectFolder}/dist`
-const outputRessource = `browserSystemImporter.js`
-const inputFile = `${projectFolder}/${inputRessource}`
-const outputFile = `${outputFolder}/${outputRessource}`
+const outputFilenameRelative = `browserSystemImporter.js`
+const inputFile = `${projectFolder}/${inputFilenameRelative}`
+const outputFile = `${outputFolder}/${outputFilenameRelative}`
 const globalName = "__browserImporter__"
 const babelPluginDescription = pluginOptionMapToPluginMap({
   "proposal-json-strings": {},
@@ -81,7 +81,7 @@ export const compileBrowserSystemImporter = async () => {
     fileWrite(`${outputFolder}/browserSystemImporter.js.map`, JSON.stringify(map, null, "  ")),
   ])
 
-  console.log(`${inputFile} -> ${outputFolder}/${inputRessource}`)
+  console.log(`${inputFile} -> ${outputFolder}/${inputFilenameRelative}`)
 }
 
 const appendSourceMappingURL = (code, sourceMappingURL) => {

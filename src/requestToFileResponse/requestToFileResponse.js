@@ -35,7 +35,7 @@ export const requestToFileResponse = async (
   const rootHref = pathnameToFileHref(projectFolder)
 
   try {
-    const filenameRelative = ressource
+    const filenameRelative = ressource.slice(1)
     const href = await locate({ origin, rootHref, filenameRelative })
 
     if (!href) {

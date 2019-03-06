@@ -36,7 +36,7 @@ const compile = ({ content }) => {
     })
 
     const actual = await compileService({
-      ressource: `${compileInto}/${compileId}/${filenameRelative}`,
+      ressource: `/${compileInto}/${compileId}/${filenameRelative}`,
     })
     assert({
       actual,
@@ -63,7 +63,7 @@ const compile = ({ content }) => {
 
     {
       const actual = await compileService({
-        ressource: `${compileInto}/${compileId}/${filenameRelative}`,
+        ressource: `/${compileInto}/${compileId}/${filenameRelative}`,
         headers: {
           "if-none-match": '"wrong-etag"',
         },
@@ -84,7 +84,7 @@ const compile = ({ content }) => {
 
     {
       const actual = await compileService({
-        ressource: `${compileInto}/${compileId}/${filenameRelative}`,
+        ressource: `/${compileInto}/${compileId}/${filenameRelative}`,
         headers: {
           "if-none-match": expectedEtag,
         },
@@ -109,7 +109,7 @@ const compile = ({ content }) => {
 
     {
       const actual = await compileService({
-        ressource: `${compileInto}/${compileId}/${filenameRelative}`,
+        ressource: `/${compileInto}/${compileId}/${filenameRelative}`,
         headers: {
           "if-modified-since": new Date(0).toUTCString(),
         },
@@ -131,7 +131,7 @@ const compile = ({ content }) => {
 
     {
       const actual = await compileService({
-        ressource: `${compileInto}/${compileId}/${filenameRelative}`,
+        ressource: `/${compileInto}/${compileId}/${filenameRelative}`,
         headers: {
           "if-modified-since": new Date().toUTCString(),
         },

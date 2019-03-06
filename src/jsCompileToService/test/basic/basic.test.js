@@ -19,7 +19,7 @@ const compileId = "test"
 
   {
     const response = await jsService({
-      ressource: `${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js`,
+      ressource: `/${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js`,
       method: "GET",
     })
 
@@ -40,7 +40,7 @@ const compileId = "test"
 
   {
     const response = await jsService({
-      ressource: `${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js__asset__/file.js.map`,
+      ressource: `/${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js__asset__/file.js.map`,
       method: "GET",
     })
 
@@ -51,7 +51,7 @@ const compileId = "test"
   // ensure 404 on file not found
   {
     const response = await jsService({
-      ressource: `${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js:10`,
+      ressource: `/${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js:10`,
       method: "GET",
     })
     assert({ actual: response.status, expected: 404 })

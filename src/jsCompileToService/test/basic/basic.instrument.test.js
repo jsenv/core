@@ -21,7 +21,7 @@ const test = async () => {
   })
 
   const response = await jsService({
-    ressource: `${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js`,
+    ressource: `/${compileInto}/${compileId}/src/jsCompileToService/test/basic/basic.js`,
     method: "GET",
   })
   assert.equal(response.status, 200)
