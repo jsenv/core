@@ -1,18 +1,7 @@
 # dev-server
 
-- a function capable of generating importMap for node module
-  "just" by passing it a folderPath
-  it will read package.json and compare the filesystem structure to generate
-  appropriate importMap.json
-  this function result will write something like build/importMap.node-module.json
-
-here we have several approach available
-we could allow bare import to be remapped to real node module
-even if we want do discourage this.
-but no in an automatic way.
-the function for now would just be to allow scoped node modules
-so every node module shared should be remapped
-
+- now we have genereateImportMapForNodeModules
+  let's remove locateModuleFilename inside locate.js
 - test all stuff inside dev-server-poc
 - create an other repo using dev-server-poc bundled files
   test the other repo can bundle dev-server-poc too
@@ -30,6 +19,9 @@ so every node module shared should be remapped
 - follow up https://github.com/systemjs/systemjs/issues/1898
 
 later
+
+- genereateImportMapForNodeModules option to
+  allow bare import to be remapped to node module location
 
 - a function capable to generate importMap from a webpack config object
 

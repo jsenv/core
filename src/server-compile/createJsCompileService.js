@@ -1,5 +1,6 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
+import { generateImportMapForNodeModules } from "../import-map/generateImportMapForNodeModules.js"
 import { jsCompile } from "../jsCompile/index.js"
 import { jsCompileToService } from "../jsCompileToService/index.js"
 import {
@@ -12,7 +13,7 @@ import { objectMap } from "../objectHelper.js"
 
 export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),
-  importMap = {},
+  inputImportMap = {},
   projectFolder,
   compileInto,
   compileGroupCount,
@@ -34,6 +35,12 @@ export const createJsCompileService = async ({
     groupCount: compileGroupCount,
     babelPluginCompatibilityDescription,
   })
+
+  const importMapForNodeModules = await generateImportMapForNodeModules({
+    foldername: projectFolder,
+  })
+
+  const importMap = mergeImportMap(inputImportMap, importMapForNodeModules)
 
   await Promise.all([
     fileWriteFromString(
@@ -109,13 +116,13 @@ const prefixScopes = (scopes, prefix) =>
     }
   })
 
-// const mergeImportMap = (...importMaps) =>
-//   importMaps.reduce(
-//     (previous, current) => {
-//       return {
-//         imports: { ...previous.imports, ...(current.imports || {}) },
-//         scopes: { ...previous.scopes, ...(current.scopes || {}) },
-//       }
-//     },
-//     { imports: {}, scopes: {} },
-//   )
+const mergeImportMap = (...importMaps) =>
+  importMaps.reduce(
+    (previous, current) => {
+      return {
+        imports: { ...previous.imports, ...(current.imports || {}) },
+        scopes: { ...previous.scopes, ...(current.scopes || {}) },
+      }
+    },
+    { imports: {}, scopes: {} },
+  )
