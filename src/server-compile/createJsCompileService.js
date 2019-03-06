@@ -79,19 +79,15 @@ export const createJsCompileService = async ({
 const writeGroupImportMapFile = ({ projectFolder, compileInto, compileId, importMap }) => {
   const prefix = `/${compileInto}/${compileId}`
 
-  const prefixedImportMap = {
-    imports: prefixImports(importMap.imports || {}, prefix),
-    scopes: prefixScopes(importMap.scopes || {}, prefix),
-  }
-
-  const compileFolderImportMap = {
+  const groupImportMap = {
     scopes: {
+      ...prefixScopes(importMap.scopes || {}, prefix),
       [`${prefix}/`]: {
+        ...prefixImports(importMap.imports || {}, prefix),
         "/": `${prefix}/`,
       },
     },
   }
-  const groupImportMap = mergeImportMap(prefixedImportMap, compileFolderImportMap)
 
   return fileWriteFromString(
     `${projectFolder}/${compileInto}/importMap.${compileId}.json`,
@@ -113,13 +109,13 @@ const prefixScopes = (scopes, prefix) =>
     }
   })
 
-const mergeImportMap = (...importMaps) =>
-  importMaps.reduce(
-    (previous, current) => {
-      return {
-        imports: { ...previous.imports, ...(current.imports || {}) },
-        scopes: { ...previous.scopes, ...(current.scopes || {}) },
-      }
-    },
-    { imports: {}, scopes: {} },
-  )
+// const mergeImportMap = (...importMaps) =>
+//   importMaps.reduce(
+//     (previous, current) => {
+//       return {
+//         imports: { ...previous.imports, ...(current.imports || {}) },
+//         scopes: { ...previous.scopes, ...(current.scopes || {}) },
+//       }
+//     },
+//     { imports: {}, scopes: {} },
+//   )
