@@ -1,7 +1,9 @@
 # dev-server
 
-- browser and node system resolve must be overriden
-  to use remapResolvedImport after systemjs has resolved
+- find when importMap are goign to be written inside
+  build/best/importMap.best.json
+  I guess it should be done during generation of groupDescription.json
+  which is written by createJsCompileService
 
 - a function capabable of wrapping import map inside a folder (like build/best)
   will generate something like

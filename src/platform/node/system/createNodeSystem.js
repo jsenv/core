@@ -1,30 +1,30 @@
 import "systemjs/dist/system.js"
-import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution"
-import { overrideSystemInstantiate } from "../../overrideSystemInstantiate.js"
-import { fromFunctionReturningNamespace } from "../../registerModuleFrom.js"
+import { remapResolvedImport, isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution"
+import { fromFunctionReturningNamespace, fromHref } from "../../registerModuleFrom.js"
 import { fetchSource } from "../fetchSource.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
 
-export const createNodeSystem = ({ compileInto, sourceOrigin, compileServerOrigin, compileId }) => {
+export const createNodeSystem = ({
+  compileInto,
+  sourceOrigin,
+  compileServerOrigin,
+  compileId,
+  importMap,
+}) => {
   const nodeSystem = new global.System.constructor()
-
-  overrideSystemInstantiate({
-    compileInto,
-    sourceOrigin,
-    compileServerOrigin,
-    compileId,
-    fetchSource,
-    platformSystem: nodeSystem,
-    moduleSourceToSystemRegisteredModule,
-  })
 
   const resolve = nodeSystem.resolve
   nodeSystem.resolve = (specifier, importer) => {
     if (isNativeNodeModuleBareSpecifier(specifier)) return specifier
-    return resolve(specifier, importer)
+
+    const href = resolve(specifier, importer)
+    return remapResolvedImport({
+      importMap,
+      importerHref: importer,
+      resolvedImport: href,
+    })
   }
 
-  const instantiate = nodeSystem.instantiate
   nodeSystem.instantiate = async (href, importer) => {
     if (isNativeNodeModuleBareSpecifier(href)) {
       return fromFunctionReturningNamespace(
@@ -39,8 +39,20 @@ export const createNodeSystem = ({ compileInto, sourceOrigin, compileServerOrigi
         { href, importer },
       )
     }
-    return instantiate(href, importer)
+
+    return fromHref({
+      compileInto,
+      sourceOrigin,
+      compileServerOrigin,
+      compileId,
+      fetchSource,
+      platformSystem: nodeSystem,
+      moduleSourceToSystemRegisteredModule,
+      href,
+      importer,
+    })
   }
+
   // https://github.com/systemjs/systemjs/blob/master/docs/hooks.md#createcontexturl---object
   // nodeSystem.createContext = (url) => {
   //   return { url }

@@ -1,7 +1,6 @@
 import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
 import { evalSource } from "./evalSource.js"
-import { getBrowserSystemImporterHref } from "./remoteURL.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 
 export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigin }) => {
@@ -28,15 +27,22 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigi
     return nativeImporter
   }
 
-  const importerHref = getBrowserSystemImporterHref({ compileServerOrigin })
-  const importerResponse = await fetchUsingXHR(importerHref)
-  if (importerResponse.status < 200 || importerResponse.status >= 400) {
-    return Promise.reject(importerResponse)
-  }
+  const importerHref = `${compileServerOrigin}/node_modules/@dmail/dev-server/dist/browserSystemImporter.js`
+  // we could not really inline it as compileId is dynamc
+  // we could generate it dynamically from a given importMap
+  // because the compiledImportMap is just the rwa importMap
+  // prefixed with /${compileInto}/${compileId}/
+  const importMapHref = `${compileServerOrigin}/${compileInto}/importMap.${compileId}.json`
+  const [importerResponse, importMapResponse] = await Promise.all([
+    fetchHref(importerHref),
+    fetchHref(importMapHref),
+  ])
 
   evalSource(importerResponse.body, importerHref)
+  const importMap = JSON.parse(importMapResponse.body)
 
   const systemImporter = window.__browserImporter__.createSystemImporter({
+    importMap,
     compileInto,
     compileServerOrigin,
     compileId,
@@ -49,6 +55,14 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigi
 // eval to avoid syntaxError because import allowed only inside module
 // for browser without dynamic import
 const createNativeImportFile = () => eval(`(function importFile(file){ return import(file) })`)
+
+const fetchHref = async (href) => {
+  const response = await fetchUsingXHR(href)
+  if (response.status < 200 || response.status >= 400) {
+    return Promise.reject(response)
+  }
+  return response
+}
 
 const fetchSource = ({ href, importer }) => {
   return fetchUsingXHR(href, {
