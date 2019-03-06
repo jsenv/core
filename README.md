@@ -1,5 +1,26 @@
 # dev-server
 
+- we must rollback to putting files inside
+  build/compileId/
+  because subdomain will fail to load source file using /
+
+- browser and node system resolve must be overriden
+  to use remapResolvedImport after systemjs has resolved
+
+- a function capabable of wrapping import map inside a folder (like build/best)
+  will generate something like
+  build/importMap.best.json
+  build/importMap.worst.json
+
+- a function capable of generating importMap for node module
+  "just" by passing it a folderPath
+  it will read package.json and compare the filesystem structure to generate
+  appropriate importMap.json
+  this function result will write something like build/importMap.node-module.json
+
+- a function capable to merge importMap and
+  will generate build/importMap.json
+
 - test all stuff inside dev-server-poc
 - create an other repo using dev-server-poc bundled files
   test the other repo can bundle dev-server-poc too
@@ -15,3 +36,11 @@
   and expect a pathname instead of folder
 
 - follow up https://github.com/systemjs/systemjs/issues/1898
+
+later
+
+- a function capable to generate importMap from a webpack config object
+
+- eslint-plugin-import of jsenv must accept
+  an optionnal importMap so that it could work with webpack
+  not required earlier because eslint-plugin-import already capable to locate node_module and does not need build/best/ scoping
