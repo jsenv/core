@@ -1,6 +1,6 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
-import { generateImportMapForNodeModules } from "../import-map/generateImportMapForNodeModules.js"
+import { generateImportMapForProjectNodeModules } from "../import-map/generateImportMapForProjectNodeModules.js"
 import { jsCompile } from "../jsCompile/index.js"
 import { jsCompileToService } from "../jsCompileToService/index.js"
 import {
@@ -36,9 +36,17 @@ export const createJsCompileService = async ({
     babelPluginCompatibilityDescription,
   })
 
-  const importMapForNodeModules = await generateImportMapForNodeModules({
-    foldername: projectFolder,
+  // on big project it can takes time, this could/should be done
+  // after npm install
+  // and write a importMap.node_modules.json somewhere
+  // that we would pass using inputImportMap
+  const before = Date.now()
+  const importMapForNodeModules = await generateImportMapForProjectNodeModules({
+    projectFolder,
   })
+  // eslint-disable-next-line no-unused-vars
+  const importMapGenerationDuration = Date.now() - before
+  // console.log(`import generated in ${importMapGenerationDuration}ms`)
 
   const importMap = mergeImportMap(inputImportMap, importMapForNodeModules)
 
@@ -87,6 +95,7 @@ const writeGroupImportMapFile = ({ projectFolder, compileInto, compileId, import
   const prefix = `/${compileInto}/${compileId}`
 
   const groupImportMap = {
+    imports: importMap.imports,
     scopes: {
       ...prefixScopes(importMap.scopes || {}, prefix),
       [`${prefix}/`]: {
@@ -105,7 +114,7 @@ const writeGroupImportMapFile = ({ projectFolder, compileInto, compileId, import
 const prefixImports = (imports, prefix) =>
   objectMap(imports, (pathnameMatchPattern, pathnameRemapPattern) => {
     return {
-      [`${prefix}${pathnameMatchPattern}`]: `${prefix}${pathnameRemapPattern}`,
+      [`${pathnameMatchPattern}`]: `${prefix}${pathnameRemapPattern}`,
     }
   })
 

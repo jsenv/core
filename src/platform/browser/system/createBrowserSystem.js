@@ -1,4 +1,4 @@
-import "../../../systemjs/system.js" // awaiting https://github.com/systemjs/systemjs/issues/1898
+import "systemjs/dist/system.js"
 import { remapResolvedImport } from "@jsenv/module-resolution"
 import { fromHref } from "../../registerModuleFrom.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
