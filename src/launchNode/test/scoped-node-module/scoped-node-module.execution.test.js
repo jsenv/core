@@ -12,6 +12,10 @@ const babelPluginDescription = {}
 ;(async () => {
   const sourceOrigin = pathnameToFileHref(projectFolder)
 
+  // here we'll have to use genereateImportMapForProjectNodeModules
+  // and pass it to startCompileServer
+  // so that client knows where to find node module
+
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder,
     compileInto,
