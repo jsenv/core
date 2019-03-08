@@ -10,8 +10,9 @@ export const launchNode = async ({
   compileInto,
   sourceOrigin,
   compileServerOrigin,
+  forwardDebugToChildProcess = false, // put back to true after https://github.com/Microsoft/vscode/issues/70052
 }) => {
-  const execArgv = await createChildExecArgv({ cancellationToken })
+  const execArgv = await createChildExecArgv({ cancellationToken, forwardDebugToChildProcess })
 
   const child = forkChildProcess(nodeClientFile, {
     execArgv,

@@ -22,6 +22,7 @@ const babelPluginDescription = {}
   const actual = await launchAndExecute({
     launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
     captureConsole: true,
+    mirrorConsole: true,
     filenameRelative,
     verbose: true,
     platformTypeForLog: "node process",

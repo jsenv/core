@@ -1,19 +1,25 @@
 import { findFreePort } from "../server/index.js"
 
-export const createChildExecArgv = async ({ cancellationToken } = {}) => {
+export const createChildExecArgv = async ({
+  cancellationToken,
+  forwardDebugToChildProcess,
+} = {}) => {
   const execArgv = process.execArgv
   const childExecArgv = execArgv.slice()
-  const { type, index, port } = processExecArgvToDebugMeta(execArgv)
 
-  if (type === "inspect") {
-    // allow vscode to debug child, otherwise you have port already used
-    const childPort = await findFreePort(port + 1, { cancellationToken })
-    childExecArgv[index] = `--inspect=${childPort}`
-  }
-  if (type === "inspect-break") {
-    // allow vscode to debug child, otherwise you have port already used
-    const childPort = await findFreePort(port + 1, { cancellationToken })
-    childExecArgv[index] = `--inspect-brk=${childPort}`
+  if (forwardDebugToChildProcess) {
+    const { type, index, port } = processExecArgvToDebugMeta(execArgv)
+
+    if (type === "inspect") {
+      // allow vscode to debug child, otherwise you have port already used
+      const childPort = await findFreePort(port + 1, { cancellationToken })
+      childExecArgv[index] = `--inspect=${childPort}`
+    }
+    if (type === "inspect-break") {
+      // allow vscode to debug child, otherwise you have port already used
+      const childPort = await findFreePort(port + 1, { cancellationToken })
+      childExecArgv[index] = `--inspect-brk=${childPort}`
+    }
   }
 
   return childExecArgv
