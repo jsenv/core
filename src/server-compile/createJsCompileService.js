@@ -1,6 +1,5 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
-import { generateImportMapForProjectNodeModules } from "../import-map/generateImportMapForProjectNodeModules.js"
 import { jsCompile } from "../jsCompile/index.js"
 import { jsCompileToService } from "../jsCompileToService/index.js"
 import {
@@ -13,7 +12,7 @@ import { objectMap } from "../objectHelper.js"
 
 export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),
-  inputImportMap = {},
+  importMap = {},
   projectFolder,
   compileInto,
   compileGroupCount,
@@ -35,20 +34,6 @@ export const createJsCompileService = async ({
     groupCount: compileGroupCount,
     babelPluginCompatibilityDescription,
   })
-
-  // on big project it can takes time, this could/should be done
-  // after npm install
-  // and write a importMap.node_modules.json somewhere
-  // that we would pass using inputImportMap
-  const before = Date.now()
-  const importMapForNodeModules = await generateImportMapForProjectNodeModules({
-    projectFolder,
-  })
-  // eslint-disable-next-line no-unused-vars
-  const importMapGenerationDuration = Date.now() - before
-  // console.log(`import generated in ${importMapGenerationDuration}ms`)
-
-  const importMap = mergeImportMap(inputImportMap, importMapForNodeModules)
 
   await Promise.all([
     fileWriteFromString(
@@ -124,14 +109,3 @@ const prefixScopes = (scopes, prefix) =>
       [`${prefix}${pathnameMatchPattern}`]: prefixImports(scopeImports, prefix),
     }
   })
-
-const mergeImportMap = (...importMaps) =>
-  importMaps.reduce(
-    (previous, current) => {
-      return {
-        imports: { ...previous.imports, ...(current.imports || {}) },
-        scopes: { ...previous.scopes, ...(current.scopes || {}) },
-      }
-    },
-    { imports: {}, scopes: {} },
-  )

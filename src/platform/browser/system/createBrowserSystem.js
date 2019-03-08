@@ -1,5 +1,5 @@
 import "systemjs/dist/system.js"
-import { remapResolvedImport } from "@jsenv/module-resolution"
+import { resolveImport, remapResolvedImport } from "@jsenv/module-resolution"
 import { fromHref } from "../../registerModuleFrom.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
 
@@ -13,13 +13,16 @@ export const createBrowserSystem = ({
 }) => {
   const browserSystem = new window.System.constructor()
 
-  const resolve = browserSystem.resolve
   browserSystem.resolve = (specifier, importer) => {
-    const href = resolve(specifier, importer)
+    const resolvedImport = resolveImport({
+      importer,
+      specifier,
+    })
+
     return remapResolvedImport({
       importMap,
       importerHref: importer,
-      resolvedImport: href,
+      resolvedImport,
     })
   }
 

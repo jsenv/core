@@ -1,5 +1,9 @@
 import "systemjs/dist/system.js"
-import { remapResolvedImport, isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution"
+import {
+  resolveImport,
+  remapResolvedImport,
+  isNativeNodeModuleBareSpecifier,
+} from "@jsenv/module-resolution"
 import { fromFunctionReturningNamespace, fromHref } from "../../registerModuleFrom.js"
 import { fetchSource } from "../fetchSource.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
@@ -13,15 +17,18 @@ export const createNodeSystem = ({
 }) => {
   const nodeSystem = new global.System.constructor()
 
-  const resolve = nodeSystem.resolve
   nodeSystem.resolve = (specifier, importer) => {
     if (isNativeNodeModuleBareSpecifier(specifier)) return specifier
 
-    const href = resolve(specifier, importer)
+    const resolvedImport = resolveImport({
+      importer,
+      specifier,
+    })
+
     return remapResolvedImport({
       importMap,
       importerHref: importer,
-      resolvedImport: href,
+      resolvedImport,
     })
   }
 

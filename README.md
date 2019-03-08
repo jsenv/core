@@ -1,7 +1,6 @@
 # dev-server
 
-- now we have genereateImportMapForNodeModules
-  let's remove locateModuleFilename inside locate.js
+- finish and test stuff around importMap being handled client side
 - test all stuff inside dev-server-poc
 - create an other repo using dev-server-poc bundled files
   test the other repo can bundle dev-server-poc too
