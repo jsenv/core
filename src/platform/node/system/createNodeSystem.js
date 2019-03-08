@@ -25,11 +25,13 @@ export const createNodeSystem = ({
       specifier,
     })
 
-    return remapResolvedImport({
+    const remappedImport = remapResolvedImport({
       importMap,
       importerHref: importer,
       resolvedImport,
     })
+
+    return remappedImport
   }
 
   nodeSystem.instantiate = async (href, importer) => {

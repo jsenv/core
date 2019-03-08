@@ -1,31 +1,31 @@
 import { assert } from "@dmail/assert"
 import { pathnameToFileHref } from "@jsenv/module-resolution"
-import { projectFolder } from "../../../projectFolder.js"
+import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchNode } from "../../launchNode.js"
+import { generateImportMapForProjectNodeModules } from "../../../import-map/generateImportMapForProjectNodeModules.js"
 
-const filenameRelative = `src/launchNode/test/scoped-node-module/scoped-node-module.js`
+const projectFolder = `${selfProjectFolder}/src/launchNode/test/scoped-node-module`
+const filenameRelative = `scoped-node-module.js`
 const compileInto = "build"
 const babelPluginDescription = {}
 
 ;(async () => {
   const sourceOrigin = pathnameToFileHref(projectFolder)
 
-  // here we'll have to use genereateImportMapForProjectNodeModules
-  // and pass it to startCompileServer
-  // so that client knows where to find node module
-  // createJSCompileService takes care of writing that importMap
-  // on the filesystem so that client can fetch it
+  const importMap = await generateImportMapForProjectNodeModules({ projectFolder })
 
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder,
     compileInto,
+    importMap,
     babelPluginDescription,
   })
 
   const actual = await launchAndExecute({
     launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
+    mirrorConsole: true,
     collectNamespace: true,
     filenameRelative,
     verbose: true,

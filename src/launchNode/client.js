@@ -3,10 +3,11 @@ import path from "path"
 import sourceMapSupport from "source-map-support"
 import { createCancellationSource } from "@dmail/cancellation"
 import { uneval } from "@dmail/uneval"
-import { hrefToPathname } from "@jsenv/module-resolution"
+import { pathnameToFileHref, hrefToPathname } from "@jsenv/module-resolution"
 import { executeCompiledFile } from "../platform/node/executeCompiledFile.js"
 import { registerProcessInterruptCallback } from "../process-signal/index.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
+import { resolveImport } from "@jsenv/module-resolution/dist/src/resolveImport"
 
 const execute = async ({
   compileInto,
@@ -65,7 +66,17 @@ const execute = async ({
       const sourceMap = JSON.parse(sourceMapContent)
       const absoluteSourceMap = {
         ...sourceMap,
-        sources: sourceMap.sources.map((source) => hrefToPathname(`${sourceOrigin}/${source}`)),
+        sources: sourceMap.sources.map((source) => {
+          if (source[0] === "/") {
+            return hrefToPathname(`${sourceOrigin}/${source.slice(1)}`)
+          }
+
+          const resolvedImport = resolveImport({
+            importer: pathnameToFileHref(sourceMapFile),
+            specifier: source,
+          })
+          return hrefToPathname(resolvedImport)
+        }),
       }
 
       return {

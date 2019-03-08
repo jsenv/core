@@ -80,11 +80,12 @@ const writeGroupImportMapFile = ({ projectFolder, compileInto, compileId, import
   const prefix = `/${compileInto}/${compileId}`
 
   const groupImportMap = {
-    imports: importMap.imports,
+    imports: prefixImports(importMap.imports || {}, prefix),
     scopes: {
       ...prefixScopes(importMap.scopes || {}, prefix),
       [`${prefix}/`]: {
         ...prefixImports(importMap.imports || {}, prefix),
+        [`${prefix}/`]: `${prefix}/`,
         "/": `${prefix}/`,
       },
     },
