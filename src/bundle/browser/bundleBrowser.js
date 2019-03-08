@@ -7,6 +7,7 @@ import { generateBalancerPages } from "./generateBalancerPages.js"
 
 export const bundleBrowser = async ({
   projectFolder,
+  importMap,
   into,
   globalName,
   entryPointsDescription,
@@ -31,6 +32,7 @@ export const bundleBrowser = async ({
       verbose,
       computeRollupOptionsWithoutBalancing: (context) =>
         computeRollupOptionsWithoutBalancing({
+          importMap,
           projectFolder,
           into,
           globalName,
@@ -41,6 +43,7 @@ export const bundleBrowser = async ({
         }),
       computeRollupOptionsWithBalancing: (context) =>
         computeRollupOptionsWithBalancing({
+          importMap,
           projectFolder,
           into,
           globalName,
@@ -50,6 +53,7 @@ export const bundleBrowser = async ({
         }),
       computeRollupOptionsForBalancer: (context) =>
         computeRollupOptionsForBalancer({
+          importMap,
           projectFolder,
           into,
           globalName,

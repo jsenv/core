@@ -4,6 +4,7 @@ import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionT
 
 export const computeRollupOptionsWithBalancing = ({
   cancellationToken,
+  importMap,
   projectFolder,
   into,
   globalName,
@@ -22,6 +23,7 @@ export const computeRollupOptionsWithBalancing = ({
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({
     cancellationToken,
+    importMap,
     projectFolder,
   })
 

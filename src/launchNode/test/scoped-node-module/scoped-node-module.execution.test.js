@@ -15,6 +15,8 @@ const babelPluginDescription = {}
   // here we'll have to use genereateImportMapForProjectNodeModules
   // and pass it to startCompileServer
   // so that client knows where to find node module
+  // createJSCompileService takes care of writing that importMap
+  // on the filesystem so that client can fetch it
 
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder,

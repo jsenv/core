@@ -5,6 +5,7 @@ import { globalNameToPromiseGlobalName } from "./globalNameToPromiseGlobalName.j
 
 export const computeRollupOptionsWithoutBalancing = ({
   cancellationToken,
+  importMap,
   projectFolder,
   into,
   globalName,
@@ -25,6 +26,7 @@ dir: ${dir}
   const rollupPluginArray = [
     createJsenvRollupPlugin({
       cancellationToken,
+      importMap,
       projectFolder,
     }),
     babelPluginDescriptionToRollupPlugin({

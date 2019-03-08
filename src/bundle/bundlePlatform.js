@@ -2,10 +2,7 @@ import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
-import {
-  generateGroupDescription,
-  groupDescriptionToCompileDescription,
-} from "../group-description/index.js"
+import { generateGroupDescription } from "../group-description/index.js"
 import { bundleWithRollup } from "./bundleWithRollup.js"
 
 export const bundlePlatform = ({

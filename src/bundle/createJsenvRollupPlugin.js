@@ -1,25 +1,43 @@
 import { resolve } from "url"
 import { fileRead } from "@dmail/helper"
 import { createOperation } from "@dmail/cancellation"
-import { resolveImport, pathnameToFileHref, fileHrefToPathname } from "@jsenv/module-resolution"
+import {
+  resolveImport,
+  remapResolvedImport,
+  pathnameToFileHref,
+  hrefToPathname,
+} from "@jsenv/module-resolution"
 import { fetchUsingHttp } from "../platform/node/fetchUsingHttp.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 
-export const createJsenvRollupPlugin = ({ cancellationToken, projectFolder }) => {
+export const createJsenvRollupPlugin = ({ cancellationToken, importMap = {}, projectFolder }) => {
   const rollupJsenvPlugin = {
     name: "jsenv",
+
     resolveId: (importee, importer) => {
+      // well I think we should not use toFileHref but rather
+      // toHttpHref to benefit from http url resolution
+      // as client side would
       const rootHref = pathnameToFileHref(projectFolder)
+
       // hotfix because entry file has no importer
       // so it would be resolved against root which is a folder
       // and url resolution would not do what we expect
-      if (!importer) return `${rootHref}/${importee}`
+      if (!importer) {
+        importer = rootHref
+      }
 
-      const id = resolveImport({
-        root: rootHref,
+      const resolvedImport = resolveImport({
         importer,
         specifier: importee,
       })
+
+      const id = remapResolvedImport({
+        importMap,
+        importerHref: importer,
+        resolvedImport,
+      })
+
       return id
     },
 
@@ -52,15 +70,17 @@ export const createJsenvRollupPlugin = ({ cancellationToken, projectFolder }) =>
       ensureResponseSuccess(response)
       return response.body
     }
+
     if (href.startsWith("https://")) {
       const response = await fetchUsingHttp(href, { cancellationToken })
       ensureResponseSuccess(response)
       return response.body
     }
+
     if (href.startsWith("file:///")) {
       const code = await createOperation({
         cancellationToken,
-        start: () => fileRead(fileHrefToPathname(href)),
+        start: () => fileRead(hrefToPathname(href)),
       })
       return code
     }

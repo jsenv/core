@@ -5,6 +5,7 @@ import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBal
 import { computeRollupOptionsForBalancer } from "./computeRollupOptionsForBalancer.js"
 
 export const bundleNode = async ({
+  importMap,
   projectFolder,
   into,
   entryPointsDescription,
@@ -23,6 +24,7 @@ export const bundleNode = async ({
     verbose,
     computeRollupOptionsWithoutBalancing: (context) =>
       computeRollupOptionsWithoutBalancing({
+        importMap,
         projectFolder,
         into,
         entryPointsDescription,
@@ -31,6 +33,7 @@ export const bundleNode = async ({
       }),
     computeRollupOptionsWithBalancing: (context) =>
       computeRollupOptionsWithBalancing({
+        importMap,
         projectFolder,
         into,
         entryPointsDescription,
@@ -39,6 +42,7 @@ export const bundleNode = async ({
       }),
     computeRollupOptionsForBalancer: (context) =>
       computeRollupOptionsForBalancer({
+        importMap,
         projectFolder,
         into,
         babelPluginDescription,

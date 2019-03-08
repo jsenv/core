@@ -3,6 +3,7 @@ import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionT
 
 export const computeRollupOptionsWithoutBalancing = ({
   cancellationToken,
+  importMap,
   projectFolder,
   into,
   entryPointsDescription,
@@ -21,6 +22,7 @@ dir: ${dir}
   const rollupPluginArray = [
     createJsenvRollupPlugin({
       cancellationToken,
+      importMap,
       projectFolder,
     }),
     babelPluginDescriptionToRollupPlugin({
