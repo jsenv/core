@@ -6,19 +6,24 @@ export const createChildExecArgv = async ({
 } = {}) => {
   const execArgv = process.execArgv
   const childExecArgv = execArgv.slice()
+  const { type, index, port } = processExecArgvToDebugMeta(execArgv)
 
-  if (forwardDebugToChildProcess) {
-    const { type, index, port } = processExecArgvToDebugMeta(execArgv)
-
-    if (type === "inspect") {
+  if (type === "inspect") {
+    if (forwardDebugToChildProcess) {
       // allow vscode to debug child, otherwise you have port already used
       const childPort = await findFreePort(port + 1, { cancellationToken })
       childExecArgv[index] = `--inspect=${childPort}`
+    } else {
+      childExecArgv.splice(index, 1)
     }
-    if (type === "inspect-break") {
+  }
+  if (type === "inspect-break") {
+    if (forwardDebugToChildProcess) {
       // allow vscode to debug child, otherwise you have port already used
       const childPort = await findFreePort(port + 1, { cancellationToken })
       childExecArgv[index] = `--inspect-brk=${childPort}`
+    } else {
+      childExecArgv.splice(index, 1)
     }
   }
 

@@ -1,6 +1,6 @@
 import { createReadStream } from "fs"
 import { folderRead, fileStat, fileRead } from "@dmail/helper"
-import { fileHrefToPathname, pathnameToFileHref } from "@jsenv/module-resolution"
+import { hrefToPathname, pathnameToFileHref } from "@jsenv/module-resolution"
 import { createETag } from "../compileToService/helpers.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
 import { ressourceToContentType } from "./ressourceToContentType.js"
@@ -65,7 +65,7 @@ export const requestToFileResponse = async (
       }
     }
 
-    const filename = fileHrefToPathname(href)
+    const filename = hrefToPathname(href)
 
     const cacheWithMtime = cacheStrategy === "mtime"
     const cacheWithETag = cacheStrategy === "etag"

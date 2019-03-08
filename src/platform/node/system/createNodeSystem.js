@@ -9,11 +9,11 @@ import { fetchSource } from "../fetchSource.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
 
 export const createNodeSystem = ({
+  importMap,
   compileInto,
   sourceOrigin,
   compileServerOrigin,
   compileId,
-  importMap,
 }) => {
   const nodeSystem = new global.System.constructor()
 

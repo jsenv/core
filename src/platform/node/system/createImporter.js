@@ -1,7 +1,14 @@
 import { createNodeSystem } from "./createNodeSystem.js"
 
-export const createImporter = ({ compileInto, sourceOrigin, compileServerOrigin, compileId }) => {
+export const createImporter = ({
+  importMap,
+  compileInto,
+  sourceOrigin,
+  compileServerOrigin,
+  compileId,
+}) => {
   const nodeSystem = createNodeSystem({
+    importMap,
     compileInto,
     sourceOrigin,
     compileServerOrigin,

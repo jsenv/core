@@ -1,8 +1,4 @@
-import {
-  resolveNodeModuleSpecifier,
-  pathnameToFileHref,
-  fileHrefToPathname,
-} from "@jsenv/module-resolution"
+import { pathnameToFileHref } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
 import {
@@ -13,6 +9,7 @@ import {
 } from "../server/index.js"
 import { projectFolder as selfProjectFolder } from "../projectFolder.js"
 import { createJsCompileService } from "./createJsCompileService.js"
+import { locateFilename } from "./locateFilename.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -113,14 +110,8 @@ const locateFileSystem = ({ rootHref, filenameRelative }) => {
     filenameRelative = filenameRelative.slice("node_modules/@dmail/dev-server/".length)
   }
 
-  if (filenameRelative.startsWith("node_modules/")) {
-    const moduleSpecifier = filenameRelative.slice("node_modules/".length)
-    const nodeModuleHref = resolveNodeModuleSpecifier({
-      specifier: moduleSpecifier,
-      importer: `${rootHref}/${filenameRelative}`,
-    })
-    return fileHrefToPathname(nodeModuleHref)
-  }
-
-  return `${rootHref}/${filenameRelative}`
+  return locateFilename({
+    rootHref,
+    filenameRelative,
+  })
 }
