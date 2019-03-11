@@ -1,4 +1,3 @@
-import { hrefToPathname } from "@jsenv/module-resolution"
 import { resolveNodeModuleSpecifier } from "./resolveNodeModuleSpecifier.js"
 
 const NODE_MODULE_FOLDER = "node_modules"
@@ -9,14 +8,12 @@ export const locateFilename = ({ rootHref, filenameRelative }) => {
   // from rootHref
 
   const nodeModuleSpecifier = moduleFilenameRelativeToNodeModuleSpecifier(filenameRelative)
-  if (!nodeModuleSpecifier) return hrefToPathname(`${rootHref}/${filenameRelative}`)
+  if (!nodeModuleSpecifier) return `${rootHref}/${filenameRelative}`
 
-  return hrefToPathname(
-    resolveNodeModuleSpecifier({
-      rootHref,
-      specifier: nodeModuleSpecifier,
-    }),
-  )
+  return resolveNodeModuleSpecifier({
+    rootHref,
+    specifier: nodeModuleSpecifier,
+  })
 }
 
 const moduleFilenameRelativeToNodeModuleSpecifier = (filenameRelative) => {

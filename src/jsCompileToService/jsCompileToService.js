@@ -1,5 +1,4 @@
 import { compileToService } from "../compileToService/index.js"
-import { createInstrumentPlugin } from "../jsCompile/index.js"
 import { ansiToHTML } from "../ansiToHTML.js"
 
 export const jsCompileToService = (
@@ -13,31 +12,17 @@ export const jsCompileToService = (
     localCacheStrategy = "etag",
     localCacheTrackHit = true,
     cacheStrategy = "etag",
-    instrumentPredicate = () => true,
     compilePredicate = () => true,
     watch,
     watchPredicate,
   },
 ) => {
-  const instrumentPlugin = createInstrumentPlugin({ predicate: instrumentPredicate })
-  const compileParamMapWithInstrumentation = { ...compileDescription }
-  Object.keys(compileDescription).forEach((groupId) => {
-    const param = compileDescription[groupId]
-    compileParamMapWithInstrumentation[`${groupId}-instrumented`] = {
-      ...param,
-      babelPluginDescription: {
-        ...param.babelPluginDescription,
-        "transform-instrument": instrumentPlugin,
-      },
-    }
-  })
-
   const service = compileToService(compileFile, {
     cancellationToken,
     projectFolder,
     compileInto,
     locate,
-    compileDescription: compileParamMapWithInstrumentation,
+    compileDescription,
     localCacheStrategy,
     localCacheTrackHit,
     cacheStrategy,

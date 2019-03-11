@@ -11,7 +11,8 @@ startBrowsingServer({
   babelPluginDescription,
   browsableDescription: {
     "index.js": true,
-    "src/**/*.js": true,
+    "src/launchChromium/test/**/*.js": true,
+    "src/launchChromium/test/**/*.test.*": false,
   },
   port: 3000,
   forcePort: true,

@@ -9,7 +9,7 @@ export const executeCompiledFile = ({
   filenameRelative,
   collectNamespace,
   collectCoverage,
-  instrument = {},
+  instrument,
 }) =>
   genericExecuteCompiledFile({
     loadCompileMeta: () => loadCompileMeta({ compileInto, sourceOrigin, compileServerOrigin }),

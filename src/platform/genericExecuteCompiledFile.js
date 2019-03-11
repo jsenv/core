@@ -9,7 +9,7 @@ export const genericExecuteCompiledFile = async ({
   filenameRelative,
   collectNamespace,
   collectCoverage,
-  instrument,
+  instrument = false,
   onError,
   transformError,
   readCoverage,

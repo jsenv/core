@@ -43,13 +43,6 @@ export const compileToService = (
   })
 
   const compileService = async ({ origin, ressource, headers = {} }) => {
-    const refererHeaderName = "x-module-referer" in headers ? "x-module-referer" : "referer"
-    const requestReferer = refererHeaderName in headers ? headers[refererHeaderName] : ""
-
-    if (requestReferer && !requestReferer.startsWith(origin)) {
-      return { status: 400, statusText: `referer origin must be inside ${origin}` }
-    }
-
     const requestPathname = ressource
 
     if (pathnameIsAsset(ressource)) return null
@@ -57,12 +50,11 @@ export const compileToService = (
     const { compileId, filename } = await locate({
       projectFolder,
       compileInto,
-      refererPathname: requestReferer ? requestReferer.slice(origin.length) : "",
       requestPathname,
     })
 
     // cannot locate a file -> we don't know what to compile
-    if (!filename) return null
+    if (!compileId) return null
 
     // we don't want to read anything outside of the project
     if (fileIsOutsideFolder(filename, projectFolder)) {
@@ -80,7 +72,6 @@ export const compileToService = (
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/307
         status: 307,
         headers: {
-          vary: refererHeaderName,
           location: `${origin}/${filenameRelative}`,
         },
       }
@@ -113,7 +104,7 @@ export const compileToService = (
       return {
         status: 200,
         headers: {
-          ...(cachedDisabled ? { "cache-control": "no-store" } : { vary: refererHeaderName }),
+          ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
           "content-length": Buffer.byteLength(output),
           "content-type": "application/javascript",
         },
@@ -140,7 +131,7 @@ export const compileToService = (
           if (ifModifiedSinceDate >= dateToSecondsPrecision(mtime)) {
             return {
               status: 304,
-              headers: { vary: refererHeaderName },
+              headers: {},
             }
           }
         }
@@ -160,7 +151,7 @@ export const compileToService = (
           if (ifNoneMatch === eTag) {
             return {
               status: 304,
-              headers: { vary: refererHeaderName },
+              headers: {},
             }
           }
         }

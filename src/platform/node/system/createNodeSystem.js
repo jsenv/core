@@ -1,9 +1,6 @@
 import "systemjs/dist/system.js"
-import {
-  resolveImport,
-  remapResolvedImport,
-  isNativeNodeModuleBareSpecifier,
-} from "@jsenv/module-resolution"
+import { resolveImport, remapResolvedImport } from "@jsenv/module-resolution"
+import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/dist/src/isNativeNodeModuleBareSpecifier.js"
 import { fromFunctionReturningNamespace, fromHref } from "../../registerModuleFrom.js"
 import { fetchSource } from "../fetchSource.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"

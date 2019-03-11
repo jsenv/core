@@ -4,7 +4,7 @@ import {
 } from "@dmail/project-structure"
 import { uneval } from "@dmail/uneval"
 import { createCancellationToken } from "@dmail/cancellation"
-import { startServer, createRequestPredicate, serviceCompose } from "../server/index.js"
+import { startServer, serviceCompose } from "../server/index.js"
 import { startCompileServer } from "../server-compile/index.js"
 import { guard } from "../functionHelper.js"
 import { getBrowserPlatformHref } from "../platform/browser/remoteURL.js"
@@ -88,12 +88,14 @@ export const startBrowsingServer = async ({
   })
 
   const indexRoute = guard(
-    createRequestPredicate({
-      ressource: "",
-      method: "GET",
-    }),
+    ({ ressource, method }) => {
+      if (ressource !== "/") return false
+      if (method !== "GET") return false
+      return true
+    },
     async () => {
       const html = await getIndexPageHTML({
+        projectFolder,
         browsableFilenameRelativeArray,
       })
 
@@ -110,10 +112,9 @@ export const startBrowsingServer = async ({
   )
 
   const otherRoute = guard(
-    createRequestPredicate({
-      ressource: "*",
-      method: "GET",
-    }),
+    ({ method }) => {
+      return method === "GET"
+    },
     async ({ ressource }) => {
       const html = await generateHTML({
         compileInto,
@@ -147,17 +148,17 @@ export const startBrowsingServer = async ({
   return browserServer
 }
 
-const getIndexPageHTML = async ({ root, browsableFilenameRelativeArray }) => {
+const getIndexPageHTML = async ({ projectFolder, browsableFilenameRelativeArray }) => {
   return `<!doctype html>
 
   <head>
-    <title>Project root</title>
+    <title>Browsing ${projectFolder}</title>
     <meta charset="utf-8" />
   </head>
 
   <body>
     <main>
-      <h1>${root}</h1>
+      <h1>${projectFolder}</h1>
       <p>List of path to browse: </p>
       <ul>
         ${browsableFilenameRelativeArray
