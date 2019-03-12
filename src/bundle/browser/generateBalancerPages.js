@@ -5,7 +5,6 @@ export const generateBalancerPages = async ({
   cancellationToken = createCancellationToken(),
   projectFolder,
   into,
-  globalName,
   entryPointsDescription,
 }) => {
   await Promise.all(
@@ -14,7 +13,6 @@ export const generateBalancerPages = async ({
         cancellationToken,
         projectFolder,
         into,
-        globalName,
         entryName,
       })
     }),

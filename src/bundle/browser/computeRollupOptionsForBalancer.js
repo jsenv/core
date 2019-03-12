@@ -7,6 +7,7 @@ import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionT
 export const computeRollupOptionsForBalancer = ({
   projectFolder,
   into,
+  globalPromiseName,
   globalName,
   babelPluginDescription,
   groupDescription,
@@ -15,6 +16,7 @@ export const computeRollupOptionsForBalancer = ({
   log,
 }) => {
   const balancerOptionSource = generateBalancerOptionsSource({
+    globalPromiseName,
     globalName,
     groupDescription,
     entryFilenameRelative,
@@ -76,8 +78,14 @@ file: ${file}
   }
 }
 
-const generateBalancerOptionsSource = ({ globalName, entryFilenameRelative, groupDescription }) => {
+const generateBalancerOptionsSource = ({
+  globalPromiseName,
+  globalName,
+  entryFilenameRelative,
+  groupDescription,
+}) => {
   return `
+export const globalPromiseName = ${uneval(globalPromiseName)}
 export const globalName = ${uneval(globalName)}
 export const entryFilenameRelative = ${uneval(entryFilenameRelative)}
 export const groupDescription = ${uneval(groupDescription)}

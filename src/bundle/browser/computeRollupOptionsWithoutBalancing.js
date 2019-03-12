@@ -1,13 +1,13 @@
 import MagicString from "magic-string"
 import { createJsenvRollupPlugin } from "../createJsenvRollupPlugin.js"
 import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionToRollupPlugin.js"
-import { globalNameToPromiseGlobalName } from "./globalNameToPromiseGlobalName.js"
 
 export const computeRollupOptionsWithoutBalancing = ({
   cancellationToken,
   importMap,
   projectFolder,
   into,
+  globalPromiseName,
   globalName,
   entryPointsDescription,
   babelPluginDescription,
@@ -36,6 +36,7 @@ dir: ${dir}
       ? [
           createIIFEPromiseRollupPlugin({
             projectFolder,
+            globalPromiseName,
             globalName,
           }),
         ]
@@ -60,7 +61,7 @@ dir: ${dir}
   }
 }
 
-const createIIFEPromiseRollupPlugin = ({ globalName }) => {
+const createIIFEPromiseRollupPlugin = ({ globalPromiseName, globalName }) => {
   return {
     name: "iife-promise",
 
@@ -68,7 +69,7 @@ const createIIFEPromiseRollupPlugin = ({ globalName }) => {
     renderChunk: (code) => {
       const magicString = new MagicString(code)
       magicString.append(`
-var ${globalNameToPromiseGlobalName(globalName)} = Promise.resolve(${globalName})`)
+var ${globalPromiseName} = Promise.resolve(${globalName})`)
       const map = magicString.generateMap({ hires: true })
       const renderedCode = magicString.toString()
       return { code: renderedCode, map }

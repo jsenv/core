@@ -9,7 +9,7 @@ export const bundleBrowser = async ({
   projectFolder,
   importMap,
   into,
-  globalName,
+  globalPromiseName,
   entryPointsDescription,
   babelPluginDescription,
   compileGroupCount = 2,
@@ -17,15 +17,18 @@ export const bundleBrowser = async ({
   autoWrapEntryInPromise = false,
   verbose,
 }) => {
-  if (typeof globalName !== "string")
-    throw new TypeError(`bundleBrowser globalName must be a string, got ${globalName}`)
+  if (typeof globalPromiseName !== "string")
+    throw new TypeError(
+      `bundleBrowser globalPromiseName must be a string, got ${globalPromiseName}`,
+    )
+
+  const globalName = globalPromiseNameToGlobalName(globalPromiseName)
 
   return await Promise.all([
     bundlePlatform({
       entryPointsDescription,
       projectFolder,
       into,
-      globalName,
       babelPluginDescription,
       compileGroupCount,
       platformScoring,
@@ -35,6 +38,7 @@ export const bundleBrowser = async ({
           importMap,
           projectFolder,
           into,
+          globalPromiseName,
           globalName,
           entryPointsDescription,
           babelPluginDescription,
@@ -56,6 +60,7 @@ export const bundleBrowser = async ({
           importMap,
           projectFolder,
           into,
+          globalPromiseName,
           globalName,
           babelPluginDescription,
           ...context,
@@ -64,11 +69,12 @@ export const bundleBrowser = async ({
     generateBalancerPages({
       projectFolder,
       into,
-      globalName,
       entryPointsDescription,
     }),
   ])
 }
+
+const globalPromiseNameToGlobalName = (globalPromiseName) => `__${globalPromiseName}Value__`
 
 /*
 forceBalancing is true because:
