@@ -1,6 +1,6 @@
 # dev-server
 
-- finish and test stuff around importMap being handled client side
+- retest bundle with importMap
 - test all stuff inside dev-server-poc
 - create an other repo using dev-server-poc bundled files
   test the other repo can bundle dev-server-poc too
