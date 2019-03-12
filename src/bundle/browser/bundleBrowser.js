@@ -13,7 +13,7 @@ export const bundleBrowser = async ({
   globalName,
   entryPointsDescription,
   babelPluginDescription,
-  compileGroupCount = 2,
+  compileGroupCount = 1,
   platformScoring = browserScoring,
   verbose,
 }) => {
