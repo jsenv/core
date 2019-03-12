@@ -10,10 +10,18 @@ export const locateFilename = ({ rootHref, filenameRelative }) => {
   const nodeModuleSpecifier = moduleFilenameRelativeToNodeModuleSpecifier(filenameRelative)
   if (!nodeModuleSpecifier) return `${rootHref}/${filenameRelative}`
 
-  return resolveNodeModuleSpecifier({
-    rootHref,
-    specifier: nodeModuleSpecifier,
-  })
+  try {
+    return resolveNodeModuleSpecifier({
+      rootHref,
+      specifier: nodeModuleSpecifier,
+    })
+  } catch (e) {
+    if (e && e.code === "MODULE_NOT_FOUND") {
+      // return an empty string, it will return 404 to client
+      return ""
+    }
+    throw e
+  }
 }
 
 const moduleFilenameRelativeToNodeModuleSpecifier = (filenameRelative) => {

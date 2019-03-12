@@ -7,7 +7,6 @@ import { createCancellationToken } from "@dmail/cancellation"
 import { startServer, serviceCompose } from "../server/index.js"
 import { startCompileServer } from "../server-compile/index.js"
 import { guard } from "../functionHelper.js"
-import { getBrowserPlatformHref } from "../platform/browser/remoteURL.js"
 
 export const startBrowsingServer = async ({
   cancellationToken = createCancellationToken(),
@@ -147,6 +146,9 @@ export const startBrowsingServer = async ({
   })
   return browserServer
 }
+
+const getBrowserPlatformHref = ({ compileServerOrigin }) =>
+  `${compileServerOrigin}/node_modules/@dmail/dev-server/dist/browserPlatform.js`
 
 const getIndexPageHTML = async ({ projectFolder, browsableFilenameRelativeArray }) => {
   return `<!doctype html>

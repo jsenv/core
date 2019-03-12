@@ -1,6 +1,6 @@
 import { createReadStream } from "fs"
 import { folderRead, fileStat, fileRead } from "@dmail/helper"
-import { hrefToPathname, pathnameToFileHref } from "@jsenv/module-resolution"
+import { hrefToPathname, pathnameToFileHref, hrefToOrigin } from "@jsenv/module-resolution"
 import { createETag } from "../compileToService/helpers.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
 import { ressourceToContentType } from "./ressourceToContentType.js"
@@ -45,7 +45,7 @@ export const requestToFileResponse = async (
     }
 
     // redirection to other origin
-    if (!href.startsWith(`${rootHref}/`)) {
+    if (hrefToOrigin(href) !== hrefToOrigin(rootHref)) {
       return {
         status: 307,
         headers: {
@@ -54,14 +54,16 @@ export const requestToFileResponse = async (
       }
     }
 
-    // redirection to same origin
-    const resolvedFilename = href.slice(`${rootHref}/`.length)
-    if (resolvedFilename !== filenameRelative) {
-      return {
-        status: 307,
-        headers: {
-          location: `${origin}/${resolvedFilename}`,
-        },
+    if (href.startsWith(`${rootHref}/`)) {
+      // redirection to same origin
+      const resolvedFilename = href.slice(`${rootHref}/`.length)
+      if (resolvedFilename !== filenameRelative) {
+        return {
+          status: 307,
+          headers: {
+            location: `${origin}/${resolvedFilename}`,
+          },
+        }
       }
     }
 

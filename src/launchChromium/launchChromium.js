@@ -5,7 +5,6 @@ import puppeteer from "puppeteer"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
 import { startIndexServer } from "../server-index/startIndexServer.js"
 import { originAsString } from "../server/index.js"
-import { getBrowserPlatformHref } from "../platform/browser/remoteURL.js"
 import { regexpEscape } from "../stringHelper.js"
 
 export const launchChromium = async ({
@@ -232,6 +231,9 @@ export const launchChromium = async ({
     executeFile,
   }
 }
+
+const getBrowserPlatformHref = ({ compileServerOrigin }) =>
+  `${compileServerOrigin}/node_modules/@dmail/dev-server/dist/browserPlatform.js`
 
 const errorToSourceError = (error, { sourceOrigin, compileServerOrigin }) => {
   // does not truly work
