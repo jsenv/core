@@ -5,7 +5,10 @@ import { generateImportMapForProjectNodeModules } from "../../generateImportMapF
 const projectFolder = `${selfProjectFolder}/src/import-map/test/basic`
 
 ;(async () => {
-  const actual = await generateImportMapForProjectNodeModules({ projectFolder })
+  const actual = await generateImportMapForProjectNodeModules({
+    projectFolder,
+    includeDevDependencies: true,
+  })
   const expected = {
     imports: {
       "@dmail/yo": "/node_modules/@dmail/yo/index.js",

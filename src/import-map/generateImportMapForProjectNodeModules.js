@@ -8,6 +8,7 @@ export const generateImportMapForProjectNodeModules = async ({
   remapMain = true, // import 'lodash' remapped to '/node_modules/lodash/index.js'
   remapFolder = true, // import 'lodash/src/file.js' remapped to '/node_modules/lodash/src/file.js'
   logDuration = false,
+  includeDevDependencies = false,
 }) => {
   const imports = {}
   const scopes = {}
@@ -15,8 +16,16 @@ export const generateImportMapForProjectNodeModules = async ({
   const visitDependencies = async (folder) => {
     const dependentName =
       folder === projectFolder ? basename(folder) : folder.slice(`${projectFolder}/`.length)
-    const nodeModules = await readNodeModulesInsideFolder(`${folder}/node_modules`)
     const isTopLevel = folder === projectFolder
+
+    let nodeModules = await readNodeModulesInsideFolder(`${folder}/node_modules`)
+    if (!includeDevDependencies) {
+      const packageData = await readFolderPackageData(folder)
+      const { devDependencies = {} } = packageData
+      nodeModules = nodeModules.filter(
+        (dependencyName) => dependencyName in devDependencies === false,
+      )
+    }
 
     await Promise.all(
       nodeModules.map(async (dependencyName) => {
