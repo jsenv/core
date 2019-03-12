@@ -25,5 +25,5 @@ selectAllFileInsideFolder({
   predicate: (meta) => meta.format === true,
   transformFile: ({ filenameRelative }) => filenameRelative,
 }).then((filenameRelativeArray) => {
-  prettiest({ folder: projectFolder, filenameRelativeArray })
+  prettiest({ folder: projectFolder, filenameRelativeArray: filenameRelativeArray.sort() })
 })
