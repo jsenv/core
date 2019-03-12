@@ -53,7 +53,6 @@ export const bundleBrowser = async ({
           globalName,
           entryPointsDescription,
           babelPluginDescription,
-          autoWrapEntryInPromise,
           ...context,
         }),
       computeRollupOptionsWithBalancing: (context) =>

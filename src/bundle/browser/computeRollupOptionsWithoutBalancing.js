@@ -11,7 +11,7 @@ export const computeRollupOptionsWithoutBalancing = ({
   globalName,
   entryPointsDescription,
   babelPluginDescription,
-  autoWrapEntryInPromise,
+  autoWrapEntryInPromise, // unused anymore, maybe to remove completely
   log,
 }) => {
   const dir = `${projectFolder}/${into}`

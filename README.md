@@ -19,9 +19,6 @@
 
 later
 
-- genereateImportMapForNodeModules option to
-  allow bare import to be remapped to node module location
-
 - a function capable to generate importMap from a webpack config object
 
 - eslint-plugin-import of jsenv must accept
