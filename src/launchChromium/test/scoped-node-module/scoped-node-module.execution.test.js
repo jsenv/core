@@ -1,27 +1,43 @@
 import { assert } from "@dmail/assert"
-import { root } from "../../../root.js"
+import { pathnameToFileHref } from "@jsenv/module-resolution"
+import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { launchChromium } from "../../launchChromium.js"
+import { generateImportMapForProjectNodeModules } from "../../../import-map/generateImportMapForProjectNodeModules.js"
 
-const file = `src/launchNode/test/scoped-node-module/scoped-node-module.js`
+const projectFolder = `${selfProjectFolder}/src/launchChromium/test/scoped-node-module`
+const filenameRelative = `scoped-node-module.js`
 const compileInto = "build"
 const babelPluginDescription = {}
+
 ;(async () => {
-  const { origin: remoteRoot } = await startCompileServer({
-    root,
+  const sourceOrigin = pathnameToFileHref(projectFolder)
+
+  const importMap = await generateImportMapForProjectNodeModules({ projectFolder })
+
+  const { origin: compileServerOrigin } = await startCompileServer({
+    importMap,
+    projectFolder,
     compileInto,
     babelPluginDescription,
   })
 
   const actual = await launchAndExecute({
-    launch: () => launchChromium({ root, compileInto, remoteRoot, headless: false }),
+    launch: (options) =>
+      launchChromium({
+        ...options,
+        compileInto,
+        sourceOrigin,
+        compileServerOrigin,
+        headless: false,
+      }),
     stopOnceExecuted: true,
     mirrorConsole: true,
+    collectNamespace: true,
+    filenameRelative,
     verbose: true,
     platformTypeForLog: "chromium browser",
-    collectNamespace: true,
-    file,
   })
   const expected = {
     status: "completed",
