@@ -1,13 +1,17 @@
 import blockScoping from "@babel/plugin-transform-block-scoping"
-import { root } from "../../../../root.js"
+import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
 import { bundleNode } from "../../bundleNode.js"
 
+const projectFolder = `${selfProjectFolder}/src/bundle/node/test/top-level-await`
+
 bundleNode({
-  entryPointObject: {
-    main: "src/bundle/node/test/top-level-await/top-level-await.js",
+  projectFolder,
+  into: "dist/node",
+  entryPointsDescription: {
+    main: "top-level-await.js",
   },
-  root,
   babelPluginDescription: {
     "transform-block-scoping": [blockScoping],
   },
+  verbose: true,
 })

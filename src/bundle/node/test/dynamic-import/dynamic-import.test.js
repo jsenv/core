@@ -1,13 +1,17 @@
 import blockScoping from "@babel/plugin-transform-block-scoping"
-import { root } from "../../../../root.js"
+import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
 import { bundleNode } from "../../bundleNode.js"
 
+const projectFolder = `${selfProjectFolder}/src/bundle/node/test/dynamic-import`
+
 bundleNode({
-  entryPointObject: {
-    main: "src/bundle/node/test/dynamic-import/dynamic-import.js",
+  projectFolder,
+  into: "dist/node",
+  entryPointsDescription: {
+    main: "dynamic-import.js",
   },
-  root,
   babelPluginDescription: {
     "transform-block-scoping": [blockScoping],
   },
+  verbose: true,
 })

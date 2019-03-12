@@ -1,12 +1,14 @@
 import blockScoping from "@babel/plugin-transform-block-scoping"
-import { projectFolder } from "../../../../projectFolder.js"
+import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
 import { bundleNode } from "../../bundleNode.js"
+
+const projectFolder = `${selfProjectFolder}/src/bundle/node/test/balancing`
 
 bundleNode({
   projectFolder,
-  into: "bundle/node",
+  into: "dist/node",
   entryPointsDescription: {
-    main: "src/bundle/node/test/balancing/balancing.js",
+    main: "balancing.js",
   },
   babelPluginDescription: {
     "transform-block-scoping": [blockScoping],
