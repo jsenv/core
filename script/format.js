@@ -7,15 +7,19 @@ const { projectFolder } = require("./projectFolder.js")
 
 const metaDescription = namedValueDescriptionToMetaDescription({
   format: {
-    "**/*.js": true,
-    "**/*.json": true,
-    "**/*.md": true,
-    node_modules: false, // eslint-disable-line camelcase
-    dist: false,
-    build: false,
-    bundle: false,
-    "package.json": false,
-    "package-lock.json": false,
+    // js
+    "index.js": true,
+    "index.test.js": true,
+    "src/**/*.js": true,
+    "test/**/*.js": true,
+    // json
+    "src/**/*.json": true,
+    "test/**/*.json": true,
+    // md
+    "readme.md": true,
+    "doc/**.md": true,
+    "src/**/*.md": true,
+    "test/**/*.md": true,
   },
 })
 
