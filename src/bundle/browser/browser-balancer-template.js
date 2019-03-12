@@ -1,5 +1,4 @@
 import {
-  globalPromiseName,
   globalName,
   entryFilenameRelative,
   groupDescription,
@@ -12,6 +11,6 @@ import { loadUsingScript } from "./loadUsingScript.js"
 const compileId = browserToCompileId(detect(), groupDescription)
 const scriptSrc = `./${compileId}/${entryFilenameRelative}`
 
-window[globalPromiseName] = loadUsingScript(scriptSrc).then(() => {
+export default loadUsingScript(scriptSrc).then(() => {
   return window[globalName]
 })

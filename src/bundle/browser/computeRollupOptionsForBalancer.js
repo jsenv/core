@@ -71,7 +71,7 @@ file: ${file}
     rollupGenerateOptions: {
       file,
       format: "iife",
-      name: null,
+      name: globalPromiseName,
       sourcemap: true,
       sourcemapExcludeSources: true,
     },

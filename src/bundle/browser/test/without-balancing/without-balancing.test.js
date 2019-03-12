@@ -5,7 +5,7 @@ import { bundleBrowser } from "../../bundleBrowser.js"
 bundleBrowser({
   projectFolder,
   into: "bundle/browser",
-  globalName: "withoutBalancing",
+  globalPromiseName: "withoutBalancing",
   entryPointsDescription: {
     main: "src/bundle/browser/test/without-balancing/without-balancing.js",
   },
