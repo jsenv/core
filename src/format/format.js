@@ -1,5 +1,8 @@
 import { prettiest } from "@dmail/prettiest"
-import { patternGroupToMetaMap, forEachRessourceMatching } from "@dmail/project-structure"
+import {
+  namedValueDescriptionToMetaDescription,
+  selectAllFileInsideFolder,
+} from "@dmail/project-structure"
 import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
@@ -9,16 +12,19 @@ export const format = ({ projectFolder, formatDescription }) =>
   catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
-    const metaMap = patternGroupToMetaMap({
-      format: formatDescription,
-    })
-
-    const ressources = await forEachRessourceMatching({
+    const filenameRelativeArray = await selectAllFileInsideFolder({
       cancellationToken,
-      localRoot: projectFolder,
-      metaMap,
-      predicate: (meta) => meta.format,
+      pathname: projectFolder,
+      metaDescription: namedValueDescriptionToMetaDescription({
+        format: formatDescription,
+      }),
+      predicate: (meta) => meta.format === true,
+      transformFile: ({ filenameRelative }) => filenameRelative,
     })
 
-    return prettiest({ cancellationToken, localRoot: projectFolder, ressources })
+    return prettiest({
+      cancellationToken,
+      folder: projectFolder,
+      filenameRelativeArray: filenameRelativeArray.sort(),
+    })
   })
