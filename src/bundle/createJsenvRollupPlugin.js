@@ -9,36 +9,53 @@ export const createJsenvRollupPlugin = ({
   cancellationToken,
   importMap = {},
   projectFolder,
-  clientOrigin = "http://example.com",
+  origin = "http://example.com",
 }) => {
   const rollupJsenvPlugin = {
     name: "jsenv",
 
     resolveId: (importee, importer) => {
-      const rootHref = `${clientOrigin}${projectFolder}`
-
-      // hotfix because entry file has no importer
-      // so it would be resolved against root which is a folder
-      // and url resolution would not do what we expect
-      if (!importer) {
-        importer = rootHref
+      let importerHref
+      if (importer) {
+        // importer will be a pathname
+        // except if you have an absolute dependency like import 'http://domain.com/file.js'
+        // so when needed convert importer back to an url
+        if (importer.startsWith(`${projectFolder}/`)) {
+          importerHref = `${origin}${importer.slice(projectFolder.length)}`
+        } else {
+          importerHref = importer
+        }
+      } else {
+        // hotfix because entry file has no importer
+        // so it would be resolved against root which is a folder
+        // and url resolution would not do what we expect
+        importerHref = `${origin}${projectFolder}`
       }
 
       const resolvedImport = resolveImport({
-        importer,
+        importer: importerHref,
         specifier: importee,
       })
 
       const id = remapResolvedImport({
         importMap,
-        importerHref: importer,
+        importerHref,
         resolvedImport,
       })
+
+      // rollup works with pathname
+      // le'sreturn himpathname when possible
+      // otherwise sourcemap.sources will be messed up
+      if (id.startsWith(`${origin}/`)) {
+        const filename = `${projectFolder}${hrefToPathname(id)}`
+        return filename
+      }
 
       return id
     },
 
-    load: async (href) => {
+    load: async (id) => {
+      const href = id[0] === "/" ? `file://${id}` : id
       const source = await fetchHref(href)
 
       const sourceMappingURL = readSourceMappingURL(source)

@@ -56,7 +56,11 @@ dir: ${dir}
       name: globalName,
       // https://rollupjs.org/guide/en#output-sourcemap
       sourcemap: true,
-      sourceMapExcludeSources: true,
+      // we could exclude them
+      // but it's better to put them directly
+      // in case source files are not reachable
+      // for whatever reason
+      sourcemapExcludeSources: false,
     },
   }
 }
