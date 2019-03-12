@@ -1,5 +1,5 @@
 import { launchChromium } from "../../launchChromium/index.js"
-import { projectFolder } from "../../projectFolder.js"
+import { projectFolder } from "../../../projectFolder.js"
 import { execute } from "../execute.js"
 
 execute({

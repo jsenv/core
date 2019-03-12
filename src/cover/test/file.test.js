@@ -1,5 +1,5 @@
 import { assert } from "@dmail/assert"
-import { projectFolder } from "../../projectFolder.js"
+import { projectFolder } from "../../../projectFolder.js"
 import { launchNode } from "../../launchNode/index.js"
 import { launchChromium } from "../../launchChromium/index.js"
 import { cover } from "../cover.js"

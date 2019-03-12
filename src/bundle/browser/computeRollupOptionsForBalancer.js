@@ -1,6 +1,6 @@
 import createNodeResolveRollupPlugin from "rollup-plugin-node-resolve"
 import { uneval } from "@dmail/uneval"
-import { projectFolder as selfProjectFolder } from "../../projectFolder.js"
+import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
 import { groupToBabelPluginDescription } from "../../group-description/index.js"
 import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionToRollupPlugin.js"
 

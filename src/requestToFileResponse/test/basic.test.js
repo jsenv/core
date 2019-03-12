@@ -1,6 +1,6 @@
 import fs from "fs"
 import { assert } from "@dmail/assert"
-import { projectFolder } from "../../projectFolder.js"
+import { projectFolder } from "../../../projectFolder.js"
 import { requestToFileResponse } from "../requestToFileResponse.js"
 
 const test = async () => {

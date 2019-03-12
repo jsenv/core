@@ -1,6 +1,6 @@
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@dmail/uneval"
-import { projectFolder } from "../projectFolder.js"
+import { projectFolder } from "../../projectFolder.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 
 const nodeClientFile = `${projectFolder}/dist/src/launchNode/client.js`

@@ -8,7 +8,7 @@ import {
   pluginOptionMapToPluginMap,
   pluginMapToPluginsForPlatform,
 } from "@dmail/project-structure-compile-babel"
-import { projectFolder } from "../../projectFolder.js"
+import { projectFolder } from "../../../projectFolder.js"
 
 const inputFilenameRelative = `src/platform/browser/browserPlatform.js`
 const outputFolder = `${projectFolder}/dist`

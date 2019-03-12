@@ -1,5 +1,5 @@
 import blockScoping from "@babel/plugin-transform-block-scoping"
-import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
+import { projectFolder as selfProjectFolder } from "../../../../../projectFolder.js"
 import { generateImportMapForProjectNodeModules } from "../../../../import-map/generateImportMapForProjectNodeModules.js"
 import { bundleBrowser } from "../../bundleBrowser.js"
 

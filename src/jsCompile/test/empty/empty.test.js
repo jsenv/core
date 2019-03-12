@@ -1,7 +1,7 @@
 import fs from "fs"
 import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
+import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
 import { jsCompile } from "../../jsCompile.js"
 
 const projectFolder = `${selfProjectFolder}/src/jsCompile/test/empty`

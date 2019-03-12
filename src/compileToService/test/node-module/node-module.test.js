@@ -1,6 +1,6 @@
 import { assert } from "@dmail/assert"
 import { compileToService } from "../../compileToService.js"
-import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
+import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
 
 const projectFolder = `${selfProjectFolder}/src/compileToService/test/node-module`
 const compileInto = "build"

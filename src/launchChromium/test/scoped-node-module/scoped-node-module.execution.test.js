@@ -1,5 +1,5 @@
 import { assert } from "@dmail/assert"
-import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
+import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { launchChromium } from "../../launchChromium.js"

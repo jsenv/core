@@ -1,4 +1,4 @@
-import { projectFolder } from "../../projectFolder.js"
+import { projectFolder } from "../../../projectFolder.js"
 import { launchNode } from "../../launchNode/index.js"
 import { execute } from "../execute.js"
 

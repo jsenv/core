@@ -1,6 +1,6 @@
 import { assert } from "@dmail/assert"
 import { fileStat } from "@dmail/helper"
-import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
+import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
 import { compileToService } from "../../compileToService.js"
 
 const projectFolder = `${selfProjectFolder}/src/compileToService/test/basic`

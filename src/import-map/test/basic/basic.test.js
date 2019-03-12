@@ -1,5 +1,5 @@
 import { assert } from "@dmail/assert"
-import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
+import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
 import { generateImportMapForProjectNodeModules } from "../../generateImportMapForProjectNodeModules.js"
 
 const projectFolder = `${selfProjectFolder}/src/import-map/test/basic`
