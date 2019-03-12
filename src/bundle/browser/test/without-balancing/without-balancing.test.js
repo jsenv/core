@@ -7,7 +7,7 @@ const projectFolder = `${selfProjectFolder}/src/bundle/browser/test/without-bala
 bundleBrowser({
   projectFolder,
   into: "dist/browser",
-  globalPromiseName: "withoutBalancing",
+  globalName: "withoutBalancing",
   entryPointsDescription: {
     main: "without-balancing.js",
   },
@@ -15,6 +15,5 @@ bundleBrowser({
     "transform-block-scoping": [blockScoping],
   },
   compileGroupCount: 1,
-  autoWrapEntryInPromise: true,
   verbose: true,
 })

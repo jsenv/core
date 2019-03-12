@@ -1,13 +1,18 @@
 import blockScoping from "@babel/plugin-transform-block-scoping"
-import { root } from "../../../../root.js"
+import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
 import { bundleBrowser } from "../../bundleBrowser.js"
 
+const projectFolder = `${selfProjectFolder}/src/bundle/browser/test/debugger`
+
 bundleBrowser({
-  entryPointObject: {
-    main: "src/bundle/browser/test/debugger/debugger.js",
+  projectFolder,
+  into: "dist/browser",
+  globalPromiseName: "debug",
+  entryPointsDescription: {
+    main: "debugger.js",
   },
-  root,
   babelPluginDescription: {
     "transform-block-scoping": [blockScoping],
   },
+  verbose: true,
 })

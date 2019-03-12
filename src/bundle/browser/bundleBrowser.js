@@ -10,19 +10,30 @@ export const bundleBrowser = async ({
   importMap,
   into,
   globalPromiseName,
+  globalName,
   entryPointsDescription,
   babelPluginDescription,
   compileGroupCount = 2,
   platformScoring = browserScoring,
-  autoWrapEntryInPromise = false,
   verbose,
 }) => {
-  if (typeof globalPromiseName !== "string")
-    throw new TypeError(
-      `bundleBrowser globalPromiseName must be a string, got ${globalPromiseName}`,
-    )
+  const hasBalancing = compileGroupCount > 1
 
-  const globalName = globalPromiseNameToGlobalName(globalPromiseName)
+  if (hasBalancing) {
+    if (typeof globalPromiseName !== "string")
+      throw new TypeError(
+        `when balancing, globalPromiseName must be a string, got ${globalPromiseName}.`,
+      )
+    if (typeof globalName !== "undefined")
+      throw new TypeError(`when balancing, globalName must be undefined, got ${globalPromiseName}.`)
+
+    globalName = globalPromiseNameToGlobalName(globalPromiseName)
+  } else {
+    if (typeof globalName !== "string")
+      throw new TypeError(`globalName must be a string, got ${globalName}.`)
+    if (typeof globalPromiseName !== "undefined")
+      throw new TypeError(`globalPromiseName must be undefined, got ${globalPromiseName}.`)
+  }
 
   return await Promise.all([
     bundlePlatform({
