@@ -1,5 +1,4 @@
 import { assert } from "@dmail/assert"
-import { pathnameToFileHref } from "@jsenv/module-resolution"
 import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
@@ -12,7 +11,7 @@ const compileInto = "build"
 const babelPluginDescription = {}
 
 ;(async () => {
-  const sourceOrigin = pathnameToFileHref(projectFolder)
+  const sourceOrigin = `file://${projectFolder}`
 
   const importMap = await generateImportMapForProjectNodeModules({ projectFolder })
 

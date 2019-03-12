@@ -1,6 +1,6 @@
 import { createReadStream } from "fs"
 import { folderRead, fileStat, fileRead } from "@dmail/helper"
-import { hrefToPathname, pathnameToFileHref, hrefToOrigin } from "@jsenv/module-resolution"
+import { hrefToPathname, hrefToOrigin } from "@jsenv/module-resolution"
 import { createETag } from "../compileToService/helpers.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
 import { ressourceToContentType } from "./ressourceToContentType.js"
@@ -32,7 +32,7 @@ export const requestToFileResponse = async (
     }
   }
 
-  const rootHref = pathnameToFileHref(projectFolder)
+  const rootHref = `file://${projectFolder}`
 
   try {
     const filenameRelative = ressource.slice(1)

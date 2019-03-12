@@ -1,5 +1,5 @@
 import { sync } from "resolve"
-import { hrefToPathname, pathnameToDirname, pathnameToFileHref } from "@jsenv/module-resolution"
+import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 
 export const resolveNodeModuleSpecifier = ({ rootHref, importer, specifier }) => {
   try {
@@ -7,7 +7,7 @@ export const resolveNodeModuleSpecifier = ({ rootHref, importer, specifier }) =>
       extensions: [".mjs", ".js", ".json"],
       basedir: importer ? pathnameToDirname(hrefToPathname(importer)) : hrefToPathname(rootHref),
     })
-    return pathnameToFileHref(nodeModuleFilePathname)
+    return `file://${nodeModuleFilePathname}`
   } catch (e) {
     if (e && e.code === "MODULE_NOT_FOUND") {
       throw createNodeModuleNotFoundError({

@@ -1,4 +1,3 @@
-import { pathnameToFileHref } from "@jsenv/module-resolution"
 import { startCompileServer } from "../server-compile/index.js"
 import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
@@ -22,7 +21,7 @@ export const execute = async ({
   catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
-    const sourceOrigin = pathnameToFileHref(projectFolder)
+    const sourceOrigin = `file://${projectFolder}`
 
     const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,

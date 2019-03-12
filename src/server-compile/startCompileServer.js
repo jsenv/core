@@ -1,4 +1,3 @@
-import { pathnameToFileHref } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
 import {
@@ -104,7 +103,7 @@ const locateFileSystem = ({ rootHref, filenameRelative }) => {
   // in order to test this behaviour, when we are working on this module
   // 'node_modules/@dmail/dev-server` is an alias to rootHref
   if (filenameRelative.startsWith("node_modules/@dmail/dev-server/")) {
-    const sourceOrigin = pathnameToFileHref(selfProjectFolder)
+    const sourceOrigin = `file://${selfProjectFolder}`
     if (rootHref === sourceOrigin || rootHref.startsWith(`${sourceOrigin}/`)) {
       const filenameRelativeSelf = filenameRelative.slice("node_modules/@dmail/dev-server/".length)
       return `${sourceOrigin}/${filenameRelativeSelf}`

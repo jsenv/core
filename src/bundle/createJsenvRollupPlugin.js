@@ -1,24 +1,21 @@
 import { resolve } from "url"
 import { fileRead } from "@dmail/helper"
 import { createOperation } from "@dmail/cancellation"
-import {
-  resolveImport,
-  remapResolvedImport,
-  pathnameToFileHref,
-  hrefToPathname,
-} from "@jsenv/module-resolution"
+import { resolveImport, remapResolvedImport, hrefToPathname } from "@jsenv/module-resolution"
 import { fetchUsingHttp } from "../platform/node/fetchUsingHttp.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 
-export const createJsenvRollupPlugin = ({ cancellationToken, importMap = {}, projectFolder }) => {
+export const createJsenvRollupPlugin = ({
+  cancellationToken,
+  importMap = {},
+  projectFolder,
+  clientOrigin = "http://example.com",
+}) => {
   const rollupJsenvPlugin = {
     name: "jsenv",
 
     resolveId: (importee, importer) => {
-      // well I think we should not use toFileHref but rather
-      // toHttpHref to benefit from http url resolution
-      // as client side would
-      const rootHref = pathnameToFileHref(projectFolder)
+      const rootHref = `${clientOrigin}${projectFolder}`
 
       // hotfix because entry file has no importer
       // so it would be resolved against root which is a folder

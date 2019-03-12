@@ -1,6 +1,5 @@
 import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 import { assert } from "@dmail/assert"
-import { pathnameToFileHref } from "@jsenv/module-resolution"
 import { projectFolder } from "../../../projectFolder.js"
 import { launchNode } from "../../launchNode.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
@@ -14,7 +13,7 @@ const babelPluginDescription = {
 }
 
 ;(async () => {
-  const sourceOrigin = pathnameToFileHref(projectFolder)
+  const sourceOrigin = `file://${projectFolder}`
 
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder,
