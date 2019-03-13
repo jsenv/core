@@ -4,31 +4,35 @@ import { launchNode } from "../../launchNode/index.js"
 import { launchChromium } from "../../launchChromium/index.js"
 import { cover } from "../cover.js"
 
-cover({
-  projectFolder,
-  compileInto: "build",
-  babelPluginDescription: {},
-  coverDescription: {
-    "src/cover/test/file.js": true,
-  },
-  executeDescription: {
-    "src/cover/test/use-file.js": {
-      node: {
-        launch: launchNode,
-      },
-      chromium: {
-        launch: launchChromium,
+const testFolder = `${projectFolder}/src/cover/test`
+const compileInto = ".dist"
+
+;(async () => {
+  const coverageMap = await cover({
+    projectFolder: testFolder,
+    compileInto,
+    babelPluginDescription: {},
+    coverDescription: {
+      "file.js": true,
+    },
+    executeDescription: {
+      "use-file.js": {
+        node: {
+          launch: launchNode,
+        },
+        chromium: {
+          launch: launchChromium,
+        },
       },
     },
-  },
-}).then((coverageMap) => {
+  })
   assert({
     actual: coverageMap,
     expected: {
-      "src/cover/test/file.js": {
-        ...coverageMap["src/cover/test/file.js"],
+      "file.js": {
+        ...coverageMap["file.js"],
         s: { 0: 2, 1: 1, 2: 1, 3: 1, 4: 0 },
       },
     },
   })
-})
+})()

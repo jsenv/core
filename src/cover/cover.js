@@ -11,6 +11,7 @@ import {
 } from "../cancellationHelper.js"
 
 export const cover = async ({
+  importMap,
   projectFolder,
   compileInto,
   babelPluginDescription,
@@ -27,6 +28,7 @@ export const cover = async ({
       listFilesToCover({ cancellationToken, projectFolder, coverDescription }),
       executeAndCoverPatternMapping({
         cancellationToken,
+        importMap,
         projectFolder,
         compileInto,
         babelPluginDescription,
@@ -61,6 +63,7 @@ const listFilesToCover = async ({ cancellationToken, projectFolder, coverDescrip
 
 const executeAndCoverPatternMapping = async ({
   cancellationToken,
+  importMap,
   projectFolder,
   compileInto,
   babelPluginDescription,
@@ -68,6 +71,7 @@ const executeAndCoverPatternMapping = async ({
 }) => {
   const executionPlan = await executeDescriptionToExecutionPlan({
     cancellationToken,
+    importMap,
     projectFolder,
     compileInto,
     babelPluginDescription,

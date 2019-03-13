@@ -6,6 +6,7 @@ import {
 } from "../cancellationHelper.js"
 
 export const execute = async ({
+  importMap,
   projectFolder,
   compileInto,
   babelPluginDescription,
@@ -25,6 +26,7 @@ export const execute = async ({
 
     const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
+      importMap,
       projectFolder,
       compileInto,
       babelPluginDescription,
