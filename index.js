@@ -35,3 +35,12 @@ export { launchChromium } from "./src/launchChromium/index.js"
 
 // must be moved later to jsenv/node-launcher
 export { launchNode } from "./src/launchNode/index.js"
+
+// helpers around coverage, core for now
+export {
+  coverageMapToAbsolute,
+} from "./src/executionPlanResultToCoverageMap/coverageMapToAbsolute.js"
+export {
+  generateCoverageHTML,
+} from "./src/executionPlanResultToCoverageMap/generateCoverageHTML.js"
+export { generateCoverageLog } from "./src/executionPlanResultToCoverageMap/generateCoverageLog.js"
