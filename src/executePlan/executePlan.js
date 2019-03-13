@@ -1,3 +1,4 @@
+import { createFileCoverage } from "istanbul-lib-coverage"
 import { createCancellationToken, createConcurrentOperations } from "@dmail/cancellation"
 import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
@@ -67,21 +68,21 @@ export const executePlan = async (
         filenameRelative,
         collectCoverage: cover,
       })
+      if (
+        cover &&
+        result.status === "errored" &&
+        result.error &&
+        result.error.code === "MODULE_PARSE_ERROR"
+      ) {
+        const fileCoverage = createFileCoverage(result.error.fileName)
+        result.coverageMap = { [result.error.fileName]: fileCoverage.toJSON() }
+      }
       afterEachExecutionCallback({ allocatedMs, executionName, filenameRelative, ...result })
 
       if (filenameRelative in planResult === false) {
         planResult[filenameRelative] = {}
       }
       planResult[filenameRelative][executionName] = result
-
-      // if (cover && result.value.coverageMap === null) {
-      // coverageMap can be null for 2 reason:
-      // - test file import a source file which is not instrumented
-      // here we should throw
-      // - test file import nothing so global__coverage__ is not set
-      // here it's totally normal
-      // throw new Error(`missing coverageMap after ${file} execution, it was not instrumented`)
-      // }
     },
   })
 

@@ -21,6 +21,7 @@ export const executionPlanResultToCoverageMap = async (
       coverageMapArray.push(coverageMap)
     })
   })
+
   const executionCoverageMap = coverageMapCompose(...coverageMapArray)
 
   const arrayOfFilenameRelativeMissingCoverage = arrayOfFilenameRelativeToCover.filter(
