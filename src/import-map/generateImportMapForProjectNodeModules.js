@@ -21,10 +21,13 @@ export const generateImportMapForProjectNodeModules = async ({
     let nodeModules = await readNodeModulesInsideFolder(`${folder}/node_modules`)
     if (!includeDevDependencies) {
       const packageData = await readFolderPackageData(folder)
-      const { devDependencies = {} } = packageData
-      nodeModules = nodeModules.filter(
-        (dependencyName) => dependencyName in devDependencies === false,
-      )
+      const { dependencies = {}, peerDependencies = {}, devDependencies = {} } = packageData
+      nodeModules = nodeModules.filter((dependencyName) => {
+        if (dependencyName in devDependencies) return false
+        if (dependencyName in dependencies) return true
+        if (dependencyName in peerDependencies) return true
+        return false
+      })
     }
 
     await Promise.all(
