@@ -21,7 +21,6 @@ const babelPluginDescription = {}
     mirrorConsole: true,
     file,
     verbose: true,
-    platformTypeForLog: "chromium browser",
   })
   const expected = {
     status: "errored",

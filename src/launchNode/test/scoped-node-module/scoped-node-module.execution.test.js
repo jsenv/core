@@ -28,7 +28,6 @@ const babelPluginDescription = {}
     collectNamespace: true,
     filenameRelative,
     verbose: true,
-    platformTypeForLog: "node process",
   })
   const expected = {
     status: "completed",

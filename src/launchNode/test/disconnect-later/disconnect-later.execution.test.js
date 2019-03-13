@@ -19,7 +19,6 @@ const babelPluginDescription = {}
     launch: (options) => launchNode({ ...options, root, compileInto, remoteRoot }),
     file,
     verbose: true,
-    platformTypeForLog: "node process",
   })
   const expected = {
     status: "completed",

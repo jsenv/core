@@ -18,7 +18,6 @@ const babelPluginDescription = {}
   const actual = await launchAndExecute({
     laynch: (options) => launchChromium({ ...options, root, compileInto, remoteRoot }),
     stopOnceExecuted: true,
-    platformTypeForLog: "chromium process",
     verbose: true,
     mirrorConsole: true,
     collectNamespace: true,

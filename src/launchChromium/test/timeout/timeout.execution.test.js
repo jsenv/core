@@ -26,7 +26,6 @@ const babelPluginDescription = {
     captureConsole: true,
     file,
     verbose: true,
-    platformTypeForLog: "chromium browser",
   })
   const expected = {
     status: "timedout",

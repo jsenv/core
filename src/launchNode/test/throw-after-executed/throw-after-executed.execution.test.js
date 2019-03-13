@@ -23,7 +23,6 @@ const babelPluginDescription = {}
     captureConsole: true,
     filenameRelative,
     verbose: true,
-    platformTypeForLog: "node process",
   })
   actual.platformLog = removeDebuggerLog(actual.platformLog)
   const expected = {

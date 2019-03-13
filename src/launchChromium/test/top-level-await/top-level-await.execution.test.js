@@ -24,7 +24,6 @@ const babelPluginDescription = {
     collectNamespace: true,
     file,
     verbose: true,
-    platformTypeForLog: "chromium browser",
   })
   const expected = {
     status: "completed",

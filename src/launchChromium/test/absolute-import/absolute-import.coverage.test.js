@@ -22,7 +22,6 @@ const babelPluginDescription = {}
 
   const actual = await launchAndExecute({
     launch: launchChromium({ root, compileInto, remoteRoot, headless: false }),
-    platformTypeForLog: "chromium browser",
     verbose: true,
     stopOnceExecuted: true,
     mirrorConsole: true,

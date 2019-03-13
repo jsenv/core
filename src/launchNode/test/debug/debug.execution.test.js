@@ -21,7 +21,6 @@ const babelPluginDescription = {}
     launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
     filenameRelative,
     verbose: true,
-    platformTypeForLog: "node process",
   })
   const expected = {
     status: "completed",

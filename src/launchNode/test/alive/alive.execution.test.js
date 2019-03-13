@@ -20,7 +20,6 @@ const babelPluginDescription = {}
     mirrorConsole: true,
     file,
     verbose: true,
-    platformTypeForLog: "node process",
   })
   const expected = {
     status: "completed",

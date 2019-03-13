@@ -20,7 +20,6 @@ const babelPluginDescription = {}
     stopOnceExecuted: true,
     mirrorConsole: true,
     verbose: true,
-    platformTypeForLog: "chromium browser",
     file,
   })
   const expected = {

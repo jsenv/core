@@ -26,7 +26,6 @@ const babelPluginDescription = {}
     collectCoverage: true,
     file,
     verbose: true,
-    platformTypeForLog: "node process",
   })
   const expected = {
     status: "completed",

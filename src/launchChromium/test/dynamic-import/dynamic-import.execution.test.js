@@ -20,7 +20,6 @@ const babelPluginDescription = {
 
   const actual = await launchAndExecute({
     launch: (options) => launchChromium({ ...options, root, compileInto, remoteRoot }),
-    platformTypeForLog: "node process",
     verbose: true,
     stopOnceExecuted: true,
     collectNamespace: true,
