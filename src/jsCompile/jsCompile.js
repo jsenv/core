@@ -33,22 +33,21 @@ export const jsCompile = async ({
   const coverage = metadata.coverage
   let output = code
 
-  // we don't need sourceRoot because our path are relative or absolute to the current location
-  // we could comment this line because it is not set by babel because not passed during transform
-  delete map.sourceRoot
-
-  sources.push(...map.sources)
-  map.sources = map.sources.map((source) => sourceToSourceForSourceMap(source))
-
-  sourcesContent.push(...map.sourcesContent)
-  // removing sourcesContent from map decrease the sourceMap
-  // it also means client have to fetch source from server (additional http request)
-  // some client ignore sourcesContent property such as vscode-chrome-debugger
-  // Because it's the most complex scenario and we want to ensure client is always able
-  // to find source from the sourcemap, we explicitely delete nmap.sourcesContent to test this.
-  delete map.sourcesContent
-
   if (remap) {
+    // we don't need sourceRoot because our path are relative or absolute to the current location
+    // we could comment this line because it is not set by babel because not passed during transform
+    delete map.sourceRoot
+
+    sources.push(...map.sources)
+    sourcesContent.push(...map.sourcesContent)
+    map.sources = map.sources.map((source) => sourceToSourceForSourceMap(source))
+    // removing sourcesContent from map decrease the sourceMap
+    // it also means client have to fetch source from server (additional http request)
+    // some client ignore sourcesContent property such as vscode-chrome-debugger
+    // Because it's the most complex scenario and we want to ensure client is always able
+    // to find source from the sourcemap, we explicitely delete nmap.sourcesContent to test this.
+    delete map.sourcesContent
+
     if (remapMethod === "inline") {
       const mapAsBase64 = new Buffer(JSON.stringify(map)).toString("base64")
       output = writeSourceMapLocation({
