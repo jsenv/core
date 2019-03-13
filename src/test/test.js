@@ -6,6 +6,7 @@ import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecut
 import { executePlan } from "../executePlan/index.js"
 
 export const test = async ({
+  importMap,
   projectFolder,
   compileInto,
   babelPluginDescription,
@@ -17,6 +18,7 @@ export const test = async ({
 
     const executionPlan = await executeDescriptionToExecutionPlan({
       cancellationToken,
+      importMap,
       projectFolder,
       compileInto,
       babelPluginDescription,
