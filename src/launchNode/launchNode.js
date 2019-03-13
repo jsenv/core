@@ -122,6 +122,8 @@ export const launchNode = async ({
   }
 
   return {
+    name: "node",
+    version: process.version.slice(1),
     options: { execArgv },
     stop,
     stopForce,

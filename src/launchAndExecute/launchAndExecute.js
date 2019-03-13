@@ -24,7 +24,7 @@ export const launchAndExecute = async ({
   // however unit test will pass true because they want to move on
   stopOnError = false,
   verbose = false,
-  platformTypeForLog = "platform", // should be 'node', 'chromium', 'firefox'
+  consoleCallback = () => {},
   startedCallback = () => {},
   stoppedCallback = () => {},
   errorAfterExecutedCallback = () => {},
@@ -32,6 +32,7 @@ export const launchAndExecute = async ({
   filenameRelative,
   collectNamespace = false,
   collectCoverage = false,
+  collectPlatformNameAndVersion = false,
   instrument = collectCoverage,
 } = {}) => {
   if (typeof launch !== "function")
@@ -41,27 +42,63 @@ export const launchAndExecute = async ({
       `launchAndExecute filenameRelative must be a string, got ${filenameRelative}`,
     )
 
-  let platformLog = ""
-  const consoleCallback = ({ type, text }) => {
-    if (captureConsole) {
+  let executionResultTransformer = (executionResult) => executionResult
+
+  if (captureConsole) {
+    let platformLog = ""
+    consoleCallback = composeCallback(consoleCallback, ({ text }) => {
       platformLog += text
-    }
-    if (mirrorConsole) {
+    })
+    executionResultTransformer = composeTransformer(
+      executionResultTransformer,
+      (executionResult) => {
+        executionResult.platformLog = platformLog
+        return executionResult
+      },
+    )
+  }
+
+  if (mirrorConsole) {
+    consoleCallback = composeCallback(consoleCallback, ({ type, text }) => {
       if (type === "error") {
         process.stderr.write(text)
       } else {
         process.stdout.write(text)
       }
-    }
+    })
   }
 
-  const startMs = Date.now()
+  if (collectPlatformNameAndVersion) {
+    startedCallback = composeCallback(startedCallback, ({ name, version }) => {
+      executionResultTransformer = composeTransformer(
+        executionResultTransformer,
+        (executionResult) => {
+          executionResult.platformName = name
+          executionResult.platformVersion = version
+          return executionResult
+        },
+      )
+    })
+  }
+
+  if (measureDuration) {
+    const startMs = Date.now()
+    executionResultTransformer = composeTransformer(
+      executionResultTransformer,
+      (executionResult) => {
+        const endMs = Date.now()
+        executionResult.startMs = startMs
+        executionResult.endMs = endMs
+        return executionResult
+      },
+    )
+  }
+
   const executionResult = await computeRawExecutionResult({
     launch,
     cancellationToken,
     allocatedMs,
     consoleCallback,
-    platformTypeForLog,
     verbose,
     stopOnceExecuted,
     stopOnError,
@@ -74,15 +111,22 @@ export const launchAndExecute = async ({
     collectCoverage,
     instrument,
   })
-  const endMs = Date.now()
-  if (measureDuration) {
-    executionResult.startMs = startMs
-    executionResult.endMs = endMs
+
+  return executionResultTransformer(executionResult)
+}
+
+const composeCallback = (previousCallback, callback) => {
+  return (...args) => {
+    previousCallback(...args)
+    return callback(...args)
   }
-  if (captureConsole) {
-    executionResult.platformLog = platformLog
+}
+
+const composeTransformer = (previousTransformer, transformer) => {
+  return (value) => {
+    const transformedValue = previousTransformer(value)
+    return transformer(transformedValue)
   }
-  return executionResult
 }
 
 const computeRawExecutionResult = async ({
@@ -145,7 +189,6 @@ const computeExecutionResult = async ({
   launch,
   cancellationToken,
   verbose,
-  platformTypeForLog,
   startedCallback,
   stoppedCallback,
   consoleCallback,
@@ -158,18 +201,15 @@ const computeExecutionResult = async ({
   collectCoverage,
   instrument,
 }) => {
-  const log = (...args) => {
-    if (verbose) {
-      console.log(...args)
-    }
-  }
+  const log = verbose ? (...args) => console.log(...args) : () => {}
 
-  log(`launch ${platformTypeForLog} to execute ${filenameRelative}`)
+  log(createStartingPlatformMessage({ filenameRelative }))
+
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
       const value = await launch({ cancellationToken })
-      startedCallback()
+      startedCallback({ name: value.name, version: value.version })
       return value
     },
     stop: ({ stop, stopForce, registerDisconnectCallback }) => {
@@ -180,7 +220,8 @@ const computeExecutionResult = async ({
       // the cancellation error
       registerDisconnectCallback(stoppedCallback)
 
-      log(`stop ${platformTypeForLog}`)
+      log(createPlatformStoppedMessage())
+
       stop()
 
       if (stopForce) {
@@ -197,6 +238,8 @@ const computeExecutionResult = async ({
   })
 
   const {
+    name: platformName,
+    version: platformVersion,
     options,
     executeFile,
     registerErrorCallback,
@@ -204,7 +247,7 @@ const computeExecutionResult = async ({
     registerDisconnectCallback,
   } = await launchOperation
 
-  log(`${platformTypeForLog} started ${JSON.stringify(options)}`)
+  log(createPlatformStartedMessage({ platformName, platformVersion, options }))
 
   registerConsoleCallback(consoleCallback)
 
@@ -214,7 +257,8 @@ const computeExecutionResult = async ({
     }
   }
 
-  log(`execute ${filenameRelative} on ${platformTypeForLog}`)
+  log(createStartExecutionMessage({ filenameRelative }))
+
   const executionResult = await createOperation({
     cancellationToken,
     start: async () => {
@@ -271,14 +315,15 @@ const computeExecutionResult = async ({
         })
       }
 
-      log(`${filenameRelative} execution on ${platformTypeForLog} done with ${value}`)
+      log(createExecutionDoneMessage({ value }))
+
       registerErrorCallback((error) => {
-        log(`${platformTypeForLog} error ${error.stack}`)
+        log(createExecutionErrorMessage({ error }))
         errorAfterExecutedCallback(error)
         onError(error)
       })
       registerDisconnectCallback(() => {
-        log(`${platformTypeForLog} disconnected`)
+        log(createDisconnectedMessage())
         disconnectAfterExecutedCallback()
       })
 
@@ -306,6 +351,31 @@ const computeExecutionResult = async ({
 
   return executionResult
 }
+
+const createStartingPlatformMessage = ({ filenameRelative }) => `start a platform to execute a file.
+filenameRelative: ${filenameRelative}`
+
+const createPlatformStartedMessage = ({
+  platformName,
+  platformVersion,
+  options,
+}) => `platform started.
+platformName: ${platformName}
+platformVersion: ${platformVersion}
+options: ${JSON.stringify(options)}`
+
+const createPlatformStoppedMessage = () => `platform stopped.`
+
+const createStartExecutionMessage = ({ filenameRelative }) => `execute file.
+filenameRelative: ${filenameRelative}`
+
+const createExecutionErrorMessage = ({ error }) => `error during execution.
+stack: ${error.stack}`
+
+const createExecutionDoneMessage = ({ value }) => `execution done.
+value: ${value}`
+
+const createDisconnectedMessage = () => `platform disconnected.`
 
 const createTimedoutExecutionResult = () => {
   return {

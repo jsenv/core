@@ -21,12 +21,12 @@ export const executePlan = async (
   const plannedExecutionArray = []
   Object.keys(executionPlan).forEach((filenameRelative) => {
     const fileExecutionPlan = executionPlan[filenameRelative]
-    Object.keys(fileExecutionPlan).forEach((platformName) => {
-      const { launch, allocatedMs } = fileExecutionPlan[platformName]
+    Object.keys(fileExecutionPlan).forEach((executionName) => {
+      const { launch, allocatedMs } = fileExecutionPlan[executionName]
       plannedExecutionArray.push({
         launch,
         allocatedMs,
-        platformName,
+        executionName,
         filenameRelative,
       })
     })
@@ -39,14 +39,15 @@ export const executePlan = async (
     cancellationToken,
     maxParallelExecution,
     array: plannedExecutionArray,
-    start: async ({ launch, allocatedMs, platformName, filenameRelative }) => {
-      beforeEachExecutionCallback({ allocatedMs, platformName, filenameRelative })
+    start: async ({ launch, allocatedMs, executionName, filenameRelative }) => {
+      beforeEachExecutionCallback({ allocatedMs, executionName, filenameRelative })
 
       const result = await launchAndExecute({
         launch,
         cancellationToken,
         allocatedMs,
         measureDuration: true,
+        collectPlatformNameAndVersion: true,
         // mirrorConsole: false because file will be executed in parallel
         // so log would be a mess to read
         mirrorConsole: false,
@@ -66,12 +67,12 @@ export const executePlan = async (
         filenameRelative,
         collectCoverage: cover,
       })
-      afterEachExecutionCallback({ allocatedMs, platformName, filenameRelative, ...result })
+      afterEachExecutionCallback({ allocatedMs, executionName, filenameRelative, ...result })
 
       if (filenameRelative in planResult === false) {
         planResult[filenameRelative] = {}
       }
-      planResult[filenameRelative][platformName] = result
+      planResult[filenameRelative][executionName] = result
 
       // if (cover && result.value.coverageMap === null) {
       // coverageMap can be null for 2 reason:
