@@ -1,26 +1,30 @@
 import { assert } from "@dmail/assert"
-import { root } from "../../../root.js"
+import { projectFolder } from "../../../../projectFolder.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { launchChromium } from "../../launchChromium.js"
 
-const file = `src/launchChromium/test/absolute-import/absolute-import.js`
-const compileInto = "build"
+const testFolder = `${projectFolder}/src/launchChromium/test/origin-relative`
+const filenameRelative = `folder/file.js`
+const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {
-  const { origin: remoteRoot } = await startCompileServer({
-    root,
+  const sourceOrigin = `file://${testFolder}`
+
+  const { origin: compileServerOrigin } = await startCompileServer({
+    projectFolder: testFolder,
     compileInto,
     babelPluginDescription,
   })
 
   const actual = await launchAndExecute({
-    launch: () => launchChromium({ root, compileInto, remoteRoot, headless: false }),
+    launch: () =>
+      launchChromium({ compileInto, sourceOrigin, compileServerOrigin, headless: false }),
     verbose: true,
     stopOnceExecuted: true,
     mirrorConsole: true,
-    file,
+    filenameRelative,
     collectNamespace: true,
   })
   const expected = {
