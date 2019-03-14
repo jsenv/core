@@ -1,4 +1,5 @@
 import { basename } from "path"
+import { normalizePathname } from "@jsenv/module-resolution"
 import { readNodeModulesInsideFolder } from "./readNodeModulesInsideFolder.js"
 import { readFolderPackageData } from "./readFolderPackageData.js"
 import { packageDataToMain } from "./packageDataToMain.js"
@@ -10,6 +11,7 @@ export const generateImportMapForProjectNodeModules = async ({
   logDuration = false,
   includeDevDependencies = false,
 }) => {
+  projectFolder = normalizePathname(projectFolder)
   const imports = {}
   const scopes = {}
 

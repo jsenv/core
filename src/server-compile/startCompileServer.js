@@ -1,4 +1,5 @@
 import { createCancellationToken } from "@dmail/cancellation"
+import { normalizePathname } from "@jsenv/module-resolution"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
 import {
   startServer,
@@ -33,6 +34,7 @@ export const startCompileServer = async ({
   signature,
   verbose,
 }) => {
+  projectFolder = normalizePathname(projectFolder)
   const jsCompileService = await createJsCompileService({
     cancellationToken,
     importMap,

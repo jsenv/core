@@ -1,3 +1,4 @@
+import { normalizePathname } from "@jsenv/module-resolution"
 import { nodeScoring } from "../../group-description/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
@@ -14,6 +15,7 @@ export const bundleNode = async ({
   platformScoring = nodeScoring,
   verbose,
 }) => {
+  projectFolder = normalizePathname(projectFolder)
   return await bundlePlatform({
     entryPointsDescription,
     projectFolder,

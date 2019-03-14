@@ -4,6 +4,7 @@ import {
 } from "@dmail/project-structure"
 import { uneval } from "@dmail/uneval"
 import { createCancellationToken } from "@dmail/cancellation"
+import { normalizePathname } from "@jsenv/module-resolution"
 import { startServer, serviceCompose } from "../server/index.js"
 import { startCompileServer } from "../server-compile/index.js"
 import { guard } from "../functionHelper.js"
@@ -53,6 +54,7 @@ export const startBrowsingServer = async ({
 </html>`
   },
 }) => {
+  projectFolder = normalizePathname(projectFolder)
   const metaDescription = namedValueDescriptionToMetaDescription({
     browsable: browsableDescription,
   })

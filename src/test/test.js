@@ -1,3 +1,4 @@
+import { normalizePathname } from "@jsenv/module-resolution"
 import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
@@ -14,6 +15,7 @@ export const test = async ({
   maxParallelExecution,
 }) =>
   catchAsyncFunctionCancellation(async () => {
+    projectFolder = normalizePathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const executionPlan = await executeDescriptionToExecutionPlan({

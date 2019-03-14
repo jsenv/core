@@ -2,6 +2,7 @@ import {
   namedValueDescriptionToMetaDescription,
   selectAllFileInsideFolder,
 } from "@dmail/project-structure"
+import { normalizePathname } from "@jsenv/module-resolution"
 import { executePlan } from "../executePlan/index.js"
 import { executionPlanResultToCoverageMap } from "../executionPlanResultToCoverageMap/index.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
@@ -22,6 +23,7 @@ export const cover = async ({
   executeDescription,
 }) =>
   catchAsyncFunctionCancellation(async () => {
+    projectFolder = normalizePathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const [arrayOfFilenameRelativeToCover, executionPlanResult] = await Promise.all([

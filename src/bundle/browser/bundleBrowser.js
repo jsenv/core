@@ -1,3 +1,4 @@
+import { normalizePathname } from "@jsenv/module-resolution"
 import { browserScoring } from "../../group-description/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
@@ -17,6 +18,7 @@ export const bundleBrowser = async ({
   platformScoring = browserScoring,
   verbose,
 }) => {
+  projectFolder = normalizePathname(projectFolder)
   const hasBalancing = compileGroupCount > 1
 
   if (hasBalancing) {
