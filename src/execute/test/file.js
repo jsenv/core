@@ -1,2 +1,3 @@
-console.log("ok")
+console.log("before")
 debugger
+console.log("after")
