@@ -2,23 +2,35 @@ import { findFreePort } from "../server/index.js"
 
 export const createChildExecArgv = async ({
   cancellationToken,
-  forwardDebugToChildProcess = true,
-  childProcessDebugPort,
+  debugMethod = 'inherit',
+  debugPort = 0,
 } = {}) => {
   const execArgv = process.execArgv
   const childExecArgv = execArgv.slice()
-  const { type, index, port } = processExecArgvToDebugMeta(execArgv)
+  
+  if (debugMethod === 'inherit') {
+    const { type, index, port } = processExecArgvToDebugMeta(execArgv)
 
-  if (type === "inspect" || type === "inspect-brk") {
-    if (forwardDebugToChildProcess) {
-      if (childProcessDebugPort) {
-        childExecArgv[index] = `--${type}=${childProcessDebugPort}`
-      } else {
-        // allow vscode to debug child, otherwise you have port already used
-        const childPort = await findFreePort(port + 1, { cancellationToken })
-        childExecArgv[index] = `--${type}=${childPort}`
-      }
-    } else {
+    if (debugPort === 0) {
+      debugPort = await findFreePort(port + 1, { cancellationToken })
+    }
+    
+    if (type) {
+      childExecArgv[index] = `--${type}=${debugPort}`
+    }
+  }
+  else if (debugMethod) {
+    const { type, index, port } = processExecArgvToDebugMeta(execArgv)
+    if (type) {
+       childExecArgv[index] = `--${debugMethod}=${debugPort}`
+    }
+    else {
+      childExecArgv.push(`--${debugMethod}=${debugPort}`)
+    }
+  }
+  else {
+    const { type, index } = processExecArgvToDebugMeta(execArgv)
+    if (type) {
       childExecArgv.splice(index, 1)
     }
   }
