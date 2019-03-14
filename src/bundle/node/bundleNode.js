@@ -11,7 +11,7 @@ export const bundleNode = async ({
   into,
   entryPointsDescription,
   babelPluginDescription,
-  compileGroupCount = 2,
+  compileGroupCount = 1,
   platformScoring = nodeScoring,
   verbose,
 }) => {

@@ -10,7 +10,7 @@ export const bundlePlatform = ({
   into,
   entryPointsDescription,
   babelPluginDescription,
-  compileGroupCount = 2,
+  compileGroupCount = 1,
   platformScoring,
   computeRollupOptionsWithoutBalancing,
   computeRollupOptionsWithBalancing,
