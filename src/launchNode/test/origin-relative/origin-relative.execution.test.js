@@ -4,15 +4,16 @@ import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchNode } from "../../launchNode.js"
 
-const filenameRelative = `src/launchNode/test/absolute-import/absolute-import.js`
-const compileInto = "build"
+const testFolder = `${projectFolder}/src/launchNode/test/origin-relative`
+const filenameRelative = `folder/file.js`
+const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {
-  const sourceOrigin = `file://${projectFolder}`
+  const sourceOrigin = `file://${testFolder}`
 
   const { origin: compileServerOrigin } = await startCompileServer({
-    projectFolder,
+    projectFolder: testFolder,
     compileInto,
     babelPluginDescription,
   })

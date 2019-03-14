@@ -3,21 +3,17 @@ import { projectFolder } from "../../../../projectFolder.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchNode } from "../../launchNode.js"
-import {
-  coverageMapToAbsolute,
-  coverageMapLog,
-  coverageMapHTML,
-} from "../../../executionPlanResultToCoverageMap/index.js"
 
-const filenameRelative = `src/launchNode/test/absolute-import/absolute-import.js`
-const compileInto = "build"
+const testFolder = `${projectFolder}/src/launchNode/test/origin-relative`
+const filenameRelative = `folder/file.js`
+const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {
-  const sourceOrigin = `file://${projectFolder}`
+  const sourceOrigin = `file://${testFolder}`
 
   const { origin: compileServerOrigin } = await startCompileServer({
-    projectFolder,
+    projectFolder: testFolder,
     compileInto,
     babelPluginDescription,
   })
@@ -29,24 +25,19 @@ const babelPluginDescription = {}
     filenameRelative,
     verbose: true,
   })
+  debugger
   const expected = {
     status: "completed",
     namespace: {
       default: 42,
     },
     coverageMap: {
-      "src/launchNode/test/absolute-import/absolute-import.js":
-        actual.coverageMap["src/launchNode/test/absolute-import/absolute-import.js"],
-      "src/launchNode/test/absolute-import/dependency.js":
-        actual.coverageMap["src/launchNode/test/absolute-import/dependency.js"],
+      "absolute-import.js": actual.coverageMap["absolute-import.js"],
+      "dependency.js": actual.coverageMap["dependency.js"],
     },
   }
   assert({
     actual,
     expected,
   })
-
-  const absoluteCoverageMap = coverageMapToAbsolute(actual.coverageMap, projectFolder)
-  coverageMapLog(absoluteCoverageMap)
-  coverageMapHTML(absoluteCoverageMap)
 })()
