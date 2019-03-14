@@ -33,8 +33,9 @@ const folderReadSubfolders = async (folder) => {
     folderBasenameArray.map(async (basename) => {
       const pathname = `${folder}/${basename}`
       const stat = await fileStat(pathname)
-      if (!stat.isDirectory()) return
-      subfolders.push(basename)
+      if (stat.isDirectory()) {
+        subfolders.push(basename)
+      }
     }),
   )
 
