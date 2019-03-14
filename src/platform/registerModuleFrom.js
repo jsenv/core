@@ -50,16 +50,19 @@ export const fromHref = async ({
   const contentType = headers["content-type"]
 
   if (contentType === "application/javascript") {
-    return fromFunctionReturningRegisteredModule(() => {
-      return moduleSourceToSystemRegisteredModule(body, {
-        compileInto,
-        sourceOrigin,
-        compileServerOrigin,
-        href: realHref,
-        importer,
-        platformSystem,
-      })
-    })
+    return fromFunctionReturningRegisteredModule(
+      () => {
+        return moduleSourceToSystemRegisteredModule(body, {
+          compileInto,
+          sourceOrigin,
+          compileServerOrigin,
+          href: realHref,
+          importer,
+          platformSystem,
+        })
+      },
+      { href: realHref, importer },
+    )
   }
 
   if (contentType === "application/json") {
