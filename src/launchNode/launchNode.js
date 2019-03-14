@@ -10,13 +10,13 @@ export const launchNode = async ({
   compileInto,
   sourceOrigin,
   compileServerOrigin,
-  forwardDebugToChildProcess,
-  childProcessDebugPort,
+  debugMethod,
+  debugPort,
 }) => {
   const execArgv = await createChildExecArgv({
     cancellationToken,
-    forwardDebugToChildProcess,
-    childProcessDebugPort,
+    debugMethod,
+    debugPort,
   })
 
   const child = forkChildProcess(nodeClientFile, {
