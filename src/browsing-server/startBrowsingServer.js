@@ -11,6 +11,7 @@ import { guard } from "../functionHelper.js"
 
 export const startBrowsingServer = async ({
   cancellationToken = createCancellationToken(),
+  importMap,
   projectFolder,
   compileInto,
   compileGroupCount,
@@ -68,6 +69,7 @@ export const startBrowsingServer = async ({
 
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
+    importMap,
     projectFolder,
     compileInto,
     compileGroupCount,
