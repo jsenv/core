@@ -44,5 +44,6 @@ export const execute = async ({
       mirrorConsole,
       stopOnceExecuted,
       filenameRelative,
+      verbose,
     })
   })
