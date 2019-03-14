@@ -58,7 +58,7 @@ export const compileFile = async ({
 
   if (cacheStrategy === "none") {
     const input = await fileRead(filename)
-    const compileResult = generate({ input })
+    const compileResult = await generate({ input })
     return {
       ...compileResult,
       outputFilenameRelative,

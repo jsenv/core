@@ -47,7 +47,7 @@
         "src/promiseHelper.js",
         "src/unused/thenable.js",
         "src/jsCompile/transpileWithBabel.js",
-        "src/jsCompile/transpiler.js",
+        // "src/jsCompile/transpiler.js",
         "src/platform/registerParamFrom.js",
         "src/platform/node/nodePlatform.js",
         "src/requestToFileResponse/convertFileSystemErrorToResponseProperties.js"
