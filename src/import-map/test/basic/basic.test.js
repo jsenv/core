@@ -7,7 +7,8 @@ const projectFolder = `${selfProjectFolder}/src/import-map/test/basic`
 ;(async () => {
   const actual = await generateImportMapForProjectNodeModules({
     projectFolder,
-    includeDevDependencies: true,
+    remapMain: true,
+    remapFolder: true,
   })
   const expected = {
     imports: {

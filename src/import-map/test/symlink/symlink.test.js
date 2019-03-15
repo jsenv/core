@@ -7,6 +7,8 @@ const testFolder = `${projectFolder}/src/import-map/test/symlink/project`
 ;(async () => {
   const actual = await generateImportMapForProjectNodeModules({
     projectFolder: testFolder,
+    remapMain: true,
+    remapFolder: true,
   })
   const expected = {
     imports: {

@@ -1,7 +1,8 @@
 {
   "name": "basic-name",
   "dependencies": {
-    "bar": "file:./bar"
+    "bar": "file:./bar",
+    "@dmail/yo": ""
   },
   "devDependencies":{
     "foo": "file:./foo"
