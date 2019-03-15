@@ -155,7 +155,7 @@ const parseDebugFromExecArgv = (argv) => {
     const inspectBreakMatch = /^--inspect-brk=([0-9]+)$/.exec(arg)
     if (inspectBreakMatch) {
       return {
-        mode: "inspect",
+        mode: "inspect-brk",
         modeIndex: i,
         port: Number(inspectBreakMatch[1]),
       }
@@ -187,7 +187,7 @@ const parseDebugFromExecArgv = (argv) => {
     const debugBreakMatch = /^--debug-brk=([0-9]+)$/.exec(arg)
     if (debugBreakMatch) {
       return {
-        mode: "debug",
+        mode: "debug-brk",
         modeIndex: i,
         port: Number(debugBreakMatch[1]),
       }
