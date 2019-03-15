@@ -8,7 +8,6 @@ export const generateImportMapForProjectNodeModules = async ({
   projectFolder,
   remapMain = false, // import 'lodash' remapped to '/node_modules/lodash/index.js'
   remapFolder = false, // import 'lodash/src/file.js' remapped to '/node_modules/lodash/src/file.js'
-  includeDevDependencies = true,
   logDuration = false,
 }) => {
   projectFolder = normalizePathname(projectFolder)
@@ -39,12 +38,8 @@ export const generateImportMapForProjectNodeModules = async ({
     const importerName = isTopLevel
       ? basename(pathnameToDirname(packageFilename))
       : pathnameToDirname(packageFilename.slice(`${projectFolder}/`.length))
-    const { dependencies = {}, devDependencies = {}, peerDependencies = {} } = packageData
-    const arrayOfDependencyToRemap = Object.keys({
-      ...dependencies,
-      ...(includeDevDependencies ? devDependencies : {}),
-      ...peerDependencies,
-    })
+    const { dependencies = {} } = packageData
+    const arrayOfDependencyToRemap = Object.keys(dependencies)
 
     await Promise.all(
       arrayOfDependencyToRemap.map(async (dependencyName) => {
