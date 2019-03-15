@@ -37,7 +37,5 @@ export { launchChromium } from "./src/launchChromium/index.js"
 export { launchNode } from "./src/launchNode/index.js"
 
 // helpers around coverage, core for now
-export {
-  generateCoverageHTML,
-} from "./src/executionPlanResultToCoverageMap/generateCoverageHTML.js"
-export { generateCoverageLog } from "./src/executionPlanResultToCoverageMap/generateCoverageLog.js"
+export { generateCoverageHTML } from "./src/cover/generateCoverageHTML.js"
+export { generateCoverageLog } from "./src/cover/generateCoverageLog.js"

@@ -2,12 +2,15 @@ import { assert } from "@dmail/assert"
 import { projectFolder } from "../../../../projectFolder.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
+import { createInstrumentPlugin } from "../../../cover/createInstrumentPlugin.js"
 import { launchNode } from "../../launchNode.js"
 
 const testFolder = `${projectFolder}/src/launchNode/test/origin-relative`
 const filenameRelative = `folder/file.js`
 const compileInto = ".dist"
-const babelPluginDescription = {}
+const babelPluginDescription = {
+  "transform-instrument": [createInstrumentPlugin()],
+}
 
 ;(async () => {
   const sourceOrigin = `file://${testFolder}`
@@ -25,15 +28,14 @@ const babelPluginDescription = {}
     filenameRelative,
     verbose: true,
   })
-  debugger
   const expected = {
     status: "completed",
     namespace: {
       default: 42,
     },
     coverageMap: {
-      "absolute-import.js": actual.coverageMap["absolute-import.js"],
-      "dependency.js": actual.coverageMap["dependency.js"],
+      "folder/file.js": actual.coverageMap["folder/file.js"],
+      "origin-file.js": actual.coverageMap["origin-file.js"],
     },
   }
   assert({
