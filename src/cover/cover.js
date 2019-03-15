@@ -4,12 +4,13 @@ import {
 } from "@dmail/project-structure"
 import { normalizePathname } from "@jsenv/module-resolution"
 import { executePlan } from "../executePlan/index.js"
-import { executionPlanResultToCoverageMap } from "../executionPlanResultToCoverageMap/index.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
 import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
+import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
+import { executionPlanResultToCoverageMap } from "./executionPlanResultToCoverageMap/index.js"
 
 export const cover = async ({
   importMap,
@@ -70,13 +71,20 @@ const executeAndCoverPatternMapping = async ({
   compileInto,
   babelPluginDescription,
   executeDescription,
+  instrumentPredicate = () => true,
 }) => {
+  const instrumentBabelPlugin = createInstrumentPlugin({ predicate: instrumentPredicate })
+  const babelPluginDescriptionWithInstrumentation = {
+    ...babelPluginDescription,
+    "transform-instrument": [instrumentBabelPlugin],
+  }
+
   const executionPlan = await executeDescriptionToExecutionPlan({
     cancellationToken,
     importMap,
     projectFolder,
     compileInto,
-    babelPluginDescription,
+    babelPluginDescription: babelPluginDescriptionWithInstrumentation,
     executeDescription,
   })
 

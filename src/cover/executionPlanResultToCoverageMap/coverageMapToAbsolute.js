@@ -1,4 +1,4 @@
-import { objectMapValue } from "../objectHelper.js"
+import { objectMapValue } from "../../objectHelper.js"
 
 export const coverageMapToAbsolute = (relativeCoverageMap, projectFolder) => {
   return objectMapValue(relativeCoverageMap, (coverage) => {

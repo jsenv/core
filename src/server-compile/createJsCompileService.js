@@ -1,6 +1,6 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
-import { jsCompile, createInstrumentPlugin } from "../jsCompile/index.js"
+import { jsCompile } from "../jsCompile/index.js"
 import { jsCompileToService } from "../jsCompileToService/index.js"
 import {
   generateGroupDescription,
@@ -24,7 +24,6 @@ export const createJsCompileService = async ({
   localCacheStrategy,
   localCacheTrackHit,
   cacheStrategy,
-  instrumentPredicate = () => true,
   watch,
   watchPredicate,
 }) => {
@@ -40,12 +39,6 @@ export const createJsCompileService = async ({
     babelPluginDescription,
   )
 
-  const instrumentBabelPlugin = createInstrumentPlugin({ predicate: instrumentPredicate })
-  const compileDescriptionWithInstrumentation = compileDescriptionToCompileDescriptionWithInstrumentation(
-    compileDescription,
-    instrumentBabelPlugin,
-  )
-
   await Promise.all([
     fileWriteFromString(
       `${projectFolder}/${compileInto}/groupDescription.json`,
@@ -55,7 +48,7 @@ export const createJsCompileService = async ({
       `${projectFolder}/${compileInto}/importMap.json`,
       JSON.stringify(importMap, null, "  "),
     ),
-    ...Object.keys(compileDescriptionWithInstrumentation).map((compileId) =>
+    ...Object.keys(compileDescription).map((compileId) =>
       writeGroupImportMapFile({
         importMap,
         projectFolder,
@@ -72,34 +65,13 @@ export const createJsCompileService = async ({
     localCacheStrategy,
     localCacheTrackHit,
     cacheStrategy,
-    instrumentPredicate,
     watch,
     watchPredicate,
     locate,
-    compileDescription: compileDescriptionWithInstrumentation,
+    compileDescription,
   })
 
   return jsCompileService
-}
-
-const compileDescriptionToCompileDescriptionWithInstrumentation = (
-  compileDescription,
-  instrumentBabelPlugin,
-) => {
-  const compileDescriptionWithInstrumentation = { ...compileDescription }
-
-  Object.keys(compileDescription).forEach((groupId) => {
-    const compileDescriptionForCompileId = compileDescription[groupId]
-    compileDescriptionWithInstrumentation[`${groupId}-instrumented`] = {
-      ...compileDescriptionForCompileId,
-      babelPluginDescription: {
-        ...compileDescriptionForCompileId.babelPluginDescription,
-        "transform-instrument": instrumentBabelPlugin,
-      },
-    }
-  })
-
-  return compileDescriptionWithInstrumentation
 }
 
 const writeGroupImportMapFile = ({ projectFolder, compileInto, compileId, importMap }) => {

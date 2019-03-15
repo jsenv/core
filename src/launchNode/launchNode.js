@@ -90,10 +90,7 @@ export const launchNode = async ({
     child.kill()
   }
 
-  const executeFile = async (
-    filenameRelative,
-    { collectNamespace, collectCoverage, instrument },
-  ) => {
+  const executeFile = async (filenameRelative, { collectNamespace, collectCoverage }) => {
     const execute = () =>
       new Promise((resolve) => {
         const executResultRegistration = registerChildMessage(child, "execute-result", (value) => {
@@ -109,7 +106,6 @@ export const launchNode = async ({
           filenameRelative,
           collectNamespace,
           collectCoverage,
-          instrument,
         })
       })
 

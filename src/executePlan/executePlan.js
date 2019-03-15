@@ -1,4 +1,3 @@
-import { createFileCoverage } from "istanbul-lib-coverage"
 import { createCancellationToken, createConcurrentOperations } from "@dmail/cancellation"
 import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
@@ -68,15 +67,6 @@ export const executePlan = async (
         filenameRelative,
         collectCoverage: cover,
       })
-      if (
-        cover &&
-        result.status === "errored" &&
-        result.error &&
-        result.error.code === "MODULE_PARSE_ERROR"
-      ) {
-        const fileCoverage = createFileCoverage(result.error.fileName)
-        result.coverageMap = { [result.error.fileName]: fileCoverage.toJSON() }
-      }
       afterEachExecutionCallback({ allocatedMs, executionName, filenameRelative, ...result })
 
       if (filenameRelative in planResult === false) {

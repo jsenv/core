@@ -22,7 +22,6 @@ export const startCompileServer = async ({
   localCacheStrategy,
   localCacheTrackHit,
   cacheStrategy,
-  instrumentPredicate,
   watch,
   watchPredicate,
   sourceCacheStrategy = "etag",
@@ -46,7 +45,6 @@ export const startCompileServer = async ({
     localCacheStrategy,
     localCacheTrackHit,
     cacheStrategy,
-    instrumentPredicate,
     watch,
     watchPredicate,
   })

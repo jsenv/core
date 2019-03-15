@@ -10,7 +10,6 @@ export const executeCompiledFile = ({
   filenameRelative,
   collectNamespace,
   collectCoverage,
-  instrument,
 }) =>
   genericExecuteCompiledFile({
     loadCompileMeta: () => loadCompileMeta({ compileInto, compileServerOrigin }),
@@ -20,7 +19,6 @@ export const executeCompiledFile = ({
     filenameRelative,
     collectNamespace,
     collectCoverage,
-    instrument,
     readCoverage,
     onError: (error) => onError(error, { compileInto, compileServerOrigin, filenameRelative }),
     transformError,

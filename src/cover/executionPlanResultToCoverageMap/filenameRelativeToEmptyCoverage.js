@@ -1,7 +1,8 @@
 import { createFileCoverage } from "istanbul-lib-coverage"
 import { fileRead } from "@dmail/helper"
 import { createOperation } from "@dmail/cancellation"
-import { jsCompile, createInstrumentPlugin } from "../jsCompile/index.js"
+import { jsCompile } from "../../jsCompile/index.js"
+import { createInstrumentPlugin } from "../createInstrumentPlugin.js"
 
 export const filenameRelativeToEmptyCoverage = async ({
   cancellationToken,

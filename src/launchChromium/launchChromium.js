@@ -141,10 +141,7 @@ export const launchChromium = async ({
   }
   trackPage(browser)
 
-  const executeFile = async (
-    filenameRelative,
-    { collectNamespace, collectCoverage, instrument },
-  ) => {
+  const executeFile = async (filenameRelative, { collectNamespace, collectCoverage }) => {
     const [page, html] = await Promise.all([
       browser.newPage(),
       generateHTML({
@@ -173,7 +170,6 @@ export const launchChromium = async ({
           filenameRelative,
           collectNamespace,
           collectCoverage,
-          instrument,
         }) => {
           return window.__platform__.executeCompiledFile({
             compileInto,
@@ -181,7 +177,6 @@ export const launchChromium = async ({
             filenameRelative,
             collectNamespace,
             collectCoverage,
-            instrument,
           })
         },
         {
@@ -190,7 +185,6 @@ export const launchChromium = async ({
           filenameRelative,
           collectNamespace,
           collectCoverage,
-          instrument,
         },
       )
     }

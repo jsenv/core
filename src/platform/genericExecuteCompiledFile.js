@@ -1,4 +1,3 @@
-import { filenameRelativeToInstrumentedHref } from "./filenameRelativeToInstrumentedHref.js"
 import { filenameRelativeToCompiledHref } from "./filenameRelativeToCompiledHref.js"
 
 export const genericExecuteCompiledFile = async ({
@@ -9,26 +8,18 @@ export const genericExecuteCompiledFile = async ({
   filenameRelative,
   collectNamespace,
   collectCoverage,
-  instrument = false,
   onError,
   transformError,
   readCoverage,
 }) => {
   const [{ compileId }, { importFile }] = await Promise.all([loadCompileMeta(), loadImporter()])
 
-  const fileHref = instrument
-    ? filenameRelativeToInstrumentedHref({
-        compileInto,
-        compileServerOrigin,
-        compileId,
-        filenameRelative,
-      })
-    : filenameRelativeToCompiledHref({
-        compileInto,
-        compileServerOrigin,
-        compileId,
-        filenameRelative,
-      })
+  const fileHref = filenameRelativeToCompiledHref({
+    compileInto,
+    compileServerOrigin,
+    compileId,
+    filenameRelative,
+  })
 
   try {
     const namespace = await importFile(fileHref)

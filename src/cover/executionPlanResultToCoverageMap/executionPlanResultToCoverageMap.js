@@ -1,3 +1,4 @@
+import { createFileCoverage } from "istanbul-lib-coverage"
 import { createCancellationToken } from "@dmail/cancellation"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 import { filenameRelativeToEmptyCoverage } from "./filenameRelativeToEmptyCoverage.js"
@@ -14,11 +15,26 @@ export const executionPlanResultToCoverageMap = async (
   const coverageMapArray = []
   Object.keys(executionPlanResult).forEach((file) => {
     const executionResultForFile = executionPlanResult[file]
-    Object.keys(executionResultForFile).forEach((platformName) => {
-      const executionResultForFileOnPlatform = executionResultForFile[platformName]
-      const { coverageMap } = executionResultForFileOnPlatform
-      if (!coverageMap) return
-      coverageMapArray.push(coverageMap)
+    Object.keys(executionResultForFile).forEach((executionName) => {
+      const executionResultForFileOnPlatform = executionResultForFile[executionName]
+
+      if (
+        executionResultForFileOnPlatform.status === "errored" &&
+        executionResultForFileOnPlatform.error &&
+        executionResultForFileOnPlatform.error.code === "MODULE_PARSE_ERROR"
+      ) {
+        const fileCoverage = createFileCoverage(executionResultForFileOnPlatform.error.fileName)
+        const coverageMap = {
+          [executionResultForFileOnPlatform.error.fileName]: fileCoverage.toJSON(),
+        }
+        coverageMapArray.push(coverageMap)
+      } else {
+        const { coverageMap } = executionResultForFileOnPlatform
+        if (!coverageMap) {
+          throw new Error(createMissingCoverageForExecutionMessage({ file, executionName }))
+        }
+        coverageMapArray.push(coverageMap)
+      }
     })
   })
 
@@ -62,6 +78,13 @@ export const executionPlanResultToCoverageMap = async (
 
   return coverageMap
 }
+
+const createMissingCoverageForExecutionMessage = ({
+  file,
+  executionName,
+}) => `missing coverageMap for execution.
+file: ${file}
+executionName: ${executionName}`
 
 const ensureNoFileIsBothCoveredAndExecuted = ({
   arrayOfFilenameRelativeToCover,

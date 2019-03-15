@@ -33,7 +33,6 @@ export const launchAndExecute = async ({
   collectNamespace = false,
   collectCoverage = false,
   collectPlatformNameAndVersion = false,
-  instrument = collectCoverage,
 } = {}) => {
   if (typeof launch !== "function")
     throw new TypeError(`launchAndExecute launch must be a function, got ${launch}`)
@@ -109,7 +108,6 @@ export const launchAndExecute = async ({
     filenameRelative,
     collectNamespace,
     collectCoverage,
-    instrument,
   })
 
   return executionResultTransformer(executionResult)
@@ -199,7 +197,6 @@ const computeExecutionResult = async ({
   filenameRelative,
   collectNamespace,
   collectCoverage,
-  instrument,
 }) => {
   const log = verbose ? (...args) => console.log(...args) : () => {}
 
@@ -273,7 +270,6 @@ const computeExecutionResult = async ({
       const executionPromise = executeFile(filenameRelative, {
         collectNamespace,
         collectCoverage,
-        instrument,
       })
       const executionCompleted = new Promise((resolve) => {
         executionPromise.then(
