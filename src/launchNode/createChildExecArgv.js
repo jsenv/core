@@ -1,79 +1,195 @@
+import { createCancellationToken } from "@dmail/cancellation"
 import { findFreePort } from "../server/index.js"
 
+const AVAILABLE_DEBUG_MODE = ["", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"]
+
 export const createChildExecArgv = async ({
-  cancellationToken,
-  debugMethod = 'inherit',
+  cancellationToken = createCancellationToken(),
+  // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
+  debugMode = "inherit",
   debugPort = 0,
+  processExecArgv,
+  processDebugPort,
 } = {}) => {
-  const execArgv = process.execArgv
-  const childExecArgv = execArgv.slice()
-  
-  if (debugMethod === 'inherit') {
-    const { type, index, port } = processExecArgvToDebugMeta(execArgv)
+  if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1)
+    throw new TypeError(`unexpected debug mode.
+debugMode: ${debugMode}
+AVAILABLE_DEBUG_MODE: ${AVAILABLE_DEBUG_MODE}`)
 
+  const processDebug = parseDebugFromExecArgv(processExecArgv)
+
+  // this is required because vscode does not
+  // support assigning a child spwaned without a specific port
+  const forceFreePortIfZero = async ({ debugPort, port }) => {
     if (debugPort === 0) {
-      debugPort = await findFreePort(port + 1, { cancellationToken })
+      const freePort = await findFreePort((port === 0 ? processDebugPort : port) + 1, {
+        cancellationToken,
+      })
+      return freePort
     }
-    
-    if (type) {
-      childExecArgv[index] = `--${type}=${debugPort}`
-    }
-  }
-  else if (debugMethod) {
-    const { type, index, port } = processExecArgvToDebugMeta(execArgv)
-    if (type) {
-       childExecArgv[index] = `--${debugMethod}=${debugPort}`
-    }
-    else {
-      childExecArgv.push(`--${debugMethod}=${debugPort}`)
-    }
-  }
-  else {
-    const { type, index } = processExecArgvToDebugMeta(execArgv)
-    if (type) {
-      childExecArgv.splice(index, 1)
-    }
+    return debugPort
   }
 
-  return childExecArgv
+  if (debugMode === "inherit") {
+    if (!processDebug.mode) {
+      return copyExecArgv(processExecArgv)
+    }
+
+    const childDebugPort = await forceFreePortIfZero({
+      cancellationToken,
+      debugPort,
+      port: processDebug.port,
+    })
+    return replaceDebugExecArgv(processExecArgv, {
+      processDebug,
+      mode: processDebug.mode,
+      port: childDebugPort,
+    })
+  }
+
+  if (debugMode) {
+    if (!processDebug.mode) {
+      const childDebugPort = await forceFreePortIfZero({
+        cancellationToken,
+        debugPort,
+        port: 1000, // TODO: should be random
+      })
+      return addDebugExecArgv(processExecArgv, { mode: debugMode, port: childDebugPort })
+    }
+
+    const childDebugPort = await forceFreePortIfZero({
+      cancellationToken,
+      debugPort,
+      port: processDebug.port,
+    })
+    return replaceDebugExecArgv(processExecArgv, {
+      processDebug,
+      mode: debugMode,
+      port: childDebugPort,
+    })
+  }
+
+  if (!processDebug.mode) {
+    return copyExecArgv(processExecArgv)
+  }
+
+  return removeDebugExecArgv(processExecArgv, processDebug)
 }
 
-const processExecArgvToDebugMeta = (argv) => {
+const copyExecArgv = (argv) => argv.slice()
+
+const replaceDebugExecArgv = (argv, { processDebug, mode, port }) => {
+  const argvCopy = argv.slice()
+
+  if (processDebug.portIndex) {
+    // argvCopy[modeIndex] = `--${mode}`
+    argvCopy[processDebug.portIndex] = `--${mode}-port${portToPortSuffix(port)}`
+    return argvCopy
+  }
+
+  argvCopy[processDebug.modeIndex] = `--${mode}${portToPortSuffix(port)}`
+  return argvCopy
+}
+
+const addDebugExecArgv = (argv, { mode, port }) => {
+  const argvCopy = argv.slice()
+
+  argvCopy.push(`--${mode}${portToPortSuffix(port)}`)
+
+  return argvCopy
+}
+
+const removeDebugExecArgv = (argv, { modeIndex, portIndex }) => {
+  const argvCopy = argv.slice()
+  if (portIndex > -1) {
+    argvCopy.splice(portIndex, 1)
+    argvCopy.splice(
+      // if modeIndex is after portIndex do -1 because we spliced
+      // portIndex just above
+      modeIndex > portIndex ? modeIndex - 1 : modeIndex,
+      1,
+    )
+    return argvCopy
+  }
+
+  argvCopy.splice(modeIndex)
+  return argvCopy
+}
+
+const portToPortSuffix = (port) => {
+  if (typeof port !== "number") return ""
+  if (port === 0) return ""
+  return `=${port}`
+}
+
+const parseDebugFromExecArgv = (argv) => {
   let i = 0
+
   while (i < argv.length) {
     const arg = argv[i]
 
     // https://nodejs.org/en/docs/guides/debugging-getting-started/
     if (arg === "--inspect") {
       return {
-        index: i,
-        type: "inspect",
-        port: process.debugPort,
+        mode: "inspect",
+        modeIndex: i,
+        ...parseInspectPortFromExecArgv(argv),
       }
     }
-    const inspectPortAsString = stringSliceAfter(arg, "--inspect=")
-    if (inspectPortAsString.length) {
+    const inspectPortMatch = /^--inspect=([0-9]+)$/.exec(arg)
+    if (inspectPortMatch) {
       return {
-        index: i,
-        type: "inspect",
-        port: Number(inspectPortAsString),
+        mode: "inspect",
+        modeIndex: i,
+        port: Number(inspectPortMatch[1]),
       }
     }
 
     if (arg === "--inspect-brk") {
       return {
-        index: i,
-        type: "inspect-brk",
-        port: process.debugPort,
+        mode: "inspect-brk",
+        modeIndex: i,
+        ...parseInspectPortFromExecArgv(argv),
+      }
+    }
+    const inspectBreakMatch = /^--inspect-brk=([0-9]+)$/.exec(arg)
+    if (inspectBreakMatch) {
+      return {
+        mode: "inspect",
+        modeIndex: i,
+        port: Number(inspectBreakMatch[1]),
       }
     }
 
-    const inspectBreakPortAsString = stringSliceAfter(arg, "--inspect-brk=")
-    if (inspectBreakPortAsString.length) {
+    if (arg === "--debug") {
       return {
-        index: i,
-        type: "inspect-brk",
-        port: Number(inspectBreakPortAsString),
+        mode: "debug",
+        modeIndex: i,
+        ...parseDebugPortFromExecArgv(argv),
+      }
+    }
+    const debugPortMatch = /^--debug=([0-9]+)$/.exec(arg)
+    if (debugPortMatch) {
+      return {
+        mode: "debug",
+        modeIndex: i,
+        port: Number(debugPortMatch[1]),
+      }
+    }
+
+    if (arg === "--debug-brk") {
+      return {
+        mode: "debug-brk",
+        modeIndex: i,
+        ...parseDebugPortFromExecArgv(argv),
+      }
+    }
+    const debugBreakMatch = /^--debug-brk=([0-9]+)$/.exec(arg)
+    if (debugBreakMatch) {
+      return {
+        mode: "debug",
+        modeIndex: i,
+        port: Number(debugBreakMatch[1]),
       }
     }
 
@@ -83,9 +199,62 @@ const processExecArgvToDebugMeta = (argv) => {
   return {}
 }
 
-const stringSliceAfter = (string, substring) => {
-  const index = string.indexOf(substring)
-  return index === -1 ? "" : string.slice(index + substring.length)
+const parseInspectPortFromExecArgv = (argv) => {
+  const portMatch = arrayFindMatch(argv, (arg) => {
+    if (arg === "--inspect-port")
+      return {
+        port: 0,
+      }
+    const match = /^--inspect-port=([0-9]+)$/.exec(arg)
+    if (match) return { port: Number(match[1]) }
+    return null
+  })
+  if (portMatch) {
+    return {
+      port: portMatch.port,
+      portIndex: portMatch.arrayIndex,
+    }
+  }
+  return {
+    port: 0,
+  }
+}
+
+const parseDebugPortFromExecArgv = (argv) => {
+  const portMatch = arrayFindMatch(argv, (arg) => {
+    if (arg === "--debug-port")
+      return {
+        port: 0,
+      }
+    const match = /^--debug-port=([0-9]+)$/.exec(arg)
+    if (match) return { port: Number(match[1]) }
+    return null
+  })
+  if (portMatch) {
+    return {
+      port: portMatch.port,
+      portIndex: portMatch.arrayIndex,
+    }
+  }
+  return {
+    port: 0,
+  }
+}
+
+const arrayFindMatch = (array, match) => {
+  let i = 0
+  while (i < array.length) {
+    const value = array[i]
+    i++
+    const matchResult = match(value)
+    if (matchResult) {
+      return {
+        ...matchResult,
+        arrayIndex: i,
+      }
+    }
+  }
+  return null
 }
 
 export const processIsExecutedByVSCode = () => {

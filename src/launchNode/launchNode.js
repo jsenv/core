@@ -17,6 +17,8 @@ export const launchNode = async ({
     cancellationToken,
     debugMethod,
     debugPort,
+    processExecArgv: process.execArgv,
+    processDebugPort: process.debugPort,
   })
 
   const child = forkChildProcess(nodeClientFile, {
