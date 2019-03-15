@@ -10,12 +10,12 @@ export const launchNode = async ({
   compileInto,
   sourceOrigin,
   compileServerOrigin,
-  debugMethod,
+  debugMode,
   debugPort,
 }) => {
   const execArgv = await createChildExecArgv({
     cancellationToken,
-    debugMethod,
+    debugMode,
     debugPort,
     processExecArgv: process.execArgv,
     processDebugPort: process.debugPort,
