@@ -1,6 +1,7 @@
 import {
   namedValueDescriptionToMetaDescription,
   selectAllFileInsideFolder,
+  pathnameToMeta,
 } from "@dmail/project-structure"
 import { normalizePathname } from "@jsenv/module-resolution"
 import { executePlan } from "../executePlan/index.js"
@@ -11,6 +12,7 @@ import {
 } from "../cancellationHelper.js"
 import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
 import { executionPlanResultToCoverageMap } from "./executionPlanResultToCoverageMap/index.js"
+import { filenameRelativeToEmptyCoverage } from "./filenameRelativeToEmptyCoverage.js"
 
 export const cover = async ({
   importMap,
@@ -27,8 +29,13 @@ export const cover = async ({
     projectFolder = normalizePathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
 
-    const [arrayOfFilenameRelativeToCover, executionPlanResult] = await Promise.all([
-      listFilesToCover({ cancellationToken, projectFolder, coverDescription }),
+    const coverFilePredicate = (filenameRelative) =>
+      pathnameToMeta({ pathname: filenameRelative, metaDescription: coverDescription }).cover ===
+      true
+
+    ensureNoFileIsBothCoveredAndExecuted({ executeDescription, coverFilePredicate })
+
+    const [executionPlanResult, arrayOfFilenameRelativeToCover] = await Promise.all([
       executeAndCoverPatternMapping({
         cancellationToken,
         importMap,
@@ -36,17 +43,57 @@ export const cover = async ({
         compileInto,
         babelPluginDescription,
         executeDescription,
+        coverFilePredicate,
+      }),
+      listFilesToCover({
+        cancellationToken,
+        projectFolder,
+        coverDescription,
       }),
     ])
 
-    const coverageMap = await executionPlanResultToCoverageMap(executionPlanResult, {
+    const executionCoverageMap = executionPlanResultToCoverageMap(executionPlanResult, {
       cancellationToken,
       projectFolder,
       arrayOfFilenameRelativeToCover,
     })
 
+    const arrayOfFilenameRelativeMissingCoverage = arrayOfFilenameRelativeToCover.filter(
+      (filenameRelative) => filenameRelative in executionCoverageMap === false,
+    )
+
+    const missedCoverageMap = {}
+    await Promise.all(
+      arrayOfFilenameRelativeMissingCoverage.map(async (filenameRelative) => {
+        const emptyCoverage = await filenameRelativeToEmptyCoverage({
+          cancellationToken,
+          projectFolder,
+          filenameRelative,
+        })
+        missedCoverageMap[filenameRelative] = emptyCoverage
+        return emptyCoverage
+      }),
+    )
+
+    const coverageMap = {
+      ...executionCoverageMap,
+      ...missedCoverageMap,
+    }
+
     return coverageMap
   })
+
+const ensureNoFileIsBothCoveredAndExecuted = ({ executeDescription, coverFilePredicate }) => {
+  const fileToExecuteAndCoverArray = Object.keys(executeDescription).filter((filenameRelative) =>
+    coverFilePredicate(filenameRelative),
+  )
+  if (fileToExecuteAndCoverArray.length) {
+    // I think it is an error, it would be strange, for a given file
+    // to be both covered and executed
+    throw new Error(`some file must both be covered and executed.
+file to execute and cover: ${fileToExecuteAndCoverArray}`)
+  }
+}
 
 const listFilesToCover = async ({ cancellationToken, projectFolder, coverDescription }) => {
   const metaDescriptionForCover = namedValueDescriptionToMetaDescription({
@@ -71,9 +118,12 @@ const executeAndCoverPatternMapping = async ({
   compileInto,
   babelPluginDescription,
   executeDescription,
-  instrumentPredicate = () => true,
+  coverFilePredicate,
 }) => {
-  const instrumentBabelPlugin = createInstrumentPlugin({ predicate: instrumentPredicate })
+  const instrumentBabelPlugin = createInstrumentPlugin({
+    predicate: (filenameRelative) => coverFilePredicate(filenameRelative),
+  })
+
   const babelPluginDescriptionWithInstrumentation = {
     ...babelPluginDescription,
     "transform-instrument": [instrumentBabelPlugin],

@@ -1,8 +1,8 @@
 import { createFileCoverage } from "istanbul-lib-coverage"
 import { fileRead } from "@dmail/helper"
 import { createOperation } from "@dmail/cancellation"
-import { jsCompile } from "../../jsCompile/index.js"
-import { createInstrumentPlugin } from "../createInstrumentPlugin.js"
+import { jsCompile } from "../jsCompile/index.js"
+import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
 
 export const filenameRelativeToEmptyCoverage = async ({
   cancellationToken,
@@ -29,7 +29,7 @@ export const filenameRelativeToEmptyCoverage = async ({
           filenameRelative,
           projectFolder,
           babelPluginDescription: {
-            instrument: [createInstrumentPlugin({ predicate: () => true })],
+            "transform-instrument": [createInstrumentPlugin({ predicate: () => true })],
           },
           remap: false,
         }),
