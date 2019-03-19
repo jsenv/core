@@ -28,10 +28,15 @@ export const cover = async ({
   catchAsyncFunctionCancellation(async () => {
     projectFolder = normalizePathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
+    const coverMetaDescription = namedValueDescriptionToMetaDescription({
+      cover: coverDescription,
+    })
 
     const coverFilePredicate = (filenameRelative) =>
-      pathnameToMeta({ pathname: filenameRelative, metaDescription: coverDescription }).cover ===
-      true
+      pathnameToMeta({
+        pathname: filenameRelative,
+        metaDescription: coverMetaDescription,
+      }).cover === true
 
     ensureNoFileIsBothCoveredAndExecuted({ executeDescription, coverFilePredicate })
 
