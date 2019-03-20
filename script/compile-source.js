@@ -40,16 +40,16 @@ const babelPluginArray = pluginMapToPluginsForPlatform(babelPluginDescription, "
 
 const metaDescription = namedValueDescriptionToMetaDescription({
   compile: {
-    "**/*.js": true,
-    "**/*.json": "copy",
-    node_modules: false, // eslint-disable-line camelcase
-    dist: false,
-    build: false,
-    bundle: false,
-    script: false,
-    sourceMapTest: false,
-    ".eslintrc.js": false,
-    "prettier.config.js": false,
+    "/**/*.js": true,
+    "/**/*.json": "copy",
+    "/node_modules/": false,
+    "/**/dist/": false,
+    "/**/build/": false,
+    "/**/bundle/": false,
+    "/script/": false,
+    "/sourceMapTest": false,
+    "/.eslintrc.js": false,
+    "/prettier.config.js": false,
   },
 })
 

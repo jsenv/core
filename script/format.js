@@ -8,18 +8,23 @@ const { projectFolder } = require("./projectFolder.js")
 const metaDescription = namedValueDescriptionToMetaDescription({
   format: {
     // js
-    "index.js": true,
-    "index.test.js": true,
-    "src/**/*.js": true,
-    "test/**/*.js": true,
+    "/index.js": true,
+    "/index.test.js": true,
+    "/src/**/*.js": true,
+    "/test/**/*.js": true,
     // json
-    "src/**/*.json": true,
-    "test/**/*.json": true,
+    "/src/**/*.json": true,
+    "/test/**/*.json": true,
     // md
-    "readme.md": true,
-    "doc/**.md": true,
-    "src/**/*.md": true,
-    "test/**/*.md": true,
+    "/readme.md": true,
+    "/doc/**.md": true,
+    "/src/**/*.md": true,
+    "/test/**/*.md": true,
+
+    // ignore some dynamic folder
+    "/**/dist/": false,
+    "/**/.dist/": false,
+    "/**/build/": false,
   },
 })
 
