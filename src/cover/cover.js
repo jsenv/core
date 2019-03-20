@@ -34,7 +34,7 @@ export const cover = async ({
 
     const coverFilePredicate = (filenameRelative) =>
       pathnameToMeta({
-        pathname: filenameRelative,
+        pathname: `/${filenameRelative}`,
         metaDescription: coverMetaDescription,
       }).cover === true
 
