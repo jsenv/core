@@ -1,4 +1,4 @@
-import { objectMap, objectFilter } from "../objectHelper.js"
+import { objectMap } from "../objectHelper.js"
 
 export const wrapImportMap = ({ imports = {}, scopes = {} }, folderRelativeName) => {
   const prefix = `/${folderRelativeName}`
@@ -17,9 +17,9 @@ export const wrapImportMap = ({ imports = {}, scopes = {} }, folderRelativeName)
 }
 
 const prefixImports = (imports, prefix) =>
-  objectMap(imports, (pathnameMatchPattern, pathnameRemapPattern) => {
+  objectMap(imports, (pathnamePattern, remapPattern) => {
     return {
-      [`${pathnameMatchPattern}`]: `${prefix}${pathnameRemapPattern}`,
+      [`${pathnamePattern}`]: `${prefix}${remapPattern}`,
     }
   })
 
@@ -27,15 +27,25 @@ const prefixScopes = (scopes, prefix) =>
   objectMap(scopes, (pathnamePattern, scopeImports) => {
     const prefixedPathnamePattern = `${prefix}${pathnamePattern}`
 
-    scopeImports = objectFilter(scopeImports, (scopedPathnamePattern) => {
-      return scopedPathnamePattern !== pathnamePattern
-    })
-
     return {
       [prefixedPathnamePattern]: {
-        ...prefixImports(scopeImports, prefix),
+        ...prefixScopedImport(scopeImports, prefix, pathnamePattern),
         [prefixedPathnamePattern]: prefixedPathnamePattern,
         "/": prefixedPathnamePattern,
       },
     }
   })
+
+const prefixScopedImport = (imports, prefix, scopePathnamePattern) => {
+  return objectMap(imports, (pathnamePattern, remapPattern) => {
+    if (pathnamePattern === scopePathnamePattern && remapPattern === scopePathnamePattern) {
+      return {
+        [`${prefix}${pathnamePattern}`]: `${prefix}${pathnamePattern}`,
+      }
+    }
+
+    return {
+      [`${pathnamePattern}`]: `${prefix}${remapPattern}`,
+    }
+  })
+}
