@@ -4,17 +4,19 @@
 [![build](https://travis-ci.com/jsenv/jsenv-core.svg?branch=master)](http://travis-ci.com/jsenv/jsenv-core)
 [![codecov](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
-> test, debug, bundle on browser and node.
+> Relying on standard jsenv-core helps to run your JavaScript in well-known scenarios.
 
 ## Presentation
 
+The most representative feature of jsenv-core is how it can run file in parallel on different platforms and return a coverage object.
+
+## Amazing demo here
+
 Put here awesome videos (certainly gif) amd screenshots.
-The idea is to show the best features:
 
-One feature to highlight: running test files against browser and node and get result + coverage
+## About other features
 
-Other feature that deserves a mention but will
-not be highlighted:
+jsenv-core got some other great features. 
 
 - execute/debug your files using the browsing server
 - debugging a file on node from vscode in 5s
