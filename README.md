@@ -1,16 +1,26 @@
-# dev-server
+# @jsenv/core
 
-- test all stuff inside dev-server-poc
-- create an other repo using dev-server-poc bundled files
-  test the other repo can bundle dev-server-poc too
-- consider updating fromHref inside registreModuleFrom to
-  avoid evaluating base on response content-type ?
-  It apparently could be a vulnerability issue in case of man in the middle. We could rely on file extension instead
+[![npm](https://badge.fury.io/js/%40jsenv%2Fcore.svg)](https://badge.fury.io/js/%40jsenv%2Fcore)
+[![build](https://travis-ci.com/jsenv/core.svg?branch=master)](http://travis-ci.com/jsenv/core)
+[![codecov](https://codecov.io/gh/jsenv/core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/core)
 
-later
+> Develop, test, build JavaScript for browser and node.
 
-- a function capable to generate importMap from a webpack config object
+## Presentation
 
-- eslint-plugin-import of jsenv must accept
-  an optionnal importMap so that it could work with webpack
-  not required earlier because eslint-plugin-import already capable to locate node_module and does not need build/best/ scoping
+Put here awesome videos (certainly gif) amd screenshots.
+The idea is to show the best features:
+
+One feature to highlight: running test files against browser and node and get result + coverage
+
+Other feature that deserves a mention but will
+not be highlighted:
+
+- execute/debug your files using the browsing server
+- debugging a file on node from vscode in 5s
+- debugging a file on chrome from vscode in 5s
+
+## Example
+
+I have made an example repository using jsenv to illustrates how it works: https://github.com/jsenv/sample-project.
+This is also the official documentation.
