@@ -1,7 +1,7 @@
 /node_modules
-/package-lock.json
+dist
+.dist
 /coverage
 /.nyc_output
 /coverage.lcov
-dist
-.dist
+/package-lock.json

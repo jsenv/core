@@ -1,9 +1,9 @@
 import assert from "assert"
-import { sourceMappingURLMap } from "./replaceSourceMappingURL.js"
+import { replaceSourceMappingURL } from "./replaceSourceMappingURL.js"
 
 {
   const source = `${"//#"} sourceMappingURL=a.js`
-  const actual = sourceMappingURLMap(source, (value) => `${value}.map`)
+  const actual = replaceSourceMappingURL(source, (value) => `${value}.map`)
   const expected = `${"//#"} sourceMappingURL=a.js.map`
   assert.equal(actual, expected)
 }
@@ -12,7 +12,7 @@ import { sourceMappingURLMap } from "./replaceSourceMappingURL.js"
   const source = `before
 ${"//#"} sourceMappingURL=a.js
 after`
-  const actual = sourceMappingURLMap(source, (value) => `${value}.map`)
+  const actual = replaceSourceMappingURL(source, (value) => `${value}.map`)
   const expected = `before
 ${"//#"} sourceMappingURL=a.js.map
 after`

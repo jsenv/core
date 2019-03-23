@@ -1,33 +1,36 @@
 import { assert } from "@dmail/assert"
-import { root } from "../../../root.js"
+import { projectFolder } from "../../../../projectFolder.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchNode } from "../../launchNode.js"
 
-const file = `src/launchNode/test/not-found/not-found.js`
+const testFolder = `${projectFolder}/src/launchNode/test/not-found`
+const filenameRelative = `not-found.js`
 const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {
-  const { origin: remoteRoot } = await startCompileServer({
-    root,
+  const sourceOrigin = `file://${testFolder}`
+
+  const { origin: compileServerOrigin } = await startCompileServer({
+    projectFolder: testFolder,
     compileInto,
     babelPluginDescription,
   })
 
   const actual = await launchAndExecute({
-    launch: (options) => launchNode({ ...options, root, compileInto, remoteRoot }),
+    launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
     mirrorConsole: true,
-    file,
+    filenameRelative,
     verbose: true,
   })
   const expected = {
     status: "errored",
     error: {
       code: "MODULE_NOT_FOUND_ERROR",
-      message: `src/launchNode/test/not-found/foo.js not found`,
+      message: `foo.js not found`,
       stack: actual.error.stack,
-      url: `${remoteRoot}/${compileInto}/best/src/launchNode/test/not-found/foo.js`,
+      url: `${compileServerOrigin}/${compileInto}/best/foo.js`,
     },
   }
   assert({ actual, expected })

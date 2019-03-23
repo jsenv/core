@@ -1,9 +1,9 @@
 import { assert } from "@dmail/assert"
-import { projectFolder } from "../../../../projectFolder.js"
-import { launchNode } from "../../../launchNode/index.js"
-import { launchChromium } from "../../../launchChromium/index.js"
-import { executePlan } from "../../../executePlan/index.js"
-import { startCompileServer } from "../../../server-compile/index.js"
+import { projectFolder } from "../../../../../projectFolder.js"
+import { launchNode } from "../../../../launchNode/index.js"
+import { launchChromium } from "../../../../launchChromium/index.js"
+import { executePlan } from "../../../../executePlan/index.js"
+import { startCompileServer } from "../../../../server-compile/index.js"
 import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap.js"
 
 const testFolder = `${projectFolder}/src/executionPlanResultToCoverageMap/test/import-throw`

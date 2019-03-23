@@ -1,25 +1,35 @@
 import { assert } from "@dmail/assert"
-import { root } from "../../../root.js"
+import { projectFolder } from "../../../../projectFolder.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { launchChromium } from "../../launchChromium.js"
 
-const file = `src/launchChromium/test/syntax-error/syntax-error.js`
+const testFolder = `${projectFolder}/src/launchChromium/test/syntax-error`
+const filenameRelative = `syntax-error.js`
 const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {
-  const { origin: remoteRoot } = await startCompileServer({
-    root,
+  const sourceOrigin = `file://${projectFolder}`
+
+  const { origin: compileServerOrigin } = await startCompileServer({
+    projectFolder: testFolder,
     compileInto,
     babelPluginDescription,
   })
 
   const actual = await launchAndExecute({
-    launch: () => launchChromium({ root, compileInto, remoteRoot, headless: false }),
+    launch: (options) =>
+      launchChromium({
+        ...options,
+        compileInto,
+        sourceOrigin,
+        compileServerOrigin,
+        headless: false,
+      }),
     stopOnceExecuted: true,
     mirrorConsole: true,
-    file,
+    filenameRelative,
     verbose: true,
   })
   const expected = {

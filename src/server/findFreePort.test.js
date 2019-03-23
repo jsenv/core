@@ -1,9 +1,11 @@
-import { test } from "@dmail/test"
-import assert from "assert"
+import { assert } from "@dmail/assert"
 import { findFreePort } from "./findFreePort.js"
 
-test(() => {
-  return findFreePort().then((port) => {
-    assert.equal(typeof port, "number")
+// eslint-disable-next-line import/newline-after-import
+;(async () => {
+  const port = await findFreePort()
+  assert({
+    actual: typeof port,
+    expected: "number",
   })
-})
+})()

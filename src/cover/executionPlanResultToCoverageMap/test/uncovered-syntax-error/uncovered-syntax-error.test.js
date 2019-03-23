@@ -1,6 +1,6 @@
 import { assert } from "@dmail/assert"
-import { projectFolder } from "../../../../projectFolder.js"
-import { executePlan } from "../../../executePlan/index.js"
+import { projectFolder } from "../../../../../projectFolder.js"
+import { executePlan } from "../../../../executePlan/index.js"
 import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap.js"
 
 const testFolder = `${projectFolder}/src/executionPlanResultToCoverageMap/test/uncovered-syntax-error`

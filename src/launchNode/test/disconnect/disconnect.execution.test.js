@@ -1,25 +1,28 @@
 import { assert } from "@dmail/assert"
-import { root } from "../../../root.js"
+import { projectFolder } from "../../../../projectFolder.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchNode } from "../../launchNode.js"
 import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
-const file = `src/launchNode/test/disconnect/disconnect.js`
+const testFolder = `${projectFolder}/src/launchNode/test/disconnect`
+const filenameRelative = `disconnect.js`
 const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {
-  const { origin: remoteRoot } = await startCompileServer({
-    root,
+  const sourceOrigin = `file://${testFolder}`
+
+  const { origin: compileServerOrigin } = await startCompileServer({
+    projectFolder: testFolder,
     compileInto,
     babelPluginDescription,
   })
 
   const actual = await launchAndExecute({
-    launch: (options) => launchNode({ ...options, root, compileInto, remoteRoot }),
+    launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
     captureConsole: true,
-    file,
+    filenameRelative,
     verbose: true,
   })
   actual.platformLog = removeDebuggerLog(actual.platformLog)

@@ -1,31 +1,34 @@
 import { assert } from "@dmail/assert"
-import { root } from "../../../root.js"
+import { projectFolder } from "../../../../projectFolder.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchNode } from "../../launchNode.js"
 
-const file = `src/launchNode/test/import-meta-url/import-meta-url.js`
+const testFolder = `${projectFolder}/src/launchNode/test/import-meta-url`
+const filenameRelative = `import-meta-url.js`
 const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {
-  const { origin: remoteRoot } = await startCompileServer({
-    root,
+  const sourceOrigin = `file://${testFolder}`
+
+  const { origin: compileServerOrigin } = await startCompileServer({
+    projectFolder: testFolder,
     compileInto,
     babelPluginDescription,
   })
 
   const actual = await launchAndExecute({
-    launch: (options) => launchNode({ ...options, root, compileInto, remoteRoot }),
+    launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
     mirrorConsole: true,
     collectNamespace: true,
-    file,
+    filenameRelative,
     verbose: true,
   })
   const expected = {
     status: "completed",
     namespace: {
-      default: `${remoteRoot}/${compileInto}/best/${file}`,
+      default: `${compileServerOrigin}/${compileInto}/best/${filenameRelative}`,
     },
   }
   assert({ actual, expected })

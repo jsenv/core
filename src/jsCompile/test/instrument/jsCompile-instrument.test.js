@@ -2,12 +2,12 @@ import fs from "fs"
 import istanbul from "istanbul"
 import { assert } from "@dmail/assert"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { root as selfRoot } from "../../root.js"
+import { projectFolder } from "../../../../projectFolder.js"
 import { objectMap } from "../../../objectHelper.js"
 import { createInstrumentPlugin } from "../../../cover/createInstrumentPlugin.js"
 import { jsCompile } from "../../jsCompile.js"
 
-const root = `${selfRoot}/src/jsCompile/test/fixtures`
+const root = `${projectFolder}/src/jsCompile/test/fixtures`
 const file = "file.js"
 const fileAbsolute = `${root}/${file}`
 const babelPluginDescription = pluginOptionMapToPluginMap({

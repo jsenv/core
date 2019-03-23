@@ -1,3 +1,4 @@
+/* eslint-disable */
 // to be rewritten, maybe using https://www.npmjs.com/package/puppeteer-firefox ?
 // https://www.npmjs.com/package/selenium-webdriver
 

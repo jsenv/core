@@ -1,5 +1,5 @@
 import { assert } from "@dmail/assert"
-import { root } from "../../../root.js"
+import { projectFolder } from "../../../../projectFolder.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { launchChromium } from "../../launchChromium.js"
@@ -9,14 +9,17 @@ const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {
-  const { origin: remoteRoot } = await startCompileServer({
-    root,
+  const sourceOrigin = `file://${projectFolder}`
+
+  const { origin: compileServerOrigin } = await startCompileServer({
+    projectFolder,
     compileInto,
     babelPluginDescription,
   })
 
   const actual = await launchAndExecute({
-    launch: () => launchChromium({ root, compileInto, remoteRoot, headless: false }),
+    launch: () =>
+      launchChromium({ compileInto, sourceOrigin, compileServerOrigin, headless: false }),
     stopOnceExecuted: true,
     mirrorConsole: true,
     verbose: true,
@@ -28,7 +31,7 @@ const babelPluginDescription = {}
       code: "MODULE_NOT_FOUND_ERROR",
       message: `src/launchChromium/test/not-found/foo.js not found`,
       stack: actual.error.stack,
-      url: `${remoteRoot}/${compileInto}/best/src/launchChromium/test/not-found/foo.js`,
+      url: `${compileServerOrigin}/${compileInto}/best/src/launchChromium/test/not-found/foo.js`,
     },
   }
   assert({ actual, expected })

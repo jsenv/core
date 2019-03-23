@@ -34,7 +34,6 @@ const babelPluginDescription = {}
     collectNamespace: true,
     collectCoverage: true,
   })
-  debugger
   const expected = {
     status: "completed",
     namespace: {
