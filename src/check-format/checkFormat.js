@@ -9,7 +9,7 @@ import {
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
 
-export const format = ({ projectFolder, formatDescription }) =>
+export const checkFormat = ({ projectFolder, formattableDescription }) =>
   catchAsyncFunctionCancellation(async () => {
     projectFolder = normalizePathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
@@ -18,7 +18,7 @@ export const format = ({ projectFolder, formatDescription }) =>
       cancellationToken,
       pathname: projectFolder,
       metaDescription: namedValueDescriptionToMetaDescription({
-        format: formatDescription,
+        format: formattableDescription,
       }),
       predicate: (meta) => meta.format === true,
       transformFile: ({ filenameRelative }) => filenameRelative,

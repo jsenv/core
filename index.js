@@ -8,7 +8,7 @@ export { launchAndExecute } from "./src/launchAndExecute/index.js"
 export { execute } from "./src/execute/execute.js"
 
 // belong to core
-export { format } from "./src/format/format.js"
+export { checkFormat } from "./src/check-format/checkFormat.js"
 
 // belong to core
 export { test } from "./src/test/test.js"
