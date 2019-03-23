@@ -24,6 +24,8 @@ const metaDescription = namedValueDescriptionToMetaDescription({
     // ignore some dynamic folder
     "/**/dist/": false,
     "/**/.dist/": false,
+    // ignore some file explicitely containing syntax error
+    "/**/syntax-error.js": false,
   },
 })
 
