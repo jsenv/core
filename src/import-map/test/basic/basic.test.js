@@ -20,10 +20,20 @@ const projectFolder = `${selfProjectFolder}/src/import-map/test/basic`
       "foo/": "/node_modules/foo/",
     },
     scopes: {
+      "/node_modules/@dmail/yo/": {
+        "/": "/node_modules/@dmail/yo/",
+      },
+      "/node_modules/bar/": {
+        "/": "/node_modules/bar/",
+      },
       "/node_modules/foo/": {
+        "/": "/node_modules/foo/",
         bar: "/node_modules/foo/node_modules/bar/index.js",
         "bar/": "/node_modules/foo/node_modules/bar/",
         "/node_modules/bar/": "/node_modules/foo/node_modules/bar/",
+      },
+      "/node_modules/foo/node_modules/bar/": {
+        "/": "/node_modules/foo/node_modules/bar/",
       },
     },
   }

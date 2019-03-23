@@ -65,34 +65,48 @@ export const generateImportMapForProjectNodeModules = async ({
         const dependencyPackageFolder = pathnameToDirname(dependencyPackageFilename)
         const dependencyFolderRelative = dependencyPackageFolder.slice(`${projectFolder}/`.length)
         const isScoped = dependencyFolderRelative !== `node_modules/${dependencyName}`
+        const dependencyScope = `/node_modules/${dependencyName}/`
 
         if (isScoped) {
-          const scopedImports = {
-            [`/node_modules/${dependencyName}/`]: `/${dependencyFolderRelative}/`,
-          }
+          const subDependencyScopedImports = {}
+          const subDependencyScope = `/${dependencyFolderRelative}/`
 
+          subDependencyScopedImports[dependencyScope] = subDependencyScope
           if (remapMain) {
             const dependencyMain = packageDataToMain(
               dependencyPackageData,
               dependencyPackageFilename,
             )
-            scopedImports[`${dependencyName}`] = `/${dependencyFolderRelative}/${dependencyMain}`
+            subDependencyScopedImports[dependencyName] = `${subDependencyScope}${dependencyMain}`
           }
           if (remapFolder) {
-            scopedImports[`${dependencyName}/`] = `/${dependencyFolderRelative}/`
+            subDependencyScopedImports[`${dependencyName}/`] = subDependencyScope
           }
 
-          scopes[`/${importerName}/`] = scopedImports
+          const importerScope = `/${importerName}/`
+          scopes[importerScope] = {
+            ...(scopes[importerScope] || {}),
+            ...subDependencyScopedImports,
+          }
+          scopes[subDependencyScope] = {
+            ...(scopes[subDependencyScope] || {}),
+            "/": subDependencyScope,
+          }
         } else {
+          scopes[dependencyScope] = {
+            ...(scopes[dependencyScope] || {}),
+            "/": dependencyScope,
+          }
+
           if (remapMain) {
             const dependencyMain = packageDataToMain(
               dependencyPackageData,
               dependencyPackageFilename,
             )
-            imports[`${dependencyName}`] = `/node_modules/${dependencyName}/${dependencyMain}`
+            imports[`${dependencyName}`] = `${dependencyScope}${dependencyMain}`
           }
           if (remapFolder) {
-            imports[`${dependencyName}/`] = `/node_modules/${dependencyName}/`
+            imports[`${dependencyName}/`] = dependencyScope
           }
         }
 
