@@ -32,7 +32,7 @@
 		"@dmail/project-structure-compile-babel": "github:dmail/project-structure-compile-babel",
 		"@dmail/signal": "9.2.0",
 		"@dmail/uneval": "github:dmail/uneval",
-		"@jsenv/module-resolution": "github:jsenv/module-resolution",
+		"@jsenv/module-resolution": "github:jsenv/jsenv-module-resolution",
 		"abort-controller": "2.0.2",
 		"ansi-to-html": "0.6.9",
 		"eventsource": "1.0.7",
