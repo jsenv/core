@@ -13,6 +13,7 @@ export const test = async ({
   babelPluginDescription,
   executeDescription,
   maxParallelExecution,
+  defaultAllocatedMsPerExecution,
 }) =>
   catchAsyncFunctionCancellation(async () => {
     projectFolder = normalizePathname(projectFolder)
@@ -25,6 +26,7 @@ export const test = async ({
       compileInto,
       babelPluginDescription,
       executeDescription,
+      defaultAllocatedMsPerExecution,
     })
 
     return executePlan(executionPlan, { cancellationToken, maxParallelExecution })

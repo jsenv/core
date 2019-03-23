@@ -24,6 +24,7 @@ export const cover = async ({
   // for now we stick to coverDescription using project-structure api
   coverDescription,
   executeDescription,
+  defaultAllocatedMsPerExecution,
 }) =>
   catchAsyncFunctionCancellation(async () => {
     projectFolder = normalizePathname(projectFolder)
@@ -49,6 +50,7 @@ export const cover = async ({
         babelPluginDescription,
         executeDescription,
         coverFilePredicate,
+        defaultAllocatedMsPerExecution,
       }),
       listFilesToCover({
         cancellationToken,
@@ -124,6 +126,7 @@ const executeAndCoverPatternMapping = async ({
   babelPluginDescription,
   executeDescription,
   coverFilePredicate,
+  defaultAllocatedMsPerExecution,
 }) => {
   const instrumentBabelPlugin = createInstrumentPlugin({
     predicate: (filenameRelative) => coverFilePredicate(filenameRelative),
@@ -141,6 +144,7 @@ const executeAndCoverPatternMapping = async ({
     compileInto,
     babelPluginDescription: babelPluginDescriptionWithInstrumentation,
     executeDescription,
+    defaultAllocatedMsPerExecution,
   })
 
   const executionPlanResult = await executePlan(executionPlan, {

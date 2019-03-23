@@ -12,6 +12,7 @@ export const executeDescriptionToExecutionPlan = async ({
   babelPluginDescription,
   executeDescription,
   verbose = false,
+  defaultAllocatedMsPerExecution = 10000,
 }) => {
   const sourceOrigin = `file://${projectFolder}`
 
@@ -37,10 +38,10 @@ export const executeDescriptionToExecutionPlan = async ({
     transformFile: ({ filenameRelative, meta }) => {
       const executionMeta = meta.execute
       const fileExecutionPlan = {}
-      Object.keys(executionMeta).forEach((platformName) => {
-        const platformExecutionPlan = executionMeta[platformName]
+      Object.keys(executionMeta).forEach((executionName) => {
+        const platformExecutionPlan = executionMeta[executionName]
         const { launch, allocatedMs } = platformExecutionPlan
-        fileExecutionPlan[platformName] = {
+        fileExecutionPlan[executionName] = {
           launch: (options) =>
             launch({
               ...options,
@@ -49,7 +50,7 @@ export const executeDescriptionToExecutionPlan = async ({
               sourceOrigin,
               compileServerOrigin,
             }),
-          allocatedMs,
+          allocatedMs: allocatedMs === undefined ? defaultAllocatedMsPerExecution : allocatedMs,
         }
       })
 
