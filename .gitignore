@@ -1,9 +1,7 @@
 /node_modules
-package-lock.json
+/package-lock.json
 /coverage
-.nyc_output
-coverage.lcov
-build
-/bundle
+/.nyc_output
+/coverage.lcov
 dist
 .dist

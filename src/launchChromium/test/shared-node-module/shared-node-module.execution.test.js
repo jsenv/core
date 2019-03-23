@@ -6,7 +6,7 @@ import { launchChromium } from "../../launchChromium.js"
 
 const projectFolder = `${selfProjectFolder}/src/launchChromium/test/shared-node-module`
 const filenameRelative = `shared-node-module.js`
-const compileInto = "build"
+const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {

@@ -3,7 +3,7 @@ import { compileToService } from "../../compileToService.js"
 import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
 
 const projectFolder = `${selfProjectFolder}/src/compileToService/test/redirect-node-module`
-const compileInto = "build"
+const compileInto = ".dist"
 const compileId = "group"
 const origin = `http://127.0.0.1`
 const compileDescription = { [compileId]: {} }

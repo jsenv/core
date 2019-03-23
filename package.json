@@ -68,7 +68,7 @@
 	},
 	"scripts": {
 		"lint": "eslint .",
-		"format": "node ./script/format.js",
+		"check-format": "node ./script/check-format.js",
 		"compile": "node ./script/compile.js",
 		"clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
 		"dist": "npm run clean && npm run compile",

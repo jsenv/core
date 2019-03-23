@@ -3,10 +3,10 @@ const {
   namedValueDescriptionToMetaDescription,
   selectAllFileInsideFolder,
 } = require("@dmail/project-structure")
-const { projectFolder } = require("./projectFolder.js")
+const { projectFolder } = require("../projectFolder.js")
 
 const metaDescription = namedValueDescriptionToMetaDescription({
-  format: {
+  formattable: {
     // js
     "/index.js": true,
     "/index.test.js": true,
@@ -24,14 +24,13 @@ const metaDescription = namedValueDescriptionToMetaDescription({
     // ignore some dynamic folder
     "/**/dist/": false,
     "/**/.dist/": false,
-    "/**/build/": false,
   },
 })
 
 selectAllFileInsideFolder({
   pathname: projectFolder,
   metaDescription,
-  predicate: (meta) => meta.format === true,
+  predicate: (meta) => meta.formattable === true,
   transformFile: ({ filenameRelative }) => filenameRelative,
 }).then((filenameRelativeArray) => {
   prettiest({ folder: projectFolder, filenameRelativeArray: filenameRelativeArray.sort() })

@@ -1,6 +1,5 @@
 /package-lock.json
 /package.json
-/dist
+dist
+.dist
 /coverage
-/build
-/bundle

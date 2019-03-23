@@ -10,7 +10,7 @@ import {
 } from "../../../executionPlanToCoverageMap/index.js"
 
 const file = `src/launchChromium/test/shared-node-module/shared-node-module.js`
-const compileInto = "build"
+const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {

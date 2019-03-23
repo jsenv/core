@@ -7,7 +7,7 @@ import { startCompileServer } from "../../../server-compile/index.js"
 import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap.js"
 
 const testFolder = `${projectFolder}/src/executionPlanResultToCoverageMap/test/node-and-chrome`
-const compileInto = "build"
+const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {

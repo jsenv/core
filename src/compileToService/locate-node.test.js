@@ -7,7 +7,7 @@ import { root } from "../root.js"
   const actual = locate({
     requestPathname: "build/best/node_modules/bar/bar.js",
     refererFile: "build/best/node_modules/foo/foo.js",
-    compileInto: "build",
+    compileInto: ".dist",
     root: `${root}/src/compileToService/test/fixtures`,
   })
   const expected = {
@@ -22,7 +22,7 @@ import { root } from "../root.js"
 {
   const actual = locate({
     requestPathname: "build/best/node_modules/bar/bar.js",
-    compileInto: "build",
+    compileInto: ".dist",
     root: `${root}/src/compileToService/test/fixtures`,
   })
   const expected = {

@@ -57,7 +57,7 @@ export const jsCompile = async ({
     } else if (remapMethod === "comment") {
       // sourceMap will be named file.js.map
       const sourceMapName = `${path.basename(filenameRelative)}.map`
-      // it will be located at `${compileServer.origin}/build/src/file.js/e3uiyi456&/file.js.map`
+      // it will be located at `${compileServer.origin}/.dist/src/file.js/e3uiyi456&/file.js.map`
       // const folder = path.dirname(file)
       // const folderWithSepOrNothing = folder ? `${folder}/` : ""
       const sourceMapLocationForSource = `./${path.basename(

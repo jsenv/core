@@ -5,7 +5,7 @@ import { startCompileServer } from "../../../server-compile/index.js"
 import { launchNode } from "../../launchNode.js"
 
 const file = `src/launchNode/test/disconnect-later/disconnect-later.js`
-const compileInto = "build"
+const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {

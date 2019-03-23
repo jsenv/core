@@ -6,7 +6,7 @@ import { launchNode } from "../../launchNode.js"
 import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
 const filenameRelative = `src/launchNode/test/throw/throw.js`
-const compileInto = "build"
+const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {

@@ -4,7 +4,7 @@ import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js
 import { compileToService } from "../../compileToService.js"
 
 const projectFolder = `${selfProjectFolder}/src/compileToService/test/basic`
-const compileInto = "build"
+const compileInto = ".dist"
 const compileId = "group"
 const output = "foo"
 const compileDescription = {

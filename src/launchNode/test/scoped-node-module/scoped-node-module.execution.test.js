@@ -7,7 +7,7 @@ import { generateImportMapForProjectNodeModules } from "../../../import-map/gene
 
 const projectFolder = `${selfProjectFolder}/src/launchNode/test/scoped-node-module`
 const filenameRelative = `scoped-node-module.js`
-const compileInto = "build"
+const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {

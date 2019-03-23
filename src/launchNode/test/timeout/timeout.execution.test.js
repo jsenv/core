@@ -7,7 +7,7 @@ import { startCompileServer } from "../../../server-compile/index.js"
 import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
 const filenameRelative = `src/launchNode/test/timeout/timeout.js`
-const compileInto = "build"
+const compileInto = ".dist"
 const babelPluginDescription = {
   "transform-async-to-promises": [transformAsyncToPromises],
 }

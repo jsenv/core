@@ -1,4 +1,3 @@
-/dist
+dist
+.dist
 /coverage
-/build
-/bundle

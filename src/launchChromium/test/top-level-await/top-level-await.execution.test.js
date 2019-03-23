@@ -6,7 +6,7 @@ import { startCompileServer } from "../../../server-compile/index.js"
 import { launchChromium } from "../../launchChromium.js"
 
 const file = `src/launchChromium/test/top-level-await/top-level-await.js`
-const compileInto = "build"
+const compileInto = ".dist"
 const babelPluginDescription = {
   "transform-async-to-promises": [transformAsyncToPromises],
 }

@@ -3,7 +3,7 @@ import { projectFolder } from "../../../../projectFolder.js"
 import { jsCompile } from "../../../jsCompile/index.js"
 import { jsCompileToService } from "../../jsCompileToService.js"
 
-const compileInto = "build"
+const compileInto = ".dist"
 const compileId = "test"
 
 ;(async () => {

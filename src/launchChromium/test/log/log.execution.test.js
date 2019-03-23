@@ -6,7 +6,7 @@ import { launchChromium } from "../../launchChromium.js"
 
 const projectFolder = `${selfProjectFolder}/src/launchChromium/test/log`
 const filenameRelative = `log.js`
-const compileInto = "build"
+const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {

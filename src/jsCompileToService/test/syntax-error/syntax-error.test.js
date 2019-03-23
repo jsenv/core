@@ -4,7 +4,7 @@ import { jsCompileToService } from "../../jsCompileToService.js"
 import { jsCompile } from "../../../jsCompile/index.js"
 
 const localRoot = path.resolve(__dirname, "../../../")
-const compileInto = "build"
+const compileInto = ".dist"
 const compileId = "compileId"
 
 const test = async () => {

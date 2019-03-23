@@ -1,4 +1,4 @@
-import { root } from "../../root.js"
+import { projectFolder } from "../../../projectFolder.js"
 import { launchNode } from "../../launchNode/index.js"
 import { launchChromium } from "../../launchChromium/index.js"
 import { test } from "../test.js"
@@ -6,7 +6,7 @@ import { test } from "../test.js"
 const launchChromiumWithUI = (options) => launchChromium({ ...options, headless: false })
 
 const testDescription = {
-  "src/test/test/file.js": {
+  "/src/test/test/file.js": {
     node: {
       launch: launchNode,
     },
@@ -17,8 +17,8 @@ const testDescription = {
 }
 
 test({
-  root,
-  compileInto: "build",
+  projectFolder,
+  compileInto: ".dist",
   babelPluginDescription: {},
   executeDescription: testDescription,
 })

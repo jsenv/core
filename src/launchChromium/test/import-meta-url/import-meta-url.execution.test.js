@@ -5,7 +5,7 @@ import { startCompileServer } from "../../../server-compile/index.js"
 import { launchChromium } from "../../launchChromium.js"
 
 const file = `src/launchChromium/test/import-meta-url/import-meta-url.js`
-const compileInto = "build"
+const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {

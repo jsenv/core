@@ -5,7 +5,7 @@ import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { launchChromium } from "../../launchChromium.js"
 
 const file = `src/launchChromium/test/syntax-error/syntax-error.js`
-const compileInto = "build"
+const compileInto = ".dist"
 const babelPluginDescription = {}
 
 ;(async () => {

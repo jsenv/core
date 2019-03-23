@@ -9,7 +9,7 @@ const {
   pluginMapToPluginsForPlatform,
 } = require("@dmail/project-structure-compile-babel")
 const { fileRead, fileWrite, fileCopy } = require("@dmail/helper")
-const { projectFolder } = require("./projectFolder.js")
+const { projectFolder } = require("../projectFolder.js")
 
 const babelPluginDescription = pluginOptionMapToPluginMap({
   "transform-modules-commonjs": {},
@@ -44,9 +44,9 @@ const metaDescription = namedValueDescriptionToMetaDescription({
     "/**/*.json": "copy",
     "/node_modules/": false,
     "/**/dist/": false,
-    "/**/build/": false,
-    "/**/bundle/": false,
+    "/**/.dist/": false,
     "/script/": false,
+    "/.vscode/": false,
     "/sourceMapTest": false,
     "/.eslintrc.js": false,
     "/prettier.config.js": false,
