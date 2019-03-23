@@ -28,7 +28,6 @@
 		"@babel/plugin-transform-block-scoping": "7.2.0",
 		"@dmail/cancellation": "github:dmail/cancellation",
 		"@dmail/helper": "github:dmail/helper",
-		"@dmail/module-loader": "github:dmail/module-loader",
 		"@dmail/project-structure": "github:dmail/project-structure",
 		"@dmail/project-structure-compile-babel": "github:dmail/project-structure-compile-babel",
 		"@dmail/signal": "9.2.0",
