@@ -9,7 +9,6 @@ import {
 } from "../server/index.js"
 import { projectFolder as selfProjectFolder } from "../../projectFolder.js"
 import { createJsCompileService } from "./createJsCompileService.js"
-import { locateFilename } from "./locateFilename.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -110,8 +109,5 @@ const locateFileSystem = ({ rootHref, filenameRelative }) => {
     }
   }
 
-  return locateFilename({
-    rootHref,
-    filenameRelative,
-  })
+  return `${rootHref}/${filenameRelative}`
 }
