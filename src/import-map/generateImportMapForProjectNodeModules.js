@@ -90,11 +90,13 @@ export const generateImportMapForProjectNodeModules = async ({
           }
           scopes[subDependencyScope] = {
             ...(scopes[subDependencyScope] || {}),
+            [subDependencyScope]: subDependencyScope,
             "/": subDependencyScope,
           }
         } else {
           scopes[dependencyScope] = {
             ...(scopes[dependencyScope] || {}),
+            [dependencyScope]: dependencyScope,
             "/": dependencyScope,
           }
 

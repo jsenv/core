@@ -8,7 +8,7 @@ import {
   browserScoring as browserDefaultScoring,
   nodeScoring as nodeDefaultScoring,
 } from "../group-description/index.js"
-import { objectMap } from "../objectHelper.js"
+import { wrapImportMap } from "../import-map/wrapImportMap.js"
 
 export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),
@@ -75,36 +75,10 @@ export const createJsCompileService = async ({
 }
 
 const writeGroupImportMapFile = ({ projectFolder, compileInto, compileId, importMap }) => {
-  const prefix = `/${compileInto}/${compileId}`
-
-  const groupImportMap = {
-    imports: prefixImports(importMap.imports || {}, prefix),
-    scopes: {
-      ...prefixScopes(importMap.scopes || {}, prefix),
-      [`${prefix}/`]: {
-        ...prefixImports(importMap.imports || {}, prefix),
-        [`${prefix}/`]: `${prefix}/`,
-        "/": `${prefix}/`,
-      },
-    },
-  }
+  const groupImportMap = wrapImportMap(importMap, `${compileInto}/${compileId}`)
 
   return fileWriteFromString(
     `${projectFolder}/${compileInto}/importMap.${compileId}.json`,
     JSON.stringify(groupImportMap, null, "  "),
   )
 }
-
-const prefixImports = (imports, prefix) =>
-  objectMap(imports, (pathnameMatchPattern, pathnameRemapPattern) => {
-    return {
-      [`${pathnameMatchPattern}`]: `${prefix}${pathnameRemapPattern}`,
-    }
-  })
-
-const prefixScopes = (scopes, prefix) =>
-  objectMap(scopes, (pathnameMatchPattern, scopeImports) => {
-    return {
-      [`${prefix}${pathnameMatchPattern}`]: prefixImports(scopeImports, prefix),
-    }
-  })
