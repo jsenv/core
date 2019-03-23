@@ -59,6 +59,7 @@
 		"@dmail/project-eslint-config": "github:dmail/project-eslint-config",
 		"@dmail/project-prettier-config": "github:dmail/project-prettier-config",
 		"babel-plugin-transform-async-to-promises": "0.8.5",
+		"babel-eslint": "11.0.0-beta.0",
 		"codecov": "2.3.0",
 		"eslint": "5.1.0",
 		"eslint-plugin-import": "2.6.0",
