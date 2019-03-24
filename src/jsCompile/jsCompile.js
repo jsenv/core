@@ -98,7 +98,3 @@ ${"//#"} sourceMappingURL=${location}`
 const stringifyMap = (object) => JSON.stringify(object, null, "  ")
 
 const stringifyCoverage = (object) => JSON.stringify(object, null, "  ")
-
-export const getBrowserPlatformFile = () => {
-  return "node_modules/dev-server/src/platform/browser/index.js"
-}

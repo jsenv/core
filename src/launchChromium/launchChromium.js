@@ -231,7 +231,7 @@ export const launchChromium = async ({
 }
 
 const getBrowserPlatformHref = ({ compileServerOrigin }) =>
-  `${compileServerOrigin}/node_modules/@dmail/dev-server/dist/browserPlatform.js`
+  `${compileServerOrigin}/node_modules/@jsenv/core/dist/browserPlatform.js`
 
 const errorToSourceError = (error, { sourceOrigin, compileServerOrigin }) => {
   // does not truly work

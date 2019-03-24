@@ -150,7 +150,7 @@ export const startBrowsingServer = async ({
 }
 
 const getBrowserPlatformHref = ({ compileServerOrigin }) =>
-  `${compileServerOrigin}/node_modules/@dmail/dev-server/dist/browserPlatform.js`
+  `${compileServerOrigin}/node_modules/@jsenv/core/dist/browserPlatform.js`
 
 const getIndexPageHTML = async ({ projectFolder, browsableFilenameRelativeArray }) => {
   return `<!doctype html>

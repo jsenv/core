@@ -96,15 +96,15 @@ export const startCompileServer = async ({
 }
 
 const locateFileSystem = ({ rootHref, filenameRelative }) => {
-  // future consumer of dev-server will use
-  // 'node_modules/@dmail/dev-server/dist/browserSystemImporter.js'
-  // to get file from dev-server module
-  // in order to test this behaviour, when we are working on this module
-  // 'node_modules/@dmail/dev-server` is an alias to rootHref
-  if (filenameRelative.startsWith("node_modules/@dmail/dev-server/")) {
+  // consumer of @jsenv/core use
+  // 'node_modules/@jsenv/core/dist/browserSystemImporter.js'
+  // to get file.
+  // in order to test this behaviour while developping @jsenv/core
+  // 'node_modules/@jsenv/core` is an alias to rootHref
+  if (filenameRelative.startsWith("node_modules/@jsenv/core/")) {
     const sourceOrigin = `file://${selfProjectFolder}`
     if (rootHref === sourceOrigin || rootHref.startsWith(`${sourceOrigin}/`)) {
-      const filenameRelativeSelf = filenameRelative.slice("node_modules/@dmail/dev-server/".length)
+      const filenameRelativeSelf = filenameRelative.slice("node_modules/@jsenv/core/".length)
       return `${sourceOrigin}/${filenameRelativeSelf}`
     }
   }

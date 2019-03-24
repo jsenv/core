@@ -27,7 +27,7 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigi
     return nativeImporter
   }
 
-  const importerHref = `${compileServerOrigin}/node_modules/@dmail/dev-server/dist/browserSystemImporter.js`
+  const importerHref = `${compileServerOrigin}/node_modules/@jsenv/core/dist/browserSystemImporter.js`
   // we could not really inline it as compileId is dynamc
   // we could generate it dynamically from a given importMap
   // because the compiledImportMap is just the rwa importMap
