@@ -17,6 +17,7 @@ export const bundleBrowser = async ({
   compileGroupCount = 1,
   platformScoring = browserScoring,
   verbose,
+  minify = true,
 }) => {
   projectFolder = normalizePathname(projectFolder)
   const hasBalancing = compileGroupCount > 1
@@ -55,6 +56,7 @@ export const bundleBrowser = async ({
           globalName,
           entryPointsDescription,
           babelPluginDescription,
+          minify,
           ...context,
         }),
       computeRollupOptionsWithBalancing: (context) =>
@@ -65,6 +67,7 @@ export const bundleBrowser = async ({
           globalName,
           entryPointsDescription,
           babelPluginDescription,
+          minify,
           ...context,
         }),
       computeRollupOptionsForBalancer: (context) =>
@@ -75,6 +78,7 @@ export const bundleBrowser = async ({
           globalPromiseName,
           globalName,
           babelPluginDescription,
+          minify,
           ...context,
         }),
     }),

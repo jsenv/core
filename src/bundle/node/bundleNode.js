@@ -14,6 +14,7 @@ export const bundleNode = async ({
   compileGroupCount = 1,
   platformScoring = nodeScoring,
   verbose,
+  minify = true,
 }) => {
   projectFolder = normalizePathname(projectFolder)
   return await bundlePlatform({
@@ -31,6 +32,7 @@ export const bundleNode = async ({
         into,
         entryPointsDescription,
         babelPluginDescription,
+        minify,
         ...context,
       }),
     computeRollupOptionsWithBalancing: (context) =>
@@ -40,6 +42,7 @@ export const bundleNode = async ({
         into,
         entryPointsDescription,
         babelPluginDescription,
+        minify,
         ...context,
       }),
     computeRollupOptionsForBalancer: (context) =>
@@ -48,6 +51,7 @@ export const bundleNode = async ({
         projectFolder,
         into,
         babelPluginDescription,
+        minify,
         ...context,
       }),
   })

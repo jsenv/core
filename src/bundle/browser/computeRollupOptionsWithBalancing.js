@@ -13,6 +13,7 @@ export const computeRollupOptionsWithBalancing = ({
   groupDescription,
   compileId,
   log,
+  minify,
 }) => {
   const dir = `${projectFolder}/${into}/${compileId}`
 
@@ -27,17 +28,20 @@ export const computeRollupOptionsWithBalancing = ({
     projectFolder,
   })
 
-  const babelRollupPlugin = babelPluginDescriptionToRollupPlugin({
-    babelPluginDescription: groupBabelPluginDescription,
-  })
-
   log(`
 bundle entry points for browser with balancing.
 compileId: ${compileId}
 entryNameArray: ${Object.keys(entryPointsDescription)}
 babelPluginNameArray: ${Object.keys(groupBabelPluginDescription)}
 dir: ${dir}
+minify: ${minify}
 `)
+
+  const babelRollupPlugin = babelPluginDescriptionToRollupPlugin({
+    babelPluginDescription: groupBabelPluginDescription,
+    minify,
+    minifyOptions: { toplevel: false },
+  })
 
   return {
     rollupParseOptions: {

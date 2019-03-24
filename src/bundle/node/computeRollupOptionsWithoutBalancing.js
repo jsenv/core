@@ -9,6 +9,7 @@ export const computeRollupOptionsWithoutBalancing = ({
   entryPointsDescription,
   babelPluginDescription,
   log,
+  minify,
 }) => {
   const dir = `${projectFolder}/${into}`
 
@@ -17,11 +18,14 @@ bundle entry points for node without balancing.
 entryNameArray: ${Object.keys(entryPointsDescription)}
 babelPluginNameArray: ${Object.keys(babelPluginDescription)}
 dir: ${dir}
+minify: ${minify}
 `)
 
   const rollupPluginArray = [
     babelPluginDescriptionToRollupPlugin({
       babelPluginDescription,
+      minify,
+      minifyOptions: { toplevel: true },
     }),
     createJsenvRollupPlugin({
       cancellationToken,

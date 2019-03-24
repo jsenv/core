@@ -12,6 +12,7 @@ export const computeRollupOptionsWithBalancing = ({
   groupDescription,
   compileId,
   log,
+  minify,
 }) => {
   const dir = `${projectFolder}/${into}/${compileId}`
 
@@ -28,6 +29,8 @@ export const computeRollupOptionsWithBalancing = ({
 
   const babelRollupPlugin = babelPluginDescriptionToRollupPlugin({
     babelPluginDescription: groupBabelPluginDescription,
+    minify,
+    minifyOptions: { toplevel: true },
   })
 
   log(`
@@ -36,6 +39,7 @@ compileId: ${compileId}
 entryNameArray: ${Object.keys(entryPointsDescription)}
 babelPluginNameArray: ${Object.keys(groupBabelPluginDescription)}
 dir: ${dir}
+minify: ${minify}
 `)
 
   return {

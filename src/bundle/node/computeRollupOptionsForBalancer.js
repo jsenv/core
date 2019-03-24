@@ -12,6 +12,7 @@ export const computeRollupOptionsForBalancer = ({
   entryName,
   entryFilenameRelative,
   log,
+  minify,
 }) => {
   const balancerOptionSource = generateBalancerOptionsSource({
     groupDescription,
@@ -48,6 +49,8 @@ export const computeRollupOptionsForBalancer = ({
   )
   const babelRollupPlugin = babelPluginDescriptionToRollupPlugin({
     babelPluginDescription: otherwiseBabelPluginDescription,
+    minify,
+    minifyOptions: { toplevel: true },
   })
 
   const file = `${projectFolder}/${into}/${entryFilenameRelative}`
@@ -57,6 +60,7 @@ bundle balancer file for node
 entryName: ${entryName}
 babelPluginNameArray: ${Object.keys(otherwiseBabelPluginDescription)}
 file: ${file}
+minify : ${minify}
 `)
 
   return {

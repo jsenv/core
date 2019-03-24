@@ -13,6 +13,7 @@ export const computeRollupOptionsWithoutBalancing = ({
   babelPluginDescription,
   autoWrapEntryInPromise, // unused anymore, maybe to remove completely
   log,
+  minify,
 }) => {
   const dir = `${projectFolder}/${into}`
 
@@ -21,11 +22,14 @@ bundle entry points for browser without balancing.
 entryNameArray: ${Object.keys(entryPointsDescription)}
 babelPluginNameArray: ${Object.keys(babelPluginDescription)}
 dir: ${dir}
+minify: ${minify}
 `)
 
   const rollupPluginArray = [
     babelPluginDescriptionToRollupPlugin({
       babelPluginDescription,
+      minify,
+      minifyOptions: { toplevel: false },
     }),
     createJsenvRollupPlugin({
       cancellationToken,
