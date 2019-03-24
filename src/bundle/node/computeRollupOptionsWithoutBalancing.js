@@ -20,13 +20,13 @@ dir: ${dir}
 `)
 
   const rollupPluginArray = [
+    babelPluginDescriptionToRollupPlugin({
+      babelPluginDescription,
+    }),
     createJsenvRollupPlugin({
       cancellationToken,
       importMap,
       projectFolder,
-    }),
-    babelPluginDescriptionToRollupPlugin({
-      babelPluginDescription,
     }),
   ]
 

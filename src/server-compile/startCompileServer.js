@@ -15,7 +15,7 @@ export const startCompileServer = async ({
   importMap,
   projectFolder,
   compileInto,
-  compileGroupCount,
+  compileGroupCount = 1,
   babelPluginDescription,
   locate,
   localCacheStrategy,

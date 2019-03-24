@@ -42,7 +42,7 @@ dir: ${dir}
   return {
     rollupParseOptions: {
       input: entryPointsDescription,
-      plugins: [jsenvRollupPlugin, babelRollupPlugin],
+      plugins: [babelRollupPlugin, jsenvRollupPlugin],
     },
     rollupGenerateOptions: {
       dir,

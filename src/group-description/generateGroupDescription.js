@@ -18,7 +18,7 @@ const OTHERWISE_ID = "otherwise"
 export const generateGroupDescription = ({
   babelPluginDescription,
   platformScoring,
-  groupCount = 4,
+  groupCount = 1,
   babelPluginCompatibilityDescription = defaultBabelPluginCompatibilityDescription,
 }) => {
   if (typeof babelPluginDescription !== "object")
