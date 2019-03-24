@@ -1,9 +1,0 @@
-{
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      // would be amazing, but https://github.com/Microsoft/TypeScript/issues/13730
-      "/*": ["./*"]
-    }
-  }
-}

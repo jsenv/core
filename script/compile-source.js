@@ -50,6 +50,8 @@ const metaDescription = namedValueDescriptionToMetaDescription({
     "/sourceMapTest": false,
     "/.eslintrc.js": false,
     "/prettier.config.js": false,
+    "/package.json": false,
+    "/package-lock.json": false,
   },
 })
 
