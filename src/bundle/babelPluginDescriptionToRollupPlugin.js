@@ -1,6 +1,7 @@
 import { transformAsync, buildExternalHelpers } from "@babel/core"
-import { babelPluginDescriptionToBabelPluginArray } from "../jsCompile/babelPluginDescriptionToBabelPluginArray.js"
 import { addNamed } from "@babel/helper-module-imports"
+import { minify } from "terser"
+import { babelPluginDescriptionToBabelPluginArray } from "../jsCompile/babelPluginDescriptionToBabelPluginArray.js"
 
 const HELPER_FILENAME = "rollupPluginBabelHelpers.js"
 
@@ -39,6 +40,16 @@ export const babelPluginDescriptionToRollupPlugin = ({ babelPluginDescription })
         },
       })
       return result
+    },
+
+    renderChunk: (code) => {
+      // https://github.com/terser-js/terser#minify-options
+      const result = minify(code, { module: true, sourceMap: true })
+      if (result.error) {
+        throw result.error
+      } else {
+        return result
+      }
     },
   }
 

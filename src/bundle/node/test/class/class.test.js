@@ -13,6 +13,6 @@ bundleNode({
   babelPluginDescription: {
     "transform-classes": [babelPluginTransformClasses],
   },
-  compileGroupCount: 1,
+  compileGroupCount: 2,
   verbose: true,
 })
