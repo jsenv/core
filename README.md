@@ -1,6 +1,6 @@
 # jsenv-core
 
-[![npm](https://badge.fury.io/js/%40jsenv%2Fcore.svg)](https://badge.fury.io/js/%40jsenv%2Fcore)
+[![npm package](https://img.shields.io/npm/v/@jsenv/core.svg)](https://www.npmjs.com/package/@jsenv/core)
 [![build](https://travis-ci.com/jsenv/jsenv-core.svg?branch=master)](http://travis-ci.com/jsenv/jsenv-core)
 [![codecov](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
@@ -16,7 +16,7 @@ Put here awesome videos (certainly gif) amd screenshots.
 
 ## About other features
 
-jsenv-core got some other great features. 
+jsenv-core got some other great features.
 
 - execute/debug your files using the browsing server
 - debugging a file on node from vscode in 5s

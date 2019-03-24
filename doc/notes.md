@@ -1,7 +1,5 @@
 To be tested:
 
-- bundle minification
-
 - travis work as expected
 
 - consider creating a repo like jsenv/jsenv-basic-babel-plugin-description
@@ -16,10 +14,7 @@ To be tested:
   exports.basicBabelPluginDescription = basicBabelPluginDescription
   ```
 
-- move dev-server to jsenv/jsenv-core
-  the npm package will be named @jsenv/core
-
-- test how dev-server behaves if you import a dependency
+- test how jsenv-core behaves if you import a dependency
   written in commonjs
 
 - having to require the importMap.json everywhere is kinda annoying

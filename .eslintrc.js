@@ -1,4 +1,4 @@
-const { createConfig } = require("@dmail/project-eslint-config")
+const { createConfig } = require("@jsenv/eslint-config")
 
 const config = createConfig()
 

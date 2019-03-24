@@ -1,10 +1,10 @@
 {
-	"name": "@dmail/dev-server",
+	"name": "@jsenv/core",
 	"version": "1.0.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/dmail/dev-server"
+		"url": "https://github.com/jsenv/jsenv-core"
 	},
 	"publishConfig": {
 		"access": "public"
@@ -12,9 +12,9 @@
 	"main": "dist/index.js",
 	"module": "index.js",
 	"files": [
-		"dist",
+		"index.js",
 		"src",
-		"index.js"
+		"dist"
 	],
 	"engines": {
 		"node": ">=8.6.0"
@@ -27,13 +27,14 @@
 		"@babel/plugin-syntax-dynamic-import": "7.2.0",
 		"@babel/plugin-syntax-import-meta": "7.2.0",
 		"@babel/plugin-transform-block-scoping": "7.2.0",
-		"@dmail/cancellation": "github:dmail/cancellation",
-		"@dmail/helper": "github:dmail/helper",
-		"@dmail/project-structure": "github:dmail/project-structure",
-		"@dmail/project-structure-compile-babel": "github:dmail/project-structure-compile-babel",
+		"@jsenv/module-resolution": "1.0.0",
+		"@dmail/prettiest": "3.0.0",
+		"@dmail/cancellation": "1.0.0",
+		"@dmail/helper": "1.0.0",
+		"@dmail/project-structure": "2.0.0",
+		"@dmail/project-structure-compile-babel": "1.0.0",
 		"@dmail/signal": "9.2.0",
-		"@dmail/uneval": "github:dmail/uneval",
-		"@jsenv/module-resolution": "github:jsenv/jsenv-module-resolution",
+		"@dmail/uneval": "4.1.0",
 		"abort-controller": "2.0.2",
 		"ansi-to-html": "0.6.9",
 		"eventsource": "1.0.7",
@@ -55,16 +56,14 @@
 		"terser": "3.14.1"
 	},
 	"devDependencies": {
-		"@dmail/assert": "github:dmail/assert",
-		"@dmail/prettiest": "github:dmail/prettiest",
-		"@dmail/project-eslint-config": "github:dmail/project-eslint-config",
-		"@dmail/project-prettier-config": "github:dmail/project-prettier-config",
+		"@jsenv/eslint-config": "8.0.0",
+		"@jsenv/prettier-config": "1.0.0",
+		"@dmail/assert": "2.0.0",
 		"babel-plugin-transform-async-to-promises": "0.8.5",
 		"babel-eslint": "11.0.0-beta.0",
 		"codecov": "2.3.0",
 		"eslint": "5.1.0",
 		"eslint-plugin-import": "2.6.0",
-		"mock-fs": "4.4.2",
 		"prettier": "1.16.3",
 		"rimraf": "2.6.2"
 	},
@@ -75,8 +74,8 @@
 		"clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
 		"dist": "npm run clean && npm run compile",
 		"test": "npm run dist && node ./dist/index.test.js",
-		"cover": "npm run dist && nyc node ./dist/index.test.js",
-		"coverage-upload": "codecov",
+		"generate-coverage": "npm run dist && nyc node ./dist/index.test.js",
+		"upload-coverage": "codecov",
 		"prepublishOnly": "npm run dist",
 		"reinstall": "npm run clean && rimraf node_modules && npm install"
 	}

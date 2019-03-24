@@ -1,1 +1,1 @@
-module.exports = require("@dmail/project-prettier-config")
+module.exports = require("@jsenv/prettier-config")

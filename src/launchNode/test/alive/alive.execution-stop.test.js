@@ -1,5 +1,5 @@
 import { assert } from "@dmail/assert"
-import { projectFolder } from "../../../../dist"
+import { projectFolder } from "../../../../projectFolder.js"
 import { launchNode } from "../../launchNode.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
