@@ -1,19 +1,5 @@
 To be tested:
 
-- travis work as expected
-
-- consider creating a repo like jsenv/jsenv-basic-babel-plugin-description
-  instead of depending on project-structure-compile-babel
-  it would do this mostly:
-
-  ```js
-  const proposalAsyncGeneratorFunction = require("@babel/proposal-async-generator-functions")
-  const basicBabelPluginDescription = {
-    "proposal-async-generator-functions": [proposalAsyncGeneratorFunction, {}],
-  }
-  exports.basicBabelPluginDescription = basicBabelPluginDescription
-  ```
-
 - test how jsenv-core behaves if you import a dependency
   written in commonjs
 

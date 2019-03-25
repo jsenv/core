@@ -126,7 +126,20 @@ export const compileFile = async ({
   // trying to do the same (mapy happen when spawining multiple server for instance)
   // https://github.com/moxystudio/node-proper-lockfile/issues/69
   await fileMakeDirname(metaFilename)
-  const unlockGlobal = await lockfile.lock(metaFilename, { realpath: false })
+  // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
+  const unlockGlobal = await lockfile.lock(metaFilename, {
+    realpath: false,
+    retries: {
+      retries: 10,
+      minTimeout: 1 * 1000,
+      maxTimeout: 5 * 1000,
+    },
+  })
+  // here in case of error.code === 'ELOCKED' thrown from here
+  // https://github.com/moxystudio/node-proper-lockfile/blob/1a478a43a077a7a7efc46ac79fd8f713a64fd499/lib/lockfile.js#L54
+  // we could give a better failure message when server tries to compile a file
+  // otherwise he'll get a 500 without much more info to debug
+
   // we use two lock because the local lock is very fast, it's a sort of perf improvement
 
   try {
@@ -165,7 +178,7 @@ export const compileFile = async ({
       outputFilenameRelative,
     }
   } finally {
-    // we want to unlock in case of rejection too
+    // we want to unlock in case of error too
     unlockLocal()
     unlockGlobal()
   }
