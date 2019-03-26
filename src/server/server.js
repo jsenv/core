@@ -74,23 +74,14 @@ export const startServer = async ({
 
   let status = "starting"
 
+  const { registerCleanupCallback, cleanup } = createTracker()
+
   const connectionTracker = trackConnections(nodeServer)
+  // opened connection must be shutdown before the close event is emitted
+  registerCleanupCallback(connectionTracker.stop)
+
   const clientTracker = trackClients(nodeServer)
-  const requestHandlerTracker = trackRequestHandlers(nodeServer)
-
-  let stoppingResolve
-  const stopping = new Promise((resolve) => {
-    stoppingResolve = resolve
-  })
-  let stoppedResolve
-  const stopped = new Promise((resolve) => {
-    stoppedResolve = resolve
-  })
-  const stop = memoizeOnce(async (reason = REASON_NOT_SPECIFIED) => {
-    stoppingResolve(reason)
-    status = "closing"
-    log(stoppedMessage(reason))
-
+  registerCleanupCallback((reason) => {
     let responseStatus
     if (reasonIsInternalError(reason)) {
       responseStatus = 500
@@ -99,12 +90,22 @@ export const startServer = async ({
       responseStatus = 503
       // reason = 'unavailable because closing'
     }
+    clientTracker.stop({ status: responseStatus, reason })
+  })
 
-    // ensure we don't try to handle request while server is closing
-    requestHandlerTracker.stop(reason)
-    // opened connection must be shutdown before the close event is emitted
-    await clientTracker.stop({ status: responseStatus, reason })
-    await connectionTracker.stop(reason)
+  const requestHandlerTracker = trackRequestHandlers(nodeServer)
+  // ensure we don't try to handle request while server is closing
+  registerCleanupCallback(requestHandlerTracker.stop)
+
+  let stoppedResolve
+  const stopped = new Promise((resolve) => {
+    stoppedResolve = resolve
+  })
+  const stop = memoizeOnce(async (reason = REASON_NOT_SPECIFIED) => {
+    status = "closing"
+    log(stoppedMessage(reason))
+
+    await cleanup(reason)
     await listenStop(nodeServer)
     status = "stopped"
     stoppedResolve()
@@ -115,46 +116,35 @@ export const startServer = async ({
     stop: (_, reason) => stop(reason),
   })
 
-  const stopRequestedPromises = []
   if (stopOnCrash) {
-    const stopRequestedByCrash = new Promise((resolve) => {
-      const unregister = registerUnadvisedProcessCrashCallback((reason) => {
-        resolve(reason.value)
-      })
-      stopping.then(unregister)
+    const unregister = registerUnadvisedProcessCrashCallback((reason) => {
+      stop(reason.value)
     })
-    stopRequestedPromises.push(stopRequestedByCrash)
+    registerCleanupCallback(unregister)
   }
+
   if (stopOnError) {
-    const stopRequestedByError = new Promise((resolve) => {
-      const unregister = requestHandlerTracker.add((nodeRequest, nodeResponse) => {
-        if (nodeResponse.statusCode === 500 && reasonIsInternalError(nodeResponse.statusMessage)) {
-          resolve(REASON_INTERNAL_ERROR)
-        }
-      })
-      stopping.then(unregister)
+    const unregister = requestHandlerTracker.add((nodeRequest, nodeResponse) => {
+      if (nodeResponse.statusCode === 500 && reasonIsInternalError(nodeResponse.statusMessage)) {
+        stop(REASON_INTERNAL_ERROR)
+      }
     })
-    stopRequestedPromises.push(stopRequestedByError)
+    registerCleanupCallback(unregister)
   }
+
   if (stopOnExit) {
-    const stopRequestedByExit = new Promise((resolve) => {
-      const unregister = registerUngaranteedProcessTeardown((reason) => {
-        resolve(`process ${reason}`)
-      })
-      stopping.then(unregister)
+    const unregister = registerUngaranteedProcessTeardown((reason) => {
+      stop(`process ${reason}`)
     })
-    stopRequestedPromises.push(stopRequestedByExit)
+    registerCleanupCallback(unregister)
   }
+
   if (stopOnSIGINT) {
-    const stopRequestedBySIGINT = new Promise((resolve) => {
-      const unregister = registerProcessInterruptCallback(() => {
-        resolve("process sigint")
-      })
-      stopping.then(unregister)
+    const unregister = registerProcessInterruptCallback(() => {
+      stop("process sigint")
     })
-    stopRequestedPromises.push(stopRequestedBySIGINT)
+    registerCleanupCallback(unregister)
   }
-  Promise.race(stopRequestedPromises).then(stop)
 
   port = await startOperation
   status = "opened"
@@ -218,8 +208,26 @@ export const startServer = async ({
     nodeServer,
     agent,
     stop,
-    stopped,
+    stopped, // should be renamed stoppedPromise
   }
+}
+
+const createTracker = () => {
+  const callbackArray = []
+
+  const registerCleanupCallback = (callback) => {
+    if (typeof callback !== "function")
+      throw new TypeError(`callback must be a function
+callback: ${callback}`)
+    callbackArray.push(callback)
+  }
+
+  const cleanup = async (reason) => {
+    const localCallbackArray = callbackArray.slice()
+    await Promise.all(localCallbackArray.map((callback) => callback(reason)))
+  }
+
+  return { registerCleanupCallback, cleanup }
 }
 
 const statusToStatusText = (status) => STATUS_CODES[status] || "not specified"

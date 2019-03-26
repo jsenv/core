@@ -30,37 +30,20 @@ export const registerCatch = (promise, callback) => {
 }
 
 export const eventRace = (eventMap) => {
-  const names = Object.keys(eventMap)
   const unregisterMap = {}
-  let called = false
 
-  const visit = (name) => {
-    const { register, callback } = eventMap[name]
-
-    const unregister = register((...args) => {
-      called = true
-      // this event unregister all other event because this one hapenned
-      const otherNames = names.filter((otherName) => otherName !== name)
-      otherNames.forEach((otherName) => {
-        unregisterMap[otherName]()
-      })
-      return callback(...args)
-    })
-
-    unregisterMap[name] = unregister
-  }
-
-  let i = 0
-  while (i < names.length) {
-    const name = names[i]
-    visit(name)
-    if (called) {
-      return () => {}
-    }
-    i++
-  }
-
-  return (reason) => {
+  const unregisterAll = (reason) => {
     return Object.keys(unregisterMap).map((name) => unregisterMap[name](reason))
   }
+
+  Object.keys(eventMap).forEach((name) => {
+    const { register, callback } = eventMap[name]
+
+    unregisterMap[name] = register((...args) => {
+      unregisterAll()
+      callback(...args)
+    })
+  })
+
+  return unregisterAll
 }
