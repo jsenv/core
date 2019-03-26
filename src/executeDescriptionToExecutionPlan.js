@@ -41,8 +41,16 @@ export const executeDescriptionToExecutionPlan = async ({
       const executionMeta = meta.execute
       const fileExecutionPlan = {}
       Object.keys(executionMeta).forEach((executionName) => {
-        const platformExecutionPlan = executionMeta[executionName]
-        const { launch, allocatedMs } = platformExecutionPlan
+        const singleExecutionPlan = executionMeta[executionName]
+        if (singleExecutionPlan === null || singleExecutionPlan === undefined) return
+        if (typeof singleExecutionPlan !== "object") {
+          throw new TypeError(`a single execution must be an object.
+file: ${filenameRelative}
+executionName: ${executionName}
+singleExecutionPlan: ${singleExecutionPlan}`)
+        }
+
+        const { launch, allocatedMs } = singleExecutionPlan
         fileExecutionPlan[executionName] = {
           launch: (options) =>
             launch({
