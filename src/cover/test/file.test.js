@@ -8,7 +8,7 @@ const testFolder = `${projectFolder}/src/cover/test`
 const compileInto = ".dist"
 
 ;(async () => {
-  const coverageMap = await cover({
+  const { coverageMap } = await cover({
     projectFolder: testFolder,
     compileInto,
     babelPluginDescription: {},

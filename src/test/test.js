@@ -31,5 +31,12 @@ export const test = async ({
       defaultAllocatedMsPerExecution,
     })
 
-    return executePlan(executionPlan, { cancellationToken, maxParallelExecution })
+    const { planResult, planResultSummary } = await executePlan(executionPlan, {
+      cancellationToken,
+      maxParallelExecution,
+    })
+    if (planResultSummary.executionCount !== planResultSummary.completedCount) {
+      process.exitCode = 1
+    }
+    return { planResult, planResultSummary }
   })

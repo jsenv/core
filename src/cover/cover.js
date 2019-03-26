@@ -42,7 +42,7 @@ export const cover = async ({
 
     ensureNoFileIsBothCoveredAndExecuted({ executeDescription, coverFilePredicate })
 
-    const [executionPlanResult, arrayOfFilenameRelativeToCover] = await Promise.all([
+    const [{ planResult, planResultSummary }, arrayOfFilenameRelativeToCover] = await Promise.all([
       executeAndCoverPatternMapping({
         cancellationToken,
         importMap,
@@ -61,7 +61,11 @@ export const cover = async ({
       }),
     ])
 
-    const executionCoverageMap = executionPlanResultToCoverageMap(executionPlanResult, {
+    if (planResultSummary.executionCount !== planResultSummary.completedCount) {
+      process.exitCode = 1
+    }
+
+    const executionCoverageMap = executionPlanResultToCoverageMap(planResult, {
       cancellationToken,
       projectFolder,
       arrayOfFilenameRelativeToCover,
@@ -89,7 +93,11 @@ export const cover = async ({
       ...missedCoverageMap,
     }
 
-    return coverageMap
+    return {
+      planResult,
+      planResultSummary,
+      coverageMap,
+    }
   })
 
 const ensureNoFileIsBothCoveredAndExecuted = ({ executeDescription, coverFilePredicate }) => {
