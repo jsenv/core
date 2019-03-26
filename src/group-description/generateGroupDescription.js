@@ -5,12 +5,9 @@
 // to the generated bundle
 
 import { arrayWithoutValue } from "@dmail/helper"
-import { decreaseArrayByComposingValues } from "../decreaseArrayByComposingValues.js"
 import { babelPluginCompatibilityDescription as defaultBabelPluginCompatibilityDescription } from "./babelPluginCompatibilityDescription.js"
 import { compatibilityDescriptionToGroupArray } from "./compatibility-description/compatibilityDescriptionToGroupArray.js"
 import { compatibilityToScore } from "./compatibility/compatibilityToScore.js"
-import { babelPluginNameArrayToScore } from "./babel-plugin-name-array/babelPluginNameArrayToScore.js"
-import { composeGroup } from "./group/composeGroup.js"
 
 const BEST_ID = "best"
 const OTHERWISE_ID = "otherwise"
@@ -30,7 +27,7 @@ export const generateGroupDescription = ({
   const babelPluginNameArray = Object.keys(babelPluginDescription)
 
   const groupWithEverything = {
-    babelPluginNameArray: babelPluginNameArray.sort(),
+    babelPluginNameArray,
     compatibility: {},
   }
 
@@ -63,23 +60,11 @@ export const generateGroupDescription = ({
     (a, b) => groupToScore(b) - groupToScore(a),
   )
 
-  const groupArrayDecreased = decreaseArrayByComposingValues({
-    array: groupArrayWithEveryCombinationSortedByPlatformScore,
-    length: groupCount,
-    composer: composeGroup,
-  })
-
-  const groupToComplexityScore = ({ babelPluginNameArray }) =>
-    babelPluginNameArrayToScore(babelPluginNameArray)
-  const groupArrayDecreasedSortedByCompexityScore = groupArrayDecreased.sort(
-    (a, b) => groupToComplexityScore(a) - groupToComplexityScore(b),
-  )
-
-  const length = groupArrayDecreasedSortedByCompexityScore.length
+  const length = groupArrayWithEveryCombinationSortedByPlatformScore.length
   const groupDescription = {}
 
-  groupDescription[BEST_ID] = groupArrayDecreasedSortedByCompexityScore[0]
-  groupArrayDecreasedSortedByCompexityScore
+  groupDescription[BEST_ID] = groupArrayWithEveryCombinationSortedByPlatformScore[0]
+  groupArrayWithEveryCombinationSortedByPlatformScore
     .slice(
       // the first group is already marked as being the best
       1,
@@ -87,7 +72,7 @@ export const generateGroupDescription = ({
       // the groupWithEverything to ensure all plugins are enabled
       // when we cannot detect the platform or it is not compatible
       // but if we have few groups, we can keep the last one
-      length === groupCount ? -1 : groupArrayDecreasedSortedByCompexityScore.length,
+      length === groupCount ? groupCount - 2 : groupCount - 1,
     )
     .forEach((intermediatePluginGroup, index) => {
       groupDescription[`intermediate-${index + 1}`] = intermediatePluginGroup

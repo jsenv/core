@@ -8,11 +8,11 @@ export const compatibilityToScore = (compatibility, platformScoring) => {
 }
 
 const platformToScore = (platformName, platformVersion, platformScoring) => {
-  if (platformName in platformScoring === false) return platformScoring.other
+  if (platformName in platformScoring === false) return platformScoring.other || 0
 
   const versionUsageMap = platformScoring[platformName]
   const versionNames = Object.keys(versionUsageMap)
-  if (versionNames.length === 0) return platformScoring.other
+  if (versionNames.length === 0) return platformScoring.other || 0
 
   const sortedVersions = versionNames.sort((versionA, versionB) =>
     versionIsBelow(versionA, versionB),
@@ -26,7 +26,7 @@ const platformToScore = (platformName, platformVersion, platformScoring) => {
     (version) => platformVersion === version || versionIsAbove(platformVersion, version),
   )
 
-  if (!closestVersion) return platformScoring.other
+  if (!closestVersion) return platformScoring.other || 0
 
   return versionUsageMap[closestVersion]
 }
