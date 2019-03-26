@@ -216,28 +216,33 @@ const computeExecutionResult = async ({
       // all code after the operation won't execute because it will be rejected with
       // the cancellation error
 
+      let forceStopped = false
+
       if (stopForce) {
-        const stopOrStopForcePromise = new Promise(async (resolve) => {
-          let resolved = false
-
-          const id = setTimeout(async () => {
-            await stopForce()
-            if (resolved) return // resolved by stop()
-            resolved = true
-            resolve({ forced: true })
-          }, ALLOCATED_MS_BEFORE_FORCE_STOP)
-
+        const stopPromise = (async () => {
           await stop()
-          if (resolved) return // resolved by stopForce()
-          clearTimeout(id)
-          resolve({ forced: false })
-        })
-        await stopOrStopForcePromise
+          return false
+        })()
+
+        const stopForcePromise = (async () => {
+          await new Promise(async (resolve) => {
+            const timeoutId = setTimeout(resolve, ALLOCATED_MS_BEFORE_FORCE_STOP)
+            try {
+              await stopPromise
+            } finally {
+              clearTimeout(timeoutId)
+            }
+          })
+          await stopForce()
+          return true
+        })()
+
+        forceStopped = await Promise.all([stopPromise, stopForcePromise])
       } else {
         await stop()
       }
 
-      stoppedCallback()
+      stoppedCallback({ forced: forceStopped })
       log(createPlatformStoppedMessage())
     },
   })

@@ -61,22 +61,19 @@ export const generateGroupDescription = ({
   )
 
   const length = groupArrayWithEveryCombinationSortedByPlatformScore.length
-  const groupDescription = {}
+  const groupArray =
+    length + 1 > groupCount
+      ? groupArrayWithEveryCombinationSortedByPlatformScore.slice(0, groupCount - 1)
+      : groupArrayWithEveryCombinationSortedByPlatformScore
 
-  groupDescription[BEST_ID] = groupArrayWithEveryCombinationSortedByPlatformScore[0]
-  groupArrayWithEveryCombinationSortedByPlatformScore
-    .slice(
-      // the first group is already marked as being the best
-      1,
-      // if we have a lot of group, the last group must be replaced by
-      // the groupWithEverything to ensure all plugins are enabled
-      // when we cannot detect the platform or it is not compatible
-      // but if we have few groups, we can keep the last one
-      length === groupCount ? groupCount - 2 : groupCount - 1,
-    )
-    .forEach((intermediatePluginGroup, index) => {
-      groupDescription[`intermediate-${index + 1}`] = intermediatePluginGroup
-    })
+  const groupDescription = {}
+  groupArray.forEach((group, index) => {
+    if (index === 0) {
+      groupDescription[BEST_ID] = group
+    } else {
+      groupDescription[`intermediate-${index + 1}`] = group
+    }
+  })
   groupDescription[OTHERWISE_ID] = groupWithEverything
 
   return groupDescription

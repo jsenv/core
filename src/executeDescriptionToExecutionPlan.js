@@ -9,6 +9,7 @@ export const executeDescriptionToExecutionPlan = async ({
   importMap,
   projectFolder,
   compileInto,
+  compileGroupCount,
   babelPluginDescription,
   executeDescription,
   verbose = false,
@@ -21,6 +22,7 @@ export const executeDescriptionToExecutionPlan = async ({
     importMap,
     projectFolder,
     compileInto,
+    compileGroupCount,
     babelPluginDescription,
     verbose,
   })

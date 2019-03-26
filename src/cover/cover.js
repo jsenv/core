@@ -18,6 +18,7 @@ export const cover = async ({
   importMap,
   projectFolder,
   compileInto,
+  compileGroupCount,
   babelPluginDescription,
   // coverDescription could be deduced from passing
   // an entryPointsDescription and collecting all dependencies
@@ -47,6 +48,7 @@ export const cover = async ({
         importMap,
         projectFolder,
         compileInto,
+        compileGroupCount,
         babelPluginDescription,
         executeDescription,
         coverFilePredicate,
@@ -123,6 +125,7 @@ const executeAndCoverPatternMapping = async ({
   importMap,
   projectFolder,
   compileInto,
+  compileGroupCount,
   babelPluginDescription,
   executeDescription,
   coverFilePredicate,
@@ -142,6 +145,7 @@ const executeAndCoverPatternMapping = async ({
     importMap,
     projectFolder,
     compileInto,
+    compileGroupCount,
     babelPluginDescription: babelPluginDescriptionWithInstrumentation,
     executeDescription,
     defaultAllocatedMsPerExecution,

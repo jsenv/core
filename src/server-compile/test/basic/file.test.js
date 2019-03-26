@@ -4,13 +4,14 @@ import { projectFolder } from "../../../../projectFolder.js"
 import { startCompileServer } from "../../startCompileServer.js"
 
 const compileInto = ".dist"
-const babelPluginDescription = {}
+const babelPluginDescription = { "transform-block-scoping": true }
 
 ;(async () => {
   const compileServer = await startCompileServer({
     projectFolder,
     compileInto,
     babelPluginDescription,
+    compileGroupCount: 2,
     protocol: "http",
     ip: "127.0.0.1",
     port: 8998,
