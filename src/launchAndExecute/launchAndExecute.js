@@ -209,28 +209,36 @@ const computeExecutionResult = async ({
       startedCallback({ name: value.name, version: value.version })
       return value
     },
-    stop: ({ stop, stopForce, registerDisconnectCallback }) => {
-      // external code can cancel using canlleationToken
+    stop: async ({ stop, stopForce }) => {
+      // external code can cancel using canllelationToken
       // and listen for stoppedCallback before restarting the launchAndExecute operation.
-      // it is important to keep that code here because once cancelled
+      // it is important to keep the code inside this stop function because once cancelled
       // all code after the operation won't execute because it will be rejected with
       // the cancellation error
-      registerDisconnectCallback(stoppedCallback)
-
-      log(createPlatformStoppedMessage())
-
-      stop()
 
       if (stopForce) {
-        const id = setTimeout(stopForce, ALLOCATED_MS_BEFORE_FORCE_STOP)
-        registerDisconnectCallback(() => {
+        const stopOrStopForcePromise = new Promise(async (resolve) => {
+          let resolved = false
+
+          const id = setTimeout(async () => {
+            await stopForce()
+            if (resolved) return // resolved by stop()
+            resolved = true
+            resolve({ forced: true })
+          }, ALLOCATED_MS_BEFORE_FORCE_STOP)
+
+          await stop()
+          if (resolved) return // resolved by stopForce()
           clearTimeout(id)
+          resolve({ forced: false })
         })
+        await stopOrStopForcePromise
+      } else {
+        await stop()
       }
 
-      return new Promise((resolve) => {
-        registerDisconnectCallback(resolve)
-      })
+      stoppedCallback()
+      log(createPlatformStoppedMessage())
     },
   })
 

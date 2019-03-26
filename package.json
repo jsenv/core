@@ -1,6 +1,6 @@
 {
 	"name": "@jsenv/core",
-	"version": "4.1.0",
+	"version": "4.2.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -29,7 +29,7 @@
 		"@babel/plugin-transform-block-scoping": "7.2.0",
 		"@jsenv/module-resolution": "1.0.0",
 		"@dmail/prettiest": "3.0.0",
-		"@dmail/cancellation": "1.0.0",
+		"@dmail/cancellation": "1.1.0",
 		"@dmail/helper": "1.0.0",
 		"@dmail/project-structure": "2.0.0",
 		"@dmail/project-structure-compile-babel": "1.0.0",

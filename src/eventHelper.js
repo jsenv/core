@@ -55,8 +55,12 @@ export const eventRace = (eventMap) => {
     const name = names[i]
     visit(name)
     if (called) {
-      break
+      return () => {}
     }
     i++
+  }
+
+  return (reason) => {
+    return Object.keys(unregisterMap).map((name) => unregisterMap[name](reason))
   }
 }

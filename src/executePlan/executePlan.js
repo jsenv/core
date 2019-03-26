@@ -1,3 +1,4 @@
+import { cpus } from "os"
 import { createCancellationToken, createConcurrentOperations } from "@dmail/cancellation"
 import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
@@ -11,7 +12,7 @@ export const executePlan = async (
   {
     cancellationToken = createCancellationToken(),
     cover = false,
-    maxParallelExecution = 5,
+    maxParallelExecution = cpus.length - 1,
     beforeEachExecutionCallback = () => {},
     afterEachExecutionCallback = (executionResult) => {
       console.log(createExecutionResultLog(executionResult))

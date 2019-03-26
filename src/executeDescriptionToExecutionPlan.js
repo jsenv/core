@@ -12,7 +12,7 @@ export const executeDescriptionToExecutionPlan = async ({
   babelPluginDescription,
   executeDescription,
   verbose = false,
-  defaultAllocatedMsPerExecution = 10000,
+  defaultAllocatedMsPerExecution = 20000,
 }) => {
   const sourceOrigin = `file://${projectFolder}`
 

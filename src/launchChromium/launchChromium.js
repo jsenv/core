@@ -6,6 +6,10 @@ import { createCancellationToken, createStoppableOperation } from "@dmail/cancel
 import { startIndexServer } from "../server-index/startIndexServer.js"
 import { originAsString } from "../server/index.js"
 import { regexpEscape } from "../stringHelper.js"
+import {
+  registerProcessInterruptCallback,
+  registerUngaranteedProcessTeardown,
+} from "../process-signal/index.js"
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
@@ -42,12 +46,11 @@ export const launchChromium = async ({
     headless,
     // because we use a self signed certificate
     ignoreHTTPSErrors: true,
-    // handleSIGINT: true,
-    // handleSIGTERM: true,
-    // handleSIGHUP: true,
-    // because the 3 above are true by default pupeeter will auto close browser
-    // so we apparently don't have to use listenNodeBeforeExit in order to close browser
-    // as we do for server
+    // let's handle them to close properly browser, remove listener
+    // and so on, instead of relying on puppetter
+    handleSIGINT: false,
+    handleSIGTERM: false,
+    handleSIGHUP: false,
     args: [
       // https://github.com/GoogleChrome/puppeteer/issues/1834
       // https://github.com/GoogleChrome/puppeteer/blob/master/docs/troubleshooting.md#tips
@@ -65,81 +68,73 @@ export const launchChromium = async ({
     errorCallbackArray.push(callback)
   }
 
-  let stopIndexServer = () => {}
+  const { registerCleanupCallback, cleanup } = createTracker()
+
   const browserOperation = createStoppableOperation({
     cancellationToken,
-    start: () => puppeteer.launch(options),
-    stop: async (browser, reason) => {
-      const targetTracker = createTargetTracker(browser)
+    start: async () => {
+      const browser = await puppeteer.launch(options)
 
-      await Promise.all([targetTracker.stop(reason), stopIndexServer(reason)])
+      const targetTracker = createTargetTracker(browser)
+      registerCleanupCallback(targetTracker.stop)
+
+      const pageTracker = createPageTracker(browser, {
+        onError: (error) => {
+          errorCallbackArray.forEach((callback) => {
+            callback(error)
+          })
+        },
+        onConsole: ({ type, text }) => {
+          consoleCallbackArray.forEach((callback) => {
+            callback({ type, text })
+          })
+        },
+      })
+      registerCleanupCallback(pageTracker.stop)
+
+      return browser
+    },
+    stop: async (browser, reason) => {
+      await cleanup(reason)
+
+      const disconnectedPromise = new Promise((resolve) => {
+        const disconnectedCallback = () => {
+          browser.removeListener("disconnected", disconnectedCallback)
+          resolve()
+        }
+        browser.on("disconnected", disconnectedCallback)
+      })
       await browser.close()
+      await disconnectedPromise
     },
   })
   const { stop } = browserOperation
+
+  const stopOnExit = true
+  if (stopOnExit) {
+    const unregisterProcessTeadown = registerUngaranteedProcessTeardown((reason) => {
+      stop(`process ${reason}`)
+    })
+    registerCleanupCallback(unregisterProcessTeadown)
+  }
+  const stopOnSIGINT = true
+  if (stopOnSIGINT) {
+    const unregisterProcessInterrupt = registerProcessInterruptCallback(() => {
+      stop("process sigint")
+    })
+    registerCleanupCallback(unregisterProcessInterrupt)
+  }
+
   const browser = await browserOperation
 
   const registerDisconnectCallback = (callback) => {
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
     browser.on("disconnected", callback)
-  }
 
-  const emitError = (error) => {
-    errorCallbackArray.forEach((callback) => {
-      callback(error)
+    registerCleanupCallback(() => {
+      browser.removeListener("disconnected", callback)
     })
   }
-
-  const trackPage = (browser) => {
-    browser.on("targetcreated", async (target) => {
-      const type = target.type()
-      if (type === "browser") {
-        const childBrowser = target.browser()
-        trackPage(childBrowser)
-      }
-
-      // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
-      if (type === "page") {
-        const page = await target.page()
-        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-        page.on("error", emitError)
-        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-        page.on("pageerror", emitError)
-
-        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
-        page.on("console", (message) => {
-          // there is also message._args
-          // which is an array of JSHandle{ _context, _client _remoteObject }
-
-          consoleCallbackArray.forEach(async (callback) => {
-            const type = message.type()
-            const text = message.text()
-            // https://github.com/GoogleChrome/puppeteer/issues/3397#issuecomment-434970058
-            // https://github.com/GoogleChrome/puppeteer/issues/2083
-            if (text === "JSHandle@error") {
-              const errorHandle = message._args[0]
-              const stack = await errorHandle.executionContext().evaluate((value) => {
-                if (value instanceof Error) {
-                  return value.stack
-                }
-                return value
-              }, errorHandle)
-              callback({
-                type: "error",
-                text: appendNewLine(stack),
-              })
-            } else {
-              callback({
-                type,
-                text: appendNewLine(text),
-              })
-            }
-          })
-        })
-      }
-    })
-  }
-  trackPage(browser)
 
   const executeFile = async (filenameRelative, { collectNamespace, collectCoverage }) => {
     const [page, html] = await Promise.all([
@@ -159,7 +154,7 @@ export const launchChromium = async ({
       page,
       body: html,
     })
-    stopIndexServer = indexStop
+    registerCleanupCallback(indexStop)
 
     const execute = async () => {
       await page.goto(indexOrigin)
@@ -230,6 +225,24 @@ export const launchChromium = async ({
   }
 }
 
+const createTracker = () => {
+  const callbackArray = []
+
+  const registerCleanupCallback = (callback) => {
+    if (typeof callback !== "function")
+      throw new TypeError(`callback must be a function
+callback: ${callback}`)
+    callbackArray.push(callback)
+  }
+
+  const cleanup = async (reason) => {
+    const localCallbackArray = callbackArray.slice()
+    await Promise.all(localCallbackArray.map((callback) => callback(reason)))
+  }
+
+  return { registerCleanupCallback, cleanup }
+}
+
 const getBrowserPlatformHref = ({ compileServerOrigin }) =>
   `${compileServerOrigin}/node_modules/@jsenv/core/dist/browserPlatform.js`
 
@@ -245,37 +258,113 @@ const errorToSourceError = (error, { sourceOrigin, compileServerOrigin }) => {
   return error
 }
 
-const createTargetTracker = (browser) => {
-  let stopCallbackArray = []
+const createPageTracker = (browser, { onError, onConsole }) => {
+  const { registerCleanupCallback, cleanup } = createTracker()
 
-  // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
-  browser.on("targetcreated", (target) => {
+  const registerEvent = ({ object, eventType, callback }) => {
+    object.on(eventType, callback)
+    registerCleanupCallback(() => {
+      object.removeListener(eventType, callback)
+    })
+  }
+
+  registerEvent({
+    object: browser,
+    eventType: "targetcreated",
+    callback: async (target) => {
+      const type = target.type()
+      if (type === "browser") {
+        const childBrowser = target.browser()
+        const childPageTracker = createPageTracker(childBrowser, { onError, onConsole })
+
+        registerCleanupCallback(childPageTracker.stop)
+      }
+
+      // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
+      if (type === "page" || type === "background_page") {
+        const page = await target.page()
+
+        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
+        registerEvent({
+          object: page,
+          eventType: "error",
+          callback: onError,
+        })
+
+        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
+        registerEvent({
+          object: page,
+          eventType: "pageerror",
+          callback: onError,
+        })
+
+        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
+        registerEvent({
+          object: page,
+          eventType: "console",
+          callback: async (message) => {
+            // https://github.com/GoogleChrome/puppeteer/issues/3397#issuecomment-434970058
+            // https://github.com/GoogleChrome/puppeteer/issues/2083
+
+            // there is also message._args
+            // which is an array of JSHandle{ _context, _client _remoteObject }
+            const type = message.type()
+            const text = message.text()
+            if (text === "JSHandle@error") {
+              const errorHandle = message._args[0]
+              const stack = await errorHandle.executionContext().evaluate((value) => {
+                if (value instanceof Error) {
+                  return value.stack
+                }
+                return value
+              }, errorHandle)
+              onConsole({
+                type: "error",
+                text: appendNewLine(stack),
+              })
+            } else {
+              onConsole({
+                type,
+                text: appendNewLine(text),
+              })
+            }
+          },
+        })
+      }
+    },
+  })
+
+  return { stop: cleanup }
+}
+
+const createTargetTracker = (browser) => {
+  const { registerCleanupCallback, cleanup } = createTracker()
+
+  const targetcreatedCallback = (target) => {
     const type = target.type()
+
     if (type === "browser") {
       const childBrowser = target.browser()
       const childTargetTracker = createTargetTracker(childBrowser)
-      stopCallbackArray = [...stopCallbackArray, (reason) => childTargetTracker.stop(reason)]
+      registerCleanupCallback(childTargetTracker.stop)
     }
+
     if (type === "page" || type === "background_page") {
       // in case of bug do not forget https://github.com/GoogleChrome/puppeteer/issues/2269
-      stopCallbackArray = [
-        ...stopCallbackArray,
-        async () => {
-          const page = await target.page()
-          return page.close()
-        },
-      ]
-      return
+      registerCleanupCallback(async () => {
+        const page = await target.page()
+        return page.close()
+      })
     }
-  })
-
-  const stop = async (reason) => {
-    const callbacks = stopCallbackArray.slice()
-    stopCallbackArray.length = 0
-    await Promise.all(callbacks.map((callback) => callback(reason)))
   }
 
-  return { stop }
+  // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
+  browser.on("targetcreated", targetcreatedCallback)
+  registerCleanupCallback(() => {
+    browser.removeListener("targetcreated", targetcreatedCallback)
+  })
+
+  return { stop: cleanup }
 }
 
 const startIndexRequestInterception = async ({

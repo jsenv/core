@@ -77,17 +77,34 @@ export const launchNode = async ({
 
   // https://nodejs.org/api/child_process.html#child_process_event_disconnect
   const registerDisconnectCallback = (callback) => {
-    registerChildEvent(child, "disconnect", () => {
+    const registration = registerChildEvent(child, "disconnect", () => {
       callback()
     })
+    return () => {
+      registration.unregister()
+    }
   }
 
   const stop = () => {
+    const disconnectedPromise = new Promise((resolve) => {
+      const unregister = registerDisconnectCallback(() => {
+        unregister()
+        resolve()
+      })
+    })
     child.kill("SIGINT")
+    return disconnectedPromise
   }
 
   const stopForce = () => {
+    const disconnectedPromise = new Promise((resolve) => {
+      const unregister = registerDisconnectCallback(() => {
+        unregister()
+        resolve()
+      })
+    })
     child.kill()
+    return disconnectedPromise
   }
 
   const executeFile = async (filenameRelative, { collectNamespace, collectCoverage }) => {

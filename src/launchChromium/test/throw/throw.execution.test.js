@@ -19,8 +19,14 @@ const babelPluginDescription = {}
   })
 
   const actual = await launchAndExecute({
-    launch: () =>
-      launchChromium({ compileInto, sourceOrigin, compileServerOrigin, headless: false }),
+    launch: (options) =>
+      launchChromium({
+        ...options,
+        compileInto,
+        sourceOrigin,
+        compileServerOrigin,
+        headless: false,
+      }),
     stopOnceExecuted: true,
     mirrorConsole: true,
     filenameRelative,
@@ -29,8 +35,8 @@ const babelPluginDescription = {}
   const expected = {
     status: "errored",
     error: {
-      message: "error",
       stack: actual.error.stack,
+      message: "error",
     },
   }
   assert({ actual, expected })
