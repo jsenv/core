@@ -4,7 +4,7 @@ import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
   createExecutionPlanStartLog,
   createExecutionResultLog,
-  createExecutionPlanResultLog,
+  createExecutionPlanSummaryMessage,
 } from "./createExecutionLog.js"
 
 export const executePlan = async (
@@ -77,7 +77,46 @@ export const executePlan = async (
     },
   })
 
-  console.log(createExecutionPlanResultLog({ executionPlan, planResult }))
+  const planResultSummary = planResultToSummary(planResult)
 
-  return planResult
+  console.log(createExecutionPlanSummaryMessage(planResultSummary))
+
+  return {
+    planResult,
+    planResultSummary,
+  }
+}
+
+const planResultToSummary = (planResult) => {
+  const fileNames = Object.keys(planResult)
+  const executionCount = fileNames.reduce((previous, fileName) => {
+    return previous + Object.keys(planResult[fileName]).length
+  }, 0)
+
+  const countResultMatching = (predicate) => {
+    return fileNames.reduce((previous, fileName) => {
+      const fileExecutionResult = planResult[fileName]
+
+      return (
+        previous +
+        Object.keys(fileExecutionResult).filter((executionName) => {
+          const fileExecutionResultForPlatform = fileExecutionResult[executionName]
+          return predicate(fileExecutionResultForPlatform)
+        }).length
+      )
+    }, 0)
+  }
+
+  const disconnectedCount = countResultMatching(({ status }) => status === "disconnected")
+  const timedoutCount = countResultMatching(({ status }) => status === "timedout")
+  const erroredCount = countResultMatching(({ status }) => status === "errored")
+  const completedCount = countResultMatching(({ status }) => status === "completed")
+
+  return {
+    executionCount,
+    disconnectedCount,
+    timedoutCount,
+    erroredCount,
+    completedCount,
+  }
 }

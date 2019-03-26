@@ -156,31 +156,13 @@ ${platformLog.trim()}
 ${grey}-------------------------${close}`
 }
 
-export const createExecutionPlanResultLog = ({ planResult }) => {
-  const fileNames = Object.keys(planResult)
-  const executionCount = fileNames.reduce((previous, fileName) => {
-    return previous + Object.keys(planResult[fileName]).length
-  }, 0)
-
-  const countResultMatching = (predicate) => {
-    return fileNames.reduce((previous, fileName) => {
-      const fileExecutionResult = planResult[fileName]
-
-      return (
-        previous +
-        Object.keys(fileExecutionResult).filter((executionName) => {
-          const fileExecutionResultForPlatform = fileExecutionResult[executionName]
-          return predicate(fileExecutionResultForPlatform)
-        }).length
-      )
-    }, 0)
-  }
-
-  const disconnectedCount = countResultMatching(({ status }) => status === "disconnected")
-  const timedoutCount = countResultMatching(({ status }) => status === "timedout")
-  const erroredCount = countResultMatching(({ status }) => status === "errored")
-  const completedCount = countResultMatching(({ status }) => status === "completed")
-
+export const createExecutionPlanSummaryMessage = ({
+  executionCount,
+  disconnectedCount,
+  timedoutCount,
+  erroredCount,
+  completedCount,
+}) => {
   return `
 -------------- execution plan result -----------------
 ${executionCount} execution launched.

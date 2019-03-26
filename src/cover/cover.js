@@ -151,10 +151,8 @@ const executeAndCoverPatternMapping = async ({
     defaultAllocatedMsPerExecution,
   })
 
-  const executionPlanResult = await executePlan(executionPlan, {
+  return executePlan(executionPlan, {
     cancellationToken,
     cover: true,
   })
-
-  return executionPlanResult
 }

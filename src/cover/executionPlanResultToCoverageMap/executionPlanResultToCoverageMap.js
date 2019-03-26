@@ -15,6 +15,10 @@ export const executionPlanResultToCoverageMap = (executionPlanResult) => {
         return
       }
 
+      if (executionResultIsTimedOut(executionResultForFileOnPlatform)) {
+        return
+      }
+
       const { coverageMap } = executionResultForFileOnPlatform
       if (!coverageMap) {
         // we throw because if ther is no parse error or notfound error
@@ -29,6 +33,10 @@ export const executionPlanResultToCoverageMap = (executionPlanResult) => {
   const executionCoverageMap = coverageMapCompose(...coverageMapArray)
 
   return executionCoverageMap
+}
+
+const executionResultIsTimedOut = ({ status }) => {
+  return status === "timedout"
 }
 
 const executionResultIsModuleParseError = ({ status, error }) => {
