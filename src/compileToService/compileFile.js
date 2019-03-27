@@ -130,9 +130,9 @@ export const compileFile = async ({
   const unlockGlobal = await lockfile.lock(metaFilename, {
     realpath: false,
     retries: {
-      retries: 10,
-      minTimeout: 1 * 1000,
-      maxTimeout: 5 * 1000,
+      retries: 20,
+      minTimeout: 100,
+      maxTimeout: 1000,
     },
   })
   // here in case of error.code === 'ELOCKED' thrown from here
