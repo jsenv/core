@@ -2,17 +2,24 @@ import { transformAsync, buildExternalHelpers } from "@babel/core"
 import { addNamed } from "@babel/helper-module-imports"
 import { minify as minifyCode } from "terser"
 import { babelPluginDescriptionToBabelPluginArray } from "../jsCompile/babelPluginDescriptionToBabelPluginArray.js"
+import { createReplaceImportMetaBabelPlugin } from "./createReplaceImportMetaBabelPlugin.js"
 
-const HELPER_FILENAME = "rollupPluginBabelHelpers.js"
+const HELPER_FILENAME = "\0rollupPluginBabelHelpers.js"
 
 export const babelPluginDescriptionToRollupPlugin = ({
   babelPluginDescription,
   minify,
-  minifyOptions,
+  target,
 }) => {
   const babelPluginArray = babelPluginDescriptionToBabelPluginArray(babelPluginDescription)
 
   babelPluginArray.unshift(createHelperImportInjectorBabelPlugin())
+
+  const replaceImportMetaBabelPlugin = createReplaceImportMetaBabelPlugin({
+    importMetaSource:
+      target === "browser" ? createBrowserImportMetaSource() : createNodeImportMetaSource(),
+  })
+  babelPluginArray.push(replaceImportMetaBabelPlugin)
 
   const babelRollupPlugin = {
     resolveId: (id) => {
@@ -46,11 +53,15 @@ export const babelPluginDescriptionToRollupPlugin = ({
       return result
     },
 
-    renderChunk: (code) => {
+    renderChunk: (source) => {
       if (!minify) return null
 
       // https://github.com/terser-js/terser#minify-options
-      const result = minifyCode(code, { sourceMap: true, ...(minifyOptions || {}) })
+      const minifyOptions = target === "browser" ? { toplevel: false } : { toplevel: true }
+      const result = minifyCode(source, {
+        sourceMap: true,
+        ...minifyOptions,
+      })
       if (result.error) {
         throw result.error
       } else {
@@ -61,6 +72,15 @@ export const babelPluginDescriptionToRollupPlugin = ({
 
   return babelRollupPlugin
 }
+
+const createBrowserImportMetaSource = () => `{
+  url: document.currentScript && document.currentScript.src || location.href
+}`
+
+const createNodeImportMetaSource = () => `{
+  url: "file://" + __dirname.indexOf("\\\\") === -1 ? __dirname : "/" + __dirname.replace(/\\\\/g, "/"),
+  require: require
+}`
 
 // for reference this is how it's done to reference
 // a global babel helper object instead of using

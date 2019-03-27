@@ -70,6 +70,8 @@ export const createNodeSystem = ({
   nodeSystem.createContext = (url) => {
     const filenameRelative = hrefToFilenameRelative(url, { compileInto, compileServerOrigin })
     const fileURL = `${sourceOrigin}/${filenameRelative}`
+    const url = fileURL
+
     const filename = hrefToPathname(fileURL)
     const require = createRequireFromFilename(filename)
 

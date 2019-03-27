@@ -54,7 +54,7 @@ export const computeRollupOptionsForBalancer = ({
   const babelRollupPlugin = babelPluginDescriptionToRollupPlugin({
     babelPluginDescription: otherwiseBabelPluginDescription,
     minify,
-    minifyOptions: { toplevel: false },
+    target: "browser",
   })
 
   const file = `${projectFolder}/${into}/${entryFilenameRelative}`

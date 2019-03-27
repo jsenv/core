@@ -40,7 +40,7 @@ minify: ${minify}
   const babelRollupPlugin = babelPluginDescriptionToRollupPlugin({
     babelPluginDescription: groupBabelPluginDescription,
     minify,
-    minifyOptions: { toplevel: false },
+    target: "browser",
   })
 
   return {

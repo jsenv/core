@@ -29,7 +29,7 @@ minify: ${minify}
     babelPluginDescriptionToRollupPlugin({
       babelPluginDescription,
       minify,
-      minifyOptions: { toplevel: false },
+      target: "browser",
     }),
     createJsenvRollupPlugin({
       cancellationToken,

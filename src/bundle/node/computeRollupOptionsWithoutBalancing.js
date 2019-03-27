@@ -25,7 +25,7 @@ minify: ${minify}
     babelPluginDescriptionToRollupPlugin({
       babelPluginDescription,
       minify,
-      minifyOptions: { toplevel: true },
+      target: "node",
     }),
     createJsenvRollupPlugin({
       cancellationToken,

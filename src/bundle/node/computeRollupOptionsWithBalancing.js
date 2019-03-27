@@ -30,7 +30,7 @@ export const computeRollupOptionsWithBalancing = ({
   const babelRollupPlugin = babelPluginDescriptionToRollupPlugin({
     babelPluginDescription: groupBabelPluginDescription,
     minify,
-    minifyOptions: { toplevel: true },
+    target: "node",
   })
 
   log(`
