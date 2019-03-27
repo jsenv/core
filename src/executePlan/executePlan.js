@@ -12,7 +12,7 @@ export const executePlan = async (
   {
     cancellationToken = createCancellationToken(),
     cover = false,
-    maxParallelExecution = cpus.length - 1,
+    maxParallelExecution = Math.max(cpus.length - 1, 1),
     beforeEachExecutionCallback = () => {},
     afterEachExecutionCallback = (executionResult) => {
       console.log(createExecutionResultLog(executionResult))
