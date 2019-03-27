@@ -67,8 +67,8 @@ export const createNodeSystem = ({
   }
 
   // https://github.com/systemjs/systemjs/blob/master/docs/hooks.md#createcontexturl---object
-  nodeSystem.createContext = (url) => {
-    const filenameRelative = hrefToFilenameRelative(url, { compileInto, compileServerOrigin })
+  nodeSystem.createContext = (moduleUrl) => {
+    const filenameRelative = hrefToFilenameRelative(moduleUrl, { compileInto, compileServerOrigin })
     const fileURL = `${sourceOrigin}/${filenameRelative}`
     const url = fileURL
 
