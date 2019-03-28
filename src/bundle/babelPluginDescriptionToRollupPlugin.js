@@ -1,6 +1,9 @@
 import { transformAsync, buildExternalHelpers } from "@babel/core"
 import { addNamed } from "@babel/helper-module-imports"
 import { minify as minifyCode } from "terser"
+import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/dist/src/isNativeNodeModuleBareSpecifier.js"
+import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/dist/src/isNativeBrowserModuleBareSpecifier.js"
+import { uneval } from "@dmail/uneval"
 import { babelPluginDescriptionToBabelPluginArray } from "../jsCompile/babelPluginDescriptionToBabelPluginArray.js"
 import { createReplaceImportMetaBabelPlugin } from "./createReplaceImportMetaBabelPlugin.js"
 
@@ -15,21 +18,29 @@ export const babelPluginDescriptionToRollupPlugin = ({
 
   babelPluginArray.unshift(createHelperImportInjectorBabelPlugin())
 
+  const importMetaSource =
+    target === "browser" ? createBrowserImportMetaSource() : createNodeImportMetaSource()
+  const isNativeModuleSpecifier =
+    target === "browser" ? isNativeBrowserModuleBareSpecifier : isNativeNodeModuleBareSpecifier
+  const buildNativeModuleSource =
+    target === "browser" ? buildBrowserNativeModuleSource : buildNodeNativeModuleSource
+
   const replaceImportMetaBabelPlugin = createReplaceImportMetaBabelPlugin({
-    importMetaSource:
-      target === "browser" ? createBrowserImportMetaSource() : createNodeImportMetaSource(),
+    importMetaSource,
   })
   babelPluginArray.push(replaceImportMetaBabelPlugin)
 
   const babelRollupPlugin = {
     resolveId: (id) => {
-      if (id === HELPER_FILENAME) {
-        return id
-      }
+      if (isNativeModuleSpecifier(id)) return id
+      if (id === HELPER_FILENAME) return id
       return null
     },
 
     load: (id) => {
+      if (isNativeModuleSpecifier(id)) {
+        return buildNativeModuleSource(id)
+      }
       if (id === HELPER_FILENAME) {
         // https://github.com/babel/babel/blob/master/packages/babel-core/src/tools/build-external-helpers.js#L1
         const allHelperCode = buildExternalHelpers(undefined, "module")
@@ -71,6 +82,21 @@ export const babelPluginDescriptionToRollupPlugin = ({
   }
 
   return babelRollupPlugin
+}
+
+const buildBrowserNativeModuleSource = () => {
+  // we'll see when they will exists
+  throw new Error(`not implemeted`)
+}
+
+const buildNodeNativeModuleSource = (id) => {
+  // eslint-disable-next-line import/no-dynamic-require
+  const namespace = require(id)
+  return `const namespace = require(${uneval(id)})
+${Object.getOwnPropertyNames(namespace)
+  .map((name) => `export const ${name} = namespace[${uneval(name)}]`)
+  .join("\n")}
+export default namespace`
 }
 
 const createBrowserImportMetaSource = () => `{
