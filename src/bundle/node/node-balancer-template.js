@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-unresolved
-import { groupDescription, entryFilenameRelative } from "bundle-node-options.js"
+import { groupDescription, entryFilenameRelative } from "\0bundle-node-options.js"
 import { detect } from "../../platform/node/nodeDetect/index.js"
 import { nodeToCompileId } from "../../platform/node/nodeToCompileId.js"
 

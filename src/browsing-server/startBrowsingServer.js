@@ -14,7 +14,7 @@ export const startBrowsingServer = async ({
   importMap,
   projectFolder,
   compileInto,
-  compileGroupCount,
+  compileGroupCount = 2,
   babelPluginDescription,
   browsableDescription,
   localCacheStrategy,

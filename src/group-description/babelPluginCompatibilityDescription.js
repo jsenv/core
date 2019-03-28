@@ -6,8 +6,6 @@
 // than importing it from an undocumented location.
 // Ideally it would be documented or a separate module
 
-// TODO: add a transform-async-to-promise compatibility
-
 export const babelPluginCompatibilityDescription = {
   "transform-template-literals": {
     chrome: "41",
@@ -227,6 +225,19 @@ export const babelPluginCompatibilityDescription = {
     electron: "1.3",
   },
   "transform-async-to-generator": {
+    chrome: "55",
+    edge: "15",
+    firefox: "52",
+    safari: "10.1",
+    node: "7.6",
+    ios: "10.3",
+    opera: "42",
+    electron: "1.6",
+  },
+  // copy of transform-async-to-generator
+  // this is not in the babel-preset-env repo
+  // but we need this
+  "transform-async-to-promises": {
     chrome: "55",
     edge: "15",
     firefox: "52",

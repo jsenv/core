@@ -1,17 +1,15 @@
-import { assert } from "@dmail/assert"
-import transformBlockScoping from "@babel/plugin-transform-block-scoping"
 import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
+import { assert } from "@dmail/assert"
 import { projectFolder } from "../../../../projectFolder.js"
+import { launchNode } from "../../launchNode.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
-import { launchChromium } from "../../launchChromium.js"
 
-const testFolder = `${projectFolder}/src/launchChromium/test/top-level-await`
-const filenameRelative = `top-level-await.js`
+const testFolder = `${projectFolder}/src/launchNode/test/async-to-promise`
+const filenameRelative = `async.js`
 const compileInto = ".dist"
 const babelPluginDescription = {
   "transform-async-to-promises": [transformAsyncToPromises],
-  "transform-block-scoping": [transformBlockScoping],
 }
 
 ;(async () => {
@@ -25,17 +23,12 @@ const babelPluginDescription = {
 
   const actual = await launchAndExecute({
     launch: (options) =>
-      launchChromium({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
-    stopOnceExecuted: true,
-    collectNamespace: true,
+      launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin, debugPort: 40000 }),
     filenameRelative,
     verbose: true,
   })
   const expected = {
     status: "completed",
-    namespace: {
-      default: 10,
-    },
   }
   assert({ actual, expected })
 })()

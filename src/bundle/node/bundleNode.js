@@ -11,10 +11,10 @@ export const bundleNode = async ({
   into,
   entryPointsDescription,
   babelPluginDescription,
-  compileGroupCount = 1,
+  compileGroupCount = 2,
   platformScoring = nodeScoring,
   verbose,
-  minify = true,
+  minify = false,
 }) => {
   projectFolder = normalizePathname(projectFolder)
   return await bundlePlatform({

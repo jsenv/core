@@ -33,7 +33,7 @@ export const jsCompile = async ({
   const coverage = metadata.coverage
   let output = code
 
-  if (remap) {
+  if (remap && map) {
     // we don't need sourceRoot because our path are relative or absolute to the current location
     // we could comment this line because it is not set by babel because not passed during transform
     delete map.sourceRoot

@@ -18,7 +18,7 @@ export const cover = async ({
   importMap,
   projectFolder,
   compileInto,
-  compileGroupCount,
+  compileGroupCount = 2,
   babelPluginDescription,
   // coverDescription could be deduced from passing
   // an entryPointsDescription and collecting all dependencies

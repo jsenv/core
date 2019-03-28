@@ -4,6 +4,8 @@ import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
 import { groupToBabelPluginDescription } from "../../group-description/index.js"
 import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionToRollupPlugin.js"
 
+const BUNDLE_NODE_OPTIONS_SPECIFIER = "\0bundle-node-options.js"
+
 export const computeRollupOptionsForBalancer = ({
   projectFolder,
   into,
@@ -24,15 +26,15 @@ export const computeRollupOptionsForBalancer = ({
     resolveId: (importee, importer) => {
       // it's important to keep the extension so that
       // rollup-plugin-babel transpiles bundle-browser-options.js too
-      if (importee === "bundle-node-options.js") {
-        return "bundle-node-options.js"
+      if (importee === BUNDLE_NODE_OPTIONS_SPECIFIER) {
+        return BUNDLE_NODE_OPTIONS_SPECIFIER
       }
       if (!importer) return importee
       return null
     },
 
     load: async (id) => {
-      if (id === "bundle-node-options.js") {
+      if (id === BUNDLE_NODE_OPTIONS_SPECIFIER) {
         return balancerOptionSource
       }
       return null

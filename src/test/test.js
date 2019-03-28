@@ -10,7 +10,7 @@ export const test = async ({
   importMap,
   projectFolder,
   compileInto,
-  compileGroupCount,
+  compileGroupCount = 2,
   babelPluginDescription,
   executeDescription,
   maxParallelExecution,

@@ -46,7 +46,7 @@
         "src/eventHelper.js",
         "src/promiseHelper.js",
         "src/unused/thenable.js",
-        "src/jsCompile/transpileWithBabel.js",
+        // "src/jsCompile/transpileWithBabel.js",
         // "src/jsCompile/transpiler.js",
         "src/platform/registerParamFrom.js",
         "src/platform/node/nodePlatform.js",
@@ -90,6 +90,22 @@
       "program": "${workspaceFolder}/dist/bin/run-node.js",
       "args": ["--file=${relativeFile}"],
       "autoAttachChildProcesses": true,
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "/*": "${workspaceRoot}/*"
+      },
+      "skipFiles": [
+        "node_modules/**",
+        // https://github.com/Microsoft/vscode-react-native/issues/620
+        "<node_internals>/**/*.js"
+      ]
+    },
+    {
+      "name": "node-attach-child",
+      "type": "node",
+      "request": "attach",
+      "port": 40000,
+      "smartStep": true,
       "sourceMaps": true,
       "sourceMapPathOverrides": {
         "/*": "${workspaceRoot}/*"

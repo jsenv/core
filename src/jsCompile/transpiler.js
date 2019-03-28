@@ -2,21 +2,10 @@ import path from "path"
 import { transformAsync, transformFromAstAsync } from "@babel/core"
 import transformModulesSystemJs from "../babel-plugin-transform-modules-systemjs/index.js"
 import { regexpEscape } from "../stringHelper.js"
-import { babelPluginDescriptionToBabelPluginArray } from "./babelPluginDescriptionToBabelPluginArray.js"
-
-const transpile = async ({ ast, code, options }) => {
-  try {
-    if (ast) {
-      return await transformFromAstAsync(ast, code, options)
-    }
-    return await transformAsync(code, options)
-  } catch (error) {
-    if (error && error.code === "BABEL_PARSE_ERROR") {
-      throw babelParseErrorToParseError(error, options)
-    }
-    throw error
-  }
-}
+import {
+  babelPluginDescriptionToBabelPluginArray,
+  defaultBabelPluginArray,
+} from "./babelPluginDescriptionToBabelPluginArray.js"
 
 export const transpiler = async ({
   input,
@@ -60,22 +49,37 @@ export const transpiler = async ({
       if (name !== asyncPluginName)
         babelPluginDescriptionWithoutAsyncPlugin[name] = babelPluginDescription[name]
     })
-    const babelPluginArray = [
-      ...babelPluginDescriptionToBabelPluginArray(babelPluginDescriptionWithoutAsyncPlugin),
-      [transformModulesSystemJs, { topLevelAwait: true }],
-      // ensure the async plugin comes last
-      // to transpile top level await
-      babelPluginDescription[asyncPluginName],
-    ]
+
+    // put body inside something like (async () => {})()
     const result = await transpile({
       ast: inputAst,
       code: input,
       options: {
         ...options,
-        plugins: babelPluginArray,
+        plugins: [
+          ...babelPluginDescriptionToBabelPluginArray(babelPluginDescriptionWithoutAsyncPlugin),
+          [transformModulesSystemJs, { topLevelAwait: true }],
+        ],
       },
     })
-    return result
+
+    // we have to do this to transpile top level await
+    // and the async keyword that are now under a function
+    // of the systemjs format
+
+    // https://github.com/babel/babel/blob/eac4c5bc17133c2857f2c94c1a6a8643e3b547a7/packages/babel-core/src/transformation/file/generate.js#L57
+    // https://github.com/babel/babel/blob/090c364a90fe73d36a30707fc612ce037bdbbb24/packages/babel-core/src/transformation/file/merge-map.js#L6
+    const finalResult = await transpile({
+      // ast: result.ast,
+      code: result.code,
+      options: {
+        ...options,
+        inputSourceMap: result.map,
+        plugins: [...defaultBabelPluginArray, babelPluginDescription[asyncPluginName]],
+      },
+    })
+
+    return finalResult
   }
 
   const babelPluginArray = [
@@ -90,6 +94,20 @@ export const transpiler = async ({
       plugins: babelPluginArray,
     },
   })
+}
+
+const transpile = async ({ ast, code, options }) => {
+  try {
+    if (ast) {
+      return await transformFromAstAsync(ast, code, options)
+    }
+    return await transformAsync(code, options)
+  } catch (error) {
+    if (error && error.code === "BABEL_PARSE_ERROR") {
+      throw babelParseErrorToParseError(error, options)
+    }
+    throw error
+  }
 }
 
 const babelParseErrorToParseError = (babelParseError, { filename, filenameRelative }) => {

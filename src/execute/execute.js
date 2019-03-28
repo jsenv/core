@@ -11,7 +11,7 @@ export const execute = async ({
   projectFolder,
   compileInto,
   babelPluginDescription,
-  compileGroupCount,
+  compileGroupCount = 2,
   protocol,
   ip,
   port,

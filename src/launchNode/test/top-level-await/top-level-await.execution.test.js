@@ -1,5 +1,5 @@
-import { assert } from "@dmail/assert"
 import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
+import { assert } from "@dmail/assert"
 import { projectFolder } from "../../../../projectFolder.js"
 import { launchNode } from "../../launchNode.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
@@ -22,17 +22,16 @@ const babelPluginDescription = {
   })
 
   const actual = await launchAndExecute({
-    launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
+    launch: (options) =>
+      launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin, debugPort: 40000 }),
     collectNamespace: true,
     filenameRelative,
     verbose: true,
   })
   const expected = {
     status: "completed",
-    value: {
-      namespace: {
-        default: 10,
-      },
+    namespace: {
+      default: 10,
     },
   }
   assert({ actual, expected })
