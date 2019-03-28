@@ -1,19 +1,34 @@
-To be tested:
+## Commons js dependency not supported for browser
 
-- test how jsenv-core behaves if you import a dependency
-  written in commonjs
+FOr now you cannot import something written in commonjs if you plan to execute it inside a browser.
+For nodejs you can use `import.meta.require`
 
-- do not forget to tell
-  generator are not supported because
-  we miss a strategy regarding regeneratorRuntime
-- sourceMaps gets broken if you use transform-async-to-promises and its
-  actually transpiled because it seems to generate bad sourcemap
-  after transform-modules-systemjs is applied
+## Generator not supported
 
-- having to require the importMap.json everywhere is kinda annoying
-  and having to run generate-import-map after any npm i could be annoying too. It's also error prone.
-  The thing is that you should be able to trust what you pass
-  and not automagically generate importMap for node_modules.
-  Also jsenv-eslint-import-resolver is watching importMap.json
-  it needs it.
-  Moreover later you may want to generate more stuff inside importMap.json from a webpack config or whatever.
+Because we miss a strategy to provide regeneratorRuntime and polyfill in general.
+
+## Sourcemap broken
+
+It's likely because `transform-async-to-promises` used together with `transform-modules-systemjs` generate bad sourcemap.
+It means if you use async/await in a platform not supporting it, your sourcemap will not be able to point the original location.
+
+## import.meta.require mandatory for native node module
+
+An import like this one:
+
+```js
+import { readFile } from "fs"
+```
+
+Will work during developement but bundleNode will try
+fo find a file named `fs`.
+
+Instead, you have to write
+
+```js
+const { readFile } = import.meta.require("fs")
+```
+
+It would be possible to write a babel plugin named `transform-native-import-to-import-meta-require` so that you would'nt be forced to write `import.meta.require`.
+
+This babel plugin would recognize every native node module import and turn it into an `import.meta.require`.

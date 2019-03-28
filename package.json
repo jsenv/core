@@ -12,9 +12,9 @@
 	"main": "dist/index.js",
 	"module": "index.js",
 	"files": [
-		"index.js",
-		"src",
-		"dist"
+		"/index.js",
+		"/src/",
+		"/dist/"
 	],
 	"engines": {
 		"node": ">=8.6.0"
