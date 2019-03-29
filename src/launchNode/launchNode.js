@@ -12,6 +12,7 @@ export const launchNode = async ({
   compileServerOrigin,
   debugMode,
   debugPort,
+  remap = true,
 }) => {
   const execArgv = await createChildExecArgv({
     cancellationToken,
@@ -123,6 +124,7 @@ export const launchNode = async ({
           filenameRelative,
           collectNamespace,
           collectCoverage,
+          remap,
         })
       })
 
