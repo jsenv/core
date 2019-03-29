@@ -1,5 +1,6 @@
 import "systemjs/dist/system.js"
 import { resolveImport, remapResolvedImport } from "@jsenv/module-resolution"
+import { hrefToFilenameRelative } from "../../hrefToFilenameRelative.js"
 import { fromHref } from "../../registerModuleFrom.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
 
@@ -38,6 +39,14 @@ export const createBrowserSystem = ({
       href,
       importer,
     })
+  }
+
+  browserSystem.createContext = (moduleUrl) => {
+    const filenameRelative = hrefToFilenameRelative(moduleUrl, { compileInto, compileServerOrigin })
+    const fileURL = `${compileServerOrigin}/${filenameRelative}`
+    const url = fileURL
+
+    return { url }
   }
 
   return browserSystem
