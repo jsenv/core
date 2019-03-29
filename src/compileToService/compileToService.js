@@ -1,6 +1,5 @@
 /* eslint-disable import/max-dependencies */
 import { createCancellationToken } from "@dmail/cancellation"
-import { createSignal } from "@dmail/signal"
 import { fileRead, fileStat } from "@dmail/helper"
 import { convertFileSystemErrorToResponseProperties } from "../requestToFileResponse/index.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
@@ -30,7 +29,7 @@ export const compileToService = (
     watchPredicate = () => true,
   },
 ) => {
-  const watchSignal = createSignal()
+  const { registerFileChangedCallback, triggerFileChanged } = createFileChangedSignal()
 
   const cacheWithMtime = cacheStrategy === "mtime"
   const cacheWithETag = cacheStrategy === "etag"
@@ -83,7 +82,7 @@ export const compileToService = (
     // when I ask for a compiled file, watch the corresponding file on filesystem
     if (watch && watchedFiles.has(filename) === false && watchPredicate(filenameRelative)) {
       const fileWatcher = watchFile(filename, () => {
-        watchSignal.emit(filenameRelative)
+        triggerFileChanged({ filename, filenameRelative })
       })
       watchedFiles.set(filename, fileWatcher)
     }
@@ -183,10 +182,10 @@ export const compileToService = (
     fileChangedSSE.open()
     cancellationToken.register(fileChangedSSE.close)
 
-    watchSignal.listen((filename) => {
+    registerFileChangedCallback(({ filenameRelative }) => {
       fileChangedSSE.sendEvent({
         type: "file-changed",
-        data: filename,
+        data: filenameRelative,
       })
     })
 
@@ -203,6 +202,23 @@ export const compileToService = (
   }
 
   return compileService
+}
+
+const createFileChangedSignal = () => {
+  const fileChangedCallbackArray = []
+
+  const registerFileChangedCallback = (callback) => {
+    fileChangedCallbackArray.push(callback)
+  }
+
+  const changed = (data) => {
+    const callbackArray = fileChangedCallbackArray.slice()
+    callbackArray.forEach((callback) => {
+      callback(data)
+    })
+  }
+
+  return { registerFileChangedCallback, changed }
 }
 
 const fileIsInsideFolder = (filename, folder) => filename.startsWith(`${folder}/`)

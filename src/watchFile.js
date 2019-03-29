@@ -1,6 +1,65 @@
-import { createSignal } from "@dmail/signal"
 import fs from "fs"
 import { memoizeSync } from "./functionHelper.js"
+
+export const watchFile = (url, fn) => {
+  const signal = getFileChangedSignal(url)
+  const listener = signal.listen(fn)
+  return () => {
+    listener.remove()
+  }
+}
+
+const getFileChangedSignal = memoizeSync((url) => {
+  // get mtime right now
+  const mtimePromise = getModificationDateForWatch(url)
+
+  const changed = ({ url, eventType, filename }) => {
+    const callbackArray = changedCallbackArray.slice()
+    callbackArray.forEach((callback) => {
+      callback({ url, eventType, filename })
+    })
+  }
+
+  const install = () => {
+    const shield = createChangedAsyncShield({
+      valuePromise: mtimePromise,
+      get: () => getModificationDateForWatch(url),
+      compare: (modificationDate, nextModificationDate) => {
+        return Number(modificationDate) !== Number(nextModificationDate)
+      },
+    })
+
+    const guardedChanged = guardAsync(changed, shield)
+
+    return watchFileChange(
+      url,
+      limitRate((eventType, filename) => {
+        guardedChanged({ url, eventType, filename })
+      }, 100),
+    )
+  }
+
+  const changedCallbackArray = []
+  let uninstall
+  const listen = (callback) => {
+    if (changedCallbackArray.length === 0) {
+      uninstall = install()
+    }
+    changedCallbackArray.push(callback)
+    return () => {
+      const index = changedCallbackArray.indexOf(callback)
+      if (index > -1) {
+        if (changedCallbackArray.length === 0) {
+          uninstall()
+          uninstall = undefined
+        }
+        changedCallbackArray.splice(index, 1)
+      }
+    }
+  }
+
+  return { listen }
+})
 
 const getModificationDate = (url) => {
   return new Promise((resolve, reject) => {
@@ -85,41 +144,5 @@ const watchFileChange = (fileLocation, callback) => {
   // watcher.on('close', () => {})
   return () => {
     watcher.close()
-  }
-}
-
-const createWatchSignal = (url) => {
-  // get mtime right now
-  const mtimePromise = getModificationDateForWatch(url)
-
-  return createSignal({
-    installer: ({ emit }) => {
-      const shield = createChangedAsyncShield({
-        valuePromise: mtimePromise,
-        get: () => getModificationDateForWatch(url),
-        compare: (modificationDate, nextModificationDate) => {
-          return Number(modificationDate) !== Number(nextModificationDate)
-        },
-      })
-
-      const guardedEmit = guardAsync(emit, shield)
-
-      return watchFileChange(
-        url,
-        limitRate((eventType, filename) => {
-          guardedEmit({ url, eventType, filename })
-        }, 100),
-      )
-    },
-  })
-}
-
-const memoizedCreateWatchSignal = memoizeSync(createWatchSignal)
-
-export const watchFile = (url, fn) => {
-  const signal = memoizedCreateWatchSignal(url)
-  const listener = signal.listen(fn)
-  return () => {
-    listener.remove()
   }
 }

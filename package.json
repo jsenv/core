@@ -32,7 +32,6 @@
 		"@dmail/prettiest": "3.0.0",
 		"@dmail/project-structure": "2.0.0",
 		"@dmail/project-structure-compile-babel": "1.0.0",
-		"@dmail/signal": "9.2.0",
 		"@dmail/uneval": "4.1.0",
 		"@jsenv/module-resolution": "1.0.0",
 		"abort-controller": "2.0.2",
