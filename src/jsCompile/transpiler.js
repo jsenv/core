@@ -17,7 +17,7 @@ export const transpiler = async ({
   remap,
 }) => {
   const transformModuleIntoSystemFormat = true
-  const allowTopLevelAwait = true
+  const allowTopLevelAwait = false
 
   let asyncPluginName
   if ("transform-async-to-promises" in babelPluginDescription) {
@@ -84,7 +84,7 @@ export const transpiler = async ({
 
   const babelPluginArray = [
     ...babelPluginDescriptionToBabelPluginArray(babelPluginDescription),
-    [transformModulesSystemJs, { topLevelAwait: true }],
+    [transformModulesSystemJs, { topLevelAwait: allowTopLevelAwait }],
   ]
   return transpile({
     ast: inputAst,
