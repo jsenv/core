@@ -10,15 +10,7 @@
       "program": "${file}",
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
-      // "outFiles": ["${workspaceRoot}/build/**/*.js"],
-      // "outputCapture": "std",
-      // https://github.com/Microsoft/vscode-chrome-debug-core/commit/eb552d621f1f6fbebcfca5d2390020dc7d8877e0#diff-b4f13aa3c326d081dea7875f9c0fe84aR31
-      "skipFiles": [
-        "node_modules/**",
-        // https://github.com/Microsoft/vscode-react-native/issues/620
-        "<node_internals>/**/*.js"
-      ]
-      // "trace": true,
+      "skipFiles": ["${workspaceFolder}/node_modules/**", "<node_internals>/**/*.js"]
     },
     {
       "name": "Launch from dist",
@@ -32,10 +24,10 @@
       "sourceMapPathOverrides": {
         "/*": "${workspaceRoot}/*"
       },
-      "smartStep": true,
+      // "smartStep": true,
       "skipFiles": [
         // skip node modules
-        "./node_modules/**",
+        "${workspaceFolder}/node_modules/**",
         // skip node internals
         "<node_internals>/**/*.js",
         "node_modules/rollup-plugin-node-resolve/dist/rollup-plugin-node-resolve.cjs.js",
@@ -94,11 +86,7 @@
       "sourceMapPathOverrides": {
         "/*": "${workspaceRoot}/*"
       },
-      "skipFiles": [
-        "node_modules/**",
-        // https://github.com/Microsoft/vscode-react-native/issues/620
-        "<node_internals>/**/*.js"
-      ]
+      "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
     },
     {
       "name": "node-attach-child",
@@ -110,11 +98,7 @@
       "sourceMapPathOverrides": {
         "/*": "${workspaceRoot}/*"
       },
-      "skipFiles": [
-        "node_modules/**",
-        // https://github.com/Microsoft/vscode-react-native/issues/620
-        "<node_internals>/**/*.js"
-      ]
+      "skipFiles": ["${workspaceFolder}/node_modules/**", , "<node_internals>/**/*.js"]
     }
   ]
 }
