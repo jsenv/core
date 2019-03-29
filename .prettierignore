@@ -4,3 +4,4 @@
 dist
 .dist
 /coverage
+syntax-error.js
