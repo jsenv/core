@@ -1,5 +1,6 @@
 import {
   globalName,
+  globalNameIsPromise,
   entryFilenameRelative,
   groupDescription,
   // eslint-disable-next-line import/no-unresolved
@@ -7,10 +8,13 @@ import {
 import { detect } from "../../platform/browser/browserDetect/index.js"
 import { browserToCompileId } from "../../platform/browser/browserToCompileId.js"
 import { loadUsingScript } from "./loadUsingScript.js"
+import { loadUsingDocumentWrite } from "./loadUsingDocumentWrite.js"
 
 const compileId = browserToCompileId(detect(), groupDescription)
 const scriptSrc = `./${compileId}/${entryFilenameRelative}`
 
-export default loadUsingScript(scriptSrc).then(() => {
-  return window[globalName]
-})
+if (globalNameIsPromise) {
+  window[globalName] = loadUsingScript(scriptSrc).then(() => window[globalName])
+} else {
+  loadUsingDocumentWrite(scriptSrc)
+}

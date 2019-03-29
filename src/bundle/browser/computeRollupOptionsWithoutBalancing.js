@@ -7,7 +7,6 @@ export const computeRollupOptionsWithoutBalancing = ({
   importMap,
   projectFolder,
   into,
-  globalPromiseName,
   globalName,
   entryPointsDescription,
   babelPluginDescription,
@@ -40,7 +39,6 @@ minify: ${minify}
       ? [
           createIIFEPromiseRollupPlugin({
             projectFolder,
-            globalPromiseName,
             globalName,
           }),
         ]

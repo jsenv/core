@@ -9,8 +9,8 @@ const BUNDLE_BROWSER_OPTIONS_SPECIFIER = "\0bundle-browser-options.js"
 export const computeRollupOptionsForBalancer = ({
   projectFolder,
   into,
-  globalPromiseName,
   globalName,
+  globalNameIsPromise,
   babelPluginDescription,
   groupDescription,
   entryName,
@@ -19,8 +19,8 @@ export const computeRollupOptionsForBalancer = ({
   minify,
 }) => {
   const balancerOptionSource = generateBalancerOptionsSource({
-    globalPromiseName,
     globalName,
+    globalNameIsPromise,
     groupDescription,
     entryFilenameRelative,
   })
@@ -77,7 +77,7 @@ minify: ${minify}
     rollupGenerateOptions: {
       file,
       format: "iife",
-      name: globalPromiseName,
+      name: globalName,
       sourcemap: true,
       sourcemapExcludeSources: true,
     },
@@ -85,15 +85,11 @@ minify: ${minify}
 }
 
 const generateBalancerOptionsSource = ({
-  globalPromiseName,
   globalName,
+  globalNameIsPromise,
   entryFilenameRelative,
   groupDescription,
-}) => {
-  return `
-export const globalPromiseName = ${uneval(globalPromiseName)}
-export const globalName = ${uneval(globalName)}
+}) => `export const globalName = ${uneval(globalName)}
+export const globalNameIsPromise = ${uneval(globalNameIsPromise)}
 export const entryFilenameRelative = ${uneval(entryFilenameRelative)}
-export const groupDescription = ${uneval(groupDescription)}
-`
-}
+export const groupDescription = ${uneval(groupDescription)}`
