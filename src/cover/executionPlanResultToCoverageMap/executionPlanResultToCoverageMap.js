@@ -21,9 +21,11 @@ export const executionPlanResultToCoverageMap = (executionPlanResult) => {
 
       const { coverageMap } = executionResultForFileOnPlatform
       if (!coverageMap) {
-        // we throw because if ther is no parse error or notfound error
-        // coverageMap should be available
-        throw new Error(createMissingCoverageForExecutionMessage({ file, executionName }))
+        // because only source file are instrumented
+        // the execution of a test file importing nothing
+        // will not produce any coverage and that's normal
+        // we could eventually emit a warning
+        return
       }
 
       coverageMapArray.push(coverageMap)
@@ -47,9 +49,9 @@ const executionResultIsModuleNotFoundError = ({ status, error }) => {
   return status === "errored" && error && error.code === "MODULE_NOT_FOUND_ERROR"
 }
 
-const createMissingCoverageForExecutionMessage = ({
-  file,
-  executionName,
-}) => `missing coverageMap for execution.
-file: ${file}
-executionName: ${executionName}`
+// const createMissingCoverageForExecutionMessage = ({
+//   file,
+//   executionName,
+// }) => `missing coverageMap for execution.
+// file: ${file}
+// executionName: ${executionName}`
