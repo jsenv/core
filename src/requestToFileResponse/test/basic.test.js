@@ -1,5 +1,5 @@
 import fs from "fs"
-import { assert } from "@dmail/assert"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { projectFolder } from "../../../projectFolder.js"
 import { requestToFileResponse } from "../requestToFileResponse.js"
 

@@ -1,5 +1,5 @@
 import path from "path"
-import { assert } from "@dmail/assert"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { jsCompileToService } from "../../jsCompileToService.js"
 import { jsCompile } from "../../../jsCompile/index.js"
 

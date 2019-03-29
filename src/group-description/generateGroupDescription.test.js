@@ -1,4 +1,4 @@
-import { assert } from "@dmail/assert"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { generateGroupDescription } from "./generateGroupDescription.js"
 import { browserScoring } from "./browserScoring.js"
 import { nodeScoring } from "./nodeScoring.js"

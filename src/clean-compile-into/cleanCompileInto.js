@@ -4,7 +4,7 @@
 // for now it just removes completely the compileInfo folder.
 // next iteration will check if a file inside compileInto still exists
 // and remove only useless files
-import rimraf from "rimraf"
+const rimraf = import.meta.require("rimraf")
 
 export const cleanCompileInto = ({
   // cancellationToken,

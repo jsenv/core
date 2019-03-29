@@ -1,6 +1,6 @@
 import fetch from "node-fetch"
-import { assert } from "@dmail/assert"
 import { createCancellationSource } from "@dmail/cancellation"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { startServer } from "./server.js"
 
 const test = async () => {

@@ -7,8 +7,9 @@ import {
   pluginOptionMapToPluginMap,
   pluginMapToPluginsForPlatform,
 } from "@dmail/project-structure-compile-babel"
-import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 import { projectFolder } from "../../../../projectFolder.js"
+
+const transformAsyncToPromises = import.meta.require("babel-plugin-transform-async-to-promises")
 
 const inputFilenameRelative = `src/platform/browser/system/createSystemImporter.js`
 const outputFolder = `${projectFolder}/dist`

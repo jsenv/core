@@ -6,7 +6,7 @@ import {
   pathnameToDirname,
   hrefToPathname,
 } from "@jsenv/module-resolution"
-import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/dist/src/isNativeNodeModuleBareSpecifier.js"
+import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { hrefToFilenameRelative } from "../../hrefToFilenameRelative.js"
 import { fromFunctionReturningNamespace, fromHref } from "../../registerModuleFrom.js"
 import { fetchSource } from "../fetchSource.js"

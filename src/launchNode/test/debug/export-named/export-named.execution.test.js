@@ -1,9 +1,10 @@
-import { assert } from "@dmail/assert"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { projectFolder } from "../../../../../projectFolder.js"
 import { launchAndExecute } from "../../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../../server-compile/index.js"
 import { launchNode } from "../../../launchNode.js"
-import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
+
+const transformAsyncToPromises = import.meta.require("babel-plugin-transform-async-to-promises")
 
 const testFolder = projectFolder
 // for debugging I need filenameRelative

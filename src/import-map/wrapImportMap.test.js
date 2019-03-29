@@ -1,4 +1,4 @@
-import { assert } from "@dmail/assert"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { wrapImportMap } from "./wrapImportMap.js"
 
 const actual = wrapImportMap(

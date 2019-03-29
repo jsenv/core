@@ -1,6 +1,6 @@
 import fs from "fs"
 import istanbul from "istanbul"
-import { assert } from "@dmail/assert"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { projectFolder } from "../../../../projectFolder.js"
 import { objectMap } from "../../../objectHelper.js"

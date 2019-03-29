@@ -1,4 +1,4 @@
-import { assert } from "@dmail/assert"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 
 // eslint-disable-next-line import/newline-after-import

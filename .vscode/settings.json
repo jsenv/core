@@ -1,13 +1,16 @@
 {
   "eslint.autoFixOnSave": false,
   "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": false
+  },
   "search.exclude": {
+    "dist/**": true,
     ".dist/**": true,
-    "dist/**": true
+    "coverage/**": true
   },
   "javascript.validate.enable": false,
-  "editor.codeActionsOnSave": {
-    "source.organizeImports": false // it mess up formatting and folding
-  },
-  "javascript.preferences.importModuleSpecifier": "relative"
+  "npm.autoDetect": "on",
+  "npm.enableScriptExplorer": true,
+  "npm.scriptExplorerAction": "open"
 }

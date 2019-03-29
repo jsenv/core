@@ -1,10 +1,11 @@
-import { assert } from "@dmail/assert"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import transformBlockScoping from "@babel/plugin-transform-block-scoping"
-import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 import { projectFolder } from "../../../../projectFolder.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchChromium } from "../../launchChromium.js"
+
+const transformAsyncToPromises = import.meta.require("babel-plugin-transform-async-to-promises")
 
 const testFolder = `${projectFolder}/src/launchChromium/test/top-level-await`
 const filenameRelative = `top-level-await.js`

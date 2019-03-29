@@ -1,4 +1,4 @@
-import { assert } from "@dmail/assert"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { startCompileServer } from "../../../server-compile/index.js"

@@ -1,5 +1,4 @@
 import path from "path"
-import transformAsyncToPromises from "babel-plugin-transform-async-to-promises"
 import { rollup } from "rollup"
 import babel from "rollup-plugin-babel"
 import nodeResolve from "rollup-plugin-node-resolve"
@@ -9,6 +8,8 @@ import {
   pluginMapToPluginsForPlatform,
 } from "@dmail/project-structure-compile-babel"
 import { projectFolder } from "../../../projectFolder.js"
+
+const transformAsyncToPromises = import.meta.require("babel-plugin-transform-async-to-promises")
 
 const inputFilenameRelative = `src/platform/browser/browserPlatform.js`
 const outputFolder = `${projectFolder}/dist`

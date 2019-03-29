@@ -1,9 +1,9 @@
 import { minify as minifyCode } from "terser"
 import { transformAsync, buildExternalHelpers } from "@babel/core"
 import { addNamed } from "@babel/helper-module-imports"
+import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
+import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
 import { uneval } from "@dmail/uneval"
-import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/dist/src/isNativeNodeModuleBareSpecifier.js"
-import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/dist/src/isNativeBrowserModuleBareSpecifier.js"
 import { babelPluginDescriptionToBabelPluginArray } from "../jsCompile/babelPluginDescriptionToBabelPluginArray.js"
 import { createReplaceImportMetaBabelPlugin } from "./createReplaceImportMetaBabelPlugin.js"
 
