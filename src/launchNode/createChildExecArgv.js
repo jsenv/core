@@ -147,7 +147,9 @@ const parseDebugFromExecArgv = (argv) => {
 
     if (arg === "--inspect-brk") {
       return {
-        mode: "inspect-brk",
+        // force "inspect" otherwise a breakpoint is hit inside vscode
+        mode: "inspect",
+        // mode: "inspect-brk",
         modeIndex: i,
         ...parseInspectPortFromExecArgv(argv),
       }
@@ -155,7 +157,9 @@ const parseDebugFromExecArgv = (argv) => {
     const inspectBreakMatch = /^--inspect-brk=([0-9]+)$/.exec(arg)
     if (inspectBreakMatch) {
       return {
-        mode: "inspect-brk",
+        // force "inspect" otherwise a breakpoint is hit inside vscode
+        mode: "inspect",
+        // mode: "inspect-brk",
         modeIndex: i,
         port: Number(inspectBreakMatch[1]),
       }
