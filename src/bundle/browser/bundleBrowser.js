@@ -4,7 +4,7 @@ import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
 import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBalancing.js"
 import { computeRollupOptionsForBalancer } from "./computeRollupOptionsForBalancer.js"
-import { generateBalancerPages } from "./generateBalancerPages.js"
+import { generateEntryPointsDescriptionPages } from "./generateEntryPointsDescriptionPages.js"
 
 export const bundleBrowser = async ({
   projectFolder,
@@ -18,6 +18,7 @@ export const bundleBrowser = async ({
   platformScoring = browserScoring,
   verbose,
   minify = true,
+  generateEntryPages = false,
 }) => {
   projectFolder = normalizePathname(projectFolder)
 
@@ -67,10 +68,12 @@ export const bundleBrowser = async ({
           ...context,
         }),
     }),
-    generateBalancerPages({
-      projectFolder,
-      into,
-      entryPointsDescription,
-    }),
+    generateEntryPages
+      ? generateEntryPointsDescriptionPages({
+          projectFolder,
+          into,
+          entryPointsDescription,
+        })
+      : null,
   ])
 }

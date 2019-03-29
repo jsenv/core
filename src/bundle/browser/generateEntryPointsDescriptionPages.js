@@ -1,7 +1,7 @@
 import { createOperation, createCancellationToken } from "@dmail/cancellation"
 import { fileWrite } from "@dmail/helper"
 
-export const generateBalancerPages = async ({
+export const generateEntryPointsDescriptionPages = async ({
   cancellationToken = createCancellationToken(),
   projectFolder,
   into,
@@ -9,7 +9,7 @@ export const generateBalancerPages = async ({
 }) => {
   await Promise.all(
     Object.keys(entryPointsDescription).map((entryName) => {
-      return genereateBalancerPage({
+      return generateEntryPage({
         cancellationToken,
         projectFolder,
         into,
@@ -19,7 +19,7 @@ export const generateBalancerPages = async ({
   )
 }
 
-const genereateBalancerPage = async ({ cancellationToken, projectFolder, into, entryName }) => {
+const generateEntryPage = async ({ cancellationToken, projectFolder, into, entryName }) => {
   const entryFilenameRelative = `${entryName}.js`
   const pageFilenameRelative = `${entryName}.html`
 
