@@ -32,7 +32,11 @@
         "/*": "${workspaceRoot}/*"
       },
       "smartStep": true,
-      "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
+      "skipFiles": [
+        // force-array-multiline
+        "node_modules/**",
+        "<node_internals>/**/*.js"
+      ]
     },
     {
       "name": "jsenv-chrome",

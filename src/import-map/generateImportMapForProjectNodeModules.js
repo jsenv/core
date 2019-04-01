@@ -1,11 +1,15 @@
 import { basename } from "path"
-import { normalizePathname, pathnameToDirname } from "@jsenv/module-resolution"
+import {
+  normalizePathname,
+  pathnameToDirname,
+} from "/node_modules/@jsenv/module-resolution/index.js"
 import { readPackageData } from "./node-module-resolution/readPackageData.js"
 import { resolveNodeModule } from "./node-module-resolution/resolveNodeModule.js"
 import { packageDataToMain } from "./node-module-resolution/packageDataToMain.js"
 
 export const generateImportMapForProjectNodeModules = async ({
   projectFolder,
+  scopeOriginRelativePerModule = true, // import '/folder/file.js' is scoped per node_module
   remapMain = true, // import 'lodash' remapped to '/node_modules/lodash/index.js'
   remapFolder = true, // import 'lodash/src/file.js' remapped to '/node_modules/lodash/src/file.js'
   remapDevDependencies = true,
@@ -85,6 +89,11 @@ export const generateImportMapForProjectNodeModules = async ({
           const subDependencyScope = `/${dependencyFolderRelative}/`
 
           subDependencyScopedImports[dependencyScope] = subDependencyScope
+
+          if (remapFolder) {
+            subDependencyScopedImports[`${dependencyName}/`] = subDependencyScope
+          }
+
           if (remapMain) {
             const dependencyMain = packageDataToMain(
               dependencyPackageData,
@@ -92,25 +101,31 @@ export const generateImportMapForProjectNodeModules = async ({
             )
             subDependencyScopedImports[dependencyName] = `${subDependencyScope}${dependencyMain}`
           }
-          if (remapFolder) {
-            subDependencyScopedImports[`${dependencyName}/`] = subDependencyScope
-          }
 
           const importerScope = `/${importerName}/`
           scopes[importerScope] = {
             ...(scopes[importerScope] || {}),
             ...subDependencyScopedImports,
           }
-          scopes[subDependencyScope] = {
-            ...(scopes[subDependencyScope] || {}),
-            [subDependencyScope]: subDependencyScope,
-            "/": subDependencyScope,
+
+          if (scopeOriginRelativePerModule) {
+            scopes[subDependencyScope] = {
+              ...(scopes[subDependencyScope] || {}),
+              [subDependencyScope]: subDependencyScope,
+              "/": subDependencyScope,
+            }
           }
         } else {
-          scopes[dependencyScope] = {
-            ...(scopes[dependencyScope] || {}),
-            [dependencyScope]: dependencyScope,
-            "/": dependencyScope,
+          if (scopeOriginRelativePerModule) {
+            scopes[dependencyScope] = {
+              ...(scopes[dependencyScope] || {}),
+              [dependencyScope]: dependencyScope,
+              "/": dependencyScope,
+            }
+          }
+
+          if (remapFolder) {
+            imports[`${dependencyName}/`] = dependencyScope
           }
 
           if (remapMain) {
@@ -119,9 +134,6 @@ export const generateImportMapForProjectNodeModules = async ({
               dependencyPackageFilename,
             )
             imports[`${dependencyName}`] = `${dependencyScope}${dependencyMain}`
-          }
-          if (remapFolder) {
-            imports[`${dependencyName}/`] = dependencyScope
           }
         }
 
@@ -142,7 +154,39 @@ export const generateImportMapForProjectNodeModules = async ({
     console.log(`import generated in ${importMapGenerationDuration}ms`)
   }
 
-  return { imports, scopes }
+  return sortImportMap({ imports, scopes })
+}
+
+const sortImportMap = (importMap) => {
+  const orderedImportMap = {
+    imports: sortImportMapImports(importMap.imports),
+    scopes: sortImportMapScopes(importMap.scopes),
+  }
+  return orderedImportMap
+}
+
+const compareLengthOrLocaleComparison = (a, b) => {
+  return b.length - a.length || a.localeCompare(b)
+}
+
+const sortImportMapImports = (imports) => {
+  const sortedImports = {}
+  Object.keys(imports)
+    .sort(compareLengthOrLocaleComparison)
+    .forEach((name) => {
+      sortedImports[name] = imports[name]
+    })
+  return sortedImports
+}
+
+const sortImportMapScopes = (scopes) => {
+  const sortedScopes = {}
+  Object.keys(scopes)
+    .sort(compareLengthOrLocaleComparison)
+    .forEach((scopeName) => {
+      sortedScopes[scopeName] = sortImportMapImports(scopes[scopeName])
+    })
+  return sortedScopes
 }
 
 const createNodeModuleNotFoundMessage = ({

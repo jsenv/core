@@ -1,5 +1,5 @@
-import { pathnameToDirname } from "@jsenv/module-resolution"
-import { firstOperationMatching } from "@dmail/helper"
+import { pathnameToDirname } from "/node_modules/@jsenv/module-resolution/index.js"
+import { firstOperationMatching } from "/node_modules/@dmail/helper/index.js"
 import { readPackageData } from "./readPackageData.js"
 
 export const resolveNodeModule = async ({ rootFolder, importerFilename, nodeModuleName }) => {

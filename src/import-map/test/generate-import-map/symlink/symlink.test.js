@@ -1,21 +1,24 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { projectFolder } from "../../../../../projectFolder.js"
 import { generateImportMapForProjectNodeModules } from "../../../generateImportMapForProjectNodeModules.js"
 
-const testFolder = `${projectFolder}/src/import-map/test/symlink/project`
+const { projectFolder } = import.meta.require("../../../../../jsenv.config.js")
+const testFolder = `${projectFolder}/src/import-map/test/generate-import-map/symlink/project`
 
 ;(async () => {
   const actual = await generateImportMapForProjectNodeModules({
     projectFolder: testFolder,
-    remapMain: true,
-    remapFolder: true,
   })
   const expected = {
     imports: {
-      foo: "/node_modules/foo/index.js",
       "foo/": "/node_modules/foo/",
+      foo: "/node_modules/foo/index.js",
     },
-    scopes: {},
+    scopes: {
+      "/node_modules/foo/": {
+        "/node_modules/foo/": "/node_modules/foo/",
+        "/": "/node_modules/foo/",
+      },
+    },
   }
   assert({
     actual,

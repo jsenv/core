@@ -1,24 +1,27 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { projectFolder } from "../../../../../projectFolder.js"
 import { generateImportMapForProjectNodeModules } from "../../../generateImportMapForProjectNodeModules.js"
 
-const testFolder = `${projectFolder}/src/import-map/test/basic`
+const { projectFolder } = import.meta.require("../../../../../jsenv.config.js")
+const testFolder = `${projectFolder}/src/import-map/test/generate-import-map/basic`
 
-debugger
 ;(async () => {
   const actual = await generateImportMapForProjectNodeModules({
     projectFolder: testFolder,
   })
   const expected = {
     imports: {
-      "@dmail/yo": "/node_modules/@dmail/yo/index.js",
       "@dmail/yo/": "/node_modules/@dmail/yo/",
-      bar: "/node_modules/bar/bar.js",
+      "@dmail/yo": "/node_modules/@dmail/yo/index.js",
       "bar/": "/node_modules/bar/",
-      foo: "/node_modules/foo/foo.js",
       "foo/": "/node_modules/foo/",
+      bar: "/node_modules/bar/bar.js",
+      foo: "/node_modules/foo/foo.js",
     },
     scopes: {
+      "/node_modules/foo/node_modules/bar/": {
+        "/node_modules/foo/node_modules/bar/": "/node_modules/foo/node_modules/bar/",
+        "/": "/node_modules/foo/node_modules/bar/",
+      },
       "/node_modules/@dmail/yo/": {
         "/node_modules/@dmail/yo/": "/node_modules/@dmail/yo/",
         "/": "/node_modules/@dmail/yo/",
@@ -28,15 +31,11 @@ debugger
         "/": "/node_modules/bar/",
       },
       "/node_modules/foo/": {
-        "/node_modules/foo/": "/node_modules/foo/",
-        "/": "/node_modules/foo/",
-        bar: "/node_modules/foo/node_modules/bar/index.js",
-        "bar/": "/node_modules/foo/node_modules/bar/",
         "/node_modules/bar/": "/node_modules/foo/node_modules/bar/",
-      },
-      "/node_modules/foo/node_modules/bar/": {
-        "/node_modules/foo/node_modules/bar/": "/node_modules/foo/node_modules/bar/",
-        "/": "/node_modules/foo/node_modules/bar/",
+        "/node_modules/foo/": "/node_modules/foo/",
+        "bar/": "/node_modules/foo/node_modules/bar/",
+        bar: "/node_modules/foo/node_modules/bar/index.js",
+        "/": "/node_modules/foo/",
       },
     },
   }
