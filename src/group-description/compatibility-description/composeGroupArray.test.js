@@ -1,11 +1,11 @@
-import assert from "assert"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { composeGroupArray } from "./composeGroupArray.js"
 
 {
   const chromePlatformGroups = [
     {
-      // freeze to ensure mergePlatformGroups does not mutate
-      babelPluginNameArray: Object.freeze(["a"]),
+      // freeze to ensure composeGroupArray does not mutate
+      incompatibleNameArray: Object.freeze(["a"]),
       compatibility: Object.freeze({
         chrome: 10,
       }),
@@ -13,7 +13,7 @@ import { composeGroupArray } from "./composeGroupArray.js"
   ]
   const firefoxPlatformGroups = [
     {
-      babelPluginNameArray: Object.freeze(["a"]),
+      incompatibleNameArray: Object.freeze(["a"]),
       compatibility: Object.freeze({
         firefox: 20,
       }),
@@ -22,14 +22,12 @@ import { composeGroupArray } from "./composeGroupArray.js"
   const actual = composeGroupArray(chromePlatformGroups, firefoxPlatformGroups)
   const expected = [
     {
-      babelPluginNameArray: ["a"],
+      incompatibleNameArray: ["a"],
       compatibility: {
-        chrome: 10,
-        firefox: 20,
+        chrome: "10",
+        firefox: "20",
       },
     },
   ]
-  assert.deepEqual(actual, expected)
+  assert({ actual, expected })
 }
-
-console.log("passed")

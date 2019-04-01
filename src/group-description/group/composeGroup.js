@@ -1,14 +1,14 @@
-import { compositionMappingToComposeStrict } from "@dmail/helper"
-import { composeCompatibility } from "../compatibility/composeCompatibility.js"
-import { composeBabelPluginNameArray } from "../babel-plugin-name-array/composeBabelPluginNameArray.js"
+import { compositionMappingToComposeStrict } from "/node_modules/@dmail/helper/index.js"
+import { composeCompatibility } from "../compatibility-description/composeCompatibility.js"
+import { composeIncompatibleNameArray } from "../compatibility-description/composeIncompatibleNameArray.js"
 
 export const composeGroup = compositionMappingToComposeStrict(
   {
-    babelPluginNameArray: composeBabelPluginNameArray,
+    incompatibleNameArray: composeIncompatibleNameArray,
     compatibility: composeCompatibility,
   },
   () => ({
-    babelPluginNameArray: [],
+    incompatibleNameArray: [],
     compatibility: {},
   }),
 )

@@ -1,16 +1,16 @@
-import assert from "assert"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { composeGroup } from "./composeGroup.js"
 
 {
   const firstGroup = {
-    babelPluginNameArray: ["a"],
+    incompatibleNameArray: ["a"],
     compatibility: {
       chrome: 50,
       firefox: 20,
     },
   }
   const secondGroup = {
-    babelPluginNameArray: ["b", "e"],
+    incompatibleNameArray: ["b", "e"],
     compatibility: {
       chrome: 49,
       firefox: 30,
@@ -19,14 +19,12 @@ import { composeGroup } from "./composeGroup.js"
   }
   const actual = composeGroup(firstGroup, secondGroup)
   const expected = {
-    babelPluginNameArray: ["a", "b", "e"],
-    compatibilityDescription: {
+    incompatibleNameArray: ["a", "b", "e"],
+    compatibility: {
       chrome: "50",
       firefox: "30",
       node: "10",
     },
   }
-  assert.deepEqual(actual, expected)
+  assert({ actual, expected })
 }
-
-console.log("passed")
