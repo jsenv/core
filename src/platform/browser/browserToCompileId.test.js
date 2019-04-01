@@ -1,5 +1,3 @@
-// won't work because rollup needs path to @dmail/project-structure-compile-babel/src/versionCompare.js
-// but we will no support export token
 import assert from "assert"
 import { browserToCompileId } from "./browserToCompileId.js"
 

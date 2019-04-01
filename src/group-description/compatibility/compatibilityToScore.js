@@ -1,4 +1,4 @@
-import { versionIsBelow, versionIsAbove } from "@dmail/project-structure-compile-babel"
+import { versionIsBelow, versionIsAbove } from "../../semantic-versioning/index.js"
 
 export const compatibilityToScore = (compatibility, platformScoring) => {
   return Object.keys(compatibility).reduce((previous, platformName) => {

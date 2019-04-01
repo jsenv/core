@@ -1,9 +1,3 @@
-// for now it's a duplicate of what can be found
-// inside project-structure-compile-babel
-// it's there so that bundleNode can find dependencies
-// when it create node balancer file
-// this is to be fixed with a proper solution
-
 const semver = (version) => {
   if (typeof version === "number") {
     return {

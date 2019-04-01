@@ -1,8 +1,5 @@
-import {
-  versionHighest,
-  versionCompare,
-  pluginMapToPluginsForPlatform,
-} from "@dmail/project-structure-compile-babel"
+import { pluginMapToPluginsForPlatform } from "@dmail/project-structure-compile-babel"
+import { versionHighest, versionCompare } from "../../semantic-versioning/index.js"
 
 export const compatibilityDescriptionToGroupArrayForPlatform = ({
   compatibilityDescription,

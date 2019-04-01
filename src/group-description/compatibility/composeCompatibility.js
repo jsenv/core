@@ -1,4 +1,4 @@
-import { versionHighest } from "@dmail/project-structure-compile-babel"
+import { versionHighest } from "../../semantic-versioning/index.js"
 import { objectComposeValue, objectMapValue } from "../../objectHelper.js"
 
 export const composeCompatibility = (compatibility, secondCompatibility) => {
