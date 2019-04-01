@@ -1,6 +1,6 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { projectFolder } from "../../../../projectFolder.js"
-import { generateImportMapForProjectNodeModules } from "../../generateImportMapForProjectNodeModules.js"
+import { projectFolder } from "../../../../../projectFolder.js"
+import { generateImportMapForProjectNodeModules } from "../../../generateImportMapForProjectNodeModules.js"
 
 const testFolder = `${projectFolder}/src/import-map/test/symlink/project`
 

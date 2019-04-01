@@ -1,14 +1,13 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
-import { generateImportMapForProjectNodeModules } from "../../generateImportMapForProjectNodeModules.js"
+import { projectFolder } from "../../../../../projectFolder.js"
+import { generateImportMapForProjectNodeModules } from "../../../generateImportMapForProjectNodeModules.js"
 
-const projectFolder = `${selfProjectFolder}/src/import-map/test/basic`
+const testFolder = `${projectFolder}/src/import-map/test/basic`
 
+debugger
 ;(async () => {
   const actual = await generateImportMapForProjectNodeModules({
-    projectFolder,
-    remapMain: true,
-    remapFolder: true,
+    projectFolder: testFolder,
   })
   const expected = {
     imports: {
