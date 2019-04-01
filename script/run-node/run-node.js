@@ -25,7 +25,7 @@ execute({
       // as a workaround, the debug port is static
       // and there is a .vscode/launch.json/#jsenv-node-attach-child
       // that you can use to reattach a debugger to this port
-      debugPort: 40010,
+      debugPort: 40000,
     }),
   filenameRelative,
   verbose: false,
