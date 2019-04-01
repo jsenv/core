@@ -1,4 +1,4 @@
-import { asyncFunctionCandidatesToElectedValuePromise, arrayWithoutValue } from "@dmail/helper"
+import { firstOperationMatching, arrayWithoutValue } from "@dmail/helper"
 
 let recoverCallbackArray = []
 let uninstall
@@ -71,11 +71,11 @@ const crash = async (reason) => {
   const externalRecoverPromise = new Promise((resolve) => {
     resolveRecovering = resolve
   })
-  const callbackRecoverPromise = asyncFunctionCandidatesToElectedValuePromise(
-    recoverCallbackArray,
-    reason,
-    (recovered) => typeof recovered === "boolean",
-  )
+  const callbackRecoverPromise = firstOperationMatching({
+    array: recoverCallbackArray,
+    start: (recoverCallback) => recoverCallback(reason),
+    predicate: (recovered) => typeof recovered === "boolean",
+  })
   const recoverPromise = Promise.race([externalRecoverPromise, callbackRecoverPromise])
 
   try {

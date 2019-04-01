@@ -1,4 +1,4 @@
-import { asyncFunctionCandidatesToElectedValuePromise } from "@dmail/helper"
+import { firstOperationMatching } from "@dmail/helper"
 
 const serviceGeneratedResponsePredicate = (value) => {
   if (value === null) {
@@ -9,10 +9,10 @@ const serviceGeneratedResponsePredicate = (value) => {
 
 export const serviceCompose = (...callbacks) => {
   return (request) => {
-    return asyncFunctionCandidatesToElectedValuePromise(
-      callbacks,
-      request,
-      serviceGeneratedResponsePredicate,
-    )
+    return firstOperationMatching({
+      array: callbacks,
+      start: (callback) => callback(request),
+      predicate: serviceGeneratedResponsePredicate,
+    })
   }
 }

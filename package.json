@@ -26,7 +26,7 @@
 		"@jsenv/core": "4.16.0",
 		"@jsenv/module-resolution": "2.0.0",
 		"@dmail/cancellation": "2.1.0",
-		"@dmail/helper": "1.0.0",
+		"@dmail/helper": "2.0.0",
 		"@dmail/prettiest": "4.2.0",
 		"@dmail/project-structure": "3.0.0",
 		"@dmail/uneval": "4.4.0",

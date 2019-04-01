@@ -1,5 +1,5 @@
 import { pathnameToDirname } from "@jsenv/module-resolution"
-import { asyncFunctionCandidatesToElectedValuePromise } from "@dmail/helper"
+import { firstOperationMatching } from "@dmail/helper"
 import { readPackageData } from "./readPackageData.js"
 
 export const resolveNodeModule = async ({ rootFolder, importerFilename, nodeModuleName }) => {
@@ -13,20 +13,20 @@ export const resolveNodeModule = async ({ rootFolder, importerFilename, nodeModu
     // reverse to handle deepest (most scoped) folder fist
     .reverse()
 
-  return asyncFunctionCandidatesToElectedValuePromise(
-    nodeModuleCandidateArray.map((nodeModuleCandidate) => {
-      return async () => {
-        const packageFilename = nodeModuleCandidate
-          ? `${rootFolder}/node_modules/${nodeModuleCandidate}/node_modules/${nodeModuleName}/package.json`
-          : `${rootFolder}/node_modules/${nodeModuleName}/package.json`
-        const packageData = await readPackageData({
-          filename: packageFilename,
-          returnNullWhenNotFound: true,
-        })
-        return { packageData, packageFilename }
-      }
-    }),
-    null,
-    ({ packageData }) => Boolean(packageData),
-  )
+  return firstOperationMatching({
+    array: nodeModuleCandidateArray,
+    start: async (nodeModuleCandidate) => {
+      const packageFilename = nodeModuleCandidate
+        ? `${rootFolder}/node_modules/${nodeModuleCandidate}/node_modules/${nodeModuleName}/package.json`
+        : `${rootFolder}/node_modules/${nodeModuleName}/package.json`
+
+      const packageData = await readPackageData({
+        filename: packageFilename,
+        returnNullWhenNotFound: true,
+      })
+
+      return { packageData, packageFilename }
+    },
+    predicate: ({ packageData }) => Boolean(packageData),
+  })
 }
