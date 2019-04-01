@@ -1,5 +1,5 @@
 import { createCancellationToken } from "@dmail/cancellation"
-import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
+import { fileWrite } from "@dmail/helper"
 import { jsCompile } from "../jsCompile/index.js"
 import { jsCompileToService } from "../jsCompileToService/index.js"
 import {
@@ -40,11 +40,11 @@ export const createJsCompileService = async ({
   )
 
   await Promise.all([
-    fileWriteFromString(
+    fileWrite(
       `${projectFolder}/${compileInto}/groupDescription.json`,
       JSON.stringify(groupDescription, null, "  "),
     ),
-    fileWriteFromString(
+    fileWrite(
       `${projectFolder}/${compileInto}/importMap.json`,
       JSON.stringify(importMap, null, "  "),
     ),
@@ -77,7 +77,7 @@ export const createJsCompileService = async ({
 const writeGroupImportMapFile = ({ projectFolder, compileInto, compileId, importMap }) => {
   const groupImportMap = wrapImportMap(importMap, `${compileInto}/${compileId}`)
 
-  return fileWriteFromString(
+  return fileWrite(
     `${projectFolder}/${compileInto}/importMap.${compileId}.json`,
     JSON.stringify(groupImportMap, null, "  "),
   )

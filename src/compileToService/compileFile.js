@@ -1,7 +1,6 @@
 import path from "path"
 import lockfile from "proper-lockfile"
-import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
-import { fileRead, fileMakeDirname } from "@dmail/helper"
+import { fileRead, fileWrite, fileMakeDirname } from "@dmail/helper"
 import { createETag, isFileNotFoundError } from "./helpers.js"
 import {
   getMetaFilename,
@@ -419,7 +418,7 @@ const updateMeta = ({
     })
 
     promises.push(
-      fileWriteFromString(mainLocation, output),
+      fileWrite(mainLocation, output),
       ...assets.map((asset, index) => {
         const assetFilename = getAssetFilename({
           projectFolder,
@@ -429,7 +428,7 @@ const updateMeta = ({
           asset,
         })
 
-        return fileWriteFromString(assetFilename, assetsContent[index])
+        return fileWrite(assetFilename, assetsContent[index])
       }),
     )
   }
@@ -488,7 +487,7 @@ const updateMeta = ({
       filenameRelative,
     })
 
-    promises.push(fileWriteFromString(metaFilename, JSON.stringify(meta, null, "  ")))
+    promises.push(fileWrite(metaFilename, JSON.stringify(meta, null, "  ")))
   }
 
   return Promise.all(promises)
