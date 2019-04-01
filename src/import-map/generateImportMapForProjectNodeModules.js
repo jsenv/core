@@ -6,8 +6,10 @@ import { packageDataToMain } from "./node-module-resolution/packageDataToMain.js
 
 export const generateImportMapForProjectNodeModules = async ({
   projectFolder,
-  remapMain = false, // import 'lodash' remapped to '/node_modules/lodash/index.js'
-  remapFolder = false, // import 'lodash/src/file.js' remapped to '/node_modules/lodash/src/file.js'
+  remapMain = true, // import 'lodash' remapped to '/node_modules/lodash/index.js'
+  remapFolder = true, // import 'lodash/src/file.js' remapped to '/node_modules/lodash/src/file.js'
+  remapDevDependencies = true,
+  remapPredicate = () => true,
   logDuration = false,
 }) => {
   projectFolder = normalizePathname(projectFolder)
@@ -38,8 +40,19 @@ export const generateImportMapForProjectNodeModules = async ({
     const importerName = isTopLevel
       ? basename(pathnameToDirname(packageFilename))
       : pathnameToDirname(packageFilename.slice(`${projectFolder}/`.length))
-    const { dependencies = {} } = packageData
-    const arrayOfDependencyToRemap = Object.keys(dependencies)
+    const { dependencies = {}, devDependencies = {} } = packageData
+
+    const arrayOfDependencyToRemap = Object.keys({
+      ...dependencies,
+      ...(remapDevDependencies ? devDependencies : {}),
+    }).filter((dependencyName) => {
+      return remapPredicate({
+        importerName,
+        isTopLevel,
+        dependencyName,
+        isDev: dependencyName in devDependencies,
+      })
+    })
 
     await Promise.all(
       arrayOfDependencyToRemap.map(async (dependencyName) => {
