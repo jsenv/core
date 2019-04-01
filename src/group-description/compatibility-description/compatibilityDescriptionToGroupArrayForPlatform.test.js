@@ -1,5 +1,5 @@
 import assert from "assert"
-import { compatibilityDescription } from "@dmail/project-structure-compile-babel"
+import { babelPluginCompatibilityDescription } from "../babelPluginCompatibilityDescription.js"
 import { compatibilityDescriptionToGroupArrayForPlatform } from "./compatibilityDescriptionToGroupArrayForPlatform.js"
 
 {
@@ -39,6 +39,9 @@ import { compatibilityDescriptionToGroupArrayForPlatform } from "./compatibility
 }
 
 {
-  const actual = compatibilityDescriptionToGroupArrayForPlatform(compatibilityDescription, "chrome")
+  const actual = compatibilityDescriptionToGroupArrayForPlatform(
+    babelPluginCompatibilityDescription,
+    "chrome",
+  )
   assert(actual.length > 0)
 }
