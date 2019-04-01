@@ -1,7 +1,7 @@
 import fs from "fs"
+import transformBlockScoping from "@babel/plugin-transform-block-scoping"
 import istanbul from "istanbul"
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { projectFolder } from "../../../../projectFolder.js"
 import { objectMap } from "../../../objectHelper.js"
 import { createInstrumentPlugin } from "../../../cover/createInstrumentPlugin.js"
@@ -10,10 +10,10 @@ import { jsCompile } from "../../jsCompile.js"
 const root = `${projectFolder}/src/jsCompile/test/fixtures`
 const file = "file.js"
 const fileAbsolute = `${root}/${file}`
-const babelPluginDescription = pluginOptionMapToPluginMap({
-  "transform-block-scoping": {},
-})
-babelPluginDescription["transform-instrument"] = createInstrumentPlugin()
+const babelPluginDescription = {
+  "transform-block-scoping": [transformBlockScoping],
+  "transform-instrument": [createInstrumentPlugin()],
+}
 
 jsCompile({
   localRoot: root,

@@ -1,6 +1,6 @@
 import fs from "fs"
+import transformBlockScoping from "@babel/plugin-transform-block-scoping"
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
 import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
 import { jsCompile } from "../../jsCompile.js"
 
@@ -8,9 +8,9 @@ const projectFolder = `${selfProjectFolder}/src/jsCompile/test/empty`
 const filenameRelative = "empty.js"
 const filename = `${projectFolder}/${filenameRelative}`
 const input = fs.readFileSync(filename).toString()
-const babelPluginDescription = pluginOptionMapToPluginMap({
-  "transform-block-scoping": {},
-})
+const babelPluginDescription = {
+  "transform-block-scoping": [transformBlockScoping],
+}
 
 ;(async () => {
   const actual = await jsCompile({

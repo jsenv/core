@@ -1,5 +1,5 @@
-import { pluginMapToPluginsForPlatform } from "@dmail/project-structure-compile-babel"
 import { versionHighest, versionCompare } from "../../semantic-versioning/index.js"
+import { computeBabelPluginNameArrayForPlatform } from "./computeBabelPluginNameArrayForPlatform.js"
 
 export const compatibilityDescriptionToGroupArrayForPlatform = ({
   compatibilityDescription,
@@ -25,12 +25,12 @@ export const compatibilityDescriptionToGroupArrayForPlatform = ({
       babelPluginDescription[babelPluginName] = babelPluginName
     })
 
-    const babelPluginNameArrayForPlatform = pluginMapToPluginsForPlatform(
+    const babelPluginNameArrayForPlatform = computeBabelPluginNameArrayForPlatform({
       babelPluginDescription,
       platformName,
       platformVersion,
       compatibilityDescription,
-    ).sort()
+    }).sort()
 
     const groupWithPlatformBabelPlugin = groupArray.find((platformGroup) => {
       return (
