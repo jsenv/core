@@ -63,17 +63,19 @@ export const transpiler = async ({
       },
     })
 
-    // we have to do this to transpile top level await
-    // and the async keyword that are now under a function
-    // of the systemjs format
+    // we need to retranspile the await keywords now wrapped
+    // inside Systemjs function.
+    // They are ignored, at least by transform-async-to-promises
+    // see https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/26
 
-    // https://github.com/babel/babel/blob/eac4c5bc17133c2857f2c94c1a6a8643e3b547a7/packages/babel-core/src/transformation/file/generate.js#L57
-    // https://github.com/babel/babel/blob/090c364a90fe73d36a30707fc612ce037bdbbb24/packages/babel-core/src/transformation/file/merge-map.js#L6
     const finalResult = await transpile({
       // ast: result.ast,
       code: result.code,
       options: {
         ...options,
+        // about inputSourceMap see
+        // https://github.com/babel/babel/blob/eac4c5bc17133c2857f2c94c1a6a8643e3b547a7/packages/babel-core/src/transformation/file/generate.js#L57
+        // https://github.com/babel/babel/blob/090c364a90fe73d36a30707fc612ce037bdbbb24/packages/babel-core/src/transformation/file/merge-map.js#L6s
         inputSourceMap: result.map,
         plugins: [...defaultBabelPluginArray, babelPluginDescription[asyncPluginName]],
       },
