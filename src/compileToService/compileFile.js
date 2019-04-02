@@ -1,6 +1,5 @@
 import path from "path"
-import lockfile from "proper-lockfile"
-import { fileRead, fileWrite, fileMakeDirname } from "@dmail/helper"
+import { fileRead, fileWrite, fileMakeDirname } from "/node_modules/@dmail/helper/index.js"
 import { createETag, isFileNotFoundError } from "./helpers.js"
 import {
   getMetaFilename,
@@ -9,6 +8,8 @@ import {
   getOutputFilenameRelative,
 } from "./locaters.js"
 import { lockForRessource } from "./ressourceRegistry.js"
+
+const lockfile = import.meta.require("proper-lockfile")
 
 export const compileFile = async ({
   compile,

@@ -1,7 +1,8 @@
-import fetch from "node-fetch"
-import { createCancellationSource } from "@dmail/cancellation"
+import { createCancellationSource } from "/node_modules/@dmail/cancellation/index.js"
 import { assert } from "/node_modules/@dmail/assert/index.js"
 import { startServer } from "./server.js"
+
+const fetch = import.meta.require("node-fetch")
 
 const test = async () => {
   const { cancel, token } = createCancellationSource()

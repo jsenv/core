@@ -1,6 +1,6 @@
 // https://github.com/digitalbazaar/forge/blob/master/examples/create-cert.js
 
-import forge from "node-forge"
+const forge = import.meta.require("node-forge")
 
 export const createSelfSignature = () => {
   const { pki } = forge

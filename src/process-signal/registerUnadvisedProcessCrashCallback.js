@@ -1,4 +1,4 @@
-import { firstOperationMatching, arrayWithoutValue } from "@dmail/helper"
+import { firstOperationMatching, arrayWithoutValue } from "/node_modules/@dmail/helper/index.js"
 
 let recoverCallbackArray = []
 let uninstall

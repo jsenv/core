@@ -1,6 +1,6 @@
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { serviceCompose } from "./serviceCompose.js"
-import assert from "assert"
 
 serviceCompose(() => null, (a) => a)({ a: true }).then((response) => {
-  assert.deepEqual(response, { a: true })
+  assert({ actual: response, expected: { a: true } })
 })

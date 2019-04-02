@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
-import { createCancellationToken } from "@dmail/cancellation"
-import { fileRead, fileStat } from "@dmail/helper"
+import { createCancellationToken } from "/node_modules/@dmail/cancellation/index.js"
+import { fileRead, fileStat } from "/node_modules/@dmail/helper/index.js"
 import { convertFileSystemErrorToResponseProperties } from "../requestToFileResponse/index.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { acceptContentType, createSSERoom, serviceCompose } from "../server/index.js"

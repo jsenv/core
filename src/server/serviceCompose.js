@@ -1,4 +1,4 @@
-import { firstOperationMatching } from "@dmail/helper"
+import { firstOperationMatching } from "/node_modules/@dmail/helper/index.js"
 
 const serviceGeneratedResponsePredicate = (value) => {
   if (value === null) {

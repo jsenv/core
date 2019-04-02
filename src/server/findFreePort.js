@@ -1,5 +1,5 @@
 import net from "net"
-import { createCancellationToken } from "@dmail/cancellation"
+import { createCancellationToken } from "/node_modules/@dmail/cancellation/index.js"
 import { listen } from "./server.js"
 
 export const findFreePort = async (
