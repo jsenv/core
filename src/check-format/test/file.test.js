@@ -1,5 +1,6 @@
-import { projectFolder } from "../../../projectFolder.js"
 import { checkFormat } from "../checkFormat.js"
+
+const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 
 checkFormat({
   projectFolder,

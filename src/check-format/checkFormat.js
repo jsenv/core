@@ -1,13 +1,14 @@
-import { prettiest } from "@dmail/prettiest"
-import {
-  namedValueDescriptionToMetaDescription,
-  selectAllFileInsideFolder,
-} from "@dmail/project-structure"
-import { normalizePathname } from "@jsenv/module-resolution"
+import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
+import { prettiest } from "/node_modules/@dmail/prettiest/index.js"
 import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
+
+// required until @jsenv/core importMap gets fixed
+const { namedValueDescriptionToMetaDescription, selectAllFileInsideFolder } = import.meta.require(
+  "@dmail/project-structure",
+)
 
 export const checkFormat = ({ projectFolder, formattableDescription }) =>
   catchAsyncFunctionCancellation(async () => {
