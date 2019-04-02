@@ -9,7 +9,7 @@ const transformAsyncToPromises = import.meta.require("babel-plugin-transform-asy
 const testFolder = `${projectFolder}/src/launchChromium/test/dynamic-import/`
 const filenameRelative = `dynamic-import.js`
 const compileInto = ".dist"
-const babelPluginDescription = {
+const babelConfigMap = {
   "transform-async-to-promises": [transformAsyncToPromises],
 }
 
@@ -19,7 +19,7 @@ const babelPluginDescription = {
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   const actual = await launchAndExecute({

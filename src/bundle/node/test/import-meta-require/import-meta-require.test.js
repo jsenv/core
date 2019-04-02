@@ -7,10 +7,10 @@ const testFolder = `${projectFolder}/src/bundle/node/test/import-meta-require`
 bundleNode({
   projectFolder: testFolder,
   into: "dist/node",
-  entryPointsDescription: {
+  entryPointMap: {
     main: "import-meta-require.js",
   },
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
   compileGroupCount: 1,

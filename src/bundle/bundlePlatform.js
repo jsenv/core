@@ -2,14 +2,14 @@ import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
-import { generateGroupDescription } from "../group-description/index.js"
+import { generateGroupMap } from "../group-description/index.js"
 import { bundleWithRollup } from "./bundleWithRollup.js"
 
 export const bundlePlatform = ({
   projectFolder,
   into,
-  entryPointsDescription,
-  babelPluginDescription,
+  entryPointMap,
+  babelConfigMap,
   compileGroupCount = 1,
   platformScoring,
   computeRollupOptionsWithoutBalancing,
@@ -22,10 +22,8 @@ export const bundlePlatform = ({
       throw new TypeError(`bundlePlatform root must be a string, got ${projectFolder}`)
     if (typeof into !== "string")
       throw new TypeError(`bundlePlatform into must be a string, got ${into}`)
-    if (typeof entryPointsDescription !== "object")
-      throw new TypeError(
-        `bundlePlatform entryPointsDescription must be an object, got ${entryPointsDescription}`,
-      )
+    if (typeof entryPointMap !== "object")
+      throw new TypeError(`bundlePlatform entryPointMap must be an object, got ${entryPointMap}`)
     if (compileGroupCount < 1)
       throw new Error(`bundlePlatform compileGroupCount must be > 1, got ${compileGroupCount}`)
 
@@ -42,8 +40,8 @@ export const bundlePlatform = ({
       return
     }
 
-    const groupDescription = generateGroupDescription({
-      babelPluginDescription,
+    const groupMap = generateGroupMap({
+      babelConfigMap,
       platformScoring,
       groupCount: compileGroupCount,
     })
@@ -52,14 +50,14 @@ export const bundlePlatform = ({
       generateEntryPointsFolders({
         cancellationToken,
         log,
-        groupDescription,
+        groupMap,
         computeRollupOptionsWithBalancing,
       }),
       generateEntryPointsBalancerFiles({
         cancellationToken,
         log,
-        entryPointsDescription,
-        groupDescription,
+        entryPointMap,
+        groupMap,
         computeRollupOptionsForBalancer,
       }),
     ])
@@ -68,18 +66,18 @@ export const bundlePlatform = ({
 const generateEntryPointsFolders = async ({
   cancellationToken,
   log,
-  groupDescription,
+  groupMap,
   computeRollupOptionsWithBalancing,
 }) => {
   await Promise.all(
-    Object.keys(groupDescription).map((compileId) => {
+    Object.keys(groupMap).map((compileId) => {
       return bundleWithRollup({
         cancellationToken,
         log,
         ...computeRollupOptionsWithBalancing({
           cancellationToken,
           log,
-          groupDescription,
+          groupMap,
           compileId,
         }),
       })
@@ -90,13 +88,13 @@ const generateEntryPointsFolders = async ({
 const generateEntryPointsBalancerFiles = ({
   cancellationToken,
   log,
-  entryPointsDescription,
-  groupDescription,
+  entryPointMap,
+  groupMap,
   computeRollupOptionsForBalancer,
 }) => {
   return Promise.all(
-    Object.keys(entryPointsDescription).map((entryName) => {
-      const entryFilenameRelative = `${entryName}.js`
+    Object.keys(entryPointMap).map((entryPoint) => {
+      const entryFilenameRelative = `${entryPoint}.js`
 
       return Promise.all([
         bundleWithRollup({
@@ -105,8 +103,8 @@ const generateEntryPointsBalancerFiles = ({
           ...computeRollupOptionsForBalancer({
             cancellationToken,
             log,
-            groupDescription,
-            entryName,
+            groupMap,
+            entryPoint,
             entryFilenameRelative,
           }),
         }),

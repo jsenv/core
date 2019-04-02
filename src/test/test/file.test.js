@@ -19,6 +19,6 @@ const testDescription = {
 test({
   projectFolder,
   compileInto: ".dist",
-  babelPluginDescription: {},
+  babelConfigMap: {},
   executeDescription: testDescription,
 })

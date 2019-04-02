@@ -7,7 +7,7 @@ const testFolder = `${projectFolder}/src/execute/test`
 execute({
   projectFolder: testFolder,
   compileInto: ".dist",
-  babelPluginDescription: {},
+  babelConfigMap: {},
   launch: launchNode,
   filenameRelative: "file.js",
 })

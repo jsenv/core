@@ -4,7 +4,7 @@ import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
 import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBalancing.js"
 import { computeRollupOptionsForBalancer } from "./computeRollupOptionsForBalancer.js"
-import { generateEntryPointsDescriptionPages } from "./generateEntryPointsDescriptionPages.js"
+import { generateEntryPointMapPages } from "./generateEntryPointMapPages.js"
 
 export const bundleBrowser = async ({
   projectFolder,
@@ -12,8 +12,8 @@ export const bundleBrowser = async ({
   into,
   globalName,
   globalNameIsPromise = false,
-  entryPointsDescription,
-  babelPluginDescription,
+  entryPointMap,
+  babelConfigMap,
   compileGroupCount = 1,
   platformScoring = browserScoring,
   verbose,
@@ -27,10 +27,10 @@ export const bundleBrowser = async ({
 
   return await Promise.all([
     bundlePlatform({
-      entryPointsDescription,
+      entryPointMap,
       projectFolder,
       into,
-      babelPluginDescription,
+      babelConfigMap,
       compileGroupCount,
       platformScoring,
       verbose,
@@ -40,8 +40,8 @@ export const bundleBrowser = async ({
           projectFolder,
           into,
           globalName,
-          entryPointsDescription,
-          babelPluginDescription,
+          entryPointMap,
+          babelConfigMap,
           minify,
           ...context,
         }),
@@ -51,8 +51,8 @@ export const bundleBrowser = async ({
           projectFolder,
           into,
           globalName,
-          entryPointsDescription,
-          babelPluginDescription,
+          entryPointMap,
+          babelConfigMap,
           minify,
           ...context,
         }),
@@ -63,16 +63,16 @@ export const bundleBrowser = async ({
           into,
           globalName,
           globalNameIsPromise,
-          babelPluginDescription,
+          babelConfigMap,
           minify,
           ...context,
         }),
     }),
     generateEntryPages
-      ? generateEntryPointsDescriptionPages({
+      ? generateEntryPointMapPages({
           projectFolder,
           into,
-          entryPointsDescription,
+          entryPointMap,
         })
       : null,
   ])

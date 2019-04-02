@@ -10,7 +10,7 @@ bundleNode({
   entryPointObject: {
     main: "debugger.js",
   },
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
 })

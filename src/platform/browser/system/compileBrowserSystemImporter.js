@@ -1,13 +1,14 @@
 import { bundleBrowser } from "@jsenv/core"
-import { babelPluginDescription } from "@jsenv/babel-plugin-description"
 import { projectFolder } from "../../../../projectFolder.js"
+
+const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
 
 export const compileBrowserSystemImporter = async () => {
   await bundleBrowser({
     projectFolder,
     into: "dist",
-    babelPluginDescription,
-    entryPointsDescription: {
+    babelConfigMap,
+    entryPointMap: {
       main: "src/platform/browser/system/createSystemImporter.js",
     },
     globalName: "__browserImporter__",

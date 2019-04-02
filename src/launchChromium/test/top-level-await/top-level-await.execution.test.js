@@ -10,7 +10,7 @@ const transformAsyncToPromises = import.meta.require("babel-plugin-transform-asy
 const testFolder = `${projectFolder}/src/launchChromium/test/top-level-await`
 const filenameRelative = `top-level-await.js`
 const compileInto = ".dist"
-const babelPluginDescription = {
+const babelConfigMap = {
   "transform-async-to-promises": [transformAsyncToPromises],
   "transform-block-scoping": [transformBlockScoping],
 }
@@ -21,7 +21,7 @@ const babelPluginDescription = {
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   const actual = await launchAndExecute({

@@ -1,27 +1,27 @@
 import { createOperation, createCancellationToken } from "@dmail/cancellation"
 import { fileWrite } from "@dmail/helper"
 
-export const generateEntryPointsDescriptionPages = async ({
+export const generateEntryPointMapPages = async ({
   cancellationToken = createCancellationToken(),
   projectFolder,
   into,
-  entryPointsDescription,
+  entryPointMap,
 }) => {
   await Promise.all(
-    Object.keys(entryPointsDescription).map((entryName) => {
+    Object.keys(entryPointMap).map((entryPoint) => {
       return generateEntryPage({
         cancellationToken,
         projectFolder,
         into,
-        entryName,
+        entryPoint,
       })
     }),
   )
 }
 
-const generateEntryPage = async ({ cancellationToken, projectFolder, into, entryName }) => {
-  const entryFilenameRelative = `${entryName}.js`
-  const pageFilenameRelative = `${entryName}.html`
+const generateEntryPage = async ({ cancellationToken, projectFolder, into, entryPoint }) => {
+  const entryFilenameRelative = `${entryPoint}.js`
+  const pageFilenameRelative = `${entryPoint}.html`
 
   const html = `<!doctype html>
 

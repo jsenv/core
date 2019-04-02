@@ -10,7 +10,7 @@ import { jsCompile } from "../../jsCompile.js"
 const root = `${projectFolder}/src/jsCompile/test/fixtures`
 const file = "file.js"
 const fileAbsolute = `${root}/${file}`
-const babelPluginDescription = {
+const babelConfigMap = {
   "transform-block-scoping": [transformBlockScoping],
   "transform-instrument": [createInstrumentPlugin()],
 }
@@ -20,7 +20,7 @@ jsCompile({
   file,
   fileAbsolute,
   input: fs.readFileSync(fileAbsolute).toString(),
-  babelPluginDescription,
+  babelConfigMap,
   instrument: true,
 }).then(({ assets, output }) => {
   assert({ actual: assets, expected: ["file.js.map", "coverage.json"] })

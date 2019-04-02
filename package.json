@@ -25,6 +25,7 @@
 		"@babel/plugin-syntax-import-meta": "7.2.0",
 		"@jsenv/core": "4.16.0",
 		"@jsenv/module-resolution": "2.0.0",
+		"@jsenv/babel-config-map": "1.0.0",
 		"@dmail/cancellation": "2.1.0",
 		"@dmail/helper": "2.0.0",
 		"@dmail/prettiest": "4.2.0",

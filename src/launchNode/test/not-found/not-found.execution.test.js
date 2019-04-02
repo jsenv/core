@@ -7,7 +7,7 @@ import { launchNode } from "../../launchNode.js"
 const testFolder = `${projectFolder}/src/launchNode/test/not-found`
 const filenameRelative = `not-found.js`
 const compileInto = ".dist"
-const babelPluginDescription = {}
+const babelConfigMap = {}
 
 ;(async () => {
   const sourceOrigin = `file://${testFolder}`
@@ -15,7 +15,7 @@ const babelPluginDescription = {}
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   const actual = await launchAndExecute({

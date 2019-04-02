@@ -4,10 +4,10 @@ import { bundleNode } from "../../bundleNode.js"
 
 bundleNode({
   projectFolder,
-  entryPointsDescription: {
+  entryPointMap: {
     main: "src/bundle/node/test/https/https.js",
   },
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
 })

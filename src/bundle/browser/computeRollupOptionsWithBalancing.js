@@ -1,6 +1,5 @@
-import { groupToBabelPluginDescription } from "../../group-description/index.js"
 import { createJsenvRollupPlugin } from "../createJsenvRollupPlugin.js"
-import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionToRollupPlugin.js"
+import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 
 export const computeRollupOptionsWithBalancing = ({
   cancellationToken,
@@ -8,19 +7,21 @@ export const computeRollupOptionsWithBalancing = ({
   projectFolder,
   into,
   globalName,
-  entryPointsDescription,
-  babelPluginDescription,
-  groupDescription,
+  entryPointMap,
+  babelConfigMap,
+  groupMap,
   compileId,
   log,
   minify,
 }) => {
   const dir = `${projectFolder}/${into}/${compileId}`
 
-  const groupBabelPluginDescription = groupToBabelPluginDescription(
-    groupDescription[compileId],
-    babelPluginDescription,
-  )
+  const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    featureNameArray: groupMap[compileId].incompatibleNameArray,
+    babelConfigMap,
+    minify,
+    target: "browser",
+  })
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({
     cancellationToken,
@@ -31,22 +32,15 @@ export const computeRollupOptionsWithBalancing = ({
   log(`
 bundle entry points for browser with balancing.
 compileId: ${compileId}
-entryNameArray: ${Object.keys(entryPointsDescription)}
-babelPluginNameArray: ${Object.keys(groupBabelPluginDescription)}
+entryPointArray: ${Object.keys(entryPointMap)}
 dir: ${dir}
 minify: ${minify}
 `)
 
-  const babelRollupPlugin = babelPluginDescriptionToRollupPlugin({
-    babelPluginDescription: groupBabelPluginDescription,
-    minify,
-    target: "browser",
-  })
-
   return {
     rollupParseOptions: {
-      input: entryPointsDescription,
-      plugins: [babelRollupPlugin, jsenvRollupPlugin],
+      input: entryPointMap,
+      plugins: [featureProviderRollupPlugin, jsenvRollupPlugin],
     },
     rollupGenerateOptions: {
       dir,

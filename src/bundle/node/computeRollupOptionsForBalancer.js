@@ -1,23 +1,22 @@
 import createNodeResolveRollupPlugin from "rollup-plugin-node-resolve"
 import { uneval } from "@dmail/uneval"
 import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
-import { groupToBabelPluginDescription } from "../../group-description/index.js"
-import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionToRollupPlugin.js"
+import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 
 const BUNDLE_NODE_OPTIONS_SPECIFIER = "\0bundle-node-options.js"
 
 export const computeRollupOptionsForBalancer = ({
   projectFolder,
   into,
-  babelPluginDescription,
-  groupDescription,
-  entryName,
+  babelConfigMap,
+  groupMap,
+  entryPoint,
   entryFilenameRelative,
   log,
   minify,
 }) => {
   const balancerOptionSource = generateBalancerOptionsSource({
-    groupDescription,
+    groupMap,
     entryFilenameRelative,
   })
 
@@ -45,12 +44,9 @@ export const computeRollupOptionsForBalancer = ({
     module: true,
   })
 
-  const otherwiseBabelPluginDescription = groupToBabelPluginDescription(
-    groupDescription.otherwise,
-    babelPluginDescription,
-  )
-  const babelRollupPlugin = babelPluginDescriptionToRollupPlugin({
-    babelPluginDescription: otherwiseBabelPluginDescription,
+  const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    featureNameArray: groupMap.otherwise.incompatibleNameArray,
+    babelConfigMap,
     minify,
     target: "node",
   })
@@ -58,9 +54,8 @@ export const computeRollupOptionsForBalancer = ({
   const file = `${projectFolder}/${into}/${entryFilenameRelative}`
 
   log(`
-bundle balancer file for node
-entryName: ${entryName}
-babelPluginNameArray: ${Object.keys(otherwiseBabelPluginDescription)}
+bundle balancer file for node.
+entryPoint: ${entryPoint}
 file: ${file}
 minify : ${minify}
 `)
@@ -68,7 +63,7 @@ minify : ${minify}
   return {
     rollupParseOptions: {
       input: `${selfProjectFolder}/src/bundle/node/node-balancer-template.js`,
-      plugins: [nodeBalancerRollupPlugin, nodeResolveRollupPlugin, babelRollupPlugin],
+      plugins: [nodeBalancerRollupPlugin, nodeResolveRollupPlugin, featureProviderRollupPlugin],
     },
     rollupGenerateOptions: {
       file,
@@ -80,9 +75,9 @@ minify : ${minify}
   }
 }
 
-const generateBalancerOptionsSource = ({ entryFilenameRelative, groupDescription }) => {
+const generateBalancerOptionsSource = ({ entryFilenameRelative, groupMap }) => {
   return `
 export const entryFilenameRelative = ${uneval(entryFilenameRelative)}
-export const groupDescription = ${uneval(groupDescription)}
+export const groupMap = ${uneval(groupMap)}
 `
 }

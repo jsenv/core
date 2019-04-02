@@ -8,10 +8,10 @@ bundleBrowser({
   projectFolder,
   into: "dist/browser",
   globalPromiseName: "debug",
-  entryPointsDescription: {
+  entryPointMap: {
     main: "debugger.js",
   },
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
   verbose: true,

@@ -9,7 +9,7 @@ const testFolder = `${projectFolder}/src/jsCompile/test/top-level-await`
 const filenameRelative = "top-level-await.js"
 const filename = `${testFolder}/${filenameRelative}`
 const input = fs.readFileSync(filename).toString()
-const babelPluginDescription = {
+const babelConfigMap = {
   "transform-async-to-promises": [transformAsyncToPromises],
 }
 
@@ -19,7 +19,7 @@ const babelPluginDescription = {
     filename,
     filenameRelative,
     projectFolder: testFolder,
-    babelPluginDescription,
+    babelConfigMap,
   })
   const actual = output.indexOf("async function")
   const expected = -1

@@ -6,7 +6,7 @@ import { launchNode } from "../../launchNode.js"
 
 const filenameRelative = `src/launchNode/test/syntax-error/syntax-error.js`
 const compileInto = ".dist"
-const babelPluginDescription = {}
+const babelConfigMap = {}
 
 ;(async () => {
   const sourceOrigin = `file://${projectFolder}`
@@ -14,7 +14,7 @@ const babelPluginDescription = {}
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   const actual = await launchAndExecute({

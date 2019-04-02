@@ -4,19 +4,19 @@ import { browserToCompileId } from "./browserToCompileId.js"
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
 
 export const loadCompileMeta = memoizeOnce(async ({ compileInto, compileServerOrigin }) => {
-  const groupDescriptionHref = `${compileServerOrigin}/${compileInto}/groupDescription.json`
+  const groupMapHref = `${compileServerOrigin}/${compileInto}/groupMap.json`
 
-  const groupDescriptionResponse = await fetchUsingXHR(groupDescriptionHref)
-  if (groupDescriptionResponse.status < 200 || groupDescriptionResponse.status >= 400) {
-    return Promise.reject(groupDescriptionResponse)
+  const groupMapResponse = await fetchUsingXHR(groupMapHref)
+  if (groupMapResponse.status < 200 || groupMapResponse.status >= 400) {
+    return Promise.reject(groupMapResponse)
   }
 
-  const groupDescription = JSON.parse(groupDescriptionResponse.body)
+  const groupMap = JSON.parse(groupMapResponse.body)
   const browser = detect()
-  const compileId = browserToCompileId(browser, groupDescription) || "otherwise"
+  const compileId = browserToCompileId(browser, groupMap) || "otherwise"
 
   return {
-    groupDescription,
+    groupMap,
     compileId,
   }
 })

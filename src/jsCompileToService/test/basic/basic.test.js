@@ -12,7 +12,7 @@ const compileId = "test"
     compileInto,
     compileDescription: {
       [compileId]: {
-        babelPluginDescription: {},
+        babelConfigMap: {},
       },
     },
   })

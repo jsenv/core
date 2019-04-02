@@ -7,7 +7,7 @@ import { startCompileServer } from "../../../server-compile/index.js"
 const testFolder = `${projectFolder}/src/launchNode/test/alive`
 const filenameRelative = `alive.js`
 const compileInto = ".dist"
-const babelPluginDescription = {}
+const babelConfigMap = {}
 
 ;(async () => {
   const sourceOrigin = `file://${testFolder}`
@@ -15,7 +15,7 @@ const babelPluginDescription = {}
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   const actual = await launchAndExecute({

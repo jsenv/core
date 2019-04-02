@@ -8,10 +8,10 @@ bundleBrowser({
   projectFolder,
   into: "dist/browser",
   globalName: "originRelative",
-  entryPointsDescription: {
+  entryPointMap: {
     main: "origin-relative.js",
   },
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
   verbose: true,

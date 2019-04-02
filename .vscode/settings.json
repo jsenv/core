@@ -10,7 +10,5 @@
     "coverage/**": true
   },
   "javascript.validate.enable": false,
-  "npm.autoDetect": "on",
-  "npm.enableScriptExplorer": true,
-  "npm.scriptExplorerAction": "open"
+  "npm.enableScriptExplorer": true
 }

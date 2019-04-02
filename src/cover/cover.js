@@ -19,9 +19,9 @@ export const cover = async ({
   projectFolder,
   compileInto,
   compileGroupCount = 2,
-  babelPluginDescription,
+  babelConfigMap,
   // coverDescription could be deduced from passing
-  // an entryPointsDescription and collecting all dependencies
+  // an entryPointMap and collecting all dependencies
   // for now we stick to coverDescription using project-structure api
   coverDescription,
   executeDescription,
@@ -49,7 +49,7 @@ export const cover = async ({
         projectFolder,
         compileInto,
         compileGroupCount,
-        babelPluginDescription,
+        babelConfigMap,
         executeDescription,
         coverFilePredicate,
         defaultAllocatedMsPerExecution,
@@ -134,7 +134,7 @@ const executeAndCoverPatternMapping = async ({
   projectFolder,
   compileInto,
   compileGroupCount,
-  babelPluginDescription,
+  babelConfigMap,
   executeDescription,
   coverFilePredicate,
   defaultAllocatedMsPerExecution,
@@ -143,8 +143,8 @@ const executeAndCoverPatternMapping = async ({
     predicate: (filenameRelative) => coverFilePredicate(filenameRelative),
   })
 
-  const babelPluginDescriptionWithInstrumentation = {
-    ...babelPluginDescription,
+  const babelConfigMapWithInstrumentation = {
+    ...babelConfigMap,
     "transform-instrument": [instrumentBabelPlugin],
   }
 
@@ -154,7 +154,7 @@ const executeAndCoverPatternMapping = async ({
     projectFolder,
     compileInto,
     compileGroupCount,
-    babelPluginDescription: babelPluginDescriptionWithInstrumentation,
+    babelConfigMap: babelConfigMapWithInstrumentation,
     executeDescription,
     defaultAllocatedMsPerExecution,
   })

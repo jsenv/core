@@ -10,7 +10,7 @@ export const executeDescriptionToExecutionPlan = async ({
   projectFolder,
   compileInto,
   compileGroupCount,
-  babelPluginDescription,
+  babelConfigMap,
   executeDescription,
   verbose = false,
   defaultAllocatedMsPerExecution = 20000,
@@ -23,7 +23,7 @@ export const executeDescriptionToExecutionPlan = async ({
     projectFolder,
     compileInto,
     compileGroupCount,
-    babelPluginDescription,
+    babelConfigMap,
     verbose,
   })
 

@@ -14,10 +14,10 @@ const testFolder = `${projectFolder}/src/bundle/node/test/async-generator`
 bundleNode({
   projectFolder: testFolder,
   into: "dist/node",
-  entryPointsDescription: {
+  entryPointMap: {
     main: "async.js",
   },
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-async-to-generator": [transformAsyncToGenerator],
     "transform-regenerator": [transformRegenerator],
     "transform-runtime": [transformRuntime],

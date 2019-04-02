@@ -8,10 +8,10 @@ bundleBrowser({
   projectFolder: testFolder,
   into: "dist/browser",
   globalName: "balancing",
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
-  entryPointsDescription: {
+  entryPointMap: {
     main: "balancing.js",
   },
   compileGroupCount: 2,

@@ -6,7 +6,7 @@
 // than importing it from an undocumented location.
 // Ideally it would be documented or a separate module
 
-export const babelPluginCompatibilityDescription = {
+export const babelCompatMap = {
   "transform-template-literals": {
     chrome: "41",
     edge: "13",

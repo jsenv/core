@@ -3,9 +3,9 @@ import { transformAsync, transformFromAstAsync } from "@babel/core"
 import transformModulesSystemJs from "../babel-plugin-transform-modules-systemjs/index.js"
 import { regexpEscape } from "../stringHelper.js"
 import {
-  babelPluginDescriptionToBabelPluginArray,
+  babelConfigMapToBabelPluginArray,
   defaultBabelPluginArray,
-} from "./babelPluginDescriptionToBabelPluginArray.js"
+} from "./babeConfigMapToBabelPluginArray.js"
 
 export const transpiler = async ({
   input,
@@ -13,16 +13,16 @@ export const transpiler = async ({
   filenameRelative,
   inputAst,
   inputMap,
-  babelPluginDescription,
+  babelConfigMap,
   remap,
 }) => {
   const transformModuleIntoSystemFormat = true
   const allowTopLevelAwait = true
 
   let asyncPluginName
-  if ("transform-async-to-promises" in babelPluginDescription) {
+  if ("transform-async-to-promises" in babelConfigMap) {
     asyncPluginName = "transform-async-to-promises"
-  } else if ("transform-async-to-generator" in babelPluginDescription) {
+  } else if ("transform-async-to-generator" in babelConfigMap) {
     asyncPluginName = "transform-async-to-generator"
   } else {
     asyncPluginName = ""
@@ -44,10 +44,9 @@ export const transpiler = async ({
   }
 
   if (transformModuleIntoSystemFormat && allowTopLevelAwait && asyncPluginName) {
-    const babelPluginDescriptionWithoutAsyncPlugin = {}
-    Object.keys(babelPluginDescription).forEach((name) => {
-      if (name !== asyncPluginName)
-        babelPluginDescriptionWithoutAsyncPlugin[name] = babelPluginDescription[name]
+    const babelConfigMapWithoutAsyncPlugin = {}
+    Object.keys(babelConfigMap).forEach((name) => {
+      if (name !== asyncPluginName) babelConfigMapWithoutAsyncPlugin[name] = babelConfigMap[name]
     })
 
     // put body inside something like (async () => {})()
@@ -57,7 +56,7 @@ export const transpiler = async ({
       options: {
         ...options,
         plugins: [
-          ...babelPluginDescriptionToBabelPluginArray(babelPluginDescriptionWithoutAsyncPlugin),
+          ...babelConfigMapToBabelPluginArray(babelConfigMapWithoutAsyncPlugin),
           [transformModulesSystemJs, { topLevelAwait: true }],
         ],
       },
@@ -77,7 +76,7 @@ export const transpiler = async ({
         // https://github.com/babel/babel/blob/eac4c5bc17133c2857f2c94c1a6a8643e3b547a7/packages/babel-core/src/transformation/file/generate.js#L57
         // https://github.com/babel/babel/blob/090c364a90fe73d36a30707fc612ce037bdbbb24/packages/babel-core/src/transformation/file/merge-map.js#L6s
         inputSourceMap: result.map,
-        plugins: [...defaultBabelPluginArray, babelPluginDescription[asyncPluginName]],
+        plugins: [...defaultBabelPluginArray, babelConfigMap[asyncPluginName]],
       },
     })
 
@@ -85,7 +84,7 @@ export const transpiler = async ({
   }
 
   const babelPluginArray = [
-    ...babelPluginDescriptionToBabelPluginArray(babelPluginDescription),
+    ...babelConfigMapToBabelPluginArray(babelConfigMap),
     [transformModulesSystemJs, { topLevelAwait: allowTopLevelAwait }],
   ]
   return transpile({

@@ -7,11 +7,11 @@ const projectFolder = `${selfProjectFolder}/src/bundle/node/test/two-entry`
 bundleNode({
   projectFolder,
   into: "dist/node",
-  entryPointsDescription: {
+  entryPointMap: {
     a: "a.js",
     b: "b.js",
   },
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
   verbose: true,

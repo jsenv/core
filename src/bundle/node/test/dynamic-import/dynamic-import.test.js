@@ -7,10 +7,10 @@ const projectFolder = `${selfProjectFolder}/src/bundle/node/test/dynamic-import`
 bundleNode({
   projectFolder,
   into: "dist/node",
-  entryPointsDescription: {
+  entryPointMap: {
     main: "dynamic-import.js",
   },
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
   verbose: true,

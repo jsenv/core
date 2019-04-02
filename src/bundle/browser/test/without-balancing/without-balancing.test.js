@@ -8,8 +8,8 @@ bundleBrowser({
   projectFolder: testFolder,
   into: "dist/browser",
   globalName: "withoutBalancing",
-  babelPluginDescription,
-  entryPointsDescription: {
+  babelConfigMap: babelPluginDescription,
+  entryPointMap: {
     main: "without-balancing.js",
   },
   verbose: true,

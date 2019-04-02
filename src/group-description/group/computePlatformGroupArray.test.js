@@ -3,7 +3,7 @@ import { computePlatformGroupArray } from "./computePlatformGroupArray.js"
 
 {
   const actual = computePlatformGroupArray({
-    compatibilityDescription: {
+    featureCompatMap: {
       a: {
         chrome: 10,
       },
@@ -17,19 +17,19 @@ import { computePlatformGroupArray } from "./computePlatformGroupArray.js"
   const expected = [
     {
       incompatibleNameArray: ["a", "b", "c"],
-      compatibility: {
+      platformCompatibility: {
         chrome: "0.0.0",
       },
     },
     {
       incompatibleNameArray: ["a", "b"],
-      compatibility: {
+      platformCompatibility: {
         chrome: "9",
       },
     },
     {
       incompatibleNameArray: ["b"],
-      compatibility: {
+      platformCompatibility: {
         chrome: "10",
       },
     },

@@ -8,7 +8,7 @@ import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCov
 
 const testFolder = `${projectFolder}/src/executionPlanResultToCoverageMap/test/node-and-chrome`
 const compileInto = ".dist"
-const babelPluginDescription = {}
+const babelConfigMap = {}
 
 ;(async () => {
   const sourceOrigin = `file://${testFolder}`
@@ -16,7 +16,7 @@ const babelPluginDescription = {}
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
     protocol: "http",
     ip: "127.0.0.1",
     port: 0,

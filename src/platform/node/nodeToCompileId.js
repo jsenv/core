@@ -1,8 +1,8 @@
 import { findHighestVersion } from "../../semantic-versioning/index.js"
 
-export const nodeToCompileId = ({ name, version }, groupDescription) => {
-  return Object.keys(groupDescription).find((compileIdCandidate) => {
-    const { compatibility } = groupDescription[compileIdCandidate]
+export const nodeToCompileId = ({ name, version }, groupMap) => {
+  return Object.keys(groupMap).find((compileIdCandidate) => {
+    const { compatibility } = groupMap[compileIdCandidate]
     if (name in compatibility === false) {
       return false
     }

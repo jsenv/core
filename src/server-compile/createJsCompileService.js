@@ -3,12 +3,12 @@ import { fileWrite } from "@dmail/helper"
 import { jsCompile } from "../jsCompile/index.js"
 import { jsCompileToService } from "../jsCompileToService/index.js"
 import {
-  generateGroupDescription,
-  groupDescriptionToCompileDescription,
+  generateGroupMap,
   browserScoring as browserDefaultScoring,
   nodeScoring as nodeDefaultScoring,
 } from "../group-description/index.js"
 import { wrapImportMap } from "../import-map/wrapImportMap.js"
+import { objectMapValue } from "../objectHelper.js"
 
 export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),
@@ -16,8 +16,8 @@ export const createJsCompileService = async ({
   projectFolder,
   compileInto,
   compileGroupCount,
-  babelPluginDescription,
-  babelPluginCompatibilityDescription,
+  babelConfigMap,
+  babelCompatMap,
   locate,
   browserScoring = browserDefaultScoring,
   nodeScoring = nodeDefaultScoring,
@@ -27,22 +27,31 @@ export const createJsCompileService = async ({
   watch,
   watchPredicate,
 }) => {
-  const groupDescription = generateGroupDescription({
-    babelPluginDescription,
+  const groupMap = generateGroupMap({
+    babelConfigMap,
+    babelCompatMap,
     platformScoring: { ...browserScoring, ...nodeScoring },
     groupCount: compileGroupCount,
-    babelPluginCompatibilityDescription,
   })
 
-  const compileDescription = groupDescriptionToCompileDescription(
-    groupDescription,
-    babelPluginDescription,
-  )
+  const compileDescription = objectMapValue(groupMap, (group) => {
+    const groupBabelConfigMap = {}
+
+    group.incompatibleNameArray.forEach((incompatibleFeatureName) => {
+      if (incompatibleFeatureName in babelConfigMap) {
+        groupBabelConfigMap[incompatibleFeatureName] = babelConfigMap[incompatibleFeatureName]
+      }
+    })
+
+    return {
+      babelConfigMap: groupBabelConfigMap,
+    }
+  })
 
   await Promise.all([
     fileWrite(
-      `${projectFolder}/${compileInto}/groupDescription.json`,
-      JSON.stringify(groupDescription, null, "  "),
+      `${projectFolder}/${compileInto}/groupMap.json`,
+      JSON.stringify(groupMap, null, "  "),
     ),
     fileWrite(
       `${projectFolder}/${compileInto}/importMap.json`,

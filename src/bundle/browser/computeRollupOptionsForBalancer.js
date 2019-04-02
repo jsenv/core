@@ -1,8 +1,7 @@
 import createNodeResolveRollupPlugin from "rollup-plugin-node-resolve"
 import { uneval } from "@dmail/uneval"
 import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
-import { groupToBabelPluginDescription } from "../../group-description/index.js"
-import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionToRollupPlugin.js"
+import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 
 const BUNDLE_BROWSER_OPTIONS_SPECIFIER = "\0bundle-browser-options.js"
 
@@ -11,9 +10,9 @@ export const computeRollupOptionsForBalancer = ({
   into,
   globalName,
   globalNameIsPromise,
-  babelPluginDescription,
-  groupDescription,
-  entryName,
+  babelConfigMap,
+  groupMap,
+  entryPoint,
   entryFilenameRelative,
   log,
   minify,
@@ -21,7 +20,7 @@ export const computeRollupOptionsForBalancer = ({
   const balancerOptionSource = generateBalancerOptionsSource({
     globalName,
     globalNameIsPromise,
-    groupDescription,
+    groupMap,
     entryFilenameRelative,
   })
 
@@ -49,12 +48,9 @@ export const computeRollupOptionsForBalancer = ({
     module: true,
   })
 
-  const otherwiseBabelPluginDescription = groupToBabelPluginDescription(
-    groupDescription.otherwise,
-    babelPluginDescription,
-  )
-  const babelRollupPlugin = babelPluginDescriptionToRollupPlugin({
-    babelPluginDescription: otherwiseBabelPluginDescription,
+  const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    featureNameArray: groupMap.otherwise.incompatibleNameArray,
+    babelConfigMap,
     minify,
     target: "browser",
   })
@@ -63,8 +59,7 @@ export const computeRollupOptionsForBalancer = ({
 
   log(`
 bundle balancer file for browser
-entryName: ${entryName}
-babelPluginNameArray: ${Object.keys(otherwiseBabelPluginDescription)}
+entryPoint: ${entryPoint}
 file: ${file}
 minify: ${minify}
 `)
@@ -72,7 +67,7 @@ minify: ${minify}
   return {
     rollupParseOptions: {
       input: `${selfProjectFolder}/src/bundle/browser/browser-balancer-template.js`,
-      plugins: [browserBalancerRollupPlugin, nodeResolveRollupPlugin, babelRollupPlugin],
+      plugins: [browserBalancerRollupPlugin, nodeResolveRollupPlugin, featureProviderRollupPlugin],
     },
     rollupGenerateOptions: {
       file,
@@ -88,8 +83,8 @@ const generateBalancerOptionsSource = ({
   globalName,
   globalNameIsPromise,
   entryFilenameRelative,
-  groupDescription,
+  groupMap,
 }) => `export const globalName = ${uneval(globalName)}
 export const globalNameIsPromise = ${uneval(globalNameIsPromise)}
 export const entryFilenameRelative = ${uneval(entryFilenameRelative)}
-export const groupDescription = ${uneval(groupDescription)}`
+export const groupMap = ${uneval(groupMap)}`

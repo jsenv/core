@@ -14,7 +14,7 @@ const test = async () => {
     compileInto,
     compileDescription: {
       [compileId]: {
-        babelPluginDescription: {
+        babelConfigMap: {
           "transform-instrument": createInstrumentPlugin(),
         },
       },

@@ -8,7 +8,7 @@ const projectFolder = `${selfProjectFolder}/src/jsCompile/test/basic`
 const filenameRelative = "basic.js"
 const filename = `${projectFolder}/${filenameRelative}`
 const input = fs.readFileSync(filename).toString()
-const babelPluginDescription = {
+const babelConfigMap = {
   "transform-block-scoping": [transformBlockScoping],
 }
 
@@ -18,7 +18,7 @@ const test = async () => {
     filename,
     filenameRelative,
     projectFolder,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   assert({ actual: sources, expected: [filenameRelative] })

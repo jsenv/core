@@ -1,36 +1,36 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { generateGroupDescription } from "./generateGroupDescription.js"
+import { generateGroupMap } from "./generateGroupMap.js"
 import { browserScoring } from "./browserScoring.js"
 import { nodeScoring } from "./nodeScoring.js"
 
 {
-  const babelPluginDescription = { "transform-block-scoping": true }
-  const actual = generateGroupDescription({
-    babelPluginDescription,
+  const babelConfigMap = { "transform-block-scoping": true }
+  const actual = generateGroupMap({
+    babelConfigMap,
     platformScoring: nodeScoring,
     groupCount: 2,
   })
   const expected = {
-    best: { babelPluginNameArray: [], compatibility: { node: "6" } },
+    best: { incompatibleNameArray: [], platformCompatibility: { node: "6" } },
     otherwise: {
-      babelPluginNameArray: Object.keys(babelPluginDescription),
-      compatibility: {},
+      incompatibleNameArray: Object.keys(babelConfigMap),
+      platformCompatibility: {},
     },
   }
   assert({ actual, expected })
 }
 
 {
-  const babelPluginDescription = { "transform-block-scoping": true }
-  const actual = generateGroupDescription({
-    babelPluginDescription,
+  const babelConfigMap = { "transform-block-scoping": true }
+  const actual = generateGroupMap({
+    babelConfigMap,
     platformScoring: browserScoring,
     groupCount: 2,
   })
   const expected = {
     best: {
-      babelPluginNameArray: [],
-      compatibility: {
+      incompatibleNameArray: [],
+      platformCompatibility: {
         chrome: "49",
         firefox: "51",
         edge: "14",
@@ -41,27 +41,27 @@ import { nodeScoring } from "./nodeScoring.js"
       },
     },
     otherwise: {
-      babelPluginNameArray: Object.keys(babelPluginDescription),
-      compatibility: {},
+      incompatibleNameArray: Object.keys(babelConfigMap),
+      platformCompatibility: {},
     },
   }
   assert({ actual, expected })
 }
 
 {
-  const babelPluginDescription = {
+  const babelConfigMap = {
     "transform-block-scoping": true,
     "transform-modules-systemjs": true,
   }
-  const actual = generateGroupDescription({
-    babelPluginDescription,
+  const actual = generateGroupMap({
+    babelConfigMap,
     platformScoring: browserScoring,
     groupCount: 2,
   })
   const expected = {
     best: {
-      babelPluginNameArray: ["transform-modules-systemjs"],
-      compatibility: {
+      incompatibleNameArray: ["transform-modules-systemjs"],
+      platformCompatibility: {
         chrome: "49",
         firefox: "51",
         edge: "14",
@@ -72,15 +72,15 @@ import { nodeScoring } from "./nodeScoring.js"
       },
     },
     otherwise: {
-      babelPluginNameArray: Object.keys(babelPluginDescription),
-      compatibility: {},
+      incompatibleNameArray: Object.keys(babelConfigMap),
+      platformCompatibility: {},
     },
   }
   assert({ actual, expected })
 }
 
 {
-  const babelPluginDescription = {
+  const babelConfigMap = {
     "proposal-async-generator-functions": true,
     "proposal-object-rest-spread": true,
     "proposal-optional-catch-binding": true,
@@ -113,14 +113,14 @@ import { nodeScoring } from "./nodeScoring.js"
     "transform-typeof-symbol": true,
     "transform-unicode-regex": true,
   }
-  const actual = generateGroupDescription({
-    babelPluginDescription,
+  const actual = generateGroupMap({
+    babelConfigMap,
     platformScoring: { ...browserScoring, ...nodeScoring },
     groupCount: 2,
   })
   const expected = {
     best: {
-      babelPluginNameArray: [
+      incompatibleNameArray: [
         "proposal-async-generator-functions",
         "proposal-json-strings",
         "proposal-optional-catch-binding",
@@ -130,7 +130,7 @@ import { nodeScoring } from "./nodeScoring.js"
         "syntax-optional-catch-binding",
         "transform-dotall-regex",
       ],
-      compatibility: {
+      platformCompatibility: {
         chrome: "60",
         firefox: "55",
         electron: "2",
@@ -139,8 +139,8 @@ import { nodeScoring } from "./nodeScoring.js"
       },
     },
     otherwise: {
-      babelPluginNameArray: Object.keys(babelPluginDescription),
-      compatibility: {},
+      incompatibleNameArray: Object.keys(babelConfigMap),
+      platformCompatibility: {},
     },
   }
   assert({ actual, expected })

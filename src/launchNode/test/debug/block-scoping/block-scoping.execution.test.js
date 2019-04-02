@@ -10,7 +10,7 @@ const testFolder = projectFolder
 // knows where sourcefiles are
 const filenameRelative = `src/launchNode/test/debug/block-scoping/debug.js`
 const compileInto = ".dist"
-const babelPluginDescription = { "transform-block-scoping": [] }
+const babelConfigMap = { "transform-block-scoping": [] }
 
 ;(async () => {
   const sourceOrigin = `file://${testFolder}`
@@ -18,7 +18,7 @@ const babelPluginDescription = { "transform-block-scoping": [] }
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   const actual = await launchAndExecute({

@@ -1,15 +1,15 @@
 import { findHighestVersion, versionCompare } from "../../semantic-versioning/index.js"
 import { computeIncompatibleNameArray } from "./computeIncompatibleNameArray.js"
 
-export const computePlatformGroupArray = ({ compatibilityDescription, platformName }) => {
-  const featureNameArray = Object.keys(compatibilityDescription)
-  const featureNameArrayWithCompatibility = featureNameArray.filter(
-    (featureName) => platformName in compatibilityDescription[featureName],
+export const computePlatformGroupArray = ({ featureCompatMap, platformName }) => {
+  const featureNameArray = Object.keys(featureCompatMap)
+  const featureNameArrayWithCompat = featureNameArray.filter(
+    (featureName) => platformName in featureCompatMap[featureName],
   )
 
-  const versionArray = featureNameArrayWithCompatibility
+  const versionArray = featureNameArrayWithCompat
     // why do I convert them to string, well ok let's keep it like that
-    .map((featureName) => String(compatibilityDescription[featureName][platformName]))
+    .map((featureName) => String(featureCompatMap[featureName][platformName]))
     .concat("0.0.0") // at least version 0
     // filter is to have unique version I guess
     .filter((version, index, array) => array.indexOf(version) === index)
@@ -19,25 +19,25 @@ export const computePlatformGroupArray = ({ compatibilityDescription, platformNa
 
   versionArray.forEach((version) => {
     const incompatibleNameArray = computeIncompatibleNameArray({
-      compatibilityDescription,
+      featureCompatMap,
       platformName,
       platformVersion: version,
     }).sort()
 
-    const platformGroupWithSameIncompatibleFeatures = platformGroupArray.find(
+    const groupWithSameIncompatibleFeatures = platformGroupArray.find(
       (platformGroup) =>
         platformGroup.incompatibleNameArray.join("") === incompatibleNameArray.join(""),
     )
 
-    if (platformGroupWithSameIncompatibleFeatures) {
-      platformGroupWithSameIncompatibleFeatures.compatibility[platformName] = findHighestVersion(
-        platformGroupWithSameIncompatibleFeatures.compatibility[platformName],
+    if (groupWithSameIncompatibleFeatures) {
+      groupWithSameIncompatibleFeatures.platformCompatibility[platformName] = findHighestVersion(
+        groupWithSameIncompatibleFeatures.platformCompatibility[platformName],
         version,
       )
     } else {
       platformGroupArray.push({
         incompatibleNameArray: incompatibleNameArray.slice(),
-        compatibility: {
+        platformCompatibility: {
           [platformName]: version,
         },
       })

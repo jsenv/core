@@ -11,7 +11,7 @@ export const bundleWithRollup = async ({
     start: () =>
       rollup({
         // about cache here, we should/could reuse previous rollup call
-        // to get the cache from the entryPointsDescription
+        // to get the cache from the entryPointMap
         // as shown here: https://rollupjs.org/guide/en#cache
         // it could be passed in arguments to this function
         // however parallelism and having different rollup options per
@@ -34,7 +34,7 @@ export const bundleWithRollup = async ({
         // https://rollupjs.org/guide/en#experimentaltoplevelawait
         experimentalTopLevelAwait: true,
         // we could put prefConst to true by checking 'transform-block-scoping'
-        // presence in babelPluginDescription
+        // presence in babelConfigMap
         preferConst: false,
         ...rollupGenerateOptions,
       }),

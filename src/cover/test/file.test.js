@@ -11,7 +11,7 @@ const compileInto = ".dist"
   const { coverageMap } = await cover({
     projectFolder: testFolder,
     compileInto,
-    babelPluginDescription: {},
+    babelConfigMap: {},
     coverDescription: {
       "file.js": true,
     },

@@ -1,5 +1,5 @@
-import assert from "assert"
-import { compatibilityToScore } from "./compatibilityToScore.js"
+import { assert } from "/node_modules/@dmail/assert/index.js"
+import { platformCompatibilityToScore } from "./platformCompatibilityToScore.js"
 
 {
   const chrome50Score = 1
@@ -16,51 +16,51 @@ import { compatibilityToScore } from "./compatibilityToScore.js"
   }
 
   {
-    const actual = compatibilityToScore(
+    const actual = platformCompatibilityToScore(
       {
         chrome: "48",
       },
       platformScoring,
     )
     const expected = chromeBelow49Score
-    assert.equal(actual, expected)
+    assert({ actual, expected })
   }
 
   {
-    const actual = compatibilityToScore(
+    const actual = platformCompatibilityToScore(
       {
         chrome: "49",
       },
       platformScoring,
     )
     const expected = chrome49Score
-    assert.equal(actual, expected)
+    assert({ actual, expected })
   }
 
   {
-    const actual = compatibilityToScore(
+    const actual = platformCompatibilityToScore(
       {
         chrome: "50",
       },
       platformScoring,
     )
     const expected = chrome50Score
-    assert.equal(actual, expected)
+    assert({ actual, expected })
   }
 
   {
-    const actual = compatibilityToScore(
+    const actual = platformCompatibilityToScore(
       {
         chrome: "51",
       },
       platformScoring,
     )
     const expected = chrome50Score
-    assert.equal(actual, expected)
+    assert({ actual, expected })
   }
 
   {
-    const actual = compatibilityToScore(
+    const actual = platformCompatibilityToScore(
       {
         chrome: "51",
         foo: ["0"],
@@ -68,8 +68,6 @@ import { compatibilityToScore } from "./compatibilityToScore.js"
       platformScoring,
     )
     const expected = chrome50Score + otherScore
-    assert.equal(actual, expected)
+    assert({ actual, expected })
   }
 }
-
-console.log("passed")

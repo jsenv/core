@@ -13,10 +13,10 @@ const projectFolder = `${selfProjectFolder}/src/bundle/browser/test/scoped-node-
     importMap,
     into: "dist/browser",
     globalName: "scopedFoo",
-    entryPointsDescription: {
+    entryPointMap: {
       main: "scoped-node-module.js",
     },
-    babelPluginDescription: {
+    babelConfigMap: {
       "transform-block-scoping": [blockScoping],
     },
     compileGroupCount: 1,

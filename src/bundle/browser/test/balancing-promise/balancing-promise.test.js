@@ -7,12 +7,12 @@ const testFolder = `${projectFolder}/src/bundle/browser/test/balancing-promise`
 bundleBrowser({
   projectFolder: testFolder,
   into: "dist/browser",
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
   globalName: "balancing",
   globalNameIsPromise: true,
-  entryPointsDescription: {
+  entryPointMap: {
     main: "balancing-promise.js",
   },
   compileGroupCount: 2,

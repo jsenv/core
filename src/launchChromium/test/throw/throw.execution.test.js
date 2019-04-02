@@ -7,7 +7,7 @@ import { launchChromium } from "../../launchChromium.js"
 const testFolder = `${projectFolder}/src/launchChromium/test/throw`
 const filenameRelative = `throw.js`
 const compileInto = ".dist"
-const babelPluginDescription = {}
+const babelConfigMap = {}
 
 ;(async () => {
   const sourceOrigin = `file://${testFolder}`
@@ -15,7 +15,7 @@ const babelPluginDescription = {}
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   const actual = await launchAndExecute({

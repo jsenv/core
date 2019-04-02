@@ -10,7 +10,7 @@ import { removeDebuggerLog } from "../removeDebuggerLog.js"
 // in ${workspaceFolder}/.vscode/launch.json#sourceMapPathOverrides['/*']
 const filenameRelative = `src/launchNode/test/throw/throw.js`
 const compileInto = ".dist"
-const babelPluginDescription = {}
+const babelConfigMap = {}
 
 ;(async () => {
   const sourceOrigin = `file://${projectFolder}`
@@ -18,7 +18,7 @@ const babelPluginDescription = {}
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   const actual = await launchAndExecute({

@@ -7,7 +7,7 @@ import { launchChromium } from "../../launchChromium.js"
 const testFolder = `${projectFolder}/src/launchChromium/test/syntax-error`
 const filenameRelative = `syntax-error.js`
 const compileInto = ".dist"
-const babelPluginDescription = {}
+const babelConfigMap = {}
 
 ;(async () => {
   const sourceOrigin = `file://${projectFolder}`
@@ -15,7 +15,7 @@ const babelPluginDescription = {}
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   const actual = await launchAndExecute({

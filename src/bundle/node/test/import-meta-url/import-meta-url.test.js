@@ -7,10 +7,10 @@ const testFolder = `${projectFolder}/src/bundle/node/test/import-meta-url`
 bundleNode({
   projectFolder: testFolder,
   into: "dist/node",
-  entryPointsDescription: {
+  entryPointMap: {
     main: "import-meta-url.js",
   },
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
   compileGroupCount: 1,

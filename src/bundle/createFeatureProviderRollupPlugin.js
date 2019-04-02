@@ -4,17 +4,21 @@ import { addNamed } from "@babel/helper-module-imports"
 import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
 import { uneval } from "@dmail/uneval"
-import { babelPluginDescriptionToBabelPluginArray } from "../jsCompile/babelPluginDescriptionToBabelPluginArray.js"
+import { babeConfigMapToBabelPluginArray } from "../jsCompile/babeConfigMapToBabelPluginArray.js"
 import { createReplaceImportMetaBabelPlugin } from "./createReplaceImportMetaBabelPlugin.js"
 
 const HELPER_FILENAME = "\0rollupPluginBabelHelpers.js"
 
-export const babelPluginDescriptionToRollupPlugin = ({
-  babelPluginDescription,
+export const createFeatureProviderRollupPlugin = ({
+  featureNameArray,
+  babelConfigMap,
   minify,
   target,
 }) => {
-  const babelPluginArray = babelPluginDescriptionToBabelPluginArray(babelPluginDescription)
+  const babelConfigMapSubset = filterBabelConfigMap(babelConfigMap, (babelPluginName) =>
+    featureNameArray.includes(babelPluginName),
+  )
+  const babelPluginArray = babeConfigMapToBabelPluginArray(babelConfigMapSubset)
 
   babelPluginArray.unshift(createHelperImportInjectorBabelPlugin())
 
@@ -82,6 +86,16 @@ export const babelPluginDescriptionToRollupPlugin = ({
   }
 
   return babelRollupPlugin
+}
+
+const filterBabelConfigMap = (babelConfigMap, filter) => {
+  const filteredBabelConfigMap = {}
+  Object.keys(babelConfigMap).forEach((babelPluginName) => {
+    if (filter(babelPluginName)) {
+      filteredBabelConfigMap[babelPluginName] = babelConfigMap[babelPluginName]
+    }
+  })
+  return filteredBabelConfigMap
 }
 
 const buildBrowserNativeModuleSource = () => {

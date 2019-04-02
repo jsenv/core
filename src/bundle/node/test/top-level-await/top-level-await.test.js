@@ -7,10 +7,10 @@ const projectFolder = `${selfProjectFolder}/src/bundle/node/test/top-level-await
 bundleNode({
   projectFolder,
   into: "dist/node",
-  entryPointsDescription: {
+  entryPointMap: {
     main: "top-level-await.js",
   },
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
   verbose: true,

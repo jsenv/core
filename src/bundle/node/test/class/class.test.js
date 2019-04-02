@@ -7,10 +7,10 @@ const testFolder = `${projectFolder}/src/bundle/node/test/class`
 bundleNode({
   projectFolder: testFolder,
   into: "dist/node",
-  entryPointsDescription: {
+  entryPointMap: {
     main: "main.js",
   },
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-classes": [babelPluginTransformClasses],
   },
   compileGroupCount: 2,

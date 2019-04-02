@@ -12,7 +12,7 @@ const testFolder = projectFolder
 // knows where sourcefiles are
 const filenameRelative = `src/launchNode/test/debug/export-named/export-named.js`
 const compileInto = ".dist"
-const babelPluginDescription = {
+const babelConfigMap = {
   "transform-block-scoping": [],
   "transform-async-to-promises": [transformAsyncToPromises],
 }
@@ -23,7 +23,7 @@ const babelPluginDescription = {
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   const actual = await launchAndExecute({

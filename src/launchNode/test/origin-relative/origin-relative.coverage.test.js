@@ -8,7 +8,7 @@ import { launchNode } from "../../launchNode.js"
 const testFolder = `${projectFolder}/src/launchNode/test/origin-relative`
 const filenameRelative = `folder/file.js`
 const compileInto = ".dist"
-const babelPluginDescription = {
+const babelConfigMap = {
   "transform-instrument": [createInstrumentPlugin()],
 }
 
@@ -18,7 +18,7 @@ const babelPluginDescription = {
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   const actual = await launchAndExecute({

@@ -7,10 +7,10 @@ const projectFolder = `${selfProjectFolder}/src/bundle/node/test/native-import`
 bundleNode({
   projectFolder,
   into: "dist/node",
-  entryPointsDescription: {
+  entryPointMap: {
     main: "native-import.js",
   },
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
   compileGroupCount: 1,

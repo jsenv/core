@@ -7,10 +7,10 @@ const projectFolder = `${selfProjectFolder}/src/bundle/node/test/without-balanci
 bundleNode({
   projectFolder,
   into: "dist/node",
-  entryPointsDescription: {
+  entryPointMap: {
     main: "without-balancing.js",
   },
-  babelPluginDescription: {
+  babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
   compileGroupCount: 1,

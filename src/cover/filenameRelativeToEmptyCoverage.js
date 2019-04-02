@@ -28,7 +28,7 @@ export const filenameRelativeToEmptyCoverage = async ({
           filename,
           filenameRelative,
           projectFolder,
-          babelPluginDescription: {
+          babelConfigMap: {
             "transform-instrument": [createInstrumentPlugin({ predicate: () => true })],
           },
           remap: false,

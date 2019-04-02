@@ -8,7 +8,7 @@ import { generateImportMapForProjectNodeModules } from "../../../import-map/gene
 const projectFolder = `${selfProjectFolder}/src/launchNode/test/scoped-node-module`
 const filenameRelative = `scoped-node-module.js`
 const compileInto = ".dist"
-const babelPluginDescription = {}
+const babelConfigMap = {}
 
 ;(async () => {
   const sourceOrigin = `file://${projectFolder}`
@@ -19,7 +19,7 @@ const babelPluginDescription = {}
     projectFolder,
     compileInto,
     importMap,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   const actual = await launchAndExecute({

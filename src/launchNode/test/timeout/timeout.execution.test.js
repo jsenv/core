@@ -9,7 +9,7 @@ const transformAsyncToPromises = import.meta.require("babel-plugin-transform-asy
 
 const filenameRelative = `src/launchNode/test/timeout/timeout.js`
 const compileInto = ".dist"
-const babelPluginDescription = {
+const babelConfigMap = {
   "transform-async-to-promises": [transformAsyncToPromises],
 }
 
@@ -19,7 +19,7 @@ const babelPluginDescription = {
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
   })
 
   const actual = await launchAndExecute({

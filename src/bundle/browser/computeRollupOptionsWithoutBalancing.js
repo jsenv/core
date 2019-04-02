@@ -1,6 +1,6 @@
 import MagicString from "magic-string"
 import { createJsenvRollupPlugin } from "../createJsenvRollupPlugin.js"
-import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionToRollupPlugin.js"
+import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 
 export const computeRollupOptionsWithoutBalancing = ({
   cancellationToken,
@@ -8,33 +8,37 @@ export const computeRollupOptionsWithoutBalancing = ({
   projectFolder,
   into,
   globalName,
-  entryPointsDescription,
-  babelPluginDescription,
+  entryPointMap,
+  babelConfigMap,
   autoWrapEntryInPromise, // unused anymore, maybe to remove completely
   log,
   minify,
 }) => {
   const dir = `${projectFolder}/${into}`
 
+  const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    featureNameArray: Object.keys(babelConfigMap),
+    babelConfigMap,
+    minify,
+    target: "browser",
+  })
+
+  const jsenvRollupPlugin = createJsenvRollupPlugin({
+    cancellationToken,
+    importMap,
+    projectFolder,
+  })
+
   log(`
 bundle entry points for browser without balancing.
-entryNameArray: ${Object.keys(entryPointsDescription)}
-babelPluginNameArray: ${Object.keys(babelPluginDescription)}
+entryPointArray: ${Object.keys(entryPointMap)}
 dir: ${dir}
 minify: ${minify}
 `)
 
   const rollupPluginArray = [
-    babelPluginDescriptionToRollupPlugin({
-      babelPluginDescription,
-      minify,
-      target: "browser",
-    }),
-    createJsenvRollupPlugin({
-      cancellationToken,
-      importMap,
-      projectFolder,
-    }),
+    featureProviderRollupPlugin,
+    jsenvRollupPlugin,
     ...(autoWrapEntryInPromise
       ? [
           createIIFEPromiseRollupPlugin({
@@ -47,7 +51,7 @@ minify: ${minify}
 
   return {
     rollupParseOptions: {
-      input: entryPointsDescription,
+      input: entryPointMap,
       plugins: rollupPluginArray,
     },
     rollupGenerateOptions: {
