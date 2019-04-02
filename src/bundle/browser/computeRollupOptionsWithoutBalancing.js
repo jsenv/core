@@ -1,4 +1,3 @@
-import MagicString from "magic-string"
 import { createJsenvRollupPlugin } from "../createJsenvRollupPlugin.js"
 import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 
@@ -10,7 +9,6 @@ export const computeRollupOptionsWithoutBalancing = ({
   globalName,
   entryPointMap,
   babelConfigMap,
-  autoWrapEntryInPromise, // unused anymore, maybe to remove completely
   log,
   minify,
 }) => {
@@ -36,23 +34,10 @@ dir: ${dir}
 minify: ${minify}
 `)
 
-  const rollupPluginArray = [
-    featureProviderRollupPlugin,
-    jsenvRollupPlugin,
-    ...(autoWrapEntryInPromise
-      ? [
-          createIIFEPromiseRollupPlugin({
-            projectFolder,
-            globalName,
-          }),
-        ]
-      : []),
-  ]
-
   return {
     rollupParseOptions: {
       input: entryPointMap,
-      plugins: rollupPluginArray,
+      plugins: [featureProviderRollupPlugin, jsenvRollupPlugin],
     },
     rollupGenerateOptions: {
       // https://rollupjs.org/guide/en#output-dir
@@ -67,22 +52,6 @@ minify: ${minify}
       // in case source files are not reachable
       // for whatever reason
       sourcemapExcludeSources: false,
-    },
-  }
-}
-
-const createIIFEPromiseRollupPlugin = ({ globalPromiseName, globalName }) => {
-  return {
-    name: "iife-promise",
-
-    // https://rollupjs.org/guide/en#renderchunk
-    renderChunk: (code) => {
-      const magicString = new MagicString(code)
-      magicString.append(`
-var ${globalPromiseName} = Promise.resolve(${globalName})`)
-      const map = magicString.generateMap({ hires: true })
-      const renderedCode = magicString.toString()
-      return { code: renderedCode, map }
     },
   }
 }

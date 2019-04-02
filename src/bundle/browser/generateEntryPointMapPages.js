@@ -1,5 +1,8 @@
-import { createOperation, createCancellationToken } from "@dmail/cancellation"
-import { fileWrite } from "@dmail/helper"
+import {
+  createOperation,
+  createCancellationToken,
+} from "/node_modules/@dmail/cancellation/index.js"
+import { fileWrite } from "/node_modules/@dmail/helper/index.js"
 
 export const generateEntryPointMapPages = async ({
   cancellationToken = createCancellationToken(),

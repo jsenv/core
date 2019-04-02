@@ -1,8 +1,7 @@
-import createNodeResolveRollupPlugin from "rollup-plugin-node-resolve"
-import { uneval } from "@dmail/uneval"
-import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
+import { uneval } from "/node_modules/@dmail/uneval/index.js"
 import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 
+const { projectFolder: selfProjectFolder } = import.meta.require("../../../jsenv.config.js")
 const BUNDLE_BROWSER_OPTIONS_SPECIFIER = "\0bundle-browser-options.js"
 
 export const computeRollupOptionsForBalancer = ({
@@ -44,10 +43,6 @@ export const computeRollupOptionsForBalancer = ({
     },
   }
 
-  const nodeResolveRollupPlugin = createNodeResolveRollupPlugin({
-    module: true,
-  })
-
   const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
     featureNameArray: groupMap.otherwise.incompatibleNameArray,
     babelConfigMap,
@@ -67,7 +62,7 @@ minify: ${minify}
   return {
     rollupParseOptions: {
       input: `${selfProjectFolder}/src/bundle/browser/browser-balancer-template.js`,
-      plugins: [browserBalancerRollupPlugin, nodeResolveRollupPlugin, featureProviderRollupPlugin],
+      plugins: [browserBalancerRollupPlugin, featureProviderRollupPlugin],
     },
     rollupGenerateOptions: {
       file,
