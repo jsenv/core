@@ -59,13 +59,6 @@ export const startBrowsingServer = async ({
     browsable: browsableDescription,
   })
 
-  const browsableFilenameRelativeArray = await selectAllFileInsideFolder({
-    pathname: projectFolder,
-    metaDescription,
-    predicate: ({ browsable }) => browsable,
-    transformFile: ({ filenameRelative }) => filenameRelative,
-  })
-
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
     importMap,
@@ -95,6 +88,13 @@ export const startBrowsingServer = async ({
       return true
     },
     async () => {
+      const browsableFilenameRelativeArray = await selectAllFileInsideFolder({
+        pathname: projectFolder,
+        metaDescription,
+        predicate: ({ browsable }) => browsable,
+        transformFile: ({ filenameRelative }) => filenameRelative,
+      })
+
       const html = await getIndexPageHTML({
         projectFolder,
         browsableFilenameRelativeArray,
