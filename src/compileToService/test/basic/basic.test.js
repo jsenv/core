@@ -94,6 +94,7 @@ const compile = ({ content }) => {
         actual,
         expected: {
           status: 304,
+          headers: {},
         },
       })
     }
@@ -141,6 +142,7 @@ const compile = ({ content }) => {
         actual,
         expected: {
           status: 304,
+          headers: {},
         },
       })
     }

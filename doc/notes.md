@@ -1,8 +1,7 @@
 ### todo
 
-retest compatibilityDescriptionToGroupArrayForPlatform
-retest compileBrowserPlatform
-retest compileBrowserSystemImporter
+retest all folders after compileToService
+retest importing a json file, it should work and seems to fail for now
 
 ### How to use dependency written in commonjs
 
