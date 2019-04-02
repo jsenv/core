@@ -38,7 +38,7 @@ Take chars below to update legends
 
 */
 
-import { arrayWithoutValue } from "@dmail/helper"
+import { arrayWithoutValue } from "/node_modules/@dmail/helper/index.js"
 import { babelCompatMap as defaultBabelCompatMap } from "./babelCompatMap.js"
 import { platformCompatibilityToScore } from "./platform-compatibility/platformCompatibilityToScore.js"
 import { computeEveryPlatformGroupArray } from "./group/computeEveryPlatformGroupArray.js"
@@ -96,16 +96,14 @@ const generateFeatureGroupMap = ({
     }
   }
 
-  const featureCompatibilityWithoutHole = {}
+  const featureCompatMapWithoutHole = {}
   featureNameArray.forEach((featureName) => {
-    featureCompatibilityWithoutHole[featureName] =
-      featureName in featureCompatibilityWithoutHole
-        ? featureCompatibilityWithoutHole[featureName]
-        : {}
+    featureCompatMapWithoutHole[featureName] =
+      featureName in featureCompatMap ? featureCompatMap[featureName] : {}
   })
 
   const groupArrayWithEveryCombination = computeEveryPlatformGroupArray({
-    featureCompatibility: featureCompatibilityWithoutHole,
+    featureCompatMap: featureCompatMapWithoutHole,
     platformNames: arrayWithoutValue(Object.keys(platformScoreMap), "other"),
   })
 

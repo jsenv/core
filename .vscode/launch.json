@@ -35,6 +35,9 @@
       "skipFiles": [
         // force-array-multiline
         "node_modules/**",
+        // does not work, it's an attempt to avoid
+        // spwaned node process to pause on first line
+        "<eval>/VM**.js",
         "<node_internals>/**/*.js"
       ]
     },
