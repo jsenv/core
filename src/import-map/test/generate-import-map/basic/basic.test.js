@@ -31,7 +31,6 @@ const testFolder = `${projectFolder}/src/import-map/test/generate-import-map/bas
         "/": "/node_modules/bar/",
       },
       "/node_modules/foo/": {
-        "/node_modules/bar/": "/node_modules/foo/node_modules/bar/",
         "/node_modules/foo/": "/node_modules/foo/",
         "bar/": "/node_modules/foo/node_modules/bar/",
         bar: "/node_modules/foo/node_modules/bar/index.js",
