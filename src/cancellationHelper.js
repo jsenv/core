@@ -1,4 +1,4 @@
-import { isCancelError, createCancellationSource } from "@dmail/cancellation"
+import { isCancelError, createCancellationSource } from "/node_modules/@dmail/cancellation/index.js"
 
 export const catchAsyncFunctionCancellation = (asyncFunction) => {
   return asyncFunction().catch((error) => {

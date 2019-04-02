@@ -24,7 +24,7 @@ export const fromHref = async ({
   const realHref = url
 
   if (status === 404) {
-    throw createNotFoundError({ filenameRelative, href: realHref })
+    throw createNotFoundError({ filenameRelative, href: realHref, importer })
   }
 
   if (status === 500 && statusText === "parse error") {
@@ -79,12 +79,19 @@ export const fromHref = async ({
   throw new Error(`unexpected ${contentType} content-type for ${href}`)
 }
 
-const createNotFoundError = ({ filenameRelative, href }) => {
-  return createError(`${filenameRelative} not found`, {
+const createNotFoundError = ({ filenameRelative, href, importer }) => {
+  return createError(createNotFoundErrorMessage({ filenameRelative, href, importer }), {
+    filenameRelative,
+    importer,
     code: "MODULE_NOT_FOUND_ERROR",
     href,
   })
 }
+
+const createNotFoundErrorMessage = ({ filenameRelative, href, importer }) => `file not found.
+filenameRelative: ${filenameRelative}
+href: ${href}
+importer: ${importer}`
 
 const createParseError = (_, { message, columnNumber, fileName, lineNumber, messageHTML }) => {
   return createError(message, {

@@ -1,5 +1,5 @@
 // https://github.com/cfware/babel-plugin-bundled-import-meta/blob/master/index.js
-import template from "@babel/template"
+const template = import.meta.require("@babel/template")
 
 export const createReplaceImportMetaBabelPlugin = ({ importMetaSource }) => {
   return () => {

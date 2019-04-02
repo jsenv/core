@@ -19,13 +19,12 @@ export const bundlePlatform = ({
 }) =>
   catchAsyncFunctionCancellation(async () => {
     if (typeof projectFolder !== "string")
-      throw new TypeError(`bundlePlatform root must be a string, got ${projectFolder}`)
-    if (typeof into !== "string")
-      throw new TypeError(`bundlePlatform into must be a string, got ${into}`)
+      throw new TypeError(`projectFolder must be a string, got ${projectFolder}`)
+    if (typeof into !== "string") throw new TypeError(`into must be a string, got ${into}`)
     if (typeof entryPointMap !== "object")
-      throw new TypeError(`bundlePlatform entryPointMap must be an object, got ${entryPointMap}`)
+      throw new TypeError(`entryPointMap must be an object, got ${entryPointMap}`)
     if (compileGroupCount < 1)
-      throw new Error(`bundlePlatform compileGroupCount must be > 1, got ${compileGroupCount}`)
+      throw new Error(`compileGroupCount must be > 1, got ${compileGroupCount}`)
 
     const log = verbose ? (...args) => console.log(...args) : () => {}
 

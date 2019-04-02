@@ -1,14 +1,13 @@
-import blockScoping from "@babel/plugin-transform-block-scoping"
-import { projectFolder as selfProjectFolder } from "../../../../../projectFolder.js"
 import { bundleNode } from "../../bundleNode.js"
 
-const projectFolder = `${selfProjectFolder}/src/bundle/node/test/native-import`
+const { projectFolder } = import.meta.require("../../../../../jsenv.config.js")
+const blockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
 
 bundleNode({
   projectFolder,
   into: "dist/node",
   entryPointMap: {
-    main: "native-import.js",
+    main: "src/bundle/node/test/native-import/native-import.js",
   },
   babelConfigMap: {
     "transform-block-scoping": [blockScoping],

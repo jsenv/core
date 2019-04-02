@@ -1,7 +1,8 @@
-import createNodeResolveRollupPlugin from "rollup-plugin-node-resolve"
-import { uneval } from "@dmail/uneval"
-import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
+import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
+import { uneval } from "/node_modules/@dmail/uneval/index.js"
 import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
+
+const { projectFolder: selfProjectFolder } = import.meta.require("../../../jsenv.config.js")
 
 const BUNDLE_NODE_OPTIONS_SPECIFIER = "\0bundle-node-options.js"
 
@@ -40,10 +41,6 @@ export const computeRollupOptionsForBalancer = ({
     },
   }
 
-  const nodeResolveRollupPlugin = createNodeResolveRollupPlugin({
-    module: true,
-  })
-
   const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
     featureNameArray: groupMap.otherwise.incompatibleNameArray,
     babelConfigMap,
@@ -63,7 +60,8 @@ minify : ${minify}
   return {
     rollupParseOptions: {
       input: `${selfProjectFolder}/src/bundle/node/node-balancer-template.js`,
-      plugins: [nodeBalancerRollupPlugin, nodeResolveRollupPlugin, featureProviderRollupPlugin],
+      plugins: [nodeBalancerRollupPlugin, featureProviderRollupPlugin],
+      external: (id) => isNativeNodeModuleBareSpecifier(id),
     },
     rollupGenerateOptions: {
       file,

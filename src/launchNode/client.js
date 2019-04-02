@@ -1,12 +1,13 @@
 import fs from "fs"
 import path from "path"
-import sourceMapSupport from "source-map-support"
 import { createCancellationSource } from "@dmail/cancellation"
 import { uneval } from "@dmail/uneval"
 import { resolveImport, hrefToPathname } from "@jsenv/module-resolution"
 import { executeCompiledFile } from "../platform/node/executeCompiledFile.js"
 import { registerProcessInterruptCallback } from "../process-signal/index.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
+
+const sourceMapSupport = import.meta.require("source-map-support")
 
 const execute = async ({
   compileInto,
@@ -56,14 +57,28 @@ const execute = async ({
         try {
           content = fs.readFileSync(source, "utf8")
         } catch (e) {
-          return null
+          if (e && e.code === "ENOENT") return null
+          throw e
         }
 
         const sourceMappingURL = readSourceMappingURL(content)
         if (!sourceMappingURL) return null
         const sourceMapFile = path.resolve(path.dirname(source), sourceMappingURL)
-        const sourceMapContent = fs.readFileSync(sourceMapFile, "utf8")
-        const sourceMap = JSON.parse(sourceMapContent)
+
+        let sourceMap
+        try {
+          const sourceMapContent = fs.readFileSync(sourceMapFile, "utf8")
+          sourceMap = JSON.parse(sourceMapContent)
+        } catch (e) {
+          if (e && e.code === "ENOENT") {
+            return null
+          }
+          if (e && e.name === "SyntaxError") {
+            return null
+          }
+          throw e
+        }
+
         const absoluteSourceMap = {
           ...sourceMap,
           sources: sourceMap.sources.map((source) => {

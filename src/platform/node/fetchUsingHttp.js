@@ -1,7 +1,8 @@
 import https from "https"
-import fetch from "node-fetch"
-import AbortController from "abort-controller"
-import { createOperation } from "@dmail/cancellation"
+import { createOperation } from "/node_modules/@dmail/cancellation/index.js"
+
+const fetch = import.meta.require("node-fetch")
+const AbortController = import.meta.require("abort-controller")
 
 // ideally we should only pass this to the fetch below
 https.globalAgent.options.rejectUnauthorized = false

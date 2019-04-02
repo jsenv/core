@@ -1,5 +1,6 @@
-import { rollup } from "rollup"
-import { createOperation } from "@dmail/cancellation"
+import { createOperation } from "/node_modules/@dmail/cancellation/index.js"
+
+const { rollup } = import.meta.require("rollup")
 
 export const bundleWithRollup = async ({
   cancellationToken,

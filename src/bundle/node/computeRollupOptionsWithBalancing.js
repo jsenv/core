@@ -1,3 +1,4 @@
+import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { createJsenvRollupPlugin } from "../createJsenvRollupPlugin.js"
 import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 
@@ -40,6 +41,7 @@ minify: ${minify}
     rollupParseOptions: {
       input: entryPointMap,
       plugins: [featureProviderRollupPlugin, jsenvRollupPlugin],
+      external: (id) => isNativeNodeModuleBareSpecifier(id),
     },
     rollupGenerateOptions: {
       dir,

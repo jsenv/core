@@ -1,5 +1,5 @@
-import syntaxDynamicImport from "@babel/plugin-syntax-dynamic-import"
-import syntaxImportMeta from "@babel/plugin-syntax-import-meta"
+const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-import")
+const syntaxImportMeta = import.meta.require("@babel/plugin-syntax-import-meta")
 
 export const defaultBabelPluginArray = [syntaxDynamicImport, syntaxImportMeta]
 

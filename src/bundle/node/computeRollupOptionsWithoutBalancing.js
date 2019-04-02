@@ -1,3 +1,4 @@
+import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { createJsenvRollupPlugin } from "../createJsenvRollupPlugin.js"
 import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 
@@ -28,17 +29,16 @@ export const computeRollupOptionsWithoutBalancing = ({
 
   log(`
 bundle entry points for node without balancing.
-entryPointArray: ${Object.keys(entryPointMap)}
 dir: ${dir}
+entry point names: ${Object.keys(entryPointMap)}
 minify: ${minify}
 `)
-
-  const rollupPluginArray = [featureProviderRollupPlugin, jsenvRollupPlugin]
 
   return {
     rollupParseOptions: {
       input: entryPointMap,
-      plugins: rollupPluginArray,
+      plugins: [featureProviderRollupPlugin, jsenvRollupPlugin],
+      external: (id) => isNativeNodeModuleBareSpecifier(id),
     },
     rollupGenerateOptions: {
       // https://rollupjs.org/guide/en#output-dir
