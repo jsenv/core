@@ -2,7 +2,7 @@ import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
-import { generateGroupMap } from "../group-description/index.js"
+import { generateGroupMap } from "../group-map/index.js"
 import { bundleWithRollup } from "./bundleWithRollup.js"
 
 export const bundlePlatform = ({
@@ -11,7 +11,7 @@ export const bundlePlatform = ({
   entryPointMap,
   babelConfigMap,
   compileGroupCount = 1,
-  platformScoring,
+  platformScoreMap,
   computeRollupOptionsWithoutBalancing,
   computeRollupOptionsWithBalancing,
   computeRollupOptionsForBalancer,
@@ -42,7 +42,7 @@ export const bundlePlatform = ({
 
     const groupMap = generateGroupMap({
       babelConfigMap,
-      platformScoring,
+      platformScoreMap,
       groupCount: compileGroupCount,
     })
 

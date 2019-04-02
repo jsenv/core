@@ -1,5 +1,5 @@
 import { normalizePathname } from "@jsenv/module-resolution"
-import { browserScoring } from "../../group-description/index.js"
+import { browserScoreMap } from "../../group-map/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
 import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBalancing.js"
@@ -15,7 +15,7 @@ export const bundleBrowser = async ({
   entryPointMap,
   babelConfigMap,
   compileGroupCount = 1,
-  platformScoring = browserScoring,
+  platformScoreMap = browserScoreMap,
   verbose,
   minify = true,
   generateEntryPages = false,
@@ -32,7 +32,7 @@ export const bundleBrowser = async ({
       into,
       babelConfigMap,
       compileGroupCount,
-      platformScoring,
+      platformScoreMap,
       verbose,
       computeRollupOptionsWithoutBalancing: (context) =>
         computeRollupOptionsWithoutBalancing({

@@ -4,9 +4,9 @@ import { jsCompile } from "../jsCompile/index.js"
 import { jsCompileToService } from "../jsCompileToService/index.js"
 import {
   generateGroupMap,
-  browserScoring as browserDefaultScoring,
-  nodeScoring as nodeDefaultScoring,
-} from "../group-description/index.js"
+  browserScoreMap as browserDefaultScoreMap,
+  nodeScoreMap as nodeDefaultScoreMap,
+} from "../group-map/index.js"
 import { wrapImportMap } from "../import-map/wrapImportMap.js"
 import { objectMapValue } from "../objectHelper.js"
 
@@ -19,8 +19,8 @@ export const createJsCompileService = async ({
   babelConfigMap,
   babelCompatMap,
   locate,
-  browserScoring = browserDefaultScoring,
-  nodeScoring = nodeDefaultScoring,
+  browserScoreMap = browserDefaultScoreMap,
+  nodeScoreMap = nodeDefaultScoreMap,
   localCacheStrategy,
   localCacheTrackHit,
   cacheStrategy,
@@ -30,7 +30,7 @@ export const createJsCompileService = async ({
   const groupMap = generateGroupMap({
     babelConfigMap,
     babelCompatMap,
-    platformScoring: { ...browserScoring, ...nodeScoring },
+    platformScoreMap: { ...browserScoreMap, ...nodeScoreMap },
     groupCount: compileGroupCount,
   })
 

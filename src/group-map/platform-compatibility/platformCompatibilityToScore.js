@@ -1,18 +1,18 @@
 import { versionCompare, findHighestVersion } from "../../semantic-versioning/index.js"
 
-export const platformCompatibilityToScore = (platformCompatibility, platformScoring) => {
+export const platformCompatibilityToScore = (platformCompatibility, platformScoreMap) => {
   return Object.keys(platformCompatibility).reduce((previous, platformName) => {
     const platformVersion = platformCompatibility[platformName]
-    return previous + platformToScore(platformName, platformVersion, platformScoring)
+    return previous + platformToScore(platformName, platformVersion, platformScoreMap)
   }, 0)
 }
 
-const platformToScore = (platformName, platformVersion, platformScoring) => {
-  if (platformName in platformScoring === false) return platformScoring.other || 0
+const platformToScore = (platformName, platformVersion, platformScoreMap) => {
+  if (platformName in platformScoreMap === false) return platformScoreMap.other || 0
 
-  const versionUsageMap = platformScoring[platformName]
+  const versionUsageMap = platformScoreMap[platformName]
   const versionNames = Object.keys(versionUsageMap)
-  if (versionNames.length === 0) return platformScoring.other || 0
+  if (versionNames.length === 0) return platformScoreMap.other || 0
 
   const sortedVersions = versionNames.sort(versionCompare)
   const highestVersion = sortedVersions.shift()
@@ -24,7 +24,7 @@ const platformToScore = (platformName, platformVersion, platformScoring) => {
     (version) => findHighestVersion(platformVersion, version) === platformVersion,
   )
 
-  if (!closestVersion) return platformScoring.other || 0
+  if (!closestVersion) return platformScoreMap.other || 0
 
   return versionUsageMap[closestVersion]
 }

@@ -6,7 +6,7 @@ import { platformCompatibilityToScore } from "./platformCompatibilityToScore.js"
   const chrome49Score = 2
   const chromeBelow49Score = 4
   const otherScore = 8
-  const platformScoring = {
+  const platformScoreMap = {
     chrome: {
       "50": chrome50Score,
       "49": chrome49Score,
@@ -20,7 +20,7 @@ import { platformCompatibilityToScore } from "./platformCompatibilityToScore.js"
       {
         chrome: "48",
       },
-      platformScoring,
+      platformScoreMap,
     )
     const expected = chromeBelow49Score
     assert({ actual, expected })
@@ -31,7 +31,7 @@ import { platformCompatibilityToScore } from "./platformCompatibilityToScore.js"
       {
         chrome: "49",
       },
-      platformScoring,
+      platformScoreMap,
     )
     const expected = chrome49Score
     assert({ actual, expected })
@@ -42,7 +42,7 @@ import { platformCompatibilityToScore } from "./platformCompatibilityToScore.js"
       {
         chrome: "50",
       },
-      platformScoring,
+      platformScoreMap,
     )
     const expected = chrome50Score
     assert({ actual, expected })
@@ -53,7 +53,7 @@ import { platformCompatibilityToScore } from "./platformCompatibilityToScore.js"
       {
         chrome: "51",
       },
-      platformScoring,
+      platformScoreMap,
     )
     const expected = chrome50Score
     assert({ actual, expected })
@@ -65,7 +65,7 @@ import { platformCompatibilityToScore } from "./platformCompatibilityToScore.js"
         chrome: "51",
         foo: ["0"],
       },
-      platformScoring,
+      platformScoreMap,
     )
     const expected = chrome50Score + otherScore
     assert({ actual, expected })

@@ -1,4 +1,4 @@
-export const browserScoring = {
+export const browserScoreMap = {
   // https://www.statista.com/statistics/268299/most-popular-internet-browsers/
   // this source of stat is what I found in 5min
   // we could improve these default usage score using better stats

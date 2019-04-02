@@ -52,7 +52,7 @@ export const generateGroupMap = ({
   // polyfill are for later, for now, nothing is using them
   polyfillConfigMap = {},
   polyfillCompatMap = {},
-  platformScoring,
+  platformScoreMap,
   groupCount = 1,
 }) => {
   const groupMap = generateFeatureGroupMap({
@@ -63,7 +63,7 @@ export const generateGroupMap = ({
       ...babelCompatMap,
       ...polyfillCompatMap,
     },
-    platformScoring,
+    platformScoreMap,
     groupCount,
   })
   return groupMap
@@ -72,15 +72,15 @@ export const generateGroupMap = ({
 const generateFeatureGroupMap = ({
   featureConfigMap,
   featureCompatMap,
-  platformScoring,
+  platformScoreMap,
   groupCount,
 }) => {
   if (typeof featureConfigMap !== "object")
     throw new TypeError(`featureConfigMap must be an object, got ${featureConfigMap}`)
   if (typeof featureCompatMap !== "object")
     throw new TypeError(`featureCompatMap must be an object, got ${featureCompatMap}`)
-  if (typeof platformScoring !== "object")
-    throw new TypeError(`platformScoring must be an object, got ${platformScoring}`)
+  if (typeof platformScoreMap !== "object")
+    throw new TypeError(`platformScoreMap must be an object, got ${platformScoreMap}`)
   if (typeof groupCount < 1) throw new TypeError(`groupCount must be above 1, got ${groupCount}`)
 
   const featureNameArray = Object.keys(featureConfigMap)
@@ -106,7 +106,7 @@ const generateFeatureGroupMap = ({
 
   const groupArrayWithEveryCombination = computeEveryPlatformGroupArray({
     featureCompatibility: featureCompatibilityWithoutHole,
-    platformNames: arrayWithoutValue(Object.keys(platformScoring), "other"),
+    platformNames: arrayWithoutValue(Object.keys(platformScoreMap), "other"),
   })
 
   if (groupArrayWithEveryCombination.length === 0) {
@@ -116,7 +116,7 @@ const generateFeatureGroupMap = ({
   }
 
   const groupToScore = ({ platformCompatibility }) =>
-    platformCompatibilityToScore(platformCompatibility, platformScoring)
+    platformCompatibilityToScore(platformCompatibility, platformScoreMap)
   const groupArrayWithEveryCombinationSortedByPlatformScore = groupArrayWithEveryCombination.sort(
     (a, b) => groupToScore(b) - groupToScore(a),
   )

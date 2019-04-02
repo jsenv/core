@@ -1,5 +1,5 @@
 // https://nodejs.org/metrics/summaries/version/nodejs.org-access.log.csv
-export const nodeScoring = {
+export const nodeScoreMap = {
   node: {
     "0.10": 0.02,
     "0.12": 0.01,
