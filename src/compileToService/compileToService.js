@@ -41,7 +41,7 @@ export const compileToService = (
     watchedFiles.clear()
   })
 
-  const compileService = async ({ origin, ressource, headers = {} }) => {
+  const compileService = async ({ origin, ressource, method, headers = {} }) => {
     const requestPathname = ressource
 
     if (pathnameIsAsset(ressource)) return null
@@ -76,8 +76,16 @@ export const compileToService = (
       }
     }
 
-    // some file must not be compiled (.html, .css, dist/browserLoader.js)
-    if (!compilePredicate(filenameRelative, filename)) return null
+    // we are asking for a compiled version of a file that does not have to be compiled
+    // we can redirect to the non compiled version
+    if (!compilePredicate(filenameRelative, filename)) {
+      return {
+        status: 307,
+        headers: {
+          location: `${origin}/${filenameRelative}`,
+        },
+      }
+    }
 
     // when I ask for a compiled file, watch the corresponding file on filesystem
     if (watch && watchedFiles.has(filename) === false && watchPredicate(filenameRelative)) {

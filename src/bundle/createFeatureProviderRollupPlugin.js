@@ -45,6 +45,12 @@ export const createFeatureProviderRollupPlugin = ({
 
     transform: async (source, filename) => {
       if (filename === HELPER_FILENAME) return null
+      if (filename.endsWith(".json")) {
+        return {
+          code: `export default ${source}`,
+          map: { mappings: "" },
+        }
+      }
 
       const result = await transformAsync(source, {
         filename,

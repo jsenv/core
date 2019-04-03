@@ -1,9 +1,9 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { projectFolder } from "../../../projectFolder.js"
 import { launchNode } from "../../launchNode/index.js"
 import { launchChromium } from "../../launchChromium/index.js"
 import { cover } from "../cover.js"
 
+const { projectFolder } = import.meta.require("../../../projectFolder.js")
 const testFolder = `${projectFolder}/src/cover/test`
 const compileInto = ".dist"
 
@@ -13,10 +13,10 @@ const compileInto = ".dist"
     compileInto,
     babelConfigMap: {},
     coverDescription: {
-      "file.js": true,
+      "/file.js": true,
     },
     executeDescription: {
-      "use-file.js": {
+      "/use-file.js": {
         node: {
           launch: launchNode,
         },

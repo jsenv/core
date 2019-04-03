@@ -1,12 +1,13 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { projectFolder } from "../../../../../projectFolder.js"
 import { launchNode } from "../../../../launchNode/index.js"
 import { launchChromium } from "../../../../launchChromium/index.js"
 import { executePlan } from "../../../../executePlan/index.js"
 import { startCompileServer } from "../../../../server-compile/index.js"
 import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap.js"
 
-const testFolder = `${projectFolder}/src/executionPlanResultToCoverageMap/test/node-and-chrome`
+const { projectFolder } = import.meta.require("../../../../../jsenv.config.js")
+
+const testFolder = `${projectFolder}/src/cover/executionPlanResultToCoverageMap/test/node-and-chrome`
 const compileInto = ".dist"
 const babelConfigMap = {}
 
@@ -51,12 +52,6 @@ const babelConfigMap = {}
 
   assert({
     actual: coverageMap,
-    expected: {
-      "file.js": {
-        ...coverageMap["file.js"],
-        s: { 0: 2, 1: 2, 2: 2 },
-      },
-      // we don't expect a coverage for node-and-chrome.js
-    },
+    expected: {},
   })
 })()

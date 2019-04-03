@@ -1,9 +1,5 @@
 ### todo
 
-retest cover
-
-retest importing a json file, it should work and seems to fail for now
-
 retest how jsenv behaves when a subimported module throw
 the idea is to be able to know what file cause the error
 because while working on this I often had trouble to find which file

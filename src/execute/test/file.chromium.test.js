@@ -1,7 +1,7 @@
 import { launchChromium } from "../../launchChromium/index.js"
-import { projectFolder } from "../../../projectFolder.js"
 import { execute } from "../execute.js"
 
+const { projectFolder } = import.meta.require("../../../projectFolder.js")
 const testFolder = `${projectFolder}/src/execute/test`
 
 execute({
