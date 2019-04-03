@@ -1,4 +1,4 @@
-import { composePlatformCompatibility } from "../platform-compatibility/composePlatformCompatibility.js"
+import { composePlatformCompatMap } from "../platform-compat-map/composePlatformCompatMap.js"
 
 export const composeGroupArray = (...arrayOfGroupArray) => {
   return arrayOfGroupArray.reduce(groupArrayReducer, [])
@@ -10,7 +10,7 @@ const groupArrayReducer = (previousGroupArray, groupArray) => {
   previousGroupArray.forEach((group) => {
     reducedGroupArray.push({
       incompatibleNameArray: group.incompatibleNameArray.slice(),
-      platformCompatibility: { ...group.platformCompatibility },
+      platformCompatMap: { ...group.platformCompatMap },
     })
   })
 
@@ -19,14 +19,14 @@ const groupArrayReducer = (previousGroupArray, groupArray) => {
       groupHaveSameIncompatibleFeatures(group, existingGroupCandidate),
     )
     if (groupWithSameIncompatibleFeature) {
-      groupWithSameIncompatibleFeature.platformCompatibility = composePlatformCompatibility(
-        groupWithSameIncompatibleFeature.platformCompatibility,
-        group.platformCompatibility,
+      groupWithSameIncompatibleFeature.platformCompatMap = composePlatformCompatMap(
+        groupWithSameIncompatibleFeature.platformCompatMap,
+        group.platformCompatMap,
       )
     } else {
       reducedGroupArray.push({
         incompatibleNameArray: group.incompatibleNameArray.slice(),
-        platformCompatibility: { ...group.platformCompatibility },
+        platformCompatMap: { ...group.platformCompatMap },
       })
     }
   })

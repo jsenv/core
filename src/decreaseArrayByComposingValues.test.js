@@ -7,7 +7,7 @@ import { decreaseArrayByComposingValues } from "./decreaseArrayByComposingValues
   const groups = [
     {
       incompatibleNameArray: ["b", "c"],
-      platformCompatibility: {
+      platformCompatMap: {
         chrome: 50,
         firefox: 10,
       },
@@ -15,7 +15,7 @@ import { decreaseArrayByComposingValues } from "./decreaseArrayByComposingValues
     },
     {
       incompatibleNameArray: ["b", "e"],
-      platformCompatibility: {
+      platformCompatMap: {
         chrome: 50,
         firefox: 11,
       },
@@ -23,7 +23,7 @@ import { decreaseArrayByComposingValues } from "./decreaseArrayByComposingValues
     },
     {
       incompatibleNameArray: ["a"],
-      platformCompatibility: {
+      platformCompatMap: {
         chrome: 50,
       },
       score: 0,
@@ -33,14 +33,14 @@ import { decreaseArrayByComposingValues } from "./decreaseArrayByComposingValues
   const expected = [
     {
       incompatibleNameArray: ["b", "c"],
-      platformCompatibility: {
+      platformCompatMap: {
         chrome: "50",
         firefox: "10",
       },
     },
     {
       incompatibleNameArray: ["a", "b", "e"],
-      platformCompatibility: {
+      platformCompatMap: {
         chrome: "50",
         firefox: "11",
       },

@@ -2,12 +2,12 @@ import { findHighestVersion } from "../../semantic-versioning/index.js"
 
 export const browserToCompileId = ({ name, version }, groupMap) => {
   return Object.keys(groupMap).find((compileIdCandidate) => {
-    const { platformCompatibility } = groupMap[compileIdCandidate]
+    const { platformCompatMap } = groupMap[compileIdCandidate]
 
-    if (name in platformCompatibility === false) {
+    if (name in platformCompatMap === false) {
       return false
     }
-    const versionForGroup = platformCompatibility[name]
+    const versionForGroup = platformCompatMap[name]
     const highestVersion = findHighestVersion(version, versionForGroup)
     return highestVersion === version
   })

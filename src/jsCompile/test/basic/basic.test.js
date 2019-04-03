@@ -1,12 +1,13 @@
 import fs from "fs"
-import transformBlockScoping from "@babel/plugin-transform-block-scoping"
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
 import { jsCompile } from "../../jsCompile.js"
 
-const projectFolder = `${selfProjectFolder}/src/jsCompile/test/basic`
+const transformBlockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
+const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
+
+const testFolder = `${projectFolder}/src/jsCompile/test/basic`
 const filenameRelative = "basic.js"
-const filename = `${projectFolder}/${filenameRelative}`
+const filename = `${testFolder}/${filenameRelative}`
 const input = fs.readFileSync(filename).toString()
 const babelConfigMap = {
   "transform-block-scoping": [transformBlockScoping],
@@ -17,7 +18,7 @@ const test = async () => {
     input,
     filename,
     filenameRelative,
-    projectFolder,
+    projectFolder: testFolder,
     babelConfigMap,
   })
 

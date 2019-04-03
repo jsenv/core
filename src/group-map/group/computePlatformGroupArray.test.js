@@ -17,19 +17,19 @@ import { computePlatformGroupArray } from "./computePlatformGroupArray.js"
   const expected = [
     {
       incompatibleNameArray: ["a", "b", "c"],
-      platformCompatibility: {
+      platformCompatMap: {
         chrome: "0.0.0",
       },
     },
     {
       incompatibleNameArray: ["a", "b"],
-      platformCompatibility: {
+      platformCompatMap: {
         chrome: "9",
       },
     },
     {
       incompatibleNameArray: ["b"],
-      platformCompatibility: {
+      platformCompatMap: {
         chrome: "10",
       },
     },

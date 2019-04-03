@@ -1,5 +1,5 @@
-import { createCancellationToken } from "@dmail/cancellation"
-import { fileWrite } from "@dmail/helper"
+import { createCancellationToken } from "/node_modules/@dmail/cancellation/index.js"
+import { fileWrite } from "/node_modules/@dmail/helper/index.js"
 import { jsCompile } from "../jsCompile/index.js"
 import { jsCompileToService } from "../jsCompileToService/index.js"
 import {

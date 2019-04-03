@@ -1,11 +1,14 @@
 import path from "path"
-import { transformAsync, transformFromAstAsync } from "@babel/core"
-import transformModulesSystemJs from "../babel-plugin-transform-modules-systemjs/index.js"
 import { regexpEscape } from "../stringHelper.js"
 import {
   babelConfigMapToBabelPluginArray,
   defaultBabelPluginArray,
 } from "./babeConfigMapToBabelPluginArray.js"
+
+const transformModulesSystemJs = import.meta.require(
+  "../babel-plugin-transform-modules-systemjs/index.js",
+)
+const { transformAsync, transformFromAstAsync } = import.meta.require("@babel/core")
 
 export const transpiler = async ({
   input,

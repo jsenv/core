@@ -11,10 +11,10 @@ import { nodeScoreMap } from "./nodeScoreMap.js"
     groupCount: 2,
   })
   const expected = {
-    best: { incompatibleNameArray: [], platformCompatibility: { node: "6" } },
+    best: { incompatibleNameArray: [], platformCompatMap: { node: "6" } },
     otherwise: {
       incompatibleNameArray: Object.keys(babelConfigMap),
-      platformCompatibility: {},
+      platformCompatMap: {},
     },
   }
   assert({ actual, expected })
@@ -30,7 +30,7 @@ import { nodeScoreMap } from "./nodeScoreMap.js"
   const expected = {
     best: {
       incompatibleNameArray: [],
-      platformCompatibility: {
+      platformCompatMap: {
         chrome: "49",
         firefox: "51",
         edge: "14",
@@ -42,7 +42,7 @@ import { nodeScoreMap } from "./nodeScoreMap.js"
     },
     otherwise: {
       incompatibleNameArray: Object.keys(babelConfigMap),
-      platformCompatibility: {},
+      platformCompatMap: {},
     },
   }
   assert({ actual, expected })
@@ -61,7 +61,7 @@ import { nodeScoreMap } from "./nodeScoreMap.js"
   const expected = {
     best: {
       incompatibleNameArray: ["transform-modules-systemjs"],
-      platformCompatibility: {
+      platformCompatMap: {
         chrome: "49",
         firefox: "51",
         edge: "14",
@@ -73,7 +73,7 @@ import { nodeScoreMap } from "./nodeScoreMap.js"
     },
     otherwise: {
       incompatibleNameArray: Object.keys(babelConfigMap),
-      platformCompatibility: {},
+      platformCompatMap: {},
     },
   }
   assert({ actual, expected })
@@ -130,7 +130,7 @@ import { nodeScoreMap } from "./nodeScoreMap.js"
         "syntax-optional-catch-binding",
         "transform-dotall-regex",
       ],
-      platformCompatibility: {
+      platformCompatMap: {
         chrome: "60",
         firefox: "55",
         electron: "2",
@@ -140,7 +140,7 @@ import { nodeScoreMap } from "./nodeScoreMap.js"
     },
     otherwise: {
       incompatibleNameArray: Object.keys(babelConfigMap),
-      platformCompatibility: {},
+      platformCompatMap: {},
     },
   }
   assert({ actual, expected })

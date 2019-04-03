@@ -1,8 +1,8 @@
 import { versionCompare, findHighestVersion } from "../../semantic-versioning/index.js"
 
-export const platformCompatibilityToScore = (platformCompatibility, platformScoreMap) => {
-  return Object.keys(platformCompatibility).reduce((previous, platformName) => {
-    const platformVersion = platformCompatibility[platformName]
+export const platformCompatMapToScore = (platformCompatMap, platformScoreMap) => {
+  return Object.keys(platformCompatMap).reduce((previous, platformName) => {
+    const platformVersion = platformCompatMap[platformName]
     return previous + platformToScore(platformName, platformVersion, platformScoreMap)
   }, 0)
 }

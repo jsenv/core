@@ -1,7 +1,8 @@
-import fetch from "node-fetch"
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { projectFolder } from "../../../../projectFolder.js"
 import { startCompileServer } from "../../startCompileServer.js"
+
+const fetch = import.meta.require("node-fetch")
+const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
 
 const compileInto = ".dist"
 const babelConfigMap = { "transform-block-scoping": true }

@@ -30,14 +30,14 @@ export const computePlatformGroupArray = ({ featureCompatMap, platformName }) =>
     )
 
     if (groupWithSameIncompatibleFeatures) {
-      groupWithSameIncompatibleFeatures.platformCompatibility[platformName] = findHighestVersion(
-        groupWithSameIncompatibleFeatures.platformCompatibility[platformName],
+      groupWithSameIncompatibleFeatures.platformCompatMap[platformName] = findHighestVersion(
+        groupWithSameIncompatibleFeatures.platformCompatMap[platformName],
         version,
       )
     } else {
       platformGroupArray.push({
         incompatibleNameArray: incompatibleNameArray.slice(),
-        platformCompatibility: {
+        platformCompatMap: {
           [platformName]: version,
         },
       })

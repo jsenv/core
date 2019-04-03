@@ -1,9 +1,10 @@
 import { fork as forkChildProcess } from "child_process"
-import { uneval } from "@dmail/uneval"
-import { projectFolder } from "../../projectFolder.js"
+import { uneval } from "/node_modules/@dmail/uneval/index.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 
-const nodeClientFile = `${projectFolder}/dist/src/launchNode/client.js`
+const { projectFolder } = import.meta.require("../../jsenv.config.js")
+
+const nodeClientFile = `${projectFolder}/dist/node/node-client/main.js`
 
 export const launchNode = async ({
   cancellationToken,

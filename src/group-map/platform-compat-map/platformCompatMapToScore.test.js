@@ -1,5 +1,5 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { platformCompatibilityToScore } from "./platformCompatibilityToScore.js"
+import { platformCompatMapToScore } from "./platformCompatMapToScore.js"
 
 {
   const chrome50Score = 1
@@ -16,7 +16,7 @@ import { platformCompatibilityToScore } from "./platformCompatibilityToScore.js"
   }
 
   {
-    const actual = platformCompatibilityToScore(
+    const actual = platformCompatMapToScore(
       {
         chrome: "48",
       },
@@ -27,7 +27,7 @@ import { platformCompatibilityToScore } from "./platformCompatibilityToScore.js"
   }
 
   {
-    const actual = platformCompatibilityToScore(
+    const actual = platformCompatMapToScore(
       {
         chrome: "49",
       },
@@ -38,7 +38,7 @@ import { platformCompatibilityToScore } from "./platformCompatibilityToScore.js"
   }
 
   {
-    const actual = platformCompatibilityToScore(
+    const actual = platformCompatMapToScore(
       {
         chrome: "50",
       },
@@ -49,7 +49,7 @@ import { platformCompatibilityToScore } from "./platformCompatibilityToScore.js"
   }
 
   {
-    const actual = platformCompatibilityToScore(
+    const actual = platformCompatMapToScore(
       {
         chrome: "51",
       },
@@ -60,7 +60,7 @@ import { platformCompatibilityToScore } from "./platformCompatibilityToScore.js"
   }
 
   {
-    const actual = platformCompatibilityToScore(
+    const actual = platformCompatMapToScore(
       {
         chrome: "51",
         foo: ["0"],

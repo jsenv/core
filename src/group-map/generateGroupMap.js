@@ -13,7 +13,7 @@
 { ┌──────────┴────────────┐
   "transform-block-scoping": {─┐
     "chrome": "10",            │
-    "safari": "3.0",           ├─platformCompatibility
+    "safari": "3.0",           platformCompatMap
     "firefox": "5.1"           │
   }────┼─────────┼─────────────┘
 }      │         └─────┐
@@ -26,7 +26,7 @@
     "incompatibleNameArray" : [
       "transform-block-scoping",
     ],
-    "platformCompatibility": {
+    "platformCompatMap": {
       "chrome": "10",
       "firefox": "6"
     }
@@ -40,7 +40,7 @@ Take chars below to update legends
 
 import { arrayWithoutValue } from "/node_modules/@dmail/helper/index.js"
 import { babelCompatMap as defaultBabelCompatMap } from "./babelCompatMap.js"
-import { platformCompatibilityToScore } from "./platform-compatibility/platformCompatibilityToScore.js"
+import { platformCompatMapToScore } from "./platform-compat-map/platformCompatMapToScore.js"
 import { computeEveryPlatformGroupArray } from "./group/computeEveryPlatformGroupArray.js"
 
 const BEST_ID = "best"
@@ -87,7 +87,7 @@ const generateFeatureGroupMap = ({
 
   const groupWithoutFeature = {
     incompatibleNameArray: featureNameArray,
-    platformCompatibility: {},
+    platformCompatMap: {},
   }
 
   if (groupCount === 1) {
@@ -113,8 +113,8 @@ const generateFeatureGroupMap = ({
     }
   }
 
-  const groupToScore = ({ platformCompatibility }) =>
-    platformCompatibilityToScore(platformCompatibility, platformScoreMap)
+  const groupToScore = ({ platformCompatMap }) =>
+    platformCompatMapToScore(platformCompatMap, platformScoreMap)
   const groupArrayWithEveryCombinationSortedByPlatformScore = groupArrayWithEveryCombination.sort(
     (a, b) => groupToScore(b) - groupToScore(a),
   )

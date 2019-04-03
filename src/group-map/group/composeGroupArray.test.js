@@ -6,7 +6,7 @@ import { composeGroupArray } from "./composeGroupArray.js"
     {
       // freeze to ensure composeGroupArray does not mutate
       incompatibleNameArray: Object.freeze(["a"]),
-      platformCompatibility: Object.freeze({
+      platformCompatMap: Object.freeze({
         chrome: 10,
       }),
     },
@@ -14,7 +14,7 @@ import { composeGroupArray } from "./composeGroupArray.js"
   const firefoxPlatformGroups = [
     {
       incompatibleNameArray: Object.freeze(["a"]),
-      platformCompatibility: Object.freeze({
+      platformCompatMap: Object.freeze({
         firefox: 20,
       }),
     },
@@ -23,7 +23,7 @@ import { composeGroupArray } from "./composeGroupArray.js"
   const expected = [
     {
       incompatibleNameArray: ["a"],
-      platformCompatibility: {
+      platformCompatMap: {
         chrome: "10",
         firefox: "20",
       },

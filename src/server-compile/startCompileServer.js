@@ -1,5 +1,5 @@
-import { createCancellationToken } from "@dmail/cancellation"
-import { normalizePathname } from "@jsenv/module-resolution"
+import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
+import { createCancellationToken } from "/node_modules/@dmail/cancellation/index.js"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
 import {
   startServer,
@@ -7,8 +7,9 @@ import {
   serviceCompose,
   responseCompose,
 } from "../server/index.js"
-import { projectFolder as selfProjectFolder } from "../../projectFolder.js"
 import { createJsCompileService } from "./createJsCompileService.js"
+
+const { projectFolder: selfProjectFolder } = import.meta.require("../../jsenv.config.js")
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
