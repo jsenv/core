@@ -1,7 +1,15 @@
 ### todo
 
-retest all folders after compileToService
+retest cover
+
 retest importing a json file, it should work and seems to fail for now
+
+retest how jsenv behaves when a subimported module throw
+the idea is to be able to know what file cause the error
+because while working on this I often had trouble to find which file
+contained invalid syntax, require or an import which was not found
+
+write test to ensure bundling works instead of having to see if output looks correct
 
 ### How to use dependency written in commonjs
 

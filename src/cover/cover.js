@@ -1,9 +1,4 @@
-import {
-  namedValueDescriptionToMetaDescription,
-  selectAllFileInsideFolder,
-  pathnameToMeta,
-} from "@dmail/project-structure"
-import { normalizePathname } from "@jsenv/module-resolution"
+import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
 import { executePlan } from "../executePlan/index.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
 import {
@@ -13,6 +8,13 @@ import {
 import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
 import { executionPlanResultToCoverageMap } from "./executionPlanResultToCoverageMap/index.js"
 import { filenameRelativeToEmptyCoverage } from "./filenameRelativeToEmptyCoverage.js"
+
+// required until importMap gets fixed in jsenv core
+const {
+  namedValueDescriptionToMetaDescription,
+  selectAllFileInsideFolder,
+  pathnameToMeta,
+} = import.meta.require("@dmail/project-structure")
 
 export const cover = async ({
   importMap,

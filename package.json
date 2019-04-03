@@ -77,7 +77,7 @@
 		"upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
 		"clean": "rimraf dist && rimraf coverage",
 		"bundle-node": "node ./script/bundle-node/bundle-node.js",
-		"dist": "npm run clean && npm run bundle-node",
+		"dist": "npm run clean && npm run bundle-node && npm run generate-browser-client && npm run generate-node-client",
 		"prepublishOnly": "npm run dist",
 		"reinstall": "npm run clean && rimraf node_modules && npm install"
 	}

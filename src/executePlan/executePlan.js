@@ -1,5 +1,8 @@
 import { cpus } from "os"
-import { createCancellationToken, createConcurrentOperations } from "@dmail/cancellation"
+import {
+  createCancellationToken,
+  createConcurrentOperations,
+} from "/node_modules/@dmail/cancellation/index.js"
 import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
   createExecutionPlanStartLog,
