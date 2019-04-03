@@ -195,9 +195,12 @@ const createExitWithFailureCodeError = (code) => {
   return new Error(`child exited with ${code}`)
 }
 
-const errorToSourceError = (error, { filenameRelative, sourceOrigin }) => {
+const errorToSourceError = (
+  error,
+  // { filenameRelative, sourceOrigin }
+) => {
   if (error && error.code === "MODULE_PARSE_ERROR") {
-    error.message = error.message.replace(filenameRelative, `${sourceOrigin}/${filenameRelative}`)
+    // error.message = error.message.replace(filenameRelative, `${sourceOrigin}/${filenameRelative}`)
     return error
   }
 

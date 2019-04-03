@@ -1,8 +1,9 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { projectFolder } from "../../../../projectFolder.js"
 import { startCompileServer } from "../../../server-compile/index.js"
 import { launchAndExecute } from "../../../launchAndExecute/index.js"
 import { launchChromium } from "../../launchChromium.js"
+
+const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
 
 const testFolder = `${projectFolder}/src/launchChromium/test/throw`
 const filenameRelative = `throw.js`

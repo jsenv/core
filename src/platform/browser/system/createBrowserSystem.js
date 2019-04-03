@@ -1,7 +1,7 @@
 import "/node_modules/systemjs/dist/system.js"
 import { resolveImport, remapResolvedImport } from "/node_modules/@jsenv/module-resolution/index.js"
 import { hrefToFilenameRelative } from "../../hrefToFilenameRelative.js"
-import { fromHref } from "../../registerModuleFrom.js"
+import { fromHref } from "../../registerModuleFrom/registerModuleFrom.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
 
 export const createBrowserSystem = ({

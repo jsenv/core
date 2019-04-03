@@ -30,8 +30,5 @@ const onError = (error) => {
 }
 
 const transformError = (error) => {
-  if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-    return error.error
-  }
   return error
 }
