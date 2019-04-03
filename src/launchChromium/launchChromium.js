@@ -1,8 +1,10 @@
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
 import { URL } from "url"
-import puppeteer from "puppeteer"
-import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
+import {
+  createCancellationToken,
+  createStoppableOperation,
+} from "/node_modules/@dmail/cancellation/index.js"
 import { startIndexServer } from "../server-index/startIndexServer.js"
 import { originAsString } from "../server/index.js"
 import { regexpEscape } from "../stringHelper.js"
@@ -10,6 +12,8 @@ import {
   registerProcessInterruptCallback,
   registerUngaranteedProcessTeardown,
 } from "../process-signal/index.js"
+
+const puppeteer = import.meta.require("puppeteer")
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
@@ -244,7 +248,7 @@ callback: ${callback}`)
 }
 
 const getBrowserPlatformHref = ({ compileServerOrigin }) =>
-  `${compileServerOrigin}/node_modules/@jsenv/core/dist/browserPlatform.js`
+  `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/platform.js`
 
 const errorToSourceError = (error, { sourceOrigin, compileServerOrigin }) => {
   // does not truly work

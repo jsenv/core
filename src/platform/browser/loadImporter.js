@@ -1,4 +1,4 @@
-import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
+import { memoizeOnce } from "/node_modules/@dmail/helper/src/memoizeOnce.js"
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
 import { evalSource } from "./evalSource.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
@@ -26,7 +26,7 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigi
     return nativeImporter
   }
 
-  const importerHref = `${compileServerOrigin}/node_modules/@jsenv/core/dist/browserSystemImporter.js`
+  const importerHref = `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/importer.js`
   // we could not really inline it as compileId is dynamc
   // we could generate it dynamically from a given importMap
   // because the compiledImportMap is just the rwa importMap
@@ -40,7 +40,8 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigi
   evalSource(importerResponse.body, importerHref)
   const importMap = JSON.parse(importMapResponse.body)
 
-  const systemImporter = window.__browserImporter__.createSystemImporter({
+  const browserImporter = await window.__browserImporter__
+  const systemImporter = browserImporter.createSystemImporter({
     importMap,
     compileInto,
     compileServerOrigin,

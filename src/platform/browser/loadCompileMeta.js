@@ -1,4 +1,4 @@
-import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
+import { memoizeOnce } from "/node_modules/@dmail/helper/src/memoizeOnce.js"
 import { detect } from "./browserDetect/index.js"
 import { browserToCompileId } from "./browserToCompileId.js"
 import { fetchUsingXHR } from "./fetchUsingXHR.js"

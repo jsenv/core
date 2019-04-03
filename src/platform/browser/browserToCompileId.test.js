@@ -1,4 +1,4 @@
-import assert from "assert"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { browserToCompileId } from "./browserToCompileId.js"
 
 {
@@ -9,14 +9,14 @@ import { browserToCompileId } from "./browserToCompileId.js"
     },
     {
       foo: {
-        compatibility: {
+        platformCompatMap: {
           chrome: "41",
         },
       },
     },
   )
   const expected = "foo"
-  assert.deepEqual(actual, expected)
+  assert({ actual, expected })
 }
 
 {
@@ -27,14 +27,14 @@ import { browserToCompileId } from "./browserToCompileId.js"
     },
     {
       foo: {
-        compatibility: {
+        platformCompatMap: {
           chrome: "41",
         },
       },
     },
   )
   const expected = null
-  assert.deepEqual(actual, expected)
+  assert({ actual, expected })
 }
 
 {
@@ -45,12 +45,12 @@ import { browserToCompileId } from "./browserToCompileId.js"
     },
     {
       foo: {
-        compatibility: {
+        platformCompatMap: {
           chrome: "41",
         },
       },
     },
   )
   const expected = null
-  assert.deepEqual(actual, expected)
+  assert({ actual, expected })
 }

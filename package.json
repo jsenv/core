@@ -67,6 +67,8 @@
 		"rimraf": "2.6.2"
 	},
 	"scripts": {
+		"generate-browser-client": "node ./script/generate-browser-client/generate-browser-client.js",
+		"generate-node-client": "node ./script/generate-node-client/generate-node-client.js",
 		"generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
 		"lint": "eslint .",
 		"check-format": "node ./script/check-format/check-format.js",

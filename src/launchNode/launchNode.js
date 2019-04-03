@@ -4,7 +4,7 @@ import { createChildExecArgv } from "./createChildExecArgv.js"
 
 const { projectFolder } = import.meta.require("../../jsenv.config.js")
 
-const nodeClientFile = `${projectFolder}/dist/node/node-client/main.js`
+const nodeClientFile = `${projectFolder}/dist/node-client/main.js`
 
 export const launchNode = async ({
   cancellationToken,

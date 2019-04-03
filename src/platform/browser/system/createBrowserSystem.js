@@ -1,5 +1,5 @@
-import "systemjs/dist/system.js"
-import { resolveImport, remapResolvedImport } from "@jsenv/module-resolution"
+import "/node_modules/systemjs/dist/system.js"
+import { resolveImport, remapResolvedImport } from "/node_modules/@jsenv/module-resolution/index.js"
 import { hrefToFilenameRelative } from "../../hrefToFilenameRelative.js"
 import { fromHref } from "../../registerModuleFrom.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"

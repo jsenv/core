@@ -4,7 +4,7 @@ const { importMap, projectFolder, babelPluginDescription } = require("../../jsen
 bundleNode({
   importMap,
   projectFolder,
-  into: "dist/node/node-client",
+  into: "dist/node-client",
   babelPluginDescription,
   entryPointsDescription: {
     main: "src/launchNode/client.js",
