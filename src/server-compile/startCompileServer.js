@@ -33,6 +33,9 @@ export const startCompileServer = async ({
   signature,
   verbose,
 }) => {
+  if (typeof projectFolder !== "string")
+    throw new TypeError(`projectFolder must be a string. got ${projectFolder}`)
+
   projectFolder = normalizePathname(projectFolder)
   const jsCompileService = await createJsCompileService({
     cancellationToken,
