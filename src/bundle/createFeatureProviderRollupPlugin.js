@@ -15,6 +15,7 @@ export const createFeatureProviderRollupPlugin = ({
   babelConfigMap,
   minify,
   target,
+  detectAndTransformIfNeededAsyncInsertedByRollup = target === "browser",
 }) => {
   const replaceBabelHelperByNamedImportBabelPlugin = createReplaceBabelHelperByNamedImportBabelPlugin(
     {
@@ -65,7 +66,7 @@ export const createFeatureProviderRollupPlugin = ({
         input: source,
         filename,
         babelConfigMap: babelConfigMapSubset,
-        // false, will be done inside writeBundle
+        // false, will be done by rollup
         transformModuleIntoSystemFormat: false,
       })
       return { code, map }
@@ -88,6 +89,8 @@ export const createFeatureProviderRollupPlugin = ({
     },
 
     writeBundle: async (bundle) => {
+      if (!detectAndTransformIfNeededAsyncInsertedByRollup) return
+
       const asyncPluginName = findAsyncPluginNameInBabelConfigMap(babelConfigMapSubset)
 
       if (!asyncPluginName) return
@@ -104,7 +107,7 @@ export const createFeatureProviderRollupPlugin = ({
             inputMap: bundleInfo.map,
             filename: bundleFilename,
             babelConfigMap: { [asyncPluginName]: babelConfigMapSubset[asyncPluginName] },
-            transformModuleIntoSystemFormat: false,
+            transformModuleIntoSystemFormat: false, // already done by rollup
           })
 
           await Promise.all([

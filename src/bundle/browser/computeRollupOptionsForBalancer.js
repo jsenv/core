@@ -63,8 +63,8 @@ minify: ${minify}
     },
     rollupGenerateOptions: {
       file,
-      format: "system",
-      name: `./${entryPointName}.js`,
+      format: "iife",
+      // name: `./${entryPointName}.js`,
       sourcemap: true,
       sourcemapExcludeSources: true,
     },

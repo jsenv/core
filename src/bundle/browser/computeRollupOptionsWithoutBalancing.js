@@ -44,7 +44,7 @@ minify: ${minify}
       dir,
       // https://rollupjs.org/guide/en#output-format
       format: "system",
-      entryFileNames: `./[name].js`,
+      // entryFileNames: `./[name].js`,
       // https://rollupjs.org/guide/en#output-sourcemap
       sourcemap: true,
       // we could exclude them

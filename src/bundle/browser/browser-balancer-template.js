@@ -6,9 +6,18 @@ import { entryPointName, groupMap } from "\0bundle-browser-options.js"
 import { detect } from "../../platform/browser/browserDetect/index.js"
 import { browserToCompileId } from "../../platform/browser/browserToCompileId.js"
 
-const compileId = browserToCompileId(detect(), groupMap)
-const scriptSrc = `./${compileId}/${entryPointName}.js`
+// eslint-disable-next-line no-undef
+System.register([], function(exports, module) {
+  "use strict"
+  return {
+    // eslint-disable-next-line object-shorthand
+    execute: function() {
+      const compileId = browserToCompileId(detect(), groupMap)
+      const scriptSrc = `./${compileId}/${entryPointName}.js`
 
-const namespace = await import(scriptSrc)
-
-export default namespace
+      return module.import(scriptSrc).then((namespace) => {
+        exports(namespace)
+      })
+    },
+  }
+})

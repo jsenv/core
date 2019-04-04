@@ -8,7 +8,6 @@ const testFolder = `${projectFolder}/test/bundle-browser/without-balancing`
 bundleBrowser({
   projectFolder: testFolder,
   into: "dist/browser",
-  globalName: "withoutBalancing",
   babelConfigMap,
   entryPointMap: {
     main: "without-balancing.js",
