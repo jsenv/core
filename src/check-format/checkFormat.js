@@ -19,9 +19,9 @@ export const checkFormat = ({ projectFolder, formattableDescription }) =>
       cancellationToken,
       pathname: projectFolder,
       metaDescription: namedValueDescriptionToMetaDescription({
-        format: formattableDescription,
+        formattable: formattableDescription,
       }),
-      predicate: (meta) => meta.format === true,
+      predicate: (meta) => meta.formattable === true,
       transformFile: ({ filenameRelative }) => filenameRelative,
     })
 

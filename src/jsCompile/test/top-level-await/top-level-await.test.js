@@ -1,9 +1,9 @@
 import fs from "fs"
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { projectFolder } from "../../../../projectFolder.js"
 import { jsCompile } from "../../jsCompile.js"
 
 const transformAsyncToPromises = import.meta.require("babel-plugin-transform-async-to-promises")
+const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
 
 const testFolder = `${projectFolder}/src/jsCompile/test/top-level-await`
 const filenameRelative = "top-level-await.js"

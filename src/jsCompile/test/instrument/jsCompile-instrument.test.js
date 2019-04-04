@@ -1,11 +1,12 @@
 import fs from "fs"
-import transformBlockScoping from "@babel/plugin-transform-block-scoping"
-import istanbul from "istanbul"
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { projectFolder } from "../../../../projectFolder.js"
 import { objectMap } from "../../../objectHelper.js"
 import { createInstrumentPlugin } from "../../../cover/createInstrumentPlugin.js"
 import { jsCompile } from "../../jsCompile.js"
+
+const istanbul = import.meta.require("istanbul")
+const transformBlockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
+const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
 
 const root = `${projectFolder}/src/jsCompile/test/fixtures`
 const file = "file.js"
