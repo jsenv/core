@@ -2,7 +2,7 @@ import {
   arrayWithoutDuplicate,
   compositionMappingToComposeStrict,
   compositionMappingToCompose,
-} from "@dmail/helper"
+} from "/node_modules/@dmail/helper/index.js"
 
 const composeHeaderValues = (value, nextValue) => {
   return arrayWithoutDuplicate([...value.split(", "), ...nextValue.split(", ")]).join(", ")

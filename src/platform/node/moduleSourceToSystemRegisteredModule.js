@@ -1,4 +1,4 @@
-import { hrefToPathname } from "@jsenv/module-resolution"
+import { hrefToPathname } from "/node_modules/@jsenv/module-resolution/index.js"
 import { hrefToMeta } from "../hrefToMeta.js"
 import { valueInstall } from "../valueInstall.js"
 import { evalSource } from "./evalSource.js"

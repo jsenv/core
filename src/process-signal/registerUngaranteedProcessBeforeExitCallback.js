@@ -1,4 +1,4 @@
-import { arrayWithoutValue } from "@dmail/helper"
+import { arrayWithoutValue } from "/node_modules/@dmail/helper/index.js"
 
 let beforeExitCallbackArray = []
 let uninstall

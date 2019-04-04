@@ -1,25 +1,28 @@
-import { groupToBabelPluginDescription } from "../../group-description/index.js"
+import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { createJsenvRollupPlugin } from "../createJsenvRollupPlugin.js"
-import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionToRollupPlugin.js"
+import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 
 export const computeRollupOptionsWithBalancing = ({
   cancellationToken,
   importMap,
   projectFolder,
   into,
-  entryPointsDescription,
-  babelPluginDescription,
-  groupDescription,
+  entryPointMap,
+  babelConfigMap,
+  groupMap,
   compileId,
   log,
   minify,
 }) => {
   const dir = `${projectFolder}/${into}/${compileId}`
 
-  const groupBabelPluginDescription = groupToBabelPluginDescription(
-    groupDescription[compileId],
-    babelPluginDescription,
-  )
+  const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    dir,
+    featureNameArray: groupMap[compileId].incompatibleNameArray,
+    babelConfigMap,
+    minify,
+    target: "node",
+  })
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({
     cancellationToken,
@@ -27,25 +30,19 @@ export const computeRollupOptionsWithBalancing = ({
     projectFolder,
   })
 
-  const babelRollupPlugin = babelPluginDescriptionToRollupPlugin({
-    babelPluginDescription: groupBabelPluginDescription,
-    minify,
-    target: "node",
-  })
-
   log(`
 bundle entry points for node with balancing.
 compileId: ${compileId}
-entryNameArray: ${Object.keys(entryPointsDescription)}
-babelPluginNameArray: ${Object.keys(groupBabelPluginDescription)}
+entryPointArray: ${Object.keys(entryPointMap)}
 dir: ${dir}
 minify: ${minify}
 `)
 
   return {
     rollupParseOptions: {
-      input: entryPointsDescription,
-      plugins: [babelRollupPlugin, jsenvRollupPlugin],
+      input: entryPointMap,
+      plugins: [featureProviderRollupPlugin, jsenvRollupPlugin],
+      external: (id) => isNativeNodeModuleBareSpecifier(id),
     },
     rollupGenerateOptions: {
       dir,

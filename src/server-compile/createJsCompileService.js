@@ -1,14 +1,14 @@
-import { createCancellationToken } from "@dmail/cancellation"
-import { fileWriteFromString } from "@dmail/project-structure-compile-babel"
+import { createCancellationToken } from "/node_modules/@dmail/cancellation/index.js"
+import { fileWrite } from "/node_modules/@dmail/helper/index.js"
 import { jsCompile } from "../jsCompile/index.js"
 import { jsCompileToService } from "../jsCompileToService/index.js"
 import {
-  generateGroupDescription,
-  groupDescriptionToCompileDescription,
-  browserScoring as browserDefaultScoring,
-  nodeScoring as nodeDefaultScoring,
-} from "../group-description/index.js"
+  generateGroupMap,
+  browserScoreMap as browserDefaultScoreMap,
+  nodeScoreMap as nodeDefaultScoreMap,
+} from "../group-map/index.js"
 import { wrapImportMap } from "../import-map/wrapImportMap.js"
+import { objectMapValue } from "../objectHelper.js"
 
 export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),
@@ -16,35 +16,48 @@ export const createJsCompileService = async ({
   projectFolder,
   compileInto,
   compileGroupCount,
-  babelPluginDescription,
-  babelPluginCompatibilityDescription,
+  babelConfigMap,
+  babelCompatMap,
   locate,
-  browserScoring = browserDefaultScoring,
-  nodeScoring = nodeDefaultScoring,
+  browserScoreMap = browserDefaultScoreMap,
+  nodeScoreMap = nodeDefaultScoreMap,
   localCacheStrategy,
   localCacheTrackHit,
   cacheStrategy,
   watch,
   watchPredicate,
+  transformTopLevelAwait,
+  enableGlobalLock,
 }) => {
-  const groupDescription = generateGroupDescription({
-    babelPluginDescription,
-    platformScoring: { ...browserScoring, ...nodeScoring },
+  const groupMap = generateGroupMap({
+    babelConfigMap,
+    babelCompatMap,
+    platformScoreMap: { ...browserScoreMap, ...nodeScoreMap },
     groupCount: compileGroupCount,
-    babelPluginCompatibilityDescription,
   })
 
-  const compileDescription = groupDescriptionToCompileDescription(
-    groupDescription,
-    babelPluginDescription,
-  )
+  const compileDescription = objectMapValue(groupMap, (group) => {
+    const groupBabelConfigMap = {}
+
+    group.incompatibleNameArray.forEach((incompatibleFeatureName) => {
+      if (incompatibleFeatureName in babelConfigMap) {
+        groupBabelConfigMap[incompatibleFeatureName] = babelConfigMap[incompatibleFeatureName]
+      }
+    })
+
+    return {
+      babelConfigMap: groupBabelConfigMap,
+      transformTopLevelAwait,
+      enableGlobalLock,
+    }
+  })
 
   await Promise.all([
-    fileWriteFromString(
-      `${projectFolder}/${compileInto}/groupDescription.json`,
-      JSON.stringify(groupDescription, null, "  "),
+    fileWrite(
+      `${projectFolder}/${compileInto}/groupMap.json`,
+      JSON.stringify(groupMap, null, "  "),
     ),
-    fileWriteFromString(
+    fileWrite(
       `${projectFolder}/${compileInto}/importMap.json`,
       JSON.stringify(importMap, null, "  "),
     ),
@@ -77,7 +90,7 @@ export const createJsCompileService = async ({
 const writeGroupImportMapFile = ({ projectFolder, compileInto, compileId, importMap }) => {
   const groupImportMap = wrapImportMap(importMap, `${compileInto}/${compileId}`)
 
-  return fileWriteFromString(
+  return fileWrite(
     `${projectFolder}/${compileInto}/importMap.${compileId}.json`,
     JSON.stringify(groupImportMap, null, "  "),
   )

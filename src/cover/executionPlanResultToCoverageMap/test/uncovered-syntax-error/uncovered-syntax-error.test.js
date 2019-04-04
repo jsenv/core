@@ -1,7 +1,8 @@
-import { assert } from "@dmail/assert"
-import { projectFolder } from "../../../../../projectFolder.js"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { executePlan } from "../../../../executePlan/index.js"
 import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap.js"
+
+const { projectFolder } = import.meta.require("../../../../../jsenv.config.js")
 
 const testFolder = `${projectFolder}/src/executionPlanResultToCoverageMap/test/uncovered-syntax-error`
 

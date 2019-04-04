@@ -1,23 +1,22 @@
-import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
+import { memoizeOnce } from "/node_modules/@dmail/helper/src/memoizeOnce.js"
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
 import { evalSource } from "./evalSource.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 
 export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigin }) => {
   // importer depends on informer, but this is an implementation detail
-  const { groupDescription, compileId } = await loadCompileMeta({
+  const { groupMap, compileId } = await loadCompileMeta({
     compileInto,
     compileServerOrigin,
   })
 
   // one day maybe we'll be able to use nativeImporter but
-  // for now transform-modules-systemjs is not inside groupDescription because
+  // for now transform-modules-systemjs is not inside groupMap because
   // we have to use it no matter what
   // they day a native solution can bring top level await, custom
   // resolve, catch syntax error etc we may use nativeImporter
   const canUseNativeImporter =
-    false &&
-    groupDescription[compileId].babelPluginNameArray.indexOf("transform-modules-systemjs") === -1
+    false && groupMap[compileId].incompatibleNameArray.indexOf("transform-modules-systemjs") === -1
 
   if (canUseNativeImporter) {
     const nativeImporter = {
@@ -27,7 +26,7 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigi
     return nativeImporter
   }
 
-  const importerHref = `${compileServerOrigin}/node_modules/@jsenv/core/dist/browserSystemImporter.js`
+  const importerHref = `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/importer.js`
   // we could not really inline it as compileId is dynamc
   // we could generate it dynamically from a given importMap
   // because the compiledImportMap is just the rwa importMap
@@ -41,7 +40,8 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigi
   evalSource(importerResponse.body, importerHref)
   const importMap = JSON.parse(importMapResponse.body)
 
-  const systemImporter = window.__browserImporter__.createSystemImporter({
+  const browserImporter = await window.__browserImporter__
+  const systemImporter = browserImporter.createSystemImporter({
     importMap,
     compileInto,
     compileServerOrigin,

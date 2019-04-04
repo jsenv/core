@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
-import { createCancellationToken } from "@dmail/cancellation"
-import { fileRead, fileStat } from "@dmail/helper"
+import { createCancellationToken } from "/node_modules/@dmail/cancellation/index.js"
+import { fileRead, fileStat } from "/node_modules/@dmail/helper/index.js"
 import { convertFileSystemErrorToResponseProperties } from "../requestToFileResponse/index.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { acceptContentType, createSSERoom, serviceCompose } from "../server/index.js"
@@ -76,8 +76,16 @@ export const compileToService = (
       }
     }
 
-    // some file must not be compiled (.html, .css, dist/browserLoader.js)
-    if (!compilePredicate(filenameRelative, filename)) return null
+    // we are asking for a compiled version of a file that does not have to be compiled
+    // we can redirect to the non compiled version
+    if (!compilePredicate(filenameRelative, filename)) {
+      return {
+        status: 307,
+        headers: {
+          location: `${origin}/${filenameRelative}`,
+        },
+      }
+    }
 
     // when I ask for a compiled file, watch the corresponding file on filesystem
     if (watch && watchedFiles.has(filename) === false && watchPredicate(filenameRelative)) {

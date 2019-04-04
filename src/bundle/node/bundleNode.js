@@ -1,5 +1,5 @@
-import { normalizePathname } from "@jsenv/module-resolution"
-import { nodeScoring } from "../../group-description/index.js"
+import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
+import { nodeScoreMap } from "../../group-map/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
 import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBalancing.js"
@@ -9,29 +9,29 @@ export const bundleNode = async ({
   importMap,
   projectFolder,
   into,
-  entryPointsDescription,
-  babelPluginDescription,
+  entryPointMap,
+  babelConfigMap,
   compileGroupCount = 2,
-  platformScoring = nodeScoring,
+  platformScoreMap = nodeScoreMap,
   verbose,
   minify = false,
 }) => {
   projectFolder = normalizePathname(projectFolder)
   return await bundlePlatform({
-    entryPointsDescription,
+    entryPointMap,
     projectFolder,
     into,
-    babelPluginDescription,
+    babelConfigMap,
     compileGroupCount,
-    platformScoring,
+    platformScoreMap,
     verbose,
     computeRollupOptionsWithoutBalancing: (context) =>
       computeRollupOptionsWithoutBalancing({
         importMap,
         projectFolder,
         into,
-        entryPointsDescription,
-        babelPluginDescription,
+        entryPointMap,
+        babelConfigMap,
         minify,
         ...context,
       }),
@@ -40,8 +40,8 @@ export const bundleNode = async ({
         importMap,
         projectFolder,
         into,
-        entryPointsDescription,
-        babelPluginDescription,
+        entryPointMap,
+        babelConfigMap,
         minify,
         ...context,
       }),
@@ -50,7 +50,7 @@ export const bundleNode = async ({
         importMap,
         projectFolder,
         into,
-        babelPluginDescription,
+        babelConfigMap,
         minify,
         ...context,
       }),

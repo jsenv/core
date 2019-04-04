@@ -2,7 +2,7 @@ import path from "path"
 import assert from "assert"
 import { jsCompileToService } from "../../jsCompileToService.js"
 import { jsCompile } from "../../../jsCompile/index.js"
-import { createInstrumentPlugin } from "../../../cover/createInstrumentPlugin"
+import { createInstrumentPlugin } from "../../../cover/createInstrumentPlugin.js"
 
 const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = ".dist"
@@ -14,7 +14,7 @@ const test = async () => {
     compileInto,
     compileDescription: {
       [compileId]: {
-        babelPluginDescription: {
+        babelConfigMap: {
           "transform-instrument": createInstrumentPlugin(),
         },
       },

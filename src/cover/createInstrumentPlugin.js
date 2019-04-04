@@ -1,4 +1,4 @@
-import { programVisitor } from "istanbul-lib-instrument"
+const { programVisitor } = import.meta.require("istanbul-lib-instrument")
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 

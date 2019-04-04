@@ -1,24 +1,24 @@
-import createNodeResolveRollupPlugin from "rollup-plugin-node-resolve"
-import { uneval } from "@dmail/uneval"
-import { projectFolder as selfProjectFolder } from "../../../projectFolder.js"
-import { groupToBabelPluginDescription } from "../../group-description/index.js"
-import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionToRollupPlugin.js"
+import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
+import { uneval } from "/node_modules/@dmail/uneval/index.js"
+import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
+import { pathnameToDirname } from "/node_modules/@jsenv/module-resolution/index.js"
+
+const { projectFolder: selfProjectFolder } = import.meta.require("../../../jsenv.config.js")
 
 const BUNDLE_NODE_OPTIONS_SPECIFIER = "\0bundle-node-options.js"
 
 export const computeRollupOptionsForBalancer = ({
   projectFolder,
   into,
-  babelPluginDescription,
-  groupDescription,
-  entryName,
-  entryFilenameRelative,
+  babelConfigMap,
+  groupMap,
+  entryPointName,
   log,
   minify,
 }) => {
   const balancerOptionSource = generateBalancerOptionsSource({
-    groupDescription,
-    entryFilenameRelative,
+    groupMap,
+    entryPointName,
   })
 
   const nodeBalancerRollupPlugin = {
@@ -41,26 +41,19 @@ export const computeRollupOptionsForBalancer = ({
     },
   }
 
-  const nodeResolveRollupPlugin = createNodeResolveRollupPlugin({
-    module: true,
-  })
+  const file = `${projectFolder}/${into}/${entryPointName}.js`
 
-  const otherwiseBabelPluginDescription = groupToBabelPluginDescription(
-    groupDescription.otherwise,
-    babelPluginDescription,
-  )
-  const babelRollupPlugin = babelPluginDescriptionToRollupPlugin({
-    babelPluginDescription: otherwiseBabelPluginDescription,
+  const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    dir: pathnameToDirname(file),
+    featureNameArray: groupMap.otherwise.incompatibleNameArray,
+    babelConfigMap,
     minify,
     target: "node",
   })
 
-  const file = `${projectFolder}/${into}/${entryFilenameRelative}`
-
   log(`
-bundle balancer file for node
-entryName: ${entryName}
-babelPluginNameArray: ${Object.keys(otherwiseBabelPluginDescription)}
+bundle balancer file for node.
+entryPointName: ${entryPointName}
 file: ${file}
 minify : ${minify}
 `)
@@ -68,21 +61,20 @@ minify : ${minify}
   return {
     rollupParseOptions: {
       input: `${selfProjectFolder}/src/bundle/node/node-balancer-template.js`,
-      plugins: [nodeBalancerRollupPlugin, nodeResolveRollupPlugin, babelRollupPlugin],
+      plugins: [nodeBalancerRollupPlugin, featureProviderRollupPlugin],
+      external: (id) => isNativeNodeModuleBareSpecifier(id),
     },
     rollupGenerateOptions: {
       file,
       format: "cjs",
-      name: null,
+      // name: null,
       sourcemap: true,
       sourcemapExcludeSources: true,
     },
   }
 }
 
-const generateBalancerOptionsSource = ({ entryFilenameRelative, groupDescription }) => {
-  return `
-export const entryFilenameRelative = ${uneval(entryFilenameRelative)}
-export const groupDescription = ${uneval(groupDescription)}
-`
+const generateBalancerOptionsSource = ({ entryPointName, groupMap }) => {
+  return `export const entryPointName = ${uneval(entryPointName)}
+export const groupMap = ${uneval(groupMap)}`
 }

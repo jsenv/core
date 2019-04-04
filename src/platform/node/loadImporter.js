@@ -1,5 +1,5 @@
-import { memoizeOnce, fileRead } from "@dmail/helper"
-import { hrefToPathname } from "@jsenv/module-resolution"
+import { memoizeOnce, fileRead } from "/node_modules/@dmail/helper/index.js"
+import { hrefToPathname } from "/node_modules/@jsenv/module-resolution/index.js"
 import { createImporter } from "./system/createImporter.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 

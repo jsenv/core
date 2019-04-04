@@ -1,4 +1,4 @@
-import { Collector, Reporter } from "istanbul"
+const { Collector, Reporter } = import.meta.require("istanbul")
 
 export const generateCoverageHTML = (coverageMap) => {
   const collector = new Collector()

@@ -8,7 +8,8 @@ export const jsCompile = async ({
   projectFolder,
   inputAst,
   inputMap,
-  babelPluginDescription = {},
+  babelConfigMap = {},
+  transformTopLevelAwait,
   remap = true,
   remapMethod = "comment", // 'comment', 'inline'
 }) => {
@@ -27,7 +28,8 @@ export const jsCompile = async ({
     projectFolder,
     inputAst,
     inputMap,
-    babelPluginDescription,
+    babelConfigMap,
+    transformTopLevelAwait,
     remap,
   })
   const coverage = metadata.coverage
@@ -90,7 +92,7 @@ export const jsCompile = async ({
   }
 }
 
-const writeSourceMapLocation = ({ source, location }) => {
+export const writeSourceMapLocation = ({ source, location }) => {
   return `${source}
 ${"//#"} sourceMappingURL=${location}`
 }

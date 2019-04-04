@@ -27,9 +27,9 @@ export const executeCompiledFile = ({
 const readCoverage = () => window.__coverage__
 
 const transformError = (error) => {
-  if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
-    return exceptionToObject(error.error)
-  }
+  // if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
+  //   return exceptionToObject(error.error)
+  // }
   return exceptionToObject(error)
 }
 
@@ -54,7 +54,18 @@ const onError = (error, { compileInto, compileServerOrigin, filenameRelative }) 
     compileServerOrigin,
   })
 
+  const knownFileError = meta.file && !meta.importerFile
+  const knownImportError = meta.file && meta.importerFile
+
   const css = `
+    .jsenv-console pre {
+      overflow: auto;
+      /* avoid scrollbar to hide the text behind it */
+      padding-top: 20px;
+      padding-right: 20px;
+      padding-bottom: 20px;
+    }
+
     .jsenv-console pre[data-theme="dark"] {
       background: transparent;
       border: 1px solid black
@@ -75,10 +86,18 @@ const onError = (error, { compileInto, compileServerOrigin, filenameRelative }) 
       <style type="text/css">${css}></style>
       <div class="jsenv-console">
         <h1>
-          <a href="${filenameRelativeToSourceHref({
-            compileServerOrigin,
-            filenameRelative,
-          })}">${filenameRelative}</a> import rejected
+        ${
+          // eslint-disable-next-line no-nested-ternary
+          knownFileError
+            ? createHTMLForKnownFileError({ file: meta.file, compileServerOrigin })
+            : knownImportError
+            ? createHTMLForKnownImportError({
+                file: meta.file,
+                importerFile: meta.importerFile,
+                compileServerOrigin,
+              })
+            : createHTMLForUnknownError({ mainFile: filenameRelative, compileServerOrigin })
+        }
         </h1>
         <pre data-theme="${meta.dataTheme || "dark"}">${meta.data}</pre>
       </div>
@@ -86,6 +105,32 @@ const onError = (error, { compileInto, compileServerOrigin, filenameRelative }) 
   appendHMTL(html, document.body)
   console.error(error)
 }
+
+const createHTMLForKnownFileError = ({
+  file,
+  compileServerOrigin,
+}) => `error with imported file.<br/>
+file: ${convertFileToLink({ file, compileServerOrigin })}`
+
+const createHTMLForKnownImportError = ({
+  file,
+  importerFile,
+  compileServerOrigin,
+}) => `error with imported file.<br />
+file: ${convertFileToLink({ file, compileServerOrigin })}
+imported by: ${convertFileToLink({ file: importerFile, compileServerOrigin })}`
+
+const createHTMLForUnknownError = ({
+  mainFile,
+  compileServerOrigin,
+}) => `error during execution.<br />
+main file: ${convertFileToLink({ file: mainFile, compileServerOrigin })}`
+
+const convertFileToLink = ({ file, compileServerOrigin }) =>
+  `<a href="${filenameRelativeToSourceHref({
+    compileServerOrigin,
+    filenameRelative: file,
+  })}">${file}</a>`
 
 const appendHMTL = (html, parentNode) => {
   const temoraryParent = document.createElement("div")

@@ -1,9 +1,10 @@
-import { assert } from "@dmail/assert"
-import { fileStat } from "@dmail/helper"
-import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
+import { assert } from "/node_modules/@dmail/assert/index.js"
+import { fileStat } from "/node_modules/@dmail/helper/index.js"
 import { compileToService } from "../../compileToService.js"
 
-const projectFolder = `${selfProjectFolder}/src/compileToService/test/basic`
+const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
+
+const testFolder = `${projectFolder}/src/compileToService/test/basic`
 const compileInto = ".dist"
 const compileId = "group"
 const output = "foo"
@@ -29,7 +30,7 @@ const compile = ({ content }) => {
   // cacheStrategy: 'none'
   {
     const compileService = compileToService(compile, {
-      projectFolder,
+      projectFolder: testFolder,
       compileInto,
       compileDescription,
       cacheStrategy: "none",
@@ -55,7 +56,7 @@ const compile = ({ content }) => {
   // cacheStrategy: 'etag'
   {
     const compileService = compileToService(compile, {
-      projectFolder,
+      projectFolder: testFolder,
       compileInto,
       compileDescription,
       cacheStrategy: "etag",
@@ -93,6 +94,7 @@ const compile = ({ content }) => {
         actual,
         expected: {
           status: 304,
+          headers: {},
         },
       })
     }
@@ -101,7 +103,7 @@ const compile = ({ content }) => {
   // cacheStrategy: 'mtime'
   {
     const compileService = compileToService(compile, {
-      projectFolder,
+      projectFolder: testFolder,
       compileInto,
       compileDescription,
       cacheStrategy: "mtime",
@@ -114,7 +116,7 @@ const compile = ({ content }) => {
           "if-modified-since": new Date(0).toUTCString(),
         },
       })
-      const { mtime } = await fileStat(`${projectFolder}/${filenameRelative}`)
+      const { mtime } = await fileStat(`${testFolder}/${filenameRelative}`)
       assert({
         actual,
         expected: {
@@ -140,6 +142,7 @@ const compile = ({ content }) => {
         actual,
         expected: {
           status: 304,
+          headers: {},
         },
       })
     }

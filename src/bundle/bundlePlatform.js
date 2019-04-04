@@ -2,16 +2,16 @@ import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
-import { generateGroupDescription } from "../group-description/index.js"
+import { generateGroupMap } from "../group-map/index.js"
 import { bundleWithRollup } from "./bundleWithRollup.js"
 
 export const bundlePlatform = ({
   projectFolder,
   into,
-  entryPointsDescription,
-  babelPluginDescription,
+  entryPointMap,
+  babelConfigMap,
   compileGroupCount = 1,
-  platformScoring,
+  platformScoreMap,
   computeRollupOptionsWithoutBalancing,
   computeRollupOptionsWithBalancing,
   computeRollupOptionsForBalancer,
@@ -19,15 +19,12 @@ export const bundlePlatform = ({
 }) =>
   catchAsyncFunctionCancellation(async () => {
     if (typeof projectFolder !== "string")
-      throw new TypeError(`bundlePlatform root must be a string, got ${projectFolder}`)
-    if (typeof into !== "string")
-      throw new TypeError(`bundlePlatform into must be a string, got ${into}`)
-    if (typeof entryPointsDescription !== "object")
-      throw new TypeError(
-        `bundlePlatform entryPointsDescription must be an object, got ${entryPointsDescription}`,
-      )
+      throw new TypeError(`projectFolder must be a string, got ${projectFolder}`)
+    if (typeof into !== "string") throw new TypeError(`into must be a string, got ${into}`)
+    if (typeof entryPointMap !== "object")
+      throw new TypeError(`entryPointMap must be an object, got ${entryPointMap}`)
     if (compileGroupCount < 1)
-      throw new Error(`bundlePlatform compileGroupCount must be > 1, got ${compileGroupCount}`)
+      throw new Error(`compileGroupCount must be > 1, got ${compileGroupCount}`)
 
     const log = verbose ? (...args) => console.log(...args) : () => {}
 
@@ -42,9 +39,9 @@ export const bundlePlatform = ({
       return
     }
 
-    const groupDescription = generateGroupDescription({
-      babelPluginDescription,
-      platformScoring,
+    const groupMap = generateGroupMap({
+      babelConfigMap,
+      platformScoreMap,
       groupCount: compileGroupCount,
     })
 
@@ -52,14 +49,14 @@ export const bundlePlatform = ({
       generateEntryPointsFolders({
         cancellationToken,
         log,
-        groupDescription,
+        groupMap,
         computeRollupOptionsWithBalancing,
       }),
       generateEntryPointsBalancerFiles({
         cancellationToken,
         log,
-        entryPointsDescription,
-        groupDescription,
+        entryPointMap,
+        groupMap,
         computeRollupOptionsForBalancer,
       }),
     ])
@@ -68,18 +65,18 @@ export const bundlePlatform = ({
 const generateEntryPointsFolders = async ({
   cancellationToken,
   log,
-  groupDescription,
+  groupMap,
   computeRollupOptionsWithBalancing,
 }) => {
   await Promise.all(
-    Object.keys(groupDescription).map((compileId) => {
+    Object.keys(groupMap).map((compileId) => {
       return bundleWithRollup({
         cancellationToken,
         log,
         ...computeRollupOptionsWithBalancing({
           cancellationToken,
           log,
-          groupDescription,
+          groupMap,
           compileId,
         }),
       })
@@ -90,14 +87,12 @@ const generateEntryPointsFolders = async ({
 const generateEntryPointsBalancerFiles = ({
   cancellationToken,
   log,
-  entryPointsDescription,
-  groupDescription,
+  entryPointMap,
+  groupMap,
   computeRollupOptionsForBalancer,
 }) => {
   return Promise.all(
-    Object.keys(entryPointsDescription).map((entryName) => {
-      const entryFilenameRelative = `${entryName}.js`
-
+    Object.keys(entryPointMap).map((entryPointName) => {
       return Promise.all([
         bundleWithRollup({
           cancellationToken,
@@ -105,9 +100,8 @@ const generateEntryPointsBalancerFiles = ({
           ...computeRollupOptionsForBalancer({
             cancellationToken,
             log,
-            groupDescription,
-            entryName,
-            entryFilenameRelative,
+            groupMap,
+            entryPointName,
           }),
         }),
       ])

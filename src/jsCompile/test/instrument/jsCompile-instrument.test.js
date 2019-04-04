@@ -1,26 +1,27 @@
 import fs from "fs"
-import istanbul from "istanbul"
-import { assert } from "@dmail/assert"
-import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { projectFolder } from "../../../../projectFolder.js"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { objectMap } from "../../../objectHelper.js"
 import { createInstrumentPlugin } from "../../../cover/createInstrumentPlugin.js"
 import { jsCompile } from "../../jsCompile.js"
 
+const istanbul = import.meta.require("istanbul")
+const transformBlockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
+const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
+
 const root = `${projectFolder}/src/jsCompile/test/fixtures`
 const file = "file.js"
 const fileAbsolute = `${root}/${file}`
-const babelPluginDescription = pluginOptionMapToPluginMap({
-  "transform-block-scoping": {},
-})
-babelPluginDescription["transform-instrument"] = createInstrumentPlugin()
+const babelConfigMap = {
+  "transform-block-scoping": [transformBlockScoping],
+  "transform-instrument": [createInstrumentPlugin()],
+}
 
 jsCompile({
   localRoot: root,
   file,
   fileAbsolute,
   input: fs.readFileSync(fileAbsolute).toString(),
-  babelPluginDescription,
+  babelConfigMap,
   instrument: true,
 }).then(({ assets, output }) => {
   assert({ actual: assets, expected: ["file.js.map", "coverage.json"] })

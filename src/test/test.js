@@ -1,4 +1,4 @@
-import { normalizePathname } from "@jsenv/module-resolution"
+import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
 import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
@@ -11,7 +11,7 @@ export const test = async ({
   projectFolder,
   compileInto,
   compileGroupCount = 2,
-  babelPluginDescription,
+  babelConfigMap,
   executeDescription,
   maxParallelExecution,
   defaultAllocatedMsPerExecution,
@@ -26,7 +26,7 @@ export const test = async ({
       projectFolder,
       compileInto,
       compileGroupCount,
-      babelPluginDescription,
+      babelConfigMap,
       executeDescription,
       defaultAllocatedMsPerExecution,
     })

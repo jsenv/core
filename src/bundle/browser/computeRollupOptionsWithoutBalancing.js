@@ -1,61 +1,50 @@
-import MagicString from "magic-string"
 import { createJsenvRollupPlugin } from "../createJsenvRollupPlugin.js"
-import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionToRollupPlugin.js"
+import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 
 export const computeRollupOptionsWithoutBalancing = ({
   cancellationToken,
   importMap,
   projectFolder,
   into,
-  globalName,
-  entryPointsDescription,
-  babelPluginDescription,
-  autoWrapEntryInPromise, // unused anymore, maybe to remove completely
+  entryPointMap,
+  babelConfigMap,
   log,
   minify,
 }) => {
   const dir = `${projectFolder}/${into}`
 
+  const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    dir,
+    featureNameArray: Object.keys(babelConfigMap),
+    babelConfigMap,
+    minify,
+    target: "browser",
+  })
+
+  const jsenvRollupPlugin = createJsenvRollupPlugin({
+    cancellationToken,
+    importMap,
+    projectFolder,
+  })
+
   log(`
 bundle entry points for browser without balancing.
-entryNameArray: ${Object.keys(entryPointsDescription)}
-babelPluginNameArray: ${Object.keys(babelPluginDescription)}
+entryPointArray: ${Object.keys(entryPointMap)}
 dir: ${dir}
 minify: ${minify}
 `)
 
-  const rollupPluginArray = [
-    babelPluginDescriptionToRollupPlugin({
-      babelPluginDescription,
-      minify,
-      target: "browser",
-    }),
-    createJsenvRollupPlugin({
-      cancellationToken,
-      importMap,
-      projectFolder,
-    }),
-    ...(autoWrapEntryInPromise
-      ? [
-          createIIFEPromiseRollupPlugin({
-            projectFolder,
-            globalName,
-          }),
-        ]
-      : []),
-  ]
-
   return {
     rollupParseOptions: {
-      input: entryPointsDescription,
-      plugins: rollupPluginArray,
+      input: entryPointMap,
+      plugins: [featureProviderRollupPlugin, jsenvRollupPlugin],
     },
     rollupGenerateOptions: {
       // https://rollupjs.org/guide/en#output-dir
       dir,
       // https://rollupjs.org/guide/en#output-format
-      format: "iife",
-      name: globalName,
+      format: "system",
+      // entryFileNames: `./[name].js`,
       // https://rollupjs.org/guide/en#output-sourcemap
       sourcemap: true,
       // we could exclude them
@@ -63,22 +52,6 @@ minify: ${minify}
       // in case source files are not reachable
       // for whatever reason
       sourcemapExcludeSources: false,
-    },
-  }
-}
-
-const createIIFEPromiseRollupPlugin = ({ globalPromiseName, globalName }) => {
-  return {
-    name: "iife-promise",
-
-    // https://rollupjs.org/guide/en#renderchunk
-    renderChunk: (code) => {
-      const magicString = new MagicString(code)
-      magicString.append(`
-var ${globalPromiseName} = Promise.resolve(${globalName})`)
-      const map = magicString.generateMap({ hires: true })
-      const renderedCode = magicString.toString()
-      return { code: renderedCode, map }
     },
   }
 }

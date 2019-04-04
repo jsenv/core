@@ -1,5 +1,5 @@
-import { createCancellationToken } from "@dmail/cancellation"
-import { normalizePathname } from "@jsenv/module-resolution"
+import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
+import { createCancellationToken } from "/node_modules/@dmail/cancellation/index.js"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
 import {
   startServer,
@@ -7,8 +7,9 @@ import {
   serviceCompose,
   responseCompose,
 } from "../server/index.js"
-import { projectFolder as selfProjectFolder } from "../../projectFolder.js"
 import { createJsCompileService } from "./createJsCompileService.js"
+
+const { projectFolder: selfProjectFolder } = import.meta.require("../../jsenv.config.js")
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -16,7 +17,7 @@ export const startCompileServer = async ({
   projectFolder,
   compileInto,
   compileGroupCount = 1,
-  babelPluginDescription,
+  babelConfigMap,
   locate,
   localCacheStrategy,
   localCacheTrackHit,
@@ -31,7 +32,12 @@ export const startCompileServer = async ({
   port,
   signature,
   verbose,
+  transformTopLevelAwait,
+  enableGlobalLock,
 }) => {
+  if (typeof projectFolder !== "string")
+    throw new TypeError(`projectFolder must be a string. got ${projectFolder}`)
+
   projectFolder = normalizePathname(projectFolder)
   const jsCompileService = await createJsCompileService({
     cancellationToken,
@@ -39,13 +45,15 @@ export const startCompileServer = async ({
     projectFolder,
     compileInto,
     compileGroupCount,
-    babelPluginDescription,
+    babelConfigMap,
     locate,
     localCacheStrategy,
     localCacheTrackHit,
     cacheStrategy,
     watch,
     watchPredicate,
+    transformTopLevelAwait,
+    enableGlobalLock,
   })
 
   const service = serviceCompose(jsCompileService, (request) =>

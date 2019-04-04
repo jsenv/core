@@ -1,14 +1,13 @@
 /* eslint-disable import/max-dependencies */
 import { createServer as createNodeServer, STATUS_CODES } from "http"
 import { createServer as createNodeSecureServer, Agent as SecureAgent } from "https"
-import killPort from "kill-port"
 import { URL } from "url"
-import { memoizeOnce } from "@dmail/helper"
+import { memoizeOnce } from "/node_modules/@dmail/helper/index.js"
 import {
   createCancellationToken,
   createOperation,
   createStoppableOperation,
-} from "@dmail/cancellation"
+} from "/node_modules/@dmail/cancellation/index.js"
 import {
   registerProcessInterruptCallback,
   registerUnadvisedProcessCrashCallback,
@@ -18,6 +17,8 @@ import { trackConnections, trackClients, trackRequestHandlers } from "./trackers
 import { nodeRequestToRequest } from "./nodeRequestToRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
 import { colorizeResponseStatus } from "./colorizeResponseStatus.js"
+
+const killPort = import.meta.require("kill-port")
 
 const REASON_NOT_SPECIFIED = "not specified"
 const REASON_INTERNAL_ERROR = "internal error"
@@ -30,6 +31,8 @@ export const originAsString = ({ protocol, ip, port }) => {
   return url.origin
 }
 
+// todo: provide an option like debugInternalError
+// which sends error.stack on 500 to the client
 export const startServer = async ({
   cancellationToken = createCancellationToken(),
   protocol = "http",
@@ -197,6 +200,9 @@ export const startServer = async ({
 
     log(`${request.method} ${request.origin}${request.ressource}`)
     log(`${colorizeResponseStatus(response.status)} ${response.statusText}`)
+    if (response.status === 500) {
+      log(response.body)
+    }
     populateNodeResponse(nodeResponse, response, {
       ignoreBody: request.method === "HEAD",
     })

@@ -1,8 +1,8 @@
-import {
-  namedValueDescriptionToMetaDescription,
-  selectAllFileInsideFolder,
-} from "@dmail/project-structure"
 import { startCompileServer } from "./server-compile/index.js"
+
+const { namedValueDescriptionToMetaDescription, selectAllFileInsideFolder } = import.meta.require(
+  "@dmail/project-structure",
+)
 
 export const executeDescriptionToExecutionPlan = async ({
   cancellationToken,
@@ -10,7 +10,7 @@ export const executeDescriptionToExecutionPlan = async ({
   projectFolder,
   compileInto,
   compileGroupCount,
-  babelPluginDescription,
+  babelConfigMap,
   executeDescription,
   verbose = false,
   defaultAllocatedMsPerExecution = 20000,
@@ -23,7 +23,7 @@ export const executeDescriptionToExecutionPlan = async ({
     projectFolder,
     compileInto,
     compileGroupCount,
-    babelPluginDescription,
+    babelConfigMap,
     verbose,
   })
 

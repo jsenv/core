@@ -1,43 +1,45 @@
+import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { createJsenvRollupPlugin } from "../createJsenvRollupPlugin.js"
-import { babelPluginDescriptionToRollupPlugin } from "../babelPluginDescriptionToRollupPlugin.js"
+import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 
 export const computeRollupOptionsWithoutBalancing = ({
   cancellationToken,
   importMap,
   projectFolder,
   into,
-  entryPointsDescription,
-  babelPluginDescription,
+  entryPointMap,
+  babelConfigMap,
   log,
   minify,
 }) => {
   const dir = `${projectFolder}/${into}`
 
+  const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    dir,
+    featureNameArray: Object.keys(babelConfigMap),
+    babelConfigMap,
+    minify,
+    target: "node",
+  })
+
+  const jsenvRollupPlugin = createJsenvRollupPlugin({
+    cancellationToken,
+    importMap,
+    projectFolder,
+  })
+
   log(`
 bundle entry points for node without balancing.
-entryNameArray: ${Object.keys(entryPointsDescription)}
-babelPluginNameArray: ${Object.keys(babelPluginDescription)}
 dir: ${dir}
+entry point names: ${Object.keys(entryPointMap)}
 minify: ${minify}
 `)
 
-  const rollupPluginArray = [
-    babelPluginDescriptionToRollupPlugin({
-      babelPluginDescription,
-      minify,
-      target: "node",
-    }),
-    createJsenvRollupPlugin({
-      cancellationToken,
-      importMap,
-      projectFolder,
-    }),
-  ]
-
   return {
     rollupParseOptions: {
-      input: entryPointsDescription,
-      plugins: rollupPluginArray,
+      input: entryPointMap,
+      plugins: [featureProviderRollupPlugin, jsenvRollupPlugin],
+      external: (id) => isNativeNodeModuleBareSpecifier(id),
     },
     rollupGenerateOptions: {
       // https://rollupjs.org/guide/en#output-dir

@@ -1,7 +1,11 @@
 import { resolve } from "url"
-import { fileRead } from "@dmail/helper"
-import { createOperation } from "@dmail/cancellation"
-import { resolveImport, remapResolvedImport, hrefToPathname } from "@jsenv/module-resolution"
+import { fileRead } from "/node_modules/@dmail/helper/index.js"
+import { createOperation } from "/node_modules/@dmail/cancellation/index.js"
+import {
+  resolveImport,
+  remapResolvedImport,
+  hrefToPathname,
+} from "/node_modules/@jsenv/module-resolution/index.js"
 import { fetchUsingHttp } from "../platform/node/fetchUsingHttp.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 

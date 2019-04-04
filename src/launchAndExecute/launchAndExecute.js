@@ -5,8 +5,8 @@ import {
   createCancellationSource,
   cancellationTokenCompose,
   errorToCancelReason,
-} from "@dmail/cancellation"
-import { promiseTrackRace } from "@dmail/helper"
+} from "/node_modules/@dmail/cancellation/index.js"
+import { promiseTrackRace } from "/node_modules/@dmail/helper/index.js"
 
 export const launchAndExecute = async ({
   cancellationToken = createCancellationToken(),

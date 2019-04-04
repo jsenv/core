@@ -1,6 +1,6 @@
 {
 	"name": "@jsenv/core",
-	"version": "4.16.0",
+	"version": "5.0.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -9,30 +9,29 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"main": "dist/index.js",
+	"main": "dist/node/main.js",
 	"module": "index.js",
 	"files": [
 		"/index.js",
 		"/src/",
 		"/dist/"
 	],
-	"engines": {
-		"node": ">=8.6.0"
-	},
 	"dependencies": {
 		"@babel/core": "7.2.2",
+		"@babel/template": "7.4.0",
 		"@babel/helper-hoist-variables": "7.0.0",
 		"@babel/helper-module-imports": "7.0.0",
 		"@babel/helper-plugin-utils": "7.0.0",
 		"@babel/plugin-syntax-dynamic-import": "7.2.0",
 		"@babel/plugin-syntax-import-meta": "7.2.0",
+		"@jsenv/core": "4.16.0",
+		"@jsenv/module-resolution": "2.0.0",
+		"@jsenv/babel-config-map": "1.0.0",
 		"@dmail/cancellation": "2.1.0",
-		"@dmail/helper": "1.0.0",
+		"@dmail/helper": "2.0.0",
 		"@dmail/prettiest": "4.2.0",
 		"@dmail/project-structure": "3.0.0",
-		"@dmail/project-structure-compile-babel": "1.0.0",
 		"@dmail/uneval": "4.4.0",
-		"@jsenv/module-resolution": "1.0.0",
 		"abort-controller": "2.0.2",
 		"ansi-to-html": "0.6.9",
 		"eventsource": "1.0.7",
@@ -54,12 +53,14 @@
 		"terser": "3.14.1"
 	},
 	"devDependencies": {
-		"@jsenv/eslint-config": "8.0.0",
-		"@jsenv/prettier-config": "1.0.0",
-		"@dmail/assert": "3.0.0",
-		"babel-eslint": "11.0.0-beta.0",
 		"@babel/plugin-transform-block-scoping": "7.2.0",
 		"babel-plugin-transform-async-to-promises": "0.8.7",
+		"@jsenv/eslint-config": "8.0.0",
+		"@jsenv/prettier-config": "1.0.0",
+		"@jsenv/eslint-import-resolver": "4.0.0",
+		"@jsenv/babel-plugin-description": "3.0.0",
+		"@dmail/assert": "3.0.0",
+		"babel-eslint": "11.0.0-beta.0",
 		"codecov": "2.3.0",
 		"eslint": "5.1.0",
 		"eslint-plugin-import": "2.6.0",
@@ -67,14 +68,17 @@
 		"rimraf": "2.6.2"
 	},
 	"scripts": {
+		"generate-browser-client": "node ./script/generate-browser-client/generate-browser-client.js",
+		"generate-node-client": "node ./script/generate-node-client/generate-node-client.js",
+		"generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
 		"lint": "eslint .",
-		"check-format": "node ./script/check-format.js",
-		"compile": "node ./script/compile.js",
-		"clean": "rimraf dist && rimraf coverage && rimraf .nyc_output",
-		"dist": "npm run clean && npm run compile",
-		"test": "npm run dist && node ./dist/index.test.js",
-		"generate-coverage": "npm run dist && nyc node ./dist/index.test.js",
-		"upload-coverage": "codecov",
+		"check-format": "node ./script/check-format/check-format.js",
+		"test": "node ./script/test/test.js",
+		"generate-coverage": "node ./script/generate-coverage/generate-coverage.js",
+		"upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
+		"clean": "rimraf dist && rimraf coverage",
+		"bundle-node": "node ./script/bundle-node/bundle-node.js",
+		"dist": "npm run clean && npm run bundle-node && npm run generate-browser-client && npm run generate-node-client",
 		"prepublishOnly": "npm run dist",
 		"reinstall": "npm run clean && rimraf node_modules && npm install"
 	}

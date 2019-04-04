@@ -1,14 +1,15 @@
-import { assert } from "@dmail/assert"
-import { projectFolder } from "../../../../../projectFolder.js"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { launchNode } from "../../../../launchNode/index.js"
 import { launchChromium } from "../../../../launchChromium/index.js"
 import { executePlan } from "../../../../executePlan/index.js"
 import { startCompileServer } from "../../../../server-compile/index.js"
 import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap.js"
 
+const { projectFolder } = import.meta.require("../../../../../jsenv.config.js")
+
 const testFolder = `${projectFolder}/src/executionPlanResultToCoverageMap/test/import-syntax-error`
 const compileInto = ".dist"
-const babelPluginDescription = {}
+const babelConfigMap = {}
 
 ;(async () => {
   const sourceOrigin = `file://${testFolder}`
@@ -16,7 +17,7 @@ const babelPluginDescription = {}
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
     verbose: false,
   })
 

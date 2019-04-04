@@ -1,13 +1,14 @@
-import {
-  namedValueDescriptionToMetaDescription,
-  selectAllFileInsideFolder,
-} from "@dmail/project-structure"
-import { uneval } from "@dmail/uneval"
-import { createCancellationToken } from "@dmail/cancellation"
-import { normalizePathname } from "@jsenv/module-resolution"
+import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
+import { uneval } from "/node_modules/@dmail/uneval/index.js"
+import { createCancellationToken } from "/node_modules/@dmail/cancellation/index.js"
 import { startServer, serviceCompose } from "../server/index.js"
 import { startCompileServer } from "../server-compile/index.js"
 import { guard } from "../functionHelper.js"
+
+// required until jsenv importMap bug gets fixed
+const { namedValueDescriptionToMetaDescription, selectAllFileInsideFolder } = import.meta.require(
+  "@dmail/project-structure",
+)
 
 export const startBrowsingServer = async ({
   cancellationToken = createCancellationToken(),
@@ -15,7 +16,7 @@ export const startBrowsingServer = async ({
   projectFolder,
   compileInto,
   compileGroupCount = 2,
-  babelPluginDescription,
+  babelConfigMap,
   browsableDescription,
   localCacheStrategy,
   localCacheTrackHit,
@@ -59,20 +60,13 @@ export const startBrowsingServer = async ({
     browsable: browsableDescription,
   })
 
-  const browsableFilenameRelativeArray = await selectAllFileInsideFolder({
-    pathname: projectFolder,
-    metaDescription,
-    predicate: ({ browsable }) => browsable,
-    transformFile: ({ filenameRelative }) => filenameRelative,
-  })
-
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
     importMap,
     projectFolder,
     compileInto,
     compileGroupCount,
-    babelPluginDescription,
+    babelConfigMap,
     localCacheStrategy,
     localCacheTrackHit,
     cacheStrategy,
@@ -95,6 +89,13 @@ export const startBrowsingServer = async ({
       return true
     },
     async () => {
+      const browsableFilenameRelativeArray = await selectAllFileInsideFolder({
+        pathname: projectFolder,
+        metaDescription,
+        predicate: ({ browsable }) => browsable,
+        transformFile: ({ filenameRelative }) => filenameRelative,
+      })
+
       const html = await getIndexPageHTML({
         projectFolder,
         browsableFilenameRelativeArray,
@@ -150,7 +151,7 @@ export const startBrowsingServer = async ({
 }
 
 const getBrowserPlatformHref = ({ compileServerOrigin }) =>
-  `${compileServerOrigin}/node_modules/@jsenv/core/dist/browserPlatform.js`
+  `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/platform.js`
 
 const getIndexPageHTML = async ({ projectFolder, browsableFilenameRelativeArray }) => {
   return `<!doctype html>

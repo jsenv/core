@@ -1,4 +1,4 @@
-import { normalizePathname } from "@jsenv/module-resolution"
+import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
 import { startCompileServer } from "../server-compile/index.js"
 import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
@@ -10,7 +10,7 @@ export const execute = async ({
   importMap,
   projectFolder,
   compileInto,
-  babelPluginDescription,
+  babelConfigMap,
   compileGroupCount = 2,
   protocol,
   ip,
@@ -32,7 +32,7 @@ export const execute = async ({
       importMap,
       projectFolder,
       compileInto,
-      babelPluginDescription,
+      babelConfigMap,
       compileGroupCount,
       protocol,
       ip,

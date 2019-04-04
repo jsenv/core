@@ -7,7 +7,7 @@ export const wrapImportMap = ({ imports = {}, scopes = {} }, folderRelativeName)
     scopes: {
       ...prefixScopes(scopes, prefix),
       [`${prefix}/`]: {
-        // ...prefixImports(imports, prefix),
+        ...prefixImports(imports, prefix),
         [`${prefix}/`]: `${prefix}/`,
         "/": `${prefix}/`,
       },

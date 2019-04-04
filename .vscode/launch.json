@@ -2,94 +2,60 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch with node",
+      "name": "node",
       "type": "node",
-      "protocol": "inspector",
       "request": "launch",
-      "preLaunchTask": "dist", // ensure dist is fresh (compile before running)
+      "protocol": "inspector",
       "program": "${file}",
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
-      "skipFiles": ["${workspaceFolder}/node_modules/**", "<node_internals>/**/*.js"]
-    },
-    {
-      "name": "Launch from dist",
-      "type": "node",
-      "request": "launch",
-      "protocol": "inspector",
-      "preLaunchTask": "dist", // ensure dist is fresh (compile before running)
-      "args": ["--trace-warnings", "${workspaceRoot}/dist/${relativeFile}"],
-      "autoAttachChildProcesses": true,
-      "sourceMaps": true,
       "sourceMapPathOverrides": {
         "/*": "${workspaceRoot}/*"
       },
-      // "smartStep": true,
+      "smartStep": true,
       "skipFiles": [
-        // skip node modules
-        "${workspaceFolder}/node_modules/**",
-        // skip node internals
-        "<node_internals>/**/*.js",
-        "node_modules/rollup-plugin-node-resolve/dist/rollup-plugin-node-resolve.cjs.js",
-        "node_modules/@babel/template/lib/builder.js",
-        "node_modules/puppeteer/**",
-        "src/createLock/createLock.js",
-        "src/fileHelper.js",
-        "src/eventHelper.js",
-        "src/promiseHelper.js",
-        "src/unused/thenable.js",
-        // "src/jsCompile/transpileWithBabel.js",
-        // "src/jsCompile/transpiler.js",
-        "src/platform/registerParamFrom.js",
-        "src/platform/node/nodePlatform.js",
-        "src/requestToFileResponse/convertFileSystemErrorToResponseProperties.js"
-      ],
-      "trace": false
-    },
-    {
-      "name": "Run with chromium",
-      "type": "chrome",
-      "request": "launch",
-      // I have to comment prelaunchTask below because of
-      // https://github.com/Microsoft/vscode/issues/6209
-      // "preLaunchTask": "start chromium server",
-      "url": "http://127.0.0.1:3000/${relativeFile}",
-      // "runtimeExecutable": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-      "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"],
-      // do not specify webroot, otherwise remote files like
-      // http://http://127.0.0.1:3001/compiled/file.js will be considered as being at
-      // ${workspaceRoot}/compiled/file.js
-      // but the compiled folder is empty
-      // let vscode think the file is distant and use sourceMapPathOverrides so that
-      // vscode can track source files
-      // "webRoot": "${workspaceFolder}",
-      "sourceMaps": true,
-      "sourceMapPathOverrides": {
-        "/*": "${workspaceRoot}/*"
-      },
-      "skipFiles": [
+        // force-array-multiline
         "node_modules/**",
-        // https://github.com/Microsoft/vscode-react-native/issues/620
         "<node_internals>/**/*.js"
       ]
-      // "trace": true
     },
     {
-      "name": "Run with node",
+      "name": "jsenv-node",
       "type": "node",
       "request": "launch",
       "protocol": "inspector",
-      "program": "${workspaceFolder}/dist/bin/run-node.js",
+      "program": "${workspaceFolder}/script/run-node/run-node.js",
       "args": ["--file=${relativeFile}"],
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
       "sourceMapPathOverrides": {
         "/*": "${workspaceRoot}/*"
       },
+      "smartStep": true,
+      "skipFiles": [
+        // force-array-multiline
+        "node_modules/**",
+        // does not work, it's an attempt to avoid
+        // spwaned node process to pause on first line
+        "<eval>/VM**.js",
+        "<node_internals>/**/*.js"
+      ]
+    },
+    {
+      "name": "jsenv-chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:3456/${relativeFile}",
+      "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"],
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "/*": "${workspaceRoot}/*"
+      },
+      "smartStep": true,
       "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
     },
     {
-      "name": "node-attach-child",
+      "name": "jsenv-node-attach-child",
       "type": "node",
       "request": "attach",
       "port": 40000,
@@ -98,7 +64,7 @@
       "sourceMapPathOverrides": {
         "/*": "${workspaceRoot}/*"
       },
-      "skipFiles": ["${workspaceFolder}/node_modules/**", , "<node_internals>/**/*.js"]
+      "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
     }
   ]
 }

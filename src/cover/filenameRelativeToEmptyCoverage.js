@@ -1,8 +1,9 @@
-import { createFileCoverage } from "istanbul-lib-coverage"
-import { fileRead } from "@dmail/helper"
-import { createOperation } from "@dmail/cancellation"
+import { fileRead } from "/node_modules/@dmail/helper/index.js"
+import { createOperation } from "/node_modules/@dmail/cancellation/index.js"
 import { jsCompile } from "../jsCompile/index.js"
 import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
+
+const { createFileCoverage } = import.meta.require("istanbul-lib-coverage")
 
 export const filenameRelativeToEmptyCoverage = async ({
   cancellationToken,
@@ -28,10 +29,11 @@ export const filenameRelativeToEmptyCoverage = async ({
           filename,
           filenameRelative,
           projectFolder,
-          babelPluginDescription: {
+          babelConfigMap: {
             "transform-instrument": [createInstrumentPlugin({ predicate: () => true })],
           },
           remap: false,
+          transformTopLevelAwait: false,
         }),
     })
 

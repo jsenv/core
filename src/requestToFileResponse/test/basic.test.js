@@ -1,7 +1,8 @@
 import fs from "fs"
-import { assert } from "@dmail/assert"
-import { projectFolder } from "../../../projectFolder.js"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { requestToFileResponse } from "../requestToFileResponse.js"
+
+const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 
 const test = async () => {
   {

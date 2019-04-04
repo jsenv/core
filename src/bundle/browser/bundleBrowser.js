@@ -1,47 +1,40 @@
-import { normalizePathname } from "@jsenv/module-resolution"
-import { browserScoring } from "../../group-description/index.js"
+import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
+import { browserScoreMap } from "../../group-map/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
 import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBalancing.js"
 import { computeRollupOptionsForBalancer } from "./computeRollupOptionsForBalancer.js"
-import { generateEntryPointsDescriptionPages } from "./generateEntryPointsDescriptionPages.js"
+import { generateEntryPointMapPages } from "./generateEntryPointMapPages.js"
 
 export const bundleBrowser = async ({
   projectFolder,
   importMap,
   into,
-  globalName,
-  globalNameIsPromise = false,
-  entryPointsDescription,
-  babelPluginDescription,
+  entryPointMap,
+  babelConfigMap,
   compileGroupCount = 1,
-  platformScoring = browserScoring,
+  platformScoreMap = browserScoreMap,
   verbose,
   minify = true,
   generateEntryPages = false,
 }) => {
   projectFolder = normalizePathname(projectFolder)
-
-  if (typeof globalName !== "string")
-    throw new TypeError(`globalName must be a string, got ${globalName}.`)
-
   return await Promise.all([
     bundlePlatform({
-      entryPointsDescription,
+      entryPointMap,
       projectFolder,
       into,
-      babelPluginDescription,
+      babelConfigMap,
       compileGroupCount,
-      platformScoring,
+      platformScoreMap,
       verbose,
       computeRollupOptionsWithoutBalancing: (context) =>
         computeRollupOptionsWithoutBalancing({
           importMap,
           projectFolder,
           into,
-          globalName,
-          entryPointsDescription,
-          babelPluginDescription,
+          entryPointMap,
+          babelConfigMap,
           minify,
           ...context,
         }),
@@ -50,9 +43,8 @@ export const bundleBrowser = async ({
           importMap,
           projectFolder,
           into,
-          globalName,
-          entryPointsDescription,
-          babelPluginDescription,
+          entryPointMap,
+          babelConfigMap,
           minify,
           ...context,
         }),
@@ -61,18 +53,16 @@ export const bundleBrowser = async ({
           importMap,
           projectFolder,
           into,
-          globalName,
-          globalNameIsPromise,
-          babelPluginDescription,
+          babelConfigMap,
           minify,
           ...context,
         }),
     }),
     generateEntryPages
-      ? generateEntryPointsDescriptionPages({
+      ? generateEntryPointMapPages({
           projectFolder,
           into,
-          entryPointsDescription,
+          entryPointMap,
         })
       : null,
   ])

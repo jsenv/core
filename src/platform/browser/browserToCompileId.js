@@ -1,13 +1,14 @@
-import { versionIsBelowOrEqual } from "@dmail/project-structure-compile-babel/src/versionCompare.js"
+import { findHighestVersion } from "../../semantic-versioning/index.js"
 
-export const browserToCompileId = ({ name, version }, groupDescription) => {
-  return Object.keys(groupDescription).find((compileIdCandidate) => {
-    const { compatibility } = groupDescription[compileIdCandidate]
+export const browserToCompileId = ({ name, version }, groupMap) => {
+  return Object.keys(groupMap).find((compileIdCandidate) => {
+    const { platformCompatMap } = groupMap[compileIdCandidate]
 
-    if (name in compatibility === false) {
+    if (name in platformCompatMap === false) {
       return false
     }
-    const versionForGroup = compatibility[name]
-    return versionIsBelowOrEqual(versionForGroup, version)
+    const versionForGroup = platformCompatMap[name]
+    const highestVersion = findHighestVersion(version, versionForGroup)
+    return highestVersion === version
   })
 }

@@ -1,4 +1,4 @@
-import { fileRead } from "@dmail/helper"
+import { fileRead } from "/node_modules/@dmail/helper/index.js"
 
 export const readPackageData = async ({ filename, returnNullWhenNotFound = false }) => {
   try {

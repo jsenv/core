@@ -1,20 +1,23 @@
-import {
-  globalName,
-  globalNameIsPromise,
-  entryFilenameRelative,
-  groupDescription,
-  // eslint-disable-next-line import/no-unresolved
-} from "\0bundle-browser-options.js"
+/* eslint-disable */
+// eslint must be disabled because he doesn't like that we try to load
+// something containing \0
+import { entryPointName, groupMap } from "\0bundle-browser-options.js"
+/* eslint-enable */
 import { detect } from "../../platform/browser/browserDetect/index.js"
 import { browserToCompileId } from "../../platform/browser/browserToCompileId.js"
-import { loadUsingScript } from "./loadUsingScript.js"
-import { loadUsingDocumentWrite } from "./loadUsingDocumentWrite.js"
 
-const compileId = browserToCompileId(detect(), groupDescription)
-const scriptSrc = `./${compileId}/${entryFilenameRelative}`
+// eslint-disable-next-line no-undef
+System.register([], function(exports, module) {
+  "use strict"
+  return {
+    // eslint-disable-next-line object-shorthand
+    execute: function() {
+      const compileId = browserToCompileId(detect(), groupMap)
+      const scriptSrc = `./${compileId}/${entryPointName}.js`
 
-if (globalNameIsPromise) {
-  window[globalName] = loadUsingScript(scriptSrc).then(() => window[globalName])
-} else {
-  loadUsingDocumentWrite(scriptSrc)
-}
+      return module.import(scriptSrc).then((namespace) => {
+        exports(namespace)
+      })
+    },
+  }
+})

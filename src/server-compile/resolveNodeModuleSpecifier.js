@@ -1,5 +1,5 @@
 import { sync } from "resolve"
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
+import { hrefToPathname, pathnameToDirname } from "/node_modules/@jsenv/module-resolution/index.js"
 
 export const resolveNodeModuleSpecifier = ({ rootHref, importer, specifier }) => {
   try {

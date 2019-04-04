@@ -27,8 +27,9 @@ export const jsCompileToService = (
     localCacheTrackHit,
     cacheStrategy,
     compilePredicate: (filenameRelative, filename) => {
-      if (filenameRelative === `browserPlatform.js`) return false
-      if (filenameRelative === `browserSystemImporter.js`) return false
+      if (filenameRelative.endsWith(".json")) return false
+      // if (filenameRelative === `platform.js`) return false
+      // if (filenameRelative === `importer.js`) return false
       return compilePredicate(filenameRelative, filename)
     },
     watch,

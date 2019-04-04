@@ -1,24 +1,25 @@
 import fs from "fs"
-import { assert } from "@dmail/assert"
-import { pluginOptionMapToPluginMap } from "@dmail/project-structure-compile-babel"
-import { projectFolder as selfProjectFolder } from "../../../../projectFolder.js"
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { jsCompile } from "../../jsCompile.js"
 
-const projectFolder = `${selfProjectFolder}/src/jsCompile/test/basic`
+const transformBlockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
+const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
+
+const testFolder = `${projectFolder}/src/jsCompile/test/basic`
 const filenameRelative = "basic.js"
-const filename = `${projectFolder}/${filenameRelative}`
+const filename = `${testFolder}/${filenameRelative}`
 const input = fs.readFileSync(filename).toString()
-const babelPluginDescription = pluginOptionMapToPluginMap({
-  "transform-block-scoping": {},
-})
+const babelConfigMap = {
+  "transform-block-scoping": [transformBlockScoping],
+}
 
 const test = async () => {
   const { sources, sourcesContent, assets, assetsContent, output } = await jsCompile({
     input,
     filename,
     filenameRelative,
-    projectFolder,
-    babelPluginDescription,
+    projectFolder: testFolder,
+    babelConfigMap,
   })
 
   assert({ actual: sources, expected: [filenameRelative] })
