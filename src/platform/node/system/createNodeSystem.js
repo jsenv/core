@@ -1,12 +1,12 @@
 import { Module } from "module"
-import "systemjs/dist/system.js"
+import "/node_modules/systemjs/dist/system.js"
 import {
   resolveImport,
   remapResolvedImport,
   pathnameToDirname,
   hrefToPathname,
-} from "@jsenv/module-resolution"
-import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
+} from "/node_modules/@jsenv/module-resolution/index.js"
+import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { hrefToFilenameRelative } from "../../hrefToFilenameRelative.js"
 import {
   fromFunctionReturningNamespace,

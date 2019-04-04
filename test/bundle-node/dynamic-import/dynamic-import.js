@@ -1,6 +1,6 @@
 const loadFeature = async () => {
   const { answer } = await import("./answer.js")
-  console.log(answer)
+  return answer
 }
 
-loadFeature()
+export default loadFeature()

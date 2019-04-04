@@ -1,3 +1,3 @@
 import { Bar } from "./bar.js"
 
-console.log(new Bar())
+export default new Bar(41).value

@@ -1,7 +1,7 @@
 import { bundleNode } from "../../../index.js"
 
 const blockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
-const { projectFolder } = import.meta.reuire("../../../jsenv.config.js")
+const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 
 const testFolder = `${projectFolder}/test/bundle-node/without-balancing`
 
