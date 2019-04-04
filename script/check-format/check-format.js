@@ -7,6 +7,7 @@ const formattableDescription = {
   "/src/**/*.js": true,
   "/test/**/*.js": true,
   "/script/**/*.js": true,
+  "/**/syntax-error.js": false,
   // json
   "/src/**/*.json": true,
   "/test/**/*.json": true,
