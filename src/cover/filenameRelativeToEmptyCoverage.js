@@ -33,6 +33,7 @@ export const filenameRelativeToEmptyCoverage = async ({
             "transform-instrument": [createInstrumentPlugin({ predicate: () => true })],
           },
           remap: false,
+          transformTopLevelAwait: false,
         }),
     })
 

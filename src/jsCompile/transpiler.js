@@ -17,10 +17,10 @@ export const transpiler = async ({
   inputAst,
   inputMap,
   babelConfigMap,
+  transformTopLevelAwait = true,
   remap,
 }) => {
   const transformModuleIntoSystemFormat = true
-  const allowTopLevelAwait = true
 
   let asyncPluginName
   if ("transform-async-to-promises" in babelConfigMap) {
@@ -42,11 +42,11 @@ export const transpiler = async ({
     sourceFileName: filenameRelative,
     // https://babeljs.io/docs/en/options#parseropts
     parserOpts: {
-      allowAwaitOutsideFunction: allowTopLevelAwait,
+      allowAwaitOutsideFunction: transformTopLevelAwait,
     },
   }
 
-  if (transformModuleIntoSystemFormat && allowTopLevelAwait && asyncPluginName) {
+  if (transformModuleIntoSystemFormat && transformTopLevelAwait && asyncPluginName) {
     const babelConfigMapWithoutAsyncPlugin = {}
     Object.keys(babelConfigMap).forEach((name) => {
       if (name !== asyncPluginName) babelConfigMapWithoutAsyncPlugin[name] = babelConfigMap[name]
@@ -88,7 +88,7 @@ export const transpiler = async ({
 
   const babelPluginArray = [
     ...babelConfigMapToBabelPluginArray(babelConfigMap),
-    [transformModulesSystemJs, { topLevelAwait: allowTopLevelAwait }],
+    [transformModulesSystemJs, { topLevelAwait: transformTopLevelAwait }],
   ]
   return transpile({
     ast: inputAst,

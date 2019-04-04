@@ -41,7 +41,7 @@ export const compileToService = (
     watchedFiles.clear()
   })
 
-  const compileService = async ({ origin, ressource, method, headers = {} }) => {
+  const compileService = async ({ origin, ressource, headers = {} }) => {
     const requestPathname = ressource
 
     if (pathnameIsAsset(ressource)) return null

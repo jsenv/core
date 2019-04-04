@@ -9,6 +9,7 @@ export const jsCompile = async ({
   inputAst,
   inputMap,
   babelConfigMap = {},
+  transformTopLevelAwait,
   remap = true,
   remapMethod = "comment", // 'comment', 'inline'
 }) => {
@@ -28,6 +29,7 @@ export const jsCompile = async ({
     inputAst,
     inputMap,
     babelConfigMap,
+    transformTopLevelAwait,
     remap,
   })
   const coverage = metadata.coverage

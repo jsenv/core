@@ -26,6 +26,7 @@ export const createJsCompileService = async ({
   cacheStrategy,
   watch,
   watchPredicate,
+  transformTopLevelAwait,
 }) => {
   const groupMap = generateGroupMap({
     babelConfigMap,
@@ -45,6 +46,7 @@ export const createJsCompileService = async ({
 
     return {
       babelConfigMap: groupBabelConfigMap,
+      transformTopLevelAwait,
     }
   })
 
