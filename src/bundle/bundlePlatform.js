@@ -92,9 +92,7 @@ const generateEntryPointsBalancerFiles = ({
   computeRollupOptionsForBalancer,
 }) => {
   return Promise.all(
-    Object.keys(entryPointMap).map((entryPoint) => {
-      const entryFilenameRelative = `${entryPoint}.js`
-
+    Object.keys(entryPointMap).map((entryPointName) => {
       return Promise.all([
         bundleWithRollup({
           cancellationToken,
@@ -103,8 +101,7 @@ const generateEntryPointsBalancerFiles = ({
             cancellationToken,
             log,
             groupMap,
-            entryPoint,
-            entryFilenameRelative,
+            entryPointName,
           }),
         }),
       ])

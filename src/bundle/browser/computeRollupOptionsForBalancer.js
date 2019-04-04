@@ -1,3 +1,4 @@
+import { pathnameToDirname } from "/node_modules/@jsenv/module-resolution/index.js"
 import { uneval } from "/node_modules/@dmail/uneval/index.js"
 import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 
@@ -7,20 +8,15 @@ const BUNDLE_BROWSER_OPTIONS_SPECIFIER = "\0bundle-browser-options.js"
 export const computeRollupOptionsForBalancer = ({
   projectFolder,
   into,
-  globalName,
-  globalNameIsPromise,
   babelConfigMap,
   groupMap,
-  entryPoint,
-  entryFilenameRelative,
+  entryPointName,
   log,
   minify,
 }) => {
   const balancerOptionSource = generateBalancerOptionsSource({
-    globalName,
-    globalNameIsPromise,
+    entryPointName,
     groupMap,
-    entryFilenameRelative,
   })
 
   const browserBalancerRollupPlugin = {
@@ -43,18 +39,19 @@ export const computeRollupOptionsForBalancer = ({
     },
   }
 
+  const file = `${projectFolder}/${into}/${entryPointName}.js`
+
   const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    dir: pathnameToDirname(file),
     featureNameArray: groupMap.otherwise.incompatibleNameArray,
     babelConfigMap,
     minify,
     target: "browser",
   })
 
-  const file = `${projectFolder}/${into}/${entryFilenameRelative}`
-
   log(`
 bundle balancer file for browser
-entryPoint: ${entryPoint}
+entryPointName: ${entryPointName}
 file: ${file}
 minify: ${minify}
 `)
@@ -66,8 +63,8 @@ minify: ${minify}
     },
     rollupGenerateOptions: {
       file,
-      format: "iife",
-      name: globalName,
+      format: "system",
+      name: `./${entryPointName}.js`,
       sourcemap: true,
       sourcemapExcludeSources: true,
     },
@@ -75,11 +72,7 @@ minify: ${minify}
 }
 
 const generateBalancerOptionsSource = ({
-  globalName,
-  globalNameIsPromise,
-  entryFilenameRelative,
+  entryPointName,
   groupMap,
-}) => `export const globalName = ${uneval(globalName)}
-export const globalNameIsPromise = ${uneval(globalNameIsPromise)}
-export const entryFilenameRelative = ${uneval(entryFilenameRelative)}
+}) => `export const entryPointName = ${uneval(entryPointName)}
 export const groupMap = ${uneval(groupMap)}`

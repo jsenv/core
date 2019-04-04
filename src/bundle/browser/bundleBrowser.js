@@ -10,8 +10,6 @@ export const bundleBrowser = async ({
   projectFolder,
   importMap,
   into,
-  globalName,
-  globalNameIsPromise = false,
   entryPointMap,
   babelConfigMap,
   compileGroupCount = 1,
@@ -21,10 +19,6 @@ export const bundleBrowser = async ({
   generateEntryPages = false,
 }) => {
   projectFolder = normalizePathname(projectFolder)
-
-  if (typeof globalName !== "string")
-    throw new TypeError(`globalName must be a string, got ${globalName}.`)
-
   return await Promise.all([
     bundlePlatform({
       entryPointMap,
@@ -39,7 +33,6 @@ export const bundleBrowser = async ({
           importMap,
           projectFolder,
           into,
-          globalName,
           entryPointMap,
           babelConfigMap,
           minify,
@@ -50,7 +43,6 @@ export const bundleBrowser = async ({
           importMap,
           projectFolder,
           into,
-          globalName,
           entryPointMap,
           babelConfigMap,
           minify,
@@ -61,8 +53,6 @@ export const bundleBrowser = async ({
           importMap,
           projectFolder,
           into,
-          globalName,
-          globalNameIsPromise,
           babelConfigMap,
           minify,
           ...context,

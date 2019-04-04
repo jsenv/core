@@ -6,7 +6,6 @@ export const computeRollupOptionsWithBalancing = ({
   importMap,
   projectFolder,
   into,
-  globalName,
   entryPointMap,
   babelConfigMap,
   groupMap,
@@ -17,6 +16,7 @@ export const computeRollupOptionsWithBalancing = ({
   const dir = `${projectFolder}/${into}/${compileId}`
 
   const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    dir,
     featureNameArray: groupMap[compileId].incompatibleNameArray,
     babelConfigMap,
     minify,
@@ -44,8 +44,8 @@ minify: ${minify}
     },
     rollupGenerateOptions: {
       dir,
-      format: "iife",
-      name: globalName,
+      format: "system",
+      // entryFileNames: `./${compileId}-[name].js`,
       sourcemap: true,
       sourceMapExcludeSources: true,
     },

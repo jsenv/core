@@ -11,20 +11,20 @@ export const generateEntryPointMapPages = async ({
   entryPointMap,
 }) => {
   await Promise.all(
-    Object.keys(entryPointMap).map((entryPoint) => {
+    Object.keys(entryPointMap).map((entryPointName) => {
       return generateEntryPage({
         cancellationToken,
         projectFolder,
         into,
-        entryPoint,
+        entryPointName,
       })
     }),
   )
 }
 
-const generateEntryPage = async ({ cancellationToken, projectFolder, into, entryPoint }) => {
-  const entryFilenameRelative = `${entryPoint}.js`
-  const pageFilenameRelative = `${entryPoint}.html`
+const generateEntryPage = async ({ cancellationToken, projectFolder, into, entryPointName }) => {
+  const entryFilenameRelative = `${entryPointName}.js`
+  const pageFilenameRelative = `${entryPointName}.html`
 
   const html = `<!doctype html>
 

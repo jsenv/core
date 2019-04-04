@@ -16,17 +16,18 @@ export const computeRollupOptionsWithBalancing = ({
 }) => {
   const dir = `${projectFolder}/${into}/${compileId}`
 
-  const jsenvRollupPlugin = createJsenvRollupPlugin({
-    cancellationToken,
-    importMap,
-    projectFolder,
-  })
-
   const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    dir,
     featureNameArray: groupMap[compileId].incompatibleNameArray,
     babelConfigMap,
     minify,
     target: "node",
+  })
+
+  const jsenvRollupPlugin = createJsenvRollupPlugin({
+    cancellationToken,
+    importMap,
+    projectFolder,
   })
 
   log(`

@@ -1,6 +1,7 @@
 import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { uneval } from "/node_modules/@dmail/uneval/index.js"
 import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
+import { pathnameToDirname } from "/node_modules/@jsenv/module-resolution/index.js"
 
 const { projectFolder: selfProjectFolder } = import.meta.require("../../../jsenv.config.js")
 
@@ -11,14 +12,13 @@ export const computeRollupOptionsForBalancer = ({
   into,
   babelConfigMap,
   groupMap,
-  entryPoint,
-  entryFilenameRelative,
+  entryPointName,
   log,
   minify,
 }) => {
   const balancerOptionSource = generateBalancerOptionsSource({
     groupMap,
-    entryFilenameRelative,
+    entryPointName,
   })
 
   const nodeBalancerRollupPlugin = {
@@ -41,18 +41,19 @@ export const computeRollupOptionsForBalancer = ({
     },
   }
 
+  const file = `${projectFolder}/${into}/${entryPointName}`
+
   const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    dir: pathnameToDirname(file),
     featureNameArray: groupMap.otherwise.incompatibleNameArray,
     babelConfigMap,
     minify,
     target: "node",
   })
 
-  const file = `${projectFolder}/${into}/${entryFilenameRelative}`
-
   log(`
 bundle balancer file for node.
-entryPoint: ${entryPoint}
+entryPointName: ${entryPointName}
 file: ${file}
 minify : ${minify}
 `)
@@ -73,9 +74,7 @@ minify : ${minify}
   }
 }
 
-const generateBalancerOptionsSource = ({ entryFilenameRelative, groupMap }) => {
-  return `
-export const entryFilenameRelative = ${uneval(entryFilenameRelative)}
-export const groupMap = ${uneval(groupMap)}
-`
+const generateBalancerOptionsSource = ({ entryPointName, groupMap }) => {
+  return `export const entryPointName = ${uneval(entryPointName)}
+export const groupMap = ${uneval(groupMap)}`
 }

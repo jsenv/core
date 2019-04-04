@@ -1,6 +1,6 @@
 import { bundleBrowser } from "../../../index.js"
 
-const blockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
+const transformAsyncToPromises = import.meta.require("babel-plugin-transform-async-to-promises")
 const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 
 const testFolder = `${projectFolder}/test/bundle-browser/balancing`
@@ -8,9 +8,8 @@ const testFolder = `${projectFolder}/test/bundle-browser/balancing`
 bundleBrowser({
   projectFolder: testFolder,
   into: "dist/browser",
-  globalName: "balancing",
   babelConfigMap: {
-    "transform-block-scoping": [blockScoping],
+    "transform-async-to-promises": [transformAsyncToPromises],
   },
   entryPointMap: {
     main: "balancing.js",

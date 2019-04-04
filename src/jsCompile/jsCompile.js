@@ -92,7 +92,7 @@ export const jsCompile = async ({
   }
 }
 
-const writeSourceMapLocation = ({ source, location }) => {
+export const writeSourceMapLocation = ({ source, location }) => {
   return `${source}
 ${"//#"} sourceMappingURL=${location}`
 }

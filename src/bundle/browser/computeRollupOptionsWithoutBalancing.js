@@ -6,7 +6,6 @@ export const computeRollupOptionsWithoutBalancing = ({
   importMap,
   projectFolder,
   into,
-  globalName,
   entryPointMap,
   babelConfigMap,
   log,
@@ -15,6 +14,7 @@ export const computeRollupOptionsWithoutBalancing = ({
   const dir = `${projectFolder}/${into}`
 
   const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    dir,
     featureNameArray: Object.keys(babelConfigMap),
     babelConfigMap,
     minify,
@@ -43,8 +43,8 @@ minify: ${minify}
       // https://rollupjs.org/guide/en#output-dir
       dir,
       // https://rollupjs.org/guide/en#output-format
-      format: "iife",
-      name: globalName,
+      format: "system",
+      entryFileNames: `./[name].js`,
       // https://rollupjs.org/guide/en#output-sourcemap
       sourcemap: true,
       // we could exclude them

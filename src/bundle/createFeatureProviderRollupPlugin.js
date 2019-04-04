@@ -1,32 +1,41 @@
-import { babelConfigMapToBabelPluginArray } from "../jsCompile/babeConfigMapToBabelPluginArray.js"
-import { createReplaceImportMetaBabelPlugin } from "./createReplaceImportMetaBabelPlugin.js"
-import { createReplaceHelperByImportBabelPlugin } from "./createReplaceHelperByImportBabelPlugin.js"
+import { fileWrite } from "/node_modules/@dmail/helper/index.js"
+import { createReplaceImportMetaBabelPlugin } from "./replace-import-meta.js"
+import { createReplaceBabelHelperByNamedImportBabelPlugin } from "./replace-babel-helper-by-named-import.js"
+import { transpiler, findAsyncPluginNameInBabelConfigMap } from "../jsCompile/transpiler.js"
+import { writeSourceMapLocation } from "../jsCompile/jsCompile.js"
 
 const { minify: minifyCode } = import.meta.require("terser")
-const { transformAsync, buildExternalHelpers } = import.meta.require("@babel/core")
+const { buildExternalHelpers } = import.meta.require("@babel/core")
 
 const HELPER_FILENAME = "\0rollupPluginBabelHelpers.js"
 
 export const createFeatureProviderRollupPlugin = ({
+  dir,
   featureNameArray,
   babelConfigMap,
   minify,
   target,
 }) => {
-  const babelConfigMapSubset = filterBabelConfigMap(babelConfigMap, (babelPluginName) =>
-    featureNameArray.includes(babelPluginName),
+  const replaceBabelHelperByNamedImportBabelPlugin = createReplaceBabelHelperByNamedImportBabelPlugin(
+    {
+      HELPER_FILENAME,
+    },
   )
-  const babelPluginArray = babelConfigMapToBabelPluginArray(babelConfigMapSubset)
-
-  babelPluginArray.unshift(createReplaceHelperByImportBabelPlugin({ HELPER_FILENAME }))
-
-  const importMetaSource =
-    target === "browser" ? createBrowserImportMetaSource() : createNodeImportMetaSource()
-
   const replaceImportMetaBabelPlugin = createReplaceImportMetaBabelPlugin({
-    importMetaSource,
+    importMetaSource:
+      target === "browser" ? createBrowserImportMetaSource() : createNodeImportMetaSource(),
   })
-  babelPluginArray.push(replaceImportMetaBabelPlugin)
+
+  const babelConfigMapSubset = {}
+  babelConfigMapSubset[
+    "replace-babel-helper-by-named-import"
+  ] = replaceBabelHelperByNamedImportBabelPlugin
+  Object.keys(babelConfigMap).forEach((babelPluginName) => {
+    if (featureNameArray.includes(babelPluginName)) {
+      babelConfigMapSubset[babelPluginName] = babelConfigMap[babelPluginName]
+    }
+  })
+  babelConfigMapSubset["replace-import-meta"] = [replaceImportMetaBabelPlugin]
 
   const babelRollupPlugin = {
     resolveId: (id) => {
@@ -52,16 +61,14 @@ export const createFeatureProviderRollupPlugin = ({
         }
       }
 
-      const result = await transformAsync(source, {
+      const { code, map } = await transpiler({
+        input: source,
         filename,
-        babelrc: false,
-        plugins: babelPluginArray,
-        sourceMaps: true,
-        parserOpts: {
-          allowAwaitOutsideFunction: true,
-        },
+        babelConfigMap: babelConfigMapSubset,
+        // false, will be done inside writeBundle
+        transformModuleIntoSystemFormat: false,
       })
-      return result
+      return { code, map }
     },
 
     renderChunk: (source) => {
@@ -79,19 +86,40 @@ export const createFeatureProviderRollupPlugin = ({
         return result
       }
     },
+
+    writeBundle: async (bundle) => {
+      const asyncPluginName = findAsyncPluginNameInBabelConfigMap(babelConfigMapSubset)
+
+      if (!asyncPluginName) return
+
+      // we have to do this because rollup ads
+      // an async wrapper function without transpiling it
+      // if your bundle contains a dynamic import
+      await Promise.all(
+        Object.keys(bundle).map(async (bundleFilename) => {
+          const bundleInfo = bundle[bundleFilename]
+
+          const { code, map } = await transpiler({
+            input: bundleInfo.code,
+            inputMap: bundleInfo.map,
+            filename: bundleFilename,
+            babelConfigMap: { [asyncPluginName]: babelConfigMapSubset[asyncPluginName] },
+            transformModuleIntoSystemFormat: false,
+          })
+
+          await Promise.all([
+            fileWrite(
+              `${dir}/${bundleFilename}`,
+              writeSourceMapLocation({ source: code, location: `./${bundleFilename}.map` }),
+            ),
+            fileWrite(`${dir}/${bundleFilename}.map`, JSON.stringify(map)),
+          ])
+        }),
+      )
+    },
   }
 
   return babelRollupPlugin
-}
-
-const filterBabelConfigMap = (babelConfigMap, filter) => {
-  const filteredBabelConfigMap = {}
-  Object.keys(babelConfigMap).forEach((babelPluginName) => {
-    if (filter(babelPluginName)) {
-      filteredBabelConfigMap[babelPluginName] = babelConfigMap[babelPluginName]
-    }
-  })
-  return filteredBabelConfigMap
 }
 
 const createBrowserImportMetaSource = () => `{

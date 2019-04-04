@@ -14,4 +14,5 @@ bundleBrowser({
     main: "without-balancing.js",
   },
   verbose: true,
+  minify: false,
 })

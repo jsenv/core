@@ -15,6 +15,7 @@ export const computeRollupOptionsWithoutBalancing = ({
   const dir = `${projectFolder}/${into}`
 
   const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+    dir,
     featureNameArray: Object.keys(babelConfigMap),
     babelConfigMap,
     minify,
