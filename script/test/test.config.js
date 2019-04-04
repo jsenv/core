@@ -7,5 +7,8 @@ const testDescription = {
   "/test/bundle-node/async-generator/": {
     node: null,
   },
+  "/test/bundle-node/https/": {
+    node: null,
+  },
 }
 exports.testDescription = testDescription

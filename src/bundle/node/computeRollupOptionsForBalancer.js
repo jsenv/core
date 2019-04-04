@@ -41,7 +41,7 @@ export const computeRollupOptionsForBalancer = ({
     },
   }
 
-  const file = `${projectFolder}/${into}/${entryPointName}`
+  const file = `${projectFolder}/${into}/${entryPointName}.js`
 
   const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
     dir: pathnameToDirname(file),
@@ -67,7 +67,7 @@ minify : ${minify}
     rollupGenerateOptions: {
       file,
       format: "cjs",
-      name: null,
+      // name: null,
       sourcemap: true,
       sourcemapExcludeSources: true,
     },

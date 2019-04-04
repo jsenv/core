@@ -1,3 +1,3 @@
 import { readFile } from "fs"
 
-export default readFile
+export default typeof readFile

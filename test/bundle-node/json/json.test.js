@@ -21,7 +21,6 @@ const testFolder = `${projectFolder}/test/bundle-node/json`
     verbose: true,
   })
 
-  // eslint-disable-next-line import/no-dynamic-require
   const actual = import.meta.require(`${testFolder}/dist/node/main.js`)
   const expected = { foo: true }
   assert({ actual, expected })

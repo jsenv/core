@@ -20,7 +20,6 @@ const testFolder = `${projectFolder}/test/bundle-node/balancing`
     verbose: false,
   })
 
-  // eslint-disable-next-line import/no-dynamic-require
   const actual = import.meta.require(`${testFolder}/dist/node/main.js`)
   const expected = 42
   assert({ actual, expected })

@@ -1,1 +1,1 @@
-await Promise.resolve(10)
+export default await Promise.resolve(42)

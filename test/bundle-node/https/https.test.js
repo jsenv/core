@@ -5,12 +5,14 @@ const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 
 const testFolder = `${projectFolder}/test/bundle-node/https`
 
-bundleNode({
-  projectFolder: testFolder,
-  entryPointMap: {
-    main: "https.js",
-  },
-  babelConfigMap: {
-    "transform-block-scoping": [blockScoping],
-  },
-})
+;(async () => {
+  await bundleNode({
+    projectFolder: testFolder,
+    entryPointMap: {
+      main: "https.js",
+    },
+    babelConfigMap: {
+      "transform-block-scoping": [blockScoping],
+    },
+  })
+})()

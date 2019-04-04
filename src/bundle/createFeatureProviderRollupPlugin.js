@@ -130,6 +130,6 @@ const createBrowserImportMetaSource = () => `{
 }`
 
 const createNodeImportMetaSource = () => `{
-  url: "file://" + __dirname.indexOf("\\\\") === -1 ? __dirname : "/" + __dirname.replace(/\\\\/g, "/"),
+  url: "file://" + (__filename.indexOf("\\\\") === -1 ? __filename : "/" + __filename.replace(/\\\\/g, "/")),
   require: require
 }`

@@ -34,13 +34,13 @@ export const createReplaceImportMetaBabelPlugin = ({ importMetaSource }) => {
           }
 
           programPath.node.body.unshift(
-            template.ast(`const ${importMetaUniqId} = ${importMetaSource}`, {
+            template.default.ast(`const ${importMetaUniqId} = ${importMetaSource}`, {
               plugins: ["importMeta"],
             }),
           )
 
           for (const meta of metas) {
-            meta.replaceWith(template.ast`${importMetaUniqId}`)
+            meta.replaceWith(template.default.ast`${importMetaUniqId}`)
           }
         },
       },

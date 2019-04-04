@@ -1,1 +1,3 @@
-import.meta.require("fs")
+const { readFile } = import.meta.require("fs")
+
+export default typeof readFile
