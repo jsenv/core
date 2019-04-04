@@ -31,6 +31,8 @@ export const originAsString = ({ protocol, ip, port }) => {
   return url.origin
 }
 
+// todo: provide an option like debugInternalError
+// which sends error.stack on 500 to the client
 export const startServer = async ({
   cancellationToken = createCancellationToken(),
   protocol = "http",
@@ -198,6 +200,9 @@ export const startServer = async ({
 
     log(`${request.method} ${request.origin}${request.ressource}`)
     log(`${colorizeResponseStatus(response.status)} ${response.statusText}`)
+    if (response.status === 500) {
+      log(response.body)
+    }
     populateNodeResponse(nodeResponse, response, {
       ignoreBody: request.method === "HEAD",
     })
