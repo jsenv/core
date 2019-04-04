@@ -1,7 +1,7 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 
-const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
+const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 
 const testFolder = `${projectFolder}/test/launch-node/json`
 const filenameRelative = `json.js`

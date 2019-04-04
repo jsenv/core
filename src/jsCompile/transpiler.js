@@ -86,7 +86,7 @@ export const transpiler = async ({
     ...defaultBabelPluginArray,
     ...Object.keys(babelConfigMap).map((babelPluginName) => babelConfigMap[babelPluginName]),
     ...(transformModuleIntoSystemFormat
-      ? [transformModulesSystemJs, { topLevelAwait: transformTopLevelAwait }]
+      ? [[transformModulesSystemJs, { topLevelAwait: transformTopLevelAwait }]]
       : []),
   ]
   return transpile({
