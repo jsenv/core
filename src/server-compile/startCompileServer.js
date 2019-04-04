@@ -32,6 +32,8 @@ export const startCompileServer = async ({
   port,
   signature,
   verbose,
+  transformTopLevelAwait,
+  enableGlobalLock,
 }) => {
   if (typeof projectFolder !== "string")
     throw new TypeError(`projectFolder must be a string. got ${projectFolder}`)
@@ -50,6 +52,8 @@ export const startCompileServer = async ({
     cacheStrategy,
     watch,
     watchPredicate,
+    transformTopLevelAwait,
+    enableGlobalLock,
   })
 
   const service = serviceCompose(jsCompileService, (request) =>

@@ -27,6 +27,7 @@ export const createJsCompileService = async ({
   watch,
   watchPredicate,
   transformTopLevelAwait,
+  enableGlobalLock,
 }) => {
   const groupMap = generateGroupMap({
     babelConfigMap,
@@ -47,6 +48,7 @@ export const createJsCompileService = async ({
     return {
       babelConfigMap: groupBabelConfigMap,
       transformTopLevelAwait,
+      enableGlobalLock,
     }
   })
 

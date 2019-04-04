@@ -28,10 +28,10 @@ export const compileFile = async ({
     filenameRelative,
   })
 
-  const generate = async ({ input }) => {
-    const compileParam =
-      compileDescription && compileId in compileDescription ? compileDescription[compileId] : {}
+  const { enableGlobalLock = true, ...compileParam } =
+    compileDescription && compileId in compileDescription ? compileDescription[compileId] : {}
 
+  const generate = async ({ input }) => {
     const {
       sources = [],
       sourcesContent = [],
@@ -127,14 +127,16 @@ export const compileFile = async ({
   // https://github.com/moxystudio/node-proper-lockfile/issues/69
   await fileMakeDirname(metaFilename)
   // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
-  const unlockGlobal = await lockfile.lock(metaFilename, {
-    realpath: false,
-    retries: {
-      retries: 20,
-      minTimeout: 100,
-      maxTimeout: 1000,
-    },
-  })
+  const unlockGlobal = enableGlobalLock
+    ? await lockfile.lock(metaFilename, {
+        realpath: false,
+        retries: {
+          retries: 20,
+          minTimeout: 20,
+          maxTimeout: 500,
+        },
+      })
+    : () => {}
   // here in case of error.code === 'ELOCKED' thrown from here
   // https://github.com/moxystudio/node-proper-lockfile/blob/1a478a43a077a7a7efc46ac79fd8f713a64fd499/lib/lockfile.js#L54
   // we could give a better failure message when server tries to compile a file
