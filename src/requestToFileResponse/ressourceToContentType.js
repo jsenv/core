@@ -1,10 +1,7 @@
 // https://github.com/jshttp/mime-db/blob/master/src/apache-types.json
 
 import { ressourceToExtension } from "../urlHelper.js"
-
-// currently jsenv seems to fail to load .json, to be fixed
-// for now we use import.meta.require to fix
-const contentTypeMap = import.meta.require("./contentTypeMap.json")
+import contentTypeMap from "./contentTypeMap.js"
 
 const availableContentTypes = Object.keys(contentTypeMap)
 const contentTypeDefault = "application/octet-stream"

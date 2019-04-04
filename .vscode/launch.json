@@ -15,7 +15,7 @@
       "smartStep": true,
       "skipFiles": [
         // force-array-multiline
-        "node_modules/**",
+        // "node_modules/**",
         "<node_internals>/**/*.js"
       ]
     },

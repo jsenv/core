@@ -17,6 +17,10 @@ export const createFeatureProviderRollupPlugin = ({
   target,
   detectAndTransformIfNeededAsyncInsertedByRollup = target === "browser",
 }) => {
+  // instead of replacing import by a raw object
+  // I should replace it with a named import (or just an import)
+  // so that it does not end being duplicated
+  // not very important
   const replaceBabelHelperByNamedImportBabelPlugin = createReplaceBabelHelperByNamedImportBabelPlugin(
     {
       HELPER_FILENAME,
