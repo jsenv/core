@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "use-scoped-foo": "*",
+    "foo": "*"
+  }
+}

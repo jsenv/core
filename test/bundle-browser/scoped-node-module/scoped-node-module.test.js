@@ -1,18 +1,19 @@
+import { assert } from "/node_modules/@dmail/assert/index.js"
 import { generateImportMapForProjectNodeModules, bundleBrowser } from "../../../index.js"
+import { importBrowserBundle } from "../import-browser-bundle.js"
 
 const blockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
-const { projectFolder } = import.meta.require("../../../projectFolder.js")
+const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 
 const testFolder = `${projectFolder}/test/bundle-browser/scoped-node-module`
 
 ;(async () => {
-  const importMap = await generateImportMapForProjectNodeModules({ projectFolder })
+  const importMap = await generateImportMapForProjectNodeModules({ projectFolder: testFolder })
 
   await bundleBrowser({
     projectFolder: testFolder,
     importMap,
     into: "dist/browser",
-    globalName: "scopedFoo",
     entryPointMap: {
       main: "scoped-node-module.js",
     },
@@ -23,5 +24,10 @@ const testFolder = `${projectFolder}/test/bundle-browser/scoped-node-module`
     verbose: true,
   })
 
-  // here we could assert some stuff
+  const { namespace: actual } = await importBrowserBundle({
+    bundleFolder: `${testFolder}/dist/browser`,
+    file: "main.js",
+  })
+  const expected = { default: 42 }
+  assert({ actual, expected })
 })()

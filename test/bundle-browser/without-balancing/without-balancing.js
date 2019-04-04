@@ -1,5 +1,3 @@
-import { answer } from "./answer.js"
+import value from "./answer.js"
 
-console.log(answer)
-
-export default answer
+export default value

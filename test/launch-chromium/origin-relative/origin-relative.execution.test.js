@@ -1,7 +1,7 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
 import { startCompileServer, launchAndExecute, launchChromium } from "../../../index.js"
 
-const { projectFolder } = import.meta.require("../../../projectFolder.js")
+const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 
 const testFolder = `${projectFolder}/test/launch-chromium/origin-relative`
 const filenameRelative = `folder/file.js`

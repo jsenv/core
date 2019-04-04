@@ -1,3 +1,3 @@
-import { foo } from "./node_modules/use-scoped-foo/use-scoped-foo.js"
+import value from "./node_modules/use-scoped-foo/use-scoped-foo.js"
 
-export { foo }
+export default value
