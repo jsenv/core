@@ -17,6 +17,7 @@ export const createFeatureProviderRollupPlugin = ({
   target,
   detectAndTransformIfNeededAsyncInsertedByRollup = target === "browser",
 }) => {
+  const babelConfigMapSubset = {}
   // instead of replacing import by a raw object
   // I should replace it with a named import (or just an import)
   // so that it does not end being duplicated
@@ -26,21 +27,20 @@ export const createFeatureProviderRollupPlugin = ({
       HELPER_FILENAME,
     },
   )
-  const replaceImportMetaBabelPlugin = createReplaceImportMetaBabelPlugin({
-    importMetaSource:
-      target === "browser" ? createBrowserImportMetaSource() : createNodeImportMetaSource(),
-  })
-
-  const babelConfigMapSubset = {}
-  babelConfigMapSubset[
-    "replace-babel-helper-by-named-import"
-  ] = replaceBabelHelperByNamedImportBabelPlugin
+  babelConfigMapSubset["replace-babel-helper-by-named-import"] = [
+    replaceBabelHelperByNamedImportBabelPlugin,
+  ]
   Object.keys(babelConfigMap).forEach((babelPluginName) => {
     if (featureNameArray.includes(babelPluginName)) {
       babelConfigMapSubset[babelPluginName] = babelConfigMap[babelPluginName]
     }
   })
-  babelConfigMapSubset["replace-import-meta"] = [replaceImportMetaBabelPlugin]
+  if (target === "node") {
+    const replaceImportMetaBabelPlugin = createReplaceImportMetaBabelPlugin({
+      importMetaSource: createNodeImportMetaSource(),
+    })
+    babelConfigMapSubset["replace-import-meta"] = [replaceImportMetaBabelPlugin]
+  }
 
   const babelRollupPlugin = {
     resolveId: (id) => {
@@ -128,10 +128,6 @@ export const createFeatureProviderRollupPlugin = ({
 
   return babelRollupPlugin
 }
-
-const createBrowserImportMetaSource = () => `{
-  url: document.currentScript && document.currentScript.src || location.href
-}`
 
 const createNodeImportMetaSource = () => `{
   url: "file://" + (__filename.indexOf("\\\\") === -1 ? __filename : "/" + __filename.replace(/\\\\/g, "/")),

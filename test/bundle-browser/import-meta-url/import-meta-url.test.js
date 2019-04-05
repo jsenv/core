@@ -25,6 +25,6 @@ const testFolder = `${projectFolder}/test/bundle-browser/import-meta-url`
     bundleFolder: `${testFolder}/dist/browser`,
     file: "main.js",
   })
-  const expected = { default: `${serverOrigin}/` }
+  const expected = { default: `${serverOrigin}/main.js` }
   assert({ actual, expected })
 })()
