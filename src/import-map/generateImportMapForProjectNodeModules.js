@@ -166,6 +166,11 @@ export const generateImportMapForProjectNodeModules = async ({
               from: `${expectedPathname}/`,
               to: `${actualPathname}/`,
             })
+            addScopedImportMapping({
+              scope: `/${importerName}/`,
+              from: `${actualPathname}/`,
+              to: `${actualPathname}/`,
+            })
           }
         }
 
