@@ -11,6 +11,7 @@ import { hrefToFilenameRelative } from "../../hrefToFilenameRelative.js"
 import {
   fromFunctionReturningNamespace,
   fromHref,
+  computeFileAndImporterFile,
 } from "../../registerModuleFrom/registerModuleFrom.js"
 import { fetchSource } from "../fetchSource.js"
 import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
@@ -52,7 +53,14 @@ export const createNodeSystem = ({
             default: nodeNativeModuleExports,
           }
         },
-        { href, importer },
+        computeFileAndImporterFile({
+          href,
+          importer,
+          compileInto,
+          sourceOrigin,
+          compileServerOrigin,
+          compileId,
+        }),
       )
     }
 

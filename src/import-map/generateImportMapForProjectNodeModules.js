@@ -62,9 +62,10 @@ export const generateImportMapForProjectNodeModules = async ({
   }
 
   const visit = async ({ packageFilename, packageData }) => {
-    if (!packageMayNeedRemapping(packageData)) return
-
     const isTopLevel = packageFilename === topLevelPackageFilename
+
+    if (!isTopLevel && !packageMayNeedRemapping(packageData)) return
+
     const importerName = isTopLevel
       ? topLevelImporterName
       : pathnameToDirname(packageFilename.slice(`${projectFolder}/`.length))

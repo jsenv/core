@@ -1,5 +1,6 @@
 {
   "name": "basic-name",
+  "module": "index.js",
   "dependencies": {
     "bar": "file:./bar",
     "foo": "file:./foo",

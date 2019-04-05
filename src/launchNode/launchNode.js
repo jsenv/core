@@ -21,6 +21,12 @@ export const launchNode = async ({
     processExecArgv: process.execArgv,
     processDebugPort: process.debugPort,
   })
+  // because we do something like this _exports({ ...require('fs') })
+  // which will emit every possible depreciation warning
+  // a fix would be that system.js _exports uses
+  // Object.getOwnPropertyNames instead of for(const key of value)
+  // and Object.defineProperty() instead of namespace[name] = value
+  execArgv.push("--no-deprecation")
 
   const child = forkChildProcess(nodeClientFile, {
     execArgv,

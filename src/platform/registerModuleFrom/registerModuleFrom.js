@@ -21,21 +21,15 @@ export const fromHref = async ({
     href,
     importer,
   })
-  const file = hrefToFilenameRelative(href, {
+  const realHref = url
+  const { file, importerFile } = computeFileAndImporterFile({
+    href,
+    importer,
     compileInto,
     sourceOrigin,
     compileServerOrigin,
     compileId,
   })
-  const importerFile = importer
-    ? hrefToFilenameRelative(importer, {
-        compileInto,
-        sourceOrigin,
-        compileServerOrigin,
-        compileId,
-      })
-    : undefined
-  const realHref = url
 
   if (status === 404) {
     throw createModuleNotFoundError({
@@ -99,7 +93,32 @@ export const fromHref = async ({
   })
 }
 
-export const fromFunctionReturningRegisteredModule = (fn, { file, importerFile }) => {
+export const computeFileAndImporterFile = ({
+  href,
+  importer,
+  compileInto,
+  sourceOrigin,
+  compileServerOrigin,
+  compileId,
+}) => {
+  const file = hrefToFilenameRelative(href, {
+    compileInto,
+    sourceOrigin,
+    compileServerOrigin,
+    compileId,
+  })
+  const importerFile = importer
+    ? hrefToFilenameRelative(importer, {
+        compileInto,
+        sourceOrigin,
+        compileServerOrigin,
+        compileId,
+      })
+    : undefined
+  return { file, importerFile }
+}
+
+const fromFunctionReturningRegisteredModule = (fn, { file, importerFile }) => {
   try {
     return fn()
   } catch (error) {
