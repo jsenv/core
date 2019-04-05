@@ -6,6 +6,7 @@ import {
 import { readPackageData } from "./node-module-resolution/readPackageData.js"
 import { resolveNodeModule } from "./node-module-resolution/resolveNodeModule.js"
 import { packageDataToMain } from "./node-module-resolution/packageDataToMain.js"
+import { packageMayNeedRemapping } from "./node-module-resolution/packageMayNeedRemapping.js"
 
 export const generateImportMapForProjectNodeModules = async ({
   projectFolder,
@@ -61,6 +62,8 @@ export const generateImportMapForProjectNodeModules = async ({
   }
 
   const visit = async ({ packageFilename, packageData }) => {
+    if (!packageMayNeedRemapping(packageData)) return
+
     const isTopLevel = packageFilename === topLevelPackageFilename
     const importerName = isTopLevel
       ? topLevelImporterName
