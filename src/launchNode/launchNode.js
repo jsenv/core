@@ -3,7 +3,7 @@ import { uneval } from "/node_modules/@dmail/uneval/index.js"
 import { ROOT_FOLDER } from "../ROOT_FOLDER.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 
-const nodeClientFile = `${ROOT_FOLDER}/dist/node-client/main.js`
+const nodeClientFile = `${ROOT_FOLDER}/dist/node-client/nodeClient.js`
 
 export const launchNode = async ({
   cancellationToken,

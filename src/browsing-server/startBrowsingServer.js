@@ -1,14 +1,18 @@
-import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
-import { uneval } from "/node_modules/@dmail/uneval/index.js"
-import { createCancellationToken } from "/node_modules/@dmail/cancellation/index.js"
+import { normalizePathname } from "@jsenv/module-resolution"
+import { createCancellationToken } from "@dmail/cancellation"
 import { startServer, serviceCompose } from "../server/index.js"
 import { startCompileServer } from "../server-compile/index.js"
 import { guard } from "../functionHelper.js"
+import { generateSelfImportIIFE } from "./self-import-iife/generateSelfImportIIFE.js"
+import { escapeClosingScriptTag } from "../stringHelper.js"
+import { requestToFileResponse } from "../requestToFileResponse/index.js"
 
 // required until jsenv importMap bug gets fixed
-const { namedValueDescriptionToMetaDescription, selectAllFileInsideFolder } = import.meta.require(
-  "@dmail/project-structure",
-)
+const {
+  namedValueDescriptionToMetaDescription,
+  selectAllFileInsideFolder,
+  pathnameToMeta,
+} = import.meta.require("@dmail/project-structure")
 
 export const startBrowsingServer = async ({
   cancellationToken = createCancellationToken(),
@@ -32,13 +36,7 @@ export const startBrowsingServer = async ({
   forcePort = false,
   signature,
 
-  // here instead I have to load systemjs from somewhere
-  // then I will use it to load an other distant file
-  // like dist/browser-client/browser-client.js
-  // capable of running my code, then I will run my code
-  // but that will be required only once jsenv use latest jsenv
-  generateHTML = ({ compileInto, compileServerOrigin, filenameRelative, browserPlatformHref }) => {
-    return `<!doctype html>
+  generateHTML = ({ selfExecuteSource }) => `<!doctype html>
 
 <head>
   <title>Untitled</title>
@@ -47,18 +45,10 @@ export const startBrowsingServer = async ({
 
 <body>
   <main></main>
-  <script src="${browserPlatformHref}"></script>
-  <script type="text/javascript">
-    window.__platform__.executeCompiledFile({
-      "compileInto": ${uneval(compileInto)},
-      "compileServerOrigin": ${uneval(compileServerOrigin)},
-      "filenameRelative": ${uneval(filenameRelative)}
-    })
-  </script>
+  <script type="text/javascript">${selfExecuteSource}</script>
 </body>
 
-</html>`
-  },
+</html>`,
 }) => {
   projectFolder = normalizePathname(projectFolder)
   const metaDescription = namedValueDescriptionToMetaDescription({
@@ -118,16 +108,36 @@ export const startBrowsingServer = async ({
     },
   )
 
-  const otherRoute = guard(
-    ({ method }) => {
-      return method === "GET"
+  const browsableRoute = guard(
+    ({ method, ressource }) => {
+      return method === "GET" && pathnameToMeta({ pathname: ressource, metaDescription }).browsable
     },
     async ({ ressource }) => {
+      // selfImportIIFEBundle is mega cool but it make things much slower...
+      // is it possible to cache some stuff ?
+      // the only variation if filenameRelative
+      // so I think it would be better/easier
+      // to create this bundle once for all as an IIFE
+      // this IIFE would set window.browserClient = the exports from browserPlatform
+      // then we would "just" have to load it using a script
+      // yeah that's what we "must" do and launchChromium and this one would use it
+      // exactly the same approach used for node client in fact
+
+      const selfImportIIFEBundle = await generateSelfImportIIFE({
+        cancellationToken,
+        importMap,
+        projectFolder,
+        compileInto,
+        babelConfigMap,
+        compileServerOrigin,
+        filenameRelative: ressource.slice(1),
+      })
+
       const html = await generateHTML({
         compileInto,
         compileServerOrigin,
-        browserPlatformHref: getBrowserPlatformHref({ compileInto, compileServerOrigin }),
         filenameRelative: ressource.slice(1),
+        selfExecuteSource: escapeClosingScriptTag(selfImportIIFEBundle.code),
       })
 
       return {
@@ -148,15 +158,14 @@ export const startBrowsingServer = async ({
     ip,
     port,
     forcePort,
-    requestToResponse: serviceCompose(indexRoute, otherRoute),
+    requestToResponse: serviceCompose(indexRoute, browsableRoute, (request) =>
+      requestToFileResponse(request, { projectFolder }),
+    ),
     startedMessage: ({ origin }) => `browser server started for ${projectFolder} at ${origin}`,
     stoppedMessage: (reason) => `browser server stopped because ${reason}`,
   })
   return browserServer
 }
-
-const getBrowserPlatformHref = ({ compileServerOrigin }) =>
-  `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/platform.js`
 
 const getIndexPageHTML = async ({ projectFolder, browsableFilenameRelativeArray }) => {
   return `<!doctype html>

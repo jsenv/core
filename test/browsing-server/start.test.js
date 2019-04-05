@@ -13,4 +13,6 @@ startBrowsingServer({
     "/*.js": true,
     "/*.test.*": false,
   },
+  port: 3400,
+  forcePort: true,
 })

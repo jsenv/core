@@ -13,7 +13,7 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigi
   // this importMap is just wrapped into /${compileInto}/${compileId}/ from an other importMap
   // we could wrap the globalImportMap here instead of fetching it
   const importMapHref = `${compileServerOrigin}/${compileInto}/importMap.${compileId}.json`
-  const importMapResponse = fetchHref(importMapHref)
+  const importMapResponse = await fetchHref(importMapHref)
   const importMap = JSON.parse(importMapResponse.body)
 
   const systemImporter = createSystemImporter({

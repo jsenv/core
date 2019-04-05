@@ -172,12 +172,9 @@ export const startServer = async ({
 
     let response
     try {
-      const {
-        status = 501,
-        statusText = statusToStatusText(status),
-        headers = {},
-        body = "",
-      } = await requestToResponse(request)
+      const generatedResponse = await requestToResponse(request)
+      const { status = 501, statusText = statusToStatusText(status), headers = {}, body = "" } =
+        generatedResponse || {}
       response = Object.freeze({ status, statusText, headers, body })
 
       if (

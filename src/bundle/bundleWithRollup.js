@@ -6,6 +6,7 @@ export const bundleWithRollup = async ({
   cancellationToken,
   rollupParseOptions,
   rollupGenerateOptions,
+  writeOnFileSystem = true,
 }) => {
   const rollupBundle = await createOperation({
     cancellationToken,
@@ -30,15 +31,26 @@ export const bundleWithRollup = async ({
 
   const rollupOutputArray = await createOperation({
     cancellationToken,
-    start: () =>
-      rollupBundle.write({
+    start: () => {
+      if (writeOnFileSystem) {
+        return rollupBundle.write({
+          // https://rollupjs.org/guide/en#experimentaltoplevelawait
+          experimentalTopLevelAwait: true,
+          // we could put prefConst to true by checking 'transform-block-scoping'
+          // presence in babelConfigMap
+          preferConst: false,
+          ...rollupGenerateOptions,
+        })
+      }
+      return rollupBundle.generate({
         // https://rollupjs.org/guide/en#experimentaltoplevelawait
         experimentalTopLevelAwait: true,
         // we could put prefConst to true by checking 'transform-block-scoping'
         // presence in babelConfigMap
         preferConst: false,
         ...rollupGenerateOptions,
-      }),
+      })
+    },
   })
 
   return rollupOutputArray

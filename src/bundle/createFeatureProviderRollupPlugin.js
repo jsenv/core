@@ -10,12 +10,12 @@ const { buildExternalHelpers } = import.meta.require("@babel/core")
 const HELPER_FILENAME = "\0rollupPluginBabelHelpers.js"
 
 export const createFeatureProviderRollupPlugin = ({
-  dir,
   featureNameArray,
   babelConfigMap,
   minify,
   target,
   detectAndTransformIfNeededAsyncInsertedByRollup = target === "browser",
+  dir,
 }) => {
   const babelConfigMapSubset = {}
   // instead of replacing import by a raw object

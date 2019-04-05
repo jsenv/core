@@ -43,3 +43,8 @@ export const stringToArrayBuffer = (string) => {
   }
   return buffer
 }
+
+// https://stackoverflow.com/questions/28643272/how-to-include-an-escapedscript-script-tag-in-a-javascript-variable/28643409#28643409
+export const escapeClosingScriptTag = (string) => {
+  return string.replace(/\<\/script\>/g, "<\\/script>")
+}

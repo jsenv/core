@@ -5,6 +5,7 @@ import {
   resolveImport,
   remapResolvedImport,
   hrefToPathname,
+  hrefToScheme,
 } from "/node_modules/@jsenv/module-resolution/index.js"
 import { fetchUsingHttp } from "../platform/node/fetchUsingHttp.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
@@ -26,6 +27,8 @@ export const createJsenvRollupPlugin = ({
         // so when needed convert importer back to an url
         if (importer.startsWith(`${projectFolder}/`)) {
           importerHref = `${origin}${importer.slice(projectFolder.length)}`
+        } else if (hrefToScheme(importer) === "") {
+          importerHref = `${origin}${importer}`
         } else {
           importerHref = importer
         }

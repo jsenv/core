@@ -7,7 +7,7 @@ bundleNode({
   into: "dist/node-client",
   babelConfigMap,
   entryPointMap: {
-    main: "src/launchNode/client.js",
+    nodeClient: "src/launchNode/client.js",
   },
   compileGroupCount: 1,
   verbose: true,
