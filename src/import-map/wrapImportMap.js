@@ -38,9 +38,9 @@ const prefixScopes = (scopes, prefix) =>
 
 const prefixScopedImport = (imports, prefix, scopePathnamePattern) => {
   return objectMap(imports, (pathnamePattern, remapPattern) => {
-    if (pathnamePattern === scopePathnamePattern && remapPattern === scopePathnamePattern) {
+    if (pathnamePattern.startsWith(scopePathnamePattern)) {
       return {
-        [`${prefix}${pathnamePattern}`]: `${prefix}${pathnamePattern}`,
+        [`${prefix}${pathnamePattern}`]: `${prefix}${remapPattern}`,
       }
     }
 
