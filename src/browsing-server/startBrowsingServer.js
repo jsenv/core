@@ -32,6 +32,11 @@ export const startBrowsingServer = async ({
   forcePort = false,
   signature,
 
+  // here instead I have to load systemjs from somewhere
+  // then I will use it to load an other distant file
+  // like dist/browser-client/browser-client.js
+  // capable of running my code, then I will run my code
+  // but that will be required only once jsenv use latest jsenv
   generateHTML = ({ compileInto, compileServerOrigin, filenameRelative, browserPlatformHref }) => {
     return `<!doctype html>
 

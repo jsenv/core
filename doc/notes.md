@@ -1,30 +1,8 @@
 ## TODO
 
-- source code -> all code referenced by index.js
-  will fails to find projectFolder using import.meta.require() because the bundled file
-  will be elsewhere
-
-launchNode, bundleBrowser, bundleNode, startCompileServer are using this
-
-in all thoose cases the idea is to get a file which is precompiled
-we could precompile it next to the source file so that
-source file will find it when runned directly
-and also put it inside dist/ so that once compiled it find the file as well
-
-but the idea is more to have some kind of
-DIST_FOLDER which is either `${projectFolder}/dist` for the source file
-and is ./ for the file already inside dist
-a good way to do this ?
-
-because even midterm we will use the node bundled version of jsenv/core.
-external user of the lib needs the file to look inside './nodeClient.js'
-but while working on jsenv launchNode needs something like '../../../dist/nodeClient.js'
-
-- There is also import.meta.require() on babel-transform-modules-systemjs written in cjs
-  which will fail
-  -> easy fix: use the import/export version
-  available here: https://github.com/babel/babel/blob/master/packages/babel-plugin-transform-modules-systemjs/src/index.js
-  and add the async wrapping I need
+- now bundleBrowser exports a System format
+  we'll have to change generate-brwoser-client
+  and how it is used inside launchChromium and browsingServer
 
 ### How to use dependency written in commonjs
 

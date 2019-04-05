@@ -1,4 +1,3 @@
-import "/node_modules/systemjs/dist/system.js"
 import { resolveImport, remapResolvedImport } from "/node_modules/@jsenv/module-resolution/index.js"
 import { hrefToFilenameRelative } from "../../hrefToFilenameRelative.js"
 import { fromHref } from "../../registerModuleFrom/registerModuleFrom.js"
@@ -12,6 +11,8 @@ export const createBrowserSystem = ({
   importMap,
   fetchSource,
 }) => {
+  if (typeof window.System === "undefined") throw new Error(`window.System is undefined`)
+
   const browserSystem = new window.System.constructor()
 
   browserSystem.resolve = (specifier, importer) => {
