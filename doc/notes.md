@@ -1,8 +1,7 @@
 ## TODO
 
-- now bundleBrowser exports a System format
-  we'll have to change generate-brwoser-client
-  and how it is used inside launchChromium and browsingServer
+- browsingServer almost good but we have to watch for
+  https://github.com/systemjs/systemjs/issues/1921 before going further.
 
 ### How to use dependency written in commonjs
 
