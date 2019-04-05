@@ -1,5 +1,6 @@
 import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
 import { createCancellationToken } from "/node_modules/@dmail/cancellation/index.js"
+import { ROOT_FOLDER } from "../ROOT_FOLDER.js"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
 import {
   startServer,
@@ -8,8 +9,6 @@ import {
   responseCompose,
 } from "../server/index.js"
 import { createJsCompileService } from "./createJsCompileService.js"
-
-const { projectFolder: selfProjectFolder } = import.meta.require("../../jsenv.config.js")
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -109,8 +108,8 @@ const locateFileSystem = ({ rootHref, filenameRelative }) => {
   // to get file.
   // in order to test this behaviour while developping @jsenv/core
   // 'node_modules/@jsenv/core` is an alias to rootHref
-  if (filenameRelative.startsWith("node_modules/@jsenv/core/")) {
-    const sourceOrigin = `file://${selfProjectFolder}`
+  if (filenameRelative.startsWith("node_modules/@jsenv/core")) {
+    const sourceOrigin = `file://${ROOT_FOLDER}`
     if (rootHref === sourceOrigin || rootHref.startsWith(`${sourceOrigin}/`)) {
       const filenameRelativeSelf = filenameRelative.slice("node_modules/@jsenv/core/".length)
       return `${sourceOrigin}/${filenameRelativeSelf}`

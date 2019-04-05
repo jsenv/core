@@ -1,12 +1,10 @@
 import path from "path"
 import { regexpEscape } from "../stringHelper.js"
+import transformModulesSystemJs from "../babel-plugin-transform-modules-systemjs/index.js"
 
 const { transformAsync, transformFromAstAsync } = import.meta.require("@babel/core")
 const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-import")
 const syntaxImportMeta = import.meta.require("@babel/plugin-syntax-import-meta")
-const transformModulesSystemJs = import.meta.require(
-  "../babel-plugin-transform-modules-systemjs/index.js",
-)
 
 const defaultBabelPluginArray = [syntaxDynamicImport, syntaxImportMeta]
 

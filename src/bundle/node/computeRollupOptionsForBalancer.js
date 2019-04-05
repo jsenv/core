@@ -2,8 +2,7 @@ import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-res
 import { uneval } from "/node_modules/@dmail/uneval/index.js"
 import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 import { pathnameToDirname } from "/node_modules/@jsenv/module-resolution/index.js"
-
-const { projectFolder: selfProjectFolder } = import.meta.require("../../../jsenv.config.js")
+import { ROOT_FOLDER } from "../../ROOT_FOLDER.js"
 
 const BUNDLE_NODE_OPTIONS_SPECIFIER = "\0bundle-node-options.js"
 
@@ -60,7 +59,7 @@ minify : ${minify}
 
   return {
     rollupParseOptions: {
-      input: `${selfProjectFolder}/src/bundle/node/node-balancer-template.js`,
+      input: `${ROOT_FOLDER}/src/bundle/node/node-balancer-template.js`,
       plugins: [nodeBalancerRollupPlugin, featureProviderRollupPlugin],
       external: (id) => isNativeNodeModuleBareSpecifier(id),
     },

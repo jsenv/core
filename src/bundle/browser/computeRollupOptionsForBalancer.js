@@ -1,8 +1,8 @@
 import { pathnameToDirname } from "/node_modules/@jsenv/module-resolution/index.js"
 import { uneval } from "/node_modules/@dmail/uneval/index.js"
 import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
+import { ROOT_FOLDER } from "../../ROOT_FOLDER.js"
 
-const { projectFolder: selfProjectFolder } = import.meta.require("../../../jsenv.config.js")
 const BUNDLE_BROWSER_OPTIONS_SPECIFIER = "\0bundle-browser-options.js"
 
 export const computeRollupOptionsForBalancer = ({
@@ -58,7 +58,7 @@ minify: ${minify}
 
   return {
     rollupParseOptions: {
-      input: `${selfProjectFolder}/src/bundle/browser/browser-balancer-template.js`,
+      input: `${ROOT_FOLDER}/src/bundle/browser/browser-balancer-template.js`,
       plugins: [browserBalancerRollupPlugin, featureProviderRollupPlugin],
     },
     rollupGenerateOptions: {

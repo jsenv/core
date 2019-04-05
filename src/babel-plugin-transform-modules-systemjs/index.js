@@ -1,48 +1,10 @@
-/* eslint-disable */
 // https://github.com/babel/babel/tree/master/packages/babel-plugin-transform-modules-systemjs
 
-"use strict"
+const { template, types: t } = import.meta.require("@babel/core")
+const { declare } = import.meta.require("@babel/helper-plugin-utils")
+const { default: hoistVariables } = import.meta.require("@babel/helper-hoist-variables")
 
-Object.defineProperty(exports, "__esModule", {
-  value: true,
-})
-exports.default = void 0
-
-function _helperPluginUtils() {
-  const data = require("@babel/helper-plugin-utils")
-
-  _helperPluginUtils = function() {
-    return data
-  }
-
-  return data
-}
-
-function _helperHoistVariables() {
-  const data = _interopRequireDefault(require("@babel/helper-hoist-variables"))
-
-  _helperHoistVariables = function() {
-    return data
-  }
-
-  return data
-}
-
-function _core() {
-  const data = require("@babel/core")
-
-  _core = function() {
-    return data
-  }
-
-  return data
-}
-
-function _interopRequireDefault(obj) {
-  return obj && obj.__esModule ? obj : { default: obj }
-}
-
-const buildTemplate = (0, _core().template)(`
+const buildTemplate = template(`
   SYSTEM_REGISTER(MODULE_NAME, SOURCES, function (EXPORT_IDENTIFIER, CONTEXT_IDENTIFIER) {
     "use strict";
     BEFORE_BODY;
@@ -52,7 +14,8 @@ const buildTemplate = (0, _core().template)(`
     };
   });
 `)
-const buildExportAll = (0, _core().template)(`
+
+const buildExportAll = template(`
   for (var KEY in TARGET) {
     if (KEY !== "default" && KEY !== "__esModule") EXPORT_OBJ[KEY] = TARGET[KEY];
   }
@@ -60,48 +23,36 @@ const buildExportAll = (0, _core().template)(`
 
 function constructExportCall(path, exportIdent, exportNames, exportValues, exportStarTarget) {
   const statements = []
-
   if (exportNames.length === 1) {
     statements.push(
-      _core().types.expressionStatement(
-        _core().types.callExpression(exportIdent, [
-          _core().types.stringLiteral(exportNames[0]),
-          exportValues[0],
-        ]),
+      t.expressionStatement(
+        t.callExpression(exportIdent, [t.stringLiteral(exportNames[0]), exportValues[0]]),
       ),
     )
+    // eslint-disable-next-line no-negated-condition
   } else if (!exportStarTarget) {
     const objectProperties = []
-
     for (let i = 0; i < exportNames.length; i++) {
       const exportName = exportNames[i]
       const exportValue = exportValues[i]
-      objectProperties.push(
-        _core().types.objectProperty(_core().types.identifier(exportName), exportValue),
-      )
+      objectProperties.push(t.objectProperty(t.identifier(exportName), exportValue))
     }
-
     statements.push(
-      _core().types.expressionStatement(
-        _core().types.callExpression(exportIdent, [
-          _core().types.objectExpression(objectProperties),
-        ]),
-      ),
+      t.expressionStatement(t.callExpression(exportIdent, [t.objectExpression(objectProperties)])),
     )
   } else {
     const exportObj = path.scope.generateUid("exportObj")
+
     statements.push(
-      _core().types.variableDeclaration("var", [
-        _core().types.variableDeclarator(
-          _core().types.identifier(exportObj),
-          _core().types.objectExpression([]),
-        ),
+      t.variableDeclaration("var", [
+        t.variableDeclarator(t.identifier(exportObj), t.objectExpression([])),
       ]),
     )
+
     statements.push(
       buildExportAll({
         KEY: path.scope.generateUidIdentifier("key"),
-        EXPORT_OBJ: _core().types.identifier(exportObj),
+        EXPORT_OBJ: t.identifier(exportObj),
         TARGET: exportStarTarget,
       }),
     )
@@ -109,77 +60,75 @@ function constructExportCall(path, exportIdent, exportNames, exportValues, expor
     for (let i = 0; i < exportNames.length; i++) {
       const exportName = exportNames[i]
       const exportValue = exportValues[i]
+
       statements.push(
-        _core().types.expressionStatement(
-          _core().types.assignmentExpression(
+        t.expressionStatement(
+          t.assignmentExpression(
             "=",
-            _core().types.memberExpression(
-              _core().types.identifier(exportObj),
-              _core().types.identifier(exportName),
-            ),
+            t.memberExpression(t.identifier(exportObj), t.identifier(exportName)),
             exportValue,
           ),
         ),
       )
     }
 
-    statements.push(
-      _core().types.expressionStatement(
-        _core().types.callExpression(exportIdent, [_core().types.identifier(exportObj)]),
-      ),
-    )
+    statements.push(t.expressionStatement(t.callExpression(exportIdent, [t.identifier(exportObj)])))
   }
-
   return statements
 }
 
 const TYPE_IMPORT = "Import"
 
-var _default = (0, _helperPluginUtils().declare)((api, options) => {
+export default declare((api, options) => {
   api.assertVersion(7)
+
   const { systemGlobal = "System" } = options
   const IGNORE_REASSIGNMENT_SYMBOL = Symbol()
+
   const reassignmentVisitor = {
     "AssignmentExpression|UpdateExpression"(path) {
       if (path.node[IGNORE_REASSIGNMENT_SYMBOL]) return
       path.node[IGNORE_REASSIGNMENT_SYMBOL] = true
+
       const arg = path.get(path.isAssignmentExpression() ? "left" : "argument")
 
       if (arg.isObjectPattern() || arg.isArrayPattern()) {
         const exprs = [path.node]
-
-        for (const name in arg.getBindingIdentifiers()) {
+        for (const name of Object.keys(arg.getBindingIdentifiers())) {
           if (this.scope.getBinding(name) !== path.scope.getBinding(name)) {
             return
           }
-
           const exportedNames = this.exports[name]
           if (!exportedNames) return
-
           for (const exportedName of exportedNames) {
-            exprs.push(this.buildCall(exportedName, _core().types.identifier(name)).expression)
+            exprs.push(this.buildCall(exportedName, t.identifier(name)).expression)
           }
         }
-
-        path.replaceWith(_core().types.sequenceExpression(exprs))
+        path.replaceWith(t.sequenceExpression(exprs))
         return
       }
 
       if (!arg.isIdentifier()) return
+
       const name = arg.node.name
+
+      // redeclared in this scope
       if (this.scope.getBinding(name) !== path.scope.getBinding(name)) return
+
       const exportedNames = this.exports[name]
       if (!exportedNames) return
-      let node = path.node
-      const isPostUpdateExpression = path.isUpdateExpression({
-        prefix: false,
-      })
 
+      let node = path.node
+
+      // if it is a non-prefix update expression (x++ etc)
+      // then we must replace with the expression (_export('x', x + 1), x++)
+      // in order to ensure the same update expression value
+      const isPostUpdateExpression = path.isUpdateExpression({ prefix: false })
       if (isPostUpdateExpression) {
-        node = _core().types.binaryExpression(
+        node = t.binaryExpression(
           node.operator[0],
-          _core().types.unaryExpression("+", _core().types.cloneNode(node.argument)),
-          _core().types.numericLiteral(1),
+          t.unaryExpression("+", t.cloneNode(node.argument)),
+          t.numericLiteral(1),
         )
       }
 
@@ -188,23 +137,22 @@ var _default = (0, _helperPluginUtils().declare)((api, options) => {
       }
 
       if (isPostUpdateExpression) {
-        node = _core().types.sequenceExpression([node, path.node])
+        node = t.sequenceExpression([node, path.node])
       }
 
       path.replaceWith(node)
     },
   }
+
   return {
     name: "transform-modules-systemjs",
+
     visitor: {
       CallExpression(path, state) {
         if (path.node.callee.type === TYPE_IMPORT) {
           path.replaceWith(
-            _core().types.callExpression(
-              _core().types.memberExpression(
-                _core().types.identifier(state.contextIdent),
-                _core().types.identifier("import"),
-              ),
+            t.callExpression(
+              t.memberExpression(t.identifier(state.contextIdent), t.identifier("import")),
               path.node.arguments,
             ),
           )
@@ -214,22 +162,14 @@ var _default = (0, _helperPluginUtils().declare)((api, options) => {
       MetaProperty(path, state) {
         if (path.node.meta.name === "import" && path.node.property.name === "meta") {
           path.replaceWith(
-            _core().types.memberExpression(
-              _core().types.identifier(state.contextIdent),
-              _core().types.identifier("meta"),
-            ),
+            t.memberExpression(t.identifier(state.contextIdent), t.identifier("meta")),
           )
         }
       },
 
       ReferencedIdentifier(path, state) {
-        if (path.node.name == "__moduleName" && !path.scope.hasBinding("__moduleName")) {
-          path.replaceWith(
-            _core().types.memberExpression(
-              _core().types.identifier(state.contextIdent),
-              _core().types.identifier("id"),
-            ),
-          )
+        if (path.node.name === "__moduleName" && !path.scope.hasBinding("__moduleName")) {
+          path.replaceWith(t.memberExpression(t.identifier(state.contextIdent), t.identifier("id")))
         }
       },
 
@@ -237,12 +177,14 @@ var _default = (0, _helperPluginUtils().declare)((api, options) => {
         enter(path, state) {
           state.contextIdent = path.scope.generateUid("context")
         },
-
         exit(path, state) {
+          const undefinedIdent = path.scope.buildUndefinedNode()
           const exportIdent = path.scope.generateUid("export")
           const contextIdent = state.contextIdent
-          const exportNames = Object.create(null)
+
+          const exportMap = Object.create(null)
           const modules = []
+
           let beforeBody = []
           const setters = []
           const sources = []
@@ -250,8 +192,8 @@ var _default = (0, _helperPluginUtils().declare)((api, options) => {
           const removedPaths = []
 
           function addExportName(key, val) {
-            exportNames[key] = exportNames[key] || []
-            exportNames[key].push(val)
+            exportMap[key] = exportMap[key] || []
+            exportMap[key].push(val)
           }
 
           function pushModule(source, key, specifiers) {
@@ -261,28 +203,20 @@ var _default = (0, _helperPluginUtils().declare)((api, options) => {
                 module = m
               }
             })
-
             if (!module) {
-              modules.push(
-                (module = {
-                  key: source,
-                  imports: [],
-                  exports: [],
-                }),
-              )
+              modules.push((module = { key: source, imports: [], exports: [] }))
             }
-
             module[key] = module[key].concat(specifiers)
           }
 
           function buildExportCall(name, val) {
-            return _core().types.expressionStatement(
-              _core().types.callExpression(_core().types.identifier(exportIdent), [
-                _core().types.stringLiteral(name),
-                val,
-              ]),
+            return t.expressionStatement(
+              t.callExpression(t.identifier(exportIdent), [t.stringLiteral(name), val]),
             )
           }
+
+          const exportNames = []
+          const exportValues = []
 
           const body = path.get("body")
 
@@ -290,40 +224,54 @@ var _default = (0, _helperPluginUtils().declare)((api, options) => {
             if (path.isFunctionDeclaration()) {
               beforeBody.push(path.node)
               removedPaths.push(path)
+            } else if (path.isClassDeclaration()) {
+              variableIds.push(path.node.id)
+              path.replaceWith(
+                t.expressionStatement(
+                  t.assignmentExpression("=", t.cloneNode(path.node.id), t.toExpression(path.node)),
+                ),
+              )
             } else if (path.isImportDeclaration()) {
               const source = path.node.source.value
               pushModule(source, "imports", path.node.specifiers)
-
-              for (const name in path.getBindingIdentifiers()) {
+              for (const name of Object.keys(path.getBindingIdentifiers())) {
                 path.scope.removeBinding(name)
-                variableIds.push(_core().types.identifier(name))
+                variableIds.push(t.identifier(name))
               }
-
               path.remove()
             } else if (path.isExportAllDeclaration()) {
               pushModule(path.node.source.value, "exports", path.node)
               path.remove()
             } else if (path.isExportDefaultDeclaration()) {
               const declar = path.get("declaration")
-
-              if (declar.isClassDeclaration() || declar.isFunctionDeclaration()) {
-                const id = declar.node.id
-                const nodes = []
-
+              const id = declar.node.id
+              if (declar.isClassDeclaration()) {
                 if (id) {
-                  nodes.push(declar.node)
-                  nodes.push(buildExportCall("default", _core().types.cloneNode(id)))
+                  exportNames.push("default")
+                  exportValues.push(undefinedIdent)
+                  variableIds.push(id)
                   addExportName(id.name, "default")
+                  path.replaceWith(
+                    t.expressionStatement(
+                      t.assignmentExpression("=", t.cloneNode(id), t.toExpression(declar.node)),
+                    ),
+                  )
                 } else {
-                  nodes.push(buildExportCall("default", _core().types.toExpression(declar.node)))
-                }
-
-                if (declar.isClassDeclaration()) {
-                  path.replaceWithMultiple(nodes)
-                } else {
-                  beforeBody = beforeBody.concat(nodes)
+                  exportNames.push("default")
+                  exportValues.push(t.toExpression(declar.node))
                   removedPaths.push(path)
                 }
+              } else if (declar.isFunctionDeclaration()) {
+                if (id) {
+                  beforeBody.push(declar.node)
+                  exportNames.push("default")
+                  exportValues.push(t.cloneNode(id))
+                  addExportName(id.name, "default")
+                } else {
+                  exportNames.push("default")
+                  exportValues.push(t.toExpression(declar.node))
+                }
+                removedPaths.push(path)
               } else {
                 path.replaceWith(buildExportCall("default", declar.node))
               }
@@ -338,20 +286,31 @@ var _default = (0, _helperPluginUtils().declare)((api, options) => {
                   const name = node.id.name
                   addExportName(name, name)
                   beforeBody.push(node)
-                  beforeBody.push(buildExportCall(name, _core().types.cloneNode(node.id)))
+                  exportNames.push(name)
+                  exportValues.push(t.cloneNode(node.id))
                   removedPaths.push(path)
                 } else if (path.isClass()) {
                   const name = declar.node.id.name
+                  exportNames.push(name)
+                  exportValues.push(undefinedIdent)
+                  variableIds.push(declar.node.id)
+                  path.replaceWith(
+                    t.expressionStatement(
+                      t.assignmentExpression(
+                        "=",
+                        t.cloneNode(declar.node.id),
+                        t.toExpression(declar.node),
+                      ),
+                    ),
+                  )
                   addExportName(name, name)
-                  path.insertAfter([buildExportCall(name, _core().types.identifier(name))])
                 } else {
-                  for (const name in declar.getBindingIdentifiers()) {
+                  for (const name of Object.keys(declar.getBindingIdentifiers())) {
                     addExportName(name, name)
                   }
                 }
               } else {
                 const specifiers = path.node.specifiers
-
                 if (specifiers && specifiers.length) {
                   if (path.node.source) {
                     pushModule(path.node.source.value, "exports", specifiers)
@@ -361,18 +320,15 @@ var _default = (0, _helperPluginUtils().declare)((api, options) => {
 
                     for (const specifier of specifiers) {
                       const binding = path.scope.getBinding(specifier.local.name)
-
-                      if (binding && _core().types.isFunctionDeclaration(binding.path.node)) {
-                        beforeBody.push(
-                          buildExportCall(
-                            specifier.exported.name,
-                            _core().types.cloneNode(specifier.local),
-                          ),
-                        )
-                      } else if (!binding) {
+                      // hoisted function export
+                      if (binding && t.isFunctionDeclaration(binding.path.node)) {
+                        exportNames.push(specifier.exported.name)
+                        exportValues.push(t.cloneNode(specifier.local))
+                      }
+                      // only globals also exported this way
+                      else if (!binding) {
                         nodes.push(buildExportCall(specifier.exported.name, specifier.local))
                       }
-
                       addExportName(specifier.local.name, specifier.exported.name)
                     }
 
@@ -388,33 +344,23 @@ var _default = (0, _helperPluginUtils().declare)((api, options) => {
             const target = path.scope.generateUid(specifiers.key)
 
             for (let specifier of specifiers.imports) {
-              if (_core().types.isImportNamespaceSpecifier(specifier)) {
+              if (t.isImportNamespaceSpecifier(specifier)) {
                 setterBody.push(
-                  _core().types.expressionStatement(
-                    _core().types.assignmentExpression(
-                      "=",
-                      specifier.local,
-                      _core().types.identifier(target),
-                    ),
+                  t.expressionStatement(
+                    t.assignmentExpression("=", specifier.local, t.identifier(target)),
                   ),
                 )
-              } else if (_core().types.isImportDefaultSpecifier(specifier)) {
-                specifier = _core().types.importSpecifier(
-                  specifier.local,
-                  _core().types.identifier("default"),
-                )
+              } else if (t.isImportDefaultSpecifier(specifier)) {
+                specifier = t.importSpecifier(specifier.local, t.identifier("default"))
               }
 
-              if (_core().types.isImportSpecifier(specifier)) {
+              if (t.isImportSpecifier(specifier)) {
                 setterBody.push(
-                  _core().types.expressionStatement(
-                    _core().types.assignmentExpression(
+                  t.expressionStatement(
+                    t.assignmentExpression(
                       "=",
                       specifier.local,
-                      _core().types.memberExpression(
-                        _core().types.identifier(target),
-                        specifier.imported,
-                      ),
+                      t.memberExpression(t.identifier(target), specifier.imported),
                     ),
                   ),
                 )
@@ -427,47 +373,43 @@ var _default = (0, _helperPluginUtils().declare)((api, options) => {
               let hasExportStar = false
 
               for (const node of specifiers.exports) {
-                if (_core().types.isExportAllDeclaration(node)) {
+                if (t.isExportAllDeclaration(node)) {
                   hasExportStar = true
-                } else if (_core().types.isExportSpecifier(node)) {
+                } else if (t.isExportSpecifier(node)) {
                   exportNames.push(node.exported.name)
-                  exportValues.push(
-                    _core().types.memberExpression(_core().types.identifier(target), node.local),
-                  )
+                  exportValues.push(t.memberExpression(t.identifier(target), node.local))
                 } else {
+                  // todo
                 }
               }
 
               setterBody = setterBody.concat(
                 constructExportCall(
                   path,
-                  _core().types.identifier(exportIdent),
+                  t.identifier(exportIdent),
                   exportNames,
                   exportValues,
-                  hasExportStar ? _core().types.identifier(target) : null,
+                  hasExportStar ? t.identifier(target) : null,
                 ),
               )
             }
 
-            sources.push(_core().types.stringLiteral(specifiers.key))
+            sources.push(t.stringLiteral(specifiers.key))
             setters.push(
-              _core().types.functionExpression(
-                null,
-                [_core().types.identifier(target)],
-                _core().types.blockStatement(setterBody),
-              ),
+              t.functionExpression(null, [t.identifier(target)], t.blockStatement(setterBody)),
             )
           })
+
           let moduleName = this.getModuleName()
-          if (moduleName) moduleName = _core().types.stringLiteral(moduleName)
-          const uninitializedVars = []
-          ;(0, _helperHoistVariables().default)(
+          if (moduleName) moduleName = t.stringLiteral(moduleName)
+
+          hoistVariables(
             path,
             (id, name, hasInit) => {
               variableIds.push(id)
-
               if (!hasInit) {
-                uninitializedVars.push(name)
+                exportNames.push(name)
+                exportValues.push(undefinedIdent)
               }
             },
             null,
@@ -475,34 +417,18 @@ var _default = (0, _helperPluginUtils().declare)((api, options) => {
 
           if (variableIds.length) {
             beforeBody.unshift(
-              _core().types.variableDeclaration(
-                "var",
-                variableIds.map((id) => _core().types.variableDeclarator(id)),
-              ),
+              t.variableDeclaration("var", variableIds.map((id) => t.variableDeclarator(id))),
             )
           }
 
-          if (uninitializedVars.length) {
-            const undefinedValues = []
-            const undefinedIdent = path.scope.buildUndefinedNode()
-
-            for (let i = 0; i < uninitializedVars.length; i++) {
-              undefinedValues[i] = undefinedIdent
-            }
-
+          if (exportNames.length) {
             beforeBody = beforeBody.concat(
-              constructExportCall(
-                path,
-                _core().types.identifier(exportIdent),
-                uninitializedVars,
-                undefinedValues,
-                null,
-              ),
+              constructExportCall(path, t.identifier(exportIdent), exportNames, exportValues, null),
             )
           }
 
           path.traverse(reassignmentVisitor, {
-            exports: exportNames,
+            exports: exportMap,
             buildCall: buildExportCall,
             scope: path.scope,
           })
@@ -513,23 +439,23 @@ var _default = (0, _helperPluginUtils().declare)((api, options) => {
 
           path.node.body = [
             buildTemplate({
-              SYSTEM_REGISTER: _core().types.memberExpression(
-                _core().types.identifier(systemGlobal),
-                _core().types.identifier("register"),
+              SYSTEM_REGISTER: t.memberExpression(
+                t.identifier(systemGlobal),
+                t.identifier("register"),
               ),
               BEFORE_BODY: beforeBody,
               MODULE_NAME: moduleName,
-              SETTERS: _core().types.arrayExpression(setters),
-              SOURCES: _core().types.arrayExpression(sources),
-              EXECUTE: _core().types.functionExpression(
+              SETTERS: t.arrayExpression(setters),
+              SOURCES: t.arrayExpression(sources),
+              EXECUTE: t.functionExpression(
                 null,
                 [],
-                _core().types.blockStatement(path.node.body),
+                t.blockStatement(path.node.body),
                 false,
                 options.topLevelAwait,
               ),
-              EXPORT_IDENTIFIER: _core().types.identifier(exportIdent),
-              CONTEXT_IDENTIFIER: _core().types.identifier(contextIdent),
+              EXPORT_IDENTIFIER: t.identifier(exportIdent),
+              CONTEXT_IDENTIFIER: t.identifier(contextIdent),
             }),
           ]
         },
@@ -537,5 +463,3 @@ var _default = (0, _helperPluginUtils().declare)((api, options) => {
     },
   }
 })
-
-exports.default = _default
