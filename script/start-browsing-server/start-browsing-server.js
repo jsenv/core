@@ -1,10 +1,5 @@
 const { startBrowsingServer } = require("@jsenv/core")
-const {
-  importMap,
-  projectFolder,
-  compileInto,
-  babelPluginDescription,
-} = require("../../jsenv.config.js")
+const { importMap, projectFolder, compileInto, babelConfigMap } = require("../../jsenv.config.js")
 
 const browsableDescription = {
   "/index.js": true,
@@ -16,7 +11,7 @@ startBrowsingServer({
   importMap,
   projectFolder,
   compileInto,
-  babelPluginDescription,
+  babelConfigMap,
   browsableDescription,
   protocol: "http",
   ip: "127.0.0.1",

@@ -1,12 +1,12 @@
 const { bundleNode } = require("@jsenv/core")
-const { importMap, projectFolder, babelPluginDescription } = require("../../jsenv.config.js")
+const { importMap, projectFolder, babelConfigMap } = require("../../jsenv.config.js")
 
 bundleNode({
   importMap,
   projectFolder,
   into: "dist/node-client",
-  babelPluginDescription,
-  entryPointsDescription: {
+  babelConfigMap,
+  entryPointMap: {
     main: "src/launchNode/client.js",
   },
   compileGroupCount: 1,

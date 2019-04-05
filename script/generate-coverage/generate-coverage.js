@@ -1,11 +1,6 @@
 const { cover, generateCoverageLog, generateCoverageHTML } = require("@jsenv/core")
 const { fileWrite } = require("@dmail/helper")
-const {
-  importMap,
-  projectFolder,
-  compileInto,
-  babelPluginDescription,
-} = require("../../jsenv.config.js")
+const { importMap, projectFolder, compileInto, babelConfigMap } = require("../../jsenv.config.js")
 const { testDescription } = require("../test/test.config.js")
 
 const coverageFile = `${projectFolder}/coverage/coverage-final.json`
@@ -26,7 +21,7 @@ const generateHTMLFiles = true
     importMap,
     projectFolder,
     compileInto,
-    babelPluginDescription,
+    babelConfigMap,
     coverDescription,
     executeDescription: testDescription,
   })

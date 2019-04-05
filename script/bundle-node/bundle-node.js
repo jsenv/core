@@ -5,8 +5,8 @@ bundleNode({
   importMap,
   projectFolder,
   into: "dist/node",
-  babelPluginDescription: {},
-  entryPointsDescription: {
+  babelConfigMap: {},
+  entryPointMap: {
     main: "index.js",
   },
   verbose: true,
