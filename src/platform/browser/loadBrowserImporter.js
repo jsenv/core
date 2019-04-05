@@ -3,8 +3,7 @@ import { fetchUsingXHR } from "./fetchUsingXHR.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 import { createSystemImporter } from "./system/createSystemImporter.js"
 
-export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigin }) => {
-  // importer depends on informer, but this is an implementation detail
+export const loadBrowserImporter = memoizeOnce(async ({ compileInto, compileServerOrigin }) => {
   const { compileId } = await loadCompileMeta({
     compileInto,
     compileServerOrigin,
@@ -16,7 +15,7 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigi
   const importMapResponse = await fetchHref(importMapHref)
   const importMap = JSON.parse(importMapResponse.body)
 
-  const systemImporter = createSystemImporter({
+  const { importFile } = createSystemImporter({
     importMap,
     compileInto,
     compileServerOrigin,
@@ -24,7 +23,7 @@ export const loadImporter = memoizeOnce(async ({ compileInto, compileServerOrigi
     fetchSource,
   })
 
-  return systemImporter
+  return { compileId, importFile }
 })
 
 const fetchHref = async (href) => {

@@ -12,7 +12,7 @@ export const loadImporter = memoizeOnce(
     const importMapFileContent = await fileRead(importMapPathname)
     const importMap = JSON.parse(importMapFileContent)
 
-    const importer = createImporter({
+    const { importFile } = createImporter({
       importMap,
       compileInto,
       sourceOrigin,
@@ -20,6 +20,6 @@ export const loadImporter = memoizeOnce(
       compileId,
     })
 
-    return importer
+    return { compileId, importFile }
   },
 )

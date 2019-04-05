@@ -1,7 +1,6 @@
 import { filenameRelativeToCompiledHref } from "./filenameRelativeToCompiledHref.js"
 
 export const genericExecuteCompiledFile = async ({
-  loadCompileMeta,
   loadImporter,
   compileInto,
   compileServerOrigin,
@@ -12,7 +11,7 @@ export const genericExecuteCompiledFile = async ({
   transformError,
   readCoverage,
 }) => {
-  const [{ compileId }, { importFile }] = await Promise.all([loadCompileMeta(), loadImporter()])
+  const { importFile, compileId } = await loadImporter()
 
   const fileHref = filenameRelativeToCompiledHref({
     compileInto,

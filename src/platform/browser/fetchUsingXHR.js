@@ -2,26 +2,35 @@ export const fetchUsingXHR = (url, headers = {}) => {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
 
+    const cleanup = () => {
+      xhr.ontimeout = null
+      xhr.onerror = null
+      xhr.onload = null
+      xhr.onreadystatechange = null
+    }
+
     xhr.ontimeout = () => {
+      cleanup()
       reject({
         name: "REQUEST_TIMEOUT_ERROR",
       })
     }
 
     xhr.onerror = (error) => {
+      cleanup()
       reject(error)
     }
 
     xhr.onload = () => {
+      cleanup()
       if (xhr.status === 0) {
         resolve({
           ...normalizeXhr(xhr),
           status: 200,
         })
-
-        return
+      } else {
+        resolve(normalizeXhr(xhr))
       }
-      resolve(normalizeXhr(xhr))
     }
 
     xhr.onreadystatechange = () => {
@@ -37,6 +46,7 @@ export const fetchUsingXHR = (url, headers = {}) => {
         return
       }
 
+      cleanup()
       resolve(normalizeXhr(xhr))
     }
 

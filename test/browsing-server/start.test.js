@@ -10,8 +10,8 @@ startBrowsingServer({
   compileInto: ".dist",
   babelConfigMap,
   browsableDescription: {
-    "/*.js": true,
-    "/*.test.*": false,
+    "/file.js": true,
+    "/other-file.js": true,
   },
   port: 3400,
   forcePort: true,

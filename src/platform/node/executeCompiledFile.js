@@ -1,5 +1,4 @@
 import { genericExecuteCompiledFile } from "../genericExecuteCompiledFile.js"
-import { loadCompileMeta } from "./loadCompileMeta.js"
 import { loadImporter } from "./loadImporter.js"
 
 export const executeCompiledFile = ({
@@ -11,7 +10,6 @@ export const executeCompiledFile = ({
   collectCoverage,
 }) =>
   genericExecuteCompiledFile({
-    loadCompileMeta: () => loadCompileMeta({ compileInto, sourceOrigin, compileServerOrigin }),
     loadImporter: () => loadImporter({ compileInto, sourceOrigin, compileServerOrigin }),
     compileInto,
     compileServerOrigin,

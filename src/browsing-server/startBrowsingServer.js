@@ -1,10 +1,9 @@
 import { normalizePathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
+import { uneval } from "@dmail/uneval"
 import { startServer, serviceCompose } from "../server/index.js"
 import { startCompileServer } from "../server-compile/index.js"
 import { guard } from "../functionHelper.js"
-import { generateSelfImportIIFE } from "./self-import-iife/generateSelfImportIIFE.js"
-import { escapeClosingScriptTag } from "../stringHelper.js"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
 
 // required until jsenv importMap bug gets fixed
@@ -36,16 +35,17 @@ export const startBrowsingServer = async ({
   forcePort = false,
   signature,
 
-  generateHTML = ({ selfExecuteSource }) => `<!doctype html>
+  generateHTML = ({ filenameRelative, systemScriptSrc, selfExecuteScriptSrc }) => `<!doctype html>
 
 <head>
-  <title>Untitled</title>
+  <title>browsing ${filenameRelative}</title>
   <meta charset="utf-8" />
 </head>
 
 <body>
   <main></main>
-  <script type="text/javascript">${selfExecuteSource}</script>
+  <script src="${systemScriptSrc}"></script>
+  <script src="${selfExecuteScriptSrc}"></script>
 </body>
 
 </html>`,
@@ -108,36 +108,43 @@ export const startBrowsingServer = async ({
     },
   )
 
+  const selfExecuteScriptRoute = guard(
+    ({ method, ressource }) => {
+      if (method !== "GET") return false
+      if (ressource.endsWith("__execute__.js")) return true
+      return false
+    },
+    async ({ ressource }) => {
+      const filenameRelative = ressource.slice(1, -`__execute__.js`.length)
+      const source = generateSelfImportSource({
+        compileInto,
+        compileServerOrigin,
+        filenameRelative,
+      })
+
+      return {
+        status: 200,
+        headers: {
+          "cache-control": "no-store",
+          "content-type": "application/javascript",
+          "content-length": Buffer.byteLength(source),
+        },
+        body: source,
+      }
+    },
+  )
+
   const browsableRoute = guard(
     ({ method, ressource }) => {
       return method === "GET" && pathnameToMeta({ pathname: ressource, metaDescription }).browsable
     },
     async ({ ressource }) => {
-      // selfImportIIFEBundle is mega cool but it make things much slower...
-      // is it possible to cache some stuff ?
-      // the only variation if filenameRelative
-      // so I think it would be better/easier
-      // to create this bundle once for all as an IIFE
-      // this IIFE would set window.browserClient = the exports from browserPlatform
-      // then we would "just" have to load it using a script
-      // yeah that's what we "must" do and launchChromium and this one would use it
-      // exactly the same approach used for node client in fact
-
-      const selfImportIIFEBundle = await generateSelfImportIIFE({
-        cancellationToken,
-        importMap,
-        projectFolder,
-        compileInto,
-        babelConfigMap,
-        compileServerOrigin,
-        filenameRelative: ressource.slice(1),
-      })
-
       const html = await generateHTML({
         compileInto,
         compileServerOrigin,
         filenameRelative: ressource.slice(1),
-        selfExecuteSource: escapeClosingScriptTag(selfImportIIFEBundle.code),
+        systemScriptSrc: `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/system.js`,
+        selfExecuteScriptSrc: `${ressource}__execute__.js`,
       })
 
       return {
@@ -158,14 +165,32 @@ export const startBrowsingServer = async ({
     ip,
     port,
     forcePort,
-    requestToResponse: serviceCompose(indexRoute, browsableRoute, (request) =>
-      requestToFileResponse(request, { projectFolder }),
+    requestToResponse: serviceCompose(
+      indexRoute,
+      selfExecuteScriptRoute,
+      browsableRoute,
+      (request) => requestToFileResponse(request, { projectFolder }),
     ),
     startedMessage: ({ origin }) => `browser server started for ${projectFolder} at ${origin}`,
     stoppedMessage: (reason) => `browser server stopped because ${reason}`,
   })
   return browserServer
 }
+
+const generateSelfImportSource = ({ compileInto, compileServerOrigin, filenameRelative }) => `
+window.System.import(${uneval(
+  computeBrowserClientHref({ compileServerOrigin }),
+)}).then(({ executeCompiledFile }) => {
+  executeCompiledFile({
+    compileInto: ${uneval(compileInto)},
+    compileServerOrigin: ${uneval(compileServerOrigin)},
+    filenameRelative: ${uneval(filenameRelative)},
+  })
+})
+`
+
+const computeBrowserClientHref = ({ compileServerOrigin }) =>
+  `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/browserClient.js`
 
 const getIndexPageHTML = async ({ projectFolder, browsableFilenameRelativeArray }) => {
   return `<!doctype html>

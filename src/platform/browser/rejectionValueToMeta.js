@@ -26,7 +26,7 @@ export const rejectionValueToMeta = (error, { compileServerOrigin }) => {
     return {
       file: error.file,
       importerFile: error.importerFile,
-      data: rejectionToData(error.error),
+      data: rejectionToData(error.instantiateError),
     }
   }
 

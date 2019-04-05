@@ -1,7 +1,6 @@
 import { genericExecuteCompiledFile } from "../genericExecuteCompiledFile.js"
 import { filenameRelativeToSourceHref } from "../filenameRelativeToSourceHref.js"
-import { loadCompileMeta } from "./loadCompileMeta.js"
-import { loadImporter } from "./loadImporter.js"
+import { loadBrowserImporter } from "./loadBrowserImporter.js"
 import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 
 export const executeCompiledFile = ({
@@ -12,28 +11,27 @@ export const executeCompiledFile = ({
   collectCoverage,
 }) =>
   genericExecuteCompiledFile({
-    loadCompileMeta: () => loadCompileMeta({ compileInto, compileServerOrigin }),
-    loadImporter: () => loadImporter({ compileInto, compileServerOrigin }),
+    loadImporter: () => loadBrowserImporter({ compileInto, compileServerOrigin }),
     compileInto,
     compileServerOrigin,
     filenameRelative,
     collectNamespace,
     collectCoverage,
     readCoverage,
-    onError: (error) => onError(error, { compileInto, compileServerOrigin, filenameRelative }),
-    transformError,
+    onError: (error) => {
+      displayErrorInDocument(error, { compileInto, compileServerOrigin, filenameRelative })
+      displayErrorInConsole(error)
+    },
+    transformError: exceptionToObject,
   })
 
 const readCoverage = () => window.__coverage__
 
-const transformError = (error) => {
+const exceptionToObject = (exception) => {
   // if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
   //   return exceptionToObject(error.error)
   // }
-  return exceptionToObject(error)
-}
 
-const exceptionToObject = (exception) => {
   // we need to convert error to an object to make it stringifiable
   if (exception && exception instanceof Error) {
     const object = {}
@@ -48,7 +46,7 @@ const exceptionToObject = (exception) => {
   }
 }
 
-const onError = (error, { compileInto, compileServerOrigin, filenameRelative }) => {
+const displayErrorInDocument = (error, { compileInto, compileServerOrigin, filenameRelative }) => {
   const meta = rejectionValueToMeta(error, {
     compileInto,
     compileServerOrigin,
@@ -102,7 +100,10 @@ const onError = (error, { compileInto, compileServerOrigin, filenameRelative }) 
         <pre data-theme="${meta.dataTheme || "dark"}">${meta.data}</pre>
       </div>
       `
-  appendHMTL(html, document.body)
+  appendHMTLInside(html, document.body)
+}
+
+const displayErrorInConsole = (error) => {
   console.error(error)
 }
 
@@ -132,7 +133,7 @@ const convertFileToLink = ({ file, compileServerOrigin }) =>
     filenameRelative: file,
   })}">${file}</a>`
 
-const appendHMTL = (html, parentNode) => {
+const appendHMTLInside = (html, parentNode) => {
   const temoraryParent = document.createElement("div")
   temoraryParent.innerHTML = html
   transferChildren(temoraryParent, parentNode)
