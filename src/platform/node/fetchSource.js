@@ -9,15 +9,15 @@ const protocolIsHttpOrHttps = (url) => {
   return url.indexOf("http:") === 0 || url.indexOf("https:") === 0
 }
 
-export const fetchSource = ({ href, importer }) => {
+export const fetchSource = ({ href, importerHref }) => {
   if (protocolIsFile(href)) {
-    return fetchUsingFileSystem(href, importer)
+    return fetchUsingFileSystem(href, importerHref)
   }
 
   if (protocolIsHttpOrHttps(href)) {
     return fetchUsingHttp(href, {
       headers: {
-        "x-module-referer": importer || href,
+        "x-module-referer": importerHref || href,
       },
     })
   }

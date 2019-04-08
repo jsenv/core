@@ -26,17 +26,17 @@ export const launchChromium = async ({
   port = 0,
   startIndexRequestHandler = startIndexServer,
   headless = true,
-  generateHTML = ({ browserPlatformHref }) => {
+  generateHTML = ({ filenameRelative, systemScriptSrc }) => {
     return `<!doctype html>
 
 <head>
-  <title>Untitled</title>
+  <title>Execute ${filenameRelative}</title>
   <meta charset="utf-8" />
 </head>
 
 <body>
   <main></main>
-  <script src="${browserPlatformHref}"></script>
+  <script src="${systemScriptSrc}"></script>
 </body>
 
 </html>`
@@ -144,9 +144,8 @@ export const launchChromium = async ({
     const [page, html] = await Promise.all([
       browser.newPage(),
       generateHTML({
-        compileInto,
-        compileServerOrigin,
-        browserPlatformHref: getBrowserPlatformHref({ compileInto, compileServerOrigin }),
+        filenameRelative,
+        systemScriptSrc: `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/system.js`,
       }),
     ])
 
@@ -169,13 +168,16 @@ export const launchChromium = async ({
           filenameRelative,
           collectNamespace,
           collectCoverage,
+          browserClientHref,
         }) => {
-          return window.__platform__.executeCompiledFile({
-            compileInto,
-            compileServerOrigin,
-            filenameRelative,
-            collectNamespace,
-            collectCoverage,
+          return window.System.import(browserClientHref).then(({ executeCompiledFile }) => {
+            return executeCompiledFile({
+              compileInto,
+              compileServerOrigin,
+              filenameRelative,
+              collectNamespace,
+              collectCoverage,
+            })
           })
         },
         {
@@ -184,6 +186,7 @@ export const launchChromium = async ({
           filenameRelative,
           collectNamespace,
           collectCoverage,
+          browserClientHref: `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/browserClient.js`,
         },
       )
     }
@@ -246,9 +249,6 @@ callback: ${callback}`)
 
   return { registerCleanupCallback, cleanup }
 }
-
-const getBrowserPlatformHref = ({ compileServerOrigin }) =>
-  `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/platform.js`
 
 const errorToSourceError = (error, { sourceOrigin, compileServerOrigin }) => {
   // does not truly work

@@ -1,32 +1,28 @@
 import { createError } from "./createError.js"
 
 export const createModuleResponseUnsupportedStatusError = ({
-  file,
-  importerFile,
   href,
+  importerHref,
   status,
   statusText,
 }) => {
   return createError({
-    file,
-    importerFile,
     href,
+    importerHref,
     status,
     statusText,
     code: "MODULE_RESPONSE_UNSUPPORTED_STATUS_ERROR",
-    message: createResponseStatusErrorMessage({ file, importerFile, href, status, statusText }),
+    message: createResponseStatusErrorMessage({ href, importerHref, status, statusText }),
   })
 }
 
 const createResponseStatusErrorMessage = ({
-  file,
-  importerFile,
   href,
+  importerHref,
   status,
   statusText,
-}) => `server responded with unexpected status.
-file: ${file}
-importerFile: ${importerFile}
+}) => `module response unsupported status.
 href: ${href}
+importerHref: ${importerHref}
 status: ${status}
 statusText: ${statusText}`

@@ -26,7 +26,8 @@ export const launchNode = async ({
   // a fix would be that system.js _exports uses
   // Object.getOwnPropertyNames instead of for(const key of value)
   // and Object.defineProperty() instead of namespace[name] = value
-  execArgv.push("--no-deprecation")
+  // execArgv.push("--no-deprecation")
+  execArgv.push("--trace-warnings")
 
   const child = forkChildProcess(nodeClientFile, {
     execArgv,

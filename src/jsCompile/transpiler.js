@@ -1,5 +1,3 @@
-import path from "path"
-import { regexpEscape } from "../stringHelper.js"
 import transformModulesSystemJs from "../babel-plugin-transform-modules-systemjs/index.js"
 
 const { transformAsync, transformFromAstAsync } = import.meta.require("@babel/core")
@@ -108,49 +106,8 @@ export const findAsyncPluginNameInBabelConfigMap = (babelConfigMap) => {
 }
 
 const transpile = async ({ ast, code, options }) => {
-  try {
-    if (ast) {
-      return await transformFromAstAsync(ast, code, options)
-    }
-    return await transformAsync(code, options)
-  } catch (error) {
-    if (error && error.code === "BABEL_PARSE_ERROR") {
-      throw babelParseErrorToParseError(error, options)
-    }
-    throw error
+  if (ast) {
+    return await transformFromAstAsync(ast, code, options)
   }
-}
-
-const babelParseErrorToParseError = (babelParseError, { filename, filenameRelative }) => {
-  const parseError = new Error()
-
-  parseError.name = "PARSE_ERROR"
-  parseError.message = transformBabelParseErrorMessage(
-    babelParseError.message,
-    filename,
-    filenameRelative,
-  )
-  parseError.fileName = filenameRelative
-  parseError.lineNumber = babelParseError.loc.line
-  parseError.columnNumber = babelParseError.loc.column
-  // parseError.stack = error.stack
-  return parseError
-}
-
-const transformBabelParseErrorMessage = (babelParseErrorMessage, filename, relativeName) => {
-  // the babelParseErrorMessage looks somehow like that:
-  /*
-  `${absoluteFilename}: Unexpected token(${lineNumber}:${columnNumber}})
-
-    ${lineNumber - 1} | ${sourceForThatLine}
-  > ${lineNumber} | ${sourceForThatLine}
-    | ^`
-  */
-  // and the idea is to replace absoluteFilename by something relative
-
-  const filenameAbsolute = path.sep === "/" ? filename : filename.replace(/\//g, "\\")
-  const filenameAbsoluteRegexp = new RegExp(regexpEscape(filenameAbsolute), "gi")
-  const filenameRelative = `${relativeName}`.replace(/\\/g, "/")
-  const parseErrorMessage = babelParseErrorMessage.replace(filenameAbsoluteRegexp, filenameRelative)
-  return parseErrorMessage
+  return await transformAsync(code, options)
 }

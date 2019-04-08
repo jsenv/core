@@ -1,32 +1,28 @@
 import { createError } from "./createError.js"
 
 export const createModuleResponseUnsupportedContentTypeHeaderError = ({
-  file,
-  importerFile,
   href,
+  importerHref,
   contentType,
 }) => {
   return createError({
-    file,
-    importerFile,
     href,
+    importerHref,
     contentType,
     code: "MODULE_RESPONSE_UNSUPPORTED_CONTENT_TYPE_HEADER_ERROR",
     message: createModuleResponseUnsupportedContentTypeHeaderErrorMessage({
-      file,
-      importerFile,
+      href,
+      importerHref,
       contentType,
     }),
   })
 }
 
 const createModuleResponseUnsupportedContentTypeHeaderErrorMessage = ({
-  file,
-  importerFile,
   href,
+  importerHref,
   contentType,
-}) => `received unsupported content-type header for file.
-file: ${file}
-importerFile: ${importerFile}
+}) => `module response unsupported content-type header.
 href: ${href}
+importerHref: ${importerHref}
 contentType: ${contentType}`

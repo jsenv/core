@@ -1,52 +1,32 @@
-import { filenameRelativeToSourceHref } from "../filenameRelativeToSourceHref.js"
-import { stringToStringWithLink, link } from "../../stringToStringWithLink.js"
-
-export const rejectionValueToMeta = (error, { compileServerOrigin }) => {
+export const rejectionValueToMeta = (error) => {
   if (error && error.code === "MODULE_PARSE_ERROR") {
     const parseError = error.parseError
 
     return {
-      file: parseError.fileName,
-      importerFile: error.importerFile,
-      data: (parseError.messageHMTL || parseError.message).replace(
-        parseError.fileName,
-        link(
-          `${filenameRelativeToSourceHref({
-            compileServerOrigin,
-            filenameRelative: parseError.fileName,
-          })}`,
-          parseError.fileName,
-        ),
-      ),
+      href: parseError.href,
+      importerHref: error.importerHref,
+      error: parseError.messageHMTL || parseError.message,
       dataTheme: "light",
     }
   }
 
   if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
     return {
-      file: error.file,
-      importerFile: error.importerFile,
-      data: rejectionToData(error.instantiateError),
+      href: error.href,
+      importerHref: error.importerHref,
+      error: error.instantiateError,
     }
   }
 
-  if (error && error.code && error.file) {
+  if (error && error.code && error.href) {
     return {
-      file: error.file,
-      importerFile: error.importerFile,
-      data: rejectionToData(error),
+      href: error.href,
+      importerHref: error.importerHref,
+      error,
     }
   }
 
   return {
-    data: rejectionToData(error),
+    error,
   }
-}
-
-const rejectionToData = (error) => {
-  if (error && error instanceof Error) {
-    return stringToStringWithLink(error.stack)
-  }
-
-  return JSON.stringify(error)
 }

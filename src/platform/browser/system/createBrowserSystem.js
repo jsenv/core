@@ -1,21 +1,20 @@
 import { resolveImport, remapResolvedImport } from "/node_modules/@jsenv/module-resolution/index.js"
 import { hrefToFilenameRelative } from "../../hrefToFilenameRelative.js"
-import { fromHref } from "../../registerModuleFrom/registerModuleFrom.js"
-import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
+import { valueInstall } from "../../valueInstall.js"
+import { fromFunctionReturningNamespace, fromHref } from "../../registerModuleFrom/index.js"
+import { fetchSource } from "../fetchSource.js"
+import { evalSource } from "../evalSource.js"
 
-export const createBrowserSystem = ({
-  compileInto,
-  sourceOrigin, // in browser it is undefined because it could be a sensitive information
-  compileServerOrigin,
-  compileId,
-  importMap,
-  fetchSource,
-}) => {
+const GLOBAL_SPECIFIER = "global"
+
+export const createBrowserSystem = ({ compileInto, compileServerOrigin, importMap }) => {
   if (typeof window.System === "undefined") throw new Error(`window.System is undefined`)
 
   const browserSystem = new window.System.constructor()
 
   browserSystem.resolve = (specifier, importer) => {
+    if (specifier === GLOBAL_SPECIFIER) return specifier
+
     const resolvedImport = resolveImport({
       importer,
       specifier,
@@ -28,17 +27,23 @@ export const createBrowserSystem = ({
     })
   }
 
-  browserSystem.instantiate = (href, importer) => {
+  browserSystem.instantiate = (href, importerHref) => {
+    if (href === GLOBAL_SPECIFIER) return fromFunctionReturningNamespace(() => window)
+
     return fromHref({
-      compileInto,
-      sourceOrigin,
-      compileServerOrigin,
-      compileId,
-      fetchSource,
-      platformSystem: browserSystem,
-      moduleSourceToSystemRegisteredModule,
       href,
-      importer,
+      importerHref,
+      fetchSource,
+      instantiateJavaScript: (source, realHref) => {
+        const uninstallSystemGlobal = valueInstall(window, "System", browserSystem)
+        try {
+          evalSource(source, realHref)
+        } finally {
+          uninstallSystemGlobal()
+        }
+
+        return browserSystem.getRegister()
+      },
     })
   }
 

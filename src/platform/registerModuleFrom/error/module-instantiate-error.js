@@ -1,20 +1,20 @@
 import { createError } from "./createError.js"
 
-export const createModuleInstantiateError = ({ file, importerFile, instantiateError }) => {
+export const createModuleInstantiateError = ({ href, importerHref, instantiateError }) => {
   return createError({
-    file,
-    importerFile,
+    href,
+    importerHref,
     instantiateError,
     code: "MODULE_INSTANTIATE_ERROR",
-    message: createModuleInstantiateErrorMessage({ file, importerFile, instantiateError }),
+    message: createModuleInstantiateErrorMessage({ href, importerHref, instantiateError }),
   })
 }
 
 const createModuleInstantiateErrorMessage = ({
-  file,
-  importerFile,
+  href,
+  importerHref,
   instantiateError,
-}) => `error during file execution.
-file: ${file}
-importerFile: ${importerFile}
+}) => `error during module instantiation.
+href: ${href}
+importerHref: ${importerHref}
 instantiateErrorMessage: ${instantiateError.message}`

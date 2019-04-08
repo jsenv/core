@@ -8,6 +8,7 @@ const { minify: minifyCode } = import.meta.require("terser")
 const { buildExternalHelpers } = import.meta.require("@babel/core")
 
 const HELPER_FILENAME = "\0rollupPluginBabelHelpers.js"
+const GLOBAL_FILENAME = "global"
 
 export const createFeatureProviderRollupPlugin = ({
   featureNameArray,
@@ -54,11 +55,15 @@ export const createFeatureProviderRollupPlugin = ({
         const allHelperCode = buildExternalHelpers(undefined, "module")
         return allHelperCode
       }
+      if (id === GLOBAL_FILENAME) {
+        return ``
+      }
       return null
     },
 
     transform: async (source, filename) => {
       if (filename === HELPER_FILENAME) return null
+      if (filename === GLOBAL_FILENAME) return null
       if (filename.endsWith(".json")) {
         return {
           code: `export default ${source}`,

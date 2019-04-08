@@ -48,7 +48,7 @@ export const filenameRelativeToEmptyCoverage = async ({
 
     return coverage
   } catch (e) {
-    if (e && e.name === "PARSE_ERROR") {
+    if (e && e.name === "BABEL_PARSE_ERROR") {
       // return an empty coverage for that file when
       // it contains a syntax error
       const coverage = createFileCoverage(filenameRelative).toJSON()

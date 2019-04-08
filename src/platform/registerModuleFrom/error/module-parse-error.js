@@ -1,20 +1,20 @@
 import { createError } from "./createError.js"
 
-export const createModuleParseError = ({ file, importerFile, parseError }) => {
+export const createModuleParseError = ({ href, importerHref, parseError }) => {
   return createError({
-    file,
-    importerFile,
+    href,
+    importerHref,
     parseError,
     code: "MODULE_PARSE_ERROR",
-    message: createModuleParseErrorMessage({ file, importerFile, parseError }),
+    message: createModuleParseErrorMessage({ href, importerHref, parseError }),
   })
 }
 
 const createModuleParseErrorMessage = ({
-  file,
-  importerFile,
+  href,
+  importerHref,
   parseError,
-}) => `error while parsing file.
-file: ${file}
-importerFile: ${importerFile}
+}) => `error while parsing module.
+href: ${href}
+importerHref: ${importerHref}
 parseErrorMessage: ${parseError.message}`

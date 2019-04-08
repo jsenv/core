@@ -1,3 +1,4 @@
+/* eslint-disable import/max-dependencies */
 import { Module } from "module"
 import "/node_modules/systemjs/dist/system.js"
 import {
@@ -8,24 +9,20 @@ import {
 } from "/node_modules/@jsenv/module-resolution/index.js"
 import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { hrefToFilenameRelative } from "../../hrefToFilenameRelative.js"
-import {
-  fromFunctionReturningNamespace,
-  fromHref,
-  computeFileAndImporterFile,
-} from "../../registerModuleFrom/registerModuleFrom.js"
+import { fromFunctionReturningNamespace, fromHref } from "../../registerModuleFrom/index.js"
+import { valueInstall } from "../../valueInstall.js"
+import { compiledHrefToCompiledFilename } from "../compiledHrefToCompiledFilename.js"
 import { fetchSource } from "../fetchSource.js"
-import { moduleSourceToSystemRegisteredModule } from "../moduleSourceToSystemRegisteredModule.js"
+import { evalSource } from "../evalSource.js"
 
-export const createNodeSystem = ({
-  importMap,
-  compileInto,
-  sourceOrigin,
-  compileServerOrigin,
-  compileId,
-}) => {
+const GLOBAL_SPECIFIER = "global"
+
+export const createNodeSystem = ({ importMap, compileInto, sourceOrigin, compileServerOrigin }) => {
   const nodeSystem = new global.System.constructor()
 
   nodeSystem.resolve = (specifier, importer) => {
+    if (specifier === GLOBAL_SPECIFIER) return specifier
+
     if (isNativeNodeModuleBareSpecifier(specifier)) return specifier
 
     const resolvedImport = resolveImport({
@@ -42,7 +39,14 @@ export const createNodeSystem = ({
     return remappedImport
   }
 
-  nodeSystem.instantiate = async (href, importer) => {
+  nodeSystem.instantiate = async (href, importerHref) => {
+    if (href === GLOBAL_SPECIFIER) {
+      return fromFunctionReturningNamespace(() => global, {
+        href,
+        importerHref,
+      })
+    }
+
     if (isNativeNodeModuleBareSpecifier(href)) {
       return fromFunctionReturningNamespace(
         () => {
@@ -53,27 +57,33 @@ export const createNodeSystem = ({
             default: nodeNativeModuleExports,
           }
         },
-        computeFileAndImporterFile({
-          href,
-          importer,
-          compileInto,
-          sourceOrigin,
-          compileServerOrigin,
-          compileId,
-        }),
+        { href, importerHref },
       )
     }
 
     return fromHref({
-      compileInto,
-      sourceOrigin,
-      compileServerOrigin,
-      compileId,
-      fetchSource,
-      platformSystem: nodeSystem,
-      moduleSourceToSystemRegisteredModule,
       href,
-      importer,
+      importerHref,
+      fetchSource,
+      instantiateJavaScript: (source, realHref) => {
+        const belongToProject = realHref.startsWith(`${compileServerOrigin}/`)
+        const sourceHref = belongToProject
+          ? compiledHrefToCompiledFilename(realHref, {
+              compileInto,
+              sourceOrigin,
+              compileServerOrigin,
+            })
+          : realHref
+
+        const uninstallSystemGlobal = valueInstall(global, "System", nodeSystem)
+        try {
+          evalSource(source, sourceHref)
+        } finally {
+          uninstallSystemGlobal()
+        }
+
+        return nodeSystem.getRegister()
+      },
     })
   }
 

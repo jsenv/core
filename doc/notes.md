@@ -1,7 +1,20 @@
 ## TODO
 
-- browsingServer almost good but we have to watch for
-  https://github.com/systemjs/systemjs/issues/1921 before going further.
+- ensure browsing server, launchCHromium etc works
+
+- introduce import from 'global' and test it
+  especially inside bundleBrowser/node
+
+- check-format should not log pretty files (just like eslint)
+
+- prettiest should move to jsenv/
+  for now inside jsenv/jsenv-core but the whole concept deserves a jsenv/jsenv-prettiest
+
+- do not log --- log --- when they are empty
+
+## To keep in mind
+
+- retry to disable inspect-brk inside vscode
 
 ### How to use dependency written in commonjs
 

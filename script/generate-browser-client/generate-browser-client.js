@@ -15,6 +15,6 @@ bundleBrowser({
 })
 
 fileCopy(
-  `${projectFolder}/node_modules/systemjs/dist/s.js`,
+  `${projectFolder}/node_modules/systemjs/dist/system.js`,
   `${projectFolder}/dist/browser-client/system.js`,
 )

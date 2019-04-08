@@ -1,10 +1,13 @@
 /* eslint-disable import/max-dependencies */
+import path from "path"
 import { createCancellationToken } from "/node_modules/@dmail/cancellation/index.js"
 import { fileRead, fileStat } from "/node_modules/@dmail/helper/index.js"
 import { convertFileSystemErrorToResponseProperties } from "../requestToFileResponse/index.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { acceptContentType, createSSERoom, serviceCompose } from "../server/index.js"
 import { watchFile } from "../watchFile.js"
+import { ansiToHTML } from "../ansiToHTML.js"
+import { regexpEscape } from "../stringHelper.js"
 import { createETag } from "./helpers.js"
 import { compileFile } from "./compileFile.js"
 import { locate as locateDefault } from "./locate.js"
@@ -175,9 +178,38 @@ export const compileToService = (
           status: 403,
         }
       }
+      
       if (error && error.code === "CACHE_CORRUPTION_ERROR") {
         return {
           status: 500,
+        }
+      }
+
+      if (error && error.code === "BABEL_PARSE_ERROR") {
+        const filename = `${projectFolder}/${filenameRelative}`
+        const href = `${origin}/${compileInto}/${compileId}/${filenameRelative}`
+        const message = transformBabelParseErrorMessage(error.message, filename, href)
+
+        const parseErrorData = {
+          name: "PARSE_ERROR",
+          message,
+          messageHTML: ansiToHTML(message),
+          href,
+          lineNumber: error.loc.line,
+          columnNumber: error.loc.column,
+        }
+
+        const json = JSON.stringify(parseErrorData)
+
+        return {
+          status: 500,
+          statusText: "parse error",
+          headers: {
+            "cache-control": "no-store",
+            "content-length": Buffer.byteLength(json),
+            "content-type": "application/json",
+          },
+          body: json,
         }
       }
       return convertFileSystemErrorToResponseProperties(error)
@@ -232,3 +264,20 @@ const createFileChangedSignal = () => {
 const fileIsInsideFolder = (filename, folder) => filename.startsWith(`${folder}/`)
 
 const fileIsOutsideFolder = (filename, folder) => !fileIsInsideFolder(filename, folder)
+
+const transformBabelParseErrorMessage = (babelParseErrorMessage, filename, href) => {
+  // the babelParseErrorMessage looks somehow like that:
+  /*
+  `${absoluteFilename}: Unexpected token(${lineNumber}:${columnNumber}})
+
+    ${lineNumber - 1} | ${sourceForThatLine}
+  > ${lineNumber} | ${sourceForThatLine}
+    | ^`
+  */
+  // and the idea is to replace absoluteFilename by something relative
+
+  const filenameAbsolute = path.sep === "/" ? filename : filename.replace(/\//g, "\\")
+  const filenameAbsoluteRegexp = new RegExp(regexpEscape(filenameAbsolute), "gi")
+  const parseErrorMessage = babelParseErrorMessage.replace(filenameAbsoluteRegexp, href)
+  return parseErrorMessage
+}

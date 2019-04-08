@@ -20,7 +20,6 @@ export const loadBrowserImporter = memoizeOnce(async ({ compileInto, compileServ
     compileInto,
     compileServerOrigin,
     compileId,
-    fetchSource,
   })
 
   return { compileId, importFile }
@@ -32,10 +31,4 @@ const fetchHref = async (href) => {
     return Promise.reject(response)
   }
   return response
-}
-
-const fetchSource = ({ href, importer }) => {
-  return fetchUsingXHR(href, {
-    "x-module-referer": importer || href,
-  })
 }

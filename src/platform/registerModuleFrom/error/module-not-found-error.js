@@ -1,14 +1,14 @@
 import { createError } from "./createError.js"
 
-export const createModuleNotFoundError = ({ file, importerFile }) => {
+export const createModuleNotFoundError = ({ href, importerHref }) => {
   return createError({
-    file,
-    importerFile,
+    href,
+    importerHref,
     code: "MODULE_NOT_FOUND_ERROR",
-    message: createModuleNotFoundErrorMessage({ file, importerFile }),
+    message: createModuleNotFoundErrorMessage({ href, importerHref }),
   })
 }
 
-const createModuleNotFoundErrorMessage = ({ file, importerFile }) => `file not found.
-file: ${file}
-importerFile: ${importerFile}`
+const createModuleNotFoundErrorMessage = ({ href, importerHref }) => `module not found.
+href: ${href}
+importerHref: ${importerHref}`
