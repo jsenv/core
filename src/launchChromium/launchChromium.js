@@ -251,6 +251,8 @@ callback: ${callback}`)
 }
 
 const errorToSourceError = (error, { sourceOrigin, compileServerOrigin }) => {
+  if (error.code === "MODULE_PARSE_ERROR") return error
+
   // does not truly work
   // error stack should be remapped either client side or here
   // error is correctly remapped inside chrome devtools

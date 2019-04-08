@@ -3,13 +3,13 @@ import { startCompileServer, launchAndExecute, launchChromium } from "../../../i
 
 const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 
-const testFolder = `${projectFolder}/src/launch-chromium/syntax-error`
+const testFolder = `${projectFolder}/test/launch-chromium/syntax-error`
 const filenameRelative = `syntax-error.js`
 const compileInto = ".dist"
 const babelConfigMap = {}
 
 ;(async () => {
-  const sourceOrigin = `file://${projectFolder}`
+  const sourceOrigin = `file://${testFolder}`
 
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
@@ -35,18 +35,18 @@ const babelConfigMap = {}
     status: "errored",
     error: {
       stack: actual.error.stack,
-      message: `error while parsing file.
-file: syntax-error.js
-importerFile: undefined
+      message: `error while parsing module.
+href: ${compileServerOrigin}/${compileInto}/otherwise/${filenameRelative}
+importerHref: undefined
 parseErrorMessage: ${actual.error.parseError.message}`,
-      file: "syntax-error.js",
+      href: `${compileServerOrigin}/${compileInto}/otherwise/${filenameRelative}`,
       parseError: {
         name: "PARSE_ERROR",
         message: actual.error.parseError.message,
-        fileName: "syntax-error.js",
+        messageHTML: actual.error.parseError.messageHTML,
+        href: `${compileServerOrigin}/${compileInto}/otherwise/${filenameRelative}`,
         lineNumber: 1,
         columnNumber: 17,
-        messageHTML: actual.error.parseError.messageHTML,
       },
       code: "MODULE_PARSE_ERROR",
     },
