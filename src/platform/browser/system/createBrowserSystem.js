@@ -28,7 +28,8 @@ export const createBrowserSystem = ({ compileInto, compileServerOrigin, importMa
   }
 
   browserSystem.instantiate = (href, importerHref) => {
-    if (href === GLOBAL_SPECIFIER) return fromFunctionReturningNamespace(() => window)
+    if (href === GLOBAL_SPECIFIER)
+      return fromFunctionReturningNamespace(() => window, { href, importerHref })
 
     return fromHref({
       href,
