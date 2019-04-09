@@ -1,13 +1,13 @@
 import { createNodeSystem } from "./createNodeSystem.js"
 
-export const createImporter = ({
+export const createImporter = async ({
   importMap,
   compileInto,
   sourceOrigin,
   compileServerOrigin,
   compileId,
 }) => {
-  const nodeSystem = createNodeSystem({
+  const nodeSystem = await createNodeSystem({
     importMap,
     compileInto,
     sourceOrigin,

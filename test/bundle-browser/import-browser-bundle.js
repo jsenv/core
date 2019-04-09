@@ -5,6 +5,8 @@ import { startServer, serviceCompose } from "../../src/server/index.js"
 const puppeteer = import.meta.require("puppeteer")
 const { projectFolder } = import.meta.require("../../jsenv.config.js")
 
+const SYSTEMJS_RELATIVE_PATH = "src/systemjs/s.js"
+
 export const importBrowserBundle = async ({ bundleFolder, file }) => {
   const [server, browser] = await Promise.all([
     startTestServer({ bundleFolder }),
@@ -52,7 +54,7 @@ const startTestServer = ({ bundleFolder }) => {
   const systemJSService = async ({ ressource }) => {
     if (ressource !== "/system.js") return null
 
-    const content = await fileRead(`${projectFolder}/node_modules/systemjs/dist/system.js`)
+    const content = await fileRead(`${projectFolder}/${SYSTEMJS_RELATIVE_PATH}`)
 
     return {
       status: 200,

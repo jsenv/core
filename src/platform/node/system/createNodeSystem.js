@@ -1,6 +1,5 @@
 /* eslint-disable import/max-dependencies */
 import { Module } from "module"
-import "/node_modules/systemjs/dist/system.js"
 import {
   resolveImport,
   remapResolvedImport,
@@ -16,8 +15,17 @@ import { fetchSource } from "../fetchSource.js"
 import { evalSource } from "../evalSource.js"
 
 const GLOBAL_SPECIFIER = "global"
+const SYSTEMJS_RELATIVE_PATH = "src/systemjs/s.js"
 
-export const createNodeSystem = ({ importMap, compileInto, sourceOrigin, compileServerOrigin }) => {
+export const createNodeSystem = async ({
+  importMap,
+  compileInto,
+  sourceOrigin,
+  compileServerOrigin,
+}) => {
+  // can be updated to '/' once jsenv inception + 1 (means jsenv use latest jsenv to build itself)
+  await import(`../../../../${SYSTEMJS_RELATIVE_PATH}`)
+
   const nodeSystem = new global.System.constructor()
 
   nodeSystem.resolve = (specifier, importer) => {

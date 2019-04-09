@@ -61,6 +61,11 @@ export const createJsenvRollupPlugin = ({
       return id
     },
 
+    // https://rollupjs.org/guide/en#resolvedynamicimport
+    // resolveDynamicImport: (specifier, importer) => {
+
+    // },
+
     load: async (id) => {
       const href = id[0] === "/" ? `file://${id}` : id
       const source = await fetchHref(href)
