@@ -1,7 +1,6 @@
 // import { pathnameToDirname } from "/node_modules/@jsenv/module-resolution/index.js"
 import { uneval } from "@dmail/uneval"
-import { createFeatureProviderRollupPlugin } from "../../bundle/createFeatureProviderRollupPlugin.js"
-import { createJsenvRollupPlugin } from "../../bundle/createJsenvRollupPlugin.js"
+import { createJsenvRollupPlugin } from "../../bundle/jsenv-rollup-plugin/index.js"
 import { bundleWithRollup } from "../../bundle/bundleWithRollup.js"
 import { ROOT_FOLDER } from "../../ROOT_FOLDER.js"
 
@@ -47,9 +46,6 @@ export const generateSelfImportIIFE = async ({
     cancellationToken,
     importMap,
     projectFolder: ROOT_FOLDER,
-  })
-
-  const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
     featureNameArray: Object.keys(babelConfigMap),
     babelConfigMap,
     minify: false,
@@ -59,7 +55,7 @@ export const generateSelfImportIIFE = async ({
   const { output } = await bundleWithRollup({
     rollupParseOptions: {
       input: `${ROOT_FOLDER}/src/browsing-server/self-import-iife/self-import-template.js`,
-      plugins: [selfImportRollupPlugin, featureProviderRollupPlugin, jsenvRollupPlugin],
+      plugins: [selfImportRollupPlugin, jsenvRollupPlugin],
     },
     rollupGenerateOptions: {
       // file,

@@ -1,12 +1,14 @@
 import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
-import { uneval } from "/node_modules/@dmail/uneval/index.js"
-import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
 import { pathnameToDirname } from "/node_modules/@jsenv/module-resolution/index.js"
+import { uneval } from "/node_modules/@dmail/uneval/index.js"
+import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
+import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
 import { ROOT_FOLDER } from "../../ROOT_FOLDER.js"
 
 const BUNDLE_NODE_OPTIONS_SPECIFIER = "\0bundle-node-options.js"
 
 export const computeRollupOptionsForBalancer = ({
+  cancellationToken,
   projectFolder,
   into,
   babelConfigMap,
@@ -15,11 +17,6 @@ export const computeRollupOptionsForBalancer = ({
   log,
   minify,
 }) => {
-  const balancerOptionSource = generateBalancerOptionsSource({
-    groupMap,
-    entryPointName,
-  })
-
   const nodeBalancerRollupPlugin = {
     name: "node-balancer",
     resolveId: (importee, importer) => {
@@ -34,15 +31,25 @@ export const computeRollupOptionsForBalancer = ({
 
     load: async (id) => {
       if (id === BUNDLE_NODE_OPTIONS_SPECIFIER) {
-        return balancerOptionSource
+        return generateBalancerOptionsSource({
+          groupMap,
+          entryPointName,
+        })
       }
       return null
     },
   }
 
+  const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
+    platformGlobalName: "global",
+  })
+
   const file = `${projectFolder}/${into}/${entryPointName}.js`
 
-  const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+  const jsenvRollupPlugin = createJsenvRollupPlugin({
+    cancellationToken,
+    importMap: {},
+    projectFolder,
     dir: pathnameToDirname(file),
     featureNameArray: groupMap.otherwise.incompatibleNameArray,
     babelConfigMap,
@@ -60,7 +67,7 @@ minify : ${minify}
   return {
     rollupParseOptions: {
       input: `${ROOT_FOLDER}/src/bundle/node/node-balancer-template.js`,
-      plugins: [nodeBalancerRollupPlugin, featureProviderRollupPlugin],
+      plugins: [nodeBalancerRollupPlugin, importFromGlobalRollupPlugin, jsenvRollupPlugin],
       external: (id) => isNativeNodeModuleBareSpecifier(id),
     },
     rollupGenerateOptions: {

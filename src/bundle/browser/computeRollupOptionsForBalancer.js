@@ -1,11 +1,14 @@
+import { isNativeBrowserModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
 import { pathnameToDirname } from "/node_modules/@jsenv/module-resolution/index.js"
 import { uneval } from "/node_modules/@dmail/uneval/index.js"
-import { createFeatureProviderRollupPlugin } from "../createFeatureProviderRollupPlugin.js"
+import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
+import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
 import { ROOT_FOLDER } from "../../ROOT_FOLDER.js"
 
 const BUNDLE_BROWSER_OPTIONS_SPECIFIER = "\0bundle-browser-options.js"
 
 export const computeRollupOptionsForBalancer = ({
+  cancellationToken,
   projectFolder,
   into,
   babelConfigMap,
@@ -39,9 +42,16 @@ export const computeRollupOptionsForBalancer = ({
     },
   }
 
+  const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
+    platformGlobalName: "window",
+  })
+
   const file = `${projectFolder}/${into}/${entryPointName}.js`
 
-  const featureProviderRollupPlugin = createFeatureProviderRollupPlugin({
+  const jsenvRollupPlugin = createJsenvRollupPlugin({
+    cancellationToken,
+    importMap: {},
+    projectFolder,
     dir: pathnameToDirname(file),
     featureNameArray: groupMap.otherwise.incompatibleNameArray,
     babelConfigMap,
@@ -59,7 +69,8 @@ minify: ${minify}
   return {
     rollupParseOptions: {
       input: `${ROOT_FOLDER}/src/bundle/browser/browser-balancer-template.js`,
-      plugins: [browserBalancerRollupPlugin, featureProviderRollupPlugin],
+      plugins: [browserBalancerRollupPlugin, importFromGlobalRollupPlugin, jsenvRollupPlugin],
+      external: (id) => isNativeBrowserModuleBareSpecifier(id),
     },
     rollupGenerateOptions: {
       file,
