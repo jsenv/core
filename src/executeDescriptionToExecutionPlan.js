@@ -14,6 +14,7 @@ export const executeDescriptionToExecutionPlan = async ({
   executeDescription,
   verbose = false,
   defaultAllocatedMsPerExecution = 20000,
+  enableGlobalLock,
 }) => {
   const sourceOrigin = `file://${projectFolder}`
 
@@ -25,6 +26,7 @@ export const executeDescriptionToExecutionPlan = async ({
     compileGroupCount,
     babelConfigMap,
     verbose,
+    enableGlobalLock,
   })
 
   const metaDescription = namedValueDescriptionToMetaDescription({
