@@ -2,7 +2,7 @@ import { assert } from "/node_modules/@dmail/assert/index.js"
 import { cover, launchNode, launchChromium } from "../../index.js"
 
 const { projectFolder } = import.meta.require("../../jsenv.config.js")
-const testFolder = `${projectFolder}/src/cover/test`
+const testFolder = `${projectFolder}/test/cover`
 const compileInto = ".dist"
 
 ;(async () => {

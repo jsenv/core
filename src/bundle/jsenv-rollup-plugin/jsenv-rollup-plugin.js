@@ -36,6 +36,7 @@ export const createJsenvRollupPlugin = ({
     HELPER_FILENAME,
     featureNameArray,
     babelConfigMap,
+    target,
   })
 
   const jsenvRollupPlugin = {

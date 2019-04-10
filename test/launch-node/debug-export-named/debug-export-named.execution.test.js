@@ -11,7 +11,6 @@ const testFolder = projectFolder
 const filenameRelative = `test/launch-node/debug-export-named/debug-export-named.js`
 const compileInto = ".dist"
 const babelConfigMap = {
-  "transform-block-scoping": [],
   "transform-async-to-promises": [transformAsyncToPromises],
 }
 
