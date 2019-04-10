@@ -129,7 +129,7 @@ export const createJsenvRollupPlugin = ({
         input: source,
         filename,
         babelConfigMap: babelConfigMapSubset,
-        // false, will be done by rollup
+        // false, rollup will take care to transform module into whatever format
         transformModuleIntoSystemFormat: false,
       })
       return { code, map }

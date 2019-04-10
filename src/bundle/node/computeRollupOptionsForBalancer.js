@@ -66,21 +66,23 @@ minify : ${minify}
 
   return {
     rollupParseOptions: {
-      input: `${ROOT_FOLDER}/src/bundle/node/node-balancer-template.js`,
+      input: `file://${
+        ROOT_FOLDER[0] === "/" ? ROOT_FOLDER : `/${ROOT_FOLDER}`
+      }/src/bundle/node/node-balancer-template.js`,
       plugins: [nodeBalancerRollupPlugin, importFromGlobalRollupPlugin, jsenvRollupPlugin],
       external: (id) => isNativeNodeModuleBareSpecifier(id),
     },
     rollupGenerateOptions: {
       file,
       format: "cjs",
-      // name: null,
       sourcemap: true,
       sourcemapExcludeSources: true,
     },
   }
 }
 
-const generateBalancerOptionsSource = ({ entryPointName, groupMap }) => {
-  return `export const entryPointName = ${uneval(entryPointName)}
+const generateBalancerOptionsSource = ({
+  entryPointName,
+  groupMap,
+}) => `export const entryPointName = ${uneval(entryPointName)}
 export const groupMap = ${uneval(groupMap)}`
-}

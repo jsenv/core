@@ -24,13 +24,12 @@ export const computeRollupOptionsForBalancer = ({
 
   const browserBalancerRollupPlugin = {
     name: "browser-balancer",
-    resolveId: (importee, importer) => {
+    resolveId: (specifier) => {
       // it's important to keep the extension so that
       // rollup-plugin-babel transpiles bundle-browser-options.js too
-      if (importee === BUNDLE_BROWSER_OPTIONS_SPECIFIER) {
+      if (specifier === BUNDLE_BROWSER_OPTIONS_SPECIFIER) {
         return BUNDLE_BROWSER_OPTIONS_SPECIFIER
       }
-      if (!importer) return importee
       return null
     },
 
@@ -68,14 +67,15 @@ minify: ${minify}
 
   return {
     rollupParseOptions: {
-      input: `${ROOT_FOLDER}/src/bundle/browser/browser-balancer-template.js`,
+      input: `file://${
+        ROOT_FOLDER[0] === "/" ? ROOT_FOLDER : `/${ROOT_FOLDER}`
+      }/src/bundle/browser/browser-balancer-template.js`,
       plugins: [browserBalancerRollupPlugin, importFromGlobalRollupPlugin, jsenvRollupPlugin],
       external: (id) => isNativeBrowserModuleBareSpecifier(id),
     },
     rollupGenerateOptions: {
       file,
       format: "iife",
-      // name: `./${entryPointName}.js`,
       sourcemap: true,
       sourcemapExcludeSources: true,
     },

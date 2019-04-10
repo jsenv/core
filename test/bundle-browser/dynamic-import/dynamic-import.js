@@ -1,1 +1,2 @@
-export default await import("./answer.js")
+const { default: value } = await import("./answer.js")
+export default value
