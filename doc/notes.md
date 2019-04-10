@@ -1,10 +1,5 @@
 ## TODO
 
-- ensure browsing server, launchCHromium etc works
-
-- introduce import from 'global' and test it
-  especially inside bundleBrowser/node
-
 - check-format should not log pretty files (just like eslint)
 
 - prettiest should move to jsenv/
