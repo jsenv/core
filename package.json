@@ -57,7 +57,7 @@
 		"@jsenv/core": "5.1.0",
 		"@jsenv/eslint-config": "8.0.0",
 		"@jsenv/prettier-config": "1.0.0",
-		"@jsenv/eslint-import-resolver": "4.0.0",
+		"@jsenv/eslint-import-resolver": "4.1.0",
 		"@jsenv/babel-config-map": "1.0.0",
 		"@dmail/assert": "3.0.0",
 		"babel-eslint": "11.0.0-beta.0",

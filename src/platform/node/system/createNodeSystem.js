@@ -13,9 +13,10 @@ import { valueInstall } from "../../valueInstall.js"
 import { compiledHrefToCompiledFilename } from "../compiledHrefToCompiledFilename.js"
 import { fetchSource } from "../fetchSource.js"
 import { evalSource } from "../evalSource.js"
+// const SYSTEMJS_RELATIVE_PATH = "src/systemjs/s.js"
+import "../../../../src/systemjs/s.js"
 
 const GLOBAL_SPECIFIER = "global"
-const SYSTEMJS_RELATIVE_PATH = "src/systemjs/s.js"
 
 export const createNodeSystem = async ({
   importMap,
@@ -23,8 +24,7 @@ export const createNodeSystem = async ({
   sourceOrigin,
   compileServerOrigin,
 }) => {
-  // can be updated to '/' once jsenv inception + 1 (means jsenv use latest jsenv to build itself)
-  await import(`../../../../${SYSTEMJS_RELATIVE_PATH}`)
+  // await import(`/${SYSTEMJS_RELATIVE_PATH}`)
 
   const nodeSystem = new global.System.constructor()
 

@@ -1,15 +1,15 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { launchAndExecute, launchChromium, startCompileServer } from "../../../index.js"
+import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 
 const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 
-const testFolder = `${projectFolder}/test/launch-chromium/import-global`
-const filenameRelative = `import-global.js`
+const testFolder = `${projectFolder}/test/launch-node/import-from-global`
+const filenameRelative = `import-from-global.js`
 const compileInto = ".dist"
 const babelConfigMap = {}
 
 ;(async () => {
-  const sourceOrigin = `file://${projectFolder}`
+  const sourceOrigin = `file://${testFolder}`
 
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
@@ -18,12 +18,11 @@ const babelConfigMap = {}
   })
 
   const actual = await launchAndExecute({
-    launch: (options) =>
-      launchChromium({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
-    verbose: true,
-    stopOnceExecuted: true,
-    collectNamespace: true,
+    launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
+    mirrorConsole: true,
     filenameRelative,
+    verbose: true,
+    collectNamespace: true,
   })
   const expected = {
     status: "completed",
