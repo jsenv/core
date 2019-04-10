@@ -11,22 +11,22 @@ const testDescription = {
   //     launch: launchNode,
   //   },
   // },
-  "/test/bundle-node/**/*.test.*": {
-    node: {
-      launch: launchNode,
-    },
-  },
+  // "/test/bundle-node/**/*.test.*": {
+  //   node: {
+  //     launch: launchNode,
+  //   },
+  // },
   // "/test/bundle-node/async-generator/": {
   //   node: null,
   // },
   // "/test/bundle-node/https/": {
   //   node: null,
   // },
-  // "/test/launch-chromium/**/*.test.js": {
-  //   node: {
-  //     launch: launchNode,
-  //   },
-  // },
+  "/test/launch-chromium/**/*.test.js": {
+    node: {
+      launch: launchNode,
+    },
+  },
   // "/test/launch-node/**/*.test.js": {
   //   node: {
   //     launch: launchNode,

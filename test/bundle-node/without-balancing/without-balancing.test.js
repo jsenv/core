@@ -21,7 +21,7 @@ const testFolder = `${projectFolder}/test/bundle-node/without-balancing`
     verbose: true,
   })
 
-  const actual = await importNodeBundle({
+  const { namespace: actual } = await importNodeBundle({
     bundleFolder: `${testFolder}/dist/node`,
     file: `main.js`,
   })

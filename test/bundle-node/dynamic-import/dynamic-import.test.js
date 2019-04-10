@@ -18,7 +18,7 @@ const testFolder = `${projectFolder}/test/bundle-node/dynamic-import`
     verbose: false,
   })
 
-  const actual = await importNodeBundle({
+  const { namespace: actual } = await importNodeBundle({
     bundleFolder: `${testFolder}/dist/node`,
     file: "main.js",
   })

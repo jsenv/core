@@ -1,5 +1,6 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
 import { bundleNode } from "../../../index.js"
+import { importNodeBundle } from "../import-node-bundle.js"
 
 const blockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
 const { projectFolder } = import.meta.require("../../../jsenv.config.js")
@@ -23,7 +24,10 @@ const testFolder = `${projectFolder}/test/bundle-node/import-meta-url`
     verbose: true,
   })
 
-  const actual = import.meta.require(`${testFolder}/dist/node/main.js`)
+  const { namespace: actual } = await importNodeBundle({
+    bundleFolder: `${testFolder}/dist/node`,
+    file: `main.js`,
+  })
   const expected = `file://${testFolder}/dist/node/main.js`
   assert({ actual, expected })
 })()

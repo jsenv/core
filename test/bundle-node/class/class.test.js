@@ -1,5 +1,6 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
 import { bundleNode } from "../../../index.js"
+import { importNodeBundle } from "../import-node-bundle.js"
 
 const babelPluginTransformClasses = import.meta.require("@babel/plugin-transform-classes")
 const { projectFolder } = import.meta.require("../../../jsenv.config.js")
@@ -20,7 +21,10 @@ const testFolder = `${projectFolder}/test/bundle-node/class`
     verbose: false,
   })
 
-  const actual = import.meta.require(`${testFolder}/dist/node/main.js`)
+  const { namespace: actual } = await importNodeBundle({
+    bundleFolder: `${testFolder}/dist/node`,
+    file: `main.js`,
+  })
   const expected = 42
   assert({ actual, expected })
 })()

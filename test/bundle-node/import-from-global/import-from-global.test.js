@@ -22,7 +22,7 @@ const testFolder = `${projectFolder}/test/bundle-node/import-from-global`
     verbose: true,
   })
 
-  const actual = await importNodeBundle({
+  const { namespace: actual } = await importNodeBundle({
     bundleFolder: `${testFolder}/dist/node`,
     file: "main.js",
   })

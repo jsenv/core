@@ -23,7 +23,7 @@ export const bundleNode = async ({
     into,
     babelConfigMap,
     compileGroupCount,
-    platformVersionScoreMap: { node: versionScoreMap },
+    platformScoreMap: { node: versionScoreMap },
     verbose,
     computeRollupOptionsWithoutBalancing: (context) =>
       computeRollupOptionsWithoutBalancing({
