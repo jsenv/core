@@ -1,5 +1,5 @@
 import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
-import { nodeScoreMap } from "../../group-map/index.js"
+import { nodeVersionScoreMap } from "../../group-map/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
 import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBalancing.js"
@@ -12,7 +12,7 @@ export const bundleNode = async ({
   entryPointMap,
   babelConfigMap,
   compileGroupCount = 2,
-  platformScoreMap = nodeScoreMap,
+  versionScoreMap = nodeVersionScoreMap,
   verbose,
   minify = false,
 }) => {
@@ -23,7 +23,7 @@ export const bundleNode = async ({
     into,
     babelConfigMap,
     compileGroupCount,
-    platformScoreMap,
+    platformVersionScoreMap: { node: versionScoreMap },
     verbose,
     computeRollupOptionsWithoutBalancing: (context) =>
       computeRollupOptionsWithoutBalancing({
