@@ -1,4 +1,4 @@
-const { checkFormat } = require("@jsenv/core")
+const { checkFormat } = require("@jsenv/prettiest")
 const { projectFolder } = require("../../jsenv.config.js")
 
 const formattableDescription = {

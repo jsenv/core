@@ -1,11 +1,8 @@
 ## TODO
 
-- check-format should not log pretty files (just like eslint)
-
-- prettiest should move to jsenv/
-  for now inside jsenv/jsenv-core but the whole concept deserves a jsenv/jsenv-prettiest
-
-- do not log --- log --- when they are empty
+- update @dmail/helper to use latest jsenv
+- make jsenv depends on latest itself
+  and ensure node deprecated warning are gone
 
 ## To keep in mind
 
