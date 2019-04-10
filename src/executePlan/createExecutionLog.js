@@ -86,8 +86,7 @@ const createDisconnectedLog = ({
 ${color}${icon} disconnected during execution.${close}
 filenameRelative: ${filenameRelative}
 platform: ${formatPlatform({ platformName, platformVersion })}
-duration: ${formatDuration(endMs - startMs)}
-${formatPlatformLog(platformLog)}`
+duration: ${formatDuration(endMs - startMs)}${appendPlatformLog(platformLog)}`
 }
 
 const createTimedoutLog = ({
@@ -106,8 +105,7 @@ const createTimedoutLog = ({
 ${color}${icon} execution takes more than ${allocatedMs}ms.${close}
 filenameRelative: ${filenameRelative}
 platform: ${formatPlatform({ platformName, platformVersion })}
-duration: ${formatDuration(endMs - startMs)}
-${formatPlatformLog(platformLog)}`
+duration: ${formatDuration(endMs - startMs)}${appendPlatformLog(platformLog)}`
 }
 
 const createErroredLog = ({
@@ -125,8 +123,7 @@ const createErroredLog = ({
 ${color}${icon} error during execution.${close}
 filenameRelative: ${filenameRelative}
 platform: ${formatPlatform({ platformName, platformVersion })}
-duration: ${formatDuration(endMs - startMs)}
-${formatPlatformLog(platformLog)}`
+duration: ${formatDuration(endMs - startMs)}${appendPlatformLog(platformLog)}`
 }
 
 const createCompletedLog = ({
@@ -144,15 +141,18 @@ const createCompletedLog = ({
 ${color}${icon} execution completed.${close}
 filenameRelative: ${filenameRelative}
 platform: ${formatPlatform({ platformName, platformVersion })}
-duration: ${formatDuration(endMs - startMs)}
-${formatPlatformLog(platformLog)}`
+duration: ${formatDuration(endMs - startMs)}${appendPlatformLog(platformLog)}`
 }
 
 const formatPlatform = ({ platformName, platformVersion }) => `${platformName}/${platformVersion}`
 
-const formatPlatformLog = (platformLog) => {
-  return `${grey}---------- log ----------${close}
-${platformLog.trim()}
+const appendPlatformLog = (platformLog) => {
+  const trimmedPlatformLog = platformLog.trim()
+  if (trimmedPlatformLog === "") return ""
+
+  return `
+${grey}---------- log ----------${close}
+${trimmedPlatformLog}
 ${grey}-------------------------${close}`
 }
 
