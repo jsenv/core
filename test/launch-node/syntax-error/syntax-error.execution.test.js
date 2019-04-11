@@ -27,19 +27,19 @@ const babelConfigMap = {}
     status: "errored",
     error: {
       stack: actual.error.stack,
-      message: `error while parsing file.
-file: syntax-error.js
-importerFile: undefined
+      message: `error while parsing module.
+href: ${compileServerOrigin}/${compileInto}/otherwise/syntax-error.js
+importerHref: undefined
 parseErrorMessage: ${actual.error.parseError.message}`,
-      file: "syntax-error.js",
-      importerFile: undefined,
+      href: `${compileServerOrigin}/${compileInto}/otherwise/syntax-error.js`,
+      importerHref: undefined,
       parseError: {
         name: "PARSE_ERROR",
         message: actual.error.parseError.message,
-        fileName: "syntax-error.js",
+        messageHTML: actual.error.parseError.messageHTML,
+        href: `${compileServerOrigin}/${compileInto}/otherwise/syntax-error.js`,
         lineNumber: 1,
         columnNumber: 14,
-        messageHTML: actual.error.parseError.messageHTML,
       },
       code: "MODULE_PARSE_ERROR",
     },
