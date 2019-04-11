@@ -59,11 +59,8 @@ export const createNodeSystem = async ({
       return fromFunctionReturningNamespace(
         () => {
           // eslint-disable-next-line import/no-dynamic-require
-          const nodeNativeModuleExports = require(href)
-          return {
-            ...nodeNativeModuleExports,
-            default: nodeNativeModuleExports,
-          }
+          const nodeNativeModuleNamespace = require(href)
+          return addDefaultToNativeNodeModuleNamespace(nodeNativeModuleNamespace)
         },
         { href, importerHref },
       )
@@ -111,6 +108,21 @@ export const createNodeSystem = async ({
   }
 
   return nodeSystem
+}
+
+const addDefaultToNativeNodeModuleNamespace = (namespace) => {
+  // const namespaceWithDefault = {}
+  // Object.getOwnPropertyNames(namespace).forEach((name) => {
+  //   Object.defineProperty(
+  //     namespaceWithDefault,
+  //     name,
+  //     Object.getOwnPropertyDescriptor(namespace, name),
+  //   )
+  // })
+  // namespaceWithDefault.default = namespaceWithDefault
+  if (Object.prototype.hasOwnProperty.call(namespace, "default")) return namespace
+  namespace.default = namespace
+  return namespace
 }
 
 // https://nodejs.org/api/modules.html#modules_module_createrequirefrompath_filename
