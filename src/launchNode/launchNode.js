@@ -13,6 +13,7 @@ export const launchNode = async ({
   debugMode,
   debugPort,
   remap = true,
+  traceWarnings = true,
 }) => {
   const execArgv = await createChildExecArgv({
     cancellationToken,
@@ -27,7 +28,9 @@ export const launchNode = async ({
   // Object.getOwnPropertyNames instead of for(const key of value)
   // and Object.defineProperty() instead of namespace[name] = value
   // execArgv.push("--no-deprecation")
-  execArgv.push("--trace-warnings")
+  if (traceWarnings && !execArgv.includes("--trace-warnings")) {
+    execArgv.push("--trace-warnings")
+  }
 
   const child = forkChildProcess(nodeClientFile, {
     execArgv,
