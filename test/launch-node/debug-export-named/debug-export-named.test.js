@@ -1,4 +1,4 @@
-import { assert } from "/node_modules/@dmail/assert/index.js"
+import { assert } from "@dmail/assert"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 
 const transformAsyncToPromises = import.meta.require("babel-plugin-transform-async-to-promises")
@@ -26,6 +26,7 @@ const babelConfigMap = {
   const actual = await launchAndExecute({
     launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
     filenameRelative,
+    mirrorConsole: true,
     verbose: true,
   })
   const expected = {
