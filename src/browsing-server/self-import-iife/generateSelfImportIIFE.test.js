@@ -13,6 +13,5 @@ const actual = await generateSelfImportIIFE({
   compileServerOrigin: "http://example.com",
   filenameRelative: "folder/test.js",
 })
-debugger
 const expected = ""
 assert({ actual, expected })

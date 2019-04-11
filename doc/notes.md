@@ -1,8 +1,6 @@
 ## TODO
 
-- update @dmail/helper to use latest jsenv
-- make jsenv depends on latest itself
-  and ensure node deprecated warning are gone
+- update dmail/uneval to avoid circular dependency
 
 ## To keep in mind
 
