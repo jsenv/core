@@ -1,5 +1,10 @@
 const { startBrowsingServer } = require("@jsenv/core")
-const { importMap, projectFolder, compileInto, babelConfigMap } = require("../../jsenv.config.js")
+const {
+  readImportMap,
+  projectFolder,
+  compileInto,
+  babelConfigMap,
+} = require("../../jsenv.config.js")
 
 const browsableDescription = {
   "/index.js": true,
@@ -8,7 +13,7 @@ const browsableDescription = {
 }
 
 startBrowsingServer({
-  importMap,
+  importMap: readImportMap(),
   projectFolder,
   compileInto,
   babelConfigMap,

@@ -1,8 +1,8 @@
 const { bundleNode } = require("@jsenv/core")
-const { importMap, projectFolder, babelConfigMap } = require("../../jsenv.config.js")
+const { readImportMap, projectFolder, babelConfigMap } = require("../../jsenv.config.js")
 
 bundleNode({
-  importMap,
+  importMap: readImportMap(),
   projectFolder,
   into: "dist/node-client",
   babelConfigMap,

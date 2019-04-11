@@ -1,12 +1,12 @@
 import { assert } from "@dmail/assert"
 import { generateSelfImportIIFE } from "./generateSelfImportIIFE.js"
 
-const { importMap, projectFolder, compileInto, babelConfigMap } = import.meta.require(
+const { readImportMap, projectFolder, compileInto, babelConfigMap } = import.meta.require(
   "../../../jsenv.config.js",
 )
 
 const actual = await generateSelfImportIIFE({
-  importMap,
+  importMap: readImportMap(),
   projectFolder,
   babelConfigMap,
   compileInto,
