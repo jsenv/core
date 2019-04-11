@@ -6,5 +6,7 @@ generateImportMapForProjectNodeModules({
   projectFolder,
   logDuration: true,
 }).then((importMap) => {
-  fileWrite(`${projectFolder}/importMap.json`, JSON.stringify(importMap, null, "  "))
+  const importMapSource = JSON.stringify(importMap, null, "  ")
+  fileWrite(`${projectFolder}/importMap.json`, importMapSource)
+  console.log(importMapSource)
 })
