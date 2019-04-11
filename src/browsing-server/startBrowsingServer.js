@@ -1,17 +1,15 @@
 import { normalizePathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
+import {
+  namedValueDescriptionToMetaDescription,
+  selectAllFileInsideFolder,
+  pathnameToMeta,
+} from "@dmail/project-structure"
 import { uneval } from "@dmail/uneval"
 import { startServer, serviceCompose } from "../server/index.js"
 import { startCompileServer } from "../server-compile/index.js"
 import { guard } from "../functionHelper.js"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
-
-// required until jsenv importMap bug gets fixed
-const {
-  namedValueDescriptionToMetaDescription,
-  selectAllFileInsideFolder,
-  pathnameToMeta,
-} = import.meta.require("@dmail/project-structure")
 
 export const startBrowsingServer = async ({
   cancellationToken = createCancellationToken(),
