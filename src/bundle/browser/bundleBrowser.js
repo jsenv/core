@@ -19,51 +19,56 @@ export const bundleBrowser = async ({
   generateEntryPages = false,
 }) => {
   projectFolder = normalizePathname(projectFolder)
-  return await Promise.all([
-    bundlePlatform({
-      entryPointMap,
-      projectFolder,
-      into,
-      babelConfigMap,
-      compileGroupCount,
-      platformScoreMap,
-      verbose,
-      computeRollupOptionsWithoutBalancing: (context) =>
-        computeRollupOptionsWithoutBalancing({
-          importMap,
-          projectFolder,
-          into,
-          entryPointMap,
-          babelConfigMap,
-          minify,
-          ...context,
-        }),
-      computeRollupOptionsWithBalancing: (context) =>
-        computeRollupOptionsWithBalancing({
-          importMap,
-          projectFolder,
-          into,
-          entryPointMap,
-          babelConfigMap,
-          minify,
-          ...context,
-        }),
-      computeRollupOptionsForBalancer: (context) =>
-        computeRollupOptionsForBalancer({
-          importMap,
-          projectFolder,
-          into,
-          babelConfigMap,
-          minify,
-          ...context,
-        }),
-    }),
-    generateEntryPages
-      ? generateEntryPointMapPages({
-          projectFolder,
-          into,
-          entryPointMap,
-        })
-      : null,
-  ])
+  try {
+    return await Promise.all([
+      bundlePlatform({
+        entryPointMap,
+        projectFolder,
+        into,
+        babelConfigMap,
+        compileGroupCount,
+        platformScoreMap,
+        verbose,
+        computeRollupOptionsWithoutBalancing: (context) =>
+          computeRollupOptionsWithoutBalancing({
+            importMap,
+            projectFolder,
+            into,
+            entryPointMap,
+            babelConfigMap,
+            minify,
+            ...context,
+          }),
+        computeRollupOptionsWithBalancing: (context) =>
+          computeRollupOptionsWithBalancing({
+            importMap,
+            projectFolder,
+            into,
+            entryPointMap,
+            babelConfigMap,
+            minify,
+            ...context,
+          }),
+        computeRollupOptionsForBalancer: (context) =>
+          computeRollupOptionsForBalancer({
+            importMap,
+            projectFolder,
+            into,
+            babelConfigMap,
+            minify,
+            ...context,
+          }),
+      }),
+      generateEntryPages
+        ? generateEntryPointMapPages({
+            projectFolder,
+            into,
+            entryPointMap,
+          })
+        : null,
+    ])
+  } catch (e) {
+    process.exitCode = 1
+    throw e
+  }
 }
