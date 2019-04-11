@@ -4,7 +4,7 @@ import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
 const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 
-const testFolder = `${projectFolder}/test/launchn-node/disconnect`
+const testFolder = `${projectFolder}/test/launch-node/disconnect`
 const filenameRelative = `disconnect.js`
 const compileInto = ".dist"
 const babelConfigMap = {}
