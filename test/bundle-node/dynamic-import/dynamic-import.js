@@ -1,1 +1,1 @@
-export default await import("./answer.js")
+export default import("./answer.js")

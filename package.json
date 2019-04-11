@@ -28,7 +28,7 @@
 		"@dmail/helper": "2.1.0",
 		"@dmail/project-structure": "3.1.0",
 		"@dmail/uneval": "4.5.0",
-		"@jsenv/prettier-check-project": "1.0.0",
+		"@jsenv/prettier-check-project": "1.1.0",
 		"@jsenv/module-resolution": "2.4.0",
 		"abort-controller": "2.0.2",
 		"ansi-to-html": "0.6.9",

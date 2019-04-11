@@ -18,10 +18,11 @@ const testFolder = `${projectFolder}/test/bundle-node/dynamic-import-origin-rela
     verbose: false,
   })
 
-  const { namespace: actual } = await importNodeBundle({
+  const { namespace } = await importNodeBundle({
     bundleFolder: `${testFolder}/dist/node`,
     file: "main.js",
   })
+  const actual = await namespace
   const expected = { default: 42 }
   assert({ actual, expected })
 })()
