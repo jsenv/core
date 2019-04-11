@@ -1,10 +1,7 @@
+const { readFileSync } = require("fs")
 const { babelConfigMap } = require("./node_modules/@jsenv/babel-config-map/index.js")
 
-exports.readImportMap = () => {
-  const importMap = require("./importMap.json")
-  delete require.cache[require.resolve("./importMap.json")]
-  return importMap
-}
+exports.readImportMap = () => JSON.parse(String(readFileSync(`${__dirname}/importMap.json`)))
 
 const projectFolder = __dirname
 exports.projectFolder = projectFolder
