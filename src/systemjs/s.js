@@ -180,7 +180,7 @@
         // note if we have hoisted exports (including reexports)
         load.h = true;
         let changed = false;
-        if (typeof name !== 'object') {
+        if (typeof name !== 'object' && typeof name !== 'function') {
           if (!(name in ns) || ns[name] !== value) {
             ns[name] = value;
             changed = true;
