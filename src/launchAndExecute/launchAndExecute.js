@@ -318,7 +318,7 @@ const computeExecutionResult = async ({
       }
 
       if (winner === executionErrored) {
-        log(createExecutionErrorMessage({ error: value }))
+        console.error(createExecutionErrorMessage({ error: value }))
         onError(value)
         return createErroredExecutionResult({
           error: value,
@@ -328,7 +328,7 @@ const computeExecutionResult = async ({
       log(createExecutionDoneMessage({ value }))
 
       registerErrorCallback((error) => {
-        log(createAfterExecutionErrorMessage({ error }))
+        console.error(createAfterExecutionErrorMessage({ error }))
         errorAfterExecutedCallback(error)
         onError(error)
       })
