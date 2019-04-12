@@ -12,11 +12,23 @@ bundleBrowser({
   entryPointMap: {
     browserClient: "src/platform/browser/browserPlatform.js",
   },
-  verbose: true,
+  verbose: false,
   minify: false,
-})
+}).then(
+  () => console.log(`-> ${projectFolder}/dist/browser-client/browserClient.js`),
+  (e) =>
+    setTimeout(() => {
+      throw e
+    }),
+)
 
 fileCopy(
   `${projectFolder}/${SYSTEMJS_RELATIVE_PATH}`,
   `${projectFolder}/dist/browser-client/system.js`,
+).then(
+  () => console.log(`-> ${projectFolder}/dist/browser-client/system.js`),
+  (e) =>
+    setTimeout(() => {
+      throw e
+    }),
 )

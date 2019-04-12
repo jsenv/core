@@ -10,5 +10,11 @@ bundleNode({
     nodeClient: "src/launchNode/client.js",
   },
   compileGroupCount: 1,
-  verbose: true,
-})
+  verbose: false,
+}).then(
+  () => console.log(`-> ${projectFolder}/dist/node-client/nodeClient.js`),
+  (e) =>
+    setTimeout(() => {
+      throw e
+    }),
+)
