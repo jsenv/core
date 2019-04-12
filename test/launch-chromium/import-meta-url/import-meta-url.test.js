@@ -1,6 +1,6 @@
 import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
-import { launchAndExecute, startCompileServer, launchChromium } from "../../../index.js"
+import { startCompileServer, launchAndExecute, launchChromium } from "../../../index.js"
 
 const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const filenameRelative = `import-meta-url.js`
@@ -17,8 +17,8 @@ const { origin: compileServerOrigin } = await startCompileServer({
 
 const actual = await launchAndExecute({
   launch: (options) =>
-    launchChromium({ ...options, headless: false, compileInto, sourceOrigin, compileServerOrigin }),
-  stopOnceExecuted: false,
+    launchChromium({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
+  stopOnceExecuted: true,
   verbose: true,
   mirrorConsole: true,
   collectNamespace: true,
