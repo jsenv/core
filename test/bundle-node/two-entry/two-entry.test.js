@@ -17,7 +17,7 @@ await bundleNode({
   babelConfigMap: {
     "transform-block-scoping": [blockScoping],
   },
-  verbose: true,
+  verbose: false,
 })
 
 {

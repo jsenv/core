@@ -1,18 +1,16 @@
+import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { bundleNode } from "../../../index.js"
 
 const blockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
-const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 
-const testFolder = `${projectFolder}/test/bundle-node/https`
+const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 
-;(async () => {
-  await bundleNode({
-    projectFolder: testFolder,
-    entryPointMap: {
-      main: "https.js",
-    },
-    babelConfigMap: {
-      "transform-block-scoping": [blockScoping],
-    },
-  })
-})()
+await bundleNode({
+  projectFolder: testFolder,
+  entryPointMap: {
+    main: "https.js",
+  },
+  babelConfigMap: {
+    "transform-block-scoping": [blockScoping],
+  },
+})
