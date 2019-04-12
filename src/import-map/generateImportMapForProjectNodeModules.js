@@ -73,7 +73,7 @@ export const generateImportMapForProjectNodeModules = async ({
 
     const arrayOfDependencyToRemap = Object.keys({
       ...dependencies,
-      ...(remapDevDependencies ? devDependencies : {}),
+      ...(remapDevDependencies && isTopLevel ? devDependencies : {}),
     }).filter((dependencyName) => {
       return remapPredicate({
         importerName,
