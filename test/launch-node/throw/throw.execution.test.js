@@ -13,32 +13,28 @@ const filenameRelative = `throw.js`
 const compileInto = ".dist"
 const babelConfigMap = {}
 
-;(async () => {
-  const sourceOrigin = `file://${testFolder}`
+const sourceOrigin = `file://${testFolder}`
 
-  const { origin: compileServerOrigin } = await startCompileServer({
-    projectFolder: testFolder,
-    compileInto,
-    babelConfigMap,
-  })
+const { origin: compileServerOrigin } = await startCompileServer({
+  projectFolder: testFolder,
+  compileInto,
+  babelConfigMap,
+})
 
-  const actual = await launchAndExecute({
-    launch: (options) =>
-      launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin, debugPort: 40000 }),
-    captureConsole: true,
-    mirrorConsole: true,
-    filenameRelative,
-    verbose: true,
-  })
-  actual.platformLog = removeDebuggerLog(actual.platformLog)
-  const expected = {
-    status: "errored",
-    error: {
-      stack: actual.error.stack,
-      message: "error",
-    },
-    platformLog: `${actual.error.stack}
+const actual = await launchAndExecute({
+  launch: (options) =>
+    launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin, debugPort: 40000 }),
+  captureConsole: true,
+  filenameRelative,
+})
+actual.platformLog = removeDebuggerLog(actual.platformLog)
+const expected = {
+  status: "errored",
+  error: {
+    stack: actual.error.stack,
+    message: "error",
+  },
+  platformLog: `${actual.error.stack}
 `,
-  }
-  assert({ actual, expected })
-})()
+}
+assert({ actual, expected })

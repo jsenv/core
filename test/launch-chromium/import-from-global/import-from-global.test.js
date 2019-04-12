@@ -7,7 +7,7 @@ const filenameRelative = `import-from-global.js`
 const compileInto = ".dist"
 const babelConfigMap = {}
 
-const sourceOrigin = `file://${projectFolder}`
+const sourceOrigin = `file://${testFolder}`
 
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder: testFolder,

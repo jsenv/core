@@ -33,7 +33,6 @@ const actual = await launchAndExecute({
       headless: false,
     }),
   stopOnceExecuted: true,
-  mirrorConsole: true,
   collectNamespace: true,
   filenameRelative,
 })

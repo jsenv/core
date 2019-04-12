@@ -25,7 +25,6 @@ const actual = await launchAndExecute({
       headless: false,
     }),
   stopOnceExecuted: true,
-  mirrorConsole: true,
   captureConsole: true,
   filenameRelative,
 })

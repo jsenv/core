@@ -12,29 +12,25 @@ const filenameRelative = `throw-from-skipped.js`
 const compileInto = ".dist"
 const babelConfigMap = {}
 
-;(async () => {
-  const sourceOrigin = `file://${testFolder}`
+const sourceOrigin = `file://${testFolder}`
 
-  const { origin: compileServerOrigin } = await startCompileServer({
-    projectFolder: testFolder,
-    compileInto,
-    babelConfigMap,
-  })
+const { origin: compileServerOrigin } = await startCompileServer({
+  projectFolder: testFolder,
+  compileInto,
+  babelConfigMap,
+})
 
-  const actual = await launchAndExecute({
-    launch: (options) =>
-      launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin, debugPort: 40000 }),
-    captureConsole: false,
-    mirrorConsole: true,
-    filenameRelative,
-    verbose: true,
-  })
-  const expected = {
-    status: "errored",
-    error: {
-      stack: actual.error.stack,
-      message: "error",
-    },
-  }
-  assert({ actual, expected })
-})()
+const actual = await launchAndExecute({
+  launch: (options) =>
+    launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin, debugPort: 40000 }),
+  captureConsole: false,
+  filenameRelative,
+})
+const expected = {
+  status: "errored",
+  error: {
+    stack: actual.error.stack,
+    message: "error",
+  },
+}
+assert({ actual, expected })
