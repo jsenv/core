@@ -1,6 +1,7 @@
 ## TODO
 
-- update dmail/uneval to avoid circular dependency
+- test shared no module or scoped one
+  with cover, it looks broken according to travis
 
 ## To keep in mind
 
