@@ -1,20 +1,23 @@
-import { assert } from "/node_modules/@dmail/assert/index.js"
+import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
+import { assert } from "@dmail/assert"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
-const { projectFolder } = import.meta.require("../../../jsenv.config.js")
-// for this test filenameRelative is relative to ${workspaceFolder} because sourceMap
-// are absolute so vscode will try to find source from the root defined
-// in ${workspaceFolder}/.vscode/launch.json#sourceMapPathOverrides['/*']
-const filenameRelative = `test/launch-node/throw/throw.js`
+// sourcemap will not work because testFolder !== projectFolder
+// but vscode will try to resolved them against projectFolder
+// see ${workspaceFolder}/.vscode/launch.json#sourceMapPathOverrides['/*']
+// someday I should retry to use relative sourcemap and make them work
+// with both vscode and browsers
+const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
+const filenameRelative = `throw.js`
 const compileInto = ".dist"
 const babelConfigMap = {}
 
 ;(async () => {
-  const sourceOrigin = `file://${projectFolder}`
+  const sourceOrigin = `file://${testFolder}`
 
   const { origin: compileServerOrigin } = await startCompileServer({
-    projectFolder,
+    projectFolder: testFolder,
     compileInto,
     babelConfigMap,
   })

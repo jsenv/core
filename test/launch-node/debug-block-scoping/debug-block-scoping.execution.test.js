@@ -1,32 +1,31 @@
-import { assert } from "/node_modules/@dmail/assert/index.js"
+import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
+import { assert } from "@dmail/assert"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 
-const { projectFolder } = import.meta.require("../../../jsenv.config.js")
-
-const testFolder = projectFolder
-// for debugging I need filenameRelative
-// to be relative to projectFolder so that vscode
-// knows where sourcefiles are
-const filenameRelative = `test/launch-node/debug-block-scoping/debug-block-scoping.js`
+// sourcemap will not work because testFolder !== projectFolder
+// but vscode will try to resolved them against projectFolder
+// see ${workspaceFolder}/.vscode/launch.json#sourceMapPathOverrides['/*']
+// someday I should retry to use relative sourcemap and make them work
+// with both vscode and browsers
+const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
+const filenameRelative = `debug-block-scoping.js`
 const compileInto = ".dist"
 const babelConfigMap = { "transform-block-scoping": [] }
 
-;(async () => {
-  const sourceOrigin = `file://${testFolder}`
+const sourceOrigin = `file://${testFolder}`
 
-  const { origin: compileServerOrigin } = await startCompileServer({
-    projectFolder: testFolder,
-    compileInto,
-    babelConfigMap,
-  })
+const { origin: compileServerOrigin } = await startCompileServer({
+  projectFolder: testFolder,
+  compileInto,
+  babelConfigMap,
+})
 
-  const actual = await launchAndExecute({
-    launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
-    filenameRelative,
-    verbose: true,
-  })
-  const expected = {
-    status: "completed",
-  }
-  assert({ actual, expected })
-})()
+const actual = await launchAndExecute({
+  launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
+  filenameRelative,
+  verbose: true,
+})
+const expected = {
+  status: "completed",
+}
+assert({ actual, expected })

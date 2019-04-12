@@ -1,14 +1,16 @@
+import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 
 const transformAsyncToPromises = import.meta.require("babel-plugin-transform-async-to-promises")
-const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 
-const testFolder = projectFolder
-// for debugging I need filenameRelative
-// to be relative to projectFolder so that vscode
-// knows where sourcefiles are
-const filenameRelative = `test/launch-node/debug-export-named/debug-export-named.js`
+// sourcemap will not work because testFolder !== projectFolder
+// but vscode will try to resolved them against projectFolder
+// see ${workspaceFolder}/.vscode/launch.json#sourceMapPathOverrides['/*']
+// someday I should retry to use relative sourcemap and make them work
+// with both vscode and browsers
+const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
+const filenameRelative = `debug-export-named.js`
 const compileInto = ".dist"
 const babelConfigMap = {
   "transform-async-to-promises": [transformAsyncToPromises],
