@@ -25,16 +25,16 @@ const testDescription = {
   // "/test/bundle-node/top-level-await/": {
   //   node: null,
   // },
-  "/test/launch-chromium/**/*.test.js": {
-    node: {
-      launch: launchNode,
-    },
-  },
-  // "/test/launch-node/**/*.test.js": {
+  // "/test/launch-chromium/**/*.test.js": {
   //   node: {
   //     launch: launchNode,
   //   },
   // },
+  "/test/launch-node/**/*.test.js": {
+    node: {
+      launch: launchNode,
+    },
+  },
   // "/test/generate-import-map/**/*.test.js": {
   //   node: {
   //     launch: launchNode,
