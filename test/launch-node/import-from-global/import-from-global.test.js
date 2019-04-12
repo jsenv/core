@@ -10,6 +10,7 @@ const babelConfigMap = {}
 const sourceOrigin = `file://${testFolder}`
 
 const { origin: compileServerOrigin } = await startCompileServer({
+  verbose: false,
   projectFolder: testFolder,
   compileInto,
   babelConfigMap,
