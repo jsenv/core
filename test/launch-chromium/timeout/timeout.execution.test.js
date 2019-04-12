@@ -27,7 +27,6 @@ const actual = await launchAndExecute({
       compileInto,
       sourceOrigin,
       compileServerOrigin,
-      headless: false,
     }),
   allocatedMs: 5000,
   stopOnceExecuted: true,

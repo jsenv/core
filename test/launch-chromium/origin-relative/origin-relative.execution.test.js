@@ -17,7 +17,7 @@ const { origin: compileServerOrigin } = await startCompileServer({
 })
 
 const actual = await launchAndExecute({
-  launch: () => launchChromium({ compileInto, sourceOrigin, compileServerOrigin, headless: false }),
+  launch: () => launchChromium({ compileInto, sourceOrigin, compileServerOrigin }),
   stopOnceExecuted: true,
   filenameRelative,
   collectNamespace: true,
