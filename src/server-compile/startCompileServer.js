@@ -33,6 +33,7 @@ export const startCompileServer = async ({
   verbose,
   transformTopLevelAwait,
   enableGlobalLock,
+  track404,
 }) => {
   if (typeof projectFolder !== "string")
     throw new TypeError(`projectFolder must be a string. got ${projectFolder}`)
@@ -59,6 +60,7 @@ export const startCompileServer = async ({
     requestToFileResponse(request, {
       projectFolder,
       locate: locateFileSystem,
+      track404,
       cacheIgnore: sourceCacheIgnore,
       cacheStrategy: sourceCacheStrategy,
     }),
@@ -110,11 +112,6 @@ const locateFileSystem = ({ rootHref, filenameRelative }) => {
   // 'node_modules/@jsenv/core` is an alias to rootHref
   if (filenameRelative.startsWith("node_modules/@jsenv/core")) {
     const sourceOrigin = `file://${ROOT_FOLDER}`
-    console.log("requesting jsenv internal file", {
-      rootHref,
-      sourceOrigin,
-      filenameRelative,
-    })
     if (rootHref === sourceOrigin || rootHref.startsWith(`${sourceOrigin}/`)) {
       const filenameRelativeSelf = filenameRelative.slice("node_modules/@jsenv/core/".length)
       return `${sourceOrigin}/${filenameRelativeSelf}`

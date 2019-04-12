@@ -10,7 +10,8 @@ const babelConfigMap = {}
 const sourceOrigin = `file://${testFolder}`
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  verbose: false,
+  verbose: true,
+  track404: true,
   projectFolder: testFolder,
   compileInto,
   babelConfigMap,
@@ -24,7 +25,8 @@ const actual = await launchAndExecute({
       compileInto,
       compileServerOrigin,
     }),
-  verbose: false,
+  verbose: true,
+  mirrorConsole: true,
   stopOnceExecuted: true,
   filenameRelative,
   collectNamespace: true,

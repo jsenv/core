@@ -24,6 +24,7 @@ export const requestToFileResponse = async (
     getFileContentAsString = fileRead,
     fileToBody = createReadStream,
     cacheStrategy = "mtime",
+    track404 = false,
   },
 ) => {
   if (method !== "GET" && method !== "HEAD") {
@@ -39,6 +40,12 @@ export const requestToFileResponse = async (
     const href = await locate({ origin, rootHref, filenameRelative })
 
     if (!href) {
+      if (track404) {
+        console.log(`cannot locate file.
+origin: ${origin},
+rootHref: ${rootHref},
+filenameRelative :${filenameRelative}`)
+      }
       return {
         status: 404,
       }
@@ -72,7 +79,16 @@ export const requestToFileResponse = async (
     const cacheWithMtime = cacheStrategy === "mtime"
     const cacheWithETag = cacheStrategy === "etag"
     const cachedDisabled = cacheStrategy === "none"
-    const stat = await getFileStat(filename)
+    let stat
+    try {
+      stat = await getFileStat(filename)
+    } catch (e) {
+      if (track404 && e && e.code === "ENOENT") {
+        console.log(`cannot find located file.
+filename: ${filename}`)
+      }
+      throw e
+    }
 
     if (stat.isDirectory()) {
       if (canReadDirectory === false) {
