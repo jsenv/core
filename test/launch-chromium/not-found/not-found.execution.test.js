@@ -19,6 +19,7 @@ const actual = await launchAndExecute({
   launch: () => launchChromium({ compileInto, sourceOrigin, compileServerOrigin, headless: false }),
   stopOnceExecuted: true,
   filenameRelative,
+  verbose: false,
 })
 const expected = {
   status: "errored",

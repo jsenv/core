@@ -35,6 +35,7 @@ const actual = await launchAndExecute({
   stopOnceExecuted: true,
   collectNamespace: true,
   filenameRelative,
+  verbose: false,
 })
 const expected = {
   status: "completed",

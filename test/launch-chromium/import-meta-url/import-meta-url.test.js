@@ -19,8 +19,7 @@ const actual = await launchAndExecute({
   launch: (options) =>
     launchChromium({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
   stopOnceExecuted: true,
-  verbose: true,
-  mirrorConsole: true,
+  verbose: false,
   collectNamespace: true,
   filenameRelative,
 })

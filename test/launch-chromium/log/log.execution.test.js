@@ -27,6 +27,7 @@ const actual = await launchAndExecute({
   stopOnceExecuted: true,
   captureConsole: true,
   filenameRelative,
+  verbose: false,
 })
 const expected = {
   status: "completed",
