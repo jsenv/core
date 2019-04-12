@@ -306,22 +306,29 @@ const createPageTracker = (browser, { onError, onConsole }) => {
             const text = message.text()
             if (text === "JSHandle@error") {
               const errorHandle = message._args[0]
-              // ensure we use a string so that istanbul won't try
-              // to put any coverage statement inside it
-              // eslint-disable-next-line no-new-func
-              const fn = new Function(
-                "value",
-                `if (value instanceof Error) {
+
+              try {
+                // ensure we use a string so that istanbul won't try
+                // to put any coverage statement inside it
+                // eslint-disable-next-line no-new-func
+                const fn = new Function(
+                  "value",
+                  `if (value instanceof Error) {
                   return value.stack
                 }
                 return value`,
-              )
-
-              const stack = await errorHandle.executionContext().evaluate(fn, errorHandle)
-              onConsole({
-                type: "error",
-                text: appendNewLine(stack),
-              })
+                )
+                const stack = await errorHandle.executionContext().evaluate(fn, errorHandle)
+                onConsole({
+                  type: "error",
+                  text: appendNewLine(stack),
+                })
+              } catch (e) {
+                onConsole({
+                  type: "error",
+                  text: String(errorHandle),
+                })
+              }
             } else {
               onConsole({
                 type,

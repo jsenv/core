@@ -22,7 +22,6 @@ const actual = await launchAndExecute({
   collectNamespace: true,
   collectCoverage: true,
   filenameRelative,
-  mirrorConsole: true,
   verbose: false,
 })
 const expected = {
