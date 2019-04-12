@@ -169,11 +169,13 @@ export const launchChromium = async ({
         collectCoverage,
         browserClientHref: `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/browserClient.js`,
       })
+      const expressionString = `(${functionString})()`
+      console.log({ expressionString })
       // https://github.com/GoogleChrome/puppeteer/blob/v1.14.0/docs/api.md#pageevaluatepagefunction-args
       // yes evaluate supports passing a function directly
       // but when I do that, istanbul will put coverage statement inside it
       // and I don't want that because function is evaluated client side
-      return await page.evaluate(`(${functionString})()`)
+      return await page.evaluate(expressionString)
     }
     try {
       const { status, coverageMap, error, namespace } = await execute()
