@@ -7,7 +7,6 @@ const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const filenameRelative = `log.js`
 const compileInto = ".dist"
 const babelConfigMap = {}
-
 const sourceOrigin = `file://${testFolder}`
 
 const { origin: compileServerOrigin } = await startCompileServer({

@@ -6,7 +6,6 @@ const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const filenameRelative = `import-from-global.js`
 const compileInto = ".dist"
 const babelConfigMap = {}
-
 const sourceOrigin = `file://${testFolder}`
 
 const { origin: compileServerOrigin } = await startCompileServer({

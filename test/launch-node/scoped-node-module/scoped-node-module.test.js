@@ -11,7 +11,6 @@ const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const filenameRelative = `scoped-node-module.js`
 const compileInto = ".dist"
 const babelConfigMap = {}
-
 const sourceOrigin = `file://${testFolder}`
 
 const importMap = await generateImportMapForProjectNodeModules({ projectFolder: testFolder })

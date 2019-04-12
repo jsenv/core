@@ -5,8 +5,8 @@ import { startCompileServer, launchAndExecute, launchNode } from "../../../index
 const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const filenameRelative = `not-found.js`
 const compileInto = ".dist"
+const compileIdOption = "otherwise"
 const babelConfigMap = {}
-
 const sourceOrigin = `file://${testFolder}`
 
 const { origin: compileServerOrigin } = await startCompileServer({
@@ -17,7 +17,8 @@ const { origin: compileServerOrigin } = await startCompileServer({
 })
 
 const actual = await launchAndExecute({
-  launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
+  launch: (options) =>
+    launchNode({ ...options, compileInto, compileIdOption, sourceOrigin, compileServerOrigin }),
   filenameRelative,
   verbose: false,
 })
@@ -26,10 +27,10 @@ const expected = {
   error: {
     stack: actual.error.stack,
     message: `module not found.
-href: ${compileServerOrigin}/${compileInto}/otherwise/foo.js
-importerHref: ${compileServerOrigin}/${compileInto}/otherwise/not-found.js`,
-    href: `${compileServerOrigin}/${compileInto}/otherwise/foo.js`,
-    importerHref: `${compileServerOrigin}/${compileInto}/otherwise/not-found.js`,
+href: ${compileServerOrigin}/${compileInto}/${compileIdOption}/foo.js
+importerHref: ${compileServerOrigin}/${compileInto}/${compileIdOption}/not-found.js`,
+    href: `${compileServerOrigin}/${compileInto}/${compileIdOption}/foo.js`,
+    importerHref: `${compileServerOrigin}/${compileInto}/${compileIdOption}/not-found.js`,
     code: "MODULE_NOT_FOUND_ERROR",
   },
 }

@@ -10,7 +10,6 @@ const compileInto = ".dist"
 const babelConfigMap = {
   "transform-classes": [babelPluginTransformClasses, {}],
 }
-
 const sourceOrigin = `file://${testFolder}`
 
 const { origin: compileServerOrigin } = await startCompileServer({

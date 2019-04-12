@@ -11,7 +11,6 @@ const compileInto = ".dist"
 const babelConfigMap = {
   "transform-async-to-promises": [transformAsyncToPromises],
 }
-
 const sourceOrigin = `file://${testFolder}`
 
 const { origin: compileServerOrigin } = await startCompileServer({

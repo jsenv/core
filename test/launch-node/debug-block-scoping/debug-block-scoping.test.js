@@ -13,7 +13,6 @@ const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const filenameRelative = `debug-block-scoping.js`
 const compileInto = ".dist"
 const babelConfigMap = { "transform-block-scoping": [transformBlockScoping] }
-
 const sourceOrigin = `file://${testFolder}`
 
 const { origin: compileServerOrigin } = await startCompileServer({

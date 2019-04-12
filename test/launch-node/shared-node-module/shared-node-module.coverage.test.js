@@ -1,12 +1,14 @@
 import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { createInstrumentPlugin } from "../../../src/cover/createInstrumentPlugin.js"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 
 const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const filenameRelative = `shared-node-module.js`
 const compileInto = ".dist"
-const babelConfigMap = {}
-
+const babelConfigMap = {
+  "transform-instrument": [createInstrumentPlugin()],
+}
 const sourceOrigin = `file://${testFolder}`
 
 const { origin: compileServerOrigin } = await startCompileServer({

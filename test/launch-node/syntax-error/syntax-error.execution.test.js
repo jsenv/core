@@ -5,8 +5,8 @@ import { startCompileServer, launchAndExecute, launchNode } from "../../../index
 const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const filenameRelative = `syntax-error.js`
 const compileInto = ".dist"
+const compileIdOption = "otherwise"
 const babelConfigMap = {}
-
 const sourceOrigin = `file://${testFolder}`
 
 const { origin: compileServerOrigin } = await startCompileServer({
@@ -26,16 +26,16 @@ const expected = {
   error: {
     stack: actual.error.stack,
     message: `error while parsing module.
-href: ${compileServerOrigin}/${compileInto}/otherwise/syntax-error.js
+href: ${compileServerOrigin}/${compileInto}/${compileIdOption}/syntax-error.js
 importerHref: undefined
 parseErrorMessage: ${actual.error.parseError.message}`,
-    href: `${compileServerOrigin}/${compileInto}/otherwise/syntax-error.js`,
+    href: `${compileServerOrigin}/${compileInto}/${compileIdOption}/syntax-error.js`,
     importerHref: undefined,
     parseError: {
       name: "PARSE_ERROR",
       message: actual.error.parseError.message,
       messageHTML: actual.error.parseError.messageHTML,
-      href: `${compileServerOrigin}/${compileInto}/otherwise/syntax-error.js`,
+      href: `${compileServerOrigin}/${compileInto}/${compileIdOption}/syntax-error.js`,
       lineNumber: 1,
       columnNumber: 14,
     },

@@ -6,7 +6,6 @@ const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const filenameRelative = `alive.js`
 const compileInto = ".dist"
 const babelConfigMap = {}
-
 const sourceOrigin = `file://${testFolder}`
 
 const { origin: compileServerOrigin } = await startCompileServer({
@@ -19,6 +18,7 @@ const { origin: compileServerOrigin } = await startCompileServer({
 const actual = await launchAndExecute({
   launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
   filenameRelative,
+  verbose: false,
 })
 const expected = {
   status: "completed",

@@ -11,7 +11,6 @@ const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const filenameRelative = `throw-from-skipped.js`
 const compileInto = ".dist"
 const babelConfigMap = {}
-
 const sourceOrigin = `file://${testFolder}`
 
 const { origin: compileServerOrigin } = await startCompileServer({
@@ -22,8 +21,7 @@ const { origin: compileServerOrigin } = await startCompileServer({
 })
 
 const actual = await launchAndExecute({
-  launch: (options) =>
-    launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin, debugPort: 40000 }),
+  launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
   captureConsole: false,
   filenameRelative,
   verbose: false,
