@@ -30,15 +30,15 @@ const testDescription = {
   //     launch: launchNode,
   //   },
   // },
-  "/test/launch-node/**/*.test.js": {
-    node: {
-      launch: launchNode,
-    },
-  },
-  // "/test/generate-import-map/**/*.test.js": {
+  // "/test/launch-node/**/*.test.js": {
   //   node: {
   //     launch: launchNode,
   //   },
   // },
+  "/test/generate-import-map/**/*.test.js": {
+    node: {
+      launch: launchNode,
+    },
+  },
 }
 exports.testDescription = testDescription

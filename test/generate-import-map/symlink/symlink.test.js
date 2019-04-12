@@ -1,5 +1,5 @@
 import { pathnameToDirname, hrefToPathname } from "@jsenv/module-resolution"
-import { assert } from "/node_modules/@dmail/assert/index.js"
+import { assert } from "@dmail/assert"
 import { generateImportMapForProjectNodeModules } from "../../../index.js"
 
 const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
