@@ -50,11 +50,6 @@ export const launchChromium = async ({
     headless,
     // because we use a self signed certificate
     ignoreHTTPSErrors: true,
-    // let's handle them to close properly browser, remove listener
-    // and so on, instead of relying on puppetter
-    handleSIGINT: false,
-    handleSIGTERM: false,
-    handleSIGHUP: false,
     args: [
       // https://github.com/GoogleChrome/puppeteer/issues/1834
       // https://github.com/GoogleChrome/puppeteer/blob/master/docs/troubleshooting.md#tips
@@ -77,7 +72,14 @@ export const launchChromium = async ({
   const browserOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
-      const browser = await puppeteer.launch(options)
+      const browser = await puppeteer.launch({
+        ...options,
+        // let's handle them to close properly browser, remove listener
+        // and so on, instead of relying on puppetter
+        handleSIGINT: false,
+        handleSIGTERM: false,
+        handleSIGHUP: false,
+      })
 
       const targetTracker = createTargetTracker(browser)
       registerCleanupCallback(targetTracker.stop)
