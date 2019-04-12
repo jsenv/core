@@ -26,6 +26,7 @@ const actual = await launchAndExecute({
     launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin, debugPort: 40000 }),
   captureConsole: true,
   filenameRelative,
+  verbose: false,
 })
 actual.platformLog = removeDebuggerLog(actual.platformLog)
 const expected = {

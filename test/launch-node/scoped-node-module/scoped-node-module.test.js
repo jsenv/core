@@ -25,10 +25,9 @@ const { origin: compileServerOrigin } = await startCompileServer({
 
 const actual = await launchAndExecute({
   launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
-  mirrorConsole: true,
   collectNamespace: true,
   filenameRelative,
-  verbose: true,
+  verbose: false,
 })
 const expected = {
   status: "completed",

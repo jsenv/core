@@ -19,11 +19,12 @@ const actual = await launchAndExecute({
   launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
   collectNamespace: true,
   filenameRelative,
+  verbose: false,
 })
 const expected = {
   status: "completed",
   namespace: {
-    default: `${compileServerOrigin}/${compileInto}/best/${filenameRelative}`,
+    default: import.meta.url,
   },
 }
 assert({ actual, expected })

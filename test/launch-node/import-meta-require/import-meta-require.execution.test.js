@@ -19,6 +19,7 @@ const actual = await launchAndExecute({
   launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
   filenameRelative,
   collectNamespace: true,
+  verbose: false,
 })
 const expected = {
   status: "completed",

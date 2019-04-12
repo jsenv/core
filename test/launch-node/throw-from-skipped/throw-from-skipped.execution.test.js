@@ -25,6 +25,7 @@ const actual = await launchAndExecute({
     launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin, debugPort: 40000 }),
   captureConsole: false,
   filenameRelative,
+  verbose: false,
 })
 const expected = {
   status: "errored",

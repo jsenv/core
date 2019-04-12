@@ -25,6 +25,7 @@ const actual = await launchAndExecute({
   allocatedMs: 5000,
   captureConsole: true,
   filenameRelative,
+  verbose: false,
 })
 actual.platformLog = removeDebuggerLog(actual.platformLog)
 const expected = {

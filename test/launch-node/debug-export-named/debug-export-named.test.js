@@ -16,23 +16,20 @@ const babelConfigMap = {
   "transform-async-to-promises": [transformAsyncToPromises],
 }
 
-;(async () => {
-  const sourceOrigin = `file://${testFolder}`
+const sourceOrigin = `file://${testFolder}`
 
-  const { origin: compileServerOrigin } = await startCompileServer({
-    projectFolder: testFolder,
-    compileInto,
-    babelConfigMap,
-  })
+const { origin: compileServerOrigin } = await startCompileServer({
+  projectFolder: testFolder,
+  compileInto,
+  babelConfigMap,
+})
 
-  const actual = await launchAndExecute({
-    launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
-    filenameRelative,
-    mirrorConsole: true,
-    verbose: true,
-  })
-  const expected = {
-    status: "completed",
-  }
-  assert({ actual, expected })
-})()
+const actual = await launchAndExecute({
+  launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
+  filenameRelative,
+  verbose: false,
+})
+const expected = {
+  status: "completed",
+}
+assert({ actual, expected })
