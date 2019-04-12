@@ -25,7 +25,7 @@ const actual = await launchAndExecute({
 const expected = {
   status: "completed",
   namespace: {
-    default: `${testFolder}/${filenameRelative}`,
+    default: `file://${testFolder}/${filenameRelative}`,
   },
 }
 assert({ actual, expected })
