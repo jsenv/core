@@ -23,7 +23,6 @@ const actual = await launchAndExecute({
       sourceOrigin,
       compileInto,
       compileServerOrigin,
-
     }),
   verbose: false,
   stopOnceExecuted: true,
