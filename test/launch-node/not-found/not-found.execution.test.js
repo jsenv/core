@@ -25,11 +25,11 @@ const expected = {
   status: "errored",
   error: {
     stack: actual.error.stack,
-    message: `file not found.
-file: foo.js
-importerFile: not-found.js`,
-    file: "foo.js",
-    importerFile: "not-found.js",
+    message: `module not found.
+href: ${compileServerOrigin}/${compileInto}/otherwise/foo.js
+importerHref: ${compileServerOrigin}/${compileInto}/otherwise/not-found.js`,
+    href: `${compileServerOrigin}/${compileInto}/otherwise/foo.js`,
+    importerHref: `${compileServerOrigin}/${compileInto}/otherwise/not-found.js`,
     code: "MODULE_NOT_FOUND_ERROR",
   },
 }
