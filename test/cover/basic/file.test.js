@@ -1,8 +1,9 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { cover, launchNode, launchChromium } from "../../index.js"
+import { cover, launchNode, launchChromium } from "../../../index.js"
 
-const { projectFolder } = import.meta.require("../../jsenv.config.js")
-const testFolder = `${projectFolder}/test/cover`
+const { projectFolder } = import.meta.require("../../../jsenv.config.js")
+
+const testFolder = `${projectFolder}/test/cover/basic`
 const compileInto = ".dist"
 
 ;(async () => {
