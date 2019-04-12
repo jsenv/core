@@ -163,6 +163,8 @@ export const launchChromium = async ({
 
     const execute = async () => {
       await page.goto(indexOrigin)
+      // Do not instrument this function, it will be executed client side
+      /* istanbul ignore next */
       return await page.evaluate(
         ({
           compileInto,
