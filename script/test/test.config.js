@@ -30,7 +30,12 @@ const testDescription = {
   //     launch: launchNode,
   //   },
   // },
-  "/test/launch-node/**/*.test.js": {
+  "/test/launch-node/debug-export-named/*.test.js": {
+    node: {
+      launch: launchNode,
+    },
+  },
+  "/test/launch-node/disconnect/*.test.js": {
     node: {
       launch: launchNode,
     },
