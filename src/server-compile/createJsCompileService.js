@@ -7,9 +7,9 @@ import {
   browserScoreMap as browserDefaultScoreMap,
   nodeVersionScoreMap as nodeDefaultVersionScoreMap,
 } from "../group-map/index.js"
+import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
 import { wrapImportMap } from "../import-map/wrapImportMap.js"
 import { objectMapValue } from "../objectHelper.js"
-import { readFileSync } from "fs"
 
 export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),
@@ -30,9 +30,10 @@ export const createJsCompileService = async ({
   transformTopLevelAwait,
   enableGlobalLock,
 }) => {
-  const importMap = importMapFilenameRelative
-    ? JSON.parse(String(readFileSync(`${projectFolder}/${importMapFilenameRelative}`)))
-    : {}
+  const importMap = readProjectImportMap({
+    projectFolder,
+    importMapFilenameRelative,
+  })
 
   const groupMap = generateGroupMap({
     babelConfigMap,

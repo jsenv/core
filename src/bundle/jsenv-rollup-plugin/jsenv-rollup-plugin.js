@@ -1,6 +1,5 @@
 /* eslint-disable import/max-dependencies */
 import { resolve } from "url"
-import { readFileSync } from "fs"
 import { fileRead, fileWrite } from "/node_modules/@dmail/helper/index.js"
 import { createOperation } from "/node_modules/@dmail/cancellation/index.js"
 import {
@@ -13,6 +12,7 @@ import { fetchUsingHttp } from "../../platform/node/fetchUsingHttp.js"
 import { readSourceMappingURL } from "../../replaceSourceMappingURL.js"
 import { transpiler, findAsyncPluginNameInBabelConfigMap } from "../../jsCompile/transpiler.js"
 import { writeSourceMapLocation } from "../../jsCompile/jsCompile.js"
+import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { computeBabelConfigMapSubset } from "./computeBabelConfigMapSubset.js"
 
 const { minify: minifyCode } = import.meta.require("terser")
@@ -33,9 +33,10 @@ export const createJsenvRollupPlugin = ({
   detectAndTransformIfNeededAsyncInsertedByRollup = target === "browser",
   dir,
 }) => {
-  const importMap = importMapFilenameRelative
-    ? JSON.parse(String(readFileSync(`${projectFolder}/${importMapFilenameRelative}`)))
-    : {}
+  const importMap = readProjectImportMap({
+    projectFolder,
+    importMapFilenameRelative,
+  })
 
   const babelConfigMapSubset = computeBabelConfigMapSubset({
     HELPER_FILENAME,
