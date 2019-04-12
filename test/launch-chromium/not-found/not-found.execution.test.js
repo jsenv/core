@@ -5,6 +5,7 @@ import { launchAndExecute, startCompileServer, launchChromium } from "../../../i
 const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const filenameRelative = `not-found.js`
 const compileInto = ".dist"
+const compileIdOption = "otherwise"
 const babelConfigMap = {}
 
 const sourceOrigin = `file://${testFolder}`
@@ -17,7 +18,7 @@ const { origin: compileServerOrigin } = await startCompileServer({
 })
 
 const actual = await launchAndExecute({
-  launch: () => launchChromium({ compileInto, sourceOrigin, compileServerOrigin }),
+  launch: () => launchChromium({ compileInto, compileIdOption, sourceOrigin, compileServerOrigin }),
   stopOnceExecuted: true,
   filenameRelative,
   verbose: false,
@@ -25,10 +26,13 @@ const actual = await launchAndExecute({
 const expected = {
   status: "errored",
   error: {
-    code: "MODULE_NOT_FOUND_ERROR",
-    message: `src/launchChromium/test/not-found/foo.js not found`,
     stack: actual.error.stack,
-    url: `${compileServerOrigin}/${compileInto}/best/src/launchChromium/test/not-found/foo.js`,
+    message: `module not found.
+href: ${sourceOrigin}/${compileInto}/${compileIdOption}/foo.js
+importerHref: ${sourceOrigin}/${compileInto}/${compileIdOption}/not-found.js`,
+    href: `${compileServerOrigin}/${compileInto}/${compileIdOption}/foo.js`,
+    importerHref: `${compileServerOrigin}/${compileInto}/${compileIdOption}/not-found.js`,
+    code: "MODULE_NOT_FOUND_ERROR",
   },
 }
 assert({ actual, expected })
