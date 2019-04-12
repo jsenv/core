@@ -17,6 +17,8 @@ const coverDescription = {
   "/**/test/": false, // inside a test folder -> nope
 }
 
+const generateFile = true
+
 const generateLog = true
 
 const generateHTMLFiles = true
@@ -31,7 +33,9 @@ const generateHTMLFiles = true
     executeDescription: testDescription,
   })
 
-  fileWrite(coverageFile, JSON.stringify(coverageMap, null, "  "))
+  if (generateFile) {
+    fileWrite(coverageFile, JSON.stringify(coverageMap, null, "  "))
+  }
   if (generateLog) {
     generateCoverageLog(coverageMap)
   }
