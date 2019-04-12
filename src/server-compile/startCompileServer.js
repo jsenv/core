@@ -12,8 +12,8 @@ import { createJsCompileService } from "./createJsCompileService.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
-  importMap,
   projectFolder,
+  importMapFilenameRelative,
   compileInto,
   compileGroupCount = 1,
   babelConfigMap,
@@ -40,8 +40,8 @@ export const startCompileServer = async ({
   projectFolder = normalizePathname(projectFolder)
   const jsCompileService = await createJsCompileService({
     cancellationToken,
-    importMap,
     projectFolder,
+    importMapFilenameRelative,
     compileInto,
     compileGroupCount,
     babelConfigMap,

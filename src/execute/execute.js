@@ -7,7 +7,7 @@ import {
 } from "../cancellationHelper.js"
 
 export const execute = async ({
-  importMap,
+  importMapFilenameRelative,
   projectFolder,
   compileInto,
   babelConfigMap,
@@ -29,7 +29,7 @@ export const execute = async ({
 
     const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
-      importMap,
+      importMapFilenameRelative,
       projectFolder,
       compileInto,
       babelConfigMap,

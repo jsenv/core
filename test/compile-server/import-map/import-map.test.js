@@ -7,13 +7,7 @@ const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const compileInto = ".dist"
 const babelConfigMap = { "transform-block-scoping": true }
 
-const importMap = {
-  imports: {
-    "/foo": "/foo.js",
-  },
-}
 const compileServer = await startCompileServer({
-  importMap,
   projectFolder: testFolder,
   compileInto,
   babelConfigMap,

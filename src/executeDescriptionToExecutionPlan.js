@@ -6,7 +6,7 @@ import { startCompileServer } from "./server-compile/index.js"
 
 export const executeDescriptionToExecutionPlan = async ({
   cancellationToken,
-  importMap,
+  importMapFilenameRelative,
   projectFolder,
   compileInto,
   compileGroupCount,
@@ -20,7 +20,7 @@ export const executeDescriptionToExecutionPlan = async ({
 
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
-    importMap,
+    importMapFilenameRelative,
     projectFolder,
     compileInto,
     compileGroupCount,

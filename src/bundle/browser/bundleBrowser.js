@@ -8,7 +8,7 @@ import { generateEntryPointMapPages } from "./generateEntryPointMapPages.js"
 
 export const bundleBrowser = async ({
   projectFolder,
-  importMap,
+  importMapFilenameRelative,
   into,
   entryPointMap,
   babelConfigMap,
@@ -31,7 +31,7 @@ export const bundleBrowser = async ({
         verbose,
         computeRollupOptionsWithoutBalancing: (context) =>
           computeRollupOptionsWithoutBalancing({
-            importMap,
+            importMapFilenameRelative,
             projectFolder,
             into,
             entryPointMap,
@@ -41,7 +41,7 @@ export const bundleBrowser = async ({
           }),
         computeRollupOptionsWithBalancing: (context) =>
           computeRollupOptionsWithBalancing({
-            importMap,
+            importMapFilenameRelative,
             projectFolder,
             into,
             entryPointMap,
@@ -51,7 +51,6 @@ export const bundleBrowser = async ({
           }),
         computeRollupOptionsForBalancer: (context) =>
           computeRollupOptionsForBalancer({
-            importMap,
             projectFolder,
             into,
             babelConfigMap,

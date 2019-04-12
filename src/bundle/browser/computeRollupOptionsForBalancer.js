@@ -49,8 +49,8 @@ export const computeRollupOptionsForBalancer = ({
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({
     cancellationToken,
-    importMap: {},
     projectFolder,
+    importMapFilenameRelative: null,
     dir: pathnameToDirname(file),
     featureNameArray: groupMap.otherwise.incompatibleNameArray,
     babelConfigMap,

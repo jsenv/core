@@ -4,7 +4,7 @@ import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
 
 export const computeRollupOptionsWithBalancing = ({
   cancellationToken,
-  importMap,
+  importMapFilenameRelative,
   projectFolder,
   into,
   entryPointMap,
@@ -22,7 +22,7 @@ export const computeRollupOptionsWithBalancing = ({
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({
     cancellationToken,
-    importMap,
+    importMapFilenameRelative,
     projectFolder,
     dir,
     featureNameArray: groupMap[compileId].incompatibleNameArray,

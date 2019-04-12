@@ -13,7 +13,7 @@ import { requestToFileResponse } from "../requestToFileResponse/index.js"
 
 export const startBrowsingServer = async ({
   cancellationToken = createCancellationToken(),
-  importMap,
+  importMapFilenameRelative,
   projectFolder,
   compileInto,
   compileGroupCount = 2,
@@ -55,7 +55,7 @@ export const startBrowsingServer = async ({
 
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
-    importMap,
+    importMapFilenameRelative,
     projectFolder,
     compileInto,
     compileGroupCount,

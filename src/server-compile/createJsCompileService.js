@@ -9,11 +9,12 @@ import {
 } from "../group-map/index.js"
 import { wrapImportMap } from "../import-map/wrapImportMap.js"
 import { objectMapValue } from "../objectHelper.js"
+import { readFileSync } from "fs"
 
 export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),
-  importMap = {},
   projectFolder,
+  importMapFilenameRelative = "importMap.json",
   compileInto,
   compileGroupCount,
   babelConfigMap,
@@ -29,6 +30,10 @@ export const createJsCompileService = async ({
   transformTopLevelAwait,
   enableGlobalLock,
 }) => {
+  const importMap = importMapFilenameRelative
+    ? JSON.parse(String(readFileSync(`${projectFolder}/${importMapFilenameRelative}`)))
+    : {}
+
   const groupMap = generateGroupMap({
     babelConfigMap,
     babelCompatMap,

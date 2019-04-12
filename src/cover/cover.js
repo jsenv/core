@@ -15,7 +15,7 @@ import { executionPlanResultToCoverageMap } from "./executionPlanResultToCoverag
 import { filenameRelativeToEmptyCoverage } from "./filenameRelativeToEmptyCoverage.js"
 
 export const cover = async ({
-  importMap,
+  importMapFilenameRelative,
   projectFolder,
   compileInto,
   compileGroupCount = 2,
@@ -47,7 +47,7 @@ export const cover = async ({
     const [{ planResult, planResultSummary }, arrayOfFilenameRelativeToCover] = await Promise.all([
       executeAndCoverPatternMapping({
         cancellationToken,
-        importMap,
+        importMapFilenameRelative,
         projectFolder,
         compileInto,
         compileGroupCount,
@@ -135,7 +135,7 @@ const listFilesToCover = async ({ cancellationToken, projectFolder, coverDescrip
 
 const executeAndCoverPatternMapping = async ({
   cancellationToken,
-  importMap,
+  importMapFilenameRelative,
   projectFolder,
   compileInto,
   compileGroupCount,
@@ -156,7 +156,7 @@ const executeAndCoverPatternMapping = async ({
 
   const executionPlan = await executeDescriptionToExecutionPlan({
     cancellationToken,
-    importMap,
+    importMapFilenameRelative,
     projectFolder,
     compileInto,
     compileGroupCount,

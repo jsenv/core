@@ -7,7 +7,7 @@ import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecut
 import { executePlan } from "../executePlan/index.js"
 
 export const test = async ({
-  importMap,
+  importMapFilenameRelative,
   projectFolder,
   compileInto,
   compileGroupCount = 2,
@@ -22,7 +22,7 @@ export const test = async ({
 
     const executionPlan = await executeDescriptionToExecutionPlan({
       cancellationToken,
-      importMap,
+      importMapFilenameRelative,
       projectFolder,
       compileInto,
       compileGroupCount,

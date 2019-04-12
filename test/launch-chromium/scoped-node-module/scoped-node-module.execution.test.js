@@ -1,4 +1,5 @@
 import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
+import { fileWrite } from "@dmail/helper"
 import { assert } from "@dmail/assert"
 import {
   generateImportMapForProjectNodeModules,
@@ -15,10 +16,10 @@ const babelConfigMap = {}
 const sourceOrigin = `file://${testFolder}`
 
 const importMap = await generateImportMapForProjectNodeModules({ projectFolder: testFolder })
+await fileWrite(`${testFolder}/importMap.json`, JSON.stringify(importMap, null, "  "))
 
 const { origin: compileServerOrigin } = await startCompileServer({
   verbose: false,
-  importMap,
   projectFolder: testFolder,
   compileInto,
   babelConfigMap,

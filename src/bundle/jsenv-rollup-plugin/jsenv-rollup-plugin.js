@@ -1,5 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { resolve } from "url"
+import { readFileSync } from "fs"
 import { fileRead, fileWrite } from "/node_modules/@dmail/helper/index.js"
 import { createOperation } from "/node_modules/@dmail/cancellation/index.js"
 import {
@@ -21,8 +22,8 @@ const HELPER_FILENAME = "\0rollupPluginBabelHelpers.js"
 
 export const createJsenvRollupPlugin = ({
   cancellationToken,
-  importMap = {},
   projectFolder,
+  importMapFilenameRelative = "importMap.json",
   origin = "http://example.com",
 
   featureNameArray,
@@ -32,6 +33,10 @@ export const createJsenvRollupPlugin = ({
   detectAndTransformIfNeededAsyncInsertedByRollup = target === "browser",
   dir,
 }) => {
+  const importMap = importMapFilenameRelative
+    ? JSON.parse(String(readFileSync(`${projectFolder}/${importMapFilenameRelative}`)))
+    : {}
+
   const babelConfigMapSubset = computeBabelConfigMapSubset({
     HELPER_FILENAME,
     featureNameArray,

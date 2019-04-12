@@ -4,14 +4,8 @@ import { launchNode, cover } from "../../../index.js"
 
 const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const compileInto = ".dist"
-const importMap = {
-  imports: {
-    "/answer": "/answer.js",
-  },
-}
 
 const { coverageMap: actual } = await cover({
-  importMap,
   projectFolder: testFolder,
   compileInto,
   babelConfigMap: {},
