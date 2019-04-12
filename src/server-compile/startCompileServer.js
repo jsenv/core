@@ -33,7 +33,6 @@ export const startCompileServer = async ({
   verbose,
   transformTopLevelAwait,
   enableGlobalLock,
-  track404,
 }) => {
   if (typeof projectFolder !== "string")
     throw new TypeError(`projectFolder must be a string. got ${projectFolder}`)
@@ -60,7 +59,6 @@ export const startCompileServer = async ({
     requestToFileResponse(request, {
       projectFolder,
       locate: locateFileSystem,
-      track404,
       cacheIgnore: sourceCacheIgnore,
       cacheStrategy: sourceCacheStrategy,
     }),
