@@ -2,6 +2,8 @@ import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 
+const transformBlockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
+
 // sourcemap will not work because testFolder !== projectFolder
 // but vscode will try to resolved them against projectFolder
 // see ${workspaceFolder}/.vscode/launch.json#sourceMapPathOverrides['/*']
@@ -10,7 +12,7 @@ import { startCompileServer, launchAndExecute, launchNode } from "../../../index
 const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const filenameRelative = `debug-block-scoping.js`
 const compileInto = ".dist"
-const babelConfigMap = { "transform-block-scoping": [] }
+const babelConfigMap = { "transform-block-scoping": [transformBlockScoping] }
 
 const sourceOrigin = `file://${testFolder}`
 

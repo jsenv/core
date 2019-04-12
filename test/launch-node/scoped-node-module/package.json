@@ -1,0 +1,6 @@
+{
+  "module": "scoped-node-module.js",
+  "dependencies": {
+    "use-scoped-foo": ""
+  }
+}
