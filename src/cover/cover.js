@@ -26,6 +26,8 @@ export const cover = async ({
   coverDescription,
   executeDescription,
   defaultAllocatedMsPerExecution,
+  enableGlobalLock = false,
+  updateProcessExitCode = true,
 }) =>
   catchAsyncFunctionCancellation(async () => {
     projectFolder = normalizePathname(projectFolder)
@@ -53,6 +55,7 @@ export const cover = async ({
         executeDescription,
         coverFilePredicate,
         defaultAllocatedMsPerExecution,
+        enableGlobalLock,
       }),
       listFilesToCover({
         cancellationToken,
@@ -61,8 +64,10 @@ export const cover = async ({
       }),
     ])
 
-    if (planResultSummary.executionCount !== planResultSummary.completedCount) {
-      process.exitCode = 1
+    if (updateProcessExitCode) {
+      if (planResultSummary.executionCount !== planResultSummary.completedCount) {
+        process.exitCode = 1
+      }
     }
 
     const executionCoverageMap = executionPlanResultToCoverageMap(planResult, {
@@ -138,7 +143,7 @@ const executeAndCoverPatternMapping = async ({
   executeDescription,
   coverFilePredicate,
   defaultAllocatedMsPerExecution,
-  enableGlobalLock = false,
+  enableGlobalLock,
 }) => {
   const instrumentBabelPlugin = createInstrumentPlugin({
     predicate: (filenameRelative) => coverFilePredicate(filenameRelative),
