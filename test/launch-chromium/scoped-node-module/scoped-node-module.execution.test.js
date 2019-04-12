@@ -17,6 +17,7 @@ const sourceOrigin = `file://${testFolder}`
 const importMap = await generateImportMapForProjectNodeModules({ projectFolder: testFolder })
 
 const { origin: compileServerOrigin } = await startCompileServer({
+  verbose: false,
   importMap,
   projectFolder: testFolder,
   compileInto,
