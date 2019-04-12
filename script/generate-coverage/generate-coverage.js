@@ -1,11 +1,6 @@
 const { cover, generateCoverageLog, generateCoverageHTML } = require("@jsenv/core")
 const { fileWrite } = require("@dmail/helper")
-const {
-  readImportMap,
-  projectFolder,
-  compileInto,
-  babelConfigMap,
-} = require("../../jsenv.config.js")
+const { projectFolder, compileInto, babelConfigMap } = require("../../jsenv.config.js")
 const { testDescription } = require("../test/test.config.js")
 
 const coverageFile = `${projectFolder}/coverage/coverage-final.json`
@@ -25,7 +20,6 @@ const generateHTMLFiles = true
 
 ;(async () => {
   const { coverageMap } = await cover({
-    importMap: readImportMap(),
     projectFolder,
     compileInto,
     babelConfigMap,
