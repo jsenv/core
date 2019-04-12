@@ -32,8 +32,8 @@ const expected = {
     default: 42,
   },
   coverageMap: {
-    "folder/file.js": actual.coverageMap["folder/file.js"],
     "origin-file.js": actual.coverageMap["origin-file.js"],
+    "folder/file.js": actual.coverageMap["folder/file.js"],
   },
 }
 assert({
