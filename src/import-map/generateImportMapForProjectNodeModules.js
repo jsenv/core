@@ -16,6 +16,7 @@ export const generateImportMapForProjectNodeModules = async ({
   remapDevDependencies = true,
   remapPredicate = () => true,
   logDuration = false,
+  updateProcessExitCode = true,
 }) => {
   projectFolder = normalizePathname(projectFolder)
   const topLevelPackageFilename = `${projectFolder}/package.json`
@@ -185,10 +186,17 @@ export const generateImportMapForProjectNodeModules = async ({
 
   const before = Date.now()
   const topLevelPackageData = await readPackageData({ filename: topLevelPackageFilename })
-  await visit({
-    packageFilename: topLevelPackageFilename,
-    packageData: topLevelPackageData,
-  })
+  try {
+    await visit({
+      packageFilename: topLevelPackageFilename,
+      packageData: topLevelPackageData,
+    })
+  } catch (e) {
+    if (updateProcessExitCode) {
+      process.exitCode = 1
+    }
+    throw e
+  }
 
   if (logDuration) {
     const importMapGenerationDuration = Date.now() - before
