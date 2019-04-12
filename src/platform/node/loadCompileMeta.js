@@ -4,7 +4,7 @@ import { detect } from "./nodeDetect/index.js"
 import { nodeToCompileId } from "./nodeToCompileId.js"
 
 export const loadCompileMeta = memoizeOnce(
-  async ({ compileInto, compileIdOption, sourceOrigin }) => {
+  async ({ compileInto, compileIdOption = "auto", sourceOrigin }) => {
     const groupMapHref = `${sourceOrigin}/${compileInto}/groupMap.json`
     const groupMapPathname = hrefToPathname(groupMapHref)
     const groupMapFileContent = await fileRead(groupMapPathname)

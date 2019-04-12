@@ -4,7 +4,7 @@ import { browserToCompileId } from "./browserToCompileId.js"
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
 
 export const loadCompileMeta = memoizeOnce(
-  async ({ compileInto, compileIdOption, compileServerOrigin }) => {
+  async ({ compileInto, compileIdOption = "auto", compileServerOrigin }) => {
     const groupMapHref = `${compileServerOrigin}/${compileInto}/groupMap.json`
 
     const groupMapResponse = await fetchUsingXHR(groupMapHref)
