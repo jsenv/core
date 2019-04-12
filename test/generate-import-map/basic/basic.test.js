@@ -1,10 +1,8 @@
+import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
 import { generateImportMapForProjectNodeModules } from "../../../index.js"
 
-const { projectFolder } = import.meta.require("../../../jsenv.config.js")
-
-const testFolder = `${projectFolder}/test/generate-import-map/basic`
-
+const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const actual = await generateImportMapForProjectNodeModules({
   projectFolder: testFolder,
 })

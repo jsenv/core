@@ -1,10 +1,10 @@
-import { assert } from "/node_modules/@dmail/assert/index.js"
+import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
+import { assert } from "@dmail/assert"
 import { launchAndExecute, launchChromium, startCompileServer } from "../../../index.js"
 
-const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 const transformAsyncToPromises = import.meta.require("babel-plugin-transform-async-to-promises")
 
-const testFolder = `${projectFolder}/test/launch-chromium/dynamic-import`
+const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const filenameRelative = `dynamic-import.js`
 const compileInto = ".dist"
 const babelConfigMap = {
@@ -12,7 +12,7 @@ const babelConfigMap = {
 }
 
 ;(async () => {
-  const sourceOrigin = `file://${projectFolder}`
+  const sourceOrigin = `file://${testFolder}`
 
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
@@ -23,7 +23,6 @@ const babelConfigMap = {
   const actual = await launchAndExecute({
     launch: (options) =>
       launchChromium({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
-    verbose: true,
     stopOnceExecuted: true,
     collectNamespace: true,
     filenameRelative,

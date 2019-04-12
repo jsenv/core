@@ -1,34 +1,30 @@
-import { assert } from "/node_modules/@dmail/assert/index.js"
-import { remapResolvedImport } from "/node_modules/@jsenv/module-resolution/index.js"
+import { pathnameToDirname, hrefToPathname, remapResolvedImport } from "@jsenv/module-resolution"
+import { assert } from "@dmail/assert"
 import { generateImportMapForProjectNodeModules } from "../../../index.js"
 
-const { projectFolder } = import.meta.require("../../../jsenv.config.js")
+const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 
-const testFolder = `${projectFolder}/test/generate-import-map/scoped`
+const importMap = await generateImportMapForProjectNodeModules({
+  projectFolder: testFolder,
+})
 
-;(async () => {
-  const importMap = await generateImportMapForProjectNodeModules({
-    projectFolder: testFolder,
-  })
+const resolve = ({ importer, specifier }) =>
+  remapResolvedImport({
+    importMap,
+    importerHref: `http://example.com/${importer}`,
+    resolvedImport: `http://example.com/${specifier}`,
+  }).slice("http://example.com/".length)
 
-  const resolve = ({ importer, specifier }) =>
-    remapResolvedImport({
-      importMap,
-      importerHref: `http://example.com/${importer}`,
-      resolvedImport: `http://example.com/${specifier}`,
-    }).slice("http://example.com/".length)
+// import 'bar' inside project
+{
+  const actual = resolve({ importer: "scoped.js", specifier: "bar" })
+  const expected = "node_modules/bar/bar.js"
+  assert({ actual, expected })
+}
 
-  // import 'bar' inside project
-  {
-    const actual = resolve({ importer: "scoped.js", specifier: "bar" })
-    const expected = "node_modules/bar/bar.js"
-    assert({ actual, expected })
-  }
-
-  // import 'bar' inside foo
-  {
-    const actual = resolve({ importer: "node_modules/foo/foo.js", specifier: "bar" })
-    const expected = "node_modules/foo/node_modules/bar/bar.js"
-    assert({ actual, expected })
-  }
-})()
+// import 'bar' inside foo
+{
+  const actual = resolve({ importer: "node_modules/foo/foo.js", specifier: "bar" })
+  const expected = "node_modules/foo/node_modules/bar/bar.js"
+  assert({ actual, expected })
+}

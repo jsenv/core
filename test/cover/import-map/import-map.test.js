@@ -1,9 +1,8 @@
+import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
 import { launchNode, cover } from "../../../index.js"
 
-const { projectFolder } = import.meta.require("../../../jsenv.config.js")
-
-const testFolder = `${projectFolder}/test/cover/import-map`
+const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const compileInto = ".dist"
 const importMap = {
   imports: {

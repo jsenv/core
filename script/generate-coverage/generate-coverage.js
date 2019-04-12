@@ -17,11 +17,11 @@ const coverDescription = {
   "/**/test/": false, // inside a test folder -> nope
 }
 
-const generateFile = true
+const generateFile = false
 
-const generateLog = true
+const generateLog = false
 
-const generateHTMLFiles = true
+const generateHTMLFiles = false
 
 ;(async () => {
   const { coverageMap } = await cover({

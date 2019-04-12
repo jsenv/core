@@ -1,10 +1,8 @@
+import { pathnameToDirname, hrefToPathname, remapResolvedImport } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
-import { remapResolvedImport } from "@jsenv/module-resolution"
 import { generateImportMapForProjectNodeModules } from "../../../index.js"
 
-const { projectFolder } = import.meta.require("../../../jsenv.config.js")
-
-const testFolder = `${projectFolder}/test/generate-import-map/shared`
+const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 
 const importMap = await generateImportMapForProjectNodeModules({
   projectFolder: testFolder,
