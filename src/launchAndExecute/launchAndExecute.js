@@ -318,6 +318,7 @@ const computeExecutionResult = async ({
       }
 
       if (winner === executionErrored) {
+        log(createExecutionErrorMessage({ error: value }))
         onError(value)
         return createErroredExecutionResult({
           error: value,
@@ -327,7 +328,7 @@ const computeExecutionResult = async ({
       log(createExecutionDoneMessage({ value }))
 
       registerErrorCallback((error) => {
-        log(createExecutionErrorMessage({ error }))
+        log(createAfterExecutionErrorMessage({ error }))
         errorAfterExecutedCallback(error)
         onError(error)
       })
@@ -379,6 +380,9 @@ const createStartExecutionMessage = ({ filenameRelative }) => `execute file.
 filenameRelative: ${filenameRelative}`
 
 const createExecutionErrorMessage = ({ error }) => `error during execution.
+stack: ${error.stack}`
+
+const createAfterExecutionErrorMessage = ({ error }) => `error after execution.
 stack: ${error.stack}`
 
 const createExecutionDoneMessage = ({ value }) => `execution done.
