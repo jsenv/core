@@ -3,27 +3,30 @@ import { fetchUsingXHR } from "./fetchUsingXHR.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 import { createSystemImporter } from "./system/createSystemImporter.js"
 
-export const loadBrowserImporter = memoizeOnce(async ({ compileInto, compileServerOrigin }) => {
-  const { compileId } = await loadCompileMeta({
-    compileInto,
-    compileServerOrigin,
-  })
+export const loadBrowserImporter = memoizeOnce(
+  async ({ compileInto, compileIdOption, compileServerOrigin }) => {
+    const { compileId } = await loadCompileMeta({
+      compileInto,
+      compileIdOption,
+      compileServerOrigin,
+    })
 
-  // this importMap is just wrapped into /${compileInto}/${compileId}/ from an other importMap
-  // we could wrap the globalImportMap here instead of fetching it
-  const importMapHref = `${compileServerOrigin}/${compileInto}/importMap.${compileId}.json`
-  const importMapResponse = await fetchHref(importMapHref)
-  const importMap = JSON.parse(importMapResponse.body)
+    // this importMap is just wrapped into /${compileInto}/${compileId}/ from an other importMap
+    // we could wrap the globalImportMap here instead of fetching it
+    const importMapHref = `${compileServerOrigin}/${compileInto}/importMap.${compileId}.json`
+    const importMapResponse = await fetchHref(importMapHref)
+    const importMap = JSON.parse(importMapResponse.body)
 
-  const { importFile } = createSystemImporter({
-    importMap,
-    compileInto,
-    compileServerOrigin,
-    compileId,
-  })
+    const { importFile } = createSystemImporter({
+      importMap,
+      compileInto,
+      compileServerOrigin,
+      compileId,
+    })
 
-  return { compileId, importFile }
-})
+    return { compileId, importFile }
+  },
+)
 
 const fetchHref = async (href) => {
   const response = await fetchUsingXHR(href)

@@ -4,13 +4,14 @@ import { displayErrorInDocument } from "./displayErrorInDocument.js"
 
 export const executeCompiledFile = ({
   compileInto,
+  compileIdOption,
   compileServerOrigin,
   filenameRelative,
   collectNamespace,
   collectCoverage,
 }) =>
   genericExecuteCompiledFile({
-    loadImporter: () => loadBrowserImporter({ compileInto, compileServerOrigin }),
+    loadImporter: () => loadBrowserImporter({ compileInto, compileIdOption, compileServerOrigin }),
     compileInto,
     compileServerOrigin,
     filenameRelative,

@@ -8,6 +8,7 @@ const nodeClientFile = `${ROOT_FOLDER}/dist/node-client/nodeClient.js`
 export const launchNode = async ({
   cancellationToken,
   compileInto,
+  compileIdOption,
   sourceOrigin,
   compileServerOrigin,
   debugMode,
@@ -130,6 +131,7 @@ export const launchNode = async ({
           sourceOrigin,
           compileServerOrigin,
           compileInto,
+          compileIdOption,
 
           filenameRelative,
           collectNamespace,

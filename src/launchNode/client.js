@@ -11,6 +11,7 @@ const sourceMapSupport = import.meta.require("source-map-support")
 
 const execute = async ({
   compileInto,
+  compileIdOption,
   sourceOrigin,
   compileServerOrigin,
   filenameRelative,
@@ -115,6 +116,7 @@ const execute = async ({
 
   const { status, coverageMap, error, namespace } = await executeCompiledFile({
     compileInto,
+    compileIdOption,
     sourceOrigin,
     compileServerOrigin,
     filenameRelative,

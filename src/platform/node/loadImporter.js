@@ -4,8 +4,13 @@ import { createImporter } from "./system/createImporter.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 
 export const loadImporter = memoizeOnce(
-  async ({ compileInto, sourceOrigin, compileServerOrigin }) => {
-    const { compileId } = await loadCompileMeta({ compileInto, sourceOrigin, compileServerOrigin })
+  async ({ compileInto, compileIdOption, sourceOrigin, compileServerOrigin }) => {
+    const { compileId } = await loadCompileMeta({
+      compileInto,
+      compileIdOption,
+      sourceOrigin,
+      compileServerOrigin,
+    })
 
     const importMapHref = `${sourceOrigin}/${compileInto}/importMap.${compileId}.json`
     const importMapPathname = hrefToPathname(importMapHref)

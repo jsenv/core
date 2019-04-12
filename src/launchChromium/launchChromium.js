@@ -16,6 +16,7 @@ const puppeteer = import.meta.require("puppeteer")
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
   compileInto,
+  compileIdOption,
   sourceOrigin,
   compileServerOrigin,
 
@@ -163,6 +164,7 @@ export const launchChromium = async ({
       await page.goto(indexOrigin)
       const functionString = createFunctionEvaluatedClientSide({
         compileInto,
+        compileIdOption,
         compileServerOrigin,
         filenameRelative,
         collectNamespace,
@@ -170,7 +172,6 @@ export const launchChromium = async ({
         browserClientHref: `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/browserClient.js`,
       })
       const expressionString = `(${functionString})()`
-      console.log({ expressionString })
       // https://github.com/GoogleChrome/puppeteer/blob/v1.14.0/docs/api.md#pageevaluatepagefunction-args
       // yes evaluate supports passing a function directly
       // but when I do that, istanbul will put coverage statement inside it
@@ -196,7 +197,7 @@ export const launchChromium = async ({
       // before it is able to finish evaluate we can safely ignore
       // and rethrow with current cancelError
       if (
-        e.message === "Protocol error (Runtime.callFunctionOn): Target closed." &&
+        e.message.match(/^Protocol error \(Runtime.[\w]+\): Target closed.$/) &&
         cancellationToken.cancellationRequested
       ) {
         cancellationToken.throwIfRequested()
@@ -415,6 +416,7 @@ const appendNewLine = (string) => {
 const createFunctionEvaluatedClientSide = ({
   browserClientHref,
   compileInto,
+  compileIdOption,
   compileServerOrigin,
   filenameRelative,
   collectNamespace,
@@ -423,6 +425,7 @@ const createFunctionEvaluatedClientSide = ({
   return window.System.import(${uneval(browserClientHref)}).then(({ executeCompiledFile }) => {
     return executeCompiledFile({
       compileInto: ${uneval(compileInto)},
+      compileIdOption: ${uneval(compileIdOption)},
       compileServerOrigin: ${uneval(compileServerOrigin)},
       filenameRelative: ${uneval(filenameRelative)},
       collectNamespace: ${uneval(collectNamespace)},

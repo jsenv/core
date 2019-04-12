@@ -3,6 +3,7 @@ import { loadImporter } from "./loadImporter.js"
 
 export const executeCompiledFile = ({
   compileInto,
+  compileIdOption,
   sourceOrigin,
   compileServerOrigin,
   filenameRelative,
@@ -10,7 +11,8 @@ export const executeCompiledFile = ({
   collectCoverage,
 }) =>
   genericExecuteCompiledFile({
-    loadImporter: () => loadImporter({ compileInto, sourceOrigin, compileServerOrigin }),
+    loadImporter: () =>
+      loadImporter({ compileInto, compileIdOption, sourceOrigin, compileServerOrigin }),
     compileInto,
     compileServerOrigin,
     filenameRelative,
