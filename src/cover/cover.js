@@ -138,6 +138,7 @@ const executeAndCoverPatternMapping = async ({
   executeDescription,
   coverFilePredicate,
   defaultAllocatedMsPerExecution,
+  enableGlobalLock = false,
 }) => {
   const instrumentBabelPlugin = createInstrumentPlugin({
     predicate: (filenameRelative) => coverFilePredicate(filenameRelative),
@@ -157,6 +158,7 @@ const executeAndCoverPatternMapping = async ({
     babelConfigMap: babelConfigMapWithInstrumentation,
     executeDescription,
     defaultAllocatedMsPerExecution,
+    enableGlobalLock,
   })
 
   return executePlan(executionPlan, {
