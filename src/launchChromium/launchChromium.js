@@ -1,10 +1,8 @@
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
 import { URL } from "url"
-import {
-  createCancellationToken,
-  createStoppableOperation,
-} from "/node_modules/@dmail/cancellation/index.js"
+import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
+import { uneval } from "@dmail/uneval"
 import { startIndexServer } from "../server-index/startIndexServer.js"
 import { originAsString } from "../server/index.js"
 import { regexpEscape } from "../stringHelper.js"
@@ -163,36 +161,19 @@ export const launchChromium = async ({
 
     const execute = async () => {
       await page.goto(indexOrigin)
-      // Do not instrument this function, it will be executed client side
-      /* istanbul ignore next */
-      return await page.evaluate(
-        ({
-          compileInto,
-          compileServerOrigin,
-          filenameRelative,
-          collectNamespace,
-          collectCoverage,
-          browserClientHref,
-        }) => {
-          return window.System.import(browserClientHref).then(({ executeCompiledFile }) => {
-            return executeCompiledFile({
-              compileInto,
-              compileServerOrigin,
-              filenameRelative,
-              collectNamespace,
-              collectCoverage,
-            })
-          })
-        },
-        {
-          compileInto,
-          compileServerOrigin,
-          filenameRelative,
-          collectNamespace,
-          collectCoverage,
-          browserClientHref: `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/browserClient.js`,
-        },
-      )
+      const functionString = createFunctionEvaluatedClientSide({
+        compileInto,
+        compileServerOrigin,
+        filenameRelative,
+        collectNamespace,
+        collectCoverage,
+        browserClientHref: `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/browserClient.js`,
+      })
+      // https://github.com/GoogleChrome/puppeteer/blob/v1.14.0/docs/api.md#pageevaluatepagefunction-args
+      // yes evaluate supports passing a function directly
+      // but when I do that, istanbul will put coverage statement inside it
+      // and I don't want that because function is evaluated client side
+      return await page.evaluate(`(${functionString})()`)
     }
     try {
       const { status, coverageMap, error, namespace } = await execute()
@@ -422,3 +403,22 @@ const appendNewLine = (string) => {
   return `${string}
 `
 }
+
+const createFunctionEvaluatedClientSide = ({
+  browserClientHref,
+  compileInto,
+  compileServerOrigin,
+  filenameRelative,
+  collectNamespace,
+  collectCoverage,
+}) => `() => {
+  return window.System.import(${uneval(browserClientHref)}).then(({ executeCompiledFile }) => {
+    return executeCompiledFile({
+      compileInto: ${uneval(compileInto)},
+      compileServerOrigin: ${uneval(compileServerOrigin)},
+      filenameRelative: ${uneval(filenameRelative)},
+      collectNamespace: ${uneval(collectNamespace)},
+      collectCoverage: ${uneval(collectCoverage)},
+    })
+  })
+}`
