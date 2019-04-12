@@ -25,7 +25,7 @@ const actual = await launchAndExecute({
 const expected = {
   status: "completed",
   namespace: {
-    default: import.meta.url,
+    default: `${testFolder}/${filenameRelative}`,
   },
 }
 assert({ actual, expected })
