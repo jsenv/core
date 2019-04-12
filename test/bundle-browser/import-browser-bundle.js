@@ -68,6 +68,7 @@ const startTestServer = ({ bundleFolder }) => {
   }
 
   return startServer({
+    verbose: false,
     requestToResponse: serviceCompose(indexPageService, systemJSService, (request) =>
       requestToFileResponse(request, { projectFolder: bundleFolder }),
     ),
