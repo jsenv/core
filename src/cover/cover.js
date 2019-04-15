@@ -1,9 +1,11 @@
+/* eslint-disable import/max-dependencies */
 import { normalizePathname } from "@jsenv/module-resolution"
 import {
   namedValueDescriptionToMetaDescription,
   selectAllFileInsideFolder,
   pathnameToMeta,
 } from "@dmail/project-structure"
+import { fileWrite } from "@dmail/helper"
 import { executePlan } from "../executePlan/index.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
 import {
@@ -13,10 +15,13 @@ import {
 import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
 import { executionPlanResultToCoverageMap } from "./executionPlanResultToCoverageMap/index.js"
 import { filenameRelativeToEmptyCoverage } from "./filenameRelativeToEmptyCoverage.js"
+import { generateCoverageHTML } from "./generateCoverageHTML.js"
+import { generateCoverageLog } from "./generateCoverageLog.js"
 
 export const cover = async ({
   importMapFilenameRelative,
   projectFolder,
+  coverageFilenameRelative,
   compileInto,
   compileGroupCount = 2,
   babelConfigMap,
@@ -27,9 +32,14 @@ export const cover = async ({
   executeDescription,
   defaultAllocatedMsPerExecution,
   enableGlobalLock = false,
+  writeCoverageFile = true,
+  logCoverageFilePath = true,
+  logCoverageTable = false,
+  writeCoverageHtmlFolder = false,
   updateProcessExitCode = true,
-}) =>
-  catchAsyncFunctionCancellation(async () => {
+  throwUnhandled = true,
+}) => {
+  const start = async () => {
     projectFolder = normalizePathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
     const coverMetaDescription = namedValueDescriptionToMetaDescription({
@@ -64,12 +74,6 @@ export const cover = async ({
       }),
     ])
 
-    if (updateProcessExitCode) {
-      if (planResultSummary.executionCount !== planResultSummary.completedCount) {
-        process.exitCode = 1
-      }
-    }
-
     const executionCoverageMap = executionPlanResultToCoverageMap(planResult, {
       cancellationToken,
       projectFolder,
@@ -98,12 +102,43 @@ export const cover = async ({
       ...missedCoverageMap,
     }
 
+    if (updateProcessExitCode) {
+      if (planResultSummary.executionCount !== planResultSummary.completedCount) {
+        process.exitCode = 1
+      }
+    }
+
+    if (writeCoverageFile) {
+      const coverageFilename = `${projectFolder}/${coverageFilenameRelative}`
+
+      await fileWrite(coverageFilename, JSON.stringify(coverageMap, null, "  "))
+      if (logCoverageFilePath) {
+        console.log(`-> ${coverageFilename}`)
+      }
+    }
+
+    if (logCoverageTable) {
+      generateCoverageLog(coverageMap)
+    }
+    if (writeCoverageHtmlFolder) {
+      generateCoverageHTML(coverageMap)
+    }
+
     return {
       planResult,
       planResultSummary,
       coverageMap,
     }
+  }
+
+  const promise = catchAsyncFunctionCancellation(start)
+  if (!throwUnhandled) return promise
+  return promise.catch((e) => {
+    setTimeout(() => {
+      throw e
+    })
   })
+}
 
 const ensureNoFileIsBothCoveredAndExecuted = ({ executeDescription, coverFilePredicate }) => {
   const fileToExecuteAndCoverArray = Object.keys(executeDescription).filter((filenameRelative) =>
