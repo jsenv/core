@@ -16,6 +16,7 @@ export const computeRollupOptionsForBalancer = ({
   entryPointName,
   log,
   minify,
+  logBundleFilePaths,
 }) => {
   const nodeBalancerRollupPlugin = {
     name: "node-balancer",
@@ -55,6 +56,7 @@ export const computeRollupOptionsForBalancer = ({
     babelConfigMap,
     minify,
     target: "node",
+    logBundleFilePaths,
   })
 
   log(`
