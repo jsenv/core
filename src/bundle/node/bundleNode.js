@@ -15,7 +15,7 @@ export const bundleNode = async ({
   versionScoreMap = nodeVersionScoreMap,
   verbose,
   minify = false,
-  trowUnhandled = true,
+  throwUnhandled = true,
   logBundleFilePaths = true,
 }) => {
   projectFolder = normalizePathname(projectFolder)
@@ -57,7 +57,7 @@ export const bundleNode = async ({
         ...context,
       }),
   })
-  if (!trowUnhandled) return promise
+  if (!throwUnhandled) return promise
   return promise.catch((e) => {
     setTimeout(() => {
       throw e

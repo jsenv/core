@@ -17,7 +17,7 @@ export const bundleBrowser = async ({
   verbose,
   minify = true,
   generateEntryPages = false,
-  trowUnhandled = true,
+  throwUnhandled = true,
   logBundleFilePaths = true,
 }) => {
   projectFolder = normalizePathname(projectFolder)
@@ -68,7 +68,7 @@ export const bundleBrowser = async ({
         })
       : null,
   ])
-  if (!trowUnhandled) return promise
+  if (!throwUnhandled) return promise
   return promise.catch((e) => {
     setTimeout(() => {
       throw e
