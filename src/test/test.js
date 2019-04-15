@@ -15,8 +15,10 @@ export const test = async ({
   executeDescription,
   maxParallelExecution,
   defaultAllocatedMsPerExecution,
-}) =>
-  catchAsyncFunctionCancellation(async () => {
+  updateProcessExitCode = true,
+  throwUnhandled = true,
+}) => {
+  const start = async () => {
     projectFolder = normalizePathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
 
@@ -35,8 +37,19 @@ export const test = async ({
       cancellationToken,
       maxParallelExecution,
     })
-    if (planResultSummary.executionCount !== planResultSummary.completedCount) {
-      process.exitCode = 1
+    if (updateProcessExitCode) {
+      if (planResultSummary.executionCount !== planResultSummary.completedCount) {
+        process.exitCode = 1
+      }
     }
     return { planResult, planResultSummary }
+  }
+
+  const promise = catchAsyncFunctionCancellation(start)
+  if (!throwUnhandled) return promise
+  return promise.catch((e) => {
+    setTimeout(() => {
+      throw e
+    })
   })
+}
