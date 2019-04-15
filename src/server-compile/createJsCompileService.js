@@ -7,14 +7,11 @@ import {
   browserScoreMap as browserDefaultScoreMap,
   nodeVersionScoreMap as nodeDefaultVersionScoreMap,
 } from "../group-map/index.js"
-import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
-import { wrapImportMap } from "../import-map/wrapImportMap.js"
 import { objectMapValue } from "../objectHelper.js"
 
 export const createJsCompileService = async ({
   cancellationToken = createCancellationToken(),
   projectFolder,
-  importMapFilenameRelative = "importMap.json",
   compileInto,
   compileGroupCount,
   babelConfigMap,
@@ -30,11 +27,6 @@ export const createJsCompileService = async ({
   transformTopLevelAwait,
   enableGlobalLock,
 }) => {
-  const importMap = readProjectImportMap({
-    projectFolder,
-    importMapFilenameRelative,
-  })
-
   const groupMap = generateGroupMap({
     babelConfigMap,
     babelCompatMap,
@@ -63,18 +55,6 @@ export const createJsCompileService = async ({
       `${projectFolder}/${compileInto}/groupMap.json`,
       JSON.stringify(groupMap, null, "  "),
     ),
-    fileWrite(
-      `${projectFolder}/${compileInto}/importMap.json`,
-      JSON.stringify(importMap, null, "  "),
-    ),
-    ...Object.keys(compileDescription).map((compileId) =>
-      writeGroupImportMapFile({
-        importMap,
-        projectFolder,
-        compileInto,
-        compileId,
-      }),
-    ),
   ])
 
   const jsCompileService = jsCompileToService(jsCompile, {
@@ -91,13 +71,4 @@ export const createJsCompileService = async ({
   })
 
   return jsCompileService
-}
-
-const writeGroupImportMapFile = ({ projectFolder, compileInto, compileId, importMap }) => {
-  const groupImportMap = wrapImportMap(importMap, `${compileInto}/${compileId}`)
-
-  return fileWrite(
-    `${projectFolder}/${compileInto}/importMap.${compileId}.json`,
-    JSON.stringify(groupImportMap, null, "  "),
-  )
 }

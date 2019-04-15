@@ -1,6 +1,6 @@
 import path from "path"
 import assert from "assert"
-import { jsCompileToService } from "../../jsCompileToService.js"
+import { jsCompileToService } from "../../../jsCompileToService/jsCompileToService.js"
 import { jsCompile } from "../../../jsCompile/index.js"
 import { createInstrumentPlugin } from "../../../cover/createInstrumentPlugin.js"
 
