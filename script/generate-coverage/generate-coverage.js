@@ -5,5 +5,4 @@ cover({
   projectFolder,
   coverDescription,
   executeDescription: testDescription,
-  logCoverageTable: true,
 })
