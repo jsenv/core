@@ -16,6 +16,7 @@ export const bundlePlatform = ({
   computeRollupOptionsWithBalancing,
   computeRollupOptionsForBalancer,
   verbose = false,
+  logBundleFilePaths = true,
 }) =>
   catchAsyncFunctionCancellation(async () => {
     if (typeof projectFolder !== "string")
@@ -34,7 +35,7 @@ export const bundlePlatform = ({
       await bundleWithRollup({
         cancellationToken,
         log,
-        ...computeRollupOptionsWithoutBalancing({ cancellationToken, log }),
+        ...computeRollupOptionsWithoutBalancing({ cancellationToken, log, logBundleFilePaths }),
       })
       return
     }
@@ -49,12 +50,14 @@ export const bundlePlatform = ({
       generateEntryPointsFolders({
         cancellationToken,
         log,
+        logBundleFilePaths,
         groupMap,
         computeRollupOptionsWithBalancing,
       }),
       generateEntryPointsBalancerFiles({
         cancellationToken,
         log,
+        logBundleFilePaths,
         entryPointMap,
         groupMap,
         computeRollupOptionsForBalancer,
@@ -65,6 +68,7 @@ export const bundlePlatform = ({
 const generateEntryPointsFolders = async ({
   cancellationToken,
   log,
+  logBundleFilePaths,
   groupMap,
   computeRollupOptionsWithBalancing,
 }) => {
@@ -76,6 +80,7 @@ const generateEntryPointsFolders = async ({
         ...computeRollupOptionsWithBalancing({
           cancellationToken,
           log,
+          logBundleFilePaths,
           groupMap,
           compileId,
         }),
@@ -87,6 +92,7 @@ const generateEntryPointsFolders = async ({
 const generateEntryPointsBalancerFiles = ({
   cancellationToken,
   log,
+  logBundleFilePaths,
   entryPointMap,
   groupMap,
   computeRollupOptionsForBalancer,
@@ -100,6 +106,7 @@ const generateEntryPointsBalancerFiles = ({
           ...computeRollupOptionsForBalancer({
             cancellationToken,
             log,
+            logBundleFilePaths,
             groupMap,
             entryPointName,
           }),

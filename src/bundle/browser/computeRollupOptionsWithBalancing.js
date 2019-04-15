@@ -12,6 +12,7 @@ export const computeRollupOptionsWithBalancing = ({
   groupMap,
   compileId,
   log,
+  logBundleFilePaths,
   minify,
 }) => {
   const dir = `${projectFolder}/${into}/${compileId}`
@@ -29,6 +30,7 @@ export const computeRollupOptionsWithBalancing = ({
     babelConfigMap,
     minify,
     target: "browser",
+    logBundleFilePaths,
   })
 
   log(`

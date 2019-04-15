@@ -15,6 +15,7 @@ export const computeRollupOptionsForBalancer = ({
   groupMap,
   entryPointName,
   log,
+  logBundleFilePaths,
   minify,
 }) => {
   const balancerOptionSource = generateBalancerOptionsSource({
@@ -56,6 +57,7 @@ export const computeRollupOptionsForBalancer = ({
     babelConfigMap,
     minify,
     target: "browser",
+    logBundleFilePaths,
   })
 
   log(`

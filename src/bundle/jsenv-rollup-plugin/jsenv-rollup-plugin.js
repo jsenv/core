@@ -32,6 +32,7 @@ export const createJsenvRollupPlugin = ({
   target,
   detectAndTransformIfNeededAsyncInsertedByRollup = target === "browser",
   dir,
+  logBundleFilePaths,
 }) => {
   const importMap = readProjectImportMap({
     projectFolder,
@@ -159,36 +160,15 @@ export const createJsenvRollupPlugin = ({
     },
 
     writeBundle: async (bundle) => {
-      if (!detectAndTransformIfNeededAsyncInsertedByRollup) return
+      if (detectAndTransformIfNeededAsyncInsertedByRollup) {
+        await transformAsyncInsertedByRollup({ dir, babelConfigMapSubset, bundle })
+      }
 
-      const asyncPluginName = findAsyncPluginNameInBabelConfigMap(babelConfigMapSubset)
-
-      if (!asyncPluginName) return
-
-      // we have to do this because rollup ads
-      // an async wrapper function without transpiling it
-      // if your bundle contains a dynamic import
-      await Promise.all(
-        Object.keys(bundle).map(async (bundleFilename) => {
-          const bundleInfo = bundle[bundleFilename]
-
-          const { code, map } = await transpiler({
-            input: bundleInfo.code,
-            inputMap: bundleInfo.map,
-            filename: bundleFilename,
-            babelConfigMap: { [asyncPluginName]: babelConfigMapSubset[asyncPluginName] },
-            transformModuleIntoSystemFormat: false, // already done by rollup
-          })
-
-          await Promise.all([
-            fileWrite(
-              `${dir}/${bundleFilename}`,
-              writeSourceMapLocation({ source: code, location: `./${bundleFilename}.map` }),
-            ),
-            fileWrite(`${dir}/${bundleFilename}.map`, JSON.stringify(map)),
-          ])
-        }),
-      )
+      if (logBundleFilePaths) {
+        Object.keys(bundle).forEach((bundleFilename) => {
+          console.log(`-> ${bundleFilename}`)
+        })
+      }
     },
   }
 
@@ -226,4 +206,35 @@ export const createJsenvRollupPlugin = ({
   }
 
   return jsenvRollupPlugin
+}
+
+const transformAsyncInsertedByRollup = async ({ dir, babelConfigMapSubset, bundle }) => {
+  const asyncPluginName = findAsyncPluginNameInBabelConfigMap(babelConfigMapSubset)
+
+  if (!asyncPluginName) return
+
+  // we have to do this because rollup ads
+  // an async wrapper function without transpiling it
+  // if your bundle contains a dynamic import
+  await Promise.all(
+    Object.keys(bundle).map(async (bundleFilename) => {
+      const bundleInfo = bundle[bundleFilename]
+
+      const { code, map } = await transpiler({
+        input: bundleInfo.code,
+        inputMap: bundleInfo.map,
+        filename: bundleFilename,
+        babelConfigMap: { [asyncPluginName]: babelConfigMapSubset[asyncPluginName] },
+        transformModuleIntoSystemFormat: false, // already done by rollup
+      })
+
+      await Promise.all([
+        fileWrite(
+          `${dir}/${bundleFilename}`,
+          writeSourceMapLocation({ source: code, location: `./${bundleFilename}.map` }),
+        ),
+        fileWrite(`${dir}/${bundleFilename}.map`, JSON.stringify(map)),
+      ])
+    }),
+  )
 }

@@ -15,48 +15,52 @@ export const bundleNode = async ({
   versionScoreMap = nodeVersionScoreMap,
   verbose,
   minify = false,
+  trowUnhandled = true,
+  logBundleFilePaths = true,
 }) => {
   projectFolder = normalizePathname(projectFolder)
-  try {
-    return await bundlePlatform({
-      entryPointMap,
-      projectFolder,
-      into,
-      babelConfigMap,
-      compileGroupCount,
-      platformScoreMap: { node: versionScoreMap },
-      verbose,
-      computeRollupOptionsWithoutBalancing: (context) =>
-        computeRollupOptionsWithoutBalancing({
-          importMapFilenameRelative,
-          projectFolder,
-          into,
-          entryPointMap,
-          babelConfigMap,
-          minify,
-          ...context,
-        }),
-      computeRollupOptionsWithBalancing: (context) =>
-        computeRollupOptionsWithBalancing({
-          importMapFilenameRelative,
-          projectFolder,
-          into,
-          entryPointMap,
-          babelConfigMap,
-          minify,
-          ...context,
-        }),
-      computeRollupOptionsForBalancer: (context) =>
-        computeRollupOptionsForBalancer({
-          projectFolder,
-          into,
-          babelConfigMap,
-          minify,
-          ...context,
-        }),
+  const promise = await bundlePlatform({
+    entryPointMap,
+    projectFolder,
+    into,
+    babelConfigMap,
+    compileGroupCount,
+    platformScoreMap: { node: versionScoreMap },
+    verbose,
+    logBundleFilePaths,
+    computeRollupOptionsWithoutBalancing: (context) =>
+      computeRollupOptionsWithoutBalancing({
+        importMapFilenameRelative,
+        projectFolder,
+        into,
+        entryPointMap,
+        babelConfigMap,
+        minify,
+        ...context,
+      }),
+    computeRollupOptionsWithBalancing: (context) =>
+      computeRollupOptionsWithBalancing({
+        importMapFilenameRelative,
+        projectFolder,
+        into,
+        entryPointMap,
+        babelConfigMap,
+        minify,
+        ...context,
+      }),
+    computeRollupOptionsForBalancer: (context) =>
+      computeRollupOptionsForBalancer({
+        projectFolder,
+        into,
+        babelConfigMap,
+        minify,
+        ...context,
+      }),
+  })
+  if (!trowUnhandled) return promise
+  return promise.catch((e) => {
+    setTimeout(() => {
+      throw e
     })
-  } catch (e) {
-    process.exitCode = 1
-    throw e
-  }
+  })
 }
