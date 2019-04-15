@@ -10,6 +10,7 @@ const compileInto = ".dist"
 const babelConfigMap = { "transform-block-scoping": true }
 
 const compileServer = await startCompileServer({
+  verbose: false,
   projectFolder: testFolder,
   compileInto,
   babelConfigMap,
