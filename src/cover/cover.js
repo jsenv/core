@@ -17,19 +17,27 @@ import { executionPlanResultToCoverageMap } from "./executionPlanResultToCoverag
 import { filenameRelativeToEmptyCoverage } from "./filenameRelativeToEmptyCoverage.js"
 import { generateCoverageHTML } from "./generateCoverageHTML.js"
 import { generateCoverageLog } from "./generateCoverageLog.js"
+import {
+  COVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  COVER_DEFAULT_COVERAGE_FILENAME_RELATIVE,
+  COVER_DEFAULT_COVER_DESCRIPTION,
+  COVER_DEFAULT_EXECUTE_DESCRIPTION,
+  COVER_DEFAULT_COMPILE_INTO,
+  COVER_DEFAULT_BABEL_CONFIG_MAP,
+} from "./cover-constant.js"
 
 export const cover = async ({
-  importMapFilenameRelative,
   projectFolder,
-  coverageFilenameRelative,
-  compileInto,
-  compileGroupCount = 2,
-  babelConfigMap,
+  babelConfigMap = COVER_DEFAULT_BABEL_CONFIG_MAP,
+  importMapFilenameRelative = COVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  coverageFilenameRelative = COVER_DEFAULT_COVERAGE_FILENAME_RELATIVE,
   // coverDescription could be deduced from passing
   // an entryPointMap and collecting all dependencies
   // for now we stick to coverDescription using project-structure api
-  coverDescription,
-  executeDescription,
+  coverDescription = COVER_DEFAULT_COVER_DESCRIPTION,
+  executeDescription = COVER_DEFAULT_EXECUTE_DESCRIPTION,
+  compileInto = COVER_DEFAULT_COMPILE_INTO,
+  compileGroupCount = 2,
   defaultAllocatedMsPerExecution,
   enableGlobalLock = false,
   writeCoverageFile = true,

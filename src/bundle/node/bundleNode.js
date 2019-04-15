@@ -4,13 +4,19 @@ import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
 import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBalancing.js"
 import { computeRollupOptionsForBalancer } from "./computeRollupOptionsForBalancer.js"
+import {
+  BUNDLE_NODE_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  BUNDLE_NODE_DEFAULT_BUNDLE_INTO,
+  BUNDLE_NODE_DEFAULT_ENTRY_POINT_MAP,
+  BUNDLE_NODE_DEFAULT_BABEL_CONFIG_MAP,
+} from "./bundle-node-constant.js"
 
 export const bundleNode = async ({
-  importMapFilenameRelative,
   projectFolder,
-  into,
-  entryPointMap,
-  babelConfigMap,
+  babelConfigMap = BUNDLE_NODE_DEFAULT_BABEL_CONFIG_MAP,
+  importMapFilenameRelative = BUNDLE_NODE_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  into = BUNDLE_NODE_DEFAULT_BUNDLE_INTO,
+  entryPointMap = BUNDLE_NODE_DEFAULT_ENTRY_POINT_MAP,
   compileGroupCount = 2,
   versionScoreMap = nodeVersionScoreMap,
   verbose,

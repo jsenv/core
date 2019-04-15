@@ -5,13 +5,19 @@ import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWith
 import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBalancing.js"
 import { computeRollupOptionsForBalancer } from "./computeRollupOptionsForBalancer.js"
 import { generateEntryPointMapPages } from "./generateEntryPointMapPages.js"
+import {
+  BUNDLE_BROWSER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  BUNDLE_BROWSER_DEFAULT_BUNDLE_INTO,
+  BUNDLE_BROWSER_DEFAULT_ENTRY_POINT_MAP,
+  BUNDLE_BROWSER_DEFAULT_BABEL_CONFIG_MAP,
+} from "./bundle-browser-constant.js"
 
 export const bundleBrowser = async ({
   projectFolder,
-  importMapFilenameRelative,
-  into,
-  entryPointMap,
-  babelConfigMap,
+  babelConfigMap = BUNDLE_BROWSER_DEFAULT_BABEL_CONFIG_MAP,
+  importMapFilenameRelative = BUNDLE_BROWSER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  into = BUNDLE_BROWSER_DEFAULT_BUNDLE_INTO,
+  entryPointMap = BUNDLE_BROWSER_DEFAULT_ENTRY_POINT_MAP,
   compileGroupCount = 1,
   platformScoreMap = browserScoreMap,
   verbose,

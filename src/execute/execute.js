@@ -5,12 +5,17 @@ import {
   createProcessInterruptionCancellationToken,
   catchAsyncFunctionCancellation,
 } from "../cancellationHelper.js"
+import {
+  EXECUTE_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  EXECUTE_DEFAULT_COMPILE_INTO,
+  EXECUTE_DEFAULT_BABEL_CONFIG_MAP,
+} from "./execute-constant.js"
 
 export const execute = async ({
-  importMapFilenameRelative,
   projectFolder,
-  compileInto,
-  babelConfigMap,
+  babelConfigMap = EXECUTE_DEFAULT_BABEL_CONFIG_MAP,
+  importMapFilenameRelative = EXECUTE_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  compileInto = EXECUTE_DEFAULT_COMPILE_INTO,
   compileGroupCount = 2,
   protocol,
   ip,

@@ -6,10 +6,11 @@ import { readPackageData } from "./node-module-resolution/readPackageData.js"
 import { resolveNodeModule } from "./node-module-resolution/resolveNodeModule.js"
 import { packageDataToMain } from "./node-module-resolution/packageDataToMain.js"
 import { packageMayNeedRemapping } from "./node-module-resolution/packageMayNeedRemapping.js"
+import { GENERATE_IMPORT_MAP_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE } from "./generate-import-map-constant.js"
 
 export const generateImportMapForProjectNodeModules = async ({
   projectFolder,
-  importMapFilenameRelative = "importMap.json",
+  importMapFilenameRelative = GENERATE_IMPORT_MAP_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
   scopeOriginRelativePerModule = true, // import '/folder/file.js' is scoped per node_module
   remapMain = true, // import 'lodash' remapped to '/node_modules/lodash/index.js'
   remapFolder = true, // import 'lodash/src/file.js' remapped to '/node_modules/lodash/src/file.js'

@@ -5,14 +5,20 @@ import {
 } from "../cancellationHelper.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
 import { executePlan } from "../executePlan/index.js"
+import {
+  TEST_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  TEST_DEFAULT_COMPILE_INTO,
+  TEST_DEFAULT_EXECUTE_DESCRIPTION,
+  TEST_DEFAULT_BABEL_CONFIG_MAP,
+} from "./test-constant.js"
 
 export const test = async ({
-  importMapFilenameRelative,
   projectFolder,
-  compileInto,
+  babelConfigMap = TEST_DEFAULT_BABEL_CONFIG_MAP,
+  importMapFilenameRelative = TEST_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  compileInto = TEST_DEFAULT_COMPILE_INTO,
+  executeDescription = TEST_DEFAULT_EXECUTE_DESCRIPTION,
   compileGroupCount = 2,
-  babelConfigMap,
-  executeDescription,
   maxParallelExecution,
   defaultAllocatedMsPerExecution,
   updateProcessExitCode = true,

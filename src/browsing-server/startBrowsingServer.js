@@ -10,15 +10,21 @@ import { startServer, serviceCompose } from "../server/index.js"
 import { startCompileServer } from "../server-compile/index.js"
 import { guard } from "../functionHelper.js"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
+import {
+  BROWSING_SERVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  BROWSING_SERVER_DEFAULT_COMPILE_INTO,
+  BROWSING_SERVER_DEFAULT_BROWSABLE_DESCRIPTION,
+  BROWSING_SERVER_DEFAULT_BABEL_CONFIG_MAP,
+} from "./browsing-server-constant.js"
 
 export const startBrowsingServer = async ({
-  cancellationToken = createCancellationToken(),
-  importMapFilenameRelative,
   projectFolder,
-  compileInto,
+  babelConfigMap = BROWSING_SERVER_DEFAULT_BABEL_CONFIG_MAP,
+  cancellationToken = createCancellationToken(),
+  importMapFilenameRelative = BROWSING_SERVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  compileInto = BROWSING_SERVER_DEFAULT_COMPILE_INTO,
   compileGroupCount = 2,
-  babelConfigMap,
-  browsableDescription,
+  browsableDescription = BROWSING_SERVER_DEFAULT_BROWSABLE_DESCRIPTION,
   localCacheStrategy,
   localCacheTrackHit,
   cacheStrategy,
