@@ -57,7 +57,7 @@
 		"@jsenv/core": "5.21.0",
 		"@jsenv/eslint-config": "8.0.0",
 		"@jsenv/prettier-config": "1.0.0",
-		"@jsenv/prettier-check-project": "1.5.0",
+		"@jsenv/prettier-check-project": "1.7.0",
 		"@jsenv/eslint-import-resolver": "4.2.0",
 		"@jsenv/codecov-upload": "1.2.0",
 		"@dmail/assert": "3.0.0",
