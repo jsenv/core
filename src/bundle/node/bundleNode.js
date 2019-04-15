@@ -19,7 +19,7 @@ export const bundleNode = async ({
   logBundleFilePaths = true,
 }) => {
   projectFolder = normalizePathname(projectFolder)
-  const promise = await bundlePlatform({
+  const promise = bundlePlatform({
     entryPointMap,
     projectFolder,
     into,
