@@ -1,5 +1,5 @@
 const { bundleBrowser } = require("@jsenv/core")
-const { projectFolder, babelConfigMap } = require("../../jsenv.config.js")
+const { projectFolder } = require("../../jsenv.config.js")
 const { fileCopy } = require("@dmail/helper")
 
 const SYSTEMJS_RELATIVE_PATH = "src/systemjs/s.js"
@@ -7,7 +7,6 @@ const SYSTEMJS_RELATIVE_PATH = "src/systemjs/s.js"
 bundleBrowser({
   projectFolder,
   into: "dist/browser-client",
-  babelConfigMap,
   entryPointMap: {
     browserClient: "src/platform/browser/browserPlatform.js",
   },
