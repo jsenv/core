@@ -166,7 +166,7 @@ export const createJsenvRollupPlugin = ({
 
       if (logBundleFilePaths) {
         Object.keys(bundle).forEach((bundleFilename) => {
-          console.log(`-> ${bundleFilename}`)
+          console.log(`-> ${dir}/${bundleFilename}`)
         })
       }
     },
