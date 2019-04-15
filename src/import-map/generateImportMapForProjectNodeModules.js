@@ -1,8 +1,6 @@
 import { basename } from "path"
-import {
-  normalizePathname,
-  pathnameToDirname,
-} from "/node_modules/@jsenv/module-resolution/index.js"
+import { normalizePathname, pathnameToDirname } from "@jsenv/module-resolution"
+import { fileWrite } from "@dmail/helper"
 import { readPackageData } from "./node-module-resolution/readPackageData.js"
 import { resolveNodeModule } from "./node-module-resolution/resolveNodeModule.js"
 import { packageDataToMain } from "./node-module-resolution/packageDataToMain.js"
@@ -10,13 +8,15 @@ import { packageMayNeedRemapping } from "./node-module-resolution/packageMayNeed
 
 export const generateImportMapForProjectNodeModules = async ({
   projectFolder,
+  importMapFilenameRelative,
   scopeOriginRelativePerModule = true, // import '/folder/file.js' is scoped per node_module
   remapMain = true, // import 'lodash' remapped to '/node_modules/lodash/index.js'
   remapFolder = true, // import 'lodash/src/file.js' remapped to '/node_modules/lodash/src/file.js'
   remapDevDependencies = true,
   remapPredicate = () => true,
-  logDuration = false,
-  updateProcessExitCode = true,
+  writeImportMapFile = true,
+  logImportMapFilePath = true,
+  throwUnhandled = true,
 }) => {
   projectFolder = normalizePathname(projectFolder)
   const topLevelPackageFilename = `${projectFolder}/package.json`
@@ -184,26 +184,30 @@ export const generateImportMapForProjectNodeModules = async ({
     )
   }
 
-  const before = Date.now()
-  const topLevelPackageData = await readPackageData({ filename: topLevelPackageFilename })
-  try {
+  const start = async () => {
+    const topLevelPackageData = await readPackageData({ filename: topLevelPackageFilename })
     await visit({
       packageFilename: topLevelPackageFilename,
       packageData: topLevelPackageData,
     })
-  } catch (e) {
-    if (updateProcessExitCode) {
-      process.exitCode = 1
+    const importMap = sortImportMap({ imports, scopes })
+    if (writeImportMapFile) {
+      const importMapFilename = `${projectFolder}/${importMapFilenameRelative}`
+      await fileWrite(importMapFilename, JSON.stringify(importMap, null, "  "))
+      if (logImportMapFilePath) {
+        console.log(`-> ${importMapFilename}`)
+      }
     }
-    throw e
+    return importMap
   }
 
-  if (logDuration) {
-    const importMapGenerationDuration = Date.now() - before
-    console.log(`import generated in ${importMapGenerationDuration}ms`)
-  }
-
-  return sortImportMap({ imports, scopes })
+  const promise = start()
+  if (!throwUnhandled) return promise
+  return promise.catch((e) => {
+    setTimeout(() => {
+      throw e
+    })
+  })
 }
 
 const sortImportMap = (importMap) => {
