@@ -1,5 +1,5 @@
-import path from "path"
-import { fileRead, fileWrite, fileMakeDirname } from "/node_modules/@dmail/helper/index.js"
+import { resolve } from "path"
+import { fileRead, fileWrite, fileMakeDirname } from "@dmail/helper"
 import { createETag, isFileNotFoundError } from "./helpers.js"
 import {
   getMetaFilename,
@@ -12,15 +12,15 @@ import { lockForRessource } from "./ressourceRegistry.js"
 const lockfile = import.meta.require("proper-lockfile")
 
 export const compileFile = async ({
-  compile,
   projectFolder,
   compileInto,
   compileId,
-  compileDescription = {},
+  serverCompileCacheStrategy = "etag",
+  serverCompileCacheTrackHit = false,
+  enableGlobalLock = true,
   filenameRelative,
   filename,
-  cacheStrategy = "etag",
-  cacheTrackHit = false,
+  compile,
 }) => {
   const outputFilenameRelative = getOutputFilenameRelative({
     compileInto,
@@ -28,23 +28,20 @@ export const compileFile = async ({
     filenameRelative,
   })
 
-  const { enableGlobalLock = true, ...compileParam } =
-    compileDescription && compileId in compileDescription ? compileDescription[compileId] : {}
-
   const generate = async ({ input }) => {
     const {
       sources = [],
       sourcesContent = [],
       assets = [],
       assetsContent = [],
-      output,
+      compiledSource,
+      contentType,
     } = await compile({
       projectFolder,
       filenameRelative,
       filename,
       input,
       outputFilenameRelative,
-      ...compileParam,
     })
 
     return {
@@ -52,11 +49,12 @@ export const compileFile = async ({
       sourcesContent,
       assets,
       assetsContent,
-      output,
+      compiledSource,
+      contentType,
     }
   }
 
-  if (cacheStrategy === "none") {
+  if (serverCompileCacheStrategy === "none") {
     const input = await fileRead(filename)
     const compileResult = await generate({ input })
     return {
@@ -98,6 +96,8 @@ export const compileFile = async ({
       return {
         status: "cached",
         meta,
+        compiledSource: cache.compiledSource,
+        contentType: meta.contentType,
         sources: meta.sources,
         assets: meta.assets,
         sourcesContent: cache.sourcesContent,
@@ -148,11 +148,12 @@ export const compileFile = async ({
     const {
       status,
       meta,
+      compiledSource,
+      contentType,
       sources,
       sourcesContent,
       assets,
       assetsContent,
-      output,
     } = await fromCacheOrCompile()
 
     await updateMeta({
@@ -161,23 +162,24 @@ export const compileFile = async ({
       compileId,
       filenameRelative,
       filename,
-      cacheTrackHit,
+      serverCompileCacheTrackHit,
       status,
       meta,
+      compiledSource,
+      contentType,
       sources,
       sourcesContent,
       assets,
       assetsContent,
-      output,
     })
 
     return {
+      compiledSource,
+      contentType,
       sources,
       sourcesContent,
       assets,
       assetsContent,
-      output,
-      outputFilenameRelative,
     }
   } finally {
     // we want to unlock in case of error too
@@ -252,7 +254,7 @@ const validateAssets = async ({
 }
 
 const validateSource = async ({ projectFolder, source, eTag }) => {
-  const sourceAbsolute = path.resolve(projectFolder, source)
+  const sourceAbsolute = resolve(projectFolder, source)
   const sourceContent = await fileRead(sourceAbsolute)
   const sourceETag = createETag(source)
 
@@ -284,7 +286,7 @@ const validateSources = async ({ projectFolder, meta }) => {
 }
 
 const validateCache = async ({ projectFolder, compileInto, compileId, filenameRelative }) => {
-  const outputFilename = getOutputFilename({
+  const compiledFilename = getOutputFilename({
     projectFolder,
     compileInto,
     compileId,
@@ -292,7 +294,7 @@ const validateCache = async ({ projectFolder, compileInto, compileId, filenameRe
   })
 
   try {
-    const content = await fileRead(outputFilename)
+    const content = await fileRead(compiledFilename)
     return {
       valid: true,
       reason: "cache found",
@@ -302,7 +304,7 @@ const validateCache = async ({ projectFolder, compileInto, compileId, filenameRe
     if (isFileNotFoundError(error)) {
       return {
         valid: false,
-        reason: `cache not found at ${outputFilename}`,
+        reason: `cache not found at ${compiledFilename}`,
       }
     }
     return Promise.reject(error)
@@ -328,7 +330,8 @@ const readCache = async ({
     return null
   }
 
-  const cacheEtag = createETag(cacheValidation.data)
+  const compiledSource = cacheValidation.data
+  const cacheEtag = createETag(compiledSource)
   if (cacheEtag !== eTag) {
     return null
   }
@@ -352,6 +355,7 @@ const readCache = async ({
   const assetsContent = assetValidations.find(({ data }) => data)
 
   return {
+    compiledSource,
     sourcesContent,
     assetsContent,
   }
@@ -397,14 +401,15 @@ const updateMeta = ({
   compileId,
   filenameRelative,
   filename,
-  cacheTrackHit,
+  serverCompileCacheTrackHit,
   status,
   meta,
+  compiledSource,
+  contentType,
   sources,
   sourcesContent,
   assets,
   assetsContent,
-  output,
 }) => {
   const isNew = status === "created"
   const isUpdated = status === "updated"
@@ -421,7 +426,7 @@ const updateMeta = ({
     })
 
     promises.push(
-      fileWrite(mainLocation, output),
+      fileWrite(mainLocation, compiledSource),
       ...assets.map((asset, index) => {
         const assetFilename = getAssetFilename({
           projectFolder,
@@ -436,18 +441,19 @@ const updateMeta = ({
     )
   }
 
-  if (isNew || isUpdated || (isCached && cacheTrackHit)) {
+  if (isNew || isUpdated || (isCached && serverCompileCacheTrackHit)) {
     if (isNew) {
       meta = {
         filenameRelative,
         filename,
+        contentType,
         sources,
         sourcesEtag: sourcesContent.map((sourceContent) => createETag(sourceContent)),
         assets,
         assetsEtag: assetsContent.map((assetContent) => createETag(assetContent)),
         createdMs: Number(Date.now()),
         lastModifiedMs: Number(Date.now()),
-        ...(cacheTrackHit
+        ...(serverCompileCacheTrackHit
           ? {
               matchCount: 1,
               lastMatchMs: Number(Date.now()),
@@ -463,7 +469,7 @@ const updateMeta = ({
         assets,
         assetsEtag: assetsContent.map((assetContent) => createETag(assetContent)),
         lastModifiedMs: Number(Date.now()),
-        ...(cacheTrackHit
+        ...(serverCompileCacheTrackHit
           ? {
               matchCount: meta.matchCount + 1,
               lastMatchMs: Number(Date.now()),
@@ -474,7 +480,7 @@ const updateMeta = ({
       meta = {
         ...meta,
         filename, // may change because of locate
-        ...(cacheTrackHit
+        ...(serverCompileCacheTrackHit
           ? {
               matchCount: meta.matchCount + 1,
               lastMatchMs: Number(Date.now()),

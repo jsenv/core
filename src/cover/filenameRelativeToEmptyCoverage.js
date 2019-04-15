@@ -1,6 +1,6 @@
-import { fileRead } from "/node_modules/@dmail/helper/index.js"
-import { createOperation } from "/node_modules/@dmail/cancellation/index.js"
-import { jsCompile } from "../jsCompile/index.js"
+import { fileRead } from "@dmail/helper"
+import { createOperation } from "@dmail/cancellation"
+import { compileJs } from "../server-compile/compile-js/index.js"
 import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
 
 const { createFileCoverage } = import.meta.require("istanbul-lib-coverage")
@@ -11,7 +11,7 @@ export const filenameRelativeToEmptyCoverage = async ({
   filenameRelative,
 }) => {
   const filename = `${projectFolder}/${filenameRelative}`
-  const input = await createOperation({
+  const source = await createOperation({
     cancellationToken,
     start: () => fileRead(filename),
   })
@@ -24,16 +24,16 @@ export const filenameRelativeToEmptyCoverage = async ({
     const { assets, assetsContent } = await createOperation({
       cancellationToken,
       start: () =>
-        jsCompile({
-          input,
+        compileJs({
+          projectFolder,
           filename,
           filenameRelative,
-          projectFolder,
+          source,
           babelConfigMap: {
             "transform-instrument": [createInstrumentPlugin({ predicate: () => true })],
           },
-          remap: false,
           transformTopLevelAwait: false,
+          remap: false,
         }),
     })
 
@@ -48,7 +48,7 @@ export const filenameRelativeToEmptyCoverage = async ({
 
     return coverage
   } catch (e) {
-    if (e && e.name === "BABEL_PARSE_ERROR") {
+    if (e && e.name === "PARSE_ERROR") {
       // return an empty coverage for that file when
       // it contains a syntax error
       const coverage = createFileCoverage(filenameRelative).toJSON()

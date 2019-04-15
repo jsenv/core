@@ -1,15 +1,15 @@
 import path from "path"
 import assert from "assert"
-import { jsCompileToService } from "../../../jsCompileToService/jsCompileToService.js"
-import { jsCompile } from "../../../jsCompile/index.js"
-import { createInstrumentPlugin } from "../../../cover/createInstrumentPlugin.js"
+import { createCompileService } from "../../createCompileService.js.js.js"
+import { jsCompile } from "../../../../jsCompile/index.js"
+import { createInstrumentPlugin } from "../../../../cover/createInstrumentPlugin.js"
 
 const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = ".dist"
 const compileId = "compileId"
 
 const test = async () => {
-  const jsService = jsCompileToService(jsCompile, {
+  const jsService = createCompileService(jsCompile, {
     localRoot,
     compileInto,
     compileDescription: {

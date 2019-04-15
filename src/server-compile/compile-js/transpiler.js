@@ -1,4 +1,4 @@
-import transformModulesSystemJs from "../babel-plugin-transform-modules-systemjs/index.js"
+import transformModulesSystemJs from "../../babel-plugin-transform-modules-systemjs/index.js"
 
 const { transformAsync, transformFromAstAsync } = import.meta.require("@babel/core")
 const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-import")

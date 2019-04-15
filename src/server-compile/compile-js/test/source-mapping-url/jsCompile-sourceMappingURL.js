@@ -1,5 +1,5 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { jsCompile } from "../../jsCompile.js"
+import { jsCompile } from "../../jsCompile/jsCompile.js"
 
 const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
 

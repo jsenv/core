@@ -1,14 +1,14 @@
 import path from "path"
-import { assert } from "/node_modules/@dmail/assert/index.js"
-import { jsCompile } from "../../../jsCompile/index.js"
-import { jsCompileToService } from "../../jsCompileToService.js"
+import { assert } from "@dmail/assert"
+import { jsCompile } from "../../../../jsCompile/index.js"
+import { createCompileService } from "../../createCompileService.js.js.js"
 
 const localRoot = path.resolve(__dirname, "../../../")
 const compileInto = ".dist"
 const compileId = "compileId"
 
 const test = async () => {
-  const jsService = jsCompileToService(jsCompile, {
+  const jsService = createCompileService(jsCompile, {
     localRoot,
     compileInto,
   })

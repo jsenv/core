@@ -1,5 +1,7 @@
-import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
-import { createCancellationToken } from "/node_modules/@dmail/cancellation/index.js"
+/* eslint-disable import/max-dependencies */
+import { normalizePathname } from "@jsenv/module-resolution"
+import { createCancellationToken } from "@dmail/cancellation"
+import { fileWrite } from "@dmail/helper"
 import { ROOT_FOLDER } from "../ROOT_FOLDER.js"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
 import {
@@ -8,64 +10,110 @@ import {
   serviceCompose,
   responseCompose,
 } from "../server/index.js"
-import { createJsCompileService } from "./createJsCompileService.js"
+import {
+  generateGroupMap,
+  browserScoreMap as browserDefaultScoreMap,
+  nodeVersionScoreMap as nodeDefaultVersionScoreMap,
+} from "../group-map/index.js"
+import { createCompileService } from "./compile-service/createCompileService.js"
+import { compileJs } from "./compile-js/index.js"
+import { compileImportMap } from "./compile-import-map/index.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
   projectFolder,
-  importMapFilenameRelative,
   compileInto,
+  // option related to compile groups
   compileGroupCount = 1,
   babelConfigMap,
-  locate,
-  localCacheStrategy,
-  localCacheTrackHit,
-  cacheStrategy,
-  watch,
-  watchPredicate,
-  sourceCacheStrategy = "etag",
-  sourceCacheIgnore = false,
+  babelCompatMap,
+  browserScoreMap = browserDefaultScoreMap,
+  nodeVersionScoreMap = nodeDefaultVersionScoreMap,
+  // options related to how cache/hotreloading
+  watchSource = false,
+  watchSourcePredicate = () => true,
+  clientCompileCacheStrategy = "etag",
+  serverCompileCacheStrategy = "etag",
+  serverCompileCacheTrackHit = false,
+  enableGlobalLock = true,
+  clientSourceCacheStrategy = "etag",
+  // js compile options
+  transformTopLevelAwait,
+  // options related to the server itself
   preventCors = false,
   protocol,
   ip,
   port,
   signature,
   verbose,
-  transformTopLevelAwait,
-  enableGlobalLock,
 }) => {
   if (typeof projectFolder !== "string")
     throw new TypeError(`projectFolder must be a string. got ${projectFolder}`)
 
   projectFolder = normalizePathname(projectFolder)
-  const jsCompileService = await createJsCompileService({
-    cancellationToken,
-    projectFolder,
-    importMapFilenameRelative,
-    compileInto,
-    compileGroupCount,
+
+  const groupMap = generateGroupMap({
     babelConfigMap,
-    locate,
-    localCacheStrategy,
-    localCacheTrackHit,
-    cacheStrategy,
-    watch,
-    watchPredicate,
-    transformTopLevelAwait,
-    enableGlobalLock,
+    babelCompatMap,
+    platformScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
+    groupCount: compileGroupCount,
   })
 
-  const service = serviceCompose(jsCompileService, (request) =>
+  await Promise.all([
+    fileWrite(
+      `${projectFolder}/${compileInto}/groupMap.json`,
+      JSON.stringify(groupMap, null, "  "),
+    ),
+  ])
+
+  const compileService = await createCompileService({
+    cancellationToken,
+    projectFolder,
+
+    compileInto,
+    watchSource,
+    watchSourcePredicate,
+    clientCompileCacheStrategy,
+    serverCompileCacheStrategy,
+    serverCompileCacheTrackHit,
+    enableGlobalLock,
+    compileImportMap: ({ compileId, source }) =>
+      compileImportMap({
+        compileInto,
+        compileId,
+        source,
+      }),
+    compileJs: ({ compileId, filenameRelative, filename, source }) => {
+      const groupBabelConfigMap = {}
+      groupMap[compileId].incompatibleNameArray.forEach((incompatibleFeatureName) => {
+        if (incompatibleFeatureName in babelConfigMap) {
+          groupBabelConfigMap[incompatibleFeatureName] = babelConfigMap[incompatibleFeatureName]
+        }
+      })
+
+      return compileJs({
+        projectFolder,
+        compileInto,
+        compileId,
+        filenameRelative,
+        filename,
+        source,
+        babelConfigMap: groupBabelConfigMap,
+        transformTopLevelAwait,
+      })
+    },
+  })
+
+  const compileOrServeFileService = serviceCompose(compileService, (request) =>
     requestToFileResponse(request, {
       projectFolder,
       locate: locateFileSystem,
-      cacheIgnore: sourceCacheIgnore,
-      cacheStrategy: sourceCacheStrategy,
+      cacheStrategy: clientSourceCacheStrategy,
     }),
   )
 
   const requestToResponse = preventCors
-    ? service
+    ? compileOrServeFileService
     : async (request) => {
         const accessControlHeaders = requestToAccessControlHeaders(request)
 
@@ -79,8 +127,7 @@ export const startCompileServer = async ({
           }
         }
 
-        const response = await service(request)
-
+        const response = await compileOrServeFileService(request)
         return responseCompose({ headers: accessControlHeaders }, response)
       }
 

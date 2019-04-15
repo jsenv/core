@@ -1,7 +1,7 @@
 import { createReadStream } from "fs"
-import { folderRead, fileStat, fileRead } from "/node_modules/@dmail/helper/index.js"
-import { hrefToPathname, hrefToOrigin } from "/node_modules/@jsenv/module-resolution/index.js"
-import { createETag } from "../jsCompileToService/helpers.js"
+import { folderRead, fileStat, fileRead } from "@dmail/helper"
+import { hrefToPathname, hrefToOrigin } from "@jsenv/module-resolution"
+import { createETag } from "../server-compile/compile-request-to-response/helpers.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
 import { ressourceToContentType } from "./ressourceToContentType.js"
 

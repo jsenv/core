@@ -1,4 +1,4 @@
-import { arrayWithoutValue } from "/node_modules/@dmail/helper/index.js"
+import { arrayWithoutValue } from "@dmail/helper"
 
 export const createLockRegistry = () => {
   let lockArray = []

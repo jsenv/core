@@ -1,13 +1,13 @@
 import { assert } from "@dmail/assert"
-import { jsCompile } from "../../../jsCompile/index.js"
-import { jsCompileToService } from "../../jsCompileToService.js"
+import { jsCompile } from "../../../../jsCompile/index.js"
+import { createCompileService } from "../../createCompileService.js.js.js"
 
 const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
 
 const compileInto = ".dist"
 const compileId = "test"
 
-const jsService = jsCompileToService(jsCompile, {
+const jsService = createCompileService(jsCompile, {
   projectFolder,
   compileInto,
   compileDescription: {

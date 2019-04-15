@@ -1,17 +1,20 @@
 /* eslint-disable import/max-dependencies */
 import { resolve } from "url"
-import { fileRead, fileWrite } from "/node_modules/@dmail/helper/index.js"
-import { createOperation } from "/node_modules/@dmail/cancellation/index.js"
+import { fileRead, fileWrite } from "@dmail/helper"
+import { createOperation } from "@dmail/cancellation"
 import {
   resolveImport,
   remapResolvedImport,
   hrefToPathname,
   hrefToScheme,
-} from "/node_modules/@jsenv/module-resolution/index.js"
+} from "@jsenv/module-resolution"
 import { fetchUsingHttp } from "../../platform/node/fetchUsingHttp.js"
 import { readSourceMappingURL } from "../../replaceSourceMappingURL.js"
-import { transpiler, findAsyncPluginNameInBabelConfigMap } from "../../jsCompile/transpiler.js"
-import { writeSourceMapLocation } from "../../jsCompile/jsCompile.js"
+import {
+  transpiler,
+  findAsyncPluginNameInBabelConfigMap,
+} from "../../server-compile/compile-js/transpiler.js"
+import { writeSourceMapLocation } from "../../server-compile/compile-js/compileJs.js"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { computeBabelConfigMapSubset } from "./computeBabelConfigMapSubset.js"
 
