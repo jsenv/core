@@ -8,6 +8,5 @@ bundleNode({
   entryPointMap: {
     main: "index.js",
   },
-  verbose: true,
   compileGroupCount: 1,
 })

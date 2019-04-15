@@ -13,13 +13,7 @@ bundleBrowser({
   },
   verbose: false,
   minify: false,
-}).then(
-  () => console.log(`-> ${projectFolder}/dist/browser-client/browserClient.js`),
-  (e) =>
-    setTimeout(() => {
-      throw e
-    }),
-)
+})
 
 fileCopy(
   `${projectFolder}/${SYSTEMJS_RELATIVE_PATH}`,

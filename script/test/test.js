@@ -1,6 +1,10 @@
 const { test } = require("@jsenv/core")
-const { projectFolder, compileInto, babelConfigMap } = require("../../jsenv.config.js")
-const { testDescription } = require("./test.config.js")
+const {
+  projectFolder,
+  compileInto,
+  babelConfigMap,
+  testDescription,
+} = require("../../jsenv.config.js")
 
 test({
   projectFolder,

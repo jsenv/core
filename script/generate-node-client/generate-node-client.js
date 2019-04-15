@@ -10,10 +10,4 @@ bundleNode({
   },
   compileGroupCount: 1,
   verbose: false,
-}).then(
-  () => console.log(`-> ${projectFolder}/dist/node-client/nodeClient.js`),
-  (e) =>
-    setTimeout(() => {
-      throw e
-    }),
-)
+})
