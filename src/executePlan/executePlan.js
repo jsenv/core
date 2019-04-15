@@ -5,7 +5,6 @@ import {
 } from "/node_modules/@dmail/cancellation/index.js"
 import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
-  createExecutionPlanStartLog,
   createExecutionResultLog,
   createExecutionPlanSummaryMessage,
 } from "./createExecutionLog.js"
@@ -36,7 +35,7 @@ export const executePlan = async (
     })
   })
 
-  console.log(createExecutionPlanStartLog({ executionPlan }))
+  // console.log(createExecutionPlanStartLog({ executionPlan }))
 
   const planResult = {}
   await createConcurrentOperations({
