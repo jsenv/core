@@ -9,7 +9,7 @@ import { packageMayNeedRemapping } from "./node-module-resolution/packageMayNeed
 
 export const generateImportMapForProjectNodeModules = async ({
   projectFolder,
-  importMapFilenameRelative,
+  importMapFilenameRelative = "importMap.json",
   scopeOriginRelativePerModule = true, // import '/folder/file.js' is scoped per node_module
   remapMain = true, // import 'lodash' remapped to '/node_modules/lodash/index.js'
   remapFolder = true, // import 'lodash/src/file.js' remapped to '/node_modules/lodash/src/file.js'
