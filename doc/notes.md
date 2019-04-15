@@ -1,7 +1,14 @@
 ## TODO
 
-- test shared no module or scoped one
-  with cover, it looks broken according to travis
+- move .dist/importMap.best.json into
+  .dist/best/importMap.json and generate it lazyly
+
+- remove jsenv/core/dist/browser-client/browserClient.js
+  and instead let client ask for it and generate it lazyly
+  an option like Node|BrowserCompileIdModuleFilenameRelative
+  that will default to 'node_modules/jsenv/src/browser/compueCompileId.js'
+  and we will dynamically create a bundle for this
+  that client will fetch to know how to compute compileId
 
 ## To keep in mind
 
