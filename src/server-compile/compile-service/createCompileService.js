@@ -6,12 +6,15 @@ import { locate as locateDefault } from "./locate.js"
 export const createCompileService = async ({
   cancellationToken = createCancellationToken(),
   projectFolder,
+  importMapFilenameRelative,
   compileInto,
   locate = locateDefault,
   watchSource,
   watchSourcePredicate,
   groupMap,
   compileImportMap,
+  compileBrowserClient,
+  compileNodeClient,
   compileJs,
 }) => {
   const { registerFileChangedCallback, triggerFileChanged } = createFileChangedSignal()
@@ -21,6 +24,18 @@ export const createCompileService = async ({
     watchedFiles.forEach((closeWatcher) => closeWatcher())
     watchedFiles.clear()
   })
+
+  const filenameRelativeToCompile = (filenameRelative) => {
+    if (filenameRelative === importMapFilenameRelative) return compileImportMap
+
+    if (filenameRelative === "JSENV_BROWSER_CLIENT.js") return compileBrowserClient
+
+    if (filenameRelative === "JSENV_NODE_CLIENT.js") return compileNodeClient
+
+    if (filenameRelative.endsWith(".json")) return undefined
+
+    return compileJs
+  }
 
   const compileService = async ({ origin, ressource, method, headers = {} }) => {
     const requestPathname = ressource
@@ -61,14 +76,7 @@ export const createCompileService = async ({
       }
     }
 
-    let compile
-    if (filenameRelative === "importMap.json") {
-      compile = compileImportMap
-    } else if (filenameRelative.endsWith(".json")) {
-      compile = undefined
-    } else {
-      compile = compileJs
-    }
+    const compile = filenameRelativeToCompile(filenameRelative)
 
     // we are asking for a compiled version of a file that does not have to be compiled
     // we can redirect to the non compiled version
@@ -84,8 +92,9 @@ export const createCompileService = async ({
     // when I ask for a compiled file, watch the corresponding file on filesystem
     // here we should use the registerFileLifecyle stuff made in
     // jsenv-eslint-import-resolver so support if file gets created/deleted
-    // because it may be possible that file does not yet exists at this point
-    // and that would be ok
+    // by the way this is not truly working if compile creates a bundle
+    // in that case we should watch for the whole bundle
+    // sources, for now let's ignore
     if (
       watchSource &&
       watchedFiles.has(filename) === false &&

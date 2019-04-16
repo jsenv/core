@@ -3,8 +3,8 @@
 // something containing \0
 import { entryPointName, groupMap } from "\0bundle-browser-options.js"
 /* eslint-enable */
-import { detect } from "../../platform/browser/browserDetect/index.js"
-import { browserToCompileId } from "../../platform/browser/browserToCompileId.js"
+import { detect } from "../../browser-compile-id/browserDetect/index.js.js"
+import { browserToCompileId } from "../../browser-compile-id/browserToCompileId.js/index.js"
 
 window.System.register([], function(_export, _context) {
   "use strict"

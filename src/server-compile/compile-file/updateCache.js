@@ -10,18 +10,20 @@ export const updateCache = ({
   filename,
   serverCompileCacheTrackHit,
   cache,
-  status,
-  compiledSource,
-  contentType,
-  sources,
-  sourcesContent,
-  assets,
-  assetsContent,
+  compileResult,
+  compileResultStatus,
 }) => {
-  const isNew = status === "created"
-  const isUpdated = status === "updated"
-  const isCached = status === "cached"
-
+  const isNew = compileResultStatus === "created"
+  const isUpdated = compileResultStatus === "updated"
+  const isCached = compileResultStatus === "cached"
+  const {
+    compiledSource,
+    contentType,
+    sources,
+    sourcesContent,
+    assets,
+    assetsContent,
+  } = compileResult
   const promises = []
 
   if (isNew || isUpdated) {

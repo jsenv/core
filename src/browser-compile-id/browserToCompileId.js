@@ -1,4 +1,4 @@
-import { findHighestVersion } from "../../semantic-versioning/index.js"
+import { findHighestVersion } from "../semantic-versioning/index.js"
 
 export const browserToCompileId = ({ name, version }, groupMap) => {
   return Object.keys(groupMap).find((compileIdCandidate) => {

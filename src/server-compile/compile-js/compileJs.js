@@ -1,7 +1,7 @@
 import { sep, basename } from "path"
 import { ansiToHTML } from "../../ansiToHTML.js"
 import { regexpEscape } from "../../stringHelper.js"
-import { createParseError } from "../compile-request-to-response/index.js"
+import { createParseError } from "../compile-file/index.js"
 import { transpiler } from "./transpiler.js"
 
 export const compileJs = async ({

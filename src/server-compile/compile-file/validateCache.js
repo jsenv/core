@@ -1,6 +1,7 @@
 import { resolve } from "path"
-import { fileRead } from "@dmail/helper"
+import { fileRead, fileStat } from "@dmail/helper"
 import { createETag } from "../../createETag.js"
+import { dateToSecondsPrecision } from "../../dateHelper.js"
 import { getCompiledFilename, getAssetFilename } from "./locaters.js"
 
 export const validateCache = async ({
@@ -9,12 +10,16 @@ export const validateCache = async ({
   compileId,
   filenameRelative,
   cache,
+  ifEtagMatch,
+  ifModifiedSinceDate,
 }) => {
   const compiledFileValidation = await validateCompiledFile({
     projectFolder,
     compileInto,
     compileId,
     filenameRelative,
+    ifEtagMatch,
+    ifModifiedSinceDate,
   })
   if (!compiledFileValidation.valid) return compiledFileValidation
 
@@ -48,6 +53,8 @@ const validateCompiledFile = async ({
   compileInto,
   compileId,
   filenameRelative,
+  ifEtagMatch,
+  ifModifiedSinceDate,
 }) => {
   const compiledFilename = getCompiledFilename({
     projectFolder,
@@ -58,6 +65,28 @@ const validateCompiledFile = async ({
 
   try {
     const compiledSource = await fileRead(compiledFilename)
+
+    if (ifEtagMatch) {
+      const compiledEtag = createETag(compiledSource)
+      if (ifEtagMatch !== compiledEtag) {
+        return {
+          code: "COMPILED_FILE_ETAG_MISMATCH",
+          valid: false,
+          data: { compiledSource, compiledEtag },
+        }
+      }
+    }
+
+    if (ifModifiedSinceDate) {
+      const compiledMtime = await fileStat(compiledFilename)
+      if (ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)) {
+        return {
+          code: "COMPILED_FILE_MTIME_OUTDATED",
+          valid: false,
+          data: { compiledSource, compiledMtime },
+        }
+      }
+    }
 
     return {
       valid: true,

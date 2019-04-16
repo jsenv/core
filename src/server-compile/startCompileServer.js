@@ -1,7 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { normalizePathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
-import { fileWrite } from "@dmail/helper"
+import { fileWrite, fileRead } from "@dmail/helper"
 import { ROOT_FOLDER } from "../ROOT_FOLDER.js"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
 import { startServer, serviceCompose } from "../server/index.js"
@@ -9,9 +9,9 @@ import { generateGroupMap } from "../group-map/index.js"
 import { createCompileService } from "./compile-service/createCompileService.js"
 import { compileJs } from "./compile-js/index.js"
 import { compileImportMap } from "./compile-import-map/index.js"
-import { compileRequestToResponse } from "./compile-request-to-response/index.js"
+import { compileFile } from "./compile-file/index.js"
 import {
-  //   COMPILE_SERVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  COMPILE_SERVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
   COMPILE_SERVER_DEFAULT_COMPILE_INTO,
   COMPILE_SERVER_DEFAULT_BABEL_CONFIG_MAP,
   COMPILE_SERVER_DEFAULT_BABEL_COMPAT_MAP,
@@ -22,6 +22,7 @@ import {
 export const startCompileServer = async ({
   projectFolder,
   cancellationToken = createCancellationToken(),
+  importMapFilenameRelative = COMPILE_SERVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
   compileInto = COMPILE_SERVER_DEFAULT_COMPILE_INTO,
   // option related to compile groups
   compileGroupCount = 1,
@@ -64,19 +65,40 @@ export const startCompileServer = async ({
   const compileService = await createCompileService({
     cancellationToken,
     projectFolder,
+    importMapFilenameRelative,
     compileInto,
     watchSource,
     watchSourcePredicate,
     groupMap,
-    compileImportMap: ({ headers, compileId, filenameRelative, filename }) => {
-      return compileRequestToResponse({
+    compileBrowserClient: ({ headers, compileId, filenameRelative, filename }) => {
+      // browserComputeCompileIdFilenameRelative = "node_modules/jsenv/core/src/browser-compile-id/computeBrowserCompileId.js",
+      // nodeComputeCompileIdFilenameRelative = "node_modules/jsenv/core/src/node-compile-id/computeNodeCompileId.js",
+
+      return compileFile({
         projectFolder,
         compileInto,
-        compileId,
         headers,
+        compileId,
         filenameRelative,
         filename,
-        compile: ({ source }) => {
+        compile: async () => {},
+        // for now disable cache for client because veryfing
+        // it would mean ensuring the whole bundle is still valid
+        // I suspect it is faster to regenerate the bundle than check
+        // if it's still valid.
+        clientCompileCacheStrategy: "none",
+      })
+    },
+    compileImportMap: ({ headers, compileId, filenameRelative, filename }) => {
+      return compileFile({
+        projectFolder,
+        compileInto,
+        headers,
+        compileId,
+        filenameRelative,
+        filename,
+        compile: async ({ filename }) => {
+          const source = await fileRead(filename)
           return compileImportMap({
             compileInto,
             compileId,
@@ -86,14 +108,15 @@ export const startCompileServer = async ({
       })
     },
     compileJs: ({ origin, headers, compileId, filenameRelative, filename }) => {
-      return compileRequestToResponse({
+      return compileFile({
         projectFolder,
         compileInto,
-        compileId,
         headers,
+        compileId,
         filenameRelative,
         filename,
-        compile: ({ source }) => {
+        compile: async ({ filename }) => {
+          const source = await fileRead(filename)
           const groupBabelConfigMap = {}
           groupMap[compileId].incompatibleNameArray.forEach((incompatibleFeatureName) => {
             if (incompatibleFeatureName in babelConfigMap) {
