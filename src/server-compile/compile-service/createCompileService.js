@@ -28,16 +28,27 @@ export const createCompileService = async ({
   const filenameRelativeToCompile = (filenameRelative) => {
     if (filenameRelative === importMapFilenameRelative) return compileImportMap
 
-    if (filenameRelative === "JSENV_BROWSER_CLIENT.js") return compileBrowserClient
-
-    if (filenameRelative === "JSENV_NODE_CLIENT.js") return compileNodeClient
-
     if (filenameRelative.endsWith(".json")) return undefined
 
     return compileJs
   }
 
   const compileService = async ({ origin, ressource, method, headers = {} }) => {
+    if (ressource === `/${compileInto}/JSENV_BROWSER_CLIENT.js`) {
+      return compileBrowserClient({
+        origin,
+        method,
+        headers,
+      })
+    }
+    if (ressource === `/${compileInto}/JSENV_NODE_CLIENT.js`) {
+      return compileNodeClient({
+        origin,
+        method,
+        headers,
+      })
+    }
+
     const requestPathname = ressource
 
     if (pathnameIsAsset(ressource)) return null

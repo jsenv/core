@@ -15,6 +15,7 @@ export const bundleNode = async ({
   projectFolder,
   babelConfigMap = BUNDLE_NODE_DEFAULT_BABEL_CONFIG_MAP,
   importMapFilenameRelative = BUNDLE_NODE_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  inlineSpecifierMap = {},
   into = BUNDLE_NODE_DEFAULT_BUNDLE_INTO,
   entryPointMap = BUNDLE_NODE_DEFAULT_ENTRY_POINT_MAP,
   compileGroupCount = 2,
@@ -36,8 +37,9 @@ export const bundleNode = async ({
     logBundleFilePaths,
     computeRollupOptionsWithoutBalancing: (context) =>
       computeRollupOptionsWithoutBalancing({
-        importMapFilenameRelative,
         projectFolder,
+        importMapFilenameRelative,
+        inlineSpecifierMap,
         into,
         entryPointMap,
         babelConfigMap,
@@ -46,8 +48,9 @@ export const bundleNode = async ({
       }),
     computeRollupOptionsWithBalancing: (context) =>
       computeRollupOptionsWithBalancing({
-        importMapFilenameRelative,
         projectFolder,
+        importMapFilenameRelative,
+        inlineSpecifierMap,
         into,
         entryPointMap,
         babelConfigMap,

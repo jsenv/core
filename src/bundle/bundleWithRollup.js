@@ -6,7 +6,7 @@ export const bundleWithRollup = async ({
   cancellationToken,
   rollupParseOptions,
   rollupGenerateOptions,
-  writeOnFileSystem = true,
+  writeOnFileSystem,
 }) => {
   const rollupBundle = await createOperation({
     cancellationToken,

@@ -4,8 +4,6 @@ import { getCacheFilename, getAssetFilename, getCompiledFilename } from "./locat
 
 export const updateCache = ({
   projectFolder,
-  compileInto,
-  compileId,
   filenameRelative,
   filename,
   serverCompileCacheTrackHit,
@@ -27,27 +25,29 @@ export const updateCache = ({
   const promises = []
 
   if (isNew || isUpdated) {
+    const { compiledSourceFileWritten = false, assetsFileWritten = false } = compileResult
     const compiledFilename = getCompiledFilename({
       projectFolder,
-      compileInto,
-      compileId,
       filenameRelative,
     })
 
-    promises.push(
-      fileWrite(compiledFilename, compiledSource),
-      ...assets.map((asset, index) => {
-        const assetFilename = getAssetFilename({
-          projectFolder,
-          compileInto,
-          compileId,
-          filenameRelative,
-          asset,
-        })
+    if (!compiledSourceFileWritten) {
+      promises.push(fileWrite(compiledFilename, compiledSource))
+    }
 
-        return fileWrite(assetFilename, assetsContent[index])
-      }),
-    )
+    if (!assetsFileWritten) {
+      promises.push(
+        ...assets.map((asset, index) => {
+          const assetFilename = getAssetFilename({
+            projectFolder,
+            filenameRelative,
+            asset,
+          })
+
+          return fileWrite(assetFilename, assetsContent[index])
+        }),
+      )
+    }
   }
 
   if (isNew || isUpdated || (isCached && serverCompileCacheTrackHit)) {
@@ -100,8 +100,6 @@ export const updateCache = ({
 
     const cacheFilename = getCacheFilename({
       projectFolder,
-      compileInto,
-      compileId,
       filenameRelative,
     })
 

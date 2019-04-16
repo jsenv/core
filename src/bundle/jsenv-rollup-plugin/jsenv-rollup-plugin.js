@@ -26,7 +26,8 @@ const HELPER_FILENAME = "\0rollupPluginBabelHelpers.js"
 export const createJsenvRollupPlugin = ({
   cancellationToken,
   projectFolder,
-  importMapFilenameRelative = "importMap.json",
+  importMapFilenameRelative,
+  inlineSpecifierMap,
   origin = "http://example.com",
 
   featureNameArray,
@@ -37,10 +38,11 @@ export const createJsenvRollupPlugin = ({
   dir,
   logBundleFilePaths,
 }) => {
-  const importMap = readProjectImportMap({
+  const projectImportMap = readProjectImportMap({
     projectFolder,
     importMapFilenameRelative,
   })
+  const importMap = projectImportMap
 
   const babelConfigMapSubset = computeBabelConfigMapSubset({
     HELPER_FILENAME,
@@ -49,11 +51,24 @@ export const createJsenvRollupPlugin = ({
     target,
   })
 
+  // https://github.com/babel/babel/blob/master/packages/babel-core/src/tools/build-external-helpers.js#L1
+  inlineSpecifierMap[HELPER_FILENAME] = () => buildExternalHelpers(undefined, "module")
+
+  const inlineImportMap = {}
+
   const jsenvRollupPlugin = {
     name: "jsenv",
 
     resolveId: (specifier, importer) => {
-      if (specifier === HELPER_FILENAME) return specifier
+      if (specifier in inlineSpecifierMap) {
+        const inlineSpecifier = inlineSpecifierMap[specifier]
+        if (typeof inlineSpecifier === "string") return inlineSpecifier
+        if (typeof inlineSpecifier === "function") {
+          inlineImportMap[specifier] = inlineSpecifier
+          return specifier
+        }
+        throw new Error(`inlineSpecifier must be a string or a function`)
+      }
 
       let importerHref
       if (importer) {
@@ -86,7 +101,7 @@ export const createJsenvRollupPlugin = ({
       })
 
       // rollup works with pathname
-      // le'sreturn himpathname when possible
+      // le's return him pathname when possible
       // otherwise sourcemap.sources will be messed up
       if (id.startsWith(`${origin}/`)) {
         const filename = `${projectFolder}${hrefToPathname(id)}`
@@ -102,11 +117,7 @@ export const createJsenvRollupPlugin = ({
     // },
 
     load: async (id) => {
-      if (id === HELPER_FILENAME) {
-        // https://github.com/babel/babel/blob/master/packages/babel-core/src/tools/build-external-helpers.js#L1
-        const allHelperCode = buildExternalHelpers(undefined, "module")
-        return allHelperCode
-      }
+      if (id in inlineImportMap) return inlineImportMap[id]()
 
       const href = id[0] === "/" ? `file://${id}` : id
       const source = await fetchHref(href)

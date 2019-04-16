@@ -16,7 +16,8 @@ export const bundlePlatform = ({
   computeRollupOptionsWithBalancing,
   computeRollupOptionsForBalancer,
   verbose = false,
-  logBundleFilePaths = true,
+  logBundleFilePaths,
+  writeOnFileSystem,
 }) =>
   catchAsyncFunctionCancellation(async () => {
     if (typeof projectFolder !== "string")
@@ -32,12 +33,12 @@ export const bundlePlatform = ({
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     if (compileGroupCount === 1) {
-      await bundleWithRollup({
+      return await bundleWithRollup({
         cancellationToken,
         log,
+        writeOnFileSystem,
         ...computeRollupOptionsWithoutBalancing({ cancellationToken, log, logBundleFilePaths }),
       })
-      return
     }
 
     const groupMap = generateGroupMap({
@@ -46,10 +47,11 @@ export const bundlePlatform = ({
       groupCount: compileGroupCount,
     })
 
-    await Promise.all([
+    return await Promise.all([
       generateEntryPointsFolders({
         cancellationToken,
         log,
+        writeOnFileSystem,
         logBundleFilePaths,
         groupMap,
         computeRollupOptionsWithBalancing,
@@ -57,6 +59,7 @@ export const bundlePlatform = ({
       generateEntryPointsBalancerFiles({
         cancellationToken,
         log,
+        writeOnFileSystem,
         logBundleFilePaths,
         entryPointMap,
         groupMap,
@@ -68,6 +71,7 @@ export const bundlePlatform = ({
 const generateEntryPointsFolders = async ({
   cancellationToken,
   log,
+  writeOnFileSystem,
   logBundleFilePaths,
   groupMap,
   computeRollupOptionsWithBalancing,
@@ -77,6 +81,7 @@ const generateEntryPointsFolders = async ({
       return bundleWithRollup({
         cancellationToken,
         log,
+        writeOnFileSystem,
         ...computeRollupOptionsWithBalancing({
           cancellationToken,
           log,
@@ -92,6 +97,7 @@ const generateEntryPointsFolders = async ({
 const generateEntryPointsBalancerFiles = ({
   cancellationToken,
   log,
+  writeOnFileSystem,
   logBundleFilePaths,
   entryPointMap,
   groupMap,
@@ -103,6 +109,7 @@ const generateEntryPointsBalancerFiles = ({
         bundleWithRollup({
           cancellationToken,
           log,
+          writeOnFileSystem,
           ...computeRollupOptionsForBalancer({
             cancellationToken,
             log,

@@ -16,6 +16,7 @@ export const bundleBrowser = async ({
   projectFolder,
   babelConfigMap = BUNDLE_BROWSER_DEFAULT_BABEL_CONFIG_MAP,
   importMapFilenameRelative = BUNDLE_BROWSER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  inlineSpecifierMap = {},
   into = BUNDLE_BROWSER_DEFAULT_BUNDLE_INTO,
   entryPointMap = BUNDLE_BROWSER_DEFAULT_ENTRY_POINT_MAP,
   compileGroupCount = 1,
@@ -25,55 +26,63 @@ export const bundleBrowser = async ({
   generateEntryPages = false,
   throwUnhandled = true,
   logBundleFilePaths = true,
+  writeOnFileSystem = true,
 }) => {
   projectFolder = normalizePathname(projectFolder)
-  const promise = Promise.all([
-    bundlePlatform({
-      entryPointMap,
-      projectFolder,
-      into,
-      babelConfigMap,
-      compileGroupCount,
-      platformScoreMap,
-      verbose,
-      logBundleFilePaths,
-      computeRollupOptionsWithoutBalancing: (context) =>
-        computeRollupOptionsWithoutBalancing({
-          importMapFilenameRelative,
+
+  const bundlePlatformPromise = bundlePlatform({
+    entryPointMap,
+    projectFolder,
+    into,
+    babelConfigMap,
+    compileGroupCount,
+    platformScoreMap,
+    verbose,
+    writeOnFileSystem,
+    logBundleFilePaths,
+    computeRollupOptionsWithoutBalancing: (context) =>
+      computeRollupOptionsWithoutBalancing({
+        projectFolder,
+        importMapFilenameRelative,
+        inlineSpecifierMap,
+        into,
+        entryPointMap,
+        babelConfigMap,
+        minify,
+        ...context,
+      }),
+    computeRollupOptionsWithBalancing: (context) =>
+      computeRollupOptionsWithBalancing({
+        projectFolder,
+        importMapFilenameRelative,
+        inlineSpecifierMap,
+        into,
+        entryPointMap,
+        babelConfigMap,
+        minify,
+        ...context,
+      }),
+    computeRollupOptionsForBalancer: (context) =>
+      computeRollupOptionsForBalancer({
+        projectFolder,
+        into,
+        babelConfigMap,
+        minify,
+        ...context,
+      }),
+  })
+
+  const promise = generateEntryPages
+    ? Promise.all([
+        bundlePlatformPromise,
+        generateEntryPointMapPages({
           projectFolder,
           into,
           entryPointMap,
-          babelConfigMap,
-          minify,
-          ...context,
         }),
-      computeRollupOptionsWithBalancing: (context) =>
-        computeRollupOptionsWithBalancing({
-          importMapFilenameRelative,
-          projectFolder,
-          into,
-          entryPointMap,
-          babelConfigMap,
-          minify,
-          ...context,
-        }),
-      computeRollupOptionsForBalancer: (context) =>
-        computeRollupOptionsForBalancer({
-          projectFolder,
-          into,
-          babelConfigMap,
-          minify,
-          ...context,
-        }),
-    }),
-    generateEntryPages
-      ? generateEntryPointMapPages({
-          projectFolder,
-          into,
-          entryPointMap,
-        })
-      : null,
-  ])
+      ])
+    : bundlePlatformPromise
+
   if (!throwUnhandled) return promise
   return promise.catch((e) => {
     setTimeout(() => {

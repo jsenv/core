@@ -1,11 +1,9 @@
 import { fileRead } from "@dmail/helper"
 import { getCacheFilename } from "./locaters.js"
 
-export const readCache = async ({ projectFolder, compileInto, compileId, filenameRelative }) => {
+export const readCache = async ({ projectFolder, filenameRelative }) => {
   const cacheFilename = getCacheFilename({
     projectFolder,
-    compileInto,
-    compileId,
     filenameRelative,
   })
 

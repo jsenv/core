@@ -6,8 +6,6 @@ import { getCompiledFilename, getAssetFilename } from "./locaters.js"
 
 export const validateCache = async ({
   projectFolder,
-  compileInto,
-  compileId,
   filenameRelative,
   cache,
   ifEtagMatch,
@@ -15,8 +13,6 @@ export const validateCache = async ({
 }) => {
   const compiledFileValidation = await validateCompiledFile({
     projectFolder,
-    compileInto,
-    compileId,
     filenameRelative,
     ifEtagMatch,
     ifModifiedSinceDate,
@@ -25,7 +21,7 @@ export const validateCache = async ({
 
   const [sourcesValidations, assetValidations] = await Promise.all([
     validateSources({ projectFolder, cache }),
-    validateAssets({ projectFolder, compileInto, compileId, filenameRelative, cache }),
+    validateAssets({ projectFolder, filenameRelative, cache }),
   ])
 
   const invalidSourceValidation = sourcesValidations.find(({ valid }) => !valid)
@@ -50,16 +46,12 @@ export const validateCache = async ({
 
 const validateCompiledFile = async ({
   projectFolder,
-  compileInto,
-  compileId,
   filenameRelative,
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
   const compiledFilename = getCompiledFilename({
     projectFolder,
-    compileInto,
-    compileId,
     filenameRelative,
   })
 
@@ -134,13 +126,11 @@ const validateSource = async ({ projectFolder, source, eTag }) => {
   }
 }
 
-const validateAssets = ({ projectFolder, compileInto, compileId, filenameRelative, cache }) =>
+const validateAssets = ({ projectFolder, filenameRelative, cache }) =>
   Promise.all(
     cache.assets.map((asset, index) =>
       validateAsset({
         projectFolder,
-        compileInto,
-        compileId,
         filenameRelative,
         asset,
         eTag: cache.assetsEtag[index],
@@ -148,18 +138,9 @@ const validateAssets = ({ projectFolder, compileInto, compileId, filenameRelativ
     ),
   )
 
-const validateAsset = async ({
-  projectFolder,
-  compileInto,
-  compileId,
-  filenameRelative,
-  asset,
-  eTag,
-}) => {
+const validateAsset = async ({ projectFolder, filenameRelative, asset, eTag }) => {
   const assetFilename = getAssetFilename({
     projectFolder,
-    compileInto,
-    compileId,
     filenameRelative,
     asset,
   })

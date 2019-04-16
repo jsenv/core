@@ -11,15 +11,13 @@ const lockfile = import.meta.require("proper-lockfile")
 
 export const compileFile = async ({
   projectFolder,
-  compileInto,
   headers,
-  compileId,
   filenameRelative,
   filename,
   compile,
   clientCompileCacheStrategy = "etag",
   serverCompileCacheTrackHit = false,
-  serverCompileCacheInterProcessLocking = true,
+  serverCompileCacheInterProcessLocking = false,
 }) => {
   if (
     clientCompileCacheStrategy !== "etag" &&
@@ -57,8 +55,7 @@ export const compileFile = async ({
     try {
       const { cache, compileResult, compileResultStatus } = await computeCompileReport({
         projectFolder,
-        compileInto,
-        compileId,
+
         filenameRelative,
         filename,
         compile,
@@ -68,8 +65,6 @@ export const compileFile = async ({
 
       await updateCache({
         projectFolder,
-        compileInto,
-        compileId,
         filenameRelative,
         filename,
         serverCompileCacheTrackHit,
@@ -157,8 +152,6 @@ export const compileFile = async ({
 
   return startAsap(start, {
     projectFolder,
-    compileInto,
-    compileId,
     filenameRelative,
     serverCompileCacheInterProcessLocking,
   })
@@ -166,8 +159,6 @@ export const compileFile = async ({
 
 const computeCompileReport = async ({
   projectFolder,
-  compileInto,
-  compileId,
   filenameRelative,
   filename,
   compile,
@@ -176,15 +167,11 @@ const computeCompileReport = async ({
 }) => {
   const cache = await readCache({
     projectFolder,
-    compileInto,
-    compileId,
     filenameRelative,
   })
 
   if (!cache) {
     const compileResult = await callCompile({
-      compileInto,
-      compileId,
       filenameRelative,
       filename,
       compile,
@@ -199,8 +186,6 @@ const computeCompileReport = async ({
 
   const cacheValidation = await validateCache({
     projectFolder,
-    compileInto,
-    compileId,
     filenameRelative,
     filename,
     cache,
@@ -209,8 +194,6 @@ const computeCompileReport = async ({
   })
   if (!cacheValidation.valid) {
     const compileResult = await callCompile({
-      compileInto,
-      compileId,
       filenameRelative,
       filename,
       compile,
@@ -227,10 +210,8 @@ const computeCompileReport = async ({
   }
 }
 
-const callCompile = async ({ compileInto, compileId, filenameRelative, filename, compile }) => {
+const callCompile = async ({ filenameRelative, filename, compile }) => {
   const compiledFilenameRelative = getCompiledFilenameRelative({
-    compileInto,
-    compileId,
     filenameRelative,
   })
 
@@ -264,38 +245,32 @@ const callCompile = async ({ compileInto, compileId, filenameRelative, filename,
 
 const startAsap = async (
   fn,
-  {
-    projectFolder,
-    compileInto,
-    compileId,
-    filenameRelative,
-    serverCompileCacheInterProcessLocking,
-  },
+  { projectFolder, filenameRelative, serverCompileCacheInterProcessLocking },
 ) => {
   const cacheFilename = getCacheFilename({
     projectFolder,
-    compileInto,
-    compileId,
     filenameRelative,
   })
 
   // in case this process try to concurrently access meta we wait for previous to be done
   const unlockLocal = await lockForRessource(cacheFilename)
-  // after that we use a lock filenameRelative to be sure we don't conflict with other process
-  // trying to do the same (mapy happen when spawining multiple server for instance)
-  // https://github.com/moxystudio/node-proper-lockfile/issues/69
-  await fileMakeDirname(cacheFilename)
-  // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
-  const unlockInterProcessLock = serverCompileCacheInterProcessLocking
-    ? await lockfile.lock(cacheFilename, {
-        realpath: false,
-        retries: {
-          retries: 20,
-          minTimeout: 20,
-          maxTimeout: 500,
-        },
-      })
-    : () => {}
+
+  let unlockInterProcessLock = () => {}
+  if (serverCompileCacheInterProcessLocking) {
+    // after that we use a lock filenameRelative to be sure we don't conflict with other process
+    // trying to do the same (mapy happen when spawining multiple server for instance)
+    // https://github.com/moxystudio/node-proper-lockfile/issues/69
+    await fileMakeDirname(cacheFilename)
+    // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
+    unlockInterProcessLock = await lockfile.lock(cacheFilename, {
+      realpath: false,
+      retries: {
+        retries: 20,
+        minTimeout: 20,
+        maxTimeout: 500,
+      },
+    })
+  }
 
   try {
     return await fn()
