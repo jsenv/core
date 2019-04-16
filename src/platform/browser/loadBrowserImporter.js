@@ -1,4 +1,4 @@
-import { memoizeOnce } from "@dmail/helper"
+import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 import { createSystemImporter } from "./system/createSystemImporter.js"
