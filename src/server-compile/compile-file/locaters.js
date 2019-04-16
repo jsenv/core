@@ -1,10 +1,11 @@
-export const getCacheFilename = ({ projectFolder, filenameRelative }) =>
-  `${projectFolder}/${filenameRelative}__asset__/cache.json`
+export const getCacheFilename = ({ projectFolder, compiledFilenameRelative }) =>
+  `${projectFolder}/${compiledFilenameRelative}__asset__/cache.json`
 
-export const getAssetFilename = ({ projectFolder, filenameRelative, asset }) =>
-  `${projectFolder}/${filenameRelative}__asset__/${asset}`
+export const getAssetFilename = ({ projectFolder, compiledFilenameRelative, asset }) =>
+  `${projectFolder}/${compiledFilenameRelative}__asset__/${asset}`
 
-export const getCompiledFilename = ({ projectFolder, filenameRelative }) =>
-  `${projectFolder}/${filenameRelative}`
+export const getCompiledFilename = ({ projectFolder, compiledFilenameRelative }) =>
+  `${projectFolder}/${compiledFilenameRelative}`
 
-export const getCompiledFilenameRelative = ({ filenameRelative }) => `${filenameRelative}`
+export const getSourceFilename = ({ projectFolder, sourceFilenameRelative }) =>
+  `${projectFolder}/${sourceFilenameRelative}`

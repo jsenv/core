@@ -1,19 +1,23 @@
 import { fileRead } from "@dmail/helper"
 import { getCacheFilename } from "./locaters.js"
 
-export const readCache = async ({ projectFolder, filenameRelative }) => {
+export const readCache = async ({
+  projectFolder,
+  sourceFilenameRelative,
+  compiledFilenameRelative,
+}) => {
   const cacheFilename = getCacheFilename({
     projectFolder,
-    filenameRelative,
+    compiledFilenameRelative,
   })
 
   try {
     const cacheContent = await fileRead(cacheFilename)
     const cache = JSON.parse(cacheContent)
-    if (cache.filenameRelative !== filenameRelative) {
+    if (cache.sourceFilenameRelative !== sourceFilenameRelative) {
       throw createCacheCorruptionError({
-        filenameRelative,
-        cacheFilenameRelative: cache.filenameRelative,
+        sourceFilenameRelative,
+        cacheSourceFilenameRelative: cache.sourceFilenameRelative,
         cacheFilename,
       })
     }
@@ -24,19 +28,27 @@ export const readCache = async ({ projectFolder, filenameRelative }) => {
   }
 }
 
-const createCacheCorruptionError = ({ filenameRelative, cacheFilename, cacheFilenameRelative }) => {
+const createCacheCorruptionError = ({
+  sourceFilenameRelative,
+  cacheFilename,
+  cacheSourceFilenameRelative,
+}) => {
   const error = new Error(
-    createCacheCorruptionErrorMessage({ filenameRelative, cacheFilename, cacheFilenameRelative }),
+    createCacheCorruptionErrorMessage({
+      sourceFilenameRelative,
+      cacheFilename,
+      cacheSourceFilenameRelative,
+    }),
   )
   error.code = "CACHE_CORRUPTION_ERROR"
   return error
 }
 
 const createCacheCorruptionErrorMessage = ({
-  filenameRelative,
+  sourceFilenameRelative,
   cacheFilename,
-  cacheFilenameRelative,
-}) => `cache filenameRelative does not match.
-filenameRelative: ${filenameRelative}
+  cacheSourceFilenameRelative,
+}) => `cache sourceFilenameRelative does not match.
+sourceFilenameRelative: ${sourceFilenameRelative}
 cacheFilename: ${cacheFilename}
-cacheFilenameRelative: ${cacheFilenameRelative}`
+cacheSourceFilenameRelative: ${cacheSourceFilenameRelative}`

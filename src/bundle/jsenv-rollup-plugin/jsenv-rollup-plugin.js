@@ -14,7 +14,7 @@ import {
   transpiler,
   findAsyncPluginNameInBabelConfigMap,
 } from "../../server-compile/compile-js/transpiler.js"
-import { writeSourceMapLocation } from "../../server-compile/compile-js/compileJs.js"
+import { writeSourceMapLocation } from "../../server-compile/compile-js/rawCompileJs.js"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { computeBabelConfigMapSubset } from "./computeBabelConfigMapSubset.js"
 

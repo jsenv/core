@@ -5,15 +5,15 @@ import { lockForRessource } from "./ressourceRegistry.js"
 import { readCache } from "./readCache.js"
 import { validateCache } from "./validateCache.js"
 import { updateCache } from "./updateCache.js"
-import { getCacheFilename, getCompiledFilenameRelative } from "./locaters.js"
+import { getCacheFilename, getSourceFilename, getCompiledFilename } from "./locaters.js"
 
 const lockfile = import.meta.require("proper-lockfile")
 
 export const compileFile = async ({
   projectFolder,
+  sourceFilenameRelative,
+  compiledFilenameRelative,
   headers,
-  filenameRelative,
-  filename,
   compile,
   clientCompileCacheStrategy = "etag",
   serverCompileCacheTrackHit = false,
@@ -55,9 +55,8 @@ export const compileFile = async ({
     try {
       const { cache, compileResult, compileResultStatus } = await computeCompileReport({
         projectFolder,
-
-        filenameRelative,
-        filename,
+        sourceFilenameRelative,
+        compiledFilenameRelative,
         compile,
         ifEtagMatch,
         ifModifiedSinceDate,
@@ -65,8 +64,8 @@ export const compileFile = async ({
 
       await updateCache({
         projectFolder,
-        filenameRelative,
-        filename,
+        sourceFilenameRelative,
+        compiledFilenameRelative,
         serverCompileCacheTrackHit,
         cache,
         compileResult,
@@ -152,28 +151,30 @@ export const compileFile = async ({
 
   return startAsap(start, {
     projectFolder,
-    filenameRelative,
+    compiledFilenameRelative,
     serverCompileCacheInterProcessLocking,
   })
 }
 
 const computeCompileReport = async ({
   projectFolder,
-  filenameRelative,
-  filename,
+  sourceFilenameRelative,
+  compiledFilenameRelative,
   compile,
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
   const cache = await readCache({
     projectFolder,
-    filenameRelative,
+    sourceFilenameRelative,
+    compiledFilenameRelative,
   })
 
   if (!cache) {
     const compileResult = await callCompile({
-      filenameRelative,
-      filename,
+      projectFolder,
+      sourceFilenameRelative,
+      compiledFilenameRelative,
       compile,
     })
 
@@ -186,16 +187,16 @@ const computeCompileReport = async ({
 
   const cacheValidation = await validateCache({
     projectFolder,
-    filenameRelative,
-    filename,
+    compiledFilenameRelative,
     cache,
     ifEtagMatch,
     ifModifiedSinceDate,
   })
   if (!cacheValidation.valid) {
     const compileResult = await callCompile({
-      filenameRelative,
-      filename,
+      projectFolder,
+      sourceFilenameRelative,
+      compiledFilenameRelative,
       compile,
     })
     return { cache, compileResult, compileResultStatus: "updated" }
@@ -210,9 +211,19 @@ const computeCompileReport = async ({
   }
 }
 
-const callCompile = async ({ filenameRelative, filename, compile }) => {
-  const compiledFilenameRelative = getCompiledFilenameRelative({
-    filenameRelative,
+const callCompile = async ({
+  projectFolder,
+  sourceFilenameRelative,
+  compiledFilenameRelative,
+  compile,
+}) => {
+  const sourceFilename = getSourceFilename({
+    projectFolder,
+    sourceFilenameRelative,
+  })
+  const compiledFilename = getCompiledFilename({
+    projectFolder,
+    compiledFilenameRelative,
   })
 
   const {
@@ -223,9 +234,10 @@ const callCompile = async ({ filenameRelative, filename, compile }) => {
     contentType,
     compiledSource,
   } = await compile({
-    filenameRelative,
-    filename,
+    sourceFilenameRelative,
     compiledFilenameRelative,
+    sourceFilename,
+    compiledFilename,
   })
 
   if (typeof contentType !== "string")
@@ -245,11 +257,11 @@ const callCompile = async ({ filenameRelative, filename, compile }) => {
 
 const startAsap = async (
   fn,
-  { projectFolder, filenameRelative, serverCompileCacheInterProcessLocking },
+  { projectFolder, compiledFilenameRelative, serverCompileCacheInterProcessLocking },
 ) => {
   const cacheFilename = getCacheFilename({
     projectFolder,
-    filenameRelative,
+    compiledFilenameRelative,
   })
 
   // in case this process try to concurrently access meta we wait for previous to be done

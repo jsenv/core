@@ -6,14 +6,14 @@ import { getCompiledFilename, getAssetFilename } from "./locaters.js"
 
 export const validateCache = async ({
   projectFolder,
-  filenameRelative,
+  compiledFilenameRelative,
   cache,
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
   const compiledFileValidation = await validateCompiledFile({
     projectFolder,
-    filenameRelative,
+    compiledFilenameRelative,
     ifEtagMatch,
     ifModifiedSinceDate,
   })
@@ -21,7 +21,7 @@ export const validateCache = async ({
 
   const [sourcesValidations, assetValidations] = await Promise.all([
     validateSources({ projectFolder, cache }),
-    validateAssets({ projectFolder, filenameRelative, cache }),
+    validateAssets({ projectFolder, compiledFilenameRelative, cache }),
   ])
 
   const invalidSourceValidation = sourcesValidations.find(({ valid }) => !valid)
@@ -46,13 +46,13 @@ export const validateCache = async ({
 
 const validateCompiledFile = async ({
   projectFolder,
-  filenameRelative,
+  compiledFilenameRelative,
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
   const compiledFilename = getCompiledFilename({
     projectFolder,
-    filenameRelative,
+    compiledFilenameRelative,
   })
 
   try {
@@ -126,22 +126,22 @@ const validateSource = async ({ projectFolder, source, eTag }) => {
   }
 }
 
-const validateAssets = ({ projectFolder, filenameRelative, cache }) =>
+const validateAssets = ({ projectFolder, compiledFilenameRelative, cache }) =>
   Promise.all(
     cache.assets.map((asset, index) =>
       validateAsset({
         projectFolder,
-        filenameRelative,
+        compiledFilenameRelative,
         asset,
         eTag: cache.assetsEtag[index],
       }),
     ),
   )
 
-const validateAsset = async ({ projectFolder, filenameRelative, asset, eTag }) => {
+const validateAsset = async ({ projectFolder, compiledFilenameRelative, asset, eTag }) => {
   const assetFilename = getAssetFilename({
     projectFolder,
-    filenameRelative,
+    compiledFilenameRelative,
     asset,
   })
 

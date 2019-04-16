@@ -13,8 +13,6 @@ export const createCompileService = async ({
   watchSourcePredicate,
   groupMap,
   compileImportMap,
-  compileBrowserClient,
-  compileNodeClient,
   compileJs,
 }) => {
   const { registerFileChangedCallback, triggerFileChanged } = createFileChangedSignal()
@@ -34,21 +32,6 @@ export const createCompileService = async ({
   }
 
   const compileService = async ({ origin, ressource, method, headers = {} }) => {
-    if (ressource === `/${compileInto}/JSENV_BROWSER_CLIENT.js`) {
-      return compileBrowserClient({
-        origin,
-        method,
-        headers,
-      })
-    }
-    if (ressource === `/${compileInto}/JSENV_NODE_CLIENT.js`) {
-      return compileNodeClient({
-        origin,
-        method,
-        headers,
-      })
-    }
-
     const requestPathname = ressource
 
     if (pathnameIsAsset(ressource)) return null
