@@ -2,7 +2,6 @@ import { createCancellationToken } from "@dmail/cancellation"
 import { acceptContentType, createSSERoom, serviceCompose } from "../../server/index.js"
 import { watchFile } from "../../watchFile.js"
 import { locate as locateDefault } from "./locate.js"
-import { compileRequestToResponse } from "../compile-request-to-response/index.js"
 
 export const createCompileService = async ({
   cancellationToken = createCancellationToken(),
@@ -11,10 +10,7 @@ export const createCompileService = async ({
   locate = locateDefault,
   watchSource,
   watchSourcePredicate,
-  clientCompileCacheStrategy,
-  serverCompileCacheStrategy,
-  serverCompileCacheTrackHit,
-  enableGlobalLock,
+  groupMap,
   compileImportMap,
   compileJs,
 }) => {
@@ -40,6 +36,10 @@ export const createCompileService = async ({
     // cannot locate a file -> we don't know what to compile
     if (!compileId) return null
 
+    if (compileId in groupMap === false) {
+      return { status: 400, statusText: "unknown compileId" }
+    }
+
     // we don't want to read anything outside of the project
     if (fileIsOutsideFolder(filename, projectFolder)) {
       return { status: 403, statusText: `cannot access file outside project` }
@@ -64,6 +64,8 @@ export const createCompileService = async ({
     let compile
     if (filenameRelative === "importMap.json") {
       compile = compileImportMap
+    } else if (filenameRelative.endsWith(".json")) {
+      compile = undefined
     } else {
       compile = compileJs
     }
@@ -80,6 +82,10 @@ export const createCompileService = async ({
     }
 
     // when I ask for a compiled file, watch the corresponding file on filesystem
+    // here we should use the registerFileLifecyle stuff made in
+    // jsenv-eslint-import-resolver so support if file gets created/deleted
+    // because it may be possible that file does not yet exists at this point
+    // and that would be ok
     if (
       watchSource &&
       watchedFiles.has(filename) === false &&
@@ -91,19 +97,13 @@ export const createCompileService = async ({
       watchedFiles.set(filename, fileWatcher)
     }
 
-    return compileRequestToResponse({
-      projectFolder,
-      compileInto,
-      compileId,
-      clientCompileCacheStrategy,
-      serverCompileCacheStrategy,
-      serverCompileCacheTrackHit,
-      enableGlobalLock,
+    return compile({
+      origin,
       method,
       headers,
+      compileId,
       filenameRelative,
       filename,
-      compile,
     })
   }
 

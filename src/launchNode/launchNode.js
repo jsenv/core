@@ -16,6 +16,9 @@ export const launchNode = async ({
   remap = true,
   traceWarnings = true,
 }) => {
+  if (typeof compileInto !== "string")
+    throw new TypeError(`compileInto must be a string, got ${compileInto}`)
+
   const execArgv = await createChildExecArgv({
     cancellationToken,
     debugMode,

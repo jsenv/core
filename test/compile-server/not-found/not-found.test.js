@@ -12,27 +12,17 @@ const compileServer = await startCompileServer({
 })
 
 const response = await fetch(`${compileServer.origin}/${compileInto}/otherwise/file.js`)
+const body = await response.text()
 const actual = {
   status: response.status,
   statusText: response.statusText,
   headers: response.headers,
+  body,
 }
 const expected = {
-  status: 200,
-  statusText: "OK",
-  headers: {
-    ...actual.headers,
-    "access-control-allow-credentials": ["true"],
-    "access-control-allow-headers": ["x-requested-with, content-type, accept"],
-    "access-control-allow-methods": ["GET, POST, PUT, DELETE, OPTIONS"],
-    "access-control-allow-origin": ["*"],
-    "access-control-max-age": ["1"],
-    connection: ["close"],
-    "content-type": ["application/javascript"],
-  },
+  status: 404,
+  statusText: "file not found",
+  headers: actual.headers,
+  body: "",
 }
-
-assert({
-  actual,
-  expected,
-})
+assert({ actual, expected })

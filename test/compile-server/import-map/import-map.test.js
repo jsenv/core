@@ -1,26 +1,18 @@
 import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
-import { fileRead } from "@dmail/helper"
 import { assert } from "@dmail/assert"
 import { startCompileServer } from "../../../index.js"
+import { fetch } from "../fetch.js"
 
 const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const compileInto = ".dist"
-const babelConfigMap = { "transform-block-scoping": true }
 
 const compileServer = await startCompileServer({
-  verbose: false,
   projectFolder: testFolder,
-  compileInto,
-  babelConfigMap,
-  compileGroupCount: 2,
-  protocol: "http",
-  ip: "127.0.0.1",
-  port: 8998,
+  verbose: false,
 })
-compileServer.stop()
 
-const content = await fileRead(`${testFolder}/${compileInto}/importMap.otherwise.json`)
-const actual = JSON.parse(content)
+const response = await fetch(`${compileServer.origin}/${compileInto}/otherwise/importMap.json`)
+const actual = await response.json()
 const expected = {
   imports: {
     "/foo": "/.dist/otherwise/foo.js",

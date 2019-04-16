@@ -1,20 +1,19 @@
 import { memoizeOnce } from "@dmail/helper"
-import { fetchUsingXHR } from "./fetchUsingXHR.js"
+import { fetchUsingHttp } from "./fetchUsingHttp.js"
+import { createImporter } from "./system/createImporter.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
-import { createSystemImporter } from "./system/createSystemImporter.js"
 
-export const loadBrowserImporter = memoizeOnce(
-  async ({ compileInto, compileIdOption, compileServerOrigin }) => {
+export const loadNodeImporter = memoizeOnce(
+  async ({ compileInto, compileIdOption, sourceOrigin, compileServerOrigin }) => {
     const { compileId } = await loadCompileMeta({
       compileInto,
       compileIdOption,
+      sourceOrigin,
       compileServerOrigin,
     })
 
-    // this importMap is just wrapped into /${compileInto}/${compileId}/ from an other importMap
-    // we could wrap the globalImportMap here instead of fetching it
     const importMapHref = `${compileServerOrigin}/${compileInto}/${compileId}/importMap.json`
-    const importMapResponse = await fetchUsingXHR(importMapHref)
+    const importMapResponse = await fetchUsingHttp(importMapHref)
     const { status } = importMapResponse
 
     let importMap
@@ -26,9 +25,10 @@ export const loadBrowserImporter = memoizeOnce(
       importMap = JSON.parse(importMapResponse.body)
     }
 
-    const { importFile } = createSystemImporter({
+    const { importFile } = await createImporter({
       importMap,
       compileInto,
+      sourceOrigin,
       compileServerOrigin,
       compileId,
     })

@@ -4,43 +4,38 @@ import { createCancellationToken } from "@dmail/cancellation"
 import { fileWrite } from "@dmail/helper"
 import { ROOT_FOLDER } from "../ROOT_FOLDER.js"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
-import {
-  startServer,
-  requestToAccessControlHeaders,
-  serviceCompose,
-  responseCompose,
-} from "../server/index.js"
-import {
-  generateGroupMap,
-  browserScoreMap as browserDefaultScoreMap,
-  nodeVersionScoreMap as nodeDefaultVersionScoreMap,
-} from "../group-map/index.js"
+import { startServer, serviceCompose } from "../server/index.js"
+import { generateGroupMap } from "../group-map/index.js"
 import { createCompileService } from "./compile-service/createCompileService.js"
 import { compileJs } from "./compile-js/index.js"
 import { compileImportMap } from "./compile-import-map/index.js"
+import { compileRequestToResponse } from "./compile-request-to-response/index.js"
+import {
+  //   COMPILE_SERVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  COMPILE_SERVER_DEFAULT_COMPILE_INTO,
+  COMPILE_SERVER_DEFAULT_BABEL_CONFIG_MAP,
+  COMPILE_SERVER_DEFAULT_BABEL_COMPAT_MAP,
+  COMPILE_SERVER_DEFAULT_BROWSER_SCORE_MAP,
+  COMPILE_SERVER_DEFAULT_NODE_VERSION_SCORE_MAP,
+} from "./compile-server-constant.js"
 
 export const startCompileServer = async ({
-  cancellationToken = createCancellationToken(),
   projectFolder,
-  compileInto,
+  cancellationToken = createCancellationToken(),
+  compileInto = COMPILE_SERVER_DEFAULT_COMPILE_INTO,
   // option related to compile groups
   compileGroupCount = 1,
-  babelConfigMap,
-  babelCompatMap,
-  browserScoreMap = browserDefaultScoreMap,
-  nodeVersionScoreMap = nodeDefaultVersionScoreMap,
+  babelConfigMap = COMPILE_SERVER_DEFAULT_BABEL_CONFIG_MAP,
+  babelCompatMap = COMPILE_SERVER_DEFAULT_BABEL_COMPAT_MAP,
+  browserScoreMap = COMPILE_SERVER_DEFAULT_BROWSER_SCORE_MAP,
+  nodeVersionScoreMap = COMPILE_SERVER_DEFAULT_NODE_VERSION_SCORE_MAP,
   // options related to how cache/hotreloading
   watchSource = false,
   watchSourcePredicate = () => true,
-  clientCompileCacheStrategy = "etag",
-  serverCompileCacheStrategy = "etag",
-  serverCompileCacheTrackHit = false,
-  enableGlobalLock = true,
-  clientSourceCacheStrategy = "etag",
   // js compile options
   transformTopLevelAwait,
   // options related to the server itself
-  preventCors = false,
+  cors = true,
   protocol,
   ip,
   port,
@@ -69,37 +64,55 @@ export const startCompileServer = async ({
   const compileService = await createCompileService({
     cancellationToken,
     projectFolder,
-
     compileInto,
     watchSource,
     watchSourcePredicate,
-    clientCompileCacheStrategy,
-    serverCompileCacheStrategy,
-    serverCompileCacheTrackHit,
-    enableGlobalLock,
-    compileImportMap: ({ compileId, source }) =>
-      compileImportMap({
-        compileInto,
-        compileId,
-        source,
-      }),
-    compileJs: ({ compileId, filenameRelative, filename, source }) => {
-      const groupBabelConfigMap = {}
-      groupMap[compileId].incompatibleNameArray.forEach((incompatibleFeatureName) => {
-        if (incompatibleFeatureName in babelConfigMap) {
-          groupBabelConfigMap[incompatibleFeatureName] = babelConfigMap[incompatibleFeatureName]
-        }
-      })
-
-      return compileJs({
+    groupMap,
+    compileImportMap: ({ headers, compileId, filenameRelative, filename }) => {
+      return compileRequestToResponse({
         projectFolder,
         compileInto,
         compileId,
+        headers,
         filenameRelative,
         filename,
-        source,
-        babelConfigMap: groupBabelConfigMap,
-        transformTopLevelAwait,
+        compile: ({ source }) => {
+          return compileImportMap({
+            compileInto,
+            compileId,
+            source,
+          })
+        },
+      })
+    },
+    compileJs: ({ origin, headers, compileId, filenameRelative, filename }) => {
+      return compileRequestToResponse({
+        projectFolder,
+        compileInto,
+        compileId,
+        headers,
+        filenameRelative,
+        filename,
+        compile: ({ source }) => {
+          const groupBabelConfigMap = {}
+          groupMap[compileId].incompatibleNameArray.forEach((incompatibleFeatureName) => {
+            if (incompatibleFeatureName in babelConfigMap) {
+              groupBabelConfigMap[incompatibleFeatureName] = babelConfigMap[incompatibleFeatureName]
+            }
+          })
+
+          return compileJs({
+            projectFolder,
+            compileInto,
+            compileId,
+            filenameRelative,
+            filename,
+            source,
+            babelConfigMap: groupBabelConfigMap,
+            transformTopLevelAwait,
+            origin,
+          })
+        },
       })
     },
   })
@@ -108,28 +121,8 @@ export const startCompileServer = async ({
     requestToFileResponse(request, {
       projectFolder,
       locate: locateFileSystem,
-      cacheStrategy: clientSourceCacheStrategy,
     }),
   )
-
-  const requestToResponse = preventCors
-    ? compileOrServeFileService
-    : async (request) => {
-        const accessControlHeaders = requestToAccessControlHeaders(request)
-
-        if (request.method === "OPTIONS") {
-          return {
-            status: 200,
-            headers: {
-              ...accessControlHeaders,
-              "content-length": 0,
-            },
-          }
-        }
-
-        const response = await compileOrServeFileService(request)
-        return responseCompose({ headers: accessControlHeaders }, response)
-      }
 
   const compileServer = await startServer({
     cancellationToken,
@@ -137,8 +130,9 @@ export const startCompileServer = async ({
     ip,
     port,
     signature,
-    requestToResponse,
+    requestToResponse: compileOrServeFileService,
     verbose,
+    cors,
     startedMessage: ({ origin }) => `compile server started for ${projectFolder} at ${origin}`,
     stoppedMessage: (reason) => `compile server stopped because ${reason}`,
   })
@@ -149,6 +143,7 @@ export const startCompileServer = async ({
   return compileServer
 }
 
+// this file be removed once we have the dynamic bundling
 const locateFileSystem = ({ rootHref, filenameRelative }) => {
   // consumer of @jsenv/core use
   // 'node_modules/@jsenv/core/dist/browserSystemImporter.js'

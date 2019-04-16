@@ -1,5 +1,5 @@
 import { genericExecuteCompiledFile } from "../genericExecuteCompiledFile.js"
-import { loadImporter } from "./loadImporter.js"
+import { loadNodeImporter } from "./loadNodeImporter.js"
 
 export const executeCompiledFile = ({
   compileInto,
@@ -12,7 +12,7 @@ export const executeCompiledFile = ({
 }) =>
   genericExecuteCompiledFile({
     loadImporter: () =>
-      loadImporter({ compileInto, compileIdOption, sourceOrigin, compileServerOrigin }),
+      loadNodeImporter({ compileInto, compileIdOption, sourceOrigin, compileServerOrigin }),
     compileInto,
     compileServerOrigin,
     filenameRelative,

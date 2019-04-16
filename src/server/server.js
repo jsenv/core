@@ -2,12 +2,12 @@
 import { createServer as createNodeServer, STATUS_CODES } from "http"
 import { createServer as createNodeSecureServer, Agent as SecureAgent } from "https"
 import { URL } from "url"
-import { memoizeOnce } from "/node_modules/@dmail/helper/index.js"
+import { memoizeOnce } from "@dmail/helper"
 import {
   createCancellationToken,
   createOperation,
   createStoppableOperation,
-} from "/node_modules/@dmail/cancellation/index.js"
+} from "@dmail/cancellation"
 import {
   registerProcessInterruptCallback,
   registerUnadvisedProcessCrashCallback,
@@ -17,6 +17,8 @@ import { trackConnections, trackClients, trackRequestHandlers } from "./trackers
 import { nodeRequestToRequest } from "./nodeRequestToRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
 import { colorizeResponseStatus } from "./colorizeResponseStatus.js"
+import { requestToAccessControlHeaders } from "./requestToAccessControlHeaders.js"
+import { responseCompose } from "./responseCompose.js"
 
 const killPort = import.meta.require("kill-port")
 
@@ -49,6 +51,7 @@ export const startServer = async ({
   // auto close the server when an uncaughtException happens
   stopOnCrash = false,
   requestToResponse = () => null,
+  cors = false,
   verbose = true,
   startedMessage = ({ origin }) => `server started at ${origin}`,
   stoppedMessage = (reason) => `server stopped because ${reason}`,
@@ -162,6 +165,26 @@ export const startServer = async ({
   //   console.log("upgrade", { head, request })
   //   console.log("socket", { connecting: socket.connecting, destroyed: socket.destroyed })
   // })
+
+  if (cors) {
+    const originalRequestToResponse = requestToResponse
+    requestToResponse = async (request) => {
+      const accessControlHeaders = requestToAccessControlHeaders(request)
+
+      if (request.method === "OPTIONS") {
+        return {
+          status: 200,
+          headers: {
+            ...accessControlHeaders,
+            "content-length": 0,
+          },
+        }
+      }
+
+      const response = await originalRequestToResponse(request)
+      return responseCompose({ headers: accessControlHeaders }, response)
+    }
+  }
 
   requestHandlerTracker.add(async (nodeRequest, nodeResponse) => {
     const request = nodeRequestToRequest(nodeRequest, origin)

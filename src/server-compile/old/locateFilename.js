@@ -1,4 +1,4 @@
-import { resolveNodeModuleSpecifier } from "./resolveNodeModuleSpecifier.js/index.js"
+import { resolveNodeModuleSpecifier } from "./resolveNodeModuleSpecifier.js"
 
 const NODE_MODULE_FOLDER = "node_modules"
 

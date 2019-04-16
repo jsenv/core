@@ -11,24 +11,28 @@ const compileServer = await startCompileServer({
   verbose: false,
 })
 
-const response = await fetch(`${compileServer.origin}/${compileInto}/otherwise/file.js`)
+const response = await fetch(`${compileServer.origin}/${compileInto}/otherwise/syntax-error.js`)
+const body = await response.json()
 const actual = {
   status: response.status,
   statusText: response.statusText,
   headers: response.headers,
+  body,
 }
 const expected = {
-  status: 200,
-  statusText: "OK",
+  status: 500,
+  statusText: "parse error",
   headers: {
     ...actual.headers,
-    "access-control-allow-credentials": ["true"],
-    "access-control-allow-headers": ["x-requested-with, content-type, accept"],
-    "access-control-allow-methods": ["GET, POST, PUT, DELETE, OPTIONS"],
-    "access-control-allow-origin": ["*"],
-    "access-control-max-age": ["1"],
-    connection: ["close"],
-    "content-type": ["application/javascript"],
+    "cache-control": ["no-store"],
+    "content-type": ["application/json"],
+  },
+  body: {
+    messageHTML: actual.body.messageHTML,
+    filename: `${testFolder}/syntax-error.js`,
+    href: `${compileServer.origin}/${compileInto}/otherwise/syntax-error.js`,
+    lineNumber: 1,
+    columnNumber: 11,
   },
 }
 

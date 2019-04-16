@@ -1,22 +1,31 @@
 import { fileRead, fileStat } from "@dmail/helper"
 import { convertFileSystemErrorToResponseProperties } from "../../requestToFileResponse/index.js"
 import { dateToSecondsPrecision } from "../../dateHelper.js"
-import { createETag } from "./helpers.js"
-import { compileFile } from "./compileFile.js"
+import { createETag } from "../../createETag.js"
+import { compileFile } from "../compile-file/index.js"
 
 export const compileRequestToResponse = async ({
   projectFolder,
   compileInto,
   compileId,
-  clientCompileCacheStrategy,
-  serverCompileCacheStrategy,
-  serverCompileCacheTrackHit,
-  enableGlobalLock,
   headers,
   filenameRelative,
   filename,
   compile,
+  clientCompileCacheStrategy = "etag",
+  serverCompileCacheStrategy,
+  serverCompileCacheTrackHit,
+  serverCompileCacheInterProcessLocking,
 }) => {
+  if (
+    clientCompileCacheStrategy !== "etag" &&
+    clientCompileCacheStrategy !== "mtime" &&
+    clientCompileCacheStrategy !== "none"
+  )
+    throw new Error(
+      `clientCompileCacheStrategy must be etag, mtime or none, got ${clientCompileCacheStrategy}`,
+    )
+
   const cacheWithMtime = clientCompileCacheStrategy === "mtime"
   const cacheWithETag = clientCompileCacheStrategy === "etag"
   const cachedDisabled = clientCompileCacheStrategy === "none"
@@ -27,12 +36,12 @@ export const compileRequestToResponse = async ({
         projectFolder,
         compileInto,
         compileId,
-        serverCompileCacheStrategy,
-        serverCompileCacheTrackHit,
-        enableGlobalLock,
         filenameRelative,
         filename,
         compile,
+        serverCompileCacheStrategy,
+        serverCompileCacheTrackHit,
+        serverCompileCacheInterProcessLocking,
       })
       return {
         status: 200,

@@ -1,6 +1,6 @@
 import { genericImportCompiledFile } from "../genericImportCompiledFile.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
-import { loadImporter } from "./loadImporter.js"
+import { loadNodeImporter } from "./loadNodeImporter.js"
 
 export const importCompiledFile = ({
   compileInto,
@@ -10,7 +10,7 @@ export const importCompiledFile = ({
 }) =>
   genericImportCompiledFile({
     loadCompileMeta: () => loadCompileMeta({ compileInto, sourceOrigin, compileServerOrigin }),
-    loadImporter: () => loadImporter({ compileInto, sourceOrigin, compileServerOrigin }),
+    loadImporter: () => loadNodeImporter({ compileInto, sourceOrigin, compileServerOrigin }),
     compileInto,
     compileServerOrigin,
     filenameRelative,

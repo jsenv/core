@@ -1,4 +1,4 @@
-import { sep } from "path"
+import { sep, basename } from "path"
 import { ansiToHTML } from "../../ansiToHTML.js"
 import { regexpEscape } from "../../stringHelper.js"
 import { createParseError } from "../compile-request-to-response/index.js"
@@ -15,6 +15,7 @@ export const compileJs = async ({
   transformTopLevelAwait,
   inputAst,
   inputMap,
+  origin = `file://${projectFolder}`,
   remap = true,
   remapMethod = "comment", // 'comment', 'inline'
 }) => {
@@ -64,11 +65,11 @@ export const compileJs = async ({
         })
       } else if (remapMethod === "comment") {
         // sourceMap will be named file.js.map
-        const sourceMapName = `${path.basename(filenameRelative)}.map`
+        const sourceMapName = `${basename(filenameRelative)}.map`
         // it will be located at `${compileServer.origin}/.dist/src/file.js/e3uiyi456&/file.js.map`
         // const folder = path.dirname(file)
         // const folderWithSepOrNothing = folder ? `${folder}/` : ""
-        const sourceMapLocationForSource = `./${path.basename(
+        const sourceMapLocationForSource = `./${basename(
           filenameRelative,
         )}__asset__/${sourceMapName}`
 
@@ -122,19 +123,19 @@ const stringifyMap = (object) => JSON.stringify(object, null, "  ")
 
 const stringifyCoverage = (object) => JSON.stringify(object, null, "  ")
 
-const transformBabelParseErrorMessage = (babelParseErrorMessage, filename, href) => {
+const transformBabelParseErrorMessage = (babelParseErrorMessage, filename, replacement) => {
   // the babelParseErrorMessage looks somehow like that:
   /*
-  `${absoluteFilename}: Unexpected token(${lineNumber}:${columnNumber}})
+  `${filename}: Unexpected token(${lineNumber}:${columnNumber}})
 
     ${lineNumber - 1} | ${sourceForThatLine}
   > ${lineNumber} | ${sourceForThatLine}
     | ^`
   */
-  // and the idea is to replace absoluteFilename by something relative
+  // and the idea is to replace ${filename} by somsething else
 
-  const filenameAbsolute = sep === "/" ? filename : filename.replace(/\//g, "\\")
-  const filenameAbsoluteRegexp = new RegExp(regexpEscape(filenameAbsolute), "gi")
-  const parseErrorMessage = babelParseErrorMessage.replace(filenameAbsoluteRegexp, href)
+  const filenameString = sep === "/" ? filename : filename.replace(/\//g, "\\")
+  const filenameRegexp = new RegExp(regexpEscape(filenameString), "gi")
+  const parseErrorMessage = babelParseErrorMessage.replace(filenameRegexp, replacement)
   return parseErrorMessage
 }
