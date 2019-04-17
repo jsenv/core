@@ -1,7 +1,7 @@
 import { memoizeOnce, fileRead } from "/node_modules/@dmail/helper/index.js"
 import { hrefToPathname } from "/node_modules/@jsenv/module-resolution/index.js"
-import { detect } from "./nodeDetect/index.js"
-import { nodeToCompileId } from "./nodeToCompileId.js"
+import { detectNode } from "../node-group-resolver/detectNode.js"
+import { nodeToCompileId } from "../node-group-resolver/nodeToCompileId.js"
 
 export const loadCompileMeta = memoizeOnce(
   async ({ compileInto, compileIdOption = "auto", sourceOrigin }) => {
@@ -12,7 +12,7 @@ export const loadCompileMeta = memoizeOnce(
 
     let compileId
     if (compileIdOption === "auto") {
-      const node = detect()
+      const node = detectNode()
       compileId = nodeToCompileId(node, groupMap) || "otherwise"
     } else {
       // here we could/should check if it's part of groupMap

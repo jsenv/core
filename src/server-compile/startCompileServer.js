@@ -1,14 +1,11 @@
 /* eslint-disable import/max-dependencies */
-import { normalizePathname } from "@jsenv/module-resolution"
+import { normalizePathname, hrefToPathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
-import { fileWrite } from "@dmail/helper"
-import { ROOT_FOLDER } from "../ROOT_FOLDER.js"
 import { requestToFileResponse } from "../requestToFileResponse/index.js"
 import { startServer, serviceCompose } from "../server/index.js"
 import { generateGroupMap } from "../group-map/index.js"
 import { createCompileService } from "./compile-service/createCompileService.js"
 import { compileJs } from "./compile-js/index.js"
-import { compileImportMap } from "./compile-import-map/index.js"
 import {
   COMPILE_SERVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
   COMPILE_SERVER_DEFAULT_COMPILE_INTO,
@@ -55,16 +52,17 @@ export const startCompileServer = async ({
     groupCount: compileGroupCount,
   })
 
-  await Promise.all([
-    fileWrite(
-      `${projectFolder}/${compileInto}/groupMap.json`,
-      JSON.stringify(groupMap, null, "  "),
-    ),
-  ])
-
   const compileBrowserClientService = ({ headers, ressource }) => {
     if (ressource !== `/${compileInto}/JSENV_BROWSER_CLIENT.js`) return null
-    return compileBrowserClient({ projectFolder, compileInto, babelConfigMap, groupMap, headers })
+    return compileBrowserClient({
+      projectFolder,
+      importMapFilenameRelative,
+      compileInto,
+      babelConfigMap,
+      groupMap,
+      transformTopLevelAwait,
+      headers,
+    })
   }
 
   const compileNodeClientService = ({ ressource }) => {
@@ -80,7 +78,6 @@ export const startCompileServer = async ({
     watchSource,
     watchSourcePredicate,
     groupMap,
-    compileImportMap,
     // todo: pass { projectFolder, compileInto, groupMap, babelConfigMap, transformTopLevelAwait}
     // to compileJS
     compileJs,
@@ -123,13 +120,8 @@ const locateFileSystem = ({ rootHref, filenameRelative }) => {
   // to get file.
   // in order to test this behaviour while developping @jsenv/core
   // 'node_modules/@jsenv/core` is an alias to rootHref
-  if (filenameRelative.startsWith("node_modules/@jsenv/core")) {
-    const sourceOrigin = `file://${ROOT_FOLDER}`
-    if (rootHref === sourceOrigin || rootHref.startsWith(`${sourceOrigin}/`)) {
-      const filenameRelativeSelf = filenameRelative.slice("node_modules/@jsenv/core/".length)
-      return `${sourceOrigin}/${filenameRelativeSelf}`
-    }
-  }
-
-  return `${rootHref}/${filenameRelative}`
+  return `file://${resolveProjectFilename({
+    projctFolder: hrefToPathname(rootHref),
+    filenameRelative,
+  })}`
 }

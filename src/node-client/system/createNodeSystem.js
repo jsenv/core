@@ -5,16 +5,19 @@ import {
   remapResolvedImport,
   pathnameToDirname,
   hrefToPathname,
-} from "/node_modules/@jsenv/module-resolution/index.js"
-import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
-import { hrefToFilenameRelative } from "../../hrefToFilenameRelative.js"
-import { fromFunctionReturningNamespace, fromHref } from "../../registerModuleFrom/index.js"
-import { valueInstall } from "../../valueInstall.js"
+} from "@jsenv/module-resolution"
+import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
+import { hrefToFilenameRelative } from "../../platform/hrefToFilenameRelative.js"
+import {
+  fromFunctionReturningNamespace,
+  fromHref,
+} from "../../platform/registerModuleFrom/index.js"
+import { valueInstall } from "../../platform/valueInstall.js"
 import { compiledHrefToCompiledFilename } from "../compiledHrefToCompiledFilename.js"
 import { fetchSource } from "../fetchSource.js"
 import { evalSource } from "../evalSource.js"
 // const SYSTEMJS_RELATIVE_PATH = "src/systemjs/s.js"
-import "../../../../src/systemjs/s.js"
+import "../../systemjs/s.js"
 
 const GLOBAL_SPECIFIER = "global"
 

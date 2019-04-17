@@ -1,4 +1,4 @@
-import { genericExecuteCompiledFile } from "../genericExecuteCompiledFile.js"
+import { genericExecuteCompiledFile } from "../platform/genericExecuteCompiledFile.js"
 import { loadNodeImporter } from "./loadNodeImporter.js"
 
 export const executeCompiledFile = ({

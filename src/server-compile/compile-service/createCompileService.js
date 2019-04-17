@@ -6,13 +6,11 @@ import { locate as locateDefault } from "./locate.js"
 export const createCompileService = async ({
   cancellationToken = createCancellationToken(),
   projectFolder,
-  importMapFilenameRelative,
   compileInto,
   locate = locateDefault,
   watchSource,
   watchSourcePredicate,
   groupMap,
-  compileImportMap,
   compileJs,
 }) => {
   const { registerFileChangedCallback, triggerFileChanged } = createFileChangedSignal()
@@ -24,8 +22,6 @@ export const createCompileService = async ({
   })
 
   const filenameRelativeToCompile = (filenameRelative) => {
-    if (filenameRelative === importMapFilenameRelative) return compileImportMap
-
     if (filenameRelative.endsWith(".json")) return undefined
 
     return compileJs

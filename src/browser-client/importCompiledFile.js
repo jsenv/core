@@ -1,4 +1,4 @@
-import { genericImportCompiledFile } from "../genericImportCompiledFile.js"
+import { genericImportCompiledFile } from "../platform/genericImportCompiledFile.js"
 import { loadBrowserImporter } from "./loadBrowserImporter.js"
 
 export const importCompiledFile = ({ compileInto, compileServerOrigin, filenameRelative }) =>

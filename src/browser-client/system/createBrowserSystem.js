@@ -1,7 +1,10 @@
-import { resolveImport, remapResolvedImport } from "/node_modules/@jsenv/module-resolution/index.js"
-import { hrefToFilenameRelative } from "../../hrefToFilenameRelative.js"
-import { valueInstall } from "../../valueInstall.js"
-import { fromFunctionReturningNamespace, fromHref } from "../../registerModuleFrom/index.js"
+import { resolveImport, remapResolvedImport } from "@jsenv/module-resolution"
+import { hrefToFilenameRelative } from "../../platform/hrefToFilenameRelative.js"
+import { valueInstall } from "../../platform/valueInstall.js"
+import {
+  fromFunctionReturningNamespace,
+  fromHref,
+} from "../../platform/registerModuleFrom/index.js"
 import { fetchSource } from "../fetchSource.js"
 import { evalSource } from "../evalSource.js"
 

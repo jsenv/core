@@ -52,6 +52,8 @@ export const compileFile = async ({
       }
     }
 
+    const cacheIgnored = clientCompileCacheStrategy === "none"
+
     try {
       const { cache, compileResult, compileResultStatus } = await computeCompileReport({
         projectFolder,
@@ -60,6 +62,7 @@ export const compileFile = async ({
         compile,
         ifEtagMatch,
         ifModifiedSinceDate,
+        cacheIgnored,
       })
 
       await updateCache({
@@ -163,12 +166,15 @@ const computeCompileReport = async ({
   compile,
   ifEtagMatch,
   ifModifiedSinceDate,
+  cacheIgnored,
 }) => {
-  const cache = await readCache({
-    projectFolder,
-    sourceFilenameRelative,
-    compiledFilenameRelative,
-  })
+  const cache = cacheIgnored
+    ? null
+    : await readCache({
+        projectFolder,
+        sourceFilenameRelative,
+        compiledFilenameRelative,
+      })
 
   if (!cache) {
     const compileResult = await callCompile({
@@ -233,6 +239,7 @@ const callCompile = async ({
     assetsContent = [],
     contentType,
     compiledSource,
+    ...rest
   } = await compile({
     sourceFilenameRelative,
     compiledFilenameRelative,
@@ -252,6 +259,7 @@ const callCompile = async ({
     sourcesContent,
     assets,
     assetsContent,
+    ...rest,
   }
 }
 

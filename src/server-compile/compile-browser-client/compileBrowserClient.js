@@ -1,78 +1,68 @@
 import { uneval } from "@dmail/uneval"
-import { ROOT_FOLDER } from "../../ROOT_FOLDER.js"
+import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
+import { resolveProjectFilename } from "../../resolveProjectFilename.js"
 import { bundleBrowser } from "../../bundle/browser/bundleBrowser.js"
 import { compileFile } from "../compile-file/index.js"
 
 export const compileBrowserClient = async ({
   projectFolder,
+  importMapFilenameRelative,
   compileInto,
   babelConfigMap,
   groupMap,
   headers,
 }) => {
-  const browserClientFilenameJsenvRelative = "src/platform/browser/browserPlatform.js"
-  const browserBalancerFilenameJsenvRelative = "src/browser-compile-id/computeBrowserCompileId.js"
-  const insideJsenv = projectFolder.startsWith(`${ROOT_FOLDER}/`)
-
-  const browserClientFilename = insideJsenv
-    ? `${ROOT_FOLDER}/${compileInto}/${browserClientFilenameJsenvRelative}`
-    : `${projectFolder}/${compileInto}/${browserClientFilenameJsenvRelative}`
-  const browserClientCompiledFilenameRelative = insideJsenv
-    ? `${compileInto}/${browserClientFilenameJsenvRelative}`
-    : `${compileInto}/node_module/@jsenv/core/${browserClientFilenameJsenvRelative}`
-  const browserClientCompiledFilename = `${projectFolder}/${browserClientCompiledFilenameRelative}`
-
-  debugger
-  // oui en fait compileFile aurait besoin d'un coup de pouce ici
-  // parce que l'endroit ou se trouve le fichier n'est pas celui
-  // ou on le met
-  // en plus compileFile a pas besoin du filename
-  // s'il a deja le filenameRelative
-  // il faut donc un sourceFilenameRelative
-  // et un compiledFilenameRelative qui vaudrait le sourceFilenameRelative ?
-  // genre si je compile '/src/file.js'
-  // le sourceFilenameRelative, ouais ok
-  // et donc le compiledFilenameRelative sera `/dist/src/file.js`
-
-  // const browserBalancerFilenameRelative = insideJsenv
-  //   ? browserBalancerFilenameJsenvRelative
-  //   : `node_module/@jsenv/core/${browserBalancerFilenameJsenvRelative}`
-  const browserBalancerFilename = insideJsenv
-    ? `${ROOT_FOLDER}/${browserBalancerFilenameJsenvRelative}`
-    : `${projectFolder}/${browserBalancerFilenameJsenvRelative}`
+  const browserClientSourceFilenameRelative = `node_modules/@jsenv/core/src/browser-client/index.js`
+  const browserClientCompiledFilenameRelative = `${compileInto}/${browserClientSourceFilenameRelative}`
+  const browserClientSourceFilename = resolveProjectFilename({
+    projectFolder,
+    filenameRelative: browserClientSourceFilenameRelative,
+  })
+  const browserGroupResolverFilenameRelative = `node_modules/@jsenv/core/src/browser-group-resolver/index.js`
+  const browserGroupResolverFilename = resolveProjectFilename({
+    projectFolder,
+    filenameRelative: browserGroupResolverFilenameRelative,
+  })
 
   return compileFile({
     projectFolder,
     headers,
-    filenameRelative: browserClientCompiledFilenameRelative,
-    filename: browserClientCompiledFilename,
+    sourceFilenameRelative: browserClientSourceFilenameRelative,
+    compiledFilenameRelative: browserClientCompiledFilenameRelative,
     compile: async () => {
+      const importMap = readProjectImportMap({
+        projectFolder,
+        importMapFilenameRelative,
+      })
+
       const bundle = await bundleBrowser({
-        // the projectFolder is the root folder
-        // except if you pass a custom one, but we'll see that later ?
-        projectFolder: insideJsenv ? ROOT_FOLDER : projectFolder,
-        inlineSpecifierMap: {
-          ["JSENV_BROWSER_CLIENT.js"]: browserClientFilename,
-          ["COMPUTE_BROWSER_COMPILE_ID"]: browserBalancerFilename,
-          ["PLATFORM_META"]: () => `export const groupMap = ${uneval(groupMap)}`,
-        },
+        projectFolder,
+        into: compileInto,
         entryPointMap: {
-          main: "JSENV_BROWSER_CLIENT.js",
+          browserClient: "JSENV_BROWSER_CLIENT.js",
+        },
+        inlineSpecifierMap: {
+          ["JSENV_BROWSER_CLIENT.js"]: browserClientSourceFilename,
+          ["BROWSER_CLIENT_DATA.js"]: () =>
+            generateBrowserClientDataSource({ importMap, groupMap }),
+          ["BROWSER_GROUP_RESOLVER.js"]: browserGroupResolverFilename,
         },
         babelConfigMap,
         minify: false,
         throwUnhandled: false,
         compileGroupCount: 1,
+        verbose: true,
       })
       const main = bundle.output[0]
       return {
+        contentType: "application/javascript",
         compiledSource: main.code,
         sources: main.map.sources,
         sourcesContent: main.map.sourcesContent,
         assets: ["main.map.js"],
         assetsSource: [JSON.stringify(main.map)],
-        compiledSourceFileWritten: true, // already written by rollup
-        assetsFileWritten: true, // already written by
+        writeCompiledSourceFile: false, // already written by rollup
+        writeAssetsFile: false, // already written by rollup
       }
     },
     // for now disable cache for client because veryfing
@@ -82,3 +72,9 @@ export const compileBrowserClient = async ({
     clientCompileCacheStrategy: "none",
   })
 }
+
+const generateBrowserClientDataSource = ({
+  importMap,
+  groupMap,
+}) => `export const importMap = ${uneval(importMap)}
+export const groupMap = ${uneval(groupMap)}`

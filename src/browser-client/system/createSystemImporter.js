@@ -1,5 +1,5 @@
+import { createImportTracker } from "../../platform/createImportTracker.js"
 import { createBrowserSystem } from "./createBrowserSystem.js"
-import { createImportTracker } from "../../createImportTracker.js"
 
 export const createSystemImporter = ({
   importMap,

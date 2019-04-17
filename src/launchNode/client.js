@@ -3,7 +3,7 @@ import path from "path"
 import { resolveImport, hrefToPathname } from "/node_modules/@jsenv/module-resolution/index.js"
 import { createCancellationSource } from "/node_modules/@dmail/cancellation/index.js"
 import { uneval } from "/node_modules/@dmail/uneval/index.js"
-import { executeCompiledFile } from "../platform/node/executeCompiledFile.js"
+import { executeCompiledFile } from "../node-client/executeCompiledFile.js"
 import { registerProcessInterruptCallback } from "../process-signal/index.js"
 import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
 

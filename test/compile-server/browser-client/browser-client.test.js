@@ -1,18 +1,21 @@
 import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { startCompileServer } from "../../../index.js"
 import { fetch } from "../fetch.js"
 
+const projectFolder = ROOT_FOLDER
 const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
-const compileInto = ".dist"
+const testFolderRelative = testFolder.slice(`${ROOT_FOLDER}/`.length)
+const compileInto = `${testFolderRelative}/.dist`
 
 const compileServer = await startCompileServer({
-  projectFolder: testFolder,
+  projectFolder,
+  compileInto,
   verbose: true,
 })
 
 const response = await fetch(`${compileServer.origin}/${compileInto}/JSENV_BROWSER_CLIENT.js`)
-debugger
 const actual = {
   status: response.status,
   statusText: response.statusText,

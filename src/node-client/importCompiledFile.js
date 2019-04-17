@@ -1,4 +1,4 @@
-import { genericImportCompiledFile } from "../genericImportCompiledFile.js"
+import { genericImportCompiledFile } from "../platform/genericImportCompiledFile.js"
 import { loadCompileMeta } from "./loadCompileMeta.js"
 import { loadNodeImporter } from "./loadNodeImporter.js"
 

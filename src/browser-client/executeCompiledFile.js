@@ -1,4 +1,4 @@
-import { genericExecuteCompiledFile } from "../genericExecuteCompiledFile.js"
+import { genericExecuteCompiledFile } from "../platform/genericExecuteCompiledFile.js"
 import { loadBrowserImporter } from "./loadBrowserImporter.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 

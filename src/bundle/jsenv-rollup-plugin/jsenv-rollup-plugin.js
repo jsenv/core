@@ -8,7 +8,7 @@ import {
   hrefToPathname,
   hrefToScheme,
 } from "@jsenv/module-resolution"
-import { fetchUsingHttp } from "../../platform/node/fetchUsingHttp.js"
+import { fetchUsingHttp } from "../../node-client/fetchUsingHttp.js"
 import { readSourceMappingURL } from "../../replaceSourceMappingURL.js"
 import {
   transpiler,
@@ -70,23 +70,22 @@ export const createJsenvRollupPlugin = ({
         throw new Error(`inlineSpecifier must be a string or a function`)
       }
 
+      // hotfix because entry file has no importer
+      // so it would be resolved against root which is a folder
+      // and url resolution would not do what we expect
+      if (!importer) importer = projectFolder
+
       let importerHref
-      if (importer) {
-        // importer will be a pathname
-        // except if you have an absolute dependency like import 'http://domain.com/file.js'
-        // so when needed convert importer back to an url
-        if (importer.startsWith(`${projectFolder}/`)) {
-          importerHref = `${origin}${importer.slice(projectFolder.length)}`
-        } else if (hrefToScheme(importer) === "") {
-          importerHref = `${origin}${importer}`
-        } else {
-          importerHref = importer
-        }
+      // importer will be a pathname
+      // except if you have an absolute dependency like import 'http://domain.com/file.js'
+      // so when needed convert importer back to an url
+      if (importer.startsWith(`${projectFolder}/`)) {
+        importerHref = `${origin}${importer.slice(projectFolder.length)}`
+      } else if (hrefToScheme(importer) === "") {
+        importerHref = `${origin}${importer}`
       } else {
-        // hotfix because entry file has no importer
-        // so it would be resolved against root which is a folder
-        // and url resolution would not do what we expect
-        importerHref = `${origin}${projectFolder}`
+        // there is already a scheme like http, https, keep it
+        importerHref = importer
       }
 
       const resolvedImport = resolveImport({
@@ -104,8 +103,12 @@ export const createJsenvRollupPlugin = ({
       // le's return him pathname when possible
       // otherwise sourcemap.sources will be messed up
       if (id.startsWith(`${origin}/`)) {
-        const filename = `${projectFolder}${hrefToPathname(id)}`
-        return filename
+        const specifierFilename = hrefToPathname(id)
+        if (importer.startsWith(`${projectFolder}/`)) {
+          const filename = `${projectFolder}${specifierFilename}`
+          return filename
+        }
+        return specifierFilename
       }
 
       return id

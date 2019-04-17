@@ -1,4 +1,4 @@
-import { stringToStringWithLink } from "../../stringToStringWithLink.js"
+import { stringToStringWithLink } from "../stringToStringWithLink.js"
 import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 
 export const displayErrorInDocument = (error, { compileServerOrigin }) => {

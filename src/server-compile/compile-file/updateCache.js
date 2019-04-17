@@ -4,8 +4,8 @@ import { getCacheFilename, getAssetFilename, getCompiledFilename } from "./locat
 
 export const updateCache = ({
   projectFolder,
-  filenameRelative,
-  filename,
+  sourceFilenameRelative,
+  compiledFilenameRelative,
   serverCompileCacheTrackHit,
   cache,
   compileResult,
@@ -25,22 +25,22 @@ export const updateCache = ({
   const promises = []
 
   if (isNew || isUpdated) {
-    const { compiledSourceFileWritten = false, assetsFileWritten = false } = compileResult
+    const { writeCompiledSourceFile = true, writeAssetsFile = true } = compileResult
     const compiledFilename = getCompiledFilename({
       projectFolder,
-      filenameRelative,
+      compiledFilenameRelative,
     })
 
-    if (!compiledSourceFileWritten) {
+    if (writeCompiledSourceFile) {
       promises.push(fileWrite(compiledFilename, compiledSource))
     }
 
-    if (!assetsFileWritten) {
+    if (writeAssetsFile) {
       promises.push(
         ...assets.map((asset, index) => {
           const assetFilename = getAssetFilename({
             projectFolder,
-            filenameRelative,
+            compiledFilenameRelative,
             asset,
           })
 
@@ -53,8 +53,7 @@ export const updateCache = ({
   if (isNew || isUpdated || (isCached && serverCompileCacheTrackHit)) {
     if (isNew) {
       cache = {
-        filenameRelative,
-        filename,
+        sourceFilenameRelative,
         contentType,
         sources,
         sourcesEtag: sourcesContent.map((sourceContent) => createETag(sourceContent)),
@@ -72,7 +71,6 @@ export const updateCache = ({
     } else if (isUpdated) {
       cache = {
         ...cache,
-        filename, // may change because of locate
         sources,
         sourcesEtag: sourcesContent.map((sourceContent) => createETag(sourceContent)),
         assets,
@@ -88,7 +86,6 @@ export const updateCache = ({
     } else {
       cache = {
         ...cache,
-        filename, // may change because of locate
         ...(serverCompileCacheTrackHit
           ? {
               matchCount: cache.matchCount + 1,
@@ -100,7 +97,7 @@ export const updateCache = ({
 
     const cacheFilename = getCacheFilename({
       projectFolder,
-      filenameRelative,
+      compiledFilenameRelative,
     })
 
     promises.push(fileWrite(cacheFilename, JSON.stringify(cache, null, "  ")))

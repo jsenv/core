@@ -1,5 +1,5 @@
 import { hrefToPathname } from "@jsenv/module-resolution"
-import { hrefToMeta } from "../hrefToMeta.js"
+import { hrefToMeta } from "../platform/hrefToMeta.js"
 
 export const compiledHrefToCompiledFilename = (
   href,
