@@ -1,10 +1,10 @@
 import { sep, basename } from "path"
 import { ansiToHTML } from "../../ansiToHTML.js"
 import { regexpEscape } from "../../stringHelper.js"
-import { createParseError } from "../compile-file/index.js"
+import { createParseError } from "../serve-compiled-file/index.js"
 import { transpiler } from "./transpiler.js"
 
-export const rawCompileJs = async ({
+export const compileJs = async ({
   projectFolder,
   compileInto,
   compileId,

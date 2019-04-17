@@ -1,6 +1,6 @@
 import { fileRead } from "@dmail/helper"
 import { createOperation } from "@dmail/cancellation"
-import { compileJs } from "../server-compile/compile-js/index.js"
+import { compileJs } from "../server-compile/serve-compiled-js/compileJs.js"
 import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
 
 const { createFileCoverage } = import.meta.require("istanbul-lib-coverage")

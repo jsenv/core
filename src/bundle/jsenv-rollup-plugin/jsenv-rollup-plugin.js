@@ -13,8 +13,8 @@ import { readSourceMappingURL } from "../../replaceSourceMappingURL.js"
 import {
   transpiler,
   findAsyncPluginNameInBabelConfigMap,
-} from "../../server-compile/compile-js/transpiler.js"
-import { writeSourceMapLocation } from "../../server-compile/compile-js/rawCompileJs.js"
+} from "../../server-compile/serve-compiled-js/transpiler.js"
+import { writeSourceMapLocation } from "../../server-compile/serve-compiled-js/compileJs.js"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { computeBabelConfigMapSubset } from "./computeBabelConfigMapSubset.js"
 

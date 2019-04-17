@@ -1,7 +1,8 @@
 import { fileRead } from "@dmail/helper"
-import { compileFile } from "../compile-file/index.js"
+import { compileJs } from "./compileJs.js"
+import { serveCompiledFile } from "../serve-compiled-file/index.js"
 
-export const compileJs = async ({
+export const serveCompiledJs = async ({
   projectFolder,
   compileInto,
   groupMap,
@@ -15,7 +16,7 @@ export const compileJs = async ({
   const sourceFilenameRelative = filenameRelative
   const compiledFilenameRelative = `${compileInto}/${compileId}/${filenameRelative}`
 
-  return compileFile({
+  return serveCompiledFile({
     projectFolder,
     sourceFilenameRelative,
     compiledFilenameRelative,

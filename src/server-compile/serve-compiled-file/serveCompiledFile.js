@@ -9,7 +9,7 @@ import { getCacheFilename, getSourceFilename, getCompiledFilename } from "./loca
 
 const lockfile = import.meta.require("proper-lockfile")
 
-export const compileFile = async ({
+export const serveCompiledFile = async ({
   projectFolder,
   sourceFilenameRelative,
   compiledFilenameRelative,

@@ -2,7 +2,7 @@ import fs from "fs"
 import { assert } from "/node_modules/@dmail/assert/index.js"
 import { objectMap } from "../../../objectHelper.js"
 import { createInstrumentPlugin } from "../../../cover/createInstrumentPlugin.js"
-import { jsCompile } from "../../jsCompile.js"
+import { jsCompile } from "../../jsCompile.js.js"
 
 const istanbul = import.meta.require("istanbul")
 const transformBlockScoping = import.meta.require("@babel/plugin-transform-block-scoping")

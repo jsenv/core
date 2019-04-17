@@ -2,9 +2,9 @@ import { uneval } from "@dmail/uneval"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { resolveProjectFilename } from "../../resolveProjectFilename.js"
 import { bundleBrowser } from "../../bundle/browser/bundleBrowser.js"
-import { compileFile } from "../compile-file/index.js"
+import { serveCompiledFile } from "../serve-compiled-file/index.js"
 
-export const compileBrowserClient = async ({
+export const serveBrowserClient = async ({
   projectFolder,
   importMapFilenameRelative,
   compileInto,
@@ -24,7 +24,7 @@ export const compileBrowserClient = async ({
     filenameRelative: browserGroupResolverFilenameRelative,
   })
 
-  return compileFile({
+  return serveCompiledFile({
     projectFolder,
     headers,
     sourceFilenameRelative: browserClientSourceFilenameRelative,

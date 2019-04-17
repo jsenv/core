@@ -1,6 +1,6 @@
 import fs from "fs"
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { jsCompile } from "../../jsCompile.js"
+import { jsCompile } from "../../jsCompile.js.js"
 
 const transformBlockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
 const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
