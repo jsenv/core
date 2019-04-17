@@ -32,7 +32,7 @@ export const startCompileServer = async ({
   watchSource = false,
   watchSourcePredicate = () => true,
   // js compile options
-  transformTopLevelAwait,
+  transformTopLevelAwait = true,
   // options related to the server itself
   cors = true,
   protocol,
@@ -64,6 +64,16 @@ export const startCompileServer = async ({
   const services = []
 
   if (watchSource) {
+    const originalWatchSourcePredicate = watchSourcePredicate
+    watchSourcePredicate = (filenameRelative) => {
+      // I doubt an asset like .js.map will change
+      // in theory a compilation asset should not change
+      // if the source file did not change
+      // so we can avoid watching compilation asset
+      if (filenameRelativeIsAsset(filenameRelative)) return false
+      return originalWatchSourcePredicate(filenameRelative)
+    }
+
     const { registerFileChangedCallback, triggerFileChanged } = createFileChangedSignal()
 
     const watchedFiles = new Map()
@@ -116,8 +126,10 @@ export const startCompileServer = async ({
       compileInto,
       babelConfigMap,
       groupMap,
-      transformTopLevelAwait, // TODO: do sthing with this
-      projectFileRequestedCallback, // TODO: do sthing with this
+      // TODO: do sthing with projectFileRequestedCallback
+      // we should call this callback
+      // for every file required to produce the browserClient bundle
+      projectFileRequestedCallback,
       headers,
     })
   }
@@ -129,31 +141,32 @@ export const startCompileServer = async ({
   }
   services.push(nodeClientService)
 
-  const projectFileService = ({ headers, ressource }) => {
+  const compiledFileService = ({ headers, ressource }) => {
     const { compileId, filenameRelative } = locateProject({
       compileInto,
       ressource,
     })
 
     // cannot locate a file -> we don't know what to compile
-    // -> will be handled by requestToFileResponse
+    // -> will be handled by fileService
     if (!compileId) return null
 
     // unexpected compileId
     if (compileId in groupMap === false) return { status: 400, statusText: "unknown compileId" }
 
-    // it's an asset, it will be served by requestToFileResponse
+    // it's an asset, it will be served by fileService
     if (filenameRelativeIsAsset(filenameRelative)) return null
 
     // .json does not need to be compiled, they are redirected
-    // to the source location
-    if (filenameRelative.endsWith(".json"))
+    // to the source location, that will be handled by fileService
+    if (filenameRelative.endsWith(".json")) {
       return {
         status: 307,
         headers: {
           location: `${origin}/${filenameRelative}`,
         },
       }
+    }
 
     return serveCompiledJs({
       projectFolder,
@@ -161,20 +174,27 @@ export const startCompileServer = async ({
       groupMap,
       babelConfigMap,
       transformTopLevelAwait,
-      projectFileRequestedCallback, // TODO: do something with this
+      projectFileRequestedCallback,
       origin,
       headers,
       compileId,
       filenameRelative,
     })
   }
-  services.push(projectFileService)
+  services.push(compiledFileService)
 
-  const fileService = (request) =>
-    requestToFileResponse(request, {
+  const fileService = (request) => {
+    const filenameRelative = request.ressource.slice(1)
+    projectFileRequestedCallback({
+      filenameRelative,
+      filename: `${projectFolder}/${filenameRelative}`,
+    })
+
+    return requestToFileResponse(request, {
       projectFolder,
       locate: locateFileSystem,
     })
+  }
   services.push(fileService)
 
   const compileServer = await startServer({
@@ -260,4 +280,23 @@ const locateProject = ({ compileInto, ressource }) => {
   }
 }
 
+// in the future I would like to put assets in a separate directory like this:
+//
+// /dist
+//   /__assets__
+//     index.js.map
+//     index.js.cache.json
+//       /foo
+//        bar.js.map
+//        bar.js.cache.json
+//   index.js
+//   foo/
+//     bar.js
+//
+// so that the dist folder is not polluted with the asset files
+// that day filenameRelativeIsAsset must be this:
+// => filenameRelative.startsWith(`${compileInto}/__assets__/`)
+// I don't do it for now because it will impact sourcemap paths
+// and sourceMappingURL comment at the bottom of compiled files
+// and that's something sensitive
 const filenameRelativeIsAsset = (filenameRelative) => filenameRelative.match(/[^\/]+__asset__\/.+$/)

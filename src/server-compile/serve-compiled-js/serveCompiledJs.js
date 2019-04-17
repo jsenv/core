@@ -8,6 +8,7 @@ export const serveCompiledJs = async ({
   groupMap,
   babelConfigMap,
   transformTopLevelAwait,
+  projectFileRequestedCallback,
   origin,
   headers,
   compileId,
@@ -15,6 +16,11 @@ export const serveCompiledJs = async ({
 }) => {
   const sourceFilenameRelative = filenameRelative
   const compiledFilenameRelative = `${compileInto}/${compileId}/${filenameRelative}`
+
+  projectFileRequestedCallback({
+    filenameRelative: sourceFilenameRelative,
+    filename: `${projectFolder}/${sourceFilenameRelative}`,
+  })
 
   return serveCompiledFile({
     projectFolder,
