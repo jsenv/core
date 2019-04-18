@@ -31,7 +31,7 @@ const decideCompileId = async () => {
 
   if (returnedGroupId in groupMap === false) {
     throw new Error(
-      `computeBrowserCompileId must return one of ${Object.keys(groupMap)}, got ${returnedGroupId}`,
+      `resolveBrowserGroup must return one of ${Object.keys(groupMap)}, got ${returnedGroupId}`,
     )
   }
 

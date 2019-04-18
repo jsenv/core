@@ -1,4 +1,4 @@
-export { requestToFileResponse } from "./requestToFileResponse.js"
+export { serveFile } from "./serveFile.js"
 export {
   convertFileSystemErrorToResponseProperties,
 } from "./convertFileSystemErrorToResponseProperties.js"

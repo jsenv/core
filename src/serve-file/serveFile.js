@@ -1,9 +1,8 @@
 import { createReadStream } from "fs"
 import { folderRead, fileStat, fileRead } from "@dmail/helper"
-import { hrefToPathname, hrefToOrigin } from "@jsenv/module-resolution"
 import { createETag } from "../createETag.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
-import { ressourceToContentType } from "./ressourceToContentType.js"
+import { filenameToContentType } from "./filenameToContentType.js"
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
 const dateToUTCString = (date) => date.toUTCString()
@@ -14,17 +13,9 @@ const dateToSecondsPrecision = (date) => {
   return dateWithSecondsPrecision
 }
 
-export const requestToFileResponse = async (
-  { origin, ressource, method, headers = {} },
-  {
-    projectFolder,
-    locate = ({ rootHref, filenameRelative }) => `${rootHref}/${filenameRelative}`,
-    canReadDirectory = false,
-    getFileStat = fileStat,
-    getFileContentAsString = fileRead,
-    fileToBody = createReadStream,
-    cacheStrategy = "mtime",
-  },
+export const serveFile = async (
+  pathname,
+  { method = "GET", headers = {}, canReadDirectory = false, cacheStrategy = "mtime" } = {},
 ) => {
   if (method !== "GET" && method !== "HEAD") {
     return {
@@ -32,47 +23,11 @@ export const requestToFileResponse = async (
     }
   }
 
-  const rootHref = `file://${projectFolder}`
-
   try {
-    const filenameRelative = ressource.slice(1)
-    const href = await locate({ origin, rootHref, filenameRelative })
-
-    if (!href) {
-      return {
-        status: 404,
-      }
-    }
-
-    // redirection to other origin
-    if (hrefToOrigin(href) !== hrefToOrigin(rootHref)) {
-      return {
-        status: 307,
-        headers: {
-          location: href,
-        },
-      }
-    }
-
-    if (href.startsWith(`${rootHref}/`)) {
-      // redirection to same origin
-      const resolvedFilename = href.slice(`${rootHref}/`.length)
-      if (resolvedFilename !== filenameRelative) {
-        return {
-          status: 307,
-          headers: {
-            location: `${origin}/${resolvedFilename}`,
-          },
-        }
-      }
-    }
-
-    const filename = hrefToPathname(href)
-
     const cacheWithMtime = cacheStrategy === "mtime"
     const cacheWithETag = cacheStrategy === "etag"
     const cachedDisabled = cacheStrategy === "none"
-    const stat = await getFileStat(filename)
+    const stat = await fileStat(pathname)
 
     if (stat.isDirectory()) {
       if (canReadDirectory === false) {
@@ -85,7 +40,7 @@ export const requestToFileResponse = async (
         }
       }
 
-      const files = await folderRead(filename)
+      const files = await folderRead(pathname)
       const filesAsJSON = JSON.stringify(files)
 
       return {
@@ -125,14 +80,14 @@ export const requestToFileResponse = async (
           ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
           "last-modified": dateToUTCString(stat.mtime),
           "content-length": stat.size,
-          "content-type": ressourceToContentType(ressource),
+          "content-type": filenameToContentType(pathname),
         },
-        body: fileToBody(filename),
+        body: createReadStream(pathname),
       }
     }
 
     if (cacheWithETag) {
-      const content = await getFileContentAsString(filename)
+      const content = await fileRead(pathname)
       const eTag = createETag(content)
 
       if ("if-none-match" in headers && headers["if-none-match"] === eTag) {
@@ -149,7 +104,7 @@ export const requestToFileResponse = async (
         headers: {
           ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
           "content-length": stat.size,
-          "content-type": ressourceToContentType(ressource),
+          "content-type": filenameToContentType(pathname),
           etag: eTag,
         },
         body: content,
@@ -161,9 +116,9 @@ export const requestToFileResponse = async (
       headers: {
         "cache-control": "no-store",
         "content-length": stat.size,
-        "content-type": ressourceToContentType(ressource),
+        "content-type": filenameToContentType(pathname),
       },
-      body: fileToBody(filename),
+      body: createReadStream(pathname),
     }
   } catch (e) {
     return convertFileSystemErrorToResponseProperties(e)

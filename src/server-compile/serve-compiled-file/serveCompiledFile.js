@@ -1,5 +1,5 @@
 import { fileMakeDirname } from "@dmail/helper"
-import { convertFileSystemErrorToResponseProperties } from "../../requestToFileResponse/index.js"
+import { convertFileSystemErrorToResponseProperties } from "../../serve-file/index.js"
 import { createETag } from "../../createETag.js"
 import { lockForRessource } from "./ressourceRegistry.js"
 import { readCache } from "./readCache.js"

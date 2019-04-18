@@ -9,7 +9,7 @@ import { uneval } from "@dmail/uneval"
 import { startServer, serviceCompose } from "../server/index.js"
 import { startCompileServer } from "../server-compile/index.js"
 import { guard } from "../functionHelper.js"
-import { requestToFileResponse } from "../requestToFileResponse/index.js"
+import { serveFile } from "../serve-file/index.js"
 import {
   BROWSING_SERVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
   BROWSING_SERVER_DEFAULT_COMPILE_INTO,
@@ -81,7 +81,7 @@ export const startBrowsingServer = async ({
     signature,
   })
 
-  const indexRoute = guard(
+  const indexPageService = guard(
     ({ ressource, method }) => {
       if (ressource !== "/") return false
       if (method !== "GET") return false
@@ -112,7 +112,7 @@ export const startBrowsingServer = async ({
     },
   )
 
-  const selfExecuteScriptRoute = guard(
+  const selfExecuteScriptService = guard(
     ({ method, ressource }) => {
       if (method !== "GET") return false
       if (ressource.endsWith("__execute__.js")) return true
@@ -138,7 +138,7 @@ export const startBrowsingServer = async ({
     },
   )
 
-  const browsableRoute = guard(
+  const executeScriptService = guard(
     ({ method, ressource }) => {
       return method === "GET" && pathnameToMeta({ pathname: ressource, metaDescription }).browsable
     },
@@ -147,6 +147,7 @@ export const startBrowsingServer = async ({
         compileInto,
         compileServerOrigin,
         filenameRelative: ressource.slice(1),
+        // nope, compileServer will now server systemjs too
         systemScriptSrc: `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/system.js`,
         selfExecuteScriptSrc: `${ressource}__execute__.js`,
       })
@@ -163,6 +164,10 @@ export const startBrowsingServer = async ({
     },
   )
 
+  const fileService = ({ ressource, method, headers }) => {
+    return serveFile(`${projectFolder}${ressource}`, { method, headers })
+  }
+
   const browserServer = await startServer({
     cancellationToken,
     protocol,
@@ -170,10 +175,10 @@ export const startBrowsingServer = async ({
     port,
     forcePort,
     requestToResponse: serviceCompose(
-      indexRoute,
-      selfExecuteScriptRoute,
-      browsableRoute,
-      (request) => requestToFileResponse(request, { projectFolder }),
+      indexPageService,
+      selfExecuteScriptService,
+      executeScriptService,
+      fileService,
     ),
     startedMessage: ({ origin }) => `browser server started for ${projectFolder} at ${origin}`,
     stoppedMessage: (reason) => `browser server stopped because ${reason}`,

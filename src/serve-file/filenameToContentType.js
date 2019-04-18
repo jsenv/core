@@ -6,8 +6,8 @@ import contentTypeMap from "./contentTypeMap.js"
 const availableContentTypes = Object.keys(contentTypeMap)
 const contentTypeDefault = "application/octet-stream"
 
-export const ressourceToContentType = (ressource) => {
-  const extension = ressourceToExtension(ressource)
+export const filenameToContentType = (filename) => {
+  const extension = ressourceToExtension(filename)
 
   const contentTypeForExtension = availableContentTypes.find((contentTypeName) => {
     const contentType = contentTypeMap[contentTypeName]

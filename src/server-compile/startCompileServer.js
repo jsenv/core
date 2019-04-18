@@ -1,8 +1,8 @@
 /* eslint-disable import/max-dependencies */
-import { normalizePathname, hrefToPathname } from "@jsenv/module-resolution"
+import { normalizePathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
 import { resolveProjectFilename } from "../resolveProjectFilename.js"
-import { requestToFileResponse } from "../requestToFileResponse/index.js"
+import { serveFile } from "../serve-file/index.js"
 import { acceptContentType, createSSERoom, startServer, serviceCompose } from "../server/index.js"
 import { watchFile } from "../watchFile.js"
 import { generateGroupMap } from "../group-map/index.js"
@@ -14,7 +14,9 @@ import {
   COMPILE_SERVER_DEFAULT_BROWSER_SCORE_MAP,
   COMPILE_SERVER_DEFAULT_NODE_VERSION_SCORE_MAP,
 } from "./compile-server-constant.js"
+import { serveSystem } from "./serve-system/index.js"
 import { serveBrowserClient } from "./serve-browser-client/index.js"
+import { serveNodeClient } from "./serve-node-client/index.js"
 import { serveCompiledJs } from "./serve-compiled-js/index.js"
 
 export const startCompileServer = async ({
@@ -118,6 +120,14 @@ export const startCompileServer = async ({
     services.push(watchSSEService)
   }
 
+  const systemService = ({ headers, ressource }) => {
+    if (ressource !== `/${compileInto}/SYSTEM.js`) return null
+    return serveSystem({
+      headers,
+    })
+  }
+  services.push(systemService)
+
   const browserClientService = ({ headers, ressource }) => {
     if (ressource !== `/${compileInto}/JSENV_BROWSER_CLIENT.js`) return null
     return serveBrowserClient({
@@ -135,9 +145,20 @@ export const startCompileServer = async ({
   }
   services.push(browserClientService)
 
-  const nodeClientService = ({ ressource }) => {
+  const nodeClientService = ({ headers, ressource }) => {
     if (ressource !== `/${compileInto}/JSENV_NODE_CLIENT.js`) return null
-    return null // TODO
+    return serveNodeClient({
+      projectFolder,
+      importMapFilenameRelative,
+      compileInto,
+      babelConfigMap,
+      groupMap,
+      // TODO: do sthing with projectFileRequestedCallback
+      // we should call this callback
+      // for every file required to produce the nodeClient bundle
+      projectFileRequestedCallback,
+      headers,
+    })
   }
   services.push(nodeClientService)
 
@@ -183,17 +204,21 @@ export const startCompileServer = async ({
   }
   services.push(compiledFileService)
 
-  const fileService = (request) => {
-    const filenameRelative = request.ressource.slice(1)
+  const fileService = ({ ressource, method, headers }) => {
+    const filenameRelative = ressource.slice(1)
     projectFileRequestedCallback({
       filenameRelative,
       filename: `${projectFolder}/${filenameRelative}`,
     })
 
-    return requestToFileResponse(request, {
+    // this way of finding the file can be removed once we have the
+    // dynamic bundling no ?
+    const pathname = resolveProjectFilename({
       projectFolder,
-      locate: locateFileSystem,
+      filenameRelative,
     })
+
+    return serveFile(pathname, { method, headers })
   }
   services.push(fileService)
 
@@ -231,20 +256,6 @@ const createFileChangedSignal = () => {
   }
 
   return { registerFileChangedCallback, changed }
-}
-
-// this locateFileSystem concept can be removed once we have the
-// dynamic bundling no ?
-const locateFileSystem = ({ rootHref, filenameRelative }) => {
-  // consumer of @jsenv/core use
-  // 'node_modules/@jsenv/core/dist/browserSystemImporter.js'
-  // to get file.
-  // in order to test this behaviour while developping @jsenv/core
-  // 'node_modules/@jsenv/core` is an alias to rootHref
-  return `file://${resolveProjectFilename({
-    projectFolder: hrefToPathname(rootHref),
-    filenameRelative,
-  })}`
 }
 
 const locateProject = ({ compileInto, ressource }) => {

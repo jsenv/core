@@ -1,32 +1,22 @@
+// BROWSER_CLIENT_DATA.js will generated at build time
+// eslint-disable-next-line import/no-unresolved
+import { importMap, groupMap } from "NODE_CLIENT_DATA.js"
+// BROWSER_GROUP_RESOLVER.js is by default a jsenv internal resolver
+// but can be overriden at build time to provide a custom
+// resolveBrowserGroup function
+// eslint-disable-next-line import/no-unresolved
+import { resolveNodeGroup } from "NODE_GROUP_RESOLVER.js"
 import { memoizeOnce } from "@dmail/helper"
-import { fetchUsingHttp } from "./fetchUsingHttp.js"
+import { wrapImportMap } from "../import-map/wrapImportMap.js"
 import { createImporter } from "./system/createImporter.js"
-import { loadCompileMeta } from "./loadCompileMeta.js"
 
 export const loadNodeImporter = memoizeOnce(
-  async ({ compileInto, compileIdOption, sourceOrigin, compileServerOrigin }) => {
-    const { compileId } = await loadCompileMeta({
-      compileInto,
-      compileIdOption,
-      sourceOrigin,
-      compileServerOrigin,
-    })
-
-    const importMapHref = `${compileServerOrigin}/${compileInto}/${compileId}/importMap.json`
-    const importMapResponse = await fetchUsingHttp(importMapHref)
-    const { status } = importMapResponse
-
-    let importMap
-    if (status === 404) {
-      importMap = {}
-    } else if (status < 200 || status >= 400) {
-      throw new Error(`unexpected response status for importMap.json, ${status}`)
-    } else {
-      importMap = JSON.parse(importMapResponse.body)
-    }
+  async ({ compileInto, sourceOrigin, compileServerOrigin }) => {
+    const compileId = await decideCompileId()
+    const wrappedImportMap = wrapImportMap(importMap, `${compileInto}/${compileId}`)
 
     const { importFile } = await createImporter({
-      importMap,
+      importMap: wrappedImportMap,
       compileInto,
       sourceOrigin,
       compileServerOrigin,
@@ -36,3 +26,17 @@ export const loadNodeImporter = memoizeOnce(
     return { compileId, importFile }
   },
 )
+
+const decideCompileId = async () => {
+  const returnedGroupId = await resolveNodeGroup({ groupMap })
+
+  if (typeof returnedGroupId === undefined) return "otherwise"
+
+  if (returnedGroupId in groupMap === false) {
+    throw new Error(
+      `resolveNodeGroup must return one of ${Object.keys(groupMap)}, got ${returnedGroupId}`,
+    )
+  }
+
+  return returnedGroupId
+}

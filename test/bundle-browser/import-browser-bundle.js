@@ -1,5 +1,5 @@
-import { fileRead } from "/node_modules/@dmail/helper/index.js"
-import { requestToFileResponse } from "../../src/requestToFileResponse/requestToFileResponse.js"
+import { fileRead } from "@dmail/helper"
+import { serveFile } from "../../src/serve-file/serveFile.js"
 import { startServer, serviceCompose } from "../../src/server/index.js"
 
 const puppeteer = import.meta.require("puppeteer")
@@ -69,8 +69,11 @@ const startTestServer = ({ bundleFolder }) => {
 
   return startServer({
     verbose: false,
-    requestToResponse: serviceCompose(indexPageService, systemJSService, (request) =>
-      requestToFileResponse(request, { projectFolder: bundleFolder }),
+    requestToResponse: serviceCompose(
+      indexPageService,
+      systemJSService,
+      ({ ressource, method, headers }) =>
+        serveFile(`${bundleFolder}${ressource}`, { method, headers }),
     ),
   })
 }
