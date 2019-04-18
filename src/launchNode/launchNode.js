@@ -11,8 +11,9 @@ export const launchNode = async ({
   compileIdOption,
   sourceOrigin,
   compileServerOrigin,
-  debugMode,
-  debugPort,
+  debugPort = 0,
+  debugMode = "inherit",
+  debugModeInheritBreak = true,
   remap = true,
   traceWarnings = true,
 }) => {
@@ -21,8 +22,9 @@ export const launchNode = async ({
 
   const execArgv = await createChildExecArgv({
     cancellationToken,
-    debugMode,
     debugPort,
+    debugMode,
+    debugModeInheritBreak,
     processExecArgv: process.execArgv,
     processDebugPort: process.debugPort,
   })

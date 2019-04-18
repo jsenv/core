@@ -6,15 +6,14 @@ const AVAILABLE_DEBUG_MODE = ["", "inherit", "inspect", "inspect-brk", "debug", 
 export const createChildExecArgv = async ({
   cancellationToken = createCancellationToken(),
   // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
-  debugMode = "inherit",
-  debugPort = 0,
+  debugPort,
+  debugMode,
+  debugModeInheritBreak,
   processExecArgv,
   processDebugPort,
 } = {}) => {
   if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1)
-    throw new TypeError(`unexpected debug mode.
-debugMode: ${debugMode}
-AVAILABLE_DEBUG_MODE: ${AVAILABLE_DEBUG_MODE}`)
+    throw createUnexpectedDebugModeError({ debugMode, AVAILABLE_DEBUG_MODE })
 
   const processDebug = parseDebugFromExecArgv(processExecArgv)
 
@@ -40,9 +39,16 @@ AVAILABLE_DEBUG_MODE: ${AVAILABLE_DEBUG_MODE}`)
       debugPort,
       port: processDebug.port,
     })
+
+    let { mode } = processDebug
+    if (debugModeInheritBreak === false) {
+      if (mode === "debug-brk") mode = "debug"
+      if (mode === "inspect-brk") mode = "inspect"
+    }
+
     return replaceDebugExecArgv(processExecArgv, {
       processDebug,
-      mode: processDebug.mode,
+      mode,
       port: childDebugPort,
     })
   }
@@ -52,7 +58,7 @@ AVAILABLE_DEBUG_MODE: ${AVAILABLE_DEBUG_MODE}`)
       const childDebugPort = await forceFreePortIfZero({
         cancellationToken,
         debugPort,
-        port: 1000, // TODO: should be random
+        port: 1000, // TODO: should be random from 0 to 10000 for instance
       })
       return addDebugExecArgv(processExecArgv, { mode: debugMode, port: childDebugPort })
     }
@@ -75,6 +81,11 @@ AVAILABLE_DEBUG_MODE: ${AVAILABLE_DEBUG_MODE}`)
 
   return removeDebugExecArgv(processExecArgv, processDebug)
 }
+
+const createUnexpectedDebugModeError = ({ debugMode, AVAILABLE_DEBUG_MODE }) =>
+  new TypeError(`unexpected debug mode.
+debugMode: ${debugMode}
+AVAILABLE_DEBUG_MODE: ${AVAILABLE_DEBUG_MODE}`)
 
 const copyExecArgv = (argv) => argv.slice()
 
