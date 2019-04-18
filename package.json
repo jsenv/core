@@ -75,9 +75,7 @@
 		"generate-coverage": "node ./script/generate-coverage/generate-coverage.js",
 		"upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
 		"bundle-node": "node ./script/bundle-node/bundle-node.js",
-		"generate-browser-client": "node ./script/generate-browser-client/generate-browser-client.js",
-		"generate-node-client": "node ./script/generate-node-client/generate-node-client.js",
-		"dist": "npm run clean && npm run bundle-node && npm run generate-browser-client && npm run generate-node-client",
+		"dist": "npm run clean && npm run bundle-node",
 		"clean": "rimraf dist && rimraf coverage",
 		"reinstall": "npm run clean && rimraf node_modules && npm install",
 		"prepublishOnly": "npm run dist"
