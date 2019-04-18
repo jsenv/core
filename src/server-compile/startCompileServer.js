@@ -162,7 +162,7 @@ export const startCompileServer = async ({
   }
   services.push(nodeClientService)
 
-  const compiledFileService = ({ headers, ressource }) => {
+  const compiledFileService = ({ origin, headers, ressource }) => {
     const { compileId, filenameRelative } = locateProject({
       compileInto,
       ressource,
