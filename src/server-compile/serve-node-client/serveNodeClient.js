@@ -39,7 +39,7 @@ export const serveNodeClient = ({
         projectFolder,
         into: compileInto,
         entryPointMap: {
-          browserClient: "JSENV_NODE_CLIENT.js",
+          nodeClient: "JSENV_NODE_CLIENT.js",
         },
         inlineSpecifierMap: {
           ["JSENV_NODE_CLIENT.js"]: nodeClientSourceFilename,

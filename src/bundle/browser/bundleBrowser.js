@@ -23,10 +23,10 @@ export const bundleBrowser = async ({
   platformScoreMap = browserScoreMap,
   verbose,
   minify = true,
-  generateEntryPages = false,
   throwUnhandled = true,
-  logBundleFilePaths = true,
   writeOnFileSystem = true,
+  logBundleFilePaths = true,
+  generateEntryPages = false,
 }) => {
   projectFolder = normalizePathname(projectFolder)
 

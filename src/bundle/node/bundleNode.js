@@ -23,6 +23,7 @@ export const bundleNode = async ({
   verbose,
   minify = false,
   throwUnhandled = true,
+  writeOnFileSystem = true,
   logBundleFilePaths = true,
 }) => {
   projectFolder = normalizePathname(projectFolder)
@@ -34,6 +35,7 @@ export const bundleNode = async ({
     compileGroupCount,
     platformScoreMap: { node: versionScoreMap },
     verbose,
+    writeOnFileSystem,
     logBundleFilePaths,
     computeRollupOptionsWithoutBalancing: (context) =>
       computeRollupOptionsWithoutBalancing({
