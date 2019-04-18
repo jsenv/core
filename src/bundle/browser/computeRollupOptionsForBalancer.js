@@ -1,15 +1,15 @@
-import { isNativeBrowserModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
-import { pathnameToDirname } from "/node_modules/@jsenv/module-resolution/index.js"
-import { uneval } from "/node_modules/@dmail/uneval/index.js"
+import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
+import { uneval } from "@dmail/uneval"
+import { resolveProjectFilename } from "../../resolveProjectFilename.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
 import { ROOT_FOLDER } from "../../ROOT_FOLDER.js"
 
-const BUNDLE_BROWSER_OPTIONS_SPECIFIER = "\0bundle-browser-options.js"
-
 export const computeRollupOptionsForBalancer = ({
   cancellationToken,
   projectFolder,
+  importMapFilenameRelative,
+  browserGroupResolverFilenameRelative,
   into,
   babelConfigMap,
   groupMap,
@@ -18,41 +18,41 @@ export const computeRollupOptionsForBalancer = ({
   logBundleFilePaths,
   minify,
 }) => {
-  const balancerOptionSource = generateBalancerOptionsSource({
-    entryPointName,
-    groupMap,
+  const entryPointMap = {
+    [entryPointName]: "BROWSER_BALANCER.js",
+  }
+
+  const browserBalancerFilename = `${
+    ROOT_FOLDER[0] === "/" ? ROOT_FOLDER : `/${ROOT_FOLDER}`
+  }/src/bundle/browser/browser-balancer-template.js`
+
+  const browserGroupResolverFilename = resolveProjectFilename({
+    projectFolder,
+    filenameRelative: browserGroupResolverFilenameRelative,
   })
 
-  const browserBalancerRollupPlugin = {
-    name: "browser-balancer",
-    resolveId: (specifier) => {
-      // it's important to keep the extension so that
-      // rollup-plugin-babel transpiles bundle-browser-options.js too
-      if (specifier === BUNDLE_BROWSER_OPTIONS_SPECIFIER) {
-        return BUNDLE_BROWSER_OPTIONS_SPECIFIER
-      }
-      return null
-    },
-
-    load: async (id) => {
-      if (id === BUNDLE_BROWSER_OPTIONS_SPECIFIER) {
-        return balancerOptionSource
-      }
-      return null
-    },
+  const inlineSpecifierMap = {
+    ["BROWSER_BALANCER.js"]: browserBalancerFilename,
+    ["BUNDLE_BROWSER_DATA.js"]: () =>
+      generateBalancerOptionsSource({
+        entryPointName,
+        groupMap,
+      }),
+    ["BROWSER_GROUP_RESOLVER.js"]: browserGroupResolverFilename,
   }
 
   const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
     platformGlobalName: "window",
   })
 
-  const file = `${projectFolder}/${into}/${entryPointName}.js`
+  const dir = `${projectFolder}/${into}`
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({
     cancellationToken,
     projectFolder,
-    importMapFilenameRelative: null,
-    dir: pathnameToDirname(file),
+    importMapFilenameRelative,
+    inlineSpecifierMap,
+    dir,
     featureNameArray: groupMap.otherwise.incompatibleNameArray,
     babelConfigMap,
     minify,
@@ -63,20 +63,18 @@ export const computeRollupOptionsForBalancer = ({
   log(`
 bundle balancer file for browser
 entryPointName: ${entryPointName}
-file: ${file}
+file: ${dir}/${entryPointName}.js
 minify: ${minify}
 `)
 
   return {
     rollupParseOptions: {
-      input: `file://${
-        ROOT_FOLDER[0] === "/" ? ROOT_FOLDER : `/${ROOT_FOLDER}`
-      }/src/bundle/browser/browser-balancer-template.js`,
-      plugins: [browserBalancerRollupPlugin, importFromGlobalRollupPlugin, jsenvRollupPlugin],
+      input: entryPointMap,
+      plugins: [importFromGlobalRollupPlugin, jsenvRollupPlugin],
       external: (id) => isNativeBrowserModuleBareSpecifier(id),
     },
     rollupGenerateOptions: {
-      file,
+      dir,
       format: "iife",
       sourcemap: true,
       sourcemapExcludeSources: true,

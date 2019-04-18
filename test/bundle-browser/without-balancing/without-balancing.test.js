@@ -1,23 +1,26 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
+import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
 import { bundleBrowser } from "../../../index.js"
 import { importBrowserBundle } from "../import-browser-bundle.js"
 
-const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
+const projectFolder = ROOT_FOLDER
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const bundleInto = `${testFolderRelative}/dist/browser`
 
 await bundleBrowser({
-  projectFolder: testFolder,
-  into: "dist/browser",
-  babelConfigMap,
+  projectFolder,
+  into: bundleInto,
   entryPointMap: {
-    main: "without-balancing.js",
+    main: `${testFolderRelative}/without-balancing.js`,
   },
-  verbose: false,
+  throwUnhandled: false,
+  verbose: true,
   minify: false,
 })
+debugger
 const { namespace: actual } = await importBrowserBundle({
-  bundleFolder: `${testFolder}/dist/browser`,
+  bundleFolder: `${projectFolder}/${bundleInto}`,
   file: "main.js",
 })
 const expected = { default: 42 }

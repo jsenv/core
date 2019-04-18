@@ -1,27 +1,26 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
+import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
 import { bundleBrowser } from "../../../index.js"
 import { importBrowserBundle } from "../import-browser-bundle.js"
 
-const transformAsyncToPromises = import.meta.require("babel-plugin-transform-async-to-promises")
-
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
+const projectFolder = ROOT_FOLDER
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const bundleInto = `${testFolderRelative}/dist/browser`
 
 await bundleBrowser({
-  projectFolder: testFolder,
-  into: "dist/browser",
-  babelConfigMap: {
-    "transform-async-to-promises": [transformAsyncToPromises],
-  },
+  projectFolder,
+  into: bundleInto,
   entryPointMap: {
-    main: "balancing.js",
+    main: `${testFolderRelative}/balancing.js`,
   },
   compileGroupCount: 2,
+  throwUnhandled: false,
   minify: false,
 })
 
 const { namespace: actual } = await importBrowserBundle({
-  bundleFolder: `${testFolder}/dist/browser`,
+  bundleFolder: `${projectFolder}/${bundleInto}`,
   file: "main.js",
 })
 const expected = { default: 42 }

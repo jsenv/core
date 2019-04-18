@@ -1,22 +1,18 @@
-/* eslint-disable */
-// eslint must be disabled because he doesn't like that we try to load
-// something containing \0
-import { entryPointName, groupMap } from "\0bundle-browser-options.js"
-/* eslint-enable */
-import { detect } from "../../browser-compile-id/browserDetect/index.js.js"
-import { browserToCompileId } from "../../browser-compile-id/browserToCompileId.js/index.js"
+// eslint-disable-next-line import/no-unresolved
+import { entryPointName, groupMap } from "BUNDLE_BROWSER_DATA.js"
+// eslint-disable-next-line import/no-unresolved
+import { resolveBrowserGroup } from "BROWSER_GROUP_RESOLVER.js"
 
-window.System.register([], function(_export, _context) {
-  "use strict"
+window.System.register([], (_export, _context) => {
+  const execute = async () => {
+    const compileId = await resolveBrowserGroup({ groupMap })
+    const scriptSrc = `./${compileId}/${entryPointName}.js`
+
+    const namespace = await _context.import(scriptSrc)
+    _export(namespace)
+  }
+
   return {
-    // eslint-disable-next-line object-shorthand
-    execute: function() {
-      const compileId = browserToCompileId(detect(), groupMap)
-      const scriptSrc = `./${compileId}/${entryPointName}.js`
-
-      return _context.import(scriptSrc).then((namespace) => {
-        _export(namespace)
-      })
-    },
+    execute,
   }
 })
