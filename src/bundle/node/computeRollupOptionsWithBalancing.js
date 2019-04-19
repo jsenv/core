@@ -1,4 +1,4 @@
-import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
+import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
 
@@ -11,10 +11,10 @@ export const computeRollupOptionsWithBalancing = ({
   entryPointMap,
   babelConfigMap,
   groupMap,
-  compileId,
-  log,
   minify,
+  log,
   logBundleFilePaths,
+  compileId,
 }) => {
   const dir = `${projectFolder}/${into}/${compileId}`
 

@@ -1,4 +1,4 @@
-import { isNativeNodeModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
+import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
 
@@ -10,8 +10,8 @@ export const computeRollupOptionsWithoutBalancing = ({
   into,
   entryPointMap,
   babelConfigMap,
-  log,
   minify,
+  log,
   logBundleFilePaths,
 }) => {
   const dir = `${projectFolder}/${into}`
@@ -35,8 +35,8 @@ export const computeRollupOptionsWithoutBalancing = ({
 
   log(`
 bundle entry points for node without balancing.
-dir: ${dir}
 entry point names: ${Object.keys(entryPointMap)}
+dir: ${dir}
 minify: ${minify}
 `)
 

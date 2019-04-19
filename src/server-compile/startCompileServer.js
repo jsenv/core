@@ -23,6 +23,8 @@ export const startCompileServer = async ({
   projectFolder,
   cancellationToken = createCancellationToken(),
   importMapFilenameRelative = COMPILE_SERVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  browserGroupResolverFilenameRelative = `node_modules/@jsenv/core/src/browser-group-resolver/index.js`,
+  nodeGroupResolverFilenameRelative = `node_modules/@jsenv/core/src/node-group-resolver/index.js`,
   compileInto = COMPILE_SERVER_DEFAULT_COMPILE_INTO,
   // option related to compile groups
   compileGroupCount = 1,
@@ -37,9 +39,9 @@ export const startCompileServer = async ({
   transformTopLevelAwait = true,
   // options related to the server itself
   cors = true,
-  protocol,
-  ip,
-  port,
+  protocol = "http",
+  ip = "127.0.0.1",
+  port = 0,
   signature,
   verbose,
 }) => {
@@ -133,6 +135,7 @@ export const startCompileServer = async ({
     return serveBrowserClient({
       projectFolder,
       importMapFilenameRelative,
+      browserGroupResolverFilenameRelative,
       compileInto,
       babelConfigMap,
       groupMap,
@@ -150,6 +153,7 @@ export const startCompileServer = async ({
     return serveNodeClient({
       projectFolder,
       importMapFilenameRelative,
+      nodeGroupResolverFilenameRelative,
       compileInto,
       babelConfigMap,
       groupMap,
@@ -293,7 +297,7 @@ const locateProject = ({ compileInto, ressource }) => {
   }
 }
 
-// in the future I would like to put assets in a separate directory like this:
+// in the future I may want to put assets in a separate directory like this:
 //
 // /dist
 //   /__assets__

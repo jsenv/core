@@ -7,50 +7,51 @@ import { serveCompiledFile } from "../serve-compiled-file/index.js"
 export const serveNodeClient = ({
   projectFolder,
   importMapFilenameRelative,
+  nodeGroupResolverFilenameRelative,
   compileInto,
   babelConfigMap,
   groupMap,
   headers,
 }) => {
-  const nodeClientSourceFilenameRelative = `node_modules/@jsenv/core/src/node-client/index.js`
-  const nodeClientCompiledFilenameRelative = `${compileInto}/${nodeClientSourceFilenameRelative}`
-  const nodeClientSourceFilename = filenameRelativeInception({
+  const nodeClientFilenameRelative = `node_modules/@jsenv/core/src/node-client/index.js`
+  const nodeClientFilenameRelativeInception = filenameRelativeInception({
     projectFolder,
-    filenameRelative: nodeClientSourceFilenameRelative,
-  })
-  const nodeGroupResolverFilenameRelative = `node_modules/@jsenv/core/src/node-group-resolver/index.js`
-  const nodeGroupResolverFilename = filenameRelativeInception({
-    projectFolder,
-    filenameRelative: nodeGroupResolverFilenameRelative,
+    filenameRelative: nodeClientFilenameRelative,
   })
 
   return serveCompiledFile({
     projectFolder,
     headers,
-    sourceFilenameRelative: nodeClientSourceFilenameRelative,
-    compiledFilenameRelative: nodeClientCompiledFilenameRelative,
+    sourceFilenameRelative: nodeClientFilenameRelativeInception,
+    compiledFilenameRelative: `${compileInto}/${nodeClientFilenameRelativeInception}`,
     compile: async () => {
       const importMap = readProjectImportMap({
         projectFolder,
         importMapFilenameRelative,
       })
 
+      const entryPointMap = {
+        browserClient: nodeClientFilenameRelativeInception,
+      }
+
+      const nodeGroupResolverFilenameRelativeInception = filenameRelativeInception({
+        projectFolder,
+        filenameRelative: nodeGroupResolverFilenameRelative,
+      })
+
+      const inlineSpecifierMap = {
+        ["NODE_CLIENT_DATA.js"]: () => generateNodeClientDataSource({ importMap, groupMap }),
+        ["NODE_GROUP_RESOLVER.js"]: `${projectFolder}/${nodeGroupResolverFilenameRelativeInception}`,
+      }
+
       const bundle = await bundleNode({
         projectFolder,
         into: compileInto,
-        entryPointMap: {
-          nodeClient: "JSENV_NODE_CLIENT.js",
-        },
-        inlineSpecifierMap: {
-          ["JSENV_NODE_CLIENT.js"]: nodeClientSourceFilename,
-          ["NODE_CLIENT_DATA.js"]: () => generateNodeClientDataSource({ importMap, groupMap }),
-          ["NODE_GROUP_RESOLVER.js"]: nodeGroupResolverFilename,
-        },
+        entryPointMap,
+        inlineSpecifierMap,
         babelConfigMap,
-        minify: false,
         throwUnhandled: false,
         compileGroupCount: 1,
-        verbose: true,
       })
       const main = bundle.output[0]
       return {

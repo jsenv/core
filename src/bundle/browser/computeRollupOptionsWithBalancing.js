@@ -1,4 +1,4 @@
-import { isNativeBrowserModuleBareSpecifier } from "/node_modules/@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
+import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
 
@@ -11,10 +11,10 @@ export const computeRollupOptionsWithBalancing = ({
   entryPointMap,
   babelConfigMap,
   groupMap,
-  compileId,
+  minify,
   log,
   logBundleFilePaths,
-  minify,
+  compileId,
 }) => {
   const dir = `${projectFolder}/${into}/${compileId}`
 
@@ -24,9 +24,9 @@ export const computeRollupOptionsWithBalancing = ({
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({
     cancellationToken,
+    projectFolder,
     importMapFilenameRelative,
     inlineSpecifierMap,
-    projectFolder,
     dir,
     featureNameArray: groupMap[compileId].incompatibleNameArray,
     babelConfigMap,
@@ -52,7 +52,6 @@ minify: ${minify}
     rollupGenerateOptions: {
       dir,
       format: "system",
-      // entryFileNames: `./${compileId}-[name].js`,
       sourcemap: true,
       sourceMapExcludeSources: true,
     },

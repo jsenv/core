@@ -7,7 +7,7 @@ import { serveCompiledFile } from "../serve-compiled-file/index.js"
 export const serveBrowserClient = async ({
   projectFolder,
   importMapFilenameRelative,
-  browserGroupResolverFilenameRelative = `node_modules/@jsenv/core/src/browser-group-resolver/index.js`,
+  browserGroupResolverFilenameRelative,
   compileInto,
   babelConfigMap,
   groupMap,
@@ -30,14 +30,14 @@ export const serveBrowserClient = async ({
         importMapFilenameRelative,
       })
 
+      const entryPointMap = {
+        browserClient: browserClientFilenameRelativeInception,
+      }
+
       const browserGroupResolverFilenameRelativeInception = filenameRelativeInception({
         projectFolder,
         filenameRelative: browserGroupResolverFilenameRelative,
       })
-
-      const entryPointMap = {
-        browserClient: browserClientFilenameRelativeInception,
-      }
 
       const inlineSpecifierMap = {
         ["BROWSER_CLIENT_DATA.js"]: () => generateBrowserClientDataSource({ importMap, groupMap }),

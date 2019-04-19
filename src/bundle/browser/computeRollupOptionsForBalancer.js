@@ -13,10 +13,14 @@ export const computeRollupOptionsForBalancer = ({
   babelConfigMap,
   groupMap,
   entryPointName,
+  minify,
   log,
   logBundleFilePaths,
-  minify,
 }) => {
+  const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
+    platformGlobalName: "window",
+  })
+
   const browserBalancerFilenameRelativeInception = filenameRelativeInception({
     projectFolder,
     filenameRelative: "node_modules/@jsenv/core/src/bundle/browser/browser-balancer-template.js",
@@ -39,10 +43,6 @@ export const computeRollupOptionsForBalancer = ({
       }),
     ["BROWSER_GROUP_RESOLVER.js"]: `${projectFolder}/${browserGroupResolverFilenameRelativeInception}`,
   }
-
-  const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
-    platformGlobalName: "window",
-  })
 
   const dir = `${projectFolder}/${into}`
 
