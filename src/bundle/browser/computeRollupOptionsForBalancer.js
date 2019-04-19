@@ -1,9 +1,8 @@
 import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
 import { uneval } from "@dmail/uneval"
-import { resolveProjectFilename } from "../../resolveProjectFilename.js"
+import { filenameRelativeInception } from "../../filenameRelativeInception.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
-import { ROOT_FOLDER } from "../../ROOT_FOLDER.js"
 
 export const computeRollupOptionsForBalancer = ({
   cancellationToken,
@@ -18,27 +17,27 @@ export const computeRollupOptionsForBalancer = ({
   logBundleFilePaths,
   minify,
 }) => {
+  const browserBalancerFilenameRelativeInception = filenameRelativeInception({
+    projectFolder,
+    filenameRelative: "node_modules/@jsenv/core/src/bundle/browser/browser-balancer-template.js",
+  })
+
   const entryPointMap = {
-    [entryPointName]: "BROWSER_BALANCER.js",
+    [entryPointName]: browserBalancerFilenameRelativeInception,
   }
 
-  const browserBalancerFilename = `${
-    ROOT_FOLDER[0] === "/" ? ROOT_FOLDER : `/${ROOT_FOLDER}`
-  }/src/bundle/browser/browser-balancer-template.js`
-
-  const browserGroupResolverFilename = resolveProjectFilename({
+  const browserGroupResolverFilenameRelativeInception = filenameRelativeInception({
     projectFolder,
     filenameRelative: browserGroupResolverFilenameRelative,
   })
 
   const inlineSpecifierMap = {
-    ["BROWSER_BALANCER.js"]: browserBalancerFilename,
     ["BUNDLE_BROWSER_DATA.js"]: () =>
       generateBalancerOptionsSource({
         entryPointName,
         groupMap,
       }),
-    ["BROWSER_GROUP_RESOLVER.js"]: browserGroupResolverFilename,
+    ["BROWSER_GROUP_RESOLVER.js"]: `${projectFolder}/${browserGroupResolverFilenameRelativeInception}`,
   }
 
   const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({

@@ -1,7 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { normalizePathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
-import { resolveProjectFilename } from "../resolveProjectFilename.js"
+import { filenameRelativeInception } from "../filenameRelativeInception.js"
 import { serveFile } from "../serve-file/index.js"
 import { acceptContentType, createSSERoom, startServer, serviceCompose } from "../server/index.js"
 import { watchFile } from "../watchFile.js"
@@ -205,17 +205,19 @@ export const startCompileServer = async ({
   services.push(compiledFileService)
 
   const fileService = ({ ressource, method, headers }) => {
-    const filenameRelative = ressource.slice(1)
-    projectFileRequestedCallback({
-      filenameRelative,
-      filename: `${projectFolder}/${filenameRelative}`,
-    })
+    const requestFilenameRelative = ressource.slice(1)
 
     // this way of finding the file can be removed once we have the
     // dynamic bundling no ?
-    const pathname = resolveProjectFilename({
+    const requestFilenameRelativeInception = filenameRelativeInception({
       projectFolder,
-      filenameRelative,
+      filenameRelative: requestFilenameRelative,
+    })
+    const pathname = `${projectFolder}/${requestFilenameRelativeInception}`
+
+    projectFileRequestedCallback({
+      filenameRelative: requestFilenameRelativeInception,
+      filename: pathname,
     })
 
     return serveFile(pathname, { method, headers })

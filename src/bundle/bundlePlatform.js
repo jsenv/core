@@ -15,7 +15,7 @@ export const bundlePlatform = ({
   computeRollupOptionsWithoutBalancing,
   computeRollupOptionsWithBalancing,
   computeRollupOptionsForBalancer,
-  verbose = false,
+  verbose,
   logBundleFilePaths,
   writeOnFileSystem,
 }) =>

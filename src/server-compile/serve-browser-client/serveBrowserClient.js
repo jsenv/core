@@ -1,57 +1,58 @@
 import { uneval } from "@dmail/uneval"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
-import { resolveProjectFilename } from "../../resolveProjectFilename.js"
+import { filenameRelativeInception } from "../../filenameRelativeInception.js"
 import { bundleBrowser } from "../../bundle/browser/bundleBrowser.js"
 import { serveCompiledFile } from "../serve-compiled-file/index.js"
 
 export const serveBrowserClient = async ({
   projectFolder,
   importMapFilenameRelative,
+  browserGroupResolverFilenameRelative = `node_modules/@jsenv/core/src/browser-group-resolver/index.js`,
   compileInto,
   babelConfigMap,
   groupMap,
   headers,
 }) => {
-  const browserClientSourceFilenameRelative = `node_modules/@jsenv/core/src/browser-client/index.js`
-  const browserClientCompiledFilenameRelative = `${compileInto}/${browserClientSourceFilenameRelative}`
-  const browserClientSourceFilename = resolveProjectFilename({
+  const browserClientFilenameRelative = `node_modules/@jsenv/core/src/browser-client/index.js`
+  const browserClientFilenameRelativeInception = filenameRelativeInception({
     projectFolder,
-    filenameRelative: browserClientSourceFilenameRelative,
-  })
-  const browserGroupResolverFilenameRelative = `node_modules/@jsenv/core/src/browser-group-resolver/index.js`
-  const browserGroupResolverFilename = resolveProjectFilename({
-    projectFolder,
-    filenameRelative: browserGroupResolverFilenameRelative,
+    filenameRelative: browserClientFilenameRelative,
   })
 
   return serveCompiledFile({
     projectFolder,
     headers,
-    sourceFilenameRelative: browserClientSourceFilenameRelative,
-    compiledFilenameRelative: browserClientCompiledFilenameRelative,
+    sourceFilenameRelative: browserClientFilenameRelativeInception,
+    compiledFilenameRelative: `${compileInto}/${browserClientFilenameRelativeInception}`,
     compile: async () => {
       const importMap = readProjectImportMap({
         projectFolder,
         importMapFilenameRelative,
       })
 
+      const browserGroupResolverFilenameRelativeInception = filenameRelativeInception({
+        projectFolder,
+        filenameRelative: browserGroupResolverFilenameRelative,
+      })
+
+      const entryPointMap = {
+        browserClient: browserClientFilenameRelativeInception,
+      }
+
+      const inlineSpecifierMap = {
+        ["BROWSER_CLIENT_DATA.js"]: () => generateBrowserClientDataSource({ importMap, groupMap }),
+        ["BROWSER_GROUP_RESOLVER.js"]: `${projectFolder}/${browserGroupResolverFilenameRelativeInception}`,
+      }
+
       const bundle = await bundleBrowser({
         projectFolder,
         into: compileInto,
-        entryPointMap: {
-          browserClient: "JSENV_BROWSER_CLIENT.js",
-        },
-        inlineSpecifierMap: {
-          ["JSENV_BROWSER_CLIENT.js"]: browserClientSourceFilename,
-          ["BROWSER_CLIENT_DATA.js"]: () =>
-            generateBrowserClientDataSource({ importMap, groupMap }),
-          ["BROWSER_GROUP_RESOLVER.js"]: browserGroupResolverFilename,
-        },
+        entryPointMap,
+        inlineSpecifierMap,
         babelConfigMap,
-        minify: false,
-        throwUnhandled: false,
         compileGroupCount: 1,
-        verbose: true,
+        throwUnhandled: false,
+        logBundleFilePaths: false,
       })
       const main = bundle.output[0]
       return {

@@ -1,6 +1,6 @@
 import { uneval } from "@dmail/uneval"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
-import { resolveProjectFilename } from "../../resolveProjectFilename.js"
+import { filenameRelativeInception } from "../../filenameRelativeInception.js"
 import { bundleNode } from "../../bundle/node/bundleNode.js"
 import { serveCompiledFile } from "../serve-compiled-file/index.js"
 
@@ -14,12 +14,12 @@ export const serveNodeClient = ({
 }) => {
   const nodeClientSourceFilenameRelative = `node_modules/@jsenv/core/src/node-client/index.js`
   const nodeClientCompiledFilenameRelative = `${compileInto}/${nodeClientSourceFilenameRelative}`
-  const nodeClientSourceFilename = resolveProjectFilename({
+  const nodeClientSourceFilename = filenameRelativeInception({
     projectFolder,
     filenameRelative: nodeClientSourceFilenameRelative,
   })
   const nodeGroupResolverFilenameRelative = `node_modules/@jsenv/core/src/node-group-resolver/index.js`
-  const nodeGroupResolverFilename = resolveProjectFilename({
+  const nodeGroupResolverFilename = filenameRelativeInception({
     projectFolder,
     filenameRelative: nodeGroupResolverFilenameRelative,
   })

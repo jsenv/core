@@ -70,22 +70,21 @@ export const createJsenvRollupPlugin = ({
         throw new Error(`inlineSpecifier must be a string or a function`)
       }
 
-      // hotfix because entry file has no importer
-      // so it would be resolved against root which is a folder
-      // and url resolution would not do what we expect
-      if (!importer) importer = projectFolder
+      if (!importer) return `${projectFolder}/${specifier}`
 
       let importerHref
-      // importer will be a pathname
-      // except if you have an absolute dependency like import 'http://domain.com/file.js'
-      // so when needed convert importer back to an url
-      if (importer.startsWith(`${projectFolder}/`)) {
-        importerHref = `${origin}${importer.slice(projectFolder.length)}`
-      } else if (hrefToScheme(importer) === "") {
-        importerHref = `${origin}${importer}`
-      } else {
-        // there is already a scheme like http, https, keep it
+      // there is already a scheme (http, https, file), keep it
+      // it means there is an absolute import starting with file:// or http:// for instance.
+      if (hrefToScheme(importer)) {
         importerHref = importer
+      }
+      // 99% of the time importer is a pathname
+      // if the importer is inside projectFolder we must remove that
+      // so that / is resolved against projectFolder and not the filesystem root
+      else if (importer.startsWith(`${projectFolder}/`)) {
+        importerHref = `${origin}${importer.slice(projectFolder.length)}`
+      } else {
+        importerHref = `${origin}${importer}`
       }
 
       const resolvedImport = resolveImport({

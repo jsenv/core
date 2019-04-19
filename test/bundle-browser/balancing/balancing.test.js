@@ -16,7 +16,6 @@ await bundleBrowser({
   },
   compileGroupCount: 2,
   throwUnhandled: false,
-  minify: false,
 })
 
 const { namespace: actual } = await importBrowserBundle({
