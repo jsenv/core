@@ -1,17 +1,17 @@
+import { ROOT_FOLDER } from "../../src/ROOT_FOLDER.js"
+import { hrefToFolderJsenvRelative } from "../../src/hrefToFolderJsenvRelative.js"
 import { startBrowsingServer } from "../../index.js"
 
-const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
-const { projectFolder } = import.meta.require("../../jsenv.config.js")
-
-const testFolder = `${projectFolder}/test/browsing-server`
+const projectFolder = ROOT_FOLDER
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const compileInto = `${testFolderRelative}/.dist`
 
 startBrowsingServer({
-  projectFolder: testFolder,
-  compileInto: ".dist",
-  babelConfigMap,
+  projectFolder,
+  compileInto,
   browsableDescription: {
-    "/**/*.main.js": true,
-    "/**/.dist/**": false,
+    [`/${testFolderRelative}/**/*.main.js`]: true,
+    [`/${testFolderRelative}/**/.dist/**`]: false,
   },
   port: 3400,
   forcePort: true,
