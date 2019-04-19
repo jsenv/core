@@ -33,7 +33,6 @@ const secondResponse = await fetch(
     },
   },
 )
-debugger
 const actual = {
   status: secondResponse.status,
   statusText: secondResponse.statusText,
@@ -41,7 +40,7 @@ const actual = {
 }
 const expected = {
   status: 304,
-  statusText: "Not modified",
+  statusText: "Not Modified",
   headers: {},
 }
 
