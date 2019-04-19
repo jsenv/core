@@ -111,7 +111,7 @@ const validateSource = async ({ projectFolder, source, eTag }) => {
   const sourceFilename = resolve(projectFolder, source)
   try {
     const sourceContent = await fileRead(sourceFilename)
-    const sourceETag = createETag(source)
+    const sourceETag = createETag(sourceContent)
 
     if (sourceETag !== eTag) {
       return {

@@ -1,5 +1,5 @@
 import { resolve } from "path"
-import { existSync } from "fs"
+import { existsSync } from "fs"
 import { uneval } from "@dmail/uneval"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { filenameRelativeInception } from "../../filenameRelativeInception.js"
@@ -76,7 +76,7 @@ export const serveBrowserClient = async ({
       // BROWSER_CLIENT_DATA.js is generated thanks to importMapFilenameRelative
       // so we replace it with that file.
       const browserClientDataIndex = sources.indexOf("BROWSER_CLIENT_DATA.js")
-      if (existSync(`${projectFolder}/${importMapFilenameRelative}`)) {
+      if (existsSync(`${projectFolder}/${importMapFilenameRelative}`)) {
         sources[browserClientDataIndex] = importMapFilenameRelative
       } else {
         sources.splice(browserClientDataIndex, 1)

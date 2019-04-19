@@ -8,7 +8,7 @@ export const requestToAccessControlHeaders = (
     allowCredentials = true,
     // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
     // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
-    maxAge = 1,
+    maxAge = 600,
   } = {},
 ) => {
   let vary
