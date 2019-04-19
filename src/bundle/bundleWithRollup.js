@@ -1,4 +1,4 @@
-import { createOperation } from "/node_modules/@dmail/cancellation/index.js"
+import { createOperation } from "@dmail/cancellation"
 
 const { rollup } = import.meta.require("rollup")
 

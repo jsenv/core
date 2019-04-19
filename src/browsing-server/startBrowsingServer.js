@@ -174,6 +174,9 @@ export const startBrowsingServer = async ({
   return browserServer
 }
 
+// we could turn generateSelfImportSource into a dynamic rollup bundles
+// but it takes times without adding much benefit
+// so for now let's keep it like that
 const generateSelfImportSource = ({ compileInto, compileServerOrigin, filenameRelative }) => `
 window.System.import(${uneval(
   `${compileServerOrigin}/${compileInto}/JSENV_BROWSER_CLIENT.js`,
