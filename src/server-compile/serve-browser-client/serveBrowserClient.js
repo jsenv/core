@@ -1,3 +1,5 @@
+import { resolve } from "path"
+import { existSync } from "fs"
 import { uneval } from "@dmail/uneval"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { filenameRelativeInception } from "../../filenameRelativeInception.js"
@@ -39,9 +41,11 @@ export const serveBrowserClient = async ({
         filenameRelative: browserGroupResolverFilenameRelative,
       })
 
+      const browserGroupResolverFilename = `${projectFolder}/${browserGroupResolverFilenameRelativeInception}`
+
       const inlineSpecifierMap = {
         ["BROWSER_CLIENT_DATA.js"]: () => generateBrowserClientDataSource({ importMap, groupMap }),
-        ["BROWSER_GROUP_RESOLVER.js"]: `${projectFolder}/${browserGroupResolverFilenameRelativeInception}`,
+        ["BROWSER_GROUP_RESOLVER.js"]: browserGroupResolverFilename,
       }
 
       const bundle = await bundleBrowser({
@@ -55,22 +59,40 @@ export const serveBrowserClient = async ({
         logBundleFilePaths: false,
       })
       const main = bundle.output[0]
+      const sources = main.map.sources.map((sourceRelativeToCompileInto) => {
+        const sourceFilename = resolve(
+          `${projectFolder}/${compileInto}`,
+          sourceRelativeToCompileInto,
+        )
+        const sourceRelativeToProjectFolder = sourceFilename.slice(`${projectFolder}/`.length)
+        return sourceRelativeToProjectFolder
+      })
+      const sourcesContent = main.map.sourcesContent.slice()
+
+      // BROWSER_CLIENT_DATA.js has no location on filesystem
+      // it means cache validation would fail saying file does not exists
+      // and would not be invalidated if something required by BROWSER_CLIENT_DATA.js
+      // has changed.
+      // BROWSER_CLIENT_DATA.js is generated thanks to importMapFilenameRelative
+      // so we replace it with that file.
+      const browserClientDataIndex = sources.indexOf("BROWSER_CLIENT_DATA.js")
+      if (existSync(`${projectFolder}/${importMapFilenameRelative}`)) {
+        sources[browserClientDataIndex] = importMapFilenameRelative
+      } else {
+        sources.splice(browserClientDataIndex, 1)
+      }
+
       return {
         contentType: "application/javascript",
         compiledSource: main.code,
-        sources: main.map.sources,
-        sourcesContent: main.map.sourcesContent,
+        sources,
+        sourcesContent,
         assets: ["main.map.js"],
-        assetsSource: [JSON.stringify(main.map)],
+        assetsContent: [JSON.stringify(main.map)],
         writeCompiledSourceFile: false, // already written by rollup
         writeAssetsFile: false, // already written by rollup
       }
     },
-    // for now disable cache for client because veryfing
-    // it would mean ensuring the whole bundle is still valid
-    // I suspect it is faster to regenerate the bundle than check
-    // if it's still valid.
-    clientCompileCacheStrategy: "none",
   })
 }
 
