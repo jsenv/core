@@ -1,14 +1,13 @@
 ## TODO
 
-- move .dist/importMap.best.json into
-  .dist/best/importMap.json and generate it lazyly
-
-- remove jsenv/core/dist/browser-client/browserClient.js
-  and instead let client ask for it and generate it lazyly
-  an option like Node|BrowserCompileIdModuleFilenameRelative
-  that will default to 'node_modules/jsenv/src/browser/compueCompileId.js'
-  and we will dynamically create a bundle for this
-  that client will fetch to know how to compute compileId
+- test launch-node
+- update all test because they have to do projectFolder: ROOT_FOLDER
+- once all test passes, publish a new jsenv version
+- ensure jsenv inception works
+- make assert use latest jsenv
+- create a github page embedding a codepen to play with @dmail/assert in the browser
+- create a github page embedding a runkit to play with @dmail/assert in node
+- move generateImportMapForProjectNodeModules into its own jsenv-node-import-map github project to extract this logic
 
 ## To keep in mind
 
