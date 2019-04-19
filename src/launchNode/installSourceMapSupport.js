@@ -1,7 +1,7 @@
 import { readFileSync } from "fs"
 import { resolve, dirname } from "path"
 import { resolveImport, hrefToPathname } from "@jsenv/module-resolution"
-import { readSourceMappingURL } from "../replaceSourceMappingURL.js"
+import { readSourceMappingURL } from "../source-mapping-url.js"
 
 const sourceMapSupport = import.meta.require("source-map-support")
 

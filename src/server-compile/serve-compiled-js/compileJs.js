@@ -1,4 +1,5 @@
 import { sep, basename } from "path"
+import { writeSourceMappingURL } from "../../source-mapping-url.js"
 import { ansiToHTML } from "../../ansiToHTML.js"
 import { regexpEscape } from "../../stringHelper.js"
 import { createParseError } from "../serve-compiled-file/index.js"
@@ -59,25 +60,18 @@ export const compileJs = async ({
 
       if (remapMethod === "inline") {
         const mapAsBase64 = new Buffer(JSON.stringify(map)).toString("base64")
-        output = writeSourceMapLocation({
-          source: output,
-          location: `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
-        })
+        output = writeSourceMappingURL(
+          output,
+          `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
+        )
       } else if (remapMethod === "comment") {
-        // sourceMap will be named file.js.map
-        const sourceMapName = `${basename(filenameRelative)}.map`
-        // it will be located at `${compileServer.origin}/.dist/src/file.js/e3uiyi456&/file.js.map`
-        // const folder = path.dirname(file)
-        // const folderWithSepOrNothing = folder ? `${folder}/` : ""
-        const sourceMapLocationForSource = `./${basename(
+        const sourcemapFilenameRelative = generateAssetFilenameRelative({
+          projectFolder,
           filenameRelative,
-        )}__asset__/${sourceMapName}`
-
-        output = writeSourceMapLocation({
-          source: output,
-          location: sourceMapLocationForSource,
+          assetName: `${basename(filenameRelative)}.map`,
         })
-        assets.push(sourceMapName)
+        output = writeSourceMappingURL(output, `./${sourcemapFilenameRelative}`)
+        assets.push(sourcemapFilenameRelative)
         assetsContent.push(stringifyMap(map))
       }
     } else {
@@ -86,7 +80,12 @@ export const compileJs = async ({
     }
 
     if (coverage) {
-      assets.push("coverage.json")
+      const coverageFilenameRelative = generateAssetFilenameRelative({
+        projectFolder,
+        filenameRelative,
+        assetName: "coverage.json",
+      })
+      assets.push(coverageFilenameRelative)
       assetsContent.push(stringifyCoverage(coverage))
     }
 
@@ -116,8 +115,11 @@ export const compileJs = async ({
   }
 }
 
-export const writeSourceMapLocation = ({ source, location }) => `${source}
-${"//#"} sourceMappingURL=${location}`
+const generateAssetFilenameRelative = ({ filenameRelative, assetName }) => {
+  const fileBasename = basename(filenameRelative)
+
+  return `${fileBasename}__asset__/${assetName}`
+}
 
 const stringifyMap = (object) => JSON.stringify(object, null, "  ")
 

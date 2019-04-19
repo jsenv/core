@@ -1,5 +1,7 @@
-// here we can do stuff like window.System.prototype.instantiate = stuff
-export const replaceSourceMappingURL = (source, callback) => {
+export const writeSourceMappingURL = (source, location) => `${source}
+${"//#"} sourceMappingURL=${location}`
+
+export const updateSourceMappingURL = (source, callback) => {
   const sourceMappingUrlRegExp = /\/\/# ?sourceMappingURL=([^\s'"]+)/g
   let lastSourceMappingUrl
   let matchSourceMappingUrl
@@ -20,8 +22,15 @@ export const replaceSourceMappingURL = (source, callback) => {
 
 export const readSourceMappingURL = (source) => {
   let sourceMappingURL
-  replaceSourceMappingURL(source, (value) => {
+  updateSourceMappingURL(source, (value) => {
     sourceMappingURL = value
   })
   return sourceMappingURL
+}
+
+export const writeOrUpdateSourceMappingURL = (source, location) => {
+  if (readSourceMappingURL(source)) {
+    return updateSourceMappingURL(source, location)
+  }
+  return writeSourceMappingURL(source, location)
 }

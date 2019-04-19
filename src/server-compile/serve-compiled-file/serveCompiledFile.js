@@ -78,7 +78,7 @@ export const serveCompiledFile = async ({
       const { contentType, compiledSource } = compileResult
 
       if (cacheWithETag) {
-        if (compileResultStatus === "cached") {
+        if (ifEtagMatch && compileResultStatus === "cached") {
           return {
             status: 304,
           }
@@ -95,7 +95,7 @@ export const serveCompiledFile = async ({
       }
 
       if (cacheWithMtime) {
-        if (compileResultStatus === "cached") {
+        if (ifModifiedSinceDate && compileResultStatus === "cached") {
           return {
             status: 304,
           }

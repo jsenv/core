@@ -9,12 +9,11 @@ import {
   hrefToScheme,
 } from "@jsenv/module-resolution"
 import { fetchUsingHttp } from "../../node-client/fetchUsingHttp.js"
-import { readSourceMappingURL } from "../../replaceSourceMappingURL.js"
+import { readSourceMappingURL, writeSourceMappingURL } from "../../source-mapping-url.js"
 import {
   transpiler,
   findAsyncPluginNameInBabelConfigMap,
 } from "../../server-compile/serve-compiled-js/transpiler.js"
-import { writeSourceMapLocation } from "../../server-compile/serve-compiled-js/compileJs.js"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { computeBabelConfigMapSubset } from "./computeBabelConfigMapSubset.js"
 
@@ -247,7 +246,7 @@ const transformAsyncInsertedByRollup = async ({ dir, babelConfigMapSubset, bundl
       await Promise.all([
         fileWrite(
           `${dir}/${bundleFilename}`,
-          writeSourceMapLocation({ source: code, location: `./${bundleFilename}.map` }),
+          writeSourceMappingURL(code, `./${bundleFilename}.map`),
         ),
         fileWrite(`${dir}/${bundleFilename}.map`, JSON.stringify(map)),
       ])

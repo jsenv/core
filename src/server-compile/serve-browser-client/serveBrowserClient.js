@@ -1,10 +1,11 @@
-import { resolve } from "path"
-import { existsSync } from "fs"
+import { dirname, resolve } from "path"
+import { existsSync, readFileSync } from "fs"
 import { uneval } from "@dmail/uneval"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { filenameRelativeInception } from "../../filenameRelativeInception.js"
 import { bundleBrowser } from "../../bundle/browser/bundleBrowser.js"
 import { serveCompiledFile } from "../serve-compiled-file/index.js"
+import { writeOrUpdateSourceMappingURL } from "../../source-mapping-url.js"
 
 export const serveBrowserClient = async ({
   projectFolder,
@@ -25,7 +26,7 @@ export const serveBrowserClient = async ({
     projectFolder,
     headers,
     sourceFilenameRelative: browserClientFilenameRelativeInception,
-    compiledFilenameRelative: `${compileInto}/${browserClientFilenameRelativeInception}`,
+    compiledFilenameRelative: `${compileInto}/browserClient.js`,
     compile: async () => {
       const importMap = readProjectImportMap({
         projectFolder,
@@ -56,19 +57,25 @@ export const serveBrowserClient = async ({
         babelConfigMap,
         compileGroupCount: 1,
         throwUnhandled: false,
+        writeOnFileSystem: false,
         logBundleFilePaths: false,
       })
       const main = bundle.output[0]
-      const sources = main.map.sources.map((sourceRelativeToCompileInto) => {
+      const mainSourcemap = main.map
+      const sources = mainSourcemap.sources.map((sourceRelativeToEntryDirectory) => {
         const sourceFilename = resolve(
-          `${projectFolder}/${compileInto}`,
-          sourceRelativeToCompileInto,
+          dirname(`${projectFolder}/${compileInto}/browserClient.js`),
+          sourceRelativeToEntryDirectory,
         )
         const sourceRelativeToProjectFolder = sourceFilename.slice(`${projectFolder}/`.length)
         return sourceRelativeToProjectFolder
       })
-      const sourcesContent = main.map.sourcesContent.slice()
+      const sourcemap = {
+        ...mainSourcemap,
+        sources: sources.map((source) => `/${source}`),
+      }
 
+      const sourcesContent = mainSourcemap.sourcesContent.slice()
       // BROWSER_CLIENT_DATA.js has no location on filesystem
       // it means cache validation would fail saying file does not exists
       // and would not be invalidated if something required by BROWSER_CLIENT_DATA.js
@@ -76,21 +83,27 @@ export const serveBrowserClient = async ({
       // BROWSER_CLIENT_DATA.js is generated thanks to importMapFilenameRelative
       // so we replace it with that file.
       const browserClientDataIndex = sources.indexOf("BROWSER_CLIENT_DATA.js")
-      if (existsSync(`${projectFolder}/${importMapFilenameRelative}`)) {
+      const importMapFilename = `${projectFolder}/${importMapFilenameRelative}`
+      if (existsSync(importMapFilename)) {
         sources[browserClientDataIndex] = importMapFilenameRelative
+        sourcesContent[browserClientDataIndex] = readFileSync(importMapFilename)
       } else {
         sources.splice(browserClientDataIndex, 1)
       }
 
+      const sourcemapFilenameRelative = "browserClient.js__asset__/browserClient.js.map"
+      const compiledSource = writeOrUpdateSourceMappingURL(
+        main.code,
+        `./${sourcemapFilenameRelative}`,
+      )
+
       return {
         contentType: "application/javascript",
-        compiledSource: main.code,
+        compiledSource,
         sources,
         sourcesContent,
-        assets: ["main.map.js"],
-        assetsContent: [JSON.stringify(main.map)],
-        writeCompiledSourceFile: false, // already written by rollup
-        writeAssetsFile: false, // already written by rollup
+        assets: [sourcemapFilenameRelative],
+        assetsContent: [JSON.stringify(sourcemap, null, "  ")],
       }
     },
   })

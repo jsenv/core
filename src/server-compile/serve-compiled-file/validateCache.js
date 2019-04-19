@@ -30,7 +30,7 @@ export const validateCache = async ({
   const invalidAssetValidation = assetValidations.find(({ valid }) => !valid)
   if (invalidAssetValidation) return invalidAssetValidation
 
-  const compiledSource = compiledFileValidation.compiledSource
+  const compiledSource = compiledFileValidation.data.compiledSource
   const sourcesContent = sourcesValidations.map(({ data }) => data.sourceContent)
   const assetsContent = assetValidations.find(({ data }) => data.assetContent)
 

@@ -169,6 +169,9 @@ export const startCompileServer = async ({
   services.push(nodeClientService)
 
   const compiledFileService = ({ origin, headers, ressource }) => {
+    // it's an asset, it will be served by fileService
+    if (filenameRelativeIsAsset(ressource.slice(1))) return null
+
     const { compileId, filenameRelative } = locateProject({
       compileInto,
       ressource,
@@ -180,9 +183,6 @@ export const startCompileServer = async ({
 
     // unexpected compileId
     if (compileId in groupMap === false) return { status: 400, statusText: "unknown compileId" }
-
-    // it's an asset, it will be served by fileService
-    if (filenameRelativeIsAsset(filenameRelative)) return null
 
     // .json does not need to be compiled, they are redirected
     // to the source location, that will be handled by fileService
