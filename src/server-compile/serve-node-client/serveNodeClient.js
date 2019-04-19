@@ -31,7 +31,7 @@ export const serveNodeClient = ({
       })
 
       const entryPointMap = {
-        browserClient: nodeClientFilenameRelativeInception,
+        nodeClient: nodeClientFilenameRelativeInception,
       }
 
       const nodeGroupResolverFilenameRelativeInception = filenameRelativeInception({
@@ -50,8 +50,9 @@ export const serveNodeClient = ({
         entryPointMap,
         inlineSpecifierMap,
         babelConfigMap,
-        throwUnhandled: false,
         compileGroupCount: 1,
+        throwUnhandled: false,
+        logBundleFilePaths: false,
       })
       const main = bundle.output[0]
       return {

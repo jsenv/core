@@ -1,27 +1,25 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
+import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
 import { bundleNode } from "../../../index.js"
 import { importNodeBundle } from "../import-node-bundle.js"
 
-const blockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
-
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
+const projectFolder = ROOT_FOLDER
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const bundleInto = `${testFolderRelative}/dist/node`
 
 await bundleNode({
-  projectFolder: testFolder,
-  into: "dist/node",
+  projectFolder,
+  into: bundleInto,
   entryPointMap: {
-    main: "balancing.js",
-  },
-  babelConfigMap: {
-    "transform-block-scoping": [blockScoping],
+    main: `${testFolderRelative}/balancing.js`,
   },
   compileGroupCount: 2,
-  verbose: false,
+  throwUnhandled: false,
 })
 
 const { namespace: actual } = await importNodeBundle({
-  bundleFolder: `${testFolder}/dist/node/`,
+  bundleFolder: `${projectFolder}/${bundleInto}`,
   file: `main.js`,
 })
 const expected = 42

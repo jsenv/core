@@ -15,8 +15,6 @@ await bundleBrowser({
     main: `${testFolderRelative}/without-balancing.js`,
   },
   throwUnhandled: false,
-  verbose: false,
-  minify: false,
 })
 const { namespace: actual } = await importBrowserBundle({
   bundleFolder: `${projectFolder}/${bundleInto}`,
