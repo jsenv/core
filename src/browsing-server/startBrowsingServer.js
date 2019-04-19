@@ -11,28 +11,23 @@ import { startCompileServer } from "../server-compile/index.js"
 import { guard } from "../functionHelper.js"
 import { serveFile } from "../serve-file/index.js"
 import {
-  BROWSING_SERVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  BROWSING_SERVER_DEFAULT_COMPILE_INTO,
-  BROWSING_SERVER_DEFAULT_BROWSABLE_DESCRIPTION,
-  BROWSING_SERVER_DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
+  DEFAULT_COMPILE_INTO,
+  DEFAULT_BROWSABLE_DESCRIPTION,
+  DEFAULT_BABEL_CONFIG_MAP,
 } from "./browsing-server-constant.js"
 
 export const startBrowsingServer = async ({
   projectFolder,
-  babelConfigMap = BROWSING_SERVER_DEFAULT_BABEL_CONFIG_MAP,
   cancellationToken = createCancellationToken(),
-  importMapFilenameRelative = BROWSING_SERVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  compileInto = BROWSING_SERVER_DEFAULT_COMPILE_INTO,
+  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
+  importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  browserGroupResolveFilenameRelative = DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
+  compileInto = DEFAULT_COMPILE_INTO,
   compileGroupCount = 2,
-  browsableDescription = BROWSING_SERVER_DEFAULT_BROWSABLE_DESCRIPTION,
-  localCacheStrategy,
-  localCacheTrackHit,
-  cacheStrategy,
-  watch,
-  watchPredicate,
-  sourceCacheStrategy = "etag",
-  sourceCacheIgnore = false,
-  preventCors = false,
+  browsableDescription = DEFAULT_BROWSABLE_DESCRIPTION,
+  cors = true,
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
@@ -61,19 +56,13 @@ export const startBrowsingServer = async ({
 
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
-    importMapFilenameRelative,
     projectFolder,
+    importMapFilenameRelative,
+    browserGroupResolveFilenameRelative,
     compileInto,
     compileGroupCount,
     babelConfigMap,
-    localCacheStrategy,
-    localCacheTrackHit,
-    cacheStrategy,
-    watch,
-    watchPredicate,
-    sourceCacheStrategy,
-    sourceCacheIgnore,
-    preventCors,
+    cors,
     protocol,
     ip,
     port: 0, // random available port
@@ -147,8 +136,7 @@ export const startBrowsingServer = async ({
         compileInto,
         compileServerOrigin,
         filenameRelative: ressource.slice(1),
-        // nope, compileServer will now server systemjs too
-        systemScriptSrc: `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/system.js`,
+        systemScriptSrc: `${compileServerOrigin}/${compileInto}/SYSTEM.js`,
         selfExecuteScriptSrc: `${ressource}__execute__.js`,
       })
 
@@ -188,7 +176,7 @@ export const startBrowsingServer = async ({
 
 const generateSelfImportSource = ({ compileInto, compileServerOrigin, filenameRelative }) => `
 window.System.import(${uneval(
-  computeBrowserClientHref({ compileServerOrigin }),
+  `${compileServerOrigin}/${compileInto}/JSENV_BROWSER_CLIENT.js`,
 )}).then(({ executeCompiledFile }) => {
   executeCompiledFile({
     compileInto: ${uneval(compileInto)},
@@ -197,9 +185,6 @@ window.System.import(${uneval(
   })
 })
 `
-
-const computeBrowserClientHref = ({ compileServerOrigin }) =>
-  `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/browserClient.js`
 
 const getIndexPageHTML = async ({ projectFolder, browsableFilenameRelativeArray }) => {
   return `<!doctype html>

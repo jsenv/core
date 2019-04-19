@@ -7,12 +7,14 @@ import { acceptContentType, createSSERoom, startServer, serviceCompose } from ".
 import { watchFile } from "../watchFile.js"
 import { generateGroupMap } from "../group-map/index.js"
 import {
-  COMPILE_SERVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  COMPILE_SERVER_DEFAULT_COMPILE_INTO,
-  COMPILE_SERVER_DEFAULT_BABEL_CONFIG_MAP,
-  COMPILE_SERVER_DEFAULT_BABEL_COMPAT_MAP,
-  COMPILE_SERVER_DEFAULT_BROWSER_SCORE_MAP,
-  COMPILE_SERVER_DEFAULT_NODE_VERSION_SCORE_MAP,
+  DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
+  DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE,
+  DEFAULT_COMPILE_INTO,
+  DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_BABEL_COMPAT_MAP,
+  DEFAULT_BROWSER_SCORE_MAP,
+  DEFAULT_NODE_VERSION_SCORE_MAP,
 } from "./compile-server-constant.js"
 import { serveSystem } from "./serve-system/index.js"
 import { serveBrowserClient } from "./serve-browser-client/index.js"
@@ -22,19 +24,19 @@ import { serveCompiledJs } from "./serve-compiled-js/index.js"
 export const startCompileServer = async ({
   projectFolder,
   cancellationToken = createCancellationToken(),
-  importMapFilenameRelative = COMPILE_SERVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  browserGroupResolverFilenameRelative = `node_modules/@jsenv/core/src/browser-group-resolver/index.js`,
-  nodeGroupResolverFilenameRelative = `node_modules/@jsenv/core/src/node-group-resolver/index.js`,
-  compileInto = COMPILE_SERVER_DEFAULT_COMPILE_INTO,
+  importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  browserGroupResolverFilenameRelative = DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
+  nodeGroupResolverFilenameRelative = DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE,
+  compileInto = DEFAULT_COMPILE_INTO,
   // option related to compile groups
   compileGroupCount = 1,
-  babelConfigMap = COMPILE_SERVER_DEFAULT_BABEL_CONFIG_MAP,
-  babelCompatMap = COMPILE_SERVER_DEFAULT_BABEL_COMPAT_MAP,
-  browserScoreMap = COMPILE_SERVER_DEFAULT_BROWSER_SCORE_MAP,
-  nodeVersionScoreMap = COMPILE_SERVER_DEFAULT_NODE_VERSION_SCORE_MAP,
+  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
+  babelCompatMap = DEFAULT_BABEL_COMPAT_MAP,
+  browserScoreMap = DEFAULT_BROWSER_SCORE_MAP,
+  nodeVersionScoreMap = DEFAULT_NODE_VERSION_SCORE_MAP,
   // options related to how cache/hotreloading
   watchSource = false,
-  watchSourcePredicate = () => true,
+  watchSourcePredicate = () => true, // aybe we should exclude node_modules by default
   // js compile options
   transformTopLevelAwait = true,
   // options related to the server itself
