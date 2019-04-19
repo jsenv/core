@@ -109,20 +109,31 @@ const validateSources = ({ projectFolder, cache }) =>
 
 const validateSource = async ({ projectFolder, source, eTag }) => {
   const sourceFilename = resolve(projectFolder, source)
-  const sourceContent = await fileRead(sourceFilename)
-  const sourceETag = createETag(source)
+  try {
+    const sourceContent = await fileRead(sourceFilename)
+    const sourceETag = createETag(source)
 
-  if (sourceETag !== eTag) {
-    return {
-      code: "SOURCE_ETAG_MISMATCH",
-      valid: false,
-      data: { source, sourceFilename, sourceContent },
+    if (sourceETag !== eTag) {
+      return {
+        code: "SOURCE_ETAG_MISMATCH",
+        valid: false,
+        data: { source, sourceFilename, sourceContent },
+      }
     }
-  }
 
-  return {
-    valid: true,
-    data: { sourceContent },
+    return {
+      valid: true,
+      data: { sourceContent },
+    }
+  } catch (e) {
+    if (e && e.code === "ENOENT") {
+      return {
+        code: "SOURCE_NOT_FOUND",
+        valid: false,
+        data: { source, sourceFilename },
+      }
+    }
+    throw e
   }
 }
 
