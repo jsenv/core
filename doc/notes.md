@@ -1,6 +1,10 @@
 ## TODO
 
-- test launch-node
+- retest browsing server
+- rewrite chromium-launcher with new approach (with a browserClientFolder)
+- retest chromium launcher
+- retest bundle browser/bundle node
+- test node-launcher
 - update all test because they have to do projectFolder: ROOT_FOLDER
 - once all test passes, publish a new jsenv version
 - ensure jsenv inception works
