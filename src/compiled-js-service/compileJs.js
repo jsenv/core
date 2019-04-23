@@ -12,8 +12,8 @@ export const compileJs = async ({
   source,
   babelConfigMap,
   transformTopLevelAwait,
-  inputAst = null,
-  inputMap = null,
+  inputAst = undefined,
+  inputMap = undefined,
   outputFilename = filename,
   remap = true,
   remapMethod = "comment", // 'comment', 'inline'
