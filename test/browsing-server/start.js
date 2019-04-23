@@ -4,11 +4,13 @@ import { startBrowsingServer } from "../../index.js"
 
 const projectFolder = ROOT_FOLDER
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-const compileInto = `${testFolderRelative}/.dist`
+const serverCompileInto = `${testFolderRelative}/.dist`
+const clientCompileInto = ".dist"
 
 startBrowsingServer({
   projectFolder,
-  compileInto,
+  serverCompileInto,
+  clientCompileInto,
   browsableDescription: {
     [`/${testFolderRelative}/**/*.main.js`]: true,
     [`/${testFolderRelative}/**/.dist/**`]: false,

@@ -1,8 +1,15 @@
 import { uneval } from "@dmail/uneval"
 import { serveFile } from "../file-service/index.js"
-import { serveBrowsingScript } from "./serve-browsing-script.js"
+import {
+  WELL_KNOWN_BROWSING_BUNDLE_DYNAMIC_DATA_PATHNAME,
+  serveBrowsingBundle,
+} from "./serve-browsing-bundle.js"
 import { serveCompiledFile } from "../compiled-file-service/index.js"
 import { compileJs } from "../compiled-js-service/index.js"
+import { WELL_KNOWN_SYSTEM_PATHNAME } from "../system-service/index.js"
+import { WELL_KNOWN_BROWSER_PLATFORM_PATHNAME } from "../browser-platform-service/index.js"
+
+const WELL_KNOWN_BROWSER_SCRIPT_PATHNAME = "/.jsenv-well-known/browser-script.js"
 
 export const serveBrowsingPage = ({
   projectFolder,
@@ -22,10 +29,19 @@ export const serveBrowsingPage = ({
     return serveFile(`${projectFolder}/${browserClientFolderRelative}/index.html`, { headers })
   }
 
-  // browser script returns a script that will
-  // auto execute the ressource, see browsing-script-template/browsing-script-template.js
-  if (ressource === "/.jsenv-well-known/browser-script.js") {
-    return serveBrowsingScript({
+  // system.js redirected to compile server
+  if (ressource === WELL_KNOWN_SYSTEM_PATHNAME) {
+    return {
+      status: 307,
+      headers: {
+        location: `${compileServerOrigin}${ressource}`,
+      },
+    }
+  }
+
+  // browser-script.js returns a self executing bundle
+  if (ressource === WELL_KNOWN_BROWSER_SCRIPT_PATHNAME) {
+    return serveBrowsingBundle({
       projectFolder,
       importMapFilenameRelative,
       compileInto,
@@ -35,8 +51,8 @@ export const serveBrowsingPage = ({
     })
   }
 
-  // browser client remains unchanged and is served by compile server
-  if (ressource === "/.jsenv-well-known/browser-client.js") {
+  // browser-platform.js redirect to compile server
+  if (ressource === WELL_KNOWN_BROWSER_PLATFORM_PATHNAME) {
     return {
       status: 307,
       headers: {
@@ -47,31 +63,47 @@ export const serveBrowsingPage = ({
 
   // browsing-dynamic-data.js exists to allow the dynamic browsing bundle
   // to remain valid if we restart server on a different ip or compileInto
-  if (ressource === "/.jsenv-well-known/browsing-dynamic-data.js") {
-    const filenameRelative = "/.jsenv-well-known/browsing-dynamic-data.js"
-
-    return serveCompiledFile({
+  if (ressource === WELL_KNOWN_BROWSING_BUNDLE_DYNAMIC_DATA_PATHNAME) {
+    return serveDynamicDataFile({
       projectFolder,
-      sourceFilenameRelative: filenameRelative,
-      compiledFilenameRelative: `${compileInto}/${filenameRelative}`,
+      compileInto,
+      babelConfigMap,
+      compileServerOrigin,
       headers,
-      compile: async () => {
-        const source = generateBrowsingDynamicDataSource({ compileInto, compileServerOrigin })
-
-        return compileJs({
-          projectFolder,
-          babelConfigMap,
-          filenameRelative,
-          filename: `${projectFolder}/${filenameRelative}`,
-          outputFilename: `file://${projectFolder}/${compileInto}/${filenameRelative}`,
-          source,
-        })
-      },
-      clientCompileCacheStrategy: "none",
     })
   }
 
   return null
+}
+
+const serveDynamicDataFile = ({
+  projectFolder,
+  compileInto,
+  babelConfigMap,
+  compileServerOrigin,
+  headers,
+}) => {
+  const filenameRelative = WELL_KNOWN_BROWSING_BUNDLE_DYNAMIC_DATA_PATHNAME.slice(1)
+
+  return serveCompiledFile({
+    projectFolder,
+    sourceFilenameRelative: filenameRelative,
+    compiledFilenameRelative: `${compileInto}/${filenameRelative}`,
+    headers,
+    compile: async () => {
+      const source = generateBrowsingDynamicDataSource({ compileInto, compileServerOrigin })
+
+      return compileJs({
+        projectFolder,
+        babelConfigMap,
+        filenameRelative,
+        filename: `${projectFolder}/${filenameRelative}`,
+        outputFilename: `file://${projectFolder}/${compileInto}/${filenameRelative}`,
+        source,
+      })
+    },
+    clientCompileCacheStrategy: "none",
+  })
 }
 
 const generateBrowsingDynamicDataSource = ({

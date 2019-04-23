@@ -3,7 +3,7 @@ import { filenameRelativeInception } from "../filenameRelativeInception.js"
 import { serveBundle } from "../bundle-service/index.js"
 
 const IMPORT_MAP_SPECIFIER = "IMPORT_MAP.json"
-const WELL_KNOWN_BROWSER_PLATFORM_PATHNAME = `/.jsenv-well-known/browser-platform.js`
+export const WELL_KNOWN_BROWSER_PLATFORM_PATHNAME = `/.jsenv-well-known/browser-platform.js`
 const BROWSER_PLATFORM_FILENAME_RELATIVE =
   "node_modules/@jsenv/core/src/browser-platform-service/browser-platform/index.js"
 const BROWSER_PLATFORM_DATA_SPECIFIER = "BROWSER_PLATFORM_DATA.js"
