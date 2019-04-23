@@ -1,7 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { createServer as createNodeServer, STATUS_CODES } from "http"
 import { createServer as createNodeSecureServer, Agent as SecureAgent } from "https"
-import { URL } from "url"
 import { memoizeOnce } from "@dmail/helper"
 import {
   createCancellationToken,
@@ -19,19 +18,13 @@ import { populateNodeResponse } from "./populateNodeResponse.js"
 import { colorizeResponseStatus } from "./colorizeResponseStatus.js"
 import { requestToAccessControlHeaders } from "./requestToAccessControlHeaders.js"
 import { responseCompose } from "./responseCompose.js"
+import { originAsString } from "./originAsString.js"
+import { listen, stopListening } from "./listen.js"
 
 const killPort = import.meta.require("kill-port")
 
 const REASON_NOT_SPECIFIED = "not specified"
 const REASON_INTERNAL_ERROR = "internal error"
-
-export const originAsString = ({ protocol, ip, port }) => {
-  const url = new URL("https://127.0.0.1:80")
-  url.protocol = protocol
-  url.hostname = ip
-  url.port = port
-  return url.origin
-}
 
 // todo: provide an option like debugInternalError
 // which sends error.stack on 500 to the client
@@ -112,7 +105,7 @@ export const startServer = async ({
     log(stoppedMessage(reason))
 
     await cleanup(reason)
-    await listenStop(nodeServer)
+    await stopListening(nodeServer)
     status = "stopped"
     stoppedResolve()
   })
@@ -257,32 +250,6 @@ callback: ${callback}`)
 }
 
 const statusToStatusText = (status) => STATUS_CODES[status] || "not specified"
-
-export const listen = ({ cancellationToken, server, port, ip }) => {
-  return createStoppableOperation({
-    cancellationToken,
-    start: () => listenStart(server, port, ip),
-    stop: () => listenStop(server),
-  })
-}
-
-const listenStart = (server, port, ip) =>
-  new Promise((resolve, reject) => {
-    server.on("error", reject)
-    server.on("listening", () => {
-      // in case port is 0 (randomly assign an available port)
-      // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-      resolve(server.address().port)
-    })
-    server.listen(port, ip)
-  })
-
-const listenStop = (server) =>
-  new Promise((resolve, reject) => {
-    server.on("error", reject)
-    server.on("close", resolve)
-    server.close()
-  })
 
 const reasonIsInternalError = (reason) => reason === REASON_INTERNAL_ERROR
 

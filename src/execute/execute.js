@@ -1,5 +1,5 @@
 import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
-import { startCompileServer } from "../server-compile/index.js"
+import { startCompileServer } from "../compile-server/index.js"
 import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
   createProcessInterruptionCancellationToken,

@@ -2,7 +2,7 @@ import {
   namedValueDescriptionToMetaDescription,
   selectAllFileInsideFolder,
 } from "@dmail/project-structure"
-import { startCompileServer } from "./server-compile/index.js"
+import { startCompileServer } from "./compile-server/index.js"
 
 export const executeDescriptionToExecutionPlan = async ({
   cancellationToken,

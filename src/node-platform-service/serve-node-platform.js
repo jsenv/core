@@ -3,7 +3,9 @@ import { filenameRelativeInception } from "../filenameRelativeInception.js"
 import { serveBundle } from "../bundle-service/index.js"
 
 const IMPORT_MAP_SPECIFIER = "IMPORT_MAP.json"
-const WELL_KNOWN_NODE_PLATFORM_PATHNAME = `/.jsenv-well-known/node-client.js`
+
+export const WELL_KNOWN_NODE_PLATFORM_PATHNAME = `/.jsenv-well-known/node-client.js`
+
 const NODE_PLATFORM_DATA_SPECIFIER = "NODE_PLATFORM_DATA.js"
 const NODE_GROUP_RESOLVER_SPECIFIER = "NODE_GROUP_RESOLVER.js"
 

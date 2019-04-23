@@ -16,7 +16,7 @@ import {
   DEFAULT_BROWSER_SCORE_MAP,
   DEFAULT_NODE_VERSION_SCORE_MAP,
 } from "./compile-server-constant.js"
-import { serveSystem } from "./system-service/index.js"
+import { serveSystem } from "../system-service/index.js"
 import { serveBrowserPlatform } from "../browser-platform-service/index.js"
 import { serveNodePlatform } from "../node-platform-service/index.js"
 import { serveCompiledJs, filenameRelativeIsAsset } from "../compiled-js-service/index.js"

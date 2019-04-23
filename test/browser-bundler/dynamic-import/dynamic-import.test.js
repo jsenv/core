@@ -1,5 +1,5 @@
 import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
-import { assert } from "/node_modules/@dmail/assert/index.js"
+import { assert } from "@dmail/assert"
 import { bundleBrowser } from "../../../index.js"
 import { importBrowserBundle } from "../import-browser-bundle.js"
 

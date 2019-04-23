@@ -4,7 +4,8 @@ import { registerProcessInterruptCallback } from "../process-signal/index.js"
 import { installSourceMapSupport } from "./installSourceMapSupport.js"
 import { fetchUsingHttp } from "../node-platform-service/node-platform/fetchUsingHttp.js"
 import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
-import { ROOT_FOLDER } from "../ROOT_FOLDER.js"
+import { WELL_KNOWN_SYSTEM_PATHNAME, SYSTEM_FILENAME } from "../system-service/index.js"
+import { WELL_KNOWN_NODE_PLATFORM_PATHNAME } from "../node-platform-service/index.js"
 
 const execute = async ({
   compileInto,
@@ -24,7 +25,7 @@ const execute = async ({
     throw valueRejected
   })
 
-  const systemHref = `${compileServerOrigin}/.jsenv-well-known/system.js`
+  const systemHref = `${compileServerOrigin}${WELL_KNOWN_SYSTEM_PATHNAME}`
   const systemResponse = await fetchUsingHttp(systemHref)
   if (systemResponse.status < 200 || systemResponse.status >= 400)
     throw new Error(
@@ -36,10 +37,10 @@ const execute = async ({
       }),
     )
 
-  evalSource(systemResponse, `${ROOT_FOLDER}/src/systemjs/s.js`)
+  evalSource(systemResponse, SYSTEM_FILENAME)
 
   const { executeCompiledFile } = await global.System.import(
-    `${compileServerOrigin}/.jsenv-well-known/node-platform.js`,
+    `${compileServerOrigin}${WELL_KNOWN_NODE_PLATFORM_PATHNAME}`,
   )
 
   const { status, coverageMap, error, namespace } = await executeCompiledFile({

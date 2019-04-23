@@ -3,13 +3,17 @@
 import { URL } from "url"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
 import { uneval } from "@dmail/uneval"
-import { startIndexServer } from "../server-index/startIndexServer.js"
 import { originAsString } from "../server/index.js"
 import { regexpEscape } from "../stringHelper.js"
 import {
   registerProcessInterruptCallback,
   registerUngaranteedProcessTeardown,
 } from "../process-signal/index.js"
+
+// TODO: this must be somehow like browsing server
+// but it should not execute the file
+// just provide what is required to do so
+const startIndexServer = () => {}
 
 const puppeteer = import.meta.require("puppeteer")
 

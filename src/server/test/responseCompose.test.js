@@ -1,5 +1,5 @@
-import { assert } from "/node_modules/@dmail/assert/index.js"
-import { responseCompose } from "./responseCompose.js"
+import { assert } from "@dmail/assert"
+import { responseCompose } from "../responseCompose.js"
 
 {
   const response = responseCompose(

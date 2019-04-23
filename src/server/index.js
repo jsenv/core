@@ -1,4 +1,5 @@
-export { startServer, originAsString } from "./server.js"
+export { originAsString } from "./originAsString.js"
+export { startServer } from "./start-server.js"
 export { findFreePort } from "./findFreePort.js"
 export { createRequestPredicate } from "./createRequestPredicate.js"
 export { requestToAccessControlHeaders } from "./requestToAccessControlHeaders.js"

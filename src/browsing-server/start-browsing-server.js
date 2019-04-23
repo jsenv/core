@@ -6,7 +6,7 @@ import {
   pathnameToMeta,
 } from "@dmail/project-structure"
 import { startServer, serviceCompose } from "../server/index.js"
-import { startCompileServer } from "../server-compile/index.js"
+import { startCompileServer } from "../compile-server/index.js"
 import { guard } from "../functionHelper.js"
 import { serveFile } from "../file-service/index.js"
 import {

@@ -1,5 +1,5 @@
 // belong to core
-export { startCompileServer } from "./src/server-compile/index.js"
+export { startCompileServer } from "./src/compile-server/index.js"
 
 // belong to core
 export { launchAndExecute } from "./src/launchAndExecute/index.js"
