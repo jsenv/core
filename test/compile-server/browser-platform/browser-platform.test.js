@@ -11,10 +11,10 @@ const compileInto = `${testFolderRelative}/.dist`
 const compileServer = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  verbose: true,
 })
 
-const response = await fetch(`${compileServer.origin}/.jsenv-well-known/nodeClient.js`)
+const response = await fetch(`${compileServer.origin}/.jsenv-well-known/browser-platform.js`)
 const actual = {
   status: response.status,
   statusText: response.statusText,

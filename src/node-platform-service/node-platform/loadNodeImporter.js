@@ -1,6 +1,10 @@
+// IMPORT_MAP.js will resolved at build time
+// eslint-disable-next-line import/no-unresolved
+import importMap from "IMPORT_MAP.json"
+
 // NODE_PLATFORM_DATA.js will generated at build time
 // eslint-disable-next-line import/no-unresolved
-import { importMap, groupMap } from "NODE_PLATFORM_DATA.js"
+import { groupMap } from "NODE_PLATFORM_DATA.js"
 
 // BROWSER_GROUP_RESOLVER.js is by default a jsenv internal resolver
 // but can be overriden at build time to provide a custom

@@ -4,6 +4,8 @@ import { serveBundle } from "../bundle-service/index.js"
 
 const IMPORT_MAP_SPECIFIER = "IMPORT_MAP.json"
 const WELL_KNOWN_BROWSER_PLATFORM_PATHNAME = `/.jsenv-well-known/browser-platform.js`
+const BROWSER_PLATFORM_FILENAME_RELATIVE =
+  "node_modules/@jsenv/core/src/browser-platform-service/browser-platform/index.js"
 const BROWSER_PLATFORM_DATA_SPECIFIER = "BROWSER_PLATFORM_DATA.js"
 const BROWSER_GROUP_RESOLVER_SPECIFIER = "BROWSER_GROUP_RESOLVER.js"
 
@@ -33,7 +35,7 @@ export const serveBrowserPlatform = async ({
     filenameRelative: WELL_KNOWN_BROWSER_PLATFORM_PATHNAME.slice(1),
     sourceFilenameRelative: filenameRelativeInception({
       projectFolder,
-      filenameRelative: "node_modules/@jsenv/core/src/browser-platform/index.js",
+      filenameRelative: BROWSER_PLATFORM_FILENAME_RELATIVE,
     }),
     inlineSpecifierMap: {
       [IMPORT_MAP_SPECIFIER]: `${projectFolder}/${importMapFilenameRelative}`,

@@ -1,4 +1,4 @@
-import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
+import { normalizePathname } from "@jsenv/module-resolution"
 import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
