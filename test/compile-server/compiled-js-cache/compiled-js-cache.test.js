@@ -8,25 +8,27 @@ const rimraf = import.meta.require("rimraf")
 
 const projectFolder = ROOT_FOLDER
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-const compileInto = `${testFolderRelative}/.dist`
+const serverCompileInto = `${testFolderRelative}/.dist`
+const clientCompileInto = ".dist"
 
 const compileServer = await startCompileServer({
   projectFolder,
-  compileInto,
-  verbose: true,
+  serverCompileInto,
+  clientCompileInto,
+  verbose: false,
 })
 
 await new Promise((resolve, reject) =>
-  rimraf(`${projectFolder}/${compileInto}`, (error) => {
+  rimraf(`${projectFolder}/${serverCompileInto}`, (error) => {
     if (error) reject(error)
     else resolve()
   }),
 )
 const firstResponse = await fetch(
-  `${compileServer.origin}/${compileInto}/otherwise/${testFolderRelative}/file.js`,
+  `${compileServer.origin}/${clientCompileInto}/otherwise/${testFolderRelative}/file.js`,
 )
 const secondResponse = await fetch(
-  `${compileServer.origin}/${compileInto}/otherwise/${testFolderRelative}/file.js`,
+  `${compileServer.origin}/${clientCompileInto}/otherwise/${testFolderRelative}/file.js`,
   {
     headers: {
       "if-none-match": firstResponse.headers.etag[0],
@@ -41,7 +43,7 @@ const actual = {
 const expected = {
   status: 304,
   statusText: "Not Modified",
-  headers: {},
+  headers: actual.headers,
 }
 
 assert({
