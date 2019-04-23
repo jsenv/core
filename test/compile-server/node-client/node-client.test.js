@@ -14,7 +14,7 @@ const compileServer = await startCompileServer({
   verbose: false,
 })
 
-const response = await fetch(`${compileServer.origin}/${compileInto}/JSENV_NODE_CLIENT.js`)
+const response = await fetch(`${compileServer.origin}/.jsenv-well-known/nodeClient.js`)
 const actual = {
   status: response.status,
   statusText: response.statusText,

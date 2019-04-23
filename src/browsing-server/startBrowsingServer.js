@@ -5,7 +5,6 @@ import {
   selectAllFileInsideFolder,
   pathnameToMeta,
 } from "@dmail/project-structure"
-import { uneval } from "@dmail/uneval"
 import { startServer, serviceCompose } from "../server/index.js"
 import { startCompileServer } from "../server-compile/index.js"
 import { guard } from "../functionHelper.js"
@@ -17,12 +16,14 @@ import {
   DEFAULT_BROWSABLE_DESCRIPTION,
   DEFAULT_BABEL_CONFIG_MAP,
 } from "./browsing-server-constant.js"
+import { serveBrowsingPage } from "./browsing-service/serve-browsing-page.js"
 
 export const startBrowsingServer = async ({
   projectFolder,
   cancellationToken = createCancellationToken(),
   babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
   importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  browserClientFolderRelative = `src/browser-client-folder`,
   browserGroupResolveFilenameRelative = DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
   compileInto = DEFAULT_COMPILE_INTO,
   compileGroupCount = 2,
@@ -33,26 +34,13 @@ export const startBrowsingServer = async ({
   port = 0,
   forcePort = false,
   signature,
-
-  generateHTML = ({ filenameRelative, systemScriptSrc, selfExecuteScriptSrc }) => `<!doctype html>
-
-<head>
-  <title>browsing ${filenameRelative}</title>
-  <meta charset="utf-8" />
-</head>
-
-<body>
-  <main></main>
-  <script src="${systemScriptSrc}"></script>
-  <script src="${selfExecuteScriptSrc}"></script>
-</body>
-
-</html>`,
 }) => {
   projectFolder = normalizePathname(projectFolder)
   const metaDescription = namedValueDescriptionToMetaDescription({
     browsable: browsableDescription,
   })
+  const browsablePredicate = (ressource) =>
+    pathnameToMeta({ pathname: ressource, metaDescription }).browsable
 
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
@@ -72,8 +60,8 @@ export const startBrowsingServer = async ({
 
   const indexPageService = guard(
     ({ ressource, method }) => {
-      if (ressource !== "/") return false
       if (method !== "GET") return false
+      if (ressource !== "/") return false
       return true
     },
     async () => {
@@ -101,59 +89,30 @@ export const startBrowsingServer = async ({
     },
   )
 
-  const selfExecuteScriptService = guard(
-    ({ method, ressource }) => {
-      if (method !== "GET") return false
-      if (ressource.endsWith("__execute__.js")) return true
-      return false
-    },
-    async ({ ressource }) => {
-      const filenameRelative = ressource.slice(1, -`__execute__.js`.length)
-      const source = generateSelfImportSource({
-        compileInto,
-        compileServerOrigin,
-        filenameRelative,
-      })
+  const browsingPageService = (request) =>
+    serveBrowsingPage({
+      projectFolder,
+      browsablePredicate,
+      ...request,
+    })
 
+  const jsenvWellKnownService = guard(
+    ({ ressource }) => ressource.startWith(`/.jsenv-well-known/`),
+    ({ ressource }) => {
       return {
-        status: 200,
+        status: 307,
         headers: {
-          "cache-control": "no-store",
-          "content-type": "application/javascript",
-          "content-length": Buffer.byteLength(source),
+          location: `${compileServerOrigin}${ressource}`,
         },
-        body: source,
       }
     },
   )
 
-  const executeScriptService = guard(
-    ({ method, ressource }) => {
-      return method === "GET" && pathnameToMeta({ pathname: ressource, metaDescription }).browsable
-    },
-    async ({ ressource }) => {
-      const html = await generateHTML({
-        compileInto,
-        compileServerOrigin,
-        filenameRelative: ressource.slice(1),
-        systemScriptSrc: `${compileServerOrigin}/${compileInto}/SYSTEM.js`,
-        selfExecuteScriptSrc: `${ressource}__execute__.js`,
-      })
-
-      return {
-        status: 200,
-        headers: {
-          "cache-control": "no-store",
-          "content-type": "text/html",
-          "content-length": Buffer.byteLength(html),
-        },
-        body: html,
-      }
-    },
-  )
-
-  const fileService = ({ ressource, method, headers }) => {
-    return serveFile(`${projectFolder}${ressource}`, { method, headers })
+  const browserClientFolderService = ({ ressource, method, headers }) => {
+    return serveFile(`${projectFolder}/${browserClientFolderRelative}${ressource}`, {
+      method,
+      headers,
+    })
   }
 
   const browserServer = await startServer({
@@ -164,30 +123,16 @@ export const startBrowsingServer = async ({
     forcePort,
     requestToResponse: serviceCompose(
       indexPageService,
-      selfExecuteScriptService,
-      executeScriptService,
-      fileService,
+      browsingPageService,
+      jsenvWellKnownService,
+      browserClientFolderService,
     ),
     startedMessage: ({ origin }) => `browser server started for ${projectFolder} at ${origin}`,
     stoppedMessage: (reason) => `browser server stopped because ${reason}`,
   })
+
   return browserServer
 }
-
-// we could turn generateSelfImportSource into a dynamic rollup bundles
-// but it takes times without adding much benefit
-// so for now let's keep it like that
-const generateSelfImportSource = ({ compileInto, compileServerOrigin, filenameRelative }) => `
-window.System.import(${uneval(
-  `${compileServerOrigin}/${compileInto}/JSENV_BROWSER_CLIENT.js`,
-)}).then(({ executeCompiledFile }) => {
-  executeCompiledFile({
-    compileInto: ${uneval(compileInto)},
-    compileServerOrigin: ${uneval(compileServerOrigin)},
-    filenameRelative: ${uneval(filenameRelative)},
-  })
-})
-`
 
 const getIndexPageHTML = async ({ projectFolder, browsableFilenameRelativeArray }) => {
   return `<!doctype html>

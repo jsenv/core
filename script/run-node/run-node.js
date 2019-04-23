@@ -18,6 +18,7 @@ execute({
       // and there is a .vscode/launch.json/#jsenv-node-attach-child
       // that you can use to reattach a debugger to this port
       debugPort: 40000,
+      // remap: false,
     }),
   filenameRelative,
   verbose: false,

@@ -16,10 +16,10 @@ import {
   DEFAULT_BROWSER_SCORE_MAP,
   DEFAULT_NODE_VERSION_SCORE_MAP,
 } from "./compile-server-constant.js"
-import { serveSystem } from "./serve-system/index.js"
-import { serveBrowserClient } from "./serve-browser-client/index.js"
-import { serveNodeClient } from "./serve-node-client/index.js"
-import { serveCompiledJs } from "./serve-compiled-js/index.js"
+import { serveSystem } from "./system-service/index.js"
+import { serveBrowserClient } from "./browser-client-service/index.js"
+import { serveNodeClient } from "./node-client-service/index.js"
+import { serveCompiledJs, filenameRelativeIsAsset } from "./compiled-js-service/index.js"
 
 export const startCompileServer = async ({
   projectFolder,
@@ -124,93 +124,43 @@ export const startCompileServer = async ({
     services.push(watchSSEService)
   }
 
-  const systemService = ({ headers, ressource }) => {
-    if (ressource !== `/${compileInto}/SYSTEM.js`) return null
-    return serveSystem({
-      headers,
-    })
-  }
-  services.push(systemService)
-
-  const browserClientService = ({ headers, ressource }) => {
-    if (ressource !== `/${compileInto}/JSENV_BROWSER_CLIENT.js`) return null
-    return serveBrowserClient({
+  services.push((request) => serveSystem(request))
+  services.push((request) =>
+    serveBrowserClient({
       projectFolder,
       importMapFilenameRelative,
       browserGroupResolverFilenameRelative,
       compileInto,
       babelConfigMap,
       groupMap,
-      // TODO: do sthing with projectFileRequestedCallback
-      // we should call this callback
-      // for every file required to produce the browserClient bundle
       projectFileRequestedCallback,
-      headers,
-    })
-  }
-  services.push(browserClientService)
-
-  const nodeClientService = ({ headers, ressource }) => {
-    if (ressource !== `/${compileInto}/JSENV_NODE_CLIENT.js`) return null
-    return serveNodeClient({
+      ...request,
+    }),
+  )
+  services.push((request) =>
+    serveNodeClient({
       projectFolder,
       importMapFilenameRelative,
       nodeGroupResolverFilenameRelative,
       compileInto,
       babelConfigMap,
       groupMap,
-      // TODO: do sthing with projectFileRequestedCallback
-      // we should call this callback
-      // for every file required to produce the nodeClient bundle
       projectFileRequestedCallback,
-      headers,
-    })
-  }
-  services.push(nodeClientService)
-
-  const compiledFileService = ({ origin, headers, ressource }) => {
-    // it's an asset, it will be served by fileService
-    if (filenameRelativeIsAsset(ressource.slice(1))) return null
-
-    const { compileId, filenameRelative } = locateProject({
-      compileInto,
-      ressource,
-    })
-
-    // cannot locate a file -> we don't know what to compile
-    // -> will be handled by fileService
-    if (!compileId) return null
-
-    // unexpected compileId
-    if (compileId in groupMap === false) return { status: 400, statusText: "unknown compileId" }
-
-    // .json does not need to be compiled, they are redirected
-    // to the source location, that will be handled by fileService
-    if (filenameRelative.endsWith(".json")) {
-      return {
-        status: 307,
-        headers: {
-          location: `${origin}/${filenameRelative}`,
-        },
-      }
-    }
-
-    return serveCompiledJs({
+      ...request,
+    }),
+  )
+  services.push((request) =>
+    serveCompiledJs({
       projectFolder,
       compileInto,
       groupMap,
       babelConfigMap,
       transformTopLevelAwait,
       projectFileRequestedCallback,
-      origin,
-      headers,
-      compileId,
-      filenameRelative,
-    })
-  }
-  services.push(compiledFileService)
-
-  const fileService = ({ ressource, method, headers }) => {
+      ...request,
+    }),
+  )
+  services.push(({ ressource, method, headers }) => {
     const requestFilenameRelative = ressource.slice(1)
 
     // this way of finding the file can be removed once we have the
@@ -227,8 +177,7 @@ export const startCompileServer = async ({
     })
 
     return serveFile(pathname, { method, headers })
-  }
-  services.push(fileService)
+  })
 
   const compileServer = await startServer({
     cancellationToken,
@@ -265,57 +214,3 @@ const createFileChangedSignal = () => {
 
   return { registerFileChangedCallback, changed }
 }
-
-const locateProject = ({ compileInto, ressource }) => {
-  if (ressource.startsWith(`/${compileInto}/`) === false) {
-    return {
-      compileId: null,
-      filenameRelative: null,
-    }
-  }
-
-  const afterCompileInto = ressource.slice(`/${compileInto}/`.length)
-  const parts = afterCompileInto.split("/")
-
-  const compileId = parts[0]
-  if (compileId.length === 0) {
-    return {
-      compileId: null,
-      filenameRelative: null,
-    }
-  }
-
-  const filenameRelative = parts.slice(1).join("/")
-  if (filenameRelative.length === 0) {
-    return {
-      compileId: null,
-      filenameRelative: "",
-    }
-  }
-
-  return {
-    compileId,
-    filenameRelative,
-  }
-}
-
-// in the future I may want to put assets in a separate directory like this:
-//
-// /dist
-//   /__assets__
-//     index.js.map
-//     index.js.cache.json
-//       /foo
-//        bar.js.map
-//        bar.js.cache.json
-//   index.js
-//   foo/
-//     bar.js
-//
-// so that the dist folder is not polluted with the asset files
-// that day filenameRelativeIsAsset must be this:
-// => filenameRelative.startsWith(`${compileInto}/__assets__/`)
-// I don't do it for now because it will impact sourcemap paths
-// and sourceMappingURL comment at the bottom of compiled files
-// and that's something sensitive
-const filenameRelativeIsAsset = (filenameRelative) => filenameRelative.match(/[^\/]+__asset__\/.+$/)

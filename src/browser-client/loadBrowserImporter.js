@@ -1,11 +1,15 @@
+// IMPORT_MAP.js will resolved at build time
+// eslint-disable-next-line import/no-unresolved
+import importMap from "IMPORT_MAP.json"
+
 // BROWSER_CLIENT_DATA.js will generated at build time
 // eslint-disable-next-line import/no-unresolved
-import { importMap, groupMap } from "BROWSER_CLIENT_DATA.js"
-// BROWSER_GROUP_RESOLVER.js is by default a jsenv internal resolver
-// but can be overriden at build time to provide a custom
-// resolveBrowserGroup function
+import { groupMap } from "BROWSER_CLIENT_DATA.js"
+
+// BROWSER_GROUP_RESOLVER.js will be resolved at build time
 // eslint-disable-next-line import/no-unresolved
 import { resolveBrowserGroup } from "BROWSER_GROUP_RESOLVER.js"
+
 import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
 import { wrapImportMap } from "../import-map/wrapImportMap.js"
 import { createSystemImporter } from "./system/createSystemImporter.js"
