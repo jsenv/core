@@ -1,4 +1,4 @@
-import { serveFile } from "../../serve-file/index.js"
+import { serveFile } from "../../file-service/index.js"
 import { ROOT_FOLDER } from "../../ROOT_FOLDER.js"
 
 const WELL_KNOWN_SYSTEM_PATHNAME = `/.jsenv-well-known/system.js`

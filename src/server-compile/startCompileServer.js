@@ -2,7 +2,7 @@
 import { normalizePathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
 import { filenameRelativeInception } from "../filenameRelativeInception.js"
-import { serveFile } from "../serve-file/index.js"
+import { serveFile } from "../file-service/index.js"
 import { acceptContentType, createSSERoom, startServer, serviceCompose } from "../server/index.js"
 import { watchFile } from "../watchFile.js"
 import { generateGroupMap } from "../group-map/index.js"
@@ -17,9 +17,9 @@ import {
   DEFAULT_NODE_VERSION_SCORE_MAP,
 } from "./compile-server-constant.js"
 import { serveSystem } from "./system-service/index.js"
-import { serveBrowserClient } from "./browser-client-service/index.js"
-import { serveNodeClient } from "./node-client-service/index.js"
-import { serveCompiledJs, filenameRelativeIsAsset } from "./compiled-js-service/index.js"
+import { serveBrowserPlatform } from "../browser-platform-service/index.js"
+import { serveNodePlatform } from "../node-platform-service/index.js"
+import { serveCompiledJs, filenameRelativeIsAsset } from "../compiled-js-service/index.js"
 
 export const startCompileServer = async ({
   projectFolder,
@@ -126,7 +126,7 @@ export const startCompileServer = async ({
 
   services.push((request) => serveSystem(request))
   services.push((request) =>
-    serveBrowserClient({
+    serveBrowserPlatform({
       projectFolder,
       importMapFilenameRelative,
       browserGroupResolverFilenameRelative,
@@ -138,7 +138,7 @@ export const startCompileServer = async ({
     }),
   )
   services.push((request) =>
-    serveNodeClient({
+    serveNodePlatform({
       projectFolder,
       importMapFilenameRelative,
       nodeGroupResolverFilenameRelative,

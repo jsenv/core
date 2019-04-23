@@ -28,10 +28,10 @@ export { bundleBrowser } from "./src/bundle/browser/bundleBrowser.js"
 export { startBrowsingServer } from "./src/browsing-server/index.js"
 
 // must be moved later to jsenv/chromium-launcher
-export { launchChromium } from "./src/launchChromium/index.js"
+export { launchChromium } from "./src/browser-chromium-launcher/index.js"
 
 // must be moved later to jsenv/node-launcher
-export { launchNode } from "./src/launchNode/index.js"
+export { launchNode } from "./src/node-launcher/index.js"
 
 // helpers around coverage, core for now
 export { generateCoverageHTML } from "./src/cover/generateCoverageHTML.js"

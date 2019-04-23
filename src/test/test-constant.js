@@ -1,4 +1,4 @@
-import { launchNode } from "../launchNode/launchNode.js"
+import { launchNode } from "../node-launcher/launchNode.js.js"
 
 const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
 

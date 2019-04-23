@@ -1,1 +1,1 @@
-export { startBrowsingServer } from "./startBrowsingServer.js"
+export { startBrowsingServer } from "./start-browsing-server.js"

@@ -8,12 +8,12 @@ import {
   hrefToPathname,
   hrefToScheme,
 } from "@jsenv/module-resolution"
-import { fetchUsingHttp } from "../../node-client/fetchUsingHttp.js"
+import { fetchUsingHttp } from "../../node-platform-service/node-platform/fetchUsingHttp.js"
 import { readSourceMappingURL, writeSourceMappingURL } from "../../source-mapping-url.js"
 import {
   transpiler,
   findAsyncPluginNameInBabelConfigMap,
-} from "../../server-compile/compiled-js-service/transpiler.js"
+} from "../../compiled-js-service/transpiler.js"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { computeBabelConfigMapSubset } from "./computeBabelConfigMapSubset.js"
 

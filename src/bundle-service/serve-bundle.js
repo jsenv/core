@@ -1,6 +1,6 @@
 import { extname, dirname, basename } from "path"
 import { bundleBrowser } from "../bundle/browser/bundleBrowser.js"
-import { serveCompiledFile } from "../server-compile/serve-compiled-file/index.js"
+import { serveCompiledFile } from "../compiled-file-service/index.js"
 import { platformClientBundleToCompilationResult } from "./platformClientBundleToCompilationResult.js"
 
 export const serveBundle = async ({

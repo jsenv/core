@@ -1,6 +1,6 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { launchNode } from "../../../../launchNode/index.js"
-import { launchChromium } from "../../../../launchChromium/index.js"
+import { launchNode } from "../../../../node-launcher/index.js.js"
+import { launchChromium } from "../../../../browser-chromium-launcher/index.js.js"
 import { executePlan } from "../../../../executePlan/index.js"
 import { startCompileServer } from "../../../../server-compile/index.js"
 import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap.js"

@@ -1,5 +1,5 @@
 import { fileRead } from "@dmail/helper"
-import { serveFile } from "../../src/serve-file/serveFile.js"
+import { serveFile } from "../../src/file-service/index.js"
 import { startServer, serviceCompose } from "../../src/server/index.js"
 
 const puppeteer = import.meta.require("puppeteer")
