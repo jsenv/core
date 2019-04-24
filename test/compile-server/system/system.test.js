@@ -6,15 +6,15 @@ import { fetch } from "../fetch.js"
 
 const projectFolder = ROOT_FOLDER
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-const compileInto = `${testFolderRelative}/.dist`
+const serverCompileInto = `${testFolderRelative}/.dist`
 
 const compileServer = await startCompileServer({
   projectFolder,
-  compileInto,
-  verbose: false,
+  serverCompileInto,
+  verbose: true,
 })
 
-const response = await fetch(`${compileServer.origin}/.jsenv-well-known/browser-platform.js`)
+const response = await fetch(`${compileServer.origin}/.jsenv-well-known/system.js`)
 const actual = {
   status: response.status,
   statusText: response.statusText,
