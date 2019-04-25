@@ -12,6 +12,7 @@ export const serveBundle = async ({
   sourceFilenameRelative,
   inlineSpecifierMap,
   headers,
+  format = "system",
 }) => {
   return serveCompiledFile({
     projectFolder,
@@ -35,6 +36,7 @@ export const serveBundle = async ({
         entryPointMap,
         inlineSpecifierMap,
         babelConfigMap,
+        format,
         compileGroupCount: 1,
         throwUnhandled: false,
         writeOnFileSystem: false,

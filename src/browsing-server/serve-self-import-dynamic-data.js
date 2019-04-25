@@ -2,17 +2,17 @@ import { uneval } from "@dmail/uneval"
 import { serveCompiledFile } from "../compiled-file-service/index.js"
 import { compileJs } from "../compiled-js-service/index.js"
 
-export const WELL_KNOWN_BROWSING_BUNDLE_DYNAMIC_DATA_PATHNAME =
-  "/.jsenv-well-kown/browsing-bundle-dynamic-data.js"
+export const WELL_KNOWN_SELF_IMPORT_DYNAMIC_DATA_PATHNAME =
+  "/.jsenv-well-known/self-import-dynamic-data.js"
 
-export const serveBrowsingBundleDynamicData = ({
+export const serveSelfImportDynamicData = ({
   projectFolder,
   compileInto,
   babelConfigMap,
   compileServerOrigin,
   request: { ressource, headers },
 }) => {
-  if (ressource !== WELL_KNOWN_BROWSING_BUNDLE_DYNAMIC_DATA_PATHNAME) return null
+  if (ressource !== WELL_KNOWN_SELF_IMPORT_DYNAMIC_DATA_PATHNAME) return null
 
   const filenameRelative = ressource.slice(1)
 

@@ -22,6 +22,7 @@ export const bundleBrowser = async ({
   entryPointMap = BUNDLE_BROWSER_DEFAULT_ENTRY_POINT_MAP,
   compileGroupCount = 1,
   platformScoreMap = browserScoreMap,
+  format = "system", // or iife
   verbose = false,
   minify = false,
   throwUnhandled = true,
@@ -49,6 +50,7 @@ export const bundleBrowser = async ({
         into,
         entryPointMap,
         babelConfigMap,
+        format,
         minify,
         ...context,
       }),

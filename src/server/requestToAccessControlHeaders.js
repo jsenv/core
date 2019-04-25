@@ -13,7 +13,7 @@ export const requestToAccessControlHeaders = (
 ) => {
   let vary
   let allowedOrigins
-  if ("origin" in headers) {
+  if ("origin" in headers && headers.origin !== "null") {
     allowedOrigins = [headers.origin]
     vary = ["origin"]
   } else if ("referer" in headers) {

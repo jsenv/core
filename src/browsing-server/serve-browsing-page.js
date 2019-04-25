@@ -1,9 +1,9 @@
 import { firstService } from "../server/index.js"
 import { serveBrowsingHtml } from "./serve-browsing-html.js"
 import { redirectSystemToCompileServer } from "./redirect-system-to-compile-server.js"
-import { redirectBrowserScriptToBrowsingBundle } from "./redirect-browser-script-to-browsing-bundle.js"
-import { serveBrowsingBundle } from "./serve-browsing-bundle.js"
-import { serveBrowsingBundleDynamicData } from "./serve-browsing-bundle-dynamic-data.js"
+import { redirectBrowserScriptToSelfImport } from "./redirect-browser-script-to-self-import.js"
+import { serveSelfImport } from "./serve-self-import.js"
+import { serveSelfImportDynamicData } from "./serve-self-import-dynamic-data.js"
 import { redirectBrowserPlatformToCompileServer } from "./redirect-browser-platform-to-compile-server.js"
 
 export const serveBrowsingPage = ({
@@ -32,12 +32,12 @@ export const serveBrowsingPage = ({
       })
     },
     () => {
-      return redirectBrowserScriptToBrowsingBundle({
+      return redirectBrowserScriptToSelfImport({
         request,
       })
     },
     () => {
-      return serveBrowsingBundle({
+      return serveSelfImport({
         projectFolder,
         importMapFilenameRelative,
         compileInto,
@@ -46,7 +46,7 @@ export const serveBrowsingPage = ({
       })
     },
     () => {
-      return serveBrowsingBundleDynamicData({
+      return serveSelfImportDynamicData({
         projectFolder,
         compileInto,
         babelConfigMap,

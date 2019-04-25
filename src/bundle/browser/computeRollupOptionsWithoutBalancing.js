@@ -10,6 +10,7 @@ export const computeRollupOptionsWithoutBalancing = ({
   into,
   entryPointMap,
   babelConfigMap,
+  format,
   minify,
   log,
   logBundleFilePaths,
@@ -50,7 +51,7 @@ minify: ${minify}
       // https://rollupjs.org/guide/en#output-dir
       dir,
       // https://rollupjs.org/guide/en#output-format
-      format: "system",
+      format,
       // entryFileNames: `./[name].js`,
       // https://rollupjs.org/guide/en#output-sourcemap
       sourcemap: true,
