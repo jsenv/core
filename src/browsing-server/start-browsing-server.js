@@ -1,8 +1,8 @@
 import { normalizePathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
-import { namedValueDescriptionToMetaDescription, pathnameToMeta } from "@dmail/project-structure"
+import { namedValueDescriptionToMetaDescription } from "@dmail/project-structure"
 import { filenameRelativeInception } from "../filenameRelativeInception.js"
-import { startServer, serviceCompose } from "../server/index.js"
+import { startServer, firstService } from "../server/index.js"
 import { startCompileServer } from "../compile-server/index.js"
 import {
   DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
@@ -14,7 +14,7 @@ import {
 } from "./browsing-server-constant.js"
 import { serveBrowsingIndex } from "./serve-browsing-index.js"
 import { serveBrowsingPage } from "./serve-browsing-page.js"
-import { serveFile } from "../file-service/index.js"
+import { serveBrowserClientFolder } from "./serve-browser-client-folder.js"
 
 export const startBrowsingServer = async ({
   projectFolder,
@@ -23,8 +23,7 @@ export const startBrowsingServer = async ({
   importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
   browserClientFolderRelative = DEFAULT_BROWSER_CLIENT_FOLDER_RELATIVE,
   browserGroupResolveFilenameRelative = DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
-  serverCompileInto = DEFAULT_COMPILE_INTO,
-  clientCompileInto = DEFAULT_COMPILE_INTO,
+  compileInto = DEFAULT_COMPILE_INTO,
   compileGroupCount = 2,
   browsableDescription = DEFAULT_BROWSABLE_DESCRIPTION,
   cors = true,
@@ -50,8 +49,7 @@ export const startBrowsingServer = async ({
     projectFolder,
     importMapFilenameRelative,
     browserGroupResolveFilenameRelative,
-    serverCompileInto,
-    clientCompileInto,
+    compileInto,
     compileGroupCount,
     babelConfigMap,
     cors,
@@ -62,33 +60,30 @@ export const startBrowsingServer = async ({
     signature,
   })
 
-  const browsingIndexService = ({ ressource }) => {
-    if (ressource !== "/") return null
-    return serveBrowsingIndex({
-      projectFolder,
-      metaDescription,
-    })
-  }
-
-  const browsingPageService = (request) => {
-    const browsablePredicate = (ressource) =>
-      pathnameToMeta({ pathname: ressource, metaDescription }).browsable
-
-    return serveBrowsingPage({
-      projectFolder,
-      browserClientFolderRelative,
-      compileServerOrigin,
-      browsablePredicate,
-      ...request,
-    })
-  }
-
-  const browserClientFileService = ({ ressource, method, headers }) => {
-    return serveFile(`${projectFolder}/${browserClientFolderRelative}${ressource}`, {
-      method,
-      headers,
-    })
-  }
+  const service = (request) =>
+    firstService(
+      () => {
+        return serveBrowsingIndex({
+          projectFolder,
+          metaDescription,
+        })
+      },
+      () => {
+        return serveBrowsingPage({
+          projectFolder,
+          importMapFilenameRelative,
+          browserClientFolderRelative,
+          compileInto,
+          babelConfigMap,
+          compileServerOrigin,
+          browsableMetaMap: metaDescription,
+          ...request,
+        })
+      },
+      () => {
+        return serveBrowserClientFolder({ projectFolder, browserClientFolderRelative, ...request })
+      },
+    )
 
   const browserServer = await startServer({
     cancellationToken,
@@ -96,13 +91,9 @@ export const startBrowsingServer = async ({
     ip,
     port,
     forcePort,
-    requestToResponse: serviceCompose(
-      browsingIndexService,
-      browsingPageService,
-      browserClientFileService,
-    ),
-    startedMessage: ({ origin }) => `browser server started for ${projectFolder} at ${origin}`,
-    stoppedMessage: (reason) => `browser server stopped because ${reason}`,
+    requestToResponse: service,
+    startedMessage: ({ origin }) => `browsing server started for ${projectFolder} at ${origin}`,
+    stoppedMessage: (reason) => `browsing server stopped because ${reason}`,
   })
 
   return browserServer

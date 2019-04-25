@@ -4,8 +4,7 @@ import { serveCompiledFile } from "../compiled-file-service/index.js"
 
 export const serveCompiledJs = async ({
   projectFolder,
-  serverCompileInto,
-  clientCompileInto,
+  compileInto,
   groupMap,
   babelConfigMap,
   transformTopLevelAwait,
@@ -18,7 +17,7 @@ export const serveCompiledJs = async ({
   if (filenameRelativeIsAsset(ressource.slice(1))) return null
 
   const { compileId, filenameRelative } = locateProject({
-    clientCompileInto,
+    compileInto,
     ressource,
   })
 
@@ -41,7 +40,7 @@ export const serveCompiledJs = async ({
   }
 
   const sourceFilenameRelative = filenameRelative
-  const compiledFilenameRelative = `${serverCompileInto}/${compileId}/${filenameRelative}`
+  const compiledFilenameRelative = `${compileInto}/${compileId}/${filenameRelative}`
 
   projectFileRequestedCallback({
     filenameRelative: sourceFilenameRelative,
@@ -68,7 +67,7 @@ export const serveCompiledJs = async ({
         transformTopLevelAwait,
         filenameRelative: sourceFilenameRelative,
         filename: sourceFilename,
-        outputFilename: `file://${projectFolder}/${serverCompileInto}/${compileId}/${filenameRelative}`,
+        outputFilename: `file://${projectFolder}/${compileInto}/${compileId}/${filenameRelative}`,
         source,
       })
     },
@@ -97,16 +96,16 @@ export const serveCompiledJs = async ({
 export const filenameRelativeIsAsset = (filenameRelative) =>
   filenameRelative.match(/[^\/]+__asset__\/.+$/)
 
-const locateProject = ({ clientCompileInto, ressource }) => {
-  if (ressource.startsWith(`/${clientCompileInto}/`) === false) {
+const locateProject = ({ compileInto, ressource }) => {
+  if (ressource.startsWith(`/${compileInto}/`) === false) {
     return {
       compileId: null,
       filenameRelative: null,
     }
   }
 
-  const afterClientCompileInto = ressource.slice(`/${clientCompileInto}/`.length)
-  const parts = afterClientCompileInto.split("/")
+  const afterCompileInto = ressource.slice(`/${compileInto}/`.length)
+  const parts = afterCompileInto.split("/")
 
   const compileId = parts[0]
   if (compileId.length === 0) {

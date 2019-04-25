@@ -6,4 +6,4 @@ export { requestToAccessControlHeaders } from "./requestToAccessControlHeaders.j
 export { acceptContentType } from "./headers.js"
 export { createSSERoom } from "./createSSERoom.js"
 export { responseCompose } from "./responseCompose.js"
-export { serviceCompose } from "./serviceCompose.js"
+export { firstService, serviceCompose } from "./serviceCompose.js"

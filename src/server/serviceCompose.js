@@ -7,6 +7,14 @@ const serviceGeneratedResponsePredicate = (value) => {
   return typeof value === "object"
 }
 
+export const firstService = (...callbacks) => {
+  return firstOperationMatching({
+    array: callbacks,
+    start: (callback) => callback(),
+    predicate: serviceGeneratedResponsePredicate,
+  })
+}
+
 export const serviceCompose = (...callbacks) => {
   return (request) => {
     return firstOperationMatching({

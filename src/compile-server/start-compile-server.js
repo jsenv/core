@@ -27,8 +27,7 @@ export const startCompileServer = async ({
   importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
   browserGroupResolverFilenameRelative = DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
   nodeGroupResolverFilenameRelative = DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE,
-  serverCompileInto = DEFAULT_COMPILE_INTO,
-  clientCompileInto = DEFAULT_COMPILE_INTO,
+  compileInto = DEFAULT_COMPILE_INTO,
   // option related to compile groups
   compileGroupCount = 1,
   babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
@@ -131,7 +130,7 @@ export const startCompileServer = async ({
       projectFolder,
       importMapFilenameRelative,
       browserGroupResolverFilenameRelative,
-      compileInto: serverCompileInto,
+      compileInto,
       babelConfigMap,
       groupMap,
       projectFileRequestedCallback,
@@ -143,7 +142,7 @@ export const startCompileServer = async ({
       projectFolder,
       importMapFilenameRelative,
       nodeGroupResolverFilenameRelative,
-      compileInto: serverCompileInto,
+      compileInto,
       babelConfigMap,
       groupMap,
       projectFileRequestedCallback,
@@ -153,8 +152,7 @@ export const startCompileServer = async ({
   services.push((request) =>
     serveCompiledJs({
       projectFolder,
-      serverCompileInto,
-      clientCompileInto,
+      compileInto,
       groupMap,
       babelConfigMap,
       transformTopLevelAwait,
