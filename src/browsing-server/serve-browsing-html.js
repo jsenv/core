@@ -5,8 +5,7 @@ export const serveBrowsingHtml = ({
   projectFolder,
   browserClientFolderRelative,
   browsableMetaMap,
-  ressource,
-  headers,
+  request: { ressource, headers },
 }) => {
   if (!pathnameToMeta({ pathname: ressource, metaDescription: browsableMetaMap }).browsable)
     return null

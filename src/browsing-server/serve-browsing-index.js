@@ -1,6 +1,10 @@
 import { selectAllFileInsideFolder } from "@dmail/project-structure"
 
-export const serveBrowsingIndex = async ({ projectFolder, metaDescription, ressource }) => {
+export const serveBrowsingIndex = async ({
+  projectFolder,
+  metaDescription,
+  request: { ressource },
+}) => {
   if (ressource !== "/") return null
 
   const browsableFilenameRelativeArray = await selectAllFileInsideFolder({

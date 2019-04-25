@@ -1,6 +1,6 @@
-import { WELL_KNOWN_SYSTEM_PATHNAME } from "../system-service/index.js"
+import { WELL_KNOWN_SYSTEM_PATHNAME } from "../compile-server/system-service/index.js"
 
-export const redirectSystemToCompileServer = ({ compileServerOrigin, ressource }) => {
+export const redirectSystemToCompileServer = ({ compileServerOrigin, request: { ressource } }) => {
   if (ressource !== WELL_KNOWN_SYSTEM_PATHNAME) return null
 
   return {

@@ -17,8 +17,7 @@ export const serveNodePlatform = ({
   babelConfigMap,
   groupMap,
   // projectFileRequestedCallback,
-  ressource,
-  headers,
+  request: { ressource, headers },
 }) => {
   if (ressource !== WELL_KNOWN_NODE_PLATFORM_PATHNAME) return null
 

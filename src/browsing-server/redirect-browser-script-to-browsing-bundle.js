@@ -5,7 +5,7 @@ import { WELL_KNOWN_BROWSING_BUNDLE_PATHNAME } from "./serve-browsing-bundle.js"
 // that we reuse here
 const WELL_KNOWN_BROWSER_SCRIPT_PATHNAME = "/.jsenv-well-known/browser-script.js"
 
-export const redirectBrowserScriptToBrowsingBundle = ({ origin, ressource }) => {
+export const redirectBrowserScriptToBrowsingBundle = ({ request: { origin, ressource } }) => {
   if (ressource !== WELL_KNOWN_BROWSER_SCRIPT_PATHNAME) return null
 
   return {

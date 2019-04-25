@@ -14,9 +14,7 @@ export const serveBrowsingPage = ({
   babelConfigMap,
   compileServerOrigin,
   browsableMetaMap,
-  origin,
-  ressource,
-  headers,
+  request,
 }) => {
   return firstService(
     () => {
@@ -24,20 +22,18 @@ export const serveBrowsingPage = ({
         projectFolder,
         browserClientFolderRelative,
         browsableMetaMap,
-        ressource,
-        headers,
+        request,
       })
     },
     () => {
       return redirectSystemToCompileServer({
         compileServerOrigin,
-        ressource,
+        request,
       })
     },
     () => {
       return redirectBrowserScriptToBrowsingBundle({
-        origin,
-        ressource,
+        request,
       })
     },
     () => {
@@ -46,8 +42,7 @@ export const serveBrowsingPage = ({
         importMapFilenameRelative,
         compileInto,
         babelConfigMap,
-        ressource,
-        headers,
+        request,
       })
     },
     () => {
@@ -56,14 +51,13 @@ export const serveBrowsingPage = ({
         compileInto,
         babelConfigMap,
         compileServerOrigin,
-        ressource,
-        headers,
+        request,
       })
     },
     () => {
       return redirectBrowserPlatformToCompileServer({
         compileServerOrigin,
-        ressource,
+        request,
       })
     },
   )

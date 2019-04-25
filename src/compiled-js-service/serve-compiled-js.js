@@ -9,9 +9,7 @@ export const serveCompiledJs = async ({
   babelConfigMap,
   transformTopLevelAwait,
   projectFileRequestedCallback,
-  origin,
-  ressource,
-  headers,
+  request: { origin, ressource, headers },
 }) => {
   // it's an asset, it will be served by fileService
   if (filenameRelativeIsAsset(ressource.slice(1))) return null

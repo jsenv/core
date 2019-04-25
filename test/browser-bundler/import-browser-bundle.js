@@ -1,7 +1,7 @@
 import { fileRead } from "@dmail/helper"
 import { serveFile } from "../../src/file-service/index.js"
 import { startServer, serviceCompose } from "../../src/server/index.js"
-import { SYSTEM_FILENAME } from "../../src/system-service/index.js"
+import { SYSTEM_FILENAME } from "../../src/compile-server/system-service/index.js"
 
 const puppeteer = import.meta.require("puppeteer")
 

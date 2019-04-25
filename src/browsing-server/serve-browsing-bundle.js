@@ -3,6 +3,7 @@ import { serveBundle } from "../bundle-service/index.js"
 import { filenameRelativeInception } from "../filenameRelativeInception.js"
 import { WELL_KNOWN_BROWSER_PLATFORM_PATHNAME } from "../browser-platform-service/index.js"
 import { WELL_KNOWN_BROWSING_BUNDLE_DYNAMIC_DATA_PATHNAME } from "./serve-browsing-bundle-dynamic-data.js"
+import { serveFile } from "../file-service/index.js"
 
 export const WELL_KNOWN_BROWSING_BUNDLE_PATHNAME = "/.jsenv-well-known/browsing-bundle.js"
 
@@ -15,9 +16,12 @@ export const serveBrowsingBundle = ({
   importMapFilenameRelative,
   compileInto,
   babelConfigMap,
-  ressource,
-  headers,
+  request: { ressource, method, headers },
 }) => {
+  if (ressource.startsWith(`${WELL_KNOWN_BROWSING_BUNDLE_PATHNAME}__asset__/`)) {
+    return serveFile(`${projectFolder}/${compileInto}${ressource}`, { method, headers })
+  }
+
   if (ressource !== WELL_KNOWN_BROWSING_BUNDLE_PATHNAME) return null
 
   const filenameRelative = ressource.slice(1)

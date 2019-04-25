@@ -66,6 +66,7 @@ export const startBrowsingServer = async ({
         return serveBrowsingIndex({
           projectFolder,
           metaDescription,
+          request,
         })
       },
       () => {
@@ -77,11 +78,11 @@ export const startBrowsingServer = async ({
           babelConfigMap,
           compileServerOrigin,
           browsableMetaMap: metaDescription,
-          ...request,
+          request,
         })
       },
       () => {
-        return serveBrowserClientFolder({ projectFolder, browserClientFolderRelative, ...request })
+        return serveBrowserClientFolder({ projectFolder, browserClientFolderRelative, request })
       },
     )
 

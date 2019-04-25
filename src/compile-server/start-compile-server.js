@@ -3,7 +3,13 @@ import { normalizePathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
 import { filenameRelativeInception } from "../filenameRelativeInception.js"
 import { serveFile } from "../file-service/index.js"
-import { acceptContentType, createSSERoom, startServer, serviceCompose } from "../server/index.js"
+import {
+  acceptContentType,
+  createSSERoom,
+  startServer,
+  serviceCompose,
+  firstService,
+} from "../server/index.js"
 import { watchFile } from "../watchFile.js"
 import { generateGroupMap } from "../group-map/index.js"
 import {
@@ -16,7 +22,7 @@ import {
   DEFAULT_BROWSER_SCORE_MAP,
   DEFAULT_NODE_VERSION_SCORE_MAP,
 } from "./compile-server-constant.js"
-import { serveSystem } from "../system-service/index.js"
+import { serveSystem } from "./system-service/index.js"
 import { serveBrowserPlatform } from "../browser-platform-service/index.js"
 import { serveNodePlatform } from "../node-platform-service/index.js"
 import { serveCompiledJs, filenameRelativeIsAsset } from "../compiled-js-service/index.js"
@@ -124,60 +130,49 @@ export const startCompileServer = async ({
     services.push(watchSSEService)
   }
 
-  services.push((request) => serveSystem(request))
   services.push((request) =>
-    serveBrowserPlatform({
-      projectFolder,
-      importMapFilenameRelative,
-      browserGroupResolverFilenameRelative,
-      compileInto,
-      babelConfigMap,
-      groupMap,
-      projectFileRequestedCallback,
-      ...request,
-    }),
+    firstService(
+      () => serveSystem({ request }),
+      () =>
+        serveBrowserPlatform({
+          projectFolder,
+          importMapFilenameRelative,
+          browserGroupResolverFilenameRelative,
+          compileInto,
+          babelConfigMap,
+          groupMap,
+          projectFileRequestedCallback,
+          request,
+        }),
+      () =>
+        serveNodePlatform({
+          projectFolder,
+          importMapFilenameRelative,
+          nodeGroupResolverFilenameRelative,
+          compileInto,
+          babelConfigMap,
+          groupMap,
+          projectFileRequestedCallback,
+          request,
+        }),
+      () =>
+        serveCompiledJs({
+          projectFolder,
+          compileInto,
+          groupMap,
+          babelConfigMap,
+          transformTopLevelAwait,
+          projectFileRequestedCallback,
+          request,
+        }),
+      () =>
+        serveProjectFolder({
+          projectFolder,
+          projectFileRequestedCallback,
+          request,
+        }),
+    ),
   )
-  services.push((request) =>
-    serveNodePlatform({
-      projectFolder,
-      importMapFilenameRelative,
-      nodeGroupResolverFilenameRelative,
-      compileInto,
-      babelConfigMap,
-      groupMap,
-      projectFileRequestedCallback,
-      ...request,
-    }),
-  )
-  services.push((request) =>
-    serveCompiledJs({
-      projectFolder,
-      compileInto,
-      groupMap,
-      babelConfigMap,
-      transformTopLevelAwait,
-      projectFileRequestedCallback,
-      ...request,
-    }),
-  )
-  services.push(({ ressource, method, headers }) => {
-    const requestFilenameRelative = ressource.slice(1)
-
-    // this way of finding the file can be removed once we have the
-    // dynamic bundling no ?
-    const requestFilenameRelativeInception = filenameRelativeInception({
-      projectFolder,
-      filenameRelative: requestFilenameRelative,
-    })
-    const pathname = `${projectFolder}/${requestFilenameRelativeInception}`
-
-    projectFileRequestedCallback({
-      filenameRelative: requestFilenameRelativeInception,
-      filename: pathname,
-    })
-
-    return serveFile(pathname, { method, headers })
-  })
 
   const compileServer = await startServer({
     cancellationToken,
@@ -196,6 +191,29 @@ export const startCompileServer = async ({
   compileServer.nodeServer.unref()
 
   return compileServer
+}
+
+const serveProjectFolder = ({
+  projectFolder,
+  projectFileRequestedCallback,
+  request: { ressource, method, headers },
+}) => {
+  const requestFilenameRelative = ressource.slice(1)
+
+  // this way of finding the file can be removed once we have the
+  // dynamic bundling no ?
+  const requestFilenameRelativeInception = filenameRelativeInception({
+    projectFolder,
+    filenameRelative: requestFilenameRelative,
+  })
+  const pathname = `${projectFolder}/${requestFilenameRelativeInception}`
+
+  projectFileRequestedCallback({
+    filenameRelative: requestFilenameRelativeInception,
+    filename: pathname,
+  })
+
+  return serveFile(pathname, { method, headers })
 }
 
 const createFileChangedSignal = () => {

@@ -1,4 +1,5 @@
 import { uneval } from "@dmail/uneval"
+import { serveFile } from "../file-service/index.js"
 import { filenameRelativeInception } from "../filenameRelativeInception.js"
 import { serveBundle } from "../bundle-service/index.js"
 
@@ -17,9 +18,11 @@ export const serveBrowserPlatform = async ({
   babelConfigMap,
   groupMap,
   // projectFileRequestedCallback,
-  ressource,
-  headers,
+  request: { ressource, method, headers },
 }) => {
+  if (ressource.startsWith(`${WELL_KNOWN_BROWSER_PLATFORM_PATHNAME}__asset__/`)) {
+    return serveFile(`${projectFolder}/${compileInto}${ressource}`, { method, headers })
+  }
   if (ressource !== WELL_KNOWN_BROWSER_PLATFORM_PATHNAME) return null
 
   const browserGroupResolverFilenameRelativeInception = filenameRelativeInception({
@@ -27,12 +30,14 @@ export const serveBrowserPlatform = async ({
     filenameRelative: browserGroupResolverFilenameRelative,
   })
 
+  const filenameRelative = ressource.slice(1)
+
   return serveBundle({
     projectFolder,
     importMapFilenameRelative,
     compileInto,
     babelConfigMap,
-    filenameRelative: WELL_KNOWN_BROWSER_PLATFORM_PATHNAME.slice(1),
+    filenameRelative,
     sourceFilenameRelative: filenameRelativeInception({
       projectFolder,
       filenameRelative: BROWSER_PLATFORM_FILENAME_RELATIVE,
