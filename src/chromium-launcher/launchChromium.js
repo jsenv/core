@@ -1,54 +1,27 @@
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
-import { URL } from "url"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
 import { uneval } from "@dmail/uneval"
-import { originAsString } from "../server/index.js"
 import { regexpEscape } from "../stringHelper.js"
 import {
   registerProcessInterruptCallback,
   registerUngaranteedProcessTeardown,
 } from "../process-signal/index.js"
-
-// TODO: this must be somehow like browsing server
-// but it should not execute the file
-// just provide what is required to do so
-const startIndexServer = () => {}
+import { startChromiumServer } from "./start-chromium-server.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
   compileInto,
-  compileIdOption,
   sourceOrigin,
   compileServerOrigin,
 
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
-  startIndexRequestHandler = startIndexServer,
   headless = true,
-  generateHTML = ({ filenameRelative, systemScriptSrc }) => {
-    return `<!doctype html>
-
-<head>
-  <title>Execute ${filenameRelative}</title>
-  <meta charset="utf-8" />
-</head>
-
-<body>
-  <main></main>
-  <script src="${systemScriptSrc}"></script>
-</body>
-
-</html>`
-  },
 }) => {
-  if (startIndexRequestHandler === startIndexRequestInterception && headless === false) {
-    throw new Error(`startIndexRequestInterception work only in headless mode`)
-  }
-
   const options = {
     headless,
     // because we use a self signed certificate
@@ -146,29 +119,22 @@ export const launchChromium = async ({
   }
 
   const executeFile = async (filenameRelative, { collectNamespace, collectCoverage }) => {
-    const [page, html] = await Promise.all([
+    const [page, chromiumServer] = await Promise.all([
       browser.newPage(),
-      generateHTML({
-        filenameRelative,
-        systemScriptSrc: `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/system.js`,
+      startChromiumServer({
+        cancellationToken,
+        protocol,
+        ip,
+        port,
+        page,
       }),
     ])
-
-    const { origin: indexOrigin, stop: indexStop } = await startIndexRequestHandler({
-      cancellationToken,
-      protocol,
-      ip,
-      port,
-      page,
-      body: html,
-    })
-    registerCleanupCallback(indexStop)
+    registerCleanupCallback(chromiumServer.stop)
 
     const execute = async () => {
-      await page.goto(indexOrigin)
+      await page.goto(`${chromiumServer.origin}/${filenameRelative}`)
       const functionString = createFunctionEvaluatedClientSide({
         compileInto,
-        compileIdOption,
         compileServerOrigin,
         filenameRelative,
         collectNamespace,
@@ -378,65 +344,23 @@ const createTargetTracker = (browser) => {
   return { stop: cleanup }
 }
 
-const startIndexRequestInterception = async ({
-  cancellationToken,
-  protocol,
-  ip,
-  port,
-  page,
-  body,
-}) => {
-  const origin = originAsString({ protocol, ip, port })
-
-  const interceptionOperation = createStoppableOperation({
-    cancellationToken,
-    start: () => page.setRequestInterception(true),
-    stop: () => page.setRequestInterception(false),
-  })
-  await interceptionOperation
-
-  page.on("request", (interceptedRequest) => {
-    const url = new URL(interceptedRequest.url())
-    if (url.origin !== origin) return
-
-    interceptedRequest.respond({
-      status: 200,
-      contentType: "text/html",
-      headers: {
-        "content-type": "text/html",
-        "content-length": Buffer.byteLength(body),
-        "cache-control": "no-store",
-      },
-      body,
-    })
-  })
-
-  const stop = interceptionOperation.stop
-
-  return {
-    origin,
-    stop,
-  }
-}
-
 const appendNewLine = (string) => {
   return `${string}
 `
 }
 
 const createFunctionEvaluatedClientSide = ({
-  browserClientHref,
   compileInto,
-  compileIdOption,
   compileServerOrigin,
   filenameRelative,
   collectNamespace,
   collectCoverage,
 }) => `() => {
-  return window.System.import(${uneval(browserClientHref)}).then(({ executeCompiledFile }) => {
+  return window.System.import(${uneval(
+    `${compileServerOrigin}/.jsenv-well-known/browser-platform.js`,
+  )}).then(({ executeCompiledFile }) => {
     return executeCompiledFile({
       compileInto: ${uneval(compileInto)},
-      compileIdOption: ${uneval(compileIdOption)},
       compileServerOrigin: ${uneval(compileServerOrigin)},
       filenameRelative: ${uneval(filenameRelative)},
       collectNamespace: ${uneval(collectNamespace)},
