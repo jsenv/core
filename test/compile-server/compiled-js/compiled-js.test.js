@@ -29,12 +29,6 @@ const expected = {
   statusText: "OK",
   headers: {
     ...actual.headers,
-    "access-control-allow-credentials": ["true"],
-    "access-control-allow-headers": ["x-requested-with, content-type, accept"],
-    "access-control-allow-methods": ["GET, POST, PUT, DELETE, OPTIONS"],
-    "access-control-allow-origin": ["*"],
-    "access-control-max-age": ["600"],
-    connection: ["close"],
     "content-type": ["application/javascript"],
   },
 }
