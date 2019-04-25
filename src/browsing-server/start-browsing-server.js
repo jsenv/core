@@ -62,15 +62,14 @@ export const startBrowsingServer = async ({
 
   const service = (request) =>
     firstService(
-      () => {
-        return serveBrowsingIndex({
+      () =>
+        serveBrowsingIndex({
           projectFolder,
           metaDescription,
           request,
-        })
-      },
-      () => {
-        return serveBrowsingPage({
+        }),
+      () =>
+        serveBrowsingPage({
           projectFolder,
           importMapFilenameRelative,
           browserClientFolderRelative,
@@ -79,11 +78,8 @@ export const startBrowsingServer = async ({
           compileServerOrigin,
           browsableMetaMap: metaDescription,
           request,
-        })
-      },
-      () => {
-        return serveBrowserClientFolder({ projectFolder, browserClientFolderRelative, request })
-      },
+        }),
+      () => serveBrowserClientFolder({ projectFolder, browserClientFolderRelative, request }),
     )
 
   const browserServer = await startServer({

@@ -1,6 +1,7 @@
 import { uneval } from "@dmail/uneval"
 import { serveBundle } from "../bundle-service/index.js"
 import { filenameRelativeInception } from "../filenameRelativeInception.js"
+import { WELL_KNOWN_SYSTEM_PATHNAME } from "../compile-server/system-service/index.js"
 import { WELL_KNOWN_BROWSER_PLATFORM_PATHNAME } from "../browser-platform-service/index.js"
 import { WELL_KNOWN_SELF_IMPORT_DYNAMIC_DATA_PATHNAME } from "./serve-self-import-dynamic-data.js"
 import { serveFile } from "../file-service/index.js"
@@ -46,7 +47,8 @@ export const serveSelfImport = ({
 }
 
 const generateSelfImportStaticDataSource = () =>
-  `export const WELL_KNOWN_BROWSER_PLATFORM_PATHNAME = ${uneval(
+  `export const WELL_KNOWN_SYSTEM_PATHNAME = ${uneval(WELL_KNOWN_SYSTEM_PATHNAME)}
+  export const WELL_KNOWN_BROWSER_PLATFORM_PATHNAME = ${uneval(
     WELL_KNOWN_BROWSER_PLATFORM_PATHNAME,
   )}
   export const WELL_KNOWN_SELF_IMPORT_DYNAMIC_DATA_PATHNAME = ${uneval(

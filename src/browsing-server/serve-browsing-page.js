@@ -15,50 +15,43 @@ export const serveBrowsingPage = ({
   compileServerOrigin,
   browsableMetaMap,
   request,
-}) => {
-  return firstService(
-    () => {
-      return serveBrowsingHtml({
+}) =>
+  firstService(
+    () =>
+      serveBrowsingHtml({
         projectFolder,
         browserClientFolderRelative,
         browsableMetaMap,
         request,
-      })
-    },
-    () => {
-      return redirectSystemToCompileServer({
-        compileServerOrigin,
+      }),
+    () =>
+      redirectBrowserScriptToSelfImport({
         request,
-      })
-    },
-    () => {
-      return redirectBrowserScriptToSelfImport({
-        request,
-      })
-    },
-    () => {
-      return serveSelfImport({
+      }),
+    () =>
+      serveSelfImport({
         projectFolder,
         importMapFilenameRelative,
         compileInto,
         babelConfigMap,
         request,
-      })
-    },
-    () => {
-      return serveSelfImportDynamicData({
+      }),
+    () =>
+      redirectSystemToCompileServer({
+        compileServerOrigin,
+        request,
+      }),
+    () =>
+      serveSelfImportDynamicData({
         projectFolder,
         compileInto,
         babelConfigMap,
         compileServerOrigin,
         request,
-      })
-    },
-    () => {
-      return redirectBrowserPlatformToCompileServer({
+      }),
+    () =>
+      redirectBrowserPlatformToCompileServer({
         compileServerOrigin,
         request,
-      })
-    },
+      }),
   )
-}
