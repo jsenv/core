@@ -166,6 +166,11 @@ export const startCompileServer = async ({
           request,
         }),
       () =>
+        serveCompiledAsset({
+          projectFolder,
+          request,
+        }),
+      () =>
         serveProjectFolder({
           projectFolder,
           projectFileRequestedCallback,
@@ -191,6 +196,18 @@ export const startCompileServer = async ({
   compileServer.nodeServer.unref()
 
   return compileServer
+}
+
+const serveCompiledAsset = ({ projectFolder, request: { ressource, method, headers } }) => {
+  if (!filenameRelativeIsAsset(ressource.slice(1))) return null
+  return serveFile(`${projectFolder}${ressource}`, {
+    method,
+    headers,
+    // because chrome seems to cache map files
+    // meaning reloaidng the page will not update sourcemapped code
+    // apparently not required anymore ?
+    // cacheStrategy: "none",
+  })
 }
 
 const serveProjectFolder = ({
