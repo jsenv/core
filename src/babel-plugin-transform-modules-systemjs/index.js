@@ -220,6 +220,8 @@ export default declare((api, options) => {
 
           const body = path.get("body")
 
+          let hasTopLevelAwait = false
+
           for (const path of body) {
             if (path.isFunctionDeclaration()) {
               beforeBody.push(path.node)
@@ -336,6 +338,8 @@ export default declare((api, options) => {
                   }
                 }
               }
+            } else if (path.isExpressionStatement() && path.get("expression").isAwaitExpression()) {
+              hasTopLevelAwait = true
             }
           }
 
@@ -452,7 +456,7 @@ export default declare((api, options) => {
                 [],
                 t.blockStatement(path.node.body),
                 false,
-                options.topLevelAwait,
+                options.topLevelAwait && hasTopLevelAwait,
               ),
               EXPORT_IDENTIFIER: t.identifier(exportIdent),
               CONTEXT_IDENTIFIER: t.identifier(contextIdent),
