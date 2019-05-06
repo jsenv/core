@@ -16,6 +16,7 @@ await bundleNode({
   },
   compileGroupCount: 2,
   throwUnhandled: false,
+  logBundleFilePaths: false,
 })
 
 const { namespace: actual } = await importNodeBundle({

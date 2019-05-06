@@ -15,6 +15,7 @@ await bundleNode({
     main: `${testFolderRelative}/without-balancing.js`,
   },
   throwUnhandled: false,
+  logBundleFilePaths: false,
 })
 
 const { namespace: actual } = await importNodeBundle({
