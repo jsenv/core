@@ -188,8 +188,6 @@ export const startCompileServer = async ({
     requestToResponse: serviceCompose(...services),
     verbose,
     cors,
-    startedMessage: ({ origin }) => `compile server started for ${projectFolder} at ${origin}`,
-    stoppedMessage: (reason) => `compile server stopped because ${reason}`,
   })
   // https://nodejs.org/api/net.html#net_server_unref
   // but while debugging it may close the server too soon, to be tested

@@ -1,7 +1,5 @@
 ## TODO
 
-- retest browsing server
-- rewrite chromium-launcher with new approach (with a browserClientFolder)
 - retest chromium launcher
 - retest bundle browser/bundle node
 - test node-launcher

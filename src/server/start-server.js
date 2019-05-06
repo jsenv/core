@@ -46,8 +46,8 @@ export const startServer = async ({
   requestToResponse = () => null,
   cors = false,
   verbose = true,
-  startedMessage = ({ origin }) => `server started at ${origin}`,
-  stoppedMessage = (reason) => `server stopped because ${reason}`,
+  startedCallback = () => {},
+  stoppedCallback = () => {},
 } = {}) => {
   if (port === 0 && forcePort) throw new Error(`no need to pass forcePort when port is 0`)
   if (protocol !== "http" && protocol !== "https")
@@ -56,11 +56,7 @@ export const startServer = async ({
   if (ip === "0.0.0.0" && process.platform === "win32")
     throw new Error(`listening ${ip} not available on window`)
 
-  const log = (...args) => {
-    if (verbose) {
-      console.log(...args)
-    }
-  }
+  const log = verbose ? (...args) => console.log(...args) : () => {}
 
   if (forcePort) {
     await createOperation({
@@ -97,16 +93,17 @@ export const startServer = async ({
   registerCleanupCallback(requestHandlerTracker.stop)
 
   let stoppedResolve
-  const stopped = new Promise((resolve) => {
+  const stoppedPromise = new Promise((resolve) => {
     stoppedResolve = resolve
   })
   const stop = memoizeOnce(async (reason = REASON_NOT_SPECIFIED) => {
     status = "closing"
-    log(stoppedMessage(reason))
+    log(`server stopped because ${reason}`)
 
     await cleanup(reason)
     await stopListening(nodeServer)
     status = "stopped"
+    stoppedCallback({ reason })
     stoppedResolve()
   })
   const startOperation = createStoppableOperation({
@@ -148,7 +145,8 @@ export const startServer = async ({
   port = await startOperation
   status = "opened"
   const origin = originAsString({ protocol, ip, port })
-  log(startedMessage({ origin }))
+  log(`server started at ${origin}`)
+  startedCallback({ origin })
 
   // nodeServer.on("upgrade", (request, socket, head) => {
   //   // when being requested using a websocket
@@ -227,7 +225,7 @@ export const startServer = async ({
     nodeServer,
     agent,
     stop,
-    stopped, // should be renamed stoppedPromise
+    stoppedPromise,
   }
 }
 

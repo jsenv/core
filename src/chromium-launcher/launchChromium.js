@@ -8,6 +8,10 @@ import {
   registerUngaranteedProcessTeardown,
 } from "../process-signal/index.js"
 import { startChromiumServer } from "./start-chromium-server.js"
+import { trackRessources } from "./ressource-tracker.js"
+import { trackBrowserTargets } from "./browser-target-tracker.js"
+import { trackBrowserPages } from "./browser-page-tracker.js"
+import { WELL_KNOWN_BROWSER_PLATFORM_PATHNAME } from "../browser-platform-service/index.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
@@ -43,7 +47,7 @@ export const launchChromium = async ({
     errorCallbackArray.push(callback)
   }
 
-  const { registerCleanupCallback, cleanup } = createTracker()
+  const { registerCleanupCallback, cleanup } = trackRessources()
 
   const browserOperation = createStoppableOperation({
     cancellationToken,
@@ -57,10 +61,10 @@ export const launchChromium = async ({
         handleSIGHUP: false,
       })
 
-      const targetTracker = createTargetTracker(browser)
+      const targetTracker = trackBrowserTargets(browser)
       registerCleanupCallback(targetTracker.stop)
 
-      const pageTracker = createPageTracker(browser, {
+      const pageTracker = trackBrowserPages(browser, {
         onError: (error) => {
           errorCallbackArray.forEach((callback) => {
             callback(error)
@@ -133,20 +137,18 @@ export const launchChromium = async ({
 
     const execute = async () => {
       await page.goto(`${chromiumServer.origin}/${filenameRelative}`)
-      const functionString = createFunctionEvaluatedClientSide({
+      const IIFEString = createClientIIFEString({
         compileInto,
         compileServerOrigin,
         filenameRelative,
         collectNamespace,
         collectCoverage,
-        browserClientHref: `${compileServerOrigin}/node_modules/@jsenv/core/dist/browser-client/browserClient.js`,
       })
-      const expressionString = `(${functionString})()`
       // https://github.com/GoogleChrome/puppeteer/blob/v1.14.0/docs/api.md#pageevaluatepagefunction-args
       // yes evaluate supports passing a function directly
       // but when I do that, istanbul will put coverage statement inside it
       // and I don't want that because function is evaluated client side
-      return await page.evaluate(expressionString)
+      return await page.evaluate(IIFEString)
     }
     try {
       const { status, coverageMap, error, namespace } = await execute()
@@ -190,24 +192,6 @@ export const launchChromium = async ({
   }
 }
 
-const createTracker = () => {
-  const callbackArray = []
-
-  const registerCleanupCallback = (callback) => {
-    if (typeof callback !== "function")
-      throw new TypeError(`callback must be a function
-callback: ${callback}`)
-    callbackArray.push(callback)
-  }
-
-  const cleanup = async (reason) => {
-    const localCallbackArray = callbackArray.slice()
-    await Promise.all(localCallbackArray.map((callback) => callback(reason)))
-  }
-
-  return { registerCleanupCallback, cleanup }
-}
-
 const errorToSourceError = (error, { sourceOrigin, compileServerOrigin }) => {
   if (error.code === "MODULE_PARSE_ERROR") return error
 
@@ -222,142 +206,15 @@ const errorToSourceError = (error, { sourceOrigin, compileServerOrigin }) => {
   return error
 }
 
-const createPageTracker = (browser, { onError, onConsole }) => {
-  const { registerCleanupCallback, cleanup } = createTracker()
-
-  const registerEvent = ({ object, eventType, callback }) => {
-    object.on(eventType, callback)
-    registerCleanupCallback(() => {
-      object.removeListener(eventType, callback)
-    })
-  }
-
-  registerEvent({
-    object: browser,
-    eventType: "targetcreated",
-    callback: async (target) => {
-      const type = target.type()
-      if (type === "browser") {
-        const childBrowser = target.browser()
-        const childPageTracker = createPageTracker(childBrowser, { onError, onConsole })
-
-        registerCleanupCallback(childPageTracker.stop)
-      }
-
-      // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
-      if (type === "page" || type === "background_page") {
-        const page = await target.page()
-
-        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-        registerEvent({
-          object: page,
-          eventType: "error",
-          callback: onError,
-        })
-
-        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
-        registerEvent({
-          object: page,
-          eventType: "pageerror",
-          callback: onError,
-        })
-
-        // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
-        registerEvent({
-          object: page,
-          eventType: "console",
-          callback: async (message) => {
-            // https://github.com/GoogleChrome/puppeteer/issues/3397#issuecomment-434970058
-            // https://github.com/GoogleChrome/puppeteer/issues/2083
-
-            // there is also message._args
-            // which is an array of JSHandle{ _context, _client _remoteObject }
-            const type = message.type()
-            const text = message.text()
-            if (text === "JSHandle@error") {
-              const errorHandle = message._args[0]
-
-              try {
-                // ensure we use a string so that istanbul won't try
-                // to put any coverage statement inside it
-                // eslint-disable-next-line no-new-func
-                const fn = new Function(
-                  "value",
-                  `if (value instanceof Error) {
-                  return value.stack
-                }
-                return value`,
-                )
-                const stack = await errorHandle.executionContext().evaluate(fn, errorHandle)
-                onConsole({
-                  type: "error",
-                  text: appendNewLine(stack),
-                })
-              } catch (e) {
-                onConsole({
-                  type: "error",
-                  text: String(errorHandle),
-                })
-              }
-            } else {
-              onConsole({
-                type,
-                text: appendNewLine(text),
-              })
-            }
-          },
-        })
-      }
-    },
-  })
-
-  return { stop: cleanup }
-}
-
-const createTargetTracker = (browser) => {
-  const { registerCleanupCallback, cleanup } = createTracker()
-
-  const targetcreatedCallback = (target) => {
-    const type = target.type()
-
-    if (type === "browser") {
-      const childBrowser = target.browser()
-      const childTargetTracker = createTargetTracker(childBrowser)
-      registerCleanupCallback(childTargetTracker.stop)
-    }
-
-    if (type === "page" || type === "background_page") {
-      // in case of bug do not forget https://github.com/GoogleChrome/puppeteer/issues/2269
-      registerCleanupCallback(async () => {
-        const page = await target.page()
-        return page.close()
-      })
-    }
-  }
-
-  // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
-  browser.on("targetcreated", targetcreatedCallback)
-  registerCleanupCallback(() => {
-    browser.removeListener("targetcreated", targetcreatedCallback)
-  })
-
-  return { stop: cleanup }
-}
-
-const appendNewLine = (string) => {
-  return `${string}
-`
-}
-
-const createFunctionEvaluatedClientSide = ({
+const createClientIIFEString = ({
   compileInto,
   compileServerOrigin,
   filenameRelative,
   collectNamespace,
   collectCoverage,
-}) => `() => {
+}) => `(() => {
   return window.System.import(${uneval(
-    `${compileServerOrigin}/.jsenv-well-known/browser-platform.js`,
+    `${compileServerOrigin}${WELL_KNOWN_BROWSER_PLATFORM_PATHNAME}`,
   )}).then(({ executeCompiledFile }) => {
     return executeCompiledFile({
       compileInto: ${uneval(compileInto)},
@@ -367,4 +224,4 @@ const createFunctionEvaluatedClientSide = ({
       collectCoverage: ${uneval(collectCoverage)},
     })
   })
-}`
+})()`

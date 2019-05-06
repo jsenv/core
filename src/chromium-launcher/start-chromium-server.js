@@ -31,7 +31,5 @@ export const startChromiumServer = ({
     ip: "127.0.0.1",
     port: 0,
     requestToResponse: service,
-    startedMessage: ({ origin }) => `chromium server started for ${projectFolder} at ${origin}`,
-    stoppedMessage: (reason) => `chromium server stopped because ${reason}`,
   })
 }

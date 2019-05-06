@@ -89,8 +89,6 @@ export const startBrowsingServer = async ({
     port,
     forcePort,
     requestToResponse: service,
-    startedMessage: ({ origin }) => `browsing server started for ${projectFolder} at ${origin}`,
-    stoppedMessage: (reason) => `browsing server stopped because ${reason}`,
   })
 
   return browserServer
