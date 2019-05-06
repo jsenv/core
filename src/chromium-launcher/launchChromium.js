@@ -151,7 +151,7 @@ export const launchChromium = async ({
 
     const execute = async () => {
       await page.goto(`${chromiumServer.origin}`)
-      const IIFEString = createClientIIFEString({
+      const IIFEString = createBrowserIIFEString({
         compileInto,
         compileServerOrigin,
         filenameRelative,
@@ -221,7 +221,7 @@ const errorToSourceError = (error, { projectFolder, compileServerOrigin }) => {
   return error
 }
 
-const createClientIIFEString = ({
+const createBrowserIIFEString = ({
   compileInto,
   compileServerOrigin,
   filenameRelative,

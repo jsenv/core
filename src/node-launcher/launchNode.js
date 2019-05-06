@@ -1,12 +1,11 @@
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@dmail/uneval"
-import { ROOT_FOLDER } from "../ROOT_FOLDER.js"
+import { ROOT_FOLDER } from "../ROOT_FOLDER-2.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
+import { WELL_KNOWN_NODE_PLATFORM_PATHNAME } from "../node-platform-service/index.js"
+import { SYSTEM_FILENAME } from "../compile-server/system-service/index.js"
 
-// il faudrais compiler ce node client
-// qui sers ensuite a load nodePlatform etc
-// on peut aussi se dire que y'a pas besoin de le compiler pour le moment
-const nodeClientFile = `${ROOT_FOLDER}/dist/node-client/nodeClient.js`
+const controllableNodeProcessFilename = `${ROOT_FOLDER}/src/node-launcher/node-controllable.js`
 
 export const launchNode = async ({
   cancellationToken,
@@ -34,17 +33,11 @@ export const launchNode = async ({
     processExecArgv: process.execArgv,
     processDebugPort: process.debugPort,
   })
-  // because we do something like this _exports({ ...require('fs') })
-  // which will emit every possible depreciation warning
-  // a fix would be that system.js _exports uses
-  // Object.getOwnPropertyNames instead of for(const key of value)
-  // and Object.defineProperty() instead of namespace[name] = value
-  // execArgv.push("--no-deprecation")
   if (traceWarnings && !execArgv.includes("--trace-warnings")) {
     execArgv.push("--trace-warnings")
   }
 
-  const child = forkChildProcess(nodeClientFile, {
+  const child = forkChildProcess(controllableNodeProcessFilename, {
     execArgv,
     // silent: true
     stdio: "pipe",
@@ -133,24 +126,28 @@ export const launchNode = async ({
   const executeFile = async (filenameRelative, { collectNamespace, collectCoverage }) => {
     const execute = () =>
       new Promise((resolve) => {
-        const executResultRegistration = registerChildMessage(child, "execute-result", (value) => {
+        const executResultRegistration = registerChildMessage(child, "evaluate-result", (value) => {
           executResultRegistration.unregister()
           resolve(value)
         })
 
-        sendToChild(child, "execute", {
-          projectFolder,
-          compileServerOrigin,
-          compileInto,
-
-          filenameRelative,
-          collectNamespace,
-          collectCoverage,
-          remap,
-        })
+        sendToChild(
+          child,
+          "evaluate",
+          createNodeIIFEString({
+            projectFolder,
+            compileServerOrigin,
+            compileInto,
+            filenameRelative,
+            collectNamespace,
+            collectCoverage,
+            remap,
+          }),
+        )
       })
 
     const { status, coverageMap, error, namespace } = await execute()
+    debugger
     if (status === "rejected") {
       return {
         status,
@@ -231,3 +228,35 @@ const errorToSourceError = (
 
   return error
 }
+
+const createNodeIIFEString = ({
+  projectFolder,
+  compileServerOrigin,
+  compileInto,
+  filenameRelative,
+  collectNamespace,
+  collectCoverage,
+  remap,
+}) => `(() => {
+  // I have to use fetchUsingHTTP here + eval
+
+  require(${uneval(SYSTEM_FILENAME)})
+
+  if (false && ${uneval(remap)}) {
+    // we don't have access to installSourceMapSupport here
+    installSourceMapSupport({ projectFolder: ${uneval(projectFolder)} })
+  }
+
+  return global.System.import(${uneval(
+    `${compileServerOrigin}${WELL_KNOWN_NODE_PLATFORM_PATHNAME}`,
+  )}).then(({ executeCompiledFile }) => {
+    return executeCompiledFile({
+      sourceOrigin: ${uneval(`file://${projectFolder}`)},
+      compileInto: ${uneval(compileInto)},
+      compileServerOrigin: ${uneval(compileServerOrigin)},
+      filenameRelative: ${uneval(filenameRelative)},
+      collectNamespace: ${uneval(collectNamespace)},
+      collectCoverage: ${uneval(collectCoverage)},
+    })
+  })
+})()`

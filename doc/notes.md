@@ -1,5 +1,6 @@
 ## TODO
 
+- rename browsing server into browser-explorer
 - test node-launcher
 - update all test because they have to do projectFolder: ROOT_FOLDER
 - once all test passes, publish a new jsenv version

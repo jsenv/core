@@ -362,8 +362,8 @@ const computeExecutionResult = async ({
   return executionResult
 }
 
-const createStartingPlatformMessage = ({ filenameRelative }) => `start a platform to execute a file.
-filenameRelative: ${filenameRelative}`
+const createStartingPlatformMessage = () => `
+start a platform to execute a file.`
 
 const createPlatformStartedMessage = ({
   platformName,
