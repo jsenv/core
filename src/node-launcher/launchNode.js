@@ -2,8 +2,6 @@ import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@dmail/uneval"
 import { ROOT_FOLDER } from "../ROOT_FOLDER-2.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
-import { WELL_KNOWN_NODE_PLATFORM_PATHNAME } from "../node-platform-service/index.js"
-import { SYSTEM_FILENAME } from "../compile-server/system-service/index.js"
 
 const controllableNodeProcessFilename = `${ROOT_FOLDER}/src/node-launcher/node-controllable.js`
 

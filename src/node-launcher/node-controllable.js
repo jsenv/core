@@ -1,10 +1,6 @@
 const { createCancellationSource } = require("@dmail/cancellation")
 const { uneval } = require("@dmail/uneval")
 
-process.once("unhandledRejection", (valueRejected) => {
-  throw valueRejected
-})
-
 const registerProcessInterruptCallback = (callback) => {
   process.once("SIGINT", callback)
   return () => {
