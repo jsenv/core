@@ -1,24 +1,20 @@
-import {
-  WELL_KNOWN_SYSTEM_PATHNAME,
-  WELL_KNOWN_BROWSER_PLATFORM_PATHNAME,
-  WELL_KNOWN_BROWSER_SELF_EXECUTE_DYNAMIC_DATA_PATHNAME,
-  // eslint-disable-next-line import/no-unresolved
-} from "BROWSER_SELF_EXECUTE_STATIC_DATA.js"
+// eslint-disable-next-line import/no-unresolved
+import { filenameRelative } from "/.jsenv-well-known/browser-self-execute-static-data.js"
 import { loadUsingScript } from "../loadUsingScript.js"
 
-const filenameRelative = window.location.pathname.slice(1)
-
+// eslint-disable-next-line import/newline-after-import
 ;(async () => {
-  await loadUsingScript(WELL_KNOWN_SYSTEM_PATHNAME)
+  await loadUsingScript("/.jsenv-well-known/system.js")
+  const { System } = window
 
-  const [{ executeCompiledFile }, { compileInto, compileServerOrigin }] = await Promise.all([
-    window.System.import(WELL_KNOWN_BROWSER_PLATFORM_PATHNAME),
-    window.System.import(WELL_KNOWN_BROWSER_SELF_EXECUTE_DYNAMIC_DATA_PATHNAME),
+  const [{ compileInto, compileServerOrigin }, { execute }] = await Promise.all([
+    System.import("/.jsenv-well-known/browser-self-execute-dynamic.data.js"),
+    System.import("/.jsenv-well-known/browser-execute.js"),
   ])
 
-  executeCompiledFile({
-    compileInto,
-    compileServerOrigin,
+  execute({
     filenameRelative,
+    compileServerOrigin,
+    compileInto,
   })
 })()

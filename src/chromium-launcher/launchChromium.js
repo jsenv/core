@@ -11,7 +11,6 @@ import { startChromiumServer } from "./start-chromium-server.js"
 import { trackRessources } from "./ressource-tracker.js"
 import { trackBrowserTargets } from "./browser-target-tracker.js"
 import { trackBrowserPages } from "./browser-page-tracker.js"
-import { WELL_KNOWN_BROWSER_PLATFORM_PATHNAME } from "../browser-platform-service/index.js"
 import {
   DEFAULT_COMPILE_INTO,
   DEFAULT_BROWSER_CLIENT_FOLDER_RELATIVE,
@@ -228,15 +227,11 @@ const createBrowserIIFEString = ({
   collectNamespace,
   collectCoverage,
 }) => `(() => {
-  return window.System.import(${uneval(
-    `${compileServerOrigin}${WELL_KNOWN_BROWSER_PLATFORM_PATHNAME}`,
-  )}).then(({ executeCompiledFile }) => {
-    return executeCompiledFile({
-      compileInto: ${uneval(compileInto)},
-      compileServerOrigin: ${uneval(compileServerOrigin)},
-      filenameRelative: ${uneval(filenameRelative)},
-      collectNamespace: ${uneval(collectNamespace)},
-      collectCoverage: ${uneval(collectCoverage)},
-    })
+  return window.__execute__({
+    filenameRelative: ${uneval(filenameRelative)},
+    compileServerOrigin: ${uneval(compileServerOrigin)},
+    compileInto: ${uneval(compileInto)},
+    collectNamespace: ${uneval(collectNamespace)},
+    collectCoverage: ${uneval(collectCoverage)},
   })
 })()`

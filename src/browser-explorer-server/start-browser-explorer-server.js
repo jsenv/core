@@ -14,7 +14,6 @@ import {
 } from "./browser-explorer-server-constant.js"
 import { serveBrowserExplorerIndex } from "./serve-browser-explorer-index.js"
 import { serveBrowserExplorerPage } from "./serve-browser-explorer-page.js"
-import { serveBrowserClientFolder } from "./serve-browser-client-folder.js"
 
 export const startBrowserExplorerServer = async ({
   projectFolder,
@@ -79,7 +78,6 @@ export const startBrowserExplorerServer = async ({
           browsableMetaMap: metaDescription,
           request,
         }),
-      () => serveBrowserClientFolder({ projectFolder, browserClientFolderRelative, request }),
     )
 
   const browserServer = await startServer({

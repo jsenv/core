@@ -1,9 +1,7 @@
 import { filenameRelativeInception } from "../filenameRelativeInception.js"
 import { startServer, firstService } from "../server/index.js"
-import { serveBrowserClientFolder } from "../browser-explorer-server/serve-browser-client-folder.js"
-import { redirectSystemToCompileServer } from "../browser-explorer-server/redirect-system-to-compile-server.js"
-import { redirectBrowserScriptToSystem } from "./redirect-browser-script-to-system.js"
 import { serveChromiumIndex } from "./serve-chromium-index.js"
+import { serveBrowserExecute } from "../browser-execute-service/index.js"
 
 export const startChromiumServer = ({
   cancellationToken,
@@ -22,10 +20,19 @@ export const startChromiumServer = ({
 
   const service = (request) =>
     firstService(
-      () => serveChromiumIndex({ projectFolder, browserClientFolderRelative, request }),
-      () => redirectBrowserScriptToSystem({ compileServerOrigin, request }),
-      () => redirectSystemToCompileServer({ compileServerOrigin, request }),
-      () => serveBrowserClientFolder({ projectFolder, browserClientFolderRelative, request }),
+      () =>
+        serveChromiumIndex({
+          projectFolder,
+          browserClientFolderRelative,
+          request,
+        }),
+      () =>
+        serveBrowserExecute({
+          projectFolder,
+          compileServerOrigin,
+          browserClientFolderRelative,
+          request,
+        }),
     )
 
   return startServer({

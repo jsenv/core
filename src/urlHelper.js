@@ -1,5 +1,5 @@
 import path from "path"
-import { URL } from "url"
+import { URL, URLSearchParams } from "url"
 
 // https://gist.github.com/dmail/54677cc3eae1661813e3a87840666f83#file-url-js
 
@@ -24,4 +24,14 @@ export const ressourceToFirstDirectory = (ressource) => {
   const pathname = ressourceToPathname(ressource)
   const firstDirectory = pathname.slice(0, pathname.indexOf("/"))
   return firstDirectory
+}
+
+export const ressourceToSearch = (ressource) => {
+  const searchSeparatorIndex = ressource.indexOf("?")
+  return searchSeparatorIndex === -1 ? "?" : ressource.slice(searchSeparatorIndex)
+}
+
+export const ressourceToSearchParamValue = (ressource, searchParamName) => {
+  const search = ressourceToSearch(ressource)
+  return new URLSearchParams(search).get(searchParamName)
 }
