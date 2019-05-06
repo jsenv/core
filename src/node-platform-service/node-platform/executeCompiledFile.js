@@ -3,7 +3,6 @@ import { loadNodeImporter } from "./loadNodeImporter.js"
 
 export const executeCompiledFile = ({
   compileInto,
-  compileIdOption,
   sourceOrigin,
   compileServerOrigin,
   filenameRelative,
@@ -11,8 +10,7 @@ export const executeCompiledFile = ({
   collectCoverage,
 }) =>
   genericExecuteCompiledFile({
-    loadImporter: () =>
-      loadNodeImporter({ compileInto, compileIdOption, sourceOrigin, compileServerOrigin }),
+    loadImporter: () => loadNodeImporter({ compileInto, sourceOrigin, compileServerOrigin }),
     compileInto,
     compileServerOrigin,
     filenameRelative,

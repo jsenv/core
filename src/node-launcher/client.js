@@ -11,17 +11,16 @@ import {
 import { WELL_KNOWN_NODE_PLATFORM_PATHNAME } from "../node-platform-service/index.js"
 
 const execute = async ({
-  compileInto,
-  compileIdOption,
-  sourceOrigin,
+  projectFolder,
   compileServerOrigin,
+  compileInto,
   filenameRelative,
   collectNamespace,
   collectCoverage,
   remap,
 }) => {
   if (remap) {
-    installSourceMapSupport({ sourceOrigin })
+    installSourceMapSupport({ projectFolder })
   }
 
   process.once("unhandledRejection", (valueRejected) => {
@@ -47,10 +46,9 @@ const execute = async ({
   )
 
   const { status, coverageMap, error, namespace } = await executeCompiledFile({
-    compileInto,
-    compileIdOption,
-    sourceOrigin,
+    sourceOrigin: `file://${projectFolder}`,
     compileServerOrigin,
+    compileInto,
     filenameRelative,
     collectNamespace,
     collectCoverage,

@@ -10,16 +10,19 @@ const nodeClientFile = `${ROOT_FOLDER}/dist/node-client/nodeClient.js`
 
 export const launchNode = async ({
   cancellationToken,
-  compileInto,
-  compileIdOption,
-  sourceOrigin,
+  projectFolder,
   compileServerOrigin,
+  compileInto,
   debugPort = 0,
   debugMode = "inherit",
   debugModeInheritBreak = true,
   remap = true,
   traceWarnings = true,
 }) => {
+  if (typeof projectFolder !== "string")
+    throw new TypeError(`projectFolder must be a string, got ${projectFolder}`)
+  if (typeof compileServerOrigin !== "string")
+    throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
   if (typeof compileInto !== "string")
     throw new TypeError(`compileInto must be a string, got ${compileInto}`)
 
@@ -136,10 +139,9 @@ export const launchNode = async ({
         })
 
         sendToChild(child, "execute", {
-          sourceOrigin,
+          projectFolder,
           compileServerOrigin,
           compileInto,
-          compileIdOption,
 
           filenameRelative,
           collectNamespace,
@@ -152,7 +154,7 @@ export const launchNode = async ({
     if (status === "rejected") {
       return {
         status,
-        error: errorToSourceError(error, { filenameRelative, sourceOrigin }),
+        error: errorToSourceError(error, { projectFolder, filenameRelative }),
         coverageMap,
       }
     }
