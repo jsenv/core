@@ -1,7 +1,6 @@
 ## TODO
 
-- retest chromium launcher
-- retest bundle browser/bundle node
+- retest bundle node
 - test node-launcher
 - update all test because they have to do projectFolder: ROOT_FOLDER
 - once all test passes, publish a new jsenv version
