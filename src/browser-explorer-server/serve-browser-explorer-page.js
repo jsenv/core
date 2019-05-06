@@ -1,12 +1,12 @@
 import { firstService } from "../server/index.js"
-import { serveBrowsingHtml } from "./serve-browsing-html.js"
+import { serveBrowserExplorerPageHTML } from "./serve-browser-explorer-page-html.js"
 import { redirectSystemToCompileServer } from "./redirect-system-to-compile-server.js"
-import { redirectBrowserScriptToSelfImport } from "./redirect-browser-script-to-self-import.js"
-import { serveSelfImport } from "./serve-self-import.js"
-import { serveSelfImportDynamicData } from "./serve-self-import-dynamic-data.js"
+import { redirectBrowserScriptToBrowserSelfExecute } from "./redirect-browser-script-to-browser-self-execute.js"
+import { serveBrowserSelfExecute } from "./serve-browser-self-execute.js"
+import { serveBrowserSelfExecuteDynamicData } from "./serve-browser-self-execute-dynamic-data.js"
 import { redirectBrowserPlatformToCompileServer } from "./redirect-browser-platform-to-compile-server.js"
 
-export const serveBrowsingPage = ({
+export const serveBrowserExplorerPage = ({
   projectFolder,
   importMapFilenameRelative,
   browserClientFolderRelative,
@@ -18,18 +18,18 @@ export const serveBrowsingPage = ({
 }) =>
   firstService(
     () =>
-      serveBrowsingHtml({
+      serveBrowserExplorerPageHTML({
         projectFolder,
         browserClientFolderRelative,
         browsableMetaMap,
         request,
       }),
     () =>
-      redirectBrowserScriptToSelfImport({
+      redirectBrowserScriptToBrowserSelfExecute({
         request,
       }),
     () =>
-      serveSelfImport({
+      serveBrowserSelfExecute({
         projectFolder,
         importMapFilenameRelative,
         compileInto,
@@ -42,7 +42,7 @@ export const serveBrowsingPage = ({
         request,
       }),
     () =>
-      serveSelfImportDynamicData({
+      serveBrowserSelfExecuteDynamicData({
         projectFolder,
         compileInto,
         babelConfigMap,

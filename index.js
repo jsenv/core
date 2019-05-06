@@ -25,7 +25,7 @@ export { bundleNode } from "./src/bundle/node/bundleNode.js"
 export { bundleBrowser } from "./src/bundle/browser/bundleBrowser.js"
 
 // may be moved to jsenv/browsing-server
-export { startBrowsingServer } from "./src/browsing-server/index.js"
+export { startBrowserExplorerServer } from "./src/browser-explorer-server/index.js"
 
 // must be moved later to jsenv/chromium-launcher
 export { launchChromium } from "./src/chromium-launcher/index.js"

@@ -11,12 +11,12 @@ import {
   DEFAULT_COMPILE_INTO,
   DEFAULT_BROWSABLE_DESCRIPTION,
   DEFAULT_BABEL_CONFIG_MAP,
-} from "./browsing-server-constant.js"
-import { serveBrowsingIndex } from "./serve-browsing-index.js"
-import { serveBrowsingPage } from "./serve-browsing-page.js"
+} from "./browser-explorer-server-constant.js"
+import { serveBrowserExplorerIndex } from "./serve-browser-explorer-index.js"
+import { serveBrowserExplorerPage } from "./serve-browser-explorer-page.js"
 import { serveBrowserClientFolder } from "./serve-browser-client-folder.js"
 
-export const startBrowsingServer = async ({
+export const startBrowserExplorerServer = async ({
   projectFolder,
   cancellationToken = createCancellationToken(),
   babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
@@ -63,13 +63,13 @@ export const startBrowsingServer = async ({
   const service = (request) =>
     firstService(
       () =>
-        serveBrowsingIndex({
+        serveBrowserExplorerIndex({
           projectFolder,
           metaDescription,
           request,
         }),
       () =>
-        serveBrowsingPage({
+        serveBrowserExplorerPage({
           projectFolder,
           importMapFilenameRelative,
           browserClientFolderRelative,

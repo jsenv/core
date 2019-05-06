@@ -1,12 +1,12 @@
 import { ROOT_FOLDER } from "../../src/ROOT_FOLDER.js"
 import { hrefToFolderJsenvRelative } from "../../src/hrefToFolderJsenvRelative.js"
-import { startBrowsingServer } from "../../index.js"
+import { startBrowserExplorerServer } from "../../index.js"
 
 const projectFolder = ROOT_FOLDER
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
 const compileInto = `${testFolderRelative}/.dist`
 
-startBrowsingServer({
+startBrowserExplorerServer({
   projectFolder,
   compileInto,
   browsableDescription: {

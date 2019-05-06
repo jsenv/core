@@ -1,6 +1,6 @@
 import { selectAllFileInsideFolder } from "@dmail/project-structure"
 
-export const serveBrowsingIndex = async ({
+export const serveBrowserExplorerIndex = async ({
   projectFolder,
   metaDescription,
   request: { ressource },

@@ -1,7 +1,7 @@
 import { filenameRelativeInception } from "../filenameRelativeInception.js"
 import { startServer, firstService } from "../server/index.js"
-import { serveBrowserClientFolder } from "../browsing-server/serve-browser-client-folder.js"
-import { redirectSystemToCompileServer } from "../browsing-server/redirect-system-to-compile-server.js"
+import { serveBrowserClientFolder } from "../browser-explorer-server/serve-browser-client-folder.js"
+import { redirectSystemToCompileServer } from "../browser-explorer-server/redirect-system-to-compile-server.js"
 import { redirectBrowserScriptToSystem } from "./redirect-browser-script-to-system.js"
 import { serveChromiumIndex } from "./serve-chromium-index.js"
 

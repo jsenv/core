@@ -1,7 +1,7 @@
 import { pathnameToMeta } from "@dmail/project-structure"
 import { serveFile } from "../file-service/index.js"
 
-export const serveBrowsingHtml = ({
+export const serveBrowserExplorerPageHTML = ({
   projectFolder,
   browserClientFolderRelative,
   browsableMetaMap,
