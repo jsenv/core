@@ -6,14 +6,13 @@
 - update all test because they have to do projectFolder: ROOT_FOLDER
 - once all test passes, publish a new jsenv version
 - ensure jsenv inception works
+- retry to disable inspect-brk inside vscode (by passing debugModeInheritBreak: false)
 - make assert use latest jsenv
 - create a github page embedding a codepen to play with @dmail/assert in the browser
 - create a github page embedding a runkit to play with @dmail/assert in node
 - move generateImportMapForProjectNodeModules into its own jsenv-node-import-map github project to extract this logic
 
 ## To keep in mind
-
-- retry to disable inspect-brk inside vscode
 
 - once https://github.com/systemjs/systemjs/issues/1924 and
   https://github.com/systemjs/systemjs/pull/1925 gets fixed, update

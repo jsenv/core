@@ -12,20 +12,30 @@ import { trackRessources } from "./ressource-tracker.js"
 import { trackBrowserTargets } from "./browser-target-tracker.js"
 import { trackBrowserPages } from "./browser-page-tracker.js"
 import { WELL_KNOWN_BROWSER_PLATFORM_PATHNAME } from "../browser-platform-service/index.js"
+import {
+  DEFAULT_COMPILE_INTO,
+  DEFAULT_BROWSER_CLIENT_FOLDER_RELATIVE,
+} from "./launch-chromium-constant.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
-  compileInto,
-  sourceOrigin,
+  projectFolder,
   compileServerOrigin,
-
+  compileInto = DEFAULT_COMPILE_INTO,
+  browserClientFolderRelative = DEFAULT_BROWSER_CLIENT_FOLDER_RELATIVE,
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
+  verbose,
   headless = true,
 }) => {
+  if (typeof projectFolder !== "string")
+    throw new TypeError(`projectFolder must be a string, got ${projectFolder}`)
+  if (typeof compileServerOrigin !== "string")
+    throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
+
   const options = {
     headless,
     // because we use a self signed certificate
@@ -127,16 +137,20 @@ export const launchChromium = async ({
       browser.newPage(),
       startChromiumServer({
         cancellationToken,
+        projectFolder,
+        compileServerOrigin,
+        browserClientFolderRelative,
         protocol,
         ip,
         port,
-        page,
+        verbose,
+        filenameRelative,
       }),
     ])
     registerCleanupCallback(chromiumServer.stop)
 
     const execute = async () => {
-      await page.goto(`${chromiumServer.origin}/${filenameRelative}`)
+      await page.goto(`${chromiumServer.origin}`)
       const IIFEString = createClientIIFEString({
         compileInto,
         compileServerOrigin,
@@ -155,7 +169,7 @@ export const launchChromium = async ({
       if (status === "rejected") {
         return {
           status,
-          error: errorToSourceError(error, { sourceOrigin, compileServerOrigin }),
+          error: errorToSourceError(error, { projectFolder, compileServerOrigin }),
           coverageMap,
         }
       }
@@ -192,7 +206,7 @@ export const launchChromium = async ({
   }
 }
 
-const errorToSourceError = (error, { sourceOrigin, compileServerOrigin }) => {
+const errorToSourceError = (error, { projectFolder, compileServerOrigin }) => {
   if (error.code === "MODULE_PARSE_ERROR") return error
 
   // does not truly work
@@ -200,6 +214,7 @@ const errorToSourceError = (error, { sourceOrigin, compileServerOrigin }) => {
   // error is correctly remapped inside chrome devtools
   // but the error we receive here is not remapped
   // client side would be better but here could be enough
+  const sourceOrigin = `file://${projectFolder}`
   const remoteRootRegexp = new RegExp(regexpEscape(compileServerOrigin), "g")
   error.stack = error.stack.replace(remoteRootRegexp, sourceOrigin)
   error.message = error.message.replace(remoteRootRegexp, sourceOrigin)

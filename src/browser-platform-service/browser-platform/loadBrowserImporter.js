@@ -31,7 +31,7 @@ export const loadBrowserImporter = memoizeOnce(async ({ compileInto, compileServ
 const decideCompileId = async () => {
   const returnedGroupId = await resolveBrowserGroup({ groupMap })
 
-  if (typeof returnedGroupId === undefined) return "otherwise"
+  if (typeof returnedGroupId === "undefined") return "otherwise"
 
   if (returnedGroupId in groupMap === false) {
     throw new Error(

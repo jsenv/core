@@ -36,7 +36,7 @@ export const loadNodeImporter = memoizeOnce(
 const decideCompileId = async () => {
   const returnedGroupId = await resolveNodeGroup({ groupMap })
 
-  if (typeof returnedGroupId === undefined) return "otherwise"
+  if (typeof returnedGroupId === "undefined") return "otherwise"
 
   if (returnedGroupId in groupMap === false) {
     throw new Error(
