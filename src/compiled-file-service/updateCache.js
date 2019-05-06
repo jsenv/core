@@ -6,7 +6,7 @@ export const updateCache = ({
   projectFolder,
   sourceFilenameRelative,
   compiledFilenameRelative,
-  serverCompileCacheTrackHit,
+  cacheHitTracking,
   cache,
   compileResult,
   compileResultStatus,
@@ -50,7 +50,7 @@ export const updateCache = ({
     }
   }
 
-  if (isNew || isUpdated || (isCached && serverCompileCacheTrackHit)) {
+  if (isNew || isUpdated || (isCached && cacheHitTracking)) {
     if (isNew) {
       cache = {
         sourceFilenameRelative,
@@ -61,7 +61,7 @@ export const updateCache = ({
         assetsEtag: assetsContent.map((assetContent) => createETag(assetContent)),
         createdMs: Number(Date.now()),
         lastModifiedMs: Number(Date.now()),
-        ...(serverCompileCacheTrackHit
+        ...(cacheHitTracking
           ? {
               matchCount: 1,
               lastMatchMs: Number(Date.now()),
@@ -76,7 +76,7 @@ export const updateCache = ({
         assets,
         assetsEtag: assetsContent.map((assetContent) => createETag(assetContent)),
         lastModifiedMs: Number(Date.now()),
-        ...(serverCompileCacheTrackHit
+        ...(cacheHitTracking
           ? {
               matchCount: cache.matchCount + 1,
               lastMatchMs: Number(Date.now()),
@@ -86,7 +86,7 @@ export const updateCache = ({
     } else {
       cache = {
         ...cache,
-        ...(serverCompileCacheTrackHit
+        ...(cacheHitTracking
           ? {
               matchCount: cache.matchCount + 1,
               lastMatchMs: Number(Date.now()),
