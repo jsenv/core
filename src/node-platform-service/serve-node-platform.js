@@ -42,6 +42,7 @@ export const serveNodePlatform = ({
       [NODE_PLATFORM_DATA_SPECIFIER]: () => generateNodePlatformDataSource({ groupMap }),
     },
     headers,
+    format: "cjs",
   })
 }
 

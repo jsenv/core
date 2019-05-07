@@ -1,5 +1,6 @@
 import { extname, dirname, basename } from "path"
 import { bundleBrowser } from "../bundle/browser/bundleBrowser.js"
+import { bundleNode } from "../bundle/node/bundleNode.js"
 import { serveCompiledFile } from "../compiled-file-service/index.js"
 import { platformClientBundleToCompilationResult } from "./platformClientBundleToCompilationResult.js"
 
@@ -29,7 +30,9 @@ export const serveBundle = async ({
         [entryName]: sourceFilenameRelative,
       }
 
-      const bundle = await bundleBrowser({
+      const generateBundle = format === "cjs" ? bundleNode : bundleBrowser
+
+      const bundle = await generateBundle({
         projectFolder,
         importMapFilenameRelative,
         into: compileInto,

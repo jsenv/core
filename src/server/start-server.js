@@ -204,7 +204,10 @@ export const startServer = async ({
       response = Object.freeze({
         status: 500,
         statusText: REASON_INTERNAL_ERROR,
-        headers: {},
+        headers: {
+          // ensure error are not cached
+          "cache-control": "no-store",
+        },
         body: error && error.stack ? error.stack : error,
       })
     }

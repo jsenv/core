@@ -1,4 +1,5 @@
-import { executeCompiledFile } from "./executeCompiledFile.js"
-import { importCompiledFile } from "./importCompiledFile.js"
+import { createBrowserPlatform } from "./create-browser-platform.js"
 
-export { importCompiledFile, executeCompiledFile }
+window.__browserPlatform__ = {
+  create: createBrowserPlatform,
+}

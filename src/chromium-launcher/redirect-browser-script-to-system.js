@@ -1,6 +1,6 @@
 import { WELL_KNOWN_SYSTEM_PATHNAME } from "../compile-server/system-service/index.js"
 
-const WELL_KNOWN_BROWSER_SCRIPT_PATHNAME = "/.jsenv-well-known/browser-script.js"
+const WELL_KNOWN_BROWSER_SCRIPT_PATHNAME = "/.jsenv/browser-script.js"
 
 export const redirectBrowserScriptToSystem = ({ compileServerOrigin, request: { ressource } }) => {
   if (ressource !== WELL_KNOWN_BROWSER_SCRIPT_PATHNAME) return null

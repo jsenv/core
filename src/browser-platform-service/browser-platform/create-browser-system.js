@@ -1,16 +1,19 @@
+/* eslint-disable import/max-dependencies */
 import { resolveImport, remapResolvedImport } from "@jsenv/module-resolution"
-import { hrefToFilenameRelative } from "../../../platform/hrefToFilenameRelative.js"
-import { valueInstall } from "../../../platform/valueInstall.js"
+import "../../compile-server/system-service/s.js"
+import { createImportTracker } from "../../platform/createImportTracker.js"
+import { hrefToFilenameRelative } from "../../platform/hrefToFilenameRelative.js"
+import { valueInstall } from "../../platform/valueInstall.js"
 import {
   fromFunctionReturningNamespace,
   fromHref,
-} from "../../../platform/registerModuleFrom/index.js"
-import { fetchSource } from "../fetchSource.js"
-import { evalSource } from "../evalSource.js"
+} from "../../platform/registerModuleFrom/index.js"
+import { fetchSource } from "./fetchSource.js"
+import { evalSource } from "./evalSource.js"
 
 const GLOBAL_SPECIFIER = "global"
 
-export const createBrowserSystem = ({ compileInto, compileServerOrigin, importMap }) => {
+export const createBrowserSystem = async ({ compileServerOrigin, compileInto, importMap }) => {
   if (typeof window.System === "undefined") throw new Error(`window.System is undefined`)
 
   const browserSystem = new window.System.constructor()
@@ -30,9 +33,12 @@ export const createBrowserSystem = ({ compileInto, compileServerOrigin, importMa
     })
   }
 
+  const importTracker = createImportTracker()
   browserSystem.instantiate = (href, importerHref) => {
     if (href === GLOBAL_SPECIFIER)
       return fromFunctionReturningNamespace(() => window, { href, importerHref })
+
+    importTracker.markHrefAsImported(href)
 
     return fromHref({
       href,

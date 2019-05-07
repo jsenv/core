@@ -1,7 +1,7 @@
 import { stringToStringWithLink } from "../../stringToStringWithLink.js"
 import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 
-export const displayErrorInDocument = (error, { compileServerOrigin }) => {
+export const displayErrorInDocument = (error) => {
   const meta = rejectionValueToMeta(error)
   const theme = meta.dataTheme || "dark"
   const hasImportInfo = meta.href && meta.importerHref
@@ -12,18 +12,14 @@ export const displayErrorInDocument = (error, { compileServerOrigin }) => {
     ? createHTMLForErrorWithImportInfo({
         href: meta.href,
         importerHref: meta.importerHref,
-        compileServerOrigin,
       })
     : hasHrefInfo
     ? createHTMLForErrorWithHrefInfo({
         href: meta.href,
-        compileServerOrigin,
       })
     : createHTMLForError()
 
-  let message = errorToHTML(meta.error, {
-    compileServerOrigin,
-  })
+  let message = errorToHTML(meta.error)
 
   message = message.replace(/\n/g, "\n")
 
@@ -70,23 +66,18 @@ export const displayErrorInDocument = (error, { compileServerOrigin }) => {
 const createHTMLForErrorWithImportInfo = ({
   href,
   importerHref,
-  compileServerOrigin,
 }) => `error with imported module.<br />
-href: ${convertHrefToLink({ href, compileServerOrigin })}
-imported by: ${convertHrefToLink({ href: importerHref, compileServerOrigin })}`
+href: ${convertHrefToLink({ href })}
+imported by: ${convertHrefToLink({ href: importerHref })}`
 
-const createHTMLForErrorWithHrefInfo = ({ href, compileServerOrigin }) => `error with module.<br/>
-href: ${convertHrefToLink({ href, compileServerOrigin })}`
+const createHTMLForErrorWithHrefInfo = ({ href }) => `error with module.<br/>
+href: ${convertHrefToLink({ href })}`
 
 const createHTMLForError = () => `error during execution.`
 
-const convertHrefToLink = ({ href, compileServerOrigin }) =>
-  `<a href="${href}">${shortenProjectLink({ href, compileServerOrigin })}</a>`
+const convertHrefToLink = ({ href }) => `<a href="${href}">${href}</a>`
 
-const shortenProjectLink = ({ href, compileServerOrigin }) =>
-  href.replace(`${compileServerOrigin}/`, "")
-
-const errorToHTML = (error, { compileServerOrigin }) => {
+const errorToHTML = (error) => {
   let html
 
   if (error && error instanceof Error) {
@@ -99,7 +90,7 @@ const errorToHTML = (error, { compileServerOrigin }) => {
 
   return stringToStringWithLink(html, {
     transform: (href) => {
-      return { href, text: shortenProjectLink({ href, compileServerOrigin }) }
+      return { href, text: href }
     },
   })
 }

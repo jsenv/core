@@ -139,6 +139,7 @@ export const launchChromium = async ({
         projectFolder,
         compileServerOrigin,
         browserClientFolderRelative,
+        compileInto,
         protocol,
         ip,
         port,

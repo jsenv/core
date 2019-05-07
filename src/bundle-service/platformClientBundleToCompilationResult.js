@@ -11,29 +11,45 @@ export const platformClientBundleToCompilationResult = ({
 }) => {
   const main = bundle.output[0]
   const mainSourcemap = main.map
-  const sources = mainSourcemap.sources.map((sourceRelativeToEntryDirectory) => {
+
+  const sources = []
+  const sourcesContent = []
+  mainSourcemap.sources.forEach((sourceRelativeToEntryDirectory, index) => {
     const sourceFilename = resolve(
       dirname(`${projectFolder}/${compileInto}/${filenameRelative}`),
       sourceRelativeToEntryDirectory,
     )
+
+    if (
+      sourceFilename in inlineSpecifierMap &&
+      typeof inlineSpecifierMap[sourceFilename] === "function"
+    ) {
+      return
+    }
+
     const sourceRelativeToProjectFolder = sourceFilename.slice(`${projectFolder}/`.length)
-    return sourceRelativeToProjectFolder
+    const source = `/${sourceRelativeToProjectFolder}`
+
+    if (source in inlineSpecifierMap && typeof inlineSpecifierMap[sourceFilename] === "function") {
+      return
+    }
+
+    sources.push(source)
+    sourcesContent.push(mainSourcemap.sourcesContent[index])
   })
   const sourcemap = {
     ...mainSourcemap,
-    sources: sources.map((source) => `/${source}`),
+    sources,
+    sourcesContent,
   }
 
-  const sourcesContent = mainSourcemap.sourcesContent.slice()
-
+  // .json files are not added to map.sources by rollup
+  // because inside jsenv-rollup-plugin we return an empty sourcemap
+  // for json files.
+  // we manually ensure they are registered as dependencies
+  // to build the bundle
   Object.keys(inlineSpecifierMap).forEach((specifier) => {
     const specifierMapping = inlineSpecifierMap[specifier]
-
-    // .json files are not added to map.sources by rollup
-    // because inside jsenv-rollup-plugin we return an empty sourcemap
-    // for json files.
-    // we manually ensure they are registered as dependencies
-    // to build the bundle
     if (
       typeof specifierMapping === "string" &&
       specifierMapping.endsWith(".json") &&
@@ -41,21 +57,9 @@ export const platformClientBundleToCompilationResult = ({
     ) {
       const expectedSource = specifierMapping.slice(`${projectFolder}/`.length)
       const sourceIndex = sources.indexOf(expectedSource)
-      //
       if (sourceIndex === -1) {
         sources.push(expectedSource)
         sourcesContent.push(String(readFileSync(specifierMapping)))
-      }
-    }
-
-    // they are dynamic sources, they have no real location
-    // on filesystem
-    if (typeof specifierMapping === "function") {
-      const sourceIndex = sources.indexOf(specifier)
-
-      if (sourceIndex > -1) {
-        sources.splice(sourceIndex, 1)
-        sourcesContent.splice(sourceIndex, 1)
       }
     }
   })
