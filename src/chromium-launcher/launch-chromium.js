@@ -1,13 +1,12 @@
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
-import { uneval } from "@dmail/uneval"
 import { regexpEscape } from "../stringHelper.js"
 import {
   registerProcessInterruptCallback,
   registerUngaranteedProcessTeardown,
 } from "../process-signal/index.js"
-import { startChromiumServer } from "./start-chromium-server.js"
+import { startPuppeteerServer } from "./start-puppeteer-server.js"
 import { trackRessources } from "./ressource-tracker.js"
 import { trackBrowserTargets } from "./browser-target-tracker.js"
 import { trackBrowserPages } from "./browser-page-tracker.js"
@@ -24,9 +23,6 @@ export const launchChromium = async ({
   compileServerOrigin,
   compileInto = DEFAULT_COMPILE_INTO,
   browserClientFolderRelative = DEFAULT_BROWSER_CLIENT_FOLDER_RELATIVE,
-  protocol = "http",
-  ip = "127.0.0.1",
-  port = 0,
   verbose,
   headless = true,
 }) => {
@@ -134,35 +130,27 @@ export const launchChromium = async ({
   const executeFile = async (filenameRelative, { collectNamespace, collectCoverage }) => {
     const [page, chromiumServer] = await Promise.all([
       browser.newPage(),
-      startChromiumServer({
+      startPuppeteerServer({
         cancellationToken,
         projectFolder,
         compileServerOrigin,
         browserClientFolderRelative,
         compileInto,
-        protocol,
-        ip,
-        port,
         verbose,
         filenameRelative,
+        collectNamespace,
+        collectCoverage,
       }),
     ])
     registerCleanupCallback(chromiumServer.stop)
 
     const execute = async () => {
       await page.goto(`${chromiumServer.origin}`)
-      const IIFEString = createBrowserIIFEString({
-        compileInto,
-        compileServerOrigin,
-        filenameRelative,
-        collectNamespace,
-        collectCoverage,
-      })
       // https://github.com/GoogleChrome/puppeteer/blob/v1.14.0/docs/api.md#pageevaluatepagefunction-args
       // yes evaluate supports passing a function directly
       // but when I do that, istanbul will put coverage statement inside it
       // and I don't want that because function is evaluated client side
-      return await page.evaluate(IIFEString)
+      return await page.evaluate(createBrowserIIFEString())
     }
     try {
       const { status, coverageMap, error, namespace } = await execute()
@@ -221,18 +209,6 @@ const errorToSourceError = (error, { projectFolder, compileServerOrigin }) => {
   return error
 }
 
-const createBrowserIIFEString = ({
-  compileInto,
-  compileServerOrigin,
-  filenameRelative,
-  collectNamespace,
-  collectCoverage,
-}) => `(() => {
-  return window.__execute__({
-    filenameRelative: ${uneval(filenameRelative)},
-    compileServerOrigin: ${uneval(compileServerOrigin)},
-    compileInto: ${uneval(compileInto)},
-    collectNamespace: ${uneval(collectNamespace)},
-    collectCoverage: ${uneval(collectCoverage)},
-  })
+const createBrowserIIFEString = () => `(() => {
+  return window.execute()
 })()`

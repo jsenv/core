@@ -1,1 +1,1 @@
-export { launchChromium } from "./launchChromium.js"
+export { launchChromium } from "./launch-chromium.js"

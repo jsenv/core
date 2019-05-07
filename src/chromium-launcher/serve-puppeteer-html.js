@@ -1,6 +1,6 @@
 import { serveFile } from "../file-service/index.js"
 
-export const serveChromiumIndex = ({
+export const servePuppeteerHtml = ({
   projectFolder,
   browserClientFolderRelative,
   request: { ressource, headers },
