@@ -7,6 +7,7 @@ import {
   hrefToPathname,
 } from "@jsenv/module-resolution"
 import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
+import "../../../compile-server/system-service/s.js"
 import { hrefToFilenameRelative } from "../../../platform/hrefToFilenameRelative.js"
 import {
   fromFunctionReturningNamespace,
@@ -17,7 +18,6 @@ import { compiledHrefToCompiledFilename } from "../compiledHrefToCompiledFilenam
 import { fetchSource } from "../fetchSource.js"
 import { evalSource } from "../evalSource.js"
 // const SYSTEMJS_RELATIVE_PATH = "src/systemjs/s.js"
-// import "../../../systemjs/s.js"
 
 const GLOBAL_SPECIFIER = "global"
 
