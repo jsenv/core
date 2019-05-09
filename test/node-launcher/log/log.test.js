@@ -10,9 +10,9 @@ const compileInto = `${testFolderRelative}/.dist`
 const filenameRelative = `${testFolderRelative}/log.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  verbose: true,
   projectFolder,
   compileInto,
+  verbose: true,
 })
 
 const actual = await launchAndExecute({
@@ -22,7 +22,6 @@ const actual = await launchAndExecute({
   verbose: true,
 })
 actual.platformLog = removeDebuggerLog(actual.platformLog)
-debugger
 const expected = {
   status: "completed",
   platformLog: `foo

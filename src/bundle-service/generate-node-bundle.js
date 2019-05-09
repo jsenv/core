@@ -10,7 +10,9 @@ export const generateNodeBundle = async ({
   babelConfigMap,
   filenameRelative,
   sourceFilenameRelative,
-  inlineSpecifierMap,
+  inlineSpecifierMap = {},
+  sourcemapFilenameRelative = computeSourcemapFilenameRelative(filenameRelative),
+  verbose = false,
 }) => {
   return getOrGenerateCompiledFile({
     projectFolder,
@@ -20,7 +22,11 @@ export const generateNodeBundle = async ({
       const entryExtname = extname(filenameRelative)
       const entryBasename = basename(filenameRelative, entryExtname)
       const entryDirname = dirname(filenameRelative)
-      const entryName = `${entryDirname ? `${entryDirname}/` : ""}${entryBasename}`
+      const entryName = entryBasename // `${entryDirname ? `${entryDirname}/` : ""}${entryBasename}`
+
+      if (entryDirname) {
+        compileInto = `${compileInto}/${entryDirname}`
+      }
 
       const entryPointMap = {
         [entryName]: sourceFilenameRelative,
@@ -37,12 +43,14 @@ export const generateNodeBundle = async ({
         throwUnhandled: false,
         writeOnFileSystem: false,
         logBundleFilePaths: false,
+        verbose,
       })
 
       return platformClientBundleToCompilationResult({
         projectFolder,
         compileInto,
         filenameRelative,
+        sourcemapFilenameRelative,
         inlineSpecifierMap,
         bundle,
       })
@@ -53,4 +61,10 @@ export const generateNodeBundle = async ({
     cacheHitTracking: false,
     cacheInterProcessLocking: false,
   })
+}
+
+const computeSourcemapFilenameRelative = (filenameRelative) => {
+  const entryBasename = basename(filenameRelative)
+  const sourcemapFilenameRelative = `${entryBasename}__asset__/${entryBasename}.map`
+  return sourcemapFilenameRelative
 }

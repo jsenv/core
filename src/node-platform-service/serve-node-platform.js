@@ -3,7 +3,7 @@ import { filenameRelativeInception } from "../filenameRelativeInception.js"
 import { serveBundle } from "../bundle-service/index.js"
 
 const IMPORT_MAP_SPECIFIER = "IMPORT_MAP.json"
-export const WELL_KNOWN_NODE_PLATFORM_PATHNAME = `/.jsenv-well-known/node-client.js`
+export const JSENV_NODE_PLATFORM_PATHNAME = `/.jsenv/node-platform.js`
 const NODE_PLATFORM_FILENAME_RELATIVE =
   "node_modules/@jsenv/core/src/node-platform-service/node-platform/index.js"
 const NODE_PLATFORM_DATA_SPECIFIER = "NODE_PLATFORM_DATA.js"
@@ -19,7 +19,7 @@ export const serveNodePlatform = ({
   // projectFileRequestedCallback,
   request: { ressource, headers },
 }) => {
-  if (ressource !== WELL_KNOWN_NODE_PLATFORM_PATHNAME) return null
+  if (ressource !== JSENV_NODE_PLATFORM_PATHNAME) return null
 
   const nodeGroupResolverFilenameRelativeInception = filenameRelativeInception({
     projectFolder,
@@ -31,7 +31,7 @@ export const serveNodePlatform = ({
     importMapFilenameRelative,
     compileInto,
     babelConfigMap,
-    filenameRelative: WELL_KNOWN_NODE_PLATFORM_PATHNAME.slice(1),
+    filenameRelative: JSENV_NODE_PLATFORM_PATHNAME.slice(1),
     sourceFilenameRelative: filenameRelativeInception({
       projectFolder,
       filenameRelative: NODE_PLATFORM_FILENAME_RELATIVE,

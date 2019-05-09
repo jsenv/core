@@ -5,19 +5,67 @@ import { writeOrUpdateSourceMappingURL } from "../source-mapping-url.js"
 export const platformClientBundleToCompilationResult = ({
   projectFolder,
   compileInto,
-  filenameRelative,
+  sourceFilenameRelative,
   inlineSpecifierMap,
   bundle,
   sourcemapFilenameRelative,
 }) => {
-  const main = bundle.output[0]
-  const mainSourcemap = main.map
+  const output = bundle.output
+  const main = output[0]
 
+  const mainSourcemap = rollupSourcemapToCompilationSourcemap({
+    rollupSourcemap: main.map,
+    projectFolder,
+    compileInto,
+    sourceFilenameRelative,
+    inlineSpecifierMap,
+  })
+
+  const sources = mainSourcemap.sources
+  const sourcesContent = mainSourcemap.sourcesContent
+  const compiledSource = writeOrUpdateSourceMappingURL(main.code, `./${sourcemapFilenameRelative}`)
+  const assets = [sourcemapFilenameRelative]
+  const assetsContent = [JSON.stringify(mainSourcemap, null, "  ")]
+
+  output.slice(1).forEach((chunk) => {
+    const chunkSourcemap = rollupSourcemapToCompilationSourcemap({
+      rollupSourcemap: chunk.map,
+      projectFolder,
+      compileInto,
+      sourceFilenameRelative,
+      inlineSpecifierMap,
+    })
+    sources.push(...chunkSourcemap.sources) // we should avod duplication I guess
+    sourcesContent.push(...chunkSourcemap.sourcesContent) // same here, avoid duplication
+
+    assets.push(chunk.fileName)
+    assetsContent.push(writeOrUpdateSourceMappingURL(chunk.code, `./${chunk.fileName}.map`))
+    assets.push(`${chunk.fileName}.map`)
+    assetsContent.push(JSON.stringify(chunkSourcemap, null, "  "))
+  })
+
+  return {
+    contentType: "application/javascript",
+    compiledSource,
+    sources,
+    sourcesContent,
+    assets,
+    assetsContent,
+  }
+}
+
+const rollupSourcemapToCompilationSourcemap = ({
+  rollupSourcemap,
+  projectFolder,
+  compileInto,
+  sourceFilenameRelative,
+  inlineSpecifierMap,
+}) => {
   const sources = []
   const sourcesContent = []
-  mainSourcemap.sources.forEach((sourceRelativeToEntryDirectory, index) => {
+  rollupSourcemap.sources.forEach((sourceRelativeToEntryDirectory, index) => {
     const sourceFilename = resolve(
-      dirname(`${projectFolder}/${compileInto}/${filenameRelative}`),
+      dirname(`${projectFolder}/${compileInto}/${sourceFilenameRelative}`),
       sourceRelativeToEntryDirectory,
     )
 
@@ -28,6 +76,13 @@ export const platformClientBundleToCompilationResult = ({
       return
     }
 
+    if (!sourceFilename.startsWith(`${projectFolder}/`)) {
+      throw new Error(`a source is not inside project
+source: ${sourceRelativeToEntryDirectory}
+sourceFilename: ${sourceFilename}
+projectFolder: ${projectFolder}`)
+    }
+
     const sourceRelativeToProjectFolder = sourceFilename.slice(`${projectFolder}/`.length)
     const source = `/${sourceRelativeToProjectFolder}`
 
@@ -36,13 +91,8 @@ export const platformClientBundleToCompilationResult = ({
     }
 
     sources.push(source)
-    sourcesContent.push(mainSourcemap.sourcesContent[index])
+    sourcesContent.push(rollupSourcemap.sourcesContent[index])
   })
-  const sourcemap = {
-    ...mainSourcemap,
-    sources,
-    sourcesContent,
-  }
 
   // .json files are not added to map.sources by rollup
   // because inside jsenv-rollup-plugin we return an empty sourcemap
@@ -65,14 +115,11 @@ export const platformClientBundleToCompilationResult = ({
     }
   })
 
-  const compiledSource = writeOrUpdateSourceMappingURL(main.code, `./${sourcemapFilenameRelative}`)
-
-  return {
-    contentType: "application/javascript",
-    compiledSource,
+  const sourcemap = {
+    ...rollupSourcemap,
     sources,
     sourcesContent,
-    assets: [sourcemapFilenameRelative],
-    assetsContent: [JSON.stringify(sourcemap, null, "  ")],
   }
+
+  return sourcemap
 }

@@ -2,6 +2,10 @@ import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@dmail/uneval"
 import { ROOT_FOLDER } from "../ROOT_FOLDER-2.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
+import { generateNodeBundle } from "../bundle-service/index.js"
+import { filenameRelativeInception } from "../filenameRelativeInception.js"
+
+const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
 
 const controllableNodeProcessFilename = `${ROOT_FOLDER}/src/node-launcher/node-controllable.js`
 
@@ -10,11 +14,13 @@ export const launchNode = async ({
   projectFolder,
   compileServerOrigin,
   compileInto,
+  importMapFilenameRelative = "importMap.json",
   debugPort = 0,
   debugMode = "inherit",
   debugModeInheritBreak = true,
   remap = true,
   traceWarnings = true,
+  verbose = true,
 }) => {
   if (typeof projectFolder !== "string")
     throw new TypeError(`projectFolder must be a string, got ${projectFolder}`)
@@ -122,8 +128,24 @@ export const launchNode = async ({
   }
 
   const executeFile = async (filenameRelative, { collectNamespace, collectCoverage }) => {
-    const execute = () =>
-      new Promise((resolve) => {
+    const execute = async () => {
+      const nodeExecuteFilenameRelative = filenameRelativeInception({
+        projectFolder,
+        filenameRelative: "node_modules/@jsenv/core/src/node-launcher/node-execute-template.js",
+      })
+
+      // seems the bundle below generated files cache is not hit for some reason, find why
+      await generateNodeBundle({
+        projectFolder,
+        importMapFilenameRelative,
+        compileInto,
+        babelConfigMap,
+        filenameRelative: ".jsenv/node-execute.js",
+        sourceFilenameRelative: nodeExecuteFilenameRelative,
+        verbose,
+      })
+
+      return new Promise((resolve) => {
         const executResultRegistration = registerChildMessage(child, "evaluate-result", (value) => {
           executResultRegistration.unregister()
           resolve(value)
@@ -143,9 +165,9 @@ export const launchNode = async ({
           }),
         )
       })
+    }
 
     const { status, coverageMap, error, namespace } = await execute()
-    debugger
     if (status === "rejected") {
       return {
         status,
@@ -236,25 +258,15 @@ const createNodeIIFEString = ({
   collectCoverage,
   remap,
 }) => `(() => {
-  // I have to use fetchUsingHTTP here + eval
+  const { execute } = require(${uneval(`${projectFolder}/${compileInto}/.jsenv/node-execute.js`)})
 
-  require(${uneval(SYSTEM_FILENAME)})
-
-  if (false && ${uneval(remap)}) {
-    // we don't have access to installSourceMapSupport here
-    installSourceMapSupport({ projectFolder: ${uneval(projectFolder)} })
-  }
-
-  return global.System.import(${uneval(
-    `${compileServerOrigin}${WELL_KNOWN_NODE_PLATFORM_PATHNAME}`,
-  )}).then(({ executeCompiledFile }) => {
-    return executeCompiledFile({
-      sourceOrigin: ${uneval(`file://${projectFolder}`)},
-      compileInto: ${uneval(compileInto)},
-      compileServerOrigin: ${uneval(compileServerOrigin)},
-      filenameRelative: ${uneval(filenameRelative)},
-      collectNamespace: ${uneval(collectNamespace)},
-      collectCoverage: ${uneval(collectCoverage)},
-    })
+  return execute({
+    projectFolder: ${uneval(projectFolder)},
+    compileServerOrigin: ${uneval(compileServerOrigin)},
+    compileInto: ${uneval(compileInto)},
+    filenameRelative: ${uneval(filenameRelative)},
+    collectNamespace: ${uneval(collectNamespace)},
+    collectCoverage: ${uneval(collectCoverage)},
+    remap: ${uneval(remap)}
   })
 })()`
