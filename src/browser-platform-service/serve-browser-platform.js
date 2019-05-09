@@ -1,6 +1,6 @@
 import { uneval } from "@dmail/uneval"
 import { serveFile } from "../file-service/index.js"
-import { filenameRelativeInception } from "../filenameRelativeInception.js"
+import { filenameRelativeInception } from "../inception.js"
 import { serveBundle } from "../bundle-service/index.js"
 
 const BROWSER_PLATFORM_FILENAME_RELATIVE =

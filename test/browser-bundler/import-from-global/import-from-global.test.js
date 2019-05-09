@@ -1,27 +1,24 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { bundleBrowser } from "../../../index.js"
 import { importBrowserBundle } from "../import-browser-bundle.js"
 
-const blockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
-
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = `${ROOT_FOLDER}/${testFolderRelative}`
+const bundleInto = `dist/browser`
 
 await bundleBrowser({
-  projectFolder: testFolder,
-  into: "dist/browser",
+  projectFolder,
+  into: bundleInto,
   entryPointMap: {
     main: "import-from-global.js",
   },
-  babelConfigMap: {
-    "transform-block-scoping": [blockScoping],
-  },
-  compileGroupCount: 1,
-  minify: false,
+  logBundleFilePaths: false,
 })
 
 const { namespace: actual } = await importBrowserBundle({
-  bundleFolder: `${testFolder}/dist/browser`,
+  bundleFolder: `${projectFolder}/${bundleInto}`,
   file: "main.js",
 })
 const expected = { default: 42 }

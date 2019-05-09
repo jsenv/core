@@ -1,6 +1,6 @@
 import { uneval } from "@dmail/uneval"
 import { serveBundle } from "../bundle-service/index.js"
-import { filenameRelativeInception } from "../filenameRelativeInception.js"
+import { filenameRelativeInception } from "../inception.js"
 import { serveFile } from "../file-service/index.js"
 import { firstService } from "../server/index.js"
 import { ressourceToPathname, ressourceToSearchParamValue } from "../urlHelper.js"

@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/no-unresolved
-import { entryPointName, groupMap } from "BUNDLE_BROWSER_DATA.js"
+import { entryPointName, groupMap } from "/.jsenv/browser-balancer-data.js"
 // eslint-disable-next-line import/no-unresolved
-import { resolveBrowserGroup } from "BROWSER_GROUP_RESOLVER.js"
+import { resolveBrowserGroup } from "/.jsenv/browser-group-resolver.js"
 
 window.System.register([], (_export, _context) => {
   const execute = async () => {

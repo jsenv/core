@@ -1,6 +1,6 @@
 import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
 import { uneval } from "@dmail/uneval"
-import { filenameRelativeInception } from "../../filenameRelativeInception.js"
+import { filenameRelativeInception } from "../../inception.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
 
@@ -36,12 +36,12 @@ export const computeRollupOptionsForBalancer = ({
   })
 
   const inlineSpecifierMap = {
-    ["BUNDLE_BROWSER_DATA.js"]: () =>
-      generateBalancerOptionsSource({
+    ["/.jsenv/browser-balancer-data.js"]: () =>
+      generateBrowserBalancerDataSource({
         entryPointName,
         groupMap,
       }),
-    ["BROWSER_GROUP_RESOLVER.js"]: `${projectFolder}/${browserGroupResolverFilenameRelativeInception}`,
+    ["/.jsenv/browser-group-resolver.js"]: `${projectFolder}/${browserGroupResolverFilenameRelativeInception}`,
   }
 
   const dir = `${projectFolder}/${into}`
@@ -81,7 +81,7 @@ minify: ${minify}
   }
 }
 
-const generateBalancerOptionsSource = ({
+const generateBrowserBalancerDataSource = ({
   entryPointName,
   groupMap,
 }) => `export const entryPointName = ${uneval(entryPointName)}

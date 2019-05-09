@@ -1,7 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { normalizePathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
-import { filenameRelativeInception } from "../filenameRelativeInception.js"
+import { filenameRelativeInception } from "../inception.js"
 import { serveFile } from "../file-service/index.js"
 import {
   acceptContentType,

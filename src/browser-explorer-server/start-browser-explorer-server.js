@@ -1,7 +1,7 @@
 import { normalizePathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
 import { namedValueDescriptionToMetaDescription } from "@dmail/project-structure"
-import { filenameRelativeInception } from "../filenameRelativeInception.js"
+import { filenameRelativeInception } from "../inception.js"
 import { startServer, firstService } from "../server/index.js"
 import { startCompileServer } from "../compile-server/index.js"
 import {

@@ -1,11 +1,11 @@
 import { assert } from "@dmail/assert"
-import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { bundleBrowser } from "../../../index.js"
 import { importBrowserBundle } from "../import-browser-bundle.js"
 
-const projectFolder = ROOT_FOLDER
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = `${ROOT_FOLDER}`
 const bundleInto = `${testFolderRelative}/dist/browser`
 
 await bundleBrowser({
@@ -15,7 +15,6 @@ await bundleBrowser({
     main: `${testFolderRelative}/balancing.js`,
   },
   compileGroupCount: 2,
-  throwUnhandled: false,
   logBundleFilePaths: false,
 })
 

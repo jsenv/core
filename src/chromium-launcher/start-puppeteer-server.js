@@ -1,4 +1,4 @@
-import { filenameRelativeInception } from "../filenameRelativeInception.js"
+import { filenameRelativeInception } from "../inception.js"
 import { startServer, firstService } from "../server/index.js"
 import { servePuppeteerHtml } from "./serve-puppeteer-html.js"
 import { serveBrowserClientFolder } from "../browser-explorer-server/server-browser-client-folder.js"

@@ -3,7 +3,7 @@ import { uneval } from "@dmail/uneval"
 import { ROOT_FOLDER } from "../ROOT_FOLDER-2.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 import { generateNodeBundle } from "../bundle-service/index.js"
-import { filenameRelativeInception } from "../filenameRelativeInception.js"
+import { filenameRelativeInception } from "../inception.js"
 
 const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
 

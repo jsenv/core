@@ -1,6 +1,6 @@
 import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { uneval } from "@dmail/uneval"
-import { filenameRelativeInception } from "../../filenameRelativeInception.js"
+import { filenameRelativeInception } from "../../inception.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
 
