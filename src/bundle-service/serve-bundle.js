@@ -11,9 +11,9 @@ export const serveBundle = async ({
   babelConfigMap,
   filenameRelative,
   sourceFilenameRelative,
-  sourcemapFilenameRelative = computeSourcemapFilenameRelative(filenameRelative),
-  inlineSpecifierMap,
   headers,
+  sourcemapFilenameRelative = computeSourcemapFilenameRelative(filenameRelative),
+  inlineSpecifierMap = {},
   format = "system",
 }) => {
   return serveCompiledFile({

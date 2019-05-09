@@ -11,7 +11,7 @@ const filenameRelative = `${testFolderRelative}/log.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  verbose: true,
 })
 
 const actual = await launchAndExecute({
@@ -21,12 +21,12 @@ const actual = await launchAndExecute({
       projectFolder,
       compileInto,
       compileServerOrigin,
-      verbose: false,
+      verbose: true,
     }),
   stopOnceExecuted: true,
   captureConsole: true,
   filenameRelative,
-  verbose: false,
+  verbose: true,
 })
 const expected = {
   status: "completed",

@@ -1,5 +1,6 @@
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
+import { uneval } from "@dmail/uneval"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
 import { regexpEscape } from "../stringHelper.js"
 import {
@@ -20,6 +21,7 @@ const puppeteer = import.meta.require("puppeteer")
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
   projectFolder,
+  importMapFilenameRelative = "importMap.json",
   compileServerOrigin,
   compileInto = DEFAULT_COMPILE_INTO,
   browserClientFolderRelative = DEFAULT_BROWSER_CLIENT_FOLDER_RELATIVE,
@@ -133,13 +135,10 @@ export const launchChromium = async ({
       startPuppeteerServer({
         cancellationToken,
         projectFolder,
-        compileServerOrigin,
+        importMapFilenameRelative,
         browserClientFolderRelative,
         compileInto,
         verbose,
-        filenameRelative,
-        collectNamespace,
-        collectCoverage,
       }),
     ])
     registerCleanupCallback(chromiumServer.stop)
@@ -150,7 +149,14 @@ export const launchChromium = async ({
       // yes evaluate supports passing a function directly
       // but when I do that, istanbul will put coverage statement inside it
       // and I don't want that because function is evaluated client side
-      return await page.evaluate(createBrowserIIFEString())
+      return await page.evaluate(
+        createBrowserIIFEString({
+          compileServerOrigin,
+          filenameRelative,
+          collectNamespace,
+          collectCoverage,
+        }),
+      )
     }
     try {
       const { status, coverageMap, error, namespace } = await execute()
@@ -209,6 +215,16 @@ const errorToSourceError = (error, { projectFolder, compileServerOrigin }) => {
   return error
 }
 
-const createBrowserIIFEString = () => `(() => {
-  return window.execute()
+const createBrowserIIFEString = ({
+  compileServerOrigin,
+  filenameRelative,
+  collectNamespace,
+  collectCoverage,
+}) => `(() => {
+  return window.execute({
+    compileServerOrigin: ${uneval(compileServerOrigin)},
+    filenameRelative: ${uneval(filenameRelative)},
+    collectNamespace: ${uneval(collectNamespace)},
+    collectCoverage: ${uneval(collectCoverage)}
+  })
 })()`

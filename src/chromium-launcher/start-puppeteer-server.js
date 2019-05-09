@@ -6,15 +6,14 @@ import { serveFile } from "../file-service/index.js"
 import { ressourceToPathname } from "../urlHelper.js"
 import { serveBundle } from "../bundle-service/index.js"
 
+const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
+
 export const startPuppeteerServer = ({
   cancellationToken,
   projectFolder,
-  compileServerOrigin,
+  importMapFilenameRelative,
   browserClientFolderRelative,
   compileInto,
-  filenameRelative,
-  collectNamespace,
-  collectCoverage,
   verbose,
 }) => {
   browserClientFolderRelative = filenameRelativeInception({
@@ -36,11 +35,9 @@ export const startPuppeteerServer = ({
         }),
       () =>
         servePuppeteerExecute({
-          compileServerOrigin,
+          projectFolder,
+          importMapFilenameRelative,
           compileInto,
-          filenameRelative,
-          collectNamespace,
-          collectCoverage,
           request,
         }),
       () =>
@@ -72,12 +69,11 @@ const redirectBrowserScriptToPuppeteerExecute = ({ request: { origin, ressource 
 }
 
 const PUPPETEER_EXECUTE_FILENAME_RELATIVE =
-  "node_modules/@jsenv/core/src/launch-chromium/puppeteer-execute-template.js"
+  "node_modules/@jsenv/core/src/chromium-launcher/puppeteer-execute-template.js"
 const servePuppeteerExecute = ({
   projectFolder,
   importMapFilenameRelative,
   compileInto,
-  babelConfigMap,
   request: { ressource, method, headers },
 }) => {
   if (ressource.startsWith(`${JSENV_PUPPETEER_EXECUTE_PATHNAME}__asset__/`)) {
@@ -98,7 +94,6 @@ const servePuppeteerExecute = ({
       projectFolder,
       filenameRelative: PUPPETEER_EXECUTE_FILENAME_RELATIVE,
     }),
-    inlineSpecifierMap: {},
     headers,
     format: "iife",
   })

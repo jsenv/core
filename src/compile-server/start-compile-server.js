@@ -22,7 +22,6 @@ import {
   DEFAULT_BROWSER_SCORE_MAP,
   DEFAULT_NODE_VERSION_SCORE_MAP,
 } from "./compile-server-constant.js"
-import { serveSystem } from "./system-service/index.js"
 import { serveBrowserPlatform } from "../browser-platform-service/index.js"
 import { serveNodePlatform } from "../node-platform-service/index.js"
 import { serveCompiledJs, filenameRelativeIsAsset } from "../compiled-js-service/index.js"
@@ -132,7 +131,11 @@ export const startCompileServer = async ({
 
   services.push((request) =>
     firstService(
-      () => serveSystem({ request }),
+      () =>
+        serveImportMap({
+          importMapFilenameRelative,
+          request,
+        }),
       () =>
         serveBrowserPlatform({
           projectFolder,
@@ -194,6 +197,17 @@ export const startCompileServer = async ({
   compileServer.nodeServer.unref()
 
   return compileServer
+}
+
+const serveImportMap = ({ importMapFilenameRelative, request: { origin, ressource } }) => {
+  if (ressource !== "/.jsenv/importMap.json") return null
+
+  return {
+    status: 307,
+    headers: {
+      location: `${origin}/${importMapFilenameRelative}`,
+    },
+  }
 }
 
 const serveCompiledAsset = ({ projectFolder, request: { ressource, method, headers } }) => {
