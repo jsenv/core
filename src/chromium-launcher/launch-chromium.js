@@ -14,6 +14,7 @@ import { trackBrowserPages } from "./browser-page-tracker.js"
 import {
   DEFAULT_COMPILE_INTO,
   DEFAULT_BROWSER_CLIENT_FOLDER_RELATIVE,
+  DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
 } from "./launch-chromium-constant.js"
 
 const puppeteer = import.meta.require("puppeteer")
@@ -21,11 +22,11 @@ const puppeteer = import.meta.require("puppeteer")
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
   projectFolder,
-  importMapFilenameRelative = "importMap.json",
   compileServerOrigin,
+  importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
   compileInto = DEFAULT_COMPILE_INTO,
   browserClientFolderRelative = DEFAULT_BROWSER_CLIENT_FOLDER_RELATIVE,
-  verbose,
+  verbose = false,
   headless = true,
 }) => {
   if (typeof projectFolder !== "string")

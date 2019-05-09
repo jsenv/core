@@ -1,26 +1,31 @@
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@dmail/uneval"
+import { createCancellationToken } from "@dmail/cancellation"
 import { ROOT_FOLDER } from "../ROOT_FOLDER-2.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 import { generateNodeBundle } from "../bundle-service/index.js"
 import { filenameRelativeInception } from "../inception.js"
+import {
+  DEFAULT_COMPILE_INTO,
+  DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+} from "./launch-node-constant.js"
 
 const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
 
 const controllableNodeProcessFilename = `${ROOT_FOLDER}/src/node-launcher/node-controllable.js`
 
 export const launchNode = async ({
-  cancellationToken,
+  cancellationToken = createCancellationToken(),
   projectFolder,
   compileServerOrigin,
-  compileInto,
-  importMapFilenameRelative = "importMap.json",
+  compileInto = DEFAULT_COMPILE_INTO,
+  importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
   debugPort = 0,
   debugMode = "inherit",
   debugModeInheritBreak = true,
   remap = true,
   traceWarnings = true,
-  verbose = true,
+  verbose = false,
 }) => {
   if (typeof projectFolder !== "string")
     throw new TypeError(`projectFolder must be a string, got ${projectFolder}`)
