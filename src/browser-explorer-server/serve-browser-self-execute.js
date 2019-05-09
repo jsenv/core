@@ -85,12 +85,11 @@ const serveBrowserSelfExecuteBundle = ({
     importMapFilenameRelative,
     compileInto,
     babelConfigMap,
-    filenameRelative: `${filenameRelative}__asset__/browser-self-execute.js`,
+    filenameRelative: `.jsenv/browser-self-execute/${filenameRelative}`,
     sourceFilenameRelative: filenameRelativeInception({
       projectFolder,
       filenameRelative: BROWSER_EXECUTE_FILENAME_RELATIVE,
     }),
-    sourcemapFilenameRelative: "browser-self-execute.js.map",
     inlineSpecifierMap: {
       ["/.jsenv/browser-self-execute-static-data.js"]: () =>
         generateBrowserSelfExecuteStaticDataSource({ filenameRelative }),
