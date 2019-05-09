@@ -22,7 +22,7 @@ export const generateNodeBundle = async ({
       const entryExtname = extname(filenameRelative)
       const entryBasename = basename(filenameRelative, entryExtname)
       const entryDirname = dirname(filenameRelative)
-      const entryName = entryBasename // `${entryDirname ? `${entryDirname}/` : ""}${entryBasename}`
+      const entryName = entryBasename
 
       if (entryDirname) {
         compileInto = `${compileInto}/${entryDirname}`

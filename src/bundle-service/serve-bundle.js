@@ -25,7 +25,11 @@ export const serveBundle = async ({
       const entryExtname = extname(filenameRelative)
       const entryBasename = basename(filenameRelative, entryExtname)
       const entryDirname = dirname(filenameRelative)
-      const entryName = `${entryDirname ? `${entryDirname}/` : ""}${entryBasename}`
+      const entryName = entryBasename
+
+      if (entryDirname) {
+        compileInto = `${compileInto}/${entryDirname}`
+      }
 
       const entryPointMap = {
         [entryName]: sourceFilenameRelative,
