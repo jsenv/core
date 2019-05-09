@@ -1,5 +1,5 @@
 import { readFileSync } from "fs"
-import { dirname, resolve, basename } from "path"
+import { dirname, resolve } from "path"
 import { writeOrUpdateSourceMappingURL } from "../source-mapping-url.js"
 
 export const platformClientBundleToCompilationResult = ({
@@ -8,6 +8,7 @@ export const platformClientBundleToCompilationResult = ({
   filenameRelative,
   inlineSpecifierMap,
   bundle,
+  sourcemapFilenameRelative,
 }) => {
   const main = bundle.output[0]
   const mainSourcemap = main.map
@@ -64,8 +65,6 @@ export const platformClientBundleToCompilationResult = ({
     }
   })
 
-  const entryBasename = basename(filenameRelative)
-  const sourcemapFilenameRelative = `${entryBasename}__asset__/${entryBasename}.map`
   const compiledSource = writeOrUpdateSourceMappingURL(main.code, `./${sourcemapFilenameRelative}`)
 
   return {

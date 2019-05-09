@@ -11,6 +11,7 @@ export const serveBundle = async ({
   babelConfigMap,
   filenameRelative,
   sourceFilenameRelative,
+  sourcemapFilenameRelative = computeSourcemapFilenameRelative(filenameRelative),
   inlineSpecifierMap,
   headers,
   format = "system",
@@ -50,9 +51,16 @@ export const serveBundle = async ({
         projectFolder,
         compileInto,
         filenameRelative,
+        sourcemapFilenameRelative,
         inlineSpecifierMap,
         bundle,
       })
     },
   })
+}
+
+const computeSourcemapFilenameRelative = (filenameRelative) => {
+  const entryBasename = basename(filenameRelative)
+  const sourcemapFilenameRelative = `${entryBasename}__asset__/${entryBasename}.map`
+  return sourcemapFilenameRelative
 }
