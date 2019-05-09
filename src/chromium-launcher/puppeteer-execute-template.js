@@ -1,14 +1,11 @@
-// eslint-disable-next-line import/no-unresolved
-import {
+import { loadUsingScript } from "../loadUsingScript.js"
+
+window.execute = async ({
   compileServerOrigin,
   filenameRelative,
   collectNamespace,
   collectCoverage,
-  // eslint-disable-next-line import/no-unresolved
-} from "/.jsenv/puppeteer-execute-data.js"
-import { loadUsingScript } from "../loadUsingScript.js"
-
-window.execute = async () => {
+}) => {
   await loadUsingScript(`${compileServerOrigin}/.jsenv/browser-platform.js`)
   const { __browserPlatform__ } = window
 
