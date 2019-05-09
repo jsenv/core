@@ -1,4 +1,3 @@
-import { resolve } from "path"
 import { fileRead, fileStat } from "@dmail/helper"
 import { createETag } from "../createETag.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
@@ -108,7 +107,8 @@ const validateSources = ({ projectFolder, cache }) =>
   )
 
 const validateSource = async ({ projectFolder, source, eTag }) => {
-  const sourceFilename = resolve(projectFolder, source)
+  const sourceFilename = `${projectFolder}${source}`
+
   try {
     const sourceContent = await fileRead(sourceFilename)
     const sourceETag = createETag(sourceContent)
