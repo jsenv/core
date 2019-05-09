@@ -26,15 +26,6 @@ const testDescription = {
       launch: launchNode,
     },
   },
-  "/test/bundle-node/async-generator/": {
-    node: null,
-  },
-  "/test/bundle-node/https/": {
-    node: null,
-  },
-  "/test/bundle-node/top-level-await/": {
-    node: null,
-  },
   "/test/launch-chromium/**/*.test.js": {
     node: {
       launch: launchNode,

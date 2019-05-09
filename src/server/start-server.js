@@ -201,14 +201,18 @@ export const startServer = async ({
         )
       }
     } catch (error) {
+      const body = error && error.stack ? error.stack : error
+
       response = Object.freeze({
         status: 500,
         statusText: REASON_INTERNAL_ERROR,
         headers: {
           // ensure error are not cached
           "cache-control": "no-store",
+          "content-type": "text/plain",
+          "content-length": Buffer.byteLength(body),
         },
-        body: error && error.stack ? error.stack : error,
+        body,
       })
     }
 

@@ -1,23 +1,24 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { bundleNode } from "../../../index.js"
 import { importNodeBundle } from "../import-node-bundle.js"
 
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = `${ROOT_FOLDER}/${testFolderRelative}`
+const bundleInto = `dist/node`
 
 await bundleNode({
-  projectFolder: testFolder,
-  into: "dist/node",
+  projectFolder,
+  into: bundleInto,
   entryPointMap: {
-    main: "dynamic-import-origin-relative.js",
+    main: `dynamic-import-origin-relative.js`,
   },
-  babelConfigMap: {},
-  compileGroupCount: 1,
-  verbose: false,
+  logBundleFilePaths: false,
 })
 
 const { namespace } = await importNodeBundle({
-  bundleFolder: `${testFolder}/dist/node`,
+  bundleFolder: `${projectFolder}/${bundleInto}`,
   file: "main.js",
 })
 const actual = await namespace

@@ -36,12 +36,12 @@ export const computeRollupOptionsForBalancer = ({
   })
 
   const inlineSpecifierMap = {
-    ["BUNDLE_NODE_DATA.js"]: () =>
+    ["/.jsenv/node-balancer-data.js"]: () =>
       generateBalancerOptionsSource({
         entryPointName,
         groupMap,
       }),
-    ["NODE_GROUP_RESOLVER.js"]: `${projectFolder}/${nodeGroupResolverFilenameRelativeInception}`,
+    ["/.jsenv/node-group-resolver.js"]: `${projectFolder}/${nodeGroupResolverFilenameRelativeInception}`,
   }
 
   const dir = `${projectFolder}/${into}`

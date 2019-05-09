@@ -1,28 +1,26 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { bundleNode } from "../../../index.js"
 import { importNodeBundle } from "../import-node-bundle.js"
 
-const blockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
-
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = `${ROOT_FOLDER}`
+const bundleInto = `${testFolderRelative}/dist/node`
 
 await bundleNode({
-  projectFolder: testFolder,
-  into: "dist/node",
+  projectFolder,
+  into: bundleInto,
   entryPointMap: {
-    a: "a.js",
-    b: "b.js",
+    a: `${testFolderRelative}/a.js`,
+    b: `${testFolderRelative}/b.js`,
   },
-  babelConfigMap: {
-    "transform-block-scoping": [blockScoping],
-  },
-  verbose: false,
+  logBundleFilePaths: false,
 })
 
 {
   const { namespace: actual } = await importNodeBundle({
-    bundleFolder: `${testFolder}/dist/node`,
+    bundleFolder: `${projectFolder}/${bundleInto}`,
     file: `a.js`,
   })
   const expected = "a-shared"
@@ -30,7 +28,7 @@ await bundleNode({
 }
 {
   const { namespace: actual } = await importNodeBundle({
-    bundleFolder: `${testFolder}/dist/node`,
+    bundleFolder: `${projectFolder}/${bundleInto}`,
     file: `b.js`,
   })
   const expected = "b-shared"

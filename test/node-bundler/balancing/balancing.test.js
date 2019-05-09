@@ -1,11 +1,11 @@
 import { assert } from "@dmail/assert"
-import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { bundleNode } from "../../../index.js"
 import { importNodeBundle } from "../import-node-bundle.js"
 
-const projectFolder = ROOT_FOLDER
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = `${ROOT_FOLDER}`
 const bundleInto = `${testFolderRelative}/dist/node`
 
 await bundleNode({

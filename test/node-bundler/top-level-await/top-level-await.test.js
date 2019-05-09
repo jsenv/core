@@ -1,27 +1,29 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { bundleNode } from "../../../index.js"
-import { importNodeBundle } from "../import-node-bundle.js"
 
-const transformAsyncToPromises = import.meta.require("babel-plugin-transform-async-to-promises")
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = `${ROOT_FOLDER}`
+const bundleInto = `${testFolderRelative}/dist/node`
 
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
-
-await bundleNode({
-  projectFolder: testFolder,
-  into: "dist/node",
-  entryPointMap: {
-    main: "top-level-await.js",
-  },
-  babelConfigMap: {
-    "transform-async-to-promises": [transformAsyncToPromises],
-  },
-  verbose: false,
-})
-
-const { namespace: actual } = await importNodeBundle({
-  bundleFolder: `${testFolder}/dist/node`,
-  file: `main.js`,
-})
-const expected = 42
-assert({ actual, expected })
+try {
+  await bundleNode({
+    projectFolder,
+    into: bundleInto,
+    entryPointMap: {
+      main: `${testFolderRelative}/top-level-await.js`,
+    },
+    logBundleFilePaths: false,
+    throwUnhandled: false,
+  })
+} catch (e) {
+  const expected = new Error(
+    `Module format cjs does not support top-level await. Use the "es" or "system" output formats rather.`,
+  )
+  expected.code = "INVALID_TLA_FORMAT"
+  assert({
+    actual: e,
+    expected,
+  })
+}

@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/no-unresolved
-import { entryPointName, groupMap } from "BUNDLE_NODE_DATA.js"
+import { entryPointName, groupMap } from "/.jsenv/node-balancer-data.js"
 // eslint-disable-next-line import/no-unresolved
-import { resolveNodeGroup } from "NODE_GROUP_RESOLVER.js"
+import { resolveNodeGroup } from "/.jsenv/node-group-resolver.js"
 
 const compileId = resolveNodeGroup({ groupMap })
 
