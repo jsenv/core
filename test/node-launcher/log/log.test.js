@@ -12,14 +12,14 @@ const filenameRelative = `${testFolderRelative}/log.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: true,
+  verbose: false,
 })
 
 const actual = await launchAndExecute({
   launch: (options) => launchNode({ ...options, projectFolder, compileServerOrigin, compileInto }),
   captureConsole: true,
   filenameRelative,
-  verbose: true,
+  verbose: false,
 })
 actual.platformLog = removeDebuggerLog(actual.platformLog)
 const expected = {

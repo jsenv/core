@@ -1,13 +1,15 @@
 import { uneval } from "@dmail/uneval"
+import { serveFile } from "../file-service/index.js"
 import { filenameRelativeInception } from "../filenameRelativeInception.js"
 import { serveBundle } from "../bundle-service/index.js"
 
-const IMPORT_MAP_SPECIFIER = "IMPORT_MAP.json"
-export const JSENV_NODE_PLATFORM_PATHNAME = `/.jsenv/node-platform.js`
 const NODE_PLATFORM_FILENAME_RELATIVE =
   "node_modules/@jsenv/core/src/node-platform-service/node-platform/index.js"
-const NODE_PLATFORM_DATA_SPECIFIER = "NODE_PLATFORM_DATA.js"
-const NODE_GROUP_RESOLVER_SPECIFIER = "NODE_GROUP_RESOLVER.js"
+
+const JSENV_NODE_PLATFORM_PATHNAME = `/.jsenv/node-platform.js`
+const JSENV_NODE_PLATFORM_DATA_PATHNAME = `/.jsenv/node-platform-data.js`
+const JSENV_NODE_GROUP_RESOLVER_PATHNAME = `/.jsenv/node-group-resolver.js`
+const JSENV_IMPORT_MAP_PATHNAME = `/.jsenv/import-map.json`
 
 export const serveNodePlatform = ({
   projectFolder,
@@ -17,8 +19,12 @@ export const serveNodePlatform = ({
   babelConfigMap,
   groupMap,
   // projectFileRequestedCallback,
-  request: { ressource, headers },
+  request: { ressource, method, headers },
 }) => {
+  if (ressource.startsWith(`${JSENV_NODE_PLATFORM_PATHNAME}__asset__/`)) {
+    return serveFile(`${projectFolder}/${compileInto}${ressource}`, { method, headers })
+  }
+
   if (ressource !== JSENV_NODE_PLATFORM_PATHNAME) return null
 
   const nodeGroupResolverFilenameRelativeInception = filenameRelativeInception({
@@ -37,14 +43,16 @@ export const serveNodePlatform = ({
       filenameRelative: NODE_PLATFORM_FILENAME_RELATIVE,
     }),
     inlineSpecifierMap: {
-      [IMPORT_MAP_SPECIFIER]: `${projectFolder}/${importMapFilenameRelative}`,
-      [NODE_GROUP_RESOLVER_SPECIFIER]: `${projectFolder}/${nodeGroupResolverFilenameRelativeInception}`,
-      [NODE_PLATFORM_DATA_SPECIFIER]: () => generateNodePlatformDataSource({ groupMap }),
+      [JSENV_NODE_PLATFORM_DATA_PATHNAME]: () =>
+        generateNodePlatformDataSource({ compileInto, groupMap }),
+      [JSENV_NODE_GROUP_RESOLVER_PATHNAME]: `${projectFolder}/${nodeGroupResolverFilenameRelativeInception}`,
+      [JSENV_IMPORT_MAP_PATHNAME]: `${projectFolder}/${importMapFilenameRelative}`,
     },
     headers,
     format: "cjs",
   })
 }
 
-const generateNodePlatformDataSource = ({ groupMap }) =>
-  `export const groupMap = ${uneval(groupMap)}`
+const generateNodePlatformDataSource = ({ compileInto, groupMap }) =>
+  `export const compileInto = ${uneval(compileInto)}
+export const groupMap = ${uneval(groupMap)}`

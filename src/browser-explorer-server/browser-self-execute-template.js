@@ -14,5 +14,6 @@ import { fetchUsingXHR } from "../browser-platform-service/browser-platform/fetc
   const { filenameRelativeToCompiledHref, executeFile } = __browserPlatform__.create({
     compileServerOrigin,
   })
-  executeFile(filenameRelativeToCompiledHref(filenameRelative))
+  const compiledFile = filenameRelativeToCompiledHref(filenameRelative)
+  executeFile(compiledFile)
 })()

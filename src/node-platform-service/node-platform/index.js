@@ -1,4 +1,5 @@
-import { executeCompiledFile } from "./executeCompiledFile.js"
-import { importCompiledFile } from "./importCompiledFile.js"
+import { createNodePlatform } from "./create-node-platform.js"
 
-export { importCompiledFile, executeCompiledFile }
+export const nodePlatform = {
+  create: createNodePlatform,
+}

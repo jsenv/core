@@ -1,4 +1,3 @@
-/* eslint-disable import/max-dependencies */
 import { Module } from "module"
 import {
   resolveImport,
@@ -7,27 +6,26 @@ import {
   hrefToPathname,
 } from "@jsenv/module-resolution"
 import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
-import "../../../compile-server/system-service/s.js"
-import { hrefToFilenameRelative } from "../../../platform/hrefToFilenameRelative.js"
+import "../../compile-server/system-service/s.js"
+import { hrefToFilenameRelative } from "../../platform/hrefToFilenameRelative.js"
 import {
   fromFunctionReturningNamespace,
   fromHref,
-} from "../../../platform/registerModuleFrom/index.js"
-import { valueInstall } from "../../../platform/valueInstall.js"
-import { compiledHrefToCompiledFilename } from "../compiledHrefToCompiledFilename.js"
-import { fetchSource } from "../fetchSource.js"
-import { evalSource } from "../evalSource.js"
-// const SYSTEMJS_RELATIVE_PATH = "src/systemjs/s.js"
+} from "../../platform/registerModuleFrom/index.js"
+import { valueInstall } from "../../platform/valueInstall.js"
+import { compiledHrefToCompiledFilename } from "./compiledHrefToCompiledFilename.js"
+import { fetchSource } from "./fetchSource.js"
+import { evalSource } from "./evalSource.js"
 
 const GLOBAL_SPECIFIER = "global"
 
 export const createNodeSystem = async ({
+  projectFolder,
+  compileServerOrigin,
   importMap,
   compileInto,
-  sourceOrigin,
-  compileServerOrigin,
 }) => {
-  // await import(`/${SYSTEMJS_RELATIVE_PATH}`)
+  if (typeof global.System === "undefined") throw new Error(`global.System is undefined`)
 
   const nodeSystem = new global.System.constructor()
 
@@ -77,9 +75,9 @@ export const createNodeSystem = async ({
         const belongToProject = realHref.startsWith(`${compileServerOrigin}/`)
         const sourceHref = belongToProject
           ? compiledHrefToCompiledFilename(realHref, {
-              compileInto,
-              sourceOrigin,
+              projectFolder,
               compileServerOrigin,
+              compileInto,
             })
           : realHref
 
@@ -98,7 +96,7 @@ export const createNodeSystem = async ({
   // https://github.com/systemjs/systemjs/blob/master/docs/hooks.md#createcontexturl---object
   nodeSystem.createContext = (moduleUrl) => {
     const filenameRelative = hrefToFilenameRelative(moduleUrl, { compileInto, compileServerOrigin })
-    const fileURL = `${sourceOrigin}/${filenameRelative}`
+    const fileURL = `file://${projectFolder}/${filenameRelative}`
     const url = fileURL
 
     const filename = hrefToPathname(fileURL)

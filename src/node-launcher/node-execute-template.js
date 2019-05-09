@@ -20,13 +20,14 @@ export const execute = async ({
 
   await fetchUsingHttp(`${compileServerOrigin}/.jsenv/node-platform.js`)
   // eslint-disable-next-line import/no-dynamic-require
-  const { executeCompiledFile } = require(`${projectFolder}/${compileInto}/.jsenv/node-platform.js`)
-
-  return executeCompiledFile({
-    sourceOrigin: `file://${projectFolder}`,
+  const { nodePlatform } = require(`${projectFolder}/${compileInto}/.jsenv/node-platform.js`)
+  const { filenameRelativeToCompiledHref, executeFile } = nodePlatform.create({
+    projectFolder,
     compileServerOrigin,
-    compileInto,
-    filenameRelative,
+  })
+  const compiledFile = filenameRelativeToCompiledHref(filenameRelative)
+
+  return executeFile(compiledFile, {
     collectNamespace,
     collectCoverage,
   })
