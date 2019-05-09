@@ -5,3 +5,8 @@ dist
 /coverage
 /importMap.json
 /env.json
+
+/test/browser-bundler/scoped-node-module/importMap.json
+/test/browser-bundler/shared-node-module/importMap.json
+/test/node-bundler/scoped-node-module/importMap.json
+/test/node-bundler/shared-node-module/importMap.json
