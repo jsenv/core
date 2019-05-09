@@ -4,7 +4,6 @@ import { filenameRelativeInception } from "../filenameRelativeInception.js"
 import { serveFile } from "../file-service/index.js"
 import { firstService } from "../server/index.js"
 import { ressourceToPathname, ressourceToSearchParamValue } from "../urlHelper.js"
-import { redirectBrowserPlatformToCompileServer } from "./redirect-browser-platform-to-compile-server.js"
 import { serveBrowserClientFolder } from "./server-browser-client-folder.js"
 
 export const serveBrowserSelfExecute = ({
@@ -32,11 +31,6 @@ export const serveBrowserSelfExecute = ({
       }),
     () =>
       serveBrowserSelfExecuteDynamicData({
-        compileServerOrigin,
-        request,
-      }),
-    () =>
-      redirectBrowserPlatformToCompileServer({
         compileServerOrigin,
         request,
       }),
@@ -91,11 +85,12 @@ const serveBrowserSelfExecuteBundle = ({
     importMapFilenameRelative,
     compileInto,
     babelConfigMap,
-    filenameRelative: pathname.slice(1),
+    filenameRelative: `${filenameRelative}__asset__/browser-self-execute.js`,
     sourceFilenameRelative: filenameRelativeInception({
       projectFolder,
       filenameRelative: BROWSER_EXECUTE_FILENAME_RELATIVE,
     }),
+    sourcemapFilenameRelative: "browser-self-execute.js.map",
     inlineSpecifierMap: {
       ["/.jsenv/browser-self-execute-static-data.js"]: () =>
         generateBrowserSelfExecuteStaticDataSource({ filenameRelative }),
