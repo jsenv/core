@@ -2,12 +2,11 @@ import { assert } from "@dmail/assert"
 import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
 import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
-import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
 const projectFolder = ROOT_FOLDER
 const compileInto = `${testFolderRelative}/.dist`
-const filenameRelative = `${testFolderRelative}/log.js`
+const filenameRelative = `${testFolderRelative}/throw.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
@@ -17,15 +16,11 @@ const { origin: compileServerOrigin } = await startCompileServer({
 
 const actual = await launchAndExecute({
   launch: (options) => launchNode({ ...options, projectFolder, compileServerOrigin, compileInto }),
-  verbose: false,
-  captureConsole: true,
   filenameRelative,
+  verbose: false,
 })
-actual.platformLog = removeDebuggerLog(actual.platformLog)
 const expected = {
-  status: "completed",
-  platformLog: `foo
-bar
-`,
+  status: "errored",
+  error: new Error("error"),
 }
 assert({ actual, expected })

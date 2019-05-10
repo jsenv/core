@@ -7,7 +7,7 @@ import { removeDebuggerLog } from "../removeDebuggerLog.js"
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
 const projectFolder = ROOT_FOLDER
 const compileInto = `${testFolderRelative}/.dist`
-const filenameRelative = `${testFolderRelative}/log.js`
+const filenameRelative = `${testFolderRelative}/timeout.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
@@ -16,16 +16,16 @@ const { origin: compileServerOrigin } = await startCompileServer({
 })
 
 const actual = await launchAndExecute({
-  launch: (options) => launchNode({ ...options, projectFolder, compileServerOrigin, compileInto }),
-  verbose: false,
+  launch: (options) => launchNode({ ...options, projectFolder, compileInto, compileServerOrigin }),
+  allocatedMs: 5000,
   captureConsole: true,
   filenameRelative,
+  verbose: false,
 })
 actual.platformLog = removeDebuggerLog(actual.platformLog)
 const expected = {
-  status: "completed",
+  status: "timedout",
   platformLog: `foo
-bar
 `,
 }
 assert({ actual, expected })
