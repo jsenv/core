@@ -46,11 +46,11 @@ token.register(
     try {
       const value = await eval(`${expressionString}
 ${"//#"} sourceURL=__node-evaluation-script__.js`)
-      sendToParent("evaluate-result", { status: "resolved", value })
+      sendToParent("evaluate-result", { error: false, value })
     } catch (e) {
       sendToParent("evaluate-result", {
-        status: "rejected",
-        error: exceptionToObject(e),
+        error: true,
+        value: exceptionToObject(e),
       })
     }
   }),

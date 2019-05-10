@@ -150,11 +150,19 @@ export const launchNode = async ({
         verbose,
       })
 
-      return new Promise((resolve) => {
-        const executResultRegistration = registerChildMessage(child, "evaluate-result", (value) => {
-          executResultRegistration.unregister()
-          resolve(value)
-        })
+      return new Promise((resolve, reject) => {
+        const executResultRegistration = registerChildMessage(
+          child,
+          "evaluate-result",
+          ({ error, value }) => {
+            executResultRegistration.unregister()
+            if (error) {
+              reject(value)
+            } else {
+              resolve(value)
+            }
+          },
+        )
 
         sendToChild(
           child,

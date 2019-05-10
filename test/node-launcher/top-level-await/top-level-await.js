@@ -1,4 +1,4 @@
-const value = await Promise.resolve(10)
+const value = await Promise.resolve(42)
 
 // eslint-disable-next-line no-debugger
 debugger

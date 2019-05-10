@@ -36,9 +36,11 @@ export const transpiler = async ({
   const asyncPluginName = findAsyncPluginNameInBabelConfigMap(babelConfigMap)
 
   if (transformModuleIntoSystemFormat && transformTopLevelAwait && asyncPluginName) {
-    const babelConfigMapWithoutAsyncPlugin = {}
+    const babelPluginArrayWithoutAsync = []
     Object.keys(babelConfigMap).forEach((name) => {
-      if (name !== asyncPluginName) babelConfigMapWithoutAsyncPlugin[name] = babelConfigMap[name]
+      if (name !== asyncPluginName) {
+        babelPluginArrayWithoutAsync.push(babelConfigMap[name])
+      }
     })
 
     // put body inside something like (async () => {})()
@@ -49,9 +51,7 @@ export const transpiler = async ({
         ...options,
         plugins: [
           ...defaultBabelPluginArray,
-          ...Object.keys(babelConfigMapWithoutAsyncPlugin).map(
-            (babelPluginName) => babelConfigMapWithoutAsyncPlugin[babelPluginName],
-          ),
+          ...babelPluginArrayWithoutAsync,
           [transformModulesSystemJs, { topLevelAwait: transformTopLevelAwait }],
         ],
       },
