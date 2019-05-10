@@ -6,9 +6,10 @@ const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
 
 export const DEFAULT_IMPORT_MAP_FILENAME_RELATIVE = "importMap.json"
 
-export const DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE = `node_modules/@jsenv/core/src/browser-group-resolver/index.js`
+export const DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE =
+  "src/browser-group-resolver/index.js"
 
-export const DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE = `node_modules/@jsenv/core/src/node-group-resolver/index.js`
+export const DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE = "src/node-group-resolver/index.js"
 
 export const DEFAULT_COMPILE_INTO = ".dist"
 

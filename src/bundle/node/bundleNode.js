@@ -15,7 +15,7 @@ export const bundleNode = async ({
   projectFolder,
   babelConfigMap = BUNDLE_NODE_DEFAULT_BABEL_CONFIG_MAP,
   importMapFilenameRelative = BUNDLE_NODE_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  nodeGroupResolverFilenameRelative = `node_modules/@jsenv/core/src/node-group-resolver/index.js`,
+  nodeGroupResolverFilenameRelative = `src/node-group-resolver/index.js`,
   inlineSpecifierMap = {},
   into = BUNDLE_NODE_DEFAULT_BUNDLE_INTO,
   entryPointMap = BUNDLE_NODE_DEFAULT_ENTRY_POINT_MAP,

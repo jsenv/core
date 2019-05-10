@@ -68,8 +68,7 @@ const redirectBrowserScriptToPuppeteerExecute = ({ request: { origin, ressource 
   }
 }
 
-const PUPPETEER_EXECUTE_FILENAME_RELATIVE =
-  "node_modules/@jsenv/core/src/chromium-launcher/puppeteer-execute-template.js"
+const PUPPETEER_EXECUTE_FILENAME_RELATIVE = "src/chromium-launcher/puppeteer-execute-template.js"
 const servePuppeteerExecute = ({
   projectFolder,
   importMapFilenameRelative,

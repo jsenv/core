@@ -23,7 +23,7 @@ export const computeRollupOptionsForBalancer = ({
 
   const browserBalancerFilenameRelativeInception = filenameRelativeInception({
     projectFolder,
-    filenameRelative: "node_modules/@jsenv/core/src/bundle/browser/browser-balancer-template.js",
+    filenameRelative: "src/bundle/browser/browser-balancer-template.js",
   })
 
   const entryPointMap = {

@@ -3,8 +3,7 @@ import { serveFile } from "../file-service/index.js"
 import { filenameRelativeInception } from "../inception.js"
 import { serveBundle } from "../bundle-service/index.js"
 
-const BROWSER_PLATFORM_FILENAME_RELATIVE =
-  "node_modules/@jsenv/core/src/browser-platform-service/browser-platform/index.js"
+const BROWSER_PLATFORM_FILENAME_RELATIVE = "browser-platform-service/browser-platform/index.js"
 
 const JSENV_BROWSER_PLATFORM_PATHNAME = `/.jsenv/browser-platform.js`
 const JSENV_BROWSER_PLATFORM_DATA_PATHNAME = `/.jsenv/browser-platform-data.js`

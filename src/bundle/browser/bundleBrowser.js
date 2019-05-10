@@ -16,7 +16,7 @@ export const bundleBrowser = async ({
   projectFolder,
   babelConfigMap = BUNDLE_BROWSER_DEFAULT_BABEL_CONFIG_MAP,
   importMapFilenameRelative = BUNDLE_BROWSER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  browserGroupResolverFilenameRelative = `node_modules/@jsenv/core/src/browser-group-resolver/index.js`,
+  browserGroupResolverFilenameRelative = `src/browser-group-resolver/index.js`,
   inlineSpecifierMap = {},
   into = BUNDLE_BROWSER_DEFAULT_BUNDLE_INTO,
   entryPointMap = BUNDLE_BROWSER_DEFAULT_ENTRY_POINT_MAP,

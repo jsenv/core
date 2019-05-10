@@ -1,7 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { normalizePathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
-import { filenameRelativeInception } from "../inception.js"
 import { serveFile } from "../file-service/index.js"
 import {
   acceptContentType,
@@ -227,22 +226,15 @@ const serveProjectFolder = ({
   projectFileRequestedCallback,
   request: { ressource, method, headers },
 }) => {
-  const requestFilenameRelative = ressource.slice(1)
-
-  // this way of finding the file can be removed once we have the
-  // dynamic bundling no ?
-  const requestFilenameRelativeInception = filenameRelativeInception({
-    projectFolder,
-    filenameRelative: requestFilenameRelative,
-  })
-  const pathname = `${projectFolder}/${requestFilenameRelativeInception}`
+  const filenameRelative = ressource.slice(1)
+  const filename = `${projectFolder}/${filenameRelative}`
 
   projectFileRequestedCallback({
-    filenameRelative: requestFilenameRelativeInception,
-    filename: pathname,
+    filenameRelative,
+    filename,
   })
 
-  return serveFile(pathname, { method, headers })
+  return serveFile(filename, { method, headers })
 }
 
 const createFileChangedSignal = () => {

@@ -23,7 +23,7 @@ export const computeRollupOptionsForBalancer = ({
 
   const nodeBalancerFilenameRelativeInception = filenameRelativeInception({
     projectFolder,
-    filenameRelative: "node_modules/@jsenv/core/src/bundle/node/node-balancer-template.js",
+    filenameRelative: "src/bundle/node/node-balancer-template.js",
   })
 
   const entryPointMap = {

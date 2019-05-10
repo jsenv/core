@@ -136,7 +136,7 @@ export const launchNode = async ({
     const execute = async () => {
       const nodeExecuteFilenameRelative = filenameRelativeInception({
         projectFolder,
-        filenameRelative: "node_modules/@jsenv/core/src/node-launcher/node-execute-template.js",
+        filenameRelative: "src/node-launcher/node-execute-template.js",
       })
 
       // seems the bundle below generated files cache is not hit for some reason, find why

@@ -62,7 +62,7 @@ const redirectBrowserScriptToBrowserSelfExecute = ({
 }
 
 const BROWSER_EXECUTE_FILENAME_RELATIVE =
-  "node_modules/@jsenv/core/src/browser-explorer-server/browser-self-execute-template.js"
+  "src/browser-explorer-server/browser-self-execute-template.js"
 
 const serveBrowserSelfExecuteBundle = ({
   projectFolder,

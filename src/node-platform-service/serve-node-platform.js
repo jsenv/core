@@ -3,8 +3,7 @@ import { serveFile } from "../file-service/index.js"
 import { filenameRelativeInception } from "../inception.js"
 import { serveBundle } from "../bundle-service/index.js"
 
-const NODE_PLATFORM_FILENAME_RELATIVE =
-  "node_modules/@jsenv/core/src/node-platform-service/node-platform/index.js"
+const NODE_PLATFORM_FILENAME_RELATIVE = "src/node-platform-service/node-platform/index.js"
 
 const JSENV_NODE_PLATFORM_PATHNAME = `/.jsenv/node-platform.js`
 const JSENV_NODE_PLATFORM_DATA_PATHNAME = `/.jsenv/node-platform-data.js`
