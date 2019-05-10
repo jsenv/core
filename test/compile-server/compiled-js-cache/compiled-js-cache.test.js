@@ -1,34 +1,32 @@
 import { assert } from "@dmail/assert"
-import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { startCompileServer } from "../../../index.js"
 import { fetch } from "../fetch.js"
 
 const rimraf = import.meta.require("rimraf")
 
-const projectFolder = ROOT_FOLDER
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-const serverCompileInto = `${testFolderRelative}/.dist`
-const clientCompileInto = ".dist"
+const projectFolder = ROOT_FOLDER
+const compileInto = `${testFolderRelative}/.dist`
 
 const compileServer = await startCompileServer({
   projectFolder,
-  serverCompileInto,
-  clientCompileInto,
+  compileInto,
   verbose: false,
 })
 
 await new Promise((resolve, reject) =>
-  rimraf(`${projectFolder}/${serverCompileInto}`, (error) => {
+  rimraf(`${projectFolder}/${compileInto}`, (error) => {
     if (error) reject(error)
     else resolve()
   }),
 )
 const firstResponse = await fetch(
-  `${compileServer.origin}/${clientCompileInto}/otherwise/${testFolderRelative}/file.js`,
+  `${compileServer.origin}/${compileInto}/otherwise/${testFolderRelative}/file.js`,
 )
 const secondResponse = await fetch(
-  `${compileServer.origin}/${clientCompileInto}/otherwise/${testFolderRelative}/file.js`,
+  `${compileServer.origin}/${compileInto}/otherwise/${testFolderRelative}/file.js`,
   {
     headers: {
       "if-none-match": firstResponse.headers.etag[0],

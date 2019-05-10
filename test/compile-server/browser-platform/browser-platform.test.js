@@ -1,11 +1,11 @@
 import { assert } from "@dmail/assert"
-import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { startCompileServer } from "../../../index.js"
 import { fetch } from "../fetch.js"
 
-const projectFolder = ROOT_FOLDER
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = ROOT_FOLDER
 const compileInto = `${testFolderRelative}/.dist`
 
 const compileServer = await startCompileServer({
@@ -14,7 +14,7 @@ const compileServer = await startCompileServer({
   verbose: false,
 })
 
-const response = await fetch(`${compileServer.origin}/.jsenv-well-known/browser-platform.js`)
+const response = await fetch(`${compileServer.origin}/.jsenv/browser-platform.js`)
 const actual = {
   status: response.status,
   statusText: response.statusText,

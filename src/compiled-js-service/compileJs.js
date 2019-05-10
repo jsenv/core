@@ -42,13 +42,13 @@ export const compileJs = async ({
     let output = code
 
     if (remap && map) {
+      map.sources = map.sources.map((source) => sourceToSourceForSourceMap(source))
+      sources.push(...map.sources)
+      sourcesContent.push(...map.sourcesContent)
+
       // we don't need sourceRoot because our path are relative or absolute to the current location
       // we could comment this line because it is not set by babel because not passed during transform
       delete map.sourceRoot
-
-      sources.push(...map.sources)
-      sourcesContent.push(...map.sourcesContent)
-      map.sources = map.sources.map((source) => sourceToSourceForSourceMap(source))
       // removing sourcesContent from map decrease the sourceMap
       // it also means client have to fetch source from server (additional http request)
       // some client ignore sourcesContent property such as vscode-chrome-debugger
@@ -73,7 +73,7 @@ export const compileJs = async ({
         assetsContent.push(stringifyMap(map))
       }
     } else {
-      sources.push(filenameRelative)
+      sources.push(`/${filenameRelative}`)
       sourcesContent.push(source)
     }
 

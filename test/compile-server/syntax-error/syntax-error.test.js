@@ -1,17 +1,22 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { startCompileServer } from "../../../index.js"
 import { fetch } from "../fetch.js"
 
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
-const compileInto = ".dist"
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = ROOT_FOLDER
+const compileInto = `${testFolderRelative}/.dist`
 
 const compileServer = await startCompileServer({
-  projectFolder: testFolder,
+  projectFolder,
+  compileInto,
   verbose: false,
 })
 
-const response = await fetch(`${compileServer.origin}/${compileInto}/otherwise/syntax-error.js`)
+const response = await fetch(
+  `${compileServer.origin}/${compileInto}/otherwise/${testFolderRelative}/syntax-error.js`,
+)
 const body = await response.json()
 const actual = {
   status: response.status,
@@ -29,8 +34,8 @@ const expected = {
   },
   body: {
     messageHTML: actual.body.messageHTML,
-    filename: `${testFolder}/syntax-error.js`,
-    href: `${compileServer.origin}/${compileInto}/otherwise/syntax-error.js`,
+    filename: `${projectFolder}/${testFolderRelative}/syntax-error.js`,
+    outputFilename: `file://${projectFolder}/${compileInto}/otherwise/${testFolderRelative}/syntax-error.js`,
     lineNumber: 1,
     columnNumber: 11,
   },

@@ -13,7 +13,7 @@ const compileServer = await startCompileServer({
 
 await fetch(`${compileServer.origin}/${compileInto}/otherwise/asset.js`)
 const response = await fetch(
-  `${compileServer.origin}/${compileInto}/best/asset.js__asset__/cache.json`,
+  `${compileServer.origin}/${compileInto}/otherwise/asset.js__asset__/cache.json`,
 )
 const body = await response.json()
 const actual = {
@@ -30,13 +30,12 @@ const expected = {
     "content-type": ["application/json"],
   },
   body: {
-    filenameRelative: "asset.js",
-    filename: `${testFolder}/asset.js`,
+    sourceFilenameRelative: "asset.js",
     contentType: "application/javascript",
     sources: ["asset.js"],
     sourcesEtag: ['"7c-b5QcrFoIrKrXSr5F415m5RCd6uY"'],
-    assets: ["asset.js.map"],
-    assetsEtag: ['"d9-oHoye79sVyCImc5tCby4ezTs0kg"'],
+    assets: ["asset.js__asset__/asset.js.map"],
+    assetsEtag: ['"d5-Y7nurt+aY3asvGmKjqFg8qU+n2c"'],
     createdMs: actual.body.createdMs,
     lastModifiedMs: actual.body.lastModifiedMs,
   },
