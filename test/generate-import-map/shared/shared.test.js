@@ -6,6 +6,7 @@ const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 
 const importMap = await generateImportMapForProjectNodeModules({
   projectFolder: testFolder,
+  writeImportMapFile: false,
 })
 
 const resolve = ({ importer, specifier }) =>

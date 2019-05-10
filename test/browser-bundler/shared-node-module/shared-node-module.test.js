@@ -20,8 +20,6 @@ await bundleBrowser({
   entryPointMap: {
     main: `shared-node-module.js`,
   },
-  compileGroupCount: 1,
-  verbose: false,
   logBundleFilePaths: false,
 })
 

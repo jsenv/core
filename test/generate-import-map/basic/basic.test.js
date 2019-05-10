@@ -5,6 +5,7 @@ import { generateImportMapForProjectNodeModules } from "../../../index.js"
 const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 const actual = await generateImportMapForProjectNodeModules({
   projectFolder: testFolder,
+  writeImportMapFile: false,
 })
 const expected = {
   imports: {

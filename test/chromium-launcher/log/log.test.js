@@ -1,10 +1,10 @@
 import { assert } from "@dmail/assert"
-import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { startCompileServer, launchAndExecute, launchChromium } from "../../../index.js"
 
-const projectFolder = ROOT_FOLDER
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = ROOT_FOLDER
 const compileInto = `${testFolderRelative}/.dist`
 const filenameRelative = `${testFolderRelative}/log.js`
 
