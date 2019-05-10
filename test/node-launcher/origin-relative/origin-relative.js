@@ -1,5 +1,5 @@
 // eslint-disable-next-line
-import { answer } from "/origin-file.js"
+import { answer } from "/test/node-launcher/origin-relative/file.js"
 
 console.log(answer)
 
