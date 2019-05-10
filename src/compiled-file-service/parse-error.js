@@ -1,4 +1,5 @@
-export const createParseError = ({ message, ...data }) => {
+export const createParseError = (data) => {
+  const { message } = data
   const parseError = new Error(message)
   parseError.code = "PARSE_ERROR"
   parseError.data = data

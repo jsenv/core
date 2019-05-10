@@ -50,29 +50,29 @@ ${"//#"} sourceURL=__node-evaluation-script__.js`)
     } catch (e) {
       sendToParent("evaluate-result", {
         error: true,
-        value: exceptionToObject(e),
+        value: e,
       })
     }
   }),
 )
 
-const exceptionToObject = (exception) => {
-  if (exception && exception instanceof Error) {
-    const object = {}
-    // indirectly this read exception.stack
-    // which will ensure it leads to the right file path
-    // thanks to sourceMapSupport
-    // we may want to have something more explicit but for now it's cool
-    Object.getOwnPropertyNames(exception).forEach((name) => {
-      object[name] = exception[name]
-    })
-    return object
-  }
+// const exceptionToObject = (exception) => {
+//   if (exception && exception instanceof Error) {
+//     const object = {}
+//     // indirectly this read exception.stack
+//     // which will ensure it leads to the right file path
+//     // thanks to sourceMapSupport
+//     // we may want to have something more explicit but for now it's cool
+//     Object.getOwnPropertyNames(exception).forEach((name) => {
+//       object[name] = exception[name]
+//     })
+//     return object
+//   }
 
-  return {
-    message: exception,
-  }
-}
+//   return {
+//     message: exception,
+//   }
+// }
 
 const sendToParent = (type, data) => {
   // https://nodejs.org/api/process.html#process_process_connected
@@ -81,7 +81,7 @@ const sendToParent = (type, data) => {
 
   // process.send algorithm does not send non enumerable values
   // because it works with JSON.stringify I guess so use uneval
-  const source = uneval(data)
+  const source = uneval(data, { accurateErrorProperties: true })
 
   process.send({
     type,
