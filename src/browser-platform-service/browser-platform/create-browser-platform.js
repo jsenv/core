@@ -7,6 +7,7 @@ import { resolveBrowserGroup } from "/.jsenv/browser-group-resolver.js"
 // "/.jsenv/import-map.json" resolved at build time
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/.jsenv/import-map.json"
+import { uneval } from "@dmail/uneval"
 import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
 import { wrapImportMap } from "../../import-map/wrapImportMap.js"
 import { createBrowserSystem } from "./create-browser-system.js"
@@ -50,13 +51,17 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
       displayErrorInConsole(error)
       return {
         status: "rejected",
-        error: exceptionToObject(error),
+        exceptionSource: unevalException(error),
         coverageMap: collectCoverage ? readCoverage() : undefined,
       }
     }
   }
 
   return { filenameRelativeToCompiledHref, importFile, executeFile }
+}
+
+const unevalException = (value) => {
+  return uneval(value, { accurateErrorProperties: true })
 }
 
 const decideCompileId = () => {
@@ -73,21 +78,6 @@ const decideCompileId = () => {
 }
 
 const readCoverage = () => window.__coverage__
-
-const exceptionToObject = (exception) => {
-  // we need to convert error to an object to make it stringifiable
-  if (exception && exception instanceof Error) {
-    const object = {}
-    Object.getOwnPropertyNames(exception).forEach((name) => {
-      object[name] = exception[name]
-    })
-    return object
-  }
-
-  return {
-    message: exception,
-  }
-}
 
 const displayErrorInConsole = (error) => {
   console.error(error)

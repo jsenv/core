@@ -7,6 +7,7 @@ import { resolveNodeGroup } from "/.jsenv/node-group-resolver.js"
 // "/.jsenv/import-map.json" resolved at build time
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/.jsenv/import-map.json"
+import { uneval } from "@dmail/uneval"
 import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
 import { wrapImportMap } from "../../import-map/wrapImportMap.js"
 import { createNodeSystem } from "./create-node-system.js"
@@ -50,7 +51,7 @@ export const createNodePlatform = ({ projectFolder, compileServerOrigin }) => {
       console.error(error)
       return {
         status: "rejected",
-        error,
+        exceptionSource: unevalException(error),
         coverageMap: collectCoverage ? readCoverage() : undefined,
       }
     }
@@ -61,6 +62,10 @@ export const createNodePlatform = ({ projectFolder, compileServerOrigin }) => {
     importFile,
     executeFile,
   }
+}
+
+const unevalException = (value) => {
+  return uneval(value, { accurateErrorProperties: true })
 }
 
 const decideCompileId = () => {

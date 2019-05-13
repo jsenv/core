@@ -1,34 +1,32 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { startCompileServer, launchAndExecute, launchChromium } from "../../../index.js"
 
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
-const filenameRelative = `throw-after-executed.js`
-const compileInto = ".dist"
-const babelConfigMap = {}
-
-const sourceOrigin = `file://${testFolder}`
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = ROOT_FOLDER
+const compileInto = `${testFolderRelative}/.dist`
+const filenameRelative = `${testFolderRelative}/throw.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  verbose: false,
-  projectFolder: testFolder,
+  projectFolder,
   compileInto,
-  babelConfigMap,
+  verbose: false,
 })
 
 const actual = await launchAndExecute({
   launch: (options) =>
     launchChromium({
       ...options,
+      projectFolder,
       compileInto,
-      sourceOrigin,
       compileServerOrigin,
     }),
   stopOnceExecuted: true,
   filenameRelative,
-  verbose: false,
 })
 const expected = {
-  status: "completed",
+  status: "errored",
+  error: new Error("error"),
 }
 assert({ actual, expected })

@@ -9,6 +9,7 @@ import {
   DEFAULT_COMPILE_INTO,
   DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
 } from "./launch-node-constant.js"
+import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
 
 const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
 
@@ -180,11 +181,14 @@ export const launchNode = async ({
       })
     }
 
-    const { status, coverageMap, error, namespace } = await execute()
+    const { status, coverageMap, exceptionSource, namespace } = await execute()
     if (status === "rejected") {
       return {
         status,
-        error: errorToSourceError(error, { projectFolder, filenameRelative }),
+        error: evalSource(
+          exceptionSource,
+          `${ROOT_FOLDER}/src/node-platform-service/node-platform/index.js`,
+        ),
         coverageMap,
       }
     }
@@ -244,22 +248,6 @@ const createExitWithFailureCodeError = (code) => {
     )
   }
   return new Error(`child exited with ${code}`)
-}
-
-const errorToSourceError = (
-  error,
-  // { filenameRelative, sourceOrigin }
-) => {
-  if (error && error.code === "MODULE_PARSE_ERROR") {
-    // error.message = error.message.replace(filenameRelative, `${sourceOrigin}/${filenameRelative}`)
-    return error
-  }
-
-  if (error && typeof error === "object") {
-    return error
-  }
-
-  return error
 }
 
 const createNodeIIFEString = ({
