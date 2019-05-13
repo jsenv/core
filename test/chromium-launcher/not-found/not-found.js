@@ -1,2 +1,2 @@
 // eslint-disable-next-line import/no-unresolved
-import "./foo.js.js"
+import "./foo.js"

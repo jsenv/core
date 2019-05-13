@@ -11,6 +11,7 @@ const filenameRelative = `${testFolderRelative}/log.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
+  verbose: false,
 })
 
 const actual = await launchAndExecute({

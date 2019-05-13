@@ -1,32 +1,41 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
+import { startCompileServer, launchAndExecute, launchChromium } from "../../../index.js"
 import { createInstrumentPlugin } from "../../../src/cover/createInstrumentPlugin.js"
-import { launchAndExecute, startCompileServer, launchChromium } from "../../../index.js"
+import { removeFolder } from "../removeFolder.js"
 
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
-const filenameRelative = `folder/file.js`
-const compileInto = ".dist"
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = ROOT_FOLDER
+const compileInto = `${testFolderRelative}/.dist`
+const filenameRelative = `${testFolderRelative}/origin-relative.js`
 const babelConfigMap = {
-  "transform-instrument": [createInstrumentPlugin()],
+  "transform-instrument": [
+    createInstrumentPlugin({
+      predicate: (filename) => {
+        return filename === `${testFolderRelative}/file.js`
+      },
+    }),
+  ],
 }
-const sourceOrigin = `file://${testFolder}`
+
+await removeFolder(`${projectFolder}/${compileInto}`)
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  verbose: false,
-  projectFolder: testFolder,
+  projectFolder,
   compileInto,
   babelConfigMap,
+  verbose: false,
 })
 
 const actual = await launchAndExecute({
   launch: (options) =>
     launchChromium({
       ...options,
-      sourceOrigin,
+      projectFolder,
       compileInto,
       compileServerOrigin,
     }),
-  verbose: false,
   stopOnceExecuted: true,
   filenameRelative,
   collectNamespace: true,
@@ -38,8 +47,10 @@ const expected = {
     default: 42,
   },
   coverageMap: {
-    "origin-file.js": actual.coverageMap["origin-file.js"],
-    "folder/file.js": actual.coverageMap["folder/file.js"],
+    [`${testFolderRelative}/file.js`]: actual.coverageMap[`${testFolderRelative}/file.js`],
   },
 }
-assert({ actual, expected })
+assert({
+  actual,
+  expected,
+})

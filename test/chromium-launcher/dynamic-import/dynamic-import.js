@@ -1,4 +1,4 @@
-const { answer } = await import("./dependency.js.js")
+const { answer } = await import("./dependency.js")
 
 console.log(answer)
 
