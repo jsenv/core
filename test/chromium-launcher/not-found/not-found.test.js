@@ -31,8 +31,8 @@ const expected = {
   status: "errored",
   error: assignNonEnumerableProperties(
     new Error(`module not found.
-href: ${compileServerOrigin}/${compileInto}/${compileId}/${testFolderRelative}/foo.js
-importerHref: ${compileServerOrigin}/${compileInto}/${compileId}/${testFolderRelative}/not-found.js`),
+href: file://${projectFolder}/${compileInto}/${compileId}/${testFolderRelative}/foo.js
+importerHref: file://${projectFolder}/${compileInto}/${compileId}/${testFolderRelative}/not-found.js`),
     {
       href: `${compileServerOrigin}/${compileInto}/${compileId}/${testFolderRelative}/foo.js`,
       importerHref: `${compileServerOrigin}/${compileInto}/${compileId}/${testFolderRelative}/not-found.js`,

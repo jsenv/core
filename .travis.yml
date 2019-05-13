@@ -5,8 +5,6 @@ before_install:
   - echo -e "machine github.com\n  login $CI_USER_TOKEN" > ~/.netrc
 script:
   - npm run generate-import-map
-  - npm run generate-browser-client
-  - npm run generate-node-client
   - npm run eslint-check-project
   - npm run prettier-check-project
   - npm run generate-coverage

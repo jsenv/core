@@ -32,7 +32,7 @@ const expected = {
   body: {
     sourceFilenameRelative: "asset.js",
     contentType: "application/javascript",
-    sources: ["asset.js"],
+    sources: ["/asset.js"],
     sourcesEtag: ['"7c-b5QcrFoIrKrXSr5F415m5RCd6uY"'],
     assets: ["asset.js__asset__/asset.js.map"],
     assetsEtag: ['"d5-Y7nurt+aY3asvGmKjqFg8qU+n2c"'],

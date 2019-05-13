@@ -7,7 +7,7 @@ import { removeDebuggerLog } from "../removeDebuggerLog.js"
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
 const projectFolder = ROOT_FOLDER
 const compileInto = `${testFolderRelative}/.dist`
-const filenameRelative = `${testFolderRelative}/disconnect-later.js`
+const filenameRelative = `${testFolderRelative}/disconnect.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,

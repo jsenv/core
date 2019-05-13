@@ -31,7 +31,7 @@ const expected = {
   status: "errored",
   error: assignNonEnumerableProperties(
     new Error(`error while parsing module.
-href: ${compileServerOrigin}/${compileInto}/${compileId}/${filenameRelative}
+href: file://${projectFolder}/${compileInto}/${compileId}/${filenameRelative}
 importerHref: undefined
 parseErrorMessage: ${actual.error.parseError.message}`),
     {

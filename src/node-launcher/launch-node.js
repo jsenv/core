@@ -186,7 +186,7 @@ export const launchNode = async ({
     if (status === "rejected") {
       return {
         status,
-        error: evalException(exceptionSource, { projectFolder }),
+        error: evalException(exceptionSource, { projectFolder, compileServerOrigin }),
         coverageMap,
       }
     }
@@ -210,14 +210,19 @@ export const launchNode = async ({
   }
 }
 
-const evalException = (exceptionSource, { projectFolder }) => {
+const evalException = (exceptionSource, { projectFolder, compileServerOrigin }) => {
   const error = evalSource(
     exceptionSource,
     `${ROOT_FOLDER}/src/node-platform-service/node-platform/index.js`,
   )
   if (error && error instanceof Error) {
     const sourceOrigin = `file://${projectFolder}`
-    const projectFolderRegexp = new RegExp(regexpEscape(projectFolder), "g")
+
+    const compileServerOriginRegexp = new RegExp(regexpEscape(compileServerOrigin), "g")
+    error.stack = error.stack.replace(compileServerOriginRegexp, sourceOrigin)
+    error.message = error.message.replace(compileServerOriginRegexp, sourceOrigin)
+
+    const projectFolderRegexp = new RegExp(regexpEscape(`(?<!file:\/\/)${projectFolder}`), "g")
     error.stack = error.stack.replace(projectFolderRegexp, sourceOrigin)
     error.message = error.message.replace(projectFolderRegexp, sourceOrigin)
   }
