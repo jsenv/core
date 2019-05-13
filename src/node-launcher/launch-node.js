@@ -10,6 +10,7 @@ import {
   DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
 } from "./launch-node-constant.js"
 import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
+import { regexpEscape } from "../../src/stringHelper.js"
 
 const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
 
@@ -185,10 +186,7 @@ export const launchNode = async ({
     if (status === "rejected") {
       return {
         status,
-        error: evalSource(
-          exceptionSource,
-          `${ROOT_FOLDER}/src/node-platform-service/node-platform/index.js`,
-        ),
+        error: evalException(exceptionSource, { projectFolder }),
         coverageMap,
       }
     }
@@ -210,6 +208,21 @@ export const launchNode = async ({
     registerConsoleCallback,
     executeFile,
   }
+}
+
+const evalException = (exceptionSource, { projectFolder }) => {
+  const error = evalSource(
+    exceptionSource,
+    `${ROOT_FOLDER}/src/node-platform-service/node-platform/index.js`,
+  )
+  if (error && error instanceof Error) {
+    const sourceOrigin = `file://${projectFolder}`
+    const projectFolderRegexp = new RegExp(regexpEscape(projectFolder), "g")
+    error.stack = error.stack.replace(projectFolderRegexp, sourceOrigin)
+    error.message = error.message.replace(projectFolderRegexp, sourceOrigin)
+  }
+
+  return error
 }
 
 const sendToChild = (child, type, data) => {

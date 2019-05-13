@@ -1,3 +1,4 @@
+/* eslint-disable import/max-dependencies */
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
 import { uneval } from "@dmail/uneval"
@@ -17,6 +18,7 @@ import {
 } from "./launch-chromium-constant.js"
 import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
 import { ROOT_FOLDER } from "../ROOT_FOLDER.js"
+import { regexpEscape } from "../../src/stringHelper.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
@@ -165,10 +167,7 @@ export const launchChromium = async ({
       if (status === "rejected") {
         return {
           status,
-          error: evalSource(
-            exceptionSource,
-            `${ROOT_FOLDER}/src/browser-platform-service/browser-platform/index.js`,
-          ),
+          error: evalException(exceptionSource, { projectFolder, compileServerOrigin }),
           coverageMap,
         }
       }
@@ -205,18 +204,26 @@ export const launchChromium = async ({
   }
 }
 
-// const clientErrorToError = (error, { projectFolder, compileServerOrigin }) => {
-//   // does not truly work
-//   // error stack should be remapped either client side or here
-//   // error is correctly remapped inside chrome devtools
-//   // but the error we receive here is not remapped
-//   // client side would be better but here could be enough
-//   const sourceOrigin = `file://${projectFolder}`
-//   const remoteRootRegexp = new RegExp(regexpEscape(compileServerOrigin), "g")
-//   error.stack = error.stack.replace(remoteRootRegexp, sourceOrigin)
-//   error.message = error.message.replace(remoteRootRegexp, sourceOrigin)
-//   return error
-// }
+const evalException = (exceptionSource, { projectFolder, compileServerOrigin }) => {
+  const error = evalSource(
+    exceptionSource,
+    `${ROOT_FOLDER}/src/browser-platform-service/browser-platform/index.js`,
+  )
+
+  if (error && error instanceof Error) {
+    // does not truly work
+    // error stack should be remapped either client side or here
+    // error is correctly remapped inside chrome devtools
+    // but the error we receive here is not remapped
+    // client side would be better but here could be enough
+    const sourceOrigin = `file://${projectFolder}`
+    const remoteRootRegexp = new RegExp(regexpEscape(compileServerOrigin), "g")
+    error.stack = error.stack.replace(remoteRootRegexp, sourceOrigin)
+    error.message = error.message.replace(remoteRootRegexp, sourceOrigin)
+  }
+
+  return error
+}
 
 const createBrowserIIFEString = ({
   compileServerOrigin,
