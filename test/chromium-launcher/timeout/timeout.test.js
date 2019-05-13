@@ -6,11 +6,12 @@ import { startCompileServer, launchAndExecute, launchChromium } from "../../../i
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
 const projectFolder = ROOT_FOLDER
 const compileInto = `${testFolderRelative}/.dist`
-const filenameRelative = `${testFolderRelative}/log.js`
+const filenameRelative = `${testFolderRelative}/timeout.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
+  verbose: false,
 })
 
 const actual = await launchAndExecute({
@@ -21,14 +22,14 @@ const actual = await launchAndExecute({
       compileInto,
       compileServerOrigin,
     }),
+  allocatedMs: 5000,
   stopOnceExecuted: true,
   captureConsole: true,
   filenameRelative,
 })
 const expected = {
-  status: "completed",
+  status: "timedout",
   platformLog: `foo
-bar
 `,
 }
 assert({ actual, expected })
