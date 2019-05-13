@@ -44,7 +44,7 @@ export const compileJs = async ({
     if (remap && map) {
       map.sources = map.sources.map((source) => sourceToSourceForSourceMap(source))
       sources.push(...map.sources)
-      sourcesContent.push(...map.sourcesContent)
+      if (map.sourcesContent) sourcesContent.push(...map.sourcesContent)
 
       // we don't need sourceRoot because our path are relative or absolute to the current location
       // we could comment this line because it is not set by babel because not passed during transform

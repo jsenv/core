@@ -1,22 +1,28 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
-const compileInto = ".dist"
-const filenameRelative = `class.js`
-const sourceOrigin = `file://${testFolder}`
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = ROOT_FOLDER
+const compileInto = `${testFolderRelative}/.dist`
+const filenameRelative = `${testFolderRelative}/class.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  projectFolder: testFolder,
+  projectFolder,
+  compileInto,
   verbose: false,
 })
 
 const actual = await launchAndExecute({
-  launch: (options) => launchNode({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
+  launch: (options) =>
+    launchNode({
+      ...options,
+      projectFolder,
+      compileServerOrigin,
+      compileInto,
+    }),
   filenameRelative,
-  mirrorConsole: true,
-  verbose: true,
 })
 const expected = {
   status: "completed",
