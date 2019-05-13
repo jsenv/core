@@ -27,7 +27,9 @@ export const launchAndExecute = async ({
   consoleCallback = () => {},
   startedCallback = () => {},
   stoppedCallback = () => {},
-  errorAfterExecutedCallback = () => {},
+  errorAfterExecutedCallback = (error) => {
+    console.error(createAfterExecutionErrorMessage({ error }))
+  },
   disconnectAfterExecutedCallback = () => {},
   filenameRelative,
   collectNamespace = false,
@@ -205,7 +207,7 @@ const computeExecutionResult = async ({
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
-      const value = await launch({ cancellationToken })
+      const value = await launch({ cancellationToken, verbose })
       startedCallback({ name: value.name, version: value.version })
       return value
     },
@@ -328,7 +330,6 @@ const computeExecutionResult = async ({
       log(createExecutionDoneMessage({ value }))
 
       registerErrorCallback((error) => {
-        console.error(createAfterExecutionErrorMessage({ error }))
         errorAfterExecutedCallback(error)
         onError(error)
       })
