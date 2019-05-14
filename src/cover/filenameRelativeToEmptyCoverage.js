@@ -37,7 +37,10 @@ export const filenameRelativeToEmptyCoverage = async ({
         }),
     })
 
-    const coverageIndex = assets.indexOf("coverage.json")
+    const coverageIndex = assets.findIndex((asset) => asset.endsWith("/coverage.json"))
+    if (coverageIndex === -1) {
+      throw new Error(`missing coverage asset for file`)
+    }
     const coverageContent = assetsContent[coverageIndex]
     const coverage = JSON.parse(coverageContent)
 
