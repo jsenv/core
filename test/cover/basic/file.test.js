@@ -1,19 +1,20 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { cover, launchNode, launchChromium } from "../../../index.js"
 
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
-const compileInto = ".dist"
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = ROOT_FOLDER
+const compileInto = `${testFolderRelative}/.dist`
 
 const { coverageMap } = await cover({
-  projectFolder: testFolder,
+  projectFolder,
   compileInto,
-  babelConfigMap: {},
   coverDescription: {
-    "/file.js": true,
+    [`/${testFolderRelative}/file.js`]: true,
   },
   executeDescription: {
-    "/use-file.js": {
+    [`/${testFolderRelative}/use-file.js`]: {
       node: {
         launch: launchNode,
       },
@@ -22,12 +23,14 @@ const { coverageMap } = await cover({
       },
     },
   },
+  executionLogLevel: "off",
+  writeCoverageFile: false,
 })
 assert({
   actual: coverageMap,
   expected: {
-    "file.js": {
-      ...coverageMap["file.js"],
+    [`${testFolderRelative}/file.js`]: {
+      ...coverageMap[`${testFolderRelative}/file.js`],
       s: { 0: 2, 1: 1, 2: 1, 3: 1, 4: 0 },
     },
   },

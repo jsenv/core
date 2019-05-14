@@ -21,7 +21,7 @@ export const bundleNode = async ({
   entryPointMap = BUNDLE_NODE_DEFAULT_ENTRY_POINT_MAP,
   compileGroupCount = 1,
   versionScoreMap = nodeVersionScoreMap,
-  verbose = false,
+  logLevel = "log",
   minify = false,
   throwUnhandled = true,
   writeOnFileSystem = true,
@@ -35,7 +35,7 @@ export const bundleNode = async ({
     babelConfigMap,
     compileGroupCount,
     platformScoreMap: { node: versionScoreMap },
-    verbose,
+    logLevel,
     writeOnFileSystem,
     logBundleFilePaths,
     computeRollupOptionsWithoutBalancing: (context) =>

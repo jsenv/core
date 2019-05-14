@@ -7,7 +7,7 @@ const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
 
 const compileServer = await startCompileServer({
   projectFolder: testFolder,
-  verbose: false,
+  logLevel: "off",
 })
 
 const response = await fetch(`${compileServer.origin}/.jsenv/importMap.json`)

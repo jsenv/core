@@ -21,7 +21,7 @@ const server = await startServer({
       body,
     }
   },
-  verbose: false,
+  logLevel: "off",
 })
 
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)

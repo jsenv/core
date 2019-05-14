@@ -12,7 +12,7 @@ const filenameRelative = `${testFolderRelative}/throw-after-executed.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  logLevel: "off",
 })
 
 let afterExecuteError
@@ -20,7 +20,6 @@ const actual = await launchAndExecute({
   launch: (options) => launchNode({ ...options, projectFolder, compileServerOrigin, compileInto }),
   captureConsole: true,
   filenameRelative,
-  verbose: false,
   errorAfterExecutedCallback: (error) => {
     afterExecuteError = error
   },

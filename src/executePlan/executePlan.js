@@ -8,19 +8,24 @@ import {
   createExecutionResultLog,
   createExecutionPlanSummaryMessage,
 } from "./createExecutionLog.js"
+import { createLogger } from "../logger.js"
 
 export const executePlan = async (
   executionPlan,
   {
     cancellationToken = createCancellationToken(),
     cover = false,
+    collectNamespace = false,
+    measureDuration = true,
+    captureConsole = true,
     maxParallelExecution = Math.max(cpus.length - 1, 1),
     beforeEachExecutionCallback = () => {},
-    afterEachExecutionCallback = (executionResult) => {
-      console.log(createExecutionResultLog(executionResult))
-    },
+    afterEachExecutionCallback = () => {},
+    logLevel = "log",
   } = {},
 ) => {
+  const { log } = createLogger({ logLevel })
+
   const plannedExecutionArray = []
   Object.keys(executionPlan).forEach((filenameRelative) => {
     const fileExecutionPlan = executionPlan[filenameRelative]
@@ -49,14 +54,13 @@ export const executePlan = async (
         launch,
         cancellationToken,
         allocatedMs,
-        measureDuration: true,
+        measureDuration,
+        logLevel: "off",
         collectPlatformNameAndVersion: true,
         // mirrorConsole: false because file will be executed in parallel
         // so log would be a mess to read
         mirrorConsole: false,
-        // instead use captureConsole: true, we will wait for the file
-        // to be executed before displaying the whole corresponding console output
-        captureConsole: true,
+        captureConsole,
         // stopOnError: true to ensure platform is stopped on error
         // because we know what we want: execution has failed
         // and we can use capturedConsole to know how it failed
@@ -69,8 +73,11 @@ export const executePlan = async (
         disconnectAfterExecutedCallback: () => {},
         filenameRelative,
         collectCoverage: cover,
+        collectNamespace,
       })
-      afterEachExecutionCallback({ allocatedMs, executionName, filenameRelative, ...result })
+      const executionResult = { allocatedMs, executionName, filenameRelative, ...result }
+      afterEachExecutionCallback(executionResult)
+      log(createExecutionResultLog(executionResult))
 
       if (filenameRelative in planResult === false) {
         planResult[filenameRelative] = {}
@@ -81,7 +88,7 @@ export const executePlan = async (
 
   const planResultSummary = planResultToSummary(planResult)
 
-  console.log(createExecutionPlanSummaryMessage(planResultSummary))
+  log(createExecutionPlanSummaryMessage(planResultSummary))
 
   return {
     planResult,

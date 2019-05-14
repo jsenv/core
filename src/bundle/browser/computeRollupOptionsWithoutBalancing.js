@@ -1,6 +1,7 @@
 import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
+import { createLogger } from "../../logger.js"
 
 export const computeRollupOptionsWithoutBalancing = ({
   cancellationToken,
@@ -12,9 +13,10 @@ export const computeRollupOptionsWithoutBalancing = ({
   babelConfigMap,
   format,
   minify,
-  log,
-  logBundleFilePaths,
+  logLevel,
 }) => {
+  const { logTrace } = createLogger({ logLevel })
+
   const dir = `${projectFolder}/${into}`
 
   const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
@@ -31,10 +33,10 @@ export const computeRollupOptionsWithoutBalancing = ({
     babelConfigMap,
     minify,
     target: "browser",
-    logBundleFilePaths,
+    logLevel,
   })
 
-  log(`
+  logTrace(`
 bundle entry points for browser without balancing.
 entry point names: ${Object.keys(entryPointMap)}
 dir: ${dir}

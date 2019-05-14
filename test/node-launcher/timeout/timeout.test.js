@@ -12,7 +12,7 @@ const filenameRelative = `${testFolderRelative}/timeout.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  logLevel: "off",
 })
 
 const actual = await launchAndExecute({
@@ -20,7 +20,6 @@ const actual = await launchAndExecute({
   allocatedMs: 5000,
   captureConsole: true,
   filenameRelative,
-  verbose: false,
 })
 actual.platformLog = removeDebuggerLog(actual.platformLog)
 const expected = {

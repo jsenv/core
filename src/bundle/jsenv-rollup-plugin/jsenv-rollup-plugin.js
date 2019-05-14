@@ -16,6 +16,7 @@ import {
 } from "../../compiled-js-service/transpiler.js"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { computeBabelConfigMapSubset } from "./computeBabelConfigMapSubset.js"
+import { createLogger } from "../../logger.js"
 
 const { minify: minifyCode } = import.meta.require("terser")
 const { buildExternalHelpers } = import.meta.require("@babel/core")
@@ -35,8 +36,10 @@ export const createJsenvRollupPlugin = ({
   target,
   detectAndTransformIfNeededAsyncInsertedByRollup = target === "browser",
   dir,
-  logBundleFilePaths,
+  logLevel,
 }) => {
+  const { log } = createLogger({ logLevel })
+
   const projectImportMap = readProjectImportMap({
     projectFolder,
     importMapFilenameRelative,
@@ -179,11 +182,9 @@ export const createJsenvRollupPlugin = ({
         await transformAsyncInsertedByRollup({ dir, babelConfigMapSubset, bundle })
       }
 
-      if (logBundleFilePaths) {
-        Object.keys(bundle).forEach((bundleFilename) => {
-          console.log(`-> ${dir}/${bundleFilename}`)
-        })
-      }
+      Object.keys(bundle).forEach((bundleFilename) => {
+        log(`-> ${dir}/${bundleFilename}`)
+      })
     },
   }
 

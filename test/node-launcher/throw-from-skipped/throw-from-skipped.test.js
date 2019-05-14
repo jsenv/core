@@ -11,13 +11,12 @@ const filenameRelative = `${testFolderRelative}/throw-from-skipped.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  logLevel: "off",
 })
 
 const actual = await launchAndExecute({
   launch: (options) => launchNode({ ...options, projectFolder, compileInto, compileServerOrigin }),
   filenameRelative,
-  verbose: false,
 })
 const expected = {
   status: "errored",

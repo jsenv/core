@@ -13,7 +13,7 @@ const compileInto = `${testFolderRelative}/.dist`
 const compileServer = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  logLevel: "off",
 })
 
 await new Promise((resolve, reject) =>

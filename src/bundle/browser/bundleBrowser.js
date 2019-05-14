@@ -23,7 +23,7 @@ export const bundleBrowser = async ({
   compileGroupCount = 1,
   platformScoreMap = browserScoreMap,
   format = "system", // or iife
-  verbose = false,
+  logLevel = "log",
   minify = false,
   throwUnhandled = true,
   writeOnFileSystem = true,
@@ -39,7 +39,7 @@ export const bundleBrowser = async ({
     babelConfigMap,
     compileGroupCount,
     platformScoreMap,
-    verbose,
+    logLevel,
     writeOnFileSystem,
     logBundleFilePaths,
     computeRollupOptionsWithoutBalancing: (context) =>

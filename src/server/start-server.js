@@ -20,6 +20,7 @@ import { requestToAccessControlHeaders } from "./requestToAccessControlHeaders.j
 import { responseCompose } from "./responseCompose.js"
 import { originAsString } from "./originAsString.js"
 import { listen, stopListening } from "./listen.js"
+import { createLogger } from "../logger.js"
 
 const killPort = import.meta.require("kill-port")
 
@@ -45,7 +46,7 @@ export const startServer = async ({
   stopOnCrash = false,
   requestToResponse = () => null,
   cors = false,
-  verbose = true,
+  logLevel = "log",
   startedCallback = () => {},
   stoppedCallback = () => {},
 } = {}) => {
@@ -56,7 +57,7 @@ export const startServer = async ({
   if (ip === "0.0.0.0" && process.platform === "win32")
     throw new Error(`listening ${ip} not available on window`)
 
-  const log = verbose ? (...args) => console.log(...args) : () => {}
+  const { log, logError } = createLogger({ logLevel })
 
   if (forcePort) {
     await createOperation({
@@ -181,7 +182,7 @@ export const startServer = async ({
     const request = nodeRequestToRequest(nodeRequest, origin)
 
     nodeRequest.on("error", (error) => {
-      log("error on", request.ressource, error)
+      logError("error on", request.ressource, error)
     })
 
     let response

@@ -66,7 +66,7 @@ const startTestServer = ({ bundleFolder }) => {
   }
 
   return startServer({
-    verbose: false,
+    logLevel: "off",
     requestToResponse: serviceCompose(
       indexPageService,
       systemJSService,

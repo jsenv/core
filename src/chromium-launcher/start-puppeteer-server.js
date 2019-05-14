@@ -14,7 +14,7 @@ export const startPuppeteerServer = ({
   importMapFilenameRelative,
   browserClientFolderRelative,
   compileInto,
-  verbose,
+  logLevel,
 }) => {
   browserClientFolderRelative = filenameRelativeInception({
     projectFolder,
@@ -50,7 +50,7 @@ export const startPuppeteerServer = ({
 
   return startServer({
     cancellationToken,
-    verbose,
+    logLevel,
     requestToResponse: service,
   })
 }

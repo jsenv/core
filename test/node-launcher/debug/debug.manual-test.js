@@ -11,7 +11,7 @@ const filenameRelative = `${testFolderRelative}/debug.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  logLevel: "off",
 })
 
 const actual = await launchAndExecute({
@@ -22,7 +22,6 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       compileInto,
     }),
-  verbose: false,
   filenameRelative,
 })
 const expected = {

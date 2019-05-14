@@ -25,7 +25,7 @@ const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
   babelConfigMap,
-  verbose: false,
+  logLevel: "off",
 })
 
 const actual = await launchAndExecute({

@@ -6,27 +6,27 @@ import { startCompileServer } from "./compile-server/index.js"
 
 export const executeDescriptionToExecutionPlan = async ({
   cancellationToken,
-  importMapFilenameRelative,
   projectFolder,
+  browserGroupResolverFilenameRelative,
+  nodeGroupResolverFilenameRelative,
+  importMapFilenameRelative,
   compileInto,
   compileGroupCount,
   babelConfigMap,
   executeDescription,
-  verbose = false,
   defaultAllocatedMsPerExecution = 20000,
-  enableGlobalLock,
+  compileServerLogLevel,
 }) => {
-  const sourceOrigin = `file://${projectFolder}`
-
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
-    importMapFilenameRelative,
     projectFolder,
+    browserGroupResolverFilenameRelative,
+    nodeGroupResolverFilenameRelative,
+    importMapFilenameRelative,
     compileInto,
     compileGroupCount,
     babelConfigMap,
-    verbose,
-    enableGlobalLock,
+    logLevel: compileServerLogLevel,
   })
 
   const metaDescription = namedValueDescriptionToMetaDescription({
@@ -58,9 +58,9 @@ singleExecutionPlan: ${singleExecutionPlan}`)
             launch({
               ...options,
               cancellationToken,
-              compileInto,
-              sourceOrigin,
+              projectFolder,
               compileServerOrigin,
+              compileInto,
             }),
           allocatedMs: allocatedMs === undefined ? defaultAllocatedMsPerExecution : allocatedMs,
         }

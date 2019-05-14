@@ -5,8 +5,9 @@ import {
   createCancellationSource,
   cancellationTokenCompose,
   errorToCancelReason,
-} from "/node_modules/@dmail/cancellation/index.js"
-import { promiseTrackRace } from "/node_modules/@dmail/helper/index.js"
+} from "@dmail/cancellation"
+import { promiseTrackRace } from "@dmail/helper"
+import { createLogger } from "../logger.js"
 
 export const launchAndExecute = async ({
   cancellationToken = createCancellationToken(),
@@ -23,13 +24,11 @@ export const launchAndExecute = async ({
   // to debug the error to the its consequences
   // however unit test will pass true because they want to move on
   stopOnError = false,
-  verbose = false,
+  logLevel = "off",
   consoleCallback = () => {},
   startedCallback = () => {},
   stoppedCallback = () => {},
-  errorAfterExecutedCallback = (error) => {
-    console.error(createAfterExecutionErrorMessage({ error }))
-  },
+  errorAfterExecutedCallback = () => {},
   disconnectAfterExecutedCallback = () => {},
   filenameRelative,
   collectNamespace = false,
@@ -99,8 +98,8 @@ export const launchAndExecute = async ({
     launch,
     cancellationToken,
     allocatedMs,
+    logLevel,
     consoleCallback,
-    verbose,
     stopOnceExecuted,
     stopOnError,
     errorAfterExecutedCallback,
@@ -188,7 +187,7 @@ const ALLOCATED_MS_BEFORE_FORCE_STOP = 8000
 const computeExecutionResult = async ({
   launch,
   cancellationToken,
-  verbose,
+  logLevel,
   startedCallback,
   stoppedCallback,
   consoleCallback,
@@ -200,14 +199,13 @@ const computeExecutionResult = async ({
   collectNamespace,
   collectCoverage,
 }) => {
-  const log = verbose ? (...args) => console.log(...args) : () => {}
-
+  const { log, logError } = createLogger({ logLevel })
   log(createStartingPlatformMessage({ filenameRelative }))
 
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
-      const value = await launch({ cancellationToken, verbose })
+      const value = await launch({ cancellationToken, logLevel })
       startedCallback({ name: value.name, version: value.version })
       return value
     },
@@ -320,7 +318,7 @@ const computeExecutionResult = async ({
       }
 
       if (winner === executionErrored) {
-        console.error(createExecutionErrorMessage({ error: value }))
+        logError(createExecutionErrorMessage({ error: value }))
         onError(value)
         return createErroredExecutionResult({
           error: value,
@@ -330,6 +328,7 @@ const computeExecutionResult = async ({
       log(createExecutionDoneMessage({ value }))
 
       registerErrorCallback((error) => {
+        logError(createAfterExecutionErrorMessage({ error }))
         errorAfterExecutedCallback(error)
         onError(error)
       })

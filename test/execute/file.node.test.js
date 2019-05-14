@@ -1,12 +1,18 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
+import { assert } from "@dmail/assert"
+import { hrefToFolderJsenvRelative } from "../../src/hrefToFolderJsenvRelative.js"
+import { ROOT_FOLDER } from "../../src/ROOT_FOLDER.js"
 import { execute, launchNode } from "../../index.js"
 
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
+const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
+const projectFolder = ROOT_FOLDER
+const compileInto = `${testFolderRelative}/.dist`
+const filenameRelative = `${testFolderRelative}/file.js`
 
-execute({
-  projectFolder: testFolder,
-  compileInto: ".dist",
-  babelConfigMap: {},
+const actual = await execute({
+  projectFolder,
+  compileInto,
   launch: launchNode,
-  filenameRelative: "file.js",
+  filenameRelative,
 })
+
+assert({ actual, expected: { status: "completed" } })

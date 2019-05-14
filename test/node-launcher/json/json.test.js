@@ -11,12 +11,11 @@ const filenameRelative = `${testFolderRelative}/json.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  logLevel: "off",
 })
 
 const actual = await launchAndExecute({
   launch: (options) => launchNode({ ...options, projectFolder, compileServerOrigin, compileInto }),
-  verbose: false,
   collectNamespace: true,
   filenameRelative,
 })

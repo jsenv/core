@@ -85,8 +85,10 @@ const createDisconnectedLog = ({
   return `
 ${color}${icon} disconnected during execution.${close}
 filenameRelative: ${filenameRelative}
-platform: ${formatPlatform({ platformName, platformVersion })}
-duration: ${formatDuration(endMs - startMs)}${appendPlatformLog(platformLog)}`
+platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
+    startMs,
+    endMs,
+  })}${appendPlatformLog(platformLog)}`
 }
 
 const createTimedoutLog = ({
@@ -104,8 +106,10 @@ const createTimedoutLog = ({
   return `
 ${color}${icon} execution takes more than ${allocatedMs}ms.${close}
 filenameRelative: ${filenameRelative}
-platform: ${formatPlatform({ platformName, platformVersion })}
-duration: ${formatDuration(endMs - startMs)}${appendPlatformLog(platformLog)}`
+platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
+    startMs,
+    endMs,
+  })}${appendPlatformLog(platformLog)}`
 }
 
 const createErroredLog = ({
@@ -122,8 +126,10 @@ const createErroredLog = ({
   return `
 ${color}${icon} error during execution.${close}
 filenameRelative: ${filenameRelative}
-platform: ${formatPlatform({ platformName, platformVersion })}
-duration: ${formatDuration(endMs - startMs)}${appendPlatformLog(platformLog)}`
+platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
+    startMs,
+    endMs,
+  })}${appendPlatformLog(platformLog)}`
 }
 
 const createCompletedLog = ({
@@ -140,13 +146,24 @@ const createCompletedLog = ({
   return `
 ${color}${icon} execution completed.${close}
 filenameRelative: ${filenameRelative}
-platform: ${formatPlatform({ platformName, platformVersion })}
-duration: ${formatDuration(endMs - startMs)}${appendPlatformLog(platformLog)}`
+platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
+    startMs,
+    endMs,
+  })}${appendPlatformLog(platformLog)}`
 }
 
 const formatPlatform = ({ platformName, platformVersion }) => `${platformName}/${platformVersion}`
 
+const appendDuration = ({ endMs, startMs }) => {
+  if (!endMs) return ""
+
+  return `
+duration: ${formatDuration(endMs - startMs)}`
+}
+
 const appendPlatformLog = (platformLog) => {
+  if (!platformLog) return ""
+
   const trimmedPlatformLog = platformLog.trim()
   if (trimmedPlatformLog === "") return ""
 

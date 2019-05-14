@@ -21,8 +21,7 @@ await bundleBrowser({
     main: "scoped-node-module.js",
   },
   compileGroupCount: 1,
-  verbose: false,
-  logBundleFilePaths: false,
+  logLevel: "off",
 })
 
 const { namespace: actual } = await importBrowserBundle({

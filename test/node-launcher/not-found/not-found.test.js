@@ -13,13 +13,12 @@ const compileId = "otherwise"
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  logLevel: "off",
 })
 
 const actual = await launchAndExecute({
   launch: (options) => launchNode({ ...options, projectFolder, compileServerOrigin, compileInto }),
   filenameRelative,
-  verbose: false,
 })
 const expected = {
   status: "errored",

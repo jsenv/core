@@ -18,35 +18,52 @@ import { filenameRelativeToEmptyCoverage } from "./filenameRelativeToEmptyCovera
 import { generateCoverageHTML } from "./generateCoverageHTML.js"
 import { generateCoverageLog } from "./generateCoverageLog.js"
 import {
-  COVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  COVER_DEFAULT_COVERAGE_FILENAME_RELATIVE,
-  COVER_DEFAULT_COVER_DESCRIPTION,
-  COVER_DEFAULT_EXECUTE_DESCRIPTION,
-  COVER_DEFAULT_COMPILE_INTO,
-  COVER_DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
+  DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE,
+  DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  DEFAULT_COMPILE_INTO,
+  DEFAULT_COVER_DESCRIPTION,
+  DEFAULT_EXECUTE_DESCRIPTION,
+  DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_COVERAGE_FILENAME_RELATIVE,
+  DEFAULT_MAX_PARALLEL_EXECUTION,
 } from "./cover-constant.js"
 
 export const cover = async ({
   projectFolder,
-  babelConfigMap = COVER_DEFAULT_BABEL_CONFIG_MAP,
-  importMapFilenameRelative = COVER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  coverageFilenameRelative = COVER_DEFAULT_COVERAGE_FILENAME_RELATIVE,
+  browserGroupResolverFilenameRelative = DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
+  nodeGroupResolverFilenameRelative = DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE,
+  importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  coverageFilenameRelative = DEFAULT_COVERAGE_FILENAME_RELATIVE,
   // coverDescription could be deduced from passing
   // an entryPointMap and collecting all dependencies
   // for now we stick to coverDescription using project-structure api
-  coverDescription = COVER_DEFAULT_COVER_DESCRIPTION,
-  executeDescription = COVER_DEFAULT_EXECUTE_DESCRIPTION,
-  compileInto = COVER_DEFAULT_COMPILE_INTO,
+  coverDescription = DEFAULT_COVER_DESCRIPTION,
+  executeDescription = DEFAULT_EXECUTE_DESCRIPTION,
+  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
+  compileInto = DEFAULT_COMPILE_INTO,
   compileGroupCount = 2,
-  defaultAllocatedMsPerExecution,
-  enableGlobalLock = false,
+  maxParallelExecution = DEFAULT_MAX_PARALLEL_EXECUTION,
+  defaultAllocatedMsPerExecution = 20000,
   writeCoverageFile = true,
   logCoverageFilePath = true,
   logCoverageTable = false,
   writeCoverageHtmlFolder = false,
   updateProcessExitCode = true,
   throwUnhandled = true,
+  compileServerLogLevel = "off",
+  executionLogLevel = "log",
+  collectNamespace = false,
+  measureDuration = true,
+  captureConsole = true,
 }) => {
+  if (!writeCoverageFile) {
+    if (logCoverageTable)
+      throw new Error(`logCoverageTable must be false when writeCoverageFile is false`)
+    if (writeCoverageHtmlFolder)
+      throw new Error(`writeCoverageHtmlFolder must be false when writeCoverageFile is false`)
+  }
+
   const start = async () => {
     projectFolder = normalizePathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
@@ -63,18 +80,40 @@ export const cover = async ({
     ensureNoFileIsBothCoveredAndExecuted({ executeDescription, coverFilePredicate })
 
     const [{ planResult, planResultSummary }, arrayOfFilenameRelativeToCover] = await Promise.all([
-      executeAndCoverPatternMapping({
-        cancellationToken,
-        importMapFilenameRelative,
-        projectFolder,
-        compileInto,
-        compileGroupCount,
-        babelConfigMap,
-        executeDescription,
-        coverFilePredicate,
-        defaultAllocatedMsPerExecution,
-        enableGlobalLock,
-      }),
+      (async () => {
+        const instrumentBabelPlugin = createInstrumentPlugin({
+          predicate: (filenameRelative) => coverFilePredicate(filenameRelative),
+        })
+
+        const babelConfigMapWithInstrumentation = {
+          ...babelConfigMap,
+          "transform-instrument": [instrumentBabelPlugin],
+        }
+
+        const executionPlan = await executeDescriptionToExecutionPlan({
+          cancellationToken,
+          projectFolder,
+          browserGroupResolverFilenameRelative,
+          nodeGroupResolverFilenameRelative,
+          importMapFilenameRelative,
+          compileInto,
+          compileGroupCount,
+          babelConfigMap: babelConfigMapWithInstrumentation,
+          executeDescription,
+          defaultAllocatedMsPerExecution,
+          compileServerLogLevel,
+        })
+
+        return executePlan(executionPlan, {
+          cover: true,
+          logLevel: executionLogLevel,
+          cancellationToken,
+          maxParallelExecution,
+          measureDuration,
+          captureConsole,
+          collectNamespace,
+        })
+      })(),
       listFilesToCover({
         cancellationToken,
         projectFolder,
@@ -174,43 +213,4 @@ const listFilesToCover = async ({ cancellationToken, projectFolder, coverDescrip
   })
 
   return arrayOfFilenameRelativeToCover
-}
-
-const executeAndCoverPatternMapping = async ({
-  cancellationToken,
-  importMapFilenameRelative,
-  projectFolder,
-  compileInto,
-  compileGroupCount,
-  babelConfigMap,
-  executeDescription,
-  coverFilePredicate,
-  defaultAllocatedMsPerExecution,
-  enableGlobalLock,
-}) => {
-  const instrumentBabelPlugin = createInstrumentPlugin({
-    predicate: (filenameRelative) => coverFilePredicate(filenameRelative),
-  })
-
-  const babelConfigMapWithInstrumentation = {
-    ...babelConfigMap,
-    "transform-instrument": [instrumentBabelPlugin],
-  }
-
-  const executionPlan = await executeDescriptionToExecutionPlan({
-    cancellationToken,
-    importMapFilenameRelative,
-    projectFolder,
-    compileInto,
-    compileGroupCount,
-    babelConfigMap: babelConfigMapWithInstrumentation,
-    executeDescription,
-    defaultAllocatedMsPerExecution,
-    enableGlobalLock,
-  })
-
-  return executePlan(executionPlan, {
-    cancellationToken,
-    cover: true,
-  })
 }

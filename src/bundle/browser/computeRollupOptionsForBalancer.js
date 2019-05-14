@@ -3,6 +3,7 @@ import { uneval } from "@dmail/uneval"
 import { filenameRelativeInception } from "../../inception.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
+import { createLogger } from "../../logger.js"
 
 export const computeRollupOptionsForBalancer = ({
   cancellationToken,
@@ -14,9 +15,10 @@ export const computeRollupOptionsForBalancer = ({
   groupMap,
   entryPointName,
   minify,
-  log,
-  logBundleFilePaths,
+  logLevel,
 }) => {
+  const { logTrace } = createLogger({ logLevel })
+
   const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
     platformGlobalName: "window",
   })
@@ -56,10 +58,10 @@ export const computeRollupOptionsForBalancer = ({
     babelConfigMap,
     minify,
     target: "browser",
-    logBundleFilePaths,
+    logLevel,
   })
 
-  log(`
+  logTrace(`
 bundle balancer file for browser
 entryPointName: ${entryPointName}
 file: ${dir}/${entryPointName}.js

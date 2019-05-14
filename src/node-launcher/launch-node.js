@@ -27,7 +27,7 @@ export const launchNode = async ({
   debugModeInheritBreak = true,
   remap = true,
   traceWarnings = true,
-  verbose = false,
+  logLevel = false,
 }) => {
   if (typeof projectFolder !== "string")
     throw new TypeError(`projectFolder must be a string, got ${projectFolder}`)
@@ -149,7 +149,7 @@ export const launchNode = async ({
         babelConfigMap,
         filenameRelative: ".jsenv/node-execute.js",
         sourceFilenameRelative: nodeExecuteFilenameRelative,
-        verbose,
+        logLevel,
       })
 
       return new Promise((resolve, reject) => {

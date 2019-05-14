@@ -7,15 +7,16 @@ import { fetch } from "../fetch.js"
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
 const projectFolder = ROOT_FOLDER
 const compileInto = `${testFolderRelative}/.dist`
+const compileId = "otherwise"
 
 const compileServer = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  logLevel: "off",
 })
 
 const response = await fetch(
-  `${compileServer.origin}/${compileInto}/otherwise/${testFolderRelative}/syntax-error.js`,
+  `${compileServer.origin}/${compileInto}/${compileId}/${testFolderRelative}/syntax-error.js`,
 )
 const body = await response.json()
 const actual = {
@@ -33,9 +34,10 @@ const expected = {
     "content-type": ["application/json"],
   },
   body: {
+    message: actual.body.message,
     messageHTML: actual.body.messageHTML,
     filename: `${projectFolder}/${testFolderRelative}/syntax-error.js`,
-    outputFilename: `file://${projectFolder}/${compileInto}/otherwise/${testFolderRelative}/syntax-error.js`,
+    outputFilename: `file://${projectFolder}/${compileInto}/${compileId}/${testFolderRelative}/syntax-error.js`,
     lineNumber: 1,
     columnNumber: 11,
   },

@@ -14,8 +14,7 @@ await bundleBrowser({
   entryPointMap: {
     main: "origin-relative.js",
   },
-  verbose: false,
-  logBundleFilePaths: false,
+  logLevel: "off",
 })
 
 const { namespace: actual } = await importBrowserBundle({

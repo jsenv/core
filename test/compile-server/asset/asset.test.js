@@ -8,7 +8,7 @@ const compileInto = ".dist"
 
 const compileServer = await startCompileServer({
   projectFolder: testFolder,
-  verbose: false,
+  logLevel: "off",
 })
 
 await fetch(`${compileServer.origin}/${compileInto}/otherwise/asset.js`)

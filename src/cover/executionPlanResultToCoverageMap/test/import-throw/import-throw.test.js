@@ -9,7 +9,6 @@ const { projectFolder } = import.meta.require("../../../../../jsenv.config.js")
 
 const testFolder = `${projectFolder}/src/executionPlanResultToCoverageMap/test/import-throw`
 const compileInto = ".dist"
-const babelConfigMap = {}
 
 ;(async () => {
   const sourceOrigin = `file://${testFolder}`
@@ -17,8 +16,7 @@ const babelConfigMap = {}
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelConfigMap,
-    verbose: false,
+    logLevel: "off",
   })
 
   const nodeLaunch = (options) =>

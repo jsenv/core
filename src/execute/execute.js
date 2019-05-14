@@ -13,24 +13,23 @@ import {
 
 export const execute = async ({
   projectFolder,
-  babelConfigMap = EXECUTE_DEFAULT_BABEL_CONFIG_MAP,
+  filenameRelative,
+  launch,
   importMapFilenameRelative = EXECUTE_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
   compileInto = EXECUTE_DEFAULT_COMPILE_INTO,
+  babelConfigMap = EXECUTE_DEFAULT_BABEL_CONFIG_MAP,
   compileGroupCount = 2,
-  protocol,
-  ip,
-  port,
-  verbose = false,
-  launch,
+  protocol = "http",
+  ip = "127.0.0.1",
+  port = 0,
+  compileServerLogLevel = "off",
+  executionLogLevel = "off",
   mirrorConsole = true,
-  stopOnceExecuted,
-  filenameRelative,
+  stopOnceExecuted = false,
 }) =>
   catchAsyncFunctionCancellation(async () => {
     projectFolder = normalizePathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
-
-    const sourceOrigin = `file://${projectFolder}`
 
     const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
@@ -42,15 +41,15 @@ export const execute = async ({
       protocol,
       ip,
       port,
-      verbose,
+      compileServerLogLevel,
     })
 
     return launchAndExecute({
-      launch: (options) => launch({ ...options, compileInto, sourceOrigin, compileServerOrigin }),
       cancellationToken,
+      launch: (options) => launch({ ...options, projectFolder, compileServerOrigin, compileInto }),
+      logLevel: executionLogLevel,
       mirrorConsole,
       stopOnceExecuted,
       filenameRelative,
-      verbose,
     })
   })

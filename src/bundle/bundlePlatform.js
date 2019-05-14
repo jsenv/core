@@ -15,7 +15,7 @@ export const bundlePlatform = ({
   computeRollupOptionsWithoutBalancing,
   computeRollupOptionsWithBalancing,
   computeRollupOptionsForBalancer,
-  verbose,
+  logLevel = "log",
   logBundleFilePaths,
   writeOnFileSystem,
 }) =>
@@ -28,15 +28,17 @@ export const bundlePlatform = ({
     if (compileGroupCount < 1)
       throw new Error(`compileGroupCount must be > 1, got ${compileGroupCount}`)
 
-    const log = verbose ? (...args) => console.log(...args) : () => {}
-
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     if (compileGroupCount === 1) {
       return await bundleWithRollup({
         cancellationToken,
         writeOnFileSystem,
-        ...computeRollupOptionsWithoutBalancing({ cancellationToken, log, logBundleFilePaths }),
+        ...computeRollupOptionsWithoutBalancing({
+          cancellationToken,
+          logLevel,
+          logBundleFilePaths,
+        }),
       })
     }
 
@@ -52,7 +54,7 @@ export const bundlePlatform = ({
         writeOnFileSystem,
         groupMap,
         computeRollupOptionsWithBalancing,
-        log,
+        logLevel,
         logBundleFilePaths,
       }),
       generateEntryPointsBalancerFiles({
@@ -61,7 +63,7 @@ export const bundlePlatform = ({
         entryPointMap,
         groupMap,
         computeRollupOptionsForBalancer,
-        log,
+        logLevel,
         logBundleFilePaths,
       }),
     ])
@@ -72,7 +74,7 @@ const generateEntryPointsFolders = async ({
   writeOnFileSystem,
   groupMap,
   computeRollupOptionsWithBalancing,
-  log,
+  logLevel,
   logBundleFilePaths,
 }) => {
   await Promise.all(
@@ -82,7 +84,7 @@ const generateEntryPointsFolders = async ({
         writeOnFileSystem,
         ...computeRollupOptionsWithBalancing({
           cancellationToken,
-          log,
+          logLevel,
           logBundleFilePaths,
           groupMap,
           compileId,
@@ -98,7 +100,7 @@ const generateEntryPointsBalancerFiles = ({
   entryPointMap,
   groupMap,
   computeRollupOptionsForBalancer,
-  log,
+  logLevel,
   logBundleFilePaths,
 }) => {
   return Promise.all(
@@ -109,7 +111,7 @@ const generateEntryPointsBalancerFiles = ({
           writeOnFileSystem,
           ...computeRollupOptionsForBalancer({
             cancellationToken,
-            log,
+            logLevel,
             logBundleFilePaths,
             groupMap,
             entryPointName,

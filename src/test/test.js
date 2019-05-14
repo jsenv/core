@@ -6,23 +6,33 @@ import {
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
 import { executePlan } from "../executePlan/index.js"
 import {
-  TEST_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  TEST_DEFAULT_COMPILE_INTO,
-  TEST_DEFAULT_EXECUTE_DESCRIPTION,
-  TEST_DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  DEFAULT_COMPILE_INTO,
+  DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
+  DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE,
+  DEFAULT_EXECUTE_DESCRIPTION,
+  DEFAULT_MAX_PARALLEL_EXECUTION,
 } from "./test-constant.js"
 
 export const test = async ({
   projectFolder,
-  babelConfigMap = TEST_DEFAULT_BABEL_CONFIG_MAP,
-  importMapFilenameRelative = TEST_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  compileInto = TEST_DEFAULT_COMPILE_INTO,
-  executeDescription = TEST_DEFAULT_EXECUTE_DESCRIPTION,
+  importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  compileInto = DEFAULT_COMPILE_INTO,
+  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
+  browserGroupResolverFilenameRelative = DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
+  nodeGroupResolverFilenameRelative = DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE,
+  executeDescription = DEFAULT_EXECUTE_DESCRIPTION,
   compileGroupCount = 2,
-  maxParallelExecution,
-  defaultAllocatedMsPerExecution,
+  maxParallelExecution = DEFAULT_MAX_PARALLEL_EXECUTION,
+  defaultAllocatedMsPerExecution = 20000,
   updateProcessExitCode = true,
   throwUnhandled = true,
+  compileServerLogLevel = "off",
+  executionLogLevel = "log",
+  collectNamespace = false,
+  measureDuration = true,
+  captureConsole = true,
 }) => {
   const start = async () => {
     projectFolder = normalizePathname(projectFolder)
@@ -30,18 +40,25 @@ export const test = async ({
 
     const executionPlan = await executeDescriptionToExecutionPlan({
       cancellationToken,
-      importMapFilenameRelative,
       projectFolder,
+      importMapFilenameRelative,
       compileInto,
       compileGroupCount,
       babelConfigMap,
+      browserGroupResolverFilenameRelative,
+      nodeGroupResolverFilenameRelative,
       executeDescription,
       defaultAllocatedMsPerExecution,
+      compileServerLogLevel,
     })
 
     const { planResult, planResultSummary } = await executePlan(executionPlan, {
       cancellationToken,
       maxParallelExecution,
+      logLevel: executionLogLevel,
+      measureDuration,
+      captureConsole,
+      collectNamespace,
     })
     if (updateProcessExitCode) {
       if (planResultSummary.executionCount !== planResultSummary.completedCount) {

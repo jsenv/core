@@ -49,7 +49,7 @@ export const startCompileServer = async ({
   ip = "127.0.0.1",
   port = 0,
   signature,
-  verbose,
+  logLevel = "log",
 }) => {
   if (typeof projectFolder !== "string")
     throw new TypeError(`projectFolder must be a string. got ${projectFolder}`)
@@ -188,7 +188,7 @@ export const startCompileServer = async ({
     port,
     signature,
     requestToResponse: serviceCompose(...services),
-    verbose,
+    logLevel,
     cors,
   })
   // https://nodejs.org/api/net.html#net_server_unref

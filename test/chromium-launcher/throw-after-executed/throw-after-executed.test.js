@@ -11,7 +11,7 @@ const filenameRelative = `${testFolderRelative}/throw-after-executed.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  logLevel: "off",
 })
 
 let afterExecuteError

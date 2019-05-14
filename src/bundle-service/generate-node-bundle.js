@@ -12,7 +12,7 @@ export const generateNodeBundle = async ({
   sourceFilenameRelative,
   inlineSpecifierMap = {},
   sourcemapFilenameRelative = computeSourcemapFilenameRelative(filenameRelative),
-  verbose = false,
+  logLevel = "off",
 }) => {
   return getOrGenerateCompiledFile({
     projectFolder,
@@ -43,7 +43,7 @@ export const generateNodeBundle = async ({
         throwUnhandled: false,
         writeOnFileSystem: false,
         logBundleFilePaths: false,
-        verbose,
+        logLevel,
       })
 
       return platformClientBundleToCompilationResult({

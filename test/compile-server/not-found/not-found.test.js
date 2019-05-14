@@ -11,7 +11,7 @@ const compileInto = `${testFolderRelative}/.dist`
 const compileServer = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  logLevel: "off",
 })
 
 const response = await fetch(

@@ -9,7 +9,6 @@ const { projectFolder } = import.meta.require("../../../../../jsenv.config.js")
 
 const testFolder = `${projectFolder}/src/cover/executionPlanResultToCoverageMap/test/node-and-chrome`
 const compileInto = ".dist"
-const babelConfigMap = {}
 
 ;(async () => {
   const sourceOrigin = `file://${testFolder}`
@@ -17,11 +16,10 @@ const babelConfigMap = {}
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelConfigMap,
     protocol: "http",
     ip: "127.0.0.1",
     port: 0,
-    verbose: false,
+    logLevel: "off",
   })
 
   const nodeLaunch = (options) =>

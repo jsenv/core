@@ -12,7 +12,7 @@ const filenameRelative = `${testFolderRelative}/disconnect.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  logLevel: "off",
 })
 
 const actual = await launchAndExecute({
@@ -23,7 +23,6 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       compileInto,
     }),
-  verbose: false,
   captureConsole: true,
   filenameRelative,
 })

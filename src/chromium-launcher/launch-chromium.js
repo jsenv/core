@@ -29,7 +29,7 @@ export const launchChromium = async ({
   importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
   compileInto = DEFAULT_COMPILE_INTO,
   browserClientFolderRelative = DEFAULT_BROWSER_CLIENT_FOLDER_RELATIVE,
-  verbose = false,
+  clientServerLogLevel = "off",
   headless = true,
 }) => {
   if (typeof projectFolder !== "string")
@@ -142,7 +142,7 @@ export const launchChromium = async ({
         importMapFilenameRelative,
         browserClientFolderRelative,
         compileInto,
-        verbose,
+        logLevel: clientServerLogLevel,
       }),
     ])
     registerCleanupCallback(chromiumServer.stop)

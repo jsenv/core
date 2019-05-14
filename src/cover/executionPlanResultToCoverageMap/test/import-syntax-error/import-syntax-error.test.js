@@ -18,7 +18,7 @@ const babelConfigMap = {}
     projectFolder: testFolder,
     compileInto,
     babelConfigMap,
-    verbose: false,
+    logLevel: "off",
   })
 
   const nodeLaunch = (options) =>

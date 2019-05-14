@@ -11,7 +11,7 @@ const filenameRelative = `${testFolderRelative}/import-from-global.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileInto,
-  verbose: false,
+  logLevel: "off",
 })
 
 const actual = await launchAndExecute({
