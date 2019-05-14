@@ -42,7 +42,6 @@ export const generateNodeBundle = async ({
         compileGroupCount: 1,
         throwUnhandled: false,
         writeOnFileSystem: false,
-        logBundleFilePaths: false,
         logLevel,
       })
 

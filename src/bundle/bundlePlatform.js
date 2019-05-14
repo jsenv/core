@@ -16,7 +16,6 @@ export const bundlePlatform = ({
   computeRollupOptionsWithBalancing,
   computeRollupOptionsForBalancer,
   logLevel = "log",
-  logBundleFilePaths,
   writeOnFileSystem,
 }) =>
   catchAsyncFunctionCancellation(async () => {
@@ -37,7 +36,6 @@ export const bundlePlatform = ({
         ...computeRollupOptionsWithoutBalancing({
           cancellationToken,
           logLevel,
-          logBundleFilePaths,
         }),
       })
     }
@@ -55,7 +53,6 @@ export const bundlePlatform = ({
         groupMap,
         computeRollupOptionsWithBalancing,
         logLevel,
-        logBundleFilePaths,
       }),
       generateEntryPointsBalancerFiles({
         cancellationToken,
@@ -64,7 +61,6 @@ export const bundlePlatform = ({
         groupMap,
         computeRollupOptionsForBalancer,
         logLevel,
-        logBundleFilePaths,
       }),
     ])
   })
@@ -75,7 +71,6 @@ const generateEntryPointsFolders = async ({
   groupMap,
   computeRollupOptionsWithBalancing,
   logLevel,
-  logBundleFilePaths,
 }) => {
   await Promise.all(
     Object.keys(groupMap).map((compileId) => {
@@ -85,7 +80,7 @@ const generateEntryPointsFolders = async ({
         ...computeRollupOptionsWithBalancing({
           cancellationToken,
           logLevel,
-          logBundleFilePaths,
+
           groupMap,
           compileId,
         }),
@@ -101,7 +96,6 @@ const generateEntryPointsBalancerFiles = ({
   groupMap,
   computeRollupOptionsForBalancer,
   logLevel,
-  logBundleFilePaths,
 }) => {
   return Promise.all(
     Object.keys(entryPointMap).map((entryPointName) => {
@@ -112,7 +106,6 @@ const generateEntryPointsBalancerFiles = ({
           ...computeRollupOptionsForBalancer({
             cancellationToken,
             logLevel,
-            logBundleFilePaths,
             groupMap,
             entryPointName,
           }),

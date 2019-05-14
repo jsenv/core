@@ -14,7 +14,7 @@ await bundleNode({
   entryPointMap: {
     main: `${testFolderRelative}/native-import.js`,
   },
-  logBundleFilePaths: false,
+  logLevel: "off",
 })
 
 const { namespace: actual } = await importNodeBundle({

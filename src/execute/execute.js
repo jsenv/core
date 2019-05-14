@@ -41,7 +41,7 @@ export const execute = async ({
       protocol,
       ip,
       port,
-      compileServerLogLevel,
+      logLevel: compileServerLogLevel,
     })
 
     return launchAndExecute({

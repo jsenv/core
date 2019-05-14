@@ -14,7 +14,7 @@ await bundleNode({
   entryPointMap: {
     main: `${testFolderRelative}/dynamic-import.js`,
   },
-  logBundleFilePaths: false,
+  logLevel: "off",
 })
 
 const { namespace } = await importNodeBundle({

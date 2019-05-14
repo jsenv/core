@@ -25,7 +25,6 @@ export const bundleNode = async ({
   minify = false,
   throwUnhandled = true,
   writeOnFileSystem = true,
-  logBundleFilePaths = true,
 }) => {
   projectFolder = normalizePathname(projectFolder)
   const promise = bundlePlatform({
@@ -37,7 +36,6 @@ export const bundleNode = async ({
     platformScoreMap: { node: versionScoreMap },
     logLevel,
     writeOnFileSystem,
-    logBundleFilePaths,
     computeRollupOptionsWithoutBalancing: (context) =>
       computeRollupOptionsWithoutBalancing({
         projectFolder,

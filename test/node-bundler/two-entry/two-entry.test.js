@@ -15,7 +15,7 @@ await bundleNode({
     a: `${testFolderRelative}/a.js`,
     b: `${testFolderRelative}/b.js`,
   },
-  logBundleFilePaths: false,
+  logLevel: "off",
 })
 
 {

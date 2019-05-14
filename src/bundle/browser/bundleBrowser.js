@@ -27,7 +27,6 @@ export const bundleBrowser = async ({
   minify = false,
   throwUnhandled = true,
   writeOnFileSystem = true,
-  logBundleFilePaths = true,
   generateEntryPages = false,
 }) => {
   projectFolder = normalizePathname(projectFolder)
@@ -41,7 +40,6 @@ export const bundleBrowser = async ({
     platformScoreMap,
     logLevel,
     writeOnFileSystem,
-    logBundleFilePaths,
     computeRollupOptionsWithoutBalancing: (context) =>
       computeRollupOptionsWithoutBalancing({
         projectFolder,

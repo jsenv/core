@@ -14,7 +14,7 @@ try {
     entryPointMap: {
       main: `${testFolderRelative}/top-level-await.js`,
     },
-    logBundleFilePaths: false,
+    logLevel: "off",
     throwUnhandled: false,
   })
 } catch (e) {

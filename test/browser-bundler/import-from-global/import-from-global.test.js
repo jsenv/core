@@ -14,7 +14,7 @@ await bundleBrowser({
   entryPointMap: {
     main: "import-from-global.js",
   },
-  logBundleFilePaths: false,
+  logLevel: "off",
 })
 
 const { namespace: actual } = await importBrowserBundle({

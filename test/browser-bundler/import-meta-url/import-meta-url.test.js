@@ -14,7 +14,7 @@ await bundleBrowser({
   entryPointMap: {
     main: "import-meta-url.js",
   },
-  logBundleFilePaths: false,
+  logLevel: "off",
 })
 const { namespace: actual, serverOrigin } = await importBrowserBundle({
   bundleFolder: `${projectFolder}/${bundleInto}`,

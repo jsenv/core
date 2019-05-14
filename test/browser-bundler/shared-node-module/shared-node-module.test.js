@@ -20,7 +20,7 @@ await bundleBrowser({
   entryPointMap: {
     main: `shared-node-module.js`,
   },
-  logBundleFilePaths: false,
+  logLevel: "off",
 })
 
 const { namespace: actual } = await importBrowserBundle({

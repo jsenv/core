@@ -48,7 +48,7 @@ export const serveBundle = async ({
         compileGroupCount: 1,
         throwUnhandled: false,
         writeOnFileSystem: false,
-        logBundleFilePaths: false,
+        logLevel: "off",
       })
 
       return platformClientBundleToCompilationResult({

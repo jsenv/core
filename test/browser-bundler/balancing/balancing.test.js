@@ -15,7 +15,7 @@ await bundleBrowser({
     main: `${testFolderRelative}/balancing.js`,
   },
   compileGroupCount: 2,
-  logBundleFilePaths: false,
+  logLevel: "off",
 })
 
 const { namespace: actual } = await importBrowserBundle({

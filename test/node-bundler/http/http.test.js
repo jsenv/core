@@ -34,7 +34,7 @@ await bundleNode({
   entryPointMap: {
     main: `${testFolderRelative}/http.js`,
   },
-  logBundleFilePaths: false,
+  logLevel: "off",
 })
 
 const { namespace: actual } = await importNodeBundle({
