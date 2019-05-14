@@ -1,9 +1,6 @@
 ## TODO
 
-- update all test because they have to do projectFolder: ROOT_FOLDER
-- once all test passes, publish a new jsenv version
 - ensure jsenv inception works
-- retry to disable inspect-brk inside vscode (by passing debugModeInheritBreak: false)
 - make assert use latest jsenv
 - create a github page embedding a codepen to play with @dmail/assert in the browser
 - create a github page embedding a runkit to play with @dmail/assert in node
