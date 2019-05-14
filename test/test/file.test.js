@@ -7,15 +7,13 @@ const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
 const projectFolder = ROOT_FOLDER
 const compileInto = `${testFolderRelative}/.dist`
 
-const launchChromiumWithUI = (options) => launchChromium({ ...options, headless: false })
-
 const testDescription = {
   [`/${testFolderRelative}/file.js`]: {
     node: {
       launch: launchNode,
     },
     chromium: {
-      launch: launchChromiumWithUI,
+      launch: launchChromium,
     },
   },
 }
