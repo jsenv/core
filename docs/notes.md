@@ -1,12 +1,11 @@
 ## TODO
 
-- move generateImportMapForProjectNodeModules into its own jsenv-node-import-map github project to extract this logic
+- nothing for now :)
 
 ## To keep in mind
 
-- once https://github.com/systemjs/systemjs/issues/1924 and
-  https://github.com/systemjs/systemjs/pull/1925 gets fixed, update
-  SYSTEMJS_RELATIVE_PATH to 'node_modules/systemjs/dist/s.js'
+- Ideally we should not keep our own systemjs version:
+  https://github.com/systemjs/systemjs/issues/1924 and https://github.com/systemjs/systemjs/pull/1925.
 
 ### How to use dependency written in commonjs
 

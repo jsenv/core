@@ -13,11 +13,6 @@ export { test } from "./src/test/test.js"
 // belong to core
 export { cover } from "./src/cover/cover.js"
 
-// belong to core
-export {
-  generateImportMapForProjectNodeModules,
-} from "./src/import-map/generateImportMapForProjectNodeModules.js"
-
 // belong to core (let's keep it in core because way easier to manage)
 export { bundleNode } from "./src/bundle/node/bundleNode.js"
 
