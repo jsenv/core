@@ -4,12 +4,6 @@ const { babelConfigMap } = require("./node_modules/@jsenv/babel-config-map/index
 const projectFolder = __dirname
 exports.projectFolder = projectFolder
 
-const importMapFilenameRelative = "importMap.json"
-exports.importMapFilenameRelative = importMapFilenameRelative
-
-const compileInto = ".dist"
-exports.compileInto = compileInto
-
 const testDescription = {
   "/test/**/*.test.js": {
     node: {

@@ -1,9 +1,5 @@
 ## TODO
 
-- ensure jsenv inception works
-- make assert use latest jsenv
-- create a github page embedding a codepen to play with @dmail/assert in the browser
-- create a github page embedding a runkit to play with @dmail/assert in node
 - move generateImportMapForProjectNodeModules into its own jsenv-node-import-map github project to extract this logic
 
 ## To keep in mind
