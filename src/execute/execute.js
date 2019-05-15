@@ -56,4 +56,6 @@ export const execute = async ({
     if (result.status === "errored") {
       throw result.error
     }
+
+    return result
   })
