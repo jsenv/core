@@ -1,7 +1,8 @@
+import { generateImportMapForProjectNodeModules } from "@jsenv/node-module-import-map"
 import { assert } from "@dmail/assert"
 import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
 import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
-import { generateImportMapForProjectNodeModules, bundleBrowser } from "../../../index.js"
+import { bundleBrowser } from "../../../index.js"
 import { importBrowserBundle } from "../import-browser-bundle.js"
 
 const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)

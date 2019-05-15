@@ -6,6 +6,15 @@
 
 - Ideally we should not keep our own systemjs version:
   https://github.com/systemjs/systemjs/issues/1924 and https://github.com/systemjs/systemjs/pull/1925.
+- Ideally we should not keep our own babel-plugin-transform-modules-systemjs version: https://github.com/babel/babel/issues/9426
+- Respond to guybeford here https://github.com/systemjs/systemjs/pull/1925
+- Create @jsenv/chromium-launcher to externalize some code and make
+  jsenv/core lighter for thoose not using chromium
+- Create @jsenv/node-launcher to externalize some code and make
+  jsenv/core lighter for thoose not using node
+- Create @jsenv/firefox-launcher because it would be cool
+  to be able to test against firefox and puppeteer-firefox should help a lot
+- safari-launcher, opera-launcher would be great
 
 ### How to use dependency written in commonjs
 
