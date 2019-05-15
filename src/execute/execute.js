@@ -44,7 +44,7 @@ export const execute = async ({
       logLevel: compileServerLogLevel,
     })
 
-    return launchAndExecute({
+    const result = await launchAndExecute({
       cancellationToken,
       launch: (options) => launch({ ...options, projectFolder, compileServerOrigin, compileInto }),
       logLevel: executionLogLevel,
@@ -52,4 +52,8 @@ export const execute = async ({
       stopOnceExecuted,
       filenameRelative,
     })
+
+    if (result.status === "errored") {
+      throw result.error
+    }
   })
