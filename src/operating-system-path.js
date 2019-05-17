@@ -1,15 +1,15 @@
 // https://url.spec.whatwg.org/#example-start-with-a-widows-drive-letter
 
-export const operatingSystemFilenameToPathname = (operatingSystemFilename) => {
-  if (isWindowsFilename(operatingSystemFilename)) {
-    return `/${replaceBackSlashWithSlash(operatingSystemFilename)}`
+export const operatingSystemPathToPathname = (operatingSystemPath) => {
+  if (isWindowsPath(operatingSystemPath)) {
+    return `/${replaceBackSlashWithSlash(operatingSystemPath)}`
   }
 
   // linux and mac operatingSystemFilename === pathname
-  return operatingSystemFilename
+  return operatingSystemPath
 }
 
-export const pathnameToOperatingSystemFilename = (pathname) => {
+export const pathnameToOperatingSystemPath = (pathname) => {
   if (pathname[0] !== "/") throw new Error(`pathname must start with /`)
 
   const pathnameWithoutLeadingSlash = pathname.slice(1)
@@ -29,25 +29,14 @@ export const pathnameIsInside = (pathname, otherPathname) => {
 }
 
 export const pathnameToRelativePathname = (pathname, otherPathname) => {
-  const pathnameWithoutLeadingSlash = pathname.slice(1)
-  return pathnameWithoutLeadingSlash.slice(otherPathname.length)
-}
-
-export const appendpathnameRelative = (filename, pathnameRelative) => {
-  if (isWindowsFilename(filename)) {
-    return `${filename}${replaceSlashWithBackSlash(`/${pathnameRelative}`)}`
-  }
-
-  return `${filename}/${pathnameRelative}`
+  return pathname.slice(otherPathname.length)
 }
 
 const replaceSlashWithBackSlash = (string) => string.replace(/\//g, "\\")
 
 const replaceBackSlashWithSlash = (string) => string.replace(/\\/g, "/")
 
-const isWindowsFilename = (filename) => {
-  return startsWithWindowsDriveLetter(filename) && filename[2] === "\\"
-}
+const isWindowsPath = (path) => startsWithWindowsDriveLetter(path) && path[2] === "\\"
 
 const startsWithWindowsDriveLetter = (string) => {
   const firstChar = string[0]

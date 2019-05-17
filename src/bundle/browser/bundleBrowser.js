@@ -11,7 +11,7 @@ import {
   DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_BABEL_CONFIG_MAP,
 } from "./bundle-browser-constant.js"
-import { operatingSystemFilenameToPathname } from "/src/operating-system-filename.js"
+import { operatingSystemPathToPathname } from "../../operating-system-path.js"
 
 export const bundleBrowser = async ({
   projectFolder,
@@ -30,7 +30,7 @@ export const bundleBrowser = async ({
   writeOnFileSystem = true,
   generateEntryPages = false,
 }) => {
-  const projectPathname = operatingSystemFilenameToPathname(projectFolder)
+  const projectPathname = operatingSystemPathToPathname(projectFolder)
 
   const bundlePlatformPromise = bundlePlatform({
     projectPathname,

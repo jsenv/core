@@ -3,7 +3,7 @@ import { bundleBrowser } from "../bundle/browser/bundleBrowser.js"
 import { bundleNode } from "../bundle/node/bundleNode.js"
 import { serveCompiledFile } from "../compiled-file-service/index.js"
 import { platformClientBundleToCompilationResult } from "./platformClientBundleToCompilationResult.js"
-import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 export const serveBundle = async ({
   projectPathname,
@@ -27,10 +27,9 @@ export const serveBundle = async ({
       const entryBasename = basename(sourceRelativePath, entryExtname)
       const entryDirname = dirname(sourceRelativePath)
       const entryName = entryBasename
-
-      if (entryDirname) {
-        compileIntoRelativePath = `${compileIntoRelativePath}/${entryDirname}`
-      }
+      const bundleIntoRelativePath = entryDirname
+        ? `${compileIntoRelativePath}${entryDirname}`
+        : compileIntoRelativePath
 
       const entryPointMap = {
         [entryName]: sourceRelativePath,
@@ -39,8 +38,8 @@ export const serveBundle = async ({
       const generateBundle = format === "cjs" ? bundleNode : bundleBrowser
 
       const bundle = await generateBundle({
-        projectFolder: pathnameToOperatingSystemFilename(projectPathname),
-        bundleIntoRelativePath: compileIntoRelativePath,
+        projectFolder: pathnameToOperatingSystemPath(projectPathname),
+        bundleIntoRelativePath,
         importMapRelativePath,
         entryPointMap,
         inlineSpecifierMap,

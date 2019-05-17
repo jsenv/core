@@ -2,7 +2,7 @@ import { fileRead } from "@dmail/helper"
 import { createOperation } from "@dmail/cancellation"
 import { compileJs } from "../compiled-js-service/index.js"
 import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
-import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 const { createFileCoverage } = import.meta.require("istanbul-lib-coverage")
 
@@ -11,7 +11,7 @@ export const relativePathToEmptyCoverage = async ({
   projectPathname,
   relativePath,
 }) => {
-  const filename = pathnameToOperatingSystemFilename(`${projectPathname}${relativePath}`)
+  const filename = pathnameToOperatingSystemPath(`${projectPathname}${relativePath}`)
   const source = await createOperation({
     cancellationToken,
     start: () => fileRead(filename),

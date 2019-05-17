@@ -12,7 +12,7 @@ import {
 } from "./launch-node-constant.js"
 import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
 import { regexpEscape } from "../../src/stringHelper.js"
-import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
 
@@ -280,7 +280,7 @@ const createNodeIIFEString = ({
   remap,
 }) => `(() => {
   const { execute } = require(${uneval(
-    pathnameToOperatingSystemFilename(
+    pathnameToOperatingSystemPath(
       `${projectPathname}${compileIntoRelativePath}${NODE_EXECUTE_CLIENT_PATHNAME}`,
     ),
   )})

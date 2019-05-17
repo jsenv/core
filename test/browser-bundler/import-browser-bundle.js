@@ -2,12 +2,12 @@ import { fileRead } from "@dmail/helper"
 import { serveFile } from "../../src/file-service/index.js"
 import { startServer, firstService } from "../../src/server/index.js"
 import { SYSTEM_PATHNAME } from "../../src/system/index.js"
-import { pathnameToOperatingSystemFilename } from "../../src/operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../../src/operating-system-path.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
 export const importBrowserBundle = async ({ bundleFolder, file }) => {
-  bundleFolder = pathnameToOperatingSystemFilename(bundleFolder)
+  bundleFolder = pathnameToOperatingSystemPath(bundleFolder)
 
   const [server, browser] = await Promise.all([
     startTestServer({ bundleFolder }),
@@ -80,7 +80,7 @@ const genereateIndexPage = () => `<!doctype html>
 const serveSystemJS = async ({ request: { ressource } }) => {
   if (ressource !== "/system.js") return null
 
-  const content = await fileRead(pathnameToOperatingSystemFilename(SYSTEM_PATHNAME))
+  const content = await fileRead(pathnameToOperatingSystemPath(SYSTEM_PATHNAME))
 
   return {
     status: 200,

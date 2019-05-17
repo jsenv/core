@@ -17,7 +17,7 @@ import {
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { computeBabelConfigMapSubset } from "./computeBabelConfigMapSubset.js"
 import { createLogger } from "../../logger.js"
-import { pathnameToOperatingSystemFilename } from "../../operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../../operating-system-path.js"
 
 const { minify: minifyCode } = import.meta.require("terser")
 const { buildExternalHelpers } = import.meta.require("@babel/core")
@@ -66,7 +66,7 @@ export const createJsenvRollupPlugin = ({
       if (specifier in inlineSpecifierMap) {
         const inlineSpecifier = inlineSpecifierMap[specifier]
         if (typeof inlineSpecifier === "string")
-          return pathnameToOperatingSystemFilename(inlineSpecifier)
+          return pathnameToOperatingSystemPath(inlineSpecifier)
         if (typeof inlineSpecifier === "function") {
           inlineSpecifierResolveMap[specifier] = inlineSpecifier
           return specifier

@@ -1,4 +1,4 @@
-import { pathnameToOperatingSystemFilename, pathnameIsInside } from "./operating-system-filename.js"
+import { pathnameToOperatingSystemPath, pathnameIsInside } from "./operating-system-path.js"
 import { JSENV_PATHNAME } from "./JSENV_PATH.js"
 
 const JSENV_RELATIVE_PATH = "/node_modules/@jsenv/core"
@@ -11,8 +11,8 @@ export const relativePathInception = ({ projectPathname, relativePath }) => {
 
   if (projectIsInsideJsenv) {
     throw new Error(`relativePathInception work only inside jsenv.
-project path: ${pathnameToOperatingSystemFilename(projectPathname)}
-jsenv path: ${pathnameToOperatingSystemFilename(JSENV_PATHNAME)}
+project path: ${pathnameToOperatingSystemPath(projectPathname)}
+jsenv path: ${pathnameToOperatingSystemPath(JSENV_PATHNAME)}
 relative path: ${relativePath}`)
   }
 

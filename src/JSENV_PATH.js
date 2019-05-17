@@ -1,6 +1,6 @@
 import { resolve } from "path"
 import { hrefToPathname } from "@jsenv/module-resolution"
-import { operatingSystemFilenameToPathname } from "./operating-system-filename.js"
+import { operatingSystemPathToPathname } from "./operating-system-path.js"
 
 let jsenvPath
 if (typeof __filename === "string") {
@@ -11,4 +11,4 @@ if (typeof __filename === "string") {
 
 export const JSENV_PATH = jsenvPath
 
-export const JSENV_PATHNAME = operatingSystemFilenameToPathname(jsenvPath)
+export const JSENV_PATHNAME = operatingSystemPathToPathname(jsenvPath)

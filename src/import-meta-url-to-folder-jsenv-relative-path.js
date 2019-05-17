@@ -1,6 +1,6 @@
 import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { JSENV_PATHNAME } from "./JSENV_PATH.js"
-import { pathnameToRelativePathname } from "./operating-system-filename.js"
+import { pathnameToRelativePathname } from "./operating-system-path.js"
 
 export const importMetaURLToFolderJsenvRelativePath = (importMetaURL) => {
   const pathname = hrefToPathname(importMetaURL)

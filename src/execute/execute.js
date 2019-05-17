@@ -4,7 +4,7 @@ import {
   createProcessInterruptionCancellationToken,
   catchAsyncFunctionCancellation,
 } from "../cancellationHelper.js"
-import { operatingSystemFilenameToPathname } from "../operating-system-filename.js"
+import { operatingSystemPathToPathname } from "../operating-system-path.js"
 import {
   DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
@@ -28,7 +28,7 @@ export const execute = async ({
   stopOnceExecuted = false,
 }) =>
   catchAsyncFunctionCancellation(async () => {
-    const projectPathname = operatingSystemFilenameToPathname(projectFolder)
+    const projectPathname = operatingSystemPathToPathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const { origin: compileServerOrigin } = await startCompileServer({

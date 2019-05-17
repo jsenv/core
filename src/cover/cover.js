@@ -28,9 +28,9 @@ import {
   DEFAULT_MAX_PARALLEL_EXECUTION,
 } from "./cover-constant.js"
 import {
-  operatingSystemFilenameToPathname,
-  pathnameToOperatingSystemFilename,
-} from "../operating-system-filename.js"
+  operatingSystemPathToPathname,
+  pathnameToOperatingSystemPath,
+} from "../operating-system-path.js"
 
 export const cover = async ({
   projectFolder,
@@ -68,7 +68,7 @@ export const cover = async ({
   }
 
   const start = async () => {
-    const projectPathname = operatingSystemFilenameToPathname(projectFolder)
+    const projectPathname = operatingSystemPathToPathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
     const coverMetaDescription = namedValueDescriptionToMetaDescription({
       cover: coverDescription,
@@ -154,7 +154,7 @@ export const cover = async ({
     }
 
     if (writeCoverageFile) {
-      const coverageFilename = pathnameToOperatingSystemFilename(
+      const coverageFilename = pathnameToOperatingSystemPath(
         `${projectPathname}${coverageRelativePath}`,
       )
 

@@ -4,7 +4,7 @@ import { ansiToHTML } from "../ansiToHTML.js"
 import { regexpEscape } from "../stringHelper.js"
 import { createParseError } from "../compiled-file-service/index.js"
 import { transpiler } from "./transpiler.js"
-import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 export const compileJs = async ({
   source,
@@ -18,12 +18,8 @@ export const compileJs = async ({
   remap = true,
   remapMethod = "comment", // 'comment', 'inline'
 }) => {
-  const sourceFilename = pathnameToOperatingSystemFilename(
-    `${projectPathname}${sourceRelativePath}`,
-  )
-  const compileFilename = pathnameToOperatingSystemFilename(
-    `${projectPathname}${compileRelativePath}`,
-  )
+  const sourceFilename = pathnameToOperatingSystemPath(`${projectPathname}${sourceRelativePath}`)
+  const compileFilename = pathnameToOperatingSystemPath(`${projectPathname}${compileRelativePath}`)
 
   try {
     const sources = []
@@ -37,7 +33,7 @@ export const compileJs = async ({
     const { map, code, metadata } = await transpiler({
       input: source,
       filename: sourceFilename,
-      filenameRelative: sourceRelativePath,
+      filenameRelative: sourceRelativePath.slice(1),
       inputAst,
       inputMap,
       babelConfigMap,

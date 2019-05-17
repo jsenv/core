@@ -4,7 +4,7 @@ import {
 } from "../cancellationHelper.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
 import { executePlan } from "../executePlan/index.js"
-import { operatingSystemFilenameToPathname } from "../operating-system-filename.js"
+import { operatingSystemPathToPathname } from "../operating-system-path.js"
 import {
   DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
@@ -36,7 +36,7 @@ export const test = async ({
 }) => {
   const start = async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
-    const projectFolderPathname = operatingSystemFilenameToPathname(projectFolder)
+    const projectFolderPathname = operatingSystemPathToPathname(projectFolder)
 
     const executionPlan = await executeDescriptionToExecutionPlan({
       cancellationToken,

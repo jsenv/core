@@ -13,7 +13,7 @@ import {
 } from "./browser-explorer-server-constant.js"
 import { serveBrowserExplorerIndex } from "./serve-browser-explorer-index.js"
 import { serveBrowserExplorerPage } from "./serve-browser-explorer-page.js"
-import { operatingSystemFilenameToPathname } from "../operating-system-filename.js"
+import { operatingSystemPathToPathname } from "../operating-system-path.js"
 
 export const startBrowserExplorerServer = async ({
   cancellationToken = createCancellationToken(),
@@ -32,7 +32,7 @@ export const startBrowserExplorerServer = async ({
   forcePort = false,
   signature,
 }) => {
-  const projectPathname = operatingSystemFilenameToPathname(projectFolder)
+  const projectPathname = operatingSystemPathToPathname(projectFolder)
 
   const metaDescription = namedValueDescriptionToMetaDescription({
     browsable: browsableDescription,

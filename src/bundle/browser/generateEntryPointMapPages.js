@@ -1,6 +1,6 @@
 import { createOperation, createCancellationToken } from "@dmail/cancellation"
 import { fileWrite } from "@dmail/helper"
-import { pathnameToOperatingSystemFilename } from "../../operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../../operating-system-path.js"
 
 export const generateEntryPointMapPages = async ({
   cancellationToken = createCancellationToken(),
@@ -47,7 +47,7 @@ const generateEntryPage = async ({
     cancellationToken,
     start: () =>
       fileWrite(
-        pathnameToOperatingSystemFilename(`${projectPathname}${bundleIntoRelativePath}${pagePath}`),
+        pathnameToOperatingSystemPath(`${projectPathname}${bundleIntoRelativePath}${pagePath}`),
         html,
       ),
   })

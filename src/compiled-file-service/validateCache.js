@@ -2,7 +2,7 @@ import { fileRead, fileStat } from "@dmail/helper"
 import { createETag } from "../createETag.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { getCompiledFilename, getAssetFilename } from "./locaters.js"
-import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 export const validateCache = async ({
   projectPathname,
@@ -108,7 +108,7 @@ const validateSources = ({ projectPathname, cache }) =>
   )
 
 const validateSource = async ({ projectPathname, source, eTag }) => {
-  const sourceFilename = pathnameToOperatingSystemFilename(`${projectPathname}${source}`)
+  const sourceFilename = pathnameToOperatingSystemPath(`${projectPathname}${source}`)
 
   try {
     const sourceContent = await fileRead(sourceFilename)

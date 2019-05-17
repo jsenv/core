@@ -2,7 +2,7 @@ import { extname, dirname, basename } from "path"
 import { getOrGenerateCompiledFile } from "../compiled-file-service/get-or-generate-compiled-file.js"
 import { bundleNode } from "../bundle/node/bundleNode.js"
 import { platformClientBundleToCompilationResult } from "./platformClientBundleToCompilationResult.js"
-import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 export const generateNodeBundle = async ({
   projectPathname,
@@ -34,7 +34,7 @@ export const generateNodeBundle = async ({
       }
 
       const bundle = await bundleNode({
-        projectFolder: pathnameToOperatingSystemFilename(projectPathname),
+        projectFolder: pathnameToOperatingSystemPath(projectPathname),
         bundleIntoRelativePath: compileIntoRelativePath,
         importMapRelativePath,
         entryPointMap,

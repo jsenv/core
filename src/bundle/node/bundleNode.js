@@ -1,4 +1,4 @@
-import { operatingSystemFilenameToPathname } from "../../operating-system-filename.js"
+import { operatingSystemPathToPathname } from "../../operating-system-path.js"
 import { nodeVersionScoreMap } from "../../group-map/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
@@ -27,7 +27,7 @@ export const bundleNode = async ({
   throwUnhandled = true,
   writeOnFileSystem = true,
 }) => {
-  const projectPathname = operatingSystemFilenameToPathname(projectFolder)
+  const projectPathname = operatingSystemPathToPathname(projectFolder)
 
   const promise = bundlePlatform({
     projectPathname,

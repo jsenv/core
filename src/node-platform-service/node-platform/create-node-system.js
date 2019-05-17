@@ -17,7 +17,7 @@ import { valueInstall } from "../../platform/valueInstall.js"
 import { compiledHrefToCompiledFilename } from "./compiledHrefToCompiledFilename.js"
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
-import { pathnameToOperatingSystemFilename } from "../../operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../../operating-system-path.js"
 
 const GLOBAL_SPECIFIER = "global"
 
@@ -104,7 +104,7 @@ export const createNodeSystem = async ({
     const fileURL = `file://${projectPathname}${fileRelativePath}`
     const url = fileURL
 
-    const filename = pathnameToOperatingSystemFilename(hrefToPathname(fileURL))
+    const filename = pathnameToOperatingSystemPath(hrefToPathname(fileURL))
     const require = createRequireFromFilename(filename)
 
     return {

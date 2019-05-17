@@ -1,5 +1,5 @@
 import { serveFile } from "../file-service/index.js"
-import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 export const serveBrowserClientFolder = ({
   projectPathname,
@@ -7,7 +7,7 @@ export const serveBrowserClientFolder = ({
   request: { ressource, method, headers },
 }) => {
   return serveFile(
-    pathnameToOperatingSystemFilename(`${projectPathname}${browserClientRelativePath}${ressource}`),
+    pathnameToOperatingSystemPath(`${projectPathname}${browserClientRelativePath}${ressource}`),
     {
       method,
       headers,

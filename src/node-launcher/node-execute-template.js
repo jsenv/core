@@ -1,5 +1,5 @@
 import { fetchUsingHttp } from "../node-platform-service/node-platform/fetchUsingHttp.js"
-import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 export const execute = async ({
   compileServerOrigin,
@@ -21,7 +21,7 @@ export const execute = async ({
 
   await fetchUsingHttp(`${compileServerOrigin}/.jsenv/node-platform.js`)
   // eslint-disable-next-line import/no-dynamic-require
-  const { nodePlatform } = require(pathnameToOperatingSystemFilename(
+  const { nodePlatform } = require(pathnameToOperatingSystemPath(
     `${projectPathname}${compileIntoRelativePath}/.jsenv/node-platform.js`,
   ))
   const { pathToCompiledHref, executeFile } = nodePlatform.create({

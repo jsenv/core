@@ -3,7 +3,7 @@ import { folderRead, fileStat, fileRead } from "@dmail/helper"
 import { createETag } from "../createETag.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
 import { filenameToContentType } from "./filenameToContentType.js"
-import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
 const dateToUTCString = (date) => date.toUTCString()
@@ -28,7 +28,7 @@ export const serveFile = async (
     const cacheWithMtime = cacheStrategy === "mtime"
     const cacheWithETag = cacheStrategy === "etag"
     const cachedDisabled = cacheStrategy === "none"
-    const filename = pathnameToOperatingSystemFilename(pathname)
+    const filename = pathnameToOperatingSystemPath(pathname)
 
     const stat = await fileStat(filename)
 

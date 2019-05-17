@@ -1,6 +1,6 @@
 import { pathnameToMeta } from "@dmail/project-structure"
 import { serveFile } from "../file-service/index.js"
-import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
+import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 export const serveBrowserExplorerPageHTML = ({
   projectPathname,
@@ -12,7 +12,7 @@ export const serveBrowserExplorerPageHTML = ({
     return null
 
   return serveFile(
-    pathnameToOperatingSystemFilename(`${projectPathname}${browserClientRelativePath}/index.html`),
+    pathnameToOperatingSystemPath(`${projectPathname}${browserClientRelativePath}/index.html`),
     { headers },
   )
 }
