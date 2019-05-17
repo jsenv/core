@@ -1,7 +1,6 @@
-import { sep, basename } from "path"
+import { basename } from "path"
 import { writeSourceMappingURL } from "../source-mapping-url.js"
 import { ansiToHTML } from "../ansiToHTML.js"
-import { regexpEscape } from "../stringHelper.js"
 import { createParseError } from "../compiled-file-service/index.js"
 import { transpiler } from "./transpiler.js"
 import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
@@ -10,7 +9,6 @@ export const compileJs = async ({
   source,
   projectPathname,
   sourceRelativePath,
-  compileRelativePath = sourceRelativePath,
   babelConfigMap,
   transformTopLevelAwait,
   inputAst = undefined,
@@ -19,7 +17,6 @@ export const compileJs = async ({
   remapMethod = "comment", // 'comment', 'inline'
 }) => {
   const sourceFilename = pathnameToOperatingSystemPath(`${projectPathname}${sourceRelativePath}`)
-  const compileFilename = pathnameToOperatingSystemPath(`${projectPathname}${compileRelativePath}`)
 
   try {
     const sources = []
@@ -99,16 +96,11 @@ export const compileJs = async ({
     }
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
-      const message = transformBabelParseErrorMessage(
-        error.message,
-        sourceFilename,
-        compileFilename,
-      )
+      const message = error.message
       throw createParseError({
         message,
         messageHTML: ansiToHTML(message),
         filename: sourceFilename,
-        outputFilename: compileFilename,
         lineNumber: error.loc.line,
         columnNumber: error.loc.column,
       })
@@ -126,20 +118,3 @@ const generateAssetpathnameRelative = ({ sourceRelativePath, assetName }) => {
 const stringifyMap = (object) => JSON.stringify(object, null, "  ")
 
 const stringifyCoverage = (object) => JSON.stringify(object, null, "  ")
-
-const transformBabelParseErrorMessage = (babelParseErrorMessage, filename, replacement) => {
-  // the babelParseErrorMessage looks somehow like that:
-  /*
-  `${filename}: Unexpected token(${lineNumber}:${columnNumber}})
-
-    ${lineNumber - 1} | ${sourceForThatLine}
-  > ${lineNumber} | ${sourceForThatLine}
-    | ^`
-  */
-  // and the idea is to replace ${filename} by somsething else
-
-  const filenameString = sep === "/" ? filename : filename.replace(/\//g, "\\")
-  const filenameRegexp = new RegExp(regexpEscape(filenameString), "gi")
-  const parseErrorMessage = babelParseErrorMessage.replace(filenameRegexp, replacement)
-  return parseErrorMessage
-}

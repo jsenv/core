@@ -2,7 +2,6 @@ import { uneval } from "@dmail/uneval"
 import { serveFile } from "../file-service/index.js"
 import { relativePathInception } from "../inception.js"
 import { serveBundle } from "../bundle-service/index.js"
-import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 const NODE_PLATFORM_RELATIVE_PATH = "/src/node-platform-service/node-platform/index.js"
 const NODE_PLATFORM_CLIENT_PATHNAME = `/.jsenv/node-platform.js`
@@ -20,14 +19,14 @@ export const serveNodePlatform = ({
   // projectFileRequestedCallback,
   request: { ressource, method, headers },
 }) => {
-  if (ressource.startsWith(`${NODE_PLATFORM_RELATIVE_PATH}__asset__/`)) {
-    return serveFile(
-      pathnameToOperatingSystemPath(`${projectPathname}${compileIntoRelativePath}${ressource}`),
-      { method, headers },
-    )
+  if (ressource.startsWith(`${NODE_PLATFORM_CLIENT_PATHNAME}__asset__/`)) {
+    return serveFile(`${projectPathname}${compileIntoRelativePath}${ressource}`, {
+      method,
+      headers,
+    })
   }
 
-  if (ressource !== NODE_PLATFORM_RELATIVE_PATH) return null
+  if (ressource !== NODE_PLATFORM_CLIENT_PATHNAME) return null
 
   return serveBundle({
     projectPathname,

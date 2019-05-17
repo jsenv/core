@@ -6,27 +6,29 @@ import { fetch } from "../fetch.js"
 
 const rimraf = import.meta.require("rimraf")
 
-const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const projectFolder = JSENV_PATH
-const compileInto = `${folderJsenvRelativePath}/.dist`
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
+const compileId = "otherwise"
+const fileRelativePath = `${folderJsenvRelativePath}/file.js`
 
 const compileServer = await startCompileServer({
   projectFolder,
-  compileInto,
+  compileIntoRelativePath,
   logLevel: "off",
 })
 
 await new Promise((resolve, reject) =>
-  rimraf(`${projectFolder}/${compileInto}`, (error) => {
+  rimraf(`${projectFolder}${compileIntoRelativePath}`, (error) => {
     if (error) reject(error)
     else resolve()
   }),
 )
 const firstResponse = await fetch(
-  `${compileServer.origin}/${compileInto}/otherwise/${folderJsenvRelativePath}/file.js`,
+  `${compileServer.origin}${compileIntoRelativePath}/${compileId}${fileRelativePath}`,
 )
 const secondResponse = await fetch(
-  `${compileServer.origin}/${compileInto}/otherwise/${folderJsenvRelativePath}/file.js`,
+  `${compileServer.origin}${compileIntoRelativePath}/${compileId}${fileRelativePath}`,
   {
     headers: {
       "if-none-match": firstResponse.headers.etag[0],
