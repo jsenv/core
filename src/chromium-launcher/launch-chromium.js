@@ -18,6 +18,7 @@ import {
 } from "./launch-chromium-constant.js"
 import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
 import { JSENV_PATH } from "../JSENV_PATH.js"
+import { operatingSystemPathToPathname } from "../operating-system-path.js"
 import { regexpEscape } from "../../src/stringHelper.js"
 
 const puppeteer = import.meta.require("puppeteer")
@@ -25,7 +26,7 @@ const puppeteer = import.meta.require("puppeteer")
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
   compileServerOrigin,
-  projectPathname,
+  projectFolder,
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   browserClientRelativePath = DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
@@ -34,8 +35,10 @@ export const launchChromium = async ({
 }) => {
   if (typeof compileServerOrigin !== "string")
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
-  if (typeof projectPathname !== "string")
-    throw new TypeError(`projectPathname must be a string, got ${projectPathname}`)
+  if (typeof projectFolder !== "string")
+    throw new TypeError(`projectFolder must be a string, got ${projectFolder}`)
+
+  const projectPathname = operatingSystemPathToPathname(projectFolder)
 
   const options = {
     headless,

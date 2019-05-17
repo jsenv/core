@@ -1,1 +1,1 @@
-const node = (
+const browser = (
