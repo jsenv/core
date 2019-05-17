@@ -1,6 +1,6 @@
 {
 	"name": "@jsenv/core",
-	"version": "5.26.0",
+	"version": "5.27.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -54,7 +54,7 @@
 	"devDependencies": {
 		"@babel/plugin-transform-block-scoping": "7.2.0",
 		"babel-plugin-transform-async-to-promises": "0.8.7",
-		"@jsenv/core": "5.25.0",
+		"@jsenv/core": "5.26.0",
 		"@jsenv/node-module-import-map": "1.1.0",
 		"@jsenv/eslint-config": "8.0.0",
 		"@jsenv/prettier-config": "1.0.0",

@@ -7,6 +7,6 @@ const filenameRelative = getFromProcessArguments("file")
 execute({
   projectFolder,
   launch: launchNode,
-  filenameRelative,
+  fileRelativePath: `/${filenameRelative}`,
   mirrorConsole: true,
 })
