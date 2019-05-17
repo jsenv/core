@@ -7,12 +7,13 @@ import { importBrowserBundle } from "../import-browser-bundle.js"
 const projectFolder = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/browser`
+const fileRelativePath = `${folderJsenvRelativePath}/balancing.js`
 
 await bundleBrowser({
   projectFolder,
   bundleIntoRelativePath,
   entryPointMap: {
-    main: `${folderJsenvRelativePath}/balancing.js`,
+    main: fileRelativePath,
   },
   compileGroupCount: 2,
   logLevel: "off",

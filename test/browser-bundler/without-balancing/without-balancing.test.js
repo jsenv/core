@@ -6,19 +6,20 @@ import { importBrowserBundle } from "../import-browser-bundle.js"
 
 const projectFolder = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
-const bundleInto = `${folderJsenvRelativePath}/dist/browser`
+const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/browser`
+const fileRelativePath = `${folderJsenvRelativePath}/without-balancing.js`
 
 await bundleBrowser({
   projectFolder,
-  into: bundleInto,
+  bundleIntoRelativePath,
   entryPointMap: {
-    main: `${folderJsenvRelativePath}/without-balancing.js`,
+    main: fileRelativePath,
   },
   throwUnhandled: false,
   logLevel: "off",
 })
 const { namespace: actual } = await importBrowserBundle({
-  bundleFolder: `${projectFolder}/${bundleInto}`,
+  bundleFolder: `${projectFolder}${bundleIntoRelativePath}`,
   file: "main.js",
 })
 const expected = { default: 42 }

@@ -7,8 +7,6 @@ import { pathnameToOperatingSystemPath } from "../../src/operating-system-path.j
 const puppeteer = import.meta.require("puppeteer")
 
 export const importBrowserBundle = async ({ bundleFolder, file }) => {
-  bundleFolder = pathnameToOperatingSystemPath(bundleFolder)
-
   const [server, browser] = await Promise.all([
     startTestServer({ bundleFolder }),
     puppeteer.launch(),
