@@ -6,6 +6,9 @@
 
 ## To keep in mind
 
+- Any times groupMap changes (because compileGroupCount, babelConfigMap, platformScoreMap changes),
+  node-platform, browser-platform and every cached files becomes invalid.
+  This is not the case for now and can be surprising.
 - Ideally we should not keep our own systemjs version:
   https://github.com/systemjs/systemjs/issues/1924 and https://github.com/systemjs/systemjs/pull/1925.
 - Ideally we should not keep our own babel-plugin-transform-modules-systemjs version: https://github.com/babel/babel/issues/9426

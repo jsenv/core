@@ -14,7 +14,7 @@ import {
   fromHref,
 } from "../../platform/registerModuleFrom/index.js"
 import { valueInstall } from "../../platform/valueInstall.js"
-import { compiledHrefToCompiledFilename } from "./compiledHrefToCompiledFilename.js"
+import { hrefToMeta } from "../../platform/hrefToMeta.js"
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
 import { pathnameToOperatingSystemPath } from "../../operating-system-path.js"
@@ -74,18 +74,16 @@ export const createNodeSystem = async ({
       importerHref,
       fetchSource,
       instantiateJavaScript: (source, realHref) => {
-        const belongToProject = realHref.startsWith(`${compileServerOrigin}/`)
-        const sourceHref = belongToProject
-          ? compiledHrefToCompiledFilename(realHref, {
+        const uninstallSystemGlobal = valueInstall(global, "System", nodeSystem)
+        try {
+          evalSource(
+            source,
+            fileHrefToOperatingSystemPath(realHref, {
               compileServerOrigin,
               projectPathname,
               compileIntoRelativePath,
-            })
-          : realHref
-
-        const uninstallSystemGlobal = valueInstall(global, "System", nodeSystem)
-        try {
-          evalSource(source, sourceHref)
+            }),
+          )
         } finally {
           uninstallSystemGlobal()
         }
@@ -114,6 +112,22 @@ export const createNodeSystem = async ({
   }
 
   return nodeSystem
+}
+
+const fileHrefToOperatingSystemPath = (
+  fileHref,
+  { compileServerOrigin, projectPathname, compileIntoRelativePath },
+) => {
+  const meta = hrefToMeta(fileHref, { compileServerOrigin, compileIntoRelativePath })
+
+  if (meta.type !== "compile-server-compiled-file") {
+    return fileHref
+  }
+
+  const operatingSystemPath = pathnameToOperatingSystemPath(
+    `${projectPathname}${compileIntoRelativePath}/${meta.compileId}${meta.ressource}`,
+  )
+  return operatingSystemPath
 }
 
 const addDefaultToNativeNodeModuleNamespace = (namespace) => {

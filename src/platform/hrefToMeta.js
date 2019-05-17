@@ -3,7 +3,7 @@ export const hrefToMeta = (href, { compileServerOrigin, compileIntoRelativePath 
 
   if (!href.startsWith(`${compileServerOrigin}/`)) return { type: "other", ressource: href }
 
-  const pathname = href.slice(`${compileServerOrigin}/`.length)
+  const pathname = href.slice(compileServerOrigin.length)
   if (!fileInsideFolder(pathname, compileIntoRelativePath)) {
     return {
       type: "compile-server-ressource",
@@ -32,5 +32,5 @@ export const hrefToMeta = (href, { compileServerOrigin, compileIntoRelativePath 
 }
 
 const fileInsideFolder = (filename, foldername) => {
-  return filename.startsWith(`${foldername}/`)
+  return filename.startsWith(foldername)
 }
