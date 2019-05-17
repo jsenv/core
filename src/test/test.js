@@ -17,7 +17,7 @@ import {
 
 export const test = async ({
   projectFolder,
-  compileFolderRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
   nodeGroupResolverRelativePath = DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
@@ -36,12 +36,12 @@ export const test = async ({
 }) => {
   const start = async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
-    const projectFolderPathname = operatingSystemPathToPathname(projectFolder)
+    const projectPathname = operatingSystemPathToPathname(projectFolder)
 
     const executionPlan = await executeDescriptionToExecutionPlan({
       cancellationToken,
-      projectFolderPathname,
-      compileFolderRelativePath,
+      projectPathname,
+      compileIntoRelativePath,
       importMapRelativePath,
       browserGroupResolverRelativePath,
       nodeGroupResolverRelativePath,
