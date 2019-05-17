@@ -20,22 +20,20 @@ export const generateNodeBundle = async ({
     sourceRelativePath,
     compileRelativePath: `${compileIntoRelativePath}${compileRelativePath}`,
     compile: async () => {
-      const entryExtname = extname(compileRelativePath)
-      const entryBasename = basename(compileRelativePath, entryExtname)
-      const entryDirname = dirname(compileRelativePath)
+      const entryExtname = extname(sourceRelativePath)
+      const entryBasename = basename(sourceRelativePath, entryExtname)
+      const entryDirname = dirname(sourceRelativePath)
       const entryName = entryBasename
-
-      if (entryDirname) {
-        compileIntoRelativePath = `${compileIntoRelativePath}/${entryDirname}`
-      }
-
+      const bundleIntoRelativePath = entryDirname
+        ? `${compileIntoRelativePath}${entryDirname}`
+        : compileIntoRelativePath
       const entryPointMap = {
         [entryName]: sourceRelativePath,
       }
 
       const bundle = await bundleNode({
         projectFolder: pathnameToOperatingSystemPath(projectPathname),
-        bundleIntoRelativePath: compileIntoRelativePath,
+        bundleIntoRelativePath,
         importMapRelativePath,
         entryPointMap,
         inlineSpecifierMap,
@@ -49,9 +47,9 @@ export const generateNodeBundle = async ({
       return platformClientBundleToCompilationResult({
         projectPathname,
         compileIntoRelativePath,
-        compileRelativePath,
-        sourcemapRelativePath,
         inlineSpecifierMap,
+        entryRelativePath: sourceRelativePath,
+        sourcemapRelativePath,
         bundle,
       })
     },

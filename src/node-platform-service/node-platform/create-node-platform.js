@@ -17,9 +17,8 @@ const memoizedCreateNodeSystem = memoizeOnce(createNodeSystem)
 export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => {
   const compileId = decideCompileId()
 
-  // rename this filePath
-  const pathToCompiledHref = (path) => {
-    return `${compileServerOrigin}${compileIntoRelativePath}/${compileId}/${path}`
+  const relativePathToCompiledHref = (relativePath) => {
+    return `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${relativePath}`
   }
 
   const wrappedImportMap = wrapImportMap(
@@ -62,7 +61,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => 
   }
 
   return {
-    pathToCompiledHref,
+    relativePathToCompiledHref,
     importFile,
     executeFile,
   }

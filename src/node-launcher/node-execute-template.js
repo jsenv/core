@@ -5,7 +5,7 @@ export const execute = async ({
   compileServerOrigin,
   projectPathname,
   compileIntoRelativePath,
-  filePath,
+  fileRelativePath,
   collectNamespace,
   collectCoverage,
   remap,
@@ -24,13 +24,12 @@ export const execute = async ({
   const { nodePlatform } = require(pathnameToOperatingSystemPath(
     `${projectPathname}${compileIntoRelativePath}/.jsenv/node-platform.js`,
   ))
-  const { pathToCompiledHref, executeFile } = nodePlatform.create({
+  const { relativePathToCompiledHref, executeFile } = nodePlatform.create({
     compileServerOrigin,
     projectPathname,
   })
 
-  const compiledFile = pathToCompiledHref(filePath)
-  return executeFile(compiledFile, {
+  return executeFile(relativePathToCompiledHref(fileRelativePath), {
     collectNamespace,
     collectCoverage,
   })

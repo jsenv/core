@@ -30,13 +30,11 @@ export const serveBundle = async ({
       const bundleIntoRelativePath = entryDirname
         ? `${compileIntoRelativePath}${entryDirname}`
         : compileIntoRelativePath
-
       const entryPointMap = {
         [entryName]: sourceRelativePath,
       }
 
       const generateBundle = format === "cjs" ? bundleNode : bundleBrowser
-
       const bundle = await generateBundle({
         projectFolder: pathnameToOperatingSystemPath(projectPathname),
         bundleIntoRelativePath,
@@ -54,9 +52,9 @@ export const serveBundle = async ({
       return platformClientBundleToCompilationResult({
         projectPathname,
         compileIntoRelativePath,
-        sourceRelativePath,
-        sourcemapRelativePath,
         inlineSpecifierMap,
+        entryRelativePath: sourceRelativePath,
+        sourcemapRelativePath,
         bundle,
       })
     },

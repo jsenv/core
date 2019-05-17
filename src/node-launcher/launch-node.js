@@ -12,7 +12,10 @@ import {
 } from "./launch-node-constant.js"
 import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
 import { regexpEscape } from "../../src/stringHelper.js"
-import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
+import {
+  pathnameToOperatingSystemPath,
+  operatingSystemPathToPathname,
+} from "../operating-system-path.js"
 
 const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
 
@@ -23,7 +26,7 @@ const NODE_EXECUTE_CLIENT_PATHNAME = "/.jsenv/node-execute.js"
 export const launchNode = async ({
   cancellationToken = createCancellationToken(),
   compileServerOrigin,
-  projectPathname,
+  projectFolder,
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   debugPort = 0,
@@ -35,10 +38,12 @@ export const launchNode = async ({
 }) => {
   if (typeof compileServerOrigin !== "string")
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
-  if (typeof projectPathname !== "string")
-    throw new TypeError(`projectPathname must be a string, got ${projectPathname}`)
+  if (typeof projectFolder !== "string")
+    throw new TypeError(`projectFolder must be a string, got ${projectFolder}`)
   if (typeof compileIntoRelativePath !== "string")
     throw new TypeError(`compileIntoRelativePath must be a string, got ${compileIntoRelativePath}`)
+
+  const projectPathname = operatingSystemPathToPathname(projectFolder)
 
   const execArgv = await createChildExecArgv({
     cancellationToken,

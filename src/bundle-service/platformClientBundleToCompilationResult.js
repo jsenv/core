@@ -10,10 +10,10 @@ import {
 
 export const platformClientBundleToCompilationResult = ({
   projectPathname,
-  sourceRelativePath,
   compileIntoRelativePath,
-  sourcemapRelativePath,
   inlineSpecifierMap,
+  entryRelativePath,
+  sourcemapRelativePath,
   bundle,
 }) => {
   const output = bundle.output
@@ -23,7 +23,7 @@ export const platformClientBundleToCompilationResult = ({
     rollupSourcemap: main.map,
     projectPathname,
     compileIntoRelativePath,
-    entryRelativePath: sourceRelativePath,
+    entryRelativePath,
     inlineSpecifierMap,
   })
 
@@ -41,7 +41,7 @@ export const platformClientBundleToCompilationResult = ({
       rollupSourcemap: chunk.map,
       projectPathname,
       compileIntoRelativePath,
-      entryRelativePath: sourceRelativePath,
+      entryRelativePath,
       inlineSpecifierMap,
     })
     sources.push(...chunkSourcemap.sources) // we should avod duplication I guess
