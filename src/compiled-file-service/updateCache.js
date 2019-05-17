@@ -3,9 +3,9 @@ import { createETag } from "../createETag.js"
 import { getCacheFilename, getAssetFilename, getCompiledFilename } from "./locaters.js"
 
 export const updateCache = ({
-  projectFolder,
-  sourceFilenameRelative,
-  compiledFilenameRelative,
+  projectPathname,
+  sourceRelativePath,
+  compileRelativePath,
   cacheHitTracking,
   cache,
   compileResult,
@@ -27,8 +27,8 @@ export const updateCache = ({
   if (isNew || isUpdated) {
     const { writeCompiledSourceFile = true, writeAssetsFile = true } = compileResult
     const compiledFilename = getCompiledFilename({
-      projectFolder,
-      compiledFilenameRelative,
+      projectPathname,
+      compileRelativePath,
     })
 
     if (writeCompiledSourceFile) {
@@ -39,8 +39,8 @@ export const updateCache = ({
       promises.push(
         ...assets.map((asset, index) => {
           const assetFilename = getAssetFilename({
-            projectFolder,
-            compiledFilenameRelative,
+            projectPathname,
+            compileRelativePath,
             asset,
           })
 
@@ -53,7 +53,7 @@ export const updateCache = ({
   if (isNew || isUpdated || (isCached && cacheHitTracking)) {
     if (isNew) {
       cache = {
-        sourceFilenameRelative,
+        sourceRelativePath,
         contentType,
         sources,
         sourcesEtag: sourcesContent.map((sourceContent) => createETag(sourceContent)),
@@ -96,8 +96,8 @@ export const updateCache = ({
     }
 
     const cacheFilename = getCacheFilename({
-      projectFolder,
-      compiledFilenameRelative,
+      projectPathname,
+      compileRelativePath,
     })
 
     promises.push(fileWrite(cacheFilename, JSON.stringify(cache, null, "  ")))

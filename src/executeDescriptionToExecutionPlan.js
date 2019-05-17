@@ -6,11 +6,11 @@ import { startCompileServer } from "./compile-server/index.js"
 
 export const executeDescriptionToExecutionPlan = async ({
   cancellationToken,
-  projectFolder,
-  browserGroupResolverFilenameRelative,
-  nodeGroupResolverFilenameRelative,
-  importMapFilenameRelative,
-  compileInto,
+  projectPathname,
+  compileIntoRelativePath,
+  importMapRelativePath,
+  browserGroupResolverRelativePath,
+  nodeGroupResolverRelativePath,
   compileGroupCount,
   babelConfigMap,
   executeDescription,
@@ -19,11 +19,11 @@ export const executeDescriptionToExecutionPlan = async ({
 }) => {
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
-    projectFolder,
-    browserGroupResolverFilenameRelative,
-    nodeGroupResolverFilenameRelative,
-    importMapFilenameRelative,
-    compileInto,
+    projectPathname,
+    compileIntoRelativePath,
+    importMapRelativePath,
+    browserGroupResolverRelativePath,
+    nodeGroupResolverRelativePath,
     compileGroupCount,
     babelConfigMap,
     logLevel: compileServerLogLevel,
@@ -36,10 +36,11 @@ export const executeDescriptionToExecutionPlan = async ({
   const executionPlan = {}
   await selectAllFileInsideFolder({
     cancellationToken,
-    pathname: projectFolder,
+    pathname: projectPathname,
     metaDescription,
     predicate: ({ execute }) => execute,
     transformFile: ({ filenameRelative, meta }) => {
+      const fileRelativePath = `/${filenameRelative}`
       const executionMeta = meta.execute
       const fileExecutionPlan = {}
       Object.keys(executionMeta).forEach((executionName) => {
@@ -47,7 +48,7 @@ export const executeDescriptionToExecutionPlan = async ({
         if (singleExecutionPlan === null || singleExecutionPlan === undefined) return
         if (typeof singleExecutionPlan !== "object") {
           throw new TypeError(`a single execution must be an object.
-file: ${filenameRelative}
+          fileRelativePath: ${fileRelativePath}
 executionName: ${executionName}
 singleExecutionPlan: ${singleExecutionPlan}`)
         }
@@ -58,15 +59,15 @@ singleExecutionPlan: ${singleExecutionPlan}`)
             launch({
               ...options,
               cancellationToken,
-              projectFolder,
               compileServerOrigin,
-              compileInto,
+              projectPathname,
+              compileIntoRelativePath,
             }),
           allocatedMs: allocatedMs === undefined ? defaultAllocatedMsPerExecution : allocatedMs,
         }
       })
 
-      executionPlan[filenameRelative] = fileExecutionPlan
+      executionPlan[fileRelativePath] = fileExecutionPlan
     },
   })
   return executionPlan

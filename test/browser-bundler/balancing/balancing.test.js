@@ -1,25 +1,25 @@
 import { assert } from "@dmail/assert"
-import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
-import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
+import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
+import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { bundleBrowser } from "../../../index.js"
 import { importBrowserBundle } from "../import-browser-bundle.js"
 
-const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-const projectFolder = `${ROOT_FOLDER}`
-const bundleInto = `${testFolderRelative}/dist/browser`
+const projectFolder = JSENV_PATH
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/browser`
 
 await bundleBrowser({
   projectFolder,
-  into: bundleInto,
+  bundleIntoRelativePath,
   entryPointMap: {
-    main: `${testFolderRelative}/balancing.js`,
+    main: `${folderJsenvRelativePath}/balancing.js`,
   },
   compileGroupCount: 2,
   logLevel: "off",
 })
 
 const { namespace: actual } = await importBrowserBundle({
-  bundleFolder: `${projectFolder}/${bundleInto}`,
+  bundleFolder: `${projectFolder}${bundleIntoRelativePath}`,
   file: "main.js",
 })
 const expected = { default: 42 }

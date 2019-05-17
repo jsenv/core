@@ -1,6 +1,6 @@
 // "/.jsenv/browser-platform-data.js" resolved at build time
 // eslint-disable-next-line import/no-unresolved
-import { compileInto, groupMap } from "/.jsenv/browser-platform-data.js"
+import { compileIntoRelativePath, groupMap } from "/.jsenv/browser-platform-data.js"
 // "/.jsenv/browser-group-resolver.js" resolved at build time
 // eslint-disable-next-line import/no-unresolved
 import { resolveBrowserGroup } from "/.jsenv/browser-group-resolver.js"
@@ -18,16 +18,19 @@ const memoizedCreateBrowserSystem = memoizeOnce(createBrowserSystem)
 export const createBrowserPlatform = ({ compileServerOrigin }) => {
   const compileId = decideCompileId()
 
-  const filenameRelativeToCompiledHref = (filenameRelative) => {
-    return `${compileServerOrigin}/${compileInto}/${compileId}/${filenameRelative}`
+  const relativePathToCompiledHref = (relativePath) => {
+    return `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${relativePath}`
   }
 
-  const wrappedImportMap = wrapImportMap(importMap, `${compileInto}/${compileId}`)
+  const wrappedImportMap = wrapImportMap(
+    importMap,
+    `${compileIntoRelativePath.slice(1)}/${compileId}`,
+  )
 
   const importFile = async (specifier) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
-      compileInto,
+      compileIntoRelativePath,
       importMap: wrappedImportMap,
     })
     return browserSystem.import(specifier)
@@ -36,7 +39,7 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
   const executeFile = async (specifier, { collectCoverage, collectNamespace } = {}) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
-      compileInto,
+      compileIntoRelativePath,
       importMap: wrappedImportMap,
     })
     try {
@@ -57,7 +60,7 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
     }
   }
 
-  return { filenameRelativeToCompiledHref, importFile, executeFile }
+  return { relativePathToCompiledHref, importFile, executeFile }
 }
 
 const unevalException = (value) => {

@@ -1,6 +1,6 @@
 import fs from "fs"
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { serveFile } from "../serve-file.js/index.js"
+import { serveFile } from "../serve-file.js"
 
 const { projectFolder } = import.meta.require("../../../jsenv.config.js")
 

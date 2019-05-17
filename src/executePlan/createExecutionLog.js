@@ -14,7 +14,7 @@ export const createExecutionPlanStartLog = () => {
 }
 
 export const createExecutionResultLog = ({
-  filenameRelative,
+  fileRelativePath,
   status,
   platformName,
   platformVersion,
@@ -25,7 +25,7 @@ export const createExecutionResultLog = ({
 }) => {
   if (status === "disconnected") {
     return createDisconnectedLog({
-      filenameRelative,
+      fileRelativePath,
       platformName,
       platformVersion,
       platformLog,
@@ -36,7 +36,7 @@ export const createExecutionResultLog = ({
 
   if (status === "timedout") {
     return createTimedoutLog({
-      filenameRelative,
+      fileRelativePath,
       platformName,
       platformVersion,
       platformLog,
@@ -48,7 +48,7 @@ export const createExecutionResultLog = ({
 
   if (status === "errored") {
     return createErroredLog({
-      filenameRelative,
+      fileRelativePath,
       platformName,
       platformVersion,
       platformLog,
@@ -59,7 +59,7 @@ export const createExecutionResultLog = ({
 
   if (status === "completed") {
     return createCompletedLog({
-      filenameRelative,
+      fileRelativePath,
       platformName,
       platformVersion,
       platformLog,
@@ -72,7 +72,7 @@ export const createExecutionResultLog = ({
 }
 
 const createDisconnectedLog = ({
-  filenameRelative,
+  fileRelativePath,
   platformName,
   platformVersion,
   platformLog,
@@ -84,7 +84,7 @@ const createDisconnectedLog = ({
 
   return `
 ${color}${icon} disconnected during execution.${close}
-filenameRelative: ${filenameRelative}
+fileRelativePath: ${fileRelativePath}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
@@ -92,7 +92,7 @@ platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
 }
 
 const createTimedoutLog = ({
-  filenameRelative,
+  fileRelativePath,
   platformName,
   platformVersion,
   platformLog,
@@ -105,7 +105,7 @@ const createTimedoutLog = ({
 
   return `
 ${color}${icon} execution takes more than ${allocatedMs}ms.${close}
-filenameRelative: ${filenameRelative}
+fileRelativePath: ${fileRelativePath}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
@@ -113,7 +113,7 @@ platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
 }
 
 const createErroredLog = ({
-  filenameRelative,
+  fileRelativePath,
   platformName,
   platformVersion,
   platformLog,
@@ -125,7 +125,7 @@ const createErroredLog = ({
 
   return `
 ${color}${icon} error during execution.${close}
-filenameRelative: ${filenameRelative}
+fileRelativePath: ${fileRelativePath}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
@@ -133,7 +133,7 @@ platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
 }
 
 const createCompletedLog = ({
-  filenameRelative,
+  fileRelativePath,
   platformName,
   platformVersion,
   platformLog,
@@ -145,7 +145,7 @@ const createCompletedLog = ({
 
   return `
 ${color}${icon} execution completed.${close}
-filenameRelative: ${filenameRelative}
+fileRelativePath: ${fileRelativePath}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,

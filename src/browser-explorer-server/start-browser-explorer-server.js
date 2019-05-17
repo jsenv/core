@@ -1,28 +1,28 @@
-import { normalizePathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
 import { namedValueDescriptionToMetaDescription } from "@dmail/project-structure"
-import { filenameRelativeInception } from "../inception.js"
+import { relativePathInception } from "../inception.js"
 import { startServer, firstService } from "../server/index.js"
 import { startCompileServer } from "../compile-server/index.js"
 import {
-  DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
-  DEFAULT_BROWSER_CLIENT_FOLDER_RELATIVE,
-  DEFAULT_COMPILE_INTO,
+  DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
+  DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_BROWSABLE_DESCRIPTION,
   DEFAULT_BABEL_CONFIG_MAP,
 } from "./browser-explorer-server-constant.js"
 import { serveBrowserExplorerIndex } from "./serve-browser-explorer-index.js"
 import { serveBrowserExplorerPage } from "./serve-browser-explorer-page.js"
+import { operatingSystemFilenameToPathname } from "../operating-system-filename.js"
 
 export const startBrowserExplorerServer = async ({
-  projectFolder,
   cancellationToken = createCancellationToken(),
+  projectFolder,
+  compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  browserClientRelativePath = DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
+  browserGroupResolverPath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
   babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
-  importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  browserClientFolderRelative = DEFAULT_BROWSER_CLIENT_FOLDER_RELATIVE,
-  browserGroupResolveFilenameRelative = DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
-  compileInto = DEFAULT_COMPILE_INTO,
   compileGroupCount = 2,
   browsableDescription = DEFAULT_BROWSABLE_DESCRIPTION,
   cors = true,
@@ -32,12 +32,7 @@ export const startBrowserExplorerServer = async ({
   forcePort = false,
   signature,
 }) => {
-  projectFolder = normalizePathname(projectFolder)
-
-  browserClientFolderRelative = filenameRelativeInception({
-    projectFolder,
-    filenameRelative: browserClientFolderRelative,
-  })
+  const projectPathname = operatingSystemFilenameToPathname(projectFolder)
 
   const metaDescription = namedValueDescriptionToMetaDescription({
     browsable: browsableDescription,
@@ -46,9 +41,9 @@ export const startBrowserExplorerServer = async ({
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
     projectFolder,
-    importMapFilenameRelative,
-    browserGroupResolveFilenameRelative,
-    compileInto,
+    compileIntoRelativePath,
+    importMapRelativePath,
+    browserGroupResolverPath,
     compileGroupCount,
     babelConfigMap,
     cors,
@@ -63,18 +58,21 @@ export const startBrowserExplorerServer = async ({
     firstService(
       () =>
         serveBrowserExplorerIndex({
-          projectFolder,
+          projectPathname,
           metaDescription,
           request,
         }),
       () =>
         serveBrowserExplorerPage({
-          projectFolder,
-          importMapFilenameRelative,
-          browserClientFolderRelative,
-          compileInto,
-          babelConfigMap,
           compileServerOrigin,
+          projectPathname,
+          compileIntoRelativePath,
+          importMapRelativePath,
+          browserClientRelativePath: relativePathInception({
+            projectPathname,
+            relativePath: browserClientRelativePath,
+          }),
+          babelConfigMap,
           browsableMetaMap: metaDescription,
           request,
         }),

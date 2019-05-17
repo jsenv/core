@@ -5,18 +5,18 @@ import { createLogger } from "../../logger.js"
 
 export const computeRollupOptionsWithoutBalancing = ({
   cancellationToken,
-  projectFolder,
-  importMapFilenameRelative,
-  inlineSpecifierMap,
-  into,
+  projectPathname,
+  bundleIntoRelativePath,
+  importMapRelativePath,
   entryPointMap,
+  inlineSpecifierMap,
   babelConfigMap,
   minify,
   logLevel,
 }) => {
   const { logTrace } = createLogger({ logLevel })
 
-  const dir = `${projectFolder}/${into}`
+  const dir = `${projectPathname}${bundleIntoRelativePath}`
 
   const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
     platformGlobalName: "global",
@@ -24,8 +24,8 @@ export const computeRollupOptionsWithoutBalancing = ({
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({
     cancellationToken,
-    projectFolder,
-    importMapFilenameRelative,
+    projectPathname,
+    importMapRelativePath,
     inlineSpecifierMap,
     dir,
     featureNameArray: Object.keys(babelConfigMap),

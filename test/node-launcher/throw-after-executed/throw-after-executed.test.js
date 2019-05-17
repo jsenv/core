@@ -1,13 +1,13 @@
 import { assert } from "@dmail/assert"
-import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
-import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
+import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
+import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
-const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-const projectFolder = ROOT_FOLDER
-const compileInto = `${testFolderRelative}/.dist`
-const filenameRelative = `${testFolderRelative}/throw-after-executed.js`
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const projectFolder = JSENV_PATH
+const compileInto = `${folderJsenvRelativePath}/.dist`
+const fileRelativePath = `${folderJsenvRelativePath}/throw-after-executed.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
@@ -19,7 +19,7 @@ let afterExecuteError
 const actual = await launchAndExecute({
   launch: (options) => launchNode({ ...options, projectFolder, compileServerOrigin, compileInto }),
   captureConsole: true,
-  filenameRelative,
+  fileRelativePath,
   errorAfterExecutedCallback: (error) => {
     afterExecuteError = error
   },

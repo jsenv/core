@@ -2,7 +2,7 @@ import fs from "fs"
 import { assert } from "/node_modules/@dmail/assert/index.js"
 import { objectMap } from "../../../objectHelper.js"
 import { createInstrumentPlugin } from "../../../cover/createInstrumentPlugin.js"
-import { jsCompile } from "../../jsCompile.js.js.js"
+import { compileJs } from "../../compileJs.js"
 
 const istanbul = import.meta.require("istanbul")
 const transformBlockScoping = import.meta.require("@babel/plugin-transform-block-scoping")
@@ -16,7 +16,7 @@ const babelConfigMap = {
   "transform-instrument": [createInstrumentPlugin()],
 }
 
-jsCompile({
+compileJs({
   localRoot: root,
   file,
   fileAbsolute,

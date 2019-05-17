@@ -1,11 +1,11 @@
 import { serveFile } from "../file-service/index.js"
 
 export const servePuppeteerHtml = ({
-  projectFolder,
-  browserClientFolderRelative,
+  projectPathname,
+  browserClientRelativePath,
   request: { ressource, headers },
 }) => {
   if (ressource !== "/") return null
 
-  return serveFile(`${projectFolder}/${browserClientFolderRelative}/index.html`, { headers })
+  return serveFile(`${projectPathname}/${browserClientRelativePath}/index.html`, { headers })
 }

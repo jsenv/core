@@ -1,6 +1,6 @@
 // "/.jsenv/node-platform-data.js" resolved at build time
 // eslint-disable-next-line import/no-unresolved
-import { compileInto, groupMap } from "/.jsenv/node-platform-data.js"
+import { compileIntoRelativePath, groupMap } from "/.jsenv/node-platform-data.js"
 // "/.jsenv/node-group-resolver.js" resolved at build time
 // eslint-disable-next-line import/no-unresolved
 import { resolveNodeGroup } from "/.jsenv/node-group-resolver.js"
@@ -14,20 +14,24 @@ import { createNodeSystem } from "./create-node-system.js"
 
 const memoizedCreateNodeSystem = memoizeOnce(createNodeSystem)
 
-export const createNodePlatform = ({ projectFolder, compileServerOrigin }) => {
+export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => {
   const compileId = decideCompileId()
 
-  const filenameRelativeToCompiledHref = (filenameRelative) => {
-    return `${compileServerOrigin}/${compileInto}/${compileId}/${filenameRelative}`
+  // rename this filePath
+  const pathToCompiledHref = (path) => {
+    return `${compileServerOrigin}${compileIntoRelativePath}/${compileId}/${path}`
   }
 
-  const wrappedImportMap = wrapImportMap(importMap, `${compileInto}/${compileId}`)
+  const wrappedImportMap = wrapImportMap(
+    importMap,
+    `${compileIntoRelativePath.slice(1)}/${compileId}`,
+  )
 
   const importFile = async (specifier) => {
     const nodeSystem = await memoizedCreateNodeSystem({
-      projectFolder,
       compileServerOrigin,
-      compileInto,
+      projectPathname,
+      compileIntoRelativePath,
       importMap: wrappedImportMap,
     })
     return nodeSystem.import(specifier)
@@ -35,9 +39,9 @@ export const createNodePlatform = ({ projectFolder, compileServerOrigin }) => {
 
   const executeFile = async (specifier, { collectCoverage, collectNamespace } = {}) => {
     const nodeSystem = await memoizedCreateNodeSystem({
-      projectFolder,
       compileServerOrigin,
-      compileInto,
+      projectPathname,
+      compileIntoRelativePath,
       importMap: wrappedImportMap,
     })
     try {
@@ -58,7 +62,7 @@ export const createNodePlatform = ({ projectFolder, compileServerOrigin }) => {
   }
 
   return {
-    filenameRelativeToCompiledHref,
+    pathToCompiledHref,
     importFile,
     executeFile,
   }

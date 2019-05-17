@@ -1,23 +1,23 @@
-import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
 import { startCompileServer } from "../compile-server/index.js"
 import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
   createProcessInterruptionCancellationToken,
   catchAsyncFunctionCancellation,
 } from "../cancellationHelper.js"
+import { operatingSystemFilenameToPathname } from "../operating-system-filename.js"
 import {
-  EXECUTE_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  EXECUTE_DEFAULT_COMPILE_INTO,
-  EXECUTE_DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  DEFAULT_BABEL_CONFIG_MAP,
 } from "./execute-constant.js"
 
 export const execute = async ({
-  projectFolder,
-  filenameRelative,
+  filePath,
   launch,
-  importMapFilenameRelative = EXECUTE_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  compileInto = EXECUTE_DEFAULT_COMPILE_INTO,
-  babelConfigMap = EXECUTE_DEFAULT_BABEL_CONFIG_MAP,
+  projectFolder,
+  compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
   compileGroupCount = 2,
   protocol = "http",
   ip = "127.0.0.1",
@@ -28,14 +28,14 @@ export const execute = async ({
   stopOnceExecuted = false,
 }) =>
   catchAsyncFunctionCancellation(async () => {
-    projectFolder = normalizePathname(projectFolder)
+    const projectPathname = operatingSystemFilenameToPathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
-      importMapFilenameRelative,
-      projectFolder,
-      compileInto,
+      projectPathname,
+      compileIntoRelativePath,
+      importMapRelativePath,
       babelConfigMap,
       compileGroupCount,
       protocol,
@@ -46,11 +46,12 @@ export const execute = async ({
 
     const result = await launchAndExecute({
       cancellationToken,
-      launch: (options) => launch({ ...options, projectFolder, compileServerOrigin, compileInto }),
+      launch: (options) =>
+        launch({ ...options, compileServerOrigin, projectPathname, compileIntoRelativePath }),
       logLevel: executionLogLevel,
       mirrorConsole,
       stopOnceExecuted,
-      filenameRelative,
+      filePath,
     })
 
     if (result.status === "errored") {

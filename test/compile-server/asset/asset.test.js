@@ -30,7 +30,7 @@ const expected = {
     "content-type": ["application/json"],
   },
   body: {
-    sourceFilenameRelative: "asset.js",
+    sourcepathnameRelative: "asset.js",
     contentType: "application/javascript",
     sources: ["/asset.js"],
     sourcesEtag: ['"7c-b5QcrFoIrKrXSr5F415m5RCd6uY"'],

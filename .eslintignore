@@ -4,4 +4,3 @@ dist
 /coverage
 syntax-error.js
 syntax-error.main.js
-/src/**/test/

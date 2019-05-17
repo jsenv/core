@@ -1,12 +1,12 @@
 import { assert } from "@dmail/assert"
-import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
-import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
+import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
+import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer } from "../../../index.js"
 import { fetch } from "../fetch.js"
 
-const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-const projectFolder = ROOT_FOLDER
-const compileInto = `${testFolderRelative}/.dist`
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const projectFolder = JSENV_PATH
+const compileInto = `${folderJsenvRelativePath}/.dist`
 const compileId = "otherwise"
 
 const compileServer = await startCompileServer({
@@ -16,7 +16,7 @@ const compileServer = await startCompileServer({
 })
 
 const response = await fetch(
-  `${compileServer.origin}/${compileInto}/${compileId}/${testFolderRelative}/syntax-error.js`,
+  `${compileServer.origin}/${compileInto}/${compileId}/${folderJsenvRelativePath}/syntax-error.js`,
 )
 const body = await response.json()
 const actual = {
@@ -36,8 +36,8 @@ const expected = {
   body: {
     message: actual.body.message,
     messageHTML: actual.body.messageHTML,
-    filename: `${projectFolder}/${testFolderRelative}/syntax-error.js`,
-    outputFilename: `file://${projectFolder}/${compileInto}/${compileId}/${testFolderRelative}/syntax-error.js`,
+    filename: `${projectFolder}/${folderJsenvRelativePath}/syntax-error.js`,
+    outputFilename: `file://${projectFolder}/${compileInto}/${compileId}/${folderJsenvRelativePath}/syntax-error.js`,
     lineNumber: 1,
     columnNumber: 11,
   },

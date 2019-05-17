@@ -2,17 +2,17 @@ import { loadUsingScript } from "../loadUsingScript.js"
 
 window.execute = async ({
   compileServerOrigin,
-  filenameRelative,
+  fileRelativePath,
   collectNamespace,
   collectCoverage,
 }) => {
   await loadUsingScript(`${compileServerOrigin}/.jsenv/browser-platform.js`)
   const { __browserPlatform__ } = window
 
-  const { filenameRelativeToCompiledHref, executeFile } = __browserPlatform__.create({
+  const { relativePathToCompiledHref, executeFile } = __browserPlatform__.create({
     compileServerOrigin,
   })
-  return executeFile(filenameRelativeToCompiledHref(filenameRelative), {
+  return executeFile(relativePathToCompiledHref(fileRelativePath), {
     collectNamespace,
     collectCoverage,
   })

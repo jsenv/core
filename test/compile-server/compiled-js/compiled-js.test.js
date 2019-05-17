@@ -1,12 +1,12 @@
 import { assert } from "@dmail/assert"
-import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
-import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
+import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
+import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer } from "../../../index.js"
 import { fetch } from "../fetch.js"
 
-const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-const projectFolder = ROOT_FOLDER
-const compileInto = `${testFolderRelative}/.dist`
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const projectFolder = JSENV_PATH
+const compileInto = `${folderJsenvRelativePath}/.dist`
 
 const compileServer = await startCompileServer({
   projectFolder,
@@ -15,7 +15,7 @@ const compileServer = await startCompileServer({
 })
 
 const response = await fetch(
-  `${compileServer.origin}/${compileInto}/otherwise/${testFolderRelative}/file.js`,
+  `${compileServer.origin}/${compileInto}/otherwise/${folderJsenvRelativePath}/file.js`,
 )
 const actual = {
   status: response.status,

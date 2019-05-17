@@ -1,8 +1,8 @@
 /* eslint-disable import/max-dependencies */
 import { resolveImport, remapResolvedImport } from "@jsenv/module-resolution"
-import "../../compile-server/system-service/s.js"
+import "../../system/s.js"
 import { createImportTracker } from "../../platform/createImportTracker.js"
-import { hrefToFilenameRelative } from "../../platform/hrefToFilenameRelative.js"
+import { hrefToFileRelativePath } from "../../platform/hrefToFileRelativePath.js"
 import { valueInstall } from "../../platform/valueInstall.js"
 import {
   fromFunctionReturningNamespace,
@@ -13,7 +13,11 @@ import { evalSource } from "./evalSource.js"
 
 const GLOBAL_SPECIFIER = "global"
 
-export const createBrowserSystem = async ({ compileServerOrigin, compileInto, importMap }) => {
+export const createBrowserSystem = async ({
+  compileServerOrigin,
+  compileIntoRelativePath,
+  importMap,
+}) => {
   if (typeof window.System === "undefined") throw new Error(`window.System is undefined`)
 
   const browserSystem = new window.System.constructor()
@@ -58,8 +62,11 @@ export const createBrowserSystem = async ({ compileServerOrigin, compileInto, im
   }
 
   browserSystem.createContext = (moduleUrl) => {
-    const filenameRelative = hrefToFilenameRelative(moduleUrl, { compileInto, compileServerOrigin })
-    const fileURL = `${compileServerOrigin}/${filenameRelative}`
+    const fileRelativePath = hrefToFileRelativePath(moduleUrl, {
+      compileIntoRelativePath,
+      compileServerOrigin,
+    })
+    const fileURL = `${compileServerOrigin}${fileRelativePath}`
     const url = fileURL
 
     return { url }

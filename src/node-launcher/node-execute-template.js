@@ -1,10 +1,11 @@
 import { fetchUsingHttp } from "../node-platform-service/node-platform/fetchUsingHttp.js"
+import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
 
 export const execute = async ({
-  projectFolder,
   compileServerOrigin,
-  compileInto,
-  filenameRelative,
+  projectPathname,
+  compileIntoRelativePath,
+  filePath,
   collectNamespace,
   collectCoverage,
   remap,
@@ -15,18 +16,20 @@ export const execute = async ({
 
   if (remap) {
     const { installSourceMapSupport } = await import("./installSourceMapSupport.js")
-    installSourceMapSupport({ projectFolder })
+    installSourceMapSupport({ projectPathname })
   }
 
   await fetchUsingHttp(`${compileServerOrigin}/.jsenv/node-platform.js`)
   // eslint-disable-next-line import/no-dynamic-require
-  const { nodePlatform } = require(`${projectFolder}/${compileInto}/.jsenv/node-platform.js`)
-  const { filenameRelativeToCompiledHref, executeFile } = nodePlatform.create({
-    projectFolder,
+  const { nodePlatform } = require(pathnameToOperatingSystemFilename(
+    `${projectPathname}${compileIntoRelativePath}/.jsenv/node-platform.js`,
+  ))
+  const { pathToCompiledHref, executeFile } = nodePlatform.create({
     compileServerOrigin,
+    projectPathname,
   })
-  const compiledFile = filenameRelativeToCompiledHref(filenameRelative)
 
+  const compiledFile = pathToCompiledHref(filePath)
   return executeFile(compiledFile, {
     collectNamespace,
     collectCoverage,

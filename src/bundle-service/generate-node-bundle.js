@@ -2,40 +2,41 @@ import { extname, dirname, basename } from "path"
 import { getOrGenerateCompiledFile } from "../compiled-file-service/get-or-generate-compiled-file.js"
 import { bundleNode } from "../bundle/node/bundleNode.js"
 import { platformClientBundleToCompilationResult } from "./platformClientBundleToCompilationResult.js"
+import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
 
 export const generateNodeBundle = async ({
-  projectFolder,
-  importMapFilenameRelative,
-  compileInto,
-  babelConfigMap,
-  filenameRelative,
-  sourceFilenameRelative,
+  projectPathname,
+  compileIntoRelativePath,
+  importMapRelativePath,
+  sourceRelativePath,
+  compileRelativePath,
+  sourcemapRelativePath = computeSourcemapRelativePath(compileRelativePath),
   inlineSpecifierMap = {},
-  sourcemapFilenameRelative = computeSourcemapFilenameRelative(filenameRelative),
+  babelConfigMap,
   logLevel = "off",
 }) => {
   return getOrGenerateCompiledFile({
-    projectFolder,
-    sourceFilenameRelative,
-    compiledFilenameRelative: `${compileInto}/${filenameRelative}`,
+    projectPathname,
+    sourceRelativePath,
+    compileRelativePath: `${compileIntoRelativePath}${compileRelativePath}`,
     compile: async () => {
-      const entryExtname = extname(filenameRelative)
-      const entryBasename = basename(filenameRelative, entryExtname)
-      const entryDirname = dirname(filenameRelative)
+      const entryExtname = extname(compileRelativePath)
+      const entryBasename = basename(compileRelativePath, entryExtname)
+      const entryDirname = dirname(compileRelativePath)
       const entryName = entryBasename
 
       if (entryDirname) {
-        compileInto = `${compileInto}/${entryDirname}`
+        compileIntoRelativePath = `${compileIntoRelativePath}/${entryDirname}`
       }
 
       const entryPointMap = {
-        [entryName]: sourceFilenameRelative,
+        [entryName]: sourceRelativePath,
       }
 
       const bundle = await bundleNode({
-        projectFolder,
-        importMapFilenameRelative,
-        into: compileInto,
+        projectFolder: pathnameToOperatingSystemFilename(projectPathname),
+        bundleIntoRelativePath: compileIntoRelativePath,
+        importMapRelativePath,
         entryPointMap,
         inlineSpecifierMap,
         babelConfigMap,
@@ -46,10 +47,10 @@ export const generateNodeBundle = async ({
       })
 
       return platformClientBundleToCompilationResult({
-        projectFolder,
-        compileInto,
-        filenameRelative,
-        sourcemapFilenameRelative,
+        projectPathname,
+        compileIntoRelativePath,
+        compileRelativePath,
+        sourcemapRelativePath,
         inlineSpecifierMap,
         bundle,
       })
@@ -62,8 +63,8 @@ export const generateNodeBundle = async ({
   })
 }
 
-const computeSourcemapFilenameRelative = (filenameRelative) => {
-  const entryBasename = basename(filenameRelative)
-  const sourcemapFilenameRelative = `${entryBasename}__asset__/${entryBasename}.map`
-  return sourcemapFilenameRelative
+const computeSourcemapRelativePath = (compileRelativePath) => {
+  const entryBasename = basename(compileRelativePath)
+  const sourcemapRelativePath = `/${entryBasename}__asset__/${entryBasename}.map`
+  return sourcemapRelativePath
 }

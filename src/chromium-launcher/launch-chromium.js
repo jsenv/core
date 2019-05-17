@@ -12,30 +12,30 @@ import { trackRessources } from "./ressource-tracker.js"
 import { trackBrowserTargets } from "./browser-target-tracker.js"
 import { trackBrowserPages } from "./browser-page-tracker.js"
 import {
-  DEFAULT_COMPILE_INTO,
-  DEFAULT_BROWSER_CLIENT_FOLDER_RELATIVE,
-  DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
 } from "./launch-chromium-constant.js"
 import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
-import { ROOT_FOLDER } from "../ROOT_FOLDER.js"
+import { JSENV_PATH } from "../JSENV_PATH.js"
 import { regexpEscape } from "../../src/stringHelper.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
-  projectFolder,
   compileServerOrigin,
-  importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  compileInto = DEFAULT_COMPILE_INTO,
-  browserClientFolderRelative = DEFAULT_BROWSER_CLIENT_FOLDER_RELATIVE,
+  projectPathname,
+  compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  browserClientRelativePath = DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
   clientServerLogLevel = "off",
   headless = true,
 }) => {
-  if (typeof projectFolder !== "string")
-    throw new TypeError(`projectFolder must be a string, got ${projectFolder}`)
   if (typeof compileServerOrigin !== "string")
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
+  if (typeof projectPathname !== "string")
+    throw new TypeError(`projectPathname must be a string, got ${projectPathname}`)
 
   const options = {
     headless,
@@ -133,15 +133,15 @@ export const launchChromium = async ({
     })
   }
 
-  const executeFile = async (filenameRelative, { collectNamespace, collectCoverage }) => {
+  const executeFile = async (fileRelativePath, { collectNamespace, collectCoverage }) => {
     const [page, chromiumServer] = await Promise.all([
       browser.newPage(),
       startPuppeteerServer({
         cancellationToken,
-        projectFolder,
-        importMapFilenameRelative,
-        browserClientFolderRelative,
-        compileInto,
+        projectPathname,
+        compileIntoRelativePath,
+        importMapRelativePath,
+        browserClientRelativePath,
         logLevel: clientServerLogLevel,
       }),
     ])
@@ -156,7 +156,7 @@ export const launchChromium = async ({
       return await page.evaluate(
         createBrowserIIFEString({
           compileServerOrigin,
-          filenameRelative,
+          fileRelativePath,
           collectNamespace,
           collectCoverage,
         }),
@@ -167,7 +167,7 @@ export const launchChromium = async ({
       if (status === "rejected") {
         return {
           status,
-          error: evalException(exceptionSource, { projectFolder, compileServerOrigin }),
+          error: evalException(exceptionSource, { compileServerOrigin, projectPathname }),
           coverageMap,
         }
       }
@@ -204,10 +204,10 @@ export const launchChromium = async ({
   }
 }
 
-const evalException = (exceptionSource, { projectFolder, compileServerOrigin }) => {
+const evalException = (exceptionSource, { compileServerOrigin, projectPathname }) => {
   const error = evalSource(
     exceptionSource,
-    `${ROOT_FOLDER}/src/browser-platform-service/browser-platform/index.js`,
+    `${JSENV_PATH}/src/browser-platform-service/browser-platform/index.js`,
   )
 
   if (error && error instanceof Error) {
@@ -216,7 +216,7 @@ const evalException = (exceptionSource, { projectFolder, compileServerOrigin }) 
     // error is correctly remapped inside chrome devtools
     // but the error we receive here is not remapped
     // client side would be better but here could be enough
-    const sourceOrigin = `file://${projectFolder}`
+    const sourceOrigin = `file://${projectPathname}`
     const remoteRootRegexp = new RegExp(regexpEscape(compileServerOrigin), "g")
     error.stack = error.stack.replace(remoteRootRegexp, sourceOrigin)
     error.message = error.message.replace(remoteRootRegexp, sourceOrigin)
@@ -227,13 +227,13 @@ const evalException = (exceptionSource, { projectFolder, compileServerOrigin }) 
 
 const createBrowserIIFEString = ({
   compileServerOrigin,
-  filenameRelative,
+  fileRelativePath,
   collectNamespace,
   collectCoverage,
 }) => `(() => {
   return window.execute({
     compileServerOrigin: ${uneval(compileServerOrigin)},
-    filenameRelative: ${uneval(filenameRelative)},
+    fileRelativePath: ${uneval(fileRelativePath)},
     collectNamespace: ${uneval(collectNamespace)},
     collectCoverage: ${uneval(collectCoverage)}
   })

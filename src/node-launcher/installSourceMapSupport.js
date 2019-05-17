@@ -37,7 +37,7 @@ const sourceMapSupport = import.meta.require("source-map-support")
  * It works for now but nust be tested on many use case
  * i'm pretty sure it would fail on file inside node_modules for instance
  */
-export const installSourceMapSupport = ({ projectFolder }) => {
+export const installSourceMapSupport = ({ projectPathname }) => {
   sourceMapSupport.install({
     retrieveSourceMap: (source) => {
       let content
@@ -70,7 +70,7 @@ export const installSourceMapSupport = ({ projectFolder }) => {
         ...sourceMap,
         sources: sourceMap.sources.map((source) => {
           if (source[0] === "/") {
-            return hrefToPathname(`file://${projectFolder}/${source.slice(1)}`)
+            return hrefToPathname(`file://${projectPathname}/${source.slice(1)}`)
           }
 
           const resolvedImport = resolveImport({

@@ -1,11 +1,10 @@
 import path from "path"
 import { startServer } from "../../server/index.js"
-import { serveFile } from "../serve-file.js/index.js"
+import { serveFile } from "../serve-file.js"
 
 const root = path.resolve(__dirname, "../../../")
-const filenameRelative = "src/__test__/file.js"
 
-const server = await startServer({
+await startServer({
   protocol: "http",
   port: 3000,
   requestToResponse: ({ ressource }) =>

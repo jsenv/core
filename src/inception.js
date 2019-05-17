@@ -1,33 +1,20 @@
-import { ROOT_FOLDER } from "./ROOT_FOLDER.js"
+import { pathnameToOperatingSystemFilename, pathnameIsInside } from "./operating-system-filename.js"
+import { JSENV_PATHNAME } from "./JSENV_PATH.js"
 
-const JSENV_RELATIVE_PATH_FOR_OTHER_PROJECT = "node_modules/@jsenv/core"
+const JSENV_RELATIVE_PATH = "/node_modules/@jsenv/core"
 
-export const filenameRelativeInception = ({ projectFolder, filenameRelative }) => {
-  const projectFolderIsJsenvRoot = projectFolder === ROOT_FOLDER
-  const projectFolderIsInsideJsenv = projectFolder.startsWith(`${ROOT_FOLDER}/`)
+export const relativePathInception = ({ projectPathname, relativePath }) => {
+  const projectIsJsenv = projectPathname === JSENV_PATHNAME
+  const projectIsInsideJsenv = pathnameIsInside(projectPathname, JSENV_PATHNAME)
 
-  if (!projectFolderIsJsenvRoot && !projectFolderIsInsideJsenv)
-    return `${JSENV_RELATIVE_PATH_FOR_OTHER_PROJECT}/${filenameRelative}`
+  if (!projectIsJsenv && !projectIsInsideJsenv) return `${JSENV_RELATIVE_PATH}${relativePath}`
 
-  if (projectFolderIsInsideJsenv) {
-    throw new Error(`filenameRelativeInception work only when projectFolder is jsenv root.
-projectFolder: ${projectFolder}
-jsenv root: ${ROOT_FOLDER}
-filenameRelative: ${filenameRelative}`)
+  if (projectIsInsideJsenv) {
+    throw new Error(`relativePathInception work only inside jsenv.
+project path: ${pathnameToOperatingSystemFilename(projectPathname)}
+jsenv path: ${pathnameToOperatingSystemFilename(JSENV_PATHNAME)}
+relative path: ${relativePath}`)
   }
 
-  return filenameRelative
+  return relativePath
 }
-
-// export const filenameInception = ({ projectFolder, filenameRelative }) => {
-//   const filenameRelativeIsInternal = filenameRelative.startsWith(`node_modules/@jsenv/core/`)
-//   if (!filenameRelativeIsInternal) return `${projectFolder}/${filenameRelative}`
-
-//   if (projectFolder === ROOT_FOLDER || projectFolder.startsWith(`${ROOT_FOLDER}/`)) {
-//     const internalFilenameRelative = filenameRelative.slice(`node_modules/@jsenv/core/`.length)
-
-//     return `${projectFolder}/${internalFilenameRelative}`
-//   }
-
-//   return `${projectFolder}/${filenameRelative}`
-// }

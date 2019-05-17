@@ -1,4 +1,3 @@
-import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
 import { browserScoreMap } from "../../group-map/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
@@ -6,20 +5,22 @@ import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBal
 import { computeRollupOptionsForBalancer } from "./computeRollupOptionsForBalancer.js"
 import { generateEntryPointMapPages } from "./generateEntryPointMapPages.js"
 import {
-  BUNDLE_BROWSER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  BUNDLE_BROWSER_DEFAULT_BUNDLE_INTO,
-  BUNDLE_BROWSER_DEFAULT_ENTRY_POINT_MAP,
-  BUNDLE_BROWSER_DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_BUNDLE_INTO_RELATIVE_PATH,
+  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  DEFAULT_ENTRY_POINT_MAP,
+  DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
+  DEFAULT_BABEL_CONFIG_MAP,
 } from "./bundle-browser-constant.js"
+import { operatingSystemFilenameToPathname } from "/src/operating-system-filename.js"
 
 export const bundleBrowser = async ({
   projectFolder,
-  babelConfigMap = BUNDLE_BROWSER_DEFAULT_BABEL_CONFIG_MAP,
-  importMapFilenameRelative = BUNDLE_BROWSER_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  browserGroupResolverFilenameRelative = `src/browser-group-resolver/index.js`,
+  bundleIntoRelativePath = DEFAULT_BUNDLE_INTO_RELATIVE_PATH,
+  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  entryPointMap = DEFAULT_ENTRY_POINT_MAP,
+  browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
   inlineSpecifierMap = {},
-  into = BUNDLE_BROWSER_DEFAULT_BUNDLE_INTO,
-  entryPointMap = BUNDLE_BROWSER_DEFAULT_ENTRY_POINT_MAP,
+  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
   compileGroupCount = 1,
   platformScoreMap = browserScoreMap,
   format = "system", // or iife
@@ -29,12 +30,12 @@ export const bundleBrowser = async ({
   writeOnFileSystem = true,
   generateEntryPages = false,
 }) => {
-  projectFolder = normalizePathname(projectFolder)
+  const projectPathname = operatingSystemFilenameToPathname(projectFolder)
 
   const bundlePlatformPromise = bundlePlatform({
+    projectPathname,
+    bundleIntoRelativePath,
     entryPointMap,
-    projectFolder,
-    into,
     babelConfigMap,
     compileGroupCount,
     platformScoreMap,
@@ -42,11 +43,11 @@ export const bundleBrowser = async ({
     writeOnFileSystem,
     computeRollupOptionsWithoutBalancing: (context) =>
       computeRollupOptionsWithoutBalancing({
-        projectFolder,
-        importMapFilenameRelative,
-        inlineSpecifierMap,
-        into,
+        projectPathname,
+        bundleIntoRelativePath,
         entryPointMap,
+        importMapRelativePath,
+        inlineSpecifierMap,
         babelConfigMap,
         format,
         minify,
@@ -54,21 +55,21 @@ export const bundleBrowser = async ({
       }),
     computeRollupOptionsWithBalancing: (context) =>
       computeRollupOptionsWithBalancing({
-        projectFolder,
-        importMapFilenameRelative,
-        inlineSpecifierMap,
-        into,
+        projectPathname,
+        bundleIntoRelativePath,
         entryPointMap,
+        importMapRelativePath,
+        inlineSpecifierMap,
         babelConfigMap,
         minify,
         ...context,
       }),
     computeRollupOptionsForBalancer: (context) =>
       computeRollupOptionsForBalancer({
-        projectFolder,
-        importMapFilenameRelative,
-        browserGroupResolverFilenameRelative,
-        into,
+        projectPathname,
+        bundleIntoRelativePath,
+        importMapRelativePath,
+        browserGroupResolverRelativePath,
         babelConfigMap,
         minify,
         ...context,
@@ -79,8 +80,8 @@ export const bundleBrowser = async ({
     ? Promise.all([
         bundlePlatformPromise,
         generateEntryPointMapPages({
-          projectFolder,
-          into,
+          projectPathname,
+          bundleIntoRelativePath,
           entryPointMap,
         }),
       ])

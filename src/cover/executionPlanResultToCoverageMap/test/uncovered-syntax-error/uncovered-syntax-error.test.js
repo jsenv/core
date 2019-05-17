@@ -15,7 +15,7 @@ const testFolder = `${projectFolder}/src/executionPlanResultToCoverageMap/test/u
 
   const coverageMap = await executionPlanResultToCoverageMap(executionPlanResult, {
     projectFolder: testFolder,
-    arrayOfFilenameRelativeToCover: ["syntax-error.js"],
+    arrayOfpathnameRelativeToCover: ["syntax-error.js"],
   })
 
   assert({

@@ -3,13 +3,13 @@ import { hrefToMeta } from "../../platform/hrefToMeta.js"
 
 export const compiledHrefToCompiledFilename = (
   href,
-  { projectFolder, compileServerOrigin, compileInto },
+  { compileServerOrigin, projectPathname, compileIntoRelativePath },
 ) => {
-  const meta = hrefToMeta(href, { compileInto, compileServerOrigin })
+  const meta = hrefToMeta(href, { compileServerOrigin, compileIntoRelativePath })
 
   const sourceCompiledHref =
     meta.type === "compile-server-compiled-file"
-      ? `file://${projectFolder}/${compileInto}/${meta.compileId}/${meta.ressource}`
+      ? `file://${projectPathname}${compileIntoRelativePath}/${meta.compileId}${meta.ressource}`
       : href
 
   return hrefToPathname(sourceCompiledHref)

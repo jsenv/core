@@ -1,19 +1,19 @@
 import { assert } from "@dmail/assert"
-import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
-import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
+import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
+import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 import { createInstrumentPlugin } from "../../../src/cover/createInstrumentPlugin.js"
 import { removeFolder } from "../removeFolder.js"
 
-const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-const projectFolder = ROOT_FOLDER
-const compileInto = `${testFolderRelative}/.dist`
-const filenameRelative = `${testFolderRelative}/origin-relative.js`
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const projectFolder = JSENV_PATH
+const compileInto = `${folderJsenvRelativePath}/.dist`
+const fileRelativePath = `${folderJsenvRelativePath}/origin-relative.js`
 const babelConfigMap = {
   "transform-instrument": [
     createInstrumentPlugin({
       predicate: (filename) => {
-        return filename === `${testFolderRelative}/file.js`
+        return filename === `${folderJsenvRelativePath}/file.js`
       },
     }),
   ],
@@ -30,7 +30,7 @@ const { origin: compileServerOrigin } = await startCompileServer({
 
 const actual = await launchAndExecute({
   launch: (options) => launchNode({ ...options, projectFolder, compileServerOrigin, compileInto }),
-  filenameRelative,
+  fileRelativePath,
   collectNamespace: true,
   collectCoverage: true,
 })
@@ -40,7 +40,9 @@ const expected = {
     default: 42,
   },
   coverageMap: {
-    [`${testFolderRelative}/file.js`]: actual.coverageMap[`${testFolderRelative}/file.js`],
+    [`${folderJsenvRelativePath}/file.js`]: actual.coverageMap[
+      `${folderJsenvRelativePath}/file.js`
+    ],
   },
 }
 assert({

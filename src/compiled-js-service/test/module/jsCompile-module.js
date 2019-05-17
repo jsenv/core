@@ -1,6 +1,6 @@
 import fs from "fs"
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { jsCompile } from "../../jsCompile.js.js.js"
+import { compileJs } from "../../compileJs.js"
 
 const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
 
@@ -10,7 +10,7 @@ const fileAbsolute = `${testFolder}/${file}`
 const input = fs.readFileSync(fileAbsolute).toString()
 const babelConfigMap = {}
 
-jsCompile({
+compileJs({
   projectFolder: testFolder,
   file,
   fileAbsolute,

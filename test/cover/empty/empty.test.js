@@ -1,17 +1,17 @@
 import { assert } from "@dmail/assert"
-import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
-import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
+import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
+import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { cover } from "../../../index.js"
 
-const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-const projectFolder = ROOT_FOLDER
-const compileInto = `${testFolderRelative}/.dist`
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const projectFolder = JSENV_PATH
+const compileInto = `${folderJsenvRelativePath}/.dist`
 
 const { coverageMap } = await cover({
   projectFolder,
   compileInto,
   coverDescription: {
-    [`/${testFolderRelative}/file.js`]: true,
+    [`/${folderJsenvRelativePath}/file.js`]: true,
   },
   executeDescription: {},
   executionLogLevel: "off",
@@ -20,8 +20,8 @@ const { coverageMap } = await cover({
 assert({
   actual: coverageMap,
   expected: {
-    [`${testFolderRelative}/file.js`]: {
-      ...coverageMap[`${testFolderRelative}/file.js`],
+    [`${folderJsenvRelativePath}/file.js`]: {
+      ...coverageMap[`${folderJsenvRelativePath}/file.js`],
       s: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 },
     },
   },

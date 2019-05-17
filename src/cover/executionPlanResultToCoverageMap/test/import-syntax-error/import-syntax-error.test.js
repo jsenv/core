@@ -1,6 +1,6 @@
-import { assert } from "/node_modules/@dmail/assert/index.js"
-import { launchNode } from "../../../../node-launcher/index.js.js"
-import { launchChromium } from "../../../../chromium-launcher/index.js.js.js"
+import { assert } from "@dmail/assert"
+import { launchNode } from "../../../../node-launcher/index.js"
+import { launchChromium } from "../../../../chromium-launcher/index.js"
 import { executePlan } from "../../../../executePlan/index.js"
 import { startCompileServer } from "../../../../compile-server/index.js"
 import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap.js"
@@ -44,7 +44,7 @@ const babelConfigMap = {}
 
   const coverageMap = await executionPlanResultToCoverageMap(executionPlanResult, {
     projectFolder,
-    arrayOfFilenameRelativeToCover: [],
+    arrayOfpathnameRelativeToCover: [],
   })
 
   assert({

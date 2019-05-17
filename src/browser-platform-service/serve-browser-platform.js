@@ -1,58 +1,56 @@
 import { uneval } from "@dmail/uneval"
 import { serveFile } from "../file-service/index.js"
-import { filenameRelativeInception } from "../inception.js"
+import { relativePathInception } from "../inception.js"
 import { serveBundle } from "../bundle-service/index.js"
 
-const BROWSER_PLATFORM_FILENAME_RELATIVE = "src/browser-platform-service/browser-platform/index.js"
-
-const JSENV_BROWSER_PLATFORM_PATHNAME = `/.jsenv/browser-platform.js`
-const JSENV_BROWSER_PLATFORM_DATA_PATHNAME = `/.jsenv/browser-platform-data.js`
-const JSENV_BROWSER_GROUP_RESOLVER_PATHNAME = `/.jsenv/browser-group-resolver.js`
-const JSENV_IMPORT_MAP_PATHNAME = `/.jsenv/import-map.json`
+const BROWSER_PLATFORM_RELATIVE_PATH = "/src/browser-platform-service/browser-platform/index.js"
+const BROWSER_PLATFORM_CLIENT_PATHNAME = `/.jsenv/browser-platform.js`
+const BROWSER_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/browser-platform-data.js`
+const BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME = `/.jsenv/browser-group-resolver.js`
+const IMPORT_MAP_CLIENT_PATHNAME = `/.jsenv/import-map.json`
 
 export const serveBrowserPlatform = async ({
-  projectFolder,
-  importMapFilenameRelative,
-  browserGroupResolverFilenameRelative,
-  compileInto,
+  projectPathname,
+  compileIntoRelativePath,
+  importMapRelativePath,
+  browserGroupResolverRelativePath,
   babelConfigMap,
   groupMap,
   // projectFileRequestedCallback,
   request: { ressource, method, headers },
 }) => {
-  if (ressource.startsWith(`${JSENV_BROWSER_PLATFORM_PATHNAME}__asset__/`)) {
-    return serveFile(`${projectFolder}/${compileInto}${ressource}`, { method, headers })
+  if (ressource.startsWith(`${BROWSER_PLATFORM_CLIENT_PATHNAME}__asset__/`)) {
+    return serveFile(`${projectPathname}${compileIntoRelativePath}${ressource}`, {
+      method,
+      headers,
+    })
   }
-  if (ressource !== JSENV_BROWSER_PLATFORM_PATHNAME) return null
-
-  const browserGroupResolverFilenameRelativeInception = filenameRelativeInception({
-    projectFolder,
-    filenameRelative: browserGroupResolverFilenameRelative,
-  })
-
-  const filenameRelative = ressource.slice(1)
+  if (ressource !== BROWSER_PLATFORM_CLIENT_PATHNAME) return null
 
   return serveBundle({
-    projectFolder,
-    importMapFilenameRelative,
-    compileInto,
+    projectPathname,
+    importMapRelativePath,
+    compileIntoRelativePath,
     babelConfigMap,
-    filenameRelative,
-    sourceFilenameRelative: filenameRelativeInception({
-      projectFolder,
-      filenameRelative: BROWSER_PLATFORM_FILENAME_RELATIVE,
+    compileRelativePath: ressource,
+    sourceRelativePath: relativePathInception({
+      projectPathname,
+      relativePath: BROWSER_PLATFORM_RELATIVE_PATH,
     }),
     inlineSpecifierMap: {
-      [JSENV_BROWSER_PLATFORM_DATA_PATHNAME]: () =>
-        generateBrowserPlatformDataSource({ compileInto, groupMap }),
-      [JSENV_BROWSER_GROUP_RESOLVER_PATHNAME]: `${projectFolder}/${browserGroupResolverFilenameRelativeInception}`,
-      [JSENV_IMPORT_MAP_PATHNAME]: `${projectFolder}/${importMapFilenameRelative}`,
+      [BROWSER_PLATFORM_DATA_CLIENT_PATHNAME]: () =>
+        generateBrowserPlatformDataSource({ compileIntoRelativePath, groupMap }),
+      [BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME]: `${projectPathname}${relativePathInception({
+        projectPathname,
+        relativePath: browserGroupResolverRelativePath,
+      })}`,
+      [IMPORT_MAP_CLIENT_PATHNAME]: `${projectPathname}${importMapRelativePath}`,
     },
     headers,
     format: "iife",
   })
 }
 
-const generateBrowserPlatformDataSource = ({ compileInto, groupMap }) =>
-  `export const compileInto = ${uneval(compileInto)}
+const generateBrowserPlatformDataSource = ({ compileIntoRelativePath, groupMap }) =>
+  `export const compileIntoRelativePath = ${uneval(compileIntoRelativePath)}
 export const groupMap = ${uneval(groupMap)}`

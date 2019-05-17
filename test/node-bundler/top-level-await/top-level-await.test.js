@@ -1,18 +1,18 @@
 import { assert } from "@dmail/assert"
-import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
-import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
+import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
+import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { bundleNode } from "../../../index.js"
 
-const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-const projectFolder = `${ROOT_FOLDER}`
-const bundleInto = `${testFolderRelative}/dist/node`
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const projectFolder = JSENV_PATH
+const bundleInto = `${folderJsenvRelativePath}/dist/node`
 
 try {
   await bundleNode({
     projectFolder,
     into: bundleInto,
     entryPointMap: {
-      main: `${testFolderRelative}/top-level-await.js`,
+      main: `${folderJsenvRelativePath}/top-level-await.js`,
     },
     logLevel: "off",
     throwUnhandled: false,

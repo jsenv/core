@@ -2,15 +2,16 @@ import { fileRead } from "@dmail/helper"
 import { createOperation } from "@dmail/cancellation"
 import { compileJs } from "../compiled-js-service/index.js"
 import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
+import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
 
 const { createFileCoverage } = import.meta.require("istanbul-lib-coverage")
 
-export const filenameRelativeToEmptyCoverage = async ({
+export const relativePathToEmptyCoverage = async ({
   cancellationToken,
-  projectFolder,
-  filenameRelative,
+  projectPathname,
+  relativePath,
 }) => {
-  const filename = `${projectFolder}/${filenameRelative}`
+  const filename = pathnameToOperatingSystemFilename(`${projectPathname}${relativePath}`)
   const source = await createOperation({
     cancellationToken,
     start: () => fileRead(filename),
@@ -25,10 +26,9 @@ export const filenameRelativeToEmptyCoverage = async ({
       cancellationToken,
       start: () =>
         compileJs({
-          projectFolder,
-          filename,
-          filenameRelative,
           source,
+          projectPathname,
+          sourceRelativePath: relativePath,
           babelConfigMap: {
             "transform-instrument": [createInstrumentPlugin({ predicate: () => true })],
           },
@@ -54,7 +54,7 @@ export const filenameRelativeToEmptyCoverage = async ({
     if (e && e.name === "PARSE_ERROR") {
       // return an empty coverage for that file when
       // it contains a syntax error
-      const coverage = createFileCoverage(filenameRelative).toJSON()
+      const coverage = createFileCoverage(relativePath.slice(1)).toJSON()
       return coverage
     }
     throw e

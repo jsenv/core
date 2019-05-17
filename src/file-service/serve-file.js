@@ -3,6 +3,7 @@ import { folderRead, fileStat, fileRead } from "@dmail/helper"
 import { createETag } from "../createETag.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
 import { filenameToContentType } from "./filenameToContentType.js"
+import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
 const dateToUTCString = (date) => date.toUTCString()
@@ -27,7 +28,9 @@ export const serveFile = async (
     const cacheWithMtime = cacheStrategy === "mtime"
     const cacheWithETag = cacheStrategy === "etag"
     const cachedDisabled = cacheStrategy === "none"
-    const stat = await fileStat(pathname)
+    const filename = pathnameToOperatingSystemFilename(pathname)
+
+    const stat = await fileStat(filename)
 
     if (stat.isDirectory()) {
       if (canReadDirectory === false) {
@@ -40,7 +43,7 @@ export const serveFile = async (
         }
       }
 
-      const files = await folderRead(pathname)
+      const files = await folderRead(filename)
       const filesAsJSON = JSON.stringify(files)
 
       return {
@@ -80,14 +83,14 @@ export const serveFile = async (
           ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
           "last-modified": dateToUTCString(stat.mtime),
           "content-length": stat.size,
-          "content-type": filenameToContentType(pathname),
+          "content-type": filenameToContentType(filename),
         },
-        body: createReadStream(pathname),
+        body: createReadStream(filename),
       }
     }
 
     if (cacheWithETag) {
-      const content = await fileRead(pathname)
+      const content = await fileRead(filename)
       const eTag = createETag(content)
 
       if ("if-none-match" in headers && headers["if-none-match"] === eTag) {
@@ -104,7 +107,7 @@ export const serveFile = async (
         headers: {
           ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
           "content-length": stat.size,
-          "content-type": filenameToContentType(pathname),
+          "content-type": filenameToContentType(filename),
           etag: eTag,
         },
         body: content,
@@ -116,9 +119,9 @@ export const serveFile = async (
       headers: {
         "cache-control": "no-store",
         "content-length": stat.size,
-        "content-type": filenameToContentType(pathname),
+        "content-type": filenameToContentType(filename),
       },
-      body: createReadStream(pathname),
+      body: createReadStream(filename),
     }
   } catch (e) {
     return convertFileSystemErrorToResponseProperties(e)

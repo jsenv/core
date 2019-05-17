@@ -1,5 +1,4 @@
 /* eslint-disable import/max-dependencies */
-import { normalizePathname } from "@jsenv/module-resolution"
 import {
   namedValueDescriptionToMetaDescription,
   selectAllFileInsideFolder,
@@ -14,34 +13,38 @@ import {
 } from "../cancellationHelper.js"
 import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
 import { executionPlanResultToCoverageMap } from "./executionPlanResultToCoverageMap/index.js"
-import { filenameRelativeToEmptyCoverage } from "./filenameRelativeToEmptyCoverage.js"
+import { relativePathToEmptyCoverage } from "./relativePathToEmptyCoverage.js"
 import { generateCoverageHTML } from "./generateCoverageHTML.js"
 import { generateCoverageLog } from "./generateCoverageLog.js"
 import {
-  DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
-  DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE,
-  DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  DEFAULT_COMPILE_INTO,
+  DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
+  DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
+  DEFAULT_COVERAGE_RELATIVE_PATH,
   DEFAULT_COVER_DESCRIPTION,
   DEFAULT_EXECUTE_DESCRIPTION,
   DEFAULT_BABEL_CONFIG_MAP,
-  DEFAULT_COVERAGE_FILENAME_RELATIVE,
   DEFAULT_MAX_PARALLEL_EXECUTION,
 } from "./cover-constant.js"
+import {
+  operatingSystemFilenameToPathname,
+  pathnameToOperatingSystemFilename,
+} from "../operating-system-filename.js"
 
 export const cover = async ({
   projectFolder,
-  browserGroupResolverFilenameRelative = DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
-  nodeGroupResolverFilenameRelative = DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE,
-  importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  coverageFilenameRelative = DEFAULT_COVERAGE_FILENAME_RELATIVE,
+  compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
+  nodeGroupResolverRelativePath = DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
+  coverageRelativePath = DEFAULT_COVERAGE_RELATIVE_PATH,
   // coverDescription could be deduced from passing
   // an entryPointMap and collecting all dependencies
   // for now we stick to coverDescription using project-structure api
   coverDescription = DEFAULT_COVER_DESCRIPTION,
   executeDescription = DEFAULT_EXECUTE_DESCRIPTION,
   babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
-  compileInto = DEFAULT_COMPILE_INTO,
   compileGroupCount = 2,
   maxParallelExecution = DEFAULT_MAX_PARALLEL_EXECUTION,
   defaultAllocatedMsPerExecution = 20000,
@@ -65,24 +68,24 @@ export const cover = async ({
   }
 
   const start = async () => {
-    projectFolder = normalizePathname(projectFolder)
+    const projectPathname = operatingSystemFilenameToPathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
     const coverMetaDescription = namedValueDescriptionToMetaDescription({
       cover: coverDescription,
     })
 
-    const coverFilePredicate = (filenameRelative) =>
+    const coverFilePredicate = (pathnameRelative) =>
       pathnameToMeta({
-        pathname: `/${filenameRelative}`,
+        pathname: `/${pathnameRelative}`,
         metaDescription: coverMetaDescription,
       }).cover === true
 
     ensureNoFileIsBothCoveredAndExecuted({ executeDescription, coverFilePredicate })
 
-    const [{ planResult, planResultSummary }, arrayOfFilenameRelativeToCover] = await Promise.all([
+    const [{ planResult, planResultSummary }, relativePathToCoverArray] = await Promise.all([
       (async () => {
         const instrumentBabelPlugin = createInstrumentPlugin({
-          predicate: (filenameRelative) => coverFilePredicate(filenameRelative),
+          predicate: (pathnameRelative) => coverFilePredicate(pathnameRelative),
         })
 
         const babelConfigMapWithInstrumentation = {
@@ -92,13 +95,13 @@ export const cover = async ({
 
         const executionPlan = await executeDescriptionToExecutionPlan({
           cancellationToken,
-          projectFolder,
-          browserGroupResolverFilenameRelative,
-          nodeGroupResolverFilenameRelative,
-          importMapFilenameRelative,
-          compileInto,
-          compileGroupCount,
+          projectPathname,
+          compileIntoRelativePath,
+          importMapRelativePath,
+          browserGroupResolverRelativePath,
+          nodeGroupResolverRelativePath,
           babelConfigMap: babelConfigMapWithInstrumentation,
+          compileGroupCount,
           executeDescription,
           defaultAllocatedMsPerExecution,
           compileServerLogLevel,
@@ -114,32 +117,27 @@ export const cover = async ({
           collectNamespace,
         })
       })(),
-      listFilesToCover({
+      listRelativePathToCover({
         cancellationToken,
-        projectFolder,
+        projectPathname,
         coverDescription,
       }),
     ])
 
-    const executionCoverageMap = executionPlanResultToCoverageMap(planResult, {
-      cancellationToken,
-      projectFolder,
-      arrayOfFilenameRelativeToCover,
-    })
-
-    const arrayOfFilenameRelativeMissingCoverage = arrayOfFilenameRelativeToCover.filter(
-      (filenameRelative) => filenameRelative in executionCoverageMap === false,
+    const executionCoverageMap = executionPlanResultToCoverageMap(planResult)
+    const relativePathMissingCoverageArray = relativePathToCoverArray.filter(
+      (relativePathToCover) => relativePathToCover.slice(1) in executionCoverageMap === false,
     )
 
     const missedCoverageMap = {}
     await Promise.all(
-      arrayOfFilenameRelativeMissingCoverage.map(async (filenameRelative) => {
-        const emptyCoverage = await filenameRelativeToEmptyCoverage({
+      relativePathMissingCoverageArray.map(async (relativePathMissingCoverage) => {
+        const emptyCoverage = await relativePathToEmptyCoverage({
           cancellationToken,
-          projectFolder,
-          filenameRelative,
+          projectPathname,
+          relativePath: relativePathMissingCoverage,
         })
-        missedCoverageMap[filenameRelative] = emptyCoverage
+        missedCoverageMap[relativePathMissingCoverage.slice(1)] = emptyCoverage
         return emptyCoverage
       }),
     )
@@ -156,7 +154,9 @@ export const cover = async ({
     }
 
     if (writeCoverageFile) {
-      const coverageFilename = `${projectFolder}/${coverageFilenameRelative}`
+      const coverageFilename = pathnameToOperatingSystemFilename(
+        `${projectPathname}${coverageRelativePath}`,
+      )
 
       await fileWrite(coverageFilename, JSON.stringify(coverageMap, null, "  "))
       if (logCoverageFilePath) {
@@ -188,8 +188,8 @@ export const cover = async ({
 }
 
 const ensureNoFileIsBothCoveredAndExecuted = ({ executeDescription, coverFilePredicate }) => {
-  const fileToExecuteAndCoverArray = Object.keys(executeDescription).filter((filenameRelative) =>
-    coverFilePredicate(filenameRelative),
+  const fileToExecuteAndCoverArray = Object.keys(executeDescription).filter((pathnameRelative) =>
+    coverFilePredicate(pathnameRelative),
   )
   if (fileToExecuteAndCoverArray.length) {
     // I think it is an error, it would be strange, for a given file
@@ -199,18 +199,22 @@ file to execute and cover: ${fileToExecuteAndCoverArray}`)
   }
 }
 
-const listFilesToCover = async ({ cancellationToken, projectFolder, coverDescription }) => {
+const listRelativePathToCover = async ({
+  cancellationToken,
+  projectPathname,
+  coverDescription,
+}) => {
   const metaDescriptionForCover = namedValueDescriptionToMetaDescription({
     cover: coverDescription,
   })
 
-  const arrayOfFilenameRelativeToCover = await selectAllFileInsideFolder({
+  const relativePathToCoverArray = await selectAllFileInsideFolder({
     cancellationToken,
-    pathname: projectFolder,
+    pathname: projectPathname,
     metaDescription: metaDescriptionForCover,
     predicate: ({ cover }) => cover,
-    transformFile: ({ filenameRelative }) => filenameRelative,
+    transformFile: ({ filenameRelative }) => `/${filenameRelative}`,
   })
 
-  return arrayOfFilenameRelativeToCover
+  return relativePathToCoverArray
 }

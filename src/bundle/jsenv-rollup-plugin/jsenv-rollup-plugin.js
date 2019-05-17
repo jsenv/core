@@ -17,6 +17,7 @@ import {
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { computeBabelConfigMapSubset } from "./computeBabelConfigMapSubset.js"
 import { createLogger } from "../../logger.js"
+import { pathnameToOperatingSystemFilename } from "../../operating-system-filename.js"
 
 const { minify: minifyCode } = import.meta.require("terser")
 const { buildExternalHelpers } = import.meta.require("@babel/core")
@@ -25,8 +26,8 @@ const HELPER_FILENAME = "\0rollupPluginBabelHelpers.js"
 
 export const createJsenvRollupPlugin = ({
   cancellationToken,
-  projectFolder,
-  importMapFilenameRelative,
+  projectPathname,
+  importMapRelativePath,
   inlineSpecifierMap,
   origin = "http://example.com",
 
@@ -41,8 +42,8 @@ export const createJsenvRollupPlugin = ({
   const { log } = createLogger({ logLevel })
 
   const projectImportMap = readProjectImportMap({
-    projectFolder,
-    importMapFilenameRelative,
+    projectPathname,
+    importMapRelativePath,
   })
   const importMap = projectImportMap
 
@@ -56,7 +57,7 @@ export const createJsenvRollupPlugin = ({
   // https://github.com/babel/babel/blob/master/packages/babel-core/src/tools/build-external-helpers.js#L1
   inlineSpecifierMap[HELPER_FILENAME] = () => buildExternalHelpers(undefined, "module")
 
-  const inlineImportMap = {}
+  const inlineSpecifierResolveMap = {}
 
   const jsenvRollupPlugin = {
     name: "jsenv",
@@ -64,15 +65,18 @@ export const createJsenvRollupPlugin = ({
     resolveId: (specifier, importer) => {
       if (specifier in inlineSpecifierMap) {
         const inlineSpecifier = inlineSpecifierMap[specifier]
-        if (typeof inlineSpecifier === "string") return inlineSpecifier
+        if (typeof inlineSpecifier === "string")
+          return pathnameToOperatingSystemFilename(inlineSpecifier)
         if (typeof inlineSpecifier === "function") {
-          inlineImportMap[specifier] = inlineSpecifier
+          inlineSpecifierResolveMap[specifier] = inlineSpecifier
           return specifier
         }
         throw new Error(`inlineSpecifier must be a string or a function`)
       }
 
-      if (!importer) return `${projectFolder}/${specifier}`
+      // TODO: test this on windows, it will fail for sure
+
+      if (!importer) return `${projectPathname}/${specifier}`
 
       let importerHref
       // there is already a scheme (http, https, file), keep it
@@ -83,8 +87,8 @@ export const createJsenvRollupPlugin = ({
       // 99% of the time importer is a pathname
       // if the importer is inside projectFolder we must remove that
       // so that / is resolved against projectFolder and not the filesystem root
-      else if (importer.startsWith(`${projectFolder}/`)) {
-        importerHref = `${origin}${importer.slice(projectFolder.length)}`
+      else if (importer.startsWith(`${projectPathname}/`)) {
+        importerHref = `${origin}${importer.slice(projectPathname.length)}`
       } else {
         importerHref = `${origin}${importer}`
       }
@@ -101,12 +105,12 @@ export const createJsenvRollupPlugin = ({
       })
 
       // rollup works with pathname
-      // le's return him pathname when possible
+      // let's return him pathname when possible
       // otherwise sourcemap.sources will be messed up
       if (id.startsWith(`${origin}/`)) {
         const specifierFilename = hrefToPathname(id)
-        if (importer.startsWith(`${projectFolder}/`)) {
-          const filename = `${projectFolder}${specifierFilename}`
+        if (importer.startsWith(`${projectPathname}/`)) {
+          const filename = `${projectPathname}${specifierFilename}`
           return filename
         }
         return specifierFilename
@@ -121,7 +125,7 @@ export const createJsenvRollupPlugin = ({
     // },
 
     load: async (id) => {
-      if (id in inlineImportMap) return inlineImportMap[id]()
+      if (id in inlineSpecifierResolveMap) return inlineSpecifierResolveMap[id]()
 
       const href = id[0] === "/" ? `file://${id}` : id
       const source = await fetchHref(href)

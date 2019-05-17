@@ -30,16 +30,16 @@ export const launchAndExecute = async ({
   stoppedCallback = () => {},
   errorAfterExecutedCallback = () => {},
   disconnectAfterExecutedCallback = () => {},
-  filenameRelative,
+  fileRelativePath,
   collectNamespace = false,
   collectCoverage = false,
   collectPlatformNameAndVersion = false,
 } = {}) => {
   if (typeof launch !== "function")
     throw new TypeError(`launchAndExecute launch must be a function, got ${launch}`)
-  if (typeof filenameRelative !== "string")
+  if (typeof fileRelativePath !== "string")
     throw new TypeError(
-      `launchAndExecute filenameRelative must be a string, got ${filenameRelative}`,
+      `launchAndExecute fileRelativePath must be a string, got ${fileRelativePath}`,
     )
 
   let executionResultTransformer = (executionResult) => executionResult
@@ -106,7 +106,7 @@ export const launchAndExecute = async ({
     disconnectAfterExecutedCallback,
     startedCallback,
     stoppedCallback,
-    filenameRelative,
+    fileRelativePath,
     collectNamespace,
     collectCoverage,
   })
@@ -133,7 +133,7 @@ const computeRawExecutionResult = async ({
   cancellationToken,
   allocatedMs,
   consoleCallback,
-  filenameRelative,
+  fileRelativePath,
   ...rest
 }) => {
   const hasAllocatedMs = typeof allocatedMs === "number"
@@ -143,7 +143,7 @@ const computeRawExecutionResult = async ({
       launch,
       cancellationToken,
       consoleCallback,
-      filenameRelative,
+      fileRelativePath,
       ...rest,
     })
   }
@@ -166,7 +166,7 @@ const computeRawExecutionResult = async ({
       launch,
       cancellationToken: externalOrTimeoutCancellationToken,
       consoleCallback,
-      filenameRelative,
+      fileRelativePath,
       ...rest,
     })
     timeoutCancel()
@@ -195,12 +195,12 @@ const computeExecutionResult = async ({
   disconnectAfterExecutedCallback,
   stopOnError,
   stopOnceExecuted,
-  filenameRelative,
+  fileRelativePath,
   collectNamespace,
   collectCoverage,
 }) => {
   const { log, logError } = createLogger({ logLevel })
-  log(createStartingPlatformMessage({ filenameRelative }))
+  log(createStartingPlatformMessage({ fileRelativePath }))
 
   const launchOperation = createStoppableOperation({
     cancellationToken,
@@ -267,7 +267,7 @@ const computeExecutionResult = async ({
     }
   }
 
-  log(createStartExecutionMessage({ filenameRelative }))
+  log(createStartExecutionMessage({ fileRelativePath }))
 
   const executionResult = await createOperation({
     cancellationToken,
@@ -280,7 +280,7 @@ const computeExecutionResult = async ({
         registerErrorCallback(resolve)
       })
 
-      const executionPromise = executeFile(filenameRelative, {
+      const executionPromise = executeFile(fileRelativePath, {
         collectNamespace,
         collectCoverage,
       })
@@ -376,8 +376,8 @@ options: ${JSON.stringify(options)}`
 
 const createPlatformStoppedMessage = () => `platform stopped.`
 
-const createStartExecutionMessage = ({ filenameRelative }) => `execute file.
-filenameRelative: ${filenameRelative}`
+const createStartExecutionMessage = ({ fileRelativePath }) => `execute file.
+fileRelativePath: ${fileRelativePath}`
 
 const createExecutionErrorMessage = ({ error }) => `error during execution.
 stack: ${error.stack}`

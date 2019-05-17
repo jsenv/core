@@ -1,14 +1,14 @@
 import { assert } from "@dmail/assert"
-import { hrefToFolderJsenvRelative } from "../../src/hrefToFolderJsenvRelative.js"
-import { ROOT_FOLDER } from "../../src/ROOT_FOLDER.js"
+import { importMetaURLToFolderJsenvRelativePath } from "../../src/import-meta-url-to-folder-jsenv-relative-path.js"
+import { JSENV_PATH } from "../../src/JSENV_PATH.js"
 import { launchNode, launchChromium, test } from "../../index.js"
 
-const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-const projectFolder = ROOT_FOLDER
-const compileInto = `${testFolderRelative}/.dist`
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const projectFolder = JSENV_PATH
+const compileInto = `${folderJsenvRelativePath}/.dist`
 
 const testDescription = {
-  [`/${testFolderRelative}/file.js`]: {
+  [`/${folderJsenvRelativePath}/file.js`]: {
     node: {
       launch: launchNode,
     },
@@ -29,7 +29,7 @@ const actual = await test({
 })
 const expected = {
   planResult: {
-    [`${testFolderRelative}/file.js`]: {
+    [`${folderJsenvRelativePath}/file.js`]: {
       node: {
         status: "completed",
         namespace: {

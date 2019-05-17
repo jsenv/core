@@ -1,10 +1,13 @@
 import { readFileSync } from "fs"
+import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
 
 // TODO: make this async
-export const readProjectImportMap = ({ projectFolder, importMapFilenameRelative }) => {
-  if (!importMapFilenameRelative) return {}
+export const readProjectImportMap = ({ projectPathname, importMapRelativePath }) => {
+  if (!importMapRelativePath) return {}
   try {
-    const buffer = readFileSync(`${projectFolder}/${importMapFilenameRelative}`)
+    const buffer = readFileSync(
+      pathnameToOperatingSystemFilename(`${projectPathname}/${importMapRelativePath}`),
+    )
     const source = String(buffer)
     return JSON.parse(source)
   } catch (e) {

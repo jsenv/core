@@ -2,25 +2,26 @@ import { fileRead, fileStat } from "@dmail/helper"
 import { createETag } from "../createETag.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { getCompiledFilename, getAssetFilename } from "./locaters.js"
+import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
 
 export const validateCache = async ({
-  projectFolder,
-  compiledFilenameRelative,
+  projectPathname,
+  compileRelativePath,
   cache,
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
   const compiledFileValidation = await validateCompiledFile({
-    projectFolder,
-    compiledFilenameRelative,
+    projectPathname,
+    compileRelativePath,
     ifEtagMatch,
     ifModifiedSinceDate,
   })
   if (!compiledFileValidation.valid) return compiledFileValidation
 
   const [sourcesValidations, assetValidations] = await Promise.all([
-    validateSources({ projectFolder, cache }),
-    validateAssets({ projectFolder, compiledFilenameRelative, cache }),
+    validateSources({ projectPathname, cache }),
+    validateAssets({ projectPathname, compileRelativePath, cache }),
   ])
 
   const invalidSourceValidation = sourcesValidations.find(({ valid }) => !valid)
@@ -44,14 +45,14 @@ export const validateCache = async ({
 }
 
 const validateCompiledFile = async ({
-  projectFolder,
-  compiledFilenameRelative,
+  projectPathname,
+  compileRelativePath,
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
   const compiledFilename = getCompiledFilename({
-    projectFolder,
-    compiledFilenameRelative,
+    projectPathname,
+    compileRelativePath,
   })
 
   try {
@@ -95,19 +96,19 @@ const validateCompiledFile = async ({
   }
 }
 
-const validateSources = ({ projectFolder, cache }) =>
+const validateSources = ({ projectPathname, cache }) =>
   Promise.all(
     cache.sources.map((source, index) =>
       validateSource({
-        projectFolder,
+        projectPathname,
         source,
         eTag: cache.sourcesEtag[index],
       }),
     ),
   )
 
-const validateSource = async ({ projectFolder, source, eTag }) => {
-  const sourceFilename = `${projectFolder}${source}`
+const validateSource = async ({ projectPathname, source, eTag }) => {
+  const sourceFilename = pathnameToOperatingSystemFilename(`${projectPathname}${source}`)
 
   try {
     const sourceContent = await fileRead(sourceFilename)
@@ -137,22 +138,22 @@ const validateSource = async ({ projectFolder, source, eTag }) => {
   }
 }
 
-const validateAssets = ({ projectFolder, compiledFilenameRelative, cache }) =>
+const validateAssets = ({ projectPathname, compileRelativePath, cache }) =>
   Promise.all(
     cache.assets.map((asset, index) =>
       validateAsset({
-        projectFolder,
-        compiledFilenameRelative,
+        projectPathname,
+        compileRelativePath,
         asset,
         eTag: cache.assetsEtag[index],
       }),
     ),
   )
 
-const validateAsset = async ({ projectFolder, compiledFilenameRelative, asset, eTag }) => {
+const validateAsset = async ({ projectPathname, compileRelativePath, asset, eTag }) => {
   const assetFilename = getAssetFilename({
-    projectFolder,
-    compiledFilenameRelative,
+    projectPathname,
+    compileRelativePath,
     asset,
   })
 

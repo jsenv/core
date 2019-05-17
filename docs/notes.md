@@ -1,6 +1,8 @@
 ## TODO
 
-- nothing for now :)
+- rename projectFolder projectPath
+- fix windows filename inside jsenv-core
+- nothing else :)
 
 ## To keep in mind
 

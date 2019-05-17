@@ -1,23 +1,19 @@
 import { fileRead } from "@dmail/helper"
 import { getCacheFilename } from "./locaters.js"
 
-export const readCache = async ({
-  projectFolder,
-  sourceFilenameRelative,
-  compiledFilenameRelative,
-}) => {
+export const readCache = async ({ projectPathname, sourceRelativePath, compileRelativePath }) => {
   const cacheFilename = getCacheFilename({
-    projectFolder,
-    compiledFilenameRelative,
+    projectPathname,
+    compileRelativePath,
   })
 
   try {
     const cacheContent = await fileRead(cacheFilename)
     const cache = JSON.parse(cacheContent)
-    if (cache.sourceFilenameRelative !== sourceFilenameRelative) {
+    if (cache.sourceRelativePath !== sourceRelativePath) {
       throw createCacheCorruptionError({
-        sourceFilenameRelative,
-        cacheSourceFilenameRelative: cache.sourceFilenameRelative,
+        sourceRelativePath,
+        cacheSourcePath: cache.sourceRelativePath,
         cacheFilename,
       })
     }
@@ -28,16 +24,12 @@ export const readCache = async ({
   }
 }
 
-const createCacheCorruptionError = ({
-  sourceFilenameRelative,
-  cacheFilename,
-  cacheSourceFilenameRelative,
-}) => {
+const createCacheCorruptionError = ({ sourceRelativePath, cacheSourcePath, cacheFilename }) => {
   const error = new Error(
     createCacheCorruptionErrorMessage({
-      sourceFilenameRelative,
+      sourceRelativePath,
       cacheFilename,
-      cacheSourceFilenameRelative,
+      cacheSourcePath,
     }),
   )
   error.code = "CACHE_CORRUPTION_ERROR"
@@ -45,10 +37,10 @@ const createCacheCorruptionError = ({
 }
 
 const createCacheCorruptionErrorMessage = ({
-  sourceFilenameRelative,
+  sourceRelativePath,
+  cacheSourcePath,
   cacheFilename,
-  cacheSourceFilenameRelative,
-}) => `cache sourceFilenameRelative does not match.
-sourceFilenameRelative: ${sourceFilenameRelative}
-cacheFilename: ${cacheFilename}
-cacheSourceFilenameRelative: ${cacheSourceFilenameRelative}`
+}) => `cache sourceRelativePath does not match.
+sourceRelativePath: ${sourceRelativePath}
+cacheSourcePath: ${cacheSourcePath}
+cacheFilename: ${cacheFilename}`

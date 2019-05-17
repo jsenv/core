@@ -4,20 +4,27 @@ import { ansiToHTML } from "../ansiToHTML.js"
 import { regexpEscape } from "../stringHelper.js"
 import { createParseError } from "../compiled-file-service/index.js"
 import { transpiler } from "./transpiler.js"
+import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
 
 export const compileJs = async ({
-  projectFolder,
-  filenameRelative,
-  filename,
   source,
+  projectPathname,
+  sourceRelativePath,
+  compileRelativePath = sourceRelativePath,
   babelConfigMap,
   transformTopLevelAwait,
   inputAst = undefined,
   inputMap = undefined,
-  outputFilename = filename,
   remap = true,
   remapMethod = "comment", // 'comment', 'inline'
 }) => {
+  const sourceFilename = pathnameToOperatingSystemFilename(
+    `${projectPathname}${sourceRelativePath}`,
+  )
+  const compileFilename = pathnameToOperatingSystemFilename(
+    `${projectPathname}${compileRelativePath}`,
+  )
+
   try {
     const sources = []
     const sourcesContent = []
@@ -29,9 +36,8 @@ export const compileJs = async ({
 
     const { map, code, metadata } = await transpiler({
       input: source,
-      filename,
-      filenameRelative,
-      projectFolder,
+      filename: sourceFilename,
+      filenameRelative: sourceRelativePath,
       inputAst,
       inputMap,
       babelConfigMap,
@@ -63,27 +69,27 @@ export const compileJs = async ({
           `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
         )
       } else if (remapMethod === "comment") {
-        const sourcemapFilenameRelative = generateAssetFilenameRelative({
-          projectFolder,
-          filenameRelative,
-          assetName: `${basename(filenameRelative)}.map`,
+        const sourcemappathnameRelative = generateAssetpathnameRelative({
+          projectPathname,
+          sourceRelativePath,
+          assetName: `${basename(sourceRelativePath)}.map`,
         })
-        output = writeSourceMappingURL(output, `./${sourcemapFilenameRelative}`)
-        assets.push(sourcemapFilenameRelative)
+        output = writeSourceMappingURL(output, `./${sourcemappathnameRelative}`)
+        assets.push(sourcemappathnameRelative)
         assetsContent.push(stringifyMap(map))
       }
     } else {
-      sources.push(`/${filenameRelative}`)
+      sources.push(`/${sourceRelativePath}`)
       sourcesContent.push(source)
     }
 
     if (coverage) {
-      const coverageFilenameRelative = generateAssetFilenameRelative({
-        projectFolder,
-        filenameRelative,
+      const coveragepathnameRelative = generateAssetpathnameRelative({
+        projectPathname,
+        sourceRelativePath,
         assetName: "coverage.json",
       })
-      assets.push(coverageFilenameRelative)
+      assets.push(coveragepathnameRelative)
       assetsContent.push(stringifyCoverage(coverage))
     }
 
@@ -97,13 +103,16 @@ export const compileJs = async ({
     }
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
-      const filename = `${projectFolder}/${filenameRelative}`
-      const message = transformBabelParseErrorMessage(error.message, filename, outputFilename)
+      const message = transformBabelParseErrorMessage(
+        error.message,
+        sourceFilename,
+        compileFilename,
+      )
       throw createParseError({
         message,
         messageHTML: ansiToHTML(message),
-        filename,
-        outputFilename,
+        filename: sourceFilename,
+        outputFilename: compileFilename,
         lineNumber: error.loc.line,
         columnNumber: error.loc.column,
       })
@@ -112,8 +121,8 @@ export const compileJs = async ({
   }
 }
 
-const generateAssetFilenameRelative = ({ filenameRelative, assetName }) => {
-  const fileBasename = basename(filenameRelative)
+const generateAssetpathnameRelative = ({ sourceRelativePath, assetName }) => {
+  const fileBasename = basename(sourceRelativePath)
 
   return `${fileBasename}__asset__/${assetName}`
 }

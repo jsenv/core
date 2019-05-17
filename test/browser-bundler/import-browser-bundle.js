@@ -1,11 +1,14 @@
 import { fileRead } from "@dmail/helper"
 import { serveFile } from "../../src/file-service/index.js"
-import { startServer, serviceCompose } from "../../src/server/index.js"
-import { SYSTEM_FILENAME } from "../../src/compile-server/system-service/index.js"
+import { startServer, firstService } from "../../src/server/index.js"
+import { SYSTEM_PATHNAME } from "../../src/system/index.js"
+import { pathnameToOperatingSystemFilename } from "../../src/operating-system-filename.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
 export const importBrowserBundle = async ({ bundleFolder, file }) => {
+  bundleFolder = pathnameToOperatingSystemFilename(bundleFolder)
+
   const [server, browser] = await Promise.all([
     startTestServer({ bundleFolder }),
     puppeteer.launch(),
@@ -32,48 +35,32 @@ export const importBrowserBundle = async ({ bundleFolder, file }) => {
 }
 
 const startTestServer = ({ bundleFolder }) => {
-  const indexPageService = ({ method, ressource }) => {
-    if (method !== "GET") return null
-    if (ressource !== "/") return null
-
-    const html = genereateIndexPage()
-
-    return {
-      status: 200,
-      headers: {
-        "cache-control": "no-store",
-        "content-type": "text/html",
-        "content-length": Buffer.byteLength(html),
-      },
-      body: html,
-    }
-  }
-
-  const systemJSService = async ({ ressource }) => {
-    if (ressource !== "/system.js") return null
-
-    const content = await fileRead(SYSTEM_FILENAME)
-
-    return {
-      status: 200,
-      headers: {
-        "cache-control": "no-store",
-        "content-type": "application/javascript",
-        "content-length": Buffer.byteLength(content),
-      },
-      body: content,
-    }
-  }
-
   return startServer({
     logLevel: "off",
-    requestToResponse: serviceCompose(
-      indexPageService,
-      systemJSService,
-      ({ ressource, method, headers }) =>
-        serveFile(`${bundleFolder}${ressource}`, { method, headers }),
-    ),
+    requestToResponse: (request) =>
+      firstService(
+        () => serveIndexPage({ request }),
+        () => serveSystemJS({ request }),
+        () => serveBundleFolder({ bundleFolder, request }),
+      ),
   })
+}
+
+const serveIndexPage = ({ request: { method, ressource } }) => {
+  if (method !== "GET") return null
+  if (ressource !== "/") return null
+
+  const html = genereateIndexPage()
+
+  return {
+    status: 200,
+    headers: {
+      "cache-control": "no-store",
+      "content-type": "text/html",
+      "content-length": Buffer.byteLength(html),
+    },
+    body: html,
+  }
 }
 
 const genereateIndexPage = () => `<!doctype html>
@@ -89,3 +76,23 @@ const genereateIndexPage = () => `<!doctype html>
 </body>
 
 </html>`
+
+const serveSystemJS = async ({ request: { ressource } }) => {
+  if (ressource !== "/system.js") return null
+
+  const content = await fileRead(pathnameToOperatingSystemFilename(SYSTEM_PATHNAME))
+
+  return {
+    status: 200,
+    headers: {
+      "cache-control": "no-store",
+      "content-type": "application/javascript",
+      "content-length": Buffer.byteLength(content),
+    },
+    body: content,
+  }
+}
+
+const serveBundleFolder = ({ bundleFolder, request: { ressource, method, headers } }) => {
+  return serveFile(`${bundleFolder}${ressource}`, { method, headers })
+}

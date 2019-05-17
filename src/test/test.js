@@ -1,31 +1,31 @@
-import { normalizePathname } from "@jsenv/module-resolution"
 import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
 import { executePlan } from "../executePlan/index.js"
+import { operatingSystemFilenameToPathname } from "../operating-system-filename.js"
 import {
-  DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  DEFAULT_COMPILE_INTO,
-  DEFAULT_BABEL_CONFIG_MAP,
-  DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
-  DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE,
+  DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
+  DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_EXECUTE_DESCRIPTION,
   DEFAULT_MAX_PARALLEL_EXECUTION,
+  DEFAULT_BABEL_CONFIG_MAP,
 } from "./test-constant.js"
 
 export const test = async ({
   projectFolder,
-  importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  compileInto = DEFAULT_COMPILE_INTO,
-  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
-  browserGroupResolverFilenameRelative = DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
-  nodeGroupResolverFilenameRelative = DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE,
+  compileFolderRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
+  nodeGroupResolverRelativePath = DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
   executeDescription = DEFAULT_EXECUTE_DESCRIPTION,
   compileGroupCount = 2,
   maxParallelExecution = DEFAULT_MAX_PARALLEL_EXECUTION,
   defaultAllocatedMsPerExecution = 20000,
+  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
   updateProcessExitCode = true,
   throwUnhandled = true,
   compileServerLogLevel = "off",
@@ -35,18 +35,18 @@ export const test = async ({
   captureConsole = true,
 }) => {
   const start = async () => {
-    projectFolder = normalizePathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
+    const projectFolderPathname = operatingSystemFilenameToPathname(projectFolder)
 
     const executionPlan = await executeDescriptionToExecutionPlan({
       cancellationToken,
-      projectFolder,
-      importMapFilenameRelative,
-      compileInto,
+      projectFolderPathname,
+      compileFolderRelativePath,
+      importMapRelativePath,
+      browserGroupResolverRelativePath,
+      nodeGroupResolverRelativePath,
       compileGroupCount,
       babelConfigMap,
-      browserGroupResolverFilenameRelative,
-      nodeGroupResolverFilenameRelative,
       executeDescription,
       defaultAllocatedMsPerExecution,
       compileServerLogLevel,

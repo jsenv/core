@@ -1,24 +1,25 @@
-import { normalizePathname } from "/node_modules/@jsenv/module-resolution/index.js"
+import { operatingSystemFilenameToPathname } from "../../operating-system-filename.js"
 import { nodeVersionScoreMap } from "../../group-map/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
 import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBalancing.js"
 import { computeRollupOptionsForBalancer } from "./computeRollupOptionsForBalancer.js"
 import {
-  BUNDLE_NODE_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  BUNDLE_NODE_DEFAULT_BUNDLE_INTO,
-  BUNDLE_NODE_DEFAULT_ENTRY_POINT_MAP,
-  BUNDLE_NODE_DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_BUNDLE_INTO_RELATIVE_PATH,
+  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  DEFAULT_ENTRY_POINT_MAP,
+  DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
+  DEFAULT_BABEL_CONFIG_MAP,
 } from "./bundle-node-constant.js"
 
 export const bundleNode = async ({
   projectFolder,
-  babelConfigMap = BUNDLE_NODE_DEFAULT_BABEL_CONFIG_MAP,
-  importMapFilenameRelative = BUNDLE_NODE_DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  nodeGroupResolverFilenameRelative = `src/node-group-resolver/index.js`,
+  bundleIntoRelativePath = DEFAULT_BUNDLE_INTO_RELATIVE_PATH,
+  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  entryPointMap = DEFAULT_ENTRY_POINT_MAP,
+  nodeGroupResolverRelativePath = DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
   inlineSpecifierMap = {},
-  into = BUNDLE_NODE_DEFAULT_BUNDLE_INTO,
-  entryPointMap = BUNDLE_NODE_DEFAULT_ENTRY_POINT_MAP,
+  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
   compileGroupCount = 1,
   versionScoreMap = nodeVersionScoreMap,
   logLevel = "log",
@@ -26,11 +27,12 @@ export const bundleNode = async ({
   throwUnhandled = true,
   writeOnFileSystem = true,
 }) => {
-  projectFolder = normalizePathname(projectFolder)
+  const projectPathname = operatingSystemFilenameToPathname(projectFolder)
+
   const promise = bundlePlatform({
+    projectPathname,
+    bundleIntoRelativePath,
     entryPointMap,
-    projectFolder,
-    into,
     babelConfigMap,
     compileGroupCount,
     platformScoreMap: { node: versionScoreMap },
@@ -38,10 +40,10 @@ export const bundleNode = async ({
     writeOnFileSystem,
     computeRollupOptionsWithoutBalancing: (context) =>
       computeRollupOptionsWithoutBalancing({
-        projectFolder,
-        importMapFilenameRelative,
+        projectPathname,
+        bundleIntoRelativePath,
+        importMapRelativePath,
         inlineSpecifierMap,
-        into,
         entryPointMap,
         babelConfigMap,
         minify,
@@ -49,10 +51,10 @@ export const bundleNode = async ({
       }),
     computeRollupOptionsWithBalancing: (context) =>
       computeRollupOptionsWithBalancing({
-        projectFolder,
-        importMapFilenameRelative,
+        projectPathname,
+        bundleIntoRelativePath,
+        importMapRelativePath,
         inlineSpecifierMap,
-        into,
         entryPointMap,
         babelConfigMap,
         minify,
@@ -60,10 +62,10 @@ export const bundleNode = async ({
       }),
     computeRollupOptionsForBalancer: (context) =>
       computeRollupOptionsForBalancer({
-        projectFolder,
-        importMapFilenameRelative,
-        nodeGroupResolverFilenameRelative,
-        into,
+        projectPathname,
+        bundleIntoRelativePath,
+        importMapRelativePath,
+        nodeGroupResolverRelativePath,
         babelConfigMap,
         minify,
         ...context,

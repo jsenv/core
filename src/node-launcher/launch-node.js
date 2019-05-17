@@ -1,27 +1,31 @@
+/* eslint-disable import/max-dependencies */
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@dmail/uneval"
 import { createCancellationToken } from "@dmail/cancellation"
-import { ROOT_FOLDER } from "../ROOT_FOLDER-2.js"
+import { JSENV_PATH } from "../JSENV_PATH-2.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 import { generateNodeBundle } from "../bundle-service/index.js"
-import { filenameRelativeInception } from "../inception.js"
+import { relativePathInception } from "../inception.js"
 import {
-  DEFAULT_COMPILE_INTO,
-  DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
 } from "./launch-node-constant.js"
 import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
 import { regexpEscape } from "../../src/stringHelper.js"
+import { pathnameToOperatingSystemFilename } from "../operating-system-filename.js"
 
 const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
 
-const controllableNodeProcessFilename = `${ROOT_FOLDER}/src/node-launcher/node-controllable.js`
+const CONTROLLABLE_NODE_PATH = `${JSENV_PATH}/src/node-launcher/node-controllable.js`
+const NODE_EXECUTE_TEMPLATE_RELATIVE_PATH = "/src/node-launcher/node-execute-template.js"
+const NODE_EXECUTE_CLIENT_PATHNAME = "/.jsenv/node-execute.js"
 
 export const launchNode = async ({
   cancellationToken = createCancellationToken(),
-  projectFolder,
   compileServerOrigin,
-  compileInto = DEFAULT_COMPILE_INTO,
-  importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
+  projectPathname,
+  compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   debugPort = 0,
   debugMode = "inherit",
   debugModeInheritBreak = false,
@@ -29,12 +33,12 @@ export const launchNode = async ({
   traceWarnings = true,
   logLevel = false,
 }) => {
-  if (typeof projectFolder !== "string")
-    throw new TypeError(`projectFolder must be a string, got ${projectFolder}`)
   if (typeof compileServerOrigin !== "string")
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
-  if (typeof compileInto !== "string")
-    throw new TypeError(`compileInto must be a string, got ${compileInto}`)
+  if (typeof projectPathname !== "string")
+    throw new TypeError(`projectPathname must be a string, got ${projectPathname}`)
+  if (typeof compileIntoRelativePath !== "string")
+    throw new TypeError(`compileIntoRelativePath must be a string, got ${compileIntoRelativePath}`)
 
   const execArgv = await createChildExecArgv({
     cancellationToken,
@@ -48,7 +52,7 @@ export const launchNode = async ({
     execArgv.push("--trace-warnings")
   }
 
-  const child = forkChildProcess(controllableNodeProcessFilename, {
+  const child = forkChildProcess(CONTROLLABLE_NODE_PATH, {
     execArgv,
     // silent: true
     stdio: "pipe",
@@ -134,21 +138,19 @@ export const launchNode = async ({
     return disconnectedPromise
   }
 
-  const executeFile = async (filenameRelative, { collectNamespace, collectCoverage }) => {
+  const executeFile = async (fileRelativePath, { collectNamespace, collectCoverage }) => {
     const execute = async () => {
-      const nodeExecuteFilenameRelative = filenameRelativeInception({
-        projectFolder,
-        filenameRelative: "src/node-launcher/node-execute-template.js",
-      })
-
       // seems the bundle below generated files cache is not hit for some reason, find why
       await generateNodeBundle({
-        projectFolder,
-        importMapFilenameRelative,
-        compileInto,
+        projectPathname,
+        compileIntoRelativePath,
+        importMapRelativePath,
+        sourceRelativePath: relativePathInception({
+          projectPathname,
+          relativePath: NODE_EXECUTE_TEMPLATE_RELATIVE_PATH,
+        }),
+        compileRelativePath: NODE_EXECUTE_CLIENT_PATHNAME,
         babelConfigMap,
-        filenameRelative: ".jsenv/node-execute.js",
-        sourceFilenameRelative: nodeExecuteFilenameRelative,
         logLevel,
       })
 
@@ -170,10 +172,10 @@ export const launchNode = async ({
           child,
           "evaluate",
           createNodeIIFEString({
-            projectFolder,
             compileServerOrigin,
-            compileInto,
-            filenameRelative,
+            projectPathname,
+            compileIntoRelativePath,
+            fileRelativePath,
             collectNamespace,
             collectCoverage,
             remap,
@@ -186,7 +188,7 @@ export const launchNode = async ({
     if (status === "rejected") {
       return {
         status,
-        error: evalException(exceptionSource, { projectFolder, compileServerOrigin }),
+        error: evalException(exceptionSource, { compileServerOrigin, projectPathname }),
         coverageMap,
       }
     }
@@ -210,21 +212,21 @@ export const launchNode = async ({
   }
 }
 
-const evalException = (exceptionSource, { projectFolder, compileServerOrigin }) => {
+const evalException = (exceptionSource, { compileServerOrigin, projectPathname }) => {
   const error = evalSource(
     exceptionSource,
-    `${ROOT_FOLDER}/src/node-platform-service/node-platform/index.js`,
+    `${JSENV_PATH}/src/node-platform-service/node-platform/index.js`,
   )
   if (error && error instanceof Error) {
-    const sourceOrigin = `file://${projectFolder}`
+    const sourceOrigin = `file://${projectPathname}`
 
     const compileServerOriginRegexp = new RegExp(regexpEscape(compileServerOrigin), "g")
     error.stack = error.stack.replace(compileServerOriginRegexp, sourceOrigin)
     error.message = error.message.replace(compileServerOriginRegexp, sourceOrigin)
 
-    const projectFolderRegexp = new RegExp(regexpEscape(`(?<!file:\/\/)${projectFolder}`), "g")
-    error.stack = error.stack.replace(projectFolderRegexp, sourceOrigin)
-    error.message = error.message.replace(projectFolderRegexp, sourceOrigin)
+    const projectPathnameRegexp = new RegExp(regexpEscape(`(?<!file:\/\/)${projectPathname}`), "g")
+    error.stack = error.stack.replace(projectPathnameRegexp, sourceOrigin)
+    error.message = error.message.replace(projectPathnameRegexp, sourceOrigin)
   }
 
   return error
@@ -269,21 +271,25 @@ const createExitWithFailureCodeError = (code) => {
 }
 
 const createNodeIIFEString = ({
-  projectFolder,
   compileServerOrigin,
-  compileInto,
-  filenameRelative,
+  projectPathname,
+  compileIntoRelativePath,
+  fileRelativePath,
   collectNamespace,
   collectCoverage,
   remap,
 }) => `(() => {
-  const { execute } = require(${uneval(`${projectFolder}/${compileInto}/.jsenv/node-execute.js`)})
+  const { execute } = require(${uneval(
+    pathnameToOperatingSystemFilename(
+      `${projectPathname}${compileIntoRelativePath}${NODE_EXECUTE_CLIENT_PATHNAME}`,
+    ),
+  )})
 
   return execute({
-    projectFolder: ${uneval(projectFolder)},
     compileServerOrigin: ${uneval(compileServerOrigin)},
-    compileInto: ${uneval(compileInto)},
-    filenameRelative: ${uneval(filenameRelative)},
+    projectPathname: ${uneval(projectPathname)},
+    compileIntoRelativePath: ${uneval(compileIntoRelativePath)},
+    fileRelativePath: ${uneval(fileRelativePath)},
     collectNamespace: ${uneval(collectNamespace)},
     collectCoverage: ${uneval(collectCoverage)},
     remap: ${uneval(remap)}

@@ -1,22 +1,22 @@
 import { selectAllFileInsideFolder } from "@dmail/project-structure"
 
 export const serveBrowserExplorerIndex = async ({
-  projectFolder,
+  projectPathname,
   metaDescription,
   request: { ressource },
 }) => {
   if (ressource !== "/") return null
 
-  const browsableFilenameRelativeArray = await selectAllFileInsideFolder({
-    pathname: projectFolder,
+  const browsablePathArray = await selectAllFileInsideFolder({
+    pathname: projectPathname,
     metaDescription,
     predicate: ({ browsable }) => browsable,
-    transformFile: ({ filenameRelative }) => filenameRelative,
+    transformFile: ({ filenameRelative }) => `/${filenameRelative}`,
   })
 
   const html = getBrowsingIndexPageHTML({
-    projectFolder,
-    browsableFilenameRelativeArray,
+    projectPathname,
+    browsablePathArray,
   })
 
   return {
@@ -30,24 +30,22 @@ export const serveBrowserExplorerIndex = async ({
   }
 }
 
-const getBrowsingIndexPageHTML = ({ projectFolder, browsableFilenameRelativeArray }) => {
+const getBrowsingIndexPageHTML = ({ projectPathname, browsablePathArray }) => {
   return `<!doctype html>
 
   <head>
-    <title>Browsing ${projectFolder}</title>
+    <title>Browsing ${projectPathname}</title>
     <meta charset="utf-8" />
   </head>
 
   <body>
     <main>
-      <h1>${projectFolder}</h1>
+      <h1>${projectPathname}</h1>
       <p>List of path to browse: </p>
       <ul>
-        ${browsableFilenameRelativeArray
+        ${browsablePathArray
           .sort()
-          .map(
-            (filenameRelative) => `<li><a href="/${filenameRelative}">${filenameRelative}</a></li>`,
-          )
+          .map((path) => `<li><a href="${path}">${path}</a></li>`)
           .join("")}
       </ul>
     </main>

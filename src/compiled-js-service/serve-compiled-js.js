@@ -3,8 +3,8 @@ import { compileJs } from "./compileJs.js"
 import { serveCompiledFile } from "../compiled-file-service/index.js"
 
 export const serveCompiledJs = async ({
-  projectFolder,
-  compileInto,
+  projectPathname,
+  compileIntoRelativePath,
   groupMap,
   babelConfigMap,
   transformTopLevelAwait,
@@ -12,10 +12,10 @@ export const serveCompiledJs = async ({
   request: { origin, ressource, headers },
 }) => {
   // it's an asset, it will be served by fileService
-  if (filenameRelativeIsAsset(ressource.slice(1))) return null
+  if (relativePathIsAsset(ressource)) return null
 
-  const { compileId, filenameRelative } = locateProject({
-    compileInto,
+  const { compileId, fileRelativePath } = locateProject({
+    compileIntoRelativePath,
     ressource,
   })
 
@@ -28,27 +28,26 @@ export const serveCompiledJs = async ({
 
   // .json does not need to be compiled, they are redirected
   // to the source location, that will be handled by fileService
-  if (filenameRelative.endsWith(".json")) {
+  if (fileRelativePath.endsWith(".json")) {
     return {
       status: 307,
       headers: {
-        location: `${origin}/${filenameRelative}`,
+        location: `${origin}${fileRelativePath}`,
       },
     }
   }
 
-  const sourceFilenameRelative = filenameRelative
-  const compiledFilenameRelative = `${compileInto}/${compileId}/${filenameRelative}`
-
   projectFileRequestedCallback({
-    filenameRelative: sourceFilenameRelative,
-    filename: `${projectFolder}/${sourceFilenameRelative}`,
+    fileRelativePath,
   })
 
+  const sourceRelativePath = fileRelativePath
+  const compileRelativePath = `${compileIntoRelativePath}/${compileId}${fileRelativePath}`
+
   return serveCompiledFile({
-    projectFolder,
-    sourceFilenameRelative,
-    compiledFilenameRelative,
+    projectPathname,
+    sourceRelativePath,
+    compileRelativePath,
     headers,
     compile: async ({ sourceFilename }) => {
       const source = await fileRead(sourceFilename)
@@ -60,13 +59,12 @@ export const serveCompiledJs = async ({
       })
 
       return compileJs({
-        projectFolder,
+        source,
+        projectPathname,
+        sourceRelativePath,
+        compileRelativePath,
         babelConfigMap: groupBabelConfigMap,
         transformTopLevelAwait,
-        filenameRelative: sourceFilenameRelative,
-        filename: sourceFilename,
-        outputFilename: `file://${projectFolder}/${compileInto}/${compileId}/${filenameRelative}`,
-        source,
       })
     },
   })
@@ -86,43 +84,42 @@ export const serveCompiledJs = async ({
 //     bar.js
 //
 // so that the dist folder is not polluted with the asset files
-// that day filenameRelativeIsAsset must be this:
-// => filenameRelative.startsWith(`${compileInto}/__assets__/`)
+// that day pathnameRelativeIsAsset must be this:
+// => pathnameRelative.startsWith(`${compileInto}/__assets__/`)
 // I don't do it for now because it will impact sourcemap paths
 // and sourceMappingURL comment at the bottom of compiled files
 // and that's something sensitive
-export const filenameRelativeIsAsset = (filenameRelative) =>
-  filenameRelative.match(/[^\/]+__asset__\/.+$/)
+export const relativePathIsAsset = (relativePath) => relativePath.match(/[^\/]+__asset__\/.+$/)
 
-const locateProject = ({ compileInto, ressource }) => {
-  if (ressource.startsWith(`/${compileInto}/`) === false) {
+const locateProject = ({ compileIntoRelativePath, ressource }) => {
+  if (ressource.startsWith(`${compileIntoRelativePath}/`) === false) {
     return {
       compileId: null,
-      filenameRelative: null,
+      fileRelativePath: null,
     }
   }
 
-  const afterCompileInto = ressource.slice(`/${compileInto}/`.length)
-  const parts = afterCompileInto.split("/")
+  const afterCompileFolder = ressource.slice(`${compileIntoRelativePath}/`.length)
+  const parts = afterCompileFolder.split("/")
 
   const compileId = parts[0]
   if (compileId.length === 0) {
     return {
       compileId: null,
-      filenameRelative: null,
+      fileRelativePath: null,
     }
   }
 
-  const filenameRelative = parts.slice(1).join("/")
-  if (filenameRelative.length === 0) {
+  const remaining = parts.slice(1).join("/")
+  if (remaining.length === 0) {
     return {
       compileId: null,
-      filenameRelative: "",
+      fileRelativePath: "",
     }
   }
 
   return {
     compileId,
-    filenameRelative,
+    fileRelativePath: `/${remaining}`,
   }
 }

@@ -1,16 +1,20 @@
 import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { uneval } from "@dmail/uneval"
-import { filenameRelativeInception } from "../../inception.js"
+import { relativePathInception } from "../../inception.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
 import { createLogger } from "../../logger.js"
 
+const NODE_BALANCER_TEMPLATE_RELATIVE_PATH = "/src/bundle/node/node-balancer-template.js"
+const NODE_BALANCER_DATA_CLIENT_PATHNAME = "/.jsenv/node-balancer-data.js"
+const NODE_GROUP_RESOLVER_CLIENT_PATHNAME = "/.jsenv/node-group-resolver.js"
+
 export const computeRollupOptionsForBalancer = ({
   cancellationToken,
-  projectFolder,
-  importMapFilenameRelative,
-  nodeGroupResolverFilenameRelative,
-  into,
+  projectPathname,
+  bundleIntoRelativePath,
+  importMapRelativePath,
+  nodeGroupResolverRelativePath,
   babelConfigMap,
   groupMap,
   entryPointName,
@@ -23,35 +27,32 @@ export const computeRollupOptionsForBalancer = ({
     platformGlobalName: "global",
   })
 
-  const nodeBalancerFilenameRelativeInception = filenameRelativeInception({
-    projectFolder,
-    filenameRelative: "src/bundle/node/node-balancer-template.js",
-  })
-
   const entryPointMap = {
-    [entryPointName]: nodeBalancerFilenameRelativeInception,
+    [entryPointName]: relativePathInception({
+      projectPathname,
+      relativePath: NODE_BALANCER_TEMPLATE_RELATIVE_PATH,
+    }),
   }
 
-  const nodeGroupResolverFilenameRelativeInception = filenameRelativeInception({
-    projectFolder,
-    filenameRelative: nodeGroupResolverFilenameRelative,
-  })
-
   const inlineSpecifierMap = {
-    ["/.jsenv/node-balancer-data.js"]: () =>
+    [NODE_BALANCER_DATA_CLIENT_PATHNAME]: () =>
       generateBalancerOptionsSource({
         entryPointName,
         groupMap,
       }),
-    ["/.jsenv/node-group-resolver.js"]: `${projectFolder}/${nodeGroupResolverFilenameRelativeInception}`,
+    [NODE_GROUP_RESOLVER_CLIENT_PATHNAME]: `${projectPathname}${relativePathInception({
+      projectPathname,
+      relativePath: nodeGroupResolverRelativePath,
+    })}`,
   }
 
-  const dir = `${projectFolder}/${into}`
+  // same here should be projectPath
+  const dir = `${projectPathname}${bundleIntoRelativePath}`
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({
     cancellationToken,
-    projectFolder,
-    importMapFilenameRelative,
+    projectPathname,
+    importMapRelativePath,
     inlineSpecifierMap,
     dir,
     featureNameArray: groupMap.otherwise.incompatibleNameArray,

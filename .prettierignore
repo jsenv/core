@@ -1,7 +1,10 @@
 /node_modules
 /package.json
 /package-lock.json
+/coverage
 dist
 .dist
-/coverage
 syntax-error.js
+/test/browser-bundler/scoped-node-module/importMap.json
+/test/browser-bundler/shared-node-module/importMap.json
+

@@ -3,9 +3,9 @@ import { createETag } from "../createETag.js"
 import { getOrGenerateCompiledFile } from "./get-or-generate-compiled-file.js"
 
 export const serveCompiledFile = async ({
-  projectFolder,
-  sourceFilenameRelative,
-  compiledFilenameRelative,
+  projectPathname,
+  sourceRelativePath,
+  compileRelativePath,
   headers,
   compile,
   clientCompileCacheStrategy = "etag",
@@ -48,9 +48,9 @@ export const serveCompiledFile = async ({
 
   try {
     const { cache, compileResult, compileResultStatus } = await getOrGenerateCompiledFile({
-      projectFolder,
-      sourceFilenameRelative,
-      compiledFilenameRelative,
+      projectPathname,
+      sourceRelativePath,
+      compileRelativePath,
       ifEtagMatch,
       ifModifiedSinceDate,
       cacheIgnored,

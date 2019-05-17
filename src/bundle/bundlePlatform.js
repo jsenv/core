@@ -6,8 +6,8 @@ import { generateGroupMap } from "../group-map/index.js"
 import { bundleWithRollup } from "./bundleWithRollup.js"
 
 export const bundlePlatform = ({
-  projectFolder,
-  into,
+  projectPathname,
+  bundleIntoRelativePath,
   entryPointMap,
   babelConfigMap,
   compileGroupCount = 1,
@@ -19,9 +19,10 @@ export const bundlePlatform = ({
   writeOnFileSystem,
 }) =>
   catchAsyncFunctionCancellation(async () => {
-    if (typeof projectFolder !== "string")
-      throw new TypeError(`projectFolder must be a string, got ${projectFolder}`)
-    if (typeof into !== "string") throw new TypeError(`into must be a string, got ${into}`)
+    if (typeof projectPathname !== "string")
+      throw new TypeError(`projectPathname must be a string, got ${projectPathname}`)
+    if (typeof bundleIntoRelativePath !== "string")
+      throw new TypeError(`bundleIntoRelativePath must be a string, got ${bundleIntoRelativePath}`)
     if (typeof entryPointMap !== "object")
       throw new TypeError(`entryPointMap must be an object, got ${entryPointMap}`)
     if (compileGroupCount < 1)

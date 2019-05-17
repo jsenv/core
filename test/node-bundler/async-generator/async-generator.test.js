@@ -17,16 +17,16 @@
 // const transformAsyncToGenerator = import.meta.require("@babel/plugin-transform-async-to-generator")
 // const transformRegenerator = import.meta.require("@babel/plugin-transform-regenerator")
 
-// const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-// const projectFolder = `${ROOT_FOLDER}`
-// const bundleInto = `${testFolderRelative}/dist/node`
+// const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+// const projectFolder = JSENV_PATH
+// const bundleInto = `${folderJsenvRelativePath}/dist/node`
 
 // // it does not work because we have no strategy to serve regeneratorRuntime
 // await bundleNode({
 //   projectFolder,
 //   into: bundleInto,
 //   entryPointMap: {
-//     main: `${testFolderRelative}/async.js`,
+//     main: `${folderJsenvRelativePath}/async.js`,
 //   },
 //   babelConfigMap: {
 //     "transform-async-to-generator": [transformAsyncToGenerator],

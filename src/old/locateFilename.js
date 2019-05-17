@@ -2,13 +2,13 @@ import { resolveNodeModuleSpecifier } from "./resolveNodeModuleSpecifier.js"
 
 const NODE_MODULE_FOLDER = "node_modules"
 
-export const locateFilename = ({ rootHref, filenameRelative }) => {
+export const locateFilename = ({ rootHref, pathnameRelative }) => {
   // request to "node_modules/foo/src/foo.js"
   // must be searched as "foo/src/foo.js"
   // from rootHref
 
-  const nodeModuleSpecifier = moduleFilenameRelativeToNodeModuleSpecifier(filenameRelative)
-  if (!nodeModuleSpecifier) return `${rootHref}/${filenameRelative}`
+  const nodeModuleSpecifier = modulepathnameRelativeToNodeModuleSpecifier(pathnameRelative)
+  if (!nodeModuleSpecifier) return `${rootHref}/${pathnameRelative}`
 
   try {
     return resolveNodeModuleSpecifier({
@@ -24,10 +24,10 @@ export const locateFilename = ({ rootHref, filenameRelative }) => {
   }
 }
 
-const moduleFilenameRelativeToNodeModuleSpecifier = (filenameRelative) => {
-  const lastIndex = filenameRelative.lastIndexOf(`${NODE_MODULE_FOLDER}/`)
+const modulepathnameRelativeToNodeModuleSpecifier = (pathnameRelative) => {
+  const lastIndex = pathnameRelative.lastIndexOf(`${NODE_MODULE_FOLDER}/`)
   if (lastIndex === -1) return ""
 
-  const afterLastNodeModule = filenameRelative.slice(lastIndex + `${NODE_MODULE_FOLDER}/`.length)
+  const afterLastNodeModule = pathnameRelative.slice(lastIndex + `${NODE_MODULE_FOLDER}/`.length)
   return afterLastNodeModule
 }

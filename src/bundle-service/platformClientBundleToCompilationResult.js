@@ -3,36 +3,39 @@ import { dirname, resolve } from "path"
 import { writeOrUpdateSourceMappingURL } from "../source-mapping-url.js"
 
 export const platformClientBundleToCompilationResult = ({
-  projectFolder,
-  compileInto,
-  sourceFilenameRelative,
+  projectPathname,
+  sourceRelativePath,
+  compileIntoRelativePath,
+  sourcemapRelativePath,
   inlineSpecifierMap,
   bundle,
-  sourcemapFilenameRelative,
 }) => {
   const output = bundle.output
   const main = output[0]
 
   const mainSourcemap = rollupSourcemapToCompilationSourcemap({
     rollupSourcemap: main.map,
-    projectFolder,
-    compileInto,
-    sourceFilenameRelative,
+    projectPathname,
+    compileIntoRelativePath,
+    sourceRelativePath,
     inlineSpecifierMap,
   })
 
   const sources = mainSourcemap.sources
   const sourcesContent = mainSourcemap.sourcesContent
-  const compiledSource = writeOrUpdateSourceMappingURL(main.code, `./${sourcemapFilenameRelative}`)
-  const assets = [sourcemapFilenameRelative]
+  const compiledSource = writeOrUpdateSourceMappingURL(
+    main.code,
+    `./${sourcemapRelativePath.slice(1)}`,
+  )
+  const assets = [sourcemapRelativePath.slice(1)]
   const assetsContent = [JSON.stringify(mainSourcemap, null, "  ")]
 
   output.slice(1).forEach((chunk) => {
     const chunkSourcemap = rollupSourcemapToCompilationSourcemap({
       rollupSourcemap: chunk.map,
-      projectFolder,
-      compileInto,
-      sourceFilenameRelative,
+      projectPathname,
+      compileIntoRelativePath,
+      sourceRelativePath,
       inlineSpecifierMap,
     })
     sources.push(...chunkSourcemap.sources) // we should avod duplication I guess
@@ -56,16 +59,16 @@ export const platformClientBundleToCompilationResult = ({
 
 const rollupSourcemapToCompilationSourcemap = ({
   rollupSourcemap,
-  projectFolder,
-  compileInto,
-  sourceFilenameRelative,
+  projectPathname,
+  compileIntoRelativePath,
+  sourceRelativePath,
   inlineSpecifierMap,
 }) => {
   const sources = []
   const sourcesContent = []
   rollupSourcemap.sources.forEach((sourceRelativeToEntryDirectory, index) => {
     const sourceFilename = resolve(
-      dirname(`${projectFolder}/${compileInto}/${sourceFilenameRelative}`),
+      dirname(`${projectPathname}${compileIntoRelativePath}${sourceRelativePath}`),
       sourceRelativeToEntryDirectory,
     )
 
@@ -76,14 +79,14 @@ const rollupSourcemapToCompilationSourcemap = ({
       return
     }
 
-    if (!sourceFilename.startsWith(`${projectFolder}/`)) {
+    if (!sourceFilename.startsWith(`${projectPathname}/`)) {
       throw new Error(`a source is not inside project
 source: ${sourceRelativeToEntryDirectory}
 sourceFilename: ${sourceFilename}
-projectFolder: ${projectFolder}`)
+projectFolder: ${projectPathname}`)
     }
 
-    const sourceRelativeToProjectFolder = sourceFilename.slice(`${projectFolder}/`.length)
+    const sourceRelativeToProjectFolder = sourceFilename.slice(`${projectPathname}/`.length)
     const source = `/${sourceRelativeToProjectFolder}`
 
     if (source in inlineSpecifierMap && typeof inlineSpecifierMap[sourceFilename] === "function") {
@@ -104,9 +107,9 @@ projectFolder: ${projectFolder}`)
     if (
       typeof specifierMapping === "string" &&
       specifierMapping.endsWith(".json") &&
-      specifierMapping.startsWith(`${projectFolder}/`)
+      specifierMapping.startsWith(`${projectPathname}/`)
     ) {
-      const expectedSource = specifierMapping.slice(`${projectFolder}/`.length)
+      const expectedSource = specifierMapping.slice(`${projectPathname}/`.length)
       const sourceIndex = sources.indexOf(expectedSource)
       if (sourceIndex === -1) {
         sources.push(expectedSource)

@@ -27,15 +27,15 @@ export const executePlan = async (
   const { log } = createLogger({ logLevel })
 
   const plannedExecutionArray = []
-  Object.keys(executionPlan).forEach((filenameRelative) => {
-    const fileExecutionPlan = executionPlan[filenameRelative]
+  Object.keys(executionPlan).forEach((fileRelativePath) => {
+    const fileExecutionPlan = executionPlan[fileRelativePath]
     Object.keys(fileExecutionPlan).forEach((executionName) => {
       const { launch, allocatedMs } = fileExecutionPlan[executionName]
       plannedExecutionArray.push({
         launch,
         allocatedMs,
         executionName,
-        filenameRelative,
+        fileRelativePath,
       })
     })
   })
@@ -47,8 +47,8 @@ export const executePlan = async (
     cancellationToken,
     maxParallelExecution,
     array: plannedExecutionArray,
-    start: async ({ launch, allocatedMs, executionName, filenameRelative }) => {
-      beforeEachExecutionCallback({ allocatedMs, executionName, filenameRelative })
+    start: async ({ launch, allocatedMs, executionName, fileRelativePath }) => {
+      beforeEachExecutionCallback({ allocatedMs, executionName, fileRelativePath })
 
       const result = await launchAndExecute({
         launch,
@@ -71,18 +71,18 @@ export const executePlan = async (
         stopOnceExecuted: true,
         // no need to log when disconnected
         disconnectAfterExecutedCallback: () => {},
-        filenameRelative,
+        fileRelativePath,
         collectCoverage: cover,
         collectNamespace,
       })
-      const executionResult = { allocatedMs, executionName, filenameRelative, ...result }
+      const executionResult = { allocatedMs, executionName, fileRelativePath, ...result }
       afterEachExecutionCallback(executionResult)
       log(createExecutionResultLog(executionResult))
 
-      if (filenameRelative in planResult === false) {
-        planResult[filenameRelative] = {}
+      if (fileRelativePath in planResult === false) {
+        planResult[fileRelativePath] = {}
       }
-      planResult[filenameRelative][executionName] = result
+      planResult[fileRelativePath][executionName] = result
     },
   })
 

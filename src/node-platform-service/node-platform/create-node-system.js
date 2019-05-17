@@ -1,3 +1,4 @@
+/* eslint-disable import/max-dependencies */
 import { Module } from "module"
 import {
   resolveImport,
@@ -6,8 +7,8 @@ import {
   hrefToPathname,
 } from "@jsenv/module-resolution"
 import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
-import "../../compile-server/system-service/s.js"
-import { hrefToFilenameRelative } from "../../platform/hrefToFilenameRelative.js"
+import "../../system/s.js"
+import { hrefToFileRelativePath } from "../../platform/hrefToFileRelativePath.js"
 import {
   fromFunctionReturningNamespace,
   fromHref,
@@ -16,14 +17,15 @@ import { valueInstall } from "../../platform/valueInstall.js"
 import { compiledHrefToCompiledFilename } from "./compiledHrefToCompiledFilename.js"
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
+import { pathnameToOperatingSystemFilename } from "../../operating-system-filename.js"
 
 const GLOBAL_SPECIFIER = "global"
 
 export const createNodeSystem = async ({
-  projectFolder,
   compileServerOrigin,
+  projectPathname,
+  compileIntoRelativePath,
   importMap,
-  compileInto,
 }) => {
   if (typeof global.System === "undefined") throw new Error(`global.System is undefined`)
 
@@ -75,9 +77,9 @@ export const createNodeSystem = async ({
         const belongToProject = realHref.startsWith(`${compileServerOrigin}/`)
         const sourceHref = belongToProject
           ? compiledHrefToCompiledFilename(realHref, {
-              projectFolder,
               compileServerOrigin,
-              compileInto,
+              projectPathname,
+              compileIntoRelativePath,
             })
           : realHref
 
@@ -95,11 +97,14 @@ export const createNodeSystem = async ({
 
   // https://github.com/systemjs/systemjs/blob/master/docs/hooks.md#createcontexturl---object
   nodeSystem.createContext = (moduleUrl) => {
-    const filenameRelative = hrefToFilenameRelative(moduleUrl, { compileInto, compileServerOrigin })
-    const fileURL = `file://${projectFolder}/${filenameRelative}`
+    const fileRelativePath = hrefToFileRelativePath(moduleUrl, {
+      compileServerOrigin,
+      compileIntoRelativePath,
+    })
+    const fileURL = `file://${projectPathname}${fileRelativePath}`
     const url = fileURL
 
-    const filename = hrefToPathname(fileURL)
+    const filename = pathnameToOperatingSystemFilename(hrefToPathname(fileURL))
     const require = createRequireFromFilename(filename)
 
     return {

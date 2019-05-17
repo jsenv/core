@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-unresolved
-import { filenameRelative } from "/.jsenv/browser-self-execute-static-data.js"
+import { filePath } from "/.jsenv/browser-self-execute-static-data.js"
 import { loadUsingScript } from "../loadUsingScript.js"
 import { fetchUsingXHR } from "../browser-platform-service/browser-platform/fetchUsingXHR.js"
 
@@ -11,9 +11,9 @@ import { fetchUsingXHR } from "../browser-platform-service/browser-platform/fetc
   await loadUsingScript(`${compileServerOrigin}/.jsenv/browser-platform.js`)
   const { __browserPlatform__ } = window
 
-  const { filenameRelativeToCompiledHref, executeFile } = __browserPlatform__.create({
+  const { pathToCompiledHref, executeFile } = __browserPlatform__.create({
     compileServerOrigin,
   })
-  const compiledFile = filenameRelativeToCompiledHref(filenameRelative)
+  const compiledFile = pathToCompiledHref(filePath)
   executeFile(compiledFile)
 })()

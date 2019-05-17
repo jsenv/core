@@ -1,17 +1,25 @@
 import { uneval } from "@dmail/uneval"
 import { serveBundle } from "../bundle-service/index.js"
-import { filenameRelativeInception } from "../inception.js"
+import { relativePathInception } from "../inception.js"
 import { serveFile } from "../file-service/index.js"
 import { firstService } from "../server/index.js"
 import { ressourceToPathname, ressourceToSearchParamValue } from "../urlHelper.js"
 import { serveBrowserClientFolder } from "./server-browser-client-folder.js"
 
+const BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH =
+  "/src/browser-explorer-server/browser-self-execute-template.js"
+// "/.jsenv/browser-script.js" is written inside browser-client/index.html
+const BROWSER_SCRIPT_CLIENT_PATHNAME = "/.jsenv/browser-script.js"
+const BROWSER_SELF_EXECUTE_CLIENT_PATHNAME = "/.jsenv/browser-self-execute.js"
+const BROWSER_SELF_EXECUTE_STATIC_DATA_PATHNAME = "/.jsenv/browser-self-execute-static-data.js"
+const BROWSER_SELF_EXECUTE_DYNAMIC_DATA_PATHNAME = "/.jsenv/browser-self-execute-dynamic-data.json"
+
 export const serveBrowserSelfExecute = ({
-  projectFolder,
   compileServerOrigin,
-  browserClientFolderRelative,
-  importMapFilenameRelative,
-  compileInto,
+  projectPathname,
+  compileIntoRelativePath,
+  importMapRelativePath,
+  browserClientRelativePath,
   babelConfigMap,
   request,
 }) =>
@@ -23,9 +31,9 @@ export const serveBrowserSelfExecute = ({
       }),
     () =>
       serveBrowserSelfExecuteBundle({
-        projectFolder,
-        importMapFilenameRelative,
-        compileInto,
+        projectPathname,
+        compileIntoRelativePath,
+        importMapRelativePath,
         babelConfigMap,
         request,
       }),
@@ -36,74 +44,70 @@ export const serveBrowserSelfExecute = ({
       }),
     () =>
       serveBrowserClientFolder({
-        projectFolder,
-        browserClientFolderRelative,
+        projectPathname,
+        browserClientRelativePath,
         request,
       }),
   )
-
-// "/.jsenv/browser-script.js" is written inside browser-client/index.html
-const JSENV_BROWSER_SCRIPT_PATHNAME = "/.jsenv/browser-script.js"
-const JSENV_BROWSER_SELF_EXECUTE_PATHNAME = "/.jsenv/browser-self-execute.js"
 
 const redirectBrowserScriptToBrowserSelfExecute = ({
   compileServerOrigin,
   request: { origin, ressource, headers },
 }) => {
-  if (ressource !== JSENV_BROWSER_SCRIPT_PATHNAME) return null
+  if (ressource !== BROWSER_SCRIPT_CLIENT_PATHNAME) return null
 
-  const filenameRelative = headers.referer.slice(compileServerOrigin.length)
+  const fileRelativePath = headers.referer.slice(compileServerOrigin.length)
   return {
     status: 307,
     headers: {
-      location: `${origin}${JSENV_BROWSER_SELF_EXECUTE_PATHNAME}?filenameRelative=${filenameRelative}`,
+      location: `${origin}${BROWSER_SELF_EXECUTE_CLIENT_PATHNAME}?fileRelativePath=${fileRelativePath}`,
     },
   }
 }
 
-const BROWSER_EXECUTE_FILENAME_RELATIVE =
-  "src/browser-explorer-server/browser-self-execute-template.js"
-
 const serveBrowserSelfExecuteBundle = ({
-  projectFolder,
-  importMapFilenameRelative,
-  compileInto,
+  projectPathname,
+  importMapRelativePath,
+  compileIntoRelativePath,
   babelConfigMap,
   request: { ressource, method, headers },
 }) => {
-  if (ressource.startsWith(`${JSENV_BROWSER_SELF_EXECUTE_PATHNAME}__asset__/`)) {
-    return serveFile(`${projectFolder}/${compileInto}${ressource}`, { method, headers })
+  if (ressource.startsWith(`${BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH}__asset__/`)) {
+    return serveFile(`${projectPathname}${compileIntoRelativePath}${ressource}`, {
+      method,
+      headers,
+    })
   }
 
   const pathname = ressourceToPathname(ressource)
-  const filenameRelative = ressourceToSearchParamValue(ressource, "filenameRelative")
+  const fileRelativePath = ressourceToSearchParamValue(ressource, "fileRelativePath")
 
-  if (pathname !== JSENV_BROWSER_SELF_EXECUTE_PATHNAME) return null
+  if (pathname !== BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH) return null
 
   return serveBundle({
-    projectFolder,
-    importMapFilenameRelative,
-    compileInto,
-    babelConfigMap,
-    filenameRelative: `.jsenv/browser-self-execute/${filenameRelative}`,
-    sourceFilenameRelative: filenameRelativeInception({
-      projectFolder,
-      filenameRelative: BROWSER_EXECUTE_FILENAME_RELATIVE,
+    projectPathname,
+    compileIntoRelativePath,
+    importMapRelativePath,
+    sourceRelativePath: relativePathInception({
+      projectPathname,
+      relativePath: BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH,
     }),
+    compileRelativePath: `/.jsenv/browser-self-execute${fileRelativePath}`,
     inlineSpecifierMap: {
-      ["/.jsenv/browser-self-execute-static-data.js"]: () =>
-        generateBrowserSelfExecuteStaticDataSource({ filenameRelative }),
+      [BROWSER_SELF_EXECUTE_STATIC_DATA_PATHNAME]: () =>
+        generateBrowserSelfExecuteStaticDataSource({ fileRelativePath }),
     },
     headers,
     format: "iife",
+    babelConfigMap,
   })
 }
 
-const generateBrowserSelfExecuteStaticDataSource = ({ filenameRelative }) =>
-  `export const filenameRelative = ${uneval(filenameRelative)}`
+const generateBrowserSelfExecuteStaticDataSource = ({ fileRelativePath }) =>
+  `export const fileRelativePath = ${uneval(fileRelativePath)}`
 
 const serveBrowserSelfExecuteDynamicData = ({ compileServerOrigin, request: { ressource } }) => {
-  if (ressource !== "/.jsenv/browser-self-execute-dynamic-data.json") return null
+  if (ressource !== BROWSER_SELF_EXECUTE_DYNAMIC_DATA_PATHNAME) return null
 
   const body = JSON.stringify({
     compileServerOrigin,

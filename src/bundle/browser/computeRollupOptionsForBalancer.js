@@ -1,16 +1,20 @@
 import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
 import { uneval } from "@dmail/uneval"
-import { filenameRelativeInception } from "../../inception.js"
+import { relativePathInception } from "../../inception.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
 import { createLogger } from "../../logger.js"
 
+const BROWSER_BALANCER_TEMPLATE_RELATIVE_PATH = "/src/bundle/browser/browser-balancer-template.js"
+const BROWSER_BALANCER_DATA_CLIENT_PATHNAME = "/.jsenv/browser-balancer-data.js"
+const BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME = "/.jsenv/browser-group-resolver.js"
+
 export const computeRollupOptionsForBalancer = ({
   cancellationToken,
-  projectFolder,
-  importMapFilenameRelative,
-  browserGroupResolverFilenameRelative,
-  into,
+  projectPathname,
+  bundleIntoRelativePath,
+  importMapRelativePath,
+  browserGroupResolverRelativePath,
   babelConfigMap,
   groupMap,
   entryPointName,
@@ -23,35 +27,32 @@ export const computeRollupOptionsForBalancer = ({
     platformGlobalName: "window",
   })
 
-  const browserBalancerFilenameRelativeInception = filenameRelativeInception({
-    projectFolder,
-    filenameRelative: "src/bundle/browser/browser-balancer-template.js",
-  })
-
   const entryPointMap = {
-    [entryPointName]: browserBalancerFilenameRelativeInception,
+    [entryPointName]: relativePathInception({
+      projectPathname,
+      relativePath: BROWSER_BALANCER_TEMPLATE_RELATIVE_PATH,
+    }),
   }
 
-  const browserGroupResolverFilenameRelativeInception = filenameRelativeInception({
-    projectFolder,
-    filenameRelative: browserGroupResolverFilenameRelative,
-  })
-
   const inlineSpecifierMap = {
-    ["/.jsenv/browser-balancer-data.js"]: () =>
+    [BROWSER_BALANCER_DATA_CLIENT_PATHNAME]: () =>
       generateBrowserBalancerDataSource({
         entryPointName,
         groupMap,
       }),
-    ["/.jsenv/browser-group-resolver.js"]: `${projectFolder}/${browserGroupResolverFilenameRelativeInception}`,
+    [BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME]: `${projectPathname}/${relativePathInception({
+      projectPathname,
+      relativePath: browserGroupResolverRelativePath,
+    })}`,
   }
 
-  const dir = `${projectFolder}/${into}`
+  // maybe it should be projectPath and not pathname here right ?
+  const dir = `${projectPathname}${bundleIntoRelativePath}`
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({
     cancellationToken,
-    projectFolder,
-    importMapFilenameRelative,
+    projectPathname,
+    importMapRelativePath,
     inlineSpecifierMap,
     dir,
     featureNameArray: groupMap.otherwise.incompatibleNameArray,

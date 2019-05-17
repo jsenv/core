@@ -1,4 +1,4 @@
-import { filenameRelativeInception } from "../inception.js"
+import { relativePathInception } from "../inception.js"
 import { startServer, firstService } from "../server/index.js"
 import { servePuppeteerHtml } from "./serve-puppeteer-html.js"
 import { serveBrowserClientFolder } from "../browser-explorer-server/server-browser-client-folder.js"
@@ -8,25 +8,30 @@ import { serveBundle } from "../bundle-service/index.js"
 
 const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
 
+const PUPPETEER_EXECUTE_TEMPLATE_RELATIVE_PATH =
+  "/src/chromium-launcher/puppeteer-execute-template.js"
+const PUPPETEER_EXECUTE_CLIENT_PATHNAME = "/.jsenv/puppeteer-execute.js"
+const BROWSER_SCRIPT_CLIENT_PATHNAME = "/.jsenv/browser-script.js"
+
 export const startPuppeteerServer = ({
   cancellationToken,
-  projectFolder,
-  importMapFilenameRelative,
-  browserClientFolderRelative,
-  compileInto,
+  projectPathname,
+  compileIntoRelativePath,
+  importMapRelativePath,
+  browserClientRelativePath,
   logLevel,
 }) => {
-  browserClientFolderRelative = filenameRelativeInception({
-    projectFolder,
-    filenameRelative: browserClientFolderRelative,
+  browserClientRelativePath = relativePathInception({
+    projectPathname,
+    relativePath: browserClientRelativePath,
   })
 
   const service = (request) =>
     firstService(
       () =>
         servePuppeteerHtml({
-          projectFolder,
-          browserClientFolderRelative,
+          projectPathname,
+          browserClientRelativePath,
           request,
         }),
       () =>
@@ -35,15 +40,15 @@ export const startPuppeteerServer = ({
         }),
       () =>
         servePuppeteerExecute({
-          projectFolder,
-          importMapFilenameRelative,
-          compileInto,
+          projectPathname,
+          compileIntoRelativePath,
+          importMapRelativePath,
           request,
         }),
       () =>
         serveBrowserClientFolder({
-          projectFolder,
-          browserClientFolderRelative,
+          projectPathname,
+          browserClientRelativePath,
           request,
         }),
     )
@@ -55,44 +60,44 @@ export const startPuppeteerServer = ({
   })
 }
 
-const JSENV_BROWSER_SCRIPT_PATHNAME = "/.jsenv/browser-script.js"
-const JSENV_PUPPETEER_EXECUTE_PATHNAME = "/.jsenv/puppeteer-execute.js"
 const redirectBrowserScriptToPuppeteerExecute = ({ request: { origin, ressource } }) => {
-  if (ressource !== JSENV_BROWSER_SCRIPT_PATHNAME) return null
+  if (ressource !== BROWSER_SCRIPT_CLIENT_PATHNAME) return null
 
   return {
     status: 307,
     headers: {
-      location: `${origin}${JSENV_PUPPETEER_EXECUTE_PATHNAME}`,
+      location: `${origin}${PUPPETEER_EXECUTE_CLIENT_PATHNAME}`,
     },
   }
 }
 
-const PUPPETEER_EXECUTE_FILENAME_RELATIVE = "src/chromium-launcher/puppeteer-execute-template.js"
 const servePuppeteerExecute = ({
-  projectFolder,
-  importMapFilenameRelative,
-  compileInto,
+  projectPathname,
+  compileIntoRelativePath,
+  importMapRelativePath,
   request: { ressource, method, headers },
 }) => {
-  if (ressource.startsWith(`${JSENV_PUPPETEER_EXECUTE_PATHNAME}__asset__/`)) {
-    return serveFile(`${projectFolder}/${compileInto}${ressource}`, { method, headers })
+  if (ressource.startsWith(`${PUPPETEER_EXECUTE_CLIENT_PATHNAME}__asset__/`)) {
+    return serveFile(`${projectPathname}${compileIntoRelativePath}${ressource}`, {
+      method,
+      headers,
+    })
   }
 
   const pathname = ressourceToPathname(ressource)
 
-  if (pathname !== JSENV_PUPPETEER_EXECUTE_PATHNAME) return null
+  if (pathname !== PUPPETEER_EXECUTE_CLIENT_PATHNAME) return null
 
   return serveBundle({
-    projectFolder,
-    importMapFilenameRelative,
-    compileInto,
-    babelConfigMap,
-    filenameRelative: pathname.slice(1),
-    sourceFilenameRelative: filenameRelativeInception({
-      projectFolder,
-      filenameRelative: PUPPETEER_EXECUTE_FILENAME_RELATIVE,
+    projectPathname,
+    compileIntoRelativePath,
+    importMapRelativePath,
+    sourceRelativePath: relativePathInception({
+      projectPathname,
+      relativePath: PUPPETEER_EXECUTE_TEMPLATE_RELATIVE_PATH,
     }),
+    compileRelativePath: pathname,
+    babelConfigMap,
     headers,
     format: "iife",
   })

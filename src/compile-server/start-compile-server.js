@@ -1,5 +1,4 @@
 /* eslint-disable import/max-dependencies */
-import { normalizePathname } from "@jsenv/module-resolution"
 import { createCancellationToken } from "@dmail/cancellation"
 import { serveFile } from "../file-service/index.js"
 import {
@@ -12,10 +11,10 @@ import {
 import { watchFile } from "../watchFile.js"
 import { generateGroupMap } from "../group-map/index.js"
 import {
-  DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
-  DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE,
-  DEFAULT_COMPILE_INTO,
+  DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
+  DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_BABEL_CONFIG_MAP,
   DEFAULT_BABEL_COMPAT_MAP,
   DEFAULT_BROWSER_SCORE_MAP,
@@ -23,16 +22,16 @@ import {
 } from "./compile-server-constant.js"
 import { serveBrowserPlatform } from "../browser-platform-service/index.js"
 import { serveNodePlatform } from "../node-platform-service/index.js"
-import { serveCompiledJs, filenameRelativeIsAsset } from "../compiled-js-service/index.js"
+import { serveCompiledJs, relativePathIsAsset } from "../compiled-js-service/index.js"
+import { operatingSystemFilenameToPathname } from "../operating-system-filename.js"
 
 export const startCompileServer = async ({
-  projectFolder,
   cancellationToken = createCancellationToken(),
-  importMapFilenameRelative = DEFAULT_IMPORT_MAP_FILENAME_RELATIVE,
-  browserGroupResolverFilenameRelative = DEFAULT_BROWSER_GROUP_RESOLVER_FILENAME_RELATIVE,
-  nodeGroupResolverFilenameRelative = DEFAULT_NODE_GROUP_RESOLVER_FILENAME_RELATIVE,
-  compileInto = DEFAULT_COMPILE_INTO,
-  // option related to compile groups
+  projectFolder,
+  compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
+  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
+  nodeGroupResolverRelativePath = DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
   compileGroupCount = 1,
   babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
   babelCompatMap = DEFAULT_BABEL_COMPAT_MAP,
@@ -54,7 +53,7 @@ export const startCompileServer = async ({
   if (typeof projectFolder !== "string")
     throw new TypeError(`projectFolder must be a string. got ${projectFolder}`)
 
-  projectFolder = normalizePathname(projectFolder)
+  const projectPathname = operatingSystemFilenameToPathname(projectFolder)
 
   const groupMap = generateGroupMap({
     babelConfigMap,
@@ -75,13 +74,13 @@ export const startCompileServer = async ({
 
   if (watchSource) {
     const originalWatchSourcePredicate = watchSourcePredicate
-    watchSourcePredicate = (filenameRelative) => {
+    watchSourcePredicate = (relativePath) => {
       // I doubt an asset like .js.map will change
       // in theory a compilation asset should not change
       // if the source file did not change
       // so we can avoid watching compilation asset
-      if (filenameRelativeIsAsset(filenameRelative)) return false
-      return originalWatchSourcePredicate(filenameRelative)
+      if (relativePathIsAsset(relativePath)) return false
+      return originalWatchSourcePredicate(relativePath)
     }
 
     const { registerFileChangedCallback, triggerFileChanged } = createFileChangedSignal()
@@ -91,18 +90,19 @@ export const startCompileServer = async ({
       watchedFiles.forEach((closeWatcher) => closeWatcher())
       watchedFiles.clear()
     })
-    projectFileRequestedCallback = ({ filenameRelative, filename }) => {
+    projectFileRequestedCallback = ({ fileRelativePath }) => {
+      const filePath = `${projectFolder}/${fileRelativePath}`
       // when I ask for a compiled file, watch the corresponding file on filesystem
       // here we should use the registerFileLifecyle stuff made in
       // jsenv-eslint-import-resolver so support if file gets created/deleted
       // by the way this is not truly working if compile creates a bundle
       // in that case we should watch for the whole bundle
       // sources, for now let's ignore
-      if (watchedFiles.has(filename) === false && watchSourcePredicate(filenameRelative)) {
-        const fileWatcher = watchFile(filename, () => {
-          triggerFileChanged({ filename, filenameRelative })
+      if (watchedFiles.has(filePath) === false && watchSourcePredicate(fileRelativePath)) {
+        const fileWatcher = watchFile(filePath, () => {
+          triggerFileChanged({ fileRelativePath })
         })
-        watchedFiles.set(filename, fileWatcher)
+        watchedFiles.set(filePath, fileWatcher)
       }
     }
 
@@ -111,10 +111,10 @@ export const startCompileServer = async ({
     fileChangedSSE.open()
     cancellationToken.register(fileChangedSSE.close)
 
-    registerFileChangedCallback(({ filenameRelative }) => {
+    registerFileChangedCallback(({ fileRelativePath }) => {
       fileChangedSSE.sendEvent({
         type: "file-changed",
-        data: filenameRelative,
+        data: fileRelativePath,
       })
     })
 
@@ -132,15 +132,15 @@ export const startCompileServer = async ({
     firstService(
       () =>
         serveImportMap({
-          importMapFilenameRelative,
+          importMapRelativePath,
           request,
         }),
       () =>
         serveBrowserPlatform({
-          projectFolder,
-          importMapFilenameRelative,
-          browserGroupResolverFilenameRelative,
-          compileInto,
+          projectPathname,
+          compileIntoRelativePath,
+          importMapRelativePath,
+          browserGroupResolverRelativePath,
           babelConfigMap,
           groupMap,
           projectFileRequestedCallback,
@@ -148,10 +148,10 @@ export const startCompileServer = async ({
         }),
       () =>
         serveNodePlatform({
-          projectFolder,
-          importMapFilenameRelative,
-          nodeGroupResolverFilenameRelative,
-          compileInto,
+          projectPathname,
+          compileIntoRelativePath,
+          importMapRelativePath,
+          nodeGroupResolverRelativePath,
           babelConfigMap,
           groupMap,
           projectFileRequestedCallback,
@@ -159,8 +159,8 @@ export const startCompileServer = async ({
         }),
       () =>
         serveCompiledJs({
-          projectFolder,
-          compileInto,
+          projectPathname,
+          compileIntoRelativePath,
           groupMap,
           babelConfigMap,
           transformTopLevelAwait,
@@ -169,12 +169,12 @@ export const startCompileServer = async ({
         }),
       () =>
         serveCompiledAsset({
-          projectFolder,
+          projectPathname,
           request,
         }),
       () =>
-        serveProjectFolder({
-          projectFolder,
+        serveProjectFiles({
+          projectPathname,
           projectFileRequestedCallback,
           request,
         }),
@@ -198,19 +198,20 @@ export const startCompileServer = async ({
   return compileServer
 }
 
-const serveImportMap = ({ importMapFilenameRelative, request: { origin, ressource } }) => {
+const serveImportMap = ({ importMapRelativePath, request: { origin, ressource } }) => {
   if (ressource !== "/.jsenv/importMap.json") return null
 
   return {
     status: 307,
     headers: {
-      location: `${origin}/${importMapFilenameRelative}`,
+      location: `${origin}/${importMapRelativePath}`,
     },
   }
 }
 
 const serveCompiledAsset = ({ projectFolder, request: { ressource, method, headers } }) => {
-  if (!filenameRelativeIsAsset(ressource.slice(1))) return null
+  if (!relativePathIsAsset(ressource)) return null
+
   return serveFile(`${projectFolder}${ressource}`, {
     method,
     headers,
@@ -221,20 +222,16 @@ const serveCompiledAsset = ({ projectFolder, request: { ressource, method, heade
   })
 }
 
-const serveProjectFolder = ({
-  projectFolder,
+const serveProjectFiles = ({
+  projectPathname,
   projectFileRequestedCallback,
   request: { ressource, method, headers },
 }) => {
-  const filenameRelative = ressource.slice(1)
-  const filename = `${projectFolder}/${filenameRelative}`
-
   projectFileRequestedCallback({
-    filenameRelative,
-    filename,
+    fileRelativePath: ressource,
   })
 
-  return serveFile(filename, { method, headers })
+  return serveFile(`${projectPathname}/${ressource}`, { method, headers })
 }
 
 const createFileChangedSignal = () => {

@@ -1,5 +1,5 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { jsCompile } from "../../jsCompile/jsCompile.js.js.js"
+import { compileJs } from "../../compileJs.js"
 
 const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
 
@@ -8,7 +8,7 @@ const file = "folder/file.js"
 const fileAbsolute = `${testFolder}/${file}`
 const input = `true`
 
-jsCompile({
+compileJs({
   projectFolder: testFolder,
   file,
   fileAbsolute,

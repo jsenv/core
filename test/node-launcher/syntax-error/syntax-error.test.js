@@ -1,13 +1,13 @@
 import { assert } from "@dmail/assert"
-import { hrefToFolderJsenvRelative } from "../../../src/hrefToFolderJsenvRelative.js"
-import { ROOT_FOLDER } from "../../../src/ROOT_FOLDER.js"
+import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
+import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 import { assignNonEnumerableProperties } from "../assignNonEnumerableProperties.js"
 
-const testFolderRelative = hrefToFolderJsenvRelative(import.meta.url)
-const projectFolder = ROOT_FOLDER
-const compileInto = `${testFolderRelative}/.dist`
-const filenameRelative = `${testFolderRelative}/syntax-error.js`
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const projectFolder = JSENV_PATH
+const compileInto = `${folderJsenvRelativePath}/.dist`
+const fileRelativePath = `${folderJsenvRelativePath}/syntax-error.js`
 const compileId = "otherwise"
 
 const { origin: compileServerOrigin } = await startCompileServer({
@@ -18,24 +18,24 @@ const { origin: compileServerOrigin } = await startCompileServer({
 
 const actual = await launchAndExecute({
   launch: (options) => launchNode({ ...options, projectFolder, compileServerOrigin, compileInto }),
-  filenameRelative,
+  fileRelativePath,
 })
 
 const expected = {
   status: "errored",
   error: assignNonEnumerableProperties(
     new Error(`error while parsing module.
-href: file://${projectFolder}/${compileInto}/${compileId}/${testFolderRelative}/syntax-error.js
+href: file://${projectFolder}/${compileInto}/${compileId}/${folderJsenvRelativePath}/syntax-error.js
 importerHref: undefined
 parseErrorMessage: ${actual.error.parseError.message}`),
     {
-      href: `${compileServerOrigin}/${compileInto}/${compileId}/${testFolderRelative}/syntax-error.js`,
+      href: `${compileServerOrigin}/${compileInto}/${compileId}/${folderJsenvRelativePath}/syntax-error.js`,
       importerHref: undefined,
       parseError: {
         message: actual.error.parseError.message,
         messageHTML: actual.error.parseError.messageHTML,
-        filename: `${projectFolder}/${filenameRelative}`,
-        outputFilename: `file://${projectFolder}/${compileInto}/${compileId}/${testFolderRelative}/syntax-error.js`,
+        filename: `${projectFolder}${fileRelativePath}`,
+        outputFilename: `file://${projectFolder}/${compileInto}/${compileId}/${folderJsenvRelativePath}/syntax-error.js`,
         lineNumber: 1,
         columnNumber: 14,
       },

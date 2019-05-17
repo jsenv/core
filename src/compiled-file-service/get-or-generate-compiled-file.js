@@ -8,9 +8,9 @@ import { getCacheFilename, getSourceFilename, getCompiledFilename } from "./loca
 const lockfile = import.meta.require("proper-lockfile")
 
 export const getOrGenerateCompiledFile = async ({
-  projectFolder,
-  sourceFilenameRelative,
-  compiledFilenameRelative,
+  projectPathname,
+  sourceRelativePath,
+  compileRelativePath,
   compile,
   cacheIgnored,
   cacheHitTracking,
@@ -21,9 +21,9 @@ export const getOrGenerateCompiledFile = async ({
   return startAsap(
     async () => {
       const { cache, compileResult, compileResultStatus } = await computeCompileReport({
-        projectFolder,
-        sourceFilenameRelative,
-        compiledFilenameRelative,
+        projectPathname,
+        sourceRelativePath,
+        compileRelativePath,
         compile,
         ifEtagMatch,
         ifModifiedSinceDate,
@@ -31,9 +31,9 @@ export const getOrGenerateCompiledFile = async ({
       })
 
       await updateCache({
-        projectFolder,
-        sourceFilenameRelative,
-        compiledFilenameRelative,
+        projectPathname,
+        sourceRelativePath,
+        compileRelativePath,
         cacheHitTracking,
         cache,
         compileResult,
@@ -43,17 +43,17 @@ export const getOrGenerateCompiledFile = async ({
       return { cache, compileResult, compileResultStatus }
     },
     {
-      projectFolder,
-      compiledFilenameRelative,
+      projectPathname,
+      compileRelativePath,
       cacheInterProcessLocking,
     },
   )
 }
 
 const computeCompileReport = async ({
-  projectFolder,
-  sourceFilenameRelative,
-  compiledFilenameRelative,
+  projectPathname,
+  sourceRelativePath,
+  compileRelativePath,
   compile,
   ifEtagMatch,
   ifModifiedSinceDate,
@@ -62,16 +62,16 @@ const computeCompileReport = async ({
   const cache = cacheIgnored
     ? null
     : await readCache({
-        projectFolder,
-        sourceFilenameRelative,
-        compiledFilenameRelative,
+        projectPathname,
+        sourceRelativePath,
+        compileRelativePath,
       })
 
   if (!cache) {
     const compileResult = await callCompile({
-      projectFolder,
-      sourceFilenameRelative,
-      compiledFilenameRelative,
+      projectPathname,
+      sourceRelativePath,
+      compileRelativePath,
       compile,
     })
 
@@ -83,17 +83,17 @@ const computeCompileReport = async ({
   }
 
   const cacheValidation = await validateCache({
-    projectFolder,
-    compiledFilenameRelative,
+    projectPathname,
+    compileRelativePath,
     cache,
     ifEtagMatch,
     ifModifiedSinceDate,
   })
   if (!cacheValidation.valid) {
     const compileResult = await callCompile({
-      projectFolder,
-      sourceFilenameRelative,
-      compiledFilenameRelative,
+      projectPathname,
+      sourceRelativePath,
+      compileRelativePath,
       compile,
     })
     return { cache, compileResult, compileResultStatus: "updated" }
@@ -109,18 +109,18 @@ const computeCompileReport = async ({
 }
 
 const callCompile = async ({
-  projectFolder,
-  sourceFilenameRelative,
-  compiledFilenameRelative,
+  projectPathname,
+  sourceRelativePath,
+  compileRelativePath,
   compile,
 }) => {
   const sourceFilename = getSourceFilename({
-    projectFolder,
-    sourceFilenameRelative,
+    projectPathname,
+    sourceRelativePath,
   })
   const compiledFilename = getCompiledFilename({
-    projectFolder,
-    compiledFilenameRelative,
+    projectPathname,
+    compileRelativePath,
   })
 
   const {
@@ -132,8 +132,8 @@ const callCompile = async ({
     compiledSource,
     ...rest
   } = await compile({
-    sourceFilenameRelative,
-    compiledFilenameRelative,
+    sourceRelativePath,
+    compileRelativePath,
     sourceFilename,
     compiledFilename,
   })
@@ -156,11 +156,11 @@ const callCompile = async ({
 
 const startAsap = async (
   fn,
-  { projectFolder, compiledFilenameRelative, cacheInterProcessLocking },
+  { projectPathname, compileRelativePath, cacheInterProcessLocking },
 ) => {
   const cacheFilename = getCacheFilename({
-    projectFolder,
-    compiledFilenameRelative,
+    projectPathname,
+    compileRelativePath,
   })
 
   // in case this process try to concurrently access meta we wait for previous to be done
@@ -168,7 +168,7 @@ const startAsap = async (
 
   let unlockInterProcessLock = () => {}
   if (cacheInterProcessLocking) {
-    // after that we use a lock filenameRelative to be sure we don't conflict with other process
+    // after that we use a lock pathnameRelative to be sure we don't conflict with other process
     // trying to do the same (mapy happen when spawining multiple server for instance)
     // https://github.com/moxystudio/node-proper-lockfile/issues/69
     await fileMakeDirname(cacheFilename)

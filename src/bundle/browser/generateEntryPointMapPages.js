@@ -1,30 +1,33 @@
-import {
-  createOperation,
-  createCancellationToken,
-} from "/node_modules/@dmail/cancellation/index.js"
-import { fileWrite } from "/node_modules/@dmail/helper/index.js"
+import { createOperation, createCancellationToken } from "@dmail/cancellation"
+import { fileWrite } from "@dmail/helper"
+import { pathnameToOperatingSystemFilename } from "../../operating-system-filename.js"
 
 export const generateEntryPointMapPages = async ({
   cancellationToken = createCancellationToken(),
-  projectFolder,
-  into,
+  projectPathname,
+  bundleIntoRelativePath,
   entryPointMap,
 }) => {
   await Promise.all(
     Object.keys(entryPointMap).map((entryPointName) => {
       return generateEntryPage({
         cancellationToken,
-        projectFolder,
-        into,
+        projectPathname,
+        bundleIntoRelativePath,
         entryPointName,
       })
     }),
   )
 }
 
-const generateEntryPage = async ({ cancellationToken, projectFolder, into, entryPointName }) => {
-  const entryFilenameRelative = `${entryPointName}.js`
-  const pageFilenameRelative = `${entryPointName}.html`
+const generateEntryPage = async ({
+  cancellationToken,
+  projectPathname,
+  bundleIntoRelativePath,
+  entryPointName,
+}) => {
+  const entrypathnameRelative = `${entryPointName}.js`
+  const pagePath = `/${entryPointName}.html`
 
   const html = `<!doctype html>
 
@@ -35,13 +38,17 @@ const generateEntryPage = async ({ cancellationToken, projectFolder, into, entry
 
 <body>
   <main></main>
-  <script src="./${entryFilenameRelative}"></script>
+  <script src="./${entrypathnameRelative}"></script>
 </body>
 
 </html>`
 
   await createOperation({
     cancellationToken,
-    start: () => fileWrite(`${projectFolder}/${into}/${pageFilenameRelative}`, html),
+    start: () =>
+      fileWrite(
+        pathnameToOperatingSystemFilename(`${projectPathname}${bundleIntoRelativePath}${pagePath}`),
+        html,
+      ),
   })
 }
