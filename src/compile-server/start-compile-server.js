@@ -23,7 +23,7 @@ import {
 import { serveBrowserPlatform } from "../browser-platform-service/index.js"
 import { serveNodePlatform } from "../node-platform-service/index.js"
 import { serveCompiledJs, relativePathIsAsset } from "../compiled-js-service/index.js"
-import { operatingSystemFilenameToPathname } from "../operating-system-filename.js"
+import { operatingSystemPathToPathname } from "../operating-system-path.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -53,7 +53,7 @@ export const startCompileServer = async ({
   if (typeof projectFolder !== "string")
     throw new TypeError(`projectFolder must be a string. got ${projectFolder}`)
 
-  const projectPathname = operatingSystemFilenameToPathname(projectFolder)
+  const projectPathname = operatingSystemPathToPathname(projectFolder)
 
   const groupMap = generateGroupMap({
     babelConfigMap,
@@ -209,10 +209,10 @@ const serveImportMap = ({ importMapRelativePath, request: { origin, ressource } 
   }
 }
 
-const serveCompiledAsset = ({ projectFolder, request: { ressource, method, headers } }) => {
+const serveCompiledAsset = ({ projectPathname, request: { ressource, method, headers } }) => {
   if (!relativePathIsAsset(ressource)) return null
 
-  return serveFile(`${projectFolder}${ressource}`, {
+  return serveFile(`${projectPathname}${ressource}`, {
     method,
     headers,
     // because chrome seems to cache map files

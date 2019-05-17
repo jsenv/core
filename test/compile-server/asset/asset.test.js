@@ -1,20 +1,27 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
 import { assert } from "@dmail/assert"
+import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
+import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
 import { startCompileServer } from "../../../index.js"
 import { fetch } from "../fetch.js"
 
-const testFolder = pathnameToDirname(hrefToPathname(import.meta.url))
-const compileInto = ".dist"
+const projectFolder = JSENV_PATH
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
+const compileId = "otherwise"
+const fileRelativePath = `${folderJsenvRelativePath}/asset.js`
 
 const compileServer = await startCompileServer({
-  projectFolder: testFolder,
+  projectFolder,
+  compileIntoRelativePath,
   logLevel: "off",
 })
 
-await fetch(`${compileServer.origin}/${compileInto}/otherwise/asset.js`)
-const response = await fetch(
-  `${compileServer.origin}/${compileInto}/otherwise/asset.js__asset__/cache.json`,
-)
+const fileCompileHref = `${
+  compileServer.origin
+}${compileIntoRelativePath}/${compileId}${fileRelativePath}`
+
+await fetch(fileCompileHref)
+const response = await fetch(`${fileCompileHref}__asset__/cache.json`)
 const body = await response.json()
 const actual = {
   status: response.status,
@@ -30,12 +37,12 @@ const expected = {
     "content-type": ["application/json"],
   },
   body: {
-    sourcepathnameRelative: "asset.js",
+    sourceRelativePath: fileRelativePath,
     contentType: "application/javascript",
-    sources: ["/asset.js"],
+    sources: [fileRelativePath],
     sourcesEtag: ['"7c-b5QcrFoIrKrXSr5F415m5RCd6uY"'],
     assets: ["asset.js__asset__/asset.js.map"],
-    assetsEtag: ['"d5-Y7nurt+aY3asvGmKjqFg8qU+n2c"'],
+    assetsEtag: ['"ef-75BqORiC83xOSvN0IYRfLmcxtEw"'],
     createdMs: actual.body.createdMs,
     lastModifiedMs: actual.body.lastModifiedMs,
   },

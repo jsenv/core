@@ -1,6 +1,12 @@
 import { readFileSync } from "fs"
 import { dirname, resolve } from "path"
 import { writeOrUpdateSourceMappingURL } from "../source-mapping-url.js"
+import {
+  pathnameToOperatingSystemPath,
+  operatingSystemPathToPathname,
+  pathnameIsInside,
+  pathnameToRelativePathname,
+} from "../operating-system-path.js"
 
 export const platformClientBundleToCompilationResult = ({
   projectPathname,
@@ -17,7 +23,7 @@ export const platformClientBundleToCompilationResult = ({
     rollupSourcemap: main.map,
     projectPathname,
     compileIntoRelativePath,
-    sourceRelativePath,
+    entryRelativePath: sourceRelativePath,
     inlineSpecifierMap,
   })
 
@@ -35,7 +41,7 @@ export const platformClientBundleToCompilationResult = ({
       rollupSourcemap: chunk.map,
       projectPathname,
       compileIntoRelativePath,
-      sourceRelativePath,
+      entryRelativePath: sourceRelativePath,
       inlineSpecifierMap,
     })
     sources.push(...chunkSourcemap.sources) // we should avod duplication I guess
@@ -61,39 +67,41 @@ const rollupSourcemapToCompilationSourcemap = ({
   rollupSourcemap,
   projectPathname,
   compileIntoRelativePath,
-  sourceRelativePath,
+  entryRelativePath,
   inlineSpecifierMap,
 }) => {
   const sources = []
   const sourcesContent = []
-  rollupSourcemap.sources.forEach((sourceRelativeToEntryDirectory, index) => {
-    const sourceFilename = resolve(
-      dirname(`${projectPathname}${compileIntoRelativePath}${sourceRelativePath}`),
-      sourceRelativeToEntryDirectory,
+  rollupSourcemap.sources.forEach((sourceRelativeToEntry, index) => {
+    const sourcePath = resolve(
+      dirname(`${projectPathname}${compileIntoRelativePath}${entryRelativePath}`),
+      sourceRelativeToEntry,
     )
+    const sourcePathname = operatingSystemPathToPathname(sourcePath)
 
     if (
-      sourceFilename in inlineSpecifierMap &&
-      typeof inlineSpecifierMap[sourceFilename] === "function"
+      sourcePathname in inlineSpecifierMap &&
+      typeof inlineSpecifierMap[sourcePathname] === "function"
     ) {
       return
     }
 
-    if (!sourceFilename.startsWith(`${projectPathname}/`)) {
+    if (!pathnameIsInside(sourcePathname, projectPathname)) {
       throw new Error(`a source is not inside project
-source: ${sourceRelativeToEntryDirectory}
-sourceFilename: ${sourceFilename}
-projectFolder: ${projectPathname}`)
+source: ${sourceRelativeToEntry}
+source path: ${sourcePath}
+project path: ${pathnameToOperatingSystemPath(projectPathname)}`)
     }
 
-    const sourceRelativeToProjectFolder = sourceFilename.slice(`${projectPathname}/`.length)
-    const source = `/${sourceRelativeToProjectFolder}`
-
-    if (source in inlineSpecifierMap && typeof inlineSpecifierMap[sourceFilename] === "function") {
+    const sourceRelativePath = pathnameToRelativePathname(sourcePathname, projectPathname)
+    if (
+      sourceRelativePath in inlineSpecifierMap &&
+      typeof inlineSpecifierMap[sourceRelativePath] === "function"
+    ) {
       return
     }
 
-    sources.push(source)
+    sources.push(sourceRelativePath)
     sourcesContent.push(rollupSourcemap.sourcesContent[index])
   })
 
@@ -109,11 +117,12 @@ projectFolder: ${projectPathname}`)
       specifierMapping.endsWith(".json") &&
       specifierMapping.startsWith(`${projectPathname}/`)
     ) {
-      const expectedSource = specifierMapping.slice(`${projectPathname}/`.length)
+      const jsonFileRelativePath = pathnameToRelativePathname(specifierMapping, projectPathname)
+      const expectedSource = jsonFileRelativePath.slice(1)
       const sourceIndex = sources.indexOf(expectedSource)
       if (sourceIndex === -1) {
-        sources.push(expectedSource)
-        sourcesContent.push(String(readFileSync(specifierMapping)))
+        sources.push(jsonFileRelativePath)
+        sourcesContent.push(String(readFileSync(pathnameToOperatingSystemPath(specifierMapping))))
       }
     }
   })
