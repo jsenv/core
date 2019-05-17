@@ -3,6 +3,7 @@ import {
   selectAllFileInsideFolder,
 } from "@dmail/project-structure"
 import { startCompileServer } from "./compile-server/index.js"
+import { pathnameToOperatingSystemPath } from "./operating-system-path.js"
 
 export const executeDescriptionToExecutionPlan = async ({
   cancellationToken,
@@ -17,9 +18,11 @@ export const executeDescriptionToExecutionPlan = async ({
   defaultAllocatedMsPerExecution = 20000,
   compileServerLogLevel,
 }) => {
+  const projectFolder = pathnameToOperatingSystemPath(projectPathname)
+
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
-    projectPathname,
+    projectFolder,
     compileIntoRelativePath,
     importMapRelativePath,
     browserGroupResolverRelativePath,
@@ -60,7 +63,7 @@ singleExecutionPlan: ${singleExecutionPlan}`)
               ...options,
               cancellationToken,
               compileServerOrigin,
-              projectPathname,
+              projectFolder,
               compileIntoRelativePath,
             }),
           allocatedMs: allocatedMs === undefined ? defaultAllocatedMsPerExecution : allocatedMs,

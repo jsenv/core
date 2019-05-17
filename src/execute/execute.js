@@ -4,7 +4,6 @@ import {
   createProcessInterruptionCancellationToken,
   catchAsyncFunctionCancellation,
 } from "../cancellationHelper.js"
-import { operatingSystemPathToPathname } from "../operating-system-path.js"
 import {
   DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
@@ -12,7 +11,7 @@ import {
 } from "./execute-constant.js"
 
 export const execute = async ({
-  filePath,
+  fileRelativePath,
   launch,
   projectFolder,
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
@@ -28,12 +27,11 @@ export const execute = async ({
   stopOnceExecuted = false,
 }) =>
   catchAsyncFunctionCancellation(async () => {
-    const projectPathname = operatingSystemPathToPathname(projectFolder)
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
-      projectPathname,
+      projectFolder,
       compileIntoRelativePath,
       importMapRelativePath,
       babelConfigMap,
@@ -47,11 +45,11 @@ export const execute = async ({
     const result = await launchAndExecute({
       cancellationToken,
       launch: (options) =>
-        launch({ ...options, compileServerOrigin, projectPathname, compileIntoRelativePath }),
+        launch({ ...options, compileServerOrigin, projectFolder, compileIntoRelativePath }),
       logLevel: executionLogLevel,
       mirrorConsole,
       stopOnceExecuted,
-      filePath,
+      fileRelativePath,
     })
 
     if (result.status === "errored") {
