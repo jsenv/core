@@ -1,2 +1,1 @@
-// eslint-disable-next-line import/no-unresolved
-export default import("/answer.js")
+export default import("/test/node-bundler/dynamic-import-origin-relative/answer.js")
