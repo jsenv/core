@@ -1,4 +1,5 @@
-// eslint-disable-next-line import/no-unresolved
-const { default: value } = await import("/answer.js")
+const {
+  default: value,
+} = await import("/test/browser-bundler/dynamic-import-origin-relative/answer.js")
 
 export default value

@@ -19,12 +19,12 @@
 
 // const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 // const projectFolder = JSENV_PATH
-// const bundleInto = `${folderJsenvRelativePath}/dist/node`
+// const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/node`
 
 // // it does not work because we have no strategy to serve regeneratorRuntime
 // await bundleNode({
 //   projectFolder,
-//   into: bundleInto,
+//   bundleIntoRelativePath
 //   entryPointMap: {
 //     main: `${folderJsenvRelativePath}/async.js`,
 //   },
@@ -36,6 +36,6 @@
 // })
 
 // const { namespace: actual } = await importNodeBundle({
-//   bundleFolder: `${projectFolder}/${bundleInto}`,
+//   bundleFolder: `${projectFolder}${bundleIntoRelativePath}`,
 //   file: `main.js`,
 // })

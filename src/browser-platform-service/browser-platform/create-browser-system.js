@@ -63,8 +63,8 @@ export const createBrowserSystem = async ({
 
   browserSystem.createContext = (moduleUrl) => {
     const fileRelativePath = hrefToFileRelativePath(moduleUrl, {
-      compileIntoRelativePath,
       compileServerOrigin,
+      compileIntoRelativePath,
     })
     const fileURL = `${compileServerOrigin}${fileRelativePath}`
     const url = fileURL

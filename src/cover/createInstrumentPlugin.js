@@ -13,9 +13,10 @@ export const createInstrumentPlugin = ({
           enter(path) {
             const { file } = this
             const { opts } = file
-            const filename = opts.filenameRelative || opts.filename
+            const { filenameRelative } = opts
 
-            if (!predicate(filename)) {
+            if (!filenameRelative) return
+            if (!predicate(`/${filenameRelative}`)) {
               return
             }
 
@@ -30,7 +31,7 @@ export const createInstrumentPlugin = ({
               inputSourceMap = opts.inputSourceMap
             }
 
-            this.__dv__ = programVisitor(types, filename, {
+            this.__dv__ = programVisitor(types, filenameRelative || opts.filename, {
               coverageVariable: "__coverage__",
               inputSourceMap,
             })

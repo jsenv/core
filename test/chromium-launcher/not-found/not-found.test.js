@@ -1,18 +1,18 @@
 import { assert } from "@dmail/assert"
-import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
 import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
+import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
 import { startCompileServer, launchAndExecute, launchChromium } from "../../../index.js"
 import { assignNonEnumerableProperties } from "/test/node-launcher/assignNonEnumerableProperties.js"
 
-const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const projectFolder = JSENV_PATH
-const compileInto = `${folderJsenvRelativePath}/.dist`
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const fileRelativePath = `${folderJsenvRelativePath}/not-found.js`
 const compileId = "otherwise"
 
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
-  compileInto,
+  compileIntoRelativePath,
   logLevel: "off",
 })
 
@@ -20,9 +20,9 @@ const actual = await launchAndExecute({
   launch: (options) =>
     launchChromium({
       ...options,
-      projectFolder,
-      compileInto,
       compileServerOrigin,
+      projectFolder,
+      compileIntoRelativePath,
     }),
   stopOnceExecuted: true,
   fileRelativePath,
@@ -31,11 +31,11 @@ const expected = {
   status: "errored",
   error: assignNonEnumerableProperties(
     new Error(`module not found.
-href: file://${projectFolder}/${compileInto}/${compileId}/${folderJsenvRelativePath}/foo.js
-importerHref: file://${projectFolder}/${compileInto}/${compileId}/${folderJsenvRelativePath}/not-found.js`),
+href: file://${projectFolder}${compileIntoRelativePath}/${compileId}${folderJsenvRelativePath}/foo.js
+importerHref: file://${projectFolder}${compileIntoRelativePath}/${compileId}${fileRelativePath}`),
     {
-      href: `${compileServerOrigin}/${compileInto}/${compileId}/${folderJsenvRelativePath}/foo.js`,
-      importerHref: `${compileServerOrigin}/${compileInto}/${compileId}/${folderJsenvRelativePath}/not-found.js`,
+      href: `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${folderJsenvRelativePath}/foo.js`,
+      importerHref: `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${fileRelativePath}`,
       code: "MODULE_NOT_FOUND_ERROR",
     },
   ),

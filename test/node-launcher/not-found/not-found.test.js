@@ -4,31 +4,37 @@ import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 import { assignNonEnumerableProperties } from "../assignNonEnumerableProperties.js"
 
-const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const projectFolder = JSENV_PATH
-const compileInto = `${folderJsenvRelativePath}/.dist`
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const fileRelativePath = `${folderJsenvRelativePath}/not-found.js`
 const compileId = "otherwise"
 
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
-  compileInto,
+  compileIntoRelativePath,
   logLevel: "off",
 })
 
 const actual = await launchAndExecute({
-  launch: (options) => launchNode({ ...options, projectFolder, compileServerOrigin, compileInto }),
+  launch: (options) =>
+    launchNode({
+      ...options,
+      compileServerOrigin,
+      projectFolder,
+      compileIntoRelativePath,
+    }),
   fileRelativePath,
 })
 const expected = {
   status: "errored",
   error: assignNonEnumerableProperties(
     new Error(`module not found.
-href: file://${projectFolder}/${compileInto}/${compileId}/${folderJsenvRelativePath}/foo.js
-importerHref: file://${projectFolder}/${compileInto}/${compileId}/${folderJsenvRelativePath}/not-found.js`),
+href: file://${projectFolder}${compileIntoRelativePath}/${compileId}${folderJsenvRelativePath}/foo.js
+importerHref: file://${projectFolder}${compileIntoRelativePath}/${compileId}${fileRelativePath}`),
     {
-      href: `${compileServerOrigin}/${compileInto}/${compileId}/${folderJsenvRelativePath}/foo.js`,
-      importerHref: `${compileServerOrigin}/${compileInto}/${compileId}/${folderJsenvRelativePath}/not-found.js`,
+      href: `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${folderJsenvRelativePath}/foo.js`,
+      importerHref: `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${fileRelativePath}`,
       code: "MODULE_NOT_FOUND_ERROR",
     },
   ),

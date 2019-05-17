@@ -74,18 +74,18 @@ export const cover = async ({
       cover: coverDescription,
     })
 
-    const coverFilePredicate = (pathnameRelative) =>
+    const coverRelativePathPredicate = (relativePath) =>
       pathnameToMeta({
-        pathname: `/${pathnameRelative}`,
+        pathname: relativePath,
         metaDescription: coverMetaDescription,
       }).cover === true
 
-    ensureNoFileIsBothCoveredAndExecuted({ executeDescription, coverFilePredicate })
+    ensureNoFileIsBothCoveredAndExecuted({ executeDescription, coverRelativePathPredicate })
 
     const [{ planResult, planResultSummary }, relativePathToCoverArray] = await Promise.all([
       (async () => {
         const instrumentBabelPlugin = createInstrumentPlugin({
-          predicate: (pathnameRelative) => coverFilePredicate(pathnameRelative),
+          predicate: (relativePath) => coverRelativePathPredicate(relativePath),
         })
 
         const babelConfigMapWithInstrumentation = {
@@ -187,9 +187,12 @@ export const cover = async ({
   })
 }
 
-const ensureNoFileIsBothCoveredAndExecuted = ({ executeDescription, coverFilePredicate }) => {
-  const fileToExecuteAndCoverArray = Object.keys(executeDescription).filter((pathnameRelative) =>
-    coverFilePredicate(pathnameRelative),
+const ensureNoFileIsBothCoveredAndExecuted = ({
+  executeDescription,
+  coverRelativePathPredicate,
+}) => {
+  const fileToExecuteAndCoverArray = Object.keys(executeDescription).filter((relativePath) =>
+    coverRelativePathPredicate(relativePath),
   )
   if (fileToExecuteAndCoverArray.length) {
     // I think it is an error, it would be strange, for a given file

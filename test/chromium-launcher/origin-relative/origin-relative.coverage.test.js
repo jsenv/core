@@ -5,25 +5,23 @@ import { startCompileServer, launchAndExecute, launchChromium } from "../../../i
 import { createInstrumentPlugin } from "../../../src/cover/createInstrumentPlugin.js"
 import { removeFolder } from "../removeFolder.js"
 
-const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const projectFolder = JSENV_PATH
-const compileInto = `${folderJsenvRelativePath}/.dist`
+const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
+const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const fileRelativePath = `${folderJsenvRelativePath}/origin-relative.js`
 const babelConfigMap = {
   "transform-instrument": [
     createInstrumentPlugin({
-      predicate: (filename) => {
-        return filename === `${folderJsenvRelativePath}/file.js`
-      },
+      predicate: (relativePath) => relativePath === `${folderJsenvRelativePath}/file.js`,
     }),
   ],
 }
 
-await removeFolder(`${projectFolder}/${compileInto}`)
+await removeFolder(`${projectFolder}${compileIntoRelativePath}`)
 
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
-  compileInto,
+  compileIntoRelativePath,
   babelConfigMap,
   logLevel: "off",
 })
@@ -32,9 +30,9 @@ const actual = await launchAndExecute({
   launch: (options) =>
     launchChromium({
       ...options,
-      projectFolder,
-      compileInto,
       compileServerOrigin,
+      projectFolder,
+      compileIntoRelativePath,
     }),
   stopOnceExecuted: true,
   fileRelativePath,
@@ -47,8 +45,8 @@ const expected = {
     default: 42,
   },
   coverageMap: {
-    [`${folderJsenvRelativePath}/file.js`]: actual.coverageMap[
-      `${folderJsenvRelativePath}/file.js`
+    [`${folderJsenvRelativePath.slice(1)}/file.js`]: actual.coverageMap[
+      `${folderJsenvRelativePath.slice(1)}/file.js`
     ],
   },
 }

@@ -48,41 +48,45 @@ export const trackBrowserPages = (browser, { onError, onConsole }) => {
             // https://github.com/GoogleChrome/puppeteer/issues/3397#issuecomment-434970058
             // https://github.com/GoogleChrome/puppeteer/issues/2083
 
-            // there is also message._args
-            // which is an array of JSHandle{ _context, _client _remoteObject }
             const type = message.type()
-            const text = message.text()
-            if (text === "JSHandle@error") {
-              const errorHandle = message._args[0]
-
-              try {
-                // ensure we use a string so that istanbul won't try
-                // to put any coverage statement inside it
-                // eslint-disable-next-line no-new-func
-                const fn = new Function(
-                  "value",
-                  `if (value instanceof Error) {
-                  return value.stack
-                }
-                return value`,
-                )
-                const stack = await errorHandle.executionContext().evaluate(fn, errorHandle)
-                onConsole({
-                  type: "error",
-                  text: appendNewLine(stack),
-                })
-              } catch (e) {
-                onConsole({
-                  type: "error",
-                  text: String(errorHandle),
-                })
+            // ensure we use a string so that istanbul won't try
+            // to put any coverage statement inside it
+            // ideally we should use uneval no ?
+            // eslint-disable-next-line no-new-func
+            const functionEvaluatedBrowserSide = new Function(
+              "value",
+              `if (value instanceof Error) {
+                return value.stack
               }
-            } else {
-              onConsole({
-                type,
-                text: appendNewLine(text),
-              })
-            }
+              return value`,
+            )
+            const argValues = await Promise.all(
+              message.args().map(async (arg) => {
+                const jsHandle = arg
+
+                try {
+                  return await jsHandle
+                    .executionContext()
+                    .evaluate(functionEvaluatedBrowserSide, jsHandle)
+                } catch (e) {
+                  return String(jsHandle)
+                }
+              }),
+            )
+            const text = argValues.reduce((previous, value, index) => {
+              let string
+
+              if (typeof value === "object") string = JSON.stringify(value, null, "  ")
+              else string = String(value)
+
+              if (index === 0) return `${previous}${string}`
+              return `${previous} ${string}`
+            }, "")
+
+            onConsole({
+              type,
+              text: appendNewLine(text),
+            })
           },
         })
       }
