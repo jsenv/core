@@ -4,14 +4,14 @@ import { startBrowserExplorerServer } from "../../index.js"
 
 const projectFolder = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
-const compileInto = `${folderJsenvRelativePath}/.dist`
+const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 
 startBrowserExplorerServer({
   projectFolder,
-  compileInto,
+  compileIntoRelativePath,
   browsableDescription: {
-    [`/${folderJsenvRelativePath}/**/*.main.js`]: true,
-    [`/${folderJsenvRelativePath}/**/.dist/**`]: false,
+    [`${folderJsenvRelativePath}/**/*.main.js`]: true,
+    [`${folderJsenvRelativePath}/**/.dist/**`]: false,
   },
   port: 3400,
   forcePort: true,

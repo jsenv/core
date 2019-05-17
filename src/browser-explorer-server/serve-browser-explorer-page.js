@@ -3,11 +3,11 @@ import { serveBrowserExplorerPageHTML } from "./serve-browser-explorer-page-html
 import { serveBrowserSelfExecute } from "./serve-browser-self-execute.js"
 
 export const serveBrowserExplorerPage = ({
-  projectPathname,
   compileServerOrigin,
+  projectPathname,
+  compileIntoRelativePath,
   importMapRelativePath,
   browserClientRelativePath,
-  compileIntoRelativePath,
   babelConfigMap,
   browsableMetaMap,
   request,
@@ -22,11 +22,11 @@ export const serveBrowserExplorerPage = ({
       }),
     () =>
       serveBrowserSelfExecute({
-        projectPathname,
         compileServerOrigin,
-        browserClientRelativePath,
+        projectPathname,
         importMapRelativePath,
         compileIntoRelativePath,
+        browserClientRelativePath,
         babelConfigMap,
         request,
       }),

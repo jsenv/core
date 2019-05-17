@@ -7,7 +7,7 @@ export const serveBrowserExplorerIndex = async ({
 }) => {
   if (ressource !== "/") return null
 
-  const browsablePathArray = await selectAllFileInsideFolder({
+  const browsablePathnameArray = await selectAllFileInsideFolder({
     pathname: projectPathname,
     metaDescription,
     predicate: ({ browsable }) => browsable,
@@ -16,7 +16,7 @@ export const serveBrowserExplorerIndex = async ({
 
   const html = getBrowsingIndexPageHTML({
     projectPathname,
-    browsablePathArray,
+    browsablePathnameArray,
   })
 
   return {
@@ -30,7 +30,7 @@ export const serveBrowserExplorerIndex = async ({
   }
 }
 
-const getBrowsingIndexPageHTML = ({ projectPathname, browsablePathArray }) => {
+const getBrowsingIndexPageHTML = ({ projectPathname, browsablePathnameArray }) => {
   return `<!doctype html>
 
   <head>
@@ -43,9 +43,12 @@ const getBrowsingIndexPageHTML = ({ projectPathname, browsablePathArray }) => {
       <h1>${projectPathname}</h1>
       <p>List of path to browse: </p>
       <ul>
-        ${browsablePathArray
+        ${browsablePathnameArray
           .sort()
-          .map((path) => `<li><a href="${path}">${path}</a></li>`)
+          .map(
+            (browsablePathname) =>
+              `<li><a href="${browsablePathname}">${browsablePathname}</a></li>`,
+          )
           .join("")}
       </ul>
     </main>

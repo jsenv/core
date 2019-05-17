@@ -56,11 +56,11 @@ const redirectBrowserScriptToBrowserSelfExecute = ({
 }) => {
   if (ressource !== BROWSER_SCRIPT_CLIENT_PATHNAME) return null
 
-  const fileRelativePath = headers.referer.slice(compileServerOrigin.length)
+  const file = headers.referer.slice(compileServerOrigin.length)
   return {
     status: 307,
     headers: {
-      location: `${origin}${BROWSER_SELF_EXECUTE_CLIENT_PATHNAME}?fileRelativePath=${fileRelativePath}`,
+      location: `${origin}${BROWSER_SELF_EXECUTE_CLIENT_PATHNAME}?file=${file}`,
     },
   }
 }
@@ -72,7 +72,7 @@ const serveBrowserSelfExecuteBundle = ({
   babelConfigMap,
   request: { ressource, method, headers },
 }) => {
-  if (ressource.startsWith(`${BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH}__asset__/`)) {
+  if (ressource.startsWith(`${BROWSER_SELF_EXECUTE_CLIENT_PATHNAME}__asset__/`)) {
     return serveFile(`${projectPathname}${compileIntoRelativePath}${ressource}`, {
       method,
       headers,
@@ -80,9 +80,10 @@ const serveBrowserSelfExecuteBundle = ({
   }
 
   const pathname = ressourceToPathname(ressource)
-  const fileRelativePath = ressourceToSearchParamValue(ressource, "fileRelativePath")
+  const file = ressourceToSearchParamValue(ressource, "file")
+  const fileRelativePath = `/${file}`
 
-  if (pathname !== BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH) return null
+  if (pathname !== BROWSER_SELF_EXECUTE_CLIENT_PATHNAME) return null
 
   return serveBundle({
     projectPathname,

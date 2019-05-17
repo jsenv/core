@@ -1,6 +1,5 @@
 import { pathnameToMeta } from "@dmail/project-structure"
 import { serveFile } from "../file-service/index.js"
-import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 export const serveBrowserExplorerPageHTML = ({
   projectPathname,
@@ -11,8 +10,5 @@ export const serveBrowserExplorerPageHTML = ({
   if (!pathnameToMeta({ pathname: ressource, metaDescription: browsableMetaMap }).browsable)
     return null
 
-  return serveFile(
-    pathnameToOperatingSystemPath(`${projectPathname}${browserClientRelativePath}/index.html`),
-    { headers },
-  )
+  return serveFile(`${projectPathname}${browserClientRelativePath}/index.html`, { headers })
 }
