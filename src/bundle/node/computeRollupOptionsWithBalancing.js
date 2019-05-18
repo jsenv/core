@@ -1,4 +1,5 @@
 import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
+import { pathnameToOperatingSystemPath } from "../../operating-system-path.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
 import { createLogger } from "../../logger.js"
@@ -18,7 +19,9 @@ export const computeRollupOptionsWithBalancing = ({
 }) => {
   const { logTrace } = createLogger({ logLevel })
 
-  const dir = `${projectPathname}${bundleIntoRelativePath}/${compileId}`
+  const dir = pathnameToOperatingSystemPath(
+    `${projectPathname}${bundleIntoRelativePath}/${compileId}`,
+  )
 
   const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
     platformGlobalName: "global",

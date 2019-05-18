@@ -17,7 +17,13 @@ import {
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { computeBabelConfigMapSubset } from "./computeBabelConfigMapSubset.js"
 import { createLogger } from "../../logger.js"
-import { pathnameToOperatingSystemPath } from "../../operating-system-path.js"
+import {
+  pathnameToOperatingSystemPath,
+  operatingSystemPathToPathname,
+  pathnameIsInside,
+  pathnameToRelativePathname,
+  isWindowsPath,
+} from "../../operating-system-path.js"
 
 const { minify: minifyCode } = import.meta.require("terser")
 const { buildExternalHelpers } = import.meta.require("@babel/core")
@@ -74,23 +80,28 @@ export const createJsenvRollupPlugin = ({
         throw new Error(`inlineSpecifier must be a string or a function`)
       }
 
-      // TODO: test this on windows, it will fail for sure
-
-      if (!importer) return `${projectPathname}/${specifier}`
+      if (!importer) return pathnameToOperatingSystemPath(`${projectPathname}/${specifier}`)
 
       let importerHref
+      const hasSheme = isWindowsPath(importer) ? false : Boolean(hrefToScheme(importer))
       // there is already a scheme (http, https, file), keep it
       // it means there is an absolute import starting with file:// or http:// for instance.
-      if (hrefToScheme(importer)) {
+      if (hasSheme) {
         importerHref = importer
       }
-      // 99% of the time importer is a pathname
-      // if the importer is inside projectFolder we must remove that
-      // so that / is resolved against projectFolder and not the filesystem root
-      else if (importer.startsWith(`${projectPathname}/`)) {
-        importerHref = `${origin}${importer.slice(projectPathname.length)}`
-      } else {
-        importerHref = `${origin}${importer}`
+      // 99% of the time importer is an operating system path
+      // here we ensure / is resolved against project by forcing an url resolution
+      // prefixing with origin
+      else {
+        const importerPathname = operatingSystemPathToPathname(importer)
+        const isInsideProject = pathnameIsInside(importerPathname, projectPathname)
+        if (!isInsideProject) {
+          throw new Error(`importer must be inside project
+importer: ${importer}
+project: ${pathnameToOperatingSystemPath(projectPathname)}`)
+        }
+
+        importerHref = `${origin}${pathnameToRelativePathname(importerPathname, projectPathname)}`
       }
 
       const resolvedImport = resolveImport({
@@ -104,16 +115,13 @@ export const createJsenvRollupPlugin = ({
         resolvedImport,
       })
 
-      // rollup works with pathname
-      // let's return him pathname when possible
-      // otherwise sourcemap.sources will be messed up
-      if (id.startsWith(`${origin}/`)) {
-        const specifierFilename = hrefToPathname(id)
-        if (importer.startsWith(`${projectPathname}/`)) {
-          const filename = `${projectPathname}${specifierFilename}`
-          return filename
-        }
-        return specifierFilename
+      // rollup works with operating system path
+      // return os path when possible
+      // to ensure we can predict sourcemap.sources returned by rollup
+      const resolvedIdIsInsideProject = id.startsWith(`${origin}/`)
+      if (resolvedIdIsInsideProject) {
+        const idPathname = hrefToPathname(id)
+        return pathnameToOperatingSystemPath(`${projectPathname}${idPathname}`)
       }
 
       return id
@@ -127,7 +135,8 @@ export const createJsenvRollupPlugin = ({
     load: async (id) => {
       if (id in inlineSpecifierResolveMap) return inlineSpecifierResolveMap[id]()
 
-      const href = id[0] === "/" ? `file://${id}` : id
+      const hasSheme = isWindowsPath(id) ? false : Boolean(hrefToScheme(id))
+      const href = hasSheme ? id : `file://${operatingSystemPathToPathname(id)}`
       const source = await fetchHref(href)
 
       const sourceMappingURL = readSourceMappingURL(source)
@@ -211,7 +220,7 @@ export const createJsenvRollupPlugin = ({
     if (href.startsWith("file:///")) {
       const code = await createOperation({
         cancellationToken,
-        start: () => fileRead(hrefToPathname(href)),
+        start: () => fileRead(pathnameToOperatingSystemPath(hrefToPathname(href))),
       })
       return code
     }

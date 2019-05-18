@@ -36,7 +36,7 @@ const replaceSlashWithBackSlash = (string) => string.replace(/\//g, "\\")
 
 const replaceBackSlashWithSlash = (string) => string.replace(/\\/g, "/")
 
-const isWindowsPath = (path) => startsWithWindowsDriveLetter(path) && path[2] === "\\"
+export const isWindowsPath = (path) => startsWithWindowsDriveLetter(path) && path[2] === "\\"
 
 const startsWithWindowsDriveLetter = (string) => {
   const firstChar = string[0]

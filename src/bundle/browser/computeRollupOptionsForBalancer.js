@@ -1,5 +1,6 @@
 import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
 import { uneval } from "@dmail/uneval"
+import { pathnameToOperatingSystemPath } from "/src/operating-system-path.js"
 import { relativePathInception } from "../../inception.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"
@@ -47,7 +48,7 @@ export const computeRollupOptionsForBalancer = ({
   }
 
   // maybe it should be projectPath and not pathname here right ?
-  const dir = `${projectPathname}${bundleIntoRelativePath}`
+  const dir = pathnameToOperatingSystemPath(`${projectPathname}${bundleIntoRelativePath}`)
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({
     cancellationToken,
