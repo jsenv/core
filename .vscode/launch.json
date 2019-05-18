@@ -10,7 +10,7 @@
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
       "sourceMapPathOverrides": {
-        "/*": "${workspaceRoot}/*"
+        "/*": "${workspaceFolder}/*"
       },
       "smartStep": true,
       "skipFiles": [
@@ -29,7 +29,7 @@
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
       "sourceMapPathOverrides": {
-        "/*": "${workspaceRoot}/*"
+        "/*": "${workspaceFolder}/*"
       },
       "smartStep": true,
       "skipFiles": [
@@ -42,11 +42,13 @@
       "name": "jsenv-chrome",
       "type": "chrome",
       "request": "launch",
+      // won't work on windows https://github.com/Microsoft/vscode/issues/40256
+      // relativeFile use backslashes
       "url": "http://127.0.0.1:3456/${relativeFile}",
       "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"],
       "sourceMaps": true,
       "sourceMapPathOverrides": {
-        "/*": "${workspaceRoot}/*"
+        "/*": "${workspaceFolder}/*"
       },
       "smartStep": true,
       "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
@@ -59,7 +61,7 @@
       "smartStep": true,
       "sourceMaps": true,
       "sourceMapPathOverrides": {
-        "/*": "${workspaceRoot}/*"
+        "/*": "${workspaceFolder}/*"
       },
       "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
     }
