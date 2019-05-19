@@ -17,4 +17,4 @@ export const getCompiledFilename = ({ projectPathname, compileRelativePath }) =>
   pathnameToOperatingSystemPath(`${projectPathname}${compileRelativePath}`)
 
 export const getSourceFilename = ({ projectPathname, sourceRelativePath }) =>
-  pathnameToOperatingSystemPath(`${projectPathname}/${sourceRelativePath}`)
+  pathnameToOperatingSystemPath(`${projectPathname}${sourceRelativePath}`)

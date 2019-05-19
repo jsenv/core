@@ -3,9 +3,11 @@ import { dirname, resolve } from "path"
 import { writeOrUpdateSourceMappingURL } from "../source-mapping-url.js"
 import {
   pathnameToOperatingSystemPath,
-  operatingSystemPathToPathname,
+  isWindowsPath,
+  windowPathToPathnameWithoutDriveLetter,
   pathnameIsInside,
   pathnameToRelativePathname,
+  operatingSystemPathToPathname,
 } from "../operating-system-path.js"
 
 export const platformClientBundleToCompilationResult = ({
@@ -82,10 +84,13 @@ const rollupSourcemapToCompilationSourcemap = ({
       sourceRelativeToEntry,
     )
     const sourcePathname = operatingSystemPathToPathname(sourcePath)
+    const sourceSpecifier = isWindowsPath(sourcePath)
+      ? windowPathToPathnameWithoutDriveLetter(sourcePath)
+      : sourcePath
 
     if (
-      sourcePathname in inlineSpecifierMap &&
-      typeof inlineSpecifierMap[sourcePathname] === "function"
+      sourceSpecifier in inlineSpecifierMap &&
+      typeof inlineSpecifierMap[sourceSpecifier] === "function"
     ) {
       return
     }
