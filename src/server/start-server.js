@@ -20,7 +20,7 @@ import { requestToAccessControlHeaders } from "./requestToAccessControlHeaders.j
 import { responseCompose } from "./responseCompose.js"
 import { originAsString } from "./originAsString.js"
 import { listen, stopListening } from "./listen.js"
-import { createLogger } from "../logger.js"
+import { createLogger, LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 
 const killPort = import.meta.require("kill-port")
 
@@ -46,7 +46,7 @@ export const startServer = async ({
   stopOnCrash = false,
   requestToResponse = () => null,
   cors = false,
-  logLevel = "log",
+  logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
   startedCallback = () => {},
   stoppedCallback = () => {},
 } = {}) => {

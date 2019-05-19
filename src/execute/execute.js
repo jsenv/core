@@ -9,6 +9,7 @@ import {
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   DEFAULT_BABEL_CONFIG_MAP,
 } from "./execute-constant.js"
+import { LOG_LEVEL_OFF } from "../logger.js"
 
 export const execute = async ({
   fileRelativePath,
@@ -21,8 +22,8 @@ export const execute = async ({
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
-  compileServerLogLevel = "off",
-  executionLogLevel = "off",
+  compileServerLogLevel = LOG_LEVEL_OFF,
+  executionLogLevel = LOG_LEVEL_OFF,
   mirrorConsole = true,
   stopOnceExecuted = false,
 }) =>

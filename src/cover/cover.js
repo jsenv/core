@@ -31,6 +31,7 @@ import {
   operatingSystemPathToPathname,
   pathnameToOperatingSystemPath,
 } from "../operating-system-path.js"
+import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS, LOG_LEVEL_OFF } from "../logger.js"
 
 export const cover = async ({
   projectFolder,
@@ -54,8 +55,8 @@ export const cover = async ({
   writeCoverageHtmlFolder = false,
   updateProcessExitCode = true,
   throwUnhandled = true,
-  compileServerLogLevel = "off",
-  executionLogLevel = "log",
+  compileServerLogLevel = LOG_LEVEL_OFF,
+  executionLogLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
   collectNamespace = false,
   measureDuration = true,
   captureConsole = true,

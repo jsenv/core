@@ -7,7 +7,7 @@ import {
   errorToCancelReason,
 } from "@dmail/cancellation"
 import { promiseTrackRace } from "@dmail/helper"
-import { createLogger } from "../logger.js"
+import { createLogger, LOG_LEVEL_OFF } from "../logger.js"
 
 export const launchAndExecute = async ({
   cancellationToken = createCancellationToken(),
@@ -24,7 +24,7 @@ export const launchAndExecute = async ({
   // to debug the error to the its consequences
   // however unit test will pass true because they want to move on
   stopOnError = false,
-  logLevel = "off",
+  logLevel = LOG_LEVEL_OFF,
   consoleCallback = () => {},
   startedCallback = () => {},
   stoppedCallback = () => {},

@@ -20,6 +20,7 @@ import { evalSource } from "../node-platform-service/node-platform/evalSource.js
 import { JSENV_PATH } from "../JSENV_PATH.js"
 import { operatingSystemPathToPathname } from "../operating-system-path.js"
 import { regexpEscape } from "../../src/stringHelper.js"
+import { LOG_LEVEL_OFF } from "../logger.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
@@ -30,7 +31,7 @@ export const launchChromium = async ({
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   browserClientRelativePath = DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
-  clientServerLogLevel = "off",
+  clientServerLogLevel = LOG_LEVEL_OFF,
   headless = true,
 }) => {
   if (typeof compileServerOrigin !== "string")

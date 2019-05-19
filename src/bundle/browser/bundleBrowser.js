@@ -12,6 +12,7 @@ import {
   DEFAULT_BABEL_CONFIG_MAP,
 } from "./bundle-browser-constant.js"
 import { operatingSystemPathToPathname } from "../../operating-system-path.js"
+import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../../logger.js"
 
 export const bundleBrowser = async ({
   projectFolder,
@@ -24,7 +25,7 @@ export const bundleBrowser = async ({
   compileGroupCount = 1,
   platformScoreMap = browserScoreMap,
   format = "system", // or iife
-  logLevel = "log",
+  logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
   minify = false,
   throwUnhandled = true,
   writeOnFileSystem = true,

@@ -14,6 +14,7 @@ import {
   DEFAULT_MAX_PARALLEL_EXECUTION,
   DEFAULT_BABEL_CONFIG_MAP,
 } from "./test-constant.js"
+import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS, LOG_LEVEL_OFF } from "../logger.js"
 
 export const test = async ({
   projectFolder,
@@ -28,8 +29,8 @@ export const test = async ({
   babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
   updateProcessExitCode = true,
   throwUnhandled = true,
-  compileServerLogLevel = "off",
-  executionLogLevel = "log",
+  compileServerLogLevel = LOG_LEVEL_OFF,
+  executionLogLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
   collectNamespace = false,
   measureDuration = true,
   captureConsole = true,

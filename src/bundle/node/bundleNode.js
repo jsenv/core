@@ -11,6 +11,7 @@ import {
   DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_BABEL_CONFIG_MAP,
 } from "./bundle-node-constant.js"
+import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../../logger.js"
 
 export const bundleNode = async ({
   projectFolder,
@@ -22,7 +23,7 @@ export const bundleNode = async ({
   babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
   compileGroupCount = 1,
   versionScoreMap = nodeVersionScoreMap,
-  logLevel = "log",
+  logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
   minify = false,
   throwUnhandled = true,
   writeOnFileSystem = true,

@@ -24,6 +24,7 @@ import { serveBrowserPlatform } from "../browser-platform-service/index.js"
 import { serveNodePlatform } from "../node-platform-service/index.js"
 import { serveCompiledJs, relativePathIsAsset } from "../compiled-js-service/index.js"
 import { operatingSystemPathToPathname } from "../operating-system-path.js"
+import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -48,7 +49,7 @@ export const startCompileServer = async ({
   ip = "127.0.0.1",
   port = 0,
   signature,
-  logLevel = "log",
+  logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
 }) => {
   if (typeof projectFolder !== "string")
     throw new TypeError(`projectFolder must be a string. got ${projectFolder}`)

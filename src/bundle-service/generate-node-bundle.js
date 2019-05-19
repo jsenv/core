@@ -3,6 +3,7 @@ import { getOrGenerateCompiledFile } from "../compiled-file-service/get-or-gener
 import { bundleNode } from "../bundle/node/bundleNode.js"
 import { platformClientBundleToCompilationResult } from "./platformClientBundleToCompilationResult.js"
 import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
+import { LOG_LEVEL_OFF } from "../logger.js"
 
 export const generateNodeBundle = async ({
   projectPathname,
@@ -12,8 +13,7 @@ export const generateNodeBundle = async ({
   compileRelativePath,
   sourcemapRelativePath = computeSourcemapRelativePath(compileRelativePath),
   inlineSpecifierMap = {},
-  babelConfigMap,
-  logLevel = "off",
+  logLevel = LOG_LEVEL_OFF,
 }) => {
   return getOrGenerateCompiledFile({
     projectPathname,

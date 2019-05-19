@@ -4,6 +4,7 @@ import {
 } from "../cancellationHelper.js"
 import { generateGroupMap } from "../group-map/index.js"
 import { bundleWithRollup } from "./bundleWithRollup.js"
+import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 
 export const bundlePlatform = ({
   projectPathname,
@@ -15,7 +16,7 @@ export const bundlePlatform = ({
   computeRollupOptionsWithoutBalancing,
   computeRollupOptionsWithBalancing,
   computeRollupOptionsForBalancer,
-  logLevel = "log",
+  logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
   writeOnFileSystem,
 }) =>
   catchAsyncFunctionCancellation(async () => {

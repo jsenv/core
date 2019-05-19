@@ -16,6 +16,7 @@ import {
   pathnameToOperatingSystemPath,
   operatingSystemPathToPathname,
 } from "../operating-system-path.js"
+import { LOG_LEVEL_OFF } from "../logger.js"
 
 const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
 
@@ -34,7 +35,7 @@ export const launchNode = async ({
   debugModeInheritBreak = false,
   remap = true,
   traceWarnings = true,
-  logLevel = false,
+  logLevel = LOG_LEVEL_OFF,
 }) => {
   if (typeof compileServerOrigin !== "string")
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)

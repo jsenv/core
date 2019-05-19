@@ -1,5 +1,11 @@
-export const createLogger = ({ logLevel = "log" }) => {
-  if (logLevel === "trace") {
+export const LOG_LEVEL_OFF = "off"
+export const LOG_LEVEL_ERRORS = "errors"
+export const LOG_LEVEL_ERRORS_AND_WARNINGS = "errors+warnings"
+export const LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS = "errors+warnings+logs"
+export const LOG_LEVEL_MAXIMUM = "maximum"
+
+export const createLogger = ({ logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS }) => {
+  if (logLevel === LOG_LEVEL_MAXIMUM) {
     return {
       logTrace,
       log,
@@ -8,7 +14,7 @@ export const createLogger = ({ logLevel = "log" }) => {
     }
   }
 
-  if (logLevel === "log") {
+  if (logLevel === LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS) {
     return {
       logTrace: logTraceDisabled,
       log,
@@ -17,7 +23,7 @@ export const createLogger = ({ logLevel = "log" }) => {
     }
   }
 
-  if (logLevel === "warn") {
+  if (logLevel === LOG_LEVEL_ERRORS_AND_WARNINGS) {
     return {
       logTrace: logTraceDisabled,
       log: logDisabled,
@@ -26,7 +32,7 @@ export const createLogger = ({ logLevel = "log" }) => {
     }
   }
 
-  if (logLevel === "error") {
+  if (logLevel === LOG_LEVEL_ERRORS) {
     return {
       logTrace: logTraceDisabled,
       log: logDisabled,
@@ -35,7 +41,7 @@ export const createLogger = ({ logLevel = "log" }) => {
     }
   }
 
-  if (logLevel === "off") {
+  if (logLevel === LOG_LEVEL_OFF) {
     return {
       logTrace: logTraceDisabled,
       log: logDisabled,
@@ -46,7 +52,7 @@ export const createLogger = ({ logLevel = "log" }) => {
 
   throw new Error(`unexpected logLevel.
 logLevel: ${logLevel}
-allowed log level: "trace", "log", "warn", "error", "off"`)
+allowed log levels: ${LOG_LEVEL_OFF}, ${LOG_LEVEL_ERRORS}, ${LOG_LEVEL_ERRORS_AND_WARNINGS}, ${LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS}, ${LOG_LEVEL_MAXIMUM}`)
 }
 
 const logTrace = console.trace

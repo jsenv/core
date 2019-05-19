@@ -8,7 +8,7 @@ import {
   createExecutionResultLog,
   createExecutionPlanSummaryMessage,
 } from "./createExecutionLog.js"
-import { createLogger } from "../logger.js"
+import { createLogger, LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 
 export const executePlan = async (
   executionPlan,
@@ -21,7 +21,7 @@ export const executePlan = async (
     maxParallelExecution = Math.max(cpus.length - 1, 1),
     beforeEachExecutionCallback = () => {},
     afterEachExecutionCallback = () => {},
-    logLevel = "log",
+    logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
   } = {},
 ) => {
   const { log } = createLogger({ logLevel })
