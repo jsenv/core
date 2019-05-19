@@ -74,7 +74,11 @@ const rollupSourcemapToCompilationSourcemap = ({
   const sourcesContent = []
   rollupSourcemap.sources.forEach((sourceRelativeToEntry, index) => {
     const sourcePath = resolve(
-      dirname(`${projectPathname}${compileIntoRelativePath}${entryRelativePath}`),
+      dirname(
+        pathnameToOperatingSystemPath(
+          `${projectPathname}${compileIntoRelativePath}${entryRelativePath}`,
+        ),
+      ),
       sourceRelativeToEntry,
     )
     const sourcePathname = operatingSystemPathToPathname(sourcePath)
