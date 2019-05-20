@@ -27,7 +27,7 @@ const puppeteer = import.meta.require("puppeteer")
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
   compileServerOrigin,
-  projectFolder,
+  projectPath,
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   browserClientRelativePath = DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
@@ -36,10 +36,10 @@ export const launchChromium = async ({
 }) => {
   if (typeof compileServerOrigin !== "string")
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
-  if (typeof projectFolder !== "string")
-    throw new TypeError(`projectFolder must be a string, got ${projectFolder}`)
+  if (typeof projectPath !== "string")
+    throw new TypeError(`projectPath must be a string, got ${projectPath}`)
 
-  const projectPathname = operatingSystemPathToPathname(projectFolder)
+  const projectPathname = operatingSystemPathToPathname(projectPath)
 
   const options = {
     headless,

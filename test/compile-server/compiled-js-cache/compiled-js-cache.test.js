@@ -6,20 +6,20 @@ import { fetch } from "../fetch.js"
 
 const rimraf = import.meta.require("rimraf")
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const compileId = "otherwise"
 const fileRelativePath = `${folderJsenvRelativePath}/file.js`
 
 const compileServer = await startCompileServer({
-  projectFolder,
+  projectPath,
   compileIntoRelativePath,
   logLevel: "off",
 })
 
 await new Promise((resolve, reject) =>
-  rimraf(`${projectFolder}${compileIntoRelativePath}`, (error) => {
+  rimraf(`${projectPath}${compileIntoRelativePath}`, (error) => {
     if (error) reject(error)
     else resolve()
   }),

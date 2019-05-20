@@ -4,12 +4,12 @@ import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { bundleBrowser } from "../../../index.js"
 import { importBrowserBundle } from "../import-browser-bundle.js"
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/browser`
 
 await bundleBrowser({
-  projectFolder,
+  projectPath,
   bundleIntoRelativePath,
   entryPointMap: {
     main: `${folderJsenvRelativePath}/import-meta-url.js`,
@@ -17,7 +17,7 @@ await bundleBrowser({
   logLevel: "off",
 })
 const { namespace: actual, serverOrigin } = await importBrowserBundle({
-  bundleFolder: `${projectFolder}${bundleIntoRelativePath}`,
+  bundleFolder: `${projectPath}${bundleIntoRelativePath}`,
   file: "main.js",
 })
 const expected = { default: `${serverOrigin}/main.js` }

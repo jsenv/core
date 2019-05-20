@@ -28,7 +28,7 @@ import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
-  projectFolder,
+  projectPath,
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
@@ -51,10 +51,10 @@ export const startCompileServer = async ({
   signature,
   logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
 }) => {
-  if (typeof projectFolder !== "string")
-    throw new TypeError(`projectFolder must be a string. got ${projectFolder}`)
+  if (typeof projectPath !== "string")
+    throw new TypeError(`projectPath must be a string. got ${projectPath}`)
 
-  const projectPathname = operatingSystemPathToPathname(projectFolder)
+  const projectPathname = operatingSystemPathToPathname(projectPath)
 
   const groupMap = generateGroupMap({
     babelPluginMap,
@@ -92,7 +92,7 @@ export const startCompileServer = async ({
       watchedFiles.clear()
     })
     projectFileRequestedCallback = ({ fileRelativePath }) => {
-      const filePath = `${projectFolder}/${fileRelativePath}`
+      const filePath = `${projectPath}/${fileRelativePath}`
       // when I ask for a compiled file, watch the corresponding file on filesystem
       // here we should use the registerFileLifecyle stuff made in
       // jsenv-eslint-import-resolver so support if file gets created/deleted

@@ -1,6 +1,6 @@
-import { assert } from "/node_modules/@dmail/assert/index.js"
-import { remapResolvedImport } from "/node_modules/@jsenv/module-resolution/index.js"
-import { wrapImportMap } from "../../wrapImportMap.js"
+import { assert } from "@dmail/assert"
+import { remapResolvedImport } from "@jsenv/module-resolution"
+import { wrapImportMap } from "../../../src/import-map/wrapImportMap.js"
 
 const importMap = {
   imports: {

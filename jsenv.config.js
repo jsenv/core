@@ -1,8 +1,8 @@
 const { launchNode } = require("@jsenv/core")
 const { jsenvBabelPluginMap } = require("./node_modules/@jsenv/babel-plugin-map/index.js")
 
-const projectFolder = __dirname
-exports.projectFolder = projectFolder
+const projectPath = __dirname
+exports.projectPath = projectPath
 
 const testDescription = {
   "/test/**/*.test.js": {

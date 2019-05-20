@@ -4,14 +4,14 @@ import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta
 import { startCompileServer } from "../../../index.js"
 import { fetch } from "../fetch.js"
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const compileId = "otherwise"
 const fileRelativePath = `${folderJsenvRelativePath}/syntax-error.js`
 
 const compileServer = await startCompileServer({
-  projectFolder,
+  projectPath,
   compileIntoRelativePath,
   logLevel: "off",
 })
@@ -37,7 +37,7 @@ const expected = {
   body: {
     message: actual.body.message,
     messageHTML: actual.body.messageHTML,
-    filename: `${projectFolder}${fileRelativePath}`,
+    filename: `${projectPath}${fileRelativePath}`,
     lineNumber: 1,
     columnNumber: 11,
   },

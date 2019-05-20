@@ -24,12 +24,12 @@ const server = await startServer({
   logLevel: "off",
 })
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/node`
 
 await bundleNode({
-  projectFolder,
+  projectPath,
   bundleIntoRelativePath,
   entryPointMap: {
     main: `${folderJsenvRelativePath}/http.js`,
@@ -38,7 +38,7 @@ await bundleNode({
 })
 
 const { namespace: actual } = await importNodeBundle({
-  bundleFolder: `${projectFolder}${bundleIntoRelativePath}`,
+  bundleFolder: `${projectPath}${bundleIntoRelativePath}`,
   file: "main.js",
 })
 const expected = 42

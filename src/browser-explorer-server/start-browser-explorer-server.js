@@ -17,7 +17,7 @@ import { operatingSystemPathToPathname } from "../operating-system-path.js"
 
 export const startBrowserExplorerServer = async ({
   cancellationToken = createCancellationToken(),
-  projectFolder,
+  projectPath,
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   browserClientRelativePath = DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
@@ -32,7 +32,7 @@ export const startBrowserExplorerServer = async ({
   forcePort = false,
   signature,
 }) => {
-  const projectPathname = operatingSystemPathToPathname(projectFolder)
+  const projectPathname = operatingSystemPathToPathname(projectPath)
 
   const metaDescription = namedValueDescriptionToMetaDescription({
     browsable: browsableDescription,
@@ -40,7 +40,7 @@ export const startBrowserExplorerServer = async ({
 
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
-    projectFolder,
+    projectPath,
     compileIntoRelativePath,
     importMapRelativePath,
     browserGroupResolverPath,

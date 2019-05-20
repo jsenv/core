@@ -4,13 +4,13 @@ import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { bundleNode } from "../../../index.js"
 import { importNodeBundle } from "../import-node-bundle.js"
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/node`
 const fileRelativePath = `${folderJsenvRelativePath}/without-balancing.js`
 
 await bundleNode({
-  projectFolder,
+  projectPath,
   bundleIntoRelativePath,
   entryPointMap: {
     main: fileRelativePath,
@@ -19,7 +19,7 @@ await bundleNode({
 })
 
 const { namespace: actual } = await importNodeBundle({
-  bundleFolder: `${projectFolder}${bundleIntoRelativePath}`,
+  bundleFolder: `${projectPath}${bundleIntoRelativePath}`,
   file: `main.js`,
 })
 const expected = 42

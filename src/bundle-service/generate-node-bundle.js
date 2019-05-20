@@ -33,7 +33,7 @@ export const generateNodeBundle = async ({
       }
 
       const bundle = await bundleNode({
-        projectFolder: pathnameToOperatingSystemPath(projectPathname),
+        projectPath: pathnameToOperatingSystemPath(projectPathname),
         bundleIntoRelativePath,
         importMapRelativePath,
         entryPointMap,

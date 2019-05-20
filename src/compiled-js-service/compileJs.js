@@ -16,6 +16,9 @@ export const compileJs = async ({
   remap = true,
   remapMethod = "comment", // 'comment', 'inline'
 }) => {
+  if (typeof babelPluginMap !== "object")
+    throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`)
+
   const sourceFilename = pathnameToOperatingSystemPath(`${projectPathname}${sourceRelativePath}`)
 
   try {
@@ -77,12 +80,12 @@ export const compileJs = async ({
     }
 
     if (coverage) {
-      const coveragepathnameRelative = generateAssetpathnameRelative({
+      const coveragePathnameRelative = generateAssetpathnameRelative({
         projectPathname,
         sourceRelativePath,
         assetName: "coverage.json",
       })
-      assets.push(coveragepathnameRelative)
+      assets.push(coveragePathnameRelative)
       assetsContent.push(stringifyCoverage(coverage))
     }
 

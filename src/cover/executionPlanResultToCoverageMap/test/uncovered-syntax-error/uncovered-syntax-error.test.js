@@ -2,9 +2,9 @@ import { assert } from "/node_modules/@dmail/assert/index.js"
 import { executePlan } from "../../../../executePlan/index.js"
 import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap.js"
 
-const { projectFolder } = import.meta.require("../../../../../jsenv.config.js")
+const { projectPath } = import.meta.require("../../../../../jsenv.config.js")
 
-const testFolder = `${projectFolder}/src/executionPlanResultToCoverageMap/test/uncovered-syntax-error`
+const testFolder = `${projectPath}/src/executionPlanResultToCoverageMap/test/uncovered-syntax-error`
 
 ;(async () => {
   const executionPlan = {}
@@ -14,7 +14,7 @@ const testFolder = `${projectFolder}/src/executionPlanResultToCoverageMap/test/u
   })
 
   const coverageMap = await executionPlanResultToCoverageMap(executionPlanResult, {
-    projectFolder: testFolder,
+    projectPath: testFolder,
     arrayOfpathnameRelativeToCover: ["syntax-error.js"],
   })
 

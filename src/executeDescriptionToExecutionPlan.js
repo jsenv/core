@@ -18,11 +18,11 @@ export const executeDescriptionToExecutionPlan = async ({
   defaultAllocatedMsPerExecution = 20000,
   compileServerLogLevel,
 }) => {
-  const projectFolder = pathnameToOperatingSystemPath(projectPathname)
+  const projectPath = pathnameToOperatingSystemPath(projectPathname)
 
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
-    projectFolder,
+    projectPath,
     compileIntoRelativePath,
     importMapRelativePath,
     browserGroupResolverRelativePath,
@@ -63,7 +63,7 @@ singleExecutionPlan: ${singleExecutionPlan}`)
               ...options,
               cancellationToken,
               compileServerOrigin,
-              projectFolder,
+              projectPath,
               compileIntoRelativePath,
             }),
           allocatedMs: allocatedMs === undefined ? defaultAllocatedMsPerExecution : allocatedMs,

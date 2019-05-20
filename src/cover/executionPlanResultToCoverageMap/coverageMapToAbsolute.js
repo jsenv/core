@@ -1,10 +1,10 @@
 import { objectMapValue } from "../../objectHelper.js"
 
-export const coverageMapToAbsolute = (relativeCoverageMap, projectFolder) => {
+export const coverageMapToAbsolute = (relativeCoverageMap, projectPath) => {
   return objectMapValue(relativeCoverageMap, (coverage) => {
     return {
       ...coverage,
-      path: `${projectFolder}/${coverage.path}`,
+      path: `${projectPath}/${coverage.path}`,
     }
   })
 }

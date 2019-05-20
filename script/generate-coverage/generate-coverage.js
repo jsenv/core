@@ -1,8 +1,8 @@
 const { cover } = require("@jsenv/core")
-const { projectFolder, coverDescription, testDescription } = require("../../jsenv.config.js")
+const { projectPath, coverDescription, testDescription } = require("../../jsenv.config.js")
 
 cover({
-  projectFolder,
+  projectFolder: projectPath,
   coverDescription,
   executeDescription: testDescription,
 })

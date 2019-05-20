@@ -15,7 +15,7 @@ import { operatingSystemPathToPathname } from "../../operating-system-path.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../../logger.js"
 
 export const bundleBrowser = async ({
-  projectFolder,
+  projectPath,
   bundleIntoRelativePath = DEFAULT_BUNDLE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   entryPointMap = DEFAULT_ENTRY_POINT_MAP,
@@ -31,7 +31,7 @@ export const bundleBrowser = async ({
   writeOnFileSystem = true,
   generateEntryPages = false,
 }) => {
-  const projectPathname = operatingSystemPathToPathname(projectFolder)
+  const projectPathname = operatingSystemPathToPathname(projectPath)
 
   const bundlePlatformPromise = bundlePlatform({
     projectPathname,

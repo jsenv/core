@@ -84,7 +84,7 @@ const createDisconnectedLog = ({
 
   return `
 ${color}${icon} disconnected during execution.${close}
-fileRelativePath: ${fileRelativePath}
+file: ${fileRelativePath.slice(1)}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
@@ -105,7 +105,7 @@ const createTimedoutLog = ({
 
   return `
 ${color}${icon} execution takes more than ${allocatedMs}ms.${close}
-fileRelativePath: ${fileRelativePath}
+file: ${fileRelativePath.slice(1)}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
@@ -125,7 +125,7 @@ const createErroredLog = ({
 
   return `
 ${color}${icon} error during execution.${close}
-fileRelativePath: ${fileRelativePath}
+file: ${fileRelativePath.slice(1)}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
@@ -145,7 +145,7 @@ const createCompletedLog = ({
 
   return `
 ${color}${icon} execution completed.${close}
-fileRelativePath: ${fileRelativePath}
+file: ${fileRelativePath.slice(1)}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,

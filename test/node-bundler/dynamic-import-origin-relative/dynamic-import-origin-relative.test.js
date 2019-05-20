@@ -4,13 +4,13 @@ import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta
 import { bundleNode } from "../../../index.js"
 import { importNodeBundle } from "../import-node-bundle.js"
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/node`
 const fileRelativePath = `${folderJsenvRelativePath}/dynamic-import-origin-relative.js`
 
 await bundleNode({
-  projectFolder,
+  projectPath,
   bundleIntoRelativePath,
   entryPointMap: {
     main: fileRelativePath,
@@ -19,7 +19,7 @@ await bundleNode({
 })
 
 const { namespace } = await importNodeBundle({
-  bundleFolder: `${projectFolder}${bundleIntoRelativePath}`,
+  bundleFolder: `${projectPath}${bundleIntoRelativePath}`,
   file: "main.js",
 })
 const actual = await namespace

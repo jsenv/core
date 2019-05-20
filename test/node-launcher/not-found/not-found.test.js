@@ -4,14 +4,14 @@ import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 import { assignNonEnumerableProperties } from "../assignNonEnumerableProperties.js"
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const fileRelativePath = `${folderJsenvRelativePath}/not-found.js`
 const compileId = "otherwise"
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  projectFolder,
+  projectPath,
   compileIntoRelativePath,
   logLevel: "off",
 })
@@ -21,7 +21,7 @@ const actual = await launchAndExecute({
     launchNode({
       ...options,
       compileServerOrigin,
-      projectFolder,
+      projectPath,
       compileIntoRelativePath,
     }),
   fileRelativePath,
@@ -30,8 +30,8 @@ const expected = {
   status: "errored",
   error: assignNonEnumerableProperties(
     new Error(`module not found.
-href: file://${projectFolder}${compileIntoRelativePath}/${compileId}${folderJsenvRelativePath}/foo.js
-importerHref: file://${projectFolder}${compileIntoRelativePath}/${compileId}${fileRelativePath}`),
+href: file://${projectPath}${compileIntoRelativePath}/${compileId}${folderJsenvRelativePath}/foo.js
+importerHref: file://${projectPath}${compileIntoRelativePath}/${compileId}${fileRelativePath}`),
     {
       href: `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${folderJsenvRelativePath}/foo.js`,
       importerHref: `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${fileRelativePath}`,

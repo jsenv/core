@@ -14,7 +14,7 @@ import { LOG_LEVEL_OFF } from "../logger.js"
 export const execute = async ({
   fileRelativePath,
   launch,
-  projectFolder,
+  projectPath,
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
@@ -32,7 +32,7 @@ export const execute = async ({
 
     const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
-      projectFolder,
+      projectPath,
       compileIntoRelativePath,
       importMapRelativePath,
       babelPluginMap,
@@ -46,7 +46,7 @@ export const execute = async ({
     const result = await launchAndExecute({
       cancellationToken,
       launch: (options) =>
-        launch({ ...options, compileServerOrigin, projectFolder, compileIntoRelativePath }),
+        launch({ ...options, compileServerOrigin, projectPath, compileIntoRelativePath }),
       logLevel: executionLogLevel,
       mirrorConsole,
       stopOnceExecuted,

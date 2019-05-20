@@ -4,8 +4,8 @@ import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 export const getCacheFilename = ({ projectPathname, compileRelativePath }) =>
   pathnameToOperatingSystemPath(`${projectPathname}${compileRelativePath}__asset__/cache.json`)
 
-// the fact an asset filename is relative to projectFolder + compiledpathnameRelative
-// is strange considering a source filename is relative to projectFolder
+// the fact an asset filename is relative to projectPath + compiledpathnameRelative
+// is strange considering a source filename is relative to projectPath
 // I think it would make more sense to make them relative to the cache.json
 // file itself but that's for later
 export const getAssetFilename = ({ projectPathname, compileRelativePath, asset }) =>

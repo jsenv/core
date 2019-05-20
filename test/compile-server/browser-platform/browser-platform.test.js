@@ -4,12 +4,12 @@ import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta
 import { startCompileServer } from "../../../index.js"
 import { fetch } from "../fetch.js"
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 
 const compileServer = await startCompileServer({
-  projectFolder,
+  projectPath,
   compileIntoRelativePath,
   logLevel: "off",
 })

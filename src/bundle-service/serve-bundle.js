@@ -36,7 +36,7 @@ export const serveBundle = async ({
 
       const generateBundle = format === "cjs" ? bundleNode : bundleBrowser
       const bundle = await generateBundle({
-        projectFolder: pathnameToOperatingSystemPath(projectPathname),
+        projectPath: pathnameToOperatingSystemPath(projectPathname),
         bundleIntoRelativePath,
         importMapRelativePath,
         entryPointMap,

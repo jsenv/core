@@ -5,7 +5,7 @@ import { startCompileServer, launchAndExecute, launchChromium } from "../../../i
 import { createInstrumentPlugin } from "../../../src/cover/createInstrumentPlugin.js"
 import { removeFolder } from "../removeFolder.js"
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const fileRelativePath = `${folderJsenvRelativePath}/origin-relative.js`
@@ -17,10 +17,10 @@ const babelPluginMap = {
   ],
 }
 
-await removeFolder(`${projectFolder}${compileIntoRelativePath}`)
+await removeFolder(`${projectPath}${compileIntoRelativePath}`)
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  projectFolder,
+  projectPath,
   compileIntoRelativePath,
   babelPluginMap,
   logLevel: "off",
@@ -31,7 +31,7 @@ const actual = await launchAndExecute({
     launchChromium({
       ...options,
       compileServerOrigin,
-      projectFolder,
+      projectPath,
       compileIntoRelativePath,
     }),
   stopOnceExecuted: true,

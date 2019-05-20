@@ -3,13 +3,13 @@ import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta
 import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { bundleNode } from "../../../index.js"
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/node`
 
 try {
   await bundleNode({
-    projectFolder,
+    projectPath,
     bundleIntoRelativePath,
     entryPointMap: {
       main: `${folderJsenvRelativePath}/top-level-await.js`,

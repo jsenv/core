@@ -2,14 +2,14 @@ import fs from "fs"
 import { assert } from "/node_modules/@dmail/assert/index.js"
 import { serveFile } from "../serve-file.js"
 
-const { projectFolder } = import.meta.require("../../../jsenv.config.js")
+const { projectPath } = import.meta.require("../../../jsenv.config.js")
 
 {
   const ressource = "/src/requestToFileResponse/test/file.js"
-  const actual = await serveFile(`${projectFolder}${ressource}`, {
+  const actual = await serveFile(`${projectPath}${ressource}`, {
     cacheStrategy: "etag",
   })
-  const content = String(fs.readFileSync(`${projectFolder}${ressource}`))
+  const content = String(fs.readFileSync(`${projectPath}${ressource}`))
   const length = Buffer.byteLength(content)
   const expected = {
     status: 200,
@@ -31,7 +31,7 @@ const { projectFolder } = import.meta.require("../../../jsenv.config.js")
       ressource,
       origin: "http://domain.com",
     },
-    { projectFolder, locate: ({ rootHref }) => `${rootHref}/otherfolder/otherfile` },
+    { projectPath, locate: ({ rootHref }) => `${rootHref}/otherfolder/otherfile` },
   )
   const expected = {
     status: 307,

@@ -34,7 +34,7 @@ import {
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS, LOG_LEVEL_OFF } from "../logger.js"
 
 export const cover = async ({
-  projectFolder,
+  projectPath,
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
@@ -69,7 +69,7 @@ export const cover = async ({
   }
 
   const start = async () => {
-    const projectPathname = operatingSystemPathToPathname(projectFolder)
+    const projectPathname = operatingSystemPathToPathname(projectPath)
     const cancellationToken = createProcessInterruptionCancellationToken()
     const coverMetaDescription = namedValueDescriptionToMetaDescription({
       cover: coverDescription,

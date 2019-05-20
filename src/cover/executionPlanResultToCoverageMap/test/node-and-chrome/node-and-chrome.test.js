@@ -5,16 +5,16 @@ import { executePlan } from "../../../../executePlan/index.js"
 import { startCompileServer } from "../../../../compile-server/index.js"
 import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap.js"
 
-const { projectFolder } = import.meta.require("../../../../../jsenv.config.js")
+const { projectPath } = import.meta.require("../../../../../jsenv.config.js")
 
-const testFolder = `${projectFolder}/src/cover/executionPlanResultToCoverageMap/test/node-and-chrome`
+const testFolder = `${projectPath}/src/cover/executionPlanResultToCoverageMap/test/node-and-chrome`
 const compileInto = ".dist"
 
 ;(async () => {
   const sourceOrigin = `file://${testFolder}`
 
   const { origin: compileServerOrigin } = await startCompileServer({
-    projectFolder: testFolder,
+    projectPath: testFolder,
     compileInto,
     protocol: "http",
     ip: "127.0.0.1",
@@ -44,7 +44,7 @@ const compileInto = ".dist"
   })
 
   const coverageMap = await executionPlanResultToCoverageMap(executionPlanResult, {
-    projectFolder,
+    projectPath,
     arrayOfpathnameRelativeToCover: [],
   })
 

@@ -75,7 +75,11 @@ export const transpiler = async ({
       },
     })
 
-    return finalResult
+    return {
+      ...result,
+      ...finalResult,
+      metadata: { ...result.metadata, ...finalResult.metadata },
+    }
   }
 
   const babelPluginArray = [

@@ -4,20 +4,20 @@ import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const fileRelativePath = `${folderJsenvRelativePath}/timeout.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  projectFolder,
+  projectPath,
   compileIntoRelativePath,
   logLevel: "off",
 })
 
 const actual = await launchAndExecute({
   launch: (options) =>
-    launchNode({ ...options, compileServerOrigin, projectFolder, compileIntoRelativePath }),
+    launchNode({ ...options, compileServerOrigin, projectPath, compileIntoRelativePath }),
   allocatedMs: 5000,
   captureConsole: true,
   fileRelativePath,

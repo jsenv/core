@@ -1,6 +1,5 @@
 ## TODO
 
-- rename projectFolder projectPath
 - fix uneval issue with AssertionError
 - nothing else :)
 

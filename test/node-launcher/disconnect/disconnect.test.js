@@ -4,13 +4,13 @@ import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
 import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const fileRelativePath = `${folderJsenvRelativePath}/disconnect.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  projectFolder,
+  projectPath,
   compileIntoRelativePath,
   logLevel: "off",
 })
@@ -20,7 +20,7 @@ const actual = await launchAndExecute({
     launchNode({
       ...options,
       compileServerOrigin,
-      projectFolder,
+      projectPath,
       compileIntoRelativePath,
     }),
   captureConsole: true,

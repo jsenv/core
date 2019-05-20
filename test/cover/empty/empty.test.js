@@ -3,12 +3,12 @@ import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
 import { cover } from "../../../index.js"
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 
 const { coverageMap } = await cover({
-  projectFolder,
+  projectPath,
   compileIntoRelativePath,
   coverDescription: {
     [`${folderJsenvRelativePath}/file.js`]: true,

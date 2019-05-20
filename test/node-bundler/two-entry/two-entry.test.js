@@ -4,14 +4,14 @@ import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta
 import { bundleNode } from "../../../index.js"
 import { importNodeBundle } from "../import-node-bundle.js"
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/node`
 const firstEntryRelativePath = `${folderJsenvRelativePath}/a.js`
 const secondEntryRelativePath = `${folderJsenvRelativePath}/b.js`
 
 await bundleNode({
-  projectFolder,
+  projectPath,
   bundleIntoRelativePath,
   entryPointMap: {
     a: firstEntryRelativePath,
@@ -22,7 +22,7 @@ await bundleNode({
 
 {
   const { namespace: actual } = await importNodeBundle({
-    bundleFolder: `${projectFolder}${bundleIntoRelativePath}`,
+    bundleFolder: `${projectPath}${bundleIntoRelativePath}`,
     file: `a.js`,
   })
   const expected = "a-shared"
@@ -30,7 +30,7 @@ await bundleNode({
 }
 {
   const { namespace: actual } = await importNodeBundle({
-    bundleFolder: `${projectFolder}${bundleIntoRelativePath}`,
+    bundleFolder: `${projectPath}${bundleIntoRelativePath}`,
     file: `b.js`,
   })
   const expected = "b-shared"

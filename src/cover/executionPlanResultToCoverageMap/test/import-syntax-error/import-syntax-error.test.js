@@ -5,9 +5,9 @@ import { executePlan } from "../../../../executePlan/index.js"
 import { startCompileServer } from "../../../../compile-server/index.js"
 import { executionPlanResultToCoverageMap } from "../../executionPlanResultToCoverageMap.js"
 
-const { projectFolder } = import.meta.require("../../../../../jsenv.config.js")
+const { projectPath } = import.meta.require("../../../../../jsenv.config.js")
 
-const testFolder = `${projectFolder}/src/executionPlanResultToCoverageMap/test/import-syntax-error`
+const testFolder = `${projectPath}/src/executionPlanResultToCoverageMap/test/import-syntax-error`
 const compileInto = ".dist"
 const babelPluginMap = {}
 
@@ -15,7 +15,7 @@ const babelPluginMap = {}
   const sourceOrigin = `file://${testFolder}`
 
   const { origin: compileServerOrigin } = await startCompileServer({
-    projectFolder: testFolder,
+    projectPath: testFolder,
     compileInto,
     babelPluginMap,
     logLevel: "off",
@@ -43,7 +43,7 @@ const babelPluginMap = {}
   })
 
   const coverageMap = await executionPlanResultToCoverageMap(executionPlanResult, {
-    projectFolder,
+    projectPath,
     arrayOfpathnameRelativeToCover: [],
   })
 

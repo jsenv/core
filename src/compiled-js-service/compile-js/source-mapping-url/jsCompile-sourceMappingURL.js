@@ -1,15 +1,15 @@
 import { assert } from "/node_modules/@dmail/assert/index.js"
-import { compileJs } from "../../compileJs.js"
+import { compileJs } from "../../../src/compiled-js-service/compileJs.js"
 
-const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
+const { projectPath } = import.meta.require("../../../../jsenv.config.js")
 
-const testFolder = `${projectFolder}/src/jsCompile/test/fixtures`
+const testFolder = `${projectPath}/src/jsCompile/test/fixtures`
 const file = "folder/file.js"
 const fileAbsolute = `${testFolder}/${file}`
 const input = `true`
 
 compileJs({
-  projectFolder: testFolder,
+  projectPath: testFolder,
   file,
   fileAbsolute,
   input,

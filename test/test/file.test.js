@@ -3,7 +3,7 @@ import { importMetaURLToFolderJsenvRelativePath } from "../../src/import-meta-ur
 import { JSENV_PATH } from "../../src/JSENV_PATH.js"
 import { launchNode, launchChromium, test } from "../../index.js"
 
-const projectFolder = JSENV_PATH
+const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const fileRelativePath = `${folderJsenvRelativePath}/file.js`
@@ -20,7 +20,7 @@ const testDescription = {
 }
 
 const actual = await test({
-  projectFolder,
+  projectPath,
   compileIntoRelativePath,
   executeDescription: testDescription,
   executionLogLevel: "off",

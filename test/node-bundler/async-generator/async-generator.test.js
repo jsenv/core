@@ -18,12 +18,12 @@
 // const transformRegenerator = import.meta.require("@babel/plugin-transform-regenerator")
 
 // const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
-// const projectFolder = JSENV_PATH
+// const projectPath = JSENV_PATH
 // const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/node`
 
 // // it does not work because we have no strategy to serve regeneratorRuntime
 // await bundleNode({
-//   projectFolder,
+//   projectPath,
 //   bundleIntoRelativePath
 //   entryPointMap: {
 //     main: `${folderJsenvRelativePath}/async.js`,
@@ -36,6 +36,6 @@
 // })
 
 // const { namespace: actual } = await importNodeBundle({
-//   bundleFolder: `${projectFolder}${bundleIntoRelativePath}`,
+//   bundleFolder: `${projectPath}${bundleIntoRelativePath}`,
 //   file: `main.js`,
 // })
