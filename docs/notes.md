@@ -1,7 +1,7 @@
 ## TODO
 
 - rename projectFolder projectPath
-- fix windows filename inside jsenv-core
+- fix uneval issue with AssertionError
 - nothing else :)
 
 ## To keep in mind

@@ -2,6 +2,7 @@
 
 | term                  | description                                      |
 | --------------------- | ------------------------------------------------ |
+| project               | a folder containing the files you're working on  |
 | importMap             | object used to remap import to an other location |
 | platform              | browser, nodejs                                  |
 | operating system      | linux, mac, windows                              |
