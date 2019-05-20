@@ -1,6 +1,5 @@
 ## TODO
 
-- jsenvception for folderPath
 - nothing else :)
 
 ## To keep in mind

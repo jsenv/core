@@ -5,7 +5,7 @@ const { getFromProcessArguments } = require("./getFromProcessArguments.js")
 const filenameRelative = getFromProcessArguments("file").replace(/\\/g, "/")
 
 execute({
-  projectFolder: projectPath,
+  projectPath,
   launch: (options) => launchNode({ ...options, debugModeInheritBreak: true }),
   fileRelativePath: `/${filenameRelative}`,
   mirrorConsole: true,
