@@ -8,7 +8,7 @@ export const serveBrowserExplorerPage = ({
   compileIntoRelativePath,
   importMapRelativePath,
   browserClientRelativePath,
-  babelConfigMap,
+  babelPluginMap,
   browsableMetaMap,
   request,
 }) =>
@@ -27,7 +27,7 @@ export const serveBrowserExplorerPage = ({
         importMapRelativePath,
         compileIntoRelativePath,
         browserClientRelativePath,
-        babelConfigMap,
+        babelPluginMap,
         request,
       }),
   )

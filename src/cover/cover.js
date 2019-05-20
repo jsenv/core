@@ -24,7 +24,7 @@ import {
   DEFAULT_COVERAGE_RELATIVE_PATH,
   DEFAULT_COVER_DESCRIPTION,
   DEFAULT_EXECUTE_DESCRIPTION,
-  DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_BABEL_PLUGIN_MAP,
   DEFAULT_MAX_PARALLEL_EXECUTION,
 } from "./cover-constant.js"
 import {
@@ -45,7 +45,7 @@ export const cover = async ({
   // for now we stick to coverDescription using project-structure api
   coverDescription = DEFAULT_COVER_DESCRIPTION,
   executeDescription = DEFAULT_EXECUTE_DESCRIPTION,
-  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
+  babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
   compileGroupCount = 2,
   maxParallelExecution = DEFAULT_MAX_PARALLEL_EXECUTION,
   defaultAllocatedMsPerExecution = 20000,
@@ -89,8 +89,8 @@ export const cover = async ({
           predicate: (relativePath) => coverRelativePathPredicate(relativePath),
         })
 
-        const babelConfigMapWithInstrumentation = {
-          ...babelConfigMap,
+        const babelPluginMapWithInstrumentation = {
+          ...babelPluginMap,
           "transform-instrument": [instrumentBabelPlugin],
         }
 
@@ -101,7 +101,7 @@ export const cover = async ({
           importMapRelativePath,
           browserGroupResolverRelativePath,
           nodeGroupResolverRelativePath,
-          babelConfigMap: babelConfigMapWithInstrumentation,
+          babelPluginMap: babelPluginMapWithInstrumentation,
           compileGroupCount,
           executeDescription,
           defaultAllocatedMsPerExecution,

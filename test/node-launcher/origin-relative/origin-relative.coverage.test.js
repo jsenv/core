@@ -9,7 +9,7 @@ const projectFolder = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const fileRelativePath = `${folderJsenvRelativePath}/origin-relative.js`
-const babelConfigMap = {
+const babelPluginMap = {
   "transform-instrument": [
     createInstrumentPlugin({
       predicate: (relativePath) => relativePath === `${folderJsenvRelativePath}/file.js`,
@@ -22,7 +22,7 @@ await removeFolder(`${projectFolder}${compileIntoRelativePath}`)
 const { origin: compileServerOrigin } = await startCompileServer({
   projectFolder,
   compileIntoRelativePath,
-  babelConfigMap,
+  babelPluginMap,
   logLevel: "off",
 })
 

@@ -28,7 +28,7 @@
 //   entryPointMap: {
 //     main: `${folderJsenvRelativePath}/async.js`,
 //   },
-//   babelConfigMap: {
+//   babelPluginMap: {
 //     "transform-async-to-generator": [transformAsyncToGenerator],
 //     "transform-regenerator": [transformRegenerator],
 //   },

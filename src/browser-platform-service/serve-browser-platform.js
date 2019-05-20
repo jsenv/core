@@ -14,7 +14,7 @@ export const serveBrowserPlatform = async ({
   compileIntoRelativePath,
   importMapRelativePath,
   browserGroupResolverRelativePath,
-  babelConfigMap,
+  babelPluginMap,
   groupMap,
   // projectFileRequestedCallback,
   request: { ressource, method, headers },
@@ -31,7 +31,7 @@ export const serveBrowserPlatform = async ({
     projectPathname,
     importMapRelativePath,
     compileIntoRelativePath,
-    babelConfigMap,
+    babelPluginMap,
     compileRelativePath: ressource,
     sourceRelativePath: relativePathInception({
       projectPathname,

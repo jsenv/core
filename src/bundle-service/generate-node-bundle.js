@@ -13,7 +13,7 @@ export const generateNodeBundle = async ({
   compileRelativePath,
   sourcemapRelativePath = computeSourcemapRelativePath(compileRelativePath),
   inlineSpecifierMap = {},
-  babelConfigMap,
+  babelPluginMap,
   logLevel = LOG_LEVEL_OFF,
 }) => {
   return getOrGenerateCompiledFile({
@@ -38,7 +38,7 @@ export const generateNodeBundle = async ({
         importMapRelativePath,
         entryPointMap,
         inlineSpecifierMap,
-        babelConfigMap,
+        babelPluginMap,
         compileGroupCount: 1,
         throwUnhandled: false,
         writeOnFileSystem: false,

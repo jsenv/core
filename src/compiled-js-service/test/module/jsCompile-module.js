@@ -8,14 +8,14 @@ const testFolder = `${projectFolder}/src/jsCompile/test/fixtures`
 const file = "module.js"
 const fileAbsolute = `${testFolder}/${file}`
 const input = fs.readFileSync(fileAbsolute).toString()
-const babelConfigMap = {}
+const babelPluginMap = {}
 
 compileJs({
   projectFolder: testFolder,
   file,
   fileAbsolute,
   input,
-  babelConfigMap,
+  babelPluginMap,
 }).then(({ output }) => {
   assert({ actual: output.includes("System.register"), expected: true })
 })

@@ -4,16 +4,16 @@ import { browserScoreMap } from "./browserScoreMap.js"
 import { nodeVersionScoreMap } from "./nodeVersionScoreMap.js"
 
 {
-  const babelConfigMap = { "transform-block-scoping": true }
+  const babelPluginMap = { "transform-block-scoping": true }
   const actual = generateGroupMap({
-    babelConfigMap,
+    babelPluginMap,
     platformScoreMap: { node: nodeVersionScoreMap },
     groupCount: 2,
   })
   const expected = {
     best: { incompatibleNameArray: [], platformCompatMap: { node: "6" } },
     otherwise: {
-      incompatibleNameArray: Object.keys(babelConfigMap),
+      incompatibleNameArray: Object.keys(babelPluginMap),
       platformCompatMap: {},
     },
   }
@@ -21,9 +21,9 @@ import { nodeVersionScoreMap } from "./nodeVersionScoreMap.js"
 }
 
 {
-  const babelConfigMap = { "transform-block-scoping": true }
+  const babelPluginMap = { "transform-block-scoping": true }
   const actual = generateGroupMap({
-    babelConfigMap,
+    babelPluginMap,
     platformScoreMap: browserScoreMap,
     groupCount: 2,
   })
@@ -41,7 +41,7 @@ import { nodeVersionScoreMap } from "./nodeVersionScoreMap.js"
       },
     },
     otherwise: {
-      incompatibleNameArray: Object.keys(babelConfigMap),
+      incompatibleNameArray: Object.keys(babelPluginMap),
       platformCompatMap: {},
     },
   }
@@ -49,12 +49,12 @@ import { nodeVersionScoreMap } from "./nodeVersionScoreMap.js"
 }
 
 {
-  const babelConfigMap = {
+  const babelPluginMap = {
     "transform-block-scoping": true,
     "transform-modules-systemjs": true,
   }
   const actual = generateGroupMap({
-    babelConfigMap,
+    babelPluginMap,
     platformScoreMap: browserScoreMap,
     groupCount: 2,
   })
@@ -72,7 +72,7 @@ import { nodeVersionScoreMap } from "./nodeVersionScoreMap.js"
       },
     },
     otherwise: {
-      incompatibleNameArray: Object.keys(babelConfigMap),
+      incompatibleNameArray: Object.keys(babelPluginMap),
       platformCompatMap: {},
     },
   }
@@ -80,7 +80,7 @@ import { nodeVersionScoreMap } from "./nodeVersionScoreMap.js"
 }
 
 {
-  const babelConfigMap = {
+  const babelPluginMap = {
     "proposal-async-generator-functions": true,
     "proposal-object-rest-spread": true,
     "proposal-optional-catch-binding": true,
@@ -114,7 +114,7 @@ import { nodeVersionScoreMap } from "./nodeVersionScoreMap.js"
     "transform-unicode-regex": true,
   }
   const actual = generateGroupMap({
-    babelConfigMap,
+    babelPluginMap,
     platformScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
     groupCount: 2,
   })
@@ -139,7 +139,7 @@ import { nodeVersionScoreMap } from "./nodeVersionScoreMap.js"
       },
     },
     otherwise: {
-      incompatibleNameArray: Object.keys(babelConfigMap),
+      incompatibleNameArray: Object.keys(babelPluginMap),
       platformCompatMap: {},
     },
   }

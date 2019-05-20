@@ -12,7 +12,7 @@ export const transpiler = async ({
   filenameRelative,
   inputAst,
   inputMap,
-  babelConfigMap,
+  babelPluginMap,
   allowTopLevelAwait = true,
   transformTopLevelAwait = true,
   transformModuleIntoSystemFormat = true,
@@ -33,13 +33,13 @@ export const transpiler = async ({
     },
   }
 
-  const asyncPluginName = findAsyncPluginNameInBabelConfigMap(babelConfigMap)
+  const asyncPluginName = findAsyncPluginNameInbabelPluginMap(babelPluginMap)
 
   if (transformModuleIntoSystemFormat && transformTopLevelAwait && asyncPluginName) {
     const babelPluginArrayWithoutAsync = []
-    Object.keys(babelConfigMap).forEach((name) => {
+    Object.keys(babelPluginMap).forEach((name) => {
       if (name !== asyncPluginName) {
-        babelPluginArrayWithoutAsync.push(babelConfigMap[name])
+        babelPluginArrayWithoutAsync.push(babelPluginMap[name])
       }
     })
 
@@ -71,7 +71,7 @@ export const transpiler = async ({
         // https://github.com/babel/babel/blob/eac4c5bc17133c2857f2c94c1a6a8643e3b547a7/packages/babel-core/src/transformation/file/generate.js#L57
         // https://github.com/babel/babel/blob/090c364a90fe73d36a30707fc612ce037bdbbb24/packages/babel-core/src/transformation/file/merge-map.js#L6s
         inputSourceMap: result.map,
-        plugins: [...defaultBabelPluginArray, babelConfigMap[asyncPluginName]],
+        plugins: [...defaultBabelPluginArray, babelPluginMap[asyncPluginName]],
       },
     })
 
@@ -80,7 +80,7 @@ export const transpiler = async ({
 
   const babelPluginArray = [
     ...defaultBabelPluginArray,
-    ...Object.keys(babelConfigMap).map((babelPluginName) => babelConfigMap[babelPluginName]),
+    ...Object.keys(babelPluginMap).map((babelPluginName) => babelPluginMap[babelPluginName]),
     ...(transformModuleIntoSystemFormat
       ? [[transformModulesSystemJs, { topLevelAwait: transformTopLevelAwait }]]
       : []),
@@ -95,11 +95,11 @@ export const transpiler = async ({
   })
 }
 
-export const findAsyncPluginNameInBabelConfigMap = (babelConfigMap) => {
-  if ("transform-async-to-promises" in babelConfigMap) {
+export const findAsyncPluginNameInbabelPluginMap = (babelPluginMap) => {
+  if ("transform-async-to-promises" in babelPluginMap) {
     return "transform-async-to-promises"
   }
-  if ("transform-async-to-generator" in babelConfigMap) {
+  if ("transform-async-to-generator" in babelPluginMap) {
     return "transform-async-to-generator"
   }
   return ""

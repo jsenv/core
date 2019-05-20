@@ -13,7 +13,7 @@ export const executeDescriptionToExecutionPlan = async ({
   browserGroupResolverRelativePath,
   nodeGroupResolverRelativePath,
   compileGroupCount,
-  babelConfigMap,
+  babelPluginMap,
   executeDescription,
   defaultAllocatedMsPerExecution = 20000,
   compileServerLogLevel,
@@ -28,7 +28,7 @@ export const executeDescriptionToExecutionPlan = async ({
     browserGroupResolverRelativePath,
     nodeGroupResolverRelativePath,
     compileGroupCount,
-    babelConfigMap,
+    babelPluginMap,
     logLevel: compileServerLogLevel,
   })
 

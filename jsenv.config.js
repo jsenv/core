@@ -1,5 +1,5 @@
 const { launchNode } = require("@jsenv/core")
-const { babelConfigMap } = require("./node_modules/@jsenv/babel-config-map/index.js")
+const { jsenvBabelPluginMap } = require("./node_modules/@jsenv/babel-plugin-map/index.js")
 
 const projectFolder = __dirname
 exports.projectFolder = projectFolder
@@ -46,4 +46,4 @@ const coverDescription = {
 }
 exports.coverDescription = coverDescription
 
-exports.babelConfigMap = babelConfigMap
+exports.babelPluginMap = jsenvBabelPluginMap

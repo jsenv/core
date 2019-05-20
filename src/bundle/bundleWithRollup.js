@@ -37,7 +37,7 @@ export const bundleWithRollup = async ({
           // https://rollupjs.org/guide/en#experimentaltoplevelawait
           experimentalTopLevelAwait: true,
           // we could put prefConst to true by checking 'transform-block-scoping'
-          // presence in babelConfigMap
+          // presence in babelPluginMap
           preferConst: false,
           ...rollupGenerateOptions,
         })
@@ -46,7 +46,7 @@ export const bundleWithRollup = async ({
         // https://rollupjs.org/guide/en#experimentaltoplevelawait
         experimentalTopLevelAwait: true,
         // we could put prefConst to true by checking 'transform-block-scoping'
-        // presence in babelConfigMap
+        // presence in babelPluginMap
         preferConst: false,
         ...rollupGenerateOptions,
       })

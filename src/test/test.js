@@ -12,7 +12,7 @@ import {
   DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_EXECUTE_DESCRIPTION,
   DEFAULT_MAX_PARALLEL_EXECUTION,
-  DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_BABEL_PLUGIN_MAP,
 } from "./test-constant.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS, LOG_LEVEL_OFF } from "../logger.js"
 
@@ -26,7 +26,7 @@ export const test = async ({
   compileGroupCount = 2,
   maxParallelExecution = DEFAULT_MAX_PARALLEL_EXECUTION,
   defaultAllocatedMsPerExecution = 20000,
-  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
+  babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
   updateProcessExitCode = true,
   throwUnhandled = true,
   compileServerLogLevel = LOG_LEVEL_OFF,
@@ -47,7 +47,7 @@ export const test = async ({
       browserGroupResolverRelativePath,
       nodeGroupResolverRelativePath,
       compileGroupCount,
-      babelConfigMap,
+      babelPluginMap,
       executeDescription,
       defaultAllocatedMsPerExecution,
       compileServerLogLevel,

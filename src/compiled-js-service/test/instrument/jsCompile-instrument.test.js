@@ -11,7 +11,7 @@ const { projectFolder } = import.meta.require("../../../../jsenv.config.js")
 const root = `${projectFolder}/src/jsCompile/test/fixtures`
 const file = "file.js"
 const fileAbsolute = `${root}/${file}`
-const babelConfigMap = {
+const babelPluginMap = {
   "transform-block-scoping": [transformBlockScoping],
   "transform-instrument": [createInstrumentPlugin()],
 }
@@ -21,7 +21,7 @@ compileJs({
   file,
   fileAbsolute,
   input: fs.readFileSync(fileAbsolute).toString(),
-  babelConfigMap,
+  babelPluginMap,
   instrument: true,
 }).then(({ assets, output }) => {
   assert({ actual: assets, expected: ["file.js.map", "coverage.json"] })

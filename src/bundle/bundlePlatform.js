@@ -10,7 +10,7 @@ export const bundlePlatform = ({
   projectPathname,
   bundleIntoRelativePath,
   entryPointMap,
-  babelConfigMap,
+  babelPluginMap,
   compileGroupCount = 1,
   platformScoreMap,
   computeRollupOptionsWithoutBalancing,
@@ -43,7 +43,7 @@ export const bundlePlatform = ({
     }
 
     const groupMap = generateGroupMap({
-      babelConfigMap,
+      babelPluginMap,
       platformScoreMap,
       groupCount: compileGroupCount,
     })

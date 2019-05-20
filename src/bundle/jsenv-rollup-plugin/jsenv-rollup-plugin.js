@@ -12,10 +12,10 @@ import { fetchUsingHttp } from "../../node-platform-service/node-platform/fetchU
 import { readSourceMappingURL, writeSourceMappingURL } from "../../source-mapping-url.js"
 import {
   transpiler,
-  findAsyncPluginNameInBabelConfigMap,
+  findAsyncPluginNameInbabelPluginMap,
 } from "../../compiled-js-service/transpiler.js"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
-import { computeBabelConfigMapSubset } from "./computeBabelConfigMapSubset.js"
+import { computeBabelPluginMapSubset } from "./computeBabelPluginMapSubset.js"
 import { createLogger } from "../../logger.js"
 import {
   pathnameToOperatingSystemPath,
@@ -38,7 +38,7 @@ export const createJsenvRollupPlugin = ({
   origin = "http://example.com",
 
   featureNameArray,
-  babelConfigMap,
+  babelPluginMap,
   minify,
   target,
   detectAndTransformIfNeededAsyncInsertedByRollup = target === "browser",
@@ -53,10 +53,10 @@ export const createJsenvRollupPlugin = ({
   })
   const importMap = projectImportMap
 
-  const babelConfigMapSubset = computeBabelConfigMapSubset({
+  const babelPluginMapSubset = computeBabelPluginMapSubset({
     HELPER_FILENAME,
     featureNameArray,
-    babelConfigMap,
+    babelPluginMap,
     target,
   })
 
@@ -167,7 +167,7 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
       const { code, map } = await transpiler({
         input: source,
         filename,
-        babelConfigMap: babelConfigMapSubset,
+        babelPluginMap: babelPluginMapSubset,
         // false, rollup will take care to transform module into whatever format
         transformModuleIntoSystemFormat: false,
       })
@@ -192,7 +192,7 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
 
     writeBundle: async (bundle) => {
       if (detectAndTransformIfNeededAsyncInsertedByRollup) {
-        await transformAsyncInsertedByRollup({ dir, babelConfigMapSubset, bundle })
+        await transformAsyncInsertedByRollup({ dir, babelPluginMapSubset, bundle })
       }
 
       Object.keys(bundle).forEach((bundleFilename) => {
@@ -237,8 +237,8 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
   return jsenvRollupPlugin
 }
 
-const transformAsyncInsertedByRollup = async ({ dir, babelConfigMapSubset, bundle }) => {
-  const asyncPluginName = findAsyncPluginNameInBabelConfigMap(babelConfigMapSubset)
+const transformAsyncInsertedByRollup = async ({ dir, babelPluginMapSubset, bundle }) => {
+  const asyncPluginName = findAsyncPluginNameInbabelPluginMap(babelPluginMapSubset)
 
   if (!asyncPluginName) return
 
@@ -253,7 +253,7 @@ const transformAsyncInsertedByRollup = async ({ dir, babelConfigMapSubset, bundl
         input: bundleInfo.code,
         inputMap: bundleInfo.map,
         filename: bundleFilename,
-        babelConfigMap: { [asyncPluginName]: babelConfigMapSubset[asyncPluginName] },
+        babelPluginMap: { [asyncPluginName]: babelPluginMapSubset[asyncPluginName] },
         transformModuleIntoSystemFormat: false, // already done by rollup
       })
 

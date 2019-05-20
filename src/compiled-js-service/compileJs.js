@@ -9,7 +9,7 @@ export const compileJs = async ({
   source,
   projectPathname,
   sourceRelativePath,
-  babelConfigMap,
+  babelPluginMap,
   transformTopLevelAwait,
   inputAst = undefined,
   inputMap = undefined,
@@ -33,7 +33,7 @@ export const compileJs = async ({
       filenameRelative: sourceRelativePath.slice(1),
       inputAst,
       inputMap,
-      babelConfigMap,
+      babelPluginMap,
       transformTopLevelAwait,
       remap,
     })

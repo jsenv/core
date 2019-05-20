@@ -1,4 +1,4 @@
-const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
+const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 export const DEFAULT_COMPILE_INTO_RELATIVE_PATH = "/dist"
 
@@ -14,4 +14,4 @@ export const DEFAULT_BROWSABLE_DESCRIPTION = {
   "/test/**/*.js": true,
 }
 
-export const DEFAULT_BABEL_CONFIG_MAP = babelConfigMap
+export const DEFAULT_BABEL_PLUGIN_MAP = jsenvBabelPluginMap

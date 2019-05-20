@@ -20,7 +20,7 @@ export const serveBrowserSelfExecute = ({
   compileIntoRelativePath,
   importMapRelativePath,
   browserClientRelativePath,
-  babelConfigMap,
+  babelPluginMap,
   request,
 }) =>
   firstService(
@@ -34,7 +34,7 @@ export const serveBrowserSelfExecute = ({
         projectPathname,
         compileIntoRelativePath,
         importMapRelativePath,
-        babelConfigMap,
+        babelPluginMap,
         request,
       }),
     () =>
@@ -69,7 +69,7 @@ const serveBrowserSelfExecuteBundle = ({
   projectPathname,
   importMapRelativePath,
   compileIntoRelativePath,
-  babelConfigMap,
+  babelPluginMap,
   request: { ressource, method, headers },
 }) => {
   if (ressource.startsWith(`${BROWSER_SELF_EXECUTE_CLIENT_PATHNAME}__asset__/`)) {
@@ -100,7 +100,7 @@ const serveBrowserSelfExecuteBundle = ({
     },
     headers,
     format: "iife",
-    babelConfigMap,
+    babelPluginMap,
   })
 }
 

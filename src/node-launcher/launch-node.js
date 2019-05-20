@@ -18,7 +18,7 @@ import {
 } from "../operating-system-path.js"
 import { LOG_LEVEL_OFF } from "../logger.js"
 
-const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
+const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 const CONTROLLABLE_NODE_PATH = `${JSENV_PATH}/src/node-launcher/node-controllable.js`
 const NODE_EXECUTE_TEMPLATE_RELATIVE_PATH = "/src/node-launcher/node-execute-template.js"
@@ -156,7 +156,7 @@ export const launchNode = async ({
           relativePath: NODE_EXECUTE_TEMPLATE_RELATIVE_PATH,
         }),
         compileRelativePath: NODE_EXECUTE_CLIENT_PATHNAME,
-        babelConfigMap,
+        babelPluginMap: jsenvBabelPluginMap,
         logLevel,
       })
 

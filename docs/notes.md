@@ -6,7 +6,7 @@
 
 ## To keep in mind
 
-- Any times groupMap changes (because compileGroupCount, babelConfigMap, platformScoreMap changes),
+- Any times groupMap changes (because compileGroupCount, babelPluginMap, platformScoreMap changes),
   node-platform, browser-platform and every cached files becomes invalid.
   This is not the case for now and can be surprising.
 - Ideally we should not keep our own systemjs version:

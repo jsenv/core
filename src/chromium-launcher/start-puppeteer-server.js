@@ -6,7 +6,7 @@ import { serveFile } from "../file-service/index.js"
 import { ressourceToPathname } from "../urlHelper.js"
 import { serveBundle } from "../bundle-service/index.js"
 
-const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
+const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 const PUPPETEER_EXECUTE_TEMPLATE_RELATIVE_PATH =
   "/src/chromium-launcher/puppeteer-execute-template.js"
@@ -97,7 +97,7 @@ const servePuppeteerExecute = ({
       relativePath: PUPPETEER_EXECUTE_TEMPLATE_RELATIVE_PATH,
     }),
     compileRelativePath: pathname,
-    babelConfigMap,
+    babelPluginMap: jsenvBabelPluginMap,
     headers,
     format: "iife",
   })

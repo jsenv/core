@@ -2,7 +2,7 @@ import { babelCompatMap } from "../group-map/babelCompatMap.js"
 import { browserScoreMap } from "../group-map/browserScoreMap.js"
 import { nodeVersionScoreMap } from "../group-map/nodeVersionScoreMap.js"
 
-const { babelConfigMap } = import.meta.require("@jsenv/babel-config-map")
+const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 export const DEFAULT_COMPILE_INTO_RELATIVE_PATH = "/.dist"
 
@@ -12,7 +12,7 @@ export const DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH = "/src/browser-group-
 
 export const DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH = "/src/node-group-resolver/index.js"
 
-export const DEFAULT_BABEL_CONFIG_MAP = babelConfigMap
+export const DEFAULT_BABEL_PLUGIN_MAP = jsenvBabelPluginMap
 
 export const DEFAULT_BABEL_COMPAT_MAP = babelCompatMap
 

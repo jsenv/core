@@ -7,7 +7,7 @@ import {
 import {
   DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
-  DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_BABEL_PLUGIN_MAP,
 } from "./execute-constant.js"
 import { LOG_LEVEL_OFF } from "../logger.js"
 
@@ -17,7 +17,7 @@ export const execute = async ({
   projectFolder,
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
-  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
+  babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
   compileGroupCount = 2,
   protocol = "http",
   ip = "127.0.0.1",
@@ -35,7 +35,7 @@ export const execute = async ({
       projectFolder,
       compileIntoRelativePath,
       importMapRelativePath,
-      babelConfigMap,
+      babelPluginMap,
       compileGroupCount,
       protocol,
       ip,

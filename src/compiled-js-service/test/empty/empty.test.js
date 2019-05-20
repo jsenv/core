@@ -9,7 +9,7 @@ const testFolder = `${projectFolder}/src/jsCompile/test/empty`
 const fileRelativePath = "/empty.js"
 const filename = `${projectFolder}${fileRelativePath}`
 const input = fs.readFileSync(filename).toString()
-const babelConfigMap = {
+const babelPluginMap = {
   "transform-block-scoping": [transformBlockScoping],
 }
 
@@ -19,7 +19,7 @@ const babelConfigMap = {
     filename,
     fileRelativePath,
     projectFolder: testFolder,
-    babelConfigMap,
+    babelPluginMap,
   })
   assert({
     actual,

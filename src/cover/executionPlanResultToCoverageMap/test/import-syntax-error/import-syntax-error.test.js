@@ -9,7 +9,7 @@ const { projectFolder } = import.meta.require("../../../../../jsenv.config.js")
 
 const testFolder = `${projectFolder}/src/executionPlanResultToCoverageMap/test/import-syntax-error`
 const compileInto = ".dist"
-const babelConfigMap = {}
+const babelPluginMap = {}
 
 ;(async () => {
   const sourceOrigin = `file://${testFolder}`
@@ -17,7 +17,7 @@ const babelConfigMap = {}
   const { origin: compileServerOrigin } = await startCompileServer({
     projectFolder: testFolder,
     compileInto,
-    babelConfigMap,
+    babelPluginMap,
     logLevel: "off",
   })
 

@@ -9,7 +9,7 @@ import {
   DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
   DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_BROWSABLE_DESCRIPTION,
-  DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_BABEL_PLUGIN_MAP,
 } from "./browser-explorer-server-constant.js"
 import { serveBrowserExplorerIndex } from "./serve-browser-explorer-index.js"
 import { serveBrowserExplorerPage } from "./serve-browser-explorer-page.js"
@@ -22,7 +22,7 @@ export const startBrowserExplorerServer = async ({
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   browserClientRelativePath = DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
   browserGroupResolverPath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
-  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
+  babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
   compileGroupCount = 2,
   browsableDescription = DEFAULT_BROWSABLE_DESCRIPTION,
   cors = true,
@@ -45,7 +45,7 @@ export const startBrowserExplorerServer = async ({
     importMapRelativePath,
     browserGroupResolverPath,
     compileGroupCount,
-    babelConfigMap,
+    babelPluginMap,
     cors,
     protocol,
     ip,
@@ -72,7 +72,7 @@ export const startBrowserExplorerServer = async ({
             projectPathname,
             relativePath: browserClientRelativePath,
           }),
-          babelConfigMap,
+          babelPluginMap,
           browsableMetaMap: metaDescription,
           request,
         }),

@@ -9,7 +9,7 @@ import {
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   DEFAULT_ENTRY_POINT_MAP,
   DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
-  DEFAULT_BABEL_CONFIG_MAP,
+  DEFAULT_BABEL_PLUGIN_MAP,
 } from "./bundle-browser-constant.js"
 import { operatingSystemPathToPathname } from "../../operating-system-path.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../../logger.js"
@@ -21,7 +21,7 @@ export const bundleBrowser = async ({
   entryPointMap = DEFAULT_ENTRY_POINT_MAP,
   browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
   inlineSpecifierMap = {},
-  babelConfigMap = DEFAULT_BABEL_CONFIG_MAP,
+  babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
   compileGroupCount = 1,
   platformScoreMap = browserScoreMap,
   format = "system", // or iife
@@ -37,7 +37,7 @@ export const bundleBrowser = async ({
     projectPathname,
     bundleIntoRelativePath,
     entryPointMap,
-    babelConfigMap,
+    babelPluginMap,
     compileGroupCount,
     platformScoreMap,
     logLevel,
@@ -49,7 +49,7 @@ export const bundleBrowser = async ({
         entryPointMap,
         importMapRelativePath,
         inlineSpecifierMap,
-        babelConfigMap,
+        babelPluginMap,
         format,
         minify,
         ...context,
@@ -61,7 +61,7 @@ export const bundleBrowser = async ({
         entryPointMap,
         importMapRelativePath,
         inlineSpecifierMap,
-        babelConfigMap,
+        babelPluginMap,
         minify,
         ...context,
       }),
@@ -71,7 +71,7 @@ export const bundleBrowser = async ({
         bundleIntoRelativePath,
         importMapRelativePath,
         browserGroupResolverRelativePath,
-        babelConfigMap,
+        babelPluginMap,
         minify,
         ...context,
       }),

@@ -47,7 +47,7 @@ const BEST_ID = "best"
 const OTHERWISE_ID = "otherwise"
 
 export const generateGroupMap = ({
-  babelConfigMap,
+  babelPluginMap,
   babelCompatMap = defaultBabelCompatMap,
   // polyfill are for later, for now, nothing is using them
   polyfillConfigMap = {},
@@ -56,8 +56,8 @@ export const generateGroupMap = ({
   groupCount = 1,
 }) => {
   const groupMap = generateFeatureGroupMap({
-    // here we should throw if key conflict between babelConfigMap/polyfillConfigMap
-    featureConfigMap: { ...babelConfigMap, ...polyfillConfigMap },
+    // here we should throw if key conflict between babelPluginMap/polyfillConfigMap
+    featureConfigMap: { ...babelPluginMap, ...polyfillConfigMap },
     // here we should throw if key conflict on babelCompatMap/polyfillCompatMap
     featureCompatMap: {
       ...babelCompatMap,

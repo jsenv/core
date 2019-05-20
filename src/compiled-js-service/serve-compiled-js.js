@@ -6,7 +6,7 @@ export const serveCompiledJs = async ({
   projectPathname,
   compileIntoRelativePath,
   groupMap,
-  babelConfigMap,
+  babelPluginMap,
   transformTopLevelAwait,
   projectFileRequestedCallback,
   request: { origin, ressource, headers },
@@ -51,10 +51,10 @@ export const serveCompiledJs = async ({
     headers,
     compile: async ({ sourceFilename }) => {
       const source = await fileRead(sourceFilename)
-      const groupBabelConfigMap = {}
+      const groupbabelPluginMap = {}
       groupMap[compileId].incompatibleNameArray.forEach((incompatibleFeatureName) => {
-        if (incompatibleFeatureName in babelConfigMap) {
-          groupBabelConfigMap[incompatibleFeatureName] = babelConfigMap[incompatibleFeatureName]
+        if (incompatibleFeatureName in babelPluginMap) {
+          groupbabelPluginMap[incompatibleFeatureName] = babelPluginMap[incompatibleFeatureName]
         }
       })
 
@@ -63,7 +63,7 @@ export const serveCompiledJs = async ({
         projectPathname,
         sourceRelativePath,
         compileRelativePath,
-        babelConfigMap: groupBabelConfigMap,
+        babelPluginMap: groupbabelPluginMap,
         transformTopLevelAwait,
       })
     },

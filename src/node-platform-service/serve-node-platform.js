@@ -14,7 +14,7 @@ export const serveNodePlatform = ({
   compileIntoRelativePath,
   importMapRelativePath,
   nodeGroupResolverRelativePath,
-  babelConfigMap,
+  babelPluginMap,
   groupMap,
   // projectFileRequestedCallback,
   request: { ressource, method, headers },
@@ -32,7 +32,7 @@ export const serveNodePlatform = ({
     projectPathname,
     compileIntoRelativePath,
     importMapRelativePath,
-    babelConfigMap,
+    babelPluginMap,
     sourceRelativePath: relativePathInception({
       projectPathname,
       relativePath: NODE_PLATFORM_RELATIVE_PATH,

@@ -29,7 +29,7 @@ export const relativePathToEmptyCoverage = async ({
           source,
           projectPathname,
           sourceRelativePath: relativePath,
-          babelConfigMap: {
+          babelPluginMap: {
             "transform-instrument": [createInstrumentPlugin({ predicate: () => true })],
           },
           transformTopLevelAwait: false,
