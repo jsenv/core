@@ -1,6 +1,6 @@
 ## TODO
 
-- fix uneval issue with AssertionError
+- jsenvception for folderPath
 - nothing else :)
 
 ## To keep in mind

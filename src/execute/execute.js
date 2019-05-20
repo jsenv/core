@@ -30,6 +30,8 @@ export const execute = async ({
   catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
+    fileRelativePath = fileRelativePath.replace(/\\/g, "/")
+
     const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
       projectPath,

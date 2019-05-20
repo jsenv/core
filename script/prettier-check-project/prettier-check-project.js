@@ -1,14 +1,12 @@
-const {
-  prettierCheckProject,
-  extendDefaultPrettifyMetaMap,
-} = require("@jsenv/prettier-check-project")
+const { prettierCheckProject, jsenvPrettifyMap } = require("@jsenv/prettier-check-project")
 const { projectPath } = require("../../jsenv.config.js")
 
 prettierCheckProject({
-  projectFolder: projectPath,
-  prettifyMetaMap: extendDefaultPrettifyMetaMap({
+  projectPath,
+  prettifyMap: {
+    ...jsenvPrettifyMap,
     "/**/.dist/": false,
     "/**/dist/": false,
     "/**/**syntax-error**.js": false,
-  }),
+  },
 })
