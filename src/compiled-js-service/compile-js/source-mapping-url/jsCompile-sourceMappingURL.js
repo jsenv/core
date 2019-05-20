@@ -1,5 +1,5 @@
-import { assert } from "/node_modules/@dmail/assert/index.js"
-import { compileJs } from "../../../src/compiled-js-service/compileJs.js"
+import { assert } from "@dmail/assert"
+import { compileJs } from "../../../../src/compiled-js-service/compileJs.js"
 
 const { projectPath } = import.meta.require("../../../../jsenv.config.js")
 
