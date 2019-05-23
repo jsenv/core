@@ -3,7 +3,7 @@ import { hrefToPathname } from "@jsenv/module-resolution"
 import {
   pathnameToOperatingSystemPath,
   operatingSystemPathToPathname,
-} from "./operating-system-path.js"
+} from "@jsenv/operating-system-path"
 
 let jsenvPath
 if (typeof __filename === "string") {

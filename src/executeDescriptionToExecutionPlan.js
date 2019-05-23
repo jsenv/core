@@ -2,8 +2,8 @@ import {
   namedValueDescriptionToMetaDescription,
   selectAllFileInsideFolder,
 } from "@dmail/project-structure"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { startCompileServer } from "./compile-server/index.js"
-import { pathnameToOperatingSystemPath } from "./operating-system-path.js"
 
 export const executeDescriptionToExecutionPlan = async ({
   cancellationToken,

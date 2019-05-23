@@ -1,8 +1,8 @@
 import { fileRead, fileStat } from "@dmail/helper"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { createETag } from "../createETag.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { getCompiledFilename, getAssetFilename } from "./locaters.js"
-import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 export const validateCache = async ({
   projectPathname,

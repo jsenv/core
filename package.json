@@ -30,6 +30,7 @@
 		"@dmail/uneval": "4.8.0",
 		"@jsenv/module-resolution": "2.4.0",
 		"@jsenv/babel-plugin-map": "1.0.0",
+		"@jsenv/operating-system-path": "2.1.0",
 		"abort-controller": "2.0.2",
 		"ansi-to-html": "0.6.9",
 		"eventsource": "1.0.7",

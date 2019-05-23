@@ -1,4 +1,4 @@
-import { pathnameToOperatingSystemPath, pathnameIsInside } from "./operating-system-path.js"
+import { pathnameToOperatingSystemPath, pathnameIsInside } from "@jsenv/operating-system-path"
 import { JSENV_PATHNAME } from "./JSENV_PATH.js"
 
 const JSENV_RELATIVE_PATH = "/node_modules/@jsenv/core"

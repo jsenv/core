@@ -1,10 +1,14 @@
 /* eslint-disable import/max-dependencies */
+import { fileWrite } from "@dmail/helper"
 import {
   namedValueDescriptionToMetaDescription,
   selectAllFileInsideFolder,
   pathnameToMeta,
 } from "@dmail/project-structure"
-import { fileWrite } from "@dmail/helper"
+import {
+  operatingSystemPathToPathname,
+  pathnameToOperatingSystemPath,
+} from "@jsenv/operating-system-path"
 import { executePlan } from "../executePlan/index.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
 import {
@@ -27,10 +31,6 @@ import {
   DEFAULT_BABEL_PLUGIN_MAP,
   DEFAULT_MAX_PARALLEL_EXECUTION,
 } from "./cover-constant.js"
-import {
-  operatingSystemPathToPathname,
-  pathnameToOperatingSystemPath,
-} from "../operating-system-path.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS, LOG_LEVEL_OFF } from "../logger.js"
 
 export const cover = async ({

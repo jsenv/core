@@ -1,5 +1,5 @@
 import { readFileSync } from "fs"
-import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 
 // TODO: make this async
 export const readProjectImportMap = ({ projectPathname, importMapRelativePath }) => {

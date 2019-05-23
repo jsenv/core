@@ -1,9 +1,9 @@
 import { createReadStream } from "fs"
 import { folderRead, fileStat, fileRead } from "@dmail/helper"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { createETag } from "../createETag.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
 import { filenameToContentType } from "./filenameToContentType.js"
-import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
 const dateToUTCString = (date) => date.toUTCString()

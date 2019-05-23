@@ -1,5 +1,5 @@
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { fetchUsingHttp } from "../node-platform-service/node-platform/fetchUsingHttp.js"
-import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 export const execute = async ({
   compileServerOrigin,

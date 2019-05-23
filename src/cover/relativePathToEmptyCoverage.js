@@ -1,8 +1,8 @@
 import { fileRead } from "@dmail/helper"
 import { createOperation } from "@dmail/cancellation"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { compileJs } from "../compiled-js-service/index.js"
 import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
-import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 const { createFileCoverage } = import.meta.require("istanbul-lib-coverage")
 

@@ -1,6 +1,6 @@
-import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
 import { uneval } from "@dmail/uneval"
-import { pathnameToOperatingSystemPath } from "/src/operating-system-path.js"
+import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { relativePathInception } from "../../inception.js"
 import { createImportFromGlobalRollupPlugin } from "../import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "../jsenv-rollup-plugin/index.js"

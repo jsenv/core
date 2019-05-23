@@ -1,4 +1,4 @@
-import { pathnameToOperatingSystemPath } from "../../src/operating-system-path.js"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 
 // for now node bundle use require
 // they may move to systemjs to support top level await

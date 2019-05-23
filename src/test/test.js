@@ -1,10 +1,10 @@
+import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
 import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
 import { executePlan } from "../executePlan/index.js"
-import { operatingSystemPathToPathname } from "../operating-system-path.js"
 import {
   DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,

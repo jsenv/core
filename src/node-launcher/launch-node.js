@@ -2,6 +2,10 @@
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@dmail/uneval"
 import { createCancellationToken } from "@dmail/cancellation"
+import {
+  pathnameToOperatingSystemPath,
+  operatingSystemPathToPathname,
+} from "@jsenv/operating-system-path"
 import { JSENV_PATH } from "../JSENV_PATH-2.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 import { generateNodeBundle } from "../bundle-service/index.js"
@@ -12,10 +16,6 @@ import {
 } from "./launch-node-constant.js"
 import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
 import { regexpEscape } from "../../src/stringHelper.js"
-import {
-  pathnameToOperatingSystemPath,
-  operatingSystemPathToPathname,
-} from "../operating-system-path.js"
 import { LOG_LEVEL_OFF } from "../logger.js"
 
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")

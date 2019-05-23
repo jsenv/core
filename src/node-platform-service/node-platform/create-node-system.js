@@ -7,6 +7,7 @@ import {
   hrefToPathname,
 } from "@jsenv/module-resolution"
 import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import "../../system/s.js"
 import { hrefToFileRelativePath } from "../../platform/hrefToFileRelativePath.js"
 import {
@@ -17,7 +18,6 @@ import { valueInstall } from "../../platform/valueInstall.js"
 import { hrefToMeta } from "../../platform/hrefToMeta.js"
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
-import { pathnameToOperatingSystemPath } from "../../operating-system-path.js"
 
 const GLOBAL_SPECIFIER = "global"
 

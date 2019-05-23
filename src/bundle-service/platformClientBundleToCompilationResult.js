@@ -1,14 +1,14 @@
 import { readFileSync } from "fs"
 import { dirname, resolve } from "path"
-import { writeOrUpdateSourceMappingURL } from "../source-mapping-url.js"
 import {
   pathnameToOperatingSystemPath,
   isWindowsPath,
-  windowPathToPathnameWithoutDriveLetter,
+  windowsPathToPathnameWithoutDriveLetter,
   pathnameIsInside,
   pathnameToRelativePathname,
   operatingSystemPathToPathname,
-} from "../operating-system-path.js"
+} from "@jsenv/operating-system-path"
+import { writeOrUpdateSourceMappingURL } from "../source-mapping-url.js"
 
 export const platformClientBundleToCompilationResult = ({
   projectPathname,
@@ -85,7 +85,7 @@ const rollupSourcemapToCompilationSourcemap = ({
     )
     const sourcePathname = operatingSystemPathToPathname(sourcePath)
     const sourceSpecifier = isWindowsPath(sourcePath)
-      ? windowPathToPathnameWithoutDriveLetter(sourcePath)
+      ? windowsPathToPathnameWithoutDriveLetter(sourcePath)
       : sourcePath
 
     if (

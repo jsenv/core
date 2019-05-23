@@ -1,5 +1,7 @@
 ## TODO
 
+- node-module-import-map still not working on windows
+- jsenv-core to be tested on windows
 - nothing else :)
 
 ## To keep in mind
@@ -11,6 +13,9 @@
   https://github.com/systemjs/systemjs/issues/1924 and https://github.com/systemjs/systemjs/pull/1925.
 - Ideally we should not keep our own babel-plugin-transform-modules-systemjs version: https://github.com/babel/babel/issues/9426
 - Respond to guybeford here https://github.com/systemjs/systemjs/pull/1925
+- executionDescription renamed executionMap
+  testDescription renamed testExecutionMap
+  coverDescription renamed coverMap
 - Create @jsenv/chromium-launcher to externalize some code and make
   jsenv/core lighter for thoose not using chromium
 - Create @jsenv/node-launcher to externalize some code and make

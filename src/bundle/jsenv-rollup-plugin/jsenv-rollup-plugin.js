@@ -8,6 +8,13 @@ import {
   hrefToPathname,
   hrefToScheme,
 } from "@jsenv/module-resolution"
+import {
+  pathnameToOperatingSystemPath,
+  operatingSystemPathToPathname,
+  pathnameIsInside,
+  pathnameToRelativePathname,
+  isWindowsPath,
+} from "@jsenv/operating-system-path"
 import { fetchUsingHttp } from "../../node-platform-service/node-platform/fetchUsingHttp.js"
 import { readSourceMappingURL, writeSourceMappingURL } from "../../source-mapping-url.js"
 import {
@@ -17,13 +24,6 @@ import {
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { computeBabelPluginMapSubset } from "./computeBabelPluginMapSubset.js"
 import { createLogger } from "../../logger.js"
-import {
-  pathnameToOperatingSystemPath,
-  operatingSystemPathToPathname,
-  pathnameIsInside,
-  pathnameToRelativePathname,
-  isWindowsPath,
-} from "../../operating-system-path.js"
 
 const { minify: minifyCode } = import.meta.require("terser")
 const { buildExternalHelpers } = import.meta.require("@babel/core")

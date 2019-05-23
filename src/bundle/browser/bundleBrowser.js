@@ -1,3 +1,4 @@
+import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
 import { browserScoreMap } from "../../group-map/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
@@ -11,7 +12,6 @@ import {
   DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_BABEL_PLUGIN_MAP,
 } from "./bundle-browser-constant.js"
-import { operatingSystemPathToPathname } from "../../operating-system-path.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../../logger.js"
 
 export const bundleBrowser = async ({

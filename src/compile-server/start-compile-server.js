@@ -1,5 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { createCancellationToken } from "@dmail/cancellation"
+import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
 import { serveFile } from "../file-service/index.js"
 import {
   acceptContentType,
@@ -23,7 +24,6 @@ import {
 import { serveBrowserPlatform } from "../browser-platform-service/index.js"
 import { serveNodePlatform } from "../node-platform-service/index.js"
 import { serveCompiledJs, relativePathIsAsset } from "../compiled-js-service/index.js"
-import { operatingSystemPathToPathname } from "../operating-system-path.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 
 export const startCompileServer = async ({

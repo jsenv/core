@@ -1,9 +1,9 @@
 import { basename } from "path"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { writeSourceMappingURL } from "../source-mapping-url.js"
 import { ansiToHTML } from "../ansiToHTML.js"
 import { createParseError } from "../compiled-file-service/index.js"
 import { transpiler } from "./transpiler.js"
-import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 export const compileJs = async ({
   source,

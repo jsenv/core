@@ -1,5 +1,5 @@
 import { pathnameToDirname } from "@jsenv/module-resolution"
-import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 
 export const getCacheFilename = ({ projectPathname, compileRelativePath }) =>
   pathnameToOperatingSystemPath(`${projectPathname}${compileRelativePath}__asset__/cache.json`)

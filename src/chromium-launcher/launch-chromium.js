@@ -3,6 +3,7 @@
 
 import { uneval } from "@dmail/uneval"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
+import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
 import {
   registerProcessInterruptCallback,
   registerUngaranteedProcessTeardown,
@@ -18,7 +19,6 @@ import {
 } from "./launch-chromium-constant.js"
 import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
 import { JSENV_PATH } from "../JSENV_PATH.js"
-import { operatingSystemPathToPathname } from "../operating-system-path.js"
 import { regexpEscape } from "../../src/stringHelper.js"
 import { LOG_LEVEL_OFF } from "../logger.js"
 

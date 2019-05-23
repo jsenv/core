@@ -1,9 +1,12 @@
-import { hrefToPathname, pathnameToDirname } from "@jsenv/module-resolution"
+import {
+  importMetaURLToFolderPath,
+  pathnameToRelativePathname,
+  operatingSystemPathToPathname,
+} from "@jsenv/operating-system-path"
 import { JSENV_PATHNAME } from "./JSENV_PATH.js"
-import { pathnameToRelativePathname } from "./operating-system-path.js"
 
 export const importMetaURLToFolderJsenvRelativePath = (importMetaURL) => {
-  const pathname = hrefToPathname(importMetaURL)
-  const dirname = pathnameToDirname(pathname)
-  return pathnameToRelativePathname(dirname, JSENV_PATHNAME)
+  const folderPath = importMetaURLToFolderPath(importMetaURL)
+  const folderPathname = operatingSystemPathToPathname(folderPath)
+  return pathnameToRelativePathname(folderPathname, JSENV_PATHNAME)
 }

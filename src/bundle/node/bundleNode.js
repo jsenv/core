@@ -1,4 +1,4 @@
-import { operatingSystemPathToPathname } from "../../operating-system-path.js"
+import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
 import { nodeVersionScoreMap } from "../../group-map/index.js"
 import { bundlePlatform } from "../bundlePlatform.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"

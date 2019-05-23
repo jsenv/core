@@ -1,9 +1,9 @@
 import { extname, dirname, basename } from "path"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { bundleBrowser } from "../bundle/browser/bundleBrowser.js"
 import { bundleNode } from "../bundle/node/bundleNode.js"
 import { serveCompiledFile } from "../compiled-file-service/index.js"
 import { platformClientBundleToCompilationResult } from "./platformClientBundleToCompilationResult.js"
-import { pathnameToOperatingSystemPath } from "../operating-system-path.js"
 
 export const serveBundle = async ({
   projectPathname,
