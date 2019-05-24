@@ -18,8 +18,9 @@ await bundleNode({
 })
 
 const { namespace } = await importNodeBundle({
-  bundleFolder: `${projectPath}${bundleIntoRelativePath}`,
-  file: "main.js",
+  projectPath,
+  bundleIntoRelativePath,
+  mainRelativePath: "/main.js",
 })
 const actual = await namespace
 const expected = { default: 42 }

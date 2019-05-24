@@ -22,16 +22,18 @@ await bundleNode({
 
 {
   const { namespace: actual } = await importNodeBundle({
-    bundleFolder: `${projectPath}${bundleIntoRelativePath}`,
-    file: `a.js`,
+    projectPath,
+    bundleIntoRelativePath,
+    mainRelativePath: "/a.js",
   })
   const expected = "a-shared"
   assert({ actual, expected })
 }
 {
   const { namespace: actual } = await importNodeBundle({
-    bundleFolder: `${projectPath}${bundleIntoRelativePath}`,
-    file: `b.js`,
+    projectPath,
+    bundleIntoRelativePath,
+    mainRelativePath: "/b.js",
   })
   const expected = "b-shared"
   assert({ actual, expected })

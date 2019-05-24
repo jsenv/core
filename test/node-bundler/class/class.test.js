@@ -18,8 +18,9 @@ await bundleNode({
 })
 
 const { namespace: actual } = await importNodeBundle({
-  bundleFolder: `${projectPath}${bundleIntoRelativePath}`,
-  file: `main.js`,
+  projectPath,
+  bundleIntoRelativePath,
+  mainRelativePath: "/main.js",
 })
 const expected = 42
 assert({ actual, expected })
