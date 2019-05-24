@@ -91,8 +91,8 @@ export const cover = async ({
         const instrumentBabelPlugin = createInstrumentPlugin({
           predicate: ({ filename, filenameRelative }) => {
             if (coverPlatformsBundle) {
-              if (filename === BROWSER_PLATFORM_PATHNAME) return true
-              if (filename === NODE_PLATFORM_PATHNAME) return true
+              if (filename === pathnameToOperatingSystemPath(BROWSER_PLATFORM_PATHNAME)) return true
+              if (filename === pathnameToOperatingSystemPath(NODE_PLATFORM_PATHNAME)) return true
             }
             if (filenameRelative) return coverRelativePathPredicate(`/${filenameRelative}`)
             return false
