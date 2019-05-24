@@ -74,7 +74,7 @@ export const startCompileServer = async ({
     compileIntoRelativePath,
   })
   const compileIntoMeta = computeCompileIntoMeta({ babelPluginMap, groupMap })
-  if (shouldInvalidateCache({ previousCompileIntoMeta, groupMap })) {
+  if (shouldInvalidateCache({ previousCompileIntoMeta, compileIntoMeta })) {
     await removeFolder(
       pathnameToOperatingSystemPath(`${projectPathname}${compileIntoRelativePath}`),
     )
