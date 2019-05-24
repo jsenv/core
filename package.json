@@ -54,7 +54,7 @@
 	},
 	"devDependencies": {
 		"@jsenv/core": "5.30.0",
-		"@jsenv/node-module-import-map": "1.4.0",
+		"@jsenv/node-module-import-map": "1.5.0",
 		"@jsenv/eslint-config": "8.0.0",
 		"@jsenv/prettier-config": "1.0.0",
 		"@jsenv/prettier-check-project": "2.3.0",
