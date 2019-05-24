@@ -1,6 +1,5 @@
 ## TODO
 
-- Search if possible to include the browser and node platform into coverage
 - nothing else :)
 
 ## To keep in mind

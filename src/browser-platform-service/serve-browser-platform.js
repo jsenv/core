@@ -3,7 +3,8 @@ import { serveFile } from "../file-service/index.js"
 import { relativePathInception } from "../inception.js"
 import { serveBundle } from "../bundle-service/index.js"
 
-const BROWSER_PLATFORM_RELATIVE_PATH = "/src/browser-platform-service/browser-platform/index.js"
+export const BROWSER_PLATFORM_RELATIVE_PATH =
+  "/src/browser-platform-service/browser-platform/index.js"
 const BROWSER_PLATFORM_CLIENT_PATHNAME = `/.jsenv/browser-platform.js`
 const BROWSER_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/browser-platform-data.js`
 const BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME = `/.jsenv/browser-group-resolver.js`

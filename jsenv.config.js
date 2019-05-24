@@ -10,31 +10,6 @@ const testDescription = {
       launch: launchNode,
     },
   },
-  "/test/bundle-browser/**/*.test.*": {
-    node: {
-      launch: launchNode,
-    },
-  },
-  "/test/bundle-node/**/*.test.*": {
-    node: {
-      launch: launchNode,
-    },
-  },
-  "/test/launch-chromium/**/*.test.js": {
-    node: {
-      launch: launchNode,
-    },
-  },
-  "/test/launch-node/**/*.test.js": {
-    node: {
-      launch: launchNode,
-    },
-  },
-  "/test/generate-import-map/**/*.test.js": {
-    node: {
-      launch: launchNode,
-    },
-  },
 }
 exports.testDescription = testDescription
 

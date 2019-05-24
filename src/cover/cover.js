@@ -11,6 +11,7 @@ import {
 } from "@jsenv/operating-system-path"
 import { executePlan } from "../executePlan/index.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
+import { BROWSER_PLATFORM_PATHNAME } from "../browser-platform-service/index.js"
 import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
@@ -86,7 +87,11 @@ export const cover = async ({
     const [{ planResult, planResultSummary }, relativePathToCoverArray] = await Promise.all([
       (async () => {
         const instrumentBabelPlugin = createInstrumentPlugin({
-          predicate: (relativePath) => coverRelativePathPredicate(relativePath),
+          predicate: ({ filename, filenameRelative }) => {
+            if (filename === BROWSER_PLATFORM_PATHNAME) return true
+            if (filenameRelative) return coverRelativePathPredicate(`/${filenameRelative}`)
+            return false
+          },
         })
 
         const babelPluginMapWithInstrumentation = {

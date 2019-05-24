@@ -1,0 +1,4 @@
+import { JSENV_PATHNAME } from "../JSENV_PATH.js"
+import { BROWSER_PLATFORM_RELATIVE_PATH } from "./serve-browser-platform.js"
+
+export const BROWSER_PLATFORM_PATHNAME = `${JSENV_PATHNAME}${BROWSER_PLATFORM_RELATIVE_PATH}`
