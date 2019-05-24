@@ -12,6 +12,7 @@ export { test } from "./src/test/test.js"
 
 // belong to core
 export { cover } from "./src/cover/cover.js"
+export { DEFAULT_COVER_DESCRIPTION as jsenvCoverDescription } from "./src/cover/cover-constant.js"
 
 // belong to core (let's keep it in core because way easier to manage)
 export { bundleNode } from "./src/bundle/node/bundleNode.js"
