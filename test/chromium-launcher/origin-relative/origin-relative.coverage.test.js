@@ -12,8 +12,7 @@ const fileRelativePath = `${folderJsenvRelativePath}/origin-relative.js`
 const babelPluginMap = {
   "transform-instrument": [
     createInstrumentPlugin({
-      predicate: ({ filenameRelative }) =>
-        filenameRelative && filenameRelative === `${folderJsenvRelativePath.slice(1)}/file.js`,
+      predicate: ({ relativePath }) => relativePath === `${folderJsenvRelativePath}/file.js`,
     }),
   ],
 }
