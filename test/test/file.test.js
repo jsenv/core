@@ -37,7 +37,7 @@ const expected = {
           default: "node",
         },
         platformName: "node",
-        platformVersion: "8.9.0",
+        platformVersion: actual.planResult[fileRelativePath].node.platformVersion,
       },
       chromium: {
         status: "completed",
