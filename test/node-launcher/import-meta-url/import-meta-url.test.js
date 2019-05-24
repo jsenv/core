@@ -1,4 +1,5 @@
 import { assert } from "@dmail/assert"
+import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
 import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
@@ -23,7 +24,7 @@ const actual = await launchAndExecute({
 const expected = {
   status: "completed",
   namespace: {
-    default: `file://${projectPath}${fileRelativePath}`,
+    default: `file://${operatingSystemPathToPathname(projectPath)}${fileRelativePath}`,
   },
 }
 assert({ actual, expected })

@@ -1,4 +1,5 @@
 import { assert } from "@dmail/assert"
+import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
 import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { bundleNode } from "../../../index.js"
@@ -22,5 +23,7 @@ const { namespace: actual } = await importNodeBundle({
   bundleIntoRelativePath,
   mainRelativePath: "/main.js",
 })
-const expected = `file://${projectPath}${bundleIntoRelativePath}/main.js`
+const expected = `file://${operatingSystemPathToPathname(
+  projectPath,
+)}${bundleIntoRelativePath}/main.js`
 assert({ actual, expected })

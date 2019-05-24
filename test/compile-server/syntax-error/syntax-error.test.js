@@ -1,4 +1,8 @@
 import { assert } from "@dmail/assert"
+import {
+  operatingSystemPathToPathname,
+  pathnameToOperatingSystemPath,
+} from "@jsenv/operating-system-path"
 import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
 import { startCompileServer } from "../../../index.js"
@@ -37,7 +41,9 @@ const expected = {
   body: {
     message: actual.body.message,
     messageHTML: actual.body.messageHTML,
-    filename: `${projectPath}${fileRelativePath}`,
+    filename: pathnameToOperatingSystemPath(
+      `${operatingSystemPathToPathname(projectPath)}${fileRelativePath}`,
+    ),
     lineNumber: 1,
     columnNumber: 11,
   },
