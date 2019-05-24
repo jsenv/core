@@ -162,7 +162,11 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
     },
 
     transform: async (source, id) => {
-      if (id === BABEL_HELPERS_RELATIVE_PATH) return null
+      if (
+        id in inlineSpecifierResolveMap &&
+        inlineSpecifierResolveMap[id] === BABEL_HELPERS_RELATIVE_PATH
+      )
+        return null
       if (id.endsWith(".json")) {
         return {
           code: `export default ${source}`,
