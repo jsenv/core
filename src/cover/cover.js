@@ -11,12 +11,13 @@ import {
 } from "@jsenv/operating-system-path"
 import { executePlan } from "../executePlan/index.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
-import { BROWSER_PLATFORM_PATHNAME } from "../browser-platform-service/index.js"
-import { NODE_PLATFORM_PATHNAME } from "../node-platform-service/index.js"
+import { BROWSER_PLATFORM_RELATIVE_PATH } from "../browser-platform-service/index.js"
+import { NODE_PLATFORM_RELATIVE_PATH } from "../node-platform-service/index.js"
 import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
+import { relativePathInception } from "../inception.js"
 import { createInstrumentPlugin } from "./createInstrumentPlugin.js"
 import { executionPlanResultToCoverageMap } from "./executionPlanResultToCoverageMap/index.js"
 import { relativePathToEmptyCoverage } from "./relativePathToEmptyCoverage.js"
@@ -62,7 +63,6 @@ export const cover = async ({
   collectNamespace = false,
   measureDuration = true,
   captureConsole = true,
-  coverPlatformsBundle = true,
 }) => {
   if (!writeCoverageFile) {
     if (logCoverageTable)
@@ -89,13 +89,8 @@ export const cover = async ({
     const [{ planResult, planResultSummary }, relativePathToCoverArray] = await Promise.all([
       (async () => {
         const instrumentBabelPlugin = createInstrumentPlugin({
-          predicate: ({ filename, filenameRelative }) => {
-            if (coverPlatformsBundle) {
-              if (filename === pathnameToOperatingSystemPath(BROWSER_PLATFORM_PATHNAME)) return true
-              if (filename === pathnameToOperatingSystemPath(NODE_PLATFORM_PATHNAME)) return true
-            }
-            if (filenameRelative) return coverRelativePathPredicate(`/${filenameRelative}`)
-            return false
+          predicate: ({ relativePath }) => {
+            return coverRelativePathPredicate(relativePath)
           },
         })
 

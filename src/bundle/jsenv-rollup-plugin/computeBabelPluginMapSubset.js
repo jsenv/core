@@ -5,7 +5,7 @@ export const computeBabelPluginMapSubset = ({
   babelPluginMap,
   featureNameArray,
   target,
-  HELPER_FILENAME,
+  BABEL_HELPERS_RELATIVE_PATH,
 }) => {
   const babelPluginMapSubset = {}
   // instead of replacing import by a raw object
@@ -14,7 +14,7 @@ export const computeBabelPluginMapSubset = ({
   // not very important
   const replaceBabelHelperByNamedImportBabelPlugin = createReplaceBabelHelperByNamedImportBabelPlugin(
     {
-      HELPER_FILENAME,
+      BABEL_HELPERS_PATH: BABEL_HELPERS_RELATIVE_PATH,
     },
   )
   babelPluginMapSubset["replace-babel-helper-by-named-import"] = [

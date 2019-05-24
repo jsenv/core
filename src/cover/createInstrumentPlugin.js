@@ -14,7 +14,8 @@ export const createInstrumentPlugin = ({
             const { file } = this
             const { opts } = file
 
-            if (!predicate(opts)) return
+            const relativePath = optionsToRelativePath(opts)
+            if (!relativePath || !predicate({ relativePath })) return
 
             this.__dv__ = null
 
@@ -46,4 +47,9 @@ export const createInstrumentPlugin = ({
       },
     }
   }
+}
+
+const optionsToRelativePath = ({ filenameRelative }) => {
+  if (filenameRelative) return `/${filenameRelative}`
+  return ""
 }

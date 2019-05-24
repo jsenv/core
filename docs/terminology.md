@@ -13,5 +13,5 @@
 | windows path          | `C:\\Users\\file.js`                             |
 | linux path            | `/Users/file.js`                                 |
 | relative path         | `/folder/file.js` path relative to an other      |
-| jsenvception          | jsenv-1 used to build latest jsenv               |
+| jsenvception          | jsenv being devDependencies of jsenv itself      |
 | service               | function returning a response for a request      |

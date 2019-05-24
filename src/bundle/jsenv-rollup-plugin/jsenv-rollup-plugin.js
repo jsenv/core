@@ -28,7 +28,7 @@ import { createLogger } from "../../logger.js"
 const { minify: minifyCode } = import.meta.require("terser")
 const { buildExternalHelpers } = import.meta.require("@babel/core")
 
-const HELPER_FILENAME = "\0rollupPluginBabelHelpers.js"
+const BABEL_HELPERS_RELATIVE_PATH = "/.jsenv/babelHelpers.js"
 
 export const createJsenvRollupPlugin = ({
   cancellationToken,
@@ -54,14 +54,14 @@ export const createJsenvRollupPlugin = ({
   const importMap = projectImportMap
 
   const babelPluginMapSubset = computeBabelPluginMapSubset({
-    HELPER_FILENAME,
+    BABEL_HELPERS_RELATIVE_PATH,
     featureNameArray,
     babelPluginMap,
     target,
   })
 
   // https://github.com/babel/babel/blob/master/packages/babel-core/src/tools/build-external-helpers.js#L1
-  inlineSpecifierMap[HELPER_FILENAME] = () => buildExternalHelpers(undefined, "module")
+  inlineSpecifierMap[BABEL_HELPERS_RELATIVE_PATH] = () => buildExternalHelpers(undefined, "module")
 
   const inlineSpecifierResolveMap = {}
 
@@ -74,13 +74,17 @@ export const createJsenvRollupPlugin = ({
         if (typeof inlineSpecifier === "string")
           return pathnameToOperatingSystemPath(inlineSpecifier)
         if (typeof inlineSpecifier === "function") {
-          inlineSpecifierResolveMap[specifier] = inlineSpecifier
-          return specifier
+          const osPath = pathnameToOperatingSystemPath(`${projectPathname}${specifier}`)
+          inlineSpecifierResolveMap[osPath] = specifier
+          return osPath
         }
         throw new Error(`inlineSpecifier must be a string or a function`)
       }
 
-      if (!importer) return pathnameToOperatingSystemPath(`${projectPathname}/${specifier}`)
+      if (!importer) {
+        if (specifier[0] === "/") specifier = specifier.slice(1)
+        return pathnameToOperatingSystemPath(`${projectPathname}/${specifier}`)
+      }
 
       let importerHref
       const hasSheme = isWindowsPath(importer) ? false : Boolean(hrefToScheme(importer))
@@ -133,7 +137,9 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
     // },
 
     load: async (id) => {
-      if (id in inlineSpecifierResolveMap) return inlineSpecifierResolveMap[id]()
+      if (id in inlineSpecifierResolveMap) {
+        return inlineSpecifierMap[inlineSpecifierResolveMap[id]]()
+      }
 
       const hasSheme = isWindowsPath(id) ? false : Boolean(hrefToScheme(id))
       const href = hasSheme ? id : `file://${operatingSystemPathToPathname(id)}`
@@ -155,18 +161,22 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
       return { code: source, map: JSON.parse(mapSource) }
     },
 
-    transform: async (source, filename) => {
-      if (filename === HELPER_FILENAME) return null
-      if (filename.endsWith(".json")) {
+    transform: async (source, id) => {
+      if (id === BABEL_HELPERS_RELATIVE_PATH) return null
+      if (id.endsWith(".json")) {
         return {
           code: `export default ${source}`,
           map: { mappings: "" },
         }
       }
 
+      const filePathname = operatingSystemPathToPathname(id)
+      const filenameRelative = pathnameToRelativePathname(filePathname, projectPathname).slice(1)
+
       const { code, map } = await transpiler({
         input: source,
-        filename,
+        filename: id,
+        filenameRelative,
         babelPluginMap: babelPluginMapSubset,
         // false, rollup will take care to transform module into whatever format
         transformModuleIntoSystemFormat: false,

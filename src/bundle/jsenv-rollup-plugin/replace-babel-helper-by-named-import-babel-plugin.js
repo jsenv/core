@@ -7,7 +7,7 @@ const { addNamed } = import.meta.require("@babel/helper-module-imports")
 
 // named import approach found here:
 // https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1
-export const createReplaceBabelHelperByNamedImportBabelPlugin = ({ HELPER_FILENAME }) => {
+export const createReplaceBabelHelperByNamedImportBabelPlugin = ({ BABEL_HELPERS_PATH }) => {
   return {
     pre: (file) => {
       const cachedHelpers = {}
@@ -21,7 +21,7 @@ export const createReplaceBabelHelperByNamedImportBabelPlugin = ({ HELPER_FILENA
         }
 
         // https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
-        const helper = addNamed(file.path, name, HELPER_FILENAME)
+        const helper = addNamed(file.path, name, BABEL_HELPERS_PATH)
         cachedHelpers[name] = helper
         return helper
       })
