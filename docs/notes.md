@@ -1,5 +1,6 @@
 ## TODO
 
+- rename test into something else, its misleading with a test folder
 - nothing else :)
 
 ## To keep in mind
