@@ -2,6 +2,7 @@
 
 - node-module-import-map still not working on windows
 - jsenv-core to be tested on windows
+- Search if possible to include the browser and node platform into coverage
 - nothing else :)
 
 ## To keep in mind
