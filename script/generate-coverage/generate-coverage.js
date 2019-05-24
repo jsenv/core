@@ -5,7 +5,7 @@ cover({
   projectPath,
   coverDescription: {
     ...jsenvCoverDescription,
-    "/.jsenv/": true, // also cover jsenv internal files
+    "/node_modules/@jsenv/core/": true, // also cover jsenv internal files
   },
   logCoverageTable: true,
 })
