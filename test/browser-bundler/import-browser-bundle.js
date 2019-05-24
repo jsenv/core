@@ -1,5 +1,8 @@
 import { fileRead } from "@dmail/helper"
-import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
+import {
+  operatingSystemPathToPathname,
+  pathnameToOperatingSystemPath,
+} from "@jsenv/operating-system-path"
 import { serveFile } from "../../src/file-service/index.js"
 import { startServer, firstService } from "../../src/server/index.js"
 import { SYSTEM_PATHNAME } from "../../src/system/index.js"
@@ -99,4 +102,8 @@ const serveBundleFolder = ({
   projectPath,
   bundleIntoRelativePath,
   request: { ressource, method, headers },
-}) => serveFile(`${projectPath}${bundleIntoRelativePath}${ressource}`, { method, headers })
+}) =>
+  serveFile(`${operatingSystemPathToPathname(projectPath)}${bundleIntoRelativePath}${ressource}`, {
+    method,
+    headers,
+  })
