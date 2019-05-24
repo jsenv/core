@@ -1,6 +1,9 @@
 /* eslint-disable import/max-dependencies */
 import { createCancellationToken } from "@dmail/cancellation"
-import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
+import {
+  operatingSystemPathToPathname,
+  pathnameToOperatingSystemPath,
+} from "@jsenv/operating-system-path"
 import { serveFile } from "../file-service/index.js"
 import {
   acceptContentType,
@@ -11,6 +14,13 @@ import {
 } from "../server/index.js"
 import { watchFile } from "../watchFile.js"
 import { generateGroupMap } from "../group-map/index.js"
+import { serveBrowserPlatform } from "../browser-platform-service/index.js"
+import { serveNodePlatform } from "../node-platform-service/index.js"
+import { serveCompiledJs, relativePathIsAsset } from "../compiled-js-service/index.js"
+import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
+import { removeFolder } from "../removeFolder.js"
+import { readCompileIntoMeta } from "./read-compile-into-meta.js"
+import { writeCompileIntoMeta } from "./write-compile-into-meta.js"
 import {
   DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
@@ -21,10 +31,6 @@ import {
   DEFAULT_BROWSER_SCORE_MAP,
   DEFAULT_NODE_VERSION_SCORE_MAP,
 } from "./compile-server-constant.js"
-import { serveBrowserPlatform } from "../browser-platform-service/index.js"
-import { serveNodePlatform } from "../node-platform-service/index.js"
-import { serveCompiledJs, relativePathIsAsset } from "../compiled-js-service/index.js"
-import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -62,6 +68,18 @@ export const startCompileServer = async ({
     platformScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
     groupCount: compileGroupCount,
   })
+
+  const previousCompileIntoMeta = await readCompileIntoMeta({
+    projectPathname,
+    compileIntoRelativePath,
+  })
+  const compileIntoMeta = computeCompileIntoMeta({ babelPluginMap, groupMap })
+  if (shouldInvalidateCache({ previousCompileIntoMeta, groupMap })) {
+    await removeFolder(
+      pathnameToOperatingSystemPath(`${projectPathname}${compileIntoRelativePath}`),
+    )
+  }
+  await writeCompileIntoMeta({ projectPathname, compileIntoRelativePath, compileIntoMeta })
 
   // this callback will be called each time a projectFile was
   // used to respond to a request
@@ -233,6 +251,17 @@ const serveProjectFiles = ({
   })
 
   return serveFile(`${projectPathname}/${ressource}`, { method, headers })
+}
+
+const computeCompileIntoMeta = ({ babelPluginMap, groupMap }) => {
+  return { babelPluginMap, groupMap }
+}
+
+const shouldInvalidateCache = ({ previousCompileIntoMeta, compileIntoMeta }) => {
+  return (
+    previousCompileIntoMeta &&
+    JSON.stringify(previousCompileIntoMeta) !== JSON.stringify(compileIntoMeta)
+  )
 }
 
 const createFileChangedSignal = () => {
