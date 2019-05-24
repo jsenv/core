@@ -15,7 +15,11 @@ export const createInstrumentPlugin = ({
             const { opts } = file
 
             const relativePath = optionsToRelativePath(opts)
-            if (!relativePath || !predicate({ relativePath })) return
+            if (!relativePath) {
+              console.warn("file without relativePath", relativePath)
+              return
+            }
+            if (!predicate({ relativePath })) return
 
             this.__dv__ = null
 
