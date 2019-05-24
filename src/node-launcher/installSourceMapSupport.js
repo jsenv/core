@@ -2,6 +2,7 @@ import { readFileSync } from "fs"
 import { resolve, dirname } from "path"
 import { resolveImport, hrefToPathname } from "@jsenv/module-resolution"
 import { readSourceMappingURL } from "../source-mapping-url.js"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 
 const sourceMapSupport = import.meta.require("source-map-support")
 
@@ -70,14 +71,15 @@ export const installSourceMapSupport = ({ projectPathname }) => {
         ...sourceMap,
         sources: sourceMap.sources.map((source) => {
           if (source[0] === "/") {
-            return hrefToPathname(`file://${projectPathname}/${source.slice(1)}`)
+            return pathnameToOperatingSystemPath(`${projectPathname}${source}`)
           }
 
           const resolvedImport = resolveImport({
             importer: `file://${sourceMapFile}`,
             specifier: source,
           })
-          return hrefToPathname(resolvedImport)
+          const pathname = hrefToPathname(resolvedImport)
+          return pathnameToOperatingSystemPath(pathname)
         }),
       }
 
