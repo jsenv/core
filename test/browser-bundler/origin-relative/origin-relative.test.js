@@ -19,8 +19,9 @@ await bundleBrowser({
 })
 
 const { namespace: actual } = await importBrowserBundle({
-  bundleFolder: `${projectPath}${bundleIntoRelativePath}`,
-  file: "main.js",
+  projectPath,
+  bundleIntoRelativePath,
+  mainRelativePath: "/main.js",
 })
 const expected = { default: 42 }
 assert({ actual, expected })

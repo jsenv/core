@@ -6,9 +6,13 @@ import { SYSTEM_PATHNAME } from "../../src/system/index.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
-export const importBrowserBundle = async ({ bundleFolder, file }) => {
+export const importBrowserBundle = async ({
+  projectPath,
+  bundleIntoRelativePath,
+  mainRelativePath,
+}) => {
   const [server, browser] = await Promise.all([
-    startTestServer({ bundleFolder }),
+    startTestServer({ projectPath, bundleIntoRelativePath }),
     puppeteer.launch(),
   ])
 
@@ -22,7 +26,7 @@ export const importBrowserBundle = async ({ bundleFolder, file }) => {
         return System.import(specifier)
       },
       {
-        specifier: `./${file}`,
+        specifier: `.${mainRelativePath}`,
       },
     )
     return { namespace, serverOrigin: server.origin }
@@ -32,14 +36,14 @@ export const importBrowserBundle = async ({ bundleFolder, file }) => {
   }
 }
 
-const startTestServer = ({ bundleFolder }) => {
+const startTestServer = ({ projectPath, bundleIntoRelativePath }) => {
   return startServer({
     logLevel: "off",
     requestToResponse: (request) =>
       firstService(
         () => serveIndexPage({ request }),
         () => serveSystemJS({ request }),
-        () => serveBundleFolder({ bundleFolder, request }),
+        () => serveBundleFolder({ projectPath, bundleIntoRelativePath, request }),
       ),
   })
 }
@@ -91,6 +95,8 @@ const serveSystemJS = async ({ request: { ressource } }) => {
   }
 }
 
-const serveBundleFolder = ({ bundleFolder, request: { ressource, method, headers } }) => {
-  return serveFile(`${bundleFolder}${ressource}`, { method, headers })
-}
+const serveBundleFolder = ({
+  projectPath,
+  bundleIntoRelativePath,
+  request: { ressource, method, headers },
+}) => serveFile(`${projectPath}${bundleIntoRelativePath}${ressource}`, { method, headers })
