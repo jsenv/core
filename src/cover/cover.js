@@ -12,6 +12,7 @@ import {
 import { executePlan } from "../executePlan/index.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
 import { BROWSER_PLATFORM_PATHNAME } from "../browser-platform-service/index.js"
+import { NODE_PLATFORM_PATHNAME } from "../node-platform-service/index.js"
 import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
@@ -61,6 +62,7 @@ export const cover = async ({
   collectNamespace = false,
   measureDuration = true,
   captureConsole = true,
+  coverPlatformsBundle = true,
 }) => {
   if (!writeCoverageFile) {
     if (logCoverageTable)
@@ -88,7 +90,10 @@ export const cover = async ({
       (async () => {
         const instrumentBabelPlugin = createInstrumentPlugin({
           predicate: ({ filename, filenameRelative }) => {
-            if (filename === BROWSER_PLATFORM_PATHNAME) return true
+            if (coverPlatformsBundle) {
+              if (filename === BROWSER_PLATFORM_PATHNAME) return true
+              if (filename === NODE_PLATFORM_PATHNAME) return true
+            }
             if (filenameRelative) return coverRelativePathPredicate(`/${filenameRelative}`)
             return false
           },

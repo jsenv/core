@@ -25,6 +25,7 @@ const { coverageMap } = await cover({
   },
   executionLogLevel: "off",
   writeCoverageFile: false,
+  coverPlatformsBundle: false,
 })
 assert({
   actual: coverageMap,

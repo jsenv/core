@@ -3,7 +3,7 @@ import { serveFile } from "../file-service/index.js"
 import { relativePathInception } from "../inception.js"
 import { serveBundle } from "../bundle-service/index.js"
 
-const NODE_PLATFORM_RELATIVE_PATH = "/src/node-platform-service/node-platform/index.js"
+export const NODE_PLATFORM_RELATIVE_PATH = "/src/node-platform-service/node-platform/index.js"
 const NODE_PLATFORM_CLIENT_PATHNAME = `/.jsenv/node-platform.js`
 const NODE_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/node-platform-data.js`
 const NODE_GROUP_RESOLVER_CLIENT_PATHNAME = `/.jsenv/node-group-resolver.js`
