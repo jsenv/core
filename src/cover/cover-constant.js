@@ -16,6 +16,8 @@ export const DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH = "/src/node-group-resolv
 export const DEFAULT_COVER_DESCRIPTION = {
   "/index.js": true,
   "/src/**/*.js": true,
+  "/**/*.test.*": false, // contains .test. -> nope
+  "/**/test/": false, // inside a test folder -> nope
 }
 
 export const DEFAULT_EXECUTE_DESCRIPTION = {
