@@ -174,12 +174,20 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
         }
       }
 
-      const filePathname = operatingSystemPathToPathname(id)
-      const filenameRelative = pathnameToRelativePathname(filePathname, projectPathname).slice(1)
+      const hasSheme = isWindowsPath(id) ? false : Boolean(hrefToScheme(id))
+      let filename
+      let filenameRelative
+      if (hasSheme) {
+        filename = id
+      } else {
+        filename = id
+        const filePathname = operatingSystemPathToPathname(id)
+        filenameRelative = pathnameToRelativePathname(filePathname, projectPathname).slice(1)
+      }
 
       const { code, map } = await transpiler({
         input: source,
-        filename: id,
+        filename,
         filenameRelative,
         babelPluginMap: babelPluginMapSubset,
         // false, rollup will take care to transform module into whatever format
