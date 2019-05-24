@@ -65,6 +65,7 @@ singleExecutionPlan: ${singleExecutionPlan}`)
               compileServerOrigin,
               projectPath,
               compileIntoRelativePath,
+              babelPluginMap,
             }),
           allocatedMs: allocatedMs === undefined ? defaultAllocatedMsPerExecution : allocatedMs,
         }

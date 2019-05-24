@@ -23,6 +23,7 @@ import { regexpEscape } from "../../src/stringHelper.js"
 import { LOG_LEVEL_OFF } from "../logger.js"
 
 const puppeteer = import.meta.require("puppeteer")
+const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
@@ -31,6 +32,7 @@ export const launchChromium = async ({
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   browserClientRelativePath = DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
+  babelPluginMap = jsenvBabelPluginMap,
   clientServerLogLevel = LOG_LEVEL_OFF,
   headless = true,
 }) => {
@@ -146,6 +148,7 @@ export const launchChromium = async ({
         compileIntoRelativePath,
         importMapRelativePath,
         browserClientRelativePath,
+        babelPluginMap,
         logLevel: clientServerLogLevel,
       }),
     ])

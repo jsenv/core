@@ -36,6 +36,7 @@ export const launchNode = async ({
   remap = true,
   traceWarnings = true,
   logLevel = LOG_LEVEL_OFF,
+  babelPluginMap = jsenvBabelPluginMap,
 }) => {
   if (typeof compileServerOrigin !== "string")
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
@@ -156,7 +157,7 @@ export const launchNode = async ({
           relativePath: NODE_EXECUTE_TEMPLATE_RELATIVE_PATH,
         }),
         compileRelativePath: NODE_EXECUTE_CLIENT_PATHNAME,
-        babelPluginMap: jsenvBabelPluginMap,
+        babelPluginMap,
         logLevel,
       })
 
