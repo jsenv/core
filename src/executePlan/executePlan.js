@@ -14,7 +14,7 @@ export const executePlan = async (
   executionPlan,
   {
     cancellationToken = createCancellationToken(),
-    cover = false,
+    collectCoverage = false,
     collectNamespace = false,
     measureDuration = true,
     captureConsole = true,
@@ -72,7 +72,7 @@ export const executePlan = async (
         // no need to log when disconnected
         disconnectAfterExecutedCallback: () => {},
         fileRelativePath,
-        collectCoverage: cover,
+        collectCoverage,
         collectNamespace,
       })
       const executionResult = { allocatedMs, executionName, fileRelativePath, ...result }

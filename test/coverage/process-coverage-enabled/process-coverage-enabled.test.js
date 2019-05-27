@@ -1,34 +1,37 @@
 import { assert } from "@dmail/assert"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
-import { cover, launchNode, launchChromium } from "../../../index.js"
+import { cover, launchNode } from "../../../index.js"
 import { COVERAGE_TEST_PARAM } from "../coverage-test-param.js"
 
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 
-const { coverageMap } = await cover({
+const { planResult: actual } = await cover({
   ...COVERAGE_TEST_PARAM,
   compileIntoRelativePath,
-  coverDescription: {
-    [`${folderJsenvRelativePath}/file.js`]: true,
-  },
+  measureDuration: false,
+  captureConsole: false,
+  collectNamespace: true,
+  coverDescription: {},
   executeDescription: {
-    [`${folderJsenvRelativePath}/use-file.js`]: {
+    [`${folderJsenvRelativePath}/file.js`]: {
       node: {
         launch: launchNode,
-      },
-      chromium: {
-        launch: launchChromium,
       },
     },
   },
 })
 assert({
-  actual: coverageMap,
+  actual,
   expected: {
-    [`${folderJsenvRelativePath.slice(1)}/file.js`]: {
-      ...coverageMap[`${folderJsenvRelativePath.slice(1)}/file.js`],
-      s: { 0: 2, 1: 1, 2: 1, 3: 1, 4: 0 },
+    [`${folderJsenvRelativePath}/file.js`]: {
+      node: {
+        status: "completed",
+        namespace: { COVERAGE_ENABLED: "true" },
+        coverageMap: undefined,
+        platformName: "node",
+        platformVersion: actual[`${folderJsenvRelativePath}/file.js`].node.platformVersion,
+      },
     },
   },
 })

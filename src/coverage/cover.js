@@ -109,16 +109,17 @@ export const cover = async ({
           executeDescription,
           defaultAllocatedMsPerExecution,
           compileServerLogLevel,
+          cover: true,
         })
 
         return executePlan(executionPlan, {
-          cover: true,
           logLevel: executionLogLevel,
           cancellationToken,
           maxParallelExecution,
           measureDuration,
           captureConsole,
           collectNamespace,
+          collectCoverage: true,
         })
       })(),
       listRelativePathToCover({

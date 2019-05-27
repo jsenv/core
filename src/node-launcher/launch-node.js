@@ -35,6 +35,7 @@ export const launchNode = async ({
   debugModeInheritBreak = false,
   remap = true,
   traceWarnings = true,
+  cover = false,
   logLevel = LOG_LEVEL_OFF,
   babelPluginMap = jsenvBabelPluginMap,
 }) => {
@@ -59,10 +60,13 @@ export const launchNode = async ({
     execArgv.push("--trace-warnings")
   }
 
+  const env = { COVERAGE_ENABLED: cover }
+
   const child = forkChildProcess(CONTROLLABLE_NODE_PATH, {
     execArgv,
     // silent: true
     stdio: "pipe",
+    env,
   })
 
   const consoleCallbackArray = []
@@ -209,7 +213,7 @@ export const launchNode = async ({
   return {
     name: "node",
     version: process.version.slice(1),
-    options: { execArgv },
+    options: { execArgv, env },
     stop,
     stopForce,
     registerDisconnectCallback,

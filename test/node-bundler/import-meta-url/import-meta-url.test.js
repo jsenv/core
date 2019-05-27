@@ -4,13 +4,16 @@ import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta
 import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { bundleNode } from "../../../index.js"
 import { importNodeBundle } from "../import-node-bundle.js"
+import {
+  NODE_BUNDLER_TEST_PARAM,
+  NODE_BUNDLER_TEST_IMPORT_PARAM,
+} from "../node-bundler-test-param.js"
 
-const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/node`
 
 await bundleNode({
-  projectPath,
+  ...NODE_BUNDLER_TEST_PARAM,
   bundleIntoRelativePath,
   entryPointMap: {
     main: `${folderJsenvRelativePath}/import-meta-url.js`,
@@ -19,11 +22,10 @@ await bundleNode({
 })
 
 const { namespace: actual } = await importNodeBundle({
-  projectPath,
+  ...NODE_BUNDLER_TEST_IMPORT_PARAM,
   bundleIntoRelativePath,
-  mainRelativePath: "/main.js",
 })
 const expected = `file://${operatingSystemPathToPathname(
-  projectPath,
+  JSENV_PATH,
 )}${bundleIntoRelativePath}/main.js`
 assert({ actual, expected })

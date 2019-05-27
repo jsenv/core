@@ -1,10 +1,13 @@
 import { assert } from "@dmail/assert"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
-import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer, launchAndExecute, launchChromium } from "../../../index.js"
 import { createInstrumentPlugin } from "../../../src/coverage/createInstrumentPlugin.js"
+import {
+  CHROMIUM_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
+  CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
+  CHROMIUM_LAUNCHER_TEST_PARAM,
+} from "../chromium-launcher-test-param.js"
 
-const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const fileRelativePath = `${folderJsenvRelativePath}/origin-relative.js`
@@ -17,24 +20,21 @@ const babelPluginMap = {
 }
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  projectPath,
+  ...CHROMIUM_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
   compileIntoRelativePath,
   babelPluginMap,
-  logLevel: "off",
-  cleanCompileInto: true,
 })
 
 const actual = await launchAndExecute({
+  ...CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
   launch: (options) =>
     launchChromium({
+      ...CHROMIUM_LAUNCHER_TEST_PARAM,
       ...options,
       compileServerOrigin,
-      projectPath,
       compileIntoRelativePath,
     }),
-  stopOnceExecuted: true,
   fileRelativePath,
-  collectNamespace: true,
   collectCoverage: true,
 })
 const expected = {

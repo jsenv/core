@@ -3,23 +3,22 @@ import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta
 import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer } from "../../../index.js"
 import { fetch } from "../fetch.js"
+import { COMPILE_SERVER_TEST_PARAM } from "../compile-server-test-param.js"
 
 const rimraf = import.meta.require("rimraf")
 
-const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const compileId = "otherwise"
 const fileRelativePath = `${folderJsenvRelativePath}/file.js`
 
 const compileServer = await startCompileServer({
-  projectPath,
+  ...COMPILE_SERVER_TEST_PARAM,
   compileIntoRelativePath,
-  logLevel: "off",
 })
 
 await new Promise((resolve, reject) =>
-  rimraf(`${projectPath}${compileIntoRelativePath}`, (error) => {
+  rimraf(`${JSENV_PATH}${compileIntoRelativePath}`, (error) => {
     if (error) reject(error)
     else resolve()
   }),

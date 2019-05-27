@@ -1,19 +1,17 @@
 import { assert } from "@dmail/assert"
-import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
 import { startCompileServer } from "../../../index.js"
+import { COMPILE_SERVER_TEST_PARAM } from "../compile-server-test-param.js"
 import { fetch } from "../fetch.js"
 
-const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const compileId = "otherwise"
 const fileRelativePath = `${folderJsenvRelativePath}/file.js`
 
 const compileServer = await startCompileServer({
-  projectPath,
+  ...COMPILE_SERVER_TEST_PARAM,
   compileIntoRelativePath,
-  logLevel: "off",
 })
 
 const response = await fetch(

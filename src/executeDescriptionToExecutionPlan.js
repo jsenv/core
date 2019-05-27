@@ -17,6 +17,7 @@ export const executeDescriptionToExecutionPlan = async ({
   executeDescription,
   defaultAllocatedMsPerExecution = 20000,
   compileServerLogLevel,
+  cover = false,
 }) => {
   const projectPath = pathnameToOperatingSystemPath(projectPathname)
 
@@ -66,6 +67,7 @@ singleExecutionPlan: ${singleExecutionPlan}`)
               projectPath,
               compileIntoRelativePath,
               babelPluginMap,
+              cover,
             }),
           allocatedMs: allocatedMs === undefined ? defaultAllocatedMsPerExecution : allocatedMs,
         }

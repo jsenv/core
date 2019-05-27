@@ -1,43 +1,41 @@
 import { assert } from "@dmail/assert"
-import {
-  operatingSystemPathToPathname,
-  pathnameToOperatingSystemPath,
-} from "@jsenv/operating-system-path"
-import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
+import { JSENV_PATHNAME } from "../../../src/JSENV_PATH.js"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
 import { startCompileServer, launchAndExecute, launchChromium } from "../../../index.js"
 import { assignNonEnumerableProperties } from "/test/node-launcher/assignNonEnumerableProperties.js"
+import {
+  CHROMIUM_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
+  CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
+  CHROMIUM_LAUNCHER_TEST_PARAM,
+} from "../chromium-launcher-test-param.js"
 
-const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const compileId = "otherwise"
 const fileRelativePath = `${folderJsenvRelativePath}/syntax-error.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  projectPath,
+  ...CHROMIUM_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
   compileIntoRelativePath,
-  logLevel: "off",
-  cleanCompileInto: true,
 })
 
 const actual = await launchAndExecute({
+  ...CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
   launch: (options) =>
     launchChromium({
+      ...CHROMIUM_LAUNCHER_TEST_PARAM,
       ...options,
       compileServerOrigin,
-      projectPath,
       compileIntoRelativePath,
     }),
-  stopOnceExecuted: true,
   fileRelativePath,
 })
-const projectPathname = operatingSystemPathToPathname(projectPath)
 const expected = {
   status: "errored",
   error: assignNonEnumerableProperties(
     new Error(`error while parsing module.
-href: file://${projectPathname}${compileIntoRelativePath}/${compileId}${fileRelativePath}
+href: file://${JSENV_PATHNAME}${compileIntoRelativePath}/${compileId}${fileRelativePath}
 importerHref: undefined
 parseErrorMessage: ${actual.error.parseError.message}`),
     {
@@ -46,7 +44,7 @@ parseErrorMessage: ${actual.error.parseError.message}`),
       parseError: {
         message: actual.error.parseError.message,
         messageHTML: actual.error.parseError.messageHTML,
-        filename: pathnameToOperatingSystemPath(`${projectPathname}${fileRelativePath}`),
+        filename: pathnameToOperatingSystemPath(`${JSENV_PATHNAME}${fileRelativePath}`),
         lineNumber: 1,
         columnNumber: 17,
       },

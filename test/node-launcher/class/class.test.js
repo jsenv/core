@@ -1,29 +1,32 @@
 import { assert } from "@dmail/assert"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
-import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer, launchAndExecute, launchNode } from "../../../index.js"
+import {
+  NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
+  NODE_LAUNCHER_TEST_LAUNCH_PARAM,
+  NODE_LAUNCHER_TEST_PARAM,
+} from "../node-launcher-test-param.js"
 
-const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const fileRelativePath = `${folderJsenvRelativePath}/class.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  projectPath,
+  ...NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
   compileIntoRelativePath,
-  logLevel: "off",
-  cleanCompileInto: true,
 })
 
 const actual = await launchAndExecute({
+  ...NODE_LAUNCHER_TEST_LAUNCH_PARAM,
   launch: (options) =>
     launchNode({
+      ...NODE_LAUNCHER_TEST_PARAM,
       ...options,
       compileServerOrigin,
-      projectPath,
       compileIntoRelativePath,
     }),
   fileRelativePath,
+  collectNamespace: false,
 })
 const expected = {
   status: "completed",
