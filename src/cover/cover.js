@@ -32,7 +32,6 @@ import {
   DEFAULT_MAX_PARALLEL_EXECUTION,
 } from "./cover-constant.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS, LOG_LEVEL_OFF } from "../logger.js"
-import { JSENV_PATHNAME } from "../JSENV_PATH.js"
 
 export const cover = async ({
   projectPath,
@@ -74,15 +73,7 @@ export const cover = async ({
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     const coverMetaDescription = namedValueDescriptionToMetaDescription({
-      cover: {
-        ...coverDescription,
-        ...(projectPathname === JSENV_PATHNAME
-          ? {
-              "/node_modules/@jsenv/core/": true, // also cover jsenv internal files
-              "/node_modules/@jsenv/core/node_modules/": false,
-            }
-          : {}),
-      },
+      cover: coverDescription,
     })
 
     const coverRelativePathPredicate = (relativePath) =>
