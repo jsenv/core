@@ -5,14 +5,16 @@ export { startCompileServer } from "./src/compile-server/index.js"
 export { launchAndExecute } from "./src/launchAndExecute/index.js"
 
 // belong to core
-export { execute } from "./src/execute/execute.js"
+export { execute } from "./src/execution/execute.js"
 
 // belong to core
-export { test } from "./src/test/test.js"
+export { test } from "./src/testing/test.js"
 
 // belong to core
-export { cover } from "./src/cover/cover.js"
-export { DEFAULT_COVER_DESCRIPTION as jsenvCoverDescription } from "./src/cover/cover-constant.js"
+export { cover } from "./src/coverage/cover.js"
+export {
+  DEFAULT_COVER_DESCRIPTION as jsenvCoverDescription,
+} from "./src/coverage/cover-constant.js"
 
 // belong to core (let's keep it in core because way easier to manage)
 export { bundleNode } from "./src/bundle/node/bundleNode.js"
@@ -28,7 +30,3 @@ export { launchChromium } from "./src/chromium-launcher/index.js"
 
 // must be moved later to jsenv/node-launcher
 export { launchNode } from "./src/node-launcher/index.js"
-
-// helpers around coverage, core for now
-export { generateCoverageHTML } from "./src/cover/generateCoverageHTML.js"
-export { generateCoverageLog } from "./src/cover/generateCoverageLog.js"

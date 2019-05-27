@@ -1,6 +1,6 @@
 ## TODO
 
-- rename test into something else, its misleading with a test folder
+- increase coverage for browser-explorer-server
 - nothing else :)
 
 ## To keep in mind
