@@ -5,22 +5,23 @@ import { startCompileServer, launchAndExecute, launchNode } from "../../../index
 
 const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
-const compileInto = `${folderJsenvRelativePath}/.dist`
+const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const fileRelativePath = `${folderJsenvRelativePath}/alive.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
   projectPath,
-  compileInto,
+  compileIntoRelativePath,
   logLevel: "off",
+  cleanCompileInto: true,
 })
 
 const actual = await launchAndExecute({
   launch: (options) =>
     launchNode({
       ...options,
-      projectPath,
       compileServerOrigin,
-      compileInto,
+      projectPath,
+      compileIntoRelativePath,
     }),
   fileRelativePath,
 })

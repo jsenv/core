@@ -5,13 +5,14 @@ import { startCompileServer, launchAndExecute, launchChromium } from "../../../i
 
 const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
-const compileInto = `${folderJsenvRelativePath}/.dist`
+const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const fileRelativePath = `${folderJsenvRelativePath}/throw-after-executed.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
   projectPath,
-  compileInto,
+  compileIntoRelativePath,
   logLevel: "off",
+  cleanCompileInto: true,
 })
 
 let afterExecuteError
@@ -19,9 +20,9 @@ const actual = await launchAndExecute({
   launch: (options) =>
     launchChromium({
       ...options,
-      projectPath,
-      compileInto,
       compileServerOrigin,
+      projectPath,
+      compileIntoRelativePath,
     }),
   errorAfterExecutedCallback: (error) => {
     afterExecuteError = error

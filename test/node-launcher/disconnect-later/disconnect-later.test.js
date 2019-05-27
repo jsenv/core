@@ -12,6 +12,7 @@ const { origin: compileServerOrigin } = await startCompileServer({
   projectPath,
   compileIntoRelativePath,
   logLevel: "off",
+  cleanCompileInto: true,
 })
 
 let called = false

@@ -13,6 +13,7 @@ const { origin: compileServerOrigin } = await startCompileServer({
   compileIntoRelativePath,
   compileGroupCount: 2,
   logLevel: "off",
+  cleanCompileInto: true,
 })
 
 const actual = await launchAndExecute({

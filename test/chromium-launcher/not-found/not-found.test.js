@@ -15,6 +15,7 @@ const { origin: compileServerOrigin } = await startCompileServer({
   projectPath,
   compileIntoRelativePath,
   logLevel: "off",
+  cleanCompileInto: true,
 })
 
 const actual = await launchAndExecute({

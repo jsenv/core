@@ -56,6 +56,7 @@ export const startCompileServer = async ({
   port = 0,
   signature,
   logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
+  cleanCompileInto = false,
 }) => {
   if (typeof projectPath !== "string")
     throw new TypeError(`projectPath must be a string. got ${projectPath}`)
@@ -74,7 +75,7 @@ export const startCompileServer = async ({
     compileIntoRelativePath,
   })
   const compileIntoMeta = computeCompileIntoMeta({ babelPluginMap, groupMap })
-  if (shouldInvalidateCache({ previousCompileIntoMeta, compileIntoMeta })) {
+  if (cleanCompileInto || shouldInvalidateCache({ previousCompileIntoMeta, compileIntoMeta })) {
     await removeFolder(
       pathnameToOperatingSystemPath(`${projectPathname}${compileIntoRelativePath}`),
     )

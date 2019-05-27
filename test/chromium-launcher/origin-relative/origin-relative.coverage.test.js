@@ -3,7 +3,6 @@ import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta
 import { JSENV_PATH } from "../../../src/JSENV_PATH.js"
 import { startCompileServer, launchAndExecute, launchChromium } from "../../../index.js"
 import { createInstrumentPlugin } from "../../../src/coverage/createInstrumentPlugin.js"
-import { removeFolder } from "../removeFolder.js"
 
 const projectPath = JSENV_PATH
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
@@ -17,13 +16,12 @@ const babelPluginMap = {
   ],
 }
 
-await removeFolder(`${projectPath}${compileIntoRelativePath}`)
-
 const { origin: compileServerOrigin } = await startCompileServer({
   projectPath,
   compileIntoRelativePath,
   babelPluginMap,
   logLevel: "off",
+  cleanCompileInto: true,
 })
 
 const actual = await launchAndExecute({

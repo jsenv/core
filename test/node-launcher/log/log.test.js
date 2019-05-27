@@ -12,6 +12,7 @@ const fileRelativePath = `${folderJsenvRelativePath}/log.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   projectPath,
   compileIntoRelativePath,
+  cleanCompileInto: true,
   logLevel: "off",
 })
 

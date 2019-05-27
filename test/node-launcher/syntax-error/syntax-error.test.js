@@ -17,6 +17,7 @@ const fileRelativePath = `${folderJsenvRelativePath}/syntax-error.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   projectPath,
   compileIntoRelativePath,
+  cleanCompileInto: true,
   logLevel: "off",
 })
 
