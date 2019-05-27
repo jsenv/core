@@ -1,7 +1,6 @@
 ## TODO
 
 - increase coverage for browser-explorer-server
-- see if we can get ride of JSENV_PATH-2.js
 - nothing else :)
 
 ## To keep in mind

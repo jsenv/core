@@ -6,7 +6,7 @@ import {
   pathnameToOperatingSystemPath,
   operatingSystemPathToPathname,
 } from "@jsenv/operating-system-path"
-import { JSENV_PATH } from "../JSENV_PATH-2.js"
+import { JSENV_PATH } from "../JSENV_PATH.js"
 import { createChildExecArgv } from "./createChildExecArgv.js"
 import { generateNodeBundle } from "../bundle-service/index.js"
 import { relativePathInception } from "../inception.js"
