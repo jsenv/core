@@ -26,7 +26,7 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       compileIntoRelativePath,
     }),
-  allocatedMs: 5000,
+  allocatedMs: 15000,
   captureConsole: true,
   fileRelativePath,
 })
