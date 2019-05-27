@@ -60,6 +60,7 @@ export const cover = async ({
   collectNamespace = false,
   measureDuration = true,
   captureConsole = true,
+  generateMissedCoverage = true,
 }) => {
   if (!writeCoverageFile) {
     if (logCoverageTable)
@@ -134,22 +135,27 @@ export const cover = async ({
       (relativePathToCover) => relativePathToCover.slice(1) in executionCoverageMap === false,
     )
 
-    const missedCoverageMap = {}
-    await Promise.all(
-      relativePathMissingCoverageArray.map(async (relativePathMissingCoverage) => {
-        const emptyCoverage = await relativePathToEmptyCoverage({
-          cancellationToken,
-          projectPathname,
-          relativePath: relativePathMissingCoverage,
-        })
-        missedCoverageMap[relativePathMissingCoverage.slice(1)] = emptyCoverage
-        return emptyCoverage
-      }),
-    )
+    let coverageMap
+    if (generateMissedCoverage) {
+      const missedCoverageMap = {}
+      await Promise.all(
+        relativePathMissingCoverageArray.map(async (relativePathMissingCoverage) => {
+          const emptyCoverage = await relativePathToEmptyCoverage({
+            cancellationToken,
+            projectPathname,
+            relativePath: relativePathMissingCoverage,
+          })
+          missedCoverageMap[relativePathMissingCoverage.slice(1)] = emptyCoverage
+          return emptyCoverage
+        }),
+      )
 
-    const coverageMap = {
-      ...executionCoverageMap,
-      ...missedCoverageMap,
+      coverageMap = {
+        ...executionCoverageMap,
+        ...missedCoverageMap,
+      }
+    } else {
+      coverageMap = executionCoverageMap
     }
 
     if (updateProcessExitCode) {
