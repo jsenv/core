@@ -13,13 +13,15 @@ const computeTestBabelPluginMap = ({ coverageEnabled }) => {
 
   return {
     ...jsenvBabelPluginMap,
-    ["transform-instrument"]: createInstrumentPlugin({
-      predicate: ({ relativePath }) =>
-        pathnameToMeta({
-          pathname: relativePath,
-          metaDescription: coverMetaDescription,
-        }).cover === true,
-    }),
+    ["transform-instrument"]: [
+      createInstrumentPlugin({
+        predicate: ({ relativePath }) =>
+          pathnameToMeta({
+            pathname: relativePath,
+            metaDescription: coverMetaDescription,
+          }).cover === true,
+      }),
+    ],
   }
 }
 

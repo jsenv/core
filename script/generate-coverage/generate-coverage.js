@@ -3,5 +3,4 @@ const { projectPath } = require("../../jsenv.config.js")
 
 cover({
   projectPath,
-  maxParallelExecution: 1,
 })

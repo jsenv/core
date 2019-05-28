@@ -6,7 +6,6 @@ import {
   NODE_LAUNCHER_TEST_LAUNCH_PARAM,
   NODE_LAUNCHER_TEST_PARAM,
 } from "../node-launcher-test-param.js"
-import { removeDebuggerLog } from "../removeDebuggerLog.js"
 
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
@@ -27,17 +26,14 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       compileIntoRelativePath,
     }),
-  captureConsole: true,
   fileRelativePath,
   collectNamespace: false,
   errorAfterExecutedCallback: (error) => {
     afterExecuteError = error
   },
 })
-actual.platformLog = removeDebuggerLog(actual.platformLog)
 const expected = {
   status: "completed",
-  platformLog: "",
 }
 assert({ actual, expected })
 

@@ -56,24 +56,6 @@ ${"//#"} sourceURL=__node-evaluation-script__.js`)
   }),
 )
 
-// const exceptionToObject = (exception) => {
-//   if (exception && exception instanceof Error) {
-//     const object = {}
-//     // indirectly this read exception.stack
-//     // which will ensure it leads to the right file path
-//     // thanks to sourceMapSupport
-//     // we may want to have something more explicit but for now it's cool
-//     Object.getOwnPropertyNames(exception).forEach((name) => {
-//       object[name] = exception[name]
-//     })
-//     return object
-//   }
-
-//   return {
-//     message: exception,
-//   }
-// }
-
 const sendToParent = (type, data) => {
   // https://nodejs.org/api/process.html#process_process_connected
   // not connected anymore, cannot communicate with parent
@@ -83,6 +65,10 @@ const sendToParent = (type, data) => {
   // because it works with JSON.stringify I guess so use uneval
   const source = uneval(data, { accurateErrorProperties: true })
 
+  // this can keep process alive longer than expected
+  // when source is a long string.
+  // It means node process may stay alive longer than expected
+  // the time to send the data to the parent.
   process.send({
     type,
     data: source,

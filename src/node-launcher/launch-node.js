@@ -151,7 +151,6 @@ export const launchNode = async ({
 
   const executeFile = async (fileRelativePath, { collectNamespace, collectCoverage }) => {
     const execute = async () => {
-      // seems the bundle below generated files cache is not hit for some reason, find why
       await generateNodeBundle({
         projectPathname,
         compileIntoRelativePath,
