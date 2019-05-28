@@ -105,7 +105,7 @@ export const launchAndExecute = async ({
         const { coverageMap, ...rest } = executionResult
         // ensure the coverage of the launched stuff
         // is accounted as coverage for this
-        global.__coverage__ = coverageMapCompose(global.__coverage__ || {}, coverageMap)
+        global.__coverage__ = coverageMapCompose(global.__coverage__ || {}, coverageMap || {})
         return savedCollectCoverage ? executionResult : rest
       },
     )

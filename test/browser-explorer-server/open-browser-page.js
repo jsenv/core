@@ -11,7 +11,7 @@ export const openBrowserPage = async (url) => {
     const coverageMap = await page.evaluate(`(() => {
   return window.__coverage__
 })()`)
-    global.__coverage__ = coverageMapCompose(global.__coverage__ || {}, coverageMap)
+    global.__coverage__ = coverageMapCompose(global.__coverage__ || {}, coverageMap || {})
   }
 
   return { browser, page }
