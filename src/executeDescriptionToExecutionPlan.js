@@ -15,7 +15,7 @@ export const executeDescriptionToExecutionPlan = async ({
   compileGroupCount,
   babelPluginMap,
   executeDescription,
-  defaultAllocatedMsPerExecution = 20000,
+  defaultAllocatedMsPerExecution,
   compileServerLogLevel,
   cover = false,
 }) => {

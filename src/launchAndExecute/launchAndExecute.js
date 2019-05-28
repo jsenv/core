@@ -8,6 +8,7 @@ import {
 } from "@dmail/cancellation"
 import { promiseTrackRace } from "@dmail/helper"
 import { createLogger, LOG_LEVEL_OFF } from "../logger.js"
+import { coverageMapCompose } from "../coverage/executionPlanResultToCoverageMap/coverageMapCompose.js"
 
 export const launchAndExecute = async ({
   cancellationToken = createCancellationToken(),
@@ -33,6 +34,7 @@ export const launchAndExecute = async ({
   fileRelativePath,
   collectNamespace = false,
   collectCoverage = false,
+  inheritCoverage = false,
   collectPlatformNameAndVersion = false,
 } = {}) => {
   if (typeof launch !== "function")
@@ -90,6 +92,21 @@ export const launchAndExecute = async ({
         executionResult.startMs = startMs
         executionResult.endMs = endMs
         return executionResult
+      },
+    )
+  }
+
+  if (inheritCoverage) {
+    const savedCollectCoverage = collectCoverage
+    collectCoverage = true
+    executionResultTransformer = composeTransformer(
+      executionResultTransformer,
+      (executionResult) => {
+        const { coverageMap, ...rest } = executionResult
+        // ensure the coverage of the launched stuff
+        // is accounted as coverage for this
+        global.__coverage__ = coverageMapCompose(global.__coverage__ || {}, coverageMap)
+        return savedCollectCoverage ? executionResult : rest
       },
     )
   }

@@ -26,6 +26,7 @@ export const execute = async ({
   executionLogLevel = LOG_LEVEL_OFF,
   mirrorConsole = true,
   stopOnceExecuted = false,
+  inheritCoverage = false,
 }) =>
   catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
@@ -53,6 +54,7 @@ export const execute = async ({
       mirrorConsole,
       stopOnceExecuted,
       fileRelativePath,
+      inheritCoverage,
     })
 
     if (result.status === "errored") {

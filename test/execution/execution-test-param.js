@@ -5,4 +5,5 @@ export const EXECUTION_TEST_PARAM = {
   projectPath: JSENV_PATH,
   logLevel: "off",
   babelPluginMap: testBabelPluginMap,
+  inheritCoverage: process.env.COVERAGE_ENABLED,
 }

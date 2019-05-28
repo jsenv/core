@@ -10,6 +10,7 @@ export const NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM = {
 
 export const NODE_LAUNCHER_TEST_LAUNCH_PARAM = {
   collectNamespace: true,
+  inheritCoverage: process.env.COVERAGE_ENABLED,
 }
 
 export const NODE_LAUNCHER_TEST_PARAM = {
