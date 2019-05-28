@@ -4,7 +4,7 @@ import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
 import { relativePathInception } from "../inception.js"
 import { startServer, firstService } from "../server/index.js"
 import { startCompileServer } from "../compile-server/index.js"
-import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS, LOG_LEVEL_OFF } from "../logger.js"
+import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 import { serveBrowserExplorerIndex } from "./serve-browser-explorer-index.js"
 import { serveBrowserExplorerPage } from "./serve-browser-explorer-page.js"
 import {
