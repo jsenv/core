@@ -44,6 +44,7 @@ export const startServer = async ({
   stopOnError = true,
   // auto close the server when an uncaughtException happens
   stopOnCrash = false,
+  keepProcessAlive = true,
   requestToResponse = () => null,
   cors = false,
   logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
@@ -67,6 +68,11 @@ export const startServer = async ({
   }
 
   const { nodeServer, agent } = getNodeServerAndAgent({ protocol, signature })
+
+  // https://nodejs.org/api/net.html#net_server_unref
+  if (!keepProcessAlive) {
+    nodeServer.unref()
+  }
 
   let status = "starting"
 

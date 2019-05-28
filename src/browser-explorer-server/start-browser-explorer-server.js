@@ -4,6 +4,9 @@ import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
 import { relativePathInception } from "../inception.js"
 import { startServer, firstService } from "../server/index.js"
 import { startCompileServer } from "../compile-server/index.js"
+import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS, LOG_LEVEL_OFF } from "../logger.js"
+import { serveBrowserExplorerIndex } from "./serve-browser-explorer-index.js"
+import { serveBrowserExplorerPage } from "./serve-browser-explorer-page.js"
 import {
   DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
@@ -12,8 +15,6 @@ import {
   DEFAULT_BROWSABLE_DESCRIPTION,
   DEFAULT_BABEL_PLUGIN_MAP,
 } from "./browser-explorer-server-constant.js"
-import { serveBrowserExplorerIndex } from "./serve-browser-explorer-index.js"
-import { serveBrowserExplorerPage } from "./serve-browser-explorer-page.js"
 
 export const startBrowserExplorerServer = async ({
   cancellationToken = createCancellationToken(),
@@ -25,12 +26,15 @@ export const startBrowserExplorerServer = async ({
   babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
   compileGroupCount = 2,
   browsableDescription = DEFAULT_BROWSABLE_DESCRIPTION,
+  logLevel = LOG_LEVEL_OFF,
+  keepProcessAlive = true,
   cors = true,
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
   forcePort = false,
   signature,
+  compileServerLogLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
 }) => {
   const projectPathname = operatingSystemPathToPathname(projectPath)
 
@@ -52,6 +56,7 @@ export const startBrowserExplorerServer = async ({
     port: 0, // random available port
     forcePort: false, // no need because random port
     signature,
+    logLevel: compileServerLogLevel,
   })
 
   const service = (request) =>
@@ -85,6 +90,8 @@ export const startBrowserExplorerServer = async ({
     port,
     forcePort,
     requestToResponse: service,
+    logLevel,
+    keepProcessAlive,
   })
 
   return browserServer

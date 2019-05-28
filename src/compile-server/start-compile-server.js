@@ -210,10 +210,9 @@ export const startCompileServer = async ({
     requestToResponse: serviceCompose(...services),
     logLevel,
     cors,
+    // but while debugging it may close the server too soon, to be tested
+    keepProcessAlive: false,
   })
-  // https://nodejs.org/api/net.html#net_server_unref
-  // but while debugging it may close the server too soon, to be tested
-  compileServer.nodeServer.unref()
 
   return compileServer
 }
