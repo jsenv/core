@@ -8,7 +8,7 @@ import {
   createExecutionResultLog,
   createExecutionPlanSummaryMessage,
 } from "./createExecutionLog.js"
-import { createLogger, LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
+import { createLogger, LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS, LOG_LEVEL_OFF } from "../logger.js"
 
 export const executePlan = async (
   executionPlan,
@@ -22,6 +22,7 @@ export const executePlan = async (
     beforeEachExecutionCallback = () => {},
     afterEachExecutionCallback = () => {},
     logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
+    launchLogLevel = LOG_LEVEL_OFF,
   } = {},
 ) => {
   const { log } = createLogger({ logLevel })
@@ -55,7 +56,7 @@ export const executePlan = async (
         cancellationToken,
         allocatedMs,
         measureDuration,
-        logLevel: "off",
+        logLevel: launchLogLevel,
         collectPlatformNameAndVersion: true,
         // mirrorConsole: false because file will be executed in parallel
         // so log would be a mess to read

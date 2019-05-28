@@ -57,6 +57,7 @@ export const cover = async ({
   throwUnhandled = true,
   compileServerLogLevel = LOG_LEVEL_OFF,
   executionLogLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
+  launchLogLevel = LOG_LEVEL_OFF,
   collectNamespace = false,
   measureDuration = true,
   captureConsole = true,
@@ -115,6 +116,7 @@ export const cover = async ({
 
         return executePlan(executionPlan, {
           logLevel: executionLogLevel,
+          launchLogLevel,
           cancellationToken,
           maxParallelExecution,
           measureDuration,
