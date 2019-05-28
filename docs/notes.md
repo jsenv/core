@@ -1,8 +1,5 @@
 ## TODO
 
-- fix coverage for node platform
-- fix coverage for browser platform
-- increase coverage for browser-explorer-server
 - nothing else :)
 
 ## To keep in mind
