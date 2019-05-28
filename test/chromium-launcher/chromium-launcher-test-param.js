@@ -11,7 +11,7 @@ export const CHROMIUM_LAUNCHER_TEST_COMPILE_SERVER_PARAM = {
 export const CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM = {
   stopOnceExecuted: true,
   collectNamespace: true,
-  inheritCoverage: process.env.COVERAGE_ENABLED,
+  inheritCoverage: process.env.COVERAGE_ENABLED === "true",
 }
 
 export const CHROMIUM_LAUNCHER_TEST_PARAM = {
