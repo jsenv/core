@@ -8,7 +8,7 @@ export const relativePathInception = ({ projectPathname, relativePath }) => {
   const projectIsJsenv = projectPathname === JSENV_PATH || pathnameIsJsenvCore(projectPathname)
 
   if (!projectIsJsenv) {
-    const projectIsInsideJsenv = projectPathname.startWith(`${JSENV_PATH}/`)
+    const projectIsInsideJsenv = projectPathname.startsWith(`${JSENV_PATH}/`)
     if (projectIsInsideJsenv) {
       throw new Error(`relativePathInception work only inside jsenv.
 project path: ${pathnameToOperatingSystemPath(projectPathname)}
