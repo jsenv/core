@@ -16,7 +16,7 @@ const { origin: compileServerOrigin } = await startCompileServer({
   compileIntoRelativePath,
 })
 
-let afterExecuteError
+let errorCallbackParam
 const actual = await launchAndExecute({
   ...NODE_LAUNCHER_TEST_LAUNCH_PARAM,
   launch: (options) =>
@@ -28,8 +28,8 @@ const actual = await launchAndExecute({
     }),
   fileRelativePath,
   collectNamespace: false,
-  errorAfterExecutedCallback: (error) => {
-    afterExecuteError = error
+  errorCallback: (param) => {
+    errorCallbackParam = param
   },
 })
 const expected = {
@@ -39,7 +39,10 @@ assert({ actual, expected })
 
 process.on("exit", () => {
   assert({
-    actual: afterExecuteError,
-    expected: new Error(`child exited with 1`),
+    actual: errorCallbackParam,
+    expected: {
+      error: new Error("child exited with 1"),
+      timing: "after-execution",
+    },
   })
 })

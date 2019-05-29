@@ -1,4 +1,5 @@
 import { assert } from "@dmail/assert"
+import { createCancellationSource } from "@dmail/cancellation"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
 import { startCompileServer, launchAndExecute, launchChromium } from "../../../index.js"
 import {
@@ -16,9 +17,12 @@ const { origin: compileServerOrigin } = await startCompileServer({
   compileIntoRelativePath,
 })
 
-let afterExecuteError
+const { cancel, token: cancellationToken } = createCancellationSource()
+
+let errorCallbackParam
 const actual = await launchAndExecute({
   ...CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
+  cancellationToken,
   launch: (options) =>
     launchChromium({
       ...CHROMIUM_LAUNCHER_TEST_PARAM,
@@ -26,10 +30,10 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       compileIntoRelativePath,
     }),
-  errorAfterExecutedCallback: (error) => {
-    afterExecuteError = error
+  errorCallback: (param) => {
+    errorCallbackParam = param
+    cancel("error") // kill chromium browser to let process end
   },
-  stopOnError: true,
   fileRelativePath,
   collectNamespace: false,
 })
@@ -40,7 +44,10 @@ assert({ actual, expected })
 
 process.on("exit", () => {
   assert({
-    actual: afterExecuteError,
-    expected: new Error(afterExecuteError.message),
+    actual: errorCallbackParam,
+    expected: {
+      error: new Error(errorCallbackParam.error.message),
+      timing: "after-execution",
+    },
   })
 })

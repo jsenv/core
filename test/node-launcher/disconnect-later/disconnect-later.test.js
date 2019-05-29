@@ -16,7 +16,7 @@ const { origin: compileServerOrigin } = await startCompileServer({
   compileIntoRelativePath,
 })
 
-let called = false
+let disconnectCallbackParam
 const actual = await launchAndExecute({
   ...NODE_LAUNCHER_TEST_LAUNCH_PARAM,
   launch: (options) =>
@@ -28,8 +28,8 @@ const actual = await launchAndExecute({
     }),
   fileRelativePath,
   collectNamespace: false,
-  disconnectAfterExecutedCallback: () => {
-    called = true
+  disconnectCallback: (param) => {
+    disconnectCallbackParam = param
   },
 })
 const expected = {
@@ -39,7 +39,7 @@ assert({ actual, expected })
 
 process.on("exit", () => {
   assert({
-    actual: called,
-    expected: true,
+    actual: disconnectCallbackParam,
+    expected: { timing: "after-execution" },
   })
 })
