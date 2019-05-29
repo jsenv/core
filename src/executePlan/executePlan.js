@@ -62,10 +62,6 @@ export const executePlan = async (
         // so log would be a mess to read
         mirrorConsole: false,
         captureConsole,
-        // stopOnError: true to ensure platform is stopped on error
-        // because we know what we want: execution has failed
-        // and we can use capturedConsole to know how it failed
-        stopOnError: true,
         // stopOnceExecuted: true to ensure platform is stopped once executed
         // because we have what we wants: execution is completed and
         // we have associated coverageMap and capturedConsole

@@ -10,6 +10,10 @@ import { promiseTrackRace } from "@dmail/helper"
 import { createLogger, LOG_LEVEL_OFF } from "../logger.js"
 import { coverageMapCompose } from "../coverage/executionPlanResultToCoverageMap/coverageMapCompose.js"
 
+const TIMING_BEFORE_EXECUTION = "before-execution"
+const TIMING_DURING_EXECUTION = "during-execution"
+const TIMING_AFTER_EXECUTION = "after-execution"
+
 export const launchAndExecute = async ({
   cancellationToken = createCancellationToken(),
   launch,
@@ -21,10 +25,6 @@ export const launchAndExecute = async ({
   // or nodejs process
   // however unit test will pass true because they want to move on
   stopOnceExecuted = false,
-  // stopOnError is false by default because it's better to keep process/browser alive
-  // to debug the error to the its consequences
-  // however unit test will pass true because they want to move on
-  stopOnError = false,
   logLevel = LOG_LEVEL_OFF,
   consoleCallback = () => {},
   startedCallback = () => {},
@@ -118,7 +118,6 @@ export const launchAndExecute = async ({
     logLevel,
     consoleCallback,
     stopOnceExecuted,
-    stopOnError,
     errorAfterExecutedCallback,
     disconnectAfterExecutedCallback,
     startedCallback,
@@ -208,9 +207,8 @@ const computeExecutionResult = async ({
   startedCallback,
   stoppedCallback,
   consoleCallback,
-  errorAfterExecutedCallback,
-  disconnectAfterExecutedCallback,
-  stopOnError,
+  errorCallback,
+  disconnectCallback,
   stopOnceExecuted,
   fileRelativePath,
   collectNamespace,
@@ -264,6 +262,8 @@ const computeExecutionResult = async ({
     },
   })
 
+  const stop = (reason) => launchOperation.stop(reason)
+
   const {
     name: platformName,
     version: platformVersion,
@@ -275,81 +275,53 @@ const computeExecutionResult = async ({
   } = await launchOperation
 
   log(createPlatformStartedMessage({ platformName, platformVersion, options }))
-
   registerConsoleCallback(consoleCallback)
-
-  const onError = () => {
-    if (stopOnError) {
-      launchOperation.stop("stopOnError")
-    }
-  }
-
   log(createStartExecutionMessage({ fileRelativePath }))
 
   const executionResult = await createOperation({
     cancellationToken,
     start: async () => {
-      const disconnected = new Promise((resolve) => {
-        registerDisconnectCallback(resolve)
-      })
+      let timing = TIMING_BEFORE_EXECUTION
 
-      const errored = new Promise((resolve) => {
-        registerErrorCallback(resolve)
+      const disconnected = new Promise((resolve) => {
+        registerDisconnectCallback(() => {
+          log(createDisconnectedLog())
+          disconnectCallback({ timing })
+          resolve()
+        })
       })
 
       const executed = executeFile(fileRelativePath, {
         collectNamespace,
         collectCoverage,
       })
+      timing = TIMING_DURING_EXECUTION
 
-      const raceResult = await promiseTrackRace([disconnected, errored, executed])
+      registerErrorCallback((error) => {
+        logError(createErrorLog({ error, timing }))
+        errorCallback({ error, timing })
+      })
+
+      const raceResult = await promiseTrackRace([disconnected, executed])
+      timing = TIMING_AFTER_EXECUTION
 
       if (raceResult.winner === disconnected) {
         return createDisconnectedExecutionResult({})
       }
 
-      if (raceResult.winner === errored) {
-        const error = raceResult.value
-        onError(error)
-        return createErroredExecutionResult({
-          error,
-        })
-      }
-
-      registerErrorCallback((error) => {
-        logError(createAfterExecutionErrorMessage({ error }))
-        errorAfterExecutedCallback(error)
-        onError(error)
-      })
-      registerDisconnectCallback(() => {
-        log(createDisconnectedMessage())
-        disconnectAfterExecutedCallback()
-      })
       if (stopOnceExecuted) {
-        launchOperation.stop("stopOnceExecuted")
+        stop("stopOnceExecuted")
       }
 
       const executionResult = raceResult.value
       const { status } = executionResult
       if (status === "errored") {
-        logError(createExecutionErrorMessage(executionResult))
-        onError(error)
-        const { error, coverageMap } = executionResult
-        return {
-          ...createErroredExecutionResult({
-            error,
-          }),
-          ...(collectCoverage ? { coverageMap } : {}),
-        }
+        logError(createErroredLog(executionResult))
+        return createErroredExecutionResult(executionResult, { collectCoverage })
       }
 
-      log(createExecutionDoneMessage(executionResult))
-      const { namespace, coverageMap } = executionResult
-      return {
-        ...createCompletedExecutionResult(),
-        ...(collectNamespace ? { namespace } : {}),
-        ...(collectCoverage ? { coverageMap } : {}),
-      }
+      log(createCompletedLog(executionResult))
+      return createCompletedExecutionResult(executionResult, { collectNamespace, collectCoverage })
     },
   })
 
@@ -373,16 +345,19 @@ const createPlatformStoppedMessage = () => `platform stopped.`
 const createStartExecutionMessage = ({ fileRelativePath }) => `execute file.
 fileRelativePath: ${fileRelativePath}`
 
-const createExecutionErrorMessage = ({ error }) => `error during execution.
+const createErrorLog = ({ error, timing }) =>
+  timing === "after-execution"
+    ? `error after execution.
+stack: ${error.stack}`
+    : `error during execution.
 stack: ${error.stack}`
 
-const createAfterExecutionErrorMessage = ({ error }) => `error after execution.
-stack: ${error.stack}`
+const createErroredLog = ({ error }) => `execution errored.
+error: ${error}`
 
-const createExecutionDoneMessage = ({ value }) => `execution done.
-value: ${value}`
+const createCompletedLog = () => `execution completed.`
 
-const createDisconnectedMessage = () => `platform disconnected.`
+const createDisconnectedLog = () => `platform disconnected.`
 
 const createTimedoutExecutionResult = () => {
   return {
@@ -396,22 +371,21 @@ const createDisconnectedExecutionResult = () => {
   }
 }
 
-const createErroredExecutionResult = ({ error }) => {
+const createErroredExecutionResult = ({ error, coverageMap }, { collectCoverage }) => {
   return {
     status: "errored",
     error,
+    ...(collectCoverage ? { coverageMap } : {}),
   }
 }
 
-const createCompletedExecutionResult = () => {
+const createCompletedExecutionResult = (
+  { namespace, coverageMap },
+  { collectNamespace, collectCoverage },
+) => {
   return {
     status: "completed",
+    ...(collectNamespace ? { namespace } : {}),
+    ...(collectCoverage ? { coverageMap } : {}),
   }
 }
-
-// well this is unexpected but haven't decided yet how we will handle that
-// const createDisconnectedDuringExecutionError = (file, platformType) => {
-//   const error = new Error(`${platformType} disconnected while executing ${file}`)
-//   error.code = "PLATFORM_DISCONNECTED_DURING_EXECUTION_ERROR"
-//   return error
-// }
