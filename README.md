@@ -10,12 +10,10 @@
 
 One day I realized that:
 
-As a consumer of a module, you consider only the main file.<br/>
-As a developper of a module, you consider all the files composing it.
+As a consumer of a module, you **consider only the main file**.<br/>
+As a developper of a module, you **consider all the files** composing it.
 
-> Unfortunately, most developper tools are made for the consumers: you have to build your entire project to test one file.
-
-I found this problematic because it becomes painful or impossible to test a file in isolation from the rest of the project.
+Unfortunately, most developper tools are made for the consumers: you have to build your entire project to test one file. I found this problematic because it becomes painful or impossible to test a file in isolation from the rest of the project.
 
 jsenv provides a solution to turn any JavaScript file into an entry point.
 
