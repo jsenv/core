@@ -170,18 +170,22 @@ export const launchChromium = async ({
       )
     }
     try {
-      const { status, coverageMap, exceptionSource, namespace } = await execute()
-      if (status === "rejected") {
+      const executionResult = await execute()
+      const { status } = executionResult
+      if (status === "errored") {
+        const { exceptionSource, coverageMap } = executionResult
         return {
           status,
           error: evalException(exceptionSource, { compileServerOrigin, projectPathname }),
           coverageMap,
         }
       }
+
+      const { namespace, coverageMap } = executionResult
       return {
         status,
-        coverageMap,
         namespace,
+        coverageMap,
       }
     } catch (e) {
       // if browser is closed due to cancellation

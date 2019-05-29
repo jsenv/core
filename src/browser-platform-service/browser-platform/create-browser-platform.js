@@ -45,7 +45,7 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
     try {
       const namespace = await browserSystem.import(specifier)
       return {
-        status: "resolved",
+        status: "completed",
         namespace: collectNamespace ? namespace : undefined,
         coverageMap: collectCoverage ? readCoverage() : undefined,
       }
@@ -53,7 +53,7 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
       displayErrorInDocument(error)
       displayErrorInConsole(error)
       return {
-        status: "rejected",
+        status: "errored",
         exceptionSource: unevalException(error),
         coverageMap: collectCoverage ? readCoverage() : undefined,
       }

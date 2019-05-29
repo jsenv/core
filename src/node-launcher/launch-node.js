@@ -18,6 +18,7 @@ import { evalSource } from "../node-platform-service/node-platform/evalSource.js
 import { regexpEscape } from "../../src/stringHelper.js"
 import { LOG_LEVEL_OFF } from "../logger.js"
 
+const { EVALUATION_STATUS_OK } = import.meta.require("./node-controllable-constants.js")
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 const CONTROLLABLE_NODE_PATH = `${JSENV_PATH}/src/node-launcher/node-controllable.js`
@@ -165,16 +166,13 @@ export const launchNode = async ({
       })
 
       return new Promise((resolve, reject) => {
-        const executResultRegistration = registerChildMessage(
+        const evaluationResultRegistration = registerChildMessage(
           child,
           "evaluate-result",
-          ({ error, value }) => {
-            executResultRegistration.unregister()
-            if (error) {
-              reject(value)
-            } else {
-              resolve(value)
-            }
+          ({ status, value }) => {
+            evaluationResultRegistration.unregister()
+            if (status === EVALUATION_STATUS_OK) resolve(value)
+            else reject(value)
           },
         )
 
@@ -194,18 +192,22 @@ export const launchNode = async ({
       })
     }
 
-    const { status, coverageMap, exceptionSource, namespace } = await execute()
-    if (status === "rejected") {
+    const executionResult = await execute()
+    const { status } = executionResult
+    if (status === "errored") {
+      const { exceptionSource, coverageMap } = executionResult
       return {
         status,
         error: evalException(exceptionSource, { compileServerOrigin, projectPathname }),
         coverageMap,
       }
     }
+
+    const { namespace, coverageMap } = executionResult
     return {
       status,
-      coverageMap,
       namespace,
+      coverageMap,
     }
   }
 

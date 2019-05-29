@@ -1,5 +1,9 @@
 const { createCancellationSource } = require("@dmail/cancellation")
 const { uneval } = require("@dmail/uneval")
+const {
+  EVALUATION_STATUS_ERROR,
+  EVALUATION_STATUS_OK,
+} = require("./node-controllable-constants.js")
 
 const registerProcessInterruptCallback = (callback) => {
   process.once("SIGINT", callback)
@@ -46,10 +50,13 @@ token.register(
     try {
       const value = await eval(`${expressionString}
 ${"//#"} sourceURL=__node-evaluation-script__.js`)
-      sendToParent("evaluate-result", { error: false, value })
+      sendToParent("evaluate-result", {
+        status: EVALUATION_STATUS_OK,
+        value,
+      })
     } catch (e) {
       sendToParent("evaluate-result", {
-        error: true,
+        status: EVALUATION_STATUS_ERROR,
         value: e,
       })
     }

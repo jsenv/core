@@ -297,52 +297,24 @@ const computeExecutionResult = async ({
         registerErrorCallback(resolve)
       })
 
-      const executionPromise = executeFile(fileRelativePath, {
+      const executed = executeFile(fileRelativePath, {
         collectNamespace,
         collectCoverage,
       })
-      const executionCompleted = new Promise((resolve) => {
-        executionPromise.then(
-          (value) => {
-            resolve(value)
-          },
-          () => {},
-        )
-      })
 
-      const executionErrored = new Promise((resolve) => {
-        executionPromise.catch((error) => {
-          resolve(error)
-        })
-      })
+      const raceResult = await promiseTrackRace([disconnected, errored, executed])
 
-      const { winner, value } = await promiseTrackRace([
-        disconnected,
-        errored,
-        executionErrored,
-        executionCompleted,
-      ])
-
-      if (winner === disconnected) {
+      if (raceResult.winner === disconnected) {
         return createDisconnectedExecutionResult({})
       }
 
-      if (winner === errored) {
-        onError(value)
+      if (raceResult.winner === errored) {
+        const error = raceResult.value
+        onError(error)
         return createErroredExecutionResult({
-          error: value,
+          error,
         })
       }
-
-      if (winner === executionErrored) {
-        logError(createExecutionErrorMessage({ error: value }))
-        onError(value)
-        return createErroredExecutionResult({
-          error: value,
-        })
-      }
-
-      log(createExecutionDoneMessage({ value }))
 
       registerErrorCallback((error) => {
         logError(createAfterExecutionErrorMessage({ error }))
@@ -353,13 +325,16 @@ const computeExecutionResult = async ({
         log(createDisconnectedMessage())
         disconnectAfterExecutedCallback()
       })
-
       if (stopOnceExecuted) {
         launchOperation.stop("stopOnceExecuted")
       }
 
-      const { status, coverageMap, error, namespace } = value
-      if (status === "rejected") {
+      const executionResult = raceResult.value
+      const { status } = executionResult
+      if (status === "errored") {
+        logError(createExecutionErrorMessage(executionResult))
+        onError(error)
+        const { error, coverageMap } = executionResult
         return {
           ...createErroredExecutionResult({
             error,
@@ -368,6 +343,8 @@ const computeExecutionResult = async ({
         }
       }
 
+      log(createExecutionDoneMessage(executionResult))
+      const { namespace, coverageMap } = executionResult
       return {
         ...createCompletedExecutionResult(),
         ...(collectNamespace ? { namespace } : {}),

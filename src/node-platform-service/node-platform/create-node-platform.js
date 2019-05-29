@@ -46,14 +46,14 @@ export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => 
     try {
       const namespace = await nodeSystem.import(specifier)
       return {
-        status: "resolved",
+        status: "completed",
         namespace: collectNamespace ? namespace : undefined,
         coverageMap: collectCoverage ? readCoverage() : undefined,
       }
     } catch (error) {
       console.error(error)
       return {
-        status: "rejected",
+        status: "errored",
         exceptionSource: unevalException(error),
         coverageMap: collectCoverage ? readCoverage() : undefined,
       }
