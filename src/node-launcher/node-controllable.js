@@ -1,9 +1,8 @@
 const { createCancellationSource } = require("@dmail/cancellation")
 const { uneval } = require("@dmail/uneval")
-const {
-  EVALUATION_STATUS_ERROR,
-  EVALUATION_STATUS_OK,
-} = require("./node-controllable-constants.js")
+
+const EVALUATION_STATUS_OK = "evaluation-ok"
+const EVALUATION_STATUS_ERROR = "evaluation-error"
 
 const registerProcessInterruptCallback = (callback) => {
   process.once("SIGINT", callback)

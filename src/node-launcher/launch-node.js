@@ -6,22 +6,21 @@ import {
   pathnameToOperatingSystemPath,
   operatingSystemPathToPathname,
 } from "@jsenv/operating-system-path"
-import { JSENV_PATH } from "../JSENV_PATH.js"
-import { createChildExecArgv } from "./createChildExecArgv.js"
+import { regexpEscape } from "../../src/stringHelper.js"
 import { generateNodeBundle } from "../bundle-service/index.js"
 import { relativePathInception } from "../inception.js"
+import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
+import { LOG_LEVEL_OFF } from "../logger.js"
+import { createChildExecArgv } from "./createChildExecArgv.js"
 import {
   DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
 } from "./launch-node-constant.js"
-import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
-import { regexpEscape } from "../../src/stringHelper.js"
-import { LOG_LEVEL_OFF } from "../logger.js"
 
-const { EVALUATION_STATUS_OK } = import.meta.require("./node-controllable-constants.js")
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
-const CONTROLLABLE_NODE_PATH = `${JSENV_PATH}/src/node-launcher/node-controllable.js`
+const EVALUATION_STATUS_OK = "evaluation-ok"
+const CONTROLLABLE_NODE_RELATIVE_PATH = `/src/node-launcher/node-controllable.js`
 const NODE_EXECUTE_TEMPLATE_RELATIVE_PATH = "/src/node-launcher/node-execute-template.js"
 const NODE_EXECUTE_CLIENT_PATHNAME = "/.jsenv/node-execute.js"
 
@@ -63,7 +62,11 @@ export const launchNode = async ({
 
   const env = { COVERAGE_ENABLED: cover }
 
-  const child = forkChildProcess(CONTROLLABLE_NODE_PATH, {
+  const childPathname = `${projectPathname}${relativePathInception({
+    projectPathname,
+    relativePath: CONTROLLABLE_NODE_RELATIVE_PATH,
+  })}`
+  const child = forkChildProcess(pathnameToOperatingSystemPath(childPathname), {
     execArgv,
     // silent: true
     stdio: "pipe",
@@ -227,7 +230,10 @@ export const launchNode = async ({
 const evalException = (exceptionSource, { compileServerOrigin, projectPathname }) => {
   const error = evalSource(
     exceptionSource,
-    `${JSENV_PATH}/src/node-platform-service/node-platform/index.js`,
+    relativePathInception({
+      projectPathname,
+      relativePath: "/src/node-platform-service/node-platform/index.js",
+    }),
   )
   if (error && error instanceof Error) {
     const sourceOrigin = `file://${projectPathname}`
