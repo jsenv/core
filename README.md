@@ -8,21 +8,16 @@
 
 ## History behind jsenv
 
-A long time ago, not even aware of github repositories or npm packages, I was learning to code.
-After some years I discovered benefits of module: writing scoped code.
-But for one exported function that people will use, you may have X private function that you want to test.
+One day I realized that:
 
-From the outside a module is likely going to have one entry point.
-From the inside, when you develop a module, you may want to consider any file as an entry point in order to test it.
+As a consumer of a module, you consider only the main file.<br/>
+As a developper of a module, you consider all the files composing it.
 
-> Unfortunately, most tools assumes you have one main file for your entire project.
+> Unfortunately, most developper tools are made for the consumers: you have to build your entire project to test one file.
 
-It means you have to build the entire project to test one file leading to 2 issues:
+I found this problematic because it becomes painful or impossible to test a file in isolation from the rest of the project.
 
-- Slower to test a file
-- Hard to test a file isolated from the rest of the project
-
-jsenv main goal is to provide a solution capable to turn any JavaScript file into an entry point.
+jsenv provides a solution to turn any JavaScript file into an entry point.
 
 ## Main dependencies
 
