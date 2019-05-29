@@ -8,12 +8,10 @@
 
 ## History behind jsenv
 
-One day I realized that:
-
 As a consumer of a module, you **consider only the main file**.<br/>
 As a developper of a module, you **consider all the files** composing it.
 
-Unfortunately, most developper tools are made for the consumers: you have to build your entire project to test one file. I found this problematic because it becomes painful or impossible to test a file in isolation from the rest of the project.
+Most developper tools focuses on the consumer point of view and you have to build your entire project to test one file. It makes painful or even impossible to test a file in isolation of the project.
 
 jsenv provides a solution to turn any JavaScript file into an entry point.
 
@@ -29,22 +27,17 @@ Thank you to people behind these projects, they helped me a lot.
 
 ## Documentation
 
-There is not yet official documentation.
-I'm not planning to add it very soon because it's a lot of work and there is an acceptable alternative:
-
-I encourage you to check (my) projects powered by jsenv
+There is no complete documentation available at the moment. To understand how jsenv works, I encourage you to check (my) projects using it.
 
 - https://github.com/dmail/assert
 - https://github.com/dmail/uneval
 
-You can understand how jsenv is meants to be used by checking their package.json scripts section:
+You can understand how jsenv is meants to be used by checking package.json scripts:
 https://github.com/dmail/assert/blob/3a308d2e78b9ea217807e27ed4597fbf71f3903f/package.json#L38-L52
 
 ## Demonstration
 
-This section will show what is cool about jsenv.
-
-List of cool stuff
+Section dedicated to highlight the cool stuff provided by jsenv.
 
 - You can use import starting with / `import from '/src/file.js'`
 - You can use top level await
