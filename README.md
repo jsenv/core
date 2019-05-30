@@ -11,7 +11,7 @@
 As a consumer of a module, you **consider only the main file**.<br/>
 As a developper of a module, you **consider all the files** composing it.
 
-Most developper tools focuses on the consumer point of view and you have to build your entire project to test one file. It makes painful or even impossible to test a file in isolation of the project.
+Most developper tools focuses on the consumer point of view and you have to build your entire project to test one file. It becomes hard to test a file in isolation of the project.
 
 jsenv provides a solution to turn any JavaScript file into an entry point.
 
