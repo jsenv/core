@@ -24,7 +24,7 @@ export const computeRollupOptionsWithBalancing = ({
   )
 
   const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
-    platformGlobalName: "global",
+    platformGlobalName: "globalThis",
   })
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({

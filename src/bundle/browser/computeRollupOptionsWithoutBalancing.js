@@ -21,7 +21,7 @@ export const computeRollupOptionsWithoutBalancing = ({
   const dir = pathnameToOperatingSystemPath(`${projectPathname}${bundleIntoRelativePath}`)
 
   const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
-    platformGlobalName: "window",
+    platformGlobalName: "globalThis",
   })
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({

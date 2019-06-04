@@ -54,6 +54,7 @@ export const createJsenvRollupPlugin = ({
   const importMap = projectImportMap
 
   const babelPluginMapSubset = computeBabelPluginMapSubset({
+    projectPathname,
     BABEL_HELPERS_RELATIVE_PATH,
     featureNameArray,
     babelPluginMap,

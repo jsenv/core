@@ -25,7 +25,7 @@ export const computeRollupOptionsForBalancer = ({
   const { logTrace } = createLogger({ logLevel })
 
   const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
-    platformGlobalName: "window",
+    platformGlobalName: "globalThis",
   })
 
   const entryPointMap = {

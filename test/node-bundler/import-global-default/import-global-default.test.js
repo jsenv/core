@@ -14,7 +14,7 @@ await bundleNode({
   ...NODE_BUNDLER_TEST_PARAM,
   bundleIntoRelativePath,
   entryPointMap: {
-    main: `${folderJsenvRelativePath}/import-from-global.js`,
+    main: `${folderJsenvRelativePath}/import-global-default.js`,
   },
 })
 
