@@ -40,8 +40,8 @@ export const createJsenvRollupPlugin = ({
   featureNameArray,
   babelPluginMap,
   minify,
-  target,
-  detectAndTransformIfNeededAsyncInsertedByRollup = target === "browser",
+  format,
+  detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
   dir,
   logLevel,
 }) => {
@@ -58,7 +58,7 @@ export const createJsenvRollupPlugin = ({
     BABEL_HELPERS_RELATIVE_PATH,
     featureNameArray,
     babelPluginMap,
-    target,
+    format,
   })
 
   // https://github.com/babel/babel/blob/master/packages/babel-core/src/tools/build-external-helpers.js#L1
@@ -201,7 +201,7 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
       if (!minify) return null
 
       // https://github.com/terser-js/terser#minify-options
-      const minifyOptions = target === "browser" ? { toplevel: false } : { toplevel: true }
+      const minifyOptions = format === "global" ? { toplevel: false } : { toplevel: true }
       const result = minifyCode(source, {
         sourceMap: true,
         ...minifyOptions,

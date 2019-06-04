@@ -1,5 +1,8 @@
 ## TODO
 
+- end renaming of bundle formats
+  and add some test for systemjs under node (because only test on browser for now)
+  also global add at least on test for a global bundle format on nodejs
 - nothing else :)
 
 ## To keep in mind

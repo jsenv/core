@@ -5,6 +5,4 @@
 dist
 .dist
 syntax-error.js
-/test/browser-bundler/scoped-node-module/importMap.json
-/test/browser-bundler/shared-node-module/importMap.json
 

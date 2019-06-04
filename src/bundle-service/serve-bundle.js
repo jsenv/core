@@ -1,7 +1,10 @@
 import { extname, dirname, basename } from "path"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
-import { bundleBrowser } from "../bundling/browser/bundleBrowser.js"
-import { bundleNode } from "../bundling/node/bundleNode.js"
+import {
+  generateSystemJsBundle,
+  generateCommonJsBundle,
+  generateGlobalBundle,
+} from "../bundling/index.js"
 import { serveCompiledFile } from "../compiled-file-service/index.js"
 import { platformClientBundleToCompilationResult } from "./platformClientBundleToCompilationResult.js"
 
@@ -15,7 +18,7 @@ export const serveBundle = async ({
   babelPluginMap,
   headers,
   inlineSpecifierMap = {},
-  format = "system",
+  format = "systemjs",
 }) => {
   return serveCompiledFile({
     projectPathname,
@@ -34,7 +37,14 @@ export const serveBundle = async ({
         [entryName]: sourceRelativePath,
       }
 
-      const generateBundle = format === "cjs" ? bundleNode : bundleBrowser
+      const generateBundle =
+        // eslint-disable-next-line no-nested-ternary
+        format === "commonjs"
+          ? generateCommonJsBundle
+          : format === "systemjs"
+          ? generateSystemJsBundle
+          : generateGlobalBundle
+
       const bundle = await generateBundle({
         projectPath: pathnameToOperatingSystemPath(projectPathname),
         bundleIntoRelativePath,
@@ -42,7 +52,6 @@ export const serveBundle = async ({
         entryPointMap,
         inlineSpecifierMap,
         babelPluginMap,
-        format,
         compileGroupCount: 1,
         throwUnhandled: false,
         writeOnFileSystem: false,

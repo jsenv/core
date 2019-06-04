@@ -6,7 +6,7 @@ export const computeBabelPluginMapSubset = ({
   projectPathname,
   babelPluginMap,
   featureNameArray,
-  target,
+  format,
   BABEL_HELPERS_RELATIVE_PATH,
 }) => {
   const babelPluginMapSubset = {}
@@ -30,7 +30,7 @@ export const computeBabelPluginMapSubset = ({
       babelPluginMapSubset[babelPluginName] = babelPluginMap[babelPluginName]
     }
   })
-  if (target === "node") {
+  if (format === "commonjs") {
     // instead of replacing import by a raw object
     // I should replace it with a named import (or just an import)
     // so that it does not end being duplicated

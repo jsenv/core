@@ -1,3 +1,3 @@
-const value = import.meta.require("./cjs.js")
+const value = import.meta.require("./c.js")
 
 export default value
