@@ -1,7 +1,7 @@
 import { extname, dirname, basename } from "path"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { getOrGenerateCompiledFile } from "../compiled-file-service/get-or-generate-compiled-file.js"
-import { bundleNode } from "../bundle/node/bundleNode.js"
+import { bundleNode } from "../bundling/node/bundleNode.js"
 import { platformClientBundleToCompilationResult } from "./platformClientBundleToCompilationResult.js"
 import { LOG_LEVEL_OFF } from "../logger.js"
 

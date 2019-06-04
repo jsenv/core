@@ -17,10 +17,10 @@ export {
 } from "./src/coverage/cover-constant.js"
 
 // belong to core (let's keep it in core because way easier to manage)
-export { bundleNode } from "./src/bundle/node/bundleNode.js"
+export { bundleNode } from "./src/bundling/node/bundleNode.js"
 
 // belong to core (let's keep it in core because way easier to manage)
-export { bundleBrowser } from "./src/bundle/browser/bundleBrowser.js"
+export { bundleBrowser } from "./src/bundling/browser/bundleBrowser.js"
 
 // may be moved to jsenv/browsing-server
 export { startBrowserExplorerServer } from "./src/browser-explorer-server/index.js"

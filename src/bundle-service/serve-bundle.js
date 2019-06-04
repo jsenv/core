@@ -1,7 +1,7 @@
 import { extname, dirname, basename } from "path"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
-import { bundleBrowser } from "../bundle/browser/bundleBrowser.js"
-import { bundleNode } from "../bundle/node/bundleNode.js"
+import { bundleBrowser } from "../bundling/browser/bundleBrowser.js"
+import { bundleNode } from "../bundling/node/bundleNode.js"
 import { serveCompiledFile } from "../compiled-file-service/index.js"
 import { platformClientBundleToCompilationResult } from "./platformClientBundleToCompilationResult.js"
 
