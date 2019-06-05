@@ -1,6 +1,6 @@
 {
 	"name": "@jsenv/core",
-	"version": "5.47.0",
+	"version": "5.48.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -9,7 +9,7 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"main": "dist/node/main.js",
+	"main": "dist/commonjs/main.js",
 	"module": "index.js",
 	"files": [
 		"/index.js",
@@ -53,7 +53,7 @@
 		"terser": "3.14.1"
 	},
 	"devDependencies": {
-		"@jsenv/core": "5.45.0",
+		"@jsenv/core": "5.48.0",
 		"@jsenv/node-module-import-map": "1.5.0",
 		"@jsenv/eslint-config": "8.0.0",
 		"@jsenv/prettier-config": "1.0.0",
@@ -74,8 +74,8 @@
 		"prettier-check-project": "node ./script/prettier-check-project/prettier-check-project.js",
 		"generate-coverage": "node ./script/generate-coverage/generate-coverage.js",
 		"upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
-		"bundle-node": "node ./script/bundle-node/bundle-node.js",
-		"dist": "npm run clean && npm run bundle-node",
+		"generate-commonjs-bundle": "node ./script/generate-commonjs-bundle/generate-commonjs-bundle.js",
+		"dist": "npm run clean && npm run generate-commonjs-bundle",
 		"clean": "rimraf dist && rimraf coverage",
 		"reinstall": "npm run clean && rimraf node_modules && npm install",
 		"prepublishOnly": "npm run dist"
