@@ -1,18 +1,14 @@
-import { fileRead } from "@dmail/helper"
-import {
-  operatingSystemPathToPathname,
-  pathnameToOperatingSystemPath,
-} from "@jsenv/operating-system-path"
+import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
 import { serveFile } from "../../../src/file-service/index.js"
 import { startServer, firstService } from "../../../src/server/index.js"
-import { SYSTEM_PATHNAME } from "../../../src/system/index.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
-export const browserImportSystemJsBundle = async ({
+export const browserScriptloadGlobalBundle = async ({
   projectPath,
   bundleIntoRelativePath,
   mainRelativePath,
+  globalName,
 }) => {
   const [server, browser] = await Promise.all([
     startTestServer({ projectPath, bundleIntoRelativePath }),
@@ -21,18 +17,18 @@ export const browserImportSystemJsBundle = async ({
 
   const page = await browser.newPage()
   await page.goto(`${server.origin}/`)
+  // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
+  await page.addScriptTag({
+    url: `.${mainRelativePath}`,
+  })
 
   try {
-    const namespace = await page.evaluate(
-      ({ specifier }) => {
-        // eslint-disable-next-line no-undef
-        return System.import(specifier)
-      },
-      {
-        specifier: `.${mainRelativePath}`,
-      },
+    const globalValue = await page.evaluate(
+      // eslint-disable-next-line no-undef
+      (globalName) => window[globalName],
+      globalName,
     )
-    return { namespace, serverOrigin: server.origin }
+    return { globalValue, serverOrigin: server.origin }
   } finally {
     browser.close()
     server.stop()
@@ -45,7 +41,6 @@ const startTestServer = ({ projectPath, bundleIntoRelativePath }) => {
     requestToResponse: (request) =>
       firstService(
         () => serveIndexPage({ request }),
-        () => serveSystemJS({ request }),
         () => serveBundleFolder({ projectPath, bundleIntoRelativePath, request }),
       ),
   })
@@ -77,26 +72,9 @@ const generateIndexPage = () => `<!doctype html>
 
 <body>
   <main></main>
-  <script src="system.js"></script>
 </body>
 
 </html>`
-
-const serveSystemJS = async ({ request: { ressource } }) => {
-  if (ressource !== "/system.js") return null
-
-  const content = await fileRead(pathnameToOperatingSystemPath(SYSTEM_PATHNAME))
-
-  return {
-    status: 200,
-    headers: {
-      "cache-control": "no-store",
-      "content-type": "application/javascript",
-      "content-length": Buffer.byteLength(content),
-    },
-    body: content,
-  }
-}
 
 const serveBundleFolder = ({
   projectPath,

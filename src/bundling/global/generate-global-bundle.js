@@ -1,6 +1,7 @@
 import { generateBundle } from "../generate-bundle.js"
 import { DEFAULT_BUNDLE_INTO_RELATIVE_PATH } from "./generate-global-bundle-constant.js"
 
+// throw here if we receive compileGroupCount ?
 export const generateGlobalBundle = async ({
   projectPath,
   bundleIntoRelativePath = DEFAULT_BUNDLE_INTO_RELATIVE_PATH,
