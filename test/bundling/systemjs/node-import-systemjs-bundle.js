@@ -15,6 +15,7 @@ export const nodeImportSystemJsBundle = async ({
 }
 
 const normalizeNamespace = (namespace) => {
+  if (typeof namespace !== "object") return namespace
   const normalized = {}
   // remove Symbol.toStringTag from values
   Object.keys(namespace).forEach((key) => {

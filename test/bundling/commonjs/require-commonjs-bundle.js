@@ -16,6 +16,8 @@ export const requireCommonJsBundle = async ({
 }
 
 const normalizeNamespace = (namespace) => {
+  if (typeof namespace !== "object") return namespace
+  if (namespace instanceof Promise) return namespace
   const normalized = {}
   // remove "__esModule" from values
   Object.keys(namespace).forEach((key) => {
