@@ -22,8 +22,9 @@ import {
   findAsyncPluginNameInbabelPluginMap,
 } from "../../compiled-js-service/transpiler.js"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
-import { computeBabelPluginMapSubset } from "./computeBabelPluginMapSubset.js"
 import { createLogger } from "../../logger.js"
+import { computeBabelPluginMapSubset } from "./computeBabelPluginMapSubset.js"
+import { createBundleBabelPluginMap } from "./create-bundle-babel-plugin-map.js"
 
 const { minify: minifyCode } = import.meta.require("terser")
 const { buildExternalHelpers } = import.meta.require("@babel/core")
@@ -38,7 +39,7 @@ export const createJsenvRollupPlugin = ({
   origin = "http://example.com",
 
   featureNameArray,
-  babelPluginMap,
+  babelPluginMap: allBabelPluginMap,
   minify,
   format,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
@@ -53,13 +54,17 @@ export const createJsenvRollupPlugin = ({
   })
   const importMap = projectImportMap
 
-  const babelPluginMapSubset = computeBabelPluginMapSubset({
-    projectPathname,
-    BABEL_HELPERS_RELATIVE_PATH,
-    featureNameArray,
-    babelPluginMap,
-    format,
-  })
+  const babelPluginMap = {
+    ...computeBabelPluginMapSubset({
+      babelPluginMap: allBabelPluginMap,
+      featureNameArray,
+    }),
+    ...createBundleBabelPluginMap({
+      projectPathname,
+      format,
+      BABEL_HELPERS_RELATIVE_PATH,
+    }),
+  }
 
   // https://github.com/babel/babel/blob/master/packages/babel-core/src/tools/build-external-helpers.js#L1
   inlineSpecifierMap[BABEL_HELPERS_RELATIVE_PATH] = () => buildExternalHelpers(undefined, "module")
@@ -190,7 +195,7 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
         input: source,
         filename,
         filenameRelative,
-        babelPluginMap: babelPluginMapSubset,
+        babelPluginMap,
         // false, rollup will take care to transform module into whatever format
         transformModuleIntoSystemFormat: false,
       })
@@ -215,7 +220,7 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
 
     writeBundle: async (bundle) => {
       if (detectAndTransformIfNeededAsyncInsertedByRollup) {
-        await transformAsyncInsertedByRollup({ dir, babelPluginMapSubset, bundle })
+        await transformAsyncInsertedByRollup({ dir, babelPluginMap, bundle })
       }
 
       Object.keys(bundle).forEach((bundleFilename) => {
@@ -260,8 +265,8 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
   return jsenvRollupPlugin
 }
 
-const transformAsyncInsertedByRollup = async ({ dir, babelPluginMapSubset, bundle }) => {
-  const asyncPluginName = findAsyncPluginNameInbabelPluginMap(babelPluginMapSubset)
+const transformAsyncInsertedByRollup = async ({ dir, babelPluginMap, bundle }) => {
+  const asyncPluginName = findAsyncPluginNameInbabelPluginMap(babelPluginMap)
 
   if (!asyncPluginName) return
 
@@ -276,7 +281,7 @@ const transformAsyncInsertedByRollup = async ({ dir, babelPluginMapSubset, bundl
         input: bundleInfo.code,
         inputMap: bundleInfo.map,
         filename: bundleFilename,
-        babelPluginMap: { [asyncPluginName]: babelPluginMapSubset[asyncPluginName] },
+        babelPluginMap: { [asyncPluginName]: babelPluginMap[asyncPluginName] },
         transformModuleIntoSystemFormat: false, // already done by rollup
       })
 
