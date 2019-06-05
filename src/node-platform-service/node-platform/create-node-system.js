@@ -176,12 +176,14 @@ const createRequireFromFilename =
         // https://github.com/nodejs/node/blob/f76ce0a75641991bfc235775a4747c978e0e281b/lib/module.js#L506
         const resolve = (specifier) => Module._resolveFilename(specifier, moduleObject)
 
-        // eslint-disable-next-line import/no-dynamic-require
-        const scopedRequire = (specifier) => require(resolve(specifier))
+        const __require = import.meta.require
 
-        scopedRequire.main = require.main
-        scopedRequire.extensions = require.extensions
-        scopedRequire.cache = require.cache
+        // eslint-disable-next-line import/no-dynamic-require
+        const scopedRequire = (specifier) => __require(resolve(specifier))
+
+        scopedRequire.main = __require.main
+        scopedRequire.extensions = __require.extensions
+        scopedRequire.cache = __require.cache
         scopedRequire.resolve = resolve
 
         return scopedRequire

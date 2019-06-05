@@ -22,5 +22,18 @@ const { namespace: actual } = await nodeImportSystemJsBundle({
   ...SYSTEMJS_BUNDLING_TEST_IMPORT_PARAM,
   bundleIntoRelativePath,
 })
-const expected = { default: 42 }
+const expected = Object.create(null)
+Object.defineProperty(expected, "default", {
+  value: 42,
+  configurable: true,
+  enumerable: true,
+  writable: true,
+})
+Object.defineProperty(expected, Symbol.toStringTag, {
+  value: "Module",
+  configurable: false,
+  enumerable: false,
+  writable: false,
+})
+
 assert({ actual, expected })
