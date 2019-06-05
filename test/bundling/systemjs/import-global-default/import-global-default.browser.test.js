@@ -5,7 +5,7 @@ import { browserImportSystemJsBundle } from "../browser-import-systemjs-bundle.j
 import {
   SYSTEMJS_BUNDLING_TEST_GENERATE_PARAM,
   SYSTEMJS_BUNDLING_TEST_IMPORT_PARAM,
-} from "../systemjs-budling-test-param.js"
+} from "../systemjs-bundling-test-param.js"
 
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/systemjs`
