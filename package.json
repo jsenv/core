@@ -1,6 +1,6 @@
 {
 	"name": "@jsenv/core",
-	"version": "5.45.0",
+	"version": "5.47.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -46,7 +46,7 @@
 		"resolve": "1.10.0",
 		"rollup": "1.1.2",
 		"rollup-plugin-babel": "4.3.2",
-		"rollup-plugin-external-globals": "0.3.0",
+		"rollup-plugin-external-globals": "dmail-fork/rollup-plugin-external-globals",
 		"rollup-plugin-node-resolve": "4.0.0",
 		"source-map-support": "0.5.10",
 		"systemjs": "3.1.1",
