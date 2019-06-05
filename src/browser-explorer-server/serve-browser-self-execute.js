@@ -1,5 +1,5 @@
 import { uneval } from "@dmail/uneval"
-import { serveBundle } from "../bundle-service/index.js"
+import { serveBrowserGlobalBundle } from "../bundle-service/index.js"
 import { relativePathInception } from "../inception.js"
 import { serveFile } from "../file-service/index.js"
 import { firstService } from "../server/index.js"
@@ -85,7 +85,7 @@ const serveBrowserSelfExecuteBundle = ({
 
   if (pathname !== BROWSER_SELF_EXECUTE_CLIENT_PATHNAME) return null
 
-  return serveBundle({
+  return serveBrowserGlobalBundle({
     projectPathname,
     compileIntoRelativePath,
     importMapRelativePath,
@@ -99,7 +99,6 @@ const serveBrowserSelfExecuteBundle = ({
         generateBrowserSelfExecuteStaticDataSource({ fileRelativePath }),
     },
     headers,
-    format: "iife",
     babelPluginMap,
   })
 }

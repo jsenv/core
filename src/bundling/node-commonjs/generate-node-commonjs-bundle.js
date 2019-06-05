@@ -1,28 +1,25 @@
 import { extname, dirname, basename } from "path"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
-import {
-  generateSystemJsBundle,
-  generateCommonJsBundle,
-  generateGlobalBundle,
-} from "../bundling/index.js"
-import { serveCompiledFile } from "../compiled-file-service/index.js"
-import { platformClientBundleToCompilationResult } from "./platformClientBundleToCompilationResult.js"
+import { getOrGenerateCompiledFile } from "../../compiled-file-service/get-or-generate-compiled-file.js"
+import { nodeVersionScoreMap } from "../../group-map/index.js"
+import { generateCommonJsBundle } from "../commonjs/generate-commonjs-bundle.js"
+import { platformClientBundleToCompilationResult } from "../platformClientBundleToCompilationResult.js"
 
-export const serveBundle = async ({
+export const generateNodeCommonJsBundle = async ({
   projectPathname,
   compileIntoRelativePath,
   importMapRelativePath,
   sourceRelativePath,
   compileRelativePath,
   sourcemapRelativePath = computeSourcemapRelativePath(compileRelativePath),
-  babelPluginMap,
-  headers,
   inlineSpecifierMap = {},
-  format = "systemjs",
+  babelPluginMap,
+  logLevel,
+  compileGroupCount,
+  nodeScoreMap = nodeVersionScoreMap,
 }) => {
-  return serveCompiledFile({
+  return getOrGenerateCompiledFile({
     projectPathname,
-    headers,
     sourceRelativePath,
     compileRelativePath: `${compileIntoRelativePath}${compileRelativePath}`,
     compile: async () => {
@@ -37,25 +34,20 @@ export const serveBundle = async ({
         [entryName]: sourceRelativePath,
       }
 
-      const generateBundle =
-        // eslint-disable-next-line no-nested-ternary
-        format === "commonjs"
-          ? generateCommonJsBundle
-          : format === "systemjs"
-          ? generateSystemJsBundle
-          : generateGlobalBundle
-
-      const bundle = await generateBundle({
+      const bundle = await generateCommonJsBundle({
         projectPath: pathnameToOperatingSystemPath(projectPathname),
         bundleIntoRelativePath,
         importMapRelativePath,
         entryPointMap,
         inlineSpecifierMap,
         babelPluginMap,
-        compileGroupCount: 1,
         throwUnhandled: false,
         writeOnFileSystem: false,
-        logLevel: "off",
+        logLevel,
+        compileGroupCount,
+        platformScoreMap: {
+          node: nodeScoreMap,
+        },
       })
 
       return platformClientBundleToCompilationResult({
@@ -67,6 +59,11 @@ export const serveBundle = async ({
         bundle,
       })
     },
+    ifEtagMatch: null,
+    ifModifiedSinceDate: null,
+    cacheIgnored: false,
+    cacheHitTracking: false,
+    cacheInterProcessLocking: false,
   })
 }
 

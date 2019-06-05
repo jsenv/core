@@ -12,10 +12,11 @@ export const computeRollupOptionsWithBalancing = ({
   entryPointMap,
   inlineSpecifierMap,
   babelPluginMap,
-  groupMap,
   minify,
-  format,
   logLevel,
+  format,
+  formatOutputOptions,
+  groupMap,
   compileId,
 }) => {
   const { logTrace } = createLogger({ logLevel })
@@ -61,6 +62,7 @@ minify: ${minify}
       format: formatToRollupFormat(format),
       sourcemap: true,
       sourceMapExcludeSources: true,
+      ...formatOutputOptions,
     },
   }
 }

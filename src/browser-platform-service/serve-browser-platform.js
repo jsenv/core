@@ -1,7 +1,7 @@
 import { uneval } from "@dmail/uneval"
 import { serveFile } from "../file-service/index.js"
 import { relativePathInception } from "../inception.js"
-import { serveBundle } from "../bundle-service/index.js"
+import { serveBrowserGlobalBundle } from "../bundling/index.js"
 
 export const BROWSER_PLATFORM_RELATIVE_PATH =
   "/src/browser-platform-service/browser-platform/index.js"
@@ -28,7 +28,7 @@ export const serveBrowserPlatform = async ({
   }
   if (ressource !== BROWSER_PLATFORM_CLIENT_PATHNAME) return null
 
-  return serveBundle({
+  return serveBrowserGlobalBundle({
     projectPathname,
     importMapRelativePath,
     compileIntoRelativePath,
@@ -48,7 +48,6 @@ export const serveBrowserPlatform = async ({
       [IMPORT_MAP_CLIENT_PATHNAME]: `${projectPathname}${importMapRelativePath}`,
     },
     headers,
-    format: "iife",
   })
 }
 

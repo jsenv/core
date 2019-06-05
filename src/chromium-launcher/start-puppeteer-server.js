@@ -4,7 +4,7 @@ import { servePuppeteerHtml } from "./serve-puppeteer-html.js"
 import { serveBrowserClientFolder } from "../browser-explorer-server/server-browser-client-folder.js"
 import { serveFile } from "../file-service/index.js"
 import { ressourceToPathname } from "../urlHelper.js"
-import { serveBundle } from "../bundle-service/index.js"
+import { serveBrowserGlobalBundle } from "../bundling/index.js"
 
 const PUPPETEER_EXECUTE_TEMPLATE_RELATIVE_PATH =
   "/src/chromium-launcher/puppeteer-execute-template.js"
@@ -89,7 +89,7 @@ const servePuppeteerExecute = ({
 
   if (pathname !== PUPPETEER_EXECUTE_CLIENT_PATHNAME) return null
 
-  return serveBundle({
+  return serveBrowserGlobalBundle({
     projectPathname,
     compileIntoRelativePath,
     importMapRelativePath,
@@ -100,6 +100,5 @@ const servePuppeteerExecute = ({
     compileRelativePath: pathname,
     babelPluginMap,
     headers,
-    format: "iife",
   })
 }

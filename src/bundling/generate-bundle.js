@@ -4,28 +4,38 @@ import {
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
 import { generateGroupMap } from "../group-map/index.js"
+import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 import { bundleWithRollup } from "./bundleWithRollup.js"
 import { computeRollupOptionsForBalancer } from "./computeRollupOptionsForBalancer.js"
 import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBalancing.js"
 import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
+import {
+  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  DEFAULT_PLATFORM_GROUP_RESOLVER_RELATIVE_PATH,
+  DEFAULT_ENTRY_POINT_MAP,
+  DEFAULT_BABEL_PLUGIN_MAP,
+  DEFAULT_PLATFORM_SCORE_MAP,
+} from "./generate-bundle-constant.js"
 
 export const generateBundle = ({
   projectPath,
   bundleIntoRelativePath,
-  importMapRelativePath,
-  platformGroupResolverRelativePath,
+  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  inlineSpecifierMap = {},
+  entryPointMap = DEFAULT_ENTRY_POINT_MAP,
+  babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
+  logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
+  minify = false,
+  writeOnFileSystem = true,
+  throwUnhandled = true,
+  format,
+  formatOutputOptions = {},
+  // balancing
+  compileGroupCount = 1,
   balancerTemplateRelativePath,
   balancerDataClientPathname,
-  inlineSpecifierMap,
-  entryPointMap,
-  babelPluginMap,
-  compileGroupCount,
-  platformScoreMap,
-  logLevel,
-  minify,
-  writeOnFileSystem,
-  format,
-  throwUnhandled,
+  platformScoreMap = DEFAULT_PLATFORM_SCORE_MAP,
+  platformGroupResolverRelativePath = DEFAULT_PLATFORM_GROUP_RESOLVER_RELATIVE_PATH,
 }) => {
   const promise = catchAsyncFunctionCancellation(async () => {
     if (typeof projectPath !== "string")
@@ -37,7 +47,7 @@ export const generateBundle = ({
     if (typeof compileGroupCount !== "number")
       throw new TypeError(`compileGroupCount must be a number, got ${compileGroupCount}`)
     if (compileGroupCount < 1)
-      throw new Error(`compileGroupCount must be > 1, got ${compileGroupCount}`)
+      throw new Error(`compileGroupCount must be >= 1, got ${compileGroupCount}`)
 
     const projectPathname = operatingSystemPathToPathname(projectPath)
     const cancellationToken = createProcessInterruptionCancellationToken()
@@ -54,11 +64,18 @@ export const generateBundle = ({
           inlineSpecifierMap,
           entryPointMap,
           babelPluginMap,
-          format,
           minify,
           logLevel,
+          format,
+          formatOutputOptions,
         }),
       })
+    }
+
+    if (!balancerTemplateRelativePath) {
+      throw new Error(`format not compatible with balancing.
+format: ${format}
+compileGroupCount: ${compileGroupCount}`)
     }
 
     const groupMap = generateGroupMap({
@@ -76,27 +93,28 @@ export const generateBundle = ({
         entryPointMap,
         inlineSpecifierMap,
         babelPluginMap,
-        groupMap,
         minify,
-        format,
         logLevel,
         writeOnFileSystem,
+        format,
+        formatOutputOptions,
+        groupMap,
       }),
       generateEntryPointsBalancerFiles({
         cancellationToken,
         projectPathname,
         bundleIntoRelativePath,
         importMapRelativePath,
+        entryPointMap,
+        babelPluginMap,
+        minify,
+        logLevel,
+        writeOnFileSystem,
+        format,
         platformGroupResolverRelativePath,
         balancerTemplateRelativePath,
         balancerDataClientPathname,
-        entryPointMap,
-        babelPluginMap,
         groupMap,
-        minify,
-        logLevel,
-        format,
-        writeOnFileSystem,
       }),
     ])
   })
@@ -117,11 +135,12 @@ const generateEntryPointsFolders = async ({
   entryPointMap,
   inlineSpecifierMap,
   babelPluginMap,
-  groupMap,
   minify,
-  format,
   logLevel,
   writeOnFileSystem,
+  format,
+  formatOutputOptions,
+  groupMap,
 }) => {
   await Promise.all(
     Object.keys(groupMap).map((compileId) => {
@@ -136,10 +155,11 @@ const generateEntryPointsFolders = async ({
           entryPointMap,
           inlineSpecifierMap,
           babelPluginMap,
-          groupMap,
           minify,
-          format,
           logLevel,
+          format,
+          formatOutputOptions,
+          groupMap,
           compileId,
         }),
       })
@@ -152,16 +172,16 @@ const generateEntryPointsBalancerFiles = ({
   projectPathname,
   bundleIntoRelativePath,
   importMapRelativePath,
-  platformGroupResolverRelativePath,
-  balancerTemplateRelativePath,
-  balancerDataClientPathname,
   entryPointMap,
   babelPluginMap,
-  groupMap,
   minify,
   logLevel,
-  format,
   writeOnFileSystem,
+  format,
+  balancerTemplateRelativePath,
+  balancerDataClientPathname,
+  platformGroupResolverRelativePath,
+  groupMap,
 }) => {
   return Promise.all(
     Object.keys(entryPointMap).map((entryPointName) => {
@@ -174,15 +194,15 @@ const generateEntryPointsBalancerFiles = ({
             projectPathname,
             bundleIntoRelativePath,
             importMapRelativePath,
-            platformGroupResolverRelativePath,
             babelPluginMap,
-            groupMap,
             entryPointName,
             minify,
             logLevel,
             format,
             balancerTemplateRelativePath,
             balancerDataClientPathname,
+            platformGroupResolverRelativePath,
+            groupMap,
           }),
         }),
       ])

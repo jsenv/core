@@ -13,6 +13,7 @@ export const computeRollupOptionsWithoutBalancing = ({
   entryPointMap,
   babelPluginMap,
   format,
+  formatOutputOptions,
   minify,
   logLevel,
 }) => {
@@ -64,6 +65,7 @@ minify: ${minify}
       // in case source files are not reachable
       // for whatever reason
       sourcemapExcludeSources: true,
+      ...formatOutputOptions,
     },
   }
 }

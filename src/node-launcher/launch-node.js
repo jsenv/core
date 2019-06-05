@@ -7,7 +7,7 @@ import {
   operatingSystemPathToPathname,
 } from "@jsenv/operating-system-path"
 import { regexpEscape } from "../../src/stringHelper.js"
-import { generateNodeBundle } from "../bundle-service/index.js"
+import { generateNodeCommonJsBundle } from "../bundling/index.js"
 import { relativePathInception } from "../inception.js"
 import { evalSource } from "../node-platform-service/node-platform/evalSource.js"
 import { LOG_LEVEL_OFF } from "../logger.js"
@@ -155,7 +155,7 @@ export const launchNode = async ({
 
   const executeFile = async (fileRelativePath, { collectNamespace, collectCoverage }) => {
     const execute = async () => {
-      await generateNodeBundle({
+      await generateNodeCommonJsBundle({
         projectPathname,
         compileIntoRelativePath,
         importMapRelativePath,

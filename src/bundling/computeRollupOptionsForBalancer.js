@@ -13,15 +13,15 @@ export const computeRollupOptionsForBalancer = ({
   projectPathname,
   bundleIntoRelativePath,
   importMapRelativePath,
-  platformGroupResolverRelativePath,
   babelPluginMap,
-  groupMap,
   entryPointName,
   minify,
   logLevel,
   format,
   balancerTemplateRelativePath,
   balancerDataClientPathname,
+  platformGroupResolverRelativePath,
+  groupMap,
 }) => {
   const { logTrace } = createLogger({ logLevel })
 

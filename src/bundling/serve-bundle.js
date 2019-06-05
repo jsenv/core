@@ -1,23 +1,25 @@
 import { extname, dirname, basename } from "path"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
-import { getOrGenerateCompiledFile } from "../compiled-file-service/get-or-generate-compiled-file.js"
-import { generateCommonJsBundle } from "../bundling/commonjs/generate-commonjs-bundle.js"
+import { serveCompiledFile } from "../compiled-file-service/index.js"
 import { platformClientBundleToCompilationResult } from "./platformClientBundleToCompilationResult.js"
-import { LOG_LEVEL_OFF } from "../logger.js"
+import { generateBundle } from "./generate-bundle.js"
 
-export const generateNodeBundle = async ({
+export const serveBundle = async ({
   projectPathname,
   compileIntoRelativePath,
   importMapRelativePath,
   sourceRelativePath,
   compileRelativePath,
   sourcemapRelativePath = computeSourcemapRelativePath(compileRelativePath),
-  inlineSpecifierMap = {},
   babelPluginMap,
-  logLevel = LOG_LEVEL_OFF,
+  headers,
+  inlineSpecifierMap = {},
+  format,
+  formatOutputOptions = {},
 }) => {
-  return getOrGenerateCompiledFile({
+  return serveCompiledFile({
     projectPathname,
+    headers,
     sourceRelativePath,
     compileRelativePath: `${compileIntoRelativePath}${compileRelativePath}`,
     compile: async () => {
@@ -32,7 +34,7 @@ export const generateNodeBundle = async ({
         [entryName]: sourceRelativePath,
       }
 
-      const bundle = await generateCommonJsBundle({
+      const bundle = await generateBundle({
         projectPath: pathnameToOperatingSystemPath(projectPathname),
         bundleIntoRelativePath,
         importMapRelativePath,
@@ -42,7 +44,9 @@ export const generateNodeBundle = async ({
         compileGroupCount: 1,
         throwUnhandled: false,
         writeOnFileSystem: false,
-        logLevel,
+        logLevel: "off",
+        format,
+        formatOutputOptions,
       })
 
       return platformClientBundleToCompilationResult({
@@ -54,11 +58,6 @@ export const generateNodeBundle = async ({
         bundle,
       })
     },
-    ifEtagMatch: null,
-    ifModifiedSinceDate: null,
-    cacheIgnored: false,
-    cacheHitTracking: false,
-    cacheInterProcessLocking: false,
   })
 }
 
