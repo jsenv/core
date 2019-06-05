@@ -4,7 +4,7 @@ import { generateCommonJsBundle } from "../../../../index.js"
 import { NODE_BUNDLER_TEST_PARAM } from "../node-bundler-test-param.js"
 
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
-const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/node`
+const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/commonjs`
 
 try {
   await generateCommonJsBundle({

@@ -1,5 +1,5 @@
 import { uneval } from "@dmail/uneval"
-import { serveBrowserGlobalBundle } from "../bundle-service/index.js"
+import { serveBrowserGlobalBundle } from "../bundling/index.js"
 import { relativePathInception } from "../inception.js"
 import { serveFile } from "../file-service/index.js"
 import { firstService } from "../server/index.js"

@@ -1,7 +1,7 @@
 import { uneval } from "@dmail/uneval"
 import { serveFile } from "../file-service/index.js"
 import { relativePathInception } from "../inception.js"
-import { serveBundle } from "../bundle-service/index.js"
+import { serveNodeCommonJsBundle } from "../bundling/index.js"
 
 export const NODE_PLATFORM_RELATIVE_PATH = "/src/node-platform-service/node-platform/index.js"
 const NODE_PLATFORM_CLIENT_PATHNAME = `/.jsenv/node-platform.js`
@@ -28,7 +28,7 @@ export const serveNodePlatform = ({
 
   if (ressource !== NODE_PLATFORM_CLIENT_PATHNAME) return null
 
-  return serveBundle({
+  return serveNodeCommonJsBundle({
     projectPathname,
     compileIntoRelativePath,
     importMapRelativePath,
@@ -48,7 +48,6 @@ export const serveNodePlatform = ({
       [IMPORT_MAP_CLIENT_PATHNAME]: `${projectPathname}${importMapRelativePath}`,
     },
     headers,
-    format: "cjs",
   })
 }
 

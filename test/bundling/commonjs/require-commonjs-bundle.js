@@ -3,10 +3,7 @@ import {
   pathnameToOperatingSystemPath,
 } from "@jsenv/operating-system-path"
 
-// for now node bundle use require
-// they may move to systemjs to support top level await
-
-export const importNodeBundle = async ({
+export const requireCommonJsBundle = async ({
   projectPath,
   bundleIntoRelativePath,
   mainRelativePath,

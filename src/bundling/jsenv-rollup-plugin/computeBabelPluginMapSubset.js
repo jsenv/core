@@ -13,7 +13,7 @@ export const computeBabelPluginMapSubset = ({
 
   const forcedImportsBabelPlugin = createForceImportsBabelPlugin({
     projectPathname,
-    sideEffectImportRelativePathArray: ["/src/bundle/jsenv-rollup-plugin/global-this.js"],
+    sideEffectImportRelativePathArray: ["/src/bundling/jsenv-rollup-plugin/global-this.js"],
   })
   babelPluginMapSubset["force-imports"] = [forcedImportsBabelPlugin]
 
