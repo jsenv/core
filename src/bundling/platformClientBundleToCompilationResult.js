@@ -111,7 +111,14 @@ project path: ${pathnameToOperatingSystemPath(projectPathname)}`)
     }
 
     sources.push(sourceRelativePath)
-    sourcesContent.push(rollupSourcemap.sourcesContent[index])
+    if (rollupSourcemap.sourcesContent) {
+      sourcesContent.push(rollupSourcemap.sourcesContent[index])
+    } else {
+      const sourcePath = `${projectPathname}${sourceRelativePath}`
+      // this should be async but well this is ok for now
+      const buffer = readFileSync(sourcePath)
+      sourcesContent.push(String(buffer))
+    }
   })
 
   // .json files are not added to map.sources by rollup
