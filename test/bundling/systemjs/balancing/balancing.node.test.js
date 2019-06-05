@@ -9,20 +9,20 @@ import {
 
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const bundleIntoRelativePath = `${folderJsenvRelativePath}/dist/systemjs`
+const fileRelativePath = `${folderJsenvRelativePath}/balancing.js`
 
 await generateSystemJsBundle({
   ...SYSTEMJS_BUNDLING_TEST_GENERATE_PARAM,
   bundleIntoRelativePath,
   entryPointMap: {
-    main: `${folderJsenvRelativePath}/import-global-named.js`,
+    main: fileRelativePath,
   },
+  compileGroupCount: 2,
 })
 
 const { namespace: actual } = await nodeImportSystemJsBundle({
   ...SYSTEMJS_BUNDLING_TEST_IMPORT_PARAM,
   bundleIntoRelativePath,
 })
-const expected = {
-  default: 42,
-}
+const expected = { default: 42 }
 assert({ actual, expected })

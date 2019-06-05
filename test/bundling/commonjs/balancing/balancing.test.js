@@ -24,10 +24,7 @@ const { namespace: actual } = await requireCommonJsBundle({
   ...NODE_BUNDLER_TEST_IMPORT_PARAM,
   bundleIntoRelativePath,
 })
-const expected = Object.assign(
-  Object.defineProperty({}, "__esModule", {
-    value: true,
-  }),
-  { answer: 42 },
-)
+const expected = {
+  answer: 42,
+}
 assert({ actual, expected })

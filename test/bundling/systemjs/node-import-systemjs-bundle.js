@@ -10,5 +10,15 @@ export const nodeImportSystemJsBundle = async ({
   const mainHref = `file://${projectPathname}${bundleIntoRelativePath}${mainRelativePath}`
   const nodeSystem = createNodeSystem()
   const namespace = await nodeSystem.import(mainHref)
-  return { namespace }
+
+  return { namespace: normalizeNamespace(namespace) }
+}
+
+const normalizeNamespace = (namespace) => {
+  const normalized = {}
+  // remove Symbol.toStringTag from values
+  Object.keys(namespace).forEach((key) => {
+    normalized[key] = namespace[key]
+  })
+  return normalized
 }

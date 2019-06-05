@@ -12,5 +12,14 @@ export const requireCommonJsBundle = async ({
   const mainPathname = `${projectPathname}${bundleIntoRelativePath}${mainRelativePath}`
   const mainPath = pathnameToOperatingSystemPath(mainPathname)
   const namespace = import.meta.require(mainPath)
-  return { namespace }
+  return { namespace: normalizedNamespace(namespace) }
+}
+
+const normalizedNamespace = (namespace) => {
+  const normalized = {}
+  // remove "__esModule" from values
+  Object.keys(namespace).forEach((key) => {
+    normalized[key] = namespace[key]
+  })
+  return normalized
 }
