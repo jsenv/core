@@ -1,4 +1,3 @@
-import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { createImportFromGlobalRollupPlugin } from "./import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "./jsenv-rollup-plugin/index.js"
@@ -9,8 +8,9 @@ export const computeRollupOptionsWithBalancing = ({
   projectPathname,
   bundleIntoRelativePath,
   importMapRelativePath,
-  entryPointMap,
   inlineSpecifierMap,
+  nativeModulePredicate,
+  entryPointMap,
   babelPluginMap,
   minify,
   logLevel,
@@ -55,7 +55,7 @@ minify: ${minify}
     rollupParseOptions: {
       input: entryPointMap,
       plugins: [importFromGlobalRollupPlugin, jsenvRollupPlugin],
-      external: (id) => isNativeBrowserModuleBareSpecifier(id),
+      external: (id) => nativeModulePredicate(id),
     },
     rollupGenerateOptions: {
       dir,

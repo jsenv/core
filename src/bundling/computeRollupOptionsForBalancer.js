@@ -1,5 +1,4 @@
 import { uneval } from "@dmail/uneval"
-import { isNativeBrowserModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeBrowserModuleBareSpecifier.js"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { relativePathInception } from "../inception.js"
 import { createImportFromGlobalRollupPlugin } from "./import-from-global-rollup-plugin/index.js"
@@ -13,6 +12,7 @@ export const computeRollupOptionsForBalancer = ({
   projectPathname,
   bundleIntoRelativePath,
   importMapRelativePath,
+  nativeModulePredicate,
   babelPluginMap,
   entryPointName,
   minify,
@@ -76,22 +76,15 @@ minify: ${minify}
     rollupParseOptions: {
       input: entryPointMap,
       plugins: [importFromGlobalRollupPlugin, jsenvRollupPlugin],
-      external: (id) => isNativeBrowserModuleBareSpecifier(id),
+      external: (id) => nativeModulePredicate(id),
     },
     rollupGenerateOptions: {
       dir,
-      format: formatToRollupFormat(format),
+      format: "iife",
       sourcemap: true,
       sourcemapExcludeSources: true,
     },
   }
-}
-
-const formatToRollupFormat = (format) => {
-  if (format === "global") return "iife"
-  if (format === "commonjs") return "cjs"
-  if (format === "systemjs") return "system"
-  throw new Error(`unexpected format, got ${format}`)
 }
 
 const generateBalancerDataSource = ({
