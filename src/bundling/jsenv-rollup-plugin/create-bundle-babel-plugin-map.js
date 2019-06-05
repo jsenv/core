@@ -5,19 +5,26 @@ import { createForceImportsBabelPlugin } from "./force-imports.js"
 export const createBundleBabelPluginMap = ({
   projectPathname,
   format,
-  BABEL_HELPERS_RELATIVE_PATH,
+  globalThisFacadePath,
+  globalThisFilesystemPath,
+  babelHelpersFacadePath,
 }) => {
   const bundleBabelPluginMap = {}
 
   const forcedImportsBabelPlugin = createForceImportsBabelPlugin({
     projectPathname,
-    sideEffectImportRelativePathArray: ["/src/bundling/jsenv-rollup-plugin/global-this.js"],
+    sideEffectImportArray: [
+      {
+        facadePath: globalThisFacadePath,
+        filesystemPath: globalThisFilesystemPath,
+      },
+    ],
   })
   bundleBabelPluginMap["force-imports"] = [forcedImportsBabelPlugin]
 
   const replaceBabelHelperByNamedImportsBabelPlugin = createReplaceBabelHelperByNamedImportsBabelPlugin(
     {
-      BABEL_HELPERS_PATH: BABEL_HELPERS_RELATIVE_PATH,
+      babelHelpersFacadePath,
     },
   )
   bundleBabelPluginMap["replace-babel-helper-by-named-imports"] = [

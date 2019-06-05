@@ -25,11 +25,14 @@ import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { createLogger } from "../../logger.js"
 import { computeBabelPluginMapSubset } from "./computeBabelPluginMapSubset.js"
 import { createBundleBabelPluginMap } from "./create-bundle-babel-plugin-map.js"
+import { relativePathInception } from "/src/inception.js"
 
 const { minify: minifyCode } = import.meta.require("terser")
 const { buildExternalHelpers } = import.meta.require("@babel/core")
 
-const BABEL_HELPERS_RELATIVE_PATH = "/.jsenv/babelHelpers.js"
+const BABEL_HELPERS_FACADE_PATH = "/.jsenv/babelHelpers.js"
+const GLOBAL_THIS_FACADE_PATH = "/.jsenv/helpers/global-this.js"
+const GLOBAL_THIS_FILESYSTEM_RELATIVE_PATH = "/src/bundling/jsenv-rollup-plugin/global-this.js"
 
 export const createJsenvRollupPlugin = ({
   cancellationToken,
@@ -54,6 +57,12 @@ export const createJsenvRollupPlugin = ({
   })
   const importMap = projectImportMap
 
+  const globalThisFilesystemPath = pathnameToOperatingSystemPath(
+    `${projectPathname}${relativePathInception({
+      projectPathname,
+      relativePath: GLOBAL_THIS_FILESYSTEM_RELATIVE_PATH,
+    })}`,
+  )
   const babelPluginMap = {
     ...computeBabelPluginMapSubset({
       babelPluginMap: allBabelPluginMap,
@@ -62,12 +71,15 @@ export const createJsenvRollupPlugin = ({
     ...createBundleBabelPluginMap({
       projectPathname,
       format,
-      BABEL_HELPERS_RELATIVE_PATH,
+      globalThisFacadePath: GLOBAL_THIS_FACADE_PATH,
+      globalThisFilesystemPath,
+      babelHelpersFacadePath: BABEL_HELPERS_FACADE_PATH,
     }),
   }
 
+  inlineSpecifierMap[GLOBAL_THIS_FACADE_PATH] = globalThisFilesystemPath
   // https://github.com/babel/babel/blob/master/packages/babel-core/src/tools/build-external-helpers.js#L1
-  inlineSpecifierMap[BABEL_HELPERS_RELATIVE_PATH] = () => buildExternalHelpers(undefined, "module")
+  inlineSpecifierMap[BABEL_HELPERS_FACADE_PATH] = () => buildExternalHelpers(undefined, "module")
 
   const inlineSpecifierResolveMap = {}
 
@@ -168,11 +180,13 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
     },
 
     transform: async (source, id) => {
+      // babel helper must not be retransformed
       if (
         id in inlineSpecifierResolveMap &&
-        inlineSpecifierResolveMap[id] === BABEL_HELPERS_RELATIVE_PATH
-      )
+        inlineSpecifierResolveMap[id] === BABEL_HELPERS_FACADE_PATH
+      ) {
         return null
+      }
       if (id.endsWith(".json")) {
         return {
           code: `export default ${source}`,

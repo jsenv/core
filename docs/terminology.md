@@ -9,6 +9,7 @@
 | launcher              | function launching a platform to execute a file  |
 | pathname              | pathname part of an url, always starts with `/`  |
 | path                  | string leading to a ressource                    |
+| facade path           | unresolved path to a ressource                   |
 | operating system path | windows path or linux path                       |
 | windows path          | `C:\\Users\\file.js`                             |
 | linux path            | `/Users/file.js`                                 |
