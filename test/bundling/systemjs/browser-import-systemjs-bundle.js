@@ -9,7 +9,7 @@ import { SYSTEM_PATHNAME } from "../../../src/system/index.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
-export const importBrowserBundle = async ({
+export const browserImportSystemJsBundle = async ({
   projectPath,
   bundleIntoRelativePath,
   mainRelativePath,

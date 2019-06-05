@@ -21,12 +21,12 @@ import { evalSource } from "./evalSource.js"
 
 const GLOBAL_SPECIFIER = "global"
 
-export const createNodeSystem = async ({
+export const createNodeSystem = ({
   compileServerOrigin,
   projectPathname,
   compileIntoRelativePath,
-  importMap,
-}) => {
+  importMap = {},
+} = {}) => {
   if (typeof global.System === "undefined") throw new Error(`global.System is undefined`)
 
   const nodeSystem = new global.System.constructor()
@@ -94,19 +94,18 @@ export const createNodeSystem = async ({
   }
 
   // https://github.com/systemjs/systemjs/blob/master/docs/hooks.md#createcontexturl---object
-  nodeSystem.createContext = (moduleUrl) => {
-    const fileRelativePath = hrefToFileRelativePath(moduleUrl, {
+  nodeSystem.createContext = (moduleHref) => {
+    const fileHref = moduleHrefToFileHref(moduleHref, {
       compileServerOrigin,
+      projectPathname,
       compileIntoRelativePath,
     })
-    const fileURL = `file://${projectPathname}${fileRelativePath}`
-    const url = fileURL
 
-    const filename = pathnameToOperatingSystemPath(hrefToPathname(fileURL))
+    const filename = pathnameToOperatingSystemPath(hrefToPathname(fileHref))
     const require = createRequireFromFilename(filename)
 
     return {
-      url,
+      url: fileHref,
       require,
     }
   }
@@ -118,6 +117,12 @@ const fileHrefToOperatingSystemPath = (
   fileHref,
   { compileServerOrigin, projectPathname, compileIntoRelativePath },
 ) => {
+  if (!compileServerOrigin) {
+    if (fileHref.startsWith("file:///"))
+      return pathnameToOperatingSystemPath(hrefToPathname(fileHref))
+    return fileHref
+  }
+
   const meta = hrefToMeta(fileHref, { compileServerOrigin, compileIntoRelativePath })
 
   if (meta.type !== "compile-server-compiled-file") {
@@ -128,6 +133,19 @@ const fileHrefToOperatingSystemPath = (
     `${projectPathname}${compileIntoRelativePath}/${meta.compileId}${meta.ressource}`,
   )
   return operatingSystemPath
+}
+
+const moduleHrefToFileHref = (
+  moduleHref,
+  { compileServerOrigin, projectPathname, compileIntoRelativePath },
+) => {
+  if (!compileServerOrigin) return moduleHref
+
+  const fileRelativePath = hrefToFileRelativePath(moduleHref, {
+    compileServerOrigin,
+    compileIntoRelativePath,
+  })
+  return `file://${projectPathname}${fileRelativePath}`
 }
 
 const addDefaultToNativeNodeModuleNamespace = (namespace) => {

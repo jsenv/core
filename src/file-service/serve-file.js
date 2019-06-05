@@ -3,7 +3,7 @@ import { folderRead, fileStat, fileRead } from "@dmail/helper"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { createETag } from "../createETag.js"
 import { convertFileSystemErrorToResponseProperties } from "./convertFileSystemErrorToResponseProperties.js"
-import { filenameToContentType } from "./filenameToContentType.js"
+import { pathnameToContentType } from "./pathnameToContentType.js"
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
 const dateToUTCString = (date) => date.toUTCString()
@@ -83,7 +83,7 @@ export const serveFile = async (
           ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
           "last-modified": dateToUTCString(stat.mtime),
           "content-length": stat.size,
-          "content-type": filenameToContentType(filename),
+          "content-type": pathnameToContentType(pathname),
         },
         body: createReadStream(filename),
       }
@@ -107,7 +107,7 @@ export const serveFile = async (
         headers: {
           ...(cachedDisabled ? { "cache-control": "no-store" } : {}),
           "content-length": stat.size,
-          "content-type": filenameToContentType(filename),
+          "content-type": pathnameToContentType(pathname),
           etag: eTag,
         },
         body: content,
@@ -119,7 +119,7 @@ export const serveFile = async (
       headers: {
         "cache-control": "no-store",
         "content-length": stat.size,
-        "content-type": filenameToContentType(filename),
+        "content-type": pathnameToContentType(pathname),
       },
       body: createReadStream(filename),
     }
