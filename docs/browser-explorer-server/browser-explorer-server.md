@@ -1,7 +1,7 @@
 # browser-explorer-server
 
-It's a server dynamically serving self executing file for every file of your project.
-It is fast because it caches transpiled files on filesystem.
+It's a server dynamically serving self executing file for every file of your project.<br />
+It is fast because transpiled files are cached on your filesystem.
 
 ## How to use
 
@@ -31,7 +31,7 @@ import text from "./text.js"
 console.log(text)
 ```
 
-### Add browser explorer server to basic project
+### Add browser explorer server to that basic project
 
 From that basic project file structure above here is how to use browser explorer server.
 
@@ -59,18 +59,15 @@ Now execute `root/start-browser-explorer-server.js` with node.
 node ./start-browser-explorer-server.js
 ```
 
-It will start a server at http://127.0.0.1:3456 and will log that information to the console.
+It will start a server at http://127.0.0.1:3456 and will log that information to the console.<br />
 Once server is started you can navigate to http://127.0.0.1:3456 and you will get an html page listing the files you can navigate.
 
 ![explorer server chome screenshot](./explorer-server-chrome-screenshot.png)
 
-If you navigate to http://127.0.0.1:3456/src/hello.js your console will contain a log saying `Hello world`.
+If you navigate to http://127.0.0.1:3456/src/hello.js your console will contain a log saying `Hello world`.<br />
 If you navigate to http://127.0.0.1:3456/src/text.js nothing special will happen because `/src/text.js` is just a module with an export default.
 
-## Options
-
-startBrowserExplorerServer is framework agnostic and meant to run basic javascript.
-There is options to controls how it work internally:
+## Basic options
 
 ### projectPath
 
@@ -82,7 +79,7 @@ startBrowserExplorerServer({
 })
 ```
 
-Note: it will work on windows where projectPath would be `C:\\Users\\dmail\\project`.
+Note: it will work on windows where projectPath would be `C:\Users\dmail\project`.
 
 ### browsableDescription
 
@@ -96,52 +93,77 @@ Default value:
 }
 ```
 
-The server will only serve file described as browsable.
-`/**/` means 0 or more folder.
-`*` means 1 or more character.
+The server will only serve file described as browsable.<br />
+`/**/` means 0 or more folder.<br />
+`*` means 1 or more character.<br />
 More info on path matching available at https://github.com/dmail/project-structure.
 
 ### protocol
 
-Default value: `"http"`.
+Default value:
+
+```js
+"http"
+```
+
 The protocol used by the server, you can also pass `"https"`.
 
 ### ip
 
-Default value: `"127.0.0.1"`.
+Default value:
+
+```js
+"127.0.0.1"
+```
+
 The ip server will listen to.
 
 ### port
 
-Default value: `0`.
+Default value:
+
+```js
+0
+```
+
 The port server will listen to. 0 means a random available port will be used.
 
 ### forcePort
 
-Default value: `false`.
+Default value
+
+```js
+false
+```
+
 Server will try to kill any process poentially using the port it wnats to listen.
 
 ### compileIntoRelativePath
 
-Default value: `/.dist`.
+Default value:
+
+```js
+"/.dist"
+```
+
 Server is going to write compiled files into that folder. This folder allow the server
 to write compiled files on your filesystem to cache them.
 
 ## Advanced options
 
-### importMapRelativePath
-
-Default value: `/importMap.json`.
-`importMap.json` files are used to remap your import. The presence of this file is optionnal.
-
-TODO: provide more documentation on `importMap.json` file.
+jsenv is meant to run regular JavaScript. But thanks to advanced options you can make browser explorer server compatible with `jsx` for instance.
 
 ### babelPluginMap
 
-Default value: `jsenvBabelPluginMap`.
-The default value comes from https://github.com/jsenv/jsenv-babel-plugin-map.
-babelPluginMap is an object describing all babel plugin required by your project.
-You can extend the default babelPluginMap like this:
+Default value:
+
+```js
+const { jsenvBabelPluginMap } = require("@jsenv/babel-plugin-map")
+```
+
+The default value comes from https://github.com/jsenv/jsenv-babel-plugin-map.<br />
+`babelPluginMap` is an object describing all babel plugin required by your project.<br />
+You can extend default `babelPluginMap` like this:
 
 ```js
 const { jsenvBabelPluginMap } = require("@jsenv/babel-plugin-map")
@@ -156,19 +178,32 @@ startBrowserExplorerServer({
 })
 ```
 
+### importMapRelativePath
+
+Default value:
+
+```js
+"/importMap.json"
+```
+
+`importMap.json` files are used to remap your import. The presence of this file is optionnal.
+
+TODO: provide more documentation on `importMap.json` file.
+
 ### browserClientRelativePath
 
-Default value: `/node_modules/@jsenv/core/src/browser-client`.
-Files inside this folder will be served by browser explorer server.
-The `index.html` file is used to execute js inside the browser.
-`index.html` must contains a
+Default value:
+
+```js
+"/node_modules/@jsenv/core/src/browser-client"
+```
+
+Files inside this folder will be served by browser explorer server.<br />
+This folder must contain an `index.html` file that will be used to execute js inside the browser.<br />
+And `index.html` must contains a script tag like the one below.
 
 ```html
 <script src="/.jsenv/browser-script.js"></script>
 ```
 
-This is because server will serve a dynamic self executing js at `/.jsenv/browser-script.js`.
-
-```html
-<script src="/.jsenv/browser-script.js"></script>
-```
+This is because server will serve a dynamic self executing js at `"/.jsenv/browser-script.js"`.
