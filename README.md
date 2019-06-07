@@ -28,21 +28,16 @@ It also exists to be able to test a file without having to build an entire proje
 
 ## What jsenv can do ?
 
-- execute a file inside browsers, node.js.
+- execute file on browsers, node.js.
 - execute unit tests on browsers, node.js.
 - generate code coverage of unit tests.
-- generate bundle compatible with browsers, node.js.
+- generate bundle for browsers, node.js.
+- use import starting with `/`
+- use top level `await`
+- use dynamic `import()`
+- use `import.meta.url`
 
-All of the above can be achieved using babel, systemjs, rollup and istanbul separately. But you have to make them work together and it is a lot of work, believe me.
-
-You can also:
-
-- use import starting with / `import from '/src/file.js'`
-- use top level await
-- use dynamic import
-- use import.meta.url
-
-And mainly it's about writing code that can be executed/tested/bundled for the web and node.js.
+All of the above can be achieved using babel, systemjs, rollup and istanbul separately. This project make them  work together to provide debugging, code coverage and bundling for browsers and node.js.
 
 ## Documentation
 
@@ -63,5 +58,5 @@ The `@dmail/assert` module is emblematic of what jsenv can do:
 - It needs to run unit tests on a browser and node.js.
 - It needs to export bundle that can be used inside a browser or node.js.
 
-Link to the `@dmail/assert` on github : https://github.com/dmail/assert.<br />
+Link to `@dmail/assert` on github https://github.com/dmail/assert.<br />
 I encourage you to check its [package.json scripts](https://github.com/dmail/assert/blob/3a308d2e78b9ea217807e27ed4597fbf71f3903f/package.json#L38-L52).
