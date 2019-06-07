@@ -4,7 +4,7 @@
 [![build](https://travis-ci.com/jsenv/jsenv-core.svg?branch=master)](http://travis-ci.com/jsenv/jsenv-core)
 [![codecov](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
-> Help to create JavaScript module targeting browsers and/or nodejs
+> Help to create JavaScript module targeting browsers and/or node.js
 
 ## Main dependencies
 
@@ -20,18 +20,18 @@ Thank you to people behind these projects, they helped me a lot.
 
 Two annoying things:
 
-- Having to build my entire project to test one file.
-- Current tools provide solution for browsers or node, not for both.
+- Tool provides solutions for browsers or node.js, not for both.
+- Having to build an entire project to test one file.
 
-jsenv was created to be able to test a file without building the entire project.
-And also to make it possible to write modules that can be used inside browsers or nodejs.
+The jsenv project was created to help writing modules that can be used inside browsers and node.js.<br />
+It also exists to be able to test a file without having to build an entire project.
 
 ## What jsenv can do ?
 
-- execute a file inside browsers and/or node.
-- execute unit tests on browsers and/or nodejs.
+- execute a file inside browsers, node.js.
+- execute unit tests on browsers, node.js.
 - generate code coverage of unit tests.
-- generate bundle compatible with browsers and node.
+- generate bundle compatible with browsers, node.js.
 
 All of the above can be done achieved using babel, systemjs, rollup and istanbul separately. But you have to make them work together and it is a lot of work, believe me.
 
@@ -42,7 +42,7 @@ You can also:
 - use dynamic import
 - use import.meta.url
 
-And mainly it's about writing code that can be executed/tested/bundled for browsers and/or nodejs.
+And mainly it's about writing code that can be executed/tested/bundled for the web and node.js.
 
 ## Documentation
 
@@ -57,8 +57,11 @@ List of link to the documentation of jsenv internals:
 
 ## Example
 
-A project meant to be used on browsers and node, it is also tested on both environment using jsenv:
+The `@dmail/assert` module is emblematic of what jsenv can do:
 
-https://github.com/dmail/assert
+- It can be used on browsers and node.js.
+- It needs to run unit tests on a browser and node.js.
+- It needs to export bundle that can be used inside a browser or node.js.
 
-I encourage you to check its package.json [scripts section](https://github.com/dmail/assert/blob/3a308d2e78b9ea217807e27ed4597fbf71f3903f/package.json#L38-L52).
+Link to the `@dmail/assert` on github : https://github.com/dmail/assert.<br />
+I encourage you to check its [package.json scripts](https://github.com/dmail/assert/blob/3a308d2e78b9ea217807e27ed4597fbf71f3903f/package.json#L38-L52).
