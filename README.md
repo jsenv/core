@@ -33,7 +33,7 @@ It also exists to be able to test a file without having to build an entire proje
 - generate code coverage of unit tests.
 - generate bundle compatible with browsers, node.js.
 
-All of the above can be done achieved using babel, systemjs, rollup and istanbul separately. But you have to make them work together and it is a lot of work, believe me.
+All of the above can be achieved using babel, systemjs, rollup and istanbul separately. But you have to make them work together and it is a lot of work, believe me.
 
 You can also:
 
