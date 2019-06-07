@@ -48,12 +48,12 @@ And mainly it's about writing code that can be executed/tested/bundled for brows
 
 List of link to the documentation of jsenv internals:
 
-[browser explorer server](./docs/browser-explorer-server/browser-explorer-server.md)
-[execution](./docs/execution/execution.md)
-[testing](./docs/testing/testing.md)
-[coverage](./docs/coverage/coverage.md)
-[platform launcher](./docs/platform-launcher/platform-launcher.md)
-[bundling](./docs/bundling/bundling.md)
+- [browser explorer server](./docs/browser-explorer-server/browser-explorer-server.md)
+- [execution](./docs/execution/execution.md)
+- [testing](./docs/testing/testing.md)
+- [coverage](./docs/coverage/coverage.md)
+- [platform launcher](./docs/platform-launcher/platform-launcher.md)
+- [bundling](./docs/bundling/bundling.md)
 
 ## Example
 
