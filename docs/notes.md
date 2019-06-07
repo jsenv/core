@@ -1,6 +1,6 @@
 ## TODO
 
-- update assert/uneval so that they use latest jsenv
+- write documentation
 - nothing else :)
 
 ## To keep in mind
@@ -8,7 +8,6 @@
 - Ideally we should not keep our own systemjs version:
   https://github.com/systemjs/systemjs/issues/1924 and https://github.com/systemjs/systemjs/pull/1925.
 - Ideally we should not keep our own babel-plugin-transform-modules-systemjs version: https://github.com/babel/babel/issues/9426
-- Respond to guybeford here https://github.com/systemjs/systemjs/pull/1925
 - executionDescription renamed executionMap
   testDescription renamed testExecutionMap
   coverDescription renamed coverMap

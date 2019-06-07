@@ -4,16 +4,7 @@
 [![build](https://travis-ci.com/jsenv/jsenv-core.svg?branch=master)](http://travis-ci.com/jsenv/jsenv-core)
 [![codecov](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
-> jsenv-core helps to run your JavaScript in well-known scenarios.
-
-## History behind jsenv
-
-As a consumer of a module, you **consider only the main file**.<br/>
-As a developper of a module, you **consider all the files** composing it.
-
-Most developper tools focuses on the consumer point of view and you have to build your entire project to test one file. It becomes hard to test a file in isolation of the project.
-
-jsenv provides a solution to turn any JavaScript file into an entry point.
+> Help to create JavaScript module targeting browsers and/or nodejs
 
 ## Main dependencies
 
@@ -25,31 +16,49 @@ jsenv relies mainly on the following projects:
 
 Thank you to people behind these projects, they helped me a lot.
 
+## History behind jsenv
+
+Two annoying things:
+
+- Having to build my entire project to test one file.
+- Current tools provide solution for browsers or node, not for both.
+
+jsenv was created to be able to test a file without building the entire project.
+And also to make it possible to write modules that can be used inside browsers or nodejs.
+
+## What jsenv can do ?
+
+- execute a file inside browsers and/or node.
+- execute unit tests on browsers and/or nodejs.
+- generate code coverage of unit tests.
+- generate bundle compatible with browsers and node.
+
+All of the above can be done achieved using babel, systemjs, rollup and istanbul separately. But you have to make them work together and it is a lot of work, believe me.
+
+You can also:
+
+- use import starting with / `import from '/src/file.js'`
+- use top level await
+- use dynamic import
+- use import.meta.url
+
+And mainly it's about writing code that can be executed/tested/bundled for browsers and/or nodejs.
+
 ## Documentation
 
-There is no complete documentation available at the moment. To understand how jsenv works, I encourage you to check (my) projects using it.
+List of link to the documentation of jsenv internals:
 
-- https://github.com/dmail/assert
-- https://github.com/dmail/uneval
+[browser explorer server](./docs/browser-explorer-server/browser-explorer-server.md)
+[execution](./docs/execution/execution.md)
+[testing](./docs/testing/testing.md)
+[coverage](./docs/coverage/coverage.md)
+[platform launcher](./docs/platform-launcher/platform-launcher.md)
+[bundling](./docs/bundling/bundling.md)
 
-You can understand how jsenv is meants to be used by checking package.json scripts:
-https://github.com/dmail/assert/blob/3a308d2e78b9ea217807e27ed4597fbf71f3903f/package.json#L38-L52
+## Example
 
-## Demonstration
+A project meant to be used on browsers and node, it is also tested on both environment using jsenv:
 
-Section dedicated to highlight the cool stuff provided by jsenv.
+https://github.com/dmail/assert
 
-- You can use import starting with / `import from '/src/file.js'`
-- You can use top level await
-- You can use dynamic import
-- You can use import.meta.url
-- Project browser explorer: server sending a self executing html for every file of your project
-- Project code coverage solution
-- Project can have several entry points
-- Test file contains regular code, no weird syntax/concept like jasmine.
-- Test file can be runned on chromium, on nodejs or on both.
-- Test file can kill node/chrome with infinite loop, next one guaranteed to run thanks to dedicated node process or chromium instance.
-- vscode: one click to debug any file with nodejs debugger
-- vscode: one click to debug any file with chrome debugger
-
-TODO: add screenshots, video, whatever to show evidence of the list above :)
+I encourage you to check its package.json [scripts section](https://github.com/dmail/assert/blob/3a308d2e78b9ea217807e27ed4597fbf71f3903f/package.json#L38-L52).
