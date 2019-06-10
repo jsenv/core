@@ -1,7 +1,11 @@
 # browser-explorer-server
 
-It's a server dynamically serving self executing file for every file of your project.<br />
-It is fast because transpiled files are cached on your filesystem.
+This is a server dynamically serving self executing file for every file of your project.<br />
+It is fast because transpiled files are cached on your filesystem.<br />
+
+This feature is provided by `@jsenv/core` which exports a function called `startBrowserExplorerServer`.<br />
+
+Next part shows how to use browser explorer server inside a project.
 
 ## How to use
 
@@ -31,7 +35,7 @@ import text from "./text.js"
 console.log(text)
 ```
 
-### Add browser explorer server to that basic project
+### Install browser explorer server inside that basic project
 
 From that basic project file structure above here is how to use browser explorer server.
 
@@ -53,6 +57,8 @@ startBrowserExplorerServer({
 })
 ```
 
+### Use browser explorer server inside that basic project
+
 Now execute `root/start-browser-explorer-server.js` with node.
 
 ```shell
@@ -67,7 +73,7 @@ Once server is started you can navigate to http://127.0.0.1:3456 and you will ge
 If you navigate to http://127.0.0.1:3456/src/hello.js your console will contain a log saying `Hello world`.<br />
 If you navigate to http://127.0.0.1:3456/src/text.js nothing special will happen because `/src/text.js` is just a module with an export default.
 
-## Basic options
+## Simple options
 
 ### projectPath
 
