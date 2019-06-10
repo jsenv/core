@@ -21,7 +21,7 @@ Thank you to the people behind them, they helped me a lot.
 ## History behind jsenv
 
 What I like the most about node.js is that you can write a full stack project using JavaScript only.<br /><br />
-But on such a project, I always thought there were too many obstacles when switching between front-end and back-end environment.<br /><br />
+But on such a project, I always thought there were too many obstacles when switching between front-end and back-end environments.<br /><br />
 That's why I started to think about a solution that would help me to code in an enviroment where back and front would be closer to each other.<br />
 
 ## What jsenv can do ?
