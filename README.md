@@ -4,9 +4,9 @@
 [![build](https://travis-ci.com/jsenv/jsenv-core.svg?branch=master)](http://travis-ci.com/jsenv/jsenv-core)
 [![codecov](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
-> jsenv helps a developper to code, test and build a JavaScript project. It's designed for a full stack project where front end and back end are written in JavaScript.
+> jsenv helps a developper to code, test and build a JavaScript project. It's designed for a full stack project where front-end and back-end are written in JavaScript.
 
-> jsenv can also be used for a project exclusively front end or back end.
+> jsenv can also be used for a project exclusively front-end or back-end.
 
 ## Main dependencies
 
