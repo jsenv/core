@@ -73,19 +73,14 @@ Once server is started you can navigate to http://127.0.0.1:3456 and you will ge
 If you navigate to http://127.0.0.1:3456/src/hello.js your console will contain a log saying `Hello world`.<br />
 If you navigate to http://127.0.0.1:3456/src/text.js nothing special will happen because `/src/text.js` is just a module with an export default.
 
-## Simple options
+## Shared options
 
-### projectPath
+The documentation of some options used by `startBrowserExplorerServer` is shared with other functions.
+— see [shared options](../shared-options/shared-options.md)
 
-This is the only required option. It must lead to a folder that will be considered as the root of your project. All relative path will be relative to this projectPath option.
+## Specific options
 
-```js
-startBrowserExplorerServer({
-  projectPath: "/Users/dmail/project",
-})
-```
-
-Note: it will work on windows where projectPath would be `C:\Users\dmail\project`.
+Options below are specific to `startBrowserExplorerServer`
 
 ### browsableDescription
 
@@ -142,59 +137,7 @@ Default value
 false
 ```
 
-Server will try to kill any process poentially using the port it wnats to listen.
-
-### compileIntoRelativePath
-
-Default value:
-
-```js
-"/.dist"
-```
-
-Server is going to write compiled files into that folder. This folder allow the server
-to write compiled files on your filesystem to cache them.
-
-## Advanced options
-
-jsenv is meant to run regular JavaScript. But thanks to advanced options you can make browser explorer server compatible with `jsx` for instance.
-
-### babelPluginMap
-
-Default value:
-
-```js
-const { jsenvBabelPluginMap } = require("@jsenv/babel-plugin-map")
-```
-
-The default value comes from https://github.com/jsenv/jsenv-babel-plugin-map.<br />
-`babelPluginMap` is an object describing all babel plugin required by your project.<br />
-You can extend default `babelPluginMap` like this:
-
-```js
-const { jsenvBabelPluginMap } = require("@jsenv/babel-plugin-map")
-const transformReactJSX = require("@babel/plugin-transform-react-jsx")
-
-startBrowserExplorerServer({
-  projectPath: "/Users/dmail/project",
-  babelPluginMap: {
-    ...jsenvBabelPluginMap,
-    "transform-react-jsx": [transformReactJSX, { pragma: "dom" }],
-  },
-})
-```
-
-### importMapRelativePath
-
-Default value:
-
-```js
-"/importMap.json"
-```
-
-`importMap.json` files are used to remap your import. The presence of this file is optionnal.
-
-TODO: provide more documentation on `importMap.json` file.
+WHen true, server will try to kill any process poentially using the port it wants to listen.
 
 ### browserClientRelativePath
 
