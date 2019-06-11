@@ -87,7 +87,7 @@ It will log `node` in your terminal.
 
 ## Shared options
 
-The documentation of some options used by `execute` is shared with other functions.
+The documentation of some options used by `execute` is shared.<br />
 — see [shared options](../shared-options/shared-options.md)
 
 ## Specific options
@@ -113,7 +113,7 @@ Default value:
 true
 ```
 
-When true, the log of the platform will be logged into the terminal too
+When true, platform logs are also written in the terminal.
 
 ### stopOnceExecuted
 
@@ -124,4 +124,5 @@ false
 ```
 
 When true, the platform will be stopped once the file execution is done.<br />
-Without this option would would always have to maunally close a browser launched to execute a file. You can pass true to force browser to stop once your file execution is done.
+Without this option you would have to manually close a browser launched to execute a file.<br />
+By passing true, the browser will be stopped once file execution is done.

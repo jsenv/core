@@ -75,7 +75,7 @@ If you navigate to http://127.0.0.1:3456/src/text.js nothing special will happen
 
 ## Shared options
 
-The documentation of some options used by `startBrowserExplorerServer` is shared with other functions.
+The documentation of some options used by `startBrowserExplorerServer` is shared.<br />
 — see [shared options](../shared-options/shared-options.md)
 
 ## Specific options
