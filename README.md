@@ -26,27 +26,30 @@ That's why I started to think about a solution that would help me to code in an 
 
 ## What jsenv can do ?
 
-- execute file on browsers and/or node.js.
-- execute unit tests (browsers and/or node.js).
-- generate code coverage of unit tests.
-- generate bundle (browsers and/or node.js).
-- use import starting with `/`
-- use top level `await`
-- use dynamic `import()`
-- use `import.meta.url`
+- start a server sending self executing html source for every file of your project.<br/>
+  — see [browser explorer server](./docs/browser-explorer-server/browser-explorer-server.md)
 
-All of the above can be achieved using babel, systemjs, rollup and istanbul separately. This project make them work together to provide debugging, code coverage and bundling for browsers and node.js.
+- launch a platform, like a browser or a node.js process, then execute a file inside it and return the result.<br/>
+  — see [execution](./docs/execution/execution.md)
 
-## Documentation
+- execute unit test files on different platforms and return the result.<br/>
+  — see [testing](./docs/testing/testing.md)
 
-List of link to the documentation of jsenv features:
+- generate coverage for your unit test files.<br/>
+  — see [coverage](./docs/coverage/coverage.md)
 
-- [browser explorer server](./docs/browser-explorer-server/browser-explorer-server.md)
-- [execution](./docs/execution/execution.md)
-- [testing](./docs/testing/testing.md)
-- [coverage](./docs/coverage/coverage.md)
-- [platform launcher](./docs/platform-launcher/platform-launcher.md)
-- [bundling](./docs/bundling/bundling.md)
+- Generate bundle compatible with one or several platforms.<br/>
+  — see [bundling](./docs/bundling/bundling.md)
+
+All of the above can be achieved using babel, systemjs, rollup and istanbul separately. This project makes them work together.
+
+Alongside these things jsenv can do, it also brings:
+
+- origin relative import, import starting with `/`
+- top level `await`
+- dynamic `import()`
+- `import.meta.url`
+- cross platform access to `global`
 
 ## Example
 
