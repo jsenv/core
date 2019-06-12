@@ -5,11 +5,11 @@ It is fast because transpiled files are cached on your filesystem.<br />
 
 This feature is provided by `@jsenv/core` which exports a function called `startBrowserExplorerServer`.<br />
 
-Next part shows how to use browser explorer server inside a project.
+This documentation explains how to use `startBrowserExplorerServer` inside a project.
 
 ## How to use
 
-Let's take a basic project as example
+Using a basic project setup we'll see how to use browser explorer server to execute this project files inside a browser.
 
 ### Basic project setup
 
@@ -43,9 +43,7 @@ console.log(text)
 }
 ```
 
-### Use browser explorer server inside that basic project
-
-From that basic project file structure above here is how to use browser explorer server.
+### Using browser explorer server inside that basic project
 
 1. Generate `root/importMap.json` for your project.
 
@@ -54,13 +52,13 @@ npm i --save-dev @jsenv/node-module-import-map
 node -e 'require("@jsenv/node-module-import-map").generateImportMapForProjectNodeModules({ projectPath: process.cwd() })'
 ```
 
-2. install `@jsenv/core`
+2. Install `@jsenv/core`
 
 ```shell
 npm install --save-dev @jsenv/core
 ```
 
-3. Create a script capable to start browser explorer server
+3. Create a script starting browser explorer server
 
 `root/start-browser-explorer-server.js`
 
@@ -83,18 +81,23 @@ node ./start-browser-explorer-server.js
 ```
 
 A server will start listening at http://127.0.0.1:3456 and log that info in your terminal.<br />
-Once server is started you can navigate to http://127.0.0.1:3456 and you will get an html page listing the files you can navigate.
+
+5. Open `http://127.0.0.1:3456` using a browser
+
+Once server is started you can navigate to `http://127.0.0.1:3456`  and you will see an html page listing the files you can browse.
 
 ![explorer server chome screenshot](./explorer-server-chrome-screenshot.png)
 
-If you navigate to http://127.0.0.1:3456/src/hello.js your console will contain a log saying `Hello world`.<br />
-If you navigate to http://127.0.0.1:3456/src/text.js nothing special will happen because `/src/text.js` is just a module with an export default.
+6. Browse a file
+
+- If you go to http://127.0.0.1:3456/src/hello.js your console will contain a log saying `Hello world`.
+- If you go to http://127.0.0.1:3456/src/text.js nothing special will happen because `/src/text.js` is just a module with an export default.
 
 ## vscode - debug chrome configuration
 
 What if you could debug inside chrome the file currently opened in vscode?<br />
 
-1. install `debugger for chrome` vscode extension
+1. Install `debugger for chrome` vscode extension
 
 Link to extension: https://marketplace.visualstudio.com/items?itemName=msjsdiag.debugger-for-chrome
 
@@ -121,15 +124,15 @@ Link to extension: https://marketplace.visualstudio.com/items?itemName=msjsdiag.
 }
 ```
 
-3. start browser explorer server
+3. Start browser explorer server
 
 ```shell
 node ./start-browser-explorer-server.js
 ```
 
-4. start a debugging session using `jsenv chrome`
+4. Start a debugging session using `jsenv chrome`
 
-I made a video of the debugging session inside vscode, you can see it in the gif below:
+I made a video of the debugging session inside vscode. The gif below was generated from that video.
 
 ![vscode debug chrome gif](./vscode-debug-chrome.gif)
 

@@ -3,9 +3,13 @@
 It is a function that will launch a browser or a node.js process to execute a file inside it.
 It dynamically transforms file source to make it executable on the platform.
 
+This feature is provided by `@jsenv/core` which exports a function called `execute`.<br />
+
+This documentation explains how to use `execute` inside a project.
+
 ## How to use
 
-Let's setup a basic project and see how we could execute file inside it afterwards.
+Using a basic project setup we'll see how to use `execute` to create script capable to execute file inside chromium or node.js.
 
 ### Basic project setup
 
@@ -43,7 +47,7 @@ export const getPlatformName = () => {
 }
 ```
 
-### How to execute inside chromium
+### How to execute a file of that basic project inside chromium
 
 1. Generate `root/importMap.json` for your project.
 
@@ -80,7 +84,7 @@ node ./execute-chromium.js src/file.js
 
 `browser` will be logged in your terminal.
 
-### How to execute inside node.js
+### How to execute a file of that basic project inside node.js
 
 1. Generate `root/importMap.json` for your project.
 
@@ -121,7 +125,7 @@ node ./execute-node.js src/file.js
 
 What if you could debug inside node.js the file currently opened in vscode?<br />
 
-First add a launch configuration in `root/.vscode/launch.json`
+1. Add a launch configuration in `root/.vscode/launch.json`
 
 ```json
 {
@@ -146,8 +150,10 @@ First add a launch configuration in `root/.vscode/launch.json`
 }
 ```
 
-Second, you have to edit `root/execute-node.js` to ensure `debugModeInheritBreak` is true.<br />
-For now this step is required otherwise vscode sometimes does not stop on `debugger` keywords.
+2. Edit `root/execute-node.js`
+
+This step is required otherwise vscode sometimes does not stop on `debugger` keywords.<br />
+To fix that we must force `debugModeInheritBreak` to true.<br />
 
 `root/execute-node.js` must be
 
@@ -161,8 +167,9 @@ execute({
 })
 ```
 
-Finally you can start a debugging session using `jsenv node` debug configuration.<br />
-I made a video of the debugging session inside vscode, you can see it in the gif below:
+3. Start a debugging session using `jsenv node`
+
+I made a video of the debugging session inside vscode. The gif below was generated from that video.
 
 ![vscode debug node gif](./vscode-debug-node.gif)
 
