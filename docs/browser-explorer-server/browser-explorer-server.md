@@ -1,9 +1,9 @@
 # browser-explorer-server
 
-This is a server dynamically serving self executing file for every file of your project.<br />
-It is fast because transpiled files are cached on your filesystem.<br />
-
 This feature is provided by `@jsenv/core` which exports a function called `startBrowserExplorerServer`.<br />
+
+The function starts a server dynamically serving self executing file for every file of your project.<br />
+It is fast because transpiled files are cached on your filesystem.<br />
 
 This documentation explains how to use `startBrowserExplorerServer` inside a project.
 
@@ -84,7 +84,7 @@ A server will start listening at http://127.0.0.1:3456 and log that info in your
 
 5. Open `http://127.0.0.1:3456` using a browser
 
-Once server is started you can navigate to `http://127.0.0.1:3456`  and you will see an html page listing the files you can browse.
+Once server is started you can navigate to `http://127.0.0.1:3456` and you will see an html page listing the files you can browse.
 
 ![explorer server chome screenshot](./explorer-server-chrome-screenshot.png)
 

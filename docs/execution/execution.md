@@ -1,9 +1,9 @@
 # execution
 
+This feature is provided by `@jsenv/core` which exports a function called `execute`.<br />
+
 It is a function that will launch a browser or a node.js process to execute a file inside it.
 It dynamically transforms file source to make it executable on the platform.
-
-This feature is provided by `@jsenv/core` which exports a function called `execute`.<br />
 
 This documentation explains how to use `execute` inside a project.
 
