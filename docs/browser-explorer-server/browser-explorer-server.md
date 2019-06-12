@@ -35,15 +35,34 @@ import text from "./text.js"
 console.log(text)
 ```
 
-### Install browser explorer server inside that basic project
+`root/package.json`
+
+```json
+{
+  "name": "whatever"
+}
+```
+
+### Use browser explorer server inside that basic project
 
 From that basic project file structure above here is how to use browser explorer server.
 
+1. Generate `root/importMap.json` for your project.
+
 ```shell
-npm i @jsenv/core --save-dev
+npm i --save-dev @jsenv/node-module-import-map
+node -e 'require("@jsenv/node-module-import-map").generateImportMapForProjectNodeModules({ projectPath: process.cwd() })'
 ```
 
-Create a file at `root/start-browser-explorer-server.js` with this inside.
+2. install `@jsenv/core`
+
+```shell
+npm install --save-dev @jsenv/core
+```
+
+3. Create a script capable to start browser explorer server
+
+`root/start-browser-explorer-server.js`
 
 ```js
 const { startBrowserExplorerServer } = require("@jsenv/core")
@@ -57,15 +76,13 @@ startBrowserExplorerServer({
 })
 ```
 
-### Use browser explorer server inside that basic project
-
-Now execute `root/start-browser-explorer-server.js` with node.
+4. Run `root/start-browser-explorer-server.js` we just created
 
 ```shell
 node ./start-browser-explorer-server.js
 ```
 
-It will start a server at http://127.0.0.1:3456 and will log that information to the console.<br />
+A server will start listening at http://127.0.0.1:3456 and log that info in your terminal.<br />
 Once server is started you can navigate to http://127.0.0.1:3456 and you will get an html page listing the files you can navigate.
 
 ![explorer server chome screenshot](./explorer-server-chrome-screenshot.png)
@@ -73,14 +90,55 @@ Once server is started you can navigate to http://127.0.0.1:3456 and you will ge
 If you navigate to http://127.0.0.1:3456/src/hello.js your console will contain a log saying `Hello world`.<br />
 If you navigate to http://127.0.0.1:3456/src/text.js nothing special will happen because `/src/text.js` is just a module with an export default.
 
-## Shared options
+## vscode - debug chrome configuration
+
+What if you could debug inside chrome the file currently opened in vscode?<br />
+
+1. install `debugger for chrome` vscode extension
+
+Link to extension: https://marketplace.visualstudio.com/items?itemName=msjsdiag.debugger-for-chrome
+
+2. Add a launch configuration in `root/.vscode/launch.json`
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "jsenv-chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:3456/${relativeFile}",
+      "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"],
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "/*": "${workspaceFolder}/*"
+      },
+      "smartStep": true,
+      "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
+    }
+  ]
+}
+```
+
+3. start browser explorer server
+
+```shell
+node ./start-browser-explorer-server.js
+```
+
+4. start a debugging session using `jsenv chrome`
+
+I made a video of the debugging session inside vscode, you can see it in the gif below:
+
+![vscode debug chrome gif](./vscode-debug-chrome.gif)
+
+## startBrowserExplorerServer options
 
 The documentation of some options used by `startBrowserExplorerServer` is shared.<br />
 — see [shared options](../shared-options/shared-options.md)
 
-## Specific options
-
-Options below are specific to `startBrowserExplorerServer`
+Options below are specific to `startBrowserExplorerServer`.
 
 ### browsableDescription
 

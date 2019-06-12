@@ -17,7 +17,7 @@ root/
   package.json
 ```
 
-`file.js`
+`root/file.js`
 
 ```js
 import { getPlatformName } from "./platform-name.js"
@@ -25,7 +25,7 @@ import { getPlatformName } from "./platform-name.js"
 console.log(getPlatformName())
 ```
 
-`platform-name.js`
+`root/platform-name.js`
 
 ```js
 export const getPlatformName = () => {
@@ -35,7 +35,7 @@ export const getPlatformName = () => {
 }
 ```
 
-`package.json`
+`root/package.json`
 
 ```json
 {
@@ -45,17 +45,17 @@ export const getPlatformName = () => {
 
 ### How to execute inside chromium
 
-1. Generate `importMap.json` for your project.
+1. Generate `root/importMap.json` for your project.
 
 ```shell
-npm i --save-dev @jsenv/node-module-import-map
+npm install --save-dev @jsenv/node-module-import-map
 node -e 'require("@jsenv/node-module-import-map").generateImportMapForProjectNodeModules({ projectPath: process.cwd() })'
 ```
 
 2. install `@jsenv/core`
 
 ```shell
-npm i --save-dev @jsenv/core
+npm install --save-dev @jsenv/core
 ```
 
 3. Create a script capable to execute a file on chromium.<br />
@@ -82,7 +82,7 @@ node ./execute-chromium.js src/file.js
 
 ### How to execute inside node.js
 
-1. Generate `importMap.json` for your project.
+1. Generate `root/importMap.json` for your project.
 
 ```shell
 npm i --save-dev @jsenv/node-module-import-map
@@ -117,9 +117,9 @@ node ./execute-node.js src/file.js
 
 `node` will be logged in your terminal.
 
-### Bonus part: debug node process within vscode
+#### vscode - debug node configuration
 
-You can debug file execution inside node right from vscode.
+What if you could debug inside node.js the file currently opened in vscode?<br />
 
 First add a launch configuration in `root/.vscode/launch.json`
 
@@ -140,10 +140,7 @@ First add a launch configuration in `root/.vscode/launch.json`
         "/*": "${workspaceFolder}/*"
       },
       "smartStep": true,
-      "skipFiles": [
-        "node_modules/**",
-        "<node_internals>/**/*.js"
-      ]
+      "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
     }
   ]
 }
@@ -164,8 +161,7 @@ execute({
 })
 ```
 
-Finally you can start a debugging session using `jsenv node` debug configuration.
-
+Finally you can start a debugging session using `jsenv node` debug configuration.<br />
 I made a video of the debugging session inside vscode, you can see it in the gif below:
 
 ![vscode debug node gif](./vscode-debug-node.gif)
