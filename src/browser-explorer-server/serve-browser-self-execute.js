@@ -1,3 +1,4 @@
+import { basename } from "path"
 import { uneval } from "@dmail/uneval"
 import { serveBrowserGlobalBundle } from "../bundling/index.js"
 import { relativePathInception } from "../inception.js"
@@ -72,8 +73,9 @@ const serveBrowserSelfExecuteBundle = ({
   babelPluginMap,
   request: { ressource, method, headers },
 }) => {
-  if (ressource.startsWith(`${BROWSER_SELF_EXECUTE_CLIENT_PATHNAME}__asset__/`)) {
-    return serveFile(`${projectPathname}${compileIntoRelativePath}${ressource}`, {
+  if (ressource.startsWith(`/.jsenv/browser-self-execute/`)) {
+    const assetRelativePath = ressource.slice("/.jsenv/browser-self-execute/".length)
+    return serveFile(`${projectPathname}${compileIntoRelativePath}${assetRelativePath}`, {
       method,
       headers,
     })
@@ -94,6 +96,9 @@ const serveBrowserSelfExecuteBundle = ({
       relativePath: BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH,
     }),
     compileRelativePath: `/.jsenv/browser-self-execute${fileRelativePath}`,
+    sourcemapPath: `./browser-self-execute${fileRelativePath}__asset__/${basename(
+      fileRelativePath,
+    )}.map`,
     inlineSpecifierMap: {
       [BROWSER_SELF_EXECUTE_STATIC_DATA_PATHNAME]: () =>
         generateBrowserSelfExecuteStaticDataSource({ fileRelativePath }),

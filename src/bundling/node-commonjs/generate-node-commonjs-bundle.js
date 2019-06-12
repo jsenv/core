@@ -11,7 +11,7 @@ export const generateNodeCommonJsBundle = async ({
   importMapRelativePath,
   sourceRelativePath,
   compileRelativePath,
-  sourcemapRelativePath = computeSourcemapRelativePath(compileRelativePath),
+  sourcemapPath,
   inlineSpecifierMap = {},
   babelPluginMap,
   logLevel,
@@ -55,7 +55,8 @@ export const generateNodeCommonJsBundle = async ({
         compileIntoRelativePath,
         inlineSpecifierMap,
         entryRelativePath: sourceRelativePath,
-        sourcemapRelativePath,
+        sourcemapPath,
+        sourcemapAssetPath: computeSourcemapAssetPath(compileRelativePath),
         bundle,
       })
     },
@@ -67,8 +68,8 @@ export const generateNodeCommonJsBundle = async ({
   })
 }
 
-const computeSourcemapRelativePath = (compileRelativePath) => {
+const computeSourcemapAssetPath = (compileRelativePath) => {
   const entryBasename = basename(compileRelativePath)
-  const sourcemapRelativePath = `/${entryBasename}__asset__/${entryBasename}.map`
-  return sourcemapRelativePath
+  const sourcemapPath = `./${entryBasename}__asset__/${entryBasename}.map`
+  return sourcemapPath
 }

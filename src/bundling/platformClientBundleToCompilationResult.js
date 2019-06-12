@@ -15,7 +15,8 @@ export const platformClientBundleToCompilationResult = ({
   compileIntoRelativePath,
   inlineSpecifierMap,
   entryRelativePath,
-  sourcemapRelativePath,
+  sourcemapAssetPath,
+  sourcemapPath = sourcemapAssetPath,
   bundle,
 }) => {
   const output = bundle.output
@@ -31,11 +32,8 @@ export const platformClientBundleToCompilationResult = ({
 
   const sources = mainSourcemap.sources
   const sourcesContent = mainSourcemap.sourcesContent
-  const compiledSource = writeOrUpdateSourceMappingURL(
-    main.code,
-    `./${sourcemapRelativePath.slice(1)}`,
-  )
-  const assets = [sourcemapRelativePath.slice(1)]
+  const compiledSource = writeOrUpdateSourceMappingURL(main.code, sourcemapPath)
+  const assets = [sourcemapAssetPath]
   const assetsContent = [JSON.stringify(mainSourcemap, null, "  ")]
 
   output.slice(1).forEach((chunk) => {
