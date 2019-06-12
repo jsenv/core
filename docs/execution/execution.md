@@ -173,7 +173,20 @@ I made a video of the debugging session inside vscode. The gif below was generat
 
 ![vscode debug node gif](./vscode-debug-node.gif)
 
-## Execute options
+## execute return value
+
+`execute` return value example
+
+```json
+{
+  "status": "completed",
+  "namespace": {
+    "default": 42
+  }
+}
+```
+
+## execute options
 
 The documentation of some options used by `execute` is shared.<br />
 — see [shared options](../shared-options/shared-options.md)
