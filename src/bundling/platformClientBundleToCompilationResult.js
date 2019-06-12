@@ -33,7 +33,7 @@ export const platformClientBundleToCompilationResult = ({
   const sources = mainSourcemap.sources
   const sourcesContent = mainSourcemap.sourcesContent
   const compiledSource = writeOrUpdateSourceMappingURL(main.code, sourcemapPath)
-  const assets = [sourcemapAssetPath]
+  const assets = [sourcemapAssetPath.slice(2)]
   const assetsContent = [JSON.stringify(mainSourcemap, null, "  ")]
 
   output.slice(1).forEach((chunk) => {
