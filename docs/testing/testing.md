@@ -214,7 +214,7 @@ For instance a test with an infinite loop will likely crash the platform or time
 
 - test can be concurrently executed
 
-You can prevent it by passing [maxParallelExecution](#max-parallel-execution) option to 1.
+You can prevent it by passing [maxParallelExecution](#maxparallelexecution) option to 1.
 
 ## Test options
 
