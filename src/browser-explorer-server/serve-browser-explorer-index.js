@@ -8,10 +8,10 @@ export const serveBrowserExplorerIndex = async ({
   if (ressource !== "/") return null
 
   const browsablePathnameArray = await matchAllFileInsideFolder({
-    pathname: projectPathname,
+    folderPath: projectPathname,
     metaDescription,
     predicate: ({ browsable }) => browsable,
-    transformFile: ({ filenameRelative }) => `/${filenameRelative}`,
+    transformFile: ({ relativePath }) => relativePath,
   })
 
   const html = getBrowsingIndexPageHTML({

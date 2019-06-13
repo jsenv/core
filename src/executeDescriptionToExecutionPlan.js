@@ -38,11 +38,10 @@ export const executeDescriptionToExecutionPlan = async ({
   const executionPlan = {}
   await matchAllFileInsideFolder({
     cancellationToken,
-    pathname: projectPathname,
+    folderPath: projectPathname,
     metaDescription,
     predicate: ({ execute }) => execute,
-    transformFile: ({ filenameRelative, meta }) => {
-      const fileRelativePath = `/${filenameRelative}`
+    transformFile: ({ relativePath, meta }) => {
       const executionMeta = meta.execute
       const fileExecutionPlan = {}
       Object.keys(executionMeta).forEach((executionName) => {
@@ -50,7 +49,7 @@ export const executeDescriptionToExecutionPlan = async ({
         if (singleExecutionPlan === null || singleExecutionPlan === undefined) return
         if (typeof singleExecutionPlan !== "object") {
           throw new TypeError(`a single execution must be an object.
-          fileRelativePath: ${fileRelativePath}
+          fileRelativePath: ${relativePath}
 executionName: ${executionName}
 singleExecutionPlan: ${singleExecutionPlan}`)
         }
@@ -71,7 +70,7 @@ singleExecutionPlan: ${singleExecutionPlan}`)
         }
       })
 
-      executionPlan[fileRelativePath] = fileExecutionPlan
+      executionPlan[relativePath] = fileExecutionPlan
     },
   })
   return executionPlan
