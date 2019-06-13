@@ -110,58 +110,6 @@ node ./execute-node.js src/file.js
 
 `node` will be logged in your terminal.
 
-#### vscode - debug node configuration
-
-What if you could debug inside node.js the file currently opened in vscode?<br />
-
-1. Add a launch configuration in `root/.vscode/launch.json`
-
-```json
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "jsenv-node",
-      "type": "node",
-      "request": "launch",
-      "protocol": "inspector",
-      "program": "${workspaceFolder}/execute-node.js",
-      "args": ["${relativeFile}"],
-      "autoAttachChildProcesses": true,
-      "sourceMaps": true,
-      "sourceMapPathOverrides": {
-        "/*": "${workspaceFolder}/*"
-      },
-      "smartStep": true,
-      "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
-    }
-  ]
-}
-```
-
-2. Edit `root/execute-node.js`
-
-This step is required otherwise vscode sometimes does not stop on `debugger` keywords.<br />
-To fix that we must force `debugModeInheritBreak` to true.<br />
-
-`root/execute-node.js` must be
-
-```js
-const { launchNode, execute } = require("@jsenv/core")
-
-execute({
-  projectPath: __dirname,
-  launch: (options) => launchNode({ ...options, debugModeInheritBreak: true }),
-  fileRelativePath: `/${process.argv[2]}`,
-})
-```
-
-3. Start a debugging session using `jsenv node`
-
-I made a video of the debugging session inside vscode. The gif below was generated from that video.
-
-![vscode debug node gif](./vscode-debug-node.gif)
-
 ## `execute` return value
 
 `execute` return value example
@@ -226,13 +174,65 @@ By passing true, the browser will be stopped once file execution is done.
 
 — see [generic documentation for compileIntoRelativePath](../shared-options/shared-options.md#compileintorelativepath)
 
+#### Use `execute` to debug file withing vscode
+
+What if you could debug inside node.js the file currently opened in vscode?<br />
+
+1. Add a launch configuration in `root/.vscode/launch.json`
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "jsenv-node",
+      "type": "node",
+      "request": "launch",
+      "protocol": "inspector",
+      "program": "${workspaceFolder}/execute-node.js",
+      "args": ["${relativeFile}"],
+      "autoAttachChildProcesses": true,
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "/*": "${workspaceFolder}/*"
+      },
+      "smartStep": true,
+      "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
+    }
+  ]
+}
+```
+
+2. Edit `root/execute-node.js`
+
+This step is required otherwise vscode sometimes does not stop on `debugger` keywords.<br />
+To fix that we must force `debugModeInheritBreak` to true.<br />
+
+`root/execute-node.js` must be
+
+```js
+const { launchNode, execute } = require("@jsenv/core")
+
+execute({
+  projectPath: __dirname,
+  launch: (options) => launchNode({ ...options, debugModeInheritBreak: true }),
+  fileRelativePath: `/${process.argv[2]}`,
+})
+```
+
+3. Start a debugging session using `jsenv node`
+
+I made a video of the debugging session inside vscode. The gif below was generated from that video.
+
+![vscode debug node gif](./vscode-debug-node.gif)
+
 # End
 
 You've reached the end of this documentation, congrats for scrolling so far.<br />
 Let me suggest you to:
 
 - take a break, reading doc or scrolling can be exhausting :)
-- [go back to readme](../../readme.md#what-jsenv-can-do-)
+- [go back to readme](../../README.md#what-jsenv-can-do-)
 - [go to next doc on testing](../testing/testing.md)
 
 If you noticed issue in this documentation, you're very welcome to open [an issue](https://github.com/jsenv/jsenv-core/issues). I would love you even more if you [create a pull request](https://github.com/jsenv/jsenv-core/pulls) to suggest an improvement.

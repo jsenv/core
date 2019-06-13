@@ -82,7 +82,7 @@ startBrowserExplorerServer({
 node ./start-browser-explorer-server.js
 ```
 
-A server will start listening at http://127.0.0.1:3456 and log that info in your terminal.<br />
+A server will start listening at `http://127.0.0.1:3456` and log that info in your terminal.<br />
 
 3. Open `http://127.0.0.1:3456` using a browser
 
@@ -92,51 +92,8 @@ Once server is started you can navigate to `http://127.0.0.1:3456` and you will 
 
 4. Browse a file
 
-- If you go to http://127.0.0.1:3456/src/hello.js your console will contain a log saying `Hello world`.
-- If you go to http://127.0.0.1:3456/src/text.js nothing special will happen because `/src/text.js` is just a module with an export default.
-
-## vscode - debug chrome configuration
-
-What if you could debug inside chrome the file currently opened in vscode?<br />
-
-1. Install `debugger for chrome` vscode extension
-
-Link to extension: https://marketplace.visualstudio.com/items?itemName=msjsdiag.debugger-for-chrome
-
-2. Add a launch configuration in `root/.vscode/launch.json`
-
-```json
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "jsenv-chrome",
-      "type": "chrome",
-      "request": "launch",
-      "url": "http://127.0.0.1:3456/${relativeFile}",
-      "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"],
-      "sourceMaps": true,
-      "sourceMapPathOverrides": {
-        "/*": "${workspaceFolder}/*"
-      },
-      "smartStep": true,
-      "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
-    }
-  ]
-}
-```
-
-3. Start browser explorer server
-
-```shell
-node ./start-browser-explorer-server.js
-```
-
-4. Start a debugging session using `jsenv chrome`
-
-I made a video of the debugging session inside vscode. The gif below was generated from that video.
-
-![vscode debug chrome gif](./vscode-debug-chrome.gif)
+- If you go to `http://127.0.0.1:3456/src/hello.js` your console will contain a log saying `Hello world`.
+- If you go to `http://127.0.0.1:3456/src/text.js` nothing special will happen because `/src/text.js` is just a module with an export default.
 
 ## `startBrowserExplorerServer` options
 
@@ -237,13 +194,56 @@ This is because server will serve a dynamic self executing js at `"/.jsenv/brows
 
 — see [generic documentation for compileIntoRelativePath](../shared-options/shared-options.md#compileintorelativepath)
 
+## Use browser explorer server to debug file within vscode
+
+What if you could debug inside chrome the file currently opened in vscode?<br />
+
+1. Install `debugger for chrome` vscode extension
+
+Link to extension: https://marketplace.visualstudio.com/items?itemName=msjsdiag.debugger-for-chrome
+
+2. Add a launch configuration in `root/.vscode/launch.json`
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "jsenv-chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:3456/${relativeFile}",
+      "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"],
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "/*": "${workspaceFolder}/*"
+      },
+      "smartStep": true,
+      "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
+    }
+  ]
+}
+```
+
+3. Start browser explorer server
+
+```shell
+node ./start-browser-explorer-server.js
+```
+
+4. Start a debugging session using `jsenv chrome`
+
+I made a video of the debugging session inside vscode. The gif below was generated from that video.
+
+![vscode debug chrome gif](./vscode-debug-chrome.gif)
+
 # End
 
 You've reached the end of this documentation, congrats for scrolling so far.<br />
 Let me suggest you to:
 
 - take a break, reading doc or scrolling can be exhausting :)
-- [go back to readme](../../readme.md#what-jsenv-can-do-)
+- [go back to readme](../../README.md#what-jsenv-can-do-)
 - [go to next doc on execution](../execution/execution.md)
 
 If you noticed issue in this documentation, you're very welcome to open [an issue](https://github.com/jsenv/jsenv-core/issues). I would love you even more if you [create a pull request](https://github.com/jsenv/jsenv-core/pulls) to suggest an improvement.

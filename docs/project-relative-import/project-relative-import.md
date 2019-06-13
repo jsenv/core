@@ -1,7 +1,7 @@
 # Project relative import
 
 A project relative import is an import starting with `/`.<br />
-jsenv will always resolve these imports relative to your project path.<br />
+jsenv has builtin support for them but you may want to configure other tools to work with them too.<br />
 
 This documentation explains how to make `eslint` and `vscode` compatible with import starting with `/`.
 
@@ -10,7 +10,7 @@ This documentation explains how to make `eslint` and `vscode` compatible with im
 It concerns you only if you use `eslint-plugin-import` and I definitely recommend using it.<br />
 — see [eslint plugin import on github](https://github.com/benmosher/eslint-plugin-import)
 
-So if you use `eslint-plugin-import` you will need to make it compatible with import starting with `/`.<br />
+So if you use `eslint-plugin-import` you want it to work with `/`.<br />
 To do that follow these steps:
 
 1. Install `@jsenv/eslint-import-resolver`

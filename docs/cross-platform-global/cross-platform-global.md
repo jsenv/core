@@ -2,7 +2,7 @@
 
 When writing cross platform code you may still have to access the global object.<br />
 By global object I mean `window` inside a browser or `global` inside node.js.<br />
-But it would be a pity to make your file compatible only one platform because it contains `window` or `global`.
+But if you had to write `window` or `global` explicitely you would make your code unable to run on other platforms.
 
 To avoid this jsenv provides a `global` module.
 
@@ -38,10 +38,10 @@ Inside node.js `Math` will be `global.Math`.<br />
 
 ### But, it is useless no?
 
-This feature may look useless because you could write `Math.max(40, 42)` directly. It works because anything available on global object is a global variable.
-<br />
+This feature may look useless because you could write `Math.max(40, 42)` directly.<br />
+It works because anything available on global object is a global variable.<br />
 
-But imagine a file containing on top of it
+But with a file containing on top of it
 
 ```js
 import { Math } from "global"

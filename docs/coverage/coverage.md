@@ -58,15 +58,15 @@ node ./generate-coverage.js
 
 It will execute tests and generate `root/coverage/coverage-final.json`.
 
-3. Do something with the `coverage.json`
+3. Do something with `root/coverage/coverage-final.json`.
 
-It's important to know that `coverage.json` format is the one introduced by `instanbul`.<br />
+At this point you have a `root/coverage/coverage-final.json` file. You can pass it to a code coverage tool and get valuable information from it.<br />
+
+It's important to know that `coverage-final.json` format comes from `instanbul`.<br />
 — see [istanbul on github](https://github.com/gotwarlost/istanbul)
 
-But at this point you generated `coverage.json`, so what?<br />
-You can use any code coverage tool you like to do whatever you want with that `coverage.json`.<br />
-
-There is one use case documented for now: uploading `coverage.json` to `codecov.io` to make it part of a continuous integration strategy.<br />
+The most valuable things to do with that file is to feed it to some code coverage tool during your continuous integration script.
+I have documented one of them named `codecov.io` but you can integrate with pretty much anything else.<br />
 — see [uploading coverage to codecov.io](./uploading-coverage-to-codecov.md)
 
 ## `cover` options
@@ -179,7 +179,7 @@ You've reached the end of this documentation, congrats for scrolling so far.<br 
 Let me suggest you to:
 
 - take a break, reading doc or scrolling can be exhausting :)
-- [go back to readme](../../readme.md#what-jsenv-can-do-)
+- [go back to readme](../../README.md#what-jsenv-can-do-)
 - [go to next doc on bundling](../bundling/bundling.md)
 
 If you noticed issue in this documentation, you're very welcome to open [an issue](https://github.com/jsenv/jsenv-core/issues). I would love you even more if you [create a pull request](https://github.com/jsenv/jsenv-core/pulls) to suggest an improvement.

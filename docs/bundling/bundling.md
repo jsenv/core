@@ -4,7 +4,7 @@ This feature is provided by `@jsenv/core` which exports three functions called `
 
 These function will transform your files to allow different environment to run your code.
 
-This documentation explains how to the bundling functions inside a project.
+This documentation explains how to use these three bundling functions inside a project.
 
 ## How to use
 
@@ -68,14 +68,8 @@ generateGlobalBundle({
 node ./generate-global-bundle.js
 ```
 
-It will log something like
-
-```shell
--> /root/dist/global/main.js
-```
-
-It is the path to the generated bundle.<br />
-`/root/dist/global/main.js` content looks like this:
+Once done, terminal will contain a log with the path to the generated bundle.<br />
+`/root/dist/global/main.js` content would look like this:
 
 ```js
 var __whatever__ = (function() {
@@ -104,14 +98,8 @@ generateCommonJsBundle({
 node ./generate-commonjs-bundle.js
 ```
 
-It will log something like
-
-```shell
--> /root/dist/commonjs/main.js
-```
-
-It is the path to the generated bundle.<br />
-`/root/dist/commonjs/main.js` content looks like this:
+Once done, terminal will contain a log with the path to the generated bundle.<br />
+`/root/dist/commonjs/main.js` content would look like this:
 
 ```js
 module.exports = 42
@@ -138,14 +126,8 @@ generateSystemJsBundle({
 node ./generate-systemjs-bundle.js
 ```
 
-It will log something like
-
-```shell
--> /root/dist/systemjs/main.js
-```
-
-It is the path to the generated bundle.<br />
-`/root/dist/systemjs/main.js` content looks like this:
+Once done, terminal will contain a log with the path to the generated bundle.<br />
+`/root/dist/systemjs/main.js` content would look like this:
 
 ```js
 System.register([], function(exports) {
@@ -231,7 +213,7 @@ When true, the generated bundle will be minified.
 ### globalName
 
 This option is required, it is the globalName that will contain your exports.<br />
-Passing `__whatever__` means bundle will put your exports under `window.__whatever__`.
+Passing `"__whatever__"` means generated bundle will write your exports under `window.__whatever__`.
 
 # End
 
@@ -239,6 +221,6 @@ You've reached the end of this documentation, congrats for scrolling so far.<br 
 Let me suggest you to:
 
 - take a break, reading doc or scrolling can be exhausting :)
-- [go back to readme](../../readme.md#what-jsenv-can-do-)
+- [go back to readme](../../README.md#what-jsenv-can-do-)
 
 If you noticed issue in this documentation, you're very welcome to open [an issue](https://github.com/jsenv/jsenv-core/issues). I would love you even more if you [create a pull request](https://github.com/jsenv/jsenv-core/pulls) to suggest an improvement.
