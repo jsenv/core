@@ -69,4 +69,5 @@ Doing this will unlock various features in vscode like the two feature shown bel
 - `go to definition` on import starting with `/`.<br />
 
   I made a video recording vscode going to definition of an import starting with `/`. The gif below was generated from that video.
-  ![vscode going to definition for a project relative import recording](./vscode-go-to-definition-project-relative-import.gif)
+
+![vscode going to definition for a project relative import recording](./vscode-go-to-definition-project-relative-import.gif)
