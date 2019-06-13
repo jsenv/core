@@ -1,4 +1,4 @@
-import { selectAllFileInsideFolder } from "@dmail/project-structure"
+import { matchAllFileInsideFolder } from "@dmail/filesystem-matching"
 
 export const serveBrowserExplorerIndex = async ({
   projectPathname,
@@ -7,7 +7,7 @@ export const serveBrowserExplorerIndex = async ({
 }) => {
   if (ressource !== "/") return null
 
-  const browsablePathnameArray = await selectAllFileInsideFolder({
+  const browsablePathnameArray = await matchAllFileInsideFolder({
     pathname: projectPathname,
     metaDescription,
     predicate: ({ browsable }) => browsable,

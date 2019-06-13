@@ -1,10 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { fileWrite } from "@dmail/helper"
-import {
-  namedValueDescriptionToMetaDescription,
-  selectAllFileInsideFolder,
-  pathnameToMeta,
-} from "@dmail/project-structure"
+import { namedValueDescriptionToMetaDescription, pathnameToMeta } from "@dmail/project-structure"
+import { matchAllFileInsideFolder } from "@dmail/filesystem-matching"
 import {
   operatingSystemPathToPathname,
   pathnameToOperatingSystemPath,
@@ -224,7 +221,7 @@ const listRelativePathToCover = async ({
     cover: coverDescription,
   })
 
-  const relativePathToCoverArray = await selectAllFileInsideFolder({
+  const relativePathToCoverArray = await matchAllFileInsideFolder({
     cancellationToken,
     pathname: projectPathname,
     metaDescription: metaDescriptionForCover,

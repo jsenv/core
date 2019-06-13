@@ -1,7 +1,5 @@
-import {
-  namedValueDescriptionToMetaDescription,
-  selectAllFileInsideFolder,
-} from "@dmail/project-structure"
+import { namedValueDescriptionToMetaDescription } from "@dmail/project-structure"
+import { matchAllFileInsideFolder } from "@dmail/filesystem-matching"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { startCompileServer } from "./compile-server/index.js"
 
@@ -38,7 +36,7 @@ export const executeDescriptionToExecutionPlan = async ({
   })
 
   const executionPlan = {}
-  await selectAllFileInsideFolder({
+  await matchAllFileInsideFolder({
     cancellationToken,
     pathname: projectPathname,
     metaDescription,
