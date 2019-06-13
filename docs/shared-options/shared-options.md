@@ -45,9 +45,10 @@ Default value:
 "/importMap.json"
 ```
 
-`importMap.json` files are used to remap your import. The presence of this file is optionnal.
+`importMap.json` files are used to remap your import. The presence of this file is optionnal.<br />
 
-TODO: provide more documentation on `importMap.json` file.
+You should read documentation on importMap to understand how jsenv uses this file. It is important because `importMap.json` is mandatory as soon as your project relies on node module resolution to find a file.<br />
+— see [importMap documentation](../import-map/import-map.md)
 
 # compileIntoRelativePath
 
