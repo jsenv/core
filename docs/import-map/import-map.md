@@ -21,8 +21,8 @@ import whatever from "lodash"
 ```
 
 Generating importMap for a project node modules can, and must be, automated.<br />
-jsenv provides this feature behind an npm package called `@jsenv/node-module-import-map`.
-Next part explain how to use it.
+jsenv provides this feature behind an npm package called `@jsenv/node-module-import-map`.<br />
+Read part below to see how to use it.
 
 ## How to use `@jsenv/node-module-import-map`
 
@@ -50,17 +50,16 @@ generateImportMapForProjectNodeModules({
 node ./generate-import-map.js
 ```
 
-It will write a file `/root/importMap.json` containing information to remap import to the actual location.
+It will write `/root/importMap.json` containing data capable to remap node module import to actual location on filesystem.
 
-## Important informations when using `@jsenv/node-module-import-map`
-
-### Keep importMap in sync with node_modules
+### importMap must be in sync with node_modules
 
 `/importMap.json` must be in sync with `/node_modules/`. It means you should regenerate `/importMap.json` after every npm install for instance. <br />
 
 ### Avoid using importMap for custom aliases
 
-A custom alias is the ability to write import from `"foo"` and remap that import to an actual file.
+A custom alias is the ability to write import from `"foo"` and expect a tool to remap the import to an actual file on the filesystem.<br />
+I say **custom** alias because that alias would be specific to your project and not generated from node modules.
 
 ```js
 import whatever from "foo"
