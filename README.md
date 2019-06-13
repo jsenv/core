@@ -45,9 +45,9 @@ All of the above can be achieved using babel, systemjs, rollup and istanbul sepa
 
 Alongside these things jsenv can do, it also provides:
 
-- project relative import, import starting with `/`
+- project relative import, import starting with `/`<br />
   — see [project relative import](./docs/project-relative-import/project-relative-import.md)
-- cross platform access to `global`
+- cross platform access to `global`<br />
   — see [cross platform global](./docs/cross-platform-global/cross-platform-global.md)
 - `import.meta.url`
 - top level `await`
