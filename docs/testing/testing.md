@@ -317,10 +317,10 @@ When true, logs will contain each execution logs and `platformLog` property will
 
 # End
 
-You read this documentation or you're a mad scroller<br />
-In any case congrats, let me suggest you to:
+You've reached the end of this documentation, congrats for scrolling so far.<br />
+Let me suggest you to:
 
-- take a break :)
+- take a break, reading doc or scrolling can be exhausting :)
 - [go back to readme](../../readme.md#what-jsenv-can-do-)
 - [go to next doc on coverage](../coverage/coverage.md)
 

@@ -223,3 +223,22 @@ When true, the generated bundle will be minified.
 ### importMapRelativePath
 
 — see [generic documentation for importMapRelativePath](../shared-options/shared-options.md#importmaprelativepath)
+
+## `generateGlobalBundle` options
+
+`generateGlobalBundle` got one specific option called `globalName`.<br />
+
+### globalName
+
+This option is required, it is the globalName that will contain your exports.<br />
+Passing `__whatever__` means bundle will put your exports under `window.__whatever__`.
+
+# End
+
+You've reached the end of this documentation, congrats for scrolling so far.<br />
+Let me suggest you to:
+
+- take a break, reading doc or scrolling can be exhausting :)
+- [go back to readme](../../readme.md#what-jsenv-can-do-)
+
+If you noticed issue in this documentation, you're very welcome to open [an issue](https://github.com/jsenv/jsenv-core/issues). I would love you even more if you [create a pull request](https://github.com/jsenv/jsenv-core/pulls) to suggest an improvement.
