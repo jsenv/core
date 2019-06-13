@@ -43,13 +43,15 @@ That's why I started to think about a solution that would help me to code in an 
 
 All of the above can be achieved using babel, systemjs, rollup and istanbul separately. This project makes them work together.
 
-Alongside these things jsenv can do, it also brings:
+Alongside these things jsenv can do, it also provides:
 
-- origin relative import, import starting with `/`
+- project relative import, import starting with `/`
+  — see [project relative import](./docs/project-relative-import/project-relative-import.md)
+- cross platform access to `global`
+  — see [cross platform global](./docs/cross-platform-global/cross-platform-global.md)
+- `import.meta.url`
 - top level `await`
 - dynamic `import()`
-- `import.meta.url`
-- cross platform access to `global`
 
 ## Example
 
@@ -60,5 +62,4 @@ Alongside these things jsenv can do, it also brings:
 
 For that reason the project is good use case for jsenv.<br />
 I encourage you to check of `@dmail/assert` to see how it uses jsenv.
-
-Link to package.json scripts source: https://github.com/dmail/assert/blob/3a308d2e78b9ea217807e27ed4597fbf71f3903f/package.json#L38-L52
+— see [package.json scripts source](https://github.com/dmail/assert/blob/3a308d2e78b9ea217807e27ed4597fbf71f3903f/package.json#L38-L52)

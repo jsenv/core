@@ -13,6 +13,8 @@ Using a basic project setup we'll see how to use `execute` to create script capa
 
 ### Basic project setup
 
+1. Create a file structure like this one
+
 ```
 root/
   src/
@@ -47,22 +49,22 @@ export const getPlatformName = () => {
 }
 ```
 
-### How to execute a file of that basic project inside chromium
+2. Install `@jsenv/core`
 
-1. Generate `root/importMap.json` for your project.
+```shell
+npm install --save-dev @jsenv/core
+```
+
+3. Generate `root/importMap.json`
 
 ```shell
 npm install --save-dev @jsenv/node-module-import-map
 node -e 'require("@jsenv/node-module-import-map").generateImportMapForProjectNodeModules({ projectPath: process.cwd() })'
 ```
 
-2. install `@jsenv/core`
+### How to execute a file of that basic project inside chromium
 
-```shell
-npm install --save-dev @jsenv/core
-```
-
-3. Create a script capable to execute a file on chromium.<br />
+1. Create a script capable to execute a file on chromium.<br />
 
 `root/execute-chromium.js`
 
@@ -76,7 +78,7 @@ execute({
 })
 ```
 
-4. Run `root/execute-chromium.js` we just created
+2. Run `root/execute-chromium.js` you just created
 
 ```shell
 node ./execute-chromium.js src/file.js
@@ -86,20 +88,7 @@ node ./execute-chromium.js src/file.js
 
 ### How to execute a file of that basic project inside node.js
 
-1. Generate `root/importMap.json` for your project.
-
-```shell
-npm i --save-dev @jsenv/node-module-import-map
-node -e 'require("@jsenv/node-module-import-map").generateImportMapForProjectNodeModules({ projectPath: process.cwd() })'
-```
-
-2. install `@jsenv/core`
-
-```shell
-npm i --save-dev @jsenv/core
-```
-
-3. Create a script capable to execute a file on node.<br />
+1. Create a script capable to execute a file on node.<br />
 
 `root/execute-node.js`
 
@@ -113,7 +102,7 @@ execute({
 })
 ```
 
-4. Run `root/execute-node.js` we just created
+2. Run `root/execute-node.js` you just created
 
 ```shell
 node ./execute-node.js src/file.js
@@ -173,7 +162,7 @@ I made a video of the debugging session inside vscode. The gif below was generat
 
 ![vscode debug node gif](./vscode-debug-node.gif)
 
-## execute return value
+## `execute` return value
 
 `execute` return value example
 
@@ -186,12 +175,7 @@ I made a video of the debugging session inside vscode. The gif below was generat
 }
 ```
 
-## execute options
-
-The documentation of some options used by `execute` is shared.<br />
-— see [shared options](../shared-options/shared-options.md)
-
-Options below are specific to `execute`.
+## `execute` options
 
 ### launch
 
@@ -225,3 +209,30 @@ false
 When true, the platform will be stopped once the file execution is done.<br />
 Without this option you would have to manually close a browser launched to execute a file.<br />
 By passing true, the browser will be stopped once file execution is done.
+
+### projectPath
+
+— see [generic documentation for projectPath](../shared-options/shared-options.md#projectpath)
+
+### babelPluginMap
+
+— see [generic documentation for babelPluginMap](../shared-options/shared-options.md#babelpluginmap)
+
+### importMapRelativePath
+
+— see [generic documentation for importMapRelativePath](../shared-options/shared-options.md#importmaprelativepath)
+
+### compileIntoRelativePath
+
+— see [generic documentation for compileIntoRelativePath](../shared-options/shared-options.md#compileintorelativepath)
+
+# End
+
+You read this documentation or you're a mad scroller<br />
+In any case congrats, let me suggest you to:
+
+- take a break :)
+- [go back to readme](../../readme.md#what-jsenv-can-do-)
+- [go to next doc on testing](../testing/testing.md)
+
+If you noticed issue in this documentation, you're very welcome to open [an issue](https://github.com/jsenv/jsenv-core/issues). I would love you even more if you [create a pull request](https://github.com/jsenv/jsenv-core/pulls) to suggest an improvement.
