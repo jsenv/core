@@ -140,6 +140,92 @@ I made a video recording terminal during execution `root/execute-tests.js`. The 
 
 ![test terminal recording](./test-terminal-recording.gif)
 
+## Execution success or failure
+
+`test` will execute your files, theses executions may fail. This part describes what is considered as a failure or a success.<br />
+
+- A file throwing is a failure. Execution status will be `errored`.
+
+```js
+throw new Error("here")
+```
+
+- A file longer to execute than a given amout of time is a failure. Execution status will be `timedout`.
+
+By default an execution is given 30s. You can change this value globally using `defaultAllocatedMsPerExecution` or per execution using `allocatedMs` property inside an `executionDescription`. These parts are documented a bit further in this document.
+
+```js
+await new Promise((resolve) => {
+  setTimeout(resolve, 500000)
+})
+```
+
+- A platform crashing during file execution is a failure. Execution status will be `disconnected`.
+
+```js
+while (true) {}
+```
+
+The code above may also result in `timeout` or could the browser or node.js process it depends.
+
+- A file executed without error is a success. Execution status will be completed
+
+```js
+const actual = 10 + 10
+const expected = 20
+if (actual !== expected) throw new Error(`10 + 10 should be 20`)
+```
+
+It means an empty file is a success too.
+
+## Use top level await when needed
+
+top level await is the ability to write `await` directly in the body of your program.
+
+```js
+const value = await Promise.resolve(42)
+console.log(value)
+```
+
+You must use top level await to test something async.<br />
+Without top level await, file execution is considered done even if things are still running.<br />
+
+```js
+console.log("execution start")
+;(async () => {
+  const actual = await Promise.resolve(42)
+  const expected = 42
+  if (actual !== expected) throw new Error("should be 42")
+  console.log("test done")
+})()
+console.log("execution end")
+```
+
+Executing code above with `test` logs `"execution start"`, `"execution end"`.<br />
+It does not logs `"test done"` because execution is considered as `completed` and platform is killed.<br />
+The same code written using top level await will work.
+
+```js
+console.log("execution start")
+const actual = await Promise.resolve(42)
+const expected = 42
+if (actual !== expected) throw new Error("should be 42")
+console.log("test done")
+console.log("execution end")
+```
+
+Executing code above with `test` function logs `"execution start"`, `"test done"`, `"execution end"`.<br />
+
+## One execution = one platform launched
+
+When `test` executes a file it launches one platform to execute it.<br />
+Each file will be executed in his own browser or node.js process.<br />
+
+It reduces chances that a file execution have a side effect on an other file execution. For instance if executing a file crashes the browser or node.js process, because of an infinite loop for instance, it will not prevent other file executions.<br />
+
+It also allows `test` to benefit of machine with mutiple processors. Indeed, it executes file at the same time, in concurrency, as much as possible.<br />
+You can control this with `maxParallelExecution` option documented a bit further in this document.
+
 ## `test` return value
 
 `test` returns signature is `{ planResultSummary, planResult }`.
@@ -193,30 +279,6 @@ Executing this pseudo code could give you a `planResult` like the one below:
   }
 }
 ```
-
-## Test files guidelines
-
-Some guidelines regarding test files.
-
-- if a file throws during execution, it is considered as failed with an `errored` status.
-- if platform dies during file execution, it is considered as failed with a `disconnected` status.
-- if file does not completes fast enough, it is considered as failed with a `timedout` status.
-- async test must use top level await
-
-```js
-const actual = await Promise.resolve(10)
-const expected = 10
-if (actual !== expected) throw new Error("should be 10")
-```
-
-- a platform is launched for every file, vastly reducing potential side effects between tests.
-- file cannot prevent other file execution
-
-For instance a file containing code doing an infinite loop will likely crash the platform or timeout but next one will run.
-
-- test file can be concurrently executed
-
-You can prevent it by passing [maxParallelExecution](#maxparallelexecution) option to 1.
 
 ## `test` options
 

@@ -5,7 +5,9 @@ This feature is provided by `@jsenv/core` which exports a function called `start
 The function starts a server dynamically serving self executing file for every file of your project.<br />
 It is fast because transpiled files are cached on your filesystem.<br />
 
-This documentation explains how to use `startBrowserExplorerServer` inside a project.
+![browsing project on chrome recording](./chrome-browsing-recording.gif)
+
+This documentation explains how to use `startBrowserExplorerServer` inside a project.<br />
 
 ## How to use
 
@@ -92,8 +94,10 @@ Once server is started you can navigate to `http://127.0.0.1:3456` and you will 
 
 4. Browse a file
 
+The gif on top of this document illustrates this part.
+
 - If you go to `http://127.0.0.1:3456/src/hello.js` your console will contain a log saying `Hello world`.
-- If you go to `http://127.0.0.1:3456/src/text.js` nothing special will happen because `/src/text.js` is just a module with an export default.
+- If you go to `http://127.0.0.1:3456/src/text.js` nothing special will happen because `/src/text.js` is just a module with an export default.<br />
 
 ## `startBrowserExplorerServer` options
 

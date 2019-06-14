@@ -60,6 +60,6 @@ Alongside these things jsenv can do, it also provides:
 - it has to be executable in both browsers and node.js,
 - it would like to run unit tests on a browser and node.js.
 
-For that reason the project is good use case for jsenv.<br />
-I encourage you to check of `@dmail/assert` to see how it uses jsenv.<br />
+For that reason the project is a good use case for jsenv.<br />
+I encourage you to check `@dmail/assert` to see how it uses jsenv.<br />
 — see [package.json scripts source](https://github.com/dmail/assert/blob/3a308d2e78b9ea217807e27ed4597fbf71f3903f/package.json#L38-L52)
