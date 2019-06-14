@@ -20,8 +20,8 @@ root/
     platform-name.js
   test/
     platform-name.test.js
-    platform-name.browser.test.js
-    platform-name.node.test.js
+    platform-name.test.browser.js
+    platform-name.test.node.js
   index.js
   package.json
 ```

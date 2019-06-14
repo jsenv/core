@@ -2,7 +2,10 @@
 
 This feature is provided by `@jsenv/core` which exports a function called `cover`.<br />
 
-Before reading this documentation, be sure to read the [testing](../testing/testing.md) documentation because coverage relies on it.
+Before reading this documentation, be sure to read the [testing](../testing/testing.md) documentation because coverage relies on it.<br />
+`cover` is capable to generate your project coverage in json format and a bit more.
+
+![browsing coverage recording](./coverage-browsing-recording.gif)
 
 This documentation explains how to use `cover` inside a project.
 
@@ -47,6 +50,7 @@ cover({
       },
     },
   },
+  writeCoverageHtmlFolder: true,
 })
 ```
 
@@ -58,7 +62,13 @@ node ./generate-coverage.js
 
 It will execute tests and generate `root/coverage/coverage-final.json`.
 
-3. Do something with `root/coverage/coverage-final.json`.
+3. Open `root/coverage/index.html` in a browser
+
+The gif on top of this document illustrates this part.<br />
+`root/coverage/index.html` and associated files will be generated only if you pass `writeCoverageHtmlFolder` to true.<br />
+As you can see in the gif, starting from `index.html` page you can explore your project coverage.
+
+4. Do something with `root/coverage/coverage-final.json`.
 
 At this point you have a `root/coverage/coverage-final.json` file. You can pass it to a code coverage tool and get valuable information from it.<br />
 
