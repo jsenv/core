@@ -20,7 +20,7 @@ Thank you to the people behind them, they helped me a lot.
 
 ## History behind jsenv
 
-What I like the most about node.js is that you can write a full stack project using JavaScript only.<br /><br />
+What I like the most about JavaScript is that you can write a full stack project using JavaScript only.<br /><br />
 But on such a project, I always thought there were too many obstacles when switching between front-end and back-end environments.<br /><br />
 That's why I started to think about a solution that would help me to code in an enviroment where back and front would be closer to each other.<br />
 
@@ -55,11 +55,10 @@ Alongside these things jsenv can do, it also provides:
 
 ## Example
 
-`@dmail/assert` is a npm package meant to be used either on front-end or back-end environment. This means two things:
+A concrete example using jsenv: `@dmail/assert`.<br />
+It is a npm package meant to be used either on front-end or back-end.<br />
+So it needs to be usable in both browsers and node.js.<br />
+And it would like to run unit tests on a browser and node.js.<br />
 
-- it has to be executable in both browsers and node.js,
-- it would like to run unit tests on a browser and node.js.
-
-For that reason the project is a good use case for jsenv.<br />
 I encourage you to check `@dmail/assert` to see how it uses jsenv.<br />
 — see [package.json scripts source](https://github.com/dmail/assert/blob/3a308d2e78b9ea217807e27ed4597fbf71f3903f/package.json#L38-L52)
