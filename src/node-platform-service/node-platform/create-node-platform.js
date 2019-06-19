@@ -68,7 +68,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => 
 }
 
 const unevalException = (value) => {
-  return uneval(value, { accurateErrorProperties: true })
+  return uneval(value)
 }
 
 const decideCompileId = () => {

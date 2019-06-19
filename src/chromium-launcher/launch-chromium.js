@@ -1,7 +1,6 @@
 /* eslint-disable import/max-dependencies */
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
-import { uneval } from "@dmail/uneval"
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
 import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
 import {
@@ -243,9 +242,9 @@ const createBrowserIIFEString = ({
   collectCoverage,
 }) => `(() => {
   return window.execute({
-    compileServerOrigin: ${uneval(compileServerOrigin)},
-    fileRelativePath: ${uneval(fileRelativePath)},
-    collectNamespace: ${uneval(collectNamespace)},
-    collectCoverage: ${uneval(collectCoverage)}
+    compileServerOrigin: ${JSON.stringify(compileServerOrigin)},
+    fileRelativePath: ${JSON.stringify(fileRelativePath)},
+    collectNamespace: ${JSON.stringify(collectNamespace)},
+    collectCoverage: ${JSON.stringify(collectCoverage)}
   })
 })()`

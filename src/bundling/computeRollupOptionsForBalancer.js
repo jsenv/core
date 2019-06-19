@@ -1,4 +1,3 @@
-import { uneval } from "@dmail/uneval"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { relativePathInception } from "../inception.js"
 import { createImportFromGlobalRollupPlugin } from "./import-from-global-rollup-plugin/index.js"
@@ -90,5 +89,5 @@ minify: ${minify}
 const generateBalancerDataSource = ({
   entryPointName,
   groupMap,
-}) => `export const entryPointName = ${uneval(entryPointName)}
-export const groupMap = ${uneval(groupMap)}`
+}) => `export const entryPointName = ${JSON.stringify(entryPointName)}
+export const groupMap = ${JSON.stringify(groupMap)}`

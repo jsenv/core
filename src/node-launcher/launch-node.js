@@ -251,7 +251,7 @@ const evalException = (exceptionSource, { compileServerOrigin, projectPathname }
 }
 
 const sendToChild = (child, type, data) => {
-  const source = uneval(data, { showFunctionBody: true })
+  const source = uneval(data, { functionAllowed: true })
   child.send({
     type,
     data: source,
@@ -297,19 +297,19 @@ const createNodeIIFEString = ({
   collectCoverage,
   remap,
 }) => `(() => {
-  const { execute } = require(${uneval(
+  const { execute } = require(${JSON.stringify(
     pathnameToOperatingSystemPath(
       `${projectPathname}${compileIntoRelativePath}${NODE_EXECUTE_CLIENT_PATHNAME}`,
     ),
   )})
 
   return execute({
-    compileServerOrigin: ${uneval(compileServerOrigin)},
-    projectPathname: ${uneval(projectPathname)},
-    compileIntoRelativePath: ${uneval(compileIntoRelativePath)},
-    fileRelativePath: ${uneval(fileRelativePath)},
-    collectNamespace: ${uneval(collectNamespace)},
-    collectCoverage: ${uneval(collectCoverage)},
-    remap: ${uneval(remap)}
+    compileServerOrigin: ${JSON.stringify(compileServerOrigin)},
+    projectPathname: ${JSON.stringify(projectPathname)},
+    compileIntoRelativePath: ${JSON.stringify(compileIntoRelativePath)},
+    fileRelativePath: ${JSON.stringify(fileRelativePath)},
+    collectNamespace: ${JSON.stringify(collectNamespace)},
+    collectCoverage: ${JSON.stringify(collectCoverage)},
+    remap: ${JSON.stringify(remap)}
   })
 })()`

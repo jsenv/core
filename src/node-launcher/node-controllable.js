@@ -69,7 +69,7 @@ const sendToParent = (type, data) => {
 
   // process.send algorithm does not send non enumerable values
   // because it works with JSON.stringify I guess so use uneval
-  const source = uneval(data, { accurateErrorProperties: true })
+  const source = uneval(data)
 
   // this can keep process alive longer than expected
   // when source is a long string.

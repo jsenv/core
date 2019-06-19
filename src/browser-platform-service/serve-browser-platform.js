@@ -1,4 +1,3 @@
-import { uneval } from "@dmail/uneval"
 import { serveFile } from "../file-service/index.js"
 import { relativePathInception } from "../inception.js"
 import { serveBrowserGlobalBundle } from "../bundling/index.js"
@@ -52,5 +51,5 @@ export const serveBrowserPlatform = async ({
 }
 
 const generateBrowserPlatformDataSource = ({ compileIntoRelativePath, groupMap }) =>
-  `export const compileIntoRelativePath = ${uneval(compileIntoRelativePath)}
-export const groupMap = ${uneval(groupMap)}`
+  `export const compileIntoRelativePath = ${JSON.stringify(compileIntoRelativePath)}
+export const groupMap = ${JSON.stringify(groupMap)}`

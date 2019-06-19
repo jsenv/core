@@ -64,7 +64,7 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
 }
 
 const unevalException = (value) => {
-  return uneval(value, { accurateErrorProperties: true })
+  return uneval(value)
 }
 
 const decideCompileId = () => {

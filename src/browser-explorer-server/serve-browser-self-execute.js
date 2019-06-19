@@ -1,5 +1,4 @@
 import { basename } from "path"
-import { uneval } from "@dmail/uneval"
 import { serveBrowserGlobalBundle } from "../bundling/index.js"
 import { relativePathInception } from "../inception.js"
 import { serveFile } from "../file-service/index.js"
@@ -109,7 +108,7 @@ const serveBrowserSelfExecuteBundle = ({
 }
 
 const generateBrowserSelfExecuteStaticDataSource = ({ fileRelativePath }) =>
-  `export const fileRelativePath = ${uneval(fileRelativePath)}`
+  `export const fileRelativePath = ${JSON.stringify(fileRelativePath)}`
 
 const serveBrowserSelfExecuteDynamicData = ({ compileServerOrigin, request: { ressource } }) => {
   if (ressource !== BROWSER_SELF_EXECUTE_DYNAMIC_DATA_PATHNAME) return null

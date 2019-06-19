@@ -385,7 +385,18 @@ const createCompletedExecutionResult = (
 ) => {
   return {
     status: "completed",
-    ...(collectNamespace ? { namespace } : {}),
+    ...(collectNamespace ? { namespace: normalizeNamespace(namespace) } : {}),
     ...(collectCoverage ? { coverageMap } : {}),
   }
+}
+
+const normalizeNamespace = (namespace) => {
+  if (typeof namespace !== "object") return namespace
+  if (namespace instanceof Promise) return namespace
+  const normalized = {}
+  // remove "__esModule" or Symbol.toStringTag from namespace object
+  Object.keys(namespace).forEach((key) => {
+    normalized[key] = namespace[key]
+  })
+  return normalized
 }
