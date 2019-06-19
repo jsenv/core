@@ -49,15 +49,27 @@ token.register(
     try {
       const value = await eval(`${expressionString}
 ${"//#"} sourceURL=__node-evaluation-script__.js`)
-      sendToParent("evaluate-result", {
-        status: EVALUATION_STATUS_OK,
-        value,
-      })
+      sendToParent(
+        "evaluate-result",
+        // here we use JSON.stringify because we should not
+        // have non enumerable value (unlike there is on Error objects)
+        // otherwise uneval is quite slow to turn a giant object
+        // into a string (and value can be giant when using coverage)
+        JSON.stringify({
+          status: EVALUATION_STATUS_OK,
+          value,
+        }),
+      )
     } catch (e) {
-      sendToParent("evaluate-result", {
-        status: EVALUATION_STATUS_ERROR,
-        value: e,
-      })
+      sendToParent(
+        "evaluate-result",
+        // process.send algorithm does not send non enumerable values
+        // because it works with JSON.stringify I guess so use uneval
+        uneval({
+          status: EVALUATION_STATUS_ERROR,
+          value: e,
+        }),
+      )
     }
   }),
 )
@@ -67,16 +79,12 @@ const sendToParent = (type, data) => {
   // not connected anymore, cannot communicate with parent
   if (!process.connected) return
 
-  // process.send algorithm does not send non enumerable values
-  // because it works with JSON.stringify I guess so use uneval
-  const source = uneval(data)
-
   // this can keep process alive longer than expected
   // when source is a long string.
   // It means node process may stay alive longer than expected
   // the time to send the data to the parent.
   process.send({
     type,
-    data: source,
+    data,
   })
 }

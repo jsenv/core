@@ -28,7 +28,7 @@
 		"@dmail/helper": "2.2.0",
 		"@dmail/project-structure": "3.3.0",
 		"@dmail/filesystem-matching": "1.0.0",
-		"@dmail/uneval": "5.3.0",
+		"@dmail/uneval": "5.4.0",
 		"@jsenv/module-resolution": "2.4.0",
 		"@jsenv/babel-plugin-map": "1.0.0",
 		"@jsenv/operating-system-path": "2.1.0",
