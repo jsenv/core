@@ -15,7 +15,7 @@ I made jsenv to use it inside all my JavaScript projects which can be front-end,
 
 ## What jsenv can do ?
 
-The list below presents what jsenv provides. You may want to use only some of them.
+The list below presents what tool jsenv provides. You may want to use only some of them.
 
 - start a server sending self executing html source for every file of your project.<br/>
   — see [browser explorer server](./docs/browser-explorer-server/browser-explorer-server.md)
