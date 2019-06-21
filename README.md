@@ -4,27 +4,20 @@
 [![build](https://travis-ci.com/jsenv/jsenv-core.svg?branch=master)](http://travis-ci.com/jsenv/jsenv-core)
 [![codecov](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
-> jsenv helps a developper to code, test and build a JavaScript project. It's designed for a full stack project where front-end and back-end are written in JavaScript.
+> Developper tool providing a unified workflow to write JavaScript for the web or node.js or both at the same time. jsenv is designed to be usable accross different project and repositories.
 
-> jsenv can also be used for a project exclusively front-end or back-end.
+## Why jsenv?
 
-## Main dependencies
+I have several npm packages that I want to maintain.<br />
+Setuping tools for each of them takes times and is hard to maintain accross all of them.<br />
 
-jsenv uses internally, among others, these three projects:
-
-- https://github.com/babel/babel
-- https://github.com/systemjs/systemjs
-- https://github.com/rollup/rollup
-
-Thank you to the people behind them, they helped me a lot.
-
-## History behind jsenv
-
-What I like the most about JavaScript is that you can write a full stack project using JavaScript only.<br /><br />
-But on such a project, I always thought there were too many obstacles when switching between front-end and back-end environments.<br /><br />
-That's why I started to think about a solution that would help me to code in an enviroment where back and front would be closer to each other.<br />
+I made jsenv to use it inside all my JavaScript projects which can be front-end, back-end or fullstack.<br />
 
 ## What jsenv can do ?
+
+Adapt to your project requirements.<br />
+
+It means you can use only a subset of jsenv features listed below:
 
 - start a server sending self executing html source for every file of your project.<br/>
   — see [browser explorer server](./docs/browser-explorer-server/browser-explorer-server.md)
@@ -62,3 +55,13 @@ And it would like to run unit tests on a browser and node.js.<br />
 
 I encourage you to check `@dmail/assert` to see how it uses jsenv.<br />
 — see [package.json scripts source](https://github.com/dmail/assert/blob/3a308d2e78b9ea217807e27ed4597fbf71f3903f/package.json#L38-L52)
+
+## Main dependencies
+
+jsenv uses internally, among others, these three projects:
+
+- https://github.com/babel/babel
+- https://github.com/systemjs/systemjs
+- https://github.com/rollup/rollup
+
+Thank you to the people behind them, they helped me a lot.
