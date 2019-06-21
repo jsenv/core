@@ -4,7 +4,7 @@
 [![build](https://travis-ci.com/jsenv/jsenv-core.svg?branch=master)](http://travis-ci.com/jsenv/jsenv-core)
 [![codecov](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
-> Developper tool providing a unified workflow to write JavaScript for the web or node.js or both at the same time. jsenv is designed to be usable accross different project and repositories.
+> Developper tool providing a unified workflow to write JavaScript for the web, node.js or both at the same time. jsenv is designed to be reusable on different project.
 
 ## Why jsenv?
 
