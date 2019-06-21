@@ -6,16 +6,14 @@
 
 > Developper tool providing a unified workflow to write JavaScript for the web, node.js or both at the same time. jsenv is designed to be reusable on different project.
 
-## Why jsenv?
+## Introduction
 
-I have several npm packages that I want to maintain.<br />
-Setuping tools for each of them takes times and is hard to maintain accross all of them.<br />
+`jsenv` is a collection of developper tools. A github organization named jsenv is the root of all github repositories related to jsenv. Most github repositories got a corresponding package published on npm.<br />
+`jsenv-core` is the main entry point where you can find jsenv documentation.
 
-I made jsenv to use it inside all my JavaScript projects which can be front-end, back-end or fullstack.<br />
+## How to use
 
-## What jsenv can do ?
-
-The list below presents what tool jsenv provides. You may want to use only some of them.
+The list below presents what tool jsenv provides. You can use only some of them.
 
 - start a server sending self executing html source for every file of your project.<br/>
   — see [browser explorer server](./docs/browser-explorer-server/browser-explorer-server.md)
@@ -46,10 +44,8 @@ Alongside these things jsenv can do, it also provides:
 
 ## Example
 
-A concrete example using jsenv: `@dmail/assert`.<br />
-It is a npm package meant to be used either on front-end or back-end.<br />
-So it needs to be usable in both browsers and node.js.<br />
-And it would like to run unit tests on a browser and node.js.<br />
+A good way to see how something works is to see it in application on a concrete example. I recommend to check one of my project using jsenv: `@dmail/assert`.<br />
+This is an npm package providing a browser and node.js entry point. It also runs unit test in a browser and node.js to ensure continuous integration in both environments.<br />
 
 I encourage you to check `@dmail/assert` to see how it uses jsenv.<br />
 — see [package.json scripts source](https://github.com/dmail/assert/blob/3a308d2e78b9ea217807e27ed4597fbf71f3903f/package.json#L38-L52)
