@@ -13,7 +13,7 @@
 
 ## How to use
 
-The list below presents what tool jsenv provides. You can use only some of them.
+The list below presents what tool jsenv provides. They are independent, you can use only some of them.
 
 - start a server sending self executing html source for every file of your project.<br/>
   — see [browser explorer server](./docs/browser-explorer-server/browser-explorer-server.md)
