@@ -1,4 +1,4 @@
-# browser-explorer-server
+# Browser explorer server
 
 This feature is provided by `@jsenv/core` which exports a function called `startBrowserExplorerServer`.<br />
 
@@ -14,7 +14,7 @@ This documentation explains how to use `startBrowserExplorerServer` inside a pro
 
 ![browsing project on chrome recording](./chrome-browsing-recording.gif)
 
-## How to use
+## 1. How to use
 
 Using a basic project setup we'll see how to use browser explorer server to execute this project files inside a browser.
 
@@ -62,7 +62,7 @@ npm install --save-dev @jsenv/core
 
 ```shell
 npm i --save-dev @jsenv/node-module-import-map
-node -e 'require("@jsenv/node-module-import-map").generateImportMapForProjectNodeModules({ projectPath: process.cwd() })'
+node -e "require('@jsenv/node-module-import-map').generateImportMapForProjectNodeModules({ projectPath: process.cwd() });"
 ```
 
 ### Using browser explorer server inside that basic project
@@ -89,7 +89,8 @@ startBrowserExplorerServer({
 node ./start-browser-explorer-server.js
 ```
 
-A server will start listening at `http://127.0.0.1:3456` and log that info in your terminal.<br />
+A first main server will start. This one is used by the whole jsenv project.<br />
+A second server will start. That's the one we're interested in right now. The url `http://127.0.0.1:3456` is logged in your terminal.<br />
 
 3. Open `http://127.0.0.1:3456` using a browser
 
@@ -102,13 +103,17 @@ Once server is started you can navigate to `http://127.0.0.1:3456` and you will 
 The gif on top of this document illustrates this part.
 
 - If you go to `http://127.0.0.1:3456/src/hello.js` your console will contain a log saying `Hello world`.
+It shows that if your file execution renders something, you can see the effect in your browser. 
 - If you go to `http://127.0.0.1:3456/src/text.js` nothing special will happen because `/src/text.js` is just a module with an export default.<br />
+It shows that even if your file do not render anything, you still can use this functionnality to debug your file.
 
-## `startBrowserExplorerServer` options
+## 2. `startBrowserExplorerServer` options
+
+This part explains the code you have written inside `root/start-browser-explorer-server.js`.
 
 ### browsableDescription
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 {
@@ -131,7 +136,7 @@ This option internally uses path matching provided by `dmail/project-structure`.
 
 ### protocol
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 "http"
@@ -141,7 +146,7 @@ The protocol used by the server, you can also pass `"https"`.
 
 ### ip
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 "127.0.0.1"
@@ -151,7 +156,7 @@ The ip server will listen to.
 
 ### port
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 0
@@ -161,25 +166,27 @@ The port server will listen to. 0 means a random available port will be used.
 
 ### forcePort
 
-Default value
+If you don't pass this option, the default value will be:
 
 ```js
 false
 ```
 
-WHen true, server will try to kill any process poentially using the port it wants to listen.
+Wwen true, server will try to kill any process eventually using the port it wants to listen.
 
 ### browserClientRelativePath
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 "/node_modules/@jsenv/core/src/browser-client"
 ```
 
 Files inside this folder will be served by browser explorer server.<br />
-This folder must contain an `index.html` file that will be used to execute js inside the browser.<br />
-And `index.html` must contains a script tag like the one below.
+
+If you want to use an other folder than the default one, you have to ensure this folder contains an `index.html`.<br />
+This `index.html` will be used as a template to execute your project files.<br />
+And this html file has to contains the script tag below:
 
 ```html
 <script src="/.jsenv/browser-script.js"></script>
