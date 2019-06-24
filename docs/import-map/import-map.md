@@ -14,11 +14,13 @@ To know where to find imports most jsenv tools accept an `importMapRelativePath`
 }
 ```
 
-`importMap.json` file above would allow you to write import from `"lodash"` and tool would know where to find the real file.<br />
+This would let you use `lodash` in your project by writing:
 
 ```js
 import whatever from "lodash"
 ```
+
+And jsenv would know where to find the real file.<br />
 
 Generating importMap for a project node modules can, and must be, automated.<br />
 jsenv provides this feature behind an npm package called `@jsenv/node-module-import-map`.<br />
@@ -70,5 +72,5 @@ It looks convenient but<br />
 - custom remapping are likely going to conflict with a future node module name or native module name.<br />
 - a newcomer, or even you two month later, will likely not understand where or what is `"foo"`. Aliases can make complex something as simple as a filesystem, please don't do that.
 
-I believe project relative import can replace aliases for the better.<br />
+Project relative import can replace aliases for the better.<br />
 — see [project relative import documentation](../project-relative-import/project-relative-import.md).
