@@ -2,12 +2,17 @@
 
 This feature is provided by `@jsenv/core` which exports a function called `startBrowserExplorerServer`.<br />
 
-The function starts a server dynamically serving self executing file for every file of your project.<br />
-It is fast because transpiled files are cached on your filesystem.<br />
+`startBrowserExplorerServer` starts a server.<br />
+The server creates an html page listing your project files.<br />
+Each link goes to an url where your JavaScript file will be executed.<br />
 
-![browsing project on chrome recording](./chrome-browsing-recording.gif)
+Thanks to this, any file or your project can become an entry point. You can use it to debug a file in isolation or even to create a storybook.
+
+Finally, it is fast because transpiled files are cached on your filesystem.<br />
 
 This documentation explains how to use `startBrowserExplorerServer` inside a project.<br />
+
+![browsing project on chrome recording](./chrome-browsing-recording.gif)
 
 ## How to use
 
