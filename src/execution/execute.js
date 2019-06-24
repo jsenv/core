@@ -26,6 +26,8 @@ export const execute = async ({
   executionLogLevel = LOG_LEVEL_OFF,
   mirrorConsole = true,
   stopOnceExecuted = false,
+  collectNamespace = false,
+  collectCoverage = false,
   inheritCoverage = false,
 }) =>
   catchAsyncFunctionCancellation(async () => {
@@ -54,6 +56,8 @@ export const execute = async ({
       mirrorConsole,
       stopOnceExecuted,
       fileRelativePath,
+      collectNamespace,
+      collectCoverage,
       inheritCoverage,
     })
 
