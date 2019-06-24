@@ -4,16 +4,16 @@
 [![build](https://travis-ci.com/jsenv/jsenv-core.svg?branch=master)](http://travis-ci.com/jsenv/jsenv-core)
 [![codecov](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
-> Developper tool providing a unified workflow to write JavaScript for the web, node.js or both at the same time. jsenv is designed to be reusable on different project.
+> Collection of developments tools providing a unified workflow to write JavaScript for the web, node.js or both at the same time. jsenv is designed to be reusable on different project.
 
 ## Introduction
 
-`jsenv` is a collection of developper tools. A github organization named jsenv is the root of all github repositories related to jsenv. Most github repositories got a corresponding package published on npm.<br />
-`jsenv-core` is the main entry point where you can find jsenv documentation.
+`jsenv-core` is the entry point where you can find most of the code and the documentation.<br />
+`jsenv` is a github organization used to manage repositories. Most repositories have a corresponding package published on npm.<br />
 
 ## How to use
 
-The list below presents what tool jsenv provides. They are independent, you can use only some of them.
+The list below presents what tool jsenv provides. They are independent, you can use them according to your needs.
 
 - start a server sending self executing html source for every file of your project.<br/>
   — see [browser explorer server](./docs/browser-explorer-server/browser-explorer-server.md)
