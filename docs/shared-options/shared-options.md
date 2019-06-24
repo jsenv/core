@@ -24,7 +24,7 @@ const { jsenvBabelPluginMap } = require("@jsenv/babel-plugin-map")
 
 The default value comes from https://github.com/jsenv/jsenv-babel-plugin-map.<br />
 `babelPluginMap` is an object describing all babel plugin required by your project.<br />
-jsenv does not work with babel config files like `.babelrc` because it needs to know the list of babel plugin you want to use.
+If you have a `.babelrc` file, jsenv will not read it. jsenv needs to know the list of babel plugin you want to use in an explicit way.
 
 ## babelPluginMap example
 
@@ -48,9 +48,9 @@ Default value:
 "/importMap.json"
 ```
 
-`importMap.json` files are used to remap your import. The presence of this file is optionnal.<br />
+`importMap.json` file is used to remap your imports. The presence of this file is optionnal.<br />
 
-You should read documentation on importMap to understand how jsenv uses this file. It is important because `importMap.json` is mandatory as soon as your project relies on node module resolution to find a file.<br />
+You should read documentation of importMap to understand how jsenv uses this file. It is important because `importMap.json` is mandatory as soon as your project relies on node module resolution to find a file.<br />
 — see [importMap documentation](../import-map/import-map.md)
 
 # compileIntoRelativePath
@@ -61,4 +61,4 @@ Default value:
 "/.dist"
 ```
 
-This folder is used to cache the compiled files. Every time a file is compiled, the compiled version of the file is written into that folder alongside with some metadata to be able to invalidate the cache.
+This folder is used to cache the compiled files. Every time a file is compiled, the compiled version of the file is written into that folder. Alongside with the compiled file we store some metadata on the source used to generate the compiled version. We can use these informations later to know if the cache is still valid.
