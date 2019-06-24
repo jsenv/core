@@ -9,7 +9,10 @@ It must lead to a folder that will be considered as the root of your project. Al
 const projectPath = "/Users/dmail/project"
 ```
 
-Note: on windows you would pass `C:\Users\dmail\project`, jsenv is compatible with that.
+Very often you would pass `__dirname`.<br />
+— see [__dirname documentation on node.js](https://nodejs.org/docs/latest/api/modules.html#modules_dirname)
+
+Note: on windows you would pass `C:\Users\dmail\project`, jsenv is compatible with that.<br/>
 
 # babelPluginMap
 
