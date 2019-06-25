@@ -1,31 +1,33 @@
-import { subscribeToObservable } from "../observable/index.js"
+import { createObservable } from "../observable/index.js"
 
 export const nodeStreamToObservable = (nodeStream) => {
-  return subscribeToObservable(({ next, error, complete }) => {
-    // should we do nodeStream.resume() in case the stream was paused
-    nodeStream.on("data", next)
-    nodeStream.once("error", error)
-    nodeStream.once("end", complete)
+  return createObservable({
+    subscribe: ({ next, error, complete }) => {
+      // should we do nodeStream.resume() in case the stream was paused
+      nodeStream.on("data", next)
+      nodeStream.once("error", error)
+      nodeStream.once("end", complete)
 
-    const unsubscribe = () => {
-      nodeStream.removeListener("data", next)
-      nodeStream.removeListener("error", error)
-      nodeStream.removeListener("end", complete)
+      const unsubscribe = () => {
+        nodeStream.removeListener("data", next)
+        nodeStream.removeListener("error", error)
+        nodeStream.removeListener("end", complete)
+
+        if (nodeStreamIsNodeRequest(nodeStream)) {
+          nodeStream.abort()
+        } else {
+          nodeStream.destroy()
+        }
+      }
 
       if (nodeStreamIsNodeRequest(nodeStream)) {
-        nodeStream.abort()
-      } else {
-        nodeStream.destroy()
+        nodeStream.once("abort", unsubscribe)
       }
-    }
 
-    if (nodeStreamIsNodeRequest(nodeStream)) {
-      nodeStream.once("abort", unsubscribe)
-    }
-
-    return {
-      unsubscribe,
-    }
+      return {
+        unsubscribe,
+      }
+    },
   })
 }
 

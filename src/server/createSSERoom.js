@@ -1,4 +1,4 @@
-import { subscribeToObservable } from "../observable/index.js"
+import { createObservable } from "../observable/index.js"
 
 // https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
 // https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
@@ -107,30 +107,32 @@ export const createSSERoom = ({
       ...(lastKnownId === undefined ? [] : history.since(lastKnownId)),
     ]
 
-    const body = subscribeToObservable(({ next }) => {
-      events.forEach((event) => {
-        log(`send ${event.type} event to this new client`)
-        next(stringifySourceEvent(event))
-      })
+    const body = createObservable({
+      subscribe: ({ next }) => {
+        events.forEach((event) => {
+          log(`send ${event.type} event to this new client`)
+          next(stringifySourceEvent(event))
+        })
 
-      const connection = {
-        write: next,
-        unsubscribe,
-      }
+        const connection = {
+          write: next,
+          unsubscribe,
+        }
 
-      const unsubscribe = () => {
-        connections.delete(connection)
-        log(
-          `connection closed by us, number of client connected to event source: ${
-            connections.size
-          }`,
-        )
-      }
+        const unsubscribe = () => {
+          connections.delete(connection)
+          log(
+            `connection closed by us, number of client connected to event source: ${
+              connections.size
+            }`,
+          )
+        }
 
-      connections.add(connection)
-      return {
-        unsubscribe,
-      }
+        connections.add(connection)
+        return {
+          unsubscribe,
+        }
+      },
     })
 
     log(

@@ -1,1 +1,1 @@
-export { subscribe, isObservable, subscribeToObservable } from "./observable.js"
+export { subscribe, isObservable, createObservable } from "./observable.js"

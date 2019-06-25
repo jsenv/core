@@ -2,7 +2,7 @@ if ("observable" in Symbol === false) {
   Symbol.observable = Symbol.for("observable")
 }
 
-export const subscribeToObservable = (subscribe) => {
+export const createObservable = ({ subscribe }) => {
   const observable = {
     [Symbol.observable]: () => observable,
     subscribe,
