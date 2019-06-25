@@ -2,21 +2,17 @@
 
 This feature is provided by `@jsenv/core` which exports a function called `cover`.<br />
 
-Before reading this documentation, be sure to read the [testing](../testing/testing.md) documentation because coverage relies on it.<br />
-`cover` is capable to generate your project coverage in json format and a bit more.
+`cover` is capable to generate your project coverage in json format and a bit more.<br />
+
+This documentation explains how to use `cover` inside a project. We'll reuse concepts and setup from the [testing](../testing/testing.md#basic-project-setup) documentation, be sure to read it first.
+
+The gif below shows the coverage we will obtain.
 
 ![browsing coverage recording](./coverage-browsing-recording.gif)
-
-This documentation explains how to use `cover` inside a project.
 
 ## How to use
 
 `cover` is like `test` except it will collect coverage of your tests.<br />
-— see [how to use test](../testing/testing.md#how-to-use)
-
-### How to use `cover` to generate your project coverage
-
-Once you have used `test` once, it becomes easy to use `cover`.
 
 1. Create a script capable to generate your project coverage.<br />
 

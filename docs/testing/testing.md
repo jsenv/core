@@ -2,7 +2,7 @@
 
 This feature is provided by `@jsenv/core` which exports a function called `test`.<br />
 
-The function is capable to execute files on different platforms. By default it will log as it progresses and return an object containing every execution result.
+`test` is capable to execute files on different platforms. By default it will log as it progresses and return an object containing every execution result.
 
 This documentation explains how to use `test` inside a project.
 
@@ -96,7 +96,7 @@ npm install --save-dev @jsenv/node-module-import-map
 node -e "require('@jsenv/node-module-import-map').generateImportMapForProjectNodeModules({ projectPath: process.cwd() });"
 ```
 
-### How to use `test` to execute unit tests on different platforms
+### How to use `test`
 
 1. Create a script capable to execute unit tests.<br />
 
@@ -216,7 +216,7 @@ console.log("execution end")
 
 Executing code above with `test` function logs `"execution start"`, `"test done"`, `"execution end"`.<br />
 
-## One execution = one platform launched
+## One execution = one platform
 
 When `test` executes a file it launches one platform to execute it.<br />
 Each file will be executed in his own browser or node.js process.<br />
