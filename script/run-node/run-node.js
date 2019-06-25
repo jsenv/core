@@ -5,5 +5,4 @@ execute({
   projectPath,
   launch: launchNode,
   fileRelativePath: `/${process.argv[2]}`,
-  mirrorConsole: true,
 })
