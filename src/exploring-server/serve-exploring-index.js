@@ -1,6 +1,6 @@
 import { matchAllFileInsideFolder } from "@dmail/filesystem-matching"
 
-export const serveBrowserExplorerIndex = async ({
+export const serveExploringIndex = async ({
   projectPathname,
   metaDescription,
   request: { ressource },

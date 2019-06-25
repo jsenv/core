@@ -8,7 +8,7 @@ export const DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH = "/src/browser-group-
 
 export const DEFAULT_BROWSER_CLIENT_RELATIVE_PATH = `/src/browser-client`
 
-export const DEFAULT_BROWSABLE_DESCRIPTION = {
+export const DEFAULT_EXPLORABLE_MAP = {
   "/index.js": true,
   "/src/**/*.js": true,
   "/test/**/*.js": true,

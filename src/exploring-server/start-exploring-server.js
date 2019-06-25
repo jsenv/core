@@ -5,18 +5,18 @@ import { relativePathInception } from "../inception.js"
 import { startServer, firstService } from "../server/index.js"
 import { startCompileServer } from "../compile-server/index.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
-import { serveBrowserExplorerIndex } from "./serve-browser-explorer-index.js"
-import { serveBrowserExplorerPage } from "./serve-browser-explorer-page.js"
+import { serveExploringIndex } from "./serve-exploring-index.js"
+import { serveExploringPage } from "./serve-exploring-page.js"
 import {
   DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
   DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
-  DEFAULT_BROWSABLE_DESCRIPTION,
+  DEFAULT_EXPLORABLE_MAP,
   DEFAULT_BABEL_PLUGIN_MAP,
-} from "./browser-explorer-server-constant.js"
+} from "./exploring-server-constant.js"
 
-export const startBrowserExplorerServer = async ({
+export const startExploringServer = async ({
   cancellationToken = createCancellationToken(),
   projectPath,
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
@@ -25,7 +25,7 @@ export const startBrowserExplorerServer = async ({
   browserGroupResolverPath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
   babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
   compileGroupCount = 2,
-  browsableDescription = DEFAULT_BROWSABLE_DESCRIPTION,
+  explorableMap = DEFAULT_EXPLORABLE_MAP,
   logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
   keepProcessAlive = true,
   cors = true,
@@ -39,7 +39,7 @@ export const startBrowserExplorerServer = async ({
   const projectPathname = operatingSystemPathToPathname(projectPath)
 
   const metaDescription = namedValueDescriptionToMetaDescription({
-    browsable: browsableDescription,
+    browsable: explorableMap,
   })
 
   const { origin: compileServerOrigin } = await startCompileServer({
@@ -62,13 +62,13 @@ export const startBrowserExplorerServer = async ({
   const service = (request) =>
     firstService(
       () =>
-        serveBrowserExplorerIndex({
+        serveExploringIndex({
           projectPathname,
           metaDescription,
           request,
         }),
       () =>
-        serveBrowserExplorerPage({
+        serveExploringPage({
           compileServerOrigin,
           projectPathname,
           compileIntoRelativePath,
