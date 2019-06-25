@@ -2,11 +2,11 @@
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
 import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
-import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
 import {
   registerProcessInterruptCallback,
   registerUngaranteedProcessTeardown,
-} from "../process-signal/index.js"
+} from "@dmail/process-signals"
+import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
 import { startPuppeteerServer } from "./start-puppeteer-server.js"
 import { trackRessources } from "./ressource-tracker.js"
 import { trackBrowserTargets } from "./browser-target-tracker.js"

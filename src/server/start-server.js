@@ -11,7 +11,7 @@ import {
   registerProcessInterruptCallback,
   registerUnadvisedProcessCrashCallback,
   registerUngaranteedProcessTeardown,
-} from "../process-signal/index.js"
+} from "@dmail/process-signals"
 import { trackConnections, trackClients, trackRequestHandlers } from "./trackers.js"
 import { nodeRequestToRequest } from "./nodeRequestToRequest.js"
 import { populateNodeResponse } from "./populateNodeResponse.js"
