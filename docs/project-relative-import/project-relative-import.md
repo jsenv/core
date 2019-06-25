@@ -1,9 +1,14 @@
 # Project relative import
 
 A project relative import is an import starting with `/`.<br />
-jsenv has builtin support for them but you may want to configure other tools to work with them too.<br />
 
-This documentation explains how to make `eslint` and `vscode` compatible with import starting with `/`.
+```js
+import whatever from "/src/folder/file.js"
+```
+
+jsenv supports them and resolves `"/src/folder/file.js"` as relative to your project path.<br />
+
+If you want to configure other tools to support them, this page is for you. Next parts explains how to make `eslint` and `vscode` compatible with import starting with `/`.
 
 ## Make eslint compatible
 
