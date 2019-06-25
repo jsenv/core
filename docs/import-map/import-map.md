@@ -1,6 +1,9 @@
 # importMap
 
-To know where to find imports most jsenv tools accept an `importMapRelativePath` option and will expect to find an importMap file in JSON format.<br />
+importMap is a concept external to jsenv, the concept is being specified to answer a wide range of needs.<br />
+— see [importMap documentation on wicg](https://github.com/WICG/import-maps)
+
+jsenv uses importMap to know where to find imports, most jsenv public functions accept an `importMapRelativePath` option and will search for an importMap file at that path.<br />
 
 ## importMap file example
 
