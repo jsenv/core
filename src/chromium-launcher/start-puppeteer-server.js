@@ -1,7 +1,7 @@
 import { relativePathInception } from "../inception.js"
 import { startServer, firstService } from "../server/index.js"
 import { servePuppeteerHtml } from "./serve-puppeteer-html.js"
-import { serveBrowserClientFolder } from "../browser-explorer-server/server-browser-client-folder.js"
+import { serveBrowserClientFolder } from "../exploring-server/server-browser-client-folder.js"
 import { serveFile } from "../file-service/index.js"
 import { ressourceToPathname } from "../urlHelper.js"
 import { serveBrowserGlobalBundle } from "../bundling/index.js"
