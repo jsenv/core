@@ -11,11 +11,15 @@ import { uneval } from "@dmail/uneval"
 import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
 import { wrapImportMap } from "../../import-map/wrapImportMap.js"
 import { createNodeSystem } from "./create-node-system.js"
+import { resolveCompileId } from "../../platform/compile-id-resolution.js"
 
 const memoizedCreateNodeSystem = memoizeOnce(createNodeSystem)
 
 export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => {
-  const compileId = decideCompileId()
+  const compileId = resolveCompileId({
+    groupId: resolveNodeGroup({ groupMap }),
+    groupMap,
+  })
 
   const relativePathToCompiledHref = (relativePath) => {
     return `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${relativePath}`
@@ -69,20 +73,6 @@ export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => 
 
 const unevalException = (value) => {
   return uneval(value)
-}
-
-const decideCompileId = () => {
-  const returnedGroupId = resolveNodeGroup({ groupMap })
-
-  if (typeof returnedGroupId === "undefined") return "otherwise"
-
-  if (returnedGroupId in groupMap === false) {
-    throw new Error(
-      `resolveNodeGroup must return one of ${Object.keys(groupMap)}, got ${returnedGroupId}`,
-    )
-  }
-
-  return returnedGroupId
 }
 
 const readCoverage = () => global.__coverage__

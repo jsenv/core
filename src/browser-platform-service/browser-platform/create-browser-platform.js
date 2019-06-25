@@ -12,11 +12,15 @@ import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
 import { wrapImportMap } from "../../import-map/wrapImportMap.js"
 import { createBrowserSystem } from "./create-browser-system.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
+import { resolveCompileId } from "../../platform/compile-id-resolution.js"
 
 const memoizedCreateBrowserSystem = memoizeOnce(createBrowserSystem)
 
 export const createBrowserPlatform = ({ compileServerOrigin }) => {
-  const compileId = decideCompileId()
+  const compileId = resolveCompileId({
+    groupId: resolveBrowserGroup({ groupMap }),
+    groupMap,
+  })
 
   const relativePathToCompiledHref = (relativePath) => {
     return `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${relativePath}`
@@ -65,19 +69,6 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
 
 const unevalException = (value) => {
   return uneval(value)
-}
-
-const decideCompileId = () => {
-  const returnedGroupId = resolveBrowserGroup({ groupMap })
-  if (typeof returnedGroupId === "undefined") return "otherwise"
-
-  if (returnedGroupId in groupMap === false) {
-    throw new Error(
-      `resolveBrowserGroup must return one of ${Object.keys(groupMap)}, got ${returnedGroupId}`,
-    )
-  }
-
-  return returnedGroupId
 }
 
 const readCoverage = () => window.__coverage__

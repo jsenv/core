@@ -40,6 +40,7 @@ export const startCompileServer = async ({
   browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
   nodeGroupResolverRelativePath = DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
   compileGroupCount = 1,
+  platformAlwaysInsidePlatformScoreMap = false,
   babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
   babelCompatMap = DEFAULT_BABEL_COMPAT_MAP,
   browserScoreMap = DEFAULT_BROWSER_SCORE_MAP,
@@ -68,6 +69,7 @@ export const startCompileServer = async ({
     babelCompatMap,
     platformScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
     groupCount: compileGroupCount,
+    platformAlwaysInsidePlatformScoreMap,
   })
 
   const previousCompileIntoMeta = await readCompileIntoMeta({

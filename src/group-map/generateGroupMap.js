@@ -54,6 +54,12 @@ export const generateGroupMap = ({
   polyfillCompatMap = {},
   platformScoreMap,
   groupCount = 1,
+  // pass this to true if you don't care if someone tries to run your code
+  // on a platform which is not inside platformScoreMap.
+  platformAlwaysInsidePlatformScoreMap = false,
+  // pass this to true if you think you will always be able to detect
+  // the platform or that if you fail to do so you don't care.
+  platformWillAlwaysBeKnown = false,
 }) => {
   const groupMap = generateFeatureGroupMap({
     // here we should throw if key conflict between babelPluginMap/polyfillConfigMap
@@ -65,6 +71,8 @@ export const generateGroupMap = ({
     },
     platformScoreMap,
     groupCount,
+    platformAlwaysInsidePlatformScoreMap,
+    platformWillAlwaysBeKnown,
   })
   return groupMap
 }
@@ -74,6 +82,8 @@ const generateFeatureGroupMap = ({
   featureCompatMap,
   platformScoreMap,
   groupCount,
+  platformAlwaysInsidePlatformScoreMap,
+  platformWillAlwaysBeKnown,
 }) => {
   if (typeof featureConfigMap !== "object")
     throw new TypeError(`featureConfigMap must be an object, got ${featureConfigMap}`)
@@ -90,7 +100,10 @@ const generateFeatureGroupMap = ({
     platformCompatMap: {},
   }
 
-  if (groupCount === 1) {
+  // when we create one group and we cannot ensure
+  // code will be runned on a platform inside platformScoreMap
+  // then we return otherwise group to be safe
+  if (groupCount === 1 && !platformAlwaysInsidePlatformScoreMap) {
     return {
       [OTHERWISE_ID]: groupWithoutFeature,
     }
@@ -120,9 +133,23 @@ const generateFeatureGroupMap = ({
   )
 
   const length = groupArrayWithEveryCombinationSortedByPlatformScore.length
+
+  // if we arrive here and want a single group
+  // we take the worst group and consider it's our best group
+  // because it's the lowest platform we want to support
+  if (groupCount === 1) {
+    return {
+      [BEST_ID]: groupArrayWithEveryCombinationSortedByPlatformScore[length - 1],
+    }
+  }
+
+  const addOtherwiseToBeSafe = !platformAlwaysInsidePlatformScoreMap || !platformWillAlwaysBeKnown
+
+  const lastGroupIndex = addOtherwiseToBeSafe ? groupCount - 1 : groupCount
+
   const groupArray =
     length + 1 > groupCount
-      ? groupArrayWithEveryCombinationSortedByPlatformScore.slice(0, groupCount - 1)
+      ? groupArrayWithEveryCombinationSortedByPlatformScore.slice(0, lastGroupIndex)
       : groupArrayWithEveryCombinationSortedByPlatformScore
 
   const groupMap = {}
@@ -133,6 +160,8 @@ const generateFeatureGroupMap = ({
       groupMap[`intermediate-${index + 1}`] = group
     }
   })
-  groupMap[OTHERWISE_ID] = groupWithoutFeature
+  if (addOtherwiseToBeSafe) {
+    groupMap[OTHERWISE_ID] = groupWithoutFeature
+  }
   return groupMap
 }

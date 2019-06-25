@@ -34,6 +34,7 @@ export const generateBundle = ({
   formatOutputOptions = {},
   // balancing
   compileGroupCount = 1,
+  platformAlwaysInsidePlatformScoreMap,
   balancerTemplateRelativePath,
   balancerDataClientPathname,
   platformScoreMap = DEFAULT_PLATFORM_SCORE_MAP,
@@ -85,6 +86,7 @@ compileGroupCount: ${compileGroupCount}`)
       babelPluginMap,
       platformScoreMap,
       groupCount: compileGroupCount,
+      platformAlwaysInsidePlatformScoreMap,
     })
 
     return await Promise.all([

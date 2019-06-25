@@ -12,10 +12,10 @@ export const generateCommonJsBundle = async ({
   minify,
   throwUnhandled,
   writeOnFileSystem,
-  // balancing
   compileGroupCount,
   platformGroupResolverRelativePath,
   platformScoreMap,
+  platformAlwaysInsidePlatformScoreMap,
 }) =>
   generateBundle({
     format: "commonjs",
@@ -34,4 +34,5 @@ export const generateCommonJsBundle = async ({
     compileGroupCount,
     platformGroupResolverRelativePath,
     platformScoreMap,
+    platformAlwaysInsidePlatformScoreMap,
   })

@@ -12,10 +12,10 @@ export const generateSystemJsBundle = async ({
   minify,
   throwUnhandled,
   writeOnFileSystem,
-  // balancing
   compileGroupCount,
   platformGroupResolverRelativePath,
   platformScoreMap,
+  platformAlwaysInsidePlatformScoreMap,
 }) =>
   generateBundle({
     format: "systemjs",
@@ -34,4 +34,5 @@ export const generateSystemJsBundle = async ({
     compileGroupCount,
     platformGroupResolverRelativePath,
     platformScoreMap,
+    platformAlwaysInsidePlatformScoreMap,
   })
