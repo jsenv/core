@@ -25,7 +25,7 @@
       "request": "launch",
       "protocol": "inspector",
       "program": "${workspaceFolder}/script/run-node/run-node.js",
-      "args": ["--file=${relativeFile}"],
+      "args": ["${relativeFile}"],
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
       "sourceMapPathOverrides": {

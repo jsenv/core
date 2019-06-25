@@ -1,13 +1,9 @@
 const { execute, launchNode } = require("@jsenv/core")
 const { projectPath } = require("../../jsenv.config.js")
-const { getFromProcessArguments } = require("./getFromProcessArguments.js")
-
-const filenameRelative = getFromProcessArguments("file").replace(/\\/g, "/")
 
 execute({
   projectPath,
-  launch: (options) => launchNode({ ...options, debugModeInheritBreak: true }),
-  fileRelativePath: `/${filenameRelative}`,
+  launch: launchNode,
+  fileRelativePath: `/${process.argv[2]}`,
   mirrorConsole: true,
-  // executionLogLevel: "maximum",
 })
