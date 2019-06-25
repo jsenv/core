@@ -83,7 +83,7 @@ I have documented one of them named `codecov.io` but you can integrate with pret
 
 ### coverDescription
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```json
 {
@@ -109,7 +109,7 @@ This option internally uses path matching provided by `dmail/project-structure`.
 
 ### writeCoverageFile
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 true
@@ -119,7 +119,7 @@ When true, `cover` will write a json file describing your project coverage.
 
 ### logCoverageFilePath
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 true
@@ -129,7 +129,7 @@ When true, if writeCoverageFile option is true as well, `cover` logs path of the
 
 ### coverageRelativePath
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 "/coverage/coverage-final.json"
@@ -139,7 +139,7 @@ If writeCoverageFile option is true, `cover` write the file here.
 
 ### generateMissedCoverage
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 true

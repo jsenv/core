@@ -26,7 +26,7 @@ In the future chromium launcher will likely have its own npm package and github 
 
 #### headless
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 true
@@ -44,7 +44,7 @@ In the future node launcher will likely have its own npm package and github repo
 
 #### debugPort
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 0
@@ -55,7 +55,7 @@ Otherwise the launched node process debug port will be randomly assigned to an a
 
 #### debugMode
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 "inherit"
@@ -70,7 +70,7 @@ This option controls the debug mode of the launched node process.
 
 #### debugModeInheritBreak
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 true
@@ -84,7 +84,7 @@ Assuming `file.js` launches a node process using launchNode:
 
 #### traceWarnings
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 true

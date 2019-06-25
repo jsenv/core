@@ -146,7 +146,7 @@ The following options are shared by `generateGlobalBundle`, `generateCommonJsBun
 
 ### entryPointMap
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```json
 {
@@ -166,7 +166,7 @@ You can provide several entry points like this:
 
 ### minify
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 false

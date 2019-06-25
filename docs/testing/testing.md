@@ -284,7 +284,7 @@ Executing this pseudo code could give you a `planResult` like the one below:
 
 ### executeDescription
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 const executeDescription = {
@@ -323,7 +323,7 @@ const executeDescription = {
 
 ### defaultAllocatedMsPerExecution
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 30000
@@ -335,7 +335,7 @@ A timeout will not prevent other executions, the execution is considered as time
 
 ### maxParallelExecution
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 Math.max(require("os").cpus.length - 1, 1)
@@ -343,7 +343,7 @@ Math.max(require("os").cpus.length - 1, 1)
 
 ### measureDuration
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 true
@@ -353,7 +353,7 @@ When true, logs will contain each execution duration and `startMs`, `endMs` prop
 
 ### captureConsole
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 true

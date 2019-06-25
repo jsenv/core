@@ -55,7 +55,7 @@ It will send coverage to `codecov.io`
 
 ### token
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 process.env.CODECOV_TOKEN
@@ -69,7 +69,7 @@ For example, if you use travis you would go to `https://travis-ci.com/john/whate
 
 ### coverageRelativePath
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 "/coverage/coverage-final.json"

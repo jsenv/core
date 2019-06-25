@@ -16,7 +16,7 @@ Note: on windows you would pass `C:\Users\dmail\project`, jsenv is compatible wi
 
 # babelPluginMap
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 const { jsenvBabelPluginMap } = require("@jsenv/babel-plugin-map")
@@ -42,7 +42,7 @@ const babelPluginMap = {
 
 # importMapRelativePath
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 "/importMap.json"
@@ -55,7 +55,7 @@ You should read documentation of importMap to understand how jsenv uses this fil
 
 # compileIntoRelativePath
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 "/.dist"
