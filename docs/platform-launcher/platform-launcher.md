@@ -73,7 +73,7 @@ This option controls the debug mode of the launched node process.
 Default value:
 
 ```js
-false
+true
 ```
 
 When debugMode is `inherit` this option controls if the launched node process will inherit the `-brk`.

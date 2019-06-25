@@ -44,7 +44,7 @@ npm install --save-dev @jsenv/core
 
 ```shell
 npm install --save-dev @jsenv/node-module-import-map
-node -e 'require("@jsenv/node-module-import-map").generateImportMapForProjectNodeModules({ projectPath: process.cwd() })'
+node -e "require('@jsenv/node-module-import-map').generateImportMapForProjectNodeModules({ projectPath: process.cwd() });"
 ```
 
 ## Generate global bundle for that basic project
@@ -221,6 +221,6 @@ You've reached the end of this documentation, congrats for scrolling so far.<br 
 Let me suggest you to:
 
 - take a break, reading doc or scrolling can be exhausting :)
-- [go back to readme](../../README.md#what-jsenv-can-do-)
+- [go back to readme](../../README.md#how-to-use)
 
 If you noticed issue in this documentation, you're very welcome to open [an issue](https://github.com/jsenv/jsenv-core/issues). I would love you even more if you [create a pull request](https://github.com/jsenv/jsenv-core/pulls) to suggest an improvement.

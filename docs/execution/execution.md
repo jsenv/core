@@ -59,7 +59,7 @@ npm install --save-dev @jsenv/core
 
 ```shell
 npm install --save-dev @jsenv/node-module-import-map
-node -e 'require("@jsenv/node-module-import-map").generateImportMapForProjectNodeModules({ projectPath: process.cwd() })'
+node -e "require('@jsenv/node-module-import-map').generateImportMapForProjectNodeModules({ projectPath: process.cwd() });"
 ```
 
 ### How to execute a file of that basic project inside chromium
@@ -138,17 +138,17 @@ A string leading to the file you want to execute. It is relative to projectPath.
 
 ### mirrorConsole
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 true
 ```
 
-When true, platform logs are also written in the terminal.
+When true, logs of the launched browser or node process will also be logged in your terminal.
 
 ### stopOnceExecuted
 
-Default value:
+If you don't pass this option, the default value will be:
 
 ```js
 false
@@ -156,7 +156,7 @@ false
 
 When true, the platform will be stopped once the file execution is done.<br />
 Without this option you would have to manually close a browser launched to execute a file.<br />
-By passing true, the browser will be stopped once file execution is done.
+By passing true, the browser or node process will be stopped once file execution is done.
 
 ### projectPath
 
@@ -203,24 +203,7 @@ What if you could debug inside node.js the file currently opened in vscode?<br /
 }
 ```
 
-2. Edit `root/execute-node.js`
-
-This step is required otherwise vscode sometimes does not stop on `debugger` keywords.<br />
-To fix that we must force `debugModeInheritBreak` to true.<br />
-
-`root/execute-node.js` must be
-
-```js
-const { launchNode, execute } = require("@jsenv/core")
-
-execute({
-  projectPath: __dirname,
-  launch: (options) => launchNode({ ...options, debugModeInheritBreak: true }),
-  fileRelativePath: `/${process.argv[2]}`,
-})
-```
-
-3. Start a debugging session using `jsenv node`
+2. Start a debugging session using `jsenv node`
 
 I made a video of the debugging session inside vscode. The gif below was generated from that video.
 
@@ -232,7 +215,7 @@ You've reached the end of this documentation, congrats for scrolling so far.<br 
 Let me suggest you to:
 
 - take a break, reading doc or scrolling can be exhausting :)
-- [go back to readme](../../README.md#what-jsenv-can-do-)
+- [go back to readme](../../README.md#how-to-use)
 - [go to next doc on testing](../testing/testing.md)
 
 If you noticed issue in this documentation, you're very welcome to open [an issue](https://github.com/jsenv/jsenv-core/issues). I would love you even more if you [create a pull request](https://github.com/jsenv/jsenv-core/pulls) to suggest an improvement.
