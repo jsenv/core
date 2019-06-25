@@ -48,7 +48,7 @@ A good way to see how something works is to see it in application on a concrete 
 This is an npm package providing a browser and node.js entry point. It also runs unit test in a browser and node.js to ensure continuous integration in both environments.<br />
 
 I encourage you to check `@dmail/assert` to see how it uses jsenv.<br />
-— see [package.json scripts source](https://github.com/dmail/assert/blob/3a308d2e78b9ea217807e27ed4597fbf71f3903f/package.json#L38-L52)
+— see [package.json scripts source](https://github.com/dmail/assert/blob/f05d400ae0ac849503f1b56d4d5971b5ad6b587f/package.json#L38-L52)
 
 ## Main dependencies
 
