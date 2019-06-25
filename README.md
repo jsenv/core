@@ -15,19 +15,19 @@
 
 The list below presents what tool jsenv provides. They are independent, you can use them according to your needs.
 
-- start a server sending self executing html source for every file of your project.<br/>
-  — see [browser explorer server](./docs/browser-explorer-server/browser-explorer-server.md)
+- explore your project using a browser.<br/>
+  — see [exploring server](./docs/exploring-server/exploring-server.md)
 
-- launch a platform, like a browser or a node.js process, then execute a file inside it and return the result.<br/>
+- execute one of your file on a browser or node.js process.<br/>
   — see [execution](./docs/execution/execution.md)
 
-- execute unit test files on different platforms and return the result.<br/>
+- execute your unit test files on a browser and/or node.js.<br/>
   — see [testing](./docs/testing/testing.md)
 
-- generate coverage for your unit test files.<br/>
+- generate coverage of your unit test files.<br/>
   — see [coverage](./docs/coverage/coverage.md)
 
-- Generate bundle compatible with one or several platforms.<br/>
+- generate bundle compatible with browsers and/or node.js.<br/>
   — see [bundling](./docs/bundling/bundling.md)
 
 All of the above can be achieved using babel, systemjs, rollup and istanbul separately. This project makes them work together.

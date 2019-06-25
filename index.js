@@ -24,7 +24,7 @@ export {
 } from "./src/bundling/index.js"
 
 // may be moved to jsenv/browsing-server
-export { startBrowserExplorerServer } from "./src/browser-explorer-server/index.js"
+export { startExploringServer } from "./src/exploring-server/index.js"
 
 // must be moved later to jsenv/chromium-launcher
 export { launchChromium } from "./src/chromium-launcher/index.js"

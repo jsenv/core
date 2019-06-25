@@ -1,8 +1,8 @@
 import { firstService } from "../server/index.js"
-import { serveBrowserExplorerPageHTML } from "./serve-browser-explorer-page-html.js"
+import { serveExploringPageHTML } from "./serve-exploring-page-html.js"
 import { serveBrowserSelfExecute } from "./serve-browser-self-execute.js"
 
-export const serveBrowserExplorerPage = ({
+export const serveExploringPage = ({
   compileServerOrigin,
   projectPathname,
   compileIntoRelativePath,
@@ -14,7 +14,7 @@ export const serveBrowserExplorerPage = ({
 }) =>
   firstService(
     () =>
-      serveBrowserExplorerPageHTML({
+      serveExploringPageHTML({
         projectPathname,
         browserClientRelativePath,
         browsableMetaMap,

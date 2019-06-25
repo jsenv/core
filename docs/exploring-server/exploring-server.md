@@ -1,8 +1,8 @@
-# Browser explorer server
+# Exploring server
 
-This feature is provided by `@jsenv/core` which exports a function called `startBrowserExplorerServer`.<br />
+This feature is provided by `@jsenv/core` which exports a function called `startExploringServer`.<br />
 
-`startBrowserExplorerServer` starts a server.<br />
+`startExploringServer` starts a server.<br />
 The server creates an html page listing your project files.<br />
 Each link goes to an url where your JavaScript file will be executed.<br />
 
@@ -10,13 +10,13 @@ Thanks to this, any file or your project can become an entry point. You can use 
 
 Finally, it is fast because transpiled files are cached on your filesystem.<br />
 
-This documentation explains how to use `startBrowserExplorerServer` inside a project.<br />
+This documentation explains how to use `startExploringServer` inside a project.<br />
 
-![browsing project on chrome recording](./chrome-browsing-recording.gif)
+![recording of me exploring a project using chrome](./exploring-with-chrome-recording.gif)
 
 ## 1. How to use
 
-Using a basic project setup we'll see how to use browser explorer server to execute this project files inside a browser.
+This part setup a basic project to show how to use exploring server inside it.
 
 ### Basic project setup
 
@@ -65,28 +65,28 @@ npm i --save-dev @jsenv/node-module-import-map
 node -e "require('@jsenv/node-module-import-map').generateImportMapForProjectNodeModules({ projectPath: process.cwd() });"
 ```
 
-### Using browser explorer server inside that basic project
+### How to use exploring server inside that basic project
 
-1. Create a script starting browser explorer server
+1. Create a script that will start exploring server
 
-`root/start-browser-explorer-server.js`
+`root/start-exploring-server.js`
 
 ```js
-const { startBrowserExplorerServer } = require("@jsenv/core")
+const { startExploringServer } = require("@jsenv/core")
 
-startBrowserExplorerServer({
+startExploringServer({
   projectPath: __dirname,
-  browsableDescription: {
+  explorableMap: {
     "/src/*.js": true,
   },
   port: 3456,
 })
 ```
 
-2. Run `root/start-browser-explorer-server.js` you just created
+2. Run `root/start-exploring-server.js` you just created
 
 ```shell
-node ./start-browser-explorer-server.js
+node ./start-exploring-server.js
 ```
 
 A first main server will start. This one is used by the whole jsenv project.<br />
@@ -94,24 +94,24 @@ A second server will start. That's the one we're interested in right now. The ur
 
 3. Open `http://127.0.0.1:3456` using a browser
 
-Once server is started you can navigate to `http://127.0.0.1:3456` and you will see an html page listing the files you can browse.
+Once server is started you can navigate to `http://127.0.0.1:3456` and you will see an html page listing the files you can explore.
 
-![explorer server chome screenshot](./explorer-server-chrome-screenshot.png)
+![exploring server chome screenshot](./exploring-server-chrome-screenshot.png)
 
-4. Browse a file
+4. Explore files
 
 The gif on top of this document illustrates this part.
 
 - If you go to `http://127.0.0.1:3456/src/hello.js` your console will contain a log saying `Hello world`.
-It shows that if your file execution renders something, you can see the effect in your browser. 
+  It shows that if your file execution renders something, you can see the effect in your browser.
 - If you go to `http://127.0.0.1:3456/src/text.js` nothing special will happen because `/src/text.js` is just a module with an export default.<br />
-It shows that even if your file do not render anything, you still can use this functionnality to debug your file.
+  It shows that even if your file do not render anything, you still can use this functionnality to debug your file.
 
-## 2. `startBrowserExplorerServer` options
+## 2. `startExploringServer` options
 
-This part explains the code you have written inside `root/start-browser-explorer-server.js`.
+This part explains the code you have written inside `root/start-exploring-server.js`.
 
-### browsableDescription
+### explorableMap
 
 If you don't pass this option, the default value will be:
 
@@ -123,13 +123,13 @@ If you don't pass this option, the default value will be:
 }
 ```
 
-The server index page will list files described as browsable.<br />
-Server will not handle request mades to non browsable files.<br />
-browsableDescription default value means:
+The server index page will list files described as explorable.<br />
+Server will not handle request mades to non explorable files.<br />
+explorableMap default value means:
 
-- `/index.js` file is browsable
-- any file inside `/src/` ending with `.js` is browsable
-- any file inside `/test/` ending with `.js` is browsable
+- `/index.js` file is explorable
+- any file inside `/src/` ending with `.js` is explorable
+- any file inside `/test/` ending with `.js` is explorable
 
 This option internally uses path matching provided by `dmail/project-structure`.<br />
 — see [project structure on github](https://github.com/dmail/project-structure)
@@ -210,7 +210,7 @@ This is because server will serve a dynamic self executing js at `"/.jsenv/brows
 
 — see [generic documentation for compileIntoRelativePath](../shared-options/shared-options.md#compileintorelativepath)
 
-## Use browser explorer server to debug file within vscode
+## Use exploring server to debug file within vscode
 
 What if you could debug inside chrome the file currently opened in vscode?<br />
 
@@ -241,17 +241,17 @@ Link to extension: https://marketplace.visualstudio.com/items?itemName=msjsdiag.
 }
 ```
 
-3. Start browser explorer server
+3. Start exploring server
 
 ```shell
-node ./start-browser-explorer-server.js
+node ./start-exploring-server.js
 ```
 
 4. Start a debugging session using `jsenv chrome`
 
 I made a video of the debugging session inside vscode. The gif below was generated from that video.
 
-![vscode debug chrome gif](./vscode-debug-chrome.gif)
+![recording of me debugging project inside vscode](./debugging-with-vscode-recording.gif)
 
 # End
 
