@@ -79,6 +79,10 @@ I have documented one of them named `codecov.io` but you can integrate with pret
 
 ### coverDescription
 
+> describes the file of your project that should be covered.
+
+By default, `cover` generates empty coverage for every file that must be covered but never imported by a test file.<br />
+
 If you don't pass this option, the default value will be:
 
 ```json
@@ -90,10 +94,7 @@ If you don't pass this option, the default value will be:
 }
 ```
 
-coverDescription describes the file of your project that should be covered.<br />
-By default, `cover` generates empty coverage for every file that must be covered but is actually never imported by a test file.<br />
-
-default coverDescription means:
+Which means:
 
 - `/index.js` must be covered
 - any file inside `/src/` ending by `.js` must be covered.
@@ -105,25 +106,27 @@ This option internally uses path matching provided by `dmail/project-structure`.
 
 ### writeCoverageFile
 
+> When true, `cover` will write a json file describing your project coverage.
+
 If you don't pass this option, the default value will be:
 
 ```js
 true
 ```
-
-When true, `cover` will write a json file describing your project coverage.
 
 ### logCoverageFilePath
 
+> When both writeCoverageFile and logCoverageFilePath are true, `cover` logs path of the coverage file after it is written.
+
 If you don't pass this option, the default value will be:
 
 ```js
 true
 ```
 
-When true, if writeCoverageFile option is true as well, `cover` logs path of the coverage file after it is written.
-
 ### coverageRelativePath
+
+> If writeCoverageFile option is true, `cover` write the file here.
 
 If you don't pass this option, the default value will be:
 
@@ -131,17 +134,15 @@ If you don't pass this option, the default value will be:
 "/coverage/coverage-final.json"
 ```
 
-If writeCoverageFile option is true, `cover` write the file here.
-
 ### generateMissedCoverage
+
+> When true, `cover` will generate an empty coverage for every file present in coverDescription options but never imported by test files.
 
 If you don't pass this option, the default value will be:
 
 ```js
 true
 ```
-
-When true, `cover` will generate an empty coverage for every file present in coverDescription options but never imported by test files.
 
 ### executeDescription
 

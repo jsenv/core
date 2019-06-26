@@ -146,16 +146,9 @@ The following options are shared by `generateGlobalBundle`, `generateCommonJsBun
 
 ### entryPointMap
 
-If you don't pass this option, the default value will be:
+> An object describing your project entry points.
 
-```json
-{
-  "main": "index.js"
-}
-```
-
-The default entryPointMap assumes you have only one entry point which is `index.js`.
-You can provide several entry points like this:
+Example of a custom entryPointMap for a project with two entry point.
 
 ```json
 {
@@ -164,7 +157,19 @@ You can provide several entry points like this:
 }
 ```
 
+If you don't pass this option, the default value will be:
+
+```json
+{
+  "main": "index.js"
+}
+```
+
+The default value assumes you have only one entry point which is `index.js`.
+
 ### minify
+
+> When true, generated bundle files content are minified.
 
 If you don't pass this option, the default value will be:
 
@@ -172,9 +177,9 @@ If you don't pass this option, the default value will be:
 false
 ```
 
-When true, the generated bundle will be minified.
-
 ### bundleIntoRelativePath
+
+> relative path to a folder where the bundle files will be written
 
 - `generateGlobalBundle` default value:
 

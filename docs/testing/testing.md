@@ -323,17 +323,22 @@ const executeDescription = {
 
 ### defaultAllocatedMsPerExecution
 
-If you don't pass this option, the default value will be:
+> This option controls how much time is allocated by default for an execution to complete.
+
+If the execution does not completes in time the platform (browser or node.js) is killed and the execution is considered as `timedout` which is considered as a failed execution.<br />
+A timeout will not prevent other executions, the execution is considered as timedout and remaining executions are still launched.
+
+If you don't pass this option, the default value will be 30 seconds:
 
 ```js
 30000
 ```
 
-The default value above means 20s. <br />
-This option controls how much time is allocated by default for an execution to complete.If the execution does not completes in time the platform (browser or node.js) is killed and the execution is considered as `timedout` which is considered as a failed execution.<br />
-A timeout will not prevent other executions, the execution is considered as timedout and remaining executions are still launched.
-
 ### maxParallelExecution
+
+> Maximum amount of execution in parallel at the same time.
+
+To ensure one execution at a time you can pass `1`.
 
 If you don't pass this option, the default value will be:
 
@@ -343,23 +348,27 @@ Math.max(require("os").cpus.length - 1, 1)
 
 ### measureDuration
 
+> When true, execution duration will be measured and will appear in logs and execution result.
+
+This option adds `startMs`, `endMs` properties on every execution result inside `planResult`.
+
 If you don't pass this option, the default value will be:
 
 ```js
 true
 ```
-
-When true, logs will contain each execution duration and `startMs`, `endMs` properties will be available on every execution result inside `planResult`.
 
 ### captureConsole
 
+> When true, execution logs will be captures and will appear in logs and execution result.
+
+This option add `platformLog` property on every execution result inside `planResult`.
+
 If you don't pass this option, the default value will be:
 
 ```js
 true
 ```
-
-When true, logs will contain each execution logs and `platformLog` property will be available on every execution result inside `planResult`.
 
 ### projectPath
 

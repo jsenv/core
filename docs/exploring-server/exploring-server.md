@@ -136,15 +136,17 @@ This option internally uses path matching provided by `dmail/project-structure`.
 
 ### protocol
 
+> protocol used by the server, you can also pass `"https"`.
+
 If you don't pass this option, the default value will be:
 
 ```js
 "http"
 ```
 
-The protocol used by the server, you can also pass `"https"`.
-
 ### ip
+
+> ip server will listen to.
 
 If you don't pass this option, the default value will be:
 
@@ -152,9 +154,11 @@ If you don't pass this option, the default value will be:
 "127.0.0.1"
 ```
 
-The ip server will listen to.
-
 ### port
+
+> port server will listen to.
+
+0 means a random available port will be used.
 
 If you don't pass this option, the default value will be:
 
@@ -162,9 +166,9 @@ If you don't pass this option, the default value will be:
 0
 ```
 
-The port server will listen to. 0 means a random available port will be used.
-
 ### forcePort
+
+> When true, server will try to kill any process eventually using the port it wants to listen.
 
 If you don't pass this option, the default value will be:
 
@@ -172,27 +176,23 @@ If you don't pass this option, the default value will be:
 false
 ```
 
-Wwen true, server will try to kill any process eventually using the port it wants to listen.
-
 ### browserClientRelativePath
 
-If you don't pass this option, the default value will be:
+> Files inside this folder will be served by browser explorer server.<br /> `index.html` inside it will be used as a template to execute your JavaScript files.
 
-```js
-"/node_modules/@jsenv/core/src/browser-client"
-```
-
-Files inside this folder will be served by browser explorer server.<br />
-
-If you want to use an other folder than the default one, you have to ensure this folder contains an `index.html`.<br />
-This `index.html` will be used as a template to execute your project files.<br />
-And this html file has to contains the script tag below:
+If you use a custom folder with your own `index.html`, be sure it contains the script tag below:
 
 ```html
 <script src="/.jsenv/browser-script.js"></script>
 ```
 
 This is because server will serve a dynamic self executing js at `"/.jsenv/browser-script.js"`.
+
+If you don't pass this option, the default value will be:
+
+```js
+"/node_modules/@jsenv/core/src/browser-client"
+```
 
 ### projectPath
 

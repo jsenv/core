@@ -127,16 +127,22 @@ node ./execute-node.js src/file.js
 
 ### launch
 
-Required.<br />
-A function capable to launch a platform to execute a file inside it.<br />
-— see [platform launcher](../platform-launcher/platform-launcher.md)
+> A function capable to launch a platform to execute a file inside it.
+
+- This option is **required**
+- jsenv exports function you can pass here.<br />
+  — see [platform launcher](../platform-launcher/platform-launcher.md)
 
 ### fileRelativePath
 
-Required.<br />
-A string leading to the file you want to execute. It is relative to projectPath.
+> A string leading to the file you want to execute.
+
+- This option is **required**.
+- This option is relative to `projectPath`.
 
 ### mirrorConsole
+
+> When true, logs of the launched browser or node process will also be logged in your terminal.
 
 If you don't pass this option, the default value will be:
 
@@ -144,19 +150,18 @@ If you don't pass this option, the default value will be:
 true
 ```
 
-When true, logs of the launched browser or node process will also be logged in your terminal.
-
 ### stopOnceExecuted
+
+> When true, the platform will be stopped once the file execution is done
+
+Without this option you would have to manually close a browser launched to execute a file.<br />
+By passing true, the browser or node process will be stopped once file execution is done.
 
 If you don't pass this option, the default value will be:
 
 ```js
 false
 ```
-
-When true, the platform will be stopped once the file execution is done.<br />
-Without this option you would have to manually close a browser launched to execute a file.<br />
-By passing true, the browser or node process will be stopped once file execution is done.
 
 ### projectPath
 

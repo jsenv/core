@@ -23,6 +23,7 @@ export const transpiler = async ({
     filename: filename || filenameRelative,
     filenameRelative,
     inputSourceMap: inputMap,
+    configFile: false,
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true,
     sourceMaps: remap,
