@@ -221,7 +221,7 @@ const listRelativePathToCover = async ({
     cover: coverDescription,
   })
 
-  const relativePathToCoverArray = await matchAllFileInsideFolder({
+  const matchingFileResultArray = await matchAllFileInsideFolder({
     cancellationToken,
     folderPath: projectPathname,
     metaDescription: metaDescriptionForCover,
@@ -229,5 +229,6 @@ const listRelativePathToCover = async ({
     transformFile: ({ relativePath }) => relativePath,
   })
 
+  const relativePathToCoverArray = matchingFileResultArray.map(({ relativePath }) => relativePath)
   return relativePathToCoverArray
 }

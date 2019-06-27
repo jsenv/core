@@ -41,7 +41,7 @@ export const executeDescriptionToExecutionPlan = async ({
     folderPath: projectPathname,
     metaDescription,
     predicate: ({ execute }) => execute,
-    transformFile: ({ relativePath, meta }) => {
+    matchingFileOperation: ({ relativePath, meta }) => {
       const executionMeta = meta.execute
       const fileExecutionPlan = {}
       Object.keys(executionMeta).forEach((executionName) => {
