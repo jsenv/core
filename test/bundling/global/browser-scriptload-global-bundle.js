@@ -1,6 +1,5 @@
+import { startServer, firstService, serveFile } from "@dmail/server"
 import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
-import { serveFile } from "../../../src/file-service/index.js"
-import { startServer, firstService } from "../../../src/server/index.js"
 
 const puppeteer = import.meta.require("puppeteer")
 

@@ -1,7 +1,7 @@
 import { fileRead } from "@dmail/helper"
 import { hrefToPathname } from "@jsenv/module-resolution"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
-import { pathnameToContentType } from "../../file-service/pathnameToContentType.js"
+import { ressourceToContentType, defaultContentTypeMap } from "@dmail/server"
 
 export const fetchUsingFileSystem = async (href) => {
   // if we found a symlink we should send 307 ?
@@ -17,7 +17,7 @@ export const fetchUsingFileSystem = async (href) => {
     status: 200,
     statusText: "OK",
     headers: {
-      "content-type": pathnameToContentType(pathname),
+      "content-type": ressourceToContentType(pathname, defaultContentTypeMap),
     },
     body: source,
   }

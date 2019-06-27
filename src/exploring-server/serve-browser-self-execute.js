@@ -1,8 +1,7 @@
 import { basename } from "path"
+import { firstService, serveFile } from "@dmail/server"
 import { serveBrowserGlobalBundle } from "../bundling/index.js"
 import { relativePathInception } from "../inception.js"
-import { serveFile } from "../file-service/index.js"
-import { firstService } from "../server/index.js"
 import { ressourceToPathname, ressourceToSearchParamValue } from "../urlHelper.js"
 import { serveBrowserClientFolder } from "./server-browser-client-folder.js"
 

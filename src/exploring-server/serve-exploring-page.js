@@ -1,4 +1,4 @@
-import { firstService } from "../server/index.js"
+import { firstService } from "@dmail/server"
 import { serveExploringPageHTML } from "./serve-exploring-page-html.js"
 import { serveBrowserSelfExecute } from "./serve-browser-self-execute.js"
 

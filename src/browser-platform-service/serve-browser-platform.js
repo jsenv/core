@@ -1,4 +1,4 @@
-import { serveFile } from "../file-service/index.js"
+import { serveFile } from "@dmail/server"
 import { relativePathInception } from "../inception.js"
 import { serveBrowserGlobalBundle } from "../bundling/index.js"
 

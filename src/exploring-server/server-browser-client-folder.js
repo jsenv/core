@@ -1,4 +1,4 @@
-import { serveFile } from "../file-service/index.js"
+import { serveFile } from "@dmail/server"
 
 export const serveBrowserClientFolder = ({
   projectPathname,

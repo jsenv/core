@@ -1,5 +1,5 @@
 import { pathnameToMeta } from "@dmail/project-structure"
-import { serveFile } from "../file-service/index.js"
+import { serveFile } from "@dmail/server"
 
 export const serveExploringPageHTML = ({
   projectPathname,

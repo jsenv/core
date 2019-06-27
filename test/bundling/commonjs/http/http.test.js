@@ -1,6 +1,6 @@
 import { assert } from "@dmail/assert"
+import { startServer } from "@dmail/server"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
-import { startServer } from "../../../../src/server/index.js"
 import { generateCommonJsBundle } from "../../../../index.js"
 import { requireCommonJsBundle } from "../require-commonjs-bundle.js"
 import {

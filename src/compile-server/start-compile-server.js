@@ -1,17 +1,16 @@
 /* eslint-disable import/max-dependencies */
 import { createCancellationToken } from "@dmail/cancellation"
 import {
+  acceptsContentType,
+  createServerSentEventsRoom,
+  startServer,
+  firstService,
+  serveFile,
+} from "@dmail/server"
+import {
   operatingSystemPathToPathname,
   pathnameToOperatingSystemPath,
 } from "@jsenv/operating-system-path"
-import { serveFile } from "../file-service/index.js"
-import {
-  acceptContentType,
-  createSSERoom,
-  startServer,
-  serviceCompose,
-  firstService,
-} from "../server/index.js"
 import { watchFile } from "../watchFile.js"
 import { generateGroupMap } from "../group-map/index.js"
 import { serveBrowserPlatform } from "../browser-platform-service/index.js"
@@ -92,7 +91,7 @@ export const startCompileServer = async ({
   // when a project file changed
   let projectFileRequestedCallback = () => {}
 
-  const services = []
+  let watchSSEService = () => null
 
   if (watchSource) {
     const originalWatchSourcePredicate = watchSourcePredicate
@@ -128,7 +127,7 @@ export const startCompileServer = async ({
       }
     }
 
-    const fileChangedSSE = createSSERoom()
+    const fileChangedSSE = createServerSentEventsRoom()
 
     fileChangedSSE.open()
     cancellationToken.register(fileChangedSSE.close)
@@ -140,68 +139,13 @@ export const startCompileServer = async ({
       })
     })
 
-    const watchSSEService = ({ headers }) => {
-      if (acceptContentType(headers.accept, "text/event-stream")) {
+    watchSSEService = ({ headers }) => {
+      if (acceptsContentType(headers.accept, "text/event-stream")) {
         return fileChangedSSE.connect(headers["last-event-id"])
       }
       return null
     }
-
-    services.push(watchSSEService)
   }
-
-  services.push((request) =>
-    firstService(
-      () =>
-        serveImportMap({
-          importMapRelativePath,
-          request,
-        }),
-      () =>
-        serveBrowserPlatform({
-          projectPathname,
-          compileIntoRelativePath,
-          importMapRelativePath,
-          browserGroupResolverRelativePath,
-          babelPluginMap,
-          groupMap,
-          projectFileRequestedCallback,
-          request,
-        }),
-      () =>
-        serveNodePlatform({
-          projectPathname,
-          compileIntoRelativePath,
-          importMapRelativePath,
-          nodeGroupResolverRelativePath,
-          babelPluginMap,
-          groupMap,
-          projectFileRequestedCallback,
-          request,
-        }),
-      () =>
-        serveCompiledJs({
-          projectPathname,
-          compileIntoRelativePath,
-          groupMap,
-          babelPluginMap,
-          transformTopLevelAwait,
-          projectFileRequestedCallback,
-          request,
-        }),
-      () =>
-        serveCompiledAsset({
-          projectPathname,
-          request,
-        }),
-      () =>
-        serveProjectFiles({
-          projectPathname,
-          projectFileRequestedCallback,
-          request,
-        }),
-    ),
-  )
 
   const compileServer = await startServer({
     cancellationToken,
@@ -209,7 +153,58 @@ export const startCompileServer = async ({
     ip,
     port,
     signature,
-    requestToResponse: serviceCompose(...services),
+    requestToResponse: (request) =>
+      firstService(
+        () => watchSSEService(request),
+        () =>
+          serveImportMap({
+            importMapRelativePath,
+            request,
+          }),
+        () =>
+          serveBrowserPlatform({
+            projectPathname,
+            compileIntoRelativePath,
+            importMapRelativePath,
+            browserGroupResolverRelativePath,
+            babelPluginMap,
+            groupMap,
+            projectFileRequestedCallback,
+            request,
+          }),
+        () =>
+          serveNodePlatform({
+            projectPathname,
+            compileIntoRelativePath,
+            importMapRelativePath,
+            nodeGroupResolverRelativePath,
+            babelPluginMap,
+            groupMap,
+            projectFileRequestedCallback,
+            request,
+          }),
+        () =>
+          serveCompiledJs({
+            projectPathname,
+            compileIntoRelativePath,
+            groupMap,
+            babelPluginMap,
+            transformTopLevelAwait,
+            projectFileRequestedCallback,
+            request,
+          }),
+        () =>
+          serveCompiledAsset({
+            projectPathname,
+            request,
+          }),
+        () =>
+          serveProjectFiles({
+            projectPathname,
+            projectFileRequestedCallback,
+            request,
+          }),
+      ),
     logLevel,
     cors,
     // but while debugging it may close the server too soon, to be tested

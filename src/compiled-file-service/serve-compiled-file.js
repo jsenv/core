@@ -1,4 +1,4 @@
-import { convertFileSystemErrorToResponseProperties } from "../file-service/index.js"
+import { convertFileSystemErrorToResponseProperties } from "@dmail/server"
 import { createETag } from "../createETag.js"
 import { getOrGenerateCompiledFile } from "./get-or-generate-compiled-file.js"
 

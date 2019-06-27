@@ -1,5 +1,5 @@
 import { createCancellationToken } from "@dmail/cancellation"
-import { findFreePort } from "../server/index.js"
+import { findFreePort } from "@dmail/server"
 
 const AVAILABLE_DEBUG_MODE = ["", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"]
 
