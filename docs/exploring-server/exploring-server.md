@@ -113,6 +113,28 @@ This part explains the code you have written inside `root/start-exploring-server
 
 ### explorableMap
 
+```js
+startExploringServer({
+  projectPath: "/Users/you/project",
+  explorableMap: {
+    "/src/**/*.js": true,
+    "/src/whatever/**/*.js": false,
+  },
+})
+```
+
+It is an object used to describe if a file is explorable or not.<br/>
+Example above means:
+
+- a file ending with `.js`, anywhere inside `/src/` is explorable
+- a file ending with `.js`, anywhere inside `/src/whatever/` is not explorable
+
+`explorableMap` uses path matching provided by `dmail/project-structure`.<br />
+— see [project structure on github](https://github.com/dmail/project-structure)
+
+Index page list files described as explorable.<br />
+Server will not handle request mades to non explorable files.<br />
+
 If you don't pass this option, the default value will be:
 
 ```js
@@ -123,20 +145,14 @@ If you don't pass this option, the default value will be:
 }
 ```
 
-The server index page will list files described as explorable.<br />
-Server will not handle request mades to non explorable files.<br />
-explorableMap default value means:
-
-- `/index.js` file is explorable
-- any file inside `/src/` ending with `.js` is explorable
-- any file inside `/test/` ending with `.js` is explorable
-
-This option internally uses path matching provided by `dmail/project-structure`.<br />
-— see [project structure on github](https://github.com/dmail/project-structure)
-
 ### protocol
 
-> protocol used by the server, you can also pass `"https"`.
+```js
+startExploringServer({
+  projectPath: "/Users/you/project",
+  protocol: "https",
+})
+```
 
 If you don't pass this option, the default value will be:
 
@@ -146,7 +162,12 @@ If you don't pass this option, the default value will be:
 
 ### ip
 
-> ip server will listen to.
+```js
+startExploringServer({
+  projectPath: "/Users/you/project",
+  ip: "192.168.0.1",
+})
+```
 
 If you don't pass this option, the default value will be:
 
@@ -156,9 +177,12 @@ If you don't pass this option, the default value will be:
 
 ### port
 
-> port server will listen to.
-
-0 means a random available port will be used.
+```js
+startExploringServer({
+  projectPath: "/Users/you/project",
+  port: 8080,
+})
+```
 
 If you don't pass this option, the default value will be:
 
@@ -166,9 +190,19 @@ If you don't pass this option, the default value will be:
 0
 ```
 
+The number `0` means a random available port will be used.
+
 ### forcePort
 
-> When true, server will try to kill any process eventually using the port it wants to listen.
+```js
+startExploringServer({
+  projectPath: "/Users/you/project",
+  port: 8080,
+  forcePort: true,
+})
+```
+
+When true, if there is process already listening the port you want to use, we will try to kill that process.
 
 If you don't pass this option, the default value will be:
 
@@ -178,17 +212,23 @@ false
 
 ### browserClientRelativePath
 
-> Files inside this folder will be served by browser explorer server.<br /> `index.html` inside it will be used as a template to execute your JavaScript files.
+```js
+startExploringServer({
+  projectPath: "/Users/you/project",
+  browserClientRelativePath: "/custom-browser-client",
+})
+```
 
-If you use a custom folder with your own `index.html`, be sure it contains the script tag below:
+Files inside this folder will be served by browser explorer server.<br /> `index.html` inside it will be used as a template to execute your JavaScript files.
+If you use a custom folder, be sure your `index.html` file contains the following script tag:
 
 ```html
 <script src="/.jsenv/browser-script.js"></script>
 ```
 
-This is because server will serve a dynamic self executing js at `"/.jsenv/browser-script.js"`.
+Because this is how server can arbitrary execute some javaScript inside your custom `index.html` page
 
-If you don't pass this option, the default value will be:
+If you don't pass this option, the default value will be a predefined folder available inside jsenv itself:
 
 ```js
 "/node_modules/@jsenv/core/src/browser-client"

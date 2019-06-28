@@ -39,7 +39,7 @@ const babelPluginMap = {
 If you don't pass this option, the default value will be:
 
 ```js
-const { jsenvBabelPluginMap } = require("@jsenv/babel-plugin-map")
+require("@jsenv/babel-plugin-map").jsenvBabelPluginMap
 ```
 
 Default value comes from https://github.com/jsenv/jsenv-babel-plugin-map.

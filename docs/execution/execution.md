@@ -127,22 +127,51 @@ node ./execute-node.js src/file.js
 
 ### launch
 
-> A function capable to launch a platform to execute a file inside it.
+```js
+const { launchChromium } = require('@jsenv/core')
 
-- This option is **required**
-- jsenv exports function you can pass here.<br />
-  — see [platform launcher](../platform-launcher/platform-launcher.md)
+execute({
+  projectPath: '/Users/you/project'
+  fileRelativePath: `/index.js`,
+  launch: launchChromium,
+})
+```
+
+This option is **required**.<br />
+It is a function capable to launch a platform to execute a file inside it.
+You're not likely going to write your own `launch` function, jsenv provides them.<br />
+— see [platform launcher](../platform-launcher/platform-launcher.md)
 
 ### fileRelativePath
 
-> A string leading to the file you want to execute.
+```js
+const { launchNode } = require('@jsenv/core')
 
-- This option is **required**.
-- This option is relative to `projectPath`.
+execute({
+  projectPath: '/Users/you/project'
+  fileRelativePath: `/index.js`,
+  launch: launchNode,
+})
+```
+
+This option is **required**.<br />
+It is a string leading to the file you want to execute.<br />
+It is relative to `projectPath`.
 
 ### mirrorConsole
 
-> When true, logs of the launched browser or node process will also be logged in your terminal.
+```js
+const { launchNode } = require('@jsenv/core')
+
+execute({
+  projectPath: '/Users/you/project'
+  fileRelativePath: `/index.js`,
+  launch: launchNode,
+  mirrorConsole: true
+})
+```
+
+When true, logs of the launched browser or node process will also be logged in your terminal.
 
 If you don't pass this option, the default value will be:
 
@@ -152,10 +181,20 @@ true
 
 ### stopOnceExecuted
 
-> When true, the platform will be stopped once the file execution is done
+```js
+const { launchNode } = require('@jsenv/core')
 
-Without this option you would have to manually close a browser launched to execute a file.<br />
-By passing true, the browser or node process will be stopped once file execution is done.
+execute({
+  projectPath: '/Users/you/project'
+  fileRelativePath: `/index.js`,
+  launch: launchNode,
+  stopOnceExecuted: true
+})
+```
+
+When true, the platform will be stopped once the file execution is done.
+
+This option kills the browser or node process when the file execution is done. This option is used by unit tests for instance that does not want to keep things alive.
 
 If you don't pass this option, the default value will be:
 

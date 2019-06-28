@@ -249,17 +249,17 @@ It is an object with the following signature:
 To better understand planResult signature, check the pseudo code below:
 
 ```js
-const executeDescription = {
-  "/test/file.test.js": {
-    node: {
-      launch: launchNode,
-    },
-  },
-}
-
 const { planResult } = await test({
   projectPath: "/",
-  executeDescription,
+  executeDescription: {
+    "/test/file.test.js": {
+      node: {
+        launch: launchNode,
+      },
+    },
+  },
+  measureDuration: true,
+  captureConsole: true,
 })
 ```
 
@@ -284,38 +284,39 @@ Executing this pseudo code could give you a `planResult` like the one below:
 
 ### executeDescription
 
-If you don't pass this option, the default value will be:
-
 ```js
-const executeDescription = {
-  "/test/**/*.test.js": {
-    node: {
-      launch: launchNode,
+const { launchNode, test } = require("@jsenv/core")
+
+test({
+  projectPath: "/Users/you/project",
+  executeDescription: {
+    "/test/**/*.test.js": {
+      node: {
+        launch: launchNode,
+      },
+    },
+    "/test/file.test.js": {
+      node: {
+        allocatedMs: 5000,
+      },
     },
   },
-}
+})
 ```
 
 Execute description let you describe which files you want to execute and how.<br />
+Example above means you want to execute all files ending with `.test.js` anywhere the `/test/` folder with node.js. It also allocates only `5000` ms for `/test/file.test.js` file execution.
 
-The key are relative path pattern leading to your project unit test files.<br />
-path pattern is provided by `dmail/project-structure`.<br />
+`executeDescription` uses path matching provided by `dmail/project-structure`.<br />
 — see [project structure on github](https://github.com/dmail/project-structure)
 
-The value is an object describing all execution for that file.<br />
-All execution must also be objects with a `launch` function.<br />
-Each execution can have an `allocatedMs` property as shown below:
+If you don't pass this option, the default value will be:
 
 ```js
-const executeDescription = {
+{
   "/test/**/*.test.js": {
     node: {
       launch: launchNode,
-    },
-  },
-  "/test/file.test.js": {
-    node: {
-      allocatedMs: 5000, // /test/file.test.js has only 5s to complete
     },
   },
 }
@@ -323,7 +324,16 @@ const executeDescription = {
 
 ### defaultAllocatedMsPerExecution
 
-> This option controls how much time is allocated by default for an execution to complete.
+```js
+const { test } = require("@jsenv/core")
+
+test({
+  projectPath: "/Users/you/project",
+  defaultAllocatedMsPerExecution: 50000,
+})
+```
+
+This option controls how much time is allocated by default for an execution to complete.
 
 If the execution does not completes in time the platform (browser or node.js) is killed and the execution is considered as `timedout` which is considered as a failed execution.<br />
 A timeout will not prevent other executions, the execution is considered as timedout and remaining executions are still launched.
@@ -336,7 +346,16 @@ If you don't pass this option, the default value will be 30 seconds:
 
 ### maxParallelExecution
 
-> Maximum amount of execution in parallel at the same time.
+```js
+const { test } = require("@jsenv/core")
+
+test({
+  projectPath: "/Users/you/project",
+  maxParallelExecution: 10,
+})
+```
+
+Maximum amount of execution in parallel at the same time.
 
 To ensure one execution at a time you can pass `1`.
 
@@ -348,7 +367,16 @@ Math.max(require("os").cpus.length - 1, 1)
 
 ### measureDuration
 
-> When true, execution duration will be measured and will appear in logs and execution result.
+```js
+const { test } = require("@jsenv/core")
+
+test({
+  projectPath: "/Users/you/project",
+  measureDuration: true,
+})
+```
+
+When true, execution duration will be measured and will appear in logs and execution result.
 
 This option adds `startMs`, `endMs` properties on every execution result inside `planResult`.
 
@@ -360,7 +388,16 @@ true
 
 ### captureConsole
 
-> When true, execution logs will be captures and will appear in logs and execution result.
+```js
+const { test } = require("@jsenv/core")
+
+test({
+  projectPath: "/Users/you/project",
+  captureConsole: true,
+})
+```
+
+When true, execution logs will be captures and will appear in logs and execution result.
 
 This option add `platformLog` property on every execution result inside `planResult`.
 

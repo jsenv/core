@@ -79,9 +79,28 @@ I have documented one of them named `codecov.io` but you can integrate with pret
 
 ### coverDescription
 
-> describes the file of your project that should be covered.
+```js
+const { cover } = require("@jsenv/core")
 
-By default, `cover` generates empty coverage for every file that must be covered but never imported by a test file.<br />
+cover({
+  projectPath: "/Users/you/folder",
+  coverDescription: {
+    "/src/**/*.js": true,
+    "/src/whatever/**/*.js": false,
+  },
+})
+```
+
+It describes files of your project that should be covered.<br />
+Example above means:
+
+- a file ending with `.js`, anywhere inside `/src/` must be covered
+- a file ending with `.js`, anywhere inside `/src/whatever/` does'nt have to be covered
+
+This option internally uses path matching provided by `dmail/project-structure`.<br />
+— see [project structure on github](https://github.com/dmail/project-structure)
+
+It is used to know what files you want to cover so that if your test does not cover them, an empty coverage gets generated on them.
 
 If you don't pass this option, the default value will be:
 
@@ -94,19 +113,18 @@ If you don't pass this option, the default value will be:
 }
 ```
 
-Which means:
-
-- `/index.js` must be covered
-- any file inside `/src/` ending by `.js` must be covered.
-- any file containing `.test.` does not have to be covered.
-- any file inside a `/test/` does not have to be covered.
-
-This option internally uses path matching provided by `dmail/project-structure`.<br />
-— see [project structure on github](https://github.com/dmail/project-structure)
-
 ### writeCoverageFile
 
-> When true, `cover` will write a json file describing your project coverage.
+```js
+const { cover } = require("@jsenv/core")
+
+cover({
+  projectPath: "/Users/you/folder",
+  writeCoverageFile: false,
+})
+```
+
+When true, `cover` will write a json file describing your project coverage.
 
 If you don't pass this option, the default value will be:
 
@@ -116,7 +134,16 @@ true
 
 ### logCoverageFilePath
 
-> When both writeCoverageFile and logCoverageFilePath are true, `cover` logs path of the coverage file after it is written.
+```js
+const { cover } = require("@jsenv/core")
+
+cover({
+  projectPath: "/Users/you/folder",
+  logCoverageFilePath: false,
+})
+```
+
+When both `writeCoverageFile` and this option are true, `cover` logs path of the coverage file after it is written.
 
 If you don't pass this option, the default value will be:
 
@@ -126,7 +153,16 @@ true
 
 ### coverageRelativePath
 
-> If writeCoverageFile option is true, `cover` write the file here.
+```js
+const { cover } = require("@jsenv/core")
+
+cover({
+  projectPath: "/Users/you/folder",
+  coverageRelativePath: "/coverage/whatever.json",
+})
+```
+
+If `writeCoverageFile` option is true, `cover` write the file here.
 
 If you don't pass this option, the default value will be:
 
@@ -136,7 +172,16 @@ If you don't pass this option, the default value will be:
 
 ### generateMissedCoverage
 
-> When true, `cover` will generate an empty coverage for every file present in coverDescription options but never imported by test files.
+```js
+const { cover } = require("@jsenv/core")
+
+cover({
+  projectPath: "/Users/you/folder",
+  generateMissedCoverage: false,
+})
+```
+
+When true, `cover` will generate an empty coverage for every file present in `coverDescription` options but never imported by test files.
 
 If you don't pass this option, the default value will be:
 

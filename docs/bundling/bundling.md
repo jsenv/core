@@ -146,16 +146,20 @@ The following options are shared by `generateGlobalBundle`, `generateCommonJsBun
 
 ### entryPointMap
 
-> An object describing your project entry points.
+```js
+const { generateSystemJsBundle } = require("@jsenv/core")
 
-Example of a custom entryPointMap for a project with two entry point.
-
-```json
-{
-  "main": "index.js",
-  "private": "/src/privateIndex.js"
-}
+generateSystemJsBundle({
+  projectPath: "/Users/you/folder",
+  entryPointMap: {
+    main: "index.js",
+    private: "/src/privateIndex.js",
+  },
+})
 ```
+
+It is an object describing your project entry points.<br />
+Example above shows a project having two entry point.
 
 If you don't pass this option, the default value will be:
 
@@ -169,7 +173,16 @@ The default value assumes you have only one entry point which is `index.js`.
 
 ### minify
 
-> When true, generated bundle files content are minified.
+```js
+const { generateSystemJsBundle } = require("@jsenv/core")
+
+generateSystemJsBundle({
+  projectPath: "/Users/you/folder",
+  minify: true,
+})
+```
+
+When true, generated bundle files content are minified.
 
 If you don't pass this option, the default value will be:
 
@@ -179,7 +192,16 @@ false
 
 ### bundleIntoRelativePath
 
-> relative path to a folder where the bundle files will be written
+```js
+const { generateSystemJsBundle } = require("@jsenv/core")
+
+generateSystemJsBundle({
+  projectPath: "/Users/you/folder",
+  bundleIntoRelativePath: "/whatever/systemjs",
+})
+```
+
+It is a relative path to a folder where the bundle files will be written.
 
 - `generateGlobalBundle` default value:
 
