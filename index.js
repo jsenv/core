@@ -13,6 +13,7 @@ export { cover } from "./src/coverage/cover.js"
 export {
   DEFAULT_COVER_DESCRIPTION as jsenvCoverDescription,
 } from "./src/coverage/cover-constant.js"
+export { createInstrumentPlugin } from "./src/coverage/createInstrumentPlugin.js"
 
 // could be moved to jsenv/jsenv-bundling
 export {
