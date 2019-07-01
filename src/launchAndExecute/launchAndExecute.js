@@ -224,18 +224,18 @@ const computeExecutionResult = async ({
       startedCallback({ name: value.name, version: value.version })
       return value
     },
-    stop: async ({ stop, stopForce }) => {
-      // external code can cancel using canllelationToken
-      // and listen for stoppedCallback before restarting the launchAndExecute operation.
+    stop: async (platform) => {
+      // external code can cancel using cancellationToken at any time.
+      // (hotreloading note: we would do that and listen for stoppedCallback before restarting an operation)
       // it is important to keep the code inside this stop function because once cancelled
       // all code after the operation won't execute because it will be rejected with
       // the cancellation error
 
       let forceStopped = false
 
-      if (stopForce) {
+      if (platform.stopForce) {
         const stopPromise = (async () => {
-          await stop()
+          await platform.stop()
           return false
         })()
 
@@ -248,21 +248,19 @@ const computeExecutionResult = async ({
               clearTimeout(timeoutId)
             }
           })
-          await stopForce()
+          await platform.stopForce()
           return true
         })()
 
         forceStopped = await Promise.all([stopPromise, stopForcePromise])
       } else {
-        await stop()
+        await platform.stop()
       }
 
       stoppedCallback({ forced: forceStopped })
       log(createPlatformStoppedMessage())
     },
   })
-
-  const stop = (reason) => launchOperation.stop(reason)
 
   const {
     name: platformName,
@@ -278,7 +276,7 @@ const computeExecutionResult = async ({
   registerConsoleCallback(consoleCallback)
   log(createStartExecutionMessage({ fileRelativePath }))
 
-  const executionResult = await createOperation({
+  const executeOperation = createOperation({
     cancellationToken,
     start: async () => {
       let timing = TIMING_BEFORE_EXECUTION
@@ -310,7 +308,7 @@ const computeExecutionResult = async ({
       }
 
       if (stopOnceExecuted) {
-        stop("stopOnceExecuted")
+        launchOperation.stop("stopOnceExecuted")
       }
 
       const executionResult = raceResult.value
@@ -324,6 +322,8 @@ const computeExecutionResult = async ({
       return createCompletedExecutionResult(executionResult, { collectNamespace, collectCoverage })
     },
   })
+
+  const executionResult = await executeOperation
 
   return executionResult
 }
