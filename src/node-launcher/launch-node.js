@@ -36,6 +36,7 @@ export const launchNode = async ({
   remap = true,
   traceWarnings = true,
   cover = false,
+  env = {},
   logLevel = LOG_LEVEL_OFF,
   babelPluginMap = jsenvBabelPluginMap,
 }) => {
@@ -60,7 +61,7 @@ export const launchNode = async ({
     execArgv.push("--trace-warnings")
   }
 
-  const env = { COVERAGE_ENABLED: cover }
+  env.COVERAGE_ENABLED = cover
 
   const childPathname = `${projectPathname}${relativePathInception({
     projectPathname,
