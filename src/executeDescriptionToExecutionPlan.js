@@ -13,7 +13,6 @@ export const executeDescriptionToExecutionPlan = async ({
   compileGroupCount,
   babelPluginMap,
   executeDescription,
-  defaultAllocatedMsPerExecution,
   compileServerLogLevel,
   cover = false,
 }) => {
@@ -58,15 +57,14 @@ singleExecutionPlan: ${singleExecutionPlan}`)
         fileExecutionPlan[executionName] = {
           launch: (options) =>
             launch({
-              ...options,
-              cancellationToken,
               compileServerOrigin,
               projectPath,
               compileIntoRelativePath,
               babelPluginMap,
               cover,
+              ...options,
             }),
-          allocatedMs: allocatedMs === undefined ? defaultAllocatedMsPerExecution : allocatedMs,
+          allocatedMs,
         }
       })
 

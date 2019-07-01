@@ -18,6 +18,7 @@ export const executePlan = async (
     collectNamespace = false,
     measureDuration = true,
     captureConsole = true,
+    defaultAllocatedMsPerExecution = 30000,
     maxParallelExecution = Math.max(cpus.length - 1, 1),
     beforeEachExecutionCallback = () => {},
     afterEachExecutionCallback = () => {},
@@ -31,7 +32,9 @@ export const executePlan = async (
   Object.keys(executionPlan).forEach((fileRelativePath) => {
     const fileExecutionPlan = executionPlan[fileRelativePath]
     Object.keys(fileExecutionPlan).forEach((executionName) => {
-      const { launch, allocatedMs } = fileExecutionPlan[executionName]
+      const { launch, allocatedMs = defaultAllocatedMsPerExecution } = fileExecutionPlan[
+        executionName
+      ]
       plannedExecutionArray.push({
         launch,
         allocatedMs,

@@ -106,7 +106,6 @@ export const cover = async ({
           babelPluginMap: babelPluginMapWithInstrumentation,
           compileGroupCount,
           executeDescription,
-          defaultAllocatedMsPerExecution,
           compileServerLogLevel,
           cover: true,
         })
@@ -115,6 +114,7 @@ export const cover = async ({
           logLevel: executionLogLevel,
           launchLogLevel,
           cancellationToken,
+          defaultAllocatedMsPerExecution,
           maxParallelExecution,
           measureDuration,
           captureConsole,
@@ -207,8 +207,8 @@ const ensureNoFileIsBothCoveredAndExecuted = ({
   if (fileToExecuteAndCoverArray.length) {
     // I think it is an error, it would be strange, for a given file
     // to be both covered and executed
-    throw new Error(`some file must both be covered and executed.
-file to execute and cover: ${fileToExecuteAndCoverArray}`)
+    throw new Error(`some file are both covered and executed:
+${fileToExecuteAndCoverArray.join("\n")}`)
   }
 }
 
