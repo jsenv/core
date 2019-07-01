@@ -37,7 +37,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => 
       compileIntoRelativePath,
       importMap: wrappedImportMap,
     })
-    return nodeSystem.import(specifier)
+    return makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
   }
 
   const executeFile = async (specifier, { collectCoverage, collectNamespace } = {}) => {
@@ -48,7 +48,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => 
       importMap: wrappedImportMap,
     })
     try {
-      const namespace = await nodeSystem.import(specifier)
+      const namespace = await makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
       return {
         status: "completed",
         namespace: collectNamespace ? namespace : undefined,
@@ -76,3 +76,14 @@ const unevalException = (value) => {
 }
 
 const readCoverage = () => global.__coverage__
+
+const makePromiseKeepNodeProcessAlive = async (promise) => {
+  const timerId = setInterval(() => {}, 10000)
+
+  try {
+    const value = await promise
+    return value
+  } finally {
+    clearInterval(timerId)
+  }
+}

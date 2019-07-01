@@ -1,7 +1,7 @@
 import { assert } from "@dmail/assert"
-import { importMetaURLToFolderJsenvRelativePath } from "../../src/import-meta-url-to-folder-jsenv-relative-path.js"
-import { launchNode, launchChromium, test } from "../../index.js"
-import { TESTING_TEST_PARAM } from "./testing-test-param.js"
+import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
+import { launchNode, launchChromium, test } from "../../../index.js"
+import { TESTING_TEST_PARAM } from "../testing-test-param.js"
 
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`

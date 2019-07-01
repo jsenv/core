@@ -50,7 +50,6 @@ export const test = async ({
       compileGroupCount,
       babelPluginMap,
       executeDescription,
-      defaultAllocatedMsPerExecution,
       compileServerLogLevel,
     })
 
@@ -58,6 +57,7 @@ export const test = async ({
       cancellationToken,
       maxParallelExecution,
       logLevel: executionLogLevel,
+      defaultAllocatedMsPerExecution,
       launchLogLevel,
       measureDuration,
       captureConsole,
