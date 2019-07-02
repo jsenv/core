@@ -26,8 +26,5 @@ export {
 // should be moved to jsenv/jsenv-exploring-server
 export { startExploringServer } from "./src/exploring-server/index.js"
 
-// should be moved to jsenv/jsenv-chromium-launcher
-export { launchChromium } from "./src/chromium-launcher/index.js"
-
 // should be moved to jsenv/jsenv-node-launcher
 export { launchNode } from "./src/node-launcher/index.js"

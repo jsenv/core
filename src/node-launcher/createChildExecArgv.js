@@ -1,7 +1,7 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { findFreePort } from "@dmail/server"
 
-const AVAILABLE_DEBUG_MODE = ["", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"]
+const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"]
 
 export const createChildExecArgv = async ({
   cancellationToken = createCancellationToken(),
@@ -30,7 +30,7 @@ export const createChildExecArgv = async ({
   }
 
   if (debugMode === "inherit") {
-    if (!processDebug.mode) {
+    if (processDebug.mode === "none") {
       return copyExecArgv(processExecArgv)
     }
 
@@ -53,8 +53,8 @@ export const createChildExecArgv = async ({
     })
   }
 
-  if (debugMode) {
-    if (!processDebug.mode) {
+  if (debugMode !== "none") {
+    if (processDebug.mode === "none") {
       const childDebugPort = await forceFreePortIfZero({
         cancellationToken,
         debugPort,
@@ -75,7 +75,7 @@ export const createChildExecArgv = async ({
     })
   }
 
-  if (!processDebug.mode) {
+  if (processDebug.mode === "none") {
     return copyExecArgv(processExecArgv)
   }
 
@@ -211,7 +211,9 @@ const parseDebugFromExecArgv = (argv) => {
     i++
   }
 
-  return {}
+  return {
+    mode: "none",
+  }
 }
 
 const parseInspectPortFromExecArgv = (argv) => {

@@ -1,93 +1,38 @@
 # platform launcher
 
 A platform launcher is a function capable to launch a platform to execute a file.<br />
-A platform launcher is meant to be passed to other jsenv tools.<br />
-It allows you to tell jsenv on which platform and how you want to execute your files.<br />
+You can use them to tell on which platform to execute a file.<br />
 
-When you want to pass custom option to a platform launcher, there is a pattern to follow.<br />
-The following js code shows how you can launch a chromium with UI while, by default it would launch a headless chromium:
+For instance the following code would execute `/Users/you/folder/index.js` on chromium.
 
 ```js
-const { launchChromium } = require(`@jsenv/core`)
+import { execute } from '@jsenv/core'
+import { launchChromium } from `@jsenv/chromium-launcher`
 
-const launchChromiumWithGraphicalInterface = (options) =>
-  launchChromium({ ...options, headless: false })
+execute({
+  projectPath: '/Users/you/folder',
+  fileRelativePath: '/index.js',
+  launch: launchChromium
+})
 ```
 
-This page will present the existing platform launcher:
-[chromium-launcher](./#chromium-launcher) and [node-launcher](./#node-launcher)
+## Passing options to a platform launcher
 
-## chromium-launcher
-
-chromium launcher is exported by `@jsenv/core` under a function called `launchChromium`.<br />
-In the future chromium launcher will likely have its own npm package and github repository.<br />
-
-### launchChromium options
-
-#### headless
-
-If you don't pass this option, the default value will be:
+You can pass option to a platform launcher but you have to be sure you forward the options it receives.<br />
+By default `launchChromium` execute a file inside a headless chromium, but you can make it launch a chromium with a UI like this:
 
 ```js
-true
+import { execute } from '@jsenv/core'
+import { launchChromium } from `@jsenv/chromium-launcher`
+
+execute({
+  projectPath: '/Users/you/folder',
+  fileRelativePath: '/index.js',
+  launch: (options) => launchChromium({ ...options, headless: false })
+})
 ```
 
-When true, launched chromium browser will be headless.
-When false, launched chromium browser will have a graphic interface.
+## List of platform launcher
 
-## node-launcher
-
-node launcher is exported by `@jsenv/core` under a function called `launchNode`.<br />
-In the future node launcher will likely have its own npm package and github repository.<br />
-
-### launchNode options
-
-#### debugPort
-
-If you don't pass this option, the default value will be:
-
-```js
-0
-```
-
-If the current node process is not in debug mode this option has no effect.
-Otherwise the launched node process debug port will be randomly assigned to an available port.
-
-#### debugMode
-
-If you don't pass this option, the default value will be:
-
-```js
-"inherit"
-```
-
-Node support to be debugged by passing option like `--inspect-brk`.<br />
-In that case the JavaScript execution is controlled from the outside to let you debug it.
-This option controls the debug mode of the launched node process.
-`inherit` means it will inherit the current node process debug option.
-`inspect`,`inspect-brk`,`debug`,`debug-brk` means the launched node process debug mode will be forced to this one.
-``, an empty string, means the launched node process will not be in debug mode
-
-#### debugModeInheritBreak
-
-If you don't pass this option, the default value will be:
-
-```js
-true
-```
-
-When debugMode is `inherit` this option controls if the launched node process will inherit the `-brk`.
-Assuming `file.js` launches a node process using launchNode:
-
-- When debugModeInheritBreak is false, doing `node file.js --inspect-brk` launches a node process with `--inspect`.
-- When debugModeInheritBreak is true, doing `node file.js --inspect-brk` launches a node process with `--inspect-brk`.
-
-#### traceWarnings
-
-If you don't pass this option, the default value will be:
-
-```js
-true
-```
-
-The launched node process will receive `--trace-warnings` optionn.
+- [node launcher](../docs/node-launcher.md)
+- [chromium launcher](https://github.com/jsenv/jsenv-chromium-launcher)

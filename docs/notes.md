@@ -12,8 +12,6 @@
 - executionDescription renamed executionMap
   testDescription renamed testExecutionMap
   coverDescription renamed coverMap
-- Create @jsenv/chromium-launcher to externalize some code and make
-  jsenv/core lighter for thoose not using chromium
 - Create @jsenv/node-launcher to externalize some code and make
   jsenv/core lighter for thoose not using node
 - Create @jsenv/firefox-launcher because it would be cool
