@@ -71,5 +71,15 @@ singleExecutionPlan: ${singleExecutionPlan}`)
       executionPlan[relativePath] = fileExecutionPlan
     },
   })
-  return executionPlan
+  return sortExecutionPlan(executionPlan)
+}
+
+const sortExecutionPlan = (executionPlan) => {
+  const sortedExecutionPlan = {}
+  Object.keys(executionPlan)
+    .sort()
+    .forEach((key) => {
+      sortedExecutionPlan[key] = executionPlan[key]
+    })
+  return sortedExecutionPlan
 }
