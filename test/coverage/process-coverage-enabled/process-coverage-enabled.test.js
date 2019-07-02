@@ -1,6 +1,7 @@
 import { assert } from "@dmail/assert"
+import { launchNode } from "@jsenv/node-launcher"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
-import { cover, launchNode } from "../../../index.js"
+import { cover } from "../../../index.js"
 import { COVERAGE_TEST_PARAM } from "../coverage-test-param.js"
 
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)

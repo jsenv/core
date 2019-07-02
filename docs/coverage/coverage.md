@@ -19,7 +19,8 @@ The gif below shows the coverage we will obtain.
 `root/generate-coverage.js`
 
 ```js
-const { launchNode, cover } = require("@jsenv/core")
+const { cover } = require("@jsenv/core")
+const { launchNode } = require("@jsenv/node-launcher")
 const { launchChromium } = require("@jsenv/chromium-launcher")
 
 cover({

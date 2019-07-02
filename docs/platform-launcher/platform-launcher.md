@@ -34,5 +34,5 @@ execute({
 
 ## List of platform launcher
 
-- [node launcher](../docs/node-launcher.md)
+- [node launcher](https://github.com/jsenv/jsenv-node-launcher)
 - [chromium launcher](https://github.com/jsenv/jsenv-chromium-launcher)

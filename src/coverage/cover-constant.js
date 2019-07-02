@@ -1,5 +1,5 @@
 import { cpus } from "os"
-import { launchNode } from "../node-launcher/launch-node.js"
+import { launchNode } from "@jsenv/node-launcher"
 
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 

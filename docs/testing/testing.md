@@ -86,7 +86,7 @@ export const getPlatformName = () => {
 2. Install dev dependencies
 
 ```shell
-npm install --save-dev @jsenv/core @jsenv/chromium-launcher
+npm install --save-dev @jsenv/core @jsenv/chromium-launcher @jsenv/node-launcher
 ```
 
 3. Generate `root/importMap.json`
@@ -103,7 +103,8 @@ node -e "require('@jsenv/node-module-import-map').generateImportMapForProjectNod
 `root/execute-tests.js`
 
 ```js
-const { launchNode, test } = require("@jsenv/core")
+const { test } = require("@jsenv/core")
+const { launchNode } = require('@jsenv/node-launcher')
 const { launchChromium } = require('@jsenv/chromium-launcher')
 
 test({
@@ -286,7 +287,8 @@ Executing this pseudo code could give you a `planResult` like the one below:
 ### executeDescription
 
 ```js
-const { launchNode, test } = require("@jsenv/core")
+import { test } from "@jsenv/core"
+import { launchNode } from "@jsenv/node-launcher"
 
 test({
   projectPath: "/Users/you/project",

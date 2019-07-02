@@ -12,8 +12,6 @@
 - executionDescription renamed executionMap
   testDescription renamed testExecutionMap
   coverDescription renamed coverMap
-- Create @jsenv/node-launcher to externalize some code and make
-  jsenv/core lighter for thoose not using node
 - Create @jsenv/firefox-launcher because it would be cool
   to be able to test against firefox and puppeteer-firefox should help a lot
 - safari-launcher, opera-launcher would be great

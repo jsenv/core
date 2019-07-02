@@ -52,7 +52,7 @@ export const getPlatformName = () => {
 2. Install dev dependencies
 
 ```shell
-npm install --save-dev @jsenv/core @jsenv/chromium-launcher
+npm install --save-dev @jsenv/core @jsenv/chromium-launcher @jsenv/node-launcher
 ```
 
 3. Generate `root/importMap.json`
@@ -94,7 +94,8 @@ node ./execute-chromium.js src/file.js
 `root/execute-node.js`
 
 ```js
-const { launchNode, execute } = require("@jsenv/core")
+const { execute } = require("@jsenv/core")
+const { launchNode } = require("@jsenv/node-launcher")
 
 execute({
   projectPath: __dirname,
@@ -146,7 +147,8 @@ You're not likely going to write your own `launch` function, jsenv provides them
 ### fileRelativePath
 
 ```js
-const { launchNode } = require('@jsenv/core')
+import { execute } from '@jsenv/core'
+import { launchNode } from '@jsenv/node-launcher'
 
 execute({
   projectPath: '/Users/you/project'
@@ -162,7 +164,8 @@ It is relative to `projectPath`.
 ### mirrorConsole
 
 ```js
-const { launchNode } = require('@jsenv/core')
+import { execute } from '@jsenv/core'
+import { launchNode } from '@jsenv/node-launcher'
 
 execute({
   projectPath: '/Users/you/project'
@@ -183,7 +186,8 @@ true
 ### stopOnceExecuted
 
 ```js
-const { launchNode } = require('@jsenv/core')
+import { execute } from '@jsenv/core'
+import { launchNode } from '@jsenv/node-launcher'
 
 execute({
   projectPath: '/Users/you/project'
