@@ -18,6 +18,7 @@ export { createInstrumentPlugin } from "./src/coverage/createInstrumentPlugin.js
 // could be moved to jsenv/jsenv-bundling
 export {
   serveBrowserGlobalBundle,
+  generateNodeCommonJsBundle,
   generateGlobalBundle,
   generateCommonJsBundle,
   generateSystemJsBundle,
