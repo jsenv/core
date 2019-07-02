@@ -1,4 +1,5 @@
 import { matchAllFileInsideFolder } from "@dmail/filesystem-matching"
+import { sortPathnameArray } from "../sort-pathname-array.js"
 
 export const serveExploringIndex = async ({
   projectPathname,
@@ -43,8 +44,7 @@ const getBrowsingIndexPageHTML = ({ projectPathname, browsablePathnameArray }) =
       <h1>${projectPathname}</h1>
       <p>List of path to browse: </p>
       <ul>
-        ${browsablePathnameArray
-          .sort()
+        ${sortPathnameArray(browsablePathnameArray)
           .map(
             (browsablePathname) =>
               `<li><a href="${browsablePathname}">${browsablePathname}</a></li>`,

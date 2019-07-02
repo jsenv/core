@@ -2,6 +2,7 @@ import { namedValueDescriptionToMetaDescription } from "@dmail/project-structure
 import { matchAllFileInsideFolder } from "@dmail/filesystem-matching"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { startCompileServer } from "./compile-server/index.js"
+import { sortPathnameArray } from "./sort-pathname-array.js"
 
 export const executeDescriptionToExecutionPlan = async ({
   cancellationToken,
@@ -76,10 +77,8 @@ singleExecutionPlan: ${singleExecutionPlan}`)
 
 const sortExecutionPlan = (executionPlan) => {
   const sortedExecutionPlan = {}
-  Object.keys(executionPlan)
-    .sort()
-    .forEach((key) => {
-      sortedExecutionPlan[key] = executionPlan[key]
-    })
+  sortPathnameArray(Object.keys(executionPlan)).forEach((key) => {
+    sortedExecutionPlan[key] = executionPlan[key]
+  })
   return sortedExecutionPlan
 }
