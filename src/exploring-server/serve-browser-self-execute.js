@@ -6,7 +6,7 @@ import { ressourceToPathname, ressourceToSearchParamValue } from "../urlHelper.j
 import { serveBrowserClientFolder } from "./server-browser-client-folder.js"
 
 const BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH =
-  "/src/browser-explorer-server/browser-self-execute-template.js"
+  "/src/exploring-server/browser-self-execute-template.js"
 // "/.jsenv/browser-script.js" is written inside browser-client/index.html
 const BROWSER_SCRIPT_CLIENT_PATHNAME = "/.jsenv/browser-script.js"
 const BROWSER_SELF_EXECUTE_CLIENT_PATHNAME = "/.jsenv/browser-self-execute.js"
