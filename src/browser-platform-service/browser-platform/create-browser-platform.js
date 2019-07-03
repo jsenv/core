@@ -1,6 +1,10 @@
-// "/.jsenv/browser-platform-data.js" resolved at build time
-// eslint-disable-next-line import/no-unresolved
-import { compileIntoRelativePath, groupMap } from "/.jsenv/browser-platform-data.js"
+import {
+  compileIntoRelativePath,
+  groupMap,
+  importDefaultExtension,
+  // "/.jsenv/browser-platform-data.js" resolved at build time
+  // eslint-disable-next-line import/no-unresolved
+} from "/.jsenv/browser-platform-data.js"
 // "/.jsenv/browser-group-resolver.js" resolved at build time
 // eslint-disable-next-line import/no-unresolved
 import { resolveBrowserGroup } from "/.jsenv/browser-group-resolver.js"
@@ -36,6 +40,7 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
       compileServerOrigin,
       compileIntoRelativePath,
       importMap: wrappedImportMap,
+      importDefaultExtension,
     })
     return browserSystem.import(specifier)
   }
@@ -45,6 +50,7 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
       compileServerOrigin,
       compileIntoRelativePath,
       importMap: wrappedImportMap,
+      importDefaultExtension,
     })
     try {
       const namespace = await browserSystem.import(specifier)

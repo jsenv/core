@@ -1,6 +1,10 @@
-// "/.jsenv/node-platform-data.js" resolved at build time
-// eslint-disable-next-line import/no-unresolved
-import { compileIntoRelativePath, groupMap } from "/.jsenv/node-platform-data.js"
+import {
+  compileIntoRelativePath,
+  groupMap,
+  importDefaultExtension,
+  // "/.jsenv/node-platform-data.js" resolved at build time
+  // eslint-disable-next-line import/no-unresolved
+} from "/.jsenv/node-platform-data.js"
 // "/.jsenv/node-group-resolver.js" resolved at build time
 // eslint-disable-next-line import/no-unresolved
 import { resolveNodeGroup } from "/.jsenv/node-group-resolver.js"
@@ -36,6 +40,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => 
       projectPathname,
       compileIntoRelativePath,
       importMap: wrappedImportMap,
+      importDefaultExtension,
     })
     return makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
   }
@@ -46,6 +51,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => 
       projectPathname,
       compileIntoRelativePath,
       importMap: wrappedImportMap,
+      importDefaultExtension,
     })
     try {
       const namespace = await makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))

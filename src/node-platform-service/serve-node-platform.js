@@ -12,6 +12,7 @@ export const serveNodePlatform = ({
   projectPathname,
   compileIntoRelativePath,
   importMapRelativePath,
+  importDefaultExtension,
   nodeGroupResolverRelativePath,
   babelPluginMap,
   groupMap,
@@ -39,7 +40,11 @@ export const serveNodePlatform = ({
     compileRelativePath: NODE_PLATFORM_CLIENT_PATHNAME,
     inlineSpecifierMap: {
       [NODE_PLATFORM_DATA_CLIENT_PATHNAME]: () =>
-        generateNodePlatformDataSource({ compileIntoRelativePath, groupMap }),
+        generateNodePlatformDataSource({
+          compileIntoRelativePath,
+          groupMap,
+          importDefaultExtension,
+        }),
       [NODE_GROUP_RESOLVER_CLIENT_PATHNAME]: `${projectPathname}${relativePathInception({
         projectPathname,
         relativePath: nodeGroupResolverRelativePath,
@@ -50,6 +55,11 @@ export const serveNodePlatform = ({
   })
 }
 
-const generateNodePlatformDataSource = ({ compileIntoRelativePath, groupMap }) =>
+const generateNodePlatformDataSource = ({
+  compileIntoRelativePath,
+  groupMap,
+  importDefaultExtension,
+}) =>
   `export const compileIntoRelativePath = ${JSON.stringify(compileIntoRelativePath)}
-export const groupMap = ${JSON.stringify(groupMap)}`
+export const groupMap = ${JSON.stringify(groupMap)}
+export const importDefaultExtension = ${JSON.stringify(importDefaultExtension)}`

@@ -2,12 +2,7 @@
 import { resolve } from "url"
 import { fileRead, fileWrite } from "@dmail/helper"
 import { createOperation } from "@dmail/cancellation"
-import {
-  resolveImport,
-  remapResolvedImport,
-  hrefToPathname,
-  hrefToScheme,
-} from "@jsenv/module-resolution"
+import { resolvePath, hrefToPathname, hrefToScheme } from "@jsenv/module-resolution"
 import {
   pathnameToOperatingSystemPath,
   operatingSystemPathToPathname,
@@ -38,6 +33,7 @@ export const createJsenvRollupPlugin = ({
   cancellationToken,
   projectPathname,
   importMapRelativePath,
+  importDefaultExtension,
   inlineSpecifierMap,
   origin = "http://example.com",
 
@@ -126,15 +122,11 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
         importerHref = `${origin}${pathnameToRelativePathname(importerPathname, projectPathname)}`
       }
 
-      const resolvedImport = resolveImport({
-        importer: importerHref,
+      const id = resolvePath({
         specifier,
-      })
-
-      const id = remapResolvedImport({
+        importer: importerHref,
         importMap,
-        importerHref,
-        resolvedImport,
+        importDefaultExtension,
       })
 
       // rollup works with operating system path

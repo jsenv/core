@@ -1,5 +1,5 @@
 /* eslint-disable import/max-dependencies */
-import { resolveImport, remapResolvedImport } from "@jsenv/module-resolution"
+import { resolvePath } from "@jsenv/module-resolution"
 import "../../system/s.js"
 import { createImportTracker } from "../../platform/createImportTracker.js"
 import { hrefToFileRelativePath } from "../../platform/hrefToFileRelativePath.js"
@@ -17,6 +17,7 @@ export const createBrowserSystem = async ({
   compileServerOrigin,
   compileIntoRelativePath,
   importMap,
+  importDefaultExtension,
 }) => {
   if (typeof window.System === "undefined") throw new Error(`window.System is undefined`)
 
@@ -25,15 +26,11 @@ export const createBrowserSystem = async ({
   browserSystem.resolve = (specifier, importer) => {
     if (specifier === GLOBAL_SPECIFIER) return specifier
 
-    const resolvedImport = resolveImport({
-      importer,
+    return resolvePath({
       specifier,
-    })
-
-    return remapResolvedImport({
+      importer,
       importMap,
-      importerHref: importer,
-      resolvedImport,
+      importDefaultExtension,
     })
   }
 

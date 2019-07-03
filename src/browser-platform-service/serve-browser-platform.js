@@ -13,6 +13,7 @@ export const serveBrowserPlatform = async ({
   projectPathname,
   compileIntoRelativePath,
   importMapRelativePath,
+  importDefaultExtension,
   browserGroupResolverRelativePath,
   babelPluginMap,
   groupMap,
@@ -39,7 +40,11 @@ export const serveBrowserPlatform = async ({
     }),
     inlineSpecifierMap: {
       [BROWSER_PLATFORM_DATA_CLIENT_PATHNAME]: () =>
-        generateBrowserPlatformDataSource({ compileIntoRelativePath, groupMap }),
+        generateBrowserPlatformDataSource({
+          compileIntoRelativePath,
+          groupMap,
+          importDefaultExtension,
+        }),
       [BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME]: `${projectPathname}${relativePathInception({
         projectPathname,
         relativePath: browserGroupResolverRelativePath,
@@ -50,6 +55,11 @@ export const serveBrowserPlatform = async ({
   })
 }
 
-const generateBrowserPlatformDataSource = ({ compileIntoRelativePath, groupMap }) =>
+const generateBrowserPlatformDataSource = ({
+  compileIntoRelativePath,
+  groupMap,
+  importDefaultExtension,
+}) =>
   `export const compileIntoRelativePath = ${JSON.stringify(compileIntoRelativePath)}
-export const groupMap = ${JSON.stringify(groupMap)}`
+export const groupMap = ${JSON.stringify(groupMap)}
+export const importDefaultExtension = ${JSON.stringify(importDefaultExtension)}`
