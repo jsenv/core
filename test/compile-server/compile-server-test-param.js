@@ -5,4 +5,6 @@ export const COMPILE_SERVER_TEST_PARAM = {
   projectPath: JSENV_PATH,
   logLevel: "off",
   babelPluginMap: testBabelPluginMap,
+  browserGroupResolverRelativePath: "/src/browser-group-resolver/index.js",
+  nodeGroupResolverRelativePath: "/src/node-group-resolver/index.js",
 }

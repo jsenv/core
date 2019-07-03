@@ -7,6 +7,8 @@ import {
 import {
   DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
+  DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_BABEL_PLUGIN_MAP,
 } from "./execute-constant.js"
 import { LOG_LEVEL_OFF } from "../logger.js"
@@ -18,6 +20,8 @@ export const execute = async ({
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   importDefaultExtension,
+  browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
+  nodeGroupResolverRelativePath = DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
   babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
   compileGroupCount = 2,
   protocol = "http",
@@ -42,6 +46,8 @@ export const execute = async ({
       compileIntoRelativePath,
       importMapRelativePath,
       importDefaultExtension,
+      browserGroupResolverRelativePath,
+      nodeGroupResolverRelativePath,
       babelPluginMap,
       compileGroupCount,
       protocol,

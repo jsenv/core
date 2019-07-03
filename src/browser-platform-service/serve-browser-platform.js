@@ -1,5 +1,4 @@
 import { serveFile } from "@dmail/server"
-import { relativePathInception } from "../inception.js"
 import { serveBrowserGlobalBundle } from "../bundling/index.js"
 
 export const BROWSER_PLATFORM_RELATIVE_PATH =
@@ -34,10 +33,7 @@ export const serveBrowserPlatform = async ({
     compileIntoRelativePath,
     babelPluginMap,
     compileRelativePath: ressource,
-    sourceRelativePath: relativePathInception({
-      projectPathname,
-      relativePath: BROWSER_PLATFORM_RELATIVE_PATH,
-    }),
+    sourceRelativePath: BROWSER_PLATFORM_RELATIVE_PATH,
     inlineSpecifierMap: {
       [BROWSER_PLATFORM_DATA_CLIENT_PATHNAME]: () =>
         generateBrowserPlatformDataSource({
@@ -45,10 +41,7 @@ export const serveBrowserPlatform = async ({
           groupMap,
           importDefaultExtension,
         }),
-      [BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME]: `${projectPathname}${relativePathInception({
-        projectPathname,
-        relativePath: browserGroupResolverRelativePath,
-      })}`,
+      [BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME]: `${projectPathname}${browserGroupResolverRelativePath}`,
       [IMPORT_MAP_CLIENT_PATHNAME]: `${projectPathname}${importMapRelativePath}`,
     },
     headers,

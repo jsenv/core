@@ -20,14 +20,13 @@ import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { createLogger } from "../../logger.js"
 import { computeBabelPluginMapSubset } from "./computeBabelPluginMapSubset.js"
 import { createBundleBabelPluginMap } from "./create-bundle-babel-plugin-map.js"
-import { relativePathInception } from "/src/inception.js"
+import { JSENV_PATHNAME } from "../../JSENV_PATH.js"
 
 const { minify: minifyCode } = import.meta.require("terser")
 const { buildExternalHelpers } = import.meta.require("@babel/core")
 
 const BABEL_HELPERS_FACADE_PATH = "/.jsenv/babelHelpers.js"
 const GLOBAL_THIS_FACADE_PATH = "/.jsenv/helpers/global-this.js"
-const GLOBAL_THIS_FILESYSTEM_RELATIVE_PATH = "/src/bundling/jsenv-rollup-plugin/global-this.js"
 
 export const createJsenvRollupPlugin = ({
   cancellationToken,
@@ -54,10 +53,7 @@ export const createJsenvRollupPlugin = ({
   const importMap = projectImportMap
 
   const globalThisFilesystemPath = pathnameToOperatingSystemPath(
-    `${projectPathname}${relativePathInception({
-      projectPathname,
-      relativePath: GLOBAL_THIS_FILESYSTEM_RELATIVE_PATH,
-    })}`,
+    `${JSENV_PATHNAME}/src/bundling/jsenv-rollup-plugin/global-this.js`,
   )
   const babelPluginMap = {
     ...computeBabelPluginMapSubset({

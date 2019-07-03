@@ -1,5 +1,4 @@
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
-import { relativePathInception } from "../inception.js"
 import { createImportFromGlobalRollupPlugin } from "./import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "./jsenv-rollup-plugin/index.js"
 import { createLogger } from "../logger.js"
@@ -30,10 +29,7 @@ export const computeRollupOptionsForBalancer = ({
   })
 
   const entryPointMap = {
-    [entryPointName]: relativePathInception({
-      projectPathname,
-      relativePath: balancerTemplateRelativePath,
-    }),
+    [entryPointName]: balancerTemplateRelativePath,
   }
 
   const inlineSpecifierMap = {
@@ -42,10 +38,7 @@ export const computeRollupOptionsForBalancer = ({
         entryPointName,
         groupMap,
       }),
-    [PLATFORM_GROUP_RESOLVER_CLIENT_PATHNAME]: `${projectPathname}/${relativePathInception({
-      projectPathname,
-      relativePath: platformGroupResolverRelativePath,
-    })}`,
+    [PLATFORM_GROUP_RESOLVER_CLIENT_PATHNAME]: `${projectPathname}/${platformGroupResolverRelativePath}`,
   }
 
   // maybe it should be projectPath and not pathname here right ?

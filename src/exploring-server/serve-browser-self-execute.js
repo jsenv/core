@@ -1,12 +1,11 @@
 import { basename } from "path"
 import { firstService, serveFile } from "@dmail/server"
 import { serveBrowserGlobalBundle } from "../bundling/index.js"
-import { relativePathInception } from "../inception.js"
 import { ressourceToPathname, ressourceToSearchParamValue } from "../urlHelper.js"
 import { serveBrowserClientFolder } from "./server-browser-client-folder.js"
 
 const BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH =
-  "/src/exploring-server/browser-self-execute-template.js"
+  "/node_modules/@jsenv/core/src/exploring-server/browser-self-execute-template.js"
 // "/.jsenv/browser-script.js" is written inside browser-client/index.html
 const BROWSER_SCRIPT_CLIENT_PATHNAME = "/.jsenv/browser-script.js"
 const BROWSER_SELF_EXECUTE_CLIENT_PATHNAME = "/.jsenv/browser-self-execute.js"
@@ -89,10 +88,7 @@ const serveBrowserSelfExecuteBundle = ({
     projectPathname,
     compileIntoRelativePath,
     importMapRelativePath,
-    sourceRelativePath: relativePathInception({
-      projectPathname,
-      relativePath: BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH,
-    }),
+    sourceRelativePath: BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH,
     compileRelativePath: `/.jsenv/browser-self-execute${fileRelativePath}`,
     sourcemapPath: `./browser-self-execute${fileRelativePath}__asset__/${basename(
       fileRelativePath,

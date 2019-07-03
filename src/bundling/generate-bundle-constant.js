@@ -15,7 +15,8 @@ export const DEFAULT_NATIVE_MODULE_PREDICATE = (id) =>
 
 export const DEFAULT_BABEL_PLUGIN_MAP = jsenvBabelPluginMap
 
-export const DEFAULT_PLATFORM_GROUP_RESOLVER_RELATIVE_PATH = "/src/platform-group-resolver/index.js"
+export const DEFAULT_PLATFORM_GROUP_RESOLVER_RELATIVE_PATH =
+  "/node_modules/@jsenv/core/src/platform-group-resolver/index.js"
 
 export const DEFAULT_PLATFORM_SCORE_MAP = {
   ...browserScoreMap,

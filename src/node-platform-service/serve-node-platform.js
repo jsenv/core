@@ -1,8 +1,8 @@
 import { serveFile } from "@dmail/server"
-import { relativePathInception } from "../inception.js"
 import { serveNodeCommonJsBundle } from "../bundling/index.js"
 
-export const NODE_PLATFORM_RELATIVE_PATH = "/src/node-platform-service/node-platform/index.js"
+export const NODE_PLATFORM_RELATIVE_PATH =
+  "/node_modules/@jsenv/core/src/node-platform-service/node-platform/index.js"
 const NODE_PLATFORM_CLIENT_PATHNAME = `/.jsenv/node-platform.js`
 const NODE_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/node-platform-data.js`
 const NODE_GROUP_RESOLVER_CLIENT_PATHNAME = `/.jsenv/node-group-resolver.js`
@@ -33,10 +33,7 @@ export const serveNodePlatform = ({
     compileIntoRelativePath,
     importMapRelativePath,
     babelPluginMap,
-    sourceRelativePath: relativePathInception({
-      projectPathname,
-      relativePath: NODE_PLATFORM_RELATIVE_PATH,
-    }),
+    sourceRelativePath: NODE_PLATFORM_RELATIVE_PATH,
     compileRelativePath: NODE_PLATFORM_CLIENT_PATHNAME,
     inlineSpecifierMap: {
       [NODE_PLATFORM_DATA_CLIENT_PATHNAME]: () =>
@@ -45,10 +42,7 @@ export const serveNodePlatform = ({
           groupMap,
           importDefaultExtension,
         }),
-      [NODE_GROUP_RESOLVER_CLIENT_PATHNAME]: `${projectPathname}${relativePathInception({
-        projectPathname,
-        relativePath: nodeGroupResolverRelativePath,
-      })}`,
+      [NODE_GROUP_RESOLVER_CLIENT_PATHNAME]: `${projectPathname}${nodeGroupResolverRelativePath}`,
       [IMPORT_MAP_CLIENT_PATHNAME]: `${projectPathname}${importMapRelativePath}`,
     },
     headers,

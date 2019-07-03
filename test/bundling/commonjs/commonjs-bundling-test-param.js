@@ -4,6 +4,8 @@ import { testBabelPluginMap } from "../../testBabelPluginMap.js"
 export const COMMONJS_BUNDLING_TEST_GENERATE_PARAM = {
   projectPath: JSENV_PATH,
   babelPluginMap: testBabelPluginMap,
+  balancerTemplateRelativePath: "/src/bundling/commonjs/commonjs-balancer-template.js",
+  platformGroupResolverRelativePath: "/src/platform-group-resolver/index.js",
   logLevel: "off",
   throwUnhandled: false,
 }
