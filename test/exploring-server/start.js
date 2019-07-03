@@ -9,6 +9,8 @@ const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 startExploringServer({
   projectPath,
   compileIntoRelativePath,
+  browserClientRelativePath: "/src/browser-client",
+  browserGroupResolverPath: "/src/browser-group-resolver/index.js",
   explorableMap: {
     [`${folderJsenvRelativePath}/**/*.main.js`]: true,
     [`${folderJsenvRelativePath}/**/.dist/**`]: false,

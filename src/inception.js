@@ -2,7 +2,8 @@ import { readFileSync } from "fs"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { JSENV_PATH, JSENV_PATHNAME } from "./JSENV_PATH.js"
 
-const JSENV_RELATIVE_PATH = "/node_modules/@jsenv/core"
+const PACKAGE_NAME = "@jsenv/core"
+const JSENV_RELATIVE_PATH = `/node_modules/${PACKAGE_NAME}`
 
 export const relativePathInception = ({ projectPathname, relativePath }) => {
   const projectIsJsenv = projectPathname === JSENV_PATH || pathnameIsJsenvCore(projectPathname)
@@ -32,7 +33,7 @@ const pathnameIsJsenvCore = (pathname) => {
       const buffer = readFileSync(packagePath)
       const content = String(buffer)
       const packageData = JSON.parse(content)
-      return packageData.name === "@jsenv/core"
+      return packageData.name === PACKAGE_NAME
     } catch (e) {
       if (e.code === "ENOENT") return false
       if (e.name === "SyntaxError") return false

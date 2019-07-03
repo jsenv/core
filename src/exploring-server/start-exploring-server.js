@@ -2,7 +2,6 @@ import { createCancellationToken } from "@dmail/cancellation"
 import { namedValueDescriptionToMetaDescription } from "@dmail/project-structure"
 import { startServer, firstService } from "@dmail/server"
 import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
-import { relativePathInception } from "../inception.js"
 import { startCompileServer } from "../compile-server/index.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 import { serveExploringIndex } from "./serve-exploring-index.js"
@@ -75,10 +74,7 @@ export const startExploringServer = async ({
           projectPathname,
           compileIntoRelativePath,
           importMapRelativePath,
-          browserClientRelativePath: relativePathInception({
-            projectPathname,
-            relativePath: browserClientRelativePath,
-          }),
+          browserClientRelativePath,
           babelPluginMap,
           browsableMetaMap: metaDescription,
           request,
