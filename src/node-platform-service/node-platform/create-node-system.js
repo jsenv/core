@@ -36,7 +36,7 @@ export const createNodeSystem = ({
       importer,
       specifier,
       importMap,
-      importDefaultExtension,
+      defaultExtension: importDefaultExtension,
     })
   }
 

@@ -126,7 +126,7 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
         specifier,
         importer: importerHref,
         importMap,
-        importDefaultExtension,
+        defaultExtension: importDefaultExtension,
       })
 
       // rollup works with operating system path

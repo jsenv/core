@@ -30,7 +30,7 @@ export const createBrowserSystem = async ({
       specifier,
       importer,
       importMap,
-      importDefaultExtension,
+      defaultExtension: importDefaultExtension,
     })
   }
 
