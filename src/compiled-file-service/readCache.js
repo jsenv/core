@@ -11,11 +11,7 @@ export const readCache = async ({ projectPathname, sourceRelativePath, compileRe
     const cacheContent = await fileRead(cacheFilename)
     const cache = JSON.parse(cacheContent)
     if (cache.sourceRelativePath !== sourceRelativePath) {
-      throw createCacheCorruptionError({
-        sourceRelativePath,
-        cacheSourcePath: cache.sourceRelativePath,
-        cacheFilename,
-      })
+      return null
     }
     return cache
   } catch (error) {
@@ -23,24 +19,3 @@ export const readCache = async ({ projectPathname, sourceRelativePath, compileRe
     throw error
   }
 }
-
-const createCacheCorruptionError = ({ sourceRelativePath, cacheSourcePath, cacheFilename }) => {
-  const error = new Error(
-    createCacheCorruptionErrorMessage({
-      sourceRelativePath,
-      cacheFilename,
-      cacheSourcePath,
-    }),
-  )
-  error.code = "CACHE_CORRUPTION_ERROR"
-  return error
-}
-
-const createCacheCorruptionErrorMessage = ({
-  sourceRelativePath,
-  cacheSourcePath,
-  cacheFilename,
-}) => `cache sourceRelativePath does not match.
-sourceRelativePath: ${sourceRelativePath}
-cacheSourcePath: ${cacheSourcePath}
-cacheFilename: ${cacheFilename}`

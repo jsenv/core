@@ -126,12 +126,6 @@ export const serveCompiledFile = async ({
       }
     }
 
-    if (error && error.code === "CACHE_CORRUPTION_ERROR") {
-      return {
-        status: 500,
-      }
-    }
-
     return convertFileSystemErrorToResponseProperties(error)
   }
 }
