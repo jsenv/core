@@ -2,9 +2,11 @@ export const loadUsingScript = async (src) => {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script")
 
-    const onwindowerror = (e) => {
-      cleanup()
-      reject(e)
+    const onwindowerror = (errorEvent) => {
+      if (errorEvent.filename === src) {
+        cleanup()
+        reject(errorEvent.error)
+      }
     }
 
     const onscripterror = () => {
