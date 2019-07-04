@@ -1,8 +1,6 @@
 import { serveFile } from "@dmail/server"
 import { serveBrowserGlobalBundle } from "../bundling/index.js"
 
-export const BROWSER_PLATFORM_RELATIVE_PATH =
-  "/src/browser-platform-service/browser-platform/index.js"
 const BROWSER_PLATFORM_CLIENT_PATHNAME = `/.jsenv/browser-platform.js`
 const BROWSER_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/browser-platform-data.js`
 const BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME = `/.jsenv/browser-group-resolver.js`
@@ -13,6 +11,7 @@ export const serveBrowserPlatform = async ({
   compileIntoRelativePath,
   importMapRelativePath,
   importDefaultExtension,
+  browserPlatformRelativePath,
   browserGroupResolverRelativePath,
   babelPluginMap,
   groupMap,
@@ -33,7 +32,7 @@ export const serveBrowserPlatform = async ({
     compileIntoRelativePath,
     babelPluginMap,
     compileRelativePath: ressource,
-    sourceRelativePath: BROWSER_PLATFORM_RELATIVE_PATH,
+    sourceRelativePath: browserPlatformRelativePath,
     inlineSpecifierMap: {
       [BROWSER_PLATFORM_DATA_CLIENT_PATHNAME]: () =>
         generateBrowserPlatformDataSource({

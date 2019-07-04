@@ -10,6 +10,7 @@ startExploringServer({
   projectPath,
   compileIntoRelativePath,
   browserClientRelativePath: "/src/browser-client",
+  browserPlatformRelativePath: "/src/browser-platform-service/browser-platform/index.js",
   browserGroupResolverPath: "/src/browser-group-resolver/index.js",
   explorableMap: {
     [`${folderJsenvRelativePath}/**/*.main.js`]: true,

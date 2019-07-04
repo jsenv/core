@@ -1,8 +1,6 @@
 import { serveFile } from "@dmail/server"
 import { serveNodeCommonJsBundle } from "../bundling/index.js"
 
-export const NODE_PLATFORM_RELATIVE_PATH =
-  "/node_modules/@jsenv/core/src/node-platform-service/node-platform/index.js"
 const NODE_PLATFORM_CLIENT_PATHNAME = `/.jsenv/node-platform.js`
 const NODE_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/node-platform-data.js`
 const NODE_GROUP_RESOLVER_CLIENT_PATHNAME = `/.jsenv/node-group-resolver.js`
@@ -13,6 +11,7 @@ export const serveNodePlatform = ({
   compileIntoRelativePath,
   importMapRelativePath,
   importDefaultExtension,
+  nodePlatformRelativePath,
   nodeGroupResolverRelativePath,
   babelPluginMap,
   groupMap,
@@ -33,7 +32,7 @@ export const serveNodePlatform = ({
     compileIntoRelativePath,
     importMapRelativePath,
     babelPluginMap,
-    sourceRelativePath: NODE_PLATFORM_RELATIVE_PATH,
+    sourceRelativePath: nodePlatformRelativePath,
     compileRelativePath: NODE_PLATFORM_CLIENT_PATHNAME,
     inlineSpecifierMap: {
       [NODE_PLATFORM_DATA_CLIENT_PATHNAME]: () =>

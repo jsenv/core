@@ -5,29 +5,23 @@ import {
 } from "../cancellationHelper.js"
 import { executeDescriptionToExecutionPlan } from "../executeDescriptionToExecutionPlan.js"
 import { executePlan } from "../executePlan/index.js"
-import {
-  DEFAULT_COMPILE_INTO_RELATIVE_PATH,
-  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
-  DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
-  DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
-  DEFAULT_EXECUTE_DESCRIPTION,
-  DEFAULT_MAX_PARALLEL_EXECUTION,
-  DEFAULT_BABEL_PLUGIN_MAP,
-} from "./test-constant.js"
+import { DEFAULT_EXECUTE_DESCRIPTION, DEFAULT_MAX_PARALLEL_EXECUTION } from "./test-constant.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS, LOG_LEVEL_OFF } from "../logger.js"
 
 export const test = async ({
   projectPath,
-  compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
-  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  compileIntoRelativePath,
+  importMapRelativePath,
   importDefaultExtension,
-  browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
-  nodeGroupResolverRelativePath = DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
+  browserPlatformRelativePath,
+  nodePlatformRelativePath,
+  browserGroupResolverRelativePath,
+  nodeGroupResolverRelativePath,
   executeDescription = DEFAULT_EXECUTE_DESCRIPTION,
   compileGroupCount = 2,
   maxParallelExecution = DEFAULT_MAX_PARALLEL_EXECUTION,
   defaultAllocatedMsPerExecution = 30000,
-  babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
+  babelPluginMap,
   updateProcessExitCode = true,
   throwUnhandled = true,
   compileServerLogLevel = LOG_LEVEL_OFF,
@@ -47,6 +41,8 @@ export const test = async ({
       compileIntoRelativePath,
       importMapRelativePath,
       importDefaultExtension,
+      browserPlatformRelativePath,
+      nodePlatformRelativePath,
       browserGroupResolverRelativePath,
       nodeGroupResolverRelativePath,
       compileGroupCount,

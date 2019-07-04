@@ -1,29 +1,30 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { namedValueDescriptionToMetaDescription } from "@dmail/project-structure"
 import { startServer, firstService } from "@dmail/server"
-import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
+import {
+  operatingSystemPathToPathname,
+  pathnameToOperatingSystemPath,
+} from "@jsenv/operating-system-path"
 import { startCompileServer } from "../compile-server/index.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 import { serveExploringIndex } from "./serve-exploring-index.js"
 import { serveExploringPage } from "./serve-exploring-page.js"
 import {
-  DEFAULT_COMPILE_INTO_RELATIVE_PATH,
-  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
-  DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_EXPLORABLE_MAP,
-  DEFAULT_BABEL_PLUGIN_MAP,
 } from "./exploring-server-constant.js"
+import { assertFolder, assertFile } from "./filesystem-assertions.js"
 
 export const startExploringServer = async ({
   cancellationToken = createCancellationToken(),
   projectPath,
-  compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
-  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  compileIntoRelativePath,
+  importMapRelativePath,
   importDefaultExtension,
   browserClientRelativePath = DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
-  browserGroupResolverPath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
-  babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
+  browserPlatformRelativePath,
+  browserGroupResolverPath,
+  babelPluginMap,
   compileGroupCount = 2,
   explorableMap = DEFAULT_EXPLORABLE_MAP,
   logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
@@ -42,12 +43,23 @@ export const startExploringServer = async ({
     browsable: explorableMap,
   })
 
+  const browserClientFolderPath = pathnameToOperatingSystemPath(
+    `${projectPathname}${browserClientRelativePath}`,
+  )
+  await assertFolder(browserClientFolderPath)
+
+  const browserClientIndexPath = pathnameToOperatingSystemPath(
+    `${projectPathname}${browserClientRelativePath}/index.html`,
+  )
+  await assertFile(browserClientIndexPath)
+
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
     projectPath,
     compileIntoRelativePath,
     importMapRelativePath,
     importDefaultExtension,
+    browserPlatformRelativePath,
     browserGroupResolverPath,
     compileGroupCount,
     babelPluginMap,

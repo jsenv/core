@@ -4,25 +4,20 @@ import {
   createProcessInterruptionCancellationToken,
   catchAsyncFunctionCancellation,
 } from "../cancellationHelper.js"
-import {
-  DEFAULT_COMPILE_INTO_RELATIVE_PATH,
-  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
-  DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
-  DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
-  DEFAULT_BABEL_PLUGIN_MAP,
-} from "./execute-constant.js"
 import { LOG_LEVEL_OFF } from "../logger.js"
 
 export const execute = async ({
   fileRelativePath,
   launch,
   projectPath,
-  compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
-  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  compileIntoRelativePath,
+  importMapRelativePath,
   importDefaultExtension,
-  browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
-  nodeGroupResolverRelativePath = DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
-  babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
+  browserPlatformRelativePath,
+  nodePlatformRelativePath,
+  browserGroupResolverRelativePath,
+  nodeGroupResolverRelativePath,
+  babelPluginMap,
   compileGroupCount = 2,
   protocol = "http",
   ip = "127.0.0.1",
@@ -46,6 +41,8 @@ export const execute = async ({
       compileIntoRelativePath,
       importMapRelativePath,
       importDefaultExtension,
+      browserPlatformRelativePath,
+      nodePlatformRelativePath,
       browserGroupResolverRelativePath,
       nodeGroupResolverRelativePath,
       babelPluginMap,

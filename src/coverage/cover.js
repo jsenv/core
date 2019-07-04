@@ -18,32 +18,29 @@ import { relativePathToEmptyCoverage } from "./relativePathToEmptyCoverage.js"
 import { generateCoverageHTML } from "./generateCoverageHTML.js"
 import { generateCoverageLog } from "./generateCoverageLog.js"
 import {
-  DEFAULT_COMPILE_INTO_RELATIVE_PATH,
-  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
-  DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
-  DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_COVERAGE_RELATIVE_PATH,
   DEFAULT_COVER_DESCRIPTION,
   DEFAULT_EXECUTE_DESCRIPTION,
-  DEFAULT_BABEL_PLUGIN_MAP,
   DEFAULT_MAX_PARALLEL_EXECUTION,
 } from "./cover-constant.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS, LOG_LEVEL_OFF } from "../logger.js"
 
 export const cover = async ({
   projectPath,
-  compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
-  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  compileIntoRelativePath,
+  importMapRelativePath,
   importDefaultExtension,
-  browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
-  nodeGroupResolverRelativePath = DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
+  browserPlatformRelativePath,
+  nodePlatformRelativePath,
+  browserGroupResolverRelativePath,
+  nodeGroupResolverRelativePath,
   coverageRelativePath = DEFAULT_COVERAGE_RELATIVE_PATH,
   // coverDescription could be deduced from passing
   // an entryPointMap and collecting all dependencies
   // for now we stick to coverDescription using project-structure api
   coverDescription = DEFAULT_COVER_DESCRIPTION,
   executeDescription = DEFAULT_EXECUTE_DESCRIPTION,
-  babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
+  babelPluginMap,
   compileGroupCount = 2,
   maxParallelExecution = DEFAULT_MAX_PARALLEL_EXECUTION,
   defaultAllocatedMsPerExecution = 30000,
@@ -103,6 +100,8 @@ export const cover = async ({
           compileIntoRelativePath,
           importMapRelativePath,
           importDefaultExtension,
+          browserPlatformRelativePath,
+          nodePlatformRelativePath,
           browserGroupResolverRelativePath,
           nodeGroupResolverRelativePath,
           babelPluginMap: babelPluginMapWithInstrumentation,
