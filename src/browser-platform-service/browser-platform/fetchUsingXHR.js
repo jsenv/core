@@ -11,14 +11,18 @@ export const fetchUsingXHR = (url, headers = {}) => {
 
     xhr.ontimeout = () => {
       cleanup()
-      reject({
-        name: "REQUEST_TIMEOUT_ERROR",
-      })
+      reject(createRequestTimeoutError({ url }))
     }
 
     xhr.onerror = (error) => {
       cleanup()
-      reject(error)
+      if (typeof window.ProgressEvent === "function" && error instanceof ProgressEvent) {
+        // unfortunately with have no clue why it fails
+        // might be cors for instance
+        reject(createRequestError({ url }))
+      } else {
+        reject(error)
+      }
     }
 
     xhr.onload = () => {
@@ -56,6 +60,20 @@ export const fetchUsingXHR = (url, headers = {}) => {
     })
     xhr.send(null)
   })
+}
+
+const createRequestError = ({ url }) => {
+  const error = new Error(`request error.
+url: ${url}`)
+  error.code = "REQUEST_ERROR"
+  return error
+}
+
+const createRequestTimeoutError = ({ url }) => {
+  const error = new Error(`request timeout.
+url: ${url}`)
+  error.code = "REQUEST_TIMEOUT"
+  return error
 }
 
 const normalizeXhr = (xhr) => {

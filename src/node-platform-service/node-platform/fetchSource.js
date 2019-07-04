@@ -9,7 +9,7 @@ export const fetchSource = ({ href, importerHref }) => {
   if (protocolIsHttpOrHttps(href)) {
     return fetchUsingHttp(href, {
       headers: {
-        "x-module-referer": importerHref || href,
+        // "x-module-referer": importerHref || href,
       },
     })
   }
