@@ -52,6 +52,22 @@ export const createJsenvRollupPlugin = ({
   })
   const importMap = projectImportMap
 
+  // it does not work inside launch-chromium
+  // because in that case JSENV_PATHNAME is launch-chromium
+  // and the path to global this may be either
+  // inside node_modules/@jsenv/core/path
+  // or higher in the hierarchy
+
+  /**
+   * donc dans le cas ou c'est chromium launcher qui
+   * demande a generer un bundle rollup
+   * ça fonctionne pour lui directement
+   * mais si chromium-launcher est lui meme executer
+   * depuis sa version bundle avec rollup
+   * alors la il chromium launcher se fait passer pour jsenv
+   * du point de vue de cette partie du code
+   * a reflechir
+   */
   const globalThisFilesystemPath = pathnameToOperatingSystemPath(
     `${JSENV_PATHNAME}/src/bundling/jsenv-rollup-plugin/global-this.js`,
   )
