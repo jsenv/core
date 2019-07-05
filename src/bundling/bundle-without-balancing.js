@@ -73,7 +73,7 @@ dir: ${dir}
 minify: ${minify}
 `)
 
-  const { bundle } = await generateBundleUsingRollup({
+  const bundle = await generateBundleUsingRollup({
     cancellationToken,
     writeOnFileSystem,
     rollupParseOptions: {

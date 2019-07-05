@@ -7,7 +7,7 @@ const { buildExternalHelpers } = import.meta.require("@babel/core")
 
 const BABEL_HELPERS_FACADE_PATH = "/.jsenv/babelHelpers.js"
 
-export const computeSpecifierMap = ({ specifierMap }) => specifierMap
+export const computeSpecifierMap = () => undefined
 
 export const computeSpecifierDynamicMap = () => {
   return {

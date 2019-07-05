@@ -82,7 +82,7 @@ export const groupMap = ${JSON.stringify(groupMap)}`,
   minify: ${minify}
   `)
 
-  const { bundle } = await generateBundleUsingRollup({
+  const bundle = await generateBundleUsingRollup({
     cancellationToken,
     writeOnFileSystem,
     rollupParseOptions: {
