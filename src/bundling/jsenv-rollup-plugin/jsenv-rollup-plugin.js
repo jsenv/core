@@ -26,14 +26,16 @@ const { minify: minifyCode } = import.meta.require("terser")
 const { buildExternalHelpers } = import.meta.require("@babel/core")
 
 const BABEL_HELPERS_FACADE_PATH = "/.jsenv/babelHelpers.js"
-const GLOBAL_THIS_FACADE_PATH = "/.jsenv/helpers/global-this.js"
+
+export const GLOBAL_THIS_FACADE_PATH = "/.jsenv/helpers/global-this.js"
 
 export const createJsenvRollupPlugin = ({
   cancellationToken,
   projectPathname,
   importMapRelativePath,
   importDefaultExtension,
-  inlineSpecifierMap,
+  specifierMap,
+  specifierDynamicMap,
   origin = "http://example.com",
 
   featureNameArray,
@@ -44,6 +46,20 @@ export const createJsenvRollupPlugin = ({
   dir,
   logLevel,
 }) => {
+  specifierMap = {
+    ...{
+      [GLOBAL_THIS_FACADE_PATH]:
+        "/node_modules/@jsenv/core/src/bundling/jsenv-rollup-plugin/global-this.js",
+    },
+    ...specifierMap,
+  }
+  specifierDynamicMap = {
+    ...{
+      [BABEL_HELPERS_FACADE_PATH]: () => buildExternalHelpers(undefined, "module"),
+    },
+    ...specifierDynamicMap,
+  }
+
   const { log } = createLogger({ logLevel })
 
   const projectImportMap = readProjectImportMap({
@@ -85,26 +101,35 @@ export const createJsenvRollupPlugin = ({
     }),
   }
 
-  inlineSpecifierMap[GLOBAL_THIS_FACADE_PATH] = globalThisFilesystemPath
   // https://github.com/babel/babel/blob/master/packages/babel-core/src/tools/build-external-helpers.js#L1
-  inlineSpecifierMap[BABEL_HELPERS_FACADE_PATH] = () => buildExternalHelpers(undefined, "module")
 
-  const inlineSpecifierResolveMap = {}
+  const specifierDynamicMapResolutionMap = {}
 
   const jsenvRollupPlugin = {
     name: "jsenv",
 
     resolveId: (specifier, importer) => {
-      if (specifier in inlineSpecifierMap) {
-        const inlineSpecifier = inlineSpecifierMap[specifier]
-        if (typeof inlineSpecifier === "string")
-          return pathnameToOperatingSystemPath(inlineSpecifier)
-        if (typeof inlineSpecifier === "function") {
-          const osPath = pathnameToOperatingSystemPath(`${projectPathname}${specifier}`)
-          inlineSpecifierResolveMap[osPath] = specifier
-          return osPath
+      if (specifier in specifierDynamicMap) {
+        const specifierDynamicMapping = specifierDynamicMap[specifier]
+        if (typeof specifierDynamicMapping !== "function") {
+          throw new Error(
+            `specifier inside specifierDynamicMap must be functions, found ${specifierDynamicMapping} for ${specifier}`,
+          )
         }
-        throw new Error(`inlineSpecifier must be a string or a function`)
+
+        const osPath = pathnameToOperatingSystemPath(`${projectPathname}${specifier}`)
+        specifierDynamicMapResolutionMap[osPath] = specifier
+        return osPath
+      }
+
+      if (specifier in specifierMap) {
+        const specifierMapping = specifierMap[specifier]
+        if (typeof specifierMapping !== "string") {
+          throw new Error(
+            `specifier inside specifierMap must be strings, found ${specifierMapping} for ${specifier}`,
+          )
+        }
+        specifier = specifierMapping
       }
 
       if (!importer) {
@@ -126,9 +151,7 @@ export const createJsenvRollupPlugin = ({
         const importerPathname = operatingSystemPathToPathname(importer)
         const isInsideProject = pathnameIsInside(importerPathname, projectPathname)
         if (!isInsideProject) {
-          throw new Error(`importer must be inside project
-importer: ${importer}
-project: ${pathnameToOperatingSystemPath(projectPathname)}`)
+          throw createImporterOutsideProjectError({ importer, projectPathname })
         }
 
         importerHref = `${origin}${pathnameToRelativePathname(importerPathname, projectPathname)}`
@@ -159,8 +182,8 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
     // },
 
     load: async (id) => {
-      if (id in inlineSpecifierResolveMap) {
-        return inlineSpecifierMap[inlineSpecifierResolveMap[id]]()
+      if (id in specifierDynamicMapResolutionMap) {
+        return specifierDynamicMap[specifierDynamicMapResolutionMap[id]]()
       }
 
       const hasSheme = isWindowsPath(id) ? false : Boolean(hrefToScheme(id))
@@ -186,8 +209,8 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
     transform: async (source, id) => {
       // babel helper must not be retransformed
       if (
-        id in inlineSpecifierResolveMap &&
-        inlineSpecifierResolveMap[id] === BABEL_HELPERS_FACADE_PATH
+        id in specifierDynamicMapResolutionMap &&
+        specifierDynamicMapResolutionMap[id] === BABEL_HELPERS_FACADE_PATH
       ) {
         return null
       }
@@ -282,6 +305,11 @@ project: ${pathnameToOperatingSystemPath(projectPathname)}`)
 
   return jsenvRollupPlugin
 }
+
+const createImporterOutsideProjectError = ({ importer, projectPathname }) =>
+  new Error(`importer must be inside project
+  importer: ${importer}
+  project: ${pathnameToOperatingSystemPath(projectPathname)}`)
 
 const transformAsyncInsertedByRollup = async ({ dir, babelPluginMap, bundle }) => {
   const asyncPluginName = findAsyncPluginNameInbabelPluginMap(babelPluginMap)

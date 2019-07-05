@@ -4,12 +4,13 @@ export const serveBrowserGlobalBundle = ({
   projectPathname,
   compileIntoRelativePath,
   importMapRelativePath,
+  specifierMap,
+  specifierDynamicMap,
   sourceRelativePath,
   compileRelativePath,
   sourcemapPath,
   babelPluginMap,
   headers,
-  inlineSpecifierMap,
   globalName,
 }) =>
   serveBundle({
@@ -22,10 +23,11 @@ export const serveBrowserGlobalBundle = ({
     projectPathname,
     compileIntoRelativePath,
     importMapRelativePath,
+    specifierMap,
+    specifierDynamicMap,
     sourceRelativePath,
     compileRelativePath,
     sourcemapPath,
     babelPluginMap,
     headers,
-    inlineSpecifierMap,
   })

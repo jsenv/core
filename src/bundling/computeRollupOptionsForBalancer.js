@@ -11,6 +11,8 @@ export const computeRollupOptionsForBalancer = ({
   bundleIntoRelativePath,
   importMapRelativePath,
   importDefaultExtension,
+  specifierMap,
+  specifierDynamicMap,
   nativeModulePredicate,
   babelPluginMap,
   entryPointName,
@@ -32,15 +34,6 @@ export const computeRollupOptionsForBalancer = ({
     [entryPointName]: balancerTemplateRelativePath,
   }
 
-  const inlineSpecifierMap = {
-    [balancerDataClientPathname]: () =>
-      generateBalancerDataSource({
-        entryPointName,
-        groupMap,
-      }),
-    [PLATFORM_GROUP_RESOLVER_CLIENT_PATHNAME]: `${projectPathname}/${platformGroupResolverRelativePath}`,
-  }
-
   // maybe it should be projectPath and not pathname here right ?
   const dir = pathnameToOperatingSystemPath(`${projectPathname}${bundleIntoRelativePath}`)
 
@@ -49,7 +42,18 @@ export const computeRollupOptionsForBalancer = ({
     projectPathname,
     importMapRelativePath,
     importDefaultExtension,
-    inlineSpecifierMap,
+    specifierMap: {
+      ...specifierMap,
+      [PLATFORM_GROUP_RESOLVER_CLIENT_PATHNAME]: platformGroupResolverRelativePath,
+    },
+    specifierDynamicMap: {
+      ...specifierDynamicMap,
+      [balancerDataClientPathname]: () =>
+        generateBalancerDataSource({
+          entryPointName,
+          groupMap,
+        }),
+    },
     dir,
     featureNameArray: groupMap.otherwise.incompatibleNameArray,
     babelPluginMap,

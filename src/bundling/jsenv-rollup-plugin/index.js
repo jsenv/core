@@ -1,1 +1,1 @@
-export { createJsenvRollupPlugin } from "./jsenv-rollup-plugin.js"
+export { createJsenvRollupPlugin, GLOBAL_THIS_FACADE_PATH } from "./jsenv-rollup-plugin.js"

@@ -13,7 +13,7 @@ import { writeOrUpdateSourceMappingURL } from "../source-mapping-url.js"
 export const platformClientBundleToCompilationResult = ({
   projectPathname,
   compileIntoRelativePath,
-  inlineSpecifierMap,
+  specifierDynamicMap,
   entryRelativePath,
   sourcemapAssetPath,
   sourcemapPath = sourcemapAssetPath,
@@ -27,7 +27,7 @@ export const platformClientBundleToCompilationResult = ({
     projectPathname,
     compileIntoRelativePath,
     entryRelativePath,
-    inlineSpecifierMap,
+    specifierDynamicMap,
   })
 
   const sources = mainSourcemap.sources
@@ -42,7 +42,7 @@ export const platformClientBundleToCompilationResult = ({
       projectPathname,
       compileIntoRelativePath,
       entryRelativePath,
-      inlineSpecifierMap,
+      specifierDynamicMap,
     })
     sources.push(...chunkSourcemap.sources) // we should avod duplication I guess
     sourcesContent.push(...chunkSourcemap.sourcesContent) // same here, avoid duplication
@@ -68,7 +68,7 @@ const rollupSourcemapToCompilationSourcemap = ({
   projectPathname,
   compileIntoRelativePath,
   entryRelativePath,
-  inlineSpecifierMap,
+  specifierDynamicMap,
 }) => {
   const sources = []
   const sourcesContent = []
@@ -86,10 +86,7 @@ const rollupSourcemapToCompilationSourcemap = ({
       ? windowsPathToPathnameWithoutDriveLetter(sourcePath)
       : sourcePath
 
-    if (
-      sourceSpecifier in inlineSpecifierMap &&
-      typeof inlineSpecifierMap[sourceSpecifier] === "function"
-    ) {
+    if (sourceSpecifier in specifierDynamicMap) {
       return
     }
 
@@ -101,10 +98,7 @@ project path: ${pathnameToOperatingSystemPath(projectPathname)}`)
     }
 
     const sourceRelativePath = pathnameToRelativePathname(sourcePathname, projectPathname)
-    if (
-      sourceRelativePath in inlineSpecifierMap &&
-      typeof inlineSpecifierMap[sourceRelativePath] === "function"
-    ) {
+    if (sourceRelativePath in specifierDynamicMap) {
       return
     }
 
@@ -124,22 +118,26 @@ project path: ${pathnameToOperatingSystemPath(projectPathname)}`)
   // for json files.
   // we manually ensure they are registered as dependencies
   // to build the bundle
-  Object.keys(inlineSpecifierMap).forEach((specifier) => {
-    const specifierMapping = inlineSpecifierMap[specifier]
-    if (
-      typeof specifierMapping === "string" &&
-      specifierMapping.endsWith(".json") &&
-      specifierMapping.startsWith(`${projectPathname}/`)
-    ) {
-      const jsonFileRelativePath = pathnameToRelativePathname(specifierMapping, projectPathname)
-      const expectedSource = jsonFileRelativePath.slice(1)
-      const sourceIndex = sources.indexOf(expectedSource)
-      if (sourceIndex === -1) {
-        sources.push(jsonFileRelativePath)
-        sourcesContent.push(String(readFileSync(pathnameToOperatingSystemPath(specifierMapping))))
-      }
-    }
-  })
+
+  // should we change "/.jsenv/import-map.json"
+  // for "/.jsenv/import-map.js"
+  // but ensure we still register the right .json file as dependency ?
+  // Object.keys(inlineSpecifierMap).forEach((specifier) => {
+  //   const specifierMapping = inlineSpecifierMap[specifier]
+  //   if (
+  //     typeof specifierMapping === "string" &&
+  //     specifierMapping.endsWith(".json") &&
+  //     specifierMapping.startsWith(`${projectPathname}/`)
+  //   ) {
+  //     const jsonFileRelativePath = pathnameToRelativePathname(specifierMapping, projectPathname)
+  //     const expectedSource = jsonFileRelativePath.slice(1)
+  //     const sourceIndex = sources.indexOf(expectedSource)
+  //     if (sourceIndex === -1) {
+  //       sources.push(jsonFileRelativePath)
+  //       sourcesContent.push(String(readFileSync(pathnameToOperatingSystemPath(specifierMapping))))
+  //     }
+  //   }
+  // })
 
   const sourcemap = {
     ...rollupSourcemap,

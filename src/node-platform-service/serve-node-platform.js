@@ -34,15 +34,17 @@ export const serveNodePlatform = ({
     babelPluginMap,
     sourceRelativePath: nodePlatformRelativePath,
     compileRelativePath: NODE_PLATFORM_CLIENT_PATHNAME,
-    inlineSpecifierMap: {
+    specifierMap: {
+      [NODE_GROUP_RESOLVER_CLIENT_PATHNAME]: nodeGroupResolverRelativePath,
+      [IMPORT_MAP_CLIENT_PATHNAME]: importMapRelativePath,
+    },
+    specifierDynamicMap: {
       [NODE_PLATFORM_DATA_CLIENT_PATHNAME]: () =>
         generateNodePlatformDataSource({
           compileIntoRelativePath,
           groupMap,
           importDefaultExtension,
         }),
-      [NODE_GROUP_RESOLVER_CLIENT_PATHNAME]: `${projectPathname}${nodeGroupResolverRelativePath}`,
-      [IMPORT_MAP_CLIENT_PATHNAME]: `${projectPathname}${importMapRelativePath}`,
     },
     headers,
   })

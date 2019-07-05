@@ -11,6 +11,7 @@ import { serveExploringIndex } from "./serve-exploring-index.js"
 import { serveExploringPage } from "./serve-exploring-page.js"
 import {
   DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
+  DEFAULT_BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH,
   DEFAULT_EXPLORABLE_MAP,
 } from "./exploring-server-constant.js"
 import { assertFolder, assertFile } from "./filesystem-assertions.js"
@@ -22,6 +23,7 @@ export const startExploringServer = async ({
   importMapRelativePath,
   importDefaultExtension,
   browserClientRelativePath = DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
+  browserSelfExecuteTemplateRelativePath = DEFAULT_BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH,
   browserPlatformRelativePath,
   browserGroupResolverPath,
   babelPluginMap,
@@ -87,6 +89,7 @@ export const startExploringServer = async ({
           compileIntoRelativePath,
           importMapRelativePath,
           browserClientRelativePath,
+          browserSelfExecuteTemplateRelativePath,
           babelPluginMap,
           browsableMetaMap: metaDescription,
           request,

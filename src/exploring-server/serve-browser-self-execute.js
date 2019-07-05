@@ -4,8 +4,6 @@ import { serveBrowserGlobalBundle } from "../bundling/index.js"
 import { ressourceToPathname, ressourceToSearchParamValue } from "../urlHelper.js"
 import { serveBrowserClientFolder } from "./server-browser-client-folder.js"
 
-const BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH =
-  "/node_modules/@jsenv/core/src/exploring-server/browser-self-execute-template.js"
 // "/.jsenv/browser-script.js" is written inside browser-client/index.html
 const BROWSER_SCRIPT_CLIENT_PATHNAME = "/.jsenv/browser-script.js"
 const BROWSER_SELF_EXECUTE_CLIENT_PATHNAME = "/.jsenv/browser-self-execute.js"
@@ -18,6 +16,7 @@ export const serveBrowserSelfExecute = ({
   compileIntoRelativePath,
   importMapRelativePath,
   browserClientRelativePath,
+  browserSelfExecuteTemplateRelativePath,
   babelPluginMap,
   request,
 }) =>
@@ -32,6 +31,7 @@ export const serveBrowserSelfExecute = ({
         projectPathname,
         compileIntoRelativePath,
         importMapRelativePath,
+        browserSelfExecuteTemplateRelativePath,
         babelPluginMap,
         request,
       }),
@@ -67,6 +67,7 @@ const serveBrowserSelfExecuteBundle = ({
   projectPathname,
   importMapRelativePath,
   compileIntoRelativePath,
+  browserSelfExecuteTemplateRelativePath,
   babelPluginMap,
   request: { ressource, method, headers },
 }) => {
@@ -88,12 +89,13 @@ const serveBrowserSelfExecuteBundle = ({
     projectPathname,
     compileIntoRelativePath,
     importMapRelativePath,
-    sourceRelativePath: BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH,
+    // TODO: browserSelfExecuteTemplateRelativePath must be resolved using importMap
+    sourceRelativePath: browserSelfExecuteTemplateRelativePath,
     compileRelativePath: `/.jsenv/browser-self-execute${fileRelativePath}`,
     sourcemapPath: `./browser-self-execute${fileRelativePath}__asset__/${basename(
       fileRelativePath,
     )}.map`,
-    inlineSpecifierMap: {
+    specifierDynamicMap: {
       [BROWSER_SELF_EXECUTE_STATIC_DATA_PATHNAME]: () =>
         generateBrowserSelfExecuteStaticDataSource({ fileRelativePath }),
     },
