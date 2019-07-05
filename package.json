@@ -70,6 +70,7 @@
 	},
 	"scripts": {
 		"generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
+		"start-exploring-server": "node ./script/start-exploring-server/start-exploring-server.js",
 		"test": "node ./script/test/test.js",
 		"eslint-check": "eslint .",
 		"prettier-check": "node ./script/prettier-check/prettier-check.js",
