@@ -102,8 +102,8 @@ export const createNodeSystem = ({
   }
 
   const importMethod = nodeSystem.import
-  nodeSystem.import = function(specifier) {
-    return importMethod.call(this, specifier).catch((error) => {
+  nodeSystem.import = function(specifier, importer) {
+    return importMethod.call(this, specifier, importer).catch((error) => {
       if (!error) return Promise.reject(error)
       if (error.code) return Promise.reject(error)
 

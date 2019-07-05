@@ -71,8 +71,8 @@ export const createBrowserSystem = async ({
   }
 
   const importMethod = browserSystem.import
-  browserSystem.import = function(specifier) {
-    return importMethod.call(this, specifier).catch((error) => {
+  browserSystem.import = function(specifier, importer) {
+    return importMethod.call(this, specifier, importer).catch((error) => {
       if (!error) return Promise.reject(error)
       if (error.code) return Promise.reject(error)
 

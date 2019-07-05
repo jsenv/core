@@ -32,7 +32,9 @@ export const bundleWithBalancing = async ({
 }) => {
   const { logTrace } = createLogger({ logLevel })
 
-  const dir = pathnameToOperatingSystemPath(`${projectPathname}${bundleIntoRelativePath}`)
+  const dir = pathnameToOperatingSystemPath(
+    `${projectPathname}${bundleIntoRelativePath}/${compileId}`,
+  )
   specifierMap = {
     ...specifierMap,
     ...computeSpecifierMap(),
