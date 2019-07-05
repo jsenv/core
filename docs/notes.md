@@ -1,6 +1,14 @@
 ## TODO
 
-- write documentation
+- current bundling approach is failing. see chromium launcher now failing
+  because it tries to find /node_modules/@jsenv/core/importMap.json
+  instead of /importMap.json because every node module '/' is scoped per node module.
+  As soon as we try to do '/' inside '/node_modules/@jsenv/core'
+  we resolve to '/node_modules/@jsenv/core/importMap.json'
+  it needs to be fixed.
+  Maybe /importMap.json is the only thing we want
+  to get relative to the project and not the module
+  so we should just add a notation for that or something
 - nothing else :)
 
 ## To keep in mind
@@ -9,9 +17,6 @@
   https://github.com/systemjs/systemjs/issues/1924 and https://github.com/systemjs/systemjs/pull/1925.
 - Ideally we should not keep our own babel-plugin-transform-modules-systemjs version: https://github.com/babel/babel/issues/9426
 - externalize logger into @dmail/logger
-- executionDescription renamed executionMap
-  testDescription renamed testExecutionMap
-  coverDescription renamed coverMap
 - Create @jsenv/firefox-launcher because it would be cool
   to be able to test against firefox and puppeteer-firefox should help a lot
 - safari-launcher, opera-launcher would be great

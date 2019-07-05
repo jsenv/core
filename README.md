@@ -6,6 +6,8 @@
 
 > Collection of developments tools providing a unified workflow to write JavaScript for the web, node.js or both at the same time. jsenv is designed to be reusable on different project.
 
+WARNING: latest npm version is failing. 5.70.0 is safe.
+
 ## Introduction
 
 `jsenv-core` is the entry point where you can find most of the code and the documentation.<br />
