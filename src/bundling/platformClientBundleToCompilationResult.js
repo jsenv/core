@@ -181,8 +181,19 @@ const rollupSourcemapToDependencyMap = ({
       // this could be async but it's ok for now
       // making it async could be harder than it seems
       // because sourcesContent must be in sync with sources
-      const buffer = readFileSync(sourcePath)
-      dependencyContent = String(buffer)
+      try {
+        const buffer = readFileSync(sourcePath)
+        dependencyContent = String(buffer)
+      } catch (e) {
+        if (e && e.code === "ENOENT") {
+          throw createSourceNotFoundError({
+            source: sourceRelativePath,
+            sourcePath,
+            projectPathname,
+          })
+        }
+        throw e
+      }
     } else {
       dependencyContent = rollupSourcemap.sourcesContent[index]
     }
@@ -192,6 +203,12 @@ const rollupSourcemapToDependencyMap = ({
 
   return dependencyMap
 }
+
+const createSourceNotFoundError = ({ source, sourcePath, projectPathname }) =>
+  new Error(`a source file cannot be found.
+source: ${source}
+source path: ${sourcePath}
+project path: ${pathnameToOperatingSystemPath(projectPathname)}`)
 
 const createSourceOutsideProjectError = ({ source, sourcePath, projectPathname }) =>
   new Error(`a source is not inside project
