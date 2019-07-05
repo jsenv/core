@@ -28,7 +28,7 @@
       "program": "${workspaceFolder}/script/run-node/run-node.js",
       "args": ["${relativeFile}"],
       "autoAttachChildProcesses": true,
-      "sourceMaps": true,
+      "sourceMaps": false,
       "sourceMapPathOverrides": {
         "/*": "${workspaceFolder}/*"
       },
