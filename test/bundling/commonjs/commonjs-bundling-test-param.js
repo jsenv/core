@@ -6,6 +6,7 @@ export const COMMONJS_BUNDLING_TEST_GENERATE_PARAM = {
   babelPluginMap: testBabelPluginMap,
   balancerTemplateRelativePath: "/src/bundling/commonjs/commonjs-balancer-template.js",
   platformGroupResolverRelativePath: "/src/platform-group-resolver/index.js",
+  globalThisHelperRelativePath: "/src/bundling/jsenv-rollup-plugin/global-this.js",
   logLevel: "off",
   throwUnhandled: false,
 }

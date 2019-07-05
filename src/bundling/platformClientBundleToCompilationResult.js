@@ -13,7 +13,7 @@ import { writeOrUpdateSourceMappingURL } from "../source-mapping-url.js"
 export const platformClientBundleToCompilationResult = ({
   projectPathname,
   compileIntoRelativePath,
-  specifierDynamicMap,
+  relativePathAbstractArray,
   entryRelativePath,
   sourcemapAssetPath,
   sourcemapPath = sourcemapAssetPath,
@@ -27,7 +27,7 @@ export const platformClientBundleToCompilationResult = ({
     projectPathname,
     compileIntoRelativePath,
     entryRelativePath,
-    specifierDynamicMap,
+    relativePathAbstractArray,
   })
 
   const sources = mainSourcemap.sources
@@ -42,7 +42,7 @@ export const platformClientBundleToCompilationResult = ({
       projectPathname,
       compileIntoRelativePath,
       entryRelativePath,
-      specifierDynamicMap,
+      relativePathAbstractArray,
     })
     sources.push(...chunkSourcemap.sources) // we should avod duplication I guess
     sourcesContent.push(...chunkSourcemap.sourcesContent) // same here, avoid duplication
@@ -68,7 +68,7 @@ const rollupSourcemapToCompilationSourcemap = ({
   projectPathname,
   compileIntoRelativePath,
   entryRelativePath,
-  specifierDynamicMap,
+  relativePathAbstractArray,
 }) => {
   const sources = []
   const sourcesContent = []
@@ -86,7 +86,7 @@ const rollupSourcemapToCompilationSourcemap = ({
       ? windowsPathToPathnameWithoutDriveLetter(sourcePath)
       : sourcePath
 
-    if (sourceSpecifier in specifierDynamicMap) {
+    if (relativePathAbstractArray.includes(sourceSpecifier)) {
       return
     }
 
@@ -98,7 +98,7 @@ project path: ${pathnameToOperatingSystemPath(projectPathname)}`)
     }
 
     const sourceRelativePath = pathnameToRelativePathname(sourcePathname, projectPathname)
-    if (sourceRelativePath in specifierDynamicMap) {
+    if (relativePathAbstractArray.includes(sourceRelativePath)) {
       return
     }
 

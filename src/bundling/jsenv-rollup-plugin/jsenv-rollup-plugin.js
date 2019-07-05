@@ -18,16 +18,8 @@ import {
 } from "../../compiled-js-service/transpiler.js"
 import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { createLogger } from "../../logger.js"
-import { computeBabelPluginMapSubset } from "./computeBabelPluginMapSubset.js"
-import { createBundleBabelPluginMap } from "./create-bundle-babel-plugin-map.js"
-import { JSENV_PATHNAME } from "../../JSENV_PATH.js"
 
 const { minify: minifyCode } = import.meta.require("terser")
-const { buildExternalHelpers } = import.meta.require("@babel/core")
-
-const BABEL_HELPERS_FACADE_PATH = "/.jsenv/babelHelpers.js"
-
-export const GLOBAL_THIS_FACADE_PATH = "/.jsenv/helpers/global-this.js"
 
 export const createJsenvRollupPlugin = ({
   cancellationToken,
@@ -37,29 +29,13 @@ export const createJsenvRollupPlugin = ({
   specifierMap,
   specifierDynamicMap,
   origin = "http://example.com",
-
-  featureNameArray,
-  babelPluginMap: allBabelPluginMap,
+  babelPluginMap,
   minify,
   format,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
   dir,
   logLevel,
 }) => {
-  specifierMap = {
-    ...{
-      [GLOBAL_THIS_FACADE_PATH]:
-        "/node_modules/@jsenv/core/src/bundling/jsenv-rollup-plugin/global-this.js",
-    },
-    ...specifierMap,
-  }
-  specifierDynamicMap = {
-    ...{
-      [BABEL_HELPERS_FACADE_PATH]: () => buildExternalHelpers(undefined, "module"),
-    },
-    ...specifierDynamicMap,
-  }
-
   const { log } = createLogger({ logLevel })
 
   const projectImportMap = readProjectImportMap({
@@ -68,42 +44,10 @@ export const createJsenvRollupPlugin = ({
   })
   const importMap = projectImportMap
 
-  // it does not work inside launch-chromium
-  // because in that case JSENV_PATHNAME is launch-chromium
-  // and the path to global this may be either
-  // inside node_modules/@jsenv/core/path
-  // or higher in the hierarchy
-
-  /**
-   * donc dans le cas ou c'est chromium launcher qui
-   * demande a generer un bundle rollup
-   * ça fonctionne pour lui directement
-   * mais si chromium-launcher est lui meme executer
-   * depuis sa version bundle avec rollup
-   * alors la il chromium launcher se fait passer pour jsenv
-   * du point de vue de cette partie du code
-   * a reflechir
-   */
-  const globalThisFilesystemPath = pathnameToOperatingSystemPath(
-    `${JSENV_PATHNAME}/src/bundling/jsenv-rollup-plugin/global-this.js`,
-  )
-  const babelPluginMap = {
-    ...computeBabelPluginMapSubset({
-      babelPluginMap: allBabelPluginMap,
-      featureNameArray,
-    }),
-    ...createBundleBabelPluginMap({
-      projectPathname,
-      format,
-      globalThisFacadePath: GLOBAL_THIS_FACADE_PATH,
-      globalThisFilesystemPath,
-      babelHelpersFacadePath: BABEL_HELPERS_FACADE_PATH,
-    }),
-  }
-
   // https://github.com/babel/babel/blob/master/packages/babel-core/src/tools/build-external-helpers.js#L1
 
-  const specifierDynamicMapResolutionMap = {}
+  const idSkipTransformArray = []
+  const idLoadMap = {}
 
   const jsenvRollupPlugin = {
     name: "jsenv",
@@ -118,7 +62,7 @@ export const createJsenvRollupPlugin = ({
         }
 
         const osPath = pathnameToOperatingSystemPath(`${projectPathname}${specifier}`)
-        specifierDynamicMapResolutionMap[osPath] = specifier
+        idLoadMap[osPath] = specifierDynamicMapping
         return osPath
       }
 
@@ -182,8 +126,13 @@ export const createJsenvRollupPlugin = ({
     // },
 
     load: async (id) => {
-      if (id in specifierDynamicMapResolutionMap) {
-        return specifierDynamicMap[specifierDynamicMapResolutionMap[id]]()
+      if (id in idLoadMap) {
+        const returnValue = idLoadMap[id]()
+        if (typeof returnValue === "string") return returnValue
+        if (returnValue.skipTransform) {
+          idSkipTransformArray.push(id)
+        }
+        return returnValue.code
       }
 
       const hasSheme = isWindowsPath(id) ? false : Boolean(hrefToScheme(id))
@@ -207,13 +156,10 @@ export const createJsenvRollupPlugin = ({
     },
 
     transform: async (source, id) => {
-      // babel helper must not be retransformed
-      if (
-        id in specifierDynamicMapResolutionMap &&
-        specifierDynamicMapResolutionMap[id] === BABEL_HELPERS_FACADE_PATH
-      ) {
+      if (idSkipTransformArray.includes(id)) {
         return null
       }
+
       if (id.endsWith(".json")) {
         return {
           code: `export default ${source}`,
@@ -297,13 +243,13 @@ export const createJsenvRollupPlugin = ({
     return ""
   }
 
-  const ensureResponseSuccess = ({ url, status }) => {
-    if (status < 200 || status > 299) {
-      throw new Error(`unexpected response status for ${url}, got ${status}`)
-    }
-  }
-
   return jsenvRollupPlugin
+}
+
+const ensureResponseSuccess = ({ url, status }) => {
+  if (status < 200 || status > 299) {
+    throw new Error(`unexpected response status for ${url}, got ${status}`)
+  }
 }
 
 const createImporterOutsideProjectError = ({ importer, projectPathname }) =>

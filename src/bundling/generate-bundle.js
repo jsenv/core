@@ -5,12 +5,12 @@ import {
 } from "../cancellationHelper.js"
 import { generateGroupMap } from "../group-map/index.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
-import { bundleWithRollup } from "./bundleWithRollup.js"
-import { computeRollupOptionsForBalancer } from "./computeRollupOptionsForBalancer.js"
-import { computeRollupOptionsWithBalancing } from "./computeRollupOptionsWithBalancing.js"
-import { computeRollupOptionsWithoutBalancing } from "./computeRollupOptionsWithoutBalancing.js"
+import { bundleWithoutBalancing } from "./bundle-without-balancing.js"
+import { bundleWithBalancing } from "./bundle-with-balancing.js"
+import { bundleBalancer } from "./bundle-balancer.js"
 import {
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
+  DEFAULT_GLOBAL_THIS_HELPER_RELATIVE_PATH,
   DEFAULT_PLATFORM_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_ENTRY_POINT_MAP,
   DEFAULT_NATIVE_MODULE_PREDICATE,
@@ -23,8 +23,9 @@ export const generateBundle = ({
   bundleIntoRelativePath,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   importDefaultExtension,
+  globalThisHelperRelativePath = DEFAULT_GLOBAL_THIS_HELPER_RELATIVE_PATH,
   specifierMap,
-  specifierDynamicMap,
+  dynamicSpecifierMap,
   nativeModulePredicate = DEFAULT_NATIVE_MODULE_PREDICATE,
   entryPointMap = DEFAULT_ENTRY_POINT_MAP,
   babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
@@ -58,25 +59,23 @@ export const generateBundle = ({
     const cancellationToken = createProcessInterruptionCancellationToken()
 
     if (compileGroupCount === 1) {
-      return await bundleWithRollup({
+      return bundleWithoutBalancing({
         cancellationToken,
+        projectPathname,
+        bundleIntoRelativePath,
+        importMapRelativePath,
+        importDefaultExtension,
+        globalThisHelperRelativePath,
+        specifierMap,
+        dynamicSpecifierMap,
+        nativeModulePredicate,
+        entryPointMap,
+        babelPluginMap,
+        minify,
+        logLevel,
+        format,
+        formatOutputOptions,
         writeOnFileSystem,
-        ...computeRollupOptionsWithoutBalancing({
-          cancellationToken,
-          projectPathname,
-          bundleIntoRelativePath,
-          importMapRelativePath,
-          importDefaultExtension,
-          specifierMap,
-          specifierDynamicMap,
-          nativeModulePredicate,
-          entryPointMap,
-          babelPluginMap,
-          minify,
-          logLevel,
-          format,
-          formatOutputOptions,
-        }),
       })
     }
 
@@ -100,8 +99,9 @@ compileGroupCount: ${compileGroupCount}`)
         bundleIntoRelativePath,
         importMapRelativePath,
         importDefaultExtension,
+        globalThisHelperRelativePath,
         specifierMap,
-        specifierDynamicMap,
+        dynamicSpecifierMap,
         nativeModulePredicate,
         entryPointMap,
         babelPluginMap,
@@ -118,8 +118,9 @@ compileGroupCount: ${compileGroupCount}`)
         bundleIntoRelativePath,
         importMapRelativePath,
         importDefaultExtension,
+        globalThisHelperRelativePath,
         specifierMap,
-        specifierDynamicMap,
+        dynamicSpecifierMap,
         nativeModulePredicate,
         entryPointMap,
         babelPluginMap,
@@ -149,8 +150,9 @@ const generateEntryPointsFolders = async ({
   bundleIntoRelativePath,
   importMapRelativePath,
   importDefaultExtension,
+  globalThisHelperRelativePath,
   specifierMap,
-  specifierDynamicMap,
+  dynamicSpecifierMap,
   nativeModulePredicate,
   entryPointMap,
   babelPluginMap,
@@ -160,34 +162,31 @@ const generateEntryPointsFolders = async ({
   format,
   formatOutputOptions,
   groupMap,
-}) => {
-  await Promise.all(
-    Object.keys(groupMap).map((compileId) => {
-      return bundleWithRollup({
+}) =>
+  Promise.all(
+    Object.keys(groupMap).map(async (compileId) =>
+      bundleWithBalancing({
         cancellationToken,
+        projectPathname,
+        bundleIntoRelativePath,
+        importMapRelativePath,
+        importDefaultExtension,
+        globalThisHelperRelativePath,
+        specifierMap,
+        dynamicSpecifierMap,
+        nativeModulePredicate,
+        entryPointMap,
+        babelPluginMap,
+        minify,
+        logLevel,
+        format,
+        formatOutputOptions,
+        groupMap,
+        compileId,
         writeOnFileSystem,
-        ...computeRollupOptionsWithBalancing({
-          cancellationToken,
-          projectPathname,
-          bundleIntoRelativePath,
-          importMapRelativePath,
-          importDefaultExtension,
-          specifierMap,
-          specifierDynamicMap,
-          nativeModulePredicate,
-          entryPointMap,
-          babelPluginMap,
-          minify,
-          logLevel,
-          format,
-          formatOutputOptions,
-          groupMap,
-          compileId,
-        }),
-      })
-    }),
+      }),
+    ),
   )
-}
 
 const generateEntryPointsBalancerFiles = ({
   cancellationToken,
@@ -195,8 +194,9 @@ const generateEntryPointsBalancerFiles = ({
   bundleIntoRelativePath,
   importMapRelativePath,
   importDefaultExtension,
+  globalThisHelperRelativePath,
   specifierMap,
-  specifierDynamicMap,
+  dynamicSpecifierMap,
   nativeModulePredicate,
   entryPointMap,
   babelPluginMap,
@@ -208,34 +208,30 @@ const generateEntryPointsBalancerFiles = ({
   balancerDataClientPathname,
   platformGroupResolverRelativePath,
   groupMap,
-}) => {
-  return Promise.all(
-    Object.keys(entryPointMap).map((entryPointName) => {
-      return Promise.all([
-        bundleWithRollup({
-          cancellationToken,
-          writeOnFileSystem,
-          ...computeRollupOptionsForBalancer({
-            cancellationToken,
-            projectPathname,
-            bundleIntoRelativePath,
-            importMapRelativePath,
-            importDefaultExtension,
-            specifierMap,
-            specifierDynamicMap,
-            nativeModulePredicate,
-            babelPluginMap,
-            entryPointName,
-            minify,
-            logLevel,
-            format,
-            balancerTemplateRelativePath,
-            balancerDataClientPathname,
-            platformGroupResolverRelativePath,
-            groupMap,
-          }),
-        }),
-      ])
-    }),
+}) =>
+  Promise.all(
+    Object.keys(entryPointMap).map(async (entryPointName) =>
+      bundleBalancer({
+        cancellationToken,
+        projectPathname,
+        bundleIntoRelativePath,
+        importMapRelativePath,
+        importDefaultExtension,
+        globalThisHelperRelativePath,
+        specifierMap,
+        dynamicSpecifierMap,
+        nativeModulePredicate,
+        entryPointMap: {
+          [entryPointName]: balancerTemplateRelativePath,
+        },
+        babelPluginMap,
+        minify,
+        logLevel,
+        format,
+        balancerDataClientPathname,
+        platformGroupResolverRelativePath,
+        groupMap,
+        writeOnFileSystem,
+      }),
+    ),
   )
-}

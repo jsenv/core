@@ -13,6 +13,7 @@ export const serveNodePlatform = ({
   importDefaultExtension,
   nodePlatformRelativePath,
   nodeGroupResolverRelativePath,
+  globalThisHelperRelativePath,
   babelPluginMap,
   groupMap,
   // projectFileRequestedCallback,
@@ -31,9 +32,7 @@ export const serveNodePlatform = ({
     projectPathname,
     compileIntoRelativePath,
     importMapRelativePath,
-    babelPluginMap,
-    sourceRelativePath: nodePlatformRelativePath,
-    compileRelativePath: NODE_PLATFORM_CLIENT_PATHNAME,
+    globalThisHelperRelativePath,
     specifierMap: {
       [NODE_GROUP_RESOLVER_CLIENT_PATHNAME]: nodeGroupResolverRelativePath,
       [IMPORT_MAP_CLIENT_PATHNAME]: importMapRelativePath,
@@ -46,6 +45,9 @@ export const serveNodePlatform = ({
           importDefaultExtension,
         }),
     },
+    sourceRelativePath: nodePlatformRelativePath,
+    compileRelativePath: NODE_PLATFORM_CLIENT_PATHNAME,
+    babelPluginMap,
     headers,
   })
 }

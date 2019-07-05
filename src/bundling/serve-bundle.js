@@ -8,6 +8,7 @@ export const serveBundle = async ({
   projectPathname,
   compileIntoRelativePath,
   importMapRelativePath,
+  globalThisHelperRelativePath,
   specifierMap,
   specifierDynamicMap,
   sourceRelativePath,
@@ -35,14 +36,11 @@ export const serveBundle = async ({
         [entryName]: sourceRelativePath,
       }
 
-      const specifierDynamicMap = {
-        ...specifierDynamicMap,
-      }
-
-      const bundle = await generateBundle({
+      const { bundle, relativePathAbstractArray } = await generateBundle({
         projectPath: pathnameToOperatingSystemPath(projectPathname),
         bundleIntoRelativePath,
         importMapRelativePath,
+        globalThisHelperRelativePath,
         specifierMap,
         specifierDynamicMap,
         entryPointMap,
@@ -54,17 +52,11 @@ export const serveBundle = async ({
         format,
         formatOutputOptions,
       })
-      // TODO: here specifierDynamicMap
-      // does not contains everything because
-      // deep inside generateBundle
-      // specifierDynamicMap will be augmented
-      // the fix should be that generateBundle should return some data
-      // alongside the rollup bundle
 
       return platformClientBundleToCompilationResult({
         projectPathname,
         compileIntoRelativePath,
-        specifierDynamicMap,
+        relativePathAbstractArray,
         entryRelativePath: sourceRelativePath,
         sourcemapPath,
         sourcemapAssetPath: computeSourcemapAssetPath(compileRelativePath),

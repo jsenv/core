@@ -3,9 +3,10 @@ import { testBabelPluginMap } from "../../testBabelPluginMap.js"
 
 export const SYSTEMJS_BUNDLING_TEST_GENERATE_PARAM = {
   projectPath: JSENV_PATH,
-  babelPluginMap: testBabelPluginMap,
-  test: "/src/bundling/systemjs/systemjs-balancer-template.js",
   platformGroupResolverRelativePath: "/src/platform-group-resolver/index.js",
+  balancerTemplateRelativePath: "/src/bundling/systemjs/systemjs-balancer-template.js",
+  globalThisHelperRelativePath: "/src/bundling/jsenv-rollup-plugin/global-this.js",
+  babelPluginMap: testBabelPluginMap,
   logLevel: "off",
   throwUnhandled: false,
 }

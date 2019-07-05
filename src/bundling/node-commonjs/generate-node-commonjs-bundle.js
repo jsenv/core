@@ -9,10 +9,12 @@ export const generateNodeCommonJsBundle = async ({
   projectPathname,
   compileIntoRelativePath,
   importMapRelativePath,
+  globalThisHelperRelativePath,
+  specifierMap,
+  dynamicSpecifierMap,
   sourceRelativePath,
   compileRelativePath,
   sourcemapPath,
-  inlineSpecifierMap = {},
   babelPluginMap,
   logLevel,
   compileGroupCount,
@@ -34,12 +36,14 @@ export const generateNodeCommonJsBundle = async ({
         [entryName]: sourceRelativePath,
       }
 
-      const bundle = await generateCommonJsBundle({
+      const { bundle, relativePathAbstractArray } = await generateCommonJsBundle({
         projectPath: pathnameToOperatingSystemPath(projectPathname),
         bundleIntoRelativePath,
         importMapRelativePath,
+        globalThisHelperRelativePath,
+        specifierMap,
+        dynamicSpecifierMap,
         entryPointMap,
-        inlineSpecifierMap,
         babelPluginMap,
         throwUnhandled: false,
         writeOnFileSystem: false,
@@ -53,7 +57,7 @@ export const generateNodeCommonJsBundle = async ({
       return platformClientBundleToCompilationResult({
         projectPathname,
         compileIntoRelativePath,
-        inlineSpecifierMap,
+        relativePathAbstractArray,
         entryRelativePath: sourceRelativePath,
         sourcemapPath,
         sourcemapAssetPath: computeSourcemapAssetPath(compileRelativePath),

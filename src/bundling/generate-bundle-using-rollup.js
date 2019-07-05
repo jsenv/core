@@ -2,7 +2,7 @@ import { createOperation } from "@dmail/cancellation"
 
 const { rollup } = import.meta.require("rollup")
 
-export const bundleWithRollup = async ({
+export const generateBundleUsingRollup = async ({
   cancellationToken,
   rollupParseOptions,
   rollupGenerateOptions,

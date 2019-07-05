@@ -11,6 +11,8 @@ export const createBundleBabelPluginMap = ({
 }) => {
   const bundleBabelPluginMap = {}
 
+  // disable global-this forced import for now
+  // eslint-disable-next-line no-unused-vars
   const forcedImportsBabelPlugin = createForceImportsBabelPlugin({
     projectPathname,
     sideEffectImportArray: [
@@ -20,7 +22,7 @@ export const createBundleBabelPluginMap = ({
       },
     ],
   })
-  bundleBabelPluginMap["force-imports"] = [forcedImportsBabelPlugin]
+  // bundleBabelPluginMap["force-imports"] = [forcedImportsBabelPlugin]
 
   const replaceBabelHelperByNamedImportsBabelPlugin = createReplaceBabelHelperByNamedImportsBabelPlugin(
     {

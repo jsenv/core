@@ -34,6 +34,7 @@ export const cover = async ({
   nodePlatformRelativePath,
   browserGroupResolverRelativePath,
   nodeGroupResolverRelativePath,
+  globalThisHelperRelativePath,
   coverageRelativePath = DEFAULT_COVERAGE_RELATIVE_PATH,
   // coverDescription could be deduced from passing
   // an entryPointMap and collecting all dependencies
@@ -104,6 +105,7 @@ export const cover = async ({
           nodePlatformRelativePath,
           browserGroupResolverRelativePath,
           nodeGroupResolverRelativePath,
+          globalThisHelperRelativePath,
           babelPluginMap: babelPluginMapWithInstrumentation,
           compileGroupCount,
           executeDescription,

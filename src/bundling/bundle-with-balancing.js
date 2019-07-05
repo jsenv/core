@@ -1,30 +1,52 @@
+import { generateBundleUsingRollup } from "./generate-bundle-using-rollup.js"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { createImportFromGlobalRollupPlugin } from "./import-from-global-rollup-plugin/index.js"
 import { createJsenvRollupPlugin } from "./jsenv-rollup-plugin/index.js"
 import { createLogger } from "../logger.js"
+import { formatToRollupFormat } from "./format-to-rollup-format.js"
+import {
+  computeSpecifierMap,
+  computeSpecifierDynamicMap,
+  computeBabelPluginMap,
+} from "./jsenv-rollup-plugin/compute-options.js"
 
-export const computeRollupOptionsWithoutBalancing = ({
+export const bundleWithBalancing = async ({
   cancellationToken,
   projectPathname,
   bundleIntoRelativePath,
   importMapRelativePath,
   importDefaultExtension,
+  globalThisHelperRelativePath,
   specifierMap,
   specifierDynamicMap,
   nativeModulePredicate,
   entryPointMap,
   babelPluginMap,
-  format,
-  formatOutputOptions,
   minify,
   logLevel,
+  format,
+  formatOutputOptions,
+  groupMap,
+  compileId,
+  writeOnFileSystem,
 }) => {
   const { logTrace } = createLogger({ logLevel })
 
   const dir = pathnameToOperatingSystemPath(`${projectPathname}${bundleIntoRelativePath}`)
-
-  const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
-    platformGlobalName: "globalThis",
+  specifierMap = {
+    ...specifierMap,
+    ...computeSpecifierMap(),
+  }
+  specifierDynamicMap = {
+    ...specifierDynamicMap,
+    ...computeSpecifierDynamicMap(),
+  }
+  babelPluginMap = computeBabelPluginMap({
+    projectPathname,
+    format,
+    babelPluginMap,
+    featureNameArray: groupMap[compileId].incompatibleNameArray,
+    globalThisHelperRelativePath,
   })
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({
@@ -35,48 +57,41 @@ export const computeRollupOptionsWithoutBalancing = ({
     specifierMap,
     specifierDynamicMap,
     dir,
-    featureNameArray: Object.keys(babelPluginMap),
     babelPluginMap,
     minify,
     format,
     logLevel,
   })
 
-  logTrace(`
-bundle entry points without balancing.
-format: ${format}
-entry point names: ${Object.keys(entryPointMap)}
-dir: ${dir}
-minify: ${minify}
-`)
+  const importFromGlobalRollupPlugin = createImportFromGlobalRollupPlugin({
+    platformGlobalName: "globalThis",
+  })
 
-  return {
+  logTrace(`
+  bundle entry points with balancing.
+  format: ${format}
+  compileId: ${compileId}
+  entryPointArray: ${Object.keys(entryPointMap)}
+  dir: ${dir}
+  minify: ${minify}
+  `)
+
+  const { bundle } = await generateBundleUsingRollup({
+    cancellationToken,
+    writeOnFileSystem,
     rollupParseOptions: {
       input: entryPointMap,
       plugins: [importFromGlobalRollupPlugin, jsenvRollupPlugin],
       external: (id) => nativeModulePredicate(id),
     },
     rollupGenerateOptions: {
-      // https://rollupjs.org/guide/en#output-dir
       dir,
-      // https://rollupjs.org/guide/en#output-format
       format: formatToRollupFormat(format),
-      // entryFileNames: `./[name].js`,
-      // https://rollupjs.org/guide/en#output-sourcemap
       sourcemap: true,
-      // we could exclude them
-      // but it's better to put them directly
-      // in case source files are not reachable
-      // for whatever reason
-      sourcemapExcludeSources: true,
+      sourceMapExcludeSources: true,
       ...formatOutputOptions,
     },
-  }
-}
+  })
 
-const formatToRollupFormat = (format) => {
-  if (format === "global") return "iife"
-  if (format === "commonjs") return "cjs"
-  if (format === "systemjs") return "system"
-  throw new Error(`unexpected format, got ${format}`)
+  return { bundle }
 }

@@ -13,8 +13,7 @@ export const serveBrowserPlatform = async ({
   importDefaultExtension,
   browserPlatformRelativePath,
   browserGroupResolverRelativePath,
-  specifierMap,
-  specifierDynamicMap,
+  globalThisHelperRelativePath,
   babelPluginMap,
   groupMap,
   // projectFileRequestedCallback,
@@ -30,13 +29,14 @@ export const serveBrowserPlatform = async ({
 
   return serveBrowserGlobalBundle({
     projectPathname,
-    importMapRelativePath,
     compileIntoRelativePath,
-    babelPluginMap,
-    compileRelativePath: ressource,
-    sourceRelativePath: browserPlatformRelativePath,
+    importMapRelativePath,
+    globalThisHelperRelativePath,
+    specifierMap: {
+      [BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME]: browserGroupResolverRelativePath,
+      [IMPORT_MAP_CLIENT_PATHNAME]: importMapRelativePath,
+    },
     specifierDynamicMap: {
-      ...specifierDynamicMap,
       [BROWSER_PLATFORM_DATA_CLIENT_PATHNAME]: () =>
         generateBrowserPlatformDataSource({
           compileIntoRelativePath,
@@ -44,11 +44,9 @@ export const serveBrowserPlatform = async ({
           importDefaultExtension,
         }),
     },
-    specifierMap: {
-      ...specifierMap,
-      [BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME]: browserGroupResolverRelativePath,
-      [IMPORT_MAP_CLIENT_PATHNAME]: importMapRelativePath,
-    },
+    compileRelativePath: ressource,
+    sourceRelativePath: browserPlatformRelativePath,
+    babelPluginMap,
     headers,
   })
 }

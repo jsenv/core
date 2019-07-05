@@ -6,6 +6,9 @@ const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 export const DEFAULT_IMPORT_MAP_RELATIVE_PATH = "/importMap.json"
 
+export const DEFAULT_GLOBAL_THIS_HELPER_RELATIVE_PATH =
+  "/node_modules/@jsenv/core/src/bundling/jsenv-rollup-plugin/global-this.js"
+
 export const DEFAULT_ENTRY_POINT_MAP = {
   main: "index.js",
 }

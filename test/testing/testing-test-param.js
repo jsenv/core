@@ -8,6 +8,7 @@ export const TESTING_TEST_PARAM = {
   nodePlatformRelativePath: "/src/node-platform-service/node-platform/index.js",
   browserGroupResolverRelativePath: "/src/browser-group-resolver/index.js",
   nodeGroupResolverRelativePath: "/src/node-group-resolver/index.js",
+  globalThisHelperRelativePath: "/src/bundling/jsenv-rollup-plugin/global-this.js",
   executionLogLevel: "off",
   collectNamespace: true,
   measureDuration: false,
