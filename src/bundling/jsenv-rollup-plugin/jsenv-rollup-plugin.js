@@ -74,6 +74,17 @@ export const createJsenvRollupPlugin = ({
           )
         }
         specifier = specifierMapping
+
+        // disable remapping when specifier starts with file://
+        // this is the only way for now to explicitely disable remapping
+        // to target a specific file on filesystem
+        // also remove file:// to keep only the os path
+        // otherwise windows and rollup will not be happy when
+        // searching the files
+        if (specifier.startsWith("file:///")) {
+          specifier = specifier.slice("file://".length)
+          return pathnameToOperatingSystemPath(specifier)
+        }
       }
 
       if (!importer) {
@@ -104,12 +115,7 @@ export const createJsenvRollupPlugin = ({
       const id = resolvePath({
         specifier,
         importer: importerHref,
-        importMap:
-          // disable remapping when specifier is absolute and starts with
-          // file://
-          // this is the only way for now to explicitely disable remapping
-          // to target a specific file on filesystem
-          specifier.startsWith("file:///") ? null : importMap,
+        importMap,
         defaultExtension: importDefaultExtension,
       })
 
