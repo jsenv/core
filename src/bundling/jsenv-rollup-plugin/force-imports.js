@@ -1,15 +1,15 @@
 const { addSideEffect } = import.meta.require("@babel/helper-module-imports")
 
-export const createForceImportsBabelPlugin = ({ sideEffectImportArray }) => {
+export const createForceImportsBabelPlugin = ({ sideEffectImportRelativePathArray }) => {
   return {
     pre: (file) => {
       const { opts } = file.path.hub.file
-      const isFileItself = sideEffectImportArray.some(
-        ({ filesystemPath }) => filesystemPath === opts.filename,
+      const isFileItself = sideEffectImportRelativePathArray.some(
+        (relativePath) => relativePath.slice(1) === opts.filenameRelative,
       )
       if (isFileItself) return
-      sideEffectImportArray.forEach(({ facadePath }) => {
-        addSideEffect(file.path, facadePath)
+      sideEffectImportRelativePathArray.forEach((relativePath) => {
+        addSideEffect(file.path, relativePath)
       })
     },
   }

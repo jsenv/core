@@ -1,7 +1,5 @@
-import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { computeBabelPluginMapSubset } from "./computeBabelPluginMapSubset.js"
 import { createBundleBabelPluginMap } from "./create-bundle-babel-plugin-map.js"
-import { JSENV_PATHNAME } from "../../JSENV_PATH.js"
 
 const { buildExternalHelpers } = import.meta.require("@babel/core")
 
@@ -28,22 +26,6 @@ export const computeBabelPluginMap = ({
   featureNameArray,
   globalThisHelperRelativePath,
 }) => {
-  /**
-   * donc dans le cas ou c'est chromium launcher qui
-   * demande a generer un bundle rollup
-   * ça fonctionne pour lui directement
-   * mais si chromium-launcher est lui meme éxecuté
-   * depuis sa version bundle avec rollup
-   * alors la il chromium launcher se fait passer pour jsenv
-   * du point de vue de cette partie du code
-   * a reflechir
-   * pour avoir le vrai filesystem path faudrait résoudre
-   * le vrai chemin vers ce fichier
-   */
-  const globalThisFilesystemPath = pathnameToOperatingSystemPath(
-    `${JSENV_PATHNAME}${globalThisHelperRelativePath}`,
-  )
-
   return {
     ...computeBabelPluginMapSubset({
       babelPluginMap,
@@ -52,8 +34,7 @@ export const computeBabelPluginMap = ({
     ...createBundleBabelPluginMap({
       projectPathname,
       format,
-      globalThisFacadePath: globalThisHelperRelativePath,
-      globalThisFilesystemPath,
+      globalThisHelperRelativePath,
       babelHelpersFacadePath: BABEL_HELPERS_FACADE_PATH,
     }),
   }

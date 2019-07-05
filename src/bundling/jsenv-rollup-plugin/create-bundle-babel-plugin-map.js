@@ -5,24 +5,16 @@ import { createForceImportsBabelPlugin } from "./force-imports.js"
 export const createBundleBabelPluginMap = ({
   projectPathname,
   format,
-  globalThisFacadePath,
-  globalThisFilesystemPath,
+  globalThisHelperRelativePath,
   babelHelpersFacadePath,
 }) => {
   const bundleBabelPluginMap = {}
 
-  // disable global-this forced import for now
-  // eslint-disable-next-line no-unused-vars
   const forcedImportsBabelPlugin = createForceImportsBabelPlugin({
     projectPathname,
-    sideEffectImportArray: [
-      {
-        facadePath: globalThisFacadePath,
-        filesystemPath: globalThisFilesystemPath,
-      },
-    ],
+    sideEffectImportRelativePathArray: [globalThisHelperRelativePath],
   })
-  // bundleBabelPluginMap["force-imports"] = [forcedImportsBabelPlugin]
+  bundleBabelPluginMap["force-imports"] = [forcedImportsBabelPlugin]
 
   const replaceBabelHelperByNamedImportsBabelPlugin = createReplaceBabelHelperByNamedImportsBabelPlugin(
     {
