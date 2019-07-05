@@ -7,6 +7,7 @@ import { valueInstall } from "../../platform/valueInstall.js"
 import {
   fromFunctionReturningNamespace,
   fromHref,
+  createModuleExecutionError,
 } from "../../platform/registerModuleFrom/index.js"
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
@@ -67,6 +68,23 @@ export const createBrowserSystem = async ({
     const url = fileURL
 
     return { url }
+  }
+
+  const importMethod = browserSystem.import
+  browserSystem.import = function(specifier) {
+    return importMethod.call(this, specifier).catch((error) => {
+      if (!error) return Promise.reject(error)
+      if (error.code) return Promise.reject(error)
+
+      // give some context to the error
+      return Promise.reject(
+        createModuleExecutionError({
+          href: error.id,
+          executionError: error,
+          importerHref: error.pid,
+        }),
+      )
+    })
   }
 
   return browserSystem

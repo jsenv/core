@@ -252,6 +252,8 @@
     // Captial letter = a promise function
     return load = loader[REGISTRY][id] = {
       id: id,
+      // JSENV CHANGE: add load.pid
+      pid: firstParentUrl,
       // importerSetters, the setters functions registered to this dependency
       // we retain this to add more later
       i: importerSetters,
@@ -357,6 +359,9 @@
       }
       catch (err) {
         load.er = err;
+        // JSENV CHANGE: add load.pid on the error
+        err.id = load.id;
+        err.pid = load.pid;
         throw err;
       }
       finally {
