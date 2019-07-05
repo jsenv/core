@@ -104,7 +104,12 @@ export const createJsenvRollupPlugin = ({
       const id = resolvePath({
         specifier,
         importer: importerHref,
-        importMap,
+        importMap:
+          // disable remapping when specifier is absolute and starts with
+          // file://
+          // this is the only way for now to explicitely disable remapping
+          // to target a specific file on filesystem
+          specifier.startsWith("file:///") ? null : importMap,
         defaultExtension: importDefaultExtension,
       })
 
