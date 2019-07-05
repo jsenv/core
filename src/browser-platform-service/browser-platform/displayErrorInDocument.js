@@ -1,27 +1,18 @@
 import { stringToStringWithLink } from "../../stringToStringWithLink.js"
-import { rejectionValueToMeta } from "./rejectionValueToMeta.js"
 
 export const displayErrorInDocument = (error) => {
-  const meta = rejectionValueToMeta(error)
-  const theme = meta.dataTheme || "dark"
-  const hasImportInfo = meta.href && meta.importerHref
-  const hasHrefInfo = meta.href && !meta.importerHref
+  const title = "An error occured"
+  let theme
+  let message
 
-  // eslint-disable-next-line no-nested-ternary
-  const title = hasImportInfo
-    ? createHTMLForErrorWithImportInfo({
-        href: meta.href,
-        importerHref: meta.importerHref,
-      })
-    : hasHrefInfo
-    ? createHTMLForErrorWithHrefInfo({
-        href: meta.href,
-      })
-    : createHTMLForError()
-
-  let message = errorToHTML(meta.error)
-
-  message = message.replace(/\n/g, "\n")
+  if (error && error.code === "MODULE_PARSING_ERROR") {
+    theme = "light"
+    const { parsingError } = error
+    message = errorToHTML(parsingError.messageHMTL || parsingError.message)
+  } else {
+    theme = "dark"
+    message = errorToHTML(error)
+  }
 
   const css = `
     .jsenv-console pre {
@@ -63,20 +54,6 @@ export const displayErrorInDocument = (error) => {
   appendHMTLInside(html, document.body)
 }
 
-const createHTMLForErrorWithImportInfo = ({
-  href,
-  importerHref,
-}) => `error with imported module.<br />
-href: ${convertHrefToLink({ href })}
-imported by: ${convertHrefToLink({ href: importerHref })}`
-
-const createHTMLForErrorWithHrefInfo = ({ href }) => `error with module.<br/>
-href: ${convertHrefToLink({ href })}`
-
-const createHTMLForError = () => `error during execution.`
-
-const convertHrefToLink = ({ href }) => `<a href="${href}">${href}</a>`
-
 const errorToHTML = (error) => {
   let html
 
@@ -88,11 +65,13 @@ const errorToHTML = (error) => {
     html = JSON.stringify(error)
   }
 
-  return stringToStringWithLink(html, {
+  const htmlWithCorrectLineBreaks = html.replace(/\n/g, "\n")
+  const htmlWithLinks = stringToStringWithLink(htmlWithCorrectLineBreaks, {
     transform: (href) => {
       return { href, text: href }
     },
   })
+  return htmlWithLinks
 }
 
 const appendHMTLInside = (html, parentNode) => {
