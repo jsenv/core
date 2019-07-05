@@ -177,7 +177,7 @@ const rollupSourcemapToDependencyMap = ({
     // export default, so we must set back the
     // right file content
     if (sourceRelativePath.endsWith(".json") || !rollupSourcemap.sourcesContent) {
-      const sourcePath = `${projectPathname}${sourceRelativePath}`
+      const sourcePath = pathnameToOperatingSystemPath(`${projectPathname}${sourceRelativePath}`)
       // this could be async but it's ok for now
       // making it async could be harder than it seems
       // because sourcesContent must be in sync with sources
