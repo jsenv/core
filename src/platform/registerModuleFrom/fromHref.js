@@ -1,5 +1,5 @@
 import { createModuleNotFoundError } from "./error/module-not-found-error.js"
-import { createModuleParseError } from "./error/module-parse-error.js"
+import { createModuleParsingError } from "./error/module-parsing-error.js"
 import { createModuleResponseUnsupportedStatusError } from "./error/module-response-unsupported-status-error.js"
 import { createModuleResponseMissingContentTypeHeaderError } from "./error/module-response-missing-content-type-header-error.js"
 import { createModuleResponseUnsupportedContentTypeHeaderError } from "./error/module-response-unsupported-content-type-header-error.js"
@@ -21,15 +21,15 @@ export const fromHref = async ({ href, importerHref, fetchSource, instantiateJav
   }
 
   if (status === 500 && statusText === "parse error") {
-    throw createModuleParseError({ href: realHref, importerHref, parseError: JSON.parse(body) })
+    throw createModuleParsingError({ href: realHref, parsingError: JSON.parse(body), importerHref })
   }
 
   if (status < 200 || status >= 300) {
     throw createModuleResponseUnsupportedStatusError({
       href: realHref,
-      importerHref,
       status,
       statusText,
+      importerHref,
     })
   }
 
@@ -62,7 +62,7 @@ export const fromHref = async ({ href, importerHref, fetchSource, instantiateJav
 
   throw createModuleResponseUnsupportedContentTypeHeaderError({
     href: realHref,
-    importerHref,
     contentType,
+    importerHref,
   })
 }

@@ -1,9 +1,9 @@
-import { createModuleInstantiateError } from "./error/module-instantiate-error.js"
+import { createModuleInstantiationError } from "./error/module-instantiation-error.js"
 
 export const fromFunctionReturningRegisteredModule = (fn, { href, importerHref }) => {
   try {
     return fn()
   } catch (error) {
-    throw createModuleInstantiateError({ href, importerHref, instantiateError: error })
+    throw createModuleInstantiationError({ href, instantiationError: error, importerHref })
   }
 }

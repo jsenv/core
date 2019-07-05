@@ -2,27 +2,37 @@ import { createError } from "./createError.js"
 
 export const createModuleResponseUnsupportedContentTypeHeaderError = ({
   href,
-  importerHref,
   contentType,
-}) => {
-  return createError({
+  importerHref,
+}) =>
+  importerHref
+    ? createImportedModuleResponseUnsupportedContentTypeHeaderError({
+        href,
+        contentType,
+        importerHref,
+      })
+    : createMainModuleResponseUnsupportedContentTypeHeaderError({ href, contentType })
+
+const createImportedModuleResponseUnsupportedContentTypeHeaderError = ({
+  href,
+  contentType,
+  importerHref,
+}) =>
+  createError({
+    code: "MODULE_RESPONSE_UNSUPPORTED_CONTENT_TYPE_HEADER",
+    message: `imported module response unsupported content-type header.
+href: ${href}
+importer href: ${importerHref}
+content-type header: ${contentType}`,
     href,
     importerHref,
-    contentType,
-    code: "MODULE_RESPONSE_UNSUPPORTED_CONTENT_TYPE_HEADER_ERROR",
-    message: createModuleResponseUnsupportedContentTypeHeaderErrorMessage({
-      href,
-      importerHref,
-      contentType,
-    }),
   })
-}
 
-const createModuleResponseUnsupportedContentTypeHeaderErrorMessage = ({
-  href,
-  importerHref,
-  contentType,
-}) => `module response unsupported content-type header.
+const createMainModuleResponseUnsupportedContentTypeHeaderError = ({ href, contentType }) =>
+  createError({
+    code: "MODULE_RESPONSE_UNSUPPORTED_CONTENT_TYPE_HEADER",
+    message: `main module response unsupported content-type header.
 href: ${href}
-importerHref: ${importerHref}
-contentType: ${contentType}`
+content-type header: ${contentType}`,
+    href,
+  })

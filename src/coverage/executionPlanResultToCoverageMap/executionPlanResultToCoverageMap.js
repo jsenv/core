@@ -42,7 +42,7 @@ const executionResultIsTimedOut = ({ status }) => {
 }
 
 const executionResultIsModuleParseError = ({ status, error }) => {
-  return status === "errored" && error && error.code === "MODULE_PARSE_ERROR"
+  return status === "errored" && error && error.code === "MODULE_PARSING_ERROR"
 }
 
 const executionResultIsModuleNotFoundError = ({ status, error }) => {

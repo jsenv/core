@@ -1,20 +1,22 @@
 export const rejectionValueToMeta = (error) => {
-  if (error && error.code === "MODULE_PARSE_ERROR") {
-    const parseError = error.parseError
+  if (error && error.code === "MODULE_PARSING_ERROR") {
+    const { parsingError } = error
 
     return {
-      href: parseError.href,
+      href: parsingError.href,
       importerHref: error.importerHref,
-      error: parseError.messageHMTL || parseError.message,
+      error: parsingError.messageHMTL || parsingError.message,
       dataTheme: "light",
     }
   }
 
-  if (error && error.code === "MODULE_INSTANTIATE_ERROR") {
+  if (error && error.code === "MODULE_INSTANTIATION_ERROR") {
+    const { instantiationError } = error
+
     return {
       href: error.href,
       importerHref: error.importerHref,
-      error: error.instantiateError,
+      error: instantiationError,
     }
   }
 

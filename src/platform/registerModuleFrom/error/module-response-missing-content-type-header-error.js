@@ -1,17 +1,32 @@
 import { createError } from "./createError.js"
 
-export const createModuleResponseMissingContentTypeHeaderError = ({ href, importerHref }) => {
-  return createError({
+export const createModuleResponseMissingContentTypeHeaderError = ({
+  href,
+  instantiationError,
+  importerHref,
+}) =>
+  importerHref
+    ? createImportedModuleResponseMissingContentTypeHeaderError({
+        href,
+        instantiationError,
+        importerHref,
+      })
+    : createMainModuleResponseMissingContentTypeHeaderError({ href, instantiationError })
+
+const createImportedModuleResponseMissingContentTypeHeaderError = ({ href, importerHref }) =>
+  createError({
+    code: "MODULE_RESPONSE_MISSING_CONTENT_TYPE_HEADER_ERROR",
+    message: `imported module response is missing a content-type header.
+href: ${href}
+importer href: ${importerHref}`,
     href,
     importerHref,
-    code: "MODULE_RESPONSE_MISSING_CONTENT_TYPE_HEADER_ERROR",
-    message: createModuleResponseMissingContentTypeHeaderErrorMessage({ href, importerHref }),
   })
-}
 
-const createModuleResponseMissingContentTypeHeaderErrorMessage = ({
-  href,
-  importerHref,
-}) => `module response missing content-type header.
-href: ${href}
-importerHref: ${importerHref}`
+const createMainModuleResponseMissingContentTypeHeaderError = ({ href }) =>
+  createError({
+    code: "MODULE_RESPONSE_MISSING_CONTENT_TYPE_HEADER_ERROR",
+    message: `main module response is missing a content-type header.
+href: ${href}`,
+    href,
+  })
