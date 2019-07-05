@@ -127,7 +127,7 @@ export const createJsenvRollupPlugin = ({
 
     load: async (id) => {
       if (id in idLoadMap) {
-        const returnValue = idLoadMap[id]()
+        const returnValue = await idLoadMap[id]()
         if (typeof returnValue === "string") return returnValue
         if (returnValue.skipTransform) {
           idSkipTransformArray.push(id)
