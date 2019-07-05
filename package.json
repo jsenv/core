@@ -1,6 +1,6 @@
 {
 	"name": "@jsenv/core",
-	"version": "5.74.0",
+	"version": "5.76.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -34,7 +34,6 @@
 		"@jsenv/module-resolution": "3.0.0",
 		"@jsenv/babel-plugin-map": "1.0.0",
 		"@jsenv/operating-system-path": "2.1.0",
-		"@jsenv/node-launcher": "1.0.0",
 		"abort-controller": "2.0.2",
 		"ansi-to-html": "0.6.9",
 		"eventsource": "1.0.7",
@@ -53,7 +52,7 @@
 		"terser": "3.14.1"
 	},
 	"devDependencies": {
-		"@jsenv/core": "5.69.0",
+		"@jsenv/core": "5.75.0",
 		"@jsenv/node-module-import-map": "1.5.0",
 		"@jsenv/eslint-config": "8.0.0",
 		"@jsenv/prettier-config": "1.0.0",

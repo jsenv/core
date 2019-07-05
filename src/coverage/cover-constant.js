@@ -1,5 +1,5 @@
 import { cpus } from "os"
-import { launchNode } from "@jsenv/node-launcher"
+// import { launchNode } from "@jsenv/node-launcher"
 
 export const DEFAULT_COVERAGE_RELATIVE_PATH = "/coverage/coverage-final.json"
 
@@ -12,9 +12,9 @@ export const DEFAULT_COVER_DESCRIPTION = {
 
 export const DEFAULT_EXECUTE_DESCRIPTION = {
   "/test/**/*.test.js": {
-    node: {
-      launch: launchNode,
-    },
+    // node: {
+    //   launch: launchNode,
+    // },
   },
 }
 

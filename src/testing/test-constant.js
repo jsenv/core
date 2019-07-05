@@ -1,11 +1,11 @@
 import { cpus } from "os"
-import { launchNode } from "@jsenv/node-launcher"
+// import { launchNode } from "@jsenv/node-launcher"
 
 export const DEFAULT_EXECUTE_DESCRIPTION = {
   "/test/**/*.test.js": {
-    node: {
-      launch: launchNode,
-    },
+    // node: {
+    //   launch: launchNode,
+    // },
   },
 }
 
