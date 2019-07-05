@@ -34,7 +34,7 @@ export const serveBrowserPlatform = async ({
     globalThisHelperRelativePath,
     specifierMap: {
       [BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME]: browserGroupResolverRelativePath,
-      [IMPORT_MAP_CLIENT_PATHNAME]: importMapRelativePath,
+      [IMPORT_MAP_CLIENT_PATHNAME]: `file://${projectPathname}${importMapRelativePath}`,
     },
     specifierDynamicMap: {
       [BROWSER_PLATFORM_DATA_CLIENT_PATHNAME]: () =>

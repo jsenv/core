@@ -35,7 +35,7 @@ export const serveNodePlatform = ({
     globalThisHelperRelativePath,
     specifierMap: {
       [NODE_GROUP_RESOLVER_CLIENT_PATHNAME]: nodeGroupResolverRelativePath,
-      [IMPORT_MAP_CLIENT_PATHNAME]: importMapRelativePath,
+      [IMPORT_MAP_CLIENT_PATHNAME]: `file://${projectPathname}${importMapRelativePath}`,
     },
     specifierDynamicMap: {
       [NODE_PLATFORM_DATA_CLIENT_PATHNAME]: () =>
