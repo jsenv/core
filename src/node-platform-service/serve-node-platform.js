@@ -1,5 +1,8 @@
 import { serveFile } from "@dmail/server"
+import { resolvePath, hrefToPathname } from "@jsenv/module-resolution"
 import { serveNodeCommonJsBundle } from "../bundling/index.js"
+import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
+import { JSENV_PATHNAME } from "../JSENV_PATH.js"
 
 const NODE_PLATFORM_CLIENT_PATHNAME = `/.jsenv/node-platform.js`
 const NODE_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/node-platform-data.js`
@@ -27,6 +30,17 @@ export const serveNodePlatform = ({
   }
 
   if (ressource !== NODE_PLATFORM_CLIENT_PATHNAME) return null
+
+  if (projectPathname === JSENV_PATHNAME) {
+    nodePlatformRelativePath = "/..src/node-platform-service/node-platform/index.js"
+  } else {
+    const resolvedPath = resolvePath({
+      specifier: `@jsenv/core/src/node-platform-service/node-platform/index.js`,
+      importer: projectPathname,
+      importMap: readProjectImportMap({ projectPathname, importMapRelativePath }),
+    })
+    nodePlatformRelativePath = hrefToPathname(resolvedPath)
+  }
 
   return serveNodeCommonJsBundle({
     projectPathname,
