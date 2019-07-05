@@ -103,41 +103,22 @@ project path: ${pathnameToOperatingSystemPath(projectPathname)}`)
     }
 
     sources.push(sourceRelativePath)
-    if (rollupSourcemap.sourcesContent) {
-      sourcesContent.push(rollupSourcemap.sourcesContent[index])
-    } else {
+
+    // .json file source content is not the one inside the file
+    // because jsenv-rollup-plugin transforms it to
+    // export default, so we must set back the
+    // right file content
+    if (sourceRelativePath.endsWith(".json") || !rollupSourcemap.sourcesContent) {
       const sourcePath = `${projectPathname}${sourceRelativePath}`
-      // this should be async but well this is ok for now
+      // this could be async but it's ok for now
+      // making it async could be harder than it seems
+      // because sourcesContent must be in sync with sources
       const buffer = readFileSync(sourcePath)
       sourcesContent.push(String(buffer))
+    } else {
+      sourcesContent.push(rollupSourcemap.sourcesContent[index])
     }
   })
-
-  // .json files are not added to map.sources by rollup
-  // because inside jsenv-rollup-plugin we return an empty sourcemap
-  // for json files.
-  // we manually ensure they are registered as dependencies
-  // to build the bundle
-
-  // should we change "/.jsenv/import-map.json"
-  // for "/.jsenv/import-map.js"
-  // but ensure we still register the right .json file as dependency ?
-  // Object.keys(inlineSpecifierMap).forEach((specifier) => {
-  //   const specifierMapping = inlineSpecifierMap[specifier]
-  //   if (
-  //     typeof specifierMapping === "string" &&
-  //     specifierMapping.endsWith(".json") &&
-  //     specifierMapping.startsWith(`${projectPathname}/`)
-  //   ) {
-  //     const jsonFileRelativePath = pathnameToRelativePathname(specifierMapping, projectPathname)
-  //     const expectedSource = jsonFileRelativePath.slice(1)
-  //     const sourceIndex = sources.indexOf(expectedSource)
-  //     if (sourceIndex === -1) {
-  //       sources.push(jsonFileRelativePath)
-  //       sourcesContent.push(String(readFileSync(pathnameToOperatingSystemPath(specifierMapping))))
-  //     }
-  //   }
-  // })
 
   const sourcemap = {
     ...rollupSourcemap,

@@ -137,7 +137,11 @@ export const createJsenvRollupPlugin = ({
 
       const hasSheme = isWindowsPath(id) ? false : Boolean(hrefToScheme(id))
       const href = hasSheme ? id : `file://${operatingSystemPathToPathname(id)}`
-      const source = await fetchHref(href)
+      let source = await fetchHref(href)
+
+      if (id.endsWith(".json")) {
+        source = `export default ${source}`
+      }
 
       const sourceMappingURL = readSourceMappingURL(source)
       if (!sourceMappingURL) return { code: source }
@@ -158,13 +162,6 @@ export const createJsenvRollupPlugin = ({
     transform: async (source, id) => {
       if (idSkipTransformArray.includes(id)) {
         return null
-      }
-
-      if (id.endsWith(".json")) {
-        return {
-          code: `export default ${source}`,
-          map: { mappings: "" },
-        }
       }
 
       const hasSheme = isWindowsPath(id) ? false : Boolean(hrefToScheme(id))
