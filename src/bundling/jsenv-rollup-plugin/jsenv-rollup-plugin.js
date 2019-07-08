@@ -11,7 +11,7 @@ import {
   isWindowsPath,
 } from "@jsenv/operating-system-path"
 import { fetchUsingHttp } from "../../node-platform-service/node-platform/fetchUsingHttp.js"
-import { readSourceMappingURL, writeSourceMappingURL } from "../../source-mapping-url.js"
+import { writeSourceMappingURL, parseSourceMappingURL } from "../../source-mapping-url.js"
 import {
   transpiler,
   findAsyncPluginNameInbabelPluginMap,
@@ -154,20 +154,16 @@ export const createJsenvRollupPlugin = ({
         source = `export default ${source}`
       }
 
-      const sourceMappingURL = readSourceMappingURL(source)
-      if (!sourceMappingURL) return { code: source }
+      const sourcemapParsingResult = parseSourceMappingURL(source)
 
-      const base64Prefix = "data:application/json;charset=utf-8;base64,"
-      if (sourceMappingURL.startsWith(base64Prefix)) {
-        const mapBase64Source = sourceMappingURL.slice(base64Prefix.length)
-        const mapSource = new Buffer(mapBase64Source, "base64").toString("utf8")
-        return { code: source, map: JSON.parse(mapSource) }
-      }
+      if (!sourcemapParsingResult) return { code: source }
 
-      const resolvedSourceMappingURL = resolve(href, sourceMappingURL)
-      const mapSource = await fetchHref(resolvedSourceMappingURL)
+      if (sourcemapParsingResult.sourcemapString)
+        return { code: source, map: JSON.parse(sourcemapParsingResult.sourcemapString) }
 
-      return { code: source, map: JSON.parse(mapSource) }
+      const resolvedSourceMappingURL = resolve(href, sourcemapParsingResult.sourcemapURL)
+      const sourcemapString = await fetchHref(resolvedSourceMappingURL)
+      return { code: source, map: JSON.parse(sourcemapString) }
     },
 
     transform: async (source, id) => {
