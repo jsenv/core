@@ -1,6 +1,6 @@
 import { createCancellationToken } from "@dmail/cancellation"
 import { namedValueDescriptionToMetaDescription } from "@dmail/project-structure"
-import { startServer, firstService } from "@dmail/server"
+import { startServer, firstService, serveFile } from "@dmail/server"
 import {
   operatingSystemPathToPathname,
   pathnameToOperatingSystemPath,
@@ -95,6 +95,11 @@ export const startExploringServer = async ({
           babelPluginMap,
           browsableMetaMap: metaDescription,
           request,
+        }),
+      () =>
+        serveFile(`${projectPathname}${request.ressource}`, {
+          method: request.method,
+          headers: request.headers,
         }),
     )
 

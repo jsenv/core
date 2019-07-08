@@ -1,22 +1,20 @@
 import { serveFile } from "@dmail/server"
-import { resolvePath, hrefToPathname } from "@jsenv/module-resolution"
-import { serveNodeCommonJsBundle } from "../bundling/index.js"
+import { serveBundle } from "../bundling/index.js"
 import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
-import { JSENV_PATHNAME } from "../JSENV_PATH.js"
+import { relativePathInception } from "../JSENV_PATH.js"
 
 const NODE_PLATFORM_CLIENT_PATHNAME = `/.jsenv/node-platform.js`
 const NODE_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/node-platform-data.js`
 const NODE_GROUP_RESOLVER_CLIENT_PATHNAME = `/.jsenv/node-group-resolver.js`
 const IMPORT_MAP_CLIENT_PATHNAME = `/.jsenv/import-map.json`
 
-export const serveNodePlatform = ({
+export const serveNodePlatform = async ({
   projectPathname,
   compileIntoRelativePath,
   importMapRelativePath,
   importDefaultExtension,
   nodePlatformRelativePath,
   nodeGroupResolverRelativePath,
-  globalThisHelperRelativePath,
   babelPluginMap,
   groupMap,
   // projectFileRequestedCallback,
@@ -31,22 +29,26 @@ export const serveNodePlatform = ({
 
   if (ressource !== NODE_PLATFORM_CLIENT_PATHNAME) return null
 
-  if (projectPathname === JSENV_PATHNAME) {
-    nodePlatformRelativePath = "/..src/node-platform-service/node-platform/index.js"
-  } else {
-    const resolvedPath = resolvePath({
-      specifier: `@jsenv/core/src/node-platform-service/node-platform/index.js`,
-      importer: projectPathname,
-      importMap: readProjectImportMap({ projectPathname, importMapRelativePath }),
-    })
-    nodePlatformRelativePath = hrefToPathname(resolvedPath)
-  }
+  const importMap = await readProjectImportMap({ projectPathname, importMapRelativePath })
 
-  return serveNodeCommonJsBundle({
+  nodePlatformRelativePath = relativePathInception({
+    projectPathname,
+    importMap,
+    relativePath: nodePlatformRelativePath,
+  })
+  nodeGroupResolverRelativePath = relativePathInception({
+    projectPathname,
+    importMap,
+    relativePath: nodeGroupResolverRelativePath,
+  })
+
+  return serveBundle({
+    format: "commonjs",
     projectPathname,
     compileIntoRelativePath,
-    importMapRelativePath,
-    globalThisHelperRelativePath,
+    sourceRelativePath: nodePlatformRelativePath,
+    compileRelativePath: NODE_PLATFORM_CLIENT_PATHNAME,
+    importMap,
     specifierMap: {
       [NODE_GROUP_RESOLVER_CLIENT_PATHNAME]: nodeGroupResolverRelativePath,
       [IMPORT_MAP_CLIENT_PATHNAME]: `file://${projectPathname}${importMapRelativePath}`,
@@ -59,8 +61,6 @@ export const serveNodePlatform = ({
           importDefaultExtension,
         }),
     },
-    sourceRelativePath: nodePlatformRelativePath,
-    compileRelativePath: NODE_PLATFORM_CLIENT_PATHNAME,
     babelPluginMap,
     headers,
   })

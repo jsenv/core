@@ -16,7 +16,6 @@ import {
   transpiler,
   findAsyncPluginNameInbabelPluginMap,
 } from "../../compiled-js-service/transpiler.js"
-import { readProjectImportMap } from "../../import-map/readProjectImportMap.js"
 import { createLogger } from "../../logger.js"
 
 const { minify: minifyCode } = import.meta.require("terser")
@@ -24,8 +23,8 @@ const { minify: minifyCode } = import.meta.require("terser")
 export const createJsenvRollupPlugin = ({
   cancellationToken,
   projectPathname,
-  importMapRelativePath,
   importDefaultExtension,
+  importMap,
   specifierMap,
   specifierDynamicMap,
   origin = "http://example.com",
@@ -37,12 +36,6 @@ export const createJsenvRollupPlugin = ({
   logLevel,
 }) => {
   const { log } = createLogger({ logLevel })
-
-  const projectImportMap = readProjectImportMap({
-    projectPathname,
-    importMapRelativePath,
-  })
-  const importMap = projectImportMap
 
   // https://github.com/babel/babel/blob/master/packages/babel-core/src/tools/build-external-helpers.js#L1
 

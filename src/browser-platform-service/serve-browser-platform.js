@@ -1,5 +1,7 @@
 import { serveFile } from "@dmail/server"
 import { serveBrowserGlobalBundle } from "../bundling/index.js"
+import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
+import { relativePathInception } from "../JSENV_PATH.js"
 
 const BROWSER_PLATFORM_CLIENT_PATHNAME = `/.jsenv/browser-platform.js`
 const BROWSER_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/browser-platform-data.js`
@@ -13,7 +15,6 @@ export const serveBrowserPlatform = async ({
   importDefaultExtension,
   browserPlatformRelativePath,
   browserGroupResolverRelativePath,
-  globalThisHelperRelativePath,
   babelPluginMap,
   groupMap,
   // projectFileRequestedCallback,
@@ -27,11 +28,25 @@ export const serveBrowserPlatform = async ({
   }
   if (ressource !== BROWSER_PLATFORM_CLIENT_PATHNAME) return null
 
+  const importMap = await readProjectImportMap({ projectPathname, importMapRelativePath })
+
+  browserPlatformRelativePath = relativePathInception({
+    projectPathname,
+    importMap,
+    relativePath: browserPlatformRelativePath,
+  })
+  browserGroupResolverRelativePath = relativePathInception({
+    projectPathname,
+    importMap,
+    relativePath: browserGroupResolverRelativePath,
+  })
+
   return serveBrowserGlobalBundle({
     projectPathname,
     compileIntoRelativePath,
-    importMapRelativePath,
-    globalThisHelperRelativePath,
+    compileRelativePath: ressource,
+    sourceRelativePath: browserPlatformRelativePath,
+    importMap,
     specifierMap: {
       [BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME]: browserGroupResolverRelativePath,
       [IMPORT_MAP_CLIENT_PATHNAME]: `file://${projectPathname}${importMapRelativePath}`,
@@ -44,8 +59,6 @@ export const serveBrowserPlatform = async ({
           importDefaultExtension,
         }),
     },
-    compileRelativePath: ressource,
-    sourceRelativePath: browserPlatformRelativePath,
     babelPluginMap,
     headers,
   })

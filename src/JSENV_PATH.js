@@ -1,5 +1,5 @@
 import { resolve } from "path"
-import { hrefToPathname } from "@jsenv/module-resolution"
+import { resolvePath, hrefToPathname } from "@jsenv/module-resolution"
 import {
   pathnameToOperatingSystemPath,
   operatingSystemPathToPathname,
@@ -17,3 +17,14 @@ if (typeof __filename === "string") {
 export const JSENV_PATH = jsenvPath
 
 export const JSENV_PATHNAME = operatingSystemPathToPathname(jsenvPath)
+
+export const relativePathInception = ({ projectPathname, importMap, relativePath }) => {
+  if (projectPathname === JSENV_PATHNAME) return relativePath
+
+  const resolvedPath = resolvePath({
+    specifier: `@jsenv/core${relativePath}`,
+    importer: projectPathname,
+    importMap,
+  })
+  return hrefToPathname(resolvedPath)
+}

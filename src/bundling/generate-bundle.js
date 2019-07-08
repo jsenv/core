@@ -5,12 +5,11 @@ import {
 } from "../cancellationHelper.js"
 import { generateGroupMap } from "../group-map/index.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
+import { relativePathInception } from "../JSENV_PATH.js"
 import { bundleWithoutBalancing } from "./bundle-without-balancing.js"
 import { bundleWithBalancing } from "./bundle-with-balancing.js"
 import { bundleBalancer } from "./bundle-balancer.js"
 import {
-  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
-  DEFAULT_GLOBAL_THIS_HELPER_RELATIVE_PATH,
   DEFAULT_PLATFORM_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_ENTRY_POINT_MAP,
   DEFAULT_NATIVE_MODULE_PREDICATE,
@@ -21,9 +20,8 @@ import {
 export const generateBundle = ({
   projectPath,
   bundleIntoRelativePath,
-  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   importDefaultExtension,
-  globalThisHelperRelativePath = DEFAULT_GLOBAL_THIS_HELPER_RELATIVE_PATH,
+  importMap,
   specifierMap,
   specifierDynamicMap,
   nativeModulePredicate = DEFAULT_NATIVE_MODULE_PREDICATE,
@@ -63,9 +61,8 @@ export const generateBundle = ({
         cancellationToken,
         projectPathname,
         bundleIntoRelativePath,
-        importMapRelativePath,
         importDefaultExtension,
-        globalThisHelperRelativePath,
+        importMap,
         specifierMap,
         specifierDynamicMap,
         nativeModulePredicate,
@@ -80,9 +77,7 @@ export const generateBundle = ({
     }
 
     if (!balancerTemplateRelativePath) {
-      throw new Error(`format not compatible with balancing.
-format: ${format}
-compileGroupCount: ${compileGroupCount}`)
+      throw createFormatIncompatibleWithBalancingError({ format })
     }
 
     const groupMap = generateGroupMap({
@@ -97,9 +92,8 @@ compileGroupCount: ${compileGroupCount}`)
         cancellationToken,
         projectPathname,
         bundleIntoRelativePath,
-        importMapRelativePath,
         importDefaultExtension,
-        globalThisHelperRelativePath,
+        importMap,
         specifierMap,
         specifierDynamicMap,
         nativeModulePredicate,
@@ -116,9 +110,8 @@ compileGroupCount: ${compileGroupCount}`)
         cancellationToken,
         projectPathname,
         bundleIntoRelativePath,
-        importMapRelativePath,
         importDefaultExtension,
-        globalThisHelperRelativePath,
+        importMap,
         specifierMap,
         specifierDynamicMap,
         nativeModulePredicate,
@@ -148,9 +141,8 @@ const generateEntryPointsFolders = async ({
   cancellationToken,
   projectPathname,
   bundleIntoRelativePath,
-  importMapRelativePath,
   importDefaultExtension,
-  globalThisHelperRelativePath,
+  importMap,
   specifierMap,
   specifierDynamicMap,
   nativeModulePredicate,
@@ -169,9 +161,8 @@ const generateEntryPointsFolders = async ({
         cancellationToken,
         projectPathname,
         bundleIntoRelativePath,
-        importMapRelativePath,
         importDefaultExtension,
-        globalThisHelperRelativePath,
+        importMap,
         specifierMap,
         specifierDynamicMap,
         nativeModulePredicate,
@@ -192,9 +183,8 @@ const generateEntryPointsBalancerFiles = ({
   cancellationToken,
   projectPathname,
   bundleIntoRelativePath,
-  importMapRelativePath,
   importDefaultExtension,
-  globalThisHelperRelativePath,
+  importMap,
   specifierMap,
   specifierDynamicMap,
   nativeModulePredicate,
@@ -215,23 +205,34 @@ const generateEntryPointsBalancerFiles = ({
         cancellationToken,
         projectPathname,
         bundleIntoRelativePath,
-        importMapRelativePath,
         importDefaultExtension,
-        globalThisHelperRelativePath,
+        importMap,
         specifierMap,
         specifierDynamicMap,
         nativeModulePredicate,
         entryPointMap: {
-          [entryPointName]: balancerTemplateRelativePath,
+          [entryPointName]: relativePathInception({
+            projectPathname,
+            importMap,
+            relativePath: balancerTemplateRelativePath,
+          }),
         },
         babelPluginMap,
         minify,
         logLevel,
         format,
         balancerDataClientPathname,
-        platformGroupResolverRelativePath,
+        platformGroupResolverRelativePath: relativePathInception({
+          projectPathname,
+          importMap,
+          relativePath: platformGroupResolverRelativePath,
+        }),
         groupMap,
         writeOnFileSystem,
       }),
     ),
   )
+
+const createFormatIncompatibleWithBalancingError = ({ format }) =>
+  new Error(`format not compatible with balancing.
+format: ${format}`)

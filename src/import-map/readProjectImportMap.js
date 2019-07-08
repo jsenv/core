@@ -1,15 +1,14 @@
-import { readFileSync } from "fs"
+import { fileRead } from "@dmail/helper"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 
-// TODO: make this async
-export const readProjectImportMap = ({ projectPathname, importMapRelativePath }) => {
+export const readProjectImportMap = async ({ projectPathname, importMapRelativePath }) => {
   if (!importMapRelativePath) return {}
+
   try {
-    const buffer = readFileSync(
+    const importMapString = await fileRead(
       pathnameToOperatingSystemPath(`${projectPathname}/${importMapRelativePath}`),
     )
-    const source = String(buffer)
-    return JSON.parse(source)
+    return JSON.parse(importMapString)
   } catch (e) {
     if (e && e.code === "ENOENT") {
       return {}

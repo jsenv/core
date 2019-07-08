@@ -28,7 +28,6 @@ export const serveExploringPage = ({
         projectPathname,
         importMapRelativePath,
         compileIntoRelativePath,
-        browserClientRelativePath,
         browserSelfExecuteTemplateRelativePath,
         babelPluginMap,
         request,
