@@ -19,10 +19,18 @@ export const JSENV_PATH = jsenvPath
 export const JSENV_PATHNAME = operatingSystemPathToPathname(jsenvPath)
 
 export const relativePathInception = ({ projectPathname, importMap, relativePath }) => {
-  if (projectPathname === JSENV_PATHNAME) return relativePath
+  // we are explicitely not asking for a file inside this project
+  // it means we want one of our project file without node module resolution
+  if (!relativePath.startsWith("/node_modules/")) {
+    return relativePath
+  }
 
+  // we want a file owned by a node module
+  // we need to know where is the node module folder
+  // to know the actual relative path to the file
+  const relativePathWithoutNodeModule = relativePath.slice("/node_modules".length)
   const resolvedPath = resolvePath({
-    specifier: `@jsenv/core${relativePath}`,
+    specifier: relativePathWithoutNodeModule,
     importer: projectPathname,
     importMap,
   })
