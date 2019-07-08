@@ -2,8 +2,6 @@ import { basename } from "path"
 import { serveFile } from "@dmail/server"
 import { serveBrowserGlobalBundle } from "../bundling/index.js"
 import { ressourceToPathname, ressourceToSearchParamValue } from "../urlHelper.js"
-import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
-import { relativePathInception } from "../JSENV_PATH.js"
 
 const BROWSER_SELF_EXECUTE_CLIENT_PATHNAME = "/.jsenv/browser-self-execute.js"
 const BROWSER_SELF_EXECUTE_STATIC_DATA_PATHNAME = "/.jsenv/browser-self-execute-static-data.js"
@@ -29,14 +27,6 @@ export const serveBrowserSelfExecuteBundle = async ({
   const fileRelativePath = `/${file}`
 
   if (pathname !== BROWSER_SELF_EXECUTE_CLIENT_PATHNAME) return null
-
-  const importMap = await readProjectImportMap({ projectPathname, importMapRelativePath })
-
-  browserSelfExecuteTemplateRelativePath = relativePathInception({
-    projectPathname,
-    importMap,
-    relativePath: browserSelfExecuteTemplateRelativePath,
-  })
 
   return serveBrowserGlobalBundle({
     projectPathname,

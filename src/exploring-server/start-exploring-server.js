@@ -1,3 +1,4 @@
+/* eslint-disable import/max-dependencies */
 import { createCancellationToken } from "@dmail/cancellation"
 import { namedValueDescriptionToMetaDescription } from "@dmail/project-structure"
 import { startServer, firstService, serveFile } from "@dmail/server"
@@ -7,6 +8,8 @@ import {
 } from "@jsenv/operating-system-path"
 import { startCompileServer } from "../compile-server/index.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
+import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
+import { relativePathInception } from "../JSENV_PATH.js"
 import { serveExploringIndex } from "./serve-exploring-index.js"
 import { serveExploringPage } from "./serve-exploring-page.js"
 import {
@@ -26,7 +29,6 @@ export const startExploringServer = async ({
   browserSelfExecuteTemplateRelativePath = DEFAULT_BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH,
   browserPlatformRelativePath,
   browserGroupResolverPath,
-  globalThisHelperRelativePath,
   babelPluginMap,
   compileGroupCount = 2,
   explorableMap = DEFAULT_EXPLORABLE_MAP,
@@ -42,19 +44,29 @@ export const startExploringServer = async ({
 }) => {
   const projectPathname = operatingSystemPathToPathname(projectPath)
 
+  const importMap = await readProjectImportMap({ projectPathname, importMapRelativePath })
+
+  browserClientRelativePath = relativePathInception({
+    projectPathname,
+    importMap,
+    relativePath: browserClientRelativePath,
+  })
+  browserSelfExecuteTemplateRelativePath = relativePathInception({
+    projectPathname,
+    importMap,
+    relativePath: browserSelfExecuteTemplateRelativePath,
+  })
+
+  await assertFolder(
+    pathnameToOperatingSystemPath(`${projectPathname}${browserClientRelativePath}`),
+  )
+  await assertFile(
+    pathnameToOperatingSystemPath(`${projectPathname}${browserClientRelativePath}/index.html`),
+  )
+
   const metaDescription = namedValueDescriptionToMetaDescription({
     browsable: explorableMap,
   })
-
-  const browserClientFolderPath = pathnameToOperatingSystemPath(
-    `${projectPathname}${browserClientRelativePath}`,
-  )
-  await assertFolder(browserClientFolderPath)
-
-  const browserClientIndexPath = pathnameToOperatingSystemPath(
-    `${projectPathname}${browserClientRelativePath}/index.html`,
-  )
-  await assertFile(browserClientIndexPath)
 
   const { origin: compileServerOrigin } = await startCompileServer({
     cancellationToken,
@@ -64,7 +76,6 @@ export const startExploringServer = async ({
     importDefaultExtension,
     browserPlatformRelativePath,
     browserGroupResolverPath,
-    globalThisHelperRelativePath,
     compileGroupCount,
     babelPluginMap,
     cors,
