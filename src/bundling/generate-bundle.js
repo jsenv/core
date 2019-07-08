@@ -4,25 +4,26 @@ import {
   createProcessInterruptionCancellationToken,
 } from "../cancellationHelper.js"
 import { generateGroupMap } from "../group-map/index.js"
+import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 import { relativePathInception } from "../JSENV_PATH.js"
 import { bundleWithoutBalancing } from "./bundle-without-balancing.js"
 import { bundleWithBalancing } from "./bundle-with-balancing.js"
 import { bundleBalancer } from "./bundle-balancer.js"
 import {
+  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   DEFAULT_PLATFORM_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_ENTRY_POINT_MAP,
   DEFAULT_NATIVE_MODULE_PREDICATE,
   DEFAULT_BABEL_PLUGIN_MAP,
   DEFAULT_PLATFORM_SCORE_MAP,
 } from "./generate-bundle-constant.js"
-import { readProjectImportMap } from "/dist/commonjs/main.js"
 
 export const generateBundle = ({
   projectPath,
   bundleIntoRelativePath,
+  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   importDefaultExtension,
-  importMapRelativePath,
   specifierMap,
   specifierDynamicMap,
   nativeModulePredicate = DEFAULT_NATIVE_MODULE_PREDICATE,
