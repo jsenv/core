@@ -8,7 +8,6 @@ import { hrefToFileRelativePath } from "../../platform/hrefToFileRelativePath.js
 import {
   fromFunctionReturningNamespace,
   fromHref,
-  createModuleExecutionError,
 } from "../../platform/registerModuleFrom/index.js"
 import { valueInstall } from "../../platform/valueInstall.js"
 import { hrefToMeta } from "../../platform/hrefToMeta.js"
@@ -99,23 +98,6 @@ export const createNodeSystem = ({
       url: fileHref,
       require,
     }
-  }
-
-  const importMethod = nodeSystem.import
-  nodeSystem.import = function(specifier, importer) {
-    return importMethod.call(this, specifier, importer).catch((error) => {
-      if (!error) return Promise.reject(error)
-      if (error.code) return Promise.reject(error)
-
-      // give some context to the error
-      return Promise.reject(
-        createModuleExecutionError({
-          href: error.id,
-          executionError: error,
-          importerHref: error.pid,
-        }),
-      )
-    })
   }
 
   return nodeSystem
