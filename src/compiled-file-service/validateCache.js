@@ -128,10 +128,20 @@ const validateSource = async ({ projectPathname, source, eTag }) => {
     }
   } catch (e) {
     if (e && e.code === "ENOENT") {
+      // TODO: decide if it should invalidate cache or not
+      // I think if the source cannot be found it does not invalidate the cache
+      // it means something is missing to absolutely sure the cache is valid
+      // but does not necessarily means the cache is invalid
+      // but if we allow source file not found
+      // it means we must remove sources from the list of sources
+      // or at least consider as normal that it's missing
+      // in that case, inside updateCache we must not search for sources that
+      // are missing, nor put their etag
+      // or we could return sourceContent: '', and the etag would be empty
       return {
         code: "SOURCE_NOT_FOUND",
-        valid: false,
-        data: { source, sourceFilename },
+        valid: true,
+        data: { source, sourceFilename, sourceContent: "" },
       }
     }
     throw e
