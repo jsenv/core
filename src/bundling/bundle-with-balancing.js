@@ -14,9 +14,8 @@ export const bundleWithBalancing = async ({
   cancellationToken,
   projectPathname,
   bundleIntoRelativePath,
-  importMapRelativePath,
   importDefaultExtension,
-  globalThisHelperRelativePath,
+  importMap,
   specifierMap,
   specifierDynamicMap,
   nativeModulePredicate,
@@ -48,14 +47,13 @@ export const bundleWithBalancing = async ({
     format,
     babelPluginMap,
     featureNameArray: groupMap[compileId].incompatibleNameArray,
-    globalThisHelperRelativePath,
   })
 
   const jsenvRollupPlugin = createJsenvRollupPlugin({
     cancellationToken,
     projectPathname,
-    importMapRelativePath,
     importDefaultExtension,
+    importMap,
     specifierMap,
     specifierDynamicMap,
     dir,

@@ -10,7 +10,7 @@ export const serveBundle = async ({
   sourceRelativePath,
   compileRelativePath,
   sourcemapPath,
-  importMap,
+  importMapRelativePath,
   specifierMap,
   specifierDynamicMap,
   babelPluginMap,
@@ -38,7 +38,7 @@ export const serveBundle = async ({
       const { bundle, relativePathAbstractArray } = await generateBundle({
         projectPath: pathnameToOperatingSystemPath(projectPathname),
         bundleIntoRelativePath,
-        importMap,
+        importMapRelativePath,
         specifierMap,
         specifierDynamicMap,
         entryPointMap,

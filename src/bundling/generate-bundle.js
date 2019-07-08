@@ -16,12 +16,13 @@ import {
   DEFAULT_BABEL_PLUGIN_MAP,
   DEFAULT_PLATFORM_SCORE_MAP,
 } from "./generate-bundle-constant.js"
+import { readProjectImportMap } from "/dist/commonjs/main.js"
 
 export const generateBundle = ({
   projectPath,
   bundleIntoRelativePath,
   importDefaultExtension,
-  importMap,
+  importMapRelativePath,
   specifierMap,
   specifierDynamicMap,
   nativeModulePredicate = DEFAULT_NATIVE_MODULE_PREDICATE,
@@ -53,8 +54,9 @@ export const generateBundle = ({
     if (compileGroupCount < 1)
       throw new Error(`compileGroupCount must be >= 1, got ${compileGroupCount}`)
 
-    const projectPathname = operatingSystemPathToPathname(projectPath)
     const cancellationToken = createProcessInterruptionCancellationToken()
+    const projectPathname = operatingSystemPathToPathname(projectPath)
+    const importMap = await readProjectImportMap({ projectPathname, importMapRelativePath })
 
     if (compileGroupCount === 1) {
       return bundleWithoutBalancing({

@@ -35,6 +35,9 @@ export const createJsenvRollupPlugin = ({
   dir,
   logLevel,
 }) => {
+  if (typeof importMap !== "object")
+    throw new TypeError(`importMap must be an object, got ${importMap}`)
+
   const { log } = createLogger({ logLevel })
 
   // https://github.com/babel/babel/blob/master/packages/babel-core/src/tools/build-external-helpers.js#L1

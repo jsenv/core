@@ -44,9 +44,9 @@ export const serveBrowserPlatform = async ({
   return serveBrowserGlobalBundle({
     projectPathname,
     compileIntoRelativePath,
+    importMapRelativePath,
     compileRelativePath: ressource,
     sourceRelativePath: browserPlatformRelativePath,
-    importMap,
     specifierMap: {
       [BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME]: browserGroupResolverRelativePath,
       [IMPORT_MAP_CLIENT_PATHNAME]: `file://${projectPathname}${importMapRelativePath}`,

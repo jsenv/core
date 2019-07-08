@@ -41,12 +41,12 @@ export const serveBrowserSelfExecuteBundle = async ({
   return serveBrowserGlobalBundle({
     projectPathname,
     compileIntoRelativePath,
+    importMapRelativePath,
     sourceRelativePath: browserSelfExecuteTemplateRelativePath,
     compileRelativePath: `/.jsenv/browser-self-execute${fileRelativePath}`,
     sourcemapPath: `./browser-self-execute${fileRelativePath}__asset__/${basename(
       fileRelativePath,
     )}.map`,
-    importMap,
     specifierDynamicMap: {
       [BROWSER_SELF_EXECUTE_STATIC_DATA_PATHNAME]: () =>
         generateBrowserSelfExecuteStaticDataSource({ fileRelativePath }),

@@ -46,9 +46,9 @@ export const serveNodePlatform = async ({
     format: "commonjs",
     projectPathname,
     compileIntoRelativePath,
+    importMapRelativePath,
     sourceRelativePath: nodePlatformRelativePath,
     compileRelativePath: NODE_PLATFORM_CLIENT_PATHNAME,
-    importMap,
     specifierMap: {
       [NODE_GROUP_RESOLVER_CLIENT_PATHNAME]: nodeGroupResolverRelativePath,
       [IMPORT_MAP_CLIENT_PATHNAME]: `file://${projectPathname}${importMapRelativePath}`,
