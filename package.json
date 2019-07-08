@@ -52,7 +52,7 @@
 		"terser": "3.14.1"
 	},
 	"devDependencies": {
-		"@jsenv/core": "5.75.0",
+		"@jsenv/core": "5.83.0",
 		"@jsenv/node-module-import-map": "1.5.0",
 		"@jsenv/eslint-config": "8.0.0",
 		"@jsenv/prettier-config": "1.0.0",
@@ -60,6 +60,7 @@
 		"@jsenv/eslint-import-resolver": "4.7.0",
 		"@jsenv/codecov-upload": "1.6.0",
 		"@jsenv/chromium-launcher": "1.2.0",
+		"@jsenv/node-launcher": "1.5.0",
 		"@dmail/assert": "3.4.0",
 		"babel-eslint": "11.0.0-beta.0",
 		"eslint": "5.1.0",
