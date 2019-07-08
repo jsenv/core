@@ -13,6 +13,7 @@ import { relativePathInception } from "../JSENV_PATH.js"
 import { serveExploringIndex } from "./serve-exploring-index.js"
 import { serveExploringPage } from "./serve-exploring-page.js"
 import {
+  DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
   DEFAULT_BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH,
   DEFAULT_EXPLORABLE_MAP,
@@ -23,7 +24,7 @@ export const startExploringServer = async ({
   cancellationToken = createCancellationToken(),
   projectPath,
   compileIntoRelativePath,
-  importMapRelativePath,
+  importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   importDefaultExtension,
   browserClientRelativePath = DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
   browserSelfExecuteTemplateRelativePath = DEFAULT_BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH,

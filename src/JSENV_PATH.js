@@ -28,10 +28,10 @@ export const relativePathInception = ({ projectPathname, importMap, relativePath
   // we want a file owned by a node module
   // we need to know where is the node module folder
   // to know the actual relative path to the file
-  const relativePathWithoutNodeModule = relativePath.slice("/node_modules".length)
+  const relativePathWithoutNodeModule = relativePath.slice("/node_modules/".length)
   const resolvedPath = resolvePath({
     specifier: relativePathWithoutNodeModule,
-    importer: projectPathname,
+    importer: `http://example.com${projectPathname}`,
     importMap,
   })
   return hrefToPathname(resolvedPath)
