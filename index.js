@@ -1,6 +1,7 @@
 // belong to core
 export { startCompileServer } from "./src/compile-server/index.js"
 export { launchAndExecute } from "./src/launchAndExecute/index.js"
+export { readProjectImportMap } from "./src/import-map/readProjectImportMap.js"
 
 // could be moved to jsenv/jsenv-execution
 export { execute } from "./src/execution/execute.js"
