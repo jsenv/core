@@ -144,6 +144,7 @@ export const cover = async ({
             cancellationToken,
             projectPathname,
             relativePath: relativePathMissingCoverage,
+            babelPluginMap,
           })
           missedCoverageMap[relativePathMissingCoverage.slice(1)] = emptyCoverage
           return emptyCoverage

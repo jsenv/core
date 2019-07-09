@@ -10,6 +10,7 @@ export const relativePathToEmptyCoverage = async ({
   cancellationToken,
   projectPathname,
   relativePath,
+  babelPluginMap,
 }) => {
   const filename = pathnameToOperatingSystemPath(`${projectPathname}${relativePath}`)
   const source = await createOperation({
@@ -30,6 +31,7 @@ export const relativePathToEmptyCoverage = async ({
           projectPathname,
           sourceRelativePath: relativePath,
           babelPluginMap: {
+            ...babelPluginMap,
             "transform-instrument": [createInstrumentPlugin({ predicate: () => true })],
           },
           transformTopLevelAwait: false,
