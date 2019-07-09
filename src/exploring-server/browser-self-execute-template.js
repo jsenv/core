@@ -1,3 +1,4 @@
+import { EventSource, location } from "global"
 // eslint-disable-next-line import/no-unresolved
 import { fileRelativePath } from "/.jsenv/browser-self-execute-static-data.js"
 import { loadUsingScript } from "../loadUsingScript.js"
@@ -16,4 +17,27 @@ import { fetchUsingXHR } from "../browser-platform-service/browser-platform/fetc
   })
 
   executeFile(relativePathToCompiledHref(fileRelativePath))
+
+  if (typeof EventSource === "function") {
+    const eventSource = new EventSource(compileServerOrigin, { withCredentials: true })
+
+    const close = () => {
+      eventSource.close()
+    }
+
+    eventSource.onerror = () => {
+      // we could try to reconnect several times before giving up
+      // but dont keep it open as it would try to reconnect forever
+      // maybe, it depends what error occurs, or we could
+      // retry less frequently
+      close()
+    }
+    eventSource.addEventListener("file-changed", (e) => {
+      if (e.origin !== compileServerOrigin) {
+        return
+      }
+      // const fileChanged = e.data
+      location.reload()
+    })
+  }
 })()

@@ -159,8 +159,8 @@ export const startCompileServer = async ({
 
     const fileChangedSSE = createServerSentEventsRoom()
 
-    fileChangedSSE.open()
-    cancellationToken.register(fileChangedSSE.close)
+    fileChangedSSE.start()
+    cancellationToken.register(fileChangedSSE.stop)
 
     registerFileChangedCallback(({ fileRelativePath }) => {
       fileChangedSSE.sendEvent({
@@ -300,12 +300,12 @@ const createFileChangedSignal = () => {
     fileChangedCallbackArray.push(callback)
   }
 
-  const changed = (data) => {
+  const triggerFileChanged = (data) => {
     const callbackArray = fileChangedCallbackArray.slice()
     callbackArray.forEach((callback) => {
       callback(data)
     })
   }
 
-  return { registerFileChangedCallback, changed }
+  return { registerFileChangedCallback, triggerFileChanged }
 }

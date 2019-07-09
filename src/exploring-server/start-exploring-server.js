@@ -40,6 +40,7 @@ export const startExploringServer = async ({
   ip = "127.0.0.1",
   port = 0,
   forcePort = false,
+  watchSource = false,
   signature,
   compileServerLogLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
 }) => {
@@ -86,6 +87,7 @@ export const startExploringServer = async ({
     forcePort: false, // no need because random port
     signature,
     logLevel: compileServerLogLevel,
+    watchSource,
   })
 
   const service = (request) =>

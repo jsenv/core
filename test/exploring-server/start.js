@@ -9,14 +9,15 @@ const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 startExploringServer({
   projectPath,
   compileIntoRelativePath,
+  browserSelfExecuteTemplateRelativePath: "/src/exploring-server/browser-self-execute-template.js",
   browserClientRelativePath: "/src/browser-client",
   browserPlatformRelativePath: "/src/browser-platform-service/browser-platform/index.js",
   browserGroupResolverPath: "/src/browser-group-resolver/index.js",
-  globalThisHelperRelativePath: "/src/bundling/jsenv-rollup-plugin/global-this.js",
   explorableMap: {
     [`${folderJsenvRelativePath}/**/*.main.js`]: true,
     [`${folderJsenvRelativePath}/**/.dist/**`]: false,
   },
   port: 3400,
   forcePort: true,
+  watchSource: true,
 })
