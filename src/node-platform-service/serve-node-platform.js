@@ -1,7 +1,5 @@
 import { serveFile } from "@dmail/server"
 import { serveBundle } from "../bundling/index.js"
-import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
-import { relativePathInception } from "../JSENV_PATH.js"
 
 const NODE_PLATFORM_CLIENT_PATHNAME = `/.jsenv/node-platform.js`
 const NODE_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/node-platform-data.js`
@@ -28,19 +26,6 @@ export const serveNodePlatform = async ({
   }
 
   if (ressource !== NODE_PLATFORM_CLIENT_PATHNAME) return null
-
-  const importMap = await readProjectImportMap({ projectPathname, importMapRelativePath })
-
-  nodePlatformRelativePath = relativePathInception({
-    projectPathname,
-    importMap,
-    relativePath: nodePlatformRelativePath,
-  })
-  nodeGroupResolverRelativePath = relativePathInception({
-    projectPathname,
-    importMap,
-    relativePath: nodeGroupResolverRelativePath,
-  })
 
   return serveBundle({
     format: "commonjs",

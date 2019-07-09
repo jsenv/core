@@ -18,6 +18,8 @@ import { serveNodePlatform } from "../node-platform-service/index.js"
 import { serveCompiledJs, relativePathIsAsset } from "../compiled-js-service/index.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 import { removeFolder } from "../removeFolder.js"
+import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
+import { relativePathInception } from "../JSENV_PATH.js"
 import { readCompileIntoMeta } from "./read-compile-into-meta.js"
 import { writeCompileIntoMeta } from "./write-compile-into-meta.js"
 import {
@@ -88,6 +90,29 @@ export const startCompileServer = async ({
     )
   }
   await writeCompileIntoMeta({ projectPathname, compileIntoRelativePath, compileIntoMeta })
+
+  const importMap = await readProjectImportMap({ projectPathname, importMapRelativePath })
+
+  browserPlatformRelativePath = relativePathInception({
+    projectPathname,
+    importMap,
+    relativePath: browserPlatformRelativePath,
+  })
+  browserGroupResolverRelativePath = relativePathInception({
+    projectPathname,
+    importMap,
+    relativePath: browserGroupResolverRelativePath,
+  })
+  nodePlatformRelativePath = relativePathInception({
+    projectPathname,
+    importMap,
+    relativePath: nodePlatformRelativePath,
+  })
+  nodeGroupResolverRelativePath = relativePathInception({
+    projectPathname,
+    importMap,
+    relativePath: nodeGroupResolverRelativePath,
+  })
 
   // this callback will be called each time a projectFile was
   // used to respond to a request

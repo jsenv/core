@@ -1,7 +1,5 @@
 import { serveFile } from "@dmail/server"
 import { serveBrowserGlobalBundle } from "../bundling/index.js"
-import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
-import { relativePathInception } from "../JSENV_PATH.js"
 
 const BROWSER_PLATFORM_CLIENT_PATHNAME = `/.jsenv/browser-platform.js`
 const BROWSER_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/browser-platform-data.js`
@@ -27,19 +25,6 @@ export const serveBrowserPlatform = async ({
     })
   }
   if (ressource !== BROWSER_PLATFORM_CLIENT_PATHNAME) return null
-
-  const importMap = await readProjectImportMap({ projectPathname, importMapRelativePath })
-
-  browserPlatformRelativePath = relativePathInception({
-    projectPathname,
-    importMap,
-    relativePath: browserPlatformRelativePath,
-  })
-  browserGroupResolverRelativePath = relativePathInception({
-    projectPathname,
-    importMap,
-    relativePath: browserGroupResolverRelativePath,
-  })
 
   return serveBrowserGlobalBundle({
     projectPathname,
