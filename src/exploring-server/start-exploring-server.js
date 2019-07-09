@@ -109,6 +109,7 @@ export const startExploringServer = async ({
           babelPluginMap,
           browsableMetaMap: metaDescription,
           request,
+          watchSource,
         }),
       () =>
         serveFile(`${projectPathname}${request.ressource}`, {

@@ -14,6 +14,7 @@ export const serveBrowserSelfExecute = ({
   browserSelfExecuteTemplateRelativePath,
   babelPluginMap,
   request,
+  watchSource,
 }) =>
   firstService(
     () =>
@@ -29,6 +30,7 @@ export const serveBrowserSelfExecute = ({
         browserSelfExecuteTemplateRelativePath,
         babelPluginMap,
         request,
+        watchSource,
       }),
     () =>
       serveBrowserSelfExecuteDynamicData({

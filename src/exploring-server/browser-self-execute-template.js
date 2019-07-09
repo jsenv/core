@@ -1,6 +1,6 @@
 import { EventSource, location } from "global"
 // eslint-disable-next-line import/no-unresolved
-import { fileRelativePath } from "/.jsenv/browser-self-execute-static-data.js"
+import { fileRelativePath, watchSource } from "/.jsenv/browser-self-execute-static-data.js"
 import { loadUsingScript } from "../loadUsingScript.js"
 import { fetchUsingXHR } from "../browser-platform-service/browser-platform/fetchUsingXHR.js"
 
@@ -9,7 +9,7 @@ import { fetchUsingXHR } from "../browser-platform-service/browser-platform/fetc
   const { body } = await fetchUsingXHR("/.jsenv/browser-self-execute-dynamic-data.json")
   const { compileServerOrigin } = JSON.parse(body)
 
-  if (typeof EventSource === "function") {
+  if (watchSource && typeof EventSource === "function") {
     const eventSource = new EventSource(compileServerOrigin, { withCredentials: true })
 
     const close = () => {
