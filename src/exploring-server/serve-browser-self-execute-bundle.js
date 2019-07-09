@@ -49,4 +49,4 @@ export const serveBrowserSelfExecuteBundle = async ({
 
 const generateBrowserSelfExecuteStaticDataSource = ({ fileRelativePath, watchSource }) =>
   `export const fileRelativePath = ${JSON.stringify(fileRelativePath)}
-export const hotreloading = ${JSON.stringify(watchSource)}`
+export const watchSource = ${JSON.stringify(watchSource)}`
