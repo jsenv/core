@@ -9,15 +9,6 @@ import { fetchUsingXHR } from "../browser-platform-service/browser-platform/fetc
   const { body } = await fetchUsingXHR("/.jsenv/browser-self-execute-dynamic-data.json")
   const { compileServerOrigin } = JSON.parse(body)
 
-  await loadUsingScript(`${compileServerOrigin}/.jsenv/browser-platform.js`)
-  const { __browserPlatform__ } = window
-
-  const { relativePathToCompiledHref, executeFile } = __browserPlatform__.create({
-    compileServerOrigin,
-  })
-
-  executeFile(relativePathToCompiledHref(fileRelativePath))
-
   if (typeof EventSource === "function") {
     const eventSource = new EventSource(compileServerOrigin, { withCredentials: true })
 
@@ -40,4 +31,13 @@ import { fetchUsingXHR } from "../browser-platform-service/browser-platform/fetc
       location.reload()
     })
   }
+
+  await loadUsingScript(`${compileServerOrigin}/.jsenv/browser-platform.js`)
+  const { __browserPlatform__ } = window
+
+  const { relativePathToCompiledHref, executeFile } = __browserPlatform__.create({
+    compileServerOrigin,
+  })
+
+  await executeFile(relativePathToCompiledHref(fileRelativePath), { errorNotification: true })
 })()

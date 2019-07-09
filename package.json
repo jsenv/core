@@ -25,7 +25,7 @@
 		"@dmail/project-structure": "3.3.0",
 		"@dmail/filesystem-matching": "1.1.0",
 		"@dmail/uneval": "5.4.0",
-		"@dmail/server": "1.6.0",
+		"@dmail/server": "1.10.0",
 		"@dmail/process-signals": "1.0.0",
 		"@babel/core": "7.2.2",
 		"@babel/helper-hoist-variables": "7.0.0",

@@ -123,6 +123,7 @@ export const startExploringServer = async ({
     ip,
     port,
     forcePort,
+    signature,
     requestToResponse: service,
     logLevel,
     keepProcessAlive,

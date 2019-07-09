@@ -17,6 +17,7 @@ startExploringServer({
     [`${folderJsenvRelativePath}/**/*.main.js`]: true,
     [`${folderJsenvRelativePath}/**/.dist/**`]: false,
   },
+  protocol: "https",
   port: 3400,
   forcePort: true,
   watchSource: true,

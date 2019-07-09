@@ -16,6 +16,7 @@ import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
 import { wrapImportMap } from "../../import-map/wrapImportMap.js"
 import { createBrowserSystem } from "./create-browser-system.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
+import { displayErrorNotification } from "./displayErrorNotification.js"
 import { resolveCompileId } from "../../platform/compile-id-resolution.js"
 
 const memoizedCreateBrowserSystem = memoizeOnce(createBrowserSystem)
@@ -45,7 +46,10 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
     return browserSystem.import(specifier)
   }
 
-  const executeFile = async (specifier, { collectCoverage, collectNamespace } = {}) => {
+  const executeFile = async (
+    specifier,
+    { collectCoverage, collectNamespace, errorNotification = false } = {},
+  ) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
       compileIntoRelativePath,
@@ -62,6 +66,7 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
     } catch (error) {
       displayErrorInDocument(error)
       displayErrorInConsole(error)
+      if (errorNotification) displayErrorNotification(error)
       return {
         status: "errored",
         exceptionSource: unevalException(error),
