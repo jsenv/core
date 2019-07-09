@@ -6,6 +6,7 @@ export const serveCompiledFile = async ({
   projectPathname,
   sourceRelativePath,
   compileRelativePath,
+  projectFileRequestedCallback = () => {},
   headers,
   compile,
   clientCompileCacheStrategy = "etag",
@@ -57,6 +58,10 @@ export const serveCompiledFile = async ({
       cacheHitTracking: serverCompileCacheHitTracking,
       cacheInterProcessLocking: serverCompileCacheInterProcessLocking,
       compile,
+    })
+
+    compileResult.sources.forEach((source) => {
+      projectFileRequestedCallback(source)
     })
 
     const { contentType, compiledSource } = compileResult

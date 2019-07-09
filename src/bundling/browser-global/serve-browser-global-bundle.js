@@ -9,6 +9,7 @@ export const serveBrowserGlobalBundle = ({
   sourcemapPath,
   specifierMap,
   specifierDynamicMap,
+  projectFileRequestedCallback,
   babelPluginMap,
   headers,
   globalName,
@@ -28,6 +29,7 @@ export const serveBrowserGlobalBundle = ({
     sourcemapPath,
     specifierMap,
     specifierDynamicMap,
+    projectFileRequestedCallback,
     babelPluginMap,
     headers,
   })

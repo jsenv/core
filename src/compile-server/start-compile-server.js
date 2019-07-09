@@ -53,7 +53,7 @@ export const startCompileServer = async ({
   nodeVersionScoreMap = DEFAULT_NODE_VERSION_SCORE_MAP,
   // options related to how cache/hotreloading
   watchSource = false,
-  watchSourcePredicate = () => true, // aybe we should exclude node_modules by default
+  watchSourcePredicate = () => true, // should we exclude node_modules by default ?
   // js compile options
   transformTopLevelAwait = true,
   // options related to the server itself
@@ -141,17 +141,17 @@ export const startCompileServer = async ({
       watchedFiles.forEach((closeWatcher) => closeWatcher())
       watchedFiles.clear()
     })
-    projectFileRequestedCallback = ({ fileRelativePath }) => {
-      const filePath = `${projectPath}/${fileRelativePath}`
+    projectFileRequestedCallback = (relativePath) => {
+      const filePath = `${projectPath}${relativePath}`
       // when I ask for a compiled file, watch the corresponding file on filesystem
       // here we should use the registerFileLifecyle stuff made in
       // jsenv-eslint-import-resolver so support if file gets created/deleted
       // by the way this is not truly working if compile creates a bundle
       // in that case we should watch for the whole bundle
       // sources, for now let's ignore
-      if (watchedFiles.has(filePath) === false && watchSourcePredicate(fileRelativePath)) {
+      if (watchedFiles.has(filePath) === false && watchSourcePredicate(relativePath)) {
         const fileWatcher = watchFile(filePath, () => {
-          triggerFileChanged({ fileRelativePath })
+          triggerFileChanged({ relativePath })
         })
         watchedFiles.set(filePath, fileWatcher)
       }
@@ -277,11 +277,9 @@ const serveProjectFiles = ({
   projectFileRequestedCallback,
   request: { ressource, method, headers },
 }) => {
-  projectFileRequestedCallback({
-    fileRelativePath: ressource,
-  })
+  projectFileRequestedCallback(ressource)
 
-  return serveFile(`${projectPathname}/${ressource}`, { method, headers })
+  return serveFile(`${projectPathname}${ressource}`, { method, headers })
 }
 
 const computeCompileIntoMeta = ({ babelPluginMap, groupMap }) => {

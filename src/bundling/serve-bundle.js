@@ -13,6 +13,7 @@ export const serveBundle = async ({
   importMapRelativePath,
   specifierMap,
   specifierDynamicMap,
+  projectFileRequestedCallback,
   babelPluginMap,
   headers,
   format,
@@ -23,6 +24,7 @@ export const serveBundle = async ({
     headers,
     sourceRelativePath,
     compileRelativePath: `${compileIntoRelativePath}${compileRelativePath}`,
+    projectFileRequestedCallback,
     compile: async () => {
       const entryExtname = extname(sourceRelativePath)
       const entryBasename = basename(sourceRelativePath, entryExtname)

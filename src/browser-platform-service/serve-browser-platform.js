@@ -15,7 +15,7 @@ export const serveBrowserPlatform = async ({
   browserGroupResolverRelativePath,
   babelPluginMap,
   groupMap,
-  // projectFileRequestedCallback,
+  projectFileRequestedCallback,
   request: { ressource, method, headers },
 }) => {
   if (ressource.startsWith(`${BROWSER_PLATFORM_CLIENT_PATHNAME}__asset__/`)) {
@@ -44,6 +44,7 @@ export const serveBrowserPlatform = async ({
           importDefaultExtension,
         }),
     },
+    projectFileRequestedCallback,
     babelPluginMap,
     headers,
   })

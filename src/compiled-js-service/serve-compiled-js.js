@@ -37,10 +37,6 @@ export const serveCompiledJs = async ({
     }
   }
 
-  projectFileRequestedCallback({
-    fileRelativePath,
-  })
-
   const sourceRelativePath = fileRelativePath
   const compileRelativePath = `${compileIntoRelativePath}/${compileId}${fileRelativePath}`
 
@@ -48,6 +44,7 @@ export const serveCompiledJs = async ({
     projectPathname,
     sourceRelativePath,
     compileRelativePath,
+    projectFileRequestedCallback,
     headers,
     compile: async ({ sourceFilename }) => {
       const source = await fileRead(sourceFilename)
