@@ -10,7 +10,7 @@ export {
 export {
   getOrGenerateCompiledFile,
 } from "./src/compiled-file-service/get-or-generate-compiled-file.js"
-export { serveBrowserGlobalBundle, generateNodeCommonJsBundle } from "./src/bundling/index.js"
+export { serveBundle } from "./src/bundle-service/serve-bundle.js"
 
 // could be moved to jsenv/jsenv-execution
 export { execute } from "./src/execution/execute.js"
