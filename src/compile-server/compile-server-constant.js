@@ -15,10 +15,10 @@ export const DEFAULT_NODE_PLATFORM_RELATIVE_PATH =
   "/node_modules/@jsenv/core/src/node-platform-service/node-platform/index.js"
 
 export const DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH =
-  "/node_modules/@jsenv/core/balancing/browser-group-resolver.js"
+  "/node_modules/@jsenv/core/src/balancing/browser-group-resolver.js"
 
 export const DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH =
-  "/node_modules/@jsenv/core/balancing/node-group-resolver.js"
+  "/node_modules/@jsenv/core/src/balancing/node-group-resolver.js"
 
 export const DEFAULT_BABEL_PLUGIN_MAP = jsenvBabelPluginMap
 
