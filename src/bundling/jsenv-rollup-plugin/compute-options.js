@@ -21,15 +21,28 @@ export const computeSpecifierDynamicMap = () => {
   }
 }
 
-const generateGlobalThisSource = () => `Object.defineProperty(Object.prototype, "__global__", {
-  get: function() {
-    return this
-  },
-  configurable: true,
-})
-var globalThis = __global__
-delete Object.prototype.__global__
-globalThis.globalThis = globalThis`
+const generateGlobalThisSource = () => `
+// eslint-disable-next-line no-undef
+if (typeof globalThis !== "object") {
+  let globalObject
+
+  if (this) {
+    globalObject = this
+  } else {
+    // eslint-disable-next-line no-extend-native
+    Object.defineProperty(Object.prototype, "__global__", {
+      get() {
+        return this
+      },
+      configurable: true,
+    })
+    // eslint-disable-next-line no-undef
+    globalObject = __global__
+    delete Object.prototype.__global__
+  }
+
+  globalObject.globalThis = globalObject
+}`
 
 export const computeBabelPluginMap = ({
   projectPathname,

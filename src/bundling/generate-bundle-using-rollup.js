@@ -24,7 +24,17 @@ export const generateBundleUsingRollup = async ({
         // if we want to ignore some warning
         // please use https://rollupjs.org/guide/en#onwarn
         // to be very clear about what we want to ignore
-        // onwarn: () => {},
+        onwarn: (warning, warn) => {
+          if (warning.loc) {
+            if (
+              warning.code === "THIS_IS_UNDEFINED" &&
+              warning.loc.file.endsWith("/.jsenv/helpers/global-this.js")
+            )
+              return
+          }
+
+          warn(warning)
+        },
         ...rollupParseOptions,
       }),
   })
