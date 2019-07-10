@@ -1,9 +1,8 @@
 import { extname, dirname, basename } from "path"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
-import { getOrGenerateCompiledFile } from "../../compiled-file-service/get-or-generate-compiled-file.js"
-import { nodeVersionScoreMap } from "../../group-map/index.js"
-import { generateCommonJsBundle } from "../commonjs/generate-commonjs-bundle.js"
-import { platformClientBundleToCompilationResult } from "../platformClientBundleToCompilationResult.js"
+import { generateCommonJsBundle, bundleToCompilationResult } from "@jsenv/bundling"
+import { getOrGenerateCompiledFile } from "../compiled-file-service/get-or-generate-compiled-file.js"
+import { nodeVersionScoreMap } from "../group-map/index.js"
 
 export const generateNodeCommonJsBundle = async ({
   projectPathname,
@@ -36,7 +35,7 @@ export const generateNodeCommonJsBundle = async ({
         [entryName]: sourceRelativePath,
       }
 
-      const { bundle, relativePathAbstractArray } = await generateCommonJsBundle({
+      const bundle = await generateCommonJsBundle({
         projectPath: pathnameToOperatingSystemPath(projectPathname),
         bundleIntoRelativePath,
         importMapRelativePath,
@@ -54,14 +53,12 @@ export const generateNodeCommonJsBundle = async ({
         },
       })
 
-      return platformClientBundleToCompilationResult({
+      return bundleToCompilationResult(bundle, {
         projectPathname,
         compileIntoRelativePath,
-        relativePathAbstractArray,
         entryRelativePath: sourceRelativePath,
         sourcemapPath,
         sourcemapAssetPath: computeSourcemapAssetPath(compileRelativePath),
-        bundle,
       })
     },
     ifEtagMatch: null,

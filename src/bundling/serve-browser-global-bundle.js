@@ -1,4 +1,4 @@
-import { serveBundle } from "../serve-bundle.js"
+import { serveBundle } from "./serve-bundle.js"
 
 export const serveBrowserGlobalBundle = ({
   projectPathname,
