@@ -12,7 +12,7 @@ startExploringServer({
   browserSelfExecuteTemplateRelativePath: "/src/exploring-server/browser-self-execute-template.js",
   browserClientRelativePath: "/src/browser-client",
   browserPlatformRelativePath: "/src/browser-platform-service/browser-platform/index.js",
-  browserGroupResolverPath: "/src/browser-group-resolver/index.js",
+  browserGroupResolverPath: "/src/balancing/browser-group-resolver",
   explorableMap: {
     [`${folderJsenvRelativePath}/**/*.main.js`]: true,
     [`${folderJsenvRelativePath}/**/.dist/**`]: false,

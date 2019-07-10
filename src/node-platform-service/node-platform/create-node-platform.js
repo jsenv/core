@@ -14,8 +14,8 @@ import importMap from "/.jsenv/import-map.json"
 import { uneval } from "@dmail/uneval"
 import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
 import { wrapImportMap } from "../../import-map/wrapImportMap.js"
+import { resolveCompileId } from "../../balancing/compile-id-resolution.js"
 import { createNodeSystem } from "./create-node-system.js"
-import { resolveCompileId } from "../../platform/compile-id-resolution.js"
 
 const memoizedCreateNodeSystem = memoizeOnce(createNodeSystem)
 

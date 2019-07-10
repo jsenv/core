@@ -36,6 +36,15 @@ const detector = detectorCompose([
   androidDetect,
 ])
 
+export const detect = () => {
+  const { name = "other", version = "unknown" } = detector() || {}
+
+  return {
+    name: normalizeName(name),
+    version: normalizeVersion(version),
+  }
+}
+
 const normalizeName = (name) => {
   return name.toLowerCase()
 }
@@ -54,13 +63,4 @@ const normalizeVersion = (version) => {
   }
 
   return version
-}
-
-export const detect = () => {
-  const { name = "other", version = "unknown" } = detector() || {}
-
-  return {
-    name: normalizeName(name),
-    version: normalizeVersion(version),
-  }
 }

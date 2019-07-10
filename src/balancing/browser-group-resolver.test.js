@@ -1,8 +1,8 @@
 import { assert } from "@dmail/assert"
-import { browserToCompileId } from "./browserToCompileId.js"
+import { resolveBrowserGroup } from "./browser-group-resolver.js"
 
 {
-  const actual = browserToCompileId(
+  const actual = resolveBrowserGroup(
     {
       name: "chrome",
       version: "39",
@@ -20,7 +20,7 @@ import { browserToCompileId } from "./browserToCompileId.js"
 }
 
 {
-  const actual = browserToCompileId(
+  const actual = resolveBrowserGroup(
     {
       name: "chrome",
       version: "41",
@@ -38,7 +38,7 @@ import { browserToCompileId } from "./browserToCompileId.js"
 }
 
 {
-  const actual = browserToCompileId(
+  const actual = resolveBrowserGroup(
     {
       name: "chrome",
       version: "42",

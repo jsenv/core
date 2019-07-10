@@ -1,6 +1,15 @@
 import { findHighestVersion } from "../semantic-versioning/index.js"
 
-export const nodeToCompileId = ({ name, version }, groupMap) => {
+export const resolveNodeGroup = ({ groupMap }) => {
+  const node = detectNode()
+  return nodeToCompileId(node, groupMap)
+}
+
+const detectNode = () => {
+  return { name: "node", version: process.version.slice(1) }
+}
+
+const nodeToCompileId = ({ name, version }, groupMap) => {
   return Object.keys(groupMap).find((compileIdCandidate) => {
     const { platformCompatMap } = groupMap[compileIdCandidate]
     if (name in platformCompatMap === false) {

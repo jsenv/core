@@ -14,10 +14,10 @@ import importMap from "/.jsenv/import-map.json"
 import { uneval } from "@dmail/uneval"
 import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
 import { wrapImportMap } from "../../import-map/wrapImportMap.js"
+import { resolveCompileId } from "../../balancing/compile-id-resolution.js"
 import { createBrowserSystem } from "./create-browser-system.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
-import { resolveCompileId } from "../../platform/compile-id-resolution.js"
 
 const memoizedCreateBrowserSystem = memoizeOnce(createBrowserSystem)
 
