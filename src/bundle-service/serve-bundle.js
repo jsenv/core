@@ -1,8 +1,7 @@
 import { extname, dirname, basename } from "path"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
+import { generateBundle, bundleToCompilationResult } from "@jsenv/bundling"
 import { serveCompiledFile } from "../compiled-file-service/index.js"
-import { platformClientBundleToCompilationResult } from "./platformClientBundleToCompilationResult.js"
-import { generateBundle } from "./generate-bundle.js"
 
 export const serveBundle = async ({
   projectPathname,
@@ -37,7 +36,7 @@ export const serveBundle = async ({
         [entryName]: sourceRelativePath,
       }
 
-      const { bundle, relativePathAbstractArray } = await generateBundle({
+      const bundle = await generateBundle({
         projectPath: pathnameToOperatingSystemPath(projectPathname),
         bundleIntoRelativePath,
         importMapRelativePath,
@@ -53,14 +52,12 @@ export const serveBundle = async ({
         formatOutputOptions,
       })
 
-      return platformClientBundleToCompilationResult({
+      return bundleToCompilationResult(bundle, {
         projectPathname,
         compileIntoRelativePath,
-        relativePathAbstractArray,
         entryRelativePath: sourceRelativePath,
         sourcemapPath,
         sourcemapAssetPath: computeSourcemapAssetPath(compileRelativePath),
-        bundle,
       })
     },
   })

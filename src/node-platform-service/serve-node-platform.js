@@ -1,5 +1,5 @@
 import { serveFile } from "@dmail/server"
-import { serveBundle } from "../bundling/index.js"
+import { serveBundle } from "../bundle-service/serve-bundle.js"
 
 const NODE_PLATFORM_CLIENT_PATHNAME = `/.jsenv/node-platform.js`
 const NODE_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/node-platform-data.js`

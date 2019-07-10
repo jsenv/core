@@ -10,6 +10,7 @@ export {
 export {
   getOrGenerateCompiledFile,
 } from "./src/compiled-file-service/get-or-generate-compiled-file.js"
+export { serveBundle } from "./src/bundle-service/serve-bundle.js"
 
 // could be moved to jsenv/jsenv-execution
 export { execute } from "./src/execution/execute.js"
@@ -23,15 +24,6 @@ export {
   DEFAULT_COVER_DESCRIPTION as jsenvCoverDescription,
 } from "./src/coverage/cover-constant.js"
 export { createInstrumentPlugin } from "./src/coverage/createInstrumentPlugin.js"
-
-// could be moved to jsenv/jsenv-bundling
-export {
-  serveBrowserGlobalBundle,
-  generateNodeCommonJsBundle,
-  generateGlobalBundle,
-  generateCommonJsBundle,
-  generateSystemJsBundle,
-} from "./src/bundling/index.js"
 
 // should be moved to jsenv/jsenv-exploring-server
 export { startExploringServer } from "./src/exploring-server/index.js"

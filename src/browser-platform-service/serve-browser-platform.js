@@ -1,5 +1,5 @@
 import { serveFile } from "@dmail/server"
-import { serveBrowserGlobalBundle } from "../bundling/index.js"
+import { serveBundle } from "../bundle-service/serve-bundle.js"
 
 const BROWSER_PLATFORM_CLIENT_PATHNAME = `/.jsenv/browser-platform.js`
 const BROWSER_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/browser-platform-data.js`
@@ -26,7 +26,8 @@ export const serveBrowserPlatform = async ({
   }
   if (ressource !== BROWSER_PLATFORM_CLIENT_PATHNAME) return null
 
-  return serveBrowserGlobalBundle({
+  return serveBundle({
+    format: "global",
     projectPathname,
     compileIntoRelativePath,
     importMapRelativePath,

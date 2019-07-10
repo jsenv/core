@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { serveFile } from "@dmail/server"
-import { serveBrowserGlobalBundle } from "../bundling/index.js"
+import { serveBundle } from "../bundle-service/serve-bundle.js"
 import { ressourceToPathname, ressourceToSearchParamValue } from "../urlHelper.js"
 
 const BROWSER_SELF_EXECUTE_CLIENT_PATHNAME = "/.jsenv/browser-self-execute.js"
@@ -29,7 +29,8 @@ export const serveBrowserSelfExecuteBundle = async ({
 
   if (pathname !== BROWSER_SELF_EXECUTE_CLIENT_PATHNAME) return null
 
-  return serveBrowserGlobalBundle({
+  return serveBundle({
+    format: "global",
     projectPathname,
     compileIntoRelativePath,
     importMapRelativePath,
