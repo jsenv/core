@@ -1,6 +1,6 @@
 {
 	"name": "@jsenv/core",
-	"version": "5.97.0",
+	"version": "5.98.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -39,6 +39,7 @@
 		"magic-string": "0.25.2",
 		"node-fetch": "2.3.0",
 		"proper-lockfile": "3.2.0",
+		"istanbul-lib-coverage": "2.0.1",
 		"systemjs": "3.1.1"
 	},
 	"devDependencies": {
