@@ -21,7 +21,7 @@ To do that follow these steps:
 1. Install `@jsenv/eslint-import-resolver`
 
 ```shell
-npm install --save-dev @jsenv/eslint-import-resolver
+npm install --save-dev @jsenv/eslint-import-resolver@4.7.0
 ```
 
 2. Tell `eslint-plugin-import` to use a custom resolver

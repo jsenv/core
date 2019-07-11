@@ -30,7 +30,7 @@ To help you a bit, if your github user name is `john` and your project is `whate
 3. install `@jsenv/codecov-upload`
 
 ```shell
-npm install --save-dev @jsenv/codecov-upload
+npm install --save-dev @jsenv/codecov-upload@1.6.0
 ```
 
 4. Create a script capable to upload coverage.<br />

@@ -55,13 +55,13 @@ console.log(text)
 2. Install `@jsenv/core`
 
 ```shell
-npm install --save-dev @jsenv/core
+npm install --save-dev @jsenv/core@5.96.0
 ```
 
 3. Generate `root/importMap.json`
 
 ```shell
-npm i --save-dev @jsenv/node-module-import-map
+npm install --save-dev @jsenv/node-module-import-map@2.1.0
 node -e "require('@jsenv/node-module-import-map').generateImportMapForProjectNodeModules({ projectPath: process.cwd() });"
 ```
 

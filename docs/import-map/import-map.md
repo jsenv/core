@@ -34,7 +34,7 @@ Read part below to see how to use it.
 1. Install `@jsenv/node-module-import-map`
 
 ```shell
-npm i --save-dev @jsenv/node-module-import-map
+npm install --save-dev @jsenv/node-module-import-map@2.1.0
 ```
 
 2. Create a script capable to generate importMap for your project

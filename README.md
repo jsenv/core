@@ -28,7 +28,7 @@ The list below presents what tool jsenv provides. They are independent, you can 
   — see [coverage](./docs/coverage/coverage.md)
 
 - generate bundle compatible with browsers and/or node.js.<br/>
-  — see [bundling](./docs/bundling/bundling.md)
+  — see [@jsenv/bundling on github](https://github.com/jsenv/jsenv-bundling)
 
 All of the above can be achieved using babel, systemjs, rollup and istanbul separately. This project makes them work together.
 

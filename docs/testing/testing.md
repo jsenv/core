@@ -86,13 +86,13 @@ export const getPlatformName = () => {
 2. Install dev dependencies
 
 ```shell
-npm install --save-dev @jsenv/core @jsenv/chromium-launcher @jsenv/node-launcher
+npm install --save-dev @jsenv/core@jsenv/core@5.96.0 @jsenv/chromium-launcher@1.6.0 @jsenv/node-launcher@1.6.0
 ```
 
 3. Generate `root/importMap.json`
 
 ```shell
-npm install --save-dev @jsenv/node-module-import-map
+npm install --save-dev @jsenv/node-module-import-map@2.1.0
 node -e "require('@jsenv/node-module-import-map').generateImportMapForProjectNodeModules({ projectPath: process.cwd() });"
 ```
 
@@ -104,8 +104,8 @@ node -e "require('@jsenv/node-module-import-map').generateImportMapForProjectNod
 
 ```js
 const { test } = require("@jsenv/core")
-const { launchNode } = require('@jsenv/node-launcher')
-const { launchChromium } = require('@jsenv/chromium-launcher')
+const { launchNode } = require("@jsenv/node-launcher")
+const { launchChromium } = require("@jsenv/chromium-launcher")
 
 test({
   projectPath: __dirname,

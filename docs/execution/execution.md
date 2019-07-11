@@ -58,7 +58,7 @@ npm install --save-dev @jsenv/core @jsenv/chromium-launcher @jsenv/node-launcher
 3. Generate `root/importMap.json`
 
 ```shell
-npm install --save-dev @jsenv/node-module-import-map
+npm install --save-dev @jsenv/node-module-import-map@2.1.0
 node -e "require('@jsenv/node-module-import-map').generateImportMapForProjectNodeModules({ projectPath: process.cwd() });"
 ```
 
