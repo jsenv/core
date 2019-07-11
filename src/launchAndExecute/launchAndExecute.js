@@ -7,7 +7,7 @@ import {
   errorToCancelReason,
 } from "@dmail/cancellation"
 import { promiseTrackRace } from "@dmail/helper"
-import { coverageMapCompose } from "@jsenv/testing/src/coverage/coverageMapCompose.js"
+import { coverageMapCompose } from "./coverageMapCompose.js"
 import { createLogger, LOG_LEVEL_OFF } from "../logger.js"
 
 const TIMING_BEFORE_EXECUTION = "before-execution"

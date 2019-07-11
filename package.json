@@ -1,6 +1,6 @@
 {
 	"name": "@jsenv/core",
-	"version": "5.98.0",
+	"version": "5.100.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -44,7 +44,7 @@
 	},
 	"devDependencies": {
 		"@jsenv/core": "5.96.0",
-		"@jsenv/testing": "1.2.0",
+		"@jsenv/testing": "1.4.0",
 		"@jsenv/node-module-import-map": "2.1.0",
 		"@jsenv/eslint-config": "8.0.0",
 		"@jsenv/prettier-config": "1.0.0",
