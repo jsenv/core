@@ -22,10 +22,7 @@ The list below presents what tool jsenv provides. They are independent, you can 
   — see [execution](./docs/execution/execution.md)
 
 - execute your unit test files on a browser and/or node.js.<br/>
-  — see [testing](./docs/testing/testing.md)
-
-- generate coverage of your unit test files.<br/>
-  — see [coverage](./docs/coverage/coverage.md)
+  — see [@jsenv/testing on github](https://github.com/jsenv/jsenv-testing)
 
 - generate bundle compatible with browsers and/or node.js.<br/>
   — see [@jsenv/bundling on github](https://github.com/jsenv/jsenv-bundling)
