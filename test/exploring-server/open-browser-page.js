@@ -1,4 +1,4 @@
-import { coverageMapCompose } from "../../src/coverage/executionPlanResultToCoverageMap/coverageMapCompose.js"
+import { coverageMapCompose } from "@jsenv/testing/src/coverage/coverageMapCompose.js"
 
 const puppeteer = import.meta.require("puppeteer")
 

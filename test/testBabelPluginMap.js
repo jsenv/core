@@ -1,6 +1,6 @@
 import { namedValueDescriptionToMetaDescription, pathnameToMeta } from "@dmail/project-structure"
-import { jsenvCoverDescription } from "../index.js"
-import { createInstrumentPlugin } from "../src/coverage/createInstrumentPlugin.js"
+import { jsenvCoverDescription } from "@jsenv/testing"
+import { createInstrumentBabelPlugin } from "@jsenv/testing/src/coverage/instrument-babel-plugin.js"
 
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
@@ -14,7 +14,7 @@ const computeTestBabelPluginMap = ({ coverageEnabled }) => {
   return {
     ...jsenvBabelPluginMap,
     ["transform-instrument"]: [
-      createInstrumentPlugin({
+      createInstrumentBabelPlugin({
         predicate: ({ relativePath }) =>
           pathnameToMeta({
             pathname: relativePath,
