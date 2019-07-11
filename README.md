@@ -9,43 +9,33 @@
 ## Introduction
 
 `jsenv-core` is the entry point where you can find most of the code and the documentation.<br />
-`jsenv` is a github organization used to manage repositories. Most repositories have a corresponding package published on npm.<br />
+`jsenv` is a github organization used to manage repositories. Most repositories have a package published on npm.<br />
 
 ## How to use
 
-The list below presents what tool jsenv provides. They are independent, you can use them according to your needs.
+The list below presents what tool jsenv provides. They are independent and you can use them according to your project needs.
 
 - explore your project using a browser.<br/>
   — see [exploring server](./docs/exploring-server/exploring-server.md)
 
+- execute your test files on a browser and/or node.js.<br/>
+  — see [@jsenv/testing](https://github.com/jsenv/jsenv-testing)
+
+- generate bundle compatible with browsers and/or node.js.<br/>
+  — see [@jsenv/bundling](https://github.com/jsenv/jsenv-bundling)
+
 - execute one of your file on a browser or node.js process.<br/>
   — see [execution](./docs/execution/execution.md)
 
-- execute your unit test files on a browser and/or node.js.<br/>
-  — see [@jsenv/testing on github](https://github.com/jsenv/jsenv-testing)
-
-- generate bundle compatible with browsers and/or node.js.<br/>
-  — see [@jsenv/bundling on github](https://github.com/jsenv/jsenv-bundling)
-
-All of the above can be achieved using babel, systemjs, rollup and istanbul separately. This project makes them work together.
-
-Alongside these things jsenv can do, it also provides:
-
-- project relative import, import starting with `/`<br />
-  — see [project relative import](./docs/project-relative-import/project-relative-import.md)
-- cross platform access to `global`<br />
-  — see [cross platform global](./docs/cross-platform-global/cross-platform-global.md)
-- `import.meta.url`
-- top level `await`
-- dynamic `import()`
+The above could be achieved using babel, systemjs and rollup separately. jsenv makes them work together.
 
 ## Example
 
-A good way to see how something works is to see it in application on a concrete example. I recommend to check one of my project using jsenv: `@dmail/assert`.<br />
+I recommend to check a concrete example of a project using jsenv: `@dmail/assert`.<br />
 This is an npm package providing a browser and node.js entry point. It also runs unit test in a browser and node.js to ensure continuous integration in both environments.<br />
 
 I encourage you to check `@dmail/assert` to see how it uses jsenv.<br />
-— see [package.json scripts source](https://github.com/dmail/assert/blob/f05d400ae0ac849503f1b56d4d5971b5ad6b587f/package.json#L38-L52)
+— see [package.json scripts source](https://github.com/dmail/assert/blob/59ade7b3e8ab90cb6ce5d3de8bf1ffedd3fa779a/package.json#L43-L51)
 
 ## Main dependencies
 
