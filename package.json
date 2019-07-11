@@ -1,6 +1,6 @@
 {
 	"name": "@jsenv/core",
-	"version": "5.96.0",
+	"version": "5.97.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -24,7 +24,7 @@
 		"@dmail/cancellation": "2.3.0",
 		"@dmail/helper": "2.2.0",
 		"@dmail/project-structure": "3.3.0",
-		"@dmail/filesystem-matching": "1.1.0",
+		"@dmail/filesystem-matching": "1.2.0",
 		"@dmail/uneval": "5.4.0",
 		"@dmail/server": "1.10.0",
 		"@dmail/process-signals": "1.0.0",
@@ -36,9 +36,6 @@
 		"abort-controller": "2.0.2",
 		"ansi-to-html": "0.6.9",
 		"eventsource": "1.0.7",
-		"istanbul": "0.4.5",
-		"istanbul-lib-coverage": "2.0.1",
-		"istanbul-lib-instrument": "3.0.0",
 		"magic-string": "0.25.2",
 		"node-fetch": "2.3.0",
 		"proper-lockfile": "3.2.0",
@@ -46,6 +43,7 @@
 	},
 	"devDependencies": {
 		"@jsenv/core": "5.96.0",
+		"@jsenv/testing": "1.1.0",
 		"@jsenv/node-module-import-map": "2.1.0",
 		"@jsenv/eslint-config": "8.0.0",
 		"@jsenv/prettier-config": "1.0.0",

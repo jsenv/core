@@ -15,15 +15,5 @@ export { serveBundle } from "./src/bundle-service/serve-bundle.js"
 // could be moved to jsenv/jsenv-execution
 export { execute } from "./src/execution/execute.js"
 
-// could be moved to jsenv/jsenv-testing
-export { test } from "./src/testing/test.js"
-
-// could be moved inside jsenv/jsenv-testing
-export { cover } from "./src/coverage/cover.js"
-export {
-  DEFAULT_COVER_DESCRIPTION as jsenvCoverDescription,
-} from "./src/coverage/cover-constant.js"
-export { createInstrumentPlugin } from "./src/coverage/createInstrumentPlugin.js"
-
 // should be moved to jsenv/jsenv-exploring-server
 export { startExploringServer } from "./src/exploring-server/index.js"

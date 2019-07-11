@@ -1,5 +1,4 @@
-import { matchAllFileInsideFolder } from "@dmail/filesystem-matching"
-import { sortPathnameArray } from "../sort-pathname-array.js"
+import { matchAllFileInsideFolder, sortPathnameArray } from "@dmail/filesystem-matching"
 
 export const serveExploringIndex = async ({
   projectPathname,
