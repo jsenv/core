@@ -152,7 +152,7 @@ const computeRawExecutionResult = async ({
   fileRelativePath,
   ...rest
 }) => {
-  const hasAllocatedMs = typeof allocatedMs === "number"
+  const hasAllocatedMs = typeof allocatedMs === "number" && allocatedMs !== Infinity
 
   if (!hasAllocatedMs) {
     return computeExecutionResult({
@@ -163,6 +163,10 @@ const computeRawExecutionResult = async ({
       ...rest,
     })
   }
+
+  // here if allocatedMs is very big
+  // setTimeout may be called immediatly
+  // in that case we should just throw that hte number is too big
 
   const TIMEOUT_CANCEL_REASON = "timeout"
   const id = setTimeout(() => {
