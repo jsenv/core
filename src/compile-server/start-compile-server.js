@@ -142,6 +142,7 @@ export const startCompileServer = async ({
       watchedFiles.forEach((closeWatcher) => closeWatcher())
       watchedFiles.clear()
     })
+    const originalProjectFileRequestedCallback = projectFileRequestedCallback
     projectFileRequestedCallback = ({ relativePath }) => {
       const filePath = `${projectPath}${relativePath}`
       // when I ask for a compiled file, watch the corresponding file on filesystem
@@ -156,6 +157,7 @@ export const startCompileServer = async ({
         })
         watchedFiles.set(filePath, fileWatcher)
       }
+      originalProjectFileRequestedCallback({ relativePath })
     }
 
     if (livereloadingServerSentEvents) {
