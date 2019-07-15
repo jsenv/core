@@ -144,7 +144,7 @@ export const startCompileServer = async ({
       watchedFiles.clear()
     })
     const originalProjectFileRequestedCallback = projectFileRequestedCallback
-    projectFileRequestedCallback = ({ relativePath }) => {
+    projectFileRequestedCallback = ({ relativePath, executionId }) => {
       const filePath = `${projectPath}${relativePath}`
       // when I ask for a compiled file, watch the corresponding file on filesystem
       // here we should use the registerFileLifecyle stuff made in
@@ -158,7 +158,7 @@ export const startCompileServer = async ({
         })
         watchedFiles.set(filePath, fileWatcher)
       }
-      originalProjectFileRequestedCallback({ relativePath })
+      originalProjectFileRequestedCallback({ relativePath, executionId })
     }
 
     if (livereloadingServerSentEvents) {
