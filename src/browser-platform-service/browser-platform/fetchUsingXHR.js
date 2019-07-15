@@ -75,9 +75,12 @@ const computeWithCredentials = ({ credentials, url }) => {
 }
 
 const originSameAsGlobalOrigin = (url) => {
-  // if we cannot read window.location.origin, let's consider it's ok
-  if (typeof origin !== "string") return true
-  return hrefToOrigin(url) === origin
+  // if we cannot read globalOrigin from window.location.origin, let's consider it's ok
+  if (typeof window !== "object") return true
+  if (typeof window.location !== "object") return true
+  const globalOrigin = window.location.origin
+  if (globalOrigin === "null") return true
+  return hrefToOrigin(url) === globalOrigin
 }
 
 const createRequestError = ({ url }) => {
