@@ -2,7 +2,6 @@ import {
   compileIntoRelativePath,
   groupMap,
   importDefaultExtension,
-  executionId,
   // "/.jsenv/browser-platform-data.js" resolved at build time
   // eslint-disable-next-line import/no-unresolved
 } from "/.jsenv/browser-platform-data.js"
@@ -43,14 +42,13 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
       compileIntoRelativePath,
       importMap: wrappedImportMap,
       importDefaultExtension,
-      executionId,
     })
     return browserSystem.import(specifier)
   }
 
   const executeFile = async (
     specifier,
-    { collectCoverage, collectNamespace, errorNotification = false } = {},
+    { collectCoverage, collectNamespace, errorNotification = false, executionId } = {},
   ) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,

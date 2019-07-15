@@ -289,8 +289,11 @@ const serveProjectFiles = ({
 }) => {
   projectFileRequestedCallback({
     relativePath: ressource,
-    // here I'm 100% sure we'll never get such headers
-    // because the file may be requested from 
+    // the client (browser or node) should send
+    // somehow the execution-id if we want to read it here
+    // for now there is no such thing.
+    // It means any project file which is not a module cannot be associated
+    // to a specific execution.
     executionId: headers["x-jsenv-execution-id"],
   })
 

@@ -34,6 +34,7 @@ export const launchAndExecute = async ({
   fileRelativePath,
   collectNamespace = false,
   collectCoverage = false,
+  executionId,
   inheritCoverage = false,
   collectPlatformNameAndVersion = false,
 } = {}) => {
@@ -125,6 +126,7 @@ export const launchAndExecute = async ({
     fileRelativePath,
     collectNamespace,
     collectCoverage,
+    executionId,
   })
 
   return executionResultTransformer(executionResult)
@@ -217,6 +219,7 @@ const computeExecutionResult = async ({
   fileRelativePath,
   collectNamespace,
   collectCoverage,
+  executionId,
 }) => {
   const { log, logError } = createLogger({ logLevel })
   log(createStartingPlatformMessage({ fileRelativePath }))
@@ -296,6 +299,7 @@ const computeExecutionResult = async ({
       const executed = executeFile(fileRelativePath, {
         collectNamespace,
         collectCoverage,
+        executionId,
       })
       timing = TIMING_DURING_EXECUTION
 
