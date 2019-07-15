@@ -3,6 +3,7 @@ import { createCancellationToken } from "@dmail/cancellation"
 import {
   acceptsContentType,
   createServerSentEventsRoom,
+  defaultAccessControlAllowedHeaders,
   startServer,
   firstService,
   serveFile,
@@ -254,6 +255,10 @@ export const startCompileServer = async ({
     accessControlAllowRequestOrigin: true,
     accessControlAllowRequestMethod: true,
     accessControlAllowRequestHeaders: true,
+    accessControlAllowedRequestHeaders: [
+      ...defaultAccessControlAllowedHeaders,
+      "x-jsenv-execution-id",
+    ],
     keepProcessAlive: false,
   })
 
