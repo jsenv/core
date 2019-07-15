@@ -13,7 +13,7 @@ export const serveBrowserSelfExecuteBundle = async ({
   browserSelfExecuteTemplateRelativePath,
   babelPluginMap,
   request: { ressource, method, headers },
-  watchSource,
+  livereloading,
 }) => {
   if (ressource.startsWith(`/.jsenv/browser-self-execute/`)) {
     const assetRelativePath = ressource.slice("/.jsenv/browser-self-execute/".length)
@@ -41,13 +41,13 @@ export const serveBrowserSelfExecuteBundle = async ({
     )}.map`,
     specifierDynamicMap: {
       [BROWSER_SELF_EXECUTE_STATIC_DATA_PATHNAME]: () =>
-        generateBrowserSelfExecuteStaticDataSource({ fileRelativePath, watchSource }),
+        generateBrowserSelfExecuteStaticDataSource({ fileRelativePath, livereloading }),
     },
     headers,
     babelPluginMap,
   })
 }
 
-const generateBrowserSelfExecuteStaticDataSource = ({ fileRelativePath, watchSource }) =>
+const generateBrowserSelfExecuteStaticDataSource = ({ fileRelativePath, livereloading }) =>
   `export const fileRelativePath = ${JSON.stringify(fileRelativePath)}
-export const watchSource = ${JSON.stringify(watchSource)}`
+export const livereloading = ${JSON.stringify(livereloading)}`

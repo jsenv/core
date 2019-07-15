@@ -13,7 +13,7 @@ export const serveExploringPage = ({
   babelPluginMap,
   browsableMetaMap,
   request,
-  watchSource,
+  livereloading,
 }) =>
   firstService(
     () =>
@@ -32,6 +32,6 @@ export const serveExploringPage = ({
         browserSelfExecuteTemplateRelativePath,
         babelPluginMap,
         request,
-        watchSource,
+        livereloading,
       }),
   )

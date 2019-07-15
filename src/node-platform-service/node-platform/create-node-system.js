@@ -22,6 +22,7 @@ export const createNodeSystem = ({
   compileIntoRelativePath,
   importMap = {},
   importDefaultExtension,
+  executionId,
 } = {}) => {
   if (typeof global.System === "undefined") throw new Error(`global.System is undefined`)
 
@@ -80,6 +81,7 @@ export const createNodeSystem = ({
 
         return nodeSystem.getRegister()
       },
+      executionId,
     })
   }
 

@@ -2,6 +2,7 @@ import {
   compileIntoRelativePath,
   groupMap,
   importDefaultExtension,
+  executionId,
   // "/.jsenv/node-platform-data.js" resolved at build time
   // eslint-disable-next-line import/no-unresolved
 } from "/.jsenv/node-platform-data.js"
@@ -41,6 +42,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => 
       compileIntoRelativePath,
       importMap: wrappedImportMap,
       importDefaultExtension,
+      executionId,
     })
     return makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
   }
@@ -52,6 +54,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => 
       compileIntoRelativePath,
       importMap: wrappedImportMap,
       importDefaultExtension,
+      executionId,
     })
     try {
       const namespace = await makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))

@@ -20,5 +20,5 @@ startExploringServer({
   protocol: "https",
   port: 3400,
   forcePort: true,
-  watchSource: true,
+  livereloading: true,
 })

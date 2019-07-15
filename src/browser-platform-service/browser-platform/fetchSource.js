@@ -1,7 +1,10 @@
 import { fetchUsingXHR } from "./fetchUsingXHR.js"
 
-export const fetchSource = ({ href }) => {
+export const fetchSource = ({ href, executionId }) => {
   return fetchUsingXHR(href, {
-    // "x-module-referer": importerHref || href,
+    credentials: "include",
+    headers: {
+      ...(executionId ? { "x-jsenv-execution-id": executionId } : {}),
+    },
   })
 }

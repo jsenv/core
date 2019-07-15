@@ -1,16 +1,21 @@
 import { EventSource, location } from "global"
 // eslint-disable-next-line import/no-unresolved
-import { fileRelativePath, watchSource } from "/.jsenv/browser-self-execute-static-data.js"
+import { fileRelativePath, livereloading } from "/.jsenv/browser-self-execute-static-data.js"
 import { loadUsingScript } from "../loadUsingScript.js"
 import { fetchUsingXHR } from "../browser-platform-service/browser-platform/fetchUsingXHR.js"
 
 // eslint-disable-next-line import/newline-after-import
 ;(async () => {
-  const { body } = await fetchUsingXHR("/.jsenv/browser-self-execute-dynamic-data.json")
+  const { body } = await fetchUsingXHR("/.jsenv/browser-self-execute-dynamic-data.json", {
+    credentials: "include",
+  })
   const { compileServerOrigin } = JSON.parse(body)
 
-  if (watchSource && typeof EventSource === "function") {
-    const eventSource = new EventSource(compileServerOrigin, { withCredentials: true })
+  if (livereloading && typeof EventSource === "function") {
+    const eventSourceOrigin = `${compileServerOrigin}/livereloading`
+    const eventSource = new EventSource(eventSourceOrigin, {
+      withCredentials: true,
+    })
 
     const close = () => {
       eventSource.close()
@@ -24,7 +29,7 @@ import { fetchUsingXHR } from "../browser-platform-service/browser-platform/fetc
       close()
     }
     eventSource.addEventListener("file-changed", (e) => {
-      if (e.origin !== compileServerOrigin) {
+      if (e.origin !== eventSourceOrigin) {
         return
       }
       // const fileChanged = e.data

@@ -18,6 +18,7 @@ export const createBrowserSystem = async ({
   compileIntoRelativePath,
   importMap,
   importDefaultExtension,
+  executionId,
 }) => {
   if (typeof window.System === "undefined") throw new Error(`window.System is undefined`)
 
@@ -55,6 +56,7 @@ export const createBrowserSystem = async ({
 
         return browserSystem.getRegister()
       },
+      executionId,
     })
   }
 

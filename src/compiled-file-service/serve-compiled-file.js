@@ -61,7 +61,10 @@ export const serveCompiledFile = async ({
     })
 
     compileResult.sources.forEach((source) => {
-      projectFileRequestedCallback(source)
+      projectFileRequestedCallback({
+        relativePath: source,
+        executionId: headers["x-jsenv-execution-id"],
+      })
     })
 
     const { contentType, compiledSource } = compileResult

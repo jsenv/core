@@ -6,10 +6,17 @@ import { createModuleResponseUnsupportedContentTypeHeaderError } from "./error/m
 import { fromFunctionReturningRegisteredModule } from "./fromFunctionReturningRegisteredModule.js"
 import { fromFunctionReturningNamespace } from "./fromFunctionReturningNamespace.js"
 
-export const fromHref = async ({ href, importerHref, fetchSource, instantiateJavaScript }) => {
+export const fromHref = async ({
+  href,
+  importerHref,
+  executionId,
+  fetchSource,
+  instantiateJavaScript,
+}) => {
   const { url, status, statusText, headers, body } = await fetchSource({
     href,
     importerHref,
+    executionId,
   })
   const realHref = url
 

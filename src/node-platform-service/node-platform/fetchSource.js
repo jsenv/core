@@ -1,7 +1,7 @@
 import { fetchUsingFileSystem } from "./fetchUsingFileSystem.js"
 import { fetchUsingHttp } from "./fetchUsingHttp.js"
 
-export const fetchSource = ({ href, importerHref }) => {
+export const fetchSource = ({ href, importerHref, executionId }) => {
   if (protocolIsFile(href)) {
     return fetchUsingFileSystem(href, importerHref)
   }
@@ -9,7 +9,7 @@ export const fetchSource = ({ href, importerHref }) => {
   if (protocolIsHttpOrHttps(href)) {
     return fetchUsingHttp(href, {
       headers: {
-        // "x-module-referer": importerHref || href,
+        ...(executionId ? { "x-jsenv-execution-id": executionId } : {}),
       },
     })
   }

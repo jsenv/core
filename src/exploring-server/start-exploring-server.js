@@ -40,7 +40,7 @@ export const startExploringServer = async ({
   ip = "127.0.0.1",
   port = 0,
   forcePort = false,
-  watchSource = false,
+  livereloading = false,
   signature,
   compileServerLogLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
 }) => {
@@ -87,7 +87,7 @@ export const startExploringServer = async ({
     forcePort: false, // no need because random port
     signature,
     logLevel: compileServerLogLevel,
-    watchSource,
+    livereloadingServerSentEvents: livereloading,
   })
 
   const service = (request) =>
@@ -109,7 +109,7 @@ export const startExploringServer = async ({
           babelPluginMap,
           browsableMetaMap: metaDescription,
           request,
-          watchSource,
+          livereloading,
         }),
       () =>
         serveFile(`${projectPathname}${request.ressource}`, {

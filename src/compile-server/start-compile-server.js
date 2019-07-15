@@ -51,9 +51,19 @@ export const startCompileServer = async ({
   babelCompatMap = DEFAULT_BABEL_COMPAT_MAP,
   browserScoreMap = DEFAULT_BROWSER_SCORE_MAP,
   nodeVersionScoreMap = DEFAULT_NODE_VERSION_SCORE_MAP,
-  // options related to how cache/hotreloading
-  watchSource = false,
-  watchSourcePredicate = () => true, // should we exclude node_modules by default ?
+  // this callback will be called each time a projectFile was
+  // used to respond to a request
+  // each time an execution needs a project file this callback
+  // will be called.
+  projectFileRequestedCallback = () => {},
+  // this optionnal function will be called every time a project file changes
+  // code using compileServer can use it to do something when
+  // a project file is modified
+  projectFileChangedCallback = null,
+  // should we exclude node_modules by default ?
+  projectFileWatchPredicate = () => true,
+  // when true, a /livereloading server sent events room will exist
+  livereloadingServerSentEvents = false,
   // js compile options
   transformTopLevelAwait = true,
   // options related to the server itself
@@ -113,25 +123,16 @@ export const startCompileServer = async ({
     relativePath: nodeGroupResolverRelativePath,
   })
 
-  // this callback will be called each time a projectFile was
-  // used to respond to a request
-  // it is not used yet but is meant to implement hotreloading
-  // each time a client will need a project file we will watch that file
-  // and a client can register to these events to reload the page
-  // when a project file changed
-  let projectFileRequestedCallback = () => {}
-
-  let watchSSEService = () => null
-
-  if (watchSource) {
-    const originalWatchSourcePredicate = watchSourcePredicate
-    watchSourcePredicate = (relativePath) => {
+  let livereloadingServerSentEventsService = () => null
+  if (projectFileChangedCallback || livereloadingServerSentEvents) {
+    const originalProjectFileWatchPredicate = projectFileWatchPredicate
+    projectFileWatchPredicate = (relativePath) => {
       // I doubt an asset like .js.map will change
       // in theory a compilation asset should not change
       // if the source file did not change
       // so we can avoid watching compilation asset
       if (relativePathIsAsset(relativePath)) return false
-      return originalWatchSourcePredicate(relativePath)
+      return originalProjectFileWatchPredicate(relativePath)
     }
 
     const { registerFileChangedCallback, triggerFileChanged } = createFileChangedSignal()
@@ -141,7 +142,7 @@ export const startCompileServer = async ({
       watchedFiles.forEach((closeWatcher) => closeWatcher())
       watchedFiles.clear()
     })
-    projectFileRequestedCallback = (relativePath) => {
+    projectFileRequestedCallback = ({ relativePath }) => {
       const filePath = `${projectPath}${relativePath}`
       // when I ask for a compiled file, watch the corresponding file on filesystem
       // here we should use the registerFileLifecyle stuff made in
@@ -149,7 +150,7 @@ export const startCompileServer = async ({
       // by the way this is not truly working if compile creates a bundle
       // in that case we should watch for the whole bundle
       // sources, for now let's ignore
-      if (watchedFiles.has(filePath) === false && watchSourcePredicate(relativePath)) {
+      if (watchedFiles.has(filePath) === false && projectFileWatchPredicate(relativePath)) {
         const fileWatcher = watchFile(filePath, () => {
           triggerFileChanged({ relativePath })
         })
@@ -157,23 +158,30 @@ export const startCompileServer = async ({
       }
     }
 
-    const fileChangedSSE = createServerSentEventsRoom()
+    if (livereloadingServerSentEvents) {
+      const fileChangedSSE = createServerSentEventsRoom()
 
-    fileChangedSSE.start()
-    cancellationToken.register(fileChangedSSE.stop)
+      fileChangedSSE.start()
+      cancellationToken.register(fileChangedSSE.stop)
 
-    registerFileChangedCallback(({ fileRelativePath }) => {
-      fileChangedSSE.sendEvent({
-        type: "file-changed",
-        data: fileRelativePath,
+      registerFileChangedCallback(({ fileRelativePath }) => {
+        fileChangedSSE.sendEvent({
+          type: "file-changed",
+          data: fileRelativePath,
+        })
       })
-    })
 
-    watchSSEService = ({ headers }) => {
-      if (acceptsContentType(headers.accept, "text/event-stream")) {
+      livereloadingServerSentEventsService = ({ headers, ressource }) => {
+        if (ressource !== "/livereloading") return null
+        if (!acceptsContentType(headers.accept, "text/event-stream")) return null
         return fileChangedSSE.connect(headers["last-event-id"])
       }
-      return null
+    }
+
+    if (projectFileChangedCallback) {
+      registerFileChangedCallback(({ fileRelativePath }) => {
+        projectFileChangedCallback({ relativePath: fileRelativePath })
+      })
     }
   }
 
@@ -185,7 +193,7 @@ export const startCompileServer = async ({
     signature,
     requestToResponse: (request) =>
       firstService(
-        () => watchSSEService(request),
+        () => livereloadingServerSentEventsService(request),
         () =>
           serveImportMap({
             importMapRelativePath,
@@ -279,7 +287,12 @@ const serveProjectFiles = ({
   projectFileRequestedCallback,
   request: { ressource, method, headers },
 }) => {
-  projectFileRequestedCallback(ressource)
+  projectFileRequestedCallback({
+    relativePath: ressource,
+    // here I'm 100% sure we'll never get such headers
+    // because the file may be requested from 
+    executionId: headers["x-jsenv-execution-id"],
+  })
 
   return serveFile(`${projectPathname}${ressource}`, { method, headers })
 }

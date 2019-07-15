@@ -1,4 +1,6 @@
-export const fetchUsingXHR = (url, headers = {}) => {
+import { hrefToOrigin } from "@jsenv/module-resolution/src/hrefToOrigin.js"
+
+export const fetchUsingXHR = (url, { credentials = "same-origin", headers = {} }) => {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
 
@@ -58,8 +60,24 @@ export const fetchUsingXHR = (url, headers = {}) => {
     Object.keys(headers).forEach((key) => {
       xhr.setRequestHeader(key, headers[key])
     })
+    xhr.withCredentials = computeWithCredentials({ credentials, url })
+
     xhr.send(null)
   })
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+const computeWithCredentials = ({ credentials, url }) => {
+  if (credentials === "same-origin") {
+    return originSameAsGlobalOrigin(url)
+  }
+  return credentials === "include"
+}
+
+const originSameAsGlobalOrigin = (url) => {
+  // if we cannot read window.location.origin, let's consider it's ok
+  if (typeof origin !== "string") return true
+  return hrefToOrigin(url) === origin
 }
 
 const createRequestError = ({ url }) => {
