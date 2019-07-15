@@ -164,10 +164,10 @@ export const startCompileServer = async ({
       fileChangedSSE.start()
       cancellationToken.register(fileChangedSSE.stop)
 
-      registerFileChangedCallback(({ fileRelativePath }) => {
+      registerFileChangedCallback(({ relativePath }) => {
         fileChangedSSE.sendEvent({
           type: "file-changed",
-          data: fileRelativePath,
+          data: relativePath,
         })
       })
 
@@ -179,8 +179,8 @@ export const startCompileServer = async ({
     }
 
     if (projectFileChangedCallback) {
-      registerFileChangedCallback(({ fileRelativePath }) => {
-        projectFileChangedCallback({ relativePath: fileRelativePath })
+      registerFileChangedCallback(({ relativePath }) => {
+        projectFileChangedCallback({ relativePath })
       })
     }
   }
