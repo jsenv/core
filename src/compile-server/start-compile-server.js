@@ -241,7 +241,9 @@ export const startCompileServer = async ({
       ),
     logLevel,
     cors,
-    // but while debugging it may close the server too soon, to be tested
+    accessControlAllowRequestOrigin: true,
+    accessControlAllowRequestMethod: true,
+    accessControlAllowRequestHeaders: true,
     keepProcessAlive: false,
   })
 
