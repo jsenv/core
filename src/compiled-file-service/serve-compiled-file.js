@@ -1,4 +1,8 @@
 import { convertFileSystemErrorToResponseProperties } from "@dmail/server"
+import {
+  operatingSystemPathToPathname,
+  pathnameToRelativePathname,
+} from "@jsenv/operating-system-path"
 import { createETag } from "../createETag.js"
 import { getOrGenerateCompiledFile } from "./get-or-generate-compiled-file.js"
 
@@ -114,6 +118,15 @@ export const serveCompiledFile = async ({
     }
   } catch (error) {
     if (error && error.code === "PARSE_ERROR") {
+      const relativePath = pathnameToRelativePathname(
+        operatingSystemPathToPathname(error.data.filename),
+        projectPathname,
+      )
+      projectFileRequestedCallback({
+        relativePath,
+        executionId: headers["x-jsenv-execution-id"],
+      })
+      // on the correspondig file
       const json = JSON.stringify(error.data)
 
       return {
