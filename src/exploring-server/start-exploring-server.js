@@ -10,6 +10,7 @@ import { startCompileServer } from "../compile-server/index.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
 import { relativePathInception } from "../JSENV_PATH.js"
+import { assertFolder, assertFile } from "../filesystem-assertions.js"
 import { serveExploringIndex } from "./serve-exploring-index.js"
 import { serveExploringPage } from "./serve-exploring-page.js"
 import {
@@ -18,7 +19,6 @@ import {
   DEFAULT_BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH,
   DEFAULT_EXPLORABLE_MAP,
 } from "./exploring-server-constant.js"
-import { assertFolder, assertFile } from "./filesystem-assertions.js"
 
 export const startExploringServer = async ({
   cancellationToken = createCancellationToken(),
@@ -53,17 +53,20 @@ export const startExploringServer = async ({
     importMap,
     relativePath: browserClientRelativePath,
   })
-  browserSelfExecuteTemplateRelativePath = relativePathInception({
-    projectPathname,
-    importMap,
-    relativePath: browserSelfExecuteTemplateRelativePath,
-  })
-
   await assertFolder(
     pathnameToOperatingSystemPath(`${projectPathname}${browserClientRelativePath}`),
   )
   await assertFile(
     pathnameToOperatingSystemPath(`${projectPathname}${browserClientRelativePath}/index.html`),
+  )
+
+  browserSelfExecuteTemplateRelativePath = relativePathInception({
+    projectPathname,
+    importMap,
+    relativePath: browserSelfExecuteTemplateRelativePath,
+  })
+  await assertFile(
+    pathnameToOperatingSystemPath(`${projectPathname}${browserSelfExecuteTemplateRelativePath}`),
   )
 
   const metaDescription = namedValueDescriptionToMetaDescription({

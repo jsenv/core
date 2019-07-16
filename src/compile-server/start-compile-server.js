@@ -21,6 +21,7 @@ import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 import { removeFolder } from "../removeFolder.js"
 import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
 import { relativePathInception } from "../JSENV_PATH.js"
+import { assertFile } from "../filesystem-assertions.js"
 import { readCompileIntoMeta } from "./read-compile-into-meta.js"
 import { writeCompileIntoMeta } from "./write-compile-into-meta.js"
 import {
@@ -108,21 +109,34 @@ export const startCompileServer = async ({
     importMap,
     relativePath: browserPlatformRelativePath,
   })
+  await assertFile(
+    pathnameToOperatingSystemPath(`${projectPathname}${browserPlatformRelativePath}`),
+  )
+
   browserGroupResolverRelativePath = relativePathInception({
     projectPathname,
     importMap,
     relativePath: browserGroupResolverRelativePath,
   })
+  await assertFile(
+    pathnameToOperatingSystemPath(`${projectPathname}${browserGroupResolverRelativePath}`),
+  )
+
   nodePlatformRelativePath = relativePathInception({
     projectPathname,
     importMap,
     relativePath: nodePlatformRelativePath,
   })
+  await assertFile(pathnameToOperatingSystemPath(`${projectPathname}${nodePlatformRelativePath}`))
+
   nodeGroupResolverRelativePath = relativePathInception({
     projectPathname,
     importMap,
     relativePath: nodeGroupResolverRelativePath,
   })
+  await assertFile(
+    pathnameToOperatingSystemPath(`${projectPathname}${nodeGroupResolverRelativePath}`),
+  )
 
   let livereloadingServerSentEventsService = () => null
   if (projectFileChangedCallback || livereloadingServerSentEvents) {
