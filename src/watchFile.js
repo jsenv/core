@@ -3,9 +3,9 @@ import { memoizeSync } from "./functionHelper.js"
 
 export const watchFile = (url, fn) => {
   const signal = getFileChangedSignal(url)
-  const listener = signal.listen(fn)
+  const removeListener = signal.listen(fn)
   return () => {
-    listener.remove()
+    removeListener()
   }
 }
 
