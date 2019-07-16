@@ -19,18 +19,13 @@ import { serveNodePlatform } from "../node-platform-service/index.js"
 import { serveCompiledJs, relativePathIsAsset } from "../compiled-js-service/index.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 import { removeFolder } from "../removeFolder.js"
-import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
-import { relativePathInception } from "../JSENV_PATH.js"
+import { jsenvRelativePathInception } from "../JSENV_PATH.js"
 import { assertFile } from "../filesystem-assertions.js"
 import { readCompileIntoMeta } from "./read-compile-into-meta.js"
 import { writeCompileIntoMeta } from "./write-compile-into-meta.js"
 import {
   DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
-  DEFAULT_BROWSER_PLATFORM_RELATIVE_PATH,
-  DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
-  DEFAULT_NODE_PLATFORM_RELATIVE_PATH,
-  DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
   DEFAULT_BABEL_PLUGIN_MAP,
   DEFAULT_BABEL_COMPAT_MAP,
   DEFAULT_BROWSER_SCORE_MAP,
@@ -43,10 +38,10 @@ export const startCompileServer = async ({
   compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   importDefaultExtension,
-  browserPlatformRelativePath = DEFAULT_BROWSER_PLATFORM_RELATIVE_PATH,
-  browserGroupResolverRelativePath = DEFAULT_BROWSER_GROUP_RESOLVER_RELATIVE_PATH,
-  nodePlatformRelativePath = DEFAULT_NODE_PLATFORM_RELATIVE_PATH,
-  nodeGroupResolverRelativePath = DEFAULT_NODE_GROUP_RESOLVER_RELATIVE_PATH,
+  browserPlatformRelativePath,
+  browserGroupResolverRelativePath,
+  nodePlatformRelativePath,
+  nodeGroupResolverRelativePath,
   compileGroupCount = 1,
   platformAlwaysInsidePlatformScoreMap = false,
   babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
@@ -102,38 +97,40 @@ export const startCompileServer = async ({
   }
   await writeCompileIntoMeta({ projectPathname, compileIntoRelativePath, compileIntoMeta })
 
-  const importMap = await readProjectImportMap({ projectPathname, importMapRelativePath })
-
-  browserPlatformRelativePath = relativePathInception({
-    projectPathname,
-    importMap,
-    relativePath: browserPlatformRelativePath,
-  })
+  if (typeof browserPlatformRelativePath === "undefined") {
+    browserPlatformRelativePath = jsenvRelativePathInception({
+      jsenvRelativePath: "/src/browser-platform-service/browser-platform/index.js",
+      projectPathname,
+    })
+  }
   await assertFile(
     pathnameToOperatingSystemPath(`${projectPathname}${browserPlatformRelativePath}`),
   )
 
-  browserGroupResolverRelativePath = relativePathInception({
-    projectPathname,
-    importMap,
-    relativePath: browserGroupResolverRelativePath,
-  })
+  if (typeof browserGroupResolverRelativePath === "undefined") {
+    browserGroupResolverRelativePath = jsenvRelativePathInception({
+      jsenvRelativePath: "/src/balancing/browser-group-resolver.js",
+      projectPathname,
+    })
+  }
   await assertFile(
     pathnameToOperatingSystemPath(`${projectPathname}${browserGroupResolverRelativePath}`),
   )
 
-  nodePlatformRelativePath = relativePathInception({
-    projectPathname,
-    importMap,
-    relativePath: nodePlatformRelativePath,
-  })
+  if (typeof nodePlatformRelativePath === "undefined") {
+    nodePlatformRelativePath = jsenvRelativePathInception({
+      jsenvRelativePath: "/src/node-platform-service/node-platform/index.js",
+      projectPathname,
+    })
+  }
   await assertFile(pathnameToOperatingSystemPath(`${projectPathname}${nodePlatformRelativePath}`))
 
-  nodeGroupResolverRelativePath = relativePathInception({
-    projectPathname,
-    importMap,
-    relativePath: nodeGroupResolverRelativePath,
-  })
+  if (typeof nodeGroupResolverRelativePath === "undefined") {
+    nodeGroupResolverRelativePath = jsenvRelativePathInception({
+      jsenvRelativePath: "/src/balancing/node-group-resolver.js",
+      projectPathname,
+    })
+  }
   await assertFile(
     pathnameToOperatingSystemPath(`${projectPathname}${nodeGroupResolverRelativePath}`),
   )

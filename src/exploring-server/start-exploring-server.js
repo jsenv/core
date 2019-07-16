@@ -8,15 +8,12 @@ import {
 } from "@jsenv/operating-system-path"
 import { startCompileServer } from "../compile-server/index.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
-import { readProjectImportMap } from "../import-map/readProjectImportMap.js"
-import { relativePathInception } from "../JSENV_PATH.js"
+import { jsenvRelativePathInception } from "../JSENV_PATH.js"
 import { assertFolder, assertFile } from "../filesystem-assertions.js"
 import { serveExploringIndex } from "./serve-exploring-index.js"
 import { serveExploringPage } from "./serve-exploring-page.js"
 import {
   DEFAULT_IMPORT_MAP_RELATIVE_PATH,
-  DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
-  DEFAULT_BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH,
   DEFAULT_EXPLORABLE_MAP,
 } from "./exploring-server-constant.js"
 
@@ -26,8 +23,8 @@ export const startExploringServer = async ({
   compileIntoRelativePath,
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   importDefaultExtension,
-  browserClientRelativePath = DEFAULT_BROWSER_CLIENT_RELATIVE_PATH,
-  browserSelfExecuteTemplateRelativePath = DEFAULT_BROWSER_SELF_EXECUTE_TEMPLATE_RELATIVE_PATH,
+  browserClientRelativePath,
+  browserSelfExecuteTemplateRelativePath,
   browserPlatformRelativePath,
   browserGroupResolverPath,
   babelPluginMap,
@@ -46,13 +43,12 @@ export const startExploringServer = async ({
 }) => {
   const projectPathname = operatingSystemPathToPathname(projectPath)
 
-  const importMap = await readProjectImportMap({ projectPathname, importMapRelativePath })
-
-  browserClientRelativePath = relativePathInception({
-    projectPathname,
-    importMap,
-    relativePath: browserClientRelativePath,
-  })
+  if (typeof browserClientRelativePath === "undefined") {
+    browserClientRelativePath = jsenvRelativePathInception({
+      jsenvRelativePath: "/src/browser-client",
+      projectPathname,
+    })
+  }
   await assertFolder(
     pathnameToOperatingSystemPath(`${projectPathname}${browserClientRelativePath}`),
   )
@@ -60,11 +56,12 @@ export const startExploringServer = async ({
     pathnameToOperatingSystemPath(`${projectPathname}${browserClientRelativePath}/index.html`),
   )
 
-  browserSelfExecuteTemplateRelativePath = relativePathInception({
-    projectPathname,
-    importMap,
-    relativePath: browserSelfExecuteTemplateRelativePath,
-  })
+  if (typeof browserSelfExecuteTemplateRelativePath === "undefined") {
+    browserSelfExecuteTemplateRelativePath = jsenvRelativePathInception({
+      jsenvRelativePath: "/src/exploring-server/browser-self-execute-template.js",
+      projectPathname,
+    })
+  }
   await assertFile(
     pathnameToOperatingSystemPath(`${projectPathname}${browserSelfExecuteTemplateRelativePath}`),
   )
