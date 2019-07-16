@@ -39,6 +39,7 @@ export const startExploringServer = async ({
   forcePort = false,
   livereloading = false,
   signature,
+  cleanCompileInto,
   compileServerLogLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
 }) => {
   const projectPathname = operatingSystemPathToPathname(projectPath)
@@ -86,6 +87,7 @@ export const startExploringServer = async ({
     port: 0, // random available port
     forcePort: false, // no need because random port
     signature,
+    cleanCompileInto,
     logLevel: compileServerLogLevel,
     livereloadingServerSentEvents: livereloading,
   })

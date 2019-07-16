@@ -22,6 +22,7 @@ export const execute = async ({
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
+  cleanCompileInto,
   compileServerLogLevel = LOG_LEVEL_OFF,
   executionLogLevel = LOG_LEVEL_OFF,
   mirrorConsole = true,
@@ -51,6 +52,7 @@ export const execute = async ({
       ip,
       port,
       logLevel: compileServerLogLevel,
+      cleanCompileInto,
     })
 
     const result = await launchAndExecute({

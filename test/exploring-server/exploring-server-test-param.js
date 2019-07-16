@@ -10,4 +10,5 @@ export const EXPLORING_SERVER_TEST_PARAM = {
   logLevel: "off",
   compileServerLogLevel: "off",
   keepProcessAlive: false,
+  cleanCompileInto: true,
 }

@@ -9,5 +9,6 @@ export const EXECUTION_TEST_PARAM = {
   nodePlatformRelativePath: "/src/node-platform-service/node-platform/index.js",
   browserGroupResolverRelativePath: "/src/balancing/browser-group-resolver.js",
   nodeGroupResolverRelativePath: "/src/balancing/node-group-resolver.js",
+  cleanCompileInto: true,
   inheritCoverage: process.env.COVERAGE_ENABLED === "true",
 }
