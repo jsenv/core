@@ -1,4 +1,4 @@
-import { assert } from "/node_modules/@dmail/assert/index.js"
+import { assert } from "@dmail/assert"
 import { platformCompatMapToScore } from "./platformCompatMapToScore.js"
 
 {

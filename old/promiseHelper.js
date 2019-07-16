@@ -1,7 +1,4 @@
-import {
-  createCancellationToken,
-  createOperation,
-} from "/node_modules/@dmail/cancellation/index.js"
+import { createCancellationToken, createOperation } from "@dmail/cancellation"
 
 export const createPromiseAndHooks = () => {
   let resolve

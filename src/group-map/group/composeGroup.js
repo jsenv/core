@@ -1,4 +1,4 @@
-import { compositionMappingToComposeStrict } from "/node_modules/@dmail/helper/index.js"
+import { compositionMappingToComposeStrict } from "@dmail/helper"
 import { composePlatformCompatMap } from "../platform-compat-map/composePlatformCompatMap.js"
 import { composeIncompatibleNameArray } from "./composeIncompatibleNameArray.js"
 

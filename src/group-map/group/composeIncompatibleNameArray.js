@@ -1,4 +1,4 @@
-import { arrayWithoutDuplicate } from "/node_modules/@dmail/helper/index.js"
+import { arrayWithoutDuplicate } from "@dmail/helper"
 
 export const composeIncompatibleNameArray = (prevNameArray, nameArray) =>
   arrayWithoutDuplicate([...prevNameArray, ...nameArray]).sort()

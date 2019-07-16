@@ -38,7 +38,7 @@ Take chars below to update legends
 
 */
 
-import { arrayWithoutValue } from "/node_modules/@dmail/helper/index.js"
+import { arrayWithoutValue } from "@dmail/helper"
 import { babelCompatMap as defaultBabelCompatMap } from "./babelCompatMap.js"
 import { platformCompatMapToScore } from "./platform-compat-map/platformCompatMapToScore.js"
 import { computeEveryPlatformGroupArray } from "./group/computeEveryPlatformGroupArray.js"

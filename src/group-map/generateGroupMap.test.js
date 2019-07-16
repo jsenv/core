@@ -1,4 +1,4 @@
-import { assert } from "/node_modules/@dmail/assert/index.js"
+import { assert } from "@dmail/assert"
 import { generateGroupMap } from "./generateGroupMap.js"
 import { browserScoreMap } from "./browserScoreMap.js"
 import { nodeVersionScoreMap } from "./nodeVersionScoreMap.js"
