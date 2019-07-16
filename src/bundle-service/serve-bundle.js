@@ -1,7 +1,14 @@
 import { extname, dirname, basename } from "path"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
-import { generateBundle, bundleToCompilationResult } from "@jsenv/bundling"
 import { serveCompiledFile } from "../compiled-file-service/index.js"
+
+// important to use require here
+// because @jsenv/bundling use relativePathInception
+// and if we use direct import we will no longer
+// execute @jsenv/bunling bundled files but sources files
+// meaning if we use @jsenv/core bundle we'll fail
+// to find the @jsenv/bundling files
+const { generateBundle, bundleToCompilationResult } = import.meta.require("@jsenv/bundling")
 
 export const serveBundle = async ({
   projectPathname,
