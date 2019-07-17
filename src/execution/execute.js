@@ -58,7 +58,14 @@ export const execute = async ({
     const result = await launchAndExecute({
       cancellationToken,
       launch: (options) =>
-        launch({ ...options, compileServerOrigin, projectPath, compileIntoRelativePath }),
+        launch({
+          ...options,
+          compileServerOrigin,
+          projectPath,
+          compileIntoRelativePath,
+          importMapRelativePath,
+          importDefaultExtension,
+        }),
       logLevel: executionLogLevel,
       mirrorConsole,
       stopOnceExecuted,
