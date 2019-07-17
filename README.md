@@ -15,11 +15,11 @@
 
 The list below presents what tool jsenv provides. They are independent and you can use them according to your project needs.
 
-- explore your project using a browser.<br/>
-  — see [exploring server](./docs/exploring-server/exploring-server.md)
-
 - execute your test files on a browser and/or node.js.<br/>
   — see [@jsenv/testing](https://github.com/jsenv/jsenv-testing)
+
+- explore your project using a browser.<br/>
+  — see [exploring server](./docs/exploring-server/exploring-server.md)
 
 - generate bundle compatible with browsers and/or node.js.<br/>
   — see [@jsenv/bundling](https://github.com/jsenv/jsenv-bundling)
