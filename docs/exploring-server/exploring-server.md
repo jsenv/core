@@ -246,6 +246,10 @@ If you don't pass this option, the default value will be a predefined folder ava
 
 — see [generic documentation for importMapRelativePath](../shared-options/shared-options.md#importmaprelativepath)
 
+### importDefaultExtension
+
+— see [generic documentation for importDefaultExtension](../shared-options/shared-options.md#importdefaultextension)
+
 ### compileIntoRelativePath
 
 — see [generic documentation for compileIntoRelativePath](../shared-options/shared-options.md#compileintorelativepath)

@@ -59,6 +59,23 @@ If you don't pass this option, the default value will be:
 "/importMap.json"
 ```
 
+# importDefaultExtension
+
+> Extension suffixed to any import without extension
+
+You're likely going to pass the value `".js"`.
+
+jsenv will not try different extension and choose the right one. This option only adds an extension on extensionless import.
+
+If you don't pass `importDefaultExtension`, its value will be:
+
+```js
+undefined
+```
+
+Expecting a tool to guess or append extension introduces subtle complexity in a lot of cases.
+This is what the default value is `undefined` an not `".js"`.<br />
+
 # compileIntoRelativePath
 
 > Folder used to cache the compiled files.

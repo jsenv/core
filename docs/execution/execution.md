@@ -219,6 +219,10 @@ false
 
 — see [generic documentation for importMapRelativePath](../shared-options/shared-options.md#importmaprelativepath)
 
+### importDefaultExtension
+
+— see [generic documentation for importDefaultExtension](../shared-options/shared-options.md#importdefaultextension)
+
 ### compileIntoRelativePath
 
 — see [generic documentation for compileIntoRelativePath](../shared-options/shared-options.md#compileintorelativepath)
