@@ -31,6 +31,7 @@ export const serveBrowserPlatform = async ({
     projectPathname,
     compileIntoRelativePath,
     importMapRelativePath,
+    importDefaultExtension,
     compileRelativePath: ressource,
     sourceRelativePath: browserPlatformRelativePath,
     specifierMap: {

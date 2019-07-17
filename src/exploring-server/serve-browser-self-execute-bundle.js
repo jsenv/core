@@ -9,6 +9,7 @@ const BROWSER_SELF_EXECUTE_STATIC_DATA_PATHNAME = "/.jsenv/browser-self-execute-
 export const serveBrowserSelfExecuteBundle = async ({
   projectPathname,
   importMapRelativePath,
+  importDefaultExtension,
   compileIntoRelativePath,
   browserSelfExecuteTemplateRelativePath,
   babelPluginMap,
@@ -34,6 +35,7 @@ export const serveBrowserSelfExecuteBundle = async ({
     projectPathname,
     compileIntoRelativePath,
     importMapRelativePath,
+    importDefaultExtension,
     sourceRelativePath: browserSelfExecuteTemplateRelativePath,
     compileRelativePath: `/.jsenv/browser-self-execute${fileRelativePath}`,
     sourcemapPath: `./browser-self-execute${fileRelativePath}__asset__/${basename(

@@ -106,6 +106,7 @@ export const startExploringServer = async ({
           projectPathname,
           compileIntoRelativePath,
           importMapRelativePath,
+          importDefaultExtension,
           browserClientRelativePath,
           browserSelfExecuteTemplateRelativePath,
           babelPluginMap,

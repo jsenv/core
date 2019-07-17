@@ -32,6 +32,7 @@ export const serveNodePlatform = async ({
     projectPathname,
     compileIntoRelativePath,
     importMapRelativePath,
+    importDefaultExtension,
     sourceRelativePath: nodePlatformRelativePath,
     compileRelativePath: NODE_PLATFORM_CLIENT_PATHNAME,
     specifierMap: {
