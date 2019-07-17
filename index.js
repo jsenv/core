@@ -14,6 +14,3 @@ export { serveBundle } from "./src/bundle-service/serve-bundle.js"
 
 // could be moved to jsenv/jsenv-execution
 export { execute } from "./src/execution/execute.js"
-
-// should be moved to jsenv/jsenv-exploring-server
-export { startExploringServer } from "./src/exploring-server/index.js"

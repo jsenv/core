@@ -19,7 +19,7 @@ The list below presents what tool jsenv provides. They are independent and you c
   — see [@jsenv/testing](https://github.com/jsenv/jsenv-testing)
 
 - explore your project using a browser.<br/>
-  — see [exploring server](./docs/exploring-server/exploring-server.md)
+  — see [@jsenv/exploring server](https://github.com/jsenv/jsenv-exploring-server)
 
 - generate bundle compatible with browsers and/or node.js.<br/>
   — see [@jsenv/bundling](https://github.com/jsenv/jsenv-bundling)
