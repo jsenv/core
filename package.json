@@ -44,7 +44,7 @@
 	},
 	"devDependencies": {
 		"@jsenv/core": "5.105.0",
-		"@jsenv/testing": "1.4.0",
+		"@jsenv/testing": "1.9.0",
 		"@jsenv/chromium-launcher": "1.7.0",
 		"@jsenv/node-launcher": "1.7.0",
 		"@jsenv/node-module-import-map": "2.1.0",
