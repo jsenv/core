@@ -52,7 +52,7 @@ export const getPlatformName = () => {
 2. Install dev dependencies
 
 ```shell
-npm install --save-dev @jsenv/core @jsenv/chromium-launcher @jsenv/node-launcher
+npm install --save-dev @jsenv/core@5.110.0 @jsenv/chromium-launcher@1.9.0 @jsenv/node-launcher@1.11.0
 ```
 
 3. Generate `root/importMap.json`
