@@ -35,7 +35,7 @@ I recommend to check a concrete example of a project using jsenv: `@dmail/assert
 This is an npm package providing a browser and node.js entry point. It also runs unit test in a browser and node.js to ensure continuous integration in both environments.<br />
 
 I encourage you to check `@dmail/assert` to see how it uses jsenv.<br />
-— see [package.json scripts source](https://github.com/dmail/assert/blob/59ade7b3e8ab90cb6ce5d3de8bf1ffedd3fa779a/package.json#L43-L51)
+— see [package.json scripts source](https://github.com/dmail/assert/blob/81eae260b515850dadecbc8e723d5fde5827f81e/package.json#L44-L53)
 
 ## Main dependencies
 
