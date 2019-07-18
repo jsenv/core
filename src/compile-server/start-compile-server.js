@@ -1,8 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { createCancellationToken } from "@dmail/cancellation"
 import {
-  acceptsContentType,
-  createServerSentEventsRoom,
   defaultAccessControlAllowedHeaders,
   startServer,
   firstService,
@@ -59,8 +57,6 @@ export const startCompileServer = async ({
   projectFileChangedCallback = null,
   // should we exclude node_modules by default ?
   projectFileWatchPredicate = () => true,
-  // when true, a /livereloading server sent events room will exist
-  livereloadingServerSentEvents = false,
   // js compile options
   transformTopLevelAwait = true,
   // options related to the server itself
@@ -135,8 +131,7 @@ export const startCompileServer = async ({
     pathnameToOperatingSystemPath(`${projectPathname}${nodeGroupResolverRelativePath}`),
   )
 
-  let livereloadingServerSentEventsService = () => null
-  if (projectFileChangedCallback || livereloadingServerSentEvents) {
+  if (projectFileChangedCallback) {
     const originalProjectFileWatchPredicate = projectFileWatchPredicate
     projectFileWatchPredicate = (relativePath) => {
       // I doubt an asset like .js.map will change
@@ -172,31 +167,9 @@ export const startCompileServer = async ({
       originalProjectFileRequestedCallback({ relativePath, executionId })
     }
 
-    if (livereloadingServerSentEvents) {
-      const fileChangedSSE = createServerSentEventsRoom()
-
-      fileChangedSSE.start()
-      cancellationToken.register(fileChangedSSE.stop)
-
-      registerFileChangedCallback(({ relativePath }) => {
-        fileChangedSSE.sendEvent({
-          type: "file-changed",
-          data: relativePath,
-        })
-      })
-
-      livereloadingServerSentEventsService = ({ headers, ressource }) => {
-        if (ressource !== "/livereloading") return null
-        if (!acceptsContentType(headers.accept, "text/event-stream")) return null
-        return fileChangedSSE.connect(headers["last-event-id"])
-      }
-    }
-
-    if (projectFileChangedCallback) {
-      registerFileChangedCallback(({ relativePath }) => {
-        projectFileChangedCallback({ relativePath })
-      })
-    }
+    registerFileChangedCallback(({ relativePath }) => {
+      projectFileChangedCallback({ relativePath })
+    })
   }
 
   const compileServer = await startServer({
@@ -207,7 +180,6 @@ export const startCompileServer = async ({
     signature,
     requestToResponse: (request) =>
       firstService(
-        () => livereloadingServerSentEventsService(request),
         () =>
           serveImportMap({
             importMapRelativePath,
