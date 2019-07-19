@@ -17,7 +17,8 @@
 		"/dist/"
 	],
 	"dependencies": {
-		"@jsenv/bundling": "1.4.0",
+		"@jsenv/bundling": "1.10.0",
+		"@jsenv/grouping": "1.0.0",
 		"@jsenv/module-resolution": "3.0.0",
 		"@jsenv/babel-plugin-map": "1.0.0",
 		"@jsenv/operating-system-path": "2.1.0",

@@ -3,7 +3,6 @@ import { serveBundle } from "../bundle-service/serve-bundle.js"
 
 const NODE_PLATFORM_CLIENT_PATHNAME = `/.jsenv/node-platform.js`
 const NODE_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/node-platform-data.js`
-const NODE_GROUP_RESOLVER_CLIENT_PATHNAME = `/.jsenv/node-group-resolver.js`
 const IMPORT_MAP_CLIENT_PATHNAME = `/.jsenv/import-map.json`
 
 export const serveNodePlatform = async ({
@@ -12,7 +11,6 @@ export const serveNodePlatform = async ({
   importMapRelativePath,
   importDefaultExtension,
   nodePlatformRelativePath,
-  nodeGroupResolverRelativePath,
   babelPluginMap,
   groupMap,
   projectFileRequestedCallback,
@@ -36,7 +34,6 @@ export const serveNodePlatform = async ({
     sourceRelativePath: nodePlatformRelativePath,
     compileRelativePath: NODE_PLATFORM_CLIENT_PATHNAME,
     specifierMap: {
-      [NODE_GROUP_RESOLVER_CLIENT_PATHNAME]: nodeGroupResolverRelativePath,
       [IMPORT_MAP_CLIENT_PATHNAME]: `file://${projectPathname}${importMapRelativePath}`,
     },
     specifierDynamicMap: {

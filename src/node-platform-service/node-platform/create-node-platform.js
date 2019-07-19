@@ -13,14 +13,14 @@ import { resolveNodeGroup } from "/.jsenv/node-group-resolver.js"
 import importMap from "/.jsenv/import-map.json"
 import { uneval } from "@dmail/uneval"
 import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
+import { computeCompileIdFromGroupId } from "@jsenv/grouping"
 import { wrapImportMap } from "../../import-map/wrapImportMap.js"
-import { resolveCompileId } from "../../balancing/compile-id-resolution.js"
 import { createNodeSystem } from "./create-node-system.js"
 
 const memoizedCreateNodeSystem = memoizeOnce(createNodeSystem)
 
 export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => {
-  const compileId = resolveCompileId({
+  const compileId = computeCompileIdFromGroupId({
     groupId: resolveNodeGroup({ groupMap }),
     groupMap,
   })
