@@ -3,7 +3,6 @@ import { serveBundle } from "../bundle-service/serve-bundle.js"
 
 const BROWSER_PLATFORM_CLIENT_PATHNAME = `/.jsenv/browser-platform.js`
 const BROWSER_PLATFORM_DATA_CLIENT_PATHNAME = `/.jsenv/browser-platform-data.js`
-const BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME = `/.jsenv/browser-group-resolver.js`
 const IMPORT_MAP_CLIENT_PATHNAME = `/.jsenv/import-map.json`
 
 export const serveBrowserPlatform = async ({
@@ -12,7 +11,6 @@ export const serveBrowserPlatform = async ({
   importMapRelativePath,
   importDefaultExtension,
   browserPlatformRelativePath,
-  browserGroupResolverRelativePath,
   babelPluginMap,
   groupMap,
   projectFileRequestedCallback,
@@ -35,7 +33,6 @@ export const serveBrowserPlatform = async ({
     compileRelativePath: ressource,
     sourceRelativePath: browserPlatformRelativePath,
     specifierMap: {
-      [BROWSER_GROUP_RESOLVER_CLIENT_PATHNAME]: browserGroupResolverRelativePath,
       [IMPORT_MAP_CLIENT_PATHNAME]: `file://${projectPathname}${importMapRelativePath}`,
     },
     specifierDynamicMap: {

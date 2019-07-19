@@ -1,6 +1,4 @@
-import { babelCompatMap } from "../group-map/babelCompatMap.js"
-import { browserScoreMap } from "../group-map/browserScoreMap.js"
-import { nodeVersionScoreMap } from "../group-map/nodeVersionScoreMap.js"
+import { babelCompatMap, browserScoreMap, nodeVersionScoreMap } from "@jsenv/grouping"
 
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 

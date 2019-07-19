@@ -10,8 +10,8 @@ import {
   operatingSystemPathToPathname,
   pathnameToOperatingSystemPath,
 } from "@jsenv/operating-system-path"
+import { generateGroupMap } from "@jsenv/grouping"
 import { watchFile } from "../watchFile.js"
-import { generateGroupMap } from "../group-map/index.js"
 import { serveBrowserPlatform } from "../browser-platform-service/index.js"
 import { serveNodePlatform } from "../node-platform-service/index.js"
 import { serveCompiledJs, relativePathIsAsset } from "../compiled-js-service/index.js"
@@ -37,9 +37,7 @@ export const startCompileServer = async ({
   importMapRelativePath = DEFAULT_IMPORT_MAP_RELATIVE_PATH,
   importDefaultExtension,
   browserPlatformRelativePath,
-  browserGroupResolverRelativePath,
   nodePlatformRelativePath,
-  nodeGroupResolverRelativePath,
   compileGroupCount = 1,
   platformAlwaysInsidePlatformScoreMap = false,
   babelPluginMap = DEFAULT_BABEL_PLUGIN_MAP,
@@ -104,16 +102,6 @@ export const startCompileServer = async ({
     pathnameToOperatingSystemPath(`${projectPathname}${browserPlatformRelativePath}`),
   )
 
-  if (typeof browserGroupResolverRelativePath === "undefined") {
-    browserGroupResolverRelativePath = jsenvRelativePathInception({
-      jsenvRelativePath: "/src/balancing/browser-group-resolver.js",
-      projectPathname,
-    })
-  }
-  await assertFile(
-    pathnameToOperatingSystemPath(`${projectPathname}${browserGroupResolverRelativePath}`),
-  )
-
   if (typeof nodePlatformRelativePath === "undefined") {
     nodePlatformRelativePath = jsenvRelativePathInception({
       jsenvRelativePath: "/src/node-platform-service/node-platform/index.js",
@@ -121,16 +109,6 @@ export const startCompileServer = async ({
     })
   }
   await assertFile(pathnameToOperatingSystemPath(`${projectPathname}${nodePlatformRelativePath}`))
-
-  if (typeof nodeGroupResolverRelativePath === "undefined") {
-    nodeGroupResolverRelativePath = jsenvRelativePathInception({
-      jsenvRelativePath: "/src/balancing/node-group-resolver.js",
-      projectPathname,
-    })
-  }
-  await assertFile(
-    pathnameToOperatingSystemPath(`${projectPathname}${nodeGroupResolverRelativePath}`),
-  )
 
   if (projectFileChangedCallback) {
     const originalProjectFileWatchPredicate = projectFileWatchPredicate
@@ -193,7 +171,6 @@ export const startCompileServer = async ({
             importMapRelativePath,
             importDefaultExtension,
             browserPlatformRelativePath,
-            browserGroupResolverRelativePath,
             babelPluginMap,
             groupMap,
             projectFileRequestedCallback,
@@ -206,7 +183,6 @@ export const startCompileServer = async ({
             importMapRelativePath,
             importDefaultExtension,
             nodePlatformRelativePath,
-            nodeGroupResolverRelativePath,
             babelPluginMap,
             groupMap,
             projectFileRequestedCallback,

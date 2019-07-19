@@ -5,16 +5,13 @@ import {
   // "/.jsenv/browser-platform-data.js" resolved at build time
   // eslint-disable-next-line import/no-unresolved
 } from "/.jsenv/browser-platform-data.js"
-// "/.jsenv/browser-group-resolver.js" resolved at build time
-// eslint-disable-next-line import/no-unresolved
-import { resolveBrowserGroup } from "/.jsenv/browser-group-resolver.js"
 // "/.jsenv/import-map.json" resolved at build time
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/.jsenv/import-map.json"
 import { uneval } from "@dmail/uneval"
 import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
+import { resolveBrowserGroup, computeCompileIdFromGroupId } from "@jsenv/grouping"
 import { wrapImportMap } from "../../import-map/wrapImportMap.js"
-import { resolveCompileId } from "../../balancing/compile-id-resolution.js"
 import { createBrowserSystem } from "./create-browser-system.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
@@ -22,7 +19,7 @@ import { displayErrorNotification } from "./displayErrorNotification.js"
 const memoizedCreateBrowserSystem = memoizeOnce(createBrowserSystem)
 
 export const createBrowserPlatform = ({ compileServerOrigin }) => {
-  const compileId = resolveCompileId({
+  const compileId = computeCompileIdFromGroupId({
     groupId: resolveBrowserGroup({ groupMap }),
     groupMap,
   })

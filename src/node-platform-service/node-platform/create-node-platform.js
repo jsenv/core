@@ -5,15 +5,12 @@ import {
   // "/.jsenv/node-platform-data.js" resolved at build time
   // eslint-disable-next-line import/no-unresolved
 } from "/.jsenv/node-platform-data.js"
-// "/.jsenv/node-group-resolver.js" resolved at build time
-// eslint-disable-next-line import/no-unresolved
-import { resolveNodeGroup } from "/.jsenv/node-group-resolver.js"
 // "/.jsenv/import-map.json" resolved at build time
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/.jsenv/import-map.json"
 import { uneval } from "@dmail/uneval"
 import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
-import { computeCompileIdFromGroupId } from "@jsenv/grouping"
+import { computeCompileIdFromGroupId, resolveNodeGroup } from "@jsenv/grouping"
 import { wrapImportMap } from "../../import-map/wrapImportMap.js"
 import { createNodeSystem } from "./create-node-system.js"
 
