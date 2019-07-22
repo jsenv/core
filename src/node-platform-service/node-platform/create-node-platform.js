@@ -44,7 +44,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => 
 
   const executeFile = async (
     specifier,
-    { collectCoverage, collectNamespace, executionId } = {},
+    { collectCoverage, collectNamespace, executionId, errorExposureInConsole = true } = {},
   ) => {
     const nodeSystem = await memoizedCreateNodeSystem({
       compileServerOrigin,
@@ -62,7 +62,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectPathname }) => 
         coverageMap: collectCoverage ? readCoverage() : undefined,
       }
     } catch (error) {
-      console.error(error)
+      if (errorExposureInConsole) console.error(error)
       return {
         status: "errored",
         exceptionSource: unevalException(error),

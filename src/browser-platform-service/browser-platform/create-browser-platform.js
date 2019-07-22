@@ -45,7 +45,14 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
 
   const executeFile = async (
     specifier,
-    { collectCoverage, collectNamespace, errorNotification = false, executionId } = {},
+    {
+      collectCoverage,
+      collectNamespace,
+      errorExposureInConsole = true,
+      errorExposureInNotification = false,
+      errorExposureInDocument = true,
+      executionId,
+    } = {},
   ) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
@@ -62,9 +69,9 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
         coverageMap: collectCoverage ? readCoverage() : undefined,
       }
     } catch (error) {
-      displayErrorInDocument(error)
-      displayErrorInConsole(error)
-      if (errorNotification) displayErrorNotification(error)
+      if (errorExposureInConsole) displayErrorInConsole(error)
+      if (errorExposureInNotification) displayErrorNotification(error)
+      if (errorExposureInDocument) displayErrorInDocument(error)
       return {
         status: "errored",
         exceptionSource: unevalException(error),
