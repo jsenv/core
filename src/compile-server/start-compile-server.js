@@ -11,7 +11,6 @@ import {
   pathnameToOperatingSystemPath,
 } from "@jsenv/operating-system-path"
 import { generateGroupMap } from "@jsenv/grouping"
-import { watchFile } from "../watchFile.js"
 import { serveBrowserPlatform } from "../browser-platform-service/index.js"
 import { serveNodePlatform } from "../node-platform-service/index.js"
 import { serveCompiledJs, relativePathIsAsset } from "../compiled-js-service/index.js"
@@ -44,17 +43,12 @@ export const startCompileServer = async ({
   babelCompatMap = DEFAULT_BABEL_COMPAT_MAP,
   browserScoreMap = DEFAULT_BROWSER_SCORE_MAP,
   nodeVersionScoreMap = DEFAULT_NODE_VERSION_SCORE_MAP,
+  projectFilePredicate = () => true,
   // this callback will be called each time a projectFile was
   // used to respond to a request
   // each time an execution needs a project file this callback
   // will be called.
-  projectFileRequestedCallback = () => {},
-  // this optionnal function will be called every time a project file changes
-  // code using compileServer can use it to do something when
-  // a project file is modified
-  projectFileChangedCallback = null,
-  // should we exclude node_modules by default ?
-  projectFileWatchPredicate = () => true,
+  projectFileRequestedCallback = undefined,
   // js compile options
   transformTopLevelAwait = true,
   // options related to the server itself
@@ -110,45 +104,19 @@ export const startCompileServer = async ({
   }
   await assertFile(pathnameToOperatingSystemPath(`${projectPathname}${nodePlatformRelativePath}`))
 
-  if (projectFileChangedCallback) {
-    const originalProjectFileWatchPredicate = projectFileWatchPredicate
-    projectFileWatchPredicate = (relativePath) => {
+  if (projectFileRequestedCallback) {
+    const originalProjectFileRequestedCallback = projectFileRequestedCallback
+    projectFileRequestedCallback = ({ relativePath, ...rest }) => {
       // I doubt an asset like .js.map will change
       // in theory a compilation asset should not change
       // if the source file did not change
       // so we can avoid watching compilation asset
-      if (relativePathIsAsset(relativePath)) return false
-      return originalProjectFileWatchPredicate(relativePath)
-    }
+      if (relativePathIsAsset(relativePath)) return
 
-    const { registerFileChangedCallback, triggerFileChanged } = createFileChangedSignal()
-
-    const watchedFiles = new Map()
-    cancellationToken.register(() => {
-      watchedFiles.forEach((closeWatcher) => closeWatcher())
-      watchedFiles.clear()
-    })
-    const originalProjectFileRequestedCallback = projectFileRequestedCallback
-    projectFileRequestedCallback = ({ relativePath, executionId }) => {
-      const filePath = `${projectPath}${relativePath}`
-      // when I ask for a compiled file, watch the corresponding file on filesystem
-      // here we should use the registerFileLifecyle stuff made in
-      // jsenv-eslint-import-resolver so support if file gets created/deleted
-      // by the way this is not truly working if compile creates a bundle
-      // in that case we should watch for the whole bundle
-      // sources, for now let's ignore
-      if (watchedFiles.has(filePath) === false && projectFileWatchPredicate(relativePath)) {
-        const fileWatcher = watchFile(filePath, () => {
-          triggerFileChanged({ relativePath })
-        })
-        watchedFiles.set(filePath, fileWatcher)
+      if (projectFilePredicate(relativePath)) {
+        originalProjectFileRequestedCallback({ relativePath, ...rest })
       }
-      originalProjectFileRequestedCallback({ relativePath, executionId })
     }
-
-    registerFileChangedCallback(({ relativePath }) => {
-      projectFileChangedCallback({ relativePath })
-    })
   }
 
   const compileServer = await startServer({
@@ -276,21 +244,4 @@ const shouldInvalidateCache = ({ previousCompileIntoMeta, compileIntoMeta }) => 
     previousCompileIntoMeta &&
     JSON.stringify(previousCompileIntoMeta) !== JSON.stringify(compileIntoMeta)
   )
-}
-
-const createFileChangedSignal = () => {
-  const fileChangedCallbackArray = []
-
-  const registerFileChangedCallback = (callback) => {
-    fileChangedCallbackArray.push(callback)
-  }
-
-  const triggerFileChanged = (data) => {
-    const callbackArray = fileChangedCallbackArray.slice()
-    callbackArray.forEach((callback) => {
-      callback(data)
-    })
-  }
-
-  return { registerFileChangedCallback, triggerFileChanged }
 }
