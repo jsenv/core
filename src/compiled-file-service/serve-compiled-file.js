@@ -64,14 +64,15 @@ export const serveCompiledFile = async ({
       compile,
     })
 
+    const executionId = headers["x-jsenv-execution-id"]
     projectFileRequestedCallback({
       relativePath: sourceRelativePath,
-      executionId: headers["x-jsenv-execution-id"],
+      executionId,
     })
     compileResult.sources.forEach((source) => {
       projectFileRequestedCallback({
         relativePath: source,
-        executionId: headers["x-jsenv-execution-id"],
+        executionId,
       })
     })
 
