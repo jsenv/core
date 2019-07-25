@@ -1,5 +1,10 @@
 import { basename } from "path"
-import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
+import {
+  pathnameToOperatingSystemPath,
+  operatingSystemPathToPathname,
+  pathnameToRelativePathname,
+} from "@jsenv/operating-system-path"
+import { resolvePath, hrefToPathname } from "@jsenv/module-resolution"
 import { writeSourceMappingURL } from "../source-mapping-url.js"
 import { ansiToHTML } from "../ansiToHTML.js"
 import { createParseError } from "../compiled-file-service/index.js"
@@ -41,7 +46,9 @@ export const compileJs = async ({
     let output = code
 
     if (remap && map) {
-      map.sources = map.sources.map((source) => sourceToSourceForSourceMap(source))
+      map.sources = map.sources.map((source) =>
+        sourceToSourceForSourceMap(source, { projectPathname, sourceFilename }),
+      )
       sources.push(...map.sources)
       if (map.sourcesContent) sourcesContent.push(...map.sourcesContent)
 
@@ -109,10 +116,21 @@ export const compileJs = async ({
   }
 }
 
-const sourceToSourceForSourceMap = (source) => {
+const sourceToSourceForSourceMap = (source, { projectPathname, sourceFilename }) => {
   if (source[0] === "/") {
     return source
   }
+
+  if (source.slice(0, 2) === "./" || source.slice(0, 3) === "../") {
+    const sourceHref = resolvePath({
+      specifier: source,
+      importer: `http://example.com${operatingSystemPathToPathname(sourceFilename)}`,
+    })
+    const sourcePathname = hrefToPathname(sourceHref)
+    const sourceRelativePath = pathnameToRelativePathname(sourcePathname, projectPathname)
+    return sourceRelativePath
+  }
+
   return `/${source}`
 }
 
