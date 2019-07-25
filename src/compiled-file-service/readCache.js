@@ -16,6 +16,8 @@ export const readCache = async ({ projectPathname, sourceRelativePath, compileRe
     return cache
   } catch (error) {
     if (error && error.code === "ENOENT") return null
+    // we could log the error
+    if (error && error.name === "SyntaxError") return null
     throw error
   }
 }
