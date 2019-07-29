@@ -262,6 +262,40 @@ I made a video of the debugging session inside vscode. The gif below was generat
 
 ![vscode debug node gif](./vscode-debug-node.gif)
 
+Sometimes vscode fails to auto attach child process debugging session.<br />
+According to my experience it happens mostly on windows.<br />
+When it happens you must manually attach it.<br />
+
+To do that you can add an other configuration in your `launch.json`.
+
+```json
+{
+  "name": "jsenv-node-attach-child",
+  "type": "node",
+  "request": "attach",
+  "port": 3456,
+  "smartStep": true,
+  "sourceMaps": true,
+  "sourceMapPathOverrides": {
+    "/*": "${workspaceFolder}/*"
+  },
+  "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
+}
+```
+
+Using this configuration also means your child process debug session listens at `3456`. You must update the execute-node script to force `3456` port like this:
+
+```js
+const { execute } = require("@jsenv/core")
+const { launchNode } = require("@jsenv/node-launcher")
+
+execute({
+  projectPath: __dirname,
+  launch: (options) => launchNode({ ...options, debugPort: 3456 }),
+  fileRelativePath: `/${process.argv[2]}`,
+})
+```
+
 # End
 
 You've reached the end of this documentation, congrats for scrolling so far.<br />
