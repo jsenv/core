@@ -3,7 +3,7 @@ import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
   createProcessInterruptionCancellationToken,
   catchAsyncFunctionCancellation,
-} from "../cancellationHelper.js"
+} from "@dmail/cancellation"
 import { LOG_LEVEL_OFF } from "../logger.js"
 
 export const execute = async ({
