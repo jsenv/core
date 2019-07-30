@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { Module } from "module"
-import { resolvePath, pathnameToDirname, hrefToPathname } from "@jsenv/module-resolution"
+import { pathnameToDirname, hrefToPathname } from "@jsenv/module-resolution"
 import { isNativeNodeModuleBareSpecifier } from "@jsenv/module-resolution/src/isNativeNodeModuleBareSpecifier.js"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import "../../system/s.js"
@@ -20,8 +20,7 @@ export const createNodeSystem = ({
   compileServerOrigin,
   projectPathname,
   compileIntoRelativePath,
-  importMap = {},
-  importDefaultExtension,
+  resolveImport,
   executionId,
 } = {}) => {
   if (typeof global.System === "undefined") throw new Error(`global.System is undefined`)
@@ -29,16 +28,7 @@ export const createNodeSystem = ({
   const nodeSystem = new global.System.constructor()
 
   nodeSystem.resolve = (specifier, importer) => {
-    if (specifier === GLOBAL_SPECIFIER) return specifier
-
-    if (isNativeNodeModuleBareSpecifier(specifier)) return specifier
-
-    return resolvePath({
-      importer,
-      specifier,
-      importMap,
-      defaultExtension: importDefaultExtension,
-    })
+    return resolveImport(specifier, importer)
   }
 
   nodeSystem.instantiate = async (href, importerHref) => {

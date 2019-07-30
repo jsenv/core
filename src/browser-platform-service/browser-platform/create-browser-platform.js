@@ -8,6 +8,7 @@ import {
 // "/.jsenv/import-map.json" resolved at build time
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/.jsenv/import-map.json"
+import { resolvePath } from "@jsenv/module-resolution"
 import { uneval } from "@dmail/uneval"
 import { memoizeOnce } from "@dmail/helper/src/memoizeOnce.js"
 import { resolveBrowserGroup, computeCompileIdFromGroupId } from "@jsenv/grouping"
@@ -16,6 +17,7 @@ import { createBrowserSystem } from "./create-browser-system.js"
 import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
 
+const GLOBAL_SPECIFIER = "global"
 const memoizedCreateBrowserSystem = memoizeOnce(createBrowserSystem)
 
 export const createBrowserPlatform = ({ compileServerOrigin }) => {
@@ -33,12 +35,21 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
     `${compileIntoRelativePath.slice(1)}/${compileId}`,
   )
 
+  const resolveImport = (specifier, importer) => {
+    if (specifier === GLOBAL_SPECIFIER) return specifier
+    return resolvePath({
+      specifier,
+      importer,
+      importMap: wrappedImportMap,
+      defaultExtension: importDefaultExtension,
+    })
+  }
+
   const importFile = async (specifier) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
       compileIntoRelativePath,
-      importMap: wrappedImportMap,
-      importDefaultExtension,
+      resolveImport,
     })
     return browserSystem.import(specifier)
   }
@@ -51,14 +62,14 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
       errorExposureInConsole = true,
       errorExposureInNotification = false,
       errorExposureInDocument = true,
+      errorTransform = (error) => error,
       executionId,
     } = {},
   ) => {
     const browserSystem = await memoizedCreateBrowserSystem({
       compileServerOrigin,
       compileIntoRelativePath,
-      importMap: wrappedImportMap,
-      importDefaultExtension,
+      resolveImport,
       executionId,
     })
     try {
@@ -69,18 +80,26 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
         coverageMap: collectCoverage ? readCoverage() : undefined,
       }
     } catch (error) {
-      if (errorExposureInConsole) displayErrorInConsole(error)
-      if (errorExposureInNotification) displayErrorNotification(error)
-      if (errorExposureInDocument) displayErrorInDocument(error)
+      let transformedError
+      try {
+        transformedError = await errorTransform(error)
+      } catch (e) {
+        transformedError = error
+      }
+
+      if (errorExposureInConsole) displayErrorInConsole(transformedError)
+      if (errorExposureInNotification) displayErrorNotification(transformedError)
+      if (errorExposureInDocument) displayErrorInDocument(transformedError)
+
       return {
         status: "errored",
-        exceptionSource: unevalException(error),
+        exceptionSource: unevalException(transformedError),
         coverageMap: collectCoverage ? readCoverage() : undefined,
       }
     }
   }
 
-  return { relativePathToCompiledHref, importFile, executeFile }
+  return { relativePathToCompiledHref, resolveImport, importFile, executeFile }
 }
 
 const unevalException = (value) => {

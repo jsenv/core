@@ -1,5 +1,4 @@
 /* eslint-disable import/max-dependencies */
-import { resolvePath } from "@jsenv/module-resolution"
 import "../../system/s.js"
 import { createImportTracker } from "../../platform/createImportTracker.js"
 import { hrefToFileRelativePath } from "../../platform/hrefToFileRelativePath.js"
@@ -16,8 +15,7 @@ const GLOBAL_SPECIFIER = "global"
 export const createBrowserSystem = async ({
   compileServerOrigin,
   compileIntoRelativePath,
-  importMap,
-  importDefaultExtension,
+  resolveImport,
   executionId,
 }) => {
   if (typeof window.System === "undefined") throw new Error(`window.System is undefined`)
@@ -25,14 +23,7 @@ export const createBrowserSystem = async ({
   const browserSystem = new window.System.constructor()
 
   browserSystem.resolve = (specifier, importer) => {
-    if (specifier === GLOBAL_SPECIFIER) return specifier
-
-    return resolvePath({
-      specifier,
-      importer,
-      importMap,
-      defaultExtension: importDefaultExtension,
-    })
+    return resolveImport(specifier, importer)
   }
 
   const importTracker = createImportTracker()
