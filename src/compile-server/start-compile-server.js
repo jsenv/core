@@ -105,6 +105,11 @@ export const startCompileServer = async ({
   await assertFile(pathnameToOperatingSystemPath(`${projectPathname}${nodePlatformRelativePath}`))
 
   if (projectFileRequestedCallback) {
+    if (typeof projectFileRequestedCallback !== "function") {
+      throw new TypeError(
+        `projectFileRequestedCallback must be a function, got ${projectFileRequestedCallback}`,
+      )
+    }
     const originalProjectFileRequestedCallback = projectFileRequestedCallback
     projectFileRequestedCallback = ({ relativePath, ...rest }) => {
       // I doubt an asset like .js.map will change
@@ -117,6 +122,8 @@ export const startCompileServer = async ({
         originalProjectFileRequestedCallback({ relativePath, ...rest })
       }
     }
+  } else {
+    projectFileRequestedCallback = () => {}
   }
 
   const compileServer = await startServer({
