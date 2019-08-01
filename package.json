@@ -1,6 +1,6 @@
 {
 	"name": "@jsenv/core",
-	"version": "5.121.0",
+	"version": "5.122.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -16,6 +16,19 @@
 		"/src/",
 		"/dist/"
 	],
+	"scripts": {
+		"generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
+		"test": "node ./script/test/test.js",
+		"eslint-check": "eslint .",
+		"prettier-check": "node ./script/prettier-check/prettier-check.js",
+		"generate-coverage": "node ./script/generate-coverage/generate-coverage.js",
+		"upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
+		"generate-commonjs-bundle": "node ./script/generate-commonjs-bundle/generate-commonjs-bundle.js",
+		"dist": "npm run clean && npm run generate-commonjs-bundle",
+		"clean": "rimraf dist && rimraf coverage",
+		"reinstall": "npm run clean && rimraf node_modules && npm install",
+		"prepublishOnly": "npm run dist"
+	},
 	"dependencies": {
 		"@jsenv/bundling": "1.12.0",
 		"@jsenv/grouping": "1.1.0",
@@ -44,14 +57,14 @@
 		"systemjs": "3.1.1"
 	},
 	"devDependencies": {
-		"@jsenv/core": "5.111.0",
+		"@jsenv/core": "5.121.0",
 		"@jsenv/testing": "1.19.0",
-		"@jsenv/chromium-launcher": "1.13.0",
-		"@jsenv/node-launcher": "1.13.0",
+		"@jsenv/chromium-launcher": "1.14.0",
+		"@jsenv/node-launcher": "1.14.0",
 		"@jsenv/node-module-import-map": "2.1.0",
 		"@jsenv/eslint-config": "8.0.0",
 		"@jsenv/prettier-config": "1.0.0",
-		"@jsenv/prettier-check-project": "2.8.0",
+		"@jsenv/prettier-check-project": "2.9.0",
 		"@jsenv/eslint-import-resolver": "4.7.0",
 		"@jsenv/codecov-upload": "1.6.0",
 		"@dmail/assert": "3.13.0",
@@ -61,18 +74,5 @@
 		"prettier": "1.18.2",
 		"puppeteer": "1.12.2",
 		"rimraf": "2.6.2"
-	},
-	"scripts": {
-		"generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
-		"test": "node ./script/test/test.js",
-		"eslint-check": "eslint .",
-		"prettier-check": "node ./script/prettier-check/prettier-check.js",
-		"generate-coverage": "node ./script/generate-coverage/generate-coverage.js",
-		"upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
-		"generate-commonjs-bundle": "node ./script/generate-commonjs-bundle/generate-commonjs-bundle.js",
-		"dist": "npm run clean && npm run generate-commonjs-bundle",
-		"clean": "rimraf dist && rimraf coverage",
-		"reinstall": "npm run clean && rimraf node_modules && npm install",
-		"prepublishOnly": "npm run dist"
 	}
 }
