@@ -15,17 +15,17 @@
 
 The list below presents what tool jsenv provides. They are independent and you can use them according to your project needs.
 
-- execute your test files on a browser and/or node.js.<br/>
-  — see [@jsenv/testing](https://github.com/jsenv/jsenv-testing)
-
 - explore your project using a browser.<br/>
   — see [@jsenv/exploring server](https://github.com/jsenv/jsenv-exploring-server)
 
-- generate bundle compatible with browsers and/or node.js.<br/>
-  — see [@jsenv/bundling](https://github.com/jsenv/jsenv-bundling)
+- execute your test files on a browser and/or node.js.<br/>
+  — see [@jsenv/testing](https://github.com/jsenv/jsenv-testing)
 
 - execute one of your file on a browser or node.js process.<br/>
   — see [execution](./docs/execution/execution.md)
+
+- generate bundle compatible with browsers and/or node.js.<br/>
+  — see [@jsenv/bundling](https://github.com/jsenv/jsenv-bundling)
 
 The above could be achieved using babel, systemjs and rollup separately. jsenv makes them work together.
 
