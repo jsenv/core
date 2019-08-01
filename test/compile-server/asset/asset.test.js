@@ -14,9 +14,7 @@ const compileServer = await startCompileServer({
   compileIntoRelativePath,
 })
 
-const fileCompileHref = `${
-  compileServer.origin
-}${compileIntoRelativePath}/${compileId}${fileRelativePath}`
+const fileCompileHref = `${compileServer.origin}${compileIntoRelativePath}/${compileId}${fileRelativePath}`
 
 await fetch(fileCompileHref)
 const response = await fetch(`${fileCompileHref}__asset__/cache.json`)
