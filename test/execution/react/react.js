@@ -1,3 +1,3 @@
 import React from "react"
 
-console.log(typeof React)
+export default typeof React

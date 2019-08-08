@@ -5,7 +5,7 @@ import { createReplaceIdentifiersBabelPlugin } from "./createReplaceIdentifiersB
 
 const transformCommonJs = import.meta.require("babel-plugin-transform-commonjs")
 
-export const convertCommonJs = async ({
+export const convertCommonJsWithBabel = async ({
   projectPathname,
   sourceRelativePath,
   source,

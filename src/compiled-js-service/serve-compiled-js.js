@@ -73,15 +73,19 @@ export const serveCompiledJs = async ({
         if (typeof conversionResult !== "object") {
           throw new TypeError(`convert must return an object, got ${conversionResult}`)
         }
+        const { code, map } = conversionResult
+        if (typeof code !== "string") {
+          throw new TypeError(`convert must return { code } string, got { code: ${code} } `)
+        }
 
         const compilationResult = await compileJs({
-          source: conversionResult.code,
+          source: code,
           projectPathname,
           sourceRelativePath,
           compileRelativePath,
           babelPluginMap: groupbabelPluginMap,
           transformTopLevelAwait,
-          inputMap: conversionResult.map,
+          inputMap: map,
         })
         return compilationResult
       }

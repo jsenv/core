@@ -5,7 +5,8 @@ export {
   transpiler,
   findAsyncPluginNameInbabelPluginMap,
 } from "./src/compiled-js-service/transpiler.js"
-export { convertCommonJs } from "./src/convert-commonjs/convertCommonJs.js"
+export { convertCommonJsWithBabel } from "./src/convert-commonjs/convertCommonJsWithBabel.js"
+export { convertCommonJsWithRollup } from "./src/convert-commonjs/convertCommonJsWithRollup.js"
 export {
   getOrGenerateCompiledFile,
 } from "./src/compiled-file-service/get-or-generate-compiled-file.js"
