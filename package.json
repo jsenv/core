@@ -64,7 +64,7 @@
 		"@jsenv/node-module-import-map": "2.1.0",
 		"@jsenv/eslint-config": "9.7.0",
 		"@jsenv/prettier-config": "1.0.0",
-		"@jsenv/prettier-check-project": "3.1.0",
+		"@jsenv/prettier-check-project": "3.2.0",
 		"@jsenv/codecov-upload": "1.6.0",
 		"@dmail/assert": "3.13.0",
 		"eslint": "5.1.0",
