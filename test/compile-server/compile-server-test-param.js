@@ -4,6 +4,7 @@ import { testBabelPluginMap } from "../testBabelPluginMap.js"
 export const COMPILE_SERVER_TEST_PARAM = {
   projectPath: JSENV_PATH,
   logLevel: "off",
+  compileGroupCount: 2,
   babelPluginMap: testBabelPluginMap,
   browserPlatformRelativePath: "/src/browser-platform-service/browser-platform/index.js",
   nodePlatformRelativePath: "/src/node-platform-service/node-platform/index.js",
