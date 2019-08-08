@@ -1,4 +1,6 @@
+import { stat } from "fs"
 import { fileMakeDirname } from "@dmail/helper"
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { lockForRessource } from "./ressourceRegistry.js"
 import { readCache } from "./readCache.js"
 import { validateCache } from "./validateCache.js"
@@ -30,17 +32,47 @@ export const getOrGenerateCompiledFile = async ({
         cacheIgnored,
       })
 
+      // some sources might not exists on the filesystem
+      // keep them in the sourcemap
+      // however do not mark them as dependency of the compiled version
+      const sources = []
+      const sourcesContent = []
+      await Promise.all(
+        compileResult.sources.map(async (source, index) => {
+          const path = pathnameToOperatingSystemPath(`${projectPathname}${source}`)
+          const pathLeadsToFile = await new Promise((resolve) => {
+            stat(path, (error, stats) => {
+              if (error) {
+                resolve(false)
+              } else {
+                resolve(stats.isFile())
+              }
+            })
+          })
+          if (pathLeadsToFile) {
+            sources[index] = source
+            sourcesContent[index] = compileResult.sourcesContent[index]
+          }
+        }),
+      )
+
+      const compileResultWithoutMissingSource = {
+        ...compileResult,
+        sources: sources.filter((source) => source !== undefined),
+        sourcesContent: sourcesContent.filter((sourceContent) => sourceContent !== undefined),
+      }
+
       await updateCache({
         projectPathname,
         sourceRelativePath,
         compileRelativePath,
         cacheHitTracking,
         cache,
-        compileResult,
+        compileResult: compileResultWithoutMissingSource,
         compileResultStatus,
       })
 
-      return { cache, compileResult, compileResultStatus }
+      return { cache, compileResult: compileResultWithoutMissingSource, compileResultStatus }
     },
     {
       projectPathname,
