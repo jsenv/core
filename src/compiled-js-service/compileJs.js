@@ -46,21 +46,30 @@ export const compileJs = async ({
     let output = code
 
     if (remap && map) {
-      map.sources = map.sources.map((source) =>
-        sourceToSourceForSourceMap(source, { projectPathname, sourceFilename }),
-      )
-      sources.push(...map.sources)
-      if (map.sourcesContent) sourcesContent.push(...map.sourcesContent)
+      if (map.sources.length === 0) {
+        // may happen in somae cases where babel returns a wrong sourcemap
+        // there is at least one case where it happens
+        // a file with only import './whatever.js' inside
+        sources.push(sourceRelativePath)
+        sourcesContent.push(source)
+      } else {
+        map.sources = map.sources.map((source) =>
+          sourceToSourceForSourceMap(source, { projectPathname, sourceFilename }),
+        )
+        sources.push(...map.sources)
+        if (map.sourcesContent) sourcesContent.push(...map.sourcesContent)
+      }
 
-      // we don't need sourceRoot because our path are relative or absolute to the current location
-      // we could comment this line because it is not set by babel because not passed during transform
-      delete map.sourceRoot
       // removing sourcesContent from map decrease the sourceMap
       // it also means client have to fetch source from server (additional http request)
       // some client ignore sourcesContent property such as vscode-chrome-debugger
       // Because it's the most complex scenario and we want to ensure client is always able
       // to find source from the sourcemap, we explicitely delete nmap.sourcesContent to test this.
       delete map.sourcesContent
+
+      // we don't need sourceRoot because our path are relative or absolute to the current location
+      // we could comment this line because it is not set by babel because not passed during transform
+      delete map.sourceRoot
 
       if (remapMethod === "inline") {
         const mapAsBase64 = new Buffer(JSON.stringify(map)).toString("base64")
@@ -79,7 +88,7 @@ export const compileJs = async ({
         assetsContent.push(stringifyMap(map))
       }
     } else {
-      sources.push(`/${sourceRelativePath}`)
+      sources.push(sourceRelativePath)
       sourcesContent.push(source)
     }
 
