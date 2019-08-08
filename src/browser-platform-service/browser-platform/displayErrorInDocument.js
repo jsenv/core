@@ -8,7 +8,7 @@ export const displayErrorInDocument = (error) => {
   if (error && error.code === "MODULE_PARSING_ERROR") {
     theme = "light"
     const { parsingError } = error
-    message = errorToHTML(parsingError.messageHMTL || parsingError.message)
+    message = errorToHTML(parsingError.messageHTML || parsingError.message)
   } else {
     theme = "dark"
     message = errorToHTML(error)
