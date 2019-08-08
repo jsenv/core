@@ -1,30 +1,31 @@
 import { assert } from "@dmail/assert"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
-import { startCompileServer } from "../../../index.js"
+import { startCompileServer, convertCommonJs } from "../../../index.js"
 import { COMPILE_SERVER_TEST_PARAM } from "../compile-server-test-param.js"
 import { fetch } from "../fetch.js"
 
 const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const compileId = "best"
-const fileRelativePath = `${folderJsenvRelativePath}/commonjs.js`
-
 const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAM,
   compileIntoRelativePath,
   convertMap: {
-    // get codefrom commonjs-converter to be able to return what we need here
-    "/commonjs.js": () => {},
+    [`${folderJsenvRelativePath}/cjs/`]: (options) =>
+      convertCommonJs({ ...options, nodeEnv: 42, replaceGlobalByGlobalThis: true }),
   },
 })
 
-const response = await fetch(
-  `${compileServer.origin}${compileIntoRelativePath}/${compileId}${fileRelativePath}`,
+await fetch(
+  `${compileServer.origin}${compileIntoRelativePath}/${compileId}${folderJsenvRelativePath}/cjs/index.js`,
+)
+const fileResponse = await fetch(
+  `${compileServer.origin}${compileIntoRelativePath}/${compileId}${folderJsenvRelativePath}/cjs/file.js`,
 )
 const actual = {
-  status: response.status,
-  statusText: response.statusText,
-  headers: response.headers,
+  status: fileResponse.status,
+  statusText: fileResponse.statusText,
+  headers: fileResponse.headers,
 }
 const expected = {
   status: 200,
