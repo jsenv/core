@@ -32,35 +32,37 @@ export const getOrGenerateCompiledFile = async ({
         cacheIgnored,
       })
 
+      // useless because missing source cannot invalidate cache
+      // see validateSource in validateCache.js
       // some sources might not exists on the filesystem
       // keep them in the sourcemap
       // however do not mark them as dependency of the compiled version
-      const sources = []
-      const sourcesContent = []
-      await Promise.all(
-        compileResult.sources.map(async (source, index) => {
-          const path = pathnameToOperatingSystemPath(`${projectPathname}${source}`)
-          const pathLeadsToFile = await new Promise((resolve) => {
-            stat(path, (error, stats) => {
-              if (error) {
-                resolve(false)
-              } else {
-                resolve(stats.isFile())
-              }
-            })
-          })
-          if (pathLeadsToFile) {
-            sources[index] = source
-            sourcesContent[index] = compileResult.sourcesContent[index]
-          }
-        }),
-      )
+      // const sources = []
+      // const sourcesContent = []
+      // await Promise.all(
+      //   compileResult.sources.map(async (source, index) => {
+      //     const path = pathnameToOperatingSystemPath(`${projectPathname}${source}`)
+      //     const pathLeadsToFile = await new Promise((resolve) => {
+      //       stat(path, (error, stats) => {
+      //         if (error) {
+      //           resolve(false)
+      //         } else {
+      //           resolve(stats.isFile())
+      //         }
+      //       })
+      //     })
+      //     if (pathLeadsToFile) {
+      //       sources[index] = source
+      //       sourcesContent[index] = compileResult.sourcesContent[index]
+      //     }
+      //   }),
+      // )
 
-      const compileResultWithoutMissingSource = {
-        ...compileResult,
-        sources: sources.filter((source) => source !== undefined),
-        sourcesContent: sourcesContent.filter((sourceContent) => sourceContent !== undefined),
-      }
+      // const compileResultWithoutMissingSource = {
+      //   ...compileResult,
+      //   sources: sources.filter((source) => source !== undefined),
+      //   sourcesContent: sourcesContent.filter((sourceContent) => sourceContent !== undefined),
+      // }
 
       await updateCache({
         projectPathname,
@@ -68,11 +70,11 @@ export const getOrGenerateCompiledFile = async ({
         compileRelativePath,
         cacheHitTracking,
         cache,
-        compileResult: compileResultWithoutMissingSource,
+        compileResult,
         compileResultStatus,
       })
 
-      return { cache, compileResult: compileResultWithoutMissingSource, compileResultStatus }
+      return { cache, compileResult, compileResultStatus }
     },
     {
       projectPathname,
