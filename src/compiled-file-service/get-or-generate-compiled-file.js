@@ -1,6 +1,4 @@
-import { stat } from "fs"
 import { fileMakeDirname } from "@dmail/helper"
-import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { lockForRessource } from "./ressourceRegistry.js"
 import { readCache } from "./readCache.js"
 import { validateCache } from "./validateCache.js"
