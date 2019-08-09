@@ -14,20 +14,19 @@ const filename = pathnameToOperatingSystemPath(`${projectPathname}${sourceRelati
 const source = readFileSync(filename).toString()
 
 const actual = await compileJs({
-  source,
   projectPathname,
   sourceRelativePath,
   babelPluginMap: jsenvBabelPluginMap,
 })
-
+const expected = {
+  compiledSource: actual.compiledSource,
+  contentType: "application/javascript",
+  sources: [sourceRelativePath],
+  sourcesContent: [source],
+  assets: [`basic.js__asset__/basic.js.map`],
+  assetsContent: [actual.assetsContent[0]],
+}
 assert({
   actual,
-  expected: {
-    compiledSource: actual.compiledSource,
-    contentType: "application/javascript",
-    sources: [sourceRelativePath],
-    sourcesContent: [source],
-    assets: [`basic.js__asset__/basic.js.map`],
-    assetsContent: [actual.assetsContent[0]],
-  },
+  expected,
 })

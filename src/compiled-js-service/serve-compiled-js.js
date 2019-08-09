@@ -1,5 +1,3 @@
-import { namedValueDescriptionToMetaDescription, pathnameToMeta } from "@dmail/project-structure"
-import { fileRead } from "@dmail/helper"
 import { compileJs } from "./compileJs.js"
 import { serveCompiledFile } from "../compiled-file-service/index.js"
 
@@ -48,8 +46,7 @@ export const serveCompiledJs = async ({
     compileRelativePath,
     projectFileRequestedCallback,
     headers,
-    compile: async ({ sourceFilename }) => {
-      const source = await fileRead(sourceFilename)
+    compile: async () => {
       const groupbabelPluginMap = {}
       groupMap[compileId].incompatibleNameArray.forEach((incompatibleFeatureName) => {
         if (incompatibleFeatureName in babelPluginMap) {
@@ -57,45 +54,12 @@ export const serveCompiledJs = async ({
         }
       })
 
-      const metaDescription = namedValueDescriptionToMetaDescription({
-        convert: convertMap,
-      })
-      const { convert } = pathnameToMeta({ pathname: sourceRelativePath, metaDescription })
-      if (convert) {
-        if (typeof convert !== "function") {
-          throw new TypeError(`convert must be a function, got ${convert}`)
-        }
-        const conversionResult = await convert({
-          source,
-          projectPathname,
-          sourceRelativePath,
-        })
-        if (typeof conversionResult !== "object") {
-          throw new TypeError(`convert must return an object, got ${conversionResult}`)
-        }
-        const { code, map } = conversionResult
-        if (typeof code !== "string") {
-          throw new TypeError(`convert must return { code } string, got { code: ${code} } `)
-        }
-
-        const compilationResult = await compileJs({
-          source: code,
-          projectPathname,
-          sourceRelativePath,
-          compileRelativePath,
-          babelPluginMap: groupbabelPluginMap,
-          transformTopLevelAwait,
-          inputMap: map,
-        })
-        return compilationResult
-      }
-
       return compileJs({
-        source,
         projectPathname,
         sourceRelativePath,
         compileRelativePath,
         babelPluginMap: groupbabelPluginMap,
+        convertMap,
         transformTopLevelAwait,
       })
     },

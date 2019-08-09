@@ -1,13 +1,11 @@
-import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
-import { transpiler } from "../compiled-js-service/transpiler.js"
+import { transformFile } from "../compiled-js-service/transformFile.js"
 import { createReplaceExpressionsBabelPlugin } from "./createReplaceExpressionsBabelPlugin.js"
 
 const transformCommonJs = import.meta.require("babel-plugin-transform-commonjs")
 
 export const convertCommonJsWithBabel = async ({
-  projectPathname,
-  sourceRelativePath,
-  source,
+  filename,
+  filenameRelative,
   replaceGlobalObject = true,
   replaceGlobalFilename = true,
   replaceGlobalDirname = true,
@@ -15,10 +13,9 @@ export const convertCommonJsWithBabel = async ({
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceMap = {},
 }) => {
-  const result = await transpiler({
-    input: source,
-    filename: pathnameToOperatingSystemPath(`${projectPathname}${sourceRelativePath}`),
-    filenameRelative: sourceRelativePath.slice(1),
+  const result = await transformFile({
+    filename,
+    filenameRelative,
     babelPluginMap: {
       "transform-commonjs": [transformCommonJs],
       "transform-replace-expressions": [

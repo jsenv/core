@@ -1,5 +1,3 @@
-import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
-
 const commonjs = import.meta.require("rollup-plugin-commonjs")
 const nodeResolve = import.meta.require("rollup-plugin-node-resolve")
 const builtins = import.meta.require("rollup-plugin-node-builtins")
@@ -9,8 +7,7 @@ const createReplaceRollupPlugin = import.meta.require("rollup-plugin-replace")
 const { rollup } = import.meta.require("rollup")
 
 export const convertCommonJsWithRollup = async ({
-  projectPathname,
-  sourceRelativePath,
+  filename,
   replaceGlobalObject = true,
   replaceGlobalFilename = true,
   replaceGlobalDirname = true,
@@ -21,8 +18,6 @@ export const convertCommonJsWithRollup = async ({
   replaceMap = {},
   convertBuiltinsToBrowser = true,
 } = {}) => {
-  const path = pathnameToOperatingSystemPath(`${projectPathname}${sourceRelativePath}`)
-
   const nodeBuiltinsRollupPlugin = builtins()
 
   const nodeResolveRollupPlugin = nodeResolve({
@@ -42,12 +37,14 @@ export const convertCommonJsWithRollup = async ({
   const commonJsRollupPlugin = commonjs()
 
   const rollupBundle = await rollup({
-    input: path,
+    input: filename,
     inlineDynamicImports: true,
     plugins: [
       commonJsRollupPlugin,
       createReplaceRollupPlugin({
-        ...(replaceProcessEnvNodeEnv ? { "process.env.NODE_ENV": processEnvNodeEnv } : {}),
+        ...(replaceProcessEnvNodeEnv
+          ? { "process.env.NODE_ENV": JSON.stringify(processEnvNodeEnv) }
+          : {}),
         ...(replaceGlobalObject ? { global: "globalThis" } : {}),
         ...(replaceGlobalFilename ? { __filename: __filenameReplacement } : {}),
         ...(replaceGlobalDirname ? { __dirname: __dirnameReplacement } : {}),

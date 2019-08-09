@@ -15,7 +15,6 @@ const filename = pathnameToOperatingSystemPath(`${projectPathname}${sourceRelati
 const source = readFileSync(filename).toString()
 
 const actual = await compileJs({
-  source,
   projectPathname,
   sourceRelativePath,
   babelPluginMap: jsenvBabelPluginMap,

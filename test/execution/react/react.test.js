@@ -17,10 +17,9 @@ const actual = await execute({
   collectNamespace: true,
   convertMap: {
     "/node_modules/react/index.js": (options) =>
-      convertCommonJsWithRollup({ ...options, processEnvNodeEnv: JSON.stringify("production") }),
+      convertCommonJsWithRollup({ ...options, processEnvNodeEnv: "production" }),
   },
 })
-
 const expected = {
   status: "completed",
   namespace: {
