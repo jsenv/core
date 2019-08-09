@@ -1,6 +1,6 @@
 import { assert } from "@dmail/assert"
 import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
-import { startCompileServer, convertCommonJs } from "../../../index.js"
+import { startCompileServer, convertCommonJsWithBabel } from "../../../index.js"
 import { COMPILE_SERVER_TEST_PARAM } from "../compile-server-test-param.js"
 import { fetch } from "../fetch.js"
 
@@ -12,7 +12,7 @@ const compileServer = await startCompileServer({
   compileIntoRelativePath,
   convertMap: {
     [`${folderJsenvRelativePath}/cjs/`]: (options) =>
-      convertCommonJs({ ...options, nodeEnv: 42, replaceGlobalByGlobalThis: true }),
+      convertCommonJsWithBabel({ ...options, processEnvNodeEnv: "production" }),
   },
 })
 

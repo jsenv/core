@@ -48,7 +48,6 @@
 		"@babel/plugin-syntax-dynamic-import": "7.2.0",
 		"@babel/plugin-syntax-import-meta": "7.2.0",
 		"babel-plugin-transform-commonjs": "1.1.5",
-		"babel-plugin-transform-node-env-inline": "0.4.3",
 		"abort-controller": "2.0.2",
 		"ansi-to-html": "0.6.9",
 		"eventsource": "1.0.7",
