@@ -2,9 +2,9 @@
 export { startCompileServer } from "./src/compile-server/index.js"
 export { launchAndExecute } from "./src/launchAndExecute/index.js"
 export {
-  transformFile,
+  transformSource,
   findAsyncPluginNameInbabelPluginMap,
-} from "./src/compiled-js-service/transformFile.js"
+} from "./src/compiled-js-service/transformSource.js"
 export { convertCommonJsWithBabel } from "./src/convert-commonjs/convertCommonJsWithBabel.js"
 export { convertCommonJsWithRollup } from "./src/convert-commonjs/convertCommonJsWithRollup.js"
 export {

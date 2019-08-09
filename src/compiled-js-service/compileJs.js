@@ -1,12 +1,12 @@
 import { basename } from "path"
+import { fileRead } from "@dmail/helper"
 import {
   pathnameToOperatingSystemPath,
-  operatingSystemPathToPathname,
   pathnameToRelativePathname,
 } from "@jsenv/operating-system-path"
 import { resolvePath, hrefToPathname } from "@jsenv/module-resolution"
 import { writeSourceMappingURL } from "../source-mapping-url.js"
-import { transformFile } from "./transformFile.js"
+import { transformSource } from "./transformSource.js"
 
 export const compileJs = async ({
   projectPathname,
@@ -20,16 +20,18 @@ export const compileJs = async ({
   if (typeof babelPluginMap !== "object")
     throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`)
 
-  const sourceFilename = pathnameToOperatingSystemPath(`${projectPathname}${sourceRelativePath}`)
-
   const sources = []
   const sourcesContent = []
   const assets = []
   const assetsContent = []
 
-  const { originalCode, map, code, metadata } = await transformFile({
-    filename: sourceFilename,
-    filenameRelative: sourceRelativePath.slice(1),
+  const sourcePathname = `${projectPathname}${sourceRelativePath}`
+  const sourcePath = pathnameToOperatingSystemPath(sourcePathname)
+  const source = await fileRead(sourcePath)
+  const { map, code, metadata } = await transformSource({
+    projectPathname,
+    source,
+    sourceHref: `file://${sourcePathname}`,
     babelPluginMap,
     convertMap,
     transformTopLevelAwait,
@@ -44,10 +46,10 @@ export const compileJs = async ({
       // there is at least one case where it happens
       // a file with only import './whatever.js' inside
       sources.push(sourceRelativePath)
-      sourcesContent.push(originalCode)
+      sourcesContent.push(source)
     } else {
       map.sources = map.sources.map((source) =>
-        sourceToSourceForSourceMap(source, { projectPathname, sourceFilename }),
+        sourceToSourceForSourceMap(source, { projectPathname, mainPathname: sourcePathname }),
       )
       sources.push(...map.sources)
       if (map.sourcesContent) sourcesContent.push(...map.sourcesContent)
@@ -82,7 +84,7 @@ export const compileJs = async ({
     }
   } else {
     sources.push(sourceRelativePath)
-    sourcesContent.push(originalCode)
+    sourcesContent.push(source)
   }
 
   if (coverage) {
@@ -105,7 +107,7 @@ export const compileJs = async ({
   }
 }
 
-const sourceToSourceForSourceMap = (source, { projectPathname, sourceFilename }) => {
+const sourceToSourceForSourceMap = (source, { projectPathname, mainPathname }) => {
   if (source[0] === "/") {
     return source
   }
@@ -113,7 +115,7 @@ const sourceToSourceForSourceMap = (source, { projectPathname, sourceFilename })
   if (source.slice(0, 2) === "./" || source.slice(0, 3) === "../") {
     const sourceHref = resolvePath({
       specifier: source,
-      importer: `http://example.com${operatingSystemPathToPathname(sourceFilename)}`,
+      importer: `http://example.com${mainPathname}}`,
     })
     const sourcePathname = hrefToPathname(sourceHref)
     const sourceRelativePath = pathnameToRelativePathname(sourcePathname, projectPathname)

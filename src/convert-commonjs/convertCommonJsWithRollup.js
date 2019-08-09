@@ -1,3 +1,6 @@
+import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
+import { hrefToPathname } from "@jsenv/module-resolution"
+
 const commonjs = import.meta.require("rollup-plugin-commonjs")
 const nodeResolve = import.meta.require("rollup-plugin-node-resolve")
 const builtins = import.meta.require("rollup-plugin-node-builtins")
@@ -7,7 +10,7 @@ const createReplaceRollupPlugin = import.meta.require("rollup-plugin-replace")
 const { rollup } = import.meta.require("rollup")
 
 export const convertCommonJsWithRollup = async ({
-  filename,
+  sourceHref,
   replaceGlobalObject = true,
   replaceGlobalFilename = true,
   replaceGlobalDirname = true,
@@ -18,6 +21,16 @@ export const convertCommonJsWithRollup = async ({
   replaceMap = {},
   convertBuiltinsToBrowser = true,
 } = {}) => {
+  if (!sourceHref.startsWith("file:///")) {
+    // it's possible to make rollup compatible with http:// for instance
+    // as we do in @jsenv/bundling
+    // however it's an exotic use case for now
+    throw new Error(`compatible only with file:// protocol, got ${sourceHref}`)
+  }
+
+  const sourcePathname = hrefToPathname(sourceHref)
+  const filename = pathnameToOperatingSystemPath(sourcePathname)
+
   const nodeBuiltinsRollupPlugin = builtins()
 
   const nodeResolveRollupPlugin = nodeResolve({

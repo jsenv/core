@@ -1,11 +1,12 @@
-import { transformFile } from "../compiled-js-service/transformFile.js"
+import { transformSource } from "../compiled-js-service/transformSource.js"
 import { createReplaceExpressionsBabelPlugin } from "./createReplaceExpressionsBabelPlugin.js"
 
 const transformCommonJs = import.meta.require("babel-plugin-transform-commonjs")
 
 export const convertCommonJsWithBabel = async ({
-  filename,
-  filenameRelative,
+  projectPathname,
+  source,
+  sourceHref,
   replaceGlobalObject = true,
   replaceGlobalFilename = true,
   replaceGlobalDirname = true,
@@ -13,9 +14,10 @@ export const convertCommonJsWithBabel = async ({
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceMap = {},
 }) => {
-  const result = await transformFile({
-    filename,
-    filenameRelative,
+  const result = await transformSource({
+    projectPathname,
+    source,
+    sourceHref,
     babelPluginMap: {
       "transform-commonjs": [transformCommonJs],
       "transform-replace-expressions": [

@@ -1,4 +1,9 @@
-import { fileRead } from "@dmail/helper"
+import { hrefToPathname } from "@jsenv/module-resolution"
+import {
+  pathnameToRelativePathname,
+  pathnameIsInside,
+  pathnameToOperatingSystemPath,
+} from "@jsenv/operating-system-path"
 import { namedValueDescriptionToMetaDescription, pathnameToMeta } from "@dmail/project-structure"
 import transformModulesSystemJs from "../babel-plugin-transform-modules-systemjs/index.js"
 import { ansiToHTML } from "../ansiToHTML.js"
@@ -10,9 +15,10 @@ const syntaxImportMeta = import.meta.require("@babel/plugin-syntax-import-meta")
 
 const defaultBabelPluginArray = [syntaxDynamicImport, syntaxImportMeta]
 
-export const transformFile = async ({
-  filename,
-  filenameRelative,
+export const transformSource = async ({
+  projectPathname,
+  source,
+  sourceHref,
   babelPluginMap,
   convertMap = {},
   allowTopLevelAwait = true,
@@ -20,44 +26,62 @@ export const transformFile = async ({
   transformModuleIntoSystemFormat = true,
   remap = true,
 }) => {
-  let originalCode
   let inputCode
   let inputMap
+  let inputPath
+  let inputRelativePath
 
-  const metaDescription = namedValueDescriptionToMetaDescription({
-    convert: convertMap,
-  })
-  const { convert } = pathnameToMeta({ pathname: `/${filenameRelative}`, metaDescription })
-  if (convert) {
-    if (typeof convert !== "function") {
-      throw new TypeError(`convert must be a function, got ${convert}`)
-    }
-    const conversionResult = await convert({
-      filename,
-      filenameRelative,
-      remap,
-      allowTopLevelAwait,
+  const scenario = computeScenario({ projectPathname, sourceHref })
+
+  // ideally we should check convertMap in any scenario
+  // but it means we should renamed @dmail/filesystem-matching into
+  // @dmail/url-matching
+  // and we would not pass pathname anymore but href instead
+  // to do later because @dmail/filesystem-matching is heavily used everywhere
+  if (scenario === "remote") {
+    inputCode = source
+    inputPath = sourceHref
+  } else if (scenario === "file") {
+    inputCode = source
+    inputPath = pathnameToOperatingSystemPath(hrefToPathname(sourceHref))
+  } else if (scenario === "project-file") {
+    inputCode = source
+    const sourcePathname = hrefToPathname(sourceHref)
+    inputRelativePath = pathnameToRelativePathname(sourcePathname, projectPathname)
+    inputPath = pathnameToOperatingSystemPath(sourcePathname)
+
+    const metaDescription = namedValueDescriptionToMetaDescription({
+      convert: convertMap,
     })
-    if (typeof conversionResult !== "object") {
-      throw new TypeError(`convert must return an object, got ${conversionResult}`)
+    const { convert } = pathnameToMeta({ pathname: inputRelativePath, metaDescription })
+    if (convert) {
+      if (typeof convert !== "function") {
+        throw new TypeError(`convert must be a function, got ${convert}`)
+      }
+      const conversionResult = await convert({
+        source,
+        sourceHref,
+        remap,
+        allowTopLevelAwait,
+      })
+      if (typeof conversionResult !== "object") {
+        throw new TypeError(`convert must return an object, got ${conversionResult}`)
+      }
+      const code = conversionResult.code
+      if (typeof code !== "string") {
+        throw new TypeError(`convert must return { code } string, got { code: ${code} } `)
+      }
+
+      inputCode = code
+      inputMap = conversionResult.map
     }
-    const code = conversionResult.code
-    if (typeof code !== "string") {
-      throw new TypeError(`convert must return { code } string, got { code: ${code} } `)
-    }
-    originalCode = conversionResult.originalCode
-    inputCode = code
-    inputMap = conversionResult.map
-  } else {
-    originalCode = await fileRead(filename)
-    inputCode = originalCode
   }
 
-  const transformResult = await jsenvTransform({
+  return jsenvTransform({
     inputCode,
-    filename,
-    filenameRelative,
     inputMap,
+    inputPath,
+    inputRelativePath,
     babelPluginMap,
     convertMap,
     allowTopLevelAwait,
@@ -65,13 +89,26 @@ export const transformFile = async ({
     transformModuleIntoSystemFormat,
     remap,
   })
-  return { originalCode, ...transformResult }
+}
+
+const computeScenario = ({ projectPathname, sourceHref }) => {
+  if (!sourceHref.startsWith("file:///")) {
+    return "remote"
+  }
+
+  const sourcePathname = hrefToPathname(sourceHref)
+
+  if (pathnameIsInside(sourcePathname, projectPathname)) {
+    return "project-file"
+  }
+
+  return "file"
 }
 
 const jsenvTransform = async ({
   inputCode,
-  filename,
-  filenameRelative,
+  inputPath,
+  inputRelativePath,
   inputAst,
   inputMap,
   babelPluginMap,
@@ -82,14 +119,14 @@ const jsenvTransform = async ({
 }) => {
   // https://babeljs.io/docs/en/options
   const options = {
-    filename: filename || filenameRelative,
-    filenameRelative,
+    filename: inputPath,
+    filenameRelative: inputRelativePath ? inputRelativePath.slice(1) : undefined,
     inputSourceMap: inputMap,
     configFile: false,
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true,
     sourceMaps: remap,
-    sourceFileName: filenameRelative,
+    sourceFileName: inputRelativePath ? inputRelativePath.slice(1) : undefined,
     // https://babeljs.io/docs/en/options#parseropts
     parserOpts: {
       allowAwaitOutsideFunction: allowTopLevelAwait,
