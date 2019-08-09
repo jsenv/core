@@ -1,6 +1,6 @@
 {
 	"name": "@jsenv/core",
-	"version": "5.125.0",
+	"version": "5.126.0",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -79,7 +79,6 @@
 		"prettier": "1.18.2",
 		"puppeteer": "1.12.2",
 		"react": "16.8.6",
-		"react-dom": "16.8.6",
 		"rimraf": "2.6.2"
 	}
 }

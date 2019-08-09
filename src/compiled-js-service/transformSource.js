@@ -105,7 +105,7 @@ const computeScenario = ({ projectPathname, sourceHref }) => {
   return "file"
 }
 
-const jsenvTransform = async ({
+export const jsenvTransform = async ({
   inputCode,
   inputPath,
   inputRelativePath,
