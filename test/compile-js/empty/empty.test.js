@@ -19,14 +19,15 @@ const actual = await compileJs({
   sourceRelativePath,
   babelPluginMap: jsenvBabelPluginMap,
 })
+const expected = {
+  compiledSource: actual.compiledSource,
+  contentType: "application/javascript",
+  sources: [sourceRelativePath],
+  sourcesContent: [""],
+  assets: ["empty.js__asset__/empty.js.map"],
+  assetsContent: [actual.assetsContent[0]],
+}
 assert({
   actual,
-  expected: {
-    compiledSource: actual.compiledSource,
-    contentType: "application/javascript",
-    sources: [],
-    sourcesContent: [],
-    assets: ["empty.js__asset__/empty.js.map"],
-    assetsContent: [actual.assetsContent[0]],
-  },
+  expected,
 })
