@@ -6,4 +6,6 @@
 dist
 .dist
 syntax-error.js
-
+/docs/execution/basic-project/node_modules/
+/docs/execution/basic-project/package-lock.json
+/docs/execution/basic-project/importMap.json

@@ -8,8 +8,8 @@
 
 ## Introduction
 
-`jsenv-core` is the entry point where you can find most of the code and the documentation.<br />
-`jsenv` is a github organization used to manage repositories. Most repositories have a package published on npm.<br />
+`jsenv` is a github organization used to manage github repositories. Most github repositories have a corresponding package published on npm.<br />
+`jsenv-core` is the entry point for documentation.<br />
 
 ## How to use
 
@@ -29,13 +29,12 @@ The list below presents what tool jsenv provides. They are independent and you c
 
 The above could be achieved using babel, systemjs and rollup separately. jsenv makes them work together.
 
-## Example
+## Examples
 
-I recommend to check a concrete example of a project using jsenv: `@dmail/assert`.<br />
-This is an npm package providing a browser and node.js entry point. It also runs unit test in a browser and node.js to ensure continuous integration in both environments.<br />
+I recommend to check jsenv starters repository on github.<br />
+It regroups some basic setup to start coding using jsenv from an empty project.<br />
 
-I encourage you to check `@dmail/assert` to see how it uses jsenv.<br />
-— see [package.json scripts source](https://github.com/dmail/assert/blob/81eae260b515850dadecbc8e723d5fde5827f81e/package.json#L44-L53)
+— see [jsenv starters on github](https://github.com/jsenv/jsenv-starters)
 
 ## Main dependencies
 

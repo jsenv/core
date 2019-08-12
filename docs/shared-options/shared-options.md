@@ -20,11 +20,18 @@ Note: on windows you would pass `C:\Users\dmail\project`, jsenv is compatible wi
 
 > object describing all babel plugin required by your project.
 
-If you have a `.babelrc` file, jsenv will not read it. jsenv needs to know the list of babel plugin you want to use in an explicit way.
+jsenv is meant to run standard JavaScript by default.<br />
+For that reason, if you don't pass this option, the value will be:
 
-##### Custom babelPluginMap example
+```js
+require("@jsenv/babel-plugin-map").jsenvBabelPluginMap
+```
 
-jsenv is meant to run regular JavaScript. `babelPluginMap` can be extended to make it compatible with `jsx` for instance.
+— see [jsenvBabelPluginMap source on github](https://github.com/jsenv/jsenv-babel-plugin-map/blob/a324a0b32e7d31730bab85db869d34e8bbf09933/index.js)
+
+It means standard babel plugin are enabled by default.<br />
+
+If you want to make jsenv compatible with non standard syntaxes you can use your own `babelPluginMap`. For instance, the following code makes jsenv compatible with `jsx`.
 
 ```js
 const { jsenvBabelPluginMap } = require("@jsenv/babel-plugin-map")
@@ -36,13 +43,33 @@ const babelPluginMap = {
 }
 ```
 
-If you don't pass this option, the default value will be:
+Please note that if you have a `.babelrc` file, jsenv will not read it. jsenv needs to know the list of babel plugin you want to use in an explicit way.
 
+# convertMap
+
+> object describing how to convert some files to modules format.
+
+jsenv works with code written using module format.<br />
+For the record module format means you're using `import` and `export`.<br />
+If you don't pass this option, the value will be
+
+<!-- prettier-ignore -->
 ```js
-require("@jsenv/babel-plugin-map").jsenvBabelPluginMap
+{}
 ```
 
-Default value comes from https://github.com/jsenv/jsenv-babel-plugin-map.
+Meaning all you project uses module format and nothing needs to be converted.<br />
+
+But if your code or some of your dependencies use an other format you need to convert it to module to make it work with jsenv.<br />
+For instance, the following code makes jsenv compatible with `react`.
+
+```js
+const { convertCommonJsWithRollup } = require("@jsenv/core")
+
+const convertMap = {
+  "/node_modules/react/index.js": convertCommonJsWithRollup,
+}
+```
 
 # importMapRelativePath
 

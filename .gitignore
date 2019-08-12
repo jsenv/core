@@ -1,8 +1,11 @@
-/node_modules
+/node_modules/
 /package-lock.json
+/importMap.json
 .dist
 dist
 /coverage
-/importMap.json
 /env.json
 /.vscode/settings.json
+/docs/execution/basic-project/node_modules/
+/docs/execution/basic-project/package-lock.json
+/docs/execution/basic-project/importMap.json

@@ -1,0 +1,12 @@
+{
+  "name": "whatever",
+  "scripts": {
+    "postinstall": "node ./generate-import-map.js"
+  },
+  "devDependencies": {
+    "@jsenv/core": "5.122.0",
+    "@jsenv/node-module-import-map": "3.0.0",
+    "@jsenv/chromium-launcher": "2.1.0",
+    "@jsenv/node-launcher": "1.14.0"
+  }
+}

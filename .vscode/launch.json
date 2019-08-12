@@ -8,7 +8,7 @@
       "protocol": "inspector",
       "program": "${file}",
       "autoAttachChildProcesses": true,
-      "sourceMaps": true,
+      "sourceMaps": false,
       "sourceMapPathOverrides": {
         "/*": "${workspaceFolder}/*"
       },
@@ -17,6 +17,7 @@
         // force-array-multiline
         // "node_modules/**",
         "node_modules/@babel/template/**",
+        "node_modules/@dmail/cancellation/**",
         "<node_internals>/**/*.js"
       ]
     },

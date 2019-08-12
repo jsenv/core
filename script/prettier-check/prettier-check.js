@@ -7,6 +7,6 @@ prettierCheckProject({
     ...jsenvPrettifyMap,
     "/**/.dist/": false,
     "/**/dist/": false,
-    "/**/**syntax-error**.js": false,
+    "/docs/execution/basic-project/node_modules/": false,
   },
 })

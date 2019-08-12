@@ -5,3 +5,4 @@ dist
 /old
 syntax-error.js
 syntax-error.main.js
+/docs/execution/basic-project/node_modules/
