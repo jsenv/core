@@ -133,6 +133,7 @@ export const startCompileServer = async ({
     ip,
     port,
     signature,
+    sendInternalErrorStack: true,
     requestToResponse: (request) =>
       firstService(
         () =>
