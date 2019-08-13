@@ -20,6 +20,7 @@ export const convertCommonJsWithRollup = async ({
   processEnvNodeEnv = process.env.NODE_ENV,
   replaceMap = {},
   convertBuiltinsToBrowser = true,
+  external = [],
 } = {}) => {
   if (!sourceHref.startsWith("file:///")) {
     // it's possible to make rollup compatible with http:// for instance
@@ -34,7 +35,7 @@ export const convertCommonJsWithRollup = async ({
   const nodeBuiltinsRollupPlugin = builtins()
 
   const nodeResolveRollupPlugin = nodeResolve({
-    mainFields: ["module", "jsnext:main", "main"],
+    mainFields: ["main"],
   })
 
   const jsonRollupPlugin = createJSONRollupPlugin()
@@ -52,6 +53,7 @@ export const convertCommonJsWithRollup = async ({
   const rollupBundle = await rollup({
     input: filename,
     inlineDynamicImports: true,
+    external,
     plugins: [
       commonJsRollupPlugin,
       createReplaceRollupPlugin({
