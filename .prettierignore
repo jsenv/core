@@ -2,6 +2,7 @@
 /package.json
 /package-lock.json
 /importMap.json
+/jsconfig.json
 /coverage
 dist
 .dist

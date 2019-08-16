@@ -1,4 +1,5 @@
 /* eslint-disable import/max-dependencies */
+import { readFileSync } from "fs"
 import { createCancellationToken } from "@dmail/cancellation"
 import {
   defaultAccessControlAllowedHeaders,
@@ -6,6 +7,7 @@ import {
   firstService,
   serveFile,
 } from "@dmail/server"
+import { registerFileLifecycle } from "@dmail/filesystem-watch"
 import {
   operatingSystemPathToPathname,
   pathnameToOperatingSystemPath,
@@ -16,7 +18,7 @@ import { serveNodePlatform } from "../node-platform-service/index.js"
 import { serveCompiledJs, relativePathIsAsset } from "../compiled-js-service/index.js"
 import { LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS } from "../logger.js"
 import { removeFolder } from "../removeFolder.js"
-import { jsenvRelativePathInception } from "../JSENV_PATH.js"
+import { JSENV_PATHNAME, jsenvRelativePathInception } from "../JSENV_PATH.js"
 import { assertFile } from "../filesystem-assertions.js"
 import { readCompileIntoMeta } from "./read-compile-into-meta.js"
 import { writeCompileIntoMeta } from "./write-compile-into-meta.js"
@@ -53,7 +55,6 @@ export const startCompileServer = async ({
   // js compile options
   transformTopLevelAwait = true,
   // options related to the server itself
-  cors = true,
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
@@ -61,6 +62,7 @@ export const startCompileServer = async ({
   logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
   cleanCompileInto = false,
   keepProcessAlive = false,
+  stopOnPackageVersionChange = true,
 }) => {
   if (typeof projectPath !== "string")
     throw new TypeError(`projectPath must be a string. got ${projectPath}`)
@@ -79,7 +81,13 @@ export const startCompileServer = async ({
     projectPathname,
     compileIntoRelativePath,
   })
-  const compileIntoMeta = computeCompileIntoMeta({ babelPluginMap, groupMap })
+  const packageVersion = readPackage().version
+  const compileIntoMeta = {
+    packageVersion,
+    babelPluginMap,
+    convertMap,
+    groupMap,
+  }
   if (cleanCompileInto || shouldInvalidateCache({ previousCompileIntoMeta, compileIntoMeta })) {
     await removeFolder(
       pathnameToOperatingSystemPath(`${projectPathname}${compileIntoRelativePath}`),
@@ -189,7 +197,6 @@ export const startCompileServer = async ({
           }),
       ),
     logLevel,
-    cors,
     accessControlAllowRequestOrigin: true,
     accessControlAllowRequestMethod: true,
     accessControlAllowRequestHeaders: true,
@@ -197,10 +204,55 @@ export const startCompileServer = async ({
       ...defaultAccessControlAllowedHeaders,
       "x-jsenv-execution-id",
     ],
+    accessControlAllowCredentials: true,
     keepProcessAlive,
   })
 
+  if (stopOnPackageVersionChange) {
+    const checkPackageVersion = () => {
+      let packageObject
+      try {
+        packageObject = readPackage()
+      } catch (e) {
+        // package json deleted ? not a problem
+        // let's wait for it to show back
+        if (e.code === "ENOENT") return
+        // package.json malformed ? not a problem
+        // let's wait for use to fix it or filesystem to finish writing the file
+        if (e.name === "SyntaxError") return
+        throw e
+      }
+
+      if (packageVersion !== packageObject.version) {
+        compileServer.stop(STOP_REASON_PACKAGE_VERSION_CHANGED)
+      }
+    }
+
+    const unregister = registerFileLifecycle(packagePath, {
+      added: checkPackageVersion,
+      updated: checkPackageVersion,
+    })
+    compileServer.stoppedPromise.then(
+      () => {
+        unregister()
+      },
+      () => {},
+    )
+  }
+
   return compileServer
+}
+
+const packagePath = pathnameToOperatingSystemPath(`${JSENV_PATHNAME}/package.json`)
+const readPackage = () => {
+  const buffer = readFileSync(packagePath)
+  const string = String(buffer)
+  const packageObject = JSON.parse(string)
+  return packageObject
+}
+
+export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
+  toString: () => `package version changed`,
 }
 
 const serveImportMap = ({ importMapRelativePath, request: { origin, ressource } }) => {
@@ -243,10 +295,6 @@ const serveProjectFiles = ({
   })
 
   return serveFile(`${projectPathname}${ressource}`, { method, headers })
-}
-
-const computeCompileIntoMeta = ({ babelPluginMap, groupMap }) => {
-  return { babelPluginMap, groupMap }
 }
 
 const shouldInvalidateCache = ({ previousCompileIntoMeta, compileIntoMeta }) => {

@@ -1,5 +1,8 @@
 // belong to core
-export { startCompileServer } from "./src/compile-server/index.js"
+export {
+  startCompileServer,
+  STOP_REASON_PACKAGE_VERSION_CHANGED,
+} from "./src/compile-server/index.js"
 export { launchAndExecute } from "./src/launchAndExecute/index.js"
 export {
   transformSource,
