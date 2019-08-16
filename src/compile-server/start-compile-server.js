@@ -62,7 +62,7 @@ export const startCompileServer = async ({
   logLevel = LOG_LEVEL_ERRORS_WARNINGS_AND_LOGS,
   cleanCompileInto = false,
   keepProcessAlive = false,
-  stopOnPackageVersionChange = true,
+  stopOnPackageVersionChange = false,
 }) => {
   if (typeof projectPath !== "string")
     throw new TypeError(`projectPath must be a string. got ${projectPath}`)
