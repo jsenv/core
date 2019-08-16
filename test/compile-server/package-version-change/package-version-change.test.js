@@ -9,7 +9,10 @@ const compileIntoRelativePath = `${folderJsenvRelativePath}/.dist`
 const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAM,
   compileIntoRelativePath,
+  stopOnPackageVersionChange: true,
 })
+// TODO: change this for something updating package.json version
+compileServer.stop(STOP_REASON_PACKAGE_VERSION_CHANGED)
 const reason = await compileServer.stoppedPromise
 
 const actual = reason
