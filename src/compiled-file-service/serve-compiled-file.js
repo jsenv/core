@@ -11,7 +11,7 @@ export const serveCompiledFile = async ({
   sourceRelativePath,
   compileRelativePath,
   projectFileRequestedCallback = () => {},
-  headers,
+  request,
   compile,
   clientCompileCacheStrategy = "etag",
   serverCompileCacheHitTracking = false,
@@ -27,6 +27,7 @@ export const serveCompiledFile = async ({
     )
 
   const cacheWithETag = clientCompileCacheStrategy === "etag"
+  const { headers = {} } = request
 
   let ifEtagMatch
   if (cacheWithETag) {
@@ -64,15 +65,14 @@ export const serveCompiledFile = async ({
       compile,
     })
 
-    const executionId = headers["x-jsenv-execution-id"]
     projectFileRequestedCallback({
       relativePath: sourceRelativePath,
-      executionId,
+      request,
     })
     compileResult.sources.forEach((source) => {
       projectFileRequestedCallback({
         relativePath: source,
-        executionId,
+        request,
       })
     })
 
@@ -129,7 +129,7 @@ export const serveCompiledFile = async ({
       )
       projectFileRequestedCallback({
         relativePath,
-        executionId: headers["x-jsenv-execution-id"],
+        request,
       })
       // on the correspondig file
       const json = JSON.stringify(error.data)

@@ -9,8 +9,10 @@ export const serveCompiledJs = async ({
   convertMap,
   transformTopLevelAwait,
   projectFileRequestedCallback,
-  request: { origin, ressource, headers },
+  request,
 }) => {
+  const { origin, ressource } = request
+
   // it's an asset, it will be served by fileService
   if (relativePathIsAsset(ressource)) return null
 
@@ -45,7 +47,7 @@ export const serveCompiledJs = async ({
     sourceRelativePath,
     compileRelativePath,
     projectFileRequestedCallback,
-    headers,
+    request,
     compile: async () => {
       const groupbabelPluginMap = {}
       groupMap[compileId].incompatibleNameArray.forEach((incompatibleFeatureName) => {

@@ -22,13 +22,13 @@ export const serveBundle = async ({
   specifierDynamicMap,
   projectFileRequestedCallback,
   babelPluginMap,
-  headers,
+  request,
   format,
   formatOutputOptions = {},
 }) => {
   return serveCompiledFile({
     projectPathname,
-    headers,
+    request,
     sourceRelativePath,
     compileRelativePath: `${compileIntoRelativePath}${compileRelativePath}`,
     projectFileRequestedCallback,

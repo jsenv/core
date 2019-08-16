@@ -14,8 +14,10 @@ export const serveBrowserPlatform = async ({
   babelPluginMap,
   groupMap,
   projectFileRequestedCallback,
-  request: { ressource, method, headers },
+  request,
 }) => {
+  const { ressource, method, headers } = request
+
   if (ressource.startsWith(`${BROWSER_PLATFORM_CLIENT_PATHNAME}__asset__/`)) {
     return serveFile(`${projectPathname}${compileIntoRelativePath}${ressource}`, {
       method,
@@ -45,7 +47,7 @@ export const serveBrowserPlatform = async ({
     },
     projectFileRequestedCallback,
     babelPluginMap,
-    headers,
+    request,
   })
 }
 

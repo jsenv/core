@@ -14,8 +14,10 @@ export const serveNodePlatform = async ({
   babelPluginMap,
   groupMap,
   projectFileRequestedCallback,
-  request: { ressource, method, headers },
+  request,
 }) => {
+  const { ressource, method, headers } = request
+
   if (ressource.startsWith(`${NODE_PLATFORM_CLIENT_PATHNAME}__asset__/`)) {
     return serveFile(`${projectPathname}${compileIntoRelativePath}${ressource}`, {
       method,
@@ -46,7 +48,7 @@ export const serveNodePlatform = async ({
     },
     projectFileRequestedCallback,
     babelPluginMap,
-    headers,
+    request,
   })
 }
 
