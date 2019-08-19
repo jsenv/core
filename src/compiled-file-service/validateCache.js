@@ -1,6 +1,6 @@
+import { bufferToEtag } from "@dmail/server"
 import { fileRead, fileStat } from "@dmail/helper"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
-import { createETag } from "../createETag.js"
 import { dateToSecondsPrecision } from "../dateHelper.js"
 import { getCompiledFilename, getAssetFilename } from "./locaters.js"
 
@@ -59,7 +59,7 @@ const validateCompiledFile = async ({
     const compiledSource = await fileRead(compiledFilename)
 
     if (ifEtagMatch) {
-      const compiledEtag = createETag(compiledSource)
+      const compiledEtag = bufferToEtag(Buffer.from(compiledSource))
       if (ifEtagMatch !== compiledEtag) {
         return {
           code: "COMPILED_FILE_ETAG_MISMATCH",
@@ -112,7 +112,7 @@ const validateSource = async ({ projectPathname, source, eTag }) => {
 
   try {
     const sourceContent = await fileRead(sourceFilename)
-    const sourceETag = createETag(sourceContent)
+    const sourceETag = bufferToEtag(Buffer.from(sourceContent))
 
     if (sourceETag !== eTag) {
       return {
@@ -169,7 +169,7 @@ const validateAsset = async ({ projectPathname, compileRelativePath, asset, eTag
 
   try {
     const assetContent = await fileRead(assetFilename)
-    const assetContentETag = createETag(assetContent)
+    const assetContentETag = bufferToEtag(Buffer.from(assetContent))
 
     if (eTag !== assetContentETag) {
       return {

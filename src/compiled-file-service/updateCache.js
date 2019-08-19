@@ -1,5 +1,5 @@
+import { bufferToEtag } from "@dmail/server"
 import { fileWrite } from "@dmail/helper"
-import { createETag } from "../createETag.js"
 import { getCacheFilename, getAssetFilename, getCompiledFilename } from "./locaters.js"
 
 export const updateCache = ({
@@ -56,9 +56,11 @@ export const updateCache = ({
         sourceRelativePath,
         contentType,
         sources,
-        sourcesEtag: sourcesContent.map((sourceContent) => createETag(sourceContent)),
+        sourcesEtag: sourcesContent.map((sourceContent) =>
+          bufferToEtag(Buffer.from(sourceContent)),
+        ),
         assets,
-        assetsEtag: assetsContent.map((assetContent) => createETag(assetContent)),
+        assetsEtag: assetsContent.map((assetContent) => bufferToEtag(Buffer.from(assetContent))),
         createdMs: Number(Date.now()),
         lastModifiedMs: Number(Date.now()),
         ...(cacheHitTracking
@@ -72,9 +74,11 @@ export const updateCache = ({
       cache = {
         ...cache,
         sources,
-        sourcesEtag: sourcesContent.map((sourceContent) => createETag(sourceContent)),
+        sourcesEtag: sourcesContent.map((sourceContent) =>
+          bufferToEtag(Buffer.from(sourceContent)),
+        ),
         assets,
-        assetsEtag: assetsContent.map((assetContent) => createETag(assetContent)),
+        assetsEtag: assetsContent.map((assetContent) => bufferToEtag(Buffer.from(assetContent))),
         lastModifiedMs: Number(Date.now()),
         ...(cacheHitTracking
           ? {

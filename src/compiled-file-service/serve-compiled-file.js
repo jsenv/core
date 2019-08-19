@@ -1,9 +1,8 @@
-import { convertFileSystemErrorToResponseProperties } from "@dmail/server"
+import { bufferToEtag, convertFileSystemErrorToResponseProperties } from "@dmail/server"
 import {
   operatingSystemPathToPathname,
   pathnameToRelativePathname,
 } from "@jsenv/operating-system-path"
-import { createETag } from "../createETag.js"
 import { getOrGenerateCompiledFile } from "./get-or-generate-compiled-file.js"
 
 export const serveCompiledFile = async ({
@@ -89,7 +88,7 @@ export const serveCompiledFile = async ({
         headers: {
           "content-length": Buffer.byteLength(compiledSource),
           "content-type": contentType,
-          eTag: createETag(compiledSource),
+          eTag: bufferToEtag(Buffer.from(compiledSource)),
         },
         body: compiledSource,
       }
