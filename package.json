@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "5.132.0",
+  "version": "5.133.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -32,7 +32,7 @@
     "postpublish": "node ./script/transform-package/restore-postinstall.js"
   },
   "dependencies": {
-    "@jsenv/bundling": "1.13.0",
+    "@jsenv/bundling": "1.14.0",
     "@jsenv/grouping": "1.2.0",
     "@jsenv/module-resolution": "3.3.0",
     "@jsenv/babel-plugin-map": "1.1.0",
