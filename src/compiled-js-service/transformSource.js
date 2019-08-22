@@ -4,7 +4,7 @@ import {
   pathnameIsInside,
   pathnameToOperatingSystemPath,
 } from "@jsenv/operating-system-path"
-import { namedValueDescriptionToMetaDescription, pathnameToMeta } from "@dmail/project-structure"
+import { namedMetaToMetaMap, resolveMetaMapPatterns, urlToMeta } from "@jsenv/url-meta"
 import transformModulesSystemJs from "../babel-plugin-transform-modules-systemjs/index.js"
 import { ansiToHTML } from "../ansiToHTML.js"
 import { createParseError } from "../compiled-file-service/index.js"
@@ -50,10 +50,13 @@ export const transformSource = async ({
     inputRelativePath = pathnameToRelativePathname(sourcePathname, projectPathname)
     inputPath = pathnameToOperatingSystemPath(sourcePathname)
 
-    const metaDescription = namedValueDescriptionToMetaDescription({
-      convert: convertMap,
-    })
-    const { convert } = pathnameToMeta({ pathname: inputRelativePath, metaDescription })
+    const metaMap = resolveMetaMapPatterns(
+      namedMetaToMetaMap({
+        convert: convertMap,
+      }),
+      `file://${projectPathname}`,
+    )
+    const { convert } = urlToMeta({ url: `file://${sourcePathname}`, metaMap })
     if (convert) {
       if (typeof convert !== "function") {
         throw new TypeError(`convert must be a function, got ${convert}`)
