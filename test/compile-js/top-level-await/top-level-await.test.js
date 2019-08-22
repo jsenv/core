@@ -16,7 +16,4 @@ const { compiledSource } = await compileJs({
 })
 const actual = compiledSource.indexOf("async function")
 const expected = -1
-assert({
-  actual,
-  expected,
-})
+assert({ actual, expected })

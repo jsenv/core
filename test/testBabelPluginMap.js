@@ -22,7 +22,7 @@ const computeTestBabelPluginMap = ({ coverageEnabled }) => {
         predicate: ({ relativePath }) =>
           urlToMeta({
             url: `file://${JSENV_PATHNAME}${relativePath}`,
-            coverMetaMap,
+            metaMap: coverMetaMap,
           }).cover === true,
       }),
     ],
