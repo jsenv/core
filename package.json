@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "5.135.0",
+  "version": "5.136.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -77,7 +77,7 @@
     "@jsenv/prettier-config": "1.0.0",
     "@jsenv/prettier-check-project": "3.2.0",
     "@jsenv/codecov-upload": "1.6.0",
-    "@dmail/assert": "3.13.0",
+    "@dmail/assert": "3.14.0",
     "eslint": "6.2.1",
     "prettier": "1.18.2",
     "puppeteer": "1.19.0",
