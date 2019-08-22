@@ -1,8 +1,7 @@
-/node_modules
-dist
-.dist
-/coverage
-/old
-syntax-error.js
-syntax-error.main.js
+/.dist/
+/dist/
+/coverage/
 /docs/execution/basic-project/node_modules/
+/node_modules/
+/old/
+/test/**/syntax-error.js
