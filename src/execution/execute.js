@@ -1,10 +1,11 @@
-import { startCompileServer } from "../compile-server/index.js"
 import { launchAndExecute } from "../launchAndExecute/index.js"
 import {
   createProcessInterruptionCancellationToken,
   catchAsyncFunctionCancellation,
 } from "@dmail/cancellation"
 import { LOG_LEVEL_OFF } from "../logger.js"
+
+const { startCompileServer } = import.meta.require("@jsenv/compile-server")
 
 export const execute = async ({
   fileRelativePath,

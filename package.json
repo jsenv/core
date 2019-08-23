@@ -32,6 +32,7 @@
     "postpublish": "node ./script/transform-package/restore-postinstall.js"
   },
   "dependencies": {
+    "@jsenv/compile-server": "1.1.0",
     "@jsenv/module-resolution": "3.3.0",
     "@jsenv/babel-plugin-map": "1.1.0",
     "@jsenv/operating-system-path": "2.2.0",
