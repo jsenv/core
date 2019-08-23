@@ -5,9 +5,8 @@ import {
   pathnameToOperatingSystemPath,
 } from "@jsenv/operating-system-path"
 import { namedMetaToMetaMap, resolveMetaMapPatterns, urlToMeta } from "@jsenv/url-meta"
-import transformModulesSystemJs from "../babel-plugin-transform-modules-systemjs/index.js"
-import { ansiToHTML } from "../ansiToHTML.js"
-import { createParseError } from "../compiled-file-service/index.js"
+import transformModulesSystemJs from "./babel-plugin-transform-modules-systemjs/index.js"
+import { ansiToHTML } from "./ansiToHTML.js"
 
 const { transformAsync, transformFromAstAsync } = import.meta.require("@babel/core")
 const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-import")
@@ -232,4 +231,13 @@ const babelTransform = async ({ ast, code, options }) => {
     }
     throw error
   }
+}
+
+const createParseError = (data) => {
+  const { message } = data
+  const parseError = new Error(message)
+  parseError.code = "PARSE_ERROR"
+  parseError.data = data
+
+  return parseError
 }
