@@ -6,7 +6,7 @@ You can use them to tell on which platform to execute a file.<br />
 For instance the following code would execute `/Users/you/folder/index.js` on chromium.
 
 ```js
-import { execute } from '@jsenv/core'
+import { execute } from '@jsenv/execution'
 import { launchChromium } from `@jsenv/chromium-launcher`
 
 execute({
@@ -22,7 +22,7 @@ You can pass option to a platform launcher but you have to be sure you forward t
 By default `launchChromium` execute a file inside a headless chromium, but you can make it launch a chromium with a UI like this:
 
 ```js
-import { execute } from '@jsenv/core'
+import { execute } from '@jsenv/execution'
 import { launchChromium } from `@jsenv/chromium-launcher`
 
 execute({

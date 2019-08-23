@@ -5,7 +5,7 @@ import {
   pathnameToRelativePathname,
 } from "@jsenv/operating-system-path"
 import { resolvePath, hrefToPathname } from "@jsenv/module-resolution"
-import { transformSource } from "@jsenv/core"
+import { transformSource } from "../transformSource/transformSource.js"
 import { writeSourceMappingURL } from "./source-mapping-url.js"
 
 export const compileJs = async ({

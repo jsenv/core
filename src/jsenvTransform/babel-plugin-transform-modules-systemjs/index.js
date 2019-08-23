@@ -1,3 +1,4 @@
+/* eslint-disable */
 // https://github.com/babel/babel/tree/master/packages/babel-plugin-transform-modules-systemjs
 
 const { template, types: t } = import.meta.require("@babel/core")

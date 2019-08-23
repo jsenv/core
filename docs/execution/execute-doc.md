@@ -20,7 +20,7 @@ return value example
 ### launch
 
 ```js
-const { launchChromium } = require('@jsenv/core')
+const { launchChromium } = require('@jsenv/chromium-launcher')
 
 execute({
   projectPath: '/Users/you/project'
@@ -37,7 +37,7 @@ You're not likely going to write your own `launch` function, jsenv provides them
 ### fileRelativePath
 
 ```js
-import { execute } from '@jsenv/core'
+import { execute } from '@jsenv/execution'
 import { launchNode } from '@jsenv/node-launcher'
 
 execute({
@@ -54,7 +54,7 @@ It is relative to `projectPath`.
 ### mirrorConsole
 
 ```js
-import { execute } from '@jsenv/core'
+import { execute } from '@jsenv/execution'
 import { launchNode } from '@jsenv/node-launcher'
 
 execute({
@@ -76,7 +76,7 @@ true
 ### stopOnceExecuted
 
 ```js
-import { execute } from '@jsenv/core'
+import { execute } from '@jsenv/execution'
 import { launchNode } from '@jsenv/node-launcher'
 
 execute({

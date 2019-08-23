@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "5.140.0",
+  "version": "5.141.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -54,6 +54,7 @@
   },
   "devDependencies": {
     "@jsenv/core": "5.136.0",
+    "@jsenv/execution": "1.1.0",
     "@jsenv/bundling": "1.14.0",
     "@jsenv/testing": "1.25.0",
     "@jsenv/node-launcher": "1.16.0",
