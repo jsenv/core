@@ -6,18 +6,18 @@ import {
   pathnameToRelativePathname,
 } from "@jsenv/operating-system-path"
 
-let jsenvPath
+let jsenvCorePath
 if (typeof __filename === "string") {
-  jsenvPath = resolve(__filename, "../../../") // get ride of dist/node/main.js
+  jsenvCorePath = resolve(__filename, "../../../") // get ride of dist/node/main.js
 } else {
   const selfPathname = hrefToPathname(import.meta.url)
   const selfPath = pathnameToOperatingSystemPath(selfPathname)
-  jsenvPath = resolve(selfPath, "../../") // get ride of src/JSENV_PATH.js
+  jsenvCorePath = resolve(selfPath, "../../") // get ride of src/JSENV_PATH.js
 }
 
-export const JSENV_PATH = jsenvPath
+export { jsenvCorePath }
 
-export const JSENV_PATHNAME = operatingSystemPathToPathname(jsenvPath)
+export const jsenvCorePathname = operatingSystemPathToPathname(jsenvCorePathname)
 
 /**
  * jsenvRelativePathInception is used for the following:
@@ -34,8 +34,8 @@ export const JSENV_PATHNAME = operatingSystemPathToPathname(jsenvPath)
  *
  */
 
-export const jsenvRelativePathInception = ({ jsenvRelativePath, projectPathname }) => {
-  const jsenvPathname = `${JSENV_PATHNAME}${jsenvRelativePath}`
+export const jsenvCoreRelativePathInception = ({ jsenvCoreRelativePath, projectPathname }) => {
+  const jsenvPathname = `${jsenvCorePathname}${jsenvCoreRelativePath}`
   const relativePath = pathnameToRelativePathname(jsenvPathname, projectPathname)
   return relativePath
 }

@@ -1,11 +1,5 @@
-import { hrefToPathname } from "@jsenv/module-resolution"
-import {
-  pathnameToRelativePathname,
-  pathnameIsInside,
-  pathnameToOperatingSystemPath,
-} from "@jsenv/operating-system-path"
-import { namedMetaToMetaMap, resolveMetaMapPatterns, urlToMeta } from "@jsenv/url-meta"
 import transformModulesSystemJs from "./babel-plugin-transform-modules-systemjs/index.js"
+import { findAsyncPluginNameInBabelPluginMap } from "../findAsyncPluginNameInBabelPluginMap/findAsyncPluginNameInBabelPluginMap.js"
 import { ansiToHTML } from "./ansiToHTML.js"
 
 const { transformAsync, transformFromAstAsync } = import.meta.require("@babel/core")
@@ -13,99 +7,6 @@ const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-im
 const syntaxImportMeta = import.meta.require("@babel/plugin-syntax-import-meta")
 
 const defaultBabelPluginArray = [syntaxDynamicImport, syntaxImportMeta]
-
-export const transformSource = async ({
-  projectPathname,
-  source,
-  sourceHref,
-  babelPluginMap,
-  convertMap = {},
-  allowTopLevelAwait = true,
-  transformTopLevelAwait = true,
-  transformModuleIntoSystemFormat = true,
-  remap = true,
-}) => {
-  let inputCode
-  let inputMap
-  let inputPath
-  let inputRelativePath
-
-  const scenario = computeScenario({ projectPathname, sourceHref })
-
-  // ideally we should check convertMap in any scenario
-  // but it means we should renamed @dmail/filesystem-matching into
-  // @dmail/url-matching
-  // and we would not pass pathname anymore but href instead
-  // to do later because @dmail/filesystem-matching is heavily used everywhere
-  if (scenario === "remote") {
-    inputCode = source
-    inputPath = sourceHref
-  } else if (scenario === "file") {
-    inputCode = source
-    inputPath = pathnameToOperatingSystemPath(hrefToPathname(sourceHref))
-  } else if (scenario === "project-file") {
-    inputCode = source
-    const sourcePathname = hrefToPathname(sourceHref)
-    inputRelativePath = pathnameToRelativePathname(sourcePathname, projectPathname)
-    inputPath = pathnameToOperatingSystemPath(sourcePathname)
-
-    const metaMap = resolveMetaMapPatterns(
-      namedMetaToMetaMap({
-        convert: convertMap,
-      }),
-      `file://${projectPathname}`,
-    )
-    const { convert } = urlToMeta({ url: `file://${sourcePathname}`, metaMap })
-    if (convert) {
-      if (typeof convert !== "function") {
-        throw new TypeError(`convert must be a function, got ${convert}`)
-      }
-      const conversionResult = await convert({
-        source,
-        sourceHref,
-        remap,
-        allowTopLevelAwait,
-      })
-      if (typeof conversionResult !== "object") {
-        throw new TypeError(`convert must return an object, got ${conversionResult}`)
-      }
-      const code = conversionResult.code
-      if (typeof code !== "string") {
-        throw new TypeError(`convert must return { code } string, got { code: ${code} } `)
-      }
-
-      inputCode = code
-      inputMap = conversionResult.map
-    }
-  }
-
-  return jsenvTransform({
-    inputCode,
-    inputMap,
-    inputPath,
-    inputRelativePath,
-    babelPluginMap,
-    convertMap,
-    allowTopLevelAwait,
-    transformTopLevelAwait,
-    transformModuleIntoSystemFormat,
-    remap,
-  })
-}
-
-const computeScenario = ({ projectPathname, sourceHref }) => {
-  if (!sourceHref.startsWith("file:///")) {
-    return "remote"
-  }
-
-  const sourcePathname = hrefToPathname(sourceHref)
-
-  if (pathnameIsInside(sourcePathname, projectPathname)) {
-    return "project-file"
-  }
-
-  return "file"
-}
 
 export const jsenvTransform = async ({
   inputCode,
@@ -135,7 +36,7 @@ export const jsenvTransform = async ({
     },
   }
 
-  const asyncPluginName = findAsyncPluginNameInbabelPluginMap(babelPluginMap)
+  const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap)
 
   if (transformModuleIntoSystemFormat && transformTopLevelAwait && asyncPluginName) {
     const babelPluginArrayWithoutAsync = []
@@ -200,16 +101,6 @@ export const jsenvTransform = async ({
     },
   })
   return result
-}
-
-export const findAsyncPluginNameInbabelPluginMap = (babelPluginMap) => {
-  if ("transform-async-to-promises" in babelPluginMap) {
-    return "transform-async-to-promises"
-  }
-  if ("transform-async-to-generator" in babelPluginMap) {
-    return "transform-async-to-generator"
-  }
-  return ""
 }
 
 const babelTransform = async ({ ast, code, options }) => {

@@ -1,4 +1,4 @@
-import { transformSource } from "../transformSource.js"
+import { transformSource } from "../transformSource/transformSource.js"
 import { createReplaceExpressionsBabelPlugin } from "./createReplaceExpressionsBabelPlugin.js"
 
 const transformCommonJs = import.meta.require("babel-plugin-transform-commonjs")

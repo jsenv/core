@@ -2,15 +2,15 @@ import { readFileSync } from "fs"
 import { assert } from "@dmail/assert"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { createInstrumentBabelPlugin } from "@jsenv/testing/src/coverage/instrument-babel-plugin.js"
-import { JSENV_PATHNAME } from "../../../src/JSENV_PATH.js"
-import { importMetaURLToFolderJsenvRelativePath } from "../../../src/import-meta-url-to-folder-jsenv-relative-path.js"
-import { compileJs } from "../../../src/compileJs.js"
+import { jsenvCorePathname } from "../../../src/jsenvCorePath.js"
+import { compileJs } from "../../../src/compileJs/compileJs.js"
+import { fileHrefToFolderRelativePath } from "../../fileHrefToFolderRelativePath.js"
 
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
-const projectPathname = JSENV_PATHNAME
-const folderJsenvRelativePath = importMetaURLToFolderJsenvRelativePath(import.meta.url)
-const sourceRelativePath = `${folderJsenvRelativePath}/file.js`
+const projectPathname = jsenvCorePathname
+const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
+const sourceRelativePath = `${folderRelativePath}/file.js`
 const filename = pathnameToOperatingSystemPath(`${projectPathname}${sourceRelativePath}`)
 const source = readFileSync(filename).toString()
 const babelPluginMap = {
