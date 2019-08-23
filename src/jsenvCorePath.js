@@ -17,7 +17,7 @@ if (typeof __filename === "string") {
 
 export { jsenvCorePath }
 
-export const jsenvCorePathname = operatingSystemPathToPathname(jsenvCorePathname)
+export const jsenvCorePathname = operatingSystemPathToPathname(jsenvCorePath)
 
 /**
  * jsenvRelativePathInception is used for the following:
