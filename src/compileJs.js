@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { fileRead } from "@dmail/helper"
+import { readFile } from "fs"
 import {
   pathnameToOperatingSystemPath,
   pathnameToRelativePathname,
@@ -27,7 +27,17 @@ export const compileJs = async ({
 
   const sourcePathname = `${projectPathname}${sourceRelativePath}`
   const sourcePath = pathnameToOperatingSystemPath(sourcePathname)
-  const source = await fileRead(sourcePath)
+  const source = String(
+    await new Promise((resolve, reject) => {
+      readFile(sourcePath, (error, buffer) => {
+        if (error) {
+          reject(error)
+        } else {
+          resolve(buffer)
+        }
+      })
+    }),
+  )
   const { map, code, metadata } = await transformSource({
     projectPathname,
     source,
