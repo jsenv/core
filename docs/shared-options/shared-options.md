@@ -27,7 +27,7 @@ For that reason, if you don't pass this option, the value will be:
 require("@jsenv/babel-plugin-map").jsenvBabelPluginMap
 ```
 
-— see [jsenvBabelPluginMap source on github](https://github.com/jsenv/jsenv-babel-plugin-map/blob/a324a0b32e7d31730bab85db869d34e8bbf09933/index.js)
+— see [jsenvBabelPluginMap source on github](https://github.com/jsenv/jsenv-babel-plugin-map/blob/master/index.js#L31)
 
 It means standard babel plugin are enabled by default.<br />
 

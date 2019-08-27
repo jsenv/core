@@ -22,7 +22,7 @@ The list below presents what tool jsenv provides. They are independent and you c
   — see [@jsenv/testing](https://github.com/jsenv/jsenv-testing)
 
 - execute one of your file on a browser or node.js process.<br/>
-  — see [execution](./docs/execution/execution.md)
+  — see [@jsenv/execution](https://github.com/jsenv/jsenv-execution)
 
 - generate bundle compatible with browsers and/or node.js.<br/>
   — see [@jsenv/bundling](https://github.com/jsenv/jsenv-bundling)
