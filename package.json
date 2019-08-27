@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "6.1.0",
+  "version": "6.2.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -35,7 +35,7 @@
     "@jsenv/module-resolution": "3.5.0",
     "@jsenv/babel-plugin-map": "2.0.0",
     "@jsenv/operating-system-path": "2.3.0",
-    "@jsenv/url-meta": "1.1.0",
+    "@jsenv/url-meta": "2.0.0",
     "@dmail/cancellation": "2.6.0",
     "@babel/core": "7.5.5",
     "@babel/helper-hoist-variables": "7.4.4",
@@ -53,11 +53,11 @@
     "rollup-plugin-replace": "2.2.0"
   },
   "devDependencies": {
-    "@jsenv/execution": "1.2.0",
-    "@jsenv/bundling": "2.0.0",
-    "@jsenv/testing": "1.29.0",
-    "@jsenv/node-launcher": "2.0.0",
-    "@jsenv/node-module-import-map": "4.3.0",
+    "@jsenv/execution": "2.1.0",
+    "@jsenv/bundling": "2.2.0",
+    "@jsenv/testing": "2.0.0",
+    "@jsenv/node-launcher": "2.2.0",
+    "@jsenv/node-module-import-map": "4.4.0",
     "@jsenv/eslint-config": "9.9.0",
     "@jsenv/prettier-config": "1.0.0",
     "@jsenv/prettier-check-project": "3.3.0",
