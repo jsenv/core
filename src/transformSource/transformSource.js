@@ -25,11 +25,6 @@ export const transformSource = async ({
 
   const scenario = computeScenario({ projectPathname, sourceHref })
 
-  // ideally we should check convertMap in any scenario
-  // but it means we should renamed @dmail/filesystem-matching into
-  // @dmail/url-matching
-  // and we would not pass pathname anymore but href instead
-  // to do later because @dmail/filesystem-matching is heavily used everywhere
   if (scenario === "remote") {
     inputCode = source
     inputPath = sourceHref
@@ -41,35 +36,35 @@ export const transformSource = async ({
     const sourcePathname = hrefToPathname(sourceHref)
     inputRelativePath = pathnameToRelativePathname(sourcePathname, projectPathname)
     inputPath = pathnameToOperatingSystemPath(sourcePathname)
+  }
 
-    const metaMap = resolveMetaMapPatterns(
-      namedMetaToMetaMap({
-        convert: convertMap,
-      }),
-      `file://${projectPathname}`,
-    )
-    const { convert } = urlToMeta({ url: `file://${sourcePathname}`, metaMap })
-    if (convert) {
-      if (typeof convert !== "function") {
-        throw new TypeError(`convert must be a function, got ${convert}`)
-      }
-      const conversionResult = await convert({
-        source,
-        sourceHref,
-        remap,
-        allowTopLevelAwait,
-      })
-      if (typeof conversionResult !== "object") {
-        throw new TypeError(`convert must return an object, got ${conversionResult}`)
-      }
-      const code = conversionResult.code
-      if (typeof code !== "string") {
-        throw new TypeError(`convert must return { code } string, got { code: ${code} } `)
-      }
-
-      inputCode = code
-      inputMap = conversionResult.map
+  const metaMap = resolveMetaMapPatterns(
+    namedMetaToMetaMap({
+      convert: convertMap,
+    }),
+    `file://${projectPathname}`,
+  )
+  const { convert } = urlToMeta({ url: sourceHref, metaMap })
+  if (convert) {
+    if (typeof convert !== "function") {
+      throw new TypeError(`convert must be a function, got ${convert}`)
     }
+    const conversionResult = await convert({
+      source,
+      sourceHref,
+      remap,
+      allowTopLevelAwait,
+    })
+    if (typeof conversionResult !== "object") {
+      throw new TypeError(`convert must return an object, got ${conversionResult}`)
+    }
+    const code = conversionResult.code
+    if (typeof code !== "string") {
+      throw new TypeError(`convert must return { code } string, got { code: ${code} } `)
+    }
+
+    inputCode = code
+    inputMap = conversionResult.map
   }
 
   return jsenvTransform({
