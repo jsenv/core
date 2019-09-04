@@ -8,8 +8,8 @@
 
 ## Introduction
 
-`jsenv` is a github organization used to manage jsenv tools. Most github repositories have a corresponding package published on npm.<br />
-`jsenv-core` is the entry point to document the major ones.<br />
+`jsenv` is a github organization used to manage GitHub repositories and npm packages composing jsenv tools.<br />
+`jsenv-core` is the entry point to discover major jsenv tools.<br />
 
 ## How to use
 
