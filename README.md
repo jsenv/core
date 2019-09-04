@@ -8,12 +8,12 @@
 
 ## Introduction
 
-`jsenv` is a github organization used to manage GitHub repositories and npm packages composing jsenv tools.<br />
-`jsenv-core` is the entry point to discover major jsenv tools.<br />
+`jsenv` is a github organization used to manage GitHub repositories related to jsenv tools.<br />
+`jsenv-core` is an entry point to discover the main jsenv tools.<br />
 
 ## How to use
 
-The list below presents what tool jsenv provides. They are independent and you can use them according to your project needs.
+The list below presents the main tools jsenv provides. They are independent and you can use them according to your project needs.
 
 - explore your project using a browser.<br/>
   — see [@jsenv/exploring server](https://github.com/jsenv/jsenv-exploring-server)
