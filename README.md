@@ -8,8 +8,8 @@
 
 ## Introduction
 
-`jsenv` is a github organization used to manage github repositories. Most github repositories have a corresponding package published on npm.<br />
-`jsenv-core` is the entry point for documentation.<br />
+`jsenv` is a github organization used to manage jsenv tools. Most github repositories have a corresponding package published on npm.<br />
+`jsenv-core` is the entry point to document the major ones.<br />
 
 ## How to use
 
@@ -18,13 +18,13 @@ The list below presents what tool jsenv provides. They are independent and you c
 - explore your project using a browser.<br/>
   — see [@jsenv/exploring server](https://github.com/jsenv/jsenv-exploring-server)
 
-- execute your test files on a browser and/or node.js.<br/>
+- execute your project test files on a browser and/or node.js.<br/>
   — see [@jsenv/testing](https://github.com/jsenv/jsenv-testing)
 
-- execute one of your file on a browser or node.js process.<br/>
+- execute any of your project file on a browser or node.js.<br/>
   — see [@jsenv/execution](https://github.com/jsenv/jsenv-execution)
 
-- generate bundle compatible with browsers and/or node.js.<br/>
+- bundle your project into a format compatible with browsers and/or node.js.<br/>
   — see [@jsenv/bundling](https://github.com/jsenv/jsenv-bundling)
 
 The above could be achieved using babel, systemjs and rollup separately. jsenv makes them work together.
