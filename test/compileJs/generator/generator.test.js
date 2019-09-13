@@ -4,7 +4,6 @@ import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { jsenvCorePathname } from "../../../src/jsenvCorePath.js"
 import { compileJs } from "../../../src/compileJs/compileJs.js"
 import { fileHrefToFolderRelativePath } from "../../fileHrefToFolderRelativePath.js"
-import { ensureGeneratorRuntimeImport } from "./ensureGeneratorRuntimeImport.js"
 
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
@@ -17,10 +16,7 @@ const source = readFileSync(filename).toString()
 const actual = await compileJs({
   projectPathname,
   sourceRelativePath,
-  babelPluginMap: {
-    ...jsenvBabelPluginMap,
-    "ensure-generator-runtime-import": [ensureGeneratorRuntimeImport],
-  },
+  babelPluginMap: jsenvBabelPluginMap,
 })
 const expected = {
   compiledSource: actual.compiledSource,
