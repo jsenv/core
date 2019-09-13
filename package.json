@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@jsenv/module-resolution": "3.5.0",
-    "@jsenv/babel-plugin-map": "2.0.0",
+    "@jsenv/babel-plugin-map": "3.0.0",
     "@jsenv/operating-system-path": "2.4.0",
     "@jsenv/url-meta": "2.0.0",
     "@dmail/cancellation": "2.6.0",

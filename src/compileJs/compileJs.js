@@ -14,6 +14,7 @@ export const compileJs = async ({
   babelPluginMap,
   convertMap,
   transformTopLevelAwait,
+  regeneratorRuntimeImportPath,
   remap = true,
   remapMethod = "comment", // 'comment', 'inline'
 }) => {
@@ -45,6 +46,7 @@ export const compileJs = async ({
     babelPluginMap,
     convertMap,
     transformTopLevelAwait,
+    regeneratorRuntimeImportPath,
     remap,
   })
   const coverage = metadata.coverage

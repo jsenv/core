@@ -16,6 +16,7 @@ export const transformSource = async ({
   allowTopLevelAwait = true,
   transformTopLevelAwait = true,
   transformModuleIntoSystemFormat = true,
+  regeneratorRuntimeImportPath,
   remap = true,
 }) => {
   let inputCode
@@ -77,6 +78,7 @@ export const transformSource = async ({
     allowTopLevelAwait,
     transformTopLevelAwait,
     transformModuleIntoSystemFormat,
+    regeneratorRuntimeImportPath,
     remap,
   })
 }

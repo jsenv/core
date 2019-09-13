@@ -1,6 +1,7 @@
 import transformModulesSystemJs from "./babel-plugin-transform-modules-systemjs/index.js"
 import { findAsyncPluginNameInBabelPluginMap } from "../findAsyncPluginNameInBabelPluginMap/findAsyncPluginNameInBabelPluginMap.js"
 import { ansiToHTML } from "./ansiToHTML.js"
+import { ensureRegeneratorRuntimeImportBabelPlugin } from "./ensureRegeneratorRuntimeImportBabelPlugin.js"
 
 const { transformAsync, transformFromAstAsync } = import.meta.require("@babel/core")
 const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-import")
@@ -18,6 +19,7 @@ export const jsenvTransform = async ({
   allowTopLevelAwait,
   transformTopLevelAwait,
   transformModuleIntoSystemFormat,
+  regeneratorRuntimeImportPath,
   remap,
 }) => {
   // https://babeljs.io/docs/en/options
@@ -34,6 +36,16 @@ export const jsenvTransform = async ({
     parserOpts: {
       allowAwaitOutsideFunction: allowTopLevelAwait,
     },
+  }
+
+  babelPluginMap = {
+    ...babelPluginMap,
+    "ensure-regenerator-runtime-import": [
+      ensureRegeneratorRuntimeImportBabelPlugin,
+      {
+        regeneratorRuntimeImportPath,
+      },
+    ],
   }
 
   const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap)
