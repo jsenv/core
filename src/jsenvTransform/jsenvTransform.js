@@ -106,7 +106,8 @@ export const jsenvTransform = async ({
 const babelTransform = async ({ ast, code, options }) => {
   try {
     if (ast) {
-      return await transformFromAstAsync(ast, code, options)
+      const result = await transformFromAstAsync(ast, code, options)
+      return result
     }
     return await transformAsync(code, options)
   } catch (error) {
