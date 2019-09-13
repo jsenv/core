@@ -19,6 +19,7 @@ export const jsenvTransform = async ({
   allowTopLevelAwait,
   transformTopLevelAwait,
   transformModuleIntoSystemFormat,
+  transformGenerator,
   regeneratorRuntimeImportPath,
   remap,
 }) => {
@@ -38,14 +39,16 @@ export const jsenvTransform = async ({
     },
   }
 
-  babelPluginMap = {
-    ...babelPluginMap,
-    "ensure-regenerator-runtime-import": [
-      ensureRegeneratorRuntimeImportBabelPlugin,
-      {
-        regeneratorRuntimeImportPath,
-      },
-    ],
+  if (transformGenerator) {
+    babelPluginMap = {
+      ...babelPluginMap,
+      "ensure-regenerator-runtime-import": [
+        ensureRegeneratorRuntimeImportBabelPlugin,
+        {
+          regeneratorRuntimeImportPath,
+        },
+      ],
+    }
   }
 
   const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap)

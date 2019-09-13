@@ -16,6 +16,7 @@ export const transformSource = async ({
   allowTopLevelAwait = true,
   transformTopLevelAwait = true,
   transformModuleIntoSystemFormat = true,
+  transformGenerator = true,
   regeneratorRuntimeImportPath,
   remap = true,
 }) => {
@@ -78,6 +79,7 @@ export const transformSource = async ({
     allowTopLevelAwait,
     transformTopLevelAwait,
     transformModuleIntoSystemFormat,
+    transformGenerator,
     regeneratorRuntimeImportPath,
     remap,
   })

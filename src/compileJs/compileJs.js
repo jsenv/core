@@ -14,6 +14,7 @@ export const compileJs = async ({
   babelPluginMap,
   convertMap,
   transformTopLevelAwait,
+  transformGenerator,
   regeneratorRuntimeImportPath,
   remap = true,
   remapMethod = "comment", // 'comment', 'inline'
@@ -46,6 +47,7 @@ export const compileJs = async ({
     babelPluginMap,
     convertMap,
     transformTopLevelAwait,
+    transformGenerator,
     regeneratorRuntimeImportPath,
     remap,
   })
