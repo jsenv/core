@@ -10,7 +10,13 @@ export const ensureRegeneratorRuntimeImportBabelPlugin = (api, options) => {
 
   return {
     visitor: {
-      Identifier(path) {
+      Identifier(path, opts) {
+        const { filename } = opts
+        const filepathname = filename.replace(/\\/g, "/")
+        if (filepathname.endsWith("node_modules/regenerator-runtime/runtime.js")) {
+          return
+        }
+
         const { node } = path
         if (node.name === regeneratorRuntimeIdentifierName) {
           addSideEffect(path.scope.getProgramParent().path, regeneratorRuntimeImportPath)
