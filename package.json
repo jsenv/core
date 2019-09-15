@@ -17,8 +17,7 @@
     "/index.js"
   ],
   "exports" : {
-    "/": "/",
-    "/helpers/": "/src/helpers/"
+    "/": "/"
   },
   "scripts": {
     "test": "node ./script/test/test.js",
