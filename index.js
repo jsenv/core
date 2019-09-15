@@ -21,3 +21,13 @@ export { resolveBrowserGroup } from "./src/resolveBrowserGroup/resolveBrowserGro
 export { resolveNodeGroup } from "./src/resolveNodeGroup/resolveNodeGroup.js"
 export { resolvePlatformGroup } from "./src/resolvePlatformGroup/resolvePlatformGroup.js"
 export { transformSource } from "./src/transformSource/transformSource.js"
+
+/**
+ *
+ * getOrGenerateCompiledFile and
+ * the aossicate cache concept should be moved here to be shared
+ * by compile server and bundling
+ *
+ * the cache folder however cannot be shared because rollup
+ * does not output a file with a module format
+ */

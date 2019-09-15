@@ -16,6 +16,9 @@
     "/src/",
     "/index.js"
   ],
+  "exports" : {
+    "/": "/"
+  },
   "scripts": {
     "test": "node ./script/test/test.js",
     "eslint-check": "eslint .",
@@ -45,6 +48,7 @@
     "@babel/plugin-transform-modules-systemjs": "7.5.0",
     "babel-plugin-transform-commonjs": "1.1.5",
     "ansi-to-html": "0.6.11",
+    "regenerator-runtime": "0.13.3",
     "rollup": "1.20.2",
     "rollup-plugin-commonjs": "10.1.0",
     "rollup-plugin-json": "4.0.0",

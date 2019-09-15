@@ -5,7 +5,7 @@ export const ensureRegeneratorRuntimeImportBabelPlugin = (api, options) => {
 
   const {
     regeneratorRuntimeIdentifierName = "regeneratorRuntime",
-    regeneratorRuntimeImportPath = "regenerator-runtime/runtime",
+    regeneratorRuntimeImportPath = "@jsenv/core/helpers/regenerator-runtime/regenerator-runtime.js",
   } = options
 
   return {
