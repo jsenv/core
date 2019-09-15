@@ -5,12 +5,6 @@ export {
   computeCompileIdFromGroupId,
 } from "./src/computeCompileIdFromGroupId/computeCompileIdFromGroupId.js"
 export {
-  convertCommonJsWithBabel,
-} from "./src/convertCommonJsWithBabel/convertCommonJsWithBabel.js"
-export {
-  convertCommonJsWithRollup,
-} from "./src/convertCommonJsWithRollup/convertCommonJsWithRollup.js"
-export {
   findAsyncPluginNameInBabelPluginMap,
 } from "./src/findAsyncPluginNameInBabelPluginMap/findAsyncPluginNameInBabelPluginMap.js"
 export { generateGroupMap } from "./src/generateGroupMap/generateGroupMap.js"
