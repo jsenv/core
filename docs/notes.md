@@ -16,7 +16,6 @@
 - Ideally we should not keep our own systemjs version:
   https://github.com/systemjs/systemjs/issues/1924 and https://github.com/systemjs/systemjs/pull/1925.
 - Ideally we should not keep our own babel-plugin-transform-modules-systemjs version: https://github.com/babel/babel/issues/9426
-- externalize logger into @dmail/logger
 - Create @jsenv/firefox-launcher because it would be cool
   to be able to test against firefox and puppeteer-firefox should help a lot
 - safari-launcher, opera-launcher would be great
