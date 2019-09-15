@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "7.3.0",
+  "version": "7.4.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -17,7 +17,8 @@
     "/index.js"
   ],
   "exports" : {
-    "/": "/"
+    "/": "/",
+    "/helpers/": "/src/helpers/"
   },
   "scripts": {
     "test": "node ./script/test/test.js",
