@@ -2,6 +2,7 @@ import transformModulesSystemJs from "./babel-plugin-transform-modules-systemjs/
 import { findAsyncPluginNameInBabelPluginMap } from "../findAsyncPluginNameInBabelPluginMap/findAsyncPluginNameInBabelPluginMap.js"
 import { ansiToHTML } from "./ansiToHTML.js"
 import { ensureRegeneratorRuntimeImportBabelPlugin } from "./ensureRegeneratorRuntimeImportBabelPlugin.js"
+import { ensureGlobalThisImportBabelPlugin } from "./ensureGlobalThisImportBabelPlugin.js"
 
 const { transformAsync, transformFromAstAsync } = import.meta.require("@babel/core")
 const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-import")
@@ -49,6 +50,11 @@ export const jsenvTransform = async ({
         },
       ],
     }
+  }
+
+  babelPluginMap = {
+    ...babelPluginMap,
+    "ensure-global-this-import": [ensureGlobalThisImportBabelPlugin],
   }
 
   const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap)
