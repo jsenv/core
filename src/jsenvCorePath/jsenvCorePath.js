@@ -8,11 +8,11 @@ import {
 
 let jsenvCorePath
 if (typeof __filename === "string") {
-  jsenvCorePath = resolve(__filename, "../../../") // get ride of dist/node/main.js
+  jsenvCorePath = resolve(__filename, "../../../") // get ride of dist/commonjs/main.js
 } else {
   const selfPathname = hrefToPathname(import.meta.url)
   const selfPath = pathnameToOperatingSystemPath(selfPathname)
-  jsenvCorePath = resolve(selfPath, "../../") // get ride of src/JSENV_PATH.js
+  jsenvCorePath = resolve(selfPath, "../../../") // get ride of src/jsenvCorePath/jsenvCorePath.js
 }
 
 export { jsenvCorePath }

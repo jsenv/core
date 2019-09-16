@@ -1,6 +1,5 @@
 import { assert } from "@dmail/assert"
-import { jsenvCorePathname } from "../../../src/jsenvCorePath/jsenvCorePath.js"
-import { compileJs } from "../../../src/compileJs/compileJs.js"
+import { jsenvCorePathname, compileJs } from "../../../index.js"
 import { fileHrefToFolderRelativePath } from "../../fileHrefToFolderRelativePath.js"
 
 const { jsenvBabelPluginMap: babelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
