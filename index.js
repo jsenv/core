@@ -8,6 +8,7 @@ export {
   findAsyncPluginNameInBabelPluginMap,
 } from "./src/findAsyncPluginNameInBabelPluginMap/findAsyncPluginNameInBabelPluginMap.js"
 export { generateGroupMap } from "./src/generateGroupMap/generateGroupMap.js"
+export { jsenvCorePath, jsenvCorePathname } from "./src/jsenvCorePath/jsenvCorePath.js"
 export { jsenvTransform } from "./src/jsenvTransform/jsenvTransform.js"
 export { nodeVersionScoreMap } from "./src/nodeVersionScoreMap/nodeVersionScoreMap.js"
 export { polyfillCompatMap } from "./src/polyfillCompatMap/polyfillCompatMap.js"

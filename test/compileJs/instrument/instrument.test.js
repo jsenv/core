@@ -2,7 +2,7 @@ import { readFileSync } from "fs"
 import { assert } from "@dmail/assert"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { createInstrumentBabelPlugin } from "@jsenv/testing/src/coverage/instrument-babel-plugin.js"
-import { jsenvCorePathname } from "../../../src/jsenvCorePath.js"
+import { jsenvCorePathname } from "../../../src/jsenvCorePath/jsenvCorePath.js"
 import { compileJs } from "../../../src/compileJs/compileJs.js"
 import { fileHrefToFolderRelativePath } from "../../fileHrefToFolderRelativePath.js"
 

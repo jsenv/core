@@ -3,7 +3,7 @@ import {
   pathnameToRelativePathname,
   operatingSystemPathToPathname,
 } from "@jsenv/operating-system-path"
-import { jsenvCorePathname } from "../src/jsenvCorePath.js"
+import { jsenvCorePathname } from "../src/jsenvCorePath/jsenvCorePath.js"
 
 export const fileHrefToFolderRelativePath = (fileHref) => {
   const folderPath = importMetaURLToFolderPath(fileHref)

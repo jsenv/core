@@ -1,7 +1,7 @@
 import { namedMetaToMetaMap, resolveMetaMapPatterns, urlToMeta } from "@jsenv/url-meta"
 import { jsenvCoverDescription } from "@jsenv/testing"
 import { createInstrumentBabelPlugin } from "@jsenv/testing/src/coverage/instrument-babel-plugin.js"
-import { jsenvCorePathname } from "../src/jsenvCorePath.js"
+import { jsenvCorePathname } from "../src/jsenvCorePath/jsenvCorePath.js"
 
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
