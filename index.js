@@ -3,7 +3,6 @@ export { browserScoreMap } from "./src/browserScoreMap/browserScoreMap.js"
 export {
   cleanCompileCacheFolderIfObsolete,
 } from "./src/cleanCompileCacheFolderIfObsolete/cleanCompileCacheFolderIfObsolete.js"
-export { compileJs } from "./src/compileJs/compileJs.js"
 export {
   computeCompileIdFromGroupId,
 } from "./src/computeCompileIdFromGroupId/computeCompileIdFromGroupId.js"
@@ -20,3 +19,7 @@ export { polyfillCompatMap } from "./src/polyfillCompatMap/polyfillCompatMap.js"
 export { resolveBrowserGroup } from "./src/resolveBrowserGroup/resolveBrowserGroup.js"
 export { resolveNodeGroup } from "./src/resolveNodeGroup/resolveNodeGroup.js"
 export { resolvePlatformGroup } from "./src/resolvePlatformGroup/resolvePlatformGroup.js"
+export { transformJs } from "./src/transformJs/transformJs.js"
+export {
+  transformResultToCompilationResult,
+} from "./src/transformResultToCompilationResult/transformResultToCompilationResult.js"
