@@ -1,4 +1,5 @@
 import { fileMakeDirname } from "@dmail/helper"
+import { createLogger } from "@jsenv/logger"
 import { readCache } from "./readCache.js"
 import { validateCache } from "./validateCache.js"
 import { updateCache } from "./updateCache.js"
@@ -20,6 +21,7 @@ export const getOrGenerateCompiledFile = async ({
   cacheInterProcessLocking = false,
   ifEtagMatch,
   ifModifiedSinceDate,
+  logLevel = "warn",
 }) => {
   if (typeof projectPathname !== "string") {
     throw new TypeError(`projectPathname must be a string, got ${projectPathname}`)
@@ -39,6 +41,8 @@ export const getOrGenerateCompiledFile = async ({
     throw new TypeError(`compile must be a function, got ${compile}`)
   }
 
+  const logger = createLogger({ logLevel })
+
   return startAsap(
     async () => {
       const { cache, compileResult, compileResultStatus } = await computeCompileReport({
@@ -50,6 +54,7 @@ export const getOrGenerateCompiledFile = async ({
         ifEtagMatch,
         ifModifiedSinceDate,
         cacheIgnored,
+        logger,
       })
 
       // useless because missing source cannot invalidate cache
@@ -86,12 +91,14 @@ export const getOrGenerateCompiledFile = async ({
 
       await updateCache({
         projectPathname,
+        compileCacheFolderRelativePath,
         sourceRelativePath,
         compileRelativePath,
         cacheHitTracking,
         cache,
         compileResult,
         compileResultStatus,
+        logger,
       })
 
       return { cache, compileResult, compileResultStatus }
@@ -100,6 +107,7 @@ export const getOrGenerateCompiledFile = async ({
       projectPathname,
       compileRelativePath,
       cacheInterProcessLocking,
+      logger,
     },
   )
 }
@@ -113,6 +121,7 @@ const computeCompileReport = async ({
   ifEtagMatch,
   ifModifiedSinceDate,
   cacheIgnored,
+  logger,
 }) => {
   const cache = cacheIgnored
     ? null
@@ -121,6 +130,7 @@ const computeCompileReport = async ({
         compileCacheFolderRelativePath,
         sourceRelativePath,
         compileRelativePath,
+        logger,
       })
 
   if (!cache) {
@@ -130,6 +140,7 @@ const computeCompileReport = async ({
       sourceRelativePath,
       compileRelativePath,
       compile,
+      logger,
     })
 
     return {
@@ -145,6 +156,7 @@ const computeCompileReport = async ({
     cache,
     ifEtagMatch,
     ifModifiedSinceDate,
+    logger,
   })
   if (!cacheValidation.valid) {
     const compileResult = await callCompile({
@@ -152,6 +164,7 @@ const computeCompileReport = async ({
       sourceRelativePath,
       compileRelativePath,
       compile,
+      logger,
     })
     return { cache, compileResult, compileResultStatus: "updated" }
   }
@@ -171,6 +184,7 @@ const callCompile = async ({
   sourceRelativePath,
   compileRelativePath,
   compile,
+  logger,
 }) => {
   const sourceFilename = getSourceFilePath({
     projectPathname,
@@ -181,6 +195,7 @@ const callCompile = async ({
     compileCacheFolderRelativePath,
     compileRelativePath,
   })
+  logger.info(`compile ${sourceRelativePath}`)
 
   const {
     sources = [],
@@ -215,13 +230,14 @@ const callCompile = async ({
 
 const startAsap = async (
   fn,
-  { projectPathname, compileRelativePath, cacheInterProcessLocking },
+  { projectPathname, compileRelativePath, cacheInterProcessLocking, logger },
 ) => {
   const cacheFilePath = getCacheFilePath({
     projectPathname,
     compileRelativePath,
   })
 
+  logger.info(`lock ${cacheFilePath}`)
   // in case this process try to concurrently access meta we wait for previous to be done
   const unlockLocal = await lockForRessource(cacheFilePath)
 
@@ -248,6 +264,7 @@ const startAsap = async (
     // we want to unlock in case of error too
     unlockLocal()
     unlockInterProcessLock()
+    logger.info(`unlock ${cacheFilePath}`)
   }
 
   // here in case of error.code === 'ELOCKED' thrown from here

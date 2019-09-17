@@ -12,6 +12,7 @@ export const updateCache = ({
   cache,
   compileResult,
   compileResultStatus,
+  logger,
 }) => {
   const isNew = compileResultStatus === "created"
   const isUpdated = compileResultStatus === "updated"
@@ -35,6 +36,7 @@ export const updateCache = ({
     })
 
     if (writeCompiledSourceFile) {
+      logger.info(`write file cache at ${compiledFilePath}`)
       promises.push(fileWrite(compiledFilePath, compiledSource))
     }
 
@@ -48,6 +50,7 @@ export const updateCache = ({
             asset,
           })
 
+          logger.info(`write asset cache at ${assetFilePath}`)
           return fileWrite(assetFilePath, assetsContent[index])
         }),
       )
@@ -109,6 +112,7 @@ export const updateCache = ({
       compileRelativePath,
     })
 
+    logger.info(`write cache at ${cacheFilePath}`)
     promises.push(fileWrite(cacheFilePath, JSON.stringify(cache, null, "  ")))
   }
 

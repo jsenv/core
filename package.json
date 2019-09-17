@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "8.2.0",
+  "version": "8.3.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -45,6 +45,7 @@
     "@dmail/cancellation": "2.6.0",
     "@dmail/helper": "2.3.0",
     "@jsenv/href": "1.0.0",
+    "@jsenv/logger": "1.0.0",
     "@dmail/server": "2.9.0",
     "@jsenv/module-resolution": "3.5.0",
     "@jsenv/babel-plugin-map": "3.0.0",

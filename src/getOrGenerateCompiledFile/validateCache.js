@@ -12,6 +12,7 @@ export const validateCache = async ({
   cache,
   ifEtagMatch,
   ifModifiedSinceDate,
+  logger,
 }) => {
   const compiledFileValidation = await validateCompiledFile({
     projectPathname,
@@ -19,12 +20,19 @@ export const validateCache = async ({
     compileRelativePath,
     ifEtagMatch,
     ifModifiedSinceDate,
+    logger,
   })
   if (!compiledFileValidation.valid) return compiledFileValidation
 
   const [sourcesValidations, assetValidations] = await Promise.all([
-    validateSources({ projectPathname, cache }),
-    validateAssets({ projectPathname, compileCacheFolderRelativePath, compileRelativePath, cache }),
+    validateSources({ projectPathname, cache, logger }),
+    validateAssets({
+      projectPathname,
+      compileCacheFolderRelativePath,
+      compileRelativePath,
+      cache,
+      logger,
+    }),
   ])
 
   const invalidSourceValidation = sourcesValidations.find(({ valid }) => !valid)
@@ -53,6 +61,7 @@ const validateCompiledFile = async ({
   compileRelativePath,
   ifEtagMatch,
   ifModifiedSinceDate,
+  logger,
 }) => {
   const compiledFilename = getCompiledFilePath({
     projectPathname,
@@ -66,6 +75,7 @@ const validateCompiledFile = async ({
     if (ifEtagMatch) {
       const compiledEtag = bufferToEtag(Buffer.from(compiledSource))
       if (ifEtagMatch !== compiledEtag) {
+        logger.info(`etag changed for ${compiledFilename}`)
         return {
           code: "COMPILED_FILE_ETAG_MISMATCH",
           valid: false,
@@ -77,6 +87,7 @@ const validateCompiledFile = async ({
     if (ifModifiedSinceDate) {
       const compiledMtime = await fileStat(compiledFilename)
       if (ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)) {
+        logger.info(`mtime changed for ${compiledFilename}`)
         return {
           code: "COMPILED_FILE_MTIME_OUTDATED",
           valid: false,
@@ -101,18 +112,19 @@ const validateCompiledFile = async ({
   }
 }
 
-const validateSources = ({ projectPathname, cache }) =>
+const validateSources = ({ projectPathname, cache, logger }) =>
   Promise.all(
     cache.sources.map((source, index) =>
       validateSource({
         projectPathname,
         source,
         eTag: cache.sourcesEtag[index],
+        logger,
       }),
     ),
   )
 
-const validateSource = async ({ projectPathname, source, eTag }) => {
+const validateSource = async ({ projectPathname, source, eTag, logger }) => {
   const sourceFilename = pathnameToOperatingSystemPath(`${projectPathname}${source}`)
 
   try {
@@ -120,6 +132,7 @@ const validateSource = async ({ projectPathname, source, eTag }) => {
     const sourceETag = bufferToEtag(Buffer.from(sourceContent))
 
     if (sourceETag !== eTag) {
+      logger.info(`etag changed for ${sourceFilename}`)
       return {
         code: "SOURCE_ETAG_MISMATCH",
         valid: false,
@@ -143,6 +156,7 @@ const validateSource = async ({ projectPathname, source, eTag }) => {
       // in that case, inside updateCache we must not search for sources that
       // are missing, nor put their etag
       // or we could return sourceContent: '', and the etag would be empty
+      logger.info(`source not found at ${sourceFilename}`)
       return {
         code: "SOURCE_NOT_FOUND",
         valid: true,
@@ -158,6 +172,7 @@ const validateAssets = ({
   compileCacheFolderRelativePath,
   compileRelativePath,
   cache,
+  logger,
 }) =>
   Promise.all(
     cache.assets.map((asset, index) =>
@@ -167,6 +182,7 @@ const validateAssets = ({
         compileRelativePath,
         asset,
         eTag: cache.assetsEtag[index],
+        logger,
       }),
     ),
   )
@@ -177,6 +193,7 @@ const validateAsset = async ({
   compileRelativePath,
   asset,
   eTag,
+  logger,
 }) => {
   const assetFilename = getAssetFilePath({
     projectPathname,
@@ -190,6 +207,7 @@ const validateAsset = async ({
     const assetContentETag = bufferToEtag(Buffer.from(assetContent))
 
     if (eTag !== assetContentETag) {
+      logger.info(`etag changed for ${assetFilename}`)
       return {
         code: "ASSET_ETAG_MISMATCH",
         valid: false,
@@ -203,6 +221,7 @@ const validateAsset = async ({
     }
   } catch (error) {
     if (error && error.code === "ENOENT") {
+      logger.info(`asset not found at ${assetFilename}`)
       return {
         code: "ASSET_FILE_NOT_FOUND",
         valid: false,
