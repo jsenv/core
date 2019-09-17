@@ -3,6 +3,7 @@ import { findAsyncPluginNameInBabelPluginMap } from "../findAsyncPluginNameInBab
 import { ansiToHTML } from "./ansiToHTML.js"
 import { ensureRegeneratorRuntimeImportBabelPlugin } from "./ensureRegeneratorRuntimeImportBabelPlugin.js"
 import { ensureGlobalThisImportBabelPlugin } from "./ensureGlobalThisImportBabelPlugin.js"
+import { transformBabelHelperToImportBabelPlugin } from "./transformBabelHelperToImportBabelPlugin.js"
 
 const { transformAsync, transformFromAstAsync } = import.meta.require("@babel/core")
 const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-import")
@@ -55,6 +56,7 @@ export const jsenvTransform = async ({
   babelPluginMap = {
     ...babelPluginMap,
     "ensure-global-this-import": [ensureGlobalThisImportBabelPlugin],
+    "transform-babel-helpers-to-import": [transformBabelHelperToImportBabelPlugin],
   }
 
   const asyncPluginName = findAsyncPluginNameInBabelPluginMap(babelPluginMap)

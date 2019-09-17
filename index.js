@@ -1,4 +1,5 @@
 export { babelCompatMap } from "./src/babelCompatMap/babelCompatMap.js"
+export { babelHelperGenerateMap } from "./src/babelHelperGenerateMap/babelHelperGenerateMap.js"
 export { browserScoreMap } from "./src/browserScoreMap/browserScoreMap.js"
 export {
   cleanCompileCacheFolderIfObsolete,
