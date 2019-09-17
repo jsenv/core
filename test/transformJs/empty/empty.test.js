@@ -13,8 +13,8 @@ const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 const projectPathname = jsenvCorePathname
 const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const folderName = basename(folderRelativePath)
-const sourceRelativePath = `${folderRelativePath}/${folderName}.js`
+const filename = `${basename(folderRelativePath)}.js`
+const sourceRelativePath = `${folderRelativePath}/${filename}`
 const sourcePathname = `${projectPathname}${sourceRelativePath}`
 const sourceHref = `file://${sourcePathname}`
 const sourcePath = pathnameToOperatingSystemPath(sourcePathname)
@@ -26,13 +26,17 @@ const transformResult = await transformJs({
   projectPathname,
   babelPluginMap: jsenvBabelPluginMap,
 })
-const actual = transformResultToCompilationResult(transformResult, { sourceHref, projectPathname })
+const actual = transformResultToCompilationResult(transformResult, {
+  source,
+  sourceHref,
+  projectPathname,
+})
 const expected = {
   compiledSource: actual.compiledSource,
   contentType: "application/javascript",
   sources: [sourceRelativePath],
   sourcesContent: [source],
-  assets: [`${folderName}.js__asset__/${folderName}.js.map`],
+  assets: [`${filename}__asset__/${filename}.map`],
   assetsContent: [actual.assetsContent[0]],
 }
 assert({ actual, expected })

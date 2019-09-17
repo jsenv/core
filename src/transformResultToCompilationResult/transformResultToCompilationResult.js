@@ -8,6 +8,7 @@ import { writeSourceMappingURL } from "./source-mapping-url.js"
 export const transformResultToCompilationResult = (
   { code, map, metadata = {} },
   {
+    source,
     sourceHref,
     projectPathname,
     remap = true,
@@ -26,7 +27,7 @@ export const transformResultToCompilationResult = (
       // there is at least one case where it happens
       // a file with only import './whatever.js' inside
       sources.push(sourceHrefToSourceMapSource({ sourceHref, projectPathname }))
-      sourcesContent.push(code)
+      sourcesContent.push(source)
     } else {
       map.sources = map.sources.map((source) =>
         resolveSourceMapSource(source, { sourceHref, projectPathname }),
@@ -63,7 +64,7 @@ export const transformResultToCompilationResult = (
     }
   } else {
     sources.push(sourceHrefToSourceMapSource({ sourceHref, projectPathname }))
-    sourcesContent.push(code)
+    sourcesContent.push(source)
   }
 
   const { coverage } = metadata

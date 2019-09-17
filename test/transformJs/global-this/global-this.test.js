@@ -26,7 +26,11 @@ const transformResult = await transformJs({
   projectPathname,
   babelPluginMap: jsenvBabelPluginMap,
 })
-const actual = transformResultToCompilationResult(transformResult, { sourceHref, projectPathname })
+const actual = transformResultToCompilationResult(transformResult, {
+  source,
+  sourceHref,
+  projectPathname,
+})
 const expected = {
   compiledSource: actual.compiledSource,
   contentType: "application/javascript",

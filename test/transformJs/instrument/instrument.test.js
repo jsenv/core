@@ -1,5 +1,4 @@
 import { readFileSync } from "fs"
-import { basename } from "path"
 import { assert } from "@dmail/assert"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { createInstrumentBabelPlugin } from "@jsenv/testing/src/coverage/instrument-babel-plugin.js"
@@ -31,7 +30,11 @@ const transformResult = await transformJs({
   projectPathname,
   babelPluginMap,
 })
-const actual = transformResultToCompilationResult(transformResult, { sourceHref, projectPathname })
+const actual = transformResultToCompilationResult(transformResult, {
+  source,
+  sourceHref,
+  projectPathname,
+})
 const expected = {
   compiledSource: actual.compiledSource,
   contentType: "application/javascript",
