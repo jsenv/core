@@ -4,6 +4,9 @@ export {
   cleanCompileCacheFolderIfObsolete,
 } from "./src/cleanCompileCacheFolderIfObsolete/cleanCompileCacheFolderIfObsolete.js"
 export {
+  compilationResultToTransformResut,
+} from "./src/compilationResultToTransformResult/compilationResultToTransformResut.js"
+export {
   computeCompileIdFromGroupId,
 } from "./src/computeCompileIdFromGroupId/computeCompileIdFromGroupId.js"
 export {
