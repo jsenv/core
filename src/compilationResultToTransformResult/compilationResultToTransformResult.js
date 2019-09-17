@@ -1,4 +1,4 @@
-export const compilationResultToTransformResut = ({ compiledSource, assets, assetsContent }) => {
+export const compilationResultToTransformResult = ({ compiledSource, assets, assetsContent }) => {
   const code = compiledSource
 
   const sourceMapAssetIndex = assets.findIndex((asset) => asset.endsWith(".map"))
