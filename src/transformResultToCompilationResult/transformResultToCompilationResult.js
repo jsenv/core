@@ -6,7 +6,7 @@ import { computeInputRelativePath } from "../transformJs/transformJs.js"
 import { writeSourceMappingURL } from "./source-mapping-url.js"
 
 export const transformResultToCompilationResult = (
-  { code, map, metadata },
+  { code, map, metadata = {} },
   {
     sourceHref,
     projectPathname,
@@ -19,9 +19,7 @@ export const transformResultToCompilationResult = (
   const assets = []
   const assetsContent = []
 
-  const { coverage } = metadata
   let output = code
-
   if (remap && map) {
     if (map.sources.length === 0) {
       // may happen in somae cases where babel returns a wrong sourcemap
@@ -68,6 +66,7 @@ export const transformResultToCompilationResult = (
     sourcesContent.push(code)
   }
 
+  const { coverage } = metadata
   if (coverage) {
     const coverageAssetPath = generateAssetPath({
       sourceHref,
