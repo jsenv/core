@@ -36,19 +36,24 @@
     "postpublish": "node ./script/transform-package/restore-postinstall.js"
   },
   "dependencies": {
-    "@jsenv/module-resolution": "3.5.0",
-    "@jsenv/babel-plugin-map": "3.0.0",
-    "@jsenv/operating-system-path": "2.4.0",
-    "@jsenv/url-meta": "2.0.0",
-    "@dmail/cancellation": "2.6.0",
     "@babel/core": "7.5.5",
     "@babel/helper-hoist-variables": "7.4.4",
     "@babel/helper-plugin-utils": "7.0.0",
     "@babel/plugin-syntax-dynamic-import": "7.2.0",
     "@babel/plugin-syntax-import-meta": "7.2.0",
     "@babel/plugin-transform-modules-systemjs": "7.5.0",
+    "@dmail/cancellation": "2.6.0",
+    "@dmail/helper": "2.3.0",
+    "@jsenv/href": "1.0.0",
+    "@dmail/server": "2.9.0",
+    "@jsenv/module-resolution": "3.5.0",
+    "@jsenv/babel-plugin-map": "3.0.0",
+    "@jsenv/operating-system-path": "2.4.0",
+    "@jsenv/url-meta": "2.0.0",
     "ansi-to-html": "0.6.11",
-    "regenerator-runtime": "0.13.3"
+    "proper-lockfile": "4.1.1",
+    "regenerator-runtime": "0.13.3",
+    "rimraf": "3.0.0"
   },
   "devDependencies": {
     "@jsenv/bundling": "2.3.0",
@@ -62,7 +67,6 @@
     "@jsenv/testing": "2.1.0",
     "@dmail/assert": "3.14.0",
     "eslint": "6.2.2",
-    "prettier": "1.18.2",
-    "rimraf": "3.0.0"
+    "prettier": "1.18.2"
   }
 }
