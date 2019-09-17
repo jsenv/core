@@ -1,5 +1,5 @@
 import { assert } from "@dmail/assert"
-import { createLockRegistry } from "./createLock.js"
+import { createLockRegistry } from "./createLockRegistry.js"
 
 {
   const lockRegistry = createLockRegistry()

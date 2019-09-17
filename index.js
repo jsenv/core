@@ -15,10 +15,8 @@ export {
   getOrGenerateCompiledFile,
 } from "./src/getOrGenerateCompiledFile/getOrGenerateCompiledFile.js"
 export { jsenvCorePath, jsenvCorePathname } from "./src/jsenvCorePath/jsenvCorePath.js"
-export { jsenvTransform } from "./src/jsenvTransform/jsenvTransform.js"
 export { nodeVersionScoreMap } from "./src/nodeVersionScoreMap/nodeVersionScoreMap.js"
 export { polyfillCompatMap } from "./src/polyfillCompatMap/polyfillCompatMap.js"
 export { resolveBrowserGroup } from "./src/resolveBrowserGroup/resolveBrowserGroup.js"
 export { resolveNodeGroup } from "./src/resolveNodeGroup/resolveNodeGroup.js"
 export { resolvePlatformGroup } from "./src/resolvePlatformGroup/resolvePlatformGroup.js"
-export { transformSource } from "./src/transformSource/transformSource.js"

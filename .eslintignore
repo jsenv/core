@@ -3,5 +3,4 @@
 /coverage/
 /docs/execution/basic-project/node_modules/
 /node_modules/
-/src/babel-plugin-transform-modules-systemjs/index.js
 /test/**/syntax-error.js
