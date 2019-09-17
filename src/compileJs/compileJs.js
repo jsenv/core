@@ -12,6 +12,7 @@ import { namedMetaToMetaMap, resolveMetaMapPatterns, urlToMeta } from "@jsenv/ur
 export const compileJs = async ({
   code,
   codeHref,
+  codeSourceMap,
   projectPathname,
   babelPluginMap,
   convertMap = {},
@@ -37,6 +38,7 @@ export const compileJs = async ({
 
   const { inputCode, inputMap } = await computeInputCodeAndInputMap({
     code,
+    codeSourceMap,
     codeHref,
     projectPathname,
     convertMap,
@@ -137,6 +139,7 @@ export const compileJs = async ({
 const computeInputCodeAndInputMap = async ({
   code,
   codeHref,
+  codeSourceMap,
   projectPathname,
   convertMap,
   remap,
@@ -150,15 +153,17 @@ const computeInputCodeAndInputMap = async ({
   )
   const { convert } = urlToMeta({ url: codeHref, metaMap })
   if (!convert) {
-    return { inputCode: code, inputMap: undefined }
+    return { inputCode: code, inputMap: codeSourceMap }
   }
 
   if (typeof convert !== "function") {
     throw new TypeError(`convert must be a function, got ${convert}`)
   }
+  // TODO: update @jsenv/commonjs-converter to handle sourceMap when passed
   const conversionResult = await convert({
     source: code,
     sourceHref: codeHref,
+    sourceMap: codeSourceMap,
     remap,
     allowTopLevelAwait,
   })
