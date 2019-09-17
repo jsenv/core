@@ -1,5 +1,5 @@
 export { babelCompatMap } from "./src/babelCompatMap/babelCompatMap.js"
-export { babelHelperGenerateMap } from "./src/babelHelperGenerateMap/babelHelperGenerateMap.js"
+export { babelHelperMap } from "./src/babelHelperMap/babelHelperMap.js"
 export { browserScoreMap } from "./src/browserScoreMap/browserScoreMap.js"
 export {
   cleanCompileCacheFolderIfObsolete,
@@ -13,6 +13,7 @@ export {
 export {
   findAsyncPluginNameInBabelPluginMap,
 } from "./src/findAsyncPluginNameInBabelPluginMap/findAsyncPluginNameInBabelPluginMap.js"
+export { generateBabelHelper } from "./src/generateBabelHelper/generateBabelHelper.js"
 export { generateGroupMap } from "./src/generateGroupMap/generateGroupMap.js"
 export {
   getOrGenerateCompiledFile,

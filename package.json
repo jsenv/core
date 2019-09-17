@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "8.6.0",
+  "version": "8.7.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -36,9 +36,10 @@
     "postpublish": "node ./script/transform-package/restore-postinstall.js"
   },
   "dependencies": {
-    "@babel/core": "7.5.5",
+    "@babel/core": "7.6.0",
     "@babel/helper-hoist-variables": "7.4.4",
     "@babel/helper-plugin-utils": "7.0.0",
+    "@babel/helpers": "7.6.0",
     "@babel/plugin-syntax-dynamic-import": "7.2.0",
     "@babel/plugin-syntax-import-meta": "7.2.0",
     "@babel/plugin-transform-modules-systemjs": "7.5.0",
@@ -47,7 +48,7 @@
     "@jsenv/href": "1.0.0",
     "@jsenv/logger": "1.0.0",
     "@dmail/server": "2.9.0",
-    "@jsenv/module-resolution": "3.5.0",
+    "@jsenv/module-resolution": "5.2.0",
     "@jsenv/babel-plugin-map": "3.0.0",
     "@jsenv/operating-system-path": "2.4.0",
     "@jsenv/url-meta": "2.0.0",
@@ -57,17 +58,18 @@
     "rimraf": "3.0.0"
   },
   "devDependencies": {
-    "@jsenv/bundling": "2.3.0",
+    "@jsenv/bundling": "5.8.0",
     "@jsenv/codecov-upload": "1.7.0",
-    "@jsenv/execution": "2.1.0",
-    "@jsenv/node-launcher": "2.2.0",
-    "@jsenv/node-module-import-map": "4.4.0",
-    "@jsenv/eslint-config": "9.9.0",
+    "@jsenv/execution": "5.5.0",
+    "@jsenv/node-launcher": "4.11.0",
+    "@jsenv/node-module-import-map": "7.0.0",
+    "@jsenv/eslint-config": "10.0.0",
     "@jsenv/prettier-config": "1.0.0",
-    "@jsenv/prettier-check-project": "3.3.0",
-    "@jsenv/testing": "2.1.0",
+    "@jsenv/prettier-check-project": "3.4.0",
+    "@jsenv/testing": "3.0.0",
     "@dmail/assert": "3.14.0",
-    "eslint": "6.2.2",
+    "babel-eslint": "11.0.0-beta.0",
+    "eslint": "6.4.0",
     "prettier": "1.18.2"
   }
 }

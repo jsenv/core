@@ -1,5 +1,5 @@
 import { resolve } from "path"
-import { hrefToPathname } from "@jsenv/module-resolution"
+import { hrefToPathname } from "@jsenv/href"
 import {
   pathnameToOperatingSystemPath,
   operatingSystemPathToPathname,

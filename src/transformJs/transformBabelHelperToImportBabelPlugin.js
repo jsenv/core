@@ -1,3 +1,6 @@
+import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
+import { babelHelperMap } from "../babelHelperMap/babelHelperMap.js"
+
 // https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
 const { addNamed } = import.meta.require("@babel/helper-module-imports")
 
@@ -9,10 +12,8 @@ const { addNamed } = import.meta.require("@babel/helper-module-imports")
 // a named import
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-plugin-external-helpers/src/index.js
 
-export const transformBabelHelperToImportBabelPlugin = (api, options) => {
+export const transformBabelHelperToImportBabelPlugin = (api) => {
   api.assertVersion(7)
-
-  const { babelHelpersImportPrefix = "/.jsenv/babel-helpers/" } = options
 
   return {
     pre: (file) => {
@@ -25,11 +26,18 @@ export const transformBabelHelperToImportBabelPlugin = (api, options) => {
           return undefined
         }
 
+        const filePathname = operatingSystemPathToPathname(file.opts.filename)
+        const babelHelperFilePathname = babelHelperMap[name]
+
+        if (filePathname === babelHelperFilePathname) {
+          return undefined
+        }
+
         if (cachedHelpers[name]) {
           return cachedHelpers[name]
         }
 
-        const helper = addNamed(file.path, name, `${babelHelpersImportPrefix}${name}.js`)
+        const helper = addNamed(file.path, name, babelHelperFilePathname)
         cachedHelpers[name] = helper
         return helper
       })
