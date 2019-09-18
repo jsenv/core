@@ -3,7 +3,10 @@ import { findAsyncPluginNameInBabelPluginMap } from "../findAsyncPluginNameInBab
 import { ansiToHTML } from "./ansiToHTML.js"
 import { ensureRegeneratorRuntimeImportBabelPlugin } from "./ensureRegeneratorRuntimeImportBabelPlugin.js"
 import { ensureGlobalThisImportBabelPlugin } from "./ensureGlobalThisImportBabelPlugin.js"
-import { transformBabelHelperToImportBabelPlugin } from "./transformBabelHelperToImportBabelPlugin.js"
+import {
+  transformBabelHelperToImportBabelPlugin,
+  searchPossibleBabelHelperNameInPath,
+} from "./transformBabelHelperToImportBabelPlugin.js"
 
 const { transformAsync, transformFromAstAsync } = import.meta.require("@babel/core")
 const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-import")
@@ -39,6 +42,18 @@ export const jsenvTransform = async ({
     parserOpts: {
       allowAwaitOutsideFunction: allowTopLevelAwait,
     },
+  }
+
+  const babelHelperName = searchPossibleBabelHelperNameInPath(inputPath)
+  // to prevent typeof circular dependency
+  if (babelHelperName === "typeof") {
+    const babelPluginMapWithoutTransformTypeOf = {}
+    Object.keys(babelPluginMap).forEach((key) => {
+      if (key !== "transform-typeof-symbol") {
+        babelPluginMapWithoutTransformTypeOf[key] = babelPluginMap[key]
+      }
+    })
+    babelPluginMap = babelPluginMapWithoutTransformTypeOf
   }
 
   if (transformGenerator) {

@@ -5,8 +5,42 @@ import { jsenvCorePathname } from "../jsenvCorePath/jsenvCorePath.js"
 
 const { list } = import.meta.require("@babel/helpers")
 
+const babelHelperNameInsideJsenvCoreArray = [
+  "arrayWithHoles",
+  "arrayWithoutHoles",
+  "assertThisInitialized",
+  "classCallCheck",
+  "createClass",
+  "defineProperty",
+  "getPrototypeOf",
+  "inherits",
+  "iterableToArray",
+  "iterableToArrayLimit",
+  "nonIterableRest",
+  "nonIterableSpread",
+  "objectDestructuringEmpty",
+  "objectSpread",
+  "objectSpread2",
+  "objectWithoutProperties",
+  "objectWithoutPropertiesLoose",
+  "possibleConstructorReturn",
+  "setPrototypeOf",
+  "slicedToArray",
+  "toArray",
+  "toConsumableArray",
+  "typeof",
+]
+
 const babelHelperMap = {}
-list.forEach((name) => {
-  babelHelperMap[name] = `${jsenvCorePathname}/.babel-helpers/${name}.js`
+list.forEach((babelHelperName) => {
+  if (babelHelperNameInsideJsenvCoreArray.includes(babelHelperName)) {
+    babelHelperMap[
+      babelHelperName
+    ] = `@jsenv/core/helpers/babel/${babelHelperName}/${babelHelperName}.js`
+  } else {
+    babelHelperMap[
+      babelHelperName
+    ] = `file://${jsenvCorePathname}/.babel-helpers/${babelHelperName}.js`
+  }
 })
 export { babelHelperMap }
