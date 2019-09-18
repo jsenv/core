@@ -22,7 +22,7 @@ export const readProjectImportMap = async ({
   const jsenvCoreImportKey = "@jsenv/core/"
   const jsenvCoreImportValue = `${pathnameToRelativePath(jsenvCorePathname, projectPathname)}/`
   const importsForJsenvCore = {
-    [jsenvCoreImportKey]: [jsenvCoreImportValue],
+    [jsenvCoreImportKey]: jsenvCoreImportValue,
   }
 
   if (!importMapForProject) {
