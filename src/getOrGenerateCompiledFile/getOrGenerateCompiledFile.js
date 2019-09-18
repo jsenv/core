@@ -105,6 +105,7 @@ export const getOrGenerateCompiledFile = async ({
     },
     {
       projectPathname,
+      compileCacheFolderRelativePath,
       compileRelativePath,
       cacheInterProcessLocking,
       logger,
@@ -232,10 +233,17 @@ const callCompile = async ({
 
 const startAsap = async (
   fn,
-  { projectPathname, compileRelativePath, cacheInterProcessLocking, logger },
+  {
+    projectPathname,
+    compileCacheFolderRelativePath,
+    compileRelativePath,
+    cacheInterProcessLocking,
+    logger,
+  },
 ) => {
   const cacheFilePath = getCacheFilePath({
     projectPathname,
+    compileCacheFolderRelativePath,
     compileRelativePath,
   })
 
