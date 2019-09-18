@@ -8,10 +8,10 @@ import { jsenvTransform } from "./jsenvTransform.js"
 import { namedMetaToMetaMap, resolveMetaMapPatterns, urlToMeta } from "@jsenv/url-meta"
 
 export const transformJs = async ({
+  projectPathname,
   source,
   sourceHref,
   sourceMap,
-  projectPathname,
   babelPluginMap,
   convertMap = {},
   allowTopLevelAwait = true,
@@ -20,17 +20,17 @@ export const transformJs = async ({
   transformGenerator = true,
   remap = true,
 }) => {
-  if (typeof source !== "string") {
-    throw new TypeError(`source must be a string, got ${source}`)
-  }
-  if (typeof sourceHref !== "string") {
-    throw new TypeError(`sourceHref must be a string, got ${sourceHref}`)
-  }
   if (typeof projectPathname !== "string") {
     throw new TypeError(`projectPathname must be a string, got ${projectPathname}`)
   }
   if (typeof babelPluginMap !== "object") {
     throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`)
+  }
+  if (typeof source !== "string") {
+    throw new TypeError(`source must be a string, got ${source}`)
+  }
+  if (typeof sourceHref !== "string") {
+    throw new TypeError(`sourceHref must be a string, got ${sourceHref}`)
   }
 
   const { inputCode, inputMap } = await computeInputCodeAndInputMap({
@@ -85,6 +85,7 @@ const computeInputCodeAndInputMap = async ({
   }
   // TODO: update @jsenv/commonjs-converter to handle sourceMap when passed
   const conversionResult = await convert({
+    projectPathname,
     source,
     sourceHref,
     sourceMap,
