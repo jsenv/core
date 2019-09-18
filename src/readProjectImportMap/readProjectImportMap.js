@@ -21,13 +21,13 @@ export const readProjectImportMap = async ({
 
   const jsenvCoreImportKey = "@jsenv/core/"
   const jsenvCoreImportValue = `${pathnameToRelativePath(jsenvCorePathname, projectPathname)}/`
-  const jsenvCoreImports = {
+  const importsForJsenvCore = {
     [jsenvCoreImportKey]: [jsenvCoreImportValue],
   }
 
   if (!importMapForProject) {
     return {
-      imports: jsenvCoreImports,
+      imports: importsForJsenvCore,
     }
   }
 
@@ -46,15 +46,15 @@ export const readProjectImportMap = async ({
   }
 
   const importMapForJsenvCore = {
-    imports: jsenvCoreImports,
-    scopes: generateJsenvCoreScopes({ importMapForProject, jsenvCoreImports }),
+    imports: importsForJsenvCore,
+    scopes: generateJsenvCoreScopes({ importMapForProject, importsForJsenvCore }),
   }
 
   return composeTwoImportMaps(importMapForJsenvCore, importMapForProject)
 }
 
-const generateJsenvCoreScopes = ({ projectImportMap, jsenvCoreImports }) => {
-  const { scopes } = projectImportMap
+const generateJsenvCoreScopes = ({ importMapForProject, importsForJsenvCore }) => {
+  const { scopes } = importMapForProject
 
   if (!scopes) {
     return undefined
@@ -67,11 +67,11 @@ const generateJsenvCoreScopes = ({ projectImportMap, jsenvCoreImports }) => {
   // to achieve this, we set jsenvCoreImports into every scope
   // they can still be overriden by importMapForProject
   // even if I see no use case for that
-  const jsenvCoreScopes = {}
+  const scopesForJsenvCore = {}
   Object.keys(scopes).forEach((scopeKey) => {
-    jsenvCoreScopes[scopeKey] = jsenvCoreImports
+    scopesForJsenvCore[scopeKey] = importsForJsenvCore
   })
-  return jsenvCoreScopes
+  return scopesForJsenvCore
 }
 
 const getProjectImportMap = async ({ projectPathname, importMapRelativePath }) => {
