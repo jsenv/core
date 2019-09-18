@@ -152,6 +152,7 @@ const computeCompileReport = async ({
 
   const cacheValidation = await validateCache({
     projectPathname,
+    compileCacheFolderRelativePath,
     compileRelativePath,
     cache,
     ifEtagMatch,
@@ -161,6 +162,7 @@ const computeCompileReport = async ({
   if (!cacheValidation.valid) {
     const compileResult = await callCompile({
       projectPathname,
+      compileCacheFolderRelativePath,
       sourceRelativePath,
       compileRelativePath,
       compile,
