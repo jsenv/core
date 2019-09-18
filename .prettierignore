@@ -6,7 +6,6 @@
 /docs/execution/basic-project/importMap.json
 /node_modules/
 /test/**/syntax-error.js
-/package.json
 /package-lock.json
 /importMap.json
 /jsconfig.json
