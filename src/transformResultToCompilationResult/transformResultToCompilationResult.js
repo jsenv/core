@@ -15,6 +15,16 @@ export const transformResultToCompilationResult = (
     remapMethod = "comment", // 'comment', 'inline'
   },
 ) => {
+  if (typeof source !== "string") {
+    throw new TypeError(`source must be a string, got ${source}`)
+  }
+  if (typeof sourceHref !== "string") {
+    throw new TypeError(`sourceHref must be a string, got ${sourceHref}`)
+  }
+  if (typeof projectPathname !== "string") {
+    throw new TypeError(`projectPathname must be a string, got ${projectPathname}`)
+  }
+
   const sources = []
   const sourcesContent = []
   const assets = []
