@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { pathnameToRelativePathname } from "@jsenv/operating-system-path"
 import { hrefToPathname } from "@jsenv/href"
-import { resolvePath } from "@jsenv/module-resolution"
+import { resolveSpecifier } from "@jsenv/import-map"
 import { computeInputRelativePath } from "../transformJs/transformJs.js"
 import { writeSourceMappingURL } from "./source-mapping-url.js"
 
@@ -108,10 +108,7 @@ const resolveSourceMapSource = (sourceMapSource, { sourceHref, projectPathname }
   }
 
   if (sourceMapSource.slice(0, 2) === "./" || sourceMapSource.slice(0, 3) === "../") {
-    const sourceMapSourceHref = resolvePath({
-      specifier: sourceMapSource,
-      importer: sourceHref,
-    })
+    const sourceMapSourceHref = resolveSpecifier(sourceMapSource, sourceHref)
     const sourceMapSourcePathname = hrefToPathname(sourceMapSourceHref)
     return pathnameToRelativePathname(sourceMapSourcePathname, projectPathname)
   }
