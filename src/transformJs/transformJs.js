@@ -74,6 +74,7 @@ const computeInputCodeAndInputMap = async ({
       convert: convertMap,
     }),
     `file://${projectPathname}`,
+    { forceHttpResolutionForFile: true },
   )
   const { convert } = urlToMeta({ url: sourceHref, specifierMetaMap })
   if (!convert) {
