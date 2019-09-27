@@ -2,14 +2,9 @@
 /.vscode/settings.json
 /coverage/
 /dist/
-/docs/execution/basic-project/.dist/
-/docs/execution/basic-project/node_modules/
-/docs/execution/basic-project/package-lock.json
-/docs/execution/basic-project/importMap.json
 /node_modules/
-/test/**/.dist/
-/env.json
 /importMap.json
 /jsconfig.json
+/secrets.json
 /package-lock.json
 /yarn.lock

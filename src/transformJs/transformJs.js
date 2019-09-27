@@ -5,7 +5,7 @@ import {
 } from "@jsenv/operating-system-path"
 import { hrefToPathname } from "@jsenv/href"
 import { jsenvTransform } from "./jsenvTransform.js"
-import { namedMetaToMetaMap, resolveMetaMapPatterns, urlToMeta } from "@jsenv/url-meta"
+import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
 
 export const transformJs = async ({
   projectPathname,
@@ -69,13 +69,13 @@ const computeInputCodeAndInputMap = async ({
   remap,
   allowTopLevelAwait,
 }) => {
-  const metaMap = resolveMetaMapPatterns(
-    namedMetaToMetaMap({
+  const specifierMetaMap = normalizeSpecifierMetaMap(
+    metaMapToSpecifierMetaMap({
       convert: convertMap,
     }),
     `file://${projectPathname}`,
   )
-  const { convert } = urlToMeta({ url: sourceHref, metaMap })
+  const { convert } = urlToMeta({ url: sourceHref, specifierMetaMap })
   if (!convert) {
     return { inputCode: source, inputMap: sourceMap }
   }

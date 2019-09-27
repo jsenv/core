@@ -1,6 +1,5 @@
 /.dist/
 /dist/
 /coverage/
-/docs/execution/basic-project/node_modules/
 /node_modules/
 /test/**/syntax-error.js
