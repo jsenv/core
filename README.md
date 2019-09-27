@@ -1,7 +1,7 @@
 # jsenv-core
 
-[![npm package](https://img.shields.io/npm/v/@jsenv/core.svg)](https://www.npmjs.com/package/@jsenv/core)
-[![build](https://travis-ci.com/jsenv/jsenv-core.svg?branch=master)](http://travis-ci.com/jsenv/jsenv-core)
+[![github package](https://img.shields.io/github/package-json/v/jsenv/jsenv-core.svg?label=package&logo=github)](https://github.com/jsenv/jsenv-core/packages)
+[![ci status](https://github.com/jsenv/jsenv-core/workflows/ci/badge.svg)](https://github.com/jsenv/jsenv-core/actions)
 [![codecov](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
 > Collection of developments tools providing a unified workflow to write JavaScript for the web, node.js or both at the same time. jsenv is designed to be reusable on different project.
