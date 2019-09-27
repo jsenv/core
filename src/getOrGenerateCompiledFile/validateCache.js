@@ -2,8 +2,7 @@ import { fileRead, fileStat } from "@dmail/helper"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { dateToSecondsPrecision } from "./dateToSecondsPrecision.js"
 import { getCompiledFilePath, getAssetFilePath } from "./locaters.js"
-
-const { bufferToEtag } = import.meta.require("@dmail/server")
+import { bufferToEtag } from "./bufferToEtag.js"
 
 export const validateCache = async ({
   projectPathname,

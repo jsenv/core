@@ -1,7 +1,6 @@
 import { fileWrite } from "@dmail/helper"
 import { getCacheFilePath, getAssetFilePath, getCompiledFilePath } from "./locaters.js"
-
-const { bufferToEtag } = import.meta.require("@dmail/server")
+import { bufferToEtag } from "./bufferToEtag.js"
 
 export const updateCache = ({
   projectPathname,
