@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "8.21.0",
+  "version": "8.22.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -48,7 +48,7 @@
     "@dmail/helper": "2.3.0",
     "@jsenv/babel-plugin-map": "3.1.0",
     "@jsenv/href": "1.0.0",
-    "@jsenv/import-map": "5.5.0",
+    "@jsenv/import-map": "5.8.0",
     "@jsenv/logger": "1.0.0",
     "@jsenv/operating-system-path": "2.5.0",
     "@jsenv/url-meta": "3.0.0",
@@ -60,17 +60,17 @@
   },
   "devDependencies": {
     "@dmail/assert": "3.14.0",
-    "@jsenv/bundling": "6.1.0",
+    "@jsenv/bundling": "6.4.0",
     "@jsenv/codecov-upload": "1.9.0",
-    "@jsenv/eslint-config": "10.1.0",
-    "@jsenv/execution": "5.12.0",
-    "@jsenv/node-launcher": "4.16.0",
-    "@jsenv/node-module-import-map": "7.1.0",
+    "@jsenv/eslint-config": "10.2.0",
+    "@jsenv/execution": "6.1.0",
+    "@jsenv/node-launcher": "4.20.0",
+    "@jsenv/node-module-import-map": "7.2.0",
     "@jsenv/prettier-check-project": "3.5.0",
     "@jsenv/prettier-config": "1.0.0",
-    "@jsenv/testing": "3.3.0",
+    "@jsenv/testing": "3.6.0",
     "babel-eslint": "11.0.0-beta.0",
-    "eslint": "6.4.0",
+    "eslint": "6.5.0",
     "prettier": "1.18.2"
   }
 }
