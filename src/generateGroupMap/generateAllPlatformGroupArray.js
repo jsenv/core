@@ -1,10 +1,19 @@
 import { generatePlatformGroupArray } from "./generatePlatformGroupArray.js"
 import { composeGroupArray } from "./composeGroupArray.js"
 
-export const generateAllPlatformGroupArray = ({ featureCompatMap, platformNames }) => {
+export const generateAllPlatformGroupArray = ({
+  babelPluginMap,
+  jsenvPluginMap,
+  babelPluginCompatMap,
+  jsenvPluginCompatMap,
+  platformNames,
+}) => {
   const arrayOfGroupArray = platformNames.map((platformName) =>
     generatePlatformGroupArray({
-      featureCompatMap,
+      babelPluginMap,
+      jsenvPluginMap,
+      babelPluginCompatMap,
+      jsenvPluginCompatMap,
       platformName,
     }),
   )

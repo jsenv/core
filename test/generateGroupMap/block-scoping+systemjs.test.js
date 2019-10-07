@@ -13,7 +13,8 @@ import { browserScoreMap, generateGroupMap } from "../../index.js"
   })
   const expected = {
     best: {
-      incompatibleNameArray: ["transform-modules-systemjs"],
+      babelPluginRequiredNameArray: ["transform-modules-systemjs"],
+      jsenvPluginRequiredNameArray: [],
       platformCompatMap: {
         chrome: "49",
         firefox: "51",
@@ -25,7 +26,8 @@ import { browserScoreMap, generateGroupMap } from "../../index.js"
       },
     },
     otherwise: {
-      incompatibleNameArray: Object.keys(babelPluginMap),
+      babelPluginRequiredNameArray: Object.keys(babelPluginMap),
+      jsenvPluginRequiredNameArray: [],
       platformCompatMap: {},
     },
   }

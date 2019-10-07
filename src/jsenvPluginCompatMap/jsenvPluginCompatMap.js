@@ -4,4 +4,4 @@
 // and according to that featureNameArray, add these polyfill
 // to the generated bundle
 
-export const polyfillCompatMap = {}
+export const jsenvPluginCompatMap = {}

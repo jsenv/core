@@ -9,9 +9,14 @@ import { browserScoreMap, nodeVersionScoreMap, generateGroupMap } from "../../in
     groupCount: 2,
   })
   const expected = {
-    best: { incompatibleNameArray: [], platformCompatMap: { node: "6" } },
+    best: {
+      babelPluginRequiredNameArray: [],
+      jsenvPluginRequiredNameArray: [],
+      platformCompatMap: { node: "6" },
+    },
     otherwise: {
-      incompatibleNameArray: Object.keys(babelPluginMap),
+      babelPluginRequiredNameArray: Object.keys(babelPluginMap),
+      jsenvPluginRequiredNameArray: [],
       platformCompatMap: {},
     },
   }
@@ -27,7 +32,8 @@ import { browserScoreMap, nodeVersionScoreMap, generateGroupMap } from "../../in
   })
   const expected = {
     best: {
-      incompatibleNameArray: [],
+      babelPluginRequiredNameArray: [],
+      jsenvPluginRequiredNameArray: [],
       platformCompatMap: {
         chrome: "49",
         firefox: "51",
@@ -39,7 +45,8 @@ import { browserScoreMap, nodeVersionScoreMap, generateGroupMap } from "../../in
       },
     },
     otherwise: {
-      incompatibleNameArray: Object.keys(babelPluginMap),
+      babelPluginRequiredNameArray: Object.keys(babelPluginMap),
+      jsenvPluginRequiredNameArray: [],
       platformCompatMap: {},
     },
   }

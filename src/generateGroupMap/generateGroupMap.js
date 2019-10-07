@@ -9,7 +9,7 @@
     "chrome": "10",            │
     "safari": "3.0",           platformCompatMap
     "firefox": "5.1"           │
-  }────┼─────────┼─────────────┘
+}────┼─────────┼─────────────┘
 }      │         └─────┐
   platformName  platformVersion
 
@@ -17,7 +17,7 @@
 
 {
   "best": {
-    "incompatibleNameArray" : [
+    "babelPluginRequiredNameArray" : [
       "transform-block-scoping",
     ],
     "platformCompatMap": {
@@ -32,18 +32,18 @@ Take chars below to update legends
 
 */
 
-import { babelCompatMap as defaultBabelCompatMap } from "../babelCompatMap/babelCompatMap.js"
-import { polyfillCompatMap as defaulPolyfillCompatMap } from "../polyfillCompatMap/polyfillCompatMap.js"
+import { babelPluginCompatMap as babelPluginCompatMapFallback } from "../babelPluginCompatMap/babelPluginCompatMap.js"
+import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "../jsenvPluginCompatMap/jsenvPluginCompatMap.js"
 import { generateAllPlatformGroupArray } from "./generateAllPlatformGroupArray.js"
 import { platformCompatMapToScore } from "./platformCompatMapToScore.js"
 import { OTHERWISE_ID, BEST_ID } from "../GROUP_ID.js"
 
 export const generateGroupMap = ({
   babelPluginMap,
-  babelCompatMap = defaultBabelCompatMap,
-  // polyfill are for later, for now, nothing is using them
-  polyfillConfigMap = {},
-  polyfillCompatMap = defaulPolyfillCompatMap,
+  babelPluginCompatMap = babelPluginCompatMapFallback,
+  // jsenv plugin are for later, for now, nothing is using them
+  jsenvPluginMap = {},
+  jsenvPluginCompatMap = jsenvPluginCompatMapFallback,
   platformScoreMap,
   groupCount = 1,
   // pass this to true if you don't care if someone tries to run your code
@@ -53,42 +53,28 @@ export const generateGroupMap = ({
   // the platform or that if you fail to do so you don't care.
   platformWillAlwaysBeKnown = false,
 }) => {
-  const groupMap = generateFeatureGroupMap({
-    // here we should throw if key conflict between babelPluginMap/polyfillConfigMap
-    featureConfigMap: { ...babelPluginMap, ...polyfillConfigMap },
-    // here we should throw if key conflict on babelCompatMap/polyfillCompatMap
-    featureCompatMap: {
-      ...babelCompatMap,
-      ...polyfillCompatMap,
-    },
-    platformScoreMap,
-    groupCount,
-    platformAlwaysInsidePlatformScoreMap,
-    platformWillAlwaysBeKnown,
-  })
-  return groupMap
-}
-
-const generateFeatureGroupMap = ({
-  featureConfigMap,
-  featureCompatMap,
-  platformScoreMap,
-  groupCount,
-  platformAlwaysInsidePlatformScoreMap,
-  platformWillAlwaysBeKnown,
-}) => {
-  if (typeof featureConfigMap !== "object")
-    throw new TypeError(`featureConfigMap must be an object, got ${featureConfigMap}`)
-  if (typeof featureCompatMap !== "object")
-    throw new TypeError(`featureCompatMap must be an object, got ${featureCompatMap}`)
-  if (typeof platformScoreMap !== "object")
+  if (typeof babelPluginMap !== "object") {
+    throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`)
+  }
+  if (typeof babelPluginCompatMap !== "object") {
+    throw new TypeError(`babelPluginCompatMap must be an object, got ${babelPluginCompatMap}`)
+  }
+  if (typeof jsenvPluginMap !== "object") {
+    throw new TypeError(`jsenvPluginMap must be an object, got ${jsenvPluginMap}`)
+  }
+  if (typeof jsenvPluginCompatMap !== "object") {
+    throw new TypeError(`jsenvPluginCompatMap must be an object, got ${jsenvPluginCompatMap}`)
+  }
+  if (typeof platformScoreMap !== "object") {
     throw new TypeError(`platformScoreMap must be an object, got ${platformScoreMap}`)
-  if (typeof groupCount < 1) throw new TypeError(`groupCount must be above 1, got ${groupCount}`)
-
-  const featureNameArray = Object.keys(featureConfigMap)
+  }
+  if (typeof groupCount < 1) {
+    throw new TypeError(`groupCount must be above 1, got ${groupCount}`)
+  }
 
   const groupWithoutFeature = {
-    incompatibleNameArray: featureNameArray,
+    babelPluginRequiredNameArray: Object.keys(babelPluginMap),
+    jsenvPluginRequiredNameArray: Object.keys(jsenvPluginMap),
     platformCompatMap: {},
   }
 
@@ -101,14 +87,11 @@ const generateFeatureGroupMap = ({
     }
   }
 
-  const featureCompatMapWithoutHole = {}
-  featureNameArray.forEach((featureName) => {
-    featureCompatMapWithoutHole[featureName] =
-      featureName in featureCompatMap ? featureCompatMap[featureName] : {}
-  })
-
   const allPlatformGroupArray = generateAllPlatformGroupArray({
-    featureCompatMap: featureCompatMapWithoutHole,
+    babelPluginMap,
+    babelPluginCompatMap,
+    jsenvPluginMap,
+    jsenvPluginCompatMap,
     platformNames: arrayWithoutValue(Object.keys(platformScoreMap), "other"),
   })
 
@@ -156,6 +139,7 @@ const generateFeatureGroupMap = ({
   if (addOtherwiseToBeSafe) {
     groupMap[OTHERWISE_ID] = groupWithoutFeature
   }
+
   return groupMap
 }
 

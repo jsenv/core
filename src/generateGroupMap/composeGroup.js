@@ -1,18 +1,28 @@
 import { composePlatformCompatMap } from "./composePlatformCompatMap.js"
-import { composeIncompatibleNameArray } from "./composeIncompatibleNameArray.js"
 
 const compositionMappingToComposeStrict = (compositionMapping, createInitial = () => ({})) => {
   const reducer = compositionMappingToStrictReducer(compositionMapping)
   return (...objects) => objects.reduce(reducer, createInitial())
 }
 
+const composeBabelPluginRequiredNameArray = (prevNameArray, nameArray) =>
+  arrayWithoutDuplicate([...prevNameArray, ...nameArray]).sort()
+
+const composeJsenvPluginRequiredNameArray = (prevNameArray, nameArray) =>
+  arrayWithoutDuplicate([...prevNameArray, ...nameArray]).sort()
+
+const arrayWithoutDuplicate = (array) =>
+  array.filter((value, index) => array.indexOf(value) === index)
+
 export const composeGroup = compositionMappingToComposeStrict(
   {
-    incompatibleNameArray: composeIncompatibleNameArray,
+    babelPluginRequiredNameArray: composeBabelPluginRequiredNameArray,
+    jsenvPluginRequiredNameArray: composeJsenvPluginRequiredNameArray,
     platformCompatMap: composePlatformCompatMap,
   },
   () => ({
-    incompatibleNameArray: [],
+    babelPluginRequiredNameArray: [],
+    jsenvPluginRequiredNameArray: [],
     platformCompatMap: {},
   }),
 )

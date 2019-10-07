@@ -11,7 +11,7 @@ const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
   })
   const expected = {
     best: {
-      incompatibleNameArray: [
+      babelPluginRequiredNameArray: [
         "proposal-json-strings",
         "proposal-optional-catch-binding",
         "proposal-unicode-property-regex",
@@ -19,6 +19,7 @@ const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
         "syntax-optional-catch-binding",
         "transform-dotall-regex",
       ],
+      jsenvPluginRequiredNameArray: [],
       platformCompatMap: {
         chrome: "60",
         firefox: "55",
@@ -28,7 +29,8 @@ const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
       },
     },
     otherwise: {
-      incompatibleNameArray: Object.keys(jsenvBabelPluginMap),
+      babelPluginRequiredNameArray: Object.keys(jsenvBabelPluginMap),
+      jsenvPluginRequiredNameArray: [],
       platformCompatMap: {},
     },
   }

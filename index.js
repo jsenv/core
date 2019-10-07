@@ -1,4 +1,4 @@
-export { babelCompatMap } from "./src/babelCompatMap/babelCompatMap.js"
+export { babelPluginCompatMap } from "./src/babelPluginCompatMap/babelPluginCompatMap.js"
 export { babelHelperMap } from "./src/babelHelperMap/babelHelperMap.js"
 export { browserScoreMap } from "./src/browserScoreMap/browserScoreMap.js"
 export {
@@ -8,8 +8,14 @@ export {
   compilationResultToTransformResult,
 } from "./src/compilationResultToTransformResult/compilationResultToTransformResult.js"
 export {
+  computeBabelPluginMapForPlatform,
+} from "./src/computeBabelPluginMapForPlatform/computeBabelPluginMapForPlatform.js"
+export {
   computeCompileIdFromGroupId,
 } from "./src/computeCompileIdFromGroupId/computeCompileIdFromGroupId.js"
+export {
+  computeJsenvPluginMapForPlatform,
+} from "./src/computeJsenvPluginMapForPlatform/computeJsenvPluginMapForPlatform.js"
 export {
   findAsyncPluginNameInBabelPluginMap,
 } from "./src/findAsyncPluginNameInBabelPluginMap/findAsyncPluginNameInBabelPluginMap.js"
@@ -19,8 +25,8 @@ export {
   getOrGenerateCompiledFile,
 } from "./src/getOrGenerateCompiledFile/getOrGenerateCompiledFile.js"
 export { jsenvCorePath, jsenvCorePathname } from "./src/jsenvCorePath/jsenvCorePath.js"
+export { jsenvPluginCompatMap } from "./src/jsenvPluginCompatMap/jsenvPluginCompatMap.js"
 export { nodeVersionScoreMap } from "./src/nodeVersionScoreMap/nodeVersionScoreMap.js"
-export { polyfillCompatMap } from "./src/polyfillCompatMap/polyfillCompatMap.js"
 export { readProjectImportMap } from "./src/readProjectImportMap/readProjectImportMap.js"
 export { resolveBrowserGroup } from "./src/resolveBrowserGroup/resolveBrowserGroup.js"
 export { resolveNodeGroup } from "./src/resolveNodeGroup/resolveNodeGroup.js"

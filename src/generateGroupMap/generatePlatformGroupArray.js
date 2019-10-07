@@ -1,46 +1,82 @@
+import { computeBabelPluginMapForPlatform } from "../computeBabelPluginMapForPlatform/computeBabelPluginMapForPlatform.js"
+import { computeJsenvPluginMapForPlatform } from "../computeJsenvPluginMapForPlatform/computeJsenvPluginMapForPlatform.js"
 import { findHighestVersion, versionCompare } from "../semantic-versioning/index.js"
-import { computeIncompatibleNameArray } from "./computeIncompatibleNameArray.js"
+import { groupHaveSameRequirements } from "./groupHaveSameRequirements.js"
 
-export const generatePlatformGroupArray = ({ featureCompatMap, platformName }) => {
-  const featureNameArray = Object.keys(featureCompatMap)
-  const featureNameArrayWithCompat = featureNameArray.filter(
-    (featureName) => platformName in featureCompatMap[featureName],
-  )
-
-  const versionArray = featureNameArrayWithCompat
-    // why do I convert them to string, well ok let's keep it like that
-    .map((featureName) => String(featureCompatMap[featureName][platformName]))
-    .concat("0.0.0") // at least version 0
-    // filter is to have unique version I guess
-    .filter((version, index, array) => array.indexOf(version) === index)
-    .sort(versionCompare)
+export const generatePlatformGroupArray = ({
+  babelPluginMap,
+  jsenvPluginMap,
+  babelPluginCompatMap,
+  jsenvPluginCompatMap,
+  platformName,
+}) => {
+  const versionArray = []
+  Object.keys(babelPluginMap).forEach((babelPluginKey) => {
+    if (babelPluginKey in babelPluginCompatMap) {
+      const babelPluginCompat = babelPluginCompatMap[babelPluginKey]
+      if (platformName in babelPluginCompat) {
+        const version = String(babelPluginCompat[platformName])
+        if (!versionArray.includes(version)) {
+          versionArray.push(version)
+        }
+      }
+    }
+  })
+  Object.keys(jsenvPluginMap).forEach((jsenvPluginKey) => {
+    if (jsenvPluginKey in jsenvPluginCompatMap) {
+      const jsenvPluginCompat = babelPluginCompatMap[jsenvPluginKey]
+      if (platformName in jsenvPluginCompat) {
+        const version = String(jsenvPluginCompat[platformName])
+        if (!versionArray.includes(version)) {
+          versionArray.push(version)
+        }
+      }
+    }
+  })
+  versionArray.push("0.0.0")
+  versionArray.sort(versionCompare)
 
   const platformGroupArray = []
 
   versionArray.forEach((version) => {
-    const incompatibleNameArray = computeIncompatibleNameArray({
-      featureCompatMap,
+    const babelPluginMapForPlatform = computeBabelPluginMapForPlatform({
+      babelPluginMap,
+      babelPluginCompatMap,
       platformName,
       platformVersion: version,
-    }).sort()
+    })
+    const babelPluginRequiredNameArray = Object.keys(babelPluginMap)
+      .filter((babelPluginKey) => babelPluginKey in babelPluginMapForPlatform === false)
+      .sort()
+    const jsenvPluginMapForPlatform = computeJsenvPluginMapForPlatform({
+      jsenvPluginMap,
+      jsenvPluginCompatMap,
+      platformName,
+      platformVersion: version,
+    })
+    const jsenvPluginRequiredNameArray = Object.keys(jsenvPluginMap)
+      .filter((jsenvPluginKey) => jsenvPluginKey in jsenvPluginMapForPlatform === false)
+      .sort()
 
-    const groupWithSameIncompatibleFeatures = platformGroupArray.find(
-      (platformGroup) =>
-        platformGroup.incompatibleNameArray.join("") === incompatibleNameArray.join(""),
+    const group = {
+      babelPluginRequiredNameArray,
+      jsenvPluginRequiredNameArray,
+      platformCompatMap: {
+        [platformName]: version,
+      },
+    }
+
+    const groupWithSameRequirements = platformGroupArray.find((platformGroupCandidate) =>
+      groupHaveSameRequirements(platformGroupCandidate, group),
     )
 
-    if (groupWithSameIncompatibleFeatures) {
-      groupWithSameIncompatibleFeatures.platformCompatMap[platformName] = findHighestVersion(
-        groupWithSameIncompatibleFeatures.platformCompatMap[platformName],
+    if (groupWithSameRequirements) {
+      groupWithSameRequirements.platformCompatMap[platformName] = findHighestVersion(
+        groupWithSameRequirements.platformCompatMap[platformName],
         version,
       )
     } else {
-      platformGroupArray.push({
-        incompatibleNameArray: incompatibleNameArray.slice(),
-        platformCompatMap: {
-          [platformName]: version,
-        },
-      })
+      platformGroupArray.push(group)
     }
   })
 
