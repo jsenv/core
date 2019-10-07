@@ -1,3 +1,5 @@
+import { babelPluginCompatMap as babelPluginCompatMapFallback } from "../babelPluginCompatMap/babelPluginCompatMap.js"
+import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "../jsenvPluginCompatMap/jsenvPluginCompatMap.js"
 import { computeBabelPluginMapForPlatform } from "../computeBabelPluginMapForPlatform/computeBabelPluginMapForPlatform.js"
 import { computeJsenvPluginMapForPlatform } from "../computeJsenvPluginMapForPlatform/computeJsenvPluginMapForPlatform.js"
 import { findHighestVersion, versionCompare } from "../semantic-versioning/index.js"
@@ -6,8 +8,8 @@ import { groupHaveSameRequirements } from "./groupHaveSameRequirements.js"
 export const generatePlatformGroupArray = ({
   babelPluginMap,
   jsenvPluginMap,
-  babelPluginCompatMap,
-  jsenvPluginCompatMap,
+  babelPluginCompatMap = babelPluginCompatMapFallback,
+  jsenvPluginCompatMap = jsenvPluginCompatMapFallback,
   platformName,
 }) => {
   const versionArray = []
@@ -24,7 +26,7 @@ export const generatePlatformGroupArray = ({
   })
   Object.keys(jsenvPluginMap).forEach((jsenvPluginKey) => {
     if (jsenvPluginKey in jsenvPluginCompatMap) {
-      const jsenvPluginCompat = babelPluginCompatMap[jsenvPluginKey]
+      const jsenvPluginCompat = jsenvPluginCompatMap[jsenvPluginKey]
       if (platformName in jsenvPluginCompat) {
         const version = String(jsenvPluginCompat[platformName])
         if (!versionArray.includes(version)) {
@@ -46,7 +48,7 @@ export const generatePlatformGroupArray = ({
       platformVersion: version,
     })
     const babelPluginRequiredNameArray = Object.keys(babelPluginMap)
-      .filter((babelPluginKey) => babelPluginKey in babelPluginMapForPlatform === false)
+      .filter((babelPluginKey) => babelPluginKey in babelPluginMapForPlatform)
       .sort()
     const jsenvPluginMapForPlatform = computeJsenvPluginMapForPlatform({
       jsenvPluginMap,
@@ -55,7 +57,7 @@ export const generatePlatformGroupArray = ({
       platformVersion: version,
     })
     const jsenvPluginRequiredNameArray = Object.keys(jsenvPluginMap)
-      .filter((jsenvPluginKey) => jsenvPluginKey in jsenvPluginMapForPlatform === false)
+      .filter((jsenvPluginKey) => jsenvPluginKey in jsenvPluginMapForPlatform)
       .sort()
 
     const group = {

@@ -27,7 +27,7 @@ export const computeJsenvPluginMapForPlatform = ({
       platformVersion,
       featureCompat: key in jsenvPluginCompatMap ? jsenvPluginCompatMap[key] : {},
     })
-    if (compatible) {
+    if (!compatible) {
       jsenvPluginMapForPlatform[key] = jsenvPluginMap[key]
     }
   })

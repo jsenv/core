@@ -8,10 +8,10 @@ export const computeBabelPluginMapForPlatform = ({
   platformVersion,
 }) => {
   if (typeof babelPluginMap !== "object") {
-    throw new TypeError(`babelPluginMap must be a object, got ${babelPluginMap}`)
+    throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`)
   }
   if (typeof babelPluginCompatMap !== "object") {
-    throw new TypeError(`babelPluginCompatMap must be a string, got ${babelPluginCompatMap}`)
+    throw new TypeError(`babelPluginCompatMap must be an object, got ${babelPluginCompatMap}`)
   }
   if (typeof platformName !== "string") {
     throw new TypeError(`platformName must be a string, got ${platformName}`)
@@ -27,7 +27,7 @@ export const computeBabelPluginMapForPlatform = ({
       platformVersion,
       platformCompatMap: key in babelPluginCompatMap ? babelPluginCompatMap[key] : {},
     })
-    if (compatible) {
+    if (!compatible) {
       babelPluginMapForPlatform[key] = babelPluginMap[key]
     }
   })

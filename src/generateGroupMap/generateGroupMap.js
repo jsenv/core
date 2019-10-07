@@ -54,9 +54,6 @@ export const generateGroupMap = ({
   if (typeof babelPluginMap !== "object") {
     throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`)
   }
-  if (typeof babelPluginCompatMap !== "object") {
-    throw new TypeError(`babelPluginCompatMap must be an object, got ${babelPluginCompatMap}`)
-  }
   if (typeof jsenvPluginMap !== "object") {
     throw new TypeError(`jsenvPluginMap must be an object, got ${jsenvPluginMap}`)
   }
