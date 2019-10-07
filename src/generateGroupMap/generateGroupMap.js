@@ -32,18 +32,16 @@ Take chars below to update legends
 
 */
 
-import { babelPluginCompatMap as babelPluginCompatMapFallback } from "../babelPluginCompatMap/babelPluginCompatMap.js"
-import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "../jsenvPluginCompatMap/jsenvPluginCompatMap.js"
 import { generateAllPlatformGroupArray } from "./generateAllPlatformGroupArray.js"
 import { platformCompatMapToScore } from "./platformCompatMapToScore.js"
 import { OTHERWISE_ID, BEST_ID } from "../GROUP_ID.js"
 
 export const generateGroupMap = ({
   babelPluginMap,
-  babelPluginCompatMap = babelPluginCompatMapFallback,
   // jsenv plugin are for later, for now, nothing is using them
   jsenvPluginMap = {},
-  jsenvPluginCompatMap = jsenvPluginCompatMapFallback,
+  babelPluginCompatMap,
+  jsenvPluginCompatMap,
   platformScoreMap,
   groupCount = 1,
   // pass this to true if you don't care if someone tries to run your code
@@ -61,9 +59,6 @@ export const generateGroupMap = ({
   }
   if (typeof jsenvPluginMap !== "object") {
     throw new TypeError(`jsenvPluginMap must be an object, got ${jsenvPluginMap}`)
-  }
-  if (typeof jsenvPluginCompatMap !== "object") {
-    throw new TypeError(`jsenvPluginCompatMap must be an object, got ${jsenvPluginCompatMap}`)
   }
   if (typeof platformScoreMap !== "object") {
     throw new TypeError(`platformScoreMap must be an object, got ${platformScoreMap}`)
