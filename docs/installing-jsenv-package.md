@@ -22,9 +22,12 @@ At this point you can `npm install` but if you never configured npm authentifica
 
 ![npm install authentification error screenshot](./npm-install-auth-error-screenshot.png)
 
-To fix it you need to configure npm authentification to the github registry by
+To fix it you need to configure npm authentification on github registry
+
+### Configure npm authentification on github registry
 
 1. Creating a token on your github profile with at leat `read:packages` scope.
+
 2. Save the token with the following command
    ```console
    npm config set //npm.pkg.github.com/:_authToken personal-access-token
