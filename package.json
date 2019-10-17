@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "8.26.0",
+  "version": "8.26.1",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -63,15 +63,15 @@
   },
   "devDependencies": {
     "@dmail/assert": "3.14.0",
-    "@jsenv/bundling": "7.6.0",
+    "@jsenv/bundling": "7.6.2",
     "@jsenv/codecov-upload": "2.0.0",
     "@jsenv/eslint-config": "10.2.0",
-    "@jsenv/execution": "6.10.0",
+    "@jsenv/execution": "6.11.0",
     "@jsenv/node-launcher": "4.24.0",
     "@jsenv/node-module-import-map": "8.2.1",
     "@jsenv/prettier-check-project": "3.5.0",
     "@jsenv/prettier-config": "1.0.1",
-    "@jsenv/testing": "3.8.2",
+    "@jsenv/testing": "3.9.0",
     "babel-eslint": "11.0.0-beta.0",
     "eslint": "6.5.1",
     "prettier": "1.18.2"
