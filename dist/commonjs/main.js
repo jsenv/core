@@ -2543,6 +2543,7 @@ const createIncompatibleJsenvCoreDependencyMessage = ({
   jsenvCoreRelativePath
 }) => `incompatible dependency to @jsenv/core in your project and an internal jsenv project.
 To fix this either remove project dependency to @jsenv/core or ensure they use the same version.
+(If you are inside a @jsenv project you can ignore this warning)
 --- jsenv project wanted relative path to @jsenv/core ---
 ${jsenvCoreRelativePath}
 --- your project relative path to @jsenv/core ---
