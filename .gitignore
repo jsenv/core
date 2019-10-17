@@ -1,7 +1,6 @@
 /.dist/
 /.vscode/settings.json
 /coverage/
-/dist/
 /node_modules/
 /importMap.json
 /jsconfig.json

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "8.25.0",
+  "version": "8.26.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -55,7 +55,7 @@
     "@jsenv/logger": "2.0.0",
     "@jsenv/operating-system-path": "2.5.1",
     "@jsenv/url-meta": "3.1.2",
-    "ansi-to-html": "0.6.11",
+    "ansi-to-html": "0.6.12",
     "babel-plugin-transform-commonjs": "1.1.6",
     "proper-lockfile": "4.1.1",
     "regenerator-runtime": "0.13.3",
@@ -63,15 +63,15 @@
   },
   "devDependencies": {
     "@dmail/assert": "3.14.0",
-    "@jsenv/bundling": "7.4.0",
+    "@jsenv/bundling": "7.6.0",
     "@jsenv/codecov-upload": "2.0.0",
     "@jsenv/eslint-config": "10.2.0",
-    "@jsenv/execution": "6.2.0",
+    "@jsenv/execution": "6.10.0",
     "@jsenv/node-launcher": "4.24.0",
     "@jsenv/node-module-import-map": "8.2.1",
     "@jsenv/prettier-check-project": "3.5.0",
     "@jsenv/prettier-config": "1.0.1",
-    "@jsenv/testing": "3.7.0",
+    "@jsenv/testing": "3.8.2",
     "babel-eslint": "11.0.0-beta.0",
     "eslint": "6.5.1",
     "prettier": "1.18.2"
