@@ -1,10 +1,16 @@
 # Installing a jsenv package
 
-All jsenv packages are published on github package registry.
+All jsenv packages are published on github and npm package registry.<br />
 
-In order to use a jsenv package in your project, npm must be configured to search it on the github registry.<br />
+Packages are published on github registry because it obviously fits github, where jsenv codebase is developed. They are also published to npm to let you skip the npm configuration for github registry.
+
+To avoid wasting ressource, we would like to publish only to github.<br />
+
+For these reasons you should prefer getting a jsenv package from github. But if you choose to get it from npm you can skip the documentation below.
 
 ## Configuring npm for github registry
+
+In order to use a jsenv package in your project, npm must be configured to search it on the github registry.<br />
 
 You can do that by adding the following line in your `.npmrc`<br />
 
