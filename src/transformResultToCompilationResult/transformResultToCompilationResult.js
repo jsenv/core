@@ -1,16 +1,14 @@
 import { basename } from "path"
-import { pathnameToRelativePathname } from "@jsenv/operating-system-path"
 import { hrefToPathname } from "@jsenv/href"
-import { resolveSpecifier } from "@jsenv/import-map"
-import { computeInputRelativePath } from "../transformJs/transformJs.js"
+import { fileUrlToRelativePath, resolveFileUrl } from "../urlHelpers.js"
 import { writeSourceMappingURL } from "./source-mapping-url.js"
 
 export const transformResultToCompilationResult = (
   { code, map, metadata = {} },
   {
     source,
-    sourceHref,
-    projectPathname,
+    sourceUrl,
+    projectDirectoryUrl,
     remap = true,
     remapMethod = "comment", // 'comment', 'inline'
   },
@@ -18,11 +16,11 @@ export const transformResultToCompilationResult = (
   if (typeof source !== "string") {
     throw new TypeError(`source must be a string, got ${source}`)
   }
-  if (typeof sourceHref !== "string") {
-    throw new TypeError(`sourceHref must be a string, got ${sourceHref}`)
+  if (typeof sourceUrl !== "string") {
+    throw new TypeError(`sourceUrl must be a string, got ${sourceUrl}`)
   }
-  if (typeof projectPathname !== "string") {
-    throw new TypeError(`projectPathname must be a string, got ${projectPathname}`)
+  if (typeof projectDirectoryUrl !== "string") {
+    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
   }
 
   const sources = []
@@ -36,11 +34,11 @@ export const transformResultToCompilationResult = (
       // may happen in somae cases where babel returns a wrong sourcemap
       // there is at least one case where it happens
       // a file with only import './whatever.js' inside
-      sources.push(sourceHrefToSourceMapSource({ sourceHref, projectPathname }))
+      sources.push(sourceUrlToSourceMapSource(sourceUrl, projectDirectoryUrl))
       sourcesContent.push(source)
     } else {
       map.sources = map.sources.map((source) =>
-        resolveSourceMapSource(source, { sourceHref, projectPathname }),
+        resolveSourceMapSource(source, { sourceUrl, projectDirectoryUrl }),
       )
       sources.push(...map.sources)
       if (map.sourcesContent) sourcesContent.push(...map.sourcesContent)
@@ -65,22 +63,22 @@ export const transformResultToCompilationResult = (
       )
     } else if (remapMethod === "comment") {
       const sourceMapAssetPath = generateAssetPath({
-        sourceHref,
-        assetName: `${sourceHrefToBasename(sourceHref)}.map`,
+        sourceUrl,
+        assetName: `${sourceUrlToBasename(sourceUrl)}.map`,
       })
       output = writeSourceMappingURL(output, `./${sourceMapAssetPath}`)
       assets.push(sourceMapAssetPath)
       assetsContent.push(stringifyMap(map))
     }
   } else {
-    sources.push(sourceHrefToSourceMapSource({ sourceHref, projectPathname }))
+    sources.push(sourceUrlToSourceMapSource(sourceUrl, projectDirectoryUrl))
     sourcesContent.push(source)
   }
 
   const { coverage } = metadata
   if (coverage) {
     const coverageAssetPath = generateAssetPath({
-      sourceHref,
+      sourceUrl,
       assetName: "coverage.json",
     })
     assets.push(coverageAssetPath)
@@ -97,42 +95,26 @@ export const transformResultToCompilationResult = (
   }
 }
 
-const sourceHrefToSourceMapSource = ({ sourceHref, projectPathname }) => {
-  const relativePath = computeInputRelativePath({ sourceHref, projectPathname })
-  return relativePath || sourceHref
+const sourceUrlToSourceMapSource = (sourceUrl, projectDirectoryUrl) => {
+  if (sourceUrl.startsWith(projectDirectoryUrl)) {
+    return fileUrlToRelativePath(sourceUrl, projectDirectoryUrl)
+  }
+  return sourceUrl
 }
 
-const resolveSourceMapSource = (sourceMapSource, { sourceHref, projectPathname }) => {
-  if (sourceMapSource[0] === "/") {
-    return sourceMapSource
+const resolveSourceMapSource = (sourceMapSpecifier, { sourceUrl, projectDirectoryUrl }) => {
+  const url = resolveFileUrl(sourceMapSpecifier, sourceUrl)
+  if (url.startsWith(projectDirectoryUrl)) {
+    return fileUrlToRelativePath(url, projectDirectoryUrl).slice(1)
   }
-
-  if (sourceMapSource.slice(0, 2) === "./" || sourceMapSource.slice(0, 3) === "../") {
-    const sourceMapSourceHref = resolveSpecifier(sourceMapSource, sourceHref)
-    const sourceMapSourcePathname = hrefToPathname(sourceMapSourceHref)
-    return pathnameToRelativePathname(sourceMapSourcePathname, projectPathname)
-  }
-
-  if (sourceMapSource.startsWith("file://")) {
-    return sourceMapSource
-  }
-
-  if (sourceMapSource.startsWith("http://")) {
-    return sourceMapSource
-  }
-
-  if (sourceMapSource.startsWith("https://")) {
-    return sourceMapSource
-  }
-
-  return `/${sourceMapSource}`
+  return url
 }
 
-const generateAssetPath = ({ sourceHref, assetName }) => {
-  return `${sourceHrefToBasename(sourceHref)}__asset__/${assetName}`
+const generateAssetPath = ({ sourceUrl, assetName }) => {
+  return `${sourceUrlToBasename(sourceUrl)}__asset__/${assetName}`
 }
 
-const sourceHrefToBasename = (sourceHref) => basename(hrefToPathname(sourceHref))
+const sourceUrlToBasename = (sourceUrl) => basename(hrefToPathname(sourceUrl))
 
 const stringifyMap = (object) => JSON.stringify(object, null, "  ")
 
