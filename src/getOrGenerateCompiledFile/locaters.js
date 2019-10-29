@@ -1,18 +1,16 @@
-import { resolveFileUrl, resolveDirectoryUrl, fileUrlToPath } from "../urlHelpers.js"
+import { resolveFileUrl, fileUrlToPath, resolveDirectoryUrl } from "../urlHelpers.js"
 
-export const getCacheFilePath = ({ cacheDirectoryUrl, compileRelativePath }) =>
-  fileUrlToPath(resolveFileUrl(`${compileRelativePath}__asset__/cache.json`, cacheDirectoryUrl))
-
-// the fact an asset filename is relative to projectPath + compiledpathnameRelative
-// is strange considering a source filename is relative to projectPath
-// I think it would make more sense to make them relative to the cache.json
-// file itself but that's for later
 export const getAssetFilePath = ({ cacheDirectoryUrl, compileRelativePath, asset }) => {
-  const compiledFileUrl = resolveFileUrl(compileRelativePath, cacheDirectoryUrl)
-  const compiledFileDirectoryUrl = resolveDirectoryUrl("./", compiledFileUrl)
-  const assetFileUrl = resolveFileUrl(`./${asset}`, compiledFileDirectoryUrl)
+  const assetDirectoryUrl = resolveDirectoryUrl(
+    `${compileRelativePath}__asset__/`,
+    cacheDirectoryUrl,
+  )
+  const assetFileUrl = resolveFileUrl(asset, assetDirectoryUrl)
   return fileUrlToPath(assetFileUrl)
 }
+
+export const getCacheJsonFilePath = ({ cacheDirectoryUrl, compileRelativePath }) =>
+  getAssetFilePath({ cacheDirectoryUrl, compileRelativePath, asset: "cache.json" })
 
 export const getCompiledFilePath = ({ cacheDirectoryUrl, compileRelativePath }) =>
   fileUrlToPath(resolveFileUrl(compileRelativePath, cacheDirectoryUrl))

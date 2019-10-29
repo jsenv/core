@@ -1,5 +1,5 @@
 import { fileRead } from "@dmail/helper"
-import { getCacheFilePath } from "./locaters.js"
+import { getCacheJsonFilePath } from "./locaters.js"
 
 export const readCache = async ({
   cacheDirectoryUrl,
@@ -7,33 +7,33 @@ export const readCache = async ({
   compileRelativePath,
   logger,
 }) => {
-  const cacheFilePath = getCacheFilePath({
+  const cacheJsonFilePath = getCacheJsonFilePath({
     cacheDirectoryUrl,
     compileRelativePath,
   })
 
   try {
-    const cacheAsString = await fileRead(cacheFilePath)
-    const cache = JSON.parse(cacheAsString)
-    const sourceRelativePathInCache = cache.sourceRelativePath
+    const cacheJsonFileString = await fileRead(cacheJsonFilePath)
+    const cacheJsonObject = JSON.parse(cacheJsonFileString)
+    const sourceRelativePathInCache = cacheJsonObject.sourceRelativePath
     if (sourceRelativePathInCache !== sourceRelativePath) {
       logger.info(
         createSourceRelativePathChangedMessage({
           sourceRelativePathInCache,
           sourceRelativePath,
-          cacheFilePath,
+          cacheJsonFilePath,
         }),
       )
       return null
     }
-    return cache
+    return cacheJsonObject
   } catch (error) {
     if (error && error.code === "ENOENT") {
       return null
     }
 
     if (error && error.name === "SyntaxError") {
-      logger.error(createCacheSyntaxErrorMessage({ syntaxError: error, cacheFilePath }))
+      logger.error(createCacheSyntaxErrorMessage({ syntaxError: error, cacheJsonFilePath }))
       return null
     }
 
@@ -44,17 +44,17 @@ export const readCache = async ({
 const createSourceRelativePathChangedMessage = ({
   sourceRelativePathInCache,
   sourceRelativePath,
-  cacheFilePath,
+  cacheJsonFilePath,
 }) => `cache.sourceRelativePath changed
 --- sourceRelativePath in cache ---
 ${sourceRelativePathInCache}
 --- sourceRelativePath ---
 ${sourceRelativePath}
---- cache path ---
-${cacheFilePath}`
+--- cache.json path ---
+${cacheJsonFilePath}`
 
-const createCacheSyntaxErrorMessage = ({ syntaxError, cacheFilePath }) => `cache syntax error
+const createCacheSyntaxErrorMessage = ({ syntaxError, cacheJsonFilePath }) => `cache syntax error
 --- syntax error stack ---
 ${syntaxError.stack}
---- cache path ---
-${cacheFilePath}`
+--- cache.json path ---
+${cacheJsonFilePath}`

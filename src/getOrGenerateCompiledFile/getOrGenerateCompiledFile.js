@@ -4,7 +4,7 @@ import { pathToDirectoryUrl, resolveDirectoryUrl } from "../urlHelpers.js"
 import { readCache } from "./readCache.js"
 import { validateCache } from "./validateCache.js"
 import { updateCache } from "./updateCache.js"
-import { getCacheFilePath, getSourceFilePath, getCompiledFilePath } from "./locaters.js"
+import { getCacheJsonFilePath, getSourceFilePath, getCompiledFilePath } from "./locaters.js"
 import { createLockRegistry } from "./createLockRegistry.js"
 
 const { lockForRessource } = createLockRegistry()
@@ -237,23 +237,23 @@ const startAsap = async (
   fn,
   { logger, cacheDirectoryUrl, compileRelativePath, cacheInterProcessLocking },
 ) => {
-  const cacheFilePath = getCacheFilePath({
+  const cacheJsonFilePath = getCacheJsonFilePath({
     cacheDirectoryUrl,
     compileRelativePath,
   })
 
-  logger.debug(`lock ${cacheFilePath}`)
+  logger.debug(`lock ${cacheJsonFilePath}`)
   // in case this process try to concurrently access meta we wait for previous to be done
-  const unlockLocal = await lockForRessource(cacheFilePath)
+  const unlockLocal = await lockForRessource(cacheJsonFilePath)
 
   let unlockInterProcessLock = () => {}
   if (cacheInterProcessLocking) {
     // after that we use a lock pathnameRelative to be sure we don't conflict with other process
     // trying to do the same (mapy happen when spawining multiple server for instance)
     // https://github.com/moxystudio/node-proper-lockfile/issues/69
-    await fileMakeDirname(cacheFilePath)
+    await fileMakeDirname(cacheJsonFilePath)
     // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
-    unlockInterProcessLock = await lockfile.lock(cacheFilePath, {
+    unlockInterProcessLock = await lockfile.lock(cacheJsonFilePath, {
       realpath: false,
       retries: {
         retries: 20,
@@ -269,7 +269,7 @@ const startAsap = async (
     // we want to unlock in case of error too
     unlockLocal()
     unlockInterProcessLock()
-    logger.debug(`unlock ${cacheFilePath}`)
+    logger.debug(`unlock ${cacheJsonFilePath}`)
   }
 
   // here in case of error.code === 'ELOCKED' thrown from here

@@ -62,12 +62,10 @@ export const transformResultToCompilationResult = (
         `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
       )
     } else if (remapMethod === "comment") {
-      const sourceMapAssetPath = generateAssetPath({
-        sourceUrl,
-        assetName: `${sourceUrlToBasename(sourceUrl)}.map`,
-      })
-      output = writeSourceMappingURL(output, `./${sourceMapAssetPath}`)
-      assets.push(sourceMapAssetPath)
+      const sourceBasename = basename(hrefToPathname(sourceUrl))
+      const sourceMapBasename = `${sourceBasename}.map`
+      output = writeSourceMappingURL(output, `./${sourceBasename}__asset__/${sourceMapBasename}`)
+      assets.push(sourceMapBasename)
       assetsContent.push(stringifyMap(map))
     }
   } else {
@@ -77,11 +75,7 @@ export const transformResultToCompilationResult = (
 
   const { coverage } = metadata
   if (coverage) {
-    const coverageAssetPath = generateAssetPath({
-      sourceUrl,
-      assetName: "coverage.json",
-    })
-    assets.push(coverageAssetPath)
+    assets.push(`coverage.json`)
     assetsContent.push(stringifyCoverage(coverage))
   }
 
@@ -109,12 +103,6 @@ const resolveSourceMapSource = (sourceMapSpecifier, { sourceUrl, projectDirector
   }
   return url
 }
-
-const generateAssetPath = ({ sourceUrl, assetName }) => {
-  return `${sourceUrlToBasename(sourceUrl)}__asset__/${assetName}`
-}
-
-const sourceUrlToBasename = (sourceUrl) => basename(hrefToPathname(sourceUrl))
 
 const stringifyMap = (object) => JSON.stringify(object, null, "  ")
 

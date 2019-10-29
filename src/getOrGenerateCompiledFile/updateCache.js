@@ -1,5 +1,5 @@
 import { fileWrite } from "@dmail/helper"
-import { getCacheFilePath, getAssetFilePath, getCompiledFilePath } from "./locaters.js"
+import { getCacheJsonFilePath, getAssetFilePath, getCompiledFilePath } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
 export const updateCache = ({
@@ -102,13 +102,13 @@ export const updateCache = ({
       }
     }
 
-    const cacheFilePath = getCacheFilePath({
+    const cacheJsonFilePath = getCacheJsonFilePath({
       cacheDirectoryUrl,
       compileRelativePath,
     })
 
-    logger.info(`write cache at ${cacheFilePath}`)
-    promises.push(fileWrite(cacheFilePath, JSON.stringify(cache, null, "  ")))
+    logger.info(`write cache at ${cacheJsonFilePath}`)
+    promises.push(fileWrite(cacheJsonFilePath, JSON.stringify(cache, null, "  ")))
   }
 
   return Promise.all(promises)
