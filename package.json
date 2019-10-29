@@ -1,6 +1,7 @@
 {
   "name": "@jsenv/core",
-  "version": "8.26.1",
+  "description": "jsenv core functions",
+  "version": "9.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -50,11 +51,11 @@
     "@dmail/cancellation": "2.6.0",
     "@dmail/helper": "2.3.0",
     "@jsenv/babel-plugin-map": "3.1.0",
-    "@jsenv/href": "1.1.0",
-    "@jsenv/import-map": "6.1.0",
-    "@jsenv/logger": "2.0.0",
-    "@jsenv/operating-system-path": "2.5.1",
-    "@jsenv/url-meta": "3.1.2",
+    "@jsenv/href": "1.2.0",
+    "@jsenv/import-map": "6.6.0",
+    "@jsenv/logger": "3.1.0",
+    "@jsenv/operating-system-path": "3.1.0",
+    "@jsenv/url-meta": "4.0.0",
     "ansi-to-html": "0.6.12",
     "babel-plugin-transform-commonjs": "1.1.6",
     "proper-lockfile": "4.1.1",
@@ -63,17 +64,17 @@
   },
   "devDependencies": {
     "@dmail/assert": "3.14.0",
-    "@jsenv/bundling": "7.6.2",
+    "@jsenv/bundling": "7.7.1",
     "@jsenv/codecov-upload": "2.0.0",
-    "@jsenv/eslint-config": "10.2.0",
+    "@jsenv/eslint-config": "11.3.0",
     "@jsenv/execution": "6.11.0",
-    "@jsenv/node-launcher": "4.24.0",
-    "@jsenv/node-module-import-map": "8.2.1",
+    "@jsenv/node-launcher": "4.26.0",
+    "@jsenv/node-module-import-map": "8.4.1",
     "@jsenv/prettier-check-project": "3.5.0",
     "@jsenv/prettier-config": "1.0.1",
     "@jsenv/testing": "3.9.0",
     "babel-eslint": "11.0.0-beta.0",
-    "eslint": "6.5.1",
+    "eslint": "6.6.0",
     "prettier": "1.18.2"
   }
 }

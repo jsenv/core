@@ -1,8 +1,8 @@
 const rimraf = import.meta.require("rimraf")
 
-export const removeFolder = (foldername) =>
+export const removeDirectory = (path) =>
   new Promise((resolve, reject) =>
-    rimraf(foldername, (error) => {
+    rimraf(path, (error) => {
       if (error) reject(error)
       else resolve()
     }),

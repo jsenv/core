@@ -2,8 +2,8 @@ export { babelPluginCompatMap } from "./src/babelPluginCompatMap/babelPluginComp
 export { babelHelperMap } from "./src/babelHelperMap/babelHelperMap.js"
 export { browserScoreMap } from "./src/browserScoreMap/browserScoreMap.js"
 export {
-  cleanCompileCacheFolderIfObsolete,
-} from "./src/cleanCompileCacheFolderIfObsolete/cleanCompileCacheFolderIfObsolete.js"
+  cleanCompileCacheDirectoryIfObsolete,
+} from "./src/cleanCompileCacheDirectoryIfObsolete/cleanCompileCacheDirectoryIfObsolete.js"
 export {
   compilationResultToTransformResult,
 } from "./src/compilationResultToTransformResult/compilationResultToTransformResult.js"
@@ -24,7 +24,7 @@ export { generateGroupMap } from "./src/generateGroupMap/generateGroupMap.js"
 export {
   getOrGenerateCompiledFile,
 } from "./src/getOrGenerateCompiledFile/getOrGenerateCompiledFile.js"
-export { jsenvCorePath, jsenvCorePathname } from "./src/jsenvCorePath/jsenvCorePath.js"
+export { jsenvCoreDirectoryUrl } from "./src/jsenvCoreDirectoryUrl/jsenvCoreDirectoryUrl.js"
 export { jsenvPluginCompatMap } from "./src/jsenvPluginCompatMap/jsenvPluginCompatMap.js"
 export { nodeVersionScoreMap } from "./src/nodeVersionScoreMap/nodeVersionScoreMap.js"
 export { readProjectImportMap } from "./src/readProjectImportMap/readProjectImportMap.js"
