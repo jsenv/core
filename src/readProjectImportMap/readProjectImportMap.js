@@ -1,26 +1,43 @@
 import { readFile } from "fs"
-import { pathnameToRelativePath } from "@jsenv/href"
-import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { composeTwoImportMaps } from "@jsenv/import-map"
-import { jsenvCorePathname } from "../jsenvCorePath/jsenvCorePath.js"
+import {
+  pathToDirectoryUrl,
+  fileUrlToRelativePath,
+  resolveFileUrl,
+  fileUrlToPath,
+} from "../urlHelpers.js"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl/jsenvCoreDirectoryUrl.js"
 
 export const readProjectImportMap = async ({
-  projectPathname,
-  jsenvProjectPathname,
-  importMapRelativePath,
+  projectDirectoryPath,
+  jsenvProjectDirectoryPath,
+  importMapFileRelativePath,
   logger,
 }) => {
-  if (typeof projectPathname !== "string") {
-    throw new TypeError(`projectPathname must be a string, got ${projectPathname}`)
+  if (typeof projectDirectoryPath !== "string") {
+    throw new TypeError(`projectDirectoryPath must be a string, got ${projectDirectoryPath}`)
   }
-  if (typeof jsenvProjectPathname !== "string") {
-    throw new TypeError(`jsenvProjectPathname must be a string, got ${jsenvProjectPathname}`)
+  if (typeof jsenvProjectDirectoryPath !== "string") {
+    throw new TypeError(
+      `jsenvProjectDirectoryPath must be a string, got ${jsenvProjectDirectoryPath}`,
+    )
   }
 
-  const importMapForProject = await getProjectImportMap({ projectPathname, importMapRelativePath })
+  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
+
+  const importMapForProject = importMapFileRelativePath
+    ? await getProjectImportMap({
+        projectDirectoryUrl,
+        importMapFileRelativePath,
+      })
+    : null
 
   const jsenvCoreImportKey = "@jsenv/core/"
-  const jsenvCoreImportValue = `${pathnameToRelativePath(jsenvCorePathname, projectPathname)}/`
+  const jsenvCoreImportValue = fileUrlToRelativePath(
+    projectDirectoryUrl,
+    jsenvCoreDirectoryUrl,
+  ).slice(1)
+
   const importsForJsenvCore = {
     [jsenvCoreImportKey]: jsenvCoreImportValue,
   }
@@ -36,8 +53,8 @@ export const readProjectImportMap = async ({
     if (jsenvCoreProjectImportValue && jsenvCoreProjectImportValue !== jsenvCoreImportValue) {
       logger.warn(
         createIncompatibleJsenvCoreDependencyMessage({
-          projectPathname,
-          jsenvProjectPathname,
+          projectDirectoryPath,
+          jsenvProjectDirectoryPath,
           jsenvCoreProjectRelativePath: jsenvCoreProjectImportValue.slice(0, -1),
           jsenvCoreRelativePath: jsenvCoreImportValue.slice(0, -1),
         }),
@@ -74,15 +91,12 @@ const generateJsenvCoreScopes = ({ importMapForProject, importsForJsenvCore }) =
   return scopesForJsenvCore
 }
 
-const getProjectImportMap = async ({ projectPathname, importMapRelativePath }) => {
-  if (!importMapRelativePath) {
-    return null
-  }
-
-  const importMapPath = pathnameToOperatingSystemPath(`${projectPathname}/${importMapRelativePath}`)
+const getProjectImportMap = async ({ projectDirectoryUrl, importMapFileRelativePath }) => {
+  const importMapFileUrl = resolveFileUrl(importMapFileRelativePath, projectDirectoryUrl)
+  const importMapFilePath = fileUrlToPath(importMapFileUrl)
 
   return new Promise((resolve, reject) => {
-    readFile(importMapPath, (error, buffer) => {
+    readFile(importMapFilePath, (error, buffer) => {
       if (error) {
         if (error.code === "ENOENT") {
           resolve(null)
@@ -98,8 +112,8 @@ const getProjectImportMap = async ({ projectPathname, importMapRelativePath }) =
 }
 
 const createIncompatibleJsenvCoreDependencyMessage = ({
-  projectPathname,
-  jsenvProjectPathname,
+  projectDirectoryPath,
+  jsenvProjectDirectoryPath,
   jsenvCoreProjectRelativePath,
   jsenvCoreRelativePath,
 }) => `incompatible dependency to @jsenv/core in your project and an internal jsenv project.
@@ -110,6 +124,6 @@ ${jsenvCoreRelativePath}
 --- your project relative path to @jsenv/core ---
 ${jsenvCoreProjectRelativePath}
 --- jsenv project path ---
-${jsenvProjectPathname}
+${jsenvProjectDirectoryPath}
 --- your project path ---
-${projectPathname}`
+${projectDirectoryPath}`
