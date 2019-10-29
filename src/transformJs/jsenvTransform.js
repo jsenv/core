@@ -5,7 +5,7 @@ import { ensureRegeneratorRuntimeImportBabelPlugin } from "./ensureRegeneratorRu
 import { ensureGlobalThisImportBabelPlugin } from "./ensureGlobalThisImportBabelPlugin.js"
 import {
   transformBabelHelperToImportBabelPlugin,
-  searchPossibleBabelHelperNameInPath,
+  searchPossibleBabelHelperNameInFilePath,
 } from "./transformBabelHelperToImportBabelPlugin.js"
 
 const { transformAsync, transformFromAstAsync } = import.meta.require("@babel/core")
@@ -44,7 +44,7 @@ export const jsenvTransform = async ({
     },
   }
 
-  const babelHelperName = searchPossibleBabelHelperNameInPath(inputPath)
+  const babelHelperName = searchPossibleBabelHelperNameInFilePath(inputPath)
   // to prevent typeof circular dependency
   if (babelHelperName === "typeof") {
     const babelPluginMapWithoutTransformTypeOf = {}

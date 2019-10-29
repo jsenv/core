@@ -1,17 +1,12 @@
-import {
-  pathnameToOperatingSystemPath,
-  pathnameToRelativePathname,
-  pathnameIsInside,
-} from "@jsenv/operating-system-path"
-import { hrefToPathname } from "@jsenv/href"
+import { pathToDirectoryUrl, fileUrlToPath, fileUrlToRelativePath } from "../urlHelpers.js"
 import { jsenvTransform } from "./jsenvTransform.js"
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
 
 export const transformJs = async ({
-  projectPathname,
-  source,
-  sourceHref,
-  sourceMap,
+  projectDirectoryPath,
+  code,
+  url,
+  map,
   babelPluginMap,
   convertMap = {},
   allowTopLevelAwait = true,
@@ -20,30 +15,32 @@ export const transformJs = async ({
   transformGenerator = true,
   remap = true,
 }) => {
-  if (typeof projectPathname !== "string") {
-    throw new TypeError(`projectPathname must be a string, got ${projectPathname}`)
+  if (typeof projectDirectoryPath !== "string") {
+    throw new TypeError(`projectDirectoryPath must be a string, got ${projectDirectoryPath}`)
   }
   if (typeof babelPluginMap !== "object") {
     throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`)
   }
-  if (typeof source !== "string") {
-    throw new TypeError(`source must be a string, got ${source}`)
+  if (typeof code !== "string") {
+    throw new TypeError(`code must be a string, got ${code}`)
   }
-  if (typeof sourceHref !== "string") {
-    throw new TypeError(`sourceHref must be a string, got ${sourceHref}`)
+  if (typeof url !== "string") {
+    throw new TypeError(`url must be a string, got ${url}`)
   }
 
+  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
+
   const { inputCode, inputMap } = await computeInputCodeAndInputMap({
-    source,
-    sourceHref,
-    sourceMap,
-    projectPathname,
+    code,
+    url,
+    map,
+    projectDirectoryUrl,
     convertMap,
     remap,
     allowTopLevelAwait,
   })
-  const inputPath = computeInputPath({ sourceHref, projectPathname })
-  const inputRelativePath = computeInputRelativePath({ sourceHref, projectPathname })
+  const inputPath = computeInputPath(url)
+  const inputRelativePath = computeInputRelativePath(url, projectDirectoryUrl)
 
   return jsenvTransform({
     inputCode,
@@ -61,10 +58,10 @@ export const transformJs = async ({
 }
 
 const computeInputCodeAndInputMap = async ({
-  source,
-  sourceHref,
-  sourceMap,
-  projectPathname,
+  code,
+  url,
+  map,
+  projectDirectoryUrl,
   convertMap,
   remap,
   allowTopLevelAwait,
@@ -73,23 +70,22 @@ const computeInputCodeAndInputMap = async ({
     metaMapToSpecifierMetaMap({
       convert: convertMap,
     }),
-    `file://${projectPathname}`,
-    { forceHttpResolutionForFile: true },
+    projectDirectoryUrl,
   )
-  const { convert } = urlToMeta({ url: sourceHref, specifierMetaMap })
+  const { convert } = urlToMeta({ url, specifierMetaMap })
   if (!convert) {
-    return { inputCode: source, inputMap: sourceMap }
+    return { inputCode: code, inputMap: map }
   }
 
   if (typeof convert !== "function") {
     throw new TypeError(`convert must be a function, got ${convert}`)
   }
-  // TODO: update @jsenv/commonjs-converter to handle sourceMap when passed
+  // TODO: update @jsenv/commonjs-converter to handle map when passed
   const conversionResult = await convert({
-    projectPathname,
-    source,
-    sourceHref,
-    sourceMap,
+    projectDirectoryUrl,
+    code,
+    url,
+    map,
     remap,
     allowTopLevelAwait,
   })
@@ -104,36 +100,16 @@ const computeInputCodeAndInputMap = async ({
   return { inputCode, inputMap }
 }
 
-const computeInputPath = ({ sourceHref, projectPathname }) => {
-  const scenario = computeScenario({ sourceHref, projectPathname })
-
-  if (scenario === "remote") {
-    return sourceHref
+const computeInputPath = ({ url }) => {
+  if (url.startsWith("file://")) {
+    return fileUrlToPath(url)
   }
-
-  return pathnameToOperatingSystemPath(hrefToPathname(sourceHref))
+  return url
 }
 
-export const computeInputRelativePath = ({ sourceHref, projectPathname }) => {
-  const scenario = computeScenario({ sourceHref, projectPathname })
-
-  if (scenario === "project-file") {
-    return pathnameToRelativePathname(hrefToPathname(sourceHref), projectPathname)
+export const computeInputRelativePath = (url, projectDirectoryUrl) => {
+  if (url.startsWith(projectDirectoryUrl)) {
+    return fileUrlToRelativePath(url, projectDirectoryUrl)
   }
-
   return undefined
-}
-
-const computeScenario = ({ sourceHref, projectPathname }) => {
-  if (!sourceHref.startsWith("file:///")) {
-    return "remote"
-  }
-
-  const sourcePathname = hrefToPathname(sourceHref)
-
-  if (pathnameIsInside(sourcePathname, projectPathname)) {
-    return "project-file"
-  }
-
-  return "file"
 }

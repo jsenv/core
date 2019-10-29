@@ -1,4 +1,4 @@
-import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
+import { pathToFileUrl } from "../urlHelpers.js"
 import { babelHelperMap } from "../babelHelperMap/babelHelperMap.js"
 
 // https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
@@ -26,14 +26,15 @@ export const transformBabelHelperToImportBabelPlugin = (api) => {
           return undefined
         }
 
-        const filePathname = operatingSystemPathToPathname(file.opts.filename)
-        const babelHelperFilePathname = babelHelperMap[name]
+        const filePath = file.opts.filename
+        const fileUrl = pathToFileUrl(filePath)
+        const babelHelperFileUrl = babelHelperMap[name]
 
-        if (filePathname === babelHelperFilePathname) {
+        if (fileUrl === babelHelperFileUrl) {
           return undefined
         }
 
-        if (searchPossibleBabelHelperNameInPath(filePathname) === name) {
+        if (searchPossibleBabelHelperNameInFilePath(filePath) === name) {
           return undefined
         }
 
@@ -41,7 +42,7 @@ export const transformBabelHelperToImportBabelPlugin = (api) => {
           return cachedHelpers[name]
         }
 
-        const helper = addDefault(file.path, babelHelperFilePathname, { nameHint: `_${name}` })
+        const helper = addDefault(file.path, filePath, { nameHint: `_${name}` })
         cachedHelpers[name] = helper
         return helper
       })
@@ -49,12 +50,15 @@ export const transformBabelHelperToImportBabelPlugin = (api) => {
   }
 }
 
-export const searchPossibleBabelHelperNameInPath = (path) => {
+export const searchPossibleBabelHelperNameInFilePath = (filePath) => {
+  const fileUrl = pathToFileUrl(filePath)
+  const filePathname = fileUrl.slice("file://".length)
+
   const babelPathPart = "@jsenv/core/helpers/babel/"
-  const babelPathPartIndex = path.indexOf(babelPathPart)
+  const babelPathPartIndex = filePathname.indexOf(babelPathPart)
   if (babelPathPartIndex === -1) return ""
 
-  const after = path.slice(babelPathPartIndex + babelPathPart.length)
+  const after = filePathname.slice(babelPathPartIndex + babelPathPart.length)
   const helperName = after.slice(0, after.indexOf("/"))
   return helperName
 }
