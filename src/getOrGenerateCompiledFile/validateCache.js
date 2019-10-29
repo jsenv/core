@@ -1,12 +1,12 @@
 import { fileRead, fileStat } from "@dmail/helper"
-import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
+import { fileUrlToPath } from "../urlHelpers.js"
 import { dateToSecondsPrecision } from "./dateToSecondsPrecision.js"
 import { getCompiledFilePath, getAssetFilePath } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
 export const validateCache = async ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  projectDirectoryUrl,
+  cacheDirectoryUrl,
   compileRelativePath,
   cache,
   ifEtagMatch,
@@ -14,8 +14,7 @@ export const validateCache = async ({
   logger,
 }) => {
   const compiledFileValidation = await validateCompiledFile({
-    projectPathname,
-    compileCacheFolderRelativePath,
+    cacheDirectoryUrl,
     compileRelativePath,
     ifEtagMatch,
     ifModifiedSinceDate,
@@ -24,10 +23,10 @@ export const validateCache = async ({
   if (!compiledFileValidation.valid) return compiledFileValidation
 
   const [sourcesValidations, assetValidations] = await Promise.all([
-    validateSources({ projectPathname, cache, logger }),
+    validateSources({ projectDirectoryUrl, cache, logger }),
     validateAssets({
-      projectPathname,
-      compileCacheFolderRelativePath,
+      projectDirectoryUrl,
+      cacheDirectoryUrl,
       compileRelativePath,
       cache,
       logger,
@@ -55,26 +54,24 @@ export const validateCache = async ({
 }
 
 const validateCompiledFile = async ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  cacheDirectoryUrl,
   compileRelativePath,
   ifEtagMatch,
   ifModifiedSinceDate,
   logger,
 }) => {
-  const compiledFilename = getCompiledFilePath({
-    projectPathname,
-    compileCacheFolderRelativePath,
+  const compiledFilePath = getCompiledFilePath({
+    cacheDirectoryUrl,
     compileRelativePath,
   })
 
   try {
-    const compiledSource = await fileRead(compiledFilename)
+    const compiledSource = await fileRead(compiledFilePath)
 
     if (ifEtagMatch) {
       const compiledEtag = bufferToEtag(Buffer.from(compiledSource))
       if (ifEtagMatch !== compiledEtag) {
-        logger.info(`etag changed for ${compiledFilename}`)
+        logger.info(`etag changed for ${compiledFilePath}`)
         return {
           code: "COMPILED_FILE_ETAG_MISMATCH",
           valid: false,
@@ -84,9 +81,9 @@ const validateCompiledFile = async ({
     }
 
     if (ifModifiedSinceDate) {
-      const compiledMtime = await fileStat(compiledFilename)
+      const compiledMtime = await fileStat(compiledFilePath)
       if (ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)) {
-        logger.info(`mtime changed for ${compiledFilename}`)
+        logger.info(`mtime changed for ${compiledFilePath}`)
         return {
           code: "COMPILED_FILE_MTIME_OUTDATED",
           valid: false,
@@ -104,18 +101,18 @@ const validateCompiledFile = async ({
       return {
         code: "COMPILED_FILE_NOT_FOUND",
         valid: false,
-        data: { compiledFilename },
+        data: { compiledFilePath },
       }
     }
     return Promise.reject(error)
   }
 }
 
-const validateSources = ({ projectPathname, cache, logger }) =>
+const validateSources = ({ projectDirectoryUrl, cache, logger }) =>
   Promise.all(
     cache.sources.map((source, index) =>
       validateSource({
-        projectPathname,
+        projectDirectoryUrl,
         source,
         eTag: cache.sourcesEtag[index],
         logger,
@@ -123,19 +120,20 @@ const validateSources = ({ projectPathname, cache, logger }) =>
     ),
   )
 
-const validateSource = async ({ projectPathname, source, eTag, logger }) => {
-  const sourceFilename = pathnameToOperatingSystemPath(`${projectPathname}${source}`)
+const validateSource = async ({ projectDirectoryUrl, source, eTag, logger }) => {
+  const sourceFileUrl = `${projectDirectoryUrl}${source.slice(1)}`
+  const sourceFilePath = fileUrlToPath(sourceFileUrl)
 
   try {
-    const sourceContent = await fileRead(sourceFilename)
+    const sourceContent = await fileRead(sourceFilePath)
     const sourceETag = bufferToEtag(Buffer.from(sourceContent))
 
     if (sourceETag !== eTag) {
-      logger.info(`etag changed for ${sourceFilename}`)
+      logger.info(`etag changed for ${sourceFilePath}`)
       return {
         code: "SOURCE_ETAG_MISMATCH",
         valid: false,
-        data: { source, sourceFilename, sourceContent },
+        data: { source, sourceFilePath, sourceContent },
       }
     }
 
@@ -155,29 +153,22 @@ const validateSource = async ({ projectPathname, source, eTag, logger }) => {
       // in that case, inside updateCache we must not search for sources that
       // are missing, nor put their etag
       // or we could return sourceContent: '', and the etag would be empty
-      logger.info(`source not found at ${sourceFilename}`)
+      logger.info(`source not found at ${sourceFilePath}`)
       return {
         code: "SOURCE_NOT_FOUND",
         valid: true,
-        data: { source, sourceFilename, sourceContent: "" },
+        data: { source, sourceFilePath, sourceContent: "" },
       }
     }
     throw e
   }
 }
 
-const validateAssets = ({
-  projectPathname,
-  compileCacheFolderRelativePath,
-  compileRelativePath,
-  cache,
-  logger,
-}) =>
+const validateAssets = ({ cacheDirectoryUrl, compileRelativePath, cache, logger }) =>
   Promise.all(
     cache.assets.map((asset, index) =>
       validateAsset({
-        projectPathname,
-        compileCacheFolderRelativePath,
+        cacheDirectoryUrl,
         compileRelativePath,
         asset,
         eTag: cache.assetsEtag[index],
@@ -186,31 +177,23 @@ const validateAssets = ({
     ),
   )
 
-const validateAsset = async ({
-  projectPathname,
-  compileCacheFolderRelativePath,
-  compileRelativePath,
-  asset,
-  eTag,
-  logger,
-}) => {
-  const assetFilename = getAssetFilePath({
-    projectPathname,
-    compileCacheFolderRelativePath,
+const validateAsset = async ({ cacheDirectoryUrl, compileRelativePath, asset, eTag, logger }) => {
+  const assetFilePath = getAssetFilePath({
+    cacheDirectoryUrl,
     compileRelativePath,
     asset,
   })
 
   try {
-    const assetContent = await fileRead(assetFilename)
+    const assetContent = await fileRead(assetFilePath)
     const assetContentETag = bufferToEtag(Buffer.from(assetContent))
 
     if (eTag !== assetContentETag) {
-      logger.info(`etag changed for ${assetFilename}`)
+      logger.info(`etag changed for ${assetFilePath}`)
       return {
         code: "ASSET_ETAG_MISMATCH",
         valid: false,
-        data: { asset, assetFilename, assetContent, assetContentETag },
+        data: { asset, assetFilePath, assetContent, assetContentETag },
       }
     }
 
@@ -220,11 +203,11 @@ const validateAsset = async ({
     }
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.info(`asset not found at ${assetFilename}`)
+      logger.info(`asset not found at ${assetFilePath}`)
       return {
         code: "ASSET_FILE_NOT_FOUND",
         valid: false,
-        data: { asset, assetFilename },
+        data: { asset, assetFilePath },
       }
     }
     return Promise.reject(error)

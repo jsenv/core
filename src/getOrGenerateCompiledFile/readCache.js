@@ -2,15 +2,13 @@ import { fileRead } from "@dmail/helper"
 import { getCacheFilePath } from "./locaters.js"
 
 export const readCache = async ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  cacheDirectoryUrl,
   sourceRelativePath,
   compileRelativePath,
   logger,
 }) => {
   const cacheFilePath = getCacheFilePath({
-    projectPathname,
-    compileCacheFolderRelativePath,
+    cacheDirectoryUrl,
     compileRelativePath,
   })
 

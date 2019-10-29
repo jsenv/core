@@ -3,8 +3,7 @@ import { getCacheFilePath, getAssetFilePath, getCompiledFilePath } from "./locat
 import { bufferToEtag } from "./bufferToEtag.js"
 
 export const updateCache = ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  cacheDirectoryUrl,
   sourceRelativePath,
   compileRelativePath,
   cacheHitTracking,
@@ -29,8 +28,7 @@ export const updateCache = ({
   if (isNew || isUpdated) {
     const { writeCompiledSourceFile = true, writeAssetsFile = true } = compileResult
     const compiledFilePath = getCompiledFilePath({
-      projectPathname,
-      compileCacheFolderRelativePath,
+      cacheDirectoryUrl,
       compileRelativePath,
     })
 
@@ -43,8 +41,7 @@ export const updateCache = ({
       promises.push(
         ...assets.map((asset, index) => {
           const assetFilePath = getAssetFilePath({
-            projectPathname,
-            compileCacheFolderRelativePath,
+            cacheDirectoryUrl,
             compileRelativePath,
             asset,
           })
@@ -106,8 +103,7 @@ export const updateCache = ({
     }
 
     const cacheFilePath = getCacheFilePath({
-      projectPathname,
-      compileCacheFolderRelativePath,
+      cacheDirectoryUrl,
       compileRelativePath,
     })
 

@@ -11,7 +11,7 @@ import { removeDirectory } from "./removeDirectory.js"
 
 export const cleanCompileCacheDirectoryIfObsolete = async ({
   projectDirectoryPath,
-  compileCacheDirectoryRelativePath,
+  cacheDirectoryRelativePath,
   forceObsolete = false,
   cacheMeta,
   cleanCallback = () => {},
@@ -26,10 +26,7 @@ export const cleanCompileCacheDirectoryIfObsolete = async ({
     jsenvCorePackageVersion,
   }
 
-  const cacheDirectoryUrl = resolveDirectoryUrl(
-    compileCacheDirectoryRelativePath,
-    projectDirectoryUrl,
-  )
+  const cacheDirectoryUrl = resolveDirectoryUrl(cacheDirectoryRelativePath, projectDirectoryUrl)
   const cacheMetaFileUrl = resolveFileUrl("./meta.json", cacheDirectoryUrl)
   const cacheMetaFilePath = fileUrlToPath(cacheMetaFileUrl)
   const cacheDirectoryPath = fileUrlToPath(cacheDirectoryUrl)
