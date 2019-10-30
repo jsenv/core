@@ -1,29 +1,22 @@
 import { readFile } from "fs"
 import { composeTwoImportMaps } from "@jsenv/import-map"
-import {
-  pathToDirectoryUrl,
-  fileUrlToRelativePath,
-  resolveFileUrl,
-  fileUrlToPath,
-} from "../urlHelpers.js"
+import { fileUrlToRelativePath, resolveFileUrl, fileUrlToPath } from "../urlHelpers.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl/jsenvCoreDirectoryUrl.js"
 
 export const readProjectImportMap = async ({
-  projectDirectoryPath,
-  jsenvProjectDirectoryPath,
+  projectDirectoryUrl,
+  jsenvProjectDirectoryUrl,
   importMapFileRelativePath,
   logger,
 }) => {
-  if (typeof projectDirectoryPath !== "string") {
-    throw new TypeError(`projectDirectoryPath must be a string, got ${projectDirectoryPath}`)
+  if (typeof projectDirectoryUrl !== "string") {
+    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
   }
-  if (typeof jsenvProjectDirectoryPath !== "string") {
+  if (typeof jsenvProjectDirectoryUrl !== "string") {
     throw new TypeError(
-      `jsenvProjectDirectoryPath must be a string, got ${jsenvProjectDirectoryPath}`,
+      `jsenvProjectDirectoryUrl must be a string, got ${jsenvProjectDirectoryUrl}`,
     )
   }
-
-  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
 
   const importMapForProject = importMapFileRelativePath
     ? await getProjectImportMap({
@@ -53,8 +46,8 @@ export const readProjectImportMap = async ({
     if (jsenvCoreProjectImportValue && jsenvCoreProjectImportValue !== jsenvCoreImportValue) {
       logger.warn(
         createIncompatibleJsenvCoreDependencyMessage({
-          projectDirectoryPath,
-          jsenvProjectDirectoryPath,
+          projectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
+          jsenvProjectDirectoryPath: fileUrlToPath(jsenvProjectDirectoryUrl),
           jsenvCoreProjectRelativePath: jsenvCoreProjectImportValue.slice(0, -1),
           jsenvCoreRelativePath: jsenvCoreImportValue.slice(0, -1),
         }),

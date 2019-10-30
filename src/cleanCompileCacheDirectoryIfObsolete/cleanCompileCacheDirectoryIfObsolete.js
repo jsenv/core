@@ -1,22 +1,15 @@
 import { readFileSync } from "fs"
 import { fileRead, fileWrite } from "@dmail/helper"
-import {
-  pathToDirectoryUrl,
-  resolveFileUrl,
-  resolveDirectoryUrl,
-  fileUrlToPath,
-} from "../urlHelpers.js"
+import { resolveFileUrl, fileUrlToPath } from "../urlHelpers.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl/jsenvCoreDirectoryUrl.js"
 import { removeDirectory } from "./removeDirectory.js"
 
 export const cleanCompileCacheDirectoryIfObsolete = async ({
-  projectDirectoryPath,
-  cacheDirectoryRelativePath,
+  cacheDirectoryUrl,
   forceObsolete = false,
   cacheMeta,
   cleanCallback = () => {},
 }) => {
-  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   const jsenvCorePackageFileUrl = resolveFileUrl("./package.json", jsenvCoreDirectoryUrl)
   const jsenvCorePackageFilePath = fileUrlToPath(jsenvCorePackageFileUrl)
   const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
@@ -26,7 +19,6 @@ export const cleanCompileCacheDirectoryIfObsolete = async ({
     jsenvCorePackageVersion,
   }
 
-  const cacheDirectoryUrl = resolveDirectoryUrl(cacheDirectoryRelativePath, projectDirectoryUrl)
   const cacheMetaFileUrl = resolveFileUrl("./meta.json", cacheDirectoryUrl)
   const cacheMetaFilePath = fileUrlToPath(cacheMetaFileUrl)
   const cacheDirectoryPath = fileUrlToPath(cacheDirectoryUrl)

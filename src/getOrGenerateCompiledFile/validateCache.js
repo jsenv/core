@@ -1,11 +1,10 @@
 import { fileRead, fileStat } from "@dmail/helper"
-import { fileUrlToPath } from "../urlHelpers.js"
+import { fileUrlToPath, resolveFileUrl } from "../urlHelpers.js"
 import { dateToSecondsPrecision } from "./dateToSecondsPrecision.js"
 import { getCompiledFilePath, getAssetFilePath } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
 export const validateCache = async ({
-  projectDirectoryUrl,
   cacheDirectoryUrl,
   compileRelativePath,
   cache,
@@ -23,13 +22,16 @@ export const validateCache = async ({
   if (!compiledFileValidation.valid) return compiledFileValidation
 
   const [sourcesValidations, assetValidations] = await Promise.all([
-    validateSources({ projectDirectoryUrl, cache, logger }),
+    validateSources({
+      logger,
+      cacheDirectoryUrl,
+      cache,
+    }),
     validateAssets({
-      projectDirectoryUrl,
+      logger,
       cacheDirectoryUrl,
       compileRelativePath,
       cache,
-      logger,
     }),
   ])
 
@@ -108,20 +110,20 @@ const validateCompiledFile = async ({
   }
 }
 
-const validateSources = ({ projectDirectoryUrl, cache, logger }) =>
+const validateSources = ({ logger, cacheDirectoryUrl, cache }) =>
   Promise.all(
     cache.sources.map((source, index) =>
       validateSource({
-        projectDirectoryUrl,
+        logger,
+        cacheDirectoryUrl,
         source,
         eTag: cache.sourcesEtag[index],
-        logger,
       }),
     ),
   )
 
-const validateSource = async ({ projectDirectoryUrl, source, eTag, logger }) => {
-  const sourceFileUrl = `${projectDirectoryUrl}${source.slice(1)}`
+const validateSource = async ({ logger, cacheDirectoryUrl, source, eTag }) => {
+  const sourceFileUrl = resolveFileUrl(source, cacheDirectoryUrl)
   const sourceFilePath = fileUrlToPath(sourceFileUrl)
 
   try {
@@ -164,20 +166,20 @@ const validateSource = async ({ projectDirectoryUrl, source, eTag, logger }) => 
   }
 }
 
-const validateAssets = ({ cacheDirectoryUrl, compileRelativePath, cache, logger }) =>
+const validateAssets = ({ logger, cacheDirectoryUrl, compileRelativePath, cache }) =>
   Promise.all(
     cache.assets.map((asset, index) =>
       validateAsset({
+        logger,
         cacheDirectoryUrl,
         compileRelativePath,
         asset,
         eTag: cache.assetsEtag[index],
-        logger,
       }),
     ),
   )
 
-const validateAsset = async ({ cacheDirectoryUrl, compileRelativePath, asset, eTag, logger }) => {
+const validateAsset = async ({ logger, cacheDirectoryUrl, compileRelativePath, asset, eTag }) => {
   const assetFilePath = getAssetFilePath({
     cacheDirectoryUrl,
     compileRelativePath,

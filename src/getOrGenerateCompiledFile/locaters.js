@@ -15,5 +15,5 @@ export const getCacheJsonFilePath = ({ cacheDirectoryUrl, compileRelativePath })
 export const getCompiledFilePath = ({ cacheDirectoryUrl, compileRelativePath }) =>
   fileUrlToPath(resolveFileUrl(compileRelativePath, cacheDirectoryUrl))
 
-export const getSourceFilePath = ({ projectDirectoryUrl, sourceRelativePath }) =>
-  fileUrlToPath(resolveFileUrl(projectDirectoryUrl, sourceRelativePath))
+export const getSourceFilePath = ({ cacheDirectoryUrl, sourceRelativePath }) =>
+  fileUrlToPath(resolveFileUrl(sourceRelativePath, cacheDirectoryUrl))

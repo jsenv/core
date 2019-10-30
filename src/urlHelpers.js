@@ -1,9 +1,4 @@
 import { pathToFileURL, fileURLToPath } from "url"
-import { resolve } from "path"
-
-export const resolvePath = (specifier, basePath) => {
-  return resolve(specifier, basePath)
-}
 
 export const pathToDirectoryUrl = (path) => {
   const directoryUrl = path.startsWith("file://") ? path : String(pathToFileURL(path))

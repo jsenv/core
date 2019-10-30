@@ -1,6 +1,5 @@
 import { fileMakeDirname } from "@dmail/helper"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, resolveDirectoryUrl } from "../urlHelpers.js"
 import { readCache } from "./readCache.js"
 import { validateCache } from "./validateCache.js"
 import { updateCache } from "./updateCache.js"
@@ -12,8 +11,7 @@ const { lockForRessource } = createLockRegistry()
 const lockfile = import.meta.require("proper-lockfile")
 
 export const getOrGenerateCompiledFile = async ({
-  projectDirectoryPath,
-  cacheDirectoryRelativePath,
+  cacheDirectoryUrl,
   sourceRelativePath,
   compileRelativePath = sourceRelativePath,
   compile,
@@ -24,13 +22,8 @@ export const getOrGenerateCompiledFile = async ({
   ifModifiedSinceDate,
   logLevel,
 }) => {
-  if (typeof projectDirectoryPath !== "string") {
-    throw new TypeError(`projectDirectoryPath must be a string, got ${projectDirectoryPath}`)
-  }
-  if (typeof cacheDirectoryRelativePath !== "string") {
-    throw new TypeError(
-      `cacheDirectoryRelativePath must be a string, got ${cacheDirectoryRelativePath}`,
-    )
+  if (typeof cacheDirectoryUrl !== "string") {
+    throw new TypeError(`cacheDirectoryUrl must be a string, got ${cacheDirectoryUrl}`)
   }
   if (typeof sourceRelativePath !== "string") {
     throw new TypeError(`sourceRelativePath must be a string, got ${sourceRelativePath}`)
@@ -42,15 +35,11 @@ export const getOrGenerateCompiledFile = async ({
     throw new TypeError(`compile must be a function, got ${compile}`)
   }
 
-  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
-  const cacheDirectoryUrl = resolveDirectoryUrl(cacheDirectoryUrl, projectDirectoryUrl)
-
   const logger = createLogger({ logLevel })
 
   return startAsap(
     async () => {
       const { cache, compileResult, compileResultStatus } = await computeCompileReport({
-        projectDirectoryUrl,
         cacheDirectoryUrl,
         sourceRelativePath,
         compileRelativePath,
@@ -116,7 +105,6 @@ export const getOrGenerateCompiledFile = async ({
 }
 
 const computeCompileReport = async ({
-  projectDirectoryUrl,
   cacheDirectoryUrl,
   sourceRelativePath,
   compileRelativePath,
@@ -137,7 +125,6 @@ const computeCompileReport = async ({
 
   if (!cache) {
     const compileResult = await callCompile({
-      projectDirectoryUrl,
       cacheDirectoryUrl,
       sourceRelativePath,
       compileRelativePath,
@@ -153,7 +140,6 @@ const computeCompileReport = async ({
   }
 
   const cacheValidation = await validateCache({
-    projectDirectoryUrl,
     cacheDirectoryUrl,
     compileRelativePath,
     cache,
@@ -163,7 +149,6 @@ const computeCompileReport = async ({
   })
   if (!cacheValidation.valid) {
     const compileResult = await callCompile({
-      projectDirectoryUrl,
       cacheDirectoryUrl,
       sourceRelativePath,
       compileRelativePath,
@@ -183,7 +168,6 @@ const computeCompileReport = async ({
 }
 
 const callCompile = async ({
-  projectDirectoryUrl,
   cacheDirectoryUrl,
   sourceRelativePath,
   compileRelativePath,
@@ -191,7 +175,7 @@ const callCompile = async ({
   logger,
 }) => {
   const sourceFilePath = getSourceFilePath({
-    projectDirectoryUrl,
+    cacheDirectoryUrl,
     sourceRelativePath,
   })
   const compiledFilePath = getCompiledFilePath({
