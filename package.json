@@ -1,7 +1,7 @@
 {
   "name": "@jsenv/core",
   "description": "jsenv core functions",
-  "version": "9.4.0",
+  "version": "9.5.0",
   "license": "MIT",
   "repository": {
     "type": "git",
