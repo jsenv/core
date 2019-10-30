@@ -1,7 +1,8 @@
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
 import { jsenvCoverDescription } from "@jsenv/testing"
 import { createInstrumentBabelPlugin } from "@jsenv/testing/src/coverage/instrument-babel-plugin.js"
-import { jsenvCorePathname } from "../src/jsenvCorePath/jsenvCorePath.js"
+import { resolveFileUrl } from "../src/urlHelpers.js"
+import { jsenvCoreDirectoryUrl } from "../src/jsenvCoreDirectoryUrl/jsenvCoreDirectoryUrl.js"
 
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
@@ -12,7 +13,7 @@ const computeTestBabelPluginMap = ({ coverageEnabled }) => {
     metaMapToSpecifierMetaMap({
       cover: jsenvCoverDescription,
     }),
-    `file://${jsenvCorePathname}`,
+    jsenvCoreDirectoryUrl,
   )
 
   return {
@@ -21,7 +22,7 @@ const computeTestBabelPluginMap = ({ coverageEnabled }) => {
       createInstrumentBabelPlugin({
         predicate: ({ relativePath }) =>
           urlToMeta({
-            url: `file://${jsenvCorePathname}${relativePath}`,
+            url: resolveFileUrl(`.${relativePath}`, jsenvCoreDirectoryUrl),
             specifierMetaMap: specifierMetaMapForCoverage,
           }).cover === true,
       }),
