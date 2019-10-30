@@ -1,26 +1,26 @@
-import { basename } from "path"
 import { readFileSync } from "fs"
+import { basename } from "path"
 import { assert } from "@dmail/assert"
-import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
-import { jsenvCorePathname, transformJs } from "../../../index.js"
-import { fileHrefToFolderRelativePath } from "../../fileHrefToFolderRelativePath.js"
+import { fileUrlToPath, resolveFileUrl } from "../../../src/urlHelpers.js"
+import { jsenvCoreDirectoryUrl, transformJs } from "../../../index.js"
+import { importMetaUrlToDirectoryRelativePath } from "../../importMetaUrlToDirectoryRelativePath.js"
 
-const { jsenvBabelPluginMap: babelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
+const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
-const projectPathname = jsenvCorePathname
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const folderName = basename(folderRelativePath)
-const codeRelativePath = `${folderRelativePath}/${folderName}.js`
-const codeFilePathname = `${projectPathname}${codeRelativePath}`
-const sourceHref = `file://${codeFilePathname}`
-const codeFilePath = pathnameToOperatingSystemPath(codeFilePathname)
-const source = readFileSync(codeFilePath).toString()
+const projectDirectoryPath = fileUrlToPath(jsenvCoreDirectoryUrl)
+const testDirectoryRelativePath = importMetaUrlToDirectoryRelativePath(import.meta.url)
+const testDirectoryBasename = basename(testDirectoryRelativePath)
+const fileBasename = `${testDirectoryBasename}.js`
+const fileRelativePath = `${testDirectoryRelativePath}${fileBasename}`
+const fileUrl = resolveFileUrl(fileRelativePath, jsenvCoreDirectoryUrl)
+const filePath = fileUrlToPath(fileUrl)
+const fileContent = readFileSync(filePath).toString()
 
 const { code } = await transformJs({
-  source,
-  sourceHref,
-  projectPathname,
-  babelPluginMap,
+  code: fileContent,
+  url: fileUrl,
+  projectDirectoryPath,
+  babelPluginMap: jsenvBabelPluginMap,
 })
 const actual = code.indexOf("async function")
 const expected = -1

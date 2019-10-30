@@ -1,46 +1,47 @@
 import { readFileSync } from "fs"
+import { basename } from "path"
 import { assert } from "@dmail/assert"
-import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { createInstrumentBabelPlugin } from "@jsenv/testing/src/coverage/instrument-babel-plugin.js"
+import { fileUrlToPath, resolveFileUrl } from "../../../src/urlHelpers.js"
 import {
-  jsenvCorePathname,
+  jsenvCoreDirectoryUrl,
   transformJs,
   transformResultToCompilationResult,
 } from "../../../index.js"
-import { fileHrefToFolderRelativePath } from "../../fileHrefToFolderRelativePath.js"
+import { importMetaUrlToDirectoryRelativePath } from "../../importMetaUrlToDirectoryRelativePath.js"
 
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
-const projectPathname = jsenvCorePathname
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const filename = `file.js`
-const sourceRelativePath = `${folderRelativePath}/${filename}`
-const sourcePathname = `${projectPathname}${sourceRelativePath}`
-const sourceHref = `file://${sourcePathname}`
-const sourcePath = pathnameToOperatingSystemPath(sourcePathname)
-const source = readFileSync(sourcePath).toString()
-const babelPluginMap = {
-  ...jsenvBabelPluginMap,
-  "transform-instrument": [createInstrumentBabelPlugin()],
-}
+const projectDirectoryUrl = jsenvCoreDirectoryUrl
+const projectDirectoryPath = fileUrlToPath(jsenvCoreDirectoryUrl)
+const testDirectoryRelativePath = importMetaUrlToDirectoryRelativePath(import.meta.url)
+const testDirectoryBasename = basename(testDirectoryRelativePath)
+const fileBasename = `${testDirectoryBasename}.js`
+const fileRelativePath = `${testDirectoryRelativePath}${fileBasename}`
+const fileUrl = resolveFileUrl(fileRelativePath, jsenvCoreDirectoryUrl)
+const filePath = fileUrlToPath(fileUrl)
+const fileContent = readFileSync(filePath).toString()
 
 const transformResult = await transformJs({
-  source,
-  sourceHref,
-  projectPathname,
-  babelPluginMap,
+  code: fileContent,
+  url: fileUrl,
+  projectDirectoryPath,
+  babelPluginMap: {
+    ...jsenvBabelPluginMap,
+    "transform-instrument": [createInstrumentBabelPlugin()],
+  },
 })
 const actual = transformResultToCompilationResult(transformResult, {
-  source,
-  sourceHref,
-  projectPathname,
+  source: fileContent,
+  sourceUrl: fileUrl,
+  projectDirectoryUrl,
 })
 const expected = {
   compiledSource: actual.compiledSource,
   contentType: "application/javascript",
-  sources: [sourceRelativePath],
-  sourcesContent: [source],
-  assets: [`${filename}__asset__/${filename}.map`, `${filename}__asset__/coverage.json`],
+  sources: [fileRelativePath],
+  sourcesContent: [fileContent],
+  assets: [`${fileBasename}.map`, "coverage.json"],
   assetsContent: [actual.assetsContent[0], actual.assetsContent[1]],
 }
 assert({ actual, expected })
