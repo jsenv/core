@@ -26,13 +26,13 @@ export const readProjectImportMap = async ({
     : null
 
   const jsenvCoreImportKey = "@jsenv/core/"
-  const jsenvCoreImportValue = fileUrlToRelativePath(
-    projectDirectoryUrl,
+  const jsenvCoreRelativePathForJsenvProject = fileUrlToRelativePath(
     jsenvCoreDirectoryUrl,
-  ).slice(1)
+    jsenvProjectDirectoryUrl,
+  )
 
   const importsForJsenvCore = {
-    [jsenvCoreImportKey]: jsenvCoreImportValue,
+    [jsenvCoreImportKey]: jsenvCoreRelativePathForJsenvProject,
   }
 
   if (!importMapForProject) {
@@ -42,14 +42,17 @@ export const readProjectImportMap = async ({
   }
 
   if (importMapForProject.imports) {
-    const jsenvCoreProjectImportValue = importMapForProject.imports[jsenvCoreImportKey]
-    if (jsenvCoreProjectImportValue && jsenvCoreProjectImportValue !== jsenvCoreImportValue) {
+    const jsenvCoreRelativePathForProject = importMapForProject.imports[jsenvCoreImportKey]
+    if (
+      jsenvCoreRelativePathForProject &&
+      jsenvCoreRelativePathForProject !== jsenvCoreRelativePathForJsenvProject
+    ) {
       logger.warn(
         createIncompatibleJsenvCoreDependencyMessage({
           projectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
           jsenvProjectDirectoryPath: fileUrlToPath(jsenvProjectDirectoryUrl),
-          jsenvCoreProjectRelativePath: jsenvCoreProjectImportValue.slice(0, -1),
-          jsenvCoreRelativePath: jsenvCoreImportValue.slice(0, -1),
+          jsenvCoreRelativePathForProject,
+          jsenvCoreRelativePathForJsenvProject,
         }),
       )
     }
@@ -107,15 +110,15 @@ const getProjectImportMap = async ({ projectDirectoryUrl, importMapFileRelativeP
 const createIncompatibleJsenvCoreDependencyMessage = ({
   projectDirectoryPath,
   jsenvProjectDirectoryPath,
-  jsenvCoreProjectRelativePath,
-  jsenvCoreRelativePath,
+  jsenvCoreRelativePathForProject,
+  jsenvCoreRelativePathForJsenvProject,
 }) => `incompatible dependency to @jsenv/core in your project and an internal jsenv project.
 To fix this either remove project dependency to @jsenv/core or ensure they use the same version.
 (If you are inside a @jsenv project you can ignore this warning)
---- jsenv project wanted relative path to @jsenv/core ---
-${jsenvCoreRelativePath}
---- your project relative path to @jsenv/core ---
-${jsenvCoreProjectRelativePath}
+--- your project path to @jsenv/core ---
+${jsenvCoreRelativePathForProject}
+--- jsenv project wanted path to @jsenv/core ---
+${jsenvCoreRelativePathForJsenvProject}
 --- jsenv project path ---
 ${jsenvProjectDirectoryPath}
 --- your project path ---

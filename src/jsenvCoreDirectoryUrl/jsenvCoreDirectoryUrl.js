@@ -4,7 +4,7 @@ let jsenvCoreDirectoryUrl
 if (typeof __filename === "string") {
   jsenvCoreDirectoryUrl = resolveDirectoryUrl(
     // get ride of dist/node/main.js
-    "../../../",
+    "../../",
     pathToFileUrl(__filename),
   )
 } else {

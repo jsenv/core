@@ -2,10 +2,11 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var path = require('path');
+var url$1 = require('url');
 var fs = require('fs');
 var util = require('util');
 var crypto = require('crypto');
+var path = require('path');
 
 // copied from
 // https://github.com/babel/babel/blob/0ee2c42b55e1893f0ae6510916405eb273587844/packages/babel-preset-env/data/plugins.json
@@ -377,26 +378,6 @@ const babelPluginCompatMap = {
   }
 };
 
-const assertImportMap = value => {
-  if (value === null) {
-    throw new TypeError(`an importMap must be an object, got null`);
-  }
-
-  const type = typeof value;
-
-  if (type !== "object") {
-    throw new TypeError(`an importMap must be an object, received ${value}`);
-  }
-
-  if (Array.isArray(value)) {
-    throw new TypeError(`an importMap must be an object, received array ${value}`);
-  }
-};
-
-const hasScheme = string => {
-  return /^[a-zA-Z]{2,}:/.test(string);
-};
-
 const hrefToScheme = href => {
   const colonIndex = href.indexOf(":");
   if (colonIndex === -1) return "";
@@ -429,201 +410,44 @@ const ressourceToPathname = ressource => {
   return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex);
 };
 
-const hrefToOrigin = href => {
-  const scheme = hrefToScheme(href);
-
-  if (scheme === "file") {
-    return "file://";
-  }
-
-  if (scheme === "http" || scheme === "https") {
-    const secondProtocolSlashIndex = scheme.length + "://".length;
-    const pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex);
-    if (pathnameSlashIndex === -1) return href;
-    return href.slice(0, pathnameSlashIndex);
-  }
-
-  return href.slice(0, scheme.length + 1);
-};
-
-const pathnameToDirname = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-  if (slashLastIndex === -1) return "";
-  return pathname.slice(0, slashLastIndex);
-};
-
-// could be useful: https://url.spec.whatwg.org/#url-miscellaneous
-const resolveUrl = (specifier, baseUrl) => {
-  if (baseUrl) {
-    if (typeof baseUrl !== "string") {
-      throw new TypeError(writeBaseUrlMustBeAString({
-        baseUrl,
-        specifier
-      }));
-    }
-
-    if (!hasScheme(baseUrl)) {
-      throw new Error(writeBaseUrlMustBeAbsolute({
-        baseUrl,
-        specifier
-      }));
-    }
-  }
-
-  if (hasScheme(specifier)) {
-    return specifier;
-  }
-
-  if (!baseUrl) {
-    throw new Error(writeBaseUrlRequired({
-      baseUrl,
-      specifier
-    }));
-  } // scheme relative
-
-
-  if (specifier.slice(0, 2) === "//") {
-    return `${hrefToScheme(baseUrl)}:${specifier}`;
-  } // origin relative
-
-
-  if (specifier[0] === "/") {
-    return `${hrefToOrigin(baseUrl)}${specifier}`;
-  }
-
-  const baseOrigin = hrefToOrigin(baseUrl);
-  const basePathname = hrefToPathname(baseUrl); // pathname relative inside
-
-  if (specifier.slice(0, 2) === "./") {
-    const baseDirname = pathnameToDirname(basePathname);
-    return `${baseOrigin}${baseDirname}/${specifier.slice(2)}`;
-  } // pathname relative outside
-
-
-  if (specifier.slice(0, 3) === "../") {
-    let unresolvedPathname = specifier;
-    const importerFolders = basePathname.split("/");
-    importerFolders.pop();
-
-    while (unresolvedPathname.slice(0, 3) === "../") {
-      // when there is no folder left to resolved
-      // we just ignore '../'
-      if (importerFolders.length) {
-        importerFolders.pop();
-      }
-
-      unresolvedPathname = unresolvedPathname.slice(3);
-    }
-
-    const resolvedPathname = `${importerFolders.join("/")}/${unresolvedPathname}`;
-    return `${baseOrigin}${resolvedPathname}`;
-  } // bare
-
-
-  if (basePathname === "") {
-    return `${baseOrigin}/${specifier}`;
-  }
-
-  if (basePathname[basePathname.length] === "/") {
-    return `${baseOrigin}${basePathname}${specifier}`;
-  }
-
-  return `${baseOrigin}${pathnameToDirname(basePathname)}/${specifier}`;
-};
-
-const writeBaseUrlMustBeAString = ({
-  baseUrl,
-  specifier
-}) => `baseUrl must be a string.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const writeBaseUrlMustBeAbsolute = ({
-  baseUrl,
-  specifier
-}) => `baseUrl must be absolute.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const writeBaseUrlRequired = ({
-  baseUrl,
-  specifier
-}) => `baseUrl required to resolve relative specifier.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const resolveSpecifier = (specifier, importer) => {
-  if (specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
-    return resolveUrl(specifier, importer);
-  }
-
-  if (hasScheme(specifier)) {
-    return specifier;
-  }
-
-  return null;
-};
-
 // eslint-disable-next-line import/no-unresolved
 const nodeRequire = require;
 const filenameContainsBackSlashes = __filename.indexOf("\\") > -1;
 const url = filenameContainsBackSlashes ? `file://${__filename.replace(/\\/g, "/")}` : `file://${__filename}`;
 
-const pathnameToRelativePath = (pathname, otherPathname) => pathname.slice(otherPathname.length);
-
-const startsWithWindowsDriveLetter = string => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-  return true;
+const pathToFileUrl = path => {
+  return String(url$1.pathToFileURL(path));
 };
-
-const replaceSlashesWithBackSlashes = string => string.replace(/\//g, "\\");
-
-const pathnameToOperatingSystemPath = pathname => {
-  if (pathname[0] !== "/") throw new Error(`pathname must start with /, got ${pathname}`);
-  const pathnameWithoutLeadingSlash = pathname.slice(1);
-
-  if (startsWithWindowsDriveLetter(pathnameWithoutLeadingSlash) && pathnameWithoutLeadingSlash[2] === "/") {
-    return replaceSlashesWithBackSlashes(pathnameWithoutLeadingSlash);
-  } // linux mac pathname === operatingSystemFilename
-
-
-  return pathname;
+const fileUrlToPath = fileUrl => {
+  return url$1.fileURLToPath(fileUrl);
 };
+const resolveDirectoryUrl = (specifier, baseUrl) => {
+  const directoryUrl = String(new URL(specifier, baseUrl));
 
-const isWindowsPath = path => startsWithWindowsDriveLetter(path) && path[2] === "\\";
+  if (directoryUrl.endsWith("/")) {
+    return directoryUrl;
+  }
 
-const replaceBackSlashesWithSlashes = string => string.replace(/\\/g, "/");
-
-const operatingSystemPathToPathname = operatingSystemPath => {
-  if (isWindowsPath(operatingSystemPath)) {
-    return `/${replaceBackSlashesWithSlashes(operatingSystemPath)}`;
-  } // linux and mac operatingSystemFilename === pathname
-
-
-  return operatingSystemPath;
+  return `${directoryUrl}/`;
 };
+const fileUrlToRelativePath = (fileUrl, baseUrl) => {
+  if (fileUrl.startsWith(baseUrl)) {
+    return `./${fileUrl.slice(baseUrl.length)}`;
+  }
 
-const pathnameIsInside = (pathname, otherPathname) => pathname.startsWith(`${otherPathname}/`);
-
-const pathnameToRelativePathname = (pathname, otherPathname) => pathname.slice(otherPathname.length);
+  return fileUrl;
+};
+const resolveFileUrl = (specifier, baseUrl) => {
+  return String(new URL(specifier, baseUrl));
+};
 
 if (typeof __filename === "string") {
-  exports.jsenvCorePath = path.resolve(__filename, "../../../"); // get ride of dist/commonjs/main.js
+  exports.jsenvCoreDirectoryUrl = resolveDirectoryUrl( // get ride of dist/node/main.js
+  "../../../", pathToFileUrl(__filename));
 } else {
-  const selfPathname = hrefToPathname(url);
-  const selfPath = pathnameToOperatingSystemPath(selfPathname);
-  exports.jsenvCorePath = path.resolve(selfPath, "../../../"); // get ride of src/jsenvCorePath/jsenvCorePath.js
+  exports.jsenvCoreDirectoryUrl = resolveDirectoryUrl( // get ride of src/jsenvCoreDirectoryUrl/jsenvCoreDirectoryUrl.js
+  "../../", url);
 }
-const jsenvCorePathname = operatingSystemPathToPathname(exports.jsenvCorePath);
 
 const {
   list
@@ -635,7 +459,7 @@ list.forEach(babelHelperName => {
   if (babelHelperNameInsideJsenvCoreArray.includes(babelHelperName)) {
     babelHelperMap[babelHelperName] = `@jsenv/core/helpers/babel/${babelHelperName}/${babelHelperName}.js`;
   } else {
-    babelHelperMap[babelHelperName] = `file://${jsenvCorePathname}/.babel-helpers/${babelHelperName}.js`;
+    babelHelperMap[babelHelperName] = `${exports.jsenvCoreDirectoryUrl}.babel-helpers/${babelHelperName}.js`;
   }
 });
 
@@ -798,76 +622,56 @@ const fileWrite = async (file, content) => {
 
 const readdirPromisified = util.promisify(fs.readdir);
 
-const readCompileCacheFolderMeta = async ({
-  projectPathname,
-  compileCacheFolderRelativePath
-}) => {
-  try {
-    const compileCacheFolderMetaFilePath = pathnameToOperatingSystemPath(`${projectPathname}${compileCacheFolderRelativePath}/meta.json`);
-    const source = await fileRead(compileCacheFolderMetaFilePath);
-    return JSON.parse(source);
-  } catch (e) {
-    if (e && e.code === "ENOENT") {
-      return null;
-    }
-
-    throw e;
-  }
-};
-
-const writeCompileCacheFolderMeta = async ({
-  projectPathname,
-  compileCacheFolderRelativePath,
-  compileCacheFolderMeta
-}) => {
-  const cacheMetaMetaFilePath = pathnameToOperatingSystemPath(`${projectPathname}${compileCacheFolderRelativePath}/meta.json`);
-  await fileWrite(cacheMetaMetaFilePath, JSON.stringify(compileCacheFolderMeta, null, "  "));
-};
-
 const rimraf = nodeRequire("rimraf");
 
-const removeFolder = foldername => new Promise((resolve, reject) => rimraf(foldername, error => {
+const removeDirectory = path => new Promise((resolve, reject) => rimraf(path, error => {
   if (error) reject(error);else resolve();
 }));
 
-const cleanCompileCacheFolderIfObsolete = async ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+const cleanCompileCacheDirectoryIfObsolete = async ({
+  cacheDirectoryUrl,
   forceObsolete = false,
   cacheMeta,
   cleanCallback = () => {}
 }) => {
-  const jsenvCorePackagePath = pathnameToOperatingSystemPath(`${jsenvCorePathname}/package.json`);
-  const jsenvCorePackageVersion = readPackage(jsenvCorePackagePath).version;
-  const compileCacheFolderMeta = { ...cacheMeta,
+  const jsenvCorePackageFileUrl = resolveFileUrl("./package.json", exports.jsenvCoreDirectoryUrl);
+  const jsenvCorePackageFilePath = fileUrlToPath(jsenvCorePackageFileUrl);
+  const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version;
+  const compileCacheDirectoryMeta = { ...cacheMeta,
     jsenvCorePackageVersion
   };
-  const cacheFolderPath = pathnameToOperatingSystemPath(`${projectPathname}${compileCacheFolderRelativePath}`);
+  const cacheMetaFileUrl = resolveFileUrl("./meta.json", cacheDirectoryUrl);
+  const cacheMetaFilePath = fileUrlToPath(cacheMetaFileUrl);
+  const cacheDirectoryPath = fileUrlToPath(cacheDirectoryUrl);
 
   if (forceObsolete) {
-    cleanCallback(cacheFolderPath);
-    await removeFolder(cacheFolderPath);
+    cleanCallback(cacheDirectoryPath);
+    await removeDirectory(cacheDirectoryPath);
   } else {
-    const previousCompileCacheFolderMeta = await readCompileCacheFolderMeta({
-      projectPathname,
-      compileCacheFolderRelativePath
-    });
+    let previousCompileCacheDirectoryMeta;
 
-    if (JSON.stringify(previousCompileCacheFolderMeta) !== JSON.stringify(compileCacheFolderMeta)) {
-      cleanCallback(cacheFolderPath);
-      await removeFolder(cacheFolderPath);
+    try {
+      const source = await fileRead(cacheMetaFilePath);
+      previousCompileCacheDirectoryMeta = JSON.parse(source);
+    } catch (e) {
+      if (e && e.code === "ENOENT") {
+        previousCompileCacheDirectoryMeta = null;
+      } else {
+        throw e;
+      }
+    }
+
+    if (JSON.stringify(previousCompileCacheDirectoryMeta) !== JSON.stringify(compileCacheDirectoryMeta)) {
+      cleanCallback(cacheDirectoryPath);
+      await removeDirectory(cacheDirectoryPath);
     }
   }
 
-  await writeCompileCacheFolderMeta({
-    projectPathname,
-    compileCacheFolderRelativePath,
-    compileCacheFolderMeta
-  });
+  await fileWrite(cacheMetaFilePath, JSON.stringify(compileCacheDirectoryMeta, null, "  "));
 };
 
-const readPackage = packagePath => {
-  const buffer = fs.readFileSync(packagePath);
+const readPackage = packageFilePath => {
+  const buffer = fs.readFileSync(packageFilePath);
   const string = String(buffer);
   const packageObject = JSON.parse(string);
   return packageObject;
@@ -1494,18 +1298,18 @@ const generateGroupMap = ({
 
 const arrayWithoutValue$1 = (array, value) => array.filter(valueCandidate => valueCandidate !== value);
 
-const LOG_LEVEL_TRACE = "trace";
+const LOG_LEVEL_OFF = "off";
+const LOG_LEVEL_DEBUG = "debug";
 const LOG_LEVEL_INFO = "info";
 const LOG_LEVEL_WARN = "warn";
 const LOG_LEVEL_ERROR = "error";
-const LOG_LEVEL_OFF = "off";
 
 const createLogger = ({
   logLevel = LOG_LEVEL_INFO
 } = {}) => {
-  if (logLevel === LOG_LEVEL_TRACE) {
+  if (logLevel === LOG_LEVEL_DEBUG) {
     return {
-      trace,
+      debug,
       info,
       warn,
       error
@@ -1514,7 +1318,7 @@ const createLogger = ({
 
   if (logLevel === LOG_LEVEL_INFO) {
     return {
-      trace: traceDisabled,
+      debug: debugDisabled,
       info,
       warn,
       error
@@ -1523,7 +1327,7 @@ const createLogger = ({
 
   if (logLevel === LOG_LEVEL_WARN) {
     return {
-      trace: traceDisabled,
+      debug: debugDisabled,
       info: infoDisabled,
       warn,
       error
@@ -1532,7 +1336,7 @@ const createLogger = ({
 
   if (logLevel === LOG_LEVEL_ERROR) {
     return {
-      trace: traceDisabled,
+      debug: debugDisabled,
       info: infoDisabled,
       warn: warnDisabled,
       error
@@ -1541,7 +1345,7 @@ const createLogger = ({
 
   if (logLevel === LOG_LEVEL_OFF) {
     return {
-      trace: traceDisabled,
+      debug: debugDisabled,
       info: infoDisabled,
       warn: warnDisabled,
       error: errorDisabled
@@ -1563,12 +1367,12 @@ ${LOG_LEVEL_OFF}
 ${LOG_LEVEL_ERROR}
 ${LOG_LEVEL_WARN}
 ${LOG_LEVEL_INFO}
-${LOG_LEVEL_TRACE}
+${LOG_LEVEL_DEBUG}
 `;
 
-const trace = console.trace;
+const debug = console.debug;
 
-const traceDisabled = () => {};
+const debugDisabled = () => {};
 
 const info = console.info;
 
@@ -1582,59 +1386,58 @@ const error = console.error;
 
 const errorDisabled = () => {};
 
-const getCacheFilePath = ({
-  projectPathname,
-  compileCacheFolderRelativePath,
-  compileRelativePath
-}) => pathnameToOperatingSystemPath(`${projectPathname}${compileCacheFolderRelativePath}${compileRelativePath}__asset__/cache.json`); // the fact an asset filename is relative to projectPath + compiledpathnameRelative
-// is strange considering a source filename is relative to projectPath
-// I think it would make more sense to make them relative to the cache.json
-// file itself but that's for later
-
 const getAssetFilePath = ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  cacheDirectoryUrl,
   compileRelativePath,
   asset
-}) => pathnameToOperatingSystemPath(`${projectPathname}${compileCacheFolderRelativePath}/${pathnameToDirname(compileRelativePath.slice(1))}/${asset}`);
-const getCompiledFilePath = ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+}) => {
+  const assetDirectoryUrl = resolveDirectoryUrl(`${compileRelativePath}__asset__/`, cacheDirectoryUrl);
+  const assetFileUrl = resolveFileUrl(asset, assetDirectoryUrl);
+  return fileUrlToPath(assetFileUrl);
+};
+const getCacheJsonFilePath = ({
+  cacheDirectoryUrl,
   compileRelativePath
-}) => pathnameToOperatingSystemPath(`${projectPathname}${compileCacheFolderRelativePath}${compileRelativePath}`);
+}) => getAssetFilePath({
+  cacheDirectoryUrl,
+  compileRelativePath,
+  asset: "cache.json"
+});
+const getCompiledFilePath = ({
+  cacheDirectoryUrl,
+  compileRelativePath
+}) => fileUrlToPath(resolveFileUrl(compileRelativePath, cacheDirectoryUrl));
 const getSourceFilePath = ({
-  projectPathname,
+  projectDirectoryUrl,
   sourceRelativePath
-}) => pathnameToOperatingSystemPath(`${projectPathname}${sourceRelativePath}`);
+}) => fileUrlToPath(resolveFileUrl(sourceRelativePath, projectDirectoryUrl));
 
 const readCache = async ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  cacheDirectoryUrl,
   sourceRelativePath,
   compileRelativePath,
   logger
 }) => {
-  const cacheFilePath = getCacheFilePath({
-    projectPathname,
-    compileCacheFolderRelativePath,
+  const cacheJsonFilePath = getCacheJsonFilePath({
+    cacheDirectoryUrl,
     compileRelativePath
   });
 
   try {
-    const cacheAsString = await fileRead(cacheFilePath);
-    const cache = JSON.parse(cacheAsString);
-    const sourceRelativePathInCache = cache.sourceRelativePath;
+    const cacheJsonFileString = await fileRead(cacheJsonFilePath);
+    const cacheJsonObject = JSON.parse(cacheJsonFileString);
+    const sourceRelativePathInCache = cacheJsonObject.sourceRelativePath;
 
     if (sourceRelativePathInCache !== sourceRelativePath) {
       logger.info(createSourceRelativePathChangedMessage({
         sourceRelativePathInCache,
         sourceRelativePath,
-        cacheFilePath
+        cacheJsonFilePath
       }));
       return null;
     }
 
-    return cache;
+    return cacheJsonObject;
   } catch (error) {
     if (error && error.code === "ENOENT") {
       return null;
@@ -1643,7 +1446,7 @@ const readCache = async ({
     if (error && error.name === "SyntaxError") {
       logger.error(createCacheSyntaxErrorMessage({
         syntaxError: error,
-        cacheFilePath
+        cacheJsonFilePath
       }));
       return null;
     }
@@ -1655,23 +1458,23 @@ const readCache = async ({
 const createSourceRelativePathChangedMessage = ({
   sourceRelativePathInCache,
   sourceRelativePath,
-  cacheFilePath
+  cacheJsonFilePath
 }) => `cache.sourceRelativePath changed
 --- sourceRelativePath in cache ---
 ${sourceRelativePathInCache}
 --- sourceRelativePath ---
 ${sourceRelativePath}
---- cache path ---
-${cacheFilePath}`;
+--- cache.json path ---
+${cacheJsonFilePath}`;
 
 const createCacheSyntaxErrorMessage = ({
   syntaxError,
-  cacheFilePath
+  cacheJsonFilePath
 }) => `cache syntax error
 --- syntax error stack ---
 ${syntaxError.stack}
---- cache path ---
-${cacheFilePath}`;
+--- cache.json path ---
+${cacheJsonFilePath}`;
 
 const dateToSecondsPrecision = date => {
   const dateWithSecondsPrecision = new Date(date);
@@ -1698,8 +1501,8 @@ const bufferToEtag = buffer => {
 };
 
 const validateCache = async ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  projectDirectoryUrl,
+  cacheDirectoryUrl,
   compileRelativePath,
   cache,
   ifEtagMatch,
@@ -1707,8 +1510,7 @@ const validateCache = async ({
   logger
 }) => {
   const compiledFileValidation = await validateCompiledFile({
-    projectPathname,
-    compileCacheFolderRelativePath,
+    cacheDirectoryUrl,
     compileRelativePath,
     ifEtagMatch,
     ifModifiedSinceDate,
@@ -1716,15 +1518,14 @@ const validateCache = async ({
   });
   if (!compiledFileValidation.valid) return compiledFileValidation;
   const [sourcesValidations, assetValidations] = await Promise.all([validateSources({
-    projectPathname,
-    cache,
-    logger
+    logger,
+    projectDirectoryUrl,
+    cache
   }), validateAssets({
-    projectPathname,
-    compileCacheFolderRelativePath,
+    logger,
+    cacheDirectoryUrl,
     compileRelativePath,
-    cache,
-    logger
+    cache
   })]);
   const invalidSourceValidation = sourcesValidations.find(({
     valid
@@ -1752,27 +1553,25 @@ const validateCache = async ({
 };
 
 const validateCompiledFile = async ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  cacheDirectoryUrl,
   compileRelativePath,
   ifEtagMatch,
   ifModifiedSinceDate,
   logger
 }) => {
-  const compiledFilename = getCompiledFilePath({
-    projectPathname,
-    compileCacheFolderRelativePath,
+  const compiledFilePath = getCompiledFilePath({
+    cacheDirectoryUrl,
     compileRelativePath
   });
 
   try {
-    const compiledSource = await fileRead(compiledFilename);
+    const compiledSource = await fileRead(compiledFilePath);
 
     if (ifEtagMatch) {
       const compiledEtag = bufferToEtag(Buffer.from(compiledSource));
 
       if (ifEtagMatch !== compiledEtag) {
-        logger.info(`etag changed for ${compiledFilename}`);
+        logger.info(`etag changed for ${compiledFilePath}`);
         return {
           code: "COMPILED_FILE_ETAG_MISMATCH",
           valid: false,
@@ -1785,10 +1584,10 @@ const validateCompiledFile = async ({
     }
 
     if (ifModifiedSinceDate) {
-      const compiledMtime = await fileStat(compiledFilename);
+      const compiledMtime = await fileStat(compiledFilePath);
 
       if (ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)) {
-        logger.info(`mtime changed for ${compiledFilename}`);
+        logger.info(`mtime changed for ${compiledFilePath}`);
         return {
           code: "COMPILED_FILE_MTIME_OUTDATED",
           valid: false,
@@ -1812,7 +1611,7 @@ const validateCompiledFile = async ({
         code: "COMPILED_FILE_NOT_FOUND",
         valid: false,
         data: {
-          compiledFilename
+          compiledFilePath
         }
       };
     }
@@ -1822,36 +1621,40 @@ const validateCompiledFile = async ({
 };
 
 const validateSources = ({
-  projectPathname,
-  cache,
-  logger
+  logger,
+  projectDirectoryUrl,
+  cache
 }) => Promise.all(cache.sources.map((source, index) => validateSource({
-  projectPathname,
+  logger,
+  projectDirectoryUrl,
   source,
-  eTag: cache.sourcesEtag[index],
-  logger
+  eTag: cache.sourcesEtag[index]
 })));
 
 const validateSource = async ({
-  projectPathname,
+  logger,
+  projectDirectoryUrl,
   source,
-  eTag,
-  logger
+  eTag
 }) => {
-  const sourceFilename = pathnameToOperatingSystemPath(`${projectPathname}${source}`);
+  const sourceFileUrl = getSourceFilePath({
+    sourceRelativePath: source,
+    projectDirectoryUrl
+  });
+  const sourceFilePath = fileUrlToPath(sourceFileUrl);
 
   try {
-    const sourceContent = await fileRead(sourceFilename);
+    const sourceContent = await fileRead(sourceFilePath);
     const sourceETag = bufferToEtag(Buffer.from(sourceContent));
 
     if (sourceETag !== eTag) {
-      logger.info(`etag changed for ${sourceFilename}`);
+      logger.info(`etag changed for ${sourceFilePath}`);
       return {
         code: "SOURCE_ETAG_MISMATCH",
         valid: false,
         data: {
           source,
-          sourceFilename,
+          sourceFilePath,
           sourceContent
         }
       };
@@ -1875,13 +1678,13 @@ const validateSource = async ({
       // in that case, inside updateCache we must not search for sources that
       // are missing, nor put their etag
       // or we could return sourceContent: '', and the etag would be empty
-      logger.info(`source not found at ${sourceFilename}`);
+      logger.info(`source not found at ${sourceFilePath}`);
       return {
         code: "SOURCE_NOT_FOUND",
         valid: true,
         data: {
           source,
-          sourceFilename,
+          sourceFilePath,
           sourceContent: ""
         }
       };
@@ -1892,47 +1695,43 @@ const validateSource = async ({
 };
 
 const validateAssets = ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  logger,
+  cacheDirectoryUrl,
   compileRelativePath,
-  cache,
-  logger
+  cache
 }) => Promise.all(cache.assets.map((asset, index) => validateAsset({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  logger,
+  cacheDirectoryUrl,
   compileRelativePath,
   asset,
-  eTag: cache.assetsEtag[index],
-  logger
+  eTag: cache.assetsEtag[index]
 })));
 
 const validateAsset = async ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  logger,
+  cacheDirectoryUrl,
   compileRelativePath,
   asset,
-  eTag,
-  logger
+  eTag
 }) => {
-  const assetFilename = getAssetFilePath({
-    projectPathname,
-    compileCacheFolderRelativePath,
+  const assetFilePath = getAssetFilePath({
+    cacheDirectoryUrl,
     compileRelativePath,
     asset
   });
 
   try {
-    const assetContent = await fileRead(assetFilename);
+    const assetContent = await fileRead(assetFilePath);
     const assetContentETag = bufferToEtag(Buffer.from(assetContent));
 
     if (eTag !== assetContentETag) {
-      logger.info(`etag changed for ${assetFilename}`);
+      logger.info(`etag changed for ${assetFilePath}`);
       return {
         code: "ASSET_ETAG_MISMATCH",
         valid: false,
         data: {
           asset,
-          assetFilename,
+          assetFilePath,
           assetContent,
           assetContentETag
         }
@@ -1948,13 +1747,13 @@ const validateAsset = async ({
     };
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.info(`asset not found at ${assetFilename}`);
+      logger.info(`asset not found at ${assetFilePath}`);
       return {
         code: "ASSET_FILE_NOT_FOUND",
         valid: false,
         data: {
           asset,
-          assetFilename
+          assetFilePath
         }
       };
     }
@@ -1964,8 +1763,7 @@ const validateAsset = async ({
 };
 
 const updateCache = ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  cacheDirectoryUrl,
   sourceRelativePath,
   compileRelativePath,
   cacheHitTracking,
@@ -1993,8 +1791,7 @@ const updateCache = ({
       writeAssetsFile = true
     } = compileResult;
     const compiledFilePath = getCompiledFilePath({
-      projectPathname,
-      compileCacheFolderRelativePath,
+      cacheDirectoryUrl,
       compileRelativePath
     });
 
@@ -2006,8 +1803,7 @@ const updateCache = ({
     if (writeAssetsFile) {
       promises.push(...assets.map((asset, index) => {
         const assetFilePath = getAssetFilePath({
-          projectPathname,
-          compileCacheFolderRelativePath,
+          cacheDirectoryUrl,
           compileRelativePath,
           asset
         });
@@ -2054,13 +1850,12 @@ const updateCache = ({
       };
     }
 
-    const cacheFilePath = getCacheFilePath({
-      projectPathname,
-      compileCacheFolderRelativePath,
+    const cacheJsonFilePath = getCacheJsonFilePath({
+      cacheDirectoryUrl,
       compileRelativePath
     });
-    logger.info(`write cache at ${cacheFilePath}`);
-    promises.push(fileWrite(cacheFilePath, JSON.stringify(cache, null, "  ")));
+    logger.info(`write cache at ${cacheJsonFilePath}`);
+    promises.push(fileWrite(cacheJsonFilePath, JSON.stringify(cache, null, "  ")));
   }
 
   return Promise.all(promises);
@@ -2102,8 +1897,8 @@ const {
 const lockfile = nodeRequire("proper-lockfile");
 
 const getOrGenerateCompiledFile = async ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  projectDirectoryUrl,
+  cacheDirectoryUrl,
   sourceRelativePath,
   compileRelativePath = sourceRelativePath,
   compile,
@@ -2112,14 +1907,14 @@ const getOrGenerateCompiledFile = async ({
   cacheInterProcessLocking = false,
   ifEtagMatch,
   ifModifiedSinceDate,
-  logLevel = "warn"
+  logLevel
 }) => {
-  if (typeof projectPathname !== "string") {
-    throw new TypeError(`projectPathname must be a string, got ${projectPathname}`);
+  if (typeof projectDirectoryUrl !== "string") {
+    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`);
   }
 
-  if (typeof compileCacheFolderRelativePath !== "string") {
-    throw new TypeError(`compileCacheFolderRelativePath must be a string, got ${compileCacheFolderRelativePath}`);
+  if (typeof cacheDirectoryUrl !== "string") {
+    throw new TypeError(`cacheDirectoryUrl must be a string, got ${cacheDirectoryUrl}`);
   }
 
   if (typeof sourceRelativePath !== "string") {
@@ -2143,8 +1938,8 @@ const getOrGenerateCompiledFile = async ({
       compileResult,
       compileResultStatus
     } = await computeCompileReport({
-      projectPathname,
-      compileCacheFolderRelativePath,
+      projectDirectoryUrl,
+      cacheDirectoryUrl,
       sourceRelativePath,
       compileRelativePath,
       compile,
@@ -2184,8 +1979,7 @@ const getOrGenerateCompiledFile = async ({
     // }
 
     await updateCache({
-      projectPathname,
-      compileCacheFolderRelativePath,
+      cacheDirectoryUrl,
       sourceRelativePath,
       compileRelativePath,
       cacheHitTracking,
@@ -2200,8 +1994,7 @@ const getOrGenerateCompiledFile = async ({
       compileResultStatus
     };
   }, {
-    projectPathname,
-    compileCacheFolderRelativePath,
+    cacheDirectoryUrl,
     compileRelativePath,
     cacheInterProcessLocking,
     logger
@@ -2209,8 +2002,8 @@ const getOrGenerateCompiledFile = async ({
 };
 
 const computeCompileReport = async ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  projectDirectoryUrl,
+  cacheDirectoryUrl,
   sourceRelativePath,
   compileRelativePath,
   compile,
@@ -2220,8 +2013,7 @@ const computeCompileReport = async ({
   logger
 }) => {
   const cache = cacheIgnored ? null : await readCache({
-    projectPathname,
-    compileCacheFolderRelativePath,
+    cacheDirectoryUrl,
     sourceRelativePath,
     compileRelativePath,
     logger
@@ -2229,8 +2021,8 @@ const computeCompileReport = async ({
 
   if (!cache) {
     const compileResult = await callCompile({
-      projectPathname,
-      compileCacheFolderRelativePath,
+      projectDirectoryUrl,
+      cacheDirectoryUrl,
       sourceRelativePath,
       compileRelativePath,
       compile,
@@ -2244,8 +2036,8 @@ const computeCompileReport = async ({
   }
 
   const cacheValidation = await validateCache({
-    projectPathname,
-    compileCacheFolderRelativePath,
+    projectDirectoryUrl,
+    cacheDirectoryUrl,
     compileRelativePath,
     cache,
     ifEtagMatch,
@@ -2255,8 +2047,8 @@ const computeCompileReport = async ({
 
   if (!cacheValidation.valid) {
     const compileResult = await callCompile({
-      projectPathname,
-      compileCacheFolderRelativePath,
+      projectDirectoryUrl,
+      cacheDirectoryUrl,
       sourceRelativePath,
       compileRelativePath,
       compile,
@@ -2294,23 +2086,22 @@ const computeCompileReport = async ({
 };
 
 const callCompile = async ({
-  projectPathname,
-  compileCacheFolderRelativePath,
+  projectDirectoryUrl,
+  cacheDirectoryUrl,
   sourceRelativePath,
   compileRelativePath,
   compile,
   logger
 }) => {
-  const sourceFilename = getSourceFilePath({
-    projectPathname,
+  const sourceFilePath = getSourceFilePath({
+    projectDirectoryUrl,
     sourceRelativePath
   });
-  const compiledFilename = getCompiledFilePath({
-    projectPathname,
-    compileCacheFolderRelativePath,
+  const compiledFilePath = getCompiledFilePath({
+    cacheDirectoryUrl,
     compileRelativePath
   });
-  logger.info(`compile ${sourceRelativePath}`);
+  logger.debug(`compile ${sourceRelativePath}`);
   const {
     sources = [],
     sourcesContent = [],
@@ -2322,11 +2113,18 @@ const callCompile = async ({
   } = await compile({
     sourceRelativePath,
     compileRelativePath,
-    sourceFilename,
-    compiledFilename
+    sourceFilePath,
+    compiledFilePath
   });
-  if (typeof contentType !== "string") throw new TypeError(`compile must return a contentType string, got ${contentType}`);
-  if (typeof compiledSource !== "string") throw new TypeError(`compile must return a compiledSource string, got ${compiledSource}`);
+
+  if (typeof contentType !== "string") {
+    throw new TypeError(`compile must return a contentType string, got ${contentType}`);
+  }
+
+  if (typeof compiledSource !== "string") {
+    throw new TypeError(`compile must return a compiledSource string, got ${compiledSource}`);
+  }
+
   return {
     contentType,
     compiledSource,
@@ -2339,20 +2137,18 @@ const callCompile = async ({
 };
 
 const startAsap = async (fn, {
-  projectPathname,
-  compileCacheFolderRelativePath,
+  logger,
+  cacheDirectoryUrl,
   compileRelativePath,
-  cacheInterProcessLocking,
-  logger
+  cacheInterProcessLocking
 }) => {
-  const cacheFilePath = getCacheFilePath({
-    projectPathname,
-    compileCacheFolderRelativePath,
+  const cacheJsonFilePath = getCacheJsonFilePath({
+    cacheDirectoryUrl,
     compileRelativePath
   });
-  logger.info(`lock ${cacheFilePath}`); // in case this process try to concurrently access meta we wait for previous to be done
+  logger.debug(`lock ${cacheJsonFilePath}`); // in case this process try to concurrently access meta we wait for previous to be done
 
-  const unlockLocal = await lockForRessource(cacheFilePath);
+  const unlockLocal = await lockForRessource(cacheJsonFilePath);
 
   let unlockInterProcessLock = () => {};
 
@@ -2360,9 +2156,9 @@ const startAsap = async (fn, {
     // after that we use a lock pathnameRelative to be sure we don't conflict with other process
     // trying to do the same (mapy happen when spawining multiple server for instance)
     // https://github.com/moxystudio/node-proper-lockfile/issues/69
-    await fileMakeDirname(cacheFilePath); // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
+    await fileMakeDirname(cacheJsonFilePath); // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
 
-    unlockInterProcessLock = await lockfile.lock(cacheFilePath, {
+    unlockInterProcessLock = await lockfile.lock(cacheJsonFilePath, {
       realpath: false,
       retries: {
         retries: 20,
@@ -2378,7 +2174,7 @@ const startAsap = async (fn, {
     // we want to unlock in case of error too
     unlockLocal();
     unlockInterProcessLock();
-    logger.info(`unlock ${cacheFilePath}`);
+    logger.debug(`unlock ${cacheJsonFilePath}`);
   } // here in case of error.code === 'ELOCKED' thrown from here
   // https://github.com/moxystudio/node-proper-lockfile/blob/1a478a43a077a7a7efc46ac79fd8f713a64fd499/lib/lockfile.js#L54
   // we could give a better failure message when server tries to compile a file
@@ -2398,6 +2194,22 @@ const nodeVersionScoreMap = {
   9: 0.1,
   10: 0.5,
   11: 0.25
+};
+
+const assertImportMap = value => {
+  if (value === null) {
+    throw new TypeError(`an importMap must be an object, got null`);
+  }
+
+  const type = typeof value;
+
+  if (type !== "object") {
+    throw new TypeError(`an importMap must be an object, received ${value}`);
+  }
+
+  if (Array.isArray(value)) {
+    throw new TypeError(`an importMap must be an object, received array ${value}`);
+  }
 };
 
 // https://github.com/systemjs/systemjs/blob/89391f92dfeac33919b0223bbf834a1f4eea5750/src/common.js#L136
@@ -2433,27 +2245,27 @@ const composeTwoScopes = (leftScopes = {}, rightScopes = {}) => {
 };
 
 const readProjectImportMap = async ({
-  projectPathname,
-  jsenvProjectPathname,
-  importMapRelativePath,
+  projectDirectoryUrl,
+  jsenvProjectDirectoryUrl,
+  importMapFileRelativePath,
   logger
 }) => {
-  if (typeof projectPathname !== "string") {
-    throw new TypeError(`projectPathname must be a string, got ${projectPathname}`);
+  if (typeof projectDirectoryUrl !== "string") {
+    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`);
   }
 
-  if (typeof jsenvProjectPathname !== "string") {
-    throw new TypeError(`jsenvProjectPathname must be a string, got ${jsenvProjectPathname}`);
+  if (typeof jsenvProjectDirectoryUrl !== "string") {
+    throw new TypeError(`jsenvProjectDirectoryUrl must be a string, got ${jsenvProjectDirectoryUrl}`);
   }
 
-  const importMapForProject = await getProjectImportMap({
-    projectPathname,
-    importMapRelativePath
-  });
+  const importMapForProject = importMapFileRelativePath ? await getProjectImportMap({
+    projectDirectoryUrl,
+    importMapFileRelativePath
+  }) : null;
   const jsenvCoreImportKey = "@jsenv/core/";
-  const jsenvCoreImportValue = `${pathnameToRelativePath(jsenvCorePathname, projectPathname)}/`;
+  const jsenvCoreRelativePathForJsenvProject = fileUrlToRelativePath(exports.jsenvCoreDirectoryUrl, jsenvProjectDirectoryUrl);
   const importsForJsenvCore = {
-    [jsenvCoreImportKey]: jsenvCoreImportValue
+    [jsenvCoreImportKey]: jsenvCoreRelativePathForJsenvProject
   };
 
   if (!importMapForProject) {
@@ -2463,14 +2275,14 @@ const readProjectImportMap = async ({
   }
 
   if (importMapForProject.imports) {
-    const jsenvCoreProjectImportValue = importMapForProject.imports[jsenvCoreImportKey];
+    const jsenvCoreRelativePathForProject = importMapForProject.imports[jsenvCoreImportKey];
 
-    if (jsenvCoreProjectImportValue && jsenvCoreProjectImportValue !== jsenvCoreImportValue) {
+    if (jsenvCoreRelativePathForProject && jsenvCoreRelativePathForProject !== jsenvCoreRelativePathForJsenvProject) {
       logger.warn(createIncompatibleJsenvCoreDependencyMessage({
-        projectPathname,
-        jsenvProjectPathname,
-        jsenvCoreProjectRelativePath: jsenvCoreProjectImportValue.slice(0, -1),
-        jsenvCoreRelativePath: jsenvCoreImportValue.slice(0, -1)
+        projectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
+        jsenvProjectDirectoryPath: fileUrlToPath(jsenvProjectDirectoryUrl),
+        jsenvCoreRelativePathForProject,
+        jsenvCoreRelativePathForJsenvProject
       }));
     }
   }
@@ -2512,16 +2324,13 @@ const generateJsenvCoreScopes = ({
 };
 
 const getProjectImportMap = async ({
-  projectPathname,
-  importMapRelativePath
+  projectDirectoryUrl,
+  importMapFileRelativePath
 }) => {
-  if (!importMapRelativePath) {
-    return null;
-  }
-
-  const importMapPath = pathnameToOperatingSystemPath(`${projectPathname}/${importMapRelativePath}`);
+  const importMapFileUrl = resolveFileUrl(importMapFileRelativePath, projectDirectoryUrl);
+  const importMapFilePath = fileUrlToPath(importMapFileUrl);
   return new Promise((resolve, reject) => {
-    fs.readFile(importMapPath, (error, buffer) => {
+    fs.readFile(importMapFilePath, (error, buffer) => {
       if (error) {
         if (error.code === "ENOENT") {
           resolve(null);
@@ -2537,21 +2346,21 @@ const getProjectImportMap = async ({
 };
 
 const createIncompatibleJsenvCoreDependencyMessage = ({
-  projectPathname,
-  jsenvProjectPathname,
-  jsenvCoreProjectRelativePath,
-  jsenvCoreRelativePath
+  projectDirectoryPath,
+  jsenvProjectDirectoryPath,
+  jsenvCoreRelativePathForProject,
+  jsenvCoreRelativePathForJsenvProject
 }) => `incompatible dependency to @jsenv/core in your project and an internal jsenv project.
 To fix this either remove project dependency to @jsenv/core or ensure they use the same version.
 (If you are inside a @jsenv project you can ignore this warning)
---- jsenv project wanted relative path to @jsenv/core ---
-${jsenvCoreRelativePath}
---- your project relative path to @jsenv/core ---
-${jsenvCoreProjectRelativePath}
+--- your project path to @jsenv/core ---
+${jsenvCoreRelativePathForProject}
+--- jsenv project wanted path to @jsenv/core ---
+${jsenvCoreRelativePathForJsenvProject}
 --- jsenv project path ---
-${jsenvProjectPathname}
+${jsenvProjectDirectoryPath}
 --- your project path ---
-${projectPathname}`;
+${projectDirectoryPath}`;
 
 const resolveGroup = ({
   name,
@@ -3305,14 +3114,15 @@ const transformBabelHelperToImportBabelPlugin = api => {
           return undefined;
         }
 
-        const filePathname = operatingSystemPathToPathname(file.opts.filename);
-        const babelHelperFilePathname = babelHelperMap[name];
+        const filePath = file.opts.filename;
+        const fileUrl = pathToFileUrl(filePath);
+        const babelHelperFileUrl = babelHelperMap[name];
 
-        if (filePathname === babelHelperFilePathname) {
+        if (fileUrl === babelHelperFileUrl) {
           return undefined;
         }
 
-        if (searchPossibleBabelHelperNameInPath(filePathname) === name) {
+        if (searchPossibleBabelHelperNameInFilePath(filePath) === name) {
           return undefined;
         }
 
@@ -3320,7 +3130,7 @@ const transformBabelHelperToImportBabelPlugin = api => {
           return cachedHelpers[name];
         }
 
-        const helper = addDefault(file.path, babelHelperFilePathname, {
+        const helper = addDefault(file.path, filePath, {
           nameHint: `_${name}`
         });
         cachedHelpers[name] = helper;
@@ -3329,11 +3139,13 @@ const transformBabelHelperToImportBabelPlugin = api => {
     }
   };
 };
-const searchPossibleBabelHelperNameInPath = path => {
+const searchPossibleBabelHelperNameInFilePath = filePath => {
+  const fileUrl = pathToFileUrl(filePath);
+  const filePathname = fileUrl.slice("file://".length);
   const babelPathPart = "@jsenv/core/helpers/babel/";
-  const babelPathPartIndex = path.indexOf(babelPathPart);
+  const babelPathPartIndex = filePathname.indexOf(babelPathPart);
   if (babelPathPartIndex === -1) return "";
-  const after = path.slice(babelPathPartIndex + babelPathPart.length);
+  const after = filePathname.slice(babelPathPartIndex + babelPathPart.length);
   const helperName = after.slice(0, after.indexOf("/"));
   return helperName;
 };
@@ -3365,20 +3177,20 @@ const jsenvTransform = async ({
   // https://babeljs.io/docs/en/options
   const options = {
     filename: inputPath,
-    filenameRelative: inputRelativePath ? inputRelativePath.slice(1) : undefined,
+    filenameRelative: inputRelativePath,
     inputSourceMap: inputMap,
     configFile: false,
     babelrc: false,
     // trust only these options, do not read any babelrc config file
     ast: true,
     sourceMaps: remap,
-    sourceFileName: inputRelativePath ? inputRelativePath.slice(1) : undefined,
+    sourceFileName: inputPath,
     // https://babeljs.io/docs/en/options#parseropts
     parserOpts: {
       allowAwaitOutsideFunction: allowTopLevelAwait
     }
   };
-  const babelHelperName = searchPossibleBabelHelperNameInPath(inputPath); // to prevent typeof circular dependency
+  const babelHelperName = searchPossibleBabelHelperNameInFilePath(inputPath); // to prevent typeof circular dependency
 
   if (babelHelperName === "typeof") {
     const babelPluginMapWithoutTransformTypeOf = {};
@@ -3504,7 +3316,7 @@ const assertUrlLike = (value, name = "url") => {
     throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
   }
 
-  if (!hasScheme$1(value)) {
+  if (!hasScheme(value)) {
     throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
   }
 };
@@ -3518,7 +3330,7 @@ const isWindowsPathnameSpecifier = specifier => {
   return thirdChar === "/";
 };
 
-const hasScheme$1 = specifier => /^[a-zA-Z]+:/.test(specifier);
+const hasScheme = specifier => /^[a-zA-Z]+:/.test(specifier);
 
 // https://git-scm.com/docs/gitignore
 const applySpecifierPatternMatching = ({
@@ -3786,142 +3598,6 @@ const metaMapToSpecifierMetaMap = metaMap => {
   return specifierMetaMap;
 };
 
-// "https://domain.com/folder/file.js"
-// "file:///folder/file.js"
-// "chrome://folder/file.js"
-const isAbsoluteSpecifier = specifier => {
-  if (isWindowsDriveSpecifier(specifier)) {
-    // window drive letter could are not protocol yep
-    // something like `C:/folder/file.js`
-    // will be considered as a bare import
-    return false;
-  }
-
-  return /^[a-zA-Z]+:/.test(specifier);
-}; // https://url.spec.whatwg.org/#example-start-with-a-widows-drive-letter
-
-const isWindowsDriveSpecifier = specifier => {
-  const firstChar = specifier[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = specifier[1];
-  if (secondChar !== ":") return false;
-  const thirdChar = specifier[2];
-  return thirdChar === "/";
-};
-
-const resolveAbsoluteSpecifier = specifier => specifier;
-
-const hrefToScheme$1 = href => {
-  const colonIndex = href.indexOf(":");
-  if (colonIndex === -1) return "";
-  return href.slice(0, colonIndex);
-};
-
-const isSchemeRelativeSpecifier = specifier => {
-  return specifier.slice(0, 2) === "//";
-};
-const resolveSchemeRelativeSpecifier = (specifier, importer) => {
-  return `${hrefToScheme$1(importer)}:${specifier}`;
-};
-
-const isOriginRelativeSpecifier = specifier => {
-  const firstChar = specifier[0];
-  if (firstChar !== "/") return false;
-  const secondChar = specifier[1];
-  if (secondChar === "/") return false;
-  return true;
-};
-const resolveOriginRelativeSpecifier = (specifier, importer) => {
-  const importerOrigin = hrefToOrigin(importer);
-  return `${importerOrigin}/${specifier.slice(1)}`;
-};
-
-// https://github.com/systemjs/systemjs/blob/master/src/common.js
-// "../folder/file.js"
-
-const isPathnameRelativeSpecifier = specifier => {
-  if (specifier.slice(0, 2) === "./") return true;
-  if (specifier.slice(0, 3) === "../") return true;
-  return false;
-};
-const resolvePathnameRelativeSpecifier = (specifier, importer) => {
-  const importerPathname = hrefToPathname(importer); // ./foo.js on /folder/file.js -> /folder/foo.js
-  // ./foo/bar.js on /folder/file.js -> /folder/foo/bar.js
-  // ./foo.js on /folder/subfolder/file.js -> /folder/subfolder/foo.js
-
-  if (specifier.slice(0, 2) === "./") {
-    const importerOrigin = hrefToOrigin(importer);
-    const importerDirname = pathnameToDirname(importerPathname);
-    return `${importerOrigin}${importerDirname}/${specifier.slice(2)}`;
-  } // ../foo/bar.js on /folder/file.js -> /foo/bar.js
-  // ../foo/bar.js on /folder/subfolder/file.js -> /folder/foo/bar.js
-  // ../../foo/bar.js on /folder/file.js -> /foo/bar.js
-  // ../bar.js on / -> /bar.js
-
-
-  let unresolvedPathname = specifier;
-  const importerFolders = importerPathname.split("/");
-  importerFolders.pop(); // remove file, it is not a folder
-
-  while (unresolvedPathname.slice(0, 3) === "../") {
-    // when there is no folder left to resolved
-    // we just ignore '../'
-    if (importerFolders.length) {
-      importerFolders.pop();
-    }
-
-    unresolvedPathname = unresolvedPathname.slice(3);
-  }
-
-  const importerOrigin = hrefToOrigin(importer);
-  const resolvedPathname = `${importerFolders.join("/")}/${unresolvedPathname}`;
-  return `${importerOrigin}${resolvedPathname}`;
-};
-
-const resolveBareSpecifier = (specifier, importer) => {
-  const importerOrigin = hrefToOrigin(importer);
-  return `${importerOrigin}/${specifier}`;
-};
-
-// could be useful: https://url.spec.whatwg.org/#url-miscellaneous
-const resolveSpecifier$1 = (specifier, importer) => {
-  if (isAbsoluteSpecifier(specifier)) {
-    return resolveAbsoluteSpecifier(specifier);
-  }
-
-  if (!importer) {
-    throw new Error(createMissingImporterMessage(specifier, importer));
-  }
-
-  if (!isAbsoluteSpecifier(importer)) {
-    throw new Error(createAbsoluteImporterRequiredMessage(importer));
-  }
-
-  if (isSchemeRelativeSpecifier(specifier)) {
-    return resolveSchemeRelativeSpecifier(specifier, importer);
-  }
-
-  if (isOriginRelativeSpecifier(specifier)) {
-    return resolveOriginRelativeSpecifier(specifier, importer);
-  }
-
-  if (isPathnameRelativeSpecifier(specifier)) {
-    return resolvePathnameRelativeSpecifier(specifier, importer);
-  }
-
-  return resolveBareSpecifier(specifier, importer);
-};
-
-const createMissingImporterMessage = (specifier, importer) => `missing importer to resolve relative specifier.
---- specifier ---
-${specifier}
---- importer ---
-${importer}`;
-
-const createAbsoluteImporterRequiredMessage = importer => `importer must be absolute.
---- importer ---
-${importer}`;
-
 const assertSpecifierMetaMap = value => {
   if (!isPlainObject(value)) {
     throw new TypeError(`specifierMetaMap must be a plain object, got ${value}`);
@@ -3929,24 +3605,11 @@ const assertSpecifierMetaMap = value => {
 
 };
 
-const FAKE_HTTP_ORIGIN_UNLIKELY_TO_COLLIDE = "http://fake_origin_unlikely_to_collide.ext";
-const normalizeSpecifierMetaMap = (specifierMetaMap, url, {
-  forceHttpResolutionForFile = false
-} = {}) => {
+const normalizeSpecifierMetaMap = (specifierMetaMap, url) => {
   assertSpecifierMetaMap(specifierMetaMap);
-  const resolveSpecifierScoped = forceHttpResolutionForFile && url.startsWith("file:///") ? (specifier, url) => {
-    const specifierResolvedAgainstHttp = resolveSpecifier$1(specifier, FAKE_HTTP_ORIGIN_UNLIKELY_TO_COLLIDE);
-
-    if (specifierResolvedAgainstHttp.startsWith(`${FAKE_HTTP_ORIGIN_UNLIKELY_TO_COLLIDE}/`)) {
-      const specifierPathname = specifierResolvedAgainstHttp.slice(FAKE_HTTP_ORIGIN_UNLIKELY_TO_COLLIDE.length);
-      return `${url}${specifierPathname}`;
-    }
-
-    return specifierResolvedAgainstHttp;
-  } : resolveSpecifier$1;
   const specifierMetaMapNormalized = {};
   Object.keys(specifierMetaMap).forEach(specifier => {
-    const specifierResolved = resolveSpecifierScoped(specifier, url);
+    const specifierResolved = String(new URL(specifier, url));
     specifierMetaMapNormalized[specifierResolved] = specifierMetaMap[specifier];
   });
   return specifierMetaMapNormalized;
@@ -3972,10 +3635,10 @@ const urlToMeta = ({
 };
 
 const transformJs = async ({
-  projectPathname,
-  source,
-  sourceHref,
-  sourceMap,
+  projectDirectoryUrl,
+  code,
+  url,
+  map,
   babelPluginMap,
   convertMap = {},
   allowTopLevelAwait = true,
@@ -3984,42 +3647,36 @@ const transformJs = async ({
   transformGenerator = true,
   remap = true
 }) => {
-  if (typeof projectPathname !== "string") {
-    throw new TypeError(`projectPathname must be a string, got ${projectPathname}`);
+  if (typeof projectDirectoryUrl !== "string") {
+    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`);
   }
 
   if (typeof babelPluginMap !== "object") {
     throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`);
   }
 
-  if (typeof source !== "string") {
-    throw new TypeError(`source must be a string, got ${source}`);
+  if (typeof code !== "string") {
+    throw new TypeError(`code must be a string, got ${code}`);
   }
 
-  if (typeof sourceHref !== "string") {
-    throw new TypeError(`sourceHref must be a string, got ${sourceHref}`);
+  if (typeof url !== "string") {
+    throw new TypeError(`url must be a string, got ${url}`);
   }
 
   const {
     inputCode,
     inputMap
   } = await computeInputCodeAndInputMap({
-    source,
-    sourceHref,
-    sourceMap,
-    projectPathname,
+    code,
+    url,
+    map,
+    projectDirectoryUrl,
     convertMap,
     remap,
     allowTopLevelAwait
   });
-  const inputPath = computeInputPath({
-    sourceHref,
-    projectPathname
-  });
-  const inputRelativePath = computeInputRelativePath({
-    sourceHref,
-    projectPathname
-  });
+  const inputPath = computeInputPath(url);
+  const inputRelativePath = computeInputRelativePath(url, projectDirectoryUrl);
   return jsenvTransform({
     inputCode,
     inputMap,
@@ -4036,43 +3693,41 @@ const transformJs = async ({
 };
 
 const computeInputCodeAndInputMap = async ({
-  source,
-  sourceHref,
-  sourceMap,
-  projectPathname,
+  code,
+  url,
+  map,
+  projectDirectoryUrl,
   convertMap,
   remap,
   allowTopLevelAwait
 }) => {
   const specifierMetaMap = normalizeSpecifierMetaMap(metaMapToSpecifierMetaMap({
     convert: convertMap
-  }), `file://${projectPathname}`, {
-    forceHttpResolutionForFile: true
-  });
+  }), projectDirectoryUrl);
   const {
     convert
   } = urlToMeta({
-    url: sourceHref,
+    url,
     specifierMetaMap
   });
 
   if (!convert) {
     return {
-      inputCode: source,
-      inputMap: sourceMap
+      inputCode: code,
+      inputMap: map
     };
   }
 
   if (typeof convert !== "function") {
     throw new TypeError(`convert must be a function, got ${convert}`);
-  } // TODO: update @jsenv/commonjs-converter to handle sourceMap when passed
+  } // TODO: update @jsenv/commonjs-converter to handle map when passed
 
 
   const conversionResult = await convert({
-    projectPathname,
-    source,
-    sourceHref,
-    sourceMap,
+    projectDirectoryUrl,
+    code,
+    url,
+    map,
     remap,
     allowTopLevelAwait
   });
@@ -4094,53 +3749,20 @@ const computeInputCodeAndInputMap = async ({
   };
 };
 
-const computeInputPath = ({
-  sourceHref,
-  projectPathname
-}) => {
-  const scenario = computeScenario({
-    sourceHref,
-    projectPathname
-  });
-
-  if (scenario === "remote") {
-    return sourceHref;
+const computeInputPath = url => {
+  if (url.startsWith("file://")) {
+    return fileUrlToPath(url);
   }
 
-  return pathnameToOperatingSystemPath(hrefToPathname(sourceHref));
+  return url;
 };
 
-const computeInputRelativePath = ({
-  sourceHref,
-  projectPathname
-}) => {
-  const scenario = computeScenario({
-    sourceHref,
-    projectPathname
-  });
-
-  if (scenario === "project-file") {
-    return pathnameToRelativePathname(hrefToPathname(sourceHref), projectPathname);
+const computeInputRelativePath = (url, projectDirectoryUrl) => {
+  if (url.startsWith(projectDirectoryUrl)) {
+    return fileUrlToRelativePath(url, projectDirectoryUrl);
   }
 
   return undefined;
-};
-
-const computeScenario = ({
-  sourceHref,
-  projectPathname
-}) => {
-  if (!sourceHref.startsWith("file:///")) {
-    return "remote";
-  }
-
-  const sourcePathname = hrefToPathname(sourceHref);
-
-  if (pathnameIsInside(sourcePathname, projectPathname)) {
-    return "project-file";
-  }
-
-  return "file";
 };
 
 const writeSourceMappingURL = (source, location) => `${source}
@@ -4152,8 +3774,8 @@ const transformResultToCompilationResult = ({
   metadata = {}
 }, {
   source,
-  sourceHref,
-  projectPathname,
+  sourceUrl,
+  projectDirectoryUrl,
   remap = true,
   remapMethod = "comment" // 'comment', 'inline'
 
@@ -4162,12 +3784,12 @@ const transformResultToCompilationResult = ({
     throw new TypeError(`source must be a string, got ${source}`);
   }
 
-  if (typeof sourceHref !== "string") {
-    throw new TypeError(`sourceHref must be a string, got ${sourceHref}`);
+  if (typeof sourceUrl !== "string") {
+    throw new TypeError(`sourceUrl must be a string, got ${sourceUrl}`);
   }
 
-  if (typeof projectPathname !== "string") {
-    throw new TypeError(`projectPathname must be a string, got ${projectPathname}`);
+  if (typeof projectDirectoryUrl !== "string") {
+    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`);
   }
 
   const sources = [];
@@ -4178,20 +3800,25 @@ const transformResultToCompilationResult = ({
 
   if (remap && map) {
     if (map.sources.length === 0) {
-      // may happen in somae cases where babel returns a wrong sourcemap
+      // may happen in some cases where babel returns a wrong sourcemap
       // there is at least one case where it happens
       // a file with only import './whatever.js' inside
-      sources.push(sourceHrefToSourceMapSource({
-        sourceHref,
-        projectPathname
-      }));
+      sources.push(sourceUrlToSourceMapSource(sourceUrl, projectDirectoryUrl));
       sourcesContent.push(source);
     } else {
-      map.sources = map.sources.map(source => resolveSourceMapSource(source, {
-        sourceHref,
-        projectPathname
-      }));
-      sources.push(...map.sources);
+      map.sources = map.sources.map(source => {
+        const url = resolveFileUrl(source, sourceUrl);
+
+        if (url.startsWith(projectDirectoryUrl)) {
+          const sourceRelativePath = fileUrlToRelativePath(url, projectDirectoryUrl);
+          const sourceOriginRelative = sourceRelativePath.slice(1);
+          sources.push(sourceRelativePath);
+          return sourceOriginRelative;
+        }
+
+        sources.push(source);
+        return source;
+      });
       if (map.sourcesContent) sourcesContent.push(...map.sourcesContent);
     } // removing sourcesContent from map decrease the sourceMap
     // it also means client have to fetch source from server (additional http request)
@@ -4209,19 +3836,14 @@ const transformResultToCompilationResult = ({
       const mapAsBase64 = new Buffer(JSON.stringify(map)).toString("base64");
       output = writeSourceMappingURL(output, `data:application/json;charset=utf-8;base64,${mapAsBase64}`);
     } else if (remapMethod === "comment") {
-      const sourceMapAssetPath = generateAssetPath({
-        sourceHref,
-        assetName: `${sourceHrefToBasename(sourceHref)}.map`
-      });
-      output = writeSourceMappingURL(output, `./${sourceMapAssetPath}`);
-      assets.push(sourceMapAssetPath);
+      const sourceBasename = path.basename(hrefToPathname(sourceUrl));
+      const sourceMapBasename = `${sourceBasename}.map`;
+      output = writeSourceMappingURL(output, `./${sourceBasename}__asset__/${sourceMapBasename}`);
+      assets.push(sourceMapBasename);
       assetsContent.push(stringifyMap(map));
     }
   } else {
-    sources.push(sourceHrefToSourceMapSource({
-      sourceHref,
-      projectPathname
-    }));
+    sources.push(sourceUrlToSourceMapSource(sourceUrl, projectDirectoryUrl));
     sourcesContent.push(source);
   }
 
@@ -4230,11 +3852,7 @@ const transformResultToCompilationResult = ({
   } = metadata;
 
   if (coverage) {
-    const coverageAssetPath = generateAssetPath({
-      sourceHref,
-      assetName: "coverage.json"
-    });
-    assets.push(coverageAssetPath);
+    assets.push(`coverage.json`);
     assetsContent.push(stringifyCoverage(coverage));
   }
 
@@ -4248,54 +3866,13 @@ const transformResultToCompilationResult = ({
   };
 };
 
-const sourceHrefToSourceMapSource = ({
-  sourceHref,
-  projectPathname
-}) => {
-  const relativePath = computeInputRelativePath({
-    sourceHref,
-    projectPathname
-  });
-  return relativePath || sourceHref;
+const sourceUrlToSourceMapSource = (sourceUrl, projectDirectoryUrl) => {
+  if (sourceUrl.startsWith(projectDirectoryUrl)) {
+    return fileUrlToRelativePath(sourceUrl, projectDirectoryUrl);
+  }
+
+  return sourceUrl;
 };
-
-const resolveSourceMapSource = (sourceMapSource, {
-  sourceHref,
-  projectPathname
-}) => {
-  if (sourceMapSource[0] === "/") {
-    return sourceMapSource;
-  }
-
-  if (sourceMapSource.slice(0, 2) === "./" || sourceMapSource.slice(0, 3) === "../") {
-    const sourceMapSourceHref = resolveSpecifier(sourceMapSource, sourceHref);
-    const sourceMapSourcePathname = hrefToPathname(sourceMapSourceHref);
-    return pathnameToRelativePathname(sourceMapSourcePathname, projectPathname);
-  }
-
-  if (sourceMapSource.startsWith("file://")) {
-    return sourceMapSource;
-  }
-
-  if (sourceMapSource.startsWith("http://")) {
-    return sourceMapSource;
-  }
-
-  if (sourceMapSource.startsWith("https://")) {
-    return sourceMapSource;
-  }
-
-  return `/${sourceMapSource}`;
-};
-
-const generateAssetPath = ({
-  sourceHref,
-  assetName
-}) => {
-  return `${sourceHrefToBasename(sourceHref)}__asset__/${assetName}`;
-};
-
-const sourceHrefToBasename = sourceHref => path.basename(hrefToPathname(sourceHref));
 
 const stringifyMap = object => JSON.stringify(object, null, "  ");
 
@@ -4304,7 +3881,7 @@ const stringifyCoverage = object => JSON.stringify(object, null, "  ");
 exports.babelHelperMap = babelHelperMap;
 exports.babelPluginCompatMap = babelPluginCompatMap;
 exports.browserScoreMap = browserScoreMap;
-exports.cleanCompileCacheFolderIfObsolete = cleanCompileCacheFolderIfObsolete;
+exports.cleanCompileCacheDirectoryIfObsolete = cleanCompileCacheDirectoryIfObsolete;
 exports.compilationResultToTransformResult = compilationResultToTransformResult;
 exports.computeBabelPluginMapForPlatform = computeBabelPluginMapForPlatform;
 exports.computeCompileIdFromGroupId = computeCompileIdFromGroupId;
@@ -4313,7 +3890,6 @@ exports.findAsyncPluginNameInBabelPluginMap = findAsyncPluginNameInBabelPluginMa
 exports.generateBabelHelper = generateBabelHelper;
 exports.generateGroupMap = generateGroupMap;
 exports.getOrGenerateCompiledFile = getOrGenerateCompiledFile;
-exports.jsenvCorePathname = jsenvCorePathname;
 exports.jsenvPluginCompatMap = jsenvPluginCompatMap;
 exports.nodeVersionScoreMap = nodeVersionScoreMap;
 exports.readProjectImportMap = readProjectImportMap;
