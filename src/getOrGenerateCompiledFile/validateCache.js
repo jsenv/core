@@ -1,10 +1,11 @@
 import { fileRead, fileStat } from "@dmail/helper"
-import { fileUrlToPath, resolveFileUrl } from "../urlHelpers.js"
+import { fileUrlToPath } from "../urlHelpers.js"
 import { dateToSecondsPrecision } from "./dateToSecondsPrecision.js"
-import { getCompiledFilePath, getAssetFilePath } from "./locaters.js"
+import { getSourceFilePath, getCompiledFilePath, getAssetFilePath } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
 export const validateCache = async ({
+  projectDirectoryUrl,
   cacheDirectoryUrl,
   compileRelativePath,
   cache,
@@ -24,7 +25,7 @@ export const validateCache = async ({
   const [sourcesValidations, assetValidations] = await Promise.all([
     validateSources({
       logger,
-      cacheDirectoryUrl,
+      projectDirectoryUrl,
       cache,
     }),
     validateAssets({
@@ -110,20 +111,20 @@ const validateCompiledFile = async ({
   }
 }
 
-const validateSources = ({ logger, cacheDirectoryUrl, cache }) =>
+const validateSources = ({ logger, projectDirectoryUrl, cache }) =>
   Promise.all(
     cache.sources.map((source, index) =>
       validateSource({
         logger,
-        cacheDirectoryUrl,
+        projectDirectoryUrl,
         source,
         eTag: cache.sourcesEtag[index],
       }),
     ),
   )
 
-const validateSource = async ({ logger, cacheDirectoryUrl, source, eTag }) => {
-  const sourceFileUrl = resolveFileUrl(source, cacheDirectoryUrl)
+const validateSource = async ({ logger, projectDirectoryUrl, source, eTag }) => {
+  const sourceFileUrl = getSourceFilePath({ sourceRelativePath: source, projectDirectoryUrl })
   const sourceFilePath = fileUrlToPath(sourceFileUrl)
 
   try {

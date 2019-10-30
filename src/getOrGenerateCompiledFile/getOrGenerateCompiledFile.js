@@ -11,6 +11,7 @@ const { lockForRessource } = createLockRegistry()
 const lockfile = import.meta.require("proper-lockfile")
 
 export const getOrGenerateCompiledFile = async ({
+  projectDirectoryUrl,
   cacheDirectoryUrl,
   sourceRelativePath,
   compileRelativePath = sourceRelativePath,
@@ -22,6 +23,9 @@ export const getOrGenerateCompiledFile = async ({
   ifModifiedSinceDate,
   logLevel,
 }) => {
+  if (typeof projectDirectoryUrl !== "string") {
+    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
+  }
   if (typeof cacheDirectoryUrl !== "string") {
     throw new TypeError(`cacheDirectoryUrl must be a string, got ${cacheDirectoryUrl}`)
   }
@@ -40,6 +44,7 @@ export const getOrGenerateCompiledFile = async ({
   return startAsap(
     async () => {
       const { cache, compileResult, compileResultStatus } = await computeCompileReport({
+        projectDirectoryUrl,
         cacheDirectoryUrl,
         sourceRelativePath,
         compileRelativePath,
@@ -105,6 +110,7 @@ export const getOrGenerateCompiledFile = async ({
 }
 
 const computeCompileReport = async ({
+  projectDirectoryUrl,
   cacheDirectoryUrl,
   sourceRelativePath,
   compileRelativePath,
@@ -125,6 +131,7 @@ const computeCompileReport = async ({
 
   if (!cache) {
     const compileResult = await callCompile({
+      projectDirectoryUrl,
       cacheDirectoryUrl,
       sourceRelativePath,
       compileRelativePath,
@@ -140,6 +147,7 @@ const computeCompileReport = async ({
   }
 
   const cacheValidation = await validateCache({
+    projectDirectoryUrl,
     cacheDirectoryUrl,
     compileRelativePath,
     cache,
@@ -149,6 +157,7 @@ const computeCompileReport = async ({
   })
   if (!cacheValidation.valid) {
     const compileResult = await callCompile({
+      projectDirectoryUrl,
       cacheDirectoryUrl,
       sourceRelativePath,
       compileRelativePath,
@@ -168,6 +177,7 @@ const computeCompileReport = async ({
 }
 
 const callCompile = async ({
+  projectDirectoryUrl,
   cacheDirectoryUrl,
   sourceRelativePath,
   compileRelativePath,
@@ -175,7 +185,7 @@ const callCompile = async ({
   logger,
 }) => {
   const sourceFilePath = getSourceFilePath({
-    cacheDirectoryUrl,
+    projectDirectoryUrl,
     sourceRelativePath,
   })
   const compiledFilePath = getCompiledFilePath({
