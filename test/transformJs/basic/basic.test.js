@@ -11,11 +11,13 @@ import { importMetaUrlToDirectoryRelativePath } from "../../importMetaUrlToDirec
 
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
+const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const projectDirectoryPath = fileUrlToPath(jsenvCoreDirectoryUrl)
-const directoryRelativePath = importMetaUrlToDirectoryRelativePath(import.meta.url)
-const directoryBasename = basename(directoryRelativePath)
-const sourceRelativePath = `${directoryRelativePath}${directoryBasename}.js`
-const fileUrl = resolveFileUrl(sourceRelativePath, jsenvCoreDirectoryUrl)
+const testDirectoryRelativePath = importMetaUrlToDirectoryRelativePath(import.meta.url)
+const testDirectoryBasename = basename(testDirectoryRelativePath)
+const fileBasename = `${testDirectoryBasename}.js`
+const fileRelativePath = `${testDirectoryRelativePath}${fileBasename}`
+const fileUrl = resolveFileUrl(fileRelativePath, jsenvCoreDirectoryUrl)
 const filePath = fileUrlToPath(fileUrl)
 const fileContent = readFileSync(filePath).toString()
 
@@ -28,14 +30,14 @@ const transformResult = await transformJs({
 const actual = transformResultToCompilationResult(transformResult, {
   source: fileContent,
   sourceUrl: fileUrl,
-  projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  projectDirectoryUrl,
 })
 const expected = {
   compiledSource: actual.compiledSource,
   contentType: "application/javascript",
-  sources: [sourceRelativePath],
+  sources: [fileRelativePath],
   sourcesContent: [fileContent],
-  assets: [`${directoryBasename}.js.map`],
+  assets: [`${fileBasename}.map`],
   assetsContent: [actual.assetsContent[0]],
 }
 assert({ actual, expected })
