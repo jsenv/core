@@ -100,7 +100,7 @@ const computeInputCodeAndInputMap = async ({
   return { inputCode, inputMap }
 }
 
-const computeInputPath = ({ url }) => {
+const computeInputPath = (url) => {
   if (url.startsWith("file://")) {
     return fileUrlToPath(url)
   }

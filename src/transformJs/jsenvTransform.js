@@ -31,13 +31,13 @@ export const jsenvTransform = async ({
   // https://babeljs.io/docs/en/options
   const options = {
     filename: inputPath,
-    filenameRelative: inputRelativePath ? inputRelativePath.slice(1) : undefined,
+    filenameRelative: inputRelativePath,
     inputSourceMap: inputMap,
     configFile: false,
     babelrc: false, // trust only these options, do not read any babelrc config file
     ast: true,
     sourceMaps: remap,
-    sourceFileName: inputRelativePath ? inputRelativePath.slice(1) : undefined,
+    sourceFileName: inputPath,
     // https://babeljs.io/docs/en/options#parseropts
     parserOpts: {
       allowAwaitOutsideFunction: allowTopLevelAwait,

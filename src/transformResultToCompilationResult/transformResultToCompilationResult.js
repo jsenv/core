@@ -31,16 +31,25 @@ export const transformResultToCompilationResult = (
   let output = code
   if (remap && map) {
     if (map.sources.length === 0) {
-      // may happen in somae cases where babel returns a wrong sourcemap
+      // may happen in some cases where babel returns a wrong sourcemap
       // there is at least one case where it happens
       // a file with only import './whatever.js' inside
       sources.push(sourceUrlToSourceMapSource(sourceUrl, projectDirectoryUrl))
       sourcesContent.push(source)
     } else {
-      map.sources = map.sources.map((source) =>
-        resolveSourceMapSource(source, { sourceUrl, projectDirectoryUrl }),
-      )
-      sources.push(...map.sources)
+      map.sources = map.sources.map((source) => {
+        const url = resolveFileUrl(source, sourceUrl)
+        if (url.startsWith(projectDirectoryUrl)) {
+          const sourceRelativePath = fileUrlToRelativePath(url, projectDirectoryUrl)
+          const sourceOriginRelative = sourceRelativePath.slice(1)
+          sources.push(sourceRelativePath)
+          return sourceOriginRelative
+        }
+
+        sources.push(source)
+        return source
+      })
+
       if (map.sourcesContent) sourcesContent.push(...map.sourcesContent)
     }
 
@@ -94,14 +103,6 @@ const sourceUrlToSourceMapSource = (sourceUrl, projectDirectoryUrl) => {
     return fileUrlToRelativePath(sourceUrl, projectDirectoryUrl)
   }
   return sourceUrl
-}
-
-const resolveSourceMapSource = (sourceMapSpecifier, { sourceUrl, projectDirectoryUrl }) => {
-  const url = resolveFileUrl(sourceMapSpecifier, sourceUrl)
-  if (url.startsWith(projectDirectoryUrl)) {
-    return fileUrlToRelativePath(url, projectDirectoryUrl).slice(1)
-  }
-  return url
 }
 
 const stringifyMap = (object) => JSON.stringify(object, null, "  ")

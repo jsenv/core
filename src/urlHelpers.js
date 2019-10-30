@@ -14,7 +14,7 @@ export const pathToDirectoryUrl = (path) => {
 }
 
 export const pathToFileUrl = (path) => {
-  return pathToFileURL(path)
+  return String(pathToFileURL(path))
 }
 
 export const fileUrlToPath = (fileUrl) => {

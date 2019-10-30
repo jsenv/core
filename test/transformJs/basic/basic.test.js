@@ -1,42 +1,41 @@
 import { readFileSync } from "fs"
 import { basename } from "path"
 import { assert } from "@dmail/assert"
-import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
+import { fileUrlToPath, resolveFileUrl } from "../../../src/urlHelpers.js"
 import {
-  jsenvCorePathname,
+  jsenvCoreDirectoryUrl,
   transformJs,
   transformResultToCompilationResult,
 } from "../../../index.js"
-import { fileHrefToFolderRelativePath } from "../../fileHrefToFolderRelativePath.js"
+import { importMetaUrlToDirectoryRelativePath } from "../../importMetaUrlToDirectoryRelativePath.js"
 
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
-const projectPathname = jsenvCorePathname
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const folderName = basename(folderRelativePath)
-const sourceRelativePath = `${folderRelativePath}/${folderName}.js`
-const sourcePathname = `${projectPathname}${sourceRelativePath}`
-const sourceHref = `file://${sourcePathname}`
-const sourcePath = pathnameToOperatingSystemPath(sourcePathname)
-const source = readFileSync(sourcePath).toString()
+const projectDirectoryPath = fileUrlToPath(jsenvCoreDirectoryUrl)
+const directoryRelativePath = importMetaUrlToDirectoryRelativePath(import.meta.url)
+const directoryBasename = basename(directoryRelativePath)
+const sourceRelativePath = `${directoryRelativePath}${directoryBasename}.js`
+const fileUrl = resolveFileUrl(sourceRelativePath, jsenvCoreDirectoryUrl)
+const filePath = fileUrlToPath(fileUrl)
+const fileContent = readFileSync(filePath).toString()
 
 const transformResult = await transformJs({
-  source,
-  sourceHref,
-  projectPathname,
+  code: fileContent,
+  url: fileUrl,
+  projectDirectoryPath,
   babelPluginMap: jsenvBabelPluginMap,
 })
 const actual = transformResultToCompilationResult(transformResult, {
-  source,
-  sourceHref,
-  projectPathname,
+  source: fileContent,
+  sourceUrl: fileUrl,
+  projectDirectoryUrl: jsenvCoreDirectoryUrl,
 })
 const expected = {
   compiledSource: actual.compiledSource,
   contentType: "application/javascript",
   sources: [sourceRelativePath],
-  sourcesContent: [source],
-  assets: [`${folderName}.js__asset__/${folderName}.js.map`],
+  sourcesContent: [fileContent],
+  assets: [`${directoryBasename}.js.map`],
   assetsContent: [actual.assetsContent[0]],
 }
 assert({ actual, expected })
