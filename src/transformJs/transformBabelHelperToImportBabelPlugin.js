@@ -27,14 +27,14 @@ export const transformBabelHelperToImportBabelPlugin = (api) => {
         }
 
         const filePath = file.opts.filename
-        const fileUrl = pathToFileUrl(filePath)
-        const babelHelperFileUrl = babelHelperMap[name]
+        const babelHelperPath = babelHelperMap[name]
 
-        if (fileUrl === babelHelperFileUrl) {
-          return undefined
-        }
-
-        if (searchPossibleBabelHelperNameInFilePath(filePath) === name) {
+        if (babelHelperPath.startsWith("file://")) {
+          const fileUrl = pathToFileUrl(filePath)
+          if (fileUrl === babelHelperPath) {
+            return undefined
+          }
+        } else if (searchPossibleBabelHelperNameInFilePath(filePath) === name) {
           return undefined
         }
 
@@ -42,7 +42,7 @@ export const transformBabelHelperToImportBabelPlugin = (api) => {
           return cachedHelpers[name]
         }
 
-        const helper = addDefault(file.path, filePath, { nameHint: `_${name}` })
+        const helper = addDefault(file.path, babelHelperPath, { nameHint: `_${name}` })
         cachedHelpers[name] = helper
         return helper
       })
