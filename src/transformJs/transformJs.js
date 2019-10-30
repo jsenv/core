@@ -1,9 +1,9 @@
-import { pathToDirectoryUrl, fileUrlToPath, fileUrlToRelativePath } from "../urlHelpers.js"
+import { fileUrlToPath, fileUrlToRelativePath } from "../urlHelpers.js"
 import { jsenvTransform } from "./jsenvTransform.js"
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
 
 export const transformJs = async ({
-  projectDirectoryPath,
+  projectDirectoryUrl,
   code,
   url,
   map,
@@ -15,8 +15,8 @@ export const transformJs = async ({
   transformGenerator = true,
   remap = true,
 }) => {
-  if (typeof projectDirectoryPath !== "string") {
-    throw new TypeError(`projectDirectoryPath must be a string, got ${projectDirectoryPath}`)
+  if (typeof projectDirectoryUrl !== "string") {
+    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
   }
   if (typeof babelPluginMap !== "object") {
     throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`)
@@ -27,8 +27,6 @@ export const transformJs = async ({
   if (typeof url !== "string") {
     throw new TypeError(`url must be a string, got ${url}`)
   }
-
-  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
 
   const { inputCode, inputMap } = await computeInputCodeAndInputMap({
     code,

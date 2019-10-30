@@ -12,7 +12,6 @@ import { importMetaUrlToDirectoryRelativePath } from "../../importMetaUrlToDirec
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 const projectDirectoryUrl = jsenvCoreDirectoryUrl
-const projectDirectoryPath = fileUrlToPath(jsenvCoreDirectoryUrl)
 const testDirectoryRelativePath = importMetaUrlToDirectoryRelativePath(import.meta.url)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
 const fileBasename = `${testDirectoryBasename}.js`
@@ -24,7 +23,7 @@ const fileContent = readFileSync(filePath).toString()
 const transformResult = await transformJs({
   code: fileContent,
   url: fileUrl,
-  projectDirectoryPath,
+  projectDirectoryUrl,
   babelPluginMap: jsenvBabelPluginMap,
 })
 const actual = transformResultToCompilationResult(transformResult, {
