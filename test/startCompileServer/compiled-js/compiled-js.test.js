@@ -1,22 +1,22 @@
 import { assert } from "@dmail/assert"
-import { fileHrefToFolderRelativePath } from "../../fileHrefToFolderRelativePath.js"
+import { resolveDirectoryUrl, resolveFileUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
 import { startCompileServer } from "../../../index.js"
-import { COMPILE_SERVER_TEST_PARAM } from "../../compile-server-test-param.js"
-import { fetch } from "../../fetch.js"
+import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
+import { fetch } from "../fetch.js"
 
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const compileId = "otherwise"
-const fileRelativePath = `${folderRelativePath}/file.js`
-
-const compileServer = await startCompileServer({
-  ...COMPILE_SERVER_TEST_PARAM,
-  compileIntoRelativePath,
-})
-
-const response = await fetch(
-  `${compileServer.origin}${compileIntoRelativePath}/${compileId}${fileRelativePath}`,
+const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
+const fileUrl = resolveFileUrl("./file.js", import.meta.url)
+const fileRelativePath = fileUrlToRelativePath(
+  fileUrl,
+  COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,
 )
+const compileServer = await startCompileServer({
+  ...COMPILE_SERVER_TEST_PARAMS,
+  compileDirectoryUrl,
+})
+const fileServerUrl = `${compileServer.origin}/.dist/otherwise/${fileRelativePath}`
+
+const response = await fetch(fileServerUrl)
 const actual = {
   status: response.status,
   statusText: response.statusText,

@@ -30,11 +30,11 @@ export const startCompileServer = async ({
   importMapFileRelativePath = "./importMap.json",
   importDefaultExtension,
   browserPlatformFileUrl = resolveFileUrl(
-    "./src/startCompileServer/browser-platform/index.js",
+    "./src/private/compile-server/platform-service/createBrowserPlatform/index.js",
     jsenvCoreDirectoryUrl,
   ),
   nodePlatformFileUrl = resolveFileUrl(
-    "./src/startCompileServer/node-platform/index.js",
+    "./src/private/compile-server/platform-service/createNodePlatform/index.js",
     jsenvCoreDirectoryUrl,
   ),
   compileGroupCount = 1,

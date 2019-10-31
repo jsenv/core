@@ -1,39 +1,27 @@
 import { assert } from "@dmail/assert"
-import { fileHrefToFolderRelativePath } from "../../fileHrefToFolderRelativePath.js"
-import { jsenvCompileServerPath } from "../../../src/jsenvCompileServerPath.js"
+import { resolveDirectoryUrl, resolveFileUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
 import { startCompileServer } from "../../../index.js"
-import { fetch } from "../../fetch.js"
-import { COMPILE_SERVER_TEST_PARAM } from "../../compile-server-test-param.js"
+import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
+import { fetch } from "../fetch.js"
 
-const rimraf = import.meta.require("rimraf")
-
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const compileId = "otherwise"
-const fileRelativePath = `${folderRelativePath}/file.js`
-
+const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
+const fileUrl = resolveFileUrl("./file.js", import.meta.url)
+const fileRelativePath = fileUrlToRelativePath(
+  fileUrl,
+  COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,
+)
 const compileServer = await startCompileServer({
-  ...COMPILE_SERVER_TEST_PARAM,
-  compileIntoRelativePath,
+  ...COMPILE_SERVER_TEST_PARAMS,
+  compileDirectoryUrl,
 })
+const fileServerUrl = `${compileServer.origin}/.dist/otherwise/${fileRelativePath}`
 
-await new Promise((resolve, reject) =>
-  rimraf(`${jsenvCompileServerPath}${compileIntoRelativePath}`, (error) => {
-    if (error) reject(error)
-    else resolve()
-  }),
-)
-const firstResponse = await fetch(
-  `${compileServer.origin}${compileIntoRelativePath}/${compileId}${fileRelativePath}`,
-)
-const secondResponse = await fetch(
-  `${compileServer.origin}${compileIntoRelativePath}/${compileId}${fileRelativePath}`,
-  {
-    headers: {
-      "if-none-match": firstResponse.headers.etag[0],
-    },
+const firstResponse = await fetch(fileServerUrl)
+const secondResponse = await fetch(fileServerUrl, {
+  headers: {
+    "if-none-match": firstResponse.headers.etag[0],
   },
-)
+})
 const actual = {
   status: secondResponse.status,
   statusText: secondResponse.statusText,

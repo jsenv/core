@@ -1,18 +1,16 @@
 import { assert } from "@dmail/assert"
-import { fileHrefToFolderRelativePath } from "../../fileHrefToFolderRelativePath.js"
+import { resolveDirectoryUrl } from "src/private/urlUtils.js"
 import { startCompileServer } from "../../../index.js"
-import { COMPILE_SERVER_TEST_PARAM } from "../../compile-server-test-param.js"
-import { fetch } from "../../fetch.js"
+import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
+import { fetch } from "../fetch.js"
 
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-
+const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
 const compileServer = await startCompileServer({
-  ...COMPILE_SERVER_TEST_PARAM,
-  compileIntoRelativePath,
+  ...COMPILE_SERVER_TEST_PARAMS,
+  compileDirectoryUrl,
 })
-
-const response = await fetch(`${compileServer.origin}/.jsenv/browser-platform.js`)
+const fileServerUrl = `${compileServer.origin}/.jsenv/browser-platform.js`
+const response = await fetch(fileServerUrl)
 const actual = {
   status: response.status,
   statusText: response.statusText,

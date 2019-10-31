@@ -1,29 +1,27 @@
 import { assert } from "@dmail/assert"
-import { fileHrefToFolderRelativePath } from "../../fileHrefToFolderRelativePath.js"
+import { resolveDirectoryUrl, resolveFileUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
 import { startCompileServer } from "../../../index.js"
-import { COMPILE_SERVER_TEST_PARAM } from "../../compile-server-test-param.js"
-import { fetch } from "../../fetch.js"
+import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
+import { fetch } from "../fetch.js"
 
 const { convertCommonJsWithBabel } = import.meta.require("@jsenv/commonjs-converter")
-
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const compileId = "best"
+const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
+const fileUrl = resolveFileUrl("./file.js", import.meta.url)
+const fileRelativePath = fileUrlToRelativePath(
+  fileUrl,
+  COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,
+)
 const compileServer = await startCompileServer({
-  ...COMPILE_SERVER_TEST_PARAM,
-  compileIntoRelativePath,
+  ...COMPILE_SERVER_TEST_PARAMS,
+  compileDirectoryUrl,
   convertMap: {
-    [`${folderRelativePath}/cjs/`]: (options) =>
+    [fileRelativePath]: (options) =>
       convertCommonJsWithBabel({ ...options, processEnvNodeEnv: "production" }),
   },
 })
+const fileServerUrl = `${compileServer.origin}/.dist/best/${fileRelativePath}`
 
-await fetch(
-  `${compileServer.origin}${compileIntoRelativePath}/${compileId}${folderRelativePath}/cjs/index.js`,
-)
-const fileResponse = await fetch(
-  `${compileServer.origin}${compileIntoRelativePath}/${compileId}${folderRelativePath}/cjs/file.js`,
-)
+const fileResponse = await fetch(fileServerUrl)
 const actual = {
   status: fileResponse.status,
   statusText: fileResponse.statusText,
