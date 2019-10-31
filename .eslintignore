@@ -2,4 +2,5 @@
 dist/
 coverage/
 node_modules/
+src/**/s.js
 test/**/syntax-error.js

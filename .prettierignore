@@ -2,6 +2,7 @@
 coverage/
 dist/
 node_modules/
+src/**/s.js
 test/**/syntax-error.js
 importMap.json
 jsconfig.json
