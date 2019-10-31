@@ -5,9 +5,10 @@ import { bufferToEtag } from "./bufferToEtag.js"
 export const updateMeta = ({
   logger,
   meta,
+  projectDirectoryUrl,
   compileDirectoryUrl,
-  relativePathToProjectDirectory,
-  relativePathToCompileDirectory,
+  originalFileRelativePath,
+  compiledFileRelativePath,
   cacheHitTracking,
   compileResult,
   compileResultStatus,
@@ -28,8 +29,8 @@ export const updateMeta = ({
   if (isNew || isUpdated) {
     const { writeCompiledSourceFile = true, writeAssetsFile = true } = compileResult
     const compiledFilePath = getPathForCompiledFile({
-      compileDirectoryUrl,
-      relativePathToCompileDirectory,
+      projectDirectoryUrl,
+      compiledFileRelativePath,
     })
 
     if (writeCompiledSourceFile) {
@@ -42,7 +43,7 @@ export const updateMeta = ({
         ...assets.map((asset, index) => {
           const assetFilePath = getPathForAssetFile({
             compileDirectoryUrl,
-            relativePathToCompileDirectory,
+            compiledFileRelativePath,
             asset,
           })
 
@@ -58,7 +59,7 @@ export const updateMeta = ({
 
     if (isNew) {
       latestMeta = {
-        relativePathToProjectDirectory,
+        originalFileRelativePath,
         contentType,
         sources,
         sourcesEtag: sourcesContent.map((sourceContent) =>
@@ -106,7 +107,7 @@ export const updateMeta = ({
 
     const metaJsonFilePath = getPathForMetaJsonFile({
       compileDirectoryUrl,
-      relativePathToCompileDirectory,
+      compiledFileRelativePath,
     })
 
     logger.debug(`write compiled file meta at ${metaJsonFilePath}`)

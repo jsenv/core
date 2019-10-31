@@ -4,23 +4,23 @@ import { getPathForMetaJsonFile } from "./locaters.js"
 export const readMeta = async ({
   logger,
   compileDirectoryUrl,
-  relativePathToProjectDirectory,
-  relativePathToCompileDirectory,
+  originalFileRelativePath,
+  compiledFileRelativePath,
 }) => {
   const metaJsonFilePath = getPathForMetaJsonFile({
     compileDirectoryUrl,
-    relativePathToCompileDirectory,
+    compiledFileRelativePath,
   })
 
   try {
     const metaJsonString = await fileRead(metaJsonFilePath)
     const metaJsonObject = JSON.parse(metaJsonString)
-    const relativePathToProjectDirectoryFromMeta = metaJsonObject.relativePathToProjectDirectory
-    if (relativePathToProjectDirectoryFromMeta !== relativePathToProjectDirectory) {
+    const relativePathToProjectDirectoryFromMeta = metaJsonObject.originalFileRelativePath
+    if (relativePathToProjectDirectoryFromMeta !== originalFileRelativePath) {
       logger.info(
         createRelativePathToProjectDirectoryChangedMessage({
           relativePathToProjectDirectoryFromMeta,
-          relativePathToProjectDirectory,
+          originalFileRelativePath,
           metaJsonFilePath,
         }),
       )
@@ -48,13 +48,13 @@ export const readMeta = async ({
 
 const createRelativePathToProjectDirectoryChangedMessage = ({
   relativePathToProjectDirectoryFromMeta,
-  relativePathToProjectDirectory,
+  originalFileRelativePath,
   metaJsonFilePath,
-}) => `unexpected relativePathToProjectDirectory in meta.json
---- relativePathToProjectDirectory in meta.json ---
+}) => `unexpected originalFileRelativePath in meta.json
+--- originalFileRelativePath in meta.json ---
 ${relativePathToProjectDirectoryFromMeta}
---- relativePathToProjectDirectory ---
-${relativePathToProjectDirectory}
+--- originalFileRelativePath ---
+${originalFileRelativePath}
 --- meta.json path ---
 ${metaJsonFilePath}`
 

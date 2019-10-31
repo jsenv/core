@@ -24,11 +24,41 @@ const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
+  logLevel,
+
+  // js compile options
+  transformTopLevelAwait = true,
+  transformModuleIntoSystemFormat = true,
+
   projectDirectoryUrl,
   compileDirectoryUrl,
   compileDirectoryClean = false,
   importMapFileRelativePath = "./importMap.json",
   importDefaultExtension,
+  babelPluginMap = jsenvBabelPluginMap,
+  convertMap = {},
+
+  // options related to the server itself
+  protocol = "http",
+  ip = "127.0.0.1",
+  port = 0,
+  signature,
+  keepProcessAlive = false,
+  stopOnPackageVersionChange = false,
+
+  // this callback will be called each time a projectFile was
+  // used to respond to a request
+  // each time an execution needs a project file this callback
+  // will be called.
+  projectFileRequestedCallback = undefined,
+  projectFilePredicate = () => true,
+
+  // remaining options are complex or private
+  compileGroupCount = 1,
+  babelCompatMap = babelPluginCompatMapFallback,
+  browserScoreMap = browserScoreMapFallback,
+  nodeVersionScoreMap = nodeVersionScoreMapFallback,
+  platformAlwaysInsidePlatformScoreMap = false,
   browserPlatformFileUrl = resolveFileUrl(
     "./src/private/compile-server/platform-service/createBrowserPlatform/index.js",
     jsenvCoreDirectoryUrl,
@@ -37,29 +67,6 @@ export const startCompileServer = async ({
     "./src/private/compile-server/platform-service/createNodePlatform/index.js",
     jsenvCoreDirectoryUrl,
   ),
-  compileGroupCount = 1,
-  platformAlwaysInsidePlatformScoreMap = false,
-  babelPluginMap = jsenvBabelPluginMap,
-  convertMap = {},
-  babelCompatMap = babelPluginCompatMapFallback,
-  browserScoreMap = browserScoreMapFallback,
-  nodeVersionScoreMap = nodeVersionScoreMapFallback,
-  projectFilePredicate = () => true,
-  // this callback will be called each time a projectFile was
-  // used to respond to a request
-  // each time an execution needs a project file this callback
-  // will be called.
-  projectFileRequestedCallback = undefined,
-  // js compile options
-  transformTopLevelAwait = true,
-  // options related to the server itself
-  protocol = "http",
-  ip = "127.0.0.1",
-  port = 0,
-  signature,
-  logLevel,
-  keepProcessAlive = false,
-  stopOnPackageVersionChange = false,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
@@ -131,6 +138,7 @@ export const startCompileServer = async ({
       firstService(
         () =>
           serveBrowserPlatform({
+            logger,
             projectDirectoryUrl,
             compileDirectoryUrl,
             importMapFileRelativePath,
@@ -140,10 +148,10 @@ export const startCompileServer = async ({
             groupMap,
             projectFileRequestedCallback,
             request,
-            logger,
           }),
         () =>
           serveNodePlatform({
+            logger,
             projectDirectoryUrl,
             compileDirectoryUrl,
             importMapFileRelativePath,
@@ -153,7 +161,6 @@ export const startCompileServer = async ({
             groupMap,
             projectFileRequestedCallback,
             request,
-            logger,
           }),
         () =>
           serveCompiledJs({
@@ -163,6 +170,7 @@ export const startCompileServer = async ({
             babelPluginMap,
             convertMap,
             transformTopLevelAwait,
+            transformModuleIntoSystemFormat,
             projectFileRequestedCallback,
             request,
           }),

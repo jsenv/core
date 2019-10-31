@@ -33,7 +33,7 @@ const expected = {
     "content-type": ["application/json"],
   },
   body: {
-    relativePathToProjectDirectory: fileRelativePath,
+    originalFileRelativePath: fileRelativePath,
     contentType: "application/javascript",
     sources: [fileRelativePath],
     sourcesEtag: ['"7c-b5QcrFoIrKrXSr5F415m5RCd6uY"'],

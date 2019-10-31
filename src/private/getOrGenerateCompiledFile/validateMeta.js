@@ -8,14 +8,14 @@ export const validateMeta = async ({
   meta,
   projectDirectoryUrl,
   compileDirectoryUrl,
-  relativePathToCompileDirectory,
+  compiledFileRelativePath,
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
   const compiledFileValidation = await validateCompiledFile({
     logger,
-    compileDirectoryUrl,
-    relativePathToCompileDirectory,
+    projectDirectoryUrl,
+    compiledFileRelativePath,
     ifEtagMatch,
     ifModifiedSinceDate,
   })
@@ -31,7 +31,7 @@ export const validateMeta = async ({
       logger,
       meta,
       compileDirectoryUrl,
-      relativePathToCompileDirectory,
+      compiledFileRelativePath,
     }),
   ])
 
@@ -57,14 +57,14 @@ export const validateMeta = async ({
 
 const validateCompiledFile = async ({
   logger,
-  compileDirectoryUrl,
-  relativePathToCompileDirectory,
+  projectDirectoryUrl,
+  compiledFileRelativePath,
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
   const compiledFilePath = getPathForCompiledFile({
-    compileDirectoryUrl,
-    relativePathToCompileDirectory,
+    projectDirectoryUrl,
+    compiledFileRelativePath,
   })
 
   try {
@@ -168,14 +168,14 @@ const validateSource = async ({ logger, projectDirectoryUrl, source, eTag }) => 
   }
 }
 
-const validateAssets = ({ logger, compileDirectoryUrl, relativePathToCompileDirectory, cache }) =>
+const validateAssets = ({ logger, compileDirectoryUrl, compiledFileRelativePath, cache }) =>
   Promise.all(
     cache.assets.map((asset, index) =>
       validateAsset({
         logger,
         asset,
         compileDirectoryUrl,
-        relativePathToCompileDirectory,
+        compiledFileRelativePath,
         eTag: cache.assetsEtag[index],
       }),
     ),
@@ -185,12 +185,12 @@ const validateAsset = async ({
   logger,
   asset,
   compileDirectoryUrl,
-  relativePathToCompileDirectory,
+  compiledFileRelativePath,
   eTag,
 }) => {
   const assetFilePath = getPathForAssetFile({
     compileDirectoryUrl,
-    relativePathToCompileDirectory,
+    compiledFileRelativePath,
     asset,
   })
 

@@ -10,11 +10,15 @@ const fileRelativePath = fileUrlToRelativePath(
   fileUrl,
   COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,
 )
+const compileDirectoryRelativePath = fileUrlToRelativePath(
+  compileDirectoryUrl,
+  COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,
+)
 const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   compileDirectoryUrl,
 })
-const fileServerUrl = `${compileServer.origin}/.dist/otherwise/${fileRelativePath}`
+const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativePath}otherwise/${fileRelativePath}`
 
 const response = await fetch(fileServerUrl)
 const actual = {

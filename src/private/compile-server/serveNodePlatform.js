@@ -36,8 +36,8 @@ export const serveNodePlatform = async ({
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    relativePathToProjectDirectory: fileUrlToRelativePath(nodePlatformFileUrl, projectDirectoryUrl),
-    relativePathToCompileDirectory: ressource.slice(1),
+    originalFileRelativePath: fileUrlToRelativePath(nodePlatformFileUrl, projectDirectoryUrl),
+    compiledFileRelativePath: ressource.slice(1),
     importDefaultExtension,
     importMapFileRelativePath,
     importReplaceMap: {

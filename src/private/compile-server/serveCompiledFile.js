@@ -8,8 +8,8 @@ const { bufferToEtag, convertFileSystemErrorToResponseProperties } = import.meta
 export const serveCompiledFile = async ({
   projectDirectoryUrl,
   compileDirectoryUrl,
-  relativePathToProjectDirectory,
-  relativePathToCompileDirectory,
+  originalFileRelativePath,
+  compiledFileRelativePath,
   projectFileRequestedCallback = () => {},
   request,
   compile,
@@ -57,8 +57,8 @@ export const serveCompiledFile = async ({
     const { meta, compileResult, compileResultStatus } = await getOrGenerateCompiledFile({
       projectDirectoryUrl,
       compileDirectoryUrl,
-      relativePathToProjectDirectory,
-      relativePathToCompileDirectory,
+      originalFileRelativePath,
+      compiledFileRelativePath,
       ifEtagMatch,
       ifModifiedSinceDate,
       cache,
@@ -68,7 +68,7 @@ export const serveCompiledFile = async ({
     })
 
     projectFileRequestedCallback({
-      relativePath: relativePathToProjectDirectory,
+      relativePath: originalFileRelativePath,
       request,
     })
     compileResult.sources.forEach((source) => {

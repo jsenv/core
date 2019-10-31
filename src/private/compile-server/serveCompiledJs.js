@@ -1,5 +1,5 @@
 import { readFile } from "fs"
-import { resolveFileUrl, fileUrlToPath, fileUrlToRelativePath } from "../urlUtils.js"
+import { resolveFileUrl, pathToFileUrl, fileUrlToRelativePath } from "../urlUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
@@ -13,6 +13,7 @@ export const serveCompiledJs = async ({
   babelPluginMap,
   convertMap,
   transformTopLevelAwait,
+  transformModuleIntoSystemFormat,
   projectFileRequestedCallback,
   request,
 }) => {
@@ -26,48 +27,54 @@ export const serveCompiledJs = async ({
   const compileDirectoryRelativePath = fileUrlToRelativePath(
     compileDirectoryUrl,
     projectDirectoryUrl,
-  ).slice(2)
+  )
 
-  const { compileId, fileRelativePath } = locateProject({
-    compileDirectoryRelativePath,
-    ressource,
-  })
+  // not inside compile directory -> nothing to compile
+  if (relativePath.startsWith(compileDirectoryRelativePath) === false) return null
 
-  // cannot locate a file -> we don't know what to compile
-  // -> will be handled by fileService
-  if (!compileId) return null
+  const afterCompileDirectory = relativePath.slice(compileDirectoryRelativePath.length)
+  const parts = afterCompileDirectory.split("/")
+
+  const compileId = parts[0]
+  // no compileId, we don't know what to compile (not supposed so happen)
+  if (compileId === "") return null
 
   // unexpected compileId
   if (compileId in groupMap === false) {
     return {
       status: 400,
-      statusText: "unknown compileId",
+      statusText: `compileId must be one of ${Object.keys(groupMap)}, received ${compileId}`,
     }
   }
 
+  const remaining = parts.slice(1).join("/")
+  // nothing after compileId, we don't know what to compile (not suppoed to happen)
+  if (remaining === "") return null
+
+  const originalFileRelativePath = remaining
+
   // json, css, html etc does not need to be compiled
   // they are redirected to the source location that will be served as file
-  const contentType = ressourceToContentType(fileRelativePath, defaultContentTypeMap)
+  const contentType = ressourceToContentType(relativePath, defaultContentTypeMap)
   if (contentType !== "application/javascript") {
     return {
       status: 307,
       headers: {
-        location: resolveFileUrl(fileRelativePath, origin),
+        location: resolveFileUrl(originalFileRelativePath, origin),
       },
     }
   }
 
-  const relativePathToProjectDirectory = fileRelativePath
-  const relativePathToCompileDirectory = `./${compileId}${fileRelativePath}`
+  const compiledFileRelativePath = `${compileDirectoryRelativePath}${compileId}/${remaining}`
 
   return serveCompiledFile({
     projectDirectoryUrl,
     compileDirectoryUrl,
-    relativePathToProjectDirectory,
-    relativePathToCompileDirectory,
+    originalFileRelativePath,
+    compiledFileRelativePath,
     projectFileRequestedCallback,
     request,
-    compile: async () => {
+    compile: async ({ originalFilePath }) => {
       const groupBabelPluginMap = {}
       groupMap[compileId].babelPluginRequiredNameArray.forEach((babelPluginRequiredName) => {
         if (babelPluginRequiredName in babelPluginMap) {
@@ -75,10 +82,9 @@ export const serveCompiledJs = async ({
         }
       })
 
-      const sourceUrl = resolveFileUrl(relativePathToProjectDirectory, projectDirectoryUrl)
-      const sourceFilePath = fileUrlToPath(sourceUrl)
-      const sourceBuffer = await new Promise((resolve, reject) => {
-        readFile(sourceFilePath, (error, buffer) => {
+      const originalFileUrl = pathToFileUrl(originalFilePath)
+      const originalFileBuffer = await new Promise((resolve, reject) => {
+        readFile(originalFilePath, (error, buffer) => {
           if (error) {
             reject(error)
           } else {
@@ -86,19 +92,20 @@ export const serveCompiledJs = async ({
           }
         })
       })
-      const source = String(sourceBuffer)
+      const originalFileContent = String(originalFileBuffer)
 
       const transformResult = await transformJs({
         projectDirectoryUrl,
-        code: source,
-        url: sourceUrl,
+        code: originalFileContent,
+        url: originalFileUrl,
         babelPluginMap: groupBabelPluginMap,
         convertMap,
         transformTopLevelAwait,
+        transformModuleIntoSystemFormat,
       })
       return transformResultToCompilationResult(transformResult, {
-        source,
-        sourceUrl,
+        source: originalFileContent,
+        sourceUrl: originalFileUrl,
         projectDirectoryUrl,
       })
     },
@@ -125,36 +132,3 @@ export const serveCompiledJs = async ({
 // and sourceMappingURL comment at the bottom of compiled files
 // and that's something sensitive
 export const relativePathIsAsset = (relativePath) => relativePath.match(/[^\/]+__asset__\/.+$/)
-
-const locateProject = ({ compileCacheDirectoryRelativePath, ressource }) => {
-  if (ressource.startsWith(compileCacheDirectoryRelativePath) === false) {
-    return {
-      compileId: null,
-      fileRelativePath: null,
-    }
-  }
-
-  const afterCompileFolder = ressource.slice(compileCacheDirectoryRelativePath.length)
-  const parts = afterCompileFolder.split("/")
-
-  const compileId = parts[0]
-  if (compileId.length === 0) {
-    return {
-      compileId: null,
-      fileRelativePath: null,
-    }
-  }
-
-  const remaining = parts.slice(1).join("/")
-  if (remaining.length === 0) {
-    return {
-      compileId: null,
-      fileRelativePath: "",
-    }
-  }
-
-  return {
-    compileId,
-    fileRelativePath: remaining,
-  }
-}

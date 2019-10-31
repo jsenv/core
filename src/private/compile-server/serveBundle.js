@@ -18,9 +18,9 @@ export const serveBundle = async ({
   jsenvProjectDirectoryUrl,
   projectDirectoryUrl,
   compileDirectoryUrl,
-  relativePathToProjectDirectory,
-  relativePathToCompileDirectory,
-  sourcemapRelativePath = computeSourcemapRelativePath(relativePathToCompileDirectory),
+  originalFileRelativePath,
+  compiledFileRelativePath,
+  sourcemapRelativePath = computeSourcemapRelativePath(compiledFileRelativePath),
   importDefaultExtension,
   importMapFileRelativePath,
   importMapForBundle = {},
@@ -38,16 +38,13 @@ export const serveBundle = async ({
   }
 
   const compile = async () => {
-    const entryExtname = extname(relativePathToProjectDirectory)
-    const entryBasename = basename(relativePathToProjectDirectory, entryExtname)
+    const entryExtname = extname(originalFileRelativePath)
+    const entryBasename = basename(originalFileRelativePath, entryExtname)
     const entryName = entryBasename
-    const bundleDirectoryUrl = resolveDirectoryUrl(
-      relativePathToProjectDirectory,
-      compileDirectoryUrl,
-    )
+    const bundleDirectoryUrl = resolveDirectoryUrl(originalFileRelativePath, compileDirectoryUrl)
     const bundleDirectoryRelativePath = fileUrlToRelativePath(bundleDirectoryUrl)
     const entryPointMap = {
-      [entryName]: relativePathToProjectDirectory,
+      [entryName]: originalFileRelativePath,
     }
 
     const importMapForJsenvProjectUsingServeBundle = await generateImportMapForPackage({
@@ -122,11 +119,11 @@ export const serveBundle = async ({
 
     const sourcemapPathForModule = sourcemapRelativePathToSourcemapPathForModule(
       sourcemapRelativePath,
-      relativePathToCompileDirectory,
+      compiledFileRelativePath,
     )
     const sourcemapPathForCache = sourcemapRelativePathToSourcePathForCache(
       sourcemapRelativePath,
-      relativePathToCompileDirectory,
+      compiledFileRelativePath,
     )
 
     return bundleToCompilationResult(bundle, {
@@ -139,30 +136,30 @@ export const serveBundle = async ({
   return serveCompiledFile({
     projectDirectoryUrl,
     compileDirectoryUrl,
-    relativePathToProjectDirectory,
-    relativePathToCompileDirectory,
+    originalFileRelativePath,
+    compiledFileRelativePath,
     projectFileRequestedCallback,
     compile,
     request,
   })
 }
 
-const computeSourcemapRelativePath = (relativePathToCompileDirectory) => {
-  const entryBasename = basename(relativePathToCompileDirectory)
-  const sourcemapRelativePath = `${relativePathToCompileDirectory}/${entryBasename}__asset__/${entryBasename}.map`
+const computeSourcemapRelativePath = (compiledFileRelativePath) => {
+  const entryBasename = basename(compiledFileRelativePath)
+  const sourcemapRelativePath = `${compiledFileRelativePath}/${entryBasename}__asset__/${entryBasename}.map`
   return sourcemapRelativePath
 }
 
 const sourcemapRelativePathToSourcemapPathForModule = (
   sourcemapRelativePath,
-  relativePathToCompileDirectory,
+  compiledFileRelativePath,
 ) => {
-  return `./${relative(relativePathToCompileDirectory, sourcemapRelativePath)}`
+  return `./${relative(compiledFileRelativePath, sourcemapRelativePath)}`
 }
 
 const sourcemapRelativePathToSourcePathForCache = (
   sourcemapRelativePath,
-  relativePathToCompileDirectory,
+  compiledFileRelativePath,
 ) => {
-  return relative(relativePathToCompileDirectory, sourcemapRelativePath)
+  return relative(compiledFileRelativePath, sourcemapRelativePath)
 }

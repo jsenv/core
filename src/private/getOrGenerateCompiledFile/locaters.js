@@ -1,26 +1,22 @@
 import { resolveFileUrl, fileUrlToPath, resolveDirectoryUrl } from "../urlUtils.js"
 
-export const getPathForAssetFile = ({
-  compileDirectoryUrl,
-  relativePathToCompileDirectory,
-  asset,
-}) => {
+export const getPathForAssetFile = ({ compileDirectoryUrl, compiledFileRelativePath, asset }) => {
   const assetDirectoryUrl = resolveDirectoryUrl(
-    `${relativePathToCompileDirectory}__asset__/`,
+    `${compiledFileRelativePath}__asset__/`,
     compileDirectoryUrl,
   )
   const assetFileUrl = resolveFileUrl(asset, assetDirectoryUrl)
   return fileUrlToPath(assetFileUrl)
 }
 
-export const getPathForMetaJsonFile = ({ compileDirectoryUrl, relativePathToCompileDirectory }) =>
-  getPathForAssetFile({ compileDirectoryUrl, relativePathToCompileDirectory, asset: "meta.json" })
+export const getPathForMetaJsonFile = ({ compileDirectoryUrl, compiledFileRelativePath }) =>
+  getPathForAssetFile({ compileDirectoryUrl, compiledFileRelativePath, asset: "meta.json" })
 
-export const getPathForCompiledFile = ({ compileDirectoryUrl, relativePathToCompileDirectory }) =>
-  fileUrlToPath(resolveFileUrl(relativePathToCompileDirectory, compileDirectoryUrl))
+export const getPathForCompiledFile = ({ projectDirectoryUrl, compiledFileRelativePath }) =>
+  fileUrlToPath(resolveFileUrl(compiledFileRelativePath, projectDirectoryUrl))
 
-export const getPathForOriginalFile = ({ projectDirectoryUrl, relativePathToProjectDirectory }) =>
-  fileUrlToPath(resolveFileUrl(relativePathToProjectDirectory, projectDirectoryUrl))
+export const getPathForOriginalFile = ({ projectDirectoryUrl, originalFileRelativePath }) =>
+  fileUrlToPath(resolveFileUrl(originalFileRelativePath, projectDirectoryUrl))
 
 export const getPathForSourceFile = ({ projectDirectoryUrl, source }) =>
   fileUrlToPath(resolveFileUrl(source, projectDirectoryUrl))

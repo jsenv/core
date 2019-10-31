@@ -35,11 +35,8 @@ export const serveBrowserPlatform = async ({
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    relativePathToProjectDirectory: fileUrlToRelativePath(
-      browserPlatformFileUrl,
-      projectDirectoryUrl,
-    ),
-    relativePathToCompileDirectory: ressource.slice(1),
+    originalFileRelativePath: fileUrlToRelativePath(browserPlatformFileUrl, projectDirectoryUrl),
+    compiledFileRelativePath: ressource.slice(1),
     importMapFileRelativePath,
     importDefaultExtension,
     importReplaceMap: {
