@@ -1,5 +1,7 @@
 import { assert } from "@dmail/assert"
-import { browserScoreMap, nodeVersionScoreMap, generateGroupMap } from "../../index.js"
+import { generateGroupMap } from "../../src/private/generateGroupMap/generateGroupMap.js"
+import { browserScoreMap } from "../../src/browserScoreMap.js"
+import { nodeVersionScoreMap } from "../../src/nodeVersionScoreMap.js"
 
 {
   const babelPluginMap = { "transform-block-scoping": true }

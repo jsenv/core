@@ -1,5 +1,6 @@
 import { assert } from "@dmail/assert"
-import { browserScoreMap, generateGroupMap } from "../../index.js"
+import { generateGroupMap } from "../../src/private/generateGroupMap/generateGroupMap.js"
+import { browserScoreMap } from "../../src/browserScoreMap.js"
 
 {
   const babelPluginMap = {

@@ -1,5 +1,5 @@
-import { pathToFileUrl } from "../urlHelpers.js"
-import { babelHelperMap } from "../babelHelperMap/babelHelperMap.js"
+import { pathToFileUrl } from "../urlUtils.js"
+import { babelHelperMap } from "../babelHelperMap.js"
 
 // https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
 const { addDefault } = import.meta.require("@babel/helper-module-imports")

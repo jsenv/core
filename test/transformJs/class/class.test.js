@@ -1,35 +1,31 @@
 import { readFileSync } from "fs"
 import { basename } from "path"
 import { assert } from "@dmail/assert"
-import { fileUrlToPath, resolveFileUrl } from "../../../src/urlHelpers.js"
-import {
-  jsenvCoreDirectoryUrl,
-  transformJs,
-  transformResultToCompilationResult,
-} from "../../../index.js"
-import { importMetaUrlToDirectoryRelativePath } from "../../importMetaUrlToDirectoryRelativePath.js"
+import { fileUrlToPath, fileUrlToRelativePath, resolveDirectoryUrl } from "src/private/urlUtils.js"
+import { transformJs } from "src/private/transformJs/transformJs.js"
+import { transformResultToCompilationResult } from "src/private/transformResultToCompilationResult/transformResultToCompilationResult.js"
+import { TRANSFORM_JS_TEST_PARAMS, TRANSFORM_RESULT_TEST_PARAMS } from "../transformJsTestParams.js"
 
-const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
-
-const projectDirectoryUrl = jsenvCoreDirectoryUrl
-const testDirectoryRelativePath = importMetaUrlToDirectoryRelativePath(import.meta.url)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryBasename = basename(testDirectoryUrl)
 const fileBasename = `${testDirectoryBasename}.js`
-const fileRelativePath = `${testDirectoryRelativePath}${fileBasename}`
-const fileUrl = resolveFileUrl(fileRelativePath, jsenvCoreDirectoryUrl)
+const fileUrl = import.meta.resolve(`./${fileBasename}`)
+const fileRelativePath = fileUrlToRelativePath(
+  fileUrl,
+  TRANSFORM_JS_TEST_PARAMS.projectDirectoryUrl,
+)
 const filePath = fileUrlToPath(fileUrl)
 const fileContent = readFileSync(filePath).toString()
 
 const transformResult = await transformJs({
+  ...TRANSFORM_JS_TEST_PARAMS,
   code: fileContent,
   url: fileUrl,
-  projectDirectoryUrl,
-  babelPluginMap: jsenvBabelPluginMap,
 })
 const actual = transformResultToCompilationResult(transformResult, {
+  ...TRANSFORM_RESULT_TEST_PARAMS,
   source: fileContent,
   sourceUrl: fileUrl,
-  projectDirectoryUrl,
 })
 const expected = {
   compiledSource: actual.compiledSource,

@@ -1,4 +1,4 @@
-import { fileUrlToPath, fileUrlToRelativePath } from "../urlHelpers.js"
+import { fileUrlToPath, fileUrlToRelativePath } from "../urlUtils.js"
 import { jsenvTransform } from "./jsenvTransform.js"
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
 

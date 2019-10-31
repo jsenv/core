@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { hrefToPathname } from "@jsenv/href"
-import { fileUrlToRelativePath, resolveFileUrl } from "../urlHelpers.js"
-import { writeSourceMappingURL } from "./source-mapping-url.js"
+import { fileUrlToRelativePath, resolveFileUrl } from "../urlUtils.js"
+import { writeSourceMappingURL } from "../sourceMappingURLUtils.js"
 
 export const transformResultToCompilationResult = (
   { code, map, metadata = {} },

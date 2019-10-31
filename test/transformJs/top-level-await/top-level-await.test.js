@@ -1,25 +1,21 @@
 import { readFileSync } from "fs"
 import { basename } from "path"
 import { assert } from "@dmail/assert"
-import { fileUrlToPath, resolveFileUrl } from "../../../src/urlHelpers.js"
-import { jsenvCoreDirectoryUrl, transformJs } from "../../../index.js"
-import { importMetaUrlToDirectoryRelativePath } from "../../importMetaUrlToDirectoryRelativePath.js"
+import { fileUrlToPath, resolveDirectoryUrl } from "src/private/urlUtils.js"
+import { transformJs } from "src/private/transformJs/transformJs.js"
+import { TRANSFORM_JS_TEST_PARAMS } from "../transformJsTestParams.js"
 
-const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
-
-const testDirectoryRelativePath = importMetaUrlToDirectoryRelativePath(import.meta.url)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryBasename = basename(testDirectoryUrl)
 const fileBasename = `${testDirectoryBasename}.js`
-const fileRelativePath = `${testDirectoryRelativePath}${fileBasename}`
-const fileUrl = resolveFileUrl(fileRelativePath, jsenvCoreDirectoryUrl)
+const fileUrl = import.meta.resolve(`./${fileBasename}`)
 const filePath = fileUrlToPath(fileUrl)
 const fileContent = readFileSync(filePath).toString()
 
 const { code } = await transformJs({
+  ...TRANSFORM_JS_TEST_PARAMS,
   code: fileContent,
   url: fileUrl,
-  projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  babelPluginMap: jsenvBabelPluginMap,
 })
 const actual = code.indexOf("async function")
 const expected = -1

@@ -1,5 +1,5 @@
 import transformModulesSystemJs from "./babel-plugin-transform-modules-systemjs/index.js"
-import { findAsyncPluginNameInBabelPluginMap } from "../findAsyncPluginNameInBabelPluginMap/findAsyncPluginNameInBabelPluginMap.js"
+import { findAsyncPluginNameInBabelPluginMap } from "../findAsyncPluginNameInBabelPluginMap.js"
 import { ansiToHTML } from "./ansiToHTML.js"
 import { ensureRegeneratorRuntimeImportBabelPlugin } from "./ensureRegeneratorRuntimeImportBabelPlugin.js"
 import { ensureGlobalThisImportBabelPlugin } from "./ensureGlobalThisImportBabelPlugin.js"

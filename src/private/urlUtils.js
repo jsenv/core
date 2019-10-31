@@ -30,7 +30,7 @@ export const hasScheme = (string) => {
 
 export const fileUrlToRelativePath = (fileUrl, baseUrl) => {
   if (fileUrl.startsWith(baseUrl)) {
-    return `./${fileUrl.slice(baseUrl.length)}`
+    return fileUrl.slice(baseUrl.length)
   }
   return fileUrl
 }

@@ -1,5 +1,5 @@
-import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "../jsenvPluginCompatMap/jsenvPluginCompatMap.js"
-import { findHighestVersion } from "../semantic-versioning/index.js"
+import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "./jsenvPluginCompatMap.js"
+import { findHighestVersion } from "./private/semantic-versioning/index.js"
 
 export const computeJsenvPluginMapForPlatform = ({
   jsenvPluginMap,

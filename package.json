@@ -25,6 +25,9 @@
   "exports": {
     "./": "./"
   },
+  "imports": {
+    "src/": "./src/"
+  },
   "scripts": {
     "test": "node ./script/test/test.js",
     "eslint-check": "eslint .",

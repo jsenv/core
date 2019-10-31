@@ -1,4 +1,4 @@
-import { pathToFileUrl, resolveDirectoryUrl } from "../urlHelpers.js"
+import { pathToFileUrl, resolveDirectoryUrl } from "./urlUtils.js"
 
 let jsenvCoreDirectoryUrl
 if (typeof __filename === "string") {
@@ -9,7 +9,7 @@ if (typeof __filename === "string") {
   )
 } else {
   jsenvCoreDirectoryUrl = resolveDirectoryUrl(
-    // get ride of src/jsenvCoreDirectoryUrl/jsenvCoreDirectoryUrl.js
+    // get ride of src/private/jsenvCoreDirectoryUrl.js
     "../../",
     import.meta.url,
   )

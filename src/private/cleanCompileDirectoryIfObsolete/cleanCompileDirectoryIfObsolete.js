@@ -1,8 +1,8 @@
 import { readFileSync } from "fs"
 import { fileRead, fileWrite } from "@dmail/helper"
-import { resolveFileUrl, fileUrlToPath } from "../urlHelpers.js"
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl/jsenvCoreDirectoryUrl.js"
-import { removeDirectory } from "./removeDirectory.js"
+import { resolveFileUrl, fileUrlToPath } from "../urlUtils.js"
+import { removeDirectory } from "../removeDirectory.js"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
 export const cleanCompileDirectoryIfObsolete = async ({
   compileDirectoryUrl,

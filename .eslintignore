@@ -1,5 +1,5 @@
-/.dist/
-/dist/
-/coverage/
-/node_modules/
-/test/**/syntax-error.js
+.dist/
+dist/
+coverage/
+node_modules/
+test/**/syntax-error.js

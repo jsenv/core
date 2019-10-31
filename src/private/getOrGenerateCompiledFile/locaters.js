@@ -1,4 +1,4 @@
-import { resolveFileUrl, fileUrlToPath, resolveDirectoryUrl } from "../urlHelpers.js"
+import { resolveFileUrl, fileUrlToPath, resolveDirectoryUrl } from "../urlUtils.js"
 
 export const getPathForAssetFile = ({
   compileDirectoryUrl,

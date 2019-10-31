@@ -1,7 +1,7 @@
-import { babelPluginCompatMap as babelPluginCompatMapFallback } from "../babelPluginCompatMap/babelPluginCompatMap.js"
-import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "../jsenvPluginCompatMap/jsenvPluginCompatMap.js"
-import { computeBabelPluginMapForPlatform } from "../computeBabelPluginMapForPlatform/computeBabelPluginMapForPlatform.js"
-import { computeJsenvPluginMapForPlatform } from "../computeJsenvPluginMapForPlatform/computeJsenvPluginMapForPlatform.js"
+import { babelPluginCompatMap as babelPluginCompatMapFallback } from "../../babelPluginCompatMap.js"
+import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "../../jsenvPluginCompatMap.js"
+import { computeBabelPluginMapForPlatform } from "../../computeBabelPluginMapForPlatform.js"
+import { computeJsenvPluginMapForPlatform } from "../../computeJsenvPluginMapForPlatform.js"
 import { findHighestVersion, versionCompare } from "../semantic-versioning/index.js"
 import { groupHaveSameRequirements } from "./groupHaveSameRequirements.js"
 

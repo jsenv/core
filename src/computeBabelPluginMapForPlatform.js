@@ -1,5 +1,5 @@
-import { babelPluginCompatMap as babelPluginCompatMapFallback } from "../babelPluginCompatMap/babelPluginCompatMap.js"
-import { findHighestVersion } from "../semantic-versioning/index.js"
+import { babelPluginCompatMap as babelPluginCompatMapFallback } from "./babelPluginCompatMap.js"
+import { findHighestVersion } from "./private/semantic-versioning/index.js"
 
 export const computeBabelPluginMapForPlatform = ({
   babelPluginMap,
