@@ -1,16 +1,16 @@
 import { fileWrite } from "@dmail/helper"
-import { getCacheJsonFilePath, getAssetFilePath, getCompiledFilePath } from "./locaters.js"
+import { getPathForMetaJsonFile, getPathForAssetFile, getPathForCompiledFile } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
-export const updateCache = ({
-  cacheDirectoryUrl,
-  sourceRelativePath,
-  compileRelativePath,
+export const updateMeta = ({
+  logger,
+  meta,
+  compileDirectoryUrl,
+  relativePathToProjectDirectory,
+  relativePathToCompileDirectory,
   cacheHitTracking,
-  cache,
   compileResult,
   compileResultStatus,
-  logger,
 }) => {
   const isNew = compileResultStatus === "created"
   const isUpdated = compileResultStatus === "updated"
@@ -27,26 +27,26 @@ export const updateCache = ({
 
   if (isNew || isUpdated) {
     const { writeCompiledSourceFile = true, writeAssetsFile = true } = compileResult
-    const compiledFilePath = getCompiledFilePath({
-      cacheDirectoryUrl,
-      compileRelativePath,
+    const compiledFilePath = getPathForCompiledFile({
+      compileDirectoryUrl,
+      relativePathToCompileDirectory,
     })
 
     if (writeCompiledSourceFile) {
-      logger.info(`write file cache at ${compiledFilePath}`)
+      logger.debug(`write compiled file at ${compiledFilePath}`)
       promises.push(fileWrite(compiledFilePath, compiledSource))
     }
 
     if (writeAssetsFile) {
       promises.push(
         ...assets.map((asset, index) => {
-          const assetFilePath = getAssetFilePath({
-            cacheDirectoryUrl,
-            compileRelativePath,
+          const assetFilePath = getPathForAssetFile({
+            compileDirectoryUrl,
+            relativePathToCompileDirectory,
             asset,
           })
 
-          logger.info(`write asset cache at ${assetFilePath}`)
+          logger.debug(`write compiled file asset at ${assetFilePath}`)
           return fileWrite(assetFilePath, assetsContent[index])
         }),
       )
@@ -54,9 +54,11 @@ export const updateCache = ({
   }
 
   if (isNew || isUpdated || (isCached && cacheHitTracking)) {
+    let latestMeta
+
     if (isNew) {
-      cache = {
-        sourceRelativePath,
+      latestMeta = {
+        relativePathToProjectDirectory,
         contentType,
         sources,
         sourcesEtag: sourcesContent.map((sourceContent) =>
@@ -74,8 +76,8 @@ export const updateCache = ({
           : {}),
       }
     } else if (isUpdated) {
-      cache = {
-        ...cache,
+      latestMeta = {
+        ...meta,
         sources,
         sourcesEtag: sourcesContent.map((sourceContent) =>
           bufferToEtag(Buffer.from(sourceContent)),
@@ -85,30 +87,30 @@ export const updateCache = ({
         lastModifiedMs: Number(Date.now()),
         ...(cacheHitTracking
           ? {
-              matchCount: cache.matchCount + 1,
+              matchCount: meta.matchCount + 1,
               lastMatchMs: Number(Date.now()),
             }
           : {}),
       }
     } else {
-      cache = {
-        ...cache,
+      latestMeta = {
+        ...meta,
         ...(cacheHitTracking
           ? {
-              matchCount: cache.matchCount + 1,
+              matchCount: meta.matchCount + 1,
               lastMatchMs: Number(Date.now()),
             }
           : {}),
       }
     }
 
-    const cacheJsonFilePath = getCacheJsonFilePath({
-      cacheDirectoryUrl,
-      compileRelativePath,
+    const metaJsonFilePath = getPathForMetaJsonFile({
+      compileDirectoryUrl,
+      relativePathToCompileDirectory,
     })
 
-    logger.info(`write cache at ${cacheJsonFilePath}`)
-    promises.push(fileWrite(cacheJsonFilePath, JSON.stringify(cache, null, "  ")))
+    logger.debug(`write compiled file meta at ${metaJsonFilePath}`)
+    promises.push(fileWrite(metaJsonFilePath, JSON.stringify(latestMeta, null, "  ")))
   }
 
   return Promise.all(promises)

@@ -4,10 +4,10 @@ import { fileUrlToRelativePath, resolveFileUrl, fileUrlToPath } from "../urlHelp
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl/jsenvCoreDirectoryUrl.js"
 
 export const readProjectImportMap = async ({
+  logger,
   projectDirectoryUrl,
   jsenvProjectDirectoryUrl,
   importMapFileRelativePath,
-  logger,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)

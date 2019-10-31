@@ -1,9 +1,13 @@
 import { fileMakeDirname } from "@dmail/helper"
 import { createLogger } from "@jsenv/logger"
-import { readCache } from "./readCache.js"
-import { validateCache } from "./validateCache.js"
-import { updateCache } from "./updateCache.js"
-import { getCacheJsonFilePath, getSourceFilePath, getCompiledFilePath } from "./locaters.js"
+import { readMeta } from "./readMeta.js"
+import { validateMeta } from "./validateMeta.js"
+import { updateMeta } from "./updateMeta.js"
+import {
+  getPathForMetaJsonFile,
+  getPathForOriginalFile,
+  getPathForCompiledFile,
+} from "./locaters.js"
 import { createLockRegistry } from "./createLockRegistry.js"
 
 const { lockForRessource } = createLockRegistry()
@@ -12,11 +16,11 @@ const lockfile = import.meta.require("proper-lockfile")
 
 export const getOrGenerateCompiledFile = async ({
   projectDirectoryUrl,
-  cacheDirectoryUrl,
-  sourceRelativePath,
-  compileRelativePath = sourceRelativePath,
+  compileDirectoryUrl,
+  relativePathToProjectDirectory,
+  relativePathToCompileDirectory = relativePathToProjectDirectory,
   compile,
-  cacheIgnored = false,
+  cache = false, // do not forget to pass this to true
   cacheHitTracking = false,
   cacheInterProcessLocking = false,
   ifEtagMatch,
@@ -26,14 +30,18 @@ export const getOrGenerateCompiledFile = async ({
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
   }
-  if (typeof cacheDirectoryUrl !== "string") {
-    throw new TypeError(`cacheDirectoryUrl must be a string, got ${cacheDirectoryUrl}`)
+  if (typeof compileDirectoryUrl !== "string") {
+    throw new TypeError(`compileDirectoryUrl must be a string, got ${compileDirectoryUrl}`)
   }
-  if (typeof sourceRelativePath !== "string") {
-    throw new TypeError(`sourceRelativePath must be a string, got ${sourceRelativePath}`)
+  if (typeof relativePathToProjectDirectory !== "string") {
+    throw new TypeError(
+      `relativePathToProjectDirectory must be a string, got ${relativePathToProjectDirectory}`,
+    )
   }
-  if (typeof compileRelativePath !== "string") {
-    throw new TypeError(`compileRelativePath must be a string, got ${compileRelativePath}`)
+  if (typeof relativePathToCompileDirectory !== "string") {
+    throw new TypeError(
+      `relativePathToCompileDirectory must be a string, got ${relativePathToCompileDirectory}`,
+    )
   }
   if (typeof compile !== "function") {
     throw new TypeError(`compile must be a function, got ${compile}`)
@@ -43,15 +51,15 @@ export const getOrGenerateCompiledFile = async ({
 
   return startAsap(
     async () => {
-      const { cache, compileResult, compileResultStatus } = await computeCompileReport({
+      const { meta, compileResult, compileResultStatus } = await computeCompileReport({
         projectDirectoryUrl,
-        cacheDirectoryUrl,
-        sourceRelativePath,
-        compileRelativePath,
+        compileDirectoryUrl,
+        relativePathToProjectDirectory,
+        relativePathToCompileDirectory,
         compile,
         ifEtagMatch,
         ifModifiedSinceDate,
-        cacheIgnored,
+        cache,
         logger,
       })
 
@@ -87,22 +95,26 @@ export const getOrGenerateCompiledFile = async ({
       //   sourcesContent: sourcesContent.filter((sourceContent) => sourceContent !== undefined),
       // }
 
-      await updateCache({
-        cacheDirectoryUrl,
-        sourceRelativePath,
-        compileRelativePath,
-        cacheHitTracking,
-        cache,
+      await updateMeta({
+        logger,
+        meta,
         compileResult,
         compileResultStatus,
-        logger,
+        compileDirectoryUrl,
+        relativePathToProjectDirectory,
+        relativePathToCompileDirectory,
+        cacheHitTracking,
       })
 
-      return { cache, compileResult, compileResultStatus }
+      return {
+        meta,
+        compileResult,
+        compileResultStatus,
+      }
     },
     {
-      cacheDirectoryUrl,
-      compileRelativePath,
+      compileDirectoryUrl,
+      relativePathToCompileDirectory,
       cacheInterProcessLocking,
       logger,
     },
@@ -111,66 +123,70 @@ export const getOrGenerateCompiledFile = async ({
 
 const computeCompileReport = async ({
   projectDirectoryUrl,
-  cacheDirectoryUrl,
-  sourceRelativePath,
-  compileRelativePath,
+  compileDirectoryUrl,
+  relativePathToProjectDirectory,
+  relativePathToCompileDirectory,
   compile,
   ifEtagMatch,
   ifModifiedSinceDate,
-  cacheIgnored,
+  cache,
   logger,
 }) => {
-  const cache = cacheIgnored
-    ? null
-    : await readCache({
-        cacheDirectoryUrl,
-        sourceRelativePath,
-        compileRelativePath,
+  const meta = cache
+    ? await readMeta({
         logger,
+        compileDirectoryUrl,
+        relativePathToProjectDirectory,
+        relativePathToCompileDirectory,
       })
+    : null
 
-  if (!cache) {
+  if (!meta) {
     const compileResult = await callCompile({
-      projectDirectoryUrl,
-      cacheDirectoryUrl,
-      sourceRelativePath,
-      compileRelativePath,
-      compile,
       logger,
+      projectDirectoryUrl,
+      compileDirectoryUrl,
+      relativePathToProjectDirectory,
+      relativePathToCompileDirectory,
+      compile,
     })
 
     return {
-      cache: null,
+      meta: null,
       compileResult,
       compileResultStatus: "created",
     }
   }
 
-  const cacheValidation = await validateCache({
+  const metaValidation = await validateMeta({
+    logger,
+    meta,
     projectDirectoryUrl,
-    cacheDirectoryUrl,
-    compileRelativePath,
-    cache,
+    compileDirectoryUrl,
+    relativePathToCompileDirectory,
     ifEtagMatch,
     ifModifiedSinceDate,
-    logger,
   })
-  if (!cacheValidation.valid) {
+  if (!metaValidation.valid) {
     const compileResult = await callCompile({
-      projectDirectoryUrl,
-      cacheDirectoryUrl,
-      sourceRelativePath,
-      compileRelativePath,
-      compile,
       logger,
+      projectDirectoryUrl,
+      compileDirectoryUrl,
+      relativePathToProjectDirectory,
+      relativePathToCompileDirectory,
+      compile,
     })
-    return { cache, compileResult, compileResultStatus: "updated" }
+    return {
+      meta,
+      compileResult,
+      compileResultStatus: "updated",
+    }
   }
 
-  const { contentType, sources, assets } = cache
-  const { compiledSource, sourcesContent, assetsContent } = cacheValidation.data
+  const { contentType, sources, assets } = meta
+  const { compiledSource, sourcesContent, assetsContent } = metaValidation.data
   return {
-    cache,
+    meta,
     compileResult: { contentType, compiledSource, sources, sourcesContent, assets, assetsContent },
     compileResultStatus: "cached",
   }
@@ -178,21 +194,21 @@ const computeCompileReport = async ({
 
 const callCompile = async ({
   projectDirectoryUrl,
-  cacheDirectoryUrl,
-  sourceRelativePath,
-  compileRelativePath,
+  compileDirectoryUrl,
+  relativePathToProjectDirectory,
+  relativePathToCompileDirectory,
   compile,
   logger,
 }) => {
-  const sourceFilePath = getSourceFilePath({
+  const originalFilePath = getPathForOriginalFile({
     projectDirectoryUrl,
-    sourceRelativePath,
+    relativePathToProjectDirectory,
   })
-  const compiledFilePath = getCompiledFilePath({
-    cacheDirectoryUrl,
-    compileRelativePath,
+  const compiledFilePath = getPathForCompiledFile({
+    compileDirectoryUrl,
+    relativePathToCompileDirectory,
   })
-  logger.debug(`compile ${sourceRelativePath}`)
+  logger.debug(`compile ${relativePathToProjectDirectory}`)
 
   const {
     sources = [],
@@ -203,9 +219,7 @@ const callCompile = async ({
     compiledSource,
     ...rest
   } = await compile({
-    sourceRelativePath,
-    compileRelativePath,
-    sourceFilePath,
+    originalFilePath,
     compiledFilePath,
   })
 
@@ -229,25 +243,25 @@ const callCompile = async ({
 
 const startAsap = async (
   fn,
-  { logger, cacheDirectoryUrl, compileRelativePath, cacheInterProcessLocking },
+  { logger, compileDirectoryUrl, relativePathToCompileDirectory, cacheInterProcessLocking },
 ) => {
-  const cacheJsonFilePath = getCacheJsonFilePath({
-    cacheDirectoryUrl,
-    compileRelativePath,
+  const metaJsonFilePath = getPathForMetaJsonFile({
+    compileDirectoryUrl,
+    relativePathToCompileDirectory,
   })
 
-  logger.debug(`lock ${cacheJsonFilePath}`)
+  logger.debug(`lock ${metaJsonFilePath}`)
   // in case this process try to concurrently access meta we wait for previous to be done
-  const unlockLocal = await lockForRessource(cacheJsonFilePath)
+  const unlockLocal = await lockForRessource(metaJsonFilePath)
 
   let unlockInterProcessLock = () => {}
   if (cacheInterProcessLocking) {
     // after that we use a lock pathnameRelative to be sure we don't conflict with other process
     // trying to do the same (mapy happen when spawining multiple server for instance)
     // https://github.com/moxystudio/node-proper-lockfile/issues/69
-    await fileMakeDirname(cacheJsonFilePath)
+    await fileMakeDirname(metaJsonFilePath)
     // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
-    unlockInterProcessLock = await lockfile.lock(cacheJsonFilePath, {
+    unlockInterProcessLock = await lockfile.lock(metaJsonFilePath, {
       realpath: false,
       retries: {
         retries: 20,
@@ -263,7 +277,7 @@ const startAsap = async (
     // we want to unlock in case of error too
     unlockLocal()
     unlockInterProcessLock()
-    logger.debug(`unlock ${cacheJsonFilePath}`)
+    logger.debug(`unlock ${metaJsonFilePath}`)
   }
 
   // here in case of error.code === 'ELOCKED' thrown from here

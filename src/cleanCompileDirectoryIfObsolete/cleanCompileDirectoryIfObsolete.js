@@ -4,51 +4,48 @@ import { resolveFileUrl, fileUrlToPath } from "../urlHelpers.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl/jsenvCoreDirectoryUrl.js"
 import { removeDirectory } from "./removeDirectory.js"
 
-export const cleanCompileCacheDirectoryIfObsolete = async ({
-  cacheDirectoryUrl,
+export const cleanCompileDirectoryIfObsolete = async ({
+  compileDirectoryUrl,
+  compileDirectoryMeta,
   forceObsolete = false,
-  cacheMeta,
   cleanCallback = () => {},
 }) => {
   const jsenvCorePackageFileUrl = resolveFileUrl("./package.json", jsenvCoreDirectoryUrl)
   const jsenvCorePackageFilePath = fileUrlToPath(jsenvCorePackageFileUrl)
   const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
 
-  const compileCacheDirectoryMeta = {
-    ...cacheMeta,
+  compileDirectoryMeta = {
+    ...compileDirectoryMeta,
     jsenvCorePackageVersion,
   }
 
-  const cacheMetaFileUrl = resolveFileUrl("./meta.json", cacheDirectoryUrl)
-  const cacheMetaFilePath = fileUrlToPath(cacheMetaFileUrl)
-  const cacheDirectoryPath = fileUrlToPath(cacheDirectoryUrl)
+  const metaFileUrl = resolveFileUrl("./meta.json", compileDirectoryUrl)
+  const metaFilePath = fileUrlToPath(metaFileUrl)
+  const compileDirectoryPath = fileUrlToPath(compileDirectoryUrl)
 
   if (forceObsolete) {
-    cleanCallback(cacheDirectoryPath)
-    await removeDirectory(cacheDirectoryPath)
+    cleanCallback(compileDirectoryPath)
+    await removeDirectory(compileDirectoryPath)
   } else {
-    let previousCompileCacheDirectoryMeta
+    let previousCompileDirectoryMeta
     try {
-      const source = await fileRead(cacheMetaFilePath)
-      previousCompileCacheDirectoryMeta = JSON.parse(source)
+      const source = await fileRead(metaFilePath)
+      previousCompileDirectoryMeta = JSON.parse(source)
     } catch (e) {
       if (e && e.code === "ENOENT") {
-        previousCompileCacheDirectoryMeta = null
+        previousCompileDirectoryMeta = null
       } else {
         throw e
       }
     }
 
-    if (
-      JSON.stringify(previousCompileCacheDirectoryMeta) !==
-      JSON.stringify(compileCacheDirectoryMeta)
-    ) {
-      cleanCallback(cacheDirectoryPath)
-      await removeDirectory(cacheDirectoryPath)
+    if (JSON.stringify(previousCompileDirectoryMeta) !== JSON.stringify(compileDirectoryMeta)) {
+      cleanCallback(compileDirectoryPath)
+      await removeDirectory(compileDirectoryPath)
     }
   }
 
-  await fileWrite(cacheMetaFilePath, JSON.stringify(compileCacheDirectoryMeta, null, "  "))
+  await fileWrite(metaFilePath, JSON.stringify(compileDirectoryMeta, null, "  "))
 }
 
 const readPackage = (packageFilePath) => {
