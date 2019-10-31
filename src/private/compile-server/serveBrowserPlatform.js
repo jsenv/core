@@ -34,7 +34,6 @@ export const serveBrowserPlatform = async ({
     compileDirectoryUrl,
     projectDirectoryUrl,
   )
-
   const originalFileRelativePath = fileUrlToRelativePath(
     browserPlatformFileUrl,
     projectDirectoryUrl,

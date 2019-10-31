@@ -31,22 +31,26 @@ export const serveNodePlatform = async ({
 
   if (ressource !== NODE_PLATFORM_CLIENT_PATHNAME) return null
 
+  const compileDirectoryRelativePath = fileUrlToRelativePath(
+    compileDirectoryUrl,
+    projectDirectoryUrl,
+  )
+  const originalFileRelativePath = fileUrlToRelativePath(nodePlatformFileUrl, projectDirectoryUrl)
+  const compiledFileRelativePath = `${compileDirectoryRelativePath}${ressource.slice(1)}`
+
   return serveBundle({
     logger,
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileRelativePath: fileUrlToRelativePath(nodePlatformFileUrl, projectDirectoryUrl),
-    compiledFileRelativePath: ressource.slice(1),
+    originalFileRelativePath,
+    compiledFileRelativePath,
     importDefaultExtension,
     importMapFileRelativePath,
     importReplaceMap: {
       "/.jsenv/node-platform-data.js": () =>
         generateNodePlatformDataSource({
-          compileDirectoryRelativePath: fileUrlToRelativePath(
-            compileDirectoryUrl,
-            projectDirectoryUrl,
-          ),
+          compileDirectoryRelativePath,
           groupMap,
           importDefaultExtension,
         }),

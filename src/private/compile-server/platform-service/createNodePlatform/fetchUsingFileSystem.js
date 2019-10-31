@@ -1,5 +1,5 @@
 import { fileRead } from "@dmail/helper"
-import { fileUrlToPath } from "../../urlHelpers.js"
+import { fileUrlToPath } from "../../../urlUtils.js"
 
 const { ressourceToContentType, defaultContentTypeMap } = import.meta.require("@dmail/server")
 

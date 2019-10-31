@@ -34,6 +34,8 @@ export const serveBundle = async ({
   request,
   format,
   formatOutputOptions = {},
+  node = format === "commonjs",
+  browser = format === "global",
 }) => {
   if (typeof jsenvProjectDirectoryUrl !== "string") {
     throw new TypeError(
@@ -122,6 +124,8 @@ export const serveBundle = async ({
       writeOnFileSystem: false,
       format,
       formatOutputOptions,
+      node,
+      browser,
     })
 
     const sourcemapPathForModule = sourcemapRelativePathToSourcemapPathForModule(
