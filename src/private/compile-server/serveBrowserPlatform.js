@@ -30,22 +30,30 @@ export const serveBrowserPlatform = async ({
   }
   if (ressource !== BROWSER_PLATFORM_CLIENT_PATHNAME) return null
 
+  const compileDirectoryRelativePath = fileUrlToRelativePath(
+    compileDirectoryUrl,
+    projectDirectoryUrl,
+  )
+
+  const originalFileRelativePath = fileUrlToRelativePath(
+    browserPlatformFileUrl,
+    projectDirectoryUrl,
+  )
+  const compiledFileRelativePath = `${compileDirectoryRelativePath}${ressource.slice(1)}`
+
   return serveBundle({
     logger,
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileRelativePath: fileUrlToRelativePath(browserPlatformFileUrl, projectDirectoryUrl),
-    compiledFileRelativePath: ressource.slice(1),
+    originalFileRelativePath,
+    compiledFileRelativePath,
     importMapFileRelativePath,
     importDefaultExtension,
     importReplaceMap: {
       "/.jsenv/browser-platform-data.js": () =>
         generateBrowserPlatformDataSource({
-          compileDirectoryRelativePath: fileUrlToRelativePath(
-            compileDirectoryUrl,
-            projectDirectoryUrl,
-          ),
+          compileDirectoryRelativePath,
           groupMap,
           importDefaultExtension,
         }),

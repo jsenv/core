@@ -1,7 +1,13 @@
 import { extname, basename, relative } from "path"
 import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
 import { composeTwoImportMaps } from "@jsenv/import-map"
-import { fileUrlToPath, resolveDirectoryUrl, fileUrlToRelativePath } from "../urlUtils.js"
+import {
+  fileUrlToPath,
+  resolveDirectoryUrl,
+  fileUrlToRelativePath,
+  resolveFileUrl,
+} from "../urlUtils.js"
+import { readProjectImportMap } from "../readProjectImportMap/readProjectImportMap.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
 
 // important to use require here
@@ -11,13 +17,11 @@ import { serveCompiledFile } from "./serveCompiledFile.js"
 // meaning if we use @jsenv/core bundle we'll fail
 // to find the @jsenv/bundling files
 const { generateBundle, bundleToCompilationResult } = import.meta.require("@jsenv/bundling")
-const { readProjectImportMap } = import.meta.require("@jsenv/core")
 
 export const serveBundle = async ({
   logger,
   jsenvProjectDirectoryUrl,
   projectDirectoryUrl,
-  compileDirectoryUrl,
   originalFileRelativePath,
   compiledFileRelativePath,
   sourcemapRelativePath = computeSourcemapRelativePath(compiledFileRelativePath),
@@ -41,10 +45,8 @@ export const serveBundle = async ({
     const entryExtname = extname(originalFileRelativePath)
     const entryBasename = basename(originalFileRelativePath, entryExtname)
     const entryName = entryBasename
-    const bundleDirectoryUrl = resolveDirectoryUrl(originalFileRelativePath, compileDirectoryUrl)
-    const bundleDirectoryRelativePath = fileUrlToRelativePath(bundleDirectoryUrl)
     const entryPointMap = {
-      [entryName]: originalFileRelativePath,
+      [entryName]: `./${originalFileRelativePath}`,
     }
 
     const importMapForJsenvProjectUsingServeBundle = await generateImportMapForPackage({
@@ -103,7 +105,12 @@ export const serveBundle = async ({
     const bundle = await generateBundle({
       logLevel: "off",
       projectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
-      bundleDirectoryRelativePath,
+      // bundleDirectoryRelativePath is not really important
+      // because we pass writeOnFileSystem: false anyway
+      bundleDirectoryRelativePath: computeBundleDirectoryRelativePath({
+        projectDirectoryUrl,
+        compiledFileRelativePath,
+      }),
       importDefaultExtension,
       importMapFileRelativePath,
       importMapForBundle,
@@ -143,9 +150,17 @@ export const serveBundle = async ({
   })
 }
 
+const computeBundleDirectoryRelativePath = ({ projectDirectoryUrl, compiledFileRelativePath }) => {
+  const compiledFileUrl = resolveFileUrl(compiledFileRelativePath, projectDirectoryUrl)
+  const bundleDirectoryUrl = resolveDirectoryUrl("./", compiledFileUrl)
+  const bundleDirectoryRelativePath = fileUrlToRelativePath(bundleDirectoryUrl, projectDirectoryUrl)
+  return bundleDirectoryRelativePath
+}
+
 const computeSourcemapRelativePath = (compiledFileRelativePath) => {
   const entryBasename = basename(compiledFileRelativePath)
-  const sourcemapRelativePath = `${compiledFileRelativePath}/${entryBasename}__asset__/${entryBasename}.map`
+  const compiledFileAssetDirectoryRelativePath = `${compiledFileRelativePath}/${entryBasename}__asset__/`
+  const sourcemapRelativePath = `${compiledFileAssetDirectoryRelativePath}${entryBasename}.map`
   return sourcemapRelativePath
 }
 
@@ -160,5 +175,7 @@ const sourcemapRelativePathToSourcePathForCache = (
   sourcemapRelativePath,
   compiledFileRelativePath,
 ) => {
-  return relative(compiledFileRelativePath, sourcemapRelativePath)
+  const entryBasename = basename(compiledFileRelativePath)
+  const compiledFileAssetDirectoryRelativePath = `${compiledFileRelativePath}/${entryBasename}__asset__/`
+  return relative(compiledFileAssetDirectoryRelativePath, sourcemapRelativePath)
 }

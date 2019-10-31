@@ -29,6 +29,9 @@ export const hasScheme = (string) => {
 }
 
 export const fileUrlToRelativePath = (fileUrl, baseUrl) => {
+  if (typeof baseUrl !== "string") {
+    throw new TypeError(`baseUrl must be a string, got ${baseUrl}`)
+  }
   if (fileUrl.startsWith(baseUrl)) {
     return fileUrl.slice(baseUrl.length)
   }

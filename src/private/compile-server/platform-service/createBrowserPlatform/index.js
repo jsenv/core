@@ -1,4 +1,4 @@
-import { createBrowserPlatform } from "./create-browser-platform.js"
+import { createBrowserPlatform } from "./createBrowserPlatform.js"
 
 window.__browserPlatform__ = {
   create: createBrowserPlatform,

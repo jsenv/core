@@ -58,6 +58,7 @@
     "@dmail/server": "2.10.0",
     "@dmail/uneval": "5.6.0",
     "@jsenv/babel-plugin-map": "3.1.0",
+    "@jsenv/bundling": "8.1.0",
     "@jsenv/href": "1.2.0",
     "@jsenv/import-map": "6.6.0",
     "@jsenv/logger": "3.1.0",
@@ -76,7 +77,6 @@
   "devDependencies": {
     "@dmail/assert": "3.14.0",
     "@jsenv/auto-publish": "2.0.0",
-    "@jsenv/bundling": "7.7.1",
     "@jsenv/codecov-upload": "2.0.0",
     "@jsenv/eslint-config": "11.3.0",
     "@jsenv/execution": "6.11.0",
