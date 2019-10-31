@@ -53,7 +53,13 @@
       "sourceMapPathOverrides": {
         "/*": "${workspaceFolder}/*"
       },
-      "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
+      "skipFiles": [
+        // "node_modules/**",
+        "node_modules/@babel/template/**",
+        "node_modules/@dmail/cancellation/**",
+        "node_modules/rollup-plugin-node-resolve/**",
+        "<node_internals>/**/*.js"
+      ]
     }
   ]
 }

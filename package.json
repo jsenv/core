@@ -78,6 +78,7 @@
     "@dmail/assert": "3.14.0",
     "@jsenv/auto-publish": "2.0.0",
     "@jsenv/codecov-upload": "2.0.0",
+    "@jsenv/commonjs-converter": "3.0.0",
     "@jsenv/eslint-config": "11.3.0",
     "@jsenv/execution": "6.11.0",
     "@jsenv/node-launcher": "4.26.0",
