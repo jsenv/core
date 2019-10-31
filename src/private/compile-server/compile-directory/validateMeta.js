@@ -166,15 +166,15 @@ const validateSource = async ({ logger, projectDirectoryUrl, source, eTag }) => 
   }
 }
 
-const validateAssets = ({ logger, projectDirectoryUrl, compiledFileRelativePath, cache }) =>
+const validateAssets = ({ logger, projectDirectoryUrl, compiledFileRelativePath, meta }) =>
   Promise.all(
-    cache.assets.map((asset, index) =>
+    meta.assets.map((asset, index) =>
       validateAsset({
         logger,
         asset,
         projectDirectoryUrl,
         compiledFileRelativePath,
-        eTag: cache.assetsEtag[index],
+        eTag: meta.assetsEtag[index],
       }),
     ),
   )
