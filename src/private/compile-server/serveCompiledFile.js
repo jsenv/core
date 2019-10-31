@@ -1,5 +1,5 @@
 import { fileUrlToRelativePath, pathToFileUrl } from "../urlUtils.js"
-import { getOrGenerateCompiledFile } from "../getOrGenerateCompiledFile/getOrGenerateCompiledFile.js"
+import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
 
 const { bufferToEtag, convertFileSystemErrorToResponseProperties } = import.meta.require(
   "@dmail/server",

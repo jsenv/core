@@ -1,5 +1,4 @@
 import { fileRead, fileStat } from "@dmail/helper"
-import { dateToSecondsPrecision } from "./dateToSecondsPrecision.js"
 import { getPathForSourceFile, getPathForCompiledFile, getPathForAssetFile } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
@@ -221,4 +220,10 @@ const validateAsset = async ({
     }
     return Promise.reject(error)
   }
+}
+
+const dateToSecondsPrecision = (date) => {
+  const dateWithSecondsPrecision = new Date(date)
+  dateWithSecondsPrecision.setMilliseconds(0)
+  return dateWithSecondsPrecision
 }
