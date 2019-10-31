@@ -3,12 +3,12 @@ import { getPathForMetaJsonFile } from "./locaters.js"
 
 export const readMeta = async ({
   logger,
-  compileDirectoryUrl,
+  projectDirectoryUrl,
   originalFileRelativePath,
   compiledFileRelativePath,
 }) => {
   const metaJsonFilePath = getPathForMetaJsonFile({
-    compileDirectoryUrl,
+    projectDirectoryUrl,
     compiledFileRelativePath,
   })
 

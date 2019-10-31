@@ -69,7 +69,6 @@ export const serveCompiledJs = async ({
 
   return serveCompiledFile({
     projectDirectoryUrl,
-    compileDirectoryUrl,
     originalFileRelativePath,
     compiledFileRelativePath,
     projectFileRequestedCallback,

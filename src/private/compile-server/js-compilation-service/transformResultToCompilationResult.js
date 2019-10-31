@@ -41,7 +41,7 @@ export const transformResultToCompilationResult = (
         const url = resolveFileUrl(source, sourceUrl)
         if (url.startsWith(projectDirectoryUrl)) {
           const sourceRelativePath = fileUrlToRelativePath(url, projectDirectoryUrl)
-          const sourceOriginRelative = sourceRelativePath.slice(1)
+          const sourceOriginRelative = `/${sourceRelativePath}`
           sources.push(sourceRelativePath)
           return sourceOriginRelative
         }

@@ -1,16 +1,16 @@
 import { resolveFileUrl, fileUrlToPath, resolveDirectoryUrl } from "../urlUtils.js"
 
-export const getPathForAssetFile = ({ compileDirectoryUrl, compiledFileRelativePath, asset }) => {
+export const getPathForAssetFile = ({ projectDirectoryUrl, compiledFileRelativePath, asset }) => {
   const assetDirectoryUrl = resolveDirectoryUrl(
     `${compiledFileRelativePath}__asset__/`,
-    compileDirectoryUrl,
+    projectDirectoryUrl,
   )
   const assetFileUrl = resolveFileUrl(asset, assetDirectoryUrl)
   return fileUrlToPath(assetFileUrl)
 }
 
-export const getPathForMetaJsonFile = ({ compileDirectoryUrl, compiledFileRelativePath }) =>
-  getPathForAssetFile({ compileDirectoryUrl, compiledFileRelativePath, asset: "meta.json" })
+export const getPathForMetaJsonFile = ({ projectDirectoryUrl, compiledFileRelativePath }) =>
+  getPathForAssetFile({ projectDirectoryUrl, compiledFileRelativePath, asset: "meta.json" })
 
 export const getPathForCompiledFile = ({ projectDirectoryUrl, compiledFileRelativePath }) =>
   fileUrlToPath(resolveFileUrl(compiledFileRelativePath, projectDirectoryUrl))

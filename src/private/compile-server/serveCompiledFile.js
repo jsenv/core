@@ -7,7 +7,6 @@ const { bufferToEtag, convertFileSystemErrorToResponseProperties } = import.meta
 
 export const serveCompiledFile = async ({
   projectDirectoryUrl,
-  compileDirectoryUrl,
   originalFileRelativePath,
   compiledFileRelativePath,
   projectFileRequestedCallback = () => {},
@@ -56,7 +55,6 @@ export const serveCompiledFile = async ({
   try {
     const { meta, compileResult, compileResultStatus } = await getOrGenerateCompiledFile({
       projectDirectoryUrl,
-      compileDirectoryUrl,
       originalFileRelativePath,
       compiledFileRelativePath,
       ifEtagMatch,

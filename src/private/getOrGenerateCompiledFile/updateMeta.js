@@ -6,7 +6,6 @@ export const updateMeta = ({
   logger,
   meta,
   projectDirectoryUrl,
-  compileDirectoryUrl,
   originalFileRelativePath,
   compiledFileRelativePath,
   cacheHitTracking,
@@ -42,7 +41,7 @@ export const updateMeta = ({
       promises.push(
         ...assets.map((asset, index) => {
           const assetFilePath = getPathForAssetFile({
-            compileDirectoryUrl,
+            projectDirectoryUrl,
             compiledFileRelativePath,
             asset,
           })
@@ -106,7 +105,7 @@ export const updateMeta = ({
     }
 
     const metaJsonFilePath = getPathForMetaJsonFile({
-      compileDirectoryUrl,
+      projectDirectoryUrl,
       compiledFileRelativePath,
     })
 

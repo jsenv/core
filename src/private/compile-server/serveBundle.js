@@ -135,7 +135,6 @@ export const serveBundle = async ({
 
   return serveCompiledFile({
     projectDirectoryUrl,
-    compileDirectoryUrl,
     originalFileRelativePath,
     compiledFileRelativePath,
     projectFileRequestedCallback,

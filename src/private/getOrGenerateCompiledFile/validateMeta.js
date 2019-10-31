@@ -7,7 +7,6 @@ export const validateMeta = async ({
   logger,
   meta,
   projectDirectoryUrl,
-  compileDirectoryUrl,
   compiledFileRelativePath,
   ifEtagMatch,
   ifModifiedSinceDate,
@@ -30,7 +29,7 @@ export const validateMeta = async ({
     validateAssets({
       logger,
       meta,
-      compileDirectoryUrl,
+      projectDirectoryUrl,
       compiledFileRelativePath,
     }),
   ])
@@ -168,13 +167,13 @@ const validateSource = async ({ logger, projectDirectoryUrl, source, eTag }) => 
   }
 }
 
-const validateAssets = ({ logger, compileDirectoryUrl, compiledFileRelativePath, cache }) =>
+const validateAssets = ({ logger, projectDirectoryUrl, compiledFileRelativePath, cache }) =>
   Promise.all(
     cache.assets.map((asset, index) =>
       validateAsset({
         logger,
         asset,
-        compileDirectoryUrl,
+        projectDirectoryUrl,
         compiledFileRelativePath,
         eTag: cache.assetsEtag[index],
       }),
@@ -184,12 +183,12 @@ const validateAssets = ({ logger, compileDirectoryUrl, compiledFileRelativePath,
 const validateAsset = async ({
   logger,
   asset,
-  compileDirectoryUrl,
+  projectDirectoryUrl,
   compiledFileRelativePath,
   eTag,
 }) => {
   const assetFilePath = getPathForAssetFile({
-    compileDirectoryUrl,
+    projectDirectoryUrl,
     compiledFileRelativePath,
     asset,
   })
