@@ -1,0 +1,13 @@
+{
+  "name": "whatever",
+  "license": "MIT",
+  "scripts": {
+    "execute-on-chromium": "node ./execute-chromium.js index.js",
+    "execute-on-node": "node ./execute-node.js index.js"
+  },
+  "devDependencies": {
+    "@jsenv/execution": "5.11.0",
+    "@jsenv/chromium-launcher": "3.7.0",
+    "@jsenv/node-launcher": "4.15.0"
+  }
+}
