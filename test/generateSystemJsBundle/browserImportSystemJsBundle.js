@@ -1,6 +1,6 @@
 import { fileRead } from "@dmail/helper"
 import { startServer, firstService, serveFile } from "@dmail/server"
-import { fileUrlToPath, resolveFileUrl, resolveDirectoryUrl } from "../../src/urlHelpers.js"
+import { resolveDirectoryUrl, resolveFileUrl, fileUrlToPath } from "src/private/urlUtils.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
