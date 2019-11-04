@@ -1,6 +1,6 @@
-import { resolveDirectoryUrl, resolveFileUrl, fileUrlToPath } from "../../src/urlHelpers.js"
+import { resolveDirectoryUrl, resolveFileUrl, fileUrlToPath } from "src/private/urlUtils.js"
 
-export const nodeRequireGlobalBundle = async ({
+export const requireGlobalBundle = async ({
   projectDirectoryUrl,
   bundleDirectoryRelativePath,
   mainRelativePath,

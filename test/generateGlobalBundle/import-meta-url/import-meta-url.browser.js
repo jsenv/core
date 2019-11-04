@@ -1,27 +1,30 @@
 import { basename } from "path"
 import { assert } from "@dmail/assert"
 import { generateGlobalBundle } from "../../../index.js"
-import { importMetaUrlToDirectoryRelativePath } from "../../importMetaUrlToDirectoryRelativePath.js"
-import { browserScriptloadGlobalBundle } from "../browser-scriptload-global-bundle.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
+import { scriptLoadGlobalBundle } from "../scriptLoadGlobalBundle.js"
 import {
-  GLOBAL_BUNDLING_TEST_GENERATE_PARAM,
-  GLOBAL_BUNDLING_TEST_SCRIPTLOAD_PARAM,
-} from "../global-bundling-test-param.js"
+  GENERATE_GLOBAL_BUNDLE_TEST_PARAMS,
+  SCRIPT_LOAD_GLOBAL_BUNDLE_TEST_PARAMS,
+} from "../TEST_PARAMS.js"
 
-const testDirectoryRelativePath = importMetaUrlToDirectoryRelativePath(import.meta.url)
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/global-browser/`
+const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/commonjs/`
 const mainFileBasename = `${testDirectoryBasename}.js`
 
 await generateGlobalBundle({
-  ...GLOBAL_BUNDLING_TEST_GENERATE_PARAM,
+  ...GENERATE_GLOBAL_BUNDLE_TEST_PARAMS,
+  importMapFileRelativePath: `${testDirectoryRelativePath}importMap.json`,
   bundleDirectoryRelativePath,
   entryPointMap: {
     main: `${testDirectoryRelativePath}${mainFileBasename}`,
   },
 })
-const { globalValue: actual, serverOrigin } = await browserScriptloadGlobalBundle({
-  ...GLOBAL_BUNDLING_TEST_SCRIPTLOAD_PARAM,
+const { globalValue: actual, serverOrigin } = await scriptLoadGlobalBundle({
+  ...SCRIPT_LOAD_GLOBAL_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativePath,
 })
 const expected = `${serverOrigin}/main.js`

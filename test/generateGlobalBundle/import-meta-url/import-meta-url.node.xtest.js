@@ -1,27 +1,29 @@
 import { basename } from "path"
 import { assert } from "@dmail/assert"
 import { generateGlobalBundle } from "../../../index.js"
-import { importMetaUrlToDirectoryRelativePath } from "../../importMetaUrlToDirectoryRelativePath.js"
-import { nodeRequireGlobalBundle } from "../node-require-global-bundle.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
+import { requireGlobalBundle } from "../requireGlobalBundle.js"
 import {
-  GLOBAL_BUNDLING_TEST_GENERATE_PARAM,
-  GLOBAL_BUNDLING_TEST_REQUIRE_PARAM,
-} from "../global-bundling-test-param.js"
+  GENERATE_GLOBAL_BUNDLE_TEST_PARAMS,
+  REQUIRE_GLOBAL_BUNDLE_TEST_PARAMS,
+} from "../TEST_PARAMS.js"
 
-const testDirectoryRelativePath = importMetaUrlToDirectoryRelativePath(import.meta.url)
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/global-browser/`
+const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/commonjs/`
 const mainFileBasename = `${testDirectoryBasename}.js`
 
 await generateGlobalBundle({
-  ...GLOBAL_BUNDLING_TEST_GENERATE_PARAM,
+  ...GENERATE_GLOBAL_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativePath,
   entryPointMap: {
     main: `${testDirectoryRelativePath}${mainFileBasename}`,
   },
 })
-const { globalValue: actual } = await nodeRequireGlobalBundle({
-  ...GLOBAL_BUNDLING_TEST_REQUIRE_PARAM,
+const { globalValue: actual } = await requireGlobalBundle({
+  ...REQUIRE_GLOBAL_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativePath,
 })
 // global bundle do not set a global[globalName]

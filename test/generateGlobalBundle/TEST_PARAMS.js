@@ -2,15 +2,23 @@ import { fileUrlToPath } from "src/private/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
 import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
-export const GENERATE_COMMONJS_BUNDLE_TEST_PARAMS = {
+export const GENERATE_GLOBAL_BUNDLE_TEST_PARAMS = {
   projectDirectoryPath: fileUrlToPath(jsenvCoreDirectoryUrl),
-  bundleDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
+  bundleDirectoryClean: true,
   logLevel: "off",
   throwUnhandled: false,
+  globalName: "__namespace__",
 }
 
-export const REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS = {
+export const SCRIPT_LOAD_GLOBAL_BUNDLE_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   mainRelativePath: "./main.js",
+  globalName: "__namespace__",
+}
+
+export const REQUIRE_GLOBAL_BUNDLE_TEST_PARAMS = {
+  projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  mainRelativePath: "./main.js",
+  globalName: "__namespace__",
 }
