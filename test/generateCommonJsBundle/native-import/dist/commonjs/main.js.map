@@ -1,1 +1,0 @@
-{"version":3,"file":"main.js","sources":["/test/commonjs/native-import/native-import.js"],"sourcesContent":["import { readFile } from \"fs\"\n\nexport default typeof readFile === \"function\" ? 42 : 40\n"],"names":["readFile"],"mappings":";;;;AAEA,mBAAe,OAAOA,WAAP,KAAoB,UAApB,GAAiC,EAAjC,GAAsC,EAArD;;;;"}
