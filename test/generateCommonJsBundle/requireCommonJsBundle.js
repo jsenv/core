@@ -1,4 +1,4 @@
-import { resolveDirectoryUrl, resolveFileUrl, fileUrlToPath } from "../../src/urlHelpers.js"
+import { resolveDirectoryUrl, resolveFileUrl, fileUrlToPath } from "src/private/urlUtils.js"
 
 export const requireCommonJsBundle = async ({
   projectDirectoryUrl,

@@ -1,20 +1,22 @@
 import { basename } from "path"
 import { assert } from "@dmail/assert"
 import { generateCommonJsBundle } from "../../../index.js"
-import { importMetaUrlToDirectoryRelativePath } from "../../importMetaUrlToDirectoryRelativePath.js"
-import { requireCommonJsBundle } from "../require-commonjs-bundle.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
+import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
-  COMMONJS_BUNDLING_TEST_GENERATE_PARAM,
-  COMMONJS_BUNDLING_TEST_REQUIRE_PARAM,
-} from "../commonjs-bundling-test-param.js"
+  GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
+  REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
+} from "../TEST_PARAMS.js"
 
-const testDirectoryRelativePath = importMetaUrlToDirectoryRelativePath(import.meta.url)
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
 const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/commonjs`
 const mainFileBasename = `${testDirectoryBasename}.js`
 
 await generateCommonJsBundle({
-  ...COMMONJS_BUNDLING_TEST_GENERATE_PARAM,
+  ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativePath,
   entryPointMap: {
     main: `${testDirectoryRelativePath}${mainFileBasename}`,
@@ -22,7 +24,7 @@ await generateCommonJsBundle({
 })
 
 const { namespace } = await requireCommonJsBundle({
-  ...COMMONJS_BUNDLING_TEST_REQUIRE_PARAM,
+  ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativePath,
 })
 const actual = await namespace

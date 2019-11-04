@@ -1,3 +1,4 @@
+export { bundleToCompilationResult } from "./src/bundleToCompilationResult.js"
 export { computeBabelPluginMapForPlatform } from "./src/computeBabelPluginMapForPlatform.js"
 export { computeJsenvPluginMapForPlatform } from "./src/computeJsenvPluginMapForPlatform.js"
 export { convertCommonJsWithBabel } from "./src/convertCommonJsWithBabel.js"
