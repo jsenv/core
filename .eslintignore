@@ -1,6 +1,12 @@
 /.dist/
 /dist/
 /coverage/
+/docs/bundling/basic-project/dist/
+/docs/bundling/basic-project/node_modules/
+/docs/execution/basic-project/dist/
+/docs/execution/basic-project/node_modules/
 /node_modules/
 /src/**/s.js
+/test/**/.dist/
+/test/**/dist/
 /test/**/syntax-error.js
