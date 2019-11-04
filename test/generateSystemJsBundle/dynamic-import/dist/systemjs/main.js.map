@@ -1,1 +1,0 @@
-{"version":3,"file":"main.js","sources":["/test/systemjs/dynamic-import/dynamic-import.js"],"sourcesContent":["const { default: value } = await import(\"./answer.js\")\nexport default value\n"],"names":["value","default"],"mappings":";;;;;cAA2B,MAAM,cAAO,sBAAP;OAAhBA,aAATC;;;;;;;"}

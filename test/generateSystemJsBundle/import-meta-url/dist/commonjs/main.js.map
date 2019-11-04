@@ -1,1 +1,0 @@
-{"version":3,"file":"main.js","sources":["/test/systemjs/import-meta-url/import-meta-url.js"],"sourcesContent":["export default import.meta.url\n"],"names":["import"],"mappings":";;;;;AAAA,0CAAeA,gBAAf;;;;;;"}

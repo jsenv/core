@@ -1,1 +1,0 @@
-{"version":3,"file":"main.js","sources":["/test/systemjs/basic/answer.js","/test/systemjs/basic/basic.js"],"sourcesContent":["export default 42\n","import value from \"./answer.js\"\n\nexport default value\n"],"names":[],"mappings":";;;;;AAAA,eAAe,EAAf;;ACEA;;;;;;"}
