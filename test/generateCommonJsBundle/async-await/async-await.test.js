@@ -3,7 +3,7 @@ import { assert } from "@dmail/assert"
 import { generateCommonJsBundle } from "../../../index.js"
 import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
-import { requireCommonJsBundle } from "../require-commonjs-bundle.js"
+import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
   GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
