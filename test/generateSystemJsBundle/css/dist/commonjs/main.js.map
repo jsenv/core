@@ -1,0 +1,1 @@
+{"version":3,"file":"main.js","sources":["/test/systemjs/css/style.css","/test/systemjs/css/css.js"],"sourcesContent":["export default \"body {\\n  background: yellow;\\n}\\n\"","import cssText from \"./style.css\"\n\nexport default cssText\n"],"names":[],"mappings":";;;;;AAAA,iBAAe,oCAAf;;ACEA;;;;;;"}

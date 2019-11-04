@@ -1,0 +1,1 @@
+{"version":3,"file":"a.js","sources":["../../a.js"],"sourcesContent":["import { usedByBoth } from \"./used-by-both.js\"\n\nexport default `a-${usedByBoth}`\n"],"names":["usedByBoth"],"mappings":";;;;AAEA,oBAAoBA,oBAApB;;;;"}

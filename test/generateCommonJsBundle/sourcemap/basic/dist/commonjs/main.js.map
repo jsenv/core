@@ -1,0 +1,1 @@
+{"version":3,"file":"main.js","sources":["/test/commonjs/sourcemap/basic/basic.js"],"sourcesContent":["const answer = () => {\n  return 42\n}\n\nexport { answer }\n"],"names":["answer"],"mappings":";;;;IAAMA,MAAM,GAAG,SAATA,MAAS,GAAM;SACZ,EAAP;CADF;;;;"}

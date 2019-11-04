@@ -46,6 +46,7 @@
   "dependencies": {
     "@babel/core": "7.6.0",
     "@babel/helper-hoist-variables": "7.4.4",
+    "@babel/helper-module-imports": "7.0.0",
     "@babel/helper-plugin-utils": "7.0.0",
     "@babel/helpers": "7.6.0",
     "@babel/plugin-syntax-dynamic-import": "7.2.0",
@@ -62,6 +63,7 @@
     "@jsenv/href": "1.2.0",
     "@jsenv/import-map": "6.6.0",
     "@jsenv/logger": "3.1.0",
+    "@jsenv/node-module-import-map": "8.4.1",
     "@jsenv/operating-system-path": "3.1.0",
     "@jsenv/url-meta": "4.0.0",
     "abort-controller": "3.0.0",
@@ -80,7 +82,8 @@
     "rollup-plugin-node-resolve": "5.2.0",
     "rollup-plugin-node-globals": "1.4.0",
     "rollup-plugin-replace": "2.2.0",
-    "systemjs": "6.1.4"
+    "systemjs": "6.1.4",
+    "terser": "4.3.9"
   },
   "devDependencies": {
     "@dmail/assert": "3.14.0",
@@ -90,7 +93,6 @@
     "@jsenv/eslint-config": "11.3.0",
     "@jsenv/execution": "6.11.0",
     "@jsenv/node-launcher": "4.26.0",
-    "@jsenv/node-module-import-map": "8.4.1",
     "@jsenv/prettier-check-project": "3.5.0",
     "@jsenv/prettier-config": "1.0.1",
     "@jsenv/testing": "3.9.0",

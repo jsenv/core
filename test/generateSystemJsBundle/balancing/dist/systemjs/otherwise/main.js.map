@@ -1,0 +1,1 @@
+{"version":3,"file":"main.js","sources":["/test/systemjs/balancing/answer.js","/test/systemjs/balancing/balancing.js"],"sourcesContent":["export const answer = 42\n","import { answer } from \"./answer.js\"\n\nconsole.log(answer)\n\nexport default answer\n"],"names":["answer","console","log"],"mappings":";;;;;GAAO,IAAMA,MAAM,GAAG,EAAf;;GCEPC,OAAO,CAACC,GAAR,CAAYF,MAAZ;AAEA;;;;;;"}

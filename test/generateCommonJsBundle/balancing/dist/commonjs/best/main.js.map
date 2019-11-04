@@ -1,0 +1,1 @@
+{"version":3,"file":"main.js","sources":["/test/commonjs/balancing/answer.js"],"sourcesContent":["export const answer = 42\n"],"names":["answer"],"mappings":";;;;MAAaA,MAAM,GAAG,EAAf;;;;"}

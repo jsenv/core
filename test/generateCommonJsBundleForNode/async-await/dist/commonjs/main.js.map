@@ -1,0 +1,1 @@
+{"version":3,"file":"main.js","sources":["/test/commonjs-for-node/async-await/async-await.js"],"sourcesContent":["export const ask = async () => {\n  const value = await Promise.resolve(42)\n  return value\n}\n"],"names":["ask","value","Promise","resolve"],"mappings":";;;;MAAaA,GAAG,GAAG,YAAY;QACvBC,KAAK,GAAG,MAAMC,OAAO,CAACC,OAAR,CAAgB,EAAhB,CAApB;SACOF,KAAP;CAFK;;;;"}

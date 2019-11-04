@@ -1,0 +1,18 @@
+{
+  "sourceRelativePath": "/test/commonjs/global-this/global-this.js",
+  "contentType": "application/javascript",
+  "sources": [
+    "/test/commonjs/global-this/global-this.js"
+  ],
+  "sourcesEtag": [
+    "\"36-03L3tUzUmTZ+Xcf8LnkCkiMgB9g\""
+  ],
+  "assets": [
+    "global-this.js__asset__/global-this.js.map"
+  ],
+  "assetsEtag": [
+    "\"d9-gVUvDIJtLrR14sG4jHHHvFJgMIw\""
+  ],
+  "createdMs": 1571839037586,
+  "lastModifiedMs": 1571839037586
+}

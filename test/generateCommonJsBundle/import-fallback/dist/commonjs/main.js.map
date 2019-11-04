@@ -1,0 +1,1 @@
+{"version":3,"file":"main.js","sources":["/test/commonjs/import-fallback/whatever.js","/test/commonjs/import-fallback/import-fallback.js"],"sourcesContent":["export default 42","// eslint-disable-next-line import/no-unresolved\nimport value from \"./whatever.js\"\n\nexport default value\n"],"names":[],"mappings":";;AAAA,YAAe,EAAf;;ACAA;;;;"}

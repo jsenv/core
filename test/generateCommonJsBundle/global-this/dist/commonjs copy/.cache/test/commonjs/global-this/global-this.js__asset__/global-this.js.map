@@ -1,0 +1,11 @@
+{
+  "version": 3,
+  "sources": [
+    "/test/commonjs/global-this/global-this.js"
+  ],
+  "names": [
+    "global",
+    "globalThis"
+  ],
+  "mappings": ";AAAA,eAAeA,MAAM,CAACC,UAAP,KAAsBD,MAAtB,GAA+B,EAA/B,GAAoC,EAAnD"
+}
