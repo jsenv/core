@@ -1,5 +1,7 @@
 export { computeBabelPluginMapForPlatform } from "./src/computeBabelPluginMapForPlatform.js"
 export { computeJsenvPluginMapForPlatform } from "./src/computeJsenvPluginMapForPlatform.js"
+export { convertCommonJsWithBabel } from "./src/convertCommonJsWithBabel.js"
+export { convertCommonJsWithRollup } from "./src/convertCommonJsWithRollup.js"
 export { execute } from "./src/execute.js"
 export { jsenvBabelPluginCompatMap } from "./src/jsenvBabelPluginCompatMap.js"
 export { jsenvBrowserScoreMap } from "./src/jsenvBrowserScoreMap.js"

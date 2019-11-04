@@ -73,6 +73,13 @@
     "proper-lockfile": "4.1.1",
     "regenerator-runtime": "0.13.3",
     "rimraf": "3.0.0",
+    "rollup": "1.26.0",
+    "rollup-plugin-commonjs": "10.1.0",
+    "rollup-plugin-json": "4.0.0",
+    "rollup-plugin-node-builtins": "2.1.2",
+    "rollup-plugin-node-resolve": "5.2.0",
+    "rollup-plugin-node-globals": "1.4.0",
+    "rollup-plugin-replace": "2.2.0",
     "systemjs": "6.1.4"
   },
   "devDependencies": {
@@ -80,7 +87,6 @@
     "@jsenv/auto-publish": "2.0.0",
     "@jsenv/chromium-launcher": "3.15.0",
     "@jsenv/codecov-upload": "2.0.0",
-    "@jsenv/commonjs-converter": "3.0.0",
     "@jsenv/eslint-config": "11.3.0",
     "@jsenv/execution": "6.11.0",
     "@jsenv/node-launcher": "4.26.0",
