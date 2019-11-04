@@ -1,6 +1,6 @@
 import { assert } from "@dmail/assert"
 import { generateGroupMap } from "../../src/private/generateGroupMap/generateGroupMap.js"
-import { browserScoreMap } from "../../src/browserScoreMap.js"
+import { jsenvBrowserScoreMap } from "../../src/jsenvBrowserScoreMap.js"
 
 {
   const babelPluginMap = {
@@ -9,7 +9,7 @@ import { browserScoreMap } from "../../src/browserScoreMap.js"
   }
   const actual = generateGroupMap({
     babelPluginMap,
-    platformScoreMap: browserScoreMap,
+    platformScoreMap: jsenvBrowserScoreMap,
     groupCount: 2,
   })
   const expected = {

@@ -1,13 +1,13 @@
 import { assert } from "@dmail/assert"
 import { generateGroupMap } from "../../src/private/generateGroupMap/generateGroupMap.js"
-import { browserScoreMap } from "../../src/browserScoreMap.js"
-import { nodeVersionScoreMap } from "../../src/nodeVersionScoreMap.js"
+import { jsenvBrowserScoreMap } from "../../src/jsenvBrowserScoreMap.js"
+import { jsenvNodeVersionScoreMap } from "../../src/jsenvNodeVersionScoreMap.js"
 
 {
   const babelPluginMap = { "transform-block-scoping": true }
   const actual = generateGroupMap({
     babelPluginMap,
-    platformScoreMap: { node: nodeVersionScoreMap },
+    platformScoreMap: { node: jsenvNodeVersionScoreMap },
     groupCount: 2,
   })
   const expected = {
@@ -29,7 +29,7 @@ import { nodeVersionScoreMap } from "../../src/nodeVersionScoreMap.js"
   const babelPluginMap = { "transform-block-scoping": true }
   const actual = generateGroupMap({
     babelPluginMap,
-    platformScoreMap: browserScoreMap,
+    platformScoreMap: jsenvBrowserScoreMap,
     groupCount: 2,
   })
   const expected = {

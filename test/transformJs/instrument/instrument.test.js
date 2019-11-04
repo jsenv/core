@@ -3,9 +3,9 @@ import { basename } from "path"
 import { assert } from "@dmail/assert"
 import { createInstrumentBabelPlugin } from "@jsenv/testing/src/coverage/instrument-babel-plugin.js"
 import { fileUrlToPath, fileUrlToRelativePath, resolveDirectoryUrl } from "src/private/urlUtils.js"
-import { transformJs } from "src/private/transformJs/transformJs.js"
-import { transformResultToCompilationResult } from "src/private/transformResultToCompilationResult/transformResultToCompilationResult.js"
-import { TRANSFORM_JS_TEST_PARAMS, TRANSFORM_RESULT_TEST_PARAMS } from "../transformJsTestParams.js"
+import { transformJs } from "src/private/compile-server/js-compilation-service/transformJs.js"
+import { transformResultToCompilationResult } from "src/private/compile-server/js-compilation-service/transformResultToCompilationResult.js"
+import { TRANSFORM_JS_TEST_PARAMS, TRANSFORM_RESULT_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryBasename = basename(testDirectoryUrl)

@@ -2,8 +2,8 @@ import { readFileSync } from "fs"
 import { basename } from "path"
 import { assert } from "@dmail/assert"
 import { fileUrlToPath, fileUrlToRelativePath, resolveDirectoryUrl } from "src/private/urlUtils.js"
-import { transformJs } from "src/private/transformJs/transformJs.js"
-import { transformResultToCompilationResult } from "src/private/transformResultToCompilationResult/transformResultToCompilationResult.js"
+import { transformJs } from "src/private/compile-server/js-compilation-service/transformJs.js"
+import { transformResultToCompilationResult } from "src/private/compile-server/js-compilation-service/transformResultToCompilationResult.js"
 import { TRANSFORM_JS_TEST_PARAMS, TRANSFORM_RESULT_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)

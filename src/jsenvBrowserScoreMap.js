@@ -4,7 +4,7 @@
 // and keep in mind this should be updated time to time or even better
 // come from a project specific audience
 
-export const browserScoreMap = {
+export const jsenvBrowserScoreMap = {
   android: 0.001,
   chrome: {
     "71": 0.3,

@@ -1,14 +1,14 @@
 import { assert } from "@dmail/assert"
 import { generateGroupMap } from "../../src/private/generateGroupMap/generateGroupMap.js"
-import { browserScoreMap } from "../../src/browserScoreMap.js"
-import { nodeVersionScoreMap } from "../../src/nodeVersionScoreMap.js"
+import { jsenvBrowserScoreMap } from "../../src/jsenvBrowserScoreMap.js"
+import { jsenvNodeVersionScoreMap } from "../../src/jsenvNodeVersionScoreMap.js"
 
 const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 {
   const actual = generateGroupMap({
     babelPluginMap: jsenvBabelPluginMap,
-    platformScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
+    platformScoreMap: { ...jsenvBrowserScoreMap, node: jsenvNodeVersionScoreMap },
     groupCount: 2,
   })
   const expected = {

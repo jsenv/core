@@ -10,9 +10,9 @@ import { serveBrowserPlatform } from "./private/compile-server/serveBrowserPlatf
 import { serveNodePlatform } from "./private/compile-server/serveNodePlatform.js"
 import { serveCompiledJs, relativePathIsAsset } from "./private/compile-server/serveCompiledJs.js"
 import { cleanCompileDirectoryIfObsolete } from "./private/compile-server/compile-directory/cleanCompileDirectoryIfObsolete.js"
-import { babelPluginCompatMap as babelPluginCompatMapFallback } from "./babelPluginCompatMap.js"
-import { browserScoreMap as browserScoreMapFallback } from "./browserScoreMap.js"
-import { nodeVersionScoreMap as nodeVersionScoreMapFallback } from "./nodeVersionScoreMap.js"
+import { jsenvBabelPluginCompatMap } from "./jsenvBabelPluginCompatMap.js"
+import { jsenvBrowserScoreMap } from "./jsenvBrowserScoreMap.js"
+import { jsenvNodeVersionScoreMap } from "./jsenvNodeVersionScoreMap.js"
 
 const {
   defaultAccessControlAllowedHeaders,
@@ -55,9 +55,9 @@ export const startCompileServer = async ({
 
   // remaining options are complex or private
   compileGroupCount = 1,
-  babelCompatMap = babelPluginCompatMapFallback,
-  browserScoreMap = browserScoreMapFallback,
-  nodeVersionScoreMap = nodeVersionScoreMapFallback,
+  babelCompatMap = jsenvBabelPluginCompatMap,
+  browserScoreMap = jsenvBrowserScoreMap,
+  nodeVersionScoreMap = jsenvNodeVersionScoreMap,
   platformAlwaysInsidePlatformScoreMap = false,
   browserPlatformFileUrl = resolveFileUrl(
     "./src/private/compile-server/platform-service/createBrowserPlatform/index.js",

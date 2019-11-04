@@ -1,4 +1,4 @@
-import { babelPluginCompatMap as babelPluginCompatMapFallback } from "../../babelPluginCompatMap.js"
+import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
 import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "../../jsenvPluginCompatMap.js"
 import { computeBabelPluginMapForPlatform } from "../../computeBabelPluginMapForPlatform.js"
 import { computeJsenvPluginMapForPlatform } from "../../computeJsenvPluginMapForPlatform.js"
@@ -8,7 +8,7 @@ import { groupHaveSameRequirements } from "./groupHaveSameRequirements.js"
 export const generatePlatformGroupArray = ({
   babelPluginMap,
   jsenvPluginMap,
-  babelPluginCompatMap = babelPluginCompatMapFallback,
+  babelPluginCompatMap = jsenvBabelPluginCompatMap,
   jsenvPluginCompatMap = jsenvPluginCompatMapFallback,
   platformName,
 }) => {
