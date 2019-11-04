@@ -68,6 +68,7 @@
     "ansi-to-html": "0.6.12",
     "babel-plugin-transform-commonjs": "1.1.6",
     "eventsource": "1.0.7",
+    "istanbul-lib-coverage": "2.0.5",
     "node-fetch": "2.6.0",
     "proper-lockfile": "4.1.1",
     "regenerator-runtime": "0.13.3",
