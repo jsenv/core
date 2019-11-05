@@ -2,6 +2,7 @@ import { readFileSync } from "fs"
 import { basename } from "path"
 import { assert } from "@dmail/assert"
 import { fileUrlToPath, fileUrlToRelativePath, resolveDirectoryUrl } from "src/private/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
 import { transformJs } from "src/private/compile-server/js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "src/private/compile-server/js-compilation-service/transformResultToCompilationResult.js"
 import { TRANSFORM_JS_TEST_PARAMS, TRANSFORM_RESULT_TEST_PARAMS } from "../TEST_PARAMS.js"
@@ -10,10 +11,7 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryBasename = basename(testDirectoryUrl)
 const fileBasename = `${testDirectoryBasename}.js`
 const fileUrl = import.meta.resolve(`./${fileBasename}`)
-const fileRelativePath = fileUrlToRelativePath(
-  fileUrl,
-  TRANSFORM_JS_TEST_PARAMS.projectDirectoryUrl,
-)
+const fileRelativePath = fileUrlToRelativePath(fileUrl, jsenvCoreDirectoryUrl)
 const filePath = fileUrlToPath(fileUrl)
 const fileContent = readFileSync(filePath).toString()
 
