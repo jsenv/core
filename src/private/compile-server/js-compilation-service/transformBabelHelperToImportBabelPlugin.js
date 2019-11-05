@@ -1,5 +1,5 @@
 import { pathToFileUrl } from "../../urlUtils.js"
-import { babelHelperMap } from "./babelHelperMap.js"
+import { babelHelperMap, pathToBabelHelperName } from "./babelHelperMap.js"
 
 // https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
 const { addDefault } = import.meta.require("@babel/helper-module-imports")
@@ -34,7 +34,7 @@ export const transformBabelHelperToImportBabelPlugin = (api) => {
           if (fileUrl === babelHelperPath) {
             return undefined
           }
-        } else if (searchPossibleBabelHelperNameInFilePath(filePath) === name) {
+        } else if (pathToBabelHelperName(filePath) === name) {
           return undefined
         }
 
@@ -48,17 +48,4 @@ export const transformBabelHelperToImportBabelPlugin = (api) => {
       })
     },
   }
-}
-
-export const searchPossibleBabelHelperNameInFilePath = (filePath) => {
-  const fileUrl = pathToFileUrl(filePath)
-  const filePathname = fileUrl.slice("file://".length)
-
-  const babelPathPart = "@jsenv/core/helpers/babel/"
-  const babelPathPartIndex = filePathname.indexOf(babelPathPart)
-  if (babelPathPartIndex === -1) return ""
-
-  const after = filePathname.slice(babelPathPartIndex + babelPathPart.length)
-  const helperName = after.slice(0, after.indexOf("/"))
-  return helperName
 }

@@ -62,6 +62,19 @@ export const generateBundle = ({
     if (typeof entryPointMap !== "object") {
       throw new TypeError(`entryPointMap must be an object, got ${entryPointMap}`)
     }
+    Object.keys(entryPointMap).forEach((entryName) => {
+      const entryRelativePath = entryPointMap[entryName]
+      if (typeof entryRelativePath !== "string") {
+        throw new TypeError(
+          `found unexpected value in entryPointMap, it must be a string but found ${entryRelativePath} for key ${entryName}`,
+        )
+      }
+      if (!entryRelativePath.startsWith("./")) {
+        throw new TypeError(
+          `found unexpected value in entryPointMap, it must start with ./ but found ${entryRelativePath} for key ${entryName}`,
+        )
+      }
+    })
     if (typeof compileGroupCount !== "number") {
       throw new TypeError(`compileGroupCount must be a number, got ${compileGroupCount}`)
     }
