@@ -8,15 +8,9 @@ import {
   resolveFileUrl,
 } from "../urlUtils.js"
 import { readProjectImportMap } from "../readProjectImportMap/readProjectImportMap.js"
+import { generateBundle } from "../bundle/generateBundle/generateBundle.js"
+import { bundleToCompilationResult } from "../bundle/bundleToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
-
-// important to use require here
-// because @jsenv/bundling use relativePathInception
-// and if we use direct import we will no longer
-// execute @jsenv/bunling bundled files but sources files
-// meaning if we use @jsenv/core bundle we'll fail
-// to find the @jsenv/bundling files
-const { generateBundle, bundleToCompilationResult } = import.meta.require("@jsenv/bundling")
 
 export const serveBundle = async ({
   logger,

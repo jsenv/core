@@ -1,6 +1,7 @@
 import { basename } from "path"
 import { assert } from "@dmail/assert"
-import { generateCommonJsBundle, bundleToCompilationResult } from "../../../index.js"
+import { generateCommonJsBundle } from "../../../index.js"
+import { bundleToCompilationResult } from "src/private/bundle/bundleToCompilationResult.js"
 import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"

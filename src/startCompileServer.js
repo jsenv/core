@@ -13,6 +13,7 @@ import { cleanCompileDirectoryIfObsolete } from "./private/compile-server/compil
 import { jsenvBabelPluginCompatMap } from "./jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "./jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "./jsenvNodeVersionScoreMap.js"
+import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 const {
   defaultAccessControlAllowedHeaders,
@@ -20,7 +21,6 @@ const {
   firstService,
   serveFile,
 } = import.meta.require("@dmail/server")
-const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),

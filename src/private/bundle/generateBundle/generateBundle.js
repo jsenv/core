@@ -3,6 +3,9 @@ import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "@dmail/cancellation"
+import { jsenvBabelPluginMap } from "../../../jsenvBabelPluginMap.js"
+import { jsenvBrowserScoreMap } from "../../../jsenvBrowserScoreMap.js"
+import { jsenvNodeVersionScoreMap } from "../../../jsenvNodeVersionScoreMap.js"
 import { pathToDirectoryUrl, resolveDirectoryUrl, fileUrlToPath } from "../../urlUtils.js"
 import { generateGroupMap } from "../../generateGroupMap/generateGroupMap.js"
 import { assertFile, assertFolder } from "./filesystem-assertions.js"
@@ -11,9 +14,6 @@ import { bundleWithBalancing } from "./bundleWithBalancing.js"
 import { bundleBalancer } from "./bundleBalancer.js"
 import { removeDirectory } from "./removeDirectory.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
-
-const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
-const { browserScoreMap, nodeVersionScoreMap } = import.meta.require("@jsenv/core")
 
 export const generateBundle = ({
   projectDirectoryPath,
@@ -45,7 +45,10 @@ export const generateBundle = ({
   platformWillAlwaysBeKnown,
   balancerTemplateFileUrl,
   balancerDataAbstractSpecifier,
-  platformScoreMap = { ...browserScoreMap, node: nodeVersionScoreMap },
+  platformScoreMap = {
+    ...jsenvBrowserScoreMap,
+    node: jsenvNodeVersionScoreMap,
+  },
 }) => {
   const promise = catchAsyncFunctionCancellation(async () => {
     if (typeof projectDirectoryPath !== "string") {

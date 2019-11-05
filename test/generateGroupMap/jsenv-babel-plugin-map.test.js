@@ -1,9 +1,8 @@
 import { assert } from "@dmail/assert"
+import { jsenvBabelPluginMap } from "../../index.js"
 import { generateGroupMap } from "../../src/private/generateGroupMap/generateGroupMap.js"
 import { jsenvBrowserScoreMap } from "../../src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "../../src/jsenvNodeVersionScoreMap.js"
-
-const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 {
   const actual = generateGroupMap({

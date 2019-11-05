@@ -1,10 +1,9 @@
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
 import { jsenvCoverDescription } from "@jsenv/testing"
 import { createInstrumentBabelPlugin } from "@jsenv/testing/src/coverage/instrument-babel-plugin.js"
+import { jsenvBabelPluginMap } from "../index.js"
 import { resolveFileUrl } from "../src/private/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "../src/private/jsenvCoreDirectoryUrl.js"
-
-const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
 
 const computeTestBabelPluginMap = ({ coverageEnabled }) => {
   if (!coverageEnabled) return jsenvBabelPluginMap

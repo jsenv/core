@@ -32,7 +32,7 @@ Note: All parameter ending with `relativePath` are resolved against `projectDire
 This parameter is optionnal with a default value of:
 
 ```js
-require("@jsenv/babel-plugin-map").jsenvBabelPluginMap
+require("@jsenv/core").jsenvBabelPluginMap
 ```
 
 jsenv is meant to run standard JavaScript by default so the default `babelPluginMap` enable standard babel plugins.<br />
@@ -41,7 +41,7 @@ jsenv is meant to run standard JavaScript by default so the default `babelPlugin
 If you want to make jsenv compatible with non standard syntaxes you can use your own `babelPluginMap`. For instance, the following code makes jsenv compatible with `jsx`.
 
 ```js
-const { jsenvBabelPluginMap } = require("@jsenv/babel-plugin-map")
+const { jsenvBabelPluginMap } = require("@jsenv/core")
 const transformReactJSX = require("@babel/plugin-transform-react-jsx")
 
 const babelPluginMap = {

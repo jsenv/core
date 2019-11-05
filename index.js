@@ -1,4 +1,3 @@
-export { bundleToCompilationResult } from "./src/bundleToCompilationResult.js"
 export { computeBabelPluginMapForPlatform } from "./src/computeBabelPluginMapForPlatform.js"
 export { computeJsenvPluginMapForPlatform } from "./src/computeJsenvPluginMapForPlatform.js"
 export { convertCommonJsWithBabel } from "./src/convertCommonJsWithBabel.js"
@@ -9,6 +8,7 @@ export { generateCommonJsBundleForNode } from "./src/generateCommonJsBundleForNo
 export { generateGlobalBundle } from "./src/generateGlobalBundle.js"
 export { generateSystemJsBundle } from "./src/generateSystemJsBundle.js"
 export { jsenvBabelPluginCompatMap } from "./src/jsenvBabelPluginCompatMap.js"
+export { jsenvBabelPluginMap } from "./src/jsenvBabelPluginMap.js"
 export { jsenvBrowserScoreMap } from "./src/jsenvBrowserScoreMap.js"
 export { jsenvNodeVersionScoreMap } from "./src/jsenvNodeVersionScoreMap.js"
 export { jsenvPluginCompatMap } from "./src/jsenvPluginCompatMap.js"

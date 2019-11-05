@@ -1,7 +1,6 @@
 import { computeBabelPluginMapForPlatform } from "./computeBabelPluginMapForPlatform.js"
 import { generateCommonJsBundle } from "./generateCommonJsBundle.js"
-
-const { jsenvBabelPluginMap } = import.meta.require("@jsenv/babel-plugin-map")
+import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 export const generateCommonJsBundleForNode = ({
   babelPluginMap = jsenvBabelPluginMap,
