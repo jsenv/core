@@ -1,18 +1,16 @@
 import { assert } from "@dmail/assert"
 import { resolveDirectoryUrl, resolveFileUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "../../../index.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 import { fetch } from "../fetch.js"
 
 const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
 const fileUrl = resolveFileUrl("./file.js", import.meta.url)
-const fileRelativePath = fileUrlToRelativePath(
-  fileUrl,
-  COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,
-)
+const fileRelativePath = fileUrlToRelativePath(fileUrl, jsenvCoreDirectoryUrl)
 const compileDirectoryRelativePath = fileUrlToRelativePath(
   compileDirectoryUrl,
-  COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,
+  jsenvCoreDirectoryUrl,
 )
 const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,

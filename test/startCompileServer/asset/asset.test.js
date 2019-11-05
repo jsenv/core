@@ -1,20 +1,22 @@
 import { assert } from "@dmail/assert"
 import { resolveDirectoryUrl, resolveFileUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "../../../index.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 import { fetch } from "../fetch.js"
 
 const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
 const fileUrl = resolveFileUrl("./asset.js", import.meta.url)
-const fileRelativePath = fileUrlToRelativePath(
-  fileUrl,
-  COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,
+const fileRelativePath = fileUrlToRelativePath(fileUrl, jsenvCoreDirectoryUrl)
+const compileDirectoryRelativePath = fileUrlToRelativePath(
+  compileDirectoryUrl,
+  jsenvCoreDirectoryUrl,
 )
 const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   compileDirectoryUrl,
 })
-const fileServerUrl = `${compileServer.origin}/.dist/otherwise/${fileRelativePath}`
+const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativePath}otherwise/${fileRelativePath}`
 
 await fetch(fileServerUrl)
 const response = await fetch(`${fileServerUrl}__asset__/meta.json`)
@@ -38,7 +40,7 @@ const expected = {
     sources: [fileRelativePath],
     sourcesEtag: ['"7c-b5QcrFoIrKrXSr5F415m5RCd6uY"'],
     assets: ["asset.js.map"],
-    assetsEtag: ['"ef-75BqORiC83xOSvN0IYRfLmcxtEw"'],
+    assetsEtag: ['"f3-55p2vaaelfIcmtI8g+lQFAOt4E8"'],
     createdMs: actual.body.createdMs,
     lastModifiedMs: actual.body.lastModifiedMs,
   },
