@@ -71,6 +71,16 @@ export const startCompileServer = async ({
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
   }
+  if (typeof compileDirectoryUrl !== "string") {
+    throw new TypeError(`compileDirectoryUrl must be a string. got ${compileDirectoryUrl}`)
+  }
+  if (!compileDirectoryUrl.startsWith(projectDirectoryUrl)) {
+    throw new TypeError(`compileDirectoryUrl must be inside projectDirectoryUrl.
+--- compile directory url ---
+${compileDirectoryUrl}
+--- project directory url ---
+${projectDirectoryUrl}`)
+  }
   if (typeof browserPlatformFileUrl !== "string") {
     throw new TypeError(`browserPlatformFileUrl must be a string. got ${browserPlatformFileUrl}`)
   }

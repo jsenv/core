@@ -83,9 +83,12 @@ export const generateBundle = ({
     }
     const cancellationToken = createProcessInterruptionCancellationToken()
 
+    const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
+    // important to do this in case projectDirectoryPath was already a file:/// url
+    projectDirectoryPath = fileUrlToPath(projectDirectoryUrl)
+
     await assertFolder(projectDirectoryPath)
 
-    const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
     const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativePath, projectDirectoryUrl)
     const bundleDirectoryPath = fileUrlToPath(bundleDirectoryUrl)
 

@@ -324,20 +324,23 @@ const createNodeIIFEString = ({
     collectCoverage,
     executionId,
     remap
-  } = ${JSON.stringify({
-    nodeExecuteFilePath: fileUrlToPath(
-      resolveFileUrl(NODE_EXECUTE_CLIENT_RELATIVE_PATH, compileDirectoryUrl),
-    ),
-    compileServerOrigin,
-    projectDirectoryUrl,
-    compileDirectoryUrl,
-    fileRelativePath,
-    collectNamespace,
-    collectCoverage,
-    executionId,
-    remap,
-  })})
-
+  } = ${JSON.stringify(
+    {
+      nodeExecuteFilePath: fileUrlToPath(
+        resolveFileUrl(NODE_EXECUTE_CLIENT_RELATIVE_PATH, compileDirectoryUrl),
+      ),
+      compileServerOrigin,
+      projectDirectoryUrl,
+      compileDirectoryUrl,
+      fileRelativePath,
+      collectNamespace,
+      collectCoverage,
+      executionId,
+      remap,
+    },
+    null,
+    "    ",
+  )}
 
   const { execute } = require(nodeExecuteFilePath)
 

@@ -85,7 +85,7 @@
     "@dmail/helper": "2.3.0",
     "@dmail/process-signals": "1.1.0",
     "@dmail/server": "2.10.0",
-    "@dmail/uneval": "5.6.0",
+    "@dmail/uneval": "5.7.0",
     "@jsenv/error-stack-sourcemap": "3.5.0",
     "@jsenv/href": "1.2.0",
     "@jsenv/import-map": "6.6.0",

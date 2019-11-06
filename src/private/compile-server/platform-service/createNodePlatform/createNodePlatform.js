@@ -28,12 +28,12 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
   })
 
   const relativePathToCompiledUrl = (relativePath) => {
-    return `${compileServerOrigin}${compileDirectoryRelativePath}${compileId}/${relativePath}`
+    return `${compileServerOrigin}/${compileDirectoryRelativePath}${compileId}/${relativePath}`
   }
 
   const importMapNormalized = normalizeImportMap(
     importMap,
-    `${compileServerOrigin}${compileDirectoryRelativePath}${compileId}/`,
+    `${compileServerOrigin}/${compileDirectoryRelativePath}${compileId}/`,
   )
 
   const resolveImportScoped = (specifier, importer) => {
