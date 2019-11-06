@@ -139,7 +139,7 @@ const urlToOriginalUrl = (
     return url
   }
 
-  const afterCompileId = afterCompileDirectory.slice(nextSlashIndex)
+  const afterCompileId = afterCompileDirectory.slice(nextSlashIndex + 1)
   return resolveFileUrl(afterCompileId, projectDirectoryUrl)
 }
 
