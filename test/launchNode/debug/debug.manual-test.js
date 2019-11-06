@@ -1,35 +1,38 @@
+import { basename } from "path"
 import { assert } from "@dmail/assert"
-import { selfHrefToFolderRelativePath } from "../self-href-to-folder-relative-path.js"
-import { launchNode } from "../../index.js"
+import { launchNode, startCompileServer, launchAndExecute } from "../../../index.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
 import {
-  NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
-  NODE_LAUNCHER_TEST_LAUNCH_PARAM,
-  NODE_LAUNCHER_TEST_PARAM,
-} from "../node-launcher-test-param.js"
+  START_COMPILE_SERVER_TEST_PARAMS,
+  EXECUTE_TEST_PARAMS,
+  LAUNCH_TEST_PARAMS,
+} from "../TEST_PARAMS.js"
 
-const { startCompileServer } = import.meta.require("@jsenv/compile-server")
-const { launchAndExecute } = import.meta.require("@jsenv/execution")
-
-const folderRelativePath = selfHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/debug.js`
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryBasename = basename(testDirectoryRelativePath)
+const fileBasename = `${testDirectoryBasename}.js`
+const compileDirectoryUrl = resolveDirectoryUrl("./.dist/", import.meta.url)
+const fileRelativePath = `${testDirectoryRelativePath}${fileBasename}`
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  ...NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
-  compileIntoRelativePath,
+  ...START_COMPILE_SERVER_TEST_PARAMS,
+  compileDirectoryUrl,
 })
 
 const actual = await launchAndExecute({
-  ...NODE_LAUNCHER_TEST_LAUNCH_PARAM,
+  ...EXECUTE_TEST_PARAMS,
   launch: (options) =>
     launchNode({
-      ...NODE_LAUNCHER_TEST_PARAM,
+      ...LAUNCH_TEST_PARAMS,
       ...options,
       compileServerOrigin,
-      compileIntoRelativePath,
+      compileDirectoryUrl,
     }),
-  mirrorConsole: true,
   fileRelativePath,
+  mirrorConsole: true,
+  collectNamespace: false,
 })
 const expected = {
   status: "completed",
