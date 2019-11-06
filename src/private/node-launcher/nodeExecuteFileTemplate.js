@@ -45,7 +45,7 @@ export const execute = async ({
 
   const fileCompiledServerUrl = relativePathToCompiledUrl(fileRelativePath)
   const fileCompiledFileUrl = resolveFileUrl(
-    fileCompiledServerUrl.slice(`${compileServerOrigin}/`.length),
+    fileCompiledServerUrl.slice(compileServerOrigin.length),
     projectDirectoryUrl,
   )
 
@@ -56,7 +56,7 @@ export const execute = async ({
           ? filePathToServerOrFileUrl(importer, { projectDirectoryUrl, compileServerOrigin })
           : fileServerUrl
         const specifierUrl = resolveFileUrl(specifier, importerUrl)
-        if (specifierUrl.startsWith(`${compileServerOrigin}/`)) {
+        if (specifierUrl.startsWith(compileServerOrigin)) {
           return `file://${specifierUrl.slice(compileServerOrigin.length)}`
         }
         return specifierUrl

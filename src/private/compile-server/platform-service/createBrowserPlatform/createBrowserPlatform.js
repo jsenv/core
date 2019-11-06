@@ -28,13 +28,13 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
     groupMap,
   })
 
-  const relativePathToCompiledHref = (relativePath) => {
-    return `${compileServerOrigin}${compileDirectoryRelativePath}/${compileId}/${relativePath}`
+  const relativePathToCompiledUrl = (relativePath) => {
+    return `${compileServerOrigin}/${compileDirectoryRelativePath}${compileId}/${relativePath}`
   }
 
   const importMapNormalized = normalizeImportMap(
     importMap,
-    `${compileServerOrigin}${compileDirectoryRelativePath}/${compileId}/`,
+    `${compileServerOrigin}/${compileDirectoryRelativePath}${compileId}/`,
   )
 
   const resolveImportScoped = (specifier, importer) => {
@@ -102,7 +102,7 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
   }
 
   return {
-    relativePathToCompiledHref,
+    relativePathToCompiledUrl,
     resolveImportScoped,
     importFile,
     executeFile,

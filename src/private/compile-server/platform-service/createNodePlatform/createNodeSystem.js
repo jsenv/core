@@ -109,8 +109,8 @@ const responseUrlToSourceUrl = (responseUrl, { compileServerOrigin, projectDirec
   // because we can also create a node system and use it to import a bundle
   // from filesystem. In that case there is no compileServerOrigin
   if (compileServerOrigin && responseUrl.startsWith(`${compileServerOrigin}/`)) {
-    const ressource = responseUrl.slice(compileServerOrigin.length)
-    const fileUrl = resolveFileUrl(ressource, projectDirectoryUrl)
+    const afterOrigin = responseUrl.slice(`${compileServerOrigin}/`.length)
+    const fileUrl = resolveFileUrl(afterOrigin, projectDirectoryUrl)
     return fileUrlToPath(fileUrl)
   }
   return responseUrl
@@ -128,19 +128,19 @@ const urlToOriginalUrl = (
     return url
   }
 
-  const ressource = url.slice(compileServerOrigin.length)
-  if (!ressource.startsWith(compileDirectoryRelativePath)) {
+  const afterOrigin = url.slice(`${compileServerOrigin}/`.length)
+  if (!afterOrigin.startsWith(compileDirectoryRelativePath)) {
     return url
   }
 
-  const ressourceAfterCompileInto = ressource.slice(compileDirectoryRelativePath.length)
-  const nextSlashIndex = ressourceAfterCompileInto.indexOf("/")
+  const afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativePath.length)
+  const nextSlashIndex = afterCompileDirectory.indexOf("/")
   if (nextSlashIndex === -1) {
     return url
   }
 
-  const ressourceAfterCompileId = ressourceAfterCompileInto.slice(nextSlashIndex)
-  return resolveFileUrl(ressourceAfterCompileId, projectDirectoryUrl)
+  const afterCompileId = afterCompileDirectory.slice(nextSlashIndex)
+  return resolveFileUrl(afterCompileId, projectDirectoryUrl)
 }
 
 const moduleExportsToModuleNamespace = (moduleExports) => {
