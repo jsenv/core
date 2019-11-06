@@ -18,8 +18,9 @@ const mainFileBasename = `${testDirectoryBasename}.js`
 await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativePath,
+  importMapFileRelativePath: `${testDirectoryRelativePath}importMap.json`,
   entryPointMap: {
-    main: `${testDirectoryRelativePath}${mainFileBasename}`,
+    main: `./${testDirectoryRelativePath}${mainFileBasename}`,
   },
 })
 

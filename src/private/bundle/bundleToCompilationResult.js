@@ -48,7 +48,7 @@ export const bundleToCompilationResult = (
       // do not track dependency outside project
       if (!moduleUrl.startsWith(projectDirectoryUrl)) return
 
-      const relativePath = fileUrlToRelativePath(moduleUrl, projectDirectoryUrl).slice(2)
+      const relativePath = fileUrlToRelativePath(moduleUrl, projectDirectoryUrl)
       if (!sources.includes(relativePath)) {
         sources.push(relativePath)
         sourcesContent.push(dependencyMap[moduleUrl].contentRaw)
