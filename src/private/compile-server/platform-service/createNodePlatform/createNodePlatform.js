@@ -27,7 +27,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
     groupMap,
   })
 
-  const relativePathToCompiledHref = (relativePath) => {
+  const relativePathToCompiledUrl = (relativePath) => {
     return `${compileServerOrigin}${compileDirectoryRelativePath}${compileId}/${relativePath}`
   }
 
@@ -102,7 +102,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
   }
 
   return {
-    relativePathToCompiledHref,
+    relativePathToCompiledUrl,
     resolveImport: resolveImportScoped,
     importFile,
     executeFile,

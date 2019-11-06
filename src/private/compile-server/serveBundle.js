@@ -46,9 +46,9 @@ export const serveBundle = async ({
     }
 
     const importMapForJsenvProjectUsingServeBundle = await generateImportMapForPackage({
+      logger,
       projectDirectoryPath: fileUrlToPath(jsenvProjectDirectoryUrl),
       rootProjectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
-      logger,
     })
     importMapForBundle = composeTwoImportMaps(
       importMapForBundle,

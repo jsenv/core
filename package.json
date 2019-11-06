@@ -86,6 +86,7 @@
     "@dmail/process-signals": "1.1.0",
     "@dmail/server": "2.10.0",
     "@dmail/uneval": "5.6.0",
+    "@jsenv/error-stack-sourcemap": "3.5.0",
     "@jsenv/href": "1.2.0",
     "@jsenv/import-map": "6.6.0",
     "@jsenv/logger": "3.1.0",
@@ -109,6 +110,7 @@
     "rollup-plugin-node-resolve": "5.2.0",
     "rollup-plugin-node-globals": "1.4.0",
     "rollup-plugin-replace": "2.2.0",
+    "source-map": "0.7.3",
     "systemjs": "6.1.4",
     "terser": "4.3.9"
   },
