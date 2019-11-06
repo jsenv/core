@@ -18,7 +18,7 @@ const bundle = await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativePath,
   entryPointMap: {
-    main: `${testDirectoryRelativePath}${mainFileBasename}`,
+    main: `./${testDirectoryRelativePath}${mainFileBasename}`,
   },
   writeOnFileSystem: true,
 })
@@ -30,7 +30,7 @@ const sourceMap = JSON.parse(compilationResult.assetsContent[0])
 const sourceMapConsumer = await new SourceMapConsumer(sourceMap)
 const actual = sourceMapConsumer.originalPositionFor({ line: 6, column: 0, bias: 2 })
 const expected = {
-  source: `${testDirectoryRelativePath.slice(1)}basic.js`,
+  source: `/${testDirectoryRelativePath}${mainFileBasename}`,
   line: 2,
   column: actual.column,
   name: null,
