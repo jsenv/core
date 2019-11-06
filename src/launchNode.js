@@ -2,14 +2,14 @@
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@dmail/uneval"
 import { createCancellationToken } from "@dmail/cancellation"
-import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
-import { fileUrlToPath, fileUrlToRelativePath, resolveFileUrl } from "../urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
-import { evalSource } from "./evalSource.js"
-import { createChildExecArgv } from "./createChildExecArgv.js"
-import { assertFile } from "../filesystem-assertions.js"
-import { generateNodeCommonJsBundle } from "./generateNodeCommonJsBundle.js"
+import { fileUrlToPath, fileUrlToRelativePath, resolveFileUrl } from "./private/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "./private/jsenvCoreDirectoryUrl.js"
+import { escapeRegexpSpecialCharacters } from "./private/escapeRegexpSpecialCharacters.js"
+import { assertFile } from "./private/filesystem-assertions.js"
+import { evalSource } from "./private/node-launcher/evalSource.js"
+import { createChildExecArgv } from "./private/node-launcher/createChildExecArgv.js"
+import { generateNodeBundle } from "./private/node-launcher/generateNodeBundle.js"
+import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 const EVALUATION_STATUS_OK = "evaluation-ok"
 const NODE_EXECUTE_CLIENT_RELATIVE_PATH = ".jsenv/node-execute.js"
@@ -166,7 +166,8 @@ export const launchNode = async ({
     { collectNamespace, collectCoverage, executionId },
   ) => {
     const execute = async () => {
-      await generateNodeCommonJsBundle({
+      await generateNodeBundle({
+        logLevel,
         projectDirectoryUrl,
         importDefaultExtension,
         importMapFileRelativePath,
@@ -174,11 +175,11 @@ export const launchNode = async ({
           nodeExecuteTemplateFileUrl,
           projectDirectoryUrl,
         ),
-        // not exactly because compiledFileRelativePath
-        // doit contenir le chemin vers compileDirectoryUrl
-        compiledFileRelativePath: NODE_EXECUTE_CLIENT_RELATIVE_PATH,
+        compiledFileRelativePath: fileUrlToRelativePath(
+          resolveFileUrl(NODE_EXECUTE_CLIENT_RELATIVE_PATH, compileDirectoryUrl),
+          projectDirectoryUrl,
+        ),
         babelPluginMap,
-        logLevel,
       })
 
       return new Promise((resolve, reject) => {

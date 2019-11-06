@@ -6,7 +6,7 @@ export const execute = async ({
   compileServerOrigin,
   projectDirectoryUrl,
   compileDirectoryUrl,
-  moduleFileRelativePath,
+  fileRelativePath,
   collectNamespace,
   collectCoverage,
   executionId,
@@ -20,13 +20,13 @@ export const execute = async ({
     throw valueRejected
   })
 
-  const moduleFileServerUrl = `${compileServerOrigin}/${moduleFileRelativePath}`
-  const moduelFileUrl = resolveFileUrl(moduleFileRelativePath, projectDirectoryUrl)
-  const moduleFilePath = fileUrlToPath(moduelFileUrl)
+  const fileServerUrl = `${compileServerOrigin}/${fileRelativePath}`
+  const fileUrl = resolveFileUrl(fileRelativePath, projectDirectoryUrl)
+  const filePath = fileUrlToPath(fileUrl)
 
   // ça ne fixera pas le fait que require se fera ou mauvais endroit
   // process.chdir(executionFilePath)
-  const executionRequire = createRequireFromFilePath(moduleFilePath)
+  const executionRequire = createRequireFromFilePath(filePath)
 
   const { SourceMapConsumer } = executionRequire("source-map")
   const { installNodeErrorStackRemapping } = executionRequire("@jsenv/error-stack-sourcemap")
@@ -43,9 +43,9 @@ export const execute = async ({
     projectDirectoryUrl,
   })
 
-  const moduleFileCompiledServerUrl = relativePathToCompiledUrl(moduleFileRelativePath)
-  const moduleFileCompiledFileUrl = resolveFileUrl(
-    moduleFileCompiledServerUrl.slice(`${compileServerOrigin}/`.length),
+  const fileCompiledServerUrl = relativePathToCompiledUrl(fileRelativePath)
+  const fileCompiledFileUrl = resolveFileUrl(
+    fileCompiledServerUrl.slice(`${compileServerOrigin}/`.length),
     projectDirectoryUrl,
   )
 
@@ -54,7 +54,7 @@ export const execute = async ({
       if (type === "source" || type === "file-original" || type === "source-map") {
         const importerUrl = importer
           ? filePathToServerOrFileUrl(importer, { projectDirectoryUrl, compileServerOrigin })
-          : moduleFileServerUrl
+          : fileServerUrl
         const specifierUrl = resolveFileUrl(specifier, importerUrl)
         if (specifierUrl.startsWith(`${compileServerOrigin}/`)) {
           return `file://${specifierUrl.slice(compileServerOrigin.length)}`
@@ -62,12 +62,12 @@ export const execute = async ({
         return specifierUrl
       }
 
-      return resolveFileUrl(specifier, importer || moduleFileCompiledFileUrl)
+      return resolveFileUrl(specifier, importer || fileCompiledFileUrl)
     },
     SourceMapConsumer,
   })
 
-  return executeFile(moduleFileCompiledServerUrl, {
+  return executeFile(fileCompiledServerUrl, {
     collectNamespace,
     collectCoverage,
     executionId,

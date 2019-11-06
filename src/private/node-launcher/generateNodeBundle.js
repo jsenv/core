@@ -13,7 +13,7 @@ import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { getOrGenerateCompiledFile } from "../compile-server/compile-directory/getOrGenerateCompiledFile.js"
 import { bundleToCompilationResult } from "../bundle/bundleToCompilationResult.js"
 
-export const generateNodeCommonJsBundle = async ({
+export const generateNodeBundle = async ({
   projectDirectoryUrl,
   importMapFileRelativePath,
   importDefaultExtension,
@@ -29,6 +29,7 @@ export const generateNodeCommonJsBundle = async ({
     projectDirectoryUrl,
     originalFileRelativePath,
     compiledFileRelativePath,
+    cache: true,
     compile: async () => {
       const entryExtname = extname(originalFileRelativePath)
       const entryBasename = basename(originalFileRelativePath, entryExtname)
@@ -81,11 +82,6 @@ export const generateNodeCommonJsBundle = async ({
         sourcemapPathForCache,
       })
     },
-    ifEtagMatch: null,
-    ifModifiedSinceDate: null,
-    cacheIgnored: false,
-    cacheHitTracking: false,
-    cacheInterProcessLocking: false,
   })
 }
 

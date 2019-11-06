@@ -15,16 +15,16 @@ const { lockForRessource } = createLockRegistry()
 const lockfile = import.meta.require("proper-lockfile")
 
 export const getOrGenerateCompiledFile = async ({
+  logLevel,
   projectDirectoryUrl,
   originalFileRelativePath,
   compiledFileRelativePath = originalFileRelativePath,
-  compile,
   cache = false, // do not forget to pass this to true
   cacheHitTracking = false,
   cacheInterProcessLocking = false,
   ifEtagMatch,
   ifModifiedSinceDate,
-  logLevel,
+  compile,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
