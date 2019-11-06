@@ -92,7 +92,7 @@
     "@jsenv/logger": "3.1.0",
     "@jsenv/node-module-import-map": "8.4.1",
     "@jsenv/operating-system-path": "3.1.0",
-    "@jsenv/url-meta": "4.0.0",
+    "@jsenv/url-meta": "4.1.0",
     "abort-controller": "3.0.0",
     "ansi-to-html": "0.6.12",
     "babel-plugin-transform-commonjs": "1.1.6",

@@ -1,16 +1,13 @@
 import { assert } from "@dmail/assert"
-import { launchNode } from "@jsenv/node-launcher"
 import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
-import { execute } from "../../../index.js"
+import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
+import { execute, launchNode } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = fileUrlToRelativePath(
-  testDirectoryUrl,
-  EXECUTE_TEST_PARAMS.projectDirectoryUrl,
-)
+const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
-const fileRelativePath = `${compileDirectoryRelativePath}file.js`
+const fileRelativePath = `${testDirectoryRelativePath}file.js`
 
 const actual = await execute({
   ...EXECUTE_TEST_PARAMS,
