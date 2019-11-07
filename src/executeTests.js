@@ -4,11 +4,11 @@ import {
 } from "@dmail/cancellation"
 import { pathToDirectoryUrl, resolveDirectoryUrl } from "./private/urlUtils.js"
 import { startCompileServerForTesting } from "./private/testing/startCompileServerForTesting.js"
-import { generateExecutionArray } from "./private/testing/execution/generate-execution-array.js"
-import { executeAll } from "./private/testing/execution/executeAll.js"
-import { executionIsPassed } from "./private/testing/execution/execution-is-passed.js"
+import { generateExecutionArray } from "./private/testing/generateExecutionArray.js"
+import { executeAll } from "./private/testing/executeAll.js"
+import { executionIsPassed } from "./private/testing/executionIsPassed.js"
 
-export const test = async ({
+export const executeTests = async ({
   logLevel,
   compileServerLogLevel = "off",
   launchLogLevel = "off",

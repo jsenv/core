@@ -1,0 +1,18 @@
+{
+  "sourceRelativePath": "/test/testing/timeout/timeout.js",
+  "contentType": "application/javascript",
+  "sources": [
+    "/test/testing/timeout/timeout.js"
+  ],
+  "sourcesEtag": [
+    "\"41-5TOQ2/BEJh1HyB7N64ozH6MNeGE\""
+  ],
+  "assets": [
+    "timeout.js__asset__/timeout.js.map"
+  ],
+  "assetsEtag": [
+    "\"115-2SSQa2lBhW8wVoX4X+DgpL3euWo\""
+  ],
+  "createdMs": 1571320466805,
+  "lastModifiedMs": 1571320466805
+}

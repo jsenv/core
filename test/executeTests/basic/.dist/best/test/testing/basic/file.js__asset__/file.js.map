@@ -1,0 +1,11 @@
+{
+  "version": 3,
+  "sources": [
+    "/test/testing/basic/file.js"
+  ],
+  "names": [
+    "window",
+    "process"
+  ],
+  "mappings": ";;;;;;yBAAe,CAAC,MAAM;AACpB,YAAI,OAAOA,MAAP,KAAkB,QAAtB,EAAgC;AAC9B,iBAAO,SAAP;AACD;;AACD,YAAI,OAAOC,OAAP,KAAmB,QAAvB,EAAiC;AAC/B,iBAAO,MAAP;AACD;;AACD,eAAO,OAAP;AACD,OARc,G"
+}

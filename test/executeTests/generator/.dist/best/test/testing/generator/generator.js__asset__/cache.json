@@ -1,0 +1,18 @@
+{
+  "sourceRelativePath": "/test/testing/generator/generator.js",
+  "contentType": "application/javascript",
+  "sources": [
+    "/test/testing/generator/generator.js"
+  ],
+  "sourcesEtag": [
+    "\"3e-lguEUOwkn7JK+cRey/76rADFcIc\""
+  ],
+  "assets": [
+    "generator.js__asset__/generator.js.map"
+  ],
+  "assetsEtag": [
+    "\"d7-EU0iNgBQtRnV+mmIkcCtgVtxMrM\""
+  ],
+  "createdMs": 1571320460178,
+  "lastModifiedMs": 1571320460178
+}

@@ -1,0 +1,18 @@
+{
+  "sourceRelativePath": "/test/testing/error/file.spec.js",
+  "contentType": "application/javascript",
+  "sources": [
+    "/test/testing/error/file.spec.js"
+  ],
+  "sourcesEtag": [
+    "\"ab-t2NT7ieCQQ2SSx1Es4m448wdlJc\""
+  ],
+  "assets": [
+    "file.spec.js__asset__/file.spec.js.map"
+  ],
+  "assetsEtag": [
+    "\"159-2mjMf0iB32JL5Yig/REs2XmJAOk\""
+  ],
+  "createdMs": 1571320453394,
+  "lastModifiedMs": 1571320453394
+}

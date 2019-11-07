@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "sources": [
+    "/test/testing/error/file.js"
+  ],
+  "names": [
+    "ask"
+  ],
+  "mappings": ";;;;;;;qBAAaA,G,GAAM,MAAM,E"
+}

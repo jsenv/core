@@ -1,0 +1,13 @@
+{
+  "version": 3,
+  "sources": [
+    "/test/testing/error/file.spec.js"
+  ],
+  "names": [
+    "ask",
+    "actual",
+    "expected",
+    "Error"
+  ],
+  "mappings": ";;;;;;AAASA,MAAAA,G,WAAAA,G;;;AAEHC,MAAAA,M,GAASD,GAAG,E;AACZE,MAAAA,Q,GAAW,E;;AACjB,UAAID,MAAM,KAAKC,QAAf,EAAyB;AACvB,cAAM,IAAIC,KAAJ,CAAW,uBAAsBD,QAAS,SAAQD,MAAO,EAAzD,CAAN;AACD"
+}

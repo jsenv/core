@@ -1,3 +1,6 @@
+// TODO: kill this in favor of more options for executeTests
+// like passing that you want to generate coverage alongside
+
 /* eslint-disable import/max-dependencies */
 import {
   catchAsyncFunctionCancellation,
@@ -8,7 +11,7 @@ import { collectFiles } from "@jsenv/file-collector"
 import { pathToDirectoryUrl, resolveDirectoryUrl, fileUrlToPath } from "./private/urlUtils.js"
 import { startCompileServerForTesting } from "./private/testing/startCompileServerForTesting.js"
 import { executionResultToCoverageMap } from "./private/testing/coverage/executionResultToCoverageMap.js"
-import { createInstrumentBabelPlugin } from "./private/testing/coverage/instrument-babel-plugin.js"
+import { createInstrumentBabelPlugin } from "./private/testing/coverage/createInstrumentBabelPlugin.js"
 import { relativePathToEmptyCoverage } from "./private/testing/coverage/relativePathToEmptyCoverage.js"
 import { generateCoverageJsonFile } from "./private/testing/coverage/generateCoverageJsonFile.js"
 import { generateCoverageHtmlDirectory } from "./private/testing/coverage/generateCoverageHtmlDirectory.js"
@@ -17,7 +20,7 @@ import { generateExecutionArray } from "./private/testing/generateExecutionArray
 import { executeAll } from "./private/testing/executeAll.js"
 import { executionIsPassed } from "./private/testing/executionIsPassed.js"
 
-export const cover = async ({
+export const generateCoverage = async ({
   logLevel,
   compileServerLogLevel = "off",
   launchLogLevel = "off",
