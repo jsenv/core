@@ -1,4 +1,4 @@
-import { resolveDirectoryUrl, fileUrlToPath } from "../../urlUtils.js"
+import { resolveDirectoryUrl, fileUrlToPath } from "../urlUtils.js"
 
 const libReport = import.meta.require("istanbul-lib-report")
 const reports = import.meta.require("istanbul-reports")

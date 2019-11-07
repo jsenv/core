@@ -1,5 +1,5 @@
 import { fileWrite } from "@dmail/helper"
-import { resolveFileUrl, fileUrlToPath } from "../../urlUtils.js"
+import { resolveFileUrl, fileUrlToPath } from "../urlUtils.js"
 
 export const generateCoverageJsonFile = async ({
   projectDirectoryUrl,

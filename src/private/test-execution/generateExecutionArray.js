@@ -5,11 +5,11 @@ import { generateFilePlan } from "./generateFilePlan.js"
 import { filePlanToExecutionArray } from "./filePlanToExecutionArray.js"
 
 export const generateExecutionArray = async (
-  executeDescription,
+  executionConfig,
   { cancellationToken, projectDirectoryUrl },
 ) => {
   const specifierMetaMap = metaMapToSpecifierMetaMap({
-    execute: executeDescription,
+    execute: executionConfig,
   })
 
   const fileResultArray = await collectFiles({

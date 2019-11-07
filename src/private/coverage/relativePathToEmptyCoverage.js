@@ -1,6 +1,6 @@
 import { fileRead } from "@dmail/helper"
 import { createOperation } from "@dmail/cancellation"
-import { fileUrlToPath } from "../../urlUtils.js"
+import { fileUrlToPath } from "../urlUtils.js"
 import { createInstrumentBabelPlugin } from "./createInstrumentBabelPlugin.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
 

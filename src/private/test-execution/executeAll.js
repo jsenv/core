@@ -1,11 +1,9 @@
 import { cpus } from "os"
 import { stat } from "fs"
-import {
-  operatingSystemPathToPathname,
-  pathnameToOperatingSystemPath,
-} from "@jsenv/operating-system-path"
 import { createConcurrentOperations } from "@dmail/cancellation"
 import { createLogger } from "@jsenv/logger"
+import { fileUrlToPath } from "../urlUtils.js"
+import { launchAndExecute } from "../../launchAndExecute.js"
 import {
   createCompletedLog,
   createDisconnectedLog,
@@ -14,22 +12,19 @@ import {
 } from "./executionLogs.js"
 import { createSummaryLog } from "./createSummaryLog.js"
 
-// use import.meta.require to avoid breaking relativePathInception
-const { launchAndExecute } = import.meta.require("@jsenv/execution")
-
 export const executeAll = async (
   executionArray,
   {
     cancellationToken,
-    compileServerOrigin,
-    projectPath,
-    compileIntoRelativePath,
-    importMapRelativePath,
-    importDefaultExtension,
-    babelPluginMap,
     logLevel,
     launchLogLevel = "off",
     executeLogLevel = "off",
+    compileServerOrigin,
+    projectDirectoryUrl,
+    compileDirectoryUrl,
+    importMapFileRelativePath,
+    importDefaultExtension,
+    babelPluginMap,
     logEachExecutionSuccess = true,
     logSummary = true,
     maxParallelExecution = Math.max(cpus.length - 1, 1),
@@ -47,11 +42,11 @@ export const executeAll = async (
   if (typeof compileServerOrigin !== "string") {
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
   }
-  if (typeof projectPath !== "string") {
-    throw new TypeError(`projectPath must be a string, got ${projectPath}`)
+  if (typeof projectDirectoryUrl !== "string") {
+    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
   }
-  if (typeof compileIntoRelativePath !== "string") {
-    throw new TypeError(`compileIntoRelativePath must be a string, got ${compileIntoRelativePath}`)
+  if (typeof compileDirectoryUrl !== "string") {
+    throw new TypeError(`compileDirectoryUrl must be a string, got ${compileDirectoryUrl}`)
   }
 
   const logger = createLogger({ logLevel })
@@ -72,8 +67,6 @@ relative path: ${relativePath}`),
     startMs = Date.now()
   }
 
-  const projectPathname = operatingSystemPathToPathname(projectPath)
-
   const report = {}
   await createConcurrentOperations({
     cancellationToken,
@@ -86,9 +79,8 @@ relative path: ${relativePath}`),
       allocatedMs = defaultAllocatedMsPerExecution,
       fileRelativePath,
     }) => {
-      const fileExists = await pathLeadsToFile(
-        pathnameToOperatingSystemPath(`${projectPathname}${fileRelativePath}`),
-      )
+      const filePath = fileUrlToPath(`${projectDirectoryUrl}${fileRelativePath}`)
+      const fileExists = await pathLeadsToFile(filePath)
       if (!fileExists) {
         mainFileNotFoundCallback({ relativePath: fileRelativePath, executionName, executionId })
         return
@@ -107,9 +99,9 @@ relative path: ${relativePath}`),
         launch: (options) =>
           launch({
             compileServerOrigin,
-            projectPath,
-            compileIntoRelativePath,
-            importMapRelativePath,
+            projectDirectoryUrl,
+            compileDirectoryUrl,
+            importMapFileRelativePath,
             importDefaultExtension,
             babelPluginMap,
             cover: collectCoverage,
