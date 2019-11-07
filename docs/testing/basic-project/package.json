@@ -1,0 +1,14 @@
+{
+  "name": "whatever",
+  "version": "0.0.1",
+  "license": "MIT",
+  "scripts": {
+    "test": "node ./execute-test.js",
+    "generate-coverage": "node ./generate-coverage.js"
+  },
+  "dependencies": {
+    "@jsenv/testing": "3.2.0",
+    "@jsenv/chromium-launcher": "3.7.0",
+    "@jsenv/node-launcher": "4.15.0"
+  }
+}

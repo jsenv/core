@@ -9,7 +9,7 @@ export const pathToDirectoryUrl = (path) => {
 }
 
 export const pathToFileUrl = (path) => {
-  return String(pathToFileURL(path))
+  return path.startsWith("file://") ? path : String(pathToFileURL(path))
 }
 
 export const fileUrlToPath = (fileUrl) => {
