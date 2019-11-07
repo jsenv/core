@@ -1,32 +1,34 @@
 ## Table of contents
 
 - [Presentation](#Presentation)
-- [Bundle to global](#bundle-to-global)
-- [Bundle to systemjs](#bundle-to-systemjs)
-- [Bundle to commonjs](#bundle-to-commonjs)
+- [Global format](#global-format)
+- [Systemjs format](#systemjs-format)
+- [Commonjs format](#commonjs-format)
 - [Code example](#code-example)
 - [Concrete example](#concrete-example)
   - [Step 1 - Setup basic project](#step-1---setup-basic-project)
   - [Step 2 - Install dependencies](#step-2---install-dependencies)
   - [Step 3 - Generate bundles](#step-3---generate-bundles)
-- [Installation](#installation)
 
 ## Presentation
 
-`jsenv-bundling` github repository corresponds to `@jsenv/bundling` package published on github and npm package registries.
+A bundle is the concatenation of many files into one.
 
-`@jsenv/bundling` can generates bundle for systemjs, commonjs or global (also known as iife). Each format takes is meant to be used in a specific way explained below.
+They are used to save http requests if your production servers are not compatible with http2 multiplexing (or not configured for it).
+They also provide a dedicated build time where you can perform changes or optimization production specific like minifying files.
 
-## Bundle to global
+Jsenv uses [rollup](https://github.com/rollup/rollup) to provide functions generating bundle of various formats. Each format shines in different situations explained later in this document.
 
-Things to know about global bundle:
+## Global format
 
-- Meant to run in a browser environment
-- Needs collision free global variable
-- Not compatible with code using dynamic import
-- Not compatible with code using top level await
+Things to know about bundle using global format:
 
-For example [docs/basic-project/index.js](./docs/basic-project/index.js) is bundled to [docs/basic-project/dist/global/main.js](./docs/basic-project/dist/global/main.js).
+- runs in a browser environment
+- needs collision free global variable
+- not compatible with dynamic import
+- not compatible with top level await
+
+For example [./basic-project/index.js](./basic-project/index.js) is bundled to [./basic-project/dist/global/main.js](./basic-project/dist/global/main.js).
 
 That global bundle could be used by
 
@@ -37,15 +39,15 @@ That global bundle could be used by
 </script>
 ```
 
-## Bundle to systemjs
+## Systemjs format
 
-Things to know about systemjs bundle:
+Things to know about bundle using systemjs format:
 
-- Needs [systemjs](https://github.com/systemjs/systemjs) to be used
-- Compatible with dynamic import
-- Compatible with top level await
+- needs [systemjs](https://github.com/systemjs/systemjs) to be used
+- compatible with dynamic import
+- compatible with top level await
 
-For example [docs/basic-project/index.js](./docs/basic-project/index.js) is bundled to [docs/basic-project/dist/systemjs/main.js](./docs/basic-project/dist/systemjs/main.js).
+For example [./basic-project/index.js](./basic-project/index.js) is bundled to [./basic-project/dist/systemjs/main.js](./basic-project/dist/systemjs/main.js).
 
 That systemjs bundle could be used by
 
@@ -58,14 +60,14 @@ That systemjs bundle could be used by
 </script>
 ```
 
-## Bundle to commonjs
+## Commonjs format
 
-Things to know about commonjs bundle:
+Things to know about bundle using commonjs format:
 
-- Meant to be required in a node.js environment
-- Not compatible with code using top level await
+- runs in a Node.js environment
+- not compatible with top level await
 
-For example [docs/basic-project/index.js](./docs/basic-project/index.js) is bundled to [docs/basic-project/dist/commonjs/main.js](./docs/basic-project/dist/commonjs/main.js).
+For example [./basic-project/index.js](./basic-project/index.js) is bundled to [./basic-project/dist/commonjs/main.js](./basic-project/dist/commonjs/main.js).
 
 That commonjs bundle could be used by
 
@@ -77,10 +79,10 @@ console.log(exports)
 
 ### Code example
 
-The following code uses `@jsenv/bundling` to create a systemjs bundle for `index.js` entry point.
+The following code uses `@jsenv/core` to create a systemjs bundle for `index.js` entry point.
 
 ```js
-const { generateSystemJsBundle } = require("@jsenv/bundling")
+const { generateSystemJsBundle } = require("@jsenv/core")
 
 generateSystemJsBundle({
   projectDirectoryPath: __dirname,
@@ -91,26 +93,23 @@ generateSystemJsBundle({
 })
 ```
 
-If you want to know more about this function and others check [api documentation](./docs/api.md)
+If you want to know more about this function and others check [api documentation](./api.md)
 
 ## Concrete example
 
-This part explains how to setup a real environment to see `@jsenv/bundling` in action.<br />
-You will setup a basic project where you can generate different bundle formats.
+This part explains how to quickly setup a real environment where you can generate different bundles.
 
 ### Step 1 - Setup basic project
 
 ```console
-git clone git@github.com:jsenv/jsenv-bundling.git
+git clone git@github.com:jsenv/jsenv-core.git
 ```
 
 ### Step 2 - Install dependencies
 
 ```console
-cd ./jsenv-bundling/docs/basic-project
+cd ./jsenv-core/docs/bundling/basic-project
 ```
-
-If you never configured npm authentification on github registry see [Configure npm authentification on github registry](https://github.com/jsenv/jsenv-core/blob/master/docs/installing-jsenv-package.md#configure-npm-authentification-on-github-registry) first.
 
 ```console
 npm install
@@ -120,19 +119,19 @@ npm install
 
 This project has preconfigured 3 bundle. You can generate them with the commands below:
 
-- [docs/basic-project/dist/systemjs/main.js](./docs/basic-project/dist/systemjs/main.js)
+- [./basic-project/dist/systemjs/main.js](./basic-project/dist/systemjs/main.js)
 
   ```console
   node ./generate-systemjs-bundle.js
   ```
 
-* [docs/basic-project/dist/global/main.js](./docs/basic-project/dist/global/main.js)
+* [./basic-project/dist/global/main.js](./basic-project/dist/global/main.js)
 
   ```console
   node ./generate-global-bundle.js
   ```
 
-- [docs/basic-project/dist/commonjs/main.js](./docs/basic-project/dist/commonjs/main.js)
+- [./basic-project/dist/commonjs/main.js](./basic-project/dist/commonjs/main.js)
 
   ```console
   node ./generate-commonjs-bundle.js

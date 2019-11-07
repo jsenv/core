@@ -20,6 +20,8 @@ import { readProjectImportMap } from "../../../readProjectImportMap/readProjectI
 // bundling could and should start a compile server and fetch source from it
 // by default we would disable cache just to make things as they were
 // but we could also enable it
+// -> not that simple cause we still must
+//    transform importReplaceMap, importFallbackMap and stuff like thoose
 import {
   babelHelperMap,
   babelHelperIsInsideJsenvCore,
@@ -66,26 +68,6 @@ export const createJsenvRollupPlugin = async ({
     babelPluginRequiredNameArray,
   })
 
-  importFallbackMap = {
-    // importMap is optionnal
-    "/importMap.json": () => `{}`,
-    ...importFallbackMap,
-  }
-  importFallbackMap = resolveSpecifierMap(importFallbackMap, projectDirectoryUrl)
-
-  const chunkId = `${Object.keys(entryPointMap)[0]}.js`
-  importReplaceMap = {
-    [bundleConstantAbstractSpecifier]: () => `export const chunkId = ${JSON.stringify(chunkId)}`,
-    ...importReplaceMap,
-  }
-  Object.keys(babelHelperMap).forEach((babelHelperName) => {
-    if (!babelHelperIsInsideJsenvCore(babelHelperName)) {
-      const babelHelperPath = babelHelperMap[babelHelperName]
-      importReplaceMap[babelHelperPath] = () => generateBabelHelper(babelHelperName)
-    }
-  })
-  importReplaceMap = resolveSpecifierMap(importReplaceMap, projectDirectoryUrl)
-
   const importMapForProject = await readProjectImportMap({
     logger,
     projectDirectoryUrl,
@@ -113,6 +95,34 @@ export const createJsenvRollupPlugin = async ({
     ].reduce((previous, current) => composeTwoImportMaps(previous, current), {}),
     projectDirectoryUrl,
   )
+
+  importFallbackMap = {
+    // importMap is optionnal
+    "/importMap.json": () => `{}`,
+    ...importFallbackMap,
+  }
+  importFallbackMap = resolveSpecifierMap(importFallbackMap, {
+    projectDirectoryUrl,
+    importMap,
+    importDefaultExtension,
+  })
+
+  const chunkId = `${Object.keys(entryPointMap)[0]}.js`
+  importReplaceMap = {
+    [bundleConstantAbstractSpecifier]: () => `export const chunkId = ${JSON.stringify(chunkId)}`,
+    ...importReplaceMap,
+  }
+  Object.keys(babelHelperMap).forEach((babelHelperName) => {
+    if (!babelHelperIsInsideJsenvCore(babelHelperName)) {
+      const babelHelperPath = babelHelperMap[babelHelperName]
+      importReplaceMap[babelHelperPath] = () => generateBabelHelper(babelHelperName)
+    }
+  })
+  importReplaceMap = resolveSpecifierMap(importReplaceMap, {
+    projectDirectoryUrl,
+    importMap,
+    importDefaultExtension,
+  })
 
   const jsenvRollupPlugin = {
     name: "jsenv",
@@ -411,11 +421,19 @@ export const rollupIdToUrl = (rollupId) => {
   return pathToFileUrl(rollupId)
 }
 
-const resolveSpecifierMap = (specifierMap, projectDirectoryUrl) => {
+const resolveSpecifierMap = (
+  specifierMap,
+  { projectDirectoryUrl, importMap, importDefaultExtension },
+) => {
   const specifierMapResolved = {}
   Object.keys(specifierMap).forEach((specifier) => {
-    const specifierResolved = resolveFileUrl(specifier, projectDirectoryUrl)
-    specifierMapResolved[specifierResolved] = specifierMap[specifier]
+    const specifierUrl = resolveImport({
+      specifier,
+      importer: projectDirectoryUrl,
+      importMap,
+      defaultExtension: importDefaultExtension,
+    })
+    specifierMapResolved[specifierUrl] = specifierMap[specifier]
   })
   return specifierMapResolved
 }

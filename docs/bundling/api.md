@@ -1,14 +1,16 @@
-# Table of contents for api documentation
+# Table of contents
 
 - [Shared bundling parameters](#shared-bundling-parameters)
   - [bundleDirectoryRelativePath](#bundleDirectoryRelativePath)
   - [entryPointMap](#entryPointMap)
   - [minify](#minify)
   - [projectDirectoryPath](#projectDirectoryPath)
+  - [babelPluginMap](#babelPluginMap)
+  - [convertMap](#convertMap)
   - [importMapFileRelativePath](#importMapFileRelativePath)
   - [importDefaultExtension](#importDefaultExtension)
-  - [convertMap](#convertMap)
-  - [babelPluginMap](#babelPluginMap)
+  - [importReplaceMap](#importReplaceMap)
+  - [importFallbackMap](#importFallbackMap)
 - [generateSystemJsBundle](#generateSystemJsBundle)
 - [generateGlobalBundle](#generateglobalbundle)
   - [globalName](#globalName)
@@ -30,19 +32,19 @@ This parameter is optional with a default value specific to each bundling functi
 - Default for `generateGlobalBundle`:
 
   ```js
-  "./dist/global"
+  "./dist/global/"
   ```
 
 - Default for `generateCommonJsBundle` and `generateCommonJsBundleForNode`:
 
   ```js
-  "./dist/commonjs"
+  "./dist/commonjs/"
   ```
 
 - Default for `generateSystemJsBundle`:
 
   ```js
-  "./dist/systemjs"
+  "./dist/systemjs/"
   ```
 
 ### entryPointMap
@@ -71,32 +73,81 @@ false
 
 ### projectDirectoryPath
 
-— see [generic documentation for projectDirectoryPath](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters/shared-parameters.md#projectdirectorypath)
+— see [generic documentation for projectDirectoryPath](../shared-parameters/shared-parameters.md#projectdirectorypath)
 
 ### babelPluginMap
 
-— see [generic documentation for babelPluginMap](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters/shared-parameters.md#babelPluginMap)
+— see [generic documentation for babelPluginMap](../shared-parameters/shared-parameters.md#babelPluginMap)
 
 ### convertMap
 
-— see [generic documentation for convertMap](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters/shared-parameters.md#convertMap)
+— see [generic documentation for convertMap](../shared-parameters/shared-parameters.md#convertMap)
 
 ### importMapFileRelativePath
 
-— see [generic documentation for importMapFileRelativePath](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters/shared-parameters.md#importMapFileRelativePath)
+— see [generic documentation for importMapFileRelativePath](../shared-parameters/shared-parameters.md#importMapFileRelativePath)
 
 ### importDefaultExtension
 
-— see [generic documentation for importDefaultExtension](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-parameters/shared-parameters.md#importDefaultExtension)
+— see [generic documentation for importDefaultExtension](../shared-parameters/shared-parameters.md#importDefaultExtension)
+
+### importReplaceMap
+
+> `importReplaceMap` is an object mapping import specifier to function or string representing an import content.
+
+This parameter is optional with a default value of
+
+<!-- prettier-ignore -->
+```js
+{}
+```
+
+You can use this parameter to savagely override import content.<br />
+For instance the following index.js
+
+```js
+import value from "./foo.js"
+
+console.log(value)
+```
+
+Could be bundled like this
+
+```js
+const { generateSystemJsBundle } = require("@jsenv/core")
+
+generateSystemJsBundle({
+  projectDirectoryPath: __dirname,
+  importReplaceMap: {
+    "./foo.js": "export default 42",
+  },
+})
+```
+
+And executing your bundle logs `42`.
+
+### importFallbackMap
+
+> `importReplaceMap` is an object mapping import specifier to function or string representing an import content.
+
+This parameter is optional with a default value of
+
+<!-- prettier-ignore -->
+```js
+{}
+```
+
+This parameter can be used to provide a default content when an import cannot be found.<br />
+Do not confuse with [importReplaceMap](#importReplaceMap) that does not consider if import is found.<br />
 
 ## generateSystemJsBundle
 
 > `generateSystemJsBundle` is a function generating a systemjs bundle for your project.
 
-Implemented in [src/generateSystemJsBundle/generateSystemJsBundle.js](../src/generateSystemJsBundle/generateSystemJsBundle.js), you can use it as shown below.
+Implemented in [src/generateSystemJsBundle.js](../../src/generateSystemJsBundle.js), you can use it as shown below.
 
 ```js
-const { generateSystemJsBundle } = require("@jsenv/bundling")
+const { generateSystemJsBundle } = require("@jsenv/core")
 
 generateSystemJsBundle({
   projectDirectoryPath: __dirname,
@@ -107,10 +158,10 @@ generateSystemJsBundle({
 
 > `generateGlobalBundle` is a function generating a global bundle for your project.
 
-Implemented in [src/generateGlobalBundle/generateGlobalBundle.js](../src/generateGlobalBundle/generateGlobalBundle.js), you can use it as shown below.
+Implemented in [src/generateGlobalBundle.js](../../src/generateGlobalBundle.js), you can use it as shown below.
 
 ```js
-const { generateGlobalBundle } = require("@jsenv/bundling")
+const { generateGlobalBundle } = require("@jsenv/core")
 
 generateGlobalBundle({
   projectDirectoryPath: __dirname,
@@ -134,10 +185,10 @@ Passing `"__whatever__"` means generated bundle will write your exports under `w
 
 > `generateCommonJsBundle` is a function generating a commonjs bundle for your project.
 
-Implemented in [src/generateCommonJsBundle/generateCommonJsBundle.js](../src/generateCommonJsBundle/generateCommonJsBundle.js), you can use it as shown below.
+Implemented in [src/generateCommonJsBundle.js](../../src/generateCommonJsBundle.js), you can use it as shown below.
 
 ```js
-const { generateCommonJsBundle } = require("@jsenv/bundling")
+const { generateCommonJsBundle } = require("@jsenv/core")
 
 generateCommonJsBundle({
   projectDirectoryPath: __dirname,
@@ -148,10 +199,10 @@ generateCommonJsBundle({
 
 > `generateCommonJsBundleForNode` is a function generating a commonjs bundle for your project assuming it will run in your current node version.
 
-Implemented in [src/generateCommonJsBundleForNode/generateCommonJsBundleForNode.js](../src/generateCommonJsBundleForNode/generateCommonJsBundleForNode.js), you can use it as shown below.
+Implemented in [src/generateCommonJsBundleForNode.js](../../src/generateCommonJsBundleForNode.js), you can use it as shown below.
 
 ```js
-const { generateCommonJsBundleForNode } = require("@jsenv/bundling")
+const { generateCommonJsBundleForNode } = require("@jsenv/core")
 
 generateCommonJsBundleForNode({
   projectDirectoryPath: __dirname,

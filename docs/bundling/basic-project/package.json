@@ -1,0 +1,13 @@
+{
+  "name": "whatever",
+  "version": "0.0.1",
+  "license": "MIT",
+  "scripts": {
+    "generate-commonjs-bundle": "node ./generate-commonjs-bundle.js",
+    "generate-global-bundle": "node ./generate-global-bundle.js",
+    "generate-systemjs-bundle": "node ./generate-systemjs-bundle.js"
+  },
+  "devDependencies": {
+    "@jsenv/core": "10.0.0"
+  }
+}
