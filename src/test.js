@@ -2,74 +2,70 @@ import {
   catchAsyncFunctionCancellation,
   createProcessInterruptionCancellationToken,
 } from "@dmail/cancellation"
-import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
-import { startCompileServerForTesting } from "./startCompileServerForTesting.js"
-import { generateExecutionArray } from "./execution/generate-execution-array.js"
-import { executeAll } from "./execution/execute-all.js"
-import { executionIsPassed } from "./execution/execution-is-passed.js"
+import { pathToDirectoryUrl, resolveDirectoryUrl } from "./private/urlUtils.js"
+import { startCompileServerForTesting } from "./private/testing/startCompileServerForTesting.js"
+import { generateExecutionArray } from "./private/testing/execution/generate-execution-array.js"
+import { executeAll } from "./private/testing/execution/executeAll.js"
+import { executionIsPassed } from "./private/testing/execution/execution-is-passed.js"
 
 export const test = async ({
-  projectPath,
-  compileIntoRelativePath = "./.dist/",
-  importMapRelativePath,
+  logLevel,
+  compileServerLogLevel = "off",
+  launchLogLevel = "off",
+  executeLogLevel = "off",
+  projectDirectoryPath,
+  compileDirectoryRelativePath = "./.dist/",
+  compileDirectoryClean,
+  importMapFileRelativePath,
   importDefaultExtension,
-  browserPlatformRelativePath,
-  nodePlatformRelativePath,
-  browserGroupResolverRelativePath,
-  nodeGroupResolverRelativePath,
   executeDescription = {},
   compileGroupCount = 2,
   babelPluginMap,
   convertMap,
   updateProcessExitCode = true,
   throwUnhandled = true,
-  logLevel,
-  compileServerLogLevel = "off",
-  launchLogLevel = "off",
-  executeLogLevel = "off",
   maxParallelExecution,
   defaultAllocatedMsPerExecution = 30000,
   captureConsole = true,
   measureDuration = true,
   measureTotalDuration = false,
   collectNamespace = false,
-  cleanCompileInto,
 }) => {
   const start = async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
-    const projectPathname = operatingSystemPathToPathname(projectPath)
+    const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
+    const compileDirectoryUrl = resolveDirectoryUrl(
+      compileDirectoryRelativePath,
+      projectDirectoryUrl,
+    )
 
     const [executionArray, { origin: compileServerOrigin }] = await Promise.all([
       generateExecutionArray(executeDescription, {
         cancellationToken,
-        projectPathname,
+        projectDirectoryUrl,
       }),
       startCompileServerForTesting({
         cancellationToken,
-        projectPath,
-        compileIntoRelativePath,
-        cleanCompileInto,
-        importMapRelativePath,
+        logLevel: compileServerLogLevel,
+        projectDirectoryUrl,
+        compileDirectoryUrl,
+        compileDirectoryClean,
+        importMapFileRelativePath,
         importDefaultExtension,
-        browserPlatformRelativePath,
-        nodePlatformRelativePath,
-        browserGroupResolverRelativePath,
-        nodeGroupResolverRelativePath,
         compileGroupCount,
         babelPluginMap,
         convertMap,
-        logLevel: compileServerLogLevel,
       }),
     ])
 
     const executionResult = await executeAll(executionArray, {
       cancellationToken,
-      compileServerOrigin,
-      projectPath,
-      compileIntoRelativePath,
-      importMapRelativePath,
-      importDefaultExtension,
       logLevel,
+      compileServerOrigin,
+      projectDirectoryUrl,
+      compileDirectoryUrl,
+      importMapFileRelativePath,
+      importDefaultExtension,
       launchLogLevel,
       executeLogLevel,
       maxParallelExecution,

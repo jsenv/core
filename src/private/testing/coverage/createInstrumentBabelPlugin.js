@@ -54,6 +54,6 @@ export const createInstrumentBabelPlugin = ({
 }
 
 const optionsToRelativePath = ({ filenameRelative }) => {
-  if (filenameRelative) return `/${filenameRelative}`
+  if (filenameRelative) return filenameRelative
   return ""
 }

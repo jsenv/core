@@ -1,8 +1,8 @@
 import { fileRead } from "@dmail/helper"
 import { createOperation } from "@dmail/cancellation"
-import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
-import { createInstrumentBabelPlugin } from "./instrument-babel-plugin.js"
-import { createEmptyCoverage } from "./empty-coverage.js"
+import { fileUrlToPath } from "../../urlUtils.js"
+import { createInstrumentBabelPlugin } from "./createInstrumentBabelPlugin.js"
+import { createEmptyCoverage } from "./createEmptyCoverage.js"
 
 const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-import")
 const syntaxImportMeta = import.meta.require("@babel/plugin-syntax-import-meta")
@@ -10,14 +10,15 @@ const { transformAsync } = import.meta.require("@babel/core")
 
 export const relativePathToEmptyCoverage = async ({
   cancellationToken,
-  projectPathname,
+  projectDirectoryUrl,
   relativePath,
   babelPluginMap,
 }) => {
-  const filename = pathnameToOperatingSystemPath(`${projectPathname}${relativePath}`)
+  const fileUrl = `${projectDirectoryUrl}${relativePath}`
+  const filePath = fileUrlToPath(fileUrl)
   const source = await createOperation({
     cancellationToken,
-    start: () => fileRead(filename),
+    start: () => fileRead(filePath),
   })
 
   // we must compile to get the coverage object
@@ -29,7 +30,7 @@ export const relativePathToEmptyCoverage = async ({
       cancellationToken,
       start: () =>
         transformAsync(source, {
-          filename: pathnameToOperatingSystemPath(`${projectPathname}${relativePath}`),
+          filename: filePath,
           filenameRelative: relativePath,
           configFile: false,
           babelrc: false,

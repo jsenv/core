@@ -1,38 +1,29 @@
 import { metaMapToSpecifierMetaMap } from "@jsenv/url-meta"
-import { matchAllFileInsideFolder, sortPathnameArray } from "@dmail/filesystem-matching"
+import { collectFiles } from "@jsenv/file-collector"
+import { pathToFileUrl } from "../urlUtils.js"
 import { generateFilePlan } from "./generateFilePlan.js"
 import { filePlanToExecutionArray } from "./filePlanToExecutionArray.js"
 
 export const generateExecutionArray = async (
   executeDescription,
-  { cancellationToken, projectPathname },
+  { cancellationToken, projectDirectoryUrl },
 ) => {
   const specifierMetaMap = metaMapToSpecifierMetaMap({
     execute: executeDescription,
   })
 
-  const plan = {}
-  await matchAllFileInsideFolder({
+  const fileResultArray = await collectFiles({
     cancellationToken,
-    folderPath: projectPathname,
+    directoryPath: pathToFileUrl(projectDirectoryUrl),
     specifierMetaMap,
     predicate: ({ execute }) => execute,
-    matchingFileOperation: ({ relativePath, meta }) => {
-      plan[relativePath] = generateFilePlan(relativePath, meta.execute)
-    },
+  })
+  const plan = {}
+  fileResultArray.forEach(({ relativePath, meta }) => {
+    plan[relativePath] = generateFilePlan(relativePath, meta.execute)
   })
 
-  const sortedPlan = sortPlan(plan)
-
-  return planToExecutionArray(sortedPlan)
-}
-
-const sortPlan = (plan) => {
-  const sortedPlan = {}
-  sortPathnameArray(Object.keys(plan)).forEach((key) => {
-    sortedPlan[key] = plan[key]
-  })
-  return sortedPlan
+  return planToExecutionArray(plan)
 }
 
 const planToExecutionArray = (plan) => {

@@ -5,17 +5,17 @@ import {
 } from "@dmail/cancellation"
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
 import { collectFiles } from "@jsenv/file-collector"
-import { pathToDirectoryUrl, resolveDirectoryUrl, fileUrlToPath } from "../urlUtils.js"
-import { startCompileServerForTesting } from "./startCompileServerForTesting.js"
-import { executionResultToCoverageMap } from "./coverage/executionResultToCoverageMap.js"
-import { createInstrumentBabelPlugin } from "./coverage/instrument-babel-plugin.js"
-import { relativePathToEmptyCoverage } from "./coverage/relativePathToEmptyCoverage.js"
-import { generateCoverageJsonReport } from "./coverage/generateCoverageJsonReport.js"
-import { generateCoverageHtmlReport } from "./coverage/generateCoverageHtmlReport.js"
-import { generateCoverageConsoleReport } from "./coverage/generateCoverageConsoleReport.js"
-import { generateExecutionArray } from "./execution/generate-execution-array.js"
-import { executeAll } from "./execution/execute-all.js"
-import { executionIsPassed } from "./execution/execution-is-passed.js"
+import { pathToDirectoryUrl, resolveDirectoryUrl, fileUrlToPath } from "./private/urlUtils.js"
+import { startCompileServerForTesting } from "./private/testing/startCompileServerForTesting.js"
+import { executionResultToCoverageMap } from "./private/testing/coverage/executionResultToCoverageMap.js"
+import { createInstrumentBabelPlugin } from "./private/testing/coverage/instrument-babel-plugin.js"
+import { relativePathToEmptyCoverage } from "./private/testing/coverage/relativePathToEmptyCoverage.js"
+import { generateCoverageJsonFile } from "./private/testing/coverage/generateCoverageJsonFile.js"
+import { generateCoverageHtmlDirectory } from "./private/testing/coverage/generateCoverageHtmlDirectory.js"
+import { generateCoverageConsoleReport } from "./private/testing/coverage/generateCoverageConsoleReport.js"
+import { generateExecutionArray } from "./private/testing/generateExecutionArray.js"
+import { executeAll } from "./private/testing/executeAll.js"
+import { executionIsPassed } from "./private/testing/executionIsPassed.js"
 
 export const cover = async ({
   logLevel,
@@ -182,7 +182,7 @@ export const cover = async ({
     }
 
     if (coverageJsonFile) {
-      await generateCoverageJsonReport({
+      await generateCoverageJsonFile({
         projectDirectoryUrl,
         coverageJsonFileRelativePath,
         coverageJsonFileLog,
@@ -190,7 +190,7 @@ export const cover = async ({
       })
     }
     if (coverageHtmlDirectory) {
-      await generateCoverageHtmlReport({
+      await generateCoverageHtmlDirectory({
         coverageMap,
         projectDirectoryUrl,
         coverageHtmlDirectoryRelativePath,

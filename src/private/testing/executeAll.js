@@ -1,4 +1,5 @@
 import { cpus } from "os"
+import { stat } from "fs"
 import {
   operatingSystemPathToPathname,
   pathnameToOperatingSystemPath,
@@ -10,10 +11,8 @@ import {
   createDisconnectedLog,
   createErroredLog,
   createTimedoutLog,
-} from "../logs/execution-logging.js"
-import { createSummaryLog } from "../logs/summary-log.js"
-import { reportToSummary } from "./report-to-summary.js"
-import { pathLeadsToFile } from "./pathLeadsToFile.js"
+} from "./executionLogs.js"
+import { createSummaryLog } from "./createSummaryLog.js"
 
 // use import.meta.require to avoid breaking relativePathInception
 const { launchAndExecute } = import.meta.require("@jsenv/execution")
@@ -175,5 +174,54 @@ relative path: ${relativePath}`),
   return {
     summary,
     report,
+  }
+}
+
+const pathLeadsToFile = (path) =>
+  new Promise((resolve, reject) => {
+    stat(path, (error, stats) => {
+      if (error) {
+        if (error.code === "ENOENT") {
+          resolve(false)
+        } else {
+          reject(error)
+        }
+      } else {
+        resolve(stats.isFile())
+      }
+    })
+  })
+
+const reportToSummary = (report) => {
+  const fileNames = Object.keys(report)
+  const executionCount = fileNames.reduce((previous, fileName) => {
+    return previous + Object.keys(report[fileName]).length
+  }, 0)
+
+  const countResultMatching = (predicate) => {
+    return fileNames.reduce((previous, fileName) => {
+      const fileExecutionResult = report[fileName]
+
+      return (
+        previous +
+        Object.keys(fileExecutionResult).filter((executionName) => {
+          const fileExecutionResultForPlatform = fileExecutionResult[executionName]
+          return predicate(fileExecutionResultForPlatform)
+        }).length
+      )
+    }, 0)
+  }
+
+  const disconnectedCount = countResultMatching(({ status }) => status === "disconnected")
+  const timedoutCount = countResultMatching(({ status }) => status === "timedout")
+  const erroredCount = countResultMatching(({ status }) => status === "errored")
+  const completedCount = countResultMatching(({ status }) => status === "completed")
+
+  return {
+    executionCount,
+    disconnectedCount,
+    timedoutCount,
+    erroredCount,
+    completedCount,
   }
 }
