@@ -10,7 +10,7 @@ const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvC
 const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
 const fileRelativePath = `${testDirectoryRelativePath}file.js`
 
-const executeDescription = {
+const executionConfig = {
   [fileRelativePath]: {
     node: {
       launch: launchNode,
@@ -24,7 +24,7 @@ const executeDescription = {
 const actual = await executeTests({
   ...EXECUTE_TEST_PARAMS,
   compileDirectoryRelativePath,
-  executeDescription,
+  executionConfig,
 })
 const expected = {
   summary: {

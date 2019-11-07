@@ -36,14 +36,19 @@ export const executeTests = async ({
   updateProcessExitCode = true,
   throwUnhandled = true,
 
-  // execution parameters
   executionConfig = {},
-  captureConsole = true,
-  measureDuration = true,
-  measureTotalDuration = false,
-  collectNamespace = false,
-  maxParallelExecution,
-  defaultAllocatedMsPerExecution = 30000,
+  concurrencyLimit,
+  measureDuration,
+  executeParams = {
+    allocatedMs: 30000,
+    measureDuration: true,
+    // mirrorConsole: false because file will be executed in parallel
+    // so log would be a mess to read
+    mirrorConsole: false,
+    captureConsole: true,
+    collectNamespace: false,
+    collectCoverage: false,
+  },
 
   // coverage parameters
   coverage = false,
@@ -95,19 +100,16 @@ export const executeTests = async ({
       const executionResult = await executeAll(executionArray, {
         cancellationToken,
         logLevel,
+        launchLogLevel,
+        executeLogLevel,
         compileServerOrigin,
         projectDirectoryUrl,
         compileDirectoryUrl,
         importMapFileRelativePath,
         importDefaultExtension,
-        launchLogLevel,
-        executeLogLevel,
-        maxParallelExecution,
-        defaultAllocatedMsPerExecution,
-        captureConsole,
+        concurrencyLimit,
         measureDuration,
-        measureTotalDuration,
-        collectNamespace,
+        executeParams,
         collectCoverage: coverage,
       })
 
@@ -127,6 +129,8 @@ export const executeTests = async ({
           `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
         )
       }
+
+      executeParams.collectCoverage = true
 
       const specifierMetaMapForCoverage = normalizeSpecifierMetaMap(
         metaMapToSpecifierMetaMap({

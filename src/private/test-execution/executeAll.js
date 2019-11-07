@@ -27,15 +27,11 @@ export const executeAll = async (
     babelPluginMap,
     logEachExecutionSuccess = true,
     logSummary = true,
-    maxParallelExecution = Math.max(cpus.length - 1, 1),
-    defaultAllocatedMsPerExecution,
+    concurrencyLimit = Math.max(cpus.length - 1, 1),
+    measureDuration = false,
+    executeParams,
     beforeEachExecutionCallback = () => {},
     afterEachExecutionCallback = () => {},
-    captureConsole = false,
-    measureDuration = false,
-    measureTotalDuration = false,
-    collectNamespace = false,
-    collectCoverage = false,
     mainFileNotFoundCallback,
   } = {},
 ) => {
@@ -63,22 +59,34 @@ relative path: ${relativePath}`),
   // console.log(createExecutionPlanStartLog({ executionPlan }))
 
   let startMs
-  if (measureTotalDuration) {
+  if (measureDuration) {
     startMs = Date.now()
   }
 
   const report = {}
   await createConcurrentOperations({
     cancellationToken,
-    maxParallelExecution,
+    maxParallelExecution: concurrencyLimit,
     array: executionArray,
-    start: async ({
-      executionName,
-      executionId,
-      launch,
-      allocatedMs = defaultAllocatedMsPerExecution,
-      fileRelativePath,
-    }) => {
+    start: async (execution) => {
+      const {
+        executionName,
+        executionId,
+        fileRelativePath,
+        launch,
+        allocatedMs,
+        measureDuration,
+        mirrorConsole,
+        captureConsole,
+        collectPlatformName,
+        collectPlatformVersion,
+        collectCoverage,
+        collectNamespace,
+      } = {
+        ...executeParams,
+        ...execution,
+      }
+
       const filePath = fileUrlToPath(`${projectDirectoryUrl}${fileRelativePath}`)
       const fileExists = await pathLeadsToFile(filePath)
       if (!fileExists) {
@@ -96,6 +104,9 @@ relative path: ${relativePath}`),
       beforeEachExecutionCallback(beforeExecutionInfo)
 
       const executionResult = await launchAndExecute({
+        cancellationToken,
+        launchLogLevel,
+        executeLogLevel,
         launch: (options) =>
           launch({
             compileServerOrigin,
@@ -107,22 +118,16 @@ relative path: ${relativePath}`),
             cover: collectCoverage,
             ...options,
           }),
-        cancellationToken,
         allocatedMs,
         measureDuration,
-        launchLogLevel,
-        executeLogLevel,
-        collectPlatformNameAndVersion: true,
-        // mirrorConsole: false because file will be executed in parallel
-        // so log would be a mess to read
-        mirrorConsole: false,
+        collectPlatformName,
+        collectPlatformVersion,
+        mirrorConsole,
         captureConsole,
-        // stopOnceExecuted: true to ensure platform is stopped once executed
+        // stopPlatformAfterExecute: true to ensure platform is stopped once executed
         // because we have what we wants: execution is completed and
         // we have associated coverageMap and capturedConsole
-        stopOnceExecuted: true,
-        // no need to log when disconnected
-        disconnectAfterExecutedCallback: () => {},
+        stopPlatformAfterExecute: true,
         executionId,
         fileRelativePath,
         collectCoverage,
@@ -154,7 +159,7 @@ relative path: ${relativePath}`),
   })
 
   const summary = reportToSummary(report)
-  if (measureTotalDuration) {
+  if (measureDuration) {
     summary.startMs = startMs
     summary.endMs = Date.now()
   }
