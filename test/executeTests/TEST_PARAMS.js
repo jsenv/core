@@ -1,10 +1,11 @@
-import { jsenvTestingProjectPath } from "../../src/jsenv-testing-project.js"
-import { testBabelPluginMap } from "../test-babel-plugin-map.js"
+import { fileUrlToPath } from "../../src/private/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "../../src/private/jsenvCoreDirectoryUrl.js"
+import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
-export const TESTING_TEST_PARAM = {
-  projectPath: jsenvTestingProjectPath,
-  babelPluginMap: testBabelPluginMap,
+export const EXECUTE_TEST_PARAMS = {
   logLevel: "off",
+  projectDirectoryPath: fileUrlToPath(jsenvCoreDirectoryUrl),
+  babelPluginMap: testBabelPluginMap,
   collectNamespace: true,
   measureDuration: false,
   captureConsole: false,
