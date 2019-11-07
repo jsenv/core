@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { executionIsPassed } from "../execution/execution-is-passed.js"
+import { executionIsPassed } from "../executionIsPassed.js"
 import {
   createBrokenNotificationMessage,
   createStillFailingNotificationMessage,
@@ -9,11 +9,11 @@ import {
 const notifier = import.meta.require("node-notifier")
 
 export const showContinuousTestingNotification = ({
-  projectPath,
+  projectDirectoryUrl,
   previousTestingResult,
   testingResult,
 }) => {
-  const projectName = basename(projectPath)
+  const projectName = basename(projectDirectoryUrl)
 
   const previousTestingPassed = executionIsPassed(previousTestingResult)
   const testingPassed = executionIsPassed(testingResult)

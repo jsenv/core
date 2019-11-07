@@ -6,18 +6,13 @@ import {
   createCancellationSource,
   errorToCancelReason,
 } from "@dmail/cancellation"
-import { registerFolderLifecycle } from "@dmail/filesystem-watch"
-import { operatingSystemPathToPathname } from "@jsenv/operating-system-path"
+import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { hrefToOrigin, hrefToPathname } from "@jsenv/href"
 import { createLogger } from "@jsenv/logger"
-import { startCompileServerForTesting } from "../start-compile-server-for-testing.js"
-import { generateExecutionArray } from "../execution/generate-execution-array.js"
-import { executeAll } from "../execution/execute-all.js"
-import {
-  DEFAULT_EXECUTE_DESCRIPTION,
-  DEFAULT_MAX_PARALLEL_EXECUTION,
-  DEFAULT_COMPILE_INTO_RELATIVE_PATH,
-} from "../test-constant.js"
+import { pathToDirectoryUrl, fileUrlToPath, resolveDirectoryUrl } from "../../urlUtils.js"
+import { startCompileServerForTesting } from "../startCompileServerForTesting.js"
+import { generateExecutionArray } from "../generateExecutionArray.js"
+import { executeAll } from "../executeAll.js"
 import { relativePathToExecutionArray } from "./relativePathToExecutionArray.js"
 import { showContinuousTestingNotification } from "./showContinuousTestingNotification.js"
 import { createRemoveLog, createRunLog } from "./continous-testing-logs.js"
@@ -25,46 +20,47 @@ import { createRemoveLog, createRunLog } from "./continous-testing-logs.js"
 const cuid = import.meta.require("cuid")
 
 export const TESTING_WATCH_EXCLUDE_DESCRIPTION = {
-  "/.git/": false,
-  "/node_modules/": false,
+  "./.git/": false,
+  "./node_modules/": false,
 }
 
 export const startContinuousTesting = async ({
-  projectPath,
-  compileIntoRelativePath = DEFAULT_COMPILE_INTO_RELATIVE_PATH,
-  importMapRelativePath,
+  projectDirectoryPath,
+  compileDirectoryRelativePath = "./.dist/",
+  compileDirectoryClean,
+  importMapFileRelativePath,
   importDefaultExtension,
-  browserPlatformRelativePath,
-  nodePlatformRelativePath,
-  browserGroupResolverRelativePath,
-  nodeGroupResolverRelativePath,
-  executeDescription = DEFAULT_EXECUTE_DESCRIPTION,
+  executeDescription = {},
   watchDescription = {
-    "/**/*": true,
+    "./**/*": true,
     ...TESTING_WATCH_EXCLUDE_DESCRIPTION,
   },
   compileGroupCount = 2,
   babelPluginMap,
   convertMap,
   logLevel,
-  maxParallelExecution = DEFAULT_MAX_PARALLEL_EXECUTION,
+  maxParallelExecution,
   defaultAllocatedMsPerExecution = 30000,
   captureConsole = true,
   measureDuration = true,
   measureTotalDuration = false,
   collectNamespace = false,
   systemNotification = true,
-  cleanCompileInto,
 }) =>
   catchAsyncFunctionCancellation(async () => {
     const logger = createLogger({ logLevel })
 
     const cancellationToken = createProcessInterruptionCancellationToken()
-    const projectPathname = operatingSystemPathToPathname(projectPath)
-    const unregisterProjectFolderLifecycle = registerFolderLifecycle(projectPath, {
+    const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
+    projectDirectoryPath = fileUrlToPath(projectDirectoryUrl)
+    const compileDirectoryUrl = resolveDirectoryUrl(
+      compileDirectoryRelativePath,
+      projectDirectoryUrl,
+    )
+    const unregisterProjectDirectoryLifecycle = registerDirectoryLifecycle(projectDirectoryPath, {
       watchDescription: {
         ...watchDescription,
-        [compileIntoRelativePath]: false,
+        [compileDirectoryRelativePath]: false,
       },
       keepProcessAlive: false,
       added: ({ relativePath, type }) => {
@@ -81,11 +77,11 @@ export const startContinuousTesting = async ({
         projectFileRemovedCallback({ relativePath })
       },
     })
-    cancellationToken.register(unregisterProjectFolderLifecycle)
+    cancellationToken.register(unregisterProjectDirectoryLifecycle)
 
     let executionArray = await generateExecutionArray(executeDescription, {
       cancellationToken,
-      projectPathname,
+      projectDirectoryUrl,
     })
     executionArray.forEach((execution) => {
       execution.executionId = cuid()
@@ -112,7 +108,7 @@ export const startContinuousTesting = async ({
 
       fileMutationMap[relativePath] = "added"
       checkActionRequiredResolution({
-        projectPathname,
+        projectDirectoryUrl,
         executeDescription,
         executionArray,
         dependencyTracker,
@@ -129,7 +125,7 @@ export const startContinuousTesting = async ({
 
       fileMutationMap[relativePath] = "updated"
       checkActionRequiredResolution({
-        projectPathname,
+        projectDirectoryUrl,
         executeDescription,
         executionArray,
         dependencyTracker,
@@ -146,7 +142,7 @@ export const startContinuousTesting = async ({
 
       fileMutationMap[relativePath] = "removed"
       checkActionRequiredResolution({
-        projectPathname,
+        projectDirectoryUrl,
         executeDescription,
         executionArray,
         dependencyTracker,
@@ -183,20 +179,16 @@ export const startContinuousTesting = async ({
 
     const { origin: compileServerOrigin } = await startCompileServerForTesting({
       cancellationToken,
-      projectPath,
-      compileIntoRelativePath,
-      importMapRelativePath,
+      projectDirectoryUrl,
+      compileDirectoryUrl,
+      compileDirectoryClean,
+      importMapFileRelativePath,
       importDefaultExtension,
-      browserPlatformRelativePath,
-      nodePlatformRelativePath,
-      browserGroupResolverRelativePath,
-      nodeGroupResolverRelativePath,
       compileGroupCount,
       babelPluginMap,
       convertMap,
       logLevel: "off",
       projectFileRequestedCallback,
-      cleanCompileInto,
       keepProcessAlive: true,
     })
 
@@ -244,14 +236,14 @@ export const startContinuousTesting = async ({
           executing = true
           testingResult = await executeAll(toRun, {
             cancellationToken: externalOrFileChangedCancellationToken,
-            compileServerOrigin,
-            projectPath,
-            compileIntoRelativePath,
-            importMapRelativePath,
-            importDefaultExtension,
             logLevel,
             launchLogLevel: "off",
             executeLogLevel: "off",
+            compileServerOrigin,
+            projectDirectoryUrl,
+            compileDirectoryUrl,
+            importMapFileRelativePath,
+            importDefaultExtension,
             maxParallelExecution,
             defaultAllocatedMsPerExecution,
             logEachExecutionSuccess: false,
@@ -291,7 +283,11 @@ export const startContinuousTesting = async ({
           })
 
           if (systemNotification) {
-            showContinuousTestingNotification({ projectPath, previousTestingResult, testingResult })
+            showContinuousTestingNotification({
+              projectDirectoryUrl,
+              previousTestingResult,
+              testingResult,
+            })
           }
         } catch (error) {
           const cancelReason = errorToCancelReason(error)
@@ -337,14 +333,14 @@ export const startContinuousTesting = async ({
     logger.info("start initial testing")
     testingResult = await executeAll(executionArray, {
       cancellationToken,
-      compileServerOrigin,
-      projectPath,
-      compileIntoRelativePath,
-      importMapRelativePath,
-      importDefaultExtension,
       logLevel,
       launchLogLevel: "off",
       executeLogLevel: "off",
+      compileServerOrigin,
+      projectDirectoryUrl,
+      compileDirectoryUrl,
+      importMapFileRelativePath,
+      importDefaultExtension,
       maxParallelExecution,
       defaultAllocatedMsPerExecution,
       logEachExecutionSuccess: false,
@@ -363,7 +359,7 @@ export const startContinuousTesting = async ({
     initialTestingDone = true
     const actionRequiredPromise = generateActionRequiredPromise()
     const willDoSomething = checkActionRequiredResolution({
-      projectPathname,
+      projectDirectoryUrl,
       executeDescription,
       executionArray,
       dependencyTracker,
@@ -379,7 +375,7 @@ export const startContinuousTesting = async ({
   })
 
 const checkActionRequiredResolution = ({
-  projectPathname,
+  projectDirectoryUrl,
   executeDescription,
   executionArray,
   dependencyTracker,
@@ -387,7 +383,7 @@ const checkActionRequiredResolution = ({
   resolveActionRequired,
 }) => {
   const actionsToPerform = computeActionsToPerform({
-    projectPathname,
+    projectDirectoryUrl,
     executeDescription,
     executionArray,
     dependencyTracker,
@@ -401,7 +397,7 @@ const checkActionRequiredResolution = ({
 }
 
 const computeActionsToPerform = ({
-  projectPathname,
+  projectDirectoryUrl,
   executeDescription,
   executionArray,
   dependencyTracker,
@@ -453,7 +449,7 @@ const computeActionsToPerform = ({
     if (!fileIsAdded(relativePath)) return
 
     const toAddForFile = relativePathToExecutionArray({
-      projectPathname,
+      projectDirectoryUrl,
       relativePath,
       executeDescription,
     })

@@ -1,9 +1,9 @@
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { generateFilePlan } from "../execution/generateFilePlan.js"
-import { filePlanToExecutionArray } from "../execution/filePlanToExecutionArray.js"
+import { generateFilePlan } from "../generateFilePlan.js"
+import { filePlanToExecutionArray } from "../filePlanToExecutionArray.js"
 
 export const relativePathToExecutionArray = ({
-  projectPathname,
+  projectDirectoryUrl,
   relativePath,
   executeDescription,
 }) => {
@@ -11,12 +11,11 @@ export const relativePathToExecutionArray = ({
     metaMapToSpecifierMetaMap({
       execute: executeDescription,
     }),
-    `file://${projectPathname}`,
-    { forceHttpResolutionForFile: true },
+    projectDirectoryUrl,
   )
 
   const meta = urlToMeta({
-    url: `file://${projectPathname}${relativePath}`,
+    url: `${projectDirectoryUrl}${relativePath}`,
     specifierMetaMap: specifierMetaMapForExecution,
   })
   if (meta.execute) {
