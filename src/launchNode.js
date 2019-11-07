@@ -36,7 +36,6 @@ export const launchNode = async ({
   traceWarnings = true,
   cover = false,
   env,
-  logLevel = "off",
   babelPluginMap = jsenvBabelPluginMap,
 }) => {
   if (typeof compileServerOrigin !== "string") {
@@ -167,7 +166,10 @@ export const launchNode = async ({
   ) => {
     const execute = async () => {
       await generateNodeBundle({
-        logLevel,
+        logLevel: "off", // not ideal but launch receives a logger
+        // and cannot convert that into a logLevel + it's an implementation detail
+        // still that's something we want to see when passing logLevel to debug
+        // for now that is ok
         projectDirectoryUrl,
         importDefaultExtension,
         importMapFileRelativePath,
