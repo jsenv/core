@@ -4,7 +4,7 @@ import { ansiToHTML } from "./ansiToHTML.js"
 import { ensureRegeneratorRuntimeImportBabelPlugin } from "./ensureRegeneratorRuntimeImportBabelPlugin.js"
 import { ensureGlobalThisImportBabelPlugin } from "./ensureGlobalThisImportBabelPlugin.js"
 import { transformBabelHelperToImportBabelPlugin } from "./transformBabelHelperToImportBabelPlugin.js"
-import { pathToBabelHelperName } from "./babelHelperMap.js"
+import { filePathToBabelHelperName } from "./babelHelper.js"
 
 const { transformAsync, transformFromAstAsync } = import.meta.require("@babel/core")
 const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-import")
@@ -42,7 +42,7 @@ export const jsenvTransform = async ({
     },
   }
 
-  const babelHelperName = pathToBabelHelperName(inputPath)
+  const babelHelperName = filePathToBabelHelperName(inputPath)
   // to prevent typeof circular dependency
   if (babelHelperName === "typeof") {
     const babelPluginMapWithoutTransformTypeOf = {}

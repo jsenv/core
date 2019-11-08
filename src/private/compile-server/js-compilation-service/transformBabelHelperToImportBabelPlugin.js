@@ -1,5 +1,4 @@
-import { pathToFileUrl } from "../../urlUtils.js"
-import { babelHelperMap, pathToBabelHelperName } from "./babelHelperMap.js"
+import { filePathToBabelHelperName, babelHelperNameToImportSpecifier } from "./babelHelper.js"
 
 // https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
 const { addDefault } = import.meta.require("@babel/helper-module-imports")
@@ -26,23 +25,18 @@ export const transformBabelHelperToImportBabelPlugin = (api) => {
           return undefined
         }
 
-        const filePath = file.opts.filename
-        const babelHelperPath = babelHelperMap[name]
-
-        if (babelHelperPath.startsWith("file://")) {
-          const fileUrl = pathToFileUrl(filePath)
-          if (fileUrl === babelHelperPath) {
-            return undefined
-          }
-        } else if (pathToBabelHelperName(filePath) === name) {
-          return undefined
-        }
-
         if (cachedHelpers[name]) {
           return cachedHelpers[name]
         }
 
-        const helper = addDefault(file.path, babelHelperPath, { nameHint: `_${name}` })
+        const filePath = file.opts.filename
+        const babelHelperImportSpecifier = babelHelperNameToImportSpecifier(name)
+
+        if (filePathToBabelHelperName(filePath) === name) {
+          return undefined
+        }
+
+        const helper = addDefault(file.path, babelHelperImportSpecifier, { nameHint: `_${name}` })
         cachedHelpers[name] = helper
         return helper
       })

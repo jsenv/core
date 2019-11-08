@@ -22,6 +22,7 @@ export const executeTestPlan = async ({
 
   projectDirectoryPath,
   compileDirectoryRelativePath = "./.dist/",
+  compileGroupCount = 2,
 
   updateProcessExitCode = true,
   throwUnhandled = true,
@@ -52,6 +53,7 @@ export const executeTestPlan = async ({
       logger,
       plan: testPlan,
       compileServerLogger,
+      compileGroupCount,
       launchLogger,
       executeLogger,
       projectDirectoryUrl,

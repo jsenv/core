@@ -23,9 +23,9 @@ import { readProjectImportMap } from "../../../readProjectImportMap/readProjectI
 // -> not that simple cause we still must
 //    transform importReplaceMap, importFallbackMap and stuff like thoose
 import {
-  babelHelperMap,
-  babelHelperIsInsideJsenvCore,
-} from "../../../compile-server/js-compilation-service/babelHelperMap.js"
+  listAbstractBabelHelpers,
+  babelHelperNameToImportSpecifier,
+} from "../../../compile-server/js-compilation-service/babelHelper.js"
 import { generateBabelHelper } from "../../../compile-server/js-compilation-service/generateBabelHelper.js"
 import { transformJs } from "../../../compile-server/js-compilation-service/transformJs.js"
 import { findAsyncPluginNameInBabelPluginMap } from "../../../compile-server/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
@@ -112,11 +112,9 @@ export const createJsenvRollupPlugin = async ({
     [bundleConstantAbstractSpecifier]: () => `export const chunkId = ${JSON.stringify(chunkId)}`,
     ...importReplaceMap,
   }
-  Object.keys(babelHelperMap).forEach((babelHelperName) => {
-    if (!babelHelperIsInsideJsenvCore(babelHelperName)) {
-      const babelHelperPath = babelHelperMap[babelHelperName]
-      importReplaceMap[babelHelperPath] = () => generateBabelHelper(babelHelperName)
-    }
+  listAbstractBabelHelpers().forEach((babelHelperName) => {
+    importReplaceMap[babelHelperNameToImportSpecifier(babelHelperName)] = () =>
+      generateBabelHelper(babelHelperName)
   })
   importReplaceMap = resolveSpecifierMap(importReplaceMap, {
     projectDirectoryUrl,
