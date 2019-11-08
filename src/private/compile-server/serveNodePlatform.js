@@ -4,7 +4,7 @@ import { fileUrlToPath, resolveFileUrl, fileUrlToRelativePath } from "../urlUtil
 
 const { serveFile } = import.meta.require("@dmail/server")
 
-const NODE_PLATFORM_CLIENT_PATHNAME = `/.jsenv/node-platform.js`
+const NODE_PLATFORM_RELATIVE_PATH = `.jsenv/node-platform.js`
 
 export const serveNodePlatform = async ({
   logger,
@@ -20,8 +20,16 @@ export const serveNodePlatform = async ({
 }) => {
   const { ressource, method, headers } = request
 
-  if (ressource.startsWith(`${NODE_PLATFORM_CLIENT_PATHNAME}__asset__/`)) {
-    const fileUrl = resolveFileUrl(ressource.slice(1), compileDirectoryUrl)
+  const relativePath = ressource.slice(1)
+  const compileDirectoryRelativePath = fileUrlToRelativePath(
+    compileDirectoryUrl,
+    projectDirectoryUrl,
+  )
+  const nodePlatformCompiledFileRelativePath = `${compileDirectoryRelativePath}${NODE_PLATFORM_RELATIVE_PATH}`
+  const nodePlatformAssetDirectoryRelativePath = `${nodePlatformCompiledFileRelativePath}__asset__/`
+
+  if (relativePath.startsWith(nodePlatformAssetDirectoryRelativePath)) {
+    const fileUrl = resolveFileUrl(relativePath, projectDirectoryUrl)
     const filePath = fileUrlToPath(fileUrl)
     return serveFile(filePath, {
       method,
@@ -29,22 +37,17 @@ export const serveNodePlatform = async ({
     })
   }
 
-  if (ressource !== NODE_PLATFORM_CLIENT_PATHNAME) return null
-
-  const compileDirectoryRelativePath = fileUrlToRelativePath(
-    compileDirectoryUrl,
-    projectDirectoryUrl,
-  )
-  const originalFileRelativePath = fileUrlToRelativePath(nodePlatformFileUrl, projectDirectoryUrl)
-  const compiledFileRelativePath = `${compileDirectoryRelativePath}${ressource.slice(1)}`
+  if (!relativePath.startsWith(nodePlatformCompiledFileRelativePath)) {
+    return null
+  }
 
   return serveBundle({
     logger,
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileRelativePath,
-    compiledFileRelativePath,
+    originalFileRelativePath: fileUrlToRelativePath(nodePlatformFileUrl, projectDirectoryUrl),
+    compiledFileRelativePath: nodePlatformCompiledFileRelativePath,
     importDefaultExtension,
     importMapFileRelativePath,
     importReplaceMap: {

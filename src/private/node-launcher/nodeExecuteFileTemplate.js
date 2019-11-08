@@ -31,13 +31,21 @@ export const execute = async ({
   const { SourceMapConsumer } = executionRequire("source-map")
   const { installNodeErrorStackRemapping } = executionRequire("@jsenv/error-stack-sourcemap")
 
-  const nodePlatformServerUrl = `${compileServerOrigin}/.jsenv/node-platform.js`
-  const nodePlatformFileUrl = resolveFileUrl(`.jsenv/node-platform.js`, compileDirectoryUrl)
-  const nodePlatformFilePath = fileUrlToPath(nodePlatformFileUrl)
+  const compileDirectoryRelativePath = fileUrlToRelativePath(
+    compileDirectoryUrl,
+    projectDirectoryUrl,
+  )
+  const nodePlatformCompiledFileRelativePath = `${compileDirectoryRelativePath}.jsenv/node-platform.js`
+  const nodePlatformCompiledServerUrl = `${compileServerOrigin}/${nodePlatformCompiledFileRelativePath}`
+  const nodePlatformCompiledFileUrl = resolveFileUrl(
+    nodePlatformCompiledFileRelativePath,
+    projectDirectoryUrl,
+  )
+  const nodePlatformCompiledFilePath = fileUrlToPath(nodePlatformCompiledFileUrl)
 
-  await fetchUsingHttp(nodePlatformServerUrl)
+  await fetchUsingHttp(nodePlatformCompiledServerUrl)
   // eslint-disable-next-line import/no-dynamic-require
-  const { nodePlatform } = require(nodePlatformFilePath)
+  const { nodePlatform } = require(nodePlatformCompiledFilePath)
   const { relativePathToCompiledUrl, executeFile } = nodePlatform.create({
     compileServerOrigin,
     projectDirectoryUrl,

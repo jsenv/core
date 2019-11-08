@@ -4,7 +4,7 @@ import { fileUrlToPath, resolveFileUrl, fileUrlToRelativePath } from "../urlUtil
 
 const { serveFile } = import.meta.require("@dmail/server")
 
-const BROWSER_PLATFORM_CLIENT_PATHNAME = `/.jsenv/browser-platform.js`
+const BROWSER_PLATFORM_RELATIVE_PATH = `.jsenv/browser-platform.js`
 
 export const serveBrowserPlatform = async ({
   logger,
@@ -20,33 +20,34 @@ export const serveBrowserPlatform = async ({
 }) => {
   const { ressource, method, headers } = request
 
-  if (ressource.startsWith(`${BROWSER_PLATFORM_CLIENT_PATHNAME}__asset__/`)) {
-    const fileUrl = resolveFileUrl(ressource.slice(1), compileDirectoryUrl)
+  const relativePath = ressource.slice(1)
+  const compileDirectoryRelativePath = fileUrlToRelativePath(
+    compileDirectoryUrl,
+    projectDirectoryUrl,
+  )
+  const browserPlatformCompiledFileRelativePath = `${compileDirectoryRelativePath}${BROWSER_PLATFORM_RELATIVE_PATH}`
+  const browserPlatformAssetDirectoryRelativePath = `${browserPlatformCompiledFileRelativePath}__asset__/`
+
+  if (relativePath.startsWith(browserPlatformAssetDirectoryRelativePath)) {
+    const fileUrl = resolveFileUrl(relativePath, compileDirectoryUrl)
     const filePath = fileUrlToPath(fileUrl)
     return serveFile(filePath, {
       method,
       headers,
     })
   }
-  if (ressource !== BROWSER_PLATFORM_CLIENT_PATHNAME) return null
 
-  const compileDirectoryRelativePath = fileUrlToRelativePath(
-    compileDirectoryUrl,
-    projectDirectoryUrl,
-  )
-  const originalFileRelativePath = fileUrlToRelativePath(
-    browserPlatformFileUrl,
-    projectDirectoryUrl,
-  )
-  const compiledFileRelativePath = `${compileDirectoryRelativePath}${ressource.slice(1)}`
+  if (!relativePath.startsWith(browserPlatformCompiledFileRelativePath)) {
+    return null
+  }
 
   return serveBundle({
     logger,
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileRelativePath,
-    compiledFileRelativePath,
+    originalFileRelativePath: fileUrlToRelativePath(browserPlatformFileUrl, projectDirectoryUrl),
+    compiledFileRelativePath: browserPlatformCompiledFileRelativePath,
     importMapFileRelativePath,
     importDefaultExtension,
     importReplaceMap: {
