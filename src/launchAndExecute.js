@@ -7,7 +7,6 @@ import {
   errorToCancelReason,
 } from "@dmail/cancellation"
 import { promiseTrackRace } from "@dmail/helper"
-import { createLogger } from "@jsenv/logger"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 
 const TIMING_BEFORE_EXECUTION = "before-execution"
@@ -16,9 +15,8 @@ const TIMING_AFTER_EXECUTION = "after-execution"
 
 export const launchAndExecute = async ({
   cancellationToken = createCancellationToken(),
-  logLevel,
-  launchLogLevel = logLevel,
-  executeLogLevel = logLevel,
+  launchLogger,
+  executeLogger,
   launch,
 
   // stopPlatformAfterExecute false by default because you want to keep browser alive
@@ -127,9 +125,6 @@ export const launchAndExecute = async ({
       },
     )
   }
-
-  const launchLogger = createLogger({ logLevel: launchLogLevel })
-  const executeLogger = createLogger({ logLevel: executeLogLevel })
 
   const executionResult = await computeRawExecutionResult({
     cancellationToken,

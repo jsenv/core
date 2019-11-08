@@ -2,6 +2,7 @@ import {
   createProcessInterruptionCancellationToken,
   catchAsyncFunctionCancellation,
 } from "@dmail/cancellation"
+import { createLogger } from "@jsenv/logger"
 import { pathToDirectoryUrl, resolveDirectoryUrl } from "./private/urlUtils.js"
 import { launchAndExecute } from "./launchAndExecute.js"
 import { startCompileServer } from "./startCompileServer.js"
@@ -55,6 +56,9 @@ export const execute = async ({
 
   fileRelativePath = fileRelativePath.replace(/\\/g, "/")
 
+  const launchLogger = createLogger({ logLevel: launchLogLevel })
+  const executeLogger = createLogger({ logLevel: executeLogLevel })
+
   return catchAsyncFunctionCancellation(async () => {
     const cancellationToken = createProcessInterruptionCancellationToken()
 
@@ -80,11 +84,11 @@ export const execute = async ({
 
     const result = await launchAndExecute({
       cancellationToken,
-      launchLogLevel,
-      executeLogLevel,
-      launch: (options) =>
+      launchLogger,
+      executeLogger,
+      launch: (params) =>
         launch({
-          ...options,
+          ...params,
           compileServerOrigin,
           projectDirectoryUrl,
           compileDirectoryUrl,

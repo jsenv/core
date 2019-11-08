@@ -84,9 +84,24 @@ ${projectDirectoryUrl}`)
   if (typeof browserPlatformFileUrl !== "string") {
     throw new TypeError(`browserPlatformFileUrl must be a string. got ${browserPlatformFileUrl}`)
   }
+  if (!browserPlatformFileUrl.startsWith(projectDirectoryUrl)) {
+    throw new TypeError(`browserPlatformFileUrl must be inside projectDirectoryUrl.
+--- browser platform file url ---
+${browserPlatformFileUrl}
+--- project directory url ---
+${projectDirectoryUrl}`)
+  }
   if (typeof nodePlatformFileUrl !== "string") {
     throw new TypeError(`nodePlatformFileUrl must be a string. got ${nodePlatformFileUrl}`)
   }
+  if (!nodePlatformFileUrl.startsWith(projectDirectoryUrl)) {
+    throw new TypeError(`nodePlatformFileUrl must be inside projectDirectoryUrl.
+--- node platform file url ---
+${nodePlatformFileUrl}
+--- project directory url ---
+${projectDirectoryUrl}`)
+  }
+
   const logger = createLogger({ logLevel })
 
   const groupMap = generateGroupMap({

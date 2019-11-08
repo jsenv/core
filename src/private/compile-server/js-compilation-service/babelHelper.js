@@ -98,21 +98,20 @@ export const babelHelperNameToImportSpecifier = (babelHelperName) => {
 export const filePathToBabelHelperName = (filePath) => {
   const fileUrl = pathToFileUrl(filePath)
 
-  if (fileUrl.includes(babelHelperDirectoryRelativePath)) {
-    const afterBabelHelperDirectory = fileUrl.slice(
-      fileUrl.indexOf(babelHelperDirectoryRelativePath) + babelHelperDirectoryRelativePath.length,
+  const babelHelperPrefix = "core/helpers/babel/"
+  if (fileUrl.includes(babelHelperPrefix)) {
+    const afterBabelHelper = fileUrl.slice(
+      fileUrl.indexOf(babelHelperPrefix) + babelHelperPrefix.length,
     )
-    return afterBabelHelperDirectory.slice(afterBabelHelperDirectory.indexOf("/") + 1)
+    return afterBabelHelper.slice(0, afterBabelHelper.indexOf("/"))
   }
 
   if (fileUrl.includes(abstractBabelHelperDirectoryRelativePath)) {
-    const afterBabelHelperDirectory = fileUrl.slice(
+    const afterBabelHelper = fileUrl.slice(
       fileUrl.indexOf(abstractBabelHelperDirectoryRelativePath) +
         abstractBabelHelperDirectoryRelativePath.length,
     )
-    return afterBabelHelperDirectory.slice(
-      abstractBabelHelperDirectoryRelativePath.indexOf("/") + 1,
-    )
+    return afterBabelHelper.slice(0, afterBabelHelper.indexOf("/"))
   }
 
   return null
