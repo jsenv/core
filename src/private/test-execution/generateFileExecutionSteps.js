@@ -1,27 +1,25 @@
 export const generateFileExecutionSteps = ({ fileRelativePath, filePlan }) => {
   const fileExecutionSteps = []
   Object.keys(filePlan).forEach((name) => {
-    const stepConfigMap = filePlan[name]
-    if (stepConfigMap === null || stepConfigMap === undefined) {
+    const stepConfig = filePlan[name]
+    if (stepConfig === null || stepConfig === undefined) {
       return
     }
 
-    if (typeof stepConfigMap !== "object") {
+    if (typeof stepConfig !== "object") {
       throw new TypeError(`found unexpected value in plan, they must be object.
 --- file relative path ---
 ${fileRelativePath}
 --- name ---
 ${name}
 --- value ---
-${stepConfigMap}`)
+${stepConfig}`)
     }
 
-    Object.keys(stepConfigMap).forEach((name) => {
-      fileExecutionSteps.push({
-        name,
-        fileRelativePath,
-        ...stepConfigMap[name],
-      })
+    fileExecutionSteps.push({
+      name,
+      fileRelativePath,
+      ...stepConfig,
     })
   })
 

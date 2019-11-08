@@ -123,7 +123,7 @@ ${fileRelativePath}`),
         cancellationToken,
         launchLogger,
         executeLogger,
-        launch: (options) =>
+        launch: (params) =>
           launch({
             compileServerOrigin,
             projectDirectoryUrl,
@@ -132,7 +132,7 @@ ${fileRelativePath}`),
             importDefaultExtension,
             babelPluginMap,
             cover: collectCoverage,
-            ...options,
+            ...params,
           }),
         allocatedMs,
         measureDuration,

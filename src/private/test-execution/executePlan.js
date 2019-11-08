@@ -100,6 +100,8 @@ export const executePlan = async ({
   ])
 
   const executionResult = await executeConcurrently(executionSteps, {
+    cancellationToken,
+    logger,
     compileServerOrigin,
     projectDirectoryUrl,
     compileDirectoryUrl,
