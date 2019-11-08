@@ -3,7 +3,7 @@ export { computeJsenvPluginMapForPlatform } from "./src/computeJsenvPluginMapFor
 export { convertCommonJsWithBabel } from "./src/convertCommonJsWithBabel.js"
 export { convertCommonJsWithRollup } from "./src/convertCommonJsWithRollup.js"
 export { execute } from "./src/execute.js"
-export { executeTests } from "./src/executeTests.js"
+export { executeTestPlan } from "./src/executeTestPlan.js"
 export { generateCommonJsBundle } from "./src/generateCommonJsBundle.js"
 export { generateCommonJsBundleForNode } from "./src/generateCommonJsBundleForNode.js"
 export { generateGlobalBundle } from "./src/generateGlobalBundle.js"

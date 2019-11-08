@@ -40,7 +40,7 @@ export const launchAndExecute = async ({
   collectNamespace = false,
   collectCoverage = false,
   fileRelativePath,
-  coverageInherit = false,
+  inheritCoverage = false,
   executionId,
 } = {}) => {
   if (typeof launch !== "function") {
@@ -113,7 +113,7 @@ export const launchAndExecute = async ({
     })
   }
 
-  if (coverageInherit) {
+  if (inheritCoverage) {
     const savedCollectCoverage = collectCoverage
     collectCoverage = true
     executionResultTransformer = composeTransformer(

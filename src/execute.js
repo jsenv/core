@@ -7,6 +7,11 @@ import { launchAndExecute } from "./launchAndExecute.js"
 import { startCompileServer } from "./startCompileServer.js"
 
 export const execute = async ({
+  logLevel = "off",
+  compileServerLogLevel = logLevel,
+  launchLogLevel = logLevel,
+  executeLogLevel = logLevel,
+
   fileRelativePath,
   launch,
   projectDirectoryPath,
@@ -24,12 +29,8 @@ export const execute = async ({
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
-  logLevel = "off",
-  compileServerLogLevel = logLevel,
-  launchLogLevel = logLevel,
-  executeLogLevel = logLevel,
   mirrorConsole = true,
-  stopOnceExecuted = false,
+  stopPlatformAfterExecute = false,
   collectNamespace = false,
   collectCoverage = false,
   inheritCoverage = false,
@@ -79,6 +80,8 @@ export const execute = async ({
 
     const result = await launchAndExecute({
       cancellationToken,
+      launchLogLevel,
+      executeLogLevel,
       launch: (options) =>
         launch({
           ...options,
@@ -88,10 +91,8 @@ export const execute = async ({
           importMapFileRelativePath,
           importDefaultExtension,
         }),
-      launchLogLevel,
-      executeLogLevel,
       mirrorConsole,
-      stopOnceExecuted,
+      stopPlatformAfterExecute,
       fileRelativePath,
       collectNamespace,
       collectCoverage,

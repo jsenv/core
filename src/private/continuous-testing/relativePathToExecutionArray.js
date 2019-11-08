@@ -1,6 +1,6 @@
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { generateFilePlan } from "../generateFilePlan.js"
-import { filePlanToExecutionArray } from "../filePlanToExecutionArray.js"
+import { generateFileExecutionPlan } from "../test-execution/generateFileExecutionPlan.js"
+import { fileExecutionPlanToArray } from "../filePlanToExecutionArray.js"
 
 export const relativePathToExecutionArray = ({
   projectDirectoryUrl,
@@ -20,7 +20,7 @@ export const relativePathToExecutionArray = ({
   })
   if (meta.execute) {
     const executionMeta = meta.execute
-    const filePlan = generateFilePlan(relativePath, executionMeta)
+    const filePlan = generateFileExecutionPlan(relativePath, executionMeta)
     return filePlanToExecutionArray(filePlan, relativePath)
   }
 
