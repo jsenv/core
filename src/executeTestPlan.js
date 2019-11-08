@@ -27,6 +27,13 @@ export const executeTestPlan = async ({
   updateProcessExitCode = true,
   throwUnhandled = true,
 
+  coverage = false,
+  coverageConfig = {
+    "./index.js": true,
+    "./src/**/*.js": true,
+    "./**/*.test.*": false, // contains .test. -> nope
+    "./**/test/": false, // inside a test folder -> nope,
+  },
   coverageJsonFile = true,
   coverageJsonFileLog = true,
   coverageJsonFileRelativePath = "./coverage/coverage-final.json",
@@ -39,7 +46,6 @@ export const executeTestPlan = async ({
 }) => {
   const start = async () => {
     const logger = createLogger({ logLevel })
-    const compileServerLogger = createLogger({ logLevel: compileServerLogLevel })
     const launchLogger = createLogger({ logLevel: launchLogLevel })
     const executeLogger = createLogger({ logLevel: executeLogLevel })
     const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
@@ -51,13 +57,16 @@ export const executeTestPlan = async ({
     const result = await executePlan({
       cancellationToken,
       logger,
-      plan: testPlan,
-      compileServerLogger,
-      compileGroupCount,
+      compileServerLogLevel,
       launchLogger,
       executeLogger,
+
+      plan: testPlan,
+      compileGroupCount,
       projectDirectoryUrl,
       compileDirectoryUrl,
+      coverage,
+      coverageConfig,
       ...rest,
     })
 
@@ -66,7 +75,7 @@ export const executeTestPlan = async ({
     }
 
     const promises = []
-    if (coverageJsonFile) {
+    if (coverage && coverageJsonFile) {
       promises.push(
         generateCoverageJsonFile({
           projectDirectoryUrl,
@@ -76,7 +85,7 @@ export const executeTestPlan = async ({
         }),
       )
     }
-    if (coverageHtmlDirectory) {
+    if (coverage && coverageHtmlDirectory) {
       promises.push(
         generateCoverageHtmlDirectory({
           coverageMap: result.coverageMap,
@@ -86,7 +95,7 @@ export const executeTestPlan = async ({
         }),
       )
     }
-    if (coverageConsole) {
+    if (coverage && coverageConsole) {
       promises.push(
         generateCoverageConsoleReport({
           coverageMap: result.coverageMap,

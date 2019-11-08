@@ -12,7 +12,7 @@ import { generateNodeBundle } from "./private/node-launcher/generateNodeBundle.j
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 const EVALUATION_STATUS_OK = "evaluation-ok"
-const NODE_EXECUTE_CLIENT_RELATIVE_PATH = ".jsenv/node-execute.js"
+const NODE_EXECUTE_RELATIVE_PATH = ".jsenv/node-execute.js"
 
 export const launchNode = async ({
   cancellationToken = createCancellationToken(),
@@ -70,8 +70,8 @@ export const launchNode = async ({
   const nodeControllableFilePath = fileUrlToPath(nodeControllableFileUrl)
   await assertFile(nodeControllableFilePath)
 
-  const nodeExecuteTemplateRelativeFilePath = fileUrlToPath(nodeExecuteTemplateFileUrl)
-  await assertFile(nodeExecuteTemplateRelativeFilePath)
+  const nodeExecuteTemplateFilePath = fileUrlToPath(nodeExecuteTemplateFileUrl)
+  await assertFile(nodeExecuteTemplateFilePath)
 
   const child = forkChildProcess(nodeControllableFilePath, {
     execArgv,
@@ -178,7 +178,7 @@ export const launchNode = async ({
           projectDirectoryUrl,
         ),
         compiledFileRelativePath: fileUrlToRelativePath(
-          resolveFileUrl(NODE_EXECUTE_CLIENT_RELATIVE_PATH, compileDirectoryUrl),
+          resolveFileUrl(NODE_EXECUTE_RELATIVE_PATH, compileDirectoryUrl),
           projectDirectoryUrl,
         ),
         babelPluginMap,
@@ -329,7 +329,7 @@ const createNodeIIFEString = ({
   } = ${JSON.stringify(
     {
       nodeExecuteFilePath: fileUrlToPath(
-        resolveFileUrl(NODE_EXECUTE_CLIENT_RELATIVE_PATH, compileDirectoryUrl),
+        resolveFileUrl(NODE_EXECUTE_RELATIVE_PATH, compileDirectoryUrl),
       ),
       compileServerOrigin,
       projectDirectoryUrl,

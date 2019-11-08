@@ -54,6 +54,8 @@ export const executeConcurrently = async (
     // so log would be a mess to read
     mirrorConsole: false,
     captureConsole: true,
+    collectPlatformName: true,
+    collectPlatformVersion: true,
     collectNamespace: false,
     collectCoverage: coverage,
 
@@ -81,6 +83,11 @@ ${fileRelativePath}`),
     maxParallelExecution: concurrencyLimit,
     array: executionSteps,
     start: async (executionStep) => {
+      executionStep = {
+        ...stepParams,
+        ...executionStep,
+      }
+
       const {
         name,
         executionId,
@@ -99,10 +106,7 @@ ${fileRelativePath}`),
         beforeExecutionCallback,
         afterExecutionCallback,
         logSuccess,
-      } = {
-        ...stepParams,
-        ...executionStep,
-      }
+      } = executionStep
 
       const beforeExecutionInfo = {
         allocatedMs,

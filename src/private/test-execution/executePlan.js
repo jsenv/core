@@ -7,7 +7,7 @@ import { executeConcurrently } from "./executeConcurrently.js"
 export const executePlan = async ({
   cancellationToken,
   logger,
-  compileServerLogger,
+  compileServerLogLevel,
 
   projectDirectoryUrl,
   compileDirectoryUrl,
@@ -20,12 +20,7 @@ export const executePlan = async ({
 
   // coverage parameters
   coverage = false,
-  coverageConfig = {
-    "./index.js": true,
-    "./src/**/*.js": true,
-    "./**/*.test.*": false, // contains .test. -> nope
-    "./**/test/": false, // inside a test folder -> nope,
-  },
+  coverageConfig = {},
   coverageAndExecutionAllowed = false,
 
   plan = {},
@@ -87,7 +82,7 @@ export const executePlan = async ({
     }),
     startCompileServerForTesting({
       cancellationToken,
-      logger: compileServerLogger,
+      logLevel: compileServerLogLevel,
       projectDirectoryUrl,
       compileDirectoryUrl,
       compileDirectoryClean,

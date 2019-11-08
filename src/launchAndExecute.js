@@ -33,7 +33,7 @@ export const launchAndExecute = async ({
   measureDuration = false, // both launch + execute
   mirrorConsole = false,
   captureConsole = false,
-  collectPlaformName = false,
+  collectPlatformName = false,
   collectPlatformVersion = false,
   collectNamespace = false,
   collectCoverage = false,
@@ -87,7 +87,7 @@ export const launchAndExecute = async ({
     )
   }
 
-  if (collectPlaformName) {
+  if (collectPlatformName) {
     platformStartedCallback = composeCallback(platformStartedCallback, ({ name }) => {
       executionResultTransformer = composeTransformer(
         executionResultTransformer,

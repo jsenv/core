@@ -7,7 +7,9 @@ export const EXECUTE_TEST_PARAMS = {
   projectDirectoryPath: fileUrlToPath(jsenvCoreDirectoryUrl),
   compileDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
-  collectNamespace: true,
-  measureDuration: false,
-  captureConsole: false,
+  stepParams: {
+    collectNamespace: true,
+    measureDuration: false,
+    captureConsole: false,
+  },
 }

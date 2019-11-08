@@ -25,14 +25,15 @@ const actual = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
   compileDirectoryRelativePath,
   testPlan,
+  compileGroupCount: 1,
 })
 const expected = {
   summary: {
-    executionCount: 2,
+    executionCount: 1,
     disconnectedCount: 0,
     timedoutCount: 0,
     erroredCount: 0,
-    completedCount: 2,
+    completedCount: 1,
   },
   report: {
     [fileRelativePath]: {
