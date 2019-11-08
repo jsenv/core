@@ -9,11 +9,11 @@ import {
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { hrefToOrigin, hrefToPathname } from "@jsenv/href"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, fileUrlToPath, resolveDirectoryUrl } from "../../urlUtils.js"
-import { startCompileServerForTesting } from "../startCompileServerForTesting.js"
-import { generateExecutionArray } from "../generateExecutionArray.js"
-import { executeAll } from "../executeAll.js"
-import { relativePathToExecutionArray } from "./relativePathToExecutionArray.js"
+import { pathToDirectoryUrl, fileUrlToPath, resolveDirectoryUrl } from "../urlUtils.js"
+import { startCompileServerForTesting } from "../test-execution/startCompileServerForTesting.js"
+import { generateExecutionSteps } from "../test-execution/generateExecutionSteps.js"
+import { executeConcurrently } from "../test-execution/executeConcurrently.js"
+import { relativePathToExecutionSteps } from "./relativePathToExecutionSteps.js"
 import { showContinuousTestingNotification } from "./showContinuousTestingNotification.js"
 import { createRemoveLog, createRunLog } from "./continous-testing-logs.js"
 
@@ -30,7 +30,7 @@ export const startContinuousTesting = async ({
   compileDirectoryClean,
   importMapFileRelativePath,
   importDefaultExtension,
-  executeDescription = {},
+  testPlan = {},
   watchDescription = {
     "./**/*": true,
     ...TESTING_WATCH_EXCLUDE_DESCRIPTION,
@@ -79,12 +79,12 @@ export const startContinuousTesting = async ({
     })
     cancellationToken.register(unregisterProjectDirectoryLifecycle)
 
-    let executionArray = await generateExecutionArray(executeDescription, {
+    let executionSteps = await generateExecutionSteps(testPlan, {
       cancellationToken,
       projectDirectoryUrl,
     })
-    executionArray.forEach((execution) => {
-      execution.executionId = cuid()
+    executionSteps.forEach((executionStep) => {
+      executionStep.executionId = cuid()
     })
 
     let testingResult
@@ -109,8 +109,8 @@ export const startContinuousTesting = async ({
       fileMutationMap[relativePath] = "added"
       checkActionRequiredResolution({
         projectDirectoryUrl,
-        executeDescription,
-        executionArray,
+        testPlan,
+        executionSteps,
         dependencyTracker,
         fileMutationMap,
         resolveActionRequired,
@@ -126,8 +126,8 @@ export const startContinuousTesting = async ({
       fileMutationMap[relativePath] = "updated"
       checkActionRequiredResolution({
         projectDirectoryUrl,
-        executeDescription,
-        executionArray,
+        testPlan,
+        executionSteps,
         dependencyTracker,
         fileMutationMap,
         resolveActionRequired,
@@ -143,8 +143,8 @@ export const startContinuousTesting = async ({
       fileMutationMap[relativePath] = "removed"
       checkActionRequiredResolution({
         projectDirectoryUrl,
-        executeDescription,
-        executionArray,
+        testPlan,
+        executionSteps,
         dependencyTracker,
         fileMutationMap,
         resolveActionRequired,
@@ -164,7 +164,7 @@ export const startContinuousTesting = async ({
         if (hrefToOrigin(referer) === request.origin) {
           const refererRelativePath = hrefToPathname(referer)
 
-          executionArray.forEach(({ executionId, fileRelativePath }) => {
+          executionSteps.forEach(({ executionId, fileRelativePath }) => {
             if (fileRelativePath === refererRelativePath) {
               executionImportCallback({ relativePath, executionId })
             }
@@ -234,7 +234,7 @@ export const startContinuousTesting = async ({
         const previousTestingResult = testingResult
         try {
           executing = true
-          testingResult = await executeAll(toRun, {
+          testingResult = await executeConcurrently(toRun, {
             cancellationToken: externalOrFileChangedCancellationToken,
             logLevel,
             launchLogLevel: "off",
@@ -306,12 +306,14 @@ export const startContinuousTesting = async ({
         if (toAdd.length > 0) {
           // log(createAddLog({ fileResponsibleOfAdd, toAdd }))
           // we should sort thoose execution, but it's ok for now
-          executionArray.push(...toAdd)
+          executionSteps.push(...toAdd)
         }
         if (toRemove.length > 0) {
           logger.info(createRemoveLog({ fileResponsibleOfRemove, toRemove }))
           // we should sort thoose execution, but it's ok for now
-          executionArray = executionArray.filter((execution) => !toRemove.includes(execution))
+          executionSteps = executionSteps.filter(
+            (executionStep) => !toRemove.includes(executionStep),
+          )
         }
         // all mutation handled, reset the map
         fileMutationMap = {}
@@ -331,7 +333,7 @@ export const startContinuousTesting = async ({
     }
 
     logger.info("start initial testing")
-    testingResult = await executeAll(executionArray, {
+    testingResult = await executeConcurrently(executionSteps, {
       cancellationToken,
       logLevel,
       launchLogLevel: "off",
@@ -360,8 +362,8 @@ export const startContinuousTesting = async ({
     const actionRequiredPromise = generateActionRequiredPromise()
     const willDoSomething = checkActionRequiredResolution({
       projectDirectoryUrl,
-      executeDescription,
-      executionArray,
+      testPlan,
+      executionSteps,
       dependencyTracker,
       fileMutationMap: fileMutationMapHandledAfterInitialTesting,
       resolveActionRequired,
@@ -376,16 +378,16 @@ export const startContinuousTesting = async ({
 
 const checkActionRequiredResolution = ({
   projectDirectoryUrl,
-  executeDescription,
-  executionArray,
+  testPlan,
+  executionSteps,
   dependencyTracker,
   fileMutationMap,
   resolveActionRequired,
 }) => {
   const actionsToPerform = computeActionsToPerform({
     projectDirectoryUrl,
-    executeDescription,
-    executionArray,
+    testPlan,
+    executionSteps,
     dependencyTracker,
     fileMutationMap,
   })
@@ -398,8 +400,8 @@ const checkActionRequiredResolution = ({
 
 const computeActionsToPerform = ({
   projectDirectoryUrl,
-  executeDescription,
-  executionArray,
+  testPlan,
+  executionSteps,
   dependencyTracker,
   fileMutationMap,
 }) => {
@@ -416,16 +418,16 @@ const computeActionsToPerform = ({
 
   const fileIsRemoved = (relativePath) => fileMutationMap[relativePath] === "removed"
 
-  executionArray.forEach((execution) => {
-    const { fileRelativePath } = execution
+  executionSteps.forEach((executionStep) => {
+    const { fileRelativePath } = executionStep
 
     if (fileIsRemoved(fileRelativePath)) {
       if (!fileResponsibleOfRemove.includes(fileRelativePath)) {
         fileResponsibleOfRemove.push(fileRelativePath)
       }
-      toRemove.push(execution)
+      toRemove.push(executionStep)
     } else {
-      const dependencySet = dependencyTracker.getDependencySet(execution.executionId)
+      const dependencySet = dependencyTracker.getDependencySet(executionStep.executionId)
       const executionDependencyChangedArray = Array.from(dependencySet).filter((relativePath) => {
         if (fileIsUpdated(relativePath)) return true
         if (relativePath !== fileRelativePath && fileIsRemoved(relativePath)) return true
@@ -440,7 +442,7 @@ const computeActionsToPerform = ({
             fileResponsibleOfRun.push(relativePath)
           }
         })
-        toRun.push(execution)
+        toRun.push(executionStep)
       }
     }
   })
@@ -448,10 +450,10 @@ const computeActionsToPerform = ({
   Object.keys(fileMutationMap).forEach((relativePath) => {
     if (!fileIsAdded(relativePath)) return
 
-    const toAddForFile = relativePathToExecutionArray({
+    const toAddForFile = relativePathToExecutionSteps({
       projectDirectoryUrl,
       relativePath,
-      executeDescription,
+      plan: testPlan,
     })
     if (toAddForFile.length) {
       toAddForFile.forEach((execution) => {
