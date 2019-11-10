@@ -6,6 +6,7 @@
   - [1 - Setup basic project](#1---setup-basic-project)
   - [2 - Execute tests](#2---execute-tests)
   - [3 - Generate test coverage](#3---generate-test-coverage)
+- [How to test async code](#How-to-test-async-code)
 
 ## Presentation
 
@@ -13,7 +14,7 @@ To understand how to use jsenv testing let's use it on a "real" project.<br /> W
 
 ## Code example
 
-The following code uses `@jsenv/core` to execute every files ending with `test.js` inside a directory.
+The following code uses `@jsenv/core` to execute every files ending with `test.js` inside a project directory.
 
 ```js
 const { executeTestPlan, launchNode } = require("@jsenv/core")
@@ -81,6 +82,40 @@ The most valuable thing to do with that file is to feed it to some code coverage
 I have documented one of them named `codecov.io` but you can integrate with pretty much anything else.<br />
 — see [uploading coverage to codecov.io](./docs/uploading-coverage-to-codecov.md)
 
-### `startContinuousTesting` example
+## How to test async code
 
-To be documented, in any case it's an experimental for now.
+top level await is the ability to write `await` directly in the body of your program.
+
+```js
+const value = await Promise.resolve(42)
+console.log(value)
+```
+
+You must use top level await to test something async.<br />
+Without top level await, file execution is considered done even if things are still running.<br />
+
+```js
+console.log("execution start")
+;(async () => {
+  const actual = await Promise.resolve(42)
+  const expected = 42
+  if (actual !== expected) throw new Error("should be 42")
+  console.log("test done")
+})()
+console.log("execution end")
+```
+
+Executing code above with `test` logs `"execution start"`, `"execution end"`.<br />
+It does not logs `"test done"` because execution is considered as `completed` and platform is killed.<br />
+The same code written using top level await will work.
+
+```js
+console.log("execution start")
+const actual = await Promise.resolve(42)
+const expected = 42
+if (actual !== expected) throw new Error("should be 42")
+console.log("test done")
+console.log("execution end")
+```
+
+Executing code above with `test` function logs `"execution start"`, `"test done"`, `"execution end"`.<br />
