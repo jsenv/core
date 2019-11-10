@@ -30,12 +30,13 @@ To fix it you need to configure npm authentification on github registry
 
 ### Configure npm authentification on github registry
 
-1. Create a token on your github profile with at leat `read:packages` scope.
+1. Create a token on your github profile with at leat `read:packages` scope. (https://github.com/settings/tokens)
 
 2. Save the token with the following command
    ```console
    npm config set //npm.pkg.github.com/:_authToken personal-access-token
    ```
+   Replace 'personal-access-token' with your previously generated token.
 
 — see [Authenticating to GitHub Package Registry documentation on GitHub](https://help.github.com/en/articles/configuring-npm-for-use-with-github-package-registry#authenticating-to-github-package-registry)
 
