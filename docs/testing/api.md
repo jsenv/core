@@ -1,14 +1,33 @@
 # Table of contents
 
-- [executeTestPlan](#executeTestPlan)
+- [Example](#executeTestPlan)
+- [Parameters](#executeTestPlan-parameters)
   - [testPlan](#testPlan)
+    - [specifier](#specifier)
+    - [executionName](#executionName)
+    - [executionOptions](#executionOptions)
+      - [launch](#launch)
+      - [allocatedMs](#allocatedMs)
+      - [measureDuration](#measureDuration)
+      - [captureConsole](#captureConsole)
+      - [collectNamespace](#collectNamespace)
+      - [collectCoverage](#collectCoverage)
+      - [logSuccess](#logSuccess)
+  - [executionDefaultOptions](#executionDefaultOptions)
+  - [concurrencyLimit](#concurrencyLimit)
+  - [measurePlanExecutionDuration](#measurePlanExecutionDuration)
+  - [Shared parameters](#shared-parameters)
+- [Return value](#return-value)
+  - [testPlanSummary](#testPlanSummary)
+  - [testPlanReport](#testPlanReport)
+  - [testPlanCoverageMap](#testPlanCoverageMap)
 - [One execution = One platform](#One-execution--one-platform)
 - [Execution error](#Execution-error)
 - [Execution timeout](#Execution-timeout)
 - [Execution disconnection](#Execution-disconnection)
 - [Execution completion](#Execution-completion)
 
-# executeTestPlan
+# Example
 
 > `executeTestPlan` is a function executing test files in one or several platforms logging progression and optionnaly generating associated coverage.
 
@@ -18,15 +37,16 @@ Implemented in [src/executeTestPlan.js](../../src/executeTestPlan.js), you can u
 const { executeTestPlan, launchNode } = require("@jsenv/core")
 
 executeTestPlan({
-  logLevel: "info",
+  projectDirectoryPath: __dirname,
   testPlan: {
-    "/test/**/*.test.js": {
+    "./test/**/*.test.js": {
       node: {
         launch: launchNode,
+        allocatedMs: 5000,
       },
     },
   },
-  projectDirectoryPath: __dirname,
+  logLevel: "info",
   coverage: true,
   coverageConfig: {
     "./index.js": true,
@@ -40,7 +60,13 @@ executeTestPlan({
 
 The code above executes every files ending with .test.js inside node and write the associated coverage into a file in json format.
 
-### testPlan
+# Parameters
+
+`executeTestPlan` uses named parameters documented here.
+
+Each parameter got a dedicated section to shortly explain what it does and if it's required or optional.
+
+## testPlan
 
 > `testPlan` is an object describing where are your test files and how they should be executed.
 
@@ -48,129 +74,275 @@ This is an optional parameter with a default value of:
 
 ```js
 {
- "/test/**/*.test.js": {
+ "./test/**/*.test.js": {
   node: {
     launch: launchNode,
   }
 }
 ```
 
-Execute description let you describe which files you want to execute and how.<br />
-Example above means you want to execute all files ending with `.test.js` anywhere the `/test/` folder with node.js. It also allocates only `5000` ms for `/test/file.test.js` file execution.
-
-`executeDescription` uses path matching provided by `@jsenv/url-meta`.<br />
-— see [@jsenv/url-meta on github](https://github.com/jsenv/jsenv-url-meta)
-
-If you don't pass this option, the default value will be:
-
-### defaultAllocatedMsPerExecution
+`testPlan` parts are named `specifier`, `filePlan`, `executionName` and `executionOptions`.<br />
+To better see what is named how, let's name every part of the default `testPlan`:
 
 ```js
-const { test } = require("@jsenv/testing")
+const specifier = "./test/**/*.test.js"
+const executionName = "node"
+const executionOptions = {
+  launch: launchNode,
+}
+const filePlan = {
+  [executionName]: executionOptions,
+}
+const testPlan = {
+  [specifier]: filePlan,
+}
+```
 
-test({
-  projectPath: "/Users/you/project",
-  defaultAllocatedMsPerExecution: 50000,
+### specifier
+
+`specifier` is documented in [https://github.com/jsenv/jsenv-url-meta#specifier](https://github.com/jsenv/jsenv-url-meta#specifier).
+
+### executionName
+
+`executionName` can be anything. up to you to name this execution.
+
+### executionOptions
+
+`executionOptions` can be `null`, in that case the execution is ignored.
+It exists to prevent an execution planified by a previous specifier.
+
+```js
+{
+  // execute every file twice on node (why not ^^)
+  "./test/**/*.test.js": {
+    node: {
+      launch: launchNode,
+    },
+    node2: {
+      launch: launchNode
+    }
+  },
+  // but executes foo.test.js once
+  "./test/foo.test.js": {
+    node2: null
+  }
+}
+```
+
+`executionOptions` option are documented below:
+
+#### launch
+
+A function capable to launch a platform.<br />
+This option is **required**
+
+#### allocatedMs
+
+A number representing the amount of milliseconds allocated for this file execution to complete.<br />
+This option is optional with a default value of 30s.
+
+#### measureDuration
+
+A boolean controlling if file execution duration is measured and reported back.<br />
+This option is optional with a default value of true.
+
+When true `startMs`, `endMs` properties are availabe on every execution result inside [testPlanReport](#testPlanReport)
+
+#### captureConsole
+
+A boolean controlling if console logs are captured during file execution and reported back.<br />
+This option is optional with a default value of true.
+
+When true `platformLog` property is availabe on every execution result inside [testPlanReport](#testPlanReport)
+
+#### collectNamespace
+
+A boolean controlling if file exports are collected and reported back.<br />
+This option is optional with a default value of false.
+
+When true `namespace` property is availabe on every execution result inside [testPlanReport](#testPlanReport)
+
+#### collectCoverage
+
+A boolean controlling if coverage related to this execution is collected and reported back.
+
+This option is optional with a default value of false.
+
+When true `coverageMap` property is availabe on every execution result inside [testPlanReport](#testPlanReport)
+
+#### logSuccess
+
+A boolean controlling if execution success is logged in your terminal.<br />
+This option is optional with a default value of true.
+
+When false and execution completes normally nothing is logged.
+
+## executionDefaultOptions
+
+> `executionDefaultOptions` are the default option used to execute file.
+
+This is an optional parameter with a default value of:
+
+<!-- prettier-ignore -->
+```js
+{}
+```
+
+`executionDefaultOptions` was designed to define options shared by file execution.<br />
+These option can be overriden per file using [testPlan](#testPlan) parameter.
+
+For example the following code allocates 5s test file by default and 10s for `foo.test.js`
+
+```js
+executeTestPlan({
+  executionDefaultOptions: {
+    allocatedMs: 5000,
+  },
+  testPlan: {
+    "./foo.test.js": {
+      node: {
+        launch: launchNode,
+        allocatedMs: 10000,
+      },
+    },
+  },
 })
 ```
 
-This option controls how much time is allocated by default for an execution to complete.
+## concurrencyLimit
 
-If the execution does not completes in time the platform (browser or node.js) is killed and the execution is considered as `timedout` which is considered as a failed execution.<br />
-A timeout will not prevent other executions, the execution is considered as timedout and remaining executions are still launched.
+> `concurrencyLimit` is a number representing the max amount of execution allowed to run simultaneously.
 
-If you don't pass this option, the default value will be 30 seconds:
-
-```js
-30000
-```
-
-### maxParallelExecution
-
-```js
-const { test } = require("@jsenv/testing")
-
-test({
-  projectPath: "/Users/you/project",
-  maxParallelExecution: 10,
-})
-```
-
-Maximum amount of execution in parallel at the same time.
-
-To ensure one execution at a time you can pass `1`.
-
-If you don't pass this option, the default value will be:
+This parameter is optional with a default value of
 
 ```js
 Math.max(require("os").cpus.length - 1, 1)
 ```
 
-### measureDuration
+To ensure one execution at a time you can pass `1`.
+
+## measurePlanExecutionDuration
+
+> `measurePlanExecutionDuration` is a boolean controlling if test plan execution duration is measured, logger and reported.
+
+This parameter is optional with a default value of `false`.
+
+When true, `startMs`, `endMs` properties are available on [testPlanSummary](#testPlanSummary).<br />
+When true, a log will indicates test plan duration.
+
+## Shared parameters
+
+To avoid duplication some parameter are linked to a generic documentation.
+
+- [projectDirectoryPath](../shared-parameters.md#projectDirectoryPath)
+- [babelPluginMap](../shared-parameters.md#babelPluginMap)
+- [convertMap](../shared-parameters.md#convertMap)
+- [importMapFileRelativePath](../shared-parameters.md#importMapFileRelativePath)
+- [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
+- [compileDirectoryRelativePath](../shared-parameters.md#compileDirectoryRelativePath)
+
+# Return value
+
+`executeTestPlan` returns signature is `{ summary, report, coverageMap }`
+
+## testPlanSummary
+
+> `testPlanSummary` is an object describing quickly how the testPlan execution went.
+
+It is returned by `executeTestPlan`, see below an example
 
 ```js
-const { test } = require("@jsenv/testing")
-
-test({
-  projectPath: "/Users/you/project",
-  measureDuration: true,
+const { summary } = await executeTestPlan({
+  projectDirectoryPath: __dirname,
+  testPlan: {},
 })
 ```
 
-When true, execution duration will be measured and will appear in logs and execution result.
-
-This option adds `startMs`, `endMs` properties on every execution result inside `report`.
-
-If you don't pass this option, the default value will be:
+returns
 
 ```js
-true
+{
+  executionCount: 0,
+  disconnectedCount: 0,
+  timedoutCount: 0,
+  erroredCount: 0,
+  completedCount: 0
+}
 ```
 
-### captureConsole
+## testPlanReport
+
+> `testPlanReport` is an object containing information about every test plan file execution.
+
+It is returned by `executeTestPlan`, see below an example
 
 ```js
-const { test } = require("@jsenv/testing")
-
-test({
-  projectPath: "/Users/you/project",
-  captureConsole: true,
+const { report } = await executeTestPlan({
+  projectDirectoryPath: __dirname
+  testPlan: {
+    "./test/file.test.js": {
+      node: {
+        launch: launchNode,
+      },
+    },
+  },
 })
 ```
 
-When true, execution logs will be captures and will appear in logs and execution result.
+Returns
 
-This option add `platformLog` property on every execution result inside `report`.
-
-If you don't pass this option, the default value will be:
-
-```js
-true
+```json
+{
+  "./test/file.test.js": {
+    "node": {
+      "platformName": "node",
+      "platformVersion": "8.9.0",
+      "status": "completed",
+      "startMs": 1560355699946,
+      "endMs": 1560355699950,
+      "platformLog": ""
+    }
+  }
+}
 ```
 
-### projectPath
+## testPlanCoverageMap
 
-— see [generic documentation for projectPath](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-options/shared-options.md#projectpath)
+> `testPlanCoverageMap` is an object is the coverage of your test plan, it aggregates every file execution coverage.
 
-### babelPluginMap
+It is returned by `executeTestPlan`, see below an example
 
-— see [generic documentation for babelPluginMap](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-options/shared-options.md#babelpluginmap)
+```js
+const { coverageMap } = await executeTestPlan({
+  projectDirectoryPath: __dirname
+  testPlan: {
+    "./test/file.test.js": {
+      node: {
+        launch: launchNode,
+      },
+    },
+  },
+  coverage: true
+})
+```
 
-### convertMap
+Returns an object like this one:
 
-— see [generic documentation for convertMap](../shared-options/shared-options.md#convertmap)
-
-### importMapRelativePath
-
-— see [generic documentation for importMapRelativePath](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-options/shared-options.md#importmaprelativepath)
-
-### importDefaultExtension
-
-— see [generic documentation for importDefaultExtension](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-options/shared-options.md#importdefaultextension)
-
-### compileIntoRelativePath
-
-— see [generic documentation for compileIntoRelativePath](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-options/shared-options.md#compileintorelativepath)
+```json
+{
+  "src/file.js": {
+    "path": "src/file.js",
+    "statementMap": {},
+    "fnMap": {},
+    "branchMap": {},
+    "s": {},
+    "f": {},
+    "b": {},
+    "_coverageSchema": "1a1c01bbd47fc00a2c39e90264f33305004495a9",
+    "hash": "4c491deb0eb163063ccae03693fa439ec01fcda4"
+  }
+}
+```
 
 ## One execution = one platform
 
@@ -226,55 +398,3 @@ if (actual !== expected) {
 ```
 
 Note: An empty file is a completed test.
-
-### summary
-
-`test` returns signature is `{ summary, report, coverageMap }`.
-
-It is an object with the following signature:
-
-```js
-{
-  executionCount,
-  disconnectedCount,
-  timedoutCount,
-  erroredCount,
-  completedCount,
-}
-```
-
-### report
-
-To better understand report signature, check the pseudo code below:
-
-```js
-const { report } = await test({
-  projectPath: "/",
-  executeDescription: {
-    "/test/file.test.js": {
-      node: {
-        launch: launchNode,
-      },
-    },
-  },
-  measureDuration: true,
-  captureConsole: true,
-})
-```
-
-Executing this pseudo code could give you a `report` like the one below:
-
-```json
-{
-  "/test/file.test.js": {
-    "node": {
-      "platformName": "node",
-      "platformVersion": "8.9.0",
-      "status": "completed",
-      "startMs": 1560355699946,
-      "endMs": 1560355699950,
-      "platformLog": ""
-    }
-  }
-}
-```

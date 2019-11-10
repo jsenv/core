@@ -31,7 +31,7 @@ export const executeConcurrently = async (
     importDefaultExtension,
     babelPluginMap,
 
-    measureDuration = false,
+    measurePlanExecutionDuration = false,
     concurrencyLimit = Math.max(cpus.length - 1, 1),
     logSummary = true,
 
@@ -40,14 +40,14 @@ export const executeConcurrently = async (
     coverageConfig,
     coverageIncludeMissing = true,
 
-    stepParams = {},
+    executionDefaultOptions = {},
   },
 ) => {
   if (typeof compileServerOrigin !== "string") {
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
   }
 
-  stepParams = {
+  const executionOptionsFromDefault = {
     allocatedMs: 30000,
     measureDuration: true,
     // mirrorConsole: false because file will be executed in parallel
@@ -69,11 +69,11 @@ ${fileRelativePath}`),
     },
     beforeExecutionCallback: () => {},
     afterExecutionCallback: () => {},
-    ...stepParams,
+    ...executionDefaultOptions,
   }
 
   let startMs
-  if (measureDuration) {
+  if (measurePlanExecutionDuration) {
     startMs = Date.now()
   }
 
@@ -82,10 +82,10 @@ ${fileRelativePath}`),
     cancellationToken,
     maxParallelExecution: concurrencyLimit,
     array: executionSteps,
-    start: async (executionStep) => {
-      executionStep = {
-        ...stepParams,
-        ...executionStep,
+    start: async (executionOptionsFromStep) => {
+      const executionOptions = {
+        ...executionOptionsFromDefault,
+        ...executionOptionsFromStep,
       }
 
       const {
@@ -106,7 +106,7 @@ ${fileRelativePath}`),
         beforeExecutionCallback,
         afterExecutionCallback,
         logSuccess,
-      } = executionStep
+      } = executionOptions
 
       const beforeExecutionInfo = {
         allocatedMs,
@@ -179,7 +179,7 @@ ${fileRelativePath}`),
   })
 
   const summary = reportToSummary(report)
-  if (measureDuration) {
+  if (measurePlanExecutionDuration) {
     summary.startMs = startMs
     summary.endMs = Date.now()
   }
