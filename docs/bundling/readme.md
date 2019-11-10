@@ -6,9 +6,8 @@
 - [Commonjs format](#commonjs-format)
 - [Code example](#code-example)
 - [Concrete example](#concrete-example)
-  - [Step 1 - Setup basic project](#step-1---setup-basic-project)
-  - [Step 2 - Install dependencies](#step-2---install-dependencies)
-  - [Step 3 - Generate bundles](#step-3---generate-bundles)
+  - [1 - Setup basic project](#1---setup-basic-project)
+  - [2 - Generate bundles](#2---generate-bundles)
 
 ## Presentation
 
@@ -99,13 +98,11 @@ If you want to know more about this function and others check [api documentation
 
 This part explains how to quickly setup a real environment where you can generate different bundles.
 
-### Step 1 - Setup basic project
+### 1 - Setup basic project
 
 ```console
 git clone git@github.com:jsenv/jsenv-core.git
 ```
-
-### Step 2 - Install dependencies
 
 ```console
 cd ./jsenv-core/docs/bundling/basic-project
@@ -115,7 +112,7 @@ cd ./jsenv-core/docs/bundling/basic-project
 npm install
 ```
 
-### Step 3 - Generate bundles
+### 2 - Generate bundles
 
 This project has preconfigured 3 bundle. You can generate them with the commands below:
 

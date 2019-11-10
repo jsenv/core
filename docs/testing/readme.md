@@ -1,54 +1,78 @@
-## How to use
+## Table of contents
+
+- [Presentation](#Presentation)
+- [Code example](#code-example)
+- [Concrete example](#concrete-example)
+  - [1 - Setup basic project](#1---setup-basic-project)
+  - [2 - Execute tests](#2---execute-tests)
+  - [3 - Generate test coverage](#3---generate-test-coverage)
+
+## Presentation
 
 To understand how to use jsenv testing let's use it on a "real" project.<br /> We will setup a basic project and execute tests, then see how to get test coverage.
 
-### Basic project setup
+## Code example
 
-1. Create basic project file structure
+The following code uses `@jsenv/core` to execute every files ending with `test.js` inside a directory.
 
-   — see [./docs/basic-project](./docs/basic-project)
+```js
+const { executeTestPlan, launchNode } = require("@jsenv/core")
 
-2. Install dev dependencies
-
-   ```console
-   npm install
-   ```
-
-### `test` example
-
-```console
-node ./execute-tests.js
+executeTestPlan({
+  projectDirectoryPath: __dirname,
+  testPlan: {
+    "./**/*.test.js": {
+      node: {
+        launch: launchNode,
+      },
+    },
+  },
+})
 ```
 
-I made a video recording terminal during execution `basic-project/execute-tests.js`. The gif below was generated from that video.
+If you want to know more about this function and others check [api documentation](./api.md)
 
-![test terminal recording](./docs/test-terminal-recording.gif)
+## Concrete example
 
-Cool isn't it?
-
-If you want to know more about `test`, there is a dedicated page for that.<br />
-— see [`test` documentation](./docs/test-doc.md)
-
-From this point you can generate coverage for that basic project.<br />
-If you are interested by this, it is explained in the next part.
-
-### `cover` example
+### 1 - Setup basic project
 
 ```console
-node ./generate-coverage.js
+git clone git@github.com:jsenv/jsenv-core.git
 ```
 
-It will execute tests and generate `basic-project/coverage/coverage-final.json`.
+```console
+cd ./jsenv-core/docs/test/basic-project
+```
 
-I made a gif to illustrate one thing you can get after generating basic project coverage. You can see me exploring the files to see coverage of `basic-project/src/platform-name.js`.<br />
+```console
+npm install
+```
 
-![browsing coverage recording](./docs/coverage-browsing-recording.gif)
+### 2 - Execute tests
 
-These files will be generated only if you pass `coverageHtmlReport: true` to `cover`.
+```console
+node ./execute-test-plan.js
+```
+
+The gif below shows terminal output during execution of `execute-test-plan.js`.
+
+![test terminal recording](./test-terminal-recording.gif)
+
+### 3 - Generate test coverage
+
+```console
+node ./execute-test-plan.js --cover
+```
+
+It will execute tests and generate `./coverage/` directory with files corresponding to your test coverage.
+
+The gif below shows how you can explore files to see coverage of `./basic-project/src/platform-name.js`.
+
+![browsing coverage recording](./coverage-browsing-recording.gif)
 
 #### What is `coverage-final.json` ?
 
-At this point you have a `basic-project/coverage/coverage-final.json` file. You can pass it to a code coverage tool and get valuable information from it.<br />
+At this point you have a `coverage-final.json` file. You can pass it to a code coverage tool and get valuable information from it.<br />
 
 It's important to know that `coverage-final.json` format comes from `instanbul`.<br />
 — see [istanbul on github](https://github.com/gotwarlost/istanbul)

@@ -1,8 +1,8 @@
-const { cover } = require("@jsenv/testing")
+const { executeTestPlan } = require("@jsenv/testing")
 const { launchNode } = require("@jsenv/node-launcher")
 const { launchChromium } = require("@jsenv/chromium-launcher")
 
-cover({
+executeTestPlan({
   projectPath: __dirname,
   executeDescription: {
     "/test/*.test.js": {
@@ -24,8 +24,12 @@ cover({
       },
     },
   },
-  coverDescription: {
+  coverage: process.argv.includes("--cover"),
+  coveraegConfig: {
     "/src/**/*.js": true,
   },
-  coverageHtmlReport: true,
+  coverageHtmlDirectory: true,
+  coverageHtmlDirectoryRelativePath: "./coverage/",
+  coverageJsonFile: true,
+  coverageJsonFileRelativePath: "./coverage/coverage-final.json",
 })
