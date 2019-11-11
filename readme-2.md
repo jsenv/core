@@ -7,6 +7,15 @@
 
 Collection of developments tools providing a unified workflow to write JavaScript for the web, node.js or both at the same time. jsenv is designed to be reusable on different project.
 
+WARNING: This is under active development, nothing is stable.
+
+# Table of contents
+
+- [Presentation](#Presentation)
+- [How to use](#How-to-use)
+- [Examples](#Examples)
+- [Main dependencies](#Main-dependencies)
+
 ## Presentation
 
 `jsenv` is a github organization used to manage GitHub repositories related to jsenv tools.<br />
