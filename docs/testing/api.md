@@ -1,7 +1,7 @@
 # Table of contents
 
 - [Example](#executeTestPlan)
-- [Parameters](#executeTestPlan-parameters)
+- [Parameters](#parameters)
   - [testPlan](#testPlan)
     - [specifier](#specifier)
     - [executionName](#executionName)
