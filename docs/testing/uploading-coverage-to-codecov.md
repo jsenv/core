@@ -1,50 +1,66 @@
-# Uploading `coverage.json` to `codecov.io`
+TODO: move this in @jsenv/codecov-upload
 
-This part is dedicated to show how to upload it to `codecov.io`.<br />
+# Table of contents
 
-## What is `codecov.io`
+- [Presentation](#Presentation)
+- [Installation](#Installation)
+  - [Step 1 - Setup basic project](#step-1---setup-basic-project)
+  - [Step 2 - Find your CODECOV_TOKEN](#step-2---find-your-codecov_token)
+  - [Step 3 - Install @jsenv/codecov-upload](#step-3---install--jsenvcodecov-upload)
+  - [Step 4 - Create js file to upload coverage](#step-4---create-js-file-to-upload-coverage)
+  - [Step 5 - Upload your coverage](#step-5---upload-coverage-your-coverage)
 
-`codecov.io` is a developper tool helping to manage your project coverage. You have to send them your project coverage as part of your continuous integration process.<br />
-By the way, I have no special relationship with them, this documentation just explains how to use it.<br />
+# Presentation
+
+This document describes how to upload your coverage to `codecov.io` to track your project coverage evolution.
+
+`codecov.io` is a developper tool helping to manage your project coverage. You have to send them your project coverage as part of your continuous integration workflow.<br />
 — see [codecov.io quick start documentation](https://docs.codecov.io/docs/quick-start).
 
-## How to send them `coverage.json`
+Note: This documentation explains how to use codecov.io but jsenv has no privilegied relationship with them.
+
+# Installation
 
 There is a dedicated npm package for this task called `@jsenv/codecov-upload`.<br />
 Here are the steps to use it:
 
-1. Create an account on `codecov.io`
+## Step 1 - Create an account on `codecov.io`
 
 Go to https://codecov.io
 
-2. Find `Repository Upload Token` for your project
+## Step 2 - Find your CODECOV_TOKEN
+
+Find `Repository Upload Token` for your project
 
 Check the codecov io documentation.<br />
 — see https://docs.codecov.io/docs
 
 To help you a bit, if your github user name is `john` and your project is `whatever` you would go to https://codecov.io/gh/john/whatever to get your `Repository Upload Token`.<br />
 
-3. install `@jsenv/codecov-upload`
+### Step 3 - Install @jsenv/codecov-upload
 
 ```shell
 npm install --save-dev @jsenv/codecov-upload@1.6.0
 ```
 
-4. Create a script capable to upload coverage.<br />
+### Step 4 - Create js file to upload coverage
 
-`root/upload-coverage.js`
+Create a script capable to upload coverage.
+
+`upload-coverage.js`
 
 ```js
 const { uploadCoverage } = require("@jsenv/codecov-upload")
 
 uploadCoverage({
-  projectPath: __dirname,
-  coverageRelativePath: "/coverage/coverage-final.json",
-  token: YOUR_REPOSITORY_UPLOAD_TOKEN,
+  projectDirectoryPath: __dirname,
+  coverageJsonFileRelativePath: "./coverage/coverage.json",
 })
 ```
 
-5. Run `root/upload-coverage.js` you just created
+### Step 5 - Upload your coverage
+
+Ensure process.env.CODECOV_TOKEN will exists and run `upload-coverage.js`.
 
 It will send coverage to `codecov.io`
 
@@ -69,5 +85,5 @@ For example, if you use travis you would go to `https://travis-ci.com/john/whate
 If you don't pass this option, the default value will be:
 
 ```js
-"/coverage/coverage-final.json"
+"./coverage/coverage.json"
 ```

@@ -67,32 +67,31 @@ node ./execute-test-plan.js --cover
 
 It will execute tests and generate `./coverage/` directory with files corresponding to your test coverage.
 
-The gif below shows how you can explore files to see coverage of `./basic-project/src/platform-name.js`.
+#### What is coverage/index.html ?
+
+The gif below shows how you can explore your test coverage by opening `coverage/index.html` in your browser.
 
 ![browsing coverage recording](./coverage-browsing-recording.gif)
 
-#### What is `coverage-final.json` ?
+#### What is coverage/coverage.json ?
 
-At this point you have a `coverage-final.json` file. You can pass it to a code coverage tool and get valuable information from it.<br />
+It is your test plan coverage in JSON format. This format was created by [istanbul](https://github.com/gotwarlost/istanbul) and can be given to coverage tools.
 
-It's important to know that `coverage-final.json` format comes from `instanbul`.<br />
-— see [istanbul on github](https://github.com/gotwarlost/istanbul)
-
-The most valuable thing to do with that file is to feed it to some code coverage tool during your continuous integration script.
-I have documented one of them named `codecov.io` but you can integrate with pretty much anything else.<br />
-— see [uploading coverage to codecov.io](./docs/uploading-coverage-to-codecov.md)
+This file exists to be provided to some code coverage tool.
+For instance you might want to send `coverage.json` to codecov.io inside during continuous integration workflow.<br />
+— see [uploading coverage to codecov.io](./uploading-coverage-to-codecov.md)
 
 ## How to test async code
 
-top level await is the ability to write `await` directly in the body of your program.
+If you want to test async code you must use top level await:
 
 ```js
-const value = await Promise.resolve(42)
-console.log(value)
+const actual = await Promise.resolve(42)
+const expected = 42
+if (actual !== expected) throw new Error("should be 42")
 ```
 
-You must use top level await to test something async.<br />
-Without top level await, file execution is considered done even if things are still running.<br />
+You must use top level await otherwise your execution is considered done even if your code is still executing as shown in example below:
 
 ```js
 console.log("execution start")
@@ -105,17 +104,10 @@ console.log("execution start")
 console.log("execution end")
 ```
 
-Executing code above with `test` logs `"execution start"`, `"execution end"`.<br />
-It does not logs `"test done"` because execution is considered as `completed` and platform is killed.<br />
-The same code written using top level await will work.
+Logs
 
-```js
-console.log("execution start")
-const actual = await Promise.resolve(42)
-const expected = 42
-if (actual !== expected) throw new Error("should be 42")
-console.log("test done")
-console.log("execution end")
+```console
+execution start
+execution end
+test done
 ```
-
-Executing code above with `test` function logs `"execution start"`, `"test done"`, `"execution end"`.<br />

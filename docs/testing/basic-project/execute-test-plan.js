@@ -31,5 +31,5 @@ executeTestPlan({
   coverageHtmlDirectory: true,
   coverageHtmlDirectoryRelativePath: "./coverage/",
   coverageJsonFile: true,
-  coverageJsonFileRelativePath: "./coverage/coverage-final.json",
+  coverageJsonFileRelativePath: "./coverage/coverage.json",
 })
