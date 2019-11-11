@@ -5,7 +5,7 @@
 - [convertMap](#convertMap)
 - [importMapFileRelativePath](#importMapFileRelativePath)
 - [importDefaultExtension](#importDefaultExtension)
-- [compileCacheDirectoryRelativePath](#compileCacheDirectoryRelativePath)
+- [compileDirectoryRelativePath](#compileDirectoryRelativePath)
 
 ## projectDirectoryPath
 
@@ -36,7 +36,7 @@ require("@jsenv/core").jsenvBabelPluginMap
 ```
 
 jsenv is meant to run standard JavaScript by default so the default `babelPluginMap` enable standard babel plugins.<br />
-— see [@jsenv/babel-plugin-map on github](https://github.com/jsenv/jsenv-babel-plugin-map/blob/master/index.js#L31)
+— see [src/jsenvBabelPluginMap.js](../src/jsenvBabelPluginMap.js)
 
 If you want to make jsenv compatible with non standard syntaxes you can use your own `babelPluginMap`. For instance, the following code makes jsenv compatible with `jsx`.
 
@@ -78,7 +78,7 @@ const convertMap = {
 
 ## importMapFileRelativePath
 
-> `importMapRelativePath` is a string representing a relative path to a file containing import map.
+> `importMapFileRelativePath` is a string representing a relative path to a file containing import map.
 
 This parameter is optional with a default value of
 
@@ -115,9 +115,9 @@ But expecting a tool to guess extension introduces complexity and makes you depe
 
 This option only adds an extension on extensionless import, it cannot try different extension and choose the right one.
 
-## compileCacheDirectoryRelativePath
+## compileDirectoryRelativePath
 
-> `compileCacheDirectoryRelativePath` is a string leading to a directory used to cache compiled version of your files.
+> `compileDirectoryRelativePath` is a string leading to a directory used to wrtie compiled version of your files.
 
 This parameter is optional with a default value of
 
@@ -125,4 +125,4 @@ This parameter is optional with a default value of
 "./.dist"
 ```
 
-Every time a file is compiled, the compiled version of the file is written into that directory. Alongside with the compiled file, some metadata on the source used to generate the compiled version is written. These metadata are used later to know if the cache is still valid.
+Every time a file is compiled, the compiled version of the file is written into that directory. Alongside with the compiled file, some metadata on the source used to generate the compiled version is written. These metadata are used later to know if the compiled version is still valid.

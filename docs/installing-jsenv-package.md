@@ -1,16 +1,23 @@
-# Installing a jsenv package
+# Table of contents
 
-All jsenv packages are published on github and npm package registry.<br />
+- [Before installing a jsenv package](#before-installing-a-jsenv-package)
+- [Configuring npm for github registry](#Configuring-npm-for-github-registry)
+  - [Configure npm authentification on github registry](#Configure-npm-authentification-on-github-registry)
+- [Installing the jsenv package](#Installing-the-jsenv-package)
+
+# Before installing a jsenv package
+
+All jsenv packages are published on github and npm package registry.
 
 Packages are published on github registry because it fits naturally with github, where jsenv codebase is developed. They are also published to npm to let you skip the npm configuration for github registry.
 
 If you choose to get it from npm you can skip the documentation below.
 
-## Configuring npm for github registry
+# Configuring npm for github registry
 
-In order to use a jsenv package in your project, npm must be configured to search it on the github registry.<br />
+In order to use a jsenv package in your project, npm must be configured to search it on the github registry.
 
-You can do that by adding the following line in your `.npmrc`<br />
+You can do that by adding the following line in your `.npmrc`.
 
 ```
 @jsenv:registry=https://npm.pkg.github.com
@@ -28,9 +35,9 @@ At this point you can `npm install` but if you never configured npm authentifica
 
 To fix it you need to configure npm authentification on github registry
 
-### Configure npm authentification on github registry
+## Configure npm authentification on github registry
 
-1. Create a token on your github profile with at leat `read:packages` scope. (https://github.com/settings/tokens)
+1. Create a token in your [github settings](https://github.com/settings/tokens) with at leat `read:packages` scope.
 
 2. Save the token with the following command
    ```console
@@ -40,7 +47,7 @@ To fix it you need to configure npm authentification on github registry
 
 — see [Authenticating to GitHub Package Registry documentation on GitHub](https://help.github.com/en/articles/configuring-npm-for-use-with-github-package-registry#authenticating-to-github-package-registry)
 
-## Installing the jsenv package
+# Installing the jsenv package
 
 Now npm is properly configured, you can install a package doing
 
