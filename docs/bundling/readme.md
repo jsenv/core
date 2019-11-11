@@ -114,7 +114,7 @@ npm install
 
 ### 2 - Generate bundles
 
-This project has preconfigured 3 bundle. You can generate them with the commands below:
+This project has preconfigured 3 files that will generate bundles. You can generate them with the commands below:
 
 - [./basic-project/dist/systemjs/main.js](./basic-project/dist/systemjs/main.js)
 
