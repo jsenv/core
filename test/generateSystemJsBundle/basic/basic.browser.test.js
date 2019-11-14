@@ -12,14 +12,14 @@ import {
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/commonjs/`
+const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/systemjs/`
 const mainFileBasename = `${testDirectoryBasename}.js`
 
 await generateSystemJsBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativePath,
   entryPointMap: {
-    main: `${testDirectoryRelativePath}${mainFileBasename}`,
+    main: `./${testDirectoryRelativePath}${mainFileBasename}`,
   },
 })
 const { namespace: actual } = await browserImportSystemJsBundle({
