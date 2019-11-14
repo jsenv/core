@@ -3,9 +3,9 @@ import {
   createOperation,
   createStoppableOperation,
   createCancellationSource,
-  cancellationTokenCompose,
+  composeCancellationToken,
   errorToCancelReason,
-} from "@dmail/cancellation"
+} from "@jsenv/cancellation"
 import { promiseTrackRace } from "@dmail/helper"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 
@@ -183,7 +183,7 @@ const computeRawExecutionResult = async ({ cancellationToken, allocatedMs, ...re
   cancellationToken.register(timeoutCancel)
 
   const timeoutCancellationSource = createCancellationSource()
-  const externalOrTimeoutCancellationToken = cancellationTokenCompose(
+  const externalOrTimeoutCancellationToken = composeCancellationToken(
     cancellationToken,
     timeoutCancellationSource.token,
   )

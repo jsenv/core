@@ -1,7 +1,7 @@
 import { globalAgent } from "https"
-import { createOperation } from "@dmail/cancellation"
+import { createOperation } from "@jsenv/cancellation"
 import { fileRead } from "@dmail/helper"
-import { ressourceToContentType, defaultContentTypeMap } from "@dmail/server"
+import { filenameToContentType, jsenvContentTypeMap } from "@jsenv/server"
 import { hrefToPathname } from "@jsenv/href"
 import { fileUrlToPath } from "../../../urlUtils.js"
 
