@@ -2,7 +2,7 @@ const libReport = import.meta.require("istanbul-lib-report")
 const reports = import.meta.require("istanbul-reports")
 const { createCoverageMap } = import.meta.require("istanbul-lib-coverage")
 
-export const generateCoverageConsoleReport = ({ coverageMap }) => {
+export const generateCoverageTextLog = ({ coverageMap }) => {
   const context = libReport.createContext({
     coverageMap: createCoverageMap(coverageMap),
   })

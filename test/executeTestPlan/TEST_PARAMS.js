@@ -12,4 +12,7 @@ export const EXECUTE_TEST_PARAMS = {
     measureDuration: false,
     captureConsole: false,
   },
+  coverageTextLog: false,
+  coverageJsonFile: false,
+  coverageHtmlDirectory: false,
 }

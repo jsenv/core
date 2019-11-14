@@ -1,36 +1,39 @@
 import { assert } from "@jsenv/assert"
-import { launchChromium } from "@jsenv/chromium-launcher"
-import { launchNode } from "@jsenv/node-launcher"
-import { cover } from "../../../index.js"
-import { fileHrefToFolderRelativePath } from "../../file-href-to-folder-relative-path.js"
-import { COVERAGE_TEST_PARAM } from "../coverage-test-param.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
+import { executeTestPlan, launchNode } from "../../../index.js"
+import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-
-const { coverageMap } = await cover({
-  ...COVERAGE_TEST_PARAM,
-  compileIntoRelativePath,
-  executeDescription: {
-    [`${folderRelativePath}/use-file.js`]: {
-      node: {
-        launch: launchNode,
-      },
-      chromium: {
-        launch: launchChromium,
-      },
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
+const fileRelativePath = `${testDirectoryRelativePath}use-file.js`
+const testPlan = {
+  [fileRelativePath]: {
+    node: {
+      launch: launchNode,
+    },
+    node2: {
+      launch: launchNode,
     },
   },
-  coverDescription: {
-    [`${folderRelativePath}/file.js`]: true,
+}
+
+const { coverageMap } = await executeTestPlan({
+  ...EXECUTE_TEST_PARAMS,
+  compileDirectoryRelativePath,
+  testPlan,
+  coverage: true,
+  coverageConfig: {
+    [`${testDirectoryRelativePath}file.js`]: true,
   },
 })
-assert({
-  actual: coverageMap,
-  expected: {
-    [`${folderRelativePath.slice(1)}/file.js`]: {
-      ...coverageMap[`${folderRelativePath.slice(1)}/file.js`],
-      s: { 0: 2, 1: 1, 2: 1, 3: 1, 4: 0 },
-    },
+const actual = coverageMap
+const expected = {
+  [`${testDirectoryRelativePath}file.js`]: {
+    ...coverageMap[`${testDirectoryRelativePath}file.js`],
+    path: `${testDirectoryRelativePath}file.js`,
+    s: { 0: 2, 1: 0, 2: 2, 3: 2, 4: 0 },
   },
-})
+}
+assert({ actual, expected })

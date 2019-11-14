@@ -9,7 +9,7 @@ import { executePlan } from "./internal/test-execution/executePlan.js"
 import { executionIsPassed } from "./internal/test-execution/executionIsPassed.js"
 import { generateCoverageJsonFile } from "./internal/coverage/generateCoverageJsonFile.js"
 import { generateCoverageHtmlDirectory } from "./internal/coverage/generateCoverageHtmlDirectory.js"
-import { generateCoverageConsoleReport } from "./internal/coverage/generateCoverageConsoleReport.js"
+import { generateCoverageTextLog } from "./internal/coverage/generateCoverageTextLog.js"
 
 export const executeTestPlan = async ({
   cancellationToken = createCancellationTokenForProcessSIGINT(),
@@ -39,11 +39,11 @@ export const executeTestPlan = async ({
   },
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
-  coverageJsonFile = true,
+  coverageTextLog = true,
+  coverageJsonFile = Boolean(process.env.CI),
   coverageJsonFileLog = true,
   coverageJsonFileRelativePath = "./coverage/coverage-final.json",
-  coverageConsole = false,
-  coverageHtmlDirectory = false,
+  coverageHtmlDirectory = !process.env.CI,
   coverageHtmlDirectoryRelativePath = "./coverage",
   coverageHtmlDirectoryIndexLog = true,
 }) => {
@@ -105,9 +105,9 @@ export const executeTestPlan = async ({
         }),
       )
     }
-    if (coverage && coverageConsole) {
+    if (coverage && coverageTextLog) {
       promises.push(
-        generateCoverageConsoleReport({
+        generateCoverageTextLog({
           coverageMap: result.coverageMap,
         }),
       )

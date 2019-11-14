@@ -8,7 +8,6 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
 const fileRelativePath = `${testDirectoryRelativePath}file.js`
-
 const testPlan = {
   [fileRelativePath]: {
     node: {
