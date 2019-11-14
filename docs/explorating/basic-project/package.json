@@ -1,0 +1,11 @@
+{
+  "name": "whatever",
+  "version": "0.0.1",
+  "license": "MIT",
+  "scripts": {
+    "start-exploring-server": "node ./start-exploring-server.js"
+  },
+  "devDependencies": {
+    "@jsenv/exploring-server": "3.9.0"
+  }
+}
