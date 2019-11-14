@@ -1,14 +1,14 @@
 /* eslint-disable import/max-dependencies */
 import { fork as forkChildProcess } from "child_process"
-import { uneval } from "@dmail/uneval"
-import { createCancellationToken } from "@dmail/cancellation"
-import { fileUrlToPath, fileUrlToRelativePath, resolveFileUrl } from "./private/urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "./private/jsenvCoreDirectoryUrl.js"
-import { escapeRegexpSpecialCharacters } from "./private/escapeRegexpSpecialCharacters.js"
-import { assertFile } from "./private/filesystem-assertions.js"
-import { evalSource } from "./private/node-launcher/evalSource.js"
-import { createChildExecArgv } from "./private/node-launcher/createChildExecArgv.js"
-import { generateNodeBundle } from "./private/node-launcher/generateNodeBundle.js"
+import { uneval } from "@jsenv/uneval"
+import { createCancellationToken } from "@jsenv/cancellation"
+import { fileUrlToPath, fileUrlToRelativePath, resolveFileUrl } from "./internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
+import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
+import { assertFile } from "./internal/filesystem-assertions.js"
+import { evalSource } from "./internal/node-launcher/evalSource.js"
+import { createChildExecArgv } from "./internal/node-launcher/createChildExecArgv.js"
+import { generateNodeBundle } from "./internal/node-launcher/generateNodeBundle.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 const EVALUATION_STATUS_OK = "evaluation-ok"
@@ -22,11 +22,11 @@ export const launchNode = async ({
   importMapFileRelativePath,
   importDefaultExtension,
   nodeControllableFileUrl = resolveFileUrl(
-    "./src/private/node-launcher/nodeControllableFile.js",
+    "./src/internal/node-launcher/nodeControllableFile.js",
     jsenvCoreDirectoryUrl,
   ),
   nodeExecuteTemplateFileUrl = resolveFileUrl(
-    "./src/private/node-launcher/nodeExecuteFileTemplate.js",
+    "./src/internal/node-launcher/nodeExecuteFileTemplate.js",
     jsenvCoreDirectoryUrl,
   ),
   debugPort = 0,

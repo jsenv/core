@@ -1,8 +1,8 @@
 import { basename } from "path"
 import { assert } from "@dmail/assert"
 import { launchNode, startCompileServer, launchAndExecute } from "../../../index.js"
-import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTE_TEST_PARAMS,

@@ -1,5 +1,5 @@
-import { assert } from "@dmail/assert"
-import { createChildExecArgv } from "src/private/node-launcher/createChildExecArgv.js"
+import { assert } from "@jsenv/assert"
+import { createChildExecArgv } from "src/internal/node-launcher/createChildExecArgv.js"
 
 // inherit without debug mode
 {

@@ -4,7 +4,7 @@ import {
   resolveFileUrl,
   fileUrlToRelativePath,
   fileUrlToPath,
-} from "src/private/urlUtils.js"
+} from "src/internal/urlUtils.js"
 import { startCompileServer } from "../../../index.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 import { fetch } from "../fetch.js"

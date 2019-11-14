@@ -1,4 +1,4 @@
-import { transformJs } from "./private/compile-server/js-compilation-service/transformJs.js"
+import { transformJs } from "./internal/compile-server/js-compilation-service/transformJs.js"
 
 const transformCommonJs = import.meta.require("babel-plugin-transform-commonjs")
 

@@ -1,6 +1,6 @@
-import { resolveFileUrl } from "./private/urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "./private/jsenvCoreDirectoryUrl.js"
-import { generateBundle } from "./private/bundle/generateBundle/generateBundle.js"
+import { resolveFileUrl } from "./internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
+import { generateBundle } from "./internal/bundle/generateBundle/generateBundle.js"
 
 export const generateCommonJsBundle = async ({
   bundleDirectoryRelativePath = "./dist/commonjs",
@@ -12,7 +12,7 @@ export const generateCommonJsBundle = async ({
     bundleDirectoryRelativePath,
     node,
     balancerTemplateFileUrl: resolveFileUrl(
-      "./src/private/bundle/commonjs-balancer-template.js",
+      "./src/internal/bundle/commonjs-balancer-template.js",
       jsenvCoreDirectoryUrl,
     ),
     balancerDataAbstractSpecifier: "/.jsenv/commonjs-balancer-data.js",

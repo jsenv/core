@@ -1,9 +1,9 @@
 import {
-  createProcessInterruptionCancellationToken,
+  createCancellationTokenForProcessSIGINT,
   catchAsyncFunctionCancellation,
-} from "@dmail/cancellation"
+} from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, resolveDirectoryUrl } from "./private/urlUtils.js"
+import { pathToDirectoryUrl, resolveDirectoryUrl } from "./internal/urlUtils.js"
 import { launchAndExecute } from "./launchAndExecute.js"
 import { startCompileServer } from "./startCompileServer.js"
 
@@ -60,7 +60,7 @@ export const execute = async ({
   const executeLogger = createLogger({ logLevel: executeLogLevel })
 
   return catchAsyncFunctionCancellation(async () => {
-    const cancellationToken = createProcessInterruptionCancellationToken()
+    const cancellationToken = createCancellationTokenForProcessSIGINT()
 
     const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,

@@ -9,7 +9,7 @@ if (typeof __filename === "string") {
   )
 } else {
   jsenvCoreDirectoryUrl = resolveDirectoryUrl(
-    // get ride of src/private/jsenvCoreDirectoryUrl.js
+    // get ride of src/internal/jsenvCoreDirectoryUrl.js
     "../../",
     import.meta.url,
   )

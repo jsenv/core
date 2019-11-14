@@ -1,8 +1,8 @@
 import { basename } from "path"
 import { assert } from "@dmail/assert"
 import { generateSystemJsBundle } from "../../../index.js"
-import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
 import { nodeImportSystemJsBundle } from "../nodeImportSystemJsBundle.js"
 import {
   GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,

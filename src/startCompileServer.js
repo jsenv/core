@@ -1,15 +1,15 @@
 /* eslint-disable import/max-dependencies */
 import { readFileSync } from "fs"
-import { createCancellationToken } from "@dmail/cancellation"
-import { registerFileLifecycle } from "@dmail/filesystem-watch"
+import { createCancellationToken } from "@jsenv/cancellation"
+import { registerFileLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
-import { generateGroupMap } from "./private/generateGroupMap/generateGroupMap.js"
-import { resolveFileUrl, fileUrlToPath } from "./private/urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "./private/jsenvCoreDirectoryUrl.js"
-import { serveBrowserPlatform } from "./private/compile-server/serveBrowserPlatform.js"
-import { serveNodePlatform } from "./private/compile-server/serveNodePlatform.js"
-import { serveCompiledJs, relativePathIsAsset } from "./private/compile-server/serveCompiledJs.js"
-import { cleanCompileDirectoryIfObsolete } from "./private/compile-server/compile-directory/cleanCompileDirectoryIfObsolete.js"
+import { generateGroupMap } from "./internal/generateGroupMap/generateGroupMap.js"
+import { resolveFileUrl, fileUrlToPath } from "./internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
+import { serveBrowserPlatform } from "./internal/compile-server/serveBrowserPlatform.js"
+import { serveNodePlatform } from "./internal/compile-server/serveNodePlatform.js"
+import { serveCompiledJs, relativePathIsAsset } from "./internal/compile-server/serveCompiledJs.js"
+import { cleanCompileDirectoryIfObsolete } from "./internal/compile-server/compile-directory/cleanCompileDirectoryIfObsolete.js"
 import { jsenvBabelPluginCompatMap } from "./jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "./jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "./jsenvNodeVersionScoreMap.js"
@@ -60,11 +60,11 @@ export const startCompileServer = async ({
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
   platformAlwaysInsidePlatformScoreMap = false,
   browserPlatformFileUrl = resolveFileUrl(
-    "./src/private/compile-server/platform-service/createBrowserPlatform/index.js",
+    "./src/internal/compile-server/platform-service/createBrowserPlatform/index.js",
     jsenvCoreDirectoryUrl,
   ),
   nodePlatformFileUrl = resolveFileUrl(
-    "./src/private/compile-server/platform-service/createNodePlatform/index.js",
+    "./src/internal/compile-server/platform-service/createNodePlatform/index.js",
     jsenvCoreDirectoryUrl,
   ),
 }) => {

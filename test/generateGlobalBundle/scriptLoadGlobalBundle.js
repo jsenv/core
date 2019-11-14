@@ -1,5 +1,5 @@
 import { startServer, firstService, serveFile } from "@dmail/server"
-import { resolveDirectoryUrl, resolveFileUrl, fileUrlToPath } from "src/private/urlUtils.js"
+import { resolveDirectoryUrl, resolveFileUrl, fileUrlToPath } from "src/internal/urlUtils.js"
 
 const puppeteer = import.meta.require("puppeteer")
 

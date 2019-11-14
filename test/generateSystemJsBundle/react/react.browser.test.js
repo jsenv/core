@@ -1,8 +1,8 @@
 import { basename } from "path"
 import { assert } from "@dmail/assert"
 import { generateSystemJsBundle, convertCommonJsWithRollup } from "../../../index.js"
-import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
 import { browserImportSystemJsBundle } from "../browserImportSystemJsBundle.js"
 import {
   GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,

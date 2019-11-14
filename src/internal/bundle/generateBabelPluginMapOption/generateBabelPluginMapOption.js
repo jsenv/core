@@ -35,7 +35,7 @@ const generateBabelPluginMapForBundle = ({ format }) => {
 
   if (format === "commonjs" || format === "global") {
     const importMetaFacadeUrl = resolveFileUrl(
-      `./src/private/bundle/generateBabelPluginMapOption/import-meta-${format}.js`,
+      `./src/internal/bundle/generateBabelPluginMapOption/import-meta-${format}.js`,
       jsenvCoreDirectoryUrl,
     )
 

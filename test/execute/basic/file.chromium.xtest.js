@@ -1,6 +1,6 @@
 import { assert } from "@dmail/assert"
 import { launchChromium } from "@jsenv/chromium-launcher"
-import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"
 import { execute } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 

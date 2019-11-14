@@ -1,18 +1,18 @@
 /* eslint-disable import/max-dependencies */
 import {
   catchAsyncFunctionCancellation,
-  createProcessInterruptionCancellationToken,
-} from "@dmail/cancellation"
+  createCancellationTokenForProcessSIGINT,
+} from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, resolveDirectoryUrl } from "./private/urlUtils.js"
-import { executePlan } from "./private/test-execution/executePlan.js"
-import { executionIsPassed } from "./private/test-execution/executionIsPassed.js"
-import { generateCoverageJsonFile } from "./private/coverage/generateCoverageJsonFile.js"
-import { generateCoverageHtmlDirectory } from "./private/coverage/generateCoverageHtmlDirectory.js"
-import { generateCoverageConsoleReport } from "./private/coverage/generateCoverageConsoleReport.js"
+import { pathToDirectoryUrl, resolveDirectoryUrl } from "./internal/urlUtils.js"
+import { executePlan } from "./internal/test-execution/executePlan.js"
+import { executionIsPassed } from "./internal/test-execution/executionIsPassed.js"
+import { generateCoverageJsonFile } from "./internal/coverage/generateCoverageJsonFile.js"
+import { generateCoverageHtmlDirectory } from "./internal/coverage/generateCoverageHtmlDirectory.js"
+import { generateCoverageConsoleReport } from "./internal/coverage/generateCoverageConsoleReport.js"
 
 export const executeTestPlan = async ({
-  cancellationToken = createProcessInterruptionCancellationToken(),
+  cancellationToken = createCancellationTokenForProcessSIGINT(),
   logLevel,
   compileServerLogLevel = "off",
   launchLogLevel = "off",

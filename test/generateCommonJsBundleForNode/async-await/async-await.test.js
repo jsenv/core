@@ -1,8 +1,8 @@
 import { basename } from "path"
 import { assert } from "@dmail/assert"
 import { generateCommonJsBundleForNode } from "../../../index.js"
-import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/private/urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "src/private/jsenvCoreDirectoryUrl.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
   GENERATE_COMMONJS_BUNDLE_FOR_NODE_TEST_PARAMS,
