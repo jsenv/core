@@ -15,8 +15,8 @@ import {
 } from "./internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { assertFile } from "./internal/filesystem-assertions.js"
-import { serveExploringIndex } from "./internal/exploring/serve-exploring-index.js"
-import { serveBrowserSelfExecute } from "./internal/exploring/serve-browser-self-execute.js"
+import { serveExploringIndex } from "./internal/exploring/serveExploringIndex.js"
+import { serveBrowserSelfExecute } from "./internal/exploring/serveBrowserSelfExecute.js"
 import { startCompileServer } from "./startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
@@ -163,9 +163,8 @@ export const startExploring = async ({
         }
       }
 
-      htmlTemplateRequestedCallback = (request) => {
-        const requestServerUrl = `${request.origin}${request.ressource}`
-        dependencyTracker[urlToRelativePath(requestServerUrl)] = []
+      htmlTemplateRequestedCallback = ({ relativePath }) => {
+        dependencyTracker[relativePath] = []
       }
 
       projectFileRequestedCallback = ({ relativePath, request }) => {
@@ -214,19 +213,15 @@ export const startExploring = async ({
         }
       }
 
-      rawProjectFileRequestedCallback = ({ request }) => {
-        const requestServerUrl = `${request.origin}${request.ressource}`
-        const relativePath = urlToRelativePath(requestServerUrl)
+      rawProjectFileRequestedCallback = ({ relativePath, request }) => {
         projectFileRequestedCallback({ relativePath, request })
         projectFileSet.add(relativePath)
       }
 
-      livereloadServerSentEventService = ({ request }) => {
+      livereloadServerSentEventService = ({ relativePath, request }) => {
         const { accept = "" } = request.headers
         if (!accept.includes("text/event-stream")) return null
 
-        const requestServerUrl = `${request.origin}${request.ressource}`
-        const relativePath = urlToRelativePath(requestServerUrl)
         return getOrCreateRoomForRelativePath(relativePath).connect(
           request.headers["last-event-id"],
         )
@@ -271,10 +266,14 @@ export const startExploring = async ({
 
     const service = (request) =>
       firstService(
-        () =>
-          livereloadServerSentEventService({
+        () => {
+          const requestServerUrl = `${request.origin}${request.ressource}`
+          const relativePath = urlToRelativePath(requestServerUrl)
+          return livereloadServerSentEventService({
+            relativePath,
             request,
-          }),
+          })
+        },
         () =>
           serveExploringIndex({
             projectDirectoryUrl,
@@ -282,7 +281,8 @@ export const startExploring = async ({
             request,
           }),
         () => {
-          const requestFileUrl = `${projectDirectoryUrl}${request.ressource.slice(1)}`
+          const relativePath = request.ressource.slice(1)
+          const requestFileUrl = `${projectDirectoryUrl}${relativePath}`
 
           if (
             !urlToMeta({
@@ -293,7 +293,7 @@ export const startExploring = async ({
             return null
           }
 
-          htmlTemplateRequestedCallback(request)
+          htmlTemplateRequestedCallback({ relativePath, request })
 
           return serveFile(HTMLTemplateFileUrl, {
             headers: request.headers,
@@ -313,9 +313,9 @@ export const startExploring = async ({
             livereloading,
           }),
         () => {
-          rawProjectFileRequestedCallback({ request })
           const requestServerUrl = `${request.origin}${request.ressource}`
           const relativePath = urlToRelativePath(requestServerUrl)
+          rawProjectFileRequestedCallback({ relativePath, request })
           return serveFile(`${projectDirectoryUrl}${relativePath}`, {
             method: request.method,
             headers: request.headers,

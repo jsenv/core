@@ -1,5 +1,5 @@
-import { firstService } from "@dmail/server"
-import { serveBrowserSelfExecuteBundle } from "./serve-browser-self-execute-bundle.js"
+import { firstService } from "@jsenv/server"
+import { serveBrowserSelfExecuteBundle } from "./serveBrowserSelfExecuteBundle.js"
 
 // "/.jsenv/browser-script.js" is written inside browser-client/index.html
 const BROWSER_SCRIPT_CLIENT_PATHNAME = "/.jsenv/browser-script.js"
@@ -8,11 +8,11 @@ const BROWSER_SELF_EXECUTE_DYNAMIC_DATA_PATHNAME = "/.jsenv/browser-self-execute
 
 export const serveBrowserSelfExecute = ({
   compileServerOrigin,
-  projectPathname,
-  compileIntoRelativePath,
-  importMapRelativePath,
+  projectDirectoryUrl,
+  compileDirectoryUrl,
+  importMapFileRelativePath,
   importDefaultExtension,
-  browserSelfExecuteTemplateRelativePath,
+  browserSelfExecuteTemplateFileUrl,
   babelPluginMap,
   request,
   livereloading,
@@ -26,11 +26,11 @@ export const serveBrowserSelfExecute = ({
       }),
     () =>
       serveBrowserSelfExecuteBundle({
-        projectPathname,
-        compileIntoRelativePath,
-        importMapRelativePath,
+        projectDirectoryUrl,
+        compileDirectoryUrl,
+        importMapFileRelativePath,
         importDefaultExtension,
-        browserSelfExecuteTemplateRelativePath,
+        browserSelfExecuteTemplateFileUrl,
         babelPluginMap,
         request,
         livereloading,
