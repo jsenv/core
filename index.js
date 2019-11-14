@@ -19,4 +19,7 @@ export { jsenvBrowserScoreMap } from "./src/jsenvBrowserScoreMap.js"
 export { jsenvNodeVersionScoreMap } from "./src/jsenvNodeVersionScoreMap.js"
 export { jsenvPluginCompatMap } from "./src/jsenvPluginCompatMap.js"
 export { launchNode } from "./src/launchNode.js"
+// serveBundle is not meant ot be documented but
+// will be used by @jsenv/chromium-launcher
+export { serveBundle } from "./src/serveBundle.js"
 export { startExploring } from "./src/startExploring.js"

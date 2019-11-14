@@ -1,5 +1,5 @@
 import { serveFile } from "@jsenv/server"
-import { serveBundle } from "./serveBundle.js"
+import { serveBundle } from "../../serveBundle.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { fileUrlToPath, resolveFileUrl, fileUrlToRelativePath } from "../urlUtils.js"
 
