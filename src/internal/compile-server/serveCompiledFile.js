@@ -1,9 +1,7 @@
+import { convertFileSystemErrorToResponseProperties } from "@jsenv/server"
 import { fileUrlToRelativePath, pathToFileUrl } from "../urlUtils.js"
+import { bufferToEtag } from "./compile-directory/bufferToEtag.js"
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
-
-const { bufferToEtag, convertFileSystemErrorToResponseProperties } = import.meta.require(
-  "@dmail/server",
-)
 
 export const serveCompiledFile = async ({
   projectDirectoryUrl,

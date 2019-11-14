@@ -1,4 +1,4 @@
-import { startServer, firstService, serveFile } from "@dmail/server"
+import { startServer, firstService, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveFileUrl, fileUrlToPath } from "src/internal/urlUtils.js"
 
 const puppeteer = import.meta.require("puppeteer")

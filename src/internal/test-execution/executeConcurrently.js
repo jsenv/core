@@ -1,7 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { cpus } from "os"
 import { stat } from "fs"
-import { createConcurrentOperations } from "@dmail/cancellation"
+import { createConcurrentOperations } from "@jsenv/cancellation"
 import { metaMapToSpecifierMetaMap } from "@jsenv/url-meta"
 import { collectFiles } from "@jsenv/file-collector"
 import { fileUrlToPath } from "../urlUtils.js"

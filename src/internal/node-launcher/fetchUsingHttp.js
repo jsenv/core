@@ -1,5 +1,5 @@
 import { globalAgent } from "https"
-import { createOperation } from "@dmail/cancellation"
+import { createOperation } from "@jsenv/cancellation"
 
 const fetch = import.meta.require("node-fetch")
 const AbortController = import.meta.require("abort-controller")

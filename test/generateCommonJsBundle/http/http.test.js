@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { startServer } from "@dmail/server"
+import { startServer } from "@jsenv/server"
 import { assert } from "@jsenv/assert"
 import { generateCommonJsBundle } from "../../../index.js"
 import { bundleToCompilationResult } from "src/internal/bundle/bundleToCompilationResult.js"

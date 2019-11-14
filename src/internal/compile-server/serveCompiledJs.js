@@ -1,10 +1,9 @@
 import { readFile } from "fs"
+import { urlToContentType } from "@jsenv/server"
 import { resolveFileUrl, pathToFileUrl, fileUrlToRelativePath } from "../urlUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
-
-const { ressourceToContentType, defaultContentTypeMap } = import.meta.require("@dmail/server")
 
 export const serveCompiledJs = async ({
   projectDirectoryUrl,
@@ -55,7 +54,7 @@ export const serveCompiledJs = async ({
 
   // json, css, html etc does not need to be compiled
   // they are redirected to the source location that will be served as file
-  const contentType = ressourceToContentType(relativePath, defaultContentTypeMap)
+  const contentType = urlToContentType(pathToFileUrl(relativePath))
   if (contentType !== "application/javascript") {
     return {
       status: 307,

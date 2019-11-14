@@ -9,7 +9,7 @@ import {
 // "/.jsenv/compileServerImportMap.json" resolved at build time
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/.jsenv/compileServerImportMap.json"
-import { uneval } from "@dmail/uneval"
+import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport/resolveImport.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"

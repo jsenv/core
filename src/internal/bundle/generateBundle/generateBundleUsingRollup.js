@@ -1,4 +1,4 @@
-import { createOperation } from "@dmail/cancellation"
+import { createOperation } from "@jsenv/cancellation"
 
 const { rollup } = import.meta.require("rollup")
 

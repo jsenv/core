@@ -3,6 +3,12 @@ import { readFileSync } from "fs"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { registerFileLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
+import {
+  jsenvAccessControlAllowedHeaders,
+  startServer,
+  firstService,
+  serveFile,
+} from "@jsenv/server"
 import { generateGroupMap } from "./internal/generateGroupMap/generateGroupMap.js"
 import { resolveFileUrl, fileUrlToPath } from "./internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
@@ -14,13 +20,6 @@ import { jsenvBabelPluginCompatMap } from "./jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "./jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "./jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
-
-const {
-  defaultAccessControlAllowedHeaders,
-  startServer,
-  firstService,
-  serveFile,
-} = import.meta.require("@dmail/server")
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -211,7 +210,7 @@ ${projectDirectoryUrl}`)
     accessControlAllowRequestMethod: true,
     accessControlAllowRequestHeaders: true,
     accessControlAllowedRequestHeaders: [
-      ...defaultAccessControlAllowedHeaders,
+      ...jsenvAccessControlAllowedHeaders,
       "x-jsenv-execution-id",
     ],
     accessControlAllowCredentials: true,

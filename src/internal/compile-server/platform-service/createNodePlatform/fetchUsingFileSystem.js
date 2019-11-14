@@ -1,7 +1,6 @@
+import { urlToContentType } from "@jsenv/server"
 import { readFileContent } from "../../../filesystemUtils.js"
 import { fileUrlToPath } from "../../../urlUtils.js"
-
-const { ressourceToContentType, defaultContentTypeMap } = import.meta.require("@dmail/server")
 
 export const fetchUsingFileSystem = async (url) => {
   // if we found a symlink we should send 307 ?
@@ -16,7 +15,7 @@ export const fetchUsingFileSystem = async (url) => {
     status: 200,
     statusText: "OK",
     headers: {
-      "content-type": ressourceToContentType(path, defaultContentTypeMap),
+      "content-type": urlToContentType(url),
     },
     body: source,
   }

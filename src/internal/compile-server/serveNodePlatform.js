@@ -1,8 +1,7 @@
+import { serveFile } from "@jsenv/server"
 import { serveBundle } from "./serveBundle.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { fileUrlToPath, resolveFileUrl, fileUrlToRelativePath } from "../urlUtils.js"
-
-const { serveFile } = import.meta.require("@dmail/server")
 
 const NODE_PLATFORM_RELATIVE_PATH = `.jsenv/node-platform.js`
 

@@ -1,6 +1,5 @@
-import { createCancellationToken } from "@dmail/cancellation"
-
-const { findFreePort } = import.meta.require("@dmail/server")
+import { createCancellationToken } from "@jsenv/cancellation"
+import { findFreePort } from "@jsenv/server"
 
 const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"]
 

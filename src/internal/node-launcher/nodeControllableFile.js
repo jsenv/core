@@ -1,5 +1,5 @@
-const { createCancellationSource } = require("@dmail/cancellation")
-const { uneval } = require("@dmail/uneval")
+const { createCancellationSource } = require("@jsenv/cancellation")
+const { uneval } = require("@jsenv/uneval")
 
 const EVALUATION_STATUS_OK = "evaluation-ok"
 const EVALUATION_STATUS_ERROR = "evaluation-error"

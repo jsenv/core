@@ -1,8 +1,8 @@
 /* eslint-disable import/max-dependencies */
 import {
   catchAsyncFunctionCancellation,
-  createProcessInterruptionCancellationToken,
-} from "@dmail/cancellation"
+  createCancellationTokenForProcessSIGINT,
+} from "@jsenv/cancellation"
 import { jsenvBabelPluginMap } from "../../../jsenvBabelPluginMap.js"
 import { jsenvBrowserScoreMap } from "../../../jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "../../../jsenvNodeVersionScoreMap.js"
@@ -81,7 +81,7 @@ export const generateBundle = ({
     if (compileGroupCount < 1) {
       throw new Error(`compileGroupCount must be >= 1, got ${compileGroupCount}`)
     }
-    const cancellationToken = createProcessInterruptionCancellationToken()
+    const cancellationToken = createCancellationTokenForProcessSIGINT()
 
     const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
     // important to do this in case projectDirectoryPath was already a file:/// url
