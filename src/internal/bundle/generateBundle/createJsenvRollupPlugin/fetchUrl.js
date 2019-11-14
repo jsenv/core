@@ -1,8 +1,7 @@
 import { globalAgent } from "https"
 import { createOperation } from "@jsenv/cancellation"
-import { fileRead } from "@dmail/helper"
-import { filenameToContentType, jsenvContentTypeMap } from "@jsenv/server"
-import { hrefToPathname } from "@jsenv/href"
+import { urlToContentType } from "@jsenv/server"
+import { readFileContent } from "../../../filesystemUtils.js"
 import { fileUrlToPath } from "../../../urlUtils.js"
 
 const fetch = import.meta.require("node-fetch")
@@ -30,14 +29,14 @@ export const fetchUrl = async (url, { cancellationToken } = {}) => {
       const path = fileUrlToPath(url)
       const code = await createOperation({
         cancellationToken,
-        start: () => fileRead(path),
+        start: () => readFileContent(path),
       })
       return {
         url,
         status: 200,
         body: code,
         headers: {
-          "content-type": ressourceToContentType(hrefToPathname(url), defaultContentTypeMap),
+          "content-type": urlToContentType(url),
         },
       }
     } catch (e) {

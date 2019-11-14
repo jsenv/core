@@ -1,4 +1,4 @@
-import { fileWrite } from "@dmail/helper"
+import { writeFileContent } from "../filesystemUtils.js"
 import { resolveFileUrl, fileUrlToPath } from "../urlUtils.js"
 
 export const generateCoverageJsonFile = async ({
@@ -10,7 +10,7 @@ export const generateCoverageJsonFile = async ({
   const coverageJsonFileUrl = resolveFileUrl(coverageJsonFileRelativePath, projectDirectoryUrl)
   const coverageJsonFilePath = fileUrlToPath(coverageJsonFileUrl)
 
-  await fileWrite(coverageJsonFilePath, JSON.stringify(coverageMap, null, "  "))
+  await writeFileContent(coverageJsonFilePath, JSON.stringify(coverageMap, null, "  "))
   if (coverageJsonFileLog) {
     console.log(`-> ${coverageJsonFilePath}`)
   }

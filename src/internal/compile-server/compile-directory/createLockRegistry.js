@@ -1,5 +1,3 @@
-import { arrayWithoutValue } from "@dmail/helper"
-
 export const createLockRegistry = () => {
   let lockArray = []
   const lockForRessource = async (ressource) => {
@@ -17,7 +15,7 @@ export const createLockRegistry = () => {
     if (currentLock) await currentLock.unlocked
 
     const unlock = () => {
-      lockArray = arrayWithoutValue(lockArray, lock)
+      lockArray = lockArray.filter((lockCandidate) => lockCandidate !== lock)
       unlockResolve()
     }
     return unlock

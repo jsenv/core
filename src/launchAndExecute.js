@@ -6,7 +6,6 @@ import {
   composeCancellationToken,
   errorToCancelReason,
 } from "@jsenv/cancellation"
-import { promiseTrackRace } from "@dmail/helper"
 import { coverageMapCompose } from "./coverageMapCompose.js"
 
 const TIMING_BEFORE_EXECUTION = "before-execution"
@@ -391,4 +390,24 @@ const normalizeNamespace = (namespace) => {
     normalized[key] = namespace[key]
   })
   return normalized
+}
+
+const promiseTrackRace = (promiseArray) => {
+  return new Promise((resolve, reject) => {
+    let resolved = false
+
+    const visit = (index) => {
+      const promise = promiseArray[index]
+      promise.then((value) => {
+        if (resolved) return
+        resolved = true
+        resolve({ winner: promise, value, index })
+      }, reject)
+    }
+
+    let i = 0
+    while (i < promiseArray.length) {
+      visit(i++)
+    }
+  })
 }

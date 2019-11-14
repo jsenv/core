@@ -1,4 +1,4 @@
-import { fileRead, fileStat } from "@dmail/helper"
+import { readFileContent, readFileStat } from "../../filesystemUtils.js"
 import { getPathForSourceFile, getPathForCompiledFile, getPathForAssetFile } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
@@ -66,7 +66,7 @@ const validateCompiledFile = async ({
   })
 
   try {
-    const compiledSource = await fileRead(compiledFilePath)
+    const compiledSource = await readFileContent(compiledFilePath)
 
     if (ifEtagMatch) {
       const compiledEtag = bufferToEtag(Buffer.from(compiledSource))
@@ -81,7 +81,7 @@ const validateCompiledFile = async ({
     }
 
     if (ifModifiedSinceDate) {
-      const compiledMtime = await fileStat(compiledFilePath)
+      const compiledMtime = await readFileStat(compiledFilePath)
       if (ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)) {
         logger.debug(`mtime changed for ${compiledFilePath}`)
         return {
@@ -127,7 +127,7 @@ const validateSource = async ({ logger, projectDirectoryUrl, source, eTag }) => 
   })
 
   try {
-    const sourceContent = await fileRead(sourceFilePath)
+    const sourceContent = await readFileContent(sourceFilePath)
     const sourceETag = bufferToEtag(Buffer.from(sourceContent))
 
     if (sourceETag !== eTag) {
@@ -193,7 +193,7 @@ const validateAsset = async ({
   })
 
   try {
-    const assetContent = await fileRead(assetFilePath)
+    const assetContent = await readFileContent(assetFilePath)
     const assetContentETag = bufferToEtag(Buffer.from(assetContent))
 
     if (eTag !== assetContentETag) {

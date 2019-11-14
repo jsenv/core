@@ -1,5 +1,5 @@
 import { readFileSync } from "fs"
-import { fileRead, fileWrite } from "@dmail/helper"
+import { readFileContent, writeFileContent } from "../../filesystemUtils.js"
 import { resolveFileUrl, fileUrlToPath } from "../../urlUtils.js"
 import { removeDirectory } from "../../removeDirectory.js"
 import { jsenvCoreDirectoryUrl } from "../../jsenvCoreDirectoryUrl.js"
@@ -29,7 +29,7 @@ export const cleanCompileDirectoryIfObsolete = async ({
   } else {
     let previousCompileDirectoryMeta
     try {
-      const source = await fileRead(metaFilePath)
+      const source = await readFileContent(metaFilePath)
       previousCompileDirectoryMeta = JSON.parse(source)
     } catch (e) {
       if (e && e.code === "ENOENT") {
@@ -45,7 +45,7 @@ export const cleanCompileDirectoryIfObsolete = async ({
     }
   }
 
-  await fileWrite(metaFilePath, JSON.stringify(compileDirectoryMeta, null, "  "))
+  await writeFileContent(metaFilePath, JSON.stringify(compileDirectoryMeta, null, "  "))
 }
 
 const readPackage = (packageFilePath) => {

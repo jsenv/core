@@ -1,6 +1,6 @@
-import { fileRead } from "@dmail/helper"
 import { startServer, firstService, serveFile } from "@jsenv/server"
-import { resolveDirectoryUrl, resolveFileUrl, fileUrlToPath } from "src/private/urlUtils.js"
+import { readFileContent } from "src/internal/filesystemUtils.js"
+import { resolveDirectoryUrl, resolveFileUrl, fileUrlToPath } from "src/internal/urlUtils.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
@@ -58,7 +58,7 @@ const startTestServer = ({ testDirectoryUrl }) => {
 const serveSystemJS = async ({ request: { ressource } }) => {
   if (ressource !== "/system.js") return null
 
-  const content = await fileRead(SYSTEM_PATH)
+  const content = await readFileContent(SYSTEM_PATH)
 
   return {
     status: 200,

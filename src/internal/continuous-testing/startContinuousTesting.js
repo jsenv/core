@@ -1,11 +1,11 @@
 /* eslint-disable import/max-dependencies */
 import {
   catchAsyncFunctionCancellation,
-  createProcessInterruptionCancellationToken,
-  cancellationTokenCompose,
+  createCancellationTokenForProcessSIGINT,
+  composeCancellationToken,
   createCancellationSource,
   errorToCancelReason,
-} from "@dmail/cancellation"
+} from "@jsenv/cancellation"
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { hrefToOrigin, hrefToPathname } from "@jsenv/href"
 import { createLogger } from "@jsenv/logger"
@@ -50,7 +50,7 @@ export const startContinuousTesting = async ({
   catchAsyncFunctionCancellation(async () => {
     const logger = createLogger({ logLevel })
 
-    const cancellationToken = createProcessInterruptionCancellationToken()
+    const cancellationToken = createCancellationTokenForProcessSIGINT()
     const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
     projectDirectoryPath = fileUrlToPath(projectDirectoryUrl)
     const compileDirectoryUrl = resolveDirectoryUrl(
@@ -204,7 +204,7 @@ export const startContinuousTesting = async ({
 
       const nextActionRequiredPromise = generateActionRequiredPromise()
       const actionRequiredCancellationSource = createCancellationSource()
-      const externalOrFileChangedCancellationToken = cancellationTokenCompose(
+      const externalOrFileChangedCancellationToken = composeCancellationToken(
         cancellationToken,
         actionRequiredCancellationSource.token,
       )

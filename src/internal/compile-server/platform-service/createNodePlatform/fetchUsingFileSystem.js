@@ -1,4 +1,4 @@
-import { fileRead } from "@dmail/helper"
+import { readFileContent } from "../../../filesystemUtils.js"
 import { fileUrlToPath } from "../../../urlUtils.js"
 
 const { ressourceToContentType, defaultContentTypeMap } = import.meta.require("@dmail/server")
@@ -8,7 +8,7 @@ export const fetchUsingFileSystem = async (url) => {
   // nope but we should update the returned url: key to the symlink target
 
   const path = fileUrlToPath(url)
-  const source = await fileRead(path)
+  const source = await readFileContent(path)
 
   // on pourrait ajouter des info dans headers comme le mtime, e-tag ?
   return {

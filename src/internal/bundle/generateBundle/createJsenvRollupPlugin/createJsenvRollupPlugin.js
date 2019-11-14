@@ -1,10 +1,9 @@
 /* eslint-disable import/max-dependencies */
 import { statSync } from "fs"
-import { fileWrite } from "@dmail/helper"
-import { ressourceToContentType, defaultContentTypeMap } from "@dmail/server"
-import { hrefToPathname } from "@jsenv/href"
+import { urlToContentType } from "@jsenv/server"
 import { normalizeImportMap, composeTwoImportMaps, resolveImport } from "@jsenv/import-map"
 import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
+import { writeFileContent } from "../../../filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "../../../jsenvCoreDirectoryUrl.js"
 import {
   fileUrlToRelativePath,
@@ -394,7 +393,7 @@ ${moduleUrl}`)
     }
 
     return {
-      contentType: ressourceToContentType(hrefToPathname(url), defaultContentTypeMap),
+      contentType: urlToContentType(url),
       content: code,
       map,
     }
@@ -466,11 +465,11 @@ const transformAsyncInsertedByRollup = async ({
       const bundleFileUrl = resolveFileUrl(bundleFilename, bundleDirectoryUrl)
 
       await Promise.all([
-        fileWrite(
+        writeFileContent(
           fileUrlToPath(bundleFileUrl),
           writeSourceMappingURL(code, `./${bundleFilename}.map`),
         ),
-        fileWrite(fileUrlToPath(`${bundleFileUrl}.map`), JSON.stringify(map)),
+        writeFileContent(fileUrlToPath(`${bundleFileUrl}.map`), JSON.stringify(map)),
       ])
     }),
   )

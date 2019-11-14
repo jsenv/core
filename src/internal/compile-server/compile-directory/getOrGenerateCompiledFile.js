@@ -1,5 +1,5 @@
-import { fileMakeDirname } from "@dmail/helper"
 import { createLogger } from "@jsenv/logger"
+import { createFileDirectories } from "../../filesystemUtils.js"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
 import { updateMeta } from "./updateMeta.js"
@@ -249,7 +249,7 @@ const startAsap = async (
     // after that we use a lock pathnameRelative to be sure we don't conflict with other process
     // trying to do the same (mapy happen when spawining multiple server for instance)
     // https://github.com/moxystudio/node-proper-lockfile/issues/69
-    await fileMakeDirname(metaJsonFilePath)
+    await createFileDirectories(metaJsonFilePath)
     // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
     unlockInterProcessLock = await lockfile.lock(metaJsonFilePath, {
       realpath: false,

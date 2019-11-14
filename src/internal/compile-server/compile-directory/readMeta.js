@@ -1,4 +1,4 @@
-import { fileRead } from "@dmail/helper"
+import { readFileContent } from "../../filesystemUtils.js"
 import { getPathForMetaJsonFile } from "./locaters.js"
 
 export const readMeta = async ({
@@ -13,7 +13,7 @@ export const readMeta = async ({
   })
 
   try {
-    const metaJsonString = await fileRead(metaJsonFilePath)
+    const metaJsonString = await readFileContent(metaJsonFilePath)
     const metaJsonObject = JSON.parse(metaJsonString)
     const relativePathToProjectDirectoryFromMeta = metaJsonObject.originalFileRelativePath
     if (relativePathToProjectDirectoryFromMeta !== originalFileRelativePath) {

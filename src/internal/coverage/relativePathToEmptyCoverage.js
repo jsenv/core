@@ -1,5 +1,5 @@
-import { fileRead } from "@dmail/helper"
-import { createOperation } from "@dmail/cancellation"
+import { createOperation } from "@jsenv/cancellation"
+import { readFileContent } from "../filesystemUtils.js"
 import { fileUrlToPath } from "../urlUtils.js"
 import { createInstrumentBabelPlugin } from "./createInstrumentBabelPlugin.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
@@ -18,7 +18,7 @@ export const relativePathToEmptyCoverage = async ({
   const filePath = fileUrlToPath(fileUrl)
   const source = await createOperation({
     cancellationToken,
-    start: () => fileRead(filePath),
+    start: () => readFileContent(filePath),
   })
 
   // we must compile to get the coverage object

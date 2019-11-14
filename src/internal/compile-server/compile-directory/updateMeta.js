@@ -1,4 +1,4 @@
-import { fileWrite } from "@dmail/helper"
+import { writeFileContent } from "../../filesystemUtils.js"
 import { getPathForMetaJsonFile, getPathForAssetFile, getPathForCompiledFile } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
@@ -34,7 +34,7 @@ export const updateMeta = ({
 
     if (writeCompiledSourceFile) {
       logger.debug(`write compiled file at ${compiledFilePath}`)
-      promises.push(fileWrite(compiledFilePath, compiledSource))
+      promises.push(writeFileContent(compiledFilePath, compiledSource))
     }
 
     if (writeAssetsFile) {
@@ -47,7 +47,7 @@ export const updateMeta = ({
           })
 
           logger.debug(`write compiled file asset at ${assetFilePath}`)
-          return fileWrite(assetFilePath, assetsContent[index])
+          return writeFileContent(assetFilePath, assetsContent[index])
         }),
       )
     }
@@ -110,7 +110,7 @@ export const updateMeta = ({
     })
 
     logger.debug(`write compiled file meta at ${metaJsonFilePath}`)
-    promises.push(fileWrite(metaJsonFilePath, JSON.stringify(latestMeta, null, "  ")))
+    promises.push(writeFileContent(metaJsonFilePath, JSON.stringify(latestMeta, null, "  ")))
   }
 
   return Promise.all(promises)
