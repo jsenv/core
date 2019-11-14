@@ -39,9 +39,10 @@ export const startCompileServer = async ({
 
   // options related to the server itself
   protocol = "http",
+  privateKey,
+  certificate,
   ip = "127.0.0.1",
   port = 0,
-  signature,
   keepProcessAlive = false,
   stopOnPackageVersionChange = false,
 
@@ -154,9 +155,10 @@ ${projectDirectoryUrl}`)
   const compileServer = await startServer({
     cancellationToken,
     protocol,
+    privateKey,
+    certificate,
     ip,
     port,
-    signature,
     sendInternalErrorStack: true,
     requestToResponse: (request) =>
       firstService(

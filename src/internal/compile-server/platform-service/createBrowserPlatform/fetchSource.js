@@ -1,4 +1,4 @@
-import { fetchUsingXHR } from "./fetchUsingXHR.js"
+import { fetchUsingXHR } from "../../../fetchUsingXHR.js"
 
 export const fetchSource = ({ url, executionId }) => {
   return fetchUsingXHR(url, {

@@ -1,0 +1,362 @@
+/* eslint-disable import/max-dependencies */
+import {
+  catchAsyncFunctionCancellation,
+  createCancellationTokenForProcessSIGINT,
+} from "@jsenv/cancellation"
+import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
+import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
+import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
+import { createLogger } from "@jsenv/logger"
+import {
+  resolveFileUrl,
+  resolveDirectoryUrl,
+  fileUrlToPath,
+  pathToDirectoryUrl,
+} from "./internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
+import { assertFile } from "./internal/filesystem-assertions.js"
+import { serveExploringIndex } from "./internal/exploring/serve-exploring-index.js"
+import { serveBrowserSelfExecute } from "./internal/exploring/serve-browser-self-execute.js"
+import { startCompileServer } from "./startCompileServer.js"
+import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
+
+export const startExploring = async ({
+  logLevel,
+  compileServerLogLevel = logLevel,
+
+  HTMLTemplateFileUrl = resolveFileUrl(
+    "./src/internal/exploring/template.html",
+    jsenvCoreDirectoryUrl,
+  ),
+  browserSelfExecuteTemplateFileUrl = resolveFileUrl(
+    "./src/internal/exploring/browser-self-execute-template.js",
+    jsenvCoreDirectoryUrl,
+  ),
+  explorableConfig = jsenvExplorableConfig,
+  watchConfig = {
+    "./**/*": true,
+    "./.git/": false,
+    "./node_modules/": false,
+  },
+  livereloading = false,
+
+  projectDirectoryPath,
+  compileDirectoryRelativePath = "./.dist",
+  compileDirectoryClean,
+  importMapFileRelativePath = "./importMap.json",
+  importDefaultExtension,
+  babelPluginMap,
+  convertMap,
+  compileGroupCount = 2,
+  keepProcessAlive = true,
+  cors = true,
+  protocol = "http",
+  ip = "127.0.0.1",
+  port = 0,
+  forcePort = false,
+  certificate,
+  privateKey,
+}) => {
+  if (typeof projectDirectoryPath !== "string") {
+    throw new Error(`projectDirectoryPath must be a string, got ${projectDirectoryPath}`)
+  }
+  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
+  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativePath, projectDirectoryUrl)
+
+  const HTMLTemplateFilePath = fileUrlToPath(HTMLTemplateFileUrl)
+  await assertFile(HTMLTemplateFilePath)
+
+  const browserSelfExecuteTemplateFilePath = fileUrlToPath(browserSelfExecuteTemplateFileUrl)
+  await assertFile(browserSelfExecuteTemplateFilePath)
+
+  return catchAsyncFunctionCancellation(async () => {
+    const cancellationToken = createCancellationTokenForProcessSIGINT()
+
+    const specifierMetaMapRelativeForExplorable = metaMapToSpecifierMetaMap({
+      explorable: explorableConfig,
+    })
+    const specifierMetaMapForExplorable = normalizeSpecifierMetaMap(
+      specifierMetaMapRelativeForExplorable,
+      projectDirectoryUrl,
+    )
+
+    let projectFileRequestedCallback
+    let rawProjectFileRequestedCallback = () => {}
+    let livereloadServerSentEventService = () => null
+    let htmlTemplateRequestedCallback = () => {}
+
+    if (livereloading) {
+      watchConfig[compileDirectoryRelativePath] = false
+
+      const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryPath, {
+        watchDescription: watchConfig,
+        updated: ({ relativePath }) => {
+          if (projectFileSet.has(relativePath)) {
+            projectFileUpdatedCallback(relativePath)
+          }
+        },
+        removed: ({ relativePath }) => {
+          if (projectFileSet.has(relativePath)) {
+            projectFileSet.delete(relativePath)
+            projectFileRemovedCallback(relativePath)
+          }
+        },
+        keepProcessAlive: false,
+      })
+      cancellationToken.register(unregisterDirectoryLifecyle)
+
+      const projectFileSet = new Set()
+      const roomMap = {}
+      const dependencyTracker = {}
+
+      const projectFileUpdatedCallback = (relativePath) => {
+        projectFileToAffectedRoomArray(relativePath).forEach((room) => {
+          room.sendEvent({
+            type: "file-changed",
+            data: relativePath,
+          })
+        })
+      }
+
+      const projectFileRemovedCallback = (relativePath) => {
+        projectFileToAffectedRoomArray(relativePath).forEach((room) => {
+          room.sendEvent({
+            type: "file-removed",
+            data: relativePath,
+          })
+        })
+      }
+
+      const projectFileToAffectedRoomArray = (relativePath) => {
+        const affectedRoomArray = []
+        Object.keys(roomMap).forEach((mainRelativePath) => {
+          if (!dependencyTracker.hasOwnProperty(mainRelativePath)) return
+
+          if (
+            relativePath === mainRelativePath ||
+            dependencyTracker[mainRelativePath].includes(relativePath)
+          ) {
+            affectedRoomArray.push(roomMap[mainRelativePath])
+          }
+        })
+        return affectedRoomArray
+      }
+
+      const trackDependency = ({ relativePath, executionId }) => {
+        if (executionId) {
+          // quand on voit main on marque tout ce qui existe actuallement
+          // comme plus dépendant ?
+          // mais si ce qui était la
+
+          if (dependencyTracker.hasOwnProperty(executionId)) {
+            const dependencyArray = dependencyTracker[executionId]
+            if (!dependencyArray.includes(dependencyTracker)) {
+              dependencyArray.push(relativePath)
+            }
+          } else {
+            dependencyTracker[executionId] = [relativePath]
+          }
+        } else {
+          Object.keys(dependencyTracker).forEach((executionId) => {
+            trackDependency({ relativePath, executionId })
+          })
+        }
+      }
+
+      htmlTemplateRequestedCallback = (request) => {
+        const requestServerUrl = `${request.origin}${request.ressource}`
+        dependencyTracker[urlToRelativePath(requestServerUrl)] = []
+      }
+
+      projectFileRequestedCallback = ({ relativePath, request }) => {
+        projectFileSet.add(relativePath)
+
+        const { headers = {} } = request
+
+        if ("x-jsenv-execution-id" in headers) {
+          const executionId = headers["x-jsenv-execution-id"]
+          trackDependency({ relativePath, executionId })
+        } else if ("referer" in headers) {
+          const { referer } = headers
+          if (sameOrigin(referer, request.origin)) {
+            const refererRelativePath = urlToRelativePath(referer)
+            const refererFileUrl = `${projectDirectoryUrl}${refererRelativePath}`
+
+            if (
+              urlToMeta({
+                url: refererFileUrl,
+                specifierMetaMap: specifierMetaMapForExplorable,
+              }).explorable
+            ) {
+              const executionId = refererRelativePath
+              trackDependency({
+                relativePath,
+                executionId,
+              })
+            } else {
+              Object.keys(dependencyTracker).forEach((executionId) => {
+                if (
+                  executionId === refererRelativePath ||
+                  dependencyTracker[executionId].includes(refererRelativePath)
+                ) {
+                  trackDependency({
+                    relativePath,
+                    executionId,
+                  })
+                }
+              })
+            }
+          } else {
+            trackDependency({ relativePath })
+          }
+        } else {
+          trackDependency({ relativePath })
+        }
+      }
+
+      rawProjectFileRequestedCallback = ({ request }) => {
+        const requestServerUrl = `${request.origin}${request.ressource}`
+        const relativePath = urlToRelativePath(requestServerUrl)
+        projectFileRequestedCallback({ relativePath, request })
+        projectFileSet.add(relativePath)
+      }
+
+      livereloadServerSentEventService = ({ request }) => {
+        const { accept = "" } = request.headers
+        if (!accept.includes("text/event-stream")) return null
+
+        const requestServerUrl = `${request.origin}${request.ressource}`
+        const relativePath = urlToRelativePath(requestServerUrl)
+        return getOrCreateRoomForRelativePath(relativePath).connect(
+          request.headers["last-event-id"],
+        )
+      }
+
+      const getOrCreateRoomForRelativePath = (relativePath) => {
+        if (roomMap.hasOwnProperty(relativePath)) return roomMap[relativePath]
+
+        const room = createSSERoom()
+        room.start()
+        cancellationToken.register(room.stop)
+        roomMap[relativePath] = room
+        return room
+      }
+    }
+
+    const compileServer = await startCompileServer({
+      cancellationToken,
+      projectDirectoryUrl,
+      compileDirectoryUrl,
+      compileDirectoryClean,
+      importMapFileRelativePath,
+      importDefaultExtension,
+      compileGroupCount,
+      babelPluginMap,
+      convertMap,
+      cors,
+      protocol,
+      privateKey,
+      certificate,
+      ip,
+      port: 0, // random available port
+      forcePort: false, // no need because random port
+      logLevel: compileServerLogLevel,
+      projectFileRequestedCallback,
+      stopOnPackageVersionChange: true,
+    })
+
+    const { origin: compileServerOrigin } = compileServer
+
+    const logger = createLogger({ logLevel })
+
+    const service = (request) =>
+      firstService(
+        () =>
+          livereloadServerSentEventService({
+            request,
+          }),
+        () =>
+          serveExploringIndex({
+            projectDirectoryUrl,
+            explorableConfig,
+            request,
+          }),
+        () => {
+          const requestFileUrl = `${projectDirectoryUrl}${request.ressource.slice(1)}`
+
+          if (
+            !urlToMeta({
+              url: requestFileUrl,
+              specifierMetaMap: specifierMetaMapForExplorable,
+            }).explorable
+          ) {
+            return null
+          }
+
+          htmlTemplateRequestedCallback(request)
+
+          return serveFile(HTMLTemplateFileUrl, {
+            headers: request.headers,
+          })
+        },
+        () =>
+          serveBrowserSelfExecute({
+            logger,
+            compileServerOrigin,
+            projectDirectoryUrl,
+            compileDirectoryUrl,
+            importMapFileRelativePath,
+            importDefaultExtension,
+            browserSelfExecuteTemplateFileUrl,
+            babelPluginMap,
+            request,
+            livereloading,
+          }),
+        () => {
+          rawProjectFileRequestedCallback({ request })
+          const requestServerUrl = `${request.origin}${request.ressource}`
+          const relativePath = urlToRelativePath(requestServerUrl)
+          return serveFile(`${projectDirectoryUrl}${relativePath}`, {
+            method: request.method,
+            headers: request.headers,
+            cacheStrategy: "etag",
+          })
+        },
+      )
+
+    const browserServer = await startServer({
+      cancellationToken,
+      logLevel,
+      protocol,
+      privateKey,
+      certificate,
+      ip,
+      port,
+      forcePort,
+      sendInternalErrorStack: true,
+      requestToResponse: service,
+      accessControlAllowRequestOrigin: true,
+      accessControlAllowRequestMethod: true,
+      accessControlAllowRequestHeaders: true,
+      accessControlAllowCredentials: true,
+      keepProcessAlive,
+    })
+
+    compileServer.stoppedPromise.then(
+      (reason) => {
+        browserServer.stop(reason)
+      },
+      () => {},
+    )
+
+    return browserServer
+  })
+}
+
+const sameOrigin = (url, otherUrl) => {
+  return new URL(url).origin === new URL(otherUrl).origin
+}
+
+const urlToRelativePath = (url) => {
+  return new URL(url).pathname.slice(1)
+}
