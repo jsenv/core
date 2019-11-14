@@ -61,6 +61,7 @@ export const serveNodePlatform = async ({
     babelPluginMap,
     format: "commonjs",
     request,
+    sourcemapPreferLeadingSlash: true,
   })
 }
 

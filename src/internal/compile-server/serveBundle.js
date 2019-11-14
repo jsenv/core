@@ -30,6 +30,7 @@ export const serveBundle = async ({
   formatOutputOptions = {},
   node = format === "commonjs",
   browser = format === "global",
+  sourcemapPreferLeadingSlash = true,
 }) => {
   if (typeof jsenvProjectDirectoryUrl !== "string") {
     throw new TypeError(
@@ -112,6 +113,7 @@ export const serveBundle = async ({
       importMapForBundle,
       importReplaceMap,
       entryPointMap,
+      sourcemapPreferLeadingSlash,
       babelPluginMap,
       compileGroupCount: 1,
       throwUnhandled: false,

@@ -19,7 +19,7 @@ await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativePath,
   entryPointMap: {
-    main: `${testDirectoryRelativePath}${mainFileBasename}`,
+    main: `./${testDirectoryRelativePath}${mainFileBasename}`,
   },
   compileGroupCount: 2,
 })

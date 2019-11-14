@@ -30,7 +30,7 @@ const sourceMap = JSON.parse(compilationResult.assetsContent[0])
 const sourceMapConsumer = await new SourceMapConsumer(sourceMap)
 const actual = sourceMapConsumer.originalPositionFor({ line: 6, column: 0, bias: 2 })
 const expected = {
-  source: `/${testDirectoryRelativePath}${mainFileBasename}`,
+  source: `../../${mainFileBasename}`,
   line: 2,
   column: actual.column,
   name: null,

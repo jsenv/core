@@ -53,7 +53,7 @@ export const createJsenvRollupPlugin = async ({
   format,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
   entryPointMap,
-  sourcemapPreferLeadingSlash = true,
+  sourcemapPreferLeadingSlash = false,
   logger,
 }) => {
   const arrayOfUrlToSkipTransform = []

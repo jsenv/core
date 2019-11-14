@@ -61,6 +61,7 @@ export const serveBrowserPlatform = async ({
     babelPluginMap,
     format: "global",
     request,
+    sourcemapPreferLeadingSlash: true,
   })
 }
 
