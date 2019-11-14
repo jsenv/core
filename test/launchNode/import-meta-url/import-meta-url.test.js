@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { assert } from "@dmail/assert"
+import { assert } from "@jsenv/assert"
 import { launchNode, startCompileServer, launchAndExecute } from "../../../index.js"
 import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"

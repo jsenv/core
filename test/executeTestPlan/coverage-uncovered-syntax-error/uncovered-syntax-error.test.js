@@ -1,4 +1,4 @@
-import { assert } from "@dmail/assert"
+import { assert } from "@jsenv/assert"
 import { cover } from "../../../index.js"
 import { fileHrefToFolderRelativePath } from "../../file-href-to-folder-relative-path.js"
 import { COVERAGE_TEST_PARAM } from "../coverage-test-param.js"

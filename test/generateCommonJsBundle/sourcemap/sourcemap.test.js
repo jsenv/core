@@ -1,5 +1,5 @@
 import { basename } from "path"
-import { assert } from "@dmail/assert"
+import { assert } from "@jsenv/assert"
 import { generateCommonJsBundle } from "../../../index.js"
 import { bundleToCompilationResult } from "src/internal/bundle/bundleToCompilationResult.js"
 import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"

@@ -1,6 +1,6 @@
 import { readFileSync } from "fs"
 import { basename } from "path"
-import { assert } from "@dmail/assert"
+import { assert } from "@jsenv/assert"
 import { fileUrlToPath, fileUrlToRelativePath, resolveDirectoryUrl } from "src/internal/urlUtils.js"
 import { transformJs } from "src/internal/compile-server/js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "src/internal/compile-server/js-compilation-service/transformResultToCompilationResult.js"

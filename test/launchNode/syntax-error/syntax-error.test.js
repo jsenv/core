@@ -1,4 +1,4 @@
-import { assert } from "@dmail/assert"
+import { assert } from "@jsenv/assert"
 import { pathnameToOperatingSystemPath } from "@jsenv/operating-system-path"
 import { launchNode, launchNodeProjectPathname } from "../../index.js"
 import { selfHrefToFolderRelativePath } from "../self-href-to-folder-relative-path.js"

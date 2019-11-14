@@ -1,4 +1,4 @@
-import { assert } from "@dmail/assert"
+import { assert } from "@jsenv/assert"
 import { generateGroupMap } from "../../src/internal/generateGroupMap/generateGroupMap.js"
 import { jsenvBrowserScoreMap } from "../../src/jsenvBrowserScoreMap.js"
 

@@ -1,4 +1,4 @@
-import { assert } from "@dmail/assert"
+import { assert } from "@jsenv/assert"
 import { launchNode, launchNodeProjectPathname } from "../../index.js"
 import {
   NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,

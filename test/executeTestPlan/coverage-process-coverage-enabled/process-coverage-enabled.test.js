@@ -1,4 +1,4 @@
-import { assert } from "@dmail/assert"
+import { assert } from "@jsenv/assert"
 import { launchNode } from "@jsenv/node-launcher"
 import { cover } from "../../../index.js"
 import { fileHrefToFolderRelativePath } from "../../file-href-to-folder-relative-path.js"

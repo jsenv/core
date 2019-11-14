@@ -1,4 +1,4 @@
-import { assert } from "@dmail/assert"
+import { assert } from "@jsenv/assert"
 import { launchChromium } from "@jsenv/chromium-launcher"
 import { launchNode } from "@jsenv/node-launcher"
 import { cover } from "../../../index.js"

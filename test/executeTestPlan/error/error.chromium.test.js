@@ -1,4 +1,4 @@
-import { assert } from "@dmail/assert"
+import { assert } from "@jsenv/assert"
 import { launchChromium } from "@jsenv/chromium-launcher"
 import { fileHrefToFolderRelativePath } from "../../file-href-to-folder-relative-path.js"
 import { test } from "../../../index.js"
