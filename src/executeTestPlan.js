@@ -18,14 +18,17 @@ export const executeTestPlan = async ({
   launchLogLevel = "off",
   executeLogLevel = "off",
 
-  testPlan,
-
   projectDirectoryPath,
   compileDirectoryRelativePath = "./.dist/",
   compileGroupCount = 2,
 
-  updateProcessExitCode = true,
+  testPlan,
   throwUnhandled = true,
+  measurePlanExecutionDuration = false,
+  concurrencyLimit,
+  executionDefaultOptions = {},
+  logSummary = true,
+  updateProcessExitCode = true,
 
   coverage = false,
   coverageConfig = {
@@ -34,6 +37,8 @@ export const executeTestPlan = async ({
     "./**/*.test.*": false, // contains .test. -> nope
     "./**/test/": false, // inside a test folder -> nope,
   },
+  coverageIncludeMissing = true,
+  coverageAndExecutionAllowed = false,
   coverageJsonFile = true,
   coverageJsonFileLog = true,
   coverageJsonFileRelativePath = "./coverage/coverage-final.json",
@@ -41,8 +46,6 @@ export const executeTestPlan = async ({
   coverageHtmlDirectory = false,
   coverageHtmlDirectoryRelativePath = "./coverage",
   coverageHtmlDirectoryIndexLog = true,
-
-  ...rest
 }) => {
   const start = async () => {
     const logger = createLogger({ logLevel })
@@ -56,18 +59,25 @@ export const executeTestPlan = async ({
 
     const result = await executePlan({
       cancellationToken,
-      logger,
       compileServerLogLevel,
+      logger,
       launchLogger,
       executeLogger,
 
-      plan: testPlan,
       compileGroupCount,
       projectDirectoryUrl,
       compileDirectoryUrl,
+
+      plan: testPlan,
+      measurePlanExecutionDuration,
+      concurrencyLimit,
+      executionDefaultOptions,
+      logSummary,
+
       coverage,
       coverageConfig,
-      ...rest,
+      coverageIncludeMissing,
+      coverageAndExecutionAllowed,
     })
 
     if (updateProcessExitCode && !executionIsPassed(result)) {

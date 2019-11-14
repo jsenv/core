@@ -6,8 +6,10 @@ import { executeConcurrently } from "./executeConcurrently.js"
 
 export const executePlan = async ({
   cancellationToken,
-  logger,
   compileServerLogLevel,
+  logger,
+  launchLogger,
+  executeLogger,
 
   projectDirectoryUrl,
   compileDirectoryUrl,
@@ -18,14 +20,16 @@ export const executePlan = async ({
   convertMap,
   compileGroupCount,
 
+  plan,
+  measurePlanExecutionDuration,
+  concurrencyLimit,
+  executionDefaultOptions,
+  logSummary,
+
   // coverage parameters
-  coverage = false,
-  coverageConfig = {},
-  coverageAndExecutionAllowed = false,
-
-  plan = {},
-
-  ...rest
+  coverage,
+  coverageConfig,
+  coverageAndExecutionAllowed,
 } = {}) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -97,13 +101,24 @@ export const executePlan = async ({
   const executionResult = await executeConcurrently(executionSteps, {
     cancellationToken,
     logger,
+    launchLogger,
+    executeLogger,
+
     compileServerOrigin,
     projectDirectoryUrl,
     compileDirectoryUrl,
     importMapFileRelativePath,
     importDefaultExtension,
     babelPluginMap,
-    ...rest,
+
+    measurePlanExecutionDuration,
+    concurrencyLimit,
+    executionDefaultOptions,
+    logSummary,
+
+    coverage,
+    coverageConfig,
+    coverageAndExecutionAllowed,
   })
 
   return executionResult

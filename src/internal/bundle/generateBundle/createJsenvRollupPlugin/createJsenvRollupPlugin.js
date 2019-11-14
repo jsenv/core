@@ -53,6 +53,7 @@ export const createJsenvRollupPlugin = async ({
   format,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
   entryPointMap,
+  sourcemapPreferLeadingSlash = true,
   logger,
 }) => {
   const arrayOfUrlToSkipTransform = []
@@ -256,10 +257,15 @@ ${importer}`)
             return `https://${originRelativePath.slice(`http:/`.length)}`
           }
 
-          const originRelativePath = `/${relativePath}`
-          return originRelativePath
+          if (sourcemapPreferLeadingSlash) {
+            const originRelativePath = `/${relativePath}`
+            return originRelativePath
+          }
+
+          return relativeSpecifier
         }
-        return url
+
+        return relativeSpecifier
       }
       return options
     },

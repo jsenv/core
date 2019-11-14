@@ -31,16 +31,14 @@ export const executeConcurrently = async (
     importDefaultExtension,
     babelPluginMap,
 
-    measurePlanExecutionDuration = false,
+    measurePlanExecutionDuration,
     concurrencyLimit = Math.max(cpus.length - 1, 1),
-    logSummary = true,
-
-    // coverage parameters
-    coverage = false,
-    coverageConfig,
-    coverageIncludeMissing = true,
-
     executionDefaultOptions = {},
+    logSummary,
+
+    coverage,
+    coverageConfig,
+    coverageIncludeMissing,
   },
 ) => {
   if (typeof compileServerOrigin !== "string") {
@@ -80,7 +78,7 @@ ${fileRelativePath}`),
   const report = {}
   await createConcurrentOperations({
     cancellationToken,
-    maxParallelExecution: concurrencyLimit,
+    concurrencyLimit,
     array: executionSteps,
     start: async (executionOptionsFromStep) => {
       const executionOptions = {
