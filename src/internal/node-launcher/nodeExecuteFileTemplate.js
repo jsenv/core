@@ -64,8 +64,8 @@ export const execute = async ({
           ? filePathToServerOrFileUrl(importer, { projectDirectoryUrl, compileServerOrigin })
           : fileServerUrl
         const specifierUrl = resolveFileUrl(specifier, importerUrl)
-        if (specifierUrl.startsWith(compileServerOrigin)) {
-          return `file://${specifierUrl.slice(compileServerOrigin.length)}`
+        if (specifierUrl.startsWith(`${compileServerOrigin}/`)) {
+          return `${projectDirectoryUrl}${specifierUrl.slice(`${compileServerOrigin}/`.length)}`
         }
         return specifierUrl
       }

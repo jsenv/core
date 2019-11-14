@@ -1,44 +1,48 @@
+import { basename } from "path"
+import { createLogger } from "@jsenv/logger"
 import { assert } from "@jsenv/assert"
-import { launchNode, launchNodeProjectPathname } from "../../index.js"
+import { launchNode, startCompileServer, launchAndExecute } from "../../../index.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
 import {
-  NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
-  NODE_LAUNCHER_TEST_LAUNCH_PARAM,
-  NODE_LAUNCHER_TEST_PARAM,
-} from "../node-launcher-test-param.js"
-import { selfHrefToFolderRelativePath } from "../self-href-to-folder-relative-path.js"
+  START_COMPILE_SERVER_TEST_PARAMS,
+  EXECUTE_TEST_PARAMS,
+  LAUNCH_TEST_PARAMS,
+} from "../TEST_PARAMS.js"
 
-const { startCompileServer } = import.meta.require("@jsenv/compile-server")
-const { launchAndExecute } = import.meta.require("@jsenv/execution")
-
-const folderRelativePath = selfHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/throw.js`
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryBasename = basename(testDirectoryRelativePath)
+const fileBasename = `${testDirectoryBasename}.js`
+const compileDirectoryUrl = resolveDirectoryUrl("./.dist/", import.meta.url)
+const fileRelativePath = `${testDirectoryRelativePath}${fileBasename}`
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  ...NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
-  compileIntoRelativePath,
+  ...START_COMPILE_SERVER_TEST_PARAMS,
+  compileDirectoryUrl,
 })
 
 const result = await launchAndExecute({
-  ...NODE_LAUNCHER_TEST_LAUNCH_PARAM,
-  // mirrorConsole: true,
+  ...EXECUTE_TEST_PARAMS,
+  // sets executeLogger to off to avoid seeing an expected error in logs
+  executeLogger: createLogger({ logLevel: "off" }),
   launch: (options) =>
     launchNode({
-      ...NODE_LAUNCHER_TEST_PARAM,
+      ...LAUNCH_TEST_PARAMS,
       ...options,
       compileServerOrigin,
-      compileIntoRelativePath,
+      compileDirectoryUrl,
     }),
   fileRelativePath,
 })
 
 const stack = result.error.stack
 const expected = `Error: error
-  at triggerError (file://${launchNodeProjectPathname}${folderRelativePath}/trigger-error.js:2:9)
-  at Object.triggerError (file://${launchNodeProjectPathname}${folderRelativePath}/throw.js:3:1)
-  at call (file://${launchNodeProjectPathname}/node_modules/@jsenv/compile-server/src/startCompileServer/s.js:358:34)
-  at doExec (file://${launchNodeProjectPathname}/node_modules/@jsenv/compile-server/src/startCompileServer/s.js:354:12)
-  at postOrderExec (file://${launchNodeProjectPathname}/node_modules/@jsenv/compile-server/src/startCompileServer/s.js:317:14)
-  at processTicksAndRejections (internal/process/task_queues.js:93:5)`
+  at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
+  at Object.triggerError (${testDirectoryUrl}error-stack.js:3:1)
+  at call (${jsenvCoreDirectoryUrl}src/internal/compile-server/platform-service/s.js:358:34)
+  at doExec (${jsenvCoreDirectoryUrl}src/internal/compile-server/platform-service/s.js:354:12)
+  at postOrderExec (${jsenvCoreDirectoryUrl}src/internal/compile-server/platform-service/s.js:317:14)
+  at processTicksAndRejections (internal/process/task_queues.js:`
 const actual = stack.slice(0, expected.length)
 assert({ actual, expected })
