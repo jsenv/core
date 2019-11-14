@@ -20,10 +20,10 @@ const bundle = await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativePath,
   entryPointMap: {
-    main: `${testDirectoryRelativePath}${mainFileBasename}`,
+    main: `./${testDirectoryRelativePath}${mainFileBasename}`,
   },
   importReplaceMap: {
-    [`${testDirectoryRelativePath}whatever.js`]: () => `export default 42`,
+    [`./${testDirectoryRelativePath}whatever.js`]: () => `export default 42`,
   },
 })
 
@@ -46,10 +46,7 @@ const bundle = await generateCommonJsBundle({
     const expected = {
       version: 3,
       file: "main.js",
-      sources: [
-        `${testDirectoryRelativePath.slice(1)}whatever.js`,
-        `${testDirectoryRelativePath.slice(1)}${mainFileBasename}`,
-      ],
+      sources: [`../../whatever.js`, `../../${mainFileBasename}`],
       sourcesContent: ["export default 42", actual.sourcesContent[1]],
       names: actual.names,
       mappings: actual.mappings,
