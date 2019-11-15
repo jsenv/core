@@ -4,7 +4,7 @@ import { composeTwoImportMaps } from "@jsenv/import-map"
 import {
   fileUrlToPath,
   resolveDirectoryUrl,
-  fileUrlToRelativePath,
+  urlToRelativePath,
   resolveFileUrl,
 } from "internal/urlUtils.js"
 import { readProjectImportMap } from "internal/readProjectImportMap/readProjectImportMap.js"
@@ -153,7 +153,7 @@ export const serveBundle = async ({
 const computeBundleDirectoryRelativePath = ({ projectDirectoryUrl, compiledFileRelativePath }) => {
   const compiledFileUrl = resolveFileUrl(compiledFileRelativePath, projectDirectoryUrl)
   const bundleDirectoryUrl = resolveDirectoryUrl("./", compiledFileUrl)
-  const bundleDirectoryRelativePath = fileUrlToRelativePath(bundleDirectoryUrl, projectDirectoryUrl)
+  const bundleDirectoryRelativePath = urlToRelativePath(bundleDirectoryUrl, projectDirectoryUrl)
   return bundleDirectoryRelativePath
 }
 

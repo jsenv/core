@@ -1,5 +1,5 @@
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { fileUrlToPath, fileUrlToRelativePath } from "internal/urlUtils.js"
+import { fileUrlToPath, urlToRelativePath } from "internal/urlUtils.js"
 import { jsenvTransform } from "./jsenvTransform.js"
 
 export const transformJs = async ({
@@ -107,7 +107,7 @@ const computeInputPath = (url) => {
 
 export const computeInputRelativePath = (url, projectDirectoryUrl) => {
   if (url.startsWith(projectDirectoryUrl)) {
-    return fileUrlToRelativePath(url, projectDirectoryUrl)
+    return urlToRelativePath(url, projectDirectoryUrl)
   }
   return undefined
 }

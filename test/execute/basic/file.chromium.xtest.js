@@ -1,11 +1,11 @@
 import { assert } from "@jsenv/assert"
 import { launchChromium } from "@jsenv/chromium-launcher"
-import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToRelativePath } from "src/internal/urlUtils.js"
 import { execute } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = fileUrlToRelativePath(
+const testDirectoryRelativePath = urlToRelativePath(
   testDirectoryUrl,
   EXECUTE_TEST_PARAMS.projectDirectoryUrl,
 )

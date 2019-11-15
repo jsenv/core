@@ -4,7 +4,7 @@ import { createLogger } from "@jsenv/logger"
 import {
   fileUrlToPath,
   resolveDirectoryUrl,
-  fileUrlToRelativePath,
+  urlToRelativePath,
   resolveFileUrl,
 } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
@@ -88,7 +88,7 @@ export const generateNodeBundle = async ({
 const computeBundleDirectoryRelativePath = ({ projectDirectoryUrl, compiledFileRelativePath }) => {
   const compiledFileUrl = resolveFileUrl(compiledFileRelativePath, projectDirectoryUrl)
   const bundleDirectoryUrl = resolveDirectoryUrl("./", compiledFileUrl)
-  const bundleDirectoryRelativePath = fileUrlToRelativePath(bundleDirectoryUrl, projectDirectoryUrl)
+  const bundleDirectoryRelativePath = urlToRelativePath(bundleDirectoryUrl, projectDirectoryUrl)
   return bundleDirectoryRelativePath
 }
 

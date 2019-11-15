@@ -1,6 +1,4 @@
-import global from "global"
-
-const { Math } = global
+const { Math } = window.globalThis
 
 const answer = Math.max(40, 42)
 console.log(answer)

@@ -1,7 +1,7 @@
 import { readFileSync } from "fs"
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { fileUrlToPath, fileUrlToRelativePath, resolveDirectoryUrl } from "src/internal/urlUtils.js"
+import { fileUrlToPath, urlToRelativePath, resolveDirectoryUrl } from "src/internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
 import { transformJs } from "src/internal/compile-server/js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "src/internal/compile-server/js-compilation-service/transformResultToCompilationResult.js"
@@ -11,7 +11,7 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryBasename = basename(testDirectoryUrl)
 const fileBasename = `${testDirectoryBasename}.js`
 const fileUrl = import.meta.resolve(`./${fileBasename}`)
-const fileRelativePath = fileUrlToRelativePath(fileUrl, jsenvCoreDirectoryUrl)
+const fileRelativePath = urlToRelativePath(fileUrl, jsenvCoreDirectoryUrl)
 const filePath = fileUrlToPath(fileUrl)
 const fileContent = readFileSync(filePath).toString()
 

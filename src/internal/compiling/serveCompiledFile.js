@@ -1,5 +1,5 @@
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server"
-import { fileUrlToRelativePath, pathToFileUrl } from "internal/urlUtils.js"
+import { urlToRelativePath, pathToFileUrl } from "internal/urlUtils.js"
 import { bufferToEtag } from "./compile-directory/bufferToEtag.js"
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
 
@@ -121,7 +121,7 @@ export const serveCompiledFile = async ({
     }
   } catch (error) {
     if (error && error.code === "PARSE_ERROR") {
-      const relativePath = fileUrlToRelativePath(
+      const relativePath = urlToRelativePath(
         pathToFileUrl(error.data.filename),
         projectDirectoryUrl,
       )

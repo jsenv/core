@@ -2,7 +2,7 @@ import { basename } from "path"
 import { startServer } from "@jsenv/server"
 import { assert } from "@jsenv/assert"
 import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
-import { resolveDirectoryUrl, fileUrlToRelativePath } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToRelativePath } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { generateCommonJsBundle } from "../../../index.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
@@ -12,7 +12,7 @@ import {
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
 const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/commonjs`
 const mainFileBasename = `${testDirectoryBasename}.js`

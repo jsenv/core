@@ -1,12 +1,12 @@
 import { assert } from "@jsenv/assert"
 import { launchChromium } from "@jsenv/chromium-launcher"
-import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToRelativePath } from "src/internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
 import { execute, convertCommonJsWithRollup } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
 const fileRelativePath = `${compileDirectoryRelativePath}file.js`
 

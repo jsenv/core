@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { hrefToPathname } from "@jsenv/href"
-import { fileUrlToRelativePath, resolveFileUrl } from "internal/urlUtils.js"
+import { urlToRelativePath, resolveFileUrl } from "internal/urlUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 
 export const transformResultToCompilationResult = (
@@ -40,7 +40,7 @@ export const transformResultToCompilationResult = (
       map.sources = map.sources.map((source) => {
         const url = resolveFileUrl(source, sourceUrl)
         if (url.startsWith(projectDirectoryUrl)) {
-          const sourceRelativePath = fileUrlToRelativePath(url, projectDirectoryUrl)
+          const sourceRelativePath = urlToRelativePath(url, projectDirectoryUrl)
           const sourceOriginRelative = `/${sourceRelativePath}`
           sources.push(sourceRelativePath)
           return sourceOriginRelative
@@ -100,7 +100,7 @@ export const transformResultToCompilationResult = (
 
 const sourceUrlToSourceMapSource = (sourceUrl, projectDirectoryUrl) => {
   if (sourceUrl.startsWith(projectDirectoryUrl)) {
-    return fileUrlToRelativePath(sourceUrl, projectDirectoryUrl)
+    return urlToRelativePath(sourceUrl, projectDirectoryUrl)
   }
   return sourceUrl
 }

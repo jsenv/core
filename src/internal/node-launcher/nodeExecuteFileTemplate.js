@@ -2,7 +2,7 @@ import {
   resolveFileUrl,
   fileUrlToPath,
   pathToFileUrl,
-  fileUrlToRelativePath,
+  urlToRelativePath,
 } from "internal/urlUtils.js"
 import { fetchUsingHttp } from "./fetchUsingHttp.js"
 import { createRequireFromFilePath } from "./createRequireFromFilePath.js"
@@ -36,7 +36,7 @@ export const execute = async ({
   const { SourceMapConsumer } = executionRequire("source-map")
   const { installNodeErrorStackRemapping } = executionRequire("@jsenv/error-stack-sourcemap")
 
-  const compileDirectoryRelativePath = fileUrlToRelativePath(
+  const compileDirectoryRelativePath = urlToRelativePath(
     compileDirectoryUrl,
     projectDirectoryUrl,
   )
@@ -100,7 +100,7 @@ export const execute = async ({
 const filePathToServerOrFileUrl = (filePath, { projectDirectoryUrl, compileServerOrigin }) => {
   const fileUrl = filePath.startsWith("file://") ? filePath : pathToFileUrl(filePath)
   if (fileUrl.startsWith(projectDirectoryUrl)) {
-    const fileRelativePath = fileUrlToRelativePath(fileUrl, projectDirectoryUrl)
+    const fileRelativePath = urlToRelativePath(fileUrl, projectDirectoryUrl)
     return `${compileServerOrigin}/${fileRelativePath}`
   }
   return fileUrl

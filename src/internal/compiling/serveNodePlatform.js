@@ -1,5 +1,5 @@
 import { serveFile } from "@jsenv/server"
-import { fileUrlToPath, resolveFileUrl, fileUrlToRelativePath } from "internal/urlUtils.js"
+import { fileUrlToPath, resolveFileUrl, urlToRelativePath } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { serveBundle } from "src/serveBundle.js"
 
@@ -20,7 +20,7 @@ export const serveNodePlatform = async ({
   const { ressource, method, headers } = request
 
   const relativePath = ressource.slice(1)
-  const compileDirectoryRelativePath = fileUrlToRelativePath(
+  const compileDirectoryRelativePath = urlToRelativePath(
     compileDirectoryUrl,
     projectDirectoryUrl,
   )
@@ -45,7 +45,7 @@ export const serveNodePlatform = async ({
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileRelativePath: fileUrlToRelativePath(nodePlatformFileUrl, projectDirectoryUrl),
+    originalFileRelativePath: urlToRelativePath(nodePlatformFileUrl, projectDirectoryUrl),
     compiledFileRelativePath: nodePlatformCompiledFileRelativePath,
     importDefaultExtension,
     importMapFileRelativePath,

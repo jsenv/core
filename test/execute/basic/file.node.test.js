@@ -1,11 +1,11 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, fileUrlToRelativePath } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToRelativePath } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { execute, launchNode } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
 const fileRelativePath = `${testDirectoryRelativePath}file.js`
 

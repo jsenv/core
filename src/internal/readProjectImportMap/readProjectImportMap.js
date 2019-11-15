@@ -1,6 +1,6 @@
 import { readFile } from "fs"
 import { composeTwoImportMaps } from "@jsenv/import-map"
-import { fileUrlToRelativePath, resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
+import { urlToRelativePath, resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 
 export const readProjectImportMap = async ({
@@ -26,7 +26,7 @@ export const readProjectImportMap = async ({
     : null
 
   const jsenvCoreImportKey = "@jsenv/core/"
-  const jsenvCoreRelativePathForJsenvProject = fileUrlToRelativePath(
+  const jsenvCoreRelativePathForJsenvProject = urlToRelativePath(
     jsenvCoreDirectoryUrl,
     jsenvProjectDirectoryUrl,
   )

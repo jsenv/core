@@ -1,6 +1,6 @@
 import { readFile } from "fs"
 import { urlToContentType } from "@jsenv/server"
-import { resolveFileUrl, pathToFileUrl, fileUrlToRelativePath } from "internal/urlUtils.js"
+import { resolveFileUrl, pathToFileUrl, urlToRelativePath } from "internal/urlUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
@@ -23,7 +23,7 @@ export const serveCompiledJs = async ({
   // it's an asset, it will be served by fileService
   if (relativePathIsAsset(relativePath)) return null
 
-  const compileDirectoryRelativePath = fileUrlToRelativePath(
+  const compileDirectoryRelativePath = urlToRelativePath(
     compileDirectoryUrl,
     projectDirectoryUrl,
   )

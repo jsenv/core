@@ -26,7 +26,7 @@ json file etag is used to invalidate the cache
 */
 
 import { readFileSync } from "fs"
-import { fileUrlToRelativePath, fileUrlToPath } from "internal/urlUtils.js"
+import { urlToRelativePath, fileUrlToPath } from "internal/urlUtils.js"
 import { writeOrUpdateSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 import { rollupIdToUrl } from "./generateBundle/createJsenvRollupPlugin/createJsenvRollupPlugin.js"
 
@@ -48,7 +48,7 @@ export const bundleToCompilationResult = (
       // do not track dependency outside project
       if (!moduleUrl.startsWith(projectDirectoryUrl)) return
 
-      const relativePath = fileUrlToRelativePath(moduleUrl, projectDirectoryUrl)
+      const relativePath = urlToRelativePath(moduleUrl, projectDirectoryUrl)
       if (!sources.includes(relativePath)) {
         sources.push(relativePath)
         sourcesContent.push(dependencyMap[moduleUrl].contentRaw)

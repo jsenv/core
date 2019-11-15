@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, fileUrlToRelativePath } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToRelativePath } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
 import { generateCommonJsBundle } from "../../../index.js"
@@ -9,7 +9,7 @@ import { GENERATE_COMMONJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
 const { SourceMapConsumer } = import.meta.require("source-map")
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
 const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/commonjs`
 const mainFileBasename = `${testDirectoryBasename}.js`
