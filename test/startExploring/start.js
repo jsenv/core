@@ -1,19 +1,18 @@
-import { exploringServerProjectPath } from "../src/exploring-server-project.js"
-import { startExploringServer } from "../index.js"
-import { fileHrefToFolderRelativePath } from "./file-href-to-folder-relative-path.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { startExploring } from "../../index.js"
+import { START_EXPLORING_TEST_PARAMS } from "./TEST_PARAMS.js"
 
-const projectPath = exploringServerProjectPath
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
 
-startExploringServer({
-  projectPath,
-  compileIntoRelativePath,
-  browserSelfExecuteTemplateRelativePath: "/src/browser-self-execute-template.js",
-  HTMLTemplateRelativePath: "/test/template.html",
-  explorableMap: {
-    [`${folderRelativePath}/**/*.main.js`]: true,
-    [`${folderRelativePath}/**/.dist/**`]: false,
+startExploring({
+  ...START_EXPLORING_TEST_PARAMS,
+  compileDirectoryRelativePath,
+  explorableConfig: {
+    [`./${testDirectoryRelativePath}**/*.main.js`]: true,
+    [`./${testDirectoryRelativePath}**/.dist/**`]: false,
   },
   protocol: "https",
   port: 3400,

@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, resolveFileUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "../../../index.js"
+import { resolveDirectoryUrl, resolveFileUrl, fileUrlToRelativePath } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 import { fetch } from "../fetch.js"
 

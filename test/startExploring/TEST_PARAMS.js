@@ -1,13 +1,12 @@
-import { exploringServerProjectPath } from "../src/exploring-server-project.js"
-import { testBabelPluginMap } from "./test-babel-plugin-map.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
-export const EXPLORING_SERVER_TEST_PARAM = {
-  projectPath: exploringServerProjectPath,
-  babelPluginMap: testBabelPluginMap,
-  HTMLTemplateRelativePath: "/src/template.html",
-  browserSelfExecuteTemplateRelativePath: "/src/browser-self-execute-template.js",
+export const START_EXPLORING_TEST_PARAMS = {
   logLevel: "off",
   compileServerLogLevel: "off",
+  projectDirectoryPath: jsenvCoreDirectoryUrl,
+  compileDirectoryClean: true,
+  HTMLTemplateFileUrl: import.meta.resolve("./template.htnl"),
+  babelPluginMap: testBabelPluginMap,
   keepProcessAlive: false,
-  cleanCompileInto: true,
 }

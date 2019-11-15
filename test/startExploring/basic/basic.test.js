@@ -1,18 +1,21 @@
-import { assert } from "@dmail/assert"
-import { startExploringServer } from "../../index.js"
-import { fileHrefToFolderRelativePath } from "../file-href-to-folder-relative-path.js"
-import { openBrowserPage } from "../open-browser-page.js"
-import { EXPLORING_SERVER_TEST_PARAM } from "../exploring-server-test-param.js"
+import { assert } from "@jsenv/assert"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { startExploring } from "../../../index.js"
+import { openBrowserPage } from "../openBrowserPage.js"
+import { START_EXPLORING_TEST_PARAMS } from "../TEST_PARAMS.js"
 
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/basic.main.js`
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = fileUrlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
+const fileRelativePath = `${testDirectoryRelativePath}basic.main.js`
 
-const { origin: browserExplorerServerOrigin } = await startExploringServer({
-  ...EXPLORING_SERVER_TEST_PARAM,
-  compileIntoRelativePath,
+const { origin: browserExplorerServerOrigin } = await startExploring({
+  ...START_EXPLORING_TEST_PARAMS,
+  compileDirectoryRelativePath,
 })
 const { browser, page } = await openBrowserPage(`${browserExplorerServerOrigin}${fileRelativePath}`)
 const actual = await page.title()
-assert({ actual, expected: `browser client index` })
+const expected = `browser client index`
+assert({ actual, expected })
 browser.close()
