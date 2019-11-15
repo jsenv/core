@@ -12,7 +12,7 @@ export const generateCommonJsBundle = async ({
     bundleDirectoryRelativePath,
     node,
     balancerTemplateFileUrl: resolveFileUrl(
-      "./src/internal/bundle/commonjs-balancer-template.js",
+      "./src/internal/bundling/commonjs-balancer-template.js",
       jsenvCoreDirectoryUrl,
     ),
     balancerDataAbstractSpecifier: "/.jsenv/commonjs-balancer-data.js",

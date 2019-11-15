@@ -1,10 +1,10 @@
 import { basename } from "path"
 import { startServer } from "@jsenv/server"
 import { assert } from "@jsenv/assert"
+import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { generateCommonJsBundle } from "../../../index.js"
-import { bundleToCompilationResult } from "src/internal/bundle/bundleToCompilationResult.js"
-import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
   GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,

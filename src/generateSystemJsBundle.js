@@ -9,7 +9,7 @@ export const generateSystemJsBundle = async ({
   generateBundle({
     format: "systemjs",
     balancerTemplateFileUrl: resolveFileUrl(
-      "./src/internal/bundle/systemjs-balancer-template.js",
+      "./src/internal/bundling/systemjs-balancer-template.js",
       jsenvCoreDirectoryUrl,
     ),
     balancerDataAbstractSpecifier: "/.jsenv/systemjs-balancer-data.js",

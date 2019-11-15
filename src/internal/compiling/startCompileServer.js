@@ -60,11 +60,11 @@ export const startCompileServer = async ({
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
   platformAlwaysInsidePlatformScoreMap = false,
   browserPlatformFileUrl = resolveFileUrl(
-    "./src/internal/compile-server/platform-service/createBrowserPlatform/index.js",
+    "./src/internal/compiling/platform-service/createBrowserPlatform/index.js",
     jsenvCoreDirectoryUrl,
   ),
   nodePlatformFileUrl = resolveFileUrl(
-    "./src/internal/compile-server/platform-service/createNodePlatform/index.js",
+    "./src/internal/compiling/platform-service/createNodePlatform/index.js",
     jsenvCoreDirectoryUrl,
   ),
 }) => {
