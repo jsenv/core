@@ -4,12 +4,12 @@ import {
   createCancellationTokenForProcessSIGINT,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, resolveDirectoryUrl } from "./internal/urlUtils.js"
-import { executePlan } from "./internal/test-execution/executePlan.js"
-import { executionIsPassed } from "./internal/test-execution/executionIsPassed.js"
-import { generateCoverageJsonFile } from "./internal/coverage/generateCoverageJsonFile.js"
-import { generateCoverageHtmlDirectory } from "./internal/coverage/generateCoverageHtmlDirectory.js"
-import { generateCoverageTextLog } from "./internal/coverage/generateCoverageTextLog.js"
+import { pathToDirectoryUrl, resolveDirectoryUrl } from "internal/urlUtils.js"
+import { executePlan } from "internal/executing/executePlan.js"
+import { executionIsPassed } from "internal/executing/executionIsPassed.js"
+import { generateCoverageJsonFile } from "internal/executing/coverage/generateCoverageJsonFile.js"
+import { generateCoverageHtmlDirectory } from "internal/executing/coverage/generateCoverageHtmlDirectory.js"
+import { generateCoverageTextLog } from "internal/executing/coverage/generateCoverageTextLog.js"
 
 export const executeTestPlan = async ({
   cancellationToken = createCancellationTokenForProcessSIGINT(),

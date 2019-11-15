@@ -2,8 +2,6 @@
 // and not be exported anymore
 export { computeBabelPluginMapForPlatform } from "./src/computeBabelPluginMapForPlatform.js"
 export { computeJsenvPluginMapForPlatform } from "./src/computeJsenvPluginMapForPlatform.js"
-export { launchAndExecute } from "./src/launchAndExecute.js"
-export { startCompileServer } from "./src/startCompileServer.js"
 
 export { convertCommonJsWithBabel } from "./src/convertCommonJsWithBabel.js"
 export { convertCommonJsWithRollup } from "./src/convertCommonJsWithRollup.js"

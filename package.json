@@ -26,7 +26,8 @@
     "./": "./"
   },
   "imports": {
-    "src/": "./src/"
+    "src/": "./src/",
+    "internal/": "./src/internal/"
   },
   "scripts": {
     "test": "node ./script/test/test.js",

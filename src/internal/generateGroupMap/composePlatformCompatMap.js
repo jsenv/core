@@ -1,4 +1,4 @@
-import { findHighestVersion } from "../semantic-versioning/index.js"
+import { findHighestVersion } from "internal/semantic-versioning/index.js"
 
 export const composePlatformCompatMap = (platformCompatMap, secondPlatformCompatMap) => {
   return objectComposeValue(

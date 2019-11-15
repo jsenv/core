@@ -1,4 +1,9 @@
-import { resolveFileUrl, fileUrlToPath, pathToFileUrl, fileUrlToRelativePath } from "../urlUtils.js"
+import {
+  resolveFileUrl,
+  fileUrlToPath,
+  pathToFileUrl,
+  fileUrlToRelativePath,
+} from "internal/urlUtils.js"
 import { fetchUsingHttp } from "./fetchUsingHttp.js"
 import { createRequireFromFilePath } from "./createRequireFromFilePath.js"
 

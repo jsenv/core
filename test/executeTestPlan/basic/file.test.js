@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, fileUrlToRelativePath } from "src/internal/urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
+import { resolveDirectoryUrl, fileUrlToRelativePath } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { executeTestPlan, launchNode } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 

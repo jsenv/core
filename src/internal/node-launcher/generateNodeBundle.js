@@ -1,17 +1,17 @@
 import { extname, basename, relative } from "path"
 import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
 import { createLogger } from "@jsenv/logger"
-import { generateCommonJsBundleForNode } from "../../generateCommonJsBundleForNode.js"
-import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import {
   fileUrlToPath,
   resolveDirectoryUrl,
   fileUrlToRelativePath,
   resolveFileUrl,
-} from "../urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { getOrGenerateCompiledFile } from "../compile-server/compile-directory/getOrGenerateCompiledFile.js"
-import { bundleToCompilationResult } from "../bundle/bundleToCompilationResult.js"
+} from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { getOrGenerateCompiledFile } from "internal/compiling/compile-directory/getOrGenerateCompiledFile.js"
+import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
+import { generateCommonJsBundleForNode } from "src/generateCommonJsBundleForNode.js"
+import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
 
 export const generateNodeBundle = async ({
   projectDirectoryUrl,

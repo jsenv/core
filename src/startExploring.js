@@ -12,12 +12,12 @@ import {
   resolveDirectoryUrl,
   fileUrlToPath,
   pathToDirectoryUrl,
-} from "./internal/urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
-import { assertFile } from "./internal/filesystem-assertions.js"
-import { serveExploringIndex } from "./internal/exploring/serveExploringIndex.js"
-import { serveBrowserSelfExecute } from "./internal/exploring/serveBrowserSelfExecute.js"
-import { startCompileServer } from "./startCompileServer.js"
+} from "internal/urlUtils.js"
+import { assertFile } from "internal/filesystemUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { serveExploringIndex } from "internal/exploring/serveExploringIndex.js"
+import { serveBrowserSelfExecute } from "internal/exploring/serveBrowserSelfExecute.js"
+import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
 export const startExploring = async ({

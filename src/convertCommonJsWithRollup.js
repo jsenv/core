@@ -1,4 +1,4 @@
-import { fileUrlToPath } from "./internal/urlUtils.js"
+import { fileUrlToPath } from "internal/urlUtils.js"
 
 const commonjs = import.meta.require("rollup-plugin-commonjs")
 const nodeResolve = import.meta.require("rollup-plugin-node-resolve")

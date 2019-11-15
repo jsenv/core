@@ -6,11 +6,11 @@ import {
   resolveDirectoryUrl,
   fileUrlToRelativePath,
   resolveFileUrl,
-} from "./internal/urlUtils.js"
-import { readProjectImportMap } from "./internal/readProjectImportMap/readProjectImportMap.js"
-import { generateBundle } from "./internal/bundle/generateBundle/generateBundle.js"
-import { bundleToCompilationResult } from "./internal/bundle/bundleToCompilationResult.js"
-import { serveCompiledFile } from "./internal/compile-server/serveCompiledFile.js"
+} from "internal/urlUtils.js"
+import { readProjectImportMap } from "internal/readProjectImportMap/readProjectImportMap.js"
+import { generateBundle } from "internal/bundling/generateBundle/generateBundle.js"
+import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
+import { serveCompiledFile } from "internal/compiling/serveCompiledFile.js"
 
 export const serveBundle = async ({
   logger,

@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/no-unresolved
 import { fileRelativePath, livereloading } from "/.jsenv/browser-self-execute-static-data.js"
-import { loadUsingScript } from "../loadUsingScript.js"
-import { fetchUsingXHR } from "../fetchUsingXHR.js"
+import { loadUsingScript } from "internal/loadUsingScript.js"
+import { fetchUsingXHR } from "internal/fetchUsingXHR.js"
 
 const { EventSource, location } = window
 // eslint-disable-next-line import/newline-after-import

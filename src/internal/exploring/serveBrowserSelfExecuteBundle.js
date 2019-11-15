@@ -1,8 +1,8 @@
 // import { basename } from "path"
 import { serveFile, urlToSearchParamValue } from "@jsenv/server"
-import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
-import { fileUrlToRelativePath, resolveFileUrl } from "../urlUtils.js"
-import { serveBundle } from "../../serveBundle.js"
+import { fileUrlToRelativePath, resolveFileUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { serveBundle } from "src/serveBundle.js"
 
 const BROWSER_SELF_EXECUTE_RELATIVE_PATH = ".jsenv/browser-self-execute.js"
 

@@ -3,9 +3,9 @@ import {
   catchAsyncFunctionCancellation,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, resolveDirectoryUrl } from "./internal/urlUtils.js"
-import { launchAndExecute } from "./launchAndExecute.js"
-import { startCompileServer } from "./startCompileServer.js"
+import { pathToDirectoryUrl, resolveDirectoryUrl } from "internal/urlUtils.js"
+import { startCompileServer } from "internal/compiling/startCompileServer.js"
+import { launchAndExecute } from "internal/executing/launchAndExecute.js"
 
 export const execute = async ({
   logLevel = "off",
