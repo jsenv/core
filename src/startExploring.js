@@ -240,6 +240,7 @@ export const startExploring = async ({
 
     const compileServer = await startCompileServer({
       cancellationToken,
+      logLevel: compileServerLogLevel,
       projectDirectoryUrl,
       compileDirectoryUrl,
       compileDirectoryClean,
@@ -255,7 +256,6 @@ export const startExploring = async ({
       ip,
       port: 0, // random available port
       forcePort: false, // no need because random port
-      logLevel: compileServerLogLevel,
       projectFileRequestedCallback,
       stopOnPackageVersionChange: true,
     })
@@ -274,12 +274,13 @@ export const startExploring = async ({
             request,
           })
         },
-        () =>
-          serveExploringIndex({
+        () => {
+          return serveExploringIndex({
             projectDirectoryUrl,
             explorableConfig,
             request,
-          }),
+          })
+        },
         () => {
           const relativePath = request.ressource.slice(1)
           const requestFileUrl = `${projectDirectoryUrl}${relativePath}`
@@ -299,8 +300,8 @@ export const startExploring = async ({
             headers: request.headers,
           })
         },
-        () =>
-          serveBrowserSelfExecute({
+        () => {
+          return serveBrowserSelfExecute({
             logger,
             compileServerOrigin,
             projectDirectoryUrl,
@@ -311,7 +312,8 @@ export const startExploring = async ({
             babelPluginMap,
             request,
             livereloading,
-          }),
+          })
+        },
         () => {
           const requestServerUrl = `${request.origin}${request.ressource}`
           const relativePath = urlToRelativePath(requestServerUrl)

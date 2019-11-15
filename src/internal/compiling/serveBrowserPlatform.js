@@ -1,6 +1,6 @@
 import { serveFile } from "@jsenv/server"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { fileUrlToPath, resolveFileUrl, fileUrlToRelativePath } from "internal/urlUtils.js"
+import { urlToRelativePath } from "internal/urlUtils.js"
 import { serveBundle } from "src/serveBundle.js"
 
 const BROWSER_PLATFORM_RELATIVE_PATH = `.jsenv/browser-platform.js`
@@ -17,26 +17,21 @@ export const serveBrowserPlatform = async ({
   projectFileRequestedCallback,
   request,
 }) => {
-  const { ressource, method, headers } = request
+  const { origin, ressource, method, headers } = request
 
-  const relativePath = ressource.slice(1)
-  const compileDirectoryRelativePath = fileUrlToRelativePath(
-    compileDirectoryUrl,
-    projectDirectoryUrl,
-  )
-  const browserPlatformCompiledFileRelativePath = `${compileDirectoryRelativePath}${BROWSER_PLATFORM_RELATIVE_PATH}`
-  const browserPlatformAssetDirectoryRelativePath = `${browserPlatformCompiledFileRelativePath}__asset__/`
+  const compileDirectoryRelativePath = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
+  const requestUrl = `${origin}${ressource}`
+  const browserPlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativePath}${BROWSER_PLATFORM_RELATIVE_PATH}`
+  const browserPlatformAssetDirectoryServerUrl = `${browserPlatformCompiledFileServerUrl}__asset__/`
 
-  if (relativePath.startsWith(browserPlatformAssetDirectoryRelativePath)) {
-    const fileUrl = resolveFileUrl(relativePath, compileDirectoryUrl)
-    const filePath = fileUrlToPath(fileUrl)
-    return serveFile(filePath, {
+  if (requestUrl.startsWith(browserPlatformAssetDirectoryServerUrl)) {
+    return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
       method,
       headers,
     })
   }
 
-  if (!relativePath.startsWith(browserPlatformCompiledFileRelativePath)) {
+  if (!requestUrl.startsWith(browserPlatformCompiledFileServerUrl)) {
     return null
   }
 
@@ -45,8 +40,8 @@ export const serveBrowserPlatform = async ({
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileRelativePath: fileUrlToRelativePath(browserPlatformFileUrl, projectDirectoryUrl),
-    compiledFileRelativePath: browserPlatformCompiledFileRelativePath,
+    originalFileRelativePath: urlToRelativePath(browserPlatformFileUrl, projectDirectoryUrl),
+    compiledFileRelativePath: urlToRelativePath(browserPlatformCompiledFileServerUrl, `${origin}/`),
     importMapFileRelativePath,
     importDefaultExtension,
     importReplaceMap: {
