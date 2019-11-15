@@ -3,8 +3,6 @@ import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { urlToRelativePath } from "internal/urlUtils.js"
 import { serveBundle } from "src/serveBundle.js"
 
-const BROWSER_PLATFORM_RELATIVE_PATH = `.jsenv/browser-platform.js`
-
 export const serveBrowserPlatform = async ({
   logger,
   projectDirectoryUrl,
@@ -21,7 +19,7 @@ export const serveBrowserPlatform = async ({
 
   const compileDirectoryRelativePath = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
   const requestUrl = `${origin}${ressource}`
-  const browserPlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativePath}${BROWSER_PLATFORM_RELATIVE_PATH}`
+  const browserPlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativePath}.jsenv/browser-platform.js`
   const browserPlatformAssetDirectoryServerUrl = `${browserPlatformCompiledFileServerUrl}__asset__/`
 
   if (requestUrl.startsWith(browserPlatformAssetDirectoryServerUrl)) {

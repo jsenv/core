@@ -1,9 +1,7 @@
 import { serveFile } from "@jsenv/server"
-import { fileUrlToPath, resolveFileUrl, urlToRelativePath } from "internal/urlUtils.js"
+import { urlToRelativePath } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { serveBundle } from "src/serveBundle.js"
-
-const NODE_PLATFORM_RELATIVE_PATH = `.jsenv/node-platform.js`
 
 export const serveNodePlatform = async ({
   logger,
@@ -17,26 +15,20 @@ export const serveNodePlatform = async ({
   projectFileRequestedCallback,
   request,
 }) => {
-  const { ressource, method, headers } = request
+  const { origin, ressource, method, headers } = request
+  const compileDirectoryRelativePath = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
+  const requestUrl = `${origin}${ressource}`
+  const nodePlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativePath}.jsenv/node-platform.js`
+  const nodePlatformAssetDirectoryServerUrl = `${nodePlatformCompiledFileServerUrl}__asset__/`
 
-  const relativePath = ressource.slice(1)
-  const compileDirectoryRelativePath = urlToRelativePath(
-    compileDirectoryUrl,
-    projectDirectoryUrl,
-  )
-  const nodePlatformCompiledFileRelativePath = `${compileDirectoryRelativePath}${NODE_PLATFORM_RELATIVE_PATH}`
-  const nodePlatformAssetDirectoryRelativePath = `${nodePlatformCompiledFileRelativePath}__asset__/`
-
-  if (relativePath.startsWith(nodePlatformAssetDirectoryRelativePath)) {
-    const fileUrl = resolveFileUrl(relativePath, projectDirectoryUrl)
-    const filePath = fileUrlToPath(fileUrl)
-    return serveFile(filePath, {
+  if (requestUrl.startsWith(nodePlatformAssetDirectoryServerUrl)) {
+    return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
       method,
       headers,
     })
   }
 
-  if (!relativePath.startsWith(nodePlatformCompiledFileRelativePath)) {
+  if (!requestUrl.startsWith(nodePlatformCompiledFileServerUrl)) {
     return null
   }
 
@@ -46,7 +38,7 @@ export const serveNodePlatform = async ({
     projectDirectoryUrl,
     compileDirectoryUrl,
     originalFileRelativePath: urlToRelativePath(nodePlatformFileUrl, projectDirectoryUrl),
-    compiledFileRelativePath: nodePlatformCompiledFileRelativePath,
+    compiledFileRelativePath: urlToRelativePath(nodePlatformCompiledFileServerUrl, `${origin}/`),
     importDefaultExtension,
     importMapFileRelativePath,
     importReplaceMap: {
