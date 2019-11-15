@@ -89,7 +89,7 @@
     "@jsenv/href": "1.2.0",
     "@jsenv/import-map": "6.6.0",
     "@jsenv/logger": "3.1.0",
-    "@jsenv/node-module-import-map": "8.4.1",
+    "@jsenv/node-module-import-map": "8.5.0",
     "@jsenv/operating-system-path": "3.1.0",
     "@jsenv/server": "1.2.0",
     "@jsenv/uneval": "1.1.0",
