@@ -114,22 +114,10 @@ npm install
 
 ### 2 - Generate bundles
 
-This project has preconfigured 3 files that will generate bundles. You can generate them with the commands below:
+This project has preconfigured 3 files that will generate bundles.
 
-- [./basic-project/dist/systemjs/main.js](./basic-project/dist/systemjs/main.js)
+[./basic-project/generate-systemjs-bundle.js](./basic-project/generate-systemjs-bundle.js) generates [./basic-project/dist/systemjs/main.js](./basic-project/dist/systemjs/main.js) file.
 
-  ```console
-  node ./generate-systemjs-bundle.js
-  ```
+[./basic-project/generate-global-bundle.js](./basic-project/generate-global-bundle.js) generates [./basic-project/dist/global/main.js](./basic-project/dist/global/main.js) file.
 
-* [./basic-project/dist/global/main.js](./basic-project/dist/global/main.js)
-
-  ```console
-  node ./generate-global-bundle.js
-  ```
-
-- [./basic-project/dist/commonjs/main.js](./basic-project/dist/commonjs/main.js)
-
-  ```console
-  node ./generate-commonjs-bundle.js
-  ```
+[./basic-project/generate-commonjs-bundle.js](./basic-project/generate-commonjs-bundle.js) generates [./basic-project/dist/commonjs/main.js](./basic-project/dist/commonjs/main.js) file.
