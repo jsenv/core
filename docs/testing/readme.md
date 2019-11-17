@@ -2,7 +2,7 @@
 
 - [Test presentation](#Test-presentation)
 - [Test execution recorded](#Test-execution-recorded)
-- [Test concrete example](#concrete-example)
+- [Test concrete example](#Test-concrete-example)
   - [1 - Setup basic project](#1---setup-basic-project)
   - [2 - Execute tests](#2---execute-tests)
   - [3 - Generate test coverage](#3---generate-test-coverage)
@@ -25,14 +25,17 @@ A test runs your code to ensure it works as expected.
 Test are putting you in the shoes of someone using your code. In that perspective they document how to use your code and the variety of scenarios your code supports.<br />
 Finally test helps to prevent accidentally breaking in the future what is working today.
 
-Jsenv provides an api to execute your test files inside one or many environments. It means you can execute a given test file inside chromium and Node.js as long as code inside test file can executes in both.<br />
+Jsenv provides an api to execute your test files inside one or many environments. It means you can execute a given test file inside chromium and Node.js as long as code inside test file can executes in both.
 
 ## Test execution recorded
 
-![test terminal recording](./test-terminal-recording.gif)
+![test terminal recording](./test-terminal-recording.gif)<br />
 Gif generated from [./test-terminal-recording.mp4](./test-terminal-recording.mp4). To run this on your machine, check [Concrete example](#Concrete-example) section.
 
-## Concrete example
+## Test concrete example
+
+This part helps you to setup a project on your machine to play with jsenv testing.<br />
+You can also reuse the project file structure to understand how to integrate jsenv to write and run your own project tests.
 
 ### 1 - Setup basic project
 
@@ -72,10 +75,10 @@ The gif below shows how you can explore your test coverage by opening `coverage/
 
 #### coverage/coverage.json
 
-It is your test plan coverage in JSON format. This format was created by [istanbul](https://github.com/gotwarlost/istanbul) and can be given to coverage tools.
+It is your test plan coverage in JSON format. This format was created by [istanbul](https://github.com/gotwarlost/istanbul), a JS code coverage tool written in JS.
 
 This file exists to be provided to some code coverage tool.
-For instance you might want to send `coverage.json` to codecov.io inside during continuous integration workflow.<br />
+For instance you might want to send `coverage.json` to codecov.io inside continuous integration workflow.<br />
 — see [uploading coverage to codecov.io](./uploading-coverage-to-codecov.md)
 
 ## Test execution
@@ -88,9 +91,9 @@ It also allows to execute files concurrently increasing speed on machine with mu
 
 Currently jsenv provides 3 possible test execution environments, called `platforms`:
 
-- A chromium browser
-- A chromium browser tab
-- A node process
+- A chromium browser by test
+- A chromium browser tab by test
+- A node process by test
 
 ### How test is executed
 
@@ -123,6 +126,7 @@ await new Promise(() => {})
 ```
 
 Note: By default an execution is given 30s before being considered as a timeout.
+Check [executionDefaultOptions documentation](./api.md#executionDefaultOptions) to know how to configure this value.
 
 ### Execution disconnection
 
@@ -184,6 +188,7 @@ If jsenv executed that code, platform would be stopped after `execution end` log
 ## Test api example
 
 The following code uses `@jsenv/core` to execute every files ending with `test.js` inside a project directory.
+To integrate it properly in your own project, take inspiration from the [basic project](./basic-project) files.
 
 ```js
 const { executeTestPlan, launchNode } = require("@jsenv/core")
