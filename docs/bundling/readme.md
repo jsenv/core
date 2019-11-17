@@ -44,7 +44,7 @@ Things to know about bundle using systemjs format:
 - compatible with dynamic import
 - compatible with top level await
 
-Systemjs bundle generated for the [file structure](#File-structure)
+Here is the generated bundle using systemjs format for the [file structure](#File-structure)
 
 ```js
 System.register([], function(exports) {
@@ -80,7 +80,7 @@ Things to know about bundle using global format:
 - not compatible with dynamic import
 - not compatible with top level await
 
-Global bundle generated for the [file structure](#File-structure)
+Here is the generated bundle using global format for the [file structure](#File-structure)
 
 ```js
 var __whatever__ = (function() {
@@ -107,7 +107,7 @@ Things to know about bundle using commonjs format:
 - runs in a Node.js environment
 - not compatible with top level await
 
-commonjs bundle generated for the [file structure](#File-structure)
+Here is the generated bundle using commonjs format for the [file structure](#File-structure)
 
 ```js
 module.exports = 42
