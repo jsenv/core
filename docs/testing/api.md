@@ -16,16 +16,12 @@
   - [executionDefaultOptions](#executionDefaultOptions)
   - [concurrencyLimit](#concurrencyLimit)
   - [measurePlanExecutionDuration](#measurePlanExecutionDuration)
+  - [coverage](#coverage)
   - [Shared parameters](#shared-parameters)
 - [Return value](#return-value)
   - [testPlanSummary](#testPlanSummary)
   - [testPlanReport](#testPlanReport)
   - [testPlanCoverageMap](#testPlanCoverageMap)
-- [One execution = One platform](#One-execution--one-platform)
-- [Execution error](#Execution-error)
-- [Execution timeout](#Execution-timeout)
-- [Execution disconnection](#Execution-disconnection)
-- [Execution completion](#Execution-completion)
 
 # Example
 
@@ -230,6 +226,10 @@ This parameter is optional with a default value of `false`.
 When true, `startMs`, `endMs` properties are available on [testPlanSummary](#testPlanSummary).<br />
 When true, a log will indicates test plan duration.
 
+## coverage
+
+TODO and all coverage params
+
 ## Shared parameters
 
 To avoid duplication some parameter are linked to a generic documentation.
@@ -343,58 +343,3 @@ Returns an object like this one:
   }
 }
 ```
-
-## One execution = one platform
-
-Each test file will be executed in his own browser or node.js process.
-
-It reduces chances that a file execution have a side effect on an other file execution.
-For instance executing code with an infinite loop crashes browser or node.js process. In that scenario that file would not prevent other file executions.
-
-It also allows to execute files concurrently increasing speed on machine with mutiple processors.
-
-## Execution error
-
-Any value thrown during file execution sets execution status to errored and test is considered as failed.<br />
-See below code that would trigger this scenario:
-
-```js
-throw new Error("here")
-```
-
-## Execution timeout
-
-File execution taking longer than an allocated amout of milliseconds sets execution status to timedout and test is considered as failed.<br />
-See below code that would trigger this scenario:
-
-```js
-await new Promise(() => {})
-```
-
-Note: By default an execution is given 30s before being considered as a timeout.
-
-## Execution disconnection
-
-Platform disconnected during file execution sets execution status to disconnected and test is considered as failed.<br />
-See below code that would trigger this scenario:
-
-```js
-while (true) {}
-```
-
-Note: This code might either crash the platform (browser or node.js) resulting in disconnected or just timeout.
-
-### Execution completion
-
-When none of the aboves scenario occurs, execution status is success and test is considered as completed.s
-See below code that would trigger this scenario:
-
-```js
-const actual = 10 + 10
-const expected = 20
-if (actual !== expected) {
-  throw new Error(`10 + 10 should be 20`)
-}
-```
-
-Note: An empty file is a completed test.
