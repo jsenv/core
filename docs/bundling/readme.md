@@ -1,8 +1,8 @@
 ## Table of contents
 
 - [Presentation](#Presentation)
-- [Global format](#global-format)
 - [Systemjs format](#systemjs-format)
+- [Global format](#global-format)
 - [Commonjs format](#commonjs-format)
 - [Code example](#code-example)
 - [Concrete example](#concrete-example)
@@ -11,31 +11,29 @@
 
 ## Presentation
 
-A bundle is the concatenation of many files into one.
+A bundle is the concatenation of an entry file and its dependencies into one file.
 
 They are used to save http requests if your production servers are not compatible with http2 multiplexing (or not configured for it).
 They also provide a dedicated build time where you can perform changes or optimization production specific like minifying files.
 
-Jsenv uses [rollup](https://github.com/rollup/rollup) to provide functions generating bundle of various formats. Each format shines in different situations explained later in this document.
+Jsenv uses [rollup](https://github.com/rollup/rollup) to provide functions generating bundle of various formats.
+Each format shines in different situations explained later in this document.
+Each section shows what bundle would be generated for the following file structure:
 
-## Global format
+### File structure
 
-Things to know about bundle using global format:
+index.js
 
-- runs in a browser environment
-- needs collision free global variable
-- not compatible with dynamic import
-- not compatible with top level await
+```js
+import value from "./dependency.js"
 
-For example [./basic-project/index.js](./basic-project/index.js) is bundled to [./basic-project/dist/global/main.js](./basic-project/dist/global/main.js).
+export default value
+```
 
-That global bundle could be used by
+dependency.js
 
-```html
-<script src="./dist/global/main.js"></script>
-<script>
-  console.log(window.__whatever__)
-</script>
+```js
+export default 42
 ```
 
 ## Systemjs format
@@ -46,9 +44,23 @@ Things to know about bundle using systemjs format:
 - compatible with dynamic import
 - compatible with top level await
 
-For example [./basic-project/index.js](./basic-project/index.js) is bundled to [./basic-project/dist/systemjs/main.js](./basic-project/dist/systemjs/main.js).
+Systemjs bundle generated for the [file structure](#File-structure)
 
-That systemjs bundle could be used by
+```js
+System.register([], function(exports) {
+  return {
+    execute: function() {
+      exports("default", 42)
+    },
+  }
+})
+//# sourceMappingURL=main.js.map
+```
+
+Systemjs bundle put files content into a System.register call. This format was invented by systemjs to polyfill module feature like top level await.<br />
+— see [System.register documentation on github](https://github.com/systemjs/systemjs/blob/762f46db81b55e48891b42e7a97af374478e9cf7/docs/system-register.md)
+
+This systemjs bundle can be used by loading systemjs library and importing the bundle file.
 
 ```html
 <script src="https://unpkg.com/systemjs@6.1.4/dist/system.js"></script>
@@ -59,6 +71,35 @@ That systemjs bundle could be used by
 </script>
 ```
 
+## Global format
+
+Things to know about bundle using global format:
+
+- runs in a browser environment
+- needs a global variable
+- not compatible with dynamic import
+- not compatible with top level await
+
+Global bundle generated for the [file structure](#File-structure)
+
+```js
+var __whatever__ = (function() {
+  return 42
+})()
+//# sourceMappingURL=./main.js.map
+```
+
+Global bundle put files content into a function executable in old browsers writing exports on `window.__whatever__`.
+
+This global bundle can be used with a classic script tag.
+
+```html
+<script src="./dist/global/main.js"></script>
+<script>
+  console.log(window.__whatever__)
+</script>
+```
+
 ## Commonjs format
 
 Things to know about bundle using commonjs format:
@@ -66,14 +107,22 @@ Things to know about bundle using commonjs format:
 - runs in a Node.js environment
 - not compatible with top level await
 
-For example [./basic-project/index.js](./basic-project/index.js) is bundled to [./basic-project/dist/commonjs/main.js](./basic-project/dist/commonjs/main.js).
-
-That commonjs bundle could be used by
+commonjs bundle generated for the [file structure](#File-structure)
 
 ```js
-const exports = require("./dist/commonjs/main.js")
+module.exports = 42
+//# sourceMappingURL=main.js.map
+```
 
-console.log(exports)
+Commonjs bundle put files content into a file executable in Node.js writing exports on `module.exports`.<br />
+— see [Modules documentation on node.js](https://nodejs.org/docs/latest-v12.x/api/modules.html)
+
+This commonjs bundle can be used by require.
+
+```js
+const namespace = require("./dist/commonjs/main.js")
+
+console.log(namespace)
 ```
 
 ### Code example
@@ -96,12 +145,13 @@ If you want to know more about this function and others check [api documentation
 
 ## Concrete example
 
-This part explains how to quickly setup a real environment where you can generate different bundles.
+This part explains how to quickly setup a real environment where you can generate different bundles.<br />
+You can also reuse the project file structure to understand how to integrate jsenv to generate your bundles.
 
 ### 1 - Setup basic project
 
 ```console
-git clone git@github.com:jsenv/jsenv-core.git
+git clone https://github.com/jsenv/jsenv-core.git
 ```
 
 ```console
@@ -114,10 +164,16 @@ npm install
 
 ### 2 - Generate bundles
 
-This project has preconfigured 3 files that will generate bundles.
+This project contains 3 files that will generate bundle when executed.
 
-[./basic-project/generate-systemjs-bundle.js](./basic-project/generate-systemjs-bundle.js) generates [./basic-project/dist/systemjs/main.js](./basic-project/dist/systemjs/main.js) file.
+To generate a bundle you can execute the corresponding file with node.
 
-[./basic-project/generate-global-bundle.js](./basic-project/generate-global-bundle.js) generates [./basic-project/dist/global/main.js](./basic-project/dist/global/main.js) file.
+```console
+node ./generate-systemjs-bundle.js
+```
 
-[./basic-project/generate-commonjs-bundle.js](./basic-project/generate-commonjs-bundle.js) generates [./basic-project/dist/commonjs/main.js](./basic-project/dist/commonjs/main.js) file.
+Or you can use the preconfigured script from package.json.
+
+```console
+npm run generate-systemjs-bundle
+```
