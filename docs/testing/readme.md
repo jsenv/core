@@ -30,7 +30,7 @@ Jsenv provides an api to execute your test files inside one or many environments
 ## Test execution recorded
 
 ![test terminal recording](./test-terminal-recording.gif)<br />
-Gif generated from [./test-terminal-recording.mp4](./test-terminal-recording.mp4). To run this on your machine, check [Concrete example](#Concrete-example) section.
+— gif generated from [./test-terminal-recording.mp4](./test-terminal-recording.mp4)
 
 ## Test concrete example
 
@@ -57,7 +57,7 @@ npm install
 node ./execute-test-plan.js
 ```
 
-It will execute all your tests as shown in [Recorded example](#Recorded-example)
+It will execute all your tests as shown in [Test execution recorded](#Test-execution-recorded)
 
 ### 3 - Generate test coverage
 
@@ -71,13 +71,12 @@ It will execute tests and generate `./coverage/` directory with files correspond
 
 The gif below shows how you can explore your test coverage by opening `coverage/index.html` in your browser.
 
-![browsing coverage recording](./coverage-browsing-recording.gif)
+![browsing coverage recording](./coverage-browsing-recording.gif)<br />
+— gif generated from [./coverage-browsing-recording.mp4](./coverage-browsing-recording.mp4)
 
 #### coverage/coverage.json
 
-It is your test plan coverage in JSON format. This format was created by [istanbul](https://github.com/gotwarlost/istanbul), a JS code coverage tool written in JS.
-
-This file exists to be provided to some code coverage tool.
+It is your test plan coverage in JSON format. This format was created by [istanbul](https://github.com/gotwarlost/istanbul), a JS code coverage tool written in JS. This file exists to be provided to some code coverage tool.
 For instance you might want to send `coverage.json` to codecov.io inside continuous integration workflow.<br />
 — see [uploading coverage to codecov.io](./uploading-coverage-to-codecov.md)
 
@@ -136,7 +135,11 @@ Platform disconnected during file execution sets execution status to disconnecte
 while (true) {}
 ```
 
-Note: This code might either crash the platform resulting in disconnected execution or never completes nor throw resulting in a timedout execution.
+Note: There is, fortunately, no way to crash a browser during execution so this code might either crash the platform or result in a timeout. Inside node however you could write code resulting in a disconnected execution.
+
+```js
+process.exit()
+```
 
 ### Execution completion
 
