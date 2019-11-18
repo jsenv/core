@@ -39,7 +39,7 @@ export const createJsenvRollupPlugin = async ({
   cancellationToken,
   projectDirectoryUrl,
   bundleDirectoryUrl,
-  importMapFileRelativePath,
+  importMapFileUrl,
   importMapForBundle,
   importDefaultExtension,
   importReplaceMap,
@@ -68,11 +68,13 @@ export const createJsenvRollupPlugin = async ({
     babelPluginRequiredNameArray,
   })
 
+  const projectImportMapUrl = resolveFileUrl("./importMap.json", projectDirectoryUrl)
+
   const importMapForProject = await readProjectImportMap({
     logger,
     projectDirectoryUrl,
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
-    importMapFileRelativePath,
+    importMapFileUrl,
   })
   const importMap = normalizeImportMap(
     [
@@ -81,12 +83,17 @@ export const createJsenvRollupPlugin = async ({
         rootProjectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
         logger,
       }),
-      ...(importMapFileRelativePath === "./importMap.json"
+      // someone set the importMap.json path to something else than the default.
+      // but we want to provide a reliable way to get the project importmap file
+      // so we redirect any ./importMap.json to the custom value we received.
+      // this feature is not yet used it's just to be able to get the project import map
+      // if we need it one day
+      ...(importMapFileUrl === projectImportMapUrl
         ? []
         : [
             {
               imports: {
-                "/importMap.json": importMapFileRelativePath,
+                "./importMap.json": importMapFileUrl,
               },
             },
           ]),
@@ -98,7 +105,7 @@ export const createJsenvRollupPlugin = async ({
 
   importFallbackMap = {
     // importMap is optionnal
-    "/importMap.json": () => `{}`,
+    "./importMap.json": () => `{}`,
     ...importFallbackMap,
   }
   importFallbackMap = resolveSpecifierMap(importFallbackMap, {

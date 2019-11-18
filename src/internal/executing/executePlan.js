@@ -14,7 +14,7 @@ export const executePlan = async ({
   projectDirectoryUrl,
   compileDirectoryUrl,
   compileDirectoryClean,
-  importMapFileRelativePath,
+  importMapFileUrl,
   importDefaultExtension,
   babelPluginMap,
   convertMap,
@@ -29,31 +29,9 @@ export const executePlan = async ({
   // coverage parameters
   coverage,
   coverageConfig,
-  coverageAndExecutionAllowed,
+  coverageIncludeMissing,
 } = {}) => {
-  if (typeof projectDirectoryUrl !== "string") {
-    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
-  }
-  if (typeof compileDirectoryUrl !== "string") {
-    throw new TypeError(`compileDirectoryUrl must be a string, got ${compileDirectoryUrl}`)
-  }
-
   if (coverage) {
-    if (typeof coverageConfig !== "object") {
-      throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`)
-    }
-    if (Object.keys(coverageConfig).length === 0) {
-      logger.warn(
-        `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
-      )
-    }
-    if (!coverageAndExecutionAllowed) {
-      ensureNoFileWillBeBothCoveredAndExecuted({
-        coverageConfig,
-        plan,
-      })
-    }
-
     const specifierMetaMapForCover = normalizeSpecifierMetaMap(
       metaMapToSpecifierMetaMap({
         cover: coverageConfig,
@@ -90,7 +68,7 @@ export const executePlan = async ({
       projectDirectoryUrl,
       compileDirectoryUrl,
       compileDirectoryClean,
-      importMapFileRelativePath,
+      importMapFileUrl,
       importDefaultExtension,
       compileGroupCount,
       babelPluginMap,
@@ -107,7 +85,7 @@ export const executePlan = async ({
     compileServerOrigin,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    importMapFileRelativePath,
+    importMapFileUrl,
     importDefaultExtension,
     babelPluginMap,
 
@@ -118,41 +96,8 @@ export const executePlan = async ({
 
     coverage,
     coverageConfig,
-    coverageAndExecutionAllowed,
+    coverageIncludeMissing,
   })
 
   return executionResult
-}
-
-const ensureNoFileWillBeBothCoveredAndExecuted = ({ plan, coverageConfig }) => {
-  const fileSpecifierMapForExecute = normalizeSpecifierMetaMap(
-    metaMapToSpecifierMetaMap({
-      execute: plan,
-    }),
-    "file:///",
-  )
-
-  const fileSpecifierMapForCover = normalizeSpecifierMetaMap(
-    metaMapToSpecifierMetaMap({
-      cover: coverageConfig,
-    }),
-    "file:///",
-  )
-
-  const fileSpecifierMatchingCoverAndExecuteArray = Object.keys(fileSpecifierMapForExecute).filter(
-    (fileUrl) => {
-      return urlToMeta({
-        url: fileUrl,
-        specifierMetaMap: fileSpecifierMapForCover,
-      }).cover
-    },
-  )
-
-  if (fileSpecifierMatchingCoverAndExecuteArray.length) {
-    // I think it is an error, it would be strange, for a given file
-    // to be both covered and executed
-    throw new Error(`some file will be both covered and executed
---- specifiers ---
-${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
-  }
 }

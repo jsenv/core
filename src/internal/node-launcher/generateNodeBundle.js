@@ -15,7 +15,7 @@ import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
 
 export const generateNodeBundle = async ({
   projectDirectoryUrl,
-  importMapFileRelativePath,
+  importMapFileUrl,
   importDefaultExtension,
   originalFileRelativePath,
   compiledFileRelativePath,
@@ -54,7 +54,7 @@ export const generateNodeBundle = async ({
           compiledFileRelativePath,
         }),
         importDefaultExtension,
-        importMapFileRelativePath,
+        importMapFileUrl,
         importMapForBundle: jsenvNodeLauncherImportMap,
         entryPointMap,
         babelPluginMap,

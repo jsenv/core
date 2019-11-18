@@ -20,7 +20,7 @@ export const serveBundle = async ({
   compiledFileRelativePath,
   sourcemapRelativePath = computeSourcemapRelativePath(compiledFileRelativePath),
   importDefaultExtension,
-  importMapFileRelativePath,
+  importMapFileUrl,
   importMapForBundle = {},
   importReplaceMap = {},
   projectFileRequestedCallback,
@@ -93,7 +93,7 @@ export const serveBundle = async ({
           logger,
           projectDirectoryUrl,
           jsenvProjectDirectoryUrl,
-          importMapFileRelativePath,
+          importMapFileUrl,
         })
         return JSON.stringify(importMap)
       },
@@ -109,7 +109,7 @@ export const serveBundle = async ({
         compiledFileRelativePath,
       }),
       importDefaultExtension,
-      importMapFileRelativePath,
+      importMapFileRelativePath: urlToRelativePath(importMapFileUrl, projectDirectoryUrl),
       importMapForBundle,
       importReplaceMap,
       entryPointMap,

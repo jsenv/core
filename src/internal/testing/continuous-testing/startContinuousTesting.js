@@ -9,7 +9,12 @@ import {
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { hrefToOrigin, hrefToPathname } from "@jsenv/href"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, fileUrlToPath, resolveDirectoryUrl } from "internal/urlUtils.js"
+import { fileUrlToPath } from "internal/urlUtils.js"
+import {
+  resolveProjectDirectoryUrl,
+  resolveImportMapFileUrl,
+  resolveCompileDirectorUrl,
+} from "internal/argUtils.js"
 import { generateExecutionSteps } from "internal/executing/generateExecutionSteps.js"
 import { executeConcurrently } from "internal/executing/executeConcurrently.js"
 import { startCompileServerForExecutingPlan } from "internal/executing/startCompileServerForExecutingPlan.js"
@@ -46,17 +51,18 @@ export const startContinuousTesting = async ({
   measureTotalDuration = false,
   collectNamespace = false,
   systemNotification = true,
-}) =>
-  catchAsyncFunctionCancellation(async () => {
-    const logger = createLogger({ logLevel })
+}) => {
+  const cancellationToken = createCancellationTokenForProcessSIGINT()
+  const logger = createLogger({ logLevel })
+  const projectDirectoryUrl = resolveProjectDirectoryUrl(projectDirectoryPath)
+  projectDirectoryPath = fileUrlToPath(projectDirectoryUrl)
+  const importMapFileUrl = resolveImportMapFileUrl({ importMapFileRelativePath })
+  const compileDirectoryUrl = resolveCompileDirectorUrl(
+    compileDirectoryRelativePath,
+    projectDirectoryUrl,
+  )
 
-    const cancellationToken = createCancellationTokenForProcessSIGINT()
-    const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
-    projectDirectoryPath = fileUrlToPath(projectDirectoryUrl)
-    const compileDirectoryUrl = resolveDirectoryUrl(
-      compileDirectoryRelativePath,
-      projectDirectoryUrl,
-    )
+  return catchAsyncFunctionCancellation(async () => {
     const unregisterProjectDirectoryLifecycle = registerDirectoryLifecycle(projectDirectoryPath, {
       watchDescription: {
         ...watchDescription,
@@ -182,7 +188,7 @@ export const startContinuousTesting = async ({
       projectDirectoryUrl,
       compileDirectoryUrl,
       compileDirectoryClean,
-      importMapFileRelativePath,
+      importMapFileUrl,
       importDefaultExtension,
       compileGroupCount,
       babelPluginMap,
@@ -242,7 +248,7 @@ export const startContinuousTesting = async ({
             compileServerOrigin,
             projectDirectoryUrl,
             compileDirectoryUrl,
-            importMapFileRelativePath,
+            importMapFileUrl,
             importDefaultExtension,
             maxParallelExecution,
             defaultAllocatedMsPerExecution,
@@ -341,7 +347,7 @@ export const startContinuousTesting = async ({
       compileServerOrigin,
       projectDirectoryUrl,
       compileDirectoryUrl,
-      importMapFileRelativePath,
+      importMapFileUrl,
       importDefaultExtension,
       maxParallelExecution,
       defaultAllocatedMsPerExecution,
@@ -375,6 +381,7 @@ export const startContinuousTesting = async ({
     }
     await getNextTestingResult(actionRequiredPromise)
   })
+}
 
 const checkActionRequiredResolution = ({
   projectDirectoryUrl,

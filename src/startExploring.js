@@ -8,12 +8,20 @@ import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/serv
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
 import {
-  resolveFileUrl,
-  resolveDirectoryUrl,
-  fileUrlToPath,
   pathToDirectoryUrl,
+  resolveDirectoryUrl,
+  resolveFileUrl,
+  fileUrlToPath,
 } from "internal/urlUtils.js"
-import { assertFile } from "internal/filesystemUtils.js"
+import { assertFileExists } from "internal/filesystemUtils.js"
+import {
+  assertProjectDirectoryPath,
+  assertProjectDirectoryExists,
+  assertImportMapFileRelativePath,
+  assertImportMapFileInsideProject,
+  assertCompileDirectoryRelativePath,
+  assertCompileDirectoryInsideProject,
+} from "internal/argUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { serveExploringIndex } from "internal/exploring/serveExploringIndex.js"
 import { serveBrowserSelfExecute } from "internal/exploring/serveBrowserSelfExecute.js"
@@ -21,6 +29,7 @@ import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
 export const startExploring = async ({
+  cancellationToken = createCancellationTokenForProcessSIGINT(),
   logLevel,
   compileServerLogLevel = logLevel,
 
@@ -57,40 +66,28 @@ export const startExploring = async ({
   certificate,
   privateKey,
 }) => {
-  if (typeof projectDirectoryPath !== "string") {
-    throw new Error(`projectDirectoryPath must be a string, got ${projectDirectoryPath}`)
-  }
-  if (typeof importMapFileRelativePath !== "string") {
-    throw new Error(`importMapFileRelativePath must be a string, got ${importMapFileRelativePath}`)
-  }
-
+  assertProjectDirectoryPath({ projectDirectoryPath })
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
-  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativePath, projectDirectoryUrl)
-  // TODO: pass importMapFileUrl to internal functions instead of importMapFileRelativePath
-  // and apply this pattern everywhere to everything that is relative
-  // and also ensure the relative path is actually relative
-  // maybe an helper like resolveImportMapFileUrl(relativePath, projectDirectoryUrl),
-  // resolveCompileDirectoryUrl to share logic and keep nice error message
+  await assertProjectDirectoryExists({ projectDirectoryUrl })
+
+  assertImportMapFileRelativePath({ importMapFileRelativePath })
   const importMapFileUrl = resolveFileUrl(importMapFileRelativePath, projectDirectoryUrl)
-  if (!importMapFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`importMapFile must be inside project directory
---- import map file url ---
-${importMapFileUrl}
---- project directory url ---
-${projectDirectoryUrl}
---- importMapFileRelativePath ---
-${importMapFileRelativePath}`)
-  }
+  assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
+
+  assertCompileDirectoryRelativePath({ compileDirectoryRelativePath })
+  const compileDirectoryUrl = resolveDirectoryUrl({
+    compileDirectoryRelativePath,
+    projectDirectoryUrl,
+  })
+  assertCompileDirectoryInsideProject({ compileDirectoryUrl, projectDirectoryUrl })
 
   const HTMLTemplateFilePath = fileUrlToPath(HTMLTemplateFileUrl)
-  await assertFile(HTMLTemplateFilePath)
+  await assertFileExists(HTMLTemplateFilePath)
 
   const browserSelfExecuteTemplateFilePath = fileUrlToPath(browserSelfExecuteTemplateFileUrl)
-  await assertFile(browserSelfExecuteTemplateFilePath)
+  await assertFileExists(browserSelfExecuteTemplateFilePath)
 
   return catchAsyncFunctionCancellation(async () => {
-    const cancellationToken = createCancellationTokenForProcessSIGINT()
-
     const specifierMetaMapRelativeForExplorable = metaMapToSpecifierMetaMap({
       explorable: explorableConfig,
     })
@@ -263,7 +260,7 @@ ${importMapFileRelativePath}`)
       projectDirectoryUrl,
       compileDirectoryUrl,
       compileDirectoryClean,
-      importMapFileRelativePath,
+      importMapFileUrl,
       importDefaultExtension,
       compileGroupCount,
       babelPluginMap,
@@ -325,7 +322,7 @@ ${importMapFileRelativePath}`)
             compileServerOrigin,
             projectDirectoryUrl,
             compileDirectoryUrl,
-            importMapFileRelativePath,
+            importMapFileUrl,
             importDefaultExtension,
             browserSelfExecuteTemplateFileUrl,
             babelPluginMap,

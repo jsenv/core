@@ -7,7 +7,7 @@ export const serveBrowserSelfExecute = ({
   compileServerOrigin,
   projectDirectoryUrl,
   compileDirectoryUrl,
-  importMapFileRelativePath,
+  importMapFileUrl,
   importDefaultExtension,
   browserSelfExecuteTemplateFileUrl,
   babelPluginMap,
@@ -15,10 +15,7 @@ export const serveBrowserSelfExecute = ({
   livereloading,
   logger,
 }) => {
-  const compileDirectoryRelativePath = urlToRelativePath(
-    compileDirectoryUrl,
-    projectDirectoryUrl,
-  )
+  const compileDirectoryRelativePath = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
   const browserSelfExecuteDirectoryRelativePath = `${compileDirectoryRelativePath}.jsenv/browser-self-execute/`
 
   return firstService(
@@ -66,7 +63,7 @@ export const serveBrowserSelfExecute = ({
           logger,
           projectDirectoryUrl,
           compileDirectoryUrl,
-          importMapFileRelativePath,
+          importMapFileUrl,
           importDefaultExtension,
           browserSelfExecuteTemplateFileUrl,
           babelPluginMap,
@@ -118,17 +115,14 @@ const serveBrowserSelfExecuteBundle = async ({
   projectDirectoryUrl,
   compileDirectoryUrl,
   browserSelfExecuteTemplateFileUrl,
-  importMapFileRelativePath,
+  importMapFileUrl,
   importDefaultExtension,
   babelPluginMap,
   request,
   fileRelativePath,
   livereloading,
 }) => {
-  const compileDirectoryRelativePath = urlToRelativePath(
-    compileDirectoryUrl,
-    projectDirectoryUrl,
-  )
+  const compileDirectoryRelativePath = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
   return serveBundle({
     logger,
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
@@ -140,7 +134,7 @@ const serveBrowserSelfExecuteBundle = async ({
     ),
     compiledFileRelativePath: request.ressource.slice(1),
     importDefaultExtension,
-    importMapFileRelativePath,
+    importMapFileUrl,
     importReplaceMap: {
       "/.jsenv/browser-self-execute-static-data.js": () =>
         generateBrowserSelfExecuteStaticDataSource({

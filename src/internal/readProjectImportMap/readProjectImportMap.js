@@ -1,13 +1,13 @@
 import { readFile } from "fs"
 import { composeTwoImportMaps } from "@jsenv/import-map"
-import { urlToRelativePath, resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
+import { urlToRelativePath, fileUrlToPath } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 
 export const readProjectImportMap = async ({
   logger,
   projectDirectoryUrl,
   jsenvProjectDirectoryUrl,
-  importMapFileRelativePath,
+  importMapFileUrl,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -18,11 +18,8 @@ export const readProjectImportMap = async ({
     )
   }
 
-  const importMapForProject = importMapFileRelativePath
-    ? await getProjectImportMap({
-        projectDirectoryUrl,
-        importMapFileRelativePath,
-      })
+  const importMapForProject = importMapFileUrl
+    ? await getProjectImportMap({ importMapFileUrl })
     : null
 
   const jsenvCoreImportKey = "@jsenv/core/"
@@ -87,8 +84,7 @@ const generateJsenvCoreScopes = ({ importMapForProject, importsForJsenvCore }) =
   return scopesForJsenvCore
 }
 
-const getProjectImportMap = async ({ projectDirectoryUrl, importMapFileRelativePath }) => {
-  const importMapFileUrl = resolveFileUrl(importMapFileRelativePath, projectDirectoryUrl)
+const getProjectImportMap = async ({ importMapFileUrl }) => {
   const importMapFilePath = fileUrlToPath(importMapFileUrl)
 
   return new Promise((resolve, reject) => {

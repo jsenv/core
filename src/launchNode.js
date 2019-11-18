@@ -3,7 +3,7 @@ import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { fileUrlToPath, urlToRelativePath, resolveFileUrl } from "internal/urlUtils.js"
-import { assertFile } from "internal/filesystemUtils.js"
+import { assertFileExists } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
 import { evalSource } from "internal/node-launcher/evalSource.js"
@@ -19,7 +19,7 @@ export const launchNode = async ({
   compileServerOrigin,
   projectDirectoryUrl,
   compileDirectoryUrl,
-  importMapFileRelativePath,
+  importMapFileUrl,
   importDefaultExtension,
   nodeControllableFileUrl = resolveFileUrl(
     "./src/internal/node-launcher/nodeControllableFile.js",
@@ -68,10 +68,10 @@ export const launchNode = async ({
   env.COVERAGE_ENABLED = cover
 
   const nodeControllableFilePath = fileUrlToPath(nodeControllableFileUrl)
-  await assertFile(nodeControllableFilePath)
+  await assertFileExists(nodeControllableFilePath)
 
   const nodeExecuteTemplateFilePath = fileUrlToPath(nodeExecuteTemplateFileUrl)
-  await assertFile(nodeExecuteTemplateFilePath)
+  await assertFileExists(nodeExecuteTemplateFilePath)
 
   const child = forkChildProcess(nodeControllableFilePath, {
     execArgv,
@@ -171,8 +171,8 @@ export const launchNode = async ({
         // still that's something we want to see when passing logLevel to debug
         // for now that is ok
         projectDirectoryUrl,
+        importMapFileUrl,
         importDefaultExtension,
-        importMapFileRelativePath,
         originalFileRelativePath: urlToRelativePath(
           nodeExecuteTemplateFileUrl,
           projectDirectoryUrl,

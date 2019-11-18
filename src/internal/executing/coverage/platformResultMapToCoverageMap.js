@@ -1,4 +1,4 @@
-import { coverageMapCompose } from "./coverageMapCompose.js"
+import { composeCoverageMap } from "./composeCoverageMap.js"
 
 export const platformResultMapToCoverageMap = (platformResultMap) => {
   const coverageMapList = []
@@ -14,5 +14,5 @@ export const platformResultMapToCoverageMap = (platformResultMap) => {
     })
   })
 
-  return coverageMapCompose(...coverageMapList)
+  return composeCoverageMap(...coverageMapList)
 }

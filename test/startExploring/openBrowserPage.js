@@ -1,4 +1,4 @@
-import { coverageMapCompose } from "internal/executing/coverage/coverageMapCompose.js"
+import { composeCoverageMap } from "internal/executing/coverage/composeCoverageMap.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
@@ -11,7 +11,7 @@ export const openBrowserPage = async (url) => {
     const coverageMap = await page.evaluate(`(() => {
   return window.__coverage__
 })()`)
-    global.__coverage__ = coverageMapCompose(global.__coverage__ || {}, coverageMap || {})
+    global.__coverage__ = composeCoverageMap(global.__coverage__ || {}, coverageMap || {})
   }
 
   return { browser, page }

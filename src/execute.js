@@ -3,25 +3,28 @@ import {
   catchAsyncFunctionCancellation,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, resolveDirectoryUrl } from "internal/urlUtils.js"
+import {
+  resolveProjectDirectoryUrl,
+  resolveCompileDirectorUrl,
+  resolveImportMapFileUrl,
+} from "internal/argUtils.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "internal/executing/launchAndExecute.js"
 
 export const execute = async ({
+  cancellationToken = createCancellationTokenForProcessSIGINT(),
   logLevel = "off",
   compileServerLogLevel = logLevel,
   launchLogLevel = logLevel,
   executeLogLevel = logLevel,
 
-  fileRelativePath,
-  launch,
   projectDirectoryPath,
   compileDirectoryRelativePath = "./.dist",
   compileDirectoryClean,
   importMapFileRelativePath = "./importMap.json",
   importDefaultExtension,
-  browserPlatformFileUrl,
-  nodePlatformFileUrl,
+  fileRelativePath,
+  launch,
   babelPluginMap,
   convertMap,
 
@@ -36,45 +39,38 @@ export const execute = async ({
   collectCoverage = false,
   inheritCoverage = false,
 }) => {
-  if (typeof projectDirectoryPath !== "string") {
-    throw new TypeError(`projectDirectoryPath must be a string, got ${projectDirectoryPath}`)
-  }
-  if (typeof compileDirectoryRelativePath !== "string") {
-    throw new TypeError(
-      `compileDirectoryRelativePath must be a string, got ${compileDirectoryRelativePath}`,
-    )
-  }
+  const launchLogger = createLogger({ logLevel: launchLogLevel })
+  const executeLogger = createLogger({ logLevel: executeLogLevel })
+
+  const projectDirectoryUrl = resolveProjectDirectoryUrl({ projectDirectoryPath })
+  const compileDirectoryUrl = resolveCompileDirectorUrl({
+    compileDirectoryRelativePath,
+    projectDirectoryUrl,
+  })
+  const importMapFileUrl = resolveImportMapFileUrl({
+    projectDirectoryUrl,
+    importMapFileRelativePath,
+  })
   if (typeof fileRelativePath !== "string") {
     throw new TypeError(`fileRelativePath must be a string, got ${fileRelativePath}`)
   }
+  fileRelativePath = fileRelativePath.replace(/\\/g, "/")
   if (typeof launch !== "function") {
     throw new TypeError(`launch must be a function, got ${launch}`)
   }
 
-  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
-  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativePath, projectDirectoryUrl)
-
-  fileRelativePath = fileRelativePath.replace(/\\/g, "/")
-
-  const launchLogger = createLogger({ logLevel: launchLogLevel })
-  const executeLogger = createLogger({ logLevel: executeLogLevel })
-
   return catchAsyncFunctionCancellation(async () => {
-    const cancellationToken = createCancellationTokenForProcessSIGINT()
-
     const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
       logLevel: compileServerLogLevel,
+
       projectDirectoryUrl,
       compileDirectoryUrl,
       compileDirectoryClean,
-      importMapFileRelativePath,
+      importMapFileUrl,
       importDefaultExtension,
       babelPluginMap,
       convertMap,
-      browserPlatformFileUrl,
-      nodePlatformFileUrl,
-
       compileGroupCount,
 
       protocol,

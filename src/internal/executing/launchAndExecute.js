@@ -6,7 +6,7 @@ import {
   composeCancellationToken,
   errorToCancelReason,
 } from "@jsenv/cancellation"
-import { coverageMapCompose } from "./coverage/coverageMapCompose.js"
+import { composeCoverageMap } from "./coverage/composeCoverageMap.js"
 
 const TIMING_BEFORE_EXECUTION = "before-execution"
 const TIMING_DURING_EXECUTION = "during-execution"
@@ -119,7 +119,7 @@ export const launchAndExecute = async ({
         const { coverageMap, ...rest } = executionResult
         // ensure the coverage of the launched stuff
         // is accounted as coverage for this
-        global.__coverage__ = coverageMapCompose(global.__coverage__ || {}, coverageMap || {})
+        global.__coverage__ = composeCoverageMap(global.__coverage__ || {}, coverageMap || {})
         return savedCollectCoverage ? executionResult : rest
       },
     )

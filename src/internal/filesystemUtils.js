@@ -1,6 +1,7 @@
 import { dirname } from "path"
 import { promisify } from "util"
 import { mkdir, readFile, writeFile, stat } from "fs"
+import { fileUrlToPath } from "./urlUtils.js"
 
 const rimraf = import.meta.require("rimraf")
 
@@ -46,35 +47,31 @@ export const removeDirectory = (path) =>
     }),
   )
 
-export const assertFolder = async (path) => {
-  const filesystemEntry = await pathToFilesystemEntry(path)
+export const assertDirectoryExists = async (fileUrl) => {
+  const directoryPath = fileUrlToPath(fileUrl)
+  const filesystemEntry = await pathToFilesystemEntry(directoryPath)
 
   if (!filesystemEntry) {
-    throw new Error(`folder not found on filesystem.
-  path: ${path}`)
+    throw new Error(`directory not found at ${directoryPath}`)
   }
 
   const { type } = filesystemEntry
   if (type !== "folder") {
-    throw new Error(`folder expected but found something else on filesystem.
-  path: ${path}
-  found: ${type}`)
+    throw new Error(`directory expected at ${directoryPath} but found ${type}`)
   }
 }
 
-export const assertFile = async (path) => {
-  const filesystemEntry = await pathToFilesystemEntry(path)
+export const assertFileExists = async (fileUrl) => {
+  const filePath = fileUrlToPath(fileUrl)
+  const filesystemEntry = await pathToFilesystemEntry(filePath)
 
   if (!filesystemEntry) {
-    throw new Error(`file not found on filesystem.
-  path: ${path}`)
+    throw new Error(`file not found at ${filePath}`)
   }
 
   const { type } = filesystemEntry
   if (type !== "file") {
-    throw new Error(`file expected but found something else on filesystem.
-  path: ${path}
-  found: ${type}`)
+    throw new Error(`file expected at ${filePath} but found ${type}`)
   }
 }
 

@@ -7,7 +7,7 @@ export const serveBrowserPlatform = async ({
   logger,
   projectDirectoryUrl,
   compileDirectoryUrl,
-  importMapFileRelativePath,
+  importMapFileUrl,
   importDefaultExtension,
   browserPlatformFileUrl,
   babelPluginMap,
@@ -40,7 +40,7 @@ export const serveBrowserPlatform = async ({
     compileDirectoryUrl,
     originalFileRelativePath: urlToRelativePath(browserPlatformFileUrl, projectDirectoryUrl),
     compiledFileRelativePath: urlToRelativePath(browserPlatformCompiledFileServerUrl, `${origin}/`),
-    importMapFileRelativePath,
+    importMapFileUrl,
     importDefaultExtension,
     importReplaceMap: {
       "/.jsenv/browser-platform-data.js": () =>

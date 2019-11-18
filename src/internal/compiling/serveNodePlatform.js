@@ -7,7 +7,7 @@ export const serveNodePlatform = async ({
   logger,
   projectDirectoryUrl,
   compileDirectoryUrl,
-  importMapFileRelativePath,
+  importMapFileUrl,
   importDefaultExtension,
   nodePlatformFileUrl,
   babelPluginMap,
@@ -40,7 +40,7 @@ export const serveNodePlatform = async ({
     originalFileRelativePath: urlToRelativePath(nodePlatformFileUrl, projectDirectoryUrl),
     compiledFileRelativePath: urlToRelativePath(nodePlatformCompiledFileServerUrl, `${origin}/`),
     importDefaultExtension,
-    importMapFileRelativePath,
+    importMapFileUrl,
     importReplaceMap: {
       "/.jsenv/node-platform-data.js": () =>
         generateNodePlatformDataSource({
