@@ -12,7 +12,7 @@ const { launchAndExecute } = import.meta.require("@jsenv/execution")
 
 const folderRelativePath = selfHrefToFolderRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/disconnect-later.js`
+const fileRelativeUrl = `${folderRelativePath}/disconnect-later.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
   ...NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
@@ -29,7 +29,7 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       compileIntoRelativePath,
     }),
-  fileRelativePath,
+  fileRelativeUrl,
   collectNamespace: false,
   disconnectCallback: (param) => {
     disconnectCallbackParam = param

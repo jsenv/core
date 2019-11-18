@@ -3,9 +3,9 @@
 - [projectDirectoryPath](#projectDirectoryPath)
 - [babelPluginMap](#babelPluginMap)
 - [convertMap](#convertMap)
-- [importMapFileRelativePath](#importMapFileRelativePath)
+- [importMapFileRelativeUrl](#importMapFileRelativeUrl)
 - [importDefaultExtension](#importDefaultExtension)
-- [compileDirectoryRelativePath](#compileDirectoryRelativePath)
+- [compileDirectoryRelativeUrl](#compileDirectoryRelativeUrl)
 
 ## projectDirectoryPath
 
@@ -23,7 +23,7 @@ file url, like `file:///Users/you/folder`, are valid.<br />
 You can use `__dirname` to provide the value.<br />
 — see [\_\_dirname documentation on node.js](https://nodejs.org/docs/latest/api/modules.html#modules_dirname)
 
-Note: All parameter ending with `relativePath` are resolved against `projectDirectoryPath`.
+Note: All parameter ending with `relativeUrl` are resolved against `projectDirectoryPath`.
 
 ## babelPluginMap
 
@@ -76,9 +76,9 @@ const convertMap = {
 }
 ```
 
-## importMapFileRelativePath
+## importMapFileRelativeUrl
 
-> `importMapFileRelativePath` is a string representing a relative path to a file containing import map.
+> `importMapFileRelativeUrl` is a string representing a relative path to a file containing import map.
 
 This parameter is optional with a default value of
 
@@ -115,9 +115,9 @@ But expecting a tool to guess extension introduces complexity and makes you depe
 
 This option only adds an extension on extensionless import, it cannot try different extension and choose the right one.
 
-## compileDirectoryRelativePath
+## compileDirectoryRelativeUrl
 
-> `compileDirectoryRelativePath` is a string leading to a directory used to wrtie compiled version of your files.
+> `compileDirectoryRelativeUrl` is a string leading to a directory used to wrtie compiled version of your files.
 
 This parameter is optional with a default value of
 

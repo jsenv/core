@@ -13,7 +13,7 @@ const { launchAndExecute } = import.meta.require("@jsenv/execution")
 
 const folderRelativePath = selfHrefToFolderRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/not-found.js`
+const fileRelativeUrl = `${folderRelativePath}/not-found.js`
 const compileId = "best"
 
 const { origin: compileServerOrigin } = await startCompileServer({
@@ -30,18 +30,18 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       compileIntoRelativePath,
     }),
-  fileRelativePath,
+  fileRelativeUrl,
 })
 const expected = {
   status: "errored",
   error: assignNonEnumerableProperties(
     new Error(`imported module not found.
 href: file://${launchNodeProjectPathname}${compileIntoRelativePath}/${compileId}${folderRelativePath}/foo.js
-importer href: file://${launchNodeProjectPathname}${compileIntoRelativePath}/${compileId}${fileRelativePath}`),
+importer href: file://${launchNodeProjectPathname}${compileIntoRelativePath}/${compileId}${fileRelativeUrl}`),
     {
       code: "MODULE_NOT_FOUND_ERROR",
       href: `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${folderRelativePath}/foo.js`,
-      importerHref: `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${fileRelativePath}`,
+      importerHref: `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${fileRelativeUrl}`,
     },
   ),
 }

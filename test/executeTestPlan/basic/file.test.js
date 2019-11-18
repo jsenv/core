@@ -6,10 +6,10 @@ import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
-const fileRelativePath = `${testDirectoryRelativePath}file.js`
+const compileDirectoryRelativeUrl = `${testDirectoryRelativePath}.dist/`
+const fileRelativeUrl = `${testDirectoryRelativePath}file.js`
 const testPlan = {
-  [fileRelativePath]: {
+  [fileRelativeUrl]: {
     node: {
       launch: launchNode,
     },
@@ -21,7 +21,7 @@ const testPlan = {
 
 const actual = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
-  compileDirectoryRelativePath,
+  compileDirectoryRelativeUrl,
   testPlan,
   compileGroupCount: 1,
 })
@@ -34,14 +34,14 @@ const expected = {
     completedCount: 2,
   },
   report: {
-    [fileRelativePath]: {
+    [fileRelativeUrl]: {
       node: {
         status: "completed",
         namespace: {
           default: "node",
         },
         platformName: "node",
-        platformVersion: actual.report[fileRelativePath].node.platformVersion,
+        platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
       },
       node2: {
         status: "completed",
@@ -49,7 +49,7 @@ const expected = {
           default: "node",
         },
         platformName: "node",
-        platformVersion: actual.report[fileRelativePath].node.platformVersion,
+        platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
       },
     },
   },

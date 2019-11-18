@@ -12,19 +12,19 @@ import {
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/commonjs/`
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs/`
 const mainFileBasename = `${testDirectoryBasename}.js`
 
 await generateGlobalBundle({
   ...GENERATE_GLOBAL_BUNDLE_TEST_PARAMS,
-  bundleDirectoryRelativePath,
+  bundleDirectoryRelativeUrl,
   entryPointMap: {
     main: `${testDirectoryRelativePath}${mainFileBasename}`,
   },
 })
 const { globalValue: actual } = await scriptLoadGlobalBundle({
   ...SCRIPT_LOAD_GLOBAL_BUNDLE_TEST_PARAMS,
-  bundleDirectoryRelativePath,
+  bundleDirectoryRelativeUrl,
 })
 const expected = [0, 1]
 assert({ actual, expected })

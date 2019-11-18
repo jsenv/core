@@ -36,15 +36,15 @@ export const launchAndExecute = async ({
   collectPlatformVersion = false,
   collectNamespace = false,
   collectCoverage = false,
-  fileRelativePath,
+  fileRelativeUrl,
   inheritCoverage = false,
   executionId,
 } = {}) => {
   if (typeof launch !== "function") {
     throw new TypeError(`launch launch must be a function, got ${launch}`)
   }
-  if (typeof fileRelativePath !== "string") {
-    throw new TypeError(`fileRelativePath must be a string, got ${fileRelativePath}`)
+  if (typeof fileRelativeUrl !== "string") {
+    throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`)
   }
 
   let executionResultTransformer = (executionResult) => executionResult
@@ -137,7 +137,7 @@ export const launchAndExecute = async ({
     platformStartedCallback,
     platformStoppedCallback,
     allocatedMs,
-    fileRelativePath,
+    fileRelativeUrl,
     collectNamespace,
     collectCoverage,
     executionId,
@@ -218,7 +218,7 @@ const computeExecutionResult = async ({
   platformConsoleCallback,
   platformErrorCallback,
   platformDisconnectCallback,
-  fileRelativePath,
+  fileRelativeUrl,
   collectNamespace,
   collectCoverage,
   executionId,
@@ -285,7 +285,7 @@ const computeExecutionResult = async ({
 options: ${JSON.stringify(options, null, "  ")}`)
 
   registerConsoleCallback(platformConsoleCallback)
-  executeLogger.debug(`execute file ${fileRelativePath}`)
+  executeLogger.debug(`execute file ${fileRelativeUrl}`)
 
   const executeOperation = createOperation({
     cancellationToken,
@@ -300,7 +300,7 @@ options: ${JSON.stringify(options, null, "  ")}`)
         })
       })
 
-      const executed = executeFile(fileRelativePath, {
+      const executed = executeFile(fileRelativeUrl, {
         collectNamespace,
         collectCoverage,
         executionId,

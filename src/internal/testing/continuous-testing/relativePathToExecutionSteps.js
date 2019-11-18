@@ -15,7 +15,7 @@ export const relativePathToExecutionSteps = ({ projectDirectoryUrl, relativePath
   })
   if (meta.filePlan) {
     return generateFileExecutionSteps({
-      fileRelativePath: relativePath,
+      fileRelativeUrl: relativePath,
       filePlan: meta.filePlan,
     })
   }

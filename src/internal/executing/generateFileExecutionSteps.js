@@ -1,4 +1,4 @@
-export const generateFileExecutionSteps = ({ fileRelativePath, filePlan }) => {
+export const generateFileExecutionSteps = ({ fileRelativeUrl, filePlan }) => {
   const fileExecutionSteps = []
   Object.keys(filePlan).forEach((name) => {
     const stepConfig = filePlan[name]
@@ -9,7 +9,7 @@ export const generateFileExecutionSteps = ({ fileRelativePath, filePlan }) => {
     if (typeof stepConfig !== "object") {
       throw new TypeError(`found unexpected value in plan, they must be object.
 --- file relative path ---
-${fileRelativePath}
+${fileRelativeUrl}
 --- name ---
 ${name}
 --- value ---
@@ -18,7 +18,7 @@ ${stepConfig}`)
 
     fileExecutionSteps.push({
       name,
-      fileRelativePath,
+      fileRelativeUrl,
       ...stepConfig,
     })
   })

@@ -134,7 +134,7 @@ const { generateSystemJsBundle } = require("@jsenv/core")
 
 generateSystemJsBundle({
   projectDirectoryPath: __dirname,
-  bundleDirectoryRelativePath: "./dist",
+  bundleDirectoryRelativeUrl: "./dist",
   entryPointMap: {
     main: "./index.js",
   },

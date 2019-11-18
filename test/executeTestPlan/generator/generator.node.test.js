@@ -6,9 +6,9 @@ import { TESTING_TEST_PARAM } from "../testing-test-param.js"
 
 const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/generator.spec.js`
+const fileRelativeUrl = `${folderRelativePath}/generator.spec.js`
 const executeDescription = {
-  [fileRelativePath]: {
+  [fileRelativeUrl]: {
     node: {
       launch: launchNode,
     },
@@ -30,11 +30,11 @@ const expected = {
     completedCount: 1,
   },
   report: {
-    [fileRelativePath]: {
+    [fileRelativeUrl]: {
       node: {
         status: "completed",
         platformName: "node",
-        platformVersion: actual.report[fileRelativePath].node.platformVersion,
+        platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
       },
     },
   },

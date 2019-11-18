@@ -7,14 +7,14 @@ import { START_EXPLORING_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
-const fileRelativePath = `${testDirectoryRelativePath}basic.main.js`
+const compileDirectoryRelativeUrl = `${testDirectoryRelativePath}.dist/`
+const fileRelativeUrl = `${testDirectoryRelativePath}basic.main.js`
 
 const { origin: browserExplorerServerOrigin } = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
-  compileDirectoryRelativePath,
+  compileDirectoryRelativeUrl,
 })
-const { browser, page } = await openBrowserPage(`${browserExplorerServerOrigin}${fileRelativePath}`)
+const { browser, page } = await openBrowserPage(`${browserExplorerServerOrigin}${fileRelativeUrl}`)
 const actual = await page.title()
 const expected = `browser client index`
 assert({ actual, expected })

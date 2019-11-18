@@ -157,7 +157,7 @@ export const launchNode = async ({
   }
 
   const executeFile = async (
-    fileRelativePath,
+    fileRelativeUrl,
     { collectNamespace, collectCoverage, executionId },
   ) => {
     const execute = async () => {
@@ -198,7 +198,7 @@ export const launchNode = async ({
             compileServerOrigin,
             projectDirectoryUrl,
             compileDirectoryUrl,
-            fileRelativePath,
+            fileRelativeUrl,
             collectNamespace,
             collectCoverage,
             executionId,
@@ -306,7 +306,7 @@ const createNodeIIFEString = ({
   compileServerOrigin,
   projectDirectoryUrl,
   compileDirectoryUrl,
-  fileRelativePath,
+  fileRelativeUrl,
   collectNamespace,
   collectCoverage,
   executionId,
@@ -317,7 +317,7 @@ const createNodeIIFEString = ({
     compileServerOrigin,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    fileRelativePath,
+    fileRelativeUrl,
     collectNamespace,
     collectCoverage,
     executionId,
@@ -330,7 +330,7 @@ const createNodeIIFEString = ({
       compileServerOrigin,
       projectDirectoryUrl,
       compileDirectoryUrl,
-      fileRelativePath,
+      fileRelativeUrl,
       collectNamespace,
       collectCoverage,
       executionId,
@@ -346,7 +346,7 @@ const createNodeIIFEString = ({
     compileServerOrigin,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    fileRelativePath,
+    fileRelativeUrl,
     collectNamespace,
     collectCoverage,
     executionId,

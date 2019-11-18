@@ -12,19 +12,19 @@ import {
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/commonjs/`
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs/`
 const mainFileBasename = `${testDirectoryBasename}.js`
 
 await generateGlobalBundle({
   ...GENERATE_GLOBAL_BUNDLE_TEST_PARAMS,
-  bundleDirectoryRelativePath,
+  bundleDirectoryRelativeUrl,
   entryPointMap: {
     main: `${testDirectoryRelativePath}${mainFileBasename}`,
   },
 })
 const { globalValue: actual } = await requireGlobalBundle({
   ...REQUIRE_GLOBAL_BUNDLE_TEST_PARAMS,
-  bundleDirectoryRelativePath,
+  bundleDirectoryRelativeUrl,
 })
 // global bundle do not set a global[globalName]
 // value but rather a var so we cannot read that var

@@ -5,7 +5,7 @@ export const createExecutionPlanStartLog = () => `
 ------------- execution plan start ----------------`
 
 export const createDisconnectedLog = ({
-  fileRelativePath,
+  fileRelativeUrl,
   platformName,
   platformVersion,
   platformLog,
@@ -17,7 +17,7 @@ export const createDisconnectedLog = ({
 
   return `
 ${color}${icon} disconnected during execution.${ansiResetSequence}
-file: ${fileRelativePath.slice(1)}
+file: ${fileRelativeUrl.slice(1)}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
@@ -25,7 +25,7 @@ platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
 }
 
 export const createTimedoutLog = ({
-  fileRelativePath,
+  fileRelativeUrl,
   platformName,
   platformVersion,
   platformLog,
@@ -38,7 +38,7 @@ export const createTimedoutLog = ({
 
   return `
 ${color}${icon} execution takes more than ${allocatedMs}ms.${ansiResetSequence}
-file: ${fileRelativePath.slice(1)}
+file: ${fileRelativeUrl.slice(1)}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
@@ -46,7 +46,7 @@ platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
 }
 
 export const createErroredLog = ({
-  fileRelativePath,
+  fileRelativeUrl,
   platformName,
   platformVersion,
   platformLog,
@@ -59,7 +59,7 @@ export const createErroredLog = ({
 
   return `
 ${color}${icon} error during execution.${ansiResetSequence}
-file: ${fileRelativePath.slice(1)}
+file: ${fileRelativeUrl.slice(1)}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
@@ -73,7 +73,7 @@ error: ${error.stack}`
 }
 
 export const createCompletedLog = ({
-  fileRelativePath,
+  fileRelativeUrl,
   platformName,
   platformVersion,
   platformLog,
@@ -85,7 +85,7 @@ export const createCompletedLog = ({
 
   return `
 ${color}${icon} execution completed.${ansiResetSequence}
-file: ${fileRelativePath.slice(1)}
+file: ${fileRelativeUrl.slice(1)}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,

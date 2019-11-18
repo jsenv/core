@@ -17,9 +17,9 @@ export const serveBrowserPlatform = async ({
 }) => {
   const { origin, ressource, method, headers } = request
 
-  const compileDirectoryRelativePath = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
+  const compileDirectoryRelativeUrl = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
   const requestUrl = `${origin}${ressource}`
-  const browserPlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativePath}.jsenv/browser-platform.js`
+  const browserPlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativeUrl}.jsenv/browser-platform.js`
   const browserPlatformAssetDirectoryServerUrl = `${browserPlatformCompiledFileServerUrl}__asset__/`
 
   if (requestUrl.startsWith(browserPlatformAssetDirectoryServerUrl)) {
@@ -45,7 +45,7 @@ export const serveBrowserPlatform = async ({
     importReplaceMap: {
       "/.jsenv/browser-platform-data.js": () =>
         generateBrowserPlatformDataSource({
-          compileDirectoryRelativePath,
+          compileDirectoryRelativeUrl,
           groupMap,
           importDefaultExtension,
         }),
@@ -58,10 +58,10 @@ export const serveBrowserPlatform = async ({
 }
 
 const generateBrowserPlatformDataSource = ({
-  compileDirectoryRelativePath,
+  compileDirectoryRelativeUrl,
   groupMap,
   importDefaultExtension,
 }) => `
-export const compileDirectoryRelativePath = ${JSON.stringify(compileDirectoryRelativePath)}
+export const compileDirectoryRelativeUrl = ${JSON.stringify(compileDirectoryRelativeUrl)}
 export const groupMap = ${JSON.stringify(groupMap)}
 export const importDefaultExtension = ${JSON.stringify(importDefaultExtension)}`

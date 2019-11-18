@@ -13,12 +13,12 @@ import {
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/commonjs`
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs`
 const mainFileBasename = `${testDirectoryBasename}.js`
 
 const bundle = await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
-  bundleDirectoryRelativePath,
+  bundleDirectoryRelativeUrl,
   entryPointMap: {
     main: `./${testDirectoryRelativePath}${mainFileBasename}`,
   },
@@ -58,7 +58,7 @@ const bundle = await generateCommonJsBundle({
 {
   const { namespace: actual } = await requireCommonJsBundle({
     ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
-    bundleDirectoryRelativePath,
+    bundleDirectoryRelativeUrl,
   })
   const expected = 42
   assert({ actual, expected })

@@ -28,10 +28,10 @@ import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNo
 export const generateBundle = async ({
   cancellationToken = createCancellationTokenForProcessSIGINT(),
   projectDirectoryPath,
-  bundleDirectoryRelativePath,
+  bundleDirectoryRelativeUrl,
   bundleDirectoryClean = false,
   bundleCache = false,
-  importMapFileRelativePath = "./importMap.json",
+  importMapFileRelativeUrl = "./importMap.json",
   importMapForBundle = {},
   importDefaultExtension,
   importReplaceMap = {},
@@ -64,15 +64,15 @@ export const generateBundle = async ({
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  assertBundleDirectoryRelativePath({ bundleDirectoryRelativePath })
-  const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativePath, projectDirectoryUrl)
+  assertbundleDirectoryRelativeUrl({ bundleDirectoryRelativeUrl })
+  const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
   assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
   if (bundleDirectoryClean) {
     await removeDirectory(fileUrlToPath(bundleDirectoryUrl))
   }
 
-  assertImportMapFileRelativePath({ importMapFileRelativePath })
-  const importMapFileUrl = resolveFileUrl(importMapFileRelativePath, projectDirectoryUrl)
+  assertImportMapFileRelativePath({ importMapFileRelativeUrl })
+  const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
   assertEntryPointMap({ entryPointMap })
@@ -132,7 +132,7 @@ export const generateBundle = async ({
         bundleDirectoryUrl,
         bundleCache,
         importMapFileUrl,
-        importMapFileRelativePath,
+        importMapFileRelativeUrl,
         importMapForBundle,
         importDefaultExtension,
         importReplaceMap,
@@ -195,10 +195,10 @@ const assertEntryPointMap = ({ entryPointMap }) => {
   })
 }
 
-const assertBundleDirectoryRelativePath = ({ bundleDirectoryRelativePath }) => {
-  if (typeof bundleDirectoryRelativePath !== "string") {
+const assertbundleDirectoryRelativeUrl = ({ bundleDirectoryRelativeUrl }) => {
+  if (typeof bundleDirectoryRelativeUrl !== "string") {
     throw new TypeError(
-      `bundleDirectoryRelativePath must be a string, received ${bundleDirectoryRelativePath}`,
+      `bundleDirectoryRelativeUrl must be a string, received ${bundleDirectoryRelativeUrl}`,
     )
   }
 }

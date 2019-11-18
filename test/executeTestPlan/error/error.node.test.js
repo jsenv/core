@@ -6,9 +6,9 @@ import { TESTING_TEST_PARAM } from "../testing-test-param.js"
 
 const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/file.spec.js`
+const fileRelativeUrl = `${folderRelativePath}/file.spec.js`
 const executeDescription = {
-  [fileRelativePath]: {
+  [fileRelativeUrl]: {
     node: {
       launch: launchNode,
     },
@@ -30,13 +30,13 @@ const expected = {
     completedCount: 0,
   },
   report: {
-    [fileRelativePath]: {
+    [fileRelativeUrl]: {
       node: {
         status: "errored",
         error: new Error(`ask() should return 42, got 40`),
-        platformLog: actual.report[fileRelativePath].node.platformLog,
+        platformLog: actual.report[fileRelativeUrl].node.platformLog,
         platformName: "node",
-        platformVersion: actual.report[fileRelativePath].node.platformVersion,
+        platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
       },
     },
   },
@@ -45,7 +45,7 @@ assert({ actual, expected })
 
 {
   // error should not be in logs
-  const actual = actual.report[fileRelativePath].node.platformLog.includes(`should return 42`)
+  const actual = actual.report[fileRelativeUrl].node.platformLog.includes(`should return 42`)
   const expected = false
   assert({ actual, expected })
 }

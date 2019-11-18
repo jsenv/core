@@ -237,9 +237,9 @@ To avoid duplication some parameter are linked to a generic documentation.
 - [projectDirectoryPath](../shared-parameters.md#projectDirectoryPath)
 - [babelPluginMap](../shared-parameters.md#babelPluginMap)
 - [convertMap](../shared-parameters.md#convertMap)
-- [importMapFileRelativePath](../shared-parameters.md#importMapFileRelativePath)
+- [importMapFileRelativeUrl](../shared-parameters.md#importMapFileRelativeUrl)
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
-- [compileDirectoryRelativePath](../shared-parameters.md#compileDirectoryRelativePath)
+- [compileDirectoryRelativeUrl](../shared-parameters.md#compileDirectoryRelativeUrl)
 
 # Return value
 

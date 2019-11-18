@@ -5,13 +5,13 @@ import { START_EXPLORING_TEST_PARAMS } from "./TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
+const compileDirectoryRelativeUrl = `${testDirectoryRelativePath}.dist/`
 
 startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   logLevel: "info",
   compileServerLogLevel: "info",
-  compileDirectoryRelativePath,
+  compileDirectoryRelativeUrl,
   explorableConfig: {
     [`./${testDirectoryRelativePath}**/*.main.js`]: true,
     [`./${testDirectoryRelativePath}**/.dist/**`]: false,

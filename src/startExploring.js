@@ -45,9 +45,9 @@ export const startExploring = async ({
   livereloading = false,
 
   projectDirectoryPath,
-  compileDirectoryRelativePath = "./.dist",
+  compileDirectoryRelativeUrl = "./.dist",
   compileDirectoryClean,
-  importMapFileRelativePath = "./importMap.json",
+  importMapFileRelativeUrl = "./importMap.json",
   importDefaultExtension,
   babelPluginMap,
   convertMap,
@@ -65,12 +65,12 @@ export const startExploring = async ({
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  assertImportMapFileRelativePath({ importMapFileRelativePath })
-  const importMapFileUrl = resolveFileUrl(importMapFileRelativePath, projectDirectoryUrl)
+  assertImportMapFileRelativePath({ importMapFileRelativeUrl })
+  const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
-  assertCompileDirectoryRelativePath({ compileDirectoryRelativePath })
-  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativePath, projectDirectoryUrl)
+  assertCompileDirectoryRelativePath({ compileDirectoryRelativeUrl })
+  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
   assertCompileDirectoryInsideProject({ compileDirectoryUrl, projectDirectoryUrl })
 
   await assertFileExists(HTMLTemplateFileUrl)
@@ -91,7 +91,7 @@ export const startExploring = async ({
     let htmlTemplateRequestedCallback = () => {}
 
     if (livereloading) {
-      watchConfig[compileDirectoryRelativePath] = false
+      watchConfig[compileDirectoryRelativeUrl] = false
 
       const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryPath, {
         watchDescription: watchConfig,

@@ -11,7 +11,7 @@ export const execute = async ({
   compileServerOrigin,
   projectDirectoryUrl,
   compileDirectoryUrl,
-  fileRelativePath,
+  fileRelativeUrl,
   collectNamespace,
   collectCoverage,
   executionId,
@@ -25,8 +25,8 @@ export const execute = async ({
     throw valueRejected
   })
 
-  const fileServerUrl = `${compileServerOrigin}/${fileRelativePath}`
-  const fileUrl = resolveFileUrl(fileRelativePath, projectDirectoryUrl)
+  const fileServerUrl = `${compileServerOrigin}/${fileRelativeUrl}`
+  const fileUrl = resolveFileUrl(fileRelativeUrl, projectDirectoryUrl)
   const filePath = fileUrlToPath(fileUrl)
 
   // ça ne fixera pas le fait que require se fera ou mauvais endroit
@@ -36,11 +36,11 @@ export const execute = async ({
   const { SourceMapConsumer } = executionRequire("source-map")
   const { installNodeErrorStackRemapping } = executionRequire("@jsenv/error-stack-sourcemap")
 
-  const compileDirectoryRelativePath = urlToRelativePath(
+  const compileDirectoryRelativeUrl = urlToRelativePath(
     compileDirectoryUrl,
     projectDirectoryUrl,
   )
-  const nodePlatformCompiledFileRelativePath = `${compileDirectoryRelativePath}.jsenv/node-platform.js`
+  const nodePlatformCompiledFileRelativePath = `${compileDirectoryRelativeUrl}.jsenv/node-platform.js`
   const nodePlatformCompiledServerUrl = `${compileServerOrigin}/${nodePlatformCompiledFileRelativePath}`
   const nodePlatformCompiledFileUrl = resolveFileUrl(
     nodePlatformCompiledFileRelativePath,
@@ -56,7 +56,7 @@ export const execute = async ({
     projectDirectoryUrl,
   })
 
-  const fileCompiledServerUrl = relativePathToCompiledUrl(fileRelativePath)
+  const fileCompiledServerUrl = relativePathToCompiledUrl(fileRelativeUrl)
   const fileCompiledFileUrl = resolveFileUrl(
     fileCompiledServerUrl.slice(compileServerOrigin.length),
     projectDirectoryUrl,
@@ -100,8 +100,8 @@ export const execute = async ({
 const filePathToServerOrFileUrl = (filePath, { projectDirectoryUrl, compileServerOrigin }) => {
   const fileUrl = filePath.startsWith("file://") ? filePath : pathToFileUrl(filePath)
   if (fileUrl.startsWith(projectDirectoryUrl)) {
-    const fileRelativePath = urlToRelativePath(fileUrl, projectDirectoryUrl)
-    return `${compileServerOrigin}/${fileRelativePath}`
+    const fileRelativeUrl = urlToRelativePath(fileUrl, projectDirectoryUrl)
+    return `${compileServerOrigin}/${fileRelativeUrl}`
   }
   return fileUrl
 }

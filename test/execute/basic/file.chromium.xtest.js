@@ -9,14 +9,14 @@ const testDirectoryRelativePath = urlToRelativePath(
   testDirectoryUrl,
   EXECUTE_TEST_PARAMS.projectDirectoryUrl,
 )
-const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
-const fileRelativePath = `${compileDirectoryRelativePath}file.js`
+const compileDirectoryRelativeUrl = `${testDirectoryRelativePath}.dist/`
+const fileRelativeUrl = `${compileDirectoryRelativeUrl}file.js`
 
 const actual = await execute({
   ...EXECUTE_TEST_PARAMS,
-  compileDirectoryRelativePath,
+  compileDirectoryRelativeUrl,
   launch: launchChromium,
-  fileRelativePath,
+  fileRelativeUrl,
   stopOnceExecuted: true,
 })
 const expected = {

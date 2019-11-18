@@ -12,7 +12,7 @@ const { launchAndExecute } = import.meta.require("@jsenv/execution")
 
 const folderRelativePath = selfHrefToFolderRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/leading-slash.js`
+const fileRelativeUrl = `${folderRelativePath}/leading-slash.js`
 const { origin: compileServerOrigin } = await startCompileServer({
   ...NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
   compileIntoRelativePath,
@@ -28,7 +28,7 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       compileIntoRelativePath,
     }),
-  fileRelativePath,
+  fileRelativeUrl,
 })
 
 // leading slash will not work

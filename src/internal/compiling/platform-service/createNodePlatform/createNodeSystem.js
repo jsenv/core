@@ -13,7 +13,7 @@ const GLOBAL_SPECIFIER = "global"
 export const createNodeSystem = ({
   compileServerOrigin,
   projectDirectoryUrl,
-  compileDirectoryRelativePath,
+  compileDirectoryRelativeUrl,
   resolveImport,
   executionId,
 } = {}) => {
@@ -56,7 +56,7 @@ export const createNodeSystem = ({
             responseUrlToSourceUrl(responseUrl, {
               compileServerOrigin,
               projectDirectoryUrl,
-              compileDirectoryRelativePath,
+              compileDirectoryRelativeUrl,
             }),
           )
         } finally {
@@ -76,14 +76,14 @@ export const createNodeSystem = ({
       return urlToOriginalUrl(urlResolved, {
         compileServerOrigin,
         projectDirectoryUrl,
-        compileDirectoryRelativePath,
+        compileDirectoryRelativeUrl,
       })
     }
 
     const originalUrl = urlToOriginalUrl(url, {
       compileServerOrigin,
       projectDirectoryUrl,
-      compileDirectoryRelativePath,
+      compileDirectoryRelativeUrl,
     })
 
     const require = createRequireFromPath(
@@ -118,7 +118,7 @@ const responseUrlToSourceUrl = (responseUrl, { compileServerOrigin, projectDirec
 
 const urlToOriginalUrl = (
   url,
-  { compileServerOrigin, projectDirectoryUrl, compileDirectoryRelativePath },
+  { compileServerOrigin, projectDirectoryUrl, compileDirectoryRelativeUrl },
 ) => {
   if (!url.startsWith(`${compileServerOrigin}/`)) {
     return url
@@ -129,11 +129,11 @@ const urlToOriginalUrl = (
   }
 
   const afterOrigin = url.slice(`${compileServerOrigin}/`.length)
-  if (!afterOrigin.startsWith(compileDirectoryRelativePath)) {
+  if (!afterOrigin.startsWith(compileDirectoryRelativeUrl)) {
     return url
   }
 
-  const afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativePath.length)
+  const afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativeUrl.length)
   const nextSlashIndex = afterCompileDirectory.indexOf("/")
   if (nextSlashIndex === -1) {
     return url

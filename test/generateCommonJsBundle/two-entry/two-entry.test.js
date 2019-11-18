@@ -10,13 +10,13 @@ import {
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/commonjs`
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs`
 const firstEntryFileRelativePath = `${testDirectoryRelativePath}a.js`
 const secondEntryFileRelativePath = `${testDirectoryRelativePath}b.js`
 
 await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
-  bundleDirectoryRelativePath,
+  bundleDirectoryRelativeUrl,
   entryPointMap: {
     a: firstEntryFileRelativePath,
     b: secondEntryFileRelativePath,
@@ -26,7 +26,7 @@ await generateCommonJsBundle({
 {
   const { namespace: actual } = await requireCommonJsBundle({
     ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
-    bundleDirectoryRelativePath,
+    bundleDirectoryRelativeUrl,
     mainRelativePath: "./a.js",
   })
   const expected = "a-shared"
@@ -35,7 +35,7 @@ await generateCommonJsBundle({
 {
   const { namespace: actual } = await requireCommonJsBundle({
     ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
-    bundleDirectoryRelativePath,
+    bundleDirectoryRelativeUrl,
     mainRelativePath: "./b.js",
   })
   const expected = "b-shared"

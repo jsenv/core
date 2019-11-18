@@ -1,6 +1,6 @@
 import {
-  fileRelativePath,
-  compileDirectoryRelativePath,
+  fileRelativeUrl,
+  compileDirectoryRelativeUrl,
   livereloading,
   // eslint-disable-next-line import/no-unresolved
 } from "/.jsenv/browser-self-execute-static-data.js"
@@ -12,7 +12,7 @@ const { EventSource, location } = window
 ;(async () => {
   if (livereloading && typeof EventSource === "function") {
     const eventSourceOrigin = window.location.origin
-    const eventSourceHref = `${eventSourceOrigin}/${fileRelativePath}`
+    const eventSourceHref = `${eventSourceOrigin}/${fileRelativeUrl}`
     const eventSource = new EventSource(eventSourceHref, {
       withCredentials: true,
     })
@@ -38,7 +38,7 @@ const { EventSource, location } = window
   }
 
   const { body } = await fetchUsingXHR(
-    `${window.origin}/${compileDirectoryRelativePath}.jsenv/browser-self-execute-dynamic-data.json`,
+    `${window.origin}/${compileDirectoryRelativeUrl}.jsenv/browser-self-execute-dynamic-data.json`,
     {
       credentials: "include",
     },
@@ -46,7 +46,7 @@ const { EventSource, location } = window
   const { compileServerOrigin } = JSON.parse(body)
 
   await loadUsingScript(
-    `${compileServerOrigin}/${compileDirectoryRelativePath}.jsenv/browser-platform.js`,
+    `${compileServerOrigin}/${compileDirectoryRelativeUrl}.jsenv/browser-platform.js`,
   )
   const { __browserPlatform__ } = window
 
@@ -54,8 +54,8 @@ const { EventSource, location } = window
     compileServerOrigin,
   })
 
-  await executeFile(relativePathToCompiledUrl(fileRelativePath), {
+  await executeFile(relativePathToCompiledUrl(fileRelativeUrl), {
     errorNotification: true,
-    executionId: fileRelativePath,
+    executionId: fileRelativeUrl,
   })
 })()

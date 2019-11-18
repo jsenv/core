@@ -7,19 +7,19 @@ import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
-const fileRelativePath = `${compileDirectoryRelativePath}file.js`
+const compileDirectoryRelativeUrl = `${testDirectoryRelativePath}.dist/`
+const fileRelativeUrl = `${compileDirectoryRelativeUrl}file.js`
 
 const actual = await execute({
   ...EXECUTE_TEST_PARAMS,
-  compileDirectoryRelativePath,
+  compileDirectoryRelativeUrl,
   convertMap: {
     "./node_modules/react/index.js": (options) =>
       convertCommonJsWithRollup({ ...options, processEnvNodeEnv: "production" }),
   },
   launch: launchChromium,
   stopPlatformAfterExecute: true,
-  fileRelativePath,
+  fileRelativeUrl,
   collectNamespace: true,
 })
 const expected = {

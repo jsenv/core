@@ -58,11 +58,11 @@ export const executeConcurrently = async (
     collectCoverage: coverage,
 
     logSuccess: true,
-    mainFileNotFoundCallback: ({ fileRelativePath }) => {
+    mainFileNotFoundCallback: ({ fileRelativeUrl }) => {
       logger.error(
         new Error(`an execution main file does not exists.
 --- file relative path ---
-${fileRelativePath}`),
+${fileRelativeUrl}`),
       )
     },
     beforeExecutionCallback: () => {},
@@ -89,7 +89,7 @@ ${fileRelativePath}`),
       const {
         name,
         executionId,
-        fileRelativePath,
+        fileRelativeUrl,
         launch,
         allocatedMs,
         measureDuration,
@@ -110,10 +110,10 @@ ${fileRelativePath}`),
         allocatedMs,
         name,
         executionId,
-        fileRelativePath,
+        fileRelativeUrl,
       }
 
-      const filePath = fileUrlToPath(`${projectDirectoryUrl}${fileRelativePath}`)
+      const filePath = fileUrlToPath(`${projectDirectoryUrl}${fileRelativeUrl}`)
       const fileExists = await pathLeadsToFile(filePath)
       if (!fileExists) {
         mainFileNotFoundCallback(beforeExecutionInfo)
@@ -147,7 +147,7 @@ ${fileRelativePath}`),
         // we have associated coverageMap and capturedConsole
         stopPlatformAfterExecute: true,
         executionId,
-        fileRelativePath,
+        fileRelativeUrl,
         collectCoverage,
         collectNamespace,
       })
@@ -169,10 +169,10 @@ ${fileRelativePath}`),
         logger.info(createErroredLog(afterExecutionInfo))
       }
 
-      if (fileRelativePath in report === false) {
-        report[fileRelativePath] = {}
+      if (fileRelativeUrl in report === false) {
+        report[fileRelativeUrl] = {}
       }
-      report[fileRelativePath][name] = executionResult
+      report[fileRelativeUrl][name] = executionResult
     },
   })
 

@@ -16,9 +16,9 @@ export const serveNodePlatform = async ({
   request,
 }) => {
   const { origin, ressource, method, headers } = request
-  const compileDirectoryRelativePath = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
+  const compileDirectoryRelativeUrl = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
   const requestUrl = `${origin}${ressource}`
-  const nodePlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativePath}.jsenv/node-platform.js`
+  const nodePlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativeUrl}.jsenv/node-platform.js`
   const nodePlatformAssetDirectoryServerUrl = `${nodePlatformCompiledFileServerUrl}__asset__/`
 
   if (requestUrl.startsWith(nodePlatformAssetDirectoryServerUrl)) {
@@ -44,7 +44,7 @@ export const serveNodePlatform = async ({
     importReplaceMap: {
       "/.jsenv/node-platform-data.js": () =>
         generateNodePlatformDataSource({
-          compileDirectoryRelativePath,
+          compileDirectoryRelativeUrl,
           groupMap,
           importDefaultExtension,
         }),
@@ -57,10 +57,10 @@ export const serveNodePlatform = async ({
 }
 
 const generateNodePlatformDataSource = ({
-  compileDirectoryRelativePath,
+  compileDirectoryRelativeUrl,
   groupMap,
   importDefaultExtension,
 }) => `
-export const compileDirectoryRelativePath = ${JSON.stringify(compileDirectoryRelativePath)}
+export const compileDirectoryRelativeUrl = ${JSON.stringify(compileDirectoryRelativeUrl)}
 export const groupMap = ${JSON.stringify(groupMap)}
 export const importDefaultExtension = ${JSON.stringify(importDefaultExtension)}`

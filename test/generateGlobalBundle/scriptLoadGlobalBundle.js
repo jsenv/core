@@ -5,11 +5,11 @@ const puppeteer = import.meta.require("puppeteer")
 
 export const scriptLoadGlobalBundle = async ({
   projectDirectoryUrl,
-  bundleDirectoryRelativePath,
+  bundleDirectoryRelativeUrl,
   mainRelativePath,
   globalName,
 }) => {
-  const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativePath, projectDirectoryUrl)
+  const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
     startTestServer({ bundleDirectoryUrl }),
     puppeteer.launch(),

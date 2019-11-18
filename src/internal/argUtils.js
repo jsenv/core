@@ -10,10 +10,10 @@ export const assertProjectDirectoryExists = ({ projectDirectoryUrl }) => {
   assertDirectoryExists(projectDirectoryUrl)
 }
 
-export const assertImportMapFileRelativePath = ({ importMapFileRelativePath }) => {
-  if (typeof importMapFileRelativePath !== "string") {
+export const assertImportMapFileRelativePath = ({ importMapFileRelativeUrl }) => {
+  if (typeof importMapFileRelativeUrl !== "string") {
     throw new TypeError(
-      `importMapFileRelativePath must be a string, received ${importMapFileRelativePath}`,
+      `importMapFileRelativeUrl must be a string, received ${importMapFileRelativeUrl}`,
     )
   }
 }
@@ -28,10 +28,10 @@ ${projectDirectoryUrl}`)
   }
 }
 
-export const assertCompileDirectoryRelativePath = ({ compileDirectoryRelativePath }) => {
-  if (typeof compileDirectoryRelativePath !== "string") {
+export const assertCompileDirectoryRelativePath = ({ compileDirectoryRelativeUrl }) => {
+  if (typeof compileDirectoryRelativeUrl !== "string") {
     throw new TypeError(
-      `compileDirectoryRelativePath must be a string, received ${compileDirectoryRelativePath}`,
+      `compileDirectoryRelativeUrl must be a string, received ${compileDirectoryRelativeUrl}`,
     )
   }
 }

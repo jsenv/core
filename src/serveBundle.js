@@ -102,14 +102,14 @@ export const serveBundle = async ({
     const bundle = await generateBundle({
       logLevel: "off",
       projectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
-      // bundleDirectoryRelativePath is not really important
+      // bundleDirectoryRelativeUrl is not really important
       // because we pass writeOnFileSystem: false anyway
-      bundleDirectoryRelativePath: computeBundleDirectoryRelativePath({
+      bundleDirectoryRelativeUrl: computebundleDirectoryRelativeUrl({
         projectDirectoryUrl,
         compiledFileRelativePath,
       }),
       importDefaultExtension,
-      importMapFileRelativePath: urlToRelativePath(importMapFileUrl, projectDirectoryUrl),
+      importMapFileRelativeUrl: urlToRelativePath(importMapFileUrl, projectDirectoryUrl),
       importMapForBundle,
       importReplaceMap,
       entryPointMap,
@@ -150,11 +150,11 @@ export const serveBundle = async ({
   })
 }
 
-const computeBundleDirectoryRelativePath = ({ projectDirectoryUrl, compiledFileRelativePath }) => {
+const computebundleDirectoryRelativeUrl = ({ projectDirectoryUrl, compiledFileRelativePath }) => {
   const compiledFileUrl = resolveFileUrl(compiledFileRelativePath, projectDirectoryUrl)
   const bundleDirectoryUrl = resolveDirectoryUrl("./", compiledFileUrl)
-  const bundleDirectoryRelativePath = urlToRelativePath(bundleDirectoryUrl, projectDirectoryUrl)
-  return bundleDirectoryRelativePath
+  const bundleDirectoryRelativeUrl = urlToRelativePath(bundleDirectoryUrl, projectDirectoryUrl)
+  return bundleDirectoryRelativeUrl
 }
 
 const computeSourcemapRelativePath = (compiledFileRelativePath) => {

@@ -28,9 +28,9 @@ export const executeTestPlan = async ({
   executeLogLevel = "off",
 
   projectDirectoryPath,
-  compileDirectoryRelativePath = "./.dist/",
+  compileDirectoryRelativeUrl = "./.dist/",
   compileDirectoryClean,
-  importMapFileRelativePath = "./importMap.json",
+  importMapFileRelativeUrl = "./importMap.json",
   compileGroupCount = 2,
 
   testPlan,
@@ -65,12 +65,12 @@ export const executeTestPlan = async ({
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  assertImportMapFileRelativePath({ importMapFileRelativePath })
-  const importMapFileUrl = resolveFileUrl(importMapFileRelativePath, projectDirectoryUrl)
+  assertImportMapFileRelativePath({ importMapFileRelativeUrl })
+  const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
-  assertCompileDirectoryRelativePath({ compileDirectoryRelativePath })
-  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativePath, projectDirectoryUrl)
+  assertCompileDirectoryRelativePath({ compileDirectoryRelativeUrl })
+  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
   assertCompileDirectoryInsideProject({ compileDirectoryUrl, projectDirectoryUrl })
 
   if (coverage) {

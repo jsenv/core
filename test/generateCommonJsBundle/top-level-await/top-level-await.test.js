@@ -8,13 +8,13 @@ import { GENERATE_COMMONJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativePath = `${testDirectoryRelativePath}dist/commonjs`
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs`
 const mainFileBasename = `${testDirectoryBasename}.js`
 
 try {
   await generateCommonJsBundle({
     ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
-    bundleDirectoryRelativePath,
+    bundleDirectoryRelativeUrl,
     entryPointMap: {
       main: `${testDirectoryRelativePath}${mainFileBasename}`,
     },

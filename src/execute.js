@@ -23,11 +23,11 @@ export const execute = async ({
   executeLogLevel = logLevel,
 
   projectDirectoryPath,
-  compileDirectoryRelativePath = "./.dist",
+  compileDirectoryRelativeUrl = "./.dist",
   compileDirectoryClean,
-  importMapFileRelativePath = "./importMap.json",
+  importMapFileRelativeUrl = "./importMap.json",
   importDefaultExtension,
-  fileRelativePath,
+  fileRelativeUrl,
   launch,
   babelPluginMap,
   convertMap,
@@ -50,18 +50,18 @@ export const execute = async ({
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  assertImportMapFileRelativePath({ importMapFileRelativePath })
-  const importMapFileUrl = resolveFileUrl(importMapFileRelativePath, projectDirectoryUrl)
+  assertImportMapFileRelativePath({ importMapFileRelativeUrl })
+  const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
-  assertCompileDirectoryRelativePath({ compileDirectoryRelativePath })
-  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativePath, projectDirectoryUrl)
+  assertCompileDirectoryRelativePath({ compileDirectoryRelativeUrl })
+  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
   assertCompileDirectoryInsideProject({ compileDirectoryUrl, projectDirectoryUrl })
 
-  if (typeof fileRelativePath !== "string") {
-    throw new TypeError(`fileRelativePath must be a string, got ${fileRelativePath}`)
+  if (typeof fileRelativeUrl !== "string") {
+    throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`)
   }
-  fileRelativePath = fileRelativePath.replace(/\\/g, "/")
+  fileRelativeUrl = fileRelativeUrl.replace(/\\/g, "/")
   if (typeof launch !== "function") {
     throw new TypeError(`launch must be a function, got ${launch}`)
   }
@@ -95,12 +95,12 @@ export const execute = async ({
           compileServerOrigin,
           projectDirectoryUrl,
           compileDirectoryUrl,
-          importMapFileRelativePath,
+          importMapFileRelativeUrl,
           importDefaultExtension,
         }),
       mirrorConsole,
       stopPlatformAfterExecute,
-      fileRelativePath,
+      fileRelativeUrl,
       collectNamespace,
       collectCoverage,
       inheritCoverage,

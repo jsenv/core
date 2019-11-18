@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import {
-  compileDirectoryRelativePath,
+  compileDirectoryRelativeUrl,
   groupMap,
   importDefaultExtension,
   // eslint-disable-next-line import/no-unresolved
@@ -26,12 +26,12 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
   })
 
   const relativePathToCompiledUrl = (relativePath) => {
-    return `${compileServerOrigin}/${compileDirectoryRelativePath}${compileId}/${relativePath}`
+    return `${compileServerOrigin}/${compileDirectoryRelativeUrl}${compileId}/${relativePath}`
   }
 
   const importMapNormalized = normalizeImportMap(
     importMap,
-    `${compileServerOrigin}/${compileDirectoryRelativePath}${compileId}/`,
+    `${compileServerOrigin}/${compileDirectoryRelativeUrl}${compileId}/`,
   )
 
   const resolveImportScoped = (specifier, importer) => {
@@ -51,7 +51,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
     const nodeSystem = await memoizedCreateNodeSystem({
       compileServerOrigin,
       projectDirectoryUrl,
-      compileDirectoryRelativePath,
+      compileDirectoryRelativeUrl,
       resolveImport: resolveImportScoped,
     })
     return makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
@@ -70,7 +70,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
     const nodeSystem = await memoizedCreateNodeSystem({
       compileServerOrigin,
       projectDirectoryUrl,
-      compileDirectoryRelativePath,
+      compileDirectoryRelativeUrl,
       resolveImport: resolveImportScoped,
       executionId,
     })

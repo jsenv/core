@@ -3,13 +3,13 @@ import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { generateBundle } from "internal/bundling/generateBundle/generateBundle.js"
 
 export const generateCommonJsBundle = async ({
-  bundleDirectoryRelativePath = "./dist/commonjs",
+  bundleDirectoryRelativeUrl = "./dist/commonjs",
   node = true,
   ...rest
 }) =>
   generateBundle({
     format: "commonjs",
-    bundleDirectoryRelativePath,
+    bundleDirectoryRelativeUrl,
     node,
     balancerTemplateFileUrl: resolveFileUrl(
       "./src/internal/bundling/commonjs-balancer-template.js",

@@ -4,7 +4,7 @@ import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 
 export const generateCommonJsBundleForNode = ({
   babelPluginMap = jsenvBabelPluginMap,
-  bundleDirectoryRelativePath,
+  bundleDirectoryRelativeUrl,
   nodeMinimumVersion = decideNodeMinimumVersion(),
   ...rest
 }) => {
@@ -15,7 +15,7 @@ export const generateCommonJsBundleForNode = ({
   })
 
   return generateCommonJsBundle({
-    bundleDirectoryRelativePath,
+    bundleDirectoryRelativeUrl,
     compileGroupCount: 1,
     babelPluginMap: babelPluginMapForNode,
     ...rest,

@@ -13,7 +13,7 @@ const { launchAndExecute } = import.meta.require("@jsenv/execution")
 
 const folderRelativePath = selfHrefToFolderRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/disconnect.js`
+const fileRelativeUrl = `${folderRelativePath}/disconnect.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
   ...NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
@@ -30,7 +30,7 @@ const actual = await launchAndExecute({
       compileIntoRelativePath,
     }),
   captureConsole: true,
-  fileRelativePath,
+  fileRelativeUrl,
 })
 actual.platformLog = removeDebuggerLog(actual.platformLog)
 const expected = {

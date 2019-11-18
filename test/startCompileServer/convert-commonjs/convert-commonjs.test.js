@@ -6,11 +6,11 @@ import { fetch } from "../fetch.js"
 
 const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
 const fileUrl = resolveFileUrl("./file.js", import.meta.url)
-const fileRelativePath = urlToRelativePath(
+const fileRelativeUrl = urlToRelativePath(
   fileUrl,
   COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,
 )
-const compileDirectoryRelativePath = urlToRelativePath(
+const compileDirectoryRelativeUrl = urlToRelativePath(
   compileDirectoryUrl,
   COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,
 )
@@ -18,11 +18,11 @@ const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   compileDirectoryUrl,
   convertMap: {
-    [fileRelativePath]: (options) =>
+    [fileRelativeUrl]: (options) =>
       convertCommonJsWithBabel({ ...options, processEnvNodeEnv: "production" }),
   },
 })
-const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativePath}best/${fileRelativePath}`
+const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativeUrl}best/${fileRelativeUrl}`
 
 const fileResponse = await fetch(fileServerUrl)
 const actual = {

@@ -31,9 +31,9 @@ export const TESTING_WATCH_EXCLUDE_DESCRIPTION = {
 
 export const startContinuousTesting = async ({
   projectDirectoryPath,
-  compileDirectoryRelativePath = "./.dist/",
+  compileDirectoryRelativeUrl = "./.dist/",
   compileDirectoryClean,
-  importMapFileRelativePath,
+  importMapFileRelativeUrl,
   importDefaultExtension,
   testPlan = {},
   watchDescription = {
@@ -56,9 +56,9 @@ export const startContinuousTesting = async ({
   const logger = createLogger({ logLevel })
   const projectDirectoryUrl = resolveProjectDirectoryUrl(projectDirectoryPath)
   projectDirectoryPath = fileUrlToPath(projectDirectoryUrl)
-  const importMapFileUrl = resolveImportMapFileUrl({ importMapFileRelativePath })
+  const importMapFileUrl = resolveImportMapFileUrl({ importMapFileRelativeUrl })
   const compileDirectoryUrl = resolveCompileDirectorUrl(
-    compileDirectoryRelativePath,
+    compileDirectoryRelativeUrl,
     projectDirectoryUrl,
   )
 
@@ -66,7 +66,7 @@ export const startContinuousTesting = async ({
     const unregisterProjectDirectoryLifecycle = registerDirectoryLifecycle(projectDirectoryPath, {
       watchDescription: {
         ...watchDescription,
-        [compileDirectoryRelativePath]: false,
+        [compileDirectoryRelativeUrl]: false,
       },
       keepProcessAlive: false,
       added: ({ relativePath, type }) => {
@@ -170,8 +170,8 @@ export const startContinuousTesting = async ({
         if (hrefToOrigin(referer) === request.origin) {
           const refererRelativePath = hrefToPathname(referer)
 
-          executionSteps.forEach(({ executionId, fileRelativePath }) => {
-            if (fileRelativePath === refererRelativePath) {
+          executionSteps.forEach(({ executionId, fileRelativeUrl }) => {
+            if (fileRelativeUrl === refererRelativePath) {
               executionImportCallback({ relativePath, executionId })
             }
           })
@@ -426,21 +426,21 @@ const computeActionsToPerform = ({
   const fileIsRemoved = (relativePath) => fileMutationMap[relativePath] === "removed"
 
   executionSteps.forEach((executionStep) => {
-    const { fileRelativePath } = executionStep
+    const { fileRelativeUrl } = executionStep
 
-    if (fileIsRemoved(fileRelativePath)) {
-      if (!fileResponsibleOfRemove.includes(fileRelativePath)) {
-        fileResponsibleOfRemove.push(fileRelativePath)
+    if (fileIsRemoved(fileRelativeUrl)) {
+      if (!fileResponsibleOfRemove.includes(fileRelativeUrl)) {
+        fileResponsibleOfRemove.push(fileRelativeUrl)
       }
       toRemove.push(executionStep)
     } else {
       const dependencySet = dependencyTracker.getDependencySet(executionStep.executionId)
       const executionDependencyChangedArray = Array.from(dependencySet).filter((relativePath) => {
         if (fileIsUpdated(relativePath)) return true
-        if (relativePath !== fileRelativePath && fileIsRemoved(relativePath)) return true
+        if (relativePath !== fileRelativeUrl && fileIsRemoved(relativePath)) return true
         // only indirect dependency added counts
         // otherwise we could add it twice
-        if (relativePath !== fileRelativePath && fileIsAdded(relativePath)) return true
+        if (relativePath !== fileRelativeUrl && fileIsAdded(relativePath)) return true
         return false
       })
       if (executionDependencyChangedArray.length) {

@@ -3,7 +3,7 @@ import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { generateBundle } from "internal/bundling/generateBundle/generateBundle.js"
 
 export const generateSystemJsBundle = async ({
-  bundleDirectoryRelativePath = "./dist/systemjs",
+  bundleDirectoryRelativeUrl = "./dist/systemjs",
   ...rest
 }) =>
   generateBundle({
@@ -13,6 +13,6 @@ export const generateSystemJsBundle = async ({
       jsenvCoreDirectoryUrl,
     ),
     balancerDataAbstractSpecifier: "/.jsenv/systemjs-balancer-data.js",
-    bundleDirectoryRelativePath,
+    bundleDirectoryRelativeUrl,
     ...rest,
   })

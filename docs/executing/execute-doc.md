@@ -24,7 +24,7 @@ const { launchChromium } = require('@jsenv/chromium-launcher')
 
 execute({
   projectPath: '/Users/you/project'
-  fileRelativePath: `/index.js`,
+  fileRelativeUrl: `/index.js`,
   launch: launchChromium,
 })
 ```
@@ -34,7 +34,7 @@ It is a function capable to launch a platform to execute a file inside it.
 You're not likely going to write your own `launch` function, jsenv provides them.<br />
 — see [platform launcher](../platform-launcher/platform-launcher.md)
 
-### fileRelativePath
+### fileRelativeUrl
 
 ```js
 import { execute } from '@jsenv/execution'
@@ -42,7 +42,7 @@ import { launchNode } from '@jsenv/node-launcher'
 
 execute({
   projectPath: '/Users/you/project'
-  fileRelativePath: `/index.js`,
+  fileRelativeUrl: `/index.js`,
   launch: launchNode,
 })
 ```
@@ -59,7 +59,7 @@ import { launchNode } from '@jsenv/node-launcher'
 
 execute({
   projectPath: '/Users/you/project'
-  fileRelativePath: `/index.js`,
+  fileRelativeUrl: `/index.js`,
   launch: launchNode,
   mirrorConsole: true
 })
@@ -81,7 +81,7 @@ import { launchNode } from '@jsenv/node-launcher'
 
 execute({
   projectPath: '/Users/you/project'
-  fileRelativePath: `/index.js`,
+  fileRelativeUrl: `/index.js`,
   launch: launchNode,
   stopOnceExecuted: true
 })

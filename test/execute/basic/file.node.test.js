@@ -6,14 +6,14 @@ import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
-const fileRelativePath = `${testDirectoryRelativePath}file.js`
+const compileDirectoryRelativeUrl = `${testDirectoryRelativePath}.dist/`
+const fileRelativeUrl = `${testDirectoryRelativePath}file.js`
 
 const actual = await execute({
   ...EXECUTE_TEST_PARAMS,
-  compileDirectoryRelativePath,
+  compileDirectoryRelativeUrl,
   launch: launchNode,
-  fileRelativePath,
+  fileRelativeUrl,
 })
 const expected = {
   status: "completed",

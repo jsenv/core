@@ -6,9 +6,9 @@ import { TESTING_TEST_PARAM } from "../testing-test-param.js"
 
 const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/file.spec.js`
+const fileRelativeUrl = `${folderRelativePath}/file.spec.js`
 const executeDescription = {
-  [fileRelativePath]: {
+  [fileRelativeUrl]: {
     chromium: {
       launch: launchChromium,
     },
@@ -30,13 +30,13 @@ const expected = {
     completedCount: 0,
   },
   report: {
-    [fileRelativePath]: {
+    [fileRelativeUrl]: {
       chromium: {
         status: "errored",
         error: new Error(`ask() should return 42, got 40`),
         platformLog: "",
         platformName: "chromium",
-        platformVersion: actual.report[fileRelativePath].chromium.platformVersion,
+        platformVersion: actual.report[fileRelativeUrl].chromium.platformVersion,
       },
     },
   },

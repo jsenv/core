@@ -13,7 +13,7 @@ const { launchAndExecute } = import.meta.require("@jsenv/execution")
 
 const folderRelativePath = selfHrefToFolderRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/timeout.js`
+const fileRelativeUrl = `${folderRelativePath}/timeout.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
   ...NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
@@ -31,7 +31,7 @@ const actual = await launchAndExecute({
     }),
   allocatedMs: 15000,
   captureConsole: true,
-  fileRelativePath,
+  fileRelativeUrl,
 })
 actual.platformLog = removeDebuggerLog(actual.platformLog)
 const expected = {

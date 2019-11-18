@@ -6,10 +6,10 @@ import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const compileDirectoryRelativePath = `${testDirectoryRelativePath}.dist/`
-const fileRelativePath = `${testDirectoryRelativePath}use-file.js`
+const compileDirectoryRelativeUrl = `${testDirectoryRelativePath}.dist/`
+const fileRelativeUrl = `${testDirectoryRelativePath}use-file.js`
 const testPlan = {
-  [fileRelativePath]: {
+  [fileRelativeUrl]: {
     node: {
       launch: launchNode,
     },
@@ -21,7 +21,7 @@ const testPlan = {
 
 const { coverageMap } = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
-  compileDirectoryRelativePath,
+  compileDirectoryRelativeUrl,
   testPlan,
   coverage: true,
   coverageConfig: {

@@ -7,8 +7,8 @@ import { fetch } from "../fetch.js"
 
 const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
 const fileUrl = resolveFileUrl("./asset.js", import.meta.url)
-const fileRelativePath = urlToRelativePath(fileUrl, jsenvCoreDirectoryUrl)
-const compileDirectoryRelativePath = urlToRelativePath(
+const fileRelativeUrl = urlToRelativePath(fileUrl, jsenvCoreDirectoryUrl)
+const compileDirectoryRelativeUrl = urlToRelativePath(
   compileDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )
@@ -16,7 +16,7 @@ const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   compileDirectoryUrl,
 })
-const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativePath}otherwise/${fileRelativePath}`
+const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`
 
 await fetch(fileServerUrl)
 const response = await fetch(`${fileServerUrl}__asset__/meta.json`)
@@ -35,9 +35,9 @@ const expected = {
     "content-type": ["application/json"],
   },
   body: {
-    originalFileRelativePath: fileRelativePath,
+    originalFileRelativePath: fileRelativeUrl,
     contentType: "application/javascript",
-    sources: [fileRelativePath],
+    sources: [fileRelativeUrl],
     sourcesEtag: ['"7c-b5QcrFoIrKrXSr5F415m5RCd6uY"'],
     assets: ["asset.js.map"],
     assetsEtag: ['"f3-55p2vaaelfIcmtI8g+lQFAOt4E8"'],

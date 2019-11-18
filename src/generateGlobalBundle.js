@@ -1,7 +1,7 @@
 import { generateBundle } from "internal/bundling/generateBundle/generateBundle.js"
 
 export const generateGlobalBundle = async ({
-  bundleDirectoryRelativePath = "./dist/global",
+  bundleDirectoryRelativeUrl = "./dist/global",
   globalName,
   browser = true,
   ...rest
@@ -14,7 +14,7 @@ export const generateGlobalBundle = async ({
           name: globalName,
         }
       : {},
-    bundleDirectoryRelativePath,
+    bundleDirectoryRelativeUrl,
     compileGroupCount: 1,
     ...rest,
   })

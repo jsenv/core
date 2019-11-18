@@ -28,12 +28,12 @@ export const serveCompiledJs = async ({
   // it's an asset, it will be served by fileService
   if (relativePathIsAsset(relativePath)) return null
 
-  const compileDirectoryRelativePath = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
+  const compileDirectoryRelativeUrl = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
 
   // not inside compile directory -> nothing to compile
-  if (relativePath.startsWith(compileDirectoryRelativePath) === false) return null
+  if (relativePath.startsWith(compileDirectoryRelativeUrl) === false) return null
 
-  const afterCompileDirectory = relativePath.slice(compileDirectoryRelativePath.length)
+  const afterCompileDirectory = relativePath.slice(compileDirectoryRelativeUrl.length)
   const parts = afterCompileDirectory.split("/")
 
   const compileId = parts[0]
@@ -66,7 +66,7 @@ export const serveCompiledJs = async ({
     }
   }
 
-  const compiledFileRelativePath = `${compileDirectoryRelativePath}${compileId}/${remaining}`
+  const compiledFileRelativePath = `${compileDirectoryRelativeUrl}${compileId}/${remaining}`
 
   return serveCompiledFile({
     projectDirectoryUrl,

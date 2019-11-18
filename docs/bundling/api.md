@@ -1,13 +1,13 @@
 # Table of contents
 
 - [Shared bundling parameters](#shared-bundling-parameters)
-  - [bundleDirectoryRelativePath](#bundleDirectoryRelativePath)
+  - [bundleDirectoryRelativeUrl](#bundleDirectoryRelativeUrl)
   - [entryPointMap](#entryPointMap)
   - [minify](#minify)
   - [projectDirectoryPath](#projectDirectoryPath)
   - [babelPluginMap](#babelPluginMap)
   - [convertMap](#convertMap)
-  - [importMapFileRelativePath](#importMapFileRelativePath)
+  - [importMapFileRelativeUrl](#importMapFileRelativeUrl)
   - [importDefaultExtension](#importDefaultExtension)
   - [importReplaceMap](#importReplaceMap)
   - [importFallbackMap](#importFallbackMap)
@@ -23,9 +23,9 @@
 Some parameters are available to all function generating bundles.
 These parameters documentation is shared in this section.
 
-### bundleDirectoryRelativePath
+### bundleDirectoryRelativeUrl
 
-> `bundleDirectoryRelativePath` is a string leading to a directory where bundle files are written.
+> `bundleDirectoryRelativeUrl` is a string leading to a directory where bundle files are written.
 
 This parameter is optional with a default value specific to each bundling function:
 
@@ -83,9 +83,9 @@ false
 
 — see [generic documentation for convertMap](../shared-parameters/shared-parameters.md#convertMap)
 
-### importMapFileRelativePath
+### importMapFileRelativeUrl
 
-— see [generic documentation for importMapFileRelativePath](../shared-parameters/shared-parameters.md#importMapFileRelativePath)
+— see [generic documentation for importMapFileRelativeUrl](../shared-parameters/shared-parameters.md#importMapFileRelativeUrl)
 
 ### importDefaultExtension
 

@@ -10,7 +10,7 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryBasename = basename(testDirectoryUrl)
 const fileBasename = `${testDirectoryBasename}.js`
 const fileUrl = import.meta.resolve(`./${fileBasename}`)
-const fileRelativePath = urlToRelativePath(
+const fileRelativeUrl = urlToRelativePath(
   fileUrl,
   TRANSFORM_JS_TEST_PARAMS.projectDirectoryUrl,
 )
@@ -30,7 +30,7 @@ const actual = transformResultToCompilationResult(transformResult, {
 const expected = {
   compiledSource: actual.compiledSource,
   contentType: "application/javascript",
-  sources: [fileRelativePath],
+  sources: [fileRelativeUrl],
   sourcesContent: [fileContent],
   assets: [`${fileBasename}.map`],
   assetsContent: [actual.assetsContent[0]],

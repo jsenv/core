@@ -95,7 +95,7 @@ const { launchNode } = require("@jsenv/node-launcher")
 execute({
   projectPath: __dirname,
   launch: (options) => launchNode({ ...options, debugPort: 3456 }),
-  fileRelativePath: `/${process.argv[2]}`,
+  fileRelativeUrl: `/${process.argv[2]}`,
 })
 ```
 

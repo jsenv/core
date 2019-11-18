@@ -15,8 +15,8 @@ export const serveBrowserSelfExecute = ({
   livereloading,
   logger,
 }) => {
-  const compileDirectoryRelativePath = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
-  const browserSelfExecuteDirectoryRelativePath = `${compileDirectoryRelativePath}.jsenv/browser-self-execute/`
+  const compileDirectoryRelativeUrl = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
+  const browserSelfExecuteDirectoryRelativePath = `${compileDirectoryRelativeUrl}.jsenv/browser-self-execute/`
 
   return firstService(
     () => {
@@ -36,7 +36,7 @@ export const serveBrowserSelfExecute = ({
       // otherwise the cached bundles would still target the previous compile server origin
       if (
         request.ressource ===
-        `/${compileDirectoryRelativePath}.jsenv/browser-self-execute-dynamic-data.json`
+        `/${compileDirectoryRelativeUrl}.jsenv/browser-self-execute-dynamic-data.json`
       ) {
         return serveBrowserSelfExecuteDynamicData({
           compileServerOrigin,
@@ -51,8 +51,8 @@ export const serveBrowserSelfExecute = ({
       const browserSelfExecuteDirectoryUrl = `${origin}/${browserSelfExecuteDirectoryRelativePath}`
 
       if (requestUrl.startsWith(browserSelfExecuteDirectoryUrl)) {
-        const fileRelativePath = urlToRelativePath(requestUrl, browserSelfExecuteDirectoryUrl)
-        if (fileRelativePath.includes("__asset__/")) {
+        const fileRelativeUrl = urlToRelativePath(requestUrl, browserSelfExecuteDirectoryUrl)
+        if (fileRelativeUrl.includes("__asset__/")) {
           return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
             method,
             headers,
@@ -68,7 +68,7 @@ export const serveBrowserSelfExecute = ({
           browserSelfExecuteTemplateFileUrl,
           babelPluginMap,
           request,
-          fileRelativePath,
+          fileRelativeUrl,
           livereloading,
         })
       }
@@ -119,10 +119,10 @@ const serveBrowserSelfExecuteBundle = async ({
   importDefaultExtension,
   babelPluginMap,
   request,
-  fileRelativePath,
+  fileRelativeUrl,
   livereloading,
 }) => {
-  const compileDirectoryRelativePath = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
+  const compileDirectoryRelativeUrl = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
   return serveBundle({
     logger,
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
@@ -138,8 +138,8 @@ const serveBrowserSelfExecuteBundle = async ({
     importReplaceMap: {
       "/.jsenv/browser-self-execute-static-data.js": () =>
         generateBrowserSelfExecuteStaticDataSource({
-          compileDirectoryRelativePath,
-          fileRelativePath,
+          compileDirectoryRelativeUrl,
+          fileRelativeUrl,
           livereloading,
         }),
     },
@@ -150,11 +150,11 @@ const serveBrowserSelfExecuteBundle = async ({
 }
 
 const generateBrowserSelfExecuteStaticDataSource = ({
-  compileDirectoryRelativePath,
-  fileRelativePath,
+  compileDirectoryRelativeUrl,
+  fileRelativeUrl,
   livereloading,
 }) => `
-export const compileDirectoryRelativePath = ${JSON.stringify(compileDirectoryRelativePath)}
-export const fileRelativePath = ${JSON.stringify(fileRelativePath)}
+export const compileDirectoryRelativeUrl = ${JSON.stringify(compileDirectoryRelativeUrl)}
+export const fileRelativeUrl = ${JSON.stringify(fileRelativeUrl)}
 export const livereloading = ${JSON.stringify(livereloading)}
 `

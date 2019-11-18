@@ -15,7 +15,7 @@ const { launchAndExecute } = import.meta.require("@jsenv/execution")
 const folderRelativePath = selfHrefToFolderRelativePath(import.meta.url)
 const compileIntoRelativePath = `${folderRelativePath}/.dist`
 const compileId = "best"
-const fileRelativePath = `${folderRelativePath}/syntax-error.js`
+const fileRelativeUrl = `${folderRelativePath}/syntax-error.js`
 
 const { origin: compileServerOrigin } = await startCompileServer({
   ...NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
@@ -31,21 +31,21 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       compileIntoRelativePath,
     }),
-  fileRelativePath,
+  fileRelativeUrl,
 })
 const expected = {
   status: "errored",
   error: assignNonEnumerableProperties(
     new Error(`main module parsing error.
-href: file://${launchNodeProjectPathname}${compileIntoRelativePath}/${compileId}${fileRelativePath}
+href: file://${launchNodeProjectPathname}${compileIntoRelativePath}/${compileId}${fileRelativeUrl}
 parsing error message: ${actual.error.parsingError.message}`),
     {
       code: "MODULE_PARSING_ERROR",
-      href: `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${fileRelativePath}`,
+      href: `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${fileRelativeUrl}`,
       parsingError: {
         message: actual.error.parsingError.message,
         messageHTML: actual.error.parsingError.messageHTML,
-        filename: pathnameToOperatingSystemPath(`${launchNodeProjectPathname}${fileRelativePath}`),
+        filename: pathnameToOperatingSystemPath(`${launchNodeProjectPathname}${fileRelativeUrl}`),
         lineNumber: 1,
         columnNumber: 14,
       },

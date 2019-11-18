@@ -11,7 +11,7 @@ import { launchChromium } from `@jsenv/chromium-launcher`
 
 execute({
   projectPath: '/Users/you/folder',
-  fileRelativePath: '/index.js',
+  fileRelativeUrl: '/index.js',
   launch: launchChromium
 })
 ```
@@ -27,7 +27,7 @@ import { launchChromium } from `@jsenv/chromium-launcher`
 
 execute({
   projectPath: '/Users/you/folder',
-  fileRelativePath: '/index.js',
+  fileRelativeUrl: '/index.js',
   launch: (options) => launchChromium({ ...options, headless: false })
 })
 ```
