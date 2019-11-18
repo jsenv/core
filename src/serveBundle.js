@@ -24,7 +24,6 @@ export const serveBundle = async ({
   formatOutputOptions = {},
   node = format === "commonjs",
   browser = format === "global",
-  sourcemapPreferLeadingSlash = true,
 }) => {
   if (typeof jsenvProjectDirectoryUrl !== "string") {
     throw new TypeError(
@@ -108,7 +107,6 @@ export const serveBundle = async ({
       importMapForBundle,
       importReplaceMap,
       entryPointMap,
-      sourcemapPreferLeadingSlash,
       babelPluginMap,
       compileGroupCount: 1,
       throwUnhandled: false,
@@ -120,7 +118,7 @@ export const serveBundle = async ({
     })
 
     const entryFilename = `${entryBasename}${entryExtname}`
-    const sourcemapFileUrl = `${compiledFileUrl}/${entryFilename}__asset__/${entryFilename}.map`
+    const sourcemapFileUrl = `${compiledFileUrl}__asset__/${entryFilename}.map`
     const sourcemapFileRelativeUrlForModule = `./${relative(compiledFileUrl, sourcemapFileUrl)}`
 
     return bundleToCompilationResult(bundle, {

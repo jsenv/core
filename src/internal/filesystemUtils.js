@@ -2,24 +2,25 @@ import { dirname } from "path"
 import { promisify } from "util"
 import { mkdir, readFile, writeFile, stat } from "fs"
 import { fileUrlToPath } from "./urlUtils.js"
+import { createFileDirectories } from "./createFileDirectories.js"
 
 const rimraf = import.meta.require("rimraf")
 
-export const createFileDirectories = (filePath) => {
-  return new Promise((resolve, reject) => {
-    mkdir(dirname(filePath), { recursive: true }, (error) => {
-      if (error) {
-        if (error.code === "EEXIST") {
-          resolve()
-          return
-        }
-        reject(error)
-        return
-      }
-      resolve()
-    })
-  })
-}
+// export const createFileDirectories = (filePath) => {
+//   return new Promise((resolve, reject) => {
+//     mkdir(dirname(filePath), { recursive: true }, (error) => {
+//       if (error) {
+//         if (error.code === "EEXIST") {
+//           resolve()
+//           return
+//         }
+//         reject(error)
+//         return
+//       }
+//       resolve()
+//     })
+//   })
+// }
 
 const statPromisified = promisify(stat)
 export const readFileStat = async (filePath) => {

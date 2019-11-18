@@ -10,7 +10,6 @@ const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, jsenvC
 const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   compileDirectoryUrl,
-  logLevel: "debug",
 })
 const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativeUrl}.jsenv/browser-platform.js`
 const response = await fetch(fileServerUrl)

@@ -25,8 +25,9 @@ while sourcesContent will contain the json file raw source because the correspon
 json file etag is used to invalidate the cache
 */
 
+import { basename } from "path"
 import { readFileSync } from "fs"
-import { urlToRelativeUrl, fileUrlToPath } from "internal/urlUtils.js"
+import { fileUrlToRelativePath, fileUrlToPath } from "internal/urlUtils.js"
 import { writeOrUpdateSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 import { rollupIdToUrl } from "./generateBundle/createJsenvRollupPlugin/createJsenvRollupPlugin.js"
 
@@ -48,9 +49,11 @@ export const bundleToCompilationResult = (
       // do not track dependency outside project
       if (!moduleUrl.startsWith(projectDirectoryUrl)) return
 
-      const relativeUrl = urlToRelativeUrl(moduleUrl, projectDirectoryUrl)
-      if (!sources.includes(relativeUrl)) {
-        sources.push(relativeUrl)
+      // technically we are not relative to sourcemapFileUrl but rather
+      // to the meta.json file url but they are at the same place
+      const relativePath = fileUrlToRelativePath(moduleUrl, sourcemapFileUrl)
+      if (!sources.includes(relativePath)) {
+        sources.push(relativePath)
         sourcesContent.push(dependencyMap[moduleUrl].contentRaw)
       }
     })
@@ -65,9 +68,7 @@ export const bundleToCompilationResult = (
     sourcemapFileRelativeUrlForModule,
   })
   trackDependencies(mainChunk.dependencyMap)
-  // we should make sourcemapFileUrl relative to the asset directory
-  // right now it's a full url
-  assets.push(sourcemapFileUrl)
+  assets.push(basename(fileUrlToPath(sourcemapFileUrl)))
   assetsContent.push(JSON.stringify(mainChunk.sourcemap, null, "  "))
 
   rollupBundle.output.slice(1).forEach((rollupChunk) => {
