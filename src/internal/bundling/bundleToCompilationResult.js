@@ -33,7 +33,7 @@ import { rollupIdToUrl } from "./generateBundle/createJsenvRollupPlugin/createJs
 
 export const bundleToCompilationResult = (
   { rollupBundle, arrayOfAbstractUrl, moduleContentMap },
-  { projectDirectoryUrl, sourcemapFileUrl, sourcemapFileRelativeUrlForModule },
+  { projectDirectoryUrl, compiledFileUrl, sourcemapFileUrl },
 ) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -65,7 +65,7 @@ export const bundleToCompilationResult = (
   const mainChunk = parseRollupChunk(rollupBundle.output[0], {
     moduleContentMap,
     arrayOfAbstractUrl,
-    sourcemapFileRelativeUrlForModule,
+    sourcemapFileRelativeUrlForModule: fileUrlToRelativePath(sourcemapFileUrl, compiledFileUrl),
   })
   trackDependencies(mainChunk.dependencyMap)
   assets.push(basename(fileUrlToPath(sourcemapFileUrl)))

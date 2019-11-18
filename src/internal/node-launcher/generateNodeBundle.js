@@ -1,4 +1,4 @@
-import { extname, basename, relative } from "path"
+import { extname, basename } from "path"
 import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
 import { createLogger } from "@jsenv/logger"
 import { fileUrlToPath, resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
@@ -64,12 +64,11 @@ export const generateNodeBundle = async ({
       })
 
       const sourcemapFileUrl = `${compiledFileUrl}/${entryBasename}__asset__/${entryBasename}.map`
-      const sourcemapFileRelativeUrlForModule = `./${relative(compiledFileUrl, sourcemapFileUrl)}`
 
       return bundleToCompilationResult(bundle, {
         projectDirectoryUrl,
+        compiledFileUrl,
         sourcemapFileUrl,
-        sourcemapFileRelativeUrlForModule,
       })
     },
   })

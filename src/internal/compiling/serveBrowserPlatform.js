@@ -16,7 +16,6 @@ export const serveBrowserPlatform = async ({
   request,
 }) => {
   const { origin, ressource, method, headers } = request
-
   const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
   const requestUrl = `${origin}${ressource}`
   const browserPlatformCompiledFileRelativeUrl = `${compileDirectoryRelativeUrl}.jsenv/browser-platform.js`

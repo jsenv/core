@@ -1,4 +1,4 @@
-import { extname, basename, relative } from "path"
+import { extname, basename } from "path"
 import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
 import { composeTwoImportMaps } from "@jsenv/import-map"
 import { fileUrlToPath, resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
@@ -119,12 +119,11 @@ export const serveBundle = async ({
 
     const entryFilename = `${entryBasename}${entryExtname}`
     const sourcemapFileUrl = `${compiledFileUrl}__asset__/${entryFilename}.map`
-    const sourcemapFileRelativeUrlForModule = `./${relative(compiledFileUrl, sourcemapFileUrl)}`
 
     return bundleToCompilationResult(bundle, {
       projectDirectoryUrl,
+      compiledFileUrl,
       sourcemapFileUrl,
-      sourcemapFileRelativeUrlForModule,
     })
   }
 

@@ -41,8 +41,8 @@ export const serveNodePlatform = async ({
     compileDirectoryUrl,
     originalFileUrl: nodePlatformFileUrl,
     compiledFileUrl: nodePlatformCompiledFileUrl,
-    importDefaultExtension,
     importMapFileUrl,
+    importDefaultExtension,
     importReplaceMap: {
       "/.jsenv/node-platform-data.js": () =>
         generateNodePlatformDataSource({
