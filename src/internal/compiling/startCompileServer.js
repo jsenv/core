@@ -33,7 +33,8 @@ export const startCompileServer = async ({
 
   compileDirectoryUrl,
   compileDirectoryClean = false,
-  compileInMemory = false,
+  writeOnFilesystem = true,
+  useFilesystemAsCache = true,
 
   importMapFileUrl,
   importDefaultExtension,
@@ -125,7 +126,7 @@ ${projectDirectoryUrl}`)
     compileDirectoryMeta,
     forceObsolete: compileDirectoryClean,
     cleanCallback: (compileDirectoryPath) => {
-      logger.warn(`remove compile directory ${compileDirectoryPath}`)
+      logger.info(`clean compile directory content at ${compileDirectoryPath}`)
     },
   })
 
@@ -197,7 +198,8 @@ ${projectDirectoryUrl}`)
           serveCompiledJs({
             projectDirectoryUrl,
             compileDirectoryUrl,
-            compileInMemory,
+            writeOnFilesystem,
+            useFilesystemAsCache,
             groupMap,
             babelPluginMap,
             convertMap,

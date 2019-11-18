@@ -16,7 +16,8 @@ export const getOrGenerateCompiledFile = async ({
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl = originalFileUrl,
-  cache = false, // do not forget to pass this to true
+  writeOnFilesystem,
+  useFilesystemAsCache,
   cacheHitTracking = false,
   cacheInterProcessLocking = false,
   ifEtagMatch,
@@ -60,7 +61,7 @@ ${projectDirectoryUrl}`)
         compile,
         ifEtagMatch,
         ifModifiedSinceDate,
-        cache,
+        useFilesystemAsCache,
         logger,
       })
 
@@ -96,14 +97,16 @@ ${projectDirectoryUrl}`)
       //   sourcesContent: sourcesContent.filter((sourceContent) => sourceContent !== undefined),
       // }
 
-      await updateMeta({
-        logger,
-        meta,
-        compileResult,
-        compileResultStatus,
-        compiledFileUrl,
-        cacheHitTracking,
-      })
+      if (writeOnFilesystem) {
+        await updateMeta({
+          logger,
+          meta,
+          compileResult,
+          compileResultStatus,
+          compiledFileUrl,
+          cacheHitTracking,
+        })
+      }
 
       return {
         meta,
@@ -125,10 +128,10 @@ const computeCompileReport = async ({
   compile,
   ifEtagMatch,
   ifModifiedSinceDate,
-  cache,
+  useFilesystemAsCache,
   logger,
 }) => {
-  const meta = cache
+  const meta = useFilesystemAsCache
     ? await readMeta({
         logger,
         compiledFileUrl,

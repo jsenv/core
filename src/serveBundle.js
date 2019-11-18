@@ -133,6 +133,8 @@ export const serveBundle = async ({
     projectDirectoryUrl,
     originalFileUrl,
     compiledFileUrl,
+    writeOnFilesystem: true,
+    useFilesystemAsCache: true,
     projectFileRequestedCallback,
     compile,
     request,

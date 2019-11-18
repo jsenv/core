@@ -2,7 +2,7 @@
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
-import { fileUrlToPath, urlToRelativeUrl, resolveFileUrl } from "internal/urlUtils.js"
+import { fileUrlToPath, resolveFileUrl } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
@@ -156,6 +156,11 @@ export const launchNode = async ({
     return disconnectedPromise
   }
 
+  const nodeExecuteTemplateCompiledFileUrl = resolveFileUrl(
+    NODE_EXECUTE_RELATIVE_PATH,
+    compileDirectoryUrl,
+  )
+
   const executeFile = async (
     fileRelativeUrl,
     { collectNamespace, collectCoverage, executionId },
@@ -169,11 +174,8 @@ export const launchNode = async ({
         projectDirectoryUrl,
         importMapFileUrl,
         importDefaultExtension,
-        originalFileRelativeUrl: urlToRelativeUrl(nodeExecuteTemplateFileUrl, projectDirectoryUrl),
-        compiledFileRelativeUrl: urlToRelativeUrl(
-          resolveFileUrl(NODE_EXECUTE_RELATIVE_PATH, compileDirectoryUrl),
-          projectDirectoryUrl,
-        ),
+        originalFileUrl: nodeExecuteTemplateFileUrl,
+        compiledFileUrl: nodeExecuteTemplateCompiledFileUrl,
         babelPluginMap,
       })
 
@@ -195,6 +197,7 @@ export const launchNode = async ({
             compileServerOrigin,
             projectDirectoryUrl,
             compileDirectoryUrl,
+            nodeExecuteTemplateCompiledFileUrl,
             fileRelativeUrl,
             collectNamespace,
             collectCoverage,
@@ -303,6 +306,7 @@ const createNodeIIFEString = ({
   compileServerOrigin,
   projectDirectoryUrl,
   compileDirectoryUrl,
+  nodeExecuteTemplateCompiledFileUrl,
   fileRelativeUrl,
   collectNamespace,
   collectCoverage,
@@ -321,9 +325,7 @@ const createNodeIIFEString = ({
     remap
   } = ${JSON.stringify(
     {
-      nodeExecuteFilePath: fileUrlToPath(
-        resolveFileUrl(NODE_EXECUTE_RELATIVE_PATH, compileDirectoryUrl),
-      ),
+      nodeExecuteFilePath: fileUrlToPath(nodeExecuteTemplateCompiledFileUrl),
       compileServerOrigin,
       projectDirectoryUrl,
       compileDirectoryUrl,

@@ -23,7 +23,8 @@ export const generateNodeBundle = async ({
     projectDirectoryUrl,
     originalFileUrl,
     compiledFileUrl,
-    cache: true,
+    writeOnFilesystem: true,
+    useFilesystemAsCache: true,
     compile: async () => {
       const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
       const entryExtname = extname(originalFileRelativeUrl)

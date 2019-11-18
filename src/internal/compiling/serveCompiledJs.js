@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { readFile } from "fs"
 import { urlToContentType } from "@jsenv/server"
-import { resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
+import { urlToRelativeUrl, resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
@@ -9,7 +9,8 @@ import { serveCompiledFile } from "./serveCompiledFile.js"
 export const serveCompiledJs = async ({
   projectDirectoryUrl,
   compileDirectoryUrl,
-  compileInMemory,
+  writeOnFilesystem,
+  useFilesystemAsCache,
   groupMap,
   babelPluginMap,
   convertMap,
@@ -20,15 +21,15 @@ export const serveCompiledJs = async ({
 }) => {
   const { origin, ressource } = request
   const requestUrl = `${origin}${ressource}`
-  const compileDirectoryServerUrl = `${origin}${compileDirectoryUrl.slice("file://".length)}`
-
   // it's an asset, it will be served by fileService
   if (urlIsAsset(requestUrl)) {
     return null
   }
 
+  const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
+  const compileDirectoryServerUrl = `${origin}/${compileDirectoryRelativeUrl}`
   // not inside compile directory -> nothing to compile
-  if (!requestUrl.startsWith(compileDirectoryServerUrl) === false) {
+  if (!requestUrl.startsWith(compileDirectoryServerUrl)) {
     return null
   }
 
@@ -70,9 +71,10 @@ export const serveCompiledJs = async ({
 
   return serveCompiledFile({
     projectDirectoryUrl,
-    compileInMemory,
     originalFileUrl,
     compiledFileUrl,
+    writeOnFilesystem,
+    useFilesystemAsCache,
     projectFileRequestedCallback,
     request,
     compile: async () => {

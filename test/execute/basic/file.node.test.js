@@ -5,9 +5,9 @@ import { execute, launchNode } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const compileDirectoryRelativeUrl = `${testDirectoryRelativePath}.dist/`
-const fileRelativeUrl = `${testDirectoryRelativePath}file.js`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const compileDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.dist/`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}file.js`
 
 const actual = await execute({
   ...EXECUTE_TEST_PARAMS,

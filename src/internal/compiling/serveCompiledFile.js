@@ -10,18 +10,17 @@ export const serveCompiledFile = async ({
   projectFileRequestedCallback = () => {},
   request,
   compile,
-  compileInMemory,
+  writeOnFilesystem,
+  useFilesystemAsCache,
   compileCacheStrategy = "etag",
   serverCompileCacheHitTracking = false,
   serverCompileCacheInterProcessLocking = false,
 }) => {
-  const cache = !compileInMemory
-
-  if (cache && compileCacheStrategy !== "etag" && compileCacheStrategy !== "mtime") {
+  if (writeOnFilesystem && compileCacheStrategy !== "etag" && compileCacheStrategy !== "mtime") {
     throw new Error(`compileCacheStrategy must be etag or mtime , got ${compileCacheStrategy}`)
   }
 
-  const cacheWithETag = cache && compileCacheStrategy === "etag"
+  const cacheWithETag = writeOnFilesystem && compileCacheStrategy === "etag"
   const { headers = {} } = request
 
   let ifEtagMatch
@@ -31,7 +30,7 @@ export const serveCompiledFile = async ({
     }
   }
 
-  const cacheWithMtime = cache && compileCacheStrategy === "mtime"
+  const cacheWithMtime = writeOnFilesystem && compileCacheStrategy === "mtime"
   let ifModifiedSinceDate
   if (cacheWithMtime) {
     const ifModifiedSince = headers["if-modified-since"]
@@ -52,7 +51,8 @@ export const serveCompiledFile = async ({
       compiledFileUrl,
       ifEtagMatch,
       ifModifiedSinceDate,
-      cache,
+      writeOnFilesystem,
+      useFilesystemAsCache,
       cacheHitTracking: serverCompileCacheHitTracking,
       cacheInterProcessLocking: serverCompileCacheInterProcessLocking,
       compile,
