@@ -13,7 +13,7 @@ import { assertFileExists, removeDirectory } from "internal/filesystemUtils.js"
 import {
   assertProjectDirectoryPath,
   assertProjectDirectoryExists,
-  assertImportMapFileRelativePath,
+  assertImportMapFileRelativeUrl,
   assertImportMapFileInsideProject,
 } from "internal/argUtils.js"
 import { generateGroupMap } from "internal/generateGroupMap/generateGroupMap.js"
@@ -71,7 +71,7 @@ export const generateBundle = async ({
     await removeDirectory(fileUrlToPath(bundleDirectoryUrl))
   }
 
-  assertImportMapFileRelativePath({ importMapFileRelativeUrl })
+  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
   const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
@@ -181,15 +181,15 @@ const assertEntryPointMap = ({ entryPointMap }) => {
     throw new TypeError(`entryPointMap must be an object, got ${entryPointMap}`)
   }
   Object.keys(entryPointMap).forEach((entryName) => {
-    const entryRelativePath = entryPointMap[entryName]
-    if (typeof entryRelativePath !== "string") {
+    const entryRelativeUrl = entryPointMap[entryName]
+    if (typeof entryRelativeUrl !== "string") {
       throw new TypeError(
-        `found unexpected value in entryPointMap, it must be a string but found ${entryRelativePath} for key ${entryName}`,
+        `found unexpected value in entryPointMap, it must be a string but found ${entryRelativeUrl} for key ${entryName}`,
       )
     }
-    if (!entryRelativePath.startsWith("./")) {
+    if (!entryRelativeUrl.startsWith("./")) {
       throw new TypeError(
-        `found unexpected value in entryPointMap, it must start with ./ but found ${entryRelativePath} for key ${entryName}`,
+        `found unexpected value in entryPointMap, it must start with ./ but found ${entryRelativeUrl} for key ${entryName}`,
       )
     }
   })

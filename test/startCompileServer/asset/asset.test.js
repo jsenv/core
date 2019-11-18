@@ -8,10 +8,7 @@ import { fetch } from "../fetch.js"
 const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
 const fileUrl = resolveFileUrl("./asset.js", import.meta.url)
 const fileRelativeUrl = urlToRelativeUrl(fileUrl, jsenvCoreDirectoryUrl)
-const compileDirectoryRelativeUrl = urlToRelativeUrl(
-  compileDirectoryUrl,
-  jsenvCoreDirectoryUrl,
-)
+const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, jsenvCoreDirectoryUrl)
 const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   compileDirectoryUrl,
@@ -35,7 +32,7 @@ const expected = {
     "content-type": ["application/json"],
   },
   body: {
-    originalFileRelativePath: fileRelativeUrl,
+    originalFileRelativeUrl: fileRelativeUrl,
     contentType: "application/javascript",
     sources: [fileRelativeUrl],
     sourcesEtag: ['"7c-b5QcrFoIrKrXSr5F415m5RCd6uY"'],

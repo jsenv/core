@@ -1,6 +1,6 @@
 import { createOperation } from "@jsenv/cancellation"
 import { readFileContent } from "internal/filesystemUtils.js"
-import { fileUrlToPath } from "internal/urlUtils.js"
+import { resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
 import { createInstrumentBabelPlugin } from "./createInstrumentBabelPlugin.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
 
@@ -8,13 +8,11 @@ const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-im
 const syntaxImportMeta = import.meta.require("@babel/plugin-syntax-import-meta")
 const { transformAsync } = import.meta.require("@babel/core")
 
-export const relativePathToEmptyCoverage = async ({
-  cancellationToken,
-  projectDirectoryUrl,
-  relativePath,
-  babelPluginMap,
-}) => {
-  const fileUrl = `${projectDirectoryUrl}${relativePath}`
+export const relativeUrlToEmptyCoverage = async (
+  relativeUrl,
+  { cancellationToken, projectDirectoryUrl, babelPluginMap },
+) => {
+  const fileUrl = resolveFileUrl(relativeUrl, projectDirectoryUrl)
   const filePath = fileUrlToPath(fileUrl)
   const source = await createOperation({
     cancellationToken,
@@ -31,7 +29,7 @@ export const relativePathToEmptyCoverage = async ({
       start: () =>
         transformAsync(source, {
           filename: filePath,
-          filenameRelative: relativePath,
+          filenameRelative: relativeUrl,
           configFile: false,
           babelrc: false,
           parserOpts: {
@@ -63,7 +61,7 @@ export const relativePathToEmptyCoverage = async ({
     if (e && e.code === "BABEL_PARSE_ERROR") {
       // return an empty coverage for that file when
       // it contains a syntax error
-      return createEmptyCoverage(relativePath)
+      return createEmptyCoverage(relativeUrl)
     }
     throw e
   }

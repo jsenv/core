@@ -17,13 +17,11 @@ export const serveExploringIndex = async ({
     specifierMetaMap,
     predicate: ({ explorable }) => explorable,
   })
-  const explorableRelativePathArray = matchingFileResultArray.map(
-    ({ relativePath }) => relativePath,
-  )
+  const explorableRelativeUrlArray = matchingFileResultArray.map(({ relativePath }) => relativePath)
 
   const html = getBrowsingIndexPageHTML({
     projectDirectoryUrl,
-    explorableRelativePathArray,
+    explorableRelativeUrlArray,
   })
 
   return {
@@ -37,7 +35,7 @@ export const serveExploringIndex = async ({
   }
 }
 
-const getBrowsingIndexPageHTML = ({ projectDirectoryUrl, explorableRelativePathArray }) => {
+const getBrowsingIndexPageHTML = ({ projectDirectoryUrl, explorableRelativeUrlArray }) => {
   return `<!doctype html>
 
   <head>
@@ -50,8 +48,8 @@ const getBrowsingIndexPageHTML = ({ projectDirectoryUrl, explorableRelativePathA
       <h1>${projectDirectoryUrl}</h1>
       <p>List of path to explore: </p>
       <ul>
-        ${explorableRelativePathArray
-          .map((relativePath) => `<li><a href="${relativePath}">${relativePath}</a></li>`)
+        ${explorableRelativeUrlArray
+          .map((relativeUrl) => `<li><a href="${relativeUrl}">${relativeUrl}</a></li>`)
           .join("")}
       </ul>
     </main>

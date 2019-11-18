@@ -36,14 +36,11 @@ export const execute = async ({
   const { SourceMapConsumer } = executionRequire("source-map")
   const { installNodeErrorStackRemapping } = executionRequire("@jsenv/error-stack-sourcemap")
 
-  const compileDirectoryRelativeUrl = urlToRelativeUrl(
-    compileDirectoryUrl,
-    projectDirectoryUrl,
-  )
-  const nodePlatformCompiledFileRelativePath = `${compileDirectoryRelativeUrl}.jsenv/node-platform.js`
-  const nodePlatformCompiledServerUrl = `${compileServerOrigin}/${nodePlatformCompiledFileRelativePath}`
+  const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
+  const nodePlatformCompiledFileRelativeUrl = `${compileDirectoryRelativeUrl}.jsenv/node-platform.js`
+  const nodePlatformCompiledServerUrl = `${compileServerOrigin}/${nodePlatformCompiledFileRelativeUrl}`
   const nodePlatformCompiledFileUrl = resolveFileUrl(
-    nodePlatformCompiledFileRelativePath,
+    nodePlatformCompiledFileRelativeUrl,
     projectDirectoryUrl,
   )
   const nodePlatformCompiledFilePath = fileUrlToPath(nodePlatformCompiledFileUrl)
@@ -51,12 +48,12 @@ export const execute = async ({
   await fetchUsingHttp(nodePlatformCompiledServerUrl)
   // eslint-disable-next-line import/no-dynamic-require
   const { nodePlatform } = require(nodePlatformCompiledFilePath)
-  const { relativePathToCompiledUrl, executeFile } = nodePlatform.create({
+  const { relativeUrlToCompiledUrl, executeFile } = nodePlatform.create({
     compileServerOrigin,
     projectDirectoryUrl,
   })
 
-  const fileCompiledServerUrl = relativePathToCompiledUrl(fileRelativeUrl)
+  const fileCompiledServerUrl = relativeUrlToCompiledUrl(fileRelativeUrl)
   const fileCompiledFileUrl = resolveFileUrl(
     fileCompiledServerUrl.slice(compileServerOrigin.length),
     projectDirectoryUrl,

@@ -6,7 +6,7 @@ import { metaMapToSpecifierMetaMap } from "@jsenv/url-meta"
 import { collectFiles } from "@jsenv/file-collector"
 import { fileUrlToPath } from "internal/urlUtils.js"
 import { launchAndExecute } from "internal/executing/launchAndExecute.js"
-import { relativePathToEmptyCoverage } from "./coverage/relativePathToEmptyCoverage.js"
+import { relativeUrlToEmptyCoverage } from "./coverage/relativeUrlToEmptyCoverage.js"
 import { executionReportToCoverageMap } from "./coverage/executionReportToCoverageMap.js"
 import {
   createCompletedLog,
@@ -267,26 +267,25 @@ const reportToCoverageMap = async (
     return coverageMapForReport
   }
 
-  const relativePathToCoverArray = await listRelativePathToCover({
+  const relativeFileUrlToCoverArray = await listRelativeFileUrlToCover({
     cancellationToken,
     projectDirectoryUrl,
     coverageConfig,
   })
 
-  const relativePathMissingCoverageArray = relativePathToCoverArray.filter(
-    (relativePathToCover) => relativePathToCover in coverageMapForReport === false,
+  const relativeFileUrlMissingCoverageArray = relativeFileUrlToCoverArray.filter(
+    (relativeFileUrlToCover) => relativeFileUrlToCover in coverageMapForReport === false,
   )
 
   const coverageMapForMissedFiles = {}
   await Promise.all(
-    relativePathMissingCoverageArray.map(async (relativePathMissingCoverage) => {
-      const emptyCoverage = await relativePathToEmptyCoverage({
+    relativeFileUrlMissingCoverageArray.map(async (relativeFileUrlMissingCoverage) => {
+      const emptyCoverage = await relativeUrlToEmptyCoverage(relativeFileUrlMissingCoverage, {
         cancellationToken,
         projectDirectoryUrl,
-        relativePath: relativePathMissingCoverage,
         babelPluginMap,
       })
-      coverageMapForMissedFiles[relativePathMissingCoverage] = emptyCoverage
+      coverageMapForMissedFiles[relativeFileUrlMissingCoverage] = emptyCoverage
       return emptyCoverage
     }),
   )
@@ -297,7 +296,7 @@ const reportToCoverageMap = async (
   }
 }
 
-const listRelativePathToCover = async ({
+const listRelativeFileUrlToCover = async ({
   cancellationToken,
   projectDirectoryUrl,
   coverageConfig,

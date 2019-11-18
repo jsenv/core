@@ -1,4 +1,5 @@
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
+import { resolveFileUrl } from "internal/urlUtils.js"
 import { createInstrumentBabelPlugin } from "./coverage/createInstrumentBabelPlugin.js"
 import { generateExecutionSteps } from "./generateExecutionSteps.js"
 import { startCompileServerForExecutingPlan } from "./startCompileServerForExecutingPlan.js"
@@ -39,18 +40,15 @@ export const executePlan = async ({
       projectDirectoryUrl,
     )
 
-    const coverRelativePathPredicate = (relativePath) =>
-      urlToMeta({
-        url: `${projectDirectoryUrl}${relativePath}`,
-        specifierMetaMap: specifierMetaMapForCover,
-      }).cover
-
     babelPluginMap = {
       ...babelPluginMap,
       "transform-instrument": [
         createInstrumentBabelPlugin({
-          predicate: ({ relativePath }) => {
-            return coverRelativePathPredicate(relativePath)
+          predicate: ({ relativeUrl }) => {
+            return urlToMeta({
+              url: resolveFileUrl(relativeUrl, projectDirectoryUrl),
+              specifierMetaMap: specifierMetaMapForCover,
+            }).cover
           },
         }),
       ],

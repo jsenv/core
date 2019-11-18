@@ -169,11 +169,8 @@ export const launchNode = async ({
         projectDirectoryUrl,
         importMapFileUrl,
         importDefaultExtension,
-        originalFileRelativePath: urlToRelativeUrl(
-          nodeExecuteTemplateFileUrl,
-          projectDirectoryUrl,
-        ),
-        compiledFileRelativePath: urlToRelativeUrl(
+        originalFileRelativeUrl: urlToRelativeUrl(nodeExecuteTemplateFileUrl, projectDirectoryUrl),
+        compiledFileRelativeUrl: urlToRelativeUrl(
           resolveFileUrl(NODE_EXECUTE_RELATIVE_PATH, compileDirectoryUrl),
           projectDirectoryUrl,
         ),

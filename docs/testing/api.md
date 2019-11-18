@@ -50,7 +50,7 @@ executeTestPlan({
     "./**/*.test.*": false,
   },
   coverageJsonFile: true,
-  coverageJsonFileRelativePath: "./coverage/coverage.json",
+  coverageJsonFileRelativeUrl: "./coverage/coverage.json",
 })
 ```
 

@@ -39,9 +39,9 @@ const computeTestingResultComparisonSummary = (previousTestingResult, testingRes
   let fixedCount = 0
   let brokenCount = 0
   let stillFailingCount = 0
-  executionArray.forEach(({ relativePath, executionResult: { status, executionName } }) => {
+  executionArray.forEach(({ relativeUrl, executionResult: { status, executionName } }) => {
     const previousExecution = previousExecutionArray.find((previousExecutionCandidate) => {
-      if (previousExecutionCandidate.relativePath !== relativePath) return false
+      if (previousExecutionCandidate.relativeUrl !== relativeUrl) return false
       if (previousExecutionCandidate.executionResult.executionName !== executionName) return false
       return true
     })
@@ -71,11 +71,11 @@ const computeTestingResultComparisonSummary = (previousTestingResult, testingRes
 
 const reportToExecutionResultArray = (report) => {
   const executionResultArray = []
-  Object.keys(report).forEach((relativePath) => {
-    const fileExecutionMap = report[relativePath]
+  Object.keys(report).forEach((relativeUrl) => {
+    const fileExecutionMap = report[relativeUrl]
     Object.keys(fileExecutionMap).forEach((executionName) => {
       executionResultArray.push({
-        relativePath,
+        relativeUrl,
         executionResult: fileExecutionMap[executionName],
       })
     })

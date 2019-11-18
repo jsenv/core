@@ -50,11 +50,11 @@ const { EventSource, location } = window
   )
   const { __browserPlatform__ } = window
 
-  const { relativePathToCompiledUrl, executeFile } = __browserPlatform__.create({
+  const { relativeUrlToCompiledUrl, executeFile } = __browserPlatform__.create({
     compileServerOrigin,
   })
 
-  await executeFile(relativePathToCompiledUrl(fileRelativeUrl), {
+  await executeFile(relativeUrlToCompiledUrl(fileRelativeUrl), {
     errorNotification: true,
     executionId: fileRelativeUrl,
   })

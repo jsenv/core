@@ -1,11 +1,6 @@
 import { readFile } from "fs"
 import { urlToContentType } from "@jsenv/server"
-import {
-  resolveFileUrl,
-  pathToFileUrl,
-  urlToRelativeUrl,
-  fileUrlToPath,
-} from "internal/urlUtils.js"
+import { resolveFileUrl, urlToRelativeUrl, fileUrlToPath } from "internal/urlUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
@@ -23,17 +18,17 @@ export const serveCompiledJs = async ({
 }) => {
   const { origin, ressource } = request
 
-  const relativePath = ressource.slice(1)
+  const relativeUrl = ressource.slice(1)
 
   // it's an asset, it will be served by fileService
-  if (relativePathIsAsset(relativePath)) return null
+  if (relativeUrlIsAsset(relativeUrl)) return null
 
   const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
 
   // not inside compile directory -> nothing to compile
-  if (relativePath.startsWith(compileDirectoryRelativeUrl) === false) return null
+  if (relativeUrl.startsWith(compileDirectoryRelativeUrl) === false) return null
 
-  const afterCompileDirectory = relativePath.slice(compileDirectoryRelativeUrl.length)
+  const afterCompileDirectory = relativeUrl.slice(compileDirectoryRelativeUrl.length)
   const parts = afterCompileDirectory.split("/")
 
   const compileId = parts[0]
@@ -52,26 +47,27 @@ export const serveCompiledJs = async ({
   // nothing after compileId, we don't know what to compile (not suppoed to happen)
   if (remaining === "") return null
 
-  const originalFileRelativePath = remaining
+  const originalFileRelativeUrl = remaining
+  const requestUrl = `${origin}${ressource}`
 
   // json, css, html etc does not need to be compiled
   // they are redirected to the source location that will be served as file
-  const contentType = urlToContentType(pathToFileUrl(relativePath))
+  const contentType = urlToContentType(requestUrl)
   if (contentType !== "application/javascript") {
     return {
       status: 307,
       headers: {
-        location: resolveFileUrl(originalFileRelativePath, origin),
+        location: resolveFileUrl(originalFileRelativeUrl, origin),
       },
     }
   }
 
-  const compiledFileRelativePath = `${compileDirectoryRelativeUrl}${compileId}/${remaining}`
+  const compiledFileRelativeUrl = `${compileDirectoryRelativeUrl}${compileId}/${remaining}`
 
   return serveCompiledFile({
     projectDirectoryUrl,
-    originalFileRelativePath,
-    compiledFileRelativePath,
+    originalFileRelativeUrl,
+    compiledFileRelativeUrl,
     projectFileRequestedCallback,
     request,
     compile: async ({ originalFileUrl, compiledFileUrl }) => {
@@ -131,4 +127,4 @@ export const serveCompiledJs = async ({
 // I don't do it for now because it will impact sourcemap paths
 // and sourceMappingURL comment at the bottom of compiled files
 // and that's something sensitive
-export const relativePathIsAsset = (relativePath) => relativePath.match(/[^\/]+__asset__\/.+$/)
+export const relativeUrlIsAsset = (relativeUrl) => relativeUrl.match(/[^\/]+__asset__\/.+$/)

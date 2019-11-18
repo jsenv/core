@@ -7,14 +7,14 @@ export const validateMeta = async ({
   logger,
   meta,
   projectDirectoryUrl,
-  compiledFileRelativePath,
+  compiledFileRelativeUrl,
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
   const compiledFileValidation = await validateCompiledFile({
     logger,
     projectDirectoryUrl,
-    compiledFileRelativePath,
+    compiledFileRelativeUrl,
     ifEtagMatch,
     ifModifiedSinceDate,
   })
@@ -30,7 +30,7 @@ export const validateMeta = async ({
       logger,
       meta,
       projectDirectoryUrl,
-      compiledFileRelativePath,
+      compiledFileRelativeUrl,
     }),
   ])
 
@@ -57,13 +57,13 @@ export const validateMeta = async ({
 const validateCompiledFile = async ({
   logger,
   projectDirectoryUrl,
-  compiledFileRelativePath,
+  compiledFileRelativeUrl,
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
   const compiledFileUrl = resolveCompiledFileUrl({
     projectDirectoryUrl,
-    compiledFileRelativePath,
+    compiledFileRelativeUrl,
   })
   const compiledFilePath = fileUrlToPath(compiledFileUrl)
 
@@ -169,14 +169,14 @@ const validateSource = async ({ logger, projectDirectoryUrl, source, eTag }) => 
   }
 }
 
-const validateAssets = ({ logger, projectDirectoryUrl, compiledFileRelativePath, meta }) =>
+const validateAssets = ({ logger, projectDirectoryUrl, compiledFileRelativeUrl, meta }) =>
   Promise.all(
     meta.assets.map((asset, index) =>
       validateAsset({
         logger,
         asset,
         projectDirectoryUrl,
-        compiledFileRelativePath,
+        compiledFileRelativeUrl,
         eTag: meta.assetsEtag[index],
       }),
     ),
@@ -186,12 +186,12 @@ const validateAsset = async ({
   logger,
   asset,
   projectDirectoryUrl,
-  compiledFileRelativePath,
+  compiledFileRelativeUrl,
   eTag,
 }) => {
   const assetFileUrl = resolveAssetFileUrl({
     projectDirectoryUrl,
-    compiledFileRelativePath,
+    compiledFileRelativeUrl,
     asset,
   })
   const assetFilePath = fileUrlToPath(assetFileUrl)

@@ -5,24 +5,24 @@ import { resolveMetaJsonFileUrl } from "./locaters.js"
 export const readMeta = async ({
   logger,
   projectDirectoryUrl,
-  originalFileRelativePath,
-  compiledFileRelativePath,
+  originalFileRelativeUrl,
+  compiledFileRelativeUrl,
 }) => {
   const metaJsonFileUrl = resolveMetaJsonFileUrl({
     projectDirectoryUrl,
-    compiledFileRelativePath,
+    compiledFileRelativeUrl,
   })
   const metaJsonFilePath = fileUrlToPath(metaJsonFileUrl)
 
   try {
     const metaJsonString = await readFileContent(metaJsonFilePath)
     const metaJsonObject = JSON.parse(metaJsonString)
-    const relativePathToProjectDirectoryFromMeta = metaJsonObject.originalFileRelativePath
-    if (relativePathToProjectDirectoryFromMeta !== originalFileRelativePath) {
+    const originalFileRelativeUrlFromMeta = metaJsonObject.originalFileRelativeUrl
+    if (originalFileRelativeUrlFromMeta !== originalFileRelativeUrl) {
       logger.info(
-        createRelativePathToProjectDirectoryChangedMessage({
-          relativePathToProjectDirectoryFromMeta,
-          originalFileRelativePath,
+        createOriginalFileRelativeUrlChangedMessage({
+          originalFileRelativeUrlFromMeta,
+          originalFileRelativeUrl,
           metaJsonFilePath,
         }),
       )
@@ -48,15 +48,15 @@ export const readMeta = async ({
   }
 }
 
-const createRelativePathToProjectDirectoryChangedMessage = ({
-  relativePathToProjectDirectoryFromMeta,
-  originalFileRelativePath,
+const createOriginalFileRelativeUrlChangedMessage = ({
+  originalFileRelativeUrlFromMeta,
+  originalFileRelativeUrl,
   metaJsonFilePath,
-}) => `unexpected originalFileRelativePath in meta.json
---- originalFileRelativePath in meta.json ---
-${relativePathToProjectDirectoryFromMeta}
---- originalFileRelativePath ---
-${originalFileRelativePath}
+}) => `unexpected originalFileRelativeUrl in meta.json
+--- originalFileRelativeUrl in meta.json ---
+${originalFileRelativeUrlFromMeta}
+--- originalFileRelativeUrl ---
+${originalFileRelativeUrl}
 --- meta.json path ---
 ${metaJsonFilePath}`
 

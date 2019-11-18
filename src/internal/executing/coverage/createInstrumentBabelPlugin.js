@@ -14,12 +14,12 @@ export const createInstrumentBabelPlugin = ({
             const { file } = this
             const { opts } = file
 
-            const relativePath = optionsToRelativePath(opts)
-            if (!relativePath) {
-              console.warn("file without relativePath", relativePath)
+            const relativeUrl = optionsToRelativeUrl(opts)
+            if (!relativeUrl) {
+              console.warn("file without relativeUrl", relativeUrl)
               return
             }
-            if (!predicate({ relativePath })) return
+            if (!predicate({ relativeUrl })) return
 
             this.__dv__ = null
 
@@ -53,7 +53,7 @@ export const createInstrumentBabelPlugin = ({
   }
 }
 
-const optionsToRelativePath = ({ filenameRelative }) => {
+const optionsToRelativeUrl = ({ filenameRelative }) => {
   if (filenameRelative) return filenameRelative
   return ""
 }

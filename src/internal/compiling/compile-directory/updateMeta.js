@@ -7,8 +7,8 @@ export const updateMeta = ({
   logger,
   meta,
   projectDirectoryUrl,
-  originalFileRelativePath,
-  compiledFileRelativePath,
+  originalFileRelativeUrl,
+  compiledFileRelativeUrl,
   cacheHitTracking,
   compileResult,
   compileResultStatus,
@@ -32,7 +32,7 @@ export const updateMeta = ({
     if (writeCompiledSourceFile) {
       const compiledFileUrl = resolveCompiledFileUrl({
         projectDirectoryUrl,
-        compiledFileRelativePath,
+        compiledFileRelativeUrl,
       })
       const compiledFilePath = fileUrlToPath(compiledFileUrl)
       logger.debug(`write compiled file at ${compiledFilePath}`)
@@ -44,7 +44,7 @@ export const updateMeta = ({
         ...assets.map((asset, index) => {
           const assetFileUrl = resolveAssetFileUrl({
             projectDirectoryUrl,
-            compiledFileRelativePath,
+            compiledFileRelativeUrl,
             asset,
           })
           const assetFilePath = fileUrlToPath(assetFileUrl)
@@ -60,7 +60,7 @@ export const updateMeta = ({
 
     if (isNew) {
       latestMeta = {
-        originalFileRelativePath,
+        originalFileRelativeUrl,
         contentType,
         sources,
         sourcesEtag: sourcesContent.map((sourceContent) =>
@@ -108,7 +108,7 @@ export const updateMeta = ({
 
     const metaJsonFileUrl = resolveMetaJsonFileUrl({
       projectDirectoryUrl,
-      compiledFileRelativePath,
+      compiledFileRelativeUrl,
     })
     const metaJsonFilePath = fileUrlToPath(metaJsonFileUrl)
 

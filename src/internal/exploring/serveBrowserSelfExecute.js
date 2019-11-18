@@ -16,7 +16,7 @@ export const serveBrowserSelfExecute = ({
   logger,
 }) => {
   const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
-  const browserSelfExecuteDirectoryRelativePath = `${compileDirectoryRelativeUrl}.jsenv/browser-self-execute/`
+  const browserSelfExecuteDirectoryRelativeUrl = `${compileDirectoryRelativeUrl}.jsenv/browser-self-execute/`
 
   return firstService(
     () => {
@@ -24,7 +24,7 @@ export const serveBrowserSelfExecute = ({
       if (request.ressource === "/.jsenv/browser-script.js") {
         return redirectBrowserScriptToCompiledBrowserSelfExecuteFile({
           compileServerOrigin,
-          browserSelfExecuteDirectoryRelativePath,
+          browserSelfExecuteDirectoryRelativeUrl,
           request,
         })
       }
@@ -48,10 +48,10 @@ export const serveBrowserSelfExecute = ({
       const { origin, ressource, method, headers } = request
 
       const requestUrl = `${origin}${ressource}`
-      const browserSelfExecuteDirectoryUrl = `${origin}/${browserSelfExecuteDirectoryRelativePath}`
+      const browserSelfExecuteDirectoryServerUrl = `${origin}/${browserSelfExecuteDirectoryRelativeUrl}`
 
-      if (requestUrl.startsWith(browserSelfExecuteDirectoryUrl)) {
-        const fileRelativeUrl = urlToRelativeUrl(requestUrl, browserSelfExecuteDirectoryUrl)
+      if (requestUrl.startsWith(browserSelfExecuteDirectoryServerUrl)) {
+        const fileRelativeUrl = urlToRelativeUrl(requestUrl, browserSelfExecuteDirectoryServerUrl)
         if (fileRelativeUrl.includes("__asset__/")) {
           return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
             method,
@@ -80,11 +80,11 @@ export const serveBrowserSelfExecute = ({
 
 const redirectBrowserScriptToCompiledBrowserSelfExecuteFile = ({
   compileServerOrigin,
-  browserSelfExecuteDirectoryRelativePath,
+  browserSelfExecuteDirectoryRelativeUrl,
   request: { origin, headers },
 }) => {
   const file = headers.referer.slice(compileServerOrigin.length)
-  const browserSelfExecuteCompiledFileServerUrl = `${origin}/${browserSelfExecuteDirectoryRelativePath}${file}`
+  const browserSelfExecuteCompiledFileServerUrl = `${origin}/${browserSelfExecuteDirectoryRelativeUrl}${file}`
 
   return {
     status: 307,
@@ -128,11 +128,11 @@ const serveBrowserSelfExecuteBundle = async ({
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileRelativePath: urlToRelativeUrl(
+    originalFileRelativeUrl: urlToRelativeUrl(
       browserSelfExecuteTemplateFileUrl,
       projectDirectoryUrl,
     ),
-    compiledFileRelativePath: request.ressource.slice(1),
+    compiledFileRelativeUrl: request.ressource.slice(1),
     importDefaultExtension,
     importMapFileUrl,
     importReplaceMap: {

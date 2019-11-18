@@ -7,9 +7,9 @@ import { pathToDirectoryUrl, resolveDirectoryUrl, resolveFileUrl } from "interna
 import {
   assertProjectDirectoryPath,
   assertProjectDirectoryExists,
-  assertImportMapFileRelativePath,
+  assertImportMapFileRelativeUrl,
   assertImportMapFileInsideProject,
-  assertCompileDirectoryRelativePath,
+  assertCompileDirectoryRelativeUrl,
   assertCompileDirectoryInsideProject,
 } from "internal/argUtils.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
@@ -50,11 +50,11 @@ export const execute = async ({
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  assertImportMapFileRelativePath({ importMapFileRelativeUrl })
+  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
   const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
-  assertCompileDirectoryRelativePath({ compileDirectoryRelativeUrl })
+  assertCompileDirectoryRelativeUrl({ compileDirectoryRelativeUrl })
   const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
   assertCompileDirectoryInsideProject({ compileDirectoryUrl, projectDirectoryUrl })
 

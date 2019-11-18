@@ -6,12 +6,12 @@ const { createCoverageMap } = import.meta.require("istanbul-lib-coverage")
 
 export const generateCoverageHtmlDirectory = ({
   projectDirectoryUrl,
-  coverageHtmlDirectoryRelativePath,
+  coverageHtmlDirectoryRelativeUrl,
   coverageHtmlDirectoryIndexLog,
   coverageMap,
 }) => {
   const htmlDirectoryUrl = resolveDirectoryUrl(
-    coverageHtmlDirectoryRelativePath,
+    coverageHtmlDirectoryRelativeUrl,
     projectDirectoryUrl,
   )
   const htmlDirectoryPath = fileUrlToPath(htmlDirectoryUrl)

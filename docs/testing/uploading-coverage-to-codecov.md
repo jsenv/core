@@ -54,7 +54,7 @@ const { uploadCoverage } = require("@jsenv/codecov-upload")
 
 uploadCoverage({
   projectDirectoryPath: __dirname,
-  coverageJsonFileRelativePath: "./coverage/coverage.json",
+  coverageJsonFileRelativeUrl: "./coverage/coverage.json",
 })
 ```
 
@@ -80,7 +80,7 @@ It means you have to set this value somehow before running the script.<br />
 
 For example, if you use travis you would go to `https://travis-ci.com/john/whatever/settings` in the `Environment Variables` section and add a `CODECOV_TOKEN` variable.
 
-### coverageRelativePath
+### coverageJsonFileRelativeUrl
 
 If you don't pass this option, the default value will be:
 

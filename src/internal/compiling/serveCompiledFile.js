@@ -5,8 +5,8 @@ import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateComp
 
 export const serveCompiledFile = async ({
   projectDirectoryUrl,
-  originalFileRelativePath,
-  compiledFileRelativePath,
+  originalFileRelativeUrl,
+  compiledFileRelativeUrl,
   projectFileRequestedCallback = () => {},
   request,
   compile,
@@ -53,8 +53,8 @@ export const serveCompiledFile = async ({
   try {
     const { meta, compileResult, compileResultStatus } = await getOrGenerateCompiledFile({
       projectDirectoryUrl,
-      originalFileRelativePath,
-      compiledFileRelativePath,
+      originalFileRelativeUrl,
+      compiledFileRelativeUrl,
       ifEtagMatch,
       ifModifiedSinceDate,
       cache,
@@ -64,12 +64,12 @@ export const serveCompiledFile = async ({
     })
 
     projectFileRequestedCallback({
-      relativePath: originalFileRelativePath,
+      relativeUrl: originalFileRelativeUrl,
       request,
     })
     compileResult.sources.forEach((source) => {
       projectFileRequestedCallback({
-        relativePath: source,
+        relativeUrl: source,
         request,
       })
     })

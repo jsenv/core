@@ -19,7 +19,7 @@ import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 import { cleanCompileDirectoryIfObsolete } from "./compile-directory/cleanCompileDirectoryIfObsolete.js"
 import { serveBrowserPlatform } from "./serveBrowserPlatform.js"
 import { serveNodePlatform } from "./serveNodePlatform.js"
-import { serveCompiledJs, relativePathIsAsset } from "./serveCompiledJs.js"
+import { serveCompiledJs, relativeUrlIsAsset } from "./serveCompiledJs.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -137,15 +137,15 @@ ${projectDirectoryUrl}`)
       )
     }
     const originalProjectFileRequestedCallback = projectFileRequestedCallback
-    projectFileRequestedCallback = ({ relativePath, ...rest }) => {
+    projectFileRequestedCallback = ({ relativeUrl, ...rest }) => {
       // I doubt an asset like .js.map will change
       // in theory a compilation asset should not change
       // if the source file did not change
       // so we can avoid watching compilation asset
-      if (relativePathIsAsset(relativePath)) return
+      if (relativeUrlIsAsset(relativeUrl)) return
 
-      if (projectFilePredicate(relativePath)) {
-        originalProjectFileRequestedCallback({ relativePath, ...rest })
+      if (projectFilePredicate(relativeUrl)) {
+        originalProjectFileRequestedCallback({ relativeUrl, ...rest })
       }
     }
   } else {
@@ -267,14 +267,12 @@ export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
 
 const serveProjectFiles = ({ projectDirectoryUrl, projectFileRequestedCallback, request }) => {
   const { ressource, method, headers } = request
-  const relativePath = ressource.slice(1)
+  const relativeUrl = ressource.slice(1)
 
-  if (!relativePathIsAsset(relativePath)) {
-    projectFileRequestedCallback({
-      relativePath,
-      request,
-    })
-  }
+  projectFileRequestedCallback({
+    relativeUrl,
+    request,
+  })
 
   const fileUrl = resolveFileUrl(ressource.slice(1), projectDirectoryUrl)
   const filePath = fileUrlToPath(fileUrl)

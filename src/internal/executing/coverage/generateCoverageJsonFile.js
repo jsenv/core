@@ -3,11 +3,11 @@ import { resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
 
 export const generateCoverageJsonFile = async ({
   projectDirectoryUrl,
-  coverageJsonFileRelativePath,
+  coverageJsonFileRelativeUrl,
   coverageJsonFileLog,
   coverageMap,
 }) => {
-  const coverageJsonFileUrl = resolveFileUrl(coverageJsonFileRelativePath, projectDirectoryUrl)
+  const coverageJsonFileUrl = resolveFileUrl(coverageJsonFileRelativeUrl, projectDirectoryUrl)
   const coverageJsonFilePath = fileUrlToPath(coverageJsonFileUrl)
 
   await writeFileContent(coverageJsonFilePath, JSON.stringify(coverageMap, null, "  "))

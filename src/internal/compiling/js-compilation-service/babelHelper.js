@@ -81,8 +81,11 @@ const babelHelperNameInsideJsenvCoreArray = [
   "wrapRegExp",
 ]
 
-const babelHelperDirectoryRelativePath = "@jsenv/core/helpers/babel/"
-const abstractBabelHelperDirectoryRelativePath = `.jsenv/helpers/babel/`
+const babelHelperScope = "@jsenv/core/helpers/babel/"
+// maybe we can put back / in front of .jsenv here because we will
+// "redirect" or at least transform everything inside .jsenv
+// not only everything inside .dist
+const babelHelperAbstractScope = `.jsenv/helpers/babel/`
 
 export const listAbstractBabelHelpers = () => {
   return list.filter((babelHelperName) => !babelHelperIsInsideJsenvCore(babelHelperName))
@@ -90,9 +93,9 @@ export const listAbstractBabelHelpers = () => {
 
 export const babelHelperNameToImportSpecifier = (babelHelperName) => {
   if (babelHelperNameInsideJsenvCoreArray.includes(babelHelperName)) {
-    return `${babelHelperDirectoryRelativePath}${babelHelperName}/${babelHelperName}.js`
+    return `${babelHelperScope}${babelHelperName}/${babelHelperName}.js`
   }
-  return `${abstractBabelHelperDirectoryRelativePath}${babelHelperName}/${babelHelperName}.js`
+  return `${babelHelperAbstractScope}${babelHelperName}/${babelHelperName}.js`
 }
 
 export const filePathToBabelHelperName = (filePath) => {
@@ -106,10 +109,9 @@ export const filePathToBabelHelperName = (filePath) => {
     return afterBabelHelper.slice(0, afterBabelHelper.indexOf("/"))
   }
 
-  if (fileUrl.includes(abstractBabelHelperDirectoryRelativePath)) {
+  if (fileUrl.includes(babelHelperAbstractScope)) {
     const afterBabelHelper = fileUrl.slice(
-      fileUrl.indexOf(abstractBabelHelperDirectoryRelativePath) +
-        abstractBabelHelperDirectoryRelativePath.length,
+      fileUrl.indexOf(babelHelperAbstractScope) + babelHelperAbstractScope.length,
     )
     return afterBabelHelper.slice(0, afterBabelHelper.indexOf("/"))
   }

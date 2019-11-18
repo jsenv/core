@@ -29,7 +29,7 @@ executeTestPlan({
     "/src/**/*.js": true,
   },
   coverageHtmlDirectory: true,
-  coverageHtmlDirectoryRelativePath: "./coverage/",
+  coverageHtmlDirectoryRelativeUrl: "./coverage/",
   coverageJsonFile: true,
-  coverageJsonFileRelativePath: "./coverage/coverage.json",
+  coverageJsonFileRelativeUrl: "./coverage/coverage.json",
 })

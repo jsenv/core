@@ -18,7 +18,7 @@ import {
 import { generateExecutionSteps } from "internal/executing/generateExecutionSteps.js"
 import { executeConcurrently } from "internal/executing/executeConcurrently.js"
 import { startCompileServerForExecutingPlan } from "internal/executing/startCompileServerForExecutingPlan.js"
-import { relativePathToExecutionSteps } from "./relativePathToExecutionSteps.js"
+import { relativeUrlToExecutionSteps } from "./relativeUrlToExecutionSteps.js"
 import { showContinuousTestingNotification } from "./showContinuousTestingNotification.js"
 import { createRemoveLog, createRunLog } from "./continous-testing-logs.js"
 
@@ -69,18 +69,18 @@ export const startContinuousTesting = async ({
         [compileDirectoryRelativeUrl]: false,
       },
       keepProcessAlive: false,
-      added: ({ relativePath, type }) => {
+      added: ({ relativeUrl, type }) => {
         if (type === "file") {
-          projectFileAddedCallback({ relativePath })
+          projectFileAddedCallback({ relativeUrl })
         }
       },
-      updated: ({ relativePath }) => {
-        if (!projectFileSet.has(relativePath)) return
-        projectFileUpdatedCallback({ relativePath })
+      updated: ({ relativeUrl }) => {
+        if (!projectFileSet.has(relativeUrl)) return
+        projectFileUpdatedCallback({ relativeUrl })
       },
-      removed: ({ relativePath }) => {
-        if (!projectFileSet.has(relativePath)) return
-        projectFileRemovedCallback({ relativePath })
+      removed: ({ relativeUrl }) => {
+        if (!projectFileSet.has(relativeUrl)) return
+        projectFileRemovedCallback({ relativeUrl })
       },
     })
     cancellationToken.register(unregisterProjectDirectoryLifecycle)
@@ -100,19 +100,19 @@ export const startContinuousTesting = async ({
     let resolveActionRequired
 
     const dependencyTracker = createDependencyTracker()
-    let executionImportCallback = ({ relativePath, executionId }) => {
-      dependencyTracker.trackDependency(relativePath, executionId)
+    let executionImportCallback = ({ relativeUrl, executionId }) => {
+      dependencyTracker.trackDependency(relativeUrl, executionId)
     }
 
-    const projectFileAddedCallback = ({ relativePath }) => {
-      projectFileSet.add(relativePath)
+    const projectFileAddedCallback = ({ relativeUrl }) => {
+      projectFileSet.add(relativeUrl)
 
       if (!initialTestingDone) {
-        fileMutationMapHandledAfterInitialTesting[relativePath] = "added"
+        fileMutationMapHandledAfterInitialTesting[relativeUrl] = "added"
         return
       }
 
-      fileMutationMap[relativePath] = "added"
+      fileMutationMap[relativeUrl] = "added"
       checkActionRequiredResolution({
         projectDirectoryUrl,
         testPlan,
@@ -123,13 +123,13 @@ export const startContinuousTesting = async ({
       })
     }
 
-    const projectFileUpdatedCallback = ({ relativePath }) => {
+    const projectFileUpdatedCallback = ({ relativeUrl }) => {
       if (!initialTestingDone) {
-        fileMutationMapHandledAfterInitialTesting[relativePath] = "updated"
+        fileMutationMapHandledAfterInitialTesting[relativeUrl] = "updated"
         return
       }
 
-      fileMutationMap[relativePath] = "updated"
+      fileMutationMap[relativeUrl] = "updated"
       checkActionRequiredResolution({
         projectDirectoryUrl,
         testPlan,
@@ -140,13 +140,13 @@ export const startContinuousTesting = async ({
       })
     }
 
-    const projectFileRemovedCallback = ({ relativePath }) => {
+    const projectFileRemovedCallback = ({ relativeUrl }) => {
       if (!initialTestingDone) {
-        fileMutationMapHandledAfterInitialTesting[relativePath] = "removed"
+        fileMutationMapHandledAfterInitialTesting[relativeUrl] = "removed"
         return
       }
 
-      fileMutationMap[relativePath] = "removed"
+      fileMutationMap[relativeUrl] = "removed"
       checkActionRequiredResolution({
         projectDirectoryUrl,
         testPlan,
@@ -158,28 +158,28 @@ export const startContinuousTesting = async ({
     }
 
     const projectFileSet = new Set()
-    const projectFileRequestedCallback = ({ relativePath, request }) => {
-      projectFileSet.add(relativePath)
+    const projectFileRequestedCallback = ({ relativeUrl, request }) => {
+      projectFileSet.add(relativeUrl)
 
       const { headers = {} } = request
       if ("x-jsenv-execution-id" in headers) {
         const executionId = headers["x-jsenv-execution-id"]
-        executionImportCallback({ relativePath, executionId })
+        executionImportCallback({ relativeUrl, executionId })
       } else if ("referer" in headers) {
         const { referer } = headers
         if (hrefToOrigin(referer) === request.origin) {
-          const refererRelativePath = hrefToPathname(referer)
+          const refererRelativeUrl = hrefToPathname(referer).slice(1)
 
           executionSteps.forEach(({ executionId, fileRelativeUrl }) => {
-            if (fileRelativeUrl === refererRelativePath) {
-              executionImportCallback({ relativePath, executionId })
+            if (fileRelativeUrl === refererRelativeUrl) {
+              executionImportCallback({ relativeUrl, executionId })
             }
           })
         } else {
-          executionImportCallback({ relativePath })
+          executionImportCallback({ relativeUrl })
         }
       } else {
-        executionImportCallback({ relativePath })
+        executionImportCallback({ relativeUrl })
       }
     }
 
@@ -219,9 +219,9 @@ export const startContinuousTesting = async ({
         logger.info(createRunLog({ fileResponsibleOfRun, toRun }))
 
         const nextDependencyTracker = createDependencyTracker()
-        executionImportCallback = ({ relativePath, executionId }) => {
-          dependencyTracker.trackDependency(relativePath, executionId)
-          nextDependencyTracker.trackDependency(relativePath, executionId)
+        executionImportCallback = ({ relativeUrl, executionId }) => {
+          dependencyTracker.trackDependency(relativeUrl, executionId)
+          nextDependencyTracker.trackDependency(relativeUrl, executionId)
         }
 
         let executing
@@ -274,18 +274,18 @@ export const startContinuousTesting = async ({
             // it's not a big problem, let's just call projectFileRemovedCallback
             // it can happen because fs.watch is not notified when a file is removed
             // inside a folder on windows os for instance
-            mainFileNotFoundCallback: ({ relativePath }) => {
-              projectFileRemovedCallback({ relativePath })
+            mainFileNotFoundCallback: ({ relativeUrl }) => {
+              projectFileRemovedCallback({ relativeUrl })
             },
           })
           executing = false
 
-          const updatedRelativePathArray = Object.keys(fileMutationMap).filter((relativePath) => {
-            return fileMutationMap[relativePath] === "removed"
+          const updatedRelativeUrlArray = Object.keys(fileMutationMap).filter((relativeUrl) => {
+            return fileMutationMap[relativeUrl] === "removed"
           })
           // toRun handled
-          updatedRelativePathArray.forEach((relativePath) => {
-            delete fileMutationMap[relativePath]
+          updatedRelativeUrlArray.forEach((relativeUrl) => {
+            delete fileMutationMap[relativeUrl]
           })
 
           if (systemNotification) {
@@ -360,8 +360,8 @@ export const startContinuousTesting = async ({
       // it's not a big problem, let's just call projectFileRemovedCallback
       // it can happen because fs.watch is not notified when a file is removed
       // inside a folder on windows os for instance
-      mainFileNotFoundCallback: ({ relativePath }) => {
-        projectFileRemovedCallback({ relativePath })
+      mainFileNotFoundCallback: ({ relativeUrl }) => {
+        projectFileRemovedCallback({ relativeUrl })
       },
     })
     initialTestingDone = true
@@ -419,11 +419,11 @@ const computeActionsToPerform = ({
   const fileResponsibleOfRemove = []
   const fileResponsibleOfRun = []
 
-  const fileIsAdded = (relativePath) => fileMutationMap[relativePath] === "added"
+  const fileIsAdded = (relativeUrl) => fileMutationMap[relativeUrl] === "added"
 
-  const fileIsUpdated = (relativePath) => fileMutationMap[relativePath] === "updated"
+  const fileIsUpdated = (relativeUrl) => fileMutationMap[relativeUrl] === "updated"
 
-  const fileIsRemoved = (relativePath) => fileMutationMap[relativePath] === "removed"
+  const fileIsRemoved = (relativeUrl) => fileMutationMap[relativeUrl] === "removed"
 
   executionSteps.forEach((executionStep) => {
     const { fileRelativeUrl } = executionStep
@@ -435,18 +435,18 @@ const computeActionsToPerform = ({
       toRemove.push(executionStep)
     } else {
       const dependencySet = dependencyTracker.getDependencySet(executionStep.executionId)
-      const executionDependencyChangedArray = Array.from(dependencySet).filter((relativePath) => {
-        if (fileIsUpdated(relativePath)) return true
-        if (relativePath !== fileRelativeUrl && fileIsRemoved(relativePath)) return true
+      const executionDependencyChangedArray = Array.from(dependencySet).filter((relativeUrl) => {
+        if (fileIsUpdated(relativeUrl)) return true
+        if (relativeUrl !== fileRelativeUrl && fileIsRemoved(relativeUrl)) return true
         // only indirect dependency added counts
         // otherwise we could add it twice
-        if (relativePath !== fileRelativeUrl && fileIsAdded(relativePath)) return true
+        if (relativeUrl !== fileRelativeUrl && fileIsAdded(relativeUrl)) return true
         return false
       })
       if (executionDependencyChangedArray.length) {
-        executionDependencyChangedArray.forEach((relativePath) => {
-          if (!fileResponsibleOfRun.includes(relativePath)) {
-            fileResponsibleOfRun.push(relativePath)
+        executionDependencyChangedArray.forEach((relativeUrl) => {
+          if (!fileResponsibleOfRun.includes(relativeUrl)) {
+            fileResponsibleOfRun.push(relativeUrl)
           }
         })
         toRun.push(executionStep)
@@ -454,21 +454,20 @@ const computeActionsToPerform = ({
     }
   })
 
-  Object.keys(fileMutationMap).forEach((relativePath) => {
-    if (!fileIsAdded(relativePath)) return
+  Object.keys(fileMutationMap).forEach((relativeUrl) => {
+    if (!fileIsAdded(relativeUrl)) return
 
-    const toAddForFile = relativePathToExecutionSteps({
+    const toAddForFile = relativeUrlToExecutionSteps(relativeUrl, {
       projectDirectoryUrl,
-      relativePath,
       plan: testPlan,
     })
     if (toAddForFile.length) {
       toAddForFile.forEach((execution) => {
         execution.executionId = cuid()
       })
-      fileResponsibleOfAdd.push(relativePath)
+      fileResponsibleOfAdd.push(relativeUrl)
       toAdd.push(...toAddForFile)
-      fileResponsibleOfRun.push(relativePath)
+      fileResponsibleOfRun.push(relativeUrl)
       toRun.push(...toAddForFile)
     }
   })
@@ -490,18 +489,18 @@ const computeActionsToPerform = ({
 const createDependencyTracker = () => {
   const state = {}
 
-  const trackDependency = (relativePath, executionId) => {
+  const trackDependency = (relativeUrl, executionId) => {
     if (executionId) {
       if (state.hasOwnProperty(executionId)) {
-        state[executionId].add(relativePath)
+        state[executionId].add(relativeUrl)
       } else {
         const set = new Set()
         state[executionId] = set
-        set.add(relativePath)
+        set.add(relativeUrl)
       }
     } else {
       Object.keys(state).forEach((executionId) => {
-        state[executionId].add(relativePath)
+        state[executionId].add(relativeUrl)
       })
     }
   }

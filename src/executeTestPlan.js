@@ -9,9 +9,9 @@ import { pathToDirectoryUrl, resolveDirectoryUrl, resolveFileUrl } from "interna
 import {
   assertProjectDirectoryPath,
   assertProjectDirectoryExists,
-  assertImportMapFileRelativePath,
+  assertImportMapFileRelativeUrl,
   assertImportMapFileInsideProject,
-  assertCompileDirectoryRelativePath,
+  assertCompileDirectoryRelativeUrl,
   assertCompileDirectoryInsideProject,
 } from "internal/argUtils.js"
 import { executePlan } from "internal/executing/executePlan.js"
@@ -52,9 +52,9 @@ export const executeTestPlan = async ({
   coverageTextLog = true,
   coverageJsonFile = Boolean(process.env.CI),
   coverageJsonFileLog = true,
-  coverageJsonFileRelativePath = "./coverage/coverage-final.json",
+  coverageJsonFileRelativeUrl = "./coverage/coverage-final.json",
   coverageHtmlDirectory = !process.env.CI,
-  coverageHtmlDirectoryRelativePath = "./coverage",
+  coverageHtmlDirectoryRelativeUrl = "./coverage",
   coverageHtmlDirectoryIndexLog = true,
 }) => {
   const logger = createLogger({ logLevel })
@@ -65,11 +65,11 @@ export const executeTestPlan = async ({
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  assertImportMapFileRelativePath({ importMapFileRelativeUrl })
+  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
   const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
-  assertCompileDirectoryRelativePath({ compileDirectoryRelativeUrl })
+  assertCompileDirectoryRelativeUrl({ compileDirectoryRelativeUrl })
   const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
   assertCompileDirectoryInsideProject({ compileDirectoryUrl, projectDirectoryUrl })
 
@@ -150,7 +150,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       promises.push(
         generateCoverageJsonFile({
           projectDirectoryUrl,
-          coverageJsonFileRelativePath,
+          coverageJsonFileRelativeUrl,
           coverageJsonFileLog,
           coverageMap: result.coverageMap,
         }),
@@ -161,7 +161,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
         generateCoverageHtmlDirectory({
           coverageMap: result.coverageMap,
           projectDirectoryUrl,
-          coverageHtmlDirectoryRelativePath,
+          coverageHtmlDirectoryRelativeUrl,
           coverageHtmlDirectoryIndexLog,
         }),
       )
