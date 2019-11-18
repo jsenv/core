@@ -70,10 +70,7 @@ export const startExploring = async ({
   assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
   assertCompileDirectoryRelativePath({ compileDirectoryRelativePath })
-  const compileDirectoryUrl = resolveDirectoryUrl({
-    compileDirectoryRelativePath,
-    projectDirectoryUrl,
-  })
+  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativePath, projectDirectoryUrl)
   assertCompileDirectoryInsideProject({ compileDirectoryUrl, projectDirectoryUrl })
 
   await assertFileExists(HTMLTemplateFileUrl)

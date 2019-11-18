@@ -3,10 +3,14 @@ import {
   catchAsyncFunctionCancellation,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
+import { pathToDirectoryUrl, resolveDirectoryUrl, resolveFileUrl } from "internal/urlUtils.js"
 import {
-  resolveProjectDirectoryUrl,
-  resolveCompileDirectorUrl,
-  resolveImportMapFileUrl,
+  assertProjectDirectoryPath,
+  assertProjectDirectoryExists,
+  assertImportMapFileRelativePath,
+  assertImportMapFileInsideProject,
+  assertCompileDirectoryRelativePath,
+  assertCompileDirectoryInsideProject,
 } from "internal/argUtils.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "internal/executing/launchAndExecute.js"
@@ -42,15 +46,18 @@ export const execute = async ({
   const launchLogger = createLogger({ logLevel: launchLogLevel })
   const executeLogger = createLogger({ logLevel: executeLogLevel })
 
-  const projectDirectoryUrl = resolveProjectDirectoryUrl({ projectDirectoryPath })
-  const compileDirectoryUrl = resolveCompileDirectorUrl({
-    compileDirectoryRelativePath,
-    projectDirectoryUrl,
-  })
-  const importMapFileUrl = resolveImportMapFileUrl({
-    projectDirectoryUrl,
-    importMapFileRelativePath,
-  })
+  assertProjectDirectoryPath({ projectDirectoryPath })
+  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
+  await assertProjectDirectoryExists({ projectDirectoryUrl })
+
+  assertImportMapFileRelativePath({ importMapFileRelativePath })
+  const importMapFileUrl = resolveFileUrl(importMapFileRelativePath, projectDirectoryUrl)
+  assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
+
+  assertCompileDirectoryRelativePath({ compileDirectoryRelativePath })
+  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativePath, projectDirectoryUrl)
+  assertCompileDirectoryInsideProject({ compileDirectoryUrl, projectDirectoryUrl })
+
   if (typeof fileRelativePath !== "string") {
     throw new TypeError(`fileRelativePath must be a string, got ${fileRelativePath}`)
   }
