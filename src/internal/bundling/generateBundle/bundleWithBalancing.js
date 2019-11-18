@@ -1,4 +1,3 @@
-import { createLogger } from "@jsenv/logger"
 import { resolveDirectoryUrl, fileUrlToPath } from "internal/urlUtils.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin/createJsenvRollupPlugin.js"
 import { generateBundleUsingRollup } from "./generateBundleUsingRollup.js"
@@ -6,8 +5,7 @@ import { bundleOptionsToRollupParseOptions } from "./bundleOptionsToRollupParseO
 import { bundleOptionsToRollupGenerateOptions } from "./bundleOptionsToRollupGenerateOptions.js"
 
 export const bundleWithBalancing = async (options) => {
-  const { logLevel } = options
-  const logger = createLogger({ logLevel })
+  const { logger } = options
 
   const { bundleDirectoryUrl, compileId, groupMap } = options
   const bundleDirectoryUrlWithBalancing = resolveDirectoryUrl(compileId, bundleDirectoryUrl)

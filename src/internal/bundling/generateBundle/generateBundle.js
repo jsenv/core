@@ -3,6 +3,7 @@ import {
   catchAsyncFunctionCancellation,
   createCancellationTokenForProcessSIGINT,
 } from "@jsenv/cancellation"
+import { createLogger } from "@jsenv/logger"
 import {
   pathToDirectoryUrl,
   resolveDirectoryUrl,
@@ -27,6 +28,8 @@ import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNo
 
 export const generateBundle = async ({
   cancellationToken = createCancellationTokenForProcessSIGINT(),
+  logLevel = "info",
+  logger,
   projectDirectoryPath,
   bundleDirectoryRelativeUrl,
   bundleDirectoryClean = false,
@@ -44,7 +47,6 @@ export const generateBundle = async ({
   sourcemapPreferLeadingSlash,
   babelPluginMap = jsenvBabelPluginMap,
   convertMap,
-  logLevel = "info",
   minify = false,
   writeOnFileSystem = true,
   format,
@@ -60,6 +62,8 @@ export const generateBundle = async ({
     node: jsenvNodeVersionScoreMap,
   },
 }) => {
+  logger = logger || createLogger({ logLevel })
+
   assertProjectDirectoryPath({ projectDirectoryPath })
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
@@ -96,6 +100,7 @@ export const generateBundle = async ({
     if (compileGroupCount === 1) {
       return bundleWithoutBalancing({
         cancellationToken,
+        logger,
         projectDirectoryUrl,
         bundleDirectoryUrl,
         bundleCache,
@@ -110,7 +115,6 @@ export const generateBundle = async ({
         babelPluginMap,
         convertMap,
         minify,
-        logLevel,
         format,
         formatOutputOptions,
         writeOnFileSystem,
@@ -128,6 +132,7 @@ export const generateBundle = async ({
     return await Promise.all([
       generateEntryPointsFolders({
         cancellationToken,
+        logger,
         projectDirectoryUrl,
         bundleDirectoryUrl,
         bundleCache,
@@ -143,7 +148,6 @@ export const generateBundle = async ({
         babelPluginMap,
         convertMap,
         minify,
-        logLevel,
         writeOnFileSystem,
         format,
         formatOutputOptions,
@@ -151,6 +155,7 @@ export const generateBundle = async ({
       }),
       generateEntryPointsBalancerFiles({
         cancellationToken,
+        logger,
         projectDirectoryUrl,
         bundleDirectoryUrl,
         bundleCache,
@@ -165,7 +170,6 @@ export const generateBundle = async ({
         babelPluginMap,
         convertMap,
         minify,
-        logLevel,
         writeOnFileSystem,
         format,
         balancerTemplateFileUrl,

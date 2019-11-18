@@ -95,7 +95,7 @@ export const serveBundle = async ({
     }
 
     const bundle = await generateBundle({
-      logLevel: "off",
+      logger,
       projectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
       // bundleDirectoryRelativeUrl is not really important
       // because we pass writeOnFileSystem: false anyway
@@ -119,7 +119,8 @@ export const serveBundle = async ({
       browser,
     })
 
-    const sourcemapFileUrl = `${compiledFileUrl}/${entryBasename}__asset__/${entryBasename}.map`
+    const entryFilename = `${entryBasename}${entryExtname}`
+    const sourcemapFileUrl = `${compiledFileUrl}/${entryFilename}__asset__/${entryFilename}.map`
     const sourcemapFileRelativeUrlForModule = `./${relative(compiledFileUrl, sourcemapFileUrl)}`
 
     return bundleToCompilationResult(bundle, {

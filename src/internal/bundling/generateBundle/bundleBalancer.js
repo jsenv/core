@@ -1,12 +1,10 @@
-import { createLogger } from "@jsenv/logger"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin/createJsenvRollupPlugin.js"
 import { generateBundleUsingRollup } from "./generateBundleUsingRollup.js"
 import { bundleOptionsToRollupParseOptions } from "./bundleOptionsToRollupParseOptions.js"
 import { bundleOptionsToRollupGenerateOptions } from "./bundleOptionsToRollupGenerateOptions.js"
 
 export const bundleBalancer = async (options) => {
-  const { logLevel } = options
-  const logger = createLogger({ logLevel })
+  const { logger } = options
 
   const { balancerDataAbstractSpecifier } = options
 

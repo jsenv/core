@@ -75,6 +75,9 @@ export const startCompileServer = async ({
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
   }
+  if (typeof importMapFileUrl === "undefined") {
+    importMapFileUrl = resolveFileUrl("./importMap.json", projectDirectoryUrl)
+  }
   if (typeof compileDirectoryUrl !== "string") {
     throw new TypeError(`compileDirectoryUrl must be a string. got ${compileDirectoryUrl}`)
   }
