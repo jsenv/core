@@ -67,7 +67,7 @@ export const serveCompiledJs = async ({
   }
 
   const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
-  const compiledFileUrl = `${projectDirectoryUrl}${compileId}/${originalFileRelativeUrl}`
+  const compiledFileUrl = `${compileDirectoryUrl}${compileId}/${originalFileRelativeUrl}`
 
   return serveCompiledFile({
     projectDirectoryUrl,
