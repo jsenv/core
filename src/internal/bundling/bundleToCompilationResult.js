@@ -32,7 +32,7 @@ import { rollupIdToUrl } from "./generateBundle/createJsenvRollupPlugin/createJs
 
 export const bundleToCompilationResult = (
   { rollupBundle, arrayOfAbstractUrl, moduleContentMap },
-  { projectDirectoryUrl, sourcemapPathForModule, sourcemapPathForCache },
+  { projectDirectoryUrl, sourcemapFileRelativeUrl, sourcemapFileRelativeUrlForModule },
 ) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -62,11 +62,11 @@ export const bundleToCompilationResult = (
   const mainChunk = parseRollupChunk(rollupBundle.output[0], {
     moduleContentMap,
     arrayOfAbstractUrl,
-    sourcemapPathForModule,
-    sourcemapPathForCache,
+    sourcemapFileRelativeUrl,
+    sourcemapFileRelativeUrlForModule,
   })
   trackDependencies(mainChunk.dependencyMap)
-  assets.push(mainChunk.sourcemapPathForCache)
+  assets.push(mainChunk.sourcemapFileRelativeUrl)
   assetsContent.push(JSON.stringify(mainChunk.sourcemap, null, "  "))
 
   rollupBundle.output.slice(1).forEach((rollupChunk) => {
@@ -78,7 +78,7 @@ export const bundleToCompilationResult = (
     trackDependencies(chunk.dependencyMap)
     assets.push(chunkFileName)
     assetsContent.push(chunk.content)
-    assets.push(chunk.sourcemapPathForCache)
+    assets.push(chunk.sourcemapFileRelativeUrl)
     assetsContent.push(JSON.stringify(chunk.sourcemap, null, "  "))
   })
 
@@ -97,8 +97,8 @@ const parseRollupChunk = (
   {
     arrayOfAbstractUrl,
     moduleContentMap,
-    sourcemapPathForModule = `./${rollupChunk.fileName}.map`,
-    sourcemapPathForCache = `${rollupChunk.fileName}.map`,
+    sourcemapFileRelativeUrlForModule = `./${rollupChunk.fileName}.map`,
+    sourcemapFileRelativeUrl = `${rollupChunk.fileName}.map`,
   },
 ) => {
   const dependencyMap = {}
@@ -120,11 +120,11 @@ const parseRollupChunk = (
 
   const sourcemap = rollupChunk.map
 
-  const content = writeOrUpdateSourceMappingURL(rollupChunk.code, sourcemapPathForModule)
+  const content = writeOrUpdateSourceMappingURL(rollupChunk.code, sourcemapFileRelativeUrlForModule)
 
   return {
     url: mainModuleUrl,
-    sourcemapPathForCache,
+    sourcemapFileRelativeUrl,
     dependencyMap,
     content,
     sourcemap,

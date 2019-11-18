@@ -48,7 +48,7 @@ export const generateNodeBundle = async ({
         projectDirectoryPath: projectDirectoryUrl,
         // bundleDirectoryRelativeUrl is not really important
         // because we pass writeOnFileSystem: false anyway
-        bundleDirectoryRelativeUrl: computebundleDirectoryRelativeUrl({
+        bundleDirectoryRelativeUrl: computeBundleDirectoryRelativeUrl({
           projectDirectoryUrl,
           compiledFileRelativeUrl,
         }),
@@ -75,14 +75,14 @@ export const generateNodeBundle = async ({
 
       return bundleToCompilationResult(bundle, {
         projectDirectoryUrl,
-        sourcemapFileRelativeUrlForModule,
         sourcemapFileRelativeUrl,
+        sourcemapFileRelativeUrlForModule,
       })
     },
   })
 }
 
-const computebundleDirectoryRelativeUrl = ({ projectDirectoryUrl, compiledFileRelativeUrl }) => {
+const computeBundleDirectoryRelativeUrl = ({ projectDirectoryUrl, compiledFileRelativeUrl }) => {
   const compiledFileUrl = resolveFileUrl(compiledFileRelativeUrl, projectDirectoryUrl)
   const bundleDirectoryUrl = resolveDirectoryUrl("./", compiledFileUrl)
   const bundleDirectoryRelativeUrl = urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl)

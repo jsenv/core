@@ -18,7 +18,6 @@ export const serveBundle = async ({
   projectDirectoryUrl,
   originalFileRelativeUrl,
   compiledFileRelativeUrl,
-  sourcemapRelativePath = computeSourcemapRelativePath(compiledFileRelativeUrl),
   importDefaultExtension,
   importMapFileUrl,
   importMapForBundle = {},
@@ -104,7 +103,7 @@ export const serveBundle = async ({
       projectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
       // bundleDirectoryRelativeUrl is not really important
       // because we pass writeOnFileSystem: false anyway
-      bundleDirectoryRelativeUrl: computebundleDirectoryRelativeUrl({
+      bundleDirectoryRelativeUrl: computeBundleDirectoryRelativeUrl({
         projectDirectoryUrl,
         compiledFileRelativeUrl,
       }),
@@ -124,19 +123,17 @@ export const serveBundle = async ({
       browser,
     })
 
-    const sourcemapPathForModule = sourcemapRelativePathToSourcemapPathForModule(
-      sourcemapRelativePath,
+    const sourcemapFileRelativeUrl = `${compiledFileRelativeUrl}/${entryBasename}__asset__/${entryBasename}.map`
+
+    const sourcemapFileRelativeUrlForModule = `./${relative(
       compiledFileRelativeUrl,
-    )
-    const sourcemapPathForCache = sourcemapRelativePathToSourcePathForCache(
-      sourcemapRelativePath,
-      compiledFileRelativeUrl,
-    )
+      sourcemapFileRelativeUrl,
+    )}`
 
     return bundleToCompilationResult(bundle, {
       projectDirectoryUrl,
-      sourcemapPathForModule,
-      sourcemapPathForCache,
+      sourcemapFileRelativeUrl,
+      sourcemapFileRelativeUrlForModule,
     })
   }
 
@@ -150,32 +147,9 @@ export const serveBundle = async ({
   })
 }
 
-const computebundleDirectoryRelativeUrl = ({ projectDirectoryUrl, compiledFileRelativeUrl }) => {
+const computeBundleDirectoryRelativeUrl = ({ projectDirectoryUrl, compiledFileRelativeUrl }) => {
   const compiledFileUrl = resolveFileUrl(compiledFileRelativeUrl, projectDirectoryUrl)
   const bundleDirectoryUrl = resolveDirectoryUrl("./", compiledFileUrl)
   const bundleDirectoryRelativeUrl = urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl)
   return bundleDirectoryRelativeUrl
-}
-
-const computeSourcemapRelativePath = (compiledFileRelativeUrl) => {
-  const entryBasename = basename(compiledFileRelativeUrl)
-  const compiledFileAssetDirectoryRelativePath = `${compiledFileRelativeUrl}/${entryBasename}__asset__/`
-  const sourcemapRelativePath = `${compiledFileAssetDirectoryRelativePath}${entryBasename}.map`
-  return sourcemapRelativePath
-}
-
-const sourcemapRelativePathToSourcemapPathForModule = (
-  sourcemapRelativePath,
-  compiledFileRelativeUrl,
-) => {
-  return `./${relative(compiledFileRelativeUrl, sourcemapRelativePath)}`
-}
-
-const sourcemapRelativePathToSourcePathForCache = (
-  sourcemapRelativePath,
-  compiledFileRelativeUrl,
-) => {
-  const entryBasename = basename(compiledFileRelativeUrl)
-  const compiledFileAssetDirectoryRelativePath = `${compiledFileRelativeUrl}/${entryBasename}__asset__/`
-  return relative(compiledFileAssetDirectoryRelativePath, sourcemapRelativePath)
 }

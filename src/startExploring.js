@@ -12,9 +12,9 @@ import { assertFileExists } from "internal/filesystemUtils.js"
 import {
   assertProjectDirectoryPath,
   assertProjectDirectoryExists,
-  assertImportMapFileRelativePath,
+  assertImportMapFileRelativeUrl,
   assertImportMapFileInsideProject,
-  assertCompileDirectoryRelativePath,
+  assertCompileDirectoryRelativeUrl,
   assertCompileDirectoryInsideProject,
 } from "internal/argUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
@@ -65,11 +65,11 @@ export const startExploring = async ({
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  assertImportMapFileRelativePath({ importMapFileRelativeUrl })
+  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
   const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
-  assertCompileDirectoryRelativePath({ compileDirectoryRelativeUrl })
+  assertCompileDirectoryRelativeUrl({ compileDirectoryRelativeUrl })
   const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
   assertCompileDirectoryInsideProject({ compileDirectoryUrl, projectDirectoryUrl })
 
@@ -95,15 +95,15 @@ export const startExploring = async ({
 
       const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryPath, {
         watchDescription: watchConfig,
-        updated: ({ relativePath }) => {
-          if (projectFileSet.has(relativePath)) {
-            projectFileUpdatedCallback(relativePath)
+        updated: ({ relativeUrl }) => {
+          if (projectFileSet.has(relativeUrl)) {
+            projectFileUpdatedCallback(relativeUrl)
           }
         },
-        removed: ({ relativePath }) => {
-          if (projectFileSet.has(relativePath)) {
-            projectFileSet.delete(relativePath)
-            projectFileRemovedCallback(relativePath)
+        removed: ({ relativeUrl }) => {
+          if (projectFileSet.has(relativeUrl)) {
+            projectFileSet.delete(relativeUrl)
+            projectFileRemovedCallback(relativeUrl)
           }
         },
         keepProcessAlive: false,
@@ -114,40 +114,40 @@ export const startExploring = async ({
       const roomMap = {}
       const dependencyTracker = {}
 
-      const projectFileUpdatedCallback = (relativePath) => {
-        projectFileToAffectedRoomArray(relativePath).forEach((room) => {
+      const projectFileUpdatedCallback = (relativeUrl) => {
+        projectFileToAffectedRoomArray(relativeUrl).forEach((room) => {
           room.sendEvent({
             type: "file-changed",
-            data: relativePath,
+            data: relativeUrl,
           })
         })
       }
 
-      const projectFileRemovedCallback = (relativePath) => {
-        projectFileToAffectedRoomArray(relativePath).forEach((room) => {
+      const projectFileRemovedCallback = (relativeUrl) => {
+        projectFileToAffectedRoomArray(relativeUrl).forEach((room) => {
           room.sendEvent({
             type: "file-removed",
-            data: relativePath,
+            data: relativeUrl,
           })
         })
       }
 
-      const projectFileToAffectedRoomArray = (relativePath) => {
+      const projectFileToAffectedRoomArray = (relativeUrl) => {
         const affectedRoomArray = []
-        Object.keys(roomMap).forEach((mainRelativePath) => {
-          if (!dependencyTracker.hasOwnProperty(mainRelativePath)) return
+        Object.keys(roomMap).forEach((mainRelativeUrl) => {
+          if (!dependencyTracker.hasOwnProperty(mainRelativeUrl)) return
 
           if (
-            relativePath === mainRelativePath ||
-            dependencyTracker[mainRelativePath].includes(relativePath)
+            relativeUrl === mainRelativeUrl ||
+            dependencyTracker[mainRelativeUrl].includes(relativeUrl)
           ) {
-            affectedRoomArray.push(roomMap[mainRelativePath])
+            affectedRoomArray.push(roomMap[mainRelativeUrl])
           }
         })
         return affectedRoomArray
       }
 
-      const trackDependency = ({ relativePath, executionId }) => {
+      const trackDependency = ({ relativeUrl, executionId }) => {
         if (executionId) {
           // quand on voit main on marque tout ce qui existe actuallement
           // comme plus dépendant ?
@@ -156,30 +156,30 @@ export const startExploring = async ({
           if (dependencyTracker.hasOwnProperty(executionId)) {
             const dependencyArray = dependencyTracker[executionId]
             if (!dependencyArray.includes(dependencyTracker)) {
-              dependencyArray.push(relativePath)
+              dependencyArray.push(relativeUrl)
             }
           } else {
-            dependencyTracker[executionId] = [relativePath]
+            dependencyTracker[executionId] = [relativeUrl]
           }
         } else {
           Object.keys(dependencyTracker).forEach((executionId) => {
-            trackDependency({ relativePath, executionId })
+            trackDependency({ relativeUrl, executionId })
           })
         }
       }
 
-      htmlTemplateRequestedCallback = ({ relativePath }) => {
-        dependencyTracker[relativePath] = []
+      htmlTemplateRequestedCallback = ({ relativeUrl }) => {
+        dependencyTracker[relativeUrl] = []
       }
 
-      projectFileRequestedCallback = ({ relativePath, request }) => {
-        projectFileSet.add(relativePath)
+      projectFileRequestedCallback = ({ relativeUrl, request }) => {
+        projectFileSet.add(relativeUrl)
 
         const { headers = {} } = request
 
         if ("x-jsenv-execution-id" in headers) {
           const executionId = headers["x-jsenv-execution-id"]
-          trackDependency({ relativePath, executionId })
+          trackDependency({ relativeUrl, executionId })
         } else if ("referer" in headers) {
           const { referer } = headers
           if (sameOrigin(referer, request.origin)) {
@@ -194,7 +194,7 @@ export const startExploring = async ({
             ) {
               const executionId = refererRelativeUrl
               trackDependency({
-                relativePath,
+                relativeUrl,
                 executionId,
               })
             } else {
@@ -204,41 +204,39 @@ export const startExploring = async ({
                   dependencyTracker[executionId].includes(refererRelativeUrl)
                 ) {
                   trackDependency({
-                    relativePath,
+                    relativeUrl,
                     executionId,
                   })
                 }
               })
             }
           } else {
-            trackDependency({ relativePath })
+            trackDependency({ relativeUrl })
           }
         } else {
-          trackDependency({ relativePath })
+          trackDependency({ relativeUrl })
         }
       }
 
-      rawProjectFileRequestedCallback = ({ relativePath, request }) => {
-        projectFileRequestedCallback({ relativePath, request })
-        projectFileSet.add(relativePath)
+      rawProjectFileRequestedCallback = ({ relativeUrl, request }) => {
+        projectFileRequestedCallback({ relativeUrl, request })
+        projectFileSet.add(relativeUrl)
       }
 
-      livereloadServerSentEventService = ({ relativePath, request }) => {
+      livereloadServerSentEventService = ({ relativeUrl, request }) => {
         const { accept = "" } = request.headers
         if (!accept.includes("text/event-stream")) return null
 
-        return getOrCreateRoomForRelativePath(relativePath).connect(
-          request.headers["last-event-id"],
-        )
+        return getOrCreateRoomForRelativeUrl(relativeUrl).connect(request.headers["last-event-id"])
       }
 
-      const getOrCreateRoomForRelativePath = (relativePath) => {
-        if (roomMap.hasOwnProperty(relativePath)) return roomMap[relativePath]
+      const getOrCreateRoomForRelativeUrl = (relativeUrl) => {
+        if (roomMap.hasOwnProperty(relativeUrl)) return roomMap[relativeUrl]
 
         const room = createSSERoom()
         room.start()
         cancellationToken.register(room.stop)
-        roomMap[relativePath] = room
+        roomMap[relativeUrl] = room
         return room
       }
     }
@@ -287,8 +285,8 @@ export const startExploring = async ({
           })
         },
         () => {
-          const relativePath = request.ressource.slice(1)
-          const requestFileUrl = `${projectDirectoryUrl}${relativePath}`
+          const relativeUrl = request.ressource.slice(1)
+          const requestFileUrl = resolveFileUrl(relativeUrl, projectDirectoryUrl)
 
           if (
             !urlToMeta({
@@ -299,7 +297,7 @@ export const startExploring = async ({
             return null
           }
 
-          htmlTemplateRequestedCallback({ relativePath, request })
+          htmlTemplateRequestedCallback({ relativeUrl, request })
 
           return serveFile(HTMLTemplateFileUrl, {
             headers: request.headers,
@@ -320,10 +318,10 @@ export const startExploring = async ({
           })
         },
         () => {
-          const requestServerUrl = `${request.origin}${request.ressource}`
-          const relativePath = urlToRelativeUrl(requestServerUrl)
-          rawProjectFileRequestedCallback({ relativePath, request })
-          return serveFile(`${projectDirectoryUrl}${relativePath}`, {
+          const relativeUrl = request.ressource.slice(1)
+          const fileUrl = `${projectDirectoryUrl}${relativeUrl}`
+          rawProjectFileRequestedCallback({ relativeUrl, request })
+          return serveFile(fileUrl, {
             method: request.method,
             headers: request.headers,
             cacheStrategy: "etag",
