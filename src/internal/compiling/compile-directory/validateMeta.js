@@ -1,5 +1,6 @@
+import { fileUrlToPath } from "internal/urlUtils.js"
 import { readFileContent, readFileStat } from "internal/filesystemUtils.js"
-import { getPathForSourceFile, getPathForCompiledFile, getPathForAssetFile } from "./locaters.js"
+import { resolveAssetFileUrl, resolveCompiledFileUrl, resolveSourceFileUrl } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
 export const validateMeta = async ({
@@ -60,10 +61,11 @@ const validateCompiledFile = async ({
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
-  const compiledFilePath = getPathForCompiledFile({
+  const compiledFileUrl = resolveCompiledFileUrl({
     projectDirectoryUrl,
     compiledFileRelativePath,
   })
+  const compiledFilePath = fileUrlToPath(compiledFileUrl)
 
   try {
     const compiledSource = await readFileContent(compiledFilePath)
@@ -121,10 +123,11 @@ const validateSources = ({ logger, meta, projectDirectoryUrl }) =>
   )
 
 const validateSource = async ({ logger, projectDirectoryUrl, source, eTag }) => {
-  const sourceFilePath = getPathForSourceFile({
+  const sourceFileUrl = resolveSourceFileUrl({
     source,
     projectDirectoryUrl,
   })
+  const sourceFilePath = fileUrlToPath(sourceFileUrl)
 
   try {
     const sourceContent = await readFileContent(sourceFilePath)
@@ -186,11 +189,12 @@ const validateAsset = async ({
   compiledFileRelativePath,
   eTag,
 }) => {
-  const assetFilePath = getPathForAssetFile({
+  const assetFileUrl = resolveAssetFileUrl({
     projectDirectoryUrl,
     compiledFileRelativePath,
     asset,
   })
+  const assetFilePath = fileUrlToPath(assetFileUrl)
 
   try {
     const assetContent = await readFileContent(assetFilePath)

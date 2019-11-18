@@ -1,5 +1,6 @@
+import { fileUrlToPath } from "internal/urlUtils.js"
 import { writeFileContent } from "internal/filesystemUtils.js"
-import { getPathForMetaJsonFile, getPathForAssetFile, getPathForCompiledFile } from "./locaters.js"
+import { resolveMetaJsonFileUrl, resolveAssetFileUrl, resolveCompiledFileUrl } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
 export const updateMeta = ({
@@ -27,12 +28,13 @@ export const updateMeta = ({
 
   if (isNew || isUpdated) {
     const { writeCompiledSourceFile = true, writeAssetsFile = true } = compileResult
-    const compiledFilePath = getPathForCompiledFile({
-      projectDirectoryUrl,
-      compiledFileRelativePath,
-    })
 
     if (writeCompiledSourceFile) {
+      const compiledFileUrl = resolveCompiledFileUrl({
+        projectDirectoryUrl,
+        compiledFileRelativePath,
+      })
+      const compiledFilePath = fileUrlToPath(compiledFileUrl)
       logger.debug(`write compiled file at ${compiledFilePath}`)
       promises.push(writeFileContent(compiledFilePath, compiledSource))
     }
@@ -40,12 +42,12 @@ export const updateMeta = ({
     if (writeAssetsFile) {
       promises.push(
         ...assets.map((asset, index) => {
-          const assetFilePath = getPathForAssetFile({
+          const assetFileUrl = resolveAssetFileUrl({
             projectDirectoryUrl,
             compiledFileRelativePath,
             asset,
           })
-
+          const assetFilePath = fileUrlToPath(assetFileUrl)
           logger.debug(`write compiled file asset at ${assetFilePath}`)
           return writeFileContent(assetFilePath, assetsContent[index])
         }),
@@ -104,10 +106,11 @@ export const updateMeta = ({
       }
     }
 
-    const metaJsonFilePath = getPathForMetaJsonFile({
+    const metaJsonFileUrl = resolveMetaJsonFileUrl({
       projectDirectoryUrl,
       compiledFileRelativePath,
     })
+    const metaJsonFilePath = fileUrlToPath(metaJsonFileUrl)
 
     logger.debug(`write compiled file meta at ${metaJsonFilePath}`)
     promises.push(writeFileContent(metaJsonFilePath, JSON.stringify(latestMeta, null, "  ")))

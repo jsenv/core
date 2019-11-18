@@ -1,12 +1,13 @@
 import { createLogger } from "@jsenv/logger"
+import { fileUrlToPath } from "internal/urlUtils.js"
 import { createFileDirectories } from "internal/filesystemUtils.js"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
 import { updateMeta } from "./updateMeta.js"
 import {
-  getPathForMetaJsonFile,
-  getPathForOriginalFile,
-  getPathForCompiledFile,
+  resolveMetaJsonFileUrl,
+  resolveOriginalFileUrl,
+  resolveCompiledFileUrl,
 } from "./locaters.js"
 import { createLockRegistry } from "./createLockRegistry.js"
 
@@ -190,11 +191,11 @@ const callCompile = async ({
   compile,
   logger,
 }) => {
-  const originalFilePath = getPathForOriginalFile({
+  const originalFileUrl = resolveOriginalFileUrl({
     projectDirectoryUrl,
     originalFileRelativePath,
   })
-  const compiledFilePath = getPathForCompiledFile({
+  const compiledFileUrl = resolveCompiledFileUrl({
     projectDirectoryUrl,
     compiledFileRelativePath,
   })
@@ -209,8 +210,8 @@ const callCompile = async ({
     compiledSource,
     ...rest
   } = await compile({
-    originalFilePath,
-    compiledFilePath,
+    originalFileUrl,
+    compiledFileUrl,
   })
 
   if (typeof contentType !== "string") {
@@ -235,10 +236,11 @@ const startAsap = async (
   fn,
   { logger, projectDirectoryUrl, compiledFileRelativePath, cacheInterProcessLocking },
 ) => {
-  const metaJsonFilePath = getPathForMetaJsonFile({
+  const metaJsonFileUrl = resolveMetaJsonFileUrl({
     projectDirectoryUrl,
     compiledFileRelativePath,
   })
+  const metaJsonFilePath = fileUrlToPath(metaJsonFileUrl)
 
   logger.debug(`lock ${metaJsonFilePath}`)
   // in case this process try to concurrently access meta we wait for previous to be done

@@ -1,5 +1,6 @@
+import { fileUrlToPath } from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
-import { getPathForMetaJsonFile } from "./locaters.js"
+import { resolveMetaJsonFileUrl } from "./locaters.js"
 
 export const readMeta = async ({
   logger,
@@ -7,10 +8,11 @@ export const readMeta = async ({
   originalFileRelativePath,
   compiledFileRelativePath,
 }) => {
-  const metaJsonFilePath = getPathForMetaJsonFile({
+  const metaJsonFileUrl = resolveMetaJsonFileUrl({
     projectDirectoryUrl,
     compiledFileRelativePath,
   })
+  const metaJsonFilePath = fileUrlToPath(metaJsonFileUrl)
 
   try {
     const metaJsonString = await readFileContent(metaJsonFilePath)
