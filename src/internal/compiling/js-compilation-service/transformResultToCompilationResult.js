@@ -1,6 +1,5 @@
 import { basename } from "path"
-import { hrefToPathname } from "@jsenv/href"
-import { urlToRelativeUrl } from "internal/urlUtils.js"
+import { fileUrlToRelativePath, fileUrlToPath } from "internal/urlUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 
 export const transformResultToCompilationResult = (
@@ -10,6 +9,7 @@ export const transformResultToCompilationResult = (
     originalFileContent,
     originalFileUrl,
     compiledFileUrl,
+    sourcemapFileUrl,
     remap = true,
     remapMethod = "comment", // 'comment', 'inline'
   },
@@ -26,6 +26,9 @@ export const transformResultToCompilationResult = (
   if (typeof compiledFileUrl !== "string") {
     throw new TypeError(`compiledFileUrl must be a string, got ${compiledFileUrl}`)
   }
+  if (typeof sourcemapFileUrl !== "string") {
+    throw new TypeError(`sourcemapFileUrl must be a string, got ${sourcemapFileUrl}`)
+  }
 
   const sources = []
   const sourcesContent = []
@@ -38,18 +41,14 @@ export const transformResultToCompilationResult = (
       // may happen in some cases where babel returns a wrong sourcemap
       // there is at least one case where it happens
       // a file with only import './whatever.js' inside
-      sources.push(originalFileUrlToSourceMapSource(originalFileUrl, projectDirectoryUrl))
+      sources.push(fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl))
       sourcesContent.push(originalFileContent)
     } else {
       map.sources = map.sources.map((source) => {
-        // const url = resolveFileUrl(source, sourceUrl)
-        // if (url.startsWith(projectDirectoryUrl)) {
-        //   const sourceRelativePath = urlToRelativeUrl(url, projectDirectoryUrl)
-        //   const sourceOriginRelative = `/${sourceRelativePath}`
-        //   sources.push(sourceRelativePath)
-        //   return sourceOriginRelative
-        // }
-
+        const url = String(new URL(source, originalFileUrl))
+        if (url.startsWith(projectDirectoryUrl)) {
+          source = fileUrlToRelativePath(url, sourcemapFileUrl)
+        }
         sources.push(source)
         return source
       })
@@ -75,14 +74,14 @@ export const transformResultToCompilationResult = (
         `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
       )
     } else if (remapMethod === "comment") {
-      const sourceBasename = basename(hrefToPathname(originalFileUrl))
-      const sourceMapBasename = `${sourceBasename}.map`
-      output = writeSourceMappingURL(output, `./${sourceBasename}__asset__/${sourceMapBasename}`)
-      assets.push(sourceMapBasename)
+      const sourcemapFileRelativePath = fileUrlToRelativePath(sourcemapFileUrl, compiledFileUrl)
+      output = writeSourceMappingURL(output, sourcemapFileRelativePath)
+      const sourcemapFileBasename = basename(fileUrlToPath(sourcemapFileUrl))
+      assets.push(sourcemapFileBasename)
       assetsContent.push(stringifyMap(map))
     }
   } else {
-    sources.push(originalFileUrlToSourceMapSource(originalFileUrl, projectDirectoryUrl))
+    sources.push(fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl))
     sourcesContent.push(originalFileContent)
   }
 
@@ -100,13 +99,6 @@ export const transformResultToCompilationResult = (
     assets,
     assetsContent,
   }
-}
-
-const originalFileUrlToSourceMapSource = (originalFileUrl, projectDirectoryUrl) => {
-  if (originalFileUrl.startsWith(projectDirectoryUrl)) {
-    return urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
-  }
-  return originalFileUrl
 }
 
 const stringifyMap = (object) => JSON.stringify(object, null, "  ")

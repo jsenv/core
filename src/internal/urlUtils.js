@@ -1,3 +1,4 @@
+import { relative, dirname } from "path"
 import { pathToFileURL, fileURLToPath } from "url"
 
 export const pathToDirectoryUrl = (path) => {
@@ -22,6 +23,16 @@ export const resolveDirectoryUrl = (specifier, baseUrl) => {
     return directoryUrl
   }
   return `${directoryUrl}/`
+}
+
+export const fileUrlToRelativePath = (fileUrl, baseFileUrl) => {
+  // https://stackoverflow.com/a/31024574/2634179
+  const fromPath = baseFileUrl.endsWith("/")
+    ? fileUrlToPath(baseFileUrl)
+    : dirname(fileUrlToPath(baseFileUrl))
+  const toPath = fileUrlToPath(fileUrl)
+  const relativePath = relative(fromPath, toPath)
+  return relativePath
 }
 
 export const hasScheme = (string) => {

@@ -1,3 +1,4 @@
+import { basename } from "path"
 import { readFile } from "fs"
 import { urlToContentType } from "@jsenv/server"
 import { resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
@@ -100,11 +101,17 @@ export const serveCompiledJs = async ({
         transformTopLevelAwait,
         transformModuleIntoSystemFormat,
       })
+
+      const sourcemapFileUrl = `${compiledFileUrl}__asset__/${basename(
+        fileUrlToPath(compiledFileUrl),
+      )}.map`
+
       return transformResultToCompilationResult(transformResult, {
         projectDirectoryUrl,
         originalFileContent,
         originalFileUrl,
         compiledFileUrl,
+        sourcemapFileUrl,
       })
     },
   })
