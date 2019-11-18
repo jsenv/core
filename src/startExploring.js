@@ -7,12 +7,7 @@ import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from 
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
-import {
-  pathToDirectoryUrl,
-  resolveDirectoryUrl,
-  resolveFileUrl,
-  fileUrlToPath,
-} from "internal/urlUtils.js"
+import { pathToDirectoryUrl, resolveDirectoryUrl, resolveFileUrl } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
 import {
   assertProjectDirectoryPath,
@@ -81,11 +76,8 @@ export const startExploring = async ({
   })
   assertCompileDirectoryInsideProject({ compileDirectoryUrl, projectDirectoryUrl })
 
-  const HTMLTemplateFilePath = fileUrlToPath(HTMLTemplateFileUrl)
-  await assertFileExists(HTMLTemplateFilePath)
-
-  const browserSelfExecuteTemplateFilePath = fileUrlToPath(browserSelfExecuteTemplateFileUrl)
-  await assertFileExists(browserSelfExecuteTemplateFilePath)
+  await assertFileExists(HTMLTemplateFileUrl)
+  await assertFileExists(browserSelfExecuteTemplateFileUrl)
 
   return catchAsyncFunctionCancellation(async () => {
     const specifierMetaMapRelativeForExplorable = metaMapToSpecifierMetaMap({

@@ -81,7 +81,7 @@ export const generateBundle = async ({
     if (typeof balancerTemplateFileUrl === "undefined") {
       throw new Error(`${format} format not compatible with balancing.`)
     }
-    await assertFileExists(fileUrlToPath(balancerTemplateFileUrl))
+    await assertFileExists(balancerTemplateFileUrl)
   }
 
   return catchAsyncFunctionCancellation(async () => {

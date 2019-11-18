@@ -52,6 +52,8 @@ export const launchNode = async ({
   } else if (typeof env !== "object") {
     throw new TypeError(`env must be an object, got ${env}`)
   }
+  await assertFileExists(nodeControllableFileUrl)
+  await assertFileExists(nodeExecuteTemplateFileUrl)
 
   const execArgv = await createChildExecArgv({
     cancellationToken,
@@ -67,13 +69,7 @@ export const launchNode = async ({
 
   env.COVERAGE_ENABLED = cover
 
-  const nodeControllableFilePath = fileUrlToPath(nodeControllableFileUrl)
-  await assertFileExists(nodeControllableFilePath)
-
-  const nodeExecuteTemplateFilePath = fileUrlToPath(nodeExecuteTemplateFileUrl)
-  await assertFileExists(nodeExecuteTemplateFilePath)
-
-  const child = forkChildProcess(nodeControllableFilePath, {
+  const child = forkChildProcess(fileUrlToPath(nodeControllableFileUrl), {
     execArgv,
     // silent: true
     stdio: "pipe",

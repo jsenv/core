@@ -3,10 +3,8 @@ import {
   compileDirectoryRelativePath,
   groupMap,
   importDefaultExtension,
-  // "/.jsenv/browser-platform-data.js" resolved at build time
   // eslint-disable-next-line import/no-unresolved
 } from "/.jsenv/browser-platform-data.js"
-// "/.jsenv/compileServerImportMap.json" resolved at build time
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/.jsenv/compileServerImportMap.json"
 import { uneval } from "@jsenv/uneval"
