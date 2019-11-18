@@ -1,6 +1,6 @@
 import { serveFile } from "@jsenv/server"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { urlToRelativePath } from "internal/urlUtils.js"
+import { urlToRelativeUrl } from "internal/urlUtils.js"
 import { serveBundle } from "src/serveBundle.js"
 
 export const serveBrowserPlatform = async ({
@@ -17,7 +17,7 @@ export const serveBrowserPlatform = async ({
 }) => {
   const { origin, ressource, method, headers } = request
 
-  const compileDirectoryRelativeUrl = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
+  const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
   const requestUrl = `${origin}${ressource}`
   const browserPlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativeUrl}.jsenv/browser-platform.js`
   const browserPlatformAssetDirectoryServerUrl = `${browserPlatformCompiledFileServerUrl}__asset__/`
@@ -38,8 +38,8 @@ export const serveBrowserPlatform = async ({
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileRelativePath: urlToRelativePath(browserPlatformFileUrl, projectDirectoryUrl),
-    compiledFileRelativePath: urlToRelativePath(browserPlatformCompiledFileServerUrl, `${origin}/`),
+    originalFileRelativePath: urlToRelativeUrl(browserPlatformFileUrl, projectDirectoryUrl),
+    compiledFileRelativePath: urlToRelativeUrl(browserPlatformCompiledFileServerUrl, `${origin}/`),
     importMapFileUrl,
     importDefaultExtension,
     importReplaceMap: {

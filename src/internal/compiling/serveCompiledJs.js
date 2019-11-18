@@ -3,7 +3,7 @@ import { urlToContentType } from "@jsenv/server"
 import {
   resolveFileUrl,
   pathToFileUrl,
-  urlToRelativePath,
+  urlToRelativeUrl,
   fileUrlToPath,
 } from "internal/urlUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
@@ -28,7 +28,7 @@ export const serveCompiledJs = async ({
   // it's an asset, it will be served by fileService
   if (relativePathIsAsset(relativePath)) return null
 
-  const compileDirectoryRelativeUrl = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
+  const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
 
   // not inside compile directory -> nothing to compile
   if (relativePath.startsWith(compileDirectoryRelativeUrl) === false) return null

@@ -28,7 +28,7 @@ export const hasScheme = (string) => {
   return /^[a-zA-Z]{2,}:/.test(string)
 }
 
-export const urlToRelativePath = (url, baseUrl) => {
+export const urlToRelativeUrl = (url, baseUrl) => {
   if (typeof baseUrl !== "string") {
     throw new TypeError(`baseUrl must be a string, got ${baseUrl}`)
   }

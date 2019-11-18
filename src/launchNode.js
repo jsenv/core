@@ -2,7 +2,7 @@
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
-import { fileUrlToPath, urlToRelativePath, resolveFileUrl } from "internal/urlUtils.js"
+import { fileUrlToPath, urlToRelativeUrl, resolveFileUrl } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
@@ -169,11 +169,11 @@ export const launchNode = async ({
         projectDirectoryUrl,
         importMapFileUrl,
         importDefaultExtension,
-        originalFileRelativePath: urlToRelativePath(
+        originalFileRelativePath: urlToRelativeUrl(
           nodeExecuteTemplateFileUrl,
           projectDirectoryUrl,
         ),
-        compiledFileRelativePath: urlToRelativePath(
+        compiledFileRelativePath: urlToRelativeUrl(
           resolveFileUrl(NODE_EXECUTE_RELATIVE_PATH, compileDirectoryUrl),
           projectDirectoryUrl,
         ),

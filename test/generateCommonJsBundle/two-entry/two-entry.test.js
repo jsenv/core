@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 import { generateCommonJsBundle } from "../../../index.js"
-import { resolveDirectoryUrl, urlToRelativePath } from "src/internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "src/internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
@@ -9,7 +9,7 @@ import {
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs`
 const firstEntryFileRelativePath = `${testDirectoryRelativePath}a.js`
 const secondEntryFileRelativePath = `${testDirectoryRelativePath}b.js`

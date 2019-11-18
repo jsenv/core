@@ -183,8 +183,8 @@ export const startExploring = async ({
         } else if ("referer" in headers) {
           const { referer } = headers
           if (sameOrigin(referer, request.origin)) {
-            const refererRelativePath = urlToRelativePath(referer)
-            const refererFileUrl = `${projectDirectoryUrl}${refererRelativePath}`
+            const refererRelativeUrl = urlToRelativeUrl(referer)
+            const refererFileUrl = `${projectDirectoryUrl}${refererRelativeUrl}`
 
             if (
               urlToMeta({
@@ -192,7 +192,7 @@ export const startExploring = async ({
                 specifierMetaMap: specifierMetaMapForExplorable,
               }).explorable
             ) {
-              const executionId = refererRelativePath
+              const executionId = refererRelativeUrl
               trackDependency({
                 relativePath,
                 executionId,
@@ -200,8 +200,8 @@ export const startExploring = async ({
             } else {
               Object.keys(dependencyTracker).forEach((executionId) => {
                 if (
-                  executionId === refererRelativePath ||
-                  dependencyTracker[executionId].includes(refererRelativePath)
+                  executionId === refererRelativeUrl ||
+                  dependencyTracker[executionId].includes(refererRelativeUrl)
                 ) {
                   trackDependency({
                     relativePath,
@@ -273,9 +273,9 @@ export const startExploring = async ({
       firstService(
         () => {
           const requestServerUrl = `${request.origin}${request.ressource}`
-          const relativePath = urlToRelativePath(requestServerUrl)
+          const relativeUrl = urlToRelativeUrl(requestServerUrl)
           return livereloadServerSentEventService({
-            relativePath,
+            relativeUrl,
             request,
           })
         },
@@ -321,7 +321,7 @@ export const startExploring = async ({
         },
         () => {
           const requestServerUrl = `${request.origin}${request.ressource}`
-          const relativePath = urlToRelativePath(requestServerUrl)
+          const relativePath = urlToRelativeUrl(requestServerUrl)
           rawProjectFileRequestedCallback({ relativePath, request })
           return serveFile(`${projectDirectoryUrl}${relativePath}`, {
             method: request.method,
@@ -362,8 +362,4 @@ export const startExploring = async ({
 
 const sameOrigin = (url, otherUrl) => {
   return new URL(url).origin === new URL(otherUrl).origin
-}
-
-const urlToRelativePath = (url) => {
-  return new URL(url).pathname.slice(1)
 }

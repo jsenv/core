@@ -1,5 +1,5 @@
 import { serveFile } from "@jsenv/server"
-import { urlToRelativePath } from "internal/urlUtils.js"
+import { urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { serveBundle } from "src/serveBundle.js"
 
@@ -16,7 +16,7 @@ export const serveNodePlatform = async ({
   request,
 }) => {
   const { origin, ressource, method, headers } = request
-  const compileDirectoryRelativeUrl = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
+  const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
   const requestUrl = `${origin}${ressource}`
   const nodePlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativeUrl}.jsenv/node-platform.js`
   const nodePlatformAssetDirectoryServerUrl = `${nodePlatformCompiledFileServerUrl}__asset__/`
@@ -37,8 +37,8 @@ export const serveNodePlatform = async ({
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileRelativePath: urlToRelativePath(nodePlatformFileUrl, projectDirectoryUrl),
-    compiledFileRelativePath: urlToRelativePath(nodePlatformCompiledFileServerUrl, `${origin}/`),
+    originalFileRelativePath: urlToRelativeUrl(nodePlatformFileUrl, projectDirectoryUrl),
+    compiledFileRelativePath: urlToRelativeUrl(nodePlatformCompiledFileServerUrl, `${origin}/`),
     importDefaultExtension,
     importMapFileUrl,
     importReplaceMap: {

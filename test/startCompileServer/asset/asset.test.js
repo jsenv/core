@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, resolveFileUrl, urlToRelativePath } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, resolveFileUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
@@ -7,8 +7,8 @@ import { fetch } from "../fetch.js"
 
 const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
 const fileUrl = resolveFileUrl("./asset.js", import.meta.url)
-const fileRelativeUrl = urlToRelativePath(fileUrl, jsenvCoreDirectoryUrl)
-const compileDirectoryRelativeUrl = urlToRelativePath(
+const fileRelativeUrl = urlToRelativeUrl(fileUrl, jsenvCoreDirectoryUrl)
+const compileDirectoryRelativeUrl = urlToRelativeUrl(
   compileDirectoryUrl,
   jsenvCoreDirectoryUrl,
 )

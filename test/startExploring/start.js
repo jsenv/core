@@ -1,10 +1,10 @@
-import { resolveDirectoryUrl, urlToRelativePath } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startExploring } from "../../index.js"
 import { START_EXPLORING_TEST_PARAMS } from "./TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativePath(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const compileDirectoryRelativeUrl = `${testDirectoryRelativePath}.dist/`
 
 startExploring({

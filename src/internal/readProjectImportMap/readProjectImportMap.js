@@ -1,6 +1,6 @@
 import { readFile } from "fs"
 import { composeTwoImportMaps } from "@jsenv/import-map"
-import { urlToRelativePath, fileUrlToPath } from "internal/urlUtils.js"
+import { urlToRelativeUrl, fileUrlToPath } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 
 export const readProjectImportMap = async ({
@@ -23,13 +23,13 @@ export const readProjectImportMap = async ({
     : null
 
   const jsenvCoreImportKey = "@jsenv/core/"
-  const jsenvCoreRelativePathForJsenvProject = urlToRelativePath(
+  const jsenvCoreRelativeUrlForJsenvProject = urlToRelativeUrl(
     jsenvCoreDirectoryUrl,
     jsenvProjectDirectoryUrl,
   )
 
   const importsForJsenvCore = {
-    [jsenvCoreImportKey]: jsenvCoreRelativePathForJsenvProject,
+    [jsenvCoreImportKey]: jsenvCoreRelativeUrlForJsenvProject,
   }
 
   if (!importMapForProject) {
@@ -39,17 +39,17 @@ export const readProjectImportMap = async ({
   }
 
   if (importMapForProject.imports) {
-    const jsenvCoreRelativePathForProject = importMapForProject.imports[jsenvCoreImportKey]
+    const jsenvCoreRelativeUrlForProject = importMapForProject.imports[jsenvCoreImportKey]
     if (
-      jsenvCoreRelativePathForProject &&
-      jsenvCoreRelativePathForProject !== jsenvCoreRelativePathForJsenvProject
+      jsenvCoreRelativeUrlForProject &&
+      jsenvCoreRelativeUrlForProject !== jsenvCoreRelativeUrlForJsenvProject
     ) {
       logger.warn(
         createIncompatibleJsenvCoreDependencyMessage({
           projectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
           jsenvProjectDirectoryPath: fileUrlToPath(jsenvProjectDirectoryUrl),
-          jsenvCoreRelativePathForProject,
-          jsenvCoreRelativePathForJsenvProject,
+          jsenvCoreRelativeUrlForProject,
+          jsenvCoreRelativeUrlForJsenvProject,
         }),
       )
     }
@@ -106,15 +106,15 @@ const getProjectImportMap = async ({ importMapFileUrl }) => {
 const createIncompatibleJsenvCoreDependencyMessage = ({
   projectDirectoryPath,
   jsenvProjectDirectoryPath,
-  jsenvCoreRelativePathForProject,
-  jsenvCoreRelativePathForJsenvProject,
+  jsenvCoreRelativeUrlForProject,
+  jsenvCoreRelativeUrlForJsenvProject,
 }) => `incompatible dependency to @jsenv/core in your project and an internal jsenv project.
 To fix this either remove project dependency to @jsenv/core or ensure they use the same version.
 (If you are inside a @jsenv project you can ignore this warning)
 --- your project path to @jsenv/core ---
-${jsenvCoreRelativePathForProject}
+${jsenvCoreRelativeUrlForProject}
 --- jsenv project wanted path to @jsenv/core ---
-${jsenvCoreRelativePathForJsenvProject}
+${jsenvCoreRelativeUrlForJsenvProject}
 --- jsenv project path ---
 ${jsenvProjectDirectoryPath}
 --- your project path ---

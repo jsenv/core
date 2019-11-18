@@ -4,7 +4,7 @@ import { urlToContentType } from "@jsenv/server"
 import { normalizeImportMap, composeTwoImportMaps, resolveImport } from "@jsenv/import-map"
 import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
 import {
-  urlToRelativePath,
+  urlToRelativeUrl,
   hasScheme,
   fileUrlToPath,
   pathToFileUrl,
@@ -245,19 +245,19 @@ ${importer}`)
 
         if (url.startsWith(projectDirectoryUrl)) {
           // relativise project dependencies
-          const relativePath = urlToRelativePath(url, projectDirectoryUrl)
+          const relativeUrl = urlToRelativeUrl(url, projectDirectoryUrl)
 
           // yep rollup don't really support source being http
-          if (relativePath.startsWith("http:/")) {
-            return `http://${relativePath.slice(`http:/`.length)}`
+          if (relativeUrl.startsWith("http:/")) {
+            return `http://${relativeUrl.slice(`http:/`.length)}`
           }
-          if (relativePath.startsWith("https:/")) {
-            return `https://${relativePath.slice(`http:/`.length)}`
+          if (relativeUrl.startsWith("https:/")) {
+            return `https://${relativeUrl.slice(`http:/`.length)}`
           }
 
           if (sourcemapPreferLeadingSlash) {
-            const originRelativePath = `/${relativePath}`
-            return originRelativePath
+            const originRelativeUrl = `/${relativeUrl}`
+            return originRelativeUrl
           }
 
           return relativeSpecifier

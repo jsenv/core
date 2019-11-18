@@ -1,5 +1,5 @@
 import { firstService, serveFile } from "@jsenv/server"
-import { urlToRelativePath } from "internal/urlUtils.js"
+import { urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { serveBundle } from "src/serveBundle.js"
 
@@ -15,7 +15,7 @@ export const serveBrowserSelfExecute = ({
   livereloading,
   logger,
 }) => {
-  const compileDirectoryRelativeUrl = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
+  const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
   const browserSelfExecuteDirectoryRelativePath = `${compileDirectoryRelativeUrl}.jsenv/browser-self-execute/`
 
   return firstService(
@@ -51,7 +51,7 @@ export const serveBrowserSelfExecute = ({
       const browserSelfExecuteDirectoryUrl = `${origin}/${browserSelfExecuteDirectoryRelativePath}`
 
       if (requestUrl.startsWith(browserSelfExecuteDirectoryUrl)) {
-        const fileRelativeUrl = urlToRelativePath(requestUrl, browserSelfExecuteDirectoryUrl)
+        const fileRelativeUrl = urlToRelativeUrl(requestUrl, browserSelfExecuteDirectoryUrl)
         if (fileRelativeUrl.includes("__asset__/")) {
           return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
             method,
@@ -122,13 +122,13 @@ const serveBrowserSelfExecuteBundle = async ({
   fileRelativeUrl,
   livereloading,
 }) => {
-  const compileDirectoryRelativeUrl = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
+  const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
   return serveBundle({
     logger,
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileRelativePath: urlToRelativePath(
+    originalFileRelativePath: urlToRelativeUrl(
       browserSelfExecuteTemplateFileUrl,
       projectDirectoryUrl,
     ),
