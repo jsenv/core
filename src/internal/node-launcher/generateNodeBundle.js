@@ -1,12 +1,7 @@
 import { extname, basename, relative } from "path"
 import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
 import { createLogger } from "@jsenv/logger"
-import {
-  fileUrlToPath,
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  resolveFileUrl,
-} from "internal/urlUtils.js"
+import { fileUrlToPath, resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { getOrGenerateCompiledFile } from "internal/compiling/compile-directory/getOrGenerateCompiledFile.js"
 import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
@@ -17,8 +12,8 @@ export const generateNodeBundle = async ({
   projectDirectoryUrl,
   importMapFileUrl,
   importDefaultExtension,
-  originalFileRelativeUrl,
-  compiledFileRelativeUrl,
+  originalFileUrl,
+  compiledFileUrl,
   babelPluginMap,
   logLevel,
   compileGroupCount,
@@ -26,10 +21,11 @@ export const generateNodeBundle = async ({
 }) => {
   return getOrGenerateCompiledFile({
     projectDirectoryUrl,
-    originalFileRelativeUrl,
-    compiledFileRelativeUrl,
+    originalFileUrl,
+    compiledFileUrl,
     cache: true,
     compile: async () => {
+      const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
       const entryExtname = extname(originalFileRelativeUrl)
       const entryBasename = basename(originalFileRelativeUrl, entryExtname)
       const entryName = entryBasename
@@ -50,7 +46,7 @@ export const generateNodeBundle = async ({
         // because we pass writeOnFileSystem: false anyway
         bundleDirectoryRelativeUrl: computeBundleDirectoryRelativeUrl({
           projectDirectoryUrl,
-          compiledFileRelativeUrl,
+          compiledFileUrl,
         }),
         importDefaultExtension,
         importMapFileUrl,
@@ -66,24 +62,19 @@ export const generateNodeBundle = async ({
         },
       })
 
-      const sourcemapFileRelativeUrl = `${compiledFileRelativeUrl}/${entryBasename}__asset__/${entryBasename}.map`
-
-      const sourcemapFileRelativeUrlForModule = `./${relative(
-        compiledFileRelativeUrl,
-        sourcemapFileRelativeUrl,
-      )}`
+      const sourcemapFileUrl = `${compiledFileUrl}/${entryBasename}__asset__/${entryBasename}.map`
+      const sourcemapFileRelativeUrlForModule = `./${relative(compiledFileUrl, sourcemapFileUrl)}`
 
       return bundleToCompilationResult(bundle, {
         projectDirectoryUrl,
-        sourcemapFileRelativeUrl,
+        sourcemapFileUrl,
         sourcemapFileRelativeUrlForModule,
       })
     },
   })
 }
 
-const computeBundleDirectoryRelativeUrl = ({ projectDirectoryUrl, compiledFileRelativeUrl }) => {
-  const compiledFileUrl = resolveFileUrl(compiledFileRelativeUrl, projectDirectoryUrl)
+const computeBundleDirectoryRelativeUrl = ({ projectDirectoryUrl, compiledFileUrl }) => {
   const bundleDirectoryUrl = resolveDirectoryUrl("./", compiledFileUrl)
   const bundleDirectoryRelativeUrl = urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl)
   return bundleDirectoryRelativeUrl

@@ -123,16 +123,14 @@ const serveBrowserSelfExecuteBundle = async ({
   livereloading,
 }) => {
   const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
+  const compiledFileUrl = `${projectDirectoryUrl}${request.ressource.slice(1)}`
   return serveBundle({
     logger,
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileRelativeUrl: urlToRelativeUrl(
-      browserSelfExecuteTemplateFileUrl,
-      projectDirectoryUrl,
-    ),
-    compiledFileRelativeUrl: request.ressource.slice(1),
+    originalFileUrl: browserSelfExecuteTemplateFileUrl,
+    compiledFileUrl,
     importDefaultExtension,
     importMapFileUrl,
     importReplaceMap: {

@@ -18,7 +18,9 @@ export const serveNodePlatform = async ({
   const { origin, ressource, method, headers } = request
   const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
   const requestUrl = `${origin}${ressource}`
-  const nodePlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativeUrl}.jsenv/node-platform.js`
+  const nodePlatformCompiledFileRelativeUrl = `${compileDirectoryRelativeUrl}.jsenv/node-platform.js`
+  const nodePlatformCompiledFileUrl = `${projectDirectoryUrl}${nodePlatformCompiledFileRelativeUrl}`
+  const nodePlatformCompiledFileServerUrl = `${origin}/${nodePlatformCompiledFileRelativeUrl}`
   const nodePlatformAssetDirectoryServerUrl = `${nodePlatformCompiledFileServerUrl}__asset__/`
 
   if (requestUrl.startsWith(nodePlatformAssetDirectoryServerUrl)) {
@@ -37,8 +39,8 @@ export const serveNodePlatform = async ({
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileRelativeUrl: urlToRelativeUrl(nodePlatformFileUrl, projectDirectoryUrl),
-    compiledFileRelativeUrl: urlToRelativeUrl(nodePlatformCompiledFileServerUrl, `${origin}/`),
+    originalFileUrl: nodePlatformFileUrl,
+    compiledFileUrl: nodePlatformCompiledFileUrl,
     importDefaultExtension,
     importMapFileUrl,
     importReplaceMap: {

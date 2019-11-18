@@ -2,32 +2,15 @@ import { fileUrlToPath } from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
 import { resolveMetaJsonFileUrl } from "./locaters.js"
 
-export const readMeta = async ({
-  logger,
-  projectDirectoryUrl,
-  originalFileRelativeUrl,
-  compiledFileRelativeUrl,
-}) => {
+export const readMeta = async ({ logger, compiledFileUrl }) => {
   const metaJsonFileUrl = resolveMetaJsonFileUrl({
-    projectDirectoryUrl,
-    compiledFileRelativeUrl,
+    compiledFileUrl,
   })
   const metaJsonFilePath = fileUrlToPath(metaJsonFileUrl)
 
   try {
     const metaJsonString = await readFileContent(metaJsonFilePath)
     const metaJsonObject = JSON.parse(metaJsonString)
-    const originalFileRelativeUrlFromMeta = metaJsonObject.originalFileRelativeUrl
-    if (originalFileRelativeUrlFromMeta !== originalFileRelativeUrl) {
-      logger.info(
-        createOriginalFileRelativeUrlChangedMessage({
-          originalFileRelativeUrlFromMeta,
-          originalFileRelativeUrl,
-          metaJsonFilePath,
-        }),
-      )
-      return null
-    }
     return metaJsonObject
   } catch (error) {
     if (error && error.code === "ENOENT") {
@@ -47,18 +30,6 @@ export const readMeta = async ({
     throw error
   }
 }
-
-const createOriginalFileRelativeUrlChangedMessage = ({
-  originalFileRelativeUrlFromMeta,
-  originalFileRelativeUrl,
-  metaJsonFilePath,
-}) => `unexpected originalFileRelativeUrl in meta.json
---- originalFileRelativeUrl in meta.json ---
-${originalFileRelativeUrlFromMeta}
---- originalFileRelativeUrl ---
-${originalFileRelativeUrl}
---- meta.json path ---
-${metaJsonFilePath}`
 
 const createCacheSyntaxErrorMessage = ({ syntaxError, metaJsonFilePath }) => `cache syntax error
 --- syntax error stack ---

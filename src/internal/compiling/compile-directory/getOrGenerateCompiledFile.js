@@ -4,11 +4,7 @@ import { createFileDirectories } from "internal/filesystemUtils.js"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
 import { updateMeta } from "./updateMeta.js"
-import {
-  resolveMetaJsonFileUrl,
-  resolveOriginalFileUrl,
-  resolveCompiledFileUrl,
-} from "./locaters.js"
+import { resolveMetaJsonFileUrl } from "./locaters.js"
 import { createLockRegistry } from "./createLockRegistry.js"
 
 const { lockForRessource } = createLockRegistry()
@@ -18,8 +14,8 @@ const lockfile = import.meta.require("proper-lockfile")
 export const getOrGenerateCompiledFile = async ({
   logLevel,
   projectDirectoryUrl,
-  originalFileRelativeUrl,
-  compiledFileRelativeUrl = originalFileRelativeUrl,
+  originalFileUrl,
+  compiledFileUrl = originalFileUrl,
   cache = false, // do not forget to pass this to true
   cacheHitTracking = false,
   cacheInterProcessLocking = false,
@@ -27,27 +23,40 @@ export const getOrGenerateCompiledFile = async ({
   ifModifiedSinceDate,
   compile,
 }) => {
+  const logger = createLogger({ logLevel })
+
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
   }
-  if (typeof originalFileRelativeUrl !== "string") {
-    throw new TypeError(`originalFileRelativeUrl must be a string, got ${originalFileRelativeUrl}`)
+  if (typeof originalFileUrl !== "string") {
+    throw new TypeError(`originalFileUrl must be a string, got ${originalFileUrl}`)
   }
-  if (typeof compiledFileRelativeUrl !== "string") {
-    throw new TypeError(`compiledFileRelativeUrl must be a string, got ${compiledFileRelativeUrl}`)
+  if (!originalFileUrl.startsWith(projectDirectoryUrl)) {
+    throw new Error(`origin file must be inside project
+--- original file url ---
+${originalFileUrl}
+--- project directory url ---
+${projectDirectoryUrl}`)
+  }
+  if (typeof compiledFileUrl !== "string") {
+    throw new TypeError(`compiledFileUrl must be a string, got ${compiledFileUrl}`)
+  }
+  if (!compiledFileUrl.startsWith(projectDirectoryUrl)) {
+    throw new Error(`compiled file must be inside project
+--- compiled file url ---
+${compiledFileUrl}
+--- project directory url ---
+${projectDirectoryUrl}`)
   }
   if (typeof compile !== "function") {
     throw new TypeError(`compile must be a function, got ${compile}`)
   }
 
-  const logger = createLogger({ logLevel })
-
   return startAsap(
     async () => {
       const { meta, compileResult, compileResultStatus } = await computeCompileReport({
-        projectDirectoryUrl,
-        originalFileRelativeUrl,
-        compiledFileRelativeUrl,
+        originalFileUrl,
+        compiledFileUrl,
         compile,
         ifEtagMatch,
         ifModifiedSinceDate,
@@ -92,9 +101,7 @@ export const getOrGenerateCompiledFile = async ({
         meta,
         compileResult,
         compileResultStatus,
-        projectDirectoryUrl,
-        originalFileRelativeUrl,
-        compiledFileRelativeUrl,
+        compiledFileUrl,
         cacheHitTracking,
       })
 
@@ -105,8 +112,7 @@ export const getOrGenerateCompiledFile = async ({
       }
     },
     {
-      projectDirectoryUrl,
-      compiledFileRelativeUrl,
+      compiledFileUrl,
       cacheInterProcessLocking,
       logger,
     },
@@ -114,9 +120,8 @@ export const getOrGenerateCompiledFile = async ({
 }
 
 const computeCompileReport = async ({
-  projectDirectoryUrl,
-  originalFileRelativeUrl,
-  compiledFileRelativeUrl,
+  originalFileUrl,
+  compiledFileUrl,
   compile,
   ifEtagMatch,
   ifModifiedSinceDate,
@@ -126,18 +131,15 @@ const computeCompileReport = async ({
   const meta = cache
     ? await readMeta({
         logger,
-        projectDirectoryUrl,
-        originalFileRelativeUrl,
-        compiledFileRelativeUrl,
+        compiledFileUrl,
       })
     : null
 
   if (!meta) {
     const compileResult = await callCompile({
       logger,
-      projectDirectoryUrl,
-      originalFileRelativeUrl,
-      compiledFileRelativeUrl,
+      originalFileUrl,
+      compiledFileUrl,
       compile,
     })
 
@@ -151,17 +153,15 @@ const computeCompileReport = async ({
   const metaValidation = await validateMeta({
     logger,
     meta,
-    projectDirectoryUrl,
-    compiledFileRelativeUrl,
+    compiledFileUrl,
     ifEtagMatch,
     ifModifiedSinceDate,
   })
   if (!metaValidation.valid) {
     const compileResult = await callCompile({
       logger,
-      projectDirectoryUrl,
-      originalFileRelativeUrl,
-      compiledFileRelativeUrl,
+      originalFileUrl,
+      compiledFileUrl,
       compile,
     })
     return {
@@ -175,27 +175,20 @@ const computeCompileReport = async ({
   const { compiledSource, sourcesContent, assetsContent } = metaValidation.data
   return {
     meta,
-    compileResult: { contentType, compiledSource, sources, sourcesContent, assets, assetsContent },
+    compileResult: {
+      contentType,
+      compiledSource,
+      sources,
+      sourcesContent,
+      assets,
+      assetsContent,
+    },
     compileResultStatus: "cached",
   }
 }
 
-const callCompile = async ({
-  projectDirectoryUrl,
-  originalFileRelativeUrl,
-  compiledFileRelativeUrl,
-  compile,
-  logger,
-}) => {
-  const originalFileUrl = resolveOriginalFileUrl({
-    projectDirectoryUrl,
-    originalFileRelativeUrl,
-  })
-  const compiledFileUrl = resolveCompiledFileUrl({
-    projectDirectoryUrl,
-    compiledFileRelativeUrl,
-  })
-  logger.debug(`compile ${originalFileRelativeUrl}`)
+const callCompile = async ({ logger, originalFileUrl, compiledFileUrl, compile }) => {
+  logger.debug(`compile ${originalFileUrl}`)
 
   const {
     sources = [],
@@ -228,14 +221,8 @@ const callCompile = async ({
   }
 }
 
-const startAsap = async (
-  fn,
-  { logger, projectDirectoryUrl, compiledFileRelativeUrl, cacheInterProcessLocking },
-) => {
-  const metaJsonFileUrl = resolveMetaJsonFileUrl({
-    projectDirectoryUrl,
-    compiledFileRelativeUrl,
-  })
+const startAsap = async (fn, { logger, compiledFileUrl, cacheInterProcessLocking }) => {
+  const metaJsonFileUrl = resolveMetaJsonFileUrl({ compiledFileUrl })
   const metaJsonFilePath = fileUrlToPath(metaJsonFileUrl)
 
   logger.debug(`lock ${metaJsonFilePath}`)
@@ -263,9 +250,9 @@ const startAsap = async (
     return await fn()
   } finally {
     // we want to unlock in case of error too
+    logger.debug(`unlock ${metaJsonFilePath}`)
     unlockLocal()
     unlockInterProcessLock()
-    logger.debug(`unlock ${metaJsonFilePath}`)
   }
 
   // here in case of error.code === 'ELOCKED' thrown from here

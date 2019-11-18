@@ -1,12 +1,12 @@
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server"
-import { urlToRelativeUrl, pathToFileUrl } from "internal/urlUtils.js"
+import { urlToRelativeUrl, pathToFileUrl, resolveFileUrl } from "internal/urlUtils.js"
 import { bufferToEtag } from "./compile-directory/bufferToEtag.js"
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
 
 export const serveCompiledFile = async ({
   projectDirectoryUrl,
-  originalFileRelativeUrl,
-  compiledFileRelativeUrl,
+  originalFileUrl,
+  compiledFileUrl,
   projectFileRequestedCallback = () => {},
   request,
   compile,
@@ -53,8 +53,8 @@ export const serveCompiledFile = async ({
   try {
     const { meta, compileResult, compileResultStatus } = await getOrGenerateCompiledFile({
       projectDirectoryUrl,
-      originalFileRelativeUrl,
-      compiledFileRelativeUrl,
+      originalFileUrl,
+      compiledFileUrl,
       ifEtagMatch,
       ifModifiedSinceDate,
       cache,
@@ -64,12 +64,13 @@ export const serveCompiledFile = async ({
     })
 
     projectFileRequestedCallback({
-      relativeUrl: originalFileRelativeUrl,
+      relativeUrl: urlToRelativeUrl(originalFileUrl, projectDirectoryUrl),
       request,
     })
     compileResult.sources.forEach((source) => {
+      const sourceFileUrl = resolveFileUrl(source, `${compiledFileUrl}__asset__/`)
       projectFileRequestedCallback({
-        relativeUrl: source,
+        relativeUrl: urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl),
         request,
       })
     })

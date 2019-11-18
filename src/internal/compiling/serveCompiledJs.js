@@ -1,6 +1,6 @@
 import { readFile } from "fs"
 import { urlToContentType } from "@jsenv/server"
-import { resolveFileUrl, urlToRelativeUrl, fileUrlToPath } from "internal/urlUtils.js"
+import { resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
@@ -17,18 +17,20 @@ export const serveCompiledJs = async ({
   request,
 }) => {
   const { origin, ressource } = request
-
-  const relativeUrl = ressource.slice(1)
+  const requestUrl = `${origin}${ressource}`
+  const compileDirectoryServerUrl = `${origin}${compileDirectoryUrl.slice("file://".length)}`
 
   // it's an asset, it will be served by fileService
-  if (relativeUrlIsAsset(relativeUrl)) return null
-
-  const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
+  if (urlIsAsset(requestUrl)) {
+    return null
+  }
 
   // not inside compile directory -> nothing to compile
-  if (relativeUrl.startsWith(compileDirectoryRelativeUrl) === false) return null
+  if (!requestUrl.startsWith(compileDirectoryServerUrl) === false) {
+    return null
+  }
 
-  const afterCompileDirectory = relativeUrl.slice(compileDirectoryRelativeUrl.length)
+  const afterCompileDirectory = requestUrl.slice(compileDirectoryServerUrl.length)
   const parts = afterCompileDirectory.split("/")
 
   const compileId = parts[0]
@@ -48,7 +50,6 @@ export const serveCompiledJs = async ({
   if (remaining === "") return null
 
   const originalFileRelativeUrl = remaining
-  const requestUrl = `${origin}${ressource}`
 
   // json, css, html etc does not need to be compiled
   // they are redirected to the source location that will be served as file
@@ -62,15 +63,16 @@ export const serveCompiledJs = async ({
     }
   }
 
-  const compiledFileRelativeUrl = `${compileDirectoryRelativeUrl}${compileId}/${remaining}`
+  const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
+  const compiledFileUrl = `${projectDirectoryUrl}${compileId}/${originalFileRelativeUrl}`
 
   return serveCompiledFile({
     projectDirectoryUrl,
-    originalFileRelativeUrl,
-    compiledFileRelativeUrl,
+    originalFileUrl,
+    compiledFileUrl,
     projectFileRequestedCallback,
     request,
-    compile: async ({ originalFileUrl, compiledFileUrl }) => {
+    compile: async () => {
       const groupBabelPluginMap = {}
       groupMap[compileId].babelPluginRequiredNameArray.forEach((babelPluginRequiredName) => {
         if (babelPluginRequiredName in babelPluginMap) {
@@ -127,4 +129,4 @@ export const serveCompiledJs = async ({
 // I don't do it for now because it will impact sourcemap paths
 // and sourceMappingURL comment at the bottom of compiled files
 // and that's something sensitive
-export const relativeUrlIsAsset = (relativeUrl) => relativeUrl.match(/[^\/]+__asset__\/.+$/)
+export const urlIsAsset = (url) => url.match(/[^\/]+__asset__\/.+$/)

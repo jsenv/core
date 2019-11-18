@@ -1,14 +1,12 @@
 import { fileUrlToPath } from "internal/urlUtils.js"
 import { writeFileContent } from "internal/filesystemUtils.js"
-import { resolveMetaJsonFileUrl, resolveAssetFileUrl, resolveCompiledFileUrl } from "./locaters.js"
+import { resolveMetaJsonFileUrl, resolveAssetFileUrl } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
 export const updateMeta = ({
   logger,
   meta,
-  projectDirectoryUrl,
-  originalFileRelativeUrl,
-  compiledFileRelativeUrl,
+  compiledFileUrl,
   cacheHitTracking,
   compileResult,
   compileResultStatus,
@@ -30,10 +28,6 @@ export const updateMeta = ({
     const { writeCompiledSourceFile = true, writeAssetsFile = true } = compileResult
 
     if (writeCompiledSourceFile) {
-      const compiledFileUrl = resolveCompiledFileUrl({
-        projectDirectoryUrl,
-        compiledFileRelativeUrl,
-      })
       const compiledFilePath = fileUrlToPath(compiledFileUrl)
       logger.debug(`write compiled file at ${compiledFilePath}`)
       promises.push(writeFileContent(compiledFilePath, compiledSource))
@@ -43,8 +37,7 @@ export const updateMeta = ({
       promises.push(
         ...assets.map((asset, index) => {
           const assetFileUrl = resolveAssetFileUrl({
-            projectDirectoryUrl,
-            compiledFileRelativeUrl,
+            compiledFileUrl,
             asset,
           })
           const assetFilePath = fileUrlToPath(assetFileUrl)
@@ -60,7 +53,6 @@ export const updateMeta = ({
 
     if (isNew) {
       latestMeta = {
-        originalFileRelativeUrl,
         contentType,
         sources,
         sourcesEtag: sourcesContent.map((sourceContent) =>
@@ -107,8 +99,7 @@ export const updateMeta = ({
     }
 
     const metaJsonFileUrl = resolveMetaJsonFileUrl({
-      projectDirectoryUrl,
-      compiledFileRelativeUrl,
+      compiledFileUrl,
     })
     const metaJsonFilePath = fileUrlToPath(metaJsonFileUrl)
 

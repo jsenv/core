@@ -32,7 +32,7 @@ import { rollupIdToUrl } from "./generateBundle/createJsenvRollupPlugin/createJs
 
 export const bundleToCompilationResult = (
   { rollupBundle, arrayOfAbstractUrl, moduleContentMap },
-  { projectDirectoryUrl, sourcemapFileRelativeUrl, sourcemapFileRelativeUrlForModule },
+  { projectDirectoryUrl, sourcemapFileUrl, sourcemapFileRelativeUrlForModule },
 ) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -62,11 +62,12 @@ export const bundleToCompilationResult = (
   const mainChunk = parseRollupChunk(rollupBundle.output[0], {
     moduleContentMap,
     arrayOfAbstractUrl,
-    sourcemapFileRelativeUrl,
     sourcemapFileRelativeUrlForModule,
   })
   trackDependencies(mainChunk.dependencyMap)
-  assets.push(mainChunk.sourcemapFileRelativeUrl)
+  // we should make sourcemapFileUrl relative to the asset directory
+  // right now it's a full url
+  assets.push(sourcemapFileUrl)
   assetsContent.push(JSON.stringify(mainChunk.sourcemap, null, "  "))
 
   rollupBundle.output.slice(1).forEach((rollupChunk) => {
@@ -78,7 +79,7 @@ export const bundleToCompilationResult = (
     trackDependencies(chunk.dependencyMap)
     assets.push(chunkFileName)
     assetsContent.push(chunk.content)
-    assets.push(chunk.sourcemapFileRelativeUrl)
+    assets.push(`${rollupChunk.fileName}.map`)
     assetsContent.push(JSON.stringify(chunk.sourcemap, null, "  "))
   })
 
@@ -98,7 +99,6 @@ const parseRollupChunk = (
     arrayOfAbstractUrl,
     moduleContentMap,
     sourcemapFileRelativeUrlForModule = `./${rollupChunk.fileName}.map`,
-    sourcemapFileRelativeUrl = `${rollupChunk.fileName}.map`,
   },
 ) => {
   const dependencyMap = {}
@@ -124,7 +124,6 @@ const parseRollupChunk = (
 
   return {
     url: mainModuleUrl,
-    sourcemapFileRelativeUrl,
     dependencyMap,
     content,
     sourcemap,

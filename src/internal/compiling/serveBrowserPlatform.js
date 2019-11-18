@@ -19,7 +19,9 @@ export const serveBrowserPlatform = async ({
 
   const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
   const requestUrl = `${origin}${ressource}`
-  const browserPlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativeUrl}.jsenv/browser-platform.js`
+  const browserPlatformCompiledFileRelativeUrl = `${compileDirectoryRelativeUrl}.jsenv/browser-platform.js`
+  const browserPlatformCompiledFileUrl = `${projectDirectoryUrl}${browserPlatformCompiledFileRelativeUrl}`
+  const browserPlatformCompiledFileServerUrl = `${origin}/${browserPlatformCompiledFileRelativeUrl}`
   const browserPlatformAssetDirectoryServerUrl = `${browserPlatformCompiledFileServerUrl}__asset__/`
 
   if (requestUrl.startsWith(browserPlatformAssetDirectoryServerUrl)) {
@@ -38,8 +40,8 @@ export const serveBrowserPlatform = async ({
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileRelativeUrl: urlToRelativeUrl(browserPlatformFileUrl, projectDirectoryUrl),
-    compiledFileRelativeUrl: urlToRelativeUrl(browserPlatformCompiledFileServerUrl, `${origin}/`),
+    originalFileUrl: browserPlatformFileUrl,
+    compiledFileUrl: browserPlatformCompiledFileUrl,
     importMapFileUrl,
     importDefaultExtension,
     importReplaceMap: {
