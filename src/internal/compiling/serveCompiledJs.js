@@ -9,6 +9,7 @@ import { serveCompiledFile } from "./serveCompiledFile.js"
 export const serveCompiledJs = async ({
   projectDirectoryUrl,
   compileDirectoryUrl,
+  compileInMemory,
   groupMap,
   babelPluginMap,
   convertMap,
@@ -69,6 +70,7 @@ export const serveCompiledJs = async ({
 
   return serveCompiledFile({
     projectDirectoryUrl,
+    compileInMemory,
     originalFileUrl,
     compiledFileUrl,
     projectFileRequestedCallback,

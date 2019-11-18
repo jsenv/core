@@ -68,8 +68,6 @@ export const createJsenvRollupPlugin = async ({
     babelPluginRequiredNameArray,
   })
 
-  const projectImportMapUrl = resolveFileUrl("./importMap.json", projectDirectoryUrl)
-
   const importMapForProject = await readProjectImportMap({
     logger,
     projectDirectoryUrl,

@@ -19,7 +19,7 @@ import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 import { cleanCompileDirectoryIfObsolete } from "./compile-directory/cleanCompileDirectoryIfObsolete.js"
 import { serveBrowserPlatform } from "./serveBrowserPlatform.js"
 import { serveNodePlatform } from "./serveNodePlatform.js"
-import { serveCompiledJs, relativeUrlIsAsset } from "./serveCompiledJs.js"
+import { serveCompiledJs, urlIsAsset } from "./serveCompiledJs.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
@@ -30,8 +30,11 @@ export const startCompileServer = async ({
   transformModuleIntoSystemFormat = true,
 
   projectDirectoryUrl,
+
   compileDirectoryUrl,
   compileDirectoryClean = false,
+  compileInMemory = false,
+
   importMapFileUrl,
   importDefaultExtension,
   babelPluginMap = jsenvBabelPluginMap,
@@ -142,7 +145,9 @@ ${projectDirectoryUrl}`)
       // in theory a compilation asset should not change
       // if the source file did not change
       // so we can avoid watching compilation asset
-      if (relativeUrlIsAsset(relativeUrl)) return
+      if (urlIsAsset(`${projectDirectoryUrl}${relativeUrl}`)) {
+        return
+      }
 
       if (projectFilePredicate(relativeUrl)) {
         originalProjectFileRequestedCallback({ relativeUrl, ...rest })
@@ -192,6 +197,7 @@ ${projectDirectoryUrl}`)
           serveCompiledJs({
             projectDirectoryUrl,
             compileDirectoryUrl,
+            compileInMemory,
             groupMap,
             babelPluginMap,
             convertMap,
