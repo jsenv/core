@@ -1,26 +1,30 @@
 import { basename } from "path"
 import { hrefToPathname } from "@jsenv/href"
-import { urlToRelativePath, resolveFileUrl } from "internal/urlUtils.js"
+import { urlToRelativePath } from "internal/urlUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 
 export const transformResultToCompilationResult = (
   { code, map, metadata = {} },
   {
-    source,
-    sourceUrl,
     projectDirectoryUrl,
+    originalFileContent,
+    originalFileUrl,
+    compiledFileUrl,
     remap = true,
     remapMethod = "comment", // 'comment', 'inline'
   },
 ) => {
-  if (typeof source !== "string") {
-    throw new TypeError(`source must be a string, got ${source}`)
-  }
-  if (typeof sourceUrl !== "string") {
-    throw new TypeError(`sourceUrl must be a string, got ${sourceUrl}`)
-  }
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
+  }
+  if (typeof originalFileContent !== "string") {
+    throw new TypeError(`originalFileContent must be a string, got ${originalFileContent}`)
+  }
+  if (typeof originalFileUrl !== "string") {
+    throw new TypeError(`originalFileUrl must be a string, got ${originalFileUrl}`)
+  }
+  if (typeof compiledFileUrl !== "string") {
+    throw new TypeError(`compiledFileUrl must be a string, got ${compiledFileUrl}`)
   }
 
   const sources = []
@@ -34,17 +38,17 @@ export const transformResultToCompilationResult = (
       // may happen in some cases where babel returns a wrong sourcemap
       // there is at least one case where it happens
       // a file with only import './whatever.js' inside
-      sources.push(sourceUrlToSourceMapSource(sourceUrl, projectDirectoryUrl))
-      sourcesContent.push(source)
+      sources.push(originalFileUrlToSourceMapSource(originalFileUrl, projectDirectoryUrl))
+      sourcesContent.push(originalFileContent)
     } else {
       map.sources = map.sources.map((source) => {
-        const url = resolveFileUrl(source, sourceUrl)
-        if (url.startsWith(projectDirectoryUrl)) {
-          const sourceRelativePath = urlToRelativePath(url, projectDirectoryUrl)
-          const sourceOriginRelative = `/${sourceRelativePath}`
-          sources.push(sourceRelativePath)
-          return sourceOriginRelative
-        }
+        // const url = resolveFileUrl(source, sourceUrl)
+        // if (url.startsWith(projectDirectoryUrl)) {
+        //   const sourceRelativePath = urlToRelativePath(url, projectDirectoryUrl)
+        //   const sourceOriginRelative = `/${sourceRelativePath}`
+        //   sources.push(sourceRelativePath)
+        //   return sourceOriginRelative
+        // }
 
         sources.push(source)
         return source
@@ -71,15 +75,15 @@ export const transformResultToCompilationResult = (
         `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
       )
     } else if (remapMethod === "comment") {
-      const sourceBasename = basename(hrefToPathname(sourceUrl))
+      const sourceBasename = basename(hrefToPathname(originalFileUrl))
       const sourceMapBasename = `${sourceBasename}.map`
       output = writeSourceMappingURL(output, `./${sourceBasename}__asset__/${sourceMapBasename}`)
       assets.push(sourceMapBasename)
       assetsContent.push(stringifyMap(map))
     }
   } else {
-    sources.push(sourceUrlToSourceMapSource(sourceUrl, projectDirectoryUrl))
-    sourcesContent.push(source)
+    sources.push(originalFileUrlToSourceMapSource(originalFileUrl, projectDirectoryUrl))
+    sourcesContent.push(originalFileContent)
   }
 
   const { coverage } = metadata
@@ -98,11 +102,11 @@ export const transformResultToCompilationResult = (
   }
 }
 
-const sourceUrlToSourceMapSource = (sourceUrl, projectDirectoryUrl) => {
-  if (sourceUrl.startsWith(projectDirectoryUrl)) {
-    return urlToRelativePath(sourceUrl, projectDirectoryUrl)
+const originalFileUrlToSourceMapSource = (originalFileUrl, projectDirectoryUrl) => {
+  if (originalFileUrl.startsWith(projectDirectoryUrl)) {
+    return urlToRelativePath(originalFileUrl, projectDirectoryUrl)
   }
-  return sourceUrl
+  return originalFileUrl
 }
 
 const stringifyMap = (object) => JSON.stringify(object, null, "  ")

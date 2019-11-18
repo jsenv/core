@@ -1,6 +1,11 @@
 import { readFile } from "fs"
 import { urlToContentType } from "@jsenv/server"
-import { resolveFileUrl, pathToFileUrl, urlToRelativePath } from "internal/urlUtils.js"
+import {
+  resolveFileUrl,
+  pathToFileUrl,
+  urlToRelativePath,
+  fileUrlToPath,
+} from "internal/urlUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
@@ -23,10 +28,7 @@ export const serveCompiledJs = async ({
   // it's an asset, it will be served by fileService
   if (relativePathIsAsset(relativePath)) return null
 
-  const compileDirectoryRelativePath = urlToRelativePath(
-    compileDirectoryUrl,
-    projectDirectoryUrl,
-  )
+  const compileDirectoryRelativePath = urlToRelativePath(compileDirectoryUrl, projectDirectoryUrl)
 
   // not inside compile directory -> nothing to compile
   if (relativePath.startsWith(compileDirectoryRelativePath) === false) return null
@@ -72,7 +74,7 @@ export const serveCompiledJs = async ({
     compiledFileRelativePath,
     projectFileRequestedCallback,
     request,
-    compile: async ({ originalFilePath }) => {
+    compile: async ({ originalFileUrl, compiledFileUrl }) => {
       const groupBabelPluginMap = {}
       groupMap[compileId].babelPluginRequiredNameArray.forEach((babelPluginRequiredName) => {
         if (babelPluginRequiredName in babelPluginMap) {
@@ -80,9 +82,8 @@ export const serveCompiledJs = async ({
         }
       })
 
-      const originalFileUrl = pathToFileUrl(originalFilePath)
       const originalFileBuffer = await new Promise((resolve, reject) => {
-        readFile(originalFilePath, (error, buffer) => {
+        readFile(fileUrlToPath(originalFileUrl), (error, buffer) => {
           if (error) {
             reject(error)
           } else {
@@ -102,9 +103,10 @@ export const serveCompiledJs = async ({
         transformModuleIntoSystemFormat,
       })
       return transformResultToCompilationResult(transformResult, {
-        source: originalFileContent,
-        sourceUrl: originalFileUrl,
         projectDirectoryUrl,
+        originalFileContent,
+        originalFileUrl,
+        compiledFileUrl,
       })
     },
   })
