@@ -63,10 +63,11 @@ export const generateNodeBundle = async ({
         },
       })
 
-      const sourcemapFileUrl = `${compiledFileUrl}/${entryBasename}__asset__/${entryBasename}.map`
+      const sourcemapFileUrl = `${compiledFileUrl}__asset__/${entryBasename}${entryExtname}.map`
 
       return bundleToCompilationResult(bundle, {
         projectDirectoryUrl,
+        originalFileUrl,
         compiledFileUrl,
         sourcemapFileUrl,
       })

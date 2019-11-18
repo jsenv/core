@@ -38,6 +38,12 @@ export const bundleToCompilationResult = (
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
   }
+  if (typeof compiledFileUrl !== "string") {
+    throw new TypeError(`compiledFileUrl must be a string, got ${compiledFileUrl}`)
+  }
+  if (typeof sourcemapFileUrl !== "string") {
+    throw new TypeError(`sourcemapFileUrl must be a string, got ${sourcemapFileUrl}`)
+  }
 
   const sources = []
   const sourcesContent = []
@@ -67,6 +73,7 @@ export const bundleToCompilationResult = (
     arrayOfAbstractUrl,
     sourcemapFileRelativeUrlForModule: fileUrlToRelativePath(sourcemapFileUrl, compiledFileUrl),
   })
+  // mainChunk.sourcemap.file = fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl)
   trackDependencies(mainChunk.dependencyMap)
   assets.push(basename(fileUrlToPath(sourcemapFileUrl)))
   assetsContent.push(JSON.stringify(mainChunk.sourcemap, null, "  "))

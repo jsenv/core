@@ -12,7 +12,7 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}file.js`
 const actual = await execute({
   ...EXECUTE_TEST_PARAMS,
   compileDirectoryRelativeUrl,
-  launch: launchNode,
+  launch: (options) => launchNode({ ...options, debugPort: 40001 }),
   fileRelativeUrl,
 })
 const expected = {

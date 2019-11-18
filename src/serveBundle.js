@@ -117,11 +117,11 @@ export const serveBundle = async ({
       browser,
     })
 
-    const entryFilename = `${entryBasename}${entryExtname}`
-    const sourcemapFileUrl = `${compiledFileUrl}__asset__/${entryFilename}.map`
+    const sourcemapFileUrl = `${compiledFileUrl}__asset__/${entryBasename}${entryExtname}.map`
 
     return bundleToCompilationResult(bundle, {
       projectDirectoryUrl,
+      originalFileUrl,
       compiledFileUrl,
       sourcemapFileUrl,
     })
