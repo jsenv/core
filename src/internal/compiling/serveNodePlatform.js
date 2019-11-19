@@ -2,6 +2,7 @@ import { serveFile } from "@jsenv/server"
 import { urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { serveBundle } from "src/serveBundle.js"
+import { urlIsAsset } from "./urlIsAsset.js"
 
 export const serveNodePlatform = async ({
   logger,
@@ -18,18 +19,16 @@ export const serveNodePlatform = async ({
   const { origin, ressource, method, headers } = request
   const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
   const requestUrl = `${origin}${ressource}`
-  const nodePlatformCompiledFileRelativeUrl = `${compileDirectoryRelativeUrl}.jsenv/node-platform.js`
-  const nodePlatformCompiledFileUrl = `${projectDirectoryUrl}${nodePlatformCompiledFileRelativeUrl}`
-  const nodePlatformCompiledFileServerUrl = `${origin}/${nodePlatformCompiledFileRelativeUrl}`
-  const nodePlatformAssetDirectoryServerUrl = `${nodePlatformCompiledFileServerUrl}__asset__/`
-
-  if (requestUrl.startsWith(nodePlatformAssetDirectoryServerUrl)) {
+  if (urlIsAsset(requestUrl)) {
     return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
       method,
       headers,
     })
   }
 
+  const nodePlatformCompiledFileRelativeUrl = `${compileDirectoryRelativeUrl}.jsenv/node-platform.js`
+  const nodePlatformCompiledFileUrl = `${projectDirectoryUrl}${nodePlatformCompiledFileRelativeUrl}`
+  const nodePlatformCompiledFileServerUrl = `${origin}/${nodePlatformCompiledFileRelativeUrl}`
   if (!requestUrl.startsWith(nodePlatformCompiledFileServerUrl)) {
     return null
   }

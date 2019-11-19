@@ -1,6 +1,7 @@
 import { firstService, serveFile } from "@jsenv/server"
 import { urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { urlIsAsset } from "internal/compiling/urlIsAsset.js"
 import { serveBundle } from "src/serveBundle.js"
 
 export const serveBrowserSelfExecute = ({
@@ -46,19 +47,17 @@ export const serveBrowserSelfExecute = ({
     },
     () => {
       const { origin, ressource, method, headers } = request
-
       const requestUrl = `${origin}${ressource}`
-      const browserSelfExecuteDirectoryServerUrl = `${origin}/${browserSelfExecuteDirectoryRelativeUrl}`
+      if (urlIsAsset(requestUrl)) {
+        return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
+          method,
+          headers,
+        })
+      }
 
+      const browserSelfExecuteDirectoryServerUrl = `${origin}/${browserSelfExecuteDirectoryRelativeUrl}`
       if (requestUrl.startsWith(browserSelfExecuteDirectoryServerUrl)) {
         const fileRelativeUrl = urlToRelativeUrl(requestUrl, browserSelfExecuteDirectoryServerUrl)
-        if (fileRelativeUrl.includes("__asset__/")) {
-          return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
-            method,
-            headers,
-          })
-        }
-
         return serveBrowserSelfExecuteBundle({
           logger,
           projectDirectoryUrl,

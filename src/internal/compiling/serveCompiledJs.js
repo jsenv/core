@@ -1,10 +1,10 @@
-import { basename } from "path"
 import { readFile } from "fs"
 import { urlToContentType } from "@jsenv/server"
 import { urlToRelativeUrl, resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
+import { urlIsAsset } from "./urlIsAsset.js"
 
 export const serveCompiledJs = async ({
   projectDirectoryUrl,
@@ -106,9 +106,7 @@ export const serveCompiledJs = async ({
         transformModuleIntoSystemFormat,
       })
 
-      const sourcemapFileUrl = `${compiledFileUrl}__asset__/${basename(
-        fileUrlToPath(compiledFileUrl),
-      )}.map`
+      const sourcemapFileUrl = `${compiledFileUrl}.map`
 
       return transformResultToCompilationResult(transformResult, {
         projectDirectoryUrl,
@@ -120,24 +118,3 @@ export const serveCompiledJs = async ({
     },
   })
 }
-
-// in the future I may want to put assets in a separate directory like this:
-//
-// /dist
-//   /__assets__
-//     index.js.map
-//     index.js.cache.json
-//       /foo
-//        bar.js.map
-//        bar.js.cache.json
-//   index.js
-//   foo/
-//     bar.js
-//
-// so that the dist folder is not polluted with the asset files
-// that day pathnameRelativeIsAsset must be this:
-// => pathnameRelative.startsWith(`${compileInto}/__assets__/`)
-// I don't do it for now because it will impact sourcemap paths
-// and sourceMappingURL comment at the bottom of compiled files
-// and that's something sensitive
-export const urlIsAsset = (url) => url.match(/[^\/]+__asset__\/.+$/)

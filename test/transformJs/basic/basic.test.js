@@ -13,7 +13,7 @@ const testDirectoryBasename = basename(testDirectoryUrl)
 const fileBasename = `${testDirectoryBasename}.js`
 const originalFileUrl = import.meta.resolve(`./${fileBasename}`)
 const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativePath}.dist/${fileBasename}`
-const sourcemapFileUrl = `${compiledFileUrl}__asset__/sourcemap.map`
+const sourcemapFileUrl = `${compiledFileUrl}.map`
 const filePath = fileUrlToPath(originalFileUrl)
 const originalFileContent = readFileSync(filePath).toString()
 
@@ -32,9 +32,9 @@ const actual = transformResultToCompilationResult(transformResult, {
 const expected = {
   compiledSource: actual.compiledSource,
   contentType: "application/javascript",
-  sources: [`../../${fileBasename}`],
+  sources: [`../${fileBasename}`],
   sourcesContent: [originalFileContent],
-  assets: [`sourcemap.map`],
+  assets: [`../${fileBasename}.map`],
   assetsContent: [actual.assetsContent[0]],
 }
 assert({ actual, expected })
@@ -43,7 +43,7 @@ assert({ actual, expected })
   const actual = JSON.parse(actual.assetsContent[0])
   const expected = {
     version: 3,
-    sources: [`../../${fileBasename}`],
+    sources: [`../${fileBasename}`],
     names: actual.names,
     mappings: actual.mappings,
   }

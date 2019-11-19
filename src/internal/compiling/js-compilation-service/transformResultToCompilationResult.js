@@ -1,5 +1,4 @@
-import { basename } from "path"
-import { fileUrlToRelativePath, fileUrlToPath } from "internal/urlUtils.js"
+import { fileUrlToRelativePath } from "internal/urlUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 
 export const transformResultToCompilationResult = (
@@ -74,10 +73,16 @@ export const transformResultToCompilationResult = (
         `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
       )
     } else if (remapMethod === "comment") {
-      const sourcemapFileRelativePath = fileUrlToRelativePath(sourcemapFileUrl, compiledFileUrl)
-      output = writeSourceMappingURL(output, sourcemapFileRelativePath)
-      const sourcemapFileBasename = basename(fileUrlToPath(sourcemapFileUrl))
-      assets.push(sourcemapFileBasename)
+      const sourcemapFileRelativePathForModule = fileUrlToRelativePath(
+        sourcemapFileUrl,
+        compiledFileUrl,
+      )
+      output = writeSourceMappingURL(output, sourcemapFileRelativePathForModule)
+      const sourcemapFileRelativePathForAsset = fileUrlToRelativePath(
+        sourcemapFileUrl,
+        `${compiledFileUrl}__asset__/`,
+      )
+      assets.push(sourcemapFileRelativePathForAsset)
       assetsContent.push(stringifyMap(map))
     }
   } else {
