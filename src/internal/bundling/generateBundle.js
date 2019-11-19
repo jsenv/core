@@ -23,7 +23,7 @@ import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
 import { generateBabelPluginMapForBundle } from "./generateBabelPluginMapForBundle.js"
-import { bundleEntryPoints } from "./bundleEntryPoints.js"
+import { generateBundleUsingRollup } from "./generateBundleUsingRollup.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 
 export const generateBundle = async ({
@@ -146,7 +146,7 @@ export const generateBundle = async ({
     )}`
 
     if (compileGroupCount === 1) {
-      return bundleEntryPoints({
+      return generateBundleUsingRollup({
         cancellationToken,
         logger,
 
@@ -266,7 +266,7 @@ const generateEntryPointsDirectories = ({
 }) =>
   Promise.all(
     Object.keys(compileServer.groupMap).map((compileId) =>
-      bundleEntryPoints({
+      generateBundleUsingRollup({
         compileServer,
         bundleDirectoryUrl: resolveDirectoryUrl(compileId, bundleDirectoryUrl),
         compileDirectoryServerUrl: resolveDirectoryUrl(compileId, compileDirectoryServerUrl),
@@ -284,7 +284,7 @@ const generateEntryPointsBalancerFiles = ({
 }) =>
   Promise.all(
     Object.keys(entryPointMap).map((entryPointName) =>
-      bundleEntryPoints({
+      generateBundleUsingRollup({
         projectDirectoryUrl,
         compileDirectoryServerUrl: resolveDirectoryUrl("otherwise", compileDirectoryServerUrl),
         entryPointMap: {
