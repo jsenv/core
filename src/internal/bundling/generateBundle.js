@@ -22,7 +22,7 @@ import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
-import { generateBabelPluginMapForBundle } from "../generateBabelPluginMapForBundle.js"
+import { generateBabelPluginMapForBundle } from "./generateBabelPluginMapForBundle.js"
 import { bundleEntryPoints } from "./bundleEntryPoints.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 

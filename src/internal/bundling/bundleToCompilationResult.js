@@ -28,7 +28,7 @@ json file etag is used to invalidate the cache
 import { readFileSync } from "fs"
 import { fileUrlToRelativePath, fileUrlToPath } from "internal/urlUtils.js"
 import { writeOrUpdateSourceMappingURL } from "internal/sourceMappingURLUtils.js"
-import { rollupIdToUrl } from "./generateBundle/createJsenvRollupPlugin/createJsenvRollupPlugin.js"
+import { rollupIdToUrl } from "./createJsenvRollupPlugin/createJsenvRollupPlugin.js"
 
 export const bundleToCompilationResult = (
   { rollupBundle, arrayOfAbstractUrl, moduleContentMap },

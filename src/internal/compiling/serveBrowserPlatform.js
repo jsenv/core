@@ -33,6 +33,9 @@ export const serveBrowserPlatform = async ({
     return null
   }
 
+  // donc pour browser platform on a déja un compile server qui tourne
+  // on va juste le réutiliser, donc a priori utiliser bundleEntryPoints directement
+
   return serveBundle({
     logger,
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,

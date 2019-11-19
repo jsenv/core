@@ -1,6 +1,6 @@
 import { extname, basename } from "path"
 import { fileUrlToPath, resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
-import { generateBundle } from "internal/bundling/generateBundle/generateBundle.js"
+import { generateBundle } from "internal/bundling/generateBundle.js"
 import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
 import { serveCompiledFile } from "internal/compiling/serveCompiledFile.js"
 
