@@ -1,6 +1,6 @@
 import { createLogger } from "@jsenv/logger"
 import { fileUrlToPath } from "internal/urlUtils.js"
-import { createFileDirectories } from "internal/filesystemUtils.js"
+import { createFileDirectories, readFileContent } from "internal/filesystemUtils.js"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
 import { updateMeta } from "./updateMeta.js"
@@ -110,7 +110,6 @@ const computeCompileReport = async ({
     const compileResult = await callCompile({
       logger,
       originalFileUrl,
-      compiledFileUrl,
       compile,
     })
 
@@ -132,7 +131,6 @@ const computeCompileReport = async ({
     const compileResult = await callCompile({
       logger,
       originalFileUrl,
-      compiledFileUrl,
       compile,
     })
     return {
@@ -158,8 +156,19 @@ const computeCompileReport = async ({
   }
 }
 
-const callCompile = async ({ logger, originalFileUrl, compiledFileUrl, compile }) => {
+const callCompile = async ({ logger, originalFileUrl, compile }) => {
   logger.debug(`compile ${originalFileUrl}`)
+
+  const originalFileBuffer = await new Promise((resolve, reject) => {
+    readFileContent(fileUrlToPath(originalFileUrl), (error, buffer) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(buffer)
+      }
+    })
+  })
+  const originalFileContent = String(originalFileBuffer)
 
   const {
     sources = [],
@@ -170,8 +179,7 @@ const callCompile = async ({ logger, originalFileUrl, compiledFileUrl, compile }
     compiledSource,
     ...rest
   } = await compile({
-    originalFileUrl,
-    compiledFileUrl,
+    originalFileContent,
   })
 
   if (typeof contentType !== "string") {
