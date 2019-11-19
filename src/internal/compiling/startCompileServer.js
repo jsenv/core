@@ -259,6 +259,7 @@ ${projectDirectoryUrl}`)
         // in fact only for browser and node platforms but
         // let's make them available to anyone whowant to read it
         importMap: importMapForCompileServer,
+        groupMap,
         ...env,
       })
     },

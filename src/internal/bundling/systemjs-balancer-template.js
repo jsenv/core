@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-unresolved
-import { entryPointName, groupMap } from "/.jsenv/systemjs-balancer-data.js"
+import { chunkId, groupMap } from "/.jsenv/env.json"
 import { computeCompileIdFromGroupId } from "../compiling/platform-service/computeCompileIdFromGroupId.js"
 import { resolvePlatformGroup } from "../compiling/platform-service/resolvePlatformGroup.js"
 
@@ -11,7 +11,7 @@ globalThis.System.register([], (_export, _context) => {
       groupMap,
     })
 
-    const scriptSrc = `./${compileId}/${entryPointName}.js`
+    const scriptSrc = `./${compileId}/${chunkId}.js`
 
     const namespace = await _context.import(scriptSrc)
     _export(namespace)

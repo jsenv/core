@@ -29,6 +29,7 @@ export const createJsenvRollupPlugin = async ({
   importDefaultExtension,
 
   compileServer,
+  compileDirectoryServerUrl,
   babelPluginMap,
 
   minify,
@@ -36,20 +37,13 @@ export const createJsenvRollupPlugin = async ({
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
   const moduleContentMap = {}
-
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
-  const compileDirectoryUrl = `${bundleDirectoryUrl}.dist/`
-  const compileDirectoryServerUrl = `${compileServer.origin}/${urlToRelativeUrl(
-    compileDirectoryUrl,
-    projectDirectoryUrl,
-  )}`
-  const compileGroupDirectoryServerUrl = `${compileDirectoryServerUrl}otherwise/`
-  const importMap = normalizeImportMap(compileServer.importMap, compileGroupDirectoryServerUrl)
+  const importMap = normalizeImportMap(compileServer.importMap, compileDirectoryServerUrl)
 
   const jsenvRollupPlugin = {
     name: "jsenv",
 
-    resolveId: (specifier, importer = compileGroupDirectoryServerUrl) => {
+    resolveId: (specifier, importer = compileDirectoryServerUrl) => {
       if (!hasScheme(importer)) {
         importer = pathToFileUrl(importer)
       }

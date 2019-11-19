@@ -9,6 +9,7 @@ import {
   resolveFileUrl,
   resolveDirectoryUrl,
   fileUrlToPath,
+  urlToRelativeUrl,
 } from "internal/urlUtils.js"
 import { assertFileExists, removeDirectory } from "internal/filesystemUtils.js"
 import {
@@ -23,7 +24,6 @@ import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
 import { generateBabelPluginMapForBundle } from "../generateBabelPluginMapForBundle.js"
 import { bundleEntryPoints } from "./bundleEntryPoints.js"
-import { bundleBalancer } from "./bundleBalancer.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 
 export const generateBundle = async ({
@@ -60,6 +60,7 @@ export const generateBundle = async ({
   formatOutputOptions = {},
   minify = false,
   writeOnFileSystem = true,
+  sourcemapExcludeSources = false,
 
   ...rest
 }) => {
@@ -135,6 +136,11 @@ export const generateBundle = async ({
     // quelle url sont abstract (importReplaceMap)
     // pour que bundleToCompilationResult fonction correctement
 
+    const compileDirectoryServerUrl = `${compileServer.origin}/${urlToRelativeUrl(
+      compileDirectoryUrl,
+      projectDirectoryUrl,
+    )}`
+
     if (compileGroupCount === 1) {
       return bundleEntryPoints({
         cancellationToken,
@@ -147,12 +153,15 @@ export const generateBundle = async ({
         nativeModulePredicate,
 
         compileServer,
+        compileDirectoryServerUrl: `${compileDirectoryServerUrl}otherwise/`,
+
         babelPluginMap,
 
         minify,
         format,
         formatOutputOptions,
         writeOnFileSystem,
+        sourcemapExcludeSources,
       })
     }
 
@@ -160,31 +169,41 @@ export const generateBundle = async ({
       generateEntryPointsDirectories({
         cancellationToken,
         logger,
-        compileServer,
+
         projectDirectoryUrl,
+        entryPointMap,
         bundleDirectoryUrl,
         importDefaultExtension,
         nativeModulePredicate,
-        entryPointMap,
-        minify,
-        writeOnFileSystem,
+
+        compileServer,
+        compileDirectoryServerUrl,
+
         format,
         formatOutputOptions,
+        minify,
+        writeOnFileSystem,
+        sourcemapExcludeSources,
       }),
       generateEntryPointsBalancerFiles({
         cancellationToken,
         logger,
-        compileServer,
+
         projectDirectoryUrl,
+        entryPointMap,
         bundleDirectoryUrl,
         importDefaultExtension,
         nativeModulePredicate,
-        entryPointMap,
-        minify,
-        writeOnFileSystem,
-        format,
         balancerTemplateFileUrl,
         balancerDataAbstractSpecifier,
+
+        compileServer,
+        compileDirectoryServerUrl,
+
+        format,
+        minify,
+        writeOnFileSystem,
+        sourcemapExcludeSources,
       }),
     ])
   })
@@ -236,25 +255,42 @@ const assertCompileGroupCount = ({ compileGroupCount }) => {
   }
 }
 
-const generateEntryPointsDirectories = async ({ compileServer, bundleDirectoryUrl, ...rest }) =>
+const generateEntryPointsDirectories = async ({
+  compileServer,
+  bundleDirectoryUrl,
+  compileDirectoryServerUrl,
+  ...rest
+}) =>
   Promise.all(
     Object.keys(compileServer.groupMap).map(async (compileId) =>
       bundleEntryPoints({
         compileServer,
         bundleDirectoryUrl: resolveDirectoryUrl(compileId, bundleDirectoryUrl),
-        compileId,
+        compileDirectoryServerUrl: resolveDirectoryUrl(compileId, compileDirectoryServerUrl),
         ...rest,
       }),
     ),
   )
 
-const generateEntryPointsBalancerFiles = ({ entryPointMap, balancerTemplateFileUrl, ...rest }) =>
+const generateEntryPointsBalancerFiles = ({
+  projectDirectoryUrl,
+  bundleDirectoryUrl,
+  compileDirectoryServerUrl,
+  entryPointMap,
+  balancerTemplateFileUrl,
+  ...rest
+}) =>
   Promise.all(
     Object.keys(entryPointMap).map(async (entryPointName) =>
-      bundleBalancer({
+      bundleEntryPoints({
+        projectDirectoryUrl,
+        bundleDirectoryUrl: resolveDirectoryUrl("otherwise", bundleDirectoryUrl),
+        compileDirectoryServerUrl: resolveDirectoryUrl("otherwise", compileDirectoryServerUrl),
         entryPointMap: {
-          [entryPointName]: fileUrlToPath(balancerTemplateFileUrl),
+          [entryPointName]: urlToRelativeUrl(balancerTemplateFileUrl, projectDirectoryUrl),
         },
+        format: "global",
+        sourcemapExcludeSources: true,
         ...rest,
       }),
     ),

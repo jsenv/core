@@ -17,6 +17,8 @@ const mainFileBasename = `${testDirectoryBasename}.js`
 
 await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
+  logLevel: "debug",
+  compileServerLogLevel: "debug",
   bundleDirectoryRelativeUrl,
   entryPointMap: {
     main: `./${testDirectoryRelativePath}${mainFileBasename}`,
