@@ -48,7 +48,6 @@ export const generateBundle = async ({
     node: jsenvNodeVersionScoreMap,
   },
   balancerTemplateFileUrl,
-  balancerDataAbstractSpecifier,
 
   // bundle related params
   entryPointMap = {
@@ -59,8 +58,12 @@ export const generateBundle = async ({
   format,
   formatOutputOptions = {},
   minify = false,
-  writeOnFileSystem = true,
+  // we could exclude them
+  // but it's better to put them directly
+  // in case source files are not reachable
+  // for whatever reason
   sourcemapExcludeSources = false,
+  writeOnFileSystem = true,
 
   ...rest
 }) => {
@@ -121,8 +124,9 @@ export const generateBundle = async ({
       env,
 
       babelPluginMap,
-      platformScoreMap,
       compileDirectoryUrl,
+      compileGroupCount,
+      platformScoreMap,
       writeOnFilesystem: true,
       useFilesystemAsCache: true,
 
@@ -195,7 +199,6 @@ export const generateBundle = async ({
         importDefaultExtension,
         nativeModulePredicate,
         balancerTemplateFileUrl,
-        balancerDataAbstractSpecifier,
 
         compileServer,
         compileDirectoryServerUrl,
@@ -255,14 +258,14 @@ const assertCompileGroupCount = ({ compileGroupCount }) => {
   }
 }
 
-const generateEntryPointsDirectories = async ({
+const generateEntryPointsDirectories = ({
   compileServer,
   bundleDirectoryUrl,
   compileDirectoryServerUrl,
   ...rest
 }) =>
   Promise.all(
-    Object.keys(compileServer.groupMap).map(async (compileId) =>
+    Object.keys(compileServer.groupMap).map((compileId) =>
       bundleEntryPoints({
         compileServer,
         bundleDirectoryUrl: resolveDirectoryUrl(compileId, bundleDirectoryUrl),
@@ -274,17 +277,15 @@ const generateEntryPointsDirectories = async ({
 
 const generateEntryPointsBalancerFiles = ({
   projectDirectoryUrl,
-  bundleDirectoryUrl,
   compileDirectoryServerUrl,
   entryPointMap,
   balancerTemplateFileUrl,
   ...rest
 }) =>
   Promise.all(
-    Object.keys(entryPointMap).map(async (entryPointName) =>
+    Object.keys(entryPointMap).map((entryPointName) =>
       bundleEntryPoints({
         projectDirectoryUrl,
-        bundleDirectoryUrl: resolveDirectoryUrl("otherwise", bundleDirectoryUrl),
         compileDirectoryServerUrl: resolveDirectoryUrl("otherwise", compileDirectoryServerUrl),
         entryPointMap: {
           [entryPointName]: urlToRelativeUrl(balancerTemplateFileUrl, projectDirectoryUrl),

@@ -5,19 +5,32 @@ import { generateBundleUsingRollup } from "./generateBundleUsingRollup.js"
 export const bundleEntryPoints = async ({
   cancellationToken,
   logger,
+  projectDirectoryUrl,
   entryPointMap,
   bundleDirectoryUrl,
+  importDefaultExtension,
+  compileServer,
+  compileDirectoryServerUrl,
+  babelPluginMap,
   nativeModulePredicate,
-  sourcemapExcludeSources,
   format,
   formatOutputOptions,
+  minify,
+  sourcemapExcludeSources,
   writeOnFileSystem,
-  ...rest
 }) => {
   const { jsenvRollupPlugin, getExtraInfo } = await createJsenvRollupPlugin({
+    cancellationToken,
     logger,
+    projectDirectoryUrl,
     entryPointMap,
-    ...rest,
+    bundleDirectoryUrl,
+    importDefaultExtension,
+    compileServer,
+    compileDirectoryServerUrl,
+    babelPluginMap,
+    format,
+    minify,
   })
   const rollupParseOptions = {
     input: entryPointMap,
@@ -32,10 +45,6 @@ export const bundleEntryPoints = async ({
     // entryFileNames: `./[name].js`,
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
-    // we could exclude them
-    // but it's better to put them directly
-    // in case source files are not reachable
-    // for whatever reason
     sourcemapExcludeSources,
     ...formatOutputOptions,
   }

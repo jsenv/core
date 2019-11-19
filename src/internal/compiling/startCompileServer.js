@@ -9,6 +9,7 @@ import {
   startServer,
   firstService,
   serveFile,
+  urlToContentType,
 } from "@jsenv/server"
 import { createLogger } from "@jsenv/logger"
 import { resolveFileUrl, fileUrlToPath, urlToRelativeUrl } from "internal/urlUtils.js"
@@ -230,6 +231,8 @@ ${projectDirectoryUrl}`)
             serveProjectFiles({
               projectDirectoryUrl,
               projectFileRequestedCallback,
+              importReplaceMap,
+              importFallbackMap,
               request,
             }),
         ),
@@ -253,15 +256,22 @@ ${projectDirectoryUrl}`)
   const importMap = normalizeImportMap(importMapForCompileServer, compileServer.origin)
 
   importReplaceMap = {
-    "/.jsenv/env.json": () => {
-      return JSON.stringify({
+    "/.jsenv/env.js": () => {
+      const envObject = {
         // the compile server importmap can be useful
         // in fact only for browser and node platforms but
         // let's make them available to anyone whowant to read it
         importMap: importMapForCompileServer,
         groupMap,
         ...env,
-      })
+      }
+      return Object.keys(envObject)
+        .map(
+          (key) => `
+export const ${key} = ${JSON.stringify(envObject[key])}
+`,
+        )
+        .join("")
     },
     ...importReplaceMap,
   }
@@ -332,8 +342,15 @@ export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
   toString: () => `package version changed`,
 }
 
-const serveProjectFiles = ({ projectDirectoryUrl, projectFileRequestedCallback, request }) => {
-  const { ressource, method, headers } = request
+const serveProjectFiles = async ({
+  projectDirectoryUrl,
+  projectFileRequestedCallback,
+  importReplaceMap,
+  importFallbackMap,
+  request,
+}) => {
+  const { origin, ressource, method, headers } = request
+  const requestUrl = `${origin}${ressource}`
   const relativeUrl = ressource.slice(1)
 
   projectFileRequestedCallback({
@@ -341,19 +358,51 @@ const serveProjectFiles = ({ projectDirectoryUrl, projectFileRequestedCallback, 
     request,
   })
 
-  const fileUrl = resolveFileUrl(ressource.slice(1), projectDirectoryUrl)
+  const fileUrl = resolveFileUrl(relativeUrl, projectDirectoryUrl)
   const filePath = fileUrlToPath(fileUrl)
 
-  return serveFile(filePath, {
+  if (requestUrl in importReplaceMap) {
+    const body = await importReplaceMap[requestUrl]()
+    return {
+      status: 200,
+      headers: {
+        "cache-control": "no-store",
+        "content-type": urlToContentType(requestUrl),
+        "content-length": Buffer.byteLength(body),
+      },
+      body,
+    }
+  }
+
+  const responsePromise = serveFile(filePath, {
     method,
     headers,
   })
+
+  if (requestUrl in importFallbackMap) {
+    const response = await responsePromise
+    if (response.status === 404) {
+      const body = await importFallbackMap[requestUrl]()
+      return {
+        status: 200,
+        headers: {
+          "cache-control": "no-store",
+          "content-type": urlToContentType(requestUrl),
+          "content-length": Buffer.byteLength(body),
+        },
+        body,
+      }
+    }
+    return response
+  }
+
+  return responsePromise
 }
 
 /**
  * generateImportMapForCompileServer allows the following:
  *
- * import { importMap } from '/.jsenv/env.json'
+ * import { importMap } from '/.jsenv/env.js'
  *
  * returns jsenv internal importMap and
  *

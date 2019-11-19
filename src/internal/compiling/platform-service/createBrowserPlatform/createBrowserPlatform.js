@@ -5,7 +5,7 @@ import {
   importDefaultExtension,
   importMap,
   // eslint-disable-next-line import/no-unresolved
-} from "/.jsenv/env.json"
+} from "/.jsenv/env.js"
 import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport/resolveImport.js"
