@@ -1,16 +1,19 @@
 /* eslint-disable import/max-dependencies */
 import { readFileSync } from "fs"
 import { createCancellationToken } from "@jsenv/cancellation"
+import { composeTwoImportMaps, normalizeImportMap, resolveImport } from "@jsenv/import-map"
+import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
 import { registerFileLifecycle } from "@jsenv/file-watcher"
-import { createLogger } from "@jsenv/logger"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
   firstService,
   serveFile,
 } from "@jsenv/server"
-import { resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
+import { createLogger } from "@jsenv/logger"
+import { resolveFileUrl, fileUrlToPath, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { readProjectImportMap } from "internal/readProjectImportMap/readProjectImportMap.js"
 import { generateGroupMap } from "internal/generateGroupMap/generateGroupMap.js"
 import { jsenvBabelPluginCompatMap } from "src/jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
@@ -39,6 +42,9 @@ export const startCompileServer = async ({
 
   importMapFileUrl,
   importDefaultExtension,
+  importReplaceMap = {},
+  importFallbackMap = {},
+
   babelPluginMap = jsenvBabelPluginMap,
   convertMap = {},
 
@@ -112,6 +118,8 @@ ${projectDirectoryUrl}`)
 
   const logger = createLogger({ logLevel })
 
+  const importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
+
   const groupMap = generateGroupMap({
     babelPluginMap,
     babelCompatMap,
@@ -162,73 +170,110 @@ ${projectDirectoryUrl}`)
     projectFileRequestedCallback = () => {}
   }
 
-  const compileServer = await startServer({
-    cancellationToken,
-    protocol,
-    privateKey,
-    certificate,
-    ip,
-    port,
-    sendInternalErrorStack: true,
-    requestToResponse: (request) =>
-      firstService(
-        () =>
-          serveBrowserPlatform({
-            logger,
-            projectDirectoryUrl,
-            compileDirectoryUrl,
-            importMapFileUrl,
-            importDefaultExtension,
-            browserPlatformFileUrl,
-            babelPluginMap,
-            groupMap,
-            projectFileRequestedCallback,
-            request,
-          }),
-        () =>
-          serveNodePlatform({
-            logger,
-            projectDirectoryUrl,
-            compileDirectoryUrl,
-            importMapFileUrl,
-            importDefaultExtension,
-            nodePlatformFileUrl,
-            babelPluginMap,
-            groupMap,
-            projectFileRequestedCallback,
-            request,
-          }),
-        () =>
-          serveCompiledJs({
-            projectDirectoryUrl,
-            compileDirectoryUrl,
-            writeOnFilesystem,
-            useFilesystemAsCache,
-            groupMap,
-            babelPluginMap,
-            convertMap,
-            transformTopLevelAwait,
-            transformModuleIntoSystemFormat,
-            projectFileRequestedCallback,
-            request,
-          }),
-        () =>
-          serveProjectFiles({
-            projectDirectoryUrl,
-            projectFileRequestedCallback,
-            request,
-          }),
-      ),
-    logLevel,
-    accessControlAllowRequestOrigin: true,
-    accessControlAllowRequestMethod: true,
-    accessControlAllowRequestHeaders: true,
-    accessControlAllowedRequestHeaders: [
-      ...jsenvAccessControlAllowedHeaders,
-      "x-jsenv-execution-id",
-    ],
-    accessControlAllowCredentials: true,
-    keepProcessAlive,
+  const [compileServer, importMapForCompileServer] = await Promise.all([
+    startServer({
+      cancellationToken,
+      logLevel,
+      protocol,
+      privateKey,
+      certificate,
+      ip,
+      port,
+      sendInternalErrorStack: true,
+      requestToResponse: (request) =>
+        firstService(
+          () =>
+            serveBrowserPlatform({
+              logger,
+              projectDirectoryUrl,
+              compileDirectoryUrl,
+              importMapFileUrl,
+              importDefaultExtension,
+              browserPlatformFileUrl,
+              babelPluginMap,
+              groupMap,
+              projectFileRequestedCallback,
+              request,
+            }),
+          () =>
+            serveNodePlatform({
+              logger,
+              projectDirectoryUrl,
+              compileDirectoryUrl,
+              importMapFileUrl,
+              importDefaultExtension,
+              nodePlatformFileUrl,
+              babelPluginMap,
+              groupMap,
+              projectFileRequestedCallback,
+              request,
+            }),
+          () =>
+            serveCompiledJs({
+              projectDirectoryUrl,
+              compileDirectoryUrl,
+              importReplaceMap,
+              importFallbackMap,
+              writeOnFilesystem,
+              useFilesystemAsCache,
+              groupMap,
+              babelPluginMap,
+              convertMap,
+              transformTopLevelAwait,
+              transformModuleIntoSystemFormat,
+              projectFileRequestedCallback,
+              request,
+            }),
+          () =>
+            serveProjectFiles({
+              projectDirectoryUrl,
+              projectFileRequestedCallback,
+              request,
+            }),
+        ),
+      accessControlAllowRequestOrigin: true,
+      accessControlAllowRequestMethod: true,
+      accessControlAllowRequestHeaders: true,
+      accessControlAllowedRequestHeaders: [
+        ...jsenvAccessControlAllowedHeaders,
+        "x-jsenv-execution-id",
+      ],
+      accessControlAllowCredentials: true,
+      keepProcessAlive,
+    }),
+    generateImportMapForCompileServer({
+      logger,
+      projectDirectoryUrl,
+      importMapFileUrl,
+    }),
+  ])
+
+  const importMap = normalizeImportMap(importMapForCompileServer, compileServer.origin)
+
+  importReplaceMap = {
+    // the compile server import map can be useful
+    // in special cases, not sure
+    // anything should be aware of that
+    // the only part that need to know about it
+    // is browser or node platform
+    "/.jsenv/compileServerImportMap.json": () => JSON.stringify(importMap),
+    ...importReplaceMap,
+  }
+  importReplaceMap = resolveSpecifierMap(importReplaceMap, {
+    compileServerOrigin: compileServer.origin,
+    importMap,
+    importDefaultExtension,
+  })
+
+  importFallbackMap = {
+    // importMap is optional
+    [`./${importMapFileRelativeUrl}`]: () => `{}`,
+    ...importFallbackMap,
+  }
+  importFallbackMap = resolveSpecifierMap(importFallbackMap, {
+    compileServerOrigin: compileServer.origin,
+    importMap,
+    importDefaultExtension,
   })
 
   if (stopOnPackageVersionChange) {
@@ -263,7 +308,10 @@ ${projectDirectoryUrl}`)
     )
   }
 
-  return compileServer
+  return {
+    ...compileServer,
+    importMap: importMapForCompileServer,
+  }
 }
 
 const readPackage = (packagePath) => {
@@ -293,4 +341,58 @@ const serveProjectFiles = ({ projectDirectoryUrl, projectFileRequestedCallback, 
     method,
     headers,
   })
+}
+
+const generateImportMapForCompileServer = async ({
+  logger,
+  projectDirectoryUrl,
+  importMapFileUrl,
+}) => {
+  const importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
+  const importMapForJsenvCore = await generateImportMapForPackage({
+    logger,
+    projectDirectoryPath: fileUrlToPath(jsenvCoreDirectoryUrl),
+    rootProjectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
+  })
+  const importMapInternal = {
+    // in case importMapFileRelativeUrl is not the default
+    // redirect /importMap.json to the proper location
+    // well fuck it won't be compiled to something
+    // with this approach
+    imports: {
+      ...(importMapFileRelativeUrl === "importMap.json"
+        ? {}
+        : {
+            "/importMap.json": `./${importMapFileRelativeUrl}`,
+          }),
+    },
+  }
+  const importMapForProject = await readProjectImportMap({
+    logger,
+    projectDirectoryUrl,
+    jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
+    importMapFileUrl,
+  })
+  const importMap = [importMapForJsenvCore, importMapInternal, importMapForProject].reduce(
+    (previous, current) => composeTwoImportMaps(previous, current),
+    {},
+  )
+  return importMap
+}
+
+const resolveSpecifierMap = (
+  specifierMap,
+  { compileServerOrigin, importMap, importDefaultExtension },
+) => {
+  const specifierMapResolved = {}
+  Object.keys(specifierMap).forEach((specifier) => {
+    const specifierUrl = resolveImport({
+      specifier,
+      importer: `${compileServerOrigin}/`,
+      importMap,
+      defaultExtension: importDefaultExtension,
+    })
+    specifierMapResolved[specifierUrl] = specifierMap[specifier]
+  })
+  return specifierMapResolved
 }

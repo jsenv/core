@@ -34,14 +34,8 @@ export const generateNodeBundle = async ({
         [entryName]: `./${originalFileRelativeUrl}`,
       }
 
-      const logger = createLogger({ logLevel })
-      const jsenvNodeLauncherImportMap = await generateImportMapForPackage({
-        logger,
-        projectDirectoryPath: fileUrlToPath(jsenvCoreDirectoryUrl),
-        rootProjectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
-      })
-
       const bundle = await generateCommonJsBundleForNode({
+        logLevel,
         projectDirectoryPath: projectDirectoryUrl,
         // bundleDirectoryRelativeUrl is not really important
         // because we pass writeOnFileSystem: false anyway
@@ -51,12 +45,10 @@ export const generateNodeBundle = async ({
         }),
         importDefaultExtension,
         importMapFileUrl,
-        importMapForBundle: jsenvNodeLauncherImportMap,
         entryPointMap,
         babelPluginMap,
         throwUnhandled: false,
         writeOnFileSystem: false,
-        logLevel,
         compileGroupCount,
         platformScoreMap: {
           node: nodeScoreMap,

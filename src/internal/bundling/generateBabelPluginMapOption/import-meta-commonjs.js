@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-unresolved
-import importMap from "/.jsenv/importMap.json"
+import importMap from "/importMap.json"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport/resolveImport.js"
 

@@ -59,7 +59,7 @@ export const transformResultToCompilationResult = (
     // it also means client have to fetch source from server (additional http request)
     // some client ignore sourcesContent property such as vscode-chrome-debugger
     // Because it's the most complex scenario and we want to ensure client is always able
-    // to find source from the sourcemap, we explicitely delete nmap.sourcesContent to test this.
+    // to find source from the sourcemap, we explicitely delete map.sourcesContent to test this.
     delete map.sourcesContent
 
     // we don't need sourceRoot because our path are relative or absolute to the current location

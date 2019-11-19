@@ -1,30 +1,17 @@
 /* eslint-disable import/max-dependencies */
-import { statSync } from "fs"
 import { urlToContentType } from "@jsenv/server"
-import { normalizeImportMap, composeTwoImportMaps, resolveImport } from "@jsenv/import-map"
-import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
+import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import {
   urlToRelativeUrl,
   hasScheme,
   fileUrlToPath,
   pathToFileUrl,
   resolveFileUrl,
+  fileUrlToRelativePath,
 } from "internal/urlUtils.js"
 import { writeFileContent } from "internal/filesystemUtils.js"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
-import { readProjectImportMap } from "internal/readProjectImportMap/readProjectImportMap.js"
-// instead of importing all thoose from compile-server
-// bundling could and should start a compile server and fetch source from it
-// by default we would disable cache just to make things as they were
-// but we could also enable it
-// -> not that simple cause we still must
-//    transform importReplaceMap, importFallbackMap and stuff like thoose
-import {
-  listAbstractBabelHelpers,
-  babelHelperNameToImportSpecifier,
-} from "internal/compiling/js-compilation-service/babelHelper.js"
-import { generateBabelHelper } from "internal/compiling/js-compilation-service/generateBabelHelper.js"
+import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { transformJs } from "internal/compiling/js-compilation-service/transformJs.js"
 import { findAsyncPluginNameInBabelPluginMap } from "internal/compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 
@@ -37,10 +24,11 @@ const { minify: minifyCode } = import.meta.require("terser")
 
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
+  logger,
+  compileServerLogLevel,
   projectDirectoryUrl,
   bundleDirectoryUrl,
   importMapFileUrl,
-  importMapForBundle,
   importDefaultExtension,
   importReplaceMap,
   importFallbackMap,
@@ -53,7 +41,6 @@ export const createJsenvRollupPlugin = async ({
   format,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
   entryPointMap,
-  logger,
 }) => {
   const arrayOfUrlToSkipTransform = []
   const arrayOfAbstractUrl = []
@@ -67,60 +54,49 @@ export const createJsenvRollupPlugin = async ({
     babelPluginRequiredNameArray,
   })
 
-  const importMapForProject = await readProjectImportMap({
-    logger,
-    projectDirectoryUrl,
-    jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
-    importMapFileUrl,
-  })
-  const importMap = normalizeImportMap(
-    [
-      await generateImportMapForPackage({
-        projectDirectoryPath: fileUrlToPath(jsenvCoreDirectoryUrl),
-        rootProjectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
-        logger,
-      }),
-      {
-        imports: {
-          "/.jsenv/importMap.json": importMapFileUrl,
-        },
-      },
-      importMapForProject,
-      importMapForBundle,
-    ].reduce((previous, current) => composeTwoImportMaps(previous, current), {}),
-    projectDirectoryUrl,
-  )
-
-  importFallbackMap = {
-    // importMap is optionnal
-    "/.jsenv/importMap.json": () => `{}`,
-    ...importFallbackMap,
-  }
-  importFallbackMap = resolveSpecifierMap(importFallbackMap, {
-    projectDirectoryUrl,
-    importMap,
-    importDefaultExtension,
-  })
-
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
   importReplaceMap = {
     [bundleConstantAbstractSpecifier]: () => `export const chunkId = ${JSON.stringify(chunkId)}`,
     ...importReplaceMap,
   }
-  listAbstractBabelHelpers().forEach((babelHelperName) => {
-    importReplaceMap[babelHelperNameToImportSpecifier(babelHelperName)] = () =>
-      generateBabelHelper(babelHelperName)
-  })
-  importReplaceMap = resolveSpecifierMap(importReplaceMap, {
+
+  const compileDirectoryUrl = `${bundleDirectoryUrl}.dist/`
+
+  const {
+    origin: compileServerOrigin,
+    importMap: compileServerImportMap,
+  } = await startCompileServer({
+    cancellationToken,
+    logLevel: compileServerLogLevel,
     projectDirectoryUrl,
-    importMap,
+    importMapFileUrl,
     importDefaultExtension,
+    importReplaceMap,
+    importFallbackMap,
+    compileDirectoryUrl,
+    writeOnFilesystem: true,
+    useFilesystemAsCache: true,
+    babelPluginMap,
+    convertMap,
+    transformModuleIntoSystemFormat: false, // will be done by rollup
+    // what about compileGroupCount, well let's assume 1 for now
+
+    // we will always compile for one group which is the one
+    // with everything inside babelPluginMap
+    compileGroupCount: 1,
   })
+
+  const compileDirectoryServerUrl = `${compileServerOrigin}/${urlToRelativeUrl(
+    compileDirectoryUrl,
+    projectDirectoryUrl,
+  )}`
+  const compileGroupDirectoryServerUrl = `${compileDirectoryServerUrl}otherwise/`
+  const importMap = normalizeImportMap(compileServerImportMap, compileGroupDirectoryServerUrl)
 
   const jsenvRollupPlugin = {
     name: "jsenv",
 
-    resolveId: (specifier, importer = projectDirectoryUrl) => {
+    resolveId: (specifier, importer = compileGroupDirectoryServerUrl) => {
       if (!hasScheme(importer)) {
         importer = pathToFileUrl(importer)
       }
@@ -131,62 +107,7 @@ export const createJsenvRollupPlugin = async ({
         importMap,
         defaultExtension: importDefaultExtension,
       })
-
       logger.debug(`resolve ${specifier} to ${importUrl}`)
-
-      if (importUrl.startsWith("file://")) {
-        // TODO: open an issue rollup side
-        // to explain the issue here
-        // which is that if id is not an os path
-        // sourcemap will be broken
-        // (likely because they apply node.js path.resolve)
-        // they could either use an other resolution system
-        // or provide the ability to change how it's resolved
-        // so that the sourcemap.sources does not get broken
-
-        // rollup works with operating system path
-        // return os path when possible
-        // to ensure we can predict sourcemap.sources returned by rollup
-        const importPath = fileUrlToPath(importUrl)
-        if (importUrl in importReplaceMap) {
-          return importPath
-        }
-        // file presence is optionnal
-        if (importUrl in importFallbackMap) {
-          return importPath
-        }
-
-        let stats
-        try {
-          stats = statSync(importPath)
-        } catch (e) {
-          if (e.code === "ENOENT") {
-            throw new Error(`import file not found.
---- path ---
-${importPath}
---- specifier ---
-${specifier}
---- importer ---
-${importer}`)
-          }
-          throw e
-        }
-
-        if (!stats.isFile()) {
-          throw new Error(`unexpected import file stats.
---- path ---
-${importPath}
---- found ---
-${stats.isDirectory()} ? 'directory' : 'not-a-file'
---- specifier ---
-${specifier}
---- importer ---
-${importer}`)
-        }
-
-        return importPath
-      }
-
       return importUrl
     },
 
@@ -210,52 +131,47 @@ ${importer}`)
 
     // resolveImportMeta: () => {}
 
-    transform: async (moduleContent, rollupId) => {
-      const url = rollupIdToUrl(rollupId)
-
-      if (arrayOfUrlToSkipTransform.includes(url)) {
-        logger.debug(`skip transform for ${url}`)
-        return null
-      }
-
-      logger.debug(`transform ${url}`)
-
-      const { code, map } = await transformJs({
-        projectDirectoryUrl,
-        code: moduleContent,
-        url,
-        babelPluginMap,
-        convertMap,
-        // false, rollup will take care to transform module into whatever format
-        transformModuleIntoSystemFormat: false,
-      })
-      return { code, map }
-    },
+    // transform should not be required anymore as
+    // we will receive
+    // transform: async (moduleContent, rollupId) => {}
 
     outputOptions: (options) => {
       // we want something like ../../../../file.js to become /file.js
       // and also rollup does not expects to have http dependency in the mix
-      // so we fix them too (this one is really not mandatory)
-      options.sourcemapPathTransform = (relativeSpecifier) => {
-        const chunkFileUrl = resolveFileUrl(`./${chunkId}`, bundleDirectoryUrl)
-        const url = resolveFileUrl(relativeSpecifier, chunkFileUrl)
 
+      const chunkFileUrl = resolveFileUrl(`./${chunkId}`, bundleDirectoryUrl)
+
+      const relativePathToUrl = (relativePath) => {
+        const url = resolveFileUrl(relativePath, chunkFileUrl)
+
+        // fix rollup not supporting source being http
         if (url.startsWith(projectDirectoryUrl)) {
-          // relativise project dependencies
           const relativeUrl = urlToRelativeUrl(url, projectDirectoryUrl)
-
-          // yep rollup don't really support source being http
           if (relativeUrl.startsWith("http:/")) {
             return `http://${relativeUrl.slice(`http:/`.length)}`
           }
           if (relativeUrl.startsWith("https:/")) {
-            return `https://${relativeUrl.slice(`http:/`.length)}`
+            return `https://${relativeUrl.slice(`https:/`.length)}`
           }
-
-          return relativeSpecifier
         }
 
-        return relativeSpecifier
+        return url
+      }
+
+      options.sourcemapPathTransform = (relativePath) => {
+        const url = relativePathToUrl(relativePath)
+
+        if (url.startsWith(compileServerOrigin)) {
+          const relativeUrl = url.slice(`${compileServerOrigin}/`.length)
+          const fileUrl = `${projectDirectoryUrl}${relativeUrl}`
+          relativePath = fileUrlToRelativePath(fileUrl, chunkFileUrl)
+          return relativePath
+        }
+        if (url.startsWith(projectDirectoryUrl)) {
+          return relativePath
+        }
+
+        return url
       }
       return options
     },
@@ -412,23 +328,6 @@ export const rollupIdToUrl = (rollupId) => {
   }
 
   return pathToFileUrl(rollupId)
-}
-
-const resolveSpecifierMap = (
-  specifierMap,
-  { projectDirectoryUrl, importMap, importDefaultExtension },
-) => {
-  const specifierMapResolved = {}
-  Object.keys(specifierMap).forEach((specifier) => {
-    const specifierUrl = resolveImport({
-      specifier,
-      importer: projectDirectoryUrl,
-      importMap,
-      defaultExtension: importDefaultExtension,
-    })
-    specifierMapResolved[specifierUrl] = specifierMap[specifier]
-  })
-  return specifierMapResolved
 }
 
 const transformAsyncInsertedByRollup = async ({

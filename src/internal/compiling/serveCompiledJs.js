@@ -1,6 +1,6 @@
-import { readFile } from "fs"
 import { urlToContentType } from "@jsenv/server"
 import { urlToRelativeUrl, resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
+import { readFileContent } from "internal/filesystemUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
@@ -9,6 +9,8 @@ import { urlIsAsset } from "./urlIsAsset.js"
 export const serveCompiledJs = async ({
   projectDirectoryUrl,
   compileDirectoryUrl,
+  importReplaceMap,
+  importFallbackMap,
   writeOnFilesystem,
   useFilesystemAsCache,
   groupMap,
@@ -67,10 +69,19 @@ export const serveCompiledJs = async ({
   }
 
   const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
+  const originalFileServerUrl = `${origin}/${originalFileRelativeUrl}`
+  if (originalFileServerUrl in importReplaceMap) {
+    // disable cache if the file is ignored anyway
+    // and a function is used instead
+    useFilesystemAsCache = false
+  }
+
   const compiledFileUrl = `${compileDirectoryUrl}${compileId}/${originalFileRelativeUrl}`
 
   return serveCompiledFile({
     projectDirectoryUrl,
+    importReplaceMap,
+    importFallbackMap,
     originalFileUrl,
     compiledFileUrl,
     writeOnFilesystem,
@@ -78,6 +89,23 @@ export const serveCompiledJs = async ({
     projectFileRequestedCallback,
     request,
     compile: async () => {
+      let code
+      if (originalFileServerUrl in importReplaceMap) {
+        code = await importReplaceMap[originalFileServerUrl]()
+      } else if (originalFileServerUrl in importFallbackMap) {
+        try {
+          code = await readFileContent(fileUrlToPath(originalFileUrl))
+        } catch (e) {
+          if (e.code === "ENOENT") {
+            code = await importFallbackMap[originalFileServerUrl]()
+          } else {
+            throw e
+          }
+        }
+      } else {
+        code = await readFileContent(fileUrlToPath(originalFileUrl))
+      }
+
       const groupBabelPluginMap = {}
       groupMap[compileId].babelPluginRequiredNameArray.forEach((babelPluginRequiredName) => {
         if (babelPluginRequiredName in babelPluginMap) {
@@ -85,20 +113,9 @@ export const serveCompiledJs = async ({
         }
       })
 
-      const originalFileBuffer = await new Promise((resolve, reject) => {
-        readFile(fileUrlToPath(originalFileUrl), (error, buffer) => {
-          if (error) {
-            reject(error)
-          } else {
-            resolve(buffer)
-          }
-        })
-      })
-      const originalFileContent = String(originalFileBuffer)
-
       const transformResult = await transformJs({
         projectDirectoryUrl,
-        code: originalFileContent,
+        code,
         url: originalFileUrl,
         babelPluginMap: groupBabelPluginMap,
         convertMap,
@@ -110,7 +127,7 @@ export const serveCompiledJs = async ({
 
       return transformResultToCompilationResult(transformResult, {
         projectDirectoryUrl,
-        originalFileContent,
+        originalFileContent: code,
         originalFileUrl,
         compiledFileUrl,
         sourcemapFileUrl,

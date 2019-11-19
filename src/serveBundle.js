@@ -15,7 +15,6 @@ export const serveBundle = async ({
   compiledFileUrl,
   importDefaultExtension,
   importMapFileUrl,
-  importMapForBundle = {},
   importReplaceMap = {},
   projectFileRequestedCallback,
   babelPluginMap,
@@ -45,10 +44,10 @@ export const serveBundle = async ({
       projectDirectoryPath: fileUrlToPath(jsenvProjectDirectoryUrl),
       rootProjectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
     })
-    importMapForBundle = composeTwoImportMaps(
-      importMapForBundle,
-      importMapForJsenvProjectUsingServeBundle,
-    )
+    // importMapForJsenvProjectUsingServeBundle devrait
+    // se retrouver sans le compileServerImportMap.json
+    // mais bon ignorons pour le moment, ce sera utile que pour
+    // chromium-launcher
     importReplaceMap = {
       ...importReplaceMap,
       "/.jsenv/compileServerImportMap.json": async () => {
@@ -104,7 +103,6 @@ export const serveBundle = async ({
       }),
       importDefaultExtension,
       importMapFileRelativeUrl: urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl),
-      importMapForBundle,
       importReplaceMap,
       entryPointMap,
       babelPluginMap,
