@@ -243,7 +243,7 @@ export const startExploring = async ({
 
     const compileServer = await startCompileServer({
       cancellationToken,
-      logLevel: compileServerLogLevel,
+      compileServerLogLevel,
       projectDirectoryUrl,
       compileDirectoryUrl,
       compileDirectoryClean,

@@ -42,13 +42,10 @@ export const serveBrowserPlatform = async ({
     compiledFileUrl: browserPlatformCompiledFileUrl,
     importMapFileUrl,
     importDefaultExtension,
-    importReplaceMap: {
-      "/.jsenv/browser-platform-data.js": () =>
-        generateBrowserPlatformDataSource({
-          compileDirectoryRelativeUrl,
-          groupMap,
-          importDefaultExtension,
-        }),
+    env: {
+      compileDirectoryRelativeUrl,
+      groupMap,
+      importDefaultExtension,
     },
     projectFileRequestedCallback,
     babelPluginMap,
@@ -56,12 +53,3 @@ export const serveBrowserPlatform = async ({
     request,
   })
 }
-
-const generateBrowserPlatformDataSource = ({
-  compileDirectoryRelativeUrl,
-  groupMap,
-  importDefaultExtension,
-}) => `
-export const compileDirectoryRelativeUrl = ${JSON.stringify(compileDirectoryRelativeUrl)}
-export const groupMap = ${JSON.stringify(groupMap)}
-export const importDefaultExtension = ${JSON.stringify(importDefaultExtension)}`

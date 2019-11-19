@@ -69,7 +69,7 @@ export const execute = async ({
   return catchAsyncFunctionCancellation(async () => {
     const { origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
-      logLevel: compileServerLogLevel,
+      compileServerLogLevel,
 
       projectDirectoryUrl,
       compileDirectoryUrl,

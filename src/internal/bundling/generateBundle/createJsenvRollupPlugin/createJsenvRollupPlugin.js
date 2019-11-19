@@ -1,5 +1,4 @@
 /* eslint-disable import/max-dependencies */
-import { urlToContentType } from "@jsenv/server"
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import {
   urlToRelativeUrl,
@@ -11,11 +10,9 @@ import {
 } from "internal/urlUtils.js"
 import { writeFileContent } from "internal/filesystemUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
-import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { transformJs } from "internal/compiling/js-compilation-service/transformJs.js"
 import { findAsyncPluginNameInBabelPluginMap } from "internal/compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 
-import { generateBabelPluginMapOption } from "../../generateBabelPluginMapOption/generateBabelPluginMapOption.js"
 import { fetchUrl } from "./fetchUrl.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { validateResponseStatusIsOk } from "./validateResponseStatusIsOk.js"
@@ -25,73 +22,29 @@ const { minify: minifyCode } = import.meta.require("terser")
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
   logger,
-  compileServerLogLevel,
+
   projectDirectoryUrl,
+  entryPointMap,
   bundleDirectoryUrl,
-  importMapFileUrl,
   importDefaultExtension,
-  importReplaceMap,
-  importFallbackMap,
-  // bundleCache,
-  // bundleCacheDirectoryRelativePath,
+
+  compileServer,
   babelPluginMap,
-  babelPluginRequiredNameArray,
-  convertMap,
+
   minify,
   format,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
-  entryPointMap,
 }) => {
-  const arrayOfUrlToSkipTransform = []
-  const arrayOfAbstractUrl = []
   const moduleContentMap = {}
 
-  const bundleConstantAbstractSpecifier = "/.jsenv/BUNDLE_CONSTANTS.js"
-
-  babelPluginMap = generateBabelPluginMapOption({
-    format,
-    babelPluginMap,
-    babelPluginRequiredNameArray,
-  })
-
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
-  importReplaceMap = {
-    [bundleConstantAbstractSpecifier]: () => `export const chunkId = ${JSON.stringify(chunkId)}`,
-    ...importReplaceMap,
-  }
-
   const compileDirectoryUrl = `${bundleDirectoryUrl}.dist/`
-
-  const {
-    origin: compileServerOrigin,
-    importMap: compileServerImportMap,
-  } = await startCompileServer({
-    cancellationToken,
-    logLevel: compileServerLogLevel,
-    projectDirectoryUrl,
-    importMapFileUrl,
-    importDefaultExtension,
-    importReplaceMap,
-    importFallbackMap,
-    compileDirectoryUrl,
-    writeOnFilesystem: true,
-    useFilesystemAsCache: true,
-    babelPluginMap,
-    convertMap,
-    transformModuleIntoSystemFormat: false, // will be done by rollup
-    // what about compileGroupCount, well let's assume 1 for now
-
-    // we will always compile for one group which is the one
-    // with everything inside babelPluginMap
-    compileGroupCount: 1,
-  })
-
-  const compileDirectoryServerUrl = `${compileServerOrigin}/${urlToRelativeUrl(
+  const compileDirectoryServerUrl = `${compileServer.origin}/${urlToRelativeUrl(
     compileDirectoryUrl,
     projectDirectoryUrl,
   )}`
   const compileGroupDirectoryServerUrl = `${compileDirectoryServerUrl}otherwise/`
-  const importMap = normalizeImportMap(compileServerImportMap, compileGroupDirectoryServerUrl)
+  const importMap = normalizeImportMap(compileServer.importMap, compileGroupDirectoryServerUrl)
 
   const jsenvRollupPlugin = {
     name: "jsenv",
@@ -161,8 +114,8 @@ export const createJsenvRollupPlugin = async ({
       options.sourcemapPathTransform = (relativePath) => {
         const url = relativePathToUrl(relativePath)
 
-        if (url.startsWith(compileServerOrigin)) {
-          const relativeUrl = url.slice(`${compileServerOrigin}/`.length)
+        if (url.startsWith(compileServer.origin)) {
+          const relativeUrl = url.slice(`${compileServer.origin}/`.length)
           const fileUrl = `${projectDirectoryUrl}${relativeUrl}`
           relativePath = fileUrlToRelativePath(fileUrl, chunkFileUrl)
           return relativePath
@@ -206,12 +159,6 @@ export const createJsenvRollupPlugin = async ({
         logger.info(`-> ${bundleDirectoryUrl}${bundleFilename}`)
       })
     },
-  }
-
-  const markUrlAsAbstract = (url) => {
-    if (!arrayOfAbstractUrl.includes(url)) {
-      arrayOfAbstractUrl.push(url)
-    }
   }
 
   const loadModule = async (moduleUrl) => {
@@ -265,24 +212,10 @@ ${moduleUrl}`)
   }
 
   const getModule = async (moduleUrl) => {
-    if (moduleUrl in importReplaceMap) {
-      const generateSourceForImport = importReplaceMap[moduleUrl]
-      if (typeof generateSourceForImport !== "function") {
-        throw new Error(
-          `specifierAbstractMap values must be functions, found ${generateSourceForImport} for ${moduleUrl}`,
-        )
-      }
-
-      return generateAbstractModuleForImport(moduleUrl, generateSourceForImport)
-    }
-
     const response = await fetchUrl(moduleUrl, { cancellationToken })
     const okValidation = validateResponseStatusIsOk(response)
 
     if (!okValidation.valid) {
-      if (response.status === 404 && moduleUrl in importFallbackMap) {
-        return generateAbstractModuleForImport(moduleUrl, importFallbackMap[moduleUrl])
-      }
       throw new Error(okValidation.message)
     }
 
@@ -292,30 +225,10 @@ ${moduleUrl}`)
     }
   }
 
-  const generateAbstractModuleForImport = async (url, generateSource) => {
-    markUrlAsAbstract(url)
-
-    const returnValue = await generateSource()
-    const result = typeof returnValue === "string" ? { code: returnValue } : returnValue
-
-    const { skipTransform, code, map } = result
-
-    if (skipTransform) {
-      arrayOfUrlToSkipTransform.push(url)
-    }
-
-    return {
-      contentType: urlToContentType(url),
-      content: code,
-      map,
-    }
-  }
-
   return {
     jsenvRollupPlugin,
     getExtraInfo: () => {
       return {
-        arrayOfAbstractUrl,
         moduleContentMap,
       }
     },

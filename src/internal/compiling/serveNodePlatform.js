@@ -42,13 +42,10 @@ export const serveNodePlatform = async ({
     compiledFileUrl: nodePlatformCompiledFileUrl,
     importMapFileUrl,
     importDefaultExtension,
-    importReplaceMap: {
-      "/.jsenv/node-platform-data.js": () =>
-        generateNodePlatformDataSource({
-          compileDirectoryRelativeUrl,
-          groupMap,
-          importDefaultExtension,
-        }),
+    env: {
+      compileDirectoryRelativeUrl,
+      groupMap,
+      importDefaultExtension,
     },
     projectFileRequestedCallback,
     babelPluginMap,
@@ -56,12 +53,3 @@ export const serveNodePlatform = async ({
     request,
   })
 }
-
-const generateNodePlatformDataSource = ({
-  compileDirectoryRelativeUrl,
-  groupMap,
-  importDefaultExtension,
-}) => `
-export const compileDirectoryRelativeUrl = ${JSON.stringify(compileDirectoryRelativeUrl)}
-export const groupMap = ${JSON.stringify(groupMap)}
-export const importDefaultExtension = ${JSON.stringify(importDefaultExtension)}`

@@ -1,5 +1,5 @@
 // eslint-disable-next-line import/no-unresolved
-import { chunkId } from "/.jsenv/BUNDLE_CONSTANTS.js"
+import { chunkId } from "/.jsenv/env.json"
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/importMap.json"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap/normalizeImportMap.js"

@@ -3,22 +3,29 @@ import { generateBundleUsingRollup } from "./generateBundleUsingRollup.js"
 import { bundleOptionsToRollupParseOptions } from "./bundleOptionsToRollupParseOptions.js"
 import { bundleOptionsToRollupGenerateOptions } from "./bundleOptionsToRollupGenerateOptions.js"
 
-export const bundleWithoutBalancing = async (options) => {
+export const bundleEntryPoints = async (options) => {
   const { logger } = options
 
-  const { babelPluginMap } = options
   const { jsenvRollupPlugin, getExtraInfo } = await createJsenvRollupPlugin({
-    ...options,
-    babelPluginRequiredNameArray: Object.keys(babelPluginMap),
     logger,
+    ...options,
   })
-
   const rollupParseOptions = {
     ...bundleOptionsToRollupParseOptions(options),
     plugins: [jsenvRollupPlugin],
   }
   const rollupGenerateOptions = bundleOptionsToRollupGenerateOptions(options)
-  logger.info(createBundleWithoutBalancingMessage({ options, rollupGenerateOptions }))
+
+  logger.info(`
+generating bundle for entry points
+--- format ---
+${options.format}
+--- entry point map ---
+${JSON.stringify(options.entryPointMap, null, "  ")}
+--- into ---
+${rollupGenerateOptions.dir}
+`)
+
   const { cancellationToken, writeOnFileSystem } = options
   const rollupBundle = await generateBundleUsingRollup({
     cancellationToken,
@@ -32,16 +39,3 @@ export const bundleWithoutBalancing = async (options) => {
     ...getExtraInfo(),
   }
 }
-
-const createBundleWithoutBalancingMessage = ({
-  options: { format, entryPointMap },
-  rollupGenerateOptions: { dir },
-}) => `
-generating bundle.
---- format ---
-${format}
---- entry point map ---
-${JSON.stringify(entryPointMap, null, "  ")}
---- into ---
-${dir}
-`

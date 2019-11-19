@@ -27,7 +27,7 @@ import { urlIsAsset } from "./urlIsAsset.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
-  logLevel,
+  compileServerLogLevel,
 
   // js compile options
   transformTopLevelAwait = true,
@@ -44,6 +44,8 @@ export const startCompileServer = async ({
   importDefaultExtension,
   importReplaceMap = {},
   importFallbackMap = {},
+
+  env = {},
 
   babelPluginMap = jsenvBabelPluginMap,
   convertMap = {},
@@ -116,7 +118,7 @@ ${nodePlatformFileUrl}
 ${projectDirectoryUrl}`)
   }
 
-  const logger = createLogger({ logLevel })
+  const logger = createLogger({ logLevel: compileServerLogLevel })
 
   const importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
 
@@ -173,7 +175,7 @@ ${projectDirectoryUrl}`)
   const [compileServer, importMapForCompileServer] = await Promise.all([
     startServer({
       cancellationToken,
-      logLevel,
+      logLevel: compileServerLogLevel,
       protocol,
       privateKey,
       certificate,
@@ -251,12 +253,15 @@ ${projectDirectoryUrl}`)
   const importMap = normalizeImportMap(importMapForCompileServer, compileServer.origin)
 
   importReplaceMap = {
-    // the compile server import map can be useful
-    // in special cases, not sure
-    // anything should be aware of that
-    // the only part that need to know about it
-    // is browser or node platform
-    "/.jsenv/compileServerImportMap.json": () => JSON.stringify(importMap),
+    "/.jsenv/env.json": () => {
+      return JSON.stringify({
+        // the compile server importmap can be useful
+        // in fact only for browser and node platforms but
+        // let's make them available to anyone whowant to read it
+        importMap: importMapForCompileServer,
+        ...env,
+      })
+    },
     ...importReplaceMap,
   }
   importReplaceMap = resolveSpecifierMap(importReplaceMap, {
@@ -311,6 +316,7 @@ ${projectDirectoryUrl}`)
   return {
     ...compileServer,
     importMap: importMapForCompileServer,
+    groupMap,
   }
 }
 
@@ -343,6 +349,24 @@ const serveProjectFiles = ({ projectDirectoryUrl, projectFileRequestedCallback, 
   })
 }
 
+/**
+ * generateImportMapForCompileServer allows the following:
+ *
+ * import { importMap } from '/.jsenv/env.json'
+ *
+ * returns jsenv internal importMap and
+ *
+ * import importMap from '/importMap.json'
+ *
+ * returns the project importMap.
+ * Note that if importMap file does not exists an empty object is returned.
+ * Note that if project uses a custom importMapFileRelativeUrl jsenv internal import map
+ * remaps '/importMap.json' to the real importMap
+ *
+ * This pattern exists so that jsenv can resolve some dynamically injected import such as
+ *
+ * @jsenv/core/helpers/regenerator-runtime/regenerator-runtime.js
+ */
 const generateImportMapForCompileServer = async ({
   logger,
   projectDirectoryUrl,

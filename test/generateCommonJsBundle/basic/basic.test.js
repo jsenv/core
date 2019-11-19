@@ -1,4 +1,4 @@
-import { basename } from "path"
+ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { generateCommonJsBundle } from "../../../index.js"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "src/internal/urlUtils.js"

@@ -6,8 +6,8 @@ import {
 import { createLogger } from "@jsenv/logger"
 import {
   pathToDirectoryUrl,
-  resolveDirectoryUrl,
   resolveFileUrl,
+  resolveDirectoryUrl,
   fileUrlToPath,
 } from "internal/urlUtils.js"
 import { assertFileExists, removeDirectory } from "internal/filesystemUtils.js"
@@ -17,12 +17,12 @@ import {
   assertImportMapFileRelativeUrl,
   assertImportMapFileInsideProject,
 } from "internal/argUtils.js"
-import { generateGroupMap } from "internal/generateGroupMap/generateGroupMap.js"
+import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
-import { bundleWithoutBalancing } from "./bundleWithoutBalancing.js"
-import { bundleWithBalancing } from "./bundleWithBalancing.js"
+import { generateBabelPluginMapForBundle } from "../generateBabelPluginMapForBundle.js"
+import { bundleEntryPoints } from "./bundleEntryPoints.js"
 import { bundleBalancer } from "./bundleBalancer.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 
@@ -31,35 +31,37 @@ export const generateBundle = async ({
   logLevel = "info",
   compileServerLogLevel = "warn",
   logger,
+
+  // "classic" params
   projectDirectoryPath,
-  bundleDirectoryRelativeUrl,
-  bundleDirectoryClean = false,
-  bundleCache = false,
   importMapFileRelativeUrl = "./importMap.json",
   importDefaultExtension,
-  importReplaceMap = {},
-  importFallbackMap = {},
+  env = {},
   browser = false,
   node = false,
-  entryPointMap = {
-    main: "./index.js",
-  },
+
+  // compiling related params
   babelPluginMap = jsenvBabelPluginMap,
-  convertMap,
-  minify = false,
-  writeOnFileSystem = true,
-  format,
-  formatOutputOptions = {},
-  // balancing
   compileGroupCount = 1,
-  platformAlwaysInsidePlatformScoreMap,
-  platformWillAlwaysBeKnown,
-  balancerTemplateFileUrl,
-  balancerDataAbstractSpecifier,
   platformScoreMap = {
     ...jsenvBrowserScoreMap,
     node: jsenvNodeVersionScoreMap,
   },
+  balancerTemplateFileUrl,
+  balancerDataAbstractSpecifier,
+
+  // bundle related params
+  entryPointMap = {
+    main: "./index.js",
+  },
+  bundleDirectoryRelativeUrl,
+  bundleDirectoryClean = false,
+  format,
+  formatOutputOptions = {},
+  minify = false,
+  writeOnFileSystem = true,
+
+  ...rest
 }) => {
   logger = logger || createLogger({ logLevel })
 
@@ -67,18 +69,30 @@ export const generateBundle = async ({
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  assertbundleDirectoryRelativeUrl({ bundleDirectoryRelativeUrl })
+  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
+  const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
+  assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
+
+  assertEntryPointMap({ entryPointMap })
+
+  assertBundleDirectoryRelativeUrl({ bundleDirectoryRelativeUrl })
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
   assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
   if (bundleDirectoryClean) {
     await removeDirectory(fileUrlToPath(bundleDirectoryUrl))
   }
 
-  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
-  const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-  assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
+  const compileDirectoryUrl = `${bundleDirectoryUrl}.dist/`
+  const chunkId = `${Object.keys(entryPointMap)[0]}.js`
+  env = {
+    ...env,
+    chunkId,
+  }
+  babelPluginMap = {
+    ...babelPluginMap,
+    ...generateBabelPluginMapForBundle({ format }),
+  }
 
-  assertEntryPointMap({ entryPointMap })
   assertCompileGroupCount({ compileGroupCount })
   if (compileGroupCount > 1) {
     if (typeof balancerTemplateFileUrl === "undefined") {
@@ -96,22 +110,45 @@ export const generateBundle = async ({
       return false
     }
 
+    const compileServer = await startCompileServer({
+      cancellationToken,
+      compileServerLogLevel,
+
+      projectDirectoryUrl,
+      importMapFileUrl,
+      importDefaultExtension,
+      env,
+
+      babelPluginMap,
+      platformScoreMap,
+      compileDirectoryUrl,
+      writeOnFilesystem: true,
+      useFilesystemAsCache: true,
+
+      // override with potential custom options
+      ...rest,
+
+      transformModuleIntoSystemFormat: false, // will be done by rollup
+    })
+
+    // ne pas oublier de retourner un truc permettant de savoir
+    // quelle url sont abstract (importReplaceMap)
+    // pour que bundleToCompilationResult fonction correctement
+
     if (compileGroupCount === 1) {
-      return bundleWithoutBalancing({
+      return bundleEntryPoints({
         cancellationToken,
         logger,
-        compileServerLogLevel,
+
         projectDirectoryUrl,
-        bundleDirectoryUrl,
-        bundleCache,
-        importMapFileUrl,
-        importDefaultExtension,
-        importReplaceMap,
-        importFallbackMap,
-        nativeModulePredicate,
         entryPointMap,
+        bundleDirectoryUrl,
+        importDefaultExtension,
+        nativeModulePredicate,
+
+        compileServer,
         babelPluginMap,
-        convertMap,
+
         minify,
         format,
         formatOutputOptions,
@@ -119,58 +156,35 @@ export const generateBundle = async ({
       })
     }
 
-    const groupMap = generateGroupMap({
-      babelPluginMap,
-      platformScoreMap,
-      groupCount: compileGroupCount,
-      platformAlwaysInsidePlatformScoreMap,
-      platformWillAlwaysBeKnown,
-    })
-
     return await Promise.all([
-      generateEntryPointsFolders({
+      generateEntryPointsDirectories({
         cancellationToken,
         logger,
-        compileServerLogLevel,
+        compileServer,
         projectDirectoryUrl,
         bundleDirectoryUrl,
-        bundleCache,
-        importMapFileUrl,
-        importMapFileRelativeUrl,
         importDefaultExtension,
-        importReplaceMap,
-        importFallbackMap,
         nativeModulePredicate,
         entryPointMap,
-        babelPluginMap,
-        convertMap,
         minify,
         writeOnFileSystem,
         format,
         formatOutputOptions,
-        groupMap,
       }),
       generateEntryPointsBalancerFiles({
         cancellationToken,
         logger,
-        compileServerLogLevel,
+        compileServer,
         projectDirectoryUrl,
         bundleDirectoryUrl,
-        bundleCache,
-        importMapFileUrl,
         importDefaultExtension,
-        importReplaceMap,
-        importFallbackMap,
         nativeModulePredicate,
         entryPointMap,
-        babelPluginMap,
-        convertMap,
         minify,
         writeOnFileSystem,
         format,
         balancerTemplateFileUrl,
         balancerDataAbstractSpecifier,
-        groupMap,
       }),
     ])
   })
@@ -195,7 +209,7 @@ const assertEntryPointMap = ({ entryPointMap }) => {
   })
 }
 
-const assertbundleDirectoryRelativeUrl = ({ bundleDirectoryRelativeUrl }) => {
+const assertBundleDirectoryRelativeUrl = ({ bundleDirectoryRelativeUrl }) => {
   if (typeof bundleDirectoryRelativeUrl !== "string") {
     throw new TypeError(
       `bundleDirectoryRelativeUrl must be a string, received ${bundleDirectoryRelativeUrl}`,
@@ -222,11 +236,12 @@ const assertCompileGroupCount = ({ compileGroupCount }) => {
   }
 }
 
-const generateEntryPointsFolders = async ({ groupMap, ...rest }) =>
+const generateEntryPointsDirectories = async ({ compileServer, bundleDirectoryUrl, ...rest }) =>
   Promise.all(
-    Object.keys(groupMap).map(async (compileId) =>
-      bundleWithBalancing({
-        groupMap,
+    Object.keys(compileServer.groupMap).map(async (compileId) =>
+      bundleEntryPoints({
+        compileServer,
+        bundleDirectoryUrl: resolveDirectoryUrl(compileId, bundleDirectoryUrl),
         compileId,
         ...rest,
       }),

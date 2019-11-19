@@ -3,10 +3,9 @@ import {
   compileDirectoryRelativeUrl,
   groupMap,
   importDefaultExtension,
+  importMap,
   // eslint-disable-next-line import/no-unresolved
-} from "/.jsenv/node-platform-data.js"
-// eslint-disable-next-line import/no-unresolved
-import importMap from "/.jsenv/compileServerImportMap.json"
+} from "/.jsenv/env.json"
 import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport/resolveImport.js"
