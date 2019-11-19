@@ -1,6 +1,7 @@
 import { createOperation } from "@jsenv/cancellation"
 import { fileUrlToPath } from "internal/urlUtils.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin/createJsenvRollupPlugin.js"
+import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 
 const { rollup } = import.meta.require("rollup")
 
@@ -11,16 +12,26 @@ export const generateBundleUsingRollup = async ({
   entryPointMap,
   bundleDirectoryUrl,
   importDefaultExtension,
+  node,
+  browser,
+
   compileServer,
   compileDirectoryServerUrl,
   babelPluginMap,
-  nativeModulePredicate,
   format,
   formatOutputOptions,
   minify,
   sourcemapExcludeSources,
   writeOnFileSystem,
 }) => {
+  const nativeModulePredicate = (specifier) => {
+    if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
+    // for now browser have no native module
+    // and we don't know how we will handle that
+    if (browser) return false
+    return false
+  }
+
   const { jsenvRollupPlugin, getExtraInfo } = await createJsenvRollupPlugin({
     cancellationToken,
     logger,

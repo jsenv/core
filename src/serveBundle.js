@@ -1,25 +1,28 @@
 import { extname, basename } from "path"
-import { fileUrlToPath, resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
-import { generateBundle } from "internal/bundling/generateBundle.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { generateBundleUsingRollup } from "internal/bundling/generateBundleUsingRollup.js"
 import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
 import { serveCompiledFile } from "internal/compiling/serveCompiledFile.js"
 
 export const serveBundle = async ({
+  cancellationToken,
   logger,
+
   jsenvProjectDirectoryUrl,
   projectDirectoryUrl,
+  compileDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
   importDefaultExtension,
-  importMapFileUrl,
-  importReplaceMap = {},
-  projectFileRequestedCallback,
-  babelPluginMap,
-  request,
   format,
-  formatOutputOptions = {},
   node = format === "commonjs",
   browser = format === "global",
+  formatOutputOptions = {},
+
+  projectFileRequestedCallback,
+  request,
+  compileServer,
+  babelPluginMap,
 }) => {
   if (typeof jsenvProjectDirectoryUrl !== "string") {
     throw new TypeError(
@@ -36,27 +39,27 @@ export const serveBundle = async ({
       [entryName]: `./${originalFileRelativeUrl}`,
     }
 
-    const bundle = await generateBundle({
+    const bundle = await generateBundleUsingRollup({
+      cancellationToken,
       logger,
-      projectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
-      // bundleDirectoryRelativeUrl is not really important
-      // because we pass writeOnFileSystem: false anyway
-      bundleDirectoryRelativeUrl: computeBundleDirectoryRelativeUrl({
-        projectDirectoryUrl,
-        compiledFileUrl,
-      }),
-      importDefaultExtension,
-      importMapFileRelativeUrl: urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl),
-      importReplaceMap,
+
+      projectDirectoryUrl,
       entryPointMap,
-      babelPluginMap,
-      compileGroupCount: 1,
-      throwUnhandled: false,
-      writeOnFileSystem: false,
-      format,
-      formatOutputOptions,
+      // bundleDirectoryUrl is just theorical because of writeOnFileSystem: false
+      bundleDirectoryUrl: resolveDirectoryUrl("./bundle/", compiledFileUrl),
+      importDefaultExtension,
       node,
       browser,
+
+      compileServer,
+      compileDirectoryServerUrl: `${compileServer.origin}/${urlToRelativeUrl(
+        compileDirectoryUrl,
+        projectDirectoryUrl,
+      )}otherwise/`,
+      babelPluginMap,
+      format,
+      formatOutputOptions,
+      writeOnFileSystem: false,
     })
 
     const sourcemapFileUrl = `${compiledFileUrl}.map`
@@ -79,10 +82,4 @@ export const serveBundle = async ({
     compile,
     request,
   })
-}
-
-const computeBundleDirectoryRelativeUrl = ({ projectDirectoryUrl, compiledFileUrl }) => {
-  const bundleDirectoryUrl = resolveDirectoryUrl("./", compiledFileUrl)
-  const bundleDirectoryRelativeUrl = urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl)
-  return bundleDirectoryRelativeUrl
 }

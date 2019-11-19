@@ -5,14 +5,14 @@ import { serveBundle } from "src/serveBundle.js"
 import { urlIsAsset } from "./urlIsAsset.js"
 
 export const serveBrowserPlatform = async ({
+  cancellationToken,
   logger,
+  compileServer,
   projectDirectoryUrl,
   compileDirectoryUrl,
-  importMapFileUrl,
   importDefaultExtension,
   browserPlatformFileUrl,
   babelPluginMap,
-  groupMap,
   projectFileRequestedCallback,
   request,
 }) => {
@@ -33,26 +33,21 @@ export const serveBrowserPlatform = async ({
     return null
   }
 
-  // donc pour browser platform on a déja un compile server qui tourne
-  // on va juste le réutiliser, donc a priori utiliser bundleEntryPoints directement
-
   return serveBundle({
+    cancellationToken,
     logger,
+
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
     originalFileUrl: browserPlatformFileUrl,
     compiledFileUrl: browserPlatformCompiledFileUrl,
-    importMapFileUrl,
     importDefaultExtension,
-    env: {
-      compileDirectoryRelativeUrl,
-      groupMap,
-      importDefaultExtension,
-    },
-    projectFileRequestedCallback,
-    babelPluginMap,
     format: "global",
+
+    projectFileRequestedCallback,
     request,
+    compileServer,
+    babelPluginMap,
   })
 }

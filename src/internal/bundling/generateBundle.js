@@ -24,7 +24,6 @@ import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
 import { generateBabelPluginMapForBundle } from "./generateBabelPluginMapForBundle.js"
 import { generateBundleUsingRollup } from "./generateBundleUsingRollup.js"
-import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 
 export const generateBundle = async ({
   cancellationToken = createCancellationTokenForProcessSIGINT(),
@@ -106,14 +105,6 @@ export const generateBundle = async ({
   }
 
   return catchAsyncFunctionCancellation(async () => {
-    const nativeModulePredicate = (specifier) => {
-      if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
-      // for now browser have no native module
-      // and we don't know how we will handle that
-      if (browser) return false
-      return false
-    }
-
     const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
@@ -154,7 +145,8 @@ export const generateBundle = async ({
         entryPointMap,
         bundleDirectoryUrl,
         importDefaultExtension,
-        nativeModulePredicate,
+        node,
+        browser,
 
         compileServer,
         compileDirectoryServerUrl: `${compileDirectoryServerUrl}otherwise/`,
@@ -178,7 +170,8 @@ export const generateBundle = async ({
         entryPointMap,
         bundleDirectoryUrl,
         importDefaultExtension,
-        nativeModulePredicate,
+        node,
+        browser,
 
         compileServer,
         compileDirectoryServerUrl,
@@ -197,7 +190,8 @@ export const generateBundle = async ({
         entryPointMap,
         bundleDirectoryUrl,
         importDefaultExtension,
-        nativeModulePredicate,
+        node,
+        browser,
         balancerTemplateFileUrl,
 
         compileServer,

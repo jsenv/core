@@ -122,6 +122,7 @@ ${projectDirectoryUrl}`)
   const logger = createLogger({ logLevel: compileServerLogLevel })
 
   const importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
+  const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
 
   const groupMap = generateGroupMap({
     babelPluginMap,
@@ -187,27 +188,27 @@ ${projectDirectoryUrl}`)
         firstService(
           () =>
             serveBrowserPlatform({
+              cancellationToken,
               logger,
               projectDirectoryUrl,
               compileDirectoryUrl,
-              importMapFileUrl,
+              compileServer,
               importDefaultExtension,
               browserPlatformFileUrl,
               babelPluginMap,
-              groupMap,
               projectFileRequestedCallback,
               request,
             }),
           () =>
             serveNodePlatform({
+              cancellationToken,
               logger,
               projectDirectoryUrl,
               compileDirectoryUrl,
-              importMapFileUrl,
+              compileServer,
               importDefaultExtension,
               nodePlatformFileUrl,
               babelPluginMap,
-              groupMap,
               projectFileRequestedCallback,
               request,
             }),
@@ -263,6 +264,8 @@ ${projectDirectoryUrl}`)
         // let's make them available to anyone whowant to read it
         importMap: importMapForCompileServer,
         groupMap,
+        compileDirectoryRelativeUrl,
+        importDefaultExtension,
         ...env,
       }
       return Object.keys(envObject)
