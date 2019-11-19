@@ -42,11 +42,6 @@ export const serveNodePlatform = async ({
     compiledFileUrl: nodePlatformCompiledFileUrl,
     importMapFileUrl,
     importDefaultExtension,
-    env: {
-      compileDirectoryRelativeUrl,
-      groupMap,
-      importDefaultExtension,
-    },
     projectFileRequestedCallback,
     babelPluginMap,
     format: "commonjs",

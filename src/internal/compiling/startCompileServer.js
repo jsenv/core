@@ -13,6 +13,7 @@ import {
 } from "@jsenv/server"
 import { createLogger } from "@jsenv/logger"
 import { resolveFileUrl, fileUrlToPath, urlToRelativeUrl } from "internal/urlUtils.js"
+import { writeFileContent } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { readProjectImportMap } from "internal/readProjectImportMap/readProjectImportMap.js"
 import { generateGroupMap } from "internal/generateGroupMap/generateGroupMap.js"
@@ -256,28 +257,34 @@ ${projectDirectoryUrl}`)
 
   const importMap = normalizeImportMap(importMapForCompileServer, compileServer.origin)
 
-  importReplaceMap = {
-    "/.jsenv/env.js": () => {
-      const envObject = {
-        // the compile server importmap can be useful
-        // in fact only for browser and node platforms but
-        // let's make them available to anyone whowant to read it
-        importMap: importMapForCompileServer,
-        groupMap,
-        compileDirectoryRelativeUrl,
-        importDefaultExtension,
-        ...env,
-      }
-      return Object.keys(envObject)
+  env = {
+    ...env,
+    compileDirectoryRelativeUrl,
+    importDefaultExtension,
+  }
+
+  // it would be better for perf to generated them on demand but for now that's good
+  await Promise.all([
+    writeFileContent(
+      fileUrlToPath(resolveFileUrl("./.jsenv/importMap.json", projectDirectoryUrl)),
+      JSON.stringify(importMapForCompileServer, null, "  "),
+    ),
+    writeFileContent(
+      fileUrlToPath(resolveFileUrl("./.jsenv/groupMap.json", projectDirectoryUrl)),
+      JSON.stringify(groupMap, null, "  "),
+    ),
+    writeFileContent(
+      fileUrlToPath(resolveFileUrl("./.jsenv/env.js", projectDirectoryUrl)),
+      Object.keys(env)
         .map(
           (key) => `
-export const ${key} = ${JSON.stringify(envObject[key])}
+export const ${key} = ${JSON.stringify(env[key])}
 `,
         )
-        .join("")
-    },
-    ...importReplaceMap,
-  }
+        .join(""),
+    ),
+  ])
+
   importReplaceMap = resolveSpecifierMap(importReplaceMap, {
     compileServerOrigin: compileServer.origin,
     importMap,
