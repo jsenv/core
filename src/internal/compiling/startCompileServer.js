@@ -19,7 +19,8 @@ import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 import { cleanCompileDirectoryIfObsolete } from "./compile-directory/cleanCompileDirectoryIfObsolete.js"
 import { serveBrowserPlatform } from "./serveBrowserPlatform.js"
 import { serveNodePlatform } from "./serveNodePlatform.js"
-import { serveCompiledJs, urlIsAsset } from "./serveCompiledJs.js"
+import { serveCompiledJs } from "./serveCompiledJs.js"
+import { urlIsAsset } from "./urlIsAsset.js"
 
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),

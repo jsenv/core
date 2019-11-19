@@ -74,9 +74,7 @@ export const bundleToCompilationResult = (
   })
   // mainChunk.sourcemap.file = fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl)
   trackDependencies(mainChunk.dependencyMap)
-  assets.push(
-    fileUrlToPath(fileUrlToRelativePath(sourcemapFileUrl, `${compiledFileUrl}__asset__/`)),
-  )
+  assets.push(fileUrlToRelativePath(sourcemapFileUrl, `${compiledFileUrl}__asset__/`))
   assetsContent.push(JSON.stringify(mainChunk.sourcemap, null, "  "))
 
   rollupBundle.output.slice(1).forEach((rollupChunk) => {

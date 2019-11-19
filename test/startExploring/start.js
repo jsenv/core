@@ -4,8 +4,8 @@ import { startExploring } from "../../index.js"
 import { START_EXPLORING_TEST_PARAMS } from "./TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const compileDirectoryRelativeUrl = `${testDirectoryRelativePath}.dist/`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const compileDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.dist/`
 
 startExploring({
   ...START_EXPLORING_TEST_PARAMS,
@@ -13,8 +13,8 @@ startExploring({
   compileServerLogLevel: "info",
   compileDirectoryRelativeUrl,
   explorableConfig: {
-    [`./${testDirectoryRelativePath}**/*.main.js`]: true,
-    [`./${testDirectoryRelativePath}**/.dist/**`]: false,
+    [`./${testDirectoryRelativeUrl}**/*.main.js`]: true,
+    [`./${testDirectoryRelativeUrl}**/.dist/**`]: false,
   },
   protocol: "https",
   port: 3400,

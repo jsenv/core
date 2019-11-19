@@ -183,7 +183,7 @@ export const startExploring = async ({
         } else if ("referer" in headers) {
           const { referer } = headers
           if (sameOrigin(referer, request.origin)) {
-            const refererRelativeUrl = urlToRelativeUrl(referer)
+            const refererRelativeUrl = referer.slice(`${request.origin}/`.length)
             const refererFileUrl = `${projectDirectoryUrl}${refererRelativeUrl}`
 
             if (
@@ -270,10 +270,8 @@ export const startExploring = async ({
     const service = (request) =>
       firstService(
         () => {
-          const requestServerUrl = `${request.origin}${request.ressource}`
-          const relativeUrl = urlToRelativeUrl(requestServerUrl)
           return livereloadServerSentEventService({
-            relativeUrl,
+            relativeUrl: request.ressource.slice(1),
             request,
           })
         },
