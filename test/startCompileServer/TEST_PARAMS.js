@@ -5,6 +5,6 @@ export const COMPILE_SERVER_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   compileServerLogLevel: "warn",
   babelPluginMap: testBabelPluginMap,
-  compileDirectoryClean: true,
+  jsenvDirectoryClean: true,
   compileGroupCount: 2,
 }
