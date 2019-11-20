@@ -4,6 +4,9 @@ import { bufferToEtag } from "./compile-directory/bufferToEtag.js"
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
 
 export const serveCompiledFile = async ({
+  // cancellatioToken,
+  logger,
+
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
@@ -46,6 +49,7 @@ export const serveCompiledFile = async ({
 
   try {
     const { meta, compileResult, compileResultStatus } = await getOrGenerateCompiledFile({
+      logger,
       projectDirectoryUrl,
       originalFileUrl,
       compiledFileUrl,

@@ -6,19 +6,23 @@ import { transformResultToCompilationResult } from "./js-compilation-service/tra
 import { serveCompiledFile } from "./serveCompiledFile.js"
 
 export const serveCompiledJs = async ({
+  cancellationToken,
+  logger,
+
   projectDirectoryUrl,
   compileDirectoryUrl,
   importReplaceMap,
   importFallbackMap,
-  writeOnFilesystem,
-  useFilesystemAsCache,
+
+  transformTopLevelAwait,
+  transformModuleIntoSystemFormat,
   groupMap,
   babelPluginMap,
   convertMap,
-  transformTopLevelAwait,
-  transformModuleIntoSystemFormat,
   projectFileRequestedCallback,
   request,
+  useFilesystemAsCache,
+  writeOnFilesystem,
 }) => {
   const { origin, ressource, method, headers } = request
   const requestUrl = `${origin}${ressource}`
@@ -96,6 +100,9 @@ export const serveCompiledJs = async ({
   const compiledFileUrl = `${compileDirectoryUrl}${compileId}/${originalFileRelativeUrl}`
 
   return serveCompiledFile({
+    cancellationToken,
+    logger,
+
     projectDirectoryUrl,
     importReplaceMap,
     importFallbackMap,

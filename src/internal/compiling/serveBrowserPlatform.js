@@ -19,11 +19,10 @@ export const serveBrowserPlatform = async ({
 }) => {
   const { origin, ressource } = request
   const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
-  const requestUrl = `${origin}${ressource}`
-
   const browserPlatformCompiledFileRelativeUrl = `${compileDirectoryRelativeUrl}browser-platform.js`
   const browserPlatformCompiledFileUrl = `${projectDirectoryUrl}${browserPlatformCompiledFileRelativeUrl}`
   const browserPlatformCompiledFileServerUrl = `${origin}/${browserPlatformCompiledFileRelativeUrl}`
+  const requestUrl = `${origin}${ressource}`
   if (!requestUrl.startsWith(browserPlatformCompiledFileServerUrl)) {
     return null
   }

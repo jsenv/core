@@ -217,44 +217,53 @@ ${projectDirectoryUrl}`)
             serveBrowserPlatform({
               cancellationToken,
               logger,
+
               projectDirectoryUrl,
               compileDirectoryUrl,
-              compileServerOrigin: compileServer.origin,
-              compileServerImportMap: importMapForCompileServer,
               importDefaultExtension,
               browserPlatformFileUrl,
+
               babelPluginMap,
               projectFileRequestedCallback,
+              compileServerOrigin: compileServer.origin,
+              compileServerImportMap: importMapForCompileServer,
               request,
             }),
           () =>
             serveNodePlatform({
               cancellationToken,
               logger,
+
               projectDirectoryUrl,
               compileDirectoryUrl,
-              compileServer,
               importDefaultExtension,
               nodePlatformFileUrl,
+
               babelPluginMap,
               projectFileRequestedCallback,
+              compileServerOrigin: compileServer.origin,
+              compileServerImportMap: importMapForCompileServer,
               request,
             }),
           () =>
             serveCompiledJs({
+              cancellationToken,
+              logger,
+
               projectDirectoryUrl,
               compileDirectoryUrl,
               importReplaceMap,
               importFallbackMap,
-              writeOnFilesystem,
-              useFilesystemAsCache,
+
+              transformTopLevelAwait,
+              transformModuleIntoSystemFormat,
               groupMap,
               babelPluginMap,
               convertMap,
-              transformTopLevelAwait,
-              transformModuleIntoSystemFormat,
               projectFileRequestedCallback,
               request,
+              useFilesystemAsCache,
+              writeOnFilesystem,
             }),
           () =>
             serveProjectFiles({

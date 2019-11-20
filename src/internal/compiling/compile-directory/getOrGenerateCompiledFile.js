@@ -1,4 +1,3 @@
-import { createLogger } from "@jsenv/logger"
 import { fileUrlToPath } from "internal/urlUtils.js"
 import { createFileDirectories } from "internal/filesystemUtils.js"
 import { readMeta } from "./readMeta.js"
@@ -12,7 +11,8 @@ const { lockForRessource } = createLockRegistry()
 const lockfile = import.meta.require("proper-lockfile")
 
 export const getOrGenerateCompiledFile = async ({
-  logLevel,
+  logger,
+
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl = originalFileUrl,
@@ -24,8 +24,6 @@ export const getOrGenerateCompiledFile = async ({
   ifModifiedSinceDate,
   compile,
 }) => {
-  const logger = createLogger({ logLevel })
-
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
   }

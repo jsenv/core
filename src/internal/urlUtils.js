@@ -51,9 +51,11 @@ export const urlToRelativeUrl = (url, baseUrl) => {
   return url
 }
 
-export const resolveFileUrl = (specifier, baseUrl) => {
+export const resolveUrl = (specifier, baseUrl) => {
   if (typeof baseUrl === "undefined") {
     throw new TypeError(`baseUrl missing`)
   }
   return String(new URL(specifier, baseUrl))
 }
+
+export const resolveFileUrl = resolveUrl
