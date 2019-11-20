@@ -7,6 +7,7 @@ export const serveBrowserPlatform = async ({
   logger,
 
   projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
   compileDirectoryUrl,
   importDefaultExtension,
   browserPlatformFileUrl,
@@ -19,14 +20,14 @@ export const serveBrowserPlatform = async ({
 }) => {
   const { origin, ressource } = request
   const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
-  const browserPlatformCompiledFileRelativeUrl = `${compileDirectoryRelativeUrl}browser-platform.js`
-  const browserPlatformCompiledFileUrl = `${projectDirectoryUrl}${browserPlatformCompiledFileRelativeUrl}`
-  const browserPlatformCompiledFileServerUrl = `${origin}/${browserPlatformCompiledFileRelativeUrl}`
+  const browserPlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativeUrl}.jsenv/browser-platform.js`
   const requestUrl = `${origin}${ressource}`
   if (!requestUrl.startsWith(browserPlatformCompiledFileServerUrl)) {
     return null
   }
 
+  const originalFileUrl = browserPlatformFileUrl
+  const compiledFileUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}browser-platform.js`
   return serveBundle({
     cancellationToken,
     logger,
@@ -34,8 +35,8 @@ export const serveBrowserPlatform = async ({
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileUrl: browserPlatformFileUrl,
-    compiledFileUrl: browserPlatformCompiledFileUrl,
+    originalFileUrl,
+    compiledFileUrl,
     importDefaultExtension,
     format: "global",
 

@@ -32,9 +32,9 @@ Take chars below to update legends
 
 */
 
+import { COMPILE_ID_OTHERWISE, COMPILE_ID_BEST } from "internal/CONSTANTS.js"
 import { generateAllPlatformGroupArray } from "./generateAllPlatformGroupArray.js"
 import { platformCompatMapToScore } from "./platformCompatMapToScore.js"
-import { OTHERWISE_ID, BEST_ID } from "../GROUP_ID.js"
 
 export const generateGroupMap = ({
   babelPluginMap,
@@ -75,7 +75,7 @@ export const generateGroupMap = ({
   // then we return otherwise group to be safe
   if (groupCount === 1 && !platformAlwaysInsidePlatformScoreMap) {
     return {
-      [OTHERWISE_ID]: groupWithoutFeature,
+      [COMPILE_ID_OTHERWISE]: groupWithoutFeature,
     }
   }
 
@@ -89,7 +89,7 @@ export const generateGroupMap = ({
 
   if (allPlatformGroupArray.length === 0) {
     return {
-      [OTHERWISE_ID]: groupWithoutFeature,
+      [COMPILE_ID_OTHERWISE]: groupWithoutFeature,
     }
   }
 
@@ -107,7 +107,7 @@ export const generateGroupMap = ({
   // because it's the lowest platform we want to support
   if (groupCount === 1) {
     return {
-      [BEST_ID]: allPlatformGroupArraySortedByScore[length - 1],
+      [COMPILE_ID_BEST]: allPlatformGroupArraySortedByScore[length - 1],
     }
   }
 
@@ -123,13 +123,13 @@ export const generateGroupMap = ({
   const groupMap = {}
   groupArray.forEach((group, index) => {
     if (index === 0) {
-      groupMap[BEST_ID] = group
+      groupMap[COMPILE_ID_BEST] = group
     } else {
       groupMap[`intermediate-${index + 1}`] = group
     }
   })
   if (addOtherwiseToBeSafe) {
-    groupMap[OTHERWISE_ID] = groupWithoutFeature
+    groupMap[COMPILE_ID_OTHERWISE] = groupWithoutFeature
   }
 
   return groupMap

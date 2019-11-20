@@ -13,14 +13,12 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${COMPILE_DIRECTORY}/`
 const fileUrl = resolveFileUrl("./file.js", import.meta.url)
 const fileRelativeUrl = urlToRelativeUrl(fileUrl, projectDirectoryUrl)
-
 const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
 })
 const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-
 const firstResponse = await fetch(fileServerUrl)
 const secondResponse = await fetch(fileServerUrl, {
   headers: {

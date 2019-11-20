@@ -1,8 +1,8 @@
-import { OTHERWISE_ID } from "../../GROUP_ID.js"
+import { COMPILE_ID_OTHERWISE } from "../../CONSTANTS.js"
 
 export const computeCompileIdFromGroupId = ({ groupId, groupMap }) => {
   if (typeof groupId === "undefined") {
-    if (OTHERWISE_ID in groupMap) return OTHERWISE_ID
+    if (COMPILE_ID_OTHERWISE in groupMap) return COMPILE_ID_OTHERWISE
 
     const keys = Object.keys(groupMap)
     if (keys.length === 1) return keys[0]

@@ -1,17 +1,18 @@
 /* eslint-disable import/max-dependencies */
 
 // eslint-disable-next-line import/no-unresolved
-import groupMap from ".jsenv/groupMap.json"
+import groupMap from "/.jsenv/groupMap.json"
 // eslint-disable-next-line import/no-unresolved
-import importMap from ".jsenv/importMap.json"
+import importMap from "/.jsenv/importMap.json"
 import {
-  compileDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   importDefaultExtension,
   // eslint-disable-next-line import/no-unresolved
-} from ".jsenv/env.js"
+} from "/.jsenv/env.js"
 import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport/resolveImport.js"
+import { COMPILE_DIRECTORY } from "../../../CONSTANTS.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
 import { memoizeOnce } from "../memoizeOnce.js"
@@ -20,6 +21,7 @@ import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
 
 const GLOBAL_SPECIFIER = "global"
+const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${COMPILE_DIRECTORY}/`
 const memoizedCreateBrowserSystem = memoizeOnce(createBrowserSystem)
 
 export const createBrowserPlatform = ({ compileServerOrigin }) => {

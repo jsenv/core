@@ -92,9 +92,11 @@ export const startCompileServer = async ({
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
   }
+
   if (typeof importMapFileUrl === "undefined") {
     importMapFileUrl = resolveFileUrl("./importMap.json", projectDirectoryUrl)
   }
+
   if (typeof jsenvDirectoryRelativeUrl !== "string") {
     throw new TypeError(
       `jsenvDirectoryRelativeUrl must be a string. got ${jsenvDirectoryRelativeUrl}`,
@@ -103,11 +105,14 @@ export const startCompileServer = async ({
   const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
   if (!jsenvDirectoryUrl.startsWith(projectDirectoryUrl)) {
     throw new TypeError(`jsenv directory must be inside project directory
---- jsenv directory url ---
-${jsenvDirectoryUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
+    --- jsenv directory url ---
+    ${jsenvDirectoryUrl}
+    --- project directory url ---
+    ${projectDirectoryUrl}`)
   }
+  // to normalize the value
+  jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl)
+
   if (typeof browserPlatformFileUrl !== "string") {
     throw new TypeError(`browserPlatformFileUrl must be a string. got ${browserPlatformFileUrl}`)
   }
@@ -118,6 +123,7 @@ ${browserPlatformFileUrl}
 --- project directory url ---
 ${projectDirectoryUrl}`)
   }
+
   if (typeof nodePlatformFileUrl !== "string") {
     throw new TypeError(`nodePlatformFileUrl must be a string. got ${nodePlatformFileUrl}`)
   }
@@ -218,6 +224,7 @@ ${projectDirectoryUrl}`)
               logger,
 
               projectDirectoryUrl,
+              jsenvDirectoryRelativeUrl,
               compileDirectoryUrl,
               importDefaultExtension,
               browserPlatformFileUrl,
@@ -286,7 +293,7 @@ ${projectDirectoryUrl}`)
     generateImportMapForCompileServer({
       logger,
       projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl: urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl),
+      jsenvDirectoryRelativeUrl,
       importMapFileUrl,
     }),
   ])
