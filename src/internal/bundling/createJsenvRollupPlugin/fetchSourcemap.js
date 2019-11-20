@@ -11,8 +11,7 @@ export const fetchSourcemap = async ({ cancellationToken, logger, moduleUrl, mod
   }
 
   if (sourcemapParsingResult.sourcemapString) {
-    return parseSourcemapString({
-      sourcemapString: sourcemapParsingResult.sourcemapString,
+    return generateSourcemapFromString(sourcemapParsingResult.sourcemapString, {
       sourcemapUrl: moduleUrl,
       moduleUrl,
       logger,
@@ -30,16 +29,42 @@ export const fetchSourcemap = async ({ cancellationToken, logger, moduleUrl, mod
 
   // in theory we should also check response content-type
   // not really important
-
-  return parseSourcemapString({
+  return generateSourcemapFromString(sourcemapResponse.body, {
     logger,
-    sourcemapString: sourcemapResponse.body,
     sourcemapUrl,
     moduleUrl,
   })
 }
 
-const parseSourcemapString = ({ logger, sourcemapString, sourcemapUrl, moduleUrl }) => {
+const generateSourcemapFromString = async (
+  sourcemapString,
+  { cancellationToken, logger, sourcemapUrl, moduleUrl },
+) => {
+  const map = parseSourcemapString(sourcemapString, { logger, sourcemapUrl, moduleUrl })
+
+  if (!map) {
+    return null
+  }
+
+  // ensure sourcesContent exists and has the source
+  // so that rollup figure them and bundleToCompilationResult works
+  if (!map.sourcesContent) {
+    map.sourcesContent = []
+  }
+  await Promise.all(
+    map.sources.map(async (source, index) => {
+      if (typeof map.sourcesContent[index] === "string") {
+        return
+      }
+
+      const sourceUrl = resolveFileUrl(source, sourcemapUrl)
+      map.sourcesContent[index] = await fetchSource(sourceUrl, { cancellationToken, logger })
+    }),
+  )
+  return map
+}
+
+const parseSourcemapString = (sourcemapString, { logger, sourcemapUrl, moduleUrl }) => {
   try {
     return JSON.parse(sourcemapString)
   } catch (e) {
@@ -66,4 +91,16 @@ ${moduleUrl}`,
     }
     throw e
   }
+}
+
+const fetchSource = async (sourceUrl, { cancellationToken, logger }) => {
+  const sourceResponse = await fetchUrl(sourceUrl, { cancellationToken })
+  const okValidation = validateResponseStatusIsOk(sourceResponse)
+
+  if (!okValidation.valid) {
+    logger.warn(okValidation.message)
+    return null
+  }
+
+  return sourceResponse.body
 }

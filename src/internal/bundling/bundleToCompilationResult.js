@@ -1,41 +1,25 @@
 /*
 
-bundleToCompilationResult does two things:
-
-1. Change every relative path inside rollup sourcemap to an "absolute" version.
-Something like `../../importMap.json` becomes `/importMap.json`.
-In the process // sourceMappingURL comment of the file referencing the sourcemap is updated.
-
-We need this because vscode is configured with
-```json
-{
-  "sourceMapPathOverrides": {
-    "/*": "${workspaceFolder}/*"
-  },
-```
-And we need to do that because I struggled to make vscode work with relative notations.
-
-2. Return { compiledSource, sources, sourcesContent, assets, assetsContent }
-It is usefull because this object can be used to create a cache for the bundle.
-This object is used by serveCompiledFile.
-
 One thing to keep in mind:
 the sourcemap.sourcesContent will contains a json file transformed to js
 while sourcesContent will contain the json file raw source because the corresponding
 json file etag is used to invalidate the cache
+
 */
 
 import { readFileSync } from "fs"
-import { fileUrlToRelativePath, fileUrlToPath } from "internal/urlUtils.js"
+import { fileUrlToRelativePath, fileUrlToPath, resolveUrl } from "internal/urlUtils.js"
 import { writeOrUpdateSourceMappingURL } from "internal/sourceMappingURLUtils.js"
-import { rollupIdToUrl } from "./createJsenvRollupPlugin/createJsenvRollupPlugin.js"
 
 export const bundleToCompilationResult = (
-  { rollupBundle, moduleContentMap },
-  { projectDirectoryUrl, compiledFileUrl, sourcemapFileUrl },
+  { rollupBundle },
+  { projectDirectoryUrl, compileServerOrigin, compiledFileUrl, sourcemapFileUrl },
 ) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
+  }
+  if (typeof compileServerOrigin !== "string") {
+    throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
   }
   if (typeof compiledFileUrl !== "string") {
     throw new TypeError(`compiledFileUrl must be a string, got ${compiledFileUrl}`)
@@ -50,11 +34,11 @@ export const bundleToCompilationResult = (
   const trackDependencies = (dependencyMap) => {
     Object.keys(dependencyMap).forEach((moduleUrl) => {
       // do not track dependency outside project
-      if (!moduleUrl.startsWith(projectDirectoryUrl)) return
+      if (!moduleUrl.startsWith(projectDirectoryUrl)) {
+        return
+      }
 
-      // technically we are not relative to sourcemapFileUrl but rather
-      // to the meta.json file url but they are at the same place
-      const relativePath = fileUrlToRelativePath(moduleUrl, sourcemapFileUrl)
+      const relativePath = fileUrlToRelativePath(moduleUrl, `${compiledFileUrl}__asset__/meta.json`)
       if (!sources.includes(relativePath)) {
         sources.push(relativePath)
         sourcesContent.push(dependencyMap[moduleUrl].contentRaw)
@@ -66,7 +50,7 @@ export const bundleToCompilationResult = (
   const assetsContent = []
 
   const mainChunk = parseRollupChunk(rollupBundle.output[0], {
-    moduleContentMap,
+    sourcemapFileUrl,
     sourcemapFileRelativeUrlForModule: fileUrlToRelativePath(sourcemapFileUrl, compiledFileUrl),
   })
   // mainChunk.sourcemap.file = fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl)
@@ -77,7 +61,7 @@ export const bundleToCompilationResult = (
   rollupBundle.output.slice(1).forEach((rollupChunk) => {
     const chunkFileName = rollupChunk.fileName
     const chunk = parseRollupChunk(rollupChunk, {
-      moduleContentMap,
+      compiledFileUrl,
     })
     trackDependencies(chunk.dependencyMap)
     assets.push(chunkFileName)
@@ -98,21 +82,17 @@ export const bundleToCompilationResult = (
 
 const parseRollupChunk = (
   rollupChunk,
-  { moduleContentMap, sourcemapFileRelativeUrlForModule = `./${rollupChunk.fileName}.map` },
+  { sourcemapFileUrl, sourcemapFileRelativeUrlForModule = `./${rollupChunk.fileName}.map` },
 ) => {
   const dependencyMap = {}
-  const moduleKeys = Object.keys(rollupChunk.modules)
-  const mainModuleUrl = rollupIdToUrl(rollupChunk.facadeModuleId)
   const mainModuleSourcemap = rollupChunk.map
 
-  moduleKeys.forEach((moduleId, moduleIndex) => {
-    const moduleUrl = rollupIdToUrl(moduleId)
+  mainModuleSourcemap.sources.forEach((source, index) => {
+    const moduleUrl = resolveUrl(source, sourcemapFileUrl)
     dependencyMap[moduleUrl] = getModuleContent({
-      moduleContentMap,
-      mainModuleUrl,
       mainModuleSourcemap,
       moduleUrl,
-      moduleIndex,
+      moduleIndex: index,
     })
   })
 
@@ -121,32 +101,20 @@ const parseRollupChunk = (
   const content = writeOrUpdateSourceMappingURL(rollupChunk.code, sourcemapFileRelativeUrlForModule)
 
   return {
-    url: mainModuleUrl,
     dependencyMap,
     content,
     sourcemap,
   }
 }
 
-const getModuleContent = ({
-  moduleContentMap,
-  mainModuleUrl,
-  mainModuleSourcemap,
-  moduleUrl,
-  moduleIndex,
-}) => {
-  // try to get it from moduleContentMap
-  if (moduleUrl in moduleContentMap) {
-    return moduleContentMap[moduleUrl]
-  }
-
-  // otherwise try to read it from mainModuleSourcemap
+const getModuleContent = ({ mainModuleSourcemap, moduleUrl, moduleIndex }) => {
+  // try to read it from mainModuleSourcemap
   const sourcesContent = mainModuleSourcemap.sourcesContent || []
   if (moduleIndex in sourcesContent) {
     const contentFromRollupSourcemap = sourcesContent[moduleIndex]
     return {
-      code: contentFromRollupSourcemap,
-      raw: contentFromRollupSourcemap,
+      content: contentFromRollupSourcemap,
+      contentRaw: contentFromRollupSourcemap,
     }
   }
 
@@ -160,25 +128,17 @@ const getModuleContent = ({
       const moduleFileBuffer = readFileSync(moduleFilePath)
       const moduleFileString = String(moduleFileBuffer)
       return {
-        code: moduleFileString,
-        raw: moduleFileString,
+        content: moduleFileString,
+        contentRaw: moduleFileString,
       }
     } catch (e) {
       if (e && e.code === "ENOENT") {
-        throw new Error(`a module file cannot be found.
---- module file path ---
-${moduleFilePath}
---- main module url ---
-${mainModuleUrl}`)
+        throw new Error(`module file not found at ${moduleUrl}`)
       }
       throw e
     }
   }
 
   // it's an external ressource like http, throw
-  throw new Error(`a remote module content is missing in moduleContentMap.
---- module url ---
-${moduleUrl}
---- main module url ---
-${mainModuleUrl}`)
+  throw new Error(`cannot fetch module content from ${moduleUrl}`)
 }

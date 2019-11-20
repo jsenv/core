@@ -48,14 +48,14 @@ export const createJsenvRollupPlugin = async ({
       if (!hasScheme(importer)) {
         importer = pathToFileUrl(importer)
       }
-
       const importUrl = resolveImport({
         specifier,
         importer,
         importMap,
         defaultExtension: importDefaultExtension,
       })
-      logger.debug(`resolve ${specifier} to ${importUrl}`)
+      // const rollupId = urlToRollupId(importUrl, { projectDirectoryUrl, compileServerOrigin })
+      logger.debug(`${specifier} resolved to ${importUrl}`)
       return importUrl
     },
 
@@ -64,9 +64,8 @@ export const createJsenvRollupPlugin = async ({
 
     // },
 
-    load: async (rollupId) => {
-      const url = rollupIdToUrl(rollupId)
-      logger.debug(`loading ${url}`)
+    load: async (url) => {
+      logger.debug(`loads ${url}`)
       const { contentRaw, content, map } = await loadModule(url)
 
       moduleContentMap[url] = {
@@ -84,13 +83,13 @@ export const createJsenvRollupPlugin = async ({
     // transform: async (moduleContent, rollupId) => {}
 
     outputOptions: (options) => {
-      // we want something like ../../../../file.js to become /file.js
-      // and also rollup does not expects to have http dependency in the mix
+      // rollup does not expects to have http dependency in the mix
+      // and relativize then cause they are files behind the scene
 
-      const chunkFileUrl = resolveFileUrl(`./${chunkId}`, bundleDirectoryUrl)
+      const bundleSourcemapFileUrl = resolveFileUrl(`./${chunkId}.map`, bundleDirectoryUrl)
 
       const relativePathToUrl = (relativePath) => {
-        const url = resolveFileUrl(relativePath, chunkFileUrl)
+        const url = resolveFileUrl(relativePath, bundleSourcemapFileUrl)
 
         // fix rollup not supporting source being http
         if (url.startsWith(projectDirectoryUrl)) {
@@ -112,7 +111,7 @@ export const createJsenvRollupPlugin = async ({
         if (url.startsWith(compileServerOrigin)) {
           const relativeUrl = url.slice(`${compileServerOrigin}/`.length)
           const fileUrl = `${projectDirectoryUrl}${relativeUrl}`
-          relativePath = fileUrlToRelativePath(fileUrl, chunkFileUrl)
+          relativePath = fileUrlToRelativePath(fileUrl, bundleSourcemapFileUrl)
           return relativePath
         }
         if (url.startsWith(projectDirectoryUrl)) {
@@ -160,15 +159,16 @@ export const createJsenvRollupPlugin = async ({
     const { contentType, content, map } = await getModule(moduleUrl)
 
     if (contentType === "application/javascript") {
+      const map = await fetchSourcemap({
+        cancellationToken,
+        logger,
+        moduleUrl,
+        moduleContent: content,
+      })
       return {
         contentRaw: content,
         content,
-        map: await fetchSourcemap({
-          cancellationToken,
-          logger,
-          moduleUrl,
-          moduleContent: content,
-        }),
+        map,
       }
     }
 
@@ -230,13 +230,48 @@ ${moduleUrl}`)
   }
 }
 
+// const urlToRollupId = (url, { compileServerOrigin, projectDirectoryUrl }) => {
+//   if (url.startsWith(`${compileServerOrigin}/`)) {
+//     return fileUrlToPath(`${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`)
+//   }
+//   if (url.startsWith("file://")) {
+//     return fileUrlToPath(url)
+//   }
+//   return url
+// }
+
 export const rollupIdToUrl = (rollupId) => {
   if (hasScheme(rollupId)) {
     return rollupId
   }
-
-  return pathToFileUrl(rollupId)
+  const fileUrl = pathToFileUrl(rollupId)
+  return fileUrl
 }
+
+// const rollupIdToFileServerUrl = (rollupId, { projectDirectoryUrl, compileServerOrigin }) => {
+//   const fileUrl = rollupIdToFileUrl(rollupId)
+//   if (!fileUrl) {
+//     return null
+//   }
+
+//   if (!fileUrl.startsWith(projectDirectoryUrl)) {
+//     return null
+//   }
+
+//   const fileRelativeUrl = urlToRelativeUrl(fileUrl, projectDirectoryUrl)
+//   return `${compileServerOrigin}/${fileRelativeUrl}`
+// }
+
+// export const rollupIdToUrl = (rollupId, { compileServerOrigin, projectDirectoryUrl }) => {
+//   if (hasScheme(rollupId)) {
+//     if (rollupId.startsWith(`${compileServerOrigin}/`)) {
+//       return `${projectDirectoryUrl}${rollupId.slice(`${compileServerOrigin}/`.length)}`
+//     }
+//     return rollupId
+//   }
+
+//   return pathToFileUrl(rollupId)
+// }
 
 const transformAsyncInsertedByRollup = async ({
   projectDirectoryUrl,

@@ -1,5 +1,6 @@
 import { extname, basename } from "path"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { generateBundleUsingRollup } from "internal/bundling/generateBundleUsingRollup.js"
 import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
 import { serveCompiledFile } from "internal/compiling/serveCompiledFile.js"
@@ -8,7 +9,7 @@ export const serveBundle = async ({
   cancellationToken,
   logger,
 
-  jsenvProjectDirectoryUrl,
+  jsenvProjectDirectoryUrl = jsenvCoreDirectoryUrl,
   projectDirectoryUrl,
   compileDirectoryUrl,
   originalFileUrl,
@@ -47,7 +48,8 @@ export const serveBundle = async ({
       projectDirectoryUrl,
       entryPointMap,
       // bundleDirectoryUrl is just theorical because of writeOnFileSystem: false
-      bundleDirectoryUrl: resolveDirectoryUrl("./bundle/", compiledFileUrl),
+      // but still important to know where the files will be written
+      bundleDirectoryUrl: resolveDirectoryUrl("./", compiledFileUrl),
       importDefaultExtension,
       node,
       browser,
@@ -68,6 +70,8 @@ export const serveBundle = async ({
 
     return bundleToCompilationResult(bundle, {
       projectDirectoryUrl,
+      compileDirectoryUrl,
+      compileServerOrigin,
       originalFileUrl,
       compiledFileUrl,
       sourcemapFileUrl,
@@ -75,6 +79,7 @@ export const serveBundle = async ({
   }
 
   return serveCompiledFile({
+    logger,
     projectDirectoryUrl,
     originalFileUrl,
     compiledFileUrl,

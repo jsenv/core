@@ -1,0 +1,17 @@
+{
+  "contentType": "application/javascript",
+  "sources": [
+    "../../file.js"
+  ],
+  "sourcesEtag": [
+    "\"12-nhgTHzyRNTJVRX7W7gbGol0Jhbk\""
+  ],
+  "assets": [
+    "../file.js.map"
+  ],
+  "assetsEtag": [
+    "\"b6-+hh0/fSTl/YxH30tW/72OS1oZDg\""
+  ],
+  "createdMs": 1574260261306,
+  "lastModifiedMs": 1574260261306
+}

@@ -9,9 +9,10 @@ const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
 const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, jsenvCoreDirectoryUrl)
 const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
+  compileServerLogLevel: "debug",
   compileDirectoryUrl,
 })
-const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativeUrl}.jsenv/node-platform.js`
+const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativeUrl}node-platform.js`
 const response = await fetch(fileServerUrl)
 const actual = {
   status: response.status,
