@@ -39,6 +39,7 @@ export const createJsenvRollupPlugin = async ({
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
   const moduleContentMap = {}
+  const redirectionMap = {}
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
   const compileDirectoryServerUrl = resolveDirectoryUrl(
     compileDirectoryRelativeUrl,
@@ -71,11 +72,19 @@ export const createJsenvRollupPlugin = async ({
 
     load: async (url) => {
       logger.debug(`loads ${url}`)
-      const { contentRaw, content, map } = await loadModule(url)
+      const { responseUrl, contentRaw, content, map } = await loadModule(url)
 
-      moduleContentMap[url] = {
+      saveModuleContent(responseUrl, {
         content,
         contentRaw,
+      })
+      // handle redirection
+      if (responseUrl !== url) {
+        saveModuleContent(url, {
+          content,
+          contentRaw,
+        })
+        redirectionMap[url] = responseUrl
       }
 
       return { code: content, map }
@@ -100,10 +109,18 @@ export const createJsenvRollupPlugin = async ({
         if (url.startsWith(projectDirectoryUrl)) {
           const relativeUrl = urlToRelativeUrl(url, projectDirectoryUrl)
           if (relativeUrl.startsWith("http:/")) {
-            return `http://${relativeUrl.slice(`http:/`.length)}`
+            const httpUrl = `http://${relativeUrl.slice(`http:/`.length)}`
+            if (httpUrl in redirectionMap) {
+              return redirectionMap[httpUrl]
+            }
+            return httpUrl
           }
           if (relativeUrl.startsWith("https:/")) {
-            return `https://${relativeUrl.slice(`https:/`.length)}`
+            const httpsUrl = `https://${relativeUrl.slice(`https:/`.length)}`
+            if (httpsUrl in redirectionMap) {
+              return redirectionMap[httpsUrl]
+            }
+            return httpsUrl
           }
         }
 
@@ -160,8 +177,14 @@ export const createJsenvRollupPlugin = async ({
     },
   }
 
+  const saveModuleContent = (moduleUrl, value) => {
+    moduleContentMap[
+      potentialServerUrlToUrl(moduleUrl, { compileServerOrigin, projectDirectoryUrl })
+    ] = value
+  }
+
   const loadModule = async (moduleUrl) => {
-    const { contentType, content, map } = await getModule(moduleUrl)
+    const { responseUrl, contentType, content } = await getModule(moduleUrl)
 
     if (contentType === "application/javascript") {
       const map = await fetchSourcemap({
@@ -171,6 +194,7 @@ export const createJsenvRollupPlugin = async ({
         moduleContent: content,
       })
       return {
+        responseUrl,
         contentRaw: content,
         content,
         map,
@@ -179,19 +203,23 @@ export const createJsenvRollupPlugin = async ({
 
     if (contentType === "application/json") {
       // we could minify json too
+      // et a propos du map qui pourrait permettre de connaitre la vrai source pour ce fichier
+      // genre dire que la source c'est je ne sais quoi
+      // a defaut il faudrait
+      // pouvoir tenir compte d'une redirection pour update le
       return {
+        responseUrl,
         contentRaw: content,
         content: `export default ${content}`,
-        map,
       }
     }
 
     if (contentType.startsWith("text/")) {
       // we could minify html, svg, css etc too
       return {
+        responseUrl,
         contentRaw: content,
         content: `export default ${JSON.stringify(content)}`,
-        map,
       }
     }
 
@@ -206,10 +234,10 @@ ${contentType}
 ${moduleUrl}`)
 
     return {
+      responseUrl,
       contentRaw: content,
       // fallback to text
       content: `export default ${JSON.stringify(content)}`,
-      map,
     }
   }
 
@@ -222,6 +250,7 @@ ${moduleUrl}`)
     }
 
     return {
+      responseUrl: response.url,
       contentType: response.headers["content-type"],
       content: response.body,
     }
@@ -247,12 +276,11 @@ ${moduleUrl}`)
 //   return url
 // }
 
-export const rollupIdToUrl = (rollupId) => {
-  if (hasScheme(rollupId)) {
-    return rollupId
+const potentialServerUrlToUrl = (url, { compileServerOrigin, projectDirectoryUrl }) => {
+  if (url.startsWith(`${compileServerOrigin}/`)) {
+    return `${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`
   }
-  const fileUrl = pathToFileUrl(rollupId)
-  return fileUrl
+  return url
 }
 
 // const rollupIdToFileServerUrl = (rollupId, { projectDirectoryUrl, compileServerOrigin }) => {
@@ -267,17 +295,6 @@ export const rollupIdToUrl = (rollupId) => {
 
 //   const fileRelativeUrl = urlToRelativeUrl(fileUrl, projectDirectoryUrl)
 //   return `${compileServerOrigin}/${fileRelativeUrl}`
-// }
-
-// export const rollupIdToUrl = (rollupId, { compileServerOrigin, projectDirectoryUrl }) => {
-//   if (hasScheme(rollupId)) {
-//     if (rollupId.startsWith(`${compileServerOrigin}/`)) {
-//       return `${projectDirectoryUrl}${rollupId.slice(`${compileServerOrigin}/`.length)}`
-//     }
-//     return rollupId
-//   }
-
-//   return pathToFileUrl(rollupId)
 // }
 
 const transformAsyncInsertedByRollup = async ({

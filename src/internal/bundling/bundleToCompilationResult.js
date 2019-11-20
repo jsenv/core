@@ -12,7 +12,7 @@ import { fileUrlToRelativePath, fileUrlToPath, resolveUrl } from "internal/urlUt
 import { writeOrUpdateSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 
 export const bundleToCompilationResult = (
-  { rollupBundle },
+  { rollupBundle, moduleContentMap },
   { projectDirectoryUrl, compileServerOrigin, compiledFileUrl, sourcemapFileUrl },
 ) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -50,6 +50,7 @@ export const bundleToCompilationResult = (
   const assetsContent = []
 
   const mainChunk = parseRollupChunk(rollupBundle.output[0], {
+    moduleContentMap,
     sourcemapFileUrl,
     sourcemapFileRelativeUrlForModule: fileUrlToRelativePath(sourcemapFileUrl, compiledFileUrl),
   })
@@ -61,6 +62,7 @@ export const bundleToCompilationResult = (
   rollupBundle.output.slice(1).forEach((rollupChunk) => {
     const chunkFileName = rollupChunk.fileName
     const chunk = parseRollupChunk(rollupChunk, {
+      moduleContentMap,
       compiledFileUrl,
     })
     trackDependencies(chunk.dependencyMap)
@@ -82,7 +84,11 @@ export const bundleToCompilationResult = (
 
 const parseRollupChunk = (
   rollupChunk,
-  { sourcemapFileUrl, sourcemapFileRelativeUrlForModule = `./${rollupChunk.fileName}.map` },
+  {
+    moduleContentMap,
+    sourcemapFileUrl,
+    sourcemapFileRelativeUrlForModule = `./${rollupChunk.fileName}.map`,
+  },
 ) => {
   const dependencyMap = {}
   const mainModuleSourcemap = rollupChunk.map
@@ -90,6 +96,7 @@ const parseRollupChunk = (
   mainModuleSourcemap.sources.forEach((source, index) => {
     const moduleUrl = resolveUrl(source, sourcemapFileUrl)
     dependencyMap[moduleUrl] = getModuleContent({
+      moduleContentMap,
       mainModuleSourcemap,
       moduleUrl,
       moduleIndex: index,
@@ -107,7 +114,11 @@ const parseRollupChunk = (
   }
 }
 
-const getModuleContent = ({ mainModuleSourcemap, moduleUrl, moduleIndex }) => {
+const getModuleContent = ({ moduleContentMap, mainModuleSourcemap, moduleUrl, moduleIndex }) => {
+  if (moduleUrl in moduleContentMap) {
+    return moduleContentMap[moduleUrl]
+  }
+
   // try to read it from mainModuleSourcemap
   const sourcesContent = mainModuleSourcemap.sourcesContent || []
   if (moduleIndex in sourcesContent) {

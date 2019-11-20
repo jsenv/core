@@ -71,6 +71,14 @@ export const serveCompiledJs = async ({
 
   // json, css, html etc does not need to be compiled
   // they are redirected to the source location that will be served as file
+  // ptet qu'on devrait pas parce que
+  // on pourrait vouloir minifier ce résultat (mais bon ça osef disons)
+  // par contre on voudrait ptet avoir le bon concept
+  // (quon a dans transformResultToCompilationResult)
+  // pour tracker la bonne source avec le bon etag
+  // sinon on track le export default
+  // mais ça ça vient plutot du bundle
+  // qui doit gérer content/contentRaw
   const contentType = urlToContentType(requestUrl)
   if (contentType !== "application/javascript") {
     return {
