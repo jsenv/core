@@ -15,7 +15,8 @@ export const generateBundleUsingRollup = async ({
   node,
   browser,
 
-  compileServer,
+  compileServerOrigin,
+  compileServerImportMap,
   compileDirectoryServerUrl,
   babelPluginMap,
   format,
@@ -24,14 +25,6 @@ export const generateBundleUsingRollup = async ({
   sourcemapExcludeSources,
   writeOnFileSystem,
 }) => {
-  const nativeModulePredicate = (specifier) => {
-    if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
-    // for now browser have no native module
-    // and we don't know how we will handle that
-    if (browser) return false
-    return false
-  }
-
   const { jsenvRollupPlugin, getExtraInfo } = await createJsenvRollupPlugin({
     cancellationToken,
     logger,
@@ -39,44 +32,28 @@ export const generateBundleUsingRollup = async ({
     entryPointMap,
     bundleDirectoryUrl,
     importDefaultExtension,
-    compileServer,
+    compileServerOrigin,
+    compileServerImportMap,
     compileDirectoryServerUrl,
     babelPluginMap,
     format,
     minify,
   })
-  const rollupParseOptions = {
-    input: entryPointMap,
-    external: (id) => nativeModulePredicate(id),
-    plugins: [jsenvRollupPlugin],
-  }
-  const rollupGenerateOptions = {
-    // https://rollupjs.org/guide/en#output-dir
-    dir: fileUrlToPath(bundleDirectoryUrl),
-    // https://rollupjs.org/guide/en#output-format
-    format: formatToRollupFormat(format),
-    // entryFileNames: `./[name].js`,
-    // https://rollupjs.org/guide/en#output-sourcemap
-    sourcemap: true,
-    sourcemapExcludeSources,
-    ...formatOutputOptions,
-  }
-
-  logger.info(`
-generating bundle for entry points
---- format ---
-${format}
---- entry point map ---
-${JSON.stringify(entryPointMap, null, "  ")}
---- into ---
-${rollupGenerateOptions.dir}
-`)
 
   const rollupBundle = await useRollup({
     cancellationToken,
+    logger,
+
+    entryPointMap,
+    node,
+    browser,
+    jsenvRollupPlugin,
+
+    format,
+    formatOutputOptions,
+    bundleDirectoryUrl,
+    sourcemapExcludeSources,
     writeOnFileSystem,
-    rollupParseOptions,
-    rollupGenerateOptions,
   })
 
   return {
@@ -85,19 +62,35 @@ ${rollupGenerateOptions.dir}
   }
 }
 
-const formatToRollupFormat = (format) => {
-  if (format === "global") return "iife"
-  if (format === "commonjs") return "cjs"
-  if (format === "systemjs") return "system"
-  throw new Error(`unexpected format, got ${format}`)
-}
-
 const useRollup = async ({
   cancellationToken,
-  rollupParseOptions,
-  rollupGenerateOptions,
+  logger,
+
+  entryPointMap,
+  node,
+  browser,
+  jsenvRollupPlugin,
+
+  format,
+  formatOutputOptions,
+  bundleDirectoryUrl,
+  sourcemapExcludeSources,
   writeOnFileSystem,
 }) => {
+  logger.info(`
+parse bundle
+--- entry point map ---
+${JSON.stringify(entryPointMap, null, "  ")}
+`)
+
+  const nativeModulePredicate = (specifier) => {
+    if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
+    // for now browser have no native module
+    // and we don't know how we will handle that
+    if (browser) return false
+    return false
+  }
+
   const rollupBundle = await createOperation({
     cancellationToken,
     start: () =>
@@ -118,33 +111,47 @@ const useRollup = async ({
           if (warning.code === "THIS_IS_UNDEFINED") return
           warn(warning)
         },
-        ...rollupParseOptions,
+        input: entryPointMap,
+        external: (id) => nativeModulePredicate(id),
+        plugins: [jsenvRollupPlugin],
       }),
   })
+
+  const rollupGenerateOptions = {
+    // https://rollupjs.org/guide/en#experimentaltoplevelawait
+    experimentalTopLevelAwait: true,
+    // we could put prefConst to true by checking 'transform-block-scoping'
+    // presence in babelPluginMap
+    preferConst: false,
+    // https://rollupjs.org/guide/en#output-dir
+    dir: fileUrlToPath(bundleDirectoryUrl),
+    // https://rollupjs.org/guide/en#output-format
+    format: formatToRollupFormat(format),
+    // entryFileNames: `./[name].js`,
+    // https://rollupjs.org/guide/en#output-sourcemap
+    sourcemap: true,
+    sourcemapExcludeSources,
+    ...formatOutputOptions,
+  }
 
   const rollupOutputArray = await createOperation({
     cancellationToken,
     start: () => {
       if (writeOnFileSystem) {
-        return rollupBundle.write({
-          // https://rollupjs.org/guide/en#experimentaltoplevelawait
-          experimentalTopLevelAwait: true,
-          // we could put prefConst to true by checking 'transform-block-scoping'
-          // presence in babelPluginMap
-          preferConst: false,
-          ...rollupGenerateOptions,
-        })
+        logger.info(`write bundle at ${rollupGenerateOptions.dir}`)
+        return rollupBundle.write(rollupGenerateOptions)
       }
-      return rollupBundle.generate({
-        // https://rollupjs.org/guide/en#experimentaltoplevelawait
-        experimentalTopLevelAwait: true,
-        // we could put prefConst to true by checking 'transform-block-scoping'
-        // presence in babelPluginMap
-        preferConst: false,
-        ...rollupGenerateOptions,
-      })
+      logger.info("generate bundle")
+      return rollupBundle.generate(rollupGenerateOptions)
     },
   })
 
   return rollupOutputArray
+}
+
+const formatToRollupFormat = (format) => {
+  if (format === "global") return "iife"
+  if (format === "commonjs") return "cjs"
+  if (format === "systemjs") return "system"
+  throw new Error(`unexpected format, got ${format}`)
 }

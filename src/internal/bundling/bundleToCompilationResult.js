@@ -31,7 +31,7 @@ import { writeOrUpdateSourceMappingURL } from "internal/sourceMappingURLUtils.js
 import { rollupIdToUrl } from "./createJsenvRollupPlugin/createJsenvRollupPlugin.js"
 
 export const bundleToCompilationResult = (
-  { rollupBundle, arrayOfAbstractUrl, moduleContentMap },
+  { rollupBundle, moduleContentMap },
   { projectDirectoryUrl, compiledFileUrl, sourcemapFileUrl },
 ) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -49,8 +49,6 @@ export const bundleToCompilationResult = (
 
   const trackDependencies = (dependencyMap) => {
     Object.keys(dependencyMap).forEach((moduleUrl) => {
-      // do not track abstract dependency
-      if (arrayOfAbstractUrl.includes(moduleUrl)) return
       // do not track dependency outside project
       if (!moduleUrl.startsWith(projectDirectoryUrl)) return
 
@@ -69,7 +67,6 @@ export const bundleToCompilationResult = (
 
   const mainChunk = parseRollupChunk(rollupBundle.output[0], {
     moduleContentMap,
-    arrayOfAbstractUrl,
     sourcemapFileRelativeUrlForModule: fileUrlToRelativePath(sourcemapFileUrl, compiledFileUrl),
   })
   // mainChunk.sourcemap.file = fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl)
@@ -81,7 +78,6 @@ export const bundleToCompilationResult = (
     const chunkFileName = rollupChunk.fileName
     const chunk = parseRollupChunk(rollupChunk, {
       moduleContentMap,
-      arrayOfAbstractUrl,
     })
     trackDependencies(chunk.dependencyMap)
     assets.push(chunkFileName)
@@ -102,11 +98,7 @@ export const bundleToCompilationResult = (
 
 const parseRollupChunk = (
   rollupChunk,
-  {
-    arrayOfAbstractUrl,
-    moduleContentMap,
-    sourcemapFileRelativeUrlForModule = `./${rollupChunk.fileName}.map`,
-  },
+  { moduleContentMap, sourcemapFileRelativeUrlForModule = `./${rollupChunk.fileName}.map` },
 ) => {
   const dependencyMap = {}
   const moduleKeys = Object.keys(rollupChunk.modules)
@@ -116,7 +108,6 @@ const parseRollupChunk = (
   moduleKeys.forEach((moduleId, moduleIndex) => {
     const moduleUrl = rollupIdToUrl(moduleId)
     dependencyMap[moduleUrl] = getModuleContent({
-      arrayOfAbstractUrl,
       moduleContentMap,
       mainModuleUrl,
       mainModuleSourcemap,
@@ -138,7 +129,6 @@ const parseRollupChunk = (
 }
 
 const getModuleContent = ({
-  arrayOfAbstractUrl,
   moduleContentMap,
   mainModuleUrl,
   mainModuleSourcemap,
@@ -158,16 +148,6 @@ const getModuleContent = ({
       code: contentFromRollupSourcemap,
       raw: contentFromRollupSourcemap,
     }
-  }
-
-  // abstract ressource cannot be found, throw
-  const isAbstract = arrayOfAbstractUrl.includes(moduleUrl)
-  if (isAbstract) {
-    throw new Error(`an abstract module content is missing in moduleContentMap.
---- module url ---
-${moduleUrl}
---- main module url ---
-${mainModuleUrl}`)
   }
 
   // try to get it from filesystem

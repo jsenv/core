@@ -1,14 +1,14 @@
 /* eslint-disable import/max-dependencies */
 
 // eslint-disable-next-line import/no-unresolved
-import groupMap from "/.jsenv/groupMap.json"
+import groupMap from ".jsenv/groupMap.json"
 // eslint-disable-next-line import/no-unresolved
-import importMap from "/.jsenv/importMap.json"
+import importMap from ".jsenv/importMap.json"
 import {
   compileDirectoryRelativeUrl,
   importDefaultExtension,
   // eslint-disable-next-line import/no-unresolved
-} from "/.jsenv/env.js"
+} from ".jsenv/env.js"
 import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport/resolveImport.js"

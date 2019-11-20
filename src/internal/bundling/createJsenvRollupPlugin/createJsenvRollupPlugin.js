@@ -28,7 +28,8 @@ export const createJsenvRollupPlugin = async ({
   bundleDirectoryUrl,
   importDefaultExtension,
 
-  compileServer,
+  compileServerOrigin,
+  compileServerImportMap,
   compileDirectoryServerUrl,
   babelPluginMap,
 
@@ -38,7 +39,7 @@ export const createJsenvRollupPlugin = async ({
 }) => {
   const moduleContentMap = {}
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
-  const importMap = normalizeImportMap(compileServer.importMap, compileDirectoryServerUrl)
+  const importMap = normalizeImportMap(compileServerImportMap, compileDirectoryServerUrl)
 
   const jsenvRollupPlugin = {
     name: "jsenv",
@@ -108,8 +109,8 @@ export const createJsenvRollupPlugin = async ({
       options.sourcemapPathTransform = (relativePath) => {
         const url = relativePathToUrl(relativePath)
 
-        if (url.startsWith(compileServer.origin)) {
-          const relativeUrl = url.slice(`${compileServer.origin}/`.length)
+        if (url.startsWith(compileServerOrigin)) {
+          const relativeUrl = url.slice(`${compileServerOrigin}/`.length)
           const fileUrl = `${projectDirectoryUrl}${relativeUrl}`
           relativePath = fileUrlToRelativePath(fileUrl, chunkFileUrl)
           return relativePath

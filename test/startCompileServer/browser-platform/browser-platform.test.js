@@ -5,13 +5,14 @@ import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 import { fetch } from "../fetch.js"
 
-const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
+const compileDirectoryUrl = resolveDirectoryUrl("./.dist/", import.meta.url)
 const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, jsenvCoreDirectoryUrl)
 const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
+  // compileServerLogLevel: "debug",
   compileDirectoryUrl,
 })
-const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativeUrl}.jsenv/browser-platform.js`
+const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativeUrl}browser-platform.js`
 const response = await fetch(fileServerUrl)
 const actual = {
   status: response.status,

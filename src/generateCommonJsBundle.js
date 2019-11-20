@@ -15,6 +15,5 @@ export const generateCommonJsBundle = async ({
       "./src/internal/bundling/commonjs-balancer-template.js",
       jsenvCoreDirectoryUrl,
     ),
-    balancerDataAbstractSpecifier: "/.jsenv/commonjs-balancer-data.js",
     ...rest,
   })

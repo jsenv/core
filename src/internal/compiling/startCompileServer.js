@@ -12,7 +12,12 @@ import {
   urlToContentType,
 } from "@jsenv/server"
 import { createLogger } from "@jsenv/logger"
-import { resolveFileUrl, fileUrlToPath, urlToRelativeUrl } from "internal/urlUtils.js"
+import {
+  resolveFileUrl,
+  fileUrlToPath,
+  urlToRelativeUrl,
+  resolveDirectoryUrl,
+} from "internal/urlUtils.js"
 import { writeFileContent } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { readProjectImportMap } from "internal/readProjectImportMap/readProjectImportMap.js"
@@ -51,6 +56,7 @@ export const startCompileServer = async ({
 
   babelPluginMap = jsenvBabelPluginMap,
   convertMap = {},
+  compileConfig = {},
 
   // options related to the server itself
   protocol = "http",
@@ -89,6 +95,9 @@ export const startCompileServer = async ({
   if (typeof importMapFileUrl === "undefined") {
     importMapFileUrl = resolveFileUrl("./importMap.json", projectDirectoryUrl)
   }
+  if (typeof compileDirectoryUrl === "undefined") {
+    compileDirectoryUrl = resolveDirectoryUrl("./dist/", projectDirectoryUrl)
+  }
   if (typeof compileDirectoryUrl !== "string") {
     throw new TypeError(`compileDirectoryUrl must be a string. got ${compileDirectoryUrl}`)
   }
@@ -124,6 +133,10 @@ ${projectDirectoryUrl}`)
 
   const importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
   const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
+
+  compileConfig[browserPlatformFileUrl] = {
+    transformModuleIntoSystemFormat: false,
+  }
 
   const groupMap = generateGroupMap({
     babelPluginMap,
@@ -187,13 +200,27 @@ ${projectDirectoryUrl}`)
       sendInternalErrorStack: true,
       requestToResponse: (request) =>
         firstService(
+          () => {
+            const { origin, ressource, method, headers } = request
+            const requestUrl = `${origin}${ressource}`
+            // serve asset files directly
+            if (urlIsAsset(requestUrl)) {
+              const fileUrl = resolveFileUrl(ressource.slice(1), projectDirectoryUrl)
+              return serveFile(fileUrl, {
+                method,
+                headers,
+              })
+            }
+            return null
+          },
           () =>
             serveBrowserPlatform({
               cancellationToken,
               logger,
               projectDirectoryUrl,
               compileDirectoryUrl,
-              compileServer,
+              compileServerOrigin: compileServer.origin,
+              compileServerImportMap: importMapForCompileServer,
               importDefaultExtension,
               browserPlatformFileUrl,
               babelPluginMap,
@@ -251,6 +278,7 @@ ${projectDirectoryUrl}`)
     generateImportMapForCompileServer({
       logger,
       projectDirectoryUrl,
+      compileDirectoryRelativeUrl,
       importMapFileUrl,
     }),
   ])
@@ -266,15 +294,15 @@ ${projectDirectoryUrl}`)
   // it would be better for perf to generated them on demand but for now that's good
   await Promise.all([
     writeFileContent(
-      fileUrlToPath(resolveFileUrl("./.jsenv/importMap.json", projectDirectoryUrl)),
+      fileUrlToPath(resolveFileUrl("./importMap.json", compileDirectoryUrl)),
       JSON.stringify(importMapForCompileServer, null, "  "),
     ),
     writeFileContent(
-      fileUrlToPath(resolveFileUrl("./.jsenv/groupMap.json", projectDirectoryUrl)),
+      fileUrlToPath(resolveFileUrl("./groupMap.json", compileDirectoryUrl)),
       JSON.stringify(groupMap, null, "  "),
     ),
     writeFileContent(
-      fileUrlToPath(resolveFileUrl("./.jsenv/env.js", projectDirectoryUrl)),
+      fileUrlToPath(resolveFileUrl("./env.js", compileDirectoryUrl)),
       Object.keys(env)
         .map(
           (key) => `
@@ -412,7 +440,7 @@ const serveProjectFiles = async ({
 /**
  * generateImportMapForCompileServer allows the following:
  *
- * import { importMap } from '/.jsenv/env.js'
+ * import importMap from '.jsenv/importMap.json'
  *
  * returns jsenv internal importMap and
  *
@@ -430,6 +458,7 @@ const serveProjectFiles = async ({
 const generateImportMapForCompileServer = async ({
   logger,
   projectDirectoryUrl,
+  compileDirectoryRelativeUrl,
   importMapFileUrl,
 }) => {
   const importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
@@ -439,11 +468,12 @@ const generateImportMapForCompileServer = async ({
     rootProjectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
   })
   const importMapInternal = {
-    // in case importMapFileRelativeUrl is not the default
-    // redirect /importMap.json to the proper location
-    // well fuck it won't be compiled to something
-    // with this approach
     imports: {
+      ".jsenv/": `./${compileDirectoryRelativeUrl}`,
+      // in case importMapFileRelativeUrl is not the default
+      // redirect /importMap.json to the proper location
+      // well fuck it won't be compiled to something
+      // with this approach
       ...(importMapFileRelativeUrl === "importMap.json"
         ? {}
         : {

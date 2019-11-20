@@ -12,7 +12,6 @@ export const generateSystemJsBundle = async ({
       "./src/internal/bundling/systemjs-balancer-template.js",
       jsenvCoreDirectoryUrl,
     ),
-    balancerDataAbstractSpecifier: "/.jsenv/systemjs-balancer-data.js",
     bundleDirectoryRelativeUrl,
     ...rest,
   })

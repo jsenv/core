@@ -105,7 +105,11 @@ export const generateBundle = async ({
   }
 
   return catchAsyncFunctionCancellation(async () => {
-    const compileServer = await startCompileServer({
+    const {
+      origin: compileServerOrigin,
+      importMap: compileServerImportMap,
+      groupMap: compileServerGroupMap,
+    } = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
 
@@ -127,11 +131,7 @@ export const generateBundle = async ({
       transformModuleIntoSystemFormat: false, // will be done by rollup
     })
 
-    // ne pas oublier de retourner un truc permettant de savoir
-    // quelle url sont abstract (importReplaceMap)
-    // pour que bundleToCompilationResult fonction correctement
-
-    const compileDirectoryServerUrl = `${compileServer.origin}/${urlToRelativeUrl(
+    const compileDirectoryServerUrl = `${compileServerOrigin}/${urlToRelativeUrl(
       compileDirectoryUrl,
       projectDirectoryUrl,
     )}`
@@ -148,7 +148,8 @@ export const generateBundle = async ({
         node,
         browser,
 
-        compileServer,
+        compileServerOrigin,
+        compileServerImportMap,
         compileDirectoryServerUrl: `${compileDirectoryServerUrl}otherwise/`,
 
         babelPluginMap,
@@ -173,7 +174,9 @@ export const generateBundle = async ({
         node,
         browser,
 
-        compileServer,
+        compileServerOrigin,
+        compileServerImportMap,
+        compileServerGroupMap,
         compileDirectoryServerUrl,
 
         format,
@@ -194,7 +197,8 @@ export const generateBundle = async ({
         browser,
         balancerTemplateFileUrl,
 
-        compileServer,
+        compileServerOrigin,
+        compileServerImportMap,
         compileDirectoryServerUrl,
 
         format,
@@ -253,15 +257,14 @@ const assertCompileGroupCount = ({ compileGroupCount }) => {
 }
 
 const generateEntryPointsDirectories = ({
-  compileServer,
+  compileServerGroupMap,
   bundleDirectoryUrl,
   compileDirectoryServerUrl,
   ...rest
 }) =>
   Promise.all(
-    Object.keys(compileServer.groupMap).map((compileId) =>
+    Object.keys(compileServerGroupMap).map((compileId) =>
       generateBundleUsingRollup({
-        compileServer,
         bundleDirectoryUrl: resolveDirectoryUrl(compileId, bundleDirectoryUrl),
         compileDirectoryServerUrl: resolveDirectoryUrl(compileId, compileDirectoryServerUrl),
         ...rest,

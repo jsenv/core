@@ -15,13 +15,14 @@ export const serveBundle = async ({
   compiledFileUrl,
   importDefaultExtension,
   format,
+  formatOutputOptions = {},
   node = format === "commonjs",
   browser = format === "global",
-  formatOutputOptions = {},
 
   projectFileRequestedCallback,
   request,
-  compileServer,
+  compileServerOrigin,
+  compileServerImportMap,
   babelPluginMap,
 }) => {
   if (typeof jsenvProjectDirectoryUrl !== "string") {
@@ -51,12 +52,13 @@ export const serveBundle = async ({
       node,
       browser,
 
-      compileServer,
-      compileDirectoryServerUrl: `${compileServer.origin}/${urlToRelativeUrl(
+      babelPluginMap,
+      compileServerOrigin,
+      compileServerImportMap,
+      compileDirectoryServerUrl: `${compileServerOrigin}/${urlToRelativeUrl(
         compileDirectoryUrl,
         projectDirectoryUrl,
-      )}otherwise/`,
-      babelPluginMap,
+      )}bundle/`,
       format,
       formatOutputOptions,
       writeOnFileSystem: false,

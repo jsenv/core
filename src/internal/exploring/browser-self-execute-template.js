@@ -3,7 +3,7 @@ import {
   compileDirectoryRelativeUrl,
   livereloading,
   // eslint-disable-next-line import/no-unresolved
-} from "/.jsenv/browser-self-execute-static-data.js"
+} from ".jsenv/env.js"
 import { loadUsingScript } from "internal/loadUsingScript.js"
 import { fetchUsingXHR } from "internal/fetchUsingXHR.js"
 
