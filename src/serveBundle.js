@@ -1,4 +1,5 @@
 import { extname, basename } from "path"
+import { COMPILE_ID_BUNDLE } from "internal/CONSTANTS.js"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { generateBundleUsingRollup } from "internal/bundling/generateBundleUsingRollup.js"
@@ -40,6 +41,7 @@ export const serveBundle = async ({
     const entryPointMap = {
       [entryName]: `./${originalFileRelativeUrl}`,
     }
+    const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
 
     const bundle = await generateBundleUsingRollup({
       cancellationToken,
@@ -57,10 +59,7 @@ export const serveBundle = async ({
       babelPluginMap,
       compileServerOrigin,
       compileServerImportMap,
-      compileDirectoryServerUrl: `${compileServerOrigin}/${urlToRelativeUrl(
-        compileDirectoryUrl,
-        projectDirectoryUrl,
-      )}bundle/`,
+      compileDirectoryRelativeUrl: `${compileDirectoryRelativeUrl}${COMPILE_ID_BUNDLE}`,
       format,
       formatOutputOptions,
       writeOnFileSystem: false,

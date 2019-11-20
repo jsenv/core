@@ -12,13 +12,14 @@ import {
   urlToContentType,
 } from "@jsenv/server"
 import { createLogger } from "@jsenv/logger"
+import { COMPILE_DIRECTORY } from "internal/CONSTANTS.js"
 import {
   resolveFileUrl,
   fileUrlToPath,
   urlToRelativeUrl,
   resolveDirectoryUrl,
 } from "internal/urlUtils.js"
-import { writeFileContent } from "internal/filesystemUtils.js"
+import { writeFileContent, removeDirectory } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { readProjectImportMap } from "internal/readProjectImportMap/readProjectImportMap.js"
 import { generateGroupMap } from "internal/generateGroupMap/generateGroupMap.js"
@@ -41,9 +42,9 @@ export const startCompileServer = async ({
   transformModuleIntoSystemFormat = true,
 
   projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl = "./.jsenv/",
+  jsenvDirectoryClean = false,
 
-  compileDirectoryUrl,
-  compileDirectoryClean = false,
   writeOnFilesystem = true,
   useFilesystemAsCache = true,
 
@@ -56,7 +57,6 @@ export const startCompileServer = async ({
 
   babelPluginMap = jsenvBabelPluginMap,
   convertMap = {},
-  compileConfig = {},
 
   // options related to the server itself
   protocol = "http",
@@ -95,16 +95,16 @@ export const startCompileServer = async ({
   if (typeof importMapFileUrl === "undefined") {
     importMapFileUrl = resolveFileUrl("./importMap.json", projectDirectoryUrl)
   }
-  if (typeof compileDirectoryUrl === "undefined") {
-    compileDirectoryUrl = resolveDirectoryUrl("./dist/", projectDirectoryUrl)
+  if (typeof jsenvDirectoryRelativeUrl !== "string") {
+    throw new TypeError(
+      `jsenvDirectoryRelativeUrl must be a string. got ${jsenvDirectoryRelativeUrl}`,
+    )
   }
-  if (typeof compileDirectoryUrl !== "string") {
-    throw new TypeError(`compileDirectoryUrl must be a string. got ${compileDirectoryUrl}`)
-  }
-  if (!compileDirectoryUrl.startsWith(projectDirectoryUrl)) {
-    throw new TypeError(`compileDirectoryUrl must be inside projectDirectoryUrl.
---- compile directory url ---
-${compileDirectoryUrl}
+  const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
+  if (!jsenvDirectoryUrl.startsWith(projectDirectoryUrl)) {
+    throw new TypeError(`jsenv directory must be inside project directory
+--- jsenv directory url ---
+${jsenvDirectoryUrl}
 --- project directory url ---
 ${projectDirectoryUrl}`)
   }
@@ -132,11 +132,7 @@ ${projectDirectoryUrl}`)
   const logger = createLogger({ logLevel: compileServerLogLevel })
 
   const importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
-  const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
-
-  compileConfig[browserPlatformFileUrl] = {
-    transformModuleIntoSystemFormat: false,
-  }
+  const compileDirectoryUrl = resolveDirectoryUrl(COMPILE_DIRECTORY, jsenvDirectoryUrl)
 
   const groupMap = generateGroupMap({
     babelPluginMap,
@@ -151,10 +147,13 @@ ${projectDirectoryUrl}`)
     convertMap,
     groupMap,
   }
+  if (jsenvDirectoryClean) {
+    logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`)
+    await removeDirectory(fileUrlToPath(jsenvDirectoryUrl))
+  }
   await cleanCompileDirectoryIfObsolete({
-    compileDirectoryUrl,
+    jsenvDirectoryUrl,
     compileDirectoryMeta,
-    forceObsolete: compileDirectoryClean,
     cleanCallback: (compileDirectoryPath) => {
       logger.info(`clean compile directory content at ${compileDirectoryPath}`)
     },
@@ -287,7 +286,7 @@ ${projectDirectoryUrl}`)
     generateImportMapForCompileServer({
       logger,
       projectDirectoryUrl,
-      compileDirectoryRelativeUrl,
+      jsenvDirectoryRelativeUrl: urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl),
       importMapFileUrl,
     }),
   ])
@@ -296,22 +295,22 @@ ${projectDirectoryUrl}`)
 
   env = {
     ...env,
-    compileDirectoryRelativeUrl,
+    jsenvDirectoryRelativeUrl,
     importDefaultExtension,
   }
 
   // it would be better for perf to generated them on demand but for now that's good
   await Promise.all([
     writeFileContent(
-      fileUrlToPath(resolveFileUrl("./importMap.json", compileDirectoryUrl)),
+      fileUrlToPath(resolveFileUrl("./importMap.json", jsenvDirectoryUrl)),
       JSON.stringify(importMapForCompileServer, null, "  "),
     ),
     writeFileContent(
-      fileUrlToPath(resolveFileUrl("./groupMap.json", compileDirectoryUrl)),
+      fileUrlToPath(resolveFileUrl("./groupMap.json", jsenvDirectoryUrl)),
       JSON.stringify(groupMap, null, "  "),
     ),
     writeFileContent(
-      fileUrlToPath(resolveFileUrl("./env.js", compileDirectoryUrl)),
+      fileUrlToPath(resolveFileUrl("./env.js", jsenvDirectoryUrl)),
       Object.keys(env)
         .map(
           (key) => `
@@ -449,7 +448,7 @@ const serveProjectFiles = async ({
 /**
  * generateImportMapForCompileServer allows the following:
  *
- * import importMap from '.jsenv/importMap.json'
+ * import importMap from '/.jsenv/importMap.json'
  *
  * returns jsenv internal importMap and
  *
@@ -467,7 +466,7 @@ const serveProjectFiles = async ({
 const generateImportMapForCompileServer = async ({
   logger,
   projectDirectoryUrl,
-  compileDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   importMapFileUrl,
 }) => {
   const importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
@@ -478,7 +477,11 @@ const generateImportMapForCompileServer = async ({
   })
   const importMapInternal = {
     imports: {
-      ".jsenv/": `./${compileDirectoryRelativeUrl}`,
+      ...(jsenvDirectoryRelativeUrl === ".jsenv/"
+        ? {}
+        : {
+            "/.jsenv/": `./${jsenvDirectoryRelativeUrl}`,
+          }),
       // in case importMapFileRelativeUrl is not the default
       // redirect /importMap.json to the proper location
       // well fuck it won't be compiled to something
@@ -486,6 +489,8 @@ const generateImportMapForCompileServer = async ({
       ...(importMapFileRelativeUrl === "importMap.json"
         ? {}
         : {
+            // but it means importMap.json is not
+            // gonna hit compile server
             "/importMap.json": `./${importMapFileRelativeUrl}`,
           }),
     },

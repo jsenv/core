@@ -1,4 +1,5 @@
 import { urlToContentType, serveFile } from "@jsenv/server"
+import { COMPILE_ID_BUNDLE, COMPILE_ID_OTHERWISE } from "internal/CONSTANTS.js"
 import { urlToRelativeUrl, resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
@@ -53,7 +54,7 @@ export const serveCompiledJs = async ({
   }
 
   // unexpected compileId
-  if (compileId !== "bundle" && compileId in groupMap === false) {
+  if (compileId !== COMPILE_ID_BUNDLE && compileId in groupMap === false) {
     return {
       status: 400,
       statusText: `compileId must be one of ${Object.keys(groupMap)}, received ${compileId}`,
@@ -89,7 +90,7 @@ export const serveCompiledJs = async ({
   }
 
   let compiledIdForGroupMap
-  if (compileId === "bundle") {
+  if (compileId === COMPILE_ID_BUNDLE) {
     compiledIdForGroupMap = getWorstCompileId(groupMap)
     // we are compiling for rollup, do not transform into systemjs format
     transformModuleIntoSystemFormat = false
@@ -163,8 +164,8 @@ export const serveCompiledJs = async ({
 }
 
 const getWorstCompileId = (groupMap) => {
-  if ("otherwise" in groupMap) {
-    return "otherwise"
+  if (COMPILE_ID_OTHERWISE in groupMap) {
+    return COMPILE_ID_OTHERWISE
   }
   return Object.keys(groupMap)[Object.keys(groupMap).length - 1]
 }

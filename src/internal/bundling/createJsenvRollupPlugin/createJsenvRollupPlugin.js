@@ -7,6 +7,7 @@ import {
   pathToFileUrl,
   resolveFileUrl,
   fileUrlToRelativePath,
+  resolveDirectoryUrl,
 } from "internal/urlUtils.js"
 import { writeFileContent } from "internal/filesystemUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
@@ -30,7 +31,7 @@ export const createJsenvRollupPlugin = async ({
 
   compileServerOrigin,
   compileServerImportMap,
-  compileDirectoryServerUrl,
+  compileDirectoryRelativeUrl,
   babelPluginMap,
 
   minify,
@@ -39,6 +40,10 @@ export const createJsenvRollupPlugin = async ({
 }) => {
   const moduleContentMap = {}
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
+  const compileDirectoryServerUrl = resolveDirectoryUrl(
+    compileDirectoryRelativeUrl,
+    compileServerOrigin,
+  )
   const importMap = normalizeImportMap(compileServerImportMap, compileDirectoryServerUrl)
 
   const jsenvRollupPlugin = {
@@ -173,6 +178,7 @@ export const createJsenvRollupPlugin = async ({
     }
 
     if (contentType === "application/json") {
+      // we could minify json too
       return {
         contentRaw: content,
         content: `export default ${content}`,
@@ -181,6 +187,7 @@ export const createJsenvRollupPlugin = async ({
     }
 
     if (contentType.startsWith("text/")) {
+      // we could minify html, svg, css etc too
       return {
         contentRaw: content,
         content: `export default ${JSON.stringify(content)}`,
