@@ -2,7 +2,7 @@ import { firstService, serveFile } from "@jsenv/server"
 import { urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { urlIsAsset } from "internal/compiling/urlIsAsset.js"
-import { serveBundle } from "src/serveBundle.js"
+import { serveBundle } from "internal/compiling/serveBundle.js"
 
 export const serveBrowserSelfExecute = ({
   compileServerOrigin,

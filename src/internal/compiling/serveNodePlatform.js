@@ -1,6 +1,6 @@
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { urlToRelativeUrl } from "internal/urlUtils.js"
-import { serveBundle } from "src/serveBundle.js"
+import { serveBundle } from "./serveBundle.js"
 
 export const serveNodePlatform = async ({
   cancellationToken,

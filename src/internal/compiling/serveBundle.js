@@ -4,7 +4,7 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { generateBundleUsingRollup } from "internal/bundling/generateBundleUsingRollup.js"
 import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
-import { serveCompiledFile } from "internal/compiling/serveCompiledFile.js"
+import { serveCompiledFile } from "./serveCompiledFile.js"
 
 export const serveBundle = async ({
   cancellationToken,

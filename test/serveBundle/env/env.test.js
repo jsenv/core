@@ -11,8 +11,8 @@ import {
 import { readFileContent } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
+import { serveBundle } from "internal/compiling/serveBundle.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
-import { serveBundle } from "src/serveBundle.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
