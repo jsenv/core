@@ -1,3 +1,4 @@
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { urlToRelativeUrl } from "internal/urlUtils.js"
 import { serveBundle } from "src/serveBundle.js"
 
@@ -6,6 +7,7 @@ export const serveNodePlatform = async ({
   logger,
 
   projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
   compileDirectoryUrl,
   importDefaultExtension,
   nodePlatformFileUrl,
@@ -18,22 +20,23 @@ export const serveNodePlatform = async ({
 }) => {
   const { origin, ressource } = request
   const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
-  const nodePlatformCompiledFileRelativeUrl = `${compileDirectoryRelativeUrl}node-platform.js`
-  const nodePlatformCompiledFileUrl = `${projectDirectoryUrl}${nodePlatformCompiledFileRelativeUrl}`
-  const nodePlatformCompiledFileServerUrl = `${origin}/${nodePlatformCompiledFileRelativeUrl}`
+  const nodePlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativeUrl}.jsenv/node-platform.js`
   const requestUrl = `${origin}${ressource}`
   if (!requestUrl.startsWith(nodePlatformCompiledFileServerUrl)) {
     return null
   }
 
+  const originalFileUrl = nodePlatformFileUrl
+  const compiledFileUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}node-platform.js`
   return serveBundle({
     cancellationToken,
     logger,
 
+    jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
     compileDirectoryUrl,
-    originalFileUrl: nodePlatformFileUrl,
-    compiledFileUrl: nodePlatformCompiledFileUrl,
+    originalFileUrl,
+    compiledFileUrl,
     importDefaultExtension,
     format: "commonjs",
 

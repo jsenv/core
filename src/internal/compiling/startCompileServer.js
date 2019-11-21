@@ -241,6 +241,7 @@ ${projectDirectoryUrl}`)
               logger,
 
               projectDirectoryUrl,
+              jsenvDirectoryRelativeUrl,
               compileDirectoryUrl,
               importDefaultExtension,
               nodePlatformFileUrl,
