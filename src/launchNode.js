@@ -1,4 +1,5 @@
 /* eslint-disable import/max-dependencies */
+import { Script } from "vm"
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
@@ -6,28 +7,22 @@ import { fileUrlToPath, resolveFileUrl } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
-import { evalSource } from "internal/node-launcher/evalSource.js"
 import { createChildExecArgv } from "internal/node-launcher/createChildExecArgv.js"
-import { generateNodeBundle } from "internal/node-launcher/generateNodeBundle.js"
-import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 const EVALUATION_STATUS_OK = "evaluation-ok"
-const NODE_EXECUTE_RELATIVE_PATH = ".jsenv/node-execute.js"
 
 export const launchNode = async ({
   cancellationToken = createCancellationToken(),
-  logger,
+  // logger,
   compileServerOrigin,
   projectDirectoryUrl,
-  compileDirectoryUrl,
-  importMapFileUrl,
-  importDefaultExtension,
+  compileDirectoryServerUrl,
   nodeControllableFileUrl = resolveFileUrl(
     "./src/internal/node-launcher/nodeControllableFile.js",
     jsenvCoreDirectoryUrl,
   ),
-  nodeExecuteTemplateFileUrl = resolveFileUrl(
-    "./src/internal/node-launcher/nodeExecuteFileTemplate.js",
+  nodeExecuteFileUrl = resolveFileUrl(
+    "./src/internal/node-launcher/nodeExecuteFile.js",
     jsenvCoreDirectoryUrl,
   ),
   debugPort = 0,
@@ -37,7 +32,6 @@ export const launchNode = async ({
   traceWarnings = true,
   cover = false,
   env,
-  babelPluginMap = jsenvBabelPluginMap,
 }) => {
   if (typeof compileServerOrigin !== "string") {
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
@@ -45,8 +39,10 @@ export const launchNode = async ({
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
   }
-  if (typeof compileDirectoryUrl !== "string") {
-    throw new TypeError(`compileDirectoryUrl must be a string, got ${compileDirectoryUrl}`)
+  if (typeof compileDirectoryServerUrl !== "string") {
+    throw new TypeError(
+      `compileDirectoryServerUrl must be a string, got ${compileDirectoryServerUrl}`,
+    )
   }
   if (env === undefined) {
     env = { ...process.env }
@@ -54,7 +50,7 @@ export const launchNode = async ({
     throw new TypeError(`env must be an object, got ${env}`)
   }
   await assertFileExists(nodeControllableFileUrl)
-  await assertFileExists(nodeExecuteTemplateFileUrl)
+  await assertFileExists(nodeExecuteFileUrl)
 
   const execArgv = await createChildExecArgv({
     cancellationToken,
@@ -157,26 +153,11 @@ export const launchNode = async ({
     return disconnectedPromise
   }
 
-  const nodeExecuteTemplateCompiledFileUrl = resolveFileUrl(
-    NODE_EXECUTE_RELATIVE_PATH,
-    compileDirectoryUrl,
-  )
-
   const executeFile = async (
     fileRelativeUrl,
     { collectNamespace, collectCoverage, executionId },
   ) => {
     const execute = async () => {
-      await generateNodeBundle({
-        logger,
-        projectDirectoryUrl,
-        importMapFileUrl,
-        importDefaultExtension,
-        originalFileUrl: nodeExecuteTemplateFileUrl,
-        compiledFileUrl: nodeExecuteTemplateCompiledFileUrl,
-        babelPluginMap,
-      })
-
       return new Promise((resolve, reject) => {
         const evaluationResultRegistration = registerChildMessage(
           child,
@@ -194,8 +175,8 @@ export const launchNode = async ({
           createNodeIIFEString({
             compileServerOrigin,
             projectDirectoryUrl,
-            compileDirectoryUrl,
-            nodeExecuteTemplateCompiledFileUrl,
+            compileDirectoryServerUrl,
+            nodeExecuteFileUrl,
             fileRelativeUrl,
             collectNamespace,
             collectCoverage,
@@ -303,8 +284,8 @@ const createExitWithFailureCodeError = (code) => {
 const createNodeIIFEString = ({
   compileServerOrigin,
   projectDirectoryUrl,
-  compileDirectoryUrl,
-  nodeExecuteTemplateCompiledFileUrl,
+  compileDirectoryServerUrl,
+  nodeExecuteFileUrl,
   fileRelativeUrl,
   collectNamespace,
   collectCoverage,
@@ -315,7 +296,7 @@ const createNodeIIFEString = ({
     nodeExecuteFilePath,
     compileServerOrigin,
     projectDirectoryUrl,
-    compileDirectoryUrl,
+    compileDirectoryServerUrl,
     fileRelativeUrl,
     collectNamespace,
     collectCoverage,
@@ -323,10 +304,10 @@ const createNodeIIFEString = ({
     remap
   } = ${JSON.stringify(
     {
-      nodeExecuteFilePath: fileUrlToPath(nodeExecuteTemplateCompiledFileUrl),
+      nodeExecuteFilePath: fileUrlToPath(nodeExecuteFileUrl),
       compileServerOrigin,
       projectDirectoryUrl,
-      compileDirectoryUrl,
+      compileDirectoryServerUrl,
       fileRelativeUrl,
       collectNamespace,
       collectCoverage,
@@ -350,3 +331,8 @@ const createNodeIIFEString = ({
     remap
   })
 })()`
+
+const evalSource = (code, href) => {
+  const script = new Script(code, { filename: href })
+  return script.runInThisContext()
+}

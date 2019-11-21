@@ -3,14 +3,12 @@ import {
   catchAsyncFunctionCancellation,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, resolveDirectoryUrl, resolveFileUrl } from "internal/urlUtils.js"
+import { pathToDirectoryUrl, resolveFileUrl } from "internal/urlUtils.js"
 import {
   assertProjectDirectoryPath,
   assertProjectDirectoryExists,
   assertImportMapFileRelativeUrl,
   assertImportMapFileInsideProject,
-  assertCompileDirectoryRelativeUrl,
-  assertCompileDirectoryInsideProject,
 } from "internal/argUtils.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "internal/executing/launchAndExecute.js"
@@ -23,8 +21,8 @@ export const execute = async ({
   executeLogLevel = logLevel,
 
   projectDirectoryPath,
-  compileDirectoryRelativeUrl = "./.dist",
-  compileDirectoryClean,
+  jsenvDirectoryRelativeUrl = "./.jsenv/",
+  jsenvDirectoryClean,
   importMapFileRelativeUrl = "./importMap.json",
   importDefaultExtension,
   fileRelativeUrl,
@@ -54,10 +52,6 @@ export const execute = async ({
   const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
-  assertCompileDirectoryRelativeUrl({ compileDirectoryRelativeUrl })
-  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
-  assertCompileDirectoryInsideProject({ compileDirectoryUrl, projectDirectoryUrl })
-
   if (typeof fileRelativeUrl !== "string") {
     throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`)
   }
@@ -67,15 +61,17 @@ export const execute = async ({
   }
 
   return catchAsyncFunctionCancellation(async () => {
-    const { origin: compileServerOrigin } = await startCompileServer({
+    const { origin: compileServerOrigin, compileDirectoryServerUrl } = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
 
       projectDirectoryUrl,
-      compileDirectoryUrl,
-      compileDirectoryClean,
+      jsenvDirectoryRelativeUrl,
+      jsenvDirectoryClean,
+
       importMapFileUrl,
       importDefaultExtension,
+
       babelPluginMap,
       convertMap,
       compileGroupCount,
@@ -94,9 +90,7 @@ export const execute = async ({
           ...params,
           compileServerOrigin,
           projectDirectoryUrl,
-          compileDirectoryUrl,
-          importMapFileRelativeUrl,
-          importDefaultExtension,
+          compileDirectoryServerUrl,
         }),
       mirrorConsole,
       stopPlatformAfterExecute,

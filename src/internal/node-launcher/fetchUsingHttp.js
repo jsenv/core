@@ -1,13 +1,12 @@
-import { globalAgent } from "https"
-import { createOperation } from "@jsenv/cancellation"
-
-const fetch = import.meta.require("node-fetch")
-const AbortController = import.meta.require("abort-controller")
+const { globalAgent } = require("https")
+const fetch = require("node-fetch")
+const AbortController = require("abort-controller")
+const { createOperation } = require("@jsenv/cancellation")
 
 // ideally we should only pass this to the fetch below
 globalAgent.options.rejectUnauthorized = false
 
-export const fetchUsingHttp = async (url, { cancellationToken, ...rest } = {}) => {
+const fetchUsingHttp = async (url, { cancellationToken, ...rest } = {}) => {
   if (cancellationToken) {
     // a cancelled fetch will never resolve, while cancellation api
     // expect to get a rejected promise.
@@ -26,6 +25,7 @@ export const fetchUsingHttp = async (url, { cancellationToken, ...rest } = {}) =
   const response = await fetch(url, rest)
   return normalizeResponse(response)
 }
+exports.fetchUsingHttp = fetchUsingHttp
 
 const normalizeResponse = async (response) => {
   const text = await response.text()
