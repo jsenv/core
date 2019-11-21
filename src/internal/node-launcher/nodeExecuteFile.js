@@ -4,7 +4,7 @@ const { fetchUsingHttp } = require("./fetchUsingHttp.js")
 const execute = async ({
   compileServerOrigin,
   projectDirectoryUrl,
-  compileDirectoryServerUrl,
+  jsenvDirectoryServerUrl,
   fileRelativeUrl,
   collectNamespace,
   collectCoverage,
@@ -19,15 +19,17 @@ const execute = async ({
     throw valueRejected
   })
 
-  const nodePlatformCompiledFileServerUrl = `${compileDirectoryServerUrl}.jsenv/node-platform.js`
+  const nodePlatformCompiledFileServerUrl = `${jsenvDirectoryServerUrl}out/.jsenv/node-platform.js`
   await fetchUsingHttp(nodePlatformCompiledFileServerUrl)
 
-  const nodePlatformCompiledFileProjectUrl = urlToProjectUrl(nodePlatformCompiledFileServerUrl, {
+  const jsenvDirectoryProjectUrl = urlToProjectUrl(jsenvDirectoryServerUrl, {
     projectDirectoryUrl,
     compileServerOrigin,
   })
+  const nodePlatformCompiledFileProjectUrl = `${jsenvDirectoryProjectUrl}node-platform.js`
+  const nodePlatformCompiledFilePath = fileURLToPath(nodePlatformCompiledFileProjectUrl)
   // eslint-disable-next-line import/no-dynamic-require
-  const { nodePlatform } = require(fileURLToPath(nodePlatformCompiledFileProjectUrl))
+  const { nodePlatform } = require(nodePlatformCompiledFilePath)
 
   const { relativeUrlToCompiledUrl, executeFile } = nodePlatform.create({
     projectDirectoryUrl,

@@ -276,6 +276,13 @@ ${moduleUrl}`)
 //   return url
 // }
 
+const urlToServerUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
+  if (url.startsWith(projectDirectoryUrl)) {
+    return `${compileServerOrigin}/${url.slice(projectDirectoryUrl.length)}`
+  }
+  return null
+}
+
 const potentialServerUrlToUrl = (url, { compileServerOrigin, projectDirectoryUrl }) => {
   if (url.startsWith(`${compileServerOrigin}/`)) {
     return `${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`

@@ -1,7 +1,7 @@
 // https://github.com/cfware/babel-plugin-bundled-import-meta/blob/master/index.js
 const { addNamed } = import.meta.require("@babel/helper-module-imports")
 
-export const createImportMetaUrlNamedImportBabelPlugin = ({ importMetaFacadeUrl }) => {
+export const createImportMetaUrlNamedImportBabelPlugin = ({ importMetaSpecifier }) => {
   return () => {
     return {
       visitor: {
@@ -29,7 +29,7 @@ export const createImportMetaUrlNamedImportBabelPlugin = ({ importMetaFacadeUrl 
 
           Object.keys(metaPropertyMap).forEach((propertyName) => {
             const importMetaPropertyId = propertyName
-            const result = addNamed(programPath, importMetaPropertyId, importMetaFacadeUrl)
+            const result = addNamed(programPath, importMetaPropertyId, importMetaSpecifier)
             metaPropertyMap[propertyName].forEach((path) => {
               path.replaceWith(result)
             })

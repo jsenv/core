@@ -61,7 +61,7 @@ export const execute = async ({
   }
 
   return catchAsyncFunctionCancellation(async () => {
-    const { origin: compileServerOrigin, compileDirectoryServerUrl } = await startCompileServer({
+    const { origin: compileServerOrigin, jsenvDirectoryServerUrl } = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
 
@@ -90,7 +90,7 @@ export const execute = async ({
           ...params,
           compileServerOrigin,
           projectDirectoryUrl,
-          compileDirectoryServerUrl,
+          jsenvDirectoryServerUrl,
         }),
       mirrorConsole,
       stopPlatformAfterExecute,

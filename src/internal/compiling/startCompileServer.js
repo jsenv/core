@@ -299,7 +299,7 @@ ${projectDirectoryUrl}`)
     }),
   ])
 
-  const compileDirectoryServerUrl = `${compileServer.origin}/${jsenvDirectoryRelativeUrl}${COMPILE_DIRECTORY}/`
+  const jsenvDirectoryServerUrl = `${compileServer.origin}/${jsenvDirectoryRelativeUrl}`
   const importMap = normalizeImportMap(importMapForCompileServer, compileServer.origin)
 
   env = {
@@ -383,7 +383,7 @@ export const ${key} = ${JSON.stringify(env[key])}
     ...compileServer,
     importMap: importMapForCompileServer,
     groupMap,
-    compileDirectoryServerUrl,
+    jsenvDirectoryServerUrl,
   }
 }
 

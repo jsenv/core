@@ -22,7 +22,7 @@ import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
-import { generateBabelPluginMapForBundle } from "./generateBabelPluginMapForBundle.js"
+import { createBabePluginMapForBundle } from "./createBabePluginMapForBundle.js"
 import { generateBundleUsingRollup } from "./generateBundleUsingRollup.js"
 
 export const generateBundle = async ({
@@ -93,7 +93,9 @@ export const generateBundle = async ({
   }
   babelPluginMap = {
     ...babelPluginMap,
-    ...generateBabelPluginMapForBundle({ format }),
+    ...createBabePluginMapForBundle({
+      format,
+    }),
   }
 
   assertCompileGroupCount({ compileGroupCount })

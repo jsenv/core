@@ -6,6 +6,6 @@ export const EXECUTE_TEST_PARAMS = {
   logLevel: "off",
   projectDirectoryPath: fileUrlToPath(jsenvCoreDirectoryUrl),
   babelPluginMap: testBabelPluginMap,
-  compileDirectoryClean: true,
+  jsenvDirectoryClean: true,
   inheritCoverage: process.env.COVERAGE_ENABLED === "true",
 }

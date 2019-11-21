@@ -1,5 +1,5 @@
 import { extname, basename } from "path"
-import { COMPILE_ID_BUNDLE } from "internal/CONSTANTS.js"
+import { COMPILE_ID_BUNDLE_GLOBAL, COMPILE_ID_BUNDLE_COMMONJS } from "internal/CONSTANTS.js"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { generateBundleUsingRollup } from "internal/bundling/generateBundleUsingRollup.js"
@@ -59,7 +59,9 @@ export const serveBundle = async ({
       babelPluginMap,
       compileServerOrigin,
       compileServerImportMap,
-      compileDirectoryRelativeUrl: `${compileDirectoryRelativeUrl}${COMPILE_ID_BUNDLE}`,
+      compileDirectoryRelativeUrl: `${compileDirectoryRelativeUrl}${
+        format === "global" ? COMPILE_ID_BUNDLE_GLOBAL : COMPILE_ID_BUNDLE_COMMONJS
+      }/`,
       format,
       formatOutputOptions,
       writeOnFileSystem: false,

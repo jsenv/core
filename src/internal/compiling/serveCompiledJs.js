@@ -1,7 +1,12 @@
 import { urlToContentType, serveFile } from "@jsenv/server"
-import { COMPILE_ID_BUNDLE, COMPILE_ID_OTHERWISE } from "internal/CONSTANTS.js"
+import {
+  COMPILE_ID_BUNDLE_GLOBAL,
+  COMPILE_ID_BUNDLE_COMMONJS,
+  COMPILE_ID_OTHERWISE,
+} from "internal/CONSTANTS.js"
 import { urlToRelativeUrl, resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
+import { createBabePluginMapForBundle } from "internal/bundling/createBabePluginMapForBundle.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
@@ -54,7 +59,11 @@ export const serveCompiledJs = async ({
   }
 
   // unexpected compileId
-  if (compileId !== COMPILE_ID_BUNDLE && compileId in groupMap === false) {
+  if (
+    compileId !== COMPILE_ID_BUNDLE_GLOBAL &&
+    compileId !== COMPILE_ID_BUNDLE_COMMONJS &&
+    compileId in groupMap === false
+  ) {
     return {
       status: 400,
       statusText: `compileId must be one of ${Object.keys(groupMap)}, received ${compileId}`,
@@ -98,12 +107,17 @@ export const serveCompiledJs = async ({
   }
 
   let compiledIdForGroupMap
-  if (compileId === COMPILE_ID_BUNDLE) {
+  let babelPluginMapForGroupMap
+  if (compileId === COMPILE_ID_BUNDLE_GLOBAL || compileId === COMPILE_ID_BUNDLE_COMMONJS) {
     compiledIdForGroupMap = getWorstCompileId(groupMap)
     // we are compiling for rollup, do not transform into systemjs format
     transformModuleIntoSystemFormat = false
+    babelPluginMapForGroupMap = createBabePluginMapForBundle({
+      format: compileId === COMPILE_ID_BUNDLE_GLOBAL ? "global" : "commonjs",
+    })
   } else {
     compiledIdForGroupMap = compileId
+    babelPluginMapForGroupMap = {}
   }
 
   const compiledFileUrl = `${compileDirectoryUrl}${compileId}/${originalFileRelativeUrl}`
@@ -152,7 +166,10 @@ export const serveCompiledJs = async ({
         projectDirectoryUrl,
         code,
         url: originalFileUrl,
-        babelPluginMap: groupBabelPluginMap,
+        babelPluginMap: {
+          ...groupBabelPluginMap,
+          ...babelPluginMapForGroupMap,
+        },
         convertMap,
         transformTopLevelAwait,
         transformModuleIntoSystemFormat,
