@@ -25,9 +25,8 @@ const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${COMPILE_DIREC
 const originalFileUrl = import.meta.resolve("./file.js")
 const compiledFileUrl = import.meta.resolve(`./.jsenv/file.js`)
 const babelPluginMap = jsenvBabelPluginMap
-
 const compileServer = await startCompileServer({
-  compileServerLogLevel: "debug",
+  compileServerLogLevel: "warn",
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean: true,
@@ -36,10 +35,9 @@ const compileServer = await startCompileServer({
     whatever: 42,
   },
 })
-
-const { status: actual } = await serveBundle({
+const serveBundleParams = {
   cancellationToken: createCancellationToken(),
-  logger: createLogger({ logLevel: "debug" }),
+  logger: createLogger({ logLevel: "warn" }),
 
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   compileDirectoryUrl: resolveDirectoryUrl(compileDirectoryRelativeUrl, jsenvCoreDirectoryUrl),
@@ -57,9 +55,14 @@ const { status: actual } = await serveBundle({
   compileServerOrigin: compileServer.origin,
   compileServerImportMap: compileServer.importMap,
   babelPluginMap,
-})
-const expected = 200
-assert({ actual, expected })
+}
+const response = await serveBundle(serveBundleParams)
+
+{
+  const { status: actual } = response
+  const expected = 200
+  assert({ actual, expected })
+}
 
 {
   const sourcemapFileUrl = `${compiledFileUrl}.map`
@@ -103,3 +106,17 @@ assert({ actual, expected })
   const expected = "object"
   assert({ actual, expected })
 }
+
+// ensure serveBundle cache works
+const secondResponse = await serveBundle({
+  ...serveBundleParams,
+  request: {
+    ...serveBundleParams.request,
+    headers: {
+      "if-none-match": response.headers.eTag,
+    },
+  },
+})
+const actual = secondResponse.status
+const expected = 304
+assert({ actual, expected })
