@@ -1,8 +1,8 @@
 import { findHighestVersion, versionCompare } from "internal/semantic-versioning/index.js"
 import { jsenvBabelPluginCompatMap } from "src/jsenvBabelPluginCompatMap.js"
 import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "src/jsenvPluginCompatMap.js"
-import { computeBabelPluginMapForPlatform } from "src/computeBabelPluginMapForPlatform.js"
-import { computeJsenvPluginMapForPlatform } from "src/computeJsenvPluginMapForPlatform.js"
+import { computeBabelPluginMapForPlatform } from "./computeBabelPluginMapForPlatform.js"
+import { computeJsenvPluginMapForPlatform } from "./computeJsenvPluginMapForPlatform.js"
 import { groupHaveSameRequirements } from "./groupHaveSameRequirements.js"
 
 export const generatePlatformGroupArray = ({
