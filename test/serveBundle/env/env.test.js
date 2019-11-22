@@ -25,8 +25,8 @@ const compiledFileUrl = import.meta.resolve(`./.jsenv/file.js`)
 const babelPluginMap = jsenvBabelPluginMap
 
 const {
+  outDirectoryRelativeUrl,
   origin: compileServerOrigin,
-  outDirectoryRemoteUrl,
   compileServerImportMap,
 } = await startCompileServer({
   // compileServerLogLevel: "debug",
@@ -38,7 +38,7 @@ const {
     whatever: 42,
   },
 })
-const ressource = `${urlToRelativeUrl(outDirectoryRemoteUrl, compileServerOrigin)}file.js`
+const ressource = `/${outDirectoryRelativeUrl}file.js`
 
 const { status: actual } = await serveBundle({
   cancellationToken: createCancellationToken(),
@@ -47,6 +47,9 @@ const { status: actual } = await serveBundle({
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
+  outDirectoryRelativeUrl,
+  compileServerOrigin,
+  compileServerImportMap,
   format: "commonjs",
 
   projectFileRequestedCallback: () => {},
@@ -56,9 +59,6 @@ const { status: actual } = await serveBundle({
     method: "GET",
     headers: {},
   },
-  outDirectoryRemoteUrl,
-  compileServerOrigin,
-  compileServerImportMap,
   babelPluginMap,
 })
 const expected = 200

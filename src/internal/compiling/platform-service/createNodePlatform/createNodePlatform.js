@@ -5,7 +5,7 @@ import groupMap from "/.jsenv/groupMap.json"
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/.jsenv/importMap.json"
 import {
-  outDirectoryRemoteUrl,
+  outDirectoryRelativeUrl,
   importDefaultExtension,
   // eslint-disable-next-line import/no-unresolved
 } from "/.jsenv/env.js"
@@ -26,7 +26,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
     groupId: resolveNodeGroup({ groupMap }),
     groupMap,
   })
-  const compileDirectoryRemoteUrl = `${outDirectoryRemoteUrl}${compileId}/`
+  const compileDirectoryRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/`
   const importMapNormalized = normalizeImportMap(importMap, compileDirectoryRemoteUrl)
 
   const resolveImportScoped = (specifier, importer) => {
@@ -46,7 +46,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
       compileServerOrigin,
-      outDirectoryRemoteUrl,
+      outDirectoryRelativeUrl,
       resolveImport: resolveImportScoped,
     })
     return makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
@@ -64,8 +64,8 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
   ) => {
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
+      outDirectoryRelativeUrl,
       compileServerOrigin,
-      outDirectoryRemoteUrl,
       resolveImport: resolveImportScoped,
       executionId,
     })

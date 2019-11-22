@@ -5,7 +5,7 @@ import groupMap from "/.jsenv/groupMap.json"
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/.jsenv/importMap.json"
 import {
-  outDirectoryRemoteUrl,
+  outDirectoryRelativeUrl,
   importDefaultExtension,
   // eslint-disable-next-line import/no-unresolved
 } from "/.jsenv/env.js"
@@ -22,12 +22,12 @@ import { displayErrorNotification } from "./displayErrorNotification.js"
 const GLOBAL_SPECIFIER = "global"
 const memoizedCreateBrowserSystem = memoizeOnce(createBrowserSystem)
 
-export const createBrowserPlatform = () => {
+export const createBrowserPlatform = ({ compileServerOrigin }) => {
   const compileId = computeCompileIdFromGroupId({
     groupId: resolveBrowserGroup({ groupMap }),
     groupMap,
   })
-  const compileDirectoryRemoteUrl = `${outDirectoryRemoteUrl}${compileId}/`
+  const compileDirectoryRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/`
 
   const importMapNormalized = normalizeImportMap(importMap, compileDirectoryRemoteUrl)
 

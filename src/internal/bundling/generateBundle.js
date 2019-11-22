@@ -107,7 +107,7 @@ export const generateBundle = async ({
 
   return catchAsyncFunctionCancellation(async () => {
     const {
-      outDirectoryRemoteUrl,
+      outDirectoryRelativeUrl,
       compileServerOrigin,
       compileServerImportMap,
       compileServerGroupMap,
@@ -149,7 +149,7 @@ export const generateBundle = async ({
 
         babelPluginMap,
         compileServerOrigin,
-        compileDirectoryRemoteUrl: resolveDirectoryUrl(COMPILE_ID_OTHERWISE, outDirectoryRemoteUrl),
+        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         compileServerImportMap,
 
         minify,
@@ -166,17 +166,16 @@ export const generateBundle = async ({
         logger,
 
         projectDirectoryUrl,
-        entryPointMap,
+        outDirectoryRelativeUrl,
         bundleDirectoryUrl,
+        entryPointMap,
         importDefaultExtension,
-        node,
-        browser,
-
         compileServerOrigin,
-        outDirectoryRemoteUrl,
         compileServerImportMap,
         compileServerGroupMap,
 
+        node,
+        browser,
         format,
         formatOutputOptions,
         minify,
@@ -188,17 +187,16 @@ export const generateBundle = async ({
         logger,
 
         projectDirectoryUrl,
+        balancerTemplateFileUrl,
+        outDirectoryRelativeUrl,
         entryPointMap,
         bundleDirectoryUrl,
+        compileServerOrigin,
+        compileServerImportMap,
         importDefaultExtension,
+
         node,
         browser,
-        balancerTemplateFileUrl,
-
-        compileServerOrigin,
-        outDirectoryRemoteUrl,
-        compileServerImportMap,
-
         format,
         minify,
         writeOnFileSystem,
@@ -257,14 +255,14 @@ const assertCompileGroupCount = ({ compileGroupCount }) => {
 const generateEntryPointsDirectories = ({
   compileServerGroupMap,
   bundleDirectoryUrl,
-  outDirectoryRemoteUrl,
+  outDirectoryRelativeUrl,
   ...rest
 }) =>
   Promise.all(
     Object.keys(compileServerGroupMap).map((compileId) =>
       generateBundleUsingRollup({
         bundleDirectoryUrl: resolveDirectoryUrl(compileId, bundleDirectoryUrl),
-        compileDirectoryRemoteUrl: resolveDirectoryUrl(compileId, outDirectoryRemoteUrl),
+        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
         ...rest,
       }),
     ),
@@ -272,7 +270,7 @@ const generateEntryPointsDirectories = ({
 
 const generateEntryPointsBalancerFiles = ({
   projectDirectoryUrl,
-  outDirectoryRemoteUrl,
+  outDirectoryRelativeUrl,
   entryPointMap,
   balancerTemplateFileUrl,
   ...rest
@@ -281,7 +279,7 @@ const generateEntryPointsBalancerFiles = ({
     Object.keys(entryPointMap).map((entryPointName) =>
       generateBundleUsingRollup({
         projectDirectoryUrl,
-        compileDirectoryRemoteUrl: resolveDirectoryUrl(COMPILE_ID_OTHERWISE, outDirectoryRemoteUrl),
+        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         entryPointMap: {
           [entryPointName]: urlToRelativeUrl(balancerTemplateFileUrl, projectDirectoryUrl),
         },
