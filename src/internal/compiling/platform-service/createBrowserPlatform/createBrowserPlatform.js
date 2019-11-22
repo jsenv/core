@@ -5,14 +5,13 @@ import groupMap from "/.jsenv/groupMap.json"
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/.jsenv/importMap.json"
 import {
-  jsenvDirectoryRelativeUrl,
+  outDirectoryRemoteUrl,
   importDefaultExtension,
   // eslint-disable-next-line import/no-unresolved
 } from "/.jsenv/env.js"
 import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport/resolveImport.js"
-import { COMPILE_DIRECTORY } from "../../../CONSTANTS.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
 import { memoizeOnce } from "../memoizeOnce.js"
@@ -21,23 +20,19 @@ import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
 
 const GLOBAL_SPECIFIER = "global"
-const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${COMPILE_DIRECTORY}/`
 const memoizedCreateBrowserSystem = memoizeOnce(createBrowserSystem)
 
-export const createBrowserPlatform = ({ compileServerOrigin }) => {
+export const createBrowserPlatform = () => {
   const compileId = computeCompileIdFromGroupId({
     groupId: resolveBrowserGroup({ groupMap }),
     groupMap,
   })
 
   const relativeUrlToCompiledUrl = (relativeUrl) => {
-    return `${compileServerOrigin}/${compileDirectoryRelativeUrl}${compileId}/${relativeUrl}`
+    return `${outDirectoryRemoteUrl}${compileId}/${relativeUrl}`
   }
 
-  const importMapNormalized = normalizeImportMap(
-    importMap,
-    `${compileServerOrigin}/${compileDirectoryRelativeUrl}${compileId}/`,
-  )
+  const importMapNormalized = normalizeImportMap(importMap, `${outDirectoryRemoteUrl}${compileId}/`)
 
   const resolveImportScoped = (specifier, importer) => {
     if (specifier === GLOBAL_SPECIFIER) return specifier
@@ -51,8 +46,6 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
 
   const importFile = async (specifier) => {
     const browserSystem = await memoizedCreateBrowserSystem({
-      compileServerOrigin,
-      compileDirectoryRelativeUrl,
       resolveImport: resolveImportScoped,
     })
     return browserSystem.import(specifier)
@@ -71,8 +64,6 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
     } = {},
   ) => {
     const browserSystem = await memoizedCreateBrowserSystem({
-      compileServerOrigin,
-      compileDirectoryRelativeUrl,
       resolveImport: resolveImportScoped,
       executionId,
     })

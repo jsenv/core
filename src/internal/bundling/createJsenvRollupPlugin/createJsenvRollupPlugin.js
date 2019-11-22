@@ -7,7 +7,6 @@ import {
   pathToFileUrl,
   resolveFileUrl,
   fileUrlToRelativePath,
-  resolveDirectoryUrl,
 } from "internal/urlUtils.js"
 import { writeFileContent } from "internal/filesystemUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
@@ -30,8 +29,8 @@ export const createJsenvRollupPlugin = async ({
   importDefaultExtension,
 
   compileServerOrigin,
+  compileDirectoryRemoteUrl,
   compileServerImportMap,
-  compileDirectoryRelativeUrl,
   babelPluginMap,
 
   minify,
@@ -41,16 +40,12 @@ export const createJsenvRollupPlugin = async ({
   const moduleContentMap = {}
   const redirectionMap = {}
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
-  const compileDirectoryServerUrl = resolveDirectoryUrl(
-    compileDirectoryRelativeUrl,
-    compileServerOrigin,
-  )
-  const importMap = normalizeImportMap(compileServerImportMap, compileDirectoryServerUrl)
+  const importMap = normalizeImportMap(compileServerImportMap, compileDirectoryRemoteUrl)
 
   const jsenvRollupPlugin = {
     name: "jsenv",
 
-    resolveId: (specifier, importer = compileDirectoryServerUrl) => {
+    resolveId: (specifier, importer = compileDirectoryRemoteUrl) => {
       if (!hasScheme(importer)) {
         importer = pathToFileUrl(importer)
       }
@@ -276,12 +271,12 @@ ${moduleUrl}`)
 //   return url
 // }
 
-const urlToServerUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
-  if (url.startsWith(projectDirectoryUrl)) {
-    return `${compileServerOrigin}/${url.slice(projectDirectoryUrl.length)}`
-  }
-  return null
-}
+// const urlToServerUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
+//   if (url.startsWith(projectDirectoryUrl)) {
+//     return `${compileServerOrigin}/${url.slice(projectDirectoryUrl.length)}`
+//   }
+//   return null
+// }
 
 const potentialServerUrlToUrl = (url, { compileServerOrigin, projectDirectoryUrl }) => {
   if (url.startsWith(`${compileServerOrigin}/`)) {

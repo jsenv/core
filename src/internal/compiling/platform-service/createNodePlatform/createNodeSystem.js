@@ -11,9 +11,9 @@ import { evalSource } from "./evalSource.js"
 const GLOBAL_SPECIFIER = "global"
 
 export const createNodeSystem = ({
-  compileServerOrigin,
   projectDirectoryUrl,
-  compileDirectoryRelativeUrl,
+  compileServerOrigin,
+  outDirectoryRemoteUrl,
   resolveImport,
   executionId,
 } = {}) => {
@@ -54,9 +54,8 @@ export const createNodeSystem = ({
           evalSource(
             responseBody,
             responseUrlToSourceUrl(responseUrl, {
-              compileServerOrigin,
               projectDirectoryUrl,
-              compileDirectoryRelativeUrl,
+              compileServerOrigin,
             }),
           )
         } finally {
@@ -74,16 +73,16 @@ export const createNodeSystem = ({
     const resolve = (specifier) => {
       const urlResolved = resolveImport(specifier, url)
       return urlToOriginalUrl(urlResolved, {
-        compileServerOrigin,
         projectDirectoryUrl,
-        compileDirectoryRelativeUrl,
+        compileServerOrigin,
+        outDirectoryRemoteUrl,
       })
     }
 
     const originalUrl = urlToOriginalUrl(url, {
-      compileServerOrigin,
       projectDirectoryUrl,
-      compileDirectoryRelativeUrl,
+      compileServerOrigin,
+      outDirectoryRemoteUrl,
     })
 
     const require = createRequireFromPath(
@@ -118,7 +117,7 @@ const responseUrlToSourceUrl = (responseUrl, { compileServerOrigin, projectDirec
 
 const urlToOriginalUrl = (
   url,
-  { compileServerOrigin, projectDirectoryUrl, compileDirectoryRelativeUrl },
+  { projectDirectoryUrl, compileServerOrigin, outDirectoryRemoteUrl },
 ) => {
   if (!url.startsWith(`${compileServerOrigin}/`)) {
     return url
@@ -129,11 +128,11 @@ const urlToOriginalUrl = (
   }
 
   const afterOrigin = url.slice(`${compileServerOrigin}/`.length)
-  if (!afterOrigin.startsWith(compileDirectoryRelativeUrl)) {
+  if (!afterOrigin.startsWith(outDirectoryRemoteUrl)) {
     return url
   }
 
-  const afterCompileDirectory = afterOrigin.slice(compileDirectoryRelativeUrl.length)
+  const afterCompileDirectory = afterOrigin.slice(outDirectoryRemoteUrl.length)
   const nextSlashIndex = afterCompileDirectory.indexOf("/")
   if (nextSlashIndex === -1) {
     return url

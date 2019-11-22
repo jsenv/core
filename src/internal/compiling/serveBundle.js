@@ -12,7 +12,6 @@ export const serveBundle = async ({
 
   jsenvProjectDirectoryUrl = jsenvCoreDirectoryUrl,
   projectDirectoryUrl,
-  compileDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
   importDefaultExtension,
@@ -23,6 +22,7 @@ export const serveBundle = async ({
 
   projectFileRequestedCallback,
   request,
+  outDirectoryRemoteUrl,
   compileServerOrigin,
   compileServerImportMap,
   babelPluginMap,
@@ -41,7 +41,6 @@ export const serveBundle = async ({
     const entryPointMap = {
       [entryName]: `./${originalFileRelativeUrl}`,
     }
-    const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
 
     const bundle = await generateBundleUsingRollup({
       cancellationToken,
@@ -58,10 +57,11 @@ export const serveBundle = async ({
 
       babelPluginMap,
       compileServerOrigin,
+      compileDirectoryRemoteUrl: resolveDirectoryUrl(
+        format === "global" ? COMPILE_ID_BUNDLE_GLOBAL : COMPILE_ID_BUNDLE_COMMONJS,
+        outDirectoryRemoteUrl,
+      ),
       compileServerImportMap,
-      compileDirectoryRelativeUrl: `${compileDirectoryRelativeUrl}${
-        format === "global" ? COMPILE_ID_BUNDLE_GLOBAL : COMPILE_ID_BUNDLE_COMMONJS
-      }/`,
       format,
       formatOutputOptions,
       writeOnFileSystem: false,
@@ -71,7 +71,6 @@ export const serveBundle = async ({
 
     return bundleToCompilationResult(bundle, {
       projectDirectoryUrl,
-      compileDirectoryUrl,
       compileServerOrigin,
       originalFileUrl,
       compiledFileUrl,

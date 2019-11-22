@@ -4,7 +4,13 @@ import {
   COMPILE_ID_BUNDLE_COMMONJS,
   COMPILE_ID_OTHERWISE,
 } from "internal/CONSTANTS.js"
-import { urlToRelativeUrl, resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
+import {
+  resolveFileUrl,
+  fileUrlToPath,
+  resolveDirectoryUrl,
+  resolveUrl,
+  urlToRelativeUrl,
+} from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
 import { createBabePluginMapForBundle } from "internal/bundling/createBabePluginMapForBundle.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
@@ -16,42 +22,42 @@ export const serveCompiledJs = async ({
   logger,
 
   projectDirectoryUrl,
-  compileDirectoryUrl,
   importReplaceMap,
   importFallbackMap,
 
   transformTopLevelAwait,
   transformModuleIntoSystemFormat,
-  groupMap,
   babelPluginMap,
+  groupMap,
   convertMap,
-  projectFileRequestedCallback,
+  outDirectoryRemoteUrl,
+  compileServerOrigin,
+
   request,
+  projectFileRequestedCallback,
   useFilesystemAsCache,
   writeOnFilesystem,
 }) => {
   const { origin, ressource, method, headers } = request
   const requestUrl = `${origin}${ressource}`
-  const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
-  const compileDirectoryServerUrl = `${origin}/${compileDirectoryRelativeUrl}`
   // not inside compile directory -> nothing to compile
-  if (!requestUrl.startsWith(compileDirectoryServerUrl)) {
+  if (!requestUrl.startsWith(outDirectoryRemoteUrl)) {
     return null
   }
 
-  const afterCompileDirectory = requestUrl.slice(compileDirectoryServerUrl.length)
+  const afterOutDirectory = requestUrl.slice(outDirectoryRemoteUrl.length)
 
   // serve files inside /.dist/* directly without compilation
   // this is just to allow some files to be written inside .dist and read directly
   // if asked by the client
-  if (!afterCompileDirectory.includes("/") || afterCompileDirectory[0] === "/") {
+  if (!afterOutDirectory.includes("/") || afterOutDirectory[0] === "/") {
     return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
       method,
       headers,
     })
   }
 
-  const parts = afterCompileDirectory.split("/")
+  const parts = afterOutDirectory.split("/")
   const compileId = parts[0]
   // no compileId, we don't know what to compile (not supposed so happen)
   if (compileId === "") {
@@ -99,8 +105,8 @@ export const serveCompiledJs = async ({
   }
 
   const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
-  const originalFileServerUrl = `${origin}/${originalFileRelativeUrl}`
-  if (originalFileServerUrl in importReplaceMap) {
+  const originalFileRemoteUrl = `${origin}/${originalFileRelativeUrl}`
+  if (originalFileRemoteUrl in importReplaceMap) {
     // disable cache if the file is ignored anyway
     // and a function is used instead
     useFilesystemAsCache = false
@@ -120,7 +126,12 @@ export const serveCompiledJs = async ({
     babelPluginMapForGroupMap = {}
   }
 
-  const compiledFileUrl = `${compileDirectoryUrl}${compileId}/${originalFileRelativeUrl}`
+  const compileDirectoryRemoteUrl = resolveDirectoryUrl(compileId, outDirectoryRemoteUrl)
+  const compileDirectoryUrl = resolveDirectoryUrl(
+    urlToRelativeUrl(compileDirectoryRemoteUrl, `${compileServerOrigin}/`),
+    projectDirectoryUrl,
+  )
+  const compiledFileUrl = resolveUrl(originalFileRelativeUrl, compileDirectoryUrl)
 
   return serveCompiledFile({
     cancellationToken,
@@ -137,14 +148,14 @@ export const serveCompiledJs = async ({
     request,
     compile: async () => {
       let code
-      if (originalFileServerUrl in importReplaceMap) {
-        code = await importReplaceMap[originalFileServerUrl]()
-      } else if (originalFileServerUrl in importFallbackMap) {
+      if (originalFileRemoteUrl in importReplaceMap) {
+        code = await importReplaceMap[originalFileRemoteUrl]()
+      } else if (originalFileRemoteUrl in importFallbackMap) {
         try {
           code = await readFileContent(fileUrlToPath(originalFileUrl))
         } catch (e) {
           if (e.code === "ENOENT") {
-            code = await importFallbackMap[originalFileServerUrl]()
+            code = await importFallbackMap[originalFileRemoteUrl]()
           } else {
             throw e
           }

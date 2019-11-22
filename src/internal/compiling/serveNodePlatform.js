@@ -1,5 +1,5 @@
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { urlToRelativeUrl } from "internal/urlUtils.js"
+import { resolveUrl } from "internal/urlUtils.js"
 import { serveBundle } from "./serveBundle.js"
 
 export const serveNodePlatform = async ({
@@ -7,34 +7,35 @@ export const serveNodePlatform = async ({
   logger,
 
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  compileDirectoryUrl,
+  jsenvDirectoryUrl,
   importDefaultExtension,
   nodePlatformFileUrl,
 
   babelPluginMap,
   projectFileRequestedCallback,
   compileServerOrigin,
+  outDirectoryRemoteUrl,
   compileServerImportMap,
   request,
 }) => {
   const { origin, ressource } = request
-  const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
-  const nodePlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativeUrl}.jsenv/node-platform.js`
+  const nodePlatformCompiledFileRemoteUrl = resolveUrl(
+    ".jsenv/node-platform.js",
+    outDirectoryRemoteUrl,
+  )
   const requestUrl = `${origin}${ressource}`
-  if (!requestUrl.startsWith(nodePlatformCompiledFileServerUrl)) {
+  if (!requestUrl.startsWith(nodePlatformCompiledFileRemoteUrl)) {
     return null
   }
 
   const originalFileUrl = nodePlatformFileUrl
-  const compiledFileUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}node-platform.js`
+  const compiledFileUrl = resolveUrl(`node-platform.js`, jsenvDirectoryUrl)
   return serveBundle({
     cancellationToken,
     logger,
 
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
-    compileDirectoryUrl,
     originalFileUrl,
     compiledFileUrl,
     importDefaultExtension,
@@ -43,6 +44,7 @@ export const serveNodePlatform = async ({
     babelPluginMap,
     projectFileRequestedCallback,
     compileServerOrigin,
+    outDirectoryRemoteUrl,
     compileServerImportMap,
     request,
   })

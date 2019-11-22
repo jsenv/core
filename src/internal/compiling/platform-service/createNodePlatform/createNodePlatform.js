@@ -5,14 +5,13 @@ import groupMap from "/.jsenv/groupMap.json"
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/.jsenv/importMap.json"
 import {
-  jsenvDirectoryRelativeUrl,
+  outDirectoryRemoteUrl,
   importDefaultExtension,
   // eslint-disable-next-line import/no-unresolved
 } from "/.jsenv/env.js"
 import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport/resolveImport.js"
-import { COMPILE_DIRECTORY } from "../../../CONSTANTS.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveNodeGroup } from "../resolveNodeGroup.js"
 import { memoizeOnce } from "../memoizeOnce.js"
@@ -20,7 +19,6 @@ import { isNativeNodeModuleBareSpecifier } from "./isNativeNodeModuleBareSpecifi
 import { createNodeSystem } from "./createNodeSystem.js"
 
 const GLOBAL_SPECIFIER = "global"
-const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${COMPILE_DIRECTORY}/`
 const memoizedCreateNodeSystem = memoizeOnce(createNodeSystem)
 
 export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl }) => {
@@ -28,15 +26,11 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
     groupId: resolveNodeGroup({ groupMap }),
     groupMap,
   })
+  const compileDirectoryRemoteUrl = `${outDirectoryRemoteUrl}${compileId}/`
 
-  const relativeUrlToCompiledUrl = (relativeUrl) => {
-    return `${compileServerOrigin}/${compileDirectoryRelativeUrl}${compileId}/${relativeUrl}`
-  }
+  const relativeUrlToCompiledUrl = (relativeUrl) => `${compileDirectoryRemoteUrl}${relativeUrl}`
 
-  const importMapNormalized = normalizeImportMap(
-    importMap,
-    `${compileServerOrigin}/${compileDirectoryRelativeUrl}${compileId}/`,
-  )
+  const importMapNormalized = normalizeImportMap(importMap, compileDirectoryRemoteUrl)
 
   const resolveImportScoped = (specifier, importer) => {
     if (specifier === GLOBAL_SPECIFIER) return specifier
@@ -53,9 +47,9 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
 
   const importFile = async (specifier) => {
     const nodeSystem = await memoizedCreateNodeSystem({
-      compileServerOrigin,
       projectDirectoryUrl,
-      compileDirectoryRelativeUrl,
+      compileServerOrigin,
+      outDirectoryRemoteUrl,
       resolveImport: resolveImportScoped,
     })
     return makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
@@ -72,9 +66,9 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
     } = {},
   ) => {
     const nodeSystem = await memoizedCreateNodeSystem({
-      compileServerOrigin,
       projectDirectoryUrl,
-      compileDirectoryRelativeUrl,
+      compileServerOrigin,
+      outDirectoryRemoteUrl,
       resolveImport: resolveImportScoped,
       executionId,
     })

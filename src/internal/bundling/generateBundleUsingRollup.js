@@ -16,8 +16,9 @@ export const generateBundleUsingRollup = async ({
   browser,
 
   compileServerOrigin,
+  compileDirectoryRemoteUrl,
   compileServerImportMap,
-  compileDirectoryRelativeUrl,
+
   babelPluginMap,
   format,
   formatOutputOptions,
@@ -33,8 +34,8 @@ export const generateBundleUsingRollup = async ({
     bundleDirectoryUrl,
     importDefaultExtension,
     compileServerOrigin,
+    compileDirectoryRemoteUrl,
     compileServerImportMap,
-    compileDirectoryRelativeUrl,
     babelPluginMap,
     format,
     minify,

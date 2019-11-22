@@ -1,7 +1,8 @@
+/* eslint-disable import/max-dependencies */
+import { readFileSync } from "fs"
 import { assert } from "@jsenv/assert"
 import { createLogger } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"
-import { COMPILE_DIRECTORY } from "internal/CONSTANTS.js"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
@@ -11,6 +12,7 @@ import {
 import { readFileContent } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
+import { bufferToEtag } from "internal/compiling/compile-directory/bufferToEtag.js"
 import { serveBundle } from "internal/compiling/serveBundle.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 
@@ -18,13 +20,16 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${COMPILE_DIRECTORY}/`
 const originalFileUrl = import.meta.resolve("./file.js")
 const compiledFileUrl = import.meta.resolve(`./.jsenv/file.js`)
 const babelPluginMap = jsenvBabelPluginMap
 
-const compileServer = await startCompileServer({
-  compileServerLogLevel: "debug",
+const {
+  origin: compileServerOrigin,
+  outDirectoryRemoteUrl,
+  compileServerImportMap,
+} = await startCompileServer({
+  // compileServerLogLevel: "debug",
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean: true,
@@ -33,26 +38,27 @@ const compileServer = await startCompileServer({
     whatever: 42,
   },
 })
+const ressource = `${urlToRelativeUrl(outDirectoryRemoteUrl, compileServerOrigin)}file.js`
 
 const { status: actual } = await serveBundle({
   cancellationToken: createCancellationToken(),
   logger: createLogger({ logLevel: "debug" }),
 
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  compileDirectoryUrl: resolveDirectoryUrl(compileDirectoryRelativeUrl, jsenvCoreDirectoryUrl),
   originalFileUrl,
   compiledFileUrl,
-
   format: "commonjs",
+
   projectFileRequestedCallback: () => {},
   request: {
-    origin: compileServer.origin,
-    ressource: `/${compileDirectoryRelativeUrl}.jsenv/${COMPILE_DIRECTORY}/file.js`,
+    origin: compileServerOrigin,
+    ressource,
     method: "GET",
     headers: {},
   },
-  compileServerOrigin: compileServer.origin,
-  compileServerImportMap: compileServer.importMap,
+  outDirectoryRemoteUrl,
+  compileServerOrigin,
+  compileServerImportMap,
   babelPluginMap,
 })
 const expected = 200
@@ -76,15 +82,21 @@ assert({ actual, expected })
 }
 
 {
+  const metaFileUrl = `${compiledFileUrl}__asset__/meta.json`
   const actual = JSON.parse(
     await readFileContent(fileUrlToPath(`${compiledFileUrl}__asset__/meta.json`)),
   )
   const expected = {
     contentType: "application/javascript",
     sources: ["../env.js", "../../file.js"],
-    sourcesEtag: ['"96-/kZNIWrfacWLsajUBBbUUefYqhk"', '"74-JkgWQFIQU27HSNNc1YgGudblXWE"'],
+    sourcesEtag: [
+      bufferToEtag(readFileSync(fileUrlToPath(resolveFileUrl("../env.js", metaFileUrl)))),
+      bufferToEtag(readFileSync(fileUrlToPath(resolveFileUrl("../../file.js", metaFileUrl)))),
+    ],
     assets: ["../file.js.map"],
-    assetsEtag: ['"1f5-dGxXb3qpu4fzWm5yY+7YNSKJQKU"'],
+    assetsEtag: [
+      bufferToEtag(readFileSync(fileUrlToPath(resolveFileUrl("../file.js.map", metaFileUrl)))),
+    ],
     createdMs: actual.createdMs,
     lastModifiedMs: actual.lastModifiedMs,
   }

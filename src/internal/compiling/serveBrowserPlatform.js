@@ -1,5 +1,5 @@
+import { resolveUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { urlToRelativeUrl } from "internal/urlUtils.js"
 import { serveBundle } from "./serveBundle.js"
 
 export const serveBrowserPlatform = async ({
@@ -7,34 +7,35 @@ export const serveBrowserPlatform = async ({
   logger,
 
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  compileDirectoryUrl,
+  jsenvDirectoryUrl,
   importDefaultExtension,
   browserPlatformFileUrl,
 
   babelPluginMap,
   projectFileRequestedCallback,
   compileServerOrigin,
+  outDirectoryRemoteUrl,
   compileServerImportMap,
   request,
 }) => {
   const { origin, ressource } = request
-  const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, projectDirectoryUrl)
-  const browserPlatformCompiledFileServerUrl = `${origin}/${compileDirectoryRelativeUrl}.jsenv/browser-platform.js`
+  const browserPlatformCompiledFileRemoteUrl = resolveUrl(
+    ".jsenv/browser-platform.js",
+    outDirectoryRemoteUrl,
+  )
   const requestUrl = `${origin}${ressource}`
-  if (!requestUrl.startsWith(browserPlatformCompiledFileServerUrl)) {
+  if (!requestUrl.startsWith(browserPlatformCompiledFileRemoteUrl)) {
     return null
   }
 
   const originalFileUrl = browserPlatformFileUrl
-  const compiledFileUrl = `${projectDirectoryUrl}${jsenvDirectoryRelativeUrl}browser-platform.js`
+  const compiledFileUrl = resolveUrl(`browser-platform.js`, jsenvDirectoryUrl)
   return serveBundle({
     cancellationToken,
     logger,
 
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     projectDirectoryUrl,
-    compileDirectoryUrl,
     originalFileUrl,
     compiledFileUrl,
     importDefaultExtension,
@@ -43,6 +44,7 @@ export const serveBrowserPlatform = async ({
     babelPluginMap,
     projectFileRequestedCallback,
     compileServerOrigin,
+    outDirectoryRemoteUrl,
     compileServerImportMap,
     request,
   })

@@ -3,7 +3,6 @@ import { readFileSync } from "fs"
 import { assert } from "@jsenv/assert"
 import { createLogger } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"
-import { COMPILE_DIRECTORY } from "internal/CONSTANTS.js"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
@@ -21,11 +20,15 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${COMPILE_DIRECTORY}/`
 const originalFileUrl = import.meta.resolve("./file.js")
 const compiledFileUrl = import.meta.resolve(`./.jsenv/file.js`)
 const babelPluginMap = jsenvBabelPluginMap
-const compileServer = await startCompileServer({
+
+const {
+  origin: compileServerOrigin,
+  outDirectoryRemoteUrl,
+  compileServerImportMap,
+} = await startCompileServer({
   compileServerLogLevel: "warn",
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -35,25 +38,26 @@ const compileServer = await startCompileServer({
     whatever: 42,
   },
 })
+const ressource = `${urlToRelativeUrl(outDirectoryRemoteUrl, compileServerOrigin)}file.js`
 const serveBundleParams = {
   cancellationToken: createCancellationToken(),
   logger: createLogger({ logLevel: "warn" }),
 
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  compileDirectoryUrl: resolveDirectoryUrl(compileDirectoryRelativeUrl, jsenvCoreDirectoryUrl),
   originalFileUrl,
   compiledFileUrl,
 
   format: "commonjs",
   projectFileRequestedCallback: () => {},
   request: {
-    origin: compileServer.origin,
-    ressource: `/${compileDirectoryRelativeUrl}.jsenv/${COMPILE_DIRECTORY}/file.js`,
+    origin: compileServerOrigin,
+    ressource,
     method: "GET",
     headers: {},
   },
-  compileServerOrigin: compileServer.origin,
-  compileServerImportMap: compileServer.importMap,
+  outDirectoryRemoteUrl,
+  compileServerOrigin,
+  compileServerImportMap,
   babelPluginMap,
 }
 const response = await serveBundle(serveBundleParams)

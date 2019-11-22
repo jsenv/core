@@ -12,14 +12,13 @@ import {
   urlToContentType,
 } from "@jsenv/server"
 import { createLogger } from "@jsenv/logger"
-import { COMPILE_DIRECTORY } from "internal/CONSTANTS.js"
 import {
-  resolveFileUrl,
+  resolveUrl,
   fileUrlToPath,
   urlToRelativeUrl,
   resolveDirectoryUrl,
 } from "internal/urlUtils.js"
-import { writeFileContent, removeDirectory } from "internal/filesystemUtils.js"
+import { readFileContent, writeFileContent, removeDirectory } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { readProjectImportMap } from "internal/readProjectImportMap/readProjectImportMap.js"
 import { generateGroupMap } from "internal/generateGroupMap/generateGroupMap.js"
@@ -27,7 +26,6 @@ import { jsenvBabelPluginCompatMap } from "src/jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
-import { cleanCompileDirectoryIfObsolete } from "./compile-directory/cleanCompileDirectoryIfObsolete.js"
 import { serveBrowserPlatform } from "./serveBrowserPlatform.js"
 import { serveNodePlatform } from "./serveNodePlatform.js"
 import { serveCompiledJs } from "./serveCompiledJs.js"
@@ -42,8 +40,9 @@ export const startCompileServer = async ({
   transformModuleIntoSystemFormat = true,
 
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl = "./.jsenv/",
+  jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
+  outDirectoryRelativeUrl = "out",
 
   writeOnFilesystem = true,
   useFilesystemAsCache = true,
@@ -80,11 +79,11 @@ export const startCompileServer = async ({
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
   platformAlwaysInsidePlatformScoreMap = false,
-  browserPlatformFileUrl = resolveFileUrl(
+  browserPlatformFileUrl = resolveUrl(
     "./src/internal/compiling/platform-service/createBrowserPlatform/index.js",
     jsenvCoreDirectoryUrl,
   ),
-  nodePlatformFileUrl = resolveFileUrl(
+  nodePlatformFileUrl = resolveUrl(
     "./src/internal/compiling/platform-service/createNodePlatform/index.js",
     jsenvCoreDirectoryUrl,
   ),
@@ -94,7 +93,7 @@ export const startCompileServer = async ({
   }
 
   if (typeof importMapFileUrl === "undefined") {
-    importMapFileUrl = resolveFileUrl("./importMap.json", projectDirectoryUrl)
+    importMapFileUrl = resolveUrl("./importMap.json", projectDirectoryUrl)
   }
 
   if (typeof jsenvDirectoryRelativeUrl !== "string") {
@@ -105,13 +104,13 @@ export const startCompileServer = async ({
   const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
   if (!jsenvDirectoryUrl.startsWith(projectDirectoryUrl)) {
     throw new TypeError(`jsenv directory must be inside project directory
-    --- jsenv directory url ---
-    ${jsenvDirectoryUrl}
-    --- project directory url ---
-    ${projectDirectoryUrl}`)
+--- jsenv directory url ---
+${jsenvDirectoryUrl}
+--- project directory url ---
+${projectDirectoryUrl}`)
   }
-  // to normalize the value
-  jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl)
+
+  const outDirectoryUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, jsenvDirectoryUrl)
 
   if (typeof browserPlatformFileUrl !== "string") {
     throw new TypeError(`browserPlatformFileUrl must be a string. got ${browserPlatformFileUrl}`)
@@ -138,7 +137,6 @@ ${projectDirectoryUrl}`)
   const logger = createLogger({ logLevel: compileServerLogLevel })
 
   const importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
-  const compileDirectoryUrl = resolveDirectoryUrl(COMPILE_DIRECTORY, jsenvDirectoryUrl)
 
   const groupMap = generateGroupMap({
     babelPluginMap,
@@ -148,7 +146,7 @@ ${projectDirectoryUrl}`)
     platformAlwaysInsidePlatformScoreMap,
   })
 
-  const compileDirectoryMeta = {
+  const outDirectoryMeta = {
     babelPluginMap,
     convertMap,
     groupMap,
@@ -157,15 +155,15 @@ ${projectDirectoryUrl}`)
     logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`)
     await removeDirectory(fileUrlToPath(jsenvDirectoryUrl))
   }
-  await cleanCompileDirectoryIfObsolete({
-    jsenvDirectoryUrl,
-    compileDirectoryMeta,
-    cleanCallback: (compileDirectoryPath) => {
-      logger.info(`clean compile directory content at ${compileDirectoryPath}`)
-    },
-  })
+  if (useFilesystemAsCache) {
+    await cleanOutDirectoryIfObsolete({
+      logger,
+      outDirectoryUrl,
+      outDirectoryMeta,
+    })
+  }
 
-  const packageFileUrl = resolveFileUrl("./package.json", jsenvCoreDirectoryUrl)
+  const packageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
   const packageFilePath = fileUrlToPath(packageFileUrl)
   const packageVersion = readPackage(packageFilePath).version
 
@@ -203,14 +201,24 @@ ${projectDirectoryUrl}`)
       ip,
       port,
       sendInternalErrorStack: true,
-      requestToResponse: (request) =>
-        firstService(
+      requestToResponse: (request) => {
+        const compileServerOrigin = request.origin
+        const jsenvDirectoryRemoteUrl = resolveDirectoryUrl(
+          jsenvDirectoryRelativeUrl,
+          compileServerOrigin,
+        )
+        const outDirectoryRemoteUrl = resolveDirectoryUrl(
+          outDirectoryRelativeUrl,
+          jsenvDirectoryRemoteUrl,
+        )
+
+        return firstService(
           () => {
             const { origin, ressource, method, headers } = request
             const requestUrl = `${origin}${ressource}`
             // serve asset files directly
             if (urlIsAsset(requestUrl)) {
-              const fileUrl = resolveFileUrl(ressource.slice(1), projectDirectoryUrl)
+              const fileUrl = resolveUrl(ressource.slice(1), projectDirectoryUrl)
               return serveFile(fileUrl, {
                 method,
                 headers,
@@ -224,14 +232,13 @@ ${projectDirectoryUrl}`)
               logger,
 
               projectDirectoryUrl,
-              jsenvDirectoryRelativeUrl,
-              compileDirectoryUrl,
               importDefaultExtension,
               browserPlatformFileUrl,
 
               babelPluginMap,
               projectFileRequestedCallback,
-              compileServerOrigin: compileServer.origin,
+              compileServerOrigin,
+              outDirectoryRemoteUrl,
               compileServerImportMap: importMapForCompileServer,
               request,
             }),
@@ -241,14 +248,13 @@ ${projectDirectoryUrl}`)
               logger,
 
               projectDirectoryUrl,
-              jsenvDirectoryRelativeUrl,
-              compileDirectoryUrl,
               importDefaultExtension,
               nodePlatformFileUrl,
 
               babelPluginMap,
               projectFileRequestedCallback,
-              compileServerOrigin: compileServer.origin,
+              compileServerOrigin,
+              outDirectoryRemoteUrl,
               compileServerImportMap: importMapForCompileServer,
               request,
             }),
@@ -258,29 +264,32 @@ ${projectDirectoryUrl}`)
               logger,
 
               projectDirectoryUrl,
-              compileDirectoryUrl,
               importReplaceMap,
               importFallbackMap,
 
               transformTopLevelAwait,
               transformModuleIntoSystemFormat,
-              groupMap,
               babelPluginMap,
+              groupMap,
               convertMap,
-              projectFileRequestedCallback,
+              outDirectoryRemoteUrl,
+              compileServerOrigin,
+
               request,
+              projectFileRequestedCallback,
               useFilesystemAsCache,
               writeOnFilesystem,
             }),
           () =>
             serveProjectFiles({
               projectDirectoryUrl,
-              projectFileRequestedCallback,
               importReplaceMap,
               importFallbackMap,
               request,
+              projectFileRequestedCallback,
             }),
-        ),
+        )
+      },
       accessControlAllowRequestOrigin: true,
       accessControlAllowRequestMethod: true,
       accessControlAllowRequestHeaders: true,
@@ -294,31 +303,40 @@ ${projectDirectoryUrl}`)
     generateImportMapForCompileServer({
       logger,
       projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
+      jsenvDirectoryUrl,
       importMapFileUrl,
     }),
   ])
 
-  const importMap = normalizeImportMap(importMapForCompileServer, compileServer.origin)
+  const compileServerOrigin = compileServer.origin
+  const jsenvDirectoryRemoteUrl = resolveDirectoryUrl(
+    jsenvDirectoryRelativeUrl,
+    compileServer.origin,
+  )
+  const outDirectoryRemoteUrl = resolveDirectoryUrl(
+    outDirectoryRelativeUrl,
+    jsenvDirectoryRemoteUrl,
+  )
+  const importMap = normalizeImportMap(importMapForCompileServer, `${compileServerOrigin}/`)
 
   env = {
     ...env,
-    jsenvDirectoryRelativeUrl,
+    outDirectoryRemoteUrl,
     importDefaultExtension,
   }
 
   // it would be better for perf to generated them on demand but for now that's good
   await Promise.all([
     writeFileContent(
-      fileUrlToPath(resolveFileUrl("./importMap.json", jsenvDirectoryUrl)),
+      fileUrlToPath(resolveUrl("./importMap.json", jsenvDirectoryUrl)),
       JSON.stringify(importMapForCompileServer, null, "  "),
     ),
     writeFileContent(
-      fileUrlToPath(resolveFileUrl("./groupMap.json", jsenvDirectoryUrl)),
+      fileUrlToPath(resolveUrl("./groupMap.json", jsenvDirectoryUrl)),
       JSON.stringify(groupMap, null, "  "),
     ),
     writeFileContent(
-      fileUrlToPath(resolveFileUrl("./env.js", jsenvDirectoryUrl)),
+      fileUrlToPath(resolveUrl("./env.js", jsenvDirectoryUrl)),
       Object.keys(env)
         .map(
           (key) => `
@@ -330,7 +348,7 @@ export const ${key} = ${JSON.stringify(env[key])}
   ])
 
   importReplaceMap = resolveSpecifierMap(importReplaceMap, {
-    compileServerOrigin: compileServer.origin,
+    compileServerOrigin,
     importMap,
     importDefaultExtension,
   })
@@ -341,7 +359,7 @@ export const ${key} = ${JSON.stringify(env[key])}
     ...importFallbackMap,
   }
   importFallbackMap = resolveSpecifierMap(importFallbackMap, {
-    compileServerOrigin: compileServer.origin,
+    compileServerOrigin,
     importMap,
     importDefaultExtension,
   })
@@ -380,10 +398,10 @@ export const ${key} = ${JSON.stringify(env[key])}
 
   return {
     ...compileServer,
-    compileServerOrigin: compileServer.origin,
     compileServerImportMap: importMapForCompileServer,
     compileServerGroupMap: groupMap,
-    compileServerJsenvDirectoryUrl: `${compileServer.origin}/${jsenvDirectoryRelativeUrl}`,
+    jsenvDirectoryRemoteUrl,
+    outDirectoryRemoteUrl,
   }
 }
 
@@ -400,10 +418,10 @@ export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
 
 const serveProjectFiles = async ({
   projectDirectoryUrl,
-  projectFileRequestedCallback,
   importReplaceMap,
   importFallbackMap,
   request,
+  projectFileRequestedCallback,
 }) => {
   const { origin, ressource, method, headers } = request
   const requestUrl = `${origin}${ressource}`
@@ -414,7 +432,7 @@ const serveProjectFiles = async ({
     request,
   })
 
-  const fileUrl = resolveFileUrl(relativeUrl, projectDirectoryUrl)
+  const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
   const filePath = fileUrlToPath(fileUrl)
 
   if (requestUrl in importReplaceMap) {
@@ -476,9 +494,10 @@ const serveProjectFiles = async ({
 const generateImportMapForCompileServer = async ({
   logger,
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
+  jsenvDirectoryUrl,
   importMapFileUrl,
 }) => {
+  const jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl)
   const importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
   const importMapForJsenvCore = await generateImportMapForPackage({
     logger,
@@ -533,4 +552,41 @@ const resolveSpecifierMap = (
     specifierMapResolved[specifierUrl] = specifierMap[specifier]
   })
   return specifierMapResolved
+}
+
+const cleanOutDirectoryIfObsolete = async ({ logger, outDirectoryUrl, outDirectoryMeta }) => {
+  const jsenvCorePackageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
+  const jsenvCorePackageFilePath = fileUrlToPath(jsenvCorePackageFileUrl)
+  const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
+
+  outDirectoryMeta = {
+    ...outDirectoryMeta,
+    jsenvCorePackageVersion,
+  }
+
+  const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
+  const metaFilePath = fileUrlToPath(metaFileUrl)
+  const compileDirectoryPath = fileUrlToPath(outDirectoryUrl)
+
+  let previousOutDirectoryMeta
+  try {
+    const source = await readFileContent(metaFilePath)
+    previousOutDirectoryMeta = JSON.parse(source)
+  } catch (e) {
+    if (e && e.code === "ENOENT") {
+      previousOutDirectoryMeta = null
+    } else {
+      throw e
+    }
+  }
+
+  if (
+    previousOutDirectoryMeta !== null &&
+    JSON.stringify(previousOutDirectoryMeta) !== JSON.stringify(outDirectoryMeta)
+  ) {
+    logger.info(`clean out directory at ${compileDirectoryPath}`)
+    await removeDirectory(compileDirectoryPath)
+  }
+
+  await writeFileContent(metaFilePath, JSON.stringify(outDirectoryMeta, null, "  "))
 }
