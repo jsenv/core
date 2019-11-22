@@ -42,7 +42,7 @@ export const startCompileServer = async ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
-  outDirectoryRelativeUrl = ".jsenv/out",
+  outDirectoryName = "out",
 
   writeOnFilesystem = true,
   useFilesystemAsCache = true,
@@ -112,9 +112,11 @@ ${jsenvDirectoryUrl}
 ${projectDirectoryUrl}`)
   }
 
-  const outDirectoryUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, jsenvDirectoryUrl)
-  // outDirectoryRelativeUrl normalization
-  outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl)
+  if (typeof outDirectoryName !== "string") {
+    throw new TypeError(`outDirectoryName must be a string. got ${outDirectoryName}`)
+  }
+  const outDirectoryUrl = resolveDirectoryUrl(outDirectoryName, jsenvDirectoryUrl)
+  const outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl)
 
   if (typeof browserPlatformFileUrl !== "string") {
     throw new TypeError(`browserPlatformFileUrl must be a string. got ${browserPlatformFileUrl}`)

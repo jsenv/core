@@ -33,7 +33,7 @@ export const generateBundle = async ({
   logger,
 
   projectDirectoryPath,
-  jsenvDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean,
   importMapFileRelativeUrl = "./importMap.json",
   importDefaultExtension,
@@ -108,7 +108,7 @@ export const generateBundle = async ({
   return catchAsyncFunctionCancellation(async () => {
     const {
       outDirectoryRelativeUrl,
-      compileServerOrigin,
+      origin: compileServerOrigin,
       compileServerImportMap,
       compileServerGroupMap,
     } = await startCompileServer({
@@ -118,7 +118,7 @@ export const generateBundle = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-      outDirectoryRelativeUrl: "out-bundle",
+      outDirectoryName: "out-bundle",
       importMapFileUrl,
       importDefaultExtension,
       env,
