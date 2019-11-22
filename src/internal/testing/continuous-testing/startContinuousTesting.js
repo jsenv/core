@@ -7,13 +7,14 @@ import {
   errorToCancelReason,
 } from "@jsenv/cancellation"
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
-import { hrefToOrigin, hrefToPathname } from "@jsenv/href"
+import { hrefToPathname } from "@jsenv/href"
 import { createLogger } from "@jsenv/logger"
-import { fileUrlToPath } from "internal/urlUtils.js"
+import { resolveUrl, pathToDirectoryUrl, sameOrigin } from "internal/urlUtils.js"
 import {
-  resolveProjectDirectoryUrl,
-  resolveImportMapFileUrl,
-  resolveCompileDirectorUrl,
+  assertProjectDirectoryPath,
+  assertProjectDirectoryExists,
+  assertImportMapFileRelativeUrl,
+  assertImportMapFileInsideProject,
 } from "internal/argUtils.js"
 import { generateExecutionSteps } from "internal/executing/generateExecutionSteps.js"
 import { executeConcurrently } from "internal/executing/executeConcurrently.js"
@@ -31,8 +32,8 @@ export const TESTING_WATCH_EXCLUDE_DESCRIPTION = {
 
 export const startContinuousTesting = async ({
   projectDirectoryPath,
-  compileDirectoryRelativeUrl = "./.dist/",
-  compileDirectoryClean,
+  jsenvDirectoryRelativeUrl,
+  jsenvDirectoryClean,
   importMapFileRelativeUrl,
   importDefaultExtension,
   testPlan = {},
@@ -54,19 +55,71 @@ export const startContinuousTesting = async ({
 }) => {
   const cancellationToken = createCancellationTokenForProcessSIGINT()
   const logger = createLogger({ logLevel })
-  const projectDirectoryUrl = resolveProjectDirectoryUrl(projectDirectoryPath)
-  projectDirectoryPath = fileUrlToPath(projectDirectoryUrl)
-  const importMapFileUrl = resolveImportMapFileUrl({ importMapFileRelativeUrl })
-  const compileDirectoryUrl = resolveCompileDirectorUrl(
-    compileDirectoryRelativeUrl,
-    projectDirectoryUrl,
-  )
+
+  assertProjectDirectoryPath({ projectDirectoryPath })
+  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
+  await assertProjectDirectoryExists({ projectDirectoryUrl })
+
+  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
+  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
+  assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
   return catchAsyncFunctionCancellation(async () => {
+    const dependencyTracker = createDependencyTracker()
+    let executionImportCallback = ({ relativeUrl, executionId }) => {
+      dependencyTracker.trackDependency(relativeUrl, executionId)
+    }
+
+    const projectFileSet = new Set()
+    const projectFileRequestedCallback = ({ relativeUrl, request }) => {
+      projectFileSet.add(relativeUrl)
+
+      const { headers = {} } = request
+      if ("x-jsenv-execution-id" in headers) {
+        const executionId = headers["x-jsenv-execution-id"]
+        executionImportCallback({ relativeUrl, executionId })
+      } else if ("referer" in headers) {
+        const { referer } = headers
+        if (sameOrigin(referer, request.origin)) {
+          const refererRelativeUrl = hrefToPathname(referer).slice(1)
+
+          executionSteps.forEach(({ executionId, fileRelativeUrl }) => {
+            if (fileRelativeUrl === refererRelativeUrl) {
+              executionImportCallback({ relativeUrl, executionId })
+            }
+          })
+        } else {
+          executionImportCallback({ relativeUrl })
+        }
+      } else {
+        executionImportCallback({ relativeUrl })
+      }
+    }
+
+    const {
+      origin: compileServerOrigin,
+      outDirectoryRelativeUrl,
+    } = await startCompileServerForExecutingPlan({
+      cancellationToken,
+      logLevel: "off",
+
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      jsenvDirectoryClean,
+      importMapFileUrl,
+      importDefaultExtension,
+
+      compileGroupCount,
+      babelPluginMap,
+      convertMap,
+      projectFileRequestedCallback,
+      keepProcessAlive: true,
+    })
+
     const unregisterProjectDirectoryLifecycle = registerDirectoryLifecycle(projectDirectoryPath, {
       watchDescription: {
         ...watchDescription,
-        [compileDirectoryRelativeUrl]: false,
+        [outDirectoryRelativeUrl]: false,
       },
       keepProcessAlive: false,
       added: ({ relativeUrl, type }) => {
@@ -98,11 +151,6 @@ export const startContinuousTesting = async ({
     let fileMutationMapHandledAfterInitialTesting = {}
     let fileMutationMap
     let resolveActionRequired
-
-    const dependencyTracker = createDependencyTracker()
-    let executionImportCallback = ({ relativeUrl, executionId }) => {
-      dependencyTracker.trackDependency(relativeUrl, executionId)
-    }
 
     const projectFileAddedCallback = ({ relativeUrl }) => {
       projectFileSet.add(relativeUrl)
@@ -157,47 +205,6 @@ export const startContinuousTesting = async ({
       })
     }
 
-    const projectFileSet = new Set()
-    const projectFileRequestedCallback = ({ relativeUrl, request }) => {
-      projectFileSet.add(relativeUrl)
-
-      const { headers = {} } = request
-      if ("x-jsenv-execution-id" in headers) {
-        const executionId = headers["x-jsenv-execution-id"]
-        executionImportCallback({ relativeUrl, executionId })
-      } else if ("referer" in headers) {
-        const { referer } = headers
-        if (hrefToOrigin(referer) === request.origin) {
-          const refererRelativeUrl = hrefToPathname(referer).slice(1)
-
-          executionSteps.forEach(({ executionId, fileRelativeUrl }) => {
-            if (fileRelativeUrl === refererRelativeUrl) {
-              executionImportCallback({ relativeUrl, executionId })
-            }
-          })
-        } else {
-          executionImportCallback({ relativeUrl })
-        }
-      } else {
-        executionImportCallback({ relativeUrl })
-      }
-    }
-
-    const { origin: compileServerOrigin } = await startCompileServerForExecutingPlan({
-      cancellationToken,
-      projectDirectoryUrl,
-      compileDirectoryUrl,
-      compileDirectoryClean,
-      importMapFileUrl,
-      importDefaultExtension,
-      compileGroupCount,
-      babelPluginMap,
-      convertMap,
-      logLevel: "off",
-      projectFileRequestedCallback,
-      keepProcessAlive: true,
-    })
-
     const getNextTestingResult = async (actionRequiredPromise) => {
       const {
         toAdd,
@@ -245,11 +252,14 @@ export const startContinuousTesting = async ({
             logLevel,
             launchLogLevel: "off",
             executeLogLevel: "off",
-            compileServerOrigin,
+
             projectDirectoryUrl,
-            compileDirectoryUrl,
+            jsenvDirectoryRelativeUrl,
+            outDirectoryRelativeUrl,
+            compileServerOrigin,
             importMapFileUrl,
             importDefaultExtension,
+
             maxParallelExecution,
             defaultAllocatedMsPerExecution,
             logEachExecutionSuccess: false,
@@ -344,11 +354,14 @@ export const startContinuousTesting = async ({
       logLevel,
       launchLogLevel: "off",
       executeLogLevel: "off",
-      compileServerOrigin,
+
       projectDirectoryUrl,
-      compileDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      outDirectoryRelativeUrl,
+      compileServerOrigin,
       importMapFileUrl,
       importDefaultExtension,
+
       maxParallelExecution,
       defaultAllocatedMsPerExecution,
       logEachExecutionSuccess: false,
