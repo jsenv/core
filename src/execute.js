@@ -3,13 +3,8 @@ import {
   catchAsyncFunctionCancellation,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, resolveFileUrl } from "internal/urlUtils.js"
-import {
-  assertProjectDirectoryPath,
-  assertProjectDirectoryExists,
-  assertImportMapFileRelativeUrl,
-  assertImportMapFileInsideProject,
-} from "internal/argUtils.js"
+import { pathToDirectoryUrl } from "internal/urlUtils.js"
+import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "internal/executing/launchAndExecute.js"
 
@@ -23,7 +18,7 @@ export const execute = async ({
   projectDirectoryPath,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
-  importMapFileRelativeUrl = "./importMap.json",
+  importMapFileRelativeUrl,
   importDefaultExtension,
   fileRelativeUrl,
 
@@ -50,10 +45,6 @@ export const execute = async ({
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
-  const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-  assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
-
   if (typeof fileRelativeUrl !== "string") {
     throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`)
   }
@@ -74,7 +65,7 @@ export const execute = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-      importMapFileUrl,
+      importMapFileRelativeUrl,
       importDefaultExtension,
 
       babelPluginMap,

@@ -9,12 +9,7 @@ import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
 import { pathToDirectoryUrl, resolveFileUrl, sameOrigin } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
-import {
-  assertProjectDirectoryPath,
-  assertProjectDirectoryExists,
-  assertImportMapFileRelativeUrl,
-  assertImportMapFileInsideProject,
-} from "internal/argUtils.js"
+import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { serveExploringIndex } from "internal/exploring/serveExploringIndex.js"
 import { serveBrowserSelfExecute } from "internal/exploring/serveBrowserSelfExecute.js"
@@ -45,7 +40,7 @@ export const startExploring = async ({
   projectDirectoryPath,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
-  importMapFileRelativeUrl = "./importMap.json",
+  importMapFileRelativeUrl,
   importDefaultExtension,
 
   babelPluginMap,
@@ -64,10 +59,6 @@ export const startExploring = async ({
   assertProjectDirectoryPath({ projectDirectoryPath })
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
-
-  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
-  const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-  assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
   await assertFileExists(HTMLTemplateFileUrl)
   await assertFileExists(browserSelfExecuteTemplateFileUrl)
@@ -244,7 +235,7 @@ export const startExploring = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-      importMapFileUrl,
+      importMapFileRelativeUrl,
       importDefaultExtension,
 
       env: {

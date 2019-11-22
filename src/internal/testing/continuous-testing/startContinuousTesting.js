@@ -10,12 +10,7 @@ import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { hrefToPathname } from "@jsenv/href"
 import { createLogger } from "@jsenv/logger"
 import { resolveUrl, pathToDirectoryUrl, sameOrigin } from "internal/urlUtils.js"
-import {
-  assertProjectDirectoryPath,
-  assertProjectDirectoryExists,
-  assertImportMapFileRelativeUrl,
-  assertImportMapFileInsideProject,
-} from "internal/argUtils.js"
+import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { generateExecutionSteps } from "internal/executing/generateExecutionSteps.js"
 import { executeConcurrently } from "internal/executing/executeConcurrently.js"
 import { startCompileServerForExecutingPlan } from "internal/executing/startCompileServerForExecutingPlan.js"
@@ -60,10 +55,6 @@ export const startContinuousTesting = async ({
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
-  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-  assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
-
   return catchAsyncFunctionCancellation(async () => {
     const dependencyTracker = createDependencyTracker()
     let executionImportCallback = ({ relativeUrl, executionId }) => {
@@ -106,7 +97,7 @@ export const startContinuousTesting = async ({
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-      importMapFileUrl,
+      importMapFileRelativeUrl,
       importDefaultExtension,
 
       compileGroupCount,

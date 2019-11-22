@@ -20,6 +20,10 @@ import {
 } from "internal/urlUtils.js"
 import { readFileContent, writeFileContent, removeDirectory } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import {
+  assertImportMapFileRelativeUrl,
+  assertImportMapFileInsideProject,
+} from "internal/argUtils.js"
 import { readProjectImportMap } from "internal/readProjectImportMap/readProjectImportMap.js"
 import { generateGroupMap } from "internal/generateGroupMap/generateGroupMap.js"
 import { jsenvBabelPluginCompatMap } from "src/jsenvBabelPluginCompatMap.js"
@@ -47,7 +51,7 @@ export const startCompileServer = async ({
   writeOnFilesystem = true,
   useFilesystemAsCache = true,
 
-  importMapFileUrl,
+  importMapFileRelativeUrl = "importMap.json",
   importDefaultExtension,
   importReplaceMap = {},
   importFallbackMap = {},
@@ -92,9 +96,11 @@ export const startCompileServer = async ({
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
   }
 
-  if (typeof importMapFileUrl === "undefined") {
-    importMapFileUrl = resolveUrl("./importMap.json", projectDirectoryUrl)
-  }
+  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
+  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
+  assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
+  // importMapFileRelativeUrl normalization
+  importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
 
   if (typeof jsenvDirectoryRelativeUrl !== "string") {
     throw new TypeError(
@@ -141,8 +147,6 @@ ${projectDirectoryUrl}`)
   }
 
   const logger = createLogger({ logLevel: compileServerLogLevel })
-
-  const importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
 
   const groupMap = generateGroupMap({
     babelPluginMap,
@@ -487,9 +491,8 @@ const generateImportMapForCompileServer = async ({
   logger,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
-  importMapFileUrl,
+  importMapFileRelativeUrl,
 }) => {
-  const importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
   const importMapForJsenvCore = await generateImportMapForPackage({
     logger,
     projectDirectoryPath: fileUrlToPath(jsenvCoreDirectoryUrl),

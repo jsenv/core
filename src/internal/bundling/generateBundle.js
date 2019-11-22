@@ -13,12 +13,7 @@ import {
   urlToRelativeUrl,
 } from "internal/urlUtils.js"
 import { assertFileExists, removeDirectory } from "internal/filesystemUtils.js"
-import {
-  assertProjectDirectoryPath,
-  assertProjectDirectoryExists,
-  assertImportMapFileRelativeUrl,
-  assertImportMapFileInsideProject,
-} from "internal/argUtils.js"
+import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
@@ -35,7 +30,7 @@ export const generateBundle = async ({
   projectDirectoryPath,
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean,
-  importMapFileRelativeUrl = "./importMap.json",
+  importMapFileRelativeUrl,
   importDefaultExtension,
   env = {},
   browser = false,
@@ -83,10 +78,6 @@ export const generateBundle = async ({
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
-  const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-  assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
-
   assertEntryPointMap({ entryPointMap })
 
   assertBundleDirectoryRelativeUrl({ bundleDirectoryRelativeUrl })
@@ -130,7 +121,7 @@ export const generateBundle = async ({
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
       outDirectoryName: "out-bundle",
-      importMapFileUrl,
+      importMapFileRelativeUrl,
       importDefaultExtension,
       env,
 

@@ -6,12 +6,7 @@ import {
 import { createLogger } from "@jsenv/logger"
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
 import { pathToDirectoryUrl, resolveFileUrl } from "internal/urlUtils.js"
-import {
-  assertProjectDirectoryPath,
-  assertProjectDirectoryExists,
-  assertImportMapFileRelativeUrl,
-  assertImportMapFileInsideProject,
-} from "internal/argUtils.js"
+import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { executePlan } from "internal/executing/executePlan.js"
 import { executionIsPassed } from "internal/executing/executionIsPassed.js"
 import { generateCoverageJsonFile } from "internal/executing/coverage/generateCoverageJsonFile.js"
@@ -28,7 +23,7 @@ export const executeTestPlan = async ({
   projectDirectoryPath,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
-  importMapFileRelativeUrl = "./importMap.json",
+  importMapFileRelativeUrl,
   importDefaultExtension,
   compileGroupCount = 2,
 
@@ -63,10 +58,6 @@ export const executeTestPlan = async ({
   assertProjectDirectoryPath({ projectDirectoryPath })
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
-
-  assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
-  const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-  assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
 
   if (coverage) {
     if (typeof coverageConfig !== "object") {
@@ -122,7 +113,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
-      importMapFileUrl,
+      importMapFileRelativeUrl,
       importDefaultExtension,
 
       compileGroupCount,
