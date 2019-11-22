@@ -64,6 +64,14 @@ export const generateBundle = async ({
   sourcemapExcludeSources = false,
   writeOnFileSystem = true,
 
+  // when true .jsenv/out-bundle directory is generated
+  // with all intermediated files used to produce the final bundle.
+  // it might improve generateBundle speed for subsequent bundle generation
+  // but this is to be proven and not absolutely required
+  // so for now thoos intermediates files will be generated in memory
+  // by the compile server
+  filesystemCache = false,
+
   ...rest
 }) => {
   logger = logger || createLogger({ logLevel })
@@ -126,8 +134,8 @@ export const generateBundle = async ({
       babelPluginMap,
       compileGroupCount,
       platformScoreMap,
-      writeOnFilesystem: true,
-      useFilesystemAsCache: true,
+      writeOnFilesystem: filesystemCache,
+      useFilesystemAsCache: filesystemCache,
 
       // override with potential custom options
       ...rest,
