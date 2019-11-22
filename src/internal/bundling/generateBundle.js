@@ -68,9 +68,12 @@ export const generateBundle = async ({
   // with all intermediated files used to produce the final bundle.
   // it might improve generateBundle speed for subsequent bundle generation
   // but this is to be proven and not absolutely required
-  // so for now thoos intermediates files will be generated in memory
+  // When false intermediates files are transformed and served in memory
   // by the compile server
-  filesystemCache = false,
+  // must be true by default otherwise rollup cannot find sourcemap files
+  // when asking them to the compile server
+  // (to fix that sourcemap could be inlined)
+  filesystemCache = true,
 
   ...rest
 }) => {

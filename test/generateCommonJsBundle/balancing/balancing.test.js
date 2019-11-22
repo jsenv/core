@@ -10,18 +10,20 @@ import {
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryBasename = basename(testDirectoryRelativeUrl)
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const mainFileBasename = `${testDirectoryBasename}.js`
 
 await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
-  logLevel: "debug",
-  compileServerLogLevel: "debug",
+  // logLevel: "debug",
+  // compileServerLogLevel: "debug",
+  jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `./${testDirectoryRelativePath}${mainFileBasename}`,
+    main: `./${testDirectoryRelativeUrl}${mainFileBasename}`,
   },
   compileGroupCount: 2,
 })
