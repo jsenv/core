@@ -27,12 +27,9 @@ export const createBrowserPlatform = () => {
     groupId: resolveBrowserGroup({ groupMap }),
     groupMap,
   })
+  const compileDirectoryRemoteUrl = `${outDirectoryRemoteUrl}${compileId}/`
 
-  const relativeUrlToCompiledUrl = (relativeUrl) => {
-    return `${outDirectoryRemoteUrl}${compileId}/${relativeUrl}`
-  }
-
-  const importMapNormalized = normalizeImportMap(importMap, `${outDirectoryRemoteUrl}${compileId}/`)
+  const importMapNormalized = normalizeImportMap(importMap, compileDirectoryRemoteUrl)
 
   const resolveImportScoped = (specifier, importer) => {
     if (specifier === GLOBAL_SPECIFIER) return specifier
@@ -95,7 +92,7 @@ export const createBrowserPlatform = () => {
   }
 
   return {
-    relativeUrlToCompiledUrl,
+    compileDirectoryRemoteUrl,
     resolveImportScoped,
     importFile,
     executeFile,

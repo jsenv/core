@@ -1,6 +1,6 @@
 import {
   fileRelativeUrl,
-  compileDirectoryRelativeUrl,
+  jsenvDirectoryRemoteUrl,
   livereloading,
   // eslint-disable-next-line import/no-unresolved
 } from ".jsenv/env.js"
@@ -37,24 +37,22 @@ const { EventSource, location } = window
     })
   }
 
-  const { body } = await fetchUsingXHR(
-    `${window.origin}/${compileDirectoryRelativeUrl}.jsenv/browser-self-execute-dynamic-data.json`,
-    {
-      credentials: "include",
-    },
-  )
+  // TODO: find how to know what to fetch to get dynamic data
+  const dynamicDataFileRemoteUrl = `${window.origin}/${compileDirectoryRelativeUrl}.jsenv/browser-self-execute-dynamic-data.json`
+  const { body } = await fetchUsingXHR(dynamicDataFileRemoteUrl, {
+    credentials: "include",
+  })
   const { compileServerOrigin } = JSON.parse(body)
 
-  await loadUsingScript(
-    `${compileServerOrigin}/${compileDirectoryRelativeUrl}.jsenv/browser-platform.js`,
-  )
+  const browserPlatformCompiledFileRemoteUrl = `${jsenvDirectoryRemoteUrl}browser-platform.js`
+  await loadUsingScript(browserPlatformCompiledFileRemoteUrl)
   const { __browserPlatform__ } = window
 
-  const { relativeUrlToCompiledUrl, executeFile } = __browserPlatform__.create({
+  const { compileDirectoryRemoteUrl, executeFile } = __browserPlatform__.create({
     compileServerOrigin,
   })
-
-  await executeFile(relativeUrlToCompiledUrl(fileRelativeUrl), {
+  const compiledFileRemoteUrl = `${compileDirectoryRemoteUrl}${fileRelativeUrl}`
+  await executeFile(compiledFileRemoteUrl, {
     errorNotification: true,
     executionId: fileRelativeUrl,
   })

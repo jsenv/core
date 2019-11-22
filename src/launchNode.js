@@ -25,7 +25,8 @@ export const launchNode = async ({
     jsenvCoreDirectoryUrl,
   ),
   compileServerOrigin,
-  compileServerJsenvDirectoryUrl,
+  jsenvDirectoryRemoteUrl,
+  outDirectoryRemoteUrl,
 
   debugPort = 0,
   debugMode = "inherit",
@@ -41,10 +42,11 @@ export const launchNode = async ({
   if (typeof compileServerOrigin !== "string") {
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
   }
-  if (typeof compileServerJsenvDirectoryUrl !== "string") {
-    throw new TypeError(
-      `compileServerJsenvDirectoryUrl must be a string, got ${compileServerJsenvDirectoryUrl}`,
-    )
+  if (typeof jsenvDirectoryRemoteUrl !== "string") {
+    throw new TypeError(`jsenvDirectoryRemoteUrl must be a string, got ${jsenvDirectoryRemoteUrl}`)
+  }
+  if (typeof outDirectoryRemoteUrl !== "string") {
+    throw new TypeError(`outDirectoryRemoteUrl must be a string, got ${outDirectoryRemoteUrl}`)
   }
   if (env === undefined) {
     env = { ...process.env }
@@ -179,7 +181,8 @@ export const launchNode = async ({
             nodeExecuteFileUrl,
             fileRelativeUrl,
             compileServerOrigin,
-            compileServerJsenvDirectoryUrl,
+            jsenvDirectoryRemoteUrl,
+            outDirectoryRemoteUrl,
             collectNamespace,
             collectCoverage,
             executionId,
@@ -286,7 +289,8 @@ const createExitWithFailureCodeError = (code) => {
 const createNodeIIFEString = ({
   projectDirectoryUrl,
   compileServerOrigin,
-  compileServerJsenvDirectoryUrl,
+  jsenvDirectoryRemoteUrl,
+  outDirectoryRemoteUrl,
   nodeExecuteFileUrl,
   fileRelativeUrl,
   collectNamespace,
@@ -298,7 +302,8 @@ const createNodeIIFEString = ({
     nodeExecuteFilePath,
     projectDirectoryUrl,
     compileServerOrigin,
-    compileServerJsenvDirectoryUrl,
+    jsenvDirectoryRemoteUrl,
+    outDirectoryRemoteUrl,
     fileRelativeUrl,
     collectNamespace,
     collectCoverage,
@@ -309,7 +314,8 @@ const createNodeIIFEString = ({
       nodeExecuteFilePath: fileUrlToPath(nodeExecuteFileUrl),
       projectDirectoryUrl,
       compileServerOrigin,
-      compileServerJsenvDirectoryUrl,
+      jsenvDirectoryRemoteUrl,
+      outDirectoryRemoteUrl,
       fileRelativeUrl,
       collectNamespace,
       collectCoverage,
@@ -325,7 +331,8 @@ const createNodeIIFEString = ({
   return execute({
     projectDirectoryUrl,
     compileServerOrigin,
-    compileServerJsenvDirectoryUrl,
+    jsenvDirectoryRemoteUrl,
+    outDirectoryRemoteUrl,
     fileRelativeUrl,
     collectNamespace,
     collectCoverage,

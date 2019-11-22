@@ -25,12 +25,13 @@ export const executeConcurrently = async (
     executeLogger,
 
     projectDirectoryUrl,
+    compileServerOrigin,
+    jsenvDirectoryRemoteUrl,
+    outDirectoryRemoteUrl,
     importMapFileUrl,
     importDefaultExtension,
 
     babelPluginMap,
-    compileServerOrigin,
-    compileServerJsenvDirectoryUrl,
 
     measurePlanExecutionDuration,
     concurrencyLimit = Math.max(cpus.length - 1, 1),
@@ -129,10 +130,11 @@ ${fileRelativeUrl}`),
         launch: (params) =>
           launch({
             projectDirectoryUrl,
-            compileServerOrigin,
-            compileServerJsenvDirectoryUrl,
             importMapFileUrl,
             importDefaultExtension,
+            compileServerOrigin,
+            jsenvDirectoryRemoteUrl,
+            outDirectoryRemoteUrl,
             babelPluginMap,
             cover: collectCoverage,
             ...params,

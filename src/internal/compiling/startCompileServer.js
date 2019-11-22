@@ -232,14 +232,15 @@ ${projectDirectoryUrl}`)
               logger,
 
               projectDirectoryUrl,
-              importDefaultExtension,
-              browserPlatformFileUrl,
-
-              babelPluginMap,
-              projectFileRequestedCallback,
+              jsenvDirectoryUrl,
+              nodePlatformFileUrl,
               compileServerOrigin,
               outDirectoryRemoteUrl,
               compileServerImportMap: importMapForCompileServer,
+              importDefaultExtension,
+
+              babelPluginMap,
+              projectFileRequestedCallback,
               request,
             }),
           () =>
@@ -248,14 +249,15 @@ ${projectDirectoryUrl}`)
               logger,
 
               projectDirectoryUrl,
-              importDefaultExtension,
+              jsenvDirectoryUrl,
               nodePlatformFileUrl,
+              outDirectoryRemoteUrl,
+              compileServerOrigin,
+              compileServerImportMap: importMapForCompileServer,
+              importDefaultExtension,
 
               babelPluginMap,
               projectFileRequestedCallback,
-              compileServerOrigin,
-              outDirectoryRemoteUrl,
-              compileServerImportMap: importMapForCompileServer,
               request,
             }),
           () =>
@@ -264,6 +266,8 @@ ${projectDirectoryUrl}`)
               logger,
 
               projectDirectoryUrl,
+              outDirectoryRemoteUrl,
+              compileServerOrigin,
               importReplaceMap,
               importFallbackMap,
 
@@ -272,8 +276,6 @@ ${projectDirectoryUrl}`)
               babelPluginMap,
               groupMap,
               convertMap,
-              outDirectoryRemoteUrl,
-              compileServerOrigin,
 
               request,
               projectFileRequestedCallback,

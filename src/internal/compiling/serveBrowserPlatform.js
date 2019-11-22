@@ -8,14 +8,14 @@ export const serveBrowserPlatform = async ({
 
   projectDirectoryUrl,
   jsenvDirectoryUrl,
-  importDefaultExtension,
   browserPlatformFileUrl,
-
-  babelPluginMap,
-  projectFileRequestedCallback,
   compileServerOrigin,
   outDirectoryRemoteUrl,
   compileServerImportMap,
+  importDefaultExtension,
+
+  babelPluginMap,
+  projectFileRequestedCallback,
   request,
 }) => {
   const { origin, ressource } = request

@@ -27,9 +27,6 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
     groupMap,
   })
   const compileDirectoryRemoteUrl = `${outDirectoryRemoteUrl}${compileId}/`
-
-  const relativeUrlToCompiledUrl = (relativeUrl) => `${compileDirectoryRemoteUrl}${relativeUrl}`
-
   const importMapNormalized = normalizeImportMap(importMap, compileDirectoryRemoteUrl)
 
   const resolveImportScoped = (specifier, importer) => {
@@ -98,7 +95,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
   }
 
   return {
-    relativeUrlToCompiledUrl,
+    compileDirectoryRemoteUrl,
     resolveImport: resolveImportScoped,
     importFile,
     executeFile,

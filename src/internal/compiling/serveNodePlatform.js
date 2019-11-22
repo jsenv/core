@@ -8,14 +8,14 @@ export const serveNodePlatform = async ({
 
   projectDirectoryUrl,
   jsenvDirectoryUrl,
-  importDefaultExtension,
   nodePlatformFileUrl,
-
-  babelPluginMap,
-  projectFileRequestedCallback,
   compileServerOrigin,
   outDirectoryRemoteUrl,
   compileServerImportMap,
+  importDefaultExtension,
+
+  babelPluginMap,
+  projectFileRequestedCallback,
   request,
 }) => {
   const { origin, ressource } = request

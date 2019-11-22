@@ -22,6 +22,8 @@ export const serveCompiledJs = async ({
   logger,
 
   projectDirectoryUrl,
+  compileServerOrigin,
+  outDirectoryRemoteUrl,
   importReplaceMap,
   importFallbackMap,
 
@@ -30,8 +32,6 @@ export const serveCompiledJs = async ({
   babelPluginMap,
   groupMap,
   convertMap,
-  outDirectoryRemoteUrl,
-  compileServerOrigin,
 
   request,
   projectFileRequestedCallback,

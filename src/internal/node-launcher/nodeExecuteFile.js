@@ -3,9 +3,10 @@ const { fetchUsingHttp } = require("./fetchUsingHttp.js")
 
 const execute = async ({
   projectDirectoryUrl,
-  compileServerOrigin,
-  compileServerJsenvDirectoryUrl,
   fileRelativeUrl,
+  compileServerOrigin,
+  jsenvDirectoryRemoteUrl,
+  outDirectoryRemoteUrl,
   collectNamespace,
   collectCoverage,
   executionId,
@@ -19,33 +20,36 @@ const execute = async ({
     throw valueRejected
   })
 
-  const nodePlatformCompiledFileServerUrl = `${compileServerJsenvDirectoryUrl}out/.jsenv/node-platform.js`
+  const nodePlatformCompiledFileServerUrl = resolveUrl(
+    ".jsenv/node-platform.js",
+    outDirectoryRemoteUrl,
+  )
   await fetchUsingHttp(nodePlatformCompiledFileServerUrl)
 
-  const jsenvDirectoryProjectUrl = urlToProjectUrl(compileServerJsenvDirectoryUrl, {
+  const jsenvDirectoryUrl = urlToProjectUrl(jsenvDirectoryRemoteUrl, {
     projectDirectoryUrl,
     compileServerOrigin,
   })
-  const nodePlatformCompiledFileProjectUrl = `${jsenvDirectoryProjectUrl}node-platform.js`
-  const nodePlatformCompiledFilePath = fileURLToPath(nodePlatformCompiledFileProjectUrl)
+  const nodePlatformCompiledFileUrl = resolveUrl("node-platform.js", jsenvDirectoryUrl)
+  const nodePlatformCompiledFilePath = fileURLToPath(nodePlatformCompiledFileUrl)
   // eslint-disable-next-line import/no-dynamic-require
   const { nodePlatform } = require(nodePlatformCompiledFilePath)
 
-  const { relativeUrlToCompiledUrl, executeFile } = nodePlatform.create({
+  const { compileDirectoryRemoteUrl, executeFile } = nodePlatform.create({
     projectDirectoryUrl,
     compileServerOrigin,
   })
 
-  const originalFileServerUrl = `${compileServerOrigin}${fileRelativeUrl}`
-  const compiledFileServerUrl = relativeUrlToCompiledUrl(fileRelativeUrl)
+  const originalFileRemoteUrl = resolveUrl(fileRelativeUrl, compileServerOrigin)
+  const compiledFileRemoteUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
   const { getErrorOriginalStackString } = installErrorStackRemapping({
     projectDirectoryUrl,
     compileServerOrigin,
-    originalFileServerUrl,
-    compiledFileServerUrl,
+    originalFileRemoteUrl,
+    compiledFileRemoteUrl,
   })
 
-  return executeFile(compiledFileServerUrl, {
+  return executeFile(compiledFileRemoteUrl, {
     collectNamespace,
     collectCoverage,
     executionId,
@@ -66,13 +70,13 @@ exports.execute = execute
 const installErrorStackRemapping = ({
   projectDirectoryUrl,
   compileServerOrigin,
-  originalFileServerUrl,
-  compiledFileServerUrl,
+  originalFileRemoteUrl,
+  compiledFileRemoteUrl,
 }) => {
   const { installNodeErrorStackRemapping } = require("@jsenv/error-stack-sourcemap")
   const { SourceMapConsumer } = require("source-map")
 
-  const compiledFileProjectUrl = urlToProjectUrl(compiledFileServerUrl, {
+  const compiledFileUrl = urlToProjectUrl(compiledFileRemoteUrl, {
     projectDirectoryUrl,
     compileServerOrigin,
   })
@@ -82,7 +86,7 @@ const installErrorStackRemapping = ({
       if (type === "source" || type === "file-original" || type === "source-map") {
         const importerUrl = importer
           ? specifierToServerUrl(importer, { projectDirectoryUrl, compileServerOrigin }) || importer
-          : originalFileServerUrl
+          : originalFileRemoteUrl
         const specifierUrl = resolveUrl(specifier, importerUrl)
         return (
           urlToProjectUrl(specifierUrl, { projectDirectoryUrl, compileServerOrigin }) ||
@@ -90,7 +94,7 @@ const installErrorStackRemapping = ({
         )
       }
 
-      return resolveUrl(specifier, importer || compiledFileProjectUrl)
+      return resolveUrl(specifier, importer || compiledFileUrl)
     },
     SourceMapConsumer,
   })
