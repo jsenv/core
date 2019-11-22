@@ -7,6 +7,7 @@ import {
   pathToFileUrl,
   resolveFileUrl,
   fileUrlToRelativePath,
+  resolveDirectoryUrl,
 } from "internal/urlUtils.js"
 import { writeFileContent } from "internal/filesystemUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
@@ -26,19 +27,22 @@ export const createJsenvRollupPlugin = async ({
   projectDirectoryUrl,
   entryPointMap,
   bundleDirectoryUrl,
+  compileDirectoryRelativeUrl,
+  compileServerOrigin,
+  compileServerImportMap,
   importDefaultExtension,
 
-  compileServerOrigin,
-  compileDirectoryRemoteUrl,
-  compileServerImportMap,
   babelPluginMap,
-
-  minify,
   format,
+  minify,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
   const moduleContentMap = {}
   const redirectionMap = {}
+  const compileDirectoryRemoteUrl = resolveDirectoryUrl(
+    compileDirectoryRelativeUrl,
+    compileServerOrigin,
+  )
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
   const importMap = normalizeImportMap(compileServerImportMap, compileDirectoryRemoteUrl)
 

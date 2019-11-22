@@ -58,7 +58,11 @@ export const executePlan = async ({
 
   const [
     executionSteps,
-    { origin: compileServerOrigin, jsenvDirectoryRemoteUrl, outDirectoryRemoteUrl },
+    {
+      origin: compileServerOrigin,
+      jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
+      outDirectoryRelativeUrl,
+    },
   ] = await Promise.all([
     generateExecutionSteps(plan, {
       cancellationToken,
@@ -87,9 +91,9 @@ export const executePlan = async ({
     executeLogger,
 
     projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
     compileServerOrigin,
-    jsenvDirectoryRemoteUrl,
-    outDirectoryRemoteUrl,
     importMapFileUrl,
     importDefaultExtension,
 

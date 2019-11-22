@@ -26,7 +26,8 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
     groupId: resolveNodeGroup({ groupMap }),
     groupMap,
   })
-  const compileDirectoryRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/`
+  const outDirectoryRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`
+  const compileDirectoryRemoteUrl = `${outDirectoryRemoteUrl}${compileId}/`
   const importMapNormalized = normalizeImportMap(importMap, compileDirectoryRemoteUrl)
 
   const resolveImportScoped = (specifier, importer) => {
@@ -46,7 +47,7 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
       compileServerOrigin,
-      outDirectoryRelativeUrl,
+      outDirectoryRemoteUrl,
       resolveImport: resolveImportScoped,
     })
     return makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
@@ -64,8 +65,8 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
   ) => {
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
-      outDirectoryRelativeUrl,
       compileServerOrigin,
+      outDirectoryRemoteUrl,
       resolveImport: resolveImportScoped,
       executionId,
     })

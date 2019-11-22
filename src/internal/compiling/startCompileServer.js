@@ -42,7 +42,7 @@ export const startCompileServer = async ({
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl = ".jsenv",
   jsenvDirectoryClean = false,
-  outDirectoryRelativeUrl = "out",
+  outDirectoryRelativeUrl = ".jsenv/out",
 
   writeOnFilesystem = true,
   useFilesystemAsCache = true,
@@ -102,6 +102,8 @@ export const startCompileServer = async ({
     )
   }
   const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
+  // jsenvDirectoryRelativeUrl normalization
+  jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl)
   if (!jsenvDirectoryUrl.startsWith(projectDirectoryUrl)) {
     throw new TypeError(`jsenv directory must be inside project directory
 --- jsenv directory url ---
@@ -111,6 +113,8 @@ ${projectDirectoryUrl}`)
   }
 
   const outDirectoryUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, jsenvDirectoryUrl)
+  // outDirectoryRelativeUrl normalization
+  outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl)
 
   if (typeof browserPlatformFileUrl !== "string") {
     throw new TypeError(`browserPlatformFileUrl must be a string. got ${browserPlatformFileUrl}`)
@@ -203,14 +207,6 @@ ${projectDirectoryUrl}`)
       sendInternalErrorStack: true,
       requestToResponse: (request) => {
         const compileServerOrigin = request.origin
-        const jsenvDirectoryRemoteUrl = resolveDirectoryUrl(
-          jsenvDirectoryRelativeUrl,
-          compileServerOrigin,
-        )
-        const outDirectoryRemoteUrl = resolveDirectoryUrl(
-          outDirectoryRelativeUrl,
-          jsenvDirectoryRemoteUrl,
-        )
 
         return firstService(
           () => {
@@ -232,10 +228,10 @@ ${projectDirectoryUrl}`)
               logger,
 
               projectDirectoryUrl,
-              jsenvDirectoryUrl,
-              nodePlatformFileUrl,
+              jsenvDirectoryRelativeUrl,
+              outDirectoryRelativeUrl,
+              browserPlatformFileUrl,
               compileServerOrigin,
-              outDirectoryRemoteUrl,
               compileServerImportMap: importMapForCompileServer,
               importDefaultExtension,
 
@@ -249,9 +245,9 @@ ${projectDirectoryUrl}`)
               logger,
 
               projectDirectoryUrl,
-              jsenvDirectoryUrl,
+              jsenvDirectoryRelativeUrl,
+              outDirectoryRelativeUrl,
               nodePlatformFileUrl,
-              outDirectoryRemoteUrl,
               compileServerOrigin,
               compileServerImportMap: importMapForCompileServer,
               importDefaultExtension,
@@ -266,8 +262,7 @@ ${projectDirectoryUrl}`)
               logger,
 
               projectDirectoryUrl,
-              outDirectoryRemoteUrl,
-              compileServerOrigin,
+              outDirectoryRelativeUrl,
               importReplaceMap,
               importFallbackMap,
 
@@ -305,25 +300,18 @@ ${projectDirectoryUrl}`)
     generateImportMapForCompileServer({
       logger,
       projectDirectoryUrl,
-      jsenvDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
       importMapFileUrl,
     }),
   ])
 
   const compileServerOrigin = compileServer.origin
-  const jsenvDirectoryRemoteUrl = resolveDirectoryUrl(
-    jsenvDirectoryRelativeUrl,
-    compileServer.origin,
-  )
-  const outDirectoryRemoteUrl = resolveDirectoryUrl(
-    outDirectoryRelativeUrl,
-    jsenvDirectoryRemoteUrl,
-  )
   const importMap = normalizeImportMap(importMapForCompileServer, `${compileServerOrigin}/`)
 
   env = {
     ...env,
-    outDirectoryRemoteUrl,
+    jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
     importDefaultExtension,
   }
 
@@ -399,11 +387,11 @@ export const ${key} = ${JSON.stringify(env[key])}
   }
 
   return {
+    jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
     ...compileServer,
     compileServerImportMap: importMapForCompileServer,
     compileServerGroupMap: groupMap,
-    jsenvDirectoryRemoteUrl,
-    outDirectoryRemoteUrl,
   }
 }
 
@@ -496,10 +484,9 @@ const serveProjectFiles = async ({
 const generateImportMapForCompileServer = async ({
   logger,
   projectDirectoryUrl,
-  jsenvDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
   importMapFileUrl,
 }) => {
-  const jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl)
   const importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl)
   const importMapForJsenvCore = await generateImportMapForPackage({
     logger,

@@ -1,4 +1,4 @@
-import { resolveUrl } from "internal/urlUtils.js"
+import { resolveUrl, resolveDirectoryUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { serveBundle } from "./serveBundle.js"
 
@@ -7,10 +7,10 @@ export const serveBrowserPlatform = async ({
   logger,
 
   projectDirectoryUrl,
-  jsenvDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
+  outDirectoryRelativeUrl,
   browserPlatformFileUrl,
   compileServerOrigin,
-  outDirectoryRemoteUrl,
   compileServerImportMap,
   importDefaultExtension,
 
@@ -19,6 +19,7 @@ export const serveBrowserPlatform = async ({
   request,
 }) => {
   const { origin, ressource } = request
+  const outDirectoryRemoteUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, origin)
   const browserPlatformCompiledFileRemoteUrl = resolveUrl(
     ".jsenv/browser-platform.js",
     outDirectoryRemoteUrl,
@@ -29,6 +30,7 @@ export const serveBrowserPlatform = async ({
   }
 
   const originalFileUrl = browserPlatformFileUrl
+  const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
   const compiledFileUrl = resolveUrl(`browser-platform.js`, jsenvDirectoryUrl)
   return serveBundle({
     cancellationToken,
@@ -38,14 +40,14 @@ export const serveBrowserPlatform = async ({
     projectDirectoryUrl,
     originalFileUrl,
     compiledFileUrl,
+    compileServerOrigin,
+    outDirectoryRelativeUrl,
+    compileServerImportMap,
     importDefaultExtension,
-    format: "global",
 
+    format: "global",
     babelPluginMap,
     projectFileRequestedCallback,
-    compileServerOrigin,
-    outDirectoryRemoteUrl,
-    compileServerImportMap,
     request,
   })
 }

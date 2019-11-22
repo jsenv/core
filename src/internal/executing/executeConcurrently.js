@@ -25,9 +25,9 @@ export const executeConcurrently = async (
     executeLogger,
 
     projectDirectoryUrl,
+    jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
     compileServerOrigin,
-    jsenvDirectoryRemoteUrl,
-    outDirectoryRemoteUrl,
     importMapFileUrl,
     importDefaultExtension,
 
@@ -130,11 +130,12 @@ ${fileRelativeUrl}`),
         launch: (params) =>
           launch({
             projectDirectoryUrl,
+            jsenvDirectoryRelativeUrl,
+            outDirectoryRelativeUrl,
+            compileServerOrigin,
             importMapFileUrl,
             importDefaultExtension,
-            compileServerOrigin,
-            jsenvDirectoryRemoteUrl,
-            outDirectoryRemoteUrl,
+
             babelPluginMap,
             cover: collectCoverage,
             ...params,

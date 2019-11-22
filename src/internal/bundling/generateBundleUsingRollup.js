@@ -8,17 +8,17 @@ const { rollup } = import.meta.require("rollup")
 export const generateBundleUsingRollup = async ({
   cancellationToken,
   logger,
+
   projectDirectoryUrl,
   entryPointMap,
   bundleDirectoryUrl,
+  compileDirectoryRelativeUrl,
+  compileServerOrigin,
+  compileServerImportMap,
   importDefaultExtension,
+
   node,
   browser,
-
-  compileServerOrigin,
-  compileDirectoryRemoteUrl,
-  compileServerImportMap,
-
   babelPluginMap,
   format,
   formatOutputOptions,
@@ -29,13 +29,15 @@ export const generateBundleUsingRollup = async ({
   const { jsenvRollupPlugin, getExtraInfo } = await createJsenvRollupPlugin({
     cancellationToken,
     logger,
+
     projectDirectoryUrl,
     entryPointMap,
     bundleDirectoryUrl,
-    importDefaultExtension,
+    compileDirectoryRelativeUrl,
     compileServerOrigin,
-    compileDirectoryRemoteUrl,
     compileServerImportMap,
+    importDefaultExtension,
+
     babelPluginMap,
     format,
     minify,

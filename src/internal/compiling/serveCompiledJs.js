@@ -9,7 +9,6 @@ import {
   fileUrlToPath,
   resolveDirectoryUrl,
   resolveUrl,
-  urlToRelativeUrl,
 } from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
 import { createBabePluginMapForBundle } from "internal/bundling/createBabePluginMapForBundle.js"
@@ -22,8 +21,7 @@ export const serveCompiledJs = async ({
   logger,
 
   projectDirectoryUrl,
-  compileServerOrigin,
-  outDirectoryRemoteUrl,
+  outDirectoryRelativeUrl,
   importReplaceMap,
   importFallbackMap,
 
@@ -40,6 +38,7 @@ export const serveCompiledJs = async ({
 }) => {
   const { origin, ressource, method, headers } = request
   const requestUrl = `${origin}${ressource}`
+  const outDirectoryRemoteUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, origin)
   // not inside compile directory -> nothing to compile
   if (!requestUrl.startsWith(outDirectoryRemoteUrl)) {
     return null
@@ -126,11 +125,8 @@ export const serveCompiledJs = async ({
     babelPluginMapForGroupMap = {}
   }
 
-  const compileDirectoryRemoteUrl = resolveDirectoryUrl(compileId, outDirectoryRemoteUrl)
-  const compileDirectoryUrl = resolveDirectoryUrl(
-    urlToRelativeUrl(compileDirectoryRemoteUrl, `${compileServerOrigin}/`),
-    projectDirectoryUrl,
-  )
+  const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
+  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
   const compiledFileUrl = resolveUrl(originalFileRelativeUrl, compileDirectoryUrl)
 
   return serveCompiledFile({
@@ -138,10 +134,11 @@ export const serveCompiledJs = async ({
     logger,
 
     projectDirectoryUrl,
-    importReplaceMap,
-    importFallbackMap,
     originalFileUrl,
     compiledFileUrl,
+    importReplaceMap,
+    importFallbackMap,
+
     writeOnFilesystem,
     useFilesystemAsCache,
     projectFileRequestedCallback,

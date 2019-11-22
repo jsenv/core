@@ -21,20 +21,22 @@ export const execute = async ({
   executeLogLevel = logLevel,
 
   projectDirectoryPath,
-  jsenvDirectoryRelativeUrl = "./.jsenv/",
+  jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
   importMapFileRelativeUrl = "./importMap.json",
   importDefaultExtension,
   fileRelativeUrl,
-  launch,
+
   babelPluginMap,
   convertMap,
-
   compileGroupCount = 2,
+
+  launch,
 
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
+
   mirrorConsole = true,
   stopPlatformAfterExecute = false,
   collectNamespace = false,
@@ -61,7 +63,11 @@ export const execute = async ({
   }
 
   return catchAsyncFunctionCancellation(async () => {
-    const { jsenvDirectoryRemoteUrl, compileServerOrigin } = await startCompileServer({
+    const {
+      jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
+      outDirectoryRelativeUrl,
+      origin: compileServerOrigin,
+    } = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
 
@@ -88,8 +94,9 @@ export const execute = async ({
         launch({
           ...params,
           projectDirectoryUrl,
+          jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
+          outDirectoryRelativeUrl,
           compileServerOrigin,
-          jsenvDirectoryRemoteUrl,
         }),
       mirrorConsole,
       stopPlatformAfterExecute,

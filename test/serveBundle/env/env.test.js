@@ -42,7 +42,9 @@ const ressource = `/${outDirectoryRelativeUrl}file.js`
 
 const { status: actual } = await serveBundle({
   cancellationToken: createCancellationToken(),
-  logger: createLogger({ logLevel: "debug" }),
+  logger: createLogger({
+    logLevel: "warn",
+  }),
 
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   originalFileUrl,

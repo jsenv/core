@@ -14,17 +14,17 @@ export const serveBundle = async ({
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
+  outDirectoryRelativeUrl,
+  compileServerOrigin,
+  compileServerImportMap,
   importDefaultExtension,
+
   format,
   formatOutputOptions = {},
   node = format === "commonjs",
   browser = format === "global",
-
   projectFileRequestedCallback,
   request,
-  outDirectoryRemoteUrl,
-  compileServerOrigin,
-  compileServerImportMap,
   babelPluginMap,
 }) => {
   if (typeof jsenvProjectDirectoryUrl !== "string") {
@@ -41,6 +41,7 @@ export const serveBundle = async ({
     const entryPointMap = {
       [entryName]: `./${originalFileRelativeUrl}`,
     }
+    const compileId = format === "global" ? COMPILE_ID_BUNDLE_GLOBAL : COMPILE_ID_BUNDLE_COMMONJS
 
     const bundle = await generateBundleUsingRollup({
       cancellationToken,
@@ -51,17 +52,14 @@ export const serveBundle = async ({
       // bundleDirectoryUrl is just theorical because of writeOnFileSystem: false
       // but still important to know where the files will be written
       bundleDirectoryUrl: resolveDirectoryUrl("./", compiledFileUrl),
+      compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
+      compileServerOrigin,
+      compileServerImportMap,
       importDefaultExtension,
+
       node,
       browser,
-
       babelPluginMap,
-      compileServerOrigin,
-      compileDirectoryRemoteUrl: resolveDirectoryUrl(
-        format === "global" ? COMPILE_ID_BUNDLE_GLOBAL : COMPILE_ID_BUNDLE_COMMONJS,
-        outDirectoryRemoteUrl,
-      ),
-      compileServerImportMap,
       format,
       formatOutputOptions,
       writeOnFileSystem: false,
@@ -71,10 +69,10 @@ export const serveBundle = async ({
 
     return bundleToCompilationResult(bundle, {
       projectDirectoryUrl,
-      compileServerOrigin,
       originalFileUrl,
       compiledFileUrl,
       sourcemapFileUrl,
+      compileServerOrigin,
     })
   }
 
