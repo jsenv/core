@@ -1,9 +1,13 @@
 import {
-  fileRelativeUrl,
-  jsenvDirectoryRemoteUrl,
+  jsenvDirectoryRelativeUrl,
   livereloading,
   // eslint-disable-next-line import/no-unresolved
 } from ".jsenv/env.js"
+// cannot get fileRelativeUrl
+// from the env because it's something that
+// changes for every file
+// however we could get it using importReplaceMap
+import { fileRelativeUrl } from "somewhere"
 import { loadUsingScript } from "internal/loadUsingScript.js"
 import { fetchUsingXHR } from "internal/fetchUsingXHR.js"
 
@@ -37,14 +41,13 @@ const { EventSource, location } = window
     })
   }
 
-  // TODO: find how to know what to fetch to get dynamic data
-  const dynamicDataFileRemoteUrl = `${window.origin}/${compileDirectoryRelativeUrl}.jsenv/browser-self-execute-dynamic-data.json`
+  const dynamicDataFileRemoteUrl = `${window.origin}/${jsenvDirectoryRelativeUrl}.jsenv/browser-self-execute-dynamic-data.json`
   const { body } = await fetchUsingXHR(dynamicDataFileRemoteUrl, {
     credentials: "include",
   })
   const { compileServerOrigin } = JSON.parse(body)
 
-  const browserPlatformCompiledFileRemoteUrl = `${jsenvDirectoryRemoteUrl}browser-platform.js`
+  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}browser-platform.js`
   await loadUsingScript(browserPlatformCompiledFileRemoteUrl)
   const { __browserPlatform__ } = window
 

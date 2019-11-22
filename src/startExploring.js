@@ -7,15 +7,13 @@ import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from 
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, resolveDirectoryUrl, resolveFileUrl } from "internal/urlUtils.js"
+import { pathToDirectoryUrl, resolveFileUrl, sameOrigin } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
 import {
   assertProjectDirectoryPath,
   assertProjectDirectoryExists,
   assertImportMapFileRelativeUrl,
   assertImportMapFileInsideProject,
-  assertCompileDirectoryRelativeUrl,
-  assertCompileDirectoryInsideProject,
 } from "internal/argUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { serveExploringIndex } from "internal/exploring/serveExploringIndex.js"
@@ -33,7 +31,7 @@ export const startExploring = async ({
     jsenvCoreDirectoryUrl,
   ),
   browserSelfExecuteTemplateFileUrl = resolveFileUrl(
-    "./src/internal/exploring/browser-self-execute-template.js",
+    "./src/internal/exploring/browserSelfExecuteTemplate.js",
     jsenvCoreDirectoryUrl,
   ),
   explorableConfig = jsenvExplorableConfig,
@@ -45,13 +43,15 @@ export const startExploring = async ({
   livereloading = false,
 
   projectDirectoryPath,
-  compileDirectoryRelativeUrl = "./.dist",
-  compileDirectoryClean,
+  jsenvDirectoryRelativeUrl,
+  jsenvDirectoryClean,
   importMapFileRelativeUrl = "./importMap.json",
   importDefaultExtension,
+
   babelPluginMap,
   convertMap,
   compileGroupCount = 2,
+
   keepProcessAlive = true,
   cors = true,
   protocol = "http",
@@ -68,10 +68,6 @@ export const startExploring = async ({
   assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
   const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
-
-  assertCompileDirectoryRelativeUrl({ compileDirectoryRelativeUrl })
-  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
-  assertCompileDirectoryInsideProject({ compileDirectoryUrl, projectDirectoryUrl })
 
   await assertFileExists(HTMLTemplateFileUrl)
   await assertFileExists(browserSelfExecuteTemplateFileUrl)
@@ -244,14 +240,20 @@ export const startExploring = async ({
     const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
+
       projectDirectoryUrl,
-      compileDirectoryUrl,
-      compileDirectoryClean,
+      jsenvDirectoryRelativeUrl,
+      jsenvDirectoryClean,
       importMapFileUrl,
       importDefaultExtension,
+
+      env: {
+        livereloading,
+      },
       compileGroupCount,
       babelPluginMap,
       convertMap,
+
       cors,
       protocol,
       privateKey,
@@ -263,7 +265,12 @@ export const startExploring = async ({
       stopOnPackageVersionChange: true,
     })
 
-    const { compileServerOrigin } = compileServer
+    const {
+      origin: compileServerOrigin,
+      compileServerImportMap,
+      outDirectoryRelativeUrl,
+      jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
+    } = compileServer
 
     const logger = createLogger({ logLevel })
 
@@ -303,16 +310,20 @@ export const startExploring = async ({
         },
         () => {
           return serveBrowserSelfExecute({
+            cancellationToken,
             logger,
-            compileServerOrigin,
+
             projectDirectoryUrl,
-            compileDirectoryUrl,
-            importMapFileUrl,
-            importDefaultExtension,
             browserSelfExecuteTemplateFileUrl,
-            babelPluginMap,
+            jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
+            outDirectoryRelativeUrl,
+            compileServerOrigin,
+            compileServerImportMap,
+            importDefaultExtension,
+
+            projectFileRequestedCallback,
             request,
-            livereloading,
+            babelPluginMap,
           })
         },
         () => {
@@ -354,8 +365,4 @@ export const startExploring = async ({
 
     return browserServer
   })
-}
-
-const sameOrigin = (url, otherUrl) => {
-  return new URL(url).origin === new URL(otherUrl).origin
 }

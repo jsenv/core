@@ -10,7 +10,7 @@ export const serveBundle = async ({
   cancellationToken,
   logger,
 
-  jsenvProjectDirectoryUrl = jsenvCoreDirectoryUrl,
+  jsenvProjectDirectoryUrl,
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,

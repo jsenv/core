@@ -27,24 +27,3 @@ ${importMapFileUrl}
 ${projectDirectoryUrl}`)
   }
 }
-
-export const assertCompileDirectoryRelativeUrl = ({ compileDirectoryRelativeUrl }) => {
-  if (typeof compileDirectoryRelativeUrl !== "string") {
-    throw new TypeError(
-      `compileDirectoryRelativeUrl must be a string, received ${compileDirectoryRelativeUrl}`,
-    )
-  }
-}
-
-export const assertCompileDirectoryInsideProject = ({
-  compileDirectoryUrl,
-  projectDirectoryUrl,
-}) => {
-  if (!compileDirectoryUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`compile directory must be inside project directory
---- compile directory url ---
-${compileDirectoryUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
-  }
-}

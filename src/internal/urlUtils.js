@@ -59,3 +59,7 @@ export const resolveUrl = (specifier, baseUrl) => {
 }
 
 export const resolveFileUrl = resolveUrl
+
+export const sameOrigin = (url, otherUrl) => {
+  return new URL(url).origin === new URL(otherUrl).origin
+}
