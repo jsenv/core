@@ -2,9 +2,9 @@ const { pathToFileURL, fileURLToPath } = require("url")
 const { fetchUsingHttp } = require("./fetchUsingHttp.js")
 
 const execute = async ({
-  compileServerOrigin,
   projectDirectoryUrl,
-  jsenvDirectoryServerUrl,
+  compileServerOrigin,
+  compileServerJsenvDirectoryUrl,
   fileRelativeUrl,
   collectNamespace,
   collectCoverage,
@@ -19,10 +19,10 @@ const execute = async ({
     throw valueRejected
   })
 
-  const nodePlatformCompiledFileServerUrl = `${jsenvDirectoryServerUrl}out/.jsenv/node-platform.js`
+  const nodePlatformCompiledFileServerUrl = `${compileServerJsenvDirectoryUrl}out/.jsenv/node-platform.js`
   await fetchUsingHttp(nodePlatformCompiledFileServerUrl)
 
-  const jsenvDirectoryProjectUrl = urlToProjectUrl(jsenvDirectoryServerUrl, {
+  const jsenvDirectoryProjectUrl = urlToProjectUrl(compileServerJsenvDirectoryUrl, {
     projectDirectoryUrl,
     compileServerOrigin,
   })

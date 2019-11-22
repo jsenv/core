@@ -108,9 +108,9 @@ export const generateBundle = async ({
 
   return catchAsyncFunctionCancellation(async () => {
     const {
-      origin: compileServerOrigin,
-      importMap: compileServerImportMap,
-      groupMap: compileServerGroupMap,
+      compileServerOrigin,
+      compileServerImportMap,
+      compileServerGroupMap,
     } = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,

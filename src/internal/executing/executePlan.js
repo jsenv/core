@@ -13,10 +13,11 @@ export const executePlan = async ({
   executeLogger,
 
   projectDirectoryUrl,
-  compileDirectoryUrl,
-  compileDirectoryClean,
+  jsenvDirectoryRelativeUrl,
+  jsenvDirectoryClean,
   importMapFileUrl,
   importDefaultExtension,
+
   babelPluginMap,
   convertMap,
   compileGroupCount,
@@ -55,19 +56,24 @@ export const executePlan = async ({
     }
   }
 
-  const [executionSteps, { origin: compileServerOrigin }] = await Promise.all([
+  const [
+    executionSteps,
+    { origin: compileServerOrigin, compileServerJsenvDirectoryUrl },
+  ] = await Promise.all([
     generateExecutionSteps(plan, {
       cancellationToken,
       projectDirectoryUrl,
     }),
     startCompileServerForExecutingPlan({
       cancellationToken,
-      logLevel: compileServerLogLevel,
+      compileServerLogLevel,
+
       projectDirectoryUrl,
-      compileDirectoryUrl,
-      compileDirectoryClean,
+      jsenvDirectoryRelativeUrl,
+      jsenvDirectoryClean,
       importMapFileUrl,
       importDefaultExtension,
+
       compileGroupCount,
       babelPluginMap,
       convertMap,
@@ -80,12 +86,13 @@ export const executePlan = async ({
     launchLogger,
     executeLogger,
 
-    compileServerOrigin,
     projectDirectoryUrl,
-    compileDirectoryUrl,
     importMapFileUrl,
     importDefaultExtension,
+
     babelPluginMap,
+    compileServerOrigin,
+    compileServerJsenvDirectoryUrl,
 
     measurePlanExecutionDuration,
     concurrencyLimit,

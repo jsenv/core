@@ -14,9 +14,8 @@ const EVALUATION_STATUS_OK = "evaluation-ok"
 export const launchNode = async ({
   cancellationToken = createCancellationToken(),
   // logger,
-  compileServerOrigin,
+
   projectDirectoryUrl,
-  jsenvDirectoryServerUrl,
   nodeControllableFileUrl = resolveFileUrl(
     "./src/internal/node-launcher/nodeControllableFile.js",
     jsenvCoreDirectoryUrl,
@@ -25,6 +24,9 @@ export const launchNode = async ({
     "./src/internal/node-launcher/nodeExecuteFile.js",
     jsenvCoreDirectoryUrl,
   ),
+  compileServerOrigin,
+  compileServerJsenvDirectoryUrl,
+
   debugPort = 0,
   debugMode = "inherit",
   debugModeInheritBreak = true,
@@ -33,14 +35,16 @@ export const launchNode = async ({
   cover = false,
   env,
 }) => {
-  if (typeof compileServerOrigin !== "string") {
-    throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
-  }
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
   }
-  if (typeof jsenvDirectoryServerUrl !== "string") {
-    throw new TypeError(`jsenvDirectoryServerUrl must be a string, got ${jsenvDirectoryServerUrl}`)
+  if (typeof compileServerOrigin !== "string") {
+    throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
+  }
+  if (typeof compileServerJsenvDirectoryUrl !== "string") {
+    throw new TypeError(
+      `compileServerJsenvDirectoryUrl must be a string, got ${compileServerJsenvDirectoryUrl}`,
+    )
   }
   if (env === undefined) {
     env = { ...process.env }
@@ -171,11 +175,11 @@ export const launchNode = async ({
           child,
           "evaluate",
           createNodeIIFEString({
-            compileServerOrigin,
             projectDirectoryUrl,
-            jsenvDirectoryServerUrl,
             nodeExecuteFileUrl,
             fileRelativeUrl,
+            compileServerOrigin,
+            compileServerJsenvDirectoryUrl,
             collectNamespace,
             collectCoverage,
             executionId,
@@ -280,9 +284,9 @@ const createExitWithFailureCodeError = (code) => {
 }
 
 const createNodeIIFEString = ({
-  compileServerOrigin,
   projectDirectoryUrl,
-  jsenvDirectoryServerUrl,
+  compileServerOrigin,
+  compileServerJsenvDirectoryUrl,
   nodeExecuteFileUrl,
   fileRelativeUrl,
   collectNamespace,
@@ -292,9 +296,9 @@ const createNodeIIFEString = ({
 }) => `(() => {
   const {
     nodeExecuteFilePath,
-    compileServerOrigin,
     projectDirectoryUrl,
-    jsenvDirectoryServerUrl,
+    compileServerOrigin,
+    compileServerJsenvDirectoryUrl,
     fileRelativeUrl,
     collectNamespace,
     collectCoverage,
@@ -303,9 +307,9 @@ const createNodeIIFEString = ({
   } = ${JSON.stringify(
     {
       nodeExecuteFilePath: fileUrlToPath(nodeExecuteFileUrl),
-      compileServerOrigin,
       projectDirectoryUrl,
-      jsenvDirectoryServerUrl,
+      compileServerOrigin,
+      compileServerJsenvDirectoryUrl,
       fileRelativeUrl,
       collectNamespace,
       collectCoverage,
@@ -319,9 +323,9 @@ const createNodeIIFEString = ({
   const { execute } = require(nodeExecuteFilePath)
 
   return execute({
-    compileServerOrigin,
     projectDirectoryUrl,
-    jsenvDirectoryServerUrl,
+    compileServerOrigin,
+    compileServerJsenvDirectoryUrl,
     fileRelativeUrl,
     collectNamespace,
     collectCoverage,

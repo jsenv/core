@@ -5,14 +5,12 @@ import {
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { pathToDirectoryUrl, resolveDirectoryUrl, resolveFileUrl } from "internal/urlUtils.js"
+import { pathToDirectoryUrl, resolveFileUrl } from "internal/urlUtils.js"
 import {
   assertProjectDirectoryPath,
   assertProjectDirectoryExists,
   assertImportMapFileRelativeUrl,
   assertImportMapFileInsideProject,
-  assertCompileDirectoryRelativeUrl,
-  assertCompileDirectoryInsideProject,
 } from "internal/argUtils.js"
 import { executePlan } from "internal/executing/executePlan.js"
 import { executionIsPassed } from "internal/executing/executionIsPassed.js"
@@ -28,9 +26,10 @@ export const executeTestPlan = async ({
   executeLogLevel = "off",
 
   projectDirectoryPath,
-  compileDirectoryRelativeUrl = "./.dist/",
-  compileDirectoryClean,
+  jsenvDirectoryRelativeUrl,
+  jsenvDirectoryClean,
   importMapFileRelativeUrl = "./importMap.json",
+  importDefaultExtension,
   compileGroupCount = 2,
 
   testPlan,
@@ -68,10 +67,6 @@ export const executeTestPlan = async ({
   assertImportMapFileRelativeUrl({ importMapFileRelativeUrl })
   const importMapFileUrl = resolveFileUrl(importMapFileRelativeUrl, projectDirectoryUrl)
   assertImportMapFileInsideProject({ importMapFileUrl, projectDirectoryUrl })
-
-  assertCompileDirectoryRelativeUrl({ compileDirectoryRelativeUrl })
-  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
-  assertCompileDirectoryInsideProject({ compileDirectoryUrl, projectDirectoryUrl })
 
   if (coverage) {
     if (typeof coverageConfig !== "object") {
@@ -124,11 +119,13 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       launchLogger,
       executeLogger,
 
-      compileGroupCount,
       projectDirectoryUrl,
-      compileDirectoryUrl,
-      compileDirectoryClean,
+      jsenvDirectoryRelativeUrl,
+      jsenvDirectoryClean,
       importMapFileUrl,
+      importDefaultExtension,
+
+      compileGroupCount,
 
       plan: testPlan,
       measurePlanExecutionDuration,

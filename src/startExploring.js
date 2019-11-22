@@ -263,7 +263,7 @@ export const startExploring = async ({
       stopOnPackageVersionChange: true,
     })
 
-    const { origin: compileServerOrigin } = compileServer
+    const { compileServerOrigin } = compileServer
 
     const logger = createLogger({ logLevel })
 
