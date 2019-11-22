@@ -24,12 +24,12 @@ import {
   assertImportMapFileRelativeUrl,
   assertImportMapFileInsideProject,
 } from "internal/argUtils.js"
-import { readProjectImportMap } from "internal/readProjectImportMap/readProjectImportMap.js"
 import { generateGroupMap } from "internal/generateGroupMap/generateGroupMap.js"
 import { jsenvBabelPluginCompatMap } from "src/jsenvBabelPluginCompatMap.js"
 import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
+import { readProjectImportMap } from "./readProjectImportMap.js"
 import { serveBrowserPlatform } from "./serveBrowserPlatform.js"
 import { serveNodePlatform } from "./serveNodePlatform.js"
 import { serveCompiledJs } from "./serveCompiledJs.js"
@@ -234,7 +234,6 @@ ${projectDirectoryUrl}`)
               logger,
 
               projectDirectoryUrl,
-              jsenvDirectoryRelativeUrl,
               outDirectoryRelativeUrl,
               browserPlatformFileUrl,
               compileServerOrigin,
@@ -251,7 +250,6 @@ ${projectDirectoryUrl}`)
               logger,
 
               projectDirectoryUrl,
-              jsenvDirectoryRelativeUrl,
               outDirectoryRelativeUrl,
               nodePlatformFileUrl,
               compileServerOrigin,
@@ -522,7 +520,7 @@ const generateImportMapForCompileServer = async ({
     logger,
     projectDirectoryUrl,
     jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
-    importMapFileUrl,
+    importMapFileRelativeUrl,
   })
   const importMap = [importMapForJsenvCore, importMapInternal, importMapForProject].reduce(
     (previous, current) => composeTwoImportMaps(previous, current),

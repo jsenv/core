@@ -113,16 +113,16 @@ export const startContinuousTesting = async ({
         [outDirectoryRelativeUrl]: false,
       },
       keepProcessAlive: false,
-      added: ({ relativeUrl, type }) => {
+      added: ({ relativePath: relativeUrl, type }) => {
         if (type === "file") {
           projectFileAddedCallback({ relativeUrl })
         }
       },
-      updated: ({ relativeUrl }) => {
+      updated: ({ relativePath: relativeUrl }) => {
         if (!projectFileSet.has(relativeUrl)) return
         projectFileUpdatedCallback({ relativeUrl })
       },
-      removed: ({ relativeUrl }) => {
+      removed: ({ relativePath: relativeUrl }) => {
         if (!projectFileSet.has(relativeUrl)) return
         projectFileRemovedCallback({ relativeUrl })
       },

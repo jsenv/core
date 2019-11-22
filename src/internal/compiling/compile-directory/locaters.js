@@ -7,4 +7,4 @@ export const resolveMetaJsonFileUrl = ({ compiledFileUrl }) =>
   resolveAssetFileUrl({ compiledFileUrl, asset: "meta.json" })
 
 export const resolveSourceFileUrl = ({ source, compiledFileUrl }) =>
-  resolveFileUrl(source, compiledFileUrl)
+  resolveFileUrl(source, resolveMetaJsonFileUrl({ compiledFileUrl }))

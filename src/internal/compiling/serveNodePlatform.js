@@ -7,7 +7,6 @@ export const serveNodePlatform = async ({
   logger,
 
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   nodePlatformFileUrl,
   compileServerOrigin,
@@ -20,18 +19,15 @@ export const serveNodePlatform = async ({
 }) => {
   const { origin, ressource } = request
   const outDirectoryRemoteUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, origin)
-  const nodePlatformCompiledFileRemoteUrl = resolveUrl(
-    ".jsenv/node-platform.js",
-    outDirectoryRemoteUrl,
-  )
+  const compiledFileRemoteUrl = resolveUrl(".jsenv/node-platform.js", outDirectoryRemoteUrl)
   const requestUrl = `${origin}${ressource}`
-  if (!requestUrl.startsWith(nodePlatformCompiledFileRemoteUrl)) {
+  if (!requestUrl.startsWith(compiledFileRemoteUrl)) {
     return null
   }
 
   const originalFileUrl = nodePlatformFileUrl
-  const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
-  const compiledFileUrl = resolveUrl(`node-platform.js`, jsenvDirectoryUrl)
+  const outDirectoryUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
+  const compiledFileUrl = resolveUrl(`node-platform.js`, outDirectoryUrl)
   return serveBundle({
     cancellationToken,
     logger,

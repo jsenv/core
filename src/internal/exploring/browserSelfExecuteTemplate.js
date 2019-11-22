@@ -1,20 +1,22 @@
 import {
   jsenvDirectoryRelativeUrl,
-  livereloading,
+  outDirectoryRelativeUrl,
   // eslint-disable-next-line import/no-unresolved
-} from ".jsenv/env.js"
+} from "/.jsenv/env.js"
 // cannot get fileRelativeUrl
 // from the env because it's something that
 // changes for every file
 // however we could get it using importReplaceMap
-import { fileRelativeUrl } from "somewhere"
+// import { fileRelativeUrl } from "somewhere"
 import { loadUsingScript } from "internal/loadUsingScript.js"
 import { fetchUsingXHR } from "internal/fetchUsingXHR.js"
 
 const { EventSource, location } = window
+const fileRelativeUrl = location.pathname.slice(1)
+
 // eslint-disable-next-line import/newline-after-import
 ;(async () => {
-  if (livereloading && typeof EventSource === "function") {
+  if (typeof EventSource === "function") {
     const eventSourceOrigin = window.location.origin
     const eventSourceHref = `${eventSourceOrigin}/${fileRelativeUrl}`
     const eventSource = new EventSource(eventSourceHref, {
@@ -41,13 +43,13 @@ const { EventSource, location } = window
     })
   }
 
-  const dynamicDataFileRemoteUrl = `${window.origin}/${jsenvDirectoryRelativeUrl}.jsenv/browser-self-execute-dynamic-data.json`
+  const dynamicDataFileRemoteUrl = `${window.origin}/${jsenvDirectoryRelativeUrl}browser-self-execute-dynamic-data.json`
   const { body } = await fetchUsingXHR(dynamicDataFileRemoteUrl, {
     credentials: "include",
   })
   const { compileServerOrigin } = JSON.parse(body)
 
-  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${jsenvDirectoryRelativeUrl}browser-platform.js`
+  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}.jsenv/browser-platform.js`
   await loadUsingScript(browserPlatformCompiledFileRemoteUrl)
   const { __browserPlatform__ } = window
 

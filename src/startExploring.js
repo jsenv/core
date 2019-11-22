@@ -56,6 +56,8 @@ export const startExploring = async ({
   certificate,
   privateKey,
 }) => {
+  const logger = createLogger({ logLevel })
+
   assertProjectDirectoryPath({ projectDirectoryPath })
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
@@ -64,6 +66,43 @@ export const startExploring = async ({
   await assertFileExists(browserSelfExecuteTemplateFileUrl)
 
   return catchAsyncFunctionCancellation(async () => {
+    let livereloadServerSentEventService = () => {
+      return {
+        status: 204,
+      }
+    }
+    let htmlTemplateRequestedCallback = () => {}
+    let rawProjectFileRequestedCallback = () => {}
+    let projectFileRequestedCallback = () => {}
+
+    const compileServer = await startCompileServer({
+      cancellationToken,
+      compileServerLogLevel,
+
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      jsenvDirectoryClean,
+      importMapFileRelativeUrl,
+      importDefaultExtension,
+
+      compileGroupCount,
+      babelPluginMap,
+      convertMap,
+
+      cors,
+      protocol,
+      privateKey,
+      certificate,
+      ip,
+      port: 0, // random available port
+      forcePort: false, // no need because random port
+      projectFileRequestedCallback: (value) => {
+        // just to allow projectFileRequestedCallback to be redefined
+        projectFileRequestedCallback(value)
+      },
+      stopOnPackageVersionChange: true,
+    })
+
     const specifierMetaMapRelativeForExplorable = metaMapToSpecifierMetaMap({
       explorable: explorableConfig,
     })
@@ -72,22 +111,17 @@ export const startExploring = async ({
       projectDirectoryUrl,
     )
 
-    let projectFileRequestedCallback
-    let rawProjectFileRequestedCallback = () => {}
-    let livereloadServerSentEventService = () => null
-    let htmlTemplateRequestedCallback = () => {}
-
     if (livereloading) {
-      watchConfig[compileDirectoryRelativeUrl] = false
+      watchConfig[compileServer.jsenvDirectoryRelativeUrl] = false
 
       const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryPath, {
         watchDescription: watchConfig,
-        updated: ({ relativeUrl }) => {
+        updated: ({ relativePath: relativeUrl }) => {
           if (projectFileSet.has(relativeUrl)) {
             projectFileUpdatedCallback(relativeUrl)
           }
         },
-        removed: ({ relativeUrl }) => {
+        removed: ({ relativePath: relativeUrl }) => {
           if (projectFileSet.has(relativeUrl)) {
             projectFileSet.delete(relativeUrl)
             projectFileRemovedCallback(relativeUrl)
@@ -210,11 +244,8 @@ export const startExploring = async ({
         projectFileSet.add(relativeUrl)
       }
 
-      livereloadServerSentEventService = ({ relativeUrl, request }) => {
-        const { accept = "" } = request.headers
-        if (!accept.includes("text/event-stream")) return null
-
-        return getOrCreateRoomForRelativeUrl(relativeUrl).connect(request.headers["last-event-id"])
+      livereloadServerSentEventService = ({ request: { ressource, headers } }) => {
+        return getOrCreateRoomForRelativeUrl(ressource.slice(1)).connect(headers["last-event-id"])
       }
 
       const getOrCreateRoomForRelativeUrl = (relativeUrl) => {
@@ -228,34 +259,6 @@ export const startExploring = async ({
       }
     }
 
-    const compileServer = await startCompileServer({
-      cancellationToken,
-      compileServerLogLevel,
-
-      projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
-      jsenvDirectoryClean,
-      importMapFileRelativeUrl,
-      importDefaultExtension,
-
-      env: {
-        livereloading,
-      },
-      compileGroupCount,
-      babelPluginMap,
-      convertMap,
-
-      cors,
-      protocol,
-      privateKey,
-      certificate,
-      ip,
-      port: 0, // random available port
-      forcePort: false, // no need because random port
-      projectFileRequestedCallback,
-      stopOnPackageVersionChange: true,
-    })
-
     const {
       origin: compileServerOrigin,
       compileServerImportMap,
@@ -263,15 +266,14 @@ export const startExploring = async ({
       jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
     } = compileServer
 
-    const logger = createLogger({ logLevel })
-
     const service = (request) =>
       firstService(
         () => {
-          return livereloadServerSentEventService({
-            relativeUrl: request.ressource.slice(1),
-            request,
-          })
+          const { accept = "" } = request.headers
+          if (accept.includes("text/event-stream")) {
+            return livereloadServerSentEventService({ request })
+          }
+          return null
         },
         () => {
           return serveExploringIndex({
@@ -281,33 +283,14 @@ export const startExploring = async ({
           })
         },
         () => {
-          const relativeUrl = request.ressource.slice(1)
-          const requestFileUrl = resolveFileUrl(relativeUrl, projectDirectoryUrl)
-
-          if (
-            !urlToMeta({
-              url: requestFileUrl,
-              specifierMetaMap: specifierMetaMapForExplorable,
-            }).explorable
-          ) {
-            return null
-          }
-
-          htmlTemplateRequestedCallback({ relativeUrl, request })
-
-          return serveFile(HTMLTemplateFileUrl, {
-            headers: request.headers,
-          })
-        },
-        () => {
           return serveBrowserSelfExecute({
             cancellationToken,
             logger,
 
             projectDirectoryUrl,
-            browserSelfExecuteTemplateFileUrl,
             jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
             outDirectoryRelativeUrl,
+            browserSelfExecuteTemplateFileUrl,
             compileServerOrigin,
             compileServerImportMap,
             importDefaultExtension,
@@ -316,6 +299,24 @@ export const startExploring = async ({
             request,
             babelPluginMap,
           })
+        },
+        () => {
+          const relativeUrl = request.ressource.slice(1)
+          const requestFileUrl = resolveFileUrl(relativeUrl, projectDirectoryUrl)
+
+          if (
+            urlToMeta({
+              url: requestFileUrl,
+              specifierMetaMap: specifierMetaMapForExplorable,
+            }).explorable
+          ) {
+            htmlTemplateRequestedCallback({ relativeUrl, request })
+            return serveFile(HTMLTemplateFileUrl, {
+              headers: request.headers,
+            })
+          }
+
+          return null
         },
         () => {
           const relativeUrl = request.ressource.slice(1)

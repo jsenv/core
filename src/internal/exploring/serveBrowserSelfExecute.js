@@ -48,7 +48,7 @@ export const serveBrowserSelfExecute = ({
       // that can be dynamic
       // otherwise the cached bundles would still target the previous compile server origin
       if (
-        request.ressource === `/${jsenvDirectoryRelativeUrl}/browser-self-execute-dynamic-data.json`
+        request.ressource === `/${jsenvDirectoryRelativeUrl}browser-self-execute-dynamic-data.json`
       ) {
         const body = JSON.stringify({
           compileServerOrigin,

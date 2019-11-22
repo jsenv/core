@@ -7,7 +7,6 @@ export const serveBrowserPlatform = async ({
   logger,
 
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   browserPlatformFileUrl,
   compileServerOrigin,
@@ -20,18 +19,15 @@ export const serveBrowserPlatform = async ({
 }) => {
   const { origin, ressource } = request
   const outDirectoryRemoteUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, origin)
-  const browserPlatformCompiledFileRemoteUrl = resolveUrl(
-    ".jsenv/browser-platform.js",
-    outDirectoryRemoteUrl,
-  )
+  const compiledFileRemoteUrl = resolveUrl(".jsenv/browser-platform.js", outDirectoryRemoteUrl)
   const requestUrl = `${origin}${ressource}`
-  if (!requestUrl.startsWith(browserPlatformCompiledFileRemoteUrl)) {
+  if (!requestUrl.startsWith(compiledFileRemoteUrl)) {
     return null
   }
 
   const originalFileUrl = browserPlatformFileUrl
-  const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
-  const compiledFileUrl = resolveUrl(`browser-platform.js`, jsenvDirectoryUrl)
+  const outDirectoryUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
+  const compiledFileUrl = resolveUrl(`.jsenv/browser-platform.js`, outDirectoryUrl)
   return serveBundle({
     cancellationToken,
     logger,
