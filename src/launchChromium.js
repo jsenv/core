@@ -1,33 +1,44 @@
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
-import { createCancellationToken } from "@dmail/cancellation"
-import { trackRessources } from "./ressource-tracker.js"
-import { launchPuppeteer } from "./launchPuppeteer.js"
-import { startPuppeteerServer } from "./start-puppeteer-server.js"
-import { trackPageTargetsToClose } from "./trackPageTargetsToClose.js"
-import { trackPageTargetsToNotify } from "./trackPageTargetsToNotify.js"
-import { evaluateImportExecution } from "./evaluateImportExecution.js"
-import { CHROMIUM_VERSION } from "./constants.js"
+import { createCancellationToken } from "@jsenv/cancellation"
+import { trackRessources } from "internal/chromium-launcher/trackRessources.js"
+import { launchPuppeteer } from "internal/chromium-launcher/launchPuppeteer.js"
+import { startPuppeteerServer } from "internal/chromium-launcher/startPuppeteerServer.js"
+import { trackPageTargetsToClose } from "internal/chromium-launcher/trackPageTargetsToClose.js"
+import { trackPageTargetsToNotify } from "internal/chromium-launcher/trackPageTargetsToNotify.js"
+import { evaluateImportExecution } from "internal/chromium-launcher/evaluateImportExecution.js"
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
+
+  projectDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
+  outDirectoryRelativeUrl,
   compileServerOrigin,
-  projectPath,
-  compileIntoRelativePath,
-  importMapRelativePath,
-  importMapDefaultExtension,
-  HTMLTemplateRelativePath,
-  puppeteerExecuteTemplateRelativePath,
+
+  HTMLTemplateFileUrl,
+  puppeteerExecuteTemplateFileUrl,
+
   babelPluginMap,
   clientServerLogLevel,
   headless = true,
   incognito = false,
   errorStackRemapping = true,
 }) => {
-  if (typeof compileServerOrigin !== "string")
+  if (typeof projectDirectoryUrl !== "string") {
+    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
+  }
+  if (typeof compileServerOrigin !== "string") {
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
-  if (typeof projectPath !== "string")
-    throw new TypeError(`projectPath must be a string, got ${projectPath}`)
+  }
+  if (typeof jsenvDirectoryRelativeUrl !== "string") {
+    throw new TypeError(
+      `jsenvDirectoryRelativeUrl must be a string, got ${jsenvDirectoryRelativeUrl}`,
+    )
+  }
+  if (typeof outDirectoryRelativeUrl !== "string") {
+    throw new TypeError(`outDirectoryRelativeUrl must be a string, got ${outDirectoryRelativeUrl}`)
+  }
 
   const { registerCleanupCallback, cleanup } = trackRessources()
 
@@ -38,12 +49,13 @@ export const launchChromium = async ({
     }),
     startPuppeteerServer({
       cancellationToken,
-      projectPath,
-      compileIntoRelativePath,
-      importMapRelativePath,
-      importMapDefaultExtension,
-      HTMLTemplateRelativePath,
-      puppeteerExecuteTemplateRelativePath,
+
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+
+      HTMLTemplateFileUrl,
+      puppeteerExecuteTemplateFileUrl,
+
       babelPluginMap,
       logLevel: clientServerLogLevel,
     }),
@@ -100,7 +112,7 @@ export const launchChromium = async ({
 
     return evaluateImportExecution({
       cancellationToken,
-      projectPath,
+      projectDirectoryUrl,
       page,
       compileServerOrigin,
       puppeteerServerOrigin: puppeteerServer.origin,
@@ -114,7 +126,10 @@ export const launchChromium = async ({
 
   return {
     name: "chromium",
-    version: CHROMIUM_VERSION,
+    // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#puppeteer-api-tip-of-tree
+    // https://github.com/GoogleChrome/puppeteer#q-why-doesnt-puppeteer-vxxx-work-with-chromium-vyyy
+    // to keep in sync when updating puppeteer
+    version: "78.0.3882.0",
     options: { headless, incognito },
     stop: cleanup,
     registerDisconnectCallback,

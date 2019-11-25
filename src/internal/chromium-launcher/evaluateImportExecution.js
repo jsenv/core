@@ -1,14 +1,12 @@
-import {
-  operatingSystemPathToPathname,
-  pathnameToOperatingSystemPath,
-} from "@jsenv/operating-system-path"
-import { assertFile } from "./filesystem-assertions.js"
-import { evalSource } from "./evalSource.js"
-import { escapeRegexpSpecialCharacters } from "./escape-regexp-special-characters.js"
+import { evalSource } from "internal/compiling/platform-service/createNodePlatform/evalSource.js"
+import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
+import { resolveUrl } from "internal/urlUtils.js"
+import { assertFileExists } from "internal/filesystemUtils.js"
 
 export const evaluateImportExecution = async ({
   cancellationToken,
-  projectPath,
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
   page,
   compileServerOrigin,
   puppeteerServerOrigin,
@@ -18,9 +16,7 @@ export const evaluateImportExecution = async ({
   executionId,
   errorStackRemapping,
 }) => {
-  const projectPathname = operatingSystemPathToPathname(projectPath)
-
-  await assertFile(pathnameToOperatingSystemPath(`${projectPathname}${fileRelativePath}`))
+  await assertFileExists(resolveUrl(fileRelativePath, projectDirectoryUrl))
 
   await page.goto(puppeteerServerOrigin)
   // https://github.com/GoogleChrome/puppeteer/blob/v1.14.0/docs/api.md#pageevaluatepagefunction-args
@@ -28,8 +24,9 @@ export const evaluateImportExecution = async ({
   // but when I do that, istanbul will put coverage statement inside it
   // and I don't want that because function is evaluated client side
   const javaScriptExpressionSource = createBrowserIIFEString({
-    compileServerOrigin,
+    outDirectoryRelativeUrl,
     fileRelativePath,
+    compileServerOrigin,
     collectNamespace,
     collectCoverage,
     executionId,
@@ -44,7 +41,7 @@ export const evaluateImportExecution = async ({
       const { exceptionSource, coverageMap } = executionResult
       return {
         status,
-        error: evalException(exceptionSource, { compileServerOrigin, projectPath }),
+        error: evalException(exceptionSource, { projectDirectoryUrl, compileServerOrigin }),
         coverageMap,
       }
     }
@@ -70,35 +67,38 @@ export const evaluateImportExecution = async ({
   }
 }
 
-const evalException = (exceptionSource, { compileServerOrigin, projectPath }) => {
-  const projectPathname = operatingSystemPathToPathname(projectPath)
-
+const evalException = (exceptionSource, { projectDirectoryUrl, compileServerOrigin }) => {
   const error = evalSource(exceptionSource)
 
   if (error && error instanceof Error) {
-    const sourceOrigin = `file://${projectPathname}`
     const remoteRootRegexp = new RegExp(escapeRegexpSpecialCharacters(compileServerOrigin), "g")
-    error.stack = error.stack.replace(remoteRootRegexp, sourceOrigin)
-    error.message = error.message.replace(remoteRootRegexp, sourceOrigin)
+    error.stack = error.stack.replace(remoteRootRegexp, projectDirectoryUrl)
+    error.message = error.message.replace(remoteRootRegexp, projectDirectoryUrl)
   }
 
   return error
 }
 
 const createBrowserIIFEString = ({
-  compileServerOrigin,
+  outDirectoryRelativeUrl,
   fileRelativePath,
+  compileServerOrigin,
   collectNamespace,
   collectCoverage,
   executionId,
   errorStackRemapping,
 }) => `(() => {
-  return window.execute({
-    compileServerOrigin: ${JSON.stringify(compileServerOrigin)},
-    fileRelativePath: ${JSON.stringify(fileRelativePath)},
-    collectNamespace: ${JSON.stringify(collectNamespace)},
-    collectCoverage: ${JSON.stringify(collectCoverage)},
-    executionId: ${JSON.stringify(executionId)},
-    errorStackRemapping:  ${JSON.stringify(errorStackRemapping)},
-  })
+  return window.execute(${JSON.stringify(
+    {
+      outDirectoryRelativeUrl,
+      fileRelativePath,
+      compileServerOrigin,
+      collectNamespace,
+      collectCoverage,
+      executionId,
+      errorStackRemapping,
+    },
+    null,
+    "    ",
+  )})
 })()`

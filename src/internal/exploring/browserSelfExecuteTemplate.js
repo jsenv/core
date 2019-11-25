@@ -8,7 +8,7 @@ import {
 // changes for every file
 // however we could get it using importReplaceMap
 // import { fileRelativeUrl } from "somewhere"
-import { loadUsingScript } from "internal/loadUsingScript.js"
+import { fetchAndEvalUsingScript } from "internal/fetchAndEvalUsingScript.js"
 import { fetchUsingXHR } from "internal/fetchUsingXHR.js"
 
 const { EventSource, location } = window
@@ -50,7 +50,7 @@ const fileRelativeUrl = location.pathname.slice(1)
   const { compileServerOrigin } = JSON.parse(body)
 
   const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}.jsenv/browser-platform.js`
-  await loadUsingScript(browserPlatformCompiledFileRemoteUrl)
+  await fetchAndEvalUsingScript(browserPlatformCompiledFileRemoteUrl)
   const { __browserPlatform__ } = window
 
   const { compileDirectoryRemoteUrl, executeFile } = __browserPlatform__.create({

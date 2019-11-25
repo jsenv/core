@@ -1,12 +1,9 @@
 /* eslint-disable import/max-dependencies */
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
-import { createCancellationToken, createStoppableOperation } from "@dmail/cancellation"
-import {
-  registerProcessInterruptCallback,
-  registerUngaranteedProcessTeardown,
-} from "@dmail/process-signals"
-import { trackRessources } from "./ressource-tracker.js"
+import { createCancellationToken, createStoppableOperation } from "@jsenv/cancellation"
+import { interruptSignal, teardownSignal } from "@jsenv/node-signals"
+import { trackRessources } from "./trackRessources.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
@@ -57,13 +54,13 @@ export const launchPuppeteer = async ({
   const { stop } = browserOperation
 
   if (stopOnExit) {
-    const unregisterProcessTeadown = registerUngaranteedProcessTeardown((reason) => {
+    const unregisterProcessTeadown = teardownSignal.addCallback((reason) => {
       stop(`process ${reason}`)
     })
     registerCleanupCallback(unregisterProcessTeadown)
   }
   if (stopOnSIGINT) {
-    const unregisterProcessInterrupt = registerProcessInterruptCallback(() => {
+    const unregisterProcessInterrupt = interruptSignal.addCallback(() => {
       stop("process sigint")
     })
     registerCleanupCallback(unregisterProcessInterrupt)
@@ -71,5 +68,8 @@ export const launchPuppeteer = async ({
 
   const browser = await browserOperation
 
-  return { browser, stopBrowser: stop }
+  return {
+    browser,
+    stopBrowser: stop,
+  }
 }

@@ -1,10 +1,11 @@
 import { installBrowserErrorStackRemapping } from "@jsenv/error-stack-sourcemap/src/installBrowserErrorStackRemapping/installBrowserErrorStackRemapping.js"
 import { resolveImport } from "@jsenv/import-map"
-import { loadScript } from "./loadScript.js"
+import { fetchAndEvalUsingXHR } from "internal/fetchAndEvalUsingXHR.js"
 
 window.execute = async ({
+  outDirectoryRelativeUrl,
+  fileRelativeUrl,
   compileServerOrigin,
-  fileRelativePath,
   collectNamespace,
   collectCoverage,
   executionId,
@@ -16,27 +17,34 @@ window.execute = async ({
   errorExposureInNotification = false,
   errorExposureInDocument = true,
 }) => {
-  await loadScript(`${compileServerOrigin}/.jsenv/browser-platform.js`)
+  // better to use import.meta.resolve here
+  // just in case a project itself uses source-map and it gets deduped
+  // to be tested
+  const sourcemapPackageMainFileRemoteUrl = `${compileServerOrigin}/node_modules/source-map/dist/source-map.js`
+  await fetchAndEvalUsingXHR(sourcemapPackageMainFileRemoteUrl)
+  const { SourceMapConsumer } = window.sourceMap
+  const sourcemapPackageMappingFileRemoteUrl = `${compileServerOrigin}/node_modules/source-map/lib/mappings.wasm`
+  SourceMapConsumer.initialize({
+    "lib/mappings.wasm": sourcemapPackageMappingFileRemoteUrl,
+  })
+
+  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}.jsenv/browser-platform.js`
+  await fetchAndEvalUsingXHR(browserPlatformCompiledFileRemoteUrl)
   const { __browserPlatform__ } = window
 
-  const { relativePathToCompiledHref, executeFile } = __browserPlatform__.create({
+  const { compileDirectoryRemoteUrl, executeFile } = __browserPlatform__.create({
     compileServerOrigin,
   })
-
-  await loadScript("/node_modules/source-map/dist/source-map.js")
-  const { SourceMapConsumer } = window.sourceMap
-  SourceMapConsumer.initialize({
-    "lib/mappings.wasm": "/node_modules/source-map/lib/mappings.wasm",
-  })
+  const compiledFileRemoteUrl = `${compileDirectoryRemoteUrl}${fileRelativeUrl}`
 
   const { getErrorOriginalStackString } = installBrowserErrorStackRemapping({
-    resolveHref: ({ specifier, importer = `${compileServerOrigin}${fileRelativePath}` }) => {
+    resolveHref: ({ specifier, importer = compiledFileRemoteUrl }) => {
       return resolveImport({ specifier, importer })
     },
     SourceMapConsumer,
   })
 
-  return executeFile(relativePathToCompiledHref(fileRelativePath), {
+  return executeFile(compiledFileRemoteUrl, {
     collectNamespace,
     collectCoverage,
     executionId,
