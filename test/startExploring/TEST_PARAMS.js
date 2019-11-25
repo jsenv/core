@@ -6,7 +6,7 @@ export const START_EXPLORING_TEST_PARAMS = {
   compileServerLogLevel: "warn",
   projectDirectoryPath: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
-  HTMLTemplateFileUrl: import.meta.resolve("./template.html"),
+  htmlFileUrl: import.meta.resolve("./template.html"),
   babelPluginMap: testBabelPluginMap,
   keepProcessAlive: false,
 }

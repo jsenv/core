@@ -14,8 +14,7 @@ export const launchChromium = async ({
 
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
-  chromiumHtmlFileUrl,
-  chromiumJsFileUrl,
+  htmlFileUrl,
   compileServerOrigin,
 
   headless = true,
@@ -39,8 +38,7 @@ export const launchChromium = async ({
       logLevel: clientServerLogLevel,
 
       projectDirectoryUrl,
-      chromiumHtmlFileUrl,
-      chromiumJsFileUrl,
+      htmlFileUrl,
     }),
   ])
   registerCleanupCallback(stopBrowser)

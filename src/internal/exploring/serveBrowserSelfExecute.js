@@ -1,17 +1,16 @@
 import { firstService, serveFile } from "@jsenv/server"
-import { resolveDirectoryUrl } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, resolveUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { urlIsAsset } from "internal/compiling/urlIsAsset.js"
 import { serveBundle } from "internal/compiling/serveBundle.js"
 
-export const serveBrowserSelfExecute = ({
+export const serveBrowserSelfExecute = async ({
   cancellationToken,
   logger,
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
-  browserSelfExecuteTemplateFileUrl,
   compileServerOrigin,
   compileServerImportMap,
   importDefaultExtension,
@@ -20,6 +19,11 @@ export const serveBrowserSelfExecute = ({
   request,
   babelPluginMap,
 }) => {
+  const browserSelfExecuteTemplateFileUrl = resolveUrl(
+    "./src/internal/exploring/browserSelfExecuteTemplate.js",
+    jsenvCoreDirectoryUrl,
+  )
+
   const browserSelfExecuteDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}browser-self-execute/`
   const browserSelfExecuteDirectoryRemoteUrl = resolveDirectoryUrl(
     browserSelfExecuteDirectoryRelativeUrl,
@@ -29,9 +33,9 @@ export const serveBrowserSelfExecute = ({
   return firstService(
     () => {
       const { ressource, headers, origin } = request
-      // "/.jsenv/browser-script.js" is written inside browser-client/index.html
+      // "/.jsenv/browser-script.js" is written inside htmlFile
       if (ressource === "/.jsenv/browser-script.js") {
-        const file = headers.referer.slice(compileServerOrigin.length)
+        const file = new URL(headers.referer).searchParams.get("file")
         const browserSelfExecuteCompiledFileRemoteUrl = `${origin}/${browserSelfExecuteDirectoryRelativeUrl}${file}`
 
         return {
@@ -77,7 +81,6 @@ export const serveBrowserSelfExecute = ({
       }
 
       if (requestUrl.startsWith(browserSelfExecuteDirectoryRemoteUrl)) {
-        // const fileRelativeUrl = urlToRelativeUrl(requestUrl, browserSelfExecuteDirectoryRemoteUrl)
         const originalFileUrl = browserSelfExecuteTemplateFileUrl
         const compiledFileUrl = `${projectDirectoryUrl}${ressource.slice(1)}`
 

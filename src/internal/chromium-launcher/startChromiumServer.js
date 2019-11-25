@@ -1,40 +1,28 @@
 import { startServer, firstService, serveFile } from "@jsenv/server"
 import { resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
+import { jsenvHtmlFileUrl } from "internal/jsenvHtmlFileUrl.js"
 
 export const startChromiumServer = async ({
   cancellationToken,
   logLevel = "off",
 
   projectDirectoryUrl,
-  chromiumJsFileUrl,
-  chromiumHtmlFileUrl,
+  htmlFileUrl = jsenvHtmlFileUrl,
 }) => {
-  if (typeof chromiumHtmlFileUrl === "undefined") {
-    chromiumHtmlFileUrl = resolveUrl(
-      "./src/internal/chromium-launcher/chromium-html-file.html",
-      projectDirectoryUrl,
-    )
-  }
-  if (!chromiumHtmlFileUrl.startsWith(projectDirectoryUrl)) {
+  if (!htmlFileUrl.startsWith(projectDirectoryUrl)) {
     throw new Error(`chromium html file must be inside project directory
 --- chromium html file url ---
-${chromiumHtmlFileUrl}
+${htmlFileUrl}
 --- project directory url ---
-${chromiumHtmlFileUrl}`)
+${htmlFileUrl}`)
   }
-  await assertFileExists(chromiumHtmlFileUrl)
+  await assertFileExists(htmlFileUrl)
 
-  if (typeof chromiumJsFileUrl === "undefined") {
-    chromiumJsFileUrl = resolveUrl("./helpers/chromium/chromium-js-file.js", projectDirectoryUrl)
-  }
-  if (!chromiumJsFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`chromium js file must be inside project directory
---- chromium js file url ---
-${chromiumJsFileUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
-  }
+  const chromiumJsFileUrl = resolveUrl(
+    "./helpers/chromium/chromium-js-file.js",
+    projectDirectoryUrl,
+  )
   await assertFileExists(chromiumJsFileUrl)
 
   return startServer({
@@ -49,10 +37,7 @@ ${projectDirectoryUrl}`)
             return {
               status: 307,
               headers: {
-                location: `${request.origin}/${urlToRelativeUrl(
-                  chromiumHtmlFileUrl,
-                  projectDirectoryUrl,
-                )}`,
+                location: `${request.origin}/${urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl)}`,
               },
             }
           }

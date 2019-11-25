@@ -7,13 +7,13 @@ import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from 
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, resolveFileUrl, sameOrigin } from "internal/urlUtils.js"
+import { pathToDirectoryUrl, sameOrigin, urlToRelativeUrl } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
 import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { serveExploringIndex } from "internal/exploring/serveExploringIndex.js"
 import { serveBrowserSelfExecute } from "internal/exploring/serveBrowserSelfExecute.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
+import { jsenvHtmlFileUrl } from "internal/jsenvHtmlFileUrl.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
 export const startExploring = async ({
@@ -21,14 +21,7 @@ export const startExploring = async ({
   logLevel,
   compileServerLogLevel = logLevel,
 
-  HTMLTemplateFileUrl = resolveFileUrl(
-    "./src/internal/exploring/template.html",
-    jsenvCoreDirectoryUrl,
-  ),
-  browserSelfExecuteTemplateFileUrl = resolveFileUrl(
-    "./src/internal/exploring/browserSelfExecuteTemplate.js",
-    jsenvCoreDirectoryUrl,
-  ),
+  htmlFileUrl = jsenvHtmlFileUrl,
   explorableConfig = jsenvExplorableConfig,
   watchConfig = {
     "./**/*": true,
@@ -62,8 +55,7 @@ export const startExploring = async ({
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  await assertFileExists(HTMLTemplateFileUrl)
-  await assertFileExists(browserSelfExecuteTemplateFileUrl)
+  await assertFileExists(htmlFileUrl)
 
   return catchAsyncFunctionCancellation(async () => {
     let livereloadServerSentEventService = () => {
@@ -71,7 +63,6 @@ export const startExploring = async ({
         status: 204,
       }
     }
-    let htmlTemplateRequestedCallback = () => {}
     let rawProjectFileRequestedCallback = () => {}
     let projectFileRequestedCallback = () => {}
 
@@ -189,10 +180,6 @@ export const startExploring = async ({
         }
       }
 
-      htmlTemplateRequestedCallback = ({ relativeUrl }) => {
-        dependencyTracker[relativeUrl] = []
-      }
-
       projectFileRequestedCallback = ({ relativeUrl, request }) => {
         projectFileSet.add(relativeUrl)
 
@@ -240,8 +227,13 @@ export const startExploring = async ({
       }
 
       rawProjectFileRequestedCallback = ({ relativeUrl, request }) => {
-        projectFileRequestedCallback({ relativeUrl, request })
-        projectFileSet.add(relativeUrl)
+        // when it's the html file used to execute the files
+        if (relativeUrl === urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl)) {
+          dependencyTracker[relativeUrl] = []
+        } else {
+          projectFileRequestedCallback({ relativeUrl, request })
+          projectFileSet.add(relativeUrl)
+        }
       }
 
       livereloadServerSentEventService = ({ request: { ressource, headers } }) => {
@@ -276,11 +268,15 @@ export const startExploring = async ({
           return null
         },
         () => {
-          return serveExploringIndex({
-            projectDirectoryUrl,
-            explorableConfig,
-            request,
-          })
+          if (request.ressource === "/") {
+            return serveExploringIndex({
+              projectDirectoryUrl,
+              htmlFileUrl,
+              explorableConfig,
+              request,
+            })
+          }
+          return null
         },
         () => {
           return serveBrowserSelfExecute({
@@ -290,7 +286,6 @@ export const startExploring = async ({
             projectDirectoryUrl,
             jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
             outDirectoryRelativeUrl,
-            browserSelfExecuteTemplateFileUrl,
             compileServerOrigin,
             compileServerImportMap,
             importDefaultExtension,
@@ -302,25 +297,8 @@ export const startExploring = async ({
         },
         () => {
           const relativeUrl = request.ressource.slice(1)
-          const requestFileUrl = resolveFileUrl(relativeUrl, projectDirectoryUrl)
-
-          if (
-            urlToMeta({
-              url: requestFileUrl,
-              specifierMetaMap: specifierMetaMapForExplorable,
-            }).explorable
-          ) {
-            htmlTemplateRequestedCallback({ relativeUrl, request })
-            return serveFile(HTMLTemplateFileUrl, {
-              headers: request.headers,
-            })
-          }
-
-          return null
-        },
-        () => {
-          const relativeUrl = request.ressource.slice(1)
           const fileUrl = `${projectDirectoryUrl}${relativeUrl}`
+
           rawProjectFileRequestedCallback({ relativeUrl, request })
           return serveFile(fileUrl, {
             method: request.method,

@@ -6,3 +6,5 @@ console.log(value)
 debugger
 
 console.log("bar")
+
+window.__namespace__ = 42

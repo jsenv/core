@@ -1,12 +1,13 @@
 import { metaMapToSpecifierMetaMap } from "@jsenv/url-meta"
 import { collectFiles } from "@jsenv/file-collector"
+import { urlToRelativeUrl } from "internal/urlUtils.js"
 
 export const serveExploringIndex = async ({
   projectDirectoryUrl,
+  htmlFileUrl,
   explorableConfig,
-  request: { ressource },
 }) => {
-  if (ressource !== "/") return null
+  const htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl)
 
   const specifierMetaMap = metaMapToSpecifierMetaMap({
     explorable: explorableConfig,
@@ -21,6 +22,7 @@ export const serveExploringIndex = async ({
 
   const html = getBrowsingIndexPageHTML({
     projectDirectoryUrl,
+    htmlFileRelativeUrl,
     explorableRelativeUrlArray,
   })
 
@@ -35,7 +37,11 @@ export const serveExploringIndex = async ({
   }
 }
 
-const getBrowsingIndexPageHTML = ({ projectDirectoryUrl, explorableRelativeUrlArray }) => {
+const getBrowsingIndexPageHTML = ({
+  projectDirectoryUrl,
+  htmlFileRelativeUrl,
+  explorableRelativeUrlArray,
+}) => {
   return `<!doctype html>
 
   <head>
@@ -49,7 +55,10 @@ const getBrowsingIndexPageHTML = ({ projectDirectoryUrl, explorableRelativeUrlAr
       <p>List of path to explore: </p>
       <ul>
         ${explorableRelativeUrlArray
-          .map((relativeUrl) => `<li><a href="${relativeUrl}">${relativeUrl}</a></li>`)
+          .map(
+            (relativeUrl) =>
+              `<li><a href="${htmlFileRelativeUrl}?file=${relativeUrl}">${relativeUrl}</a></li>`,
+          )
           .join("")}
       </ul>
     </main>

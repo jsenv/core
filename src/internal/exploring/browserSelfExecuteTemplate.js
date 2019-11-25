@@ -12,7 +12,8 @@ import { fetchAndEvalUsingScript } from "internal/fetchAndEvalUsingScript.js"
 import { fetchUsingXHR } from "internal/fetchUsingXHR.js"
 
 const { EventSource, location } = window
-const fileRelativeUrl = location.pathname.slice(1)
+// TODO: find something for old browsers where URLSearchParams is not available
+const fileRelativeUrl = new URLSearchParams(location.search).get("file")
 
 // eslint-disable-next-line import/newline-after-import
 ;(async () => {

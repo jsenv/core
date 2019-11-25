@@ -19,6 +19,6 @@ startExploring({
   protocol: "https",
   port: 3400,
   forcePort: true,
-  livereloading: false,
+  livereloading: true,
   keepProcessAlive: true,
 })
