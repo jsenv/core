@@ -392,6 +392,7 @@ export const ${key} = ${JSON.stringify(env[key])}
     const unregister = registerFileLifecycle(packageFilePath, {
       added: checkPackageVersion,
       updated: checkPackageVersion,
+      keepProcessAlive: false,
     })
     compileServer.stoppedPromise.then(
       () => {
