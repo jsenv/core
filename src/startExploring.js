@@ -92,6 +92,7 @@ export const startExploring = async ({
         projectFileRequestedCallback(value)
       },
       stopOnPackageVersionChange: true,
+      keepProcessAlive,
     })
 
     const specifierMetaMapRelativeForExplorable = metaMapToSpecifierMetaMap({

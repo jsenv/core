@@ -7,12 +7,18 @@ export const openBrowserPage = async (
   {
     inheritCoverage = process.env.COVERAGE_ENABLED === "true",
     collectCoverage = false,
-    collectNamespace = true,
+    collectValue = true,
   } = {},
 ) => {
-  const browser = await puppeteer.launch()
+  const browser = await puppeteer.launch({
+    headless: false,
+  })
   const page = await browser.newPage()
   await page.goto(url)
+  await page.waitFor(
+    /* istanbul ignore next */
+    () => Boolean(window.__done__),
+  )
 
   let coverageMap
   if (inheritCoverage || collectCoverage) {
@@ -25,12 +31,12 @@ export const openBrowserPage = async (
     }
   }
 
-  let namespace
-  if (collectNamespace) {
-    namespace = await page.evaluate(`() => {
-  return window.__namespace__
+  let value
+  if (collectValue) {
+    value = await page.evaluate(`(() => {
+  return window.__value__
 })()`)
   }
 
-  return { browser, page, coverageMap, namespace }
+  return { browser, page, coverageMap, value }
 }

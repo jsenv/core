@@ -7,4 +7,5 @@ debugger
 
 console.log("bar")
 
-window.__namespace__ = 42
+window.__done__ = true
+window.__value__ = 42
