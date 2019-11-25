@@ -1,6 +1,6 @@
 import { installBrowserErrorStackRemapping } from "@jsenv/error-stack-sourcemap/src/installBrowserErrorStackRemapping/installBrowserErrorStackRemapping.js"
 import { resolveImport } from "@jsenv/import-map"
-import { fetchAndEvalUsingXHR } from "internal/fetchAndEvalUsingXHR.js"
+import { fetchAndEvalUsingXHR } from "../fetchAndEvalUsingXHR.js"
 
 window.execute = async ({
   outDirectoryRelativeUrl,

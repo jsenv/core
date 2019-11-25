@@ -36,6 +36,7 @@
     "generate-coverage": "node ./script/generate-coverage/generate-coverage.js",
     "upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
     "generate-commonjs-bundle": "node ./script/generate-commonjs-bundle/generate-commonjs-bundle.js",
+    "generate-chromium-js-file": "node ./script/generate-chromium-js-file/generate-chromium-js-file.js",
     "generate-import-map": "node ./script/generate-import-map/generate-import-map.js",
     "dist": "npm run clean && npm run generate-commonjs-bundle",
     "clean": "rimraf dist && rimraf coverage",

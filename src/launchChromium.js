@@ -3,31 +3,27 @@
 import { createCancellationToken } from "@jsenv/cancellation"
 import { trackRessources } from "internal/chromium-launcher/trackRessources.js"
 import { launchPuppeteer } from "internal/chromium-launcher/launchPuppeteer.js"
-import { startPuppeteerServer } from "internal/chromium-launcher/startPuppeteerServer.js"
+import { startChromiumServer } from "internal/chromium-launcher/startChromiumServer.js"
 import { trackPageTargetsToClose } from "internal/chromium-launcher/trackPageTargetsToClose.js"
 import { trackPageTargetsToNotify } from "internal/chromium-launcher/trackPageTargetsToNotify.js"
 import { evaluateImportExecution } from "internal/chromium-launcher/evaluateImportExecution.js"
+import { assertFileExists } from "internal/filesystemUtils.js"
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
+  clientServerLogLevel,
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
+  chromiumHtmlFileUrl,
+  chromiumJsFileUrl,
   compileServerOrigin,
 
-  HTMLTemplateFileUrl,
-  puppeteerExecuteTemplateFileUrl,
-
-  babelPluginMap,
-  clientServerLogLevel,
   headless = true,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
-  }
-  if (typeof compileServerOrigin !== "string") {
-    throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
   }
   if (typeof jsenvDirectoryRelativeUrl !== "string") {
     throw new TypeError(
@@ -37,29 +33,45 @@ export const launchChromium = async ({
   if (typeof outDirectoryRelativeUrl !== "string") {
     throw new TypeError(`outDirectoryRelativeUrl must be a string, got ${outDirectoryRelativeUrl}`)
   }
+  if (!chromiumHtmlFileUrl.startsWith(projectDirectoryUrl)) {
+    throw new Error(`chromium html file must be inside project directory
+--- chromium html file url ---
+${chromiumHtmlFileUrl}
+--- project directory url ---
+${chromiumHtmlFileUrl}`)
+  }
+  await assertFileExists(chromiumHtmlFileUrl)
+
+  if (!chromiumJsFileUrl.startsWith(projectDirectoryUrl)) {
+    throw new Error(`chromium js file must be inside project directory
+--- chromium js file url ---
+${chromiumJsFileUrl}
+--- project directory url ---
+${projectDirectoryUrl}`)
+  }
+  await assertFileExists(chromiumJsFileUrl)
+  if (typeof compileServerOrigin !== "string") {
+    throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
+  }
 
   const { registerCleanupCallback, cleanup } = trackRessources()
 
-  const [{ browser, stopBrowser }, puppeteerServer] = await Promise.all([
+  const [{ browser, stopBrowser }, chromiumServer] = await Promise.all([
     launchPuppeteer({
       cancellationToken,
       headless,
     }),
-    startPuppeteerServer({
+    startChromiumServer({
       cancellationToken,
+      logLevel: clientServerLogLevel,
 
       projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
-
-      HTMLTemplateFileUrl,
-      puppeteerExecuteTemplateFileUrl,
-
-      babelPluginMap,
-      logLevel: clientServerLogLevel,
+      chromiumHtmlFileUrl,
+      chromiumJsFileUrl,
     }),
   ])
   registerCleanupCallback(stopBrowser)
-  registerCleanupCallback(puppeteerServer.stop)
+  registerCleanupCallback(chromiumServer.stop)
 
   const registerDisconnectCallback = (callback) => {
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
@@ -116,11 +128,14 @@ export const launchChromium = async ({
 
     return evaluateImportExecution({
       cancellationToken,
+
       projectDirectoryUrl,
-      page,
-      compileServerOrigin,
-      puppeteerServerOrigin: puppeteerServer.origin,
       fileRelativePath,
+      compileServerOrigin,
+      chromiumServerOrigin: chromiumServer.origin,
+
+      page,
+
       collectNamespace,
       collectCoverage,
       executionId,

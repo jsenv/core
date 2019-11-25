@@ -1,4 +1,4 @@
-import { fetchUsingXHR } from "internal/fetchUsingXHR.js"
+import { fetchUsingXHR } from "./fetchUsingXHR.js"
 
 export const fetchAndEvalUsingXHR = async (url) => {
   const { status, body } = await fetchUsingXHR(url)

@@ -8,7 +8,7 @@
       "protocol": "inspector",
       "program": "${file}",
       "autoAttachChildProcesses": true,
-      "sourceMaps": true,
+      "sourceMaps": false,
       "sourceMapPathOverrides": {
         "/*": "${workspaceFolder}/*"
       },

@@ -41,6 +41,8 @@ export const launchChromiumTab = async ({
     throw new TypeError(`outDirectoryRelativeUrl must be a string, got ${outDirectoryRelativeUrl}`)
   }
 
+  const { registerCleanupCallback, cleanup } = trackRessources()
+
   // share chromium and puppeteerServer
   if (!sharedRessource) {
     sharedRessource = shareRessource({
@@ -70,11 +72,10 @@ export const launchChromiumTab = async ({
       },
     })
   }
-  const { registerCleanupCallback, cleanup } = trackRessources()
   const { ressource, stopUsing } = sharedRessource.startUsing()
   registerCleanupCallback(stopUsing)
-
   const { browser, puppeteerServer } = await ressource
+
   const registerDisconnectCallback = (callback) => {
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
     browser.on("disconnected", callback)
@@ -153,11 +154,14 @@ export const launchChromiumTab = async ({
 
     return evaluateImportExecution({
       cancellationToken,
+
       projectDirectoryUrl,
-      page,
+      fileRelativePath,
       compileServerOrigin,
       puppeteerServerOrigin: puppeteerServer.origin,
-      fileRelativePath,
+
+      page,
+
       collectNamespace,
       collectCoverage,
       executionId,

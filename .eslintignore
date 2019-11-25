@@ -5,6 +5,7 @@
 /docs/bundling/basic-project/node_modules/
 /docs/execution/basic-project/dist/
 /docs/execution/basic-project/node_modules/
+/helpers/chromium/
 /node_modules/
 /src/**/s.js
 /test/**/.dist/

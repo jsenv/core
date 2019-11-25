@@ -5,12 +5,15 @@ import { assertFileExists } from "internal/filesystemUtils.js"
 
 export const evaluateImportExecution = async ({
   cancellationToken,
+
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
-  page,
-  compileServerOrigin,
-  puppeteerServerOrigin,
   fileRelativePath,
+  compileServerOrigin,
+  chromiumServerOrigin,
+
+  page,
+
   collectNamespace,
   collectCoverage,
   executionId,
@@ -18,7 +21,7 @@ export const evaluateImportExecution = async ({
 }) => {
   await assertFileExists(resolveUrl(fileRelativePath, projectDirectoryUrl))
 
-  await page.goto(puppeteerServerOrigin)
+  await page.goto(chromiumServerOrigin)
   // https://github.com/GoogleChrome/puppeteer/blob/v1.14.0/docs/api.md#pageevaluatepagefunction-args
   // yes evaluate supports passing a function directly
   // but when I do that, istanbul will put coverage statement inside it
