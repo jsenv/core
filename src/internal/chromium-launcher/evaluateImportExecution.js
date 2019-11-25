@@ -8,7 +8,7 @@ export const evaluateImportExecution = async ({
 
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
-  fileRelativePath,
+  fileRelativeUrl,
   compileServerOrigin,
   chromiumServerOrigin,
 
@@ -19,7 +19,7 @@ export const evaluateImportExecution = async ({
   executionId,
   errorStackRemapping,
 }) => {
-  await assertFileExists(resolveUrl(fileRelativePath, projectDirectoryUrl))
+  await assertFileExists(resolveUrl(fileRelativeUrl, projectDirectoryUrl))
 
   await page.goto(chromiumServerOrigin)
   // https://github.com/GoogleChrome/puppeteer/blob/v1.14.0/docs/api.md#pageevaluatepagefunction-args
@@ -28,7 +28,7 @@ export const evaluateImportExecution = async ({
   // and I don't want that because function is evaluated client side
   const javaScriptExpressionSource = createBrowserIIFEString({
     outDirectoryRelativeUrl,
-    fileRelativePath,
+    fileRelativeUrl,
     compileServerOrigin,
     collectNamespace,
     collectCoverage,
@@ -84,7 +84,7 @@ const evalException = (exceptionSource, { projectDirectoryUrl, compileServerOrig
 
 const createBrowserIIFEString = ({
   outDirectoryRelativeUrl,
-  fileRelativePath,
+  fileRelativeUrl,
   compileServerOrigin,
   collectNamespace,
   collectCoverage,
@@ -94,7 +94,7 @@ const createBrowserIIFEString = ({
   return window.execute(${JSON.stringify(
     {
       outDirectoryRelativeUrl,
-      fileRelativePath,
+      fileRelativeUrl,
       compileServerOrigin,
       collectNamespace,
       collectCoverage,

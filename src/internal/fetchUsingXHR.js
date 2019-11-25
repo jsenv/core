@@ -2,7 +2,7 @@
 // to get hrefToOrigin
 import { hrefToOrigin } from "@jsenv/href/src/hrefToOrigin/hrefToOrigin.js"
 
-export const fetchUsingXHR = (url, { credentials = "same-origin", headers = {} }) => {
+export const fetchUsingXHR = (url, { credentials = "same-origin", headers = {} } = {}) => {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
 

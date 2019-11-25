@@ -18,10 +18,15 @@ export const startChromiumServer = async ({
       firstService(
         () => {
           if (request.ressource === "/") {
-            return serveFile(chromiumHtmlFileUrl, {
-              method: request.method,
-              headers: request.headers,
-            })
+            return {
+              status: 307,
+              headers: {
+                location: `${request.origin}/${urlToRelativeUrl(
+                  chromiumHtmlFileUrl,
+                  projectDirectoryUrl,
+                )}`,
+              },
+            }
           }
           return null
         },

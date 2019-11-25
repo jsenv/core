@@ -54,15 +54,11 @@ export const launchChromiumTab = async ({
           }),
           startChromiumServer({
             cancellationToken,
+            logLevel: clientServerLogLevel,
 
             projectDirectoryUrl,
-            jsenvDirectoryRelativeUrl,
-
             HTMLTemplateFileUrl,
             puppeteerExecuteTemplateFileUrl,
-
-            babelPluginMap,
-            logLevel: clientServerLogLevel,
           }),
         ])
       },
@@ -156,6 +152,7 @@ export const launchChromiumTab = async ({
       cancellationToken,
 
       projectDirectoryUrl,
+      outDirectoryRelativeUrl,
       fileRelativePath,
       compileServerOrigin,
       puppeteerServerOrigin: puppeteerServer.origin,
