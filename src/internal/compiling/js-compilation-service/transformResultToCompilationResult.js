@@ -67,7 +67,7 @@ export const transformResultToCompilationResult = (
     delete map.sourceRoot
 
     if (remapMethod === "inline") {
-      const mapAsBase64 = new Buffer(JSON.stringify(map)).toString("base64")
+      const mapAsBase64 = Buffer.from(JSON.stringify(map)).toString("base64")
       output = writeSourceMappingURL(
         output,
         `data:application/json;charset=utf-8;base64,${mapAsBase64}`,

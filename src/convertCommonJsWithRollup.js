@@ -76,11 +76,7 @@ export const convertCommonJsWithRollup = async ({
     // entryFileNames: `./[name].js`,
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
-    // we could exclude them
-    // but it's better to put them directly
-    // in case source files are not reachable
-    // for whatever reason
-    sourcemapExcludeSources: false,
+    sourcemapExcludeSources: true,
   }
 
   const result = await rollupBundle.generate(generateOptions)

@@ -228,8 +228,8 @@ ${projectDirectoryUrl}`)
             }
             return null
           },
-          () =>
-            serveBrowserPlatform({
+          () => {
+            return serveBrowserPlatform({
               cancellationToken,
               logger,
 
@@ -243,9 +243,10 @@ ${projectDirectoryUrl}`)
               babelPluginMap,
               projectFileRequestedCallback,
               request,
-            }),
-          () =>
-            serveNodePlatform({
+            })
+          },
+          () => {
+            return serveNodePlatform({
               cancellationToken,
               logger,
 
@@ -259,9 +260,10 @@ ${projectDirectoryUrl}`)
               babelPluginMap,
               projectFileRequestedCallback,
               request,
-            }),
-          () =>
-            serveCompiledJs({
+            })
+          },
+          () => {
+            return serveCompiledJs({
               cancellationToken,
               logger,
 
@@ -280,15 +282,17 @@ ${projectDirectoryUrl}`)
               projectFileRequestedCallback,
               useFilesystemAsCache,
               writeOnFilesystem,
-            }),
-          () =>
-            serveProjectFiles({
+            })
+          },
+          () => {
+            return serveProjectFiles({
               projectDirectoryUrl,
               importReplaceMap,
               importFallbackMap,
               request,
               projectFileRequestedCallback,
-            }),
+            })
+          },
         )
       },
       accessControlAllowRequestOrigin: true,
@@ -319,27 +323,34 @@ ${projectDirectoryUrl}`)
     importDefaultExtension,
   }
 
-  // it would be better for perf to generated them on demand but for now that's good
-  await Promise.all([
-    writeFileContent(
-      fileUrlToPath(resolveUrl("./importMap.json", jsenvDirectoryUrl)),
-      JSON.stringify(importMapForCompileServer, null, "  "),
-    ),
-    writeFileContent(
-      fileUrlToPath(resolveUrl("./groupMap.json", jsenvDirectoryUrl)),
-      JSON.stringify(groupMap, null, "  "),
-    ),
-    writeFileContent(
-      fileUrlToPath(resolveUrl("./env.js", jsenvDirectoryUrl)),
-      Object.keys(env)
-        .map(
-          (key) => `
+  const importMapToString = () => JSON.stringify(importMapForCompileServer, null, "  ")
+  const groupMapToString = () => JSON.stringify(groupMap, null, "  ")
+  const envToString = () =>
+    Object.keys(env)
+      .map(
+        (key) => `
 export const ${key} = ${JSON.stringify(env[key])}
 `,
-        )
-        .join(""),
-    ),
-  ])
+      )
+      .join("")
+
+  if (writeOnFilesystem) {
+    await Promise.all([
+      writeFileContent(
+        fileUrlToPath(resolveUrl("./importMap.json", jsenvDirectoryUrl)),
+        importMapToString(),
+      ),
+      writeFileContent(
+        fileUrlToPath(resolveUrl("./groupMap.json", jsenvDirectoryUrl)),
+        groupMapToString(),
+      ),
+      writeFileContent(fileUrlToPath(resolveUrl("./env.js", jsenvDirectoryUrl)), envToString()),
+    ])
+  } else {
+    importReplaceMap["/.jsenv/importMap.json"] = importMapToString
+    importReplaceMap["/.jsenv/groupMap.json"] = groupMapToString
+    importReplaceMap["/.jsenv/env.js"] = envToString
+  }
 
   importReplaceMap = resolveSpecifierMap(importReplaceMap, {
     compileServerOrigin,

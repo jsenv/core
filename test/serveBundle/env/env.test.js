@@ -46,6 +46,7 @@ const { status: actual } = await serveBundle({
     logLevel: "warn",
   }),
 
+  jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,

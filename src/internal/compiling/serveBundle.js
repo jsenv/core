@@ -1,7 +1,6 @@
 import { extname, basename } from "path"
 import { COMPILE_ID_BUNDLE_GLOBAL, COMPILE_ID_BUNDLE_COMMONJS } from "internal/CONSTANTS.js"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { generateBundleUsingRollup } from "internal/bundling/generateBundleUsingRollup.js"
 import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"

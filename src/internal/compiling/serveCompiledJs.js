@@ -191,6 +191,7 @@ export const serveCompiledJs = async ({
         originalFileUrl,
         compiledFileUrl,
         sourcemapFileUrl,
+        remapMethod: writeOnFilesystem ? "comment" : "inline",
       })
     },
   })

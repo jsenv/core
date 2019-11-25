@@ -3,7 +3,7 @@
 import { createCancellationToken } from "@jsenv/cancellation"
 import { trackRessources } from "internal/chromium-launcher/trackRessources.js"
 import { launchPuppeteer } from "internal/chromium-launcher/launchPuppeteer.js"
-import { startPuppeteerServer } from "internal/chromium-launcher/startPuppeteerServer.js"
+import { startChromiumServer } from "internal/chromium-launcher/startChromiumServer.js"
 import { trackPageTargetsToClose } from "internal/chromium-launcher/trackPageTargetsToClose.js"
 import { trackPageTargetsToNotify } from "internal/chromium-launcher/trackPageTargetsToNotify.js"
 import { evaluateImportExecution } from "internal/chromium-launcher/evaluateImportExecution.js"
@@ -52,7 +52,7 @@ export const launchChromiumTab = async ({
             cancellationToken,
             headless,
           }),
-          startPuppeteerServer({
+          startChromiumServer({
             cancellationToken,
 
             projectDirectoryUrl,

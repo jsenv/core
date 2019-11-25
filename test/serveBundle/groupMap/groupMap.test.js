@@ -43,6 +43,7 @@ const serveBundleParams = {
   cancellationToken: createCancellationToken(),
   logger: createLogger({ logLevel: "warn" }),
 
+  jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   outDirectoryRelativeUrl,
   originalFileUrl,
@@ -98,7 +99,9 @@ const response = await serveBundle(serveBundleParams)
       bufferToEtag(readFileSync(fileUrlToPath(resolveFileUrl("../../file.js", metaFileUrl)))),
     ],
     assets: ["../file.js.map"],
-    assetsEtag: ['"7ed-ydFjTMuM8PXpodF3jSsUHbi9BEI"'],
+    assetsEtag: [
+      bufferToEtag(readFileSync(fileUrlToPath(resolveFileUrl("../file.js.map", metaFileUrl)))),
+    ],
     createdMs: actual.createdMs,
     lastModifiedMs: actual.lastModifiedMs,
   }

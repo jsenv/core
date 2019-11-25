@@ -7,7 +7,6 @@ import { createLogger } from "@jsenv/logger"
 import { COMPILE_ID_OTHERWISE } from "internal/CONSTANTS.js"
 import {
   pathToDirectoryUrl,
-  resolveFileUrl,
   resolveDirectoryUrl,
   fileUrlToPath,
   urlToRelativeUrl,
@@ -52,11 +51,7 @@ export const generateBundle = async ({
   format,
   formatOutputOptions = {},
   minify = false,
-  // we could exclude them
-  // but it's better to put them directly
-  // in case source files are not reachable
-  // for whatever reason
-  sourcemapExcludeSources = false,
+  sourcemapExcludeSources = true,
   writeOnFileSystem = true,
 
   // when true .jsenv/out-bundle directory is generated
@@ -68,7 +63,7 @@ export const generateBundle = async ({
   // must be true by default otherwise rollup cannot find sourcemap files
   // when asking them to the compile server
   // (to fix that sourcemap could be inlined)
-  filesystemCache = true,
+  filesystemCache = false,
 
   ...rest
 }) => {
