@@ -1,35 +1,34 @@
-import { assert } from "@dmail/assert"
-import { launchChromium } from "../../index.js"
+import { basename } from "path"
+import { assert } from "@jsenv/assert"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "internal/compiling/startCompileServer.js"
+import { launchAndExecute } from "internal/executing/launchAndExecute.js"
+import { launchChromium } from "../../../index.js"
 import {
-  CHROMIUM_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
-  CHROMIUM_LAUNCHER_TEST_PUPPETEER_PARAM,
-  CHROMIUM_LAUNCHER_TEST_EXECUTION_PARAM,
-  CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
-} from "../chromium-launcher-test-param.js"
-import { selfHrefToFolderRelativePath } from "../self-href-to-folder-relative-path.js"
+  START_COMPILE_SERVER_TEST_PARAMS,
+  EXECUTION_TEST_PARAMS,
+  LAUNCH_TEST_PARAMS,
+} from "../TEST_PARAMS.js"
 
-const { startCompileServer } = import.meta.require("@jsenv/compile-server")
-const { launchAndExecute } = import.meta.require("@jsenv/execution")
-
-const folderRelativePath = selfHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/log.js`
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryBasename = basename(testDirectoryRelativeUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
+const fileRelativePath = `${testDirectoryRelativeUrl}${testDirectoryBasename}`
 
 const { origin: compileServerOrigin } = await startCompileServer({
-  ...CHROMIUM_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
-  compileIntoRelativePath,
+  ...START_COMPILE_SERVER_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
 })
 
 const actual = await launchAndExecute({
-  ...CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
-  ...CHROMIUM_LAUNCHER_TEST_PUPPETEER_PARAM,
-  ...CHROMIUM_LAUNCHER_TEST_EXECUTION_PARAM,
+  ...EXECUTION_TEST_PARAMS,
   launch: (options) =>
     launchChromium({
-      ...CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
+      ...LAUNCH_TEST_PARAMS,
       ...options,
       compileServerOrigin,
-      compileIntoRelativePath,
     }),
   captureConsole: true,
   collectNamespace: false,

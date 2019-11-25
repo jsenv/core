@@ -10,12 +10,9 @@ export const START_COMPILE_SERVER_TEST_PARAMS = {
 }
 
 export const EXECUTION_TEST_PARAMS = {
-  projectPath: jsenvCoreDirectoryUrl,
-  HTMLTemplateRelativePath: "/src/template.html",
-  puppeteerExecuteTemplateRelativePath: "/src/puppeteer-execute-template.js",
-  stopOnceExecuted: true,
+  stopPlatformAfterExecute: true,
   collectNamespace: true,
   inheritCoverage: process.env.COVERAGE_ENABLED === "true",
 }
 
-export const LAUNCH_CHROMIUM_TEST_PARAMS = {}
+export const LAUNCH_TEST_PARAMS = {}

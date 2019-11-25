@@ -14,8 +14,6 @@ export const launchChromium = async ({
   clientServerLogLevel,
 
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
-  outDirectoryRelativeUrl,
   chromiumHtmlFileUrl,
   chromiumJsFileUrl,
   compileServerOrigin,
@@ -24,14 +22,6 @@ export const launchChromium = async ({
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
-  }
-  if (typeof jsenvDirectoryRelativeUrl !== "string") {
-    throw new TypeError(
-      `jsenvDirectoryRelativeUrl must be a string, got ${jsenvDirectoryRelativeUrl}`,
-    )
-  }
-  if (typeof outDirectoryRelativeUrl !== "string") {
-    throw new TypeError(`outDirectoryRelativeUrl must be a string, got ${outDirectoryRelativeUrl}`)
   }
   if (!chromiumHtmlFileUrl.startsWith(projectDirectoryUrl)) {
     throw new Error(`chromium html file must be inside project directory
