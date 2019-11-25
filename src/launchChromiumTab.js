@@ -13,17 +13,14 @@ let sharedRessource
 
 export const launchChromiumTab = async ({
   cancellationToken = createCancellationToken(),
+  clientServerLogLevel,
 
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
+  chromiumHtmlFileUrl,
+  chromiumJsFileUrl,
   compileServerOrigin,
 
-  HTMLTemplateFileUrl,
-  puppeteerExecuteTemplateFileUrl,
-
-  babelPluginMap,
-  clientServerLogLevel,
   headless = true,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -31,11 +28,6 @@ export const launchChromiumTab = async ({
   }
   if (typeof compileServerOrigin !== "string") {
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
-  }
-  if (typeof jsenvDirectoryRelativeUrl !== "string") {
-    throw new TypeError(
-      `jsenvDirectoryRelativeUrl must be a string, got ${jsenvDirectoryRelativeUrl}`,
-    )
   }
   if (typeof outDirectoryRelativeUrl !== "string") {
     throw new TypeError(`outDirectoryRelativeUrl must be a string, got ${outDirectoryRelativeUrl}`)
@@ -57,20 +49,20 @@ export const launchChromiumTab = async ({
             logLevel: clientServerLogLevel,
 
             projectDirectoryUrl,
-            HTMLTemplateFileUrl,
-            puppeteerExecuteTemplateFileUrl,
+            chromiumHtmlFileUrl,
+            chromiumJsFileUrl,
           }),
         ])
       },
       stop: async (ressource) => {
-        const [stopBrowser, puppeteerServer] = await ressource
-        await Promise.all([stopBrowser(), puppeteerServer.stop()])
+        const [{ stopBrowser }, chromiumServer] = await ressource
+        await Promise.all([stopBrowser(), chromiumServer.stop()])
       },
     })
   }
   const { ressource, stopUsing } = sharedRessource.startUsing()
   registerCleanupCallback(stopUsing)
-  const { browser, puppeteerServer } = await ressource
+  const [{ browser }, chromiumServer] = await ressource
 
   const registerDisconnectCallback = (callback) => {
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
@@ -91,7 +83,7 @@ export const launchChromiumTab = async ({
   }
 
   const executeFile = async (
-    fileRelativePath,
+    fileRelativeUrl,
     {
       collectNamespace,
       collectCoverage,
@@ -153,9 +145,9 @@ export const launchChromiumTab = async ({
 
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
-      fileRelativePath,
+      fileRelativeUrl,
       compileServerOrigin,
-      puppeteerServerOrigin: puppeteerServer.origin,
+      chromiumServerOrigin: chromiumServer.origin,
 
       page,
 
@@ -171,7 +163,7 @@ export const launchChromiumTab = async ({
     // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#puppeteer-api-tip-of-tree
     // https://github.com/GoogleChrome/puppeteer#q-why-doesnt-puppeteer-vxxx-work-with-chromium-vyyy
     // to keep in sync when updating puppeteer
-    version: "78.0.3882.0",
+    version: "79.0.3942.0",
     options: { headless },
     stop: cleanup,
     registerDisconnectCallback,

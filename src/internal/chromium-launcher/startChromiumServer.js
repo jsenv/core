@@ -1,5 +1,6 @@
 import { startServer, firstService, serveFile } from "@jsenv/server"
-import { urlToRelativeUrl } from "internal/urlUtils.js"
+import { resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { assertFileExists } from "internal/filesystemUtils.js"
 
 export const startChromiumServer = async ({
   cancellationToken,
@@ -9,6 +10,33 @@ export const startChromiumServer = async ({
   chromiumJsFileUrl,
   chromiumHtmlFileUrl,
 }) => {
+  if (typeof chromiumHtmlFileUrl === "undefined") {
+    chromiumHtmlFileUrl = resolveUrl(
+      "./src/internal/chromium-launcher/chromium-html-file.html",
+      projectDirectoryUrl,
+    )
+  }
+  if (!chromiumHtmlFileUrl.startsWith(projectDirectoryUrl)) {
+    throw new Error(`chromium html file must be inside project directory
+--- chromium html file url ---
+${chromiumHtmlFileUrl}
+--- project directory url ---
+${chromiumHtmlFileUrl}`)
+  }
+  await assertFileExists(chromiumHtmlFileUrl)
+
+  if (typeof chromiumJsFileUrl === "undefined") {
+    chromiumJsFileUrl = resolveUrl("./helpers/chromium/chromium-js-file.js", projectDirectoryUrl)
+  }
+  if (!chromiumJsFileUrl.startsWith(projectDirectoryUrl)) {
+    throw new Error(`chromium js file must be inside project directory
+--- chromium js file url ---
+${chromiumJsFileUrl}
+--- project directory url ---
+${projectDirectoryUrl}`)
+  }
+  await assertFileExists(chromiumJsFileUrl)
+
   return startServer({
     cancellationToken,
     logLevel,

@@ -1,8 +1,6 @@
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
 import { createCancellationToken } from "@jsenv/cancellation"
-import { resolveUrl } from "internal/urlUtils.js"
-import { assertFileExists } from "internal/filesystemUtils.js"
 import { trackRessources } from "internal/chromium-launcher/trackRessources.js"
 import { launchPuppeteer } from "internal/chromium-launcher/launchPuppeteer.js"
 import { startChromiumServer } from "internal/chromium-launcher/startChromiumServer.js"
@@ -25,32 +23,6 @@ export const launchChromium = async ({
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
   }
-  if (typeof chromiumHtmlFileUrl === "undefined") {
-    chromiumHtmlFileUrl = resolveUrl(
-      "./src/internal/chromium-launcher/chromium-html-file.html",
-      projectDirectoryUrl,
-    )
-  }
-  if (!chromiumHtmlFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`chromium html file must be inside project directory
---- chromium html file url ---
-${chromiumHtmlFileUrl}
---- project directory url ---
-${chromiumHtmlFileUrl}`)
-  }
-  await assertFileExists(chromiumHtmlFileUrl)
-
-  if (typeof chromiumJsFileUrl === "undefined") {
-    chromiumJsFileUrl = resolveUrl("./helpers/chromium/chromium-js-file.js", projectDirectoryUrl)
-  }
-  if (!chromiumJsFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`chromium js file must be inside project directory
---- chromium js file url ---
-${chromiumJsFileUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
-  }
-  await assertFileExists(chromiumJsFileUrl)
   if (typeof compileServerOrigin !== "string") {
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
   }
