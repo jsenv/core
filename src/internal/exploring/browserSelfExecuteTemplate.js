@@ -50,7 +50,7 @@ const fileRelativeUrl = new URLSearchParams(location.search).get("file")
   })
   const { compileServerOrigin } = JSON.parse(body)
 
-  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}.jsenv/browser-platform.js`
+  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`
   await fetchAndEvalUsingScript(browserPlatformCompiledFileRemoteUrl)
   const { __browserPlatform__ } = window
 

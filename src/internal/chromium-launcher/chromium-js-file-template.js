@@ -30,7 +30,7 @@ window.execute = async ({
     "lib/mappings.wasm": sourcemapPackageMappingFileRemoteUrl,
   })
 
-  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}.jsenv/browser-platform.js`
+  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`
   await fetchAndEvalUsingXHR(browserPlatformCompiledFileRemoteUrl)
   const { __browserPlatform__ } = window
 

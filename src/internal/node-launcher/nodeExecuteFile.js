@@ -23,13 +23,16 @@ const execute = async ({
 
   const outDirectoryRemoteUrl = resolveUrl(outDirectoryRelativeUrl, compileServerOrigin)
   const nodePlatformCompiledFileServerUrl = resolveUrl(
-    ".jsenv/node-platform.js",
+    "otherwise-commonjs-bundle/src/nodePlatform.js",
     outDirectoryRemoteUrl,
   )
   await fetchUsingHttp(nodePlatformCompiledFileServerUrl)
 
-  const jsenvDirectoryUrl = resolveUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
-  const nodePlatformCompiledFileUrl = resolveUrl("node-platform.js", jsenvDirectoryUrl)
+  const outDirectoryUrl = resolveUrl(outDirectoryRelativeUrl, projectDirectoryUrl)
+  const nodePlatformCompiledFileUrl = resolveUrl(
+    "otherwise-commonjs-bundle/src/nodePlatform.js",
+    outDirectoryUrl,
+  )
   const nodePlatformCompiledFilePath = fileURLToPath(nodePlatformCompiledFileUrl)
   // eslint-disable-next-line import/no-dynamic-require
   const { nodePlatform } = require(nodePlatformCompiledFilePath)

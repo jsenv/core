@@ -13,11 +13,20 @@ export const startCompileServerForExecutingPlan = async ({
 
   const promises = []
   if (browserPlatformAnticipatedGeneration) {
-    promises.push(fetch(`${compileServer.origin}/.jsenv/browser-platform.js`))
+    promises.push(
+      fetch(
+        `${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`,
+      ),
+    )
   }
   if (nodePlatformAnticipatedGeneration) {
-    promises.push(fetch(`${compileServer.origin}/.jsenv/node-platform.js`))
+    promises.push(
+      fetch(
+        `${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodePlatform.js`,
+      ),
+    )
   }
+
   await Promise.all(promises)
 
   return compileServer
