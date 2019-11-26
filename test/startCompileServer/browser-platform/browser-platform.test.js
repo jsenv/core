@@ -11,7 +11,7 @@ const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
-  compileServerLogLevel: "debug",
+  compileServerLogLevel: "warn",
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
 })
