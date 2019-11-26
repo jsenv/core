@@ -1,4 +1,4 @@
-import { COMPILE_ID_OTHERWISE } from "../../CONSTANTS.js"
+import { COMPILE_ID_OTHERWISE } from "../CONSTANTS.js"
 
 export const computeCompileIdFromGroupId = ({ groupId, groupMap }) => {
   if (typeof groupId === "undefined") {

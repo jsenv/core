@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert"
-import { COMPILE_DIRECTORY } from "internal/CONSTANTS.js"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
@@ -10,14 +9,13 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${COMPILE_DIRECTORY}/`
-const compileServer = await startCompileServer({
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   compileServerLogLevel: "debug",
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
 })
-const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativeUrl}.jsenv/browser-platform.js`
+const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}.jsenv/browser-platform.js`
 const response = await fetch(fileServerUrl)
 const actual = {
   status: response.status,

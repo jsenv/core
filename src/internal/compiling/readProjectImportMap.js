@@ -23,10 +23,10 @@ export const readProjectImportMap = async ({
     : null
 
   const jsenvCoreImportKey = "@jsenv/core/"
-  const jsenvCoreRelativeUrlForJsenvProject = urlToRelativeUrl(
-    jsenvCoreDirectoryUrl,
-    jsenvProjectDirectoryUrl,
-  )
+  const jsenvCoreRelativeUrlForJsenvProject =
+    jsenvProjectDirectoryUrl === jsenvCoreDirectoryUrl
+      ? "./"
+      : urlToRelativeUrl(jsenvCoreDirectoryUrl, jsenvProjectDirectoryUrl)
 
   const importsForJsenvCore = {
     [jsenvCoreImportKey]: jsenvCoreRelativeUrlForJsenvProject,

@@ -30,8 +30,7 @@ import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 import { readProjectImportMap } from "./readProjectImportMap.js"
-import { serveBrowserPlatform } from "./serveBrowserPlatform.js"
-import { serveNodePlatform } from "./serveNodePlatform.js"
+import { serveBundle } from "./serveBundle.js"
 import { serveCompiledJs } from "./serveCompiledJs.js"
 import { urlIsAsset } from "./urlIsAsset.js"
 
@@ -60,6 +59,25 @@ export const startCompileServer = async ({
 
   babelPluginMap = jsenvBabelPluginMap,
   convertMap = {},
+  // that is cool but does not allow a client to request a specific bundle
+  // for a specific file
+  // the client must start the compile server with the right bundle config to do that
+  // and that is not what we want
+  // to achieve what we want we would have to:
+  // request a specific part of the server (like .jsenv/out/bundle-commonjs/)
+  // qui ensuite cherche le fichier relativement au projet
+  // sauf que lorsque le project est run par autre chose que jsenv
+  // il faut trouver ou est ce jsenv
+  bundleConfig = {
+    ".jsenv/browser-platform.js": {
+      originalFileUrl: resolveUrl("./src/browserPlatform.js", jsenvCoreDirectoryUrl),
+      format: "global",
+    },
+    ".jsenv/node-platform.js": {
+      originalFileUrl: resolveUrl("./src/nodePlatform.js", jsenvCoreDirectoryUrl),
+      format: "commonjs",
+    },
+  },
 
   // options related to the server itself
   protocol = "http",
@@ -83,14 +101,6 @@ export const startCompileServer = async ({
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
   platformAlwaysInsidePlatformScoreMap = false,
-  browserPlatformFileUrl = resolveUrl(
-    "./src/internal/compiling/platform-service/createBrowserPlatform/index.js",
-    jsenvCoreDirectoryUrl,
-  ),
-  nodePlatformFileUrl = resolveUrl(
-    "./src/internal/compiling/platform-service/createNodePlatform/index.js",
-    jsenvCoreDirectoryUrl,
-  ),
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
@@ -123,28 +133,6 @@ ${projectDirectoryUrl}`)
   }
   const outDirectoryUrl = resolveDirectoryUrl(outDirectoryName, jsenvDirectoryUrl)
   const outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl)
-
-  if (typeof browserPlatformFileUrl !== "string") {
-    throw new TypeError(`browserPlatformFileUrl must be a string. got ${browserPlatformFileUrl}`)
-  }
-  if (!browserPlatformFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new TypeError(`browserPlatformFileUrl must be inside projectDirectoryUrl.
---- browser platform file url ---
-${browserPlatformFileUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
-  }
-
-  if (typeof nodePlatformFileUrl !== "string") {
-    throw new TypeError(`nodePlatformFileUrl must be a string. got ${nodePlatformFileUrl}`)
-  }
-  if (!nodePlatformFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new TypeError(`nodePlatformFileUrl must be inside projectDirectoryUrl.
---- node platform file url ---
-${nodePlatformFileUrl}
---- project directory url ---
-${projectDirectoryUrl}`)
-  }
 
   const logger = createLogger({ logLevel: compileServerLogLevel })
 
@@ -229,38 +217,48 @@ ${projectDirectoryUrl}`)
             return null
           },
           () => {
-            return serveBrowserPlatform({
-              cancellationToken,
-              logger,
-
-              projectDirectoryUrl,
+            const outDirectoryRemoteUrl = resolveDirectoryUrl(
               outDirectoryRelativeUrl,
-              browserPlatformFileUrl,
-              compileServerOrigin,
-              compileServerImportMap: importMapForCompileServer,
-              importDefaultExtension,
+              request.origin,
+            )
+            const requestUrl = `${request.origin}${request.ressource}`
+            const bundleMainFileRelativeUrl = Object.keys(bundleConfig).find(
+              (bundleMainFileRelativeUrl) => {
+                const bundleMainCompiledFileRemoteUrl = resolveUrl(
+                  bundleMainFileRelativeUrl,
+                  outDirectoryRemoteUrl,
+                )
+                return requestUrl.startsWith(bundleMainCompiledFileRemoteUrl)
+              },
+            )
 
-              babelPluginMap,
-              projectFileRequestedCallback,
-              request,
-            })
-          },
-          () => {
-            return serveNodePlatform({
-              cancellationToken,
-              logger,
+            if (bundleMainFileRelativeUrl) {
+              const outDirectoryUrl = resolveDirectoryUrl(
+                outDirectoryRelativeUrl,
+                projectDirectoryUrl,
+              )
+              const compiledFileUrl = resolveUrl(bundleMainFileRelativeUrl, outDirectoryUrl)
+              return serveBundle({
+                cancellationToken,
+                logger,
 
-              projectDirectoryUrl,
-              outDirectoryRelativeUrl,
-              nodePlatformFileUrl,
-              compileServerOrigin,
-              compileServerImportMap: importMapForCompileServer,
-              importDefaultExtension,
+                jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
+                projectDirectoryUrl,
+                compiledFileUrl,
+                compileServerOrigin,
+                outDirectoryRelativeUrl,
+                compileServerImportMap: importMapForCompileServer,
+                importDefaultExtension,
 
-              babelPluginMap,
-              projectFileRequestedCallback,
-              request,
-            })
+                babelPluginMap,
+                projectFileRequestedCallback,
+                request,
+
+                ...bundleConfig[bundleMainFileRelativeUrl],
+              })
+            }
+
+            return null
           },
           () => {
             return serveCompiledJs({

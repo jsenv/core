@@ -1,3 +1,5 @@
+// TODO: use serveBundle to get this file
+
 import { installBrowserErrorStackRemapping } from "@jsenv/error-stack-sourcemap/src/installBrowserErrorStackRemapping/installBrowserErrorStackRemapping.js"
 import { resolveImport } from "@jsenv/import-map"
 import { fetchAndEvalUsingXHR } from "../fetchAndEvalUsingXHR.js"
