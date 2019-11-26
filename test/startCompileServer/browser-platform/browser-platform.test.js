@@ -15,7 +15,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
 })
-const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}.jsenv/browser-platform.js`
+const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`
 const response = await fetch(fileServerUrl)
 const actual = {
   status: response.status,

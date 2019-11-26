@@ -1,5 +1,8 @@
 import { extname, basename } from "path"
-import { COMPILE_ID_BUNDLE_GLOBAL, COMPILE_ID_BUNDLE_COMMONJS } from "internal/CONSTANTS.js"
+import {
+  COMPILE_ID_GLOBAL_BUNDLE_FILES,
+  COMPILE_ID_COMMONJS_BUNDLE_FILES,
+} from "internal/CONSTANTS.js"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { generateBundleUsingRollup } from "internal/bundling/generateBundleUsingRollup.js"
 import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
@@ -40,7 +43,8 @@ export const serveBundle = async ({
     const entryPointMap = {
       [entryName]: `./${originalFileRelativeUrl}`,
     }
-    const compileId = format === "global" ? COMPILE_ID_BUNDLE_GLOBAL : COMPILE_ID_BUNDLE_COMMONJS
+    const compileId =
+      format === "global" ? COMPILE_ID_GLOBAL_BUNDLE_FILES : COMPILE_ID_COMMONJS_BUNDLE_FILES
 
     const bundle = await generateBundleUsingRollup({
       cancellationToken,
@@ -62,6 +66,7 @@ export const serveBundle = async ({
       format,
       formatOutputOptions,
       writeOnFileSystem: false,
+      sourcemapExcludeSources: true,
     })
 
     const sourcemapFileUrl = `${compiledFileUrl}.map`

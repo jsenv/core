@@ -1,8 +1,10 @@
 import { urlToContentType, serveFile } from "@jsenv/server"
 import {
-  COMPILE_ID_BUNDLE_GLOBAL,
-  COMPILE_ID_BUNDLE_COMMONJS,
   COMPILE_ID_OTHERWISE,
+  COMPILE_ID_GLOBAL_BUNDLE,
+  COMPILE_ID_GLOBAL_BUNDLE_FILES,
+  COMPILE_ID_COMMONJS_BUNDLE,
+  COMPILE_ID_COMMONJS_BUNDLE_FILES,
 } from "internal/CONSTANTS.js"
 import {
   resolveFileUrl,
@@ -11,10 +13,12 @@ import {
   resolveUrl,
 } from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { createBabePluginMapForBundle } from "internal/bundling/createBabePluginMapForBundle.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
+import { serveBundle } from "./serveBundle.js"
 
 export const serveCompiledJs = async ({
   cancellationToken,
@@ -22,6 +26,8 @@ export const serveCompiledJs = async ({
 
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
+  compileServerImportMap,
+  importDefaultExtension,
   importReplaceMap,
   importFallbackMap,
 
@@ -63,15 +69,18 @@ export const serveCompiledJs = async ({
     return null
   }
 
-  // unexpected compileId
-  if (
-    compileId !== COMPILE_ID_BUNDLE_GLOBAL &&
-    compileId !== COMPILE_ID_BUNDLE_COMMONJS &&
-    compileId in groupMap === false
-  ) {
+  const allowedCompileIds = [
+    ...Object.keys(groupMap),
+    COMPILE_ID_GLOBAL_BUNDLE,
+    COMPILE_ID_GLOBAL_BUNDLE_FILES,
+    COMPILE_ID_COMMONJS_BUNDLE,
+    COMPILE_ID_COMMONJS_BUNDLE_FILES,
+  ]
+
+  if (!allowedCompileIds.includes(compileId)) {
     return {
       status: 400,
-      statusText: `compileId must be one of ${Object.keys(groupMap)}, received ${compileId}`,
+      statusText: `compileId must be one of ${allowedCompileIds}, received ${compileId}`,
     }
   }
 
@@ -111,23 +120,30 @@ export const serveCompiledJs = async ({
     useFilesystemAsCache = false
   }
 
-  let compiledIdForGroupMap
-  let babelPluginMapForGroupMap
-  if (compileId === COMPILE_ID_BUNDLE_GLOBAL || compileId === COMPILE_ID_BUNDLE_COMMONJS) {
-    compiledIdForGroupMap = getWorstCompileId(groupMap)
-    // we are compiling for rollup, do not transform into systemjs format
-    transformModuleIntoSystemFormat = false
-    babelPluginMapForGroupMap = createBabePluginMapForBundle({
-      format: compileId === COMPILE_ID_BUNDLE_GLOBAL ? "global" : "commonjs",
-    })
-  } else {
-    compiledIdForGroupMap = compileId
-    babelPluginMapForGroupMap = {}
-  }
-
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
   const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
   const compiledFileUrl = resolveUrl(originalFileRelativeUrl, compileDirectoryUrl)
+
+  if (compileId === COMPILE_ID_GLOBAL_BUNDLE || compileId === COMPILE_ID_COMMONJS_BUNDLE) {
+    return serveBundle({
+      cancellationToken,
+      logger,
+
+      jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
+      projectDirectoryUrl,
+      originalFileUrl,
+      compiledFileUrl,
+      outDirectoryRelativeUrl,
+      compileServerOrigin: request.origin,
+      compileServerImportMap,
+      importDefaultExtension,
+
+      babelPluginMap,
+      projectFileRequestedCallback,
+      request,
+      format: compileId === COMPILE_ID_GLOBAL_BUNDLE ? "global" : "commonjs",
+    })
+  }
 
   return serveCompiledFile({
     cancellationToken,
@@ -159,6 +175,23 @@ export const serveCompiledJs = async ({
         }
       } else {
         code = await readFileContent(fileUrlToPath(originalFileUrl))
+      }
+
+      let compiledIdForGroupMap
+      let babelPluginMapForGroupMap
+      if (
+        compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES ||
+        compileId === COMPILE_ID_COMMONJS_BUNDLE_FILES
+      ) {
+        compiledIdForGroupMap = getWorstCompileId(groupMap)
+        // we are compiling for rollup, do not transform into systemjs format
+        transformModuleIntoSystemFormat = false
+        babelPluginMapForGroupMap = createBabePluginMapForBundle({
+          format: compileId === COMPILE_ID_GLOBAL_BUNDLE_FILES ? "global" : "commonjs",
+        })
+      } else {
+        compiledIdForGroupMap = compileId
+        babelPluginMapForGroupMap = {}
       }
 
       const groupBabelPluginMap = {}

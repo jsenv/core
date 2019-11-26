@@ -30,7 +30,6 @@ import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 import { readProjectImportMap } from "./readProjectImportMap.js"
-import { serveBundle } from "./serveBundle.js"
 import { serveCompiledJs } from "./serveCompiledJs.js"
 import { urlIsAsset } from "./urlIsAsset.js"
 
@@ -59,25 +58,6 @@ export const startCompileServer = async ({
 
   babelPluginMap = jsenvBabelPluginMap,
   convertMap = {},
-  // that is cool but does not allow a client to request a specific bundle
-  // for a specific file
-  // the client must start the compile server with the right bundle config to do that
-  // and that is not what we want
-  // to achieve what we want we would have to:
-  // request a specific part of the server (like .jsenv/out/bundle-commonjs/)
-  // qui ensuite cherche le fichier relativement au projet
-  // sauf que lorsque le project est run par autre chose que jsenv
-  // il faut trouver ou est ce jsenv
-  bundleConfig = {
-    ".jsenv/browser-platform.js": {
-      originalFileUrl: resolveUrl("./src/browserPlatform.js", jsenvCoreDirectoryUrl),
-      format: "global",
-    },
-    ".jsenv/node-platform.js": {
-      originalFileUrl: resolveUrl("./src/nodePlatform.js", jsenvCoreDirectoryUrl),
-      format: "commonjs",
-    },
-  },
 
   // options related to the server itself
   protocol = "http",
@@ -200,8 +180,6 @@ ${projectDirectoryUrl}`)
       port,
       sendInternalErrorStack: true,
       requestToResponse: (request) => {
-        const compileServerOrigin = request.origin
-
         return firstService(
           () => {
             const { origin, ressource, method, headers } = request
@@ -217,50 +195,6 @@ ${projectDirectoryUrl}`)
             return null
           },
           () => {
-            const outDirectoryRemoteUrl = resolveDirectoryUrl(
-              outDirectoryRelativeUrl,
-              request.origin,
-            )
-            const requestUrl = `${request.origin}${request.ressource}`
-            const bundleMainFileRelativeUrl = Object.keys(bundleConfig).find(
-              (bundleMainFileRelativeUrl) => {
-                const bundleMainCompiledFileRemoteUrl = resolveUrl(
-                  bundleMainFileRelativeUrl,
-                  outDirectoryRemoteUrl,
-                )
-                return requestUrl.startsWith(bundleMainCompiledFileRemoteUrl)
-              },
-            )
-
-            if (bundleMainFileRelativeUrl) {
-              const outDirectoryUrl = resolveDirectoryUrl(
-                outDirectoryRelativeUrl,
-                projectDirectoryUrl,
-              )
-              const compiledFileUrl = resolveUrl(bundleMainFileRelativeUrl, outDirectoryUrl)
-              return serveBundle({
-                cancellationToken,
-                logger,
-
-                jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
-                projectDirectoryUrl,
-                compiledFileUrl,
-                compileServerOrigin,
-                outDirectoryRelativeUrl,
-                compileServerImportMap: importMapForCompileServer,
-                importDefaultExtension,
-
-                babelPluginMap,
-                projectFileRequestedCallback,
-                request,
-
-                ...bundleConfig[bundleMainFileRelativeUrl],
-              })
-            }
-
-            return null
-          },
-          () => {
             return serveCompiledJs({
               cancellationToken,
               logger,
@@ -269,6 +203,8 @@ ${projectDirectoryUrl}`)
               outDirectoryRelativeUrl,
               importReplaceMap,
               importFallbackMap,
+              compileServerImportMap: importMapForCompileServer,
+              importDefaultExtension,
 
               transformTopLevelAwait,
               transformModuleIntoSystemFormat,
@@ -307,7 +243,7 @@ ${projectDirectoryUrl}`)
       logger,
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
-      importMapFileUrl,
+      importMapFileRelativeUrl,
     }),
   ])
 
