@@ -83,11 +83,11 @@ export const execute = async ({
       executeLogger,
       launch: (params) =>
         launch({
-          ...params,
           projectDirectoryUrl,
           jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
           outDirectoryRelativeUrl,
           compileServerOrigin,
+          ...params,
         }),
       mirrorConsole,
       stopPlatformAfterExecute,
