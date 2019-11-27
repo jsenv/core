@@ -43,17 +43,6 @@ const actual = await launchAndExecute({
     }),
   fileRelativeUrl,
 })
-const expectedParsingErrorMessage = `${filePath}: Unexpected token (1:14)
-
-> 1 | const node = (
-    |               ^`
-const expectedParsingError = {
-  message: expectedParsingErrorMessage,
-  messageHTML: expectedParsingErrorMessage,
-  filename: filePath,
-  lineNumber: 1,
-  columnNumber: 14,
-}
 const expectedError = new Error(`imported module parsing error.
 --- parsing error message ---
 ${fileUrl}: Unexpected token (1:14)
@@ -64,7 +53,19 @@ ${fileUrl}: Unexpected token (1:14)
 ${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out/best/${fileRelativeUrl}
 --- importer url ---
 undefined`)
-expectedError.parsingError = expectedParsingError
+expectedError.parsingError = {
+  message: `${filePath}: Unexpected token (1:14)
+
+> 1 | const node = (
+    |               ^`,
+  messageHTML: `${filePath}: Unexpected token (1:14)
+
+> 1 | const node = (
+    |               ^`,
+  filename: filePath,
+  lineNumber: 1,
+  columnNumber: 14,
+}
 const expected = {
   status: "errored",
   error: expectedError,
