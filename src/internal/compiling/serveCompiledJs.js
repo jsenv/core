@@ -6,12 +6,7 @@ import {
   COMPILE_ID_COMMONJS_BUNDLE,
   COMPILE_ID_COMMONJS_BUNDLE_FILES,
 } from "internal/CONSTANTS.js"
-import {
-  resolveFileUrl,
-  fileUrlToPath,
-  resolveDirectoryUrl,
-  resolveUrl,
-} from "internal/urlUtils.js"
+import { resolveUrl, fileUrlToPath, resolveDirectoryUrl } from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { createBabePluginMapForBundle } from "internal/bundling/createBabePluginMapForBundle.js"
@@ -107,7 +102,7 @@ export const serveCompiledJs = async ({
     return {
       status: 307,
       headers: {
-        location: resolveFileUrl(originalFileRelativeUrl, origin),
+        location: resolveUrl(originalFileRelativeUrl, origin),
       },
     }
   }

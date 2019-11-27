@@ -5,7 +5,7 @@ import {
   hasScheme,
   fileUrlToPath,
   pathToFileUrl,
-  resolveFileUrl,
+  resolveUrl,
   fileUrlToRelativePath,
   resolveDirectoryUrl,
 } from "internal/urlUtils.js"
@@ -99,10 +99,10 @@ export const createJsenvRollupPlugin = async ({
       // rollup does not expects to have http dependency in the mix
       // and relativize then cause they are files behind the scene
 
-      const bundleSourcemapFileUrl = resolveFileUrl(`./${chunkId}.map`, bundleDirectoryUrl)
+      const bundleSourcemapFileUrl = resolveUrl(`./${chunkId}.map`, bundleDirectoryUrl)
 
       const relativePathToUrl = (relativePath) => {
-        const url = resolveFileUrl(relativePath, bundleSourcemapFileUrl)
+        const url = resolveUrl(relativePath, bundleSourcemapFileUrl)
 
         // fix rollup not supporting source being http
         if (url.startsWith(projectDirectoryUrl)) {
@@ -330,7 +330,7 @@ const transformAsyncInsertedByRollup = async ({
         transformGenerator: false, // already done
       })
 
-      const bundleFileUrl = resolveFileUrl(bundleFilename, bundleDirectoryUrl)
+      const bundleFileUrl = resolveUrl(bundleFilename, bundleDirectoryUrl)
 
       await Promise.all([
         writeFileContent(

@@ -1,4 +1,4 @@
-import { resolveFileUrl } from "internal/urlUtils.js"
+import { resolveUrl } from "internal/urlUtils.js"
 import { parseSourceMappingURL } from "internal/sourceMappingUrlUtils.js"
 import { fetchUrl } from "./fetchUrl.js"
 import { validateResponseStatusIsOk } from "./validateResponseStatusIsOk.js"
@@ -18,7 +18,7 @@ export const fetchSourcemap = async ({ cancellationToken, logger, moduleUrl, mod
     })
   }
 
-  const sourcemapUrl = resolveFileUrl(sourcemapParsingResult.sourcemapURL, moduleUrl)
+  const sourcemapUrl = resolveUrl(sourcemapParsingResult.sourcemapURL, moduleUrl)
   const sourcemapResponse = await fetchUrl(sourcemapUrl, { cancellationToken })
   const okValidation = validateResponseStatusIsOk(sourcemapResponse)
 
@@ -57,7 +57,7 @@ const generateSourcemapFromString = async (
         return
       }
 
-      const sourceUrl = resolveFileUrl(source, sourcemapUrl)
+      const sourceUrl = resolveUrl(source, sourcemapUrl)
       map.sourcesContent[index] = await fetchSource(sourceUrl, { cancellationToken, logger })
     }),
   )

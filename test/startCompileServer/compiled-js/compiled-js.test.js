@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 import { COMPILE_DIRECTORY, COMPILE_ID_OTHERWISE } from "internal/CONSTANTS.js"
-import { resolveDirectoryUrl, resolveFileUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
@@ -11,7 +11,7 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDir
 const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const compileDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}${COMPILE_DIRECTORY}/`
-const fileUrl = resolveFileUrl("./file.js", import.meta.url)
+const fileUrl = resolveUrl("./file.js", import.meta.url)
 const fileRelativeUrl = urlToRelativeUrl(fileUrl, projectDirectoryUrl)
 const compileServer = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,

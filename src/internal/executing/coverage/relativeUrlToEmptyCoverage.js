@@ -1,6 +1,6 @@
 import { createOperation } from "@jsenv/cancellation"
 import { readFileContent } from "internal/filesystemUtils.js"
-import { resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
+import { resolveUrl, fileUrlToPath } from "internal/urlUtils.js"
 import { createInstrumentBabelPlugin } from "./createInstrumentBabelPlugin.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
 
@@ -12,7 +12,7 @@ export const relativeUrlToEmptyCoverage = async (
   relativeUrl,
   { cancellationToken, projectDirectoryUrl, babelPluginMap },
 ) => {
-  const fileUrl = resolveFileUrl(relativeUrl, projectDirectoryUrl)
+  const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
   const filePath = fileUrlToPath(fileUrl)
   const source = await createOperation({
     cancellationToken,

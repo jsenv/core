@@ -1,6 +1,6 @@
 import { startServer, firstService, serveFile } from "@jsenv/server"
 import { readFileContent } from "src/internal/filesystemUtils.js"
-import { resolveDirectoryUrl, resolveFileUrl, fileUrlToPath } from "src/internal/urlUtils.js"
+import { resolveDirectoryUrl, resolveUrl, fileUrlToPath } from "src/internal/urlUtils.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
@@ -22,7 +22,7 @@ export const browserImportSystemJsBundle = async ({
   ])
 
   const page = await browser.newPage()
-  await page.goto(resolveFileUrl(htmlFileRelativePath, server.origin))
+  await page.goto(resolveUrl(htmlFileRelativePath, server.origin))
 
   try {
     const namespace = await page.evaluate(
@@ -72,7 +72,7 @@ const serveSystemJS = async ({ request: { ressource } }) => {
 }
 
 const serveTestDirectory = ({ testDirectoryUrl, request: { ressource, method, headers } }) =>
-  serveFile(fileUrlToPath(resolveFileUrl(ressource.slice(1), testDirectoryUrl)), {
+  serveFile(fileUrlToPath(resolveUrl(ressource.slice(1), testDirectoryUrl)), {
     method,
     headers,
   })

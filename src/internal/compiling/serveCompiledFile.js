@@ -1,5 +1,5 @@
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server"
-import { urlToRelativeUrl, pathToFileUrl, resolveFileUrl } from "internal/urlUtils.js"
+import { urlToRelativeUrl, pathToFileUrl, resolveUrl } from "internal/urlUtils.js"
 import { bufferToEtag } from "./compile-directory/bufferToEtag.js"
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
 
@@ -67,7 +67,7 @@ export const serveCompiledFile = async ({
       request,
     })
     compileResult.sources.forEach((source) => {
-      const sourceFileUrl = resolveFileUrl(source, `${compiledFileUrl}__asset__/`)
+      const sourceFileUrl = resolveUrl(source, `${compiledFileUrl}__asset__/`)
       projectFileRequestedCallback({
         relativeUrl: urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl),
         request,

@@ -1,5 +1,5 @@
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { resolveFileUrl } from "internal/urlUtils.js"
+import { resolveUrl } from "internal/urlUtils.js"
 import { generateFileExecutionSteps } from "internal/executing/generateFileExecutionSteps.js"
 
 export const relativeUrlToExecutionSteps = (relativeUrl, { projectDirectoryUrl, plan }) => {
@@ -11,7 +11,7 @@ export const relativeUrlToExecutionSteps = (relativeUrl, { projectDirectoryUrl, 
   )
 
   const meta = urlToMeta({
-    url: resolveFileUrl(relativeUrl, projectDirectoryUrl),
+    url: resolveUrl(relativeUrl, projectDirectoryUrl),
     specifierMetaMap: specifierMetaMapForExecution,
   })
   if (meta.filePlan) {

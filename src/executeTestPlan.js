@@ -5,7 +5,7 @@ import {
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { pathToDirectoryUrl, resolveFileUrl } from "internal/urlUtils.js"
+import { pathToDirectoryUrl } from "internal/urlUtils.js"
 import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { executePlan } from "internal/executing/executePlan.js"
 import { executionIsPassed } from "internal/executing/executionIsPassed.js"

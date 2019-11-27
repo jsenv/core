@@ -1,10 +1,10 @@
-import { resolveFileUrl } from "internal/urlUtils.js"
+import { resolveUrl } from "internal/urlUtils.js"
 
 export const resolveAssetFileUrl = ({ asset, compiledFileUrl }) =>
-  resolveFileUrl(asset, `${compiledFileUrl}__asset__/`)
+  resolveUrl(asset, `${compiledFileUrl}__asset__/`)
 
 export const resolveMetaJsonFileUrl = ({ compiledFileUrl }) =>
   resolveAssetFileUrl({ compiledFileUrl, asset: "meta.json" })
 
 export const resolveSourceFileUrl = ({ source, compiledFileUrl }) =>
-  resolveFileUrl(source, resolveMetaJsonFileUrl({ compiledFileUrl }))
+  resolveUrl(source, resolveMetaJsonFileUrl({ compiledFileUrl }))

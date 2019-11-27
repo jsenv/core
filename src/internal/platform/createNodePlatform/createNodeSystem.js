@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import "../s.js"
-import { fileUrlToPath, resolveFileUrl } from "../../urlUtils.js"
+import { fileUrlToPath, resolveUrl } from "../../urlUtils.js"
 import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
 import { valueInstall } from "../valueInstall.js"
 import { createRequireFromPath } from "./createRequireFromPath.js"
@@ -109,7 +109,7 @@ const responseUrlToSourceUrl = (responseUrl, { compileServerOrigin, projectDirec
   // from filesystem. In that case there is no compileServerOrigin
   if (compileServerOrigin && responseUrl.startsWith(`${compileServerOrigin}/`)) {
     const afterOrigin = responseUrl.slice(`${compileServerOrigin}/`.length)
-    const fileUrl = resolveFileUrl(afterOrigin, projectDirectoryUrl)
+    const fileUrl = resolveUrl(afterOrigin, projectDirectoryUrl)
     return fileUrlToPath(fileUrl)
   }
   return responseUrl
@@ -139,7 +139,7 @@ const urlToOriginalUrl = (
   }
 
   const afterCompileId = afterCompileDirectory.slice(nextSlashIndex + 1)
-  return resolveFileUrl(afterCompileId, projectDirectoryUrl)
+  return resolveUrl(afterCompileId, projectDirectoryUrl)
 }
 
 const moduleExportsToModuleNamespace = (moduleExports) => {

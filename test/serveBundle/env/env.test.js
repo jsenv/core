@@ -7,7 +7,7 @@ import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   fileUrlToPath,
-  resolveFileUrl,
+  resolveUrl,
 } from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
@@ -75,8 +75,8 @@ assert({ actual, expected })
     file: "file.js",
     sources: ["env.js", "../file.js"],
     sourcesContent: [
-      await readFileContent(fileUrlToPath(resolveFileUrl("env.js", sourcemapFileUrl))),
-      await readFileContent(fileUrlToPath(resolveFileUrl("../file.js", sourcemapFileUrl))),
+      await readFileContent(fileUrlToPath(resolveUrl("env.js", sourcemapFileUrl))),
+      await readFileContent(fileUrlToPath(resolveUrl("../file.js", sourcemapFileUrl))),
     ],
     names: actual.names,
     mappings: actual.mappings,
@@ -93,12 +93,12 @@ assert({ actual, expected })
     contentType: "application/javascript",
     sources: ["../env.js", "../../file.js"],
     sourcesEtag: [
-      bufferToEtag(readFileSync(fileUrlToPath(resolveFileUrl("../env.js", metaFileUrl)))),
-      bufferToEtag(readFileSync(fileUrlToPath(resolveFileUrl("../../file.js", metaFileUrl)))),
+      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../env.js", metaFileUrl)))),
+      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../../file.js", metaFileUrl)))),
     ],
     assets: ["../file.js.map"],
     assetsEtag: [
-      bufferToEtag(readFileSync(fileUrlToPath(resolveFileUrl("../file.js.map", metaFileUrl)))),
+      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../file.js.map", metaFileUrl)))),
     ],
     createdMs: actual.createdMs,
     lastModifiedMs: actual.lastModifiedMs,

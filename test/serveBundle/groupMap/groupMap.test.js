@@ -7,7 +7,7 @@ import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   fileUrlToPath,
-  resolveFileUrl,
+  resolveUrl,
 } from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
@@ -78,9 +78,9 @@ const response = await serveBundle(serveBundleParams)
     sources: ["groupMap.json", "../file.js"],
     sourcesContent: [
       `export default ${await readFileContent(
-        fileUrlToPath(resolveFileUrl("groupMap.json", sourcemapFileUrl)),
+        fileUrlToPath(resolveUrl("groupMap.json", sourcemapFileUrl)),
       )}`,
-      await readFileContent(fileUrlToPath(resolveFileUrl("../file.js", sourcemapFileUrl))),
+      await readFileContent(fileUrlToPath(resolveUrl("../file.js", sourcemapFileUrl))),
     ],
     names: actual.names,
     mappings: actual.mappings,
@@ -95,12 +95,12 @@ const response = await serveBundle(serveBundleParams)
     contentType: "application/javascript",
     sources: ["../groupMap.json", "../../file.js"],
     sourcesEtag: [
-      bufferToEtag(readFileSync(fileUrlToPath(resolveFileUrl("../groupMap.json", metaFileUrl)))),
-      bufferToEtag(readFileSync(fileUrlToPath(resolveFileUrl("../../file.js", metaFileUrl)))),
+      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../groupMap.json", metaFileUrl)))),
+      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../../file.js", metaFileUrl)))),
     ],
     assets: ["../file.js.map"],
     assetsEtag: [
-      bufferToEtag(readFileSync(fileUrlToPath(resolveFileUrl("../file.js.map", metaFileUrl)))),
+      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../file.js.map", metaFileUrl)))),
     ],
     createdMs: actual.createdMs,
     lastModifiedMs: actual.lastModifiedMs,

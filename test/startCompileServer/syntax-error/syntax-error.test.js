@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
-  resolveFileUrl,
+  resolveUrl,
   urlToRelativeUrl,
   fileUrlToPath,
 } from "src/internal/urlUtils.js"
@@ -10,7 +10,7 @@ import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 import { fetch } from "../fetch.js"
 
 const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
-const fileUrl = resolveFileUrl("./syntax-error.js", import.meta.url)
+const fileUrl = resolveUrl("./syntax-error.js", import.meta.url)
 const fileRelativeUrl = urlToRelativeUrl(
   fileUrl,
   COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,

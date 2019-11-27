@@ -3,7 +3,7 @@ import { Script } from "vm"
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
-import { fileUrlToPath, resolveFileUrl } from "internal/urlUtils.js"
+import { fileUrlToPath, resolveUrl } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
@@ -42,13 +42,13 @@ export const launchNode = async ({
     throw new TypeError(`env must be an object, got ${env}`)
   }
 
-  const nodeControllableFileUrl = resolveFileUrl(
+  const nodeControllableFileUrl = resolveUrl(
     "./src/internal/node-launcher/nodeControllableFile.js",
     jsenvCoreDirectoryUrl,
   )
   await assertFileExists(nodeControllableFileUrl)
 
-  const nodeExecuteFileUrl = resolveFileUrl(
+  const nodeExecuteFileUrl = resolveUrl(
     "./src/internal/node-launcher/nodeExecuteFile.js",
     jsenvCoreDirectoryUrl,
   )

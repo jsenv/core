@@ -1,5 +1,5 @@
 import { writeFileContent } from "internal/filesystemUtils.js"
-import { resolveFileUrl, fileUrlToPath } from "internal/urlUtils.js"
+import { resolveUrl, fileUrlToPath } from "internal/urlUtils.js"
 
 export const generateCoverageJsonFile = async ({
   projectDirectoryUrl,
@@ -7,7 +7,7 @@ export const generateCoverageJsonFile = async ({
   coverageJsonFileLog,
   coverageMap,
 }) => {
-  const coverageJsonFileUrl = resolveFileUrl(coverageJsonFileRelativeUrl, projectDirectoryUrl)
+  const coverageJsonFileUrl = resolveUrl(coverageJsonFileRelativeUrl, projectDirectoryUrl)
   const coverageJsonFilePath = fileUrlToPath(coverageJsonFileUrl)
 
   await writeFileContent(coverageJsonFilePath, JSON.stringify(coverageMap, null, "  "))
