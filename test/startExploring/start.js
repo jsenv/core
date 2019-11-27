@@ -16,7 +16,7 @@ startExploring({
   htmlFileUrl,
   explorableConfig: {
     [`./${testDirectoryRelativeUrl}**/*.main.js`]: true,
-    [`./${testDirectoryRelativeUrl}**/.dist/**`]: false,
+    [`./${testDirectoryRelativeUrl}**/.jsenv/**`]: false,
   },
   protocol: "https",
   port: 3400,

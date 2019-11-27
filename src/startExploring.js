@@ -269,6 +269,17 @@ export const startExploring = async ({
           return null
         },
         () => {
+          if (request.ressource.startsWith("/node_modules/source-map/")) {
+            const specifier = request.ressource.slice("/node_modules/".length)
+            const filePath = import.meta.require.resolve(specifier)
+            return serveFile(filePath, {
+              method: request.method,
+              headers: request.headers,
+            })
+          }
+          return null
+        },
+        () => {
           if (request.ressource === "/") {
             return serveExploringIndex({
               projectDirectoryUrl,

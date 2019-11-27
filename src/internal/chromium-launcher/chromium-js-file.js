@@ -1,7 +1,4 @@
-// TODO: use serveBundle to get this file
-
 import { installBrowserErrorStackRemapping } from "@jsenv/error-stack-sourcemap/src/installBrowserErrorStackRemapping/installBrowserErrorStackRemapping.js"
-import { resolveImport } from "@jsenv/import-map"
 import { fetchAndEvalUsingXHR } from "../fetchAndEvalUsingXHR.js"
 
 window.execute = async ({
@@ -19,17 +16,6 @@ window.execute = async ({
   errorExposureInNotification = false,
   errorExposureInDocument = true,
 }) => {
-  // better to use import.meta.resolve here
-  // just in case a project itself uses source-map and it gets deduped
-  // to be tested
-  const sourcemapPackageMainFileRemoteUrl = `${compileServerOrigin}/node_modules/source-map/dist/source-map.js`
-  await fetchAndEvalUsingXHR(sourcemapPackageMainFileRemoteUrl)
-  const { SourceMapConsumer } = window.sourceMap
-  const sourcemapPackageMappingFileRemoteUrl = `${compileServerOrigin}/node_modules/source-map/lib/mappings.wasm`
-  SourceMapConsumer.initialize({
-    "lib/mappings.wasm": sourcemapPackageMappingFileRemoteUrl,
-  })
-
   const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`
   await fetchAndEvalUsingXHR(browserPlatformCompiledFileRemoteUrl)
   const { __browserPlatform__ } = window
@@ -39,9 +25,16 @@ window.execute = async ({
   })
   const compiledFileRemoteUrl = `${compileDirectoryRemoteUrl}${fileRelativeUrl}`
 
+  const sourcemapPackageMainFileRemoteUrl = `${compileServerOrigin}/node_modules/source-map/dist/source-map.js`
+  await fetchAndEvalUsingXHR(sourcemapPackageMainFileRemoteUrl)
+  const { SourceMapConsumer } = window.sourceMap
+  const sourcemapPackageMappingFileRemoteUrl = `${compileServerOrigin}/node_modules/source-map/lib/mappings.wasm`
+  SourceMapConsumer.initialize({
+    "lib/mappings.wasm": sourcemapPackageMappingFileRemoteUrl,
+  })
   const { getErrorOriginalStackString } = installBrowserErrorStackRemapping({
     resolveHref: ({ specifier, importer = compiledFileRemoteUrl }) => {
-      return resolveImport({ specifier, importer })
+      return String(new URL(specifier, importer))
     },
     SourceMapConsumer,
   })

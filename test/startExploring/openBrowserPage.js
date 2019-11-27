@@ -6,13 +6,14 @@ const puppeteer = import.meta.require("puppeteer")
 export const openBrowserPage = async (
   url,
   {
+    headless = true,
     inheritCoverage = process.env.COVERAGE_ENABLED === "true",
     collectConsole = true,
     collectErrors = true,
   } = {},
 ) => {
   const browser = await puppeteer.launch({
-    headless: false,
+    headless,
   })
   const page = await browser.newPage()
 
