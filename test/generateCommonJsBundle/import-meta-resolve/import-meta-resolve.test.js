@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { generateCommonJsBundle } from "../../../index.js"
-import { resolveDirectoryUrl, resolveFileUrl, urlToRelativeUrl } from "src/internal/urlUtils.js"
+import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "src/internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
@@ -10,17 +10,17 @@ import {
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryBasename = basename(testDirectoryRelativeUrl)
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs`
 const mainFileBasename = `${testDirectoryBasename}.js`
 
 await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
-  importMapFileRelativeUrl: `${testDirectoryRelativePath}importMap.json`,
+  importMapFileRelativeUrl: `${testDirectoryRelativeUrl}importMap.json`,
   entryPointMap: {
-    main: `./${testDirectoryRelativePath}${mainFileBasename}`,
+    main: `./${testDirectoryRelativeUrl}${mainFileBasename}`,
   },
 })
 
@@ -29,7 +29,7 @@ const { namespace: actual } = await requireCommonJsBundle({
   bundleDirectoryRelativeUrl,
 })
 const expected = {
-  basic: resolveFileUrl(`${bundleDirectoryRelativeUrl}/file.js`, jsenvCoreDirectoryUrl),
+  basic: resolveUrl(`${bundleDirectoryRelativeUrl}/file.js`, jsenvCoreDirectoryUrl),
   remapped: `file:///bar`,
 }
 assert({ actual, expected })
