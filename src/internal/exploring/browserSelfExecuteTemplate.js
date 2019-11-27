@@ -61,5 +61,8 @@ const fileRelativeUrl = new URLSearchParams(location.search).get("file")
   await executeFile(compiledFileRemoteUrl, {
     errorNotification: true,
     executionId: fileRelativeUrl,
+    executionExposureOnWindow: true,
+    collectNamespace: true,
+    collectCoverage: true,
   })
 })()

@@ -1,4 +1,4 @@
-import { evalSource } from "internal/compiling/platform-service/createNodePlatform/evalSource.js"
+import { evalSource } from "internal/platform/createNodePlatform/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
 import { resolveUrl } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
@@ -18,6 +18,7 @@ export const evaluateImportExecution = async ({
   collectCoverage,
   executionId,
   errorStackRemapping,
+  executionExposureOnWindow,
 }) => {
   await assertFileExists(resolveUrl(fileRelativeUrl, projectDirectoryUrl))
 
@@ -34,6 +35,7 @@ export const evaluateImportExecution = async ({
     collectCoverage,
     executionId,
     errorStackRemapping,
+    executionExposureOnWindow,
   })
 
   try {
@@ -90,6 +92,7 @@ const createBrowserIIFEString = ({
   collectCoverage,
   executionId,
   errorStackRemapping,
+  executionExposureOnWindow,
 }) => `(() => {
   return window.execute(${JSON.stringify(
     {
@@ -100,6 +103,7 @@ const createBrowserIIFEString = ({
       collectCoverage,
       executionId,
       errorStackRemapping,
+      executionExposureOnWindow,
     },
     null,
     "    ",

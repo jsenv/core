@@ -7,5 +7,4 @@ debugger
 
 console.log("bar")
 
-window.__done__ = true
-window.__value__ = 42
+export default 42

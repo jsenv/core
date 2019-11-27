@@ -56,6 +56,7 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
       errorExposureInConsole = true,
       errorExposureInNotification = false,
       errorExposureInDocument = true,
+      executionExposureOnWindow = false,
       errorTransform = (error) => error,
       executionId,
     } = {},
@@ -64,9 +65,11 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
       resolveImport: resolveImportScoped,
       executionId,
     })
+
+    let executionResult
     try {
       const namespace = await browserSystem.import(specifier)
-      return {
+      executionResult = {
         status: "completed",
         namespace: collectNamespace ? namespace : undefined,
         coverageMap: collectCoverage ? readCoverage() : undefined,
@@ -83,12 +86,18 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
       if (errorExposureInNotification) displayErrorNotification(transformedError)
       if (errorExposureInDocument) displayErrorInDocument(transformedError)
 
-      return {
+      executionResult = {
         status: "errored",
         exceptionSource: unevalException(transformedError),
         coverageMap: collectCoverage ? readCoverage() : undefined,
       }
     }
+
+    if (executionExposureOnWindow) {
+      window.__executionResult__ = executionResult
+    }
+
+    return executionResult
   }
 
   return {

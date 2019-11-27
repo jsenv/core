@@ -20,17 +20,10 @@ const { origin: browserExplorerServerOrigin } = await startExploring({
   jsenvDirectoryRelativeUrl,
   htmlFileUrl,
 })
-const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
+const { browser, errors, consoleText, executionResult } = await openBrowserPage(
   `${browserExplorerServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
 )
-const actual = { pageLogs, pageErrors, executionResult }
-const expected = {
-  pageLogs: [{ type: "log", text: "42" }, { type: "log", text: "bar" }],
-  pageErrors: [],
-  executionResult: {
-    status: "completed",
-    namespace: { default: 42 },
-  },
-}
+const actual = value
+const expected = 42
 assert({ actual, expected })
 browser.close()

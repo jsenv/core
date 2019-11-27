@@ -6,37 +6,50 @@ export const openBrowserPage = async (
   url,
   {
     inheritCoverage = process.env.COVERAGE_ENABLED === "true",
-    collectCoverage = false,
-    collectValue = true,
+    collectConsole = true,
+    collectErrors = true,
   } = {},
 ) => {
   const browser = await puppeteer.launch({
     headless: false,
   })
   const page = await browser.newPage()
+
+  const pageLogs = []
+  if (collectConsole) {
+    page.on("console", (message) => {
+      pageLogs.push({ type: message.type(), text: message.text() })
+    })
+  }
+
+  const pageErrors = []
+  if (collectErrors) {
+    page.on("pageerror", (error) => {
+      pageErrors.push(error)
+    })
+  }
+
   await page.goto(url)
   await page.waitFor(
     /* istanbul ignore next */
-    () => Boolean(window.__done__),
+    () => Boolean(window.__executionResult__),
   )
 
-  let coverageMap
-  if (inheritCoverage || collectCoverage) {
-    coverageMap = await page.evaluate(`(() => {
-  return window.__coverage__
-})()`)
+  const executionResult = await page.evaluate(
+    /* istanbul ignore next */
+    () => window.__executionResult__,
+  )
+
+  if (inheritCoverage) {
+    const { coverageMap } = executionResult
     global.__coverage__ = composeCoverageMap(global.__coverage__ || {}, coverageMap || {})
-    if (!collectCoverage) {
-      coverageMap = undefined
-    }
   }
 
-  let value
-  if (collectValue) {
-    value = await page.evaluate(`(() => {
-  return window.__value__
-})()`)
+  return {
+    browser,
+    page,
+    pageErrors,
+    pageLogs,
+    executionResult,
   }
-
-  return { browser, page, coverageMap, value }
 }
