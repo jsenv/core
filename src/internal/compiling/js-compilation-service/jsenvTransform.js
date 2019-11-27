@@ -23,6 +23,7 @@ export const jsenvTransform = async ({
   transformTopLevelAwait,
   transformModuleIntoSystemFormat,
   transformGenerator,
+  transformGlobalThis,
   regeneratorRuntimeImportPath,
   remap,
 }) => {
@@ -66,9 +67,15 @@ export const jsenvTransform = async ({
     }
   }
 
+  if (transformGlobalThis) {
+    babelPluginMap = {
+      ...babelPluginMap,
+      "ensure-global-this-import": [ensureGlobalThisImportBabelPlugin],
+    }
+  }
+
   babelPluginMap = {
     ...babelPluginMap,
-    "ensure-global-this-import": [ensureGlobalThisImportBabelPlugin],
     "transform-babel-helpers-to-import": [transformBabelHelperToImportBabelPlugin],
   }
 

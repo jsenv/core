@@ -21,7 +21,6 @@ await generateSystemJsBundle({
   // compileServerLogLevel: "debug",
   // logLevel: "debug",
   jsenvDirectoryRelativeUrl,
-  // jsenvDirectoryClean: true,
   // filesystemCache: true,
   bundleDirectoryRelativeUrl,
   entryPointMap: {

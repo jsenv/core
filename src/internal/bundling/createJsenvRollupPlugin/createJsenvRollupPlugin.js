@@ -328,6 +328,7 @@ const transformAsyncInsertedByRollup = async ({
         babelPluginMap: { [asyncPluginName]: babelPluginMap[asyncPluginName] },
         transformModuleIntoSystemFormat: false, // already done by rollup
         transformGenerator: false, // already done
+        transformGlobalThis: false,
       })
 
       const bundleFileUrl = resolveUrl(bundleFilename, bundleDirectoryUrl)

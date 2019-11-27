@@ -14,6 +14,7 @@ export const transformJs = async ({
   transformTopLevelAwait = true,
   transformModuleIntoSystemFormat = true,
   transformGenerator = true,
+  transformGlobalThis = true,
   remap = true,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -53,6 +54,7 @@ export const transformJs = async ({
     transformTopLevelAwait,
     transformModuleIntoSystemFormat,
     transformGenerator,
+    transformGlobalThis,
     remap,
   })
 }

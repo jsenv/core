@@ -5,6 +5,7 @@ import { testBabelPluginMap } from "../testBabelPluginMap.js"
 export const GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS = {
   projectDirectoryPath: fileUrlToPath(jsenvCoreDirectoryUrl),
   bundleDirectoryClean: true,
+  jsenvDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
   logLevel: "warn",
   throwUnhandled: false,
