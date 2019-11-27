@@ -1,4 +1,5 @@
 import { composeCoverageMap } from "internal/executing/coverage/composeCoverageMap.js"
+import { evalSource } from "internal/platform/createNodePlatform/evalSource.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
@@ -39,6 +40,11 @@ export const openBrowserPage = async (
     /* istanbul ignore next */
     () => window.__executionResult__,
   )
+
+  if (executionResult.status === "errored") {
+    executionResult.error = evalSource(executionResult.exceptionSource)
+    delete executionResult.exceptionSource
+  }
 
   if (inheritCoverage) {
     const { coverageMap } = executionResult

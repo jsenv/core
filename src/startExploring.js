@@ -334,6 +334,9 @@ export const startExploring = async ({
       () => {},
     )
 
-    return browserServer
+    return {
+      ...browserServer,
+      compileServerOrigin,
+    }
   })
 }
