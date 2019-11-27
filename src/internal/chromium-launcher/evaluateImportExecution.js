@@ -76,7 +76,10 @@ const evalException = (exceptionSource, { projectDirectoryUrl, compileServerOrig
   const error = evalSource(exceptionSource)
 
   if (error && error instanceof Error) {
-    const remoteRootRegexp = new RegExp(escapeRegexpSpecialCharacters(compileServerOrigin), "g")
+    const remoteRootRegexp = new RegExp(
+      escapeRegexpSpecialCharacters(`${compileServerOrigin}/`),
+      "g",
+    )
     error.stack = error.stack.replace(remoteRootRegexp, projectDirectoryUrl)
     error.message = error.message.replace(remoteRootRegexp, projectDirectoryUrl)
   }

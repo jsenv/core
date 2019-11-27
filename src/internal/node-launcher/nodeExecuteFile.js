@@ -119,7 +119,7 @@ const specifierToServerUrl = (specifier, { projectDirectoryUrl, compileServerOri
   if (specifier.startsWith("http://") || specifier.startsWith("https://")) {
     return null
   }
-  if (specifier.starsWith("file://")) {
+  if (specifier.startsWith("file://")) {
     return urlToServerUrl(specifier, { projectDirectoryUrl, compileServerOrigin })
   }
   return urlToServerUrl(pathToFileURL(specifier), { projectDirectoryUrl, compileServerOrigin })
