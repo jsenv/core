@@ -3,7 +3,6 @@ const { fetchUsingHttp } = require("./fetchUsingHttp.js")
 
 const execute = async ({
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   fileRelativeUrl,
   compileServerOrigin,

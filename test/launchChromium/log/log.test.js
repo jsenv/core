@@ -34,9 +34,9 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       // headless: false,
     }),
+  fileRelativeUrl,
   captureConsole: true,
   collectNamespace: false,
-  fileRelativeUrl,
 })
 const expected = {
   status: "completed",

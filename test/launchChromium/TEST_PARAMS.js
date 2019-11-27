@@ -4,9 +4,9 @@ import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
 export const START_COMPILE_SERVER_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  jsenvDirectoryClean: true,
   compileGroupCount: 2,
   compileServerLogLevel: "off",
-  jsenvDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
 }
 

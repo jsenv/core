@@ -3,10 +3,10 @@ import { jsenvCoreDirectoryUrl } from "../../src/internal/jsenvCoreDirectoryUrl.
 import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
 export const START_COMPILE_SERVER_TEST_PARAMS = {
-  logLevel: "off",
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  jsenvDirectoryClean: true,
+  compileServerLogLevel: "off",
   babelPluginMap: testBabelPluginMap,
-  compileDirectoryClean: true,
   compileGroupCount: 2,
 }
 

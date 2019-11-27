@@ -14,13 +14,13 @@ import {
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
-const fileBasename = `${testDirectoryBasename}.js`
-const compileDirectoryUrl = resolveDirectoryUrl("./.dist/", import.meta.url)
-const fileRelativeUrl = `${testDirectoryRelativePath}${fileBasename}`
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const filename = `${testDirectoryBasename}.js`
+const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
 
-const { origin: compileServerOrigin } = await startCompileServer({
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
-  compileDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
 })
 
 const actual = await launchAndExecute({
@@ -29,8 +29,8 @@ const actual = await launchAndExecute({
     launchNode({
       ...LAUNCH_TEST_PARAMS,
       ...options,
+      outDirectoryRelativeUrl,
       compileServerOrigin,
-      compileDirectoryUrl,
     }),
   fileRelativeUrl,
   collectNamespace: false,

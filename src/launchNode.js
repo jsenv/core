@@ -16,15 +16,6 @@ export const launchNode = async ({
   // logger,
 
   projectDirectoryUrl,
-  nodeExecuteFileUrl = resolveFileUrl(
-    "./src/internal/node-launcher/nodeExecuteFile.js",
-    jsenvCoreDirectoryUrl,
-  ),
-  nodeControllableFileUrl = resolveFileUrl(
-    "./src/internal/node-launcher/nodeControllableFile.js",
-    jsenvCoreDirectoryUrl,
-  ),
-  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
 
@@ -42,11 +33,6 @@ export const launchNode = async ({
   if (typeof compileServerOrigin !== "string") {
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
   }
-  if (typeof jsenvDirectoryRelativeUrl !== "string") {
-    throw new TypeError(
-      `jsenvDirectoryRelativeUrl must be a string, got ${jsenvDirectoryRelativeUrl}`,
-    )
-  }
   if (typeof outDirectoryRelativeUrl !== "string") {
     throw new TypeError(`outDirectoryRelativeUrl must be a string, got ${outDirectoryRelativeUrl}`)
   }
@@ -55,7 +41,17 @@ export const launchNode = async ({
   } else if (typeof env !== "object") {
     throw new TypeError(`env must be an object, got ${env}`)
   }
+
+  const nodeControllableFileUrl = resolveFileUrl(
+    "./src/internal/node-launcher/nodeControllableFile.js",
+    jsenvCoreDirectoryUrl,
+  )
   await assertFileExists(nodeControllableFileUrl)
+
+  const nodeExecuteFileUrl = resolveFileUrl(
+    "./src/internal/node-launcher/nodeExecuteFile.js",
+    jsenvCoreDirectoryUrl,
+  )
   await assertFileExists(nodeExecuteFileUrl)
 
   const execArgv = await createChildExecArgv({
@@ -181,7 +177,6 @@ export const launchNode = async ({
           createNodeIIFEString({
             nodeExecuteFileUrl,
             projectDirectoryUrl,
-            jsenvDirectoryRelativeUrl,
             outDirectoryRelativeUrl,
             fileRelativeUrl,
             compileServerOrigin,
@@ -292,7 +287,6 @@ const createExitWithFailureCodeError = (code) => {
 const createNodeIIFEString = ({
   nodeExecuteFileUrl,
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   fileRelativeUrl,
   compileServerOrigin,
@@ -302,26 +296,15 @@ const createNodeIIFEString = ({
   executionId,
   remap,
 }) => `(() => {
-  const {
-    nodeExecuteFilePath,
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    fileRelativeUrl,
-    compileServerOrigin,
+  const { execute } = require(${JSON.stringify(fileUrlToPath(nodeExecuteFileUrl))})
 
-    collectNamespace,
-    collectCoverage,
-    executionId,
-    remap
-  } = ${JSON.stringify(
+  return execute(${JSON.stringify(
     {
-      nodeExecuteFilePath: fileUrlToPath(nodeExecuteFileUrl),
       projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
       outDirectoryRelativeUrl,
       fileRelativeUrl,
       compileServerOrigin,
+
       collectNamespace,
       collectCoverage,
       executionId,
@@ -329,22 +312,7 @@ const createNodeIIFEString = ({
     },
     null,
     "    ",
-  )}
-
-  const { execute } = require(nodeExecuteFilePath)
-
-  return execute({
-    projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
-    outDirectoryRelativeUrl,
-    fileRelativeUrl,
-    compileServerOrigin,
-
-    collectNamespace,
-    collectCoverage,
-    executionId,
-    remap
-  })
+  )})
 })()`
 
 const evalSource = (code, href) => {
