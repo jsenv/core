@@ -2,6 +2,8 @@
 import {
   catchAsyncFunctionCancellation,
   createCancellationTokenForProcessSIGINT,
+  composeCancellationToken,
+  createCancellationSource,
 } from "@jsenv/cancellation"
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
@@ -56,6 +58,13 @@ export const startExploring = async ({
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
   await assertFileExists(htmlFileUrl)
+
+  const stopExploringCancellationSource = createCancellationSource()
+
+  cancellationToken = composeCancellationToken(
+    cancellationToken,
+    stopExploringCancellationSource.token,
+  )
 
   return catchAsyncFunctionCancellation(async () => {
     let livereloadServerSentEventService = () => {
@@ -344,6 +353,9 @@ export const startExploring = async ({
       },
       () => {},
     )
+    browserServer.stoppedPromise.then((reason) => {
+      stopExploringCancellationSource.cancel(reason)
+    })
 
     return {
       ...browserServer,
