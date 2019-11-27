@@ -5,4 +5,5 @@ console.log(answer)
 // eslint-disable-next-line no-debugger
 debugger
 
-export default answer
+window.__done__ = true
+window.__value__ = answer
