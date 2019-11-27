@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { executeTestPlan, launchNode } from "../../../index.js"
+import { executeTestPlan, launchNode, launchChromium } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
@@ -13,8 +13,8 @@ const testPlan = {
     node: {
       launch: launchNode,
     },
-    node2: {
-      launch: launchNode,
+    chromium: {
+      launch: launchChromium,
     },
   },
 }
@@ -42,13 +42,13 @@ const expected = {
         platformName: "node",
         platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
       },
-      node2: {
+      chromium: {
         status: "completed",
         namespace: {
-          default: "node",
+          default: "browser",
         },
-        platformName: "node",
-        platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
+        platformName: "chromium",
+        platformVersion: actual.report[fileRelativeUrl].chromium.platformVersion,
       },
     },
   },
