@@ -10,22 +10,22 @@ import {
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/systemjs/`
-const mainFileBasename = `${testDirectoryBasename}.js`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
+const mainFilename = `${testDirectoryname}.js`
 
 await generateSystemJsBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
-  importMapFileRelativeUrl: `${testDirectoryRelativePath}importMap.json`,
+  importMapFileRelativeUrl: `${testDirectoryRelativeUrl}importMap.json`,
   entryPointMap: {
-    main: `./${testDirectoryRelativePath}${mainFileBasename}`,
+    main: `./${testDirectoryRelativeUrl}${mainFilename}`,
   },
 })
 const { namespace: actual, serverOrigin } = await browserImportSystemJsBundle({
   ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
-  testDirectoryRelativePath,
+  testDirectoryRelativeUrl,
 })
 const expected = {
   basic: `${serverOrigin}/dist/systemjs/file.js`,

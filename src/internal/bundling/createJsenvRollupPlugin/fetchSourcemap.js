@@ -23,7 +23,8 @@ export const fetchSourcemap = async ({ cancellationToken, logger, moduleUrl, mod
   const okValidation = validateResponseStatusIsOk(sourcemapResponse)
 
   if (!okValidation.valid) {
-    logger.warn(okValidation.message)
+    logger.warn(`unexpected response for sourcemap file:
+${okValidation.message}`)
     return null
   }
 
@@ -98,7 +99,8 @@ const fetchSource = async (sourceUrl, { cancellationToken, logger }) => {
   const okValidation = validateResponseStatusIsOk(sourceResponse)
 
   if (!okValidation.valid) {
-    logger.warn(okValidation.message)
+    logger.warn(`unexpected response for sourcemap source file:
+${okValidation.message}`)
     return null
   }
 

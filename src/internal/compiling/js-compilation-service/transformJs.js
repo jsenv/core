@@ -6,6 +6,7 @@ export const transformJs = async ({
   projectDirectoryUrl,
   code,
   url,
+  urlAfterTransform,
   map,
   babelPluginMap,
   convertMap = {},
@@ -31,6 +32,7 @@ export const transformJs = async ({
   const { inputCode, inputMap } = await computeInputCodeAndInputMap({
     code,
     url,
+    urlAfterTransform,
     map,
     projectDirectoryUrl,
     convertMap,
@@ -58,6 +60,7 @@ export const transformJs = async ({
 const computeInputCodeAndInputMap = async ({
   code,
   url,
+  urlAfterTransform,
   map,
   projectDirectoryUrl,
   convertMap,
@@ -78,11 +81,12 @@ const computeInputCodeAndInputMap = async ({
   if (typeof convert !== "function") {
     throw new TypeError(`convert must be a function, got ${convert}`)
   }
-  // TODO: update @jsenv/commonjs-converter to handle map when passed
+  // TODO: handle map when passed
   const conversionResult = await convert({
     projectDirectoryUrl,
     code,
     url,
+    urlAfterTransform,
     map,
     remap,
     allowTopLevelAwait,

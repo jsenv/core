@@ -1,6 +1,6 @@
 import { startServer, firstService, serveFile } from "@jsenv/server"
 import { readFileContent } from "src/internal/filesystemUtils.js"
-import { resolveDirectoryUrl, resolveUrl, fileUrlToPath } from "src/internal/urlUtils.js"
+import { resolveDirectoryUrl, resolveUrl } from "src/internal/urlUtils.js"
 
 const puppeteer = import.meta.require("puppeteer")
 
@@ -8,12 +8,12 @@ const SYSTEM_PATH = import.meta.require.resolve("systemjs/dist/system.js")
 
 export const browserImportSystemJsBundle = async ({
   projectDirectoryUrl,
-  testDirectoryRelativePath,
-  htmlFileRelativePath = "./index.html",
-  mainRelativePath,
+  testDirectoryRelativeUrl,
+  htmlFileRelativeUrl = "./index.html",
+  mainRelativeUrl,
   headless = true,
 }) => {
-  const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativePath, projectDirectoryUrl)
+  const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
     startTestServer({ testDirectoryUrl }),
     puppeteer.launch({
@@ -22,16 +22,16 @@ export const browserImportSystemJsBundle = async ({
   ])
 
   const page = await browser.newPage()
-  await page.goto(resolveUrl(htmlFileRelativePath, server.origin))
+  await page.goto(resolveUrl(htmlFileRelativeUrl, server.origin))
 
   try {
     const namespace = await page.evaluate(
+      /* istanbul ignore next */
       ({ specifier }) => {
-        // eslint-disable-next-line no-undef
-        return System.import(specifier)
+        return window.System.import(specifier)
       },
       {
-        specifier: mainRelativePath,
+        specifier: mainRelativeUrl,
       },
     )
     return {
@@ -72,7 +72,7 @@ const serveSystemJS = async ({ request: { ressource } }) => {
 }
 
 const serveTestDirectory = ({ testDirectoryUrl, request: { ressource, method, headers } }) =>
-  serveFile(fileUrlToPath(resolveUrl(ressource.slice(1), testDirectoryUrl)), {
+  serveFile(resolveUrl(ressource.slice(1), testDirectoryUrl), {
     method,
     headers,
   })

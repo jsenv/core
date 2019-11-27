@@ -10,16 +10,22 @@ import {
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs/`
-const mainFileBasename = `${testDirectoryBasename}.js`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
+const mainFilename = `${testDirectoryname}.js`
 
 await generateSystemJsBundle({
   ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
+  // compileServerLogLevel: "debug",
+  // logLevel: "debug",
+  jsenvDirectoryRelativeUrl,
+  // jsenvDirectoryClean: true,
+  // filesystemCache: true,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `${testDirectoryRelativePath}${mainFileBasename}`,
+    main: `./${testDirectoryRelativeUrl}${mainFilename}`,
   },
   convertMap: {
     "./node_modules/react/index.js": (options) =>
@@ -31,7 +37,7 @@ await generateSystemJsBundle({
 })
 const { namespace: actual } = await browserImportSystemJsBundle({
   ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
-  testDirectoryRelativePath,
+  testDirectoryRelativeUrl,
 })
 const expected = {
   default: "object",

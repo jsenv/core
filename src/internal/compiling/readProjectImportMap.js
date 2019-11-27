@@ -7,7 +7,7 @@ export const readProjectImportMap = async ({
   logger,
   jsenvProjectDirectoryUrl,
   projectDirectoryUrl,
-  importMapFileUrlRelativeUrl,
+  importMapFileRelativeUrl,
 }) => {
   if (typeof jsenvProjectDirectoryUrl !== "string") {
     throw new TypeError(
@@ -18,8 +18,8 @@ export const readProjectImportMap = async ({
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
   }
 
-  const importMapForProject = importMapFileUrlRelativeUrl
-    ? await getProjectImportMap({ projectDirectoryUrl, importMapFileUrlRelativeUrl })
+  const importMapForProject = importMapFileRelativeUrl
+    ? await getProjectImportMap({ projectDirectoryUrl, importMapFileRelativeUrl })
     : null
 
   const jsenvCoreImportKey = "@jsenv/core/"

@@ -6,11 +6,11 @@ export const GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS = {
   projectDirectoryPath: fileUrlToPath(jsenvCoreDirectoryUrl),
   bundleDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
-  logLevel: "off",
+  logLevel: "warn",
   throwUnhandled: false,
 }
 
 export const IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  mainRelativePath: "./dist/systemjs/main.js",
+  mainRelativeUrl: "./dist/systemjs/main.js",
 }

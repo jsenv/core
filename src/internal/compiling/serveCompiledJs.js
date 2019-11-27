@@ -202,6 +202,7 @@ export const serveCompiledJs = async ({
         projectDirectoryUrl,
         code,
         url: originalFileUrl,
+        urlAfterTransform: compiledFileUrl,
         babelPluginMap: {
           ...groupBabelPluginMap,
           ...babelPluginMapForGroupMap,

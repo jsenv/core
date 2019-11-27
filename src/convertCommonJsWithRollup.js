@@ -1,4 +1,4 @@
-import { fileUrlToPath } from "internal/urlUtils.js"
+import { fileUrlToPath, resolveUrl } from "internal/urlUtils.js"
 
 const commonjs = import.meta.require("rollup-plugin-commonjs")
 const nodeResolve = import.meta.require("rollup-plugin-node-resolve")
@@ -10,6 +10,7 @@ const { rollup } = import.meta.require("rollup")
 
 export const convertCommonJsWithRollup = async ({
   url,
+  urlAfterTransform,
   replaceGlobalObject = true,
   replaceGlobalFilename = true,
   replaceGlobalDirname = true,
@@ -28,7 +29,7 @@ export const convertCommonJsWithRollup = async ({
     throw new Error(`compatible only with file:// protocol, got ${url}`)
   }
 
-  const path = fileUrlToPath(url)
+  const filePath = fileUrlToPath(url)
 
   const nodeBuiltinsRollupPlugin = builtins()
 
@@ -49,7 +50,7 @@ export const convertCommonJsWithRollup = async ({
   const commonJsRollupPlugin = commonjs()
 
   const rollupBundle = await rollup({
-    input: path,
+    input: filePath,
     inlineDynamicImports: true,
     external,
     plugins: [
@@ -77,6 +78,7 @@ export const convertCommonJsWithRollup = async ({
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources: true,
+    ...(urlAfterTransform ? { dir: fileUrlToPath(resolveUrl("./", urlAfterTransform)) } : {}),
   }
 
   const result = await rollupBundle.generate(generateOptions)
