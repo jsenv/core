@@ -24,6 +24,7 @@ await generateCommonJsBundle({
   entryPointMap: {
     main: `./${testDirectoryRelativeUrl}${mainFileBasename}`,
   },
+  // filesystemCache: true,
 })
 
 const { namespace: actual } = await requireCommonJsBundle({
