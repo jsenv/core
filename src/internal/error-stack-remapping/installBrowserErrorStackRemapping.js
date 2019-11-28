@@ -1,10 +1,7 @@
 import { installErrorStackRemapping } from "./installErrorStackRemapping.js"
 
-export const installBrowserErrorStackRemapping = ({ resolveUrl, SourceMapConsumer, indent } = {}) =>
+export const installBrowserErrorStackRemapping = (options) =>
   installErrorStackRemapping({
-    resolveUrl,
-    SourceMapConsumer,
-    indent,
     fetchUrl: async (url) => {
       const response = await fetch(url)
       const text = await response.text()
@@ -16,4 +13,5 @@ export const installBrowserErrorStackRemapping = ({ resolveUrl, SourceMapConsume
         body: () => text,
       }
     },
+    ...options,
   })

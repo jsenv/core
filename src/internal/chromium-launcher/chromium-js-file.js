@@ -33,7 +33,7 @@ window.execute = async ({
     "lib/mappings.wasm": sourcemapPackageMappingFileRemoteUrl,
   })
   const { getErrorOriginalStackString } = installBrowserErrorStackRemapping({
-    resolveHref: ({ specifier, importer = compiledFileRemoteUrl }) => {
+    resolveUrl: ({ specifier, importer = compiledFileRemoteUrl }) => {
       return String(new URL(specifier, importer))
     },
     SourceMapConsumer,

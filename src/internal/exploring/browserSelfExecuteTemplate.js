@@ -71,7 +71,7 @@ const fileRelativeUrl = new URLSearchParams(location.search).get("file")
       "lib/mappings.wasm": sourcemapPackageMappingFileRemoteUrl,
     })
     const { getErrorOriginalStackString } = installBrowserErrorStackRemapping({
-      resolveHref: ({ specifier, importer = compiledFileRemoteUrl }) => {
+      resolveUrl: ({ specifier, importer = compiledFileRemoteUrl }) => {
         return String(new URL(specifier, importer))
       },
       SourceMapConsumer,

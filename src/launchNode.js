@@ -3,11 +3,13 @@ import { Script } from "vm"
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
-import { fileUrlToPath, resolveUrl } from "internal/urlUtils.js"
+import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
+import { fileUrlToPath, resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
 import { createChildExecArgv } from "internal/node-launcher/createChildExecArgv.js"
+import { fetchUsingHttp } from "internal/platform/createNodePlatform/fetchUsingHttp.js"
 
 const EVALUATION_STATUS_OK = "evaluation-ok"
 
@@ -47,12 +49,6 @@ export const launchNode = async ({
     jsenvCoreDirectoryUrl,
   )
   await assertFileExists(nodeControllableFileUrl)
-
-  const nodeExecuteFileUrl = resolveUrl(
-    "./src/internal/node-launcher/nodeExecuteFile.js",
-    jsenvCoreDirectoryUrl,
-  )
-  await assertFileExists(nodeExecuteFileUrl)
 
   const execArgv = await createChildExecArgv({
     cancellationToken,
@@ -160,6 +156,18 @@ export const launchNode = async ({
     { collectNamespace, collectCoverage, executionId },
   ) => {
     const execute = async () => {
+      const nodeJsFileUrl = resolveUrl(
+        "./src/internal/node-launcher/node-js-file.js",
+        jsenvCoreDirectoryUrl,
+      )
+      const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl)
+      const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`
+      const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`
+      const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`
+      await fetchUsingHttp(nodeBundledJsFileRemoteUrl, {
+        cancellationToken,
+      })
+
       return new Promise((resolve, reject) => {
         const evaluationResultRegistration = registerChildMessage(
           child,
@@ -175,7 +183,7 @@ export const launchNode = async ({
           child,
           "evaluate",
           createNodeIIFEString({
-            nodeExecuteFileUrl,
+            nodeExecuteFileUrl: nodeBundledJsFileUrl,
             projectDirectoryUrl,
             outDirectoryRelativeUrl,
             fileRelativeUrl,
