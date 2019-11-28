@@ -11,10 +11,10 @@ import {
 } from "internal/urlUtils.js"
 import { writeFileContent } from "internal/filesystemUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
+import { fetchUrl } from "internal/fetchUrl.js"
 import { transformJs } from "internal/compiling/js-compilation-service/transformJs.js"
 import { findAsyncPluginNameInBabelPluginMap } from "internal/compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 
-import { fetchUrl } from "./fetchUrl.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { validateResponseStatusIsOk } from "./validateResponseStatusIsOk.js"
 

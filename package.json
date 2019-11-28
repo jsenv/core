@@ -82,7 +82,6 @@
     "@babel/plugin-transform-typeof-symbol": "7.2.0",
     "@babel/plugin-transform-unicode-regex": "7.4.4",
     "@jsenv/cancellation": "1.1.0",
-    "@jsenv/error-stack-sourcemap": "3.5.0",
     "@jsenv/file-collector": "1.0.1",
     "@jsenv/file-watcher": "1.0.0",
     "@jsenv/href": "1.2.0",

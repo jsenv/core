@@ -44,11 +44,13 @@ export const fetchUrl = async (url, { cancellationToken } = {}) => {
         return {
           url,
           status: 404,
+          body: e.stack,
         }
       }
       return {
         url,
         status: 500,
+        body: e.stack,
       }
     }
   }

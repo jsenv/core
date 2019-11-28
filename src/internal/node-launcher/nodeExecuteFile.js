@@ -84,18 +84,26 @@ const installErrorStackRemapping = ({
 
   return installNodeErrorStackRemapping({
     resolveHref: ({ type, specifier, importer }) => {
-      if (type === "source" || type === "file-original" || type === "source-map") {
-        const importerUrl = importer
-          ? specifierToServerUrl(importer, { projectDirectoryUrl, compileServerOrigin }) || importer
-          : originalFileRemoteUrl
-        const specifierUrl = resolveUrl(specifier, importerUrl)
-        return (
-          urlToProjectUrl(specifierUrl, { projectDirectoryUrl, compileServerOrigin }) ||
-          specifierUrl
-        )
+      let importerUrl
+      if (importer) {
+        importerUrl =
+          specifierToServerUrl(importer, { projectDirectoryUrl, compileServerOrigin }) || importer
+      } else if (type === "source" || type === "source-map") {
+        importerUrl = originalFileRemoteUrl
+      } else if (type === "file-original") {
+        importerUrl = compiledFileRemoteUrl
+      } else {
+        importerUrl = compiledFileUrl
       }
 
-      return resolveUrl(specifier, importer || compiledFileUrl)
+      const specifierUrl = resolveUrl(specifier, importerUrl)
+
+      if (specifierUrl.startsWith(`${compileServerOrigin}/`)) {
+        const relativeUrl = specifierUrl.slice(`${compileServerOrigin}/`.length)
+        const projectUrl = `${projectDirectoryUrl}${relativeUrl}`
+        return projectUrl
+      }
+      return specifierUrl
     },
     SourceMapConsumer,
   })
@@ -108,13 +116,6 @@ const urlToProjectUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
   return null
 }
 
-const urlToServerUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
-  if (url.startsWith(projectDirectoryUrl)) {
-    return `${compileServerOrigin}/${url.slice(projectDirectoryUrl.length)}`
-  }
-  return null
-}
-
 const specifierToServerUrl = (specifier, { projectDirectoryUrl, compileServerOrigin }) => {
   if (specifier.startsWith("http://") || specifier.startsWith("https://")) {
     return null
@@ -122,7 +123,17 @@ const specifierToServerUrl = (specifier, { projectDirectoryUrl, compileServerOri
   if (specifier.startsWith("file://")) {
     return urlToServerUrl(specifier, { projectDirectoryUrl, compileServerOrigin })
   }
-  return urlToServerUrl(pathToFileURL(specifier), { projectDirectoryUrl, compileServerOrigin })
+  return urlToServerUrl(String(pathToFileURL(specifier)), {
+    projectDirectoryUrl,
+    compileServerOrigin,
+  })
+}
+
+const urlToServerUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
+  if (url.startsWith(projectDirectoryUrl)) {
+    return `${compileServerOrigin}/${url.slice(projectDirectoryUrl.length)}`
+  }
+  return null
 }
 
 const resolveUrl = (relativeUrl, baseUrl) => {
