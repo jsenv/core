@@ -49,7 +49,19 @@ export const launchChromium = async ({
     })
   }
   const browserRessourceUsage = browserRessource.startUsing({ headless })
-  registerCleanupCallback(browserRessourceUsage.stopUsing)
+  registerCleanupCallback(() => {
+    if (shareBrowser) {
+      // give 10ms for anything to startUsing browserRessource
+      // before actually marking it as unused
+      // so that we maximize the chances to reuse the browser
+      // and only delay the moment it will be killed by 10ms
+      setTimeout(() => {
+        browserRessourceUsage.stopUsing()
+      }, 10)
+    } else {
+      browserRessourceUsage.stopUsing()
+    }
+  })
 
   const { browser } = await browserRessourceUsage.ressource
 

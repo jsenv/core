@@ -28,8 +28,6 @@ export const executeConcurrently = async (
     jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     compileServerOrigin,
-    importMapFileUrl,
-    importDefaultExtension,
 
     babelPluginMap,
 
