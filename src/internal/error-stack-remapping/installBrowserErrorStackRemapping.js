@@ -2,7 +2,7 @@ import { installErrorStackRemapping } from "./installErrorStackRemapping.js"
 
 export const installBrowserErrorStackRemapping = (options) =>
   installErrorStackRemapping({
-    fetchUrl: async (url) => {
+    fetchFile: async (url) => {
       const response = await fetch(url)
       const text = await response.text()
       return {

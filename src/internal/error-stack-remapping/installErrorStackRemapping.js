@@ -1,17 +1,9 @@
 import { stackToString } from "./stackToString.js"
 import { generateOriginalStackString } from "./getOriginalStackString.js"
 
-export const installErrorStackRemapping = ({
-  resolveUrl,
-  fetchUrl,
-  SourceMapConsumer,
-  indent = "  ",
-}) => {
-  if (typeof resolveUrl !== "function") {
-    throw new TypeError(`resolveUrl must be a function, got ${resolveUrl}`)
-  }
-  if (typeof fetchUrl !== "function") {
-    throw new TypeError(`fetchUrl must be a function, got ${fetchUrl}`)
+export const installErrorStackRemapping = ({ fetchFile, SourceMapConsumer, indent = "  " }) => {
+  if (typeof fetchFile !== "function") {
+    throw new TypeError(`fetchFile must be a function, got ${fetchFile}`)
   }
   if (typeof SourceMapConsumer !== "function") {
     throw new TypeError(`sourceMapConsumer must be a function, got ${SourceMapConsumer}`)
@@ -19,6 +11,10 @@ export const installErrorStackRemapping = ({
   if (typeof indent !== "string") {
     throw new TypeError(`indent must be a string, got ${indent}`)
   }
+
+  // if browser does not support window.URL it will fail
+  // but no browser got Error.captureStackTrace without window.URL
+  const resolveFile = (specifier, importer) => new URL(specifier, importer).href
 
   const errorOriginalStackStringCache = new WeakMap()
   const errorRemapFailureCallbackMap = new WeakMap()
@@ -59,8 +55,8 @@ export const installErrorStackRemapping = ({
     const originalStackStringPromise = generateOriginalStackString({
       stack,
       error,
-      resolveUrl,
-      fetchUrl: memoizeFetch(fetchUrl),
+      resolveFile,
+      fetchFile: memoizeFetch(fetchFile),
       SourceMapConsumer,
       readErrorStack,
       indent,

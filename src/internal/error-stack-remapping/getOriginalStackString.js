@@ -5,19 +5,18 @@ import { stackToString } from "./stackToString.js"
 export const generateOriginalStackString = async ({
   stack,
   error,
-  resolveUrl,
-  fetchUrl,
+  resolveFile,
+  fetchFile,
   SourceMapConsumer,
   indent,
   readErrorStack,
   onFailure,
 }) => {
-  const filePathToSourceMapConsumer = memoizeByFirstArgStringValue(async (path) => {
+  const urlToSourcemapConsumer = memoizeByFirstArgStringValue(async (compiledFileUrl) => {
     try {
-      const compiledFileUrl = resolveUrl({ type: "compiled-file", specifier: path })
       let text
       try {
-        const fileResponse = await fetchUrl(compiledFileUrl)
+        const fileResponse = await fetchFile(compiledFileUrl)
         const { status } = fileResponse
         if (status !== 200) {
           if (status === 404) {
@@ -27,13 +26,13 @@ export const generateOriginalStackString = async ({
 --- response status ---
 ${status}
 --- response text ---
-${await fileResponse.text()}
+${fileResponse.body}
 --- compiled file url ---
 ${compiledFileUrl}`)
           }
           return null
         }
-        text = await fileResponse.text()
+        text = fileResponse.body
       } catch (e) {
         onFailure(`error while fetching compiled file.
 --- fetch error stack ---
@@ -53,14 +52,14 @@ ${compiledFileUrl}`)
         sourcemapUrl = compiledFileUrl
         sourcemapString = sourcemapParsingResult.sourcemapString
       } else {
-        sourcemapUrl = resolveUrl({
+        sourcemapUrl = resolveFile({
           type: "source-map",
-          specifier: sourcemapParsingResult.value,
+          specifier: sourcemapParsingResult.sourcemapURL,
           importer: compiledFileUrl,
         })
 
         try {
-          const sourcemapResponse = await fetchUrl(sourcemapUrl)
+          const sourcemapResponse = await fetchFile(sourcemapUrl)
           const { status } = sourcemapResponse
           if (status !== 200) {
             if (status === 404) {
@@ -70,13 +69,13 @@ ${compiledFileUrl}`)
 --- response status ---
 ${status}
 --- response text ---
-${await sourcemapResponse.text()}
+${sourcemapResponse.body}
 --- sourcemap url ---
 ${sourcemapUrl}`)
             }
             return null
           }
-          sourcemapString = await sourcemapResponse.text()
+          sourcemapString = sourcemapResponse.body
         } catch (e) {
           onFailure(`error while fetching sourcemap.
 --- fetch error stack ---
@@ -112,13 +111,13 @@ ${sourcemapUrl}`)
         sourceMap.sources.map(async (source, index) => {
           if (index in sourcesContent) return
 
-          const sourcemapSourceUrl = resolveUrl({
+          const sourcemapSourceUrl = resolveFile({
             type: "source",
             specifier: source,
             importer: sourcemapUrl,
           })
           try {
-            const sourceResponse = await fetchUrl(sourcemapSourceUrl)
+            const sourceResponse = await fetchFile(sourcemapSourceUrl)
             const { status } = sourceResponse
             if (status !== 200) {
               if (firstSourceMapSourceFailure) return
@@ -135,7 +134,7 @@ ${sourcemapUrl}`
   --- response status ---
   ${status}
   --- response text ---
-  ${await sourceResponse.text()}
+  ${sourceResponse.body}
   --- sourcemap source url ---
   ${sourcemapSourceUrl}
   --- sourcemap url ---
@@ -143,7 +142,7 @@ ${sourcemapUrl}`
               return
             }
 
-            const sourceString = await sourceResponse.text()
+            const sourceString = sourceResponse.body
             sourcesContent[index] = sourceString
           } catch (e) {
             if (firstSourceMapSourceFailure) return
@@ -168,8 +167,8 @@ ${sourcemapUrl}`
       onFailure(`error while preparing sourceMap consumer.
 --- error stack ---
 ${readErrorStack(e)}
---- source path ---
-${path}`)
+--- compiled file url ---
+${compiledFileUrl}`)
       return null
     }
   })
@@ -178,8 +177,8 @@ ${path}`)
     const originalStack = await Promise.all(
       stack.map((callSite) =>
         remapCallSite(callSite, {
-          resolveUrl,
-          filePathToSourceMapConsumer,
+          resolveFile,
+          urlToSourcemapConsumer,
           readErrorStack,
           onFailure,
         }),

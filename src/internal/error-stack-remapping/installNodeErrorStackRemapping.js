@@ -6,6 +6,6 @@ const { SourceMapConsumer } = import.meta.require("source-map")
 export const installNodeErrorStackRemapping = (options) =>
   installErrorStackRemapping({
     SourceMapConsumer,
-    fetchUrl,
+    fetchFile: fetchUrl,
     ...options,
   })

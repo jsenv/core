@@ -1,5 +1,5 @@
 import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
-import { fileUrlToPath, pathToFileUrl, resolveUrl } from "internal/urlUtils.js"
+import { fileUrlToPath, resolveUrl } from "internal/urlUtils.js"
 import { installNodeErrorStackRemapping } from "internal/error-stack-remapping/installNodeErrorStackRemapping.js"
 import { fetchUsingHttp } from "internal/platform/createNodePlatform/fetchUsingHttp.js"
 
@@ -43,15 +43,9 @@ export const execute = async ({
     compileServerOrigin,
   })
 
-  const originalFileRemoteUrl = resolveUrl(fileRelativeUrl, compileServerOrigin)
-  const compiledFileRemoteUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
-  const { getErrorOriginalStackString } = installErrorStackRemapping({
-    projectDirectoryUrl,
-    compileServerOrigin,
-    originalFileRemoteUrl,
-    compiledFileRemoteUrl,
-  })
+  const { getErrorOriginalStackString } = installNodeErrorStackRemapping()
 
+  const compiledFileRemoteUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
   return executeFile(compiledFileRemoteUrl, {
     collectNamespace,
     collectCoverage,
@@ -67,68 +61,4 @@ export const execute = async ({
     },
     errorExposureInConsole,
   })
-}
-
-const installErrorStackRemapping = ({
-  projectDirectoryUrl,
-  compileServerOrigin,
-  originalFileRemoteUrl,
-  compiledFileRemoteUrl,
-}) => {
-  const compiledFileUrl = urlToProjectUrl(compiledFileRemoteUrl, {
-    projectDirectoryUrl,
-    compileServerOrigin,
-  })
-
-  return installNodeErrorStackRemapping({
-    resolveUrl: ({ type, specifier, importer }) => {
-      let importerUrl
-      if (importer) {
-        importerUrl =
-          specifierToServerUrl(importer, { projectDirectoryUrl, compileServerOrigin }) || importer
-      } else if (type === "source" || type === "source-map") {
-        importerUrl = originalFileRemoteUrl
-      } else if (type === "file-original") {
-        importerUrl = compiledFileRemoteUrl
-      } else {
-        importerUrl = compiledFileUrl
-      }
-
-      const specifierUrl = resolveUrl(specifier, importerUrl)
-
-      if (specifierUrl.startsWith(`${compileServerOrigin}/`)) {
-        const relativeUrl = specifierUrl.slice(`${compileServerOrigin}/`.length)
-        const projectUrl = `${projectDirectoryUrl}${relativeUrl}`
-        return projectUrl
-      }
-      return specifierUrl
-    },
-  })
-}
-
-const urlToProjectUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
-  if (url.startsWith(`${compileServerOrigin}/`)) {
-    return `${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`
-  }
-  return null
-}
-
-const specifierToServerUrl = (specifier, { projectDirectoryUrl, compileServerOrigin }) => {
-  if (specifier.startsWith("http://") || specifier.startsWith("https://")) {
-    return null
-  }
-  if (specifier.startsWith("file://")) {
-    return urlToServerUrl(specifier, { projectDirectoryUrl, compileServerOrigin })
-  }
-  return urlToServerUrl(pathToFileUrl(specifier), {
-    projectDirectoryUrl,
-    compileServerOrigin,
-  })
-}
-
-const urlToServerUrl = (url, { projectDirectoryUrl, compileServerOrigin }) => {
-  if (url.startsWith(projectDirectoryUrl)) {
-    return `${compileServerOrigin}/${url.slice(projectDirectoryUrl.length)}`
-  }
-  return null
 }
