@@ -34,20 +34,26 @@ export const transformResultToCompilationResult = (
   const assets = []
   const assetsContent = []
 
+  const metaJsonFileUrl = `${compiledFileUrl}__asset__/meta.json`
+
   let output = code
   if (remap && map) {
     if (map.sources.length === 0) {
       // may happen in some cases where babel returns a wrong sourcemap
       // there is at least one case where it happens
       // a file with only import './whatever.js' inside
-      sources.push(fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl))
+      sources.push(fileUrlToRelativePath(originalFileUrl, metaJsonFileUrl))
       sourcesContent.push(originalFileContent)
     } else {
       map.sources = map.sources.map((source) => {
         const url = String(new URL(source, originalFileUrl))
         if (url.startsWith(projectDirectoryUrl)) {
-          source = fileUrlToRelativePath(url, sourcemapFileUrl)
+          const sourceForMeta = fileUrlToRelativePath(url, metaJsonFileUrl)
+          sources.push(sourceForMeta)
+          const sourceForSourcemap = fileUrlToRelativePath(url, sourcemapFileUrl)
+          return sourceForSourcemap
         }
+
         sources.push(source)
         return source
       })
@@ -86,7 +92,7 @@ export const transformResultToCompilationResult = (
       assetsContent.push(stringifyMap(map))
     }
   } else {
-    sources.push(fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl))
+    sources.push(fileUrlToRelativePath(originalFileUrl, metaJsonFileUrl))
     sourcesContent.push(originalFileContent)
   }
 
