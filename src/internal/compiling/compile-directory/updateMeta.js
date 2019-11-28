@@ -1,9 +1,9 @@
 import { fileUrlToPath } from "internal/urlUtils.js"
-import { writeFileContent } from "internal/filesystemUtils.js"
-import { resolveMetaJsonFileUrl, resolveAssetFileUrl } from "./locaters.js"
+import { writeFileContent, fileExists } from "internal/filesystemUtils.js"
+import { resolveSourceFileUrl, resolveMetaJsonFileUrl, resolveAssetFileUrl } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
-export const updateMeta = ({
+export const updateMeta = async ({
   logger,
   meta,
   compiledFileUrl,
@@ -14,16 +14,25 @@ export const updateMeta = ({
   const isNew = compileResultStatus === "created"
   const isUpdated = compileResultStatus === "updated"
   const isCached = compileResultStatus === "cached"
-  const {
-    compiledSource,
-    contentType,
-    sources,
-    sourcesContent,
-    assets,
-    assetsContent,
-  } = compileResult
-  const promises = []
+  const { compiledSource, contentType, assets, assetsContent } = compileResult
+  let { sources, sourcesContent } = compileResult
 
+  // ensure source that does not leads to concrete files are not capable to invalidate the cache
+  const sourceExists = await Promise.all(
+    sources.map(async (source) => {
+      const sourceFileUrl = resolveSourceFileUrl({ source, compiledFileUrl })
+      const exists = await fileExists(sourceFileUrl)
+      if (!exists) {
+        logger.warn(`a source file cannot be found ${sourceFileUrl}.
+-> excluding it from meta.sources & meta.sourcesEtag`)
+      }
+      return exists
+    }),
+  )
+  sources = sources.filter((source, index) => sourceExists[index])
+  sourcesContent = sourcesContent.filter((sourceContent, index) => sourceExists[index])
+
+  const promises = []
   if (isNew || isUpdated) {
     const { writeCompiledSourceFile = true, writeAssetsFile = true } = compileResult
 

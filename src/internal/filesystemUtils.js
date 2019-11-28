@@ -75,6 +75,19 @@ export const assertFileExists = async (fileUrl) => {
   }
 }
 
+export const fileExists = (fileUrl) => {
+  return new Promise((resolve, reject) => {
+    stat(fileUrlToPath(fileUrl), (error) => {
+      if (error) {
+        if (error.code === "ENOENT") resolve(false)
+        else reject(error)
+      } else {
+        resolve(true)
+      }
+    })
+  })
+}
+
 const pathToFilesystemEntry = (path) =>
   new Promise((resolve, reject) => {
     stat(path, (error, stats) => {

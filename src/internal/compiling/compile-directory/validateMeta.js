@@ -18,6 +18,14 @@ export const validateMeta = async ({
   })
   if (!compiledFileValidation.valid) return compiledFileValidation
 
+  if (meta.sources.length === 0) {
+    logger.warn(`meta.sources is empty, cache considered as invalid by precaution`)
+    return {
+      code: "SOURCES_EMPTY",
+      valid: false,
+    }
+  }
+
   const [sourcesValidations, assetValidations] = await Promise.all([
     validateSources({
       logger,
@@ -92,6 +100,7 @@ const validateCompiledFile = async ({
     }
   } catch (error) {
     if (error && error.code === "ENOENT") {
+      logger.debug(`compiled file not found at ${compiledFilePath}`)
       return {
         code: "COMPILED_FILE_NOT_FOUND",
         valid: false,
@@ -102,8 +111,8 @@ const validateCompiledFile = async ({
   }
 }
 
-const validateSources = ({ logger, meta, compiledFileUrl }) =>
-  Promise.all(
+const validateSources = ({ logger, meta, compiledFileUrl }) => {
+  return Promise.all(
     meta.sources.map((source, index) =>
       validateSource({
         logger,
@@ -113,6 +122,7 @@ const validateSources = ({ logger, meta, compiledFileUrl }) =>
       }),
     ),
   )
+}
 
 const validateSource = async ({ logger, compiledFileUrl, source, eTag }) => {
   const sourceFileUrl = resolveSourceFileUrl({
@@ -140,20 +150,19 @@ const validateSource = async ({ logger, compiledFileUrl, source, eTag }) => {
     }
   } catch (e) {
     if (e && e.code === "ENOENT") {
-      // TODO: decide if it should invalidate cache or not
-      // I think if the source cannot be found it does not invalidate the cache
-      // it means something is missing to absolutely sure the cache is valid
-      // but does not necessarily means the cache is invalid
-      // but if we allow source file not found
-      // it means we must remove sources from the list of sources
-      // or at least consider as normal that it's missing
-      // in that case, inside updateCache we must not search for sources that
-      // are missing, nor put their etag
-      // or we could return sourceContent: '', and the etag would be empty
-      logger.debug(`source not found at ${sourceFilePath}`)
+      // missing source invalidates the cache because
+      // we cannot check its validity
+      // HOWEVER inside writeMeta we will check if a source can be found
+      // when it cannot we will not put it as a dependency
+      // to invalidate the cache.
+      // It is important because some files are constructed on other files
+      // which are not truly on the filesystem
+      // (IN theory the above happens only for convertCommonJsWithRollup because jsenv
+      // always have a concrete file especially to avoid that kind of thing)
+      logger.warn(`source not found at ${sourceFilePath}`)
       return {
         code: "SOURCE_NOT_FOUND",
-        valid: true,
+        valid: false,
         data: { source, sourceFilePath, sourceContent: "" },
       }
     }
