@@ -1,4 +1,4 @@
-import { installBrowserErrorStackRemapping } from "@jsenv/error-stack-sourcemap/src/installBrowserErrorStackRemapping/installBrowserErrorStackRemapping.js"
+import { installBrowserErrorStackRemapping } from "internal/error-stack-remapping/installBrowserErrorStackRemapping.js"
 import { fetchAndEvalUsingXHR } from "../fetchAndEvalUsingXHR.js"
 
 window.execute = async ({
@@ -33,9 +33,6 @@ window.execute = async ({
     "lib/mappings.wasm": sourcemapPackageMappingFileRemoteUrl,
   })
   const { getErrorOriginalStackString } = installBrowserErrorStackRemapping({
-    resolveUrl: ({ specifier, importer = compiledFileRemoteUrl }) => {
-      return String(new URL(specifier, importer))
-    },
     SourceMapConsumer,
   })
 

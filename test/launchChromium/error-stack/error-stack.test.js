@@ -1,4 +1,5 @@
 import { basename } from "path"
+import { createLogger } from "@jsenv/logger"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
@@ -25,6 +26,8 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 
 const result = await launchAndExecute({
   ...EXECUTION_TEST_PARAMS,
+  // sets executeLogger to off to avoid seeing an expected error in logs
+  executeLogger: createLogger({ logLevel: "off" }),
   // stopPlatformAfterExecute: false,
   launch: (options) =>
     launchChromium({
@@ -42,7 +45,7 @@ const result = await launchAndExecute({
 const stack = result.error.stack
 const expected = `Error: error
   at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
-  at Object.triggerError (${testDirectoryUrl}/error-stack.js:3:1)
+  at Object.triggerError (${testDirectoryUrl}error-stack.js:3:1)
   at call (${jsenvCoreDirectoryUrl}src/internal/platform/s.js:358:34)
   at doExec (${jsenvCoreDirectoryUrl}src/internal/platform/s.js:354:12)
   at postOrderExec (${jsenvCoreDirectoryUrl}src/internal/platform/s.js:317:14)`

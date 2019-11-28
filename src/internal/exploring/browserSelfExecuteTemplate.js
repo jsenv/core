@@ -7,7 +7,7 @@ import {
 // TODO: find how to convert this import
 // into a dynamic import inside if (Error.prepareStackTrace)
 // until then browser without it like firefox will download the file and never use it
-import { installBrowserErrorStackRemapping } from "@jsenv/error-stack-sourcemap/src/installBrowserErrorStackRemapping/installBrowserErrorStackRemapping.js"
+import { installBrowserErrorStackRemapping } from "internal/error-stack-remapping/installBrowserErrorStackRemapping.js"
 
 import { fetchAndEvalUsingScript } from "internal/fetchAndEvalUsingScript.js"
 import { fetchUsingXHR } from "internal/fetchUsingXHR.js"
@@ -71,9 +71,6 @@ const fileRelativeUrl = new URLSearchParams(location.search).get("file")
       "lib/mappings.wasm": sourcemapPackageMappingFileRemoteUrl,
     })
     const { getErrorOriginalStackString } = installBrowserErrorStackRemapping({
-      resolveUrl: ({ specifier, importer = compiledFileRemoteUrl }) => {
-        return String(new URL(specifier, importer))
-      },
       SourceMapConsumer,
     })
 

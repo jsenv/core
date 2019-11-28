@@ -14,7 +14,10 @@ export const installErrorStackRemapping = ({ fetchFile, SourceMapConsumer, inden
 
   // if browser does not support window.URL it will fail
   // but no browser got Error.captureStackTrace without window.URL
-  const resolveFile = (specifier, importer) => new URL(specifier, importer).href
+  const resolveFile = ({ specifier, importer }) => {
+    const url = new URL(specifier, importer).href
+    return url
+  }
 
   const errorOriginalStackStringCache = new WeakMap()
   const errorRemapFailureCallbackMap = new WeakMap()
