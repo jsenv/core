@@ -2,20 +2,16 @@ import { stackToString } from "./stackToString.js"
 import { generateOriginalStackString } from "./getOriginalStackString.js"
 
 export const installErrorStackRemapping = ({
-  resolveHref,
-  fetchHref,
+  resolveUrl,
+  fetchUrl,
   SourceMapConsumer,
-  base64ToString,
   indent = "  ",
 }) => {
-  if (typeof resolveHref !== "function") {
-    throw new TypeError(`resolveHref must be a function, got ${resolveHref}`)
+  if (typeof resolveUrl !== "function") {
+    throw new TypeError(`resolveUrl must be a function, got ${resolveUrl}`)
   }
-  if (typeof fetchHref !== "function") {
-    throw new TypeError(`fetchHref must be a function, got ${fetchHref}`)
-  }
-  if (typeof base64ToString !== "function") {
-    throw new TypeError(`base64ToString must be a function, got ${base64ToString}`)
+  if (typeof fetchUrl !== "function") {
+    throw new TypeError(`fetchUrl must be a function, got ${fetchUrl}`)
   }
   if (typeof SourceMapConsumer !== "function") {
     throw new TypeError(`sourceMapConsumer must be a function, got ${SourceMapConsumer}`)
@@ -63,23 +59,22 @@ export const installErrorStackRemapping = ({
     const originalStackStringPromise = generateOriginalStackString({
       stack,
       error,
-      resolveHref,
-      fetchHref: memoizeFetch(fetchHref),
+      resolveUrl,
+      fetchUrl: memoizeFetch(fetchUrl),
       SourceMapConsumer,
-      base64ToString,
       readErrorStack,
       indent,
       onFailure,
     })
     errorOriginalStackStringCache.set(error, originalStackStringPromise)
 
-    return stackToString({ stack, error, indent })
+    return stackToString(stack, { error, indent })
   }
 
   const getErrorOriginalStackString = async (
     error,
     {
-      onFailure = ({ message }) => {
+      onFailure = (message) => {
         console.warn(message)
       },
     } = {},
@@ -111,14 +106,14 @@ export const installErrorStackRemapping = ({
   return { getErrorOriginalStackString, uninstall }
 }
 
-const memoizeFetch = (fetchHref) => {
-  const hrefCache = {}
-  return async (href) => {
-    if (href in hrefCache) {
-      return hrefCache[href]
+const memoizeFetch = (fetchUrl) => {
+  const urlCache = {}
+  return async (url) => {
+    if (url in urlCache) {
+      return urlCache[url]
     }
-    const responsePromise = fetchHref(href)
-    hrefCache[href] = responsePromise
+    const responsePromise = fetchUrl(url)
+    urlCache[url] = responsePromise
     return responsePromise
   }
 }

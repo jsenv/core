@@ -8,103 +8,94 @@ export const generateOriginalStackString = async ({
   resolveUrl,
   fetchUrl,
   SourceMapConsumer,
-  base64ToString,
   indent,
   readErrorStack,
   onFailure,
 }) => {
-  const sourceToSourceMapConsumer = memoizeByHref(async (path) => {
+  const filePathToSourceMapConsumer = memoizeByFirstArgStringValue(async (path) => {
     try {
       const compiledFileUrl = resolveUrl({ type: "compiled-file", specifier: path })
       let text
       try {
-        const fileResponse = await fetchUrl("compiled-file", compiledFileUrl)
+        const fileResponse = await fetchUrl(compiledFileUrl)
         const { status } = fileResponse
         if (status !== 200) {
           if (status === 404) {
-            onFailure({
-              code: "COMPILED_FILE_NOT_FOUND",
-              message: `compiled file not found at ${compiledFileUrl}`,
-            })
+            onFailure(`compiled file not found at ${compiledFileUrl}`)
           } else {
-            onFailure({
-              code: "UNEXPECTED_COMPILED_FILE_RESPONSE",
-              message: `compiled file unexpected response.
+            onFailure(`compiled file unexpected response.
 --- response status ---
 ${status}
 --- response text ---
 ${await fileResponse.text()}
 --- compiled file url ---
-${compiledFileUrl}`,
-            })
+${compiledFileUrl}`)
           }
           return null
         }
         text = await fileResponse.text()
       } catch (e) {
-        onFailure(
-          createErrorWhileFetchingCompiledFileFailure({
-            fetchErrorStack: readErrorStack(e),
-            href,
-          }),
-        )
+        onFailure(`error while fetching compiled file.
+--- fetch error stack ---
+${readErrorStack(e)}
+--- compiled file url ---
+${compiledFileUrl}`)
+
         return null
       }
 
-      const sourceMappingURL = parseSourceMappingURL(text)
-      if (!sourceMappingURL) return null
+      const sourcemapParsingResult = parseSourceMappingURL(text)
+      if (!sourcemapParsingResult) return null
 
-      let sourceMapHref
-      let sourceMapString
-      if (sourceMappingURL.type === "base64") {
-        sourceMapHref = href
-        sourceMapString = base64ToString(sourceMappingURL.value)
+      let sourcemapUrl
+      let sourcemapString
+      if (sourcemapParsingResult.sourcemapString) {
+        sourcemapUrl = compiledFileUrl
+        sourcemapString = sourcemapParsingResult.sourcemapString
       } else {
-        sourceMapHref = resolveHref({
+        sourcemapUrl = resolveUrl({
           type: "source-map",
-          specifier: sourceMappingURL.value,
-          importer: href,
+          specifier: sourcemapParsingResult.value,
+          importer: compiledFileUrl,
         })
 
         try {
-          const sourceMapResponse = await fetchHref(sourceMapHref)
-          const { status } = sourceMapResponse
+          const sourcemapResponse = await fetchUrl(sourcemapUrl)
+          const { status } = sourcemapResponse
           if (status !== 200) {
             if (status === 404) {
-              onFailure(createSourceMapNotFoundFailure({ href: sourceMapHref }))
+              onFailure(`sourcemap file not found at ${sourcemapUrl}`)
             } else {
-              onFailure(
-                createUnexpectedSourceMapResponseFailure({
-                  status,
-                  responseText: await sourceMapResponse.text(),
-                  href: sourceMapHref,
-                }),
-              )
+              onFailure(`unexpected response for sourcemap file.
+--- response status ---
+${status}
+--- response text ---
+${await sourcemapResponse.text()}
+--- sourcemap url ---
+${sourcemapUrl}`)
             }
             return null
           }
-          sourceMapString = await sourceMapResponse.text()
+          sourcemapString = await sourcemapResponse.text()
         } catch (e) {
-          onFailure(
-            createErrorWhileFetchingSourceMapFailure({
-              fetchErrorStack: readErrorStack(e),
-              href: sourceMapHref,
-            }),
-          )
+          onFailure(`error while fetching sourcemap.
+--- fetch error stack ---
+${readErrorStack(e)}
+--- sourcemap url ---
+${sourcemapUrl}`)
           return null
         }
       }
 
       let sourceMap
       try {
-        sourceMap = JSON.parse(sourceMapString)
+        sourceMap = JSON.parse(sourcemapString)
       } catch (e) {
-        onFailure(
-          createErrorWhileParsingSourceMapFailure({
-            parseErrorStack: readErrorStack(e),
-            href: sourceMapHref,
-          }),
-        )
+        onFailure(`error while parsing sourcemap.
+--- parse error stack ---
+${readErrorStack(e)}
+--- sourcemap url ---
+${sourcemapUrl}`)
         return null
       }
 
@@ -121,30 +112,34 @@ ${compiledFileUrl}`,
         sourceMap.sources.map(async (source, index) => {
           if (index in sourcesContent) return
 
-          const sourceMapSourceHref = resolveHref({
+          const sourcemapSourceUrl = resolveUrl({
             type: "source",
             specifier: source,
-            importer: sourceMapHref,
+            importer: sourcemapUrl,
           })
           try {
-            const sourceResponse = await fetchHref(sourceMapSourceHref)
+            const sourceResponse = await fetchUrl(sourcemapSourceUrl)
             const { status } = sourceResponse
             if (status !== 200) {
               if (firstSourceMapSourceFailure) return
 
               if (status === 404) {
-                firstSourceMapSourceFailure = createSourceMapSourceNotFoundFailure({
-                  sourceMapHref,
-                  sourceMapSourceHref,
-                })
+                firstSourceMapSourceFailure = `sourcemap source not found.
+--- sourcemap source url ---
+${sourcemapSourceUrl}
+--- sourcemap url ---
+${sourcemapUrl}`
                 return
               }
-              firstSourceMapSourceFailure = createUnexpectedSourceMapSourceResponseFailure({
-                status,
-                responseText: await sourceResponse.text(),
-                sourceMapHref,
-                sourceMapSourceHref,
-              })
+              firstSourceMapSourceFailure = `unexpected response for sourcemap source.
+  --- response status ---
+  ${status}
+  --- response text ---
+  ${await sourceResponse.text()}
+  --- sourcemap source url ---
+  ${sourcemapSourceUrl}
+  --- sourcemap url ---
+  ${sourcemapUrl}`
               return
             }
 
@@ -152,11 +147,13 @@ ${compiledFileUrl}`,
             sourcesContent[index] = sourceString
           } catch (e) {
             if (firstSourceMapSourceFailure) return
-            firstSourceMapSourceFailure = createErrorWhileFetchingSourceMapSourceFailure({
-              fetchErrorStack: readErrorStack(e),
-              sourceMapHref,
-              sourceMapSourceHref,
-            })
+            firstSourceMapSourceFailure = `error while fetching sourcemap source.
+--- fetch error stack ---
+${readErrorStack(e)}
+--- sourcemap source url ---
+${sourcemapSourceUrl}
+--- sourcemap url ---
+${sourcemapUrl}`
           }
         }),
       )
@@ -168,12 +165,11 @@ ${compiledFileUrl}`,
 
       return new SourceMapConsumer(sourceMap)
     } catch (e) {
-      onFailure(
-        createErrorWhilePreparingSourceMapConsumerFailure({
-          errorStack: readErrorStack(e),
-          path,
-        }),
-      )
+      onFailure(`error while preparing sourceMap consumer.
+--- error stack ---
+${readErrorStack(e)}
+--- source path ---
+${path}`)
       return null
     }
   })
@@ -182,161 +178,32 @@ ${compiledFileUrl}`,
     const originalStack = await Promise.all(
       stack.map((callSite) =>
         remapCallSite(callSite, {
-          resolveHref,
-          sourceToSourceMapConsumer,
+          resolveUrl,
+          filePathToSourceMapConsumer,
           readErrorStack,
           onFailure,
         }),
       ),
     )
-    return stackToString({ stack: originalStack, error, indent })
+    return stackToString(originalStack, { error, indent })
   } catch (e) {
-    const unmappedStack = stackToString({ stack, error, indent })
-    onFailure(
-      createErrorWhileComputingOriginalStackFailure({
-        errorWhileComputingStack: readErrorStack(e),
-        errorStack: unmappedStack,
-      }),
-    )
+    const unmappedStack = stackToString(stack, { error, indent })
+    onFailure(`error while computing original stack.
+--- stack from error while computing ---
+${readErrorStack(e)}
+--- stack from error to remap ---
+${unmappedStack}`)
     // in case of error return the non remapped stack
     return unmappedStack
   }
 }
 
-const memoizeByHref = (fn) => {
-  const hrefCache = {}
-  return (href) => {
-    if (href in hrefCache) return hrefCache[href]
-    const value = fn(href)
-    hrefCache[href] = value
+const memoizeByFirstArgStringValue = (fn) => {
+  const stringValueCache = {}
+  return (firstArgValue) => {
+    if (firstArgValue in stringValueCache) return stringValueCache[firstArgValue]
+    const value = fn(firstArgValue)
+    stringValueCache[firstArgValue] = value
     return value
-  }
-}
-
-const createErrorWhileFetchingCompiledFileFailure = ({ fetchErrorStack, href }) => {
-  return {
-    code: "ERROR_WHILE_FETCHING_COMPILED_FILE",
-    message: `error while fetching compiled file.
---- fetch error stack ---
-${fetchErrorStack}
---- compiled file href ---
-${href}`,
-  }
-}
-
-const createSourceMapNotFoundFailure = ({ href }) => {
-  return {
-    code: "SOURCE_MAP_NOT_FOUND_FAILURE",
-    message: `sourcemap file not found.
---- sourceMap href ---
-${href}`,
-  }
-}
-
-const createUnexpectedSourceMapResponseFailure = ({ status, responseText, href }) => {
-  return {
-    code: "UNEXPECTED_SOURCE_MAP_RESPONSE",
-    message: `unexpected response for sourcemap file.
---- response status ---
-${status}
---- response text ---
-${responseText}
---- sourceMap href ---
-${href}`,
-  }
-}
-
-const createErrorWhileFetchingSourceMapFailure = ({ fetchErrorStack, href }) => {
-  return {
-    code: "ERROR_WHILE_FETCHING_SOURCE_MAP",
-    message: `error while fetching sourcemap.
---- fetch error stack ---
-${fetchErrorStack}
---- sourceMap href ---
-${href}`,
-  }
-}
-
-const createErrorWhileParsingSourceMapFailure = ({ parseErrorStack, href }) => {
-  return {
-    code: "ERROR_WHILE_PARSING_SOURCE_MAP",
-    message: `error while parsing sourcemap.
---- parse error stack ---
-${parseErrorStack}
---- sourceMap href ---
-${href}`,
-  }
-}
-
-const createSourceMapSourceNotFoundFailure = ({ sourceMapSourceHref, sourceMapHref }) => {
-  return {
-    code: "SOURCE_MAP_SOURCE_NOT_FOUND",
-    message: `sourcemap source not found.
---- sourcemap source href ---
-${sourceMapSourceHref}
---- sourcemap href ---
-${sourceMapHref}`,
-  }
-}
-
-const createUnexpectedSourceMapSourceResponseFailure = ({
-  status,
-  responseText,
-  sourceMapSourceHref,
-  sourceMapHref,
-}) => {
-  return {
-    code: "UNEXPECTED_SOURCE_MAP_SOURCE_RESPONSE",
-    message: `unexpected response for sourcemap source.
---- response status ---
-${status}
---- response text ---
-${responseText}
---- sourceMap source href ---
-${sourceMapSourceHref}
---- sourceMap href ---
-${sourceMapHref}`,
-  }
-}
-
-const createErrorWhileFetchingSourceMapSourceFailure = ({
-  fetchErrorStack,
-  sourceMapSourceHref,
-  sourceMapHref,
-}) => {
-  return {
-    code: "ERROR_WHILE_FETCHING_SOURCE_MAP_SOURCE",
-    message: `error while fetching sourcemap source.
---- fetch error stack ---
-${fetchErrorStack}
---- sourceMap source href ---
-${sourceMapSourceHref}
---- sourceMap href ---
-${sourceMapHref}`,
-  }
-}
-
-const createErrorWhilePreparingSourceMapConsumerFailure = ({ errorStack, path }) => {
-  return {
-    code: "ERROR_WHILE_PREPARING_SOURCEMAP_CONSUMER",
-    message: `error while preparing sourceMap consumer.
---- error stack ---
-${errorStack}
---- source path ---
-${path}`,
-  }
-}
-
-const createErrorWhileComputingOriginalStackFailure = ({
-  errorWhileComputingStack,
-  errorStack,
-}) => {
-  return {
-    code: "ERROR_WHILE_COMPUTING_ORIGINAL_STACK",
-    message: `error while computing original stack.
---- stack from error while computing ---
-${errorWhileComputingStack}
---- stack from error to remap ---
-${errorStack}`,
   }
 }

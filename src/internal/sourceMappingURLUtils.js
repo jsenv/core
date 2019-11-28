@@ -28,6 +28,11 @@ export const readSourceMappingURL = (source) => {
   return sourceMappingURL
 }
 
+const base64ToString =
+  typeof window === "object"
+    ? window.btoa
+    : (base64String) => Buffer.from(base64String, "base64").toString("utf8")
+
 export const parseSourceMappingURL = (source) => {
   const sourceMappingURL = readSourceMappingURL(source)
 
@@ -36,7 +41,7 @@ export const parseSourceMappingURL = (source) => {
   const base64Prefix = "data:application/json;charset=utf-8;base64,"
   if (sourceMappingURL.startsWith(base64Prefix)) {
     const mapBase64Source = sourceMappingURL.slice(base64Prefix.length)
-    const sourcemapString = Buffer.from(mapBase64Source, "base64").toString("utf8")
+    const sourcemapString = base64ToString(mapBase64Source)
     return { sourcemapString }
   }
 
