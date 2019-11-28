@@ -7,17 +7,22 @@ import { startChromiumServer } from "internal/chromium-launcher/startChromiumSer
 import { trackPageTargetsToClose } from "internal/chromium-launcher/trackPageTargetsToClose.js"
 import { trackPageTargetsToNotify } from "internal/chromium-launcher/trackPageTargetsToNotify.js"
 import { evaluateImportExecution } from "internal/chromium-launcher/evaluateImportExecution.js"
+import { createRessource } from "internal/chromium-launcher/createRessource.js"
+import { jsenvHtmlFileUrl } from "internal/jsenvHtmlFileUrl.js"
+
+let browserRessource
+let executionServerRessource
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
   clientServerLogLevel,
 
   projectDirectoryUrl,
-  htmlFileUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
 
   headless = true,
+  shareBrowser = false,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -28,23 +33,25 @@ export const launchChromium = async ({
 
   const { registerCleanupCallback, cleanup } = trackRessources()
 
-  const [{ browser, stopBrowser }, chromiumServer] = await Promise.all([
-    launchPuppeteer({
-      cancellationToken,
-      headless,
-    }),
-    startChromiumServer({
-      cancellationToken,
-      logLevel: clientServerLogLevel,
+  if (!browserRessource) {
+    browserRessource = createRessource({
+      share: shareBrowser,
+      start: ({ headless }) => {
+        return launchPuppeteer({
+          cancellationToken,
+          headless,
+        })
+      },
+      stop: async (browserPromise) => {
+        const { stopBrowser } = await browserPromise
+        await stopBrowser()
+      },
+    })
+  }
+  const browserRessourceUsage = browserRessource.startUsing({ headless })
+  registerCleanupCallback(browserRessourceUsage.stopUsing)
 
-      projectDirectoryUrl,
-      htmlFileUrl,
-      outDirectoryRelativeUrl,
-      compileServerOrigin,
-    }),
-  ])
-  registerCleanupCallback(stopBrowser)
-  registerCleanupCallback(chromiumServer.stop)
+  const { browser } = await browserRessourceUsage.ressource
 
   const registerDisconnectCallback = (callback) => {
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
@@ -67,22 +74,64 @@ export const launchChromium = async ({
   const executeFile = async (
     fileRelativeUrl,
     {
+      htmlFileUrl = jsenvHtmlFileUrl,
+      incognito = false,
       collectNamespace,
       collectCoverage,
       executionId,
-      incognito = false,
       errorStackRemapping = true,
     },
   ) => {
+    if (!executionServerRessource) {
+      executionServerRessource = createRessource({
+        share: true,
+        start: () => {
+          return startChromiumServer({
+            cancellationToken,
+            logLevel: clientServerLogLevel,
+
+            projectDirectoryUrl,
+            outDirectoryRelativeUrl,
+            compileServerOrigin,
+          })
+        },
+        stop: async (serverPromise) => {
+          const server = await serverPromise
+          await server.stop()
+        },
+      })
+    }
+    const executionServerUsage = executionServerRessource.startUsing()
+    registerCleanupCallback(executionServerUsage.stopUsing)
+    const executionServer = await executionServerUsage.ressource
+
     // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#browsercreateincognitobrowsercontext
-    const browserContext = incognito
-      ? await browser.createIncognitoBrowserContext()
+    const browserContextPromise = incognito
+      ? browser.createIncognitoBrowserContext()
       : browser.defaultBrowserContext()
 
+    const browserContext = await browserContextPromise
     const page = await browserContext.newPage()
 
-    const stopTrackingToClose = trackPageTargetsToClose(page)
-    registerCleanupCallback(stopTrackingToClose)
+    if (incognito || !shareBrowser) {
+      // in incognito mode, browser context is not shared by tabs
+      // it means if a tab open an other page/tab we'll know
+      // it comes form that tab and not an other one
+
+      // when browser is not shared we know an opened page comes from
+      // that execution
+      const stopTrackingToClose = trackPageTargetsToClose(page)
+      registerCleanupCallback(stopTrackingToClose)
+      registerCleanupCallback(() => page.close())
+    } else {
+      // when browser is shared and execution happens in the default
+      // browser context (not incognito)
+      // we'll only try to close the tab we created
+      // otherwise we might kill tab opened by potential parallel execution.
+      // A consequence might be to leave opened tab alive
+      // (it means js execution opens an other tab, not supposed to happen a lot)
+      registerCleanupCallback(() => page.close())
+    }
 
     const stopTrackingToNotify = trackPageTargetsToNotify(page, {
       onError: (error) => {
@@ -95,7 +144,10 @@ export const launchChromium = async ({
           callback({ type, text })
         })
       },
-      trackOtherPages: true,
+      // we track other pages only in incognito mode because
+      // we know for sure opened tabs comes from this one
+      // and not from a potential parallel execution
+      trackOtherPages: incognito || !shareBrowser,
     })
     registerCleanupCallback(stopTrackingToNotify)
 
@@ -104,9 +156,10 @@ export const launchChromium = async ({
 
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
+      htmlFileUrl,
       fileRelativeUrl,
       compileServerOrigin,
-      chromiumServerOrigin: chromiumServer.origin,
+      executionServerOrigin: executionServer.origin,
 
       page,
 

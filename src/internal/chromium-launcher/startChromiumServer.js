@@ -1,8 +1,6 @@
 import { startServer, firstService, serveFile } from "@jsenv/server"
 import { resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
-import { assertFileExists } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { jsenvHtmlFileUrl } from "internal/jsenvHtmlFileUrl.js"
 import { COMPILE_ID_GLOBAL_BUNDLE } from "internal/CONSTANTS.js"
 
 export const startChromiumServer = async ({
@@ -10,24 +8,13 @@ export const startChromiumServer = async ({
   logLevel = "off",
 
   projectDirectoryUrl,
-  htmlFileUrl = jsenvHtmlFileUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
 }) => {
-  if (!htmlFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`chromium html file must be inside project directory
---- chromium html file url ---
-${htmlFileUrl}
---- project directory url ---
-${htmlFileUrl}`)
-  }
-  await assertFileExists(htmlFileUrl)
-
   const chromiumJsFileUrl = resolveUrl(
     "./src/internal/chromium-launcher/chromium-js-file.js",
     jsenvCoreDirectoryUrl,
   )
-  await assertFileExists(chromiumJsFileUrl)
   const chromiumJsFileRelativeUrl = urlToRelativeUrl(chromiumJsFileUrl, projectDirectoryUrl)
   const chromiumBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${chromiumJsFileRelativeUrl}`
   const chromiumBundledJsFileRemoteUrl = `${compileServerOrigin}/${chromiumBundledJsFileRelativeUrl}`
@@ -39,17 +26,6 @@ ${htmlFileUrl}`)
     sendInternalErrorStack: true,
     requestToResponse: (request) =>
       firstService(
-        () => {
-          if (request.ressource === "/") {
-            return {
-              status: 307,
-              headers: {
-                location: `${request.origin}/${urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl)}`,
-              },
-            }
-          }
-          return null
-        },
         () => {
           if (request.ressource === "/.jsenv/browser-script.js") {
             return {

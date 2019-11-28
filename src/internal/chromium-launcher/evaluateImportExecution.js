@@ -1,16 +1,17 @@
+import { resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { assertFileExists } from "internal/filesystemUtils.js"
 import { evalSource } from "internal/platform/createNodePlatform/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
-import { resolveUrl } from "internal/urlUtils.js"
-import { assertFileExists } from "internal/filesystemUtils.js"
 
 export const evaluateImportExecution = async ({
   cancellationToken,
 
   projectDirectoryUrl,
+  htmlFileUrl,
   outDirectoryRelativeUrl,
   fileRelativeUrl,
   compileServerOrigin,
-  chromiumServerOrigin,
+  executionServerOrigin,
 
   page,
 
@@ -20,9 +21,22 @@ export const evaluateImportExecution = async ({
   errorStackRemapping,
   executionExposureOnWindow,
 }) => {
-  await assertFileExists(resolveUrl(fileRelativeUrl, projectDirectoryUrl))
+  if (!htmlFileUrl.startsWith(projectDirectoryUrl)) {
+    throw new Error(`chromium html file must be inside project directory
+--- chromium html file url ---
+${htmlFileUrl}
+--- project directory url ---
+${htmlFileUrl}`)
+  }
+  await assertFileExists(htmlFileUrl)
 
-  await page.goto(chromiumServerOrigin)
+  const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
+  await assertFileExists(fileUrl)
+
+  const htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl)
+  const htmlFileClientUrl = `${executionServerOrigin}/${htmlFileRelativeUrl}`
+  await page.goto(htmlFileClientUrl)
+
   // https://github.com/GoogleChrome/puppeteer/blob/v1.14.0/docs/api.md#pageevaluatepagefunction-args
   // yes evaluate supports passing a function directly
   // but when I do that, istanbul will put coverage statement inside it
