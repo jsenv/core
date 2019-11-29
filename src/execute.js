@@ -33,7 +33,7 @@ export const execute = async ({
   port = 0,
 
   mirrorConsole = true,
-  stopPlatformAfterExecute = false,
+  stopPlatformAfterExecute = true,
   collectNamespace = false,
   collectCoverage = false,
   inheritCoverage = false,

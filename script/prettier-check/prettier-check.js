@@ -6,7 +6,8 @@ prettierCheckProject({
   prettifyMap: {
     ...jsenvPrettifyMap,
     "/**/.dist/": false,
+    "/**/.jsenv/": false,
     "/**/dist/": false,
-    "/docs/execution/basic-project/node_modules/": false,
+    "/docs/**/node_modules/": false,
   },
 })

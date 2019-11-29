@@ -57,7 +57,7 @@ export const launchChromium = async ({
       // and only delay the moment it will be killed by 10ms
       setTimeout(() => {
         browserRessourceUsage.stopUsing()
-      }, 10)
+      }, 100)
     } else {
       browserRessourceUsage.stopUsing()
     }
