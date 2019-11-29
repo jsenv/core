@@ -1,6 +1,8 @@
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
 import { createCancellationToken } from "@jsenv/cancellation"
+import { jsenvHtmlFileUrl } from "internal/jsenvHtmlFileUrl.js"
+import { closePage } from "internal/chromium-launcher/closePage.js"
 import { trackRessources } from "internal/chromium-launcher/trackRessources.js"
 import { launchPuppeteer } from "internal/chromium-launcher/launchPuppeteer.js"
 import { startChromiumServer } from "internal/chromium-launcher/startChromiumServer.js"
@@ -8,7 +10,6 @@ import { trackPageTargetsToClose } from "internal/chromium-launcher/trackPageTar
 import { trackPageTargetsToNotify } from "internal/chromium-launcher/trackPageTargetsToNotify.js"
 import { evaluateImportExecution } from "internal/chromium-launcher/evaluateImportExecution.js"
 import { createRessource } from "internal/chromium-launcher/createRessource.js"
-import { jsenvHtmlFileUrl } from "internal/jsenvHtmlFileUrl.js"
 
 let browserRessource
 let executionServerRessource
@@ -134,7 +135,7 @@ export const launchChromium = async ({
       // that execution
       const stopTrackingToClose = trackPageTargetsToClose(page)
       registerCleanupCallback(stopTrackingToClose)
-      registerCleanupCallback(() => page.close())
+      registerCleanupCallback(() => closePage(page))
     } else {
       // when browser is shared and execution happens in the default
       // browser context (not incognito)
@@ -142,7 +143,7 @@ export const launchChromium = async ({
       // otherwise we might kill tab opened by potential parallel execution.
       // A consequence might be to leave opened tab alive
       // (it means js execution opens an other tab, not supposed to happen a lot)
-      registerCleanupCallback(() => page.close())
+      registerCleanupCallback(() => closePage(page))
     }
 
     const stopTrackingToNotify = trackPageTargetsToNotify(page, {

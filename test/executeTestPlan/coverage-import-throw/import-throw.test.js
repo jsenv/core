@@ -1,17 +1,17 @@
 import { assert } from "@jsenv/assert"
-import { launchChromium } from "@jsenv/chromium-launcher"
-import { launchNode } from "@jsenv/node-launcher"
-import { cover } from "../../../index.js"
-import { fileHrefToFolderRelativePath } from "../../file-href-to-folder-relative-path.js"
-import { COVERAGE_TEST_PARAM } from "../coverage-test-param.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { executeTestPlan, launchNode, launchChromium } from "../../../index.js"
+import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const { coverageMap: actual } = await cover({
-  ...COVERAGE_TEST_PARAM,
-  compileIntoRelativePath,
-  executeDescription: {
-    [`${folderRelativePath}/import-throw.js`]: {
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const { coverageMap: actual } = await executeTestPlan({
+  ...EXECUTE_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
+  testPlan: {
+    [`${testDirectoryRelativePath}import-throw.js`]: {
       chromium: {
         launch: launchChromium,
       },
@@ -20,17 +20,15 @@ const { coverageMap: actual } = await cover({
       },
     },
   },
+  coverage: true,
   coverageConfig: {
-    [`${folderRelativePath}/throw.js`]: true,
+    [`${testDirectoryRelativePath}throw.js`]: true,
   },
 })
 const expected = {
-  [`${folderRelativePath.slice(1)}/throw.js`]: {
-    ...actual[`${folderRelativePath.slice(1)}/throw.js`],
+  [`${testDirectoryRelativePath}throw.js`]: {
+    ...actual[`${testDirectoryRelativePath}throw.js`],
     s: { 0: 2, 1: 2 },
   },
 }
-assert({
-  actual,
-  expected,
-})
+assert({ actual, expected })

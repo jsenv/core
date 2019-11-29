@@ -25,6 +25,9 @@ export const executeTestPlan = async ({
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
   importDefaultExtension,
+
+  babelPluginMap,
+  convertMap,
   compileGroupCount = 2,
 
   testPlan,
@@ -120,6 +123,8 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       importMapFileRelativeUrl,
       importDefaultExtension,
 
+      babelPluginMap,
+      convertMap,
       compileGroupCount,
 
       plan: testPlan,

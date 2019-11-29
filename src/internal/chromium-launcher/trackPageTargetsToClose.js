@@ -1,4 +1,5 @@
 import { trackPageTargets } from "./trackPageTargets.js"
+import { closePage } from "./closePage.js"
 
 export const trackPageTargetsToClose = (page) => {
   return trackPageTargets(page, ({ target, type }) => {
@@ -8,7 +9,7 @@ export const trackPageTargetsToClose = (page) => {
       // in case of bug do not forget https://github.com/GoogleChrome/puppeteer/issues/2269
       return async () => {
         const page = await target.page()
-        return page.close()
+        return closePage(page)
       }
     }
 
