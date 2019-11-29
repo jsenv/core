@@ -1,9 +1,9 @@
 import { basename } from "path"
 import { startServer } from "@jsenv/server"
 import { assert } from "@jsenv/assert"
-import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
 import { generateCommonJsBundle } from "../../../index.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
@@ -13,9 +13,9 @@ import {
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs`
-const mainFileBasename = `${testDirectoryBasename}.js`
+const testDirectoryname = basename(testDirectoryRelativePath)
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs/`
+const mainFilename = `${testDirectoryname}.js`
 
 const server = await startServer({
   protocol: "http",
@@ -40,20 +40,22 @@ const bundle = await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `${testDirectoryRelativePath}${mainFileBasename}`,
+    main: `./${testDirectoryRelativePath}${mainFilename}`,
   },
 })
 
 {
   const actual = bundleToCompilationResult(bundle, {
-    projectDirectoryUrl: resolveDirectoryUrl("./", import.meta.url),
+    projectDirectoryUrl: testDirectoryUrl,
+    compiledFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.js`, testDirectoryUrl),
+    sourcemapFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.js.map`, testDirectoryUrl),
   })
   const expected = {
     contentType: "application/javascript",
     compiledSource: actual.compiledSource,
-    sources: ["http.js"],
-    sourcesContent: [actual.sourcesContent[0]],
-    assets: ["main.js.map"],
+    sources: [],
+    sourcesContent: [],
+    assets: ["../main.js.map"],
     assetsContent: [actual.assetsContent[0]],
   }
   assert({ actual, expected })
@@ -64,7 +66,7 @@ const bundle = await generateCommonJsBundle({
       version: actual.version,
       file: "main.js",
       sources: ["http://127.0.0.1:9999/file.js"],
-      sourcesContent: ["export default 42"],
+      sourcesContent: null,
       names: actual.names,
       mappings: actual.mappings,
     }

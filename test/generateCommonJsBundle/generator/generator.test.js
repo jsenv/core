@@ -11,15 +11,15 @@ import {
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
+const testDirectoryname = basename(testDirectoryRelativePath)
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs`
-const mainFileBasename = `${testDirectoryBasename}.js`
+const mainFilename = `${testDirectoryname}.js`
 
 await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `${testDirectoryRelativePath}${mainFileBasename}`,
+    main: `./${testDirectoryRelativePath}${mainFilename}`,
   },
 })
 
