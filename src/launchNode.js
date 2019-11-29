@@ -26,7 +26,7 @@ export const launchNode = async ({
   debugModeInheritBreak = true,
   remap = true,
   traceWarnings = true,
-  cover = false,
+  collectCoverage = false,
   env,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -62,7 +62,7 @@ export const launchNode = async ({
     execArgv.push("--trace-warnings")
   }
 
-  env.COVERAGE_ENABLED = cover
+  env.COVERAGE_ENABLED = collectCoverage
 
   const child = forkChildProcess(fileUrlToPath(nodeControllableFileUrl), {
     execArgv,

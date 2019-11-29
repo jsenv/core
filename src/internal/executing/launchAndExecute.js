@@ -228,7 +228,7 @@ const computeExecutionResult = async ({
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
-      const value = await launch({ cancellationToken, logger: launchLogger })
+      const value = await launch({ cancellationToken, logger: launchLogger, collectCoverage })
       platformStartedCallback({ name: value.name, version: value.version })
       return value
     },

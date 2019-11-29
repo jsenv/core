@@ -1,41 +1,36 @@
 import { assert } from "@jsenv/assert"
-import { launchNode } from "@jsenv/node-launcher"
-import { cover } from "../../../index.js"
-import { fileHrefToFolderRelativePath } from "../../file-href-to-folder-relative-path.js"
-import { COVERAGE_TEST_PARAM } from "../coverage-test-param.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { executeTestPlan, launchNode } from "../../../index.js"
+import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const fileRelativeUrl = `${testDirectoryRelativePath}file.js`
 
-const {
-  executionResult: { report: actual },
-} = await cover({
-  ...COVERAGE_TEST_PARAM,
-  compileIntoRelativePath,
-  measureDuration: false,
-  captureConsole: false,
-  collectNamespace: true,
-  coverageConfig: {},
-  executeDescription: {
-    [`${folderRelativePath}/file.js`]: {
+const { report: actual } = await executeTestPlan({
+  ...EXECUTE_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
+  testPlan: {
+    [fileRelativeUrl]: {
       node: {
         launch: launchNode,
       },
     },
   },
+  coverage: true,
+  coverageConfig: {},
 })
 const expected = {
-  [`${folderRelativePath}/file.js`]: {
+  [fileRelativeUrl]: {
     node: {
       status: "completed",
       namespace: { COVERAGE_ENABLED: "true" },
       coverageMap: undefined,
       platformName: "node",
-      platformVersion: actual[`${folderRelativePath}/file.js`].node.platformVersion,
+      platformVersion: actual[fileRelativeUrl].node.platformVersion,
     },
   },
 }
-assert({
-  actual,
-  expected,
-})
+assert({ actual, expected })
