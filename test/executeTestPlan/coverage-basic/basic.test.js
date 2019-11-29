@@ -1,12 +1,12 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "src/internal/urlUtils.js"
-import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { executeTestPlan, launchNode } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const compileDirectoryRelativeUrl = `${testDirectoryRelativePath}.dist/`
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
 const fileRelativeUrl = `${testDirectoryRelativePath}use-file.js`
 const testPlan = {
   [fileRelativeUrl]: {
@@ -21,11 +21,11 @@ const testPlan = {
 
 const { coverageMap } = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
-  compileDirectoryRelativeUrl,
+  jsenvDirectoryRelativeUrl,
   testPlan,
   coverage: true,
   coverageConfig: {
-    [`${testDirectoryRelativePath}file.js`]: true,
+    [`./${testDirectoryRelativePath}file.js`]: true,
   },
 })
 const actual = coverageMap

@@ -15,7 +15,7 @@ const {
   measureDuration: false,
   captureConsole: false,
   collectNamespace: true,
-  coverDescription: {},
+  coverageConfig: {},
   executeDescription: {
     [`${folderRelativePath}/file.js`]: {
       node: {

@@ -59,6 +59,10 @@ export const executeTestPlan = async ({
   const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
+  if (typeof testPlan !== "object") {
+    throw new Error(`testPlan must be an object, got ${testPlan}`)
+  }
+
   if (coverage) {
     if (typeof coverageConfig !== "object") {
       throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`)

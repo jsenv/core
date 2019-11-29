@@ -30,7 +30,7 @@ const { coverageMap } = await cover({
       },
     },
   },
-  coverDescription: {
+  coverageConfig: {
     [`${folderRelativePath}/file.jsx`]: true,
   },
 })

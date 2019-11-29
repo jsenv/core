@@ -21,7 +21,7 @@ const { coverageMap: actual } = await cover({
       },
     },
   },
-  coverDescription: {
+  coverageConfig: {
     [`${folderRelativePath}/timeout.js`]: true,
   },
 })

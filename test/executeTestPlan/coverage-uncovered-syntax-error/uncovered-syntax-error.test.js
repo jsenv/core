@@ -9,7 +9,7 @@ const { coverageMap: actual } = await cover({
   ...COVERAGE_TEST_PARAM,
   compileIntoRelativePath,
   executeDescription: {},
-  coverDescription: {
+  coverageConfig: {
     [`${folderRelativePath}/syntax-error.js`]: true,
   },
 })

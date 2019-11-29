@@ -20,7 +20,7 @@ const { coverageMap: actual } = await cover({
       },
     },
   },
-  coverDescription: {
+  coverageConfig: {
     [`${folderRelativePath}/throw.js`]: true,
   },
 })

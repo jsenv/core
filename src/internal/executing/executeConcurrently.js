@@ -2,12 +2,9 @@
 import { cpus } from "os"
 import { stat } from "fs"
 import { createConcurrentOperations } from "@jsenv/cancellation"
-import { metaMapToSpecifierMetaMap } from "@jsenv/url-meta"
-import { collectFiles } from "@jsenv/file-collector"
 import { fileUrlToPath } from "internal/urlUtils.js"
 import { launchAndExecute } from "internal/executing/launchAndExecute.js"
-import { relativeUrlToEmptyCoverage } from "./coverage/relativeUrlToEmptyCoverage.js"
-import { executionReportToCoverageMap } from "./coverage/executionReportToCoverageMap.js"
+import { reportToCoverageMap } from "./coverage/reportToCoverageMap.js"
 import {
   createCompletedLog,
   createDisconnectedLog,
@@ -190,6 +187,7 @@ ${fileRelativeUrl}`),
       ? {
           coverageMap: await reportToCoverageMap(report, {
             cancellationToken,
+            projectDirectoryUrl,
             babelPluginMap,
             coverageConfig,
             coverageIncludeMissing,
@@ -246,68 +244,4 @@ const reportToSummary = (report) => {
     erroredCount,
     completedCount,
   }
-}
-
-const reportToCoverageMap = async (
-  report,
-  {
-    cancellationToken,
-    projectDirectoryUrl,
-    babelPluginMap,
-    coverageConfig,
-    coverageIncludeMissing,
-  },
-) => {
-  const coverageMapForReport = executionReportToCoverageMap(report)
-
-  if (!coverageIncludeMissing) {
-    return coverageMapForReport
-  }
-
-  const relativeFileUrlToCoverArray = await listRelativeFileUrlToCover({
-    cancellationToken,
-    projectDirectoryUrl,
-    coverageConfig,
-  })
-
-  const relativeFileUrlMissingCoverageArray = relativeFileUrlToCoverArray.filter(
-    (relativeFileUrlToCover) => relativeFileUrlToCover in coverageMapForReport === false,
-  )
-
-  const coverageMapForMissedFiles = {}
-  await Promise.all(
-    relativeFileUrlMissingCoverageArray.map(async (relativeFileUrlMissingCoverage) => {
-      const emptyCoverage = await relativeUrlToEmptyCoverage(relativeFileUrlMissingCoverage, {
-        cancellationToken,
-        projectDirectoryUrl,
-        babelPluginMap,
-      })
-      coverageMapForMissedFiles[relativeFileUrlMissingCoverage] = emptyCoverage
-      return emptyCoverage
-    }),
-  )
-
-  return {
-    ...coverageMapForReport,
-    ...coverageMapForMissedFiles,
-  }
-}
-
-const listRelativeFileUrlToCover = async ({
-  cancellationToken,
-  projectDirectoryUrl,
-  coverageConfig,
-}) => {
-  const specifierMetaMapForCoverage = metaMapToSpecifierMetaMap({
-    cover: coverageConfig,
-  })
-
-  const matchingFileResultArray = await collectFiles({
-    cancellationToken,
-    directoryPath: fileUrlToPath(projectDirectoryUrl),
-    specifierMetaMap: specifierMetaMapForCoverage,
-    predicate: ({ cover }) => cover,
-  })
-
-  return matchingFileResultArray.map(({ relativePath }) => relativePath)
 }
