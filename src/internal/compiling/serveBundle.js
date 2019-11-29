@@ -20,6 +20,8 @@ export const serveBundle = async ({
   compileServerOrigin,
   compileServerImportMap,
   importDefaultExtension,
+  importReplaceMap,
+  importFallbackMap,
 
   format,
   formatOutputOptions = {},
@@ -59,6 +61,8 @@ export const serveBundle = async ({
       compileServerOrigin,
       compileServerImportMap,
       importDefaultExtension,
+      importReplaceMap,
+      importFallbackMap,
 
       node,
       browser,
@@ -76,7 +80,6 @@ export const serveBundle = async ({
       originalFileUrl,
       compiledFileUrl,
       sourcemapFileUrl,
-      compileServerOrigin,
     })
   }
 

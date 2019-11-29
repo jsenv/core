@@ -31,6 +31,8 @@ export const generateBundle = async ({
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
   importDefaultExtension,
+  importReplaceMap,
+  importFallbackMap,
   env = {},
   browser = false,
   node = false,
@@ -118,6 +120,8 @@ export const generateBundle = async ({
       outDirectoryName: "out-bundle",
       importMapFileRelativeUrl,
       importDefaultExtension,
+      importReplaceMap,
+      importFallbackMap,
 
       env,
       babelPluginMap,

@@ -13,7 +13,7 @@ import { writeOrUpdateSourceMappingURL } from "internal/sourceMappingURLUtils.js
 
 export const bundleToCompilationResult = (
   { rollupBundle, moduleContentMap },
-  { projectDirectoryUrl, compiledFileUrl, sourcemapFileUrl, compileServerOrigin },
+  { projectDirectoryUrl, compiledFileUrl, sourcemapFileUrl },
 ) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -23,9 +23,6 @@ export const bundleToCompilationResult = (
   }
   if (typeof sourcemapFileUrl !== "string") {
     throw new TypeError(`sourcemapFileUrl must be a string, got ${sourcemapFileUrl}`)
-  }
-  if (typeof compileServerOrigin !== "string") {
-    throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`)
   }
 
   const sources = []

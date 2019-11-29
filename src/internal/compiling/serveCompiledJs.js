@@ -132,6 +132,8 @@ export const serveCompiledJs = async ({
       compileServerOrigin: request.origin,
       compileServerImportMap,
       importDefaultExtension,
+      importReplaceMap,
+      importFallbackMap,
 
       babelPluginMap,
       projectFileRequestedCallback,
@@ -157,13 +159,13 @@ export const serveCompiledJs = async ({
     compile: async () => {
       let code
       if (originalFileRemoteUrl in importReplaceMap) {
-        code = await importReplaceMap[originalFileRemoteUrl]()
+        code = importReplaceMap[originalFileRemoteUrl]
       } else if (originalFileRemoteUrl in importFallbackMap) {
         try {
           code = await readFileContent(fileUrlToPath(originalFileUrl))
         } catch (e) {
           if (e.code === "ENOENT") {
-            code = await importFallbackMap[originalFileRemoteUrl]()
+            code = importFallbackMap[originalFileRemoteUrl]
           } else {
             throw e
           }

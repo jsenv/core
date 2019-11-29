@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { generateCommonJsBundle } from "../../../index.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
@@ -12,29 +12,31 @@ import {
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs`
-const mainFileBasename = `${testDirectoryBasename}.js`
+const testDirectoryname = basename(testDirectoryRelativePath)
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs/`
+const mainFilename = `${testDirectoryname}.js`
 
 const bundle = await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `${testDirectoryRelativePath}${mainFileBasename}`,
+    main: `./${testDirectoryRelativePath}${mainFilename}`,
   },
   importFallbackMap: {
-    [`${testDirectoryRelativePath}whatever.js`]: () => `export default 42`,
+    [`./${testDirectoryRelativePath}whatever.js`]: `export default 42`,
   },
 })
 
 {
   const actual = await bundleToCompilationResult(bundle, {
-    projectDirectoryUrl: resolveDirectoryUrl("./", import.meta.url),
+    projectDirectoryUrl: testDirectoryUrl,
+    compiledFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.js`, testDirectoryUrl),
+    sourcemapFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.js.map`, testDirectoryUrl),
   })
   const expected = {
     contentType: "application/javascript",
     compiledSource: actual.compiledSource,
-    sources: [mainFileBasename],
+    sources: [mainFilename],
     sourcesContent: [actual.sourcesContent[0]],
     assets: ["main.js.map"],
     assetsContent: [actual.assetsContent[0]],
@@ -48,7 +50,7 @@ const bundle = await generateCommonJsBundle({
       file: "main.js",
       sources: [
         `${testDirectoryRelativePath.slice(1)}whatever.js`,
-        `${testDirectoryRelativePath.slice(1)}${mainFileBasename}`,
+        `${testDirectoryRelativePath.slice(1)}${mainFilename}`,
       ],
       sourcesContent: ["export default 42", actual.sourcesContent[1]],
       names: actual.names,

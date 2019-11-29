@@ -281,9 +281,9 @@ export const ${key} = ${JSON.stringify(env[key])}
       writeFileContent(fileUrlToPath(resolveUrl("./env.js", jsenvDirectoryUrl)), envToString()),
     ])
   } else {
-    importReplaceMap["/.jsenv/importMap.json"] = importMapToString
-    importReplaceMap["/.jsenv/groupMap.json"] = groupMapToString
-    importReplaceMap["/.jsenv/env.js"] = envToString
+    importReplaceMap["/.jsenv/importMap.json"] = importMapToString()
+    importReplaceMap["/.jsenv/groupMap.json"] = groupMapToString()
+    importReplaceMap["/.jsenv/env.js"] = envToString()
   }
 
   importReplaceMap = resolveSpecifierMap(importReplaceMap, {
@@ -342,6 +342,8 @@ export const ${key} = ${JSON.stringify(env[key])}
     ...compileServer,
     compileServerImportMap: importMapForCompileServer,
     compileServerGroupMap: groupMap,
+    compileServerImportFallbackMap: importFallbackMap,
+    compielServerImportReplaceMap: importReplaceMap,
   }
 }
 
@@ -376,7 +378,7 @@ const serveProjectFiles = async ({
   const filePath = fileUrlToPath(fileUrl)
 
   if (requestUrl in importReplaceMap) {
-    const body = await importReplaceMap[requestUrl]()
+    const body = importReplaceMap[requestUrl]
     return {
       status: 200,
       headers: {

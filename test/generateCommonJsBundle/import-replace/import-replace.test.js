@@ -23,7 +23,7 @@ const bundle = await generateCommonJsBundle({
     main: `./${testDirectoryRelativePath}${mainFileBasename}`,
   },
   importReplaceMap: {
-    [`./${testDirectoryRelativePath}whatever.js`]: () => `export default 42`,
+    [`./${testDirectoryRelativePath}whatever.js`]: `export default 42`,
   },
 })
 
