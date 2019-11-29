@@ -1,29 +1,31 @@
 import { assert } from "@jsenv/assert"
-import { launchNode } from "@jsenv/node-launcher"
-import { fileHrefToFolderRelativePath } from "../../file-href-to-folder-relative-path.js"
-import { test } from "../../../index.js"
-import { TESTING_TEST_PARAM } from "../testing-test-param.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { executeTestPlan, launchNode } from "../../../index.js"
+import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const timeoutFileRelativePath = `${folderRelativePath}/timeout.js`
-const executeDescription = {
-  [timeoutFileRelativePath]: {
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}timeout.js`
+const testPlan = {
+  [fileRelativeUrl]: {
     node: {
       launch: (options) =>
         launchNode({
           ...options,
           env: { AWAIT_FOREVER: true },
         }),
+      allocatedMs: 8000,
+      allocatedMsBeforeForceStop: 1000,
     },
   },
 }
 
-const actual = await test({
-  ...TESTING_TEST_PARAM,
-  compileIntoRelativePath,
-  executeDescription,
-  defaultAllocatedMsPerExecution: 10000,
+const actual = await executeTestPlan({
+  ...EXECUTE_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
+  testPlan,
 })
 const expected = {
   summary: {
@@ -34,11 +36,11 @@ const expected = {
     completedCount: 0,
   },
   report: {
-    [timeoutFileRelativePath]: {
+    [fileRelativeUrl]: {
       node: {
         status: "timedout",
         platformName: "node",
-        platformVersion: actual.report[timeoutFileRelativePath].node.platformVersion,
+        platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
       },
     },
   },
