@@ -1,25 +1,26 @@
 import { assert } from "@jsenv/assert"
-import { cover } from "../../../index.js"
-import { fileHrefToFolderRelativePath } from "../../file-href-to-folder-relative-path.js"
-import { COVERAGE_TEST_PARAM } from "../coverage-test-param.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { executeTestPlan } from "../../../index.js"
+import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const { coverageMap: actual } = await cover({
-  ...COVERAGE_TEST_PARAM,
-  compileIntoRelativePath,
-  executeDescription: {},
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const fileRelativeUrl = `${testDirectoryRelativePath}syntax-error.js`
+const { coverageMap: actual } = await executeTestPlan({
+  ...EXECUTE_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
+  testPlan: {},
+  coverage: true,
   coverageConfig: {
-    [`${folderRelativePath}/syntax-error.js`]: true,
+    [fileRelativeUrl]: true,
   },
 })
 const expected = {
-  [`${folderRelativePath.slice(1)}/syntax-error.js`]: {
-    ...actual[`${folderRelativePath.slice(1)}/syntax-error.js`],
+  [fileRelativeUrl]: {
+    ...actual[fileRelativeUrl],
     s: {},
   },
 }
-assert({
-  actual,
-  expected,
-})
+assert({ actual, expected })
