@@ -18,7 +18,6 @@ const testPlan = {
     },
   },
 }
-
 const { coverageMap } = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,

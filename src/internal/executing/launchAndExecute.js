@@ -22,6 +22,10 @@ export const launchAndExecute = async ({
   // or nodejs process
   // however unit test will pass true because they want to move on
   stopPlatformAfterExecute = false,
+  // when launchPlatform returns { disconnected, stop, stopForce }
+  // the launched platform have that amount of ms for disconnected to resolve
+  // before we call stopForce
+  allocatedMsBeforeForceStop = 4000,
   platformConsoleCallback = () => {},
   platformStartedCallback = () => {},
   platformStoppedCallback = () => {},
@@ -131,6 +135,7 @@ export const launchAndExecute = async ({
     executeLogger,
     launch,
     stopPlatformAfterExecute,
+    allocatedMsBeforeForceStop,
     platformConsoleCallback,
     platformErrorCallback,
     platformDisconnectCallback,
@@ -202,17 +207,13 @@ const computeRawExecutionResult = async ({ cancellationToken, allocatedMs, ...re
   }
 }
 
-// when launchPlatform returns { disconnected, stop, stopForce }
-// the launched platform have that amount of ms for disconnected to resolve
-// before we call stopForce
-const ALLOCATED_MS_BEFORE_FORCE_STOP = 8000
-
 const computeExecutionResult = async ({
   cancellationToken,
   launch,
   launchLogger,
   executeLogger,
   stopPlatformAfterExecute,
+  allocatedMsBeforeForceStop,
   platformStartedCallback,
   platformStoppedCallback,
   platformConsoleCallback,
@@ -249,7 +250,7 @@ const computeExecutionResult = async ({
 
         const stopForcePromise = (async () => {
           await new Promise(async (resolve) => {
-            const timeoutId = setTimeout(resolve, ALLOCATED_MS_BEFORE_FORCE_STOP)
+            const timeoutId = setTimeout(resolve, allocatedMsBeforeForceStop)
             try {
               await stopPromise
             } finally {

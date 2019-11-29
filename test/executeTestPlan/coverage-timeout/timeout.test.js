@@ -1,33 +1,39 @@
 import { assert } from "@jsenv/assert"
-import { launchNode } from "@jsenv/node-launcher"
-import { cover } from "../../../index.js"
-import { fileHrefToFolderRelativePath } from "../../file-href-to-folder-relative-path.js"
-import { COVERAGE_TEST_PARAM } from "../coverage-test-param.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { executeTestPlan, launchNode } from "../../../index.js"
+import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const { coverageMap: actual } = await cover({
-  ...COVERAGE_TEST_PARAM,
-  compileIntoRelativePath,
-  executeDescription: {
-    [`${folderRelativePath}/timeout.js`]: {
-      node: {
-        launch: (options) =>
-          launchNode({
-            ...options,
-            env: { AWAIT_FOREVER: true },
-          }),
-        allocatedMs: 10000,
-      },
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const fileRelativeUrl = `${testDirectoryRelativePath}timeout.js`
+const testPlan = {
+  [fileRelativeUrl]: {
+    node: {
+      launch: (options) =>
+        launchNode({
+          ...options,
+          env: { AWAIT_FOREVER: true },
+        }),
+      allocatedMs: 8000,
+      allocatedMsBeforeForceStop: 1000,
     },
   },
+}
+const { coverageMap: actual } = await executeTestPlan({
+  ...EXECUTE_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
+  testPlan,
+  coverage: true,
+  coverageAndExecutionAllowed: true,
   coverageConfig: {
-    [`${folderRelativePath}/timeout.js`]: true,
+    [fileRelativeUrl]: true,
   },
 })
 const expected = {
-  [`${folderRelativePath.slice(1)}/timeout.js`]: {
-    ...actual[`${folderRelativePath.slice(1)}/timeout.js`],
+  [fileRelativeUrl]: {
+    ...actual[fileRelativeUrl],
     s: { 0: 0, 1: 0 },
   },
 }
