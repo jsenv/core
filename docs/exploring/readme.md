@@ -1,10 +1,25 @@
-starts a server creating an html page listing your project files.<br />
-Each link goes to an url where your JavaScript file will be executed.<br />
-Thanks to this, any file or your project can become an entry point. You can use it to debug a file in isolation or even to create a storybook.
+# Table of contents
 
-It has the following exports:
+- [Exploring presentation](#Exploring-presentation)
+- [Exploring recorded video](#Exploring-recorded-video)
 
-- `startExploringServer`
+# Exploring presentation
+
+Frontend projects often comes with a local server running on your machine.
+
+These type of servers focuses on development. During development files change often and developper want a fast feedback to see effects of thoose changes.
+
+You can use jsenv to start a server serving an html page containing a list of links to your project files. Each link goes to an url where your JavaScript file will be executed. Thanks to this, any file in your project can become an entry point. You can use it to debug a file in isolation, create a storybook and so on.
+
+This tool is called exploring.
+
+## Exploring recorded video
+
+The following video was recorded to show exploring feature in action on a basic project. The developper opens a file and debugs it inside chrome.
+
+![recording of me exploring a project using chrome](./exploring-with-chrome-recording.gif)
+<br />
+— gif generated from [./exploring-with-chrome-recording.mp4](./exploring-with-chrome-recording.mp4)
 
 ## How to use
 
@@ -36,7 +51,7 @@ A second server will start. That's the one we're interested in right now. The ur
 
 Once server is started you can navigate to `http://127.0.0.1:3456` and you will see an html page listing the files you can explore.
 
-![exploring server chome screenshot](./docs/exploring-server-chrome-screenshot.png)
+![exploring server chome screenshot](./exploring-server-chrome-screenshot.png)
 
 - If you go to `http://127.0.0.1:3456/src/hello.js` page displays `Hello world`.
   It shows that if your file execution renders something, you can see the effect in your browser.
@@ -45,7 +60,5 @@ Once server is started you can navigate to `http://127.0.0.1:3456` and you will 
 
 Here is a gif showing me browing basic project files:
 
-![recording of me exploring a project using chrome](./docs/exploring-with-chrome-recording.gif)
-
 If you want to know more about `startExploringServer`, there is a dedicated page for that.<br />
-— see [`startExploringServer` documentation](./docs/start-exploring-server-doc.md)
+— see [`startExploringServer` documentation](./start-exploring-server-doc.md)
