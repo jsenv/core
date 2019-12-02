@@ -5,12 +5,13 @@ import { testBabelPluginMap } from "../testBabelPluginMap.js"
 export const GENERATE_COMMONJS_BUNDLE_FOR_NODE_TEST_PARAMS = {
   projectDirectoryPath: fileUrlToPath(jsenvCoreDirectoryUrl),
   bundleDirectoryClean: true,
+  jsenvCoreDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
-  logLevel: "off",
-  throwUnhandled: false,
+  logLevel: "warn",
+  compileServerLogLevel: "warn",
 }
 
 export const REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  mainRelativePath: "./main.js",
+  mainRelativeUrl: "./main.js",
 }

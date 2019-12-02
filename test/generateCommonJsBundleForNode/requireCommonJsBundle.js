@@ -3,10 +3,10 @@ import { resolveDirectoryUrl, resolveUrl, fileUrlToPath } from "src/internal/url
 export const requireCommonJsBundle = async ({
   projectDirectoryUrl,
   bundleDirectoryRelativeUrl,
-  mainRelativePath,
+  mainRelativeUrl,
 }) => {
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
-  const mainFileUrl = resolveUrl(mainRelativePath, bundleDirectoryUrl)
+  const mainFileUrl = resolveUrl(mainRelativeUrl, bundleDirectoryUrl)
   const mainFilePath = fileUrlToPath(mainFileUrl)
   const namespace = import.meta.require(mainFilePath)
   return {
