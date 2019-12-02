@@ -1,7 +1,7 @@
 /* eslint-disable import/max-dependencies */
 import { readFileSync } from "fs"
 import { createCancellationToken } from "@jsenv/cancellation"
-import { composeTwoImportMaps, normalizeImportMap, resolveImport } from "@jsenv/import-map"
+import { composeTwoImportMaps } from "@jsenv/import-map"
 import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
 import { registerFileLifecycle } from "@jsenv/file-watcher"
 import {
@@ -18,7 +18,12 @@ import {
   urlToRelativeUrl,
   resolveDirectoryUrl,
 } from "internal/urlUtils.js"
-import { readFileContent, writeFileContent, removeDirectory } from "internal/filesystemUtils.js"
+import {
+  readFileContent,
+  writeFileContent,
+  removeDirectory,
+  removeFile,
+} from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import {
   assertImportMapFileRelativeUrl,
@@ -51,8 +56,6 @@ export const startCompileServer = async ({
 
   importMapFileRelativeUrl = "importMap.json",
   importDefaultExtension,
-  importReplaceMap = {},
-  importFallbackMap = {},
 
   env = {},
 
@@ -201,8 +204,6 @@ ${projectDirectoryUrl}`)
 
               projectDirectoryUrl,
               outDirectoryRelativeUrl,
-              importReplaceMap,
-              importFallbackMap,
               compileServerImportMap: importMapForCompileServer,
               importDefaultExtension,
 
@@ -221,8 +222,6 @@ ${projectDirectoryUrl}`)
           () => {
             return serveProjectFiles({
               projectDirectoryUrl,
-              importReplaceMap,
-              importFallbackMap,
               request,
               projectFileRequestedCallback,
             })
@@ -247,9 +246,6 @@ ${projectDirectoryUrl}`)
     }),
   ])
 
-  const compileServerOrigin = compileServer.origin
-  const importMap = normalizeImportMap(importMapForCompileServer, `${compileServerOrigin}/`)
-
   env = {
     ...env,
     jsenvDirectoryRelativeUrl,
@@ -268,40 +264,23 @@ export const ${key} = ${JSON.stringify(env[key])}
       )
       .join("")
 
-  if (writeOnFilesystem) {
-    await Promise.all([
-      writeFileContent(
-        fileUrlToPath(resolveUrl("./importMap.json", jsenvDirectoryUrl)),
-        importMapToString(),
-      ),
-      writeFileContent(
-        fileUrlToPath(resolveUrl("./groupMap.json", jsenvDirectoryUrl)),
-        groupMapToString(),
-      ),
-      writeFileContent(fileUrlToPath(resolveUrl("./env.js", jsenvDirectoryUrl)), envToString()),
-    ])
-  } else {
-    importReplaceMap["/.jsenv/importMap.json"] = importMapToString()
-    importReplaceMap["/.jsenv/groupMap.json"] = groupMapToString()
-    importReplaceMap["/.jsenv/env.js"] = envToString()
-  }
+  const jsenvImportMapFilePath = fileUrlToPath(resolveUrl("./importMap.json", jsenvDirectoryUrl))
+  const jsenvGroupMapFilePath = fileUrlToPath(resolveUrl("./groupMap.json", jsenvDirectoryUrl))
+  const jsenvEnvFilePath = fileUrlToPath(resolveUrl("./env.js", jsenvDirectoryUrl))
 
-  importReplaceMap = resolveSpecifierMap(importReplaceMap, {
-    compileServerOrigin,
-    importMap,
-    importDefaultExtension,
-  })
+  await Promise.all([
+    writeFileContent(jsenvImportMapFilePath, importMapToString()),
+    writeFileContent(jsenvGroupMapFilePath, groupMapToString()),
+    writeFileContent(jsenvEnvFilePath, envToString()),
+  ])
 
-  importFallbackMap = {
-    // importMap is optional
-    [`./${importMapFileRelativeUrl}`]: () => `{}`,
-    ...importFallbackMap,
+  if (!writeOnFilesystem) {
+    compileServer.stoppedPromise.then(() => {
+      removeFile(jsenvImportMapFilePath)
+      removeFile(jsenvGroupMapFilePath)
+      removeFile(jsenvEnvFilePath)
+    })
   }
-  importFallbackMap = resolveSpecifierMap(importFallbackMap, {
-    compileServerOrigin,
-    importMap,
-    importDefaultExtension,
-  })
 
   if (stopOnPackageVersionChange) {
     const checkPackageVersion = () => {
@@ -342,8 +321,6 @@ export const ${key} = ${JSON.stringify(env[key])}
     ...compileServer,
     compileServerImportMap: importMapForCompileServer,
     compileServerGroupMap: groupMap,
-    compileServerImportFallbackMap: importFallbackMap,
-    compielServerImportReplaceMap: importReplaceMap,
   }
 }
 
@@ -361,7 +338,6 @@ export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
 const serveProjectFiles = async ({
   projectDirectoryUrl,
   importReplaceMap,
-  importFallbackMap,
   request,
   projectFileRequestedCallback,
 }) => {
@@ -394,23 +370,6 @@ const serveProjectFiles = async ({
     method,
     headers,
   })
-
-  if (requestUrl in importFallbackMap) {
-    const response = await responsePromise
-    if (response.status === 404) {
-      const body = await importFallbackMap[requestUrl]()
-      return {
-        status: 200,
-        headers: {
-          "cache-control": "no-store",
-          "content-type": urlToContentType(requestUrl),
-          "content-length": Buffer.byteLength(body),
-        },
-        body,
-      }
-    }
-    return response
-  }
 
   return responsePromise
 }
@@ -475,23 +434,6 @@ const generateImportMapForCompileServer = async ({
     {},
   )
   return importMap
-}
-
-const resolveSpecifierMap = (
-  specifierMap,
-  { compileServerOrigin, importMap, importDefaultExtension },
-) => {
-  const specifierMapResolved = {}
-  Object.keys(specifierMap).forEach((specifier) => {
-    const specifierUrl = resolveImport({
-      specifier,
-      importer: `${compileServerOrigin}/`,
-      importMap,
-      defaultExtension: importDefaultExtension,
-    })
-    specifierMapResolved[specifierUrl] = specifierMap[specifier]
-  })
-  return specifierMapResolved
 }
 
 const cleanOutDirectoryIfObsolete = async ({ logger, outDirectoryUrl, outDirectoryMeta }) => {

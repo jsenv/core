@@ -1,6 +1,6 @@
 import { dirname } from "path"
 import { promisify } from "util"
-import { mkdir, readFile, writeFile, stat } from "fs"
+import { mkdir, readFile, writeFile, stat, unlink } from "fs"
 import { fileUrlToPath } from "./urlUtils.js"
 
 const rimraf = import.meta.require("rimraf")
@@ -46,6 +46,17 @@ export const removeDirectory = (path) =>
       else resolve()
     }),
   )
+
+export const removeFile = (path) =>
+  new Promise((resolve, reject) => {
+    unlink(path, (error) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve()
+      }
+    })
+  })
 
 export const assertDirectoryExists = async (fileUrl) => {
   const directoryPath = fileUrlToPath(fileUrl)

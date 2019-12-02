@@ -20,8 +20,6 @@ export const serveBundle = async ({
   compileServerOrigin,
   compileServerImportMap,
   importDefaultExtension,
-  importReplaceMap,
-  importFallbackMap,
 
   format,
   formatOutputOptions = {},
@@ -61,8 +59,6 @@ export const serveBundle = async ({
       compileServerOrigin,
       compileServerImportMap,
       importDefaultExtension,
-      importReplaceMap,
-      importFallbackMap,
 
       node,
       browser,

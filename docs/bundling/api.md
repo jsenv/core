@@ -9,8 +9,6 @@
   - [convertMap](#convertMap)
   - [importMapFileRelativeUrl](#importMapFileRelativeUrl)
   - [importDefaultExtension](#importDefaultExtension)
-  - [importReplaceMap](#importReplaceMap)
-  - [importFallbackMap](#importFallbackMap)
 - [generateSystemJsBundle](#generateSystemJsBundle)
 - [generateGlobalBundle](#generateglobalbundle)
   - [globalName](#globalName)
@@ -90,55 +88,6 @@ false
 ### importDefaultExtension
 
 — see [generic documentation for importDefaultExtension](../shared-parameters/shared-parameters.md#importDefaultExtension)
-
-### importReplaceMap
-
-> `importReplaceMap` is an object mapping import specifier to function or string representing an import content.
-
-This parameter is optional with a default value of
-
-<!-- prettier-ignore -->
-```js
-{}
-```
-
-You can use this parameter to savagely override import content.<br />
-For instance the following index.js
-
-```js
-import value from "./foo.js"
-
-console.log(value)
-```
-
-Could be bundled like this
-
-```js
-const { generateSystemJsBundle } = require("@jsenv/core")
-
-generateSystemJsBundle({
-  projectDirectoryPath: __dirname,
-  importReplaceMap: {
-    "./foo.js": "export default 42",
-  },
-})
-```
-
-And executing your bundle logs `42`.
-
-### importFallbackMap
-
-> `importReplaceMap` is an object mapping import specifier to function or string representing an import content.
-
-This parameter is optional with a default value of
-
-<!-- prettier-ignore -->
-```js
-{}
-```
-
-This parameter can be used to provide a default content when an import cannot be found.<br />
-Do not confuse with [importReplaceMap](#importReplaceMap) that does not consider if import is found.<br />
 
 ## generateSystemJsBundle
 

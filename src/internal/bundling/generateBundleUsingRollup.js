@@ -16,8 +16,6 @@ export const generateBundleUsingRollup = async ({
   compileServerOrigin,
   compileServerImportMap,
   importDefaultExtension,
-  importReplaceMap,
-  importFallbackMap,
 
   node,
   browser,
@@ -61,18 +59,9 @@ export const generateBundleUsingRollup = async ({
     writeOnFileSystem,
   })
 
-  const { moduleContentMap, ...rest } = getExtraInfo()
-  // could add an other moduleContentMap
-  // here take into acount
-  // importReplaceMap and importFallbackMap
-  // and populate moduleContentMap with it
-  // (using same strat that inside jsenv rollup plugin)
-  // or just pass it to jsenv rollup plugin that will do his stuff
-
   return {
     rollupBundle,
-    moduleContentMap,
-    ...rest,
+    ...getExtraInfo(),
   }
 }
 

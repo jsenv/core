@@ -23,8 +23,6 @@ export const serveCompiledJs = async ({
   outDirectoryRelativeUrl,
   compileServerImportMap,
   importDefaultExtension,
-  importReplaceMap,
-  importFallbackMap,
 
   transformTopLevelAwait,
   transformModuleIntoSystemFormat,
@@ -108,13 +106,6 @@ export const serveCompiledJs = async ({
   }
 
   const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`
-  const originalFileRemoteUrl = `${origin}/${originalFileRelativeUrl}`
-  if (originalFileRemoteUrl in importReplaceMap) {
-    // disable cache if the file is ignored anyway
-    // and a function is used instead
-    useFilesystemAsCache = false
-  }
-
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`
   const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl)
   const compiledFileUrl = resolveUrl(originalFileRelativeUrl, compileDirectoryUrl)
@@ -132,8 +123,6 @@ export const serveCompiledJs = async ({
       compileServerOrigin: request.origin,
       compileServerImportMap,
       importDefaultExtension,
-      importReplaceMap,
-      importFallbackMap,
 
       babelPluginMap,
       projectFileRequestedCallback,
@@ -149,30 +138,13 @@ export const serveCompiledJs = async ({
     projectDirectoryUrl,
     originalFileUrl,
     compiledFileUrl,
-    importReplaceMap,
-    importFallbackMap,
 
     writeOnFilesystem,
     useFilesystemAsCache,
     projectFileRequestedCallback,
     request,
     compile: async () => {
-      let code
-      if (originalFileRemoteUrl in importReplaceMap) {
-        code = importReplaceMap[originalFileRemoteUrl]
-      } else if (originalFileRemoteUrl in importFallbackMap) {
-        try {
-          code = await readFileContent(fileUrlToPath(originalFileUrl))
-        } catch (e) {
-          if (e.code === "ENOENT") {
-            code = importFallbackMap[originalFileRemoteUrl]
-          } else {
-            throw e
-          }
-        }
-      } else {
-        code = await readFileContent(fileUrlToPath(originalFileUrl))
-      }
+      const code = await readFileContent(fileUrlToPath(originalFileUrl))
 
       let compiledIdForGroupMap
       let babelPluginMapForGroupMap

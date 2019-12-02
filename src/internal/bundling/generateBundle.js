@@ -27,12 +27,10 @@ export const generateBundle = async ({
   logger,
 
   projectDirectoryPath,
-  jsenvDirectoryRelativeUrl = ".jsenv",
+  jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
   importDefaultExtension,
-  importReplaceMap,
-  importFallbackMap,
   env = {},
   browser = false,
   node = false,
@@ -65,7 +63,7 @@ export const generateBundle = async ({
   // must be true by default otherwise rollup cannot find sourcemap files
   // when asking them to the compile server
   // (to fix that sourcemap could be inlined)
-  filesystemCache = false,
+  filesystemCache = true,
 
   ...rest
 }) => {
@@ -82,6 +80,12 @@ export const generateBundle = async ({
   assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
   if (bundleDirectoryClean) {
     await removeDirectory(fileUrlToPath(bundleDirectoryUrl))
+  }
+
+  if (filesystemCache === false && typeof jsenvDirectoryRelativeUrl === "undefined") {
+    // normalize bundleDirectoryRelativeUrl
+    bundleDirectoryRelativeUrl = urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl)
+    jsenvDirectoryRelativeUrl = `${bundleDirectoryRelativeUrl}.jsenv`
   }
 
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
@@ -120,8 +124,6 @@ export const generateBundle = async ({
       outDirectoryName: "out-bundle",
       importMapFileRelativeUrl,
       importDefaultExtension,
-      importReplaceMap,
-      importFallbackMap,
 
       env,
       babelPluginMap,
