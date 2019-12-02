@@ -6,7 +6,7 @@ const puppeteer = import.meta.require("puppeteer")
 export const scriptLoadGlobalBundle = async ({
   projectDirectoryUrl,
   bundleDirectoryRelativeUrl,
-  mainRelativePath,
+  mainRelativeUrl,
   globalName,
 }) => {
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
@@ -19,7 +19,7 @@ export const scriptLoadGlobalBundle = async ({
   await page.goto(`${server.origin}/`)
   // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
   await page.addScriptTag({
-    url: mainRelativePath,
+    url: mainRelativeUrl,
   })
 
   try {

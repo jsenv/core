@@ -3,11 +3,11 @@ import { resolveDirectoryUrl, resolveUrl, fileUrlToPath } from "src/internal/url
 export const requireGlobalBundle = async ({
   projectDirectoryUrl,
   bundleDirectoryRelativeUrl,
-  mainRelativePath,
+  mainRelativeUrl,
   globalName,
 }) => {
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
-  const mainFileUrl = resolveUrl(mainRelativePath, bundleDirectoryUrl)
+  const mainFileUrl = resolveUrl(mainRelativeUrl, bundleDirectoryUrl)
   const mainFilePath = fileUrlToPath(mainFileUrl)
   import.meta.require(mainFilePath)
   return {

@@ -5,12 +5,7 @@ const { projectPath } = require("../../jsenv.config.js")
 test({
   projectPath,
   executeDescription: {
-    "/test/generateCommonJsBundle/**/*.test.js": {
-      node: {
-        launch: launchNode,
-      },
-    },
-    "/test/generateCommonJsBundleForNode/**/*.test.js": {
+    "/test/generateGlobalBundle/**/*.test.js": {
       node: {
         launch: launchNode,
       },

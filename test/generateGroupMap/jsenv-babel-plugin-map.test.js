@@ -1,8 +1,8 @@
 import { assert } from "@jsenv/assert"
-import { jsenvBabelPluginMap } from "../../index.js"
-import { generateGroupMap } from "../../src/internal/generateGroupMap/generateGroupMap.js"
+import { generateGroupMap } from "internal/generateGroupMap/generateGroupMap.js"
 import { jsenvBrowserScoreMap } from "../../src/jsenvBrowserScoreMap.js"
 import { jsenvNodeVersionScoreMap } from "../../src/jsenvNodeVersionScoreMap.js"
+import { jsenvBabelPluginMap } from "../../index.js"
 
 {
   const actual = generateGroupMap({

@@ -4,8 +4,8 @@ import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
 export const GENERATE_COMMONJS_BUNDLE_TEST_PARAMS = {
   projectDirectoryPath: fileUrlToPath(jsenvCoreDirectoryUrl),
-  bundleDirectoryClean: true,
   jsenvCoreDirectoryClean: true,
+  bundleDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,
   logLevel: "warn",
   compileServerLogLevel: "warn",

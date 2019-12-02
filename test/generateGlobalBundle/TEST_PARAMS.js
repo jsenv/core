@@ -4,21 +4,21 @@ import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
 export const GENERATE_GLOBAL_BUNDLE_TEST_PARAMS = {
   projectDirectoryPath: fileUrlToPath(jsenvCoreDirectoryUrl),
-  babelPluginMap: testBabelPluginMap,
+  jsenvCoreDirectoryClean: true,
   bundleDirectoryClean: true,
-  logLevel: "off",
-  throwUnhandled: false,
+  logLevel: "warn",
+  babelPluginMap: testBabelPluginMap,
   globalName: "__namespace__",
 }
 
 export const SCRIPT_LOAD_GLOBAL_BUNDLE_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  mainRelativePath: "./main.js",
+  mainRelativeUrl: "./main.js",
   globalName: "__namespace__",
 }
 
 export const REQUIRE_GLOBAL_BUNDLE_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  mainRelativePath: "./main.js",
+  mainRelativeUrl: "./main.js",
   globalName: "__namespace__",
 }
