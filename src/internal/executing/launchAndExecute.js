@@ -36,7 +36,7 @@ export const launchAndExecute = async ({
 
   measureDuration = false,
   mirrorConsole = false,
-  captureConsole = false, // TODO: rename collectConsole
+  captureConsole = false, // rename collectConsole ?
   collectPlatformName = false,
   collectPlatformVersion = false,
   inheritCoverage = false,
