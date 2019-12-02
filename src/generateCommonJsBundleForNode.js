@@ -1,4 +1,4 @@
-import { computeBabelPluginMapForPlatform } from "src/computeBabelPluginMapForPlatform.js"
+import { computeBabelPluginMapForPlatform } from "internal/generateGroupMap/computeBabelPluginMapForPlatform.js"
 import { generateCommonJsBundle } from "src/generateCommonJsBundle.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 

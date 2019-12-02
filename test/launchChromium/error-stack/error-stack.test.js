@@ -29,6 +29,7 @@ const result = await launchAndExecute({
   // sets executeLogger to off to avoid seeing an expected error in logs
   executeLogger: createLogger({ logLevel: "off" }),
   // stopPlatformAfterExecute: false,
+  fileRelativeUrl,
   launch: (options) =>
     launchChromium({
       ...LAUNCH_TEST_PARAMS,
@@ -37,7 +38,6 @@ const result = await launchAndExecute({
       compileServerOrigin,
       // headless: false,
     }),
-  fileRelativeUrl,
   captureConsole: true,
   mirrorConsole: true,
 })
