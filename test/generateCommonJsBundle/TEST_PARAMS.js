@@ -14,5 +14,5 @@ export const GENERATE_COMMONJS_BUNDLE_TEST_PARAMS = {
 
 export const REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
-  mainRelativePath: "./main.js",
+  mainRelativeUrl: "./main.js",
 }

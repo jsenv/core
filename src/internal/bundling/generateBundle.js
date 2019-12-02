@@ -82,12 +82,6 @@ export const generateBundle = async ({
     await removeDirectory(fileUrlToPath(bundleDirectoryUrl))
   }
 
-  if (filesystemCache === false && typeof jsenvDirectoryRelativeUrl === "undefined") {
-    // normalize bundleDirectoryRelativeUrl
-    bundleDirectoryRelativeUrl = urlToRelativeUrl(bundleDirectoryUrl, projectDirectoryUrl)
-    jsenvDirectoryRelativeUrl = `${bundleDirectoryRelativeUrl}.jsenv`
-  }
-
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
   env = {
     ...env,

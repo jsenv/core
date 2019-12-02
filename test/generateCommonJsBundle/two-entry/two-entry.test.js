@@ -9,17 +9,19 @@ import {
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs`
-const firstEntryFileRelativePath = `${testDirectoryRelativePath}a.js`
-const secondEntryFileRelativePath = `${testDirectoryRelativePath}b.js`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
+const firstEntryRelativeUrl = `${testDirectoryRelativeUrl}a.js`
+const secondEntryRelativeUrl = `${testDirectoryRelativeUrl}b.js`
 
 await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    a: firstEntryFileRelativePath,
-    b: secondEntryFileRelativePath,
+    a: `./${firstEntryRelativeUrl}`,
+    b: `./${secondEntryRelativeUrl}`,
   },
 })
 
@@ -27,7 +29,7 @@ await generateCommonJsBundle({
   const { namespace: actual } = await requireCommonJsBundle({
     ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
-    mainRelativePath: "./a.js",
+    mainRelativeUrl: "./a.js",
   })
   const expected = "a-shared"
   assert({ actual, expected })
@@ -36,7 +38,7 @@ await generateCommonJsBundle({
   const { namespace: actual } = await requireCommonJsBundle({
     ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
-    mainRelativePath: "./b.js",
+    mainRelativeUrl: "./b.js",
   })
   const expected = "b-shared"
   assert({ actual, expected })

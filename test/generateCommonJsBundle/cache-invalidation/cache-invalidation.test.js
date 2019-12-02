@@ -31,7 +31,7 @@ const mainFilePath = fileUrlToPath(mainFileUrl)
 const generateBundle = () =>
   generateCommonJsBundle({
     ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
-    logLevel: "debug",
+    // logLevel: "debug",
     // compileServerLogLevel: "debug",
     jsenvDirectoryRelativeUrl,
     bundleDirectoryRelativeUrl,

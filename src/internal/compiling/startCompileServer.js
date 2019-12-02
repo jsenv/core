@@ -337,12 +337,10 @@ export const STOP_REASON_PACKAGE_VERSION_CHANGED = {
 
 const serveProjectFiles = async ({
   projectDirectoryUrl,
-  importReplaceMap,
   request,
   projectFileRequestedCallback,
 }) => {
-  const { origin, ressource, method, headers } = request
-  const requestUrl = `${origin}${ressource}`
+  const { ressource, method, headers } = request
   const relativeUrl = ressource.slice(1)
 
   projectFileRequestedCallback({
@@ -352,19 +350,6 @@ const serveProjectFiles = async ({
 
   const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
   const filePath = fileUrlToPath(fileUrl)
-
-  if (requestUrl in importReplaceMap) {
-    const body = importReplaceMap[requestUrl]
-    return {
-      status: 200,
-      headers: {
-        "cache-control": "no-store",
-        "content-type": urlToContentType(requestUrl),
-        "content-length": Buffer.byteLength(body),
-      },
-      body,
-    }
-  }
 
   const responsePromise = serveFile(filePath, {
     method,

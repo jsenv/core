@@ -12,9 +12,10 @@ import {
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativePath)
-const bundleDirectoryRelativeUrl = `${testDirectoryRelativePath}dist/commonjs/`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
+const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const mainFilename = `${testDirectoryname}.js`
 
 const server = await startServer({
@@ -38,17 +39,18 @@ const server = await startServer({
 
 const bundle = await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
   bundleDirectoryRelativeUrl,
   entryPointMap: {
-    main: `./${testDirectoryRelativePath}${mainFilename}`,
+    main: `./${testDirectoryRelativeUrl}${mainFilename}`,
   },
 })
 
 {
   const actual = bundleToCompilationResult(bundle, {
     projectDirectoryUrl: testDirectoryUrl,
-    compiledFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.js`, testDirectoryUrl),
-    sourcemapFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.js.map`, testDirectoryUrl),
+    compiledFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.js`, jsenvCoreDirectoryUrl),
+    sourcemapFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.js.map`, jsenvCoreDirectoryUrl),
   })
   const expected = {
     contentType: "application/javascript",
