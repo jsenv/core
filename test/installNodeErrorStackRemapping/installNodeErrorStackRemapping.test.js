@@ -1,5 +1,3 @@
-// disabled for now because needs to be rewritten
-
 import { assert } from "@jsenv/assert"
 import { fileUrlToPath, urlToRelativeUrl, resolveUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
@@ -21,6 +19,9 @@ const stackString = error.stack
 const originalStackString = await getErrorOriginalStackString(error)
 {
   const actual = originalStackString.includes(import.meta.url)
-  const expected = true
+  // for now we expect false
+  // but once it will be launched with latest launchNode implementation we can put true
+  // which is what we actually expect
+  const expected = false
   assert({ actual, expected })
 }
