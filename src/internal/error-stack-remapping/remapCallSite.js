@@ -267,7 +267,10 @@ const operatingSystemPathToFileUrl = (osFilePath) => {
   if (isWindowsPath(osFilePath)) {
     return windowsPathToFileUrl(osFilePath)
   }
-  return `file://${osFilePath}`
+  if (osFilePath[0] === "/") {
+    return `file://${osFilePath}`
+  }
+  return `file:///${osFilePath}`
 }
 
 const isWindowsPath = (path) => startsWithWindowsDriveLetter(path) && path[2] === "\\"
