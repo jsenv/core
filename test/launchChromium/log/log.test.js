@@ -24,14 +24,12 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 
 const actual = await launchAndExecute({
   ...EXECUTION_TEST_PARAMS,
-  // stopPlatformAfterExecute: false,
   launch: (options) =>
     launchChromium({
       ...LAUNCH_TEST_PARAMS,
       ...options,
       outDirectoryRelativeUrl,
       compileServerOrigin,
-      // headless: false,
     }),
   fileRelativeUrl,
   captureConsole: true,

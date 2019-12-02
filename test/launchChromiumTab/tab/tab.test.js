@@ -13,9 +13,9 @@ import {
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativeUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
-const filename = `${testDirectoryBasename}.js`
+const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
@@ -25,7 +25,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 
 const actual = await launchAndExecute({
   ...EXECUTION_TEST_PARAMS,
-  // stopPlatformAfterExecute: false,
+  fileRelativeUrl,
   launch: (options) =>
     launchChromiumTab({
       ...LAUNCH_TEST_PARAMS,
@@ -34,9 +34,7 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       // headless: false,
     }),
-  captureConsole: false,
-  collectNamespace: true,
-  fileRelativeUrl,
+  // stopPlatformAfterExecute: false,
 })
 const expected = {
   status: "completed",

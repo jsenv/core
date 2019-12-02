@@ -1,60 +1,59 @@
-import { assert } from "@dmail/assert"
-import { createCancellationSource } from "@dmail/cancellation"
-import { launchChromium } from "../../index.js"
+import { basename } from "path"
+import { createCancellationSource } from "@jsenv/cancellation"
+import { assert } from "@jsenv/assert"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "internal/compiling/startCompileServer.js"
+import { launchAndExecute } from "internal/executing/launchAndExecute.js"
+import { launchChromium } from "../../../index.js"
 import {
-  CHROMIUM_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
-  CHROMIUM_LAUNCHER_TEST_PUPPETEER_PARAM,
-  CHROMIUM_LAUNCHER_TEST_EXECUTION_PARAM,
-  CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
-} from "../chromium-launcher-test-param.js"
-import { selfHrefToFolderRelativePath } from "../self-href-to-folder-relative-path.js"
+  START_COMPILE_SERVER_TEST_PARAMS,
+  EXECUTION_TEST_PARAMS,
+  LAUNCH_TEST_PARAMS,
+} from "../TEST_PARAMS.js"
 
-const { startCompileServer } = import.meta.require("@jsenv/compile-server")
-const { launchAndExecute } = import.meta.require("@jsenv/execution")
-
-const folderRelativePath = selfHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/throw-after-executed.js`
-
-const { origin: compileServerOrigin } = await startCompileServer({
-  ...CHROMIUM_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
-  compileIntoRelativePath,
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryBasename = basename(testDirectoryRelativePath)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const filename = `${testDirectoryBasename}.js`
+const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
+  ...START_COMPILE_SERVER_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
 })
-
 const { cancel, token: cancellationToken } = createCancellationSource()
 
-let errorCallbackParam
+let errorCallbackArg
 const actual = await launchAndExecute({
-  ...CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
-  ...CHROMIUM_LAUNCHER_TEST_PUPPETEER_PARAM,
-  ...CHROMIUM_LAUNCHER_TEST_EXECUTION_PARAM,
-  stopOnceExecuted: false,
+  ...EXECUTION_TEST_PARAMS,
   cancellationToken,
+  fileRelativeUrl,
   launch: (options) =>
     launchChromium({
-      ...CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
+      ...LAUNCH_TEST_PARAMS,
       ...options,
+      outDirectoryRelativeUrl,
       compileServerOrigin,
-      compileIntoRelativePath,
     }),
-  errorCallback: (param) => {
-    errorCallbackParam = param
+  stopPlatformAfterExecute: false,
+  platformErrorCallback: (argValue) => {
+    errorCallbackArg = argValue
     cancel("error") // kill chromium browser to let process end
   },
-  fileRelativePath,
   collectNamespace: false,
 })
+
 const expected = {
   status: "completed",
 }
 assert({ actual, expected })
 
 process.on("exit", () => {
-  assert({
-    actual: errorCallbackParam,
-    expected: {
-      error: new Error(errorCallbackParam.error.message),
-      timing: "after-execution",
-    },
-  })
+  const actual = errorCallbackArg
+  const expected = {
+    error: new Error(errorCallbackArg.error.message),
+    timing: "after-execution",
+  }
+  assert({ actual, expected })
 })

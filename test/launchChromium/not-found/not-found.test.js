@@ -1,51 +1,51 @@
-import { assert } from "@dmail/assert"
-import { launchChromium, launchChromiumProjectPathname } from "../../index.js"
+import { basename } from "path"
+import { createLogger } from "@jsenv/logger"
+import { assert } from "@jsenv/assert"
+import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "internal/compiling/startCompileServer.js"
+import { launchAndExecute } from "internal/executing/launchAndExecute.js"
+import { launchChromium } from "../../../index.js"
 import {
-  CHROMIUM_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
-  CHROMIUM_LAUNCHER_TEST_PUPPETEER_PARAM,
-  CHROMIUM_LAUNCHER_TEST_EXECUTION_PARAM,
-  CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
-} from "../chromium-launcher-test-param.js"
-import { selfHrefToFolderRelativePath } from "../self-href-to-folder-relative-path.js"
-import { assignNonEnumerableProperties } from "../assignNonEnumerableProperties.js"
+  START_COMPILE_SERVER_TEST_PARAMS,
+  EXECUTION_TEST_PARAMS,
+  LAUNCH_TEST_PARAMS,
+} from "../TEST_PARAMS.js"
 
-const { startCompileServer } = import.meta.require("@jsenv/compile-server")
-const { launchAndExecute } = import.meta.require("@jsenv/execution")
-
-const folderRelativePath = selfHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativePath = `${folderRelativePath}/not-found.js`
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
+const filename = `${testDirectoryname}.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const compileId = "otherwise"
-
-const { origin: compileServerOrigin } = await startCompileServer({
-  ...CHROMIUM_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
-  compileIntoRelativePath,
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
+  ...START_COMPILE_SERVER_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
+  compileGroupCount: 1, // force otherwise compileId
 })
 
 const actual = await launchAndExecute({
-  ...CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
-  ...CHROMIUM_LAUNCHER_TEST_PUPPETEER_PARAM,
-  ...CHROMIUM_LAUNCHER_TEST_EXECUTION_PARAM,
+  ...EXECUTION_TEST_PARAMS,
+  executeLogger: createLogger({ logLevel: "off" }),
+  fileRelativeUrl,
   launch: (options) =>
     launchChromium({
-      ...CHROMIUM_LAUNCHER_TEST_LAUNCH_PARAM,
+      ...LAUNCH_TEST_PARAMS,
       ...options,
+      outDirectoryRelativeUrl,
       compileServerOrigin,
-      compileIntoRelativePath,
     }),
-  fileRelativePath,
 })
 const expected = {
   status: "errored",
-  error: assignNonEnumerableProperties(
-    new Error(`imported module not found.
-href: file://${launchChromiumProjectPathname}${compileIntoRelativePath}/${compileId}${folderRelativePath}/foo.js
-importer href: file://${launchChromiumProjectPathname}${compileIntoRelativePath}/${compileId}${fileRelativePath}`),
-    {
-      code: "MODULE_NOT_FOUND_ERROR",
-      href: `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${folderRelativePath}/foo.js`,
-      importerHref: `${compileServerOrigin}${compileIntoRelativePath}/${compileId}${fileRelativePath}`,
-    },
-  ),
+  error: new Error(`imported module not found.
+--- url ---
+${resolveUrl(
+  `${outDirectoryRelativeUrl}${compileId}/${testDirectoryRelativeUrl}foo.js`,
+  jsenvCoreDirectoryUrl,
+)}
+--- importer url ---
+${resolveUrl(`${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`, jsenvCoreDirectoryUrl)}`),
 }
 assert({ actual, expected })

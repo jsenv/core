@@ -18,7 +18,6 @@ const testDirectoryBasename = basename(testDirectoryRelativePath)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
 const filename = `${testDirectoryBasename}.js`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
-
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,

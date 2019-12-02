@@ -1,6 +1,5 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { createLogger } from "@jsenv/logger"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
@@ -13,18 +12,18 @@ import {
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryBasename = basename(testDirectoryRelativeUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const filename = `${testDirectoryBasename}.js`
-const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
+
 const actual = await launchAndExecute({
   ...EXECUTION_TEST_PARAMS,
-  executeLogger: createLogger({ logLevel: "off" }),
   fileRelativeUrl,
   launch: (options) =>
     launchChromium({
@@ -33,17 +32,11 @@ const actual = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
-  captureConsole: true,
 })
 const expected = {
-  status: "errored",
-  error: new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
-  platformLog: actual.platformLog,
+  status: "completed",
+  namespace: {
+    default: 42,
+  },
 }
 assert({ actual, expected })
-
-{
-  const actual = actual.platformLog.includes("SPECIAL_STRING_UNLIKELY_TO_COLLIDE")
-  const expected = false
-  assert({ actual, expected })
-}
