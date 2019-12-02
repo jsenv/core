@@ -4,11 +4,11 @@ import { resolveDirectoryUrl, resolveUrl } from "src/internal/urlUtils.js"
 
 export const nodeImportSystemJsBundle = async ({
   projectDirectoryUrl,
-  testDirectoryRelativePath,
-  mainRelativePath,
+  testDirectoryRelativeUrl,
+  mainRelativeUrl,
 }) => {
-  const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativePath, projectDirectoryUrl)
-  const mainFileUrl = resolveUrl(mainRelativePath, testDirectoryUrl)
+  const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
+  const mainFileUrl = resolveUrl(mainRelativeUrl, testDirectoryUrl)
   const nodeSystem = createNodeSystem({
     resolveImport: (specifier, importer) => {
       return resolveImport({ specifier, importer })
