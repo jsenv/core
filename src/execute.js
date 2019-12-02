@@ -26,17 +26,14 @@ export const execute = async ({
   convertMap,
   compileGroupCount = 2,
 
-  launch,
-
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
 
+  launch,
   mirrorConsole = true,
   stopPlatformAfterExecute = true,
-  collectNamespace = false,
-  collectCoverage = false,
-  inheritCoverage = false,
+  ...rest
 }) => {
   const launchLogger = createLogger({ logLevel: launchLogLevel })
   const executeLogger = createLogger({ logLevel: executeLogLevel })
@@ -81,6 +78,8 @@ export const execute = async ({
       cancellationToken,
       launchLogger,
       executeLogger,
+
+      fileRelativeUrl,
       launch: (params) =>
         launch({
           projectDirectoryUrl,
@@ -91,10 +90,7 @@ export const execute = async ({
         }),
       mirrorConsole,
       stopPlatformAfterExecute,
-      fileRelativeUrl,
-      collectNamespace,
-      collectCoverage,
-      inheritCoverage,
+      ...rest,
     })
 
     if (result.status === "errored") {

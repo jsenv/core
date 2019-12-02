@@ -16,6 +16,8 @@ export const launchAndExecute = async ({
   cancellationToken = createCancellationToken(),
   launchLogger,
   executeLogger,
+
+  fileRelativeUrl,
   launch,
 
   // stopPlatformAfterExecute false by default because you want to keep browser alive
@@ -32,23 +34,20 @@ export const launchAndExecute = async ({
   platformErrorCallback = () => {},
   platformDisconnectCallback = () => {},
 
-  allocatedMs, // both launch + execute
-  measureDuration = false, // both launch + execute
+  measureDuration = false,
   mirrorConsole = false,
-  captureConsole = false,
+  captureConsole = false, // TODO: rename collectConsole
   collectPlatformName = false,
   collectPlatformVersion = false,
-  collectNamespace = false,
-  collectCoverage = false,
-  fileRelativeUrl,
   inheritCoverage = false,
-  executionId,
+  collectCoverage = false,
+  ...rest
 } = {}) => {
-  if (typeof launch !== "function") {
-    throw new TypeError(`launch launch must be a function, got ${launch}`)
-  }
   if (typeof fileRelativeUrl !== "string") {
     throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`)
+  }
+  if (typeof launch !== "function") {
+    throw new TypeError(`launch launch must be a function, got ${launch}`)
   }
 
   let executionResultTransformer = (executionResult) => executionResult
@@ -133,7 +132,10 @@ export const launchAndExecute = async ({
     cancellationToken,
     launchLogger,
     executeLogger,
+
+    fileRelativeUrl,
     launch,
+
     stopPlatformAfterExecute,
     allocatedMsBeforeForceStop,
     platformConsoleCallback,
@@ -141,11 +143,8 @@ export const launchAndExecute = async ({
     platformDisconnectCallback,
     platformStartedCallback,
     platformStoppedCallback,
-    allocatedMs,
-    fileRelativeUrl,
-    collectNamespace,
     collectCoverage,
-    executionId,
+    ...rest,
   })
 
   return executionResultTransformer(executionResult)
@@ -209,9 +208,12 @@ const computeRawExecutionResult = async ({ cancellationToken, allocatedMs, ...re
 
 const computeExecutionResult = async ({
   cancellationToken,
-  launch,
   launchLogger,
   executeLogger,
+
+  fileRelativeUrl,
+  launch,
+
   stopPlatformAfterExecute,
   allocatedMsBeforeForceStop,
   platformStartedCallback,
@@ -219,17 +221,15 @@ const computeExecutionResult = async ({
   platformConsoleCallback,
   platformErrorCallback,
   platformDisconnectCallback,
-  fileRelativeUrl,
-  collectNamespace,
-  collectCoverage,
-  executionId,
+
+  ...rest
 }) => {
   launchLogger.debug(`start a platform to execute a file.`)
 
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
-      const value = await launch({ cancellationToken, logger: launchLogger, collectCoverage })
+      const value = await launch({ cancellationToken, logger: launchLogger, ...rest })
       platformStartedCallback({ name: value.name, version: value.version })
       return value
     },
@@ -301,11 +301,7 @@ options: ${JSON.stringify(options, null, "  ")}`)
         })
       })
 
-      const executed = executeFile(fileRelativeUrl, {
-        collectNamespace,
-        collectCoverage,
-        executionId,
-      })
+      const executed = executeFile(fileRelativeUrl, rest)
       timing = TIMING_DURING_EXECUTION
 
       registerErrorCallback((error) => {
@@ -338,11 +334,11 @@ ${error.stack}`)
         executeLogger.error(`execution errored.
 --- error stack ---
 ${executionResult.error.stack}`)
-        return createErroredExecutionResult(executionResult, { collectCoverage })
+        return createErroredExecutionResult(executionResult, rest)
       }
 
       executeLogger.debug(`execution completed.`)
-      return createCompletedExecutionResult(executionResult, { collectNamespace, collectCoverage })
+      return createCompletedExecutionResult(executionResult, rest)
     },
   })
 

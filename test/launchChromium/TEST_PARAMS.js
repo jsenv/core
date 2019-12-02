@@ -6,13 +6,13 @@ export const START_COMPILE_SERVER_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
   compileGroupCount: 2,
-  compileServerLogLevel: "off",
+  compileServerLogLevel: "warn",
   babelPluginMap: testBabelPluginMap,
 }
 
 export const EXECUTION_TEST_PARAMS = {
-  launchLogger: createLogger({ logLevel: "info" }),
-  executeLogger: createLogger({ logLevel: "info" }),
+  launchLogger: createLogger({ logLevel: "warn" }),
+  executeLogger: createLogger({ logLevel: "warn" }),
   stopPlatformAfterExecute: true,
   collectNamespace: true,
   inheritCoverage: process.env.COVERAGE_ENABLED === "true",

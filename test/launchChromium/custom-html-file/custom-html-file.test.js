@@ -24,7 +24,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 
 const actual = await launchAndExecute({
   ...EXECUTION_TEST_PARAMS,
-  // stopPlatformAfterExecute: false,
+  fileRelativeUrl,
   launch: (options) =>
     launchChromium({
       ...LAUNCH_TEST_PARAMS,
@@ -33,14 +33,14 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       // headless: false,
     }),
-  fileRelativeUrl,
-  captureConsole: true,
-  collectNamespace: false,
+  // stopPlatformAfterExecute: false,
+  collectNamespace: true,
+  htmlFileUrl: import.meta.resolve("./html-file.html"),
 })
 const expected = {
   status: "completed",
-  platformLog: `foo
-bar
-`,
+  namespace: {
+    default: 42,
+  },
 }
 assert({ actual, expected })
