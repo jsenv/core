@@ -18,11 +18,11 @@ import {
 } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
-const filename = `${testDirectoryBasename}.js`
-const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+const filename = `${testDirectoryname}.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
 const filePath = fileUrlToPath(fileUrl)
 
@@ -34,6 +34,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 const actual = await launchAndExecute({
   ...EXECUTE_TEST_PARAMS,
   executeLogger: createLogger({ logLevel: "off" }),
+  fileRelativeUrl,
   launch: (options) =>
     launchNode({
       ...LAUNCH_TEST_PARAMS,
@@ -41,7 +42,6 @@ const actual = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
-  fileRelativeUrl,
 })
 const expectedError = new Error(`imported module parsing error.
 --- parsing error message ---

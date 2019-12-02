@@ -46,8 +46,8 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
   const importFile = async (specifier) => {
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
+      outDirectoryRelativeUrl,
       compileServerOrigin,
-      outDirectoryRemoteUrl,
       resolveImport: resolveImportScoped,
     })
     return makePromiseKeepNodeProcessAlive(nodeSystem.import(specifier))
@@ -65,8 +65,8 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
   ) => {
     const nodeSystem = await memoizedCreateNodeSystem({
       projectDirectoryUrl,
+      outDirectoryRelativeUrl,
       compileServerOrigin,
-      outDirectoryRemoteUrl,
       resolveImport: resolveImportScoped,
       executionId,
     })

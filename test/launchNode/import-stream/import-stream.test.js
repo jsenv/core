@@ -1,34 +1,37 @@
+import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { selfHrefToFolderRelativePath } from "../self-href-to-folder-relative-path.js"
-import { launchNode } from "../../index.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "internal/compiling/startCompileServer.js"
+import { launchAndExecute } from "internal/executing/launchAndExecute.js"
+import { launchNode } from "../../../index.js"
 import {
-  NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
-  NODE_LAUNCHER_TEST_LAUNCH_PARAM,
-  NODE_LAUNCHER_TEST_PARAM,
-} from "../node-launcher-test-param.js"
+  START_COMPILE_SERVER_TEST_PARAMS,
+  EXECUTE_TEST_PARAMS,
+  LAUNCH_TEST_PARAMS,
+} from "../TEST_PARAMS.js"
 
-const { startCompileServer } = import.meta.require("@jsenv/compile-server")
-const { launchAndExecute } = import.meta.require("@jsenv/execution")
-
-const folderRelativePath = selfHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
-const fileRelativeUrl = `${folderRelativePath}/import-stream.js`
-
-const { origin: compileServerOrigin } = await startCompileServer({
-  ...NODE_LAUNCHER_TEST_COMPILE_SERVER_PARAM,
-  compileIntoRelativePath,
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativePath)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const filename = `${testDirectoryname}.js`
+const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
+  ...START_COMPILE_SERVER_TEST_PARAMS,
+  jsenvDirectoryRelativeUrl,
 })
 
 const actual = await launchAndExecute({
-  ...NODE_LAUNCHER_TEST_LAUNCH_PARAM,
+  ...EXECUTE_TEST_PARAMS,
+  fileRelativeUrl,
   launch: (options) =>
     launchNode({
-      ...NODE_LAUNCHER_TEST_PARAM,
+      ...LAUNCH_TEST_PARAMS,
       ...options,
+      outDirectoryRelativeUrl,
       compileServerOrigin,
-      compileIntoRelativePath,
     }),
-  fileRelativeUrl,
 })
 const expected = {
   status: "completed",
