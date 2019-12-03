@@ -19,6 +19,13 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12.8.0
+      - name: Dump job context
+        env:
+          JOB_CONTEXT: ${{ toJson(job) }}
+        run: echo "$JOB_CONTEXT"
+      - name: setup linux fs watchers
+        if: contains(${{ job.runs-on }}, 'ubuntu')
+        run: sudo sysctl fs.inotify.max_user_watches=524288
       - name: npm install
         run: |
           npm config set //npm.pkg.github.com/:_authToken ${{ secrets.GITHUB_TOKEN }}

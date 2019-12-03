@@ -5,6 +5,6 @@
 
 export const removeDebuggerLogs = (consoleCalls) => {
   return consoleCalls.filter(({ text }) => {
-    return !text.includes(`Debugger listening on`)
+    return !text.includes(`Debugger listening on`) && !text.includes("Debugger attached")
   })
 }
