@@ -1,4 +1,4 @@
-const { execute, launchNode } = require("../../dist/commonjs/main.js")
+const { execute, launchNode } = require("@jsenv/core")
 const jsenvConfig = require("../../jsenv.config.js")
 
 execute({
