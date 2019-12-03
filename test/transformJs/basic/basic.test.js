@@ -8,11 +8,11 @@ import { transformResultToCompilationResult } from "internal/compiling/js-compil
 import { TRANSFORM_JS_TEST_PARAMS, TRANSFORM_RESULT_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryUrl)
-const fileBasename = `${testDirectoryBasename}.js`
-const originalFileUrl = import.meta.resolve(`./${fileBasename}`)
-const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativePath}.dist/${fileBasename}`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryUrl)
+const filename = `${testDirectoryname}.js`
+const originalFileUrl = import.meta.resolve(`./${filename}`)
+const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/${filename}`
 const sourcemapFileUrl = `${compiledFileUrl}.map`
 const filePath = fileUrlToPath(originalFileUrl)
 const originalFileContent = readFileSync(filePath).toString()
@@ -32,9 +32,9 @@ const actual = await transformResultToCompilationResult(transformResult, {
 const expected = {
   compiledSource: actual.compiledSource,
   contentType: "application/javascript",
-  sources: [`../${fileBasename}`],
+  sources: [`../../../${filename}`],
   sourcesContent: [originalFileContent],
-  assets: [`../${fileBasename}.map`],
+  assets: [`../${filename}.map`],
   assetsContent: [actual.assetsContent[0]],
 }
 assert({ actual, expected })
@@ -43,7 +43,7 @@ assert({ actual, expected })
   const actual = JSON.parse(actual.assetsContent[0])
   const expected = {
     version: 3,
-    sources: [`../${fileBasename}`],
+    sources: [`../../${filename}`],
     names: actual.names,
     mappings: actual.mappings,
   }

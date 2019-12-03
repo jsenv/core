@@ -56,7 +56,8 @@ export const transformResultToCompilationResult = async (
             return
           }
 
-          sources.push(fileUrlToRelativePath(sourceFileUrl, metaJsonFileUrl))
+          map.sources[index] = fileUrlToRelativePath(sourceFileUrl, sourcemapFileUrl)
+          sources[index] = fileUrlToRelativePath(sourceFileUrl, metaJsonFileUrl)
 
           if (map.sourcesContent && map.sourcesContent[index]) {
             sourcesContent[index] = map.sourcesContent[index]

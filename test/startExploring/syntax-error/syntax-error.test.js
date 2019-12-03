@@ -12,13 +12,13 @@ import { openBrowserPage } from "../openBrowserPage.js"
 import { START_EXPLORING_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const htmlFileUrl = import.meta.resolve("../template.html")
 const htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, jsenvCoreDirectoryUrl)
-const filename = `${testDirectoryBasename}.main.js`
-const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
+const filename = `${testDirectoryname}.main.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const filePath = fileUrlToPath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl))
 
 const { origin: browserExplorerServerOrigin, compileServerOrigin } = await startExploring({
