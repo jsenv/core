@@ -1,12 +1,11 @@
-import { jsenvTestingProjectPath } from "../../src/jsenv-testing-project.js"
-import { testBabelPluginMap } from "../test-babel-plugin-map.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
 export const CONTINUOUS_TESTING_TEST_PARAM = {
-  projectPath: jsenvTestingProjectPath,
+  projectDirectory: jsenvCoreDirectoryUrl,
   babelPluginMap: testBabelPluginMap,
-  executionLogLevel: "off",
   collectNamespace: true,
   measureDuration: false,
   captureConsole: false,
-  // cleanCompileInto: true,
+  // jsenvDirectoryClean: true,
 }

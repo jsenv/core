@@ -9,7 +9,6 @@ import {
   startServer,
   firstService,
   serveFile,
-  urlToContentType,
 } from "@jsenv/server"
 import { createLogger } from "@jsenv/logger"
 import {

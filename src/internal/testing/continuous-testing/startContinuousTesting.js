@@ -9,7 +9,7 @@ import {
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { hrefToPathname } from "@jsenv/href"
 import { createLogger } from "@jsenv/logger"
-import { resolveUrl, pathToDirectoryUrl, sameOrigin } from "internal/urlUtils.js"
+import { pathToDirectoryUrl, sameOrigin } from "internal/urlUtils.js"
 import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { generateExecutionSteps } from "internal/executing/generateExecutionSteps.js"
 import { executeConcurrently } from "internal/executing/executeConcurrently.js"
@@ -248,7 +248,6 @@ export const startContinuousTesting = async ({
             jsenvDirectoryRelativeUrl,
             outDirectoryRelativeUrl,
             compileServerOrigin,
-            importMapFileUrl,
             importDefaultExtension,
 
             maxParallelExecution,
@@ -350,7 +349,6 @@ export const startContinuousTesting = async ({
       jsenvDirectoryRelativeUrl,
       outDirectoryRelativeUrl,
       compileServerOrigin,
-      importMapFileUrl,
       importDefaultExtension,
 
       maxParallelExecution,

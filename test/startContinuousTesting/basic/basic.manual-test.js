@@ -1,27 +1,27 @@
-// import { assert } from "@jsenv/assert"
-// import { launchChromium } from "@jsenv/chromium-launcher"
-import { launchNode } from "@jsenv/node-launcher"
-import { fileHrefToFolderRelativePath } from "../../file-href-to-folder-relative-path.js"
-import { startContinuousTesting } from "../../../index.js"
-import { CONTINUOUS_TESTING_TEST_PARAM } from "../continuous-testing-test-param.js"
+import { startContinuousTesting } from "internal/testing/continuous-testing/startContinuousTesting.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { launchNode, launchChromium } from "../../../index.js"
+import { CONTINUOUS_TESTING_TEST_PARAM } from "../TEST_PARAMS.js"
 
-const folderRelativePath = fileHrefToFolderRelativePath(import.meta.url)
-const compileIntoRelativePath = `${folderRelativePath}/.dist`
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 
-const executeDescription = {
-  [`${folderRelativePath}/*.spec.js`]: {
+const testPlan = {
+  [`${testDirectoryRelativeUrl}/*.spec.js`]: {
     node: {
       launch: launchNode,
     },
-    // chromium: {
-    //   launch: launchChromium,
-    // },
+    chromium: {
+      launch: launchChromium,
+    },
   },
 }
 
 await startContinuousTesting({
   ...CONTINUOUS_TESTING_TEST_PARAM,
-  compileIntoRelativePath,
+  jsenvDirectoryRelativeUrl,
   defaultAllocatedMsPerExecution: Infinity,
-  executeDescription,
+  testPlan,
 })
