@@ -24,7 +24,7 @@ jobs:
           JOB_CONTEXT: ${{ toJson(job) }}
         run: echo "$JOB_CONTEXT"
       - name: setup linux fs watchers
-        if: contains(${{ job }}, 'ubuntu')
+        if: contains(job, 'ubuntu')
         run: sudo sysctl fs.inotify.max_user_watches=524288
       - name: npm install
         run: |
