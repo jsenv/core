@@ -1,22 +1,25 @@
+import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "src/internal/urlUtils.js"
-import { startCompileServer } from "../../../index.js"
+import { COMPILE_ID_OTHERWISE } from "internal/CONSTANTS.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 import { fetch } from "../fetch.js"
 
-const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
-const fileUrl = resolveUrl("./generator.js", import.meta.url)
-const fileRelativeUrl = urlToRelativeUrl(
-  fileUrl,
-  COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,
-)
-const compileServer = await startCompileServer({
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativePath)
+const filename = `${testDirectoryname}.js`
+const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
-  compileDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
 })
-const fileServerUrl = `${compileServer.origin}/.dist/otherwise/${fileRelativeUrl}`
-
+const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
 const response = await fetch(fileServerUrl)
+
 const actual = {
   status: response.status,
   statusText: response.statusText,

@@ -7,16 +7,15 @@ import { fetch } from "../fetch.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
-  compileServerLogLevel: "debug",
-  projectDirectoryUrl,
+  compileServerLogLevel: "warn",
   jsenvDirectoryRelativeUrl,
 })
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodePlatform.js`
 const response = await fetch(fileServerUrl)
+
 const actual = {
   status: response.status,
   statusText: response.statusText,

@@ -1,34 +1,34 @@
+import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "src/internal/urlUtils.js"
-import { startCompileServer, convertCommonJsWithBabel } from "../../../index.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "internal/compiling/startCompileServer.js"
+import { convertCommonJsWithBabel } from "../../../index.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 import { fetch } from "../fetch.js"
 
-const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
-const fileUrl = resolveUrl("./file.js", import.meta.url)
-const fileRelativeUrl = urlToRelativeUrl(
-  fileUrl,
-  COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,
-)
-const compileDirectoryRelativeUrl = urlToRelativeUrl(
-  compileDirectoryUrl,
-  COMPILE_SERVER_TEST_PARAMS.projectDirectoryUrl,
-)
-const compileServer = await startCompileServer({
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativePath)
+const filename = `${testDirectoryname}.js`
+const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const compileId = "best"
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
-  compileDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
   convertMap: {
     [fileRelativeUrl]: (options) =>
       convertCommonJsWithBabel({ ...options, processEnvNodeEnv: "production" }),
   },
 })
-const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativeUrl}best/${fileRelativeUrl}`
+const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
+const response = await fetch(fileServerUrl)
 
-const fileResponse = await fetch(fileServerUrl)
 const actual = {
-  status: fileResponse.status,
-  statusText: fileResponse.statusText,
-  headers: fileResponse.headers,
+  status: response.status,
+  statusText: response.statusText,
+  headers: response.headers,
 }
 const expected = {
   status: 200,

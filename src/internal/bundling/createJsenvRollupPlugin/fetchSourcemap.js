@@ -39,7 +39,7 @@ ${okValidation.message}`)
 
 const generateSourcemapFromString = async (
   sourcemapString,
-  { cancellationToken, logger, sourcemapUrl, moduleUrl },
+  { logger, sourcemapUrl, moduleUrl },
 ) => {
   const map = parseSourcemapString(sourcemapString, { logger, sourcemapUrl, moduleUrl })
 
@@ -47,21 +47,6 @@ const generateSourcemapFromString = async (
     return null
   }
 
-  // ensure sourcesContent exists and has the source
-  // so that rollup figure them and bundleToCompilationResult works
-  if (!map.sourcesContent) {
-    map.sourcesContent = []
-  }
-  await Promise.all(
-    map.sources.map(async (source, index) => {
-      if (typeof map.sourcesContent[index] === "string") {
-        return
-      }
-
-      const sourceUrl = resolveUrl(source, sourcemapUrl)
-      map.sourcesContent[index] = await fetchSource(sourceUrl, { cancellationToken, logger })
-    }),
-  )
   return map
 }
 
@@ -92,17 +77,4 @@ ${moduleUrl}`,
     }
     throw e
   }
-}
-
-const fetchSource = async (sourceUrl, { cancellationToken, logger }) => {
-  const sourceResponse = await fetchUrl(sourceUrl, { cancellationToken })
-  const okValidation = validateResponseStatusIsOk(sourceResponse)
-
-  if (!okValidation.valid) {
-    logger.warn(`unexpected response for sourcemap source file:
-${okValidation.message}`)
-    return null
-  }
-
-  return sourceResponse.body
 }
