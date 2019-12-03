@@ -1,19 +1,23 @@
+import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 import { fetch } from "../fetch.js"
 
-const compileDirectoryUrl = resolveDirectoryUrl("./.dist", import.meta.url)
-const fileUrl = resolveUrl("./asset.js", import.meta.url)
-const fileRelativeUrl = urlToRelativeUrl(fileUrl, jsenvCoreDirectoryUrl)
-const compileDirectoryRelativeUrl = urlToRelativeUrl(compileDirectoryUrl, jsenvCoreDirectoryUrl)
-const compileServer = await startCompileServer({
+const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativePath)
+const filename = `${testDirectoryname}.js`
+const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const compileId = "otherwise"
+const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
-  compileDirectoryUrl,
+  jsenvDirectoryRelativeUrl,
 })
-const fileServerUrl = `${compileServer.origin}/${compileDirectoryRelativeUrl}otherwise/${fileRelativeUrl}`
+const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
 
 await fetch(fileServerUrl)
 const response = await fetch(`${fileServerUrl}__asset__/meta.json`)
@@ -33,10 +37,10 @@ const expected = {
   },
   body: {
     contentType: "application/javascript",
-    sources: ["../../../../../../asset.js"],
+    sources: [`../../../../../../../${filename}`],
     sourcesEtag: ['"7c-b5QcrFoIrKrXSr5F415m5RCd6uY"'],
-    assets: ["asset.js.map"],
-    assetsEtag: ['"e6-WSc+kzLNmogsMVxgzgNFxh03Y8k"'],
+    assets: [`../${filename}.map`],
+    assetsEtag: ['"12e-uk+aMECKQ1uFW5ZsxhWvFTNPBvo"'],
     createdMs: actual.body.createdMs,
     lastModifiedMs: actual.body.lastModifiedMs,
   },
