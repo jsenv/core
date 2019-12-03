@@ -31,6 +31,7 @@
   },
   "scripts": {
     "test": "node ./script/test/test.js",
+    "test-js-transform": "node ./script/test/test-js-transform.js",
     "test-compile-server": "node ./script/test/test-compile-server.js",
     "test-exploring": "node ./script/test/test-exploring.js",
     "test-commonjs-bundling": "node ./script/test/test-commonjs-bundling.js",

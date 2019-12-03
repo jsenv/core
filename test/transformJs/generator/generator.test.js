@@ -1,35 +1,40 @@
 import { readFileSync } from "fs"
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { fileUrlToPath, urlToRelativeUrl, resolveDirectoryUrl } from "src/internal/urlUtils.js"
-import { transformJs } from "src/internal/compile-server/js-compilation-service/transformJs.js"
-import { transformResultToCompilationResult } from "src/internal/compile-server/js-compilation-service/transformResultToCompilationResult.js"
+import { urlToRelativeUrl, resolveDirectoryUrl, fileUrlToPath } from "internal/urlUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { transformJs } from "internal/compiling/js-compilation-service/transformJs.js"
+import { transformResultToCompilationResult } from "internal/compiling/js-compilation-service/transformResultToCompilationResult.js"
 import { TRANSFORM_JS_TEST_PARAMS, TRANSFORM_RESULT_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryBasename = basename(testDirectoryUrl)
-const fileBasename = `${testDirectoryBasename}.js`
-const fileUrl = import.meta.resolve(`./${fileBasename}`)
-const fileRelativeUrl = urlToRelativeUrl(fileUrl, TRANSFORM_JS_TEST_PARAMS.projectDirectoryUrl)
-const filePath = fileUrlToPath(fileUrl)
-const fileContent = readFileSync(filePath).toString()
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryUrl)
+const filename = `${testDirectoryname}.js`
+const originalFileUrl = import.meta.resolve(`./${filename}`)
+const compiledFileUrl = `${jsenvCoreDirectoryUrl}${testDirectoryRelativeUrl}.jsenv/out/${filename}`
+const sourcemapFileUrl = `${compiledFileUrl}.map`
+const filePath = fileUrlToPath(originalFileUrl)
+const originalFileContent = readFileSync(filePath).toString()
 
 const transformResult = await transformJs({
   ...TRANSFORM_JS_TEST_PARAMS,
-  code: fileContent,
-  url: fileUrl,
+  code: originalFileContent,
+  url: originalFileUrl,
 })
 const actual = await transformResultToCompilationResult(transformResult, {
   ...TRANSFORM_RESULT_TEST_PARAMS,
-  source: fileContent,
-  sourceUrl: fileUrl,
+  originalFileContent,
+  originalFileUrl,
+  compiledFileUrl,
+  sourcemapFileUrl,
 })
 const expected = {
   compiledSource: actual.compiledSource,
   contentType: "application/javascript",
-  sources: [fileRelativeUrl],
-  sourcesContent: [fileContent],
-  assets: [`${fileBasename}.map`],
+  sources: [`../../../${filename}`],
+  sourcesContent: [originalFileContent],
+  assets: [`../${filename}.map`],
   assetsContent: [actual.assetsContent[0]],
 }
 assert({ actual, expected })
