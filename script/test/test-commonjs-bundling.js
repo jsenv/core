@@ -1,8 +1,8 @@
 const { executeTestPlan, launchNode } = require("@jsenv/core")
-const { projectDirectoryPath } = require("../../jsenv.config.js")
+const jsenvConfig = require("../../jsenv.config.js")
 
 executeTestPlan({
-  projectDirectoryPath,
+  ...jsenvConfig,
   testPlan: {
     "test/generateCommonJsBundle/**/*.test.js": {
       node: {

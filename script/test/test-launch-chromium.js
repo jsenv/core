@@ -1,16 +1,15 @@
-const { test } = require("@jsenv/testing")
-const { launchNode } = require("@jsenv/node-launcher")
-const { projectPath } = require("../../jsenv.config.js")
+const { executeTestPlan, launchNode } = require("@jsenv/core")
+const jsenvConfig = require("../../jsenv.config.js")
 
-test({
-  projectPath,
-  executeDescription: {
-    "/test/launchChromium/**/*.test.js": {
+executeTestPlan({
+  ...jsenvConfig,
+  testPlan: {
+    "test/launchChromium/**/*.test.js": {
       node: {
         launch: launchNode,
       },
     },
-    "/test/launchChromiumTab/**/*.test.js": {
+    "test/launchChromiumTab/**/*.test.js": {
       node: {
         launch: launchNode,
       },
