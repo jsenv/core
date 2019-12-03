@@ -23,7 +23,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 
-const actual = await launchAndExecute({
+const { status, consoleCalls } = await launchAndExecute({
   ...EXECUTE_TEST_PARAMS,
   fileRelativeUrl,
   launch: (options) =>
@@ -36,16 +36,18 @@ const actual = await launchAndExecute({
   captureConsole: true,
   collectNamespace: false,
 })
-actual.consoleCalls = removeDebuggerLogs(actual.consoleCalls)
-const expected = {
-  status: "completed",
-  consoleCalls: [
-    {
-      type: "log",
-      text: `foo
-bar
-`,
-    },
-  ],
+
+{
+  const actual = status
+  const expected = "completed"
+  assert({ actual, expected })
 }
-assert({ actual, expected })
+{
+  const actual = removeDebuggerLogs(consoleCalls).reduce((previous, { text }) => {
+    return `${previous}${text}`
+  }, "")
+  const expected = `foo
+bar
+`
+  assert({ actual, expected })
+}
