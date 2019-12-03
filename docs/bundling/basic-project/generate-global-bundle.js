@@ -1,4 +1,4 @@
-const { generateGlobalBundle } = require("@jsenv/bundling")
+const { generateGlobalBundle } = require("@jsenv/core")
 
 generateGlobalBundle({
   projectDirectoryPath: __dirname,

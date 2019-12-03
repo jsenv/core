@@ -1,4 +1,4 @@
-const { generateSystemJsBundle } = require("@jsenv/bundling")
+const { generateSystemJsBundle } = require("@jsenv/core")
 
 generateSystemJsBundle({
   projectDirectoryPath: __dirname,

@@ -1,9 +1,8 @@
 /* eslint-disable import/no-unresolved */
-const { execute } = require("@jsenv/execution")
-const { launchNode } = require("@jsenv/node-launcher")
+const { execute, launchNode } = require("@jsenv/core")
 
 execute({
   projectPath: __dirname,
   launch: launchNode,
-  fileRelativeUrl: `/${process.argv[2]}`,
+  fileRelativeUrl: process.argv[2],
 })

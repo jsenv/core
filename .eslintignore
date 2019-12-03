@@ -5,7 +5,6 @@
 /docs/bundling/basic-project/node_modules/
 /docs/execution/basic-project/dist/
 /docs/execution/basic-project/node_modules/
-/docs/exploring/basic-project/start-exploring-server.js
 /helpers/chromium/
 /node_modules/
 /src/**/s.js

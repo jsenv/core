@@ -1,10 +1,9 @@
 /* eslint-disable import/no-unresolved */
-const { execute } = require("@jsenv/execution")
-const { launchChromium } = require("@jsenv/chromium-launcher")
+const { execute, launchChromium } = require("@jsenv/core")
 
 execute({
   projectPath: __dirname,
   launch: launchChromium,
-  fileRelativeUrl: `/${process.argv[2]}`,
+  fileRelativeUrl: process.argv[2],
   stopOnceExecuted: true,
 })

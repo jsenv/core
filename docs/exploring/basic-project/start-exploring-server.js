@@ -1,10 +1,10 @@
 // eslint-disable-next-line import/no-unresolved
-const { startExploringServer } = require("@jsenv/exploring-server")
+const { startExploring } = require("@jsenv/core")
 
-startExploringServer({
-  projectPath: __dirname,
-  explorableMap: {
-    "/src/*.js": true,
+startExploring({
+  projectDirectoryPath: __dirname,
+  explorableConfig: {
+    "./src/*.js": true,
   },
   port: 3456,
 })

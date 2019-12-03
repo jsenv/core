@@ -1,11 +1,9 @@
-const { executeTestPlan } = require("@jsenv/testing")
-const { launchNode } = require("@jsenv/node-launcher")
-const { launchChromium } = require("@jsenv/chromium-launcher")
+const { executeTestPlan, launchNode, launchChromium } = require("@jsenv/core")
 
 executeTestPlan({
-  projectPath: __dirname,
-  executeDescription: {
-    "/test/*.test.js": {
+  projectDirectoryPath: __dirname,
+  testPlan: {
+    "test/*.test.js": {
       browser: {
         launch: launchChromium,
       },
@@ -13,20 +11,20 @@ executeTestPlan({
         launch: launchNode,
       },
     },
-    "/test/*.test.browser.js": {
+    "test/*.test.browser.js": {
       browser: {
         launch: launchChromium,
       },
     },
-    "/test/*.test.node.js": {
+    "test/*.test.node.js": {
       node: {
         launch: launchNode,
       },
     },
   },
   coverage: process.argv.includes("--cover"),
-  coveraegConfig: {
-    "/src/**/*.js": true,
+  coverageConfig: {
+    "src/**/*.js": true,
   },
   coverageHtmlDirectory: true,
   coverageHtmlDirectoryRelativeUrl: "./coverage/",
