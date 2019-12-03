@@ -40,7 +40,7 @@ const expected = {
     sources: [`../../../../../../../${filename}`],
     sourcesEtag: ['"7c-b5QcrFoIrKrXSr5F415m5RCd6uY"'],
     assets: [`../${filename}.map`],
-    assetsEtag: ['"12e-uk+aMECKQ1uFW5ZsxhWvFTNPBvo"'],
+    assetsEtag: ['"f0-bxeoZF9Aw0804N/SDnLk8R1QdGY"'],
     createdMs: actual.body.createdMs,
     lastModifiedMs: actual.body.lastModifiedMs,
   },

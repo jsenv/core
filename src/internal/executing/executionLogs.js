@@ -106,7 +106,7 @@ const appendConsole = (consoleCalls) => {
 
   const consoleOutput = consoleCalls.reduce((previous, { text }) => {
     return `${previous}${text}`
-  })
+  }, "")
 
   const consoleOutputTrimmed = consoleOutput.trim()
   if (consoleOutputTrimmed === "") return ""

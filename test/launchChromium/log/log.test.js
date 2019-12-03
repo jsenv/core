@@ -41,7 +41,11 @@ const expected = {
     {
       type: "log",
       text: `foo
-bar
+`,
+    },
+    {
+      type: "log",
+      text: `bar
 `,
     },
   ],
