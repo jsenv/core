@@ -7486,7 +7486,7 @@ const readProjectImportMap = async ({
     };
   }
 
-  if (importMapForProject.imports) {
+  if (importMapForProject.imports && jsenvProjectDirectoryUrl !== jsenvCoreDirectoryUrl) {
     const jsenvCoreRelativeUrlForProject = importMapForProject.imports[jsenvCoreImportKey];
 
     if (jsenvCoreRelativeUrlForProject && jsenvCoreRelativeUrlForProject !== jsenvCoreRelativeUrlForJsenvProject) {
@@ -10686,7 +10686,7 @@ const promiseTrackRace = promiseArray => {
 
 const execute = async ({
   cancellationToken = createCancellationTokenForProcessSIGINT(),
-  logLevel = "off",
+  logLevel = "warn",
   compileServerLogLevel = logLevel,
   launchLogLevel = logLevel,
   executeLogLevel = logLevel,
@@ -10862,16 +10862,48 @@ const pathToDirectoryUrl$3 = path => {
 const fileUrlToPath$3 = fileUrl => {
   return url$2.fileURLToPath(fileUrl);
 };
-const fileUrlToRelativePath$3 = (fileUrl, baseUrl) => {
+const urlToRelativeUrl$1 = (url, baseUrl) => {
   if (typeof baseUrl !== "string") {
     throw new TypeError(`baseUrl must be a string, got ${baseUrl}`);
   }
 
-  if (fileUrl.startsWith(baseUrl)) {
-    return fileUrl.slice(baseUrl.length);
+  if (url.startsWith(baseUrl)) {
+    return url.slice(baseUrl.length);
   }
 
-  return fileUrl;
+  return url;
+};
+
+const compareFilePath = (leftPath, rightPath) => {
+  const leftPartArray = leftPath.split("/");
+  const rightPartArray = rightPath.split("/");
+  const leftLength = leftPartArray.length;
+  const rightLength = rightPartArray.length;
+  const maxLength = Math.max(leftLength, rightLength);
+  let i = 0;
+
+  while (i < maxLength) {
+    const leftPartExists = i in leftPartArray;
+    const rightPartExists = i in rightPartArray; // longer comes first
+
+    if (!leftPartExists) return +1;
+    if (!rightPartExists) return -1;
+    const leftPartIsLast = i === leftPartArray.length - 1;
+    const rightPartIsLast = i === rightPartArray.length - 1; // folder comes first
+
+    if (leftPartIsLast && !rightPartIsLast) return +1;
+    if (!leftPartIsLast && rightPartIsLast) return -1;
+    const leftPart = leftPartArray[i];
+    const rightPart = rightPartArray[i];
+    i++; // local comparison comes first
+
+    const comparison = leftPart.localeCompare(rightPart);
+    if (comparison !== 0) return comparison;
+  }
+
+  if (leftLength < rightLength) return +1;
+  if (leftLength > rightLength) return -1;
+  return 0;
 };
 
 const collectFiles = async ({
@@ -10897,13 +10929,13 @@ const collectFiles = async ({
   const specifierMetaMapNormalized = normalizeSpecifierMetaMap(specifierMetaMap, rootDirectoryUrl);
   const matchingFileResultArray = [];
 
-  const visitDirectory = async (directoryUrl, depth) => {
+  const visitDirectory = async directoryUrl => {
     const directoryPath = fileUrlToPath$3(directoryUrl);
     const directoryItems = await createOperation$1({
       cancellationToken,
       start: () => readDirectory$1(directoryPath)
     });
-    await Promise.all(directoryItems.map(async (directoryItem, index) => {
+    await Promise.all(directoryItems.map(async directoryItem => {
       const directoryItemUrl = `${directoryUrl}${directoryItem}`;
       const directoryItemPath = fileUrlToPath$3(directoryItemUrl);
       const lstat = await createOperation$1({
@@ -10922,7 +10954,7 @@ const collectFiles = async ({
           return;
         }
 
-        await visitDirectory(subDirectoryUrl, depth + 1);
+        await visitDirectory(subDirectoryUrl);
         return;
       }
 
@@ -10932,41 +10964,42 @@ const collectFiles = async ({
           specifierMetaMap: specifierMetaMapNormalized
         });
         if (!predicate(meta)) return;
-        const relativePath = fileUrlToRelativePath$3(directoryItemUrl, rootDirectoryUrl);
+        const relativeUrl = urlToRelativeUrl$1(directoryItemUrl, rootDirectoryUrl);
         const operationResult = await createOperation$1({
           cancellationToken,
           start: () => matchingFileOperation({
             cancellationToken,
-            relativePath,
+            relativeUrl,
             meta,
             lstat
           })
         });
         matchingFileResultArray.push({
-          relativePath,
+          relativeUrl,
           meta,
           lstat,
-          operationResult,
-          index,
-          depth
+          operationResult
         });
         return;
-      } // we ignore symlink because entryFolder is recursively traversed
+      } // we ignore symlink because recursively traversed
       // so symlinked file will be discovered.
-      // Moreover if they lead outside of entryFolder it can become a problem
+      // Moreover if they lead outside of directoryPath it can become a problem
       // like infinite recursion of whatever.
       // that we could handle using an object of pathname already seen but it will be useless
-      // because entryFolder is recursively traversed
+      // because directoryPath is recursively traversed
 
     }));
   };
 
-  await visitDirectory(rootDirectoryUrl, 0); // When we operate on thoose files later it feels more natural
+  await visitDirectory(rootDirectoryUrl); // When we operate on thoose files later it feels more natural
   // to perform operation in the same order they appear in the filesystem.
   // It also allow to get a predictable return value.
   // For that reason we sort matchingFileResultArray
 
-  return sortMatchingFileResultArray(matchingFileResultArray);
+  matchingFileResultArray.sort((leftFile, rightFile) => {
+    return compareFilePath(leftFile.relativeUrl, rightFile.relativeUrl);
+  });
+  return matchingFileResultArray;
 };
 
 const readDirectory$1 = pathname => new Promise((resolve, reject) => {
@@ -10988,19 +11021,6 @@ const readLStat = pathname => new Promise((resolve, reject) => {
     }
   });
 });
-
-const sortMatchingFileResultArray = matchingFileResultArray => matchingFileResultArray.sort(compareMatchingFileResult);
-
-const compareMatchingFileResult = (leftMatchingFileResult, rightMatchingFileResult) => {
-  const leftDepth = leftMatchingFileResult.depth;
-  const rightDepth = rightMatchingFileResult.depth;
-
-  if (leftDepth !== rightDepth) {
-    return rightDepth - leftDepth;
-  }
-
-  return leftMatchingFileResult.index - rightMatchingFileResult.index;
-};
 
 const generateFileExecutionSteps = ({
   fileRelativeUrl,
@@ -11050,11 +11070,11 @@ const generateExecutionSteps = async (plan, {
   });
   const executionSteps = [];
   fileResultArray.forEach(({
-    relativePath,
+    relativeUrl,
     meta
   }) => {
     const fileExecutionSteps = generateFileExecutionSteps({
-      fileRelativeUrl: relativePath,
+      fileRelativeUrl: relativeUrl,
       filePlan: meta.filePlan
     });
     executionSteps.push(...fileExecutionSteps);
@@ -11207,8 +11227,8 @@ const listRelativeFileUrlToCover = async ({
     }) => cover
   });
   return matchingFileResultArray.map(({
-    relativePath
-  }) => relativePath);
+    relativeUrl
+  }) => relativeUrl);
 };
 
 const executionReportToCoverageMap = report => {
@@ -11275,7 +11295,7 @@ const createDisconnectedLog = ({
   const icon = cross;
   return `
 ${color}${icon} disconnected during execution.${ansiResetSequence}
-file: ${fileRelativeUrl.slice(1)}
+file: ${fileRelativeUrl}
 platform: ${formatPlatform({
     platformName,
     platformVersion
@@ -11297,7 +11317,7 @@ const createTimedoutLog = ({
   const icon = cross;
   return `
 ${color}${icon} execution takes more than ${allocatedMs}ms.${ansiResetSequence}
-file: ${fileRelativeUrl.slice(1)}
+file: ${fileRelativeUrl}
 platform: ${formatPlatform({
     platformName,
     platformVersion
@@ -11319,7 +11339,7 @@ const createErroredLog = ({
   const icon = cross;
   return `
 ${color}${icon} error during execution.${ansiResetSequence}
-file: ${fileRelativeUrl.slice(1)}
+file: ${fileRelativeUrl}
 platform: ${formatPlatform({
     platformName,
     platformVersion
@@ -11347,7 +11367,7 @@ const createCompletedLog = ({
   const icon = checkmark;
   return `
 ${color}${icon} execution completed.${ansiResetSequence}
-file: ${fileRelativeUrl.slice(1)}
+file: ${fileRelativeUrl}
 platform: ${formatPlatform({
     platformName,
     platformVersion
@@ -11381,7 +11401,7 @@ const appendConsole = consoleCalls => {
   const consoleOutputTrimmed = consoleOutput.trim();
   if (consoleOutputTrimmed === "") return "";
   return `
-${grey}---------- console ----------${ansiResetSequence}
+${grey}-------- console --------${ansiResetSequence}
 ${consoleOutputTrimmed}
 ${grey}-------------------------${ansiResetSequence}`;
 };
@@ -11864,12 +11884,21 @@ const generateCoverageTextLog = ({
   report.execute(context);
 };
 
+const jsenvCoverageConfig = {
+  "./index.js": true,
+  "./src/**/*.js": true,
+  "./**/*.test.*": false,
+  // contains .test. -> nope
+  "./**/test/": false // inside a test folder -> nope,
+
+};
+
 /* eslint-disable import/max-dependencies */
 const executeTestPlan = async ({
   cancellationToken = createCancellationTokenForProcessSIGINT(),
-  logLevel,
-  compileServerLogLevel = "off",
-  launchLogLevel = "off",
+  logLevel = "info",
+  compileServerLogLevel = "warn",
+  launchLogLevel = "warn",
   executeLogLevel = "off",
   projectDirectoryPath,
   jsenvDirectoryRelativeUrl,
@@ -11886,14 +11915,7 @@ const executeTestPlan = async ({
   logSummary = true,
   updateProcessExitCode = true,
   coverage = false,
-  coverageConfig = {
-    "./index.js": true,
-    "./src/**/*.js": true,
-    "./**/*.test.*": false,
-    // contains .test. -> nope
-    "./**/test/": false // inside a test folder -> nope,
-
-  },
+  coverageConfig = jsenvCoverageConfig,
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
   coverageTextLog = true,
@@ -14461,8 +14483,8 @@ const serveExploringIndex = async ({
     }) => explorable
   });
   const explorableRelativeUrlArray = matchingFileResultArray.map(({
-    relativePath
-  }) => relativePath);
+    relativeUrl
+  }) => relativeUrl);
   const html = getBrowsingIndexPageHTML({
     projectDirectoryUrl,
     htmlFileRelativeUrl,
@@ -14974,6 +14996,7 @@ exports.generateSystemJsBundle = generateSystemJsBundle;
 exports.jsenvBabelPluginCompatMap = jsenvBabelPluginCompatMap;
 exports.jsenvBabelPluginMap = jsenvBabelPluginMap;
 exports.jsenvBrowserScoreMap = jsenvBrowserScoreMap;
+exports.jsenvCoverageConfig = jsenvCoverageConfig;
 exports.jsenvNodeVersionScoreMap = jsenvNodeVersionScoreMap;
 exports.jsenvPluginCompatMap = jsenvPluginCompatMap;
 exports.launchChromium = launchChromium;

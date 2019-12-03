@@ -1,4 +1,4 @@
-const { executeTestPlan, launchNode } = require("@jsenv/core")
+const { executeTestPlan, launchNode } = require("../../dist/commonjs/main.js")
 const jsenvConfig = require("../../jsenv.config.js")
 
 executeTestPlan({

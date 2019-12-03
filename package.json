@@ -1,7 +1,7 @@
 {
   "name": "@jsenv/core",
   "description": "jsenv core functions",
-  "version": "10.0.0-alpha",
+  "version": "10.0.0-alpha.1",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -31,6 +31,7 @@
   },
   "scripts": {
     "test": "node ./script/test/test.js",
+    "test-with-coverage": "node ./script/test/test.js --coverage",
     "test-js-transform": "node ./script/test/test-js-transform.js",
     "test-compile-server": "node ./script/test/test-compile-server.js",
     "test-exploring": "node ./script/test/test-exploring.js",
@@ -39,7 +40,6 @@
     "test-systemjs-bundling": "node ./script/test/test-systemjs-bundling.js",
     "test-launch-chromium": "node ./script/test/test-launch-chromium.js",
     "test-launch-node": "node ./script/test/test-launch-node.js",
-    "test-with-coverage": "node ./script/test/test.js --coverage",
     "eslint-check": "eslint .",
     "prettier-check": "node ./script/prettier-check/prettier-check.js",
     "upload-coverage": "node ./script/upload-coverage/upload-coverage.js",
@@ -90,7 +90,7 @@
     "@babel/plugin-transform-typeof-symbol": "7.2.0",
     "@babel/plugin-transform-unicode-regex": "7.4.4",
     "@jsenv/cancellation": "1.1.0",
-    "@jsenv/file-collector": "1.0.1",
+    "@jsenv/file-collector": "1.1.0",
     "@jsenv/file-watcher": "1.0.0",
     "@jsenv/href": "1.2.0",
     "@jsenv/import-map": "6.6.0",

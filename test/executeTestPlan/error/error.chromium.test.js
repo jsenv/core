@@ -20,6 +20,7 @@ const actual = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
+  executeLogLevel: "off",
 })
 const expected = {
   summary: {

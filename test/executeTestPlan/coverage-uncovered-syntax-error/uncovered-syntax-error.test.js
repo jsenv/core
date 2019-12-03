@@ -10,6 +10,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
 const fileRelativeUrl = `${testDirectoryRelativePath}syntax-error.js`
 const { coverageMap: actual } = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
+  executeLogLevel: "off",
   jsenvDirectoryRelativeUrl,
   testPlan: {},
   coverage: true,

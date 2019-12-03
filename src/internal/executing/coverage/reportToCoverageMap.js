@@ -65,7 +65,7 @@ const listRelativeFileUrlToCover = async ({
     predicate: ({ cover }) => cover,
   })
 
-  return matchingFileResultArray.map(({ relativePath }) => relativePath)
+  return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl)
 }
 
 const executionReportToCoverageMap = (report) => {

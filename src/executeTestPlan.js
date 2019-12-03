@@ -12,12 +12,13 @@ import { executionIsPassed } from "internal/executing/executionIsPassed.js"
 import { generateCoverageJsonFile } from "internal/executing/coverage/generateCoverageJsonFile.js"
 import { generateCoverageHtmlDirectory } from "internal/executing/coverage/generateCoverageHtmlDirectory.js"
 import { generateCoverageTextLog } from "internal/executing/coverage/generateCoverageTextLog.js"
+import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
 
 export const executeTestPlan = async ({
   cancellationToken = createCancellationTokenForProcessSIGINT(),
-  logLevel,
-  compileServerLogLevel = "off",
-  launchLogLevel = "off",
+  logLevel = "info",
+  compileServerLogLevel = "warn",
+  launchLogLevel = "warn",
   executeLogLevel = "off",
 
   projectDirectoryPath,
@@ -38,12 +39,7 @@ export const executeTestPlan = async ({
   updateProcessExitCode = true,
 
   coverage = false,
-  coverageConfig = {
-    "./index.js": true,
-    "./src/**/*.js": true,
-    "./**/*.test.*": false, // contains .test. -> nope
-    "./**/test/": false, // inside a test folder -> nope,
-  },
+  coverageConfig = jsenvCoverageConfig,
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
   coverageTextLog = true,

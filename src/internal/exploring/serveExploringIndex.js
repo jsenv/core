@@ -18,7 +18,7 @@ export const serveExploringIndex = async ({
     specifierMetaMap,
     predicate: ({ explorable }) => explorable,
   })
-  const explorableRelativeUrlArray = matchingFileResultArray.map(({ relativePath }) => relativePath)
+  const explorableRelativeUrlArray = matchingFileResultArray.map(({ relativeUrl }) => relativeUrl)
 
   const html = getBrowsingIndexPageHTML({
     projectDirectoryUrl,

@@ -1,4 +1,4 @@
-const { generateCommonJsBundleForNode } = require("@jsenv/core")
+const { generateCommonJsBundleForNode } = require("../../dist/commonjs/main.js")
 const jsenvConfig = require("../../jsenv.config.js")
 
 generateCommonJsBundleForNode({

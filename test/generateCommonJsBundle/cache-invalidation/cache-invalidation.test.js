@@ -41,9 +41,17 @@ const generateBundle = () =>
     filesystemCache: true,
   })
 
-await writeFileContent(mainFilePath, `export default 42`)
+await writeFileContent(
+  mainFilePath,
+  `export default 42
+`,
+)
 await generateBundle()
-await writeFileContent(mainFilePath, `export default 43`)
+await writeFileContent(
+  mainFilePath,
+  `export default 43
+`,
+)
 await generateBundle()
 
 const { namespace: actual } = await requireCommonJsBundle({

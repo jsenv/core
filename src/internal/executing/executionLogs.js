@@ -17,7 +17,7 @@ export const createDisconnectedLog = ({
 
   return `
 ${color}${icon} disconnected during execution.${ansiResetSequence}
-file: ${fileRelativeUrl.slice(1)}
+file: ${fileRelativeUrl}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
@@ -38,7 +38,7 @@ export const createTimedoutLog = ({
 
   return `
 ${color}${icon} execution takes more than ${allocatedMs}ms.${ansiResetSequence}
-file: ${fileRelativeUrl.slice(1)}
+file: ${fileRelativeUrl}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
@@ -59,7 +59,7 @@ export const createErroredLog = ({
 
   return `
 ${color}${icon} error during execution.${ansiResetSequence}
-file: ${fileRelativeUrl.slice(1)}
+file: ${fileRelativeUrl}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
@@ -85,7 +85,7 @@ export const createCompletedLog = ({
 
   return `
 ${color}${icon} execution completed.${ansiResetSequence}
-file: ${fileRelativeUrl.slice(1)}
+file: ${fileRelativeUrl}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
@@ -112,7 +112,7 @@ const appendConsole = (consoleCalls) => {
   if (consoleOutputTrimmed === "") return ""
 
   return `
-${grey}---------- console ----------${ansiResetSequence}
+${grey}-------- console --------${ansiResetSequence}
 ${consoleOutputTrimmed}
 ${grey}-------------------------${ansiResetSequence}`
 }

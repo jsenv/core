@@ -9,6 +9,7 @@ const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDi
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
 const { coverageMap: actual } = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
+  executeLogLevel: "off",
   jsenvDirectoryRelativeUrl,
   testPlan: {
     [`${testDirectoryRelativePath}import-syntax-error.js`]: {

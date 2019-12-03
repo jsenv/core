@@ -16,9 +16,9 @@ export const generateExecutionSteps = async (plan, { cancellationToken, projectD
   })
 
   const executionSteps = []
-  fileResultArray.forEach(({ relativePath, meta }) => {
+  fileResultArray.forEach(({ relativeUrl, meta }) => {
     const fileExecutionSteps = generateFileExecutionSteps({
-      fileRelativeUrl: relativePath,
+      fileRelativeUrl: relativeUrl,
       filePlan: meta.filePlan,
     })
     executionSteps.push(...fileExecutionSteps)

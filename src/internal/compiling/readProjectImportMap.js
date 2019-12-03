@@ -38,7 +38,7 @@ export const readProjectImportMap = async ({
     }
   }
 
-  if (importMapForProject.imports) {
+  if (importMapForProject.imports && jsenvProjectDirectoryUrl !== jsenvCoreDirectoryUrl) {
     const jsenvCoreRelativeUrlForProject = importMapForProject.imports[jsenvCoreImportKey]
     if (
       jsenvCoreRelativeUrlForProject &&
