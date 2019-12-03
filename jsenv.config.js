@@ -1,13 +1,13 @@
-const { launchNode } = require("@jsenv/node-launcher")
+const { launchNode } = require("@jsenv/core")
 
-const projectPath = __dirname
-exports.projectPath = projectPath
+const projectDirectoryPath = __dirname
+exports.projectDirectoryPath = projectDirectoryPath
 
-const testDescription = {
+const testPlan = {
   "/test/**/*.test.js": {
     node: {
       launch: launchNode,
     },
   },
 }
-exports.testDescription = testDescription
+exports.testPlan = testPlan

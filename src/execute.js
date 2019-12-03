@@ -10,7 +10,7 @@ import { launchAndExecute } from "internal/executing/launchAndExecute.js"
 
 export const execute = async ({
   cancellationToken = createCancellationTokenForProcessSIGINT(),
-  logLevel = "off",
+  logLevel = "warn",
   compileServerLogLevel = logLevel,
   launchLogLevel = logLevel,
   executeLogLevel = logLevel,

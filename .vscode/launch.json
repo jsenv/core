@@ -9,9 +9,6 @@
       "program": "${file}",
       "autoAttachChildProcesses": true,
       "sourceMaps": false,
-      "sourceMapPathOverrides": {
-        "/*": "${workspaceFolder}/*"
-      },
       "smartStep": true,
       "skipFiles": [
         // force-array-multiline
