@@ -29,7 +29,7 @@ const {
   origin: compileServerOrigin,
   compileServerImportMap,
 } = await startCompileServer({
-  // compileServerLogLevel: "debug",
+  compileServerLogLevel: "warn",
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean: true,
@@ -74,10 +74,7 @@ assert({ actual, expected })
     version: 3,
     file: "file.js",
     sources: ["env.js", "../file.js"],
-    sourcesContent: [
-      await readFileContent(fileUrlToPath(resolveUrl("env.js", sourcemapFileUrl))),
-      await readFileContent(fileUrlToPath(resolveUrl("../file.js", sourcemapFileUrl))),
-    ],
+    sourcesContent: null,
     names: actual.names,
     mappings: actual.mappings,
   }

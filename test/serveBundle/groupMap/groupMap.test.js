@@ -76,12 +76,7 @@ const response = await serveBundle(serveBundleParams)
     version: 3,
     file: "file.js",
     sources: ["groupMap.json", "../file.js"],
-    sourcesContent: [
-      `export default ${await readFileContent(
-        fileUrlToPath(resolveUrl("groupMap.json", sourcemapFileUrl)),
-      )}`,
-      await readFileContent(fileUrlToPath(resolveUrl("../file.js", sourcemapFileUrl))),
-    ],
+    sourcesContent: null,
     names: actual.names,
     mappings: actual.mappings,
   }
