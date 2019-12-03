@@ -134,7 +134,7 @@
     "@jsenv/assert": "1.1.1",
     "@jsenv/auto-publish": "2.0.0",
     "@jsenv/codecov-upload": "2.0.0",
-    "@jsenv/core": "10.0.0-alpha.1",
+    "@jsenv/core": "10.0.0-alpha.2",
     "@jsenv/eslint-config": "11.3.0",
     "@jsenv/prettier-check-project": "3.5.0",
     "@jsenv/prettier-config": "1.0.1",
