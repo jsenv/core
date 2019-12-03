@@ -11,10 +11,7 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryBasename = basename(testDirectoryUrl)
 const fileBasename = `${testDirectoryBasename}.js`
 const fileUrl = import.meta.resolve(`./${fileBasename}`)
-const fileRelativeUrl = urlToRelativeUrl(
-  fileUrl,
-  TRANSFORM_JS_TEST_PARAMS.projectDirectoryUrl,
-)
+const fileRelativeUrl = urlToRelativeUrl(fileUrl, TRANSFORM_JS_TEST_PARAMS.projectDirectoryUrl)
 const filePath = fileUrlToPath(fileUrl)
 const fileContent = readFileSync(filePath).toString()
 
@@ -27,7 +24,7 @@ const transformResult = await transformJs({
     "transform-instrument": [createInstrumentBabelPlugin()],
   },
 })
-const actual = transformResultToCompilationResult(transformResult, {
+const actual = await transformResultToCompilationResult(transformResult, {
   ...TRANSFORM_RESULT_TEST_PARAMS,
   source: fileContent,
   sourceUrl: fileUrl,

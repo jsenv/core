@@ -23,6 +23,8 @@ export const updateMeta = async ({
       const sourceFileUrl = resolveSourceFileUrl({ source, compiledFileUrl })
       const exists = await fileExists(sourceFileUrl)
       if (!exists) {
+        // this can lead to cache never invalidated by itself
+        // it's a very important warning
         logger.warn(`a source file cannot be found ${sourceFileUrl}.
 -> excluding it from meta.sources & meta.sourcesEtag`)
       }

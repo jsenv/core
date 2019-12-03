@@ -20,7 +20,7 @@ const transformResult = await transformJs({
   code: fileContent,
   url: fileUrl,
 })
-const actual = transformResultToCompilationResult(transformResult, {
+const actual = await transformResultToCompilationResult(transformResult, {
   ...TRANSFORM_RESULT_TEST_PARAMS,
   source: fileContent,
   sourceUrl: fileUrl,

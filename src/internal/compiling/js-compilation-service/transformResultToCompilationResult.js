@@ -1,7 +1,8 @@
-import { fileUrlToRelativePath } from "internal/urlUtils.js"
+import { fileUrlToRelativePath, fileUrlToPath } from "internal/urlUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
+import { readFileContent } from "internal/filesystemUtils.js"
 
-export const transformResultToCompilationResult = (
+export const transformResultToCompilationResult = async (
   { code, map, metadata = {} },
   {
     projectDirectoryUrl,
@@ -45,20 +46,27 @@ export const transformResultToCompilationResult = (
       sources.push(fileUrlToRelativePath(originalFileUrl, metaJsonFileUrl))
       sourcesContent.push(originalFileContent)
     } else {
-      map.sources = map.sources.map((source) => {
-        const url = String(new URL(source, originalFileUrl))
-        if (url.startsWith(projectDirectoryUrl)) {
-          const sourceForMeta = fileUrlToRelativePath(url, metaJsonFileUrl)
-          sources.push(sourceForMeta)
-          const sourceForSourcemap = fileUrlToRelativePath(url, sourcemapFileUrl)
-          return sourceForSourcemap
-        }
+      await Promise.all(
+        map.sources.map(async (source, index) => {
+          const sourceFileUrl = String(new URL(source, sourcemapFileUrl))
 
-        sources.push(source)
-        return source
-      })
+          if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
+            // do not track dependency outside project
+            // it means cache stays valid for those external sources
+            return
+          }
 
-      if (map.sourcesContent) sourcesContent.push(...map.sourcesContent)
+          sources.push(fileUrlToRelativePath(sourceFileUrl, metaJsonFileUrl))
+
+          if (map.sourcesContent && map.sourcesContent[index]) {
+            sourcesContent[index] = map.sourcesContent[index]
+          } else {
+            const sourceFilePath = fileUrlToPath(sourceFileUrl)
+            const sourceFileContent = await readFileContent(sourceFilePath)
+            sourcesContent[index] = sourceFileContent
+          }
+        }),
+      )
     }
 
     // removing sourcesContent from map decrease the sourceMap
