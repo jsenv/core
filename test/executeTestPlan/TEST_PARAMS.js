@@ -2,7 +2,7 @@ import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
 export const EXECUTE_TEST_PARAMS = {
-  logLevel: "warn",
+  logLevel: "info",
   projectDirectoryPath: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,

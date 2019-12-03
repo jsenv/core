@@ -5,12 +5,7 @@ import { createConcurrentOperations } from "@jsenv/cancellation"
 import { fileUrlToPath } from "internal/urlUtils.js"
 import { launchAndExecute } from "internal/executing/launchAndExecute.js"
 import { reportToCoverageMap } from "./coverage/reportToCoverageMap.js"
-import {
-  createCompletedLog,
-  createDisconnectedLog,
-  createErroredLog,
-  createTimedoutLog,
-} from "./executionLogs.js"
+import { createExecutionResultLog } from "./executionLogs.js"
 import { createSummaryLog } from "./createSummaryLog.js"
 
 export const executeConcurrently = async (
@@ -73,11 +68,13 @@ ${fileRelativeUrl}`),
   }
 
   const report = {}
+  const executionCount = executionSteps.length
   await createConcurrentOperations({
     cancellationToken,
     concurrencyLimit,
     array: executionSteps,
     start: async (executionOptionsFromStep) => {
+      const executionIndex = executionSteps.indexOf(executionOptionsFromStep)
       const executionOptions = {
         ...executionOptionsFromDefault,
         ...executionOptionsFromStep,
@@ -108,6 +105,7 @@ ${fileRelativeUrl}`),
         name,
         executionId,
         fileRelativeUrl,
+        executionIndex,
       }
 
       const filePath = fileUrlToPath(`${projectDirectoryUrl}${fileRelativeUrl}`)
@@ -151,16 +149,8 @@ ${fileRelativeUrl}`),
       }
       afterExecutionCallback(afterExecutionInfo)
 
-      const { status } = executionResult
-
-      if (status === "completed" && logSuccess) {
-        logger.info(createCompletedLog(afterExecutionInfo))
-      } else if (status === "disconnected") {
-        logger.info(createDisconnectedLog(afterExecutionInfo))
-      } else if (status === "timedout") {
-        logger.info(createTimedoutLog(afterExecutionInfo))
-      } else if (status === "errored") {
-        logger.info(createErroredLog(afterExecutionInfo))
+      if (executionResult.status !== "completed" || logSuccess) {
+        logger.info(createExecutionResultLog(afterExecutionInfo, { executionCount }))
       }
 
       if (fileRelativeUrl in report === false) {

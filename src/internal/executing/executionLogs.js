@@ -1,95 +1,60 @@
 import { magenta, cross, yellow, green, checkmark, grey, red, ansiResetSequence } from "./ansi.js"
 import { formatDuration } from "./formatDuration.js"
 
-export const createExecutionPlanStartLog = () => `
-------------- execution plan start ----------------`
-
-export const createDisconnectedLog = ({
-  fileRelativeUrl,
-  platformName,
-  platformVersion,
-  consoleCalls,
-  startMs,
-  endMs,
-}) => {
-  const color = magenta
-  const icon = cross
-
-  return `
-${color}${icon} disconnected during execution.${ansiResetSequence}
-file: ${fileRelativeUrl}
-platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
+export const createExecutionResultLog = (
+  {
+    status,
+    fileRelativeUrl,
+    allocatedMs,
+    platformName,
+    platformVersion,
+    consoleCalls,
     startMs,
     endMs,
-  })}${appendConsole(consoleCalls)}`
-}
+    error,
+    executionIndex,
+  },
+  { executionCount },
+) => {
+  const executionNumber = executionIndex + 1
 
-export const createTimedoutLog = ({
-  fileRelativeUrl,
-  platformName,
-  platformVersion,
-  consoleCalls,
-  startMs,
-  endMs,
-  allocatedMs,
-}) => {
-  const color = yellow
-  const icon = cross
-
-  return `
-${color}${icon} execution takes more than ${allocatedMs}ms.${ansiResetSequence}
+  if (status === "completed") {
+    return `
+${green}${checkmark} execution completed.${ansiResetSequence} (${executionNumber}/${executionCount})
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
-    startMs,
-    endMs,
-  })}${appendConsole(consoleCalls)}`
-}
+      startMs,
+      endMs,
+    })}${appendConsole(consoleCalls)}${appendError(error)}`
+  }
 
-export const createErroredLog = ({
-  fileRelativeUrl,
-  platformName,
-  platformVersion,
-  consoleCalls,
-  startMs,
-  endMs,
-  error,
-}) => {
-  const color = red
-  const icon = cross
+  if (status === "disconnected") {
+    return `
+${magenta}${cross} disconnected during execution.${ansiResetSequence} (${executionNumber}/${executionCount})
+file: ${fileRelativeUrl}
+platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
+      startMs,
+      endMs,
+    })}${appendConsole(consoleCalls)}${appendError(error)}`
+  }
+
+  if (status === "timedout") {
+    return `
+${yellow}${cross} execution takes more than ${allocatedMs}ms.${ansiResetSequence} (${executionNumber}/${executionCount})
+file: ${fileRelativeUrl}
+platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
+      startMs,
+      endMs,
+    })}${appendConsole(consoleCalls)}${appendError(error)}`
+  }
 
   return `
-${color}${icon} error during execution.${ansiResetSequence}
+${red}${cross}error during execution.${ansiResetSequence} (${executionNumber}/${executionCount})
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
   })}${appendConsole(consoleCalls)}${appendError(error)}`
-}
-
-const appendError = (error) => {
-  if (!error) return ``
-  return `
-error: ${error.stack}`
-}
-
-export const createCompletedLog = ({
-  fileRelativeUrl,
-  platformName,
-  platformVersion,
-  consoleCalls,
-  startMs,
-  endMs,
-}) => {
-  const color = green
-  const icon = checkmark
-
-  return `
-${color}${icon} execution completed.${ansiResetSequence}
-file: ${fileRelativeUrl}
-platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
-    startMs,
-    endMs,
-  })}${appendConsole(consoleCalls)}`
 }
 
 const formatPlatform = ({ platformName, platformVersion }) => `${platformName}/${platformVersion}`
@@ -115,4 +80,10 @@ const appendConsole = (consoleCalls) => {
 ${grey}-------- console --------${ansiResetSequence}
 ${consoleOutputTrimmed}
 ${grey}-------------------------${ansiResetSequence}`
+}
+
+const appendError = (error) => {
+  if (!error) return ``
+  return `
+error: ${error.stack}`
 }
