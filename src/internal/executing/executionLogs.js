@@ -8,7 +8,7 @@ export const createDisconnectedLog = ({
   fileRelativeUrl,
   platformName,
   platformVersion,
-  platformLog,
+  consoleCalls,
   startMs,
   endMs,
 }) => {
@@ -21,14 +21,14 @@ file: ${fileRelativeUrl.slice(1)}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
-  })}${appendPlatformLog(platformLog)}`
+  })}${appendConsole(consoleCalls)}`
 }
 
 export const createTimedoutLog = ({
   fileRelativeUrl,
   platformName,
   platformVersion,
-  platformLog,
+  consoleCalls,
   startMs,
   endMs,
   allocatedMs,
@@ -42,14 +42,14 @@ file: ${fileRelativeUrl.slice(1)}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
-  })}${appendPlatformLog(platformLog)}`
+  })}${appendConsole(consoleCalls)}`
 }
 
 export const createErroredLog = ({
   fileRelativeUrl,
   platformName,
   platformVersion,
-  platformLog,
+  consoleCalls,
   startMs,
   endMs,
   error,
@@ -63,7 +63,7 @@ file: ${fileRelativeUrl.slice(1)}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
-  })}${appendPlatformLog(platformLog)}${appendError(error)}`
+  })}${appendConsole(consoleCalls)}${appendError(error)}`
 }
 
 const appendError = (error) => {
@@ -76,7 +76,7 @@ export const createCompletedLog = ({
   fileRelativeUrl,
   platformName,
   platformVersion,
-  platformLog,
+  consoleCalls,
   startMs,
   endMs,
 }) => {
@@ -89,7 +89,7 @@ file: ${fileRelativeUrl.slice(1)}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
     endMs,
-  })}${appendPlatformLog(platformLog)}`
+  })}${appendConsole(consoleCalls)}`
 }
 
 const formatPlatform = ({ platformName, platformVersion }) => `${platformName}/${platformVersion}`
@@ -101,14 +101,18 @@ const appendDuration = ({ endMs, startMs }) => {
 duration: ${formatDuration(endMs - startMs)}`
 }
 
-const appendPlatformLog = (platformLog) => {
-  if (!platformLog) return ""
+const appendConsole = (consoleCalls) => {
+  if (!consoleCalls || consoleCalls.length === 0) return ""
 
-  const trimmedPlatformLog = platformLog.trim()
-  if (trimmedPlatformLog === "") return ""
+  const consoleOutput = consoleCalls.reduce((previous, { text }) => {
+    return `${previous}${text}`
+  })
+
+  const consoleOutputTrimmed = consoleOutput.trim()
+  if (consoleOutputTrimmed === "") return ""
 
   return `
-${grey}---------- log ----------${ansiResetSequence}
-${trimmedPlatformLog}
+${grey}---------- console ----------${ansiResetSequence}
+${consoleOutputTrimmed}
 ${grey}-------------------------${ansiResetSequence}`
 }

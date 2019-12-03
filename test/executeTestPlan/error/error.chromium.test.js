@@ -34,7 +34,7 @@ const expected = {
       chromium: {
         status: "errored",
         error: new Error(`ask() should return 42, got 40`),
-        platformLog: "",
+        consoleCalls: [],
         platformName: "chromium",
         platformVersion: actual.report[fileRelativeUrl].chromium.platformVersion,
       },

@@ -76,14 +76,14 @@ export const launchAndExecute = async ({
   }
 
   if (captureConsole) {
-    let platformLog = ""
-    platformConsoleCallback = composeCallback(platformConsoleCallback, ({ text }) => {
-      platformLog += text
+    const consoleCalls = []
+    platformConsoleCallback = composeCallback(platformConsoleCallback, ({ type, text }) => {
+      consoleCalls.push({ type, text })
     })
     executionResultTransformer = composeTransformer(
       executionResultTransformer,
       (executionResult) => {
-        executionResult.platformLog = platformLog
+        executionResult.consoleCalls = consoleCalls
         return executionResult
       },
     )

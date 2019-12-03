@@ -34,7 +34,7 @@ const expected = {
       node: {
         status: "errored",
         error: new Error(`ask() should return 42, got 40`),
-        platformLog: actual.report[fileRelativeUrl].node.platformLog,
+        consoleCalls: actual.report[fileRelativeUrl].node.consoleCalls,
         platformName: "node",
         platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
       },
@@ -45,7 +45,9 @@ assert({ actual, expected })
 
 {
   // error should not be in logs
-  const actual = actual.report[fileRelativeUrl].node.platformLog.includes(`should return 42`)
+  const actual = actual.report[fileRelativeUrl].node.consoleCalls.some(({ text }) =>
+    text.includes(`should return 42`),
+  )
   const expected = false
   assert({ actual, expected })
 }

@@ -149,7 +149,7 @@ When true `startMs`, `endMs` properties are availabe on every execution result i
 A boolean controlling if console logs are captured during file execution and reported back.<br />
 This option is optional with a default value of true.
 
-When true `platformLog` property is availabe on every execution result inside [testPlanReport](#testPlanReport)
+When true `consoleCalls` property is availabe on every execution result inside [testPlanReport](#testPlanReport)
 
 #### collectNamespace
 
@@ -300,7 +300,7 @@ Returns
       "status": "completed",
       "startMs": 1560355699946,
       "endMs": 1560355699950,
-      "platformLog": ""
+      "consoleCalls": []
     }
   }
 }

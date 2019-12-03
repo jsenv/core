@@ -38,12 +38,14 @@ const actual = await launchAndExecute({
 const expected = {
   status: "errored",
   error: new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
-  platformLog: actual.platformLog,
+  consoleCalls: actual.consoleCalls,
 }
 assert({ actual, expected })
 
 {
-  const actual = actual.platformLog.includes("SPECIAL_STRING_UNLIKELY_TO_COLLIDE")
+  const actual = actual.consoleCalls.some(({ text }) =>
+    text.includes("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
+  )
   const expected = false
   assert({ actual, expected })
 }

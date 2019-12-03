@@ -37,7 +37,12 @@ const actual = await launchAndExecute({
 })
 const expected = {
   status: "timedout",
-  platformLog: `foo
+  consoleCalls: [
+    {
+      type: "log",
+      text: `foo
 `,
+    },
+  ],
 }
 assert({ actual, expected })

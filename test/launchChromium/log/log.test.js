@@ -37,8 +37,13 @@ const actual = await launchAndExecute({
 })
 const expected = {
   status: "completed",
-  platformLog: `foo
+  consoleCalls: [
+    {
+      type: "log",
+      text: `foo
 bar
 `,
+    },
+  ],
 }
 assert({ actual, expected })
