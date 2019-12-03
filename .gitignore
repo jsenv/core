@@ -1,4 +1,5 @@
 /.dist/
+/.jsenv/
 /.vscode/settings.json
 /coverage/
 /helpers/chromium/

@@ -1,5 +1,5 @@
 import { resolveUrl } from "internal/urlUtils.js"
-import { parseSourceMappingURL } from "internal/sourceMappingUrlUtils.js"
+import { parseSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 import { fetchUrl } from "internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "./validateResponseStatusIsOk.js"
 
