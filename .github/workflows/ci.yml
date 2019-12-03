@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 12.8.0
       - name: setup linux fs watchers
-        if: runner.os == "Linux"
+        if: runner.os == 'Linux'
         run: sudo sysctl fs.inotify.max_user_watches=524288
       - name: npm install
         run: |
