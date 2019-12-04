@@ -318,6 +318,7 @@ const createNodeIIFEString = ({
 
   return execute(${JSON.stringify(
     {
+      jsenvCoreDirectoryUrl,
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
       fileRelativeUrl,
