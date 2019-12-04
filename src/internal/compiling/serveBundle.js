@@ -12,7 +12,6 @@ export const serveBundle = async ({
   cancellationToken,
   logger,
 
-  jsenvProjectDirectoryUrl,
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
@@ -29,12 +28,6 @@ export const serveBundle = async ({
   request,
   babelPluginMap,
 }) => {
-  if (typeof jsenvProjectDirectoryUrl !== "string") {
-    throw new TypeError(
-      `jsenvProjectDirectoryUrl must be a string, got ${jsenvProjectDirectoryUrl}`,
-    )
-  }
-
   const compile = async () => {
     const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl)
     const entryExtname = extname(originalFileRelativeUrl)

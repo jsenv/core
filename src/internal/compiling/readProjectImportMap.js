@@ -3,17 +3,7 @@ import { composeTwoImportMaps } from "@jsenv/import-map"
 import { urlToRelativeUrl, fileUrlToPath, resolveUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 
-export const readProjectImportMap = async ({
-  logger,
-  jsenvProjectDirectoryUrl,
-  projectDirectoryUrl,
-  importMapFileRelativeUrl,
-}) => {
-  if (typeof jsenvProjectDirectoryUrl !== "string") {
-    throw new TypeError(
-      `jsenvProjectDirectoryUrl must be a string, got ${jsenvProjectDirectoryUrl}`,
-    )
-  }
+export const readProjectImportMap = async ({ projectDirectoryUrl, importMapFileRelativeUrl }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
   }
@@ -24,9 +14,9 @@ export const readProjectImportMap = async ({
 
   const jsenvCoreImportKey = "@jsenv/core/"
   const jsenvCoreRelativeUrlForJsenvProject =
-    jsenvProjectDirectoryUrl === jsenvCoreDirectoryUrl
+    projectDirectoryUrl === jsenvCoreDirectoryUrl
       ? "./"
-      : urlToRelativeUrl(jsenvCoreDirectoryUrl, jsenvProjectDirectoryUrl)
+      : urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)
 
   const importsForJsenvCore = {
     [jsenvCoreImportKey]: jsenvCoreRelativeUrlForJsenvProject,
@@ -35,23 +25,6 @@ export const readProjectImportMap = async ({
   if (!importMapForProject) {
     return {
       imports: importsForJsenvCore,
-    }
-  }
-
-  if (importMapForProject.imports && jsenvProjectDirectoryUrl !== jsenvCoreDirectoryUrl) {
-    const jsenvCoreRelativeUrlForProject = importMapForProject.imports[jsenvCoreImportKey]
-    if (
-      jsenvCoreRelativeUrlForProject &&
-      jsenvCoreRelativeUrlForProject !== jsenvCoreRelativeUrlForJsenvProject
-    ) {
-      logger.warn(
-        createIncompatibleJsenvCoreDependencyMessage({
-          projectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
-          jsenvProjectDirectoryPath: fileUrlToPath(jsenvProjectDirectoryUrl),
-          jsenvCoreRelativeUrlForProject,
-          jsenvCoreRelativeUrlForJsenvProject,
-        }),
-      )
     }
   }
 
@@ -103,20 +76,3 @@ const getProjectImportMap = async ({ projectDirectoryUrl, importMapFileRelativeU
     })
   })
 }
-
-const createIncompatibleJsenvCoreDependencyMessage = ({
-  projectDirectoryPath,
-  jsenvProjectDirectoryPath,
-  jsenvCoreRelativeUrlForProject,
-  jsenvCoreRelativeUrlForJsenvProject,
-}) => `incompatible dependency to @jsenv/core in your project and an internal jsenv project.
-To fix this either remove project dependency to @jsenv/core or ensure they use the same version.
-(If you are inside a @jsenv project you can ignore this warning)
---- your project path to @jsenv/core ---
-${jsenvCoreRelativeUrlForProject}
---- jsenv project wanted path to @jsenv/core ---
-${jsenvCoreRelativeUrlForJsenvProject}
---- jsenv project path ---
-${jsenvProjectDirectoryPath}
---- your project path ---
-${projectDirectoryPath}`

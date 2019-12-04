@@ -183,7 +183,8 @@ export const launchNode = async ({
           child,
           "evaluate",
           createNodeIIFEString({
-            nodeExecuteFileUrl: nodeBundledJsFileUrl,
+            nodeJsFileUrl,
+            nodeBundledJsFileUrl,
             projectDirectoryUrl,
             outDirectoryRelativeUrl,
             fileRelativeUrl,
@@ -293,7 +294,8 @@ const createExitWithFailureCodeError = (code) => {
 }
 
 const createNodeIIFEString = ({
-  nodeExecuteFileUrl,
+  nodeJsFileUrl,
+  nodeBundledJsFileUrl,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   fileRelativeUrl,
@@ -304,7 +306,15 @@ const createNodeIIFEString = ({
   executionId,
   remap,
 }) => `(() => {
-  const { execute } = require(${JSON.stringify(fileUrlToPath(nodeExecuteFileUrl))})
+  const fs = require('fs')
+  const Module = require('module')
+  const nodeFilePath = ${JSON.stringify(fileUrlToPath(nodeJsFileUrl))}
+  const nodeBundledJsFilePath = ${JSON.stringify(fileUrlToPath(nodeBundledJsFileUrl))}
+  const fileContent = String(fs.readFileSync(nodeBundledJsFilePath))
+  const moduleObject = new Module(nodeBundledJsFilePath)
+  moduleObject.paths = Module._nodeModulePaths(require('path').dirname(nodeFilePath));
+  moduleObject._compile(fileContent, nodeBundledJsFilePath)
+  const { execute } = moduleObject.exports
 
   return execute(${JSON.stringify(
     {

@@ -3,7 +3,7 @@ import "../s.js"
 import { fileUrlToPath, resolveUrl } from "../../urlUtils.js"
 import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
 import { valueInstall } from "../valueInstall.js"
-import { createRequireFromPath } from "./createRequireFromPath.js"
+import { createRequire } from "./createRequire.js"
 import { isNativeNodeModuleBareSpecifier } from "./isNativeNodeModuleBareSpecifier.js"
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
@@ -85,7 +85,7 @@ export const createNodeSystem = ({
       compileServerOrigin,
     })
 
-    const require = createRequireFromPath(
+    const require = createRequire(
       originalUrl.startsWith("file://")
         ? fileUrlToPath(originalUrl)
         : fileUrlToPath(projectDirectoryUrl),

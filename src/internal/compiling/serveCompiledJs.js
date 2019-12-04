@@ -8,7 +8,6 @@ import {
 } from "internal/CONSTANTS.js"
 import { resolveUrl, fileUrlToPath, resolveDirectoryUrl } from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { createBabePluginMapForBundle } from "internal/bundling/createBabePluginMapForBundle.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
@@ -115,7 +114,6 @@ export const serveCompiledJs = async ({
       cancellationToken,
       logger,
 
-      jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
       projectDirectoryUrl,
       originalFileUrl,
       compiledFileUrl,

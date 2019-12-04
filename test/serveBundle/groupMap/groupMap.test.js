@@ -43,7 +43,6 @@ const serveBundleParams = {
   cancellationToken: createCancellationToken(),
   logger: createLogger({ logLevel: "warn" }),
 
-  jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   outDirectoryRelativeUrl,
   originalFileUrl,

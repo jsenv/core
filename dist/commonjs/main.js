@@ -7457,15 +7457,9 @@ const jsenvBabelPluginMap = {
 };
 
 const readProjectImportMap = async ({
-  logger,
-  jsenvProjectDirectoryUrl,
   projectDirectoryUrl,
   importMapFileRelativeUrl
 }) => {
-  if (typeof jsenvProjectDirectoryUrl !== "string") {
-    throw new TypeError(`jsenvProjectDirectoryUrl must be a string, got ${jsenvProjectDirectoryUrl}`);
-  }
-
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`);
   }
@@ -7475,7 +7469,7 @@ const readProjectImportMap = async ({
     importMapFileRelativeUrl
   }) : null;
   const jsenvCoreImportKey = "@jsenv/core/";
-  const jsenvCoreRelativeUrlForJsenvProject = jsenvProjectDirectoryUrl === jsenvCoreDirectoryUrl ? "./" : urlToRelativeUrl(jsenvCoreDirectoryUrl, jsenvProjectDirectoryUrl);
+  const jsenvCoreRelativeUrlForJsenvProject = projectDirectoryUrl === jsenvCoreDirectoryUrl ? "./" : urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl);
   const importsForJsenvCore = {
     [jsenvCoreImportKey]: jsenvCoreRelativeUrlForJsenvProject
   };
@@ -7484,19 +7478,6 @@ const readProjectImportMap = async ({
     return {
       imports: importsForJsenvCore
     };
-  }
-
-  if (importMapForProject.imports && jsenvProjectDirectoryUrl !== jsenvCoreDirectoryUrl) {
-    const jsenvCoreRelativeUrlForProject = importMapForProject.imports[jsenvCoreImportKey];
-
-    if (jsenvCoreRelativeUrlForProject && jsenvCoreRelativeUrlForProject !== jsenvCoreRelativeUrlForJsenvProject) {
-      logger.warn(createIncompatibleJsenvCoreDependencyMessage({
-        projectDirectoryPath: fileUrlToPath(projectDirectoryUrl),
-        jsenvProjectDirectoryPath: fileUrlToPath(jsenvProjectDirectoryUrl),
-        jsenvCoreRelativeUrlForProject,
-        jsenvCoreRelativeUrlForJsenvProject
-      }));
-    }
   }
 
   const importMapForJsenvCore = {
@@ -7556,23 +7537,6 @@ const getProjectImportMap = async ({
     });
   });
 };
-
-const createIncompatibleJsenvCoreDependencyMessage = ({
-  projectDirectoryPath,
-  jsenvProjectDirectoryPath,
-  jsenvCoreRelativeUrlForProject,
-  jsenvCoreRelativeUrlForJsenvProject
-}) => `incompatible dependency to @jsenv/core in your project and an internal jsenv project.
-To fix this either remove project dependency to @jsenv/core or ensure they use the same version.
-(If you are inside a @jsenv project you can ignore this warning)
---- your project path to @jsenv/core ---
-${jsenvCoreRelativeUrlForProject}
---- jsenv project wanted path to @jsenv/core ---
-${jsenvCoreRelativeUrlForJsenvProject}
---- jsenv project path ---
-${jsenvProjectDirectoryPath}
---- your project path ---
-${projectDirectoryPath}`;
 
 // https://github.com/cfware/babel-plugin-bundled-import-meta/blob/master/index.js
 const {
@@ -9003,34 +8967,28 @@ const createJsenvRollupPlugin = async ({
     // transform: async (moduleContent, rollupId) => {}
     outputOptions: options => {
       // rollup does not expects to have http dependency in the mix
-      // and relativize then cause they are files behind the scene
-      const bundleSourcemapFileUrl = resolveUrl$1(`./${chunkId}.map`, bundleDirectoryUrl);
+      const bundleSourcemapFileUrl = resolveUrl$1(`./${chunkId}.map`, bundleDirectoryUrl); // options.sourcemapFile = bundleSourcemapFileUrl
 
       const relativePathToUrl = relativePath => {
-        const url = resolveUrl$1(relativePath, bundleSourcemapFileUrl); // fix rollup not supporting source being http
+        const rollupUrl = resolveUrl$1(relativePath, bundleSourcemapFileUrl);
+        let url; // fix rollup not supporting source being http
 
-        if (url.startsWith(projectDirectoryUrl)) {
-          const relativeUrl = urlToRelativeUrl(url, projectDirectoryUrl);
+        const httpIndex = rollupUrl.indexOf(`http:/`);
 
-          if (relativeUrl.startsWith("http:/")) {
-            const httpUrl = `http://${relativeUrl.slice(`http:/`.length)}`;
+        if (httpIndex > -1) {
+          url = `http://${rollupUrl.slice(httpIndex + `http:/`.length)}`;
+        } else {
+          const httpsIndex = rollupUrl.indexOf("https:/");
 
-            if (httpUrl in redirectionMap) {
-              return redirectionMap[httpUrl];
-            }
-
-            return httpUrl;
+          if (httpsIndex > -1) {
+            url = `http://${rollupUrl.slice(httpIndex + `http:/`.length)}`;
+          } else {
+            url = rollupUrl;
           }
+        }
 
-          if (relativeUrl.startsWith("https:/")) {
-            const httpsUrl = `https://${relativeUrl.slice(`https:/`.length)}`;
-
-            if (httpsUrl in redirectionMap) {
-              return redirectionMap[httpsUrl];
-            }
-
-            return httpsUrl;
-          }
+        if (url in redirectionMap) {
+          return redirectionMap[url];
         }
 
         return url;
@@ -9569,7 +9527,6 @@ const getModuleContent = ({
 const serveBundle = async ({
   cancellationToken,
   logger,
-  jsenvProjectDirectoryUrl,
   projectDirectoryUrl,
   originalFileUrl,
   compiledFileUrl,
@@ -9585,10 +9542,6 @@ const serveBundle = async ({
   request,
   babelPluginMap
 }) => {
-  if (typeof jsenvProjectDirectoryUrl !== "string") {
-    throw new TypeError(`jsenvProjectDirectoryUrl must be a string, got ${jsenvProjectDirectoryUrl}`);
-  }
-
   const compile = async () => {
     const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl);
     const entryExtname = path.extname(originalFileRelativeUrl);
@@ -9734,7 +9687,6 @@ const serveCompiledJs = async ({
     return serveBundle({
       cancellationToken,
       logger,
-      jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
       projectDirectoryUrl,
       originalFileUrl,
       compiledFileUrl,
@@ -10196,9 +10148,7 @@ const generateImportMapForCompileServer = async ({
     }
   };
   const importMapForProject = await readProjectImportMap({
-    logger,
     projectDirectoryUrl,
-    jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     importMapFileRelativeUrl
   });
   const importMap = [importMapForJsenvCore, importMapInternal, importMapForProject].reduce((previous, current) => composeTwoImportMaps(previous, current), {});
@@ -11283,62 +11233,63 @@ const formatDuration = duration => {
   return `${secondsWithTwoDecimalPrecision}s`;
 };
 
-const createDisconnectedLog = ({
+const createExecutionResultLog = ({
+  status,
   fileRelativeUrl,
-  platformName,
-  platformVersion,
-  consoleCalls,
-  startMs,
-  endMs
-}) => {
-  const color = magenta$1;
-  const icon = cross;
-  return `
-${color}${icon} disconnected during execution.${ansiResetSequence}
-file: ${fileRelativeUrl}
-platform: ${formatPlatform({
-    platformName,
-    platformVersion
-  })}${appendDuration({
-    startMs,
-    endMs
-  })}${appendConsole(consoleCalls)}`;
-};
-const createTimedoutLog = ({
-  fileRelativeUrl,
+  allocatedMs,
   platformName,
   platformVersion,
   consoleCalls,
   startMs,
   endMs,
-  allocatedMs
+  error,
+  executionIndex
+}, {
+  executionCount
 }) => {
-  const color = yellow$1;
-  const icon = cross;
-  return `
-${color}${icon} execution takes more than ${allocatedMs}ms.${ansiResetSequence}
+  const executionNumber = executionIndex + 1;
+
+  if (status === "completed") {
+    return `
+${green$1}${checkmark} execution completed.${ansiResetSequence} (${executionNumber}/${executionCount})
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({
-    platformName,
-    platformVersion
-  })}${appendDuration({
-    startMs,
-    endMs
-  })}${appendConsole(consoleCalls)}`;
-};
-const createErroredLog = ({
-  fileRelativeUrl,
-  platformName,
-  platformVersion,
-  consoleCalls,
-  startMs,
-  endMs,
-  error
-}) => {
-  const color = red$1;
-  const icon = cross;
+      platformName,
+      platformVersion
+    })}${appendDuration({
+      startMs,
+      endMs
+    })}${appendConsole(consoleCalls)}${appendError(error)}`;
+  }
+
+  if (status === "disconnected") {
+    return `
+${magenta$1}${cross} disconnected during execution.${ansiResetSequence} (${executionNumber}/${executionCount})
+file: ${fileRelativeUrl}
+platform: ${formatPlatform({
+      platformName,
+      platformVersion
+    })}${appendDuration({
+      startMs,
+      endMs
+    })}${appendConsole(consoleCalls)}${appendError(error)}`;
+  }
+
+  if (status === "timedout") {
+    return `
+${yellow$1}${cross} execution takes more than ${allocatedMs}ms.${ansiResetSequence} (${executionNumber}/${executionCount})
+file: ${fileRelativeUrl}
+platform: ${formatPlatform({
+      platformName,
+      platformVersion
+    })}${appendDuration({
+      startMs,
+      endMs
+    })}${appendConsole(consoleCalls)}${appendError(error)}`;
+  }
+
   return `
-${color}${icon} error during execution.${ansiResetSequence}
+${red$1}${cross}error during execution.${ansiResetSequence} (${executionNumber}/${executionCount})
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({
     platformName,
@@ -11347,34 +11298,6 @@ platform: ${formatPlatform({
     startMs,
     endMs
   })}${appendConsole(consoleCalls)}${appendError(error)}`;
-};
-
-const appendError = error => {
-  if (!error) return ``;
-  return `
-error: ${error.stack}`;
-};
-
-const createCompletedLog = ({
-  fileRelativeUrl,
-  platformName,
-  platformVersion,
-  consoleCalls,
-  startMs,
-  endMs
-}) => {
-  const color = green$1;
-  const icon = checkmark;
-  return `
-${color}${icon} execution completed.${ansiResetSequence}
-file: ${fileRelativeUrl}
-platform: ${formatPlatform({
-    platformName,
-    platformVersion
-  })}${appendDuration({
-    startMs,
-    endMs
-  })}${appendConsole(consoleCalls)}`;
 };
 
 const formatPlatform = ({
@@ -11404,6 +11327,12 @@ const appendConsole = consoleCalls => {
 ${grey}-------- console --------${ansiResetSequence}
 ${consoleOutputTrimmed}
 ${grey}-------------------------${ansiResetSequence}`;
+};
+
+const appendError = error => {
+  if (!error) return ``;
+  return `
+error: ${error.stack}`;
 };
 
 const createSummaryLog = summary => `
@@ -11558,11 +11487,13 @@ ${fileRelativeUrl}`));
   }
 
   const report = {};
+  const executionCount = executionSteps.length;
   await createConcurrentOperations({
     cancellationToken,
     concurrencyLimit,
     array: executionSteps,
     start: async executionOptionsFromStep => {
+      const executionIndex = executionSteps.indexOf(executionOptionsFromStep);
       const executionOptions = { ...executionOptionsFromDefault,
         ...executionOptionsFromStep
       };
@@ -11588,7 +11519,8 @@ ${fileRelativeUrl}`));
         allocatedMs,
         name,
         executionId,
-        fileRelativeUrl
+        fileRelativeUrl,
+        executionIndex
       };
       const filePath = fileUrlToPath(`${projectDirectoryUrl}${fileRelativeUrl}`);
       const fileExists = await pathLeadsToFile(filePath);
@@ -11629,18 +11561,11 @@ ${fileRelativeUrl}`));
         ...executionResult
       };
       afterExecutionCallback(afterExecutionInfo);
-      const {
-        status
-      } = executionResult;
 
-      if (status === "completed" && logSuccess) {
-        logger.info(createCompletedLog(afterExecutionInfo));
-      } else if (status === "disconnected") {
-        logger.info(createDisconnectedLog(afterExecutionInfo));
-      } else if (status === "timedout") {
-        logger.info(createTimedoutLog(afterExecutionInfo));
-      } else if (status === "errored") {
-        logger.info(createErroredLog(afterExecutionInfo));
+      if (executionResult.status !== "completed" || logSuccess) {
+        logger.info(createExecutionResultLog(afterExecutionInfo, {
+          executionCount
+        }));
       }
 
       if (fileRelativeUrl in report === false) {
@@ -14315,7 +14240,8 @@ const launchNode = async ({
           if (status === EVALUATION_STATUS_OK) resolve(value);else reject(value);
         });
         sendToChild(child, "evaluate", createNodeIIFEString({
-          nodeExecuteFileUrl: nodeBundledJsFileUrl,
+          nodeJsFileUrl,
+          nodeBundledJsFileUrl,
           projectDirectoryUrl,
           outDirectoryRelativeUrl,
           fileRelativeUrl,
@@ -14435,7 +14361,8 @@ const createExitWithFailureCodeError = code => {
 };
 
 const createNodeIIFEString = ({
-  nodeExecuteFileUrl,
+  nodeJsFileUrl,
+  nodeBundledJsFileUrl,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   fileRelativeUrl,
@@ -14445,7 +14372,15 @@ const createNodeIIFEString = ({
   executionId,
   remap
 }) => `(() => {
-  const { execute } = require(${JSON.stringify(fileUrlToPath(nodeExecuteFileUrl))})
+  const fs = require('fs')
+  const Module = require('module')
+  const nodeFilePath = ${JSON.stringify(fileUrlToPath(nodeJsFileUrl))}
+  const nodeBundledJsFilePath = ${JSON.stringify(fileUrlToPath(nodeBundledJsFileUrl))}
+  const fileContent = String(fs.readFileSync(nodeBundledJsFilePath))
+  const moduleObject = new Module(nodeBundledJsFilePath)
+  moduleObject.paths = Module._nodeModulePaths(require('path').dirname(nodeFilePath));
+  moduleObject._compile(fileContent, nodeBundledJsFilePath)
+  const { execute } = moduleObject.exports
 
   return execute(${JSON.stringify({
   projectDirectoryUrl,
@@ -14602,7 +14537,6 @@ const serveBrowserSelfExecute = async ({
       return serveBundle({
         cancellationToken,
         logger,
-        jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
         projectDirectoryUrl,
         originalFileUrl,
         compiledFileUrl,

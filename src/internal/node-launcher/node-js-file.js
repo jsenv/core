@@ -35,8 +35,11 @@ export const execute = async ({
     outDirectoryUrl,
   )
   const nodePlatformCompiledFilePath = fileUrlToPath(nodePlatformCompiledFileUrl)
-  // eslint-disable-next-line import/no-dynamic-require
-  const { nodePlatform } = require(nodePlatformCompiledFilePath)
+
+  const localRequire = require("module").createRequireFromPath(
+    fileUrlToPath(resolveUrl(fileRelativeUrl, projectDirectoryUrl)),
+  )
+  const { nodePlatform } = localRequire(nodePlatformCompiledFilePath)
 
   const { compileDirectoryRemoteUrl, executeFile } = nodePlatform.create({
     projectDirectoryUrl,

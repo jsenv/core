@@ -408,9 +408,7 @@ const generateImportMapForCompileServer = async ({
     },
   }
   const importMapForProject = await readProjectImportMap({
-    logger,
     projectDirectoryUrl,
-    jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
     importMapFileRelativeUrl,
   })
   const importMap = [importMapForJsenvCore, importMapInternal, importMapForProject].reduce(

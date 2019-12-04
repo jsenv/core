@@ -88,7 +88,6 @@ export const serveBrowserSelfExecute = async ({
           cancellationToken,
           logger,
 
-          jsenvProjectDirectoryUrl: jsenvCoreDirectoryUrl,
           projectDirectoryUrl,
           originalFileUrl,
           compiledFileUrl,
