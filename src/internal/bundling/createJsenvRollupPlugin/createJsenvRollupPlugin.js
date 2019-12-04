@@ -1,7 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import {
-  urlToRelativeUrl,
   hasScheme,
   fileUrlToPath,
   pathToFileUrl,
@@ -97,32 +96,31 @@ export const createJsenvRollupPlugin = async ({
 
     outputOptions: (options) => {
       // rollup does not expects to have http dependency in the mix
-      // and relativize then cause they are files behind the scene
 
       const bundleSourcemapFileUrl = resolveUrl(`./${chunkId}.map`, bundleDirectoryUrl)
 
+      // options.sourcemapFile = bundleSourcemapFileUrl
+
       const relativePathToUrl = (relativePath) => {
-        const url = resolveUrl(relativePath, bundleSourcemapFileUrl)
+        const rollupUrl = resolveUrl(relativePath, bundleSourcemapFileUrl)
+        let url
 
         // fix rollup not supporting source being http
-        if (url.startsWith(projectDirectoryUrl)) {
-          const relativeUrl = urlToRelativeUrl(url, projectDirectoryUrl)
-          if (relativeUrl.startsWith("http:/")) {
-            const httpUrl = `http://${relativeUrl.slice(`http:/`.length)}`
-            if (httpUrl in redirectionMap) {
-              return redirectionMap[httpUrl]
-            }
-            return httpUrl
-          }
-          if (relativeUrl.startsWith("https:/")) {
-            const httpsUrl = `https://${relativeUrl.slice(`https:/`.length)}`
-            if (httpsUrl in redirectionMap) {
-              return redirectionMap[httpsUrl]
-            }
-            return httpsUrl
+        const httpIndex = rollupUrl.indexOf(`http:/`)
+        if (httpIndex > -1) {
+          url = `http://${rollupUrl.slice(httpIndex + `http:/`.length)}`
+        } else {
+          const httpsIndex = rollupUrl.indexOf("https:/")
+          if (httpsIndex > -1) {
+            url = `http://${rollupUrl.slice(httpIndex + `http:/`.length)}`
+          } else {
+            url = rollupUrl
           }
         }
 
+        if (url in redirectionMap) {
+          return redirectionMap[url]
+        }
         return url
       }
 

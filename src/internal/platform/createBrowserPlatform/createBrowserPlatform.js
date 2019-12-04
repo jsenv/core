@@ -29,6 +29,10 @@ export const createBrowserPlatform = ({ compileServerOrigin }) => {
   })
   const compileDirectoryRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/`
 
+  // yes but it won't work for bundlep served dynamically
+  // where the compileId concerns the bundle
+  // it makes anything using @jsenv not working because
+  // they cannot find files related to jsenv
   const importMapNormalized = normalizeImportMap(importMap, compileDirectoryRemoteUrl)
 
   const resolveImportScoped = (specifier, importer) => {
