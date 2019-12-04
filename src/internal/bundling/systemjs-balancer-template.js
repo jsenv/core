@@ -1,7 +1,7 @@
 // eslint-disable-next-line import/no-unresolved
-import groupMap from "/.jsenv/groupMap.json"
+import groupMap from "/.jsenv/out/groupMap.json"
 // eslint-disable-next-line import/no-unresolved
-import { chunkId } from "/.jsenv/env.js"
+import { chunkId } from "/.jsenv/out/env.js"
 import { computeCompileIdFromGroupId } from "../platform/computeCompileIdFromGroupId.js"
 import { resolvePlatformGroup } from "../platform/resolvePlatformGroup.js"
 

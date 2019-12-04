@@ -3,7 +3,7 @@
 Object.defineProperty(exports, '__esModule', { value: true });
 
 var path = require('path');
-var url$2 = require('url');
+var url$1 = require('url');
 var util = require('util');
 var fs = require('fs');
 var net = require('net');
@@ -1030,7 +1030,7 @@ url, specifierMetaMap`);
 };
 
 const pathToDirectoryUrl = path => {
-  const directoryUrl = path.startsWith("file://") ? path : String(url$2.pathToFileURL(path));
+  const directoryUrl = path.startsWith("file://") ? path : String(url$1.pathToFileURL(path));
 
   if (directoryUrl.endsWith("/")) {
     return directoryUrl;
@@ -1039,10 +1039,10 @@ const pathToDirectoryUrl = path => {
   return `${directoryUrl}/`;
 };
 const pathToFileUrl = path => {
-  return path.startsWith("file://") ? path : String(url$2.pathToFileURL(path));
+  return path.startsWith("file://") ? path : String(url$1.pathToFileURL(path));
 };
 const fileUrlToPath = fileUrl => {
-  return url$2.fileURLToPath(fileUrl);
+  return url$1.fileURLToPath(fileUrl);
 };
 const resolveDirectoryUrl = (specifier, baseUrl) => {
   const directoryUrl = String(new URL(specifier, baseUrl));
@@ -2878,7 +2878,7 @@ const composeTwoScopes = (leftScopes = {}, rightScopes = {}) => {
 };
 
 const pathToDirectoryUrl$1 = path => {
-  const directoryUrl = path.startsWith("file://") ? path : String(url$2.pathToFileURL(path));
+  const directoryUrl = path.startsWith("file://") ? path : String(url$1.pathToFileURL(path));
 
   if (directoryUrl.endsWith("/")) {
     return directoryUrl;
@@ -2887,7 +2887,7 @@ const pathToDirectoryUrl$1 = path => {
   return `${directoryUrl}/`;
 };
 const fileUrlToPath$1 = fileUrl => {
-  return url$2.fileURLToPath(fileUrl);
+  return url$1.fileURLToPath(fileUrl);
 };
 const directoryUrlToPackageFileUrl = directoryUrl => {
   return String(new URL("./package.json", directoryUrl));
@@ -3003,7 +3003,7 @@ const resolveNodeModule = async ({
     array: nodeModuleCandidateArray,
     start: async nodeModuleCandidate => {
       const packageFileUrl = `${rootProjectDirectoryUrl}${nodeModuleCandidate}${dependencyName}/package.json`;
-      const packageFilePath = url$2.fileURLToPath(packageFileUrl);
+      const packageFilePath = url$1.fileURLToPath(packageFileUrl);
 
       try {
         const packageJsonObject = await readPackageFile(packageFilePath);
@@ -3043,7 +3043,7 @@ ${dependencyName}@${dependencyVersionPattern}
 --- required by ---
 ${packageJsonObject.name}@${packageJsonObject.version}
 --- package.json path ---
-${url$2.fileURLToPath(packageFileUrl)}
+${url$1.fileURLToPath(packageFileUrl)}
     `);
   }
 
@@ -3153,7 +3153,7 @@ cannot find file for package.json ${packageMainFieldName} field
 --- ${packageMainFieldName} ---
 ${packageMainFieldValue}
 --- file path ---
-${url$2.fileURLToPath(mainFileUrlFirstCandidate)}
+${url$1.fileURLToPath(mainFileUrlFirstCandidate)}
 --- package.json path ---
 ${packageFilePath}
 --- extensions tried ---
@@ -3860,7 +3860,7 @@ const ensureExactParameters = extraParameters => {
 };
 
 const pathToDirectoryUrl$2 = path => {
-  const directoryUrl = path.startsWith("file://") ? path : String(url$2.pathToFileURL(path));
+  const directoryUrl = path.startsWith("file://") ? path : String(url$1.pathToFileURL(path));
 
   if (directoryUrl.endsWith("/")) {
     return directoryUrl;
@@ -3869,10 +3869,10 @@ const pathToDirectoryUrl$2 = path => {
   return `${directoryUrl}/`;
 };
 const pathToFileUrl$1 = path => {
-  return path.startsWith("file://") ? path : String(url$2.pathToFileURL(path));
+  return path.startsWith("file://") ? path : String(url$1.pathToFileURL(path));
 };
 const fileUrlToPath$2 = fileUrl => {
-  return url$2.fileURLToPath(fileUrl);
+  return url$1.fileURLToPath(fileUrl);
 };
 const fileUrlToRelativePath$2 = (fileUrl, baseUrl) => {
   if (typeof baseUrl !== "string") {
@@ -5099,8 +5099,8 @@ const serveFile = async (path, {
     };
   }
 
-  const fileUrl = path.startsWith("file:///") ? path : url$2.pathToFileURL(path);
-  const filePath = url$2.fileURLToPath(fileUrl);
+  const fileUrl = path.startsWith("file:///") ? path : url$1.pathToFileURL(path);
+  const filePath = url$1.fileURLToPath(fileUrl);
 
   try {
     const cacheWithMtime = cacheStrategy === "mtime";
@@ -5235,11 +5235,6 @@ const readDirectory = path => new Promise((resolve, reject) => {
     if (error) reject(error);else resolve(value);
   });
 });
-
-// eslint-disable-next-line import/no-unresolved
-const nodeRequire$1 = require;
-const filenameContainsBackSlashes$1 = __filename.indexOf("\\") > -1;
-const url$1 = filenameContainsBackSlashes$1 ? `file://${__filename.replace(/\\/g, "/")}` : `file://${__filename}`;
 
 let beforeExitCallbackArray = [];
 let uninstall;
@@ -5936,7 +5931,7 @@ const originAsString = ({
   ip,
   port
 }) => {
-  const url = new url$2.URL("https://127.0.0.1:80");
+  const url = new url$1.URL("https://127.0.0.1:80");
   url.protocol = protocol;
   url.hostname = ip;
   url.port = port;
@@ -5957,7 +5952,7 @@ const STOP_REASON_PROCESS_DEATH = createReason("process death");
 const STOP_REASON_PROCESS_EXIT = createReason("process exit");
 const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
 
-const killPort = nodeRequire$1("kill-port");
+const killPort = nodeRequire("kill-port");
 
 const STATUS_TEXT_INTERNAL_ERROR = "internal error";
 const startServer = async ({
@@ -6413,7 +6408,7 @@ const generateAccessControlHeaders = ({
 let jsenvCoreDirectoryUrl;
 
 if (typeof __filename === "string") {
-  jsenvCoreDirectoryUrl = resolveDirectoryUrl( // get ride of dist/node/main.js
+  jsenvCoreDirectoryUrl = resolveDirectoryUrl( // get ride of dist/commonjs/main.js
   "../../", pathToFileUrl(__filename));
 } else {
   jsenvCoreDirectoryUrl = resolveDirectoryUrl( // get ride of src/internal/jsenvCoreDirectoryUrl.js
@@ -9997,7 +9992,7 @@ ${projectDirectoryUrl}`);
   }), generateImportMapForCompileServer({
     logger,
     projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
     importMapFileRelativeUrl
   })]);
   env = { ...env,
@@ -10014,9 +10009,9 @@ ${projectDirectoryUrl}`);
 export const ${key} = ${JSON.stringify(env[key])}
 `).join("");
 
-  const jsenvImportMapFilePath = fileUrlToPath(resolveUrl$1("./importMap.json", jsenvDirectoryUrl));
-  const jsenvGroupMapFilePath = fileUrlToPath(resolveUrl$1("./groupMap.json", jsenvDirectoryUrl));
-  const jsenvEnvFilePath = fileUrlToPath(resolveUrl$1("./env.js", jsenvDirectoryUrl));
+  const jsenvImportMapFilePath = fileUrlToPath(resolveUrl$1("./importMap.json", outDirectoryUrl));
+  const jsenvGroupMapFilePath = fileUrlToPath(resolveUrl$1("./groupMap.json", outDirectoryUrl));
+  const jsenvEnvFilePath = fileUrlToPath(resolveUrl$1("./env.js", outDirectoryUrl));
   await Promise.all([writeFileContent(jsenvImportMapFilePath, importMapToString()), writeFileContent(jsenvGroupMapFilePath, groupMapToString()), writeFileContent(jsenvEnvFilePath, envToString())]);
 
   if (!writeOnFilesystem) {
@@ -10124,7 +10119,7 @@ const serveProjectFiles = async ({
 const generateImportMapForCompileServer = async ({
   logger,
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
+  outDirectoryRelativeUrl,
   importMapFileRelativeUrl
 }) => {
   const importMapForJsenvCore = await generateImportMapForPackage({
@@ -10133,8 +10128,8 @@ const generateImportMapForCompileServer = async ({
     rootProjectDirectoryPath: fileUrlToPath(projectDirectoryUrl)
   });
   const importMapInternal = {
-    imports: { ...(jsenvDirectoryRelativeUrl === ".jsenv/" ? {} : {
-        "/.jsenv/": `./${jsenvDirectoryRelativeUrl}`
+    imports: { ...(outDirectoryRelativeUrl === ".jsenv/out/" ? {} : {
+        "/.jsenv/out/": `./${outDirectoryRelativeUrl}`
       }),
       // in case importMapFileRelativeUrl is not the default
       // redirect /importMap.json to the proper location
@@ -10683,7 +10678,6 @@ const execute = async ({
 
   return catchAsyncFunctionCancellation(async () => {
     const {
-      jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
       outDirectoryRelativeUrl,
       origin: compileServerOrigin
     } = await startCompileServer({
@@ -10708,7 +10702,6 @@ const execute = async ({
       fileRelativeUrl,
       launch: params => launch({
         projectDirectoryUrl,
-        jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
         outDirectoryRelativeUrl,
         compileServerOrigin,
         ...params
@@ -10801,7 +10794,7 @@ const optionsToRelativeUrl = ({
 };
 
 const pathToDirectoryUrl$3 = path => {
-  const directoryUrl = path.startsWith("file://") ? path : String(url$2.pathToFileURL(path));
+  const directoryUrl = path.startsWith("file://") ? path : String(url$1.pathToFileURL(path));
 
   if (directoryUrl.endsWith("/")) {
     return directoryUrl;
@@ -10810,7 +10803,7 @@ const pathToDirectoryUrl$3 = path => {
   return `${directoryUrl}/`;
 };
 const fileUrlToPath$3 = fileUrl => {
-  return url$2.fileURLToPath(fileUrl);
+  return url$1.fileURLToPath(fileUrl);
 };
 const urlToRelativeUrl$1 = (url, baseUrl) => {
   if (typeof baseUrl !== "string") {
@@ -11289,7 +11282,7 @@ platform: ${formatPlatform({
   }
 
   return `
-${red$1}${cross}error during execution.${ansiResetSequence} (${executionNumber}/${executionCount})
+${red$1}${cross} error during execution.${ansiResetSequence} (${executionNumber}/${executionCount})
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({
     platformName,
@@ -11441,7 +11434,6 @@ const executeConcurrently = async (executionSteps, {
   launchLogger,
   executeLogger,
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
   babelPluginMap,
@@ -11537,7 +11529,6 @@ ${fileRelativeUrl}`));
         executeLogger,
         launch: params => launch({
           projectDirectoryUrl,
-          jsenvDirectoryRelativeUrl,
           outDirectoryRelativeUrl,
           compileServerOrigin,
           ...params
@@ -11696,7 +11687,6 @@ const executePlan = async ({
 
   const [executionSteps, {
     origin: compileServerOrigin,
-    jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl
   }] = await Promise.all([generateExecutionSteps(plan, {
     cancellationToken,
@@ -11719,7 +11709,6 @@ const executePlan = async ({
     launchLogger,
     executeLogger,
     projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     compileServerOrigin,
     importMapFileUrl,
@@ -14383,6 +14372,7 @@ const createNodeIIFEString = ({
   const { execute } = moduleObject.exports
 
   return execute(${JSON.stringify({
+  jsenvCoreDirectoryUrl,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   fileRelativeUrl,

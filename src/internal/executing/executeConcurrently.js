@@ -17,7 +17,6 @@ export const executeConcurrently = async (
     executeLogger,
 
     projectDirectoryUrl,
-    jsenvDirectoryRelativeUrl,
     outDirectoryRelativeUrl,
     compileServerOrigin,
 
@@ -123,7 +122,6 @@ ${fileRelativeUrl}`),
         launch: (params) =>
           launch({
             projectDirectoryUrl,
-            jsenvDirectoryRelativeUrl,
             outDirectoryRelativeUrl,
             compileServerOrigin,
             ...params,

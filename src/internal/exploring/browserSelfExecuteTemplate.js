@@ -2,7 +2,7 @@ import {
   jsenvDirectoryRelativeUrl,
   outDirectoryRelativeUrl,
   // eslint-disable-next-line import/no-unresolved
-} from "/.jsenv/env.js"
+} from "/.jsenv/out/env.js"
 
 // TODO: find how to convert this import
 // into a dynamic import inside if (Error.prepareStackTrace)

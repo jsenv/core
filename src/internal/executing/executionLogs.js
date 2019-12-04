@@ -49,7 +49,7 @@ platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
   }
 
   return `
-${red}${cross}error during execution.${ansiResetSequence} (${executionNumber}/${executionCount})
+${red}${cross} error during execution.${ansiResetSequence} (${executionNumber}/${executionCount})
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,

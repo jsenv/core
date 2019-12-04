@@ -1,4 +1,4 @@
 // eslint-disable-next-line import/no-unresolved
-import { whatever } from "/.jsenv/env.js"
+import { whatever } from "/.jsenv/out/env.js"
 
 export default whatever

@@ -51,11 +51,7 @@ export const execute = async ({
   }
 
   return catchAsyncFunctionCancellation(async () => {
-    const {
-      jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
-      outDirectoryRelativeUrl,
-      origin: compileServerOrigin,
-    } = await startCompileServer({
+    const { outDirectoryRelativeUrl, origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
 
@@ -83,7 +79,6 @@ export const execute = async ({
       launch: (params) =>
         launch({
           projectDirectoryUrl,
-          jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
           outDirectoryRelativeUrl,
           compileServerOrigin,
           ...params,

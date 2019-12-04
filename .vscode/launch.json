@@ -26,10 +26,7 @@
       "program": "${workspaceFolder}/script/run-node/run-node.js",
       "args": ["${relativeFile}"],
       "autoAttachChildProcesses": true,
-      "sourceMaps": true,
-      "sourceMapPathOverrides": {
-        "/*": "${workspaceFolder}/*"
-      },
+      "sourceMaps": false,
       "smartStep": true,
       "skipFiles": [
         // force-array-multiline

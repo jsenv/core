@@ -240,7 +240,7 @@ ${projectDirectoryUrl}`)
     generateImportMapForCompileServer({
       logger,
       projectDirectoryUrl,
-      jsenvDirectoryRelativeUrl,
+      outDirectoryRelativeUrl,
       importMapFileRelativeUrl,
     }),
   ])
@@ -263,9 +263,9 @@ export const ${key} = ${JSON.stringify(env[key])}
       )
       .join("")
 
-  const jsenvImportMapFilePath = fileUrlToPath(resolveUrl("./importMap.json", jsenvDirectoryUrl))
-  const jsenvGroupMapFilePath = fileUrlToPath(resolveUrl("./groupMap.json", jsenvDirectoryUrl))
-  const jsenvEnvFilePath = fileUrlToPath(resolveUrl("./env.js", jsenvDirectoryUrl))
+  const jsenvImportMapFilePath = fileUrlToPath(resolveUrl("./importMap.json", outDirectoryUrl))
+  const jsenvGroupMapFilePath = fileUrlToPath(resolveUrl("./groupMap.json", outDirectoryUrl))
+  const jsenvEnvFilePath = fileUrlToPath(resolveUrl("./env.js", outDirectoryUrl))
 
   await Promise.all([
     writeFileContent(jsenvImportMapFilePath, importMapToString()),
@@ -379,7 +379,7 @@ const serveProjectFiles = async ({
 const generateImportMapForCompileServer = async ({
   logger,
   projectDirectoryUrl,
-  jsenvDirectoryRelativeUrl,
+  outDirectoryRelativeUrl,
   importMapFileRelativeUrl,
 }) => {
   const importMapForJsenvCore = await generateImportMapForPackage({
@@ -389,10 +389,10 @@ const generateImportMapForCompileServer = async ({
   })
   const importMapInternal = {
     imports: {
-      ...(jsenvDirectoryRelativeUrl === ".jsenv/"
+      ...(outDirectoryRelativeUrl === ".jsenv/out/"
         ? {}
         : {
-            "/.jsenv/": `./${jsenvDirectoryRelativeUrl}`,
+            "/.jsenv/out/": `./${outDirectoryRelativeUrl}`,
           }),
       // in case importMapFileRelativeUrl is not the default
       // redirect /importMap.json to the proper location
