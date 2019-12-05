@@ -22,7 +22,7 @@ export const launchChromium = async ({
   outDirectoryRelativeUrl,
   compileServerOrigin,
 
-  headless = false,
+  headless = true,
   shareBrowser = false,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
