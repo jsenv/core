@@ -237,7 +237,6 @@ const computeExecutionResult = async ({
       return value
     },
     stop: async (platform, reason) => {
-
       // external code can cancel using cancellationToken at any time.
       // (hotreloading note: we would do that and listen for stoppedCallback before restarting an operation)
       // it is important to keep the code inside this stop function because once cancelled
