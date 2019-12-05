@@ -50,10 +50,10 @@ export const launchChromium = async ({
   const [browserPromise, stopUsingBrowser] = sharingToken.useSharedValue()
   registerCleanupCallback((reason) => {
     if (shareBrowser && reason === "intermediate-execution-done") {
-      // I wonder if I should write something like
-      // setTimeout(stopUsingBrowser, 1000 * 30)
-      // just to be sure the browser is actually stopped one day
-      // in theory it is not required
+      // keep the browser except if this is the last execution
+      // don't worry browser will also be killed if it's not the last execution
+      // thanks to a dedicated cancellation source inside executeConcurrently
+      // that is cancelling everything related to execution when execution are done
       return
     }
     stopUsingBrowser()

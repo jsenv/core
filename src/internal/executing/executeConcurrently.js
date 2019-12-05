@@ -1,7 +1,11 @@
 /* eslint-disable import/max-dependencies */
 import { cpus } from "os"
 import { stat } from "fs"
-import { createConcurrentOperations } from "@jsenv/cancellation"
+import {
+  createConcurrentOperations,
+  createCancellationSource,
+  composeCancellationToken,
+} from "@jsenv/cancellation"
 import { fileUrlToPath } from "internal/urlUtils.js"
 import { launchAndExecute } from "internal/executing/launchAndExecute.js"
 import { reportToCoverageMap } from "./coverage/reportToCoverageMap.js"
@@ -67,6 +71,12 @@ ${fileRelativeUrl}`),
     startMs = Date.now()
   }
 
+  const allExecutionDoneCancellationSource = createCancellationSource()
+  const executionCancellationToken = composeCancellationToken(
+    cancellationToken,
+    allExecutionDoneCancellationSource.token,
+  )
+
   const report = {}
   const executionCount = executionSteps.length
   await createConcurrentOperations({
@@ -117,7 +127,7 @@ ${fileRelativeUrl}`),
 
       beforeExecutionCallback(beforeExecutionInfo)
       const executionResult = await launchAndExecute({
-        cancellationToken,
+        cancellationToken: executionCancellationToken,
         launchLogger,
         executeLogger,
         launch: (params) =>
@@ -159,6 +169,12 @@ ${fileRelativeUrl}`),
       report[fileRelativeUrl][name] = executionResult
     },
   })
+
+  // tell everyone we are done
+  // (used to stop potential chrome browser still opened to be reused)
+  if (stopPlatformAfterExecute) {
+    allExecutionDoneCancellationSource.cancel("all execution done")
+  }
 
   const summary = reportToSummary(report)
   if (measurePlanExecutionDuration) {

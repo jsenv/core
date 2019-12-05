@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { executeTestPlan, launchChromiumTab, launchChromium } from "../../../index.js"
+import { executeTestPlan, launchChromiumTab, launchChromium, launchNode } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
@@ -18,6 +18,9 @@ const testPlan = {
     },
     tab2: {
       launch: launchChromiumTab,
+    },
+    node: {
+      launch: launchNode,
     },
   },
 }
@@ -36,11 +39,11 @@ const actual = await executeTestPlan({
 })
 const expected = {
   summary: {
-    executionCount: 3,
+    executionCount: 4,
     disconnectedCount: 0,
     timedoutCount: 0,
     erroredCount: 0,
-    completedCount: 3,
+    completedCount: 4,
   },
   report: {
     [fileRelativeUrl]: {
@@ -67,6 +70,14 @@ const expected = {
         },
         platformName: "chromium",
         platformVersion: actual.report[fileRelativeUrl].chromium.platformVersion,
+      },
+      node: {
+        status: "completed",
+        namespace: {
+          default: 42,
+        },
+        platformName: "node",
+        platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
       },
     },
   },

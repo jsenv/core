@@ -10220,6 +10220,7 @@ const launchAndExecute = async ({
   // or nodejs process
   // however unit test will pass true because they want to move on
   stopPlatformAfterExecute = false,
+  stopPlatformAfterExecuteReason = "stop after execute",
   // when launchPlatform returns { disconnected, stop, stopForce }
   // the launched platform have that amount of ms for disconnected to resolve
   // before we call stopForce
@@ -10333,6 +10334,7 @@ const launchAndExecute = async ({
     fileRelativeUrl,
     launch,
     stopPlatformAfterExecute,
+    stopPlatformAfterExecuteReason,
     allocatedMsBeforeForceStop,
     platformConsoleCallback,
     platformErrorCallback,
@@ -10410,6 +10412,7 @@ const computeExecutionResult = async ({
   fileRelativeUrl,
   launch,
   stopPlatformAfterExecute,
+  stopPlatformAfterExecuteReason,
   allocatedMsBeforeForceStop,
   platformStartedCallback,
   platformStoppedCallback,
@@ -10433,7 +10436,7 @@ const computeExecutionResult = async ({
       });
       return value;
     },
-    stop: async platform => {
+    stop: async (platform, reason) => {
       // external code can cancel using cancellationToken at any time.
       // (hotreloading note: we would do that and listen for stoppedCallback before restarting an operation)
       // it is important to keep the code inside this stop function because once cancelled
@@ -10443,7 +10446,7 @@ const computeExecutionResult = async ({
 
       if (platform.stopForce) {
         const stopPromise = (async () => {
-          await platform.stop();
+          await platform.stop(reason);
           return false;
         })();
 
@@ -10463,7 +10466,7 @@ const computeExecutionResult = async ({
 
         forceStopped = await Promise.all([stopPromise, stopForcePromise]);
       } else {
-        await platform.stop();
+        await platform.stop(reason);
       }
 
       platformStoppedCallback({
@@ -10525,7 +10528,7 @@ ${error.stack}`);
       }
 
       if (stopPlatformAfterExecute) {
-        launchOperation.stop("stop after execute");
+        launchOperation.stop(stopPlatformAfterExecuteReason);
       }
 
       const executionResult = raceResult.value;
@@ -11440,6 +11443,7 @@ const executeConcurrently = async (executionSteps, {
   measurePlanExecutionDuration,
   concurrencyLimit = Math.max(os.cpus.length - 1, 1),
   executionDefaultOptions = {},
+  stopPlatformAfterExecute,
   logSummary,
   coverage,
   coverageConfig,
@@ -11478,6 +11482,8 @@ ${fileRelativeUrl}`));
     startMs = Date.now();
   }
 
+  const allExecutionDoneCancellationSource = createCancellationSource();
+  const executionCancellationToken = composeCancellationToken(cancellationToken, allExecutionDoneCancellationSource.token);
   const report = {};
   const executionCount = executionSteps.length;
   await createConcurrentOperations({
@@ -11524,7 +11530,7 @@ ${fileRelativeUrl}`));
 
       beforeExecutionCallback(beforeExecutionInfo);
       const executionResult = await launchAndExecute({
-        cancellationToken,
+        cancellationToken: executionCancellationToken,
         launchLogger,
         executeLogger,
         launch: params => launch({
@@ -11539,10 +11545,8 @@ ${fileRelativeUrl}`));
         collectPlatformVersion,
         mirrorConsole,
         captureConsole,
-        // stopPlatformAfterExecute: true to ensure platform is stopped once executed
-        // because we have what we wants: execution is completed and
-        // we have associated coverageMap and capturedConsole
-        stopPlatformAfterExecute: true,
+        stopPlatformAfterExecute,
+        stopPlatformAfterExecuteReason: executionIndex === executionCount - 1 ? "last-execution-done" : "intermediate-execution-done",
         executionId,
         fileRelativeUrl,
         collectCoverage,
@@ -11565,7 +11569,13 @@ ${fileRelativeUrl}`));
 
       report[fileRelativeUrl][name] = executionResult;
     }
-  });
+  }); // tell everyone we are done
+  // (used to stop potential chrome browser still opened to be reused)
+
+  if (stopPlatformAfterExecute) {
+    allExecutionDoneCancellationSource.cancel("all execution done");
+  }
+
   const summary = reportToSummary(report);
 
   if (measurePlanExecutionDuration) {
@@ -11661,6 +11671,7 @@ const executePlan = async ({
   measurePlanExecutionDuration,
   concurrencyLimit,
   executionDefaultOptions,
+  stopPlatformAfterExecute,
   logSummary,
   // coverage parameters
   coverage,
@@ -11714,6 +11725,7 @@ const executePlan = async ({
     importMapFileUrl,
     importDefaultExtension,
     babelPluginMap,
+    stopPlatformAfterExecute,
     measurePlanExecutionDuration,
     concurrencyLimit,
     executionDefaultOptions,
@@ -11826,6 +11838,12 @@ const executeTestPlan = async ({
   measurePlanExecutionDuration = false,
   concurrencyLimit,
   executionDefaultOptions = {},
+  // stopPlatformAfterExecute: true to ensure platform is stopped once executed
+  // because we have what we wants: execution is completed and
+  // we have associated coverageMap and capturedConsole
+  // you can still pass false to debug what happens
+  // meaning all node process and browsers launched stays opened
+  stopPlatformAfterExecute = true,
   logSummary = true,
   updateProcessExitCode = true,
   coverage = false,
@@ -11913,6 +11931,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`);
       measurePlanExecutionDuration,
       concurrencyLimit,
       executionDefaultOptions,
+      stopPlatformAfterExecute,
       logSummary,
       coverage,
       coverageConfig,
@@ -12763,95 +12782,86 @@ const createBrowserIIFEString = data => `(() => {
   return window.execute(${JSON.stringify(data, null, "    ")})
 })()`;
 
-const createRessource = ({
-  share = false,
-  start,
-  stop
-}) => {
-  if (!share) {
-    let ressource;
+const createSharing = ({
+  argsToId = argsToIdFallback
+} = {}) => {
+  const tokenMap = {};
 
-    const startUsing = (...args) => {
-      ressource = start(...args);
+  const getSharingToken = (...args) => {
+    const id = argsToId(args);
 
-      const stopUsing = () => {
-        const value = ressource;
-        ressource = undefined;
-        return stop(value);
-      };
-
-      return {
-        ressource,
-        stopUsing
-      };
-    };
-
-    return {
-      startUsing
-    };
-  }
-
-  const cacheMap = {};
-
-  const startUsing = (...args) => {
-    const cacheId = argsToId(args);
-    let cache;
-
-    if (cacheId in cacheMap) {
-      cache = cacheMap[cacheId];
-    } else {
-      cache = {
-        useCount: 0,
-        ressource: undefined
-      };
-      cacheMap[cacheId] = cache;
+    if (id in tokenMap) {
+      return tokenMap[id];
     }
 
-    if (cache.useCount === 0) {
-      cache.ressource = start(...args);
-    }
-
-    cache.useCount++;
-    let stopped = false;
-    let stopUsingReturnValue;
-
-    const stopUsing = () => {
-      if (stopped) {
-        // in case stopUsing is called more than once
-        return stopUsingReturnValue;
+    const sharingToken = createSharingToken({
+      unusedCallback: () => {
+        delete tokenMap[id];
       }
+    });
+    tokenMap[id] = sharingToken;
+    return sharingToken;
+  };
 
-      stopped = true;
-      cache.useCount--;
-
-      if (cache.useCount === 0) {
-        const value = cache.ressource;
-        cache.ressource = undefined;
-        delete cacheMap[cacheId];
-        stopUsingReturnValue = stop(value);
-        return stopUsingReturnValue;
-      }
-
-      stopUsingReturnValue = undefined;
-      return stopUsingReturnValue;
-    };
-
-    return {
-      ressource: cache.ressource,
-      stopUsing
-    };
+  const getUniqueSharingToken = () => {
+    return createSharingToken();
   };
 
   return {
-    startUsing
+    getSharingToken,
+    getUniqueSharingToken
   };
 };
 
-const argsToId = args => JSON.stringify(args);
+const createSharingToken = ({
+  unusedCallback = () => {}
+} = {}) => {
+  let useCount = 0;
+  let sharedValue;
+  let cleanup;
+  const sharingToken = {
+    isUsed: () => useCount > 0,
+    setSharedValue: (value, cleanupFunction = () => {}) => {
+      sharedValue = value;
+      cleanup = cleanupFunction;
+    },
+    useSharedValue: () => {
+      useCount++;
+      let stopped = false;
+      let stopUsingReturnValue;
+
+      const stopUsing = () => {
+        // ensure if stopUsing is called many times
+        // it returns the same value and does not decrement useCount more than once
+        if (stopped) {
+          return stopUsingReturnValue;
+        }
+
+        stopped = true;
+        useCount--;
+
+        if (useCount === 0) {
+          unusedCallback();
+          sharedValue = undefined;
+          stopUsingReturnValue = cleanup();
+        } else {
+          stopUsingReturnValue = undefined;
+        }
+
+        return stopUsingReturnValue;
+      };
+
+      return [sharedValue, stopUsing];
+    }
+  };
+  return sharingToken;
+};
+
+const argsToIdFallback = args => JSON.stringify(args);
 
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
-let browserRessource;
-let executionServerRessource;
+const browserSharing = createSharing();
+const executionServerSharing = createSharing();
 const launchChromium = async ({
   cancellationToken = createCancellationToken(),
   clientServerLogLevel,
@@ -12873,46 +12883,38 @@ const launchChromium = async ({
     registerCleanupCallback,
     cleanup
   } = trackRessources$1();
+  const sharingToken = shareBrowser ? browserSharing.getSharingToken({
+    headless
+  }) : browserSharing.getUniqueSharingToken();
 
-  if (!browserRessource) {
-    browserRessource = createRessource({
-      share: shareBrowser,
-      start: ({
-        headless
-      }) => {
-        return launchPuppeteer({
-          cancellationToken,
-          headless
-        });
-      },
-      stop: async browserPromise => {
-        const {
-          stopBrowser
-        } = await browserPromise;
-        await stopBrowser();
-      }
+  if (!sharingToken.isUsed()) {
+    const value = launchPuppeteer({
+      cancellationToken,
+      headless
+    });
+    sharingToken.setSharedValue(value, async () => {
+      const {
+        stopBrowser
+      } = await value;
+      await stopBrowser();
     });
   }
 
-  const browserRessourceUsage = browserRessource.startUsing({
-    headless
-  });
-  registerCleanupCallback(() => {
-    if (shareBrowser) {
-      // give 10ms for anything to startUsing browserRessource
-      // before actually marking it as unused
-      // so that we maximize the chances to reuse the browser
-      // and only delay the moment it will be killed by 10ms
-      setTimeout(() => {
-        browserRessourceUsage.stopUsing();
-      }, 100);
-    } else {
-      browserRessourceUsage.stopUsing();
+  const [browserPromise, stopUsingBrowser] = sharingToken.useSharedValue();
+  registerCleanupCallback(reason => {
+    if (shareBrowser && reason === "intermediate-execution-done") {
+      // I wonder if I should write something like
+      // setTimeout(stopUsingBrowser, 1000 * 30)
+      // just to be sure the browser is actually stopped one day
+      // in theory it is not required
+      return;
     }
+
+    stopUsingBrowser();
   });
   const {
     browser
-  } = await browserRessourceUsage.ressource;
+  } = await browserPromise;
 
   const registerDisconnectCallback = callback => {
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
@@ -12942,28 +12944,25 @@ const launchChromium = async ({
     executionId,
     errorStackRemapping = true
   }) => {
-    if (!executionServerRessource) {
-      executionServerRessource = createRessource({
-        share: true,
-        start: () => {
-          return startChromiumServer({
-            cancellationToken,
-            logLevel: clientServerLogLevel,
-            projectDirectoryUrl,
-            outDirectoryRelativeUrl,
-            compileServerOrigin
-          });
-        },
-        stop: async serverPromise => {
-          const server = await serverPromise;
-          await server.stop();
-        }
+    const sharingToken = executionServerSharing.getSharingToken();
+
+    if (!sharingToken.isUsed()) {
+      const executionServerPromise = startChromiumServer({
+        cancellationToken,
+        logLevel: clientServerLogLevel,
+        projectDirectoryUrl,
+        outDirectoryRelativeUrl,
+        compileServerOrigin
+      });
+      sharingToken.setSharedValue(executionServerPromise, async () => {
+        const server = await executionServerPromise;
+        await server.stop();
       });
     }
 
-    const executionServerUsage = executionServerRessource.startUsing();
-    registerCleanupCallback(executionServerUsage.stopUsing);
-    const executionServer = await executionServerUsage.ressource; // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#browsercreateincognitobrowsercontext
+    const [executionServerPromise, stopUsingExecutionServer] = sharingToken.useSharedValue();
+    registerCleanupCallback(stopUsingExecutionServer);
+    const executionServer = await executionServerPromise; // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#browsercreateincognitobrowsercontext
 
     const browserContextPromise = incognito ? browser.createIncognitoBrowserContext() : browser.defaultBrowserContext();
     const browserContext = await browserContextPromise;
