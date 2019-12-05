@@ -46,11 +46,16 @@ const fileRelativeUrl = new URLSearchParams(location.search).get("file")
     })
   }
 
-  const dynamicDataFileRemoteUrl = `${window.origin}/${jsenvDirectoryRelativeUrl}browser-self-execute-dynamic-data.json`
+  const dynamicDataFileRemoteUrl = `${window.origin}/${jsenvDirectoryRelativeUrl}browser-execute-dynamic-data.json`
   const { body } = await fetchUsingXHR(dynamicDataFileRemoteUrl, {
     credentials: "include",
   })
-  const { compileServerOrigin, browserPlatformFileRelativeUrl } = JSON.parse(body)
+  const {
+    browserPlatformFileRelativeUrl,
+    sourcemapMainFileRelativeUrl,
+    sourcemapMappingFileRelativeUrl,
+    compileServerOrigin,
+  } = JSON.parse(body)
 
   const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserPlatformFileRelativeUrl}`
   await fetchAndEvalUsingScript(browserPlatformCompiledFileRemoteUrl)
@@ -64,12 +69,10 @@ const fileRelativeUrl = new URLSearchParams(location.search).get("file")
   let errorTransform = (error) => error
 
   if (Error.captureStackTrace) {
-    const sourcemapPackageMainFileRemoteUrl = `${compileServerOrigin}/node_modules/source-map/dist/source-map.js`
-    await fetchAndEvalUsingScript(sourcemapPackageMainFileRemoteUrl)
+    await fetchAndEvalUsingScript(`/${sourcemapMainFileRelativeUrl}`)
     const { SourceMapConsumer } = window.sourceMap
-    const sourcemapPackageMappingFileRemoteUrl = `${compileServerOrigin}/node_modules/source-map/lib/mappings.wasm`
     SourceMapConsumer.initialize({
-      "lib/mappings.wasm": sourcemapPackageMappingFileRemoteUrl,
+      "lib/mappings.wasm": `/${sourcemapMappingFileRelativeUrl}`,
     })
     const { getErrorOriginalStackString } = installBrowserErrorStackRemapping({
       SourceMapConsumer,

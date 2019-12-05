@@ -12409,7 +12409,7 @@ const startChromiumServer = async ({
 
       return null;
     }, () => {
-      if (request.ressource.startsWith("/node_modules/source-map/")) {
+      if (request.ressource.startsWith("/node_modules/")) {
         const specifier = request.ressource.slice("/node_modules/".length);
 
         const filePath = nodeRequire.resolve(specifier);
@@ -12651,6 +12651,23 @@ const isRegExpSpecialChar = char => regexpSpecialChars.indexOf(char) > -1;
 
 const regexpSpecialChars = ["/", "^", "\\", "[", "]", "(", ")", "{", "}", "?", "+", "*", ".", "|", "$"];
 
+const getBrowserExecutionDynamicData = ({
+  projectDirectoryUrl,
+  compileServerOrigin
+}) => {
+  const browserPlatformFileRelativeUrl = projectDirectoryUrl === jsenvCoreDirectoryUrl ? "src/browserPlatform.js" : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/browserPlatform.js`;
+  const sourcemapMainFileUrl = pathToFileUrl(nodeRequire.resolve("source-map/dist/source-map.js"));
+  const sourcemapMappingFileUrl = pathToFileUrl(nodeRequire.resolve("source-map/lib/mappings.wasm"));
+  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl);
+  const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(sourcemapMappingFileUrl, projectDirectoryUrl);
+  return {
+    browserPlatformFileRelativeUrl,
+    sourcemapMainFileRelativeUrl,
+    sourcemapMappingFileRelativeUrl,
+    compileServerOrigin
+  };
+};
+
 const evaluateImportExecution = async ({
   cancellationToken,
   projectDirectoryUrl,
@@ -12687,7 +12704,10 @@ ${htmlFileUrl}`);
   const javaScriptExpressionSource = createBrowserIIFEString({
     outDirectoryRelativeUrl,
     fileRelativeUrl,
-    compileServerOrigin,
+    ...getBrowserExecutionDynamicData({
+      projectDirectoryUrl,
+      compileServerOrigin
+    }),
     collectNamespace,
     collectCoverage,
     executionId,
@@ -12752,26 +12772,8 @@ const evalException = (exceptionSource, {
   return error;
 };
 
-const createBrowserIIFEString = ({
-  outDirectoryRelativeUrl,
-  fileRelativeUrl,
-  compileServerOrigin,
-  collectNamespace,
-  collectCoverage,
-  executionId,
-  errorStackRemapping,
-  executionExposureOnWindow
-}) => `(() => {
-  return window.execute(${JSON.stringify({
-  outDirectoryRelativeUrl,
-  fileRelativeUrl,
-  compileServerOrigin,
-  collectNamespace,
-  collectCoverage,
-  executionId,
-  errorStackRemapping,
-  executionExposureOnWindow
-}, null, "    ")})
+const createBrowserIIFEString = data => `(() => {
+  return window.execute(${JSON.stringify(data, null, "    ")})
 })()`;
 
 const createRessource = ({
@@ -14486,26 +14488,6 @@ const serveBrowserSelfExecute = async ({
 
     return null;
   }, () => {
-    // dynamic data exists only to retrieve the compile server origin
-    // that can be dynamic
-    // otherwise the cached bundles would still target the previous compile server origin
-    if (request.ressource === `/${jsenvDirectoryRelativeUrl}browser-self-execute-dynamic-data.json`) {
-      const body = JSON.stringify({
-        compileServerOrigin
-      });
-      return {
-        status: 200,
-        headers: {
-          "cache-control": "no-store",
-          "content-type": "application/json",
-          "content-length": Buffer.byteLength(body)
-        },
-        body
-      };
-    }
-
-    return null;
-  }, () => {
     const {
       origin,
       ressource,
@@ -14814,7 +14796,16 @@ const startExploring = async ({
       compileServerImportMap,
       outDirectoryRelativeUrl,
       jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl
-    } = compileServer;
+    } = compileServer; // dynamic data exists only to retrieve the compile server origin
+    // that can be dynamic
+    // otherwise the cached bundles would still target the previous compile server origin
+
+    const jsenvDirectoryUrl = resolveUrl$1(jsenvDirectoryRelativeUrl, projectDirectoryUrl);
+    const browserDynamicDataFileUrl = resolveUrl$1("./browser-execute-dynamic-data.json", jsenvDirectoryUrl);
+    await writeFileContent(fileUrlToPath(browserDynamicDataFileUrl), JSON.stringify(getBrowserExecutionDynamicData({
+      projectDirectoryUrl,
+      compileServerOrigin
+    }), null, "  "));
 
     const service = request => firstService(() => {
       const {
@@ -14829,7 +14820,7 @@ const startExploring = async ({
 
       return null;
     }, () => {
-      if (request.ressource.startsWith("/node_modules/source-map/")) {
+      if (request.ressource.startsWith("/node_modules/")) {
         const specifier = request.ressource.slice("/node_modules/".length);
 
         const filePath = nodeRequire.resolve(specifier);

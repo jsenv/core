@@ -1,8 +1,8 @@
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
 import { evalSource } from "internal/platform/createNodePlatform/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
+import { getBrowserExecutionDynamicData } from "internal/platform/getBrowserExecutionDynamicData.js"
 
 export const evaluateImportExecution = async ({
   cancellationToken,
@@ -43,13 +43,12 @@ ${htmlFileUrl}`)
   // but when I do that, istanbul will put coverage statement inside it
   // and I don't want that because function is evaluated client side
   const javaScriptExpressionSource = createBrowserIIFEString({
-    browserPlatformFileRelativeUrl:
-      projectDirectoryUrl === jsenvCoreDirectoryUrl
-        ? "src/browserPlatform.js"
-        : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/browserPlatform.js`,
     outDirectoryRelativeUrl,
     fileRelativeUrl,
-    compileServerOrigin,
+    ...getBrowserExecutionDynamicData({
+      projectDirectoryUrl,
+      compileServerOrigin,
+    }),
     collectNamespace,
     collectCoverage,
     executionId,
@@ -106,30 +105,6 @@ const evalException = (exceptionSource, { projectDirectoryUrl, compileServerOrig
   return error
 }
 
-const createBrowserIIFEString = ({
-  browserPlatformFileRelativeUrl,
-  outDirectoryRelativeUrl,
-  fileRelativeUrl,
-  compileServerOrigin,
-  collectNamespace,
-  collectCoverage,
-  executionId,
-  errorStackRemapping,
-  executionExposureOnWindow,
-}) => `(() => {
-  return window.execute(${JSON.stringify(
-    {
-      browserPlatformFileRelativeUrl,
-      outDirectoryRelativeUrl,
-      fileRelativeUrl,
-      compileServerOrigin,
-      collectNamespace,
-      collectCoverage,
-      executionId,
-      errorStackRemapping,
-      executionExposureOnWindow,
-    },
-    null,
-    "    ",
-  )})
+const createBrowserIIFEString = (data) => `(() => {
+  return window.execute(${JSON.stringify(data, null, "    ")})
 })()`

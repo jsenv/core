@@ -17,8 +17,8 @@ import {
   urlToRelativeUrl,
 } from "internal/urlUtils.js"
 import { assertFileExists, writeFileContent } from "internal/filesystemUtils.js"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
+import { getBrowserExecutionDynamicData } from "internal/platform/getBrowserExecutionDynamicData.js"
 import { serveExploringIndex } from "internal/exploring/serveExploringIndex.js"
 import { serveBrowserSelfExecute } from "internal/exploring/serveBrowserSelfExecute.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
@@ -280,22 +280,13 @@ export const startExploring = async ({
     // otherwise the cached bundles would still target the previous compile server origin
     const jsenvDirectoryUrl = resolveUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
     const browserDynamicDataFileUrl = resolveUrl(
-      "./browser-self-execute-dynamic-data.json",
+      "./browser-execute-dynamic-data.json",
       jsenvDirectoryUrl,
     )
     await writeFileContent(
       fileUrlToPath(browserDynamicDataFileUrl),
       JSON.stringify(
-        {
-          compileServerOrigin,
-          browserPlatformFileRelativeUrl:
-            projectDirectoryUrl === jsenvCoreDirectoryUrl
-              ? "src/browserPlatform.js"
-              : `${urlToRelativeUrl(
-                  jsenvCoreDirectoryUrl,
-                  projectDirectoryUrl,
-                )}src/browserPlatform.js`,
-        },
+        getBrowserExecutionDynamicData({ projectDirectoryUrl, compileServerOrigin }),
         null,
         "  ",
       ),
