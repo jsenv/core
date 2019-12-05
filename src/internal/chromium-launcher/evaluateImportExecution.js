@@ -1,3 +1,4 @@
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
 import { evalSource } from "internal/platform/createNodePlatform/evalSource.js"
@@ -42,6 +43,10 @@ ${htmlFileUrl}`)
   // but when I do that, istanbul will put coverage statement inside it
   // and I don't want that because function is evaluated client side
   const javaScriptExpressionSource = createBrowserIIFEString({
+    browserPlatformFileRelativeUrl:
+      projectDirectoryUrl === jsenvCoreDirectoryUrl
+        ? "src/browserPlatform.js"
+        : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/browserPlatform.js`,
     outDirectoryRelativeUrl,
     fileRelativeUrl,
     compileServerOrigin,
@@ -102,6 +107,7 @@ const evalException = (exceptionSource, { projectDirectoryUrl, compileServerOrig
 }
 
 const createBrowserIIFEString = ({
+  browserPlatformFileRelativeUrl,
   outDirectoryRelativeUrl,
   fileRelativeUrl,
   compileServerOrigin,
@@ -113,6 +119,7 @@ const createBrowserIIFEString = ({
 }) => `(() => {
   return window.execute(${JSON.stringify(
     {
+      browserPlatformFileRelativeUrl,
       outDirectoryRelativeUrl,
       fileRelativeUrl,
       compileServerOrigin,

@@ -38,7 +38,7 @@ export const startChromiumServer = async ({
           return null
         },
         () => {
-          if (request.ressource.startsWith("/node_modules/source-map/")) {
+          if (request.ressource.startsWith("/node_modules/")) {
             const specifier = request.ressource.slice("/node_modules/".length)
             const filePath = import.meta.require.resolve(specifier)
             return serveFile(filePath, {

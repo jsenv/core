@@ -74,7 +74,7 @@ const response = await serveBundle(serveBundleParams)
   const expected = {
     version: 3,
     file: "file.js",
-    sources: ["groupMap.json", "../file.js"],
+    sources: ["out/groupMap.json", "../file.js"],
     sourcesContent: null,
     names: actual.names,
     mappings: actual.mappings,
@@ -87,9 +87,9 @@ const response = await serveBundle(serveBundleParams)
   const actual = JSON.parse(await readFileContent(fileUrlToPath(metaFileUrl)))
   const expected = {
     contentType: "application/javascript",
-    sources: ["../groupMap.json", "../../file.js"],
+    sources: ["../out/groupMap.json", "../../file.js"],
     sourcesEtag: [
-      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../groupMap.json", metaFileUrl)))),
+      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../out/groupMap.json", metaFileUrl)))),
       bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../../file.js", metaFileUrl)))),
     ],
     assets: ["../file.js.map"],

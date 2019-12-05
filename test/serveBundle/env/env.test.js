@@ -72,7 +72,7 @@ assert({ actual, expected })
   const expected = {
     version: 3,
     file: "file.js",
-    sources: ["env.js", "../file.js"],
+    sources: ["out/env.js", "../file.js"],
     sourcesContent: null,
     names: actual.names,
     mappings: actual.mappings,
@@ -87,9 +87,9 @@ assert({ actual, expected })
   )
   const expected = {
     contentType: "application/javascript",
-    sources: ["../env.js", "../../file.js"],
+    sources: ["../out/env.js", "../../file.js"],
     sourcesEtag: [
-      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../env.js", metaFileUrl)))),
+      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../out/env.js", metaFileUrl)))),
       bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../../file.js", metaFileUrl)))),
     ],
     assets: ["../file.js.map"],

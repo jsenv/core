@@ -9,6 +9,7 @@ import {
 // until then browser without it like firefox will download the file and never use it
 import { installBrowserErrorStackRemapping } from "internal/error-stack-remapping/installBrowserErrorStackRemapping.js"
 
+import { COMPILE_ID_GLOBAL_BUNDLE } from "internal/CONSTANTS.js"
 import { fetchAndEvalUsingScript } from "internal/fetchAndEvalUsingScript.js"
 import { fetchUsingXHR } from "internal/fetchUsingXHR.js"
 
@@ -49,9 +50,9 @@ const fileRelativeUrl = new URLSearchParams(location.search).get("file")
   const { body } = await fetchUsingXHR(dynamicDataFileRemoteUrl, {
     credentials: "include",
   })
-  const { compileServerOrigin } = JSON.parse(body)
+  const { compileServerOrigin, browserPlatformFileRelativeUrl } = JSON.parse(body)
 
-  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`
+  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserPlatformFileRelativeUrl}`
   await fetchAndEvalUsingScript(browserPlatformCompiledFileRemoteUrl)
   const { __browserPlatform__ } = window
 

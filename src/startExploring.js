@@ -9,8 +9,15 @@ import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from 
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, sameOrigin, urlToRelativeUrl } from "internal/urlUtils.js"
-import { assertFileExists } from "internal/filesystemUtils.js"
+import {
+  resolveUrl,
+  fileUrlToPath,
+  pathToDirectoryUrl,
+  sameOrigin,
+  urlToRelativeUrl,
+} from "internal/urlUtils.js"
+import { assertFileExists, writeFileContent } from "internal/filesystemUtils.js"
+import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { serveExploringIndex } from "internal/exploring/serveExploringIndex.js"
 import { serveBrowserSelfExecute } from "internal/exploring/serveBrowserSelfExecute.js"
@@ -268,6 +275,32 @@ export const startExploring = async ({
       jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
     } = compileServer
 
+    // dynamic data exists only to retrieve the compile server origin
+    // that can be dynamic
+    // otherwise the cached bundles would still target the previous compile server origin
+    const jsenvDirectoryUrl = resolveUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
+    const browserDynamicDataFileUrl = resolveUrl(
+      "./browser-self-execute-dynamic-data.json",
+      jsenvDirectoryUrl,
+    )
+    await writeFileContent(
+      fileUrlToPath(browserDynamicDataFileUrl),
+      JSON.stringify(
+        {
+          compileServerOrigin,
+          browserPlatformFileRelativeUrl:
+            projectDirectoryUrl === jsenvCoreDirectoryUrl
+              ? "src/browserPlatform.js"
+              : `${urlToRelativeUrl(
+                  jsenvCoreDirectoryUrl,
+                  projectDirectoryUrl,
+                )}src/browserPlatform.js`,
+        },
+        null,
+        "  ",
+      ),
+    )
+
     const service = (request) =>
       firstService(
         () => {
@@ -278,7 +311,7 @@ export const startExploring = async ({
           return null
         },
         () => {
-          if (request.ressource.startsWith("/node_modules/source-map/")) {
+          if (request.ressource.startsWith("/node_modules/")) {
             const specifier = request.ressource.slice("/node_modules/".length)
             const filePath = import.meta.require.resolve(specifier)
             return serveFile(filePath, {

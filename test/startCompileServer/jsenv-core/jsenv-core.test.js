@@ -9,7 +9,7 @@ const testDirectoryUrl = import.meta.resolve("./")
 const filename = `jsenv-core.js`
 const babelPluginMap = jsenvBabelPluginMap
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
-  compileServerLogLevel: "warn",
+  compileServerLogLevel: "error",
   projectDirectoryUrl: testDirectoryUrl,
   jsenvDirectoryClean: true,
   babelPluginMap,

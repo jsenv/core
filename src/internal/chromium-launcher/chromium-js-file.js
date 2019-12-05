@@ -2,6 +2,7 @@ import { installBrowserErrorStackRemapping } from "internal/error-stack-remappin
 import { fetchAndEvalUsingXHR } from "../fetchAndEvalUsingXHR.js"
 
 window.execute = async ({
+  browserPlatformFileRelativeUrl,
   outDirectoryRelativeUrl,
   fileRelativeUrl,
   compileServerOrigin,
@@ -16,7 +17,7 @@ window.execute = async ({
   errorExposureInNotification = false,
   errorExposureInDocument = true,
 }) => {
-  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`
+  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/${browserPlatformFileRelativeUrl}`
   await fetchAndEvalUsingXHR(browserPlatformCompiledFileRemoteUrl)
   const { __browserPlatform__ } = window
 
