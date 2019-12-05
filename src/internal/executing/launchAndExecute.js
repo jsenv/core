@@ -24,6 +24,7 @@ export const launchAndExecute = async ({
   // or nodejs process
   // however unit test will pass true because they want to move on
   stopPlatformAfterExecute = false,
+  stopPlatformAfterExecuteReason = "stop after execute",
   // when launchPlatform returns { disconnected, stop, stopForce }
   // the launched platform have that amount of ms for disconnected to resolve
   // before we call stopForce
@@ -137,6 +138,7 @@ export const launchAndExecute = async ({
     launch,
 
     stopPlatformAfterExecute,
+    stopPlatformAfterExecuteReason,
     allocatedMsBeforeForceStop,
     platformConsoleCallback,
     platformErrorCallback,
@@ -215,6 +217,7 @@ const computeExecutionResult = async ({
   launch,
 
   stopPlatformAfterExecute,
+  stopPlatformAfterExecuteReason,
   allocatedMsBeforeForceStop,
   platformStartedCallback,
   platformStoppedCallback,
@@ -233,7 +236,8 @@ const computeExecutionResult = async ({
       platformStartedCallback({ name: value.name, version: value.version })
       return value
     },
-    stop: async (platform) => {
+    stop: async (platform, reason) => {
+
       // external code can cancel using cancellationToken at any time.
       // (hotreloading note: we would do that and listen for stoppedCallback before restarting an operation)
       // it is important to keep the code inside this stop function because once cancelled
@@ -244,7 +248,7 @@ const computeExecutionResult = async ({
 
       if (platform.stopForce) {
         const stopPromise = (async () => {
-          await platform.stop()
+          await platform.stop(reason)
           return false
         })()
 
@@ -263,7 +267,7 @@ const computeExecutionResult = async ({
 
         forceStopped = await Promise.all([stopPromise, stopForcePromise])
       } else {
-        await platform.stop()
+        await platform.stop(reason)
       }
 
       platformStoppedCallback({ forced: forceStopped })
@@ -325,7 +329,7 @@ ${error.stack}`)
       }
 
       if (stopPlatformAfterExecute) {
-        launchOperation.stop("stop after execute")
+        launchOperation.stop(stopPlatformAfterExecuteReason)
       }
 
       const executionResult = raceResult.value

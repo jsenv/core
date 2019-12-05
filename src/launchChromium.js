@@ -9,10 +9,10 @@ import { startChromiumServer } from "internal/chromium-launcher/startChromiumSer
 import { trackPageTargetsToClose } from "internal/chromium-launcher/trackPageTargetsToClose.js"
 import { trackPageTargetsToNotify } from "internal/chromium-launcher/trackPageTargetsToNotify.js"
 import { evaluateImportExecution } from "internal/chromium-launcher/evaluateImportExecution.js"
-import { createRessource } from "internal/chromium-launcher/createRessource.js"
+import { createSharing } from "internal/chromium-launcher/createSharing.js"
 
-let browserRessource
-let executionServerRessource
+const browserSharing = createSharing()
+const executionServerSharing = createSharing()
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
@@ -22,7 +22,7 @@ export const launchChromium = async ({
   outDirectoryRelativeUrl,
   compileServerOrigin,
 
-  headless = true,
+  headless = false,
   shareBrowser = false,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -34,37 +34,31 @@ export const launchChromium = async ({
 
   const { registerCleanupCallback, cleanup } = trackRessources()
 
-  if (!browserRessource) {
-    browserRessource = createRessource({
-      share: shareBrowser,
-      start: ({ headless }) => {
-        return launchPuppeteer({
-          cancellationToken,
-          headless,
-        })
-      },
-      stop: async (browserPromise) => {
-        const { stopBrowser } = await browserPromise
-        await stopBrowser()
-      },
+  const sharingToken = shareBrowser
+    ? browserSharing.getSharingToken({ headless })
+    : browserSharing.getUniqueSharingToken()
+  if (!sharingToken.isUsed()) {
+    const value = launchPuppeteer({
+      cancellationToken,
+      headless,
+    })
+    sharingToken.setSharedValue(value, async () => {
+      const { stopBrowser } = await value
+      await stopBrowser()
     })
   }
-  const browserRessourceUsage = browserRessource.startUsing({ headless })
-  registerCleanupCallback(() => {
-    if (shareBrowser) {
-      // give 10ms for anything to startUsing browserRessource
-      // before actually marking it as unused
-      // so that we maximize the chances to reuse the browser
-      // and only delay the moment it will be killed by 10ms
-      setTimeout(() => {
-        browserRessourceUsage.stopUsing()
-      }, 100)
-    } else {
-      browserRessourceUsage.stopUsing()
+  const [browserPromise, stopUsingBrowser] = sharingToken.useSharedValue()
+  registerCleanupCallback((reason) => {
+    if (shareBrowser && reason === "intermediate-execution-done") {
+      // I wonder if I should write something like
+      // setTimeout(stopUsingBrowser, 1000 * 30)
+      // just to be sure the browser is actually stopped one day
+      // in theory it is not required
+      return
     }
+    stopUsingBrowser()
   })
-
-  const { browser } = await browserRessourceUsage.ressource
+  const { browser } = await browserPromise
 
   const registerDisconnectCallback = (callback) => {
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
@@ -95,28 +89,24 @@ export const launchChromium = async ({
       errorStackRemapping = true,
     },
   ) => {
-    if (!executionServerRessource) {
-      executionServerRessource = createRessource({
-        share: true,
-        start: () => {
-          return startChromiumServer({
-            cancellationToken,
-            logLevel: clientServerLogLevel,
+    const sharingToken = executionServerSharing.getSharingToken()
+    if (!sharingToken.isUsed()) {
+      const executionServerPromise = startChromiumServer({
+        cancellationToken,
+        logLevel: clientServerLogLevel,
 
-            projectDirectoryUrl,
-            outDirectoryRelativeUrl,
-            compileServerOrigin,
-          })
-        },
-        stop: async (serverPromise) => {
-          const server = await serverPromise
-          await server.stop()
-        },
+        projectDirectoryUrl,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+      })
+      sharingToken.setSharedValue(executionServerPromise, async () => {
+        const server = await executionServerPromise
+        await server.stop()
       })
     }
-    const executionServerUsage = executionServerRessource.startUsing()
-    registerCleanupCallback(executionServerUsage.stopUsing)
-    const executionServer = await executionServerUsage.ressource
+    const [executionServerPromise, stopUsingExecutionServer] = sharingToken.useSharedValue()
+    registerCleanupCallback(stopUsingExecutionServer)
+    const executionServer = await executionServerPromise
 
     // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#browsercreateincognitobrowsercontext
     const browserContextPromise = incognito

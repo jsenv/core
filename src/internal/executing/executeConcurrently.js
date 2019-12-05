@@ -25,6 +25,7 @@ export const executeConcurrently = async (
     measurePlanExecutionDuration,
     concurrencyLimit = Math.max(cpus.length - 1, 1),
     executionDefaultOptions = {},
+    stopPlatformAfterExecute,
     logSummary,
 
     coverage,
@@ -132,10 +133,11 @@ ${fileRelativeUrl}`),
         collectPlatformVersion,
         mirrorConsole,
         captureConsole,
-        // stopPlatformAfterExecute: true to ensure platform is stopped once executed
-        // because we have what we wants: execution is completed and
-        // we have associated coverageMap and capturedConsole
-        stopPlatformAfterExecute: true,
+        stopPlatformAfterExecute,
+        stopPlatformAfterExecuteReason:
+          executionIndex === executionCount - 1
+            ? "last-execution-done"
+            : "intermediate-execution-done",
         executionId,
         fileRelativeUrl,
         collectCoverage,

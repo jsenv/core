@@ -26,6 +26,7 @@ export const executePlan = async ({
   measurePlanExecutionDuration,
   concurrencyLimit,
   executionDefaultOptions,
+  stopPlatformAfterExecute,
   logSummary,
 
   // coverage parameters
@@ -94,6 +95,7 @@ export const executePlan = async ({
 
     babelPluginMap,
 
+    stopPlatformAfterExecute,
     measurePlanExecutionDuration,
     concurrencyLimit,
     executionDefaultOptions,

@@ -35,6 +35,12 @@ export const executeTestPlan = async ({
   measurePlanExecutionDuration = false,
   concurrencyLimit,
   executionDefaultOptions = {},
+  // stopPlatformAfterExecute: true to ensure platform is stopped once executed
+  // because we have what we wants: execution is completed and
+  // we have associated coverageMap and capturedConsole
+  // you can still pass false to debug what happens
+  // meaning all node process and browsers launched stays opened
+  stopPlatformAfterExecute = true,
   logSummary = true,
   updateProcessExitCode = true,
 
@@ -127,6 +133,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       measurePlanExecutionDuration,
       concurrencyLimit,
       executionDefaultOptions,
+      stopPlatformAfterExecute,
       logSummary,
 
       coverage,
