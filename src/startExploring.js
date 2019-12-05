@@ -278,7 +278,10 @@ export const startExploring = async ({
     // dynamic data exists only to retrieve the compile server origin
     // that can be dynamic
     // otherwise the cached bundles would still target the previous compile server origin
-    const jsenvDirectoryUrl = resolveUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl)
+    const jsenvDirectoryUrl = resolveUrl(
+      compileServerJsenvDirectoryRelativeUrl,
+      projectDirectoryUrl,
+    )
     const browserDynamicDataFileUrl = resolveUrl(
       "./browser-execute-dynamic-data.json",
       jsenvDirectoryUrl,
@@ -298,17 +301,6 @@ export const startExploring = async ({
           const { accept = "" } = request.headers
           if (accept.includes("text/event-stream")) {
             return livereloadServerSentEventService({ request })
-          }
-          return null
-        },
-        () => {
-          if (request.ressource.startsWith("/node_modules/")) {
-            const specifier = request.ressource.slice("/node_modules/".length)
-            const filePath = import.meta.require.resolve(specifier)
-            return serveFile(filePath, {
-              method: request.method,
-              headers: request.headers,
-            })
           }
           return null
         },

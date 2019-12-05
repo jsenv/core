@@ -12409,19 +12409,6 @@ const startChromiumServer = async ({
 
       return null;
     }, () => {
-      if (request.ressource.startsWith("/node_modules/")) {
-        const specifier = request.ressource.slice("/node_modules/".length);
-
-        const filePath = nodeRequire.resolve(specifier);
-
-        return serveFile(filePath, {
-          method: request.method,
-          headers: request.headers
-        });
-      }
-
-      return null;
-    }, () => {
       return serveFile(`${projectDirectoryUrl}${request.ressource.slice(1)}`, {
         method: request.method,
         headers: request.headers
@@ -14533,6 +14520,7 @@ const jsenvExplorableConfig = {
   "./test/**/*.js": true
 };
 
+/* eslint-disable import/max-dependencies */
 const startExploring = async ({
   cancellationToken = createCancellationTokenForProcessSIGINT(),
   logLevel,
@@ -14800,7 +14788,7 @@ const startExploring = async ({
     // that can be dynamic
     // otherwise the cached bundles would still target the previous compile server origin
 
-    const jsenvDirectoryUrl = resolveUrl$1(jsenvDirectoryRelativeUrl, projectDirectoryUrl);
+    const jsenvDirectoryUrl = resolveUrl$1(compileServerJsenvDirectoryRelativeUrl, projectDirectoryUrl);
     const browserDynamicDataFileUrl = resolveUrl$1("./browser-execute-dynamic-data.json", jsenvDirectoryUrl);
     await writeFileContent(fileUrlToPath(browserDynamicDataFileUrl), JSON.stringify(getBrowserExecutionDynamicData({
       projectDirectoryUrl,
@@ -14815,19 +14803,6 @@ const startExploring = async ({
       if (accept.includes("text/event-stream")) {
         return livereloadServerSentEventService({
           request
-        });
-      }
-
-      return null;
-    }, () => {
-      if (request.ressource.startsWith("/node_modules/")) {
-        const specifier = request.ressource.slice("/node_modules/".length);
-
-        const filePath = nodeRequire.resolve(specifier);
-
-        return serveFile(filePath, {
-          method: request.method,
-          headers: request.headers
         });
       }
 
