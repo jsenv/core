@@ -140,7 +140,7 @@
     "@jsenv/prettier-config": "1.0.1",
     "babel-eslint": "11.0.0-beta.0",
     "eslint": "6.6.0",
-    "prettier": "1.18.2",
+    "prettier": "1.19.1",
     "react": "16.9.0"
   }
 }

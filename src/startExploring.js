@@ -115,21 +115,24 @@ export const startExploring = async ({
     if (livereloading) {
       watchConfig[compileServer.jsenvDirectoryRelativeUrl] = false
 
-      const unregisterDirectoryLifecyle = registerDirectoryLifecycle(urlToFilePath(projectDirectoryUrl), {
-        watchDescription: watchConfig,
-        updated: ({ relativePath: relativeUrl }) => {
-          if (projectFileSet.has(relativeUrl)) {
-            projectFileUpdatedCallback(relativeUrl)
-          }
+      const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
+        urlToFilePath(projectDirectoryUrl),
+        {
+          watchDescription: watchConfig,
+          updated: ({ relativePath: relativeUrl }) => {
+            if (projectFileSet.has(relativeUrl)) {
+              projectFileUpdatedCallback(relativeUrl)
+            }
+          },
+          removed: ({ relativePath: relativeUrl }) => {
+            if (projectFileSet.has(relativeUrl)) {
+              projectFileSet.delete(relativeUrl)
+              projectFileRemovedCallback(relativeUrl)
+            }
+          },
+          keepProcessAlive: false,
         },
-        removed: ({ relativePath: relativeUrl }) => {
-          if (projectFileSet.has(relativeUrl)) {
-            projectFileSet.delete(relativeUrl)
-            projectFileRemovedCallback(relativeUrl)
-          }
-        },
-        keepProcessAlive: false,
-      })
+      )
       cancellationToken.register(unregisterDirectoryLifecyle)
 
       const projectFileSet = new Set()
