@@ -9,7 +9,7 @@ import {
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { hrefToPathname } from "@jsenv/href"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl, sameOrigin } from "internal/urlUtils.js"
+import { directoryPathToUrl, sameOrigin } from "internal/urlUtils.js"
 import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { generateExecutionSteps } from "internal/executing/generateExecutionSteps.js"
 import { executeConcurrently } from "internal/executing/executeConcurrently.js"
@@ -52,7 +52,7 @@ export const startContinuousTesting = async ({
   const logger = createLogger({ logLevel })
 
   assertProjectDirectoryPath({ projectDirectoryPath })
-  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
+  const projectDirectoryUrl = directoryPathToUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
   return catchAsyncFunctionCancellation(async () => {

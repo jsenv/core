@@ -1,7 +1,7 @@
 import { relative, dirname } from "path"
 import { pathToFileURL, fileURLToPath } from "url"
 
-export const pathToDirectoryUrl = (path) => {
+export const directoryPathToUrl = (path) => {
   const directoryUrl = path.startsWith("file://") ? path : String(pathToFileURL(path))
   if (directoryUrl.endsWith("/")) {
     return directoryUrl

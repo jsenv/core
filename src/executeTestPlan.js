@@ -5,7 +5,7 @@ import {
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { pathToDirectoryUrl } from "internal/urlUtils.js"
+import { directoryPathToUrl } from "internal/urlUtils.js"
 import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { executePlan } from "internal/executing/executePlan.js"
 import { executionIsPassed } from "internal/executing/executionIsPassed.js"
@@ -61,7 +61,7 @@ export const executeTestPlan = async ({
   const executeLogger = createLogger({ logLevel: executeLogLevel })
 
   assertProjectDirectoryPath({ projectDirectoryPath })
-  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
+  const projectDirectoryUrl = directoryPathToUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
   if (typeof testPlan !== "object") {

@@ -3,7 +3,7 @@ import {
   catchAsyncFunctionCancellation,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
-import { pathToDirectoryUrl } from "internal/urlUtils.js"
+import { directoryPathToUrl } from "internal/urlUtils.js"
 import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "internal/executing/launchAndExecute.js"
@@ -39,7 +39,7 @@ export const execute = async ({
   const executeLogger = createLogger({ logLevel: executeLogLevel })
 
   assertProjectDirectoryPath({ projectDirectoryPath })
-  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
+  const projectDirectoryUrl = directoryPathToUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
   if (typeof fileRelativeUrl !== "string") {

@@ -12,7 +12,7 @@ import { createLogger } from "@jsenv/logger"
 import {
   resolveUrl,
   fileUrlToPath,
-  pathToDirectoryUrl,
+  directoryPathToUrl,
   sameOrigin,
   urlToRelativeUrl,
 } from "internal/urlUtils.js"
@@ -61,7 +61,7 @@ export const startExploring = async ({
   const logger = createLogger({ logLevel })
 
   assertProjectDirectoryPath({ projectDirectoryPath })
-  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
+  const projectDirectoryUrl = directoryPathToUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
   await assertFileExists(htmlFileUrl)

@@ -6,7 +6,7 @@ import {
 import { createLogger } from "@jsenv/logger"
 import { COMPILE_ID_OTHERWISE } from "internal/CONSTANTS.js"
 import {
-  pathToDirectoryUrl,
+  directoryPathToUrl,
   resolveDirectoryUrl,
   fileUrlToPath,
   urlToRelativeUrl,
@@ -70,7 +70,7 @@ export const generateBundle = async ({
   logger = logger || createLogger({ logLevel })
 
   assertProjectDirectoryPath({ projectDirectoryPath })
-  const projectDirectoryUrl = pathToDirectoryUrl(projectDirectoryPath)
+  const projectDirectoryUrl = directoryPathToUrl(projectDirectoryPath)
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
   assertEntryPointMap({ entryPointMap })
