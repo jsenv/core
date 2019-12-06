@@ -9,15 +9,9 @@ import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from 
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
-import {
-  resolveUrl,
-  urlToFilePath,
-  directoryPathToUrl,
-  sameOrigin,
-  urlToRelativeUrl,
-} from "internal/urlUtils.js"
+import { resolveUrl, urlToFilePath, sameOrigin, urlToRelativeUrl } from "internal/urlUtils.js"
 import { assertFileExists, writeFileContent } from "internal/filesystemUtils.js"
-import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
+import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { getBrowserExecutionDynamicData } from "internal/platform/getBrowserExecutionDynamicData.js"
 import { serveExploringIndex } from "internal/exploring/serveExploringIndex.js"
 import { serveBrowserSelfExecute } from "internal/exploring/serveBrowserSelfExecute.js"
@@ -39,7 +33,7 @@ export const startExploring = async ({
   },
   livereloading = false,
 
-  projectDirectoryPath,
+  projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
@@ -60,8 +54,7 @@ export const startExploring = async ({
 }) => {
   const logger = createLogger({ logLevel })
 
-  assertProjectDirectoryPath({ projectDirectoryPath })
-  const projectDirectoryUrl = directoryPathToUrl(projectDirectoryPath)
+  projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
   await assertFileExists(htmlFileUrl)
@@ -122,7 +115,7 @@ export const startExploring = async ({
     if (livereloading) {
       watchConfig[compileServer.jsenvDirectoryRelativeUrl] = false
 
-      const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryPath, {
+      const unregisterDirectoryLifecyle = registerDirectoryLifecycle(urlToFilePath(projectDirectoryUrl), {
         watchDescription: watchConfig,
         updated: ({ relativePath: relativeUrl }) => {
           if (projectFileSet.has(relativeUrl)) {

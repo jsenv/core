@@ -33,7 +33,7 @@ Implemented in [src/executeTestPlan.js](../../src/executeTestPlan.js), you can u
 const { executeTestPlan, launchNode } = require("@jsenv/core")
 
 executeTestPlan({
-  projectDirectoryPath: __dirname,
+  projectDirectoryUrl: __dirname,
   testPlan: {
     "./test/**/*.test.js": {
       node: {
@@ -234,7 +234,7 @@ TODO and all coverage params
 
 To avoid duplication some parameter are linked to a generic documentation.
 
-- [projectDirectoryPath](../shared-parameters.md#projectDirectoryPath)
+- [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
 - [babelPluginMap](../shared-parameters.md#babelPluginMap)
 - [convertMap](../shared-parameters.md#convertMap)
 - [importMapFileRelativeUrl](../shared-parameters.md#importMapFileRelativeUrl)
@@ -253,7 +253,7 @@ It is returned by `executeTestPlan`, see below an example
 
 ```js
 const { summary } = await executeTestPlan({
-  projectDirectoryPath: __dirname,
+  projectDirectoryUrl: __dirname,
   testPlan: {},
 })
 ```
@@ -278,7 +278,7 @@ It is returned by `executeTestPlan`, see below an example
 
 ```js
 const { report } = await executeTestPlan({
-  projectDirectoryPath: __dirname
+  projectDirectoryUrl: __dirname
   testPlan: {
     "./test/file.test.js": {
       node: {
@@ -314,7 +314,7 @@ It is returned by `executeTestPlan`, see below an example
 
 ```js
 const { coverageMap } = await executeTestPlan({
-  projectDirectoryPath: __dirname
+  projectDirectoryUrl: __dirname
   testPlan: {
     "./test/file.test.js": {
       node: {

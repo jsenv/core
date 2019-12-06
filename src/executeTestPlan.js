@@ -5,8 +5,7 @@ import {
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { directoryPathToUrl } from "internal/urlUtils.js"
-import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
+import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { executePlan } from "internal/executing/executePlan.js"
 import { executionIsPassed } from "internal/executing/executionIsPassed.js"
 import { generateCoverageJsonFile } from "internal/executing/coverage/generateCoverageJsonFile.js"
@@ -21,7 +20,7 @@ export const executeTestPlan = async ({
   launchLogLevel = "warn",
   executeLogLevel = "off",
 
-  projectDirectoryPath,
+  projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
@@ -60,8 +59,7 @@ export const executeTestPlan = async ({
   const launchLogger = createLogger({ logLevel: launchLogLevel })
   const executeLogger = createLogger({ logLevel: executeLogLevel })
 
-  assertProjectDirectoryPath({ projectDirectoryPath })
-  const projectDirectoryUrl = directoryPathToUrl(projectDirectoryPath)
+  projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
   if (typeof testPlan !== "object") {

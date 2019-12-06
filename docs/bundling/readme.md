@@ -133,7 +133,7 @@ The following code uses `@jsenv/core` to create a systemjs bundle for `index.js`
 const { generateSystemJsBundle } = require("@jsenv/core")
 
 generateSystemJsBundle({
-  projectDirectoryPath: __dirname,
+  projectDirectoryUrl: __dirname,
   bundleDirectoryRelativeUrl: "./dist",
   entryPointMap: {
     main: "./index.js",

@@ -1,9 +1,28 @@
+import { filePathToUrl, hasScheme, ensureUrlTrailingSlash } from "./urlUtils.js"
 import { assertDirectoryExists } from "./filesystemUtils.js"
 
-export const assertProjectDirectoryPath = ({ projectDirectoryPath }) => {
-  if (typeof projectDirectoryPath !== "string") {
-    throw new TypeError(`projectDirectoryPath must be a string, received ${projectDirectoryPath}`)
+export const assertProjectDirectoryUrl = ({ projectDirectoryUrl }) => {
+  if (projectDirectoryUrl instanceof URL) {
+    projectDirectoryUrl = projectDirectoryUrl.href
   }
+
+  if (typeof projectDirectoryUrl === "string") {
+    const url = hasScheme(projectDirectoryUrl)
+      ? projectDirectoryUrl
+      : filePathToUrl(projectDirectoryUrl)
+
+    if (!url.startsWith("file://")) {
+      throw new Error(
+        `projectDirectoryUrl must starts with file://, received ${projectDirectoryUrl}`,
+      )
+    }
+
+    return ensureUrlTrailingSlash(projectDirectoryUrl)
+  }
+
+  throw new TypeError(
+    `projectDirectoryUrl must be a string or an url, received ${projectDirectoryUrl}`,
+  )
 }
 
 export const assertProjectDirectoryExists = ({ projectDirectoryUrl }) => {

@@ -9,8 +9,8 @@ import {
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { hrefToPathname } from "@jsenv/href"
 import { createLogger } from "@jsenv/logger"
-import { directoryPathToUrl, sameOrigin } from "internal/urlUtils.js"
-import { assertProjectDirectoryPath, assertProjectDirectoryExists } from "internal/argUtils.js"
+import { sameOrigin, urlToFilePath } from "internal/urlUtils.js"
+import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { generateExecutionSteps } from "internal/executing/generateExecutionSteps.js"
 import { executeConcurrently } from "internal/executing/executeConcurrently.js"
 import { startCompileServerForExecutingPlan } from "internal/executing/startCompileServerForExecutingPlan.js"
@@ -26,7 +26,7 @@ export const TESTING_WATCH_EXCLUDE_DESCRIPTION = {
 }
 
 export const startContinuousTesting = async ({
-  projectDirectoryPath,
+  projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
@@ -51,8 +51,7 @@ export const startContinuousTesting = async ({
   const cancellationToken = createCancellationTokenForProcessSIGINT()
   const logger = createLogger({ logLevel })
 
-  assertProjectDirectoryPath({ projectDirectoryPath })
-  const projectDirectoryUrl = directoryPathToUrl(projectDirectoryPath)
+  projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
   return catchAsyncFunctionCancellation(async () => {
@@ -107,26 +106,29 @@ export const startContinuousTesting = async ({
       keepProcessAlive: true,
     })
 
-    const unregisterProjectDirectoryLifecycle = registerDirectoryLifecycle(projectDirectoryPath, {
-      watchDescription: {
-        ...watchDescription,
-        [outDirectoryRelativeUrl]: false,
+    const unregisterProjectDirectoryLifecycle = registerDirectoryLifecycle(
+      urlToFilePath(projectDirectoryUrl),
+      {
+        watchDescription: {
+          ...watchDescription,
+          [outDirectoryRelativeUrl]: false,
+        },
+        keepProcessAlive: false,
+        added: ({ relativePath: relativeUrl, type }) => {
+          if (type === "file") {
+            projectFileAddedCallback({ relativeUrl })
+          }
+        },
+        updated: ({ relativePath: relativeUrl }) => {
+          if (!projectFileSet.has(relativeUrl)) return
+          projectFileUpdatedCallback({ relativeUrl })
+        },
+        removed: ({ relativePath: relativeUrl }) => {
+          if (!projectFileSet.has(relativeUrl)) return
+          projectFileRemovedCallback({ relativeUrl })
+        },
       },
-      keepProcessAlive: false,
-      added: ({ relativePath: relativeUrl, type }) => {
-        if (type === "file") {
-          projectFileAddedCallback({ relativeUrl })
-        }
-      },
-      updated: ({ relativePath: relativeUrl }) => {
-        if (!projectFileSet.has(relativeUrl)) return
-        projectFileUpdatedCallback({ relativeUrl })
-      },
-      removed: ({ relativePath: relativeUrl }) => {
-        if (!projectFileSet.has(relativeUrl)) return
-        projectFileRemovedCallback({ relativeUrl })
-      },
-    })
+    )
     cancellationToken.register(unregisterProjectDirectoryLifecycle)
 
     let executionSteps = await generateExecutionSteps(testPlan, {

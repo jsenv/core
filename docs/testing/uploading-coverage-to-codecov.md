@@ -53,7 +53,7 @@ Create a script capable to upload coverage.
 const { uploadCoverage } = require("@jsenv/codecov-upload")
 
 uploadCoverage({
-  projectDirectoryPath: __dirname,
+  projectDirectoryUrl: __dirname,
   coverageJsonFileRelativeUrl: "./coverage/coverage.json",
 })
 ```

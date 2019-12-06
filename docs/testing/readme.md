@@ -198,7 +198,7 @@ const { executeTestPlan, launchNode } = require("@jsenv/core")
 const { launchChromium } = require("@jsenv/chromium-launcher")
 
 executeTestPlan({
-  projectDirectoryPath: __dirname,
+  projectDirectoryUrl: __dirname,
   testPlan: {
     "./**/*.test.js": {
       node: {

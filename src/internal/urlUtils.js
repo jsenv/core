@@ -3,10 +3,11 @@ import { pathToFileURL, fileURLToPath } from "url"
 
 export const directoryPathToUrl = (path) => {
   const directoryUrl = path.startsWith("file://") ? path : String(filePathToUrl(path))
-  if (directoryUrl.endsWith("/")) {
-    return directoryUrl
-  }
-  return `${directoryUrl}/`
+  return ensureUrlTrailingSlash(directoryUrl)
+}
+
+export const ensureUrlTrailingSlash = (url) => {
+  return url.endsWith("/") ? url : `${url}/`
 }
 
 export const filePathToUrl = (path) => {

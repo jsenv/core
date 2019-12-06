@@ -4,7 +4,7 @@
   - [bundleDirectoryRelativeUrl](#bundleDirectoryRelativeUrl)
   - [entryPointMap](#entryPointMap)
   - [minify](#minify)
-  - [projectDirectoryPath](#projectDirectoryPath)
+  - [projectDirectoryUrl](#projectDirectoryUrl)
   - [babelPluginMap](#babelPluginMap)
   - [convertMap](#convertMap)
   - [importMapFileRelativeUrl](#importMapFileRelativeUrl)
@@ -69,9 +69,9 @@ This parameter is optional with a default value of
 false
 ```
 
-### projectDirectoryPath
+### projectDirectoryUrl
 
-— see [generic documentation for projectDirectoryPath](../shared-parameters/shared-parameters.md#projectdirectorypath)
+— see [generic documentation for projectDirectoryUrl](../shared-parameters/shared-parameters.md#projectDirectoryUrl)
 
 ### babelPluginMap
 
@@ -99,7 +99,7 @@ Implemented in [src/generateSystemJsBundle.js](../../src/generateSystemJsBundle.
 const { generateSystemJsBundle } = require("@jsenv/core")
 
 generateSystemJsBundle({
-  projectDirectoryPath: __dirname,
+  projectDirectoryUrl: __dirname,
 })
 ```
 
@@ -113,7 +113,7 @@ Implemented in [src/generateGlobalBundle.js](../../src/generateGlobalBundle.js),
 const { generateGlobalBundle } = require("@jsenv/core")
 
 generateGlobalBundle({
-  projectDirectoryPath: __dirname,
+  projectDirectoryUrl: __dirname,
   globalName: "__whatever__",
 })
 ```
@@ -140,7 +140,7 @@ Implemented in [src/generateCommonJsBundle.js](../../src/generateCommonJsBundle.
 const { generateCommonJsBundle } = require("@jsenv/core")
 
 generateCommonJsBundle({
-  projectDirectoryPath: __dirname,
+  projectDirectoryUrl: __dirname,
 })
 ```
 
@@ -154,7 +154,7 @@ Implemented in [src/generateCommonJsBundleForNode.js](../../src/generateCommonJs
 const { generateCommonJsBundleForNode } = require("@jsenv/core")
 
 generateCommonJsBundleForNode({
-  projectDirectoryPath: __dirname,
+  projectDirectoryUrl: __dirname,
   nodeMinimumVersion: "8.0.0",
 })
 ```

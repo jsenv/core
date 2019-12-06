@@ -1,15 +1,15 @@
 # Table of contents
 
-- [projectDirectoryPath](#projectDirectoryPath)
+- [projectDirectoryUrl](#projectDirectoryUrl)
 - [babelPluginMap](#babelPluginMap)
 - [convertMap](#convertMap)
 - [importMapFileRelativeUrl](#importMapFileRelativeUrl)
 - [importDefaultExtension](#importDefaultExtension)
 - [compileDirectoryRelativeUrl](#compileDirectoryRelativeUrl)
 
-## projectDirectoryPath
+## projectDirectoryUrl
 
-> `projectDirectoryPath` is a string leading to your project directory.
+> `projectDirectoryUrl` is a string leading to your project directory.
 
 This parameter is **required**, an example value could be:
 
@@ -23,7 +23,7 @@ file url, like `file:///Users/you/folder`, are valid.<br />
 You can use `__dirname` to provide the value.<br />
 — see [\_\_dirname documentation on node.js](https://nodejs.org/docs/latest/api/modules.html#modules_dirname)
 
-Note: All parameter ending with `relativeUrl` are resolved against `projectDirectoryPath`.
+Note: All parameter ending with `relativeUrl` are resolved against `projectDirectoryUrl`.
 
 ## babelPluginMap
 
