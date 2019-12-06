@@ -219,7 +219,7 @@ const remapSourcePosition = async ({
   readErrorStack,
   onFailure,
 }) => {
-  const url = startsWithScheme(source) ? source : operatingSystemPathToFileUrl(source)
+  const url = startsWithScheme(source) ? source : operatingSystemFilePathToUrl(source)
 
   const position = { source, line, column }
 
@@ -263,9 +263,9 @@ const startsWithScheme = (string) => {
   return /^[a-zA-Z]{2,}:/.test(string)
 }
 
-const operatingSystemPathToFileUrl = (osFilePath) => {
+const operatingSystemFilePathToUrl = (osFilePath) => {
   if (isWindowsPath(osFilePath)) {
-    return windowsPathToFileUrl(osFilePath)
+    return windowsfilePathToUrl(osFilePath)
   }
   if (osFilePath[0] === "/") {
     return `file://${osFilePath}`
@@ -285,7 +285,7 @@ const startsWithWindowsDriveLetter = (string) => {
   return true
 }
 
-const windowsPathToFileUrl = (windowsPath) => {
+const windowsfilePathToUrl = (windowsPath) => {
   return `file:///${replaceBackSlashesWithSlashes(windowsPath)}`
 }
 

@@ -1,4 +1,4 @@
-import { urlToRelativeUrl, pathToFileUrl } from "internal/urlUtils.js"
+import { urlToRelativeUrl, filePathToUrl } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 
 export const getBrowserExecutionDynamicData = ({ projectDirectoryUrl, compileServerOrigin }) => {
@@ -7,10 +7,10 @@ export const getBrowserExecutionDynamicData = ({ projectDirectoryUrl, compileSer
       ? "src/browserPlatform.js"
       : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/browserPlatform.js`
 
-  const sourcemapMainFileUrl = pathToFileUrl(
+  const sourcemapMainFileUrl = filePathToUrl(
     import.meta.require.resolve("source-map/dist/source-map.js"),
   )
-  const sourcemapMappingFileUrl = pathToFileUrl(
+  const sourcemapMappingFileUrl = filePathToUrl(
     import.meta.require.resolve("source-map/lib/mappings.wasm"),
   )
   const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl)

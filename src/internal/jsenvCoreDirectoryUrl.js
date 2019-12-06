@@ -1,11 +1,11 @@
-import { pathToFileUrl, resolveDirectoryUrl } from "./urlUtils.js"
+import { filePathToUrl, resolveDirectoryUrl } from "./urlUtils.js"
 
 let jsenvCoreDirectoryUrl
 if (typeof __filename === "string") {
   jsenvCoreDirectoryUrl = resolveDirectoryUrl(
     // get ride of dist/commonjs/main.js
     "../../",
-    pathToFileUrl(__filename),
+    filePathToUrl(__filename),
   )
 } else {
   jsenvCoreDirectoryUrl = resolveDirectoryUrl(

@@ -3,7 +3,7 @@ import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import {
   hasScheme,
   fileUrlToPath,
-  pathToFileUrl,
+  filePathToUrl,
   resolveUrl,
   fileUrlToRelativePath,
   resolveDirectoryUrl,
@@ -50,7 +50,7 @@ export const createJsenvRollupPlugin = async ({
 
     resolveId: (specifier, importer = compileDirectoryRemoteUrl) => {
       if (!hasScheme(importer)) {
-        importer = pathToFileUrl(importer)
+        importer = filePathToUrl(importer)
       }
       const importUrl = resolveImport({
         specifier,
@@ -321,7 +321,7 @@ const transformAsyncInsertedByRollup = async ({
       const { code, map } = await transformJs({
         projectDirectoryUrl,
         code: bundleInfo.code,
-        url: pathToFileUrl(bundleFilename),
+        url: filePathToUrl(bundleFilename),
         map: bundleInfo.map,
         babelPluginMap: { [asyncPluginName]: babelPluginMap[asyncPluginName] },
         transformModuleIntoSystemFormat: false, // already done by rollup
