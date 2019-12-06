@@ -6,7 +6,7 @@ import {
   createCancellationSource,
   composeCancellationToken,
 } from "@jsenv/cancellation"
-import { fileUrlToPath } from "internal/urlUtils.js"
+import { urlToFilePath } from "internal/urlUtils.js"
 import { launchAndExecute } from "internal/executing/launchAndExecute.js"
 import { reportToCoverageMap } from "./coverage/reportToCoverageMap.js"
 import { createExecutionResultLog } from "./executionLogs.js"
@@ -118,7 +118,7 @@ ${fileRelativeUrl}`),
         executionIndex,
       }
 
-      const filePath = fileUrlToPath(`${projectDirectoryUrl}${fileRelativeUrl}`)
+      const filePath = urlToFilePath(`${projectDirectoryUrl}${fileRelativeUrl}`)
       const fileExists = await pathLeadsToFile(filePath)
       if (!fileExists) {
         mainFileNotFoundCallback(beforeExecutionInfo)

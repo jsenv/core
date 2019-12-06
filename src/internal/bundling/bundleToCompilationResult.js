@@ -8,7 +8,7 @@ json file etag is used to invalidate the cache
 */
 
 import { readFileSync } from "fs"
-import { fileUrlToRelativePath, fileUrlToPath, resolveUrl } from "internal/urlUtils.js"
+import { fileUrlToRelativePath, urlToFilePath, resolveUrl } from "internal/urlUtils.js"
 import { writeOrUpdateSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 
 export const bundleToCompilationResult = (
@@ -128,7 +128,7 @@ const getModuleContent = ({ moduleContentMap, mainModuleSourcemap, moduleUrl, mo
 
   // try to get it from filesystem
   if (moduleUrl.startsWith("file:///")) {
-    const moduleFilePath = fileUrlToPath(moduleUrl)
+    const moduleFilePath = urlToFilePath(moduleUrl)
     // this could be async but it's ok for now
     // making it async could be harder than it seems
     // because sourcesContent must be in sync with sources

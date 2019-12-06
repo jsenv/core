@@ -11,7 +11,7 @@ import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
 import {
   resolveUrl,
-  fileUrlToPath,
+  urlToFilePath,
   directoryPathToUrl,
   sameOrigin,
   urlToRelativeUrl,
@@ -287,7 +287,7 @@ export const startExploring = async ({
       jsenvDirectoryUrl,
     )
     await writeFileContent(
-      fileUrlToPath(browserDynamicDataFileUrl),
+      urlToFilePath(browserDynamicDataFileUrl),
       JSON.stringify(
         getBrowserExecutionDynamicData({ projectDirectoryUrl, compileServerOrigin }),
         null,

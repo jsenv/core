@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
-import { fileUrlToPath } from "internal/urlUtils.js"
+import { urlToFilePath } from "internal/urlUtils.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
 import { fetch } from "../../fetch.js"
@@ -38,7 +38,7 @@ const expected = {
 assert({ actual, expected })
 
 {
-  const actual = import.meta.require(fileUrlToPath(compiledFileUrl))
+  const actual = import.meta.require(urlToFilePath(compiledFileUrl))
   const expected = 42
   assert({ actual, expected })
 }

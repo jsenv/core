@@ -1,7 +1,7 @@
 import { readFileSync } from "fs"
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, fileUrlToPath } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToFilePath } from "internal/urlUtils.js"
 import { transformJs } from "internal/compiling/js-compilation-service/transformJs.js"
 import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS.js"
 
@@ -9,7 +9,7 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryname = basename(testDirectoryUrl)
 const filename = `${testDirectoryname}.js`
 const originalFileUrl = import.meta.resolve(`./${filename}`)
-const filePath = fileUrlToPath(originalFileUrl)
+const filePath = urlToFilePath(originalFileUrl)
 const originalFileContent = readFileSync(filePath).toString()
 
 const { code } = await transformJs({

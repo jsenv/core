@@ -1,4 +1,4 @@
-import { fileUrlToPath } from "internal/urlUtils.js"
+import { urlToFilePath } from "internal/urlUtils.js"
 import { createFileDirectories } from "internal/filesystemUtils.js"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
@@ -187,7 +187,7 @@ const callCompile = async ({ logger, originalFileUrl, compile }) => {
 
 const startAsap = async (fn, { logger, compiledFileUrl, cacheInterProcessLocking }) => {
   const metaJsonFileUrl = resolveMetaJsonFileUrl({ compiledFileUrl })
-  const metaJsonFilePath = fileUrlToPath(metaJsonFileUrl)
+  const metaJsonFilePath = urlToFilePath(metaJsonFileUrl)
 
   logger.debug(`lock ${metaJsonFilePath}`)
   // in case this process try to concurrently access meta we wait for previous to be done

@@ -2,7 +2,7 @@
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import {
   hasScheme,
-  fileUrlToPath,
+  urlToFilePath,
   filePathToUrl,
   resolveUrl,
   fileUrlToRelativePath,
@@ -265,10 +265,10 @@ ${moduleUrl}`)
 
 // const urlToRollupId = (url, { compileServerOrigin, projectDirectoryUrl }) => {
 //   if (url.startsWith(`${compileServerOrigin}/`)) {
-//     return fileUrlToPath(`${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`)
+//     return urlToFilePath(`${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`)
 //   }
 //   if (url.startsWith("file://")) {
-//     return fileUrlToPath(url)
+//     return urlToFilePath(url)
 //   }
 //   return url
 // }
@@ -333,10 +333,10 @@ const transformAsyncInsertedByRollup = async ({
 
       await Promise.all([
         writeFileContent(
-          fileUrlToPath(bundleFileUrl),
+          urlToFilePath(bundleFileUrl),
           writeSourceMappingURL(code, `./${bundleFilename}.map`),
         ),
-        writeFileContent(fileUrlToPath(`${bundleFileUrl}.map`), JSON.stringify(map)),
+        writeFileContent(urlToFilePath(`${bundleFileUrl}.map`), JSON.stringify(map)),
       ])
     }),
   )

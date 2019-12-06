@@ -8,7 +8,7 @@ import { COMPILE_ID_OTHERWISE } from "internal/CONSTANTS.js"
 import {
   directoryPathToUrl,
   resolveDirectoryUrl,
-  fileUrlToPath,
+  urlToFilePath,
   urlToRelativeUrl,
 } from "internal/urlUtils.js"
 import { assertFileExists, removeDirectory } from "internal/filesystemUtils.js"
@@ -79,7 +79,7 @@ export const generateBundle = async ({
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
   assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
   if (bundleDirectoryClean) {
-    await removeDirectory(fileUrlToPath(bundleDirectoryUrl))
+    await removeDirectory(urlToFilePath(bundleDirectoryUrl))
   }
 
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`

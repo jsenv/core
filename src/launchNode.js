@@ -4,7 +4,7 @@ import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
-import { fileUrlToPath, resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { urlToFilePath, resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
@@ -64,7 +64,7 @@ export const launchNode = async ({
 
   env.COVERAGE_ENABLED = collectCoverage
 
-  const child = forkChildProcess(fileUrlToPath(nodeControllableFileUrl), {
+  const child = forkChildProcess(urlToFilePath(nodeControllableFileUrl), {
     execArgv,
     // silent: true
     stdio: "pipe",
@@ -238,7 +238,7 @@ const evalException = (exceptionSource, { compileServerOrigin, projectDirectoryU
       escapeRegexpSpecialCharacters(`${compileServerOrigin}/`),
       "g",
     )
-    const projectDirectoryPath = fileUrlToPath(projectDirectoryUrl)
+    const projectDirectoryPath = urlToFilePath(projectDirectoryUrl)
 
     error.stack = error.stack.replace(compileServerOriginRegexp, projectDirectoryPath)
     error.message = error.message.replace(compileServerOriginRegexp, projectDirectoryPath)
@@ -308,8 +308,8 @@ const createNodeIIFEString = ({
 }) => `(() => {
   const fs = require('fs')
   const Module = require('module')
-  const nodeFilePath = ${JSON.stringify(fileUrlToPath(nodeJsFileUrl))}
-  const nodeBundledJsFilePath = ${JSON.stringify(fileUrlToPath(nodeBundledJsFileUrl))}
+  const nodeFilePath = ${JSON.stringify(urlToFilePath(nodeJsFileUrl))}
+  const nodeBundledJsFilePath = ${JSON.stringify(urlToFilePath(nodeBundledJsFileUrl))}
   const fileContent = String(fs.readFileSync(nodeBundledJsFilePath))
   const moduleObject = new Module(nodeBundledJsFilePath)
   moduleObject.paths = Module._nodeModulePaths(require('path').dirname(nodeFilePath));

@@ -6,7 +6,7 @@ import { createCancellationToken } from "@jsenv/cancellation"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  fileUrlToPath,
+  urlToFilePath,
   resolveUrl,
 } from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
@@ -68,7 +68,7 @@ assert({ actual, expected })
 
 {
   const sourcemapFileUrl = `${compiledFileUrl}.map`
-  const actual = JSON.parse(await readFileContent(fileUrlToPath(sourcemapFileUrl)))
+  const actual = JSON.parse(await readFileContent(urlToFilePath(sourcemapFileUrl)))
   const expected = {
     version: 3,
     file: "file.js",
@@ -83,18 +83,18 @@ assert({ actual, expected })
 {
   const metaFileUrl = `${compiledFileUrl}__asset__/meta.json`
   const actual = JSON.parse(
-    await readFileContent(fileUrlToPath(`${compiledFileUrl}__asset__/meta.json`)),
+    await readFileContent(urlToFilePath(`${compiledFileUrl}__asset__/meta.json`)),
   )
   const expected = {
     contentType: "application/javascript",
     sources: ["../out/env.js", "../../file.js"],
     sourcesEtag: [
-      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../out/env.js", metaFileUrl)))),
-      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../../file.js", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFilePath(resolveUrl("../out/env.js", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFilePath(resolveUrl("../../file.js", metaFileUrl)))),
     ],
     assets: ["../file.js.map"],
     assetsEtag: [
-      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../file.js.map", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFilePath(resolveUrl("../file.js.map", metaFileUrl)))),
     ],
     createdMs: actual.createdMs,
     lastModifiedMs: actual.lastModifiedMs,
@@ -103,7 +103,7 @@ assert({ actual, expected })
 }
 
 {
-  const actual = import.meta.require(fileUrlToPath(compiledFileUrl))
+  const actual = import.meta.require(urlToFilePath(compiledFileUrl))
   const expected = 42
   assert({ actual, expected })
 }

@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  fileUrlToPath,
+  urlToFilePath,
   resolveUrl,
 } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
@@ -42,7 +42,7 @@ const expected = {
   body: {
     message: actual.body.message,
     messageHTML: actual.body.messageHTML,
-    filename: fileUrlToPath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)),
+    filename: urlToFilePath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)),
     lineNumber: 1,
     columnNumber: 11,
   },

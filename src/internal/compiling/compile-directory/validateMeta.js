@@ -1,4 +1,4 @@
-import { fileUrlToPath } from "internal/urlUtils.js"
+import { urlToFilePath } from "internal/urlUtils.js"
 import { readFileContent, readFileStat } from "internal/filesystemUtils.js"
 import { resolveAssetFileUrl, resolveSourceFileUrl } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
@@ -65,7 +65,7 @@ const validateCompiledFile = async ({
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
-  const compiledFilePath = fileUrlToPath(compiledFileUrl)
+  const compiledFilePath = urlToFilePath(compiledFileUrl)
 
   try {
     const compiledSource = await readFileContent(compiledFilePath)
@@ -129,7 +129,7 @@ const validateSource = async ({ logger, compiledFileUrl, source, eTag }) => {
     source,
     compiledFileUrl,
   })
-  const sourceFilePath = fileUrlToPath(sourceFileUrl)
+  const sourceFilePath = urlToFilePath(sourceFileUrl)
 
   try {
     const sourceContent = await readFileContent(sourceFilePath)
@@ -187,7 +187,7 @@ const validateAsset = async ({ logger, asset, compiledFileUrl, eTag }) => {
     compiledFileUrl,
     asset,
   })
-  const assetFilePath = fileUrlToPath(assetFileUrl)
+  const assetFilePath = urlToFilePath(assetFileUrl)
 
   try {
     const assetContent = await readFileContent(assetFilePath)

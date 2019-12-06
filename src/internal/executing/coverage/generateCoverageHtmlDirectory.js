@@ -1,4 +1,4 @@
-import { resolveDirectoryUrl, fileUrlToPath } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToFilePath } from "internal/urlUtils.js"
 
 const libReport = import.meta.require("istanbul-lib-report")
 const reports = import.meta.require("istanbul-reports")
@@ -14,7 +14,7 @@ export const generateCoverageHtmlDirectory = ({
     coverageHtmlDirectoryRelativeUrl,
     projectDirectoryUrl,
   )
-  const htmlDirectoryPath = fileUrlToPath(htmlDirectoryUrl)
+  const htmlDirectoryPath = urlToFilePath(htmlDirectoryUrl)
   const context = libReport.createContext({
     dir: htmlDirectoryPath,
     coverageMap: createCoverageMap(coverageMap),
@@ -28,7 +28,7 @@ export const generateCoverageHtmlDirectory = ({
 
   if (coverageHtmlDirectoryIndexLog) {
     const htmlCoverageDirectoryIndexFileUrl = `${htmlDirectoryUrl}index.html`
-    const htmlCoverageDirectoryIndexFilePath = fileUrlToPath(htmlCoverageDirectoryIndexFileUrl)
+    const htmlCoverageDirectoryIndexFilePath = urlToFilePath(htmlCoverageDirectoryIndexFileUrl)
     console.log(`-> ${htmlCoverageDirectoryIndexFilePath}`)
   }
 }

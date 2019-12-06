@@ -1,4 +1,4 @@
-import { fileUrlToRelativePath, fileUrlToPath } from "internal/urlUtils.js"
+import { fileUrlToRelativePath, urlToFilePath } from "internal/urlUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
 
@@ -62,7 +62,7 @@ export const transformResultToCompilationResult = async (
           if (map.sourcesContent && map.sourcesContent[index]) {
             sourcesContent[index] = map.sourcesContent[index]
           } else {
-            const sourceFilePath = fileUrlToPath(sourceFileUrl)
+            const sourceFilePath = urlToFilePath(sourceFileUrl)
             const sourceFileContent = await readFileContent(sourceFilePath)
             sourcesContent[index] = sourceFileContent
           }

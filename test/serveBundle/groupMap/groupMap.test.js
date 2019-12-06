@@ -6,7 +6,7 @@ import { createCancellationToken } from "@jsenv/cancellation"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  fileUrlToPath,
+  urlToFilePath,
   resolveUrl,
 } from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
@@ -70,7 +70,7 @@ const response = await serveBundle(serveBundleParams)
 
 {
   const sourcemapFileUrl = `${compiledFileUrl}.map`
-  const actual = JSON.parse(await readFileContent(fileUrlToPath(sourcemapFileUrl)))
+  const actual = JSON.parse(await readFileContent(urlToFilePath(sourcemapFileUrl)))
   const expected = {
     version: 3,
     file: "file.js",
@@ -84,17 +84,17 @@ const response = await serveBundle(serveBundleParams)
 
 {
   const metaFileUrl = `${compiledFileUrl}__asset__/meta.json`
-  const actual = JSON.parse(await readFileContent(fileUrlToPath(metaFileUrl)))
+  const actual = JSON.parse(await readFileContent(urlToFilePath(metaFileUrl)))
   const expected = {
     contentType: "application/javascript",
     sources: ["../out/groupMap.json", "../../file.js"],
     sourcesEtag: [
-      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../out/groupMap.json", metaFileUrl)))),
-      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../../file.js", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFilePath(resolveUrl("../out/groupMap.json", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFilePath(resolveUrl("../../file.js", metaFileUrl)))),
     ],
     assets: ["../file.js.map"],
     assetsEtag: [
-      bufferToEtag(readFileSync(fileUrlToPath(resolveUrl("../file.js.map", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFilePath(resolveUrl("../file.js.map", metaFileUrl)))),
     ],
     createdMs: actual.createdMs,
     lastModifiedMs: actual.lastModifiedMs,
@@ -103,7 +103,7 @@ const response = await serveBundle(serveBundleParams)
 }
 
 {
-  const actual = typeof import.meta.require(fileUrlToPath(compiledFileUrl))
+  const actual = typeof import.meta.require(urlToFilePath(compiledFileUrl))
   const expected = "object"
   assert({ actual, expected })
 }

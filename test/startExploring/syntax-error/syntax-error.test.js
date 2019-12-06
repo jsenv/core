@@ -3,7 +3,7 @@ import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  fileUrlToPath,
+  urlToFilePath,
   resolveUrl,
 } from "internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
@@ -19,7 +19,7 @@ const htmlFileUrl = import.meta.resolve("../template.html")
 const htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, jsenvCoreDirectoryUrl)
 const filename = `${testDirectoryname}.main.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const filePath = fileUrlToPath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl))
+const filePath = urlToFilePath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl))
 
 const { origin: browserExplorerServerOrigin, compileServerOrigin } = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,

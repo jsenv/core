@@ -1,7 +1,7 @@
 import { globalAgent } from "https"
 import { createOperation } from "@jsenv/cancellation"
 import { urlToContentType } from "@jsenv/server"
-import { fileUrlToPath } from "internal/urlUtils.js"
+import { urlToFilePath } from "internal/urlUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
 
 const fetch = import.meta.require("node-fetch")
@@ -26,7 +26,7 @@ export const fetchUrl = async (url, { cancellationToken } = {}) => {
 
   if (url.startsWith("file:///")) {
     try {
-      const path = fileUrlToPath(url)
+      const path = urlToFilePath(url)
       const code = await createOperation({
         cancellationToken,
         start: () => readFileContent(path),

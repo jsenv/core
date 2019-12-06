@@ -1,6 +1,6 @@
 import { metaMapToSpecifierMetaMap } from "@jsenv/url-meta"
 import { collectFiles } from "@jsenv/file-collector"
-import { fileUrlToPath } from "internal/urlUtils.js"
+import { urlToFilePath } from "internal/urlUtils.js"
 import { relativeUrlToEmptyCoverage } from "./relativeUrlToEmptyCoverage.js"
 import { composeCoverageMap } from "./composeCoverageMap.js"
 
@@ -60,7 +60,7 @@ const listRelativeFileUrlToCover = async ({
 
   const matchingFileResultArray = await collectFiles({
     cancellationToken,
-    directoryPath: fileUrlToPath(projectDirectoryUrl),
+    directoryPath: urlToFilePath(projectDirectoryUrl),
     specifierMetaMap: specifierMetaMapForCoverage,
     predicate: ({ cover }) => cover,
   })
