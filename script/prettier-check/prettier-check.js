@@ -5,6 +5,10 @@ prettierCheckProject({
   ...jsenvConfig,
   projectFilesConfig: {
     ...jsenvProjectFilesConfig,
+    "./.github/": true,
+    "./docs/": true,
+    "./docs/**/node_modules/": false,
+    "./helpers/": true,
     "./**/.jsenv/": false,
     "./**/dist/": false,
   },
