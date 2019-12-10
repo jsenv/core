@@ -28,7 +28,13 @@ const { origin: browserExplorerServerOrigin, stop } = await startExploring({
   htmlFileUrl,
   livereloading: true,
 })
-const { browser, page, pageLogs, pageErrors, executionResult } = await openBrowserPage(
+const {
+  browser,
+  page,
+  pageLogs,
+  pageErrors,
+  executionResult,
+} = await openBrowserPage(
   `${browserExplorerServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
   { headless: true },
 )

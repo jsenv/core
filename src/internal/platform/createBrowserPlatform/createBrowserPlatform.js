@@ -10,8 +10,8 @@ import {
   // eslint-disable-next-line import/no-unresolved
 } from "/.jsenv/out/env.js"
 import { uneval } from "@jsenv/uneval"
-import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap/normalizeImportMap.js"
-import { resolveImport } from "@jsenv/import-map/src/resolveImport/resolveImport.js"
+import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
+import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
 import { memoizeOnce } from "../memoizeOnce.js"

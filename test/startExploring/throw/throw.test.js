@@ -20,7 +20,12 @@ const { origin: browserExplorerServerOrigin, compileServerOrigin } = await start
   jsenvDirectoryRelativeUrl,
   htmlFileUrl,
 })
-const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
+const {
+  browser,
+  pageLogs,
+  pageErrors,
+  executionResult,
+} = await openBrowserPage(
   `${browserExplorerServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
   { headless: true },
 )

@@ -1,4 +1,4 @@
-/.dist/
+/.jsenv/
 /dist/
 /coverage/
 /docs/bundling/basic-project/dist/
@@ -8,7 +8,7 @@
 /helpers/chromium/
 /node_modules/
 /src/**/s.js
-/test/**/.dist/
+/test/**/.jsenv/
 /test/**/dist/
 /test/**/syntax-error.js
 /test/**/syntax-error.main.js

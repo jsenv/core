@@ -25,7 +25,10 @@ const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage
 )
 const actual = { pageLogs, pageErrors, executionResult }
 const expected = {
-  pageLogs: [{ type: "log", text: "42" }, { type: "log", text: "bar" }],
+  pageLogs: [
+    { type: "log", text: "42" },
+    { type: "log", text: "bar" },
+  ],
   pageErrors: [],
   executionResult: {
     status: "completed",

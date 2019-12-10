@@ -1,4 +1,4 @@
-/.dist/
+/.jsenv/
 /coverage/
 /dist/
 /helpers/chromium/

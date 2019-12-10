@@ -87,7 +87,7 @@ export const serveCompiledFile = async ({
         headers: {
           "content-length": Buffer.byteLength(compiledSource),
           "content-type": contentType,
-          eTag: bufferToEtag(Buffer.from(compiledSource)),
+          "eTag": bufferToEtag(Buffer.from(compiledSource)),
         },
         body: compiledSource,
       }
