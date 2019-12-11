@@ -1,41 +1,46 @@
-# jsenv-core
+# core
 
 [![github package](https://img.shields.io/github/package-json/v/jsenv/jsenv-core.svg?logo=github&label=package)](https://github.com/jsenv/jsenv-core/packages)
 [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 [![github ci](https://github.com/jsenv/jsenv-core/workflows/ci/badge.svg)](https://github.com/jsenv/jsenv-core/actions?workflow=ci)
 [![codecov coverage](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
-Collection of developments tools providing a unified workflow to write JavaScript for the web, node.js or both at the same time. jsenv is designed to be reusable on different project.
-
-WARNING: This is under active development, nothing is stable.
+Unified developer experience to write and maintain JavaScript projects.
 
 # Table of contents
 
 - [Presentation](#Presentation)
 - [How to use](#How-to-use)
 - [Examples](#Examples)
-- [Main dependencies](#Main-dependencies)
 
 ## Presentation
 
-`jsenv` is a github organization used to manage GitHub repositories related to jsenv tools.<br />
-`jsenv-core` is an entry point to discover the main jsenv tools.<br />
+`jsenv-core` github repository corresponds to `@jsenv/core` package published on github and npm package registries.
+
+Once upon a time `@jsenv/core` was a test runner able to execute tests in browsers and Node.js.<br />
+Being capable to execute test files, it became possible to launch any file to debug it. From that point `@jsenv/core` naturally evolved to provide more tooling like a dev server with livereloading or bundling.<br />
+
+`@jsenv/core` focuses on a developper experience that would be conceivable if latest standards were available in browsers and Node.js.
+
+`@jsenv/core` polyfills developer experience on a JavaScript project.
+
+In that regard future `@jsenv/core` versions will become lighter as standard gets adopted.
 
 ## How to use
 
-The list below presents the main tools jsenv provides. They are independent and you can use them according to your project needs.
+The list below presents the main tools `@jsenv/core` provides. They are independent and you can use them according to your project needs.
 
 - explore your project using a browser.<br/>
-  — see [@jsenv/exploring server](https://github.com/jsenv/jsenv-exploring-server)
+  — see [./docs/exploring/readme.md](./docs/exploring/readme.md)
 
 - execute your project test files on a browser and/or node.js.<br/>
-  — see [@jsenv/testing](https://github.com/jsenv/jsenv-testing)
+  — see [./docs/testing/readme.md](./docs/testing/readme.md)
 
 - execute any of your project file on a browser or node.js.<br/>
-  — see [@jsenv/execution](https://github.com/jsenv/jsenv-execution)
+  — see [./docs/executing/readme.md](./docs/executing/readme.md)
 
 - bundle your project into a format compatible with browsers and/or node.js.<br/>
-  — see [@jsenv/bundling](https://github.com/jsenv/jsenv-bundling)
+  — see [./docs/bundling/readme.md](./docs/bundling/readme.md)
 
 The above could be achieved using babel, systemjs and rollup separately. jsenv makes them work together.
 
@@ -45,13 +50,3 @@ I recommend to check jsenv starters repository on github.<br />
 It regroups some basic setup to start coding using jsenv from an empty project.<br />
 
 — see [jsenv starters on github](https://github.com/jsenv/jsenv-starters)
-
-## Main dependencies
-
-jsenv uses internally, among others, these three projects:
-
-- https://github.com/babel/babel
-- https://github.com/systemjs/systemjs
-- https://github.com/rollup/rollup
-
-Thank you to the people behind them, they helped me a lot.
