@@ -3,9 +3,6 @@ const jsenvConfig = require("../../jsenv.config.js")
 
 generateImportMapForProjectPackage({
   ...jsenvConfig,
-  includeDevDependencies: true,
-  includeImports: true,
-  includeExports: true,
   importMapFile: true,
   jsConfigFile: true,
 })
