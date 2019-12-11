@@ -386,6 +386,8 @@ const generateImportMapForCompileServer = async ({
     logger,
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
     rootProjectDirectoryUrl: projectDirectoryUrl,
+    includeImports: true,
+    includeExports: true,
   })
   const importMapInternal = {
     imports: {
