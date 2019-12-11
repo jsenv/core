@@ -1,7 +1,7 @@
 {
   "name": "@jsenv/core",
-  "description": "jsenv core functions",
-  "version": "10.0.0-alpha.11",
+  "description": "Unified developer experience to write and maintain JavaScript projects.",
+  "version": "10.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
