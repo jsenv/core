@@ -1,11 +1,11 @@
 # Table of contents
 
 - [projectDirectoryUrl](#projectDirectoryUrl)
+- [jsenvDirectoryRelativeUrl](#jsenvDirectoryRelativeUrl)
 - [babelPluginMap](#babelPluginMap)
 - [convertMap](#convertMap)
 - [importMapFileRelativeUrl](#importMapFileRelativeUrl)
 - [importDefaultExtension](#importDefaultExtension)
-- [compileDirectoryRelativeUrl](#compileDirectoryRelativeUrl)
 
 ## projectDirectoryUrl
 
@@ -14,16 +14,34 @@
 This parameter is **required**, an example value could be:
 
 ```js
-"/Users/dmail/project"
+"file:///Users/you/project"
 ```
 
-windows path, like `C:\Users\you\folder` are valid.<br />
-file url, like `file:///Users/you/folder`, are valid.<br />
-
-You can use `__dirname` to provide the value.<br />
+It is recommended to pass an url string leading to a directory.
+But a windows file path, linux/mac file path or URL object works.
+It means you can use `__dirname` to provide the value.
 — see [\_\_dirname documentation on node.js](https://nodejs.org/docs/latest/api/modules.html#modules_dirname)
 
-Note: All parameter ending with `relativeUrl` are resolved against `projectDirectoryUrl`.
+```js
+"/Users/you/project" // linux/mac file path
+"C:\\Users\\you\\project" // windows file path
+new URL("file:///Users/you/project") // URL object
+```
+
+Note: All parameter containing `relativeUrl` in their name are resolved against `projectDirectoryUrl`.
+To be exaustive, an implementation detail lets you put a trailing slash in `projectDirectoryUrl` value if you want.
+
+## jsenvDirectoryRelativeUrl
+
+> `jsenvDirectoryRelativeUrl` is a string leading to a directory used by jsenv to write compiled version of your files.
+
+This parameter is optional with a default value of
+
+```js
+"./.jsenv/"
+```
+
+Every time a file is compiled, the compiled version of the file is written into that directory. Alongside with the compiled file, some metadata on the source used to generate the compiled version is written. These metadata are used later to know if the compiled version is still valid.
 
 ## babelPluginMap
 
@@ -78,7 +96,7 @@ const convertMap = {
 
 ## importMapFileRelativeUrl
 
-> `importMapFileRelativeUrl` is a string representing a relative path to a file containing import map.
+> `importMapFileRelativeUrl` is a string representing a relative url to a file containing import map.
 
 This parameter is optional with a default value of
 
@@ -86,14 +104,15 @@ This parameter is optional with a default value of
 "./importMap.json"
 ```
 
-The file presence is optional. You need this file as soon as you use an import that is not explicitely targeting a file like:
+The file presence becomes mandatory if you use `import.meta` in your codebase.
+You need this file as soon as you use an import that is not explicitely targeting a file like:
 
 ```js
 import whatever from "foo"
 ```
 
 You should read importMap specification to understand how it works.<br />
-— see [importMap documentation](../import-map/import-map.md)
+— see [importMap spec](https://github.com/WICG/import-maps)
 
 See also [jsenv-node-module-import-map](https://github.com/jsenv/jsenv-node-module-import-map) github repository capable to generate automatically importMap file for your node modules.
 
@@ -114,15 +133,3 @@ As you are forced to rely on magic extension when one of your dependency contain
 But expecting a tool to guess extension introduces complexity and makes you dependent on magic extensions configuration and implementation.
 
 This option only adds an extension on extensionless import, it cannot try different extension and choose the right one.
-
-## compileDirectoryRelativeUrl
-
-> `compileDirectoryRelativeUrl` is a string leading to a directory used to wrtie compiled version of your files.
-
-This parameter is optional with a default value of
-
-```js
-"./.dist"
-```
-
-Every time a file is compiled, the compiled version of the file is written into that directory. Alongside with the compiled file, some metadata on the source used to generate the compiled version is written. These metadata are used later to know if the compiled version is still valid.

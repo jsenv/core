@@ -7,7 +7,7 @@
   - [livereloading](#livereloading)
   - [watchConfig](#watchConfig)
   - [Server parameters](#Server-parameters)
-  - [Shared parameters](#Shared-parameters)
+- [Shared parameters](#Shared-parameters)
 - [Return value](#return-value)
 
 # startExploring example
@@ -127,16 +127,16 @@ The following parameter controls the jsenv server:
 - [compileServerPort](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port)
 - [compileServerLogLevel](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#logLevel)
 
-## Shared parameters
+# Shared parameters
 
 To avoid duplication some parameter are linked to a generic documentation.
 
 - [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
+- [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
 - [babelPluginMap](../shared-parameters.md#babelPluginMap)
 - [convertMap](../shared-parameters.md#convertMap)
 - [importMapFileRelativeUrl](../shared-parameters.md#importMapFileRelativeUrl)
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
-- [compileDirectoryRelativeUrl](../shared-parameters.md#compileDirectoryRelativeUrl)
 
 # Return value
 
