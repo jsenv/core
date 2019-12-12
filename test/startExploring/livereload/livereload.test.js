@@ -29,7 +29,7 @@ const { exploringServer } = await startExploring({
   livereloading: true,
 })
 const { browser, page, pageLogs, pageErrors, executionResult } = await openBrowserPage(
-  `${exploringServer}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
+  `${exploringServer.origin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
   {
     headless: true,
   },
