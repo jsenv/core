@@ -8,14 +8,14 @@
       "protocol": "inspector",
       "program": "${file}",
       "autoAttachChildProcesses": true,
-      "sourceMaps": false,
+      "sourceMaps": true,
       "smartStep": true,
       "skipFiles": [
         // force-array-multiline
         // "node_modules/**",
         "node_modules/@babel/template/**",
         "node_modules/@dmail/cancellation/**",
-        "<node_internals>/**/*.js"
+        "<node_internals>/**"
       ]
     },
     {

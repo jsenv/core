@@ -2200,7 +2200,7 @@ const assertProjectDirectoryUrl = ({
       throw new Error(`projectDirectoryUrl must starts with file://, received ${projectDirectoryUrl}`);
     }
 
-    return ensureUrlTrailingSlash(projectDirectoryUrl);
+    return ensureUrlTrailingSlash(url);
   }
 
   throw new TypeError(`projectDirectoryUrl must be a string or an url, received ${projectDirectoryUrl}`);

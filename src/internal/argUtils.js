@@ -17,7 +17,7 @@ export const assertProjectDirectoryUrl = ({ projectDirectoryUrl }) => {
       )
     }
 
-    return ensureUrlTrailingSlash(projectDirectoryUrl)
+    return ensureUrlTrailingSlash(url)
   }
 
   throw new TypeError(
