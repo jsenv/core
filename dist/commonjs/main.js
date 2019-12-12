@@ -3210,9 +3210,7 @@ const visitPackageExports = ({
     packageIsRoot,
     packageDirectoryRelativeUrl
   },
-  // pass ['browser', 'default'] to read browser first then 'default' if defined
-  // in package exports field
-  favoredExports = ["default"]
+  favoredExports
 }) => {
   const importsForPackageExports = {};
 
@@ -3323,9 +3321,11 @@ const generateImportMapForPackage = async ({
   projectDirectoryUrl,
   rootProjectDirectoryUrl,
   includeDevDependencies = false,
-  includeExports,
-  favoredExports,
-  includeImports
+  includeExports = true,
+  // pass ['browser', 'default'] to read browser first then 'default' if defined
+  // in package exports field
+  favoredExports = ["default"],
+  includeImports = true
 }) => {
   projectDirectoryUrl = normalizeDirectoryUrl(projectDirectoryUrl);
 
@@ -8915,7 +8915,7 @@ const serveCompiledFile = async ({
         headers: {
           "content-length": Buffer.byteLength(compiledSource),
           "content-type": contentType,
-          eTag: bufferToEtag$1(Buffer.from(compiledSource))
+          "eTag": bufferToEtag$1(Buffer.from(compiledSource))
         },
         body: compiledSource
       };
@@ -10443,8 +10443,10 @@ const generateImportMapForCompileServer = async ({
 }) => {
   const importMapForJsenvCore = await generateImportMapForPackage({
     logger,
-    projectDirectoryPath: urlToFilePath(jsenvCoreDirectoryUrl),
-    rootProjectDirectoryPath: urlToFilePath(projectDirectoryUrl)
+    projectDirectoryUrl: jsenvCoreDirectoryUrl,
+    rootProjectDirectoryUrl: projectDirectoryUrl,
+    includeImports: true,
+    includeExports: true
   });
   const importMapInternal = {
     imports: { ...(outDirectoryRelativeUrl === ".jsenv/out/" ? {} : {
@@ -15303,12 +15305,12 @@ const startExploring = async ({
   compileServerLogLevel = logLevel,
   htmlFileUrl = jsenvHtmlFileUrl,
   explorableConfig = jsenvExplorableConfig,
+  livereloading = false,
   watchConfig = {
     "./**/*": true,
-    "./.git/": false,
-    "./node_modules/": false
+    "./**/.git/": false,
+    "./**/node_modules/": false
   },
-  livereloading = false,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
@@ -15320,11 +15322,13 @@ const startExploring = async ({
   keepProcessAlive = true,
   cors = true,
   protocol = "http",
+  privateKey,
+  certificate,
   ip = "127.0.0.1",
   port = 0,
-  forcePort = false,
-  certificate,
-  privateKey
+  compileServerPort = 0,
+  // random available port
+  forcePort = false
 }) => {
   const logger = createLogger({
     logLevel
@@ -15365,10 +15369,7 @@ const startExploring = async ({
       privateKey,
       certificate,
       ip,
-      port: 0,
-      // random available port
-      forcePort: false,
-      // no need because random port
+      port: compileServerPort,
       projectFileRequestedCallback: value => {
         // just to allow projectFileRequestedCallback to be redefined
         projectFileRequestedCallback(value);
@@ -15382,9 +15383,10 @@ const startExploring = async ({
     const specifierMetaMapForExplorable = normalizeSpecifierMetaMap(specifierMetaMapRelativeForExplorable, projectDirectoryUrl);
 
     if (livereloading) {
-      watchConfig[compileServer.jsenvDirectoryRelativeUrl] = false;
       const unregisterDirectoryLifecyle = registerDirectoryLifecycle(urlToFilePath(projectDirectoryUrl), {
-        watchDescription: watchConfig,
+        watchDescription: { ...watchConfig,
+          [compileServer.jsenvDirectoryRelativeUrl]: false
+        },
         updated: ({
           relativePath: relativeUrl
         }) => {
@@ -15621,7 +15623,7 @@ const startExploring = async ({
       });
     });
 
-    const browserServer = await startServer({
+    const exploringServer = await startServer({
       cancellationToken,
       logLevel,
       protocol,
@@ -15639,13 +15641,14 @@ const startExploring = async ({
       keepProcessAlive
     });
     compileServer.stoppedPromise.then(reason => {
-      browserServer.stop(reason);
+      exploringServer.stop(reason);
     }, () => {});
-    browserServer.stoppedPromise.then(reason => {
+    exploringServer.stoppedPromise.then(reason => {
       stopExploringCancellationSource.cancel(reason);
     });
-    return { ...browserServer,
-      compileServerOrigin
+    return {
+      exploringServer,
+      compileServer
     };
   });
 };
