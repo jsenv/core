@@ -1,5 +1,5 @@
 const { generateSystemJsBundle } = require("@jsenv/core")
 
 generateSystemJsBundle({
-  projectDirectoryPath: __dirname,
+  projectDirectoryUrl: __dirname,
 })
