@@ -22,15 +22,17 @@ const filename = `${testDirectoryname}.main.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const filePath = urlToFilePath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl))
 
-const { origin: browserExplorerServerOrigin, stop } = await startExploring({
+const { exploringServer } = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   htmlFileUrl,
   livereloading: true,
 })
 const { browser, page, pageLogs, pageErrors, executionResult } = await openBrowserPage(
-  `${browserExplorerServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
-  { headless: true },
+  `${exploringServer.origin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
+  {
+    headless: true,
+  },
 )
 const actual = { pageLogs, pageErrors, executionResult }
 const expected = {
@@ -56,5 +58,5 @@ const afterReloadExecutionResult = await page.evaluate(() => window.__executionR
   assert({ actual, expected })
 }
 
-stop()
+exploringServer.stop()
 browser.close()

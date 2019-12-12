@@ -21,13 +21,13 @@ const filename = `${testDirectoryname}.main.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const filePath = urlToFilePath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl))
 
-const { origin: browserExplorerServerOrigin, compileServerOrigin } = await startExploring({
+const { exploringServer, compileServer } = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   htmlFileUrl,
 })
 const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
-  `${browserExplorerServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
+  `${exploringServer.origin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
 )
 const actual = { pageLogs, pageErrors, executionResult }
 
@@ -46,7 +46,7 @@ const expectedError = new Error(`imported module parsing error.
 --- parsing error message ---
 ${expectedParsingError.message}
 --- url ---
-${compileServerOrigin}/${jsenvDirectoryRelativeUrl}out/best/${fileRelativeUrl}
+${compileServer.origin}/${jsenvDirectoryRelativeUrl}out/best/${fileRelativeUrl}
 --- importer url ---
 undefined`)
 Object.assign(expectedError, {

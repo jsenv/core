@@ -417,7 +417,10 @@ export default declare((api, options) => {
 
           if (variableIds.length) {
             beforeBody.unshift(
-              t.variableDeclaration("var", variableIds.map((id) => t.variableDeclarator(id))),
+              t.variableDeclaration(
+                "var",
+                variableIds.map((id) => t.variableDeclarator(id)),
+              ),
             )
           }
 

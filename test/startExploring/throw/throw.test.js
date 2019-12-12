@@ -15,13 +15,18 @@ const htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, jsenvCoreDirectoryUrl)
 const filename = `${testDirectoryname}.main.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 
-const { origin: browserExplorerServerOrigin, compileServerOrigin } = await startExploring({
+const { exploringServer, compileServer } = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   htmlFileUrl,
 })
-const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
-  `${browserExplorerServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
+const {
+  browser,
+  pageLogs,
+  pageErrors,
+  executionResult,
+} = await openBrowserPage(
+  `${exploringServer.origin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
   { headless: true },
 )
 const actual = { pageLogs, pageErrors, executionResult }
@@ -38,11 +43,11 @@ assert({ actual, expected })
 {
   const actual = executionResult.error.stack
   const expected = `Error: error
-  at triggerError (${compileServerOrigin}/test/startExploring/throw/trigger-error.js:2:9)
-  at Object.triggerError (${compileServerOrigin}/test/startExploring/throw/throw.main.js:3:1)
-  at call (${compileServerOrigin}/src/internal/platform/s.js:358:34)
-  at doExec (${compileServerOrigin}/src/internal/platform/s.js:354:12)
-  at postOrderExec (${compileServerOrigin}/src/internal/platform/s.js:317:14)`
+  at triggerError (${compileServer.origin}/test/startExploring/throw/trigger-error.js:2:9)
+  at Object.triggerError (${compileServer.origin}/test/startExploring/throw/throw.main.js:3:1)
+  at call (${compileServer.origin}/src/internal/platform/s.js:358:34)
+  at doExec (${compileServer.origin}/src/internal/platform/s.js:354:12)
+  at postOrderExec (${compileServer.origin}/src/internal/platform/s.js:317:14)`
   assert({ actual, expected })
 }
 

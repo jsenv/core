@@ -2,7 +2,7 @@
 const { execute, launchNode } = require("@jsenv/core")
 
 execute({
-  projectPath: __dirname,
+  projectDirectoryUrl: __dirname,
   launch: launchNode,
   fileRelativeUrl: process.argv[2],
 })

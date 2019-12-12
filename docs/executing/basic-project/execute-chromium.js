@@ -2,8 +2,7 @@
 const { execute, launchChromium } = require("@jsenv/core")
 
 execute({
-  projectPath: __dirname,
+  projectDirectoryUrl: __dirname,
   launch: launchChromium,
   fileRelativeUrl: process.argv[2],
-  stopOnceExecuted: true,
 })

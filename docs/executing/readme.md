@@ -1,20 +1,43 @@
-## How to use
+# Table of contents
 
-Using a basic project setup we'll see how to use `execute` to create script capable to execute file inside chromium or node.js.
+- [Execute presentation](#Execute-presentation)
+- [File execution recorded](#File-execution-recorded)
+- [Execute concrete example](#Execute-concrete-example)
+  - [1 - Setup basic project](#1---Setup-basic-project)
+  - [2 - Executing file on chromium](#2---Executing-file-on-chromium)
+  - [3 - Executing file on Node.js](#3---Executing-file-on-Node.js)
+  - [4 - Debug file inside vscode](#4---Debug-file-inside-vscode)
+    - [Debugger inconsistency](#Debugger-inconsistency)
+- [Execute api](#Execute-api)
 
-### Basic project setup
+# File execution recorded
 
-1. Create basic project file structure
+The following gif shows a file debugging session inside vscode. The file is being executed on Node.js by jsenv execute function.
+Also note that this file was executed on node 12.0 where import and export keywords were not available.
 
-   — see [./docs/basic-project](./docs/basic-project)
+![vscode debug node gif](./vscode-debug-node.gif)
+— gif generated from [./vscode-debug-node.mp4](./vscode-debug-node.mp4)
 
-2. Install dependencies
+# Execute concrete example
 
-   ```console
-   npm install
-   ```
+This part helps you to setup a project on your machine to create scripts capable to execute any file inside chromium or node.js.<br />
+You can also reuse the project file structure to understand how to integrate jsenv to execute your files.
 
-### Browser execution with chromium
+## 1 - Setup basic project
+
+```console
+git clone https://github.com/jsenv/jsenv-core.git
+```
+
+```console
+cd ./jsenv-core/docs/executing/basic-project
+```
+
+```console
+npm install
+```
+
+## 2 - Executing file on chromium
 
 ```console
 node ./execute-chromium.js index.js
@@ -22,7 +45,7 @@ node ./execute-chromium.js index.js
 
 `browser` will be logged in your terminal.
 
-### Node execution
+## 3 - Executing file on Node.js
 
 ```console
 node ./execute-node.js index.js
@@ -30,11 +53,12 @@ node ./execute-node.js index.js
 
 `node` will be logged in your terminal.
 
-#### Use `execute` to debug file withing vscode
+## 4 - Debug file inside vscode
 
-What if you could debug inside node.js the file currently opened in vscode?<br />
+If you are using vscode you can also debug the file execution within your editor.
+This is what is shown in [File execution recorded](#-File-execution-recorded).
 
-1. Add a launch configuration in `basic-project/.vscode/launch.json`
+To achieve that you need a `.vscode/launch.json` file with the following content.
 
 ```json
 {
@@ -45,28 +69,24 @@ What if you could debug inside node.js the file currently opened in vscode?<br /
       "type": "node",
       "request": "launch",
       "protocol": "inspector",
-      "program": "${workspaceFolder}/execute-node.js",
+      "program": "${workspaceFolder}/script/run-node/run-node.js",
       "args": ["${relativeFile}"],
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
-      "sourceMapPathOverrides": {
-        "/*": "${workspaceFolder}/*"
-      },
       "smartStep": true,
-      "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
+      "skipFiles": ["node_modules/**", "<node_internals>/**"]
     }
   ]
 }
 ```
 
-2. Start a debugging session using `jsenv node`
+If you already have one, just add the configuration without replacing the entire file.
+You also have to create the `script/run-node/run-node.js` file.
+Jsenv itself use it so you can find it at [script/run-node/run-node.js](../../script/run-node/run-node.js).
 
-I made a video of the debugging session inside vscode. The gif below was generated from that video.
-
-![vscode debug node gif](./docs/vscode-debug-node.gif)
+### Debugger inconsistency
 
 Sometimes vscode fails to auto attach child process debugging session.<br />
-According to my experience it happens mostly on windows.<br />
 When it happens you must manually attach it.<br />
 
 To do that you can add an other configuration in your `launch.json`.
@@ -76,28 +96,14 @@ To do that you can add an other configuration in your `launch.json`.
   "name": "jsenv-node-attach-child",
   "type": "node",
   "request": "attach",
-  "port": 3456,
+  "port": 40000,
   "smartStep": true,
   "sourceMaps": true,
-  "sourceMapPathOverrides": {
-    "/*": "${workspaceFolder}/*"
-  },
   "skipFiles": ["node_modules/**", "<node_internals>/**/*.js"]
 }
 ```
 
-Using this configuration also means your child process debug session listens at `3456`. You must update the execute-node script to force `3456` port like this:
-
-```js
-const { execute } = require("@jsenv/execution")
-const { launchNode } = require("@jsenv/node-launcher")
-
-execute({
-  projectPath: __dirname,
-  launch: (options) => launchNode({ ...options, debugPort: 3456 }),
-  fileRelativeUrl: `/${process.argv[2]}`,
-})
-```
+## Execute api
 
 If you want to know more about `execute`, there is a more detailed documentation on it.<br />
-— see [`execute` documentation](./docs/execute-doc.md)
+— see [`execute` documentation](./api.md)

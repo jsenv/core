@@ -384,8 +384,10 @@ const generateImportMapForCompileServer = async ({
 }) => {
   const importMapForJsenvCore = await generateImportMapForPackage({
     logger,
-    projectDirectoryPath: urlToFilePath(jsenvCoreDirectoryUrl),
-    rootProjectDirectoryPath: urlToFilePath(projectDirectoryUrl),
+    projectDirectoryUrl: jsenvCoreDirectoryUrl,
+    rootProjectDirectoryUrl: projectDirectoryUrl,
+    includeImports: true,
+    includeExports: true,
   })
   const importMapInternal = {
     imports: {

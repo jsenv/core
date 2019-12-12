@@ -1,93 +1,17 @@
 # Table of contents
 
-- [Shared bundling parameters](#shared-bundling-parameters)
-  - [bundleDirectoryRelativeUrl](#bundleDirectoryRelativeUrl)
-  - [entryPointMap](#entryPointMap)
-  - [minify](#minify)
-  - [projectDirectoryUrl](#projectDirectoryUrl)
-  - [babelPluginMap](#babelPluginMap)
-  - [convertMap](#convertMap)
-  - [importMapFileRelativeUrl](#importMapFileRelativeUrl)
-  - [importDefaultExtension](#importDefaultExtension)
 - [generateSystemJsBundle](#generateSystemJsBundle)
 - [generateGlobalBundle](#generateglobalbundle)
   - [globalName](#globalName)
 - [generateCommonJsBundle](#generateCommonJsBundle)
 - [generateCommonJsBundleForNode](#generateCommonJsBundleForNode)
+  - [nodeMinimumVersion](#nodeMinimumVersion)
+- [Bundling parameters](#bundling-parameters)
+  - [bundleDirectoryRelativeUrl](#bundleDirectoryRelativeUrl)
+  - [entryPointMap](#entryPointMap)
+  - [minify](#minify)
+- [Shared parameters](#Shared-parameters)
 - [Balancing](#balancing)
-
-## Shared bundling parameters
-
-Some parameters are available to all function generating bundles.
-These parameters documentation is shared in this section.
-
-### bundleDirectoryRelativeUrl
-
-> `bundleDirectoryRelativeUrl` is a string leading to a directory where bundle files are written.
-
-This parameter is optional with a default value specific to each bundling function:
-
-- Default for `generateGlobalBundle`:
-
-  ```js
-  "./dist/global/"
-  ```
-
-- Default for `generateCommonJsBundle` and `generateCommonJsBundleForNode`:
-
-  ```js
-  "./dist/commonjs/"
-  ```
-
-- Default for `generateSystemJsBundle`:
-
-  ```js
-  "./dist/systemjs/"
-  ```
-
-### entryPointMap
-
-> `entryPointMap` is an object describing your project entry points. A dedicated bundle is generated for each entry.
-
-This parameter is optional with a default value of:
-
-```json
-{
-  "main": "./index.js"
-}
-```
-
-The default value assumes you have only one entry point which is `index.js`.<br />
-
-### minify
-
-> `minify` is a boolean controlling if bundle content will be minified to save bytes.
-
-This parameter is optional with a default value of
-
-```js
-false
-```
-
-### projectDirectoryUrl
-
-— see [generic documentation for projectDirectoryUrl](../shared-parameters/shared-parameters.md#projectDirectoryUrl)
-
-### babelPluginMap
-
-— see [generic documentation for babelPluginMap](../shared-parameters/shared-parameters.md#babelPluginMap)
-
-### convertMap
-
-— see [generic documentation for convertMap](../shared-parameters/shared-parameters.md#convertMap)
-
-### importMapFileRelativeUrl
-
-— see [generic documentation for importMapFileRelativeUrl](../shared-parameters/shared-parameters.md#importMapFileRelativeUrl)
-
-### importDefaultExtension
-
-— see [generic documentation for importDefaultExtension](../shared-parameters/shared-parameters.md#importDefaultExtension)
 
 ## generateSystemJsBundle
 
@@ -168,6 +92,69 @@ This parameter is optional with a default value of:
 ```js
 process.version.slice(1)
 ```
+
+## Bundling parameters
+
+This section present parameters available to every function generating a bundle.
+
+### bundleDirectoryRelativeUrl
+
+> `bundleDirectoryRelativeUrl` is a string leading to a directory where bundle files are written.
+
+This parameter is optional with a default value specific to each bundling function:
+
+- Default for `generateGlobalBundle`:
+
+  ```js
+  "./dist/global/"
+  ```
+
+- Default for `generateCommonJsBundle` and `generateCommonJsBundleForNode`:
+
+  ```js
+  "./dist/commonjs/"
+  ```
+
+- Default for `generateSystemJsBundle`:
+
+  ```js
+  "./dist/systemjs/"
+  ```
+
+### entryPointMap
+
+> `entryPointMap` is an object describing your project entry points. A dedicated bundle is generated for each entry.
+
+This parameter is optional with a default value of:
+
+```json
+{
+  "main": "./index.js"
+}
+```
+
+The default value assumes you have only one entry point which is `index.js`.<br />
+
+### minify
+
+> `minify` is a boolean controlling if bundle content will be minified to save bytes.
+
+This parameter is optional with a default value of
+
+```js
+false
+```
+
+# Shared parameters
+
+To avoid duplication some parameter are linked to a generic documentation.
+
+- [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
+- [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
+- [babelPluginMap](../shared-parameters.md#babelPluginMap)
+- [convertMap](../shared-parameters.md#convertMap)
+- [importMapFileRelativeUrl](../shared-parameters.md#importMapFileRelativeUrl)
+- [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
 
 # Balancing
 

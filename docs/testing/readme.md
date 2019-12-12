@@ -1,4 +1,4 @@
-## Table of contents
+# Table of contents
 
 - [Test presentation](#Test-presentation)
 - [Test execution recorded](#Test-execution-recorded)
@@ -18,7 +18,7 @@
 - [Test api example](#Test-api-example)
   - [api](./api.md)
 
-## Test presentation
+# Test presentation
 
 A test runs your code to ensure it works as expected.
 
@@ -27,31 +27,31 @@ Finally test helps to prevent accidentally breaking in the future what is workin
 
 Jsenv provides an api to execute your test files inside one or many environments. It means you can execute a given test file inside chromium and Node.js as long as code inside test file can executes in both.
 
-## Test execution recorded
+# Test execution recorded
 
 ![test terminal recording](./test-terminal-recording.gif)<br />
 — gif generated from [./test-terminal-recording.mp4](./test-terminal-recording.mp4)
 
-## Test concrete example
+# Test concrete example
 
 This part helps you to setup a project on your machine to play with jsenv testing.<br />
 You can also reuse the project file structure to understand how to integrate jsenv to write and run your own project tests.
 
-### 1 - Setup basic project
+## 1 - Setup basic project
 
 ```console
 git clone https://github.com/jsenv/jsenv-core.git
 ```
 
 ```console
-cd ./jsenv-core/docs/test/basic-project
+cd ./jsenv-core/docs/testing/basic-project
 ```
 
 ```console
 npm install
 ```
 
-### 2 - Execute tests
+## 2 - Execute tests
 
 ```console
 node ./execute-test-plan.js
@@ -59,7 +59,7 @@ node ./execute-test-plan.js
 
 It will execute all your tests as shown in [Test execution recorded](#Test-execution-recorded)
 
-### 3 - Generate test coverage
+## 3 - Generate test coverage
 
 ```console
 node ./execute-test-plan.js --cover
@@ -67,20 +67,20 @@ node ./execute-test-plan.js --cover
 
 It will execute tests and generate `./coverage/` directory with files corresponding to your test coverage.
 
-#### coverage/index.html
+### coverage/index.html
 
 The gif below shows how you can explore your test coverage by opening `coverage/index.html` in your browser.
 
 ![browsing coverage recording](./coverage-browsing-recording.gif)<br />
 — gif generated from [./coverage-browsing-recording.mp4](./coverage-browsing-recording.mp4)
 
-#### coverage/coverage.json
+### coverage/coverage.json
 
 It is your test plan coverage in JSON format. This format was created by [istanbul](https://github.com/gotwarlost/istanbul), a JS code coverage tool written in JS. This file exists to be provided to some code coverage tool.
 For instance you might want to send `coverage.json` to codecov.io inside continuous integration workflow.<br />
 — see [uploading coverage to codecov.io](./uploading-coverage-to-codecov.md)
 
-## Test execution
+# Test execution
 
 Each test file will be executed in his own browser or node.js process.
 
@@ -94,7 +94,7 @@ Currently jsenv provides 3 possible test execution environments, called `platfor
 - A chromium browser tab by test
 - A node process by test
 
-### How test is executed
+## How test is executed
 
 Test is executed by something equivalent to a dynamic import.
 
@@ -108,7 +108,7 @@ If dynamic import takes too long to settle, execution is considered timedout.<br
 
 Once the execution becomes either successfull, errored or timedout jsenv stops the platform launched to execute the test. Inside a node process there is a special behaviour where jsenv sends `SIGINIT` signal to the node process executing your test. After 8s, if the node process has not exited by its own it is killed by force.
 
-### Execution error
+## Execution error
 
 Any value thrown during file execution sets execution status to errored and test is considered as failed.
 
@@ -116,7 +116,7 @@ Any value thrown during file execution sets execution status to errored and test
 throw new Error("here")
 ```
 
-### Execution timeout
+## Execution timeout
 
 Execution taking longer than an allocated amout of milliseconds sets execution status to timedout and test is considered as failed.
 
@@ -127,7 +127,7 @@ await new Promise(() => {})
 Note: By default an execution is given 30s before being considered as a timeout.
 Check [executionDefaultOptions documentation](./api.md#executionDefaultOptions) to know how to configure this value.
 
-### Execution disconnection
+## Execution disconnection
 
 Platform disconnected during file execution sets execution status to disconnected and test is considered as failed.
 
@@ -141,7 +141,7 @@ Note: There is, fortunately, no way to crash a browser during execution so this 
 process.exit()
 ```
 
-### Execution completion
+## Execution completion
 
 When none of the aboves scenario occurs, execution status is success and test is considered as completed.
 
@@ -155,7 +155,7 @@ if (actual !== expected) {
 
 Note: An empty file is a completed test.
 
-### How to test async code
+## How to test async code
 
 Top level await is a standard (and damn cool) way to make your top level code execution asynchronous. Use it to test async code.
 
@@ -188,7 +188,7 @@ test done
 
 If jsenv executed that code, platform would be stopped after `execution end` logs and `test done` would never happen.
 
-## Test api example
+# Test api example
 
 The following code uses `@jsenv/core` to execute every files ending with `test.js` inside a project directory.
 To integrate it properly in your own project, take inspiration from the [basic project](./basic-project) files.

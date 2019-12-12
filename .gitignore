@@ -1,8 +1,6 @@
-/.dist/
 /.jsenv/
 /.vscode/settings.json
 /coverage/
-/helpers/chromium/
 /node_modules/
 /importMap.json
 /jsconfig.json

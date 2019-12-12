@@ -3,9 +3,9 @@
   "version": "0.0.1",
   "license": "MIT",
   "scripts": {
-    "start-exploring-server": "node ./start-exploring-server.js"
+    "start-exploring": "node ./start-exploring.js"
   },
   "devDependencies": {
-    "@jsenv/exploring-server": "3.9.0"
+    "@jsenv/core": "10.0.0"
   }
 }

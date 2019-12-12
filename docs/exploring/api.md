@@ -1,261 +1,159 @@
-# `startExploringServer`
+# Table of contents
 
-Document how `startExploringServer` functions behaves.<br />
+- [startExploring example](#startExploring-example)
+- [Parameters](#parameters)
+  - [explorableConfig](#ExplorableConfig)
+  - [htmlFileUrl](#htmlFileUrl)
+  - [livereloading](#livereloading)
+  - [watchConfig](#watchConfig)
+  - [Server parameters](#Server-parameters)
+- [Shared parameters](#Shared-parameters)
+- [Return value](#return-value)
 
-## `startExploringServer` options
+# startExploring example
 
-### explorableMap
+> `startExploring` is a function starting a development server that transforms project files configured as explorable into an executable html page.
+
+Implemented in [src/startExploring.js](../../src/startExploring.js), you can use it as shown below.
 
 ```js
-const { startExploringServer } = require("@jsenv/exploring-server")
+const { startExploring } = require("@jsenv/core")
 
-startExploringServer({
-  projectPath: "/Users/you/project",
-  explorableMap: {
-    "/src/**/*.js": true,
-    "/src/whatever/**/*.js": false,
+startExploring({
+  projectDirectoryUrl: "file:///Users/you/project/",
+  explorableConfig: {
+    "./src/**/*.js": true,
+    "./src/whatever/**/*.js": false,
   },
 })
 ```
 
-It is an object used to describe if a file is explorable or not.<br/>
-Example above means:
+# Parameters
 
-- a file ending with `.js`, anywhere inside `/src/` is explorable
-- a file ending with `.js`, anywhere inside `/src/whatever/` is not explorable
+`startExploring` uses named parameters documented here.
 
-`explorableMap` uses path matching provided by `@jsenv/url-meta`.<br />
-— see [@jsenv/url-meta on github](https://github.com/jsenv/jsenv-url-meta)
+Each parameter got a dedicated section to shortly explain what it does and if it's required or optional.
 
-Index page list files described as explorable.<br />
-Server will not handle request mades to non explorable files.<br />
+## explorableConfig
 
-If you don't pass this option, the default value will be:
+> `explorableConfig` is an object used to configure what files are explorable in your project.
+
+This is an optional parameter with a default value of:
 
 ```js
-{
-  "/index.js": true,
-  "/src/**/*.js": true,
-  "/test/**/*.js": true
-}
+require("@jsenv/core").jsenvExplorableConfig
 ```
 
-### protocol
+You can find the exact value in [src/jsenvExplorableConfig.js](../../src/jsenvExplorableConfig.js).
+
+`explorableConfig` must be an object where keys are relative or absolute urls. These urls are allowed to contain `*` and `**` that will be used for pattern matching as documented in https://github.com/jsenv/jsenv-url-meta#pattern-matching-behaviour
+
+## htmlFileUrl
+
+> `htmlFileUrl` is a file url string leading to an html file used as template to execute JavaScript files.
+
+This is an optional parameter with a default value of:
 
 ```js
-const { readFileSync } = require("fs")
-const { startExploringServer } = require("@jsenv/exploring-server")
-
-startExploringServer({
-  projectPath: "/Users/you/project",
-  protocol: "https",
-  signature: {
-    privateKey: readFileSync(`${__dirname}/ssl/private.pem`),
-    certificate: readFileSync(`${__dirname}/ssl/cert.pem`),
-  },
-})
+require.resolve("@jsenv/core/src/internal/jsenv-html-file.html")
 ```
 
-If you don't pass this option, the default value will be:
+You can see the file at [src/internal/jsenv-html-file.html](../../src/internal/jsenv-html-file.html).
 
-```js
-"http"
-```
-
-If you pass `"https"` and omit `signature`, a default certificate will be used.<br />
-— see [default https certificate](https://github.com/dmail/server/blob/4d40f790adebaa14b7482a9fb228e0c1f63e94b7/src/server/signature.js#L24)
-
-### ip
-
-```js
-const { startExploringServer } = require("@jsenv/exploring-server")
-
-startExploringServer({
-  projectPath: "/Users/you/project",
-  ip: "192.168.0.1",
-})
-```
-
-If you don't pass this option, the default value will be:
-
-```js
-"127.0.0.1"
-```
-
-### port
-
-```js
-const { startExploringServer } = require("@jsenv/exploring-server")
-
-startExploringServer({
-  projectPath: "/Users/you/project",
-  port: 8080,
-})
-```
-
-If you don't pass this option, the default value will be:
-
-```js
-0
-```
-
-The number `0` means a random available port will be used.
-
-### forcePort
-
-```js
-const { startExploringServer } = require("@jsenv/exploring-server")
-
-startExploringServer({
-  projectPath: "/Users/you/project",
-  port: 8080,
-  forcePort: true,
-})
-```
-
-When true, if there is process already listening the port you want to use, we will try to kill that process.
-
-If you don't pass this option, the default value will be:
-
-```js
-false
-```
-
-### livereloading
-
-```js
-const { startExploringServer } = require("@jsenv/exploring-server")
-
-startExploringServer({
-  projectPath: "/Users/you/project",
-  livereloading: true,
-})
-```
-
-When true, browser reloads itself when a file changes or is saved.<br />
-When executing a file, only the file itself or an imported file will trigger the reloading.
-
-If you don't pass this option, the default value will be:
-
-```js
-false
-```
-
-### watchDescription
-
-```js
-const { startExploringServer } = require("@jsenv/exploring-server")
-
-startExploringServer({
-  projectPath: "/Users/you/project",
-  livereloading: true,
-  watchDescription: {
-    "/*/**": false,
-    "/*": true,
-    "/src/**/*": true,
-  },
-})
-```
-
-Object used to describe what project ressources should be watched.<br />
-
-If you don't pass this option, the default value will be:
-
-```js
-{
-  "/**/*": true,
-  "/.git/": false,
-  "/node_modules/": false,
-}
-```
-
-This default value is designed to work with any project because it means:
-
-- watch everything
-- except stuff inside top level .git folder
-- except stuff inside top level node_modules folder
-
-You can add more exception like this:
-
-```js
-const {
-  startExploringServer,
-  EXPLORING_SERVER_WATCH_EXCLUDE_DESCRIPTION,
-} = require("@jsenv/exploring-server")
-
-startExploringServer({
-  projectPath: "/Users/you/project",
-  livereloading: true,
-  watchDescription: {
-    "/**/*": true,
-    ...EXPLORING_SERVER_WATCH_EXCLUDE_DESCRIPTION,
-    "/.cache/": false,
-  },
-})
-```
-
-Or even better, describe what should be watched with a positive approach, as in the example:
-
-```js
-{
-  "/*/**": false,
-  "/*": true,
-  "/src/**/*": true,
-}
-```
-
-Which means:
-
-- watch nothing
-- except top level files
-- except files inside top level src folder
-
-### HTMLTemplateRelativePath
-
-```js
-const { startExploringServer } = require("@jsenv/exploring-server")
-
-startExploringServer({
-  projectPath: "/Users/you/project",
-  HTMLTemplateRelativePath: "/custom-template.html",
-})
-```
-
-The html file will be used as a template to execute your JavaScript files.
-Be sure your html file file contains the following script tag:
+If you to use a custom html file be sure it contains the following script tag:
 
 ```html
 <script src="/.jsenv/browser-script.js"></script>
 ```
 
-Because this is how server can arbitrary execute some javaScript inside your custom html file
+This is how the server can arbitrary execute some javaScript inside your custom html file.
 
-If you don't pass this option, the default value will be a predefined folder available inside jsenv itself:
+## livereloading
+
+> `livereloading` is a boolean controlling if the browser will auto reload when a file is saved.
+
+This is an optional parameter with a default value of:
 
 ```js
-"/node_modules/@jsenv/exploring-server/src/template.html"
+false
 ```
 
-### projectPath
+Note that any request to a file inside your project is also considered as a dependency that can triggers a reload. It means if your html file or js file loads image or css these files will also be considered as dependency and trigger livereloading when saved.
 
-— see [generic documentation for projectPath](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-options/shared-options.md#projectpath)
+## watchConfig
 
-### babelPluginMap
+> `watchConfig` is an object configuring which files are watched to trigger livereloading.
 
-— see [generic documentation for babelPluginMap](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-options/shared-options.md#babelpluginmap)
+This is an optional parameter with a default value of:
 
-### convertMap
+<!-- prettier-ignore -->
+```js
+{
+  "./**/*": true,
+  "./**/.git/": false,
+  "./**/node_modules/": false,
+}
+```
 
-— see [generic documentation for convertMap](../shared-options/shared-options.md#convertmap)
+The default value means any file except thoose inside directory named node_modules or git.
+`watchConfig` reuse [explorableConfig](#explorableConfig) shape meaning keys are urls with pattern matching.
 
-### importMapRelativePath
+Example of a custom `watchConfig`:
 
-— see [generic documentation for importMapRelativePath](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-options/shared-options.md#importmaprelativepath)
+```js
+{
+  "./*/**": false,
+  "./*": true,
+  "./src/**/*": true,
+}
+```
 
-### importDefaultExtension
+## Server parameters
 
-— see [generic documentation for importDefaultExtension](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-options/shared-options.md#importdefaultextension)
+Exploring uses two server. The first server is internal to jsenv and compile file dynamically.
+The second one is the server you will use to explore your project files.
+The defaults values let you use exploring right away but you might want to fix the server port or use your own https certificate for instance.
 
-### compileIntoRelativePath
+The following parameter controls the exploring server:
 
-— see [generic documentation for compileIntoRelativePath](https://github.com/jsenv/jsenv-core/blob/master/docs/shared-options/shared-options.md#compileintorelativepath)
+- [protocol](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#protocol)
+- [ip](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#ip)
+- [port](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port)
+- [forcePort](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#forcePort)
+- [logLevel](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#logLevel)
+
+The following parameter controls the jsenv server:
+
+- [compileServerPort](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port)
+- [compileServerLogLevel](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#logLevel)
+
+# Shared parameters
+
+To avoid duplication some parameter are linked to a generic documentation.
+
+- [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
+- [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
+- [babelPluginMap](../shared-parameters.md#babelPluginMap)
+- [convertMap](../shared-parameters.md#convertMap)
+- [importMapFileRelativeUrl](../shared-parameters.md#importMapFileRelativeUrl)
+- [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
+
+# Return value
+
+Using the return value is an advanced use case, in theory you should not need this.
+
+`startExploring` return signature is `{ exploringServer, compileServer }`.
+
+`exploringServer` and `compileServer` are server created by `@jsenv/server`. You can read the `@jsenv/server` documentation on the return value to see the shape of these objects.
+https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#startServer-return-value.
+
+Code below shows how you might use `exploringServer` return value.
+
+```js
+const { exploringServer, compileServer } = await executeTestPlan({
+  projectDirectoryUrl: __dirname,
+})
+
+exploringServer.stop()
+compileServer.stop()
+```
