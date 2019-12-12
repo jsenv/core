@@ -3,16 +3,15 @@
 A platform launcher is a function capable to launch a platform to execute a file.<br />
 You can use them to tell on which platform to execute a file.<br />
 
-For instance the following code would execute `/Users/you/folder/index.js` on chromium.
+For instance the following code would execute `/Users/you/directory/index.js` on chromium.
 
 ```js
-import { execute } from '@jsenv/execution'
-import { launchChromium } from `@jsenv/chromium-launcher`
+const { execute, launchChromium } = require("@jsenv/core")
 
 execute({
-  projectPath: '/Users/you/folder',
-  fileRelativeUrl: '/index.js',
-  launch: launchChromium
+  projectDirectoryUrl: "/Users/you/directory",
+  fileRelativeUrl: "./index.js",
+  launch: launchChromium,
 })
 ```
 
@@ -22,17 +21,20 @@ You can pass option to a platform launcher but you have to be sure you forward t
 By default `launchChromium` execute a file inside a headless chromium, but you can make it launch a chromium with a UI like this:
 
 ```js
-import { execute } from '@jsenv/execution'
-import { launchChromium } from `@jsenv/chromium-launcher`
+const { execute, launchChromium } = require("@jsenv/core")
 
 execute({
-  projectPath: '/Users/you/folder',
-  fileRelativeUrl: '/index.js',
-  launch: (options) => launchChromium({ ...options, headless: false })
+  projectDirectoryUrl: "/Users/you/directory",
+  fileRelativeUrl: "./index.js",
+  launch: (options) => launchChromium({ ...options, headless: false }),
 })
 ```
 
-## List of platform launcher
+## List of available platform launcher
 
-- [node launcher](https://github.com/jsenv/jsenv-node-launcher)
-- [chromium launcher](https://github.com/jsenv/jsenv-chromium-launcher)
+- [launchChromium](../../src/launchChromium.js)
+- [launchChromiumTab](../../src/launchChromiumTab.js)
+- [launchNode](../../src/launchNode.js)
+
+It is planned to add a firefox launcher but nothing was started yet.
+If you want to write a firefox launcher or any other, feel free to open a draft pull request.

@@ -10,8 +10,8 @@ Unified developer experience to write and maintain JavaScript projects.
 # Table of contents
 
 - [Presentation](#Presentation)
-- [How to use](#How-to-use)
-- [Examples](#Examples)
+- [Usage](#Usage)
+- [Installation](#Installation)
 
 ## Presentation
 
@@ -21,7 +21,7 @@ Unified developer experience to write and maintain JavaScript projects.
 
 `@jsenv/core` relies on standard that are not yet available in browsers or Node.js to provide a future proof developer experience. In that aspect it can be seen as a polyfill for the developer experience of a JavaScript project. It also means future `@jsenv/core` versions will become lighter as standard gets adopted.
 
-## How to use
+## Usage
 
 The list below presents the main tools `@jsenv/core` provides. They are independent and you can use them according to your project needs.
 
@@ -39,9 +39,16 @@ The list below presents the main tools `@jsenv/core` provides. They are independ
 
 The above could be achieved using babel, systemjs and rollup separately. jsenv makes them work together.
 
-## Examples
+## Installation
 
-I recommend to check jsenv starters repository on github.<br />
-It regroups some basic setup to start coding using jsenv from an empty project.<br />
+If you never installed a jsenv package, read [Installing a jsenv package](./docs/installing-jsenv-package.md) before going further.
 
-— see [jsenv starters on github](https://github.com/jsenv/jsenv-starters)
+This documentation is up-to-date with a specific version so prefer any of the following commands
+
+```console
+npm install --save-dev @jsenv/core@10.0.0
+```
+
+```console
+yarn add --dev @jsenv/core@10.0.0
+```

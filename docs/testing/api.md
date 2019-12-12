@@ -235,11 +235,11 @@ TODO and all coverage params
 To avoid duplication some parameter are linked to a generic documentation.
 
 - [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
+- [jsenvDirectoryRelativeUrl](../shared-parameters.md#compileDirectoryRelativeUrl)
 - [babelPluginMap](../shared-parameters.md#babelPluginMap)
 - [convertMap](../shared-parameters.md#convertMap)
 - [importMapFileRelativeUrl](../shared-parameters.md#importMapFileRelativeUrl)
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
-- [compileDirectoryRelativeUrl](../shared-parameters.md#compileDirectoryRelativeUrl)
 
 # Return value
 
