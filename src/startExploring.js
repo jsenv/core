@@ -26,12 +26,12 @@ export const startExploring = async ({
 
   htmlFileUrl = jsenvHtmlFileUrl,
   explorableConfig = jsenvExplorableConfig,
+  livereloading = false,
   watchConfig = {
     "./**/*": true,
-    "./.git/": false,
-    "./node_modules/": false,
+    "./**/.git/": false,
+    "./**/node_modules/": false,
   },
-  livereloading = false,
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -46,11 +46,12 @@ export const startExploring = async ({
   keepProcessAlive = true,
   cors = true,
   protocol = "http",
+  privateKey,
+  certificate,
   ip = "127.0.0.1",
   port = 0,
+  compileServerPort = 0, // random available port
   forcePort = false,
-  certificate,
-  privateKey,
 }) => {
   const logger = createLogger({ logLevel })
 
@@ -94,8 +95,7 @@ export const startExploring = async ({
       privateKey,
       certificate,
       ip,
-      port: 0, // random available port
-      forcePort: false, // no need because random port
+      port: compileServerPort,
       projectFileRequestedCallback: (value) => {
         // just to allow projectFileRequestedCallback to be redefined
         projectFileRequestedCallback(value)
@@ -113,12 +113,13 @@ export const startExploring = async ({
     )
 
     if (livereloading) {
-      watchConfig[compileServer.jsenvDirectoryRelativeUrl] = false
-
       const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
         urlToFilePath(projectDirectoryUrl),
         {
-          watchDescription: watchConfig,
+          watchDescription: {
+            ...watchConfig,
+            [compileServer.jsenvDirectoryRelativeUrl]: false,
+          },
           updated: ({ relativePath: relativeUrl }) => {
             if (projectFileSet.has(relativeUrl)) {
               projectFileUpdatedCallback(relativeUrl)
@@ -341,7 +342,7 @@ export const startExploring = async ({
         },
       )
 
-    const browserServer = await startServer({
+    const exploringServer = await startServer({
       cancellationToken,
       logLevel,
       protocol,
@@ -361,17 +362,17 @@ export const startExploring = async ({
 
     compileServer.stoppedPromise.then(
       (reason) => {
-        browserServer.stop(reason)
+        exploringServer.stop(reason)
       },
       () => {},
     )
-    browserServer.stoppedPromise.then((reason) => {
+    exploringServer.stoppedPromise.then((reason) => {
       stopExploringCancellationSource.cancel(reason)
     })
 
     return {
-      ...browserServer,
-      compileServerOrigin,
+      exploringServer,
+      compileServer,
     }
   })
 }

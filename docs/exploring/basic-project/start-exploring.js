@@ -2,7 +2,7 @@
 const { startExploring } = require("@jsenv/core")
 
 startExploring({
-  projectDirectoryPath: __dirname,
+  projectDirectoryUrl: __dirname,
   explorableConfig: {
     "./src/*.js": true,
   },

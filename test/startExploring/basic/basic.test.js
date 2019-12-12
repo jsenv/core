@@ -15,13 +15,13 @@ const htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, jsenvCoreDirectoryUrl)
 const filename = `${testDirectoryBasename}.main.js`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
 
-const { origin: browserExplorerServerOrigin } = await startExploring({
+const { exploringServer } = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   htmlFileUrl,
 })
 const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
-  `${browserExplorerServerOrigin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
+  `${exploringServer.origin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
 )
 const actual = { pageLogs, pageErrors, executionResult }
 const expected = {

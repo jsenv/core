@@ -17,29 +17,24 @@ Unified developer experience to write and maintain JavaScript projects.
 
 `jsenv-core` github repository corresponds to `@jsenv/core` package published on github and npm package registries.
 
-Once upon a time `@jsenv/core` was a test runner able to execute tests in browsers and Node.js.<br />
-Being capable to execute test files, it became possible to launch any file to debug it. From that point `@jsenv/core` naturally evolved to provide more tooling like a dev server with livereloading or bundling.<br />
+`@jsenv/core` exports functions a typical JavaScript project needs. These functions are independant so that you can use them according to each project requirements. Using every `@jsenv/core` functions gives you a unified developer experience but you don't have to.
 
-`@jsenv/core` focuses on a developper experience that would be conceivable if latest standards were available in browsers and Node.js.
-
-`@jsenv/core` polyfills developer experience on a JavaScript project.
-
-In that regard future `@jsenv/core` versions will become lighter as standard gets adopted.
+`@jsenv/core` relies on standard that are not yet available in browsers or Node.js to provide a future proof developer experience. In that aspect it can be seen as a polyfill for the developer experience of a JavaScript project. It also means future `@jsenv/core` versions will become lighter as standard gets adopted.
 
 ## How to use
 
 The list below presents the main tools `@jsenv/core` provides. They are independent and you can use them according to your project needs.
 
-- explore your project using a browser.<br/>
+- explore files using a browser.<br/>
   — see [./docs/exploring/readme.md](./docs/exploring/readme.md)
 
-- execute your project test files on a browser and/or node.js.<br/>
+- execute test files on a browser and/or node.js.<br/>
   — see [./docs/testing/readme.md](./docs/testing/readme.md)
 
-- execute any of your project file on a browser or node.js.<br/>
+- execute file on a browser or node.js.<br/>
   — see [./docs/executing/readme.md](./docs/executing/readme.md)
 
-- bundle your project into a format compatible with browsers and/or node.js.<br/>
+- bundle your package into a format compatible with browsers and/or node.js.<br/>
   — see [./docs/bundling/readme.md](./docs/bundling/readme.md)
 
 The above could be achieved using babel, systemjs and rollup separately. jsenv makes them work together.

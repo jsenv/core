@@ -2,6 +2,9 @@
 
 - [Exploring presentation](#Exploring-presentation)
 - [Exploring recorded video](#Exploring-recorded-video)
+- [Exploring concrete example](#Exploring-concrete-example)
+  - [1 - Setup basic project](#1---Setup-basic-project)
+  - [1 - Explore basic project](#2---Explore-basic-project)
 
 # Exploring presentation
 
@@ -13,7 +16,7 @@ You can use jsenv to start a server serving an html page containing a list of li
 
 This tool is called exploring.
 
-## Exploring recorded video
+# Exploring recorded video
 
 The following video was recorded to show exploring feature in action on a basic project. The developper opens a file and debugs it inside chrome.
 
@@ -21,30 +24,32 @@ The following video was recorded to show exploring feature in action on a basic 
 <br />
 — gif generated from [./exploring-with-chrome-recording.mp4](./exploring-with-chrome-recording.mp4)
 
-## How to use
+To reproduce the environment in this video you can follow the next part.
 
-To understand how to use jsenv exploring server let's use it on a "real" project.<br />
-We will setup a basic project and start an exploring server inside it.
+# Exploring concrete example
 
-### Steps to start exploring server on a basic project
+This part helps you to setup a project on your machine to play with jsenv exploring.<br />
+You can also reuse the project file structure to understand how to integrate jsenv to explore your own project files.
 
-1. Create basic project file structure
+## 1 - Setup basic project
 
-   — see [./docs/basic-project](./docs/basic-project)
+```console
+git clone https://github.com/jsenv/jsenv-core.git
+```
 
-2. Install dependencies
+```console
+cd ./jsenv-core/docs/exploring/basic-project
+```
 
-   ```console
-   npm install
-   ```
+```console
+npm install
+```
 
-3. Start the exploring server
+## 2 - Explore basic project
 
-   ```console
-   node ./start-exploring-server.js
-   ```
-
-### Using the exploring server
+```console
+node ./start-exploring.js
+```
 
 A first main server will start. This one is used by the whole jsenv project.<br />
 A second server will start. That's the one we're interested in right now. The url `http://127.0.0.1:3456` is logged in your terminal.<br />
@@ -58,7 +63,5 @@ Once server is started you can navigate to `http://127.0.0.1:3456` and you will 
 - If you go to `http://127.0.0.1:3456/src/text.js` nothing special will happen because `/src/text.js` is just a module with an export default.<br />
   It shows that even if your file do not render anything, you still can use this functionnality to debug your file.
 
-Here is a gif showing me browing basic project files:
-
-If you want to know more about `startExploringServer`, there is a dedicated page for that.<br />
-— see [`startExploringServer` documentation](./start-exploring-server-doc.md)
+If you want to know more about `exploring`, there is a dedicated page for that.<br />
+— see [startExploring api documentation](./start-exploring-doc.md)

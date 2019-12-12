@@ -1,6 +1,6 @@
 # Table of contents
 
-- [Example](#executeTestPlan)
+- [executeTestPlan example](#executeTestPlan-example)
 - [Parameters](#parameters)
   - [testPlan](#testPlan)
     - [specifier](#specifier)
@@ -23,7 +23,7 @@
   - [testPlanReport](#testPlanReport)
   - [testPlanCoverageMap](#testPlanCoverageMap)
 
-# Example
+# executeTestPlan example
 
 > `executeTestPlan` is a function executing test files in one or several platforms logging progression and optionnaly generating associated coverage.
 
