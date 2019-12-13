@@ -18,13 +18,13 @@ This tool is called exploring.
 
 # Exploring recorded video
 
-The following video was recorded to show exploring feature in action on a basic project. The developper opens a file and debugs it inside chrome.
+The following video was recorded to show exploring feature in action on a basic project. The developper debugs `hello.js` file inside chrome.
 
 ![recording of me exploring a project using chrome](./exploring-with-chrome-recording.gif)
 <br />
 — gif generated from [./exploring-with-chrome-recording.mp4](./exploring-with-chrome-recording.mp4)
 
-To reproduce the environment in this video you can follow the next part.
+To reproduce the environment in this gif you can follow the next part.
 
 # Exploring concrete example
 
