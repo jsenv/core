@@ -25,6 +25,7 @@ export const launchChromium = async ({
   headless = true,
   shareBrowser = false,
   debug = false,
+  debugPort,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -36,13 +37,14 @@ export const launchChromium = async ({
   const { registerCleanupCallback, cleanup } = trackRessources()
 
   const sharingToken = shareBrowser
-    ? browserSharing.getSharingToken({ headless, debug })
+    ? browserSharing.getSharingToken({ headless, debug, debugPort })
     : browserSharing.getUniqueSharingToken()
   if (!sharingToken.isUsed()) {
     const value = launchPuppeteer({
       cancellationToken,
       headless,
       debug,
+      debugPort,
     })
     sharingToken.setSharedValue(value, async () => {
       const { stopBrowser } = await value

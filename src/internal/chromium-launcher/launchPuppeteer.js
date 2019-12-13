@@ -13,6 +13,7 @@ export const launchPuppeteer = async ({
   cancellationToken = createCancellationToken(),
   headless = true,
   debug = false,
+  debugPort = 9222,
   stopOnExit = true,
   stopOnSIGINT = true,
 }) => {
@@ -25,6 +26,7 @@ export const launchPuppeteer = async ({
       // https://github.com/GoogleChrome/puppeteer/issues/1834
       // https://github.com/GoogleChrome/puppeteer/blob/master/docs/troubleshooting.md#tips
       // "--disable-dev-shm-usage",
+      `--remote-debugging-port=${debugPort}`,
     ],
   }
 
