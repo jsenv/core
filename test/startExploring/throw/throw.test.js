@@ -10,9 +10,11 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFileRelativeUrl = "template.html"
 const filename = `${testDirectoryname}.main.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const parentDirectoryUrl = resolveDirectoryUrl("../", testDirectoryUrl)
+const parentDirectoryRelativeUrl = urlToRelativeUrl(parentDirectoryUrl, jsenvCoreDirectoryUrl)
+const htmlFileRelativeUrl = `${parentDirectoryRelativeUrl}template.html`
 
 const { exploringServer, compileServer } = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,

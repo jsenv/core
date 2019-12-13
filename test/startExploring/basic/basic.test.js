@@ -7,12 +7,14 @@ import { openBrowserPage } from "../openBrowserPage.js"
 import { START_EXPLORING_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryBasename = basename(testDirectoryRelativePath)
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
-const htmlFileRelativeUrl = "template.html"
-const filename = `${testDirectoryBasename}.main.js`
-const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+const filename = `${testDirectoryname}.main.js`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const parentDirectoryUrl = resolveDirectoryUrl("../", testDirectoryUrl)
+const parentDirectoryRelativeUrl = urlToRelativeUrl(parentDirectoryUrl, jsenvCoreDirectoryUrl)
+const htmlFileRelativeUrl = `${parentDirectoryRelativeUrl}template.html`
 
 const { exploringServer } = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
