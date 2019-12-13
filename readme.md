@@ -10,6 +10,7 @@ Unified developer experience to write and maintain JavaScript projects.
 # Table of contents
 
 - [Presentation](#Presentation)
+- [Example](#Example)
 - [Usage](#Usage)
 - [Installation](#Installation)
 
@@ -20,6 +21,18 @@ Unified developer experience to write and maintain JavaScript projects.
 `@jsenv/core` exports functions needed during the life of a typical JavaScript. These functions are independant so that you can use them according to each project requirements. Using every `@jsenv/core` functions gives you a unified developer experience.
 
 `jsenv-core` github repository corresponds to `@jsenv/core` package published on github and npm package registries.
+
+## Example
+
+### Multi platform test execution
+
+![test terminal recording](./docs/testing/test-terminal-recording.gif)
+
+### Debug file execution in chrome
+
+### Debug file execution in node.js
+
+![vscode debug node gif](./docs/executing/vscode-debug-node.gif)
 
 ## Usage
 

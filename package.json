@@ -30,6 +30,7 @@
     "internal/": "./src/internal/"
   },
   "scripts": {
+    "start-exploring": "node ./script/start-exploring/start-exploring.js",
     "test": "node ./script/test/test.js",
     "test-with-coverage": "node ./script/test/test.js --coverage",
     "test-js-transform": "node ./script/test/test-js-transform.js",
