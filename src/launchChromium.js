@@ -1,5 +1,6 @@
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
+/* eslint-disable import/max-dependencies */
 import { createCancellationToken } from "@jsenv/cancellation"
 import { closePage } from "internal/chromium-launcher/closePage.js"
 import { trackRessources } from "internal/chromium-launcher/trackRessources.js"
@@ -23,6 +24,7 @@ export const launchChromium = async ({
 
   headless = true,
   shareBrowser = false,
+  debug = false,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -34,12 +36,13 @@ export const launchChromium = async ({
   const { registerCleanupCallback, cleanup } = trackRessources()
 
   const sharingToken = shareBrowser
-    ? browserSharing.getSharingToken({ headless })
+    ? browserSharing.getSharingToken({ headless, debug })
     : browserSharing.getUniqueSharingToken()
   if (!sharingToken.isUsed()) {
     const value = launchPuppeteer({
       cancellationToken,
       headless,
+      debug,
     })
     sharingToken.setSharedValue(value, async () => {
       const { stopBrowser } = await value
@@ -177,7 +180,7 @@ export const launchChromium = async ({
     // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#puppeteer-api-tip-of-tree
     // https://github.com/GoogleChrome/puppeteer#q-why-doesnt-puppeteer-vxxx-work-with-chromium-vyyy
     // to keep in sync when updating puppeteer
-    version: "79.0.3942.0",
+    version: "79.0.3945.0",
     options: { headless },
     stop: cleanup,
     registerDisconnectCallback,

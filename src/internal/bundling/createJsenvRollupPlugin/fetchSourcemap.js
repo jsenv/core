@@ -1,7 +1,7 @@
 import { resolveUrl } from "internal/urlUtils.js"
 import { parseSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 import { fetchUrl } from "internal/fetchUrl.js"
-import { validateResponseStatusIsOk } from "./validateResponseStatusIsOk.js"
+import { validateResponseStatusIsOk } from "internal/validateResponseStatusIsOk.js"
 
 export const fetchSourcemap = async ({ cancellationToken, logger, moduleUrl, moduleContent }) => {
   const sourcemapParsingResult = parseSourceMappingURL(moduleContent)
