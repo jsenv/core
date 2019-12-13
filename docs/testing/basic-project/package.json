@@ -7,6 +7,6 @@
     "test-with-coverage": "node ./execute-test-plan.js --coverage"
   },
   "dependencies": {
-    "@jsenv/core": "10.0.0"
+    "@jsenv/core": "10.1.0"
   }
 }
