@@ -30,6 +30,8 @@ Unified developer experience to write and maintain JavaScript projects.
 
 ### Debug file execution in chrome
 
+![vscode debug node gif](./docs/exploring/vscode-debug-chrome.gif)
+
 ### Debug file execution in node.js
 
 ![vscode debug node gif](./docs/executing/vscode-debug-node.gif)
