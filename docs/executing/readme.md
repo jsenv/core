@@ -1,7 +1,6 @@
 # Table of contents
 
 - [Execute presentation](#Execute-presentation)
-- [File execution recorded](#File-execution-recorded)
 - [Execute concrete example](#Execute-concrete-example)
   - [1 - Setup basic project](#1---Setup-basic-project)
   - [2 - Executing file on chromium](#2---Executing-file-on-chromium)
@@ -9,14 +8,6 @@
   - [4 - Debug file inside vscode](#4---Debug-file-inside-vscode)
     - [Debugger inconsistency](#Debugger-inconsistency)
 - [Execute api](#Execute-api)
-
-# File execution recorded
-
-The following gif shows a file debugging session inside vscode. The file is being executed on Node.js by jsenv execute function.
-Also note that this file was executed on node 12.0 where import and export keywords were not available.
-
-![vscode debug node gif](./vscode-debug-node.gif)
-— gif generated from [./vscode-debug-node.mp4](./vscode-debug-node.mp4)
 
 # Execute concrete example
 
