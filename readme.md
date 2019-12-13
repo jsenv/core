@@ -45,7 +45,7 @@ These examples can be reproduced on your machine by following the documentation 
 
 ## Usage
 
-The list below presents what `@jsenv/core` provides. They are independent and completes each other.
+This part lists features provided by `@jsenv/core`. Each of them are independent and completes each other.
 
 - explore files using a browser.<br/>
   — see [./docs/exploring/readme.md](./docs/exploring/readme.md)
