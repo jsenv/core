@@ -1,11 +1,11 @@
-const { executeTestPlan, launchNode, launchChromium } = require("@jsenv/core")
+const { executeTestPlan, launchNode, launchChromiumTab } = require("@jsenv/core")
 
 executeTestPlan({
-  projectDirectoryPath: __dirname,
+  projectDirectoryUrl: __dirname,
   testPlan: {
     "test/*.test.js": {
       browser: {
-        launch: launchChromium,
+        launch: launchChromiumTab,
       },
       node: {
         launch: launchNode,
@@ -13,7 +13,7 @@ executeTestPlan({
     },
     "test/*.test.browser.js": {
       browser: {
-        launch: launchChromium,
+        launch: launchChromiumTab,
       },
     },
     "test/*.test.node.js": {

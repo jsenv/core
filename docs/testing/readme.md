@@ -1,7 +1,6 @@
 # Table of contents
 
 - [Test presentation](#Test-presentation)
-- [Test execution recorded](#Test-execution-recorded)
 - [Test concrete example](#Test-concrete-example)
   - [1 - Setup basic project](#1---setup-basic-project)
   - [2 - Execute tests](#2---execute-tests)
@@ -26,11 +25,6 @@ Test are putting you in the shoes of someone using your code. In that perspectiv
 Finally test helps to prevent accidentally breaking in the future what is working today.
 
 Jsenv provides an api to execute your test files inside one or many environments. It means you can execute a given test file inside chromium and Node.js as long as code inside test file can executes in both.
-
-# Test execution recorded
-
-![test terminal recording](./test-terminal-recording.gif)<br />
-— gif generated from [./test-terminal-recording.mp4](./test-terminal-recording.mp4)
 
 # Test concrete example
 

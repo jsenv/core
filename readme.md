@@ -24,21 +24,28 @@ Unified developer experience to write and maintain JavaScript projects.
 
 ## Example
 
-### Multi platform test execution
+The examples below are a subset of what `@jsenv/core` does.<br />
+These examples can be reproduced on your machine by following the documentation in the next part: [Usage](#Usage)
 
-![test terminal recording](./docs/testing/test-terminal-recording.gif)
+> Example uses gif because github mardown does not supports video.
+> Video are better for documentation because they don't autoplay and can be paused.
+> You can find the original videos in [docs/example-asset/](./docs/example-asset)
+
+### Multi platform test executions
+
+![test terminal recording](./docs/example-asset/test-terminal-recording.gif)
 
 ### Debug file execution in chrome
 
-![vscode debug node gif](./docs/exploring/vscode-debug-chrome.gif)
+![vscode debug node gif](./docs/example-asset/vscode-debug-chrome.gif)
 
 ### Debug file execution in node.js
 
-![vscode debug node gif](./docs/executing/vscode-debug-node.gif)
+![vscode debug node gif](./docs/example-asset/vscode-debug-node.gif)
 
 ## Usage
 
-The list below presents the main tools `@jsenv/core` provides. They are independent and completes each other.
+The list below presents what `@jsenv/core` provides. They are independent and completes each other.
 
 - explore files using a browser.<br/>
   — see [./docs/exploring/readme.md](./docs/exploring/readme.md)
