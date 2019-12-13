@@ -18,7 +18,7 @@ Unified developer experience to write and maintain JavaScript projects.
 
 `@jsenv/core` relies on standard that are not yet available in browsers or Node.js to provide a future proof developer experience. In that aspect it can be seen as a polyfill for the developer experience of a JavaScript project. It also means future `@jsenv/core` versions will become lighter as standard gets adopted.
 
-`@jsenv/core` exports functions needed during the life of a typical JavaScript. These functions are independant so that you can use them according to each project requirements. Using every `@jsenv/core` functions gives you a unified developer experience.
+`@jsenv/core` exports functions needed during the life of a typical JavaScript project. These functions are independant so that you can use them according to each project requirements. Using every `@jsenv/core` functions results in a unified developer experience.
 
 `jsenv-core` github repository corresponds to `@jsenv/core` package published on github and npm package registries.
 
