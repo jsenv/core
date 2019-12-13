@@ -35,7 +35,7 @@ const actual = await launchAndExecute({
     }),
   // stopPlatformAfterExecute: false,
   collectNamespace: true,
-  htmlFileUrl: import.meta.resolve("./html-file.html"),
+  htmlFileRelativeUrl: "./html-file.html",
 })
 const expected = {
   status: "completed",

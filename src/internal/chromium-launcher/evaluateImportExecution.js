@@ -1,5 +1,6 @@
 import { resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
 import { assertFileExists } from "internal/filesystemUtils.js"
+import { jsenvHtmlFileUrl } from "internal/jsenvHtmlFileUrl.js"
 import { evalSource } from "internal/platform/createNodePlatform/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
 import { getBrowserExecutionDynamicData } from "internal/platform/getBrowserExecutionDynamicData.js"
@@ -8,7 +9,7 @@ export const evaluateImportExecution = async ({
   cancellationToken,
 
   projectDirectoryUrl,
-  htmlFileUrl,
+  htmlFileRelativeUrl,
   outDirectoryRelativeUrl,
   fileRelativeUrl,
   compileServerOrigin,
@@ -22,19 +23,16 @@ export const evaluateImportExecution = async ({
   errorStackRemapping,
   executionExposureOnWindow,
 }) => {
-  if (!htmlFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`chromium html file must be inside project directory
---- chromium html file url ---
-${htmlFileUrl}
---- project directory url ---
-${htmlFileUrl}`)
-  }
-  await assertFileExists(htmlFileUrl)
-
   const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
   await assertFileExists(fileUrl)
 
-  const htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl)
+  if (typeof htmlFileRelativeUrl === "undefined") {
+    htmlFileRelativeUrl = urlToRelativeUrl(jsenvHtmlFileUrl, projectDirectoryUrl)
+  } else if (typeof htmlFileRelativeUrl !== "string") {
+    throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`)
+  }
+  const htmlFileUrl = resolveUrl(htmlFileRelativeUrl, projectDirectoryUrl)
+  await assertFileExists(htmlFileUrl)
   const htmlFileClientUrl = `${executionServerOrigin}/${htmlFileRelativeUrl}`
   await page.goto(htmlFileClientUrl)
 

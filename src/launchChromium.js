@@ -1,7 +1,6 @@
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
 import { createCancellationToken } from "@jsenv/cancellation"
-import { jsenvHtmlFileUrl } from "internal/jsenvHtmlFileUrl.js"
 import { closePage } from "internal/chromium-launcher/closePage.js"
 import { trackRessources } from "internal/chromium-launcher/trackRessources.js"
 import { launchPuppeteer } from "internal/chromium-launcher/launchPuppeteer.js"
@@ -81,7 +80,7 @@ export const launchChromium = async ({
   const executeFile = async (
     fileRelativeUrl,
     {
-      htmlFileUrl = jsenvHtmlFileUrl,
+      htmlFileRelativeUrl,
       incognito = false,
       collectNamespace,
       collectCoverage,
@@ -159,7 +158,7 @@ export const launchChromium = async ({
 
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
-      htmlFileUrl,
+      htmlFileRelativeUrl,
       fileRelativeUrl,
       compileServerOrigin,
       executionServerOrigin: executionServer.origin,

@@ -15,8 +15,7 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFileUrl = import.meta.resolve("../template.html")
-const htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, jsenvCoreDirectoryUrl)
+const htmlFileRelativeUrl = "template.html"
 const filename = `${testDirectoryname}.main.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const filePath = urlToFilePath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl))
@@ -24,7 +23,7 @@ const filePath = urlToFilePath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl
 const { exploringServer, compileServer } = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  htmlFileUrl,
+  htmlFileRelativeUrl,
 })
 const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
   `${exploringServer.origin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,

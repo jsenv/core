@@ -10,15 +10,14 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryBasename = basename(testDirectoryRelativePath)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
-const htmlFileUrl = import.meta.resolve("../template.html")
-const htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, jsenvCoreDirectoryUrl)
+const htmlFileRelativeUrl = "template.html"
 const filename = `${testDirectoryBasename}.main.js`
 const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
 
 const { exploringServer } = await startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
-  htmlFileUrl,
+  htmlFileRelativeUrl,
 })
 const { browser, pageLogs, pageErrors, executionResult } = await openBrowserPage(
   `${exploringServer.origin}/${htmlFileRelativeUrl}?file=${fileRelativeUrl}`,
