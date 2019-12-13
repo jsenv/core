@@ -75,6 +75,23 @@
         "node_modules/rollup-plugin-node-resolve/**",
         "<node_internals>/**/*.js"
       ]
+    },
+    {
+      "name": "jsenv-chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:3456/${relativeFile}",
+      "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"],
+      "sourceMaps": true,
+      "smartStep": true,
+      "skipFiles": [
+        // force-multiline
+        "node_modules/@babel/template/**",
+        "node_modules/@dmail/cancellation/**",
+        "node_modules/rollup/**",
+        "node_modules/rollup-plugin-node-resolve/**",
+        "<node_internals>/**"
+      ]
     }
   ]
 }
