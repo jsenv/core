@@ -18,13 +18,13 @@ This tool is called exploring.
 
 # Exploring recorded video
 
-The following video was recorded to show exploring feature in action on a basic project. The developper opens a file and debugs it inside chrome.
+The following video was recorded to show exploring feature in action on a basic project. The developper debugs `hello.js` file inside chrome.
 
 ![recording of me exploring a project using chrome](./exploring-with-chrome-recording.gif)
 <br />
 — gif generated from [./exploring-with-chrome-recording.mp4](./exploring-with-chrome-recording.mp4)
 
-To reproduce the environment in this video you can follow the next part.
+To reproduce the environment in this gif you can follow the next part.
 
 # Exploring concrete example
 
@@ -56,7 +56,7 @@ A second server will start. That's the one we're interested in right now. The ur
 
 Once server is started you can navigate to `http://127.0.0.1:3456` and you will see an html page listing the files you can explore.
 
-![exploring server chome screenshot](./exploring-server-chrome-screenshot.png)
+![exploring chome screenshot](./exploring-chrome-screenshot.png)
 
 - If you go to `http://127.0.0.1:3456/src/hello.js` page displays `Hello world`.
   It shows that if your file execution renders something, you can see the effect in your browser.
@@ -64,4 +64,4 @@ Once server is started you can navigate to `http://127.0.0.1:3456` and you will 
   It shows that even if your file do not render anything, you still can use this functionnality to debug your file.
 
 If you want to know more about `exploring`, there is a dedicated page for that.<br />
-— see [startExploring api documentation](./start-exploring-doc.md)
+— see [startExploring api documentation](./api.md)

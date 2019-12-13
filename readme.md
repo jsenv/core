@@ -10,6 +10,7 @@ Unified developer experience to write and maintain JavaScript projects.
 # Table of contents
 
 - [Presentation](#Presentation)
+- [Example](#Example)
 - [Usage](#Usage)
 - [Installation](#Installation)
 
@@ -21,9 +22,30 @@ Unified developer experience to write and maintain JavaScript projects.
 
 `jsenv-core` github repository corresponds to `@jsenv/core` package published on github and npm package registries.
 
+## Example
+
+The examples below are a subset of what `@jsenv/core` does.<br />
+These examples can be reproduced on your machine by following the documentation in the next part: [Usage](#Usage)
+
+> Example uses gif because github mardown does not supports video.
+> Video are better for documentation because they don't autoplay and can be paused.
+> You can find the original videos in [docs/example-asset/](./docs/example-asset)
+
+### Multi platform test executions
+
+![test terminal recording](./docs/example-asset/test-terminal-recording.gif)
+
+### Debug file execution in chrome
+
+![vscode debug node gif](./docs/example-asset/vscode-debug-chrome.gif)
+
+### Debug file execution in node.js
+
+![vscode debug node gif](./docs/example-asset/vscode-debug-node.gif)
+
 ## Usage
 
-The list below presents the main tools `@jsenv/core` provides. They are independent and completes each other.
+The list below presents what `@jsenv/core` provides. They are independent and completes each other.
 
 - explore files using a browser.<br/>
   — see [./docs/exploring/readme.md](./docs/exploring/readme.md)
@@ -46,9 +68,9 @@ If you never installed a jsenv package, read [Installing a jsenv package](./docs
 This documentation is up-to-date with a specific version so prefer any of the following commands
 
 ```console
-npm install --save-dev @jsenv/core@10.0.0
+npm install --save-dev @jsenv/core@10.0.1
 ```
 
 ```console
-yarn add --dev @jsenv/core@10.0.0
+yarn add --dev @jsenv/core@10.0.1
 ```

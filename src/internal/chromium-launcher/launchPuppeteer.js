@@ -3,6 +3,8 @@
 
 import { createCancellationToken, createStoppableOperation } from "@jsenv/cancellation"
 import { interruptSignal, teardownSignal } from "@jsenv/node-signals"
+import { fetchUrl } from "internal/fetchUrl.js"
+import { validateResponseStatusIsOk } from "internal/validateResponseStatusIsOk.js"
 import { trackRessources } from "./trackRessources.js"
 
 const puppeteer = import.meta.require("puppeteer")
@@ -10,17 +12,21 @@ const puppeteer = import.meta.require("puppeteer")
 export const launchPuppeteer = async ({
   cancellationToken = createCancellationToken(),
   headless = true,
+  debug = false,
+  debugPort = 9222,
   stopOnExit = true,
   stopOnSIGINT = true,
 }) => {
   const options = {
     headless,
+    ...(debug ? { devtools: true } : {}),
     // because we use a self signed certificate
     ignoreHTTPSErrors: true,
     args: [
       // https://github.com/GoogleChrome/puppeteer/issues/1834
       // https://github.com/GoogleChrome/puppeteer/blob/master/docs/troubleshooting.md#tips
       // "--disable-dev-shm-usage",
+      `--remote-debugging-port=${debugPort}`,
     ],
   }
 
@@ -67,6 +73,23 @@ export const launchPuppeteer = async ({
   }
 
   const browser = await browserOperation
+
+  if (debug) {
+    // https://github.com/puppeteer/puppeteer/blob/v2.0.0/docs/api.md#browserwsendpoint
+    // https://chromedevtools.github.io/devtools-protocol/#how-do-i-access-the-browser-target
+    const webSocketEndpoint = browser.wsEndpoint()
+    const webSocketUrl = new URL(webSocketEndpoint)
+    const browserEndpoint = `http://${webSocketUrl.host}/json/version`
+    const browserResponse = await fetchUrl(browserEndpoint, { cancellationToken })
+    const { valid, message } = validateResponseStatusIsOk(browserResponse)
+    if (!valid) {
+      throw new Error(message)
+    }
+
+    const browserResponseObject = JSON.parse(browserResponse.body)
+    const { webSocketDebuggerUrl } = browserResponseObject
+    console.log(`Debugger listening on ${webSocketDebuggerUrl}`)
+  }
 
   return {
     browser,

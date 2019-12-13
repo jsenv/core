@@ -24,7 +24,7 @@ export const startExploring = async ({
   logLevel,
   compileServerLogLevel = logLevel,
 
-  htmlFileUrl = jsenvHtmlFileUrl,
+  htmlFileRelativeUrl,
   explorableConfig = jsenvExplorableConfig,
   livereloading = false,
   watchConfig = {
@@ -58,6 +58,12 @@ export const startExploring = async ({
   projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
   await assertProjectDirectoryExists({ projectDirectoryUrl })
 
+  if (typeof htmlFileRelativeUrl === "undefined") {
+    htmlFileRelativeUrl = urlToRelativeUrl(jsenvHtmlFileUrl, projectDirectoryUrl)
+  } else if (typeof htmlFileRelativeUrl !== "string") {
+    throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`)
+  }
+  const htmlFileUrl = resolveUrl(htmlFileRelativeUrl, projectDirectoryUrl)
   await assertFileExists(htmlFileUrl)
 
   const stopExploringCancellationSource = createCancellationSource()
@@ -242,7 +248,7 @@ export const startExploring = async ({
 
       rawProjectFileRequestedCallback = ({ relativeUrl, request }) => {
         // when it's the html file used to execute the files
-        if (relativeUrl === urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl)) {
+        if (relativeUrl === htmlFileRelativeUrl) {
           dependencyTracker[relativeUrl] = []
         } else {
           projectFileRequestedCallback({ relativeUrl, request })
@@ -305,7 +311,7 @@ export const startExploring = async ({
           if (request.ressource === "/") {
             return serveExploringIndex({
               projectDirectoryUrl,
-              htmlFileUrl,
+              htmlFileRelativeUrl,
               explorableConfig,
               request,
             })

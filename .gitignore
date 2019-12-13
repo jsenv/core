@@ -1,6 +1,11 @@
 /.jsenv/
 /.vscode/settings.json
 /coverage/
+/docs/**/.jsenv/
+/docs/**/dist/
+/docs/**/node_modules/
+/docs/**/package-lock.json
+/docs/**/yarn.lock
 /node_modules/
 /importMap.json
 /jsconfig.json

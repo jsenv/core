@@ -1,10 +1,9 @@
 /.jsenv/
-/dist/
 /coverage/
-/docs/bundling/basic-project/dist/
-/docs/bundling/basic-project/node_modules/
-/docs/execution/basic-project/dist/
-/docs/execution/basic-project/node_modules/
+/dist/
+/docs/**/.jsenv/
+/docs/**/dist/
+/docs/**/node_modules/
 /helpers/chromium/
 /node_modules/
 /src/**/s.js

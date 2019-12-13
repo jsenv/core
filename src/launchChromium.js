@@ -1,7 +1,7 @@
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
+/* eslint-disable import/max-dependencies */
 import { createCancellationToken } from "@jsenv/cancellation"
-import { jsenvHtmlFileUrl } from "internal/jsenvHtmlFileUrl.js"
 import { closePage } from "internal/chromium-launcher/closePage.js"
 import { trackRessources } from "internal/chromium-launcher/trackRessources.js"
 import { launchPuppeteer } from "internal/chromium-launcher/launchPuppeteer.js"
@@ -24,6 +24,8 @@ export const launchChromium = async ({
 
   headless = true,
   shareBrowser = false,
+  debug = false,
+  debugPort,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -35,12 +37,14 @@ export const launchChromium = async ({
   const { registerCleanupCallback, cleanup } = trackRessources()
 
   const sharingToken = shareBrowser
-    ? browserSharing.getSharingToken({ headless })
+    ? browserSharing.getSharingToken({ headless, debug, debugPort })
     : browserSharing.getUniqueSharingToken()
   if (!sharingToken.isUsed()) {
     const value = launchPuppeteer({
       cancellationToken,
       headless,
+      debug,
+      debugPort,
     })
     sharingToken.setSharedValue(value, async () => {
       const { stopBrowser } = await value
@@ -81,7 +85,7 @@ export const launchChromium = async ({
   const executeFile = async (
     fileRelativeUrl,
     {
-      htmlFileUrl = jsenvHtmlFileUrl,
+      htmlFileRelativeUrl,
       incognito = false,
       collectNamespace,
       collectCoverage,
@@ -159,7 +163,7 @@ export const launchChromium = async ({
 
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
-      htmlFileUrl,
+      htmlFileRelativeUrl,
       fileRelativeUrl,
       compileServerOrigin,
       executionServerOrigin: executionServer.origin,
@@ -178,7 +182,7 @@ export const launchChromium = async ({
     // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#puppeteer-api-tip-of-tree
     // https://github.com/GoogleChrome/puppeteer#q-why-doesnt-puppeteer-vxxx-work-with-chromium-vyyy
     // to keep in sync when updating puppeteer
-    version: "79.0.3942.0",
+    version: "79.0.3945.0",
     options: { headless },
     stop: cleanup,
     registerDisconnectCallback,

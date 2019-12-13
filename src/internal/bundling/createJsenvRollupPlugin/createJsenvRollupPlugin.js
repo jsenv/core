@@ -11,11 +11,11 @@ import {
 import { writeFileContent } from "internal/filesystemUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 import { fetchUrl } from "internal/fetchUrl.js"
+import { validateResponseStatusIsOk } from "internal/validateResponseStatusIsOk.js"
 import { transformJs } from "internal/compiling/js-compilation-service/transformJs.js"
 import { findAsyncPluginNameInBabelPluginMap } from "internal/compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 
 import { fetchSourcemap } from "./fetchSourcemap.js"
-import { validateResponseStatusIsOk } from "./validateResponseStatusIsOk.js"
 
 const { minify: minifyCode } = import.meta.require("terser")
 

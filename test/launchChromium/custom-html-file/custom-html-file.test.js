@@ -17,6 +17,7 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}html-file.html`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
@@ -35,7 +36,7 @@ const actual = await launchAndExecute({
     }),
   // stopPlatformAfterExecute: false,
   collectNamespace: true,
-  htmlFileUrl: import.meta.resolve("./html-file.html"),
+  htmlFileRelativeUrl,
 })
 const expected = {
   status: "completed",

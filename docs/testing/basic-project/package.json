@@ -3,12 +3,10 @@
   "version": "0.0.1",
   "license": "MIT",
   "scripts": {
-    "test": "node ./execute-test.js",
-    "generate-coverage": "node ./generate-coverage.js"
+    "test": "node ./execute-test-plan.js",
+    "test-with-coverage": "node ./execute-test-plan.js --coverage"
   },
   "dependencies": {
-    "@jsenv/testing": "3.2.0",
-    "@jsenv/chromium-launcher": "3.7.0",
-    "@jsenv/node-launcher": "4.15.0"
+    "@jsenv/core": "10.0.0"
   }
 }

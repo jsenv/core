@@ -1,14 +1,11 @@
 import { metaMapToSpecifierMetaMap } from "@jsenv/url-meta"
 import { collectFiles } from "@jsenv/file-collector"
-import { urlToRelativeUrl } from "internal/urlUtils.js"
 
 export const serveExploringIndex = async ({
   projectDirectoryUrl,
-  htmlFileUrl,
+  htmlFileRelativeUrl,
   explorableConfig,
 }) => {
-  const htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl)
-
   const specifierMetaMap = metaMapToSpecifierMetaMap({
     explorable: explorableConfig,
   })

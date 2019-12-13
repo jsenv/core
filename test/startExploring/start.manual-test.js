@@ -6,14 +6,14 @@ import { START_EXPLORING_TEST_PARAMS } from "./TEST_PARAMS.js"
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFileUrl = import.meta.resolve("./template.html")
+const htmlFileRelativeUrl = "template.html"
 
 startExploring({
   ...START_EXPLORING_TEST_PARAMS,
   logLevel: "info",
   compileServerLogLevel: "info",
   jsenvDirectoryRelativeUrl,
-  htmlFileUrl,
+  htmlFileRelativeUrl,
   explorableConfig: {
     [`./${testDirectoryRelativeUrl}**/*.main.js`]: true,
     [`./${testDirectoryRelativeUrl}**/.jsenv/**`]: false,

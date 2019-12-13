@@ -8,14 +8,14 @@
       "protocol": "inspector",
       "program": "${file}",
       "autoAttachChildProcesses": true,
-      "sourceMaps": false,
+      "sourceMaps": true,
       "smartStep": true,
       "skipFiles": [
         // force-array-multiline
         // "node_modules/**",
         "node_modules/@babel/template/**",
         "node_modules/@dmail/cancellation/**",
-        "<node_internals>/**/*.js"
+        "<node_internals>/**"
       ]
     },
     {
@@ -26,11 +26,12 @@
       "program": "${workspaceFolder}/script/run-node/run-node.js",
       "args": ["${relativeFile}"],
       "autoAttachChildProcesses": true,
-      "sourceMaps": false,
+      "sourceMaps": true,
       "smartStep": true,
       "skipFiles": [
         // force-array-multiline
         // "node_modules/**",
+        "node_modules/@jsenv/core/**",
         "node_modules/@babel/template/**",
         "node_modules/@dmail/cancellation/**",
         "node_modules/rollup/**",
@@ -45,9 +46,6 @@
       "port": 40000,
       "smartStep": true,
       "sourceMaps": true,
-      "sourceMapPathOverrides": {
-        "/*": "${workspaceFolder}/*"
-      },
       "skipFiles": [
         // "node_modules/**",
         "node_modules/@babel/template/**",
@@ -64,9 +62,6 @@
       "port": 40001,
       "smartStep": true,
       "sourceMaps": true,
-      "sourceMapPathOverrides": {
-        "/*": "${workspaceFolder}/*"
-      },
       "skipFiles": [
         // "node_modules/**",
         "node_modules/@babel/template/**",
@@ -74,6 +69,25 @@
         "node_modules/rollup/**",
         "node_modules/rollup-plugin-node-resolve/**",
         "<node_internals>/**/*.js"
+      ]
+    },
+    {
+      "name": "jsenv-chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:3456/node_modules/@jsenv/core/src/internal/jsenv-html-file.html?file=${relativeFile}",
+      "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"],
+      "sourceMaps": true,
+      "webRoot": "${workspaceFolder}",
+      "smartStep": true,
+      "skipFiles": [
+        // force-multiline
+        "node_modules/@jsenv/core/**",
+        "node_modules/@babel/template/**",
+        "node_modules/@dmail/cancellation/**",
+        "node_modules/rollup/**",
+        "node_modules/rollup-plugin-node-resolve/**",
+        "<node_internals>/**"
       ]
     }
   ]

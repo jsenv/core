@@ -3,7 +3,7 @@
 - [startExploring example](#startExploring-example)
 - [Parameters](#parameters)
   - [explorableConfig](#ExplorableConfig)
-  - [htmlFileUrl](#htmlFileUrl)
+  - [htmlFileRelativeUrl](#htmlFileRelativeUrl)
   - [livereloading](#livereloading)
   - [watchConfig](#watchConfig)
   - [Server parameters](#Server-parameters)
@@ -48,17 +48,11 @@ You can find the exact value in [src/jsenvExplorableConfig.js](../../src/jsenvEx
 
 `explorableConfig` must be an object where keys are relative or absolute urls. These urls are allowed to contain `*` and `**` that will be used for pattern matching as documented in https://github.com/jsenv/jsenv-url-meta#pattern-matching-behaviour
 
-## htmlFileUrl
+## htmlFileRelativeUrl
 
-> `htmlFileUrl` is a file url string leading to an html file used as template to execute JavaScript files.
+> `htmlFileRelativeUrl` is a relative url string leading to an html file used as template to execute JavaScript files.
 
-This is an optional parameter with a default value of:
-
-```js
-require.resolve("@jsenv/core/src/internal/jsenv-html-file.html")
-```
-
-You can see the file at [src/internal/jsenv-html-file.html](../../src/internal/jsenv-html-file.html).
+This is an optional parameter with a default leading to [src/internal/jsenv-html-file.html](../../src/internal/jsenv-html-file.html).
 
 If you to use a custom html file be sure it contains the following script tag:
 
@@ -150,7 +144,7 @@ https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#startServ
 Code below shows how you might use `exploringServer` return value.
 
 ```js
-const { exploringServer, compileServer } = await executeTestPlan({
+const { exploringServer, compileServer } = await startExploring({
   projectDirectoryUrl: __dirname,
 })
 
