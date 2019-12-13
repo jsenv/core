@@ -1,6 +1,8 @@
 /.jsenv/
 /coverage/
 /dist/
+/docs/**/.jsenv/
+/docs/**/node_modules/
 /helpers/chromium/
 /node_modules/
 /src/**/s.js
