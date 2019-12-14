@@ -4,7 +4,7 @@
 - [Exploring recorded video](#Exploring-recorded-video)
 - [Exploring concrete example](#Exploring-concrete-example)
   - [1 - Setup basic project](#1---Setup-basic-project)
-  - [1 - Explore basic project](#2---Explore-basic-project)
+  - [2 - Explore basic project](#2---Explore-basic-project)
 
 # Exploring presentation
 
