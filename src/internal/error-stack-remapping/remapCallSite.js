@@ -1,3 +1,5 @@
+import { isWindowsFilePath, windowsFilePathToUrl } from "internal/filePathUtils.js"
+
 export const remapCallSite = async (
   callSite,
   { urlToSourcemapConsumer, resolveFile, readErrorStack, onFailure },
@@ -264,29 +266,11 @@ const startsWithScheme = (string) => {
 }
 
 const operatingSystemFilePathToUrl = (osFilePath) => {
-  if (isWindowsPath(osFilePath)) {
-    return windowsfilePathToUrl(osFilePath)
+  if (isWindowsFilePath(osFilePath)) {
+    return windowsFilePathToUrl(osFilePath)
   }
   if (osFilePath[0] === "/") {
     return `file://${osFilePath}`
   }
   return `file:///${osFilePath}`
 }
-
-const isWindowsPath = (path) => startsWithWindowsDriveLetter(path) && path[2] === "\\"
-
-const startsWithWindowsDriveLetter = (string) => {
-  const firstChar = string[0]
-  if (!/[a-zA-Z]/.test(firstChar)) return false
-
-  const secondChar = string[1]
-  if (secondChar !== ":") return false
-
-  return true
-}
-
-const windowsfilePathToUrl = (windowsPath) => {
-  return `file:///${replaceBackSlashesWithSlashes(windowsPath)}`
-}
-
-const replaceBackSlashesWithSlashes = (string) => string.replace(/\\/g, "/")

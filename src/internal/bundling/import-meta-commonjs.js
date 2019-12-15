@@ -9,7 +9,7 @@ export { nodeRequire as require }
 const filenameContainsBackSlashes = __filename.indexOf("\\") > -1
 
 export const url = filenameContainsBackSlashes
-  ? `file://${__filename.replace(/\\/g, "/")}`
+  ? `file:///${__filename.replace(/\\/g, "/")}`
   : `file://${__filename}`
 
 export const resolve = (specifier) => {

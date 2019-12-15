@@ -1,4 +1,5 @@
-import { fileUrlToRelativePath, urlToFilePath } from "internal/urlUtils.js"
+import { resolveUrl, fileUrlToRelativePath, urlToFilePath } from "internal/urlUtils.js"
+import { isWindowsFilePath, windowsFilePathToUrl } from "internal/filePathUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 import { readFileContent } from "internal/filesystemUtils.js"
 
@@ -48,7 +49,9 @@ export const transformResultToCompilationResult = async (
     } else {
       await Promise.all(
         map.sources.map(async (source, index) => {
-          const sourceFileUrl = String(new URL(source, sourcemapFileUrl))
+          const sourceFileUrl = isWindowsFilePath(source)
+            ? windowsFilePathToUrl(source)
+            : resolveUrl(source, sourcemapFileUrl)
 
           if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
             // do not track dependency outside project

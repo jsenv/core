@@ -33,8 +33,11 @@ export const fileUrlToRelativePath = (fileUrl, baseFileUrl) => {
     : dirname(urlToFilePath(baseFileUrl))
   const toPath = urlToFilePath(fileUrl)
   const relativePath = relative(fromPath, toPath)
-  return relativePath
+
+  return replaceBackSlashesWithSlashes(relativePath)
 }
+
+const replaceBackSlashesWithSlashes = (string) => string.replace(/\\/g, "/")
 
 export const hasScheme = (string) => {
   return /^[a-zA-Z]{2,}:/.test(string)
