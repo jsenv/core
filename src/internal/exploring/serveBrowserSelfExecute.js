@@ -35,7 +35,23 @@ export const serveBrowserSelfExecute = async ({
       const { ressource, headers, origin } = request
       // "/.jsenv/browser-script.js" is written inside htmlFile
       if (ressource === "/.jsenv/browser-script.js") {
-        const file = new URL(headers.referer).searchParams.get("file")
+        if (!headers.referer) {
+          return {
+            status: 400,
+            statusText: `referer missing in request headers`,
+          }
+        }
+        let url
+        try {
+          url = new URL(headers.referer)
+        } catch (e) {
+          return {
+            status: 400,
+            statusText: `unexpected referer in request headers, must be an url and received ${headers.referer}`,
+          }
+        }
+
+        const file = url.searchParams.get("file")
         const browserSelfExecuteCompiledFileRemoteUrl = `${origin}/${browserSelfExecuteDirectoryRelativeUrl}${file}`
 
         return {
