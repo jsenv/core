@@ -52,12 +52,20 @@ export const serveBrowserSelfExecute = async ({
         }
 
         const file = url.searchParams.get("file")
+
+        if (stringHasConcecutiveSlashes(file)) {
+          return {
+            status: 400,
+            statusText: `unexpected file in query string parameters, it contains consecutive slashes ${file}`,
+          }
+        }
         const browserSelfExecuteCompiledFileRemoteUrl = `${origin}/${browserSelfExecuteDirectoryRelativeUrl}${file}`
 
         return {
           status: 307,
           headers: {
             location: browserSelfExecuteCompiledFileRemoteUrl,
+            vary: "referer",
           },
         }
       }
@@ -99,4 +107,22 @@ export const serveBrowserSelfExecute = async ({
       return null
     },
   )
+}
+
+const stringHasConcecutiveSlashes = (string) => {
+  let previousCharIsSlash = 0
+  let i = 0
+  while (i < string.length) {
+    const char = string[i]
+    i++
+    if (char === "/") {
+      if (previousCharIsSlash) {
+        return true
+      }
+      previousCharIsSlash = true
+    } else {
+      previousCharIsSlash = false
+    }
+  }
+  return false
 }
