@@ -251,6 +251,9 @@ ${moduleUrl}`)
   }
 
   const jsonToJavascript = (jsonString) => {
+    // there is no need to minify the json string
+    // because it becomes valid javascript
+    // that will be minified by minifyJs inside renderChunk
     return `export default ${jsonString}`
   }
 
