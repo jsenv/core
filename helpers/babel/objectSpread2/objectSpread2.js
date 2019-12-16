@@ -6,14 +6,14 @@ export default function(target) {
     var source = arguments[i] === null ? {} : arguments[i]
     if (i % 2) {
       // eslint-disable-next-line no-loop-func
-      ownKeys(source, true).forEach(function(key) {
+      ownKeys(Object(source), true).forEach(function(key) {
         defineProperty(target, key, source[key])
       })
     } else if (Object.getOwnPropertyDescriptors) {
       Object.defineProperties(target, Object.getOwnPropertyDescriptors(source))
     } else {
       // eslint-disable-next-line no-loop-func
-      ownKeys(source).forEach(function(key) {
+      ownKeys(Object(source)).forEach(function(key) {
         Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key))
       })
     }

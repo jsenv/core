@@ -31,6 +31,10 @@ export default function(inner, awaitWrap) {
   }
   if (typeof inner.return === "function") {
     iter.return = function(value) {
+      if (waiting) {
+        waiting = false
+        return value
+      }
       return pump("return", value)
     }
   }
