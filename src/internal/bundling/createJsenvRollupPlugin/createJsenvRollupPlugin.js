@@ -16,8 +16,9 @@ import { transformJs } from "internal/compiling/js-compilation-service/transform
 import { findAsyncPluginNameInBabelPluginMap } from "internal/compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 
 import { fetchSourcemap } from "./fetchSourcemap.js"
-
-const { minify: minifyCode } = import.meta.require("terser")
+import { minifyHtml } from "./minifyHtml.js"
+import { minifyJs } from "./minifyJs.js"
+import { minifyCss } from "./minifyCss.js"
 
 export const createJsenvRollupPlugin = async ({
   cancellationToken,
@@ -34,6 +35,13 @@ export const createJsenvRollupPlugin = async ({
   babelPluginMap,
   format,
   minify,
+  // https://github.com/terser/terser#minify-options
+  minifyJsOptions,
+  // https://github.com/jakubpawlowicz/clean-css#constructor-options
+  minifyCssOptions,
+  // https://github.com/kangax/html-minifier#options-quick-reference
+  minifyHtmlOptions,
+
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
   const moduleContentMap = {}
@@ -146,10 +154,10 @@ export const createJsenvRollupPlugin = async ({
       if (!minify) return null
 
       // https://github.com/terser-js/terser#minify-options
-      const minifyOptions = format === "global" ? { toplevel: false } : { toplevel: true }
-      const result = minifyCode(source, {
+      const result = minifyJs(source, {
         sourceMap: true,
-        ...minifyOptions,
+        ...(format === "global" ? { toplevel: false } : { toplevel: true }),
+        ...minifyJsOptions,
       })
       if (result.error) {
         throw result.error
@@ -199,28 +207,31 @@ export const createJsenvRollupPlugin = async ({
     }
 
     if (contentType === "application/json") {
-      // we could minify json too
-      // et a propos du map qui pourrait permettre de connaitre la vrai source pour ce fichier
-      // genre dire que la source c'est je ne sais quoi
-      // a defaut il faudrait
-      // pouvoir tenir compte d'une redirection pour update le
       return {
         responseUrl,
         contentRaw: content,
-        content: `export default ${content}`,
+        content: jsonToJavascript(content),
       }
     }
 
-    if (contentType.startsWith("text/")) {
-      // we could minify html, svg, css etc too
+    if (contentType === "text/html") {
       return {
         responseUrl,
         contentRaw: content,
-        content: `export default ${JSON.stringify(content)}`,
+        content: htmlToJavascript(content),
       }
     }
 
-    logger.warn(`unexpected content-type for module.
+    if (contentType === "text/css") {
+      return {
+        responseUrl,
+        contentRaw: content,
+        content: cssToJavascript(content),
+      }
+    }
+
+    if (!contentType.startsWith("text/")) {
+      logger.warn(`unexpected content-type for module.
 --- content-type ---
 ${contentType}
 --- expected content-types ---
@@ -229,13 +240,36 @@ ${contentType}
 "text/*"
 --- module url ---
 ${moduleUrl}`)
+    }
 
+    // fallback to text
     return {
       responseUrl,
       contentRaw: content,
-      // fallback to text
-      content: `export default ${JSON.stringify(content)}`,
+      content: textToJavascript(content),
     }
+  }
+
+  const jsonToJavascript = (jsonString) => {
+    return `export default ${jsonString}`
+  }
+
+  const htmlToJavascript = (htmlString) => {
+    if (minify) {
+      htmlString = minifyHtml(htmlString, minifyHtmlOptions)
+    }
+    return `export default ${JSON.stringify(htmlString)}`
+  }
+
+  const cssToJavascript = (cssString) => {
+    if (minify) {
+      cssString = minifyCss(cssString, minifyCssOptions)
+    }
+    return `export default ${JSON.stringify(cssString)}`
+  }
+
+  const textToJavascript = (textString) => {
+    return `export default ${JSON.stringify(textString)}`
   }
 
   const getModule = async (moduleUrl) => {
