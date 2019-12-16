@@ -4,7 +4,7 @@ export default function(target) {
   for (var i = 1; i < arguments.length; i++) {
     // eslint-disable-next-line prefer-rest-params
     var source = arguments[i] === null ? {} : arguments[i]
-    var ownKeys = Object.keys(source)
+    var ownKeys = Object.keys(Object(source))
     if (typeof Object.getOwnPropertySymbols === "function") {
       ownKeys = ownKeys.concat(
         // eslint-disable-next-line no-loop-func

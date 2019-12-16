@@ -28,7 +28,7 @@ function AsyncGenerator(gen) {
       Promise.resolve(wrappedAwait ? value.wrapped : value).then(
         function(arg) {
           if (wrappedAwait) {
-            resume("next", arg)
+            resume(key === "return" ? "return" : "next", arg)
             return
           }
           settle(result.done ? "return" : "normal", arg)
