@@ -6,4 +6,4 @@ document.head.appendChild(style)
 
 export { cssText }
 
-export default getComputedStyle(document.body).backgroundColor
+export const bodyBackgroundColor = getComputedStyle(document.body).backgroundColor
