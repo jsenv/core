@@ -15,23 +15,41 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/systemjs/`
 const mainFilename = `${testDirectoryname}.js`
+const entryPointMap = {
+  main: `./${testDirectoryRelativeUrl}${mainFilename}`,
+}
 
-await generateSystemJsBundle({
-  ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
-  jsenvDirectoryRelativeUrl,
-  bundleDirectoryRelativeUrl,
-  entryPointMap: {
-    main: `./${testDirectoryRelativeUrl}${mainFilename}`,
-  },
-})
-const { namespace: actual } = await browserImportSystemJsBundle({
-  ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
-  testDirectoryRelativeUrl,
-})
-const expected = {
-  default: `body {
-  background: yellow;
+{
+  await generateSystemJsBundle({
+    ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    bundleDirectoryRelativeUrl,
+    entryPointMap,
+  })
+
+  const { namespace } = await browserImportSystemJsBundle({
+    ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
+    testDirectoryRelativeUrl,
+  })
+  const actual = namespace.default
+  const expected = `rgb(255, 255, 0)`
+  assert({ actual, expected })
 }
-`,
+
+{
+  await generateSystemJsBundle({
+    ...GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
+    jsenvDirectoryRelativeUrl,
+    bundleDirectoryRelativeUrl,
+    entryPointMap,
+    minify: true,
+  })
+
+  const { namespace } = await browserImportSystemJsBundle({
+    ...IMPORT_SYSTEM_JS_BUNDLE_TEST_PARAMS,
+    testDirectoryRelativeUrl,
+  })
+  const actual = namespace.cssText
+  const expected = `body{background:#ff0}`
+  assert({ actual, expected })
 }
-assert({ actual, expected })

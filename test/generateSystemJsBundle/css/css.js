@@ -1,3 +1,9 @@
 import cssText from "./style.css"
 
-export default cssText
+const style = document.createElement("style")
+style.innerText = cssText
+document.head.appendChild(style)
+
+export { cssText }
+
+export default getComputedStyle(document.body).backgroundColor
