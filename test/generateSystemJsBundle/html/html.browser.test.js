@@ -25,6 +25,9 @@ await generateSystemJsBundle({
   bundleDirectoryRelativeUrl,
   entryPointMap,
   minify: true,
+  minifyHtmlOptions: {
+    collapseWhitespace: true,
+  },
 })
 
 const { namespace: actual } = await browserImportSystemJsBundle({
@@ -32,7 +35,7 @@ const { namespace: actual } = await browserImportSystemJsBundle({
   testDirectoryRelativeUrl,
 })
 const expected = {
-  cssText: `body{background:#ff0}`,
-  bodyBackgroundColor: `rgb(255, 255, 0)`,
+  htmlText: `<button>Hello world</button>`,
+  innerText: "Hello world",
 }
 assert({ actual, expected })

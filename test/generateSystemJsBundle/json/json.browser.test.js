@@ -32,7 +32,9 @@ const { namespace: actual } = await browserImportSystemJsBundle({
   testDirectoryRelativeUrl,
 })
 const expected = {
-  cssText: `body{background:#ff0}`,
-  bodyBackgroundColor: `rgb(255, 255, 0)`,
+  default: {
+    whatever: "It's cool",
+    [`w"ow`]: 42,
+  },
 }
 assert({ actual, expected })

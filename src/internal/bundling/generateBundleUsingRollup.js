@@ -23,6 +23,9 @@ export const generateBundleUsingRollup = async ({
   format,
   formatOutputOptions,
   minify,
+  minifyJsOptions,
+  minifyCssOptions,
+  minifyHtmlOptions,
   sourcemapExcludeSources,
   writeOnFileSystem,
 }) => {
@@ -41,6 +44,9 @@ export const generateBundleUsingRollup = async ({
     babelPluginMap,
     format,
     minify,
+    minifyJsOptions,
+    minifyCssOptions,
+    minifyHtmlOptions,
   })
 
   const rollupBundle = await useRollup({
