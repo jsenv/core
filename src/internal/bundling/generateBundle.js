@@ -51,6 +51,7 @@ export const generateBundle = async ({
   minifyHtmlOptions = {},
   sourcemapExcludeSources = true,
   writeOnFileSystem = true,
+  manifestFile = false,
 
   // when true .jsenv/out-bundle directory is generated
   // with all intermediated files used to produce the final bundle.
@@ -153,6 +154,7 @@ export const generateBundle = async ({
         formatOutputOptions,
         writeOnFileSystem,
         sourcemapExcludeSources,
+        manifestFile,
       })
     }
 
@@ -178,6 +180,7 @@ export const generateBundle = async ({
         minify,
         writeOnFileSystem,
         sourcemapExcludeSources,
+        manifestFile,
       }),
       generateEntryPointsBalancerFiles({
         cancellationToken,
@@ -199,6 +202,7 @@ export const generateBundle = async ({
         minify,
         writeOnFileSystem,
         sourcemapExcludeSources,
+        manifestFile,
       }),
     ])
   })

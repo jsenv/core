@@ -1,5 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
+import { compareFilePath } from "@jsenv/file-collector"
 import {
   hasScheme,
   urlToFilePath,
@@ -41,6 +42,7 @@ export const createJsenvRollupPlugin = async ({
   minifyCssOptions,
   // https://github.com/kangax/html-minifier#options-quick-reference
   minifyHtmlOptions,
+  manifestFile,
 
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global",
 }) => {
@@ -164,6 +166,27 @@ export const createJsenvRollupPlugin = async ({
       } else {
         return result
       }
+    },
+
+    generateBundle: async (outputOptions, bundle) => {
+      if (!manifestFile) {
+        return
+      }
+
+      const mappings = {}
+      Object.keys(bundle).forEach((key) => {
+        const chunk = bundle[key]
+        mappings[`${chunk.name}.js`] = chunk.fileName
+      })
+      const mappingKeysSorted = Object.keys(mappings).sort(compareFilePath)
+      const manifest = {}
+      mappingKeysSorted.forEach((key) => {
+        manifest[key] = mappings[key]
+      })
+
+      const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
+      const manifestFilePath = urlToFilePath(manifestFileUrl)
+      await writeFileContent(manifestFilePath, JSON.stringify(manifest, null, "  "))
     },
 
     writeBundle: async (bundle) => {
