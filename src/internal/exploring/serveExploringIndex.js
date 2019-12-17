@@ -11,7 +11,7 @@ export const serveExploringIndex = async ({
   })
 
   const matchingFileResultArray = await collectFiles({
-    directoryPath: projectDirectoryUrl,
+    directoryUrl: projectDirectoryUrl,
     specifierMetaMap,
     predicate: ({ explorable }) => explorable,
   })

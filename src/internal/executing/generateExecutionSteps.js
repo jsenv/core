@@ -1,6 +1,5 @@
 import { metaMapToSpecifierMetaMap } from "@jsenv/url-meta"
 import { collectFiles } from "@jsenv/file-collector"
-import { filePathToUrl } from "internal/urlUtils.js"
 import { generateFileExecutionSteps } from "./generateFileExecutionSteps.js"
 
 export const generateExecutionSteps = async (plan, { cancellationToken, projectDirectoryUrl }) => {
@@ -10,7 +9,7 @@ export const generateExecutionSteps = async (plan, { cancellationToken, projectD
 
   const fileResultArray = await collectFiles({
     cancellationToken,
-    directoryPath: filePathToUrl(projectDirectoryUrl),
+    directoryUrl: projectDirectoryUrl,
     specifierMetaMap,
     predicate: ({ filePlan }) => filePlan,
   })

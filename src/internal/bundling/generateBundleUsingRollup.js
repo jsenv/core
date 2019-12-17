@@ -28,6 +28,7 @@ export const generateBundleUsingRollup = async ({
   minifyHtmlOptions,
   sourcemapExcludeSources,
   writeOnFileSystem,
+  manifestFile = false,
 }) => {
   const { jsenvRollupPlugin, getExtraInfo } = await createJsenvRollupPlugin({
     cancellationToken,
@@ -47,6 +48,7 @@ export const generateBundleUsingRollup = async ({
     minifyJsOptions,
     minifyCssOptions,
     minifyHtmlOptions,
+    manifestFile,
   })
 
   const rollupBundle = await useRollup({
