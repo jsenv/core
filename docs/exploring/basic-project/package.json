@@ -6,6 +6,6 @@
     "start-exploring": "node ./start-exploring.js"
   },
   "devDependencies": {
-    "@jsenv/core": "10.1.0"
+    "@jsenv/core": "10.3.2"
   }
 }

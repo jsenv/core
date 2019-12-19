@@ -68,9 +68,9 @@ If you never installed a jsenv package, read [Installing a jsenv package](./docs
 This documentation is up-to-date with a specific version so prefer any of the following commands
 
 ```console
-npm install --save-dev @jsenv/core@10.3.0
+npm install --save-dev @jsenv/core@10.3.2
 ```
 
 ```console
-yarn add --dev @jsenv/core@10.3.0
+yarn add --dev @jsenv/core@10.3.2
 ```
