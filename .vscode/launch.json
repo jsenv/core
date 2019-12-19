@@ -35,7 +35,7 @@
         "node_modules/@babel/template/**",
         "node_modules/@dmail/cancellation/**",
         "node_modules/rollup/**",
-        "node_modules/rollup-plugin-node-resolve/**",
+        "node_modules/@rollup/**",
         "<node_internals>/**/*.js"
       ]
     },
@@ -51,7 +51,7 @@
         "node_modules/@babel/template/**",
         "node_modules/@dmail/cancellation/**",
         "node_modules/rollup/**",
-        "node_modules/rollup-plugin-node-resolve/**",
+        "node_modules/@rollup/**",
         "<node_internals>/**/*.js"
       ]
     },
@@ -67,7 +67,7 @@
         "node_modules/@babel/template/**",
         "node_modules/@dmail/cancellation/**",
         "node_modules/rollup/**",
-        "node_modules/rollup-plugin-node-resolve/**",
+        "node_modules/@rollup/**",
         "<node_internals>/**/*.js"
       ]
     },
@@ -86,7 +86,7 @@
         "node_modules/@babel/template/**",
         "node_modules/@dmail/cancellation/**",
         "node_modules/rollup/**",
-        "node_modules/rollup-plugin-node-resolve/**",
+        "node_modules/@rollup/**",
         "<node_internals>/**"
       ]
     }

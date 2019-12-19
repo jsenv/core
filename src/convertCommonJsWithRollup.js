@@ -1,11 +1,11 @@
 import { urlToFilePath, resolveUrl } from "internal/urlUtils.js"
 
 const commonjs = import.meta.require("rollup-plugin-commonjs")
-const nodeResolve = import.meta.require("rollup-plugin-node-resolve")
+const nodeResolve = import.meta.require("@rollup/plugin-node-resolve")
 const builtins = import.meta.require("rollup-plugin-node-builtins")
-const createJSONRollupPlugin = import.meta.require("rollup-plugin-json")
+const createJSONRollupPlugin = import.meta.require("@rollup/plugin-json")
 const createNodeGlobalRollupPlugin = import.meta.require("rollup-plugin-node-globals")
-const createReplaceRollupPlugin = import.meta.require("rollup-plugin-replace")
+const createReplaceRollupPlugin = import.meta.require("@rollup/plugin-replace")
 const { rollup } = import.meta.require("rollup")
 
 export const convertCommonJsWithRollup = async ({
