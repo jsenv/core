@@ -2,11 +2,11 @@
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import { compareFilePath } from "@jsenv/file-collector"
 import {
-  hasScheme,
+  isFileSystemPath,
   urlToFileSystemPath,
-  filePathToUrl,
+  fileSystemPathToUrl,
   resolveUrl,
-  fileUrlToRelativePath,
+  urlToRelativeUrl,
   resolveDirectoryUrl,
 } from "@jsenv/util"
 import { writeFileContent } from "internal/filesystemUtils.js"
@@ -59,8 +59,8 @@ export const createJsenvRollupPlugin = async ({
     name: "jsenv",
 
     resolveId: (specifier, importer = compileDirectoryRemoteUrl) => {
-      if (!hasScheme(importer)) {
-        importer = filePathToUrl(importer)
+      if (isFileSystemPath(importer)) {
+        importer = fileSystemPathToUrl(importer)
       }
       const importUrl = resolveImport({
         specifier,
@@ -140,7 +140,7 @@ export const createJsenvRollupPlugin = async ({
         if (url.startsWith(compileServerOrigin)) {
           const relativeUrl = url.slice(`${compileServerOrigin}/`.length)
           const fileUrl = `${projectDirectoryUrl}${relativeUrl}`
-          relativePath = fileUrlToRelativePath(fileUrl, bundleSourcemapFileUrl)
+          relativePath = urlToRelativeUrl(fileUrl, bundleSourcemapFileUrl)
           return relativePath
         }
         if (url.startsWith(projectDirectoryUrl)) {
@@ -381,7 +381,7 @@ const transformAsyncInsertedByRollup = async ({
       const { code, map } = await transformJs({
         projectDirectoryUrl,
         code: bundleInfo.code,
-        url: filePathToUrl(bundleFilename),
+        url: fileSystemPathToUrl(bundleFilename),
         map: bundleInfo.map,
         babelPluginMap: { [asyncPluginName]: babelPluginMap[asyncPluginName] },
         transformModuleIntoSystemFormat: false, // already done by rollup

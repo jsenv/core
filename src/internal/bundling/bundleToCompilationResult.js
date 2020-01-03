@@ -8,7 +8,7 @@ json file etag is used to invalidate the cache
 */
 
 import { readFileSync } from "fs"
-import { fileUrlToRelativePath, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
+import { urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { writeOrUpdateSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 
 export const bundleToCompilationResult = (
@@ -35,9 +35,9 @@ export const bundleToCompilationResult = (
         return
       }
 
-      const relativePath = fileUrlToRelativePath(moduleUrl, `${compiledFileUrl}__asset__/meta.json`)
-      if (!sources.includes(relativePath)) {
-        sources.push(relativePath)
+      const relativeUrl = urlToRelativeUrl(moduleUrl, `${compiledFileUrl}__asset__/meta.json`)
+      if (!sources.includes(relativeUrl)) {
+        sources.push(relativeUrl)
         sourcesContent.push(dependencyMap[moduleUrl].contentRaw)
       }
     })
@@ -49,11 +49,11 @@ export const bundleToCompilationResult = (
   const mainChunk = parseRollupChunk(rollupBundle.output[0], {
     moduleContentMap,
     sourcemapFileUrl,
-    sourcemapFileRelativeUrlForModule: fileUrlToRelativePath(sourcemapFileUrl, compiledFileUrl),
+    sourcemapFileRelativeUrlForModule: urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl),
   })
   // mainChunk.sourcemap.file = fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl)
   trackDependencies(mainChunk.dependencyMap)
-  assets.push(fileUrlToRelativePath(sourcemapFileUrl, `${compiledFileUrl}__asset__/`))
+  assets.push(urlToRelativeUrl(sourcemapFileUrl, `${compiledFileUrl}__asset__/`))
   assetsContent.push(JSON.stringify(mainChunk.sourcemap, null, "  "))
 
   rollupBundle.output.slice(1).forEach((rollupChunk) => {

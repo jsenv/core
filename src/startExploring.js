@@ -9,7 +9,7 @@ import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from 
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
-import { resolveUrl, urlToFileSystemPath, sameOrigin, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToFileSystemPath, urlIsInsideOf, urlToRelativeUrl } from "@jsenv/util"
 import { assertFileExists, writeFileContent } from "internal/filesystemUtils.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { getBrowserExecutionDynamicData } from "internal/platform/getBrowserExecutionDynamicData.js"
@@ -209,9 +209,10 @@ export const startExploring = async ({
           const executionId = headers["x-jsenv-execution-id"]
           trackDependency({ relativeUrl, executionId })
         } else if ("referer" in headers) {
+          const { origin } = request
           const { referer } = headers
-          if (sameOrigin(referer, request.origin)) {
-            const refererRelativeUrl = referer.slice(`${request.origin}/`.length)
+          if (referer === origin || urlIsInsideOf(referer, origin)) {
+            const refererRelativeUrl = urlToRelativeUrl(referer, origin)
             const refererFileUrl = `${projectDirectoryUrl}${refererRelativeUrl}`
 
             if (
