@@ -4,7 +4,7 @@ import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
-import { urlToFilePath, resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { assertFileExists } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
@@ -64,7 +64,7 @@ export const launchNode = async ({
 
   env.COVERAGE_ENABLED = collectCoverage
 
-  const child = forkChildProcess(urlToFilePath(nodeControllableFileUrl), {
+  const child = forkChildProcess(urlToFileSystemPath(nodeControllableFileUrl), {
     execArgv,
     // silent: true
     stdio: "pipe",
@@ -242,7 +242,7 @@ const evalException = (exceptionSource, { compileServerOrigin, projectDirectoryU
     error.stack = error.stack.replace(compileServerOriginRegexp, projectDirectoryUrl)
     error.message = error.message.replace(compileServerOriginRegexp, projectDirectoryUrl)
 
-    // const projectDirectoryPath = urlToFilePath(projectDirectoryUrl)
+    // const projectDirectoryPath = urlToFileSystemPath(projectDirectoryUrl)
     // const projectDirectoryPathRegexp = new RegExp(
     //   `(?<!file:\/\/)${escapeRegexpSpecialCharacters(projectDirectoryPath)}`,
     //   "g",
@@ -308,8 +308,8 @@ const createNodeIIFEString = ({
 }) => `(() => {
   const fs = require('fs')
   const Module = require('module')
-  const nodeFilePath = ${JSON.stringify(urlToFilePath(nodeJsFileUrl))}
-  const nodeBundledJsFilePath = ${JSON.stringify(urlToFilePath(nodeBundledJsFileUrl))}
+  const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
+  const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
   const fileContent = String(fs.readFileSync(nodeBundledJsFilePath))
   const moduleObject = new Module(nodeBundledJsFilePath)
   moduleObject.paths = Module._nodeModulePaths(require('path').dirname(nodeFilePath));

@@ -3,12 +3,12 @@ import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import { compareFilePath } from "@jsenv/file-collector"
 import {
   hasScheme,
-  urlToFilePath,
+  urlToFileSystemPath,
   filePathToUrl,
   resolveUrl,
   fileUrlToRelativePath,
   resolveDirectoryUrl,
-} from "internal/urlUtils.js"
+} from "@jsenv/util"
 import { writeFileContent } from "internal/filesystemUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 import { fetchUrl } from "internal/fetchUrl.js"
@@ -185,7 +185,7 @@ export const createJsenvRollupPlugin = async ({
       })
 
       const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
-      const manifestFilePath = urlToFilePath(manifestFileUrl)
+      const manifestFilePath = urlToFileSystemPath(manifestFileUrl)
       await writeFileContent(manifestFilePath, JSON.stringify(manifest, null, "  "))
     },
 
@@ -325,10 +325,10 @@ ${moduleUrl}`)
 
 // const urlToRollupId = (url, { compileServerOrigin, projectDirectoryUrl }) => {
 //   if (url.startsWith(`${compileServerOrigin}/`)) {
-//     return urlToFilePath(`${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`)
+//     return urlToFileSystemPath(`${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`)
 //   }
 //   if (url.startsWith("file://")) {
-//     return urlToFilePath(url)
+//     return urlToFileSystemPath(url)
 //   }
 //   return url
 // }
@@ -393,10 +393,10 @@ const transformAsyncInsertedByRollup = async ({
 
       await Promise.all([
         writeFileContent(
-          urlToFilePath(bundleFileUrl),
+          urlToFileSystemPath(bundleFileUrl),
           writeSourceMappingURL(code, `./${bundleFilename}.map`),
         ),
-        writeFileContent(urlToFilePath(`${bundleFileUrl}.map`), JSON.stringify(map)),
+        writeFileContent(urlToFileSystemPath(`${bundleFileUrl}.map`), JSON.stringify(map)),
       ])
     }),
   )

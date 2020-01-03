@@ -1,5 +1,5 @@
 import { startServer, firstService, serveFile } from "@jsenv/server"
-import { resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_GLOBAL_BUNDLE } from "internal/CONSTANTS.js"
 

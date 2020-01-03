@@ -9,7 +9,7 @@ import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from 
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
-import { resolveUrl, urlToFilePath, sameOrigin, urlToRelativeUrl } from "internal/urlUtils.js"
+import { resolveUrl, urlToFileSystemPath, sameOrigin, urlToRelativeUrl } from "@jsenv/util"
 import { assertFileExists, writeFileContent } from "internal/filesystemUtils.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { getBrowserExecutionDynamicData } from "internal/platform/getBrowserExecutionDynamicData.js"
@@ -120,7 +120,7 @@ export const startExploring = async ({
 
     if (livereloading) {
       const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
-        urlToFilePath(projectDirectoryUrl),
+        urlToFileSystemPath(projectDirectoryUrl),
         {
           watchDescription: {
             ...watchConfig,
@@ -290,7 +290,7 @@ export const startExploring = async ({
       jsenvDirectoryUrl,
     )
     await writeFileContent(
-      urlToFilePath(browserDynamicDataFileUrl),
+      urlToFileSystemPath(browserDynamicDataFileUrl),
       JSON.stringify(
         getBrowserExecutionDynamicData({ projectDirectoryUrl, compileServerOrigin }),
         null,

@@ -6,9 +6,9 @@ import { createCancellationToken } from "@jsenv/cancellation"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  urlToFilePath,
+  urlToFileSystemPath,
   resolveUrl,
-} from "internal/urlUtils.js"
+} from "@jsenv/util"
 import { readFileContent } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
@@ -70,7 +70,7 @@ const response = await serveBundle(serveBundleParams)
 
 {
   const sourcemapFileUrl = `${compiledFileUrl}.map`
-  const actual = JSON.parse(await readFileContent(urlToFilePath(sourcemapFileUrl)))
+  const actual = JSON.parse(await readFileContent(urlToFileSystemPath(sourcemapFileUrl)))
   const expected = {
     version: 3,
     file: "file.js",
@@ -84,17 +84,17 @@ const response = await serveBundle(serveBundleParams)
 
 {
   const metaFileUrl = `${compiledFileUrl}__asset__/meta.json`
-  const actual = JSON.parse(await readFileContent(urlToFilePath(metaFileUrl)))
+  const actual = JSON.parse(await readFileContent(urlToFileSystemPath(metaFileUrl)))
   const expected = {
     contentType: "application/javascript",
     sources: ["../out/groupMap.json", "../../file.js"],
     sourcesEtag: [
-      bufferToEtag(readFileSync(urlToFilePath(resolveUrl("../out/groupMap.json", metaFileUrl)))),
-      bufferToEtag(readFileSync(urlToFilePath(resolveUrl("../../file.js", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../out/groupMap.json", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../../file.js", metaFileUrl)))),
     ],
     assets: ["../file.js.map"],
     assetsEtag: [
-      bufferToEtag(readFileSync(urlToFilePath(resolveUrl("../file.js.map", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../file.js.map", metaFileUrl)))),
     ],
     createdMs: actual.createdMs,
     lastModifiedMs: actual.lastModifiedMs,
@@ -103,7 +103,7 @@ const response = await serveBundle(serveBundleParams)
 }
 
 {
-  const actual = typeof import.meta.require(urlToFilePath(compiledFileUrl))
+  const actual = typeof import.meta.require(urlToFileSystemPath(compiledFileUrl))
   const expected = "object"
   assert({ actual, expected })
 }

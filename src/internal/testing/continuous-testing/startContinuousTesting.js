@@ -9,7 +9,7 @@ import {
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { hrefToPathname } from "@jsenv/href"
 import { createLogger } from "@jsenv/logger"
-import { sameOrigin, urlToFilePath } from "internal/urlUtils.js"
+import { sameOrigin, urlToFileSystemPath } from "@jsenv/util"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { generateExecutionSteps } from "internal/executing/generateExecutionSteps.js"
 import { executeConcurrently } from "internal/executing/executeConcurrently.js"
@@ -107,7 +107,7 @@ export const startContinuousTesting = async ({
     })
 
     const unregisterProjectDirectoryLifecycle = registerDirectoryLifecycle(
-      urlToFilePath(projectDirectoryUrl),
+      urlToFileSystemPath(projectDirectoryUrl),
       {
         watchDescription: {
           ...watchDescription,

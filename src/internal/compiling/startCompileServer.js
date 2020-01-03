@@ -13,10 +13,10 @@ import {
 import { createLogger } from "@jsenv/logger"
 import {
   resolveUrl,
-  urlToFilePath,
+  urlToFileSystemPath,
   urlToRelativeUrl,
   resolveDirectoryUrl,
-} from "internal/urlUtils.js"
+} from "@jsenv/util"
 import {
   readFileContent,
   writeFileContent,
@@ -133,7 +133,7 @@ ${projectDirectoryUrl}`)
   }
   if (jsenvDirectoryClean) {
     logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`)
-    await removeDirectory(urlToFilePath(jsenvDirectoryUrl))
+    await removeDirectory(urlToFileSystemPath(jsenvDirectoryUrl))
   }
   if (useFilesystemAsCache) {
     await cleanOutDirectoryIfObsolete({
@@ -144,7 +144,7 @@ ${projectDirectoryUrl}`)
   }
 
   const packageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
-  const packageFilePath = urlToFilePath(packageFileUrl)
+  const packageFilePath = urlToFileSystemPath(packageFileUrl)
   const packageVersion = readPackage(packageFilePath).version
 
   if (projectFileRequestedCallback) {
@@ -263,9 +263,9 @@ export const ${key} = ${JSON.stringify(env[key])}
       )
       .join("")
 
-  const jsenvImportMapFilePath = urlToFilePath(resolveUrl("./importMap.json", outDirectoryUrl))
-  const jsenvGroupMapFilePath = urlToFilePath(resolveUrl("./groupMap.json", outDirectoryUrl))
-  const jsenvEnvFilePath = urlToFilePath(resolveUrl("./env.js", outDirectoryUrl))
+  const jsenvImportMapFilePath = urlToFileSystemPath(resolveUrl("./importMap.json", outDirectoryUrl))
+  const jsenvGroupMapFilePath = urlToFileSystemPath(resolveUrl("./groupMap.json", outDirectoryUrl))
+  const jsenvEnvFilePath = urlToFileSystemPath(resolveUrl("./env.js", outDirectoryUrl))
 
   await Promise.all([
     writeFileContent(jsenvImportMapFilePath, importMapToString()),
@@ -348,7 +348,7 @@ const serveProjectFiles = async ({
   })
 
   const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl)
-  const filePath = urlToFilePath(fileUrl)
+  const filePath = urlToFileSystemPath(fileUrl)
 
   const responsePromise = serveFile(filePath, {
     method,
@@ -422,7 +422,7 @@ const generateImportMapForCompileServer = async ({
 
 const cleanOutDirectoryIfObsolete = async ({ logger, outDirectoryUrl, outDirectoryMeta }) => {
   const jsenvCorePackageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl)
-  const jsenvCorePackageFilePath = urlToFilePath(jsenvCorePackageFileUrl)
+  const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl)
   const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version
 
   outDirectoryMeta = {
@@ -431,8 +431,8 @@ const cleanOutDirectoryIfObsolete = async ({ logger, outDirectoryUrl, outDirecto
   }
 
   const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
-  const metaFilePath = urlToFilePath(metaFileUrl)
-  const compileDirectoryPath = urlToFilePath(outDirectoryUrl)
+  const metaFilePath = urlToFileSystemPath(metaFileUrl)
+  const compileDirectoryPath = urlToFileSystemPath(outDirectoryUrl)
 
   let previousOutDirectoryMeta
   try {

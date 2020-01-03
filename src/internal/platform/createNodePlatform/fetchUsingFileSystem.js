@@ -1,12 +1,12 @@
 import { urlToContentType } from "@jsenv/server"
 import { readFileContent } from "../../filesystemUtils.js"
-import { urlToFilePath } from "../../urlUtils.js"
+import { urlToFileSystemPath } from "../../urlUtils.js"
 
 export const fetchUsingFileSystem = async (url) => {
   // if we found a symlink we should send 307 ?
   // nope but we should update the returned url: key to the symlink target
 
-  const path = urlToFilePath(url)
+  const path = urlToFileSystemPath(url)
   const source = await readFileContent(path)
 
   // on pourrait ajouter des info dans headers comme le mtime, e-tag ?

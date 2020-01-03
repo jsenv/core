@@ -8,8 +8,8 @@ import {
   resolveUrl,
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  urlToFilePath,
-} from "internal/urlUtils.js"
+  urlToFileSystemPath,
+} from "@jsenv/util"
 import { writeFileContent } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
@@ -26,7 +26,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const mainFileBasename = `${testDirectoryBasename}.js`
 const mainFileRelativeUrl = `${testDirectoryRelativeUrl}${mainFileBasename}`
 const mainFileUrl = resolveUrl(mainFileRelativeUrl, jsenvCoreDirectoryUrl)
-const mainFilePath = urlToFilePath(mainFileUrl)
+const mainFilePath = urlToFileSystemPath(mainFileUrl)
 
 const generateBundle = () =>
   generateCommonJsBundle({

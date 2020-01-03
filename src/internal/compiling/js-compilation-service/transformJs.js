@@ -1,5 +1,5 @@
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { urlToFilePath, fileUrlToRelativePath } from "internal/urlUtils.js"
+import { urlToFileSystemPath, fileUrlToRelativePath } from "@jsenv/util"
 import { jsenvTransform } from "./jsenvTransform.js"
 
 export const transformJs = async ({
@@ -106,7 +106,7 @@ const computeInputCodeAndInputMap = async ({
 
 const computeInputPath = (url) => {
   if (url.startsWith("file://")) {
-    return urlToFilePath(url)
+    return urlToFileSystemPath(url)
   }
   return url
 }

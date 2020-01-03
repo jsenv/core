@@ -1,4 +1,4 @@
-import { urlToRelativeUrl, filePathToUrl } from "internal/urlUtils.js"
+import { urlToRelativeUrl, filePathToUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 
 export const getBrowserExecutionDynamicData = ({ projectDirectoryUrl, compileServerOrigin }) => {

@@ -6,9 +6,9 @@ import { createCancellationToken } from "@jsenv/cancellation"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  urlToFilePath,
+  urlToFileSystemPath,
   resolveUrl,
-} from "internal/urlUtils.js"
+} from "@jsenv/util"
 import { readFileContent } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
@@ -68,7 +68,7 @@ assert({ actual, expected })
 
 {
   const sourcemapFileUrl = `${compiledFileUrl}.map`
-  const actual = JSON.parse(await readFileContent(urlToFilePath(sourcemapFileUrl)))
+  const actual = JSON.parse(await readFileContent(urlToFileSystemPath(sourcemapFileUrl)))
   const expected = {
     version: 3,
     file: "file.js",
@@ -83,18 +83,18 @@ assert({ actual, expected })
 {
   const metaFileUrl = `${compiledFileUrl}__asset__/meta.json`
   const actual = JSON.parse(
-    await readFileContent(urlToFilePath(`${compiledFileUrl}__asset__/meta.json`)),
+    await readFileContent(urlToFileSystemPath(`${compiledFileUrl}__asset__/meta.json`)),
   )
   const expected = {
     contentType: "application/javascript",
     sources: ["../out/env.js", "../../file.js"],
     sourcesEtag: [
-      bufferToEtag(readFileSync(urlToFilePath(resolveUrl("../out/env.js", metaFileUrl)))),
-      bufferToEtag(readFileSync(urlToFilePath(resolveUrl("../../file.js", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../out/env.js", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../../file.js", metaFileUrl)))),
     ],
     assets: ["../file.js.map"],
     assetsEtag: [
-      bufferToEtag(readFileSync(urlToFilePath(resolveUrl("../file.js.map", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../file.js.map", metaFileUrl)))),
     ],
     createdMs: actual.createdMs,
     lastModifiedMs: actual.lastModifiedMs,
@@ -103,7 +103,7 @@ assert({ actual, expected })
 }
 
 {
-  const actual = import.meta.require(urlToFilePath(compiledFileUrl))
+  const actual = import.meta.require(urlToFileSystemPath(compiledFileUrl))
   const expected = 42
   assert({ actual, expected })
 }

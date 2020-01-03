@@ -1,4 +1,4 @@
-import { resolveUrl } from "internal/urlUtils.js"
+import { resolveUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 
 export const jsenvHtmlFileUrl = resolveUrl(

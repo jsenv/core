@@ -1,5 +1,5 @@
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { resolveUrl } from "internal/urlUtils.js"
+import { resolveUrl } from "@jsenv/util"
 import { createInstrumentBabelPlugin } from "./coverage/createInstrumentBabelPlugin.js"
 import { generateExecutionSteps } from "./generateExecutionSteps.js"
 import { startCompileServerForExecutingPlan } from "./startCompileServerForExecutingPlan.js"

@@ -3,7 +3,7 @@ import {
   COMPILE_ID_GLOBAL_BUNDLE_FILES,
   COMPILE_ID_COMMONJS_BUNDLE_FILES,
 } from "internal/CONSTANTS.js"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { generateBundleUsingRollup } from "internal/bundling/generateBundleUsingRollup.js"
 import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"

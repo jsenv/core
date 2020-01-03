@@ -1,7 +1,7 @@
 import { dirname } from "path"
 import { promisify } from "util"
 import { mkdir, readFile, writeFile, stat, unlink } from "fs"
-import { urlToFilePath } from "./urlUtils.js"
+import { urlToFileSystemPath } from "./urlUtils.js"
 
 const rimraf = import.meta.require("rimraf")
 
@@ -59,7 +59,7 @@ export const removeFile = (path) =>
   })
 
 export const assertDirectoryExists = async (fileUrl) => {
-  const directoryPath = urlToFilePath(fileUrl)
+  const directoryPath = urlToFileSystemPath(fileUrl)
   const filesystemEntry = await pathToFilesystemEntry(directoryPath)
 
   if (!filesystemEntry) {
@@ -73,7 +73,7 @@ export const assertDirectoryExists = async (fileUrl) => {
 }
 
 export const assertFileExists = async (fileUrl) => {
-  const filePath = urlToFilePath(fileUrl)
+  const filePath = urlToFileSystemPath(fileUrl)
   const filesystemEntry = await pathToFilesystemEntry(filePath)
 
   if (!filesystemEntry) {
@@ -88,7 +88,7 @@ export const assertFileExists = async (fileUrl) => {
 
 export const fileExists = (fileUrl) => {
   return new Promise((resolve, reject) => {
-    stat(urlToFilePath(fileUrl), (error) => {
+    stat(urlToFileSystemPath(fileUrl), (error) => {
       if (error) {
         if (error.code === "ENOENT") resolve(false)
         else reject(error)

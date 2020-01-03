@@ -1,4 +1,4 @@
-import { resolveDirectoryUrl, urlToFilePath } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToFileSystemPath } from "@jsenv/util"
 
 const libReport = import.meta.require("istanbul-lib-report")
 const reports = import.meta.require("istanbul-reports")
@@ -14,7 +14,7 @@ export const generateCoverageHtmlDirectory = ({
     coverageHtmlDirectoryRelativeUrl,
     projectDirectoryUrl,
   )
-  const htmlDirectoryPath = urlToFilePath(htmlDirectoryUrl)
+  const htmlDirectoryPath = urlToFileSystemPath(htmlDirectoryUrl)
   const context = libReport.createContext({
     dir: htmlDirectoryPath,
     coverageMap: createCoverageMap(coverageMap),
@@ -28,7 +28,7 @@ export const generateCoverageHtmlDirectory = ({
 
   if (coverageHtmlDirectoryIndexLog) {
     const htmlCoverageDirectoryIndexFileUrl = `${htmlDirectoryUrl}index.html`
-    const htmlCoverageDirectoryIndexFilePath = urlToFilePath(htmlCoverageDirectoryIndexFileUrl)
+    const htmlCoverageDirectoryIndexFilePath = urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)
     console.log(`-> ${htmlCoverageDirectoryIndexFilePath}`)
   }
 }

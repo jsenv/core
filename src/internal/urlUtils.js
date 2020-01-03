@@ -14,7 +14,7 @@ export const filePathToUrl = (path) => {
   return path.startsWith("file://") ? path : String(pathToFileURL(path))
 }
 
-export const urlToFilePath = (fileUrl) => {
+export const urlToFileSystemPath = (fileUrl) => {
   return fileURLToPath(fileUrl)
 }
 
@@ -29,9 +29,9 @@ export const resolveDirectoryUrl = (specifier, baseUrl) => {
 export const fileUrlToRelativePath = (fileUrl, baseFileUrl) => {
   // https://stackoverflow.com/a/31024574/2634179
   const fromPath = baseFileUrl.endsWith("/")
-    ? urlToFilePath(baseFileUrl)
-    : dirname(urlToFilePath(baseFileUrl))
-  const toPath = urlToFilePath(fileUrl)
+    ? urlToFileSystemPath(baseFileUrl)
+    : dirname(urlToFileSystemPath(baseFileUrl))
+  const toPath = urlToFileSystemPath(fileUrl)
   const relativePath = relative(fromPath, toPath)
 
   return replaceBackSlashesWithSlashes(relativePath)

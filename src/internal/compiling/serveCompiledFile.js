@@ -1,5 +1,5 @@
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server"
-import { urlToRelativeUrl, filePathToUrl, resolveUrl } from "internal/urlUtils.js"
+import { urlToRelativeUrl, filePathToUrl, resolveUrl } from "@jsenv/util"
 import { bufferToEtag } from "./compile-directory/bufferToEtag.js"
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
 

@@ -1,4 +1,4 @@
-import { resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { assertFileExists } from "internal/filesystemUtils.js"
 import { jsenvHtmlFileUrl } from "internal/jsenvHtmlFileUrl.js"
 import { evalSource } from "internal/platform/createNodePlatform/evalSource.js"

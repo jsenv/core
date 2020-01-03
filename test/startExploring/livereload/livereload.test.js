@@ -3,9 +3,9 @@ import { assert } from "@jsenv/assert"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
-  urlToFilePath,
+  urlToFileSystemPath,
   resolveUrl,
-} from "internal/urlUtils.js"
+} from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startExploring } from "../../../index.js"
 import { openBrowserPage } from "../openBrowserPage.js"
@@ -18,7 +18,7 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `${testDirectoryname}.main.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
-const filePath = urlToFilePath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl))
+const filePath = urlToFileSystemPath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl))
 const parentDirectoryUrl = resolveDirectoryUrl("../", testDirectoryUrl)
 const parentDirectoryRelativeUrl = urlToRelativeUrl(parentDirectoryUrl, jsenvCoreDirectoryUrl)
 const htmlFileRelativeUrl = `${parentDirectoryRelativeUrl}template.html`
