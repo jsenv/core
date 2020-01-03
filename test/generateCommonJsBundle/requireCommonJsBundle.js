@@ -1,4 +1,4 @@
-import { resolveDirectoryUrl, resolveUrl, urlToFilePath } from "src/internal/urlUtils.js"
+import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
 
 export const requireCommonJsBundle = async ({
   projectDirectoryUrl,
@@ -7,7 +7,7 @@ export const requireCommonJsBundle = async ({
 }) => {
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
   const mainFileUrl = resolveUrl(mainRelativeUrl, bundleDirectoryUrl)
-  const mainFilePath = urlToFilePath(mainFileUrl)
+  const mainFilePath = urlToFileSystemPath(mainFileUrl)
   const namespace = import.meta.require(mainFilePath)
   return {
     namespace: normalizeNamespace(namespace),

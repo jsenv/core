@@ -7,9 +7,8 @@ import {
   errorToCancelReason,
 } from "@jsenv/cancellation"
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
-import { hrefToPathname } from "@jsenv/href"
 import { createLogger } from "@jsenv/logger"
-import { sameOrigin, urlToFilePath } from "internal/urlUtils.js"
+import { urlIsInsideOf, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { generateExecutionSteps } from "internal/executing/generateExecutionSteps.js"
 import { executeConcurrently } from "internal/executing/executeConcurrently.js"
@@ -70,8 +69,9 @@ export const startContinuousTesting = async ({
         executionImportCallback({ relativeUrl, executionId })
       } else if ("referer" in headers) {
         const { referer } = headers
-        if (sameOrigin(referer, request.origin)) {
-          const refererRelativeUrl = hrefToPathname(referer).slice(1)
+        const { origin } = request
+        if (referer === origin || urlIsInsideOf(referer, origin)) {
+          const refererRelativeUrl = urlToRelativeUrl(referer, origin)
 
           executionSteps.forEach(({ executionId, fileRelativeUrl }) => {
             if (fileRelativeUrl === refererRelativeUrl) {
@@ -107,7 +107,7 @@ export const startContinuousTesting = async ({
     })
 
     const unregisterProjectDirectoryLifecycle = registerDirectoryLifecycle(
-      urlToFilePath(projectDirectoryUrl),
+      urlToFileSystemPath(projectDirectoryUrl),
       {
         watchDescription: {
           ...watchDescription,

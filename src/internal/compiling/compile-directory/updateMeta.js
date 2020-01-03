@@ -1,5 +1,4 @@
-import { urlToFilePath } from "internal/urlUtils.js"
-import { writeFileContent, fileExists } from "internal/filesystemUtils.js"
+import { urlToFileSystemPath, writeFileContent, fileExists } from "@jsenv/util"
 import { resolveSourceFileUrl, resolveMetaJsonFileUrl, resolveAssetFileUrl } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
@@ -39,7 +38,7 @@ export const updateMeta = async ({
     const { writeCompiledSourceFile = true, writeAssetsFile = true } = compileResult
 
     if (writeCompiledSourceFile) {
-      const compiledFilePath = urlToFilePath(compiledFileUrl)
+      const compiledFilePath = urlToFileSystemPath(compiledFileUrl)
       logger.debug(`write compiled file at ${compiledFilePath}`)
       promises.push(writeFileContent(compiledFilePath, compiledSource))
     }
@@ -51,7 +50,7 @@ export const updateMeta = async ({
             compiledFileUrl,
             asset,
           })
-          const assetFilePath = urlToFilePath(assetFileUrl)
+          const assetFilePath = urlToFileSystemPath(assetFileUrl)
           logger.debug(`write compiled file asset at ${assetFilePath}`)
           return writeFileContent(assetFilePath, assetsContent[index])
         }),
@@ -112,7 +111,7 @@ export const updateMeta = async ({
     const metaJsonFileUrl = resolveMetaJsonFileUrl({
       compiledFileUrl,
     })
-    const metaJsonFilePath = urlToFilePath(metaJsonFileUrl)
+    const metaJsonFilePath = urlToFileSystemPath(metaJsonFileUrl)
 
     logger.debug(`write compiled file meta at ${metaJsonFilePath}`)
     promises.push(writeFileContent(metaJsonFilePath, JSON.stringify(latestMeta, null, "  ")))

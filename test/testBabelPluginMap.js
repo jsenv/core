@@ -1,7 +1,7 @@
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
+import { resolveUrl } from "@jsenv/util"
 import { createInstrumentBabelPlugin } from "internal/executing/coverage/createInstrumentBabelPlugin.js"
 import { jsenvBabelPluginMap, jsenvCoverageConfig } from "../index.js"
-import { resolveUrl } from "../src/internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "../src/internal/jsenvCoreDirectoryUrl.js"
 
 const computeTestBabelPluginMap = ({ coverageEnabled }) => {

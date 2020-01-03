@@ -6,8 +6,7 @@ import {
   COMPILE_ID_COMMONJS_BUNDLE,
   COMPILE_ID_COMMONJS_BUNDLE_FILES,
 } from "internal/CONSTANTS.js"
-import { resolveUrl, urlToFilePath, resolveDirectoryUrl } from "internal/urlUtils.js"
-import { readFileContent } from "internal/filesystemUtils.js"
+import { resolveUrl, urlToFileSystemPath, resolveDirectoryUrl, readFileContent } from "@jsenv/util"
 import { createBabePluginMapForBundle } from "internal/bundling/createBabePluginMapForBundle.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
@@ -142,7 +141,7 @@ export const serveCompiledJs = async ({
     projectFileRequestedCallback,
     request,
     compile: async () => {
-      const code = await readFileContent(urlToFilePath(originalFileUrl))
+      const code = await readFileContent(urlToFileSystemPath(originalFileUrl))
 
       let compiledIdForGroupMap
       let babelPluginMapForGroupMap

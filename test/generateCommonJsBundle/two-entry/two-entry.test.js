@@ -4,9 +4,9 @@ import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   resolveUrl,
-  urlToFilePath,
-} from "internal/urlUtils.js"
-import { readFileContent } from "internal/filesystemUtils.js"
+  urlToFileSystemPath,
+  readFileContent,
+} from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
@@ -35,7 +35,7 @@ await generateCommonJsBundle({
 {
   const manifestFileRelativeUrl = `${bundleDirectoryRelativeUrl}manifest.json`
   const manifestFileUrl = resolveUrl(manifestFileRelativeUrl, jsenvCoreDirectoryUrl)
-  const manifestFilePath = urlToFilePath(manifestFileUrl)
+  const manifestFilePath = urlToFileSystemPath(manifestFileUrl)
   const manifestFileContent = await readFileContent(manifestFilePath)
   const actual = JSON.parse(manifestFileContent)
   const expected = {

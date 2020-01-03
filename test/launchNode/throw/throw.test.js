@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { createLogger } from "@jsenv/logger"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "internal/executing/launchAndExecute.js"

@@ -9,8 +9,14 @@ import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from 
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
-import { resolveUrl, urlToFilePath, sameOrigin, urlToRelativeUrl } from "internal/urlUtils.js"
-import { assertFileExists, writeFileContent } from "internal/filesystemUtils.js"
+import {
+  resolveUrl,
+  urlToFileSystemPath,
+  urlIsInsideOf,
+  urlToRelativeUrl,
+  assertFileExists,
+  writeFileContent,
+} from "@jsenv/util"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { getBrowserExecutionDynamicData } from "internal/platform/getBrowserExecutionDynamicData.js"
 import { serveExploringIndex } from "internal/exploring/serveExploringIndex.js"
@@ -120,7 +126,7 @@ export const startExploring = async ({
 
     if (livereloading) {
       const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
-        urlToFilePath(projectDirectoryUrl),
+        urlToFileSystemPath(projectDirectoryUrl),
         {
           watchDescription: {
             ...watchConfig,
@@ -209,9 +215,10 @@ export const startExploring = async ({
           const executionId = headers["x-jsenv-execution-id"]
           trackDependency({ relativeUrl, executionId })
         } else if ("referer" in headers) {
+          const { origin } = request
           const { referer } = headers
-          if (sameOrigin(referer, request.origin)) {
-            const refererRelativeUrl = referer.slice(`${request.origin}/`.length)
+          if (referer === origin || urlIsInsideOf(referer, origin)) {
+            const refererRelativeUrl = urlToRelativeUrl(referer, origin)
             const refererFileUrl = `${projectDirectoryUrl}${refererRelativeUrl}`
 
             if (
@@ -290,7 +297,7 @@ export const startExploring = async ({
       jsenvDirectoryUrl,
     )
     await writeFileContent(
-      urlToFilePath(browserDynamicDataFileUrl),
+      urlToFileSystemPath(browserDynamicDataFileUrl),
       JSON.stringify(
         getBrowserExecutionDynamicData({ projectDirectoryUrl, compileServerOrigin }),
         null,

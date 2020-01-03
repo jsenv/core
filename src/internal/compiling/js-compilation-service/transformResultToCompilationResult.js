@@ -1,7 +1,6 @@
-import { resolveUrl, fileUrlToRelativePath, urlToFilePath } from "internal/urlUtils.js"
+import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath, readFileContent } from "@jsenv/util"
 import { isWindowsFilePath, windowsFilePathToUrl } from "internal/filePathUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
-import { readFileContent } from "internal/filesystemUtils.js"
 
 export const transformResultToCompilationResult = async (
   { code, map, metadata = {} },
@@ -44,7 +43,7 @@ export const transformResultToCompilationResult = async (
       // may happen in some cases where babel returns a wrong sourcemap
       // there is at least one case where it happens
       // a file with only import './whatever.js' inside
-      sources.push(fileUrlToRelativePath(originalFileUrl, metaJsonFileUrl))
+      sources.push(urlToRelativeUrl(originalFileUrl, metaJsonFileUrl))
       sourcesContent.push(originalFileContent)
     } else {
       await Promise.all(
@@ -59,13 +58,13 @@ export const transformResultToCompilationResult = async (
             return
           }
 
-          map.sources[index] = fileUrlToRelativePath(sourceFileUrl, sourcemapFileUrl)
-          sources[index] = fileUrlToRelativePath(sourceFileUrl, metaJsonFileUrl)
+          map.sources[index] = urlToRelativeUrl(sourceFileUrl, sourcemapFileUrl)
+          sources[index] = urlToRelativeUrl(sourceFileUrl, metaJsonFileUrl)
 
           if (map.sourcesContent && map.sourcesContent[index]) {
             sourcesContent[index] = map.sourcesContent[index]
           } else {
-            const sourceFilePath = urlToFilePath(sourceFileUrl)
+            const sourceFilePath = urlToFileSystemPath(sourceFileUrl)
             const sourceFileContent = await readFileContent(sourceFilePath)
             sourcesContent[index] = sourceFileContent
           }
@@ -91,12 +90,9 @@ export const transformResultToCompilationResult = async (
         `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
       )
     } else if (remapMethod === "comment") {
-      const sourcemapFileRelativePathForModule = fileUrlToRelativePath(
-        sourcemapFileUrl,
-        compiledFileUrl,
-      )
+      const sourcemapFileRelativePathForModule = urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl)
       output = writeSourceMappingURL(output, sourcemapFileRelativePathForModule)
-      const sourcemapFileRelativePathForAsset = fileUrlToRelativePath(
+      const sourcemapFileRelativePathForAsset = urlToRelativeUrl(
         sourcemapFileUrl,
         `${compiledFileUrl}__asset__/`,
       )
@@ -104,7 +100,7 @@ export const transformResultToCompilationResult = async (
       assetsContent.push(stringifyMap(map))
     }
   } else {
-    sources.push(fileUrlToRelativePath(originalFileUrl, metaJsonFileUrl))
+    sources.push(urlToRelativeUrl(originalFileUrl, metaJsonFileUrl))
     sourcesContent.push(originalFileContent)
   }
 

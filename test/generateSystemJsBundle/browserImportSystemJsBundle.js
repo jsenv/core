@@ -1,6 +1,5 @@
 import { startServer, firstService, serveFile } from "@jsenv/server"
-import { readFileContent } from "src/internal/filesystemUtils.js"
-import { resolveDirectoryUrl, resolveUrl } from "src/internal/urlUtils.js"
+import { resolveDirectoryUrl, resolveUrl, readFileContent } from "@jsenv/util"
 
 const puppeteer = import.meta.require("puppeteer")
 

@@ -1,5 +1,5 @@
 import { createOperation } from "@jsenv/cancellation"
-import { urlToFilePath } from "internal/urlUtils.js"
+import { urlToFileSystemPath } from "@jsenv/util"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin/createJsenvRollupPlugin.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 
@@ -135,7 +135,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     // presence in babelPluginMap
     preferConst: false,
     // https://rollupjs.org/guide/en#output-dir
-    dir: urlToFilePath(bundleDirectoryUrl),
+    dir: urlToFileSystemPath(bundleDirectoryUrl),
     // https://rollupjs.org/guide/en#output-format
     format: formatToRollupFormat(format),
     // entryFileNames: `./[name].js`,

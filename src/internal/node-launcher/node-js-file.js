@@ -1,5 +1,5 @@
 import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
-import { urlToFilePath, resolveUrl, urlToRelativeUrl } from "internal/urlUtils.js"
+import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { installNodeErrorStackRemapping } from "internal/error-stack-remapping/installNodeErrorStackRemapping.js"
 import { fetchUsingHttp } from "internal/platform/createNodePlatform/fetchUsingHttp.js"
 
@@ -44,8 +44,8 @@ export const execute = async ({
     nodePlatformCompiledFileRelativeUrl,
     projectDirectoryUrl,
   )
-  const nodePlatformCompiledFilePath = urlToFilePath(nodePlatformCompiledFileUrl)
-  const nodePlatformOriginalFilePath = urlToFilePath(
+  const nodePlatformCompiledFilePath = urlToFileSystemPath(nodePlatformCompiledFileUrl)
+  const nodePlatformOriginalFilePath = urlToFileSystemPath(
     resolveUrl(nodePlatformFileRelativeUrl, projectDirectoryUrl),
   )
 

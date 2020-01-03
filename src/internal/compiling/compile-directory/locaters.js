@@ -1,4 +1,4 @@
-import { resolveUrl } from "internal/urlUtils.js"
+import { resolveUrl } from "@jsenv/util"
 
 export const resolveAssetFileUrl = ({ asset, compiledFileUrl }) =>
   resolveUrl(asset, `${compiledFileUrl}__asset__/`)

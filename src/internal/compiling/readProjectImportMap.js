@@ -1,6 +1,6 @@
 import { readFile } from "fs"
 import { composeTwoImportMaps } from "@jsenv/import-map"
-import { urlToRelativeUrl, urlToFilePath, resolveUrl } from "internal/urlUtils.js"
+import { urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 
 export const readProjectImportMap = async ({ projectDirectoryUrl, importMapFileRelativeUrl }) => {
@@ -59,7 +59,7 @@ const generateJsenvCoreScopes = ({ importMapForProject, importsForJsenvCore }) =
 
 const getProjectImportMap = async ({ projectDirectoryUrl, importMapFileRelativeUrl }) => {
   const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl)
-  const importMapFilePath = urlToFilePath(importMapFileUrl)
+  const importMapFilePath = urlToFileSystemPath(importMapFileUrl)
 
   return new Promise((resolve, reject) => {
     readFile(importMapFilePath, (error, buffer) => {

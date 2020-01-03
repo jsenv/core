@@ -1,11 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToFilePath,
-  resolveUrl,
-} from "internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
@@ -42,7 +37,7 @@ const expected = {
   body: {
     message: actual.body.message,
     messageHTML: actual.body.messageHTML,
-    filename: urlToFilePath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)),
+    filename: urlToFileSystemPath(resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)),
     lineNumber: 1,
     columnNumber: 11,
   },

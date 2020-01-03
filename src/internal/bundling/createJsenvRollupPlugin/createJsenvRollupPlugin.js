@@ -2,14 +2,14 @@
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import { compareFilePath } from "@jsenv/file-collector"
 import {
-  hasScheme,
-  urlToFilePath,
-  filePathToUrl,
+  isFileSystemPath,
+  urlToFileSystemPath,
+  fileSystemPathToUrl,
   resolveUrl,
-  fileUrlToRelativePath,
+  urlToRelativeUrl,
   resolveDirectoryUrl,
-} from "internal/urlUtils.js"
-import { writeFileContent } from "internal/filesystemUtils.js"
+  writeFileContent,
+} from "@jsenv/util"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 import { fetchUrl } from "internal/fetchUrl.js"
 import { validateResponseStatusIsOk } from "internal/validateResponseStatusIsOk.js"
@@ -59,8 +59,8 @@ export const createJsenvRollupPlugin = async ({
     name: "jsenv",
 
     resolveId: (specifier, importer = compileDirectoryRemoteUrl) => {
-      if (!hasScheme(importer)) {
-        importer = filePathToUrl(importer)
+      if (isFileSystemPath(importer)) {
+        importer = fileSystemPathToUrl(importer)
       }
       const importUrl = resolveImport({
         specifier,
@@ -140,7 +140,7 @@ export const createJsenvRollupPlugin = async ({
         if (url.startsWith(compileServerOrigin)) {
           const relativeUrl = url.slice(`${compileServerOrigin}/`.length)
           const fileUrl = `${projectDirectoryUrl}${relativeUrl}`
-          relativePath = fileUrlToRelativePath(fileUrl, bundleSourcemapFileUrl)
+          relativePath = urlToRelativeUrl(fileUrl, bundleSourcemapFileUrl)
           return relativePath
         }
         if (url.startsWith(projectDirectoryUrl)) {
@@ -185,7 +185,7 @@ export const createJsenvRollupPlugin = async ({
       })
 
       const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
-      const manifestFilePath = urlToFilePath(manifestFileUrl)
+      const manifestFilePath = urlToFileSystemPath(manifestFileUrl)
       await writeFileContent(manifestFilePath, JSON.stringify(manifest, null, "  "))
     },
 
@@ -325,10 +325,10 @@ ${moduleUrl}`)
 
 // const urlToRollupId = (url, { compileServerOrigin, projectDirectoryUrl }) => {
 //   if (url.startsWith(`${compileServerOrigin}/`)) {
-//     return urlToFilePath(`${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`)
+//     return urlToFileSystemPath(`${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`)
 //   }
 //   if (url.startsWith("file://")) {
-//     return urlToFilePath(url)
+//     return urlToFileSystemPath(url)
 //   }
 //   return url
 // }
@@ -377,11 +377,12 @@ const transformAsyncInsertedByRollup = async ({
   await Promise.all(
     Object.keys(bundle).map(async (bundleFilename) => {
       const bundleInfo = bundle[bundleFilename]
+      const bundleFileUrl = resolveUrl(bundleFilename, bundleDirectoryUrl)
 
       const { code, map } = await transformJs({
         projectDirectoryUrl,
         code: bundleInfo.code,
-        url: filePathToUrl(bundleFilename),
+        url: bundleFileUrl,
         map: bundleInfo.map,
         babelPluginMap: { [asyncPluginName]: babelPluginMap[asyncPluginName] },
         transformModuleIntoSystemFormat: false, // already done by rollup
@@ -389,14 +390,12 @@ const transformAsyncInsertedByRollup = async ({
         transformGlobalThis: false,
       })
 
-      const bundleFileUrl = resolveUrl(bundleFilename, bundleDirectoryUrl)
-
       await Promise.all([
         writeFileContent(
-          urlToFilePath(bundleFileUrl),
+          urlToFileSystemPath(bundleFileUrl),
           writeSourceMappingURL(code, `./${bundleFilename}.map`),
         ),
-        writeFileContent(urlToFilePath(`${bundleFileUrl}.map`), JSON.stringify(map)),
+        writeFileContent(urlToFileSystemPath(`${bundleFileUrl}.map`), JSON.stringify(map)),
       ])
     }),
   )

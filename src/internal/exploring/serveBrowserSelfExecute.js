@@ -1,5 +1,5 @@
 import { firstService, serveFile } from "@jsenv/server"
-import { resolveDirectoryUrl, resolveUrl } from "internal/urlUtils.js"
+import { resolveDirectoryUrl, resolveUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { urlIsAsset } from "internal/compiling/urlIsAsset.js"
 import { serveBundle } from "internal/compiling/serveBundle.js"

@@ -1,12 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { createLogger } from "@jsenv/logger"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToFilePath,
-  resolveUrl,
-} from "internal/urlUtils.js"
+import { resolveDirectoryUrl, urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "internal/executing/launchAndExecute.js"
@@ -24,7 +19,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const fileUrl = resolveUrl(fileRelativeUrl, jsenvCoreDirectoryUrl)
-const filePath = urlToFilePath(fileUrl)
+const filePath = urlToFileSystemPath(fileUrl)
 
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,

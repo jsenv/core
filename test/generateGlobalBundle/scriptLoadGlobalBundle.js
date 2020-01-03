@@ -1,5 +1,5 @@
 import { startServer, firstService, serveFile } from "@jsenv/server"
-import { resolveDirectoryUrl, resolveUrl, urlToFilePath } from "src/internal/urlUtils.js"
+import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
 
 const puppeteer = import.meta.require("puppeteer")
 
@@ -80,7 +80,7 @@ const generateIndexPage = () => `<!doctype html>
 </html>`
 
 const serveBundleDirectory = ({ bundleDirectoryUrl, request: { ressource, method, headers } }) =>
-  serveFile(urlToFilePath(resolveUrl(ressource.slice(1), bundleDirectoryUrl)), {
+  serveFile(urlToFileSystemPath(resolveUrl(ressource.slice(1), bundleDirectoryUrl)), {
     method,
     headers,
   })

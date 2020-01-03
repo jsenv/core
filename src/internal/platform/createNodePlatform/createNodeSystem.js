@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import "../s.js"
-import { urlToFilePath, resolveUrl } from "../../urlUtils.js"
+import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
 import { valueInstall } from "../valueInstall.js"
 import { createRequire } from "./createRequire.js"
@@ -87,8 +87,8 @@ export const createNodeSystem = ({
 
     const require = createRequire(
       originalUrl.startsWith("file://")
-        ? urlToFilePath(originalUrl)
-        : urlToFilePath(projectDirectoryUrl),
+        ? urlToFileSystemPath(originalUrl)
+        : urlToFileSystemPath(projectDirectoryUrl),
     )
     return {
       url: originalUrl,
@@ -102,7 +102,7 @@ export const createNodeSystem = ({
 
 const responseUrlToSourceUrl = (responseUrl, { compileServerOrigin, projectDirectoryUrl }) => {
   if (responseUrl.startsWith("file://")) {
-    return urlToFilePath(responseUrl)
+    return urlToFileSystemPath(responseUrl)
   }
   // compileServerOrigin is optionnal
   // because we can also create a node system and use it to import a bundle
@@ -110,7 +110,7 @@ const responseUrlToSourceUrl = (responseUrl, { compileServerOrigin, projectDirec
   if (compileServerOrigin && responseUrl.startsWith(`${compileServerOrigin}/`)) {
     const afterOrigin = responseUrl.slice(`${compileServerOrigin}/`.length)
     const fileUrl = resolveUrl(afterOrigin, projectDirectoryUrl)
-    return urlToFilePath(fileUrl)
+    return urlToFileSystemPath(fileUrl)
   }
   return responseUrl
 }
