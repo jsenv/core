@@ -1,6 +1,5 @@
 import { urlToContentType } from "@jsenv/server"
-import { readFileContent } from "../../filesystemUtils.js"
-import { urlToFileSystemPath } from "../../urlUtils.js"
+import { urlToFileSystemPath, readFileContent } from "@jsenv/util"
 
 export const fetchUsingFileSystem = async (url) => {
   // if we found a symlink we should send 307 ?

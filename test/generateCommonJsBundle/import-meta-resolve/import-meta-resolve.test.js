@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
+import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { generateCommonJsBundle } from "../../../index.js"
-import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "src/internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {

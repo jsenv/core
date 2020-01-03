@@ -9,8 +9,8 @@ import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   urlToFileSystemPath,
+  writeFileContent,
 } from "@jsenv/util"
-import { writeFileContent } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {

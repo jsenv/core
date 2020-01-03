@@ -8,8 +8,8 @@ import {
   urlToRelativeUrl,
   urlToFileSystemPath,
   resolveUrl,
+  readFileContent,
 } from "@jsenv/util"
-import { readFileContent } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { bufferToEtag } from "internal/compiling/compile-directory/bufferToEtag.js"
@@ -89,7 +89,9 @@ const response = await serveBundle(serveBundleParams)
     contentType: "application/javascript",
     sources: ["../out/groupMap.json", "../../file.js"],
     sourcesEtag: [
-      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../out/groupMap.json", metaFileUrl)))),
+      bufferToEtag(
+        readFileSync(urlToFileSystemPath(resolveUrl("../out/groupMap.json", metaFileUrl))),
+      ),
       bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../../file.js", metaFileUrl)))),
     ],
     assets: ["../file.js.map"],

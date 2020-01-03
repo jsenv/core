@@ -1,5 +1,4 @@
-import { writeFileContent } from "internal/filesystemUtils.js"
-import { resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+import { resolveUrl, urlToFileSystemPath, writeFileContent } from "@jsenv/util"
 
 export const generateCoverageJsonFile = async ({
   projectDirectoryUrl,

@@ -5,8 +5,13 @@ import {
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 import { COMPILE_ID_OTHERWISE } from "internal/CONSTANTS.js"
-import { resolveDirectoryUrl, urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/util"
-import { assertFileExists, removeDirectory } from "internal/filesystemUtils.js"
+import {
+  resolveDirectoryUrl,
+  urlToFileSystemPath,
+  urlToRelativeUrl,
+  assertFileExists,
+  removeDirectory,
+} from "@jsenv/util"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"

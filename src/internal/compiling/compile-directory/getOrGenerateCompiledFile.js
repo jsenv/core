@@ -1,5 +1,4 @@
-import { urlToFileSystemPath } from "@jsenv/util"
-import { createFileDirectories } from "internal/filesystemUtils.js"
+import { urlToFileSystemPath, createFileDirectories } from "@jsenv/util"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
 import { updateMeta } from "./updateMeta.js"

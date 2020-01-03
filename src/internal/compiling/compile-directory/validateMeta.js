@@ -1,5 +1,4 @@
-import { urlToFileSystemPath } from "@jsenv/util"
-import { readFileContent, readFileStat } from "internal/filesystemUtils.js"
+import { urlToFileSystemPath, readFileContent, readFileStat } from "@jsenv/util"
 import { resolveAssetFileUrl, resolveSourceFileUrl } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 

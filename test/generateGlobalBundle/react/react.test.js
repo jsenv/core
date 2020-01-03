@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
+import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { generateGlobalBundle, convertCommonJsWithRollup } from "../../../index.js"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "src/internal/urlUtils.js"
 import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
 import { scriptLoadGlobalBundle } from "../scriptLoadGlobalBundle.js"
 import {

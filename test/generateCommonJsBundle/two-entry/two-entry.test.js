@@ -5,8 +5,8 @@ import {
   urlToRelativeUrl,
   resolveUrl,
   urlToFileSystemPath,
+  readFileContent,
 } from "@jsenv/util"
-import { readFileContent } from "internal/filesystemUtils.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {

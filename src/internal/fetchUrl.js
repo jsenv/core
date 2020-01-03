@@ -1,8 +1,7 @@
 import { globalAgent } from "https"
 import { createOperation } from "@jsenv/cancellation"
 import { urlToContentType } from "@jsenv/server"
-import { urlToFileSystemPath } from "@jsenv/util"
-import { readFileContent } from "internal/filesystemUtils.js"
+import { urlToFileSystemPath, readFileContent } from "@jsenv/util"
 
 const fetch = import.meta.require("node-fetch")
 const AbortController = import.meta.require("abort-controller")

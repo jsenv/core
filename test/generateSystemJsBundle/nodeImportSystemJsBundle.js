@@ -1,6 +1,6 @@
 import { resolveImport } from "@jsenv/import-map"
+import { resolveDirectoryUrl, resolveUrl } from "@jsenv/util"
 import { createNodeSystem } from "internal/platform/createNodePlatform/createNodeSystem.js"
-import { resolveDirectoryUrl, resolveUrl } from "src/internal/urlUtils.js"
 
 export const nodeImportSystemJsBundle = async ({
   projectDirectoryUrl,

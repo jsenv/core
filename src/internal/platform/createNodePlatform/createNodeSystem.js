@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import "../s.js"
-import { urlToFileSystemPath, resolveUrl } from "../../urlUtils.js"
+import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
 import { valueInstall } from "../valueInstall.js"
 import { createRequire } from "./createRequire.js"

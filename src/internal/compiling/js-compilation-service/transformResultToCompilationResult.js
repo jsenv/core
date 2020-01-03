@@ -1,7 +1,6 @@
-import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath, readFileContent } from "@jsenv/util"
 import { isWindowsFilePath, windowsFilePathToUrl } from "internal/filePathUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
-import { readFileContent } from "internal/filesystemUtils.js"
 
 export const transformResultToCompilationResult = async (
   { code, map, metadata = {} },
@@ -91,10 +90,7 @@ export const transformResultToCompilationResult = async (
         `data:application/json;charset=utf-8;base64,${mapAsBase64}`,
       )
     } else if (remapMethod === "comment") {
-      const sourcemapFileRelativePathForModule = urlToRelativeUrl(
-        sourcemapFileUrl,
-        compiledFileUrl,
-      )
+      const sourcemapFileRelativePathForModule = urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl)
       output = writeSourceMappingURL(output, sourcemapFileRelativePathForModule)
       const sourcemapFileRelativePathForAsset = urlToRelativeUrl(
         sourcemapFileUrl,

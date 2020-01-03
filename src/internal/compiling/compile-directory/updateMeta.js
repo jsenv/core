@@ -1,5 +1,4 @@
-import { urlToFileSystemPath } from "@jsenv/util"
-import { writeFileContent, fileExists } from "internal/filesystemUtils.js"
+import { urlToFileSystemPath, writeFileContent, fileExists } from "@jsenv/util"
 import { resolveSourceFileUrl, resolveMetaJsonFileUrl, resolveAssetFileUrl } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 

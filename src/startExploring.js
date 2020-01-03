@@ -9,8 +9,14 @@ import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from 
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
 import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
-import { resolveUrl, urlToFileSystemPath, urlIsInsideOf, urlToRelativeUrl } from "@jsenv/util"
-import { assertFileExists, writeFileContent } from "internal/filesystemUtils.js"
+import {
+  resolveUrl,
+  urlToFileSystemPath,
+  urlIsInsideOf,
+  urlToRelativeUrl,
+  assertFileExists,
+  writeFileContent,
+} from "@jsenv/util"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { getBrowserExecutionDynamicData } from "internal/platform/getBrowserExecutionDynamicData.js"
 import { serveExploringIndex } from "internal/exploring/serveExploringIndex.js"

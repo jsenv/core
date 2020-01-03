@@ -1,5 +1,4 @@
-import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { assertFileExists } from "internal/filesystemUtils.js"
+import { resolveUrl, urlToRelativeUrl, assertFileExists } from "@jsenv/util"
 import { jsenvHtmlFileUrl } from "internal/jsenvHtmlFileUrl.js"
 import { evalSource } from "internal/platform/createNodePlatform/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"

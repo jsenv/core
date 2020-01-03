@@ -16,13 +16,11 @@ import {
   urlToFileSystemPath,
   urlToRelativeUrl,
   resolveDirectoryUrl,
-} from "@jsenv/util"
-import {
   readFileContent,
   writeFileContent,
   removeDirectory,
   removeFile,
-} from "internal/filesystemUtils.js"
+} from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import {
   assertImportMapFileRelativeUrl,
@@ -263,7 +261,9 @@ export const ${key} = ${JSON.stringify(env[key])}
       )
       .join("")
 
-  const jsenvImportMapFilePath = urlToFileSystemPath(resolveUrl("./importMap.json", outDirectoryUrl))
+  const jsenvImportMapFilePath = urlToFileSystemPath(
+    resolveUrl("./importMap.json", outDirectoryUrl),
+  )
   const jsenvGroupMapFilePath = urlToFileSystemPath(resolveUrl("./groupMap.json", outDirectoryUrl))
   const jsenvEnvFilePath = urlToFileSystemPath(resolveUrl("./env.js", outDirectoryUrl))
 

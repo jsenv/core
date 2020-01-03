@@ -1,5 +1,4 @@
-import { urlToFileSystemPath } from "@jsenv/util"
-import { readFileContent } from "internal/filesystemUtils.js"
+import { urlToFileSystemPath, readFileContent } from "@jsenv/util"
 import { resolveMetaJsonFileUrl } from "./locaters.js"
 
 export const readMeta = async ({ logger, compiledFileUrl }) => {

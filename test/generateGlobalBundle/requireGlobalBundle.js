@@ -1,4 +1,4 @@
-import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "src/internal/urlUtils.js"
+import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
 
 export const requireGlobalBundle = async ({
   projectDirectoryUrl,

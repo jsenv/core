@@ -1,6 +1,5 @@
 import { createOperation } from "@jsenv/cancellation"
-import { readFileContent } from "internal/filesystemUtils.js"
-import { resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+import { resolveUrl, urlToFileSystemPath, readFileContent } from "@jsenv/util"
 import { createInstrumentBabelPlugin } from "./createInstrumentBabelPlugin.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
 
