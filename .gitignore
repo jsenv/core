@@ -2,6 +2,7 @@
 /.vscode/settings.json
 /coverage/
 /docs/**/.jsenv/
+/docs/**/coverage/
 /docs/**/dist/
 /docs/**/node_modules/
 /docs/**/package-lock.json

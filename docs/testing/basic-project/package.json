@@ -4,9 +4,9 @@
   "license": "MIT",
   "scripts": {
     "test": "node ./execute-test-plan.js",
-    "test-with-coverage": "node ./execute-test-plan.js --coverage"
+    "test-with-coverage": "node ./execute-test-plan.js --cover"
   },
   "dependencies": {
-    "@jsenv/core": "10.3.3"
+    "@jsenv/core": "10.4.0"
   }
 }

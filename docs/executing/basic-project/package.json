@@ -6,6 +6,6 @@
     "execute-on-node": "node ./execute-node.js index.js"
   },
   "devDependencies": {
-    "@jsenv/core": "10.3.3"
+    "@jsenv/core": "10.4.0"
   }
 }
