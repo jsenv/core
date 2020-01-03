@@ -28,7 +28,9 @@ export const generateCoverageHtmlDirectory = ({
 
   if (coverageHtmlDirectoryIndexLog) {
     const htmlCoverageDirectoryIndexFileUrl = `${htmlDirectoryUrl}index.html`
-    const htmlCoverageDirectoryIndexFilePath = urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)
+    const htmlCoverageDirectoryIndexFilePath = urlToFileSystemPath(
+      htmlCoverageDirectoryIndexFileUrl,
+    )
     console.log(`-> ${htmlCoverageDirectoryIndexFilePath}`)
   }
 }

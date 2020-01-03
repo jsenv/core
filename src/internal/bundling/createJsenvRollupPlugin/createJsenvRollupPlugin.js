@@ -377,19 +377,18 @@ const transformAsyncInsertedByRollup = async ({
   await Promise.all(
     Object.keys(bundle).map(async (bundleFilename) => {
       const bundleInfo = bundle[bundleFilename]
+      const bundleFileUrl = resolveUrl(bundleFilename, bundleDirectoryUrl)
 
       const { code, map } = await transformJs({
         projectDirectoryUrl,
         code: bundleInfo.code,
-        url: fileSystemPathToUrl(bundleFilename),
+        url: bundleFileUrl,
         map: bundleInfo.map,
         babelPluginMap: { [asyncPluginName]: babelPluginMap[asyncPluginName] },
         transformModuleIntoSystemFormat: false, // already done by rollup
         transformGenerator: false, // already done
         transformGlobalThis: false,
       })
-
-      const bundleFileUrl = resolveUrl(bundleFilename, bundleDirectoryUrl)
 
       await Promise.all([
         writeFileContent(

@@ -1,11 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToFileSystemPath,
-  resolveUrl,
-} from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startExploring } from "../../../index.js"
 import { openBrowserPage } from "../openBrowserPage.js"
