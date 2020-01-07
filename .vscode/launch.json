@@ -44,8 +44,8 @@
       "type": "node",
       "request": "attach",
       "port": 40000,
-      "smartStep": true,
       "sourceMaps": true,
+      "smartStep": true,
       "skipFiles": [
         // "node_modules/**",
         "node_modules/@babel/template/**",

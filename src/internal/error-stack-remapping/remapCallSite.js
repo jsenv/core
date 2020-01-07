@@ -1,4 +1,4 @@
-import { isWindowsFilePath, windowsFilePathToUrl } from "internal/filePathUtils.js"
+import { startsWithWindowsDriveLetter, windowsFilePathToUrl } from "internal/filePathUtils.js"
 
 export const remapCallSite = async (
   callSite,
@@ -266,7 +266,11 @@ const startsWithScheme = (string) => {
 }
 
 const operatingSystemFilePathToUrl = (osFilePath) => {
-  if (isWindowsFilePath(osFilePath)) {
+  // be careful, due to babel or something like that we might receive paths like
+  // C:/directory/file.js (without backslashes we would expect on windows)
+  // In that case we consider C: is the signe we are on windows
+  // And I avoid to rely on process.platform === "win32" because this file might be executed in chrome
+  if (startsWithWindowsDriveLetter(osFilePath)) {
     return windowsFilePathToUrl(osFilePath)
   }
   if (osFilePath[0] === "/") {
