@@ -3,9 +3,10 @@ import { installErrorStackRemapping } from "./installErrorStackRemapping.js"
 
 const { SourceMapConsumer } = import.meta.require("source-map")
 
-export const installNodeErrorStackRemapping = (options = {}) =>
+export const installNodeErrorStackRemapping = ({ projectDirectoryUrl, ...options }) =>
   installErrorStackRemapping({
     SourceMapConsumer,
     fetchFile: fetchUrl,
+    baseUrl: projectDirectoryUrl,
     ...options,
   })

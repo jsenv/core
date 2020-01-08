@@ -13,5 +13,6 @@ export const installBrowserErrorStackRemapping = (options = {}) =>
         body: text,
       }
     },
+    baseUrl: window.location.href,
     ...options,
   })

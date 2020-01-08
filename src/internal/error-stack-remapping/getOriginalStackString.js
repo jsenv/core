@@ -52,10 +52,8 @@ ${compiledFileUrl}`)
         sourcemapUrl = compiledFileUrl
         sourcemapString = sourcemapParsingResult.sourcemapString
       } else {
-        sourcemapUrl = resolveFile({
+        sourcemapUrl = resolveFile(sourcemapParsingResult.sourcemapURL, compiledFileUrl, {
           type: "source-map",
-          specifier: sourcemapParsingResult.sourcemapURL,
-          importer: compiledFileUrl,
         })
 
         try {
@@ -111,11 +109,7 @@ ${sourcemapUrl}`)
         sourceMap.sources.map(async (source, index) => {
           if (index in sourcesContent) return
 
-          const sourcemapSourceUrl = resolveFile({
-            type: "source",
-            specifier: source,
-            importer: sourcemapUrl,
-          })
+          const sourcemapSourceUrl = resolveFile(source, sourcemapUrl, { type: "source" })
           try {
             const sourceResponse = await fetchFile(sourcemapSourceUrl)
             const { status } = sourceResponse

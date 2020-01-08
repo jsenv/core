@@ -1,7 +1,12 @@
 import { stackToString } from "./stackToString.js"
 import { generateOriginalStackString } from "./getOriginalStackString.js"
 
-export const installErrorStackRemapping = ({ fetchFile, SourceMapConsumer, indent = "  " }) => {
+export const installErrorStackRemapping = ({
+  fetchFile,
+  SourceMapConsumer,
+  indent = "  ",
+  baseUrl,
+}) => {
   if (typeof fetchFile !== "function") {
     throw new TypeError(`fetchFile must be a function, got ${fetchFile}`)
   }
@@ -14,7 +19,7 @@ export const installErrorStackRemapping = ({ fetchFile, SourceMapConsumer, inden
 
   // if browser does not support window.URL it will fail
   // but no browser got Error.captureStackTrace without window.URL
-  const resolveFile = ({ specifier, importer }) => {
+  const resolveFile = (specifier, importer = baseUrl) => {
     const url = new URL(specifier, importer).href
     return url
   }

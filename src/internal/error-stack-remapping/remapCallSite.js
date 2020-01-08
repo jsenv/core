@@ -221,7 +221,7 @@ const remapSourcePosition = async ({
   readErrorStack,
   onFailure,
 }) => {
-  const url = startsWithScheme(source) ? source : operatingSystemFilePathToUrl(source)
+  const url = sourceToUrl(source, { resolveFile })
 
   const position = { source, line, column }
 
@@ -240,11 +240,7 @@ const remapSourcePosition = async ({
     const originalSource = originalPosition.source
 
     if (originalSource === null) return position
-    originalPosition.source = resolveFile({
-      type: "file-original",
-      specifier: originalSource,
-      importer: url,
-    })
+    originalPosition.source = resolveFile(originalSource, url, { type: "file-original" })
 
     return originalPosition
   } catch (e) {
@@ -261,20 +257,23 @@ ${column}`)
   }
 }
 
-const startsWithScheme = (string) => {
-  return /^[a-zA-Z]{2,}:/.test(string)
-}
-
-const operatingSystemFilePathToUrl = (osFilePath) => {
+const sourceToUrl = (source, { resolveFile }) => {
+  if (startsWithScheme(source)) {
+    return source
+  }
   // be careful, due to babel or something like that we might receive paths like
   // C:/directory/file.js (without backslashes we would expect on windows)
   // In that case we consider C: is the signe we are on windows
   // And I avoid to rely on process.platform === "win32" because this file might be executed in chrome
-  if (startsWithWindowsDriveLetter(osFilePath)) {
-    return windowsFilePathToUrl(osFilePath)
+  if (startsWithWindowsDriveLetter(source)) {
+    return windowsFilePathToUrl(source)
   }
-  if (osFilePath[0] === "/") {
-    return `file://${osFilePath}`
-  }
-  return `file:///${osFilePath}`
+  // we might receive something like internal/process/task_queues.js here
+  // in that case we consider to importer to be the default one
+  // (the projectDirectoryUrl on node and window.location on chrome)
+  return resolveFile(source)
+}
+
+const startsWithScheme = (string) => {
+  return /^[a-zA-Z]{2,}:/.test(string)
 }
