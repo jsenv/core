@@ -10,8 +10,11 @@ on:
 
 jobs:
   ci:
-    name: node 12 on ubuntu
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    name: node 12 on ${{ matrix.os }}
     env:
       CI: true
     steps:
