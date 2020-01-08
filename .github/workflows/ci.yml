@@ -32,6 +32,7 @@ jobs:
           npm config set //npm.pkg.github.com/:_authToken ${{ secrets.GITHUB_TOKEN }}
           npm install
       - name: code quality
+        if: runner.os == 'Linux' # temporary until https://github.com/jsenv/jsenv-importmap-eslint-resolver/issues/2
         run: npm run eslint-check
       - name: code format
         run: npm run prettier-check
