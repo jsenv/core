@@ -16,10 +16,9 @@ import {
   urlToFileSystemPath,
   urlToRelativeUrl,
   resolveDirectoryUrl,
-  readFileContent,
-  writeFileContent,
-  removeDirectory,
-  removeFile,
+  readFile,
+  writeFile,
+  removeFileSystemNode,
 } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import {
@@ -131,7 +130,7 @@ ${projectDirectoryUrl}`)
   }
   if (jsenvDirectoryClean) {
     logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`)
-    await removeDirectory(urlToFileSystemPath(jsenvDirectoryUrl))
+    await removeFileSystemNode(jsenvDirectoryUrl, { recursive: true })
   }
   if (useFilesystemAsCache) {
     await cleanOutDirectoryIfObsolete({
@@ -261,23 +260,21 @@ export const ${key} = ${JSON.stringify(env[key])}
       )
       .join("")
 
-  const jsenvImportMapFilePath = urlToFileSystemPath(
-    resolveUrl("./importMap.json", outDirectoryUrl),
-  )
-  const jsenvGroupMapFilePath = urlToFileSystemPath(resolveUrl("./groupMap.json", outDirectoryUrl))
-  const jsenvEnvFilePath = urlToFileSystemPath(resolveUrl("./env.js", outDirectoryUrl))
+  const jsenvImportMapFileUrl = resolveUrl("./importMap.json", outDirectoryUrl)
+  const jsenvGroupMapFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
+  const jsenvEnvFileUrl = resolveUrl("./env.js", outDirectoryUrl)
 
   await Promise.all([
-    writeFileContent(jsenvImportMapFilePath, importMapToString()),
-    writeFileContent(jsenvGroupMapFilePath, groupMapToString()),
-    writeFileContent(jsenvEnvFilePath, envToString()),
+    writeFile(jsenvImportMapFileUrl, importMapToString()),
+    writeFile(jsenvGroupMapFileUrl, groupMapToString()),
+    writeFile(jsenvEnvFileUrl, envToString()),
   ])
 
   if (!writeOnFilesystem) {
     compileServer.stoppedPromise.then(() => {
-      removeFile(jsenvImportMapFilePath)
-      removeFile(jsenvGroupMapFilePath)
-      removeFile(jsenvEnvFilePath)
+      removeFileSystemNode(jsenvImportMapFileUrl)
+      removeFileSystemNode(jsenvGroupMapFileUrl)
+      removeFileSystemNode(jsenvEnvFileUrl)
     })
   }
 
@@ -431,12 +428,10 @@ const cleanOutDirectoryIfObsolete = async ({ logger, outDirectoryUrl, outDirecto
   }
 
   const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl)
-  const metaFilePath = urlToFileSystemPath(metaFileUrl)
-  const compileDirectoryPath = urlToFileSystemPath(outDirectoryUrl)
 
   let previousOutDirectoryMeta
   try {
-    const source = await readFileContent(metaFilePath)
+    const source = await readFile(metaFileUrl)
     previousOutDirectoryMeta = JSON.parse(source)
   } catch (e) {
     if (e && e.code === "ENOENT") {
@@ -450,9 +445,9 @@ const cleanOutDirectoryIfObsolete = async ({ logger, outDirectoryUrl, outDirecto
     previousOutDirectoryMeta !== null &&
     JSON.stringify(previousOutDirectoryMeta) !== JSON.stringify(outDirectoryMeta)
   ) {
-    logger.info(`clean out directory at ${compileDirectoryPath}`)
-    await removeDirectory(compileDirectoryPath)
+    logger.info(`clean out directory at ${urlToFileSystemPath(outDirectoryUrl)}`)
+    await removeFileSystemNode(outDirectoryUrl, { recursive: true })
   }
 
-  await writeFileContent(metaFilePath, JSON.stringify(outDirectoryMeta, null, "  "))
+  await writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "))
 }

@@ -1,4 +1,4 @@
-import { urlToFileSystemPath, readFileContent, readFileStat } from "@jsenv/util"
+import { urlToFileSystemPath, readFile, readFileSystemNodeModificationTime } from "@jsenv/util"
 import { resolveAssetFileUrl, resolveSourceFileUrl } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
@@ -64,15 +64,13 @@ const validateCompiledFile = async ({
   ifEtagMatch,
   ifModifiedSinceDate,
 }) => {
-  const compiledFilePath = urlToFileSystemPath(compiledFileUrl)
-
   try {
-    const compiledSource = await readFileContent(compiledFilePath)
+    const compiledSource = await readFile(compiledFileUrl)
 
     if (ifEtagMatch) {
       const compiledEtag = bufferToEtag(Buffer.from(compiledSource))
       if (ifEtagMatch !== compiledEtag) {
-        logger.debug(`etag changed for ${compiledFilePath}`)
+        logger.debug(`etag changed for ${urlToFileSystemPath(compiledFileUrl)}`)
         return {
           code: "COMPILED_FILE_ETAG_MISMATCH",
           valid: false,
@@ -82,9 +80,9 @@ const validateCompiledFile = async ({
     }
 
     if (ifModifiedSinceDate) {
-      const compiledMtime = await readFileStat(compiledFilePath)
+      const compiledMtime = await readFileSystemNodeModificationTime(compiledFileUrl)
       if (ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)) {
-        logger.debug(`mtime changed for ${compiledFilePath}`)
+        logger.debug(`mtime changed for ${urlToFileSystemPath(compiledFileUrl)}`)
         return {
           code: "COMPILED_FILE_MTIME_OUTDATED",
           valid: false,
@@ -99,11 +97,11 @@ const validateCompiledFile = async ({
     }
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.debug(`compiled file not found at ${compiledFilePath}`)
+      logger.debug(`compiled file not found at ${urlToFileSystemPath(compiledFileUrl)}`)
       return {
         code: "COMPILED_FILE_NOT_FOUND",
         valid: false,
-        data: { compiledFilePath },
+        data: { compiledFileUrl },
       }
     }
     return Promise.reject(error)
@@ -128,18 +126,21 @@ const validateSource = async ({ logger, compiledFileUrl, source, eTag }) => {
     source,
     compiledFileUrl,
   })
-  const sourceFilePath = urlToFileSystemPath(sourceFileUrl)
 
   try {
-    const sourceContent = await readFileContent(sourceFilePath)
+    const sourceContent = await readFile(sourceFileUrl)
     const sourceETag = bufferToEtag(Buffer.from(sourceContent))
 
     if (sourceETag !== eTag) {
-      logger.debug(`etag changed for ${sourceFilePath}`)
+      logger.debug(`etag changed for ${urlToFileSystemPath(sourceFileUrl)}`)
       return {
         code: "SOURCE_ETAG_MISMATCH",
         valid: false,
-        data: { source, sourceFilePath, sourceContent },
+        data: {
+          source,
+          sourceFileUrl,
+          sourceContent,
+        },
       }
     }
 
@@ -158,11 +159,15 @@ const validateSource = async ({ logger, compiledFileUrl, source, eTag }) => {
       // which are not truly on the filesystem
       // (IN theory the above happens only for convertCommonJsWithRollup because jsenv
       // always have a concrete file especially to avoid that kind of thing)
-      logger.warn(`source not found at ${sourceFilePath}`)
+      logger.warn(`source not found at ${sourceFileUrl}`)
       return {
         code: "SOURCE_NOT_FOUND",
         valid: false,
-        data: { source, sourceFilePath, sourceContent: "" },
+        data: {
+          source,
+          sourceFileUrl,
+          sourceContent: "",
+        },
       }
     }
     throw e
@@ -186,18 +191,17 @@ const validateAsset = async ({ logger, asset, compiledFileUrl, eTag }) => {
     compiledFileUrl,
     asset,
   })
-  const assetFilePath = urlToFileSystemPath(assetFileUrl)
 
   try {
-    const assetContent = await readFileContent(assetFilePath)
+    const assetContent = await readFile(assetFileUrl)
     const assetContentETag = bufferToEtag(Buffer.from(assetContent))
 
     if (eTag !== assetContentETag) {
-      logger.debug(`etag changed for ${assetFilePath}`)
+      logger.debug(`etag changed for ${urlToFileSystemPath(assetFileUrl)}`)
       return {
         code: "ASSET_ETAG_MISMATCH",
         valid: false,
-        data: { asset, assetFilePath, assetContent, assetContentETag },
+        data: { asset, assetFileUrl, assetContent, assetContentETag },
       }
     }
 
@@ -207,11 +211,11 @@ const validateAsset = async ({ logger, asset, compiledFileUrl, eTag }) => {
     }
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.debug(`asset not found at ${assetFilePath}`)
+      logger.debug(`asset not found at ${urlToFileSystemPath(assetFileUrl)}`)
       return {
         code: "ASSET_FILE_NOT_FOUND",
         valid: false,
-        data: { asset, assetFilePath },
+        data: { asset, assetFileUrl },
       }
     }
     return Promise.reject(error)

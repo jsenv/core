@@ -4,13 +4,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { generateCommonJsBundle } from "../../../index.js"
-import {
-  resolveUrl,
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToFileSystemPath,
-  writeFileContent,
-} from "@jsenv/util"
+import { resolveUrl, resolveDirectoryUrl, urlToRelativeUrl, writeFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
@@ -26,7 +20,6 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const mainFileBasename = `${testDirectoryBasename}.js`
 const mainFileRelativeUrl = `${testDirectoryRelativeUrl}${mainFileBasename}`
 const mainFileUrl = resolveUrl(mainFileRelativeUrl, jsenvCoreDirectoryUrl)
-const mainFilePath = urlToFileSystemPath(mainFileUrl)
 
 const generateBundle = () =>
   generateCommonJsBundle({
@@ -41,14 +34,14 @@ const generateBundle = () =>
     filesystemCache: true,
   })
 
-await writeFileContent(
-  mainFilePath,
+await writeFile(
+  mainFileUrl,
   `export default 42
 `,
 )
 await generateBundle()
-await writeFileContent(
-  mainFilePath,
+await writeFile(
+  mainFileUrl,
   `export default 43
 `,
 )

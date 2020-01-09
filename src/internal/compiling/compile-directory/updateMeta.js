@@ -1,4 +1,4 @@
-import { urlToFileSystemPath, writeFileContent, fileExists } from "@jsenv/util"
+import { urlToFileSystemPath, writeFile, readFileSystemNodeStat } from "@jsenv/util"
 import { resolveSourceFileUrl, resolveMetaJsonFileUrl, resolveAssetFileUrl } from "./locaters.js"
 import { bufferToEtag } from "./bufferToEtag.js"
 
@@ -20,14 +20,15 @@ export const updateMeta = async ({
   const sourceExists = await Promise.all(
     sources.map(async (source) => {
       const sourceFileUrl = resolveSourceFileUrl({ source, compiledFileUrl })
-      const exists = await fileExists(sourceFileUrl)
-      if (!exists) {
+      const sourceStats = await readFileSystemNodeStat(sourceFileUrl, { nullIfNotFound: true })
+      if (sourceStats === null) {
         // this can lead to cache never invalidated by itself
         // it's a very important warning
         logger.warn(`a source file cannot be found ${sourceFileUrl}.
 -> excluding it from meta.sources & meta.sourcesEtag`)
+        return false
       }
-      return exists
+      return true
     }),
   )
   sources = sources.filter((source, index) => sourceExists[index])
@@ -38,9 +39,8 @@ export const updateMeta = async ({
     const { writeCompiledSourceFile = true, writeAssetsFile = true } = compileResult
 
     if (writeCompiledSourceFile) {
-      const compiledFilePath = urlToFileSystemPath(compiledFileUrl)
-      logger.debug(`write compiled file at ${compiledFilePath}`)
-      promises.push(writeFileContent(compiledFilePath, compiledSource))
+      logger.debug(`write compiled file at ${urlToFileSystemPath(compiledFileUrl)}`)
+      promises.push(writeFile(compiledFileUrl, compiledSource))
     }
 
     if (writeAssetsFile) {
@@ -50,9 +50,8 @@ export const updateMeta = async ({
             compiledFileUrl,
             asset,
           })
-          const assetFilePath = urlToFileSystemPath(assetFileUrl)
-          logger.debug(`write compiled file asset at ${assetFilePath}`)
-          return writeFileContent(assetFilePath, assetsContent[index])
+          logger.debug(`write compiled file asset at ${urlToFileSystemPath(assetFileUrl)}`)
+          return writeFile(assetFileUrl, assetsContent[index])
         }),
       )
     }
@@ -111,10 +110,9 @@ export const updateMeta = async ({
     const metaJsonFileUrl = resolveMetaJsonFileUrl({
       compiledFileUrl,
     })
-    const metaJsonFilePath = urlToFileSystemPath(metaJsonFileUrl)
 
-    logger.debug(`write compiled file meta at ${metaJsonFilePath}`)
-    promises.push(writeFileContent(metaJsonFilePath, JSON.stringify(latestMeta, null, "  ")))
+    logger.debug(`write compiled file meta at ${urlToFileSystemPath(metaJsonFileUrl)}`)
+    promises.push(writeFile(metaJsonFileUrl, JSON.stringify(latestMeta, null, "  ")))
   }
 
   return Promise.all(promises)

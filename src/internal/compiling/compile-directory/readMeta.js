@@ -1,14 +1,13 @@
-import { urlToFileSystemPath, readFileContent } from "@jsenv/util"
+import { urlToFileSystemPath, readFile } from "@jsenv/util"
 import { resolveMetaJsonFileUrl } from "./locaters.js"
 
 export const readMeta = async ({ logger, compiledFileUrl }) => {
   const metaJsonFileUrl = resolveMetaJsonFileUrl({
     compiledFileUrl,
   })
-  const metaJsonFilePath = urlToFileSystemPath(metaJsonFileUrl)
 
   try {
-    const metaJsonString = await readFileContent(metaJsonFilePath)
+    const metaJsonString = await readFile(metaJsonFileUrl)
     const metaJsonObject = JSON.parse(metaJsonString)
     return metaJsonObject
   } catch (error) {
@@ -20,7 +19,7 @@ export const readMeta = async ({ logger, compiledFileUrl }) => {
       logger.error(
         createCacheSyntaxErrorMessage({
           syntaxError: error,
-          metaJsonFilePath,
+          metaJsonFileUrl,
         }),
       )
       return null
@@ -30,8 +29,8 @@ export const readMeta = async ({ logger, compiledFileUrl }) => {
   }
 }
 
-const createCacheSyntaxErrorMessage = ({ syntaxError, metaJsonFilePath }) => `cache syntax error
+const createCacheSyntaxErrorMessage = ({ syntaxError, metaJsonFileUrl }) => `cache syntax error
 --- syntax error stack ---
 ${syntaxError.stack}
 --- meta.json path ---
-${metaJsonFilePath}`
+${urlToFileSystemPath(metaJsonFileUrl)}`

@@ -1,4 +1,4 @@
-import { urlToFileSystemPath, createFileDirectories } from "@jsenv/util"
+import { urlToFileSystemPath, ensureParentDirectories } from "@jsenv/util"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
 import { updateMeta } from "./updateMeta.js"
@@ -197,7 +197,7 @@ const startAsap = async (fn, { logger, compiledFileUrl, cacheInterProcessLocking
     // after that we use a lock pathnameRelative to be sure we don't conflict with other process
     // trying to do the same (mapy happen when spawining multiple server for instance)
     // https://github.com/moxystudio/node-proper-lockfile/issues/69
-    await createFileDirectories(metaJsonFilePath)
+    await ensureParentDirectories(metaJsonFilePath)
     // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
     unlockInterProcessLock = await lockfile.lock(metaJsonFilePath, {
       realpath: false,

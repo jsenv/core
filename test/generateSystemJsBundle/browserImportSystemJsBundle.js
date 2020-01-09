@@ -1,5 +1,5 @@
 import { startServer, firstService, serveFile } from "@jsenv/server"
-import { resolveDirectoryUrl, resolveUrl, readFileContent } from "@jsenv/util"
+import { resolveDirectoryUrl, resolveUrl, readFile } from "@jsenv/util"
 
 const puppeteer = import.meta.require("puppeteer")
 
@@ -57,7 +57,7 @@ const startTestServer = ({ testDirectoryUrl }) => {
 const serveSystemJS = async ({ request: { ressource } }) => {
   if (ressource !== "/system.js") return null
 
-  const content = await readFileContent(SYSTEM_PATH)
+  const content = await readFile(SYSTEM_PATH)
 
   return {
     status: 200,

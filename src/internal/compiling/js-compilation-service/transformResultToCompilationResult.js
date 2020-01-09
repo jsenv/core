@@ -1,10 +1,4 @@
-import {
-  resolveUrl,
-  urlToRelativeUrl,
-  urlToFileSystemPath,
-  readFileContent,
-  ensureWindowsDriveLetter,
-} from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, readFile, ensureWindowsDriveLetter } from "@jsenv/util"
 import {
   replaceBackSlashesWithSlashes,
   startsWithWindowsDriveLetter,
@@ -86,8 +80,7 @@ export const transformResultToCompilationResult = async (
           if (map.sourcesContent && map.sourcesContent[index]) {
             sourcesContent[index] = map.sourcesContent[index]
           } else {
-            const sourceFilePath = urlToFileSystemPath(sourceFileUrl)
-            const sourceFileContent = await readFileContent(sourceFilePath)
+            const sourceFileContent = await readFile(sourceFileUrl)
             sourcesContent[index] = sourceFileContent
           }
         }),

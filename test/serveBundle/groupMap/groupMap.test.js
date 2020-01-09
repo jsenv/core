@@ -8,7 +8,7 @@ import {
   urlToRelativeUrl,
   urlToFileSystemPath,
   resolveUrl,
-  readFileContent,
+  readFile,
 } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
@@ -70,7 +70,7 @@ const response = await serveBundle(serveBundleParams)
 
 {
   const sourcemapFileUrl = `${compiledFileUrl}.map`
-  const actual = JSON.parse(await readFileContent(urlToFileSystemPath(sourcemapFileUrl)))
+  const actual = JSON.parse(await readFile(sourcemapFileUrl))
   const expected = {
     version: 3,
     file: "file.js",
@@ -84,7 +84,7 @@ const response = await serveBundle(serveBundleParams)
 
 {
   const metaFileUrl = `${compiledFileUrl}__asset__/meta.json`
-  const actual = JSON.parse(await readFileContent(urlToFileSystemPath(metaFileUrl)))
+  const actual = JSON.parse(await readFile(metaFileUrl))
   const expected = {
     contentType: "application/javascript",
     sources: ["../out/groupMap.json", "../../file.js"],
