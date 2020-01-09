@@ -3,9 +3,9 @@ import { generateOriginalStackString } from "./getOriginalStackString.js"
 
 export const installErrorStackRemapping = ({
   fetchFile,
+  resolveFile,
   SourceMapConsumer,
   indent = "  ",
-  baseUrl,
 }) => {
   if (typeof fetchFile !== "function") {
     throw new TypeError(`fetchFile must be a function, got ${fetchFile}`)
@@ -15,13 +15,6 @@ export const installErrorStackRemapping = ({
   }
   if (typeof indent !== "string") {
     throw new TypeError(`indent must be a string, got ${indent}`)
-  }
-
-  // if browser does not support window.URL it will fail
-  // but no browser got Error.captureStackTrace without window.URL
-  const resolveFile = (specifier, importer = baseUrl) => {
-    const url = new URL(specifier, importer).href
-    return url
   }
 
   const errorOriginalStackStringCache = new WeakMap()

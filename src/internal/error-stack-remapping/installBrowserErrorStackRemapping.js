@@ -13,6 +13,10 @@ export const installBrowserErrorStackRemapping = (options = {}) =>
         body: text,
       }
     },
-    baseUrl: window.location.href,
+    resolveFile: (specifier, importer = window.location.href) => {
+      // if browser does not support window.URL it will fail
+      // but no browser got Error.captureStackTrace without window.URL
+      return String(new URL(specifier, importer))
+    },
     ...options,
   })

@@ -1,4 +1,10 @@
-import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath, readFileContent } from "@jsenv/util"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  urlToFileSystemPath,
+  readFileContent,
+  ensureWindowsDriveLetter,
+} from "@jsenv/util"
 import {
   replaceBackSlashesWithSlashes,
   startsWithWindowsDriveLetter,
@@ -60,8 +66,11 @@ export const transformResultToCompilationResult = async (
           const sourceFileUrl =
             isWindows && startsWithWindowsDriveLetter(source)
               ? windowsFilePathToUrl(source)
-              : resolveUrl(
-                  isWindows ? replaceBackSlashesWithSlashes(source) : source,
+              : ensureWindowsDriveLetter(
+                  resolveUrl(
+                    isWindows ? replaceBackSlashesWithSlashes(source) : source,
+                    sourcemapFileUrl,
+                  ),
                   sourcemapFileUrl,
                 )
 
