@@ -1,12 +1,6 @@
 import { assert } from "@jsenv/assert"
 import { generateCommonJsBundle } from "../../../index.js"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  resolveUrl,
-  urlToFileSystemPath,
-  readFileContent,
-} from "@jsenv/util"
+import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
@@ -35,8 +29,7 @@ await generateCommonJsBundle({
 {
   const manifestFileRelativeUrl = `${bundleDirectoryRelativeUrl}manifest.json`
   const manifestFileUrl = resolveUrl(manifestFileRelativeUrl, jsenvCoreDirectoryUrl)
-  const manifestFilePath = urlToFileSystemPath(manifestFileUrl)
-  const manifestFileContent = await readFileContent(manifestFilePath)
+  const manifestFileContent = await readFile(manifestFileUrl)
   const actual = JSON.parse(manifestFileContent)
   const expected = {
     "a.js": "a.js",

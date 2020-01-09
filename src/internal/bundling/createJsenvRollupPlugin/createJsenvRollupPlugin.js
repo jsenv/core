@@ -3,12 +3,11 @@ import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
 import { compareFilePath } from "@jsenv/file-collector"
 import {
   isFileSystemPath,
-  urlToFileSystemPath,
   fileSystemPathToUrl,
   resolveUrl,
   urlToRelativeUrl,
   resolveDirectoryUrl,
-  writeFileContent,
+  writeFile,
 } from "@jsenv/util"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 import { fetchUrl } from "internal/fetchUrl.js"
@@ -185,8 +184,7 @@ export const createJsenvRollupPlugin = async ({
       })
 
       const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl)
-      const manifestFilePath = urlToFileSystemPath(manifestFileUrl)
-      await writeFileContent(manifestFilePath, JSON.stringify(manifest, null, "  "))
+      await writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "))
     },
 
     writeBundle: async (bundle) => {
@@ -391,11 +389,8 @@ const transformAsyncInsertedByRollup = async ({
       })
 
       await Promise.all([
-        writeFileContent(
-          urlToFileSystemPath(bundleFileUrl),
-          writeSourceMappingURL(code, `./${bundleFilename}.map`),
-        ),
-        writeFileContent(urlToFileSystemPath(`${bundleFileUrl}.map`), JSON.stringify(map)),
+        writeFile(bundleFileUrl, writeSourceMappingURL(code, `./${bundleFilename}.map`)),
+        writeFile(`${bundleFileUrl}.map`, JSON.stringify(map)),
       ])
     }),
   )

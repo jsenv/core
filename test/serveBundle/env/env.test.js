@@ -8,7 +8,7 @@ import {
   urlToRelativeUrl,
   urlToFileSystemPath,
   resolveUrl,
-  readFileContent,
+  readFile,
 } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
@@ -68,7 +68,7 @@ assert({ actual, expected })
 
 {
   const sourcemapFileUrl = `${compiledFileUrl}.map`
-  const actual = JSON.parse(await readFileContent(urlToFileSystemPath(sourcemapFileUrl)))
+  const actual = JSON.parse(await readFile(sourcemapFileUrl))
   const expected = {
     version: 3,
     file: "file.js",
@@ -82,9 +82,7 @@ assert({ actual, expected })
 
 {
   const metaFileUrl = `${compiledFileUrl}__asset__/meta.json`
-  const actual = JSON.parse(
-    await readFileContent(urlToFileSystemPath(`${compiledFileUrl}__asset__/meta.json`)),
-  )
+  const actual = JSON.parse(await readFile(`${compiledFileUrl}__asset__/meta.json`))
   const expected = {
     contentType: "application/javascript",
     sources: ["../out/env.js", "../../file.js"],

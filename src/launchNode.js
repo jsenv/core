@@ -4,7 +4,7 @@ import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
-import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl, assertFileExists } from "@jsenv/util"
+import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
 import { createChildExecArgv } from "internal/node-launcher/createChildExecArgv.js"
@@ -47,7 +47,7 @@ export const launchNode = async ({
     "./src/internal/node-launcher/nodeControllableFile.js",
     jsenvCoreDirectoryUrl,
   )
-  await assertFileExists(nodeControllableFileUrl)
+  await assertFilePresence(nodeControllableFileUrl)
 
   const execArgv = await createChildExecArgv({
     cancellationToken,

@@ -1,11 +1,11 @@
-import { assertAndNormalizeDirectoryUrl, assertDirectoryExists, urlIsInsideOf } from "@jsenv/util"
+import { assertAndNormalizeDirectoryUrl, assertDirectoryPresence, urlIsInsideOf } from "@jsenv/util"
 
 export const assertProjectDirectoryUrl = ({ projectDirectoryUrl }) => {
   return assertAndNormalizeDirectoryUrl(projectDirectoryUrl)
 }
 
 export const assertProjectDirectoryExists = ({ projectDirectoryUrl }) => {
-  assertDirectoryExists(projectDirectoryUrl)
+  assertDirectoryPresence(projectDirectoryUrl)
 }
 
 export const assertImportMapFileRelativeUrl = ({ importMapFileRelativeUrl }) => {

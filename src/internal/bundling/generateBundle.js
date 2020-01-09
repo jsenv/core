@@ -7,10 +7,9 @@ import { createLogger } from "@jsenv/logger"
 import { COMPILE_ID_OTHERWISE } from "internal/CONSTANTS.js"
 import {
   resolveDirectoryUrl,
-  urlToFileSystemPath,
   urlToRelativeUrl,
-  assertFileExists,
-  removeDirectory,
+  assertFilePresence,
+  ensureEmptyDirectory,
 } from "@jsenv/util"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
@@ -82,7 +81,7 @@ export const generateBundle = async ({
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
   assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
   if (bundleDirectoryClean) {
-    await removeDirectory(urlToFileSystemPath(bundleDirectoryUrl))
+    await ensureEmptyDirectory(bundleDirectoryUrl)
   }
 
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
@@ -102,7 +101,7 @@ export const generateBundle = async ({
     if (typeof balancerTemplateFileUrl === "undefined") {
       throw new Error(`${format} format not compatible with balancing.`)
     }
-    await assertFileExists(balancerTemplateFileUrl)
+    await assertFilePresence(balancerTemplateFileUrl)
   }
 
   return catchAsyncFunctionCancellation(async () => {

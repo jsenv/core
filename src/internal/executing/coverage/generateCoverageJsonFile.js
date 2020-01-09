@@ -1,4 +1,4 @@
-import { resolveUrl, urlToFileSystemPath, writeFileContent } from "@jsenv/util"
+import { resolveUrl, urlToFileSystemPath, writeFile } from "@jsenv/util"
 
 export const generateCoverageJsonFile = async ({
   projectDirectoryUrl,
@@ -7,10 +7,9 @@ export const generateCoverageJsonFile = async ({
   coverageMap,
 }) => {
   const coverageJsonFileUrl = resolveUrl(coverageJsonFileRelativeUrl, projectDirectoryUrl)
-  const coverageJsonFilePath = urlToFileSystemPath(coverageJsonFileUrl)
 
-  await writeFileContent(coverageJsonFilePath, JSON.stringify(coverageMap, null, "  "))
+  await writeFile(coverageJsonFileUrl, JSON.stringify(coverageMap, null, "  "))
   if (coverageJsonFileLog) {
-    console.log(`-> ${coverageJsonFilePath}`)
+    console.log(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`)
   }
 }

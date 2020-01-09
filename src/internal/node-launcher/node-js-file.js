@@ -59,7 +59,9 @@ export const execute = async ({
     compileServerOrigin,
   })
 
-  const { getErrorOriginalStackString } = installNodeErrorStackRemapping()
+  const { getErrorOriginalStackString } = installNodeErrorStackRemapping({
+    projectDirectoryUrl,
+  })
 
   const compiledFileRemoteUrl = resolveUrl(fileRelativeUrl, compileDirectoryRemoteUrl)
   return executeFile(compiledFileRemoteUrl, {

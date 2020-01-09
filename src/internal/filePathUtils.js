@@ -1,6 +1,6 @@
 export const isWindowsFilePath = (path) => startsWithWindowsDriveLetter(path) && path[2] === "\\"
 
-const startsWithWindowsDriveLetter = (string) => {
+export const startsWithWindowsDriveLetter = (string) => {
   const firstChar = string[0]
   if (!/[a-zA-Z]/.test(firstChar)) return false
 
@@ -14,4 +14,4 @@ export const windowsFilePathToUrl = (windowsFilePath) => {
   return `file:///${replaceBackSlashesWithSlashes(windowsFilePath)}`
 }
 
-const replaceBackSlashesWithSlashes = (string) => string.replace(/\\/g, "/")
+export const replaceBackSlashesWithSlashes = (string) => string.replace(/\\/g, "/")

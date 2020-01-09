@@ -1,4 +1,4 @@
-import { resolveUrl, urlToRelativeUrl, assertFileExists } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvHtmlFileUrl } from "internal/jsenvHtmlFileUrl.js"
 import { evalSource } from "internal/platform/createNodePlatform/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
@@ -23,7 +23,7 @@ export const evaluateImportExecution = async ({
   executionExposureOnWindow,
 }) => {
   const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl)
-  await assertFileExists(fileUrl)
+  await assertFilePresence(fileUrl)
 
   if (typeof htmlFileRelativeUrl === "undefined") {
     htmlFileRelativeUrl = urlToRelativeUrl(jsenvHtmlFileUrl, projectDirectoryUrl)
@@ -31,7 +31,7 @@ export const evaluateImportExecution = async ({
     throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`)
   }
   const htmlFileUrl = resolveUrl(htmlFileRelativeUrl, projectDirectoryUrl)
-  await assertFileExists(htmlFileUrl)
+  await assertFilePresence(htmlFileUrl)
   const htmlFileClientUrl = `${executionServerOrigin}/${htmlFileRelativeUrl}`
   await page.goto(htmlFileClientUrl)
 

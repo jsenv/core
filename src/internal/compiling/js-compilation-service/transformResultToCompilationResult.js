@@ -1,6 +1,12 @@
-import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath, readFileContent } from "@jsenv/util"
-import { isWindowsFilePath, windowsFilePathToUrl } from "internal/filePathUtils.js"
+import { resolveUrl, urlToRelativeUrl, readFile, ensureWindowsDriveLetter } from "@jsenv/util"
+import {
+  replaceBackSlashesWithSlashes,
+  startsWithWindowsDriveLetter,
+  windowsFilePathToUrl,
+} from "internal/filePathUtils.js"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
+
+const isWindows = process.platform === "win32"
 
 export const transformResultToCompilationResult = async (
   { code, map, metadata = {} },
@@ -48,9 +54,19 @@ export const transformResultToCompilationResult = async (
     } else {
       await Promise.all(
         map.sources.map(async (source, index) => {
-          const sourceFileUrl = isWindowsFilePath(source)
-            ? windowsFilePathToUrl(source)
-            : resolveUrl(source, sourcemapFileUrl)
+          // be careful here we might received C:/Directory/file.js path from babel
+          // also in case we receive relative path like directory\file.js we replace \ with slash
+          // for url resolution
+          const sourceFileUrl =
+            isWindows && startsWithWindowsDriveLetter(source)
+              ? windowsFilePathToUrl(source)
+              : ensureWindowsDriveLetter(
+                  resolveUrl(
+                    isWindows ? replaceBackSlashesWithSlashes(source) : source,
+                    sourcemapFileUrl,
+                  ),
+                  sourcemapFileUrl,
+                )
 
           if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
             // do not track dependency outside project
@@ -64,8 +80,7 @@ export const transformResultToCompilationResult = async (
           if (map.sourcesContent && map.sourcesContent[index]) {
             sourcesContent[index] = map.sourcesContent[index]
           } else {
-            const sourceFilePath = urlToFileSystemPath(sourceFileUrl)
-            const sourceFileContent = await readFileContent(sourceFilePath)
+            const sourceFileContent = await readFile(sourceFileUrl)
             sourcesContent[index] = sourceFileContent
           }
         }),

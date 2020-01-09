@@ -14,8 +14,8 @@ import {
   urlToFileSystemPath,
   urlIsInsideOf,
   urlToRelativeUrl,
-  assertFileExists,
-  writeFileContent,
+  assertFilePresence,
+  writeFile,
 } from "@jsenv/util"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { getBrowserExecutionDynamicData } from "internal/platform/getBrowserExecutionDynamicData.js"
@@ -70,7 +70,7 @@ export const startExploring = async ({
     throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`)
   }
   const htmlFileUrl = resolveUrl(htmlFileRelativeUrl, projectDirectoryUrl)
-  await assertFileExists(htmlFileUrl)
+  await assertFilePresence(htmlFileUrl)
 
   const stopExploringCancellationSource = createCancellationSource()
 
@@ -296,8 +296,8 @@ export const startExploring = async ({
       "./browser-execute-dynamic-data.json",
       jsenvDirectoryUrl,
     )
-    await writeFileContent(
-      urlToFileSystemPath(browserDynamicDataFileUrl),
+    await writeFile(
+      browserDynamicDataFileUrl,
       JSON.stringify(
         getBrowserExecutionDynamicData({ projectDirectoryUrl, compileServerOrigin }),
         null,
