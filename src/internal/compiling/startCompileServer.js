@@ -19,6 +19,7 @@ import {
   readFile,
   writeFile,
   removeFileSystemNode,
+  ensureEmptyDirectory,
 } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import {
@@ -130,7 +131,7 @@ ${projectDirectoryUrl}`)
   }
   if (jsenvDirectoryClean) {
     logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`)
-    await removeFileSystemNode(jsenvDirectoryUrl, { recursive: true })
+    await ensureEmptyDirectory(jsenvDirectoryUrl)
   }
   if (useFilesystemAsCache) {
     await cleanOutDirectoryIfObsolete({
@@ -272,8 +273,8 @@ export const ${key} = ${JSON.stringify(env[key])}
 
   if (!writeOnFilesystem) {
     compileServer.stoppedPromise.then(() => {
-      removeFileSystemNode(jsenvImportMapFileUrl)
-      removeFileSystemNode(jsenvGroupMapFileUrl)
+      removeFileSystemNode(jsenvImportMapFileUrl, { allowUseless: true })
+      removeFileSystemNode(jsenvGroupMapFileUrl, { allowUseless: true })
       removeFileSystemNode(jsenvEnvFileUrl)
     })
   }
@@ -446,7 +447,7 @@ const cleanOutDirectoryIfObsolete = async ({ logger, outDirectoryUrl, outDirecto
     JSON.stringify(previousOutDirectoryMeta) !== JSON.stringify(outDirectoryMeta)
   ) {
     logger.info(`clean out directory at ${urlToFileSystemPath(outDirectoryUrl)}`)
-    await removeFileSystemNode(outDirectoryUrl, { recursive: true })
+    await ensureEmptyDirectory(outDirectoryUrl)
   }
 
   await writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "))

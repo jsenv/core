@@ -9,7 +9,7 @@ import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   assertFilePresence,
-  removeFileSystemNode,
+  ensureEmptyDirectory,
 } from "@jsenv/util"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
@@ -81,7 +81,7 @@ export const generateBundle = async ({
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
   assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
   if (bundleDirectoryClean) {
-    await removeFileSystemNode(bundleDirectoryUrl, { recursive: true })
+    await ensureEmptyDirectory(bundleDirectoryUrl)
   }
 
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
