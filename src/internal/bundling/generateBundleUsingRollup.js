@@ -132,18 +132,24 @@ ${JSON.stringify(entryPointMap, null, "  ")}
   // this is because rollup does not let use preserve extension using
   // entryFileNames ([extname] is only available when preserveModules options is enabled)
   // consequently we try our best to preserve extension on the output files
-  let extension
-  Object.keys(entryPointMap).forEach((key) => {
-    const value = entryPointMap[key]
-    const extensionName = extname(value)
-    if (extension && extensionName !== extension) {
-      logger.warn(
-        `entryPointMap contains mixed extensions: ${extension} extension found and now ${extensionName} under ${key}.`,
-      )
-    }
-    extension = extensionName
-  })
-  extension = extension || ".js"
+  const entryKeys = Object.keys(entryPointMap)
+  const entryExtensions = entryKeys.map((key) => extname(entryPointMap[key]) || ".js")
+  const firstFileExtension = entryExtensions[0]
+  const otherFileExtensionIndex = entryExtensions.findIndex(
+    (extension) => extension !== firstFileExtension,
+  )
+  const extension = firstFileExtension
+  if (otherFileExtensionIndex > -1) {
+    logger.warn(
+      `entryPointMap contains mixed extensions.
+--- ${entryKeys[0]} entry file ---
+${entryPointMap[entryKeys[0]]}
+--- ${entryKeys[otherFileExtensionIndex]} entry file ---
+${entryPointMap[entryKeys[otherFileExtensionIndex]]}
+
+${firstFileExtension} extension will be used for every entry.`,
+    )
+  }
 
   const rollupGenerateOptions = {
     // https://rollupjs.org/guide/en#experimentaltoplevelawait
