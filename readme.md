@@ -10,17 +10,21 @@ Write and maintain your Javascript projects.
 # Table of contents
 
 - [Presentation](#Presentation)
+- [Installation](#Installation)
 - [Example](#Example)
 - [Usage](#Usage)
-- [Installation](#Installation)
 
-## Presentation
+# Presentation
 
 `@jsenv/core` exports functions needed during the life of a typical JavaScript project. These functions are independant so that you can use them according to each project requirements. Using every `@jsenv/core` functions results in a unified developer experience.
 
-`jsenv-core` github repository corresponds to `@jsenv/core` package published on github and npm package registries.
+# Installation
 
-## Example
+```console
+npm install --save-dev @jsenv/core@10.6.0
+```
+
+# Example
 
 The examples below are a subset of what `@jsenv/core` does.<br />
 These examples can be reproduced on your machine by following the documentation in the next part: [Usage](#Usage)
@@ -41,7 +45,7 @@ These examples can be reproduced on your machine by following the documentation 
 
 ![vscode debug node gif](./docs/example-asset/vscode-debug-node.gif)
 
-## Usage
+# Usage
 
 This part lists features provided by `@jsenv/core`. Each of them are independent and completes each other.
 
@@ -58,17 +62,3 @@ This part lists features provided by `@jsenv/core`. Each of them are independent
   — see [./docs/bundling/readme.md](./docs/bundling/readme.md)
 
 The above could be achieved using babel, systemjs and rollup separately. jsenv makes them work together.
-
-## Installation
-
-If you never installed a jsenv package, read [Installing a jsenv package](./docs/installing-jsenv-package.md) before going further.
-
-This documentation is up-to-date with a specific version so prefer any of the following commands
-
-```console
-npm install --save-dev @jsenv/core@10.4.0
-```
-
-```console
-yarn add --dev @jsenv/core@10.4.0
-```
