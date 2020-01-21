@@ -1,6 +1,6 @@
-import { require } from "internal/require.js"
-import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
 import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { supportsDynamicImport } from "../../supportsDynamicImport.js"
+import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
 import { installNodeErrorStackRemapping } from "internal/error-stack-remapping/installNodeErrorStackRemapping.js"
 import { fetchUrl } from "internal/fetchUrl.js"
 
@@ -29,31 +29,15 @@ export const execute = async ({
     throw valueRejected
   })
 
-  const nodePlatformFileRelativeUrl =
-    projectDirectoryUrl === jsenvCoreDirectoryUrl
-      ? `src/nodePlatform.js`
-      : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/nodePlatform.js`
-
-  const nodePlatformCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodePlatformFileRelativeUrl}`
-  const nodePlatformCompiledFileServerUrl = resolveUrl(
-    nodePlatformCompiledFileRelativeUrl,
-    compileServerOrigin,
-  )
-  await fetchUrl(nodePlatformCompiledFileServerUrl)
-
-  const nodePlatformCompiledFileUrl = resolveUrl(
-    nodePlatformCompiledFileRelativeUrl,
-    projectDirectoryUrl,
-  )
-  const nodePlatformCompiledFilePath = urlToFileSystemPath(nodePlatformCompiledFileUrl)
-  const nodePlatformOriginalFilePath = urlToFileSystemPath(
-    resolveUrl(nodePlatformFileRelativeUrl, projectDirectoryUrl),
-  )
-
-  const { nodePlatform } = requireCompiledFileAsOriginalFile({
-    compiledFilePath: nodePlatformCompiledFilePath,
-    originalFilePath: nodePlatformOriginalFilePath,
-  })
+  const dynamicImportSupported = await supportsDynamicImport()
+  const nodePlatform = dynamicImportSupported
+    ? await getNodePlatformUsingDynamicImport({})
+    : await getNodePlatformUsingRequire({
+        jsenvCoreDirectoryUrl,
+        projectDirectoryUrl,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+      })
 
   const { compileDirectoryRemoteUrl, executeFile } = nodePlatform.create({
     projectDirectoryUrl,
@@ -82,15 +66,62 @@ export const execute = async ({
   })
 }
 
-const requireCompiledFileAsOriginalFile = ({ originalFilePath, compiledFilePath }) => {
-  const { readFileSync } = require("fs")
-  const Module = require("module")
-  const { dirname } = require("path")
+const getNodePlatformUsingDynamicImport = async () => {
+  const { nodePlatform } = await import("../../nodePlatform.js")
+  return nodePlatform
+}
 
-  const fileContent = String(readFileSync(compiledFilePath))
-  const moduleObject = new Module(compiledFilePath)
-  moduleObject.paths = Module._nodeModulePaths(dirname(originalFilePath))
-  moduleObject._compile(fileContent, compiledFilePath)
+const getNodePlatformUsingRequire = async ({
+  jsenvCoreDirectoryUrl,
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
+  compileServerOrigin,
+}) => {
+  const { require } = await import("../require.js")
 
-  return moduleObject.exports
+  const nodePlatformFileRelativeUrl =
+    projectDirectoryUrl === jsenvCoreDirectoryUrl
+      ? `src/nodePlatform.js`
+      : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/nodePlatform.js`
+
+  const nodePlatformCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodePlatformFileRelativeUrl}`
+  const nodePlatformCompiledFileServerUrl = resolveUrl(
+    nodePlatformCompiledFileRelativeUrl,
+    compileServerOrigin,
+  )
+  await fetchUrl(nodePlatformCompiledFileServerUrl)
+
+  const nodePlatformCompiledFileUrl = resolveUrl(
+    nodePlatformCompiledFileRelativeUrl,
+    projectDirectoryUrl,
+  )
+  const nodePlatformCompiledFilePath = urlToFileSystemPath(nodePlatformCompiledFileUrl)
+  const nodePlatformOriginalFilePath = urlToFileSystemPath(
+    resolveUrl(nodePlatformFileRelativeUrl, projectDirectoryUrl),
+  )
+
+  // The compiled nodePlatform file will be somewhere else in the filesystem
+  // than the original nodePlatform file.
+  // It is important for the compiled file to be able to require
+  // node modules that original file could access
+  // This is the purpose of the function below.
+  const requireCompiledFileAsOriginalFile = ({ originalFilePath, compiledFilePath }) => {
+    const { readFileSync } = require("fs")
+    const Module = require("module")
+    const { dirname } = require("path")
+
+    const fileContent = String(readFileSync(compiledFilePath))
+    const moduleObject = new Module(compiledFilePath)
+    moduleObject.paths = Module._nodeModulePaths(dirname(originalFilePath))
+    moduleObject._compile(fileContent, compiledFilePath)
+
+    return moduleObject.exports
+  }
+
+  const { nodePlatform } = requireCompiledFileAsOriginalFile({
+    compiledFilePath: nodePlatformCompiledFilePath,
+    originalFilePath: nodePlatformOriginalFilePath,
+  })
+
+  return nodePlatform
 }

@@ -19,6 +19,24 @@
       ]
     },
     {
+      "name": "node13",
+      "type": "node",
+      "request": "launch",
+      "protocol": "inspector",
+      "program": "${file}",
+      "runtimeVersion": "13.6.0",
+      "autoAttachChildProcesses": true,
+      "sourceMaps": true,
+      "smartStep": true,
+      "skipFiles": [
+        // force-array-multiline
+        // "node_modules/**",
+        "node_modules/@babel/template/**",
+        "node_modules/@dmail/cancellation/**",
+        "<node_internals>/**"
+      ]
+    },
+    {
       "name": "jsenv-node",
       "type": "node",
       "request": "launch",

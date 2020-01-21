@@ -1,3 +1,4 @@
+/* global require */
 const { createCancellationSource } = require("@jsenv/cancellation")
 const { uneval } = require("@jsenv/uneval")
 

@@ -44,7 +44,7 @@ export const launchNode = async ({
   }
 
   const nodeControllableFileUrl = resolveUrl(
-    "./src/internal/node-launcher/nodeControllableFile.js",
+    "./src/internal/node-launcher/nodeControllableFile.cjs",
     jsenvCoreDirectoryUrl,
   )
   await assertFilePresence(nodeControllableFileUrl)
