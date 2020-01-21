@@ -1,9 +1,9 @@
 /* eslint-disable import/max-dependencies */
-import "../s.js"
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
+import { require } from "internal/require.js"
+import "../s.js"
 import { fromFunctionReturningNamespace, fromUrl } from "../module-registration.js"
 import { valueInstall } from "../valueInstall.js"
-import { createRequire } from "./createRequire.js"
 import { isNativeNodeModuleBareSpecifier } from "./isNativeNodeModuleBareSpecifier.js"
 import { fetchSource } from "./fetchSource.js"
 import { evalSource } from "./evalSource.js"
@@ -85,15 +85,9 @@ export const createNodeSystem = ({
       compileServerOrigin,
     })
 
-    const require = createRequire(
-      originalUrl.startsWith("file://")
-        ? urlToFileSystemPath(originalUrl)
-        : urlToFileSystemPath(projectDirectoryUrl),
-    )
     return {
       url: originalUrl,
       resolve,
-      require,
     }
   }
 

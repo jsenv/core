@@ -2,12 +2,12 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
+var module$1 = require('module');
 var url$1 = require('url');
 var fs = require('fs');
 var crypto = require('crypto');
 var path = require('path');
 var util = require('util');
-var module$1 = require('module');
 var net = require('net');
 var http = require('http');
 var https = require('https');
@@ -20,6 +20,8 @@ var child_process = require('child_process');
 const nodeRequire = require;
 const filenameContainsBackSlashes = __filename.indexOf("\\") > -1;
 const url = filenameContainsBackSlashes ? `file:///${__filename.replace(/\\/g, "/")}` : `file://${__filename}`;
+
+const require$1 = module$1.createRequire(url);
 
 const assertUrlLike = (value, name = "url") => {
   if (typeof value !== "string") {
@@ -2100,19 +2102,19 @@ const writeFile = async (destination, content = "") => {
 };
 
 /* eslint-disable */
-// https://github.com/babel/babel/tree/master/packages/babel-plugin-transform-modules-systemjs
+
 const {
   template,
   types: t
-} = nodeRequire("@babel/core");
+} = require$1("@babel/core");
 
 const {
   declare
-} = nodeRequire("@babel/helper-plugin-utils");
+} = require$1("@babel/helper-plugin-utils");
 
 const {
   default: hoistVariables
-} = nodeRequire("@babel/helper-hoist-variables");
+} = require$1("@babel/helper-hoist-variables");
 
 const buildTemplate = template(`
   SYSTEM_REGISTER(MODULE_NAME, SOURCES, function (EXPORT_IDENTIFIER, CONTEXT_IDENTIFIER) {
@@ -2513,9 +2515,9 @@ const findAsyncPluginNameInBabelPluginMap = babelPluginMap => {
   return "";
 };
 
-// https://github.com/rburns/ansi-to-html/blob/master/src/ansi_to_html.js
 // https://github.com/drudru/ansi_up/blob/master/ansi_up.js
-const Convert = nodeRequire("ansi-to-html");
+
+const Convert = require$1("ansi-to-html");
 
 const ansiToHTML = ansiString => {
   return new Convert().toHtml(ansiString);
@@ -2523,7 +2525,7 @@ const ansiToHTML = ansiString => {
 
 const {
   addSideEffect
-} = nodeRequire("@babel/helper-module-imports");
+} = require$1("@babel/helper-module-imports");
 
 const ensureRegeneratorRuntimeImportBabelPlugin = (api, options) => {
   api.assertVersion(7);
@@ -2558,7 +2560,7 @@ const ensureRegeneratorRuntimeImportBabelPlugin = (api, options) => {
 
 const {
   addSideEffect: addSideEffect$1
-} = nodeRequire("@babel/helper-module-imports");
+} = require$1("@babel/helper-module-imports");
 
 const ensureGlobalThisImportBabelPlugin = (api, options) => {
   api.assertVersion(7);
@@ -2591,9 +2593,11 @@ const ensureGlobalThisImportBabelPlugin = (api, options) => {
   };
 };
 
+// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-core/src/tools/build-external-helpers.js
+
 const {
   list
-} = nodeRequire("@babel/helpers");
+} = require$1("@babel/helpers");
 
 const babelHelperNameInsideJsenvCoreArray = ["applyDecoratedDescriptor", "arrayWithHoles", "arrayWithoutHoles", "assertThisInitialized", "AsyncGenerator", "asyncGeneratorDelegate", "asyncIterator", "asyncToGenerator", "awaitAsyncGenerator", "AwaitValue", "classCallCheck", "classNameTDZError", "classPrivateFieldDestructureSet", "classPrivateFieldGet", "classPrivateFieldLooseBase", "classPrivateFieldLooseKey", "classPrivateFieldSet", "classPrivateMethodGet", "classPrivateMethodSet", "classStaticPrivateFieldSpecGet", "classStaticPrivateFieldSpecSet", "classStaticPrivateMethodGet", "classStaticPrivateMethodSet", "construct", "createClass", "decorate", "defaults", "defineEnumerableProperties", "defineProperty", "extends", "get", "getPrototypeOf", "inherits", "inheritsLoose", "initializerDefineProperty", "initializerWarningHelper", "instanceof", "interopRequireDefault", "interopRequireWildcard", "isNativeFunction", "iterableToArray", "iterableToArrayLimit", "iterableToArrayLimitLoose", "jsx", "newArrowCheck", "nonIterableRest", "nonIterableSpread", "objectDestructuringEmpty", "objectSpread", "objectSpread2", "objectWithoutProperties", "objectWithoutPropertiesLoose", "possibleConstructorReturn", "readOnlyError", "set", "setPrototypeOf", "skipFirstGeneratorNext", "slicedToArray", "slicedToArrayLoose", "superPropBase", "taggedTemplateLiteral", "taggedTemplateLiteralLoose", "tdz", "temporalRef", "temporalUndefined", "toArray", "toConsumableArray", "toPrimitive", "toPropertyKey", "typeof", "wrapAsyncGenerator", "wrapNativeSuper", "wrapRegExp"];
 const babelHelperScope = "@jsenv/core/helpers/babel/"; // maybe we can put back / in front of .jsenv here because we will
@@ -2627,7 +2631,7 @@ const filePathToBabelHelperName = filePath => {
 
 const {
   addDefault
-} = nodeRequire("@babel/helper-module-imports"); // named import approach found here:
+} = require$1("@babel/helper-module-imports"); // named import approach found here:
 // https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1
 // for reference this is how it's done to reference
 // a global babel helper object instead of using
@@ -2668,14 +2672,16 @@ const transformBabelHelperToImportBabelPlugin = api => {
   };
 };
 
+/* eslint-disable import/max-dependencies */
+
 const {
   transformAsync,
   transformFromAstAsync
-} = nodeRequire("@babel/core");
+} = require$1("@babel/core");
 
-const syntaxDynamicImport = nodeRequire("@babel/plugin-syntax-dynamic-import");
+const syntaxDynamicImport = require$1("@babel/plugin-syntax-dynamic-import");
 
-const syntaxImportMeta = nodeRequire("@babel/plugin-syntax-import-meta");
+const syntaxImportMeta = require$1("@babel/plugin-syntax-import-meta");
 
 const defaultBabelPluginArray = [syntaxDynamicImport, syntaxImportMeta];
 const jsenvTransform = async ({
@@ -2968,7 +2974,7 @@ const computeInputRelativePath = (url, projectDirectoryUrl) => {
   return undefined;
 };
 
-const transformCommonJs = nodeRequire("babel-plugin-transform-commonjs");
+const transformCommonJs = require$1("babel-plugin-transform-commonjs");
 
 const convertCommonJsWithBabel = async ({
   projectDirectoryUrl,
@@ -3124,21 +3130,21 @@ const createReplaceExpressionsBabelPlugin = ({
   };
 };
 
-const commonjs = nodeRequire("rollup-plugin-commonjs");
+const commonjs = require$1("rollup-plugin-commonjs");
 
-const nodeResolve = nodeRequire("@rollup/plugin-node-resolve");
+const nodeResolve = require$1("@rollup/plugin-node-resolve");
 
-const builtins = nodeRequire("rollup-plugin-node-builtins");
+const builtins = require$1("rollup-plugin-node-builtins");
 
-const createJSONRollupPlugin = nodeRequire("@rollup/plugin-json");
+const createJSONRollupPlugin = require$1("@rollup/plugin-json");
 
-const createNodeGlobalRollupPlugin = nodeRequire("rollup-plugin-node-globals");
+const createNodeGlobalRollupPlugin = require$1("rollup-plugin-node-globals");
 
-const createReplaceRollupPlugin = nodeRequire("@rollup/plugin-replace");
+const createReplaceRollupPlugin = require$1("@rollup/plugin-replace");
 
 const {
   rollup
-} = nodeRequire("rollup");
+} = require$1("rollup");
 
 const convertCommonJsWithRollup = async ({
   url,
@@ -6217,11 +6223,11 @@ const dateToSecondsPrecision = date => {
   return dateWithSecondsPrecision;
 };
 
-const require$1 = module$1.createRequire(url);
+const require$2 = module$1.createRequire(url);
 
-const nodeFetch = require$1("node-fetch");
+const nodeFetch = require$2("node-fetch");
 
-const AbortController = require$1("abort-controller");
+const AbortController = require$2("abort-controller");
 
 const {
   Response
@@ -7158,9 +7164,9 @@ const STOP_REASON_PROCESS_DEATH = createReason("process death");
 const STOP_REASON_PROCESS_EXIT = createReason("process exit");
 const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
 
-const require$2 = module$1.createRequire(url);
+const require$3 = module$1.createRequire(url);
 
-const killPort = require$2("kill-port");
+const killPort = require$3("kill-port");
 
 const STATUS_TEXT_INTERNAL_ERROR = "internal error";
 const startServer = async ({
@@ -8575,63 +8581,64 @@ const jsenvNodeVersionScoreMap = {
 };
 
 /* eslint-disable import/max-dependencies */
-const proposalJSONStrings = nodeRequire("@babel/plugin-proposal-json-strings");
 
-const proposalObjectRestSpread = nodeRequire("@babel/plugin-proposal-object-rest-spread");
+const proposalJSONStrings = require$1("@babel/plugin-proposal-json-strings");
 
-const proposalOptionalCatchBinding = nodeRequire("@babel/plugin-proposal-optional-catch-binding");
+const proposalObjectRestSpread = require$1("@babel/plugin-proposal-object-rest-spread");
 
-const proposalUnicodePropertyRegex = nodeRequire("@babel/plugin-proposal-unicode-property-regex");
+const proposalOptionalCatchBinding = require$1("@babel/plugin-proposal-optional-catch-binding");
 
-const syntaxObjectRestSpread = nodeRequire("@babel/plugin-syntax-object-rest-spread");
+const proposalUnicodePropertyRegex = require$1("@babel/plugin-proposal-unicode-property-regex");
 
-const syntaxOptionalCatchBinding = nodeRequire("@babel/plugin-syntax-optional-catch-binding");
+const syntaxObjectRestSpread = require$1("@babel/plugin-syntax-object-rest-spread");
 
-const transformArrowFunction = nodeRequire("@babel/plugin-transform-arrow-functions");
+const syntaxOptionalCatchBinding = require$1("@babel/plugin-syntax-optional-catch-binding");
 
-const transformAsyncToPromises = nodeRequire("babel-plugin-transform-async-to-promises");
+const transformArrowFunction = require$1("@babel/plugin-transform-arrow-functions");
 
-const transformBlockScopedFunctions = nodeRequire("@babel/plugin-transform-block-scoped-functions");
+const transformAsyncToPromises = require$1("babel-plugin-transform-async-to-promises");
 
-const transformBlockScoping = nodeRequire("@babel/plugin-transform-block-scoping");
+const transformBlockScopedFunctions = require$1("@babel/plugin-transform-block-scoped-functions");
 
-const transformClasses = nodeRequire("@babel/plugin-transform-classes");
+const transformBlockScoping = require$1("@babel/plugin-transform-block-scoping");
 
-const transformComputedProperties = nodeRequire("@babel/plugin-transform-computed-properties");
+const transformClasses = require$1("@babel/plugin-transform-classes");
 
-const transformDestructuring = nodeRequire("@babel/plugin-transform-destructuring");
+const transformComputedProperties = require$1("@babel/plugin-transform-computed-properties");
 
-const transformDotAllRegex = nodeRequire("@babel/plugin-transform-dotall-regex");
+const transformDestructuring = require$1("@babel/plugin-transform-destructuring");
 
-const transformDuplicateKeys = nodeRequire("@babel/plugin-transform-duplicate-keys");
+const transformDotAllRegex = require$1("@babel/plugin-transform-dotall-regex");
 
-const transformExponentiationOperator = nodeRequire("@babel/plugin-transform-exponentiation-operator");
+const transformDuplicateKeys = require$1("@babel/plugin-transform-duplicate-keys");
 
-const transformForOf = nodeRequire("@babel/plugin-transform-for-of");
+const transformExponentiationOperator = require$1("@babel/plugin-transform-exponentiation-operator");
 
-const transformFunctionName = nodeRequire("@babel/plugin-transform-function-name");
+const transformForOf = require$1("@babel/plugin-transform-for-of");
 
-const transformLiterals = nodeRequire("@babel/plugin-transform-literals");
+const transformFunctionName = require$1("@babel/plugin-transform-function-name");
 
-const transformNewTarget = nodeRequire("@babel/plugin-transform-new-target");
+const transformLiterals = require$1("@babel/plugin-transform-literals");
 
-const transformObjectSuper = nodeRequire("@babel/plugin-transform-object-super");
+const transformNewTarget = require$1("@babel/plugin-transform-new-target");
 
-const transformParameters = nodeRequire("@babel/plugin-transform-parameters");
+const transformObjectSuper = require$1("@babel/plugin-transform-object-super");
 
-const transformRegenerator = nodeRequire("@babel/plugin-transform-regenerator");
+const transformParameters = require$1("@babel/plugin-transform-parameters");
 
-const transformShorthandProperties = nodeRequire("@babel/plugin-transform-shorthand-properties");
+const transformRegenerator = require$1("@babel/plugin-transform-regenerator");
 
-const transformSpread = nodeRequire("@babel/plugin-transform-spread");
+const transformShorthandProperties = require$1("@babel/plugin-transform-shorthand-properties");
 
-const transformStickyRegex = nodeRequire("@babel/plugin-transform-sticky-regex");
+const transformSpread = require$1("@babel/plugin-transform-spread");
 
-const transformTemplateLiterals = nodeRequire("@babel/plugin-transform-template-literals");
+const transformStickyRegex = require$1("@babel/plugin-transform-sticky-regex");
 
-const transformTypeOfSymbol = nodeRequire("@babel/plugin-transform-typeof-symbol");
+const transformTemplateLiterals = require$1("@babel/plugin-transform-template-literals");
 
-const transformUnicodeRegex = nodeRequire("@babel/plugin-transform-unicode-regex");
+const transformTypeOfSymbol = require$1("@babel/plugin-transform-typeof-symbol");
+
+const transformUnicodeRegex = require$1("@babel/plugin-transform-unicode-regex");
 
 const jsenvBabelPluginMap = {
   "proposal-object-rest-spread": [proposalObjectRestSpread],
@@ -8751,10 +8758,9 @@ const getProjectImportMap = async ({
   });
 };
 
-// https://github.com/cfware/babel-plugin-bundled-import-meta/blob/master/index.js
 const {
   addNamed
-} = nodeRequire("@babel/helper-module-imports");
+} = require$1("@babel/helper-module-imports");
 
 const createImportMetaUrlNamedImportBabelPlugin = ({
   importMetaSpecifier
@@ -9493,7 +9499,7 @@ const {
   lockForRessource
 } = createLockRegistry();
 
-const lockfile = nodeRequire("proper-lockfile");
+const lockfile = require$1("proper-lockfile");
 
 const getOrGenerateCompiledFile = async ({
   logger,
@@ -10016,7 +10022,7 @@ ${moduleUrl}`);
 
 const {
   minify
-} = nodeRequire("html-minifier");
+} = require$1("html-minifier");
 
 const minifyHtml = (htmlString, options) => {
   return minify(htmlString, options);
@@ -10024,13 +10030,13 @@ const minifyHtml = (htmlString, options) => {
 
 const {
   minify: minify$1
-} = nodeRequire("terser");
+} = require$1("terser");
 
 const minifyJs = (jsString, options) => {
   return minify$1(jsString, options);
 };
 
-const CleanCSS = nodeRequire("clean-css");
+const CleanCSS = require$1("clean-css");
 
 const minifyCss = (cssString, options) => {
   return new CleanCSS(options).minify(cssString).styles;
@@ -10425,7 +10431,7 @@ const isBareSpecifierForNativeNodeModule = specifier => {
 
 const {
   rollup: rollup$1
-} = nodeRequire("rollup");
+} = require$1("rollup");
 
 const generateBundleUsingRollup = async ({
   cancellationToken,
@@ -11402,7 +11408,7 @@ const cleanOutDirectoryIfObsolete = async ({
 
 const {
   createFileCoverage
-} = nodeRequire("istanbul-lib-coverage"); // https://github.com/istanbuljs/istanbuljs/blob/5405550c3868712b14fd8bfe0cbd6f2e7ac42279/packages/istanbul-lib-coverage/lib/coverage-map.js#L43
+} = require$1("istanbul-lib-coverage"); // https://github.com/istanbuljs/istanbuljs/blob/5405550c3868712b14fd8bfe0cbd6f2e7ac42279/packages/istanbul-lib-coverage/lib/coverage-map.js#L43
 
 
 const composeCoverageMap = (...coverageMaps) => {
@@ -11938,7 +11944,7 @@ const execute = async ({
 
 const {
   programVisitor
-} = nodeRequire("istanbul-lib-instrument"); // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
+} = require$1("istanbul-lib-instrument"); // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
 
 
 const createInstrumentBabelPlugin = ({
@@ -12094,17 +12100,17 @@ const startCompileServerForExecutingPlan = async ({
 
 const {
   createFileCoverage: createFileCoverage$1
-} = nodeRequire("istanbul-lib-coverage");
+} = require$1("istanbul-lib-coverage");
 
 const createEmptyCoverage = relativeUrl => createFileCoverage$1(relativeUrl).toJSON();
 
-const syntaxDynamicImport$1 = nodeRequire("@babel/plugin-syntax-dynamic-import");
+const syntaxDynamicImport$1 = require$1("@babel/plugin-syntax-dynamic-import");
 
-const syntaxImportMeta$1 = nodeRequire("@babel/plugin-syntax-import-meta");
+const syntaxImportMeta$1 = require$1("@babel/plugin-syntax-import-meta");
 
 const {
   transformAsync: transformAsync$1
-} = nodeRequire("@babel/core");
+} = require$1("@babel/core");
 
 const relativeUrlToEmptyCoverage = async (relativeUrl, {
   cancellationToken,
@@ -12794,13 +12800,13 @@ const generateCoverageJsonFile = async ({
   }
 };
 
-const libReport = nodeRequire("istanbul-lib-report");
+const libReport = require$1("istanbul-lib-report");
 
-const reports = nodeRequire("istanbul-reports");
+const reports = require$1("istanbul-reports");
 
 const {
   createCoverageMap
-} = nodeRequire("istanbul-lib-coverage");
+} = require$1("istanbul-lib-coverage");
 
 const generateCoverageHtmlDirectory = ({
   projectDirectoryUrl,
@@ -12827,13 +12833,13 @@ const generateCoverageHtmlDirectory = ({
   }
 };
 
-const libReport$1 = nodeRequire("istanbul-lib-report");
+const libReport$1 = require$1("istanbul-lib-report");
 
-const reports$1 = nodeRequire("istanbul-reports");
+const reports$1 = require$1("istanbul-reports");
 
 const {
   createCoverageMap: createCoverageMap$1
-} = nodeRequire("istanbul-lib-coverage");
+} = require$1("istanbul-lib-coverage");
 
 const generateCoverageTextLog = ({
   coverageMap
@@ -13592,7 +13598,9 @@ const teardownSignal$1 = {
   addCallback: addCallback$c
 };
 
-const puppeteer = nodeRequire("puppeteer");
+/* eslint-disable import/max-dependencies */
+
+const puppeteer = require$1("puppeteer");
 
 const launchPuppeteer = async ({
   cancellationToken = createCancellationToken$1(),
@@ -13955,8 +13963,8 @@ const getBrowserExecutionDynamicData = ({
   compileServerOrigin
 }) => {
   const browserPlatformFileRelativeUrl = projectDirectoryUrl === jsenvCoreDirectoryUrl ? "src/browserPlatform.js" : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/browserPlatform.js`;
-  const sourcemapMainFileUrl = fileSystemPathToUrl(nodeRequire.resolve("source-map/dist/source-map.js"));
-  const sourcemapMappingFileUrl = fileSystemPathToUrl(nodeRequire.resolve("source-map/lib/mappings.wasm"));
+  const sourcemapMainFileUrl = fileSystemPathToUrl(require$1.resolve("source-map/dist/source-map.js"));
+  const sourcemapMappingFileUrl = fileSystemPathToUrl(require$1.resolve("source-map/lib/mappings.wasm"));
   const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl);
   const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(sourcemapMappingFileUrl, projectDirectoryUrl);
   return {

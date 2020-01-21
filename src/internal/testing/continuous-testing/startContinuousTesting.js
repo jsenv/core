@@ -13,6 +13,7 @@ import {
   urlToFileSystemPath,
   registerDirectoryLifecycle,
 } from "@jsenv/util"
+import { require } from "internal/require.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { generateExecutionSteps } from "internal/executing/generateExecutionSteps.js"
 import { executeConcurrently } from "internal/executing/executeConcurrently.js"
@@ -21,7 +22,7 @@ import { relativeUrlToExecutionSteps } from "./relativeUrlToExecutionSteps.js"
 import { showContinuousTestingNotification } from "./showContinuousTestingNotification.js"
 import { createRemoveLog, createRunLog } from "./continous-testing-logs.js"
 
-const cuid = import.meta.require("cuid")
+const cuid = require("cuid")
 
 export const TESTING_WATCH_EXCLUDE_DESCRIPTION = {
   "./.git/": false,

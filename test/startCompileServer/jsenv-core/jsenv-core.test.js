@@ -38,7 +38,8 @@ const expected = {
 assert({ actual, expected })
 
 {
-  const actual = import.meta.require(urlToFileSystemPath(compiledFileUrl))
+  // eslint-disable-next-line import/no-dynamic-require
+  const actual = require(urlToFileSystemPath(compiledFileUrl))
   const expected = 42
   assert({ actual, expected })
 }

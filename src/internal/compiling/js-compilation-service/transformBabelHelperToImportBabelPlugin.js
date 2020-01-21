@@ -1,7 +1,8 @@
+import { require } from "internal/require.js"
 import { filePathToBabelHelperName, babelHelperNameToImportSpecifier } from "./babelHelper.js"
 
 // https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports
-const { addDefault } = import.meta.require("@babel/helper-module-imports")
+const { addDefault } = require("@babel/helper-module-imports")
 
 // named import approach found here:
 // https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1

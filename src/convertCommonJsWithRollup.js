@@ -1,12 +1,13 @@
+import { require } from "internal/require.js"
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 
-const commonjs = import.meta.require("rollup-plugin-commonjs")
-const nodeResolve = import.meta.require("@rollup/plugin-node-resolve")
-const builtins = import.meta.require("rollup-plugin-node-builtins")
-const createJSONRollupPlugin = import.meta.require("@rollup/plugin-json")
-const createNodeGlobalRollupPlugin = import.meta.require("rollup-plugin-node-globals")
-const createReplaceRollupPlugin = import.meta.require("@rollup/plugin-replace")
-const { rollup } = import.meta.require("rollup")
+const commonjs = require("rollup-plugin-commonjs")
+const nodeResolve = require("@rollup/plugin-node-resolve")
+const builtins = require("rollup-plugin-node-builtins")
+const createJSONRollupPlugin = require("@rollup/plugin-json")
+const createNodeGlobalRollupPlugin = require("rollup-plugin-node-globals")
+const createReplaceRollupPlugin = require("@rollup/plugin-replace")
+const { rollup } = require("rollup")
 
 export const convertCommonJsWithRollup = async ({
   url,

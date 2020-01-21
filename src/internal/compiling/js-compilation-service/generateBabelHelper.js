@@ -1,5 +1,7 @@
-const { buildExternalHelpers } = import.meta.require("@babel/core")
-const { getDependencies } = import.meta.require("@babel/helpers")
+import { require } from "internal/require.js"
+
+const { buildExternalHelpers } = require("@babel/core")
+const { getDependencies } = require("@babel/helpers")
 
 export const generateBabelHelper = (name) => {
   const helpersToBuild = [name]

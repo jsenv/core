@@ -2,8 +2,9 @@
 // the list of possible helpers:
 // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
 import { fileSystemPathToUrl } from "@jsenv/util"
+import { require } from "internal/require.js"
 
-const { list } = import.meta.require("@babel/helpers")
+const { list } = require("@babel/helpers")
 
 const babelHelperNameInsideJsenvCoreArray = [
   "applyDecoratedDescriptor",

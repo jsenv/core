@@ -1,6 +1,8 @@
-const libReport = import.meta.require("istanbul-lib-report")
-const reports = import.meta.require("istanbul-reports")
-const { createCoverageMap } = import.meta.require("istanbul-lib-coverage")
+import { require } from "internal/require.js"
+
+const libReport = require("istanbul-lib-report")
+const reports = require("istanbul-reports")
+const { createCoverageMap } = require("istanbul-lib-coverage")
 
 export const generateCoverageTextLog = ({ coverageMap }) => {
   const context = libReport.createContext({

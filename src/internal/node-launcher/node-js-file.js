@@ -1,3 +1,4 @@
+import { require } from "internal/require.js"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
 import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { installNodeErrorStackRemapping } from "internal/error-stack-remapping/installNodeErrorStackRemapping.js"
@@ -82,9 +83,9 @@ export const execute = async ({
 }
 
 const requireCompiledFileAsOriginalFile = ({ originalFilePath, compiledFilePath }) => {
-  const { readFileSync } = import.meta.require("fs")
-  const Module = import.meta.require("module")
-  const { dirname } = import.meta.require("path")
+  const { readFileSync } = require("fs")
+  const Module = require("module")
+  const { dirname } = require("path")
 
   const fileContent = String(readFileSync(compiledFilePath))
   const moduleObject = new Module(compiledFilePath)

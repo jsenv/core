@@ -1,4 +1,5 @@
 import { urlToFileSystemPath, ensureParentDirectories } from "@jsenv/util"
+import { require } from "internal/require.js"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
 import { updateMeta } from "./updateMeta.js"
@@ -7,7 +8,7 @@ import { createLockRegistry } from "./createLockRegistry.js"
 
 const { lockForRessource } = createLockRegistry()
 
-const lockfile = import.meta.require("proper-lockfile")
+const lockfile = require("proper-lockfile")
 
 export const getOrGenerateCompiledFile = async ({
   logger,

@@ -1,7 +1,8 @@
+import { require } from "internal/require.js"
 import { composeCoverageMap } from "internal/executing/coverage/composeCoverageMap.js"
 import { evalSource } from "internal/platform/createNodePlatform/evalSource.js"
 
-const puppeteer = import.meta.require("puppeteer")
+const puppeteer = require("puppeteer")
 
 export const openBrowserPage = async (
   url,

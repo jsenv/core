@@ -10,6 +10,7 @@ import {
   resolveUrl,
   readFile,
 } from "@jsenv/util"
+import { require } from "internal/require.js"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { bufferToEtag } from "internal/compiling/compile-directory/bufferToEtag.js"
@@ -105,7 +106,8 @@ const response = await serveBundle(serveBundleParams)
 }
 
 {
-  const actual = typeof import.meta.require(urlToFileSystemPath(compiledFileUrl))
+  // eslint-disable-next-line import/no-dynamic-require
+  const actual = typeof require(urlToFileSystemPath(compiledFileUrl))
   const expected = "object"
   assert({ actual, expected })
 }

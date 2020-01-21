@@ -1,4 +1,5 @@
 import { basename } from "path"
+import { require } from "internal/require.js"
 import { executionIsPassed } from "internal/executing/executionIsPassed.js"
 import {
   createBrokenNotificationMessage,
@@ -6,7 +7,7 @@ import {
   createFixedNotificationMessage,
 } from "./continuous-testing-notifications.js"
 
-const notifier = import.meta.require("node-notifier")
+const notifier = require("node-notifier")
 
 export const showContinuousTestingNotification = ({
   projectDirectoryUrl,

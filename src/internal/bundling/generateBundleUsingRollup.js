@@ -1,9 +1,10 @@
 import { createOperation } from "@jsenv/cancellation"
 import { urlToFileSystemPath } from "@jsenv/util"
+import { require } from "internal/require.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin/createJsenvRollupPlugin.js"
 import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 
-const { rollup } = import.meta.require("rollup")
+const { rollup } = require("rollup")
 
 export const generateBundleUsingRollup = async ({
   cancellationToken,

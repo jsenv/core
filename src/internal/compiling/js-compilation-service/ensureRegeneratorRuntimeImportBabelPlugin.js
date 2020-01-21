@@ -1,4 +1,6 @@
-const { addSideEffect } = import.meta.require("@babel/helper-module-imports")
+import { require } from "internal/require.js"
+
+const { addSideEffect } = require("@babel/helper-module-imports")
 
 export const ensureRegeneratorRuntimeImportBabelPlugin = (api, options) => {
   api.assertVersion(7)

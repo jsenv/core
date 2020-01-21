@@ -8,7 +8,8 @@ export const requireCommonJsBundle = async ({
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
   const mainFileUrl = resolveUrl(mainRelativeUrl, bundleDirectoryUrl)
   const mainFilePath = urlToFileSystemPath(mainFileUrl)
-  const namespace = import.meta.require(mainFilePath)
+  // eslint-disable-next-line import/no-dynamic-require
+  const namespace = require(mainFilePath)
   return {
     namespace: normalizeNamespace(namespace),
   }

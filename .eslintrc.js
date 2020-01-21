@@ -6,4 +6,9 @@ const config = createEslintConfig({
   importResolutionMethod: "import-map",
 })
 
+// simulate node 13
+config.globals.__filename = "off"
+config.globals.__dirname = "off"
+config.globals.require = "off"
+
 module.exports = config

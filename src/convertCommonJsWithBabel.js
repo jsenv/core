@@ -1,6 +1,7 @@
+import { require } from "internal/require.js"
 import { transformJs } from "internal/compiling/js-compilation-service/transformJs.js"
 
-const transformCommonJs = import.meta.require("babel-plugin-transform-commonjs")
+const transformCommonJs = require("babel-plugin-transform-commonjs")
 
 export const convertCommonJsWithBabel = async ({
   projectDirectoryUrl,
