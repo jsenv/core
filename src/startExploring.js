@@ -5,7 +5,11 @@ import {
   composeCancellationToken,
   createCancellationSource,
 } from "@jsenv/cancellation"
-import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta, registerDirectoryLifecycle,
+import {
+  metaMapToSpecifierMetaMap,
+  normalizeSpecifierMetaMap,
+  urlToMeta,
+  registerDirectoryLifecycle,
   resolveUrl,
   urlToFileSystemPath,
   urlIsInsideOf,
