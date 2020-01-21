@@ -1,3 +1,5 @@
+/* global require, __dirname */
+
 const { existsSync, readFileSync, writeFileSync, unlinkSync } = require("fs")
 const { resolve } = require("path")
 

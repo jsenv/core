@@ -1,3 +1,4 @@
+/* global require */
 // eslint-disable-next-line import/no-unresolved
 import groupMap from "/.jsenv/out/groupMap.json"
 // eslint-disable-next-line import/no-unresolved

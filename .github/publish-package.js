@@ -1,3 +1,4 @@
+/* global require */
 const { publishPackage } = require("@jsenv/package-publish")
 const { projectDirectoryUrl } = require("../jsenv.config.js")
 

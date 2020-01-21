@@ -1,3 +1,4 @@
+/* global require, __dirname */
 const { executeTestPlan, launchNode, launchChromiumTab } = require("@jsenv/core")
 
 executeTestPlan({

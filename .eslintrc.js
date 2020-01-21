@@ -1,3 +1,4 @@
+/* global require */
 const { createEslintConfig } = require("@jsenv/eslint-config")
 const jsenvConfig = require("./jsenv.config.js")
 
