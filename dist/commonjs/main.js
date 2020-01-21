@@ -2,12 +2,13 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var path = require('path');
 var url$1 = require('url');
-var util = require('util');
 var fs = require('fs');
-var net = require('net');
 var crypto = require('crypto');
+var path = require('path');
+var util = require('util');
+var module$1 = require('module');
+var net = require('net');
 var http = require('http');
 var https = require('https');
 var stream = require('stream');
@@ -15,10 +16,556 @@ var os = require('os');
 var vm = require('vm');
 var child_process = require('child_process');
 
+const assertImportMap = value => {
+  if (value === null) {
+    throw new TypeError(`an importMap must be an object, got null`);
+  }
+
+  const type = typeof value;
+
+  if (type !== "object") {
+    throw new TypeError(`an importMap must be an object, received ${value}`);
+  }
+
+  if (Array.isArray(value)) {
+    throw new TypeError(`an importMap must be an object, received array ${value}`);
+  }
+};
+
+const hasScheme = string => {
+  return /^[a-zA-Z]{2,}:/.test(string);
+};
+
+const urlToScheme = urlString => {
+  const colonIndex = urlString.indexOf(":");
+  if (colonIndex === -1) return "";
+  return urlString.slice(0, colonIndex);
+};
+
+const urlToPathname = urlString => {
+  return ressourceToPathname(urlToRessource(urlString));
+};
+
+const urlToRessource = urlString => {
+  const scheme = urlToScheme(urlString);
+
+  if (scheme === "file") {
+    return urlString.slice("file://".length);
+  }
+
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = urlString.slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    return afterProtocol.slice(pathnameSlashIndex);
+  }
+
+  return urlString.slice(scheme.length + 1);
+};
+
+const ressourceToPathname = ressource => {
+  const searchSeparatorIndex = ressource.indexOf("?");
+  return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex);
+};
+
+const urlToOrigin = urlString => {
+  const scheme = urlToScheme(urlString);
+
+  if (scheme === "file") {
+    return "file://";
+  }
+
+  if (scheme === "http" || scheme === "https") {
+    const secondProtocolSlashIndex = scheme.length + "://".length;
+    const pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
+    if (pathnameSlashIndex === -1) return urlString;
+    return urlString.slice(0, pathnameSlashIndex);
+  }
+
+  return urlString.slice(0, scheme.length + 1);
+};
+
+const pathnameToDirectoryPathname = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  if (slashLastIndex === -1) return "";
+  return pathname.slice(0, slashLastIndex);
+};
+
+// could be useful: https://url.spec.whatwg.org/#url-miscellaneous
+const resolveUrl = (specifier, baseUrl) => {
+  if (baseUrl) {
+    if (typeof baseUrl !== "string") {
+      throw new TypeError(writeBaseUrlMustBeAString({
+        baseUrl,
+        specifier
+      }));
+    }
+
+    if (!hasScheme(baseUrl)) {
+      throw new Error(writeBaseUrlMustBeAbsolute({
+        baseUrl,
+        specifier
+      }));
+    }
+  }
+
+  if (hasScheme(specifier)) {
+    return specifier;
+  }
+
+  if (!baseUrl) {
+    throw new Error(writeBaseUrlRequired({
+      baseUrl,
+      specifier
+    }));
+  } // scheme relative
+
+
+  if (specifier.slice(0, 2) === "//") {
+    return `${urlToScheme(baseUrl)}:${specifier}`;
+  } // origin relative
+
+
+  if (specifier[0] === "/") {
+    return `${urlToOrigin(baseUrl)}${specifier}`;
+  }
+
+  const baseOrigin = urlToOrigin(baseUrl);
+  const basePathname = urlToPathname(baseUrl);
+
+  if (specifier === ".") {
+    const baseDirectoryPathname = pathnameToDirectoryPathname(basePathname);
+    return `${baseOrigin}${baseDirectoryPathname}/`;
+  } // pathname relative inside
+
+
+  if (specifier.slice(0, 2) === "./") {
+    const baseDirectoryPathname = pathnameToDirectoryPathname(basePathname);
+    return `${baseOrigin}${baseDirectoryPathname}/${specifier.slice(2)}`;
+  } // pathname relative outside
+
+
+  if (specifier.slice(0, 3) === "../") {
+    let unresolvedPathname = specifier;
+    const importerFolders = basePathname.split("/");
+    importerFolders.pop();
+
+    while (unresolvedPathname.slice(0, 3) === "../") {
+      unresolvedPathname = unresolvedPathname.slice(3); // when there is no folder left to resolved
+      // we just ignore '../'
+
+      if (importerFolders.length) {
+        importerFolders.pop();
+      }
+    }
+
+    const resolvedPathname = `${importerFolders.join("/")}/${unresolvedPathname}`;
+    return `${baseOrigin}${resolvedPathname}`;
+  } // bare
+
+
+  if (basePathname === "") {
+    return `${baseOrigin}/${specifier}`;
+  }
+
+  if (basePathname[basePathname.length] === "/") {
+    return `${baseOrigin}${basePathname}${specifier}`;
+  }
+
+  return `${baseOrigin}${pathnameToDirectoryPathname(basePathname)}/${specifier}`;
+};
+
+const writeBaseUrlMustBeAString = ({
+  baseUrl,
+  specifier
+}) => `baseUrl must be a string.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const writeBaseUrlMustBeAbsolute = ({
+  baseUrl,
+  specifier
+}) => `baseUrl must be absolute.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const writeBaseUrlRequired = ({
+  baseUrl,
+  specifier
+}) => `baseUrl required to resolve relative specifier.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const tryUrlResolution = (string, url) => {
+  const result = resolveUrl(string, url);
+  return hasScheme(result) ? result : null;
+};
+
+const resolveSpecifier = (specifier, importer) => {
+  if (specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
+    return resolveUrl(specifier, importer);
+  }
+
+  if (hasScheme(specifier)) {
+    return specifier;
+  }
+
+  return null;
+};
+
+const sortImports = imports => {
+  const importsSorted = {};
+  Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(name => {
+    importsSorted[name] = imports[name];
+  });
+  return importsSorted;
+};
+const sortScopes = scopes => {
+  const scopesSorted = {};
+  Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(scopeName => {
+    scopesSorted[scopeName] = sortImports(scopes[scopeName]);
+  });
+  return scopesSorted;
+};
+
+const compareLengthOrLocaleCompare = (a, b) => {
+  return b.length - a.length || a.localeCompare(b);
+};
+
+const normalizeImportMap = (importMap, baseUrl) => {
+  assertImportMap(importMap);
+
+  if (typeof baseUrl !== "string") {
+    throw new TypeError(formulateBaseUrlMustBeAString({
+      baseUrl
+    }));
+  }
+
+  const {
+    imports,
+    scopes
+  } = importMap;
+  return {
+    imports: imports ? normalizeImports(imports, baseUrl) : undefined,
+    scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
+  };
+};
+
+const normalizeImports = (imports, baseUrl) => {
+  const importsNormalized = {};
+  Object.keys(imports).forEach(specifier => {
+    const address = imports[specifier];
+
+    if (typeof address !== "string") {
+      console.warn(formulateAddressMustBeAString({
+        address,
+        specifier
+      }));
+      return;
+    }
+
+    const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
+    const addressUrl = tryUrlResolution(address, baseUrl);
+
+    if (addressUrl === null) {
+      console.warn(formulateAdressResolutionFailed({
+        address,
+        baseUrl,
+        specifier
+      }));
+      return;
+    }
+
+    if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
+      console.warn(formulateAddressUrlRequiresTrailingSlash({
+        addressUrl,
+        address,
+        specifier
+      }));
+      return;
+    }
+
+    importsNormalized[specifierResolved] = addressUrl;
+  });
+  return sortImports(importsNormalized);
+};
+
+const normalizeScopes = (scopes, baseUrl) => {
+  const scopesNormalized = {};
+  Object.keys(scopes).forEach(scope => {
+    const scopeValue = scopes[scope];
+    const scopeUrl = tryUrlResolution(scope, baseUrl);
+
+    if (scopeUrl === null) {
+      console.warn(formulateScopeResolutionFailed({
+        scope,
+        baseUrl
+      }));
+      return;
+    }
+
+    const scopeValueNormalized = normalizeImports(scopeValue, baseUrl);
+    scopesNormalized[scopeUrl] = scopeValueNormalized;
+  });
+  return sortScopes(scopesNormalized);
+};
+
+const formulateBaseUrlMustBeAString = ({
+  baseUrl
+}) => `baseUrl must be a string.
+--- base url ---
+${baseUrl}`;
+
+const formulateAddressMustBeAString = ({
+  specifier,
+  address
+}) => `Address must be a string.
+--- address ---
+${address}
+--- specifier ---
+${specifier}`;
+
+const formulateAdressResolutionFailed = ({
+  address,
+  baseUrl,
+  specifier
+}) => `Address url resolution failed.
+--- address ---
+${address}
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const formulateAddressUrlRequiresTrailingSlash = ({
+  addressURL,
+  address,
+  specifier
+}) => `Address must end with /.
+--- address url ---
+${addressURL}
+--- address ---
+${address}
+--- specifier ---
+${specifier}`;
+
+const formulateScopeResolutionFailed = ({
+  scope,
+  baseUrl
+}) => `Scope url resolution failed.
+--- scope ---
+${scope}
+--- base url ---
+${baseUrl}`;
+
+const pathnameToExtension = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex !== -1) {
+    pathname = pathname.slice(slashLastIndex + 1);
+  }
+
+  const dotLastIndex = pathname.lastIndexOf(".");
+  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+
+  return pathname.slice(dotLastIndex);
+};
+
+const applyImportMap = ({
+  importMap,
+  specifier,
+  importer
+}) => {
+  assertImportMap(importMap);
+
+  if (typeof specifier !== "string") {
+    throw new TypeError(writeSpecifierMustBeAString({
+      specifier,
+      importer
+    }));
+  }
+
+  if (importer) {
+    if (typeof importer !== "string") {
+      throw new TypeError(writeImporterMustBeAString({
+        importer,
+        specifier
+      }));
+    }
+
+    if (!hasScheme(importer)) {
+      throw new Error(writeImporterMustBeAbsolute({
+        importer,
+        specifier
+      }));
+    }
+  }
+
+  const specifierUrl = resolveSpecifier(specifier, importer);
+  const specifierNormalized = specifierUrl || specifier;
+  const {
+    scopes
+  } = importMap;
+
+  if (scopes && importer) {
+    const scopeKeyMatching = Object.keys(scopes).find(scopeKey => {
+      return scopeKey === importer || specifierIsPrefixOf(scopeKey, importer);
+    });
+
+    if (scopeKeyMatching) {
+      const scopeValue = scopes[scopeKeyMatching];
+      const remappingFromScopeImports = applyImports(specifierNormalized, scopeValue);
+
+      if (remappingFromScopeImports !== null) {
+        return remappingFromScopeImports;
+      }
+    }
+  }
+
+  const {
+    imports
+  } = importMap;
+
+  if (imports) {
+    const remappingFromImports = applyImports(specifierNormalized, imports);
+
+    if (remappingFromImports !== null) {
+      return remappingFromImports;
+    }
+  }
+
+  if (specifierUrl) {
+    return specifierUrl;
+  }
+
+  throw new Error(writeBareSpecifierMustBeRemapped({
+    specifier,
+    importer
+  }));
+};
+
+const applyImports = (specifier, imports) => {
+  const importKeyArray = Object.keys(imports);
+  let i = 0;
+
+  while (i < importKeyArray.length) {
+    const importKey = importKeyArray[i];
+    i++;
+
+    if (importKey === specifier) {
+      const importValue = imports[importKey];
+      return importValue;
+    }
+
+    if (specifierIsPrefixOf(importKey, specifier)) {
+      const importValue = imports[importKey];
+      const afterImportKey = specifier.slice(importKey.length);
+      return tryUrlResolution(afterImportKey, importValue);
+    }
+  }
+
+  return null;
+};
+
+const specifierIsPrefixOf = (specifierHref, href) => {
+  return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
+};
+
+const writeSpecifierMustBeAString = ({
+  specifier,
+  importer
+}) => `specifier must be a string.
+--- specifier ---
+${specifier}
+--- importer ---
+${importer}`;
+
+const writeImporterMustBeAString = ({
+  importer,
+  specifier
+}) => `importer must be a string.
+--- importer ---
+${importer}
+--- specifier ---
+${specifier}`;
+
+const writeImporterMustBeAbsolute = ({
+  importer,
+  specifier
+}) => `importer must be an absolute url.
+--- importer ---
+${importer}
+--- specifier ---
+${specifier}`;
+
+const writeBareSpecifierMustBeRemapped = ({
+  specifier,
+  importer
+}) => `Unmapped bare specifier.
+--- specifier ---
+${specifier}
+--- importer ---
+${importer}`;
+
+const resolveImport = ({
+  specifier,
+  importer,
+  importMap,
+  defaultExtension = true
+}) => {
+  return applyDefaultExtension({
+    url: importMap ? applyImportMap({
+      importMap,
+      specifier,
+      importer
+    }) : resolveUrl(specifier, importer),
+    importer,
+    defaultExtension
+  });
+};
+
+const applyDefaultExtension = ({
+  url,
+  importer,
+  defaultExtension
+}) => {
+  if (urlToPathname(url).endsWith("/")) {
+    return url;
+  }
+
+  if (typeof defaultExtension === "string") {
+    const extension = pathnameToExtension(url);
+
+    if (extension === "") {
+      return `${url}${defaultExtension}`;
+    }
+
+    return url;
+  }
+
+  if (defaultExtension === true) {
+    const extension = pathnameToExtension(url);
+
+    if (extension === "" && importer) {
+      const importerPathname = urlToPathname(importer);
+      const importerExtension = pathnameToExtension(importerPathname);
+      return `${url}${importerExtension}`;
+    }
+  }
+
+  return url;
+};
+
 // eslint-disable-next-line import/no-unresolved
 const nodeRequire = require;
 const filenameContainsBackSlashes = __filename.indexOf("\\") > -1;
-const url = filenameContainsBackSlashes ? `file://${__filename.replace(/\\/g, "/")}` : `file://${__filename}`;
+const url = filenameContainsBackSlashes ? `file:///${__filename.replace(/\\/g, "/")}` : `file://${__filename}`;
 
 const assertUrlLike = (value, name = "url") => {
   if (typeof value !== "string") {
@@ -29,7 +576,7 @@ const assertUrlLike = (value, name = "url") => {
     throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
   }
 
-  if (!hasScheme(value)) {
+  if (!hasScheme$1(value)) {
     throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
   }
 };
@@ -43,7 +590,7 @@ const isWindowsPathnameSpecifier = specifier => {
   return thirdChar === "/";
 };
 
-const hasScheme = specifier => /^[a-zA-Z]+:/.test(specifier);
+const hasScheme$1 = specifier => /^[a-zA-Z]+:/.test(specifier);
 
 // https://git-scm.com/docs/gitignore
 const applySpecifierPatternMatching = ({
@@ -374,6 +921,65 @@ ${2 + rest.length}
   return specifierMetaMapNormalized;
 };
 
+const urlCanContainsMetaMatching = ({
+  url,
+  specifierMetaMap,
+  predicate,
+  ...rest
+}) => {
+  assertUrlLike(url, "url"); // the function was meants to be used on url ending with '/'
+
+  if (!url.endsWith("/")) {
+    throw new Error(`url should end with /, got ${url}`);
+  }
+
+  assertSpecifierMetaMap(specifierMetaMap);
+
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+
+  if (Object.keys(rest).length) {
+    throw new Error(`received more parameters than expected.
+--- name of unexpected parameters ---
+${Object.keys(rest)}
+--- name of expected parameters ---
+url, specifierMetaMap, predicate`);
+  } // for full match we must create an object to allow pattern to override previous ones
+
+
+  let fullMatchMeta = {};
+  let someFullMatch = false; // for partial match, any meta satisfying predicate will be valid because
+  // we don't know for sure if pattern will still match for a file inside pathname
+
+  const partialMatchMetaArray = [];
+  Object.keys(specifierMetaMap).forEach(specifier => {
+    const meta = specifierMetaMap[specifier];
+    const {
+      matched,
+      index
+    } = applySpecifierPatternMatching({
+      specifier,
+      url
+    });
+
+    if (matched) {
+      someFullMatch = true;
+      fullMatchMeta = { ...fullMatchMeta,
+        ...meta
+      };
+    } else if (someFullMatch === false && index >= url.length) {
+      partialMatchMetaArray.push(meta);
+    }
+  });
+
+  if (someFullMatch) {
+    return Boolean(predicate(fullMatchMeta));
+  }
+
+  return partialMatchMetaArray.some(partialMatchMeta => predicate(partialMatchMeta));
+};
+
 const urlToMeta = ({
   url,
   specifierMetaMap,
@@ -411,53 +1017,894 @@ url, specifierMetaMap`);
 const ensureUrlTrailingSlash = url => {
   return url.endsWith("/") ? url : `${url}/`;
 };
-const filePathToUrl = path => {
-  return path.startsWith("file://") ? path : String(url$1.pathToFileURL(path));
+
+const isFileSystemPath = value => {
+  if (typeof value !== "string") {
+    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
+  }
+
+  if (value[0] === "/") return true;
+  return startsWithWindowsDriveLetter(value);
 };
-const urlToFilePath = fileUrl => {
+
+const startsWithWindowsDriveLetter = string => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+  return true;
+};
+
+const fileSystemPathToUrl = value => {
+  if (!isFileSystemPath(value)) {
+    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
+  }
+
+  return String(url$1.pathToFileURL(value));
+};
+
+const assertAndNormalizeDirectoryUrl = value => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath(value)) {
+      urlString = fileSystemPathToUrl(value);
+    } else {
+      try {
+        urlString = String(new URL(value));
+      } catch (e) {
+        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`directoryUrl must starts with file://, received ${value}`);
+  }
+
+  return ensureUrlTrailingSlash(urlString);
+};
+
+const assertAndNormalizeFileUrl = (value, baseUrl) => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath(value)) {
+      urlString = fileSystemPathToUrl(value);
+    } else {
+      try {
+        urlString = String(new URL(value, baseUrl));
+      } catch (e) {
+        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`fileUrl must starts with file://, received ${value}`);
+  }
+
+  return urlString;
+};
+
+const statsToType = stats => {
+  if (stats.isFile()) return "file";
+  if (stats.isDirectory()) return "directory";
+  if (stats.isSymbolicLink()) return "symbolic-link";
+  if (stats.isFIFO()) return "fifo";
+  if (stats.isSocket()) return "socket";
+  if (stats.isCharacterDevice()) return "character-device";
+  if (stats.isBlockDevice()) return "block-device";
+  return undefined;
+};
+
+const urlToFileSystemPath = fileUrl => {
   return url$1.fileURLToPath(fileUrl);
 };
-const resolveDirectoryUrl = (specifier, baseUrl) => {
-  const directoryUrl = String(new URL(specifier, baseUrl));
 
-  if (directoryUrl.endsWith("/")) {
-    return directoryUrl;
+// https://nodejs.org/api/fs.html#fs_file_modes
+const {
+  S_IRUSR,
+  S_IWUSR,
+  S_IXUSR,
+  S_IRGRP,
+  S_IWGRP,
+  S_IXGRP,
+  S_IROTH,
+  S_IWOTH,
+  S_IXOTH
+} = fs.constants;
+const binaryFlagsToPermissions = binaryFlags => {
+  const owner = {
+    read: Boolean(binaryFlags & S_IRUSR),
+    write: Boolean(binaryFlags & S_IWUSR),
+    execute: Boolean(binaryFlags & S_IXUSR)
+  };
+  const group = {
+    read: Boolean(binaryFlags & S_IRGRP),
+    write: Boolean(binaryFlags & S_IWGRP),
+    execute: Boolean(binaryFlags & S_IXGRP)
+  };
+  const others = {
+    read: Boolean(binaryFlags & S_IROTH),
+    write: Boolean(binaryFlags & S_IWOTH),
+    execute: Boolean(binaryFlags & S_IXOTH)
+  };
+  return {
+    owner,
+    group,
+    others
+  };
+};
+const permissionsToBinaryFlags = ({
+  owner,
+  group,
+  others
+}) => {
+  let binaryFlags = 0;
+  if (owner.read) binaryFlags |= S_IRUSR;
+  if (owner.write) binaryFlags |= S_IWUSR;
+  if (owner.execute) binaryFlags |= S_IXUSR;
+  if (group.read) binaryFlags |= S_IRGRP;
+  if (group.write) binaryFlags |= S_IWGRP;
+  if (group.execute) binaryFlags |= S_IXGRP;
+  if (others.read) binaryFlags |= S_IROTH;
+  if (others.write) binaryFlags |= S_IWOTH;
+  if (others.execute) binaryFlags |= S_IXOTH;
+  return binaryFlags;
+};
+
+const {
+  stat
+} = fs.promises;
+const readFileSystemNodePermissions = async source => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  const {
+    mode
+  } = await stat(sourcePath);
+  return binaryFlagsToPermissions(mode);
+};
+
+const writeFileSystemNodePermissions = async (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  let binaryFlags;
+
+  if (typeof permissions === "object") {
+    permissions = {
+      owner: {
+        read: getPermissionOrComputeDefault("read", "owner", permissions),
+        write: getPermissionOrComputeDefault("write", "owner", permissions),
+        execute: getPermissionOrComputeDefault("execute", "owner", permissions)
+      },
+      group: {
+        read: getPermissionOrComputeDefault("read", "group", permissions),
+        write: getPermissionOrComputeDefault("write", "group", permissions),
+        execute: getPermissionOrComputeDefault("execute", "group", permissions)
+      },
+      others: {
+        read: getPermissionOrComputeDefault("read", "others", permissions),
+        write: getPermissionOrComputeDefault("write", "others", permissions),
+        execute: getPermissionOrComputeDefault("execute", "others", permissions)
+      }
+    };
+    binaryFlags = permissionsToBinaryFlags(permissions);
+  } else {
+    binaryFlags = permissions;
   }
 
-  return `${directoryUrl}/`;
+  return chmodNaive(sourcePath, binaryFlags);
 };
-const fileUrlToRelativePath = (fileUrl, baseFileUrl) => {
-  // https://stackoverflow.com/a/31024574/2634179
-  const fromPath = baseFileUrl.endsWith("/") ? urlToFilePath(baseFileUrl) : path.dirname(urlToFilePath(baseFileUrl));
-  const toPath = urlToFilePath(fileUrl);
-  const relativePath = path.relative(fromPath, toPath);
-  return relativePath;
+
+const chmodNaive = (fileSystemPath, binaryFlags) => {
+  return new Promise((resolve, reject) => {
+    fs.chmod(fileSystemPath, binaryFlags, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
 };
-const hasScheme$1 = string => {
-  return /^[a-zA-Z]{2,}:/.test(string);
+
+const actionLevels = {
+  read: 0,
+  write: 1,
+  execute: 2
 };
-const urlToRelativeUrl = (url, baseUrl) => {
-  if (typeof baseUrl !== "string") {
-    throw new TypeError(`baseUrl must be a string, got ${baseUrl}`);
+const subjectLevels = {
+  others: 0,
+  group: 1,
+  owner: 2
+};
+
+const getPermissionOrComputeDefault = (action, subject, permissions) => {
+  if (subject in permissions) {
+    const subjectPermissions = permissions[subject];
+
+    if (action in subjectPermissions) {
+      return subjectPermissions[action];
+    }
+
+    const actionLevel = actionLevels[action];
+    const actionFallback = Object.keys(actionLevels).find(actionFallbackCandidate => actionLevels[actionFallbackCandidate] > actionLevel && actionFallbackCandidate in subjectPermissions);
+
+    if (actionFallback) {
+      return subjectPermissions[actionFallback];
+    }
   }
 
-  if (url.startsWith(baseUrl)) {
-    // we should take into account only pathname
-    // and ignore search params
-    return url.slice(baseUrl.length);
+  const subjectLevel = subjectLevels[subject]; // do we have a subject with a stronger level (group or owner)
+  // where we could read the action permission ?
+
+  const subjectFallback = Object.keys(subjectLevels).find(subjectFallbackCandidate => subjectLevels[subjectFallbackCandidate] > subjectLevel && subjectFallbackCandidate in permissions);
+
+  if (subjectFallback) {
+    const subjectPermissions = permissions[subjectFallback];
+    return action in subjectPermissions ? subjectPermissions[action] : getPermissionOrComputeDefault(action, subjectFallback, permissions);
   }
 
-  return url;
+  return false;
 };
-const resolveUrl = (specifier, baseUrl) => {
+
+const grantPermissionsOnFileSystemNode = async (source, {
+  read = false,
+  write = false,
+  execute = false
+}) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  const filePermissions = await readFileSystemNodePermissions(sourceUrl);
+  await writeFileSystemNodePermissions(sourceUrl, {
+    owner: {
+      read,
+      write,
+      execute
+    },
+    group: {
+      read,
+      write,
+      execute
+    },
+    others: {
+      read,
+      write,
+      execute
+    }
+  });
+  return async () => {
+    await writeFileSystemNodePermissions(sourceUrl, filePermissions);
+  };
+};
+
+const readFileSystemNodeStat = async (source, {
+  nullIfNotFound = false,
+  followLink = true
+} = {}) => {
+  if (source.endsWith("/")) source = source.slice(0, -1);
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  const handleNotFoundOption = nullIfNotFound ? {
+    handleNotFoundError: () => null
+  } : {};
+  return readStat(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    handlePermissionDeniedError: async error => {
+      // Windows can EPERM on stat
+      try {
+        const restorePermission = await grantPermissionsOnFileSystemNode(sourceUrl, {
+          read: true,
+          write: true,
+          execute: true
+        });
+
+        try {
+          const stats = await readStat(sourcePath, {
+            followLink,
+            ...handleNotFoundOption,
+            // could not fix the permission error, give up and throw original error
+            handlePermissionDeniedError: () => {
+              throw error;
+            }
+          });
+          return stats;
+        } finally {
+          await restorePermission();
+        }
+      } catch (e) {
+        // failed to grant permissions, throw original error as well
+        throw error;
+      }
+    }
+  });
+};
+
+const readStat = (sourcePath, {
+  followLink,
+  handleNotFoundError = null,
+  handlePermissionDeniedError = null
+} = {}) => {
+  const nodeMethod = followLink ? fs.stat : fs.lstat;
+  return new Promise((resolve, reject) => {
+    nodeMethod(sourcePath, (error, statsObject) => {
+      if (error) {
+        if (handlePermissionDeniedError && (error.code === "EPERM" || error.code === "EACCES")) {
+          resolve(handlePermissionDeniedError(error));
+        } else if (handleNotFoundError && error.code === "ENOENT") {
+          resolve(handleNotFoundError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(statsObject);
+      }
+    });
+  });
+};
+
+const assertDirectoryPresence = async source => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  const sourceStats = await readFileSystemNodeStat(sourceUrl, {
+    nullIfNotFound: true
+  });
+
+  if (!sourceStats) {
+    throw new Error(`directory not found at ${sourcePath}`);
+  }
+
+  if (!sourceStats.isDirectory()) {
+    throw new Error(`directory expected at ${sourcePath} and found ${statsToType(sourceStats)} instead`);
+  }
+};
+
+const assertFilePresence = async source => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  const sourceStats = await readFileSystemNodeStat(sourceUrl, {
+    nullIfNotFound: true
+  });
+
+  if (!sourceStats) {
+    throw new Error(`file not found at ${sourcePath}`);
+  }
+
+  if (!sourceStats.isFile()) {
+    throw new Error(`file expected at ${sourcePath} and found ${statsToType(sourceStats)} instead`);
+  }
+};
+
+const {
+  mkdir
+} = fs.promises;
+const writeDirectory = async (destination, {
+  recursive = true,
+  allowUseless = false
+} = {}) => {
+  const destinationUrl = assertAndNormalizeDirectoryUrl(destination);
+  const destinationPath = urlToFileSystemPath(destinationUrl);
+  const destinationStats = await readFileSystemNodeStat(destinationUrl, {
+    nullIfNotFound: true,
+    followLink: false
+  });
+
+  if (destinationStats) {
+    if (destinationStats.isDirectory()) {
+      if (allowUseless) {
+        return;
+      }
+
+      throw new Error(`directory already exists at ${destinationPath}`);
+    }
+
+    const destinationType = statsToType(destinationStats);
+    throw new Error(`cannot write directory at ${destinationPath} because there is a ${destinationType}`);
+  }
+
+  try {
+    await mkdir(destinationPath, {
+      recursive
+    });
+  } catch (error) {
+    if (allowUseless && error.code === "EEXIST") {
+      return;
+    }
+
+    throw error;
+  }
+};
+
+const readDirectory = async (url, {
+  emfileMaxWait = 1000
+} = {}) => {
+  const directoryUrl = assertAndNormalizeDirectoryUrl(url);
+  const directoryPath = urlToFileSystemPath(directoryUrl);
+  const startMs = Date.now();
+  let attemptCount = 0;
+
+  const attempt = () => {
+    return readdirNaive(directoryPath, {
+      handleTooManyFilesOpenedError: async error => {
+        attemptCount++;
+        const nowMs = Date.now();
+        const timeSpentWaiting = nowMs - startMs;
+
+        if (timeSpentWaiting > emfileMaxWait) {
+          throw error;
+        }
+
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve(attempt());
+          }, attemptCount);
+        });
+      }
+    });
+  };
+
+  return attempt();
+};
+
+const readdirNaive = (directoryPath, {
+  handleTooManyFilesOpenedError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    fs.readdir(directoryPath, (error, names) => {
+      if (error) {
+        // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
+        if (handleTooManyFilesOpenedError && (error.code === "EMFILE" || error.code === "ENFILE")) {
+          resolve(handleTooManyFilesOpenedError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(names);
+      }
+    });
+  });
+};
+
+const resolveUrl$1 = (specifier, baseUrl) => {
   if (typeof baseUrl === "undefined") {
-    throw new TypeError(`baseUrl missing`);
+    throw new TypeError(`baseUrl missing to resolve ${specifier}`);
   }
 
   return String(new URL(specifier, baseUrl));
 };
-const sameOrigin = (url, otherUrl) => {
-  return new URL(url).origin === new URL(otherUrl).origin;
+
+const removeFileSystemNode = async (source, {
+  allowUseless = false,
+  recursive = false,
+  maxRetries = 3,
+  retryDelay = 100,
+  onlyContent = false
+} = {}) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  const sourceStats = await readFileSystemNodeStat(sourceUrl, {
+    nullIfNotFound: true,
+    followLink: false
+  });
+
+  if (!sourceStats) {
+    if (allowUseless) {
+      return;
+    }
+
+    throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
+  } // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
+  // FIFO and socket are ignored, not sure what they are exactly and what to do with them
+  // other libraries ignore them, let's do the same.
+
+
+  if (sourceStats.isFile() || sourceStats.isSymbolicLink() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
+    await removeNonDirectory(sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl, {
+      maxRetries,
+      retryDelay
+    });
+  } else if (sourceStats.isDirectory()) {
+    await removeDirectory(ensureUrlTrailingSlash(sourceUrl), {
+      recursive,
+      maxRetries,
+      retryDelay,
+      onlyContent
+    });
+  }
+};
+
+const removeNonDirectory = (sourceUrl, {
+  maxRetries,
+  retryDelay
+}) => {
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  let retryCount = 0;
+
+  const attempt = () => {
+    return unlinkNaive(sourcePath, { ...(retryCount >= maxRetries ? {} : {
+        handleTemporaryError: async () => {
+          retryCount++;
+          return new Promise(resolve => {
+            setTimeout(() => {
+              resolve(attempt());
+            }, retryCount * retryDelay);
+          });
+        }
+      })
+    });
+  };
+
+  return attempt();
+};
+
+const unlinkNaive = (sourcePath, {
+  handleTemporaryError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    fs.unlink(sourcePath, error => {
+      if (error) {
+        if (error.code === "ENOENT") {
+          resolve();
+        } else if (handleTemporaryError && (error.code === "EBUSY" || error.code === "EMFILE" || error.code === "ENFILE" || error.code === "ENOENT")) {
+          resolve(handleTemporaryError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const removeDirectory = async (rootDirectoryUrl, {
+  maxRetries,
+  retryDelay,
+  recursive,
+  onlyContent
+}) => {
+  const visit = async sourceUrl => {
+    const sourceStats = await readFileSystemNodeStat(sourceUrl, {
+      nullIfNotFound: true,
+      followLink: false
+    }); // file/directory not found
+
+    if (sourceStats === null) {
+      return;
+    }
+
+    if (sourceStats.isFile() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
+      await visitFile(sourceUrl);
+    } else if (sourceStats.isSymbolicLink()) {
+      await visitSymbolicLink(sourceUrl);
+    } else if (sourceStats.isDirectory()) {
+      await visitDirectory(`${sourceUrl}/`);
+    }
+  };
+
+  const visitDirectory = async directoryUrl => {
+    const directoryPath = urlToFileSystemPath(directoryUrl);
+    await removeDirectoryNaive(directoryPath, { ...(recursive ? {
+        handleNotEmptyError: async () => {
+          await removeDirectoryContent(directoryUrl);
+          await visitDirectory(directoryUrl);
+        }
+      } : {})
+    });
+  };
+
+  const removeDirectoryContent = async directoryUrl => {
+    const names = await readDirectory(directoryUrl);
+    await Promise.all(names.map(async name => {
+      const url = resolveUrl$1(name, directoryUrl);
+      await visit(url);
+    }));
+  };
+
+  const visitFile = async fileUrl => {
+    await removeNonDirectory(fileUrl, {
+      maxRetries,
+      retryDelay
+    });
+  };
+
+  const visitSymbolicLink = async symbolicLinkUrl => {
+    await removeNonDirectory(symbolicLinkUrl, {
+      maxRetries,
+      retryDelay
+    });
+  };
+
+  if (onlyContent) {
+    await removeDirectoryContent(rootDirectoryUrl);
+  } else {
+    await visitDirectory(rootDirectoryUrl);
+  }
+};
+
+const removeDirectoryNaive = (directoryPath, {
+  handleNotEmptyError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    fs.rmdir(directoryPath, (error, lstatObject) => {
+      if (error) {
+        if (error.code === "ENOENT") {
+          resolve();
+        } else if (handleNotEmptyError && ( // linux os
+        error.code === "ENOTEMPTY" || // SunOS
+        error.code === "EEXIST" || // windows os
+        error.code === "EPERM")) {
+          resolve(handleNotEmptyError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(lstatObject);
+      }
+    });
+  });
+};
+
+const ensureEmptyDirectory = async source => {
+  const stats = await readFileSystemNodeStat(source, {
+    nullIfNotFound: true,
+    followLink: false
+  });
+
+  if (stats === null) {
+    // if there is nothing, create a directory
+    return writeDirectory(source);
+  }
+
+  if (stats.isDirectory()) {
+    // if there is a directory remove its content and done
+    return removeFileSystemNode(source, {
+      allowUseless: true,
+      recursive: true,
+      onlyContent: true
+    });
+  }
+
+  const sourceType = statsToType(stats);
+  const sourcePath = urlToFileSystemPath(assertAndNormalizeFileUrl(source));
+  throw new Error(`ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`);
+};
+
+const isWindows = process.platform === "win32";
+const baseUrlFallback = fileSystemPathToUrl(process.cwd());
+/**
+ * Some url might be resolved or remapped to url without the windows drive letter.
+ * For instance
+ * new URL('/foo.js', 'file:///C:/dir/file.js')
+ * resolves to
+ * 'file:///foo.js'
+ *
+ * But on windows it becomes a problem because we need the drive letter otherwise
+ * url cannot be converted to a filesystem path.
+ *
+ * ensureWindowsDriveLetter ensure a resolved url still contains the drive letter.
+ */
+
+const ensureWindowsDriveLetter = (url, baseUrl) => {
+  try {
+    url = String(new URL(url));
+  } catch (e) {
+    throw new Error(`absolute url expected but got ${url}`);
+  }
+
+  if (!isWindows) {
+    return url;
+  }
+
+  try {
+    baseUrl = String(new URL(baseUrl));
+  } catch (e) {
+    throw new Error(`absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`);
+  }
+
+  if (!url.startsWith("file://")) {
+    return url;
+  }
+
+  const afterProtocol = url.slice("file://".length); // we still have the windows drive letter
+
+  if (extractDriveLetter(afterProtocol)) {
+    return url;
+  } // drive letter was lost, restore it
+
+
+  const baseUrlOrFallback = baseUrl.startsWith("file://") ? baseUrl : baseUrlFallback;
+  const driveLetter = extractDriveLetter(baseUrlOrFallback.slice("file://".length));
+
+  if (!driveLetter) {
+    throw new Error(`drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`);
+  }
+
+  return `file:///${driveLetter}:${afterProtocol}`;
+};
+
+const extractDriveLetter = ressource => {
+  // we still have the windows drive letter
+  if (/[a-zA-Z]/.test(ressource[1]) && ressource[2] === ":") {
+    return ressource[1];
+  }
+
+  return null;
+};
+
+const getCommonPathname = (pathname, otherPathname) => {
+  const firstDifferentCharacterIndex = findFirstDifferentCharacterIndex(pathname, otherPathname); // pathname and otherpathname are exactly the same
+
+  if (firstDifferentCharacterIndex === -1) {
+    return pathname;
+  }
+
+  const commonString = pathname.slice(0, firstDifferentCharacterIndex + 1); // the first different char is at firstDifferentCharacterIndex
+
+  if (pathname.charAt(firstDifferentCharacterIndex) === "/") {
+    return commonString;
+  }
+
+  if (otherPathname.charAt(firstDifferentCharacterIndex) === "/") {
+    return commonString;
+  }
+
+  const firstDifferentSlashIndex = commonString.lastIndexOf("/");
+  return pathname.slice(0, firstDifferentSlashIndex + 1);
+};
+
+const findFirstDifferentCharacterIndex = (string, otherString) => {
+  const maxCommonLength = Math.min(string.length, otherString.length);
+  let i = 0;
+
+  while (i < maxCommonLength) {
+    const char = string.charAt(i);
+    const otherChar = otherString.charAt(i);
+
+    if (char !== otherChar) {
+      return i;
+    }
+
+    i++;
+  }
+
+  if (string.length === otherString.length) {
+    return -1;
+  } // they differ at maxCommonLength
+
+
+  return maxCommonLength;
+};
+
+const pathnameToDirectoryPathname$1 = pathname => {
+  if (pathname.endsWith("/")) {
+    return pathname;
+  }
+
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex === -1) {
+    return "";
+  }
+
+  return pathname.slice(0, slashLastIndex + 1);
+};
+
+const urlToRelativeUrl = (urlArg, baseUrlArg) => {
+  const url = new URL(urlArg);
+  const baseUrl = new URL(baseUrlArg);
+
+  if (url.protocol !== baseUrl.protocol) {
+    return urlArg;
+  }
+
+  if (url.username !== baseUrl.username || url.password !== baseUrl.password) {
+    return urlArg.slice(url.protocol.length);
+  }
+
+  if (url.host !== baseUrl.host) {
+    return urlArg.slice(url.protocol.length);
+  }
+
+  const {
+    pathname,
+    hash,
+    search
+  } = url;
+
+  if (pathname === "/") {
+    return baseUrl.pathname.slice(1);
+  }
+
+  const {
+    pathname: basePathname
+  } = baseUrl;
+  const commonPathname = getCommonPathname(pathname, basePathname);
+
+  if (!commonPathname) {
+    return urlArg;
+  }
+
+  const specificPathname = pathname.slice(commonPathname.length);
+  const baseSpecificPathname = basePathname.slice(commonPathname.length);
+  const baseSpecificDirectoryPathname = pathnameToDirectoryPathname$1(baseSpecificPathname);
+  const relativeDirectoriesNotation = baseSpecificDirectoryPathname.replace(/.*?\//g, "../");
+  const relativePathname = `${relativeDirectoriesNotation}${specificPathname}`;
+  return `${relativePathname}${search}${hash}`;
+};
+
+const ensureParentDirectories = async destination => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationPath = urlToFileSystemPath(destinationUrl);
+  const destinationParentPath = path.dirname(destinationPath);
+  return writeDirectory(destinationParentPath, {
+    recursive: true,
+    allowUseless: true
+  });
+};
+
+const urlIsInsideOf = (urlValue, otherUrlValue) => {
+  const url = new URL(urlValue);
+  const otherUrl = new URL(otherUrlValue);
+
+  if (url.origin !== otherUrl.origin) {
+    return false;
+  }
+
+  const urlPathname = url.pathname;
+  const otherUrlPathname = otherUrl.pathname;
+
+  if (urlPathname === otherUrlPathname) {
+    return false;
+  }
+
+  return urlPathname.startsWith(otherUrlPathname);
+};
+
+const readFilePromisified = util.promisify(fs.readFile);
+const readFile = async value => {
+  const fileUrl = assertAndNormalizeFileUrl(value);
+  const filePath = urlToFileSystemPath(fileUrl);
+  const buffer = await readFilePromisified(filePath);
+  return buffer.toString();
+};
+
+const readFileSystemNodeModificationTime = async source => {
+  const stats = await readFileSystemNodeStat(source);
+  return stats.mtimeMs;
+};
+
+const resolveDirectoryUrl = (specifier, baseUrl) => {
+  const url = resolveUrl$1(specifier, baseUrl);
+  return ensureUrlTrailingSlash(url);
+};
+
+const {
+  writeFile: writeFileNode
+} = fs.promises;
+const writeFile = async (destination, content = "") => {
+  const destinationUrl = assertAndNormalizeFileUrl(destination);
+  const destinationPath = urlToFileSystemPath(destinationUrl);
+
+  try {
+    await writeFileNode(destinationPath, content);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      await ensureParentDirectories(destinationUrl);
+      await writeFileNode(destinationPath, content);
+      return;
+    }
+
+    throw error;
+  }
 };
 
 /* eslint-disable */
@@ -970,7 +2417,7 @@ const babelHelperNameToImportSpecifier = babelHelperName => {
   return `${babelHelperAbstractScope}${babelHelperName}/${babelHelperName}.js`;
 };
 const filePathToBabelHelperName = filePath => {
-  const fileUrl = filePathToUrl(filePath);
+  const fileUrl = fileSystemPathToUrl(filePath);
   const babelHelperPrefix = "core/helpers/babel/";
 
   if (fileUrl.includes(babelHelperPrefix)) {
@@ -1315,7 +2762,7 @@ const computeInputCodeAndInputMap = async ({
 
 const computeInputPath = url => {
   if (url.startsWith("file://")) {
-    return urlToFilePath(url);
+    return urlToFileSystemPath(url);
   }
 
   return url;
@@ -1323,7 +2770,7 @@ const computeInputPath = url => {
 
 const computeInputRelativePath = (url, projectDirectoryUrl) => {
   if (url.startsWith(projectDirectoryUrl)) {
-    return fileUrlToRelativePath(url, projectDirectoryUrl);
+    return urlToRelativeUrl(url, projectDirectoryUrl);
   }
 
   return undefined;
@@ -1487,15 +2934,15 @@ const createReplaceExpressionsBabelPlugin = ({
 
 const commonjs = nodeRequire("rollup-plugin-commonjs");
 
-const nodeResolve = nodeRequire("rollup-plugin-node-resolve");
+const nodeResolve = nodeRequire("@rollup/plugin-node-resolve");
 
 const builtins = nodeRequire("rollup-plugin-node-builtins");
 
-const createJSONRollupPlugin = nodeRequire("rollup-plugin-json");
+const createJSONRollupPlugin = nodeRequire("@rollup/plugin-json");
 
 const createNodeGlobalRollupPlugin = nodeRequire("rollup-plugin-node-globals");
 
-const createReplaceRollupPlugin = nodeRequire("rollup-plugin-replace");
+const createReplaceRollupPlugin = nodeRequire("@rollup/plugin-replace");
 
 const {
   rollup
@@ -1522,7 +2969,7 @@ const convertCommonJsWithRollup = async ({
     throw new Error(`compatible only with file:// protocol, got ${url}`);
   }
 
-  const filePath = urlToFilePath(url);
+  const filePath = urlToFileSystemPath(url);
   const nodeBuiltinsRollupPlugin = builtins();
   const nodeResolveRollupPlugin = nodeResolve({
     mainFields: ["main"]
@@ -1566,7 +3013,7 @@ const convertCommonJsWithRollup = async ({
     sourcemap: true,
     sourcemapExcludeSources: true,
     ...(urlAfterTransform ? {
-      dir: urlToFilePath(resolveUrl("./", urlAfterTransform))
+      dir: urlToFileSystemPath(resolveUrl$1("./", urlAfterTransform))
     } : {})
   };
   const result = await rollupBundle.generate(generateOptions);
@@ -1794,44 +3241,6 @@ stop`);
   return operationPromise;
 };
 
-const firstOperationMatching = ({
-  array,
-  start,
-  predicate
-}) => {
-  if (typeof array !== "object") {
-    throw new TypeError(`array must be an object, got ${array}`);
-  }
-
-  if (typeof start !== "function") {
-    throw new TypeError(`start must be a function, got ${start}`);
-  }
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-
-  return new Promise((resolve, reject) => {
-    const visit = index => {
-      if (index >= array.length) {
-        return resolve();
-      }
-
-      const input = array[index];
-      const returnValue = start(input);
-      return Promise.resolve(returnValue).then(output => {
-        if (predicate(output)) {
-          return resolve(output);
-        }
-
-        return visit(index + 1);
-      }, reject);
-    };
-
-    visit(0);
-  });
-};
-
 const createCancelError = reason => {
   const cancelError = new Error(`canceled because ${reason}`);
   cancelError.name = "CANCEL_ERROR";
@@ -2046,14 +3455,7 @@ const createLogger = ({
     };
   }
 
-  throw new Error(createUnexpectedLogLevelMessage({
-    logLevel
-  }));
-};
-
-const createUnexpectedLogLevelMessage = ({
-  logLevel
-}) => `unexpected logLevel.
+  throw new Error(`unexpected logLevel.
 --- logLevel ---
 ${logLevel}
 --- allowed log levels ---
@@ -2061,9 +3463,8 @@ ${LOG_LEVEL_OFF}
 ${LOG_LEVEL_ERROR}
 ${LOG_LEVEL_WARN}
 ${LOG_LEVEL_INFO}
-${LOG_LEVEL_DEBUG}
-`;
-
+${LOG_LEVEL_DEBUG}`);
+};
 const debug = console.debug;
 
 const debugDisabled = () => {};
@@ -2080,135 +3481,15 @@ const error = console.error;
 
 const errorDisabled = () => {};
 
-const rimraf = nodeRequire("rimraf");
-
-const createFileDirectories = filePath => {
-  return new Promise((resolve, reject) => {
-    fs.mkdir(path.dirname(filePath), {
-      recursive: true
-    }, error => {
-      if (error) {
-        if (error.code === "EEXIST") {
-          resolve();
-          return;
-        }
-
-        reject(error);
-        return;
-      }
-
-      resolve();
-    });
-  });
-};
-const statPromisified = util.promisify(fs.stat);
-const readFileStat = async filePath => {
-  const statsObject = await statPromisified(filePath);
-  return statsObject;
-};
-const readFilePromisified = util.promisify(fs.readFile);
-const readFileContent = async filePath => {
-  const buffer = await readFilePromisified(filePath);
-  return buffer.toString();
-};
-const writeFilePromisified = util.promisify(fs.writeFile);
-const writeFileContent = async (filePath, content) => {
-  await createFileDirectories(filePath);
-  return writeFilePromisified(filePath, content);
-};
-const removeDirectory = path => new Promise((resolve, reject) => rimraf(path, error => {
-  if (error) reject(error);else resolve();
-}));
-const removeFile = path => new Promise((resolve, reject) => {
-  fs.unlink(path, error => {
-    if (error) {
-      reject(error);
-    } else {
-      resolve();
-    }
-  });
-});
-const assertDirectoryExists = async fileUrl => {
-  const directoryPath = urlToFilePath(fileUrl);
-  const filesystemEntry = await pathToFilesystemEntry(directoryPath);
-
-  if (!filesystemEntry) {
-    throw new Error(`directory not found at ${directoryPath}`);
-  }
-
-  const {
-    type
-  } = filesystemEntry;
-
-  if (type !== "folder") {
-    throw new Error(`directory expected at ${directoryPath} but found ${type}`);
-  }
-};
-const assertFileExists = async fileUrl => {
-  const filePath = urlToFilePath(fileUrl);
-  const filesystemEntry = await pathToFilesystemEntry(filePath);
-
-  if (!filesystemEntry) {
-    throw new Error(`file not found at ${filePath}`);
-  }
-
-  const {
-    type
-  } = filesystemEntry;
-
-  if (type !== "file") {
-    throw new Error(`file expected at ${filePath} but found ${type}`);
-  }
-};
-const fileExists = fileUrl => {
-  return new Promise((resolve, reject) => {
-    fs.stat(urlToFilePath(fileUrl), error => {
-      if (error) {
-        if (error.code === "ENOENT") resolve(false);else reject(error);
-      } else {
-        resolve(true);
-      }
-    });
-  });
-};
-
-const pathToFilesystemEntry = path => new Promise((resolve, reject) => {
-  fs.stat(path, (error, stats) => {
-    if (error) {
-      if (error.code === "ENOENT") resolve(null);else reject(error);
-    } else {
-      resolve({
-        // eslint-disable-next-line no-nested-ternary
-        type: stats.isFile() ? "file" : stats.isDirectory() ? "folder" : "other",
-        stats
-      });
-    }
-  });
-});
-
 const assertProjectDirectoryUrl = ({
   projectDirectoryUrl
 }) => {
-  if (projectDirectoryUrl instanceof URL) {
-    projectDirectoryUrl = projectDirectoryUrl.href;
-  }
-
-  if (typeof projectDirectoryUrl === "string") {
-    const url = hasScheme$1(projectDirectoryUrl) ? projectDirectoryUrl : filePathToUrl(projectDirectoryUrl);
-
-    if (!url.startsWith("file://")) {
-      throw new Error(`projectDirectoryUrl must starts with file://, received ${projectDirectoryUrl}`);
-    }
-
-    return ensureUrlTrailingSlash(url);
-  }
-
-  throw new TypeError(`projectDirectoryUrl must be a string or an url, received ${projectDirectoryUrl}`);
+  return assertAndNormalizeDirectoryUrl(projectDirectoryUrl);
 };
 const assertProjectDirectoryExists = ({
   projectDirectoryUrl
 }) => {
-  assertDirectoryExists(projectDirectoryUrl);
+  assertDirectoryPresence(projectDirectoryUrl);
 };
 const assertImportMapFileRelativeUrl = ({
   importMapFileRelativeUrl
@@ -2221,7 +3502,7 @@ const assertImportMapFileInsideProject = ({
   importMapFileUrl,
   projectDirectoryUrl
 }) => {
-  if (!importMapFileUrl.startsWith(projectDirectoryUrl)) {
+  if (!urlIsInsideOf(importMapFileUrl, projectDirectoryUrl)) {
     throw new Error(`importmap file must be inside project directory
 --- import map file url ---
 ${importMapFileUrl}
@@ -2229,345 +3510,6 @@ ${importMapFileUrl}
 ${projectDirectoryUrl}`);
   }
 };
-
-const assertImportMap = value => {
-  if (value === null) {
-    throw new TypeError(`an importMap must be an object, got null`);
-  }
-
-  const type = typeof value;
-
-  if (type !== "object") {
-    throw new TypeError(`an importMap must be an object, received ${value}`);
-  }
-
-  if (Array.isArray(value)) {
-    throw new TypeError(`an importMap must be an object, received array ${value}`);
-  }
-};
-
-const hasScheme$2 = string => {
-  return /^[a-zA-Z]{2,}:/.test(string);
-};
-
-const urlToScheme = urlString => {
-  const colonIndex = urlString.indexOf(":");
-  if (colonIndex === -1) return "";
-  return urlString.slice(0, colonIndex);
-};
-
-const urlToPathname = urlString => {
-  return ressourceToPathname(urlToRessource(urlString));
-};
-
-const urlToRessource = urlString => {
-  const scheme = urlToScheme(urlString);
-
-  if (scheme === "file") {
-    return urlString.slice("file://".length);
-  }
-
-  if (scheme === "https" || scheme === "http") {
-    // remove origin
-    const afterProtocol = urlString.slice(scheme.length + "://".length);
-    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
-    return afterProtocol.slice(pathnameSlashIndex);
-  }
-
-  return urlString.slice(scheme.length + 1);
-};
-
-const ressourceToPathname = ressource => {
-  const searchSeparatorIndex = ressource.indexOf("?");
-  return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex);
-};
-
-const urlToOrigin = urlString => {
-  const scheme = urlToScheme(urlString);
-
-  if (scheme === "file") {
-    return "file://";
-  }
-
-  if (scheme === "http" || scheme === "https") {
-    const secondProtocolSlashIndex = scheme.length + "://".length;
-    const pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
-    if (pathnameSlashIndex === -1) return urlString;
-    return urlString.slice(0, pathnameSlashIndex);
-  }
-
-  return urlString.slice(0, scheme.length + 1);
-};
-
-const pathnameToDirectoryPathname = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-  if (slashLastIndex === -1) return "";
-  return pathname.slice(0, slashLastIndex);
-};
-
-// could be useful: https://url.spec.whatwg.org/#url-miscellaneous
-const resolveUrl$1 = (specifier, baseUrl) => {
-  if (baseUrl) {
-    if (typeof baseUrl !== "string") {
-      throw new TypeError(writeBaseUrlMustBeAString({
-        baseUrl,
-        specifier
-      }));
-    }
-
-    if (!hasScheme$2(baseUrl)) {
-      throw new Error(writeBaseUrlMustBeAbsolute({
-        baseUrl,
-        specifier
-      }));
-    }
-  }
-
-  if (hasScheme$2(specifier)) {
-    return specifier;
-  }
-
-  if (!baseUrl) {
-    throw new Error(writeBaseUrlRequired({
-      baseUrl,
-      specifier
-    }));
-  } // scheme relative
-
-
-  if (specifier.slice(0, 2) === "//") {
-    return `${urlToScheme(baseUrl)}:${specifier}`;
-  } // origin relative
-
-
-  if (specifier[0] === "/") {
-    return `${urlToOrigin(baseUrl)}${specifier}`;
-  }
-
-  const baseOrigin = urlToOrigin(baseUrl);
-  const basePathname = urlToPathname(baseUrl);
-
-  if (specifier === ".") {
-    const baseDirectoryPathname = pathnameToDirectoryPathname(basePathname);
-    return `${baseOrigin}${baseDirectoryPathname}/`;
-  } // pathname relative inside
-
-
-  if (specifier.slice(0, 2) === "./") {
-    const baseDirectoryPathname = pathnameToDirectoryPathname(basePathname);
-    return `${baseOrigin}${baseDirectoryPathname}/${specifier.slice(2)}`;
-  } // pathname relative outside
-
-
-  if (specifier.slice(0, 3) === "../") {
-    let unresolvedPathname = specifier;
-    const importerFolders = basePathname.split("/");
-    importerFolders.pop();
-
-    while (unresolvedPathname.slice(0, 3) === "../") {
-      unresolvedPathname = unresolvedPathname.slice(3); // when there is no folder left to resolved
-      // we just ignore '../'
-
-      if (importerFolders.length) {
-        importerFolders.pop();
-      }
-    }
-
-    const resolvedPathname = `${importerFolders.join("/")}/${unresolvedPathname}`;
-    return `${baseOrigin}${resolvedPathname}`;
-  } // bare
-
-
-  if (basePathname === "") {
-    return `${baseOrigin}/${specifier}`;
-  }
-
-  if (basePathname[basePathname.length] === "/") {
-    return `${baseOrigin}${basePathname}${specifier}`;
-  }
-
-  return `${baseOrigin}${pathnameToDirectoryPathname(basePathname)}/${specifier}`;
-};
-
-const writeBaseUrlMustBeAString = ({
-  baseUrl,
-  specifier
-}) => `baseUrl must be a string.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const writeBaseUrlMustBeAbsolute = ({
-  baseUrl,
-  specifier
-}) => `baseUrl must be absolute.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const writeBaseUrlRequired = ({
-  baseUrl,
-  specifier
-}) => `baseUrl required to resolve relative specifier.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const tryUrlResolution = (string, url) => {
-  const result = resolveUrl$1(string, url);
-  return hasScheme$2(result) ? result : null;
-};
-
-const resolveSpecifier = (specifier, importer) => {
-  if (specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
-    return resolveUrl$1(specifier, importer);
-  }
-
-  if (hasScheme$2(specifier)) {
-    return specifier;
-  }
-
-  return null;
-};
-
-const applyImportMap = ({
-  importMap,
-  specifier,
-  importer
-}) => {
-  assertImportMap(importMap);
-
-  if (typeof specifier !== "string") {
-    throw new TypeError(writeSpecifierMustBeAString({
-      specifier,
-      importer
-    }));
-  }
-
-  if (importer) {
-    if (typeof importer !== "string") {
-      throw new TypeError(writeImporterMustBeAString({
-        importer,
-        specifier
-      }));
-    }
-
-    if (!hasScheme$2(importer)) {
-      throw new Error(writeImporterMustBeAbsolute({
-        importer,
-        specifier
-      }));
-    }
-  }
-
-  const specifierUrl = resolveSpecifier(specifier, importer);
-  const specifierNormalized = specifierUrl || specifier;
-  const {
-    scopes
-  } = importMap;
-
-  if (scopes && importer) {
-    const scopeKeyMatching = Object.keys(scopes).find(scopeKey => {
-      return scopeKey === importer || specifierIsPrefixOf(scopeKey, importer);
-    });
-
-    if (scopeKeyMatching) {
-      const scopeValue = scopes[scopeKeyMatching];
-      const remappingFromScopeImports = applyImports(specifierNormalized, scopeValue);
-
-      if (remappingFromScopeImports !== null) {
-        return remappingFromScopeImports;
-      }
-    }
-  }
-
-  const {
-    imports
-  } = importMap;
-
-  if (imports) {
-    const remappingFromImports = applyImports(specifierNormalized, imports);
-
-    if (remappingFromImports !== null) {
-      return remappingFromImports;
-    }
-  }
-
-  if (specifierUrl) {
-    return specifierUrl;
-  }
-
-  throw new Error(writeBareSpecifierMustBeRemapped({
-    specifier,
-    importer
-  }));
-};
-
-const applyImports = (specifier, imports) => {
-  const importKeyArray = Object.keys(imports);
-  let i = 0;
-
-  while (i < importKeyArray.length) {
-    const importKey = importKeyArray[i];
-    i++;
-
-    if (importKey === specifier) {
-      const importValue = imports[importKey];
-      return importValue;
-    }
-
-    if (specifierIsPrefixOf(importKey, specifier)) {
-      const importValue = imports[importKey];
-      const afterImportKey = specifier.slice(importKey.length);
-      return tryUrlResolution(afterImportKey, importValue);
-    }
-  }
-
-  return null;
-};
-
-const specifierIsPrefixOf = (specifierHref, href) => {
-  return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
-};
-
-const writeSpecifierMustBeAString = ({
-  specifier,
-  importer
-}) => `specifier must be a string.
---- specifier ---
-${specifier}
---- importer ---
-${importer}`;
-
-const writeImporterMustBeAString = ({
-  importer,
-  specifier
-}) => `importer must be a string.
---- importer ---
-${importer}
---- specifier ---
-${specifier}`;
-
-const writeImporterMustBeAbsolute = ({
-  importer,
-  specifier
-}) => `importer must be an absolute url.
---- importer ---
-${importer}
---- specifier ---
-${specifier}`;
-
-const writeBareSpecifierMustBeRemapped = ({
-  specifier,
-  importer
-}) => `Unmapped bare specifier.
---- specifier ---
-${specifier}
---- importer ---
-${importer}`;
 
 // https://github.com/systemjs/systemjs/blob/89391f92dfeac33919b0223bbf834a1f4eea5750/src/common.js#L136
 const composeTwoImportMaps = (leftImportMap, rightImportMap) => {
@@ -2601,284 +3543,547 @@ const composeTwoScopes = (leftScopes = {}, rightScopes = {}) => {
   return scopes;
 };
 
+const assertImportMap$1 = value => {
+  if (value === null) {
+    throw new TypeError(`an importMap must be an object, got null`);
+  }
+
+  const type = typeof value;
+
+  if (type !== "object") {
+    throw new TypeError(`an importMap must be an object, received ${value}`);
+  }
+
+  if (Array.isArray(value)) {
+    throw new TypeError(`an importMap must be an object, received array ${value}`);
+  }
+};
+
 const sortImportMap = importMap => {
-  assertImportMap(importMap);
+  assertImportMap$1(importMap);
   const {
     imports,
     scopes
   } = importMap;
   return {
-    imports: imports ? sortImports(imports) : undefined,
-    scopes: scopes ? sortScopes(scopes) : undefined
+    imports: imports ? sortImports$1(imports) : undefined,
+    scopes: scopes ? sortScopes$1(scopes) : undefined
   };
 };
-const sortImports = imports => {
+const sortImports$1 = imports => {
   const importsSorted = {};
-  Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(name => {
+  Object.keys(imports).sort(compareLengthOrLocaleCompare$1).forEach(name => {
     importsSorted[name] = imports[name];
   });
   return importsSorted;
 };
-const sortScopes = scopes => {
+const sortScopes$1 = scopes => {
   const scopesSorted = {};
-  Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(scopeName => {
-    scopesSorted[scopeName] = sortImports(scopes[scopeName]);
+  Object.keys(scopes).sort(compareLengthOrLocaleCompare$1).forEach(scopeName => {
+    scopesSorted[scopeName] = sortImports$1(scopes[scopeName]);
   });
   return scopesSorted;
 };
 
-const compareLengthOrLocaleCompare = (a, b) => {
+const compareLengthOrLocaleCompare$1 = (a, b) => {
   return b.length - a.length || a.localeCompare(b);
 };
 
-const normalizeImportMap = (importMap, baseUrl) => {
-  assertImportMap(importMap);
+const ensureUrlTrailingSlash$1 = url => {
+  return url.endsWith("/") ? url : `${url}/`;
+};
 
-  if (typeof baseUrl !== "string") {
-    throw new TypeError(formulateBaseUrlMustBeAString({
-      baseUrl
-    }));
+const isFileSystemPath$1 = value => {
+  if (typeof value !== "string") {
+    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
+  }
+
+  if (value[0] === "/") return true;
+  return startsWithWindowsDriveLetter$1(value);
+};
+
+const startsWithWindowsDriveLetter$1 = string => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+  return true;
+};
+
+const fileSystemPathToUrl$1 = value => {
+  if (!isFileSystemPath$1(value)) {
+    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
+  }
+
+  return String(url$1.pathToFileURL(value));
+};
+
+const assertAndNormalizeDirectoryUrl$1 = value => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath$1(value)) {
+      urlString = fileSystemPathToUrl$1(value);
+    } else {
+      try {
+        urlString = String(new URL(value));
+      } catch (e) {
+        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`directoryUrl must starts with file://, received ${value}`);
+  }
+
+  return ensureUrlTrailingSlash$1(urlString);
+};
+
+const assertAndNormalizeFileUrl$1 = (value, baseUrl) => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath$1(value)) {
+      urlString = fileSystemPathToUrl$1(value);
+    } else {
+      try {
+        urlString = String(new URL(value, baseUrl));
+      } catch (e) {
+        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`fileUrl must starts with file://, received ${value}`);
+  }
+
+  return urlString;
+};
+
+const urlToFileSystemPath$1 = fileUrl => {
+  if (fileUrl[fileUrl.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    fileUrl = fileUrl.slice(0, -1);
+  }
+
+  const fileSystemPath = url$1.fileURLToPath(fileUrl);
+  return fileSystemPath;
+};
+
+// https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
+// https://nodejs.org/api/fs.html#fs_file_modes
+// https://github.com/TooTallNate/stat-mode
+// cannot get from fs.constants because they are not available on windows
+const S_IRUSR$1 = 256;
+/* 0000400 read permission, owner */
+
+const S_IWUSR$1 = 128;
+/* 0000200 write permission, owner */
+
+const S_IXUSR$1 = 64;
+/* 0000100 execute/search permission, owner */
+
+const S_IRGRP$1 = 32;
+/* 0000040 read permission, group */
+
+const S_IWGRP$1 = 16;
+/* 0000020 write permission, group */
+
+const S_IXGRP$1 = 8;
+/* 0000010 execute/search permission, group */
+
+const S_IROTH$1 = 4;
+/* 0000004 read permission, others */
+
+const S_IWOTH$1 = 2;
+/* 0000002 write permission, others */
+
+const S_IXOTH$1 = 1;
+const permissionsToBinaryFlags$1 = ({
+  owner,
+  group,
+  others
+}) => {
+  let binaryFlags = 0;
+  if (owner.read) binaryFlags |= S_IRUSR$1;
+  if (owner.write) binaryFlags |= S_IWUSR$1;
+  if (owner.execute) binaryFlags |= S_IXUSR$1;
+  if (group.read) binaryFlags |= S_IRGRP$1;
+  if (group.write) binaryFlags |= S_IWGRP$1;
+  if (group.execute) binaryFlags |= S_IXGRP$1;
+  if (others.read) binaryFlags |= S_IROTH$1;
+  if (others.write) binaryFlags |= S_IWOTH$1;
+  if (others.execute) binaryFlags |= S_IXOTH$1;
+  return binaryFlags;
+};
+
+const writeFileSystemNodePermissions$1 = async (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl$1(source);
+  const sourcePath = urlToFileSystemPath$1(sourceUrl);
+  let binaryFlags;
+
+  if (typeof permissions === "object") {
+    permissions = {
+      owner: {
+        read: getPermissionOrComputeDefault$1("read", "owner", permissions),
+        write: getPermissionOrComputeDefault$1("write", "owner", permissions),
+        execute: getPermissionOrComputeDefault$1("execute", "owner", permissions)
+      },
+      group: {
+        read: getPermissionOrComputeDefault$1("read", "group", permissions),
+        write: getPermissionOrComputeDefault$1("write", "group", permissions),
+        execute: getPermissionOrComputeDefault$1("execute", "group", permissions)
+      },
+      others: {
+        read: getPermissionOrComputeDefault$1("read", "others", permissions),
+        write: getPermissionOrComputeDefault$1("write", "others", permissions),
+        execute: getPermissionOrComputeDefault$1("execute", "others", permissions)
+      }
+    };
+    binaryFlags = permissionsToBinaryFlags$1(permissions);
+  } else {
+    binaryFlags = permissions;
+  }
+
+  return chmodNaive$1(sourcePath, binaryFlags);
+};
+
+const chmodNaive$1 = (fileSystemPath, binaryFlags) => {
+  return new Promise((resolve, reject) => {
+    fs.chmod(fileSystemPath, binaryFlags, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const actionLevels$1 = {
+  read: 0,
+  write: 1,
+  execute: 2
+};
+const subjectLevels$1 = {
+  others: 0,
+  group: 1,
+  owner: 2
+};
+
+const getPermissionOrComputeDefault$1 = (action, subject, permissions) => {
+  if (subject in permissions) {
+    const subjectPermissions = permissions[subject];
+
+    if (action in subjectPermissions) {
+      return subjectPermissions[action];
+    }
+
+    const actionLevel = actionLevels$1[action];
+    const actionFallback = Object.keys(actionLevels$1).find(actionFallbackCandidate => actionLevels$1[actionFallbackCandidate] > actionLevel && actionFallbackCandidate in subjectPermissions);
+
+    if (actionFallback) {
+      return subjectPermissions[actionFallback];
+    }
+  }
+
+  const subjectLevel = subjectLevels$1[subject]; // do we have a subject with a stronger level (group or owner)
+  // where we could read the action permission ?
+
+  const subjectFallback = Object.keys(subjectLevels$1).find(subjectFallbackCandidate => subjectLevels$1[subjectFallbackCandidate] > subjectLevel && subjectFallbackCandidate in permissions);
+
+  if (subjectFallback) {
+    const subjectPermissions = permissions[subjectFallback];
+    return action in subjectPermissions ? subjectPermissions[action] : getPermissionOrComputeDefault$1(action, subjectFallback, permissions);
+  }
+
+  return false;
+};
+
+const isWindows$1 = process.platform === "win32";
+const readFileSystemNodeStat$1 = async (source, {
+  nullIfNotFound = false,
+  followLink = true
+} = {}) => {
+  if (source.endsWith("/")) source = source.slice(0, -1);
+  const sourceUrl = assertAndNormalizeFileUrl$1(source);
+  const sourcePath = urlToFileSystemPath$1(sourceUrl);
+  const handleNotFoundOption = nullIfNotFound ? {
+    handleNotFoundError: () => null
+  } : {};
+  return readStat$1(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows$1 ? {
+      // Windows can EPERM on stat
+      handlePermissionDeniedError: async error => {
+        // unfortunately it means we mutate the permissions
+        // without being able to restore them to the previous value
+        // (because reading current permission would also throw)
+        try {
+          await writeFileSystemNodePermissions$1(sourceUrl, 0o666);
+          const stats = await readStat$1(sourcePath, {
+            followLink,
+            ...handleNotFoundOption,
+            // could not fix the permission error, give up and throw original error
+            handlePermissionDeniedError: () => {
+              throw error;
+            }
+          });
+          return stats;
+        } catch (e) {
+          // failed to write permission or readState, throw original error as well
+          throw error;
+        }
+      }
+    } : {})
+  });
+};
+
+const readStat$1 = (sourcePath, {
+  followLink,
+  handleNotFoundError = null,
+  handlePermissionDeniedError = null
+} = {}) => {
+  const nodeMethod = followLink ? fs.stat : fs.lstat;
+  return new Promise((resolve, reject) => {
+    nodeMethod(sourcePath, (error, statsObject) => {
+      if (error) {
+        if (handlePermissionDeniedError && (error.code === "EPERM" || error.code === "EACCES")) {
+          resolve(handlePermissionDeniedError(error));
+        } else if (handleNotFoundError && error.code === "ENOENT") {
+          resolve(handleNotFoundError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(statsObject);
+      }
+    });
+  });
+};
+
+const getCommonPathname$1 = (pathname, otherPathname) => {
+  const firstDifferentCharacterIndex = findFirstDifferentCharacterIndex$1(pathname, otherPathname); // pathname and otherpathname are exactly the same
+
+  if (firstDifferentCharacterIndex === -1) {
+    return pathname;
+  }
+
+  const commonString = pathname.slice(0, firstDifferentCharacterIndex + 1); // the first different char is at firstDifferentCharacterIndex
+
+  if (pathname.charAt(firstDifferentCharacterIndex) === "/") {
+    return commonString;
+  }
+
+  if (otherPathname.charAt(firstDifferentCharacterIndex) === "/") {
+    return commonString;
+  }
+
+  const firstDifferentSlashIndex = commonString.lastIndexOf("/");
+  return pathname.slice(0, firstDifferentSlashIndex + 1);
+};
+
+const findFirstDifferentCharacterIndex$1 = (string, otherString) => {
+  const maxCommonLength = Math.min(string.length, otherString.length);
+  let i = 0;
+
+  while (i < maxCommonLength) {
+    const char = string.charAt(i);
+    const otherChar = otherString.charAt(i);
+
+    if (char !== otherChar) {
+      return i;
+    }
+
+    i++;
+  }
+
+  if (string.length === otherString.length) {
+    return -1;
+  } // they differ at maxCommonLength
+
+
+  return maxCommonLength;
+};
+
+const pathnameToDirectoryPathname$2 = pathname => {
+  if (pathname.endsWith("/")) {
+    return pathname;
+  }
+
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex === -1) {
+    return "";
+  }
+
+  return pathname.slice(0, slashLastIndex + 1);
+};
+
+const urlToRelativeUrl$1 = (urlArg, baseUrlArg) => {
+  const url = new URL(urlArg);
+  const baseUrl = new URL(baseUrlArg);
+
+  if (url.protocol !== baseUrl.protocol) {
+    return urlArg;
+  }
+
+  if (url.username !== baseUrl.username || url.password !== baseUrl.password) {
+    return urlArg.slice(url.protocol.length);
+  }
+
+  if (url.host !== baseUrl.host) {
+    return urlArg.slice(url.protocol.length);
   }
 
   const {
-    imports,
-    scopes
-  } = importMap;
-  return {
-    imports: imports ? normalizeImports(imports, baseUrl) : undefined,
-    scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
-  };
-};
+    pathname,
+    hash,
+    search
+  } = url;
 
-const normalizeImports = (imports, baseUrl) => {
-  const importsNormalized = {};
-  Object.keys(imports).forEach(specifier => {
-    const address = imports[specifier];
-
-    if (typeof address !== "string") {
-      console.warn(formulateAddressMustBeAString({
-        address,
-        specifier
-      }));
-      return;
-    }
-
-    const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
-    const addressUrl = tryUrlResolution(address, baseUrl);
-
-    if (addressUrl === null) {
-      console.warn(formulateAdressResolutionFailed({
-        address,
-        baseUrl,
-        specifier
-      }));
-      return;
-    }
-
-    if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
-      console.warn(formulateAddressUrlRequiresTrailingSlash({
-        addressUrl,
-        address,
-        specifier
-      }));
-      return;
-    }
-
-    importsNormalized[specifierResolved] = addressUrl;
-  });
-  return sortImports(importsNormalized);
-};
-
-const normalizeScopes = (scopes, baseUrl) => {
-  const scopesNormalized = {};
-  Object.keys(scopes).forEach(scope => {
-    const scopeValue = scopes[scope];
-    const scopeUrl = tryUrlResolution(scope, baseUrl);
-
-    if (scopeUrl === null) {
-      console.warn(formulateScopeResolutionFailed({
-        scope,
-        baseUrl
-      }));
-      return;
-    }
-
-    const scopeValueNormalized = normalizeImports(scopeValue, baseUrl);
-    scopesNormalized[scopeUrl] = scopeValueNormalized;
-  });
-  return sortScopes(scopesNormalized);
-};
-
-const formulateBaseUrlMustBeAString = ({
-  baseUrl
-}) => `baseUrl must be a string.
---- base url ---
-${baseUrl}`;
-
-const formulateAddressMustBeAString = ({
-  specifier,
-  address
-}) => `Address must be a string.
---- address ---
-${address}
---- specifier ---
-${specifier}`;
-
-const formulateAdressResolutionFailed = ({
-  address,
-  baseUrl,
-  specifier
-}) => `Address url resolution failed.
---- address ---
-${address}
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const formulateAddressUrlRequiresTrailingSlash = ({
-  addressURL,
-  address,
-  specifier
-}) => `Address must end with /.
---- address url ---
-${addressURL}
---- address ---
-${address}
---- specifier ---
-${specifier}`;
-
-const formulateScopeResolutionFailed = ({
-  scope,
-  baseUrl
-}) => `Scope url resolution failed.
---- scope ---
-${scope}
---- base url ---
-${baseUrl}`;
-
-const pathnameToExtension = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-
-  if (slashLastIndex !== -1) {
-    pathname = pathname.slice(slashLastIndex + 1);
+  if (pathname === "/") {
+    return baseUrl.pathname.slice(1);
   }
 
-  const dotLastIndex = pathname.lastIndexOf(".");
-  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+  const {
+    pathname: basePathname
+  } = baseUrl;
+  const commonPathname = getCommonPathname$1(pathname, basePathname);
 
-  return pathname.slice(dotLastIndex);
-};
-
-const resolveImport = ({
-  specifier,
-  importer,
-  importMap,
-  defaultExtension = true
-}) => {
-  return applyDefaultExtension({
-    url: importMap ? applyImportMap({
-      importMap,
-      specifier,
-      importer
-    }) : resolveUrl$1(specifier, importer),
-    importer,
-    defaultExtension
-  });
-};
-
-const applyDefaultExtension = ({
-  url,
-  importer,
-  defaultExtension
-}) => {
-  if (urlToPathname(url).endsWith("/")) {
-    return url;
+  if (!commonPathname) {
+    return urlArg;
   }
 
-  if (typeof defaultExtension === "string") {
-    const extension = pathnameToExtension(url);
+  const specificPathname = pathname.slice(commonPathname.length);
+  const baseSpecificPathname = basePathname.slice(commonPathname.length);
+  const baseSpecificDirectoryPathname = pathnameToDirectoryPathname$2(baseSpecificPathname);
+  const relativeDirectoriesNotation = baseSpecificDirectoryPathname.replace(/.*?\//g, "../");
+  const relativePathname = `${relativeDirectoriesNotation}${specificPathname}`;
+  return `${relativePathname}${search}${hash}`;
+};
 
-    if (extension === "") {
-      return `${url}${defaultExtension}`;
-    }
-
-    return url;
+const resolveUrl$2 = (specifier, baseUrl) => {
+  if (typeof baseUrl === "undefined") {
+    throw new TypeError(`baseUrl missing to resolve ${specifier}`);
   }
 
-  if (defaultExtension === true) {
-    const extension = pathnameToExtension(url);
-
-    if (extension === "" && importer) {
-      const importerPathname = urlToPathname(importer);
-      const importerExtension = pathnameToExtension(importerPathname);
-      return `${url}${importerExtension}`;
-    }
-  }
-
-  return url;
+  return String(new URL(specifier, baseUrl));
 };
 
-const resolveUrl$2 = (value, baseUrl) => {
-  return String(new URL(value, baseUrl));
-};
-const urlToFilePath$1 = url => {
-  return url$1.fileURLToPath(url);
-};
-const hasScheme$3 = string => {
-  return /^[a-zA-Z]{2,}:/.test(string);
-};
-const urlToRelativeUrl$1 = (url, baseUrl) => {
-  if (typeof baseUrl !== "string") {
-    throw new TypeError(`baseUrl must be a string, got ${baseUrl}`);
-  }
+const isWindows$2 = process.platform === "win32";
+const baseUrlFallback$1 = fileSystemPathToUrl$1(process.cwd());
 
-  if (url.startsWith(baseUrl)) {
-    // we should take into account only pathname
-    // and ignore search params
-    return url.slice(baseUrl.length);
-  }
+const isWindows$3 = process.platform === "win32";
 
-  return url;
-};
-
-const normalizeDirectoryUrl = (value, name = "projectDirectoryUrl") => {
-  if (value instanceof URL) {
-    value = value.href;
-  }
-
-  if (typeof value === "string") {
-    const url = hasScheme$3(value) ? value : urlToFilePath$1(value);
-
-    if (!url.startsWith("file://")) {
-      throw new Error(`${name} must starts with file://, received ${value}`);
-    }
-
-    return ensureTrailingSlash(value);
-  }
-
-  throw new TypeError(`${name} must be a string or an url, received ${value}`);
-};
-
-const ensureTrailingSlash = string => {
-  return string.endsWith("/") ? string : `${string}/`;
-};
-
-const readPackageFile = async path => {
-  const packageFileString = await readFileContent$1(path);
-  const packageJsonObject = JSON.parse(packageFileString);
-  return packageJsonObject;
-};
 const readFilePromisified$1 = util.promisify(fs.readFile);
-
-const readFileContent$1 = async filePath => {
+const readFile$1 = async value => {
+  const fileUrl = assertAndNormalizeFileUrl$1(value);
+  const filePath = urlToFileSystemPath$1(fileUrl);
   const buffer = await readFilePromisified$1(filePath);
   return buffer.toString();
+};
+
+const isWindows$4 = process.platform === "win32";
+
+/* eslint-disable import/max-dependencies */
+const isLinux = process.platform === "linux"; // linux does not support recursive option
+
+const readPackageFile = async (packageFileUrl, manualOverrides) => {
+  const packageFileString = await readFile$1(packageFileUrl);
+  const packageJsonObject = JSON.parse(packageFileString);
+  const {
+    name,
+    version
+  } = packageJsonObject;
+  const overrideKey = Object.keys(manualOverrides).find(overrideKeyCandidate => {
+    if (name === overrideKeyCandidate) return true;
+    if (`${name}@${version}` === overrideKeyCandidate) return true;
+    return false;
+  });
+
+  if (overrideKey) {
+    return composeObject(packageJsonObject, manualOverrides[overrideKey]);
+  }
+
+  return packageJsonObject;
+};
+
+const composeObject = (leftObject, rightObject) => {
+  const composedObject = { ...leftObject
+  };
+  Object.keys(rightObject).forEach(key => {
+    const rightValue = rightObject[key];
+
+    if (rightValue === null || typeof rightValue !== "object" || key in leftObject === false) {
+      composedObject[key] = rightValue;
+    } else {
+      const leftValue = leftObject[key];
+
+      if (leftValue === null || typeof leftValue !== "object") {
+        composedObject[key] = rightValue;
+      } else {
+        composedObject[key] = composeObject(leftValue, rightValue);
+      }
+    }
+  });
+  return composedObject;
+};
+
+const firstOperationMatching = ({
+  array,
+  start,
+  predicate
+}) => {
+  if (typeof array !== "object") {
+    throw new TypeError(`array must be an object, got ${array}`);
+  }
+
+  if (typeof start !== "function") {
+    throw new TypeError(`start must be a function, got ${start}`);
+  }
+
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+
+  return new Promise((resolve, reject) => {
+    const visit = index => {
+      if (index >= array.length) {
+        return resolve();
+      }
+
+      const input = array[index];
+      const returnValue = start(input);
+      return Promise.resolve(returnValue).then(output => {
+        if (predicate(output)) {
+          return resolve(output);
+        }
+
+        return visit(index + 1);
+      }, reject);
+    };
+
+    visit(0);
+  });
 };
 
 const resolveNodeModule = async ({
   logger,
   rootProjectDirectoryUrl,
+  manualOverrides,
   packageFileUrl,
   packageJsonObject,
   dependencyName,
@@ -2891,10 +4096,9 @@ const resolveNodeModule = async ({
     array: nodeModuleCandidateArray,
     start: async nodeModuleCandidate => {
       const packageFileUrl = `${rootProjectDirectoryUrl}${nodeModuleCandidate}${dependencyName}/package.json`;
-      const packageFilePath = url$1.fileURLToPath(packageFileUrl);
 
       try {
-        const packageJsonObject = await readPackageFile(packageFilePath);
+        const packageJsonObject = await readPackageFile(packageFileUrl, manualOverrides);
         return {
           packageFileUrl,
           packageJsonObject
@@ -2910,7 +4114,7 @@ error while parsing dependency package.json.
 --- parsing error message ---
 ${e.message}
 --- package.json path ---
-${packageFilePath}
+${urlToFileSystemPath$1(packageFileUrl)}
 `);
           return {};
         }
@@ -2931,7 +4135,7 @@ ${dependencyName}@${dependencyVersionPattern}
 --- required by ---
 ${packageJsonObject.name}@${packageJsonObject.version}
 --- package.json path ---
-${url$1.fileURLToPath(packageFileUrl)}
+${urlToFileSystemPath$1(packageFileUrl)}
     `);
   }
 
@@ -3010,7 +4214,7 @@ const resolveMainFile = async ({
     return null;
   }
 
-  const packageFilePath = urlToFilePath$1(packageFileUrl);
+  const packageFilePath = urlToFileSystemPath$1(packageFileUrl);
   const packageDirectoryUrl = resolveUrl$2("./", packageFileUrl);
   const mainFileRelativeUrl = packageMainFieldValue.endsWith("/") ? `${packageMainFieldValue}index` : packageMainFieldValue;
   const mainFileUrlFirstCandidate = resolveUrl$2(mainFileRelativeUrl, packageFileUrl);
@@ -3041,7 +4245,7 @@ cannot find file for package.json ${packageMainFieldName} field
 --- ${packageMainFieldName} ---
 ${packageMainFieldValue}
 --- file path ---
-${url$1.fileURLToPath(mainFileUrlFirstCandidate)}
+${urlToFileSystemPath$1(mainFileUrlFirstCandidate)}
 --- package.json path ---
 ${packageFilePath}
 --- extensions tried ---
@@ -3056,32 +4260,17 @@ ${extensionCandidateArray.join(`,`)}
 };
 
 const findMainFileUrlOrNull = async mainFileUrl => {
-  const mainFilePath = urlToFilePath$1(mainFileUrl);
-  const stats = await pathToStats(mainFilePath);
+  const mainStats = await readFileSystemNodeStat$1(mainFileUrl, {
+    nullIfNotFound: true
+  });
 
-  if (stats === null) {
-    const extension = path.extname(mainFilePath);
-
-    if (extension === "") {
-      const extensionLeadingToAFile = await findExtension(mainFilePath);
-
-      if (extensionLeadingToAFile === null) {
-        return null;
-      }
-
-      return `${mainFileUrl}.${extensionLeadingToAFile}`;
-    }
-
-    return null;
-  }
-
-  if (stats.isFile()) {
+  if (mainStats && mainStats.isFile()) {
     return mainFileUrl;
   }
 
-  if (stats.isDirectory()) {
+  if (mainStats && mainStats.isDirectory()) {
     const indexFileUrl = resolveUrl$2("./index", mainFileUrl.endsWith("/") ? mainFileUrl : `${mainFileUrl}/`);
-    const extensionLeadingToAFile = await findExtension(urlToFilePath$1(indexFileUrl));
+    const extensionLeadingToAFile = await findExtension(indexFileUrl);
 
     if (extensionLeadingToAFile === null) {
       return null;
@@ -3090,17 +4279,33 @@ const findMainFileUrlOrNull = async mainFileUrl => {
     return `${indexFileUrl}.${extensionLeadingToAFile}`;
   }
 
+  const mainFilePath = urlToFileSystemPath$1(mainFileUrl);
+  const extension = path.extname(mainFilePath);
+
+  if (extension === "") {
+    const extensionLeadingToAFile = await findExtension(mainFileUrl);
+
+    if (extensionLeadingToAFile === null) {
+      return null;
+    }
+
+    return `${mainFileUrl}.${extensionLeadingToAFile}`;
+  }
+
   return null;
 };
 
-const findExtension = async path$1 => {
-  const pathDirname = path.dirname(path$1);
-  const pathBasename = path.basename(path$1);
+const findExtension = async fileUrl => {
+  const filePath = urlToFileSystemPath$1(fileUrl);
+  const fileDirname = path.dirname(filePath);
+  const fileBasename = path.basename(filePath);
   const extensionLeadingToFile = await firstOperationMatching({
     array: extensionCandidateArray,
     start: async extensionCandidate => {
-      const pathCandidate = `${pathDirname}/${pathBasename}.${extensionCandidate}`;
-      const stats = await pathToStats(pathCandidate);
+      const filePathCandidate = `${fileDirname}/${fileBasename}.${extensionCandidate}`;
+      const stats = await readFileSystemNodeStat$1(filePathCandidate, {
+        nullIfNotFound: true
+      });
       return stats && stats.isFile() ? extensionCandidate : null;
     },
     predicate: extension => Boolean(extension)
@@ -3108,16 +4313,21 @@ const findExtension = async path$1 => {
   return extensionLeadingToFile || null;
 };
 
-const pathToStats = path => {
-  return new Promise((resolve, reject) => {
-    fs.stat(path, (error, statObject) => {
-      if (error) {
-        if (error.code === "ENOENT") resolve(null);else reject(error);
-      } else {
-        resolve(statObject);
-      }
-    });
-  });
+const specifierIsRelative = specifier => {
+  if (specifier.startsWith("//")) {
+    return false;
+  }
+
+  if (specifier.startsWith("../")) {
+    return false;
+  } // starts with http:// or file:// or ftp: for instance
+
+
+  if (/^[a-zA-Z]+\:/.test(specifier)) {
+    return false;
+  }
+
+  return true;
 };
 
 const visitPackageImports = ({
@@ -3126,7 +4336,7 @@ const visitPackageImports = ({
   packageJsonObject
 }) => {
   const importsForPackageImports = {};
-  const packageFilePath = urlToFilePath$1(packageFileUrl);
+  const packageFilePath = urlToFileSystemPath$1(packageFileUrl);
   const {
     imports: packageImports
   } = packageJsonObject;
@@ -3143,7 +4353,7 @@ ${packageFilePath}
   }
 
   Object.keys(packageImports).forEach(specifier => {
-    if (hasScheme$3(specifier) || specifier.startsWith("//") || specifier.startsWith("../")) {
+    if (!specifierIsRelative(specifier)) {
       logger.warn(`
 found unexpected specifier in imports of package.json, it must be relative to package.json.
 --- specifier ---
@@ -3169,7 +4379,7 @@ ${packageFilePath}
       return;
     }
 
-    if (hasScheme$3(address) || address.startsWith("//") || address.startsWith("../")) {
+    if (!specifierIsRelative(address)) {
       logger.warn(`
 found unexpected address in imports of package.json, it must be relative to package.json.
 --- address ---
@@ -3198,47 +4408,75 @@ ${packageFilePath}
   return importsForPackageImports;
 };
 
-// because currently it works but if the package.json contains malformed exports field our code
-// might behave unexpectedly, warning logs would be better
-
+// https://nodejs.org/dist/latest-v13.x/docs/api/esm.html#esm_package_exports
 const visitPackageExports = ({
   logger,
   packageFileUrl,
   packageName,
   packageJsonObject,
   packageInfo: {
-    packageIsRoot,
     packageDirectoryRelativeUrl
   },
   favoredExports
 }) => {
   const importsForPackageExports = {};
+  const packageFilePath = urlToFileSystemPath$1(packageFileUrl);
+  const {
+    exports: packageExports
+  } = packageJsonObject; // false is allowed as laternative to exports: {}
 
-  if (packageIsRoot) {
+  if (packageExports === false) return importsForPackageExports;
+
+  const addressToDestination = address => {
+    if (address[0] === "/") {
+      return address;
+    }
+
+    if (address.startsWith("./")) {
+      return `./${packageDirectoryRelativeUrl}${address.slice(2)}`;
+    }
+
+    return `./${packageDirectoryRelativeUrl}${address}`;
+  }; // exports used to indicate the main file
+
+
+  if (typeof packageExports === "string") {
+    const from = packageName;
+    const to = addressToDestination(packageExports);
+    importsForPackageExports[from] = to;
     return importsForPackageExports;
   }
 
-  const packageFilePath = urlToFilePath$1(packageFileUrl);
-  const {
-    exports: rawPackageExports
-  } = packageJsonObject;
-
-  if (typeof rawPackageExports !== "object" || rawPackageExports === null) {
-    if (rawPackageExports === false) return importsForPackageExports;
+  if (typeof packageExports !== "object" || packageExports === null) {
     logger.warn(`
 exports of package.json must be an object.
 --- package.json exports ---
-${rawPackageExports}
+${packageExports}
 --- package.json path ---
 ${packageFilePath}
 `);
     return importsForPackageExports;
   }
 
-  const favoredExport = favoredExports ? favoredExports.find(favoredExportCandidate => favoredExportCandidate in rawPackageExports) : null;
-  const packageExports = favoredExport ? rawPackageExports[favoredExport] : rawPackageExports;
-  Object.keys(packageExports).forEach(specifier => {
-    if (hasScheme$3(specifier) || specifier.startsWith("//") || specifier.startsWith("../")) {
+  const packageExportsKeys = Object.keys(packageExports);
+  const someSpecifierStartsWithDot = packageExportsKeys.some(key => key.startsWith("."));
+
+  if (someSpecifierStartsWithDot) {
+    const someSpecifierDoesNotStartsWithDot = packageExportsKeys.some(key => !key.startsWith("."));
+
+    if (someSpecifierDoesNotStartsWithDot) {
+      // see https://nodejs.org/dist/latest-v13.x/docs/api/esm.html#esm_exports_sugar
+      logger.error(`
+exports of package.json mixes conditional exports and direct exports.
+--- package.json path ---
+${packageFilePath}
+`);
+      return importsForPackageExports;
+    }
+  }
+
+  packageExportsKeys.forEach(specifier => {
+    if (!specifierIsRelative(specifier)) {
       logger.warn(`
 found unexpected specifier in exports of package.json, it must be relative to package.json.
 --- specifier ---
@@ -3253,31 +4491,31 @@ ${packageFilePath}
     let address;
 
     if (typeof value === "object") {
-      if (!favoredExport) {
+      const favoredExport = favoredExports.find(key => key in value);
+
+      if (favoredExport) {
+        address = value[favoredExport];
+      } else if ("default" in value) {
+        address = value.default;
+      } else {
         return;
       }
-
-      if (favoredExport in value === false) {
-        return;
-      }
-
-      address = value[favoredExport];
     } else if (typeof value === "string") {
       address = value;
     } else {
       logger.warn(`
-      found unexpected address in exports of package.json, it must be a string.
-      --- address ---
-      ${address}
-      --- specifier ---
-      ${specifier}
-      --- package.json path ---
-      ${packageFilePath}
-      `);
+found unexpected address in exports of package.json, it must be a string.
+--- address ---
+${address}
+--- specifier ---
+${specifier}
+--- package.json path ---
+${packageFilePath}
+`);
       return;
     }
 
-    if (hasScheme$3(address) || address.startsWith("//") || address.startsWith("../")) {
+    if (!specifierIsRelative(address)) {
       logger.warn(`
 found unexpected address in exports of package.json, it must be relative to package.json.
 --- address ---
@@ -3292,7 +4530,9 @@ ${packageFilePath}
 
     let from;
 
-    if (specifier[0] === "/") {
+    if (specifier === ".") {
+      from = packageName;
+    } else if (specifier[0] === "/") {
       from = specifier;
     } else if (specifier.startsWith("./")) {
       from = `${packageName}${specifier.slice(1)}`;
@@ -3300,16 +4540,7 @@ ${packageFilePath}
       from = `${packageName}/${specifier}`;
     }
 
-    let to;
-
-    if (address[0] === "/") {
-      to = address;
-    } else if (address.startsWith("./")) {
-      to = `./${packageDirectoryRelativeUrl}${address.slice(2)}`;
-    } else {
-      to = `./${packageDirectoryRelativeUrl}${address}`;
-    }
-
+    const to = addressToDestination(address);
     importsForPackageExports[from] = to;
   });
   return importsForPackageExports;
@@ -3320,19 +4551,21 @@ const generateImportMapForPackage = async ({
   logger,
   projectDirectoryUrl,
   rootProjectDirectoryUrl,
+  manualOverrides = {},
   includeDevDependencies = false,
   includeExports = true,
   // pass ['browser', 'default'] to read browser first then 'default' if defined
   // in package exports field
-  favoredExports = ["default"],
-  includeImports = true
+  favoredExports = [],
+  includeImports = true,
+  selfImport = true
 }) => {
-  projectDirectoryUrl = normalizeDirectoryUrl(projectDirectoryUrl);
+  projectDirectoryUrl = assertAndNormalizeDirectoryUrl$1(projectDirectoryUrl);
 
   if (typeof rootProjectDirectoryUrl === "undefined") {
     rootProjectDirectoryUrl = projectDirectoryUrl;
   } else {
-    rootProjectDirectoryUrl = normalizeDirectoryUrl(rootProjectDirectoryUrl, "rootProjectDirectoryUrl");
+    rootProjectDirectoryUrl = assertAndNormalizeDirectoryUrl$1(rootProjectDirectoryUrl);
   }
 
   const projectPackageFileUrl = resolveUrl$2("./package.json", projectDirectoryUrl);
@@ -3437,6 +4670,26 @@ const generateImportMapForPackage = async ({
       });
     }
 
+    if (selfImport) {
+      const {
+        importerIsRoot,
+        packageDirectoryRelativeUrl
+      } = packageInfo;
+
+      if (importerIsRoot) {
+        addImportMapping({
+          from: `${packageName}/`,
+          to: `./${packageDirectoryRelativeUrl}`
+        });
+      } else {
+        addScopedImportMapping({
+          scope: `./${packageDirectoryRelativeUrl}`,
+          from: `${packageName}/`,
+          to: `./${packageDirectoryRelativeUrl}`
+        });
+      }
+    }
+
     if (includeExports && "exports" in packageJsonObject) {
       const importsForPackageExports = visitPackageExports({
         packageFileUrl,
@@ -3448,33 +4701,45 @@ const generateImportMapForPackage = async ({
       const {
         importerIsRoot,
         importerRelativeUrl,
+        packageIsRoot,
         packageDirectoryUrl,
         packageDirectoryUrlExpected
       } = packageInfo;
-      Object.keys(importsForPackageExports).forEach(from => {
-        const to = importsForPackageExports[from];
 
-        if (importerIsRoot) {
+      if (packageIsRoot && selfImport) {
+        Object.keys(importsForPackageExports).forEach(from => {
+          const to = importsForPackageExports[from];
           addImportMapping({
             from,
             to
           });
-        } else {
-          addScopedImportMapping({
-            scope: `./${importerRelativeUrl}`,
-            from,
-            to
-          });
-        }
+        });
+      } else if (packageIsRoot) ; else {
+        Object.keys(importsForPackageExports).forEach(from => {
+          const to = importsForPackageExports[from];
 
-        if (packageDirectoryUrl !== packageDirectoryUrlExpected) {
-          addScopedImportMapping({
-            scope: `./${importerRelativeUrl}`,
-            from,
-            to
-          });
-        }
-      });
+          if (importerIsRoot) {
+            addImportMapping({
+              from,
+              to
+            });
+          } else {
+            addScopedImportMapping({
+              scope: `./${importerRelativeUrl}`,
+              from,
+              to
+            });
+          }
+
+          if (packageDirectoryUrl !== packageDirectoryUrlExpected) {
+            addScopedImportMapping({
+              scope: `./${importerRelativeUrl}`,
+              from,
+              to
+            });
+          }
+        });
+      }
     }
   };
 
@@ -3703,6 +4968,7 @@ const generateImportMapForPackage = async ({
 
     const dependencyPromise = resolveNodeModule({
       rootProjectDirectoryUrl,
+      manualOverrides,
       packageFileUrl,
       packageJsonObject,
       dependencyName,
@@ -3714,16 +4980,40 @@ const generateImportMapForPackage = async ({
     return dependencyPromise;
   };
 
-  const projectPackageJsonObject = await readPackageFile(urlToFilePath$1(projectPackageFileUrl));
+  const projectPackageJsonObject = await readPackageFile(projectPackageFileUrl, manualOverrides);
   const packageFileUrl = projectPackageFileUrl;
   const importerPackageFileUrl = projectPackageFileUrl;
   markPackageAsSeen(packageFileUrl, importerPackageFileUrl);
-  await visit({
-    packageFileUrl,
-    packageName: projectPackageJsonObject.name,
-    packageJsonObject: projectPackageJsonObject,
-    importerPackageFileUrl,
-    includeDevDependencies
+  const packageName = projectPackageJsonObject.name;
+
+  if (typeof packageName === "string") {
+    await visit({
+      packageFileUrl,
+      packageName: projectPackageJsonObject.name,
+      packageJsonObject: projectPackageJsonObject,
+      importerPackageFileUrl,
+      includeDevDependencies
+    });
+  } else {
+    logger.warn(`package name field must be a string
+--- package name field ---
+${packageName}
+--- package.json file path ---
+${packageFileUrl}`);
+  } // remove useless duplicates (scoped key+value already defined on imports)
+
+
+  Object.keys(scopes).forEach(key => {
+    const scopedImports = scopes[key];
+    Object.keys(scopedImports).forEach(scopedImportKey => {
+      if (scopedImportKey in imports && imports[scopedImportKey] === scopedImports[scopedImportKey]) {
+        delete scopedImports[scopedImportKey];
+      }
+    });
+
+    if (Object.keys(scopedImports).length === 0) {
+      delete scopes[key];
+    }
   });
   return sortImportMap({
     imports,
@@ -3740,7 +5030,7 @@ const assertUrlLike$1 = (value, name = "url") => {
     throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
   }
 
-  if (!hasScheme$4(value)) {
+  if (!hasScheme$2(value)) {
     throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
   }
 };
@@ -3754,7 +5044,7 @@ const isWindowsPathnameSpecifier$1 = specifier => {
   return thirdChar === "/";
 };
 
-const hasScheme$4 = specifier => /^[a-zA-Z]+:/.test(specifier);
+const hasScheme$2 = specifier => /^[a-zA-Z]+:/.test(specifier);
 
 // https://git-scm.com/docs/gitignore
 const applySpecifierPatternMatching$1 = ({
@@ -4085,7 +5375,7 @@ ${2 + rest.length}
   return specifierMetaMapNormalized;
 };
 
-const urlCanContainsMetaMatching = ({
+const urlCanContainsMetaMatching$1 = ({
   url,
   specifierMetaMap,
   predicate,
@@ -4193,7 +5483,7 @@ const pathToFileUrl = path => {
 const fileUrlToPath = fileUrl => {
   return url$1.fileURLToPath(fileUrl);
 };
-const fileUrlToRelativePath$1 = (fileUrl, baseUrl) => {
+const fileUrlToRelativePath = (fileUrl, baseUrl) => {
   if (typeof baseUrl !== "string") {
     throw new TypeError(`baseUrl must be a string, got ${baseUrl}`);
   }
@@ -4257,7 +5547,7 @@ callback: ${callback}`);
 const filesystemPathToTypeOrNull = path => {
   try {
     const stats = fs.statSync(path);
-    const type = statsToType(stats);
+    const type = statsToType$1(stats);
     return type;
   } catch (error) {
     if (error.code === "ENOENT") return null;
@@ -4274,7 +5564,7 @@ const FILESYSTEM_SOCKET = "socket";
 const FILESYSTEM_CHARACTER_DEVICE = "character-device";
 const FILESYSTEM_BLOCK_DEVICE = "block-device";
 
-const statsToType = stats => {
+const statsToType$1 = stats => {
   if (stats.isFile()) return FILESYSTEM_FILE;
   if (stats.isDirectory()) return FILESYSTEM_DIRECTORY;
   if (stats.isSymbolicLink()) return FILESYSTEM_SYMBOLIC_LINK;
@@ -4328,7 +5618,7 @@ const registerDirectoryLifecycle = (directoryPath, {
     const entryUrl = `${directoryUrl}${relativePath}`;
 
     if (type === "directory") {
-      const canContainEntryToWatch = urlCanContainsMetaMatching({
+      const canContainEntryToWatch = urlCanContainsMetaMatching$1({
         url: `${entryUrl}/`,
         specifierMetaMap,
         predicate: ({
@@ -4581,7 +5871,7 @@ const visitDirectory = ({
     const entryPath = fileUrlToPath(entryUrl);
     const type = filesystemPathToTypeOrNull(entryPath);
     if (type === null) return;
-    const relativePath = fileUrlToRelativePath$1(entryUrl, directoryUrl);
+    const relativePath = fileUrlToRelativePath(entryUrl, directoryUrl);
     entryFound({
       relativePath,
       type
@@ -4820,14 +6110,14 @@ const composeHeaderValues = (value, nextValue) => {
 };
 
 const headerCompositionMapping = {
-  accept: composeHeaderValues,
+  "accept": composeHeaderValues,
   "accept-charset": composeHeaderValues,
   "accept-language": composeHeaderValues,
   "access-control-allow-headers": composeHeaderValues,
   "access-control-allow-methods": composeHeaderValues,
   "access-control-allow-origin": composeHeaderValues,
   // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
-  vary: composeHeaderValues
+  "vary": composeHeaderValues
 };
 const composeResponseHeaders = compositionMappingToCompose(headerCompositionMapping);
 
@@ -4902,6 +6192,86 @@ const isErrorWithCode = (error, code) => {
   return typeof error === "object" && error.code === code;
 };
 
+const LOG_LEVEL_OFF$1 = "off";
+const LOG_LEVEL_DEBUG$1 = "debug";
+const LOG_LEVEL_INFO$1 = "info";
+const LOG_LEVEL_WARN$1 = "warn";
+const LOG_LEVEL_ERROR$1 = "error";
+
+const createLogger$1 = ({
+  logLevel = LOG_LEVEL_INFO$1
+} = {}) => {
+  if (logLevel === LOG_LEVEL_DEBUG$1) {
+    return {
+      debug: debug$1,
+      info: info$1,
+      warn: warn$1,
+      error: error$1
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_INFO$1) {
+    return {
+      debug: debugDisabled$1,
+      info: info$1,
+      warn: warn$1,
+      error: error$1
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_WARN$1) {
+    return {
+      debug: debugDisabled$1,
+      info: infoDisabled$1,
+      warn: warn$1,
+      error: error$1
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_ERROR$1) {
+    return {
+      debug: debugDisabled$1,
+      info: infoDisabled$1,
+      warn: warnDisabled$1,
+      error: error$1
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_OFF$1) {
+    return {
+      debug: debugDisabled$1,
+      info: infoDisabled$1,
+      warn: warnDisabled$1,
+      error: errorDisabled$1
+    };
+  }
+
+  throw new Error(`unexpected logLevel.
+--- logLevel ---
+${logLevel}
+--- allowed log levels ---
+${LOG_LEVEL_OFF$1}
+${LOG_LEVEL_ERROR$1}
+${LOG_LEVEL_WARN$1}
+${LOG_LEVEL_INFO$1}
+${LOG_LEVEL_DEBUG$1}`);
+};
+const debug$1 = console.debug;
+
+const debugDisabled$1 = () => {};
+
+const info$1 = console.info;
+
+const infoDisabled$1 = () => {};
+
+const warn$1 = console.warn;
+
+const warnDisabled$1 = () => {};
+
+const error$1 = console.error;
+
+const errorDisabled$1 = () => {};
+
 if ("observable" in Symbol === false) {
   Symbol.observable = Symbol.for("observable");
 }
@@ -4948,7 +6318,7 @@ const createSSERoom = ({
   maxConnectionAllowed = 100 // max 100 users accepted
 
 } = {}) => {
-  const logger = createLogger({
+  const logger = createLogger$1({
     logLevel
   });
   const connections = new Set(); // what about history that keeps growing ?
@@ -5013,7 +6383,7 @@ const createSSERoom = ({
       headers: {
         "content-type": "text/event-stream",
         "cache-control": "no-cache",
-        connection: "keep-alive"
+        "connection": "keep-alive"
       },
       body
     };
@@ -5131,152 +6501,530 @@ const createEventHistory = ({
   };
 };
 
-const listen = ({
-  cancellationToken,
-  server,
-  port,
-  ip
-}) => {
-  return createStoppableOperation({
-    cancellationToken,
-    start: () => startListening(server, port, ip),
-    stop: () => stopListening(server)
-  });
-};
-const startListening = (server, port, ip) => new Promise((resolve, reject) => {
-  server.on("error", reject);
-  server.on("listening", () => {
-    // in case port is 0 (randomly assign an available port)
-    // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-    resolve(server.address().port);
-  });
-  server.listen(port, ip);
-});
-const stopListening = server => new Promise((resolve, reject) => {
-  server.on("error", reject);
-  server.on("close", resolve);
-  server.close();
-});
-
-const findFreePort = async (initialPort = 1, {
-  cancellationToken = createCancellationToken(),
-  ip = "127.0.0.1",
-  min = 1,
-  max = 65534,
-  next = port => port + 1
-} = {}) => {
-  const testUntil = async (port, ip) => {
-    const free = await portIsFree({
-      cancellationToken,
-      port,
-      ip
-    });
-
-    if (free) {
-      return port;
+const createCancellationToken$1 = () => {
+  const register = callback => {
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
     }
 
-    const nextPort = next(port);
-
-    if (nextPort > max) {
-      throw new Error(`${ip} has no available port between ${min} and ${max}`);
-    }
-
-    return testUntil(nextPort, ip);
+    return {
+      callback,
+      unregister: () => {}
+    };
   };
 
-  return testUntil(initialPort, ip);
+  const throwIfRequested = () => undefined;
+
+  return {
+    register,
+    cancellationRequested: false,
+    throwIfRequested
+  };
 };
 
-const portIsFree = async ({
-  cancellationToken,
-  port,
-  ip
+const memoizeOnce$1 = compute => {
+  let locked = false;
+  let lockValue;
+
+  const memoized = (...args) => {
+    if (locked) return lockValue; // if compute is recursive wait for it to be fully done before storing the lockValue
+    // so set locked later
+
+    lockValue = compute(...args);
+    locked = true;
+    return lockValue;
+  };
+
+  memoized.deleteCache = () => {
+    const value = lockValue;
+    locked = false;
+    lockValue = undefined;
+    return value;
+  };
+
+  return memoized;
+};
+
+const createOperation$1 = ({
+  cancellationToken = createCancellationToken$1(),
+  start,
+  ...rest
 }) => {
-  const server = net.createServer();
-  const listenOperation = listen({
-    cancellationToken,
-    server,
-    port,
-    ip
-  });
-  return listenOperation.then(() => {
-    const stopPromise = listenOperation.stop(); // cancellation must wait for server to be closed before considering
-    // cancellation as done
+  const unknownArgumentNames = Object.keys(rest);
 
-    cancellationToken.register(() => stopPromise);
-    return stopPromise.then(() => true);
-  }, error => {
-    if (error && error.code === "EADDRINUSE") {
-      return false;
-    }
-
-    if (error && error.code === "EACCES") {
-      return false;
-    }
-
-    return Promise.reject(error);
-  });
-};
-
-const firstService = (...callbacks) => {
-  return firstOperationMatching({
-    array: callbacks,
-    start: callback => callback(),
-    predicate: serviceGeneratedResponsePredicate
-  });
-};
-
-const serviceGeneratedResponsePredicate = value => {
-  if (value === null) {
-    return false;
+  if (unknownArgumentNames.length) {
+    throw new Error(`createOperation called with unknown argument names.
+--- unknown argument names ---
+${unknownArgumentNames}
+--- possible argument names ---
+cancellationToken
+start`);
   }
 
-  return typeof value === "object";
+  cancellationToken.throwIfRequested();
+  const promise = new Promise(resolve => {
+    resolve(start());
+  });
+  const cancelPromise = new Promise((resolve, reject) => {
+    const cancelRegistration = cancellationToken.register(cancelError => {
+      cancelRegistration.unregister();
+      reject(cancelError);
+    });
+    promise.then(cancelRegistration.unregister, () => {});
+  });
+  const operationPromise = Promise.race([promise, cancelPromise]);
+  return operationPromise;
 };
 
-const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
+const createStoppableOperation$1 = ({
+  cancellationToken = createCancellationToken$1(),
+  start,
+  stop,
+  ...rest
+}) => {
+  if (typeof stop !== "function") {
+    throw new TypeError(`stop must be a function. got ${stop}`);
+  }
 
-const jsenvAccessControlAllowedMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"];
+  const unknownArgumentNames = Object.keys(rest);
 
-const jsenvPrivateKey = `-----BEGIN RSA PRIVATE KEY-----
-MIICXAIBAAKBgQCll1gJkJqB+KRZsyepQ7gs81UO+73aKPaNbjp/dwo9XfqvNdDp
-Ki4zfTwzzJyFXkoN+NGihfQHI+VqRGITc+XzmBPcGu9XIvYy52lV3zjG4sldz+r8
-iNBzFwFSdUGmaHfkcm0YhvcjdRhyKalDaLMc3pVX4dq9rRzqm+pkbzVfVQIDAQAB
-AoGAImSo2HO8Y7ptCGR5nGKAYnW3+QC4khNoAkAezlK/Qbe/VZzr40Hrjq44Ttn0
-uI64+uXvRL5lzQXbpJLHfBraa8J6Vstf2Kwadmg+FyrqBcet6gidqZ6S1LBTfXII
-eSUcMIqkourv7LWOs8BfWQQiCf0Em0shGK1qf1lgiOQxoJECQQD+dSJOPqKbdZfJ
-/JcsInf5dPkfTNZMhBxpxqiYOvU3684W3LHB1g6BXjHmIF/CIrxcAHsxxXwTGWu9
-23Ffu+xPAkEApphOt+CzGdYq+Ygjj6Hq+hx3hkUwKUHSEOcNXG0Eb90m2sCEkXgz
-xH7fKYXaohFtis7IFJR4UfYD8pkGYVmdGwJAJf/iFqM9709ZUp25CatAFW3Fgkoc
-OqMEBzvWk51CX46EYV+l4BeSZPlnJEGzay96x5Z+z0j5pXSHZXvu62gJ+wJACci+
-LsxymFzcr0UQmZnv2/qaBne/yVyFQtrfDQOWFB/P7V8LKiP+Hlc5Mg4bdhNB9LoK
-RDMoEeA6ASB9oHAL6wJBAJcYLOICBVQrTil6DroEkrIxQY/S+arKc42uFpj98S+w
-k3doJf8KKDrclaRnKfMXxGYhXPUWFpa5fFr1hvcprEo=
------END RSA PRIVATE KEY-----`;
-const jsenvCertificate = `-----BEGIN CERTIFICATE-----
-MIIDEDCCAnmgAwIBAgIQd9Gto4GPGwXcLk0flq7bsjANBgkqhkiG9w0BAQsFADCB
-kTEuMCwGA1UEAxMlaHR0cHM6Ly9naXRodWIuY29tL2pzZW52L2pzZW52LXNlcnZl
-cjELMAkGA1UEBhMCRlIxGDAWBgNVBAgTD0FscGVzIE1hcml0aW1lczERMA8GA1UE
-BxMIVmFsYm9ubmUxDjAMBgNVBAoTBWpzZW52MRUwEwYDVQQLEwxqc2VudiBzZXJ2
-ZXIwHhcNMTkwNzA5MTQ1MzU4WhcNMjgwNzA5MTQ1MzU5WjCBkTEuMCwGA1UEAxMl
-aHR0cHM6Ly9naXRodWIuY29tL2pzZW52L2pzZW52LXNlcnZlcjELMAkGA1UEBhMC
-RlIxGDAWBgNVBAgTD0FscGVzIE1hcml0aW1lczERMA8GA1UEBxMIVmFsYm9ubmUx
-DjAMBgNVBAoTBWpzZW52MRUwEwYDVQQLEwxqc2VudiBzZXJ2ZXIwgZ8wDQYJKoZI
-hvcNAQEBBQADgY0AMIGJAoGBAKWXWAmQmoH4pFmzJ6lDuCzzVQ77vdoo9o1uOn93
-Cj1d+q810OkqLjN9PDPMnIVeSg340aKF9Acj5WpEYhNz5fOYE9wa71ci9jLnaVXf
-OMbiyV3P6vyI0HMXAVJ1QaZod+RybRiG9yN1GHIpqUNosxzelVfh2r2tHOqb6mRv
-NV9VAgMBAAGjZzBlMAwGA1UdEwEB/wQCMAAwDgYDVR0PAQH/BAQDAgWgMBMGA1Ud
-JQQMMAoGCCsGAQUFBwMBMB8GA1UdIwQYMBaAFOQhJA9S7idbpNIbvKMyeRWbwyad
-MA8GA1UdEQQIMAaHBH8AAAEwDQYJKoZIhvcNAQELBQADgYEAUKPupneUl1bdjbbf
-QvUqAExIK0Nv2u54X8l0EJvkdPMNQEer7Npzg5RQWExtvamfEZI1EPOeVfPVu5sz
-q4DB6OgAEzkytbKtcgPlhY0GDbim8ELCpO1JNDn/jUXH74VJElwXMZqan5VaQ5c+
-qsCeVUdw8QsfIZH6XbkvhCswh4k=
------END CERTIFICATE-----`;
+  if (unknownArgumentNames.length) {
+    throw new Error(`createStoppableOperation called with unknown argument names.
+--- unknown argument names ---
+${unknownArgumentNames}
+--- possible argument names ---
+cancellationToken
+start
+stop`);
+  }
+
+  cancellationToken.throwIfRequested();
+  const promise = new Promise(resolve => {
+    resolve(start());
+  });
+  const cancelPromise = new Promise((resolve, reject) => {
+    const cancelRegistration = cancellationToken.register(cancelError => {
+      cancelRegistration.unregister();
+      reject(cancelError);
+    });
+    promise.then(cancelRegistration.unregister, () => {});
+  });
+  const operationPromise = Promise.race([promise, cancelPromise]);
+  const stopInternal = memoizeOnce$1(async reason => {
+    const value = await promise;
+    return stop(value, reason);
+  });
+  cancellationToken.register(stopInternal);
+  operationPromise.stop = stopInternal;
+  return operationPromise;
+};
+
+const firstOperationMatching$1 = ({
+  array,
+  start,
+  predicate
+}) => {
+  if (typeof array !== "object") {
+    throw new TypeError(`array must be an object, got ${array}`);
+  }
+
+  if (typeof start !== "function") {
+    throw new TypeError(`start must be a function, got ${start}`);
+  }
+
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+
+  return new Promise((resolve, reject) => {
+    const visit = index => {
+      if (index >= array.length) {
+        return resolve();
+      }
+
+      const input = array[index];
+      const returnValue = start(input);
+      return Promise.resolve(returnValue).then(output => {
+        if (predicate(output)) {
+          return resolve(output);
+        }
+
+        return visit(index + 1);
+      }, reject);
+    };
+
+    visit(0);
+  });
+};
+
+const ensureUrlTrailingSlash$2 = url => {
+  return url.endsWith("/") ? url : `${url}/`;
+};
+
+const isFileSystemPath$2 = value => {
+  if (typeof value !== "string") {
+    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
+  }
+
+  if (value[0] === "/") return true;
+  return startsWithWindowsDriveLetter$2(value);
+};
+
+const startsWithWindowsDriveLetter$2 = string => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+  return true;
+};
+
+const fileSystemPathToUrl$2 = value => {
+  if (!isFileSystemPath$2(value)) {
+    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
+  }
+
+  return String(url$1.pathToFileURL(value));
+};
+
+const assertAndNormalizeDirectoryUrl$2 = value => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath$2(value)) {
+      urlString = fileSystemPathToUrl$2(value);
+    } else {
+      try {
+        urlString = String(new URL(value));
+      } catch (e) {
+        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`directoryUrl must starts with file://, received ${value}`);
+  }
+
+  return ensureUrlTrailingSlash$2(urlString);
+};
+
+const assertAndNormalizeFileUrl$2 = (value, baseUrl) => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath$2(value)) {
+      urlString = fileSystemPathToUrl$2(value);
+    } else {
+      try {
+        urlString = String(new URL(value, baseUrl));
+      } catch (e) {
+        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`fileUrl must starts with file://, received ${value}`);
+  }
+
+  return urlString;
+};
+
+const urlToFileSystemPath$2 = fileUrl => {
+  if (fileUrl[fileUrl.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    fileUrl = fileUrl.slice(0, -1);
+  }
+
+  const fileSystemPath = url$1.fileURLToPath(fileUrl);
+  return fileSystemPath;
+};
+
+// https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
+// https://nodejs.org/api/fs.html#fs_file_modes
+// https://github.com/TooTallNate/stat-mode
+// cannot get from fs.constants because they are not available on windows
+const S_IRUSR$2 = 256;
+/* 0000400 read permission, owner */
+
+const S_IWUSR$2 = 128;
+/* 0000200 write permission, owner */
+
+const S_IXUSR$2 = 64;
+/* 0000100 execute/search permission, owner */
+
+const S_IRGRP$2 = 32;
+/* 0000040 read permission, group */
+
+const S_IWGRP$2 = 16;
+/* 0000020 write permission, group */
+
+const S_IXGRP$2 = 8;
+/* 0000010 execute/search permission, group */
+
+const S_IROTH$2 = 4;
+/* 0000004 read permission, others */
+
+const S_IWOTH$2 = 2;
+/* 0000002 write permission, others */
+
+const S_IXOTH$2 = 1;
+const permissionsToBinaryFlags$2 = ({
+  owner,
+  group,
+  others
+}) => {
+  let binaryFlags = 0;
+  if (owner.read) binaryFlags |= S_IRUSR$2;
+  if (owner.write) binaryFlags |= S_IWUSR$2;
+  if (owner.execute) binaryFlags |= S_IXUSR$2;
+  if (group.read) binaryFlags |= S_IRGRP$2;
+  if (group.write) binaryFlags |= S_IWGRP$2;
+  if (group.execute) binaryFlags |= S_IXGRP$2;
+  if (others.read) binaryFlags |= S_IROTH$2;
+  if (others.write) binaryFlags |= S_IWOTH$2;
+  if (others.execute) binaryFlags |= S_IXOTH$2;
+  return binaryFlags;
+};
+
+const writeFileSystemNodePermissions$2 = async (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl$2(source);
+  const sourcePath = urlToFileSystemPath$2(sourceUrl);
+  let binaryFlags;
+
+  if (typeof permissions === "object") {
+    permissions = {
+      owner: {
+        read: getPermissionOrComputeDefault$2("read", "owner", permissions),
+        write: getPermissionOrComputeDefault$2("write", "owner", permissions),
+        execute: getPermissionOrComputeDefault$2("execute", "owner", permissions)
+      },
+      group: {
+        read: getPermissionOrComputeDefault$2("read", "group", permissions),
+        write: getPermissionOrComputeDefault$2("write", "group", permissions),
+        execute: getPermissionOrComputeDefault$2("execute", "group", permissions)
+      },
+      others: {
+        read: getPermissionOrComputeDefault$2("read", "others", permissions),
+        write: getPermissionOrComputeDefault$2("write", "others", permissions),
+        execute: getPermissionOrComputeDefault$2("execute", "others", permissions)
+      }
+    };
+    binaryFlags = permissionsToBinaryFlags$2(permissions);
+  } else {
+    binaryFlags = permissions;
+  }
+
+  return chmodNaive$2(sourcePath, binaryFlags);
+};
+
+const chmodNaive$2 = (fileSystemPath, binaryFlags) => {
+  return new Promise((resolve, reject) => {
+    fs.chmod(fileSystemPath, binaryFlags, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const actionLevels$2 = {
+  read: 0,
+  write: 1,
+  execute: 2
+};
+const subjectLevels$2 = {
+  others: 0,
+  group: 1,
+  owner: 2
+};
+
+const getPermissionOrComputeDefault$2 = (action, subject, permissions) => {
+  if (subject in permissions) {
+    const subjectPermissions = permissions[subject];
+
+    if (action in subjectPermissions) {
+      return subjectPermissions[action];
+    }
+
+    const actionLevel = actionLevels$2[action];
+    const actionFallback = Object.keys(actionLevels$2).find(actionFallbackCandidate => actionLevels$2[actionFallbackCandidate] > actionLevel && actionFallbackCandidate in subjectPermissions);
+
+    if (actionFallback) {
+      return subjectPermissions[actionFallback];
+    }
+  }
+
+  const subjectLevel = subjectLevels$2[subject]; // do we have a subject with a stronger level (group or owner)
+  // where we could read the action permission ?
+
+  const subjectFallback = Object.keys(subjectLevels$2).find(subjectFallbackCandidate => subjectLevels$2[subjectFallbackCandidate] > subjectLevel && subjectFallbackCandidate in permissions);
+
+  if (subjectFallback) {
+    const subjectPermissions = permissions[subjectFallback];
+    return action in subjectPermissions ? subjectPermissions[action] : getPermissionOrComputeDefault$2(action, subjectFallback, permissions);
+  }
+
+  return false;
+};
+
+const isWindows$5 = process.platform === "win32";
+const readFileSystemNodeStat$2 = async (source, {
+  nullIfNotFound = false,
+  followLink = true
+} = {}) => {
+  if (source.endsWith("/")) source = source.slice(0, -1);
+  const sourceUrl = assertAndNormalizeFileUrl$2(source);
+  const sourcePath = urlToFileSystemPath$2(sourceUrl);
+  const handleNotFoundOption = nullIfNotFound ? {
+    handleNotFoundError: () => null
+  } : {};
+  return readStat$2(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows$5 ? {
+      // Windows can EPERM on stat
+      handlePermissionDeniedError: async error => {
+        // unfortunately it means we mutate the permissions
+        // without being able to restore them to the previous value
+        // (because reading current permission would also throw)
+        try {
+          await writeFileSystemNodePermissions$2(sourceUrl, 0o666);
+          const stats = await readStat$2(sourcePath, {
+            followLink,
+            ...handleNotFoundOption,
+            // could not fix the permission error, give up and throw original error
+            handlePermissionDeniedError: () => {
+              throw error;
+            }
+          });
+          return stats;
+        } catch (e) {
+          // failed to write permission or readState, throw original error as well
+          throw error;
+        }
+      }
+    } : {})
+  });
+};
+
+const readStat$2 = (sourcePath, {
+  followLink,
+  handleNotFoundError = null,
+  handlePermissionDeniedError = null
+} = {}) => {
+  const nodeMethod = followLink ? fs.stat : fs.lstat;
+  return new Promise((resolve, reject) => {
+    nodeMethod(sourcePath, (error, statsObject) => {
+      if (error) {
+        if (handlePermissionDeniedError && (error.code === "EPERM" || error.code === "EACCES")) {
+          resolve(handlePermissionDeniedError(error));
+        } else if (handleNotFoundError && error.code === "ENOENT") {
+          resolve(handleNotFoundError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(statsObject);
+      }
+    });
+  });
+};
+
+const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+const bufferToEtag = buffer => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expected, got ${buffer}`);
+  }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT;
+  }
+
+  const hash = crypto.createHash("sha1");
+  hash.update(buffer, "utf8");
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+};
+
+const readDirectory$1 = async (url, {
+  emfileMaxWait = 1000
+} = {}) => {
+  const directoryUrl = assertAndNormalizeDirectoryUrl$2(url);
+  const directoryPath = urlToFileSystemPath$2(directoryUrl);
+  const startMs = Date.now();
+  let attemptCount = 0;
+
+  const attempt = () => {
+    return readdirNaive$1(directoryPath, {
+      handleTooManyFilesOpenedError: async error => {
+        attemptCount++;
+        const nowMs = Date.now();
+        const timeSpentWaiting = nowMs - startMs;
+
+        if (timeSpentWaiting > emfileMaxWait) {
+          throw error;
+        }
+
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve(attempt());
+          }, attemptCount);
+        });
+      }
+    });
+  };
+
+  return attempt();
+};
+
+const readdirNaive$1 = (directoryPath, {
+  handleTooManyFilesOpenedError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    fs.readdir(directoryPath, (error, names) => {
+      if (error) {
+        // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
+        if (handleTooManyFilesOpenedError && (error.code === "EMFILE" || error.code === "ENFILE")) {
+          resolve(handleTooManyFilesOpenedError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(names);
+      }
+    });
+  });
+};
+
+const isWindows$6 = process.platform === "win32";
+const baseUrlFallback$2 = fileSystemPathToUrl$2(process.cwd());
+
+const isWindows$7 = process.platform === "win32";
+
+const readFilePromisified$2 = util.promisify(fs.readFile);
+
+const isWindows$8 = process.platform === "win32";
+
+/* eslint-disable import/max-dependencies */
+const isLinux$1 = process.platform === "linux"; // linux does not support recursive option
 
 const jsenvContentTypeMap = {
   "application/javascript": {
-    extensions: ["js", "mjs", "ts", "jsx"]
+    extensions: ["js", "cjs", "mjs", "ts", "jsx"]
   },
   "application/json": {
     extensions: ["json"]
@@ -5387,25 +7135,11 @@ const urlToContentType = (url, contentTypeMap = jsenvContentTypeMap, contentType
   return contentTypeForExtension || contentTypeDefault;
 };
 
-const EMPTY_ID = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
-const bufferToEtag = buffer => {
-  if (!Buffer.isBuffer(buffer)) {
-    throw new TypeError(`buffer expected, got ${buffer}`);
-  }
-
-  if (buffer.length === 0) {
-    return EMPTY_ID;
-  }
-
-  const hash = crypto.createHash("sha1");
-  hash.update(buffer, "utf8");
-  const hashBase64String = hash.digest("base64");
-  const hashBase64StringSubset = hashBase64String.slice(0, 27);
-  const length = buffer.length;
-  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
-};
-
-const serveFile = async (path, {
+const {
+  readFile: readFile$2
+} = fs.promises;
+const serveFile = async (source, {
+  cancellationToken = createCancellationToken$1(),
   method = "GET",
   headers = {},
   canReadDirectory = false,
@@ -5418,16 +7152,19 @@ const serveFile = async (path, {
     };
   }
 
-  const fileUrl = path.startsWith("file:///") ? path : url$1.pathToFileURL(path);
-  const filePath = url$1.fileURLToPath(fileUrl);
+  const sourceUrl = assertAndNormalizeFileUrl$2(source);
+  const clientCacheDisabled = headers["cache-control"] === "no-cache";
 
   try {
-    const cacheWithMtime = cacheStrategy === "mtime";
-    const cacheWithETag = cacheStrategy === "etag";
-    const cachedDisabled = cacheStrategy === "none";
-    const stat = await readFileStat$1(filePath);
+    const cacheWithMtime = !clientCacheDisabled && cacheStrategy === "mtime";
+    const cacheWithETag = !clientCacheDisabled && cacheStrategy === "etag";
+    const cachedDisabled = clientCacheDisabled || cacheStrategy === "none";
+    const sourceStat = await createOperation$1({
+      cancellationToken,
+      start: () => readFileSystemNodeStat$2(sourceUrl)
+    });
 
-    if (stat.isDirectory()) {
+    if (sourceStat.isDirectory()) {
       if (canReadDirectory === false) {
         return {
           status: 403,
@@ -5439,60 +7176,42 @@ const serveFile = async (path, {
         };
       }
 
-      const files = await readDirectory(filePath);
-      const filesAsJSON = JSON.stringify(files);
+      const directoryContentArray = await createOperation$1({
+        cancellationToken,
+        start: () => readDirectory$1(sourceUrl)
+      });
+      const directoryContentJson = JSON.stringify(directoryContentArray);
       return {
         status: 200,
         headers: { ...(cachedDisabled ? {
             "cache-control": "no-store"
           } : {}),
           "content-type": "application/json",
-          "content-length": filesAsJSON.length
+          "content-length": directoryContentJson.length
         },
-        body: filesAsJSON
+        body: directoryContentJson
       };
-    }
+    } // not a file, give up
 
-    if (cacheWithMtime) {
-      if ("if-modified-since" in headers) {
-        let cachedModificationDate;
 
-        try {
-          cachedModificationDate = new Date(headers["if-modified-since"]);
-        } catch (e) {
-          return {
-            status: 400,
-            statusText: "if-modified-since header is not a valid date"
-          };
-        }
-
-        const actualModificationDate = dateToSecondsPrecision(stat.mtime);
-
-        if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
-          return {
-            status: 304
-          };
-        }
-      }
-
+    if (!sourceStat.isFile()) {
       return {
-        status: 200,
+        status: 404,
         headers: { ...(cachedDisabled ? {
             "cache-control": "no-store"
-          } : {}),
-          "last-modified": dateToUTCString(stat.mtime),
-          "content-length": stat.size,
-          "content-type": urlToContentType(fileUrl, contentTypeMap)
-        },
-        body: fs.createReadStream(filePath)
+          } : {})
+        }
       };
     }
 
     if (cacheWithETag) {
-      const buffer = await readFileAsBuffer(filePath);
-      const eTag = bufferToEtag(buffer);
+      const fileContentAsBuffer = await createOperation$1({
+        cancellationToken,
+        start: () => readFile$2(urlToFileSystemPath$2(sourceUrl))
+      });
+      const fileContentEtag = bufferToEtag(fileContentAsBuffer);
 
-      if ("if-none-match" in headers && headers["if-none-match"] === eTag) {
+      if ("if-none-match" in headers && headers["if-none-match"] === fileContentEtag) {
         return {
           status: 304,
           headers: { ...(cachedDisabled ? {
@@ -5507,22 +7226,47 @@ const serveFile = async (path, {
         headers: { ...(cachedDisabled ? {
             "cache-control": "no-store"
           } : {}),
-          "content-length": stat.size,
-          "content-type": urlToContentType(fileUrl, contentTypeMap),
-          etag: eTag
+          "content-length": sourceStat.size,
+          "content-type": urlToContentType(sourceUrl, contentTypeMap),
+          "etag": fileContentEtag
         },
-        body: buffer
+        body: fileContentAsBuffer
       };
+    }
+
+    if (cacheWithMtime && "if-modified-since" in headers) {
+      let cachedModificationDate;
+
+      try {
+        cachedModificationDate = new Date(headers["if-modified-since"]);
+      } catch (e) {
+        return {
+          status: 400,
+          statusText: "if-modified-since header is not a valid date"
+        };
+      }
+
+      const actualModificationDate = dateToSecondsPrecision(sourceStat.mtime);
+
+      if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
+        return {
+          status: 304
+        };
+      }
     }
 
     return {
       status: 200,
-      headers: {
-        "cache-control": "no-store",
-        "content-length": stat.size,
-        "content-type": urlToContentType(fileUrl, contentTypeMap)
+      headers: { ...(cachedDisabled ? {
+          "cache-control": "no-store"
+        } : {}),
+        ...(cacheWithMtime ? {
+          "last-modified": dateToUTCString(sourceStat.mtime)
+        } : {}),
+        "content-length": sourceStat.size,
+        "content-type": urlToContentType(sourceUrl, contentTypeMap)
       },
-      body: fs.createReadStream(filePath)
+      body: fs.createReadStream(urlToFileSystemPath$2(sourceUrl))
     };
   } catch (e) {
     return convertFileSystemErrorToResponseProperties(e);
@@ -5537,23 +7281,154 @@ const dateToSecondsPrecision = date => {
   return dateWithSecondsPrecision;
 };
 
-const readFileAsBuffer = path => new Promise((resolve, reject) => {
-  fs.readFile(path, (error, buffer) => {
-    if (error) reject(error);else resolve(buffer);
+const require$1 = module$1.createRequire(url);
+
+const nodeFetch = require$1("node-fetch");
+
+const AbortController = require$1("abort-controller");
+
+const listen = ({
+  cancellationToken,
+  server,
+  port,
+  ip
+}) => {
+  return createStoppableOperation$1({
+    cancellationToken,
+    start: () => startListening(server, port, ip),
+    stop: () => stopListening(server)
   });
+};
+const startListening = (server, port, ip) => new Promise((resolve, reject) => {
+  server.on("error", reject);
+  server.on("listening", () => {
+    // in case port is 0 (randomly assign an available port)
+    // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
+    resolve(server.address().port);
+  });
+  server.listen(port, ip);
+});
+const stopListening = server => new Promise((resolve, reject) => {
+  server.on("error", reject);
+  server.on("close", resolve);
+  server.close();
 });
 
-const readFileStat$1 = path => new Promise((resolve, reject) => {
-  fs.stat(path, (error, stats) => {
-    if (error) reject(error);else resolve(stats);
-  });
-});
+const findFreePort = async (initialPort = 1, {
+  cancellationToken = createCancellationToken$1(),
+  ip = "127.0.0.1",
+  min = 1,
+  max = 65534,
+  next = port => port + 1
+} = {}) => {
+  const testUntil = async (port, ip) => {
+    const free = await portIsFree({
+      cancellationToken,
+      port,
+      ip
+    });
 
-const readDirectory = path => new Promise((resolve, reject) => {
-  fs.readdir(path, (error, value) => {
-    if (error) reject(error);else resolve(value);
+    if (free) {
+      return port;
+    }
+
+    const nextPort = next(port);
+
+    if (nextPort > max) {
+      throw new Error(`${ip} has no available port between ${min} and ${max}`);
+    }
+
+    return testUntil(nextPort, ip);
+  };
+
+  return testUntil(initialPort, ip);
+};
+
+const portIsFree = async ({
+  cancellationToken,
+  port,
+  ip
+}) => {
+  const server = net.createServer();
+  const listenOperation = listen({
+    cancellationToken,
+    server,
+    port,
+    ip
   });
-});
+  return listenOperation.then(() => {
+    const stopPromise = listenOperation.stop(); // cancellation must wait for server to be closed before considering
+    // cancellation as done
+
+    cancellationToken.register(() => stopPromise);
+    return stopPromise.then(() => true);
+  }, error => {
+    if (error && error.code === "EADDRINUSE") {
+      return false;
+    }
+
+    if (error && error.code === "EACCES") {
+      return false;
+    }
+
+    return Promise.reject(error);
+  });
+};
+
+const firstService = (...callbacks) => {
+  return firstOperationMatching$1({
+    array: callbacks,
+    start: callback => callback(),
+    predicate: serviceGeneratedResponsePredicate
+  });
+};
+
+const serviceGeneratedResponsePredicate = value => {
+  if (value === null) {
+    return false;
+  }
+
+  return typeof value === "object";
+};
+
+const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
+
+const jsenvAccessControlAllowedMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"];
+
+const jsenvPrivateKey = `-----BEGIN RSA PRIVATE KEY-----
+MIICXAIBAAKBgQCll1gJkJqB+KRZsyepQ7gs81UO+73aKPaNbjp/dwo9XfqvNdDp
+Ki4zfTwzzJyFXkoN+NGihfQHI+VqRGITc+XzmBPcGu9XIvYy52lV3zjG4sldz+r8
+iNBzFwFSdUGmaHfkcm0YhvcjdRhyKalDaLMc3pVX4dq9rRzqm+pkbzVfVQIDAQAB
+AoGAImSo2HO8Y7ptCGR5nGKAYnW3+QC4khNoAkAezlK/Qbe/VZzr40Hrjq44Ttn0
+uI64+uXvRL5lzQXbpJLHfBraa8J6Vstf2Kwadmg+FyrqBcet6gidqZ6S1LBTfXII
+eSUcMIqkourv7LWOs8BfWQQiCf0Em0shGK1qf1lgiOQxoJECQQD+dSJOPqKbdZfJ
+/JcsInf5dPkfTNZMhBxpxqiYOvU3684W3LHB1g6BXjHmIF/CIrxcAHsxxXwTGWu9
+23Ffu+xPAkEApphOt+CzGdYq+Ygjj6Hq+hx3hkUwKUHSEOcNXG0Eb90m2sCEkXgz
+xH7fKYXaohFtis7IFJR4UfYD8pkGYVmdGwJAJf/iFqM9709ZUp25CatAFW3Fgkoc
+OqMEBzvWk51CX46EYV+l4BeSZPlnJEGzay96x5Z+z0j5pXSHZXvu62gJ+wJACci+
+LsxymFzcr0UQmZnv2/qaBne/yVyFQtrfDQOWFB/P7V8LKiP+Hlc5Mg4bdhNB9LoK
+RDMoEeA6ASB9oHAL6wJBAJcYLOICBVQrTil6DroEkrIxQY/S+arKc42uFpj98S+w
+k3doJf8KKDrclaRnKfMXxGYhXPUWFpa5fFr1hvcprEo=
+-----END RSA PRIVATE KEY-----`;
+const jsenvCertificate = `-----BEGIN CERTIFICATE-----
+MIIDEDCCAnmgAwIBAgIQd9Gto4GPGwXcLk0flq7bsjANBgkqhkiG9w0BAQsFADCB
+kTEuMCwGA1UEAxMlaHR0cHM6Ly9naXRodWIuY29tL2pzZW52L2pzZW52LXNlcnZl
+cjELMAkGA1UEBhMCRlIxGDAWBgNVBAgTD0FscGVzIE1hcml0aW1lczERMA8GA1UE
+BxMIVmFsYm9ubmUxDjAMBgNVBAoTBWpzZW52MRUwEwYDVQQLEwxqc2VudiBzZXJ2
+ZXIwHhcNMTkwNzA5MTQ1MzU4WhcNMjgwNzA5MTQ1MzU5WjCBkTEuMCwGA1UEAxMl
+aHR0cHM6Ly9naXRodWIuY29tL2pzZW52L2pzZW52LXNlcnZlcjELMAkGA1UEBhMC
+RlIxGDAWBgNVBAgTD0FscGVzIE1hcml0aW1lczERMA8GA1UEBxMIVmFsYm9ubmUx
+DjAMBgNVBAoTBWpzZW52MRUwEwYDVQQLEwxqc2VudiBzZXJ2ZXIwgZ8wDQYJKoZI
+hvcNAQEBBQADgY0AMIGJAoGBAKWXWAmQmoH4pFmzJ6lDuCzzVQ77vdoo9o1uOn93
+Cj1d+q810OkqLjN9PDPMnIVeSg340aKF9Acj5WpEYhNz5fOYE9wa71ci9jLnaVXf
+OMbiyV3P6vyI0HMXAVJ1QaZod+RybRiG9yN1GHIpqUNosxzelVfh2r2tHOqb6mRv
+NV9VAgMBAAGjZzBlMAwGA1UdEwEB/wQCMAAwDgYDVR0PAQH/BAQDAgWgMBMGA1Ud
+JQQMMAoGCCsGAQUFBwMBMB8GA1UdIwQYMBaAFOQhJA9S7idbpNIbvKMyeRWbwyad
+MA8GA1UdEQQIMAaHBH8AAAEwDQYJKoZIhvcNAQELBQADgYEAUKPupneUl1bdjbbf
+QvUqAExIK0Nv2u54X8l0EJvkdPMNQEer7Npzg5RQWExtvamfEZI1EPOeVfPVu5sz
+q4DB6OgAEzkytbKtcgPlhY0GDbim8ELCpO1JNDn/jUXH74VJElwXMZqan5VaQ5c+
+qsCeVUdw8QsfIZH6XbkvhCswh4k=
+-----END CERTIFICATE-----`;
 
 let beforeExitCallbackArray = [];
 let uninstall;
@@ -5757,7 +7632,7 @@ const teardownSignal = {
   addCallback: addCallback$5
 };
 
-const firstOperationMatching$1 = ({
+const firstOperationMatching$2 = ({
   array,
   start,
   predicate
@@ -5880,7 +7755,7 @@ const crash = async reason => {
   const externalRecoverPromise = new Promise(resolve => {
     resolveRecovering = resolve;
   });
-  const callbackRecoverPromise = firstOperationMatching$1({
+  const callbackRecoverPromise = firstOperationMatching$2({
     array: recoverCallbackArray,
     start: recoverCallback => recoverCallback(reason),
     predicate: recovered => typeof recovered === "boolean"
@@ -5917,7 +7792,7 @@ const unadvisedCrashSignal = {
   addCallback: addCallback$6
 };
 
-const memoizeOnce$1 = compute => {
+const memoizeOnce$2 = compute => {
   let locked = false;
   let lockValue;
 
@@ -6271,12 +8146,16 @@ const STOP_REASON_PROCESS_DEATH = createReason("process death");
 const STOP_REASON_PROCESS_EXIT = createReason("process exit");
 const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
 
-const killPort = nodeRequire("kill-port");
+const require$2 = module$1.createRequire(url);
+
+const killPort = require$2("kill-port");
 
 const STATUS_TEXT_INTERNAL_ERROR = "internal error";
 const startServer = async ({
-  cancellationToken = createCancellationToken(),
+  cancellationToken = createCancellationToken$1(),
   logLevel,
+  logStart = true,
+  logStop = true,
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
@@ -6329,12 +8208,12 @@ const startServer = async ({
   if (protocol !== "http" && protocol !== "https") throw new Error(`protocol must be http or https, got ${protocol}`); // https://github.com/nodejs/node/issues/14900
 
   if (ip === "0.0.0.0" && process.platform === "win32") throw new Error(`listening ${ip} not available on window`);
-  const logger = createLogger({
+  const logger = createLogger$1({
     logLevel
   });
 
   if (forcePort) {
-    await createOperation({
+    await createOperation$1({
       cancellationToken,
       start: () => killPort(port)
     });
@@ -6383,9 +8262,13 @@ const startServer = async ({
   const stoppedPromise = new Promise(resolve => {
     stoppedResolve = resolve;
   });
-  const stop = memoizeOnce$1(async (reason = STOP_REASON_NOT_SPECIFIED) => {
+  const stop = memoizeOnce$2(async (reason = STOP_REASON_NOT_SPECIFIED) => {
     status = "closing";
-    logger.info(`server stopped because ${reason}`);
+
+    if (logStop) {
+      logger.info(`server stopped because ${reason}`);
+    }
+
     await cleanup(reason);
     await stopListening(nodeServer);
     status = "stopped";
@@ -6394,7 +8277,7 @@ const startServer = async ({
     });
     stoppedResolve(reason);
   });
-  const startOperation = createStoppableOperation({
+  const startOperation = createStoppableOperation$1({
     cancellationToken,
     start: () => listen({
       cancellationToken,
@@ -6447,7 +8330,11 @@ const startServer = async ({
     ip,
     port
   });
-  logger.info(`server started at ${origin}`);
+
+  if (logStart) {
+    logger.info(`server started at ${origin}`);
+  }
+
   startedCallback({
     origin
   }); // nodeServer.on("upgrade", (request, socket, head) => {
@@ -6547,7 +8434,7 @@ const startServer = async ({
       const responseProperties = await requestToResponse(request);
       return {
         request,
-        response: responsePropertiesToResponse(responseProperties)
+        response: responsePropertiesToResponse(responseProperties || {})
       };
     } catch (error) {
       return {
@@ -6728,7 +8615,7 @@ let jsenvCoreDirectoryUrl;
 
 if (typeof __filename === "string") {
   jsenvCoreDirectoryUrl = resolveDirectoryUrl( // get ride of dist/commonjs/main.js
-  "../../", filePathToUrl(__filename));
+  "../../", fileSystemPathToUrl(__filename));
 } else {
   jsenvCoreDirectoryUrl = resolveDirectoryUrl( // get ride of src/internal/jsenvCoreDirectoryUrl.js
   "../../", url);
@@ -7834,8 +9721,8 @@ const getProjectImportMap = async ({
   projectDirectoryUrl,
   importMapFileRelativeUrl
 }) => {
-  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
-  const importMapFilePath = urlToFilePath(importMapFileUrl);
+  const importMapFileUrl = resolveUrl$1(importMapFileRelativeUrl, projectDirectoryUrl);
+  const importMapFilePath = urlToFileSystemPath(importMapFileUrl);
   return new Promise((resolve, reject) => {
     fs.readFile(importMapFilePath, (error, buffer) => {
       if (error) {
@@ -7918,6 +9805,18 @@ const createBabePluginMapForBundle = ({
   };
 };
 
+const startsWithWindowsDriveLetter$3 = string => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+  return true;
+};
+const windowsFilePathToUrl = windowsFilePath => {
+  return `file:///${replaceBackSlashesWithSlashes(windowsFilePath)}`;
+};
+const replaceBackSlashesWithSlashes = string => string.replace(/\\/g, "/");
+
 const writeSourceMappingURL = (source, location) => `${source}
 ${"//#"} sourceMappingURL=${location}`;
 const updateSourceMappingURL = (source, callback) => {
@@ -7974,6 +9873,7 @@ const writeOrUpdateSourceMappingURL = (source, location) => {
   return writeSourceMappingURL(source, location);
 };
 
+const isWindows$9 = process.platform === "win32";
 const transformResultToCompilationResult = async ({
   code,
   map,
@@ -8020,11 +9920,14 @@ const transformResultToCompilationResult = async ({
       // may happen in some cases where babel returns a wrong sourcemap
       // there is at least one case where it happens
       // a file with only import './whatever.js' inside
-      sources.push(fileUrlToRelativePath(originalFileUrl, metaJsonFileUrl));
+      sources.push(urlToRelativeUrl(originalFileUrl, metaJsonFileUrl));
       sourcesContent.push(originalFileContent);
     } else {
       await Promise.all(map.sources.map(async (source, index) => {
-        const sourceFileUrl = String(new URL(source, sourcemapFileUrl));
+        // be careful here we might received C:/Directory/file.js path from babel
+        // also in case we receive relative path like directory\file.js we replace \ with slash
+        // for url resolution
+        const sourceFileUrl = isWindows$9 && startsWithWindowsDriveLetter$3(source) ? windowsFilePathToUrl(source) : ensureWindowsDriveLetter(resolveUrl$1(isWindows$9 ? replaceBackSlashesWithSlashes(source) : source, sourcemapFileUrl), sourcemapFileUrl);
 
         if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
           // do not track dependency outside project
@@ -8032,14 +9935,13 @@ const transformResultToCompilationResult = async ({
           return;
         }
 
-        map.sources[index] = fileUrlToRelativePath(sourceFileUrl, sourcemapFileUrl);
-        sources[index] = fileUrlToRelativePath(sourceFileUrl, metaJsonFileUrl);
+        map.sources[index] = urlToRelativeUrl(sourceFileUrl, sourcemapFileUrl);
+        sources[index] = urlToRelativeUrl(sourceFileUrl, metaJsonFileUrl);
 
         if (map.sourcesContent && map.sourcesContent[index]) {
           sourcesContent[index] = map.sourcesContent[index];
         } else {
-          const sourceFilePath = urlToFilePath(sourceFileUrl);
-          const sourceFileContent = await readFileContent(sourceFilePath);
+          const sourceFileContent = await readFile(sourceFileUrl);
           sourcesContent[index] = sourceFileContent;
         }
       }));
@@ -8059,14 +9961,14 @@ const transformResultToCompilationResult = async ({
       const mapAsBase64 = Buffer.from(JSON.stringify(map)).toString("base64");
       output = writeSourceMappingURL(output, `data:application/json;charset=utf-8;base64,${mapAsBase64}`);
     } else if (remapMethod === "comment") {
-      const sourcemapFileRelativePathForModule = fileUrlToRelativePath(sourcemapFileUrl, compiledFileUrl);
+      const sourcemapFileRelativePathForModule = urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl);
       output = writeSourceMappingURL(output, sourcemapFileRelativePathForModule);
-      const sourcemapFileRelativePathForAsset = fileUrlToRelativePath(sourcemapFileUrl, `${compiledFileUrl}__asset__/`);
+      const sourcemapFileRelativePathForAsset = urlToRelativeUrl(sourcemapFileUrl, `${compiledFileUrl}__asset__/`);
       assets.push(sourcemapFileRelativePathForAsset);
       assetsContent.push(stringifyMap(map));
     }
   } else {
-    sources.push(fileUrlToRelativePath(originalFileUrl, metaJsonFileUrl));
+    sources.push(urlToRelativeUrl(originalFileUrl, metaJsonFileUrl));
     sourcesContent.push(originalFileContent);
   }
 
@@ -8093,14 +9995,14 @@ const stringifyMap = object => JSON.stringify(object, null, "  ");
 
 const stringifyCoverage = object => JSON.stringify(object, null, "  ");
 
-const EMPTY_ID$1 = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+const EMPTY_ID = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
 const bufferToEtag$1 = buffer => {
   if (!Buffer.isBuffer(buffer)) {
     throw new TypeError(`buffer expected, got ${buffer}`);
   }
 
   if (buffer.length === 0) {
-    return EMPTY_ID$1;
+    return EMPTY_ID;
   }
 
   const hash = crypto.createHash("sha1");
@@ -8114,7 +10016,7 @@ const bufferToEtag$1 = buffer => {
 const resolveAssetFileUrl = ({
   asset,
   compiledFileUrl
-}) => resolveUrl(asset, `${compiledFileUrl}__asset__/`);
+}) => resolveUrl$1(asset, `${compiledFileUrl}__asset__/`);
 const resolveMetaJsonFileUrl = ({
   compiledFileUrl
 }) => resolveAssetFileUrl({
@@ -8124,7 +10026,7 @@ const resolveMetaJsonFileUrl = ({
 const resolveSourceFileUrl = ({
   source,
   compiledFileUrl
-}) => resolveUrl(source, resolveMetaJsonFileUrl({
+}) => resolveUrl$1(source, resolveMetaJsonFileUrl({
   compiledFileUrl
 }));
 
@@ -8135,10 +10037,9 @@ const readMeta = async ({
   const metaJsonFileUrl = resolveMetaJsonFileUrl({
     compiledFileUrl
   });
-  const metaJsonFilePath = urlToFilePath(metaJsonFileUrl);
 
   try {
-    const metaJsonString = await readFileContent(metaJsonFilePath);
+    const metaJsonString = await readFile(metaJsonFileUrl);
     const metaJsonObject = JSON.parse(metaJsonString);
     return metaJsonObject;
   } catch (error) {
@@ -8149,7 +10050,7 @@ const readMeta = async ({
     if (error && error.name === "SyntaxError") {
       logger.error(createCacheSyntaxErrorMessage({
         syntaxError: error,
-        metaJsonFilePath
+        metaJsonFileUrl
       }));
       return null;
     }
@@ -8160,12 +10061,12 @@ const readMeta = async ({
 
 const createCacheSyntaxErrorMessage = ({
   syntaxError,
-  metaJsonFilePath
+  metaJsonFileUrl
 }) => `cache syntax error
 --- syntax error stack ---
 ${syntaxError.stack}
 --- meta.json path ---
-${metaJsonFilePath}`;
+${urlToFileSystemPath(metaJsonFileUrl)}`;
 
 const validateMeta = async ({
   logger,
@@ -8230,16 +10131,14 @@ const validateCompiledFile = async ({
   ifEtagMatch,
   ifModifiedSinceDate
 }) => {
-  const compiledFilePath = urlToFilePath(compiledFileUrl);
-
   try {
-    const compiledSource = await readFileContent(compiledFilePath);
+    const compiledSource = await readFile(compiledFileUrl);
 
     if (ifEtagMatch) {
       const compiledEtag = bufferToEtag$1(Buffer.from(compiledSource));
 
       if (ifEtagMatch !== compiledEtag) {
-        logger.debug(`etag changed for ${compiledFilePath}`);
+        logger.debug(`etag changed for ${urlToFileSystemPath(compiledFileUrl)}`);
         return {
           code: "COMPILED_FILE_ETAG_MISMATCH",
           valid: false,
@@ -8252,10 +10151,10 @@ const validateCompiledFile = async ({
     }
 
     if (ifModifiedSinceDate) {
-      const compiledMtime = await readFileStat(compiledFilePath);
+      const compiledMtime = await readFileSystemNodeModificationTime(compiledFileUrl);
 
       if (ifModifiedSinceDate < dateToSecondsPrecision$1(compiledMtime)) {
-        logger.debug(`mtime changed for ${compiledFilePath}`);
+        logger.debug(`mtime changed for ${urlToFileSystemPath(compiledFileUrl)}`);
         return {
           code: "COMPILED_FILE_MTIME_OUTDATED",
           valid: false,
@@ -8275,12 +10174,12 @@ const validateCompiledFile = async ({
     };
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.debug(`compiled file not found at ${compiledFilePath}`);
+      logger.debug(`compiled file not found at ${urlToFileSystemPath(compiledFileUrl)}`);
       return {
         code: "COMPILED_FILE_NOT_FOUND",
         valid: false,
         data: {
-          compiledFilePath
+          compiledFileUrl
         }
       };
     }
@@ -8312,20 +10211,19 @@ const validateSource = async ({
     source,
     compiledFileUrl
   });
-  const sourceFilePath = urlToFilePath(sourceFileUrl);
 
   try {
-    const sourceContent = await readFileContent(sourceFilePath);
+    const sourceContent = await readFile(sourceFileUrl);
     const sourceETag = bufferToEtag$1(Buffer.from(sourceContent));
 
     if (sourceETag !== eTag) {
-      logger.debug(`etag changed for ${sourceFilePath}`);
+      logger.debug(`etag changed for ${urlToFileSystemPath(sourceFileUrl)}`);
       return {
         code: "SOURCE_ETAG_MISMATCH",
         valid: false,
         data: {
           source,
-          sourceFilePath,
+          sourceFileUrl,
           sourceContent
         }
       };
@@ -8348,13 +10246,13 @@ const validateSource = async ({
       // which are not truly on the filesystem
       // (IN theory the above happens only for convertCommonJsWithRollup because jsenv
       // always have a concrete file especially to avoid that kind of thing)
-      logger.warn(`source not found at ${sourceFilePath}`);
+      logger.warn(`source not found at ${sourceFileUrl}`);
       return {
         code: "SOURCE_NOT_FOUND",
         valid: false,
         data: {
           source,
-          sourceFilePath,
+          sourceFileUrl,
           sourceContent: ""
         }
       };
@@ -8385,20 +10283,19 @@ const validateAsset = async ({
     compiledFileUrl,
     asset
   });
-  const assetFilePath = urlToFilePath(assetFileUrl);
 
   try {
-    const assetContent = await readFileContent(assetFilePath);
+    const assetContent = await readFile(assetFileUrl);
     const assetContentETag = bufferToEtag$1(Buffer.from(assetContent));
 
     if (eTag !== assetContentETag) {
-      logger.debug(`etag changed for ${assetFilePath}`);
+      logger.debug(`etag changed for ${urlToFileSystemPath(assetFileUrl)}`);
       return {
         code: "ASSET_ETAG_MISMATCH",
         valid: false,
         data: {
           asset,
-          assetFilePath,
+          assetFileUrl,
           assetContent,
           assetContentETag
         }
@@ -8414,13 +10311,13 @@ const validateAsset = async ({
     };
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.debug(`asset not found at ${assetFilePath}`);
+      logger.debug(`asset not found at ${urlToFileSystemPath(assetFileUrl)}`);
       return {
         code: "ASSET_FILE_NOT_FOUND",
         valid: false,
         data: {
           asset,
-          assetFilePath
+          assetFileUrl
         }
       };
     }
@@ -8462,16 +10359,19 @@ const updateMeta = async ({
       source,
       compiledFileUrl
     });
-    const exists = await fileExists(sourceFileUrl);
+    const sourceStats = await readFileSystemNodeStat(sourceFileUrl, {
+      nullIfNotFound: true
+    });
 
-    if (!exists) {
+    if (sourceStats === null) {
       // this can lead to cache never invalidated by itself
       // it's a very important warning
       logger.warn(`a source file cannot be found ${sourceFileUrl}.
 -> excluding it from meta.sources & meta.sourcesEtag`);
+      return false;
     }
 
-    return exists;
+    return true;
   }));
   sources = sources.filter((source, index) => sourceExists[index]);
   sourcesContent = sourcesContent.filter((sourceContent, index) => sourceExists[index]);
@@ -8484,9 +10384,8 @@ const updateMeta = async ({
     } = compileResult;
 
     if (writeCompiledSourceFile) {
-      const compiledFilePath = urlToFilePath(compiledFileUrl);
-      logger.debug(`write compiled file at ${compiledFilePath}`);
-      promises.push(writeFileContent(compiledFilePath, compiledSource));
+      logger.debug(`write compiled file at ${urlToFileSystemPath(compiledFileUrl)}`);
+      promises.push(writeFile(compiledFileUrl, compiledSource));
     }
 
     if (writeAssetsFile) {
@@ -8495,9 +10394,8 @@ const updateMeta = async ({
           compiledFileUrl,
           asset
         });
-        const assetFilePath = urlToFilePath(assetFileUrl);
-        logger.debug(`write compiled file asset at ${assetFilePath}`);
-        return writeFileContent(assetFilePath, assetsContent[index]);
+        logger.debug(`write compiled file asset at ${urlToFileSystemPath(assetFileUrl)}`);
+        return writeFile(assetFileUrl, assetsContent[index]);
       }));
     }
   }
@@ -8543,9 +10441,8 @@ const updateMeta = async ({
     const metaJsonFileUrl = resolveMetaJsonFileUrl({
       compiledFileUrl
     });
-    const metaJsonFilePath = urlToFilePath(metaJsonFileUrl);
-    logger.debug(`write compiled file meta at ${metaJsonFilePath}`);
-    promises.push(writeFileContent(metaJsonFilePath, JSON.stringify(latestMeta, null, "  ")));
+    logger.debug(`write compiled file meta at ${urlToFileSystemPath(metaJsonFileUrl)}`);
+    promises.push(writeFile(metaJsonFileUrl, JSON.stringify(latestMeta, null, "  ")));
   }
 
   return Promise.all(promises);
@@ -8784,7 +10681,7 @@ const startAsap = async (fn, {
   const metaJsonFileUrl = resolveMetaJsonFileUrl({
     compiledFileUrl
   });
-  const metaJsonFilePath = urlToFilePath(metaJsonFileUrl);
+  const metaJsonFilePath = urlToFileSystemPath(metaJsonFileUrl);
   logger.debug(`lock ${metaJsonFilePath}`); // in case this process try to concurrently access meta we wait for previous to be done
 
   const unlockLocal = await lockForRessource(metaJsonFilePath);
@@ -8795,7 +10692,7 @@ const startAsap = async (fn, {
     // after that we use a lock pathnameRelative to be sure we don't conflict with other process
     // trying to do the same (mapy happen when spawining multiple server for instance)
     // https://github.com/moxystudio/node-proper-lockfile/issues/69
-    await createFileDirectories(metaJsonFilePath); // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
+    await ensureParentDirectories(metaJsonFilePath); // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
 
     unlockInterProcessLock = await lockfile.lock(metaJsonFilePath, {
       realpath: false,
@@ -8892,7 +10789,7 @@ const serveCompiledFile = async ({
       request
     });
     compileResult.sources.forEach(source => {
-      const sourceFileUrl = resolveUrl(source, `${compiledFileUrl}__asset__/`);
+      const sourceFileUrl = resolveUrl$1(source, `${compiledFileUrl}__asset__/`);
       projectFileRequestedCallback({
         relativeUrl: urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl),
         request
@@ -8950,7 +10847,7 @@ const serveCompiledFile = async ({
     };
   } catch (error) {
     if (error && error.code === "PARSE_ERROR") {
-      const relativeUrl = urlToRelativeUrl(filePathToUrl(error.data.filename), projectDirectoryUrl);
+      const relativeUrl = urlToRelativeUrl(fileSystemPathToUrl(error.data.filename), projectDirectoryUrl);
       projectFileRequestedCallback({
         relativeUrl,
         request
@@ -8979,9 +10876,193 @@ const serveCompiledFile = async ({
   }
 };
 
+const ensureUrlTrailingSlash$3 = url => {
+  return url.endsWith("/") ? url : `${url}/`;
+};
+const urlToFilePath = fileUrl => {
+  return url$1.fileURLToPath(fileUrl);
+};
+const hasScheme$3 = string => {
+  return /^[a-zA-Z]{2,}:/.test(string);
+};
+const urlToRelativeUrl$2 = (url, baseUrl) => {
+  if (typeof baseUrl !== "string") {
+    throw new TypeError(`baseUrl must be a string, got ${baseUrl}`);
+  }
+
+  if (url.startsWith(baseUrl)) {
+    return url.slice(baseUrl.length);
+  }
+
+  return url;
+};
+
+const normalizeDirectoryUrl = value => {
+  if (value instanceof URL) {
+    value = value.href;
+  }
+
+  if (typeof value === "string") {
+    const url = hasScheme$3(value) ? value : urlToFilePath(value);
+
+    if (!url.startsWith("file://")) {
+      throw new Error(`directoryUrl must starts with file://, received ${value}`);
+    }
+
+    return ensureUrlTrailingSlash$3(url);
+  }
+
+  throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
+};
+
+const compareFilePath = (leftPath, rightPath) => {
+  const leftPartArray = leftPath.split("/");
+  const rightPartArray = rightPath.split("/");
+  const leftLength = leftPartArray.length;
+  const rightLength = rightPartArray.length;
+  const maxLength = Math.max(leftLength, rightLength);
+  let i = 0;
+
+  while (i < maxLength) {
+    const leftPartExists = i in leftPartArray;
+    const rightPartExists = i in rightPartArray; // longer comes first
+
+    if (!leftPartExists) return +1;
+    if (!rightPartExists) return -1;
+    const leftPartIsLast = i === leftPartArray.length - 1;
+    const rightPartIsLast = i === rightPartArray.length - 1; // folder comes first
+
+    if (leftPartIsLast && !rightPartIsLast) return +1;
+    if (!leftPartIsLast && rightPartIsLast) return -1;
+    const leftPart = leftPartArray[i];
+    const rightPart = rightPartArray[i];
+    i++; // local comparison comes first
+
+    const comparison = leftPart.localeCompare(rightPart);
+    if (comparison !== 0) return comparison;
+  }
+
+  if (leftLength < rightLength) return +1;
+  if (leftLength > rightLength) return -1;
+  return 0;
+};
+
+const collectFiles = async ({
+  cancellationToken = createCancellationToken(),
+  directoryUrl,
+  specifierMetaMap,
+  predicate,
+  matchingFileOperation = () => null
+}) => {
+  const rootDirectoryUrl = normalizeDirectoryUrl(directoryUrl);
+
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+
+  if (typeof matchingFileOperation !== "function") {
+    throw new TypeError(`matchingFileOperation must be a function, got ${matchingFileOperation}`);
+  }
+
+  const specifierMetaMapNormalized = normalizeSpecifierMetaMap(specifierMetaMap, rootDirectoryUrl);
+  const matchingFileResultArray = [];
+
+  const visitDirectory = async directoryUrl => {
+    const directoryPath = urlToFilePath(directoryUrl);
+    const directoryItems = await createOperation({
+      cancellationToken,
+      start: () => readDirectory$2(directoryPath)
+    });
+    await Promise.all(directoryItems.map(async directoryItem => {
+      const directoryItemUrl = `${directoryUrl}${directoryItem}`;
+      const directoryItemPath = urlToFilePath(directoryItemUrl);
+      const lstat = await createOperation({
+        cancellationToken,
+        start: () => readLStat(directoryItemPath)
+      });
+
+      if (lstat.isDirectory()) {
+        const subDirectoryUrl = `${directoryItemUrl}/`;
+
+        if (!urlCanContainsMetaMatching({
+          url: subDirectoryUrl,
+          specifierMetaMap: specifierMetaMapNormalized,
+          predicate
+        })) {
+          return;
+        }
+
+        await visitDirectory(subDirectoryUrl);
+        return;
+      }
+
+      if (lstat.isFile()) {
+        const meta = urlToMeta({
+          url: directoryItemUrl,
+          specifierMetaMap: specifierMetaMapNormalized
+        });
+        if (!predicate(meta)) return;
+        const relativeUrl = urlToRelativeUrl$2(directoryItemUrl, rootDirectoryUrl);
+        const operationResult = await createOperation({
+          cancellationToken,
+          start: () => matchingFileOperation({
+            cancellationToken,
+            relativeUrl,
+            meta,
+            lstat
+          })
+        });
+        matchingFileResultArray.push({
+          relativeUrl,
+          meta,
+          lstat,
+          operationResult
+        });
+        return;
+      } // we ignore symlink because recursively traversed
+      // so symlinked file will be discovered.
+      // Moreover if they lead outside of directoryPath it can become a problem
+      // like infinite recursion of whatever.
+      // that we could handle using an object of pathname already seen but it will be useless
+      // because directoryPath is recursively traversed
+
+    }));
+  };
+
+  await visitDirectory(rootDirectoryUrl); // When we operate on thoose files later it feels more natural
+  // to perform operation in the same order they appear in the filesystem.
+  // It also allow to get a predictable return value.
+  // For that reason we sort matchingFileResultArray
+
+  matchingFileResultArray.sort((leftFile, rightFile) => {
+    return compareFilePath(leftFile.relativeUrl, rightFile.relativeUrl);
+  });
+  return matchingFileResultArray;
+};
+
+const readDirectory$2 = filePath => new Promise((resolve, reject) => {
+  fs.readdir(filePath, (error, names) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(names);
+    }
+  });
+});
+
+const readLStat = filePath => new Promise((resolve, reject) => {
+  fs.lstat(filePath, (error, stat) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(stat);
+    }
+  });
+});
+
 const fetch = nodeRequire("node-fetch");
 
-const AbortController = nodeRequire("abort-controller"); // ideally we should only pass this to the fetch below
+const AbortController$1 = nodeRequire("abort-controller"); // ideally we should only pass this to the fetch below
 
 
 https.globalAgent.options.rejectUnauthorized = false;
@@ -9007,10 +11088,9 @@ const fetchUrl = async (url, {
 
   if (url.startsWith("file:///")) {
     try {
-      const path = urlToFilePath(url);
       const code = await createOperation({
         cancellationToken,
-        start: () => readFileContent(path)
+        start: () => readFile(url)
       });
       return {
         url,
@@ -9075,7 +11155,7 @@ const normalizeResponse = async response => {
 
 
 const cancellationTokenToAbortSignal = cancellationToken => {
-  const abortController = new AbortController();
+  const abortController = new AbortController$1();
   cancellationToken.register(reason => {
     abortController.abort(reason);
   });
@@ -9134,7 +11214,7 @@ const fetchSourcemap = async ({
     });
   }
 
-  const sourcemapUrl = resolveUrl(sourcemapParsingResult.sourcemapURL, moduleUrl);
+  const sourcemapUrl = resolveUrl$1(sourcemapParsingResult.sourcemapURL, moduleUrl);
   const sourcemapResponse = await fetchUrl(sourcemapUrl, {
     cancellationToken
   });
@@ -9206,9 +11286,28 @@ ${moduleUrl}`);
 };
 
 const {
-  minify: minifyCode
+  minify
+} = nodeRequire("html-minifier");
+
+const minifyHtml = (htmlString, options) => {
+  return minify(htmlString, options);
+};
+
+const {
+  minify: minify$1
 } = nodeRequire("terser");
 
+const minifyJs = (jsString, options) => {
+  return minify$1(jsString, options);
+};
+
+const CleanCSS = nodeRequire("clean-css");
+
+const minifyCss = (cssString, options) => {
+  return new CleanCSS(options).minify(cssString).styles;
+};
+
+/* eslint-disable import/max-dependencies */
 const createJsenvRollupPlugin = async ({
   cancellationToken,
   logger,
@@ -9222,6 +11321,13 @@ const createJsenvRollupPlugin = async ({
   babelPluginMap,
   format,
   minify,
+  // https://github.com/terser/terser#minify-options
+  minifyJsOptions,
+  // https://github.com/jakubpawlowicz/clean-css#constructor-options
+  minifyCssOptions,
+  // https://github.com/kangax/html-minifier#options-quick-reference
+  minifyHtmlOptions,
+  manifestFile,
   detectAndTransformIfNeededAsyncInsertedByRollup = format === "global"
 }) => {
   const moduleContentMap = {};
@@ -9232,8 +11338,8 @@ const createJsenvRollupPlugin = async ({
   const jsenvRollupPlugin = {
     name: "jsenv",
     resolveId: (specifier, importer = compileDirectoryRemoteUrl) => {
-      if (!hasScheme$1(importer)) {
-        importer = filePathToUrl(importer);
+      if (isFileSystemPath(importer)) {
+        importer = fileSystemPathToUrl(importer);
       }
 
       const importUrl = resolveImport({
@@ -9281,10 +11387,10 @@ const createJsenvRollupPlugin = async ({
     // transform: async (moduleContent, rollupId) => {}
     outputOptions: options => {
       // rollup does not expects to have http dependency in the mix
-      const bundleSourcemapFileUrl = resolveUrl(`./${chunkId}.map`, bundleDirectoryUrl); // options.sourcemapFile = bundleSourcemapFileUrl
+      const bundleSourcemapFileUrl = resolveUrl$1(`./${chunkId}.map`, bundleDirectoryUrl); // options.sourcemapFile = bundleSourcemapFileUrl
 
       const relativePathToUrl = relativePath => {
-        const rollupUrl = resolveUrl(relativePath, bundleSourcemapFileUrl);
+        const rollupUrl = resolveUrl$1(relativePath, bundleSourcemapFileUrl);
         let url; // fix rollup not supporting source being http
 
         const httpIndex = rollupUrl.indexOf(`http:/`);
@@ -9314,7 +11420,7 @@ const createJsenvRollupPlugin = async ({
         if (url.startsWith(compileServerOrigin)) {
           const relativeUrl = url.slice(`${compileServerOrigin}/`.length);
           const fileUrl = `${projectDirectoryUrl}${relativeUrl}`;
-          relativePath = fileUrlToRelativePath(fileUrl, bundleSourcemapFileUrl);
+          relativePath = urlToRelativeUrl(fileUrl, bundleSourcemapFileUrl);
           return relativePath;
         }
 
@@ -9330,14 +11436,14 @@ const createJsenvRollupPlugin = async ({
     renderChunk: source => {
       if (!minify) return null; // https://github.com/terser-js/terser#minify-options
 
-      const minifyOptions = format === "global" ? {
-        toplevel: false
-      } : {
-        toplevel: true
-      };
-      const result = minifyCode(source, {
+      const result = minifyJs(source, {
         sourceMap: true,
-        ...minifyOptions
+        ...(format === "global" ? {
+          toplevel: false
+        } : {
+          toplevel: true
+        }),
+        ...minifyJsOptions
       });
 
       if (result.error) {
@@ -9345,6 +11451,24 @@ const createJsenvRollupPlugin = async ({
       } else {
         return result;
       }
+    },
+    generateBundle: async (outputOptions, bundle) => {
+      if (!manifestFile) {
+        return;
+      }
+
+      const mappings = {};
+      Object.keys(bundle).forEach(key => {
+        const chunk = bundle[key];
+        mappings[`${chunk.name}.js`] = chunk.fileName;
+      });
+      const mappingKeysSorted = Object.keys(mappings).sort(compareFilePath);
+      const manifest = {};
+      mappingKeysSorted.forEach(key => {
+        manifest[key] = mappings[key];
+      });
+      const manifestFileUrl = resolveUrl$1("manifest.json", bundleDirectoryUrl);
+      await writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "));
     },
     writeBundle: async bundle => {
       if (detectAndTransformIfNeededAsyncInsertedByRollup) {
@@ -9392,28 +11516,31 @@ const createJsenvRollupPlugin = async ({
     }
 
     if (contentType === "application/json") {
-      // we could minify json too
-      // et a propos du map qui pourrait permettre de connaitre la vrai source pour ce fichier
-      // genre dire que la source c'est je ne sais quoi
-      // a defaut il faudrait
-      // pouvoir tenir compte d'une redirection pour update le
       return {
         responseUrl,
         contentRaw: content,
-        content: `export default ${content}`
+        content: jsonToJavascript(content)
       };
     }
 
-    if (contentType.startsWith("text/")) {
-      // we could minify html, svg, css etc too
+    if (contentType === "text/html") {
       return {
         responseUrl,
         contentRaw: content,
-        content: `export default ${JSON.stringify(content)}`
+        content: htmlToJavascript(content)
       };
     }
 
-    logger.warn(`unexpected content-type for module.
+    if (contentType === "text/css") {
+      return {
+        responseUrl,
+        contentRaw: content,
+        content: cssToJavascript(content)
+      };
+    }
+
+    if (!contentType.startsWith("text/")) {
+      logger.warn(`unexpected content-type for module.
 --- content-type ---
 ${contentType}
 --- expected content-types ---
@@ -9422,12 +11549,41 @@ ${contentType}
 "text/*"
 --- module url ---
 ${moduleUrl}`);
+    } // fallback to text
+
+
     return {
       responseUrl,
       contentRaw: content,
-      // fallback to text
-      content: `export default ${JSON.stringify(content)}`
+      content: textToJavascript(content)
     };
+  };
+
+  const jsonToJavascript = jsonString => {
+    // there is no need to minify the json string
+    // because it becomes valid javascript
+    // that will be minified by minifyJs inside renderChunk
+    return `export default ${jsonString}`;
+  };
+
+  const htmlToJavascript = htmlString => {
+    if (minify) {
+      htmlString = minifyHtml(htmlString, minifyHtmlOptions);
+    }
+
+    return `export default ${JSON.stringify(htmlString)}`;
+  };
+
+  const cssToJavascript = cssString => {
+    if (minify) {
+      cssString = minifyCss(cssString, minifyCssOptions);
+    }
+
+    return `export default ${JSON.stringify(cssString)}`;
+  };
+
+  const textToJavascript = textString => {
+    return `export default ${JSON.stringify(textString)}`;
   };
 
   const getModule = async moduleUrl => {
@@ -9457,10 +11613,10 @@ ${moduleUrl}`);
   };
 }; // const urlToRollupId = (url, { compileServerOrigin, projectDirectoryUrl }) => {
 //   if (url.startsWith(`${compileServerOrigin}/`)) {
-//     return urlToFilePath(`${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`)
+//     return urlToFileSystemPath(`${projectDirectoryUrl}${url.slice(`${compileServerOrigin}/`.length)}`)
 //   }
 //   if (url.startsWith("file://")) {
-//     return urlToFilePath(url)
+//     return urlToFileSystemPath(url)
 //   }
 //   return url
 // }
@@ -9506,13 +11662,14 @@ const transformAsyncInsertedByRollup = async ({
 
   await Promise.all(Object.keys(bundle).map(async bundleFilename => {
     const bundleInfo = bundle[bundleFilename];
+    const bundleFileUrl = resolveUrl$1(bundleFilename, bundleDirectoryUrl);
     const {
       code,
       map
     } = await transformJs({
       projectDirectoryUrl,
       code: bundleInfo.code,
-      url: filePathToUrl(bundleFilename),
+      url: bundleFileUrl,
       map: bundleInfo.map,
       babelPluginMap: {
         [asyncPluginName]: babelPluginMap[asyncPluginName]
@@ -9523,8 +11680,7 @@ const transformAsyncInsertedByRollup = async ({
       // already done
       transformGlobalThis: false
     });
-    const bundleFileUrl = resolveUrl(bundleFilename, bundleDirectoryUrl);
-    await Promise.all([writeFileContent(urlToFilePath(bundleFileUrl), writeSourceMappingURL(code, `./${bundleFilename}.map`)), writeFileContent(urlToFilePath(`${bundleFileUrl}.map`), JSON.stringify(map))]);
+    await Promise.all([writeFile(bundleFileUrl, writeSourceMappingURL(code, `./${bundleFilename}.map`)), writeFile(`${bundleFileUrl}.map`, JSON.stringify(map))]);
   }));
 };
 
@@ -9558,8 +11714,12 @@ const generateBundleUsingRollup = async ({
   format,
   formatOutputOptions,
   minify,
+  minifyJsOptions,
+  minifyCssOptions,
+  minifyHtmlOptions,
   sourcemapExcludeSources,
-  writeOnFileSystem
+  writeOnFileSystem,
+  manifestFile = false
 }) => {
   const {
     jsenvRollupPlugin,
@@ -9576,7 +11736,11 @@ const generateBundleUsingRollup = async ({
     importDefaultExtension,
     babelPluginMap,
     format,
-    minify
+    minify,
+    minifyJsOptions,
+    minifyCssOptions,
+    minifyHtmlOptions,
+    manifestFile
   });
   const rollupBundle = await useRollup({
     cancellationToken,
@@ -9635,7 +11799,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}
       // call make it a bit complex
       // cache: null
       // https://rollupjs.org/guide/en#experimentaltoplevelawait
-      experimentalTopLevelAwait: true,
+      //  experimentalTopLevelAwait: true,
       // if we want to ignore some warning
       // please use https://rollupjs.org/guide/en#onwarn
       // to be very clear about what we want to ignore
@@ -9650,15 +11814,14 @@ ${JSON.stringify(entryPointMap, null, "  ")}
   });
   const rollupGenerateOptions = {
     // https://rollupjs.org/guide/en#experimentaltoplevelawait
-    experimentalTopLevelAwait: true,
+    // experimentalTopLevelAwait: true,
     // we could put prefConst to true by checking 'transform-block-scoping'
     // presence in babelPluginMap
     preferConst: false,
     // https://rollupjs.org/guide/en#output-dir
-    dir: urlToFilePath(bundleDirectoryUrl),
+    dir: urlToFileSystemPath(bundleDirectoryUrl),
     // https://rollupjs.org/guide/en#output-format
     format: formatToRollupFormat(format),
-    // entryFileNames: `./[name].js`,
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources,
@@ -9724,10 +11887,10 @@ const bundleToCompilationResult = ({
         return;
       }
 
-      const relativePath = fileUrlToRelativePath(moduleUrl, `${compiledFileUrl}__asset__/meta.json`);
+      const relativeUrl = urlToRelativeUrl(moduleUrl, `${compiledFileUrl}__asset__/meta.json`);
 
-      if (!sources.includes(relativePath)) {
-        sources.push(relativePath);
+      if (!sources.includes(relativeUrl)) {
+        sources.push(relativeUrl);
         sourcesContent.push(dependencyMap[moduleUrl].contentRaw);
       }
     });
@@ -9738,11 +11901,11 @@ const bundleToCompilationResult = ({
   const mainChunk = parseRollupChunk(rollupBundle.output[0], {
     moduleContentMap,
     sourcemapFileUrl,
-    sourcemapFileRelativeUrlForModule: fileUrlToRelativePath(sourcemapFileUrl, compiledFileUrl)
+    sourcemapFileRelativeUrlForModule: urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl)
   }); // mainChunk.sourcemap.file = fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl)
 
   trackDependencies(mainChunk.dependencyMap);
-  assets.push(fileUrlToRelativePath(sourcemapFileUrl, `${compiledFileUrl}__asset__/`));
+  assets.push(urlToRelativeUrl(sourcemapFileUrl, `${compiledFileUrl}__asset__/`));
   assetsContent.push(JSON.stringify(mainChunk.sourcemap, null, "  "));
   rollupBundle.output.slice(1).forEach(rollupChunk => {
     const chunkFileName = rollupChunk.fileName;
@@ -9774,7 +11937,7 @@ const parseRollupChunk = (rollupChunk, {
   const dependencyMap = {};
   const mainModuleSourcemap = rollupChunk.map;
   mainModuleSourcemap.sources.forEach((source, index) => {
-    const moduleUrl = resolveUrl(source, sourcemapFileUrl);
+    const moduleUrl = resolveUrl$1(source, sourcemapFileUrl);
     dependencyMap[moduleUrl] = getModuleContent({
       moduleContentMap,
       mainModuleSourcemap,
@@ -9814,7 +11977,7 @@ const getModuleContent = ({
 
 
   if (moduleUrl.startsWith("file:///")) {
-    const moduleFilePath = urlToFilePath(moduleUrl); // this could be async but it's ok for now
+    const moduleFilePath = urlToFileSystemPath(moduleUrl); // this could be async but it's ok for now
     // making it async could be harder than it seems
     // because sourcesContent must be in sync with sources
 
@@ -9987,7 +12150,7 @@ const serveCompiledJs = async ({
     return {
       status: 307,
       headers: {
-        location: resolveUrl(originalFileRelativeUrl, origin)
+        location: resolveUrl$1(originalFileRelativeUrl, origin)
       }
     };
   }
@@ -9995,7 +12158,7 @@ const serveCompiledJs = async ({
   const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`;
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`;
   const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl);
-  const compiledFileUrl = resolveUrl(originalFileRelativeUrl, compileDirectoryUrl);
+  const compiledFileUrl = resolveUrl$1(originalFileRelativeUrl, compileDirectoryUrl);
 
   if (compileId === COMPILE_ID_GLOBAL_BUNDLE || compileId === COMPILE_ID_COMMONJS_BUNDLE) {
     return serveBundle({
@@ -10026,7 +12189,7 @@ const serveCompiledJs = async ({
     projectFileRequestedCallback,
     request,
     compile: async () => {
-      const code = await readFileContent(urlToFilePath(originalFileUrl));
+      const code = await readFile(originalFileUrl);
       let compiledIdForGroupMap;
       let babelPluginMapForGroupMap;
 
@@ -10153,7 +12316,7 @@ const startCompileServer = async ({
   assertImportMapFileRelativeUrl({
     importMapFileRelativeUrl
   });
-  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
+  const importMapFileUrl = resolveUrl$1(importMapFileRelativeUrl, projectDirectoryUrl);
   assertImportMapFileInsideProject({
     importMapFileUrl,
     projectDirectoryUrl
@@ -10203,7 +12366,7 @@ ${projectDirectoryUrl}`);
 
   if (jsenvDirectoryClean) {
     logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`);
-    await removeDirectory(urlToFilePath(jsenvDirectoryUrl));
+    await ensureEmptyDirectory(jsenvDirectoryUrl);
   }
 
   if (useFilesystemAsCache) {
@@ -10214,8 +12377,8 @@ ${projectDirectoryUrl}`);
     });
   }
 
-  const packageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl);
-  const packageFilePath = urlToFilePath(packageFileUrl);
+  const packageFileUrl = resolveUrl$1("./package.json", jsenvCoreDirectoryUrl);
+  const packageFilePath = urlToFileSystemPath(packageFileUrl);
   const packageVersion = readPackage(packageFilePath).version;
 
   if (projectFileRequestedCallback) {
@@ -10268,7 +12431,7 @@ ${projectDirectoryUrl}`);
         const requestUrl = `${origin}${ressource}`; // serve asset files directly
 
         if (urlIsAsset(requestUrl)) {
-          const fileUrl = resolveUrl(ressource.slice(1), projectDirectoryUrl);
+          const fileUrl = resolveUrl$1(ressource.slice(1), projectDirectoryUrl);
           return serveFile(fileUrl, {
             method,
             headers
@@ -10328,16 +12491,20 @@ ${projectDirectoryUrl}`);
 export const ${key} = ${JSON.stringify(env[key])}
 `).join("");
 
-  const jsenvImportMapFilePath = urlToFilePath(resolveUrl("./importMap.json", outDirectoryUrl));
-  const jsenvGroupMapFilePath = urlToFilePath(resolveUrl("./groupMap.json", outDirectoryUrl));
-  const jsenvEnvFilePath = urlToFilePath(resolveUrl("./env.js", outDirectoryUrl));
-  await Promise.all([writeFileContent(jsenvImportMapFilePath, importMapToString()), writeFileContent(jsenvGroupMapFilePath, groupMapToString()), writeFileContent(jsenvEnvFilePath, envToString())]);
+  const jsenvImportMapFileUrl = resolveUrl$1("./importMap.json", outDirectoryUrl);
+  const jsenvGroupMapFileUrl = resolveUrl$1("./groupMap.json", outDirectoryUrl);
+  const jsenvEnvFileUrl = resolveUrl$1("./env.js", outDirectoryUrl);
+  await Promise.all([writeFile(jsenvImportMapFileUrl, importMapToString()), writeFile(jsenvGroupMapFileUrl, groupMapToString()), writeFile(jsenvEnvFileUrl, envToString())]);
 
   if (!writeOnFilesystem) {
     compileServer.stoppedPromise.then(() => {
-      removeFile(jsenvImportMapFilePath);
-      removeFile(jsenvGroupMapFilePath);
-      removeFile(jsenvEnvFilePath);
+      removeFileSystemNode(jsenvImportMapFileUrl, {
+        allowUseless: true
+      });
+      removeFileSystemNode(jsenvGroupMapFileUrl, {
+        allowUseless: true
+      });
+      removeFileSystemNode(jsenvEnvFileUrl);
     });
   }
 
@@ -10407,8 +12574,8 @@ const serveProjectFiles = async ({
     relativeUrl,
     request
   });
-  const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl);
-  const filePath = urlToFilePath(fileUrl);
+  const fileUrl = resolveUrl$1(relativeUrl, projectDirectoryUrl);
+  const filePath = urlToFileSystemPath(fileUrl);
   const responsePromise = serveFile(filePath, {
     method,
     headers
@@ -10476,19 +12643,17 @@ const cleanOutDirectoryIfObsolete = async ({
   outDirectoryUrl,
   outDirectoryMeta
 }) => {
-  const jsenvCorePackageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl);
-  const jsenvCorePackageFilePath = urlToFilePath(jsenvCorePackageFileUrl);
+  const jsenvCorePackageFileUrl = resolveUrl$1("./package.json", jsenvCoreDirectoryUrl);
+  const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl);
   const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version;
   outDirectoryMeta = { ...outDirectoryMeta,
     jsenvCorePackageVersion
   };
-  const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl);
-  const metaFilePath = urlToFilePath(metaFileUrl);
-  const compileDirectoryPath = urlToFilePath(outDirectoryUrl);
+  const metaFileUrl = resolveUrl$1("./meta.json", outDirectoryUrl);
   let previousOutDirectoryMeta;
 
   try {
-    const source = await readFileContent(metaFilePath);
+    const source = await readFile(metaFileUrl);
     previousOutDirectoryMeta = JSON.parse(source);
   } catch (e) {
     if (e && e.code === "ENOENT") {
@@ -10499,11 +12664,11 @@ const cleanOutDirectoryIfObsolete = async ({
   }
 
   if (previousOutDirectoryMeta !== null && JSON.stringify(previousOutDirectoryMeta) !== JSON.stringify(outDirectoryMeta)) {
-    logger.info(`clean out directory at ${compileDirectoryPath}`);
-    await removeDirectory(compileDirectoryPath);
+    logger.info(`clean out directory at ${urlToFileSystemPath(outDirectoryUrl)}`);
+    await ensureEmptyDirectory(outDirectoryUrl);
   }
 
-  await writeFileContent(metaFilePath, JSON.stringify(outDirectoryMeta, null, "  "));
+  await writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "));
 };
 
 const {
@@ -11116,639 +13281,6 @@ const optionsToRelativeUrl = ({
   return "";
 };
 
-// https://github.com/tc39/proposal-cancellation/tree/master/stage0
-const createCancellationToken$1 = () => {
-  const register = callback => {
-    if (typeof callback !== "function") {
-      throw new Error(`callback must be a function, got ${callback}`);
-    }
-
-    return {
-      callback,
-      unregister: () => {}
-    };
-  };
-
-  const throwIfRequested = () => undefined;
-
-  return {
-    register,
-    cancellationRequested: false,
-    throwIfRequested
-  };
-};
-
-const createOperation$1 = ({
-  cancellationToken = createCancellationToken$1(),
-  start,
-  ...rest
-}) => {
-  ensureExactParameters(rest);
-  cancellationToken.throwIfRequested();
-  const promise = new Promise(resolve => {
-    resolve(start());
-  });
-  const cancelPromise = new Promise((resolve, reject) => {
-    const cancelRegistration = cancellationToken.register(cancelError => {
-      cancelRegistration.unregister();
-      reject(cancelError);
-    });
-    promise.then(cancelRegistration.unregister, () => {});
-  });
-  const operationPromise = Promise.race([promise, cancelPromise]);
-  return operationPromise;
-};
-
-const ensureExactParameters = extraParameters => {
-  const extraParamNames = Object.keys(extraParameters);
-  if (extraParamNames.length) throw new Error(`createOperation expect only cancellationToken, start. Got ${extraParamNames}`);
-};
-
-const assertUrlLike$2 = (value, name = "url") => {
-  if (typeof value !== "string") {
-    throw new TypeError(`${name} must be a url string, got ${value}`);
-  }
-
-  if (isWindowsPathnameSpecifier$2(value)) {
-    throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
-  }
-
-  if (!hasScheme$5(value)) {
-    throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
-  }
-};
-
-const isWindowsPathnameSpecifier$2 = specifier => {
-  const firstChar = specifier[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = specifier[1];
-  if (secondChar !== ":") return false;
-  const thirdChar = specifier[2];
-  return thirdChar === "/";
-};
-
-const hasScheme$5 = specifier => /^[a-zA-Z]+:/.test(specifier);
-
-// https://git-scm.com/docs/gitignore
-const applySpecifierPatternMatching$2 = ({
-  specifier,
-  url,
-  ...rest
-} = {}) => {
-  assertUrlLike$2(specifier, "specifier");
-  assertUrlLike$2(url, "url");
-
-  if (Object.keys(rest).length) {
-    throw new Error(`received more parameters than expected.
---- name of unexpected parameters ---
-${Object.keys(rest)}
---- name of expected parameters ---
-specifier, url`);
-  }
-
-  return applyPatternMatching$2(specifier, url);
-};
-
-const applyPatternMatching$2 = (pattern, string) => {
-  let patternIndex = 0;
-  let index = 0;
-  let remainingPattern = pattern;
-  let remainingString = string; // eslint-disable-next-line no-constant-condition
-
-  while (true) {
-    // pattern consumed and string consumed
-    if (remainingPattern === "" && remainingString === "") {
-      // pass because string fully matched pattern
-      return pass$2({
-        patternIndex,
-        index
-      });
-    } // pattern consumed, string not consumed
-
-
-    if (remainingPattern === "" && remainingString !== "") {
-      // fails because string longer than expected
-      return fail$2({
-        patternIndex,
-        index
-      });
-    } // from this point pattern is not consumed
-    // string consumed, pattern not consumed
-
-
-    if (remainingString === "") {
-      // pass because trailing "**" is optional
-      if (remainingPattern === "**") {
-        return pass$2({
-          patternIndex: patternIndex + 2,
-          index
-        });
-      } // fail because string shorted than expected
-
-
-      return fail$2({
-        patternIndex,
-        index
-      });
-    } // from this point pattern and string are not consumed
-    // fast path trailing slash
-
-
-    if (remainingPattern === "/") {
-      // pass because trailing slash matches remaining
-      return pass$2({
-        patternIndex: patternIndex + 1,
-        index: string.length
-      });
-    } // fast path trailing '**'
-
-
-    if (remainingPattern === "**") {
-      // pass because trailing ** matches remaining
-      return pass$2({
-        patternIndex: patternIndex + 2,
-        index: string.length
-      });
-    } // pattern leading **
-
-
-    if (remainingPattern.slice(0, 2) === "**") {
-      // consumes "**"
-      remainingPattern = remainingPattern.slice(2);
-      patternIndex += 2;
-
-      if (remainingPattern[0] === "/") {
-        // consumes "/"
-        remainingPattern = remainingPattern.slice(1);
-        patternIndex += 1;
-      } // pattern ending with ** always match remaining string
-
-
-      if (remainingPattern === "") {
-        return pass$2({
-          patternIndex,
-          index: string.length
-        });
-      }
-
-      const skipResult = skipUntilMatch$2({
-        pattern: remainingPattern,
-        string: remainingString
-      });
-
-      if (!skipResult.matched) {
-        return fail$2({
-          patternIndex: patternIndex + skipResult.patternIndex,
-          index: index + skipResult.index
-        });
-      }
-
-      return pass$2({
-        patternIndex: pattern.length,
-        index: string.length
-      });
-    }
-
-    if (remainingPattern[0] === "*") {
-      // consumes "*"
-      remainingPattern = remainingPattern.slice(1);
-      patternIndex += 1; // la c'est plus délicat, il faut que remainingString
-      // ne soit composé que de truc !== '/'
-
-      if (remainingPattern === "") {
-        const slashIndex = remainingString.indexOf("/");
-
-        if (slashIndex > -1) {
-          return fail$2({
-            patternIndex,
-            index: index + slashIndex
-          });
-        }
-
-        return pass$2({
-          patternIndex,
-          index: string.length
-        });
-      } // the next char must not the one expected by remainingPattern[0]
-      // because * is greedy and expect to skip one char
-
-
-      if (remainingPattern[0] === remainingString[0]) {
-        return fail$2({
-          patternIndex: patternIndex - "*".length,
-          index
-        });
-      }
-
-      const skipResult = skipUntilMatch$2({
-        pattern: remainingPattern,
-        string: remainingString,
-        skippablePredicate: remainingString => remainingString[0] !== "/"
-      });
-
-      if (!skipResult.matched) {
-        return fail$2({
-          patternIndex: patternIndex + skipResult.patternIndex,
-          index: index + skipResult.index
-        });
-      }
-
-      return pass$2({
-        patternIndex: pattern.length,
-        index: string.length
-      });
-    }
-
-    if (remainingPattern[0] !== remainingString[0]) {
-      return fail$2({
-        patternIndex,
-        index
-      });
-    } // consumes next char
-
-
-    remainingPattern = remainingPattern.slice(1);
-    remainingString = remainingString.slice(1);
-    patternIndex += 1;
-    index += 1;
-    continue;
-  }
-};
-
-const skipUntilMatch$2 = ({
-  pattern,
-  string,
-  skippablePredicate = () => true
-}) => {
-  let index = 0;
-  let remainingString = string;
-  let bestMatch = null; // eslint-disable-next-line no-constant-condition
-
-  while (true) {
-    const matchAttempt = applyPatternMatching$2(pattern, remainingString);
-
-    if (matchAttempt.matched) {
-      bestMatch = matchAttempt;
-      break;
-    }
-
-    const skippable = skippablePredicate(remainingString);
-    bestMatch = fail$2({
-      patternIndex: bestMatch ? Math.max(bestMatch.patternIndex, matchAttempt.patternIndex) : matchAttempt.patternIndex,
-      index: index + matchAttempt.index
-    });
-
-    if (!skippable) {
-      break;
-    } // search against the next unattempted string
-
-
-    remainingString = remainingString.slice(matchAttempt.index + 1);
-    index += matchAttempt.index + 1;
-
-    if (remainingString === "") {
-      bestMatch = { ...bestMatch,
-        index: string.length
-      };
-      break;
-    }
-
-    continue;
-  }
-
-  return bestMatch;
-};
-
-const pass$2 = ({
-  patternIndex,
-  index
-}) => {
-  return {
-    matched: true,
-    index,
-    patternIndex
-  };
-};
-
-const fail$2 = ({
-  patternIndex,
-  index
-}) => {
-  return {
-    matched: false,
-    index,
-    patternIndex
-  };
-};
-
-const isPlainObject$2 = value => {
-  if (value === null) {
-    return false;
-  }
-
-  if (typeof value === "object") {
-    if (Array.isArray(value)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  return false;
-};
-
-const assertSpecifierMetaMap$2 = value => {
-  if (!isPlainObject$2(value)) {
-    throw new TypeError(`specifierMetaMap must be a plain object, got ${value}`);
-  } // we could ensure it's key/value pair of url like key/object or null values
-
-};
-
-const normalizeSpecifierMetaMap$2 = (specifierMetaMap, url, ...rest) => {
-  assertSpecifierMetaMap$2(specifierMetaMap);
-  assertUrlLike$2(url, "url");
-
-  if (rest.length) {
-    throw new Error(`received more arguments than expected.
---- number of arguments received ---
-${2 + rest.length}
---- number of arguments expected ---
-2`);
-  }
-
-  const specifierMetaMapNormalized = {};
-  Object.keys(specifierMetaMap).forEach(specifier => {
-    const specifierResolved = String(new URL(specifier, url));
-    specifierMetaMapNormalized[specifierResolved] = specifierMetaMap[specifier];
-  });
-  return specifierMetaMapNormalized;
-};
-
-const urlCanContainsMetaMatching$1 = ({
-  url,
-  specifierMetaMap,
-  predicate,
-  ...rest
-}) => {
-  assertUrlLike$2(url, "url"); // the function was meants to be used on url ending with '/'
-
-  if (!url.endsWith("/")) {
-    throw new Error(`url should end with /, got ${url}`);
-  }
-
-  assertSpecifierMetaMap$2(specifierMetaMap);
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-
-  if (Object.keys(rest).length) {
-    throw new Error(`received more parameters than expected.
---- name of unexpected parameters ---
-${Object.keys(rest)}
---- name of expected parameters ---
-url, specifierMetaMap, predicate`);
-  } // for full match we must create an object to allow pattern to override previous ones
-
-
-  let fullMatchMeta = {};
-  let someFullMatch = false; // for partial match, any meta satisfying predicate will be valid because
-  // we don't know for sure if pattern will still match for a file inside pathname
-
-  const partialMatchMetaArray = [];
-  Object.keys(specifierMetaMap).forEach(specifier => {
-    const meta = specifierMetaMap[specifier];
-    const {
-      matched,
-      index
-    } = applySpecifierPatternMatching$2({
-      specifier,
-      url
-    });
-
-    if (matched) {
-      someFullMatch = true;
-      fullMatchMeta = { ...fullMatchMeta,
-        ...meta
-      };
-    } else if (someFullMatch === false && index >= url.length) {
-      partialMatchMetaArray.push(meta);
-    }
-  });
-
-  if (someFullMatch) {
-    return Boolean(predicate(fullMatchMeta));
-  }
-
-  return partialMatchMetaArray.some(partialMatchMeta => predicate(partialMatchMeta));
-};
-
-const urlToMeta$2 = ({
-  url,
-  specifierMetaMap,
-  ...rest
-} = {}) => {
-  assertUrlLike$2(url);
-  assertSpecifierMetaMap$2(specifierMetaMap);
-
-  if (Object.keys(rest).length) {
-    throw new Error(`received more parameters than expected.
---- name of unexpected parameters ---
-${Object.keys(rest)}
---- name of expected parameters ---
-url, specifierMetaMap`);
-  }
-
-  return Object.keys(specifierMetaMap).reduce((previousMeta, specifier) => {
-    const {
-      matched
-    } = applySpecifierPatternMatching$2({
-      specifier,
-      url
-    });
-
-    if (matched) {
-      return { ...previousMeta,
-        ...specifierMetaMap[specifier]
-      };
-    }
-
-    return previousMeta;
-  }, {});
-};
-
-const pathToDirectoryUrl$1 = path => {
-  const directoryUrl = path.startsWith("file://") ? path : String(url$1.pathToFileURL(path));
-
-  if (directoryUrl.endsWith("/")) {
-    return directoryUrl;
-  }
-
-  return `${directoryUrl}/`;
-};
-const fileUrlToPath$1 = fileUrl => {
-  return url$1.fileURLToPath(fileUrl);
-};
-const urlToRelativeUrl$2 = (url, baseUrl) => {
-  if (typeof baseUrl !== "string") {
-    throw new TypeError(`baseUrl must be a string, got ${baseUrl}`);
-  }
-
-  if (url.startsWith(baseUrl)) {
-    return url.slice(baseUrl.length);
-  }
-
-  return url;
-};
-
-const compareFilePath = (leftPath, rightPath) => {
-  const leftPartArray = leftPath.split("/");
-  const rightPartArray = rightPath.split("/");
-  const leftLength = leftPartArray.length;
-  const rightLength = rightPartArray.length;
-  const maxLength = Math.max(leftLength, rightLength);
-  let i = 0;
-
-  while (i < maxLength) {
-    const leftPartExists = i in leftPartArray;
-    const rightPartExists = i in rightPartArray; // longer comes first
-
-    if (!leftPartExists) return +1;
-    if (!rightPartExists) return -1;
-    const leftPartIsLast = i === leftPartArray.length - 1;
-    const rightPartIsLast = i === rightPartArray.length - 1; // folder comes first
-
-    if (leftPartIsLast && !rightPartIsLast) return +1;
-    if (!leftPartIsLast && rightPartIsLast) return -1;
-    const leftPart = leftPartArray[i];
-    const rightPart = rightPartArray[i];
-    i++; // local comparison comes first
-
-    const comparison = leftPart.localeCompare(rightPart);
-    if (comparison !== 0) return comparison;
-  }
-
-  if (leftLength < rightLength) return +1;
-  if (leftLength > rightLength) return -1;
-  return 0;
-};
-
-const collectFiles = async ({
-  cancellationToken = createCancellationToken$1(),
-  directoryPath,
-  specifierMetaMap,
-  predicate,
-  matchingFileOperation = () => null
-}) => {
-  if (typeof directoryPath !== "string") {
-    throw new TypeError(`directoryPath must be a string, got ${directoryPath}`);
-  }
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-
-  if (typeof matchingFileOperation !== "function") {
-    throw new TypeError(`matchingFileOperation must be a function, got ${matchingFileOperation}`);
-  }
-
-  const rootDirectoryUrl = pathToDirectoryUrl$1(directoryPath);
-  const specifierMetaMapNormalized = normalizeSpecifierMetaMap$2(specifierMetaMap, rootDirectoryUrl);
-  const matchingFileResultArray = [];
-
-  const visitDirectory = async directoryUrl => {
-    const directoryPath = fileUrlToPath$1(directoryUrl);
-    const directoryItems = await createOperation$1({
-      cancellationToken,
-      start: () => readDirectory$1(directoryPath)
-    });
-    await Promise.all(directoryItems.map(async directoryItem => {
-      const directoryItemUrl = `${directoryUrl}${directoryItem}`;
-      const directoryItemPath = fileUrlToPath$1(directoryItemUrl);
-      const lstat = await createOperation$1({
-        cancellationToken,
-        start: () => readLStat(directoryItemPath)
-      });
-
-      if (lstat.isDirectory()) {
-        const subDirectoryUrl = `${directoryItemUrl}/`;
-
-        if (!urlCanContainsMetaMatching$1({
-          url: subDirectoryUrl,
-          specifierMetaMap: specifierMetaMapNormalized,
-          predicate
-        })) {
-          return;
-        }
-
-        await visitDirectory(subDirectoryUrl);
-        return;
-      }
-
-      if (lstat.isFile()) {
-        const meta = urlToMeta$2({
-          url: directoryItemUrl,
-          specifierMetaMap: specifierMetaMapNormalized
-        });
-        if (!predicate(meta)) return;
-        const relativeUrl = urlToRelativeUrl$2(directoryItemUrl, rootDirectoryUrl);
-        const operationResult = await createOperation$1({
-          cancellationToken,
-          start: () => matchingFileOperation({
-            cancellationToken,
-            relativeUrl,
-            meta,
-            lstat
-          })
-        });
-        matchingFileResultArray.push({
-          relativeUrl,
-          meta,
-          lstat,
-          operationResult
-        });
-        return;
-      } // we ignore symlink because recursively traversed
-      // so symlinked file will be discovered.
-      // Moreover if they lead outside of directoryPath it can become a problem
-      // like infinite recursion of whatever.
-      // that we could handle using an object of pathname already seen but it will be useless
-      // because directoryPath is recursively traversed
-
-    }));
-  };
-
-  await visitDirectory(rootDirectoryUrl); // When we operate on thoose files later it feels more natural
-  // to perform operation in the same order they appear in the filesystem.
-  // It also allow to get a predictable return value.
-  // For that reason we sort matchingFileResultArray
-
-  matchingFileResultArray.sort((leftFile, rightFile) => {
-    return compareFilePath(leftFile.relativeUrl, rightFile.relativeUrl);
-  });
-  return matchingFileResultArray;
-};
-
-const readDirectory$1 = pathname => new Promise((resolve, reject) => {
-  fs.readdir(pathname, (error, names) => {
-    if (error) {
-      reject(error);
-    } else {
-      resolve(names);
-    }
-  });
-});
-
-const readLStat = pathname => new Promise((resolve, reject) => {
-  fs.lstat(pathname, (error, stat) => {
-    if (error) {
-      reject(error);
-    } else {
-      resolve(stat);
-    }
-  });
-});
-
 const generateFileExecutionSteps = ({
   fileRelativeUrl,
   filePlan
@@ -11789,7 +13321,7 @@ const generateExecutionSteps = async (plan, {
   });
   const fileResultArray = await collectFiles({
     cancellationToken,
-    directoryPath: filePathToUrl(projectDirectoryUrl),
+    directoryUrl: projectDirectoryUrl,
     specifierMetaMap,
     predicate: ({
       filePlan
@@ -11852,11 +13384,10 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
   projectDirectoryUrl,
   babelPluginMap
 }) => {
-  const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl);
-  const filePath = urlToFilePath(fileUrl);
+  const fileUrl = resolveUrl$1(relativeUrl, projectDirectoryUrl);
   const source = await createOperation({
     cancellationToken,
-    start: () => readFileContent(filePath)
+    start: () => readFile(fileUrl)
   }); // we must compile to get the coverage object
   // without evaluating the file because it would increment coverage
   // and execute code that can be doing anything
@@ -11867,7 +13398,7 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
     } = await createOperation({
       cancellationToken,
       start: () => transformAsync$1(source, {
-        filename: filePath,
+        filename: urlToFileSystemPath(fileUrl),
         filenameRelative: relativeUrl,
         configFile: false,
         babelrc: false,
@@ -11947,7 +13478,7 @@ const listRelativeFileUrlToCover = async ({
   });
   const matchingFileResultArray = await collectFiles({
     cancellationToken,
-    directoryPath: urlToFilePath(projectDirectoryUrl),
+    directoryUrl: projectDirectoryUrl,
     specifierMetaMap: specifierMetaMapForCoverage,
     predicate: ({
       cover
@@ -12301,7 +13832,7 @@ ${fileRelativeUrl}`));
         fileRelativeUrl,
         executionIndex
       };
-      const filePath = urlToFilePath(`${projectDirectoryUrl}${fileRelativeUrl}`);
+      const filePath = urlToFileSystemPath(`${projectDirectoryUrl}${fileRelativeUrl}`);
       const fileExists = await pathLeadsToFile(filePath);
 
       if (!fileExists) {
@@ -12469,7 +14000,7 @@ const executePlan = async ({
           relativeUrl
         }) => {
           return urlToMeta({
-            url: resolveUrl(relativeUrl, projectDirectoryUrl),
+            url: resolveUrl$1(relativeUrl, projectDirectoryUrl),
             specifierMetaMap: specifierMetaMapForCover
           }).cover;
         }
@@ -12528,12 +14059,11 @@ const generateCoverageJsonFile = async ({
   coverageJsonFileLog,
   coverageMap
 }) => {
-  const coverageJsonFileUrl = resolveUrl(coverageJsonFileRelativeUrl, projectDirectoryUrl);
-  const coverageJsonFilePath = urlToFilePath(coverageJsonFileUrl);
-  await writeFileContent(coverageJsonFilePath, JSON.stringify(coverageMap, null, "  "));
+  const coverageJsonFileUrl = resolveUrl$1(coverageJsonFileRelativeUrl, projectDirectoryUrl);
+  await writeFile(coverageJsonFileUrl, JSON.stringify(coverageMap, null, "  "));
 
   if (coverageJsonFileLog) {
-    console.log(`-> ${coverageJsonFilePath}`);
+    console.log(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`);
   }
 };
 
@@ -12552,7 +14082,7 @@ const generateCoverageHtmlDirectory = ({
   coverageMap
 }) => {
   const htmlDirectoryUrl = resolveDirectoryUrl(coverageHtmlDirectoryRelativeUrl, projectDirectoryUrl);
-  const htmlDirectoryPath = urlToFilePath(htmlDirectoryUrl);
+  const htmlDirectoryPath = urlToFileSystemPath(htmlDirectoryUrl);
   const context = libReport.createContext({
     dir: htmlDirectoryPath,
     coverageMap: createCoverageMap(coverageMap)
@@ -12565,7 +14095,7 @@ const generateCoverageHtmlDirectory = ({
 
   if (coverageHtmlDirectoryIndexLog) {
     const htmlCoverageDirectoryIndexFileUrl = `${htmlDirectoryUrl}index.html`;
-    const htmlCoverageDirectoryIndexFilePath = urlToFilePath(htmlCoverageDirectoryIndexFileUrl);
+    const htmlCoverageDirectoryIndexFilePath = urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl);
     console.log(`-> ${htmlCoverageDirectoryIndexFilePath}`);
   }
 };
@@ -12781,8 +14311,12 @@ const generateBundle = async ({
   format,
   formatOutputOptions = {},
   minify = false,
+  minifyJsOptions = {},
+  minifyCssOptions = {},
+  minifyHtmlOptions = {},
   sourcemapExcludeSources = true,
   writeOnFileSystem = true,
+  manifestFile = false,
   // when true .jsenv/out-bundle directory is generated
   // with all intermediated files used to produce the final bundle.
   // it might improve generateBundle speed for subsequent bundle generation
@@ -12817,7 +14351,7 @@ const generateBundle = async ({
   });
 
   if (bundleDirectoryClean) {
-    await removeDirectory(urlToFilePath(bundleDirectoryUrl));
+    await ensureEmptyDirectory(bundleDirectoryUrl);
   }
 
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`;
@@ -12838,7 +14372,7 @@ const generateBundle = async ({
       throw new Error(`${format} format not compatible with balancing.`);
     }
 
-    await assertFileExists(balancerTemplateFileUrl);
+    await assertFilePresence(balancerTemplateFileUrl);
   }
 
   return catchAsyncFunctionCancellation(async () => {
@@ -12883,10 +14417,14 @@ const generateBundle = async ({
         node,
         browser,
         minify,
+        minifyJsOptions,
+        minifyCssOptions,
+        minifyHtmlOptions,
         format,
         formatOutputOptions,
         writeOnFileSystem,
-        sourcemapExcludeSources
+        sourcemapExcludeSources,
+        manifestFile
       });
     }
 
@@ -12908,7 +14446,8 @@ const generateBundle = async ({
       formatOutputOptions,
       minify,
       writeOnFileSystem,
-      sourcemapExcludeSources
+      sourcemapExcludeSources,
+      manifestFile
     }), generateEntryPointsBalancerFiles({
       cancellationToken,
       logger,
@@ -12926,7 +14465,8 @@ const generateBundle = async ({
       format,
       minify,
       writeOnFileSystem,
-      sourcemapExcludeSources
+      sourcemapExcludeSources,
+      manifestFile
     })]);
   });
 };
@@ -13014,13 +14554,19 @@ const generateEntryPointsBalancerFiles = ({
 
 const generateCommonJsBundle = async ({
   bundleDirectoryRelativeUrl = "./dist/commonjs",
+  cjsExtension = false,
   node = true,
   ...rest
 }) => generateBundle({
   format: "commonjs",
   bundleDirectoryRelativeUrl,
   node,
-  balancerTemplateFileUrl: resolveUrl("./src/internal/bundling/commonjs-balancer-template.js", jsenvCoreDirectoryUrl),
+  formatOutputOptions: { ...(cjsExtension ? {
+      // by default it's [name].js
+      entryFileNames: `[name].cjs`
+    } : {})
+  },
+  balancerTemplateFileUrl: resolveUrl$1("./src/internal/bundling/commonjs-balancer-template.js", jsenvCoreDirectoryUrl),
   ...rest
 });
 
@@ -13028,6 +14574,7 @@ const generateCommonJsBundleForNode = ({
   babelPluginMap = jsenvBabelPluginMap,
   bundleDirectoryRelativeUrl,
   nodeMinimumVersion = decideNodeMinimumVersion(),
+  cjsExtension,
   ...rest
 }) => {
   const babelPluginMapForNode = computeBabelPluginMapForPlatform({
@@ -13037,6 +14584,7 @@ const generateCommonJsBundleForNode = ({
   });
   return generateCommonJsBundle({
     bundleDirectoryRelativeUrl,
+    cjsExtension,
     compileGroupCount: 1,
     babelPluginMap: babelPluginMapForNode,
     ...rest
@@ -13068,12 +14616,16 @@ const generateSystemJsBundle = async ({
   ...rest
 }) => generateBundle({
   format: "systemjs",
-  balancerTemplateFileUrl: resolveUrl("./src/internal/bundling/systemjs-balancer-template.js", jsenvCoreDirectoryUrl),
+  balancerTemplateFileUrl: resolveUrl$1("./src/internal/bundling/systemjs-balancer-template.js", jsenvCoreDirectoryUrl),
   bundleDirectoryRelativeUrl,
   ...rest
 });
 
-const jsenvHtmlFileUrl = resolveUrl("./src/internal/jsenv-html-file.html", jsenvCoreDirectoryUrl);
+const jsenvExplorableConfig = {
+  "./index.js": true,
+  "./src/**/*.js": true,
+  "./test/**/*.js": true
+};
 
 const closePage = async page => {
   try {
@@ -13111,22 +14663,229 @@ callback: ${callback}`);
   };
 };
 
+let beforeExitCallbackArray$1 = [];
+let uninstall$2;
+
+const addCallback$7 = callback => {
+  if (beforeExitCallbackArray$1.length === 0) uninstall$2 = install$2();
+  beforeExitCallbackArray$1 = [...beforeExitCallbackArray$1, callback];
+  return () => {
+    if (beforeExitCallbackArray$1.length === 0) return;
+    beforeExitCallbackArray$1 = beforeExitCallbackArray$1.filter(beforeExitCallback => beforeExitCallback !== callback);
+    if (beforeExitCallbackArray$1.length === 0) uninstall$2();
+  };
+};
+
+const install$2 = () => {
+  const onBeforeExit = () => {
+    return beforeExitCallbackArray$1.reduce(async (previous, callback) => {
+      await previous;
+      return callback();
+    }, Promise.resolve());
+  };
+
+  process.once("beforeExit", onBeforeExit);
+  return () => {
+    process.removeListener("beforeExit", onBeforeExit);
+  };
+};
+
+const beforeExitSignal$1 = {
+  addCallback: addCallback$7
+};
+
+const addCallback$8 = callback => {
+  const triggerDeath = () => callback(); // SIGTERM http://man7.org/linux/man-pages/man7/signal.7.html
+
+
+  process.once("SIGTERM", triggerDeath);
+  return () => {
+    process.removeListener("SIGTERM", triggerDeath);
+  };
+};
+
+const deathSignal$1 = {
+  addCallback: addCallback$8
+};
+
+const addCallback$9 = (callback, {
+  collectExceptions = false
+} = {}) => {
+  if (!collectExceptions) {
+    const exitCallback = () => {
+      callback();
+    };
+
+    process.on("exit", exitCallback);
+    return () => {
+      process.removeListener("exit", exitCallback);
+    };
+  }
+
+  const {
+    getExceptions,
+    stop
+  } = trackExceptions$1();
+
+  const exitCallback = () => {
+    process.removeListener("exit", exitCallback);
+    stop();
+    callback({
+      exceptionArray: getExceptions().map(({
+        exception,
+        origin
+      }) => {
+        return {
+          exception,
+          origin
+        };
+      })
+    });
+  };
+
+  process.on("exit", exitCallback);
+  return () => {
+    process.removeListener("exit", exitCallback);
+  };
+};
+
+const trackExceptions$1 = () => {
+  let exceptionArray = [];
+
+  const unhandledRejectionCallback = (unhandledRejection, promise) => {
+    exceptionArray = [...exceptionArray, {
+      origin: "unhandledRejection",
+      exception: unhandledRejection,
+      promise
+    }];
+  };
+
+  const rejectionHandledCallback = promise => {
+    exceptionArray = exceptionArray.filter(exceptionArray => exceptionArray.promise !== promise);
+  };
+
+  const uncaughtExceptionCallback = (uncaughtException, origin) => {
+    // since node 12.4 https://nodejs.org/docs/latest-v12.x/api/process.html#process_event_uncaughtexception
+    if (origin === "unhandledRejection") return;
+    exceptionArray = [...exceptionArray, {
+      origin: "uncaughtException",
+      exception: uncaughtException
+    }];
+  };
+
+  process.on("unhandledRejection", unhandledRejectionCallback);
+  process.on("rejectionHandled", rejectionHandledCallback);
+  process.on("uncaughtException", uncaughtExceptionCallback);
+  return {
+    getExceptions: () => exceptionArray,
+    stop: () => {
+      process.removeListener("unhandledRejection", unhandledRejectionCallback);
+      process.removeListener("rejectionHandled", rejectionHandledCallback);
+      process.removeListener("uncaughtException", uncaughtExceptionCallback);
+    }
+  };
+};
+
+const exitSignal$1 = {
+  addCallback: addCallback$9
+};
+
+const addCallback$a = callback => {
+  const triggerHangUpOrDeath = () => callback(); // SIGHUP http://man7.org/linux/man-pages/man7/signal.7.html
+
+
+  process.once("SIGUP", triggerHangUpOrDeath);
+  return () => {
+    process.removeListener("SIGUP", triggerHangUpOrDeath);
+  };
+};
+
+const hangupOrDeathSignal$1 = {
+  addCallback: addCallback$a
+};
+
+const addCallback$b = callback => {
+  // SIGINT is CTRL+C from keyboard
+  // http://man7.org/linux/man-pages/man7/signal.7.html
+  // may also be sent by vscode https://github.com/Microsoft/vscode-node-debug/issues/1#issuecomment-405185642
+  process.once("SIGINT", callback);
+  return () => {
+    process.removeListener("SIGINT", callback);
+  };
+};
+
+const interruptSignal$1 = {
+  addCallback: addCallback$b
+};
+
+// usefull to ensure a given server is closed when process stops for instance
+
+const addCallback$c = callback => {
+  return eventRace$1({
+    beforeExit: {
+      register: beforeExitSignal$1.addCallback,
+      callback: () => callback("beforeExit")
+    },
+    hangupOrDeath: {
+      register: hangupOrDeathSignal$1.addCallback,
+      callback: () => callback("hangupOrDeath")
+    },
+    death: {
+      register: deathSignal$1.addCallback,
+      callback: () => callback("death")
+    },
+    exit: {
+      register: exitSignal$1.addCallback,
+      callback: () => callback("exit")
+    }
+  });
+};
+
+const eventRace$1 = eventMap => {
+  const unregisterMap = {};
+
+  const unregisterAll = reason => {
+    return Object.keys(unregisterMap).map(name => unregisterMap[name](reason));
+  };
+
+  Object.keys(eventMap).forEach(name => {
+    const {
+      register,
+      callback
+    } = eventMap[name];
+    unregisterMap[name] = register((...args) => {
+      unregisterAll();
+      callback(...args);
+    });
+  });
+  return unregisterAll;
+};
+
+const teardownSignal$1 = {
+  addCallback: addCallback$c
+};
+
 const puppeteer = nodeRequire("puppeteer");
 
 const launchPuppeteer = async ({
   cancellationToken = createCancellationToken(),
   headless = true,
+  debug = false,
+  debugPort = 9222,
   stopOnExit = true,
   stopOnSIGINT = true
 }) => {
   const options = {
     headless,
+    ...(debug ? {
+      devtools: true
+    } : {}),
     // because we use a self signed certificate
     ignoreHTTPSErrors: true,
     args: [// https://github.com/GoogleChrome/puppeteer/issues/1834
-      // https://github.com/GoogleChrome/puppeteer/blob/master/docs/troubleshooting.md#tips
-      // "--disable-dev-shm-usage",
-    ]
+    // https://github.com/GoogleChrome/puppeteer/blob/master/docs/troubleshooting.md#tips
+    // "--disable-dev-shm-usage",
+    `--remote-debugging-port=${debugPort}`]
   };
   const {
     registerCleanupCallback,
@@ -13160,20 +14919,46 @@ const launchPuppeteer = async ({
   } = browserOperation;
 
   if (stopOnExit) {
-    const unregisterProcessTeadown = teardownSignal.addCallback(reason => {
+    const unregisterProcessTeadown = teardownSignal$1.addCallback(reason => {
       stop(`process ${reason}`);
     });
     registerCleanupCallback(unregisterProcessTeadown);
   }
 
   if (stopOnSIGINT) {
-    const unregisterProcessInterrupt = interruptSignal.addCallback(() => {
+    const unregisterProcessInterrupt = interruptSignal$1.addCallback(() => {
       stop("process sigint");
     });
     registerCleanupCallback(unregisterProcessInterrupt);
   }
 
   const browser = await browserOperation;
+
+  if (debug) {
+    // https://github.com/puppeteer/puppeteer/blob/v2.0.0/docs/api.md#browserwsendpoint
+    // https://chromedevtools.github.io/devtools-protocol/#how-do-i-access-the-browser-target
+    const webSocketEndpoint = browser.wsEndpoint();
+    const webSocketUrl = new URL(webSocketEndpoint);
+    const browserEndpoint = `http://${webSocketUrl.host}/json/version`;
+    const browserResponse = await fetchUrl(browserEndpoint, {
+      cancellationToken
+    });
+    const {
+      valid,
+      message
+    } = validateResponseStatusIsOk(browserResponse);
+
+    if (!valid) {
+      throw new Error(message);
+    }
+
+    const browserResponseObject = JSON.parse(browserResponse.body);
+    const {
+      webSocketDebuggerUrl
+    } = browserResponseObject;
+    console.log(`Debugger listening on ${webSocketDebuggerUrl}`);
+  }
+
   return {
     browser,
     stopBrowser: stop
@@ -13187,7 +14972,7 @@ const startChromiumServer = async ({
   outDirectoryRelativeUrl,
   compileServerOrigin
 }) => {
-  const chromiumJsFileUrl = resolveUrl("./src/internal/chromium-launcher/chromium-js-file.js", jsenvCoreDirectoryUrl);
+  const chromiumJsFileUrl = resolveUrl$1("./src/internal/chromium-launcher/chromium-js-file.js", jsenvCoreDirectoryUrl);
   const chromiumJsFileRelativeUrl = urlToRelativeUrl(chromiumJsFileUrl, projectDirectoryUrl);
   const chromiumBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${chromiumJsFileRelativeUrl}`;
   const chromiumBundledJsFileRemoteUrl = `${compileServerOrigin}/${chromiumBundledJsFileRelativeUrl}`;
@@ -13410,6 +15195,8 @@ const extractTextFromPuppeteerMessage = async message => {
   //   return text
 };
 
+const jsenvHtmlFileUrl = resolveUrl$1("./src/internal/jsenv-html-file.html", jsenvCoreDirectoryUrl);
+
 const evalSource = (code, filePath) => {
   const script = new vm.Script(code, {
     filename: filePath
@@ -13441,8 +15228,8 @@ const getBrowserExecutionDynamicData = ({
   compileServerOrigin
 }) => {
   const browserPlatformFileRelativeUrl = projectDirectoryUrl === jsenvCoreDirectoryUrl ? "src/browserPlatform.js" : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/browserPlatform.js`;
-  const sourcemapMainFileUrl = filePathToUrl(nodeRequire.resolve("source-map/dist/source-map.js"));
-  const sourcemapMappingFileUrl = filePathToUrl(nodeRequire.resolve("source-map/lib/mappings.wasm"));
+  const sourcemapMainFileUrl = fileSystemPathToUrl(nodeRequire.resolve("source-map/dist/source-map.js"));
+  const sourcemapMappingFileUrl = fileSystemPathToUrl(nodeRequire.resolve("source-map/lib/mappings.wasm"));
   const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl);
   const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(sourcemapMappingFileUrl, projectDirectoryUrl);
   return {
@@ -13456,7 +15243,7 @@ const getBrowserExecutionDynamicData = ({
 const evaluateImportExecution = async ({
   cancellationToken,
   projectDirectoryUrl,
-  htmlFileUrl,
+  htmlFileRelativeUrl,
   outDirectoryRelativeUrl,
   fileRelativeUrl,
   compileServerOrigin,
@@ -13468,18 +15255,17 @@ const evaluateImportExecution = async ({
   errorStackRemapping,
   executionExposureOnWindow
 }) => {
-  if (!htmlFileUrl.startsWith(projectDirectoryUrl)) {
-    throw new Error(`chromium html file must be inside project directory
---- chromium html file url ---
-${htmlFileUrl}
---- project directory url ---
-${htmlFileUrl}`);
+  const fileUrl = resolveUrl$1(fileRelativeUrl, projectDirectoryUrl);
+  await assertFilePresence(fileUrl);
+
+  if (typeof htmlFileRelativeUrl === "undefined") {
+    htmlFileRelativeUrl = urlToRelativeUrl(jsenvHtmlFileUrl, projectDirectoryUrl);
+  } else if (typeof htmlFileRelativeUrl !== "string") {
+    throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`);
   }
 
-  await assertFileExists(htmlFileUrl);
-  const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl);
-  await assertFileExists(fileUrl);
-  const htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl);
+  const htmlFileUrl = resolveUrl$1(htmlFileRelativeUrl, projectDirectoryUrl);
+  await assertFilePresence(htmlFileUrl);
   const htmlFileClientUrl = `${executionServerOrigin}/${htmlFileRelativeUrl}`;
   await page.goto(htmlFileClientUrl); // https://github.com/GoogleChrome/puppeteer/blob/v1.14.0/docs/api.md#pageevaluatepagefunction-args
   // yes evaluate supports passing a function directly
@@ -13648,7 +15434,9 @@ const launchChromium = async ({
   outDirectoryRelativeUrl,
   compileServerOrigin,
   headless = true,
-  shareBrowser = false
+  shareBrowser = false,
+  debug = false,
+  debugPort
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`);
@@ -13663,13 +15451,17 @@ const launchChromium = async ({
     cleanup
   } = trackRessources$1();
   const sharingToken = shareBrowser ? browserSharing.getSharingToken({
-    headless
+    headless,
+    debug,
+    debugPort
   }) : browserSharing.getUniqueSharingToken();
 
   if (!sharingToken.isUsed()) {
     const value = launchPuppeteer({
       cancellationToken,
-      headless
+      headless,
+      debug,
+      debugPort
     });
     sharingToken.setSharedValue(value, async () => {
       const {
@@ -13716,7 +15508,7 @@ const launchChromium = async ({
   };
 
   const executeFile = async (fileRelativeUrl, {
-    htmlFileUrl = jsenvHtmlFileUrl,
+    htmlFileRelativeUrl,
     incognito = false,
     collectNamespace,
     collectCoverage,
@@ -13793,7 +15585,7 @@ const launchChromium = async ({
       cancellationToken,
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
-      htmlFileUrl,
+      htmlFileRelativeUrl,
       fileRelativeUrl,
       compileServerOrigin,
       executionServerOrigin: executionServer.origin,
@@ -13810,7 +15602,7 @@ const launchChromium = async ({
     // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#puppeteer-api-tip-of-tree
     // https://github.com/GoogleChrome/puppeteer#q-why-doesnt-puppeteer-vxxx-work-with-chromium-vyyy
     // to keep in sync when updating puppeteer
-    version: "79.0.3942.0",
+    version: "79.0.3945.0",
     options: {
       headless
     },
@@ -14779,7 +16571,7 @@ const arrayFindMatch = (array, match) => {
 
 const fetch$2 = nodeRequire("node-fetch");
 
-const AbortController$1 = nodeRequire("abort-controller"); // ideally we should only pass this to the fetch below
+const AbortController$2 = nodeRequire("abort-controller"); // ideally we should only pass this to the fetch below
 
 
 https.globalAgent.options.rejectUnauthorized = false;
@@ -14818,7 +16610,7 @@ const normalizeResponse$1 = async response => {
 
 
 const cancellationTokenToAbortSignal$1 = cancellationToken => {
-  const abortController = new AbortController$1();
+  const abortController = new AbortController$2();
   cancellationToken.register(reason => {
     abortController.abort(reason);
   });
@@ -14868,8 +16660,8 @@ const launchNode = async ({
     throw new TypeError(`env must be an object, got ${env}`);
   }
 
-  const nodeControllableFileUrl = resolveUrl("./src/internal/node-launcher/nodeControllableFile.js", jsenvCoreDirectoryUrl);
-  await assertFileExists(nodeControllableFileUrl);
+  const nodeControllableFileUrl = resolveUrl$1("./src/internal/node-launcher/nodeControllableFile.js", jsenvCoreDirectoryUrl);
+  await assertFilePresence(nodeControllableFileUrl);
   const execArgv = await createChildExecArgv({
     cancellationToken,
     debugPort,
@@ -14884,7 +16676,7 @@ const launchNode = async ({
   }
 
   env.COVERAGE_ENABLED = collectCoverage;
-  const child = child_process.fork(urlToFilePath(nodeControllableFileUrl), {
+  const child = child_process.fork(urlToFileSystemPath(nodeControllableFileUrl), {
     execArgv,
     // silent: true
     stdio: "pipe",
@@ -14979,7 +16771,7 @@ const launchNode = async ({
     executionId
   }) => {
     const execute = async () => {
-      const nodeJsFileUrl = resolveUrl("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl);
+      const nodeJsFileUrl = resolveUrl$1("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl);
       const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl);
       const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`;
       const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`;
@@ -15065,12 +16857,14 @@ const evalException$1 = (exceptionSource, {
 
   if (error && error instanceof Error) {
     const compileServerOriginRegexp = new RegExp(escapeRegexpSpecialCharacters(`${compileServerOrigin}/`), "g");
-    const projectDirectoryPath = urlToFilePath(projectDirectoryUrl);
-    error.stack = error.stack.replace(compileServerOriginRegexp, projectDirectoryPath);
-    error.message = error.message.replace(compileServerOriginRegexp, projectDirectoryPath);
-    const projectDirectoryPathRegexp = new RegExp(`(?<!file:\/\/)${escapeRegexpSpecialCharacters(projectDirectoryPath)}`, "g");
-    error.stack = error.stack.replace(projectDirectoryPathRegexp, projectDirectoryUrl);
-    error.message = error.message.replace(projectDirectoryPathRegexp, projectDirectoryUrl);
+    error.stack = error.stack.replace(compileServerOriginRegexp, projectDirectoryUrl);
+    error.message = error.message.replace(compileServerOriginRegexp, projectDirectoryUrl); // const projectDirectoryPath = urlToFileSystemPath(projectDirectoryUrl)
+    // const projectDirectoryPathRegexp = new RegExp(
+    //   `(?<!file:\/\/)${escapeRegexpSpecialCharacters(projectDirectoryPath)}`,
+    //   "g",
+    // )
+    // error.stack = error.stack.replace(projectDirectoryPathRegexp, projectDirectoryUrl)
+    // error.message = error.message.replace(projectDirectoryPathRegexp, projectDirectoryUrl)
   }
 
   return error;
@@ -15130,8 +16924,8 @@ const createNodeIIFEString = ({
 }) => `(() => {
   const fs = require('fs')
   const Module = require('module')
-  const nodeFilePath = ${JSON.stringify(urlToFilePath(nodeJsFileUrl))}
-  const nodeBundledJsFilePath = ${JSON.stringify(urlToFilePath(nodeBundledJsFileUrl))}
+  const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
+  const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
   const fileContent = String(fs.readFileSync(nodeBundledJsFilePath))
   const moduleObject = new Module(nodeBundledJsFilePath)
   moduleObject.paths = Module._nodeModulePaths(require('path').dirname(nodeFilePath));
@@ -15160,15 +16954,14 @@ const evalSource$1 = (code, href) => {
 
 const serveExploringIndex = async ({
   projectDirectoryUrl,
-  htmlFileUrl,
+  htmlFileRelativeUrl,
   explorableConfig
 }) => {
-  const htmlFileRelativeUrl = urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl);
   const specifierMetaMap = metaMapToSpecifierMetaMap({
     explorable: explorableConfig
   });
   const matchingFileResultArray = await collectFiles({
-    directoryPath: projectDirectoryUrl,
+    directoryUrl: projectDirectoryUrl,
     specifierMetaMap,
     predicate: ({
       explorable
@@ -15230,7 +17023,7 @@ const serveBrowserSelfExecute = async ({
   request,
   babelPluginMap
 }) => {
-  const browserSelfExecuteTemplateFileUrl = resolveUrl("./src/internal/exploring/browserSelfExecuteTemplate.js", jsenvCoreDirectoryUrl);
+  const browserSelfExecuteTemplateFileUrl = resolveUrl$1("./src/internal/exploring/browserSelfExecuteTemplate.js", jsenvCoreDirectoryUrl);
   const browserSelfExecuteDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}browser-self-execute/`;
   const browserSelfExecuteDirectoryRemoteUrl = resolveDirectoryUrl(browserSelfExecuteDirectoryRelativeUrl, request.origin);
   return firstService(() => {
@@ -15241,12 +17034,39 @@ const serveBrowserSelfExecute = async ({
     } = request; // "/.jsenv/browser-script.js" is written inside htmlFile
 
     if (ressource === "/.jsenv/browser-script.js") {
-      const file = new URL(headers.referer).searchParams.get("file");
+      if (!headers.referer) {
+        return {
+          status: 400,
+          statusText: `referer missing in request headers`
+        };
+      }
+
+      let url;
+
+      try {
+        url = new URL(headers.referer);
+      } catch (e) {
+        return {
+          status: 400,
+          statusText: `unexpected referer in request headers, must be an url and received ${headers.referer}`
+        };
+      }
+
+      const file = url.searchParams.get("file");
+
+      if (stringHasConcecutiveSlashes(file)) {
+        return {
+          status: 400,
+          statusText: `unexpected file in query string parameters, it contains consecutive slashes ${file}`
+        };
+      }
+
       const browserSelfExecuteCompiledFileRemoteUrl = `${origin}/${browserSelfExecuteDirectoryRelativeUrl}${file}`;
       return {
         status: 307,
         headers: {
-          location: browserSelfExecuteCompiledFileRemoteUrl
+          location: browserSelfExecuteCompiledFileRemoteUrl,
+          vary: "referer"
         }
       };
     }
@@ -15292,10 +17112,26 @@ const serveBrowserSelfExecute = async ({
   });
 };
 
-const jsenvExplorableConfig = {
-  "./index.js": true,
-  "./src/**/*.js": true,
-  "./test/**/*.js": true
+const stringHasConcecutiveSlashes = string => {
+  let previousCharIsSlash = 0;
+  let i = 0;
+
+  while (i < string.length) {
+    const char = string[i];
+    i++;
+
+    if (char === "/") {
+      if (previousCharIsSlash) {
+        return true;
+      }
+
+      previousCharIsSlash = true;
+    } else {
+      previousCharIsSlash = false;
+    }
+  }
+
+  return false;
 };
 
 /* eslint-disable import/max-dependencies */
@@ -15303,7 +17139,7 @@ const startExploring = async ({
   cancellationToken = createCancellationTokenForProcessSIGINT(),
   logLevel,
   compileServerLogLevel = logLevel,
-  htmlFileUrl = jsenvHtmlFileUrl,
+  htmlFileRelativeUrl,
   explorableConfig = jsenvExplorableConfig,
   livereloading = false,
   watchConfig = {
@@ -15339,7 +17175,15 @@ const startExploring = async ({
   await assertProjectDirectoryExists({
     projectDirectoryUrl
   });
-  await assertFileExists(htmlFileUrl);
+
+  if (typeof htmlFileRelativeUrl === "undefined") {
+    htmlFileRelativeUrl = urlToRelativeUrl(jsenvHtmlFileUrl, projectDirectoryUrl);
+  } else if (typeof htmlFileRelativeUrl !== "string") {
+    throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`);
+  }
+
+  const htmlFileUrl = resolveUrl$1(htmlFileRelativeUrl, projectDirectoryUrl);
+  await assertFilePresence(htmlFileUrl);
   const stopExploringCancellationSource = createCancellationSource();
   cancellationToken = composeCancellationToken(cancellationToken, stopExploringCancellationSource.token);
   return catchAsyncFunctionCancellation(async () => {
@@ -15383,7 +17227,7 @@ const startExploring = async ({
     const specifierMetaMapForExplorable = normalizeSpecifierMetaMap(specifierMetaMapRelativeForExplorable, projectDirectoryUrl);
 
     if (livereloading) {
-      const unregisterDirectoryLifecyle = registerDirectoryLifecycle(urlToFilePath(projectDirectoryUrl), {
+      const unregisterDirectoryLifecyle = registerDirectoryLifecycle(urlToFileSystemPath(projectDirectoryUrl), {
         watchDescription: { ...watchConfig,
           [compileServer.jsenvDirectoryRelativeUrl]: false
         },
@@ -15483,11 +17327,14 @@ const startExploring = async ({
           });
         } else if ("referer" in headers) {
           const {
+            origin
+          } = request;
+          const {
             referer
           } = headers;
 
-          if (sameOrigin(referer, request.origin)) {
-            const refererRelativeUrl = referer.slice(`${request.origin}/`.length);
+          if (referer === origin || urlIsInsideOf(referer, origin)) {
+            const refererRelativeUrl = urlToRelativeUrl(referer, origin);
             const refererFileUrl = `${projectDirectoryUrl}${refererRelativeUrl}`;
 
             if (urlToMeta({
@@ -15526,7 +17373,7 @@ const startExploring = async ({
         request
       }) => {
         // when it's the html file used to execute the files
-        if (relativeUrl === urlToRelativeUrl(htmlFileUrl, projectDirectoryUrl)) {
+        if (relativeUrl === htmlFileRelativeUrl) {
           dependencyTracker[relativeUrl] = [];
         } else {
           projectFileRequestedCallback({
@@ -15565,9 +17412,9 @@ const startExploring = async ({
     // that can be dynamic
     // otherwise the cached bundles would still target the previous compile server origin
 
-    const jsenvDirectoryUrl = resolveUrl(compileServerJsenvDirectoryRelativeUrl, projectDirectoryUrl);
-    const browserDynamicDataFileUrl = resolveUrl("./browser-execute-dynamic-data.json", jsenvDirectoryUrl);
-    await writeFileContent(urlToFilePath(browserDynamicDataFileUrl), JSON.stringify(getBrowserExecutionDynamicData({
+    const jsenvDirectoryUrl = resolveUrl$1(compileServerJsenvDirectoryRelativeUrl, projectDirectoryUrl);
+    const browserDynamicDataFileUrl = resolveUrl$1("./browser-execute-dynamic-data.json", jsenvDirectoryUrl);
+    await writeFile(browserDynamicDataFileUrl, JSON.stringify(getBrowserExecutionDynamicData({
       projectDirectoryUrl,
       compileServerOrigin
     }), null, "  "));
@@ -15588,7 +17435,7 @@ const startExploring = async ({
       if (request.ressource === "/") {
         return serveExploringIndex({
           projectDirectoryUrl,
-          htmlFileUrl,
+          htmlFileRelativeUrl,
           explorableConfig,
           request
         });
@@ -15665,6 +17512,7 @@ exports.jsenvBabelPluginCompatMap = jsenvBabelPluginCompatMap;
 exports.jsenvBabelPluginMap = jsenvBabelPluginMap;
 exports.jsenvBrowserScoreMap = jsenvBrowserScoreMap;
 exports.jsenvCoverageConfig = jsenvCoverageConfig;
+exports.jsenvExplorableConfig = jsenvExplorableConfig;
 exports.jsenvNodeVersionScoreMap = jsenvNodeVersionScoreMap;
 exports.jsenvPluginCompatMap = jsenvPluginCompatMap;
 exports.launchChromium = launchChromium;
