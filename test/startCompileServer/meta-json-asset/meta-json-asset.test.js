@@ -1,10 +1,10 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { fetchUrl } from "@jsenv/server"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
-import { fetch } from "../../fetch.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -19,8 +19,8 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 })
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
 
-await fetch(fileServerUrl)
-const response = await fetch(`${fileServerUrl}__asset__/meta.json`)
+await fetchUrl(fileServerUrl)
+const response = await fetchUrl(`${fileServerUrl}__asset__/meta.json`)
 const body = await response.json()
 const actual = {
   status: response.status,

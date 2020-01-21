@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { fetchUrl } from "@jsenv/server"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
-import { fetch } from "../../fetch.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -14,7 +14,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodePlatform.js`
-const response = await fetch(fileServerUrl)
+const response = await fetchUrl(fileServerUrl)
 
 const actual = {
   status: response.status,

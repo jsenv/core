@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert"
-import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
 import { urlToFileSystemPath } from "@jsenv/util"
+import { fetchUrl } from "@jsenv/server"
+import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
-import { fetch } from "../../fetch.js"
 
 const testDirectoryUrl = import.meta.resolve("./")
 const filename = `jsenv-core.js`
@@ -20,7 +20,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 const compiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${filename}`
 const compiledFileServerUrl = `${compileServerOrigin}/${compiledFileRelativeUrl}`
 const compiledFileUrl = `${testDirectoryUrl}${compiledFileRelativeUrl}`
-const response = await fetch(compiledFileServerUrl)
+const response = await fetchUrl(compiledFileServerUrl)
 
 const actual = {
   status: response.status,

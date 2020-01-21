@@ -1,11 +1,11 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { fetchUrl } from "@jsenv/server"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { convertCommonJsWithBabel } from "../../../index.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
-import { fetch } from "../../fetch.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -23,7 +23,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   },
 })
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
-const response = await fetch(fileServerUrl)
+const response = await fetchUrl(fileServerUrl)
 
 const actual = {
   status: response.status,
