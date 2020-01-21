@@ -3,12 +3,12 @@ import { Script } from "vm"
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
+import { fetchUrl } from "@jsenv/server"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
 import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "internal/escapeRegexpSpecialCharacters.js"
 import { createChildExecArgv } from "internal/node-launcher/createChildExecArgv.js"
-import { fetchUsingHttp } from "internal/platform/createNodePlatform/fetchUsingHttp.js"
 
 const EVALUATION_STATUS_OK = "evaluation-ok"
 
@@ -163,7 +163,7 @@ export const launchNode = async ({
       const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`
       const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`
       const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`
-      await fetchUsingHttp(nodeBundledJsFileRemoteUrl, {
+      await fetchUrl(nodeBundledJsFileRemoteUrl, {
         cancellationToken,
       })
 
