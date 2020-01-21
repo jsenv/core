@@ -1,6 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { urlToFileSystemPath } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
+import { require } from "internal/require.js"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
 import { startCompileServer } from "internal/compiling/startCompileServer.js"
 import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"

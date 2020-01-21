@@ -1,4 +1,5 @@
 import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+import { require } from "internal/require.js"
 
 export const requireCommonJsBundle = async ({
   projectDirectoryUrl,

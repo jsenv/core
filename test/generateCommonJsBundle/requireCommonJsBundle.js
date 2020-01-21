@@ -1,4 +1,5 @@
 import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+import { require } from "internal/require.js"
 
 export const requireCommonJsBundle = async ({
   projectDirectoryUrl,
@@ -8,6 +9,7 @@ export const requireCommonJsBundle = async ({
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
   const mainFileUrl = resolveUrl(mainRelativeUrl, bundleDirectoryUrl)
   const mainFilePath = urlToFileSystemPath(mainFileUrl)
+  // eslint-disable-next-line import/no-dynamic-require
   const namespace = require(mainFilePath)
   return {
     namespace: normalizeNamespace(namespace),
