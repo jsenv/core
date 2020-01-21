@@ -1,7 +1,7 @@
 {
   "name": "@jsenv/core",
   "description": "Write and maintain your Javascript projects.",
-  "version": "10.5.1",
+  "version": "10.6.0-alpha.0",
   "license": "MIT",
   "repository": {
     "type": "git",
