@@ -6,6 +6,7 @@ export const generateCommonJsBundleForNode = ({
   babelPluginMap = jsenvBabelPluginMap,
   bundleDirectoryRelativeUrl,
   nodeMinimumVersion = decideNodeMinimumVersion(),
+  cjsExtension,
   ...rest
 }) => {
   const babelPluginMapForNode = computeBabelPluginMapForPlatform({
@@ -16,6 +17,7 @@ export const generateCommonJsBundleForNode = ({
 
   return generateCommonJsBundle({
     bundleDirectoryRelativeUrl,
+    cjsExtension,
     compileGroupCount: 1,
     babelPluginMap: babelPluginMapForNode,
     ...rest,

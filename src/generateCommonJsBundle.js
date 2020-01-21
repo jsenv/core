@@ -4,6 +4,7 @@ import { generateBundle } from "internal/bundling/generateBundle.js"
 
 export const generateCommonJsBundle = async ({
   bundleDirectoryRelativeUrl = "./dist/commonjs",
+  cjsExtension = false,
   node = true,
   ...rest
 }) =>
@@ -11,6 +12,14 @@ export const generateCommonJsBundle = async ({
     format: "commonjs",
     bundleDirectoryRelativeUrl,
     node,
+    formatOutputOptions: {
+      ...(cjsExtension
+        ? {
+            // by default it's [name].js
+            entryFileNames: `[name].cjs`,
+          }
+        : {}),
+    },
     balancerTemplateFileUrl: resolveUrl(
       "./src/internal/bundling/commonjs-balancer-template.js",
       jsenvCoreDirectoryUrl,
