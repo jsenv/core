@@ -1,3 +1,4 @@
+/* global require, __filename */
 // eslint-disable-next-line import/no-unresolved
 import importMap from "/importMap.json"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
