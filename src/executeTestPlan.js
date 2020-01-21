@@ -4,7 +4,7 @@ import {
   createCancellationTokenForProcessSIGINT,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
-import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
+import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/util"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { executePlan } from "internal/executing/executePlan.js"
 import { executionIsPassed } from "internal/executing/executionIsPassed.js"

@@ -5,11 +5,7 @@ import {
   composeCancellationToken,
   createCancellationSource,
 } from "@jsenv/cancellation"
-import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
-import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
-import { createLogger } from "@jsenv/logger"
-import {
+import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta, registerDirectoryLifecycle,
   resolveUrl,
   urlToFileSystemPath,
   urlIsInsideOf,
@@ -17,6 +13,9 @@ import {
   assertFilePresence,
   writeFile,
 } from "@jsenv/util"
+import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
+import { createLogger } from "@jsenv/logger"
+
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { getBrowserExecutionDynamicData } from "internal/platform/getBrowserExecutionDynamicData.js"
 import { serveExploringIndex } from "internal/exploring/serveExploringIndex.js"

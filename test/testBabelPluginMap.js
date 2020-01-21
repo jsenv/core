@@ -1,5 +1,9 @@
-import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { resolveUrl } from "@jsenv/util"
+import {
+  resolveUrl,
+  metaMapToSpecifierMetaMap,
+  normalizeSpecifierMetaMap,
+  urlToMeta,
+} from "@jsenv/util"
 import { createInstrumentBabelPlugin } from "internal/executing/coverage/createInstrumentBabelPlugin.js"
 import { jsenvBabelPluginMap, jsenvCoverageConfig } from "../index.js"
 import { jsenvCoreDirectoryUrl } from "../src/internal/jsenvCoreDirectoryUrl.js"

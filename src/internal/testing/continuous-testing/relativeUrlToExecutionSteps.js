@@ -1,5 +1,9 @@
-import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { resolveUrl } from "@jsenv/util"
+import {
+  resolveUrl,
+  metaMapToSpecifierMetaMap,
+  normalizeSpecifierMetaMap,
+  urlToMeta,
+} from "@jsenv/util"
 import { generateFileExecutionSteps } from "internal/executing/generateFileExecutionSteps.js"
 
 export const relativeUrlToExecutionSteps = (relativeUrl, { projectDirectoryUrl, plan }) => {

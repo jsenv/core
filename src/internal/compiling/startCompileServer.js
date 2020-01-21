@@ -3,7 +3,6 @@ import { readFileSync } from "fs"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { composeTwoImportMaps } from "@jsenv/import-map"
 import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
-import { registerFileLifecycle } from "@jsenv/file-watcher"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -20,6 +19,7 @@ import {
   writeFile,
   removeFileSystemNode,
   ensureEmptyDirectory,
+  registerFileLifecycle,
 } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
 import {

@@ -6,9 +6,13 @@ import {
   createCancellationSource,
   errorToCancelReason,
 } from "@jsenv/cancellation"
-import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
-import { urlIsInsideOf, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
+import {
+  urlIsInsideOf,
+  urlToRelativeUrl,
+  urlToFileSystemPath,
+  registerDirectoryLifecycle,
+} from "@jsenv/util"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
 import { generateExecutionSteps } from "internal/executing/generateExecutionSteps.js"
 import { executeConcurrently } from "internal/executing/executeConcurrently.js"

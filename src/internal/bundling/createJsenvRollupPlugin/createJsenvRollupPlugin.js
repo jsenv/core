@@ -1,6 +1,5 @@
 /* eslint-disable import/max-dependencies */
 import { normalizeImportMap, resolveImport } from "@jsenv/import-map"
-import { compareFilePath } from "@jsenv/file-collector"
 import {
   isFileSystemPath,
   fileSystemPathToUrl,
@@ -8,6 +7,7 @@ import {
   urlToRelativeUrl,
   resolveDirectoryUrl,
   writeFile,
+  comparePathnames,
 } from "@jsenv/util"
 import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
 import { fetchUrl } from "internal/fetchUrl.js"
@@ -177,7 +177,7 @@ export const createJsenvRollupPlugin = async ({
         const chunk = bundle[key]
         mappings[`${chunk.name}.js`] = chunk.fileName
       })
-      const mappingKeysSorted = Object.keys(mappings).sort(compareFilePath)
+      const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames)
       const manifest = {}
       mappingKeysSorted.forEach((key) => {
         manifest[key] = mappings[key]

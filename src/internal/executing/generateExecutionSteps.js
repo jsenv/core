@@ -1,5 +1,4 @@
-import { metaMapToSpecifierMetaMap } from "@jsenv/url-meta"
-import { collectFiles } from "@jsenv/file-collector"
+import { collectFiles, metaMapToSpecifierMetaMap } from "@jsenv/util"
 import { generateFileExecutionSteps } from "./generateFileExecutionSteps.js"
 
 export const generateExecutionSteps = async (plan, { cancellationToken, projectDirectoryUrl }) => {
