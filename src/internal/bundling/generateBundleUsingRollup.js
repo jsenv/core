@@ -1,3 +1,4 @@
+import { extname } from "path"
 import { createOperation } from "@jsenv/cancellation"
 import { urlToFileSystemPath } from "@jsenv/util"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin/createJsenvRollupPlugin.js"
@@ -114,7 +115,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}
         // call make it a bit complex
         // cache: null
         // https://rollupjs.org/guide/en#experimentaltoplevelawait
-        experimentalTopLevelAwait: true,
+        //  experimentalTopLevelAwait: true,
         // if we want to ignore some warning
         // please use https://rollupjs.org/guide/en#onwarn
         // to be very clear about what we want to ignore
@@ -128,17 +129,40 @@ ${JSON.stringify(entryPointMap, null, "  ")}
       }),
   })
 
+  // this is because rollup does not let use preserve extension using
+  // entryFileNames ([extname] is only available when preserveModules options is enabled)
+  // consequently we try our best to preserve extension on the output files
+  const entryKeys = Object.keys(entryPointMap)
+  const entryExtensions = entryKeys.map((key) => extname(entryPointMap[key]) || ".js")
+  const firstFileExtension = entryExtensions[0]
+  const otherFileExtensionIndex = entryExtensions.findIndex(
+    (extension) => extension !== firstFileExtension,
+  )
+  const extension = firstFileExtension
+  if (otherFileExtensionIndex > -1) {
+    logger.warn(
+      `entryPointMap contains mixed extensions.
+--- ${entryKeys[0]} entry file ---
+${entryPointMap[entryKeys[0]]}
+--- ${entryKeys[otherFileExtensionIndex]} entry file ---
+${entryPointMap[entryKeys[otherFileExtensionIndex]]}
+
+${firstFileExtension} extension will be used for every entry.`,
+    )
+  }
+
   const rollupGenerateOptions = {
     // https://rollupjs.org/guide/en#experimentaltoplevelawait
-    experimentalTopLevelAwait: true,
+    // experimentalTopLevelAwait: true,
     // we could put prefConst to true by checking 'transform-block-scoping'
     // presence in babelPluginMap
     preferConst: false,
     // https://rollupjs.org/guide/en#output-dir
     dir: urlToFileSystemPath(bundleDirectoryUrl),
+    // by default it's [name].js, meaning the file extension is not kept
+    entryFileNames: `[name]${extension}`,
     // https://rollupjs.org/guide/en#output-format
     format: formatToRollupFormat(format),
-    // entryFileNames: `./[name].js`,
     // https://rollupjs.org/guide/en#output-sourcemap
     sourcemap: true,
     sourcemapExcludeSources,
