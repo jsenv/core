@@ -22,25 +22,27 @@ import { TRANSFORM_JS_TEST_PARAMS, TRANSFORM_RESULT_TEST_PARAMS } from "../TEST_
     code: originalFileContent,
     url: originalFileUrl,
   })
-  const actual = await transformResultToCompilationResult(transformResult, {
+  const compilationResult = await transformResultToCompilationResult(transformResult, {
     ...TRANSFORM_RESULT_TEST_PARAMS,
     originalFileContent,
     originalFileUrl,
     compiledFileUrl,
     sourcemapFileUrl,
   })
-  const expected = {
-    compiledSource: actual.compiledSource,
-    contentType: "application/javascript",
-    sources: [`../../../${filename}`],
-    sourcesContent: [originalFileContent],
-    assets: [`../${filename}.map`],
-    assetsContent: [actual.assetsContent[0]],
-  }
-  assert({ actual, expected })
-
   {
-    const actual = JSON.parse(actual.assetsContent[0])
+    const actual = compilationResult
+    const expected = {
+      compiledSource: actual.compiledSource,
+      contentType: "application/javascript",
+      sources: [`../../../${filename}`],
+      sourcesContent: [originalFileContent],
+      assets: [`../${filename}.map`],
+      assetsContent: [actual.assetsContent[0]],
+    }
+    assert({ actual, expected })
+  }
+  {
+    const actual = JSON.parse(compilationResult.assetsContent[0])
     const expected = {
       version: 3,
       sources: [`../../${filename}`],
