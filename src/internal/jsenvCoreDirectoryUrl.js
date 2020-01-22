@@ -1,11 +1,13 @@
+/* global __filename */
+
 import { fileSystemPathToUrl, resolveUrl } from "@jsenv/util"
 
 let jsenvCoreDirectoryUrl
-if (typeof global.__filename === "string") {
+if (typeof __filename === "string") {
   jsenvCoreDirectoryUrl = resolveUrl(
     // get ride of dist/commonjs/main.js
     "../../",
-    fileSystemPathToUrl(global.__filename),
+    fileSystemPathToUrl(__filename),
   )
 } else {
   jsenvCoreDirectoryUrl = resolveUrl(
