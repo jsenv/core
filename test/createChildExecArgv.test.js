@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert"
-import { createChildExecArgv } from "src/internal/node-launcher/createChildExecArgv.js"
+import { createChildExecArgv } from "../src/internal/node-launcher/createChildExecArgv.js"
 
 // inherit without debug mode
 {

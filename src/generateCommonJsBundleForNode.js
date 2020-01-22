@@ -1,6 +1,6 @@
-import { computeBabelPluginMapForPlatform } from "internal/generateGroupMap/computeBabelPluginMapForPlatform.js"
-import { generateCommonJsBundle } from "src/generateCommonJsBundle.js"
-import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
+import { computeBabelPluginMapForPlatform } from "./internal/generateGroupMap/computeBabelPluginMapForPlatform.js"
+import { generateCommonJsBundle } from "./generateCommonJsBundle.js"
+import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
 export const generateCommonJsBundleForNode = ({
   babelPluginMap = jsenvBabelPluginMap,

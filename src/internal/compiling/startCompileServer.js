@@ -21,16 +21,13 @@ import {
   ensureEmptyDirectory,
   registerFileLifecycle,
 } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import {
-  assertImportMapFileRelativeUrl,
-  assertImportMapFileInsideProject,
-} from "internal/argUtils.js"
-import { generateGroupMap } from "internal/generateGroupMap/generateGroupMap.js"
-import { jsenvBabelPluginCompatMap } from "src/jsenvBabelPluginCompatMap.js"
-import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
-import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
-import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+import { assertImportMapFileRelativeUrl, assertImportMapFileInsideProject } from "../argUtils.js"
+import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
+import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
+import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
+import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
+import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
 import { readProjectImportMap } from "./readProjectImportMap.js"
 import { serveCompiledJs } from "./serveCompiledJs.js"
 import { urlIsAsset } from "./urlIsAsset.js"

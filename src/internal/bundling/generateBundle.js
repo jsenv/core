@@ -4,18 +4,18 @@ import {
   createCancellationTokenForProcessSIGINT,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
-import { COMPILE_ID_OTHERWISE } from "internal/CONSTANTS.js"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   assertFilePresence,
   ensureEmptyDirectory,
 } from "@jsenv/util"
-import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
-import { startCompileServer } from "internal/compiling/startCompileServer.js"
-import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
-import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
-import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
+import { COMPILE_ID_OTHERWISE } from "../CONSTANTS.js"
+import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "../argUtils.js"
+import { startCompileServer } from "../compiling/startCompileServer.js"
+import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
+import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
+import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import { createBabePluginMapForBundle } from "./createBabePluginMapForBundle.js"
 import { generateBundleUsingRollup } from "./generateBundleUsingRollup.js"
 
