@@ -1,4 +1,4 @@
-import { startsWithWindowsDriveLetter, windowsFilePathToUrl } from "internal/filePathUtils.js"
+import { startsWithWindowsDriveLetter, windowsFilePathToUrl } from "../filePathUtils.js"
 
 export const remapCallSite = async (
   callSite,

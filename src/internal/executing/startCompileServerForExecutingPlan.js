@@ -1,5 +1,5 @@
-import { startCompileServer } from "internal/compiling/startCompileServer.js"
-import { fetchUrl } from "internal/fetchUrl.js"
+import { startCompileServer } from "../compiling/startCompileServer.js"
+import { fetchUrl } from "../fetchUrl.js"
 
 export const startCompileServerForExecutingPlan = async ({
   // false because don't know if user is going

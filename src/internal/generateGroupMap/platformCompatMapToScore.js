@@ -1,4 +1,4 @@
-import { versionCompare, findHighestVersion } from "internal/semantic-versioning/index.js"
+import { versionCompare, findHighestVersion } from "../semantic-versioning/index.js"
 
 export const platformCompatMapToScore = (platformCompatMap, platformScoreMap) => {
   return Object.keys(platformCompatMap).reduce((previous, platformName) => {

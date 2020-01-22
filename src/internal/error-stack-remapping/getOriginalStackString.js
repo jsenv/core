@@ -1,4 +1,4 @@
-import { parseSourceMappingURL } from "internal/sourceMappingURLUtils.js"
+import { parseSourceMappingURL } from "../sourceMappingURLUtils.js"
 import { remapCallSite } from "./remapCallSite.js"
 import { stackToString } from "./stackToString.js"
 

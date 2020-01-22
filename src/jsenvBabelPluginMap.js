@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 
-import { require } from "internal/require.js"
+import { require } from "./internal/require.js"
 
 const proposalJSONStrings = require("@babel/plugin-proposal-json-strings")
 const proposalObjectRestSpread = require("@babel/plugin-proposal-object-rest-spread")

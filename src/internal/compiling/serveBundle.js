@@ -1,11 +1,8 @@
 import { extname, basename } from "path"
-import {
-  COMPILE_ID_GLOBAL_BUNDLE_FILES,
-  COMPILE_ID_COMMONJS_BUNDLE_FILES,
-} from "internal/CONSTANTS.js"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { generateBundleUsingRollup } from "internal/bundling/generateBundleUsingRollup.js"
-import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
+import { COMPILE_ID_GLOBAL_BUNDLE_FILES, COMPILE_ID_COMMONJS_BUNDLE_FILES } from "../CONSTANTS.js"
+import { generateBundleUsingRollup } from "../bundling/generateBundleUsingRollup.js"
+import { bundleToCompilationResult } from "../bundling/bundleToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"
 
 export const serveBundle = async ({

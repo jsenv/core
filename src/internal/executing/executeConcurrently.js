@@ -7,7 +7,7 @@ import {
   composeCancellationToken,
 } from "@jsenv/cancellation"
 import { urlToFileSystemPath } from "@jsenv/util"
-import { launchAndExecute } from "internal/executing/launchAndExecute.js"
+import { launchAndExecute } from "../executing/launchAndExecute.js"
 import { reportToCoverageMap } from "./coverage/reportToCoverageMap.js"
 import { createExecutionResultLog } from "./executionLogs.js"
 import { createSummaryLog } from "./createSummaryLog.js"

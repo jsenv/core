@@ -1,6 +1,6 @@
 import { resolveUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { generateBundle } from "internal/bundling/generateBundle.js"
+import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
+import { generateBundle } from "./internal/bundling/generateBundle.js"
 
 export const generateCommonJsBundle = async ({
   bundleDirectoryRelativeUrl = "./dist/commonjs",

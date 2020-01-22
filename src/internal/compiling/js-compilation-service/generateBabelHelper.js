@@ -1,4 +1,4 @@
-import { require } from "internal/require.js"
+import { require } from "../../require.js"
 
 const { buildExternalHelpers } = require("@babel/core")
 const { getDependencies } = require("@babel/helpers")

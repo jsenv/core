@@ -5,12 +5,12 @@ import {
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/util"
-import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
-import { executePlan } from "internal/executing/executePlan.js"
-import { executionIsPassed } from "internal/executing/executionIsPassed.js"
-import { generateCoverageJsonFile } from "internal/executing/coverage/generateCoverageJsonFile.js"
-import { generateCoverageHtmlDirectory } from "internal/executing/coverage/generateCoverageHtmlDirectory.js"
-import { generateCoverageTextLog } from "internal/executing/coverage/generateCoverageTextLog.js"
+import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
+import { executePlan } from "./internal/executing/executePlan.js"
+import { executionIsPassed } from "./internal/executing/executionIsPassed.js"
+import { generateCoverageJsonFile } from "./internal/executing/coverage/generateCoverageJsonFile.js"
+import { generateCoverageHtmlDirectory } from "./internal/executing/coverage/generateCoverageHtmlDirectory.js"
+import { generateCoverageTextLog } from "./internal/executing/coverage/generateCoverageTextLog.js"
 import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
 
 export const executeTestPlan = async ({

@@ -1,7 +1,7 @@
 /* eslint-disable */
 // https://github.com/babel/babel/tree/master/packages/babel-plugin-transform-modules-systemjs
 
-import { require } from "internal/require.js"
+import { require } from "../../require.js"
 
 const { template, types: t } = require("@babel/core")
 const { declare } = require("@babel/helper-plugin-utils")

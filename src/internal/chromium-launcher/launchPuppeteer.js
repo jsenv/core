@@ -3,9 +3,9 @@
 
 import { createCancellationToken, createStoppableOperation } from "@jsenv/cancellation"
 import { interruptSignal, teardownSignal } from "@jsenv/node-signals"
-import { require } from "internal/require.js"
-import { fetchUrl } from "internal/fetchUrl.js"
-import { validateResponseStatusIsOk } from "internal/validateResponseStatusIsOk.js"
+import { require } from "../require.js"
+import { fetchUrl } from "../fetchUrl.js"
+import { validateResponseStatusIsOk } from "../validateResponseStatusIsOk.js"
 import { trackRessources } from "./trackRessources.js"
 
 const puppeteer = require("puppeteer")

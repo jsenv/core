@@ -1,5 +1,5 @@
-import { require } from "internal/require.js"
 import { resolveDirectoryUrl, urlToFileSystemPath } from "@jsenv/util"
+import { require } from "../../require.js"
 
 const libReport = require("istanbul-lib-report")
 const reports = require("istanbul-reports")

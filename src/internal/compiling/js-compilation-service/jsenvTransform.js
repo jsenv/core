@@ -1,5 +1,5 @@
 /* eslint-disable import/max-dependencies */
-import { require } from "internal/require.js"
+import { require } from "../../require.js"
 import transformModulesSystemJs from "./babel-plugin-transform-modules-systemjs/index.js"
 import { findAsyncPluginNameInBabelPluginMap } from "./findAsyncPluginNameInBabelPluginMap.js"
 import { ansiToHTML } from "./ansiToHTML.js"

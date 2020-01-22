@@ -4,7 +4,7 @@ import {
   normalizeSpecifierMetaMap,
   urlToMeta,
 } from "@jsenv/util"
-import { generateFileExecutionSteps } from "internal/executing/generateFileExecutionSteps.js"
+import { generateFileExecutionSteps } from "../../executing/generateFileExecutionSteps.js"
 
 export const relativeUrlToExecutionSteps = (relativeUrl, { projectDirectoryUrl, plan }) => {
   const specifierMetaMapForExecution = normalizeSpecifierMetaMap(

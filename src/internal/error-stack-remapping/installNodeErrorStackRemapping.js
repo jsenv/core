@@ -1,6 +1,6 @@
-import { require } from "internal/require.js"
 import { ensureWindowsDriveLetter, resolveUrl } from "@jsenv/util"
-import { fetchUrl } from "internal/fetchUrl.js"
+import { require } from "../require.js"
+import { fetchUrl } from "../fetchUrl.js"
 import { installErrorStackRemapping } from "./installErrorStackRemapping.js"
 
 const { SourceMapConsumer } = require("source-map")

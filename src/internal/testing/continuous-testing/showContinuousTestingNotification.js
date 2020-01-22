@@ -1,6 +1,6 @@
 import { basename } from "path"
-import { require } from "internal/require.js"
-import { executionIsPassed } from "internal/executing/executionIsPassed.js"
+import { require } from "../../require.js"
+import { executionIsPassed } from "../../executing/executionIsPassed.js"
 import {
   createBrokenNotificationMessage,
   createStillFailingNotificationMessage,

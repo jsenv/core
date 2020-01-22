@@ -1,4 +1,4 @@
-import { require } from "internal/require.js"
+import { require } from "../../require.js"
 
 const libReport = require("istanbul-lib-report")
 const reports = require("istanbul-reports")

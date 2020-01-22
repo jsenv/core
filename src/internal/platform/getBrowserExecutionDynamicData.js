@@ -1,6 +1,6 @@
-import { require } from "internal/require.js"
 import { urlToRelativeUrl, fileSystemPathToUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { require } from "../require.js"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
 export const getBrowserExecutionDynamicData = ({ projectDirectoryUrl, compileServerOrigin }) => {
   const browserPlatformFileRelativeUrl =

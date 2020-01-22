@@ -7,11 +7,10 @@ import {
 // TODO: find how to convert this import
 // into a dynamic import inside if (Error.prepareStackTrace)
 // until then browser without it like firefox will download the file and never use it
-import { installBrowserErrorStackRemapping } from "internal/error-stack-remapping/installBrowserErrorStackRemapping.js"
-
-import { COMPILE_ID_GLOBAL_BUNDLE } from "internal/CONSTANTS.js"
-import { fetchAndEvalUsingScript } from "internal/fetchAndEvalUsingScript.js"
-import { fetchUsingXHR } from "internal/fetchUsingXHR.js"
+import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
+import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
+import { fetchAndEvalUsingScript } from "../fetchAndEvalUsingScript.js"
+import { fetchUsingXHR } from "../fetchUsingXHR.js"
 
 const { EventSource, location } = window
 // TODO: find something for old browsers where URLSearchParams is not available

@@ -1,4 +1,4 @@
-import { require } from "internal/require.js"
+import { require } from "../../require.js"
 
 const { createFileCoverage } = require("istanbul-lib-coverage")
 

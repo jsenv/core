@@ -1,4 +1,4 @@
-import { require } from "internal/require.js"
+import { require } from "../../require.js"
 import { filePathToBabelHelperName, babelHelperNameToImportSpecifier } from "./babelHelper.js"
 
 // https://github.com/babel/babel/tree/master/packages/babel-helper-module-imports

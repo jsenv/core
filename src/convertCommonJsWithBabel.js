@@ -1,5 +1,5 @@
-import { require } from "internal/require.js"
-import { transformJs } from "internal/compiling/js-compilation-service/transformJs.js"
+import { require } from "./internal/require.js"
+import { transformJs } from "./internal/compiling/js-compilation-service/transformJs.js"
 
 const transformCommonJs = require("babel-plugin-transform-commonjs")
 

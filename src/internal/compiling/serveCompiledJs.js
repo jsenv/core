@@ -1,13 +1,13 @@
 import { urlToContentType, serveFile } from "@jsenv/server"
+import { resolveUrl, resolveDirectoryUrl, readFile } from "@jsenv/util"
 import {
   COMPILE_ID_OTHERWISE,
   COMPILE_ID_GLOBAL_BUNDLE,
   COMPILE_ID_GLOBAL_BUNDLE_FILES,
   COMPILE_ID_COMMONJS_BUNDLE,
   COMPILE_ID_COMMONJS_BUNDLE_FILES,
-} from "internal/CONSTANTS.js"
-import { resolveUrl, resolveDirectoryUrl, readFile } from "@jsenv/util"
-import { createBabePluginMapForBundle } from "internal/bundling/createBabePluginMapForBundle.js"
+} from "../CONSTANTS.js"
+import { createBabePluginMapForBundle } from "../bundling/createBabePluginMapForBundle.js"
 import { transformJs } from "./js-compilation-service/transformJs.js"
 import { transformResultToCompilationResult } from "./js-compilation-service/transformResultToCompilationResult.js"
 import { serveCompiledFile } from "./serveCompiledFile.js"

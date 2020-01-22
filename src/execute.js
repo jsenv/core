@@ -3,9 +3,9 @@ import {
   catchAsyncFunctionCancellation,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
-import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
-import { startCompileServer } from "internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "internal/executing/launchAndExecute.js"
+import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
+import { startCompileServer } from "./internal/compiling/startCompileServer.js"
+import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
 
 export const execute = async ({
   cancellationToken = createCancellationTokenForProcessSIGINT(),

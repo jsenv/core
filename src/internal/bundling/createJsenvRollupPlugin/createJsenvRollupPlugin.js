@@ -9,11 +9,11 @@ import {
   writeFile,
   comparePathnames,
 } from "@jsenv/util"
-import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
-import { fetchUrl } from "internal/fetchUrl.js"
-import { validateResponseStatusIsOk } from "internal/validateResponseStatusIsOk.js"
-import { transformJs } from "internal/compiling/js-compilation-service/transformJs.js"
-import { findAsyncPluginNameInBabelPluginMap } from "internal/compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
+import { writeSourceMappingURL } from "../../sourceMappingURLUtils.js"
+import { fetchUrl } from "../../fetchUrl.js"
+import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
+import { transformJs } from "../../compiling/js-compilation-service/transformJs.js"
+import { findAsyncPluginNameInBabelPluginMap } from "../../compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { minifyHtml } from "./minifyHtml.js"

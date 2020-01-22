@@ -1,5 +1,5 @@
 import { urlToFileSystemPath, ensureParentDirectories } from "@jsenv/util"
-import { require } from "internal/require.js"
+import { require } from "../../require.js"
 import { readMeta } from "./readMeta.js"
 import { validateMeta } from "./validateMeta.js"
 import { updateMeta } from "./updateMeta.js"

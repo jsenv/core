@@ -1,8 +1,8 @@
 import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { supportsDynamicImport } from "../../supportsDynamicImport.js"
-import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
-import { installNodeErrorStackRemapping } from "internal/error-stack-remapping/installNodeErrorStackRemapping.js"
-import { fetchUrl } from "internal/fetchUrl.js"
+import { COMPILE_ID_COMMONJS_BUNDLE } from "../CONSTANTS.js"
+import { installNodeErrorStackRemapping } from "../error-stack-remapping/installNodeErrorStackRemapping.js"
+import { fetchUrl } from "../fetchUrl.js"
 
 export const execute = async ({
   // this whole file will be compiled in every project

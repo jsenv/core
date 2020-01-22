@@ -1,7 +1,7 @@
 import { readFile } from "fs"
 import { composeTwoImportMaps } from "@jsenv/import-map"
 import { urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
 export const readProjectImportMap = async ({ projectDirectoryUrl, importMapFileRelativeUrl }) => {
   if (typeof projectDirectoryUrl !== "string") {
