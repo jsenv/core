@@ -5,6 +5,9 @@ const jsenvConfig = require("./jsenv.config.js")
 const config = createEslintConfig({
   ...jsenvConfig,
   importResolutionMethod: "import-map",
+  // importResolverOptions: {
+  //   logLevel: "debug",
+  // },
 })
 
 // simulate node 13

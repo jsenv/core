@@ -96,7 +96,7 @@
     "@jsenv/node-module-import-map": "10.4.0",
     "@jsenv/node-signals": "1.2.1",
     "@jsenv/server": "1.5.0",
-    "@jsenv/uneval": "1.1.0",
+    "@jsenv/uneval": "1.2.0",
     "@jsenv/util": "3.3.3",
     "@rollup/plugin-json": "4.0.1",
     "@rollup/plugin-node-resolve": "6.0.0",

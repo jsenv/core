@@ -4,9 +4,9 @@ import {
   normalizeSpecifierMetaMap,
   urlToMeta,
 } from "@jsenv/util"
-import { createInstrumentBabelPlugin } from "internal/executing/coverage/createInstrumentBabelPlugin.js"
-import { jsenvBabelPluginMap, jsenvCoverageConfig } from "../index.js"
+import { createInstrumentBabelPlugin } from "../src/internal/executing/coverage/createInstrumentBabelPlugin.js"
 import { jsenvCoreDirectoryUrl } from "../src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvBabelPluginMap, jsenvCoverageConfig } from "../index.js"
 
 const computeTestBabelPluginMap = ({ coverageEnabled }) => {
   if (!coverageEnabled) return jsenvBabelPluginMap
