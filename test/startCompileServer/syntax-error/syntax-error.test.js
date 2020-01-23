@@ -1,39 +1,37 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl, urlToFileSystemPath, resolveUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 import { fetchUrl } from "@jsenv/server"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "internal/compiling/startCompileServer.js"
+import { COMPILE_ID_OTHERWISE } from "../../../src/internal/CONSTANTS.js"
+import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 
-const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativePath)
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
 const filename = `${testDirectoryname}.js`
-const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
-const compileId = "otherwise"
+const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
-const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
+const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
 const response = await fetchUrl(fileServerUrl)
-
 const actual = {
   status: response.status,
   statusText: response.statusText,
-  headers: response.headers,
+  contentType: response.headers.get("content-type"),
+  cacheControl: response.headers.get("cache-control"),
   body: await response.json(),
 }
 const expected = {
   status: 500,
   statusText: "parse error",
-  headers: {
-    ...actual.headers,
-    "cache-control": ["no-store"],
-    "content-type": ["application/json"],
-  },
+  contentType: "application/json",
+  cacheControl: "no-store",
   body: {
     message: actual.body.message,
     messageHTML: actual.body.messageHTML,
