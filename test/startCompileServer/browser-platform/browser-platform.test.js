@@ -17,15 +17,17 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`
-const actual = await fetchUrl(fileServerUrl, { simplified: true })
+const { url, status, statusText, headers } = await fetchUrl(fileServerUrl)
+const actual = {
+  url,
+  status,
+  statusText,
+  contentType: headers.get("content-type"),
+}
 const expected = {
-  url: fileServerUrl,
+  url,
   status: 200,
   statusText: "OK",
-  headers: {
-    ...actual.headers,
-    "content-type": "application/javascript",
-  },
-  body: actual.body,
+  contentType: "application/javascript",
 }
 assert({ actual, expected })

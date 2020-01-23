@@ -8,20 +8,19 @@ import { startCompileServer } from "../../../src/internal/compiling/startCompile
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativePath)
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
 const filename = `${testDirectoryname}.js`
-const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
-
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-const response = await fetchUrl(fileServerUrl)
+const { status, statusText, headers } = await fetchUrl(fileServerUrl)
 {
-  const { status, statusText, headers } = response
   const actual = {
     status,
     statusText,
@@ -38,7 +37,7 @@ const response = await fetchUrl(fileServerUrl)
 {
   const { status, statusText } = await fetchUrl(fileServerUrl, {
     headers: {
-      "if-none-match": response.headers.get("etag"),
+      "if-none-match": headers.get("etag"),
     },
   })
   const actual = {
