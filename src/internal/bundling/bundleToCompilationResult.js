@@ -61,6 +61,7 @@ export const bundleToCompilationResult = (
     const chunk = parseRollupChunk(rollupChunk, {
       moduleContentMap,
       compiledFileUrl,
+      sourcemapFileUrl: resolveUrl(rollupChunk.map.file, compiledFileUrl),
     })
     trackDependencies(chunk.dependencyMap)
     assets.push(chunkFileName)

@@ -26,6 +26,7 @@ export const launchNode = async ({
   remap = true,
   traceWarnings = true,
   collectCoverage = false,
+  unhandledRejectionStrict = true,
   env,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
@@ -59,6 +60,9 @@ export const launchNode = async ({
   })
   if (traceWarnings && !execArgv.includes("--trace-warnings")) {
     execArgv.push("--trace-warnings")
+  }
+  if (unhandledRejectionStrict) {
+    execArgv.push("--unhandled-rejections=strict")
   }
 
   env.COVERAGE_ENABLED = collectCoverage

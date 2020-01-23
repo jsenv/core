@@ -24,7 +24,7 @@
       "request": "launch",
       "protocol": "inspector",
       "program": "${file}",
-      "runtimeVersion": "13.6.0",
+      "runtimeVersion": "13.7.0",
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
       "smartStep": true,
