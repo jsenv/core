@@ -3,28 +3,21 @@ import { readFileSync } from "fs"
 import { assert } from "@jsenv/assert"
 import { createLogger } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"
-import {
-  resolveDirectoryUrl,
-  urlToRelativeUrl,
-  urlToFileSystemPath,
-  resolveUrl,
-  readFile,
-} from "@jsenv/util"
-import { require } from "internal/require.js"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "internal/compiling/startCompileServer.js"
-import { bufferToEtag } from "internal/compiling/compile-directory/bufferToEtag.js"
-import { serveBundle } from "internal/compiling/serveBundle.js"
-import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
+import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath, readFile } from "@jsenv/util"
+import { require } from "../../../src/internal/require.js"
+import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
+import { bufferToEtag } from "../../../src/internal/compiling/compile-directory/bufferToEtag.js"
+import { serveBundle } from "../../../src/internal/compiling/serveBundle.js"
+import { jsenvBabelPluginMap } from "../../../src/jsenvBabelPluginMap.js"
 
-const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
+const originalFileUrl = resolveUrl("./file.js", import.meta.url)
+const compiledFileUrl = resolveUrl("./.jsenv/file.js", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const originalFileUrl = import.meta.resolve("./file.js")
-const compiledFileUrl = import.meta.resolve(`./.jsenv/file.js`)
 const babelPluginMap = jsenvBabelPluginMap
-
 const {
   outDirectoryRelativeUrl,
   origin: compileServerOrigin,
@@ -61,14 +54,13 @@ const serveBundleParams = {
   },
   babelPluginMap,
 }
-const response = await serveBundle(serveBundleParams)
 
+const response = await serveBundle(serveBundleParams)
 {
   const { status: actual } = response
   const expected = 200
   assert({ actual, expected })
 }
-
 {
   const sourcemapFileUrl = `${compiledFileUrl}.map`
   const actual = JSON.parse(await readFile(sourcemapFileUrl))
@@ -82,7 +74,6 @@ const response = await serveBundle(serveBundleParams)
   }
   assert({ actual, expected })
 }
-
 {
   const metaFileUrl = `${compiledFileUrl}__asset__/meta.json`
   const actual = JSON.parse(await readFile(metaFileUrl))
@@ -104,24 +95,24 @@ const response = await serveBundle(serveBundleParams)
   }
   assert({ actual, expected })
 }
-
 {
   // eslint-disable-next-line import/no-dynamic-require
   const actual = typeof require(urlToFileSystemPath(compiledFileUrl))
   const expected = "object"
   assert({ actual, expected })
 }
-
-// ensure serveBundle cache works
-const secondResponse = await serveBundle({
-  ...serveBundleParams,
-  request: {
-    ...serveBundleParams.request,
-    headers: {
-      "if-none-match": response.headers.eTag,
+{
+  // ensure serveBundle cache works
+  const secondResponse = await serveBundle({
+    ...serveBundleParams,
+    request: {
+      ...serveBundleParams.request,
+      headers: {
+        "if-none-match": response.headers.eTag,
+      },
     },
-  },
-})
-const actual = secondResponse.status
-const expected = 304
-assert({ actual, expected })
+  })
+  const actual = secondResponse.status
+  const expected = 304
+  assert({ actual, expected })
+}
