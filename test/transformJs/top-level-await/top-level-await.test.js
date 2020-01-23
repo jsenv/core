@@ -1,16 +1,14 @@
-import { readFileSync } from "fs"
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToFileSystemPath } from "@jsenv/util"
-import { transformJs } from "internal/compiling/js-compilation-service/transformJs.js"
+import { resolveUrl, readFile } from "@jsenv/util"
+import { transformJs } from "../../../src/internal/compiling/js-compilation-service/transformJs.js"
 import { TRANSFORM_JS_TEST_PARAMS } from "../TEST_PARAMS.js"
 
-const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryname = basename(testDirectoryUrl)
 const filename = `${testDirectoryname}.js`
-const originalFileUrl = import.meta.resolve(`./${filename}`)
-const filePath = urlToFileSystemPath(originalFileUrl)
-const originalFileContent = readFileSync(filePath).toString()
+const originalFileUrl = resolveUrl(`./${filename}`, testDirectoryUrl)
+const originalFileContent = await readFile(originalFileUrl)
 
 const { code } = await transformJs({
   ...TRANSFORM_JS_TEST_PARAMS,
