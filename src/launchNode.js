@@ -4,6 +4,7 @@ import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { fetchUrl } from "@jsenv/server"
+import { supportsDynamicImport } from "./supportsDynamicImport.js"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "./internal/CONSTANTS.js"
 import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
@@ -11,6 +12,10 @@ import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCha
 import { createChildExecArgv } from "./internal/node-launcher/createChildExecArgv.js"
 
 const EVALUATION_STATUS_OK = "evaluation-ok"
+const nodeJsFileUrl = resolveUrl(
+  "./src/internal/node-launcher/node-js-file.js",
+  jsenvCoreDirectoryUrl,
+)
 
 export const launchNode = async ({
   cancellationToken = createCancellationToken(),
@@ -44,8 +49,11 @@ export const launchNode = async ({
     throw new TypeError(`env must be an object, got ${env}`)
   }
 
+  const dynamicImportSupported = await supportsDynamicImport()
   const nodeControllableFileUrl = resolveUrl(
-    "./src/internal/node-launcher/nodeControllableFile.cjs",
+    dynamicImportSupported
+      ? "./src/internal/node-launcher/nodeControllableFile.js"
+      : "./src/internal/node-launcher/nodeControllableFile.cjs",
     jsenvCoreDirectoryUrl,
   )
   await assertFilePresence(nodeControllableFileUrl)
@@ -159,19 +167,7 @@ export const launchNode = async ({
     { collectNamespace, collectCoverage, executionId },
   ) => {
     const execute = async () => {
-      const nodeJsFileUrl = resolveUrl(
-        "./src/internal/node-launcher/node-js-file.js",
-        jsenvCoreDirectoryUrl,
-      )
-      const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl)
-      const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`
-      const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`
-      const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`
-      await fetchUrl(nodeBundledJsFileRemoteUrl, {
-        cancellationToken,
-      })
-
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
         const evaluationResultRegistration = registerChildMessage(
           child,
           "evaluate-result",
@@ -182,23 +178,29 @@ export const launchNode = async ({
           },
         )
 
-        sendToChild(
-          child,
-          "evaluate",
-          createNodeIIFEString({
-            nodeJsFileUrl,
-            nodeBundledJsFileUrl,
-            projectDirectoryUrl,
-            outDirectoryRelativeUrl,
-            fileRelativeUrl,
-            compileServerOrigin,
+        const executeParams = {
+          jsenvCoreDirectoryUrl,
+          projectDirectoryUrl,
+          outDirectoryRelativeUrl,
+          fileRelativeUrl,
+          compileServerOrigin,
 
-            collectNamespace,
-            collectCoverage,
-            executionId,
-            remap,
-          }),
-        )
+          collectNamespace,
+          collectCoverage,
+          executionId,
+          remap,
+        }
+
+        const source = await generateSourceToEvaluate({
+          supportsDynamicImport,
+          cancellationToken,
+          projectDirectoryUrl,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+          executeParams,
+        })
+
+        sendToChild(child, "evaluate", source)
       })
     }
 
@@ -296,46 +298,53 @@ const createExitWithFailureCodeError = (code) => {
   return new Error(`child exited with ${code}`)
 }
 
-const createNodeIIFEString = ({
-  nodeJsFileUrl,
-  nodeBundledJsFileUrl,
+const generateSourceToEvaluate = async ({
+  supportsDynamicImport,
+  executeParams,
+
+  cancellationToken,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
-  fileRelativeUrl,
   compileServerOrigin,
+}) => {
+  if (supportsDynamicImport) {
+    return `import { execute } from ${JSON.stringify(nodeJsFileUrl)}
 
-  collectNamespace,
-  collectCoverage,
-  executionId,
-  remap,
-}) => `(() => {
-  const fs = require('fs')
+export default execute(${JSON.stringify(executeParams, null, "    ")})`
+  }
+
+  const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl)
+  const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`
+  const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`
+  const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`
+  await fetchUrl(nodeBundledJsFileRemoteUrl, {
+    cancellationToken,
+  })
+
+  // The compiled nodePlatform file will be somewhere else in the filesystem
+  // than the original nodePlatform file.
+  // It is important for the compiled file to be able to require
+  // node modules that original file could access
+  // hence the requireCompiledFileAsOriginalFile
+  return `(() => {
+  const { readFileSync } = require("fs")
   const Module = require('module')
+  const { dirname } = require("path")
+
+  const requireCompiledFileAsOriginalFile = (compiledFilePath, originalFilePath) => {
+    const fileContent = String(readFileSync(compiledFilePath))
+    const moduleObject = new Module(compiledFilePath)
+    moduleObject.paths = Module._nodeModulePaths(dirname(originalFilePath))
+    moduleObject._compile(fileContent, compiledFilePath)
+    return moduleObject.exports
+  }
+
   const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
   const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
-  const fileContent = String(fs.readFileSync(nodeBundledJsFilePath))
-  const moduleObject = new Module(nodeBundledJsFilePath)
-  moduleObject.paths = Module._nodeModulePaths(require('path').dirname(nodeFilePath));
-  moduleObject._compile(fileContent, nodeBundledJsFilePath)
-  const { execute } = moduleObject.exports
-
-  return execute(${JSON.stringify(
-    {
-      jsenvCoreDirectoryUrl,
-      projectDirectoryUrl,
-      outDirectoryRelativeUrl,
-      fileRelativeUrl,
-      compileServerOrigin,
-
-      collectNamespace,
-      collectCoverage,
-      executionId,
-      remap,
-    },
-    null,
-    "    ",
-  )})
+  const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
+  return execute(${JSON.stringify(executeParams, null, "    ")})
 })()`
+}
 
 const evalSource = (code, href) => {
   const script = new Script(code, { filename: href })
