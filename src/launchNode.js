@@ -35,6 +35,7 @@ export const launchNode = async ({
 
   remap = true,
   collectCoverage = false,
+  interruptAfterExecute = true,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -207,6 +208,14 @@ export const launchNode = async ({
     }
 
     const executionResult = await execute()
+
+    // file executed, ask child to terminate
+    // required for node13 to properly let the child process ends
+    if (interruptAfterExecute) {
+      console.log("killing child")
+      // child.kill("SIGINT")
+    }
+
     const { status } = executionResult
     if (status === "errored") {
       const { exceptionSource, coverageMap } = executionResult

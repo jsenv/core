@@ -245,7 +245,7 @@ const computeExecutionResult = async ({
 
       let forceStopped = false
 
-      if (platform.stopForce) {
+      if (platform.stopForce && allocatedMsBeforeForceStop) {
         const stopPromise = (async () => {
           await platform.stop(reason)
           return false
