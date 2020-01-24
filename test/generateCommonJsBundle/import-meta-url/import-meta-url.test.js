@@ -29,5 +29,5 @@ const { namespace: actual } = await requireCommonJsBundle({
   ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
 })
-const expected = resolveUrl(`${bundleDirectoryRelativeUrl}/main.js`, jsenvCoreDirectoryUrl)
+const expected = resolveUrl(`${bundleDirectoryRelativeUrl}/main.cjs`, jsenvCoreDirectoryUrl)
 assert({ actual, expected })

@@ -1,4 +1,5 @@
 /* eslint-disable import/max-dependencies */
+import { extname } from "path"
 import {
   catchAsyncFunctionCancellation,
   createCancellationTokenForProcessSIGINT,
@@ -84,7 +85,12 @@ export const generateBundle = async ({
     await ensureEmptyDirectory(bundleDirectoryUrl)
   }
 
-  const chunkId = `${Object.keys(entryPointMap)[0]}.js`
+  const extension =
+    formatOutputOptions && formatOutputOptions.entryFileNames
+      ? extname(formatOutputOptions.entryFileNames)
+      : ".js"
+
+  const chunkId = `${Object.keys(entryPointMap)[0]}${extension}`
   env = {
     ...env,
     chunkId,
@@ -203,6 +209,7 @@ export const generateBundle = async ({
         node,
         browser,
         format,
+        formatOutputOptions,
         minify,
         writeOnFileSystem,
         sourcemapExcludeSources,
@@ -287,7 +294,7 @@ const generateEntryPointsBalancerFiles = ({
         projectDirectoryUrl,
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         entryPointMap: {
-          [entryPointName]: urlToRelativeUrl(balancerTemplateFileUrl, projectDirectoryUrl),
+          [entryPointName]: `./${urlToRelativeUrl(balancerTemplateFileUrl, projectDirectoryUrl)}`,
         },
         sourcemapExcludeSources: true,
         ...rest,

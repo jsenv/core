@@ -17,7 +17,6 @@ const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const mainFilename = `${testDirectoryname}.js`
-
 const server = await startServer({
   protocol: "http",
   ip: "127.0.0.1",
@@ -45,42 +44,42 @@ const bundle = await generateCommonJsBundle({
     main: `./${testDirectoryRelativeUrl}${mainFilename}`,
   },
 })
-
+const compilationResult = bundleToCompilationResult(bundle, {
+  projectDirectoryUrl: testDirectoryUrl,
+  compiledFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.cjs`, jsenvCoreDirectoryUrl),
+  sourcemapFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.cjs.map`, jsenvCoreDirectoryUrl),
+})
 {
-  const actual = bundleToCompilationResult(bundle, {
-    projectDirectoryUrl: testDirectoryUrl,
-    compiledFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.js`, jsenvCoreDirectoryUrl),
-    sourcemapFileUrl: resolveUrl(`${bundleDirectoryRelativeUrl}main.js.map`, jsenvCoreDirectoryUrl),
-  })
+  const actual = compilationResult
   const expected = {
     contentType: "application/javascript",
     compiledSource: actual.compiledSource,
     sources: [],
     sourcesContent: [],
-    assets: ["../main.js.map"],
+    assets: ["../main.cjs.map"],
     assetsContent: [actual.assetsContent[0]],
   }
   assert({ actual, expected })
-
-  {
-    const actual = JSON.parse(actual.assetsContent[0])
-    const expected = {
-      version: actual.version,
-      file: "main.js",
-      sources: ["http://127.0.0.1:9999/file.js"],
-      sourcesContent: null,
-      names: actual.names,
-      mappings: actual.mappings,
-    }
-    assert({ actual, expected })
-  }
 }
-
-const { namespace: actual } = await requireCommonJsBundle({
-  ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
-  bundleDirectoryRelativeUrl,
-})
-const expected = 42
-assert({ actual, expected })
+{
+  const actual = JSON.parse(actual.assetsContent[0])
+  const expected = {
+    version: actual.version,
+    file: "main.cjs",
+    sources: ["http://127.0.0.1:9999/file.js"],
+    sourcesContent: null,
+    names: actual.names,
+    mappings: actual.mappings,
+  }
+  assert({ actual, expected })
+}
+{
+  const { namespace: actual } = await requireCommonJsBundle({
+    ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
+    bundleDirectoryRelativeUrl,
+  })
+  const expected = 42
+  assert({ actual, expected })
+}
 
 server.stop()
