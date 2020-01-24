@@ -2,7 +2,7 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { generateSystemJsBundle } from "../../../index.js"
-import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { nodeImportSystemJsBundle } from "../nodeImportSystemJsBundle.js"
 import {
   GENERATE_SYSTEMJS_BUNDLE_TEST_PARAMS,
