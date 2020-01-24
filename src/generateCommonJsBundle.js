@@ -17,6 +17,7 @@ export const generateCommonJsBundle = async ({
         ? {
             // by default it's [name].js
             entryFileNames: `[name].cjs`,
+            chunkFileNames: `[name]-[hash].cjs`,
           }
         : {}),
     },

@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert"
 import { generateCommonJsBundle } from "../../../index.js"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
@@ -8,12 +8,12 @@ import {
   REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
-const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
-const firstEntryRelativeUrl = `${testDirectoryRelativeUrl}a.cjs`
-const secondEntryRelativeUrl = `${testDirectoryRelativeUrl}b.cjs`
+const firstEntryRelativeUrl = `${testDirectoryRelativeUrl}a.js`
+const secondEntryRelativeUrl = `${testDirectoryRelativeUrl}b.js`
 
 await generateCommonJsBundle({
   ...GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
@@ -31,9 +31,9 @@ await generateCommonJsBundle({
   const manifestFileContent = await readFile(manifestFileUrl)
   const actual = JSON.parse(manifestFileContent)
   const expected = {
-    "a.cjs": "a.cjs",
-    "b.cjs": "b.cjs",
-    "used-by-both.cjs": actual["used-by-both.cjs"],
+    "a.js": "a.cjs",
+    "b.js": "b.cjs",
+    "used-by-both.js": actual["used-by-both.js"],
   }
   assert({ actual, expected })
 }
