@@ -1,5 +1,5 @@
 import { createLogger } from "@jsenv/logger"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "../../src/internal/jsenvCoreDirectoryUrl.js"
 import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
 export const START_COMPILE_SERVER_TEST_PARAMS = {

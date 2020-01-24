@@ -1,6 +1,6 @@
 import { startServer, firstService, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
-import { require } from "internal/require.js"
+import { require } from "../../src/internal/require.js"
 
 const puppeteer = require("puppeteer")
 

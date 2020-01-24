@@ -1,9 +1,9 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl } from "@jsenv/util"
-import { require } from "internal/require.js"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { bundleToCompilationResult } from "internal/bundling/bundleToCompilationResult.js"
+import { require } from "../../../src/internal/require.js"
+import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
+import { bundleToCompilationResult } from "../../../src/internal/bundling/bundleToCompilationResult.js"
 import { generateCommonJsBundle } from "../../../index.js"
 import { GENERATE_COMMONJS_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
