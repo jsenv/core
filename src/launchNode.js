@@ -35,7 +35,6 @@ export const launchNode = async ({
 
   remap = true,
   collectCoverage = false,
-  interruptAfterExecute = true,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -84,6 +83,10 @@ export const launchNode = async ({
   logger.info(
     `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(nodeControllableFileUrl)}`,
   )
+
+  const childReadyPromise = new Promise((resolve) => {
+    registerChildMessage(child, "ready", resolve)
+  })
 
   const consoleCallbackArray = []
   const registerConsoleCallback = (callback) => {
@@ -175,6 +178,11 @@ export const launchNode = async ({
           child,
           "evaluate-result",
           ({ status, value }) => {
+            logger.debug(`child process sent the following evaluation result.
+--- status ---
+${status}
+--- value ---
+${value}`)
             evaluationResultRegistration.unregister()
             if (status === EVALUATION_STATUS_OK) resolve(value)
             else reject(value)
@@ -203,18 +211,23 @@ export const launchNode = async ({
           executeParams,
         })
 
-        sendToChild(child, "evaluate", source)
+        logger.debug(`ask child process to evaluate
+--- source ---
+${source}`)
+
+        await childReadyPromise
+        try {
+          await sendToChild(child, "evaluate", source)
+        } catch (e) {
+          logger.error(`error while sending message to child
+--- error stack ---
+${e.stack}`)
+          throw e
+        }
       })
     }
 
     const executionResult = await execute()
-
-    // file executed, ask child to terminate
-    // required for node13 to properly let the child process ends
-    if (interruptAfterExecute) {
-      console.log("killing child")
-      // child.kill("SIGINT")
-    }
 
     const { status } = executionResult
     if (status === "errored") {
@@ -270,11 +283,17 @@ const evalException = (exceptionSource, { compileServerOrigin, projectDirectoryU
   return error
 }
 
-const sendToChild = (child, type, data) => {
+const sendToChild = async (child, type, data) => {
   const source = uneval(data, { functionAllowed: true })
-  child.send({
-    type,
-    data: source,
+
+  return new Promise((resolve, reject) => {
+    child.send({ type, data: source }, (error) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve()
+      }
+    })
   })
 }
 
@@ -282,7 +301,7 @@ const registerChildMessage = (child, type, callback) => {
   return registerChildEvent(child, "message", (message) => {
     if (message.type === type) {
       // eslint-disable-next-line no-eval
-      callback(eval(`(${message.data})`))
+      callback(message.data ? eval(`(${message.data})`) : "")
     }
   })
 }

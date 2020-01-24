@@ -46,11 +46,11 @@ token.register(
   }),
 )
 token.register(
-  listenParentOnce("evaluate", async (expressionString) => {
+  listenParentOnce("evaluate", async (source) => {
     try {
       // eslint-disable-next-line no-eval
-      const namespace = await evalUsingDynamicImport(`${expressionString}
-${"//#"} sourceURL=__node-evaluation-script__.js`)
+      const namespace = await evalUsingDynamicImport(`${source}
+  ${"//#"} sourceURL=__node-evaluation-script__.js`)
       const value = await namespace.default
       sendToParent(
         "evaluate-result",
@@ -86,7 +86,9 @@ const evalUsingDynamicImport = async (source) => {
 const sendToParent = (type, data) => {
   // https://nodejs.org/api/process.html#process_process_connected
   // not connected anymore, cannot communicate with parent
-  if (!process.connected) return
+  if (!process.connected) {
+    throw new Error("cannot send response because process not connected to parent")
+  }
 
   // this can keep process alive longer than expected
   // when source is a long string.
@@ -97,3 +99,5 @@ const sendToParent = (type, data) => {
     data,
   })
 }
+
+setTimeout(() => sendToParent("ready"))
