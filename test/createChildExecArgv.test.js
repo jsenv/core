@@ -68,6 +68,16 @@ import { createChildExecArgv } from "../src/internal/node-launcher/createChildEx
   assert({ actual, expected })
 }
 
+// debugPort itself it not enough to enable debugging
+{
+  const actual = await createChildExecArgv({
+    processExecArgv: ["--before", "--after"],
+    debugPort: 10,
+  })
+  const expected = ["--before", "--after"]
+  assert({ actual, expected })
+}
+
 // unhandledRejection inherited by default
 {
   const actual = await createChildExecArgv({
