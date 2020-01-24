@@ -1,6 +1,6 @@
-import { require } from "internal/require.js"
-import { composeCoverageMap } from "internal/executing/coverage/composeCoverageMap.js"
-import { evalSource } from "internal/platform/createNodePlatform/evalSource.js"
+import { require } from "../../src/internal/require.js"
+import { composeCoverageMap } from "../../src/internal/executing/coverage/composeCoverageMap.js"
+import { evalSource } from "../../src/internal/platform/createNodePlatform/evalSource.js"
 
 const puppeteer = require("puppeteer")
 
