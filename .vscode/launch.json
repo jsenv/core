@@ -25,6 +25,7 @@
       "protocol": "inspector",
       "program": "${file}",
       "runtimeVersion": "13.7.0",
+      "runtimeArgs": ["--experimental-json-modules", "--unhandled-rejections=strict"],
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
       "smartStep": true,
