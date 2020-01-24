@@ -24,16 +24,14 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}file.js`
  * en gros il reste des choses a définir
  */
 
-;(async () => {
-  const actual = await execute({
-    ...EXECUTE_TEST_PARAMS,
-    launchLogLevel: "info",
-    jsenvDirectoryRelativeUrl,
-    launch: (options) => launchNode({ ...options, debugPort: 40001 }),
-    fileRelativeUrl,
-  })
-  const expected = {
-    status: "completed",
-  }
-  assert({ actual, expected })
-})()
+const actual = await execute({
+  ...EXECUTE_TEST_PARAMS,
+  launchLogLevel: "info",
+  jsenvDirectoryRelativeUrl,
+  launch: (options) => launchNode({ ...options, debugPort: 40001 }),
+  fileRelativeUrl,
+})
+const expected = {
+  status: "completed",
+}
+assert({ actual, expected })

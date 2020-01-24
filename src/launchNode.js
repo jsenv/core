@@ -194,7 +194,7 @@ export const launchNode = async ({
         }
 
         const source = await generateSourceToEvaluate({
-          supportsDynamicImport,
+          dynamicImportSupported,
           cancellationToken,
           projectDirectoryUrl,
           outDirectoryRelativeUrl,
@@ -301,7 +301,7 @@ const createExitWithFailureCodeError = (code) => {
 }
 
 const generateSourceToEvaluate = async ({
-  supportsDynamicImport,
+  dynamicImportSupported,
   executeParams,
 
   cancellationToken,
@@ -309,7 +309,7 @@ const generateSourceToEvaluate = async ({
   outDirectoryRelativeUrl,
   compileServerOrigin,
 }) => {
-  if (supportsDynamicImport) {
+  if (dynamicImportSupported) {
     return `import { execute } from ${JSON.stringify(nodeJsFileUrl)}
 
 export default execute(${JSON.stringify(executeParams, null, "    ")})`

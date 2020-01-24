@@ -1,6 +1,7 @@
 import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
+import { fetchUrl } from "../../fetchUrl.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveNodeGroup } from "../resolveNodeGroup.js"
 import { memoizeOnce } from "../memoizeOnce.js"
@@ -107,8 +108,9 @@ export const createNodePlatform = async ({
 }
 
 const importJson = async (url) => {
-  const namespace = await import(url)
-  return namespace.default
+  const response = await fetchUrl(url, { simplified: false })
+  const object = await response.json()
+  return object
 }
 
 const unevalException = (value) => {

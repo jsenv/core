@@ -50,7 +50,7 @@ token.register(
   listenParentOnce("evaluate", async (expressionString) => {
     try {
       // eslint-disable-next-line no-eval
-      const namespace = await eval(`${expressionString}
+    const namespace = await eval(`${expressionString}
 ${"//#"} sourceURL=__node-evaluation-script__.js`)
       const value = await namespace.default
       sendToParent(

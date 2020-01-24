@@ -96,3 +96,20 @@ import { createChildExecArgv } from "../src/internal/node-launcher/createChildEx
   const expected = ["--before", "--after", "--unhandled-rejections=strict"]
   assert({ actual, expected })
 }
+
+// traceWarnings inherited by default
+{
+  const actual = await createChildExecArgv({
+    processExecArgv: ["--before", "--after"],
+  })
+  const expected = ["--before", "--after"]
+  assert({ actual, expected })
+}
+
+{
+  const actual = await createChildExecArgv({
+    processExecArgv: ["--before", "--trace-warnings", "--after"],
+  })
+  const expected = ["--before", "--trace-warnings", "--after"]
+  assert({ actual, expected })
+}
