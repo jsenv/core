@@ -24,7 +24,6 @@ await generateCommonJsBundle({
     main: `./${testDirectoryRelativeUrl}${mainFilename}`,
   },
 })
-
 const {
   namespace: { ask },
 } = await requireCommonJsBundle({

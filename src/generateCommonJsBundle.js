@@ -4,7 +4,7 @@ import { generateBundle } from "./internal/bundling/generateBundle.js"
 
 export const generateCommonJsBundle = async ({
   bundleDirectoryRelativeUrl = "./dist/commonjs",
-  cjsExtension = false,
+  cjsExtension = true,
   node = true,
   ...rest
 }) =>
