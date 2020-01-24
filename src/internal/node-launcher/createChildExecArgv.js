@@ -1,16 +1,21 @@
 import { createCancellationToken } from "@jsenv/cancellation"
 import { findFreePort } from "@jsenv/server"
+import { getCommandArgument, removeCommandArgument } from "./commandArguments.js"
 
 const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"]
 
 export const createChildExecArgv = async ({
   cancellationToken = createCancellationToken(),
   // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
-  debugPort,
-  debugMode,
-  debugModeInheritBreak,
   processExecArgv,
   processDebugPort,
+
+  debugPort = 0,
+  debugMode = "inherit",
+  debugModeInheritBreak = true,
+  traceWarnings = "inherit",
+  unhandledRejection = "inherit",
+  jsonModules = "inherit",
 } = {}) => {
   if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
     throw new TypeError(`unexpected debug mode.
@@ -20,258 +25,135 @@ ${debugMode}
 ${AVAILABLE_DEBUG_MODE}`)
   }
 
-  const processDebug = parseDebugFromExecArgv(processExecArgv)
-
-  // this is required because vscode does not
-  // support assigning a child spwaned without a specific port
-  const forceFreePortIfZero = async ({ debugPort, port }) => {
-    if (debugPort === 0) {
-      const freePort = await findFreePort((port === 0 ? processDebugPort : port) + 1, {
-        cancellationToken,
-      })
-      return freePort
-    }
-    return debugPort
-  }
-
+  let childExecArgv = processExecArgv.slice()
+  const { debugModeArg, debugPortArg } = getCommandDebugArgs(processExecArgv)
+  let childDebugMode
   if (debugMode === "inherit") {
-    if (processDebug.mode === "none") {
-      return copyExecArgv(processExecArgv)
+    if (debugModeArg) {
+      childDebugMode = debugModeArg.name.slice(2)
+      if (debugModeInheritBreak === false) {
+        if (childDebugMode === "--debug-brk") childDebugMode = "--debug"
+        if (childDebugMode === "--inspect-brk") childDebugMode = "--inspect"
+      }
+    } else {
+      childDebugMode = "none"
     }
-
-    const childDebugPort = await forceFreePortIfZero({
-      cancellationToken,
-      debugPort,
-      port: processDebug.port,
-    })
-
-    let { mode } = processDebug
-    if (debugModeInheritBreak === false) {
-      if (mode === "debug-brk") mode = "debug"
-      if (mode === "inspect-brk") mode = "inspect"
+  } else {
+    childDebugMode = debugMode
+  }
+  if (childDebugMode === "none") {
+    // remove debug mode or debug port arg
+    if (debugModeArg) {
+      childExecArgv = removeCommandArgument(childExecArgv, debugModeArg.name)
     }
-
-    return replaceDebugExecArgv(processExecArgv, {
-      processDebug,
-      mode,
-      port: childDebugPort,
-    })
-  }
-
-  if (debugMode !== "none") {
-    if (processDebug.mode === "none") {
-      const childDebugPort = await forceFreePortIfZero({
-        cancellationToken,
-        debugPort,
-        port: 1000, // TODO: should be random from 0 to 10000 for instance
-      })
-      return addDebugExecArgv(processExecArgv, { mode: debugMode, port: childDebugPort })
+    if (debugPortArg) {
+      childExecArgv = removeCommandArgument(childExecArgv, debugPortArg.name)
     }
+  } else {
+    // this is required because vscode does not
+    // support assigning a child spwaned without a specific port
+    const childDebugPort =
+      debugPort === 0 ? await findFreePort(processDebugPort + 1, { cancellationToken }) : debugPort
 
-    const childDebugPort = await forceFreePortIfZero({
-      cancellationToken,
-      debugPort,
-      port: processDebug.port,
-    })
-    return replaceDebugExecArgv(processExecArgv, {
-      processDebug,
-      mode: debugMode,
-      port: childDebugPort,
-    })
+    // remove process debugMode, it will be replaced with the child debugMode
+    const childDebugModeArgName = `--${childDebugMode}`
+    if (debugPortArg) {
+      // replace the debug port arg
+      const childDebugPortArgFull = `--${childDebugMode}-port${portToArgValue(childDebugPort)}`
+      childExecArgv[debugPortArg.index] = childDebugPortArgFull
+
+      // replace debug mode or create it (would be strange to have to create it)
+      if (debugModeArg) {
+        childExecArgv[debugModeArg.index] = childDebugModeArgName
+      } else {
+        childExecArgv.push(childDebugModeArgName)
+      }
+    } else {
+      const childDebugArgFull = `${childDebugModeArgName}${portToArgValue(childDebugPort)}`
+      // replace debug mode for child
+      if (debugModeArg) {
+        childExecArgv[debugModeArg.index] = childDebugArgFull
+      }
+      // add debug mode to child
+      else {
+        childExecArgv.push(childDebugArgFull)
+      }
+    }
   }
 
-  if (processDebug.mode === "none") {
-    return copyExecArgv(processExecArgv)
+  if (traceWarnings !== "inherit") {
+    const traceWarningsArg = getCommandArgument(childExecArgv, "--trace-warnings")
+    if (traceWarnings && !traceWarningsArg) {
+      childExecArgv.push("--trace-warnings")
+    } else if (!traceWarnings && traceWarningsArg) {
+      childExecArgv.splice(traceWarningsArg.index, 1)
+    }
   }
 
-  return removeDebugExecArgv(processExecArgv, processDebug)
-}
-
-const copyExecArgv = (argv) => argv.slice()
-
-const replaceDebugExecArgv = (argv, { processDebug, mode, port }) => {
-  const argvCopy = argv.slice()
-
-  if (processDebug.portIndex) {
-    // argvCopy[modeIndex] = `--${mode}`
-    argvCopy[processDebug.portIndex] = `--${mode}-port${portToPortSuffix(port)}`
-    return argvCopy
+  // https://nodejs.org/api/cli.html#cli_unhandled_rejections_mode
+  if (unhandledRejection !== "inherit") {
+    const unhandledRejectionArg = getCommandArgument(childExecArgv, "--unhandled-rejections")
+    if (unhandledRejection && !unhandledRejectionArg) {
+      childExecArgv.push(`--unhandled-rejections=${unhandledRejection}`)
+    } else if (unhandledRejection && unhandledRejectionArg) {
+      childExecArgv[unhandledRejectionArg.index] = `--unhandled-rejections=${unhandledRejection}`
+    } else if (!unhandledRejection && unhandledRejectionArg) {
+      childExecArgv.splice(unhandledRejectionArg.index, 1)
+    }
   }
 
-  argvCopy[processDebug.modeIndex] = `--${mode}${portToPortSuffix(port)}`
-  return argvCopy
-}
-
-const addDebugExecArgv = (argv, { mode, port }) => {
-  const argvCopy = argv.slice()
-
-  argvCopy.push(`--${mode}${portToPortSuffix(port)}`)
-
-  return argvCopy
-}
-
-const removeDebugExecArgv = (argv, { modeIndex, portIndex }) => {
-  const argvCopy = argv.slice()
-  if (portIndex > -1) {
-    argvCopy.splice(portIndex, 1)
-    argvCopy.splice(
-      // if modeIndex is after portIndex do -1 because we spliced
-      // portIndex just above
-      modeIndex > portIndex ? modeIndex - 1 : modeIndex,
-      1,
-    )
-    return argvCopy
+  // https://nodejs.org/api/cli.html#cli_experimental_json_modules
+  if (jsonModules !== "inherit") {
+    const jsonModulesArg = getCommandArgument(childExecArgv, "--experimental-json-modules")
+    if (jsonModules && !jsonModulesArg) {
+      childExecArgv.push(`--experimental-json-modules`)
+    } else if (!jsonModules && jsonModulesArg) {
+      childExecArgv.splice(jsonModulesArg.index, 1)
+    }
   }
 
-  argvCopy.splice(modeIndex)
-  return argvCopy
+  return childExecArgv
 }
 
-const portToPortSuffix = (port) => {
+const portToArgValue = (port) => {
   if (typeof port !== "number") return ""
   if (port === 0) return ""
   return `=${port}`
 }
 
-const parseDebugFromExecArgv = (argv) => {
-  let i = 0
-
-  while (i < argv.length) {
-    const arg = argv[i]
-
-    // https://nodejs.org/en/docs/guides/debugging-getting-started/
-    if (arg === "--inspect") {
-      return {
-        mode: "inspect",
-        modeIndex: i,
-        ...parseInspectPortFromExecArgv(argv),
-      }
-    }
-    const inspectPortMatch = /^--inspect=([0-9]+)$/.exec(arg)
-    if (inspectPortMatch) {
-      return {
-        mode: "inspect",
-        modeIndex: i,
-        port: Number(inspectPortMatch[1]),
-      }
-    }
-
-    if (arg === "--inspect-brk") {
-      return {
-        // force "inspect" otherwise a breakpoint is hit inside vscode
-        // mode: "inspect",
-        mode: "inspect-brk",
-        modeIndex: i,
-        ...parseInspectPortFromExecArgv(argv),
-      }
-    }
-    const inspectBreakMatch = /^--inspect-brk=([0-9]+)$/.exec(arg)
-    if (inspectBreakMatch) {
-      return {
-        // force "inspect" otherwise a breakpoint is hit inside vscode
-        // mode: "inspect",
-        mode: "inspect-brk",
-        modeIndex: i,
-        port: Number(inspectBreakMatch[1]),
-      }
-    }
-
-    if (arg === "--debug") {
-      return {
-        mode: "debug",
-        modeIndex: i,
-        ...parseDebugPortFromExecArgv(argv),
-      }
-    }
-    const debugPortMatch = /^--debug=([0-9]+)$/.exec(arg)
-    if (debugPortMatch) {
-      return {
-        mode: "debug",
-        modeIndex: i,
-        port: Number(debugPortMatch[1]),
-      }
-    }
-
-    if (arg === "--debug-brk") {
-      return {
-        mode: "debug-brk",
-        modeIndex: i,
-        ...parseDebugPortFromExecArgv(argv),
-      }
-    }
-    const debugBreakMatch = /^--debug-brk=([0-9]+)$/.exec(arg)
-    if (debugBreakMatch) {
-      return {
-        mode: "debug-brk",
-        modeIndex: i,
-        port: Number(debugBreakMatch[1]),
-      }
-    }
-
-    i++
-  }
-
-  return {
-    mode: "none",
-  }
-}
-
-const parseInspectPortFromExecArgv = (argv) => {
-  const portMatch = arrayFindMatch(argv, (arg) => {
-    if (arg === "--inspect-port")
-      return {
-        port: 0,
-      }
-    const match = /^--inspect-port=([0-9]+)$/.exec(arg)
-    if (match) return { port: Number(match[1]) }
-    return null
-  })
-  if (portMatch) {
+// https://nodejs.org/en/docs/guides/debugging-getting-started/
+const getCommandDebugArgs = (argv) => {
+  const inspectArg = getCommandArgument(argv, "--inspect")
+  if (inspectArg) {
     return {
-      port: portMatch.port,
-      portIndex: portMatch.arrayIndex,
+      debugModeArg: inspectArg,
+      debugPortArg: getCommandArgument(argv, "--inspect-port"),
     }
   }
-  return {
-    port: 0,
-  }
-}
-
-const parseDebugPortFromExecArgv = (argv) => {
-  const portMatch = arrayFindMatch(argv, (arg) => {
-    if (arg === "--debug-port")
-      return {
-        port: 0,
-      }
-    const match = /^--debug-port=([0-9]+)$/.exec(arg)
-    if (match) return { port: Number(match[1]) }
-    return null
-  })
-  if (portMatch) {
+  const inspectBreakArg = getCommandArgument(argv, "--inspect-brk")
+  if (inspectBreakArg) {
     return {
-      port: portMatch.port,
-      portIndex: portMatch.arrayIndex,
+      debugModeArg: inspectBreakArg,
+      debugPortArg: getCommandArgument(argv, "--inspect-port"),
     }
   }
-  return {
-    port: 0,
-  }
-}
 
-const arrayFindMatch = (array, match) => {
-  let i = 0
-  while (i < array.length) {
-    const value = array[i]
-    i++
-    const matchResult = match(value)
-    if (matchResult) {
-      return {
-        ...matchResult,
-        arrayIndex: i,
-      }
+  const debugArg = getCommandArgument(argv, "--debug")
+  if (debugArg) {
+    return {
+      debugModeArg: debugArg,
+      debugPortArg: getCommandArgument(argv, "--debug-port"),
     }
   }
-  return null
+  const debugBreakArg = getCommandArgument(argv, "--debug-brk")
+  if (debugBreakArg) {
+    return {
+      debugModeArg: debugBreakArg,
+      debugPortArg: getCommandArgument(argv, "--debug-port"),
+    }
+  }
+
+  return {}
 }
 
 export const processIsExecutedByVSCode = () => {

@@ -19,20 +19,22 @@ const nodeJsFileUrl = resolveUrl(
 
 export const launchNode = async ({
   cancellationToken = createCancellationToken(),
-  // logger,
+  logger,
 
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
 
-  debugPort = 0,
-  debugMode = "inherit",
-  debugModeInheritBreak = true,
-  remap = true,
-  traceWarnings = true,
-  collectCoverage = false,
-  unhandledRejectionStrict = true,
+  debugPort,
+  debugMode,
+  debugModeInheritBreak,
+  traceWarnings,
+  unhandledRejection,
+  jsonModules,
   env,
+
+  remap = true,
+  collectCoverage = false,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`)
@@ -60,18 +62,15 @@ export const launchNode = async ({
 
   const execArgv = await createChildExecArgv({
     cancellationToken,
+    processExecArgv: process.execArgv,
+    processDebugPort: process.debugPort,
     debugPort,
     debugMode,
     debugModeInheritBreak,
-    processExecArgv: process.execArgv,
-    processDebugPort: process.debugPort,
+    traceWarnings,
+    unhandledRejection,
+    jsonModules,
   })
-  if (traceWarnings && !execArgv.includes("--trace-warnings")) {
-    execArgv.push("--trace-warnings")
-  }
-  if (unhandledRejectionStrict) {
-    execArgv.push("--unhandled-rejections=strict")
-  }
 
   env.COVERAGE_ENABLED = collectCoverage
 
@@ -81,6 +80,9 @@ export const launchNode = async ({
     stdio: "pipe",
     env,
   })
+  logger.info(
+    `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(nodeControllableFileUrl)}`,
+  )
 
   const consoleCallbackArray = []
   const registerConsoleCallback = (callback) => {
@@ -342,7 +344,9 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`
   const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
   const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
   const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
-  return execute(${JSON.stringify(executeParams, null, "    ")})
+  return {
+    default: execute(${JSON.stringify(executeParams, null, "    ")})
+  }
 })()`
 }
 
