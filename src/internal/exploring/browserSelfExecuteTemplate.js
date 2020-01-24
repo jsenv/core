@@ -1,8 +1,5 @@
-import {
-  jsenvDirectoryRelativeUrl,
-  outDirectoryRelativeUrl,
-  // eslint-disable-next-line import/no-unresolved
-} from "/.jsenv/out/env.js"
+// eslint-disable-next-line import/no-unresolved
+import env from "/.jsenv/out/env.json"
 
 // TODO: find how to convert this import
 // into a dynamic import inside if (Error.prepareStackTrace)
@@ -12,6 +9,7 @@ import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
 import { fetchAndEvalUsingScript } from "../fetchAndEvalUsingScript.js"
 import { fetchUsingXHR } from "../fetchUsingXHR.js"
 
+const { jsenvDirectoryRelativeUrl, outDirectoryRelativeUrl } = env
 const { EventSource, location } = window
 // TODO: find something for old browsers where URLSearchParams is not available
 const fileRelativeUrl = new URLSearchParams(location.search).get("file")
