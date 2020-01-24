@@ -68,7 +68,7 @@ const response = await serveBundle({
   const expected = {
     version: 3,
     file: "file.js",
-    sources: ["out/env.js", "../file.js"],
+    sources: ["out/env.json", "../file.js"],
     sourcesContent: null,
     names: actual.names,
     mappings: actual.mappings,
@@ -80,9 +80,9 @@ const response = await serveBundle({
   const actual = JSON.parse(await readFile(`${compiledFileUrl}__asset__/meta.json`))
   const expected = {
     contentType: "application/javascript",
-    sources: ["../out/env.js", "../../file.js"],
+    sources: ["../out/env.json", "../../file.js"],
     sourcesEtag: [
-      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../out/env.js", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../out/env.json", metaFileUrl)))),
       bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../../file.js", metaFileUrl)))),
     ],
     assets: ["../file.js.map"],
@@ -97,6 +97,10 @@ const response = await serveBundle({
 {
   // eslint-disable-next-line import/no-dynamic-require
   const actual = require(urlToFileSystemPath(compiledFileUrl))
-  const expected = 42
+  const expected = {
+    whatever: 42,
+    jsenvDirectoryRelativeUrl,
+    outDirectoryRelativeUrl,
+  }
   assert({ actual, expected })
 }
