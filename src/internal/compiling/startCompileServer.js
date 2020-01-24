@@ -249,18 +249,11 @@ ${projectDirectoryUrl}`)
 
   const importMapToString = () => JSON.stringify(importMapForCompileServer, null, "  ")
   const groupMapToString = () => JSON.stringify(groupMap, null, "  ")
-  const envToString = () =>
-    Object.keys(env)
-      .map(
-        (key) => `
-export const ${key} = ${JSON.stringify(env[key])}
-`,
-      )
-      .join("")
+  const envToString = () => JSON.stringify(env, null, "  ")
 
   const jsenvImportMapFileUrl = resolveUrl("./importMap.json", outDirectoryUrl)
   const jsenvGroupMapFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
-  const jsenvEnvFileUrl = resolveUrl("./env.js", outDirectoryUrl)
+  const jsenvEnvFileUrl = resolveUrl("./env.json", outDirectoryUrl)
 
   await Promise.all([
     writeFile(jsenvImportMapFileUrl, importMapToString()),

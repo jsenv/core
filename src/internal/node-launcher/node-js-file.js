@@ -6,6 +6,7 @@ export const execute = async ({
   projectDirectoryUrl,
   fileRelativeUrl,
   compileServerOrigin,
+  outDirectoryRelativeUrl,
 
   collectNamespace,
   collectCoverage,
@@ -20,9 +21,10 @@ export const execute = async ({
     throw valueRejected
   })
 
-  const { compileDirectoryRemoteUrl, executeFile } = nodePlatform.create({
+  const { compileDirectoryRemoteUrl, executeFile } = await nodePlatform.create({
     projectDirectoryUrl,
     compileServerOrigin,
+    outDirectoryRelativeUrl,
   })
 
   const { getErrorOriginalStackString } = installNodeErrorStackRemapping({

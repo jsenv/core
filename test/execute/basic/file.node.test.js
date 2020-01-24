@@ -27,7 +27,7 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}file.js`
 ;(async () => {
   const actual = await execute({
     ...EXECUTE_TEST_PARAMS,
-    // logLevel: "debug",
+    launchLogLevel: "info",
     jsenvDirectoryRelativeUrl,
     launch: (options) => launchNode({ ...options, debugPort: 40001 }),
     fileRelativeUrl,

@@ -49,8 +49,9 @@ token.register(
   listenParentOnce("evaluate", async (expressionString) => {
     try {
       // eslint-disable-next-line no-eval
-      const value = await evalUsingDynamicImport(`${expressionString}
+      const namespace = await evalUsingDynamicImport(`${expressionString}
 ${"//#"} sourceURL=__node-evaluation-script__.js`)
+      const value = await namespace.default
       sendToParent(
         "evaluate-result",
         // here we use JSON.stringify because we should not
