@@ -1,7 +1,7 @@
 import { urlToFileSystemPath, resolveUrl } from "@jsenv/util"
 import { require } from "./internal/require.js"
 
-const commonjs = require("rollup-plugin-commonjs")
+const commonjs = require("@rollup/plugin-commonjs")
 const nodeResolve = require("@rollup/plugin-node-resolve")
 const builtins = require("rollup-plugin-node-builtins")
 const createJSONRollupPlugin = require("@rollup/plugin-json")
