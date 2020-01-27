@@ -52,9 +52,7 @@ executeTestPlan({
 })
 ```
 
-There is an in-depth documentation about testing at [./docs/testing/readme.md](./docs/testing/readme.md).
-
-`@jsenv/core` can be used only for testing and also bring you more as shown in the [Documentation](./Documentation) below.
+There is a detailed documentation about testing at [./docs/testing/readme.md](./docs/testing/readme.md). `@jsenv/core` can also bring you more as shown in the [Documentation](#Documentation) part.
 
 # Installation
 
