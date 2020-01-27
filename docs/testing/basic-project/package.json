@@ -7,10 +7,10 @@
     "node": ">=13.7.0"
   },
   "scripts": {
-    "test": "node ./execute-test-plan.js",
-    "test-with-coverage": "node ./execute-test-plan.js --cover"
+    "test": "node ./execute-test-plan.cjs",
+    "test-with-coverage": "node ./execute-test-plan.cjs --cover"
   },
   "devDependencies": {
-    "@jsenv/core": "11.0.0-alpha.0"
+    "@jsenv/core": "11.0.1"
   }
 }

@@ -1,7 +1,8 @@
-import { executeTestPlan, launchNode, launchChromiumTab } from "@jsenv/core"
+/* globals require, __dirname */
+const { executeTestPlan, launchNode, launchChromiumTab } = require("@jsenv/core")
 
 executeTestPlan({
-  projectDirectoryUrl: new URL("./", import.meta.url),
+  projectDirectoryUrl: __dirname,
   testPlan: {
     "./test/*.test.js": {
       browser: {
