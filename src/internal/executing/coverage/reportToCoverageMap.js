@@ -1,6 +1,7 @@
 import { collectFiles, metaMapToSpecifierMetaMap } from "@jsenv/util"
 import { relativeUrlToEmptyCoverage } from "./relativeUrlToEmptyCoverage.js"
 import { composeCoverageMap } from "./composeCoverageMap.js"
+import { ensureRelativePathsInCoverage } from "./ensureRelativePathsInCoverage.js"
 
 export const reportToCoverageMap = async (
   report,
@@ -15,7 +16,7 @@ export const reportToCoverageMap = async (
   const coverageMapForReport = executionReportToCoverageMap(report)
 
   if (!coverageIncludeMissing) {
-    return coverageMapForReport
+    return ensureRelativePathsInCoverage(coverageMapForReport)
   }
 
   const relativeFileUrlToCoverArray = await listRelativeFileUrlToCover({
@@ -41,10 +42,10 @@ export const reportToCoverageMap = async (
     }),
   )
 
-  return {
+  return ensureRelativePathsInCoverage({
     ...coverageMapForReport,
     ...coverageMapForMissedFiles,
-  }
+  })
 }
 
 const listRelativeFileUrlToCover = async ({

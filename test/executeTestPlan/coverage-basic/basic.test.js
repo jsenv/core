@@ -32,7 +32,7 @@ const actual = coverageMap
 const expected = {
   [`${testDirectoryRelativeUrl}file.js`]: {
     ...coverageMap[`${testDirectoryRelativeUrl}file.js`],
-    path: `${testDirectoryRelativeUrl}file.js`,
+    path: `./${testDirectoryRelativeUrl}file.js`,
     s: { 0: 2, 1: 0, 2: 2, 3: 2, 4: 0 },
   },
 }
