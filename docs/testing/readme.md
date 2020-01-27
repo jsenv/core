@@ -475,7 +475,7 @@ const { coverageMap } = await executeTestPlan({
 ```json
 {
   "src/file.js": {
-    "path": "src/file.js",
+    "path": "./src/file.js",
     "statementMap": {},
     "fnMap": {},
     "branchMap": {},
