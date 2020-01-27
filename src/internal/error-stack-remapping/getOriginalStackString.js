@@ -1,4 +1,4 @@
-import { parseSourceMappingURL } from "internal/sourceMappingURLUtils.js"
+import { parseSourceMappingURL } from "../sourceMappingURLUtils.js"
 import { remapCallSite } from "./remapCallSite.js"
 import { stackToString } from "./stackToString.js"
 
@@ -12,33 +12,33 @@ export const generateOriginalStackString = async ({
   readErrorStack,
   onFailure,
 }) => {
-  const urlToSourcemapConsumer = memoizeByFirstArgStringValue(async (compiledFileUrl) => {
+  const urlToSourcemapConsumer = memoizeByFirstArgStringValue(async (stackTraceFileUrl) => {
     try {
       let text
       try {
-        const fileResponse = await fetchFile(compiledFileUrl)
+        const fileResponse = await fetchFile(stackTraceFileUrl)
         const { status } = fileResponse
         if (status !== 200) {
           if (status === 404) {
-            onFailure(`compiled file not found at ${compiledFileUrl}`)
+            onFailure(`stack trace file not found at ${stackTraceFileUrl}`)
           } else {
-            onFailure(`compiled file unexpected response.
+            onFailure(`unexpected response fetching stack trace file.
 --- response status ---
 ${status}
 --- response text ---
 ${fileResponse.body}
---- compiled file url ---
-${compiledFileUrl}`)
+--- stack trace file ---
+${stackTraceFileUrl}`)
           }
           return null
         }
         text = fileResponse.body
       } catch (e) {
-        onFailure(`error while fetching compiled file.
+        onFailure(`error while fetching stack trace file.
 --- fetch error stack ---
 ${readErrorStack(e)}
---- compiled file url ---
-${compiledFileUrl}`)
+--- stack trace file ---
+${stackTraceFileUrl}`)
 
         return null
       }
@@ -49,10 +49,10 @@ ${compiledFileUrl}`)
       let sourcemapUrl
       let sourcemapString
       if (sourcemapParsingResult.sourcemapString) {
-        sourcemapUrl = compiledFileUrl
+        sourcemapUrl = stackTraceFileUrl
         sourcemapString = sourcemapParsingResult.sourcemapString
       } else {
-        sourcemapUrl = resolveFile(sourcemapParsingResult.sourcemapURL, compiledFileUrl, {
+        sourcemapUrl = resolveFile(sourcemapParsingResult.sourcemapURL, stackTraceFileUrl, {
           type: "source-map",
         })
 
@@ -158,11 +158,11 @@ ${sourcemapUrl}`
 
       return new SourceMapConsumer(sourceMap)
     } catch (e) {
-      onFailure(`error while preparing sourceMap consumer.
+      onFailure(`error while preparing a sourceMap consumer for a stack trace file.
 --- error stack ---
 ${readErrorStack(e)}
---- compiled file url ---
-${compiledFileUrl}`)
+--- stack trace file ---
+${stackTraceFileUrl}`)
       return null
     }
   })

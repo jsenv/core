@@ -3,7 +3,6 @@ import { readFileSync } from "fs"
 import { createCancellationToken } from "@jsenv/cancellation"
 import { composeTwoImportMaps } from "@jsenv/import-map"
 import { generateImportMapForPackage } from "@jsenv/node-module-import-map"
-import { registerFileLifecycle } from "@jsenv/file-watcher"
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -20,17 +19,15 @@ import {
   writeFile,
   removeFileSystemNode,
   ensureEmptyDirectory,
+  registerFileLifecycle,
 } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import {
-  assertImportMapFileRelativeUrl,
-  assertImportMapFileInsideProject,
-} from "internal/argUtils.js"
-import { generateGroupMap } from "internal/generateGroupMap/generateGroupMap.js"
-import { jsenvBabelPluginCompatMap } from "src/jsenvBabelPluginCompatMap.js"
-import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
-import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
-import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+import { assertImportMapFileRelativeUrl, assertImportMapFileInsideProject } from "../argUtils.js"
+import { generateGroupMap } from "../generateGroupMap/generateGroupMap.js"
+import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
+import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
+import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
+import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
 import { readProjectImportMap } from "./readProjectImportMap.js"
 import { serveCompiledJs } from "./serveCompiledJs.js"
 import { urlIsAsset } from "./urlIsAsset.js"
@@ -38,6 +35,7 @@ import { urlIsAsset } from "./urlIsAsset.js"
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
   compileServerLogLevel,
+  logStart,
 
   // js compile options
   transformTopLevelAwait = true,
@@ -173,6 +171,7 @@ ${projectDirectoryUrl}`)
     startServer({
       cancellationToken,
       logLevel: compileServerLogLevel,
+      logStart,
       protocol,
       privateKey,
       certificate,
@@ -252,18 +251,11 @@ ${projectDirectoryUrl}`)
 
   const importMapToString = () => JSON.stringify(importMapForCompileServer, null, "  ")
   const groupMapToString = () => JSON.stringify(groupMap, null, "  ")
-  const envToString = () =>
-    Object.keys(env)
-      .map(
-        (key) => `
-export const ${key} = ${JSON.stringify(env[key])}
-`,
-      )
-      .join("")
+  const envToString = () => JSON.stringify(env, null, "  ")
 
   const jsenvImportMapFileUrl = resolveUrl("./importMap.json", outDirectoryUrl)
   const jsenvGroupMapFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
-  const jsenvEnvFileUrl = resolveUrl("./env.js", outDirectoryUrl)
+  const jsenvEnvFileUrl = resolveUrl("./env.json", outDirectoryUrl)
 
   await Promise.all([
     writeFile(jsenvImportMapFileUrl, importMapToString()),

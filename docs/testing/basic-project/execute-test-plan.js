@@ -1,9 +1,9 @@
-const { executeTestPlan, launchNode, launchChromiumTab } = require("@jsenv/core")
+import { executeTestPlan, launchNode, launchChromiumTab } from "@jsenv/core"
 
 executeTestPlan({
-  projectDirectoryUrl: __dirname,
+  projectDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    "test/*.test.js": {
+    "./test/*.test.js": {
       browser: {
         launch: launchChromiumTab,
       },
@@ -11,12 +11,12 @@ executeTestPlan({
         launch: launchNode,
       },
     },
-    "test/*.test.browser.js": {
+    "./test/*.test.browser.js": {
       browser: {
         launch: launchChromiumTab,
       },
     },
-    "test/*.test.node.js": {
+    "./test/*.test.node.js": {
       node: {
         launch: launchNode,
       },

@@ -1,5 +1,5 @@
 import { resolveUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "./jsenvCoreDirectoryUrl.js"
 
 export const jsenvHtmlFileUrl = resolveUrl(
   "./src/internal/jsenv-html-file.html",

@@ -1,14 +1,16 @@
-import { fileSystemPathToUrl, resolveDirectoryUrl } from "@jsenv/util"
+/* global __filename */
+
+import { fileSystemPathToUrl, resolveUrl } from "@jsenv/util"
 
 let jsenvCoreDirectoryUrl
 if (typeof __filename === "string") {
-  jsenvCoreDirectoryUrl = resolveDirectoryUrl(
+  jsenvCoreDirectoryUrl = resolveUrl(
     // get ride of dist/commonjs/main.js
     "../../",
     fileSystemPathToUrl(__filename),
   )
 } else {
-  jsenvCoreDirectoryUrl = resolveDirectoryUrl(
+  jsenvCoreDirectoryUrl = resolveUrl(
     // get ride of src/internal/jsenvCoreDirectoryUrl.js
     "../../",
     import.meta.url,

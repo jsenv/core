@@ -1,1 +1,2 @@
-module.exports = require("./node_modules/@jsenv/prettier-config/index.js")
+// eslint-disable-next-line no-undef
+module.exports = require("@jsenv/prettier-config")

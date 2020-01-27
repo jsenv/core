@@ -32,7 +32,7 @@ Take chars below to update legends
 
 */
 
-import { COMPILE_ID_OTHERWISE, COMPILE_ID_BEST } from "internal/CONSTANTS.js"
+import { COMPILE_ID_OTHERWISE, COMPILE_ID_BEST } from "../CONSTANTS.js"
 import { generateAllPlatformGroupArray } from "./generateAllPlatformGroupArray.js"
 import { platformCompatMapToScore } from "./platformCompatMapToScore.js"
 

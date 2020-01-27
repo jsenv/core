@@ -1,5 +1,5 @@
-const { createCancellationSource } = require("@jsenv/cancellation")
-const { uneval } = require("@jsenv/uneval")
+import { createCancellationSource } from "@jsenv/cancellation"
+import { uneval } from "@jsenv/uneval"
 
 const EVALUATION_STATUS_OK = "evaluation-ok"
 const EVALUATION_STATUS_ERROR = "evaluation-error"
@@ -46,11 +46,12 @@ token.register(
   }),
 )
 token.register(
-  listenParentOnce("evaluate", async (expressionString) => {
+  listenParentOnce("evaluate", async (source) => {
     try {
       // eslint-disable-next-line no-eval
-      const value = await eval(`${expressionString}
-${"//#"} sourceURL=__node-evaluation-script__.js`)
+      const namespace = await evalUsingDynamicImport(`${source}
+  ${"//#"} sourceURL=__node-evaluation-script__.js`)
+      const value = await namespace.default
       sendToParent(
         "evaluate-result",
         // here we use JSON.stringify because we should not
@@ -76,10 +77,18 @@ ${"//#"} sourceURL=__node-evaluation-script__.js`)
   }),
 )
 
+const evalUsingDynamicImport = async (source) => {
+  const sourceAsBase64 = Buffer.from(source).toString("base64")
+  const namespace = await import(`data:text/javascript;base64,${sourceAsBase64}`)
+  return namespace
+}
+
 const sendToParent = (type, data) => {
   // https://nodejs.org/api/process.html#process_process_connected
   // not connected anymore, cannot communicate with parent
-  if (!process.connected) return
+  if (!process.connected) {
+    throw new Error("cannot send response because process not connected to parent")
+  }
 
   // this can keep process alive longer than expected
   // when source is a long string.
@@ -90,3 +99,5 @@ const sendToParent = (type, data) => {
     data,
   })
 }
+
+setTimeout(() => sendToParent("ready"))

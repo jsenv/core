@@ -1,12 +1,13 @@
-const { prettierCheckProject, jsenvProjectFilesConfig } = require("@jsenv/prettier-check-project")
+/* global require */
+const { formatWithPrettier, jsenvProjectFilesConfig } = require("@jsenv/prettier-check-project")
 const jsenvConfig = require("../../jsenv.config.js")
 
-prettierCheckProject({
+formatWithPrettier({
   ...jsenvConfig,
   projectFilesConfig: {
     ...jsenvProjectFilesConfig,
-    "./docs/**/node_modules/": false,
     "./helpers/": true,
+    "./**/coverage/": false,
     "./**/.jsenv/": false,
     "./**/dist/": false,
   },

@@ -2,7 +2,7 @@ import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { generateCommonJsBundle } from "../../../index.js"
-import { jsenvCoreDirectoryUrl } from "src/internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
   GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
@@ -29,5 +29,5 @@ const { namespace: actual } = await requireCommonJsBundle({
   ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
   bundleDirectoryRelativeUrl,
 })
-const expected = resolveUrl(`${bundleDirectoryRelativeUrl}/main.js`, jsenvCoreDirectoryUrl)
+const expected = resolveUrl(`${bundleDirectoryRelativeUrl}/main.cjs`, jsenvCoreDirectoryUrl)
 assert({ actual, expected })

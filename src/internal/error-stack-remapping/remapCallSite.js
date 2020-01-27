@@ -1,4 +1,4 @@
-import { startsWithWindowsDriveLetter, windowsFilePathToUrl } from "internal/filePathUtils.js"
+import { startsWithWindowsDriveLetter, windowsFilePathToUrl } from "../filePathUtils.js"
 
 export const remapCallSite = async (
   callSite,
@@ -221,9 +221,10 @@ const remapSourcePosition = async ({
   readErrorStack,
   onFailure,
 }) => {
-  const url = sourceToUrl(source, { resolveFile })
-
   const position = { source, line, column }
+
+  const url = sourceToUrl(source, { resolveFile })
+  if (!url) return position
 
   const sourceMapConsumer = await urlToSourcemapConsumer(url)
 
@@ -261,6 +262,12 @@ const sourceToUrl = (source, { resolveFile }) => {
   if (startsWithScheme(source)) {
     return source
   }
+
+  // linux filesystem path
+  if (source[0] === "/") {
+    return resolveFile(source)
+  }
+
   // be careful, due to babel or something like that we might receive paths like
   // C:/directory/file.js (without backslashes we would expect on windows)
   // In that case we consider C: is the signe we are on windows
@@ -268,10 +275,24 @@ const sourceToUrl = (source, { resolveFile }) => {
   if (startsWithWindowsDriveLetter(source)) {
     return windowsFilePathToUrl(source)
   }
-  // we might receive something like internal/process/task_queues.js here
-  // in that case we consider to importer to be the default one
-  // (the projectDirectoryUrl on node and window.location on chrome)
-  return resolveFile(source)
+
+  // I don't think we will ever encounter relative file in the stack trace
+  // but if it ever happens we are safe :)
+  if (source.slice(0, 2) === "./" || source.slice(0, 3) === "../") {
+    return resolveFile(source)
+  }
+
+  // we have received a "bare specifier" for the source
+  // it happens for internal/process/task_queues.js for instance
+  // if we do return resolveFile(source) it will be converted to
+  // file:///C:/project-directory/internal/process/task_queues.js in node
+  // and
+  // http://domain.com/internal/process/task_queues.js
+  // but the file will certainly be a 404
+  // and if not it won't be the right file anyway
+  // for now we assume "bare specifier" in the stack trace
+  // are internal files that are pointless to try to remap
+  return null
 }
 
 const startsWithScheme = (string) => {

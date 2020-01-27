@@ -5,70 +5,75 @@
 [![github ci](https://github.com/jsenv/jsenv-core/workflows/ci/badge.svg)](https://github.com/jsenv/jsenv-core/actions?workflow=ci)
 [![codecov coverage](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
-Write and maintain your Javascript projects.
+Cross platform execution for testing.
 
 # Table of contents
 
 - [Presentation](#Presentation)
-- [Example](#Example)
-- [Usage](#Usage)
 - [Installation](#Installation)
+- [Documentation](#Documentation)
 
-## Presentation
+# Presentation
 
-`@jsenv/core` exports functions needed during the life of a typical JavaScript project. These functions are independant so that you can use them according to each project requirements. Using every `@jsenv/core` functions results in a unified developer experience.
+`@jsenv/core` is above all a testing framework. It executes your tests on a browser, nodejs or both and can generate the combined coverage from all executions.
 
-`jsenv-core` github repository corresponds to `@jsenv/core` package published on github and npm package registries.
+![test execution terminal screenshot](./docs/testing/test-execution-terminal-screenshot.png)
 
-## Example
+You configure your test files and the associated execution on browsers or node.js in a file like the one below.
 
-The examples below are a subset of what `@jsenv/core` does.<br />
-These examples can be reproduced on your machine by following the documentation in the next part: [Usage](#Usage)
+```js
+import { executeTestPlan, launchNode, launchChromiumTab } from "@jsenv/core"
 
-> Example uses gif because github mardown does not supports video.
-> Video are better for documentation because they don't autoplay and can be paused.
-> You can find the original videos in [docs/example-asset/](./docs/example-asset)
+executeTestPlan({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  testPlan: {
+    // executes files ending with test.js on chromium and node
+    "./test/**/*.test.js": {
+      browser: {
+        launch: launchChromiumTab,
+      },
+      node: {
+        launch: launchNode,
+      },
+    },
+    // executes file ending with test.browser.js only on chromium
+    "./test/**/*.test.browser.js": {
+      browser: {
+        launch: launchChromiumTab,
+      },
+    },
+    // executes file ending with test.node.js only on node
+    "./test/**/*.test.node.js": {
+      node: {
+        launch: launchNode,
+      },
+    },
+  },
+})
+```
 
-### Multi platform test executions
+There is an in-depth documentation about testing at [./docs/testing/readme.md](./docs/testing/readme.md).
 
-![test terminal recording](./docs/example-asset/test-terminal-recording.gif)
+`@jsenv/core` can be used only for testing but because it can bring you a bit more as shown in the [Documentation](./Documentation) below.
 
-### Debug file execution in chrome
+# Installation
 
-![vscode debug node gif](./docs/example-asset/vscode-debug-chrome.gif)
+```console
+npm install --save-dev @jsenv/core@11.0.0
+```
 
-### Debug file execution in node.js
+# Documentation
 
-![vscode debug node gif](./docs/example-asset/vscode-debug-node.gif)
-
-## Usage
-
-This part lists features provided by `@jsenv/core`. Each of them are independent and completes each other.
-
-- explore files using a browser.<br/>
-  — see [./docs/exploring/readme.md](./docs/exploring/readme.md)
+`@jsenv/core` exports functions needed during the life of a typical JavaScript project. These functions are independant, you can use them according to each project requirements. Using every `@jsenv/core` functions results in a unified developer experience.
 
 - execute test files on a browser and/or node.js.<br/>
   — see [./docs/testing/readme.md](./docs/testing/readme.md)
+
+- explore files using a browser.<br/>
+  — see [./docs/exploring/readme.md](./docs/exploring/readme.md)
 
 - execute file on a browser or node.js.<br/>
   — see [./docs/executing/readme.md](./docs/executing/readme.md)
 
 - bundle your package into a format compatible with browsers and/or node.js.<br/>
   — see [./docs/bundling/readme.md](./docs/bundling/readme.md)
-
-The above could be achieved using babel, systemjs and rollup separately. jsenv makes them work together.
-
-## Installation
-
-If you never installed a jsenv package, read [Installing a jsenv package](./docs/installing-jsenv-package.md) before going further.
-
-This documentation is up-to-date with a specific version so prefer any of the following commands
-
-```console
-npm install --save-dev @jsenv/core@10.4.0
-```
-
-```console
-yarn add --dev @jsenv/core@10.4.0
-```

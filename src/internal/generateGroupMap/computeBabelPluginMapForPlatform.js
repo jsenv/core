@@ -1,5 +1,5 @@
-import { findHighestVersion } from "internal/semantic-versioning/index.js"
-import { jsenvBabelPluginCompatMap } from "src/jsenvBabelPluginCompatMap.js"
+import { findHighestVersion } from "../semantic-versioning/index.js"
+import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
 
 export const computeBabelPluginMapForPlatform = ({
   babelPluginMap,

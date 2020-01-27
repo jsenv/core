@@ -1,9 +1,11 @@
 /* eslint-disable */
 // https://github.com/babel/babel/tree/master/packages/babel-plugin-transform-modules-systemjs
 
-const { template, types: t } = import.meta.require("@babel/core")
-const { declare } = import.meta.require("@babel/helper-plugin-utils")
-const { default: hoistVariables } = import.meta.require("@babel/helper-hoist-variables")
+import { require } from "../../../require.js"
+
+const { template, types: t } = require("@babel/core")
+const { declare } = require("@babel/helper-plugin-utils")
+const { default: hoistVariables } = require("@babel/helper-hoist-variables")
 
 const buildTemplate = template(`
   SYSTEM_REGISTER(MODULE_NAME, SOURCES, function (EXPORT_IDENTIFIER, CONTEXT_IDENTIFIER) {

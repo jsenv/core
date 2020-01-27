@@ -1,3 +1,4 @@
+/* global require */
 const { generateImportMapForProjectPackage } = require("@jsenv/node-module-import-map")
 const jsenvConfig = require("../../jsenv.config.js")
 

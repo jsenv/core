@@ -3,8 +3,8 @@ import {
   replaceBackSlashesWithSlashes,
   startsWithWindowsDriveLetter,
   windowsFilePathToUrl,
-} from "internal/filePathUtils.js"
-import { writeSourceMappingURL } from "internal/sourceMappingURLUtils.js"
+} from "../../filePathUtils.js"
+import { writeSourceMappingURL } from "../../sourceMappingURLUtils.js"
 
 const isWindows = process.platform === "win32"
 

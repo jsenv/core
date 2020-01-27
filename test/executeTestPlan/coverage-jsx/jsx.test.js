@@ -1,6 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { require } from "../../../src/internal/require.js"
+import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import {
   executeTestPlan,
   launchNode,
@@ -9,7 +10,7 @@ import {
 } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
-const transformReactJSX = import.meta.require("@babel/plugin-transform-react-jsx")
+const transformReactJSX = require("@babel/plugin-transform-react-jsx")
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)

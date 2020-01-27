@@ -1,3 +1,4 @@
+!/.github/
 /.jsenv/
 /coverage/
 /dist/
@@ -11,3 +12,4 @@
 /test/**/dist/
 /test/**/syntax-error.js
 /test/**/syntax-error.main.js
+!.eslintrc.js

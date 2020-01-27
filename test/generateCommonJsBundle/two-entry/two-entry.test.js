@@ -1,14 +1,14 @@
 import { assert } from "@jsenv/assert"
 import { generateCommonJsBundle } from "../../../index.js"
-import { resolveDirectoryUrl, urlToRelativeUrl, resolveUrl, readFile } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { resolveUrl, urlToRelativeUrl, readFile } from "@jsenv/util"
+import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { requireCommonJsBundle } from "../requireCommonJsBundle.js"
 import {
   GENERATE_COMMONJS_BUNDLE_TEST_PARAMS,
   REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
-const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
@@ -25,15 +25,14 @@ await generateCommonJsBundle({
   },
   manifestFile: true,
 })
-
 {
   const manifestFileRelativeUrl = `${bundleDirectoryRelativeUrl}manifest.json`
   const manifestFileUrl = resolveUrl(manifestFileRelativeUrl, jsenvCoreDirectoryUrl)
   const manifestFileContent = await readFile(manifestFileUrl)
   const actual = JSON.parse(manifestFileContent)
   const expected = {
-    "a.js": "a.js",
-    "b.js": "b.js",
+    "a.js": "a.cjs",
+    "b.js": "b.cjs",
     "used-by-both.js": actual["used-by-both.js"],
   }
   assert({ actual, expected })
@@ -42,7 +41,7 @@ await generateCommonJsBundle({
   const { namespace: actual } = await requireCommonJsBundle({
     ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
-    mainRelativeUrl: "./a.js",
+    mainRelativeUrl: "./a.cjs",
   })
   const expected = "a-shared"
   assert({ actual, expected })
@@ -51,7 +50,7 @@ await generateCommonJsBundle({
   const { namespace: actual } = await requireCommonJsBundle({
     ...REQUIRE_COMMONJS_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
-    mainRelativeUrl: "./b.js",
+    mainRelativeUrl: "./b.cjs",
   })
   const expected = "b-shared"
   assert({ actual, expected })

@@ -1,18 +1,15 @@
-import {
-  jsenvDirectoryRelativeUrl,
-  outDirectoryRelativeUrl,
-  // eslint-disable-next-line import/no-unresolved
-} from "/.jsenv/out/env.js"
+// eslint-disable-next-line import/no-unresolved
+import env from "/.jsenv/out/env.json"
 
 // TODO: find how to convert this import
 // into a dynamic import inside if (Error.prepareStackTrace)
 // until then browser without it like firefox will download the file and never use it
-import { installBrowserErrorStackRemapping } from "internal/error-stack-remapping/installBrowserErrorStackRemapping.js"
+import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
+import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
+import { fetchAndEvalUsingScript } from "../fetchAndEvalUsingScript.js"
+import { fetchUsingXHR } from "../fetchUsingXHR.js"
 
-import { COMPILE_ID_GLOBAL_BUNDLE } from "internal/CONSTANTS.js"
-import { fetchAndEvalUsingScript } from "internal/fetchAndEvalUsingScript.js"
-import { fetchUsingXHR } from "internal/fetchUsingXHR.js"
-
+const { jsenvDirectoryRelativeUrl, outDirectoryRelativeUrl } = env
 const { EventSource, location } = window
 // TODO: find something for old browsers where URLSearchParams is not available
 const fileRelativeUrl = new URLSearchParams(location.search).get("file")

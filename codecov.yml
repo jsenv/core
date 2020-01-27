@@ -13,4 +13,4 @@ coverage:
       enable_partials: yes
 
 comment:
-  layout: "header"
+  layout: "diff, flags"

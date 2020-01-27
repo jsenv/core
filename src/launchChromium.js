@@ -2,14 +2,14 @@
 
 /* eslint-disable import/max-dependencies */
 import { createCancellationToken } from "@jsenv/cancellation"
-import { closePage } from "internal/chromium-launcher/closePage.js"
-import { trackRessources } from "internal/chromium-launcher/trackRessources.js"
-import { launchPuppeteer } from "internal/chromium-launcher/launchPuppeteer.js"
-import { startChromiumServer } from "internal/chromium-launcher/startChromiumServer.js"
-import { trackPageTargetsToClose } from "internal/chromium-launcher/trackPageTargetsToClose.js"
-import { trackPageTargetsToNotify } from "internal/chromium-launcher/trackPageTargetsToNotify.js"
-import { evaluateImportExecution } from "internal/chromium-launcher/evaluateImportExecution.js"
-import { createSharing } from "internal/chromium-launcher/createSharing.js"
+import { closePage } from "./internal/chromium-launcher/closePage.js"
+import { trackRessources } from "./internal/chromium-launcher/trackRessources.js"
+import { launchPuppeteer } from "./internal/chromium-launcher/launchPuppeteer.js"
+import { startChromiumServer } from "./internal/chromium-launcher/startChromiumServer.js"
+import { trackPageTargetsToClose } from "./internal/chromium-launcher/trackPageTargetsToClose.js"
+import { trackPageTargetsToNotify } from "./internal/chromium-launcher/trackPageTargetsToNotify.js"
+import { evaluateImportExecution } from "./internal/chromium-launcher/evaluateImportExecution.js"
+import { createSharing } from "./internal/chromium-launcher/createSharing.js"
 
 const browserSharing = createSharing()
 const executionServerSharing = createSharing()

@@ -1,3 +1,5 @@
+/* eslint-disable import/max-dependencies */
+import { require } from "../../require.js"
 import transformModulesSystemJs from "./babel-plugin-transform-modules-systemjs/index.js"
 import { findAsyncPluginNameInBabelPluginMap } from "./findAsyncPluginNameInBabelPluginMap.js"
 import { ansiToHTML } from "./ansiToHTML.js"
@@ -6,9 +8,9 @@ import { ensureGlobalThisImportBabelPlugin } from "./ensureGlobalThisImportBabel
 import { transformBabelHelperToImportBabelPlugin } from "./transformBabelHelperToImportBabelPlugin.js"
 import { filePathToBabelHelperName } from "./babelHelper.js"
 
-const { transformAsync, transformFromAstAsync } = import.meta.require("@babel/core")
-const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-import")
-const syntaxImportMeta = import.meta.require("@babel/plugin-syntax-import-meta")
+const { transformAsync, transformFromAstAsync } = require("@babel/core")
+const syntaxDynamicImport = require("@babel/plugin-syntax-dynamic-import")
+const syntaxImportMeta = require("@babel/plugin-syntax-import-meta")
 
 const defaultBabelPluginArray = [syntaxDynamicImport, syntaxImportMeta]
 

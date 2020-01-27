@@ -1,10 +1,10 @@
 import { basename } from "path"
 import { createLogger } from "@jsenv/logger"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "internal/compiling/startCompileServer.js"
-import { launchAndExecute } from "internal/executing/launchAndExecute.js"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
+import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
 import { launchNode } from "../../../index.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
@@ -12,7 +12,7 @@ import {
   LAUNCH_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
 
-const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativePath)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
@@ -47,4 +47,17 @@ const expected = `Error: error
   at postOrderExec (${jsenvCoreDirectoryUrl}src/internal/platform/s.js:317:14)
   at processTicksAndRejections (internal/process/task_queues.js:`
 const actual = stack.slice(0, expected.length)
-assert({ actual, expected })
+try {
+  assert({ actual, expected })
+} catch (e) {
+  // allow an other stack trace for node13
+  const expected = `Error: error
+  at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
+  at Object.triggerError (${testDirectoryUrl}error-stack.js:3:1)
+  at doExec (${jsenvCoreDirectoryUrl}src/internal/platform/s.js:358:34)
+  at postOrderExec (${jsenvCoreDirectoryUrl}src/internal/platform/s.js:354:12)
+  at ${jsenvCoreDirectoryUrl}/internal/platform/s.js:317:14
+  at processTicksAndRejections (internal/process/task_queues.js:`
+  const actual = stack.slice(0, expected.length)
+  assert({ actual, expected })
+}

@@ -6,18 +6,23 @@ import {
   createCancellationSource,
   errorToCancelReason,
 } from "@jsenv/cancellation"
-import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
 import { createLogger } from "@jsenv/logger"
-import { urlIsInsideOf, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
-import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
-import { generateExecutionSteps } from "internal/executing/generateExecutionSteps.js"
-import { executeConcurrently } from "internal/executing/executeConcurrently.js"
-import { startCompileServerForExecutingPlan } from "internal/executing/startCompileServerForExecutingPlan.js"
+import {
+  urlIsInsideOf,
+  urlToRelativeUrl,
+  urlToFileSystemPath,
+  registerDirectoryLifecycle,
+} from "@jsenv/util"
+import { require } from "../../require.js"
+import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "../../argUtils.js"
+import { generateExecutionSteps } from "../../executing/generateExecutionSteps.js"
+import { executeConcurrently } from "../../executing/executeConcurrently.js"
+import { startCompileServerForExecutingPlan } from "../../executing/startCompileServerForExecutingPlan.js"
 import { relativeUrlToExecutionSteps } from "./relativeUrlToExecutionSteps.js"
 import { showContinuousTestingNotification } from "./showContinuousTestingNotification.js"
 import { createRemoveLog, createRunLog } from "./continous-testing-logs.js"
 
-const cuid = import.meta.require("cuid")
+const cuid = require("cuid")
 
 export const TESTING_WATCH_EXCLUDE_DESCRIPTION = {
   "./.git/": false,
@@ -114,16 +119,17 @@ export const startContinuousTesting = async ({
           [outDirectoryRelativeUrl]: false,
         },
         keepProcessAlive: false,
-        added: ({ relativePath: relativeUrl, type }) => {
+        recursive: true,
+        added: ({ relativeUrl, type }) => {
           if (type === "file") {
             projectFileAddedCallback({ relativeUrl })
           }
         },
-        updated: ({ relativePath: relativeUrl }) => {
+        updated: ({ relativeUrl }) => {
           if (!projectFileSet.has(relativeUrl)) return
           projectFileUpdatedCallback({ relativeUrl })
         },
-        removed: ({ relativePath: relativeUrl }) => {
+        removed: ({ relativeUrl }) => {
           if (!projectFileSet.has(relativeUrl)) return
           projectFileRemovedCallback({ relativeUrl })
         },

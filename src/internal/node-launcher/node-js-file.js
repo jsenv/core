@@ -1,19 +1,12 @@
-import { COMPILE_ID_COMMONJS_BUNDLE } from "internal/CONSTANTS.js"
-import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { installNodeErrorStackRemapping } from "internal/error-stack-remapping/installNodeErrorStackRemapping.js"
-import { fetchUsingHttp } from "internal/platform/createNodePlatform/fetchUsingHttp.js"
+import { resolveUrl } from "@jsenv/util"
+import { installNodeErrorStackRemapping } from "../error-stack-remapping/installNodeErrorStackRemapping.js"
+import { nodePlatform } from "../../nodePlatform.js"
 
 export const execute = async ({
-  // this whole file will be compiled in every project
-  // where jsenvCoreDirectoryUrl must be computed before hand
-  // otherwise when this file will be required
-  // jsenvCoreDirectoryUrl will be wrong
-  jsenvCoreDirectoryUrl,
-
   projectDirectoryUrl,
-  outDirectoryRelativeUrl,
   fileRelativeUrl,
   compileServerOrigin,
+  outDirectoryRelativeUrl,
 
   collectNamespace,
   collectCoverage,
@@ -28,35 +21,10 @@ export const execute = async ({
     throw valueRejected
   })
 
-  const nodePlatformFileRelativeUrl =
-    projectDirectoryUrl === jsenvCoreDirectoryUrl
-      ? `src/nodePlatform.js`
-      : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/nodePlatform.js`
-
-  const nodePlatformCompiledFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodePlatformFileRelativeUrl}`
-  const nodePlatformCompiledFileServerUrl = resolveUrl(
-    nodePlatformCompiledFileRelativeUrl,
-    compileServerOrigin,
-  )
-  await fetchUsingHttp(nodePlatformCompiledFileServerUrl)
-
-  const nodePlatformCompiledFileUrl = resolveUrl(
-    nodePlatformCompiledFileRelativeUrl,
-    projectDirectoryUrl,
-  )
-  const nodePlatformCompiledFilePath = urlToFileSystemPath(nodePlatformCompiledFileUrl)
-  const nodePlatformOriginalFilePath = urlToFileSystemPath(
-    resolveUrl(nodePlatformFileRelativeUrl, projectDirectoryUrl),
-  )
-
-  const { nodePlatform } = requireCompiledFileAsOriginalFile({
-    compiledFilePath: nodePlatformCompiledFilePath,
-    originalFilePath: nodePlatformOriginalFilePath,
-  })
-
-  const { compileDirectoryRemoteUrl, executeFile } = nodePlatform.create({
+  const { compileDirectoryRemoteUrl, executeFile } = await nodePlatform.create({
     projectDirectoryUrl,
     compileServerOrigin,
+    outDirectoryRelativeUrl,
   })
 
   const { getErrorOriginalStackString } = installNodeErrorStackRemapping({
@@ -79,17 +47,4 @@ export const execute = async ({
     },
     errorExposureInConsole,
   })
-}
-
-const requireCompiledFileAsOriginalFile = ({ originalFilePath, compiledFilePath }) => {
-  const { readFileSync } = import.meta.require("fs")
-  const Module = import.meta.require("module")
-  const { dirname } = import.meta.require("path")
-
-  const fileContent = String(readFileSync(compiledFilePath))
-  const moduleObject = new Module(compiledFilePath)
-  moduleObject.paths = Module._nodeModulePaths(dirname(originalFilePath))
-  moduleObject._compile(fileContent, compiledFilePath)
-
-  return moduleObject.exports
 }

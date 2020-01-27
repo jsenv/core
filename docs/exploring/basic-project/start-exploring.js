@@ -1,3 +1,4 @@
+/* global require, __dirname */
 // eslint-disable-next-line import/no-unresolved
 const { startExploring } = require("@jsenv/core")
 

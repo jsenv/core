@@ -1,9 +1,10 @@
 import { startServer, firstService, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl, readFile } from "@jsenv/util"
+import { require } from "../../src/internal/require.js"
 
-const puppeteer = import.meta.require("puppeteer")
+const puppeteer = require("puppeteer")
 
-const SYSTEM_PATH = import.meta.require.resolve("systemjs/dist/system.js")
+const SYSTEM_PATH = require.resolve("systemjs/dist/system.js")
 
 export const browserImportSystemJsBundle = async ({
   projectDirectoryUrl,

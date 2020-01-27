@@ -5,24 +5,25 @@ import {
   composeCancellationToken,
   createCancellationSource,
 } from "@jsenv/cancellation"
-import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/url-meta"
-import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
-import { registerDirectoryLifecycle } from "@jsenv/file-watcher"
-import { createLogger } from "@jsenv/logger"
 import {
+  metaMapToSpecifierMetaMap,
+  normalizeSpecifierMetaMap,
+  urlToMeta,
+  registerDirectoryLifecycle,
   resolveUrl,
-  urlToFileSystemPath,
   urlIsInsideOf,
   urlToRelativeUrl,
   assertFilePresence,
   writeFile,
 } from "@jsenv/util"
-import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
-import { getBrowserExecutionDynamicData } from "internal/platform/getBrowserExecutionDynamicData.js"
-import { serveExploringIndex } from "internal/exploring/serveExploringIndex.js"
-import { serveBrowserSelfExecute } from "internal/exploring/serveBrowserSelfExecute.js"
-import { startCompileServer } from "internal/compiling/startCompileServer.js"
-import { jsenvHtmlFileUrl } from "internal/jsenvHtmlFileUrl.js"
+import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
+import { createLogger } from "@jsenv/logger"
+import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
+import { getBrowserExecutionDynamicData } from "./internal/platform/getBrowserExecutionDynamicData.js"
+import { serveExploringIndex } from "./internal/exploring/serveExploringIndex.js"
+import { serveBrowserSelfExecute } from "./internal/exploring/serveBrowserSelfExecute.js"
+import { startCompileServer } from "./internal/compiling/startCompileServer.js"
+import { jsenvHtmlFileUrl } from "./internal/jsenvHtmlFileUrl.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
 export const startExploring = async ({
@@ -91,6 +92,7 @@ export const startExploring = async ({
     const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
+      logStart: false,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
@@ -125,27 +127,25 @@ export const startExploring = async ({
     )
 
     if (livereloading) {
-      const unregisterDirectoryLifecyle = registerDirectoryLifecycle(
-        urlToFileSystemPath(projectDirectoryUrl),
-        {
-          watchDescription: {
-            ...watchConfig,
-            [compileServer.jsenvDirectoryRelativeUrl]: false,
-          },
-          updated: ({ relativePath: relativeUrl }) => {
-            if (projectFileSet.has(relativeUrl)) {
-              projectFileUpdatedCallback(relativeUrl)
-            }
-          },
-          removed: ({ relativePath: relativeUrl }) => {
-            if (projectFileSet.has(relativeUrl)) {
-              projectFileSet.delete(relativeUrl)
-              projectFileRemovedCallback(relativeUrl)
-            }
-          },
-          keepProcessAlive: false,
+      const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryUrl, {
+        watchDescription: {
+          ...watchConfig,
+          [compileServer.jsenvDirectoryRelativeUrl]: false,
         },
-      )
+        updated: ({ relativeUrl }) => {
+          if (projectFileSet.has(relativeUrl)) {
+            projectFileUpdatedCallback(relativeUrl)
+          }
+        },
+        removed: ({ relativeUrl }) => {
+          if (projectFileSet.has(relativeUrl)) {
+            projectFileSet.delete(relativeUrl)
+            projectFileRemovedCallback(relativeUrl)
+          }
+        },
+        keepProcessAlive: false,
+        recursive: true,
+      })
       cancellationToken.register(unregisterDirectoryLifecyle)
 
       const projectFileSet = new Set()

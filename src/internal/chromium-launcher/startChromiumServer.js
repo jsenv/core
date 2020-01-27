@@ -1,7 +1,7 @@
 import { startServer, firstService, serveFile } from "@jsenv/server"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { COMPILE_ID_GLOBAL_BUNDLE } from "internal/CONSTANTS.js"
+import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
+import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
 
 export const startChromiumServer = async ({
   cancellationToken,

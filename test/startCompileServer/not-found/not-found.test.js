@@ -1,35 +1,33 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { startCompileServer } from "internal/compiling/startCompileServer.js"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { fetchUrl } from "@jsenv/server"
+import { COMPILE_ID_OTHERWISE } from "../../../src/internal/CONSTANTS.js"
+import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
+import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
-import { fetch } from "../../fetch.js"
 
-const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const testDirectoryname = basename(testDirectoryRelativePath)
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const testDirectoryname = basename(testDirectoryRelativeUrl)
 const filename = `${testDirectoryname}.js`
-const fileRelativeUrl = `${testDirectoryRelativePath}${filename}`
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
-const compileId = "otherwise"
+const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
-const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
-const response = await fetch(fileServerUrl)
-
+const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
+const response = await fetchUrl(fileServerUrl)
 const actual = {
   status: response.status,
   statusText: response.statusText,
-  headers: response.headers,
   body: await response.text(),
 }
 const expected = {
   status: 404,
   statusText: "file not found",
-  headers: actual.headers,
   body: "",
 }
 assert({ actual, expected })

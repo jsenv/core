@@ -1,12 +1,12 @@
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { jsenvCoreDirectoryUrl } from "../../src/internal/jsenvCoreDirectoryUrl.js"
 import { startExploring } from "../../index.js"
 import { START_EXPLORING_TEST_PARAMS } from "./TEST_PARAMS.js"
 
-const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
-const htmlFileRelativeUrl = "template.html"
+const htmlFileRelativeUrl = `${testDirectoryRelativeUrl}template.html`
 
 startExploring({
   ...START_EXPLORING_TEST_PARAMS,

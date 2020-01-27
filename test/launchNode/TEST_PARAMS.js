@@ -19,4 +19,5 @@ export const EXECUTE_TEST_PARAMS = {
 
 export const LAUNCH_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
+  debugPort: 40001,
 }

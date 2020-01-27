@@ -1,17 +1,7 @@
-/* eslint-disable import/max-dependencies */
-
-// eslint-disable-next-line import/no-unresolved
-import groupMap from "/.jsenv/out/groupMap.json"
-// eslint-disable-next-line import/no-unresolved
-import importMap from "/.jsenv/out/importMap.json"
-import {
-  outDirectoryRelativeUrl,
-  importDefaultExtension,
-  // eslint-disable-next-line import/no-unresolved
-} from "/.jsenv/out/env.js"
 import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
+import { fetchUrl } from "../../fetchUrl.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveNodeGroup } from "../resolveNodeGroup.js"
 import { memoizeOnce } from "../memoizeOnce.js"
@@ -21,7 +11,21 @@ import { createNodeSystem } from "./createNodeSystem.js"
 const GLOBAL_SPECIFIER = "global"
 const memoizedCreateNodeSystem = memoizeOnce(createNodeSystem)
 
-export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl }) => {
+export const createNodePlatform = async ({
+  projectDirectoryUrl,
+  compileServerOrigin,
+  outDirectoryRelativeUrl,
+}) => {
+  const outDirectoryUrl = `${projectDirectoryUrl}${outDirectoryRelativeUrl}`
+  const groupMapUrl = String(new URL("groupMap.json", outDirectoryUrl))
+  const importMapUrl = String(new URL("importMap.json", outDirectoryUrl))
+  const envUrl = String(new URL("env.json", outDirectoryUrl))
+  const [groupMap, importMap, { importDefaultExtension }] = await Promise.all([
+    importJson(groupMapUrl),
+    importJson(importMapUrl),
+    importJson(envUrl),
+  ])
+
   const compileId = computeCompileIdFromGroupId({
     groupId: resolveNodeGroup({ groupMap }),
     groupMap,
@@ -101,6 +105,12 @@ export const createNodePlatform = ({ compileServerOrigin, projectDirectoryUrl })
     importFile,
     executeFile,
   }
+}
+
+const importJson = async (url) => {
+  const response = await fetchUrl(url, { simplified: false })
+  const object = await response.json()
+  return object
 }
 
 const unevalException = (value) => {

@@ -1,7 +1,7 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
 import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { generateGlobalBundle } from "../../../index.js"
 import { GENERATE_GLOBAL_BUNDLE_TEST_PARAMS } from "../TEST_PARAMS.js"
 

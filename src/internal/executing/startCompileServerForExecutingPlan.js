@@ -1,6 +1,5 @@
-import { startCompileServer } from "internal/compiling/startCompileServer.js"
-
-const fetch = import.meta.require("node-fetch")
+import { startCompileServer } from "../compiling/startCompileServer.js"
+import { fetchUrl } from "../fetchUrl.js"
 
 export const startCompileServerForExecutingPlan = async ({
   // false because don't know if user is going
@@ -14,14 +13,14 @@ export const startCompileServerForExecutingPlan = async ({
   const promises = []
   if (browserPlatformAnticipatedGeneration) {
     promises.push(
-      fetch(
+      fetchUrl(
         `${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`,
       ),
     )
   }
   if (nodePlatformAnticipatedGeneration) {
     promises.push(
-      fetch(
+      fetchUrl(
         `${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodePlatform.js`,
       ),
     )

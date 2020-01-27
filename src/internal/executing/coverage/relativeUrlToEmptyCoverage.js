@@ -1,11 +1,12 @@
 import { createOperation } from "@jsenv/cancellation"
 import { resolveUrl, urlToFileSystemPath, readFile } from "@jsenv/util"
+import { require } from "../../require.js"
 import { createInstrumentBabelPlugin } from "./createInstrumentBabelPlugin.js"
 import { createEmptyCoverage } from "./createEmptyCoverage.js"
 
-const syntaxDynamicImport = import.meta.require("@babel/plugin-syntax-dynamic-import")
-const syntaxImportMeta = import.meta.require("@babel/plugin-syntax-import-meta")
-const { transformAsync } = import.meta.require("@babel/core")
+const syntaxDynamicImport = require("@babel/plugin-syntax-dynamic-import")
+const syntaxImportMeta = require("@babel/plugin-syntax-import-meta")
+const { transformAsync } = require("@babel/core")
 
 export const relativeUrlToEmptyCoverage = async (
   relativeUrl,

@@ -1,4 +1,4 @@
-import { generateBundle } from "internal/bundling/generateBundle.js"
+import { generateBundle } from "./internal/bundling/generateBundle.js"
 
 export const generateGlobalBundle = async ({
   bundleDirectoryRelativeUrl = "./dist/global",

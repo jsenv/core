@@ -2,11 +2,15 @@
   "name": "whatever",
   "version": "0.0.1",
   "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=13.7.0"
+  },
   "scripts": {
     "test": "node ./execute-test-plan.js",
     "test-with-coverage": "node ./execute-test-plan.js --cover"
   },
-  "dependencies": {
-    "@jsenv/core": "10.4.0"
+  "devDependencies": {
+    "@jsenv/core": "11.0.0-alpha.0"
   }
 }

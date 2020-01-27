@@ -1,10 +1,10 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
+import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { execute, launchChromium, convertCommonJsWithRollup } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
-const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}react.js`

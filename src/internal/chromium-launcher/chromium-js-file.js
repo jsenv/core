@@ -1,4 +1,4 @@
-import { installBrowserErrorStackRemapping } from "internal/error-stack-remapping/installBrowserErrorStackRemapping.js"
+import { installBrowserErrorStackRemapping } from "../error-stack-remapping/installBrowserErrorStackRemapping.js"
 import { fetchAndEvalUsingXHR } from "../fetchAndEvalUsingXHR.js"
 
 window.execute = async ({

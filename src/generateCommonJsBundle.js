@@ -1,10 +1,10 @@
 import { resolveUrl } from "@jsenv/util"
-import { jsenvCoreDirectoryUrl } from "internal/jsenvCoreDirectoryUrl.js"
-import { generateBundle } from "internal/bundling/generateBundle.js"
+import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
+import { generateBundle } from "./internal/bundling/generateBundle.js"
 
 export const generateCommonJsBundle = async ({
   bundleDirectoryRelativeUrl = "./dist/commonjs",
-  cjsExtension = false,
+  cjsExtension = true,
   node = true,
   ...rest
 }) =>
@@ -17,6 +17,7 @@ export const generateCommonJsBundle = async ({
         ? {
             // by default it's [name].js
             entryFileNames: `[name].cjs`,
+            chunkFileNames: `[name]-[hash].cjs`,
           }
         : {}),
     },

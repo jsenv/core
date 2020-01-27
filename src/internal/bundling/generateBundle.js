@@ -1,21 +1,22 @@
 /* eslint-disable import/max-dependencies */
+import { extname } from "path"
 import {
   catchAsyncFunctionCancellation,
   createCancellationTokenForProcessSIGINT,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
-import { COMPILE_ID_OTHERWISE } from "internal/CONSTANTS.js"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   assertFilePresence,
   ensureEmptyDirectory,
 } from "@jsenv/util"
-import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "internal/argUtils.js"
-import { startCompileServer } from "internal/compiling/startCompileServer.js"
-import { jsenvBabelPluginMap } from "src/jsenvBabelPluginMap.js"
-import { jsenvBrowserScoreMap } from "src/jsenvBrowserScoreMap.js"
-import { jsenvNodeVersionScoreMap } from "src/jsenvNodeVersionScoreMap.js"
+import { COMPILE_ID_OTHERWISE } from "../CONSTANTS.js"
+import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "../argUtils.js"
+import { startCompileServer } from "../compiling/startCompileServer.js"
+import { jsenvBabelPluginMap } from "../../jsenvBabelPluginMap.js"
+import { jsenvBrowserScoreMap } from "../../jsenvBrowserScoreMap.js"
+import { jsenvNodeVersionScoreMap } from "../../jsenvNodeVersionScoreMap.js"
 import { createBabePluginMapForBundle } from "./createBabePluginMapForBundle.js"
 import { generateBundleUsingRollup } from "./generateBundleUsingRollup.js"
 
@@ -84,7 +85,12 @@ export const generateBundle = async ({
     await ensureEmptyDirectory(bundleDirectoryUrl)
   }
 
-  const chunkId = `${Object.keys(entryPointMap)[0]}.js`
+  const extension =
+    formatOutputOptions && formatOutputOptions.entryFileNames
+      ? extname(formatOutputOptions.entryFileNames)
+      : ".js"
+
+  const chunkId = `${Object.keys(entryPointMap)[0]}${extension}`
   env = {
     ...env,
     chunkId,
@@ -203,6 +209,7 @@ export const generateBundle = async ({
         node,
         browser,
         format,
+        formatOutputOptions,
         minify,
         writeOnFileSystem,
         sourcemapExcludeSources,
@@ -287,7 +294,7 @@ const generateEntryPointsBalancerFiles = ({
         projectDirectoryUrl,
         compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
         entryPointMap: {
-          [entryPointName]: urlToRelativeUrl(balancerTemplateFileUrl, projectDirectoryUrl),
+          [entryPointName]: `./${urlToRelativeUrl(balancerTemplateFileUrl, projectDirectoryUrl)}`,
         },
         sourcemapExcludeSources: true,
         ...rest,

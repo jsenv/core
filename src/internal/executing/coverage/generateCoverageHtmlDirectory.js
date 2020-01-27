@@ -1,8 +1,9 @@
 import { resolveDirectoryUrl, urlToFileSystemPath } from "@jsenv/util"
+import { require } from "../../require.js"
 
-const libReport = import.meta.require("istanbul-lib-report")
-const reports = import.meta.require("istanbul-reports")
-const { createCoverageMap } = import.meta.require("istanbul-lib-coverage")
+const libReport = require("istanbul-lib-report")
+const reports = require("istanbul-reports")
+const { createCoverageMap } = require("istanbul-lib-coverage")
 
 export const generateCoverageHtmlDirectory = ({
   projectDirectoryUrl,
