@@ -1,6 +1,6 @@
 # core
 
-Cross platform execution for testing.
+Execute JavaScript on multiple environments for testing.
 
 [![github package](https://img.shields.io/github/package-json/v/jsenv/jsenv-core.svg?logo=github&label=package)](https://github.com/jsenv/jsenv-core/packages)
 [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
@@ -54,7 +54,7 @@ executeTestPlan({
 
 There is an in-depth documentation about testing at [./docs/testing/readme.md](./docs/testing/readme.md).
 
-`@jsenv/core` can be used only for testing but because it can bring you a bit more as shown in the [Documentation](./Documentation) below.
+`@jsenv/core` can be used only for testing and also bring you more as shown in the [Documentation](./Documentation) below.
 
 # Installation
 
