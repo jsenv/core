@@ -10,6 +10,12 @@ executeTestPlan({
         launch: launchNode,
       },
     },
+    "test/execute/basic/file.chromium.test.js": {
+      node: {
+        launch: launchNode,
+        allocatedMs: 1000 * 60,
+      },
+    },
   },
   coverage: process.argv.includes("--coverage"),
 })
