@@ -5,7 +5,7 @@
 [![github ci](https://github.com/jsenv/jsenv-core/workflows/ci/badge.svg)](https://github.com/jsenv/jsenv-core/actions?workflow=ci)
 [![codecov coverage](https://codecov.io/gh/jsenv/jsenv-core/branch/master/graph/badge.svg)](https://codecov.io/gh/jsenv/jsenv-core)
 
-Unified developer experience for JavaScript projects.
+Cross platform execution for testing.
 
 # Table of contents
 
