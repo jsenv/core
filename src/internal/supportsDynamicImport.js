@@ -1,4 +1,6 @@
-export const supportsDynamicImport = async () => {
+import { memoizeOnce } from "./memoizeOnce.js"
+
+export const supportsDynamicImport = memoizeOnce(async () => {
   // ZXhwb3J0IGRlZmF1bHQgNDI= is Buffer.from("export default 42").toString("base64")
 
   try {
@@ -13,4 +15,4 @@ export const supportsDynamicImport = async () => {
   } catch (e) {
     return false
   }
-}
+})

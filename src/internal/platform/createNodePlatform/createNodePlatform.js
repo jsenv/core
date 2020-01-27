@@ -1,10 +1,10 @@
 import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
+import { memoizeOnce } from "../../memoizeOnce.js"
 import { fetchUrl } from "../../fetchUrl.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveNodeGroup } from "../resolveNodeGroup.js"
-import { memoizeOnce } from "../memoizeOnce.js"
 import { isNativeNodeModuleBareSpecifier } from "./isNativeNodeModuleBareSpecifier.js"
 import { createNodeSystem } from "./createNodeSystem.js"
 
