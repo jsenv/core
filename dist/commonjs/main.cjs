@@ -3687,7 +3687,7 @@ const createReplaceExpressionsBabelPlugin = ({
   };
 };
 
-const commonjs = require$1("rollup-plugin-commonjs");
+const commonjs = require$1("@rollup/plugin-commonjs");
 
 const nodeResolve = require$1("@rollup/plugin-node-resolve");
 
@@ -5806,7 +5806,7 @@ const createEventHistory = ({
   };
 };
 
-// eslint-disable-next-line import/no-unresolved
+/* global require, __filename */
 const nodeRequire$1 = require;
 const filenameContainsBackSlashes$1 = __filename.indexOf("\\") > -1;
 const url$1 = filenameContainsBackSlashes$1 ? `file:///${__filename.replace(/\\/g, "/")}` : `file://${__filename}`;
@@ -12171,6 +12171,17 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
   }
 };
 
+const ensureRelativePathsInCoverage = coverageMap => {
+  const coverageMapRelative = {};
+  Object.keys(coverageMap).forEach(key => {
+    const coverageForFile = coverageMap[key];
+    coverageMapRelative[key] = coverageForFile.path.startsWith("./") ? coverageForFile : { ...coverageForFile,
+      path: `./${coverageForFile.path}`
+    };
+  });
+  return coverageMapRelative;
+};
+
 const reportToCoverageMap = async (report, {
   cancellationToken,
   projectDirectoryUrl,
@@ -12181,7 +12192,7 @@ const reportToCoverageMap = async (report, {
   const coverageMapForReport = executionReportToCoverageMap(report);
 
   if (!coverageIncludeMissing) {
-    return coverageMapForReport;
+    return ensureRelativePathsInCoverage(coverageMapForReport);
   }
 
   const relativeFileUrlToCoverArray = await listRelativeFileUrlToCover({
@@ -12200,9 +12211,9 @@ const reportToCoverageMap = async (report, {
     coverageMapForMissedFiles[relativeFileUrlMissingCoverage] = emptyCoverage;
     return emptyCoverage;
   }));
-  return { ...coverageMapForReport,
+  return ensureRelativePathsInCoverage({ ...coverageMapForReport,
     ...coverageMapForMissedFiles
-  };
+  });
 };
 
 const listRelativeFileUrlToCover = async ({
@@ -15009,7 +15020,30 @@ function safeDefineProperty(object, propertyNameOrSymbol, descriptor) {
   return source;
 };
 
-const supportsDynamicImport = async () => {
+const memoizeOnce$3 = compute => {
+  let locked = false;
+  let lockValue;
+
+  const memoized = (...args) => {
+    if (locked) return lockValue; // if compute is recursive wait for it to be fully done before storing the lockValue
+    // so set locked later
+
+    lockValue = compute(...args);
+    locked = true;
+    return lockValue;
+  };
+
+  memoized.deleteCache = () => {
+    const value = lockValue;
+    locked = false;
+    lockValue = undefined;
+    return value;
+  };
+
+  return memoized;
+};
+
+const supportsDynamicImport = memoizeOnce$3(async () => {
   // ZXhwb3J0IGRlZmF1bHQgNDI= is Buffer.from("export default 42").toString("base64")
   try {
     // eslint-disable-next-line no-eval
@@ -15023,7 +15057,7 @@ const supportsDynamicImport = async () => {
   } catch (e) {
     return false;
   }
-};
+});
 
 const getCommandArgument = (argv, name) => {
   let i = 0;
