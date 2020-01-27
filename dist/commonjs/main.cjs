@@ -3,7 +3,7 @@
 Object.defineProperty(exports, '__esModule', { value: true });
 
 var module$1 = require('module');
-var url$1 = require('url');
+var url$2 = require('url');
 var fs = require('fs');
 var crypto = require('crypto');
 var path = require('path');
@@ -16,7 +16,564 @@ var os = require('os');
 var vm = require('vm');
 var child_process = require('child_process');
 
-// eslint-disable-next-line import/no-unresolved
+const assertImportMap = value => {
+  if (value === null) {
+    throw new TypeError(`an importMap must be an object, got null`);
+  }
+
+  const type = typeof value;
+
+  if (type !== "object") {
+    throw new TypeError(`an importMap must be an object, received ${value}`);
+  }
+
+  if (Array.isArray(value)) {
+    throw new TypeError(`an importMap must be an object, received array ${value}`);
+  }
+};
+
+const hasScheme = string => {
+  return /^[a-zA-Z]{2,}:/.test(string);
+};
+
+const urlToScheme = urlString => {
+  const colonIndex = urlString.indexOf(":");
+  if (colonIndex === -1) return "";
+  return urlString.slice(0, colonIndex);
+};
+
+const urlToPathname = urlString => {
+  return ressourceToPathname(urlToRessource(urlString));
+};
+
+const urlToRessource = urlString => {
+  const scheme = urlToScheme(urlString);
+
+  if (scheme === "file") {
+    return urlString.slice("file://".length);
+  }
+
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = urlString.slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    return afterProtocol.slice(pathnameSlashIndex);
+  }
+
+  return urlString.slice(scheme.length + 1);
+};
+
+const ressourceToPathname = ressource => {
+  const searchSeparatorIndex = ressource.indexOf("?");
+  return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex);
+};
+
+const urlToOrigin = urlString => {
+  const scheme = urlToScheme(urlString);
+
+  if (scheme === "file") {
+    return "file://";
+  }
+
+  if (scheme === "http" || scheme === "https") {
+    const secondProtocolSlashIndex = scheme.length + "://".length;
+    const pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
+    if (pathnameSlashIndex === -1) return urlString;
+    return urlString.slice(0, pathnameSlashIndex);
+  }
+
+  return urlString.slice(0, scheme.length + 1);
+};
+
+const pathnameToDirectoryPathname = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  if (slashLastIndex === -1) return "";
+  return pathname.slice(0, slashLastIndex);
+};
+
+// could be useful: https://url.spec.whatwg.org/#url-miscellaneous
+const resolveUrl = (specifier, baseUrl) => {
+  if (baseUrl) {
+    if (typeof baseUrl !== "string") {
+      throw new TypeError(writeBaseUrlMustBeAString({
+        baseUrl,
+        specifier
+      }));
+    }
+
+    if (!hasScheme(baseUrl)) {
+      throw new Error(writeBaseUrlMustBeAbsolute({
+        baseUrl,
+        specifier
+      }));
+    }
+  }
+
+  if (hasScheme(specifier)) {
+    return specifier;
+  }
+
+  if (!baseUrl) {
+    throw new Error(writeBaseUrlRequired({
+      baseUrl,
+      specifier
+    }));
+  } // scheme relative
+
+
+  if (specifier.slice(0, 2) === "//") {
+    return `${urlToScheme(baseUrl)}:${specifier}`;
+  } // origin relative
+
+
+  if (specifier[0] === "/") {
+    return `${urlToOrigin(baseUrl)}${specifier}`;
+  }
+
+  const baseOrigin = urlToOrigin(baseUrl);
+  const basePathname = urlToPathname(baseUrl);
+
+  if (specifier === ".") {
+    const baseDirectoryPathname = pathnameToDirectoryPathname(basePathname);
+    return `${baseOrigin}${baseDirectoryPathname}/`;
+  } // pathname relative inside
+
+
+  if (specifier.slice(0, 2) === "./") {
+    const baseDirectoryPathname = pathnameToDirectoryPathname(basePathname);
+    return `${baseOrigin}${baseDirectoryPathname}/${specifier.slice(2)}`;
+  } // pathname relative outside
+
+
+  if (specifier.slice(0, 3) === "../") {
+    let unresolvedPathname = specifier;
+    const importerFolders = basePathname.split("/");
+    importerFolders.pop();
+
+    while (unresolvedPathname.slice(0, 3) === "../") {
+      unresolvedPathname = unresolvedPathname.slice(3); // when there is no folder left to resolved
+      // we just ignore '../'
+
+      if (importerFolders.length) {
+        importerFolders.pop();
+      }
+    }
+
+    const resolvedPathname = `${importerFolders.join("/")}/${unresolvedPathname}`;
+    return `${baseOrigin}${resolvedPathname}`;
+  } // bare
+
+
+  if (basePathname === "") {
+    return `${baseOrigin}/${specifier}`;
+  }
+
+  if (basePathname[basePathname.length] === "/") {
+    return `${baseOrigin}${basePathname}${specifier}`;
+  }
+
+  return `${baseOrigin}${pathnameToDirectoryPathname(basePathname)}/${specifier}`;
+};
+
+const writeBaseUrlMustBeAString = ({
+  baseUrl,
+  specifier
+}) => `baseUrl must be a string.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const writeBaseUrlMustBeAbsolute = ({
+  baseUrl,
+  specifier
+}) => `baseUrl must be absolute.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const writeBaseUrlRequired = ({
+  baseUrl,
+  specifier
+}) => `baseUrl required to resolve relative specifier.
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const tryUrlResolution = (string, url) => {
+  const result = resolveUrl(string, url);
+  return hasScheme(result) ? result : null;
+};
+
+const resolveSpecifier = (specifier, importer) => {
+  if (specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
+    return resolveUrl(specifier, importer);
+  }
+
+  if (hasScheme(specifier)) {
+    return specifier;
+  }
+
+  return null;
+};
+
+const sortImportMap = importMap => {
+  assertImportMap(importMap);
+  const {
+    imports,
+    scopes
+  } = importMap;
+  return {
+    imports: imports ? sortImports(imports) : undefined,
+    scopes: scopes ? sortScopes(scopes) : undefined
+  };
+};
+const sortImports = imports => {
+  const importsSorted = {};
+  Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(name => {
+    importsSorted[name] = imports[name];
+  });
+  return importsSorted;
+};
+const sortScopes = scopes => {
+  const scopesSorted = {};
+  Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(scopeName => {
+    scopesSorted[scopeName] = sortImports(scopes[scopeName]);
+  });
+  return scopesSorted;
+};
+
+const compareLengthOrLocaleCompare = (a, b) => {
+  return b.length - a.length || a.localeCompare(b);
+};
+
+const normalizeImportMap = (importMap, baseUrl) => {
+  assertImportMap(importMap);
+
+  if (typeof baseUrl !== "string") {
+    throw new TypeError(formulateBaseUrlMustBeAString({
+      baseUrl
+    }));
+  }
+
+  const {
+    imports,
+    scopes
+  } = importMap;
+  return {
+    imports: imports ? normalizeImports(imports, baseUrl) : undefined,
+    scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
+  };
+};
+
+const normalizeImports = (imports, baseUrl) => {
+  const importsNormalized = {};
+  Object.keys(imports).forEach(specifier => {
+    const address = imports[specifier];
+
+    if (typeof address !== "string") {
+      console.warn(formulateAddressMustBeAString({
+        address,
+        specifier
+      }));
+      return;
+    }
+
+    const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
+    const addressUrl = tryUrlResolution(address, baseUrl);
+
+    if (addressUrl === null) {
+      console.warn(formulateAdressResolutionFailed({
+        address,
+        baseUrl,
+        specifier
+      }));
+      return;
+    }
+
+    if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
+      console.warn(formulateAddressUrlRequiresTrailingSlash({
+        addressUrl,
+        address,
+        specifier
+      }));
+      return;
+    }
+
+    importsNormalized[specifierResolved] = addressUrl;
+  });
+  return sortImports(importsNormalized);
+};
+
+const normalizeScopes = (scopes, baseUrl) => {
+  const scopesNormalized = {};
+  Object.keys(scopes).forEach(scope => {
+    const scopeValue = scopes[scope];
+    const scopeUrl = tryUrlResolution(scope, baseUrl);
+
+    if (scopeUrl === null) {
+      console.warn(formulateScopeResolutionFailed({
+        scope,
+        baseUrl
+      }));
+      return;
+    }
+
+    const scopeValueNormalized = normalizeImports(scopeValue, baseUrl);
+    scopesNormalized[scopeUrl] = scopeValueNormalized;
+  });
+  return sortScopes(scopesNormalized);
+};
+
+const formulateBaseUrlMustBeAString = ({
+  baseUrl
+}) => `baseUrl must be a string.
+--- base url ---
+${baseUrl}`;
+
+const formulateAddressMustBeAString = ({
+  specifier,
+  address
+}) => `Address must be a string.
+--- address ---
+${address}
+--- specifier ---
+${specifier}`;
+
+const formulateAdressResolutionFailed = ({
+  address,
+  baseUrl,
+  specifier
+}) => `Address url resolution failed.
+--- address ---
+${address}
+--- base url ---
+${baseUrl}
+--- specifier ---
+${specifier}`;
+
+const formulateAddressUrlRequiresTrailingSlash = ({
+  addressURL,
+  address,
+  specifier
+}) => `Address must end with /.
+--- address url ---
+${addressURL}
+--- address ---
+${address}
+--- specifier ---
+${specifier}`;
+
+const formulateScopeResolutionFailed = ({
+  scope,
+  baseUrl
+}) => `Scope url resolution failed.
+--- scope ---
+${scope}
+--- base url ---
+${baseUrl}`;
+
+const pathnameToExtension = pathname => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex !== -1) {
+    pathname = pathname.slice(slashLastIndex + 1);
+  }
+
+  const dotLastIndex = pathname.lastIndexOf(".");
+  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
+
+  return pathname.slice(dotLastIndex);
+};
+
+const applyImportMap = ({
+  importMap,
+  specifier,
+  importer
+}) => {
+  assertImportMap(importMap);
+
+  if (typeof specifier !== "string") {
+    throw new TypeError(writeSpecifierMustBeAString({
+      specifier,
+      importer
+    }));
+  }
+
+  if (importer) {
+    if (typeof importer !== "string") {
+      throw new TypeError(writeImporterMustBeAString({
+        importer,
+        specifier
+      }));
+    }
+
+    if (!hasScheme(importer)) {
+      throw new Error(writeImporterMustBeAbsolute({
+        importer,
+        specifier
+      }));
+    }
+  }
+
+  const specifierUrl = resolveSpecifier(specifier, importer);
+  const specifierNormalized = specifierUrl || specifier;
+  const {
+    scopes
+  } = importMap;
+
+  if (scopes && importer) {
+    const scopeKeyMatching = Object.keys(scopes).find(scopeKey => {
+      return scopeKey === importer || specifierIsPrefixOf(scopeKey, importer);
+    });
+
+    if (scopeKeyMatching) {
+      const scopeValue = scopes[scopeKeyMatching];
+      const remappingFromScopeImports = applyImports(specifierNormalized, scopeValue);
+
+      if (remappingFromScopeImports !== null) {
+        return remappingFromScopeImports;
+      }
+    }
+  }
+
+  const {
+    imports
+  } = importMap;
+
+  if (imports) {
+    const remappingFromImports = applyImports(specifierNormalized, imports);
+
+    if (remappingFromImports !== null) {
+      return remappingFromImports;
+    }
+  }
+
+  if (specifierUrl) {
+    return specifierUrl;
+  }
+
+  throw new Error(writeBareSpecifierMustBeRemapped({
+    specifier,
+    importer
+  }));
+};
+
+const applyImports = (specifier, imports) => {
+  const importKeyArray = Object.keys(imports);
+  let i = 0;
+
+  while (i < importKeyArray.length) {
+    const importKey = importKeyArray[i];
+    i++;
+
+    if (importKey === specifier) {
+      const importValue = imports[importKey];
+      return importValue;
+    }
+
+    if (specifierIsPrefixOf(importKey, specifier)) {
+      const importValue = imports[importKey];
+      const afterImportKey = specifier.slice(importKey.length);
+      return tryUrlResolution(afterImportKey, importValue);
+    }
+  }
+
+  return null;
+};
+
+const specifierIsPrefixOf = (specifierHref, href) => {
+  return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
+};
+
+const writeSpecifierMustBeAString = ({
+  specifier,
+  importer
+}) => `specifier must be a string.
+--- specifier ---
+${specifier}
+--- importer ---
+${importer}`;
+
+const writeImporterMustBeAString = ({
+  importer,
+  specifier
+}) => `importer must be a string.
+--- importer ---
+${importer}
+--- specifier ---
+${specifier}`;
+
+const writeImporterMustBeAbsolute = ({
+  importer,
+  specifier
+}) => `importer must be an absolute url.
+--- importer ---
+${importer}
+--- specifier ---
+${specifier}`;
+
+const writeBareSpecifierMustBeRemapped = ({
+  specifier,
+  importer
+}) => `Unmapped bare specifier.
+--- specifier ---
+${specifier}
+--- importer ---
+${importer}`;
+
+const resolveImport = ({
+  specifier,
+  importer,
+  importMap,
+  defaultExtension = true
+}) => {
+  return applyDefaultExtension({
+    url: importMap ? applyImportMap({
+      importMap,
+      specifier,
+      importer
+    }) : resolveUrl(specifier, importer),
+    importer,
+    defaultExtension
+  });
+};
+
+const applyDefaultExtension = ({
+  url,
+  importer,
+  defaultExtension
+}) => {
+  if (urlToPathname(url).endsWith("/")) {
+    return url;
+  }
+
+  if (typeof defaultExtension === "string") {
+    const extension = pathnameToExtension(url);
+
+    if (extension === "") {
+      return `${url}${defaultExtension}`;
+    }
+
+    return url;
+  }
+
+  if (defaultExtension === true) {
+    const extension = pathnameToExtension(url);
+
+    if (extension === "" && importer) {
+      const importerPathname = urlToPathname(importer);
+      const importerExtension = pathnameToExtension(importerPathname);
+      return `${url}${importerExtension}`;
+    }
+  }
+
+  return url;
+};
+
+/* global require, __filename */
 const nodeRequire = require;
 const filenameContainsBackSlashes = __filename.indexOf("\\") > -1;
 const url = filenameContainsBackSlashes ? `file:///${__filename.replace(/\\/g, "/")}` : `file://${__filename}`;
@@ -32,7 +589,7 @@ const assertUrlLike = (value, name = "url") => {
     throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
   }
 
-  if (!hasScheme(value)) {
+  if (!hasScheme$1(value)) {
     throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
   }
 };
@@ -46,7 +603,7 @@ const isWindowsPathnameSpecifier = specifier => {
   return thirdChar === "/" || thirdChar === "\\";
 };
 
-const hasScheme = specifier => /^[a-zA-Z]+:/.test(specifier);
+const hasScheme$1 = specifier => /^[a-zA-Z]+:/.test(specifier);
 
 // https://git-scm.com/docs/gitignore
 const applySpecifierPatternMatching = ({
@@ -514,7 +1071,7 @@ const fileSystemPathToUrl = value => {
     throw new Error(`received an invalid value for fileSystemPath: ${value}`);
   }
 
-  return String(url$1.pathToFileURL(value));
+  return String(url$2.pathToFileURL(value));
 };
 
 const assertAndNormalizeDirectoryUrl = value => {
@@ -587,7 +1144,7 @@ const urlToFileSystemPath = fileUrl => {
     fileUrl = fileUrl.slice(0, -1);
   }
 
-  const fileSystemPath = url$1.fileURLToPath(fileUrl);
+  const fileSystemPath = url$2.fileURLToPath(fileUrl);
   return fileSystemPath;
 };
 
@@ -980,7 +1537,7 @@ const findFirstDifferentCharacterIndex = (string, otherString) => {
   return maxCommonLength;
 };
 
-const pathnameToDirectoryPathname = pathname => {
+const pathnameToDirectoryPathname$1 = pathname => {
   if (pathname.endsWith("/")) {
     return pathname;
   }
@@ -1031,7 +1588,7 @@ const urlToRelativeUrl = (urlArg, baseUrlArg) => {
 
   const specificPathname = pathname.slice(commonPathname.length);
   const baseSpecificPathname = basePathname.slice(commonPathname.length);
-  const baseSpecificDirectoryPathname = pathnameToDirectoryPathname(baseSpecificPathname);
+  const baseSpecificDirectoryPathname = pathnameToDirectoryPathname$1(baseSpecificPathname);
   const relativeDirectoriesNotation = baseSpecificDirectoryPathname.replace(/.*?\//g, "../");
   const relativePathname = `${relativeDirectoriesNotation}${specificPathname}`;
   return `${relativePathname}${search}${hash}`;
@@ -1202,7 +1759,7 @@ const writeDirectory = async (destination, {
   }
 };
 
-const resolveUrl = (specifier, baseUrl) => {
+const resolveUrl$1 = (specifier, baseUrl) => {
   if (typeof baseUrl === "undefined") {
     throw new TypeError(`baseUrl missing to resolve ${specifier}`);
   }
@@ -1358,7 +1915,7 @@ const removeDirectory = async (rootDirectoryUrl, {
   const removeDirectoryContent = async directoryUrl => {
     const names = await readDirectory(directoryUrl);
     await Promise.all(names.map(async name => {
-      const url = resolveUrl(name, directoryUrl);
+      const url = resolveUrl$1(name, directoryUrl);
       await visit(url);
     }));
   };
@@ -1645,7 +2202,7 @@ const registerDirectoryLifecycle = (source, {
     relativeUrl,
     type
   }) => {
-    const entryUrl = resolveUrl(relativeUrl, sourceUrl);
+    const entryUrl = resolveUrl$1(relativeUrl, sourceUrl);
 
     if (type === "directory") {
       const canContainEntryToWatch = urlCanContainsMetaMatching({
@@ -1702,7 +2259,7 @@ const registerDirectoryLifecycle = (source, {
       }
 
       const removedEntryRelativeUrl = relativeUrlCandidateArray.find(relativeUrlCandidate => {
-        const entryUrl = resolveUrl(relativeUrlCandidate, sourceUrl);
+        const entryUrl = resolveUrl$1(relativeUrlCandidate, sourceUrl);
         const type = fileSystemNodeToTypeOrNull(entryUrl);
         return type === null;
       });
@@ -1717,7 +2274,7 @@ const registerDirectoryLifecycle = (source, {
   };
 
   const handleChange = relativeUrl => {
-    const entryUrl = resolveUrl(relativeUrl, sourceUrl);
+    const entryUrl = resolveUrl$1(relativeUrl, sourceUrl);
     const previousType = contentMap[relativeUrl];
     const type = fileSystemNodeToTypeOrNull(entryUrl);
 
@@ -1796,7 +2353,7 @@ const registerDirectoryLifecycle = (source, {
     }
 
     contentMap[relativeUrl] = type;
-    const entryUrl = resolveUrl(relativeUrl, sourceUrl);
+    const entryUrl = resolveUrl$1(relativeUrl, sourceUrl);
 
     if (type === "directory") {
       visitDirectory({
@@ -1896,7 +2453,7 @@ const visitDirectory = ({
 }) => {
   const directoryPath = urlToFileSystemPath(directoryUrl);
   fs.readdirSync(directoryPath).forEach(entry => {
-    const entryUrl = resolveUrl(entry, directoryUrl);
+    const entryUrl = resolveUrl$1(entry, directoryUrl);
     const type = fileSystemNodeToTypeOrNull(entryUrl);
 
     if (type === null) {
@@ -2077,7 +2634,7 @@ const watchFileMutation = (sourceUrl, {
 };
 
 const resolveDirectoryUrl = (specifier, baseUrl) => {
-  const url = resolveUrl(specifier, baseUrl);
+  const url = resolveUrl$1(specifier, baseUrl);
   return ensureUrlTrailingSlash(url);
 };
 
@@ -3211,7 +3768,7 @@ const convertCommonJsWithRollup = async ({
     sourcemap: true,
     sourcemapExcludeSources: true,
     ...(urlAfterTransform ? {
-      dir: urlToFileSystemPath(resolveUrl("./", urlAfterTransform))
+      dir: urlToFileSystemPath(resolveUrl$1("./", urlAfterTransform))
     } : {})
   };
   const result = await rollupBundle.generate(generateOptions);
@@ -3709,345 +4266,6 @@ ${projectDirectoryUrl}`);
   }
 };
 
-const assertImportMap = value => {
-  if (value === null) {
-    throw new TypeError(`an importMap must be an object, got null`);
-  }
-
-  const type = typeof value;
-
-  if (type !== "object") {
-    throw new TypeError(`an importMap must be an object, received ${value}`);
-  }
-
-  if (Array.isArray(value)) {
-    throw new TypeError(`an importMap must be an object, received array ${value}`);
-  }
-};
-
-const hasScheme$1 = string => {
-  return /^[a-zA-Z]{2,}:/.test(string);
-};
-
-const urlToScheme = urlString => {
-  const colonIndex = urlString.indexOf(":");
-  if (colonIndex === -1) return "";
-  return urlString.slice(0, colonIndex);
-};
-
-const urlToPathname = urlString => {
-  return ressourceToPathname(urlToRessource(urlString));
-};
-
-const urlToRessource = urlString => {
-  const scheme = urlToScheme(urlString);
-
-  if (scheme === "file") {
-    return urlString.slice("file://".length);
-  }
-
-  if (scheme === "https" || scheme === "http") {
-    // remove origin
-    const afterProtocol = urlString.slice(scheme.length + "://".length);
-    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
-    return afterProtocol.slice(pathnameSlashIndex);
-  }
-
-  return urlString.slice(scheme.length + 1);
-};
-
-const ressourceToPathname = ressource => {
-  const searchSeparatorIndex = ressource.indexOf("?");
-  return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex);
-};
-
-const urlToOrigin = urlString => {
-  const scheme = urlToScheme(urlString);
-
-  if (scheme === "file") {
-    return "file://";
-  }
-
-  if (scheme === "http" || scheme === "https") {
-    const secondProtocolSlashIndex = scheme.length + "://".length;
-    const pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
-    if (pathnameSlashIndex === -1) return urlString;
-    return urlString.slice(0, pathnameSlashIndex);
-  }
-
-  return urlString.slice(0, scheme.length + 1);
-};
-
-const pathnameToDirectoryPathname$1 = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-  if (slashLastIndex === -1) return "";
-  return pathname.slice(0, slashLastIndex);
-};
-
-// could be useful: https://url.spec.whatwg.org/#url-miscellaneous
-const resolveUrl$1 = (specifier, baseUrl) => {
-  if (baseUrl) {
-    if (typeof baseUrl !== "string") {
-      throw new TypeError(writeBaseUrlMustBeAString({
-        baseUrl,
-        specifier
-      }));
-    }
-
-    if (!hasScheme$1(baseUrl)) {
-      throw new Error(writeBaseUrlMustBeAbsolute({
-        baseUrl,
-        specifier
-      }));
-    }
-  }
-
-  if (hasScheme$1(specifier)) {
-    return specifier;
-  }
-
-  if (!baseUrl) {
-    throw new Error(writeBaseUrlRequired({
-      baseUrl,
-      specifier
-    }));
-  } // scheme relative
-
-
-  if (specifier.slice(0, 2) === "//") {
-    return `${urlToScheme(baseUrl)}:${specifier}`;
-  } // origin relative
-
-
-  if (specifier[0] === "/") {
-    return `${urlToOrigin(baseUrl)}${specifier}`;
-  }
-
-  const baseOrigin = urlToOrigin(baseUrl);
-  const basePathname = urlToPathname(baseUrl);
-
-  if (specifier === ".") {
-    const baseDirectoryPathname = pathnameToDirectoryPathname$1(basePathname);
-    return `${baseOrigin}${baseDirectoryPathname}/`;
-  } // pathname relative inside
-
-
-  if (specifier.slice(0, 2) === "./") {
-    const baseDirectoryPathname = pathnameToDirectoryPathname$1(basePathname);
-    return `${baseOrigin}${baseDirectoryPathname}/${specifier.slice(2)}`;
-  } // pathname relative outside
-
-
-  if (specifier.slice(0, 3) === "../") {
-    let unresolvedPathname = specifier;
-    const importerFolders = basePathname.split("/");
-    importerFolders.pop();
-
-    while (unresolvedPathname.slice(0, 3) === "../") {
-      unresolvedPathname = unresolvedPathname.slice(3); // when there is no folder left to resolved
-      // we just ignore '../'
-
-      if (importerFolders.length) {
-        importerFolders.pop();
-      }
-    }
-
-    const resolvedPathname = `${importerFolders.join("/")}/${unresolvedPathname}`;
-    return `${baseOrigin}${resolvedPathname}`;
-  } // bare
-
-
-  if (basePathname === "") {
-    return `${baseOrigin}/${specifier}`;
-  }
-
-  if (basePathname[basePathname.length] === "/") {
-    return `${baseOrigin}${basePathname}${specifier}`;
-  }
-
-  return `${baseOrigin}${pathnameToDirectoryPathname$1(basePathname)}/${specifier}`;
-};
-
-const writeBaseUrlMustBeAString = ({
-  baseUrl,
-  specifier
-}) => `baseUrl must be a string.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const writeBaseUrlMustBeAbsolute = ({
-  baseUrl,
-  specifier
-}) => `baseUrl must be absolute.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const writeBaseUrlRequired = ({
-  baseUrl,
-  specifier
-}) => `baseUrl required to resolve relative specifier.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const tryUrlResolution = (string, url) => {
-  const result = resolveUrl$1(string, url);
-  return hasScheme$1(result) ? result : null;
-};
-
-const resolveSpecifier = (specifier, importer) => {
-  if (specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
-    return resolveUrl$1(specifier, importer);
-  }
-
-  if (hasScheme$1(specifier)) {
-    return specifier;
-  }
-
-  return null;
-};
-
-const applyImportMap = ({
-  importMap,
-  specifier,
-  importer
-}) => {
-  assertImportMap(importMap);
-
-  if (typeof specifier !== "string") {
-    throw new TypeError(writeSpecifierMustBeAString({
-      specifier,
-      importer
-    }));
-  }
-
-  if (importer) {
-    if (typeof importer !== "string") {
-      throw new TypeError(writeImporterMustBeAString({
-        importer,
-        specifier
-      }));
-    }
-
-    if (!hasScheme$1(importer)) {
-      throw new Error(writeImporterMustBeAbsolute({
-        importer,
-        specifier
-      }));
-    }
-  }
-
-  const specifierUrl = resolveSpecifier(specifier, importer);
-  const specifierNormalized = specifierUrl || specifier;
-  const {
-    scopes
-  } = importMap;
-
-  if (scopes && importer) {
-    const scopeKeyMatching = Object.keys(scopes).find(scopeKey => {
-      return scopeKey === importer || specifierIsPrefixOf(scopeKey, importer);
-    });
-
-    if (scopeKeyMatching) {
-      const scopeValue = scopes[scopeKeyMatching];
-      const remappingFromScopeImports = applyImports(specifierNormalized, scopeValue);
-
-      if (remappingFromScopeImports !== null) {
-        return remappingFromScopeImports;
-      }
-    }
-  }
-
-  const {
-    imports
-  } = importMap;
-
-  if (imports) {
-    const remappingFromImports = applyImports(specifierNormalized, imports);
-
-    if (remappingFromImports !== null) {
-      return remappingFromImports;
-    }
-  }
-
-  if (specifierUrl) {
-    return specifierUrl;
-  }
-
-  throw new Error(writeBareSpecifierMustBeRemapped({
-    specifier,
-    importer
-  }));
-};
-
-const applyImports = (specifier, imports) => {
-  const importKeyArray = Object.keys(imports);
-  let i = 0;
-
-  while (i < importKeyArray.length) {
-    const importKey = importKeyArray[i];
-    i++;
-
-    if (importKey === specifier) {
-      const importValue = imports[importKey];
-      return importValue;
-    }
-
-    if (specifierIsPrefixOf(importKey, specifier)) {
-      const importValue = imports[importKey];
-      const afterImportKey = specifier.slice(importKey.length);
-      return tryUrlResolution(afterImportKey, importValue);
-    }
-  }
-
-  return null;
-};
-
-const specifierIsPrefixOf = (specifierHref, href) => {
-  return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
-};
-
-const writeSpecifierMustBeAString = ({
-  specifier,
-  importer
-}) => `specifier must be a string.
---- specifier ---
-${specifier}
---- importer ---
-${importer}`;
-
-const writeImporterMustBeAString = ({
-  importer,
-  specifier
-}) => `importer must be a string.
---- importer ---
-${importer}
---- specifier ---
-${specifier}`;
-
-const writeImporterMustBeAbsolute = ({
-  importer,
-  specifier
-}) => `importer must be an absolute url.
---- importer ---
-${importer}
---- specifier ---
-${specifier}`;
-
-const writeBareSpecifierMustBeRemapped = ({
-  specifier,
-  importer
-}) => `Unmapped bare specifier.
---- specifier ---
-${specifier}
---- importer ---
-${importer}`;
-
 // https://github.com/systemjs/systemjs/blob/89391f92dfeac33919b0223bbf834a1f4eea5750/src/common.js#L136
 const composeTwoImportMaps = (leftImportMap, rightImportMap) => {
   assertImportMap(leftImportMap);
@@ -4078,259 +4296,6 @@ const composeTwoScopes = (leftScopes = {}, rightScopes = {}) => {
     }
   });
   return scopes;
-};
-
-const sortImports = imports => {
-  const importsSorted = {};
-  Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(name => {
-    importsSorted[name] = imports[name];
-  });
-  return importsSorted;
-};
-const sortScopes = scopes => {
-  const scopesSorted = {};
-  Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(scopeName => {
-    scopesSorted[scopeName] = sortImports(scopes[scopeName]);
-  });
-  return scopesSorted;
-};
-
-const compareLengthOrLocaleCompare = (a, b) => {
-  return b.length - a.length || a.localeCompare(b);
-};
-
-const normalizeImportMap = (importMap, baseUrl) => {
-  assertImportMap(importMap);
-
-  if (typeof baseUrl !== "string") {
-    throw new TypeError(formulateBaseUrlMustBeAString({
-      baseUrl
-    }));
-  }
-
-  const {
-    imports,
-    scopes
-  } = importMap;
-  return {
-    imports: imports ? normalizeImports(imports, baseUrl) : undefined,
-    scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
-  };
-};
-
-const normalizeImports = (imports, baseUrl) => {
-  const importsNormalized = {};
-  Object.keys(imports).forEach(specifier => {
-    const address = imports[specifier];
-
-    if (typeof address !== "string") {
-      console.warn(formulateAddressMustBeAString({
-        address,
-        specifier
-      }));
-      return;
-    }
-
-    const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
-    const addressUrl = tryUrlResolution(address, baseUrl);
-
-    if (addressUrl === null) {
-      console.warn(formulateAdressResolutionFailed({
-        address,
-        baseUrl,
-        specifier
-      }));
-      return;
-    }
-
-    if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
-      console.warn(formulateAddressUrlRequiresTrailingSlash({
-        addressUrl,
-        address,
-        specifier
-      }));
-      return;
-    }
-
-    importsNormalized[specifierResolved] = addressUrl;
-  });
-  return sortImports(importsNormalized);
-};
-
-const normalizeScopes = (scopes, baseUrl) => {
-  const scopesNormalized = {};
-  Object.keys(scopes).forEach(scope => {
-    const scopeValue = scopes[scope];
-    const scopeUrl = tryUrlResolution(scope, baseUrl);
-
-    if (scopeUrl === null) {
-      console.warn(formulateScopeResolutionFailed({
-        scope,
-        baseUrl
-      }));
-      return;
-    }
-
-    const scopeValueNormalized = normalizeImports(scopeValue, baseUrl);
-    scopesNormalized[scopeUrl] = scopeValueNormalized;
-  });
-  return sortScopes(scopesNormalized);
-};
-
-const formulateBaseUrlMustBeAString = ({
-  baseUrl
-}) => `baseUrl must be a string.
---- base url ---
-${baseUrl}`;
-
-const formulateAddressMustBeAString = ({
-  specifier,
-  address
-}) => `Address must be a string.
---- address ---
-${address}
---- specifier ---
-${specifier}`;
-
-const formulateAdressResolutionFailed = ({
-  address,
-  baseUrl,
-  specifier
-}) => `Address url resolution failed.
---- address ---
-${address}
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const formulateAddressUrlRequiresTrailingSlash = ({
-  addressURL,
-  address,
-  specifier
-}) => `Address must end with /.
---- address url ---
-${addressURL}
---- address ---
-${address}
---- specifier ---
-${specifier}`;
-
-const formulateScopeResolutionFailed = ({
-  scope,
-  baseUrl
-}) => `Scope url resolution failed.
---- scope ---
-${scope}
---- base url ---
-${baseUrl}`;
-
-const pathnameToExtension = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-
-  if (slashLastIndex !== -1) {
-    pathname = pathname.slice(slashLastIndex + 1);
-  }
-
-  const dotLastIndex = pathname.lastIndexOf(".");
-  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
-
-  return pathname.slice(dotLastIndex);
-};
-
-const resolveImport = ({
-  specifier,
-  importer,
-  importMap,
-  defaultExtension = true
-}) => {
-  return applyDefaultExtension({
-    url: importMap ? applyImportMap({
-      importMap,
-      specifier,
-      importer
-    }) : resolveUrl$1(specifier, importer),
-    importer,
-    defaultExtension
-  });
-};
-
-const applyDefaultExtension = ({
-  url,
-  importer,
-  defaultExtension
-}) => {
-  if (urlToPathname(url).endsWith("/")) {
-    return url;
-  }
-
-  if (typeof defaultExtension === "string") {
-    const extension = pathnameToExtension(url);
-
-    if (extension === "") {
-      return `${url}${defaultExtension}`;
-    }
-
-    return url;
-  }
-
-  if (defaultExtension === true) {
-    const extension = pathnameToExtension(url);
-
-    if (extension === "" && importer) {
-      const importerPathname = urlToPathname(importer);
-      const importerExtension = pathnameToExtension(importerPathname);
-      return `${url}${importerExtension}`;
-    }
-  }
-
-  return url;
-};
-
-const assertImportMap$1 = value => {
-  if (value === null) {
-    throw new TypeError(`an importMap must be an object, got null`);
-  }
-
-  const type = typeof value;
-
-  if (type !== "object") {
-    throw new TypeError(`an importMap must be an object, received ${value}`);
-  }
-
-  if (Array.isArray(value)) {
-    throw new TypeError(`an importMap must be an object, received array ${value}`);
-  }
-};
-
-const sortImportMap = importMap => {
-  assertImportMap$1(importMap);
-  const {
-    imports,
-    scopes
-  } = importMap;
-  return {
-    imports: imports ? sortImports$1(imports) : undefined,
-    scopes: scopes ? sortScopes$1(scopes) : undefined
-  };
-};
-const sortImports$1 = imports => {
-  const importsSorted = {};
-  Object.keys(imports).sort(compareLengthOrLocaleCompare$1).forEach(name => {
-    importsSorted[name] = imports[name];
-  });
-  return importsSorted;
-};
-const sortScopes$1 = scopes => {
-  const scopesSorted = {};
-  Object.keys(scopes).sort(compareLengthOrLocaleCompare$1).forEach(scopeName => {
-    scopesSorted[scopeName] = sortImports$1(scopes[scopeName]);
-  });
-  return scopesSorted;
-};
-
-const compareLengthOrLocaleCompare$1 = (a, b) => {
-  return b.length - a.length || a.localeCompare(b);
 };
 
 const readPackageFile = async (packageFileUrl, manualOverrides) => {
@@ -4422,7 +4387,7 @@ const resolveNodeModule = async ({
   dependencyVersionPattern,
   dependencyType
 }) => {
-  const packageDirectoryUrl = resolveUrl("./", packageFileUrl);
+  const packageDirectoryUrl = resolveUrl$1("./", packageFileUrl);
   const nodeModuleCandidateArray = [...computeNodeModuleCandidateArray(packageDirectoryUrl, rootProjectDirectoryUrl), `node_modules/`];
   const result = await firstOperationMatching({
     array: nodeModuleCandidateArray,
@@ -4547,9 +4512,9 @@ const resolveMainFile = async ({
   }
 
   const packageFilePath = urlToFileSystemPath(packageFileUrl);
-  const packageDirectoryUrl = resolveUrl("./", packageFileUrl);
+  const packageDirectoryUrl = resolveUrl$1("./", packageFileUrl);
   const mainFileRelativeUrl = packageMainFieldValue.endsWith("/") ? `${packageMainFieldValue}index` : packageMainFieldValue;
-  const mainFileUrlFirstCandidate = resolveUrl(mainFileRelativeUrl, packageFileUrl);
+  const mainFileUrlFirstCandidate = resolveUrl$1(mainFileRelativeUrl, packageFileUrl);
 
   if (!mainFileUrlFirstCandidate.startsWith(packageDirectoryUrl)) {
     logger.warn(`
@@ -4601,7 +4566,7 @@ const findMainFileUrlOrNull = async mainFileUrl => {
   }
 
   if (mainStats && mainStats.isDirectory()) {
-    const indexFileUrl = resolveUrl("./index", mainFileUrl.endsWith("/") ? mainFileUrl : `${mainFileUrl}/`);
+    const indexFileUrl = resolveUrl$1("./index", mainFileUrl.endsWith("/") ? mainFileUrl : `${mainFileUrl}/`);
     const extensionLeadingToAFile = await findExtension(indexFileUrl);
 
     if (extensionLeadingToAFile === null) {
@@ -4900,8 +4865,8 @@ const generateImportMapForPackage = async ({
     rootProjectDirectoryUrl = assertAndNormalizeDirectoryUrl(rootProjectDirectoryUrl);
   }
 
-  const projectPackageFileUrl = resolveUrl("./package.json", projectDirectoryUrl);
-  const rootProjectPackageFileUrl = resolveUrl("./package.json", rootProjectDirectoryUrl);
+  const projectPackageFileUrl = resolveUrl$1("./package.json", projectDirectoryUrl);
+  const rootProjectPackageFileUrl = resolveUrl$1("./package.json", rootProjectDirectoryUrl);
   const imports = {};
   const scopes = {};
   const seen = {};
@@ -4923,13 +4888,15 @@ const generateImportMapForPackage = async ({
     packageName,
     packageJsonObject,
     importerPackageFileUrl,
+    importerPackageJsonObject,
     includeDevDependencies
   }) => {
     await visitPackage({
       packageFileUrl,
       packageName,
       packageJsonObject,
-      importerPackageFileUrl
+      importerPackageFileUrl,
+      importerPackageJsonObject
     });
     await visitDependencies({
       packageFileUrl,
@@ -4942,7 +4909,8 @@ const generateImportMapForPackage = async ({
     packageFileUrl,
     packageName,
     packageJsonObject,
-    importerPackageFileUrl
+    importerPackageFileUrl,
+    importerPackageJsonObject
   }) => {
     const packageInfo = computePackageInfo({
       packageFileUrl,
@@ -4958,6 +4926,7 @@ const generateImportMapForPackage = async ({
 
     if (includeImports && "imports" in packageJsonObject) {
       const importsForPackageImports = visitPackageImports({
+        logger,
         packageFileUrl,
         packageName,
         packageJsonObject,
@@ -5004,26 +4973,28 @@ const generateImportMapForPackage = async ({
 
     if (selfImport) {
       const {
-        importerIsRoot,
+        packageIsRoot,
         packageDirectoryRelativeUrl
-      } = packageInfo;
+      } = packageInfo; // allow import 'package-name/dir/file.js' in package-name files
 
-      if (importerIsRoot) {
+      if (packageIsRoot) {
         addImportMapping({
           from: `${packageName}/`,
           to: `./${packageDirectoryRelativeUrl}`
         });
-      } else {
-        addScopedImportMapping({
-          scope: `./${packageDirectoryRelativeUrl}`,
-          from: `${packageName}/`,
-          to: `./${packageDirectoryRelativeUrl}`
-        });
-      }
+      } // scoped allow import 'package-name/dir/file.js' in package-name files
+      else {
+          addScopedImportMapping({
+            scope: `./${packageDirectoryRelativeUrl}`,
+            from: `${packageName}/`,
+            to: `./${packageDirectoryRelativeUrl}`
+          });
+        }
     }
 
     if (includeExports && "exports" in packageJsonObject) {
       const importsForPackageExports = visitPackageExports({
+        logger,
         packageFileUrl,
         packageName,
         packageJsonObject,
@@ -5034,8 +5005,9 @@ const generateImportMapForPackage = async ({
         importerIsRoot,
         importerRelativeUrl,
         packageIsRoot,
-        packageDirectoryUrl,
-        packageDirectoryUrlExpected
+        packageDirectoryRelativeUrl // packageDirectoryUrl,
+        // packageDirectoryUrlExpected,
+
       } = packageInfo;
 
       if (packageIsRoot && selfImport) {
@@ -5048,28 +5020,52 @@ const generateImportMapForPackage = async ({
         });
       } else if (packageIsRoot) ; else {
         Object.keys(importsForPackageExports).forEach(from => {
-          const to = importsForPackageExports[from];
+          const to = importsForPackageExports[from]; // own package exports available to himself
 
           if (importerIsRoot) {
-            addImportMapping({
-              from,
-              to
-            });
+            // importer is the package himself, keep exports scoped
+            // otherwise the dependency exports would override the package exports.
+            if (importerPackageJsonObject.name === packageName) {
+              addScopedImportMapping({
+                scope: `./${packageDirectoryRelativeUrl}`,
+                from,
+                to
+              });
+
+              if (from === packageName || from in imports === false) {
+                addImportMapping({
+                  from,
+                  to
+                });
+              }
+            } else {
+              addImportMapping({
+                from,
+                to
+              });
+            }
           } else {
             addScopedImportMapping({
-              scope: `./${importerRelativeUrl}`,
+              scope: `./${packageDirectoryRelativeUrl}`,
               from,
               to
             });
-          }
+          } // now make package exports available to the importer
+          // if importer is root no need because the top level remapping does it
 
-          if (packageDirectoryUrl !== packageDirectoryUrlExpected) {
-            addScopedImportMapping({
-              scope: `./${importerRelativeUrl}`,
-              from,
-              to
-            });
-          }
+
+          if (importerIsRoot) {
+            return;
+          } // now make it available to the importer
+          // here if the importer is himself we could do stuff
+          // we should even handle the case earlier to prevent top level remapping
+
+
+          addScopedImportMapping({
+            scope: `./${importerRelativeUrl}`,
+            from,
+            to
+          });
         });
       }
     }
@@ -5210,7 +5206,8 @@ const generateImportMapForPackage = async ({
       packageFileUrl: dependencyPackageFileUrl,
       packageName: dependencyName,
       packageJsonObject: dependencyPackageJsonObject,
-      importerPackageFileUrl: packageFileUrl
+      importerPackageFileUrl: packageFileUrl,
+      importerPackageJsonObject: packageJsonObject
     });
   };
 
@@ -5221,11 +5218,11 @@ const generateImportMapForPackage = async ({
   }) => {
     const importerIsRoot = importerPackageFileUrl === rootProjectPackageFileUrl;
     const importerIsProject = importerPackageFileUrl === projectPackageFileUrl;
-    const importerPackageDirectoryUrl = resolveUrl("./", importerPackageFileUrl);
+    const importerPackageDirectoryUrl = resolveUrl$1("./", importerPackageFileUrl);
     const importerRelativeUrl = importerIsRoot ? `${path.basename(rootProjectDirectoryUrl)}/` : urlToRelativeUrl(importerPackageDirectoryUrl, rootProjectDirectoryUrl);
     const packageIsRoot = packageFileUrl === rootProjectPackageFileUrl;
     const packageIsProject = packageFileUrl === projectPackageFileUrl;
-    const packageDirectoryUrl = resolveUrl("./", packageFileUrl);
+    const packageDirectoryUrl = resolveUrl$1("./", packageFileUrl);
     let packageDirectoryUrlExpected;
 
     if (packageIsProject && !packageIsRoot) {
@@ -5324,6 +5321,7 @@ const generateImportMapForPackage = async ({
       packageName: projectPackageJsonObject.name,
       packageJsonObject: projectPackageJsonObject,
       importerPackageFileUrl,
+      importerPackageJsonObject: null,
       includeDevDependencies
     });
   } else {
@@ -5808,6 +5806,11 @@ const createEventHistory = ({
   };
 };
 
+// eslint-disable-next-line import/no-unresolved
+const nodeRequire$1 = require;
+const filenameContainsBackSlashes$1 = __filename.indexOf("\\") > -1;
+const url$1 = filenameContainsBackSlashes$1 ? `file:///${__filename.replace(/\\/g, "/")}` : `file://${__filename}`;
+
 const createCancellationToken$2 = () => {
   const register = callback => {
     if (typeof callback !== "function") {
@@ -6223,7 +6226,7 @@ const dateToSecondsPrecision = date => {
   return dateWithSecondsPrecision;
 };
 
-const require$2 = module$1.createRequire(url);
+const require$2 = module$1.createRequire(url$1);
 
 const nodeFetch = require$2("node-fetch");
 
@@ -7143,7 +7146,7 @@ const originAsString = ({
   ip,
   port
 }) => {
-  const url = new url$1.URL("https://127.0.0.1:80");
+  const url = new url$2.URL("https://127.0.0.1:80");
   url.protocol = protocol;
   url.hostname = ip;
   url.port = port;
@@ -7164,7 +7167,7 @@ const STOP_REASON_PROCESS_DEATH = createReason("process death");
 const STOP_REASON_PROCESS_EXIT = createReason("process exit");
 const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
 
-const require$3 = module$1.createRequire(url);
+const require$3 = module$1.createRequire(url$1);
 
 const killPort = require$3("kill-port");
 
@@ -7632,10 +7635,10 @@ const generateAccessControlHeaders = ({
 let jsenvCoreDirectoryUrl;
 
 if (typeof __filename === "string") {
-  jsenvCoreDirectoryUrl = resolveDirectoryUrl( // get ride of dist/commonjs/main.js
+  jsenvCoreDirectoryUrl = resolveUrl$1( // get ride of dist/commonjs/main.js
   "../../", fileSystemPathToUrl(__filename));
 } else {
-  jsenvCoreDirectoryUrl = resolveDirectoryUrl( // get ride of src/internal/jsenvCoreDirectoryUrl.js
+  jsenvCoreDirectoryUrl = resolveUrl$1( // get ride of src/internal/jsenvCoreDirectoryUrl.js
   "../../", url);
 }
 
@@ -8740,7 +8743,7 @@ const getProjectImportMap = async ({
   projectDirectoryUrl,
   importMapFileRelativeUrl
 }) => {
-  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
+  const importMapFileUrl = resolveUrl$1(importMapFileRelativeUrl, projectDirectoryUrl);
   const importMapFilePath = urlToFileSystemPath(importMapFileUrl);
   return new Promise((resolve, reject) => {
     fs.readFile(importMapFilePath, (error, buffer) => {
@@ -8945,7 +8948,7 @@ const transformResultToCompilationResult = async ({
         // be careful here we might received C:/Directory/file.js path from babel
         // also in case we receive relative path like directory\file.js we replace \ with slash
         // for url resolution
-        const sourceFileUrl = isWindows$4 && startsWithWindowsDriveLetter$1(source) ? windowsFilePathToUrl(source) : ensureWindowsDriveLetter(resolveUrl(isWindows$4 ? replaceBackSlashesWithSlashes$1(source) : source, sourcemapFileUrl), sourcemapFileUrl);
+        const sourceFileUrl = isWindows$4 && startsWithWindowsDriveLetter$1(source) ? windowsFilePathToUrl(source) : ensureWindowsDriveLetter(resolveUrl$1(isWindows$4 ? replaceBackSlashesWithSlashes$1(source) : source, sourcemapFileUrl), sourcemapFileUrl);
 
         if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
           // do not track dependency outside project
@@ -9034,7 +9037,7 @@ const bufferToEtag$1 = buffer => {
 const resolveAssetFileUrl = ({
   asset,
   compiledFileUrl
-}) => resolveUrl(asset, `${compiledFileUrl}__asset__/`);
+}) => resolveUrl$1(asset, `${compiledFileUrl}__asset__/`);
 const resolveMetaJsonFileUrl = ({
   compiledFileUrl
 }) => resolveAssetFileUrl({
@@ -9044,7 +9047,7 @@ const resolveMetaJsonFileUrl = ({
 const resolveSourceFileUrl = ({
   source,
   compiledFileUrl
-}) => resolveUrl(source, resolveMetaJsonFileUrl({
+}) => resolveUrl$1(source, resolveMetaJsonFileUrl({
   compiledFileUrl
 }));
 
@@ -9807,7 +9810,7 @@ const serveCompiledFile = async ({
       request
     });
     compileResult.sources.forEach(source => {
-      const sourceFileUrl = resolveUrl(source, `${compiledFileUrl}__asset__/`);
+      const sourceFileUrl = resolveUrl$1(source, `${compiledFileUrl}__asset__/`);
       projectFileRequestedCallback({
         relativeUrl: urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl),
         request
@@ -9949,7 +9952,7 @@ const fetchSourcemap = async ({
     });
   }
 
-  const sourcemapUrl = resolveUrl(sourcemapParsingResult.sourcemapURL, moduleUrl);
+  const sourcemapUrl = resolveUrl$1(sourcemapParsingResult.sourcemapURL, moduleUrl);
   const sourcemapResponse = await fetchUrl$1(sourcemapUrl, {
     cancellationToken
   });
@@ -10122,10 +10125,10 @@ const createJsenvRollupPlugin = async ({
     // transform: async (moduleContent, rollupId) => {}
     outputOptions: options => {
       // rollup does not expects to have http dependency in the mix
-      const bundleSourcemapFileUrl = resolveUrl(`./${chunkId}.map`, bundleDirectoryUrl); // options.sourcemapFile = bundleSourcemapFileUrl
+      const bundleSourcemapFileUrl = resolveUrl$1(`./${chunkId}.map`, bundleDirectoryUrl); // options.sourcemapFile = bundleSourcemapFileUrl
 
       const relativePathToUrl = relativePath => {
-        const rollupUrl = resolveUrl(relativePath, bundleSourcemapFileUrl);
+        const rollupUrl = resolveUrl$1(relativePath, bundleSourcemapFileUrl);
         let url; // fix rollup not supporting source being http
 
         const httpIndex = rollupUrl.indexOf(`http:/`);
@@ -10136,7 +10139,7 @@ const createJsenvRollupPlugin = async ({
           const httpsIndex = rollupUrl.indexOf("https:/");
 
           if (httpsIndex > -1) {
-            url = `http://${rollupUrl.slice(httpIndex + `http:/`.length)}`;
+            url = `https://${rollupUrl.slice(httpsIndex + `https:/`.length)}`;
           } else {
             url = rollupUrl;
           }
@@ -10202,7 +10205,7 @@ const createJsenvRollupPlugin = async ({
       mappingKeysSorted.forEach(key => {
         manifest[key] = mappings[key];
       });
-      const manifestFileUrl = resolveUrl("manifest.json", bundleDirectoryUrl);
+      const manifestFileUrl = resolveUrl$1("manifest.json", bundleDirectoryUrl);
       await writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "));
     },
     writeBundle: async bundle => {
@@ -10397,7 +10400,7 @@ const transformAsyncInsertedByRollup = async ({
 
   await Promise.all(Object.keys(bundle).map(async bundleFilename => {
     const bundleInfo = bundle[bundleFilename];
-    const bundleFileUrl = resolveUrl(bundleFilename, bundleDirectoryUrl);
+    const bundleFileUrl = resolveUrl$1(bundleFilename, bundleDirectoryUrl);
     const {
       code,
       map
@@ -10646,7 +10649,8 @@ const bundleToCompilationResult = ({
     const chunkFileName = rollupChunk.fileName;
     const chunk = parseRollupChunk(rollupChunk, {
       moduleContentMap,
-      compiledFileUrl
+      compiledFileUrl,
+      sourcemapFileUrl: resolveUrl$1(rollupChunk.map.file, compiledFileUrl)
     });
     trackDependencies(chunk.dependencyMap);
     assets.push(chunkFileName);
@@ -10672,7 +10676,7 @@ const parseRollupChunk = (rollupChunk, {
   const dependencyMap = {};
   const mainModuleSourcemap = rollupChunk.map;
   mainModuleSourcemap.sources.forEach((source, index) => {
-    const moduleUrl = resolveUrl(source, sourcemapFileUrl);
+    const moduleUrl = resolveUrl$1(source, sourcemapFileUrl);
     dependencyMap[moduleUrl] = getModuleContent({
       moduleContentMap,
       mainModuleSourcemap,
@@ -10885,7 +10889,7 @@ const serveCompiledJs = async ({
     return {
       status: 307,
       headers: {
-        location: resolveUrl(originalFileRelativeUrl, origin)
+        location: resolveUrl$1(originalFileRelativeUrl, origin)
       }
     };
   }
@@ -10893,7 +10897,7 @@ const serveCompiledJs = async ({
   const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`;
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`;
   const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl);
-  const compiledFileUrl = resolveUrl(originalFileRelativeUrl, compileDirectoryUrl);
+  const compiledFileUrl = resolveUrl$1(originalFileRelativeUrl, compileDirectoryUrl);
 
   if (compileId === COMPILE_ID_GLOBAL_BUNDLE || compileId === COMPILE_ID_COMMONJS_BUNDLE) {
     return serveBundle({
@@ -11009,6 +11013,7 @@ const urlIsAsset = url => {
 const startCompileServer = async ({
   cancellationToken = createCancellationToken$1(),
   compileServerLogLevel,
+  logStart,
   // js compile options
   transformTopLevelAwait = true,
   transformModuleIntoSystemFormat = true,
@@ -11051,7 +11056,7 @@ const startCompileServer = async ({
   assertImportMapFileRelativeUrl({
     importMapFileRelativeUrl
   });
-  const importMapFileUrl = resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
+  const importMapFileUrl = resolveUrl$1(importMapFileRelativeUrl, projectDirectoryUrl);
   assertImportMapFileInsideProject({
     importMapFileUrl,
     projectDirectoryUrl
@@ -11112,7 +11117,7 @@ ${projectDirectoryUrl}`);
     });
   }
 
-  const packageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl);
+  const packageFileUrl = resolveUrl$1("./package.json", jsenvCoreDirectoryUrl);
   const packageFilePath = urlToFileSystemPath(packageFileUrl);
   const packageVersion = readPackage(packageFilePath).version;
 
@@ -11149,6 +11154,7 @@ ${projectDirectoryUrl}`);
   const [compileServer, importMapForCompileServer] = await Promise.all([startServer({
     cancellationToken,
     logLevel: compileServerLogLevel,
+    logStart,
     protocol,
     privateKey,
     certificate,
@@ -11166,7 +11172,7 @@ ${projectDirectoryUrl}`);
         const requestUrl = `${origin}${ressource}`; // serve asset files directly
 
         if (urlIsAsset(requestUrl)) {
-          const fileUrl = resolveUrl(ressource.slice(1), projectDirectoryUrl);
+          const fileUrl = resolveUrl$1(ressource.slice(1), projectDirectoryUrl);
           return serveFile(fileUrl, {
             method,
             headers
@@ -11222,13 +11228,11 @@ ${projectDirectoryUrl}`);
 
   const groupMapToString = () => JSON.stringify(groupMap, null, "  ");
 
-  const envToString = () => Object.keys(env).map(key => `
-export const ${key} = ${JSON.stringify(env[key])}
-`).join("");
+  const envToString = () => JSON.stringify(env, null, "  ");
 
-  const jsenvImportMapFileUrl = resolveUrl("./importMap.json", outDirectoryUrl);
-  const jsenvGroupMapFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl);
-  const jsenvEnvFileUrl = resolveUrl("./env.js", outDirectoryUrl);
+  const jsenvImportMapFileUrl = resolveUrl$1("./importMap.json", outDirectoryUrl);
+  const jsenvGroupMapFileUrl = resolveUrl$1("./groupMap.json", outDirectoryUrl);
+  const jsenvEnvFileUrl = resolveUrl$1("./env.json", outDirectoryUrl);
   await Promise.all([writeFile(jsenvImportMapFileUrl, importMapToString()), writeFile(jsenvGroupMapFileUrl, groupMapToString()), writeFile(jsenvEnvFileUrl, envToString())]);
 
   if (!writeOnFilesystem) {
@@ -11309,7 +11313,7 @@ const serveProjectFiles = async ({
     relativeUrl,
     request
   });
-  const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl);
+  const fileUrl = resolveUrl$1(relativeUrl, projectDirectoryUrl);
   const filePath = urlToFileSystemPath(fileUrl);
   const responsePromise = serveFile(filePath, {
     method,
@@ -11378,13 +11382,13 @@ const cleanOutDirectoryIfObsolete = async ({
   outDirectoryUrl,
   outDirectoryMeta
 }) => {
-  const jsenvCorePackageFileUrl = resolveUrl("./package.json", jsenvCoreDirectoryUrl);
+  const jsenvCorePackageFileUrl = resolveUrl$1("./package.json", jsenvCoreDirectoryUrl);
   const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl);
   const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version;
   outDirectoryMeta = { ...outDirectoryMeta,
     jsenvCorePackageVersion
   };
-  const metaFileUrl = resolveUrl("./meta.json", outDirectoryUrl);
+  const metaFileUrl = resolveUrl$1("./meta.json", outDirectoryUrl);
   let previousOutDirectoryMeta;
 
   try {
@@ -11665,7 +11669,7 @@ const computeExecutionResult = async ({
       // the cancellation error
       let forceStopped = false;
 
-      if (platform.stopForce) {
+      if (platform.stopForce && allocatedMsBeforeForceStop) {
         const stopPromise = (async () => {
           await platform.stop(reason);
           return false;
@@ -12117,7 +12121,7 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
   projectDirectoryUrl,
   babelPluginMap
 }) => {
-  const fileUrl = resolveUrl(relativeUrl, projectDirectoryUrl);
+  const fileUrl = resolveUrl$1(relativeUrl, projectDirectoryUrl);
   const source = await createOperation$1({
     cancellationToken,
     start: () => readFile(fileUrl)
@@ -12733,7 +12737,7 @@ const executePlan = async ({
           relativeUrl
         }) => {
           return urlToMeta({
-            url: resolveUrl(relativeUrl, projectDirectoryUrl),
+            url: resolveUrl$1(relativeUrl, projectDirectoryUrl),
             specifierMetaMap: specifierMetaMapForCover
           }).cover;
         }
@@ -12792,7 +12796,7 @@ const generateCoverageJsonFile = async ({
   coverageJsonFileLog,
   coverageMap
 }) => {
-  const coverageJsonFileUrl = resolveUrl(coverageJsonFileRelativeUrl, projectDirectoryUrl);
+  const coverageJsonFileUrl = resolveUrl$1(coverageJsonFileRelativeUrl, projectDirectoryUrl);
   await writeFile(coverageJsonFileUrl, JSON.stringify(coverageMap, null, "  "));
 
   if (coverageJsonFileLog) {
@@ -13087,7 +13091,8 @@ const generateBundle = async ({
     await ensureEmptyDirectory(bundleDirectoryUrl);
   }
 
-  const chunkId = `${Object.keys(entryPointMap)[0]}.js`;
+  const extension = formatOutputOptions && formatOutputOptions.entryFileNames ? path.extname(formatOutputOptions.entryFileNames) : ".js";
+  const chunkId = `${Object.keys(entryPointMap)[0]}${extension}`;
   env = { ...env,
     chunkId
   };
@@ -13196,6 +13201,7 @@ const generateBundle = async ({
       node,
       browser,
       format,
+      formatOutputOptions,
       minify,
       writeOnFileSystem,
       sourcemapExcludeSources,
@@ -13278,7 +13284,7 @@ const generateEntryPointsBalancerFiles = ({
   projectDirectoryUrl,
   compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
   entryPointMap: {
-    [entryPointName]: urlToRelativeUrl(balancerTemplateFileUrl, projectDirectoryUrl)
+    [entryPointName]: `./${urlToRelativeUrl(balancerTemplateFileUrl, projectDirectoryUrl)}`
   },
   sourcemapExcludeSources: true,
   ...rest,
@@ -13287,7 +13293,7 @@ const generateEntryPointsBalancerFiles = ({
 
 const generateCommonJsBundle = async ({
   bundleDirectoryRelativeUrl = "./dist/commonjs",
-  cjsExtension = false,
+  cjsExtension = true,
   node = true,
   ...rest
 }) => generateBundle({
@@ -13296,10 +13302,11 @@ const generateCommonJsBundle = async ({
   node,
   formatOutputOptions: { ...(cjsExtension ? {
       // by default it's [name].js
-      entryFileNames: `[name].cjs`
+      entryFileNames: `[name].cjs`,
+      chunkFileNames: `[name]-[hash].cjs`
     } : {})
   },
-  balancerTemplateFileUrl: resolveUrl("./src/internal/bundling/commonjs-balancer-template.js", jsenvCoreDirectoryUrl),
+  balancerTemplateFileUrl: resolveUrl$1("./src/internal/bundling/commonjs-balancer-template.js", jsenvCoreDirectoryUrl),
   ...rest
 });
 
@@ -13349,7 +13356,7 @@ const generateSystemJsBundle = async ({
   ...rest
 }) => generateBundle({
   format: "systemjs",
-  balancerTemplateFileUrl: resolveUrl("./src/internal/bundling/systemjs-balancer-template.js", jsenvCoreDirectoryUrl),
+  balancerTemplateFileUrl: resolveUrl$1("./src/internal/bundling/systemjs-balancer-template.js", jsenvCoreDirectoryUrl),
   bundleDirectoryRelativeUrl,
   ...rest
 });
@@ -13707,7 +13714,7 @@ const startChromiumServer = async ({
   outDirectoryRelativeUrl,
   compileServerOrigin
 }) => {
-  const chromiumJsFileUrl = resolveUrl("./src/internal/chromium-launcher/chromium-js-file.js", jsenvCoreDirectoryUrl);
+  const chromiumJsFileUrl = resolveUrl$1("./src/internal/chromium-launcher/chromium-js-file.js", jsenvCoreDirectoryUrl);
   const chromiumJsFileRelativeUrl = urlToRelativeUrl(chromiumJsFileUrl, projectDirectoryUrl);
   const chromiumBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${chromiumJsFileRelativeUrl}`;
   const chromiumBundledJsFileRemoteUrl = `${compileServerOrigin}/${chromiumBundledJsFileRelativeUrl}`;
@@ -13930,7 +13937,7 @@ const extractTextFromPuppeteerMessage = async message => {
   //   return text
 };
 
-const jsenvHtmlFileUrl = resolveUrl("./src/internal/jsenv-html-file.html", jsenvCoreDirectoryUrl);
+const jsenvHtmlFileUrl = resolveUrl$1("./src/internal/jsenv-html-file.html", jsenvCoreDirectoryUrl);
 
 const evalSource = (code, filePath) => {
   const script = new vm.Script(code, {
@@ -13990,7 +13997,7 @@ const evaluateImportExecution = async ({
   errorStackRemapping,
   executionExposureOnWindow
 }) => {
-  const fileUrl = resolveUrl(fileRelativeUrl, projectDirectoryUrl);
+  const fileUrl = resolveUrl$1(fileRelativeUrl, projectDirectoryUrl);
   await assertFilePresence(fileUrl);
 
   if (typeof htmlFileRelativeUrl === "undefined") {
@@ -13999,7 +14006,7 @@ const evaluateImportExecution = async ({
     throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`);
   }
 
-  const htmlFileUrl = resolveUrl(htmlFileRelativeUrl, projectDirectoryUrl);
+  const htmlFileUrl = resolveUrl$1(htmlFileRelativeUrl, projectDirectoryUrl);
   await assertFilePresence(htmlFileUrl);
   const htmlFileClientUrl = `${executionServerOrigin}/${htmlFileRelativeUrl}`;
   await page.goto(htmlFileClientUrl); // https://github.com/GoogleChrome/puppeteer/blob/v1.14.0/docs/api.md#pageevaluatepagefunction-args
@@ -15002,15 +15009,72 @@ function safeDefineProperty(object, propertyNameOrSymbol, descriptor) {
   return source;
 };
 
+const supportsDynamicImport = async () => {
+  // ZXhwb3J0IGRlZmF1bHQgNDI= is Buffer.from("export default 42").toString("base64")
+  try {
+    // eslint-disable-next-line no-eval
+    const asyncFunction = global.eval(`(async () => {
+  const moduleSource = "data:text/javascript;base64,ZXhwb3J0IGRlZmF1bHQgNDI="
+  const namespace = await import(moduleSource)
+  return namespace.default
+})`);
+    const value = await asyncFunction();
+    return value === 42;
+  } catch (e) {
+    return false;
+  }
+};
+
+const getCommandArgument = (argv, name) => {
+  let i = 0;
+
+  while (i < argv.length) {
+    const arg = argv[i];
+
+    if (arg === name) {
+      return {
+        name,
+        index: i,
+        value: ""
+      };
+    }
+
+    if (arg.startsWith(`${name}=`)) {
+      return {
+        name,
+        index: i,
+        value: arg.slice(`${name}=`.length)
+      };
+    }
+
+    i++;
+  }
+
+  return null;
+};
+const removeCommandArgument = (argv, name) => {
+  const argvCopy = argv.slice();
+  const arg = getCommandArgument(argv, name);
+
+  if (arg) {
+    argvCopy.splice(arg.index, 1);
+  }
+
+  return argvCopy;
+};
+
 const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"];
 const createChildExecArgv = async ({
   cancellationToken = createCancellationToken$1(),
   // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
-  debugPort,
-  debugMode,
-  debugModeInheritBreak,
   processExecArgv,
-  processDebugPort
+  processDebugPort,
+  debugPort = 0,
+  debugMode = "inherit",
+  debugModeInheritBreak = true,
+  traceWarnings = "inherit",
+  unhandledRejection = "inherit",
+  jsonModules = "inherit"
 } = {}) => {
   if (typeof debugMode === "string" && AVAILABLE_DEBUG_MODE.indexOf(debugMode) === -1) {
     throw new TypeError(`unexpected debug mode.
@@ -15020,305 +15084,170 @@ ${debugMode}
 ${AVAILABLE_DEBUG_MODE}`);
   }
 
-  const processDebug = parseDebugFromExecArgv(processExecArgv); // this is required because vscode does not
-  // support assigning a child spwaned without a specific port
-
-  const forceFreePortIfZero = async ({
-    debugPort,
-    port
-  }) => {
-    if (debugPort === 0) {
-      const freePort = await findFreePort((port === 0 ? processDebugPort : port) + 1, {
-        cancellationToken
-      });
-      return freePort;
-    }
-
-    return debugPort;
-  };
+  let childExecArgv = processExecArgv.slice();
+  const {
+    debugModeArg,
+    debugPortArg
+  } = getCommandDebugArgs(processExecArgv);
+  let childDebugMode;
 
   if (debugMode === "inherit") {
-    if (processDebug.mode === "none") {
-      return copyExecArgv(processExecArgv);
+    if (debugModeArg) {
+      childDebugMode = debugModeArg.name.slice(2);
+
+      if (debugModeInheritBreak === false) {
+        if (childDebugMode === "--debug-brk") childDebugMode = "--debug";
+        if (childDebugMode === "--inspect-brk") childDebugMode = "--inspect";
+      }
+    } else {
+      childDebugMode = "none";
+    }
+  } else {
+    childDebugMode = debugMode;
+  }
+
+  if (childDebugMode === "none") {
+    // remove debug mode or debug port arg
+    if (debugModeArg) {
+      childExecArgv = removeCommandArgument(childExecArgv, debugModeArg.name);
     }
 
-    const childDebugPort = await forceFreePortIfZero({
-      cancellationToken,
-      debugPort,
-      port: processDebug.port
-    });
-    let {
-      mode
-    } = processDebug;
-
-    if (debugModeInheritBreak === false) {
-      if (mode === "debug-brk") mode = "debug";
-      if (mode === "inspect-brk") mode = "inspect";
+    if (debugPortArg) {
+      childExecArgv = removeCommandArgument(childExecArgv, debugPortArg.name);
     }
+  } else {
+    // this is required because vscode does not
+    // support assigning a child spwaned without a specific port
+    const childDebugPort = debugPort === 0 ? await findFreePort(processDebugPort + 1, {
+      cancellationToken
+    }) : debugPort; // remove process debugMode, it will be replaced with the child debugMode
 
-    return replaceDebugExecArgv(processExecArgv, {
-      processDebug,
-      mode,
-      port: childDebugPort
-    });
-  }
+    const childDebugModeArgName = `--${childDebugMode}`;
 
-  if (debugMode !== "none") {
-    if (processDebug.mode === "none") {
-      const childDebugPort = await forceFreePortIfZero({
-        cancellationToken,
-        debugPort,
-        port: 1000 // TODO: should be random from 0 to 10000 for instance
+    if (debugPortArg) {
+      // replace the debug port arg
+      const childDebugPortArgFull = `--${childDebugMode}-port${portToArgValue(childDebugPort)}`;
+      childExecArgv[debugPortArg.index] = childDebugPortArgFull; // replace debug mode or create it (would be strange to have to create it)
 
-      });
-      return addDebugExecArgv(processExecArgv, {
-        mode: debugMode,
-        port: childDebugPort
-      });
+      if (debugModeArg) {
+        childExecArgv[debugModeArg.index] = childDebugModeArgName;
+      } else {
+        childExecArgv.push(childDebugModeArgName);
+      }
+    } else {
+      const childDebugArgFull = `${childDebugModeArgName}${portToArgValue(childDebugPort)}`; // replace debug mode for child
+
+      if (debugModeArg) {
+        childExecArgv[debugModeArg.index] = childDebugArgFull;
+      } // add debug mode to child
+      else {
+          childExecArgv.push(childDebugArgFull);
+        }
     }
-
-    const childDebugPort = await forceFreePortIfZero({
-      cancellationToken,
-      debugPort,
-      port: processDebug.port
-    });
-    return replaceDebugExecArgv(processExecArgv, {
-      processDebug,
-      mode: debugMode,
-      port: childDebugPort
-    });
   }
 
-  if (processDebug.mode === "none") {
-    return copyExecArgv(processExecArgv);
+  if (traceWarnings !== "inherit") {
+    const traceWarningsArg = getCommandArgument(childExecArgv, "--trace-warnings");
+
+    if (traceWarnings && !traceWarningsArg) {
+      childExecArgv.push("--trace-warnings");
+    } else if (!traceWarnings && traceWarningsArg) {
+      childExecArgv.splice(traceWarningsArg.index, 1);
+    }
+  } // https://nodejs.org/api/cli.html#cli_unhandled_rejections_mode
+
+
+  if (unhandledRejection !== "inherit") {
+    const unhandledRejectionArg = getCommandArgument(childExecArgv, "--unhandled-rejections");
+
+    if (unhandledRejection && !unhandledRejectionArg) {
+      childExecArgv.push(`--unhandled-rejections=${unhandledRejection}`);
+    } else if (unhandledRejection && unhandledRejectionArg) {
+      childExecArgv[unhandledRejectionArg.index] = `--unhandled-rejections=${unhandledRejection}`;
+    } else if (!unhandledRejection && unhandledRejectionArg) {
+      childExecArgv.splice(unhandledRejectionArg.index, 1);
+    }
+  } // https://nodejs.org/api/cli.html#cli_experimental_json_modules
+
+
+  if (jsonModules !== "inherit") {
+    const jsonModulesArg = getCommandArgument(childExecArgv, "--experimental-json-modules");
+
+    if (jsonModules && !jsonModulesArg) {
+      childExecArgv.push(`--experimental-json-modules`);
+    } else if (!jsonModules && jsonModulesArg) {
+      childExecArgv.splice(jsonModulesArg.index, 1);
+    }
   }
 
-  return removeDebugExecArgv(processExecArgv, processDebug);
+  return childExecArgv;
 };
 
-const copyExecArgv = argv => argv.slice();
-
-const replaceDebugExecArgv = (argv, {
-  processDebug,
-  mode,
-  port
-}) => {
-  const argvCopy = argv.slice();
-
-  if (processDebug.portIndex) {
-    // argvCopy[modeIndex] = `--${mode}`
-    argvCopy[processDebug.portIndex] = `--${mode}-port${portToPortSuffix(port)}`;
-    return argvCopy;
-  }
-
-  argvCopy[processDebug.modeIndex] = `--${mode}${portToPortSuffix(port)}`;
-  return argvCopy;
-};
-
-const addDebugExecArgv = (argv, {
-  mode,
-  port
-}) => {
-  const argvCopy = argv.slice();
-  argvCopy.push(`--${mode}${portToPortSuffix(port)}`);
-  return argvCopy;
-};
-
-const removeDebugExecArgv = (argv, {
-  modeIndex,
-  portIndex
-}) => {
-  const argvCopy = argv.slice();
-
-  if (portIndex > -1) {
-    argvCopy.splice(portIndex, 1);
-    argvCopy.splice( // if modeIndex is after portIndex do -1 because we spliced
-    // portIndex just above
-    modeIndex > portIndex ? modeIndex - 1 : modeIndex, 1);
-    return argvCopy;
-  }
-
-  argvCopy.splice(modeIndex);
-  return argvCopy;
-};
-
-const portToPortSuffix = port => {
+const portToArgValue = port => {
   if (typeof port !== "number") return "";
   if (port === 0) return "";
   return `=${port}`;
-};
+}; // https://nodejs.org/en/docs/guides/debugging-getting-started/
 
-const parseDebugFromExecArgv = argv => {
-  let i = 0;
 
-  while (i < argv.length) {
-    const arg = argv[i]; // https://nodejs.org/en/docs/guides/debugging-getting-started/
+const getCommandDebugArgs = argv => {
+  const inspectArg = getCommandArgument(argv, "--inspect");
 
-    if (arg === "--inspect") {
-      return {
-        mode: "inspect",
-        modeIndex: i,
-        ...parseInspectPortFromExecArgv(argv)
-      };
-    }
-
-    const inspectPortMatch = /^--inspect=([0-9]+)$/.exec(arg);
-
-    if (inspectPortMatch) {
-      return {
-        mode: "inspect",
-        modeIndex: i,
-        port: Number(inspectPortMatch[1])
-      };
-    }
-
-    if (arg === "--inspect-brk") {
-      return {
-        // force "inspect" otherwise a breakpoint is hit inside vscode
-        // mode: "inspect",
-        mode: "inspect-brk",
-        modeIndex: i,
-        ...parseInspectPortFromExecArgv(argv)
-      };
-    }
-
-    const inspectBreakMatch = /^--inspect-brk=([0-9]+)$/.exec(arg);
-
-    if (inspectBreakMatch) {
-      return {
-        // force "inspect" otherwise a breakpoint is hit inside vscode
-        // mode: "inspect",
-        mode: "inspect-brk",
-        modeIndex: i,
-        port: Number(inspectBreakMatch[1])
-      };
-    }
-
-    if (arg === "--debug") {
-      return {
-        mode: "debug",
-        modeIndex: i,
-        ...parseDebugPortFromExecArgv(argv)
-      };
-    }
-
-    const debugPortMatch = /^--debug=([0-9]+)$/.exec(arg);
-
-    if (debugPortMatch) {
-      return {
-        mode: "debug",
-        modeIndex: i,
-        port: Number(debugPortMatch[1])
-      };
-    }
-
-    if (arg === "--debug-brk") {
-      return {
-        mode: "debug-brk",
-        modeIndex: i,
-        ...parseDebugPortFromExecArgv(argv)
-      };
-    }
-
-    const debugBreakMatch = /^--debug-brk=([0-9]+)$/.exec(arg);
-
-    if (debugBreakMatch) {
-      return {
-        mode: "debug-brk",
-        modeIndex: i,
-        port: Number(debugBreakMatch[1])
-      };
-    }
-
-    i++;
-  }
-
-  return {
-    mode: "none"
-  };
-};
-
-const parseInspectPortFromExecArgv = argv => {
-  const portMatch = arrayFindMatch(argv, arg => {
-    if (arg === "--inspect-port") return {
-      port: 0
-    };
-    const match = /^--inspect-port=([0-9]+)$/.exec(arg);
-    if (match) return {
-      port: Number(match[1])
-    };
-    return null;
-  });
-
-  if (portMatch) {
+  if (inspectArg) {
     return {
-      port: portMatch.port,
-      portIndex: portMatch.arrayIndex
+      debugModeArg: inspectArg,
+      debugPortArg: getCommandArgument(argv, "--inspect-port")
     };
   }
 
-  return {
-    port: 0
-  };
-};
+  const inspectBreakArg = getCommandArgument(argv, "--inspect-brk");
 
-const parseDebugPortFromExecArgv = argv => {
-  const portMatch = arrayFindMatch(argv, arg => {
-    if (arg === "--debug-port") return {
-      port: 0
-    };
-    const match = /^--debug-port=([0-9]+)$/.exec(arg);
-    if (match) return {
-      port: Number(match[1])
-    };
-    return null;
-  });
-
-  if (portMatch) {
+  if (inspectBreakArg) {
     return {
-      port: portMatch.port,
-      portIndex: portMatch.arrayIndex
+      debugModeArg: inspectBreakArg,
+      debugPortArg: getCommandArgument(argv, "--inspect-port")
     };
   }
 
-  return {
-    port: 0
-  };
-};
+  const debugArg = getCommandArgument(argv, "--debug");
 
-const arrayFindMatch = (array, match) => {
-  let i = 0;
-
-  while (i < array.length) {
-    const value = array[i];
-    i++;
-    const matchResult = match(value);
-
-    if (matchResult) {
-      return { ...matchResult,
-        arrayIndex: i
-      };
-    }
+  if (debugArg) {
+    return {
+      debugModeArg: debugArg,
+      debugPortArg: getCommandArgument(argv, "--debug-port")
+    };
   }
 
-  return null;
+  const debugBreakArg = getCommandArgument(argv, "--debug-brk");
+
+  if (debugBreakArg) {
+    return {
+      debugModeArg: debugBreakArg,
+      debugPortArg: getCommandArgument(argv, "--debug-port")
+    };
+  }
+
+  return {};
 };
 
 /* eslint-disable import/max-dependencies */
 const EVALUATION_STATUS_OK = "evaluation-ok";
+const nodeJsFileUrl = resolveUrl$1("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl);
 const launchNode = async ({
   cancellationToken = createCancellationToken$1(),
-  // logger,
+  logger,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
-  debugPort = 0,
-  debugMode = "inherit",
-  debugModeInheritBreak = true,
+  debugPort,
+  debugMode,
+  debugModeInheritBreak,
+  traceWarnings,
+  unhandledRejection,
+  jsonModules,
+  env,
   remap = true,
-  traceWarnings = true,
-  collectCoverage = false,
-  env
+  collectCoverage = false
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`);
@@ -15339,27 +15268,30 @@ const launchNode = async ({
     throw new TypeError(`env must be an object, got ${env}`);
   }
 
-  const nodeControllableFileUrl = resolveUrl("./src/internal/node-launcher/nodeControllableFile.js", jsenvCoreDirectoryUrl);
+  const dynamicImportSupported = await supportsDynamicImport();
+  const nodeControllableFileUrl = resolveUrl$1(dynamicImportSupported ? "./src/internal/node-launcher/nodeControllableFile.js" : "./src/internal/node-launcher/nodeControllableFile.cjs", jsenvCoreDirectoryUrl);
   await assertFilePresence(nodeControllableFileUrl);
   const execArgv = await createChildExecArgv({
     cancellationToken,
+    processExecArgv: process.execArgv,
+    processDebugPort: process.debugPort,
     debugPort,
     debugMode,
     debugModeInheritBreak,
-    processExecArgv: process.execArgv,
-    processDebugPort: process.debugPort
+    traceWarnings,
+    unhandledRejection,
+    jsonModules
   });
-
-  if (traceWarnings && !execArgv.includes("--trace-warnings")) {
-    execArgv.push("--trace-warnings");
-  }
-
   env.COVERAGE_ENABLED = collectCoverage;
   const child = child_process.fork(urlToFileSystemPath(nodeControllableFileUrl), {
     execArgv,
     // silent: true
     stdio: "pipe",
     env
+  });
+  logger.info(`${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(nodeControllableFileUrl)}`);
+  const childReadyPromise = new Promise(resolve => {
+    registerChildMessage(child, "ready", resolve);
   });
   const consoleCallbackArray = [];
 
@@ -15450,25 +15382,21 @@ const launchNode = async ({
     executionId
   }) => {
     const execute = async () => {
-      const nodeJsFileUrl = resolveUrl("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl);
-      const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl);
-      const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`;
-      const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`;
-      const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`;
-      await fetchUrl(nodeBundledJsFileRemoteUrl, {
-        cancellationToken
-      });
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
         const evaluationResultRegistration = registerChildMessage(child, "evaluate-result", ({
           status,
           value
         }) => {
+          logger.debug(`child process sent the following evaluation result.
+--- status ---
+${status}
+--- value ---
+${value}`);
           evaluationResultRegistration.unregister();
           if (status === EVALUATION_STATUS_OK) resolve(value);else reject(value);
         });
-        sendToChild(child, "evaluate", createNodeIIFEString({
-          nodeJsFileUrl,
-          nodeBundledJsFileUrl,
+        const executeParams = {
+          jsenvCoreDirectoryUrl,
           projectDirectoryUrl,
           outDirectoryRelativeUrl,
           fileRelativeUrl,
@@ -15477,7 +15405,28 @@ const launchNode = async ({
           collectCoverage,
           executionId,
           remap
-        }));
+        };
+        const source = await generateSourceToEvaluate({
+          dynamicImportSupported,
+          cancellationToken,
+          projectDirectoryUrl,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+          executeParams
+        });
+        logger.debug(`ask child process to evaluate
+--- source ---
+${source}`);
+        await childReadyPromise;
+
+        try {
+          await sendToChild(child, "evaluate", source);
+        } catch (e) {
+          logger.error(`error while sending message to child
+--- error stack ---
+${e.stack}`);
+          throw e;
+        }
       });
     };
 
@@ -15549,13 +15498,21 @@ const evalException$1 = (exceptionSource, {
   return error;
 };
 
-const sendToChild = (child, type, data) => {
+const sendToChild = async (child, type, data) => {
   const source = uneval(data, {
     functionAllowed: true
   });
-  child.send({
-    type,
-    data: source
+  return new Promise((resolve, reject) => {
+    child.send({
+      type,
+      data: source
+    }, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
   });
 };
 
@@ -15563,7 +15520,7 @@ const registerChildMessage = (child, type, callback) => {
   return registerChildEvent(child, "message", message => {
     if (message.type === type) {
       // eslint-disable-next-line no-eval
-      callback(eval(`(${message.data})`));
+      callback(message.data ? eval(`(${message.data})`) : "");
     }
   });
 };
@@ -15589,40 +15546,53 @@ const createExitWithFailureCodeError = code => {
   return new Error(`child exited with ${code}`);
 };
 
-const createNodeIIFEString = ({
-  nodeJsFileUrl,
-  nodeBundledJsFileUrl,
+const generateSourceToEvaluate = async ({
+  dynamicImportSupported,
+  executeParams,
+  cancellationToken,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
-  fileRelativeUrl,
-  compileServerOrigin,
-  collectNamespace,
-  collectCoverage,
-  executionId,
-  remap
-}) => `(() => {
-  const fs = require('fs')
+  compileServerOrigin
+}) => {
+  if (dynamicImportSupported) {
+    return `import { execute } from ${JSON.stringify(nodeJsFileUrl)}
+
+export default execute(${JSON.stringify(executeParams, null, "    ")})`;
+  }
+
+  const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl);
+  const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`;
+  const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`;
+  const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`;
+  await fetchUrl(nodeBundledJsFileRemoteUrl, {
+    cancellationToken
+  }); // The compiled nodePlatform file will be somewhere else in the filesystem
+  // than the original nodePlatform file.
+  // It is important for the compiled file to be able to require
+  // node modules that original file could access
+  // hence the requireCompiledFileAsOriginalFile
+
+  return `(() => {
+  const { readFileSync } = require("fs")
   const Module = require('module')
+  const { dirname } = require("path")
+
+  const requireCompiledFileAsOriginalFile = (compiledFilePath, originalFilePath) => {
+    const fileContent = String(readFileSync(compiledFilePath))
+    const moduleObject = new Module(compiledFilePath)
+    moduleObject.paths = Module._nodeModulePaths(dirname(originalFilePath))
+    moduleObject._compile(fileContent, compiledFilePath)
+    return moduleObject.exports
+  }
+
   const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
   const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
-  const fileContent = String(fs.readFileSync(nodeBundledJsFilePath))
-  const moduleObject = new Module(nodeBundledJsFilePath)
-  moduleObject.paths = Module._nodeModulePaths(require('path').dirname(nodeFilePath));
-  moduleObject._compile(fileContent, nodeBundledJsFilePath)
-  const { execute } = moduleObject.exports
-
-  return execute(${JSON.stringify({
-  jsenvCoreDirectoryUrl,
-  projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  fileRelativeUrl,
-  compileServerOrigin,
-  collectNamespace,
-  collectCoverage,
-  executionId,
-  remap
-}, null, "    ")})
+  const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
+  return {
+    default: execute(${JSON.stringify(executeParams, null, "    ")})
+  }
 })()`;
+};
 
 const evalSource$1 = (code, href) => {
   const script = new vm.Script(code, {
@@ -15702,7 +15672,7 @@ const serveBrowserSelfExecute = async ({
   request,
   babelPluginMap
 }) => {
-  const browserSelfExecuteTemplateFileUrl = resolveUrl("./src/internal/exploring/browserSelfExecuteTemplate.js", jsenvCoreDirectoryUrl);
+  const browserSelfExecuteTemplateFileUrl = resolveUrl$1("./src/internal/exploring/browserSelfExecuteTemplate.js", jsenvCoreDirectoryUrl);
   const browserSelfExecuteDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}browser-self-execute/`;
   const browserSelfExecuteDirectoryRemoteUrl = resolveDirectoryUrl(browserSelfExecuteDirectoryRelativeUrl, request.origin);
   return firstService(() => {
@@ -15861,7 +15831,7 @@ const startExploring = async ({
     throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`);
   }
 
-  const htmlFileUrl = resolveUrl(htmlFileRelativeUrl, projectDirectoryUrl);
+  const htmlFileUrl = resolveUrl$1(htmlFileRelativeUrl, projectDirectoryUrl);
   await assertFilePresence(htmlFileUrl);
   const stopExploringCancellationSource = createCancellationSource();
   cancellationToken = composeCancellationToken(cancellationToken, stopExploringCancellationSource.token);
@@ -15879,6 +15849,7 @@ const startExploring = async ({
     const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
+      logStart: false,
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
@@ -15906,26 +15877,27 @@ const startExploring = async ({
     const specifierMetaMapForExplorable = normalizeSpecifierMetaMap(specifierMetaMapRelativeForExplorable, projectDirectoryUrl);
 
     if (livereloading) {
-      const unregisterDirectoryLifecyle = registerDirectoryLifecycle(urlToFileSystemPath(projectDirectoryUrl), {
+      const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryUrl, {
         watchDescription: { ...watchConfig,
           [compileServer.jsenvDirectoryRelativeUrl]: false
         },
         updated: ({
-          relativePath: relativeUrl
+          relativeUrl
         }) => {
           if (projectFileSet.has(relativeUrl)) {
             projectFileUpdatedCallback(relativeUrl);
           }
         },
         removed: ({
-          relativePath: relativeUrl
+          relativeUrl
         }) => {
           if (projectFileSet.has(relativeUrl)) {
             projectFileSet.delete(relativeUrl);
             projectFileRemovedCallback(relativeUrl);
           }
         },
-        keepProcessAlive: false
+        keepProcessAlive: false,
+        recursive: true
       });
       cancellationToken.register(unregisterDirectoryLifecyle);
       const projectFileSet = new Set();
@@ -16091,8 +16063,8 @@ const startExploring = async ({
     // that can be dynamic
     // otherwise the cached bundles would still target the previous compile server origin
 
-    const jsenvDirectoryUrl = resolveUrl(compileServerJsenvDirectoryRelativeUrl, projectDirectoryUrl);
-    const browserDynamicDataFileUrl = resolveUrl("./browser-execute-dynamic-data.json", jsenvDirectoryUrl);
+    const jsenvDirectoryUrl = resolveUrl$1(compileServerJsenvDirectoryRelativeUrl, projectDirectoryUrl);
+    const browserDynamicDataFileUrl = resolveUrl$1("./browser-execute-dynamic-data.json", jsenvDirectoryUrl);
     await writeFile(browserDynamicDataFileUrl, JSON.stringify(getBrowserExecutionDynamicData({
       projectDirectoryUrl,
       compileServerOrigin

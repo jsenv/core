@@ -5,8 +5,10 @@
   - [1 - Setup basic project](#1---Setup-basic-project)
   - [2 - Executing file on chromium](#2---Executing-file-on-chromium)
   - [3 - Executing file on Node.js](#3---Executing-file-on-Node.js)
-  - [4 - Debug file inside vscode](#4---Debug-file-inside-vscode)
-    - [Debugger inconsistency](#Debugger-inconsistency)
+  - [4 - Debug file from vscode](#4---Debug-file-from-vscode)
+    - [Debug chrome execution](#Debug-chrome-execution)
+    - [Debug node execution](#Debug-node-execution)
+      - [Node debugger inconsistency](#Node-debugger-inconsistency)
 - [Execute api](#Execute-api)
 
 # Execute concrete example
@@ -44,10 +46,58 @@ node ./execute-node.js index.js
 
 `node` will be logged in your terminal.
 
-## 4 - Debug file inside vscode
+## 4 - Debug file from vscode
 
 If you are using vscode you can also debug the file execution within your editor.
-This is what is shown in [File execution recorded](#-File-execution-recorded).
+
+### Debug chrome execution
+
+You can debug file being executed in chrome within vscode.
+
+![vscode debug chrome gif](../example-asset/vscode-debug-chrome.gif)
+
+To achieve that you need a `.vscode/launch.json` file with the following content.
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "jsenv-chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:3456/node_modules/@jsenv/core/src/internal/jsenv-html-file.html?file=${relativeFile}",
+      "runtimeArgs": ["--allow-file-access-from-files", "--disable-web-security"],
+      "sourceMaps": true,
+      "webRoot": "${workspaceFolder}",
+      "smartStep": true,
+      "skipFiles": ["node_modules/@jsenv/core/**", "<node_internals>/**"]
+    }
+  ]
+}
+```
+
+And a file starting the server capable to execute any file
+
+```js
+const { startExploring } = require("@jsenv/core")
+
+startExploring({
+  projectDirectoryUrl: __dirname,
+  port: 3456,
+})
+```
+
+Then you must execute that file to run the server.
+Once server is started you can use the jsenv-chrome debug configuration to debug your files.
+
+> There is an issue to improve chrome debugging at https://github.com/jsenv/jsenv-core/issues/54
+
+### Debug node execution
+
+You can debug file being executed in a node process withing vscode.
+
+![vscode debug node gif](../example-asset/vscode-debug-node.gif)
 
 To achieve that you need a `.vscode/launch.json` file with the following content.
 
@@ -75,7 +125,7 @@ If you already have one, just add the configuration without replacing the entire
 You also have to create the `script/run-node/run-node.js` file.
 Jsenv itself use it so you can find it at [script/run-node/run-node.js](../../script/run-node/run-node.js).
 
-### Debugger inconsistency
+#### Node debugger inconsistency
 
 Sometimes vscode fails to auto attach child process debugging session.<br />
 When it happens you must manually attach it.<br />

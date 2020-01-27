@@ -26,7 +26,12 @@
       "protocol": "inspector",
       "program": "${file}",
       "runtimeVersion": "13.7.0",
-      "runtimeArgs": ["--experimental-json-modules", "--unhandled-rejections=strict"],
+      "runtimeArgs": [
+        "--experimental-json-modules",
+        "--unhandled-rejections=strict",
+        // this is to disabled experimental warning
+        "--no-warnings"
+      ],
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
       "smartStep": true,
