@@ -121,7 +121,7 @@ export const createJsenvRollupPlugin = async ({
         } else {
           const httpsIndex = rollupUrl.indexOf("https:/")
           if (httpsIndex > -1) {
-            url = `http://${rollupUrl.slice(httpIndex + `http:/`.length)}`
+            url = `https://${rollupUrl.slice(httpsIndex + `https:/`.length)}`
           } else {
             url = rollupUrl
           }
