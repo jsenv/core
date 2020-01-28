@@ -43,13 +43,11 @@ const {
   assert({ actual, expected })
 }
 {
-  const actual = executionResult.error.stack
+  const stack = executionResult.error.stack
   const expected = `Error: error
   at triggerError (${compileServer.origin}/test/startExploring/throw/trigger-error.js:2:9)
-  at Object.triggerError (${compileServer.origin}/test/startExploring/throw/throw.main.js:3:1)
-  at call (${compileServer.origin}/src/internal/platform/s.js:358:34)
-  at doExec (${compileServer.origin}/src/internal/platform/s.js:354:12)
-  at postOrderExec (${compileServer.origin}/src/internal/platform/s.js:317:14)`
+  at Object.triggerError (${compileServer.origin}/test/startExploring/throw/throw.main.js:3:1)`
+  const actual = stack.slice(0, expected.length)
   assert({ actual, expected })
 }
 

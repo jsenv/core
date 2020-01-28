@@ -37,27 +37,9 @@ const result = await launchAndExecute({
     }),
   mirrorConsole: true,
 })
-
 const stack = result.error.stack
 const expected = `Error: error
   at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
-  at Object.triggerError (${testDirectoryUrl}error-stack.js:3:1)
-  at call (${jsenvCoreDirectoryUrl}src/internal/platform/s.js:358:34)
-  at doExec (${jsenvCoreDirectoryUrl}src/internal/platform/s.js:354:12)
-  at postOrderExec (${jsenvCoreDirectoryUrl}src/internal/platform/s.js:317:14)
-  at processTicksAndRejections (internal/process/task_queues.js:`
+  at Object.triggerError (${testDirectoryUrl}error-stack.js:3:1)`
 const actual = stack.slice(0, expected.length)
-try {
-  assert({ actual, expected })
-} catch (e) {
-  // allow an other stack trace for node13
-  const expected = `Error: error
-  at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
-  at Object.triggerError (${testDirectoryUrl}error-stack.js:3:1)
-  at doExec (${jsenvCoreDirectoryUrl}src/internal/platform/s.js:358:34)
-  at postOrderExec (${jsenvCoreDirectoryUrl}src/internal/platform/s.js:354:12)
-  at ${jsenvCoreDirectoryUrl}/internal/platform/s.js:317:14
-  at processTicksAndRejections (internal/process/task_queues.js:`
-  const actual = stack.slice(0, expected.length)
-  assert({ actual, expected })
-}
+assert({ actual, expected })
