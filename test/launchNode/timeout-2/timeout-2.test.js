@@ -10,7 +10,6 @@ import {
   EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
-import { removeDebuggerLogs } from "../../removeDebuggerLogs.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -20,6 +19,7 @@ const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
+  // jsenvDirectoryClean: false,
   jsenvDirectoryRelativeUrl,
 })
 
@@ -33,22 +33,9 @@ const actual = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
-  allocatedMs: 12000,
-  captureConsole: true,
+  allocatedMs: 4000,
 })
-actual.consoleCalls = removeDebuggerLogs(actual.consoleCalls)
 const expected = {
   status: "timedout",
-  consoleCalls:
-    // on windows we don't get the console calls in that specific case, ignore for now
-    process.platform === "win32"
-      ? actual.consoleCalls
-      : [
-          {
-            type: "log",
-            text: `foo
-`,
-          },
-        ],
 }
 assert({ actual, expected })
