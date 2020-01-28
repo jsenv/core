@@ -34,21 +34,9 @@ const actual = await launchAndExecute({
       compileServerOrigin,
     }),
   allocatedMs: 12000,
-  captureConsole: true,
 })
 actual.consoleCalls = removeDebuggerLogs(actual.consoleCalls)
 const expected = {
   status: "timedout",
-  consoleCalls:
-    // on windows we don't get the console calls in that specific case, ignore for now
-    process.platform === "win32"
-      ? actual.consoleCalls
-      : [
-          {
-            type: "log",
-            text: `foo
-`,
-          },
-        ],
 }
 assert({ actual, expected })

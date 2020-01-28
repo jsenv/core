@@ -2,7 +2,7 @@
 import { Script } from "vm"
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
-import { createCancellationToken } from "@jsenv/cancellation"
+import { createCancellationToken, isCancelError } from "@jsenv/cancellation"
 import { fetchUrl } from "@jsenv/server"
 import { supportsDynamicImport } from "./internal/supportsDynamicImport.js"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "./internal/CONSTANTS.js"
@@ -50,6 +50,21 @@ export const launchNode = async ({
   } else if (typeof env !== "object") {
     throw new TypeError(`env must be an object, got ${env}`)
   }
+
+  let removeUnhandledRejectionListener = () => {}
+  cancellationToken.register(() => {
+    const unhandledRejectionListener = (rejectedValue) => {
+      if (isCancelError(rejectedValue)) {
+        return
+      }
+      throw rejectedValue
+    }
+
+    process.once("unhandledRejection", unhandledRejectionListener)
+    removeUnhandledRejectionListener = () => {
+      process.removeListener("unhandledRejection", unhandledRejectionListener)
+    }
+  })
 
   const dynamicImportSupported = await supportsDynamicImport()
   const nodeControllableFileUrl = resolveUrl(
@@ -126,9 +141,11 @@ export const launchNode = async ({
     errorEventRegistration.unregister()
     exitErrorRegistration.unregister()
     emitError(error)
+    removeUnhandledRejectionListener()
   })
   // process.exit(1) from child
   const exitErrorRegistration = registerChildEvent(child, "exit", (code) => {
+    removeUnhandledRejectionListener()
     if (code !== 0 && code !== null) {
       errorEventRegistration.unregister()
       exitErrorRegistration.unregister()
@@ -139,6 +156,7 @@ export const launchNode = async ({
   // https://nodejs.org/api/child_process.html#child_process_event_disconnect
   const registerDisconnectCallback = (callback) => {
     const registration = registerChildEvent(child, "disconnect", () => {
+      removeUnhandledRejectionListener()
       callback()
     })
     return () => {

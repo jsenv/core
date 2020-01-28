@@ -297,7 +297,9 @@ ${moduleUrl}`)
   }
 
   const getModule = async (moduleUrl) => {
-    const response = await fetchUrl(moduleUrl, { cancellationToken })
+    const response = await fetchUrl(moduleUrl, {
+      cancellationToken,
+    })
     const okValidation = validateResponseStatusIsOk(response)
 
     if (!okValidation.valid) {
