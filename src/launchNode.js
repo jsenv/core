@@ -3,7 +3,6 @@ import { Script } from "vm"
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken, isCancelError } from "@jsenv/cancellation"
-import { fetchUrl } from "@jsenv/server"
 import { supportsDynamicImport } from "./internal/supportsDynamicImport.js"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "./internal/CONSTANTS.js"
 import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
@@ -350,7 +349,6 @@ const generateSourceToEvaluate = async ({
   dynamicImportSupported,
   executeParams,
 
-  cancellationToken,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
@@ -365,9 +363,6 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`
   const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`
   const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`
   const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`
-  await fetchUrl(nodeBundledJsFileRemoteUrl, {
-    cancellationToken,
-  })
 
   // The compiled nodePlatform file will be somewhere else in the filesystem
   // than the original nodePlatform file.
@@ -378,6 +373,17 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`
   const { readFileSync } = require("fs")
   const Module = require('module')
   const { dirname } = require("path")
+  const { fetchUrl } = require("@jsenv/server")
+
+  const run = async () => {
+    await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)})
+
+    const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
+    const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
+    const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
+
+    return execute(${JSON.stringify(executeParams, null, "    ")})
+  }
 
   const requireCompiledFileAsOriginalFile = (compiledFilePath, originalFilePath) => {
     const fileContent = String(readFileSync(compiledFilePath))
@@ -387,11 +393,8 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`
     return moduleObject.exports
   }
 
-  const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
-  const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
-  const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
   return {
-    default: execute(${JSON.stringify(executeParams, null, "    ")})
+    default: run()
   }
 })()`
 }

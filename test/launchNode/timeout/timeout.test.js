@@ -10,7 +10,6 @@ import {
   EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
-import { removeDebuggerLogs } from "../../removeDebuggerLogs.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -35,7 +34,6 @@ const actual = await launchAndExecute({
     }),
   allocatedMs: 12000,
 })
-actual.consoleCalls = removeDebuggerLogs(actual.consoleCalls)
 const expected = {
   status: "timedout",
 }
