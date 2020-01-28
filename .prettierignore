@@ -6,6 +6,7 @@
 /helpers/chromium/
 /node_modules/
 /src/**/s.js
+/src/**/dynamicImportSource.js
 /test/**/syntax-error.js
 /test/**/syntax-error.main.js
 /importMap.json
