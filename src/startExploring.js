@@ -92,7 +92,6 @@ export const startExploring = async ({
     const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
-      logStart: false,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,

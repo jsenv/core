@@ -35,7 +35,6 @@ import { urlIsAsset } from "./urlIsAsset.js"
 export const startCompileServer = async ({
   cancellationToken = createCancellationToken(),
   compileServerLogLevel,
-  logStart,
 
   // js compile options
   transformTopLevelAwait = true,
@@ -171,7 +170,8 @@ ${projectDirectoryUrl}`)
     startServer({
       cancellationToken,
       logLevel: compileServerLogLevel,
-      logStart,
+      serverName: "compile server",
+
       protocol,
       privateKey,
       certificate,

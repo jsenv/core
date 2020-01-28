@@ -51,7 +51,7 @@ npm install
 node ./start-exploring.js
 ```
 
-A first main server will start. This one is used by the whole jsenv project.<br />
+A first server will start. This one is used by the whole jsenv project.<br />
 A second server will start. That's the one we're interested in right now. The url `http://127.0.0.1:3456` is logged in your terminal.<br />
 
 Once server is started you can navigate to `http://127.0.0.1:3456` and you will see an html page listing the files you can explore.
