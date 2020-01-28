@@ -5,6 +5,15 @@
 - [Exploring concrete example](#Exploring-concrete-example)
   - [1 - Setup basic project](#1---Setup-basic-project)
   - [2 - Explore basic project](#2---Explore-basic-project)
+- [startExploring example](#startExploring-example)
+- [startExploring parameters](#startExploring-parameters)
+  - [explorableConfig](#ExplorableConfig)
+  - [htmlFileRelativeUrl](#htmlFileRelativeUrl)
+  - [livereloading](#livereloading)
+  - [watchConfig](#watchConfig)
+  - [Server parameters](#Server-parameters)
+  - [Shared parameters](#Shared-parameters)
+- [startExploring return value](#startExploring-return-value)
 
 # Exploring presentation
 
@@ -63,5 +72,119 @@ Once server is started you can navigate to `http://127.0.0.1:3456` and you will 
 - If you go to `http://127.0.0.1:3456/src/text.js` nothing special will happen because `/src/text.js` is just a module with an export default.<br />
   It shows that even if your file do not render anything, you still can use this functionnality to debug your file.
 
-If you want to know more about `exploring`, there is a dedicated page for that.<br />
-— see [startExploring api documentation](./api.md)
+# startExploring example
+
+`startExploring` is an async function starting a development server that transforms project files configured as explorable into an executable html page.
+
+```js
+import { startExploring } from "@jsenv/core"
+
+startExploring({
+  projectDirectoryUrl: "file:///Users/you/project/",
+  explorableConfig: {
+    "./src/**/*.js": true,
+    "./src/whatever/**/*.js": false,
+  },
+})
+```
+
+— source code at [src/startExploring.js](../../src/startExploring.js).
+
+# startExploring Parameters
+
+`startExploring` uses named parameters documented here.
+
+Each parameter got a dedicated section to shortly explain what it does and if it's required or optional.
+
+## explorableConfig
+
+`explorableConfig` parameter is an object used to configure what files are explorable in your project. This is an optional parameter with a default value configured to match jsenv file structure. The exact value can be found in [src/jsenvExplorableConfig.js](../../src/jsenvExplorableConfig.js).
+
+This parameter must be an object where keys are relative or absolute urls. These urls are allowed to contain `*` and `**` that will be used for pattern matching as documented in https://github.com/jsenv/jsenv-url-meta#pattern-matching-behaviour
+
+## htmlFileRelativeUrl
+
+`htmlFileRelativeUrl` parameter is a relative url string leading to an html file used as template to execute JavaScript files. This is an optional parameter with a default leading to [src/internal/jsenv-html-file.html](../../src/internal/jsenv-html-file.html).
+
+If you to use a custom html file be sure it contains the following script tag:
+
+```html
+<script src="/.jsenv/browser-script.js"></script>
+```
+
+This is how the server can arbitrary execute some javaScript inside your custom html file.
+
+## livereloading
+
+`livereloading` parameter is a boolean controlling if the browser will auto reload when a file is saved. This is an optional parameter with a default value of `false`.
+
+Note that any request to a file inside your project is also considered as a dependency that can triggers a reload. It means if your html file or js file loads image or css these files will also be considered as dependency and trigger livereloading when saved.
+
+## watchConfig
+
+`watchConfig` parameter is an object configuring which files are watched to trigger livereloading. This is an optional parameter with a default value configured to watch everything except git and node_modules directories. `watchConfig` reuse [explorableConfig](#explorableConfig) shape meaning keys are urls with pattern matching.
+
+Example of a custom `watchConfig`:
+
+```js
+{
+  "./*/**": false,
+  "./*": true,
+  "./src/**/*": true,
+}
+```
+
+## Server parameters
+
+Exploring uses two server:
+
+- A server used by jsenv to compile file dynamically called `compile server`.
+- A server used to explore your project files called `exploring server`.
+
+The defaults values let you use exploring right away but you might want to configure the exploring server port or use your own https certificate for instance.
+
+The following parameter controls the exploring server:
+
+- [protocol](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#protocol)
+- [ip](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#ip)
+- [port](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port)
+- [forcePort](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#forcePort)
+- [logLevel](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#logLevel)
+
+The following parameter controls the compile server:
+
+- [compileServerPort](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port)
+- [compileServerLogLevel](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#logLevel)
+
+# Shared parameters
+
+To avoid duplication some parameter are linked to a generic documentation.
+
+- [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
+- [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
+- [babelPluginMap](../shared-parameters.md#babelPluginMap)
+- [convertMap](../shared-parameters.md#convertMap)
+- [importMapFileRelativeUrl](../shared-parameters.md#importMapFileRelativeUrl)
+- [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
+
+# startExploring return value
+
+Using the return value is an advanced use case, in theory you should not need this.
+
+`startExploring` return signature is `{ exploringServer, compileServer }`.
+
+`exploringServer` and `compileServer` are server created by `@jsenv/server`. You can read the `@jsenv/server` documentation on the return value to see the shape of these objects.
+https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#startServer-return-value.
+
+Code below shows how you might use return value.
+
+```js
+import { startExploring } from "@jsenv/core"
+
+const { exploringServer, compileServer } = await startExploring({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+})
+
+exploringServer.stop()
+compileServer.stop()
+```
