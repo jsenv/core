@@ -1,8 +1,6 @@
-import {
-  createCancellationTokenForProcessSIGINT,
-  catchAsyncFunctionCancellation,
-} from "@jsenv/cancellation"
+import { createCancellationTokenForProcessSIGINT } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
+import { wrapAsyncFunction } from "./internal/wrapAsyncFunction.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
@@ -34,21 +32,21 @@ export const execute = async ({
   stopPlatformAfterExecute = true,
   ...rest
 }) => {
-  const launchLogger = createLogger({ logLevel: launchLogLevel })
-  const executeLogger = createLogger({ logLevel: executeLogLevel })
+  return wrapAsyncFunction(async () => {
+    const launchLogger = createLogger({ logLevel: launchLogLevel })
+    const executeLogger = createLogger({ logLevel: executeLogLevel })
 
-  projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
-  await assertProjectDirectoryExists({ projectDirectoryUrl })
+    projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
+    await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  if (typeof fileRelativeUrl !== "string") {
-    throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`)
-  }
-  fileRelativeUrl = fileRelativeUrl.replace(/\\/g, "/")
-  if (typeof launch !== "function") {
-    throw new TypeError(`launch must be a function, got ${launch}`)
-  }
+    if (typeof fileRelativeUrl !== "string") {
+      throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`)
+    }
+    fileRelativeUrl = fileRelativeUrl.replace(/\\/g, "/")
+    if (typeof launch !== "function") {
+      throw new TypeError(`launch must be a function, got ${launch}`)
+    }
 
-  return catchAsyncFunctionCancellation(async () => {
     const { outDirectoryRelativeUrl, origin: compileServerOrigin } = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,

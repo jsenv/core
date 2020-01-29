@@ -1,10 +1,8 @@
 /* eslint-disable import/max-dependencies */
-import {
-  catchAsyncFunctionCancellation,
-  createCancellationTokenForProcessSIGINT,
-} from "@jsenv/cancellation"
+import { createCancellationTokenForProcessSIGINT } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/util"
+import { wrapAsyncFunction } from "./internal/wrapAsyncFunction.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { executePlan } from "./internal/executing/executePlan.js"
 import { executionIsPassed } from "./internal/executing/executionIsPassed.js"
@@ -55,61 +53,61 @@ export const executeTestPlan = async ({
   coverageHtmlDirectoryRelativeUrl = "./coverage",
   coverageHtmlDirectoryIndexLog = true,
 }) => {
-  const logger = createLogger({ logLevel })
-  const launchLogger = createLogger({ logLevel: launchLogLevel })
-  const executeLogger = createLogger({ logLevel: executeLogLevel })
+  return wrapAsyncFunction(async () => {
+    const logger = createLogger({ logLevel })
+    const launchLogger = createLogger({ logLevel: launchLogLevel })
+    const executeLogger = createLogger({ logLevel: executeLogLevel })
 
-  projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
-  await assertProjectDirectoryExists({ projectDirectoryUrl })
+    projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
+    await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  if (typeof testPlan !== "object") {
-    throw new Error(`testPlan must be an object, got ${testPlan}`)
-  }
-
-  if (coverage) {
-    if (typeof coverageConfig !== "object") {
-      throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`)
+    if (typeof testPlan !== "object") {
+      throw new Error(`testPlan must be an object, got ${testPlan}`)
     }
-    if (Object.keys(coverageConfig).length === 0) {
-      logger.warn(
-        `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
-      )
-    }
-    if (!coverageAndExecutionAllowed) {
-      const fileSpecifierMapForExecute = normalizeSpecifierMetaMap(
-        metaMapToSpecifierMetaMap({
-          execute: testPlan,
-        }),
-        "file:///",
-      )
 
-      const fileSpecifierMapForCover = normalizeSpecifierMetaMap(
-        metaMapToSpecifierMetaMap({
-          cover: coverageConfig,
-        }),
-        "file:///",
-      )
+    if (coverage) {
+      if (typeof coverageConfig !== "object") {
+        throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`)
+      }
+      if (Object.keys(coverageConfig).length === 0) {
+        logger.warn(
+          `coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`,
+        )
+      }
+      if (!coverageAndExecutionAllowed) {
+        const fileSpecifierMapForExecute = normalizeSpecifierMetaMap(
+          metaMapToSpecifierMetaMap({
+            execute: testPlan,
+          }),
+          "file:///",
+        )
 
-      const fileSpecifierMatchingCoverAndExecuteArray = Object.keys(
-        fileSpecifierMapForExecute,
-      ).filter((fileUrl) => {
-        return urlToMeta({
-          url: fileUrl,
-          specifierMetaMap: fileSpecifierMapForCover,
-        }).cover
-      })
+        const fileSpecifierMapForCover = normalizeSpecifierMetaMap(
+          metaMapToSpecifierMetaMap({
+            cover: coverageConfig,
+          }),
+          "file:///",
+        )
 
-      if (fileSpecifierMatchingCoverAndExecuteArray.length) {
-        // I think it is an error, it would be strange, for a given file
-        // to be both covered and executed
-        throw new Error(`some file will be both covered and executed
+        const fileSpecifierMatchingCoverAndExecuteArray = Object.keys(
+          fileSpecifierMapForExecute,
+        ).filter((fileUrl) => {
+          return urlToMeta({
+            url: fileUrl,
+            specifierMetaMap: fileSpecifierMapForCover,
+          }).cover
+        })
+
+        if (fileSpecifierMatchingCoverAndExecuteArray.length) {
+          // I think it is an error, it would be strange, for a given file
+          // to be both covered and executed
+          throw new Error(`some file will be both covered and executed
 --- specifiers ---
 ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
+        }
       }
     }
-  }
 
-  return catchAsyncFunctionCancellation(async () => {
     const result = await executePlan({
       cancellationToken,
       compileServerLogLevel,
