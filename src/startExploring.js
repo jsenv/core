@@ -92,7 +92,6 @@ export const startExploring = async ({
     const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
-      logStart: false,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
@@ -358,6 +357,7 @@ export const startExploring = async ({
     const exploringServer = await startServer({
       cancellationToken,
       logLevel,
+      serverName: "exploring server",
       protocol,
       privateKey,
       certificate,

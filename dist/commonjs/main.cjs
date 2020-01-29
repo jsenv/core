@@ -1373,24 +1373,6 @@ const assertFilePresence = async source => {
   }
 };
 
-const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
-const bufferToEtag = buffer => {
-  if (!Buffer.isBuffer(buffer)) {
-    throw new TypeError(`buffer expected, got ${buffer}`);
-  }
-
-  if (buffer.length === 0) {
-    return ETAG_FOR_EMPTY_CONTENT;
-  }
-
-  const hash = crypto.createHash("sha1");
-  hash.update(buffer, "utf8");
-  const hashBase64String = hash.digest("base64");
-  const hashBase64StringSubset = hashBase64String.slice(0, 27);
-  const length = buffer.length;
-  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
-};
-
 const createCancellationToken = () => {
   const register = callback => {
     if (typeof callback !== "function") {
@@ -2186,7 +2168,7 @@ const registerDirectoryLifecycle = (source, {
     throw new TypeError(`added must be a function or undefined, got ${added}`);
   }
 
-  if (!undefinedOrFunction(added)) {
+  if (!undefinedOrFunction(updated)) {
     throw new TypeError(`updated must be a function or undefined, got ${updated}`);
   }
 
@@ -4298,8 +4280,420 @@ const composeTwoScopes = (leftScopes = {}, rightScopes = {}) => {
   return scopes;
 };
 
+const ensureUrlTrailingSlash$1 = url => {
+  return url.endsWith("/") ? url : `${url}/`;
+};
+
+const isFileSystemPath$1 = value => {
+  if (typeof value !== "string") {
+    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
+  }
+
+  if (value[0] === "/") return true;
+  return startsWithWindowsDriveLetter$1(value);
+};
+
+const startsWithWindowsDriveLetter$1 = string => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+  return true;
+};
+
+const fileSystemPathToUrl$1 = value => {
+  if (!isFileSystemPath$1(value)) {
+    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
+  }
+
+  return String(url$2.pathToFileURL(value));
+};
+
+const assertAndNormalizeDirectoryUrl$1 = value => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath$1(value)) {
+      urlString = fileSystemPathToUrl$1(value);
+    } else {
+      try {
+        urlString = String(new URL(value));
+      } catch (e) {
+        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`directoryUrl must starts with file://, received ${value}`);
+  }
+
+  return ensureUrlTrailingSlash$1(urlString);
+};
+
+const assertAndNormalizeFileUrl$1 = (value, baseUrl) => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath$1(value)) {
+      urlString = fileSystemPathToUrl$1(value);
+    } else {
+      try {
+        urlString = String(new URL(value, baseUrl));
+      } catch (e) {
+        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`fileUrl must starts with file://, received ${value}`);
+  }
+
+  return urlString;
+};
+
+const urlToFileSystemPath$1 = fileUrl => {
+  if (fileUrl[fileUrl.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    fileUrl = fileUrl.slice(0, -1);
+  }
+
+  const fileSystemPath = url$2.fileURLToPath(fileUrl);
+  return fileSystemPath;
+};
+
+// https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
+// https://nodejs.org/api/fs.html#fs_file_modes
+// https://github.com/TooTallNate/stat-mode
+// cannot get from fs.constants because they are not available on windows
+const S_IRUSR$1 = 256;
+/* 0000400 read permission, owner */
+
+const S_IWUSR$1 = 128;
+/* 0000200 write permission, owner */
+
+const S_IXUSR$1 = 64;
+/* 0000100 execute/search permission, owner */
+
+const S_IRGRP$1 = 32;
+/* 0000040 read permission, group */
+
+const S_IWGRP$1 = 16;
+/* 0000020 write permission, group */
+
+const S_IXGRP$1 = 8;
+/* 0000010 execute/search permission, group */
+
+const S_IROTH$1 = 4;
+/* 0000004 read permission, others */
+
+const S_IWOTH$1 = 2;
+/* 0000002 write permission, others */
+
+const S_IXOTH$1 = 1;
+const permissionsToBinaryFlags$1 = ({
+  owner,
+  group,
+  others
+}) => {
+  let binaryFlags = 0;
+  if (owner.read) binaryFlags |= S_IRUSR$1;
+  if (owner.write) binaryFlags |= S_IWUSR$1;
+  if (owner.execute) binaryFlags |= S_IXUSR$1;
+  if (group.read) binaryFlags |= S_IRGRP$1;
+  if (group.write) binaryFlags |= S_IWGRP$1;
+  if (group.execute) binaryFlags |= S_IXGRP$1;
+  if (others.read) binaryFlags |= S_IROTH$1;
+  if (others.write) binaryFlags |= S_IWOTH$1;
+  if (others.execute) binaryFlags |= S_IXOTH$1;
+  return binaryFlags;
+};
+
+const writeFileSystemNodePermissions$1 = async (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl$1(source);
+  const sourcePath = urlToFileSystemPath$1(sourceUrl);
+  let binaryFlags;
+
+  if (typeof permissions === "object") {
+    permissions = {
+      owner: {
+        read: getPermissionOrComputeDefault$1("read", "owner", permissions),
+        write: getPermissionOrComputeDefault$1("write", "owner", permissions),
+        execute: getPermissionOrComputeDefault$1("execute", "owner", permissions)
+      },
+      group: {
+        read: getPermissionOrComputeDefault$1("read", "group", permissions),
+        write: getPermissionOrComputeDefault$1("write", "group", permissions),
+        execute: getPermissionOrComputeDefault$1("execute", "group", permissions)
+      },
+      others: {
+        read: getPermissionOrComputeDefault$1("read", "others", permissions),
+        write: getPermissionOrComputeDefault$1("write", "others", permissions),
+        execute: getPermissionOrComputeDefault$1("execute", "others", permissions)
+      }
+    };
+    binaryFlags = permissionsToBinaryFlags$1(permissions);
+  } else {
+    binaryFlags = permissions;
+  }
+
+  return chmodNaive$1(sourcePath, binaryFlags);
+};
+
+const chmodNaive$1 = (fileSystemPath, binaryFlags) => {
+  return new Promise((resolve, reject) => {
+    fs.chmod(fileSystemPath, binaryFlags, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const actionLevels$1 = {
+  read: 0,
+  write: 1,
+  execute: 2
+};
+const subjectLevels$1 = {
+  others: 0,
+  group: 1,
+  owner: 2
+};
+
+const getPermissionOrComputeDefault$1 = (action, subject, permissions) => {
+  if (subject in permissions) {
+    const subjectPermissions = permissions[subject];
+
+    if (action in subjectPermissions) {
+      return subjectPermissions[action];
+    }
+
+    const actionLevel = actionLevels$1[action];
+    const actionFallback = Object.keys(actionLevels$1).find(actionFallbackCandidate => actionLevels$1[actionFallbackCandidate] > actionLevel && actionFallbackCandidate in subjectPermissions);
+
+    if (actionFallback) {
+      return subjectPermissions[actionFallback];
+    }
+  }
+
+  const subjectLevel = subjectLevels$1[subject]; // do we have a subject with a stronger level (group or owner)
+  // where we could read the action permission ?
+
+  const subjectFallback = Object.keys(subjectLevels$1).find(subjectFallbackCandidate => subjectLevels$1[subjectFallbackCandidate] > subjectLevel && subjectFallbackCandidate in permissions);
+
+  if (subjectFallback) {
+    const subjectPermissions = permissions[subjectFallback];
+    return action in subjectPermissions ? subjectPermissions[action] : getPermissionOrComputeDefault$1(action, subjectFallback, permissions);
+  }
+
+  return false;
+};
+
+const isWindows$4 = process.platform === "win32";
+const readFileSystemNodeStat$1 = async (source, {
+  nullIfNotFound = false,
+  followLink = true
+} = {}) => {
+  if (source.endsWith("/")) source = source.slice(0, -1);
+  const sourceUrl = assertAndNormalizeFileUrl$1(source);
+  const sourcePath = urlToFileSystemPath$1(sourceUrl);
+  const handleNotFoundOption = nullIfNotFound ? {
+    handleNotFoundError: () => null
+  } : {};
+  return readStat$1(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows$4 ? {
+      // Windows can EPERM on stat
+      handlePermissionDeniedError: async error => {
+        // unfortunately it means we mutate the permissions
+        // without being able to restore them to the previous value
+        // (because reading current permission would also throw)
+        try {
+          await writeFileSystemNodePermissions$1(sourceUrl, 0o666);
+          const stats = await readStat$1(sourcePath, {
+            followLink,
+            ...handleNotFoundOption,
+            // could not fix the permission error, give up and throw original error
+            handlePermissionDeniedError: () => {
+              throw error;
+            }
+          });
+          return stats;
+        } catch (e) {
+          // failed to write permission or readState, throw original error as well
+          throw error;
+        }
+      }
+    } : {})
+  });
+};
+
+const readStat$1 = (sourcePath, {
+  followLink,
+  handleNotFoundError = null,
+  handlePermissionDeniedError = null
+} = {}) => {
+  const nodeMethod = followLink ? fs.stat : fs.lstat;
+  return new Promise((resolve, reject) => {
+    nodeMethod(sourcePath, (error, statsObject) => {
+      if (error) {
+        if (handlePermissionDeniedError && (error.code === "EPERM" || error.code === "EACCES")) {
+          resolve(handlePermissionDeniedError(error));
+        } else if (handleNotFoundError && error.code === "ENOENT") {
+          resolve(handleNotFoundError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(statsObject);
+      }
+    });
+  });
+};
+
+const getCommonPathname$1 = (pathname, otherPathname) => {
+  const firstDifferentCharacterIndex = findFirstDifferentCharacterIndex$1(pathname, otherPathname); // pathname and otherpathname are exactly the same
+
+  if (firstDifferentCharacterIndex === -1) {
+    return pathname;
+  }
+
+  const commonString = pathname.slice(0, firstDifferentCharacterIndex + 1); // the first different char is at firstDifferentCharacterIndex
+
+  if (pathname.charAt(firstDifferentCharacterIndex) === "/") {
+    return commonString;
+  }
+
+  if (otherPathname.charAt(firstDifferentCharacterIndex) === "/") {
+    return commonString;
+  }
+
+  const firstDifferentSlashIndex = commonString.lastIndexOf("/");
+  return pathname.slice(0, firstDifferentSlashIndex + 1);
+};
+
+const findFirstDifferentCharacterIndex$1 = (string, otherString) => {
+  const maxCommonLength = Math.min(string.length, otherString.length);
+  let i = 0;
+
+  while (i < maxCommonLength) {
+    const char = string.charAt(i);
+    const otherChar = otherString.charAt(i);
+
+    if (char !== otherChar) {
+      return i;
+    }
+
+    i++;
+  }
+
+  if (string.length === otherString.length) {
+    return -1;
+  } // they differ at maxCommonLength
+
+
+  return maxCommonLength;
+};
+
+const pathnameToDirectoryPathname$2 = pathname => {
+  if (pathname.endsWith("/")) {
+    return pathname;
+  }
+
+  const slashLastIndex = pathname.lastIndexOf("/");
+
+  if (slashLastIndex === -1) {
+    return "";
+  }
+
+  return pathname.slice(0, slashLastIndex + 1);
+};
+
+const urlToRelativeUrl$1 = (urlArg, baseUrlArg) => {
+  const url = new URL(urlArg);
+  const baseUrl = new URL(baseUrlArg);
+
+  if (url.protocol !== baseUrl.protocol) {
+    return urlArg;
+  }
+
+  if (url.username !== baseUrl.username || url.password !== baseUrl.password) {
+    return urlArg.slice(url.protocol.length);
+  }
+
+  if (url.host !== baseUrl.host) {
+    return urlArg.slice(url.protocol.length);
+  }
+
+  const {
+    pathname,
+    hash,
+    search
+  } = url;
+
+  if (pathname === "/") {
+    return baseUrl.pathname.slice(1);
+  }
+
+  const {
+    pathname: basePathname
+  } = baseUrl;
+  const commonPathname = getCommonPathname$1(pathname, basePathname);
+
+  if (!commonPathname) {
+    return urlArg;
+  }
+
+  const specificPathname = pathname.slice(commonPathname.length);
+  const baseSpecificPathname = basePathname.slice(commonPathname.length);
+  const baseSpecificDirectoryPathname = pathnameToDirectoryPathname$2(baseSpecificPathname);
+  const relativeDirectoriesNotation = baseSpecificDirectoryPathname.replace(/.*?\//g, "../");
+  const relativePathname = `${relativeDirectoriesNotation}${specificPathname}`;
+  return `${relativePathname}${search}${hash}`;
+};
+
+const resolveUrl$2 = (specifier, baseUrl) => {
+  if (typeof baseUrl === "undefined") {
+    throw new TypeError(`baseUrl missing to resolve ${specifier}`);
+  }
+
+  return String(new URL(specifier, baseUrl));
+};
+
+const isWindows$5 = process.platform === "win32";
+const baseUrlFallback$1 = fileSystemPathToUrl$1(process.cwd());
+
+const isWindows$6 = process.platform === "win32";
+
+const readFilePromisified$1 = util.promisify(fs.readFile);
+const readFile$1 = async value => {
+  const fileUrl = assertAndNormalizeFileUrl$1(value);
+  const filePath = urlToFileSystemPath$1(fileUrl);
+  const buffer = await readFilePromisified$1(filePath);
+  return buffer.toString();
+};
+
+const isWindows$7 = process.platform === "win32";
+
+/* eslint-disable import/max-dependencies */
+const isLinux$1 = process.platform === "linux"; // linux does not support recursive option
+
 const readPackageFile = async (packageFileUrl, manualOverrides) => {
-  const packageFileString = await readFile(packageFileUrl);
+  const packageFileString = await readFile$1(packageFileUrl);
   const packageJsonObject = JSON.parse(packageFileString);
   const {
     name,
@@ -4387,7 +4781,7 @@ const resolveNodeModule = async ({
   dependencyVersionPattern,
   dependencyType
 }) => {
-  const packageDirectoryUrl = resolveUrl$1("./", packageFileUrl);
+  const packageDirectoryUrl = resolveUrl$2("./", packageFileUrl);
   const nodeModuleCandidateArray = [...computeNodeModuleCandidateArray(packageDirectoryUrl, rootProjectDirectoryUrl), `node_modules/`];
   const result = await firstOperationMatching({
     array: nodeModuleCandidateArray,
@@ -4411,7 +4805,7 @@ error while parsing dependency package.json.
 --- parsing error message ---
 ${e.message}
 --- package.json path ---
-${urlToFileSystemPath(packageFileUrl)}
+${urlToFileSystemPath$1(packageFileUrl)}
 `);
           return {};
         }
@@ -4432,7 +4826,7 @@ ${dependencyName}@${dependencyVersionPattern}
 --- required by ---
 ${packageJsonObject.name}@${packageJsonObject.version}
 --- package.json path ---
-${urlToFileSystemPath(packageFileUrl)}
+${urlToFileSystemPath$1(packageFileUrl)}
     `);
   }
 
@@ -4444,7 +4838,7 @@ const computeNodeModuleCandidateArray = (packageDirectoryUrl, rootProjectDirecto
     return [];
   }
 
-  const packageDirectoryRelativeUrl = urlToRelativeUrl(packageDirectoryUrl, rootProjectDirectoryUrl);
+  const packageDirectoryRelativeUrl = urlToRelativeUrl$1(packageDirectoryUrl, rootProjectDirectoryUrl);
   const candidateArray = [];
   const relativeNodeModuleDirectoryArray = `./${packageDirectoryRelativeUrl}`.split("/node_modules/"); // remove the first empty string
 
@@ -4511,10 +4905,10 @@ const resolveMainFile = async ({
     return null;
   }
 
-  const packageFilePath = urlToFileSystemPath(packageFileUrl);
-  const packageDirectoryUrl = resolveUrl$1("./", packageFileUrl);
+  const packageFilePath = urlToFileSystemPath$1(packageFileUrl);
+  const packageDirectoryUrl = resolveUrl$2("./", packageFileUrl);
   const mainFileRelativeUrl = packageMainFieldValue.endsWith("/") ? `${packageMainFieldValue}index` : packageMainFieldValue;
-  const mainFileUrlFirstCandidate = resolveUrl$1(mainFileRelativeUrl, packageFileUrl);
+  const mainFileUrlFirstCandidate = resolveUrl$2(mainFileRelativeUrl, packageFileUrl);
 
   if (!mainFileUrlFirstCandidate.startsWith(packageDirectoryUrl)) {
     logger.warn(`
@@ -4542,7 +4936,7 @@ cannot find file for package.json ${packageMainFieldName} field
 --- ${packageMainFieldName} ---
 ${packageMainFieldValue}
 --- file path ---
-${urlToFileSystemPath(mainFileUrlFirstCandidate)}
+${urlToFileSystemPath$1(mainFileUrlFirstCandidate)}
 --- package.json path ---
 ${packageFilePath}
 --- extensions tried ---
@@ -4557,7 +4951,7 @@ ${extensionCandidateArray.join(`,`)}
 };
 
 const findMainFileUrlOrNull = async mainFileUrl => {
-  const mainStats = await readFileSystemNodeStat(mainFileUrl, {
+  const mainStats = await readFileSystemNodeStat$1(mainFileUrl, {
     nullIfNotFound: true
   });
 
@@ -4566,7 +4960,7 @@ const findMainFileUrlOrNull = async mainFileUrl => {
   }
 
   if (mainStats && mainStats.isDirectory()) {
-    const indexFileUrl = resolveUrl$1("./index", mainFileUrl.endsWith("/") ? mainFileUrl : `${mainFileUrl}/`);
+    const indexFileUrl = resolveUrl$2("./index", mainFileUrl.endsWith("/") ? mainFileUrl : `${mainFileUrl}/`);
     const extensionLeadingToAFile = await findExtension(indexFileUrl);
 
     if (extensionLeadingToAFile === null) {
@@ -4576,7 +4970,7 @@ const findMainFileUrlOrNull = async mainFileUrl => {
     return `${indexFileUrl}.${extensionLeadingToAFile}`;
   }
 
-  const mainFilePath = urlToFileSystemPath(mainFileUrl);
+  const mainFilePath = urlToFileSystemPath$1(mainFileUrl);
   const extension = path.extname(mainFilePath);
 
   if (extension === "") {
@@ -4593,14 +4987,14 @@ const findMainFileUrlOrNull = async mainFileUrl => {
 };
 
 const findExtension = async fileUrl => {
-  const filePath = urlToFileSystemPath(fileUrl);
+  const filePath = urlToFileSystemPath$1(fileUrl);
   const fileDirname = path.dirname(filePath);
   const fileBasename = path.basename(filePath);
   const extensionLeadingToFile = await firstOperationMatching({
     array: extensionCandidateArray,
     start: async extensionCandidate => {
       const filePathCandidate = `${fileDirname}/${fileBasename}.${extensionCandidate}`;
-      const stats = await readFileSystemNodeStat(filePathCandidate, {
+      const stats = await readFileSystemNodeStat$1(filePathCandidate, {
         nullIfNotFound: true
       });
       return stats && stats.isFile() ? extensionCandidate : null;
@@ -4633,7 +5027,7 @@ const visitPackageImports = ({
   packageJsonObject
 }) => {
   const importsForPackageImports = {};
-  const packageFilePath = urlToFileSystemPath(packageFileUrl);
+  const packageFilePath = urlToFileSystemPath$1(packageFileUrl);
   const {
     imports: packageImports
   } = packageJsonObject;
@@ -4717,7 +5111,7 @@ const visitPackageExports = ({
   favoredExports
 }) => {
   const importsForPackageExports = {};
-  const packageFilePath = urlToFileSystemPath(packageFileUrl);
+  const packageFilePath = urlToFileSystemPath$1(packageFileUrl);
   const {
     exports: packageExports
   } = packageJsonObject; // false is allowed as laternative to exports: {}
@@ -4857,16 +5251,16 @@ const generateImportMapForPackage = async ({
   includeImports = true,
   selfImport = true
 }) => {
-  projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl);
+  projectDirectoryUrl = assertAndNormalizeDirectoryUrl$1(projectDirectoryUrl);
 
   if (typeof rootProjectDirectoryUrl === "undefined") {
     rootProjectDirectoryUrl = projectDirectoryUrl;
   } else {
-    rootProjectDirectoryUrl = assertAndNormalizeDirectoryUrl(rootProjectDirectoryUrl);
+    rootProjectDirectoryUrl = assertAndNormalizeDirectoryUrl$1(rootProjectDirectoryUrl);
   }
 
-  const projectPackageFileUrl = resolveUrl$1("./package.json", projectDirectoryUrl);
-  const rootProjectPackageFileUrl = resolveUrl$1("./package.json", rootProjectDirectoryUrl);
+  const projectPackageFileUrl = resolveUrl$2("./package.json", projectDirectoryUrl);
+  const rootProjectPackageFileUrl = resolveUrl$2("./package.json", rootProjectDirectoryUrl);
   const imports = {};
   const scopes = {};
   const seen = {};
@@ -5095,7 +5489,7 @@ const generateImportMapForPackage = async ({
     // or a main that does not lead to an actual file
 
     if (mainFileUrl === null) return;
-    const mainFileRelativeUrl = urlToRelativeUrl(mainFileUrl, rootProjectDirectoryUrl);
+    const mainFileRelativeUrl = urlToRelativeUrl$1(mainFileUrl, rootProjectDirectoryUrl);
     const from = packageName;
     const to = `./${mainFileRelativeUrl}`;
 
@@ -5218,11 +5612,11 @@ const generateImportMapForPackage = async ({
   }) => {
     const importerIsRoot = importerPackageFileUrl === rootProjectPackageFileUrl;
     const importerIsProject = importerPackageFileUrl === projectPackageFileUrl;
-    const importerPackageDirectoryUrl = resolveUrl$1("./", importerPackageFileUrl);
-    const importerRelativeUrl = importerIsRoot ? `${path.basename(rootProjectDirectoryUrl)}/` : urlToRelativeUrl(importerPackageDirectoryUrl, rootProjectDirectoryUrl);
+    const importerPackageDirectoryUrl = resolveUrl$2("./", importerPackageFileUrl);
+    const importerRelativeUrl = importerIsRoot ? `${path.basename(rootProjectDirectoryUrl)}/` : urlToRelativeUrl$1(importerPackageDirectoryUrl, rootProjectDirectoryUrl);
     const packageIsRoot = packageFileUrl === rootProjectPackageFileUrl;
     const packageIsProject = packageFileUrl === projectPackageFileUrl;
-    const packageDirectoryUrl = resolveUrl$1("./", packageFileUrl);
+    const packageDirectoryUrl = resolveUrl$2("./", packageFileUrl);
     let packageDirectoryUrlExpected;
 
     if (packageIsProject && !packageIsRoot) {
@@ -5231,7 +5625,7 @@ const generateImportMapForPackage = async ({
       packageDirectoryUrlExpected = `${importerPackageDirectoryUrl}node_modules/${packageName}/`;
     }
 
-    const packageDirectoryRelativeUrl = urlToRelativeUrl(packageDirectoryUrl, rootProjectDirectoryUrl);
+    const packageDirectoryRelativeUrl = urlToRelativeUrl$1(packageDirectoryUrl, rootProjectDirectoryUrl);
     return {
       importerIsRoot,
       importerIsProject,
@@ -5497,86 +5891,6 @@ const isErrorWithCode = (error, code) => {
   return typeof error === "object" && error.code === code;
 };
 
-const LOG_LEVEL_OFF$1 = "off";
-const LOG_LEVEL_DEBUG$1 = "debug";
-const LOG_LEVEL_INFO$1 = "info";
-const LOG_LEVEL_WARN$1 = "warn";
-const LOG_LEVEL_ERROR$1 = "error";
-
-const createLogger$1 = ({
-  logLevel = LOG_LEVEL_INFO$1
-} = {}) => {
-  if (logLevel === LOG_LEVEL_DEBUG$1) {
-    return {
-      debug: debug$1,
-      info: info$1,
-      warn: warn$1,
-      error: error$1
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_INFO$1) {
-    return {
-      debug: debugDisabled$1,
-      info: info$1,
-      warn: warn$1,
-      error: error$1
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_WARN$1) {
-    return {
-      debug: debugDisabled$1,
-      info: infoDisabled$1,
-      warn: warn$1,
-      error: error$1
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_ERROR$1) {
-    return {
-      debug: debugDisabled$1,
-      info: infoDisabled$1,
-      warn: warnDisabled$1,
-      error: error$1
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_OFF$1) {
-    return {
-      debug: debugDisabled$1,
-      info: infoDisabled$1,
-      warn: warnDisabled$1,
-      error: errorDisabled$1
-    };
-  }
-
-  throw new Error(`unexpected logLevel.
---- logLevel ---
-${logLevel}
---- allowed log levels ---
-${LOG_LEVEL_OFF$1}
-${LOG_LEVEL_ERROR$1}
-${LOG_LEVEL_WARN$1}
-${LOG_LEVEL_INFO$1}
-${LOG_LEVEL_DEBUG$1}`);
-};
-const debug$1 = console.debug;
-
-const debugDisabled$1 = () => {};
-
-const info$1 = console.info;
-
-const infoDisabled$1 = () => {};
-
-const warn$1 = console.warn;
-
-const warnDisabled$1 = () => {};
-
-const error$1 = console.error;
-
-const errorDisabled$1 = () => {};
-
 if ("observable" in Symbol === false) {
   Symbol.observable = Symbol.for("observable");
 }
@@ -5623,7 +5937,7 @@ const createSSERoom = ({
   maxConnectionAllowed = 100 // max 100 users accepted
 
 } = {}) => {
-  const logger = createLogger$1({
+  const logger = createLogger({
     logLevel
   });
   const connections = new Set(); // what about history that keeps growing ?
@@ -5882,6 +6196,7 @@ start`);
     });
     promise.then(cancelRegistration.unregister, () => {});
   });
+  cancelPromise.catch(() => {});
   const operationPromise = Promise.race([promise, cancelPromise]);
   return operationPromise;
 };
@@ -5966,6 +6281,371 @@ const firstOperationMatching$1 = ({
     visit(0);
   });
 };
+
+const ensureUrlTrailingSlash$2 = url => {
+  return url.endsWith("/") ? url : `${url}/`;
+};
+
+const isFileSystemPath$2 = value => {
+  if (typeof value !== "string") {
+    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
+  }
+
+  if (value[0] === "/") return true;
+  return startsWithWindowsDriveLetter$2(value);
+};
+
+const startsWithWindowsDriveLetter$2 = string => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+  return true;
+};
+
+const fileSystemPathToUrl$2 = value => {
+  if (!isFileSystemPath$2(value)) {
+    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
+  }
+
+  return String(url$2.pathToFileURL(value));
+};
+
+const assertAndNormalizeDirectoryUrl$2 = value => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath$2(value)) {
+      urlString = fileSystemPathToUrl$2(value);
+    } else {
+      try {
+        urlString = String(new URL(value));
+      } catch (e) {
+        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`directoryUrl must starts with file://, received ${value}`);
+  }
+
+  return ensureUrlTrailingSlash$2(urlString);
+};
+
+const assertAndNormalizeFileUrl$2 = (value, baseUrl) => {
+  let urlString;
+
+  if (value instanceof URL) {
+    urlString = value.href;
+  } else if (typeof value === "string") {
+    if (isFileSystemPath$2(value)) {
+      urlString = fileSystemPathToUrl$2(value);
+    } else {
+      try {
+        urlString = String(new URL(value, baseUrl));
+      } catch (e) {
+        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
+      }
+    }
+  } else {
+    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
+  }
+
+  if (!urlString.startsWith("file://")) {
+    throw new Error(`fileUrl must starts with file://, received ${value}`);
+  }
+
+  return urlString;
+};
+
+const urlToFileSystemPath$2 = fileUrl => {
+  if (fileUrl[fileUrl.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    fileUrl = fileUrl.slice(0, -1);
+  }
+
+  const fileSystemPath = url$2.fileURLToPath(fileUrl);
+  return fileSystemPath;
+};
+
+// https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
+// https://nodejs.org/api/fs.html#fs_file_modes
+// https://github.com/TooTallNate/stat-mode
+// cannot get from fs.constants because they are not available on windows
+const S_IRUSR$2 = 256;
+/* 0000400 read permission, owner */
+
+const S_IWUSR$2 = 128;
+/* 0000200 write permission, owner */
+
+const S_IXUSR$2 = 64;
+/* 0000100 execute/search permission, owner */
+
+const S_IRGRP$2 = 32;
+/* 0000040 read permission, group */
+
+const S_IWGRP$2 = 16;
+/* 0000020 write permission, group */
+
+const S_IXGRP$2 = 8;
+/* 0000010 execute/search permission, group */
+
+const S_IROTH$2 = 4;
+/* 0000004 read permission, others */
+
+const S_IWOTH$2 = 2;
+/* 0000002 write permission, others */
+
+const S_IXOTH$2 = 1;
+const permissionsToBinaryFlags$2 = ({
+  owner,
+  group,
+  others
+}) => {
+  let binaryFlags = 0;
+  if (owner.read) binaryFlags |= S_IRUSR$2;
+  if (owner.write) binaryFlags |= S_IWUSR$2;
+  if (owner.execute) binaryFlags |= S_IXUSR$2;
+  if (group.read) binaryFlags |= S_IRGRP$2;
+  if (group.write) binaryFlags |= S_IWGRP$2;
+  if (group.execute) binaryFlags |= S_IXGRP$2;
+  if (others.read) binaryFlags |= S_IROTH$2;
+  if (others.write) binaryFlags |= S_IWOTH$2;
+  if (others.execute) binaryFlags |= S_IXOTH$2;
+  return binaryFlags;
+};
+
+const writeFileSystemNodePermissions$2 = async (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl$2(source);
+  const sourcePath = urlToFileSystemPath$2(sourceUrl);
+  let binaryFlags;
+
+  if (typeof permissions === "object") {
+    permissions = {
+      owner: {
+        read: getPermissionOrComputeDefault$2("read", "owner", permissions),
+        write: getPermissionOrComputeDefault$2("write", "owner", permissions),
+        execute: getPermissionOrComputeDefault$2("execute", "owner", permissions)
+      },
+      group: {
+        read: getPermissionOrComputeDefault$2("read", "group", permissions),
+        write: getPermissionOrComputeDefault$2("write", "group", permissions),
+        execute: getPermissionOrComputeDefault$2("execute", "group", permissions)
+      },
+      others: {
+        read: getPermissionOrComputeDefault$2("read", "others", permissions),
+        write: getPermissionOrComputeDefault$2("write", "others", permissions),
+        execute: getPermissionOrComputeDefault$2("execute", "others", permissions)
+      }
+    };
+    binaryFlags = permissionsToBinaryFlags$2(permissions);
+  } else {
+    binaryFlags = permissions;
+  }
+
+  return chmodNaive$2(sourcePath, binaryFlags);
+};
+
+const chmodNaive$2 = (fileSystemPath, binaryFlags) => {
+  return new Promise((resolve, reject) => {
+    fs.chmod(fileSystemPath, binaryFlags, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+const actionLevels$2 = {
+  read: 0,
+  write: 1,
+  execute: 2
+};
+const subjectLevels$2 = {
+  others: 0,
+  group: 1,
+  owner: 2
+};
+
+const getPermissionOrComputeDefault$2 = (action, subject, permissions) => {
+  if (subject in permissions) {
+    const subjectPermissions = permissions[subject];
+
+    if (action in subjectPermissions) {
+      return subjectPermissions[action];
+    }
+
+    const actionLevel = actionLevels$2[action];
+    const actionFallback = Object.keys(actionLevels$2).find(actionFallbackCandidate => actionLevels$2[actionFallbackCandidate] > actionLevel && actionFallbackCandidate in subjectPermissions);
+
+    if (actionFallback) {
+      return subjectPermissions[actionFallback];
+    }
+  }
+
+  const subjectLevel = subjectLevels$2[subject]; // do we have a subject with a stronger level (group or owner)
+  // where we could read the action permission ?
+
+  const subjectFallback = Object.keys(subjectLevels$2).find(subjectFallbackCandidate => subjectLevels$2[subjectFallbackCandidate] > subjectLevel && subjectFallbackCandidate in permissions);
+
+  if (subjectFallback) {
+    const subjectPermissions = permissions[subjectFallback];
+    return action in subjectPermissions ? subjectPermissions[action] : getPermissionOrComputeDefault$2(action, subjectFallback, permissions);
+  }
+
+  return false;
+};
+
+const isWindows$8 = process.platform === "win32";
+const readFileSystemNodeStat$2 = async (source, {
+  nullIfNotFound = false,
+  followLink = true
+} = {}) => {
+  if (source.endsWith("/")) source = source.slice(0, -1);
+  const sourceUrl = assertAndNormalizeFileUrl$2(source);
+  const sourcePath = urlToFileSystemPath$2(sourceUrl);
+  const handleNotFoundOption = nullIfNotFound ? {
+    handleNotFoundError: () => null
+  } : {};
+  return readStat$2(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows$8 ? {
+      // Windows can EPERM on stat
+      handlePermissionDeniedError: async error => {
+        // unfortunately it means we mutate the permissions
+        // without being able to restore them to the previous value
+        // (because reading current permission would also throw)
+        try {
+          await writeFileSystemNodePermissions$2(sourceUrl, 0o666);
+          const stats = await readStat$2(sourcePath, {
+            followLink,
+            ...handleNotFoundOption,
+            // could not fix the permission error, give up and throw original error
+            handlePermissionDeniedError: () => {
+              throw error;
+            }
+          });
+          return stats;
+        } catch (e) {
+          // failed to write permission or readState, throw original error as well
+          throw error;
+        }
+      }
+    } : {})
+  });
+};
+
+const readStat$2 = (sourcePath, {
+  followLink,
+  handleNotFoundError = null,
+  handlePermissionDeniedError = null
+} = {}) => {
+  const nodeMethod = followLink ? fs.stat : fs.lstat;
+  return new Promise((resolve, reject) => {
+    nodeMethod(sourcePath, (error, statsObject) => {
+      if (error) {
+        if (handlePermissionDeniedError && (error.code === "EPERM" || error.code === "EACCES")) {
+          resolve(handlePermissionDeniedError(error));
+        } else if (handleNotFoundError && error.code === "ENOENT") {
+          resolve(handleNotFoundError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(statsObject);
+      }
+    });
+  });
+};
+
+const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+const bufferToEtag = buffer => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expected, got ${buffer}`);
+  }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT;
+  }
+
+  const hash = crypto.createHash("sha1");
+  hash.update(buffer, "utf8");
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+};
+
+const readDirectory$1 = async (url, {
+  emfileMaxWait = 1000
+} = {}) => {
+  const directoryUrl = assertAndNormalizeDirectoryUrl$2(url);
+  const directoryPath = urlToFileSystemPath$2(directoryUrl);
+  const startMs = Date.now();
+  let attemptCount = 0;
+
+  const attempt = () => {
+    return readdirNaive$1(directoryPath, {
+      handleTooManyFilesOpenedError: async error => {
+        attemptCount++;
+        const nowMs = Date.now();
+        const timeSpentWaiting = nowMs - startMs;
+
+        if (timeSpentWaiting > emfileMaxWait) {
+          throw error;
+        }
+
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve(attempt());
+          }, attemptCount);
+        });
+      }
+    });
+  };
+
+  return attempt();
+};
+
+const readdirNaive$1 = (directoryPath, {
+  handleTooManyFilesOpenedError = null
+} = {}) => {
+  return new Promise((resolve, reject) => {
+    fs.readdir(directoryPath, (error, names) => {
+      if (error) {
+        // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
+        if (handleTooManyFilesOpenedError && (error.code === "EMFILE" || error.code === "ENFILE")) {
+          resolve(handleTooManyFilesOpenedError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(names);
+      }
+    });
+  });
+};
+
+const isWindows$9 = process.platform === "win32";
+const baseUrlFallback$2 = fileSystemPathToUrl$2(process.cwd());
+
+const isWindows$a = process.platform === "win32";
+
+const readFilePromisified$2 = util.promisify(fs.readFile);
+
+const isWindows$b = process.platform === "win32";
+
+/* eslint-disable import/max-dependencies */
+const isLinux$2 = process.platform === "linux"; // linux does not support recursive option
 
 const jsenvContentTypeMap = {
   "application/javascript": {
@@ -6081,7 +6761,7 @@ const urlToContentType = (url, contentTypeMap = jsenvContentTypeMap, contentType
 };
 
 const {
-  readFile: readFile$1
+  readFile: readFile$2
 } = fs.promises;
 const serveFile = async (source, {
   cancellationToken = createCancellationToken$2(),
@@ -6097,7 +6777,7 @@ const serveFile = async (source, {
     };
   }
 
-  const sourceUrl = assertAndNormalizeFileUrl(source);
+  const sourceUrl = assertAndNormalizeFileUrl$2(source);
   const clientCacheDisabled = headers["cache-control"] === "no-cache";
 
   try {
@@ -6106,7 +6786,7 @@ const serveFile = async (source, {
     const cachedDisabled = clientCacheDisabled || cacheStrategy === "none";
     const sourceStat = await createOperation$2({
       cancellationToken,
-      start: () => readFileSystemNodeStat(sourceUrl)
+      start: () => readFileSystemNodeStat$2(sourceUrl)
     });
 
     if (sourceStat.isDirectory()) {
@@ -6123,7 +6803,7 @@ const serveFile = async (source, {
 
       const directoryContentArray = await createOperation$2({
         cancellationToken,
-        start: () => readDirectory(sourceUrl)
+        start: () => readDirectory$1(sourceUrl)
       });
       const directoryContentJson = JSON.stringify(directoryContentArray);
       return {
@@ -6152,7 +6832,7 @@ const serveFile = async (source, {
     if (cacheWithETag) {
       const fileContentAsBuffer = await createOperation$2({
         cancellationToken,
-        start: () => readFile$1(urlToFileSystemPath(sourceUrl))
+        start: () => readFile$2(urlToFileSystemPath$2(sourceUrl))
       });
       const fileContentEtag = bufferToEtag(fileContentAsBuffer);
 
@@ -6211,7 +6891,7 @@ const serveFile = async (source, {
         "content-length": sourceStat.size,
         "content-type": urlToContentType(sourceUrl, contentTypeMap)
       },
-      body: fs.createReadStream(urlToFileSystemPath(sourceUrl))
+      body: fs.createReadStream(urlToFileSystemPath$2(sourceUrl))
     };
   } catch (e) {
     return convertFileSystemErrorToResponseProperties(e);
@@ -6269,24 +6949,31 @@ const fetchUrl = async (url, {
       headers
     });
     return simplified ? standardResponseToSimplifiedResponse(response) : response;
-  }
+  } // https://github.com/bitinn/node-fetch#request-cancellation-with-abortsignal
 
-  const response = await createOperation$2({
-    cancellationToken,
-    start: () => nodeFetch(url, {
-      signal: cancellationTokenToAbortSignal(cancellationToken),
-      ...options
-    })
-  });
-  return simplified ? standardResponseToSimplifiedResponse(response) : response;
-}; // https://github.com/bitinn/node-fetch#request-cancellation-with-abortsignal
 
-const cancellationTokenToAbortSignal = cancellationToken => {
   const abortController = new AbortController();
+  let cancelError;
   cancellationToken.register(reason => {
+    cancelError = reason;
     abortController.abort(reason);
   });
-  return abortController.signal;
+  let response;
+
+  try {
+    response = await nodeFetch(url, {
+      signal: abortController.signal,
+      ...options
+    });
+  } catch (e) {
+    if (cancelError && e.name === "AbortError") {
+      throw cancelError;
+    }
+
+    throw e;
+  }
+
+  return simplified ? standardResponseToSimplifiedResponse(response) : response;
 };
 
 const standardResponseToSimplifiedResponse = async response => {
@@ -7175,8 +7862,7 @@ const STATUS_TEXT_INTERNAL_ERROR = "internal error";
 const startServer = async ({
   cancellationToken = createCancellationToken$2(),
   logLevel,
-  logStart = true,
-  logStop = true,
+  serverName = "server",
   protocol = "http",
   ip = "127.0.0.1",
   port = 0,
@@ -7229,7 +7915,7 @@ const startServer = async ({
   if (protocol !== "http" && protocol !== "https") throw new Error(`protocol must be http or https, got ${protocol}`); // https://github.com/nodejs/node/issues/14900
 
   if (ip === "0.0.0.0" && process.platform === "win32") throw new Error(`listening ${ip} not available on window`);
-  const logger = createLogger$1({
+  const logger = createLogger({
     logLevel
   });
 
@@ -7285,11 +7971,7 @@ const startServer = async ({
   });
   const stop = memoizeOnce$2(async (reason = STOP_REASON_NOT_SPECIFIED) => {
     status = "closing";
-
-    if (logStop) {
-      logger.info(`server stopped because ${reason}`);
-    }
-
+    logger.info(`${serverName} stopped because ${reason}`);
     await cleanup(reason);
     await stopListening(nodeServer);
     status = "stopped";
@@ -7351,11 +8033,7 @@ const startServer = async ({
     ip,
     port
   });
-
-  if (logStart) {
-    logger.info(`server started at ${origin}`);
-  }
-
+  logger.info(`${serverName} started at ${origin}`);
   startedCallback({
     origin
   }); // nodeServer.on("upgrade", (request, socket, head) => {
@@ -7753,18 +8431,142 @@ const findHighestVersion = (...values) => {
 };
 
 // copied from
-// https://github.com/babel/babel/blob/0ee2c42b55e1893f0ae6510916405eb273587844/packages/babel-preset-env/data/plugins.json
+// https://github.com/babel/babel/blob/master/packages/babel-compat-data/data/plugins.json#L1
 // Because this is an hidden implementation detail of @babel/preset-env
 // it could be deprecated or moved anytime.
 // For that reason it makes more sens to have it inlined here
 // than importing it from an undocumented location.
 // Ideally it would be documented or a separate module
 const jsenvBabelPluginCompatMap = {
+  "proposal-nullish-coalescing-operator": {
+    chrome: "80",
+    firefox: "72",
+    safari: "tp",
+    opera: "67"
+  },
+  "proposal-optional-chaining": {
+    chrome: "80",
+    firefox: "74",
+    safari: "tp",
+    opera: "67"
+  },
+  "proposal-json-strings": {
+    chrome: "66",
+    edge: "79",
+    firefox: "62",
+    safari: "12",
+    node: "10",
+    ios: "12",
+    samsung: "9",
+    opera: "53",
+    electron: "3.1"
+  },
+  "proposal-optional-catch-binding": {
+    chrome: "66",
+    edge: "79",
+    firefox: "58",
+    safari: "11.1",
+    node: "10",
+    ios: "11.3",
+    samsung: "9",
+    opera: "53",
+    electron: "3.1"
+  },
+  "proposal-async-generator-functions": {
+    chrome: "63",
+    edge: "79",
+    firefox: "57",
+    safari: "12",
+    node: "10",
+    ios: "12",
+    samsung: "8",
+    opera: "50",
+    electron: "3.1"
+  },
+  "proposal-object-rest-spread": {
+    chrome: "60",
+    edge: "79",
+    firefox: "55",
+    safari: "11.1",
+    node: "8.3",
+    ios: "11.3",
+    samsung: "8",
+    opera: "47",
+    electron: "2.1"
+  },
+  "transform-dotall-regex": {
+    chrome: "62",
+    edge: "79",
+    safari: "11.1",
+    node: "8.10",
+    ios: "11.3",
+    samsung: "8",
+    opera: "49",
+    electron: "3.1"
+  },
+  "proposal-unicode-property-regex": {
+    chrome: "64",
+    edge: "79",
+    safari: "11.1",
+    node: "10",
+    ios: "11.3",
+    samsung: "9",
+    opera: "51",
+    electron: "3.1"
+  },
+  "transform-named-capturing-groups-regex": {
+    chrome: "64",
+    edge: "79",
+    safari: "11.1",
+    node: "10",
+    ios: "11.3",
+    samsung: "9",
+    opera: "51",
+    electron: "3.1"
+  },
+  // copy of transform-async-to-generator
+  // this is not in the babel-preset-env repo
+  // but we need this
+  "transform-async-to-promises": {
+    chrome: "55",
+    edge: "15",
+    firefox: "52",
+    safari: "11",
+    node: "7.6",
+    ios: "11",
+    samsung: "6",
+    opera: "42",
+    electron: "1.6"
+  },
+  "transform-async-to-generator": {
+    chrome: "55",
+    edge: "15",
+    firefox: "52",
+    safari: "11",
+    node: "7.6",
+    ios: "11",
+    samsung: "6",
+    opera: "42",
+    electron: "1.6"
+  },
+  "transform-exponentiation-operator": {
+    chrome: "52",
+    edge: "14",
+    firefox: "52",
+    safari: "10.1",
+    node: "7",
+    ios: "10.3",
+    samsung: "6",
+    opera: "39",
+    electron: "1.3"
+  },
   "transform-template-literals": {
     chrome: "41",
     edge: "13",
     firefox: "34",
+    safari: "13",
     node: "4",
+    ios: "13",
     samsung: "3.4",
     opera: "28",
     electron: "0.24"
@@ -7782,6 +8584,7 @@ const jsenvBabelPluginCompatMap = {
   },
   "transform-function-name": {
     chrome: "51",
+    edge: "79",
     firefox: "53",
     safari: "10",
     node: "6.5",
@@ -7890,15 +8693,6 @@ const jsenvBabelPluginCompatMap = {
     opera: "36",
     electron: "1"
   },
-  "transform-dotall-regex": {
-    chrome: "62",
-    safari: "11.1",
-    node: "8.10",
-    ios: "11.3",
-    samsung: "8.2",
-    opera: "49",
-    electron: "3.1"
-  },
   "transform-unicode-regex": {
     chrome: "50",
     edge: "13",
@@ -7987,97 +8781,6 @@ const jsenvBabelPluginCompatMap = {
     opera: "37",
     electron: "1.1"
   },
-  "transform-exponentiation-operator": {
-    chrome: "52",
-    edge: "14",
-    firefox: "52",
-    safari: "10.1",
-    node: "7",
-    ios: "10.3",
-    samsung: "6.2",
-    opera: "39",
-    electron: "1.3"
-  },
-  "transform-async-to-generator": {
-    chrome: "55",
-    edge: "15",
-    firefox: "52",
-    safari: "11",
-    node: "7.6",
-    ios: "11",
-    samsung: "6.2",
-    opera: "42",
-    electron: "1.6"
-  },
-  // copy of transform-async-to-generator
-  // this is not in the babel-preset-env repo
-  // but we need this
-  "transform-async-to-promises": {
-    chrome: "55",
-    edge: "15",
-    firefox: "52",
-    safari: "11",
-    node: "7.6",
-    ios: "11",
-    samsung: "6.2",
-    opera: "42",
-    electron: "1.6"
-  },
-  "proposal-async-generator-functions": {
-    chrome: "63",
-    firefox: "57",
-    safari: "12",
-    node: "10",
-    ios: "12",
-    samsung: "8.2",
-    opera: "50",
-    electron: "3.1"
-  },
-  "proposal-object-rest-spread": {
-    chrome: "60",
-    firefox: "55",
-    safari: "11.1",
-    node: "8.3",
-    ios: "11.3",
-    samsung: "8.2",
-    opera: "47",
-    electron: "2.1"
-  },
-  "proposal-optional-chaining": {},
-  "proposal-unicode-property-regex": {
-    chrome: "64",
-    safari: "11.1",
-    node: "10",
-    ios: "11.3",
-    opera: "51",
-    electron: "3.1"
-  },
-  "proposal-json-strings": {
-    chrome: "66",
-    firefox: "62",
-    safari: "12",
-    node: "10",
-    ios: "12",
-    opera: "53",
-    electron: "3.1"
-  },
-  "proposal-optional-catch-binding": {
-    chrome: "66",
-    firefox: "58",
-    safari: "11.1",
-    node: "10",
-    ios: "11.3",
-    opera: "53",
-    electron: "3.1"
-  },
-  "transform-named-capturing-groups-regex": {
-    chrome: "64",
-    safari: "11.1",
-    node: "10",
-    ios: "11.3",
-    opera: "51",
-    electron: "3.1"
-  },
   "transform-member-expression-literals": {
     chrome: "7",
     opera: "12",
@@ -8089,7 +8792,7 @@ const jsenvBabelPluginCompatMap = {
     android: "4",
     ios: "6",
     phantom: "2",
-    samsung: "2.1",
+    samsung: "1",
     electron: "5"
   },
   "transform-property-literals": {
@@ -8103,7 +8806,7 @@ const jsenvBabelPluginCompatMap = {
     android: "4",
     ios: "6",
     phantom: "2",
-    samsung: "2.1",
+    samsung: "1",
     electron: "5"
   },
   "transform-reserved-words": {
@@ -8117,7 +8820,7 @@ const jsenvBabelPluginCompatMap = {
     android: "4.4",
     ios: "6",
     phantom: "2",
-    samsung: "2.1",
+    samsung: "1",
     electron: "0.2"
   }
 };
@@ -8826,7 +9529,7 @@ const createBabePluginMapForBundle = ({
   };
 };
 
-const startsWithWindowsDriveLetter$1 = string => {
+const startsWithWindowsDriveLetter$3 = string => {
   const firstChar = string[0];
   if (!/[a-zA-Z]/.test(firstChar)) return false;
   const secondChar = string[1];
@@ -8894,7 +9597,7 @@ const writeOrUpdateSourceMappingURL = (source, location) => {
   return writeSourceMappingURL(source, location);
 };
 
-const isWindows$4 = process.platform === "win32";
+const isWindows$c = process.platform === "win32";
 const transformResultToCompilationResult = async ({
   code,
   map,
@@ -8948,7 +9651,7 @@ const transformResultToCompilationResult = async ({
         // be careful here we might received C:/Directory/file.js path from babel
         // also in case we receive relative path like directory\file.js we replace \ with slash
         // for url resolution
-        const sourceFileUrl = isWindows$4 && startsWithWindowsDriveLetter$1(source) ? windowsFilePathToUrl(source) : ensureWindowsDriveLetter(resolveUrl$1(isWindows$4 ? replaceBackSlashesWithSlashes$1(source) : source, sourcemapFileUrl), sourcemapFileUrl);
+        const sourceFileUrl = isWindows$c && startsWithWindowsDriveLetter$3(source) ? windowsFilePathToUrl(source) : ensureWindowsDriveLetter(resolveUrl$1(isWindows$c ? replaceBackSlashesWithSlashes$1(source) : source, sourcemapFileUrl), sourcemapFileUrl);
 
         if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
           // do not track dependency outside project
@@ -11013,7 +11716,6 @@ const urlIsAsset = url => {
 const startCompileServer = async ({
   cancellationToken = createCancellationToken$1(),
   compileServerLogLevel,
-  logStart,
   // js compile options
   transformTopLevelAwait = true,
   transformModuleIntoSystemFormat = true,
@@ -11154,7 +11856,7 @@ ${projectDirectoryUrl}`);
   const [compileServer, importMapForCompileServer] = await Promise.all([startServer({
     cancellationToken,
     logLevel: compileServerLogLevel,
-    logStart,
+    serverName: "compile server",
     protocol,
     privateKey,
     certificate,
@@ -11446,10 +12148,10 @@ const launchAndExecute = async ({
   // however unit test will pass true because they want to move on
   stopPlatformAfterExecute = false,
   stopPlatformAfterExecuteReason = "stop after execute",
-  // when launchPlatform returns { disconnected, stop, stopForce }
+  // when launchPlatform returns { disconnected, gracefulStop, stop }
   // the launched platform have that amount of ms for disconnected to resolve
-  // before we call stopForce
-  allocatedMsBeforeForceStop = 4000,
+  // before we call stop
+  gracefulStopAllocatedMs = 4000,
   platformConsoleCallback = () => {},
   platformStartedCallback = () => {},
   platformStoppedCallback = () => {},
@@ -11560,7 +12262,7 @@ const launchAndExecute = async ({
     launch,
     stopPlatformAfterExecute,
     stopPlatformAfterExecuteReason,
-    allocatedMsBeforeForceStop,
+    gracefulStopAllocatedMs,
     platformConsoleCallback,
     platformErrorCallback,
     platformDisconnectCallback,
@@ -11638,7 +12340,7 @@ const computeExecutionResult = async ({
   launch,
   stopPlatformAfterExecute,
   stopPlatformAfterExecuteReason,
-  allocatedMsBeforeForceStop,
+  gracefulStopAllocatedMs,
   platformStartedCallback,
   platformStoppedCallback,
   platformConsoleCallback,
@@ -11667,35 +12369,36 @@ const computeExecutionResult = async ({
       // it is important to keep the code inside this stop function because once cancelled
       // all code after the operation won't execute because it will be rejected with
       // the cancellation error
-      let forceStopped = false;
+      let gracefulStop;
 
-      if (platform.stopForce && allocatedMsBeforeForceStop) {
-        const stopPromise = (async () => {
-          await platform.stop(reason);
-          return false;
+      if (platform.gracefulStop && gracefulStopAllocatedMs) {
+        const gracefulStopPromise = (async () => {
+          await platform.gracefulStop(reason);
+          return true;
         })();
 
-        const stopForcePromise = (async () => {
+        const stopPromise = (async () => {
           await new Promise(async resolve => {
-            const timeoutId = setTimeout(resolve, allocatedMsBeforeForceStop);
+            const timeoutId = setTimeout(resolve, gracefulStopAllocatedMs);
 
             try {
-              await stopPromise;
+              await gracefulStopPromise;
             } finally {
               clearTimeout(timeoutId);
             }
           });
-          await platform.stopForce();
-          return true;
+          await platform.stop();
+          return false;
         })();
 
-        forceStopped = await Promise.all([stopPromise, stopForcePromise]);
+        gracefulStop = await Promise.all([gracefulStopPromise, stopPromise]);
       } else {
         await platform.stop(reason);
+        gracefulStop = false;
       }
 
       platformStoppedCallback({
-        forced: forceStopped
+        gracefulStop
       });
       launchLogger.debug(`platform stopped.`);
     }
@@ -15044,20 +15747,23 @@ const memoizeOnce$3 = compute => {
 };
 
 const supportsDynamicImport = memoizeOnce$3(async () => {
-  // ZXhwb3J0IGRlZmF1bHQgNDI= is Buffer.from("export default 42").toString("base64")
+  const fileUrl = resolveUrl$1("./src/internal/dynamicImportSource.js", jsenvCoreDirectoryUrl);
+  const filePath = urlToFileSystemPath(fileUrl);
+  const fileAsString = String(fs.readFileSync(filePath));
+
   try {
-    // eslint-disable-next-line no-eval
-    const asyncFunction = global.eval(`(async () => {
-  const moduleSource = "data:text/javascript;base64,ZXhwb3J0IGRlZmF1bHQgNDI="
-  const namespace = await import(moduleSource)
-  return namespace.default
-})`);
-    const value = await asyncFunction();
-    return value === 42;
+    return await evalSource$1(fileAsString, filePath);
   } catch (e) {
     return false;
   }
 });
+
+const evalSource$1 = (code, filePath) => {
+  const script = new vm.Script(code, {
+    filename: filePath
+  });
+  return script.runInThisContext();
+};
 
 const getCommandArgument = (argv, name) => {
   let i = 0;
@@ -15302,6 +16008,23 @@ const launchNode = async ({
     throw new TypeError(`env must be an object, got ${env}`);
   }
 
+  let removeUnhandledRejectionListener = () => {};
+
+  cancellationToken.register(() => {
+    const unhandledRejectionListener = rejectedValue => {
+      if (isCancelError(rejectedValue)) {
+        return;
+      }
+
+      throw rejectedValue;
+    };
+
+    process.once("unhandledRejection", unhandledRejectionListener);
+
+    removeUnhandledRejectionListener = () => {
+      process.removeListener("unhandledRejection", unhandledRejectionListener);
+    };
+  });
   const dynamicImportSupported = await supportsDynamicImport();
   const nodeControllableFileUrl = resolveUrl$1(dynamicImportSupported ? "./src/internal/node-launcher/nodeControllableFile.js" : "./src/internal/node-launcher/nodeControllableFile.cjs", jsenvCoreDirectoryUrl);
   await assertFilePresence(nodeControllableFileUrl);
@@ -15369,9 +16092,12 @@ const launchNode = async ({
     errorEventRegistration.unregister();
     exitErrorRegistration.unregister();
     emitError(error);
+    removeUnhandledRejectionListener();
   }); // process.exit(1) from child
 
   const exitErrorRegistration = registerChildEvent(child, "exit", code => {
+    removeUnhandledRejectionListener();
+
     if (code !== 0 && code !== null) {
       errorEventRegistration.unregister();
       exitErrorRegistration.unregister();
@@ -15381,6 +16107,7 @@ const launchNode = async ({
 
   const registerDisconnectCallback = callback => {
     const registration = registerChildEvent(child, "disconnect", () => {
+      removeUnhandledRejectionListener();
       callback();
     });
     return () => {
@@ -15399,7 +16126,7 @@ const launchNode = async ({
     return disconnectedPromise;
   };
 
-  const stopForce = () => {
+  const gracefulStop = () => {
     const disconnectedPromise = new Promise(resolve => {
       const unregister = registerDisconnectCallback(() => {
         unregister();
@@ -15502,8 +16229,8 @@ ${e.stack}`);
       execArgv,
       env
     },
+    gracefulStop,
     stop,
-    stopForce,
     registerDisconnectCallback,
     registerErrorCallback,
     registerConsoleCallback,
@@ -15515,7 +16242,7 @@ const evalException$1 = (exceptionSource, {
   compileServerOrigin,
   projectDirectoryUrl
 }) => {
-  const error = evalSource$1(exceptionSource);
+  const error = evalSource$2(exceptionSource);
 
   if (error && error instanceof Error) {
     const compileServerOriginRegexp = new RegExp(escapeRegexpSpecialCharacters(`${compileServerOrigin}/`), "g");
@@ -15583,7 +16310,6 @@ const createExitWithFailureCodeError = code => {
 const generateSourceToEvaluate = async ({
   dynamicImportSupported,
   executeParams,
-  cancellationToken,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin
@@ -15597,10 +16323,7 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`;
   const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl);
   const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`;
   const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`;
-  const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`;
-  await fetchUrl(nodeBundledJsFileRemoteUrl, {
-    cancellationToken
-  }); // The compiled nodePlatform file will be somewhere else in the filesystem
+  const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`; // The compiled nodePlatform file will be somewhere else in the filesystem
   // than the original nodePlatform file.
   // It is important for the compiled file to be able to require
   // node modules that original file could access
@@ -15610,6 +16333,17 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`;
   const { readFileSync } = require("fs")
   const Module = require('module')
   const { dirname } = require("path")
+  const { fetchUrl } = require("@jsenv/server")
+
+  const run = async () => {
+    await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)})
+
+    const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
+    const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
+    const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
+
+    return execute(${JSON.stringify(executeParams, null, "    ")})
+  }
 
   const requireCompiledFileAsOriginalFile = (compiledFilePath, originalFilePath) => {
     const fileContent = String(readFileSync(compiledFilePath))
@@ -15619,16 +16353,13 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`;
     return moduleObject.exports
   }
 
-  const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
-  const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
-  const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
   return {
-    default: execute(${JSON.stringify(executeParams, null, "    ")})
+    default: run()
   }
 })()`;
 };
 
-const evalSource$1 = (code, href) => {
+const evalSource$2 = (code, href) => {
   const script = new vm.Script(code, {
     filename: href
   });
@@ -15883,7 +16614,6 @@ const startExploring = async ({
     const compileServer = await startCompileServer({
       cancellationToken,
       compileServerLogLevel,
-      logStart: false,
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,

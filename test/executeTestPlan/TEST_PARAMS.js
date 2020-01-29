@@ -3,6 +3,7 @@ import { testBabelPluginMap } from "../testBabelPluginMap.js"
 
 export const EXECUTE_TEST_PARAMS = {
   logLevel: "warn",
+  updateProcessExitCode: false,
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
   jsenvDirectoryClean: true,
   babelPluginMap: testBabelPluginMap,

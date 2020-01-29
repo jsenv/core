@@ -7,8 +7,9 @@
       "request": "launch",
       "protocol": "inspector",
       "program": "${file}",
+      "runtimeArgs": ["--unhandled-rejections=strict"],
       "autoAttachChildProcesses": true,
-      "sourceMaps": true,
+      // "sourceMaps": false,
       "smartStep": true,
       "skipFiles": [
         // force-array-multiline
@@ -51,20 +52,22 @@
       "request": "launch",
       "protocol": "inspector",
       "program": "${workspaceFolder}/script/run-node/run-node.js",
+      // "runtimeArgs": ["--unhandled-rejections=strict"],
       "args": ["${relativeFile}"],
       "autoAttachChildProcesses": true,
-      "sourceMaps": true,
+      // "sourceMaps": false,
       "smartStep": true,
       "skipFiles": [
-        // force-array-multiline
+        "<node_internals>/**/*.js",
         // "node_modules/**",
-        "node_modules/@jsenv/core/**",
         "node_modules/@babel/template/**",
-        "node_modules/@dmail/cancellation/**",
+        // "node_modules/@jsenv/core/**",
+        // "node_modules/@jsenv/cancellation/**",
+        "node_modules/@rollup/**",
         "node_modules/puppeteer/**",
         "node_modules/rollup/**",
-        "node_modules/@rollup/**",
-        "<node_internals>/**/*.js"
+        "src/internal/supportsDynamicImport.js",
+        "src/internal/dynamicImportSource.js"
       ]
     },
     {

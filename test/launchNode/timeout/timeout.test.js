@@ -1,6 +1,6 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
@@ -10,9 +10,8 @@ import {
   EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
-import { removeDebuggerLogs } from "../../removeDebuggerLogs.js"
 
-const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
@@ -34,21 +33,8 @@ const actual = await launchAndExecute({
       compileServerOrigin,
     }),
   allocatedMs: 12000,
-  captureConsole: true,
 })
-actual.consoleCalls = removeDebuggerLogs(actual.consoleCalls)
 const expected = {
   status: "timedout",
-  consoleCalls:
-    // on windows we don't get the console calls in that specific case, ignore for now
-    process.platform === "win32"
-      ? actual.consoleCalls
-      : [
-          {
-            type: "log",
-            text: `foo
-`,
-          },
-        ],
 }
 assert({ actual, expected })

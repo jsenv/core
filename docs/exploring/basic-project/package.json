@@ -2,10 +2,14 @@
   "name": "whatever",
   "version": "0.0.1",
   "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=13.7.0"
+  },
   "scripts": {
-    "start-exploring": "node ./start-exploring.js"
+    "start-exploring": "node ./start-exploring.cjs"
   },
   "devDependencies": {
-    "@jsenv/core": "10.4.0"
+    "@jsenv/core": "11.0.0"
   }
 }

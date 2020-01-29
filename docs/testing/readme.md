@@ -232,7 +232,7 @@ executeTestPlan({
 })
 ```
 
-— source code at [src/executeTestPlan.js](./src/executeTestPlan.js).
+— source code at [src/executeTestPlan.js](../../src/executeTestPlan.js).
 
 # executeTestPlan parameters
 

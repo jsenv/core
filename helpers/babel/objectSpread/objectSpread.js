@@ -2,9 +2,9 @@ import defineProperty from "../defineProperty/defineProperty.js"
 
 export default function(target) {
   for (var i = 1; i < arguments.length; i++) {
-    // eslint-disable-next-line prefer-rest-params
-    var source = arguments[i] === null ? {} : arguments[i]
-    var ownKeys = Object.keys(Object(source))
+    // eslint-disable-next-line
+    var source = arguments[i] != null ? Object(arguments[i]) : {}
+    var ownKeys = Object.keys(source)
     if (typeof Object.getOwnPropertySymbols === "function") {
       ownKeys = ownKeys.concat(
         // eslint-disable-next-line no-loop-func

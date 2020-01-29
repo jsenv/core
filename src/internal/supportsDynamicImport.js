@@ -1,18 +1,22 @@
+import { Script } from "vm"
+import { readFileSync } from "fs"
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+import { jsenvCoreDirectoryUrl } from "./jsenvCoreDirectoryUrl.js"
 import { memoizeOnce } from "./memoizeOnce.js"
 
 export const supportsDynamicImport = memoizeOnce(async () => {
-  // ZXhwb3J0IGRlZmF1bHQgNDI= is Buffer.from("export default 42").toString("base64")
+  const fileUrl = resolveUrl("./src/internal/dynamicImportSource.js", jsenvCoreDirectoryUrl)
+  const filePath = urlToFileSystemPath(fileUrl)
+  const fileAsString = String(readFileSync(filePath))
 
   try {
-    // eslint-disable-next-line no-eval
-    const asyncFunction = global.eval(`(async () => {
-  const moduleSource = "data:text/javascript;base64,ZXhwb3J0IGRlZmF1bHQgNDI="
-  const namespace = await import(moduleSource)
-  return namespace.default
-})`)
-    const value = await asyncFunction()
-    return value === 42
+    return await evalSource(fileAsString, filePath)
   } catch (e) {
     return false
   }
 })
+
+const evalSource = (code, filePath) => {
+  const script = new Script(code, { filename: filePath })
+  return script.runInThisContext()
+}

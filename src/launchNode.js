@@ -2,8 +2,7 @@
 import { Script } from "vm"
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
-import { createCancellationToken } from "@jsenv/cancellation"
-import { fetchUrl } from "@jsenv/server"
+import { createCancellationToken, isCancelError } from "@jsenv/cancellation"
 import { supportsDynamicImport } from "./internal/supportsDynamicImport.js"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "./internal/CONSTANTS.js"
 import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
@@ -50,6 +49,21 @@ export const launchNode = async ({
   } else if (typeof env !== "object") {
     throw new TypeError(`env must be an object, got ${env}`)
   }
+
+  let removeUnhandledRejectionListener = () => {}
+  cancellationToken.register(() => {
+    const unhandledRejectionListener = (rejectedValue) => {
+      if (isCancelError(rejectedValue)) {
+        return
+      }
+      throw rejectedValue
+    }
+
+    process.once("unhandledRejection", unhandledRejectionListener)
+    removeUnhandledRejectionListener = () => {
+      process.removeListener("unhandledRejection", unhandledRejectionListener)
+    }
+  })
 
   const dynamicImportSupported = await supportsDynamicImport()
   const nodeControllableFileUrl = resolveUrl(
@@ -126,9 +140,11 @@ export const launchNode = async ({
     errorEventRegistration.unregister()
     exitErrorRegistration.unregister()
     emitError(error)
+    removeUnhandledRejectionListener()
   })
   // process.exit(1) from child
   const exitErrorRegistration = registerChildEvent(child, "exit", (code) => {
+    removeUnhandledRejectionListener()
     if (code !== 0 && code !== null) {
       errorEventRegistration.unregister()
       exitErrorRegistration.unregister()
@@ -139,6 +155,7 @@ export const launchNode = async ({
   // https://nodejs.org/api/child_process.html#child_process_event_disconnect
   const registerDisconnectCallback = (callback) => {
     const registration = registerChildEvent(child, "disconnect", () => {
+      removeUnhandledRejectionListener()
       callback()
     })
     return () => {
@@ -157,7 +174,7 @@ export const launchNode = async ({
     return disconnectedPromise
   }
 
-  const stopForce = () => {
+  const gracefulStop = () => {
     const disconnectedPromise = new Promise((resolve) => {
       const unregister = registerDisconnectCallback(() => {
         unregister()
@@ -251,8 +268,8 @@ ${e.stack}`)
     name: "node",
     version: process.version.slice(1),
     options: { execArgv, env },
+    gracefulStop,
     stop,
-    stopForce,
     registerDisconnectCallback,
     registerErrorCallback,
     registerConsoleCallback,
@@ -332,7 +349,6 @@ const generateSourceToEvaluate = async ({
   dynamicImportSupported,
   executeParams,
 
-  cancellationToken,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
@@ -347,9 +363,6 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`
   const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`
   const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`
   const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`
-  await fetchUrl(nodeBundledJsFileRemoteUrl, {
-    cancellationToken,
-  })
 
   // The compiled nodePlatform file will be somewhere else in the filesystem
   // than the original nodePlatform file.
@@ -360,6 +373,17 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`
   const { readFileSync } = require("fs")
   const Module = require('module')
   const { dirname } = require("path")
+  const { fetchUrl } = require("@jsenv/server")
+
+  const run = async () => {
+    await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)})
+
+    const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
+    const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
+    const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
+
+    return execute(${JSON.stringify(executeParams, null, "    ")})
+  }
 
   const requireCompiledFileAsOriginalFile = (compiledFilePath, originalFilePath) => {
     const fileContent = String(readFileSync(compiledFilePath))
@@ -369,11 +393,8 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`
     return moduleObject.exports
   }
 
-  const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
-  const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
-  const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
   return {
-    default: execute(${JSON.stringify(executeParams, null, "    ")})
+    default: run()
   }
 })()`
 }

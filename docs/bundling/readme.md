@@ -1,15 +1,27 @@
-## Table of contents
+# Table of contents
 
 - [Presentation](#Presentation)
-- [Systemjs format](#systemjs-format)
-- [Global format](#global-format)
-- [Commonjs format](#commonjs-format)
-- [Code example](#code-example)
+  - [File structure](#File-structure)
+    - [Systemjs format](#systemjs-format)
+    - [Global format](#global-format)
+    - [Commonjs format](#commonjs-format)
 - [Concrete example](#concrete-example)
   - [1 - Setup basic project](#1---setup-basic-project)
   - [2 - Generate bundles](#2---generate-bundles)
+- [generateSystemJsBundle](#generateSystemJsBundle)
+- [generateGlobalBundle](#generateglobalbundle)
+  - [globalName](#globalName)
+- [generateCommonJsBundle](#generateCommonJsBundle)
+- [generateCommonJsBundleForNode](#generateCommonJsBundleForNode)
+  - [nodeMinimumVersion](#nodeMinimumVersion)
+- [Bundling parameters](#bundling-parameters)
+  - [bundleDirectoryRelativeUrl](#bundleDirectoryRelativeUrl)
+  - [entryPointMap](#entryPointMap)
+  - [minify](#minify)
+- [Shared parameters](#Shared-parameters)
+- [Balancing](#balancing)
 
-## Presentation
+# Presentation
 
 A bundle is the concatenation of an entry file and its dependencies into one file.
 
@@ -17,10 +29,9 @@ They are used to save http requests if your production servers are not compatibl
 They also provide a dedicated build time where you can perform changes or optimization production specific like minifying files.
 
 Jsenv uses [rollup](https://github.com/rollup/rollup) to provide functions generating bundle of various formats.
-Each format shines in different situations explained later in this document.
-Each section shows what bundle would be generated for the following file structure:
+These formats output different code for the same files as shown in the next part.
 
-### File structure
+## File structure
 
 index.js
 
@@ -36,7 +47,7 @@ dependency.js
 export default 42
 ```
 
-## Systemjs format
+### Systemjs format
 
 Things to know about bundle using systemjs format:
 
@@ -71,7 +82,7 @@ This systemjs bundle can be used by loading systemjs library and importing the b
 </script>
 ```
 
-## Global format
+### Global format
 
 Things to know about bundle using global format:
 
@@ -100,7 +111,7 @@ This global bundle can be used with a classic script tag.
 </script>
 ```
 
-## Commonjs format
+### Commonjs format
 
 Things to know about bundle using commonjs format:
 
@@ -111,7 +122,7 @@ Here is the generated bundle using commonjs format for the [file structure](#Fil
 
 ```js
 module.exports = 42
-//# sourceMappingURL=main.js.map
+//# sourceMappingURL=main.cjs.map
 ```
 
 Commonjs bundle put files content into a file executable in Node.js writing exports on `module.exports`.<br />
@@ -120,28 +131,10 @@ Commonjs bundle put files content into a file executable in Node.js writing expo
 This commonjs bundle can be used by require.
 
 ```js
-const namespace = require("./dist/commonjs/main.js")
+const namespace = require("./dist/commonjs/main.cjs")
 
 console.log(namespace)
 ```
-
-### Code example
-
-The following code uses `@jsenv/core` to create a systemjs bundle for `index.js` entry point.
-
-```js
-const { generateSystemJsBundle } = require("@jsenv/core")
-
-generateSystemJsBundle({
-  projectDirectoryUrl: __dirname,
-  bundleDirectoryRelativeUrl: "./dist",
-  entryPointMap: {
-    main: "./index.js",
-  },
-})
-```
-
-If you want to know more about this function and others check [api documentation](./api.md)
 
 ## Concrete example
 
@@ -164,12 +157,10 @@ npm install
 
 ### 2 - Generate bundles
 
-This project contains 3 files that will generate bundle when executed.
-
-To generate a bundle you can execute the corresponding file with node.
+This project contains 3 files that will generate bundle when executed. To generate a bundle you can execute the corresponding file with node.
 
 ```console
-node ./generate-systemjs-bundle.js
+node ./generate-systemjs-bundle.cjs
 ```
 
 Or you can use the preconfigured script from package.json.
@@ -177,3 +168,124 @@ Or you can use the preconfigured script from package.json.
 ```console
 npm run generate-systemjs-bundle
 ```
+
+# generateSystemJsBundle
+
+`generateSystemJsBundle` is an async function generating a systemjs bundle for your project.
+
+```js
+import { generateSystemJsBundle } from "@jsenv/core"
+
+generateSystemJsBundle({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+})
+```
+
+— source code at [src/generateSystemJsBundle.js](../../src/generateSystemJsBundle.js).
+
+# generateGlobalBundle
+
+`generateGlobalBundle` is an async function generating a global bundle for your project.
+
+```js
+import { generateGlobalBundle } from "@jsenv/core"
+
+generateGlobalBundle({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  globalName: "__whatever__",
+})
+```
+
+— source code at [src/generateGlobalBundle.js](../../src/generateGlobalBundle.js).
+
+## globalName
+
+`globalName` parameter controls what global variable will contain your entry file exports. This is a **required** parameter. Passing `"__whatever__"` means generated bundle will write your exports under `window.__whatever__`.
+
+# generateCommonJsBundle
+
+`generateCommonJsBundle` is an async function generating a commonjs bundle for your project.
+
+```js
+import { generateCommonJsBundle } from "@jsenv/core"
+
+generateCommonJsBundle({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+})
+```
+
+— source code at [src/generateCommonJsBundle.js](../../src/generateCommonJsBundle.js).
+
+# generateCommonJsBundleForNode
+
+`generateCommonJsBundleForNode` is an async function generating a commonjs bundle for your project assuming it will run in your current node version.
+
+```js
+import { generateCommonJsBundleForNode } from "@jsenv/core"
+
+generateCommonJsBundleForNode({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+  nodeMinimumVersion: "8.0.0",
+})
+```
+
+— source code at [src/generateCommonJsBundleForNode.js](../../src/generateCommonJsBundleForNode.js)
+
+## nodeMinimumVersion
+
+`nodeMinimumVersion` parameter is a string representing the minimum node version your bundle will work with. This parameter is optional with a default value corresponding to your current node version.
+
+# Bundling parameters
+
+This section present parameters available to every function generating a bundle.
+
+## bundleDirectoryRelativeUrl
+
+`bundleDirectoryRelativeUrl` parameter is a string leading to a directory where bundle files are written. This parameter is optional with a default value specific to each bundling function:
+
+- Default for `generateGlobalBundle`:
+
+  ```js
+  "./dist/global/"
+  ```
+
+- Default for `generateCommonJsBundle` and `generateCommonJsBundleForNode`:
+
+  ```js
+  "./dist/commonjs/"
+  ```
+
+- Default for `generateSystemJsBundle`:
+
+  ```js
+  "./dist/systemjs/"
+  ```
+
+## entryPointMap
+
+`entryPointMap` parameter is an object describing your project entry points. A dedicated bundle is generated for each entry. This parameter is optional with a default value assuming your have one entry point being `index.js`.
+
+```json
+{
+  "main": "./index.js"
+}
+```
+
+## minify
+
+`minify` parameter is a boolean controlling if bundle content will be minified to save bytes. This parameter is optional with a default value of `false`.
+
+# Shared parameters
+
+To avoid duplication some parameter are linked to a generic documentation.
+
+- [projectDirectoryUrl](../shared-parameters.md#projectDirectoryUrl)
+- [jsenvDirectoryRelativeUrl](../shared-parameters.md#jsenvDirectoryRelativeUrl)
+- [babelPluginMap](../shared-parameters.md#babelPluginMap)
+- [convertMap](../shared-parameters.md#convertMap)
+- [importMapFileRelativeUrl](../shared-parameters.md#importMapFileRelativeUrl)
+- [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
+
+# Balancing
+
+If you check source code you might see some code related to a balancing concept. It is not documented nor ready to be used. It's likely never going to have a use case.

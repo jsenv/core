@@ -1,8 +1,9 @@
+/* globals require, __dirname  */
 // eslint-disable-next-line import/no-unresolved
-import { startExploring } from "@jsenv/core"
+const { startExploring } = require("@jsenv/core")
 
 startExploring({
-  projectDirectoryUrl: new URL("./", import.meta.url),
+  projectDirectoryUrl: __dirname,
   explorableConfig: {
     "./src/*.js": true,
   },

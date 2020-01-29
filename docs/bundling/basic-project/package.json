@@ -2,12 +2,16 @@
   "name": "whatever",
   "version": "0.0.1",
   "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=13.7.0"
+  },
   "scripts": {
-    "generate-commonjs-bundle": "node ./generate-commonjs-bundle.js",
-    "generate-global-bundle": "node ./generate-global-bundle.js",
-    "generate-systemjs-bundle": "node ./generate-systemjs-bundle.js"
+    "generate-commonjs-bundle": "node ./generate-commonjs-bundle.cjs",
+    "generate-global-bundle": "node ./generate-global-bundle.cjs",
+    "generate-systemjs-bundle": "node ./generate-systemjs-bundle.cjs"
   },
   "devDependencies": {
-    "@jsenv/core": "10.4.0"
+    "@jsenv/core": "11.0.0"
   }
 }

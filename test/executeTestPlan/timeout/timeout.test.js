@@ -1,10 +1,10 @@
 import { assert } from "@jsenv/assert"
-import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { executeTestPlan, launchNode } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
-const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
+const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}timeout.js`
@@ -17,14 +17,14 @@ const testPlan = {
           env: { AWAIT_FOREVER: true },
         }),
       allocatedMs: 8000,
-      allocatedMsBeforeForceStop: 1000,
+      gracefulStopAllocatedMs: 5000,
     },
   },
 }
 
 const actual = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
-  executeLogLevel: "off",
+  executeLogLevel: "error",
   jsenvDirectoryRelativeUrl,
   testPlan,
 })
