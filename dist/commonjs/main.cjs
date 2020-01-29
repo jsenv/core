@@ -6196,6 +6196,7 @@ start`);
     });
     promise.then(cancelRegistration.unregister, () => {});
   });
+  cancelPromise.catch(() => {});
   const operationPromise = Promise.race([promise, cancelPromise]);
   return operationPromise;
 };
@@ -6948,24 +6949,31 @@ const fetchUrl = async (url, {
       headers
     });
     return simplified ? standardResponseToSimplifiedResponse(response) : response;
-  }
+  } // https://github.com/bitinn/node-fetch#request-cancellation-with-abortsignal
 
-  const response = await createOperation$2({
-    cancellationToken,
-    start: () => nodeFetch(url, {
-      signal: cancellationTokenToAbortSignal(cancellationToken),
-      ...options
-    })
-  });
-  return simplified ? standardResponseToSimplifiedResponse(response) : response;
-}; // https://github.com/bitinn/node-fetch#request-cancellation-with-abortsignal
 
-const cancellationTokenToAbortSignal = cancellationToken => {
   const abortController = new AbortController();
+  let cancelError;
   cancellationToken.register(reason => {
+    cancelError = reason;
     abortController.abort(reason);
   });
-  return abortController.signal;
+  let response;
+
+  try {
+    response = await nodeFetch(url, {
+      signal: abortController.signal,
+      ...options
+    });
+  } catch (e) {
+    if (cancelError && e.name === "AbortError") {
+      throw cancelError;
+    }
+
+    throw e;
+  }
+
+  return simplified ? standardResponseToSimplifiedResponse(response) : response;
 };
 
 const standardResponseToSimplifiedResponse = async response => {
@@ -12140,10 +12148,10 @@ const launchAndExecute = async ({
   // however unit test will pass true because they want to move on
   stopPlatformAfterExecute = false,
   stopPlatformAfterExecuteReason = "stop after execute",
-  // when launchPlatform returns { disconnected, stop, stopForce }
+  // when launchPlatform returns { disconnected, gracefulStop, stop }
   // the launched platform have that amount of ms for disconnected to resolve
-  // before we call stopForce
-  allocatedMsBeforeForceStop = 4000,
+  // before we call stop
+  gracefulStopAllocatedMs = 4000,
   platformConsoleCallback = () => {},
   platformStartedCallback = () => {},
   platformStoppedCallback = () => {},
@@ -12254,7 +12262,7 @@ const launchAndExecute = async ({
     launch,
     stopPlatformAfterExecute,
     stopPlatformAfterExecuteReason,
-    allocatedMsBeforeForceStop,
+    gracefulStopAllocatedMs,
     platformConsoleCallback,
     platformErrorCallback,
     platformDisconnectCallback,
@@ -12332,7 +12340,7 @@ const computeExecutionResult = async ({
   launch,
   stopPlatformAfterExecute,
   stopPlatformAfterExecuteReason,
-  allocatedMsBeforeForceStop,
+  gracefulStopAllocatedMs,
   platformStartedCallback,
   platformStoppedCallback,
   platformConsoleCallback,
@@ -12361,35 +12369,36 @@ const computeExecutionResult = async ({
       // it is important to keep the code inside this stop function because once cancelled
       // all code after the operation won't execute because it will be rejected with
       // the cancellation error
-      let forceStopped = false;
+      let gracefulStop;
 
-      if (platform.stopForce && allocatedMsBeforeForceStop) {
-        const stopPromise = (async () => {
-          await platform.stop(reason);
-          return false;
+      if (platform.gracefulStop && gracefulStopAllocatedMs) {
+        const gracefulStopPromise = (async () => {
+          await platform.gracefulStop(reason);
+          return true;
         })();
 
-        const stopForcePromise = (async () => {
+        const stopPromise = (async () => {
           await new Promise(async resolve => {
-            const timeoutId = setTimeout(resolve, allocatedMsBeforeForceStop);
+            const timeoutId = setTimeout(resolve, gracefulStopAllocatedMs);
 
             try {
-              await stopPromise;
+              await gracefulStopPromise;
             } finally {
               clearTimeout(timeoutId);
             }
           });
-          await platform.stopForce();
-          return true;
+          await platform.stop();
+          return false;
         })();
 
-        forceStopped = await Promise.all([stopPromise, stopForcePromise]);
+        gracefulStop = await Promise.all([gracefulStopPromise, stopPromise]);
       } else {
         await platform.stop(reason);
+        gracefulStop = false;
       }
 
       platformStoppedCallback({
-        forced: forceStopped
+        gracefulStop
       });
       launchLogger.debug(`platform stopped.`);
     }
@@ -15999,6 +16008,23 @@ const launchNode = async ({
     throw new TypeError(`env must be an object, got ${env}`);
   }
 
+  let removeUnhandledRejectionListener = () => {};
+
+  cancellationToken.register(() => {
+    const unhandledRejectionListener = rejectedValue => {
+      if (isCancelError(rejectedValue)) {
+        return;
+      }
+
+      throw rejectedValue;
+    };
+
+    process.once("unhandledRejection", unhandledRejectionListener);
+
+    removeUnhandledRejectionListener = () => {
+      process.removeListener("unhandledRejection", unhandledRejectionListener);
+    };
+  });
   const dynamicImportSupported = await supportsDynamicImport();
   const nodeControllableFileUrl = resolveUrl$1(dynamicImportSupported ? "./src/internal/node-launcher/nodeControllableFile.js" : "./src/internal/node-launcher/nodeControllableFile.cjs", jsenvCoreDirectoryUrl);
   await assertFilePresence(nodeControllableFileUrl);
@@ -16066,9 +16092,12 @@ const launchNode = async ({
     errorEventRegistration.unregister();
     exitErrorRegistration.unregister();
     emitError(error);
+    removeUnhandledRejectionListener();
   }); // process.exit(1) from child
 
   const exitErrorRegistration = registerChildEvent(child, "exit", code => {
+    removeUnhandledRejectionListener();
+
     if (code !== 0 && code !== null) {
       errorEventRegistration.unregister();
       exitErrorRegistration.unregister();
@@ -16078,6 +16107,7 @@ const launchNode = async ({
 
   const registerDisconnectCallback = callback => {
     const registration = registerChildEvent(child, "disconnect", () => {
+      removeUnhandledRejectionListener();
       callback();
     });
     return () => {
@@ -16096,7 +16126,7 @@ const launchNode = async ({
     return disconnectedPromise;
   };
 
-  const stopForce = () => {
+  const gracefulStop = () => {
     const disconnectedPromise = new Promise(resolve => {
       const unregister = registerDisconnectCallback(() => {
         unregister();
@@ -16199,8 +16229,8 @@ ${e.stack}`);
       execArgv,
       env
     },
+    gracefulStop,
     stop,
-    stopForce,
     registerDisconnectCallback,
     registerErrorCallback,
     registerConsoleCallback,
@@ -16280,7 +16310,6 @@ const createExitWithFailureCodeError = code => {
 const generateSourceToEvaluate = async ({
   dynamicImportSupported,
   executeParams,
-  cancellationToken,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin
@@ -16294,10 +16323,7 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`;
   const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl);
   const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`;
   const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`;
-  const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`;
-  await fetchUrl(nodeBundledJsFileRemoteUrl, {
-    cancellationToken
-  }); // The compiled nodePlatform file will be somewhere else in the filesystem
+  const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`; // The compiled nodePlatform file will be somewhere else in the filesystem
   // than the original nodePlatform file.
   // It is important for the compiled file to be able to require
   // node modules that original file could access
@@ -16307,6 +16333,17 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`;
   const { readFileSync } = require("fs")
   const Module = require('module')
   const { dirname } = require("path")
+  const { fetchUrl } = require("@jsenv/server")
+
+  const run = async () => {
+    await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)})
+
+    const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
+    const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
+    const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
+
+    return execute(${JSON.stringify(executeParams, null, "    ")})
+  }
 
   const requireCompiledFileAsOriginalFile = (compiledFilePath, originalFilePath) => {
     const fileContent = String(readFileSync(compiledFilePath))
@@ -16316,11 +16353,8 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`;
     return moduleObject.exports
   }
 
-  const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
-  const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
-  const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
   return {
-    default: execute(${JSON.stringify(executeParams, null, "    ")})
+    default: run()
   }
 })()`;
 };
