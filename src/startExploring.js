@@ -357,6 +357,7 @@ export const startExploring = async ({
     const exploringServer = await startServer({
       cancellationToken,
       logLevel,
+      serverName: "exploring server",
       protocol,
       privateKey,
       certificate,
