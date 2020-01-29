@@ -17,7 +17,7 @@ const testPlan = {
           env: { AWAIT_FOREVER: true },
         }),
       allocatedMs: 8000,
-      allocatedMsBeforeForceStop: 1000,
+      gracefulStopAllocatedMs: 1000,
     },
   },
 }

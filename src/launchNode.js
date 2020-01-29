@@ -174,7 +174,7 @@ export const launchNode = async ({
     return disconnectedPromise
   }
 
-  const stopForce = () => {
+  const gracefulStop = () => {
     const disconnectedPromise = new Promise((resolve) => {
       const unregister = registerDisconnectCallback(() => {
         unregister()
@@ -268,8 +268,8 @@ ${e.stack}`)
     name: "node",
     version: process.version.slice(1),
     options: { execArgv, env },
+    gracefulStop,
     stop,
-    stopForce,
     registerDisconnectCallback,
     registerErrorCallback,
     registerConsoleCallback,

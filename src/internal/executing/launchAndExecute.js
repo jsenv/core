@@ -25,10 +25,10 @@ export const launchAndExecute = async ({
   // however unit test will pass true because they want to move on
   stopPlatformAfterExecute = false,
   stopPlatformAfterExecuteReason = "stop after execute",
-  // when launchPlatform returns { disconnected, stop, stopForce }
+  // when launchPlatform returns { disconnected, gracefulStop, stop }
   // the launched platform have that amount of ms for disconnected to resolve
-  // before we call stopForce
-  allocatedMsBeforeForceStop = 4000,
+  // before we call stop
+  gracefulStopAllocatedMs = 4000,
   platformConsoleCallback = () => {},
   platformStartedCallback = () => {},
   platformStoppedCallback = () => {},
@@ -139,7 +139,7 @@ export const launchAndExecute = async ({
 
     stopPlatformAfterExecute,
     stopPlatformAfterExecuteReason,
-    allocatedMsBeforeForceStop,
+    gracefulStopAllocatedMs,
     platformConsoleCallback,
     platformErrorCallback,
     platformDisconnectCallback,
@@ -218,7 +218,7 @@ const computeExecutionResult = async ({
 
   stopPlatformAfterExecute,
   stopPlatformAfterExecuteReason,
-  allocatedMsBeforeForceStop,
+  gracefulStopAllocatedMs,
   platformStartedCallback,
   platformStoppedCallback,
   platformConsoleCallback,
@@ -243,33 +243,34 @@ const computeExecutionResult = async ({
       // all code after the operation won't execute because it will be rejected with
       // the cancellation error
 
-      let forceStopped = false
+      let gracefulStop
 
-      if (platform.stopForce && allocatedMsBeforeForceStop) {
-        const stopPromise = (async () => {
-          await platform.stop(reason)
-          return false
+      if (platform.gracefulStop && gracefulStopAllocatedMs) {
+        const gracefulStopPromise = (async () => {
+          await platform.gracefulStop(reason)
+          return true
         })()
 
-        const stopForcePromise = (async () => {
+        const stopPromise = (async () => {
           await new Promise(async (resolve) => {
-            const timeoutId = setTimeout(resolve, allocatedMsBeforeForceStop)
+            const timeoutId = setTimeout(resolve, gracefulStopAllocatedMs)
             try {
-              await stopPromise
+              await gracefulStopPromise
             } finally {
               clearTimeout(timeoutId)
             }
           })
-          await platform.stopForce()
-          return true
+          await platform.stop()
+          return false
         })()
 
-        forceStopped = await Promise.all([stopPromise, stopForcePromise])
+        gracefulStop = await Promise.all([gracefulStopPromise, stopPromise])
       } else {
         await platform.stop(reason)
+        gracefulStop = false
       }
 
-      platformStoppedCallback({ forced: forceStopped })
+      platformStoppedCallback({ gracefulStop })
       launchLogger.debug(`platform stopped.`)
     },
   })
