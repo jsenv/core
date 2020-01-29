@@ -1,6 +1,5 @@
 /* eslint-disable import/max-dependencies */
 import {
-  catchAsyncFunctionCancellation,
   createCancellationTokenForProcessSIGINT,
   composeCancellationToken,
   createCancellationSource,
@@ -13,6 +12,7 @@ import {
   urlToFileSystemPath,
   registerDirectoryLifecycle,
 } from "@jsenv/util"
+import { wrapAsyncFunction } from "../../wrapAsyncFunction.js"
 import { require } from "../../require.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "../../argUtils.js"
 import { generateExecutionSteps } from "../../executing/generateExecutionSteps.js"
@@ -52,13 +52,13 @@ export const startContinuousTesting = async ({
   collectNamespace = false,
   systemNotification = true,
 }) => {
-  const cancellationToken = createCancellationTokenForProcessSIGINT()
-  const logger = createLogger({ logLevel })
+  return wrapAsyncFunction(async () => {
+    const cancellationToken = createCancellationTokenForProcessSIGINT()
+    const logger = createLogger({ logLevel })
 
-  projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
-  await assertProjectDirectoryExists({ projectDirectoryUrl })
+    projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
+    await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  return catchAsyncFunctionCancellation(async () => {
     const dependencyTracker = createDependencyTracker()
     let executionImportCallback = ({ relativeUrl, executionId }) => {
       dependencyTracker.trackDependency(relativeUrl, executionId)

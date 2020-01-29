@@ -1,6 +1,5 @@
 /* eslint-disable import/max-dependencies */
 import {
-  catchAsyncFunctionCancellation,
   createCancellationTokenForProcessSIGINT,
   composeCancellationToken,
   createCancellationSource,
@@ -18,6 +17,7 @@ import {
 } from "@jsenv/util"
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
 import { createLogger } from "@jsenv/logger"
+import { wrapAsyncFunction } from "./internal/wrapAsyncFunction.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { getBrowserExecutionDynamicData } from "./internal/platform/getBrowserExecutionDynamicData.js"
 import { serveExploringIndex } from "./internal/exploring/serveExploringIndex.js"
@@ -60,27 +60,27 @@ export const startExploring = async ({
   compileServerPort = 0, // random available port
   forcePort = false,
 }) => {
-  const logger = createLogger({ logLevel })
+  return wrapAsyncFunction(async () => {
+    const logger = createLogger({ logLevel })
 
-  projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
-  await assertProjectDirectoryExists({ projectDirectoryUrl })
+    projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
+    await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-  if (typeof htmlFileRelativeUrl === "undefined") {
-    htmlFileRelativeUrl = urlToRelativeUrl(jsenvHtmlFileUrl, projectDirectoryUrl)
-  } else if (typeof htmlFileRelativeUrl !== "string") {
-    throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`)
-  }
-  const htmlFileUrl = resolveUrl(htmlFileRelativeUrl, projectDirectoryUrl)
-  await assertFilePresence(htmlFileUrl)
+    if (typeof htmlFileRelativeUrl === "undefined") {
+      htmlFileRelativeUrl = urlToRelativeUrl(jsenvHtmlFileUrl, projectDirectoryUrl)
+    } else if (typeof htmlFileRelativeUrl !== "string") {
+      throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`)
+    }
+    const htmlFileUrl = resolveUrl(htmlFileRelativeUrl, projectDirectoryUrl)
+    await assertFilePresence(htmlFileUrl)
 
-  const stopExploringCancellationSource = createCancellationSource()
+    const stopExploringCancellationSource = createCancellationSource()
 
-  cancellationToken = composeCancellationToken(
-    cancellationToken,
-    stopExploringCancellationSource.token,
-  )
+    cancellationToken = composeCancellationToken(
+      cancellationToken,
+      stopExploringCancellationSource.token,
+    )
 
-  return catchAsyncFunctionCancellation(async () => {
     let livereloadServerSentEventService = () => {
       return {
         status: 204,
