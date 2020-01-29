@@ -3,7 +3,7 @@
 Object.defineProperty(exports, '__esModule', { value: true });
 
 var module$1 = require('module');
-var url$2 = require('url');
+var url$1 = require('url');
 var fs = require('fs');
 var crypto = require('crypto');
 var path = require('path');
@@ -1071,7 +1071,7 @@ const fileSystemPathToUrl = value => {
     throw new Error(`received an invalid value for fileSystemPath: ${value}`);
   }
 
-  return String(url$2.pathToFileURL(value));
+  return String(url$1.pathToFileURL(value));
 };
 
 const assertAndNormalizeDirectoryUrl = value => {
@@ -1144,7 +1144,7 @@ const urlToFileSystemPath = fileUrl => {
     fileUrl = fileUrl.slice(0, -1);
   }
 
-  const fileSystemPath = url$2.fileURLToPath(fileUrl);
+  const fileSystemPath = url$1.fileURLToPath(fileUrl);
   return fileSystemPath;
 };
 
@@ -4125,13 +4125,6 @@ const createCancellationSource = () => {
   };
 };
 
-const catchAsyncFunctionCancellation = asyncFunction => {
-  return asyncFunction().catch(error => {
-    if (isCancelError(error)) return;
-    throw error;
-  });
-};
-
 const createCancellationTokenForProcessSIGINT = () => {
   const SIGINTCancelSource = createCancellationSource();
   process.on("SIGINT", () => SIGINTCancelSource.cancel("process interruption"));
@@ -4217,6 +4210,21 @@ const warnDisabled = () => {};
 const error = console.error;
 
 const errorDisabled = () => {};
+
+const wrapAsyncFunction = (asyncFunction, {
+  updateProcessExitCode = true
+} = {}) => {
+  return asyncFunction().catch(error => {
+    if (isCancelError(error)) return; // this is required to ensure unhandledRejection will still
+    // set process.exitCode to 1 preventing further command to run
+
+    if (updateProcessExitCode) {
+      process.exitCode = 1;
+    }
+
+    throw error;
+  });
+};
 
 const assertProjectDirectoryUrl = ({
   projectDirectoryUrl
@@ -4306,7 +4314,7 @@ const fileSystemPathToUrl$1 = value => {
     throw new Error(`received an invalid value for fileSystemPath: ${value}`);
   }
 
-  return String(url$2.pathToFileURL(value));
+  return String(url$1.pathToFileURL(value));
 };
 
 const assertAndNormalizeDirectoryUrl$1 = value => {
@@ -4368,7 +4376,7 @@ const urlToFileSystemPath$1 = fileUrl => {
     fileUrl = fileUrl.slice(0, -1);
   }
 
-  const fileSystemPath = url$2.fileURLToPath(fileUrl);
+  const fileSystemPath = url$1.fileURLToPath(fileUrl);
   return fileSystemPath;
 };
 
@@ -4931,6 +4939,10 @@ ${packageFilePath}
     // otherwise the package.json is missing the main field
     // it certainly means it's not important
     if (packageMainFieldName !== "default") {
+      const extensionTried = path.extname(urlToFileSystemPath$1(mainFileUrlFirstCandidate)) === "" ? `--- extensions tried ---
+${extensionCandidateArray.join(`,`)}
+` : `
+`;
       logger.warn(`
 cannot find file for package.json ${packageMainFieldName} field
 --- ${packageMainFieldName} ---
@@ -4939,9 +4951,7 @@ ${packageMainFieldValue}
 ${urlToFileSystemPath$1(mainFileUrlFirstCandidate)}
 --- package.json path ---
 ${packageFilePath}
---- extensions tried ---
-${extensionCandidateArray.join(`,`)}
-        `);
+${extensionTried}`);
     }
 
     return mainFileUrlFirstCandidate;
@@ -5247,9 +5257,10 @@ const generateImportMapForPackage = async ({
   includeExports = true,
   // pass ['browser', 'default'] to read browser first then 'default' if defined
   // in package exports field
-  favoredExports = [],
+  favoredExports = ["import", "node", "require"],
   includeImports = true,
-  selfImport = true
+  // this is not yet standard, should be false by default
+  selfImport = false
 }) => {
   projectDirectoryUrl = assertAndNormalizeDirectoryUrl$1(projectDirectoryUrl);
 
@@ -6120,11 +6131,6 @@ const createEventHistory = ({
   };
 };
 
-/* global require, __filename */
-const nodeRequire$1 = require;
-const filenameContainsBackSlashes$1 = __filename.indexOf("\\") > -1;
-const url$1 = filenameContainsBackSlashes$1 ? `file:///${__filename.replace(/\\/g, "/")}` : `file://${__filename}`;
-
 const createCancellationToken$2 = () => {
   const register = callback => {
     if (typeof callback !== "function") {
@@ -6196,7 +6202,6 @@ start`);
     });
     promise.then(cancelRegistration.unregister, () => {});
   });
-  cancelPromise.catch(() => {});
   const operationPromise = Promise.race([promise, cancelPromise]);
   return operationPromise;
 };
@@ -6308,7 +6313,7 @@ const fileSystemPathToUrl$2 = value => {
     throw new Error(`received an invalid value for fileSystemPath: ${value}`);
   }
 
-  return String(url$2.pathToFileURL(value));
+  return String(url$1.pathToFileURL(value));
 };
 
 const assertAndNormalizeDirectoryUrl$2 = value => {
@@ -6370,7 +6375,7 @@ const urlToFileSystemPath$2 = fileUrl => {
     fileUrl = fileUrl.slice(0, -1);
   }
 
-  const fileSystemPath = url$2.fileURLToPath(fileUrl);
+  const fileSystemPath = url$1.fileURLToPath(fileUrl);
   return fileSystemPath;
 };
 
@@ -6906,7 +6911,7 @@ const dateToSecondsPrecision = date => {
   return dateWithSecondsPrecision;
 };
 
-const require$2 = module$1.createRequire(url$1);
+const require$2 = module$1.createRequire(url);
 
 const nodeFetch = require$2("node-fetch");
 
@@ -7833,7 +7838,7 @@ const originAsString = ({
   ip,
   port
 }) => {
-  const url = new url$2.URL("https://127.0.0.1:80");
+  const url = new url$1.URL("https://127.0.0.1:80");
   url.protocol = protocol;
   url.hostname = ip;
   url.port = port;
@@ -7854,7 +7859,7 @@ const STOP_REASON_PROCESS_DEATH = createReason("process death");
 const STOP_REASON_PROCESS_EXIT = createReason("process exit");
 const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
 
-const require$3 = module$1.createRequire(url$1);
+const require$3 = module$1.createRequire(url);
 
 const killPort = require$3("kill-port");
 
@@ -12583,30 +12588,30 @@ const execute = async ({
   stopPlatformAfterExecute = true,
   ...rest
 }) => {
-  const launchLogger = createLogger({
-    logLevel: launchLogLevel
-  });
-  const executeLogger = createLogger({
-    logLevel: executeLogLevel
-  });
-  projectDirectoryUrl = assertProjectDirectoryUrl({
-    projectDirectoryUrl
-  });
-  await assertProjectDirectoryExists({
-    projectDirectoryUrl
-  });
+  return wrapAsyncFunction(async () => {
+    const launchLogger = createLogger({
+      logLevel: launchLogLevel
+    });
+    const executeLogger = createLogger({
+      logLevel: executeLogLevel
+    });
+    projectDirectoryUrl = assertProjectDirectoryUrl({
+      projectDirectoryUrl
+    });
+    await assertProjectDirectoryExists({
+      projectDirectoryUrl
+    });
 
-  if (typeof fileRelativeUrl !== "string") {
-    throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`);
-  }
+    if (typeof fileRelativeUrl !== "string") {
+      throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`);
+    }
 
-  fileRelativeUrl = fileRelativeUrl.replace(/\\/g, "/");
+    fileRelativeUrl = fileRelativeUrl.replace(/\\/g, "/");
 
-  if (typeof launch !== "function") {
-    throw new TypeError(`launch must be a function, got ${launch}`);
-  }
+    if (typeof launch !== "function") {
+      throw new TypeError(`launch must be a function, got ${launch}`);
+    }
 
-  return catchAsyncFunctionCancellation(async () => {
     const {
       outDirectoryRelativeUrl,
       origin: compileServerOrigin
@@ -13620,60 +13625,60 @@ const executeTestPlan = async ({
   coverageHtmlDirectoryRelativeUrl = "./coverage",
   coverageHtmlDirectoryIndexLog = true
 }) => {
-  const logger = createLogger({
-    logLevel
-  });
-  const launchLogger = createLogger({
-    logLevel: launchLogLevel
-  });
-  const executeLogger = createLogger({
-    logLevel: executeLogLevel
-  });
-  projectDirectoryUrl = assertProjectDirectoryUrl({
-    projectDirectoryUrl
-  });
-  await assertProjectDirectoryExists({
-    projectDirectoryUrl
-  });
+  return wrapAsyncFunction(async () => {
+    const logger = createLogger({
+      logLevel
+    });
+    const launchLogger = createLogger({
+      logLevel: launchLogLevel
+    });
+    const executeLogger = createLogger({
+      logLevel: executeLogLevel
+    });
+    projectDirectoryUrl = assertProjectDirectoryUrl({
+      projectDirectoryUrl
+    });
+    await assertProjectDirectoryExists({
+      projectDirectoryUrl
+    });
 
-  if (typeof testPlan !== "object") {
-    throw new Error(`testPlan must be an object, got ${testPlan}`);
-  }
-
-  if (coverage) {
-    if (typeof coverageConfig !== "object") {
-      throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`);
+    if (typeof testPlan !== "object") {
+      throw new Error(`testPlan must be an object, got ${testPlan}`);
     }
 
-    if (Object.keys(coverageConfig).length === 0) {
-      logger.warn(`coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`);
-    }
+    if (coverage) {
+      if (typeof coverageConfig !== "object") {
+        throw new TypeError(`coverageConfig must be an object, got ${coverageConfig}`);
+      }
 
-    if (!coverageAndExecutionAllowed) {
-      const fileSpecifierMapForExecute = normalizeSpecifierMetaMap(metaMapToSpecifierMetaMap({
-        execute: testPlan
-      }), "file:///");
-      const fileSpecifierMapForCover = normalizeSpecifierMetaMap(metaMapToSpecifierMetaMap({
-        cover: coverageConfig
-      }), "file:///");
-      const fileSpecifierMatchingCoverAndExecuteArray = Object.keys(fileSpecifierMapForExecute).filter(fileUrl => {
-        return urlToMeta({
-          url: fileUrl,
-          specifierMetaMap: fileSpecifierMapForCover
-        }).cover;
-      });
+      if (Object.keys(coverageConfig).length === 0) {
+        logger.warn(`coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`);
+      }
 
-      if (fileSpecifierMatchingCoverAndExecuteArray.length) {
-        // I think it is an error, it would be strange, for a given file
-        // to be both covered and executed
-        throw new Error(`some file will be both covered and executed
+      if (!coverageAndExecutionAllowed) {
+        const fileSpecifierMapForExecute = normalizeSpecifierMetaMap(metaMapToSpecifierMetaMap({
+          execute: testPlan
+        }), "file:///");
+        const fileSpecifierMapForCover = normalizeSpecifierMetaMap(metaMapToSpecifierMetaMap({
+          cover: coverageConfig
+        }), "file:///");
+        const fileSpecifierMatchingCoverAndExecuteArray = Object.keys(fileSpecifierMapForExecute).filter(fileUrl => {
+          return urlToMeta({
+            url: fileUrl,
+            specifierMetaMap: fileSpecifierMapForCover
+          }).cover;
+        });
+
+        if (fileSpecifierMatchingCoverAndExecuteArray.length) {
+          // I think it is an error, it would be strange, for a given file
+          // to be both covered and executed
+          throw new Error(`some file will be both covered and executed
 --- specifiers ---
 ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`);
+        }
       }
     }
-  }
 
-  return catchAsyncFunctionCancellation(async () => {
     const result = await executePlan({
       cancellationToken,
       compileServerLogLevel,
@@ -13778,56 +13783,57 @@ const generateBundle = async ({
   // when asking them to the compile server
   // (to fix that sourcemap could be inlined)
   filesystemCache = true,
+  updateProcessExitCode,
   ...rest
 }) => {
-  logger = logger || createLogger({
-    logLevel
-  });
-  projectDirectoryUrl = assertProjectDirectoryUrl({
-    projectDirectoryUrl
-  });
-  await assertProjectDirectoryExists({
-    projectDirectoryUrl
-  });
-  assertEntryPointMap({
-    entryPointMap
-  });
-  assertBundleDirectoryRelativeUrl({
-    bundleDirectoryRelativeUrl
-  });
-  const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl);
-  assertBundleDirectoryInsideProject({
-    bundleDirectoryUrl,
-    projectDirectoryUrl
-  });
+  return wrapAsyncFunction(async () => {
+    logger = logger || createLogger({
+      logLevel
+    });
+    projectDirectoryUrl = assertProjectDirectoryUrl({
+      projectDirectoryUrl
+    });
+    await assertProjectDirectoryExists({
+      projectDirectoryUrl
+    });
+    assertEntryPointMap({
+      entryPointMap
+    });
+    assertBundleDirectoryRelativeUrl({
+      bundleDirectoryRelativeUrl
+    });
+    const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl);
+    assertBundleDirectoryInsideProject({
+      bundleDirectoryUrl,
+      projectDirectoryUrl
+    });
 
-  if (bundleDirectoryClean) {
-    await ensureEmptyDirectory(bundleDirectoryUrl);
-  }
-
-  const extension = formatOutputOptions && formatOutputOptions.entryFileNames ? path.extname(formatOutputOptions.entryFileNames) : ".js";
-  const chunkId = `${Object.keys(entryPointMap)[0]}${extension}`;
-  env = { ...env,
-    chunkId
-  };
-  babelPluginMap = { ...babelPluginMap,
-    ...createBabePluginMapForBundle({
-      format
-    })
-  };
-  assertCompileGroupCount({
-    compileGroupCount
-  });
-
-  if (compileGroupCount > 1) {
-    if (typeof balancerTemplateFileUrl === "undefined") {
-      throw new Error(`${format} format not compatible with balancing.`);
+    if (bundleDirectoryClean) {
+      await ensureEmptyDirectory(bundleDirectoryUrl);
     }
 
-    await assertFilePresence(balancerTemplateFileUrl);
-  }
+    const extension = formatOutputOptions && formatOutputOptions.entryFileNames ? path.extname(formatOutputOptions.entryFileNames) : ".js";
+    const chunkId = `${Object.keys(entryPointMap)[0]}${extension}`;
+    env = { ...env,
+      chunkId
+    };
+    babelPluginMap = { ...babelPluginMap,
+      ...createBabePluginMapForBundle({
+        format
+      })
+    };
+    assertCompileGroupCount({
+      compileGroupCount
+    });
 
-  return catchAsyncFunctionCancellation(async () => {
+    if (compileGroupCount > 1) {
+      if (typeof balancerTemplateFileUrl === "undefined") {
+        throw new Error(`${format} format not compatible with balancing.`);
+      }
+
+      await assertFilePresence(balancerTemplateFileUrl);
+    }
+
     const {
       outDirectoryRelativeUrl,
       origin: compileServerOrigin,
@@ -13921,6 +13927,8 @@ const generateBundle = async ({
       sourcemapExcludeSources,
       manifestFile
     })]);
+  }, {
+    updateProcessExitCode
   });
 };
 
@@ -16580,27 +16588,28 @@ const startExploring = async ({
   // random available port
   forcePort = false
 }) => {
-  const logger = createLogger({
-    logLevel
-  });
-  projectDirectoryUrl = assertProjectDirectoryUrl({
-    projectDirectoryUrl
-  });
-  await assertProjectDirectoryExists({
-    projectDirectoryUrl
-  });
+  return wrapAsyncFunction(async () => {
+    const logger = createLogger({
+      logLevel
+    });
+    projectDirectoryUrl = assertProjectDirectoryUrl({
+      projectDirectoryUrl
+    });
+    await assertProjectDirectoryExists({
+      projectDirectoryUrl
+    });
 
-  if (typeof htmlFileRelativeUrl === "undefined") {
-    htmlFileRelativeUrl = urlToRelativeUrl(jsenvHtmlFileUrl, projectDirectoryUrl);
-  } else if (typeof htmlFileRelativeUrl !== "string") {
-    throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`);
-  }
+    if (typeof htmlFileRelativeUrl === "undefined") {
+      htmlFileRelativeUrl = urlToRelativeUrl(jsenvHtmlFileUrl, projectDirectoryUrl);
+    } else if (typeof htmlFileRelativeUrl !== "string") {
+      throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`);
+    }
 
-  const htmlFileUrl = resolveUrl$1(htmlFileRelativeUrl, projectDirectoryUrl);
-  await assertFilePresence(htmlFileUrl);
-  const stopExploringCancellationSource = createCancellationSource();
-  cancellationToken = composeCancellationToken(cancellationToken, stopExploringCancellationSource.token);
-  return catchAsyncFunctionCancellation(async () => {
+    const htmlFileUrl = resolveUrl$1(htmlFileRelativeUrl, projectDirectoryUrl);
+    await assertFilePresence(htmlFileUrl);
+    const stopExploringCancellationSource = createCancellationSource();
+    cancellationToken = composeCancellationToken(cancellationToken, stopExploringCancellationSource.token);
+
     let livereloadServerSentEventService = () => {
       return {
         status: 204
@@ -16888,6 +16897,7 @@ const startExploring = async ({
     const exploringServer = await startServer({
       cancellationToken,
       logLevel,
+      serverName: "exploring server",
       protocol,
       privateKey,
       certificate,

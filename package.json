@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "11.2.0-alpha.0",
+  "version": "11.2.0",
   "description": "Execute JavaScript on multiple environments for testing.",
   "license": "MIT",
   "repository": {
@@ -98,7 +98,7 @@
     "@jsenv/href": "1.2.0",
     "@jsenv/import-map": "6.7.1",
     "@jsenv/logger": "3.3.0",
-    "@jsenv/node-module-import-map": "11.0.0-alpha.0",
+    "@jsenv/node-module-import-map": "11.0.0",
     "@jsenv/node-signals": "1.2.1",
     "@jsenv/server": "1.5.2",
     "@jsenv/uneval": "1.3.0",
