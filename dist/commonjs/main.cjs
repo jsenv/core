@@ -12407,7 +12407,7 @@ const computeExecutionResult = async ({
           return false;
         })();
 
-        gracefulStop = await Promise.all([gracefulStopPromise, stopPromise]);
+        gracefulStop = await Promise.race([gracefulStopPromise, stopPromise]);
       } else {
         await platform.stop(reason);
         gracefulStop = false;
