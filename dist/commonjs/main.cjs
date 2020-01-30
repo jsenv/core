@@ -4215,8 +4215,15 @@ const wrapAsyncFunction = (asyncFunction, {
   updateProcessExitCode = true
 } = {}) => {
   return asyncFunction().catch(error => {
-    if (isCancelError(error)) return; // this is required to ensure unhandledRejection will still
-    // set process.exitCode to 1 preventing further command to run
+    if (isCancelError(error)) {
+      // it means consume of the function will resolve with a cancelError
+      // but when you cancel it means you're not interested in the result anymore
+      // thanks to this it avoid unhandledRejection
+      return error;
+    } // this is required to ensure unhandledRejection will still
+    // set process.exitCode to 1 marking the process execution as errored
+    // preventing further command to run
+
 
     if (updateProcessExitCode) {
       process.exitCode = 1;
@@ -8066,7 +8073,11 @@ const startServer = async ({
     logger.info(`${request.method} ${request.origin}${request.ressource}`);
 
     if (error) {
-      logger.error(error);
+      logger.error(`internal error while handling request.
+--- error stack ---
+${error.stack}
+--- request ---
+${request.method} ${request.origin}${request.ressource}`);
     }
 
     logger.info(`${colorizeResponseStatus(response.status)} ${response.statusText}`);
@@ -15731,30 +15742,33 @@ function safeDefineProperty(object, propertyNameOrSymbol, descriptor) {
   return source;
 };
 
-const memoizeOnce$3 = compute => {
-  let locked = false;
-  let lockValue;
+const memoize = compute => {
+  let memoized = false;
+  let memoizedValue;
 
-  const memoized = (...args) => {
-    if (locked) return lockValue; // if compute is recursive wait for it to be fully done before storing the lockValue
+  const fnWithMemoization = (...args) => {
+    if (memoized) {
+      return memoizedValue;
+    } // if compute is recursive wait for it to be fully done before storing the lockValue
     // so set locked later
 
-    lockValue = compute(...args);
-    locked = true;
-    return lockValue;
+
+    memoizedValue = compute(...args);
+    memoized = true;
+    return memoizedValue;
   };
 
-  memoized.deleteCache = () => {
-    const value = lockValue;
-    locked = false;
-    lockValue = undefined;
+  fnWithMemoization.forget = () => {
+    const value = memoizedValue;
+    memoized = false;
+    memoizedValue = undefined;
     return value;
   };
 
-  return memoized;
+  return fnWithMemoization;
 };
 
-const supportsDynamicImport = memoizeOnce$3(async () => {
+const supportsDynamicImport = memoize(async () => {
   const fileUrl = resolveUrl$1("./src/internal/dynamicImportSource.js", jsenvCoreDirectoryUrl);
   const filePath = urlToFileSystemPath(fileUrl);
   const fileAsString = String(fs.readFileSync(filePath));
@@ -16016,23 +16030,6 @@ const launchNode = async ({
     throw new TypeError(`env must be an object, got ${env}`);
   }
 
-  let removeUnhandledRejectionListener = () => {};
-
-  cancellationToken.register(() => {
-    const unhandledRejectionListener = rejectedValue => {
-      if (isCancelError(rejectedValue)) {
-        return;
-      }
-
-      throw rejectedValue;
-    };
-
-    process.once("unhandledRejection", unhandledRejectionListener);
-
-    removeUnhandledRejectionListener = () => {
-      process.removeListener("unhandledRejection", unhandledRejectionListener);
-    };
-  });
   const dynamicImportSupported = await supportsDynamicImport();
   const nodeControllableFileUrl = resolveUrl$1(dynamicImportSupported ? "./src/internal/node-launcher/nodeControllableFile.js" : "./src/internal/node-launcher/nodeControllableFile.cjs", jsenvCoreDirectoryUrl);
   await assertFilePresence(nodeControllableFileUrl);
@@ -16100,12 +16097,9 @@ const launchNode = async ({
     errorEventRegistration.unregister();
     exitErrorRegistration.unregister();
     emitError(error);
-    removeUnhandledRejectionListener();
   }); // process.exit(1) from child
 
   const exitErrorRegistration = registerChildEvent(child, "exit", code => {
-    removeUnhandledRejectionListener();
-
     if (code !== 0 && code !== null) {
       errorEventRegistration.unregister();
       exitErrorRegistration.unregister();
@@ -16115,7 +16109,6 @@ const launchNode = async ({
 
   const registerDisconnectCallback = callback => {
     const registration = registerChildEvent(child, "disconnect", () => {
-      removeUnhandledRejectionListener();
       callback();
     });
     return () => {
@@ -16344,7 +16337,14 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`;
   const { fetchUrl } = require("@jsenv/server")
 
   const run = async () => {
-    await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)})
+    try {
+      await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)})
+    }
+    catch(e) {
+      console.log('error while fetching', e)
+      debugger
+      return null
+    }
 
     const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
     const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
