@@ -104,9 +104,9 @@ It also allows to execute files concurrently increasing speed on machine with mu
 
 Currently jsenv provides 3 possible test execution environments, called `platforms`:
 
-- A chromium browser by test
-- A chromium browser tab by test
-- A node process by test
+- A chromium browser per test
+- A chromium browser tab per test
+- A node process per test
 
 ## How test is executed
 

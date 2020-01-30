@@ -182,7 +182,7 @@ export const launchChromium = async ({
     // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#puppeteer-api-tip-of-tree
     // https://github.com/GoogleChrome/puppeteer#q-why-doesnt-puppeteer-vxxx-work-with-chromium-vyyy
     // to keep in sync when updating puppeteer
-    version: "79.0.3945.0",
+    version: "79.0.3942.0",
     options: { headless },
     stop: cleanup,
     registerDisconnectCallback,

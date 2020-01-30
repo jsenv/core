@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "11.3.1-alpha.2",
+  "version": "11.3.1-alpha.3",
   "description": "Execute JavaScript on multiple environments for testing.",
   "license": "MIT",
   "repository": {
@@ -120,7 +120,7 @@
     "istanbul-reports": "3.0.0-alpha.1",
     "node-notifier": "6.0.0",
     "proper-lockfile": "4.1.1",
-    "puppeteer": "2.1.0",
+    "puppeteer": "2.0.0",
     "regenerator-runtime": "0.13.3",
     "rimraf": "3.0.1",
     "rollup": "1.30.1",
