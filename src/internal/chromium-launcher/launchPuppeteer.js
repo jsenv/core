@@ -8,6 +8,14 @@ import { fetchUrl } from "../fetchUrl.js"
 import { validateResponseStatusIsOk } from "../validateResponseStatusIsOk.js"
 import { trackRessources } from "./trackRessources.js"
 
+/**
+ * Be very careful whenever updating puppeteer
+ * For instance version 2.1.0 introduced a subtle problem:
+ * browser is not properly destroyed when calling stop
+ * meaning process can never exit properly.
+ *
+ * That bug hapenned only on windows (and could reproduce only in github workflow...)
+ */
 const puppeteer = require("puppeteer")
 
 export const launchPuppeteer = async ({
@@ -46,16 +54,16 @@ export const launchPuppeteer = async ({
       }),
     stop: async (browser, reason) => {
       await cleanup(reason)
-
-      const disconnectedPromise = new Promise((resolve) => {
-        const disconnectedCallback = () => {
-          browser.removeListener("disconnected", disconnectedCallback)
-          resolve()
-        }
-        browser.on("disconnected", disconnectedCallback)
-      })
       await browser.close()
-      await disconnectedPromise
+      if (browser.isConnected()) {
+        await new Promise((resolve) => {
+          const disconnectedCallback = () => {
+            browser.removeListener("disconnected", disconnectedCallback)
+            resolve()
+          }
+          browser.on("disconnected", disconnectedCallback)
+        })
+      }
     },
   })
   const { stop } = browserOperation

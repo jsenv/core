@@ -14112,7 +14112,9 @@ const jsenvExplorableConfig = {
 
 const closePage = async page => {
   try {
-    await page.close();
+    if (!page.isClosed()) {
+      await page.close();
+    }
   } catch (e) {
     if (e.message.match(/^Protocol error \(.*?\): Target closed/)) {
       return;
@@ -14349,6 +14351,14 @@ const teardownSignal$1 = {
 };
 
 /* eslint-disable import/max-dependencies */
+/**
+ * Be very careful whenever updating puppeteer
+ * For instance version 2.1.0 introduced a subtle problem:
+ * browser is not properly destroyed when calling stop
+ * meaning process can never exit properly.
+ *
+ * That bug hapenned only on windows (and could reproduce only in github workflow...)
+ */
 
 const puppeteer = require$1("puppeteer");
 
@@ -14387,16 +14397,18 @@ const launchPuppeteer = async ({
     }),
     stop: async (browser, reason) => {
       await cleanup(reason);
-      const disconnectedPromise = new Promise(resolve => {
-        const disconnectedCallback = () => {
-          browser.removeListener("disconnected", disconnectedCallback);
-          resolve();
-        };
-
-        browser.on("disconnected", disconnectedCallback);
-      });
       await browser.close();
-      await disconnectedPromise;
+
+      if (browser.isConnected()) {
+        await new Promise(resolve => {
+          const disconnectedCallback = () => {
+            browser.removeListener("disconnected", disconnectedCallback);
+            resolve();
+          };
+
+          browser.on("disconnected", disconnectedCallback);
+        });
+      }
     }
   });
   const {
@@ -15087,7 +15099,7 @@ const launchChromium = async ({
     // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#puppeteer-api-tip-of-tree
     // https://github.com/GoogleChrome/puppeteer#q-why-doesnt-puppeteer-vxxx-work-with-chromium-vyyy
     // to keep in sync when updating puppeteer
-    version: "79.0.3945.0",
+    version: "79.0.3942.0",
     options: {
       headless
     },
@@ -16141,7 +16153,7 @@ const launchNode = async ({
     // const signal = gracefulFailed ? "SIGHUP" : "SIGKILL"
     // https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
 
-    sendToChild(child, "stop");
+    child.kill("SIGKILL");
     return disconnectedPromise;
   };
 

@@ -1,6 +1,8 @@
 export const closePage = async (page) => {
   try {
-    await page.close()
+    if (!page.isClosed()) {
+      await page.close()
+    }
   } catch (e) {
     if (e.message.match(/^Protocol error \(.*?\): Target closed/)) {
       return
