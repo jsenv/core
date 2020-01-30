@@ -11,7 +11,7 @@ import env from "/.jsenv/out/env.json"
 import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
-import { memoizeOnce } from "../../memoizeOnce.js"
+import { memoize } from "../../memoize.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveBrowserGroup } from "../resolveBrowserGroup.js"
 import { createBrowserSystem } from "./createBrowserSystem.js"
@@ -19,7 +19,7 @@ import { displayErrorInDocument } from "./displayErrorInDocument.js"
 import { displayErrorNotification } from "./displayErrorNotification.js"
 
 const GLOBAL_SPECIFIER = "global"
-const memoizedCreateBrowserSystem = memoizeOnce(createBrowserSystem)
+const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
 const { outDirectoryRelativeUrl, importDefaultExtension } = env
 
 export const createBrowserPlatform = ({ compileServerOrigin }) => {

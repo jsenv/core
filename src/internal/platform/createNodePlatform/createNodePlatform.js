@@ -1,7 +1,7 @@
 import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
-import { memoizeOnce } from "../../memoizeOnce.js"
+import { memoize } from "../../memoize.js"
 import { fetchUrl } from "../../fetchUrl.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveNodeGroup } from "../resolveNodeGroup.js"
@@ -9,7 +9,7 @@ import { isNativeNodeModuleBareSpecifier } from "./isNativeNodeModuleBareSpecifi
 import { createNodeSystem } from "./createNodeSystem.js"
 
 const GLOBAL_SPECIFIER = "global"
-const memoizedCreateNodeSystem = memoizeOnce(createNodeSystem)
+const memoizedCreateNodeSystem = memoize(createNodeSystem)
 
 export const createNodePlatform = async ({
   projectDirectoryUrl,
