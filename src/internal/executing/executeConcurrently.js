@@ -108,6 +108,7 @@ ${fileRelativeUrl}`),
         beforeExecutionCallback,
         afterExecutionCallback,
         logSuccess,
+        gracefulStopAllocatedMs,
       } = executionOptions
 
       const beforeExecutionInfo = {
@@ -143,6 +144,7 @@ ${fileRelativeUrl}`),
         collectPlatformVersion,
         mirrorConsole,
         captureConsole,
+        gracefulStopAllocatedMs,
         stopPlatformAfterExecute,
         stopPlatformAfterExecuteReason:
           executionIndex === executionCount - 1

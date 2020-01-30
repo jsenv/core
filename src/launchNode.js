@@ -250,7 +250,8 @@ ${e.stack}`)
     name: "node",
     version: process.version.slice(1),
     options: { execArgv, env },
-    gracefulStop,
+    // child.kill('SIGINT') does not work on windows
+    ...(process.platform === "win32" ? {} : { gracefulStop }),
     stop,
     registerDisconnectCallback,
     registerErrorCallback,
