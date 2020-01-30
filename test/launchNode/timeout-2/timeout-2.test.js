@@ -33,6 +33,7 @@ const actual = await launchAndExecute({
       compileServerOrigin,
     }),
   allocatedMs: 4000,
+  mirrorConsole: true,
 })
 const expected = {
   status: "timedout",

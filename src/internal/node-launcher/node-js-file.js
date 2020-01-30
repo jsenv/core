@@ -17,9 +17,10 @@ export const execute = async ({
   // it avoids seeing error in platform logs during testing
   errorExposureInConsole = false,
 }) => {
-  process.once("unhandledRejection", (valueRejected) => {
-    throw valueRejected
-  })
+  // should we ignore cancellation error ?
+  // process.once("unhandledRejection", (valueRejected) => {
+  //   throw valueRejected
+  // })
 
   const { compileDirectoryRemoteUrl, executeFile } = await nodePlatform.create({
     projectDirectoryUrl,
