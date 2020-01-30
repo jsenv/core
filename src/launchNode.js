@@ -146,6 +146,9 @@ export const launchNode = async ({
   }
 
   const stop = () => {
+    if (!child.connected) {
+      return Promise.resolve()
+    }
     // { gracefulFailed } = {}
     const disconnectedPromise = new Promise((resolve) => {
       const unregister = registerDisconnectCallback(() => {
@@ -161,13 +164,16 @@ export const launchNode = async ({
   }
 
   const gracefulStop = () => {
+    if (!child.connected) {
+      return Promise.resolve()
+    }
     const disconnectedPromise = new Promise((resolve) => {
       const unregister = registerDisconnectCallback(() => {
         unregister()
         resolve()
       })
     })
-    child.kill("SIGTERM")
+    sendToChild(child, "gracefulStop")
     return disconnectedPromise
   }
 

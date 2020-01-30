@@ -30,19 +30,24 @@ const listenParentOnce = (type, callback) => {
 }
 
 const { token, cancel } = createCancellationSource()
+const removeTerminateCallback = registerProcessTerminateCallback(() => {
+  // cancel will remove listener to process.on('message')
+  // which is sufficient to let child process die
+  // assuming nothing else keeps it alive
+  cancel("process received SIGTERM")
+})
+token.register(removeTerminateCallback)
 token.register(
-  registerProcessTerminateCallback(() => {
-    // cancel will remove listener to process.on('message')
-    // which is sufficient to let child process die
-    // assuming nothing else keeps it alive
-    cancel("process termination")
-
-    // if something keeps it alive the process won't die
-    // but this is the responsability of the code
-    // to properly cancel stuff on 'SIGTERM'
-    // If code does not do that, a process forced exit
-    // like process.exit() or child.kill() from parent
-    // will ensure process dies
+  listenParentOnce("gracefulStop", () => {
+    removeTerminateCallback()
+    cancel("parent process asks gracefulStop")
+    // emit sigterm in case the code we are running is listening for it
+    process.emit("SIGTERM")
+  }),
+)
+token.register(
+  listenParentOnce("stop", () => {
+    process.exit()
   }),
 )
 token.register(

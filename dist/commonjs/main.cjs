@@ -16127,7 +16127,11 @@ const launchNode = async ({
   };
 
   const stop = () => {
-    // { gracefulFailed } = {}
+    if (!child.connected) {
+      return Promise.resolve();
+    } // { gracefulFailed } = {}
+
+
     const disconnectedPromise = new Promise(resolve => {
       const unregister = registerDisconnectCallback(() => {
         unregister();
@@ -16137,18 +16141,22 @@ const launchNode = async ({
     // const signal = gracefulFailed ? "SIGHUP" : "SIGKILL"
     // https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
 
-    child.kill("SIGKILL");
+    sendToChild(child, "stop");
     return disconnectedPromise;
   };
 
   const gracefulStop = () => {
+    if (!child.connected) {
+      return Promise.resolve();
+    }
+
     const disconnectedPromise = new Promise(resolve => {
       const unregister = registerDisconnectCallback(() => {
         unregister();
         resolve();
       });
     });
-    child.kill("SIGTERM");
+    sendToChild(child, "gracefulStop");
     return disconnectedPromise;
   };
 
