@@ -57,7 +57,7 @@ There is a detailed documentation about testing at [./docs/testing/readme.md](./
 # Installation
 
 ```console
-npm install --save-dev @jsenv/core@11.1.0
+npm install --save-dev @jsenv/core@11.2.1
 ```
 
 `@jsenv/core` is tested on mac, linux and windows platforms. It supports Node.js 12.8.0 and 13.7.0, other versions are not supported.
