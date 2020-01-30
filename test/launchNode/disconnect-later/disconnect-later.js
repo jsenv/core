@@ -6,6 +6,6 @@ const id = setTimeout(() => {
   console.log("will close")
 }, 1000 * 5)
 
-process.on("SIGINT", () => {
+process.on("SIGTERM", () => {
   clearTimeout(id)
 })

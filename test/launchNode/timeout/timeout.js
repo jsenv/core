@@ -2,7 +2,7 @@
 console.log("foo")
 await new Promise((resolve) => {
   const id = setTimeout(resolve, 30000)
-  process.on("SIGINT", () => {
+  process.on("SIGTERM", () => {
     clearTimeout(id)
   })
 })

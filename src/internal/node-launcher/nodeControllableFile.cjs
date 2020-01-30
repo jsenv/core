@@ -5,10 +5,10 @@ const { uneval } = require("@jsenv/uneval")
 const EVALUATION_STATUS_OK = "evaluation-ok"
 const EVALUATION_STATUS_ERROR = "evaluation-error"
 
-const registerProcessInterruptCallback = (callback) => {
-  process.once("SIGINT", callback)
+const registerProcessTerminateCallback = (callback) => {
+  process.once("SIGTERM", callback)
   return () => {
-    process.removeListener("SIGINT", callback)
+    process.removeListener("SIGTERM", callback)
   }
 }
 
@@ -32,15 +32,15 @@ const listenParentOnce = (type, callback) => {
 
 const { token, cancel } = createCancellationSource()
 token.register(
-  registerProcessInterruptCallback(() => {
+  registerProcessTerminateCallback(() => {
     // cancel will remove listener to process.on('message')
     // which is sufficient to let child process die
     // assuming nothing else keeps it alive
-    cancel("process interrupt")
+    cancel("process termination")
 
     // if something keeps it alive the process won't die
     // but this is the responsability of the code
-    // to properly cancel stuff on 'SIGINT'
+    // to properly cancel stuff on 'SIGTERM'
     // If code does not do that, a process forced exit
     // like process.exit() or child.kill() from parent
     // will ensure process dies

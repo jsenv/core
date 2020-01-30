@@ -6,6 +6,6 @@ const id = setInterval(() => {
   console.log("alive")
 }, 1000 * 5)
 
-process.on("SIGINT", () => {
+process.on("SIGTERM", () => {
   clearInterval(id)
 })

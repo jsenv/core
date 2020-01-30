@@ -247,7 +247,7 @@ const computeExecutionResult = async ({
 
       if (platform.gracefulStop && gracefulStopAllocatedMs) {
         const gracefulStopPromise = (async () => {
-          await platform.gracefulStop(reason)
+          await platform.gracefulStop({ reason })
           return true
         })()
 
@@ -260,13 +260,13 @@ const computeExecutionResult = async ({
               clearTimeout(timeoutId)
             }
           })
-          await platform.stop()
+          await platform.stop({ reason, gracefulFailed: true })
           return false
         })()
 
         gracefulStop = await Promise.race([gracefulStopPromise, stopPromise])
       } else {
-        await platform.stop(reason)
+        await platform.stop({ reason, gracefulFailed: false })
         gracefulStop = false
       }
 

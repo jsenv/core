@@ -12389,7 +12389,9 @@ const computeExecutionResult = async ({
 
       if (platform.gracefulStop && gracefulStopAllocatedMs) {
         const gracefulStopPromise = (async () => {
-          await platform.gracefulStop(reason);
+          await platform.gracefulStop({
+            reason
+          });
           return true;
         })();
 
@@ -12403,13 +12405,19 @@ const computeExecutionResult = async ({
               clearTimeout(timeoutId);
             }
           });
-          await platform.stop();
+          await platform.stop({
+            reason,
+            gracefulFailed: true
+          });
           return false;
         })();
 
         gracefulStop = await Promise.race([gracefulStopPromise, stopPromise]);
       } else {
-        await platform.stop(reason);
+        await platform.stop({
+          reason,
+          gracefulFailed: false
+        });
         gracefulStop = false;
       }
 
@@ -13290,7 +13298,8 @@ ${fileRelativeUrl}`));
         mainFileNotFoundCallback,
         beforeExecutionCallback,
         afterExecutionCallback,
-        logSuccess
+        logSuccess,
+        gracefulStopAllocatedMs
       } = executionOptions;
       const beforeExecutionInfo = {
         allocatedMs,
@@ -13324,6 +13333,7 @@ ${fileRelativeUrl}`));
         collectPlatformVersion,
         mirrorConsole,
         captureConsole,
+        gracefulStopAllocatedMs,
         stopPlatformAfterExecute,
         stopPlatformAfterExecuteReason: executionIndex === executionCount - 1 ? "last-execution-done" : "intermediate-execution-done",
         executionId,
@@ -16117,13 +16127,17 @@ const launchNode = async ({
   };
 
   const stop = () => {
+    // { gracefulFailed } = {}
     const disconnectedPromise = new Promise(resolve => {
       const unregister = registerDisconnectCallback(() => {
         unregister();
         resolve();
       });
-    });
-    child.kill();
+    }); // http://man7.org/linux/man-pages/man7/signal.7.html
+    // const signal = gracefulFailed ? "SIGHUP" : "SIGKILL"
+    // https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
+
+    child.kill("SIGKILL");
     return disconnectedPromise;
   };
 
@@ -16134,7 +16148,7 @@ const launchNode = async ({
         resolve();
       });
     });
-    child.kill("SIGINT");
+    child.kill("SIGTERM");
     return disconnectedPromise;
   };
 
@@ -16231,6 +16245,8 @@ ${e.stack}`);
       env
     },
     gracefulStop,
+    // child.kill('SIGINT') does not work on windows
+    // ...(process.platform === "win32" ? {} : { gracefulStop }),
     stop,
     registerDisconnectCallback,
     registerErrorCallback,

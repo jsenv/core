@@ -146,13 +146,17 @@ export const launchNode = async ({
   }
 
   const stop = () => {
+    // { gracefulFailed } = {}
     const disconnectedPromise = new Promise((resolve) => {
       const unregister = registerDisconnectCallback(() => {
         unregister()
         resolve()
       })
     })
-    child.kill()
+    // http://man7.org/linux/man-pages/man7/signal.7.html
+    // const signal = gracefulFailed ? "SIGHUP" : "SIGKILL"
+    // https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
+    child.kill("SIGKILL")
     return disconnectedPromise
   }
 
@@ -163,7 +167,7 @@ export const launchNode = async ({
         resolve()
       })
     })
-    child.kill("SIGINT")
+    child.kill("SIGTERM")
     return disconnectedPromise
   }
 
@@ -250,8 +254,9 @@ ${e.stack}`)
     name: "node",
     version: process.version.slice(1),
     options: { execArgv, env },
+    gracefulStop,
     // child.kill('SIGINT') does not work on windows
-    ...(process.platform === "win32" ? {} : { gracefulStop }),
+    // ...(process.platform === "win32" ? {} : { gracefulStop }),
     stop,
     registerDisconnectCallback,
     registerErrorCallback,
