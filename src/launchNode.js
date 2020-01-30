@@ -152,7 +152,7 @@ export const launchNode = async ({
         resolve()
       })
     })
-    child.kill("SIGINT")
+    child.kill()
     return disconnectedPromise
   }
 
@@ -163,7 +163,7 @@ export const launchNode = async ({
         resolve()
       })
     })
-    child.kill()
+    child.kill("SIGINT")
     return disconnectedPromise
   }
 
