@@ -67,7 +67,8 @@
         "node_modules/puppeteer/**",
         "node_modules/rollup/**",
         "src/internal/supportsDynamicImport.js",
-        "src/internal/dynamicImportSource.js"
+        "src/internal/dynamicImportSource.js",
+        "script/run-node/**"
       ]
     },
     {
