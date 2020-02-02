@@ -1,9 +1,8 @@
 /* global require */
 const { createEslintConfig } = require("@jsenv/eslint-config")
-const jsenvConfig = require("./jsenv.config.js")
 
 const config = createEslintConfig({
-  ...jsenvConfig,
+  projectDirectoryUrl: __dirname,
   importResolutionMethod: "import-map",
   // importResolverOptions: {
   //   logLevel: "debug",

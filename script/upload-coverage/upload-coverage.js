@@ -1,6 +1,5 @@
-/* global require */
-const { uploadCoverage } = require("@jsenv/codecov-upload")
-const jsenvConfig = require("../../jsenv.config.js")
+import { uploadCoverage } from "@jsenv/codecov-upload"
+import * as jsenvConfig from "../../jsenv.config.js"
 
 uploadCoverage({
   ...jsenvConfig,

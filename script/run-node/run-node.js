@@ -1,6 +1,5 @@
-/* global require */
-const { execute, launchNode } = require("@jsenv/core")
-const jsenvConfig = require("../../jsenv.config.js")
+import { execute, launchNode } from "@jsenv/core"
+import * as jsenvConfig from "../../jsenv.config.js"
 
 execute({
   ...jsenvConfig,

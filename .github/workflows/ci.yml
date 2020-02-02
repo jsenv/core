@@ -14,14 +14,14 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    name: node 12 on ${{ matrix.os }}
+    name: node 13 on ${{ matrix.os }}
     env:
       CI: true
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-node@v1
         with:
-          node-version: 12.8.0
+          node-version: 13.7.0
       - name: setup linux fs watchers
         if: runner.os == 'Linux'
         run: |
