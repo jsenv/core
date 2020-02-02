@@ -1,6 +1,5 @@
-/* global require */
-const { startExploring, jsenvExplorableConfig } = require("@jsenv/core")
-const jsenvConfig = require("../../jsenv.config.js")
+import { startExploring, jsenvExplorableConfig } from "@jsenv/core"
+import * as jsenvConfig from "../../jsenv.config.js"
 
 startExploring({
   ...jsenvConfig,

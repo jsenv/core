@@ -13,15 +13,20 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
+        # We cannot test both on 12.8 and 13.7 because
+        # the scripts files are now written in mjs
+        # Maintaining .cjs and .mjs would be too much work.
+        # It means we might introduce regression on 12.8 from now on.
+        node: [13.7.0]
     runs-on: ${{ matrix.os }}
-    name: node 12 on ${{ matrix.os }}
+    name: node ${{ matrix.node }} on ${{ matrix.os }}
     env:
       CI: true
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-node@v1
         with:
-          node-version: 12.8.0
+          node-version: ${{ matrix.node }}
       - name: setup linux fs watchers
         if: runner.os == 'Linux'
         run: |

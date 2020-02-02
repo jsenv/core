@@ -1,6 +1,5 @@
-/* global require */
-const { installGitHooks } = require("@jsenv/git-hooks")
-const jsenvConfig = require("../../jsenv.config.js")
+import { installGitHooks } from "@jsenv/git-hooks"
+import * as jsenvConfig from "../../jsenv.config.js"
 
 installGitHooks({
   ...jsenvConfig,

@@ -10,7 +10,7 @@ import {
   EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
-import { removeDebuggerLogs } from "../../removeDebuggerLogs.js"
+import { removeAnnoyingLogs } from "../../removeAnnoyingLogs.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -43,7 +43,7 @@ const { status, consoleCalls } = await launchAndExecute({
   assert({ actual, expected })
 }
 {
-  const actual = removeDebuggerLogs(consoleCalls).reduce((previous, { text }) => {
+  const actual = removeAnnoyingLogs(consoleCalls).reduce((previous, { text }) => {
     return `${previous}${text}`
   }, "")
   const expected = `foo

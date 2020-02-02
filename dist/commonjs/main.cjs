@@ -1394,6 +1394,29 @@ const createCancellationToken = () => {
   };
 };
 
+const memoizeOnce = compute => {
+  let locked = false;
+  let lockValue;
+
+  const memoized = (...args) => {
+    if (locked) return lockValue; // if compute is recursive wait for it to be fully done before storing the lockValue
+    // so set locked later
+
+    lockValue = compute(...args);
+    locked = true;
+    return lockValue;
+  };
+
+  memoized.deleteCache = () => {
+    const value = lockValue;
+    locked = false;
+    lockValue = undefined;
+    return value;
+  };
+
+  return memoized;
+};
+
 const createOperation = ({
   cancellationToken = createCancellationToken(),
   start,
@@ -1423,6 +1446,303 @@ start`);
   });
   const operationPromise = Promise.race([promise, cancelPromise]);
   return operationPromise;
+};
+
+/*
+We could pick from array like this
+
+maxParallelExecution: 2
+array: [a, b, c, d]
+
+We could start [a,b]
+And immediatly after a or b finish, start c
+And immediatly after any finishes, start d
+
+This approach try to maximize maxParallelExecution.
+But it has one hidden disadvantage.
+
+If the tasks can queue each other there is a chance that
+a task gets constantly delayed by other started task
+giving the false feeling that the task takes a long time
+to be done.
+
+To avoid this I prefer to start them chunk by chunk
+so it means [a,b] and then [c,d] that will wait for a and b to complete
+
+*/
+const createConcurrentOperations = async ({
+  cancellationToken = createCancellationToken(),
+  concurrencyLimit = 5,
+  array,
+  start,
+  ...rest
+}) => {
+  if (typeof concurrencyLimit !== "number") {
+    throw new TypeError(`concurrencyLimit must be a number, got ${concurrencyLimit}`);
+  }
+
+  if (concurrencyLimit < 1) {
+    throw new Error(`concurrencyLimit must be 1 or more, got ${concurrencyLimit}`);
+  }
+
+  if (typeof array !== "object") {
+    throw new TypeError(`array must be an array, got ${array}`);
+  }
+
+  if (typeof start !== "function") {
+    throw new TypeError(`start must be a function, got ${start}`);
+  }
+
+  const unknownArgumentNames = Object.keys(rest);
+
+  if (unknownArgumentNames.length) {
+    throw new Error(`createConcurrentOperations called with unknown argument names.
+--- unknown argument names ---
+${unknownArgumentNames}
+--- possible argument names ---
+cancellationToken
+concurrencyLimit
+array
+start`);
+  }
+
+  const outputArray = [];
+  let progressionIndex = 0;
+  let remainingExecutionCount = array.length;
+
+  const nextChunk = async () => {
+    await createOperation({
+      cancellationToken,
+      start: async () => {
+        const outputPromiseArray = [];
+
+        while (remainingExecutionCount > 0 && outputPromiseArray.length < concurrencyLimit) {
+          remainingExecutionCount--;
+          const outputPromise = executeOne(progressionIndex);
+          progressionIndex++;
+          outputPromiseArray.push(outputPromise);
+        }
+
+        if (outputPromiseArray.length) {
+          await Promise.all(outputPromiseArray);
+
+          if (remainingExecutionCount > 0) {
+            await nextChunk();
+          }
+        }
+      }
+    });
+  };
+
+  const executeOne = async index => {
+    return createOperation({
+      cancellationToken,
+      start: async () => {
+        const input = array[index];
+        const output = await start(input);
+        outputArray[index] = output;
+      }
+    });
+  };
+
+  await nextChunk();
+  return outputArray;
+};
+
+const createStoppableOperation = ({
+  cancellationToken = createCancellationToken(),
+  start,
+  stop,
+  ...rest
+}) => {
+  if (typeof stop !== "function") {
+    throw new TypeError(`stop must be a function. got ${stop}`);
+  }
+
+  const unknownArgumentNames = Object.keys(rest);
+
+  if (unknownArgumentNames.length) {
+    throw new Error(`createStoppableOperation called with unknown argument names.
+--- unknown argument names ---
+${unknownArgumentNames}
+--- possible argument names ---
+cancellationToken
+start
+stop`);
+  }
+
+  cancellationToken.throwIfRequested();
+  const promise = new Promise(resolve => {
+    resolve(start());
+  });
+  const cancelPromise = new Promise((resolve, reject) => {
+    const cancelRegistration = cancellationToken.register(cancelError => {
+      cancelRegistration.unregister();
+      reject(cancelError);
+    });
+    promise.then(cancelRegistration.unregister, () => {});
+  });
+  const operationPromise = Promise.race([promise, cancelPromise]);
+  const stopInternal = memoizeOnce(async reason => {
+    const value = await promise;
+    return stop(value, reason);
+  });
+  cancellationToken.register(stopInternal);
+  operationPromise.stop = stopInternal;
+  return operationPromise;
+};
+
+const createCancelError = reason => {
+  const cancelError = new Error(`canceled because ${reason}`);
+  cancelError.name = "CANCEL_ERROR";
+  cancelError.reason = reason;
+  return cancelError;
+};
+const isCancelError = value => {
+  return value && typeof value === "object" && value.name === "CANCEL_ERROR";
+};
+const errorToCancelReason = error => {
+  if (!isCancelError(error)) return "";
+  return error.reason;
+};
+
+const composeCancellationToken = (...tokens) => {
+  const register = callback => {
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
+    }
+
+    const registrationArray = [];
+
+    const visit = i => {
+      const token = tokens[i];
+      const registration = token.register(callback);
+      registrationArray.push(registration);
+    };
+
+    let i = 0;
+
+    while (i < tokens.length) {
+      visit(i++);
+    }
+
+    const compositeRegistration = {
+      callback,
+      unregister: () => {
+        registrationArray.forEach(registration => registration.unregister());
+        registrationArray.length = 0;
+      }
+    };
+    return compositeRegistration;
+  };
+
+  let requested = false;
+  let cancelError;
+  const internalRegistration = register(parentCancelError => {
+    requested = true;
+    cancelError = parentCancelError;
+    internalRegistration.unregister();
+  });
+
+  const throwIfRequested = () => {
+    if (requested) {
+      throw cancelError;
+    }
+  };
+
+  return {
+    register,
+
+    get cancellationRequested() {
+      return requested;
+    },
+
+    throwIfRequested
+  };
+};
+
+const arrayWithout = (array, item) => {
+  const arrayWithoutItem = [];
+  let i = 0;
+
+  while (i < array.length) {
+    const value = array[i];
+    i++;
+
+    if (value === item) {
+      continue;
+    }
+
+    arrayWithoutItem.push(value);
+  }
+
+  return arrayWithoutItem;
+};
+
+// https://github.com/tc39/proposal-cancellation/tree/master/stage0
+const createCancellationSource = () => {
+  let requested = false;
+  let cancelError;
+  let registrationArray = [];
+
+  const cancel = reason => {
+    if (requested) return;
+    requested = true;
+    cancelError = createCancelError(reason);
+    const registrationArrayCopy = registrationArray.slice();
+    registrationArray.length = 0;
+    registrationArrayCopy.forEach(registration => {
+      registration.callback(cancelError); // const removedDuringCall = registrationArray.indexOf(registration) === -1
+    });
+  };
+
+  const register = callback => {
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
+    }
+
+    const existingRegistration = registrationArray.find(registration => {
+      return registration.callback === callback;
+    }); // don't register twice
+
+    if (existingRegistration) {
+      return existingRegistration;
+    }
+
+    const registration = {
+      callback,
+      unregister: () => {
+        registrationArray = arrayWithout(registrationArray, registration);
+      }
+    };
+    registrationArray = [registration, ...registrationArray];
+    return registration;
+  };
+
+  const throwIfRequested = () => {
+    if (requested) {
+      throw cancelError;
+    }
+  };
+
+  return {
+    token: {
+      register,
+
+      get cancellationRequested() {
+        return requested;
+      },
+
+      throwIfRequested
+    },
+    cancel
+  };
+};
+
+const createCancellationTokenForProcessSIGINT = () => {
+  const SIGINTCancelSource = createCancellationSource();
+  process.on("SIGINT", () => SIGINTCancelSource.cancel("process interruption"));
+  return SIGINTCancelSource.token;
 };
 
 const readDirectory = async (url, {
@@ -3759,378 +4079,6 @@ const convertCommonJsWithRollup = async ({
 const __filenameReplacement$1 = `import.meta.url.slice('file:///'.length)`;
 const __dirnameReplacement$1 = `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`;
 
-const createCancellationToken$1 = () => {
-  const register = callback => {
-    if (typeof callback !== "function") {
-      throw new Error(`callback must be a function, got ${callback}`);
-    }
-
-    return {
-      callback,
-      unregister: () => {}
-    };
-  };
-
-  const throwIfRequested = () => undefined;
-
-  return {
-    register,
-    cancellationRequested: false,
-    throwIfRequested
-  };
-};
-
-const memoizeOnce = compute => {
-  let locked = false;
-  let lockValue;
-
-  const memoized = (...args) => {
-    if (locked) return lockValue; // if compute is recursive wait for it to be fully done before storing the lockValue
-    // so set locked later
-
-    lockValue = compute(...args);
-    locked = true;
-    return lockValue;
-  };
-
-  memoized.deleteCache = () => {
-    const value = lockValue;
-    locked = false;
-    lockValue = undefined;
-    return value;
-  };
-
-  return memoized;
-};
-
-const createOperation$1 = ({
-  cancellationToken = createCancellationToken$1(),
-  start,
-  ...rest
-}) => {
-  const unknownArgumentNames = Object.keys(rest);
-
-  if (unknownArgumentNames.length) {
-    throw new Error(`createOperation called with unknown argument names.
---- unknown argument names ---
-${unknownArgumentNames}
---- possible argument names ---
-cancellationToken
-start`);
-  }
-
-  cancellationToken.throwIfRequested();
-  const promise = new Promise(resolve => {
-    resolve(start());
-  });
-  const cancelPromise = new Promise((resolve, reject) => {
-    const cancelRegistration = cancellationToken.register(cancelError => {
-      cancelRegistration.unregister();
-      reject(cancelError);
-    });
-    promise.then(cancelRegistration.unregister, () => {});
-  });
-  const operationPromise = Promise.race([promise, cancelPromise]);
-  return operationPromise;
-};
-
-/*
-We could pick from array like this
-
-maxParallelExecution: 2
-array: [a, b, c, d]
-
-We could start [a,b]
-And immediatly after a or b finish, start c
-And immediatly after any finishes, start d
-
-This approach try to maximize maxParallelExecution.
-But it has one hidden disadvantage.
-
-If the tasks can queue each other there is a chance that
-a task gets constantly delayed by other started task
-giving the false feeling that the task takes a long time
-to be done.
-
-To avoid this I prefer to start them chunk by chunk
-so it means [a,b] and then [c,d] that will wait for a and b to complete
-
-*/
-const createConcurrentOperations = async ({
-  cancellationToken = createCancellationToken$1(),
-  concurrencyLimit = 5,
-  array,
-  start,
-  ...rest
-}) => {
-  if (typeof concurrencyLimit !== "number") {
-    throw new TypeError(`concurrencyLimit must be a number, got ${concurrencyLimit}`);
-  }
-
-  if (concurrencyLimit < 1) {
-    throw new Error(`concurrencyLimit must be 1 or more, got ${concurrencyLimit}`);
-  }
-
-  if (typeof array !== "object") {
-    throw new TypeError(`array must be an array, got ${array}`);
-  }
-
-  if (typeof start !== "function") {
-    throw new TypeError(`start must be a function, got ${start}`);
-  }
-
-  const unknownArgumentNames = Object.keys(rest);
-
-  if (unknownArgumentNames.length) {
-    throw new Error(`createConcurrentOperations called with unknown argument names.
---- unknown argument names ---
-${unknownArgumentNames}
---- possible argument names ---
-cancellationToken
-concurrencyLimit
-array
-start`);
-  }
-
-  const outputArray = [];
-  let progressionIndex = 0;
-  let remainingExecutionCount = array.length;
-
-  const nextChunk = async () => {
-    await createOperation$1({
-      cancellationToken,
-      start: async () => {
-        const outputPromiseArray = [];
-
-        while (remainingExecutionCount > 0 && outputPromiseArray.length < concurrencyLimit) {
-          remainingExecutionCount--;
-          const outputPromise = executeOne(progressionIndex);
-          progressionIndex++;
-          outputPromiseArray.push(outputPromise);
-        }
-
-        if (outputPromiseArray.length) {
-          await Promise.all(outputPromiseArray);
-
-          if (remainingExecutionCount > 0) {
-            await nextChunk();
-          }
-        }
-      }
-    });
-  };
-
-  const executeOne = async index => {
-    return createOperation$1({
-      cancellationToken,
-      start: async () => {
-        const input = array[index];
-        const output = await start(input);
-        outputArray[index] = output;
-      }
-    });
-  };
-
-  await nextChunk();
-  return outputArray;
-};
-
-const createStoppableOperation = ({
-  cancellationToken = createCancellationToken$1(),
-  start,
-  stop,
-  ...rest
-}) => {
-  if (typeof stop !== "function") {
-    throw new TypeError(`stop must be a function. got ${stop}`);
-  }
-
-  const unknownArgumentNames = Object.keys(rest);
-
-  if (unknownArgumentNames.length) {
-    throw new Error(`createStoppableOperation called with unknown argument names.
---- unknown argument names ---
-${unknownArgumentNames}
---- possible argument names ---
-cancellationToken
-start
-stop`);
-  }
-
-  cancellationToken.throwIfRequested();
-  const promise = new Promise(resolve => {
-    resolve(start());
-  });
-  const cancelPromise = new Promise((resolve, reject) => {
-    const cancelRegistration = cancellationToken.register(cancelError => {
-      cancelRegistration.unregister();
-      reject(cancelError);
-    });
-    promise.then(cancelRegistration.unregister, () => {});
-  });
-  const operationPromise = Promise.race([promise, cancelPromise]);
-  const stopInternal = memoizeOnce(async reason => {
-    const value = await promise;
-    return stop(value, reason);
-  });
-  cancellationToken.register(stopInternal);
-  operationPromise.stop = stopInternal;
-  return operationPromise;
-};
-
-const createCancelError = reason => {
-  const cancelError = new Error(`canceled because ${reason}`);
-  cancelError.name = "CANCEL_ERROR";
-  cancelError.reason = reason;
-  return cancelError;
-};
-const isCancelError = value => {
-  return value && typeof value === "object" && value.name === "CANCEL_ERROR";
-};
-const errorToCancelReason = error => {
-  if (!isCancelError(error)) return "";
-  return error.reason;
-};
-
-const composeCancellationToken = (...tokens) => {
-  const register = callback => {
-    if (typeof callback !== "function") {
-      throw new Error(`callback must be a function, got ${callback}`);
-    }
-
-    const registrationArray = [];
-
-    const visit = i => {
-      const token = tokens[i];
-      const registration = token.register(callback);
-      registrationArray.push(registration);
-    };
-
-    let i = 0;
-
-    while (i < tokens.length) {
-      visit(i++);
-    }
-
-    const compositeRegistration = {
-      callback,
-      unregister: () => {
-        registrationArray.forEach(registration => registration.unregister());
-        registrationArray.length = 0;
-      }
-    };
-    return compositeRegistration;
-  };
-
-  let requested = false;
-  let cancelError;
-  const internalRegistration = register(parentCancelError => {
-    requested = true;
-    cancelError = parentCancelError;
-    internalRegistration.unregister();
-  });
-
-  const throwIfRequested = () => {
-    if (requested) {
-      throw cancelError;
-    }
-  };
-
-  return {
-    register,
-
-    get cancellationRequested() {
-      return requested;
-    },
-
-    throwIfRequested
-  };
-};
-
-const arrayWithout = (array, item) => {
-  const arrayWithoutItem = [];
-  let i = 0;
-
-  while (i < array.length) {
-    const value = array[i];
-    i++;
-
-    if (value === item) {
-      continue;
-    }
-
-    arrayWithoutItem.push(value);
-  }
-
-  return arrayWithoutItem;
-};
-
-// https://github.com/tc39/proposal-cancellation/tree/master/stage0
-const createCancellationSource = () => {
-  let requested = false;
-  let cancelError;
-  let registrationArray = [];
-
-  const cancel = reason => {
-    if (requested) return;
-    requested = true;
-    cancelError = createCancelError(reason);
-    const registrationArrayCopy = registrationArray.slice();
-    registrationArray.length = 0;
-    registrationArrayCopy.forEach(registration => {
-      registration.callback(cancelError); // const removedDuringCall = registrationArray.indexOf(registration) === -1
-    });
-  };
-
-  const register = callback => {
-    if (typeof callback !== "function") {
-      throw new Error(`callback must be a function, got ${callback}`);
-    }
-
-    const existingRegistration = registrationArray.find(registration => {
-      return registration.callback === callback;
-    }); // don't register twice
-
-    if (existingRegistration) {
-      return existingRegistration;
-    }
-
-    const registration = {
-      callback,
-      unregister: () => {
-        registrationArray = arrayWithout(registrationArray, registration);
-      }
-    };
-    registrationArray = [registration, ...registrationArray];
-    return registration;
-  };
-
-  const throwIfRequested = () => {
-    if (requested) {
-      throw cancelError;
-    }
-  };
-
-  return {
-    token: {
-      register,
-
-      get cancellationRequested() {
-        return requested;
-      },
-
-      throwIfRequested
-    },
-    cancel
-  };
-};
-
-const createCancellationTokenForProcessSIGINT = () => {
-  const SIGINTCancelSource = createCancellationSource();
-  process.on("SIGINT", () => SIGINTCancelSource.cancel("process interruption"));
-  return SIGINTCancelSource.token;
-};
-
 const LOG_LEVEL_OFF = "off";
 const LOG_LEVEL_DEBUG = "debug";
 const LOG_LEVEL_INFO = "info";
@@ -5909,6 +5857,86 @@ const isErrorWithCode = (error, code) => {
   return typeof error === "object" && error.code === code;
 };
 
+const LOG_LEVEL_OFF$1 = "off";
+const LOG_LEVEL_DEBUG$1 = "debug";
+const LOG_LEVEL_INFO$1 = "info";
+const LOG_LEVEL_WARN$1 = "warn";
+const LOG_LEVEL_ERROR$1 = "error";
+
+const createLogger$1 = ({
+  logLevel = LOG_LEVEL_INFO$1
+} = {}) => {
+  if (logLevel === LOG_LEVEL_DEBUG$1) {
+    return {
+      debug: debug$1,
+      info: info$1,
+      warn: warn$1,
+      error: error$1
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_INFO$1) {
+    return {
+      debug: debugDisabled$1,
+      info: info$1,
+      warn: warn$1,
+      error: error$1
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_WARN$1) {
+    return {
+      debug: debugDisabled$1,
+      info: infoDisabled$1,
+      warn: warn$1,
+      error: error$1
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_ERROR$1) {
+    return {
+      debug: debugDisabled$1,
+      info: infoDisabled$1,
+      warn: warnDisabled$1,
+      error: error$1
+    };
+  }
+
+  if (logLevel === LOG_LEVEL_OFF$1) {
+    return {
+      debug: debugDisabled$1,
+      info: infoDisabled$1,
+      warn: warnDisabled$1,
+      error: errorDisabled$1
+    };
+  }
+
+  throw new Error(`unexpected logLevel.
+--- logLevel ---
+${logLevel}
+--- allowed log levels ---
+${LOG_LEVEL_OFF$1}
+${LOG_LEVEL_ERROR$1}
+${LOG_LEVEL_WARN$1}
+${LOG_LEVEL_INFO$1}
+${LOG_LEVEL_DEBUG$1}`);
+};
+const debug$1 = console.debug;
+
+const debugDisabled$1 = () => {};
+
+const info$1 = console.info;
+
+const infoDisabled$1 = () => {};
+
+const warn$1 = console.warn;
+
+const warnDisabled$1 = () => {};
+
+const error$1 = console.error;
+
+const errorDisabled$1 = () => {};
+
 if ("observable" in Symbol === false) {
   Symbol.observable = Symbol.for("observable");
 }
@@ -5955,7 +5983,7 @@ const createSSERoom = ({
   maxConnectionAllowed = 100 // max 100 users accepted
 
 } = {}) => {
-  const logger = createLogger({
+  const logger = createLogger$1({
     logLevel
   });
   const connections = new Set(); // what about history that keeps growing ?
@@ -6138,7 +6166,7 @@ const createEventHistory = ({
   };
 };
 
-const createCancellationToken$2 = () => {
+const createCancellationToken$1 = () => {
   const register = callback => {
     if (typeof callback !== "function") {
       throw new Error(`callback must be a function, got ${callback}`);
@@ -6182,8 +6210,8 @@ const memoizeOnce$1 = compute => {
   return memoized;
 };
 
-const createOperation$2 = ({
-  cancellationToken = createCancellationToken$2(),
+const createOperation$1 = ({
+  cancellationToken = createCancellationToken$1(),
   start,
   ...rest
 }) => {
@@ -6214,7 +6242,7 @@ start`);
 };
 
 const createStoppableOperation$1 = ({
-  cancellationToken = createCancellationToken$2(),
+  cancellationToken = createCancellationToken$1(),
   start,
   stop,
   ...rest
@@ -6776,7 +6804,7 @@ const {
   readFile: readFile$2
 } = fs.promises;
 const serveFile = async (source, {
-  cancellationToken = createCancellationToken$2(),
+  cancellationToken = createCancellationToken$1(),
   method = "GET",
   headers = {},
   canReadDirectory = false,
@@ -6796,7 +6824,7 @@ const serveFile = async (source, {
     const cacheWithMtime = !clientCacheDisabled && cacheStrategy === "mtime";
     const cacheWithETag = !clientCacheDisabled && cacheStrategy === "etag";
     const cachedDisabled = clientCacheDisabled || cacheStrategy === "none";
-    const sourceStat = await createOperation$2({
+    const sourceStat = await createOperation$1({
       cancellationToken,
       start: () => readFileSystemNodeStat$2(sourceUrl)
     });
@@ -6813,7 +6841,7 @@ const serveFile = async (source, {
         };
       }
 
-      const directoryContentArray = await createOperation$2({
+      const directoryContentArray = await createOperation$1({
         cancellationToken,
         start: () => readDirectory$1(sourceUrl)
       });
@@ -6842,7 +6870,7 @@ const serveFile = async (source, {
     }
 
     if (cacheWithETag) {
-      const fileContentAsBuffer = await createOperation$2({
+      const fileContentAsBuffer = await createOperation$1({
         cancellationToken,
         start: () => readFile$2(urlToFileSystemPath$2(sourceUrl))
       });
@@ -6928,7 +6956,7 @@ const {
   Response
 } = nodeFetch;
 const fetchUrl = async (url, {
-  cancellationToken = createCancellationToken$2(),
+  cancellationToken = createCancellationToken$1(),
   simplified = false,
   canReadDirectory,
   contentTypeMap,
@@ -7035,7 +7063,7 @@ const stopListening = server => new Promise((resolve, reject) => {
 });
 
 const findFreePort = async (initialPort = 1, {
-  cancellationToken = createCancellationToken$2(),
+  cancellationToken = createCancellationToken$1(),
   ip = "127.0.0.1",
   min = 1,
   max = 65534,
@@ -7872,7 +7900,7 @@ const killPort = require$3("kill-port");
 
 const STATUS_TEXT_INTERNAL_ERROR = "internal error";
 const startServer = async ({
-  cancellationToken = createCancellationToken$2(),
+  cancellationToken = createCancellationToken$1(),
   logLevel,
   serverName = "server",
   protocol = "http",
@@ -7927,12 +7955,12 @@ const startServer = async ({
   if (protocol !== "http" && protocol !== "https") throw new Error(`protocol must be http or https, got ${protocol}`); // https://github.com/nodejs/node/issues/14900
 
   if (ip === "0.0.0.0" && process.platform === "win32") throw new Error(`listening ${ip} not available on window`);
-  const logger = createLogger({
+  const logger = createLogger$1({
     logLevel
   });
 
   if (forcePort) {
-    await createOperation$2({
+    await createOperation$1({
       cancellationToken,
       start: () => killPort(port)
     });
@@ -11245,7 +11273,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     return false;
   };
 
-  const rollupBundle = await createOperation$1({
+  const rollupBundle = await createOperation({
     cancellationToken,
     start: () => rollup$1({
       // about cache here, we should/could reuse previous rollup call
@@ -11284,7 +11312,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     sourcemapExcludeSources,
     ...formatOutputOptions
   };
-  const rollupOutputArray = await createOperation$1({
+  const rollupOutputArray = await createOperation({
     cancellationToken,
     start: () => {
       if (writeOnFileSystem) {
@@ -11730,7 +11758,7 @@ const urlIsAsset = url => {
 
 /* eslint-disable import/max-dependencies */
 const startCompileServer = async ({
-  cancellationToken = createCancellationToken$1(),
+  cancellationToken = createCancellationToken(),
   compileServerLogLevel,
   // js compile options
   transformTopLevelAwait = true,
@@ -12154,7 +12182,7 @@ const TIMING_BEFORE_EXECUTION = "before-execution";
 const TIMING_DURING_EXECUTION = "during-execution";
 const TIMING_AFTER_EXECUTION = "after-execution";
 const launchAndExecute = async ({
-  cancellationToken = createCancellationToken$1(),
+  cancellationToken = createCancellationToken(),
   launchLogger,
   executeLogger,
   fileRelativeUrl,
@@ -12441,7 +12469,7 @@ const computeExecutionResult = async ({
 options: ${JSON.stringify(options, null, "  ")}`);
   registerConsoleCallback(platformConsoleCallback);
   executeLogger.debug(`execute file ${fileRelativeUrl}`);
-  const executeOperation = createOperation$1({
+  const executeOperation = createOperation({
     cancellationToken,
     start: async () => {
       let timing = TIMING_BEFORE_EXECUTION;
@@ -12849,7 +12877,7 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
   babelPluginMap
 }) => {
   const fileUrl = resolveUrl$1(relativeUrl, projectDirectoryUrl);
-  const source = await createOperation$1({
+  const source = await createOperation({
     cancellationToken,
     start: () => readFile(fileUrl)
   }); // we must compile to get the coverage object
@@ -12859,7 +12887,7 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
   try {
     const {
       metadata
-    } = await createOperation$1({
+    } = await createOperation({
       cancellationToken,
       start: () => transformAsync$1(source, {
         filename: urlToFileSystemPath(fileUrl),
@@ -14363,7 +14391,7 @@ const teardownSignal$1 = {
 const puppeteer = require$1("puppeteer");
 
 const launchPuppeteer = async ({
-  cancellationToken = createCancellationToken$1(),
+  cancellationToken = createCancellationToken(),
   headless = true,
   debug = false,
   debugPort = 9222,
@@ -14925,7 +14953,7 @@ const argsToIdFallback = args => JSON.stringify(args);
 const browserSharing = createSharing();
 const executionServerSharing = createSharing();
 const launchChromium = async ({
-  cancellationToken = createCancellationToken$1(),
+  cancellationToken = createCancellationToken(),
   clientServerLogLevel,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
@@ -15849,7 +15877,7 @@ const removeCommandArgument = (argv, name) => {
 
 const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"];
 const createChildExecArgv = async ({
-  cancellationToken = createCancellationToken$1(),
+  cancellationToken = createCancellationToken(),
   // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
   processExecArgv,
   processDebugPort,
@@ -16018,7 +16046,7 @@ const getCommandDebugArgs = argv => {
 const EVALUATION_STATUS_OK = "evaluation-ok";
 const nodeJsFileUrl = resolveUrl$1("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl);
 const launchNode = async ({
-  cancellationToken = createCancellationToken$1(),
+  cancellationToken = createCancellationToken(),
   logger,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
