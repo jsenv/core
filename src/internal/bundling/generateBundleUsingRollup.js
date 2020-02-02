@@ -1,3 +1,4 @@
+import { extname } from "path"
 import { createOperation } from "@jsenv/cancellation"
 import { urlToFileSystemPath } from "@jsenv/util"
 import { require } from "../require.js"
@@ -128,6 +129,17 @@ ${JSON.stringify(entryPointMap, null, "  ")}
         plugins: [jsenvRollupPlugin],
       }),
   })
+
+  if (!formatOutputOptions.entryFileNames) {
+    formatOutputOptions.entryFileNames = `[name]${extname(
+      entryPointMap[Object.keys(entryPointMap)[0]],
+    )}`
+  }
+  if (!formatOutputOptions.chunkFileNames) {
+    formatOutputOptions.chunkFileNames = `[name]-[hash]${extname(
+      entryPointMap[Object.keys(entryPointMap)[0]],
+    )}`
+  }
 
   const rollupGenerateOptions = {
     // https://rollupjs.org/guide/en#experimentaltoplevelawait

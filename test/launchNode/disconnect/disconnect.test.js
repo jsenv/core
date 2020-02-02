@@ -10,7 +10,7 @@ import {
   EXECUTE_TEST_PARAMS,
   LAUNCH_TEST_PARAMS,
 } from "../TEST_PARAMS.js"
-import { removeDebuggerLogs } from "../../removeDebuggerLogs.js"
+import { removeAnnoyingLogs } from "../../removeAnnoyingLogs.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
@@ -35,7 +35,7 @@ const actual = await launchAndExecute({
     }),
   captureConsole: true,
 })
-actual.consoleCalls = removeDebuggerLogs(actual.consoleCalls)
+actual.consoleCalls = removeAnnoyingLogs(actual.consoleCalls)
 const expected = {
   status: "disconnected",
   consoleCalls: [

@@ -12,7 +12,7 @@ import { COMPILE_SERVER_TEST_PARAMS } from "../TEST_PARAMS.js"
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const testDirectoryname = basename(testDirectoryRelativeUrl)
-const filename = `${testDirectoryname}.js`
+const filename = `${testDirectoryname}.cjs`
 const babelPluginMap = jsenvBabelPluginMap
 
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({

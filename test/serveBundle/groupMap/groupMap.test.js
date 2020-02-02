@@ -12,8 +12,8 @@ import { serveBundle } from "../../../src/internal/compiling/serveBundle.js"
 import { jsenvBabelPluginMap } from "../../../src/jsenvBabelPluginMap.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
-const originalFileUrl = resolveUrl("./file.js", import.meta.url)
-const compiledFileUrl = resolveUrl("./.jsenv/file.js", import.meta.url)
+const originalFileUrl = resolveUrl("./file.cjs", import.meta.url)
+const compiledFileUrl = resolveUrl("./.jsenv/file.cjs", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const projectDirectoryUrl = jsenvCoreDirectoryUrl
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
@@ -32,7 +32,7 @@ const {
     whatever: 42,
   },
 })
-const ressource = `/${outDirectoryRelativeUrl}file.js`
+const ressource = `/${outDirectoryRelativeUrl}file.cjs`
 const serveBundleParams = {
   cancellationToken: createCancellationToken(),
   logger: createLogger({ logLevel: "warn" }),
@@ -66,8 +66,8 @@ const response = await serveBundle(serveBundleParams)
   const actual = JSON.parse(await readFile(sourcemapFileUrl))
   const expected = {
     version: 3,
-    file: "file.js",
-    sources: ["out/groupMap.json", "../file.js"],
+    file: "file.cjs",
+    sources: ["out/groupMap.json", "../file.cjs"],
     sourcesContent: null,
     names: actual.names,
     mappings: actual.mappings,
@@ -79,16 +79,16 @@ const response = await serveBundle(serveBundleParams)
   const actual = JSON.parse(await readFile(metaFileUrl))
   const expected = {
     contentType: "application/javascript",
-    sources: ["../out/groupMap.json", "../../file.js"],
+    sources: ["../out/groupMap.json", "../../file.cjs"],
     sourcesEtag: [
       bufferToEtag(
         readFileSync(urlToFileSystemPath(resolveUrl("../out/groupMap.json", metaFileUrl))),
       ),
-      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../../file.js", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../../file.cjs", metaFileUrl)))),
     ],
-    assets: ["../file.js.map"],
+    assets: ["../file.cjs.map"],
     assetsEtag: [
-      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../file.js.map", metaFileUrl)))),
+      bufferToEtag(readFileSync(urlToFileSystemPath(resolveUrl("../file.cjs.map", metaFileUrl)))),
     ],
     createdMs: actual.createdMs,
     lastModifiedMs: actual.lastModifiedMs,
