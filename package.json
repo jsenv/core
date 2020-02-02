@@ -127,6 +127,7 @@
     "rollup-plugin-node-builtins": "2.1.2",
     "rollup-plugin-node-globals": "1.4.0",
     "source-map": "0.7.3",
+    "supports-color": "7.1.0",
     "systemjs": "6.1.9",
     "terser": "4.6.3",
     "tree-kill": "1.2.2"

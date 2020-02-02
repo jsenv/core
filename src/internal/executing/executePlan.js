@@ -31,6 +31,8 @@ export const executePlan = async ({
   concurrencyLimit,
   executionDefaultOptions,
   stopPlatformAfterExecute,
+  completedExecutionLogMerging,
+  completedExecutionLogAbbreviation,
   logSummary,
 
   // coverage parameters
@@ -103,6 +105,8 @@ export const executePlan = async ({
     measurePlanExecutionDuration,
     concurrencyLimit,
     executionDefaultOptions,
+    completedExecutionLogMerging,
+    completedExecutionLogAbbreviation,
     logSummary,
 
     coverage,

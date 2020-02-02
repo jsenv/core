@@ -29,7 +29,7 @@ export const executeTestPlan = async ({
   compileGroupCount = 2,
 
   testPlan,
-  measurePlanExecutionDuration = false,
+  measurePlanExecutionDuration = true,
   concurrencyLimit,
   executionDefaultOptions = {},
   // stopPlatformAfterExecute: true to ensure platform is stopped once executed
@@ -38,6 +38,8 @@ export const executeTestPlan = async ({
   // you can still pass false to debug what happens
   // meaning all node process and browsers launched stays opened
   stopPlatformAfterExecute = true,
+  completedExecutionLogMerging = false,
+  completedExecutionLogAbbreviation = false,
   logSummary = true,
   updateProcessExitCode = true,
 
@@ -130,6 +132,8 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       concurrencyLimit,
       executionDefaultOptions,
       stopPlatformAfterExecute,
+      completedExecutionLogMerging,
+      completedExecutionLogAbbreviation,
       logSummary,
 
       coverage,

@@ -1,11 +1,13 @@
 /* eslint-disable import/max-dependencies */
 import { cpus } from "os"
 import { stat } from "fs"
+import readline from "readline"
 import {
   createConcurrentOperations,
   createCancellationSource,
   composeCancellationToken,
 } from "@jsenv/cancellation"
+import { loggerToLevels } from "@jsenv/logger"
 import { urlToFileSystemPath } from "@jsenv/util"
 import { launchAndExecute } from "../executing/launchAndExecute.js"
 import { reportToCoverageMap } from "./coverage/reportToCoverageMap.js"
@@ -31,6 +33,8 @@ export const executeConcurrently = async (
     executionDefaultOptions = {},
     stopPlatformAfterExecute,
     logSummary,
+    completedExecutionLogMerging,
+    completedExecutionLogAbbreviation,
 
     coverage,
     coverageConfig,
@@ -53,7 +57,6 @@ export const executeConcurrently = async (
     collectNamespace: false,
     collectCoverage: coverage,
 
-    logSuccess: true,
     mainFileNotFoundCallback: ({ fileRelativeUrl }) => {
       logger.error(
         new Error(`an execution main file does not exists.
@@ -79,6 +82,14 @@ ${fileRelativeUrl}`),
 
   const report = {}
   const executionCount = executionSteps.length
+
+  let previousExecutionResult
+  let previousExecutionLog
+  let disconnectedCount = 0
+  let timedoutCount = 0
+  let erroredCount = 0
+  let completedCount = 0
+
   await createConcurrentOperations({
     cancellationToken,
     concurrencyLimit,
@@ -107,7 +118,6 @@ ${fileRelativeUrl}`),
         mainFileNotFoundCallback,
         beforeExecutionCallback,
         afterExecutionCallback,
-        logSuccess,
         gracefulStopAllocatedMs,
       } = executionOptions
 
@@ -161,14 +171,43 @@ ${fileRelativeUrl}`),
       }
       afterExecutionCallback(afterExecutionInfo)
 
-      if (executionResult.status !== "completed" || logSuccess) {
-        logger.info(createExecutionResultLog(afterExecutionInfo, { executionCount }))
+      if (executionResult.status === "timedout") {
+        timedoutCount++
+      } else if (executionResult.status === "disconnected") {
+        disconnectedCount++
+      } else if (executionResult.status === "errored") {
+        erroredCount++
+      } else if (executionResult.status === "completed") {
+        completedCount++
       }
+
+      if (
+        completedExecutionLogMerging &&
+        previousExecutionResult &&
+        previousExecutionResult.status === "completed" &&
+        executionResult.status === "completed"
+      ) {
+        if (loggerToLevels(logger).info) {
+          readline.moveCursor(process.stdout, 0, -previousExecutionLog.split(/\r\n|\r|\n/).length)
+          readline.cursorTo(process.stdout, 0)
+        }
+      }
+      const log = createExecutionResultLog(afterExecutionInfo, {
+        completedExecutionLogAbbreviation,
+        executionCount,
+        disconnectedCount,
+        timedoutCount,
+        erroredCount,
+        completedCount,
+      })
+      logger.info(log)
 
       if (fileRelativeUrl in report === false) {
         report[fileRelativeUrl] = {}
       }
       report[fileRelativeUrl][name] = executionResult
+      previousExecutionResult = executionResult
+      previousExecutionLog = log
     },
   })
 

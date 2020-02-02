@@ -372,9 +372,17 @@ executeTestPlan({
 
 ## measurePlanExecutionDuration
 
-`measurePlanExecutionDuration` parameter is a boolean controlling if test plan execution duration is measured, logger and reported. This parameter is optional with a default value of `false`.
+`measurePlanExecutionDuration` parameter is a boolean controlling if test plan execution duration is measured, logger and reported. This parameter is optional with a default value of `true`.
 
 When true, `startMs`, `endMs` properties are available on [testPlanSummary](#testPlanSummary). When true, a log will indicates test plan duration.
+
+## completedExecutionLogMerging
+
+`completedExecutionLogMerging` parameter is a boolean controlling if completed execution logs will be merged together when adjacent. This parameter is optional with a default value of `false`. Use this parameter to shorten overall console output length and focus on non completed execution.
+
+## completedExecutionLogAbbreviation
+
+`completedExecutionLogAbbreviation` parameter is a boolean controlling verbosity of completed execution logs. This parameter is optional with a default value of `false`. Use this parameter to shorten log generated for completed execution.
 
 ## coverage
 
