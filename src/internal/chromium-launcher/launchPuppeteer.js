@@ -2,7 +2,7 @@
 // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
 
 import { createCancellationToken, createStoppableOperation } from "@jsenv/cancellation"
-import { interruptSignal, teardownSignal } from "@jsenv/node-signals"
+import { teardownSignal } from "@jsenv/node-signals"
 import { require } from "../require.js"
 import { fetchUrl } from "../fetchUrl.js"
 import { validateResponseStatusIsOk } from "../validateResponseStatusIsOk.js"
@@ -24,7 +24,6 @@ export const launchPuppeteer = async ({
   debug = false,
   debugPort = 9222,
   stopOnExit = true,
-  stopOnSIGINT = true,
 }) => {
   const options = {
     headless,
@@ -73,12 +72,6 @@ export const launchPuppeteer = async ({
       stop(`process ${reason}`)
     })
     registerCleanupCallback(unregisterProcessTeadown)
-  }
-  if (stopOnSIGINT) {
-    const unregisterProcessInterrupt = interruptSignal.addCallback(() => {
-      stop("process sigint")
-    })
-    registerCleanupCallback(unregisterProcessInterrupt)
   }
 
   const browser = await browserOperation
