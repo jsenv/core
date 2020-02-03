@@ -27,7 +27,6 @@ export const executePlan = async ({
   compileGroupCount,
 
   plan,
-  measurePlanExecutionDuration,
   concurrencyLimit,
   executionDefaultOptions,
   stopPlatformAfterExecute,
@@ -102,7 +101,6 @@ export const executePlan = async ({
     babelPluginMap,
 
     stopPlatformAfterExecute,
-    measurePlanExecutionDuration,
     concurrencyLimit,
     executionDefaultOptions,
     completedExecutionLogMerging,

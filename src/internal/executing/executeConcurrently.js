@@ -28,7 +28,6 @@ export const executeConcurrently = async (
 
     babelPluginMap,
 
-    measurePlanExecutionDuration,
     concurrencyLimit = Math.max(cpus.length - 1, 1),
     executionDefaultOptions = {},
     stopPlatformAfterExecute,
@@ -69,10 +68,7 @@ ${fileRelativeUrl}`),
     ...executionDefaultOptions,
   }
 
-  let startMs
-  if (measurePlanExecutionDuration) {
-    startMs = Date.now()
-  }
+  const startMs = Date.now()
 
   const allExecutionDoneCancellationSource = createCancellationSource()
   const executionCancellationToken = composeCancellationToken(
@@ -218,10 +214,8 @@ ${fileRelativeUrl}`),
   }
 
   const summary = reportToSummary(report)
-  if (measurePlanExecutionDuration) {
-    summary.startMs = startMs
-    summary.endMs = Date.now()
-  }
+  summary.startMs = startMs
+  summary.endMs = Date.now()
 
   if (logSummary) {
     logger.info(createSummaryLog(summary))

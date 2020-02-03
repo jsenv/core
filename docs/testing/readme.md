@@ -29,7 +29,6 @@
       - [logSuccess](#logSuccess)
   - [executionDefaultOptions](#executionDefaultOptions)
   - [concurrencyLimit](#concurrencyLimit)
-  - [measurePlanExecutionDuration](#measurePlanExecutionDuration)
   - [coverage](#coverage)
   - [Shared parameters](#shared-parameters)
 - [executeTestPlan return value](#executeTestPlan-return-value)
@@ -369,12 +368,6 @@ executeTestPlan({
 ## concurrencyLimit
 
 `concurrencyLimit` parameter is a number representing the max amount of execution allowed to run simultaneously. This parameter is optional with a default value being the number of cpus available minus one. To ensure one execution at a time you can pass `1`.
-
-## measurePlanExecutionDuration
-
-`measurePlanExecutionDuration` parameter is a boolean controlling if test plan execution duration is measured, logger and reported. This parameter is optional with a default value of `true`.
-
-When true, `startMs`, `endMs` properties are available on [testPlanSummary](#testPlanSummary). When true, a log will indicates test plan duration.
 
 ## completedExecutionLogMerging
 

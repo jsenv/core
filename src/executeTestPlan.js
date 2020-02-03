@@ -29,7 +29,6 @@ export const executeTestPlan = async ({
   compileGroupCount = 2,
 
   testPlan,
-  measurePlanExecutionDuration = true,
   concurrencyLimit,
   executionDefaultOptions = {},
   // stopPlatformAfterExecute: true to ensure platform is stopped once executed
@@ -128,7 +127,6 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       compileGroupCount,
 
       plan: testPlan,
-      measurePlanExecutionDuration,
       concurrencyLimit,
       executionDefaultOptions,
       stopPlatformAfterExecute,
