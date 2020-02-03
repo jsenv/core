@@ -29,6 +29,8 @@ const expected = {
     timedoutCount: 0,
     erroredCount: 1,
     completedCount: 0,
+    startMs: actual.summary.startMs,
+    endMs: actual.summary.endMs,
   },
   report: {
     [fileRelativeUrl]: {
