@@ -1,6 +1,7 @@
-export const formatDuration = (duration) => {
-  const seconds = duration / 1000
-  const secondsWithTwoDecimalPrecision = Math.floor(seconds * 100) / 100
+import { require } from "../require.js"
 
-  return `${secondsWithTwoDecimalPrecision}s`
+const humanizeDuration = require("humanize-duration")
+
+export const formatDuration = (duration) => {
+  return humanizeDuration(duration, { largest: 2, maxDecimalPoints: 2 })
 }

@@ -17,9 +17,19 @@ Execute JavaScript on multiple environments for testing.
 
 `@jsenv/core` is above all a testing framework. It executes your tests on a browser, nodejs or both and can generate the combined coverage from all executions.
 
-![test execution terminal screenshot](./docs/testing/test-execution-terminal-screenshot.png)
+> In reality you would never test `Math.max`, the code below is testing it to show an example unrelated to a specific codebase.
 
-You configure your test files and the associated execution on browsers or node.js in a file like the one below.
+`Math.max.test.js`
+
+```js
+const actual = Math.max(2, 4)
+const expected = 4
+if (actual !== expected) {
+  throw new Error(`Math.max(2, 4) should return ${expected}, got ${actual}`)
+}
+```
+
+`execute-test-plan.js`
 
 ```js
 import { executeTestPlan, launchNode, launchChromiumTab } from "@jsenv/core"
@@ -27,23 +37,10 @@ import { executeTestPlan, launchNode, launchChromiumTab } from "@jsenv/core"
 executeTestPlan({
   projectDirectoryUrl: new URL("./", import.meta.url),
   testPlan: {
-    // executes files ending with test.js on chromium and node
-    "./test/**/*.test.js": {
-      browser: {
+    "./**/*.test.js": {
+      chromium: {
         launch: launchChromiumTab,
       },
-      node: {
-        launch: launchNode,
-      },
-    },
-    // executes file ending with test.browser.js only on chromium
-    "./test/**/*.test.browser.js": {
-      browser: {
-        launch: launchChromiumTab,
-      },
-    },
-    // executes file ending with test.node.js only on node
-    "./test/**/*.test.node.js": {
       node: {
         launch: launchNode,
       },
@@ -52,12 +49,14 @@ executeTestPlan({
 })
 ```
 
+![test execution terminal screenshot](./docs/testing/test-execution-terminal-screenshot.png)
+
 There is a detailed documentation about testing at [./docs/testing/readme.md](./docs/testing/readme.md). `@jsenv/core` can also bring you more as shown in the [Documentation](#Documentation) part.
 
 # Installation
 
 ```console
-npm install --save-dev @jsenv/core@11.4.0
+npm install --save-dev @jsenv/core@11.5.0
 ```
 
 `@jsenv/core` is tested on mac, linux and windows platforms on Node.js 12.8.0 and 13.7.0. Other platforms and Node.js versions are not tested.

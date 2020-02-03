@@ -1,5 +1,6 @@
 import { magenta, cross, yellow, green, checkmark, grey, red, ansiResetSequence } from "./ansi.js"
 import { formatDuration } from "./formatDuration.js"
+import { createSummaryDetails } from "./createSummaryLog.js"
 
 export const createExecutionResultLog = (
   {
@@ -14,13 +15,32 @@ export const createExecutionResultLog = (
     error,
     executionIndex,
   },
-  { executionCount },
+  {
+    completedExecutionLogAbbreviation,
+    executionCount,
+    disconnectedCount,
+    timedoutCount,
+    erroredCount,
+    completedCount,
+  },
 ) => {
   const executionNumber = executionIndex + 1
+  const summary = `(${createSummaryDetails({
+    executionCount: executionNumber,
+    disconnectedCount,
+    timedoutCount,
+    erroredCount,
+    completedCount,
+  })})`
 
   if (status === "completed") {
+    if (completedExecutionLogAbbreviation) {
+      return `
+${green}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.`
+    }
+
     return `
-${green}${checkmark} execution completed.${ansiResetSequence} (${executionNumber}/${executionCount})
+${green}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
       startMs,
@@ -30,7 +50,7 @@ platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
 
   if (status === "disconnected") {
     return `
-${magenta}${cross} disconnected during execution.${ansiResetSequence} (${executionNumber}/${executionCount})
+${magenta}${cross} execution ${executionNumber} of ${executionCount} disconnected${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
       startMs,
@@ -40,7 +60,7 @@ platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
 
   if (status === "timedout") {
     return `
-${yellow}${cross} execution takes more than ${allocatedMs}ms.${ansiResetSequence} (${executionNumber}/${executionCount})
+${yellow}${cross} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
       startMs,
@@ -49,7 +69,7 @@ platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
   }
 
   return `
-${red}${cross} error during execution.${ansiResetSequence} (${executionNumber}/${executionCount})
+${red}${cross} execution ${executionNumber} of ${executionCount} error${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     startMs,
@@ -86,4 +106,8 @@ const appendError = (error) => {
   if (!error) return ``
   return `
 error: ${error.stack}`
+}
+
+export const createShortExecutionResultLog = () => {
+  return `Execution completed (2/9) - (all completed)`
 }

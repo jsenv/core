@@ -22,10 +22,10 @@ const createSummaryMessage = ({
     timedoutCount,
     erroredCount,
     completedCount,
-  })}`
+  })}.`
 }
 
-const createSummaryDetails = ({
+export const createSummaryDetails = ({
   executionCount,
   disconnectedCount,
   timedoutCount,
@@ -54,13 +54,13 @@ const createSummaryDetails = ({
   })
 }
 
-const createAllDisconnectedDetails = () => `all ${magenta}disconnected${ansiResetSequence}.`
+const createAllDisconnectedDetails = () => `all ${magenta}disconnected${ansiResetSequence}`
 
-const createAllTimedoutDetails = () => `all ${yellow}timedout${ansiResetSequence}.`
+const createAllTimedoutDetails = () => `all ${yellow}timedout${ansiResetSequence}`
 
-const createAllErroredDetails = () => `all ${red}errored${ansiResetSequence}.`
+const createAllErroredDetails = () => `all ${red}errored${ansiResetSequence}`
 
-const createAllCompletedDetails = () => `all ${green}completed${ansiResetSequence}.`
+const createAllCompletedDetails = () => `all ${green}completed${ansiResetSequence}`
 
 const createMixedDetails = ({ disconnectedCount, timedoutCount, erroredCount, completedCount }) => {
   const parts = []
@@ -81,7 +81,7 @@ const createMixedDetails = ({ disconnectedCount, timedoutCount, erroredCount, co
     parts.push(`${completedCount} ${green}completed${ansiResetSequence}`)
   }
 
-  return `${parts.join(", ")}.`
+  return `${parts.join(", ")}`
 }
 
 const createTotalDurationMessage = ({ startMs, endMs }) => {

@@ -86,21 +86,25 @@ const makeProcessControllable = ({ evaluate }) => {
 
 const terminate = () => {
   killProcessTree(process.pid, "SIGTERM", (error) => {
-    console.error(`error while killing process tree with SIGTERM
+    if (error) {
+      console.error(`error while killing process tree with SIGTERM
 --- error stack ---
 ${error.stack}
 --- process.pid ---
 ${process.pid}`)
+    }
   })
 }
 
 const kill = () => {
   killProcessTree(process.pid, "SIGKILL", (error) => {
-    console.error(`error while killing process tree with SIGKILL
+    if (error) {
+      console.error(`error while killing process tree with SIGKILL
 --- error stack ---
 ${error.stack}
 --- process.pid ---
 ${process.pid}`)
+    }
   })
   process.exit()
 }

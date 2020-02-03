@@ -27,10 +27,11 @@ export const executePlan = async ({
   compileGroupCount,
 
   plan,
-  measurePlanExecutionDuration,
   concurrencyLimit,
   executionDefaultOptions,
   stopPlatformAfterExecute,
+  completedExecutionLogMerging,
+  completedExecutionLogAbbreviation,
   logSummary,
 
   // coverage parameters
@@ -100,9 +101,10 @@ export const executePlan = async ({
     babelPluginMap,
 
     stopPlatformAfterExecute,
-    measurePlanExecutionDuration,
     concurrencyLimit,
     executionDefaultOptions,
+    completedExecutionLogMerging,
+    completedExecutionLogAbbreviation,
     logSummary,
 
     coverage,
