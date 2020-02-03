@@ -11,7 +11,7 @@ const testPlan = {
   [`${testDirectoryRelativeUrl}*.spec.js`]: {
     browser: {
       launch: launchChromium,
-      measureDuration: true
+      measureDuration: true,
     },
   },
 }
