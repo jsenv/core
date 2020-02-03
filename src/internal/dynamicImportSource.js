@@ -7,6 +7,10 @@
     return namespace.default === 42
   }
   catch(e) {
+    // see https://nodejs.org/api/vm.html#vm_constructor_new_vm_script_code_options
+    if (e.code === 'ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING') {
+      return true
+    }
     return false
   }
 })()

@@ -17,6 +17,8 @@ export const supportsDynamicImport = memoize(async () => {
 })
 
 const evalSource = (code, filePath) => {
-  const script = new Script(code, { filename: filePath })
+  const script = new Script(code, {
+    filename: filePath,
+  })
   return script.runInThisContext()
 }
