@@ -42,7 +42,7 @@ export const executeTestPlan = async ({
   logSummary = true,
   updateProcessExitCode = true,
 
-  coverage = false,
+  coverage = process.argv.includes("--coverage"),
   coverageConfig = jsenvCoverageConfig,
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
