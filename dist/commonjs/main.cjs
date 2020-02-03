@@ -2,6 +2,8 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
 var module$1 = require('module');
 var url$1 = require('url');
 var fs = require('fs');
@@ -13,6 +15,7 @@ var http = require('http');
 var https = require('https');
 var stream = require('stream');
 var os = require('os');
+var readline = _interopDefault(require('readline'));
 var vm = require('vm');
 var child_process = require('child_process');
 
@@ -219,17 +222,6 @@ const resolveSpecifier = (specifier, importer) => {
   return null;
 };
 
-const sortImportMap = importMap => {
-  assertImportMap(importMap);
-  const {
-    imports,
-    scopes
-  } = importMap;
-  return {
-    imports: imports ? sortImports(imports) : undefined,
-    scopes: scopes ? sortScopes(scopes) : undefined
-  };
-};
 const sortImports = imports => {
   const importsSorted = {};
   Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(name => {
@@ -4159,6 +4151,24 @@ const error = console.error;
 
 const errorDisabled = () => {};
 
+const disabledMethods = {
+  debug: debugDisabled,
+  info: infoDisabled,
+  warn: warnDisabled,
+  error: errorDisabled
+};
+const loggerIsMethodEnabled = (logger, methodName) => {
+  return logger[methodName] !== disabledMethods[methodName];
+};
+const loggerToLevels = logger => {
+  return {
+    debug: loggerIsMethodEnabled(logger, "debug"),
+    info: loggerIsMethodEnabled(logger, "info"),
+    warn: loggerIsMethodEnabled(logger, "warn"),
+    error: loggerIsMethodEnabled(logger, "error")
+  };
+};
+
 const wrapAsyncFunction = (asyncFunction, {
   updateProcessExitCode = true
 } = {}) => {
@@ -4241,6 +4251,52 @@ const composeTwoScopes = (leftScopes = {}, rightScopes = {}) => {
     }
   });
   return scopes;
+};
+
+const assertImportMap$1 = value => {
+  if (value === null) {
+    throw new TypeError(`an importMap must be an object, got null`);
+  }
+
+  const type = typeof value;
+
+  if (type !== "object") {
+    throw new TypeError(`an importMap must be an object, received ${value}`);
+  }
+
+  if (Array.isArray(value)) {
+    throw new TypeError(`an importMap must be an object, received array ${value}`);
+  }
+};
+
+const sortImportMap = importMap => {
+  assertImportMap$1(importMap);
+  const {
+    imports,
+    scopes
+  } = importMap;
+  return {
+    imports: imports ? sortImports$1(imports) : undefined,
+    scopes: scopes ? sortScopes$1(scopes) : undefined
+  };
+};
+const sortImports$1 = imports => {
+  const importsSorted = {};
+  Object.keys(imports).sort(compareLengthOrLocaleCompare$1).forEach(name => {
+    importsSorted[name] = imports[name];
+  });
+  return importsSorted;
+};
+const sortScopes$1 = scopes => {
+  const scopesSorted = {};
+  Object.keys(scopes).sort(compareLengthOrLocaleCompare$1).forEach(scopeName => {
+    scopesSorted[scopeName] = sortImports$1(scopes[scopeName]);
+  });
+  return scopesSorted;
+};
+
+const compareLengthOrLocaleCompare$1 = (a, b) => {
+  return b.length - a.length || a.localeCompare(b);
 };
 
 const ensureUrlTrailingSlash$1 = url => {
@@ -11297,6 +11353,15 @@ ${JSON.stringify(entryPointMap, null, "  ")}
       plugins: [jsenvRollupPlugin]
     })
   });
+
+  if (!formatOutputOptions.entryFileNames) {
+    formatOutputOptions.entryFileNames = `[name]${path.extname(entryPointMap[Object.keys(entryPointMap)[0]])}`;
+  }
+
+  if (!formatOutputOptions.chunkFileNames) {
+    formatOutputOptions.chunkFileNames = `[name]-[hash]${path.extname(entryPointMap[Object.keys(entryPointMap)[0]])}`;
+  }
+
   const rollupGenerateOptions = {
     // https://rollupjs.org/guide/en#experimentaltoplevelawait
     // experimentalTopLevelAwait: true,
@@ -13038,10 +13103,112 @@ const green$1 = "\x1b[32m";
 const grey = "\x1b[39m";
 const ansiResetSequence = "\x1b[0m";
 
+const humanizeDuration = require$1("humanize-duration");
+
 const formatDuration = duration => {
-  const seconds = duration / 1000;
-  const secondsWithTwoDecimalPrecision = Math.floor(seconds * 100) / 100;
-  return `${secondsWithTwoDecimalPrecision}s`;
+  return humanizeDuration(duration, {
+    largest: 2,
+    maxDecimalPoints: 2
+  });
+};
+
+const createSummaryLog = summary => `
+-------------- summary -----------------
+${createSummaryMessage(summary)}${createTotalDurationMessage(summary)}
+----------------------------------------
+`;
+
+const createSummaryMessage = ({
+  executionCount,
+  disconnectedCount,
+  timedoutCount,
+  erroredCount,
+  completedCount
+}) => {
+  if (executionCount === 0) return `0 execution.`;
+  return `${executionCount} execution: ${createSummaryDetails({
+    executionCount,
+    disconnectedCount,
+    timedoutCount,
+    erroredCount,
+    completedCount
+  })}.`;
+};
+
+const createSummaryDetails = ({
+  executionCount,
+  disconnectedCount,
+  timedoutCount,
+  erroredCount,
+  completedCount
+}) => {
+  if (disconnectedCount === executionCount) {
+    return createAllDisconnectedDetails();
+  }
+
+  if (timedoutCount === executionCount) {
+    return createAllTimedoutDetails();
+  }
+
+  if (erroredCount === executionCount) {
+    return createAllErroredDetails();
+  }
+
+  if (completedCount === executionCount) {
+    return createAllCompletedDetails();
+  }
+
+  return createMixedDetails({
+    executionCount,
+    disconnectedCount,
+    timedoutCount,
+    erroredCount,
+    completedCount
+  });
+};
+
+const createAllDisconnectedDetails = () => `all ${magenta$1}disconnected${ansiResetSequence}`;
+
+const createAllTimedoutDetails = () => `all ${yellow$1}timedout${ansiResetSequence}`;
+
+const createAllErroredDetails = () => `all ${red$1}errored${ansiResetSequence}`;
+
+const createAllCompletedDetails = () => `all ${green$1}completed${ansiResetSequence}`;
+
+const createMixedDetails = ({
+  disconnectedCount,
+  timedoutCount,
+  erroredCount,
+  completedCount
+}) => {
+  const parts = [];
+
+  if (disconnectedCount) {
+    parts.push(`${disconnectedCount} ${magenta$1}disconnected${ansiResetSequence}`);
+  }
+
+  if (timedoutCount) {
+    parts.push(`${timedoutCount} ${yellow$1}timed out${ansiResetSequence}`);
+  }
+
+  if (erroredCount) {
+    parts.push(`${erroredCount} ${red$1}errored${ansiResetSequence}`);
+  }
+
+  if (completedCount) {
+    parts.push(`${completedCount} ${green$1}completed${ansiResetSequence}`);
+  }
+
+  return `${parts.join(", ")}`;
+};
+
+const createTotalDurationMessage = ({
+  startMs,
+  endMs
+}) => {
+  if (!endMs) return "";
+  return `
+total duration: ${formatDuration(endMs - startMs)}`;
 };
 
 const createExecutionResultLog = ({
@@ -13056,13 +13223,30 @@ const createExecutionResultLog = ({
   error,
   executionIndex
 }, {
-  executionCount
+  completedExecutionLogAbbreviation,
+  executionCount,
+  disconnectedCount,
+  timedoutCount,
+  erroredCount,
+  completedCount
 }) => {
   const executionNumber = executionIndex + 1;
+  const summary = `(${createSummaryDetails({
+    executionCount: executionNumber,
+    disconnectedCount,
+    timedoutCount,
+    erroredCount,
+    completedCount
+  })})`;
 
   if (status === "completed") {
+    if (completedExecutionLogAbbreviation) {
+      return `
+${green$1}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.`;
+    }
+
     return `
-${green$1}${checkmark} execution completed.${ansiResetSequence} (${executionNumber}/${executionCount})
+${green$1}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({
       platformName,
@@ -13075,7 +13259,7 @@ platform: ${formatPlatform({
 
   if (status === "disconnected") {
     return `
-${magenta$1}${cross} disconnected during execution.${ansiResetSequence} (${executionNumber}/${executionCount})
+${magenta$1}${cross} execution ${executionNumber} of ${executionCount} disconnected${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({
       platformName,
@@ -13088,7 +13272,7 @@ platform: ${formatPlatform({
 
   if (status === "timedout") {
     return `
-${yellow$1}${cross} execution takes more than ${allocatedMs}ms.${ansiResetSequence} (${executionNumber}/${executionCount})
+${yellow$1}${cross} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({
       platformName,
@@ -13100,7 +13284,7 @@ platform: ${formatPlatform({
   }
 
   return `
-${red$1}${cross} error during execution.${ansiResetSequence} (${executionNumber}/${executionCount})
+${red$1}${cross} execution ${executionNumber} of ${executionCount} error${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
 platform: ${formatPlatform({
     platformName,
@@ -13146,105 +13330,6 @@ const appendError = error => {
 error: ${error.stack}`;
 };
 
-const createSummaryLog = summary => `
--------------- summary -----------------
-${createSummaryMessage(summary)}${createTotalDurationMessage(summary)}
-----------------------------------------
-`;
-
-const createSummaryMessage = ({
-  executionCount,
-  disconnectedCount,
-  timedoutCount,
-  erroredCount,
-  completedCount
-}) => {
-  if (executionCount === 0) return `0 execution.`;
-  return `${executionCount} execution: ${createSummaryDetails({
-    executionCount,
-    disconnectedCount,
-    timedoutCount,
-    erroredCount,
-    completedCount
-  })}`;
-};
-
-const createSummaryDetails = ({
-  executionCount,
-  disconnectedCount,
-  timedoutCount,
-  erroredCount,
-  completedCount
-}) => {
-  if (disconnectedCount === executionCount) {
-    return createAllDisconnectedDetails();
-  }
-
-  if (timedoutCount === executionCount) {
-    return createAllTimedoutDetails();
-  }
-
-  if (erroredCount === executionCount) {
-    return createAllErroredDetails();
-  }
-
-  if (completedCount === executionCount) {
-    return createAllCompletedDetails();
-  }
-
-  return createMixedDetails({
-    executionCount,
-    disconnectedCount,
-    timedoutCount,
-    erroredCount,
-    completedCount
-  });
-};
-
-const createAllDisconnectedDetails = () => `all ${magenta$1}disconnected${ansiResetSequence}.`;
-
-const createAllTimedoutDetails = () => `all ${yellow$1}timedout${ansiResetSequence}.`;
-
-const createAllErroredDetails = () => `all ${red$1}errored${ansiResetSequence}.`;
-
-const createAllCompletedDetails = () => `all ${green$1}completed${ansiResetSequence}.`;
-
-const createMixedDetails = ({
-  disconnectedCount,
-  timedoutCount,
-  erroredCount,
-  completedCount
-}) => {
-  const parts = [];
-
-  if (disconnectedCount) {
-    parts.push(`${disconnectedCount} ${magenta$1}disconnected${ansiResetSequence}`);
-  }
-
-  if (timedoutCount) {
-    parts.push(`${timedoutCount} ${yellow$1}timed out${ansiResetSequence}`);
-  }
-
-  if (erroredCount) {
-    parts.push(`${erroredCount} ${red$1}errored${ansiResetSequence}`);
-  }
-
-  if (completedCount) {
-    parts.push(`${completedCount} ${green$1}completed${ansiResetSequence}`);
-  }
-
-  return `${parts.join(", ")}.`;
-};
-
-const createTotalDurationMessage = ({
-  startMs,
-  endMs
-}) => {
-  if (!endMs) return "";
-  return `
-total duration: ${formatDuration(endMs - startMs)}`;
-};
-
 /* eslint-disable import/max-dependencies */
 const executeConcurrently = async (executionSteps, {
   cancellationToken,
@@ -13255,11 +13340,12 @@ const executeConcurrently = async (executionSteps, {
   outDirectoryRelativeUrl,
   compileServerOrigin,
   babelPluginMap,
-  measurePlanExecutionDuration,
   concurrencyLimit = Math.max(os.cpus.length - 1, 1),
   executionDefaultOptions = {},
   stopPlatformAfterExecute,
   logSummary,
+  completedExecutionLogMerging,
+  completedExecutionLogAbbreviation,
   coverage,
   coverageConfig,
   coverageIncludeMissing
@@ -13279,7 +13365,6 @@ const executeConcurrently = async (executionSteps, {
     collectPlatformVersion: true,
     collectNamespace: false,
     collectCoverage: coverage,
-    logSuccess: true,
     mainFileNotFoundCallback: ({
       fileRelativeUrl
     }) => {
@@ -13291,16 +13376,17 @@ ${fileRelativeUrl}`));
     afterExecutionCallback: () => {},
     ...executionDefaultOptions
   };
-  let startMs;
-
-  if (measurePlanExecutionDuration) {
-    startMs = Date.now();
-  }
-
+  const startMs = Date.now();
   const allExecutionDoneCancellationSource = createCancellationSource();
   const executionCancellationToken = composeCancellationToken(cancellationToken, allExecutionDoneCancellationSource.token);
   const report = {};
   const executionCount = executionSteps.length;
+  let previousExecutionResult;
+  let previousExecutionLog;
+  let disconnectedCount = 0;
+  let timedoutCount = 0;
+  let erroredCount = 0;
+  let completedCount = 0;
   await createConcurrentOperations({
     cancellationToken,
     concurrencyLimit,
@@ -13326,7 +13412,6 @@ ${fileRelativeUrl}`));
         mainFileNotFoundCallback,
         beforeExecutionCallback,
         afterExecutionCallback,
-        logSuccess,
         gracefulStopAllocatedMs
       } = executionOptions;
       const beforeExecutionInfo = {
@@ -13374,17 +13459,40 @@ ${fileRelativeUrl}`));
       };
       afterExecutionCallback(afterExecutionInfo);
 
-      if (executionResult.status !== "completed" || logSuccess) {
-        logger.info(createExecutionResultLog(afterExecutionInfo, {
-          executionCount
-        }));
+      if (executionResult.status === "timedout") {
+        timedoutCount++;
+      } else if (executionResult.status === "disconnected") {
+        disconnectedCount++;
+      } else if (executionResult.status === "errored") {
+        erroredCount++;
+      } else if (executionResult.status === "completed") {
+        completedCount++;
       }
+
+      if (completedExecutionLogMerging && previousExecutionResult && previousExecutionResult.status === "completed" && executionResult.status === "completed") {
+        if (loggerToLevels(logger).info) {
+          readline.moveCursor(process.stdout, 0, -previousExecutionLog.split(/\r\n|\r|\n/).length);
+          readline.cursorTo(process.stdout, 0);
+        }
+      }
+
+      const log = createExecutionResultLog(afterExecutionInfo, {
+        completedExecutionLogAbbreviation,
+        executionCount,
+        disconnectedCount,
+        timedoutCount,
+        erroredCount,
+        completedCount
+      });
+      logger.info(log);
 
       if (fileRelativeUrl in report === false) {
         report[fileRelativeUrl] = {};
       }
 
       report[fileRelativeUrl][name] = executionResult;
+      previousExecutionResult = executionResult;
+      previousExecutionLog = log;
     }
   }); // tell everyone we are done
   // (used to stop potential chrome browser still opened to be reused)
@@ -13394,11 +13502,8 @@ ${fileRelativeUrl}`));
   }
 
   const summary = reportToSummary(report);
-
-  if (measurePlanExecutionDuration) {
-    summary.startMs = startMs;
-    summary.endMs = Date.now();
-  }
+  summary.startMs = startMs;
+  summary.endMs = Date.now();
 
   if (logSummary) {
     logger.info(createSummaryLog(summary));
@@ -13485,10 +13590,11 @@ const executePlan = async ({
   convertMap,
   compileGroupCount,
   plan,
-  measurePlanExecutionDuration,
   concurrencyLimit,
   executionDefaultOptions,
   stopPlatformAfterExecute,
+  completedExecutionLogMerging,
+  completedExecutionLogAbbreviation,
   logSummary,
   // coverage parameters
   coverage,
@@ -13543,9 +13649,10 @@ const executePlan = async ({
     importDefaultExtension,
     babelPluginMap,
     stopPlatformAfterExecute,
-    measurePlanExecutionDuration,
     concurrencyLimit,
     executionDefaultOptions,
+    completedExecutionLogMerging,
+    completedExecutionLogAbbreviation,
     logSummary,
     coverage,
     coverageConfig,
@@ -13651,7 +13758,6 @@ const executeTestPlan = async ({
   convertMap,
   compileGroupCount = 2,
   testPlan,
-  measurePlanExecutionDuration = false,
   concurrencyLimit,
   executionDefaultOptions = {},
   // stopPlatformAfterExecute: true to ensure platform is stopped once executed
@@ -13660,9 +13766,11 @@ const executeTestPlan = async ({
   // you can still pass false to debug what happens
   // meaning all node process and browsers launched stays opened
   stopPlatformAfterExecute = true,
+  completedExecutionLogMerging = false,
+  completedExecutionLogAbbreviation = false,
   logSummary = true,
   updateProcessExitCode = true,
-  coverage = false,
+  coverage = process.argv.includes("--coverage"),
   coverageConfig = jsenvCoverageConfig,
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
@@ -13743,10 +13851,11 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`);
       convertMap,
       compileGroupCount,
       plan: testPlan,
-      measurePlanExecutionDuration,
       concurrencyLimit,
       executionDefaultOptions,
       stopPlatformAfterExecute,
+      completedExecutionLogMerging,
+      completedExecutionLogAbbreviation,
       logSummary,
       coverage,
       coverageConfig,
@@ -14176,10 +14285,57 @@ callback: ${callback}`);
   };
 };
 
+const addCallback$7 = callback => {
+  const triggerHangUpOrDeath = () => callback(); // SIGHUP http://man7.org/linux/man-pages/man7/signal.7.html
+
+
+  process.once("SIGUP", triggerHangUpOrDeath);
+  return () => {
+    process.removeListener("SIGUP", triggerHangUpOrDeath);
+  };
+};
+
+const SIGUPSignal = {
+  addCallback: addCallback$7
+};
+
+const addCallback$8 = callback => {
+  // SIGINT is CTRL+C from keyboard also refered as keyboard interruption
+  // http://man7.org/linux/man-pages/man7/signal.7.html
+  // may also be sent by vscode https://github.com/Microsoft/vscode-node-debug/issues/1#issuecomment-405185642
+  process.once("SIGINT", callback);
+  return () => {
+    process.removeListener("SIGINT", callback);
+  };
+};
+
+const SIGINTSignal = {
+  addCallback: addCallback$8
+};
+
+const addCallback$9 = callback => {
+  if (process.platform === "win32") {
+    console.warn(`SIGTERM is not supported on windows`);
+    return () => {};
+  }
+
+  const triggerTermination = () => callback(); // SIGTERM http://man7.org/linux/man-pages/man7/signal.7.html
+
+
+  process.once("SIGTERM", triggerTermination);
+  return () => {
+    process.removeListener("SIGTERM", triggerTermination);
+  };
+};
+
+const SIGTERMSignal = {
+  addCallback: addCallback$9
+};
+
 let beforeExitCallbackArray$1 = [];
 let uninstall$2;
 
-const addCallback$7 = callback => {
+const addCallback$a = callback => {
   if (beforeExitCallbackArray$1.length === 0) uninstall$2 = install$2();
   beforeExitCallbackArray$1 = [...beforeExitCallbackArray$1, callback];
   return () => {
@@ -14204,24 +14360,10 @@ const install$2 = () => {
 };
 
 const beforeExitSignal$1 = {
-  addCallback: addCallback$7
+  addCallback: addCallback$a
 };
 
-const addCallback$8 = callback => {
-  const triggerDeath = () => callback(); // SIGTERM http://man7.org/linux/man-pages/man7/signal.7.html
-
-
-  process.once("SIGTERM", triggerDeath);
-  return () => {
-    process.removeListener("SIGTERM", triggerDeath);
-  };
-};
-
-const deathSignal$1 = {
-  addCallback: addCallback$8
-};
-
-const addCallback$9 = (callback, {
+const addCallback$b = (callback, {
   collectExceptions = false
 } = {}) => {
   if (!collectExceptions) {
@@ -14300,52 +14442,28 @@ const trackExceptions$1 = () => {
 };
 
 const exitSignal$1 = {
-  addCallback: addCallback$9
-};
-
-const addCallback$a = callback => {
-  const triggerHangUpOrDeath = () => callback(); // SIGHUP http://man7.org/linux/man-pages/man7/signal.7.html
-
-
-  process.once("SIGUP", triggerHangUpOrDeath);
-  return () => {
-    process.removeListener("SIGUP", triggerHangUpOrDeath);
-  };
-};
-
-const hangupOrDeathSignal$1 = {
-  addCallback: addCallback$a
-};
-
-const addCallback$b = callback => {
-  // SIGINT is CTRL+C from keyboard
-  // http://man7.org/linux/man-pages/man7/signal.7.html
-  // may also be sent by vscode https://github.com/Microsoft/vscode-node-debug/issues/1#issuecomment-405185642
-  process.once("SIGINT", callback);
-  return () => {
-    process.removeListener("SIGINT", callback);
-  };
-};
-
-const interruptSignal$1 = {
   addCallback: addCallback$b
 };
 
-// usefull to ensure a given server is closed when process stops for instance
-
 const addCallback$c = callback => {
   return eventRace$1({
+    SIGHUP: {
+      register: SIGUPSignal.addCallback,
+      callback: () => callback("SIGHUP")
+    },
+    SIGINT: {
+      register: SIGINTSignal.addCallback,
+      callback: () => callback("SIGINT")
+    },
+    ...(process.paltform === "win32" ? {} : {
+      SIGTERM: {
+        register: SIGTERMSignal.addCallback,
+        callback: () => callback("SIGTERM")
+      }
+    }),
     beforeExit: {
       register: beforeExitSignal$1.addCallback,
       callback: () => callback("beforeExit")
-    },
-    hangupOrDeath: {
-      register: hangupOrDeathSignal$1.addCallback,
-      callback: () => callback("hangupOrDeath")
-    },
-    death: {
-      register: deathSignal$1.addCallback,
-      callback: () => callback("death")
     },
     exit: {
       register: exitSignal$1.addCallback,
@@ -14395,8 +14513,7 @@ const launchPuppeteer = async ({
   headless = true,
   debug = false,
   debugPort = 9222,
-  stopOnExit = true,
-  stopOnSIGINT = true
+  stopOnExit = true
 }) => {
   const options = {
     headless,
@@ -14448,13 +14565,6 @@ const launchPuppeteer = async ({
       stop(`process ${reason}`);
     });
     registerCleanupCallback(unregisterProcessTeadown);
-  }
-
-  if (stopOnSIGINT) {
-    const unregisterProcessInterrupt = interruptSignal$1.addCallback(() => {
-      stop("process sigint");
-    });
-    registerCleanupCallback(unregisterProcessInterrupt);
   }
 
   const browser = await browserOperation;

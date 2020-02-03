@@ -28,6 +28,8 @@
       - [collectCoverage](#collectCoverage)
       - [logSuccess](#logSuccess)
   - [executionDefaultOptions](#executionDefaultOptions)
+  - [completedExecutionLogAbbreviation](#completedExecutionLogAbbreviation)
+  - [completedExecutionLogMerging](#completedExecutionLogMerging)
   - [concurrencyLimit](#concurrencyLimit)
   - [coverage](#coverage)
   - [Shared parameters](#shared-parameters)
@@ -365,17 +367,33 @@ executeTestPlan({
 })
 ```
 
-## concurrencyLimit
+## completedExecutionLogAbbreviation
 
-`concurrencyLimit` parameter is a number representing the max amount of execution allowed to run simultaneously. This parameter is optional with a default value being the number of cpus available minus one. To ensure one execution at a time you can pass `1`.
+`completedExecutionLogAbbreviation` parameter is a boolean controlling verbosity of completed execution logs. This parameter is optional and disabled by default.
+
+![test execution mixed full terminal screenshot](./test-execution-mixed-full-terminal.png)
+
+Becomes
+
+![test execution mixed short terminal screenshot](./test-execution-mixed-short-terminal.png)
+
+> Note how completed executions are shorter. The idea is that you don't need additional information for completed executions.
 
 ## completedExecutionLogMerging
 
-`completedExecutionLogMerging` parameter is a boolean controlling if completed execution logs will be merged together when adjacent. This parameter is optional with a default value of `false`. Use this parameter to shorten overall console output length and focus on non completed execution.
+`completedExecutionLogMerging` parameter is a boolean controlling if completed execution logs will be merged together when adjacent. This parameter is optional and enabled by default when `completedExecutionLogAbbreviation` is enabled. Otherwise it is disabled.
 
-## completedExecutionLogAbbreviation
+![test execution mixed short terminal screenshot](./test-execution-mixed-short-terminal.png)
 
-`completedExecutionLogAbbreviation` parameter is a boolean controlling verbosity of completed execution logs. This parameter is optional with a default value of `false`. Use this parameter to shorten log generated for completed execution.
+Becomes
+
+![test execution mixed short and merge terminal screenshot](./test-execution-mixed-short-merge-terminal.png)
+
+> Note how the first two completed execution got merged into one line. The idea is to reduce output length as long as execution are completed.
+
+## concurrencyLimit
+
+`concurrencyLimit` parameter is a number representing the max amount of execution allowed to run simultaneously. This parameter is optional with a default value being the number of cpus available minus one. To ensure one execution at a time you can pass `1`.
 
 ## coverage
 

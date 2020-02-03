@@ -37,8 +37,8 @@ export const executeTestPlan = async ({
   // you can still pass false to debug what happens
   // meaning all node process and browsers launched stays opened
   stopPlatformAfterExecute = true,
-  completedExecutionLogMerging = false,
   completedExecutionLogAbbreviation = false,
+  completedExecutionLogMerging = completedExecutionLogAbbreviation,
   logSummary = true,
   updateProcessExitCode = true,
 

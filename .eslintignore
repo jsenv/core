@@ -8,7 +8,6 @@
 /helpers/chromium/
 /node_modules/
 /src/**/s.js
-/src/**/dynamicImportSource.js
 /test/**/.jsenv/
 /test/**/dist/
 /test/**/syntax-error.js
