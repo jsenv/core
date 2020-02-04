@@ -29,6 +29,7 @@ export const execute = async ({
   launch,
   mirrorConsole = true,
   stopPlatformAfterExecute = true,
+  updateProcessExitCode = true,
   ...rest
 }) => {
   return catchCancellation(async () => {
@@ -65,7 +66,7 @@ export const execute = async ({
       port,
     })
 
-    const result = await launchAndExecute({
+    return launchAndExecute({
       cancellationToken,
       launchLogger,
       executeLogger,
@@ -82,14 +83,24 @@ export const execute = async ({
       stopPlatformAfterExecute,
       ...rest,
     })
-
-    if (result.status === "errored") {
-      throw result.error
-    }
-
-    return result
-  }).catch((e) => {
-    process.exitCode = 1
-    throw e
-  })
+  }).then(
+    (result) => {
+      if (result.status === "errored") {
+        // unexpected execution error
+        // -> update process.exitCode by default
+        // (we can disable this for testing)
+        if (updateProcessExitCode) {
+          process.exitCode = 1
+        }
+        throw result.error
+      }
+      return result
+    },
+    (e) => {
+      // unexpected internal error
+      // -> always updates process.exitCode
+      process.exitCode = 1
+      throw e
+    },
+  )
 }

@@ -66,7 +66,6 @@ export const generateBundle = async ({
   // when asking them to the compile server
   // (to fix that sourcemap could be inlined)
   filesystemCache = true,
-  updateProcessExitCode,
 
   ...rest
 }) => {
@@ -216,9 +215,7 @@ export const generateBundle = async ({
       }),
     ])
   }).catch((e) => {
-    if (updateProcessExitCode) {
-      process.exitCode = 1
-    }
+    process.exitCode = 1
     throw e
   })
 }
