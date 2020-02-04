@@ -5,9 +5,9 @@ import { executeTestPlan, launchNode } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
-const testDirectoryRelativePath = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
-const jsenvDirectoryRelativeUrl = `${testDirectoryRelativePath}.jsenv/`
-const fileRelativeUrl = `${testDirectoryRelativePath}file.js`
+const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
+const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
+const fileRelativeUrl = `${testDirectoryRelativeUrl}file.js`
 
 const { report: actual } = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,

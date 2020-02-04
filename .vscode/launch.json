@@ -33,6 +33,7 @@
         // this is to disabled experimental warning
         "--no-warnings"
       ],
+      // "args": ["--coverage"],
       "autoAttachChildProcesses": true,
       "sourceMaps": true,
       "smartStep": true,

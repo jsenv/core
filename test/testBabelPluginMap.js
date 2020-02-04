@@ -7,6 +7,7 @@ import {
 import { createInstrumentBabelPlugin } from "../src/internal/executing/coverage/createInstrumentBabelPlugin.js"
 import { jsenvCoreDirectoryUrl } from "../src/internal/jsenvCoreDirectoryUrl.js"
 import { jsenvBabelPluginMap, jsenvCoverageConfig } from "../index.js"
+import { coverageIsEnabled } from "./coverageIsEnabled.js"
 
 const computeTestBabelPluginMap = ({ coverageEnabled }) => {
   if (!coverageEnabled) return jsenvBabelPluginMap
@@ -33,5 +34,5 @@ const computeTestBabelPluginMap = ({ coverageEnabled }) => {
 }
 
 export const testBabelPluginMap = computeTestBabelPluginMap({
-  coverageEnabled: process.env.COVERAGE_ENABLED === "true",
+  coverageEnabled: coverageIsEnabled(),
 })

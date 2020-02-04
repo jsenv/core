@@ -1,6 +1,7 @@
 import { createLogger } from "@jsenv/logger"
 import { jsenvCoreDirectoryUrl } from "../../src/internal/jsenvCoreDirectoryUrl.js"
 import { testBabelPluginMap } from "../testBabelPluginMap.js"
+import { coverageIsEnabled } from "../coverageIsEnabled.js"
 
 export const START_COMPILE_SERVER_TEST_PARAMS = {
   projectDirectoryUrl: jsenvCoreDirectoryUrl,
@@ -15,7 +16,7 @@ export const EXECUTION_TEST_PARAMS = {
   executeLogger: createLogger({ logLevel: "warn" }),
   stopPlatformAfterExecute: true,
   collectNamespace: true,
-  inheritCoverage: process.env.COVERAGE_ENABLED === "true",
+  inheritCoverage: coverageIsEnabled(),
 }
 
 export const LAUNCH_TEST_PARAMS = {

@@ -1,6 +1,7 @@
 import { require } from "../../src/internal/require.js"
 import { composeCoverageMap } from "../../src/internal/executing/coverage/composeCoverageMap.js"
 import { evalSource } from "../../src/internal/platform/createNodePlatform/evalSource.js"
+import { coverageIsEnabled } from "../coverageIsEnabled.js"
 
 const puppeteer = require("puppeteer")
 
@@ -8,7 +9,7 @@ export const openBrowserPage = async (
   url,
   {
     headless = true,
-    inheritCoverage = process.env.COVERAGE_ENABLED === "true",
+    inheritCoverage = coverageIsEnabled(),
     collectConsole = true,
     collectErrors = true,
   } = {},
