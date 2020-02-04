@@ -17,7 +17,6 @@ import {
 } from "@jsenv/util"
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
 import { createLogger } from "@jsenv/logger"
-import { wrapAsyncFunction } from "./internal/wrapAsyncFunction.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { getBrowserExecutionDynamicData } from "./internal/platform/getBrowserExecutionDynamicData.js"
 import { serveExploringIndex } from "./internal/exploring/serveExploringIndex.js"
@@ -60,7 +59,7 @@ export const startExploring = async ({
   compileServerPort = 0, // random available port
   forcePort = false,
 }) => {
-  return wrapAsyncFunction(async () => {
+  return catchCancellation(async () => {
     const logger = createLogger({ logLevel })
 
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })

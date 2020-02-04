@@ -1,12 +1,11 @@
-import { createCancellationTokenForProcessSIGINT } from "@jsenv/cancellation"
+import { createCancellationTokenForProcess, catchCancellation } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
-import { wrapAsyncFunction } from "./internal/wrapAsyncFunction.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
 
 export const execute = async ({
-  cancellationToken = createCancellationTokenForProcessSIGINT(),
+  cancellationToken = createCancellationTokenForProcess(),
   logLevel = "warn",
   compileServerLogLevel = logLevel,
   launchLogLevel = logLevel,
@@ -32,7 +31,7 @@ export const execute = async ({
   stopPlatformAfterExecute = true,
   ...rest
 }) => {
-  return wrapAsyncFunction(async () => {
+  return catchCancellation(async () => {
     const launchLogger = createLogger({ logLevel: launchLogLevel })
     const executeLogger = createLogger({ logLevel: executeLogLevel })
 
@@ -89,5 +88,8 @@ export const execute = async ({
     }
 
     return result
+  }).catch((e) => {
+    process.exitCode = 1
+    throw e
   })
 }

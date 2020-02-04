@@ -1,14 +1,14 @@
 /* eslint-disable import/max-dependencies */
 import { extname } from "path"
-import { createCancellationTokenForProcessSIGINT } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 import {
   resolveDirectoryUrl,
   urlToRelativeUrl,
   assertFilePresence,
   ensureEmptyDirectory,
+  createCancellationTokenForProcess,
+  catchCancellation,
 } from "@jsenv/util"
-import { wrapAsyncFunction } from "../wrapAsyncFunction.js"
 import { COMPILE_ID_OTHERWISE } from "../CONSTANTS.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "../argUtils.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
@@ -19,7 +19,7 @@ import { createBabePluginMapForBundle } from "./createBabePluginMapForBundle.js"
 import { generateBundleUsingRollup } from "./generateBundleUsingRollup.js"
 
 export const generateBundle = async ({
-  cancellationToken = createCancellationTokenForProcessSIGINT(),
+  cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
   logger,
@@ -70,158 +70,157 @@ export const generateBundle = async ({
 
   ...rest
 }) => {
-  return wrapAsyncFunction(
-    async () => {
-      logger = logger || createLogger({ logLevel })
+  return catchCancellation(async () => {
+    logger = logger || createLogger({ logLevel })
 
-      projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
-      await assertProjectDirectoryExists({ projectDirectoryUrl })
+    projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
+    await assertProjectDirectoryExists({ projectDirectoryUrl })
 
-      assertEntryPointMap({ entryPointMap })
+    assertEntryPointMap({ entryPointMap })
 
-      assertBundleDirectoryRelativeUrl({ bundleDirectoryRelativeUrl })
-      const bundleDirectoryUrl = resolveDirectoryUrl(
-        bundleDirectoryRelativeUrl,
-        projectDirectoryUrl,
-      )
-      assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
-      if (bundleDirectoryClean) {
-        await ensureEmptyDirectory(bundleDirectoryUrl)
+    assertBundleDirectoryRelativeUrl({ bundleDirectoryRelativeUrl })
+    const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
+    assertBundleDirectoryInsideProject({ bundleDirectoryUrl, projectDirectoryUrl })
+    if (bundleDirectoryClean) {
+      await ensureEmptyDirectory(bundleDirectoryUrl)
+    }
+
+    const extension =
+      formatOutputOptions && formatOutputOptions.entryFileNames
+        ? extname(formatOutputOptions.entryFileNames)
+        : ".js"
+
+    const chunkId = `${Object.keys(entryPointMap)[0]}${extension}`
+    env = {
+      ...env,
+      chunkId,
+    }
+    babelPluginMap = {
+      ...babelPluginMap,
+      ...createBabePluginMapForBundle({
+        format,
+      }),
+    }
+
+    assertCompileGroupCount({ compileGroupCount })
+    if (compileGroupCount > 1) {
+      if (typeof balancerTemplateFileUrl === "undefined") {
+        throw new Error(`${format} format not compatible with balancing.`)
       }
+      await assertFilePresence(balancerTemplateFileUrl)
+    }
 
-      const extension =
-        formatOutputOptions && formatOutputOptions.entryFileNames
-          ? extname(formatOutputOptions.entryFileNames)
-          : ".js"
+    const {
+      outDirectoryRelativeUrl,
+      origin: compileServerOrigin,
+      compileServerImportMap,
+      compileServerGroupMap,
+    } = await startCompileServer({
+      cancellationToken,
+      compileServerLogLevel,
 
-      const chunkId = `${Object.keys(entryPointMap)[0]}${extension}`
-      env = {
-        ...env,
-        chunkId,
-      }
-      babelPluginMap = {
-        ...babelPluginMap,
-        ...createBabePluginMapForBundle({
-          format,
-        }),
-      }
+      projectDirectoryUrl,
+      jsenvDirectoryRelativeUrl,
+      jsenvDirectoryClean,
+      outDirectoryName: "out-bundle",
+      importMapFileRelativeUrl,
+      importDefaultExtension,
 
-      assertCompileGroupCount({ compileGroupCount })
-      if (compileGroupCount > 1) {
-        if (typeof balancerTemplateFileUrl === "undefined") {
-          throw new Error(`${format} format not compatible with balancing.`)
-        }
-        await assertFilePresence(balancerTemplateFileUrl)
-      }
+      env,
+      babelPluginMap,
+      compileGroupCount,
+      platformScoreMap,
+      writeOnFilesystem: filesystemCache,
+      useFilesystemAsCache: filesystemCache,
 
-      const {
-        outDirectoryRelativeUrl,
-        origin: compileServerOrigin,
-        compileServerImportMap,
-        compileServerGroupMap,
-      } = await startCompileServer({
+      // override with potential custom options
+      ...rest,
+
+      transformModuleIntoSystemFormat: false, // will be done by rollup
+    })
+
+    if (compileGroupCount === 1) {
+      return generateBundleUsingRollup({
         cancellationToken,
-        compileServerLogLevel,
+        logger,
 
         projectDirectoryUrl,
-        jsenvDirectoryRelativeUrl,
-        jsenvDirectoryClean,
-        outDirectoryName: "out-bundle",
-        importMapFileRelativeUrl,
+        entryPointMap,
+        bundleDirectoryUrl,
+        compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
+        compileServerOrigin,
+        compileServerImportMap,
         importDefaultExtension,
 
-        env,
         babelPluginMap,
-        compileGroupCount,
-        platformScoreMap,
-        writeOnFilesystem: filesystemCache,
-        useFilesystemAsCache: filesystemCache,
-
-        // override with potential custom options
-        ...rest,
-
-        transformModuleIntoSystemFormat: false, // will be done by rollup
+        node,
+        browser,
+        minify,
+        minifyJsOptions,
+        minifyCssOptions,
+        minifyHtmlOptions,
+        format,
+        formatOutputOptions,
+        writeOnFileSystem,
+        sourcemapExcludeSources,
+        manifestFile,
       })
+    }
 
-      if (compileGroupCount === 1) {
-        return generateBundleUsingRollup({
-          cancellationToken,
-          logger,
+    return await Promise.all([
+      generateEntryPointsDirectories({
+        cancellationToken,
+        logger,
 
-          projectDirectoryUrl,
-          entryPointMap,
-          bundleDirectoryUrl,
-          compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
-          compileServerOrigin,
-          compileServerImportMap,
-          importDefaultExtension,
+        projectDirectoryUrl,
+        outDirectoryRelativeUrl,
+        bundleDirectoryUrl,
+        entryPointMap,
+        compileServerOrigin,
+        compileServerImportMap,
+        importDefaultExtension,
 
-          babelPluginMap,
-          node,
-          browser,
-          minify,
-          minifyJsOptions,
-          minifyCssOptions,
-          minifyHtmlOptions,
-          format,
-          formatOutputOptions,
-          writeOnFileSystem,
-          sourcemapExcludeSources,
-          manifestFile,
-        })
-      }
+        babelPluginMap,
+        compileServerGroupMap,
+        node,
+        browser,
+        format,
+        formatOutputOptions,
+        minify,
+        writeOnFileSystem,
+        sourcemapExcludeSources,
+        manifestFile,
+      }),
+      generateEntryPointsBalancerFiles({
+        cancellationToken,
+        logger,
 
-      return await Promise.all([
-        generateEntryPointsDirectories({
-          cancellationToken,
-          logger,
+        projectDirectoryUrl,
+        balancerTemplateFileUrl,
+        outDirectoryRelativeUrl,
+        entryPointMap,
+        bundleDirectoryUrl,
+        compileServerOrigin,
+        compileServerImportMap,
+        importDefaultExtension,
 
-          projectDirectoryUrl,
-          outDirectoryRelativeUrl,
-          bundleDirectoryUrl,
-          entryPointMap,
-          compileServerOrigin,
-          compileServerImportMap,
-          importDefaultExtension,
-
-          babelPluginMap,
-          compileServerGroupMap,
-          node,
-          browser,
-          format,
-          formatOutputOptions,
-          minify,
-          writeOnFileSystem,
-          sourcemapExcludeSources,
-          manifestFile,
-        }),
-        generateEntryPointsBalancerFiles({
-          cancellationToken,
-          logger,
-
-          projectDirectoryUrl,
-          balancerTemplateFileUrl,
-          outDirectoryRelativeUrl,
-          entryPointMap,
-          bundleDirectoryUrl,
-          compileServerOrigin,
-          compileServerImportMap,
-          importDefaultExtension,
-
-          babelPluginMap,
-          node,
-          browser,
-          format,
-          formatOutputOptions,
-          minify,
-          writeOnFileSystem,
-          sourcemapExcludeSources,
-          manifestFile,
-        }),
-      ])
-    },
-    { updateProcessExitCode },
-  )
+        babelPluginMap,
+        node,
+        browser,
+        format,
+        formatOutputOptions,
+        minify,
+        writeOnFileSystem,
+        sourcemapExcludeSources,
+        manifestFile,
+      }),
+    ])
+  }).catch((e) => {
+    if (updateProcessExitCode) {
+      process.exitCode = 1
+    }
+    throw e
+  })
 }
 
 const assertEntryPointMap = ({ entryPointMap }) => {

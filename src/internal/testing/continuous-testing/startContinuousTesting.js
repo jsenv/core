@@ -1,18 +1,18 @@
 /* eslint-disable import/max-dependencies */
 import {
-  createCancellationTokenForProcessSIGINT,
   composeCancellationToken,
   createCancellationSource,
   errorToCancelReason,
 } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 import {
+  createCancellationTokenForProcess,
+  catchCancellation,
   urlIsInsideOf,
   urlToRelativeUrl,
   urlToFileSystemPath,
   registerDirectoryLifecycle,
 } from "@jsenv/util"
-import { wrapAsyncFunction } from "../../wrapAsyncFunction.js"
 import { require } from "../../require.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "../../argUtils.js"
 import { generateExecutionSteps } from "../../executing/generateExecutionSteps.js"
@@ -30,6 +30,7 @@ export const TESTING_WATCH_EXCLUDE_DESCRIPTION = {
 }
 
 export const startContinuousTesting = async ({
+  cancellationToken = createCancellationTokenForProcess(),
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
@@ -52,8 +53,7 @@ export const startContinuousTesting = async ({
   collectNamespace = false,
   systemNotification = true,
 }) => {
-  return wrapAsyncFunction(async () => {
-    const cancellationToken = createCancellationTokenForProcessSIGINT()
+  return catchCancellation(async () => {
     const logger = createLogger({ logLevel })
 
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
@@ -390,6 +390,9 @@ export const startContinuousTesting = async ({
       logger.info(`test execution will restart automatically`)
     }
     await getNextTestingResult(actionRequiredPromise)
+  }).catch((e) => {
+    process.exitCode = 1
+    throw e
   })
 }
 
