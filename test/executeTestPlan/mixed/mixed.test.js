@@ -23,7 +23,7 @@ const actual = await executeTestPlan({
   jsenvDirectoryRelativeUrl,
   testPlan,
   compileGroupCount: 1,
-  completedExecutionLogAbbreviation: true,
+  completedExecutionLogAbbreviation: false,
   completedExecutionLogMerging: true,
 })
 const expected = {

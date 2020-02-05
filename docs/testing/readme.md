@@ -381,7 +381,7 @@ Becomes
 
 ## completedExecutionLogMerging
 
-`completedExecutionLogMerging` parameter is a boolean controlling if completed execution logs will be merged together when adjacent. This parameter is optional and enabled by default when `completedExecutionLogAbbreviation` is enabled. Otherwise it is disabled.
+`completedExecutionLogMerging` parameter is a boolean controlling if completed execution logs will be merged together when adjacent. This parameter is optional and disabled by default.
 
 ![test execution mixed short terminal screenshot](./test-execution-mixed-short-terminal.png)
 

@@ -184,8 +184,13 @@ ${fileRelativeUrl}`),
         executionResult.status === "completed"
       ) {
         if (loggerToLevels(logger).info) {
-          readline.moveCursor(process.stdout, 0, -previousExecutionLog.split(/\r\n|\r|\n/).length)
-          readline.cursorTo(process.stdout, 0)
+          let lineCount = previousExecutionLog.split(/\r\n|\r|\n/).length
+          while (lineCount--) {
+            readline.moveCursor(process.stdout, 0, -1)
+            readline.cursorTo(process.stdout, 0)
+            readline.clearLine(process.stdout, 0)
+            readline.cursorTo(process.stdout, 0)
+          }
         }
       }
       const log = createExecutionResultLog(afterExecutionInfo, {
