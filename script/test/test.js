@@ -1,7 +1,7 @@
 import { executeTestPlan, launchNode } from "@jsenv/core"
 import * as jsenvConfig from "../../jsenv.config.js"
 
-process.env.NODE_DEBUG = "net"
+// process.env.NODE_DEBUG = "net"
 
 executeTestPlan({
   ...jsenvConfig,
