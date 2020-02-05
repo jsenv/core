@@ -1,6 +1,5 @@
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server"
-import { urlToRelativeUrl, fileSystemPathToUrl, resolveUrl } from "@jsenv/util"
-import { bufferToEtag } from "./compile-directory/bufferToEtag.js"
+import { urlToRelativeUrl, fileSystemPathToUrl, resolveUrl, bufferToEtag } from "@jsenv/util"
 import { getOrGenerateCompiledFile } from "./compile-directory/getOrGenerateCompiledFile.js"
 
 export const serveCompiledFile = async ({

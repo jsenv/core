@@ -3,11 +3,16 @@ import { readFileSync } from "fs"
 import { assert } from "@jsenv/assert"
 import { createLogger } from "@jsenv/logger"
 import { createCancellationToken } from "@jsenv/cancellation"
-import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath, readFile } from "@jsenv/util"
+import {
+  resolveUrl,
+  urlToRelativeUrl,
+  urlToFileSystemPath,
+  readFile,
+  bufferToEtag,
+} from "@jsenv/util"
 import { require } from "../../../src/internal/require.js"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
-import { bufferToEtag } from "../../../src/internal/compiling/compile-directory/bufferToEtag.js"
 import { serveBundle } from "../../../src/internal/compiling/serveBundle.js"
 import { jsenvBabelPluginMap } from "../../../src/jsenvBabelPluginMap.js"
 
