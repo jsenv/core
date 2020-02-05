@@ -8,7 +8,7 @@ export const writeLog = (string, { stream = process.stdout } = {}) => {
   stream.write(`${string}
 `)
 
-  const streamModified = spyStreamModification(stream)
+  const consoleModified = spyConsoleModification()
 
   const remove = memoize(() => {
     const { columns = 80 } = stream
@@ -33,7 +33,7 @@ export const writeLog = (string, { stream = process.stdout } = {}) => {
     }
     updated = true
 
-    if (!streamModified()) {
+    if (!consoleModified()) {
       remove()
     }
     return writeLog(newString, { stream })
@@ -45,14 +45,16 @@ export const writeLog = (string, { stream = process.stdout } = {}) => {
   }
 }
 
-const spyStreamModification = (stream) => {
+const spyConsoleModification = () => {
   let modified = false
   const dataListener = () => {
     modified = true
   }
-  stream.once("data", dataListener)
+  process.stdout.once("data", dataListener)
+  process.stderr.once("data", dataListener)
   return () => {
-    stream.removeListener("data", dataListener)
+    process.stdout.removeListener("data", dataListener)
+    process.stderr.removeListener("data", dataListener)
     return modified
   }
 }
