@@ -1,11 +1,12 @@
-import { createCancellationTokenForProcess, catchCancellation } from "@jsenv/util"
+import { catchCancellation } from "@jsenv/util"
+import { createCancellationTokenForProcessSIGINT } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
 
 export const execute = async ({
-  cancellationToken = createCancellationTokenForProcess(),
+  cancellationToken = createCancellationTokenForProcessSIGINT(),
   logLevel = "warn",
   compileServerLogLevel = logLevel,
   launchLogLevel = logLevel,
@@ -96,11 +97,11 @@ export const execute = async ({
       }
       return result
     },
-    () => {
+    (e) => {
       // unexpected internal error
       // -> always updates process.exitCode
-      // process.exitCode = 1
-      // throw e
+      process.exitCode = 1
+      throw e
     },
   )
 }
