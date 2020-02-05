@@ -1,12 +1,8 @@
 /* eslint-disable import/max-dependencies */
-import {
-  composeCancellationToken,
-  createCancellationSource,
-  createCancellationTokenForProcessSIGINT,
-} from "@jsenv/cancellation"
+import { composeCancellationToken, createCancellationSource } from "@jsenv/cancellation"
 import {
   catchCancellation,
-  // createCancellationTokenForProcess,
+  createCancellationTokenForProcess,
   metaMapToSpecifierMetaMap,
   normalizeSpecifierMetaMap,
   urlToMeta,
@@ -28,7 +24,7 @@ import { jsenvHtmlFileUrl } from "./internal/jsenvHtmlFileUrl.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
 export const startExploring = async ({
-  cancellationToken = createCancellationTokenForProcessSIGINT(),
+  cancellationToken = createCancellationTokenForProcess(),
   logLevel,
   compileServerLogLevel = logLevel,
 
