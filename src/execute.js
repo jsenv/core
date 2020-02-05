@@ -1,11 +1,15 @@
-import { catchCancellation, createCancellationTokenForProcess } from "@jsenv/util"
+import {
+  catchCancellation,
+  // createCancellationTokenForProcess
+} from "@jsenv/util"
+import { createCancellationTokenForProcessSIGINT } from "@jsenv/cancellation"
 import { createLogger } from "@jsenv/logger"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
 
 export const execute = async ({
-  cancellationToken = createCancellationTokenForProcess(),
+  cancellationToken = createCancellationTokenForProcessSIGINT(),
   logLevel = "warn",
   compileServerLogLevel = logLevel,
   launchLogLevel = logLevel,
