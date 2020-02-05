@@ -79,6 +79,12 @@ export const launchNode = async ({
     stdio: "pipe",
     env,
   })
+  process.stdin.on("error", (error) => {
+    if (error.code === "ENOTCONN") {
+      return
+    }
+    throw error
+  })
   logger.info(
     `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(nodeControllableFileUrl)}`,
   )
