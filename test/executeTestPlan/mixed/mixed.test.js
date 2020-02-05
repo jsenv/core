@@ -12,7 +12,7 @@ const testPlan = {
     node: {
       launch: launchNode,
       measureDuration: true,
-      captureConsole: true,
+      // captureConsole: true,
     },
   },
 }
