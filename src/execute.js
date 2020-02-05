@@ -99,8 +99,8 @@ export const execute = async ({
     (e) => {
       // unexpected internal error
       // -> always updates process.exitCode
-      process.exitCode = 1
-      throw e
+      // process.exitCode = 1
+      // throw e
     },
   )
 }
