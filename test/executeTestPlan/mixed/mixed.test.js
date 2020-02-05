@@ -20,7 +20,6 @@ const testPlan = {
 const actual = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
   logLevel: "info",
-  jsenvDirectoryClean: false,
   jsenvDirectoryRelativeUrl,
   testPlan,
   compileGroupCount: 1,
