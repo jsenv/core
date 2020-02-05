@@ -11,8 +11,7 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}file.js`
 
 const actual = await execute({
   ...EXECUTE_TEST_PARAMS,
-  logLevel: "debug",
-  launchLogLevel: "debug",
+  launchLogLevel: "info",
   jsenvDirectoryRelativeUrl,
   launch: launchChromium,
   fileRelativeUrl,

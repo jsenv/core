@@ -46,29 +46,29 @@ export const writeLog = (string, { stream = process.stdout } = {}) => {
 }
 
 const spyConsoleModification = () => {
-  let modified = false
-  const dataListener = () => {
-    modified = true
-  }
-  process.stdout.once("data", dataListener)
-  process.stderr.once("data", dataListener)
+  const modified = false
 
-  process.stdout.on("error", (error) => {
-    if (error.code === "ENOTCONN") {
-      return
-    }
-    throw error
-  })
-  process.stderr.on("error", (error) => {
-    if (error.code === "ENOTCONN") {
-      return
-    }
-    throw error
-  })
+  // const dataListener = () => {
+  //   modified = true
+  // }
+  // process.stdout.once("data", dataListener)
+  // process.stdout.on("error", (error) => {
+  //   if (error.code === "ENOTCONN") {
+  //     return
+  //   }
+  //   throw error
+  // })
+  // process.stderr.once("data", dataListener)
+  // process.stderr.on("error", (error) => {
+  //   if (error.code === "ENOTCONN") {
+  //     return
+  //   }
+  //   throw error
+  // })
 
   return () => {
-    process.stdout.removeListener("data", dataListener)
-    process.stderr.removeListener("data", dataListener)
+    // process.stdout.removeListener("data", dataListener)
+    // process.stderr.removeListener("data", dataListener)
     return modified
   }
 }
