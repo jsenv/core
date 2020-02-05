@@ -52,6 +52,20 @@ const spyConsoleModification = () => {
   }
   process.stdout.once("data", dataListener)
   process.stderr.once("data", dataListener)
+
+  process.stdout.on("error", (error) => {
+    if (error.code === "ENOTCONN") {
+      return
+    }
+    throw error
+  })
+  process.stderr.on("error", (error) => {
+    if (error.code === "ENOTCONN") {
+      return
+    }
+    throw error
+  })
+
   return () => {
     process.stdout.removeListener("data", dataListener)
     process.stderr.removeListener("data", dataListener)
