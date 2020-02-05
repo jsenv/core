@@ -384,7 +384,7 @@ export const startExploring = async ({
       exploringServer,
       compileServer,
     }
-  }).then((e) => {
+  }).catch((e) => {
     process.exitCode = 1
     throw e
   })
