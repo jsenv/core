@@ -128,10 +128,12 @@
     "rollup-plugin-node-builtins": "2.1.2",
     "rollup-plugin-node-globals": "1.4.0",
     "source-map": "0.7.3",
+    "string-width": "4.2.0",
     "supports-color": "7.1.0",
     "systemjs": "6.1.9",
     "terser": "4.6.3",
-    "tree-kill": "1.2.2"
+    "tree-kill": "1.2.2",
+    "wrap-ansi": "6.2.0"
   },
   "devDependencies": {
     "@babel/plugin-transform-react-jsx": "7.8.3",

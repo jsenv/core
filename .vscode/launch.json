@@ -29,7 +29,7 @@
       "runtimeVersion": "13.7.0",
       "runtimeArgs": [
         "--unhandled-rejections=strict",
-        "--experimental-json-modules",
+        "--experimental-json-modules"
         // this is to disabled experimental warning
         "--no-warnings"
       ],

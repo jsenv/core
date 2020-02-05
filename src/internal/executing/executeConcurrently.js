@@ -1,7 +1,6 @@
 /* eslint-disable import/max-dependencies */
 import { cpus } from "os"
 import { stat } from "fs"
-import readline from "readline"
 import {
   createConcurrentOperations,
   createCancellationSource,
@@ -9,10 +8,14 @@ import {
 } from "@jsenv/cancellation"
 import { loggerToLevels } from "@jsenv/logger"
 import { urlToFileSystemPath } from "@jsenv/util"
+import { require } from "../require.js"
 import { launchAndExecute } from "../executing/launchAndExecute.js"
 import { reportToCoverageMap } from "./coverage/reportToCoverageMap.js"
+import { writeLog } from "./writeLog.js"
 import { createExecutionResultLog } from "./executionLogs.js"
 import { createSummaryLog } from "./createSummaryLog.js"
+
+const wrapAnsi = require("wrap-ansi")
 
 export const executeConcurrently = async (
   executionSteps,
@@ -85,8 +88,6 @@ ${fileRelativeUrl}`),
   let timedoutCount = 0
   let erroredCount = 0
   let completedCount = 0
-  let processStdoutModified
-
   await createConcurrentOperations({
     cancellationToken,
     concurrencyLimit,
@@ -178,42 +179,40 @@ ${fileRelativeUrl}`),
         completedCount++
       }
 
-      if (
-        completedExecutionLogMerging &&
-        previousExecutionResult &&
-        previousExecutionResult.status === "completed" &&
-        executionResult.status === "completed" &&
-        // if something occured in between, do not override
-        // the line because it's no longer our line we would erase
-        !processStdoutModified()
-      ) {
-        if (loggerToLevels(logger).info) {
-          let lineCount = previousExecutionLog.split(/\r\n|\r|\n/).length
-          while (lineCount--) {
-            readline.moveCursor(process.stdout, 0, -1)
-            readline.cursorTo(process.stdout, 0)
-            readline.clearLine(process.stdout, 0)
-            readline.cursorTo(process.stdout, 0)
-          }
+      if (loggerToLevels(logger).info) {
+        let log = createExecutionResultLog(afterExecutionInfo, {
+          completedExecutionLogAbbreviation,
+          executionCount,
+          disconnectedCount,
+          timedoutCount,
+          erroredCount,
+          completedCount,
+        })
+        const { columns = 80 } = process.stdout
+        log = wrapAnsi(log, columns, {
+          trim: false,
+          hard: true,
+          wordWrap: false,
+        })
+
+        if (
+          previousExecutionLog &&
+          completedExecutionLogMerging &&
+          previousExecutionResult &&
+          previousExecutionResult.status === "completed" &&
+          executionResult.status === "completed"
+        ) {
+          previousExecutionLog = previousExecutionLog.update(log)
+        } else {
+          previousExecutionLog = writeLog(log)
         }
       }
-      const log = createExecutionResultLog(afterExecutionInfo, {
-        completedExecutionLogAbbreviation,
-        executionCount,
-        disconnectedCount,
-        timedoutCount,
-        erroredCount,
-        completedCount,
-      })
-      logger.info(log)
-      processStdoutModified = spyStreamModification(process.stdout)
 
       if (fileRelativeUrl in report === false) {
         report[fileRelativeUrl] = {}
       }
       report[fileRelativeUrl][name] = executionResult
       previousExecutionResult = executionResult
-      previousExecutionLog = log
     },
   })
 
@@ -294,17 +293,5 @@ const reportToSummary = (report) => {
     timedoutCount,
     erroredCount,
     completedCount,
-  }
-}
-
-const spyStreamModification = (stream) => {
-  let modified = false
-  const dataListener = () => {
-    modified = true
-  }
-  stream.once("data", dataListener)
-  return () => {
-    stream.removeListener("data", dataListener)
-    return modified
   }
 }
