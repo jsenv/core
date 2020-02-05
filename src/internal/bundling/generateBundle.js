@@ -6,9 +6,9 @@ import {
   urlToRelativeUrl,
   assertFilePresence,
   ensureEmptyDirectory,
-  createCancellationTokenForProcess,
   catchCancellation,
 } from "@jsenv/util"
+import { createCancellationTokenForProcessSIGINT } from "@jsenv/cancellation"
 import { COMPILE_ID_OTHERWISE } from "../CONSTANTS.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "../argUtils.js"
 import { startCompileServer } from "../compiling/startCompileServer.js"
@@ -19,7 +19,7 @@ import { createBabePluginMapForBundle } from "./createBabePluginMapForBundle.js"
 import { generateBundleUsingRollup } from "./generateBundleUsingRollup.js"
 
 export const generateBundle = async ({
-  cancellationToken = createCancellationTokenForProcess(),
+  cancellationToken = createCancellationTokenForProcessSIGINT(),
   logLevel = "info",
   compileServerLogLevel = "warn",
   logger,
