@@ -96,7 +96,7 @@ export const execute = async ({
       }
       return result
     },
-    (e) => {
+    () => {
       // unexpected internal error
       // -> always updates process.exitCode
       // process.exitCode = 1
