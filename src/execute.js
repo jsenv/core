@@ -1,12 +1,11 @@
-import { createCancellationTokenForProcessSIGINT } from "@jsenv/cancellation"
+import { catchCancellation, createCancellationTokenForProcess } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
-import { wrapAsyncFunction } from "./internal/wrapAsyncFunction.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
 
 export const execute = async ({
-  cancellationToken = createCancellationTokenForProcessSIGINT(),
+  cancellationToken = createCancellationTokenForProcess(),
   logLevel = "warn",
   compileServerLogLevel = logLevel,
   launchLogLevel = logLevel,
@@ -30,9 +29,10 @@ export const execute = async ({
   launch,
   mirrorConsole = true,
   stopPlatformAfterExecute = true,
+  updateProcessExitCode = true,
   ...rest
 }) => {
-  return wrapAsyncFunction(async () => {
+  return catchCancellation(async () => {
     const launchLogger = createLogger({ logLevel: launchLogLevel })
     const executeLogger = createLogger({ logLevel: executeLogLevel })
 
@@ -66,7 +66,7 @@ export const execute = async ({
       port,
     })
 
-    const result = await launchAndExecute({
+    return launchAndExecute({
       cancellationToken,
       launchLogger,
       executeLogger,
@@ -83,11 +83,24 @@ export const execute = async ({
       stopPlatformAfterExecute,
       ...rest,
     })
-
-    if (result.status === "errored") {
-      throw result.error
-    }
-
-    return result
-  })
+  }).then(
+    (result) => {
+      if (result.status === "errored") {
+        // unexpected execution error
+        // -> update process.exitCode by default
+        // (we can disable this for testing)
+        if (updateProcessExitCode) {
+          process.exitCode = 1
+        }
+        throw result.error
+      }
+      return result
+    },
+    (e) => {
+      // unexpected internal error
+      // -> always updates process.exitCode
+      process.exitCode = 1
+      throw e
+    },
+  )
 }

@@ -10,7 +10,7 @@ const { supportsColor } = require("supports-color")
 
 const CLEAR_WHOLE_LINE = 0
 
-export const clearLine = (stdout) => {
+export const clearLine = (stdout = process.stdout) => {
   if (supportsColor(stdout)) {
     readline.clearLine(stdout, CLEAR_WHOLE_LINE)
     readline.cursorTo(stdout, 0)
@@ -22,7 +22,7 @@ export const clearLine = (stdout) => {
   }
 }
 
-export const toStartOfLine = (stdout) => {
+export const toStartOfLine = (stdout = process.stdout) => {
   if (supportsColor(stdout)) {
     readline.cursorTo(stdout, 0)
   } else {

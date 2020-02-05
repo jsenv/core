@@ -42,7 +42,7 @@ const { status, consoleCalls } = await launchAndExecute({
   const expected = "completed"
   assert({ actual, expected })
 }
-{
+if (process.platform !== "win32") {
   const actual = removeAnnoyingLogs(consoleCalls).reduce((previous, { text }) => {
     return `${previous}${text}`
   }, "")

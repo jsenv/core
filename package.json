@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "11.5.0",
+  "version": "11.6.0",
   "description": "Execute JavaScript on multiple environments for testing.",
   "license": "MIT",
   "repository": {
@@ -31,8 +31,8 @@
   ],
   "scripts": {
     "start-exploring": "node ./script/start-exploring/start-exploring.js",
-    "test": "node ./script/test/test.js",
-    "test-with-coverage": "node ./script/test/test.js --coverage",
+    "test": "node --no-warnings ./script/test/test.js",
+    "test-with-coverage": "node --no-warnings ./script/test/test.js --coverage",
     "test-js-transform": "node ./script/test/test-js-transform.js",
     "test-compile-server": "node ./script/test/test-compile-server.js",
     "test-exploring": "node ./script/test/test-exploring.js",
@@ -99,10 +99,10 @@
     "@jsenv/import-map": "6.7.2",
     "@jsenv/logger": "3.3.1",
     "@jsenv/node-module-import-map": "11.0.0",
-    "@jsenv/node-signals": "2.0.0",
-    "@jsenv/server": "1.5.3",
+    "@jsenv/node-signals": "2.0.1",
+    "@jsenv/server": "1.6.0",
     "@jsenv/uneval": "1.3.0",
-    "@jsenv/util": "3.4.1",
+    "@jsenv/util": "3.5.1",
     "@rollup/plugin-commonjs": "11.0.2",
     "@rollup/plugin-json": "4.0.2",
     "@rollup/plugin-node-resolve": "7.1.0",
@@ -128,10 +128,12 @@
     "rollup-plugin-node-builtins": "2.1.2",
     "rollup-plugin-node-globals": "1.4.0",
     "source-map": "0.7.3",
+    "string-width": "4.2.0",
     "supports-color": "7.1.0",
     "systemjs": "6.1.9",
     "terser": "4.6.3",
-    "tree-kill": "1.2.2"
+    "tree-kill": "1.2.2",
+    "wrap-ansi": "6.2.0"
   },
   "devDependencies": {
     "@babel/plugin-transform-react-jsx": "7.8.3",

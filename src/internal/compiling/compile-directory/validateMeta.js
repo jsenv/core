@@ -1,6 +1,10 @@
-import { urlToFileSystemPath, readFile, readFileSystemNodeModificationTime } from "@jsenv/util"
+import {
+  urlToFileSystemPath,
+  readFile,
+  readFileSystemNodeModificationTime,
+  bufferToEtag,
+} from "@jsenv/util"
 import { resolveAssetFileUrl, resolveSourceFileUrl } from "./locaters.js"
-import { bufferToEtag } from "./bufferToEtag.js"
 
 export const validateMeta = async ({
   logger,

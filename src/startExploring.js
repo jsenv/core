@@ -1,10 +1,8 @@
 /* eslint-disable import/max-dependencies */
+import { composeCancellationToken, createCancellationSource } from "@jsenv/cancellation"
 import {
-  createCancellationTokenForProcessSIGINT,
-  composeCancellationToken,
-  createCancellationSource,
-} from "@jsenv/cancellation"
-import {
+  catchCancellation,
+  createCancellationTokenForProcess,
   metaMapToSpecifierMetaMap,
   normalizeSpecifierMetaMap,
   urlToMeta,
@@ -17,7 +15,6 @@ import {
 } from "@jsenv/util"
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
 import { createLogger } from "@jsenv/logger"
-import { wrapAsyncFunction } from "./internal/wrapAsyncFunction.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { getBrowserExecutionDynamicData } from "./internal/platform/getBrowserExecutionDynamicData.js"
 import { serveExploringIndex } from "./internal/exploring/serveExploringIndex.js"
@@ -27,7 +24,7 @@ import { jsenvHtmlFileUrl } from "./internal/jsenvHtmlFileUrl.js"
 import { jsenvExplorableConfig } from "./jsenvExplorableConfig.js"
 
 export const startExploring = async ({
-  cancellationToken = createCancellationTokenForProcessSIGINT(),
+  cancellationToken = createCancellationTokenForProcess(),
   logLevel,
   compileServerLogLevel = logLevel,
 
@@ -60,7 +57,7 @@ export const startExploring = async ({
   compileServerPort = 0, // random available port
   forcePort = false,
 }) => {
-  return wrapAsyncFunction(async () => {
+  return catchCancellation(async () => {
     const logger = createLogger({ logLevel })
 
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
@@ -387,5 +384,8 @@ export const startExploring = async ({
       exploringServer,
       compileServer,
     }
+  }).catch((e) => {
+    process.exitCode = 1
+    throw e
   })
 }

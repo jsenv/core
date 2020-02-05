@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
-import { executeTestPlan, launchChromium } from "../../../index.js"
+import { executeTestPlan, launchNode } from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -9,9 +9,10 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDir
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const testPlan = {
   [`${testDirectoryRelativeUrl}*.spec.js`]: {
-    browser: {
-      launch: launchChromium,
+    node: {
+      launch: launchNode,
       measureDuration: true,
+      captureConsole: true,
     },
   },
 }
@@ -19,11 +20,10 @@ const testPlan = {
 const actual = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
   logLevel: "info",
-  jsenvDirectoryClean: false,
   jsenvDirectoryRelativeUrl,
   testPlan,
   compileGroupCount: 1,
-  completedExecutionLogAbbreviation: true,
+  completedExecutionLogAbbreviation: false,
   completedExecutionLogMerging: true,
 })
 const expected = {

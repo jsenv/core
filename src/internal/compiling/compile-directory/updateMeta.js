@@ -1,6 +1,5 @@
-import { urlToFileSystemPath, writeFile, readFileSystemNodeStat } from "@jsenv/util"
+import { urlToFileSystemPath, writeFile, readFileSystemNodeStat, bufferToEtag } from "@jsenv/util"
 import { resolveSourceFileUrl, resolveMetaJsonFileUrl, resolveAssetFileUrl } from "./locaters.js"
-import { bufferToEtag } from "./bufferToEtag.js"
 
 export const updateMeta = async ({
   logger,

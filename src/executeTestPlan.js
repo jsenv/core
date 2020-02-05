@@ -1,8 +1,11 @@
-/* eslint-disable import/max-dependencies */
-import { createCancellationTokenForProcessSIGINT } from "@jsenv/cancellation"
+import {
+  catchCancellation,
+  createCancellationTokenForProcess,
+  metaMapToSpecifierMetaMap,
+  normalizeSpecifierMetaMap,
+  urlToMeta,
+} from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
-import { metaMapToSpecifierMetaMap, normalizeSpecifierMetaMap, urlToMeta } from "@jsenv/util"
-import { wrapAsyncFunction } from "./internal/wrapAsyncFunction.js"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { executePlan } from "./internal/executing/executePlan.js"
 import { executionIsPassed } from "./internal/executing/executionIsPassed.js"
@@ -12,7 +15,7 @@ import { generateCoverageTextLog } from "./internal/executing/coverage/generateC
 import { jsenvCoverageConfig } from "./jsenvCoverageConfig.js"
 
 export const executeTestPlan = async ({
-  cancellationToken = createCancellationTokenForProcessSIGINT(),
+  cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
   launchLogLevel = "warn",
@@ -38,7 +41,7 @@ export const executeTestPlan = async ({
   // meaning all node process and browsers launched stays opened
   stopPlatformAfterExecute = true,
   completedExecutionLogAbbreviation = false,
-  completedExecutionLogMerging = completedExecutionLogAbbreviation,
+  completedExecutionLogMerging = false,
   logSummary = true,
   updateProcessExitCode = true,
 
@@ -54,7 +57,7 @@ export const executeTestPlan = async ({
   coverageHtmlDirectoryRelativeUrl = "./coverage",
   coverageHtmlDirectoryIndexLog = true,
 }) => {
-  return wrapAsyncFunction(async () => {
+  return catchCancellation(async () => {
     const logger = createLogger({ logLevel })
     const launchLogger = createLogger({ logLevel: launchLogLevel })
     const executeLogger = createLogger({ logLevel: executeLogLevel })
@@ -174,5 +177,8 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
     await Promise.all(promises)
 
     return result
+  }).catch((e) => {
+    process.exitCode = 1
+    throw e
   })
 }
