@@ -60,7 +60,6 @@ jobs:
       # package will be published at least we know if there is a regression
       # Otherwise we would have to reswitch to 13.7 before publishing the package
       - name: Non regression test for node 12.8
-        if: runner.os == 'Linux' # runner check to run it once
         run: |
           curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
           export NVM_DIR="$HOME/.nvm"
