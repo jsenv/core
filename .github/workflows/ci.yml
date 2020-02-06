@@ -33,14 +33,32 @@ jobs:
           npm config set //npm.pkg.github.com/:_authToken ${{ secrets.GITHUB_TOKEN }}
           npm install
       - name: code quality
-        if: matrix.node == '13.7.0'
         run: npm run eslint-check
       - name: code format
-        if: matrix.node == '13.7.0'
         run: npm run prettier-check
+      - name: testing
+        run: npm run test-with-coverage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: upload coverage
+        run: npm run upload-coverage
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: publish package
+        if: github.event_name == 'push' && runner.os == 'Linux' # runner check to run it once
+        run: node ./.github/publish-package.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: ensure github release
+        if: github.event_name == 'push' && runner.os == 'Linux' # runner check to run it once
+        run: node ./.github/ensure-github-release-for-package.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # for now keep it after publish package even if it means
-      # package will be published at least we knoe if there is a regression
-      # Otherwse we would have to reswitch to 13.7 before publishing the package
+      # package will be published at least we know if there is a regression
+      # Otherwise we would have to reswitch to 13.7 before publishing the package
       - name: Non regression test for node 12.8
         if: runner.os == 'Linux' # runner check to run it once
         run: |
