@@ -163,7 +163,7 @@ export const launchNode = async ({
     return disconnectedPromise
   }
 
-  const gracefulStop = () => {
+  const gracefulStop = async () => {
     if (!child.connected) {
       return Promise.resolve()
     }
@@ -173,7 +173,15 @@ export const launchNode = async ({
         resolve()
       })
     })
-    sendToChild(child, "gracefulStop")
+    try {
+      await sendToChild(child, "gracefulStop")
+    } catch (e) {
+      // cannot comunicate with the child (child killed itself ?)
+      if (e.code === "EPIPE") {
+        return disconnectedPromise
+      }
+      throw e
+    }
     return disconnectedPromise
   }
 
