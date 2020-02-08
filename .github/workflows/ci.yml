@@ -13,10 +13,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        # We cannot test both on 12.8 and 13.7 because
-        # the scripts files are now written in mjs
-        # Maintaining .cjs and .mjs would be too much work.
-        # It means we might introduce regression on 12.8 from now on.
         node: [13.7.0]
     runs-on: ${{ matrix.os }}
     name: node ${{ matrix.node }} on ${{ matrix.os }}
@@ -60,3 +56,15 @@ jobs:
         run: node ./.github/ensure-github-release-for-package.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # for now keep it after publish package even if it means
+      # package will be published at least we know if there is a regression
+      # Otherwise we would have to reswitch to 13.7 before publishing the package
+      - name: Non regression test for node 12.8
+        if: runner.os == 'Linux'
+        run: |
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
+          export NVM_DIR="$HOME/.nvm"
+          source "$NVM_DIR/nvm.sh"
+          nvm install 12.8.0
+          nvm use 12.8.0
+          node ./script/test/test.cjs
