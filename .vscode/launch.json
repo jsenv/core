@@ -53,7 +53,7 @@
       "request": "launch",
       "protocol": "inspector",
       "program": "${workspaceFolder}/script/run-node/run-node.js",
-      // "runtimeArgs": ["--unhandled-rejections=strict"],
+      "runtimeArgs": ["--unhandled-rejections=strict"],
       "args": ["${relativeFile}"],
       "autoAttachChildProcesses": true,
       // "sourceMaps": false,

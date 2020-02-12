@@ -7,8 +7,8 @@ const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debu
 export const createChildExecArgv = async ({
   cancellationToken = createCancellationToken(),
   // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
-  processExecArgv,
-  processDebugPort,
+  processExecArgv = process.execArgv,
+  processDebugPort = process.debugPort,
 
   debugPort = 0,
   debugMode = "inherit",

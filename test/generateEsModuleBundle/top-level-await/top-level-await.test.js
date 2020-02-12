@@ -27,20 +27,31 @@ await generateEsModuleBundle({
     main: `./${testDirectoryRelativeUrl}${mainFilename}`,
   },
 })
-{
-  const { value: actual } = await browserImportBundle({
+// top level await not supported in pupeteer for now
+try {
+  await browserImportBundle({
     ...BROWSER_IMPORT_BUNDLE_TEST_PARAMS,
     bundleDirectoryRelativeUrl,
   })
-  const expected = 42
+  throw new Error("should throw")
+} catch (actual) {
+  const expected = new Error("Evaluation failed: SyntaxError: Unexpected reserved word")
   assert({ actual, expected })
 }
-// SourceMap added in 13.7, used to test only if we got dynamic import
+// top level await not supported in node 13.8 for now (SourceMap test because added in 13.7)
 if (SourceMap) {
-  const { value: actual } = await nodeImportBundle({
-    ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
-    bundleDirectoryRelativeUrl,
-  })
-  const expected = 42
-  assert({ actual, expected })
+  try {
+    await nodeImportBundle({
+      ...NODE_IMPORT_BUNDLE_TEST_PARAMS,
+      bundleDirectoryRelativeUrl,
+    })
+    throw new Error("should throw")
+  } catch (actual) {
+    const expected = {
+      name: "SyntaxError",
+      message: "Unexpected reserved word",
+      stack: actual.stack,
+    }
+    assert({ actual, expected })
+  }
 }
