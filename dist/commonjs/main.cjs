@@ -222,6 +222,17 @@ const resolveSpecifier = (specifier, importer) => {
   return null;
 };
 
+const sortImportMap = importMap => {
+  assertImportMap(importMap);
+  const {
+    imports,
+    scopes
+  } = importMap;
+  return {
+    imports: imports ? sortImports(imports) : undefined,
+    scopes: scopes ? sortScopes(scopes) : undefined
+  };
+};
 const sortImports = imports => {
   const importsSorted = {};
   Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(name => {
@@ -1365,6 +1376,24 @@ const assertFilePresence = async source => {
   }
 };
 
+const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+const bufferToEtag = buffer => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expected, got ${buffer}`);
+  }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT;
+  }
+
+  const hash = crypto.createHash("sha1");
+  hash.update(buffer, "utf8");
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+};
+
 const createCancellationToken = () => {
   const register = callback => {
     if (typeof callback !== "function") {
@@ -1584,6 +1613,44 @@ stop`);
   return operationPromise;
 };
 
+const firstOperationMatching = ({
+  array,
+  start,
+  predicate
+}) => {
+  if (typeof array !== "object") {
+    throw new TypeError(`array must be an object, got ${array}`);
+  }
+
+  if (typeof start !== "function") {
+    throw new TypeError(`start must be a function, got ${start}`);
+  }
+
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+
+  return new Promise((resolve, reject) => {
+    const visit = index => {
+      if (index >= array.length) {
+        return resolve();
+      }
+
+      const input = array[index];
+      const returnValue = start(input);
+      return Promise.resolve(returnValue).then(output => {
+        if (predicate(output)) {
+          return resolve(output);
+        }
+
+        return visit(index + 1);
+      }, reject);
+    };
+
+    visit(0);
+  });
+};
+
 const createCancelError = reason => {
   const cancelError = new Error(`canceled because ${reason}`);
   cancelError.name = "CANCEL_ERROR";
@@ -1731,10 +1798,17 @@ const createCancellationSource = () => {
   };
 };
 
-const createCancellationTokenForProcessSIGINT = () => {
-  const SIGINTCancelSource = createCancellationSource();
-  process.on("SIGINT", () => SIGINTCancelSource.cancel("process interruption"));
-  return SIGINTCancelSource.token;
+const catchCancellation = asyncFn => {
+  return asyncFn().catch(error => {
+    if (isCancelError(error)) {
+      // it means consume of the function will resolve with a cancelError
+      // but when you cancel it means you're not interested in the result anymore
+      // thanks to this it avoid unhandledRejection
+      return error;
+    }
+
+    throw error;
+  });
 };
 
 const readDirectory = async (url, {
@@ -2377,6 +2451,409 @@ const urlIsInsideOf = (urlValue, otherUrlValue) => {
   }
 
   return urlPathname.startsWith(otherUrlPathname);
+};
+
+const addCallback = callback => {
+  const triggerHangUpOrDeath = () => callback(); // SIGHUP http://man7.org/linux/man-pages/man7/signal.7.html
+
+
+  process.once("SIGUP", triggerHangUpOrDeath);
+  return () => {
+    process.removeListener("SIGUP", triggerHangUpOrDeath);
+  };
+};
+
+const SIGUPSignal = {
+  addCallback
+};
+
+const addCallback$1 = callback => {
+  // SIGINT is CTRL+C from keyboard also refered as keyboard interruption
+  // http://man7.org/linux/man-pages/man7/signal.7.html
+  // may also be sent by vscode https://github.com/Microsoft/vscode-node-debug/issues/1#issuecomment-405185642
+  process.once("SIGINT", callback);
+  return () => {
+    process.removeListener("SIGINT", callback);
+  };
+};
+
+const SIGINTSignal = {
+  addCallback: addCallback$1
+};
+
+const addCallback$2 = callback => {
+  if (process.platform === "win32") {
+    console.warn(`SIGTERM is not supported on windows`);
+    return () => {};
+  }
+
+  const triggerTermination = () => callback(); // SIGTERM http://man7.org/linux/man-pages/man7/signal.7.html
+
+
+  process.once("SIGTERM", triggerTermination);
+  return () => {
+    process.removeListener("SIGTERM", triggerTermination);
+  };
+};
+
+const SIGTERMSignal = {
+  addCallback: addCallback$2
+};
+
+let beforeExitCallbackArray = [];
+let uninstall;
+
+const addCallback$3 = callback => {
+  if (beforeExitCallbackArray.length === 0) uninstall = install();
+  beforeExitCallbackArray = [...beforeExitCallbackArray, callback];
+  return () => {
+    if (beforeExitCallbackArray.length === 0) return;
+    beforeExitCallbackArray = beforeExitCallbackArray.filter(beforeExitCallback => beforeExitCallback !== callback);
+    if (beforeExitCallbackArray.length === 0) uninstall();
+  };
+};
+
+const install = () => {
+  const onBeforeExit = () => {
+    return beforeExitCallbackArray.reduce(async (previous, callback) => {
+      await previous;
+      return callback();
+    }, Promise.resolve());
+  };
+
+  process.once("beforeExit", onBeforeExit);
+  return () => {
+    process.removeListener("beforeExit", onBeforeExit);
+  };
+};
+
+const beforeExitSignal = {
+  addCallback: addCallback$3
+};
+
+const addCallback$4 = (callback, {
+  collectExceptions = false
+} = {}) => {
+  if (!collectExceptions) {
+    const exitCallback = () => {
+      callback();
+    };
+
+    process.on("exit", exitCallback);
+    return () => {
+      process.removeListener("exit", exitCallback);
+    };
+  }
+
+  const {
+    getExceptions,
+    stop
+  } = trackExceptions();
+
+  const exitCallback = () => {
+    process.removeListener("exit", exitCallback);
+    stop();
+    callback({
+      exceptionArray: getExceptions().map(({
+        exception,
+        origin
+      }) => {
+        return {
+          exception,
+          origin
+        };
+      })
+    });
+  };
+
+  process.on("exit", exitCallback);
+  return () => {
+    process.removeListener("exit", exitCallback);
+  };
+};
+
+const trackExceptions = () => {
+  let exceptionArray = [];
+
+  const unhandledRejectionCallback = (unhandledRejection, promise) => {
+    exceptionArray = [...exceptionArray, {
+      origin: "unhandledRejection",
+      exception: unhandledRejection,
+      promise
+    }];
+  };
+
+  const rejectionHandledCallback = promise => {
+    exceptionArray = exceptionArray.filter(exceptionArray => exceptionArray.promise !== promise);
+  };
+
+  const uncaughtExceptionCallback = (uncaughtException, origin) => {
+    // since node 12.4 https://nodejs.org/docs/latest-v12.x/api/process.html#process_event_uncaughtexception
+    if (origin === "unhandledRejection") return;
+    exceptionArray = [...exceptionArray, {
+      origin: "uncaughtException",
+      exception: uncaughtException
+    }];
+  };
+
+  process.on("unhandledRejection", unhandledRejectionCallback);
+  process.on("rejectionHandled", rejectionHandledCallback);
+  process.on("uncaughtException", uncaughtExceptionCallback);
+  return {
+    getExceptions: () => exceptionArray,
+    stop: () => {
+      process.removeListener("unhandledRejection", unhandledRejectionCallback);
+      process.removeListener("rejectionHandled", rejectionHandledCallback);
+      process.removeListener("uncaughtException", uncaughtExceptionCallback);
+    }
+  };
+};
+
+const exitSignal = {
+  addCallback: addCallback$4
+};
+
+const addCallback$5 = callback => {
+  return eventRace({
+    SIGHUP: {
+      register: SIGUPSignal.addCallback,
+      callback: () => callback("SIGHUP")
+    },
+    SIGINT: {
+      register: SIGINTSignal.addCallback,
+      callback: () => callback("SIGINT")
+    },
+    ...(process.platform === "win32" ? {} : {
+      SIGTERM: {
+        register: SIGTERMSignal.addCallback,
+        callback: () => callback("SIGTERM")
+      }
+    }),
+    beforeExit: {
+      register: beforeExitSignal.addCallback,
+      callback: () => callback("beforeExit")
+    },
+    exit: {
+      register: exitSignal.addCallback,
+      callback: () => callback("exit")
+    }
+  });
+};
+
+const eventRace = eventMap => {
+  const unregisterMap = {};
+
+  const unregisterAll = reason => {
+    return Object.keys(unregisterMap).map(name => unregisterMap[name](reason));
+  };
+
+  Object.keys(eventMap).forEach(name => {
+    const {
+      register,
+      callback
+    } = eventMap[name];
+    unregisterMap[name] = register((...args) => {
+      unregisterAll();
+      callback(...args);
+    });
+  });
+  return unregisterAll;
+};
+
+const teardownSignal = {
+  addCallback: addCallback$5
+};
+
+const firstOperationMatching$1 = ({
+  array,
+  start,
+  predicate
+}) => {
+  if (typeof array !== "object") throw new TypeError(createArrayErrorMessage({
+    array
+  }));
+  if (typeof start !== "function") throw new TypeError(createStartErrorMessage({
+    start
+  }));
+  if (typeof predicate !== "function") throw new TypeError(createPredicateErrorMessage({
+    predicate
+  }));
+  return new Promise((resolve, reject) => {
+    const visit = index => {
+      if (index >= array.length) {
+        return resolve();
+      }
+
+      const input = array[index];
+      const returnValue = start(input);
+      return Promise.resolve(returnValue).then(output => {
+        if (predicate(output)) {
+          return resolve(output);
+        }
+
+        return visit(index + 1);
+      }, reject);
+    };
+
+    visit(0);
+  });
+};
+
+const createArrayErrorMessage = ({
+  array
+}) => `array must be an object.
+array: ${array}`;
+
+const createStartErrorMessage = ({
+  start
+}) => `start must be a function.
+start: ${start}`;
+
+const createPredicateErrorMessage = ({
+  predicate
+}) => `predicate must be a function.
+predicate: ${predicate}`;
+
+/*
+why unadvised ?
+- First because you should not do anything when a process uncaughtException
+or unhandled rejection happens.
+You cannot assume assume or trust the state of your process so you're
+likely going to throw an other error trying to handle the first one.
+- Second because the error stack trace will be modified making it harder
+to reach back what cause the error
+
+Instead you should monitor your process with an other one
+and when the monitored process die, here you can do what you want
+like analysing logs to find what cause process to die, ping a log server, ...
+*/
+let recoverCallbackArray = [];
+let uninstall$1;
+
+const addCallback$6 = callback => {
+  if (recoverCallbackArray.length === 0) uninstall$1 = install$1();
+  recoverCallbackArray = [...recoverCallbackArray, callback];
+  return () => {
+    if (recoverCallbackArray.length === 0) return;
+    recoverCallbackArray = recoverCallbackArray.filter(recoverCallback => recoverCallback !== callback);
+    if (recoverCallbackArray.length === 0) uninstall$1();
+  };
+};
+
+const install$1 = () => {
+  const onUncaughtException = error => triggerUncaughtException(error);
+
+  const onUnhandledRejection = (value, promise) => triggerUnhandledRejection(value, promise);
+
+  const onRejectionHandled = promise => recoverExceptionMatching(exception => exception.promise === promise);
+
+  process.on("unhandledRejection", onUnhandledRejection);
+  process.on("rejectionHandled", onRejectionHandled);
+  process.on("uncaughtException", onUncaughtException);
+  return () => {
+    process.removeListener("unhandledRejection", onUnhandledRejection);
+    process.removeListener("rejectionHandled", onRejectionHandled);
+    process.removeListener("uncaughtException", onRejectionHandled);
+  };
+};
+
+const triggerUncaughtException = error => crash({
+  type: "uncaughtException",
+  value: error
+});
+
+const triggerUnhandledRejection = (value, promise) => crash({
+  type: "unhandledRejection",
+  value,
+  promise
+});
+
+let isCrashing = false;
+let crashReason;
+let resolveRecovering;
+
+const crash = async reason => {
+  if (isCrashing) {
+    console.log(`cannot recover due to ${crashReason.type} during recover`);
+    console.error(crashReason.value);
+    resolveRecovering(false);
+    return;
+  }
+
+  console.log(`process starts crashing due to ${crashReason.type}`);
+  console.log(`trying to recover`);
+  isCrashing = true;
+  crashReason = reason;
+  const externalRecoverPromise = new Promise(resolve => {
+    resolveRecovering = resolve;
+  });
+  const callbackRecoverPromise = firstOperationMatching$1({
+    array: recoverCallbackArray,
+    start: recoverCallback => recoverCallback(reason),
+    predicate: recovered => typeof recovered === "boolean"
+  });
+  const recoverPromise = Promise.race([externalRecoverPromise, callbackRecoverPromise]);
+
+  try {
+    const recovered = await recoverPromise;
+    if (recovered) return;
+  } catch (error) {
+    console.error(`cannot recover due to internal recover error`);
+    console.error(error);
+  }
+
+  crashReason = undefined; // uninstall() prevent catching of the next throw
+  // else the following would create an infinite loop
+  // process.on('uncaughtException', function() {
+  //     setTimeout(function() {
+  //         throw 'yo';
+  //     });
+  // });
+
+  uninstall$1();
+  throw reason.value; // this mess up the stack trace :'(
+};
+
+const recoverExceptionMatching = predicate => {
+  if (isCrashing && predicate(crashReason)) {
+    resolveRecovering(true);
+  }
+};
+
+const unadvisedCrashSignal = {
+  addCallback: addCallback$6
+};
+
+const createCancellationTokenForProcess = () => {
+  const teardownCancelSource = createCancellationSource();
+  teardownSignal.addCallback(reason => teardownCancelSource.cancel(`process ${reason}`));
+  return teardownCancelSource.token;
+};
+
+const memoize = compute => {
+  let memoized = false;
+  let memoizedValue;
+
+  const fnWithMemoization = (...args) => {
+    if (memoized) {
+      return memoizedValue;
+    } // if compute is recursive wait for it to be fully done before storing the value
+    // so set memoized boolean after the call
+
+
+    memoizedValue = compute(...args);
+    memoized = true;
+    return memoizedValue;
+  };
+
+  fnWithMemoization.forget = () => {
+    const value = memoizedValue;
+    memoized = false;
+    memoizedValue = undefined;
+    return value;
+  };
+
+  return fnWithMemoization;
 };
 
 const readFilePromisified = util.promisify(fs.readFile);
@@ -4169,28 +4646,6 @@ const loggerToLevels = logger => {
   };
 };
 
-const wrapAsyncFunction = (asyncFunction, {
-  updateProcessExitCode = true
-} = {}) => {
-  return asyncFunction().catch(error => {
-    if (isCancelError(error)) {
-      // it means consume of the function will resolve with a cancelError
-      // but when you cancel it means you're not interested in the result anymore
-      // thanks to this it avoid unhandledRejection
-      return error;
-    } // this is required to ensure unhandledRejection will still
-    // set process.exitCode to 1 marking the process execution as errored
-    // preventing further command to run
-
-
-    if (updateProcessExitCode) {
-      process.exitCode = 1;
-    }
-
-    throw error;
-  });
-};
-
 const assertProjectDirectoryUrl = ({
   projectDirectoryUrl
 }) => {
@@ -4253,466 +4708,8 @@ const composeTwoScopes = (leftScopes = {}, rightScopes = {}) => {
   return scopes;
 };
 
-const assertImportMap$1 = value => {
-  if (value === null) {
-    throw new TypeError(`an importMap must be an object, got null`);
-  }
-
-  const type = typeof value;
-
-  if (type !== "object") {
-    throw new TypeError(`an importMap must be an object, received ${value}`);
-  }
-
-  if (Array.isArray(value)) {
-    throw new TypeError(`an importMap must be an object, received array ${value}`);
-  }
-};
-
-const sortImportMap = importMap => {
-  assertImportMap$1(importMap);
-  const {
-    imports,
-    scopes
-  } = importMap;
-  return {
-    imports: imports ? sortImports$1(imports) : undefined,
-    scopes: scopes ? sortScopes$1(scopes) : undefined
-  };
-};
-const sortImports$1 = imports => {
-  const importsSorted = {};
-  Object.keys(imports).sort(compareLengthOrLocaleCompare$1).forEach(name => {
-    importsSorted[name] = imports[name];
-  });
-  return importsSorted;
-};
-const sortScopes$1 = scopes => {
-  const scopesSorted = {};
-  Object.keys(scopes).sort(compareLengthOrLocaleCompare$1).forEach(scopeName => {
-    scopesSorted[scopeName] = sortImports$1(scopes[scopeName]);
-  });
-  return scopesSorted;
-};
-
-const compareLengthOrLocaleCompare$1 = (a, b) => {
-  return b.length - a.length || a.localeCompare(b);
-};
-
-const ensureUrlTrailingSlash$1 = url => {
-  return url.endsWith("/") ? url : `${url}/`;
-};
-
-const isFileSystemPath$1 = value => {
-  if (typeof value !== "string") {
-    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
-  }
-
-  if (value[0] === "/") return true;
-  return startsWithWindowsDriveLetter$1(value);
-};
-
-const startsWithWindowsDriveLetter$1 = string => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-  return true;
-};
-
-const fileSystemPathToUrl$1 = value => {
-  if (!isFileSystemPath$1(value)) {
-    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
-  }
-
-  return String(url$1.pathToFileURL(value));
-};
-
-const assertAndNormalizeDirectoryUrl$1 = value => {
-  let urlString;
-
-  if (value instanceof URL) {
-    urlString = value.href;
-  } else if (typeof value === "string") {
-    if (isFileSystemPath$1(value)) {
-      urlString = fileSystemPathToUrl$1(value);
-    } else {
-      try {
-        urlString = String(new URL(value));
-      } catch (e) {
-        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
-      }
-    }
-  } else {
-    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
-  }
-
-  if (!urlString.startsWith("file://")) {
-    throw new Error(`directoryUrl must starts with file://, received ${value}`);
-  }
-
-  return ensureUrlTrailingSlash$1(urlString);
-};
-
-const assertAndNormalizeFileUrl$1 = (value, baseUrl) => {
-  let urlString;
-
-  if (value instanceof URL) {
-    urlString = value.href;
-  } else if (typeof value === "string") {
-    if (isFileSystemPath$1(value)) {
-      urlString = fileSystemPathToUrl$1(value);
-    } else {
-      try {
-        urlString = String(new URL(value, baseUrl));
-      } catch (e) {
-        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
-      }
-    }
-  } else {
-    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
-  }
-
-  if (!urlString.startsWith("file://")) {
-    throw new Error(`fileUrl must starts with file://, received ${value}`);
-  }
-
-  return urlString;
-};
-
-const urlToFileSystemPath$1 = fileUrl => {
-  if (fileUrl[fileUrl.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    fileUrl = fileUrl.slice(0, -1);
-  }
-
-  const fileSystemPath = url$1.fileURLToPath(fileUrl);
-  return fileSystemPath;
-};
-
-// https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
-// https://nodejs.org/api/fs.html#fs_file_modes
-// https://github.com/TooTallNate/stat-mode
-// cannot get from fs.constants because they are not available on windows
-const S_IRUSR$1 = 256;
-/* 0000400 read permission, owner */
-
-const S_IWUSR$1 = 128;
-/* 0000200 write permission, owner */
-
-const S_IXUSR$1 = 64;
-/* 0000100 execute/search permission, owner */
-
-const S_IRGRP$1 = 32;
-/* 0000040 read permission, group */
-
-const S_IWGRP$1 = 16;
-/* 0000020 write permission, group */
-
-const S_IXGRP$1 = 8;
-/* 0000010 execute/search permission, group */
-
-const S_IROTH$1 = 4;
-/* 0000004 read permission, others */
-
-const S_IWOTH$1 = 2;
-/* 0000002 write permission, others */
-
-const S_IXOTH$1 = 1;
-const permissionsToBinaryFlags$1 = ({
-  owner,
-  group,
-  others
-}) => {
-  let binaryFlags = 0;
-  if (owner.read) binaryFlags |= S_IRUSR$1;
-  if (owner.write) binaryFlags |= S_IWUSR$1;
-  if (owner.execute) binaryFlags |= S_IXUSR$1;
-  if (group.read) binaryFlags |= S_IRGRP$1;
-  if (group.write) binaryFlags |= S_IWGRP$1;
-  if (group.execute) binaryFlags |= S_IXGRP$1;
-  if (others.read) binaryFlags |= S_IROTH$1;
-  if (others.write) binaryFlags |= S_IWOTH$1;
-  if (others.execute) binaryFlags |= S_IXOTH$1;
-  return binaryFlags;
-};
-
-const writeFileSystemNodePermissions$1 = async (source, permissions) => {
-  const sourceUrl = assertAndNormalizeFileUrl$1(source);
-  const sourcePath = urlToFileSystemPath$1(sourceUrl);
-  let binaryFlags;
-
-  if (typeof permissions === "object") {
-    permissions = {
-      owner: {
-        read: getPermissionOrComputeDefault$1("read", "owner", permissions),
-        write: getPermissionOrComputeDefault$1("write", "owner", permissions),
-        execute: getPermissionOrComputeDefault$1("execute", "owner", permissions)
-      },
-      group: {
-        read: getPermissionOrComputeDefault$1("read", "group", permissions),
-        write: getPermissionOrComputeDefault$1("write", "group", permissions),
-        execute: getPermissionOrComputeDefault$1("execute", "group", permissions)
-      },
-      others: {
-        read: getPermissionOrComputeDefault$1("read", "others", permissions),
-        write: getPermissionOrComputeDefault$1("write", "others", permissions),
-        execute: getPermissionOrComputeDefault$1("execute", "others", permissions)
-      }
-    };
-    binaryFlags = permissionsToBinaryFlags$1(permissions);
-  } else {
-    binaryFlags = permissions;
-  }
-
-  return chmodNaive$1(sourcePath, binaryFlags);
-};
-
-const chmodNaive$1 = (fileSystemPath, binaryFlags) => {
-  return new Promise((resolve, reject) => {
-    fs.chmod(fileSystemPath, binaryFlags, error => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
-};
-
-const actionLevels$1 = {
-  read: 0,
-  write: 1,
-  execute: 2
-};
-const subjectLevels$1 = {
-  others: 0,
-  group: 1,
-  owner: 2
-};
-
-const getPermissionOrComputeDefault$1 = (action, subject, permissions) => {
-  if (subject in permissions) {
-    const subjectPermissions = permissions[subject];
-
-    if (action in subjectPermissions) {
-      return subjectPermissions[action];
-    }
-
-    const actionLevel = actionLevels$1[action];
-    const actionFallback = Object.keys(actionLevels$1).find(actionFallbackCandidate => actionLevels$1[actionFallbackCandidate] > actionLevel && actionFallbackCandidate in subjectPermissions);
-
-    if (actionFallback) {
-      return subjectPermissions[actionFallback];
-    }
-  }
-
-  const subjectLevel = subjectLevels$1[subject]; // do we have a subject with a stronger level (group or owner)
-  // where we could read the action permission ?
-
-  const subjectFallback = Object.keys(subjectLevels$1).find(subjectFallbackCandidate => subjectLevels$1[subjectFallbackCandidate] > subjectLevel && subjectFallbackCandidate in permissions);
-
-  if (subjectFallback) {
-    const subjectPermissions = permissions[subjectFallback];
-    return action in subjectPermissions ? subjectPermissions[action] : getPermissionOrComputeDefault$1(action, subjectFallback, permissions);
-  }
-
-  return false;
-};
-
-const isWindows$4 = process.platform === "win32";
-const readFileSystemNodeStat$1 = async (source, {
-  nullIfNotFound = false,
-  followLink = true
-} = {}) => {
-  if (source.endsWith("/")) source = source.slice(0, -1);
-  const sourceUrl = assertAndNormalizeFileUrl$1(source);
-  const sourcePath = urlToFileSystemPath$1(sourceUrl);
-  const handleNotFoundOption = nullIfNotFound ? {
-    handleNotFoundError: () => null
-  } : {};
-  return readStat$1(sourcePath, {
-    followLink,
-    ...handleNotFoundOption,
-    ...(isWindows$4 ? {
-      // Windows can EPERM on stat
-      handlePermissionDeniedError: async error => {
-        // unfortunately it means we mutate the permissions
-        // without being able to restore them to the previous value
-        // (because reading current permission would also throw)
-        try {
-          await writeFileSystemNodePermissions$1(sourceUrl, 0o666);
-          const stats = await readStat$1(sourcePath, {
-            followLink,
-            ...handleNotFoundOption,
-            // could not fix the permission error, give up and throw original error
-            handlePermissionDeniedError: () => {
-              throw error;
-            }
-          });
-          return stats;
-        } catch (e) {
-          // failed to write permission or readState, throw original error as well
-          throw error;
-        }
-      }
-    } : {})
-  });
-};
-
-const readStat$1 = (sourcePath, {
-  followLink,
-  handleNotFoundError = null,
-  handlePermissionDeniedError = null
-} = {}) => {
-  const nodeMethod = followLink ? fs.stat : fs.lstat;
-  return new Promise((resolve, reject) => {
-    nodeMethod(sourcePath, (error, statsObject) => {
-      if (error) {
-        if (handlePermissionDeniedError && (error.code === "EPERM" || error.code === "EACCES")) {
-          resolve(handlePermissionDeniedError(error));
-        } else if (handleNotFoundError && error.code === "ENOENT") {
-          resolve(handleNotFoundError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(statsObject);
-      }
-    });
-  });
-};
-
-const getCommonPathname$1 = (pathname, otherPathname) => {
-  const firstDifferentCharacterIndex = findFirstDifferentCharacterIndex$1(pathname, otherPathname); // pathname and otherpathname are exactly the same
-
-  if (firstDifferentCharacterIndex === -1) {
-    return pathname;
-  }
-
-  const commonString = pathname.slice(0, firstDifferentCharacterIndex + 1); // the first different char is at firstDifferentCharacterIndex
-
-  if (pathname.charAt(firstDifferentCharacterIndex) === "/") {
-    return commonString;
-  }
-
-  if (otherPathname.charAt(firstDifferentCharacterIndex) === "/") {
-    return commonString;
-  }
-
-  const firstDifferentSlashIndex = commonString.lastIndexOf("/");
-  return pathname.slice(0, firstDifferentSlashIndex + 1);
-};
-
-const findFirstDifferentCharacterIndex$1 = (string, otherString) => {
-  const maxCommonLength = Math.min(string.length, otherString.length);
-  let i = 0;
-
-  while (i < maxCommonLength) {
-    const char = string.charAt(i);
-    const otherChar = otherString.charAt(i);
-
-    if (char !== otherChar) {
-      return i;
-    }
-
-    i++;
-  }
-
-  if (string.length === otherString.length) {
-    return -1;
-  } // they differ at maxCommonLength
-
-
-  return maxCommonLength;
-};
-
-const pathnameToDirectoryPathname$2 = pathname => {
-  if (pathname.endsWith("/")) {
-    return pathname;
-  }
-
-  const slashLastIndex = pathname.lastIndexOf("/");
-
-  if (slashLastIndex === -1) {
-    return "";
-  }
-
-  return pathname.slice(0, slashLastIndex + 1);
-};
-
-const urlToRelativeUrl$1 = (urlArg, baseUrlArg) => {
-  const url = new URL(urlArg);
-  const baseUrl = new URL(baseUrlArg);
-
-  if (url.protocol !== baseUrl.protocol) {
-    return urlArg;
-  }
-
-  if (url.username !== baseUrl.username || url.password !== baseUrl.password) {
-    return urlArg.slice(url.protocol.length);
-  }
-
-  if (url.host !== baseUrl.host) {
-    return urlArg.slice(url.protocol.length);
-  }
-
-  const {
-    pathname,
-    hash,
-    search
-  } = url;
-
-  if (pathname === "/") {
-    return baseUrl.pathname.slice(1);
-  }
-
-  const {
-    pathname: basePathname
-  } = baseUrl;
-  const commonPathname = getCommonPathname$1(pathname, basePathname);
-
-  if (!commonPathname) {
-    return urlArg;
-  }
-
-  const specificPathname = pathname.slice(commonPathname.length);
-  const baseSpecificPathname = basePathname.slice(commonPathname.length);
-  const baseSpecificDirectoryPathname = pathnameToDirectoryPathname$2(baseSpecificPathname);
-  const relativeDirectoriesNotation = baseSpecificDirectoryPathname.replace(/.*?\//g, "../");
-  const relativePathname = `${relativeDirectoriesNotation}${specificPathname}`;
-  return `${relativePathname}${search}${hash}`;
-};
-
-const resolveUrl$2 = (specifier, baseUrl) => {
-  if (typeof baseUrl === "undefined") {
-    throw new TypeError(`baseUrl missing to resolve ${specifier}`);
-  }
-
-  return String(new URL(specifier, baseUrl));
-};
-
-const isWindows$5 = process.platform === "win32";
-const baseUrlFallback$1 = fileSystemPathToUrl$1(process.cwd());
-
-const isWindows$6 = process.platform === "win32";
-
-const readFilePromisified$1 = util.promisify(fs.readFile);
-const readFile$1 = async value => {
-  const fileUrl = assertAndNormalizeFileUrl$1(value);
-  const filePath = urlToFileSystemPath$1(fileUrl);
-  const buffer = await readFilePromisified$1(filePath);
-  return buffer.toString();
-};
-
-const isWindows$7 = process.platform === "win32";
-
-/* eslint-disable import/max-dependencies */
-const isLinux$1 = process.platform === "linux"; // linux does not support recursive option
-
 const readPackageFile = async (packageFileUrl, manualOverrides) => {
-  const packageFileString = await readFile$1(packageFileUrl);
+  const packageFileString = await readFile(packageFileUrl);
   const packageJsonObject = JSON.parse(packageFileString);
   const {
     name,
@@ -4752,44 +4749,6 @@ const composeObject = (leftObject, rightObject) => {
   return composedObject;
 };
 
-const firstOperationMatching = ({
-  array,
-  start,
-  predicate
-}) => {
-  if (typeof array !== "object") {
-    throw new TypeError(`array must be an object, got ${array}`);
-  }
-
-  if (typeof start !== "function") {
-    throw new TypeError(`start must be a function, got ${start}`);
-  }
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-
-  return new Promise((resolve, reject) => {
-    const visit = index => {
-      if (index >= array.length) {
-        return resolve();
-      }
-
-      const input = array[index];
-      const returnValue = start(input);
-      return Promise.resolve(returnValue).then(output => {
-        if (predicate(output)) {
-          return resolve(output);
-        }
-
-        return visit(index + 1);
-      }, reject);
-    };
-
-    visit(0);
-  });
-};
-
 const resolveNodeModule = async ({
   logger,
   rootProjectDirectoryUrl,
@@ -4800,7 +4759,7 @@ const resolveNodeModule = async ({
   dependencyVersionPattern,
   dependencyType
 }) => {
-  const packageDirectoryUrl = resolveUrl$2("./", packageFileUrl);
+  const packageDirectoryUrl = resolveUrl$1("./", packageFileUrl);
   const nodeModuleCandidateArray = [...computeNodeModuleCandidateArray(packageDirectoryUrl, rootProjectDirectoryUrl), `node_modules/`];
   const result = await firstOperationMatching({
     array: nodeModuleCandidateArray,
@@ -4824,7 +4783,7 @@ error while parsing dependency package.json.
 --- parsing error message ---
 ${e.message}
 --- package.json path ---
-${urlToFileSystemPath$1(packageFileUrl)}
+${urlToFileSystemPath(packageFileUrl)}
 `);
           return {};
         }
@@ -4845,7 +4804,7 @@ ${dependencyName}@${dependencyVersionPattern}
 --- required by ---
 ${packageJsonObject.name}@${packageJsonObject.version}
 --- package.json path ---
-${urlToFileSystemPath$1(packageFileUrl)}
+${urlToFileSystemPath(packageFileUrl)}
     `);
   }
 
@@ -4857,7 +4816,7 @@ const computeNodeModuleCandidateArray = (packageDirectoryUrl, rootProjectDirecto
     return [];
   }
 
-  const packageDirectoryRelativeUrl = urlToRelativeUrl$1(packageDirectoryUrl, rootProjectDirectoryUrl);
+  const packageDirectoryRelativeUrl = urlToRelativeUrl(packageDirectoryUrl, rootProjectDirectoryUrl);
   const candidateArray = [];
   const relativeNodeModuleDirectoryArray = `./${packageDirectoryRelativeUrl}`.split("/node_modules/"); // remove the first empty string
 
@@ -4924,10 +4883,10 @@ const resolveMainFile = async ({
     return null;
   }
 
-  const packageFilePath = urlToFileSystemPath$1(packageFileUrl);
-  const packageDirectoryUrl = resolveUrl$2("./", packageFileUrl);
+  const packageFilePath = urlToFileSystemPath(packageFileUrl);
+  const packageDirectoryUrl = resolveUrl$1("./", packageFileUrl);
   const mainFileRelativeUrl = packageMainFieldValue.endsWith("/") ? `${packageMainFieldValue}index` : packageMainFieldValue;
-  const mainFileUrlFirstCandidate = resolveUrl$2(mainFileRelativeUrl, packageFileUrl);
+  const mainFileUrlFirstCandidate = resolveUrl$1(mainFileRelativeUrl, packageFileUrl);
 
   if (!mainFileUrlFirstCandidate.startsWith(packageDirectoryUrl)) {
     logger.warn(`
@@ -4950,7 +4909,7 @@ ${packageFilePath}
     // otherwise the package.json is missing the main field
     // it certainly means it's not important
     if (packageMainFieldName !== "default") {
-      const extensionTried = path.extname(urlToFileSystemPath$1(mainFileUrlFirstCandidate)) === "" ? `--- extensions tried ---
+      const extensionTried = path.extname(urlToFileSystemPath(mainFileUrlFirstCandidate)) === "" ? `--- extensions tried ---
 ${extensionCandidateArray.join(`,`)}
 ` : `
 `;
@@ -4959,7 +4918,7 @@ cannot find file for package.json ${packageMainFieldName} field
 --- ${packageMainFieldName} ---
 ${packageMainFieldValue}
 --- file path ---
-${urlToFileSystemPath$1(mainFileUrlFirstCandidate)}
+${urlToFileSystemPath(mainFileUrlFirstCandidate)}
 --- package.json path ---
 ${packageFilePath}
 ${extensionTried}`);
@@ -4972,7 +4931,7 @@ ${extensionTried}`);
 };
 
 const findMainFileUrlOrNull = async mainFileUrl => {
-  const mainStats = await readFileSystemNodeStat$1(mainFileUrl, {
+  const mainStats = await readFileSystemNodeStat(mainFileUrl, {
     nullIfNotFound: true
   });
 
@@ -4981,7 +4940,7 @@ const findMainFileUrlOrNull = async mainFileUrl => {
   }
 
   if (mainStats && mainStats.isDirectory()) {
-    const indexFileUrl = resolveUrl$2("./index", mainFileUrl.endsWith("/") ? mainFileUrl : `${mainFileUrl}/`);
+    const indexFileUrl = resolveUrl$1("./index", mainFileUrl.endsWith("/") ? mainFileUrl : `${mainFileUrl}/`);
     const extensionLeadingToAFile = await findExtension(indexFileUrl);
 
     if (extensionLeadingToAFile === null) {
@@ -4991,7 +4950,7 @@ const findMainFileUrlOrNull = async mainFileUrl => {
     return `${indexFileUrl}.${extensionLeadingToAFile}`;
   }
 
-  const mainFilePath = urlToFileSystemPath$1(mainFileUrl);
+  const mainFilePath = urlToFileSystemPath(mainFileUrl);
   const extension = path.extname(mainFilePath);
 
   if (extension === "") {
@@ -5008,14 +4967,14 @@ const findMainFileUrlOrNull = async mainFileUrl => {
 };
 
 const findExtension = async fileUrl => {
-  const filePath = urlToFileSystemPath$1(fileUrl);
+  const filePath = urlToFileSystemPath(fileUrl);
   const fileDirname = path.dirname(filePath);
   const fileBasename = path.basename(filePath);
   const extensionLeadingToFile = await firstOperationMatching({
     array: extensionCandidateArray,
     start: async extensionCandidate => {
       const filePathCandidate = `${fileDirname}/${fileBasename}.${extensionCandidate}`;
-      const stats = await readFileSystemNodeStat$1(filePathCandidate, {
+      const stats = await readFileSystemNodeStat(filePathCandidate, {
         nullIfNotFound: true
       });
       return stats && stats.isFile() ? extensionCandidate : null;
@@ -5048,7 +5007,7 @@ const visitPackageImports = ({
   packageJsonObject
 }) => {
   const importsForPackageImports = {};
-  const packageFilePath = urlToFileSystemPath$1(packageFileUrl);
+  const packageFilePath = urlToFileSystemPath(packageFileUrl);
   const {
     imports: packageImports
   } = packageJsonObject;
@@ -5132,7 +5091,7 @@ const visitPackageExports = ({
   favoredExports
 }) => {
   const importsForPackageExports = {};
-  const packageFilePath = urlToFileSystemPath$1(packageFileUrl);
+  const packageFilePath = urlToFileSystemPath(packageFileUrl);
   const {
     exports: packageExports
   } = packageJsonObject; // false is allowed as laternative to exports: {}
@@ -5273,16 +5232,16 @@ const generateImportMapForPackage = async ({
   // this is not yet standard, should be false by default
   selfImport = false
 }) => {
-  projectDirectoryUrl = assertAndNormalizeDirectoryUrl$1(projectDirectoryUrl);
+  projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl);
 
   if (typeof rootProjectDirectoryUrl === "undefined") {
     rootProjectDirectoryUrl = projectDirectoryUrl;
   } else {
-    rootProjectDirectoryUrl = assertAndNormalizeDirectoryUrl$1(rootProjectDirectoryUrl);
+    rootProjectDirectoryUrl = assertAndNormalizeDirectoryUrl(rootProjectDirectoryUrl);
   }
 
-  const projectPackageFileUrl = resolveUrl$2("./package.json", projectDirectoryUrl);
-  const rootProjectPackageFileUrl = resolveUrl$2("./package.json", rootProjectDirectoryUrl);
+  const projectPackageFileUrl = resolveUrl$1("./package.json", projectDirectoryUrl);
+  const rootProjectPackageFileUrl = resolveUrl$1("./package.json", rootProjectDirectoryUrl);
   const imports = {};
   const scopes = {};
   const seen = {};
@@ -5511,7 +5470,7 @@ const generateImportMapForPackage = async ({
     // or a main that does not lead to an actual file
 
     if (mainFileUrl === null) return;
-    const mainFileRelativeUrl = urlToRelativeUrl$1(mainFileUrl, rootProjectDirectoryUrl);
+    const mainFileRelativeUrl = urlToRelativeUrl(mainFileUrl, rootProjectDirectoryUrl);
     const from = packageName;
     const to = `./${mainFileRelativeUrl}`;
 
@@ -5634,11 +5593,11 @@ const generateImportMapForPackage = async ({
   }) => {
     const importerIsRoot = importerPackageFileUrl === rootProjectPackageFileUrl;
     const importerIsProject = importerPackageFileUrl === projectPackageFileUrl;
-    const importerPackageDirectoryUrl = resolveUrl$2("./", importerPackageFileUrl);
-    const importerRelativeUrl = importerIsRoot ? `${path.basename(rootProjectDirectoryUrl)}/` : urlToRelativeUrl$1(importerPackageDirectoryUrl, rootProjectDirectoryUrl);
+    const importerPackageDirectoryUrl = resolveUrl$1("./", importerPackageFileUrl);
+    const importerRelativeUrl = importerIsRoot ? `${path.basename(rootProjectDirectoryUrl)}/` : urlToRelativeUrl(importerPackageDirectoryUrl, rootProjectDirectoryUrl);
     const packageIsRoot = packageFileUrl === rootProjectPackageFileUrl;
     const packageIsProject = packageFileUrl === projectPackageFileUrl;
-    const packageDirectoryUrl = resolveUrl$2("./", packageFileUrl);
+    const packageDirectoryUrl = resolveUrl$1("./", packageFileUrl);
     let packageDirectoryUrlExpected;
 
     if (packageIsProject && !packageIsRoot) {
@@ -5647,7 +5606,7 @@ const generateImportMapForPackage = async ({
       packageDirectoryUrlExpected = `${importerPackageDirectoryUrl}node_modules/${packageName}/`;
     }
 
-    const packageDirectoryRelativeUrl = urlToRelativeUrl$1(packageDirectoryUrl, rootProjectDirectoryUrl);
+    const packageDirectoryRelativeUrl = urlToRelativeUrl(packageDirectoryUrl, rootProjectDirectoryUrl);
     return {
       importerIsRoot,
       importerIsProject,
@@ -5913,86 +5872,6 @@ const isErrorWithCode = (error, code) => {
   return typeof error === "object" && error.code === code;
 };
 
-const LOG_LEVEL_OFF$1 = "off";
-const LOG_LEVEL_DEBUG$1 = "debug";
-const LOG_LEVEL_INFO$1 = "info";
-const LOG_LEVEL_WARN$1 = "warn";
-const LOG_LEVEL_ERROR$1 = "error";
-
-const createLogger$1 = ({
-  logLevel = LOG_LEVEL_INFO$1
-} = {}) => {
-  if (logLevel === LOG_LEVEL_DEBUG$1) {
-    return {
-      debug: debug$1,
-      info: info$1,
-      warn: warn$1,
-      error: error$1
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_INFO$1) {
-    return {
-      debug: debugDisabled$1,
-      info: info$1,
-      warn: warn$1,
-      error: error$1
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_WARN$1) {
-    return {
-      debug: debugDisabled$1,
-      info: infoDisabled$1,
-      warn: warn$1,
-      error: error$1
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_ERROR$1) {
-    return {
-      debug: debugDisabled$1,
-      info: infoDisabled$1,
-      warn: warnDisabled$1,
-      error: error$1
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_OFF$1) {
-    return {
-      debug: debugDisabled$1,
-      info: infoDisabled$1,
-      warn: warnDisabled$1,
-      error: errorDisabled$1
-    };
-  }
-
-  throw new Error(`unexpected logLevel.
---- logLevel ---
-${logLevel}
---- allowed log levels ---
-${LOG_LEVEL_OFF$1}
-${LOG_LEVEL_ERROR$1}
-${LOG_LEVEL_WARN$1}
-${LOG_LEVEL_INFO$1}
-${LOG_LEVEL_DEBUG$1}`);
-};
-const debug$1 = console.debug;
-
-const debugDisabled$1 = () => {};
-
-const info$1 = console.info;
-
-const infoDisabled$1 = () => {};
-
-const warn$1 = console.warn;
-
-const warnDisabled$1 = () => {};
-
-const error$1 = console.error;
-
-const errorDisabled$1 = () => {};
-
 if ("observable" in Symbol === false) {
   Symbol.observable = Symbol.for("observable");
 }
@@ -6039,7 +5918,7 @@ const createSSERoom = ({
   maxConnectionAllowed = 100 // max 100 users accepted
 
 } = {}) => {
-  const logger = createLogger$1({
+  const logger = createLogger({
     logLevel
   });
   const connections = new Set(); // what about history that keeps growing ?
@@ -6222,527 +6101,6 @@ const createEventHistory = ({
   };
 };
 
-const createCancellationToken$1 = () => {
-  const register = callback => {
-    if (typeof callback !== "function") {
-      throw new Error(`callback must be a function, got ${callback}`);
-    }
-
-    return {
-      callback,
-      unregister: () => {}
-    };
-  };
-
-  const throwIfRequested = () => undefined;
-
-  return {
-    register,
-    cancellationRequested: false,
-    throwIfRequested
-  };
-};
-
-const memoizeOnce$1 = compute => {
-  let locked = false;
-  let lockValue;
-
-  const memoized = (...args) => {
-    if (locked) return lockValue; // if compute is recursive wait for it to be fully done before storing the lockValue
-    // so set locked later
-
-    lockValue = compute(...args);
-    locked = true;
-    return lockValue;
-  };
-
-  memoized.deleteCache = () => {
-    const value = lockValue;
-    locked = false;
-    lockValue = undefined;
-    return value;
-  };
-
-  return memoized;
-};
-
-const createOperation$1 = ({
-  cancellationToken = createCancellationToken$1(),
-  start,
-  ...rest
-}) => {
-  const unknownArgumentNames = Object.keys(rest);
-
-  if (unknownArgumentNames.length) {
-    throw new Error(`createOperation called with unknown argument names.
---- unknown argument names ---
-${unknownArgumentNames}
---- possible argument names ---
-cancellationToken
-start`);
-  }
-
-  cancellationToken.throwIfRequested();
-  const promise = new Promise(resolve => {
-    resolve(start());
-  });
-  const cancelPromise = new Promise((resolve, reject) => {
-    const cancelRegistration = cancellationToken.register(cancelError => {
-      cancelRegistration.unregister();
-      reject(cancelError);
-    });
-    promise.then(cancelRegistration.unregister, () => {});
-  });
-  const operationPromise = Promise.race([promise, cancelPromise]);
-  return operationPromise;
-};
-
-const createStoppableOperation$1 = ({
-  cancellationToken = createCancellationToken$1(),
-  start,
-  stop,
-  ...rest
-}) => {
-  if (typeof stop !== "function") {
-    throw new TypeError(`stop must be a function. got ${stop}`);
-  }
-
-  const unknownArgumentNames = Object.keys(rest);
-
-  if (unknownArgumentNames.length) {
-    throw new Error(`createStoppableOperation called with unknown argument names.
---- unknown argument names ---
-${unknownArgumentNames}
---- possible argument names ---
-cancellationToken
-start
-stop`);
-  }
-
-  cancellationToken.throwIfRequested();
-  const promise = new Promise(resolve => {
-    resolve(start());
-  });
-  const cancelPromise = new Promise((resolve, reject) => {
-    const cancelRegistration = cancellationToken.register(cancelError => {
-      cancelRegistration.unregister();
-      reject(cancelError);
-    });
-    promise.then(cancelRegistration.unregister, () => {});
-  });
-  const operationPromise = Promise.race([promise, cancelPromise]);
-  const stopInternal = memoizeOnce$1(async reason => {
-    const value = await promise;
-    return stop(value, reason);
-  });
-  cancellationToken.register(stopInternal);
-  operationPromise.stop = stopInternal;
-  return operationPromise;
-};
-
-const firstOperationMatching$1 = ({
-  array,
-  start,
-  predicate
-}) => {
-  if (typeof array !== "object") {
-    throw new TypeError(`array must be an object, got ${array}`);
-  }
-
-  if (typeof start !== "function") {
-    throw new TypeError(`start must be a function, got ${start}`);
-  }
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-
-  return new Promise((resolve, reject) => {
-    const visit = index => {
-      if (index >= array.length) {
-        return resolve();
-      }
-
-      const input = array[index];
-      const returnValue = start(input);
-      return Promise.resolve(returnValue).then(output => {
-        if (predicate(output)) {
-          return resolve(output);
-        }
-
-        return visit(index + 1);
-      }, reject);
-    };
-
-    visit(0);
-  });
-};
-
-const ensureUrlTrailingSlash$2 = url => {
-  return url.endsWith("/") ? url : `${url}/`;
-};
-
-const isFileSystemPath$2 = value => {
-  if (typeof value !== "string") {
-    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
-  }
-
-  if (value[0] === "/") return true;
-  return startsWithWindowsDriveLetter$2(value);
-};
-
-const startsWithWindowsDriveLetter$2 = string => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-  return true;
-};
-
-const fileSystemPathToUrl$2 = value => {
-  if (!isFileSystemPath$2(value)) {
-    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
-  }
-
-  return String(url$1.pathToFileURL(value));
-};
-
-const assertAndNormalizeDirectoryUrl$2 = value => {
-  let urlString;
-
-  if (value instanceof URL) {
-    urlString = value.href;
-  } else if (typeof value === "string") {
-    if (isFileSystemPath$2(value)) {
-      urlString = fileSystemPathToUrl$2(value);
-    } else {
-      try {
-        urlString = String(new URL(value));
-      } catch (e) {
-        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
-      }
-    }
-  } else {
-    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
-  }
-
-  if (!urlString.startsWith("file://")) {
-    throw new Error(`directoryUrl must starts with file://, received ${value}`);
-  }
-
-  return ensureUrlTrailingSlash$2(urlString);
-};
-
-const assertAndNormalizeFileUrl$2 = (value, baseUrl) => {
-  let urlString;
-
-  if (value instanceof URL) {
-    urlString = value.href;
-  } else if (typeof value === "string") {
-    if (isFileSystemPath$2(value)) {
-      urlString = fileSystemPathToUrl$2(value);
-    } else {
-      try {
-        urlString = String(new URL(value, baseUrl));
-      } catch (e) {
-        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
-      }
-    }
-  } else {
-    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
-  }
-
-  if (!urlString.startsWith("file://")) {
-    throw new Error(`fileUrl must starts with file://, received ${value}`);
-  }
-
-  return urlString;
-};
-
-const urlToFileSystemPath$2 = fileUrl => {
-  if (fileUrl[fileUrl.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    fileUrl = fileUrl.slice(0, -1);
-  }
-
-  const fileSystemPath = url$1.fileURLToPath(fileUrl);
-  return fileSystemPath;
-};
-
-// https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
-// https://nodejs.org/api/fs.html#fs_file_modes
-// https://github.com/TooTallNate/stat-mode
-// cannot get from fs.constants because they are not available on windows
-const S_IRUSR$2 = 256;
-/* 0000400 read permission, owner */
-
-const S_IWUSR$2 = 128;
-/* 0000200 write permission, owner */
-
-const S_IXUSR$2 = 64;
-/* 0000100 execute/search permission, owner */
-
-const S_IRGRP$2 = 32;
-/* 0000040 read permission, group */
-
-const S_IWGRP$2 = 16;
-/* 0000020 write permission, group */
-
-const S_IXGRP$2 = 8;
-/* 0000010 execute/search permission, group */
-
-const S_IROTH$2 = 4;
-/* 0000004 read permission, others */
-
-const S_IWOTH$2 = 2;
-/* 0000002 write permission, others */
-
-const S_IXOTH$2 = 1;
-const permissionsToBinaryFlags$2 = ({
-  owner,
-  group,
-  others
-}) => {
-  let binaryFlags = 0;
-  if (owner.read) binaryFlags |= S_IRUSR$2;
-  if (owner.write) binaryFlags |= S_IWUSR$2;
-  if (owner.execute) binaryFlags |= S_IXUSR$2;
-  if (group.read) binaryFlags |= S_IRGRP$2;
-  if (group.write) binaryFlags |= S_IWGRP$2;
-  if (group.execute) binaryFlags |= S_IXGRP$2;
-  if (others.read) binaryFlags |= S_IROTH$2;
-  if (others.write) binaryFlags |= S_IWOTH$2;
-  if (others.execute) binaryFlags |= S_IXOTH$2;
-  return binaryFlags;
-};
-
-const writeFileSystemNodePermissions$2 = async (source, permissions) => {
-  const sourceUrl = assertAndNormalizeFileUrl$2(source);
-  const sourcePath = urlToFileSystemPath$2(sourceUrl);
-  let binaryFlags;
-
-  if (typeof permissions === "object") {
-    permissions = {
-      owner: {
-        read: getPermissionOrComputeDefault$2("read", "owner", permissions),
-        write: getPermissionOrComputeDefault$2("write", "owner", permissions),
-        execute: getPermissionOrComputeDefault$2("execute", "owner", permissions)
-      },
-      group: {
-        read: getPermissionOrComputeDefault$2("read", "group", permissions),
-        write: getPermissionOrComputeDefault$2("write", "group", permissions),
-        execute: getPermissionOrComputeDefault$2("execute", "group", permissions)
-      },
-      others: {
-        read: getPermissionOrComputeDefault$2("read", "others", permissions),
-        write: getPermissionOrComputeDefault$2("write", "others", permissions),
-        execute: getPermissionOrComputeDefault$2("execute", "others", permissions)
-      }
-    };
-    binaryFlags = permissionsToBinaryFlags$2(permissions);
-  } else {
-    binaryFlags = permissions;
-  }
-
-  return chmodNaive$2(sourcePath, binaryFlags);
-};
-
-const chmodNaive$2 = (fileSystemPath, binaryFlags) => {
-  return new Promise((resolve, reject) => {
-    fs.chmod(fileSystemPath, binaryFlags, error => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
-};
-
-const actionLevels$2 = {
-  read: 0,
-  write: 1,
-  execute: 2
-};
-const subjectLevels$2 = {
-  others: 0,
-  group: 1,
-  owner: 2
-};
-
-const getPermissionOrComputeDefault$2 = (action, subject, permissions) => {
-  if (subject in permissions) {
-    const subjectPermissions = permissions[subject];
-
-    if (action in subjectPermissions) {
-      return subjectPermissions[action];
-    }
-
-    const actionLevel = actionLevels$2[action];
-    const actionFallback = Object.keys(actionLevels$2).find(actionFallbackCandidate => actionLevels$2[actionFallbackCandidate] > actionLevel && actionFallbackCandidate in subjectPermissions);
-
-    if (actionFallback) {
-      return subjectPermissions[actionFallback];
-    }
-  }
-
-  const subjectLevel = subjectLevels$2[subject]; // do we have a subject with a stronger level (group or owner)
-  // where we could read the action permission ?
-
-  const subjectFallback = Object.keys(subjectLevels$2).find(subjectFallbackCandidate => subjectLevels$2[subjectFallbackCandidate] > subjectLevel && subjectFallbackCandidate in permissions);
-
-  if (subjectFallback) {
-    const subjectPermissions = permissions[subjectFallback];
-    return action in subjectPermissions ? subjectPermissions[action] : getPermissionOrComputeDefault$2(action, subjectFallback, permissions);
-  }
-
-  return false;
-};
-
-const isWindows$8 = process.platform === "win32";
-const readFileSystemNodeStat$2 = async (source, {
-  nullIfNotFound = false,
-  followLink = true
-} = {}) => {
-  if (source.endsWith("/")) source = source.slice(0, -1);
-  const sourceUrl = assertAndNormalizeFileUrl$2(source);
-  const sourcePath = urlToFileSystemPath$2(sourceUrl);
-  const handleNotFoundOption = nullIfNotFound ? {
-    handleNotFoundError: () => null
-  } : {};
-  return readStat$2(sourcePath, {
-    followLink,
-    ...handleNotFoundOption,
-    ...(isWindows$8 ? {
-      // Windows can EPERM on stat
-      handlePermissionDeniedError: async error => {
-        // unfortunately it means we mutate the permissions
-        // without being able to restore them to the previous value
-        // (because reading current permission would also throw)
-        try {
-          await writeFileSystemNodePermissions$2(sourceUrl, 0o666);
-          const stats = await readStat$2(sourcePath, {
-            followLink,
-            ...handleNotFoundOption,
-            // could not fix the permission error, give up and throw original error
-            handlePermissionDeniedError: () => {
-              throw error;
-            }
-          });
-          return stats;
-        } catch (e) {
-          // failed to write permission or readState, throw original error as well
-          throw error;
-        }
-      }
-    } : {})
-  });
-};
-
-const readStat$2 = (sourcePath, {
-  followLink,
-  handleNotFoundError = null,
-  handlePermissionDeniedError = null
-} = {}) => {
-  const nodeMethod = followLink ? fs.stat : fs.lstat;
-  return new Promise((resolve, reject) => {
-    nodeMethod(sourcePath, (error, statsObject) => {
-      if (error) {
-        if (handlePermissionDeniedError && (error.code === "EPERM" || error.code === "EACCES")) {
-          resolve(handlePermissionDeniedError(error));
-        } else if (handleNotFoundError && error.code === "ENOENT") {
-          resolve(handleNotFoundError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(statsObject);
-      }
-    });
-  });
-};
-
-const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
-const bufferToEtag = buffer => {
-  if (!Buffer.isBuffer(buffer)) {
-    throw new TypeError(`buffer expected, got ${buffer}`);
-  }
-
-  if (buffer.length === 0) {
-    return ETAG_FOR_EMPTY_CONTENT;
-  }
-
-  const hash = crypto.createHash("sha1");
-  hash.update(buffer, "utf8");
-  const hashBase64String = hash.digest("base64");
-  const hashBase64StringSubset = hashBase64String.slice(0, 27);
-  const length = buffer.length;
-  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
-};
-
-const readDirectory$1 = async (url, {
-  emfileMaxWait = 1000
-} = {}) => {
-  const directoryUrl = assertAndNormalizeDirectoryUrl$2(url);
-  const directoryPath = urlToFileSystemPath$2(directoryUrl);
-  const startMs = Date.now();
-  let attemptCount = 0;
-
-  const attempt = () => {
-    return readdirNaive$1(directoryPath, {
-      handleTooManyFilesOpenedError: async error => {
-        attemptCount++;
-        const nowMs = Date.now();
-        const timeSpentWaiting = nowMs - startMs;
-
-        if (timeSpentWaiting > emfileMaxWait) {
-          throw error;
-        }
-
-        return new Promise(resolve => {
-          setTimeout(() => {
-            resolve(attempt());
-          }, attemptCount);
-        });
-      }
-    });
-  };
-
-  return attempt();
-};
-
-const readdirNaive$1 = (directoryPath, {
-  handleTooManyFilesOpenedError = null
-} = {}) => {
-  return new Promise((resolve, reject) => {
-    fs.readdir(directoryPath, (error, names) => {
-      if (error) {
-        // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
-        if (handleTooManyFilesOpenedError && (error.code === "EMFILE" || error.code === "ENFILE")) {
-          resolve(handleTooManyFilesOpenedError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(names);
-      }
-    });
-  });
-};
-
-const isWindows$9 = process.platform === "win32";
-const baseUrlFallback$2 = fileSystemPathToUrl$2(process.cwd());
-
-const isWindows$a = process.platform === "win32";
-
-const readFilePromisified$2 = util.promisify(fs.readFile);
-
-const isWindows$b = process.platform === "win32";
-
-/* eslint-disable import/max-dependencies */
-const isLinux$2 = process.platform === "linux"; // linux does not support recursive option
-
 const jsenvContentTypeMap = {
   "application/javascript": {
     extensions: ["js", "cjs", "mjs", "ts", "jsx"]
@@ -6857,10 +6215,10 @@ const urlToContentType = (url, contentTypeMap = jsenvContentTypeMap, contentType
 };
 
 const {
-  readFile: readFile$2
+  readFile: readFile$1
 } = fs.promises;
 const serveFile = async (source, {
-  cancellationToken = createCancellationToken$1(),
+  cancellationToken = createCancellationToken(),
   method = "GET",
   headers = {},
   canReadDirectory = false,
@@ -6873,16 +6231,16 @@ const serveFile = async (source, {
     };
   }
 
-  const sourceUrl = assertAndNormalizeFileUrl$2(source);
+  const sourceUrl = assertAndNormalizeFileUrl(source);
   const clientCacheDisabled = headers["cache-control"] === "no-cache";
 
   try {
     const cacheWithMtime = !clientCacheDisabled && cacheStrategy === "mtime";
     const cacheWithETag = !clientCacheDisabled && cacheStrategy === "etag";
     const cachedDisabled = clientCacheDisabled || cacheStrategy === "none";
-    const sourceStat = await createOperation$1({
+    const sourceStat = await createOperation({
       cancellationToken,
-      start: () => readFileSystemNodeStat$2(sourceUrl)
+      start: () => readFileSystemNodeStat(sourceUrl)
     });
 
     if (sourceStat.isDirectory()) {
@@ -6897,9 +6255,9 @@ const serveFile = async (source, {
         };
       }
 
-      const directoryContentArray = await createOperation$1({
+      const directoryContentArray = await createOperation({
         cancellationToken,
-        start: () => readDirectory$1(sourceUrl)
+        start: () => readDirectory(sourceUrl)
       });
       const directoryContentJson = JSON.stringify(directoryContentArray);
       return {
@@ -6926,9 +6284,9 @@ const serveFile = async (source, {
     }
 
     if (cacheWithETag) {
-      const fileContentAsBuffer = await createOperation$1({
+      const fileContentAsBuffer = await createOperation({
         cancellationToken,
-        start: () => readFile$2(urlToFileSystemPath$2(sourceUrl))
+        start: () => readFile$1(urlToFileSystemPath(sourceUrl))
       });
       const fileContentEtag = bufferToEtag(fileContentAsBuffer);
 
@@ -6987,7 +6345,7 @@ const serveFile = async (source, {
         "content-length": sourceStat.size,
         "content-type": urlToContentType(sourceUrl, contentTypeMap)
       },
-      body: fs.createReadStream(urlToFileSystemPath$2(sourceUrl))
+      body: fs.createReadStream(urlToFileSystemPath(sourceUrl))
     };
   } catch (e) {
     return convertFileSystemErrorToResponseProperties(e);
@@ -7012,7 +6370,7 @@ const {
   Response
 } = nodeFetch;
 const fetchUrl = async (url, {
-  cancellationToken = createCancellationToken$1(),
+  cancellationToken = createCancellationToken(),
   simplified = false,
   canReadDirectory,
   contentTypeMap,
@@ -7097,7 +6455,7 @@ const listen = ({
   port,
   ip
 }) => {
-  return createStoppableOperation$1({
+  return createStoppableOperation({
     cancellationToken,
     start: () => startListening(server, port, ip),
     stop: () => stopListening(server)
@@ -7119,7 +6477,7 @@ const stopListening = server => new Promise((resolve, reject) => {
 });
 
 const findFreePort = async (initialPort = 1, {
-  cancellationToken = createCancellationToken$1(),
+  cancellationToken = createCancellationToken(),
   ip = "127.0.0.1",
   min = 1,
   max = 65534,
@@ -7180,7 +6538,7 @@ const portIsFree = async ({
 };
 
 const firstService = (...callbacks) => {
-  return firstOperationMatching$1({
+  return firstOperationMatching({
     array: callbacks,
     start: callback => callback(),
     predicate: serviceGeneratedResponsePredicate
@@ -7234,413 +6592,42 @@ q4DB6OgAEzkytbKtcgPlhY0GDbim8ELCpO1JNDn/jUXH74VJElwXMZqan5VaQ5c+
 qsCeVUdw8QsfIZH6XbkvhCswh4k=
 -----END CERTIFICATE-----`;
 
-let beforeExitCallbackArray = [];
-let uninstall;
-
-const addCallback = callback => {
-  if (beforeExitCallbackArray.length === 0) uninstall = install();
-  beforeExitCallbackArray = [...beforeExitCallbackArray, callback];
-  return () => {
-    if (beforeExitCallbackArray.length === 0) return;
-    beforeExitCallbackArray = beforeExitCallbackArray.filter(beforeExitCallback => beforeExitCallback !== callback);
-    if (beforeExitCallbackArray.length === 0) uninstall();
-  };
-};
-
-const install = () => {
-  const onBeforeExit = () => {
-    return beforeExitCallbackArray.reduce(async (previous, callback) => {
-      await previous;
-      return callback();
-    }, Promise.resolve());
-  };
-
-  process.once("beforeExit", onBeforeExit);
-  return () => {
-    process.removeListener("beforeExit", onBeforeExit);
-  };
-};
-
-const beforeExitSignal = {
-  addCallback
-};
-
-const addCallback$1 = callback => {
-  const triggerDeath = () => callback(); // SIGTERM http://man7.org/linux/man-pages/man7/signal.7.html
-
-
-  process.once("SIGTERM", triggerDeath);
-  return () => {
-    process.removeListener("SIGTERM", triggerDeath);
-  };
-};
-
-const deathSignal = {
-  addCallback: addCallback$1
-};
-
-const addCallback$2 = (callback, {
-  collectExceptions = false
-} = {}) => {
-  if (!collectExceptions) {
-    const exitCallback = () => {
-      callback();
-    };
-
-    process.on("exit", exitCallback);
-    return () => {
-      process.removeListener("exit", exitCallback);
-    };
-  }
-
-  const {
-    getExceptions,
-    stop
-  } = trackExceptions();
-
-  const exitCallback = () => {
-    process.removeListener("exit", exitCallback);
-    stop();
-    callback({
-      exceptionArray: getExceptions().map(({
-        exception,
-        origin
-      }) => {
-        return {
-          exception,
-          origin
-        };
-      })
-    });
-  };
-
-  process.on("exit", exitCallback);
-  return () => {
-    process.removeListener("exit", exitCallback);
-  };
-};
-
-const trackExceptions = () => {
-  let exceptionArray = [];
-
-  const unhandledRejectionCallback = (unhandledRejection, promise) => {
-    exceptionArray = [...exceptionArray, {
-      origin: "unhandledRejection",
-      exception: unhandledRejection,
-      promise
-    }];
-  };
-
-  const rejectionHandledCallback = promise => {
-    exceptionArray = exceptionArray.filter(exceptionArray => exceptionArray.promise !== promise);
-  };
-
-  const uncaughtExceptionCallback = (uncaughtException, origin) => {
-    // since node 12.4 https://nodejs.org/docs/latest-v12.x/api/process.html#process_event_uncaughtexception
-    if (origin === "unhandledRejection") return;
-    exceptionArray = [...exceptionArray, {
-      origin: "uncaughtException",
-      exception: uncaughtException
-    }];
-  };
-
-  process.on("unhandledRejection", unhandledRejectionCallback);
-  process.on("rejectionHandled", rejectionHandledCallback);
-  process.on("uncaughtException", uncaughtExceptionCallback);
-  return {
-    getExceptions: () => exceptionArray,
-    stop: () => {
-      process.removeListener("unhandledRejection", unhandledRejectionCallback);
-      process.removeListener("rejectionHandled", rejectionHandledCallback);
-      process.removeListener("uncaughtException", uncaughtExceptionCallback);
-    }
-  };
-};
-
-const exitSignal = {
-  addCallback: addCallback$2
-};
-
-const addCallback$3 = callback => {
-  const triggerHangUpOrDeath = () => callback(); // SIGHUP http://man7.org/linux/man-pages/man7/signal.7.html
-
-
-  process.once("SIGUP", triggerHangUpOrDeath);
-  return () => {
-    process.removeListener("SIGUP", triggerHangUpOrDeath);
-  };
-};
-
-const hangupOrDeathSignal = {
-  addCallback: addCallback$3
-};
-
-const addCallback$4 = callback => {
-  // SIGINT is CTRL+C from keyboard
-  // http://man7.org/linux/man-pages/man7/signal.7.html
-  // may also be sent by vscode https://github.com/Microsoft/vscode-node-debug/issues/1#issuecomment-405185642
-  process.once("SIGINT", callback);
-  return () => {
-    process.removeListener("SIGINT", callback);
-  };
-};
-
-const interruptSignal = {
-  addCallback: addCallback$4
-};
-
-// usefull to ensure a given server is closed when process stops for instance
-
-const addCallback$5 = callback => {
-  return eventRace({
-    beforeExit: {
-      register: beforeExitSignal.addCallback,
-      callback: () => callback("beforeExit")
-    },
-    hangupOrDeath: {
-      register: hangupOrDeathSignal.addCallback,
-      callback: () => callback("hangupOrDeath")
-    },
-    death: {
-      register: deathSignal.addCallback,
-      callback: () => callback("death")
-    },
-    exit: {
-      register: exitSignal.addCallback,
-      callback: () => callback("exit")
-    }
-  });
-};
-
-const eventRace = eventMap => {
-  const unregisterMap = {};
-
-  const unregisterAll = reason => {
-    return Object.keys(unregisterMap).map(name => unregisterMap[name](reason));
-  };
-
-  Object.keys(eventMap).forEach(name => {
-    const {
-      register,
-      callback
-    } = eventMap[name];
-    unregisterMap[name] = register((...args) => {
-      unregisterAll();
-      callback(...args);
-    });
-  });
-  return unregisterAll;
-};
-
-const teardownSignal = {
-  addCallback: addCallback$5
-};
-
-const firstOperationMatching$2 = ({
-  array,
-  start,
-  predicate
-}) => {
-  if (typeof array !== "object") throw new TypeError(createArrayErrorMessage({
-    array
-  }));
-  if (typeof start !== "function") throw new TypeError(createStartErrorMessage({
-    start
-  }));
-  if (typeof predicate !== "function") throw new TypeError(createPredicateErrorMessage({
-    predicate
-  }));
-  return new Promise((resolve, reject) => {
-    const visit = index => {
-      if (index >= array.length) {
-        return resolve();
-      }
-
-      const input = array[index];
-      const returnValue = start(input);
-      return Promise.resolve(returnValue).then(output => {
-        if (predicate(output)) {
-          return resolve(output);
-        }
-
-        return visit(index + 1);
-      }, reject);
-    };
-
-    visit(0);
-  });
-};
-
-const createArrayErrorMessage = ({
-  array
-}) => `array must be an object.
-array: ${array}`;
-
-const createStartErrorMessage = ({
-  start
-}) => `start must be a function.
-start: ${start}`;
-
-const createPredicateErrorMessage = ({
-  predicate
-}) => `predicate must be a function.
-predicate: ${predicate}`;
-
-/*
-why unadvised ?
-- First because you should not do anything when a process uncaughtException
-or unhandled rejection happens.
-You cannot assume assume or trust the state of your process so you're
-likely going to throw an other error trying to handle the first one.
-- Second because the error stack trace will be modified making it harder
-to reach back what cause the error
-
-Instead you should monitor your process with an other one
-and when the monitored process die, here you can do what you want
-like analysing logs to find what cause process to die, ping a log server, ...
-*/
-let recoverCallbackArray = [];
-let uninstall$1;
-
-const addCallback$6 = callback => {
-  if (recoverCallbackArray.length === 0) uninstall$1 = install$1();
-  recoverCallbackArray = [...recoverCallbackArray, callback];
-  return () => {
-    if (recoverCallbackArray.length === 0) return;
-    recoverCallbackArray = recoverCallbackArray.filter(recoverCallback => recoverCallback !== callback);
-    if (recoverCallbackArray.length === 0) uninstall$1();
-  };
-};
-
-const install$1 = () => {
-  const onUncaughtException = error => triggerUncaughtException(error);
-
-  const onUnhandledRejection = (value, promise) => triggerUnhandledRejection(value, promise);
-
-  const onRejectionHandled = promise => recoverExceptionMatching(exception => exception.promise === promise);
-
-  process.on("unhandledRejection", onUnhandledRejection);
-  process.on("rejectionHandled", onRejectionHandled);
-  process.on("uncaughtException", onUncaughtException);
-  return () => {
-    process.removeListener("unhandledRejection", onUnhandledRejection);
-    process.removeListener("rejectionHandled", onRejectionHandled);
-    process.removeListener("uncaughtException", onRejectionHandled);
-  };
-};
-
-const triggerUncaughtException = error => crash({
-  type: "uncaughtException",
-  value: error
-});
-
-const triggerUnhandledRejection = (value, promise) => crash({
-  type: "unhandledRejection",
-  value,
-  promise
-});
-
-let isCrashing = false;
-let crashReason;
-let resolveRecovering;
-
-const crash = async reason => {
-  if (isCrashing) {
-    console.log(`cannot recover due to ${crashReason.type} during recover`);
-    console.error(crashReason.value);
-    resolveRecovering(false);
-    return;
-  }
-
-  console.log(`process starts crashing due to ${crashReason.type}`);
-  console.log(`trying to recover`);
-  isCrashing = true;
-  crashReason = reason;
-  const externalRecoverPromise = new Promise(resolve => {
-    resolveRecovering = resolve;
-  });
-  const callbackRecoverPromise = firstOperationMatching$2({
-    array: recoverCallbackArray,
-    start: recoverCallback => recoverCallback(reason),
-    predicate: recovered => typeof recovered === "boolean"
-  });
-  const recoverPromise = Promise.race([externalRecoverPromise, callbackRecoverPromise]);
-
-  try {
-    const recovered = await recoverPromise;
-    if (recovered) return;
-  } catch (error) {
-    console.error(`cannot recover due to internal recover error`);
-    console.error(error);
-  }
-
-  crashReason = undefined; // uninstall() prevent catching of the next throw
-  // else the following would create an infinite loop
-  // process.on('uncaughtException', function() {
-  //     setTimeout(function() {
-  //         throw 'yo';
-  //     });
-  // });
-
-  uninstall$1();
-  throw reason.value; // this mess up the stack trace :'(
-};
-
-const recoverExceptionMatching = predicate => {
-  if (isCrashing && predicate(crashReason)) {
-    resolveRecovering(true);
-  }
-};
-
-const unadvisedCrashSignal = {
-  addCallback: addCallback$6
-};
-
-const memoizeOnce$2 = compute => {
-  let locked = false;
-  let lockValue;
-
-  const memoized = (...args) => {
-    if (locked) return lockValue; // if compute is recursive wait for it to be fully done before storing the lockValue
-    // so set locked later
-
-    lockValue = compute(...args);
-    locked = true;
-    return lockValue;
-  };
-
-  memoized.deleteCache = () => {
-    const value = lockValue;
-    locked = false;
-    lockValue = undefined;
-    return value;
-  };
-
-  return memoized;
-};
-
 const urlToOrigin$1 = url => {
   return new URL(url).origin;
 };
 
-const trackConnections = nodeServer => {
+const trackConnections = (nodeServer, {
+  onConnectionError
+}) => {
   const connections = new Set();
 
   const connectionListener = connection => {
     connection.on("close", () => {
       connections.delete(connection);
     });
+    connection.on("error", onConnectionError);
     connections.add(connection);
   };
 
   nodeServer.on("connection", connectionListener);
 
-  const stop = reason => {
-    nodeServer.removeListener("connection", connectionListener); // should we do this async ?
-
-    connections.forEach(connection => {
-      connection.destroy(reason);
-    });
+  const stop = async reason => {
+    nodeServer.removeListener("connection", connectionListener);
+    await Promise.all(Array.from(connections).map(connection => {
+      return new Promise((resolve, reject) => {
+        connection.destroy(reason, error => {
+          if (error) {
+            if (error === reason || error.code === "ENOTCONN") {
+              resolve();
+            } else {
+              reject(error);
+            }
+          } else {
+            resolve();
+          }
+        });
+      });
+    }));
   };
 
   return {
@@ -7677,12 +6664,12 @@ const trackClients = nodeServer => {
       }
 
       return new Promise(resolve => {
-        if (nodeResponse.finished === false) {
+        if (nodeResponse.finished) {
+          resolve();
+        } else {
           nodeResponse.on("finish", resolve);
           nodeResponse.on("error", resolve);
           nodeResponse.destroy(reason);
-        } else {
-          resolve();
         }
       });
     }));
@@ -7942,11 +6929,11 @@ const createReason = reasonString => {
   };
 };
 
-const STOP_REASON_INTERNAL_ERROR = createReason("internal error");
-const STOP_REASON_PROCESS_SIGINT = createReason("process sigint");
+const STOP_REASON_INTERNAL_ERROR = createReason("Internal error");
+const STOP_REASON_PROCESS_SIGHUP = createReason("process SIGHUP");
+const STOP_REASON_PROCESS_SIGTERM = createReason("process SIGTERM");
+const STOP_REASON_PROCESS_SIGINT = createReason("process SIGINT");
 const STOP_REASON_PROCESS_BEFORE_EXIT = createReason("process before exit");
-const STOP_REASON_PROCESS_HANGUP_OR_DEATH = createReason("process hangup or death");
-const STOP_REASON_PROCESS_DEATH = createReason("process death");
 const STOP_REASON_PROCESS_EXIT = createReason("process exit");
 const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
 
@@ -7954,9 +6941,9 @@ const require$3 = module$1.createRequire(url);
 
 const killPort = require$3("kill-port");
 
-const STATUS_TEXT_INTERNAL_ERROR = "internal error";
+const STATUS_TEXT_INTERNAL_ERROR = "Internal error";
 const startServer = async ({
-  cancellationToken = createCancellationToken$1(),
+  cancellationToken = createCancellationToken(),
   logLevel,
   serverName = "server",
   protocol = "http",
@@ -8007,16 +6994,60 @@ const startServer = async ({
   startedCallback = () => {},
   stoppedCallback = () => {}
 } = {}) => {
-  if (port === 0 && forcePort) throw new Error(`no need to pass forcePort when port is 0`);
-  if (protocol !== "http" && protocol !== "https") throw new Error(`protocol must be http or https, got ${protocol}`); // https://github.com/nodejs/node/issues/14900
+  if (port === 0 && forcePort) {
+    throw new Error(`no need to pass forcePort when port is 0`);
+  }
 
-  if (ip === "0.0.0.0" && process.platform === "win32") throw new Error(`listening ${ip} not available on window`);
-  const logger = createLogger$1({
+  if (protocol !== "http" && protocol !== "https") {
+    throw new Error(`protocol must be http or https, got ${protocol}`);
+  } // https://github.com/nodejs/node/issues/14900
+
+
+  if (ip === "0.0.0.0" && process.platform === "win32") {
+    throw new Error(`listening ${ip} not available on window`);
+  }
+
+  const logger = createLogger({
     logLevel
   });
+  const internalCancellationSource = createCancellationSource();
+  cancellationToken = composeCancellationToken(cancellationToken, internalCancellationSource.token);
+  const {
+    registerCleanupCallback,
+    cleanup
+  } = createTracker();
+
+  if (stopOnCrash) {
+    const unregister = unadvisedCrashSignal.addCallback(reason => {
+      internalCancellationSource.cancel(reason.value);
+    });
+    registerCleanupCallback(unregister);
+  }
+
+  if (stopOnExit) {
+    const unregister = teardownSignal.addCallback(tearDownReason => {
+      if (!stopOnSIGINT && tearDownReason === "SIGINT") {
+        return;
+      }
+
+      internalCancellationSource.cancel({
+        SIGHUP: STOP_REASON_PROCESS_SIGHUP,
+        SIGTERM: STOP_REASON_PROCESS_SIGTERM,
+        SIGINT: STOP_REASON_PROCESS_SIGINT,
+        beforeExit: STOP_REASON_PROCESS_BEFORE_EXIT,
+        exit: STOP_REASON_PROCESS_EXIT
+      }[tearDownReason]);
+    });
+    registerCleanupCallback(unregister);
+  } else if (stopOnSIGINT) {
+    const unregister = SIGINTSignal.addCallback(() => {
+      internalCancellationSource.cancel(STOP_REASON_PROCESS_SIGINT);
+    });
+    registerCleanupCallback(unregister);
+  }
 
   if (forcePort) {
-    await createOperation$1({
+    await createOperation({
       cancellationToken,
       start: () => killPort(port)
     });
@@ -8036,11 +7067,12 @@ const startServer = async ({
   }
 
   let status = "starting";
-  const {
-    registerCleanupCallback,
-    cleanup
-  } = createTracker();
-  const connectionTracker = trackConnections(nodeServer); // opened connection must be shutdown before the close event is emitted
+
+  let onConnectionError = () => {};
+
+  const connectionTracker = trackConnections(nodeServer, {
+    onConnectionError
+  }); // opened connection must be shutdown before the close event is emitted
 
   registerCleanupCallback(connectionTracker.stop);
   const clientTracker = trackClients(nodeServer);
@@ -8050,7 +7082,7 @@ const startServer = async ({
     if (reason === STOP_REASON_INTERNAL_ERROR) {
       responseStatus = 500; // reason = 'shutdown because error'
     } else {
-      responseStatus = 503; // reason = 'unavailable because closing'
+      responseStatus = 503; // reason = 'unavailable because stopping'
     }
 
     clientTracker.stop({
@@ -8058,15 +7090,32 @@ const startServer = async ({
       reason
     });
   });
-  const requestHandlerTracker = trackRequestHandlers(nodeServer); // ensure we don't try to handle request while server is closing
+  const requestHandlerTracker = trackRequestHandlers(nodeServer); // ensure we don't try to handle request while server is stopping
 
   registerCleanupCallback(requestHandlerTracker.stop);
   let stoppedResolve;
   const stoppedPromise = new Promise(resolve => {
     stoppedResolve = resolve;
   });
-  const stop = memoizeOnce$2(async (reason = STOP_REASON_NOT_SPECIFIED) => {
-    status = "closing";
+  const stop = memoize(async (reason = STOP_REASON_NOT_SPECIFIED) => {
+    status = "stopping";
+
+    onConnectionError = error => {
+      if (error === reason) {
+        return;
+      }
+
+      if (error && error.code === "ECONNRESET") {
+        return;
+      }
+
+      if (isCancelError(reason)) {
+        return;
+      }
+
+      throw error;
+    };
+
     logger.info(`${serverName} stopped because ${reason}`);
     await cleanup(reason);
     await stopListening(nodeServer);
@@ -8076,7 +7125,8 @@ const startServer = async ({
     });
     stoppedResolve(reason);
   });
-  const startOperation = createStoppableOperation$1({
+  cancellationToken.register(stop);
+  const startOperation = createStoppableOperation({
     cancellationToken,
     start: () => listen({
       cancellationToken,
@@ -8086,42 +7136,6 @@ const startServer = async ({
     }),
     stop: (_, reason) => stop(reason)
   });
-
-  if (stopOnCrash) {
-    const unregister = unadvisedCrashSignal.addCallback(reason => {
-      stop(reason.value);
-    });
-    registerCleanupCallback(unregister);
-  }
-
-  if (stopOnInternalError) {
-    const unregister = requestHandlerTracker.add((nodeRequest, nodeResponse) => {
-      if (nodeResponse.statusCode === 500 && nodeResponse.statusMessage === STATUS_TEXT_INTERNAL_ERROR) {
-        stop(STOP_REASON_INTERNAL_ERROR);
-      }
-    });
-    registerCleanupCallback(unregister);
-  }
-
-  if (stopOnExit) {
-    const unregister = teardownSignal.addCallback(tearDownReason => {
-      stop({
-        beforeExit: STOP_REASON_PROCESS_BEFORE_EXIT,
-        hangupOrDeath: STOP_REASON_PROCESS_HANGUP_OR_DEATH,
-        death: STOP_REASON_PROCESS_DEATH,
-        exit: STOP_REASON_PROCESS_EXIT
-      }[tearDownReason]);
-    });
-    registerCleanupCallback(unregister);
-  }
-
-  if (stopOnSIGINT) {
-    const unregister = interruptSignal.addCallback(() => {
-      stop(STOP_REASON_PROCESS_SIGINT);
-    });
-    registerCleanupCallback(unregister);
-  }
-
   port = await startOperation;
   status = "opened";
   const origin = originAsString({
@@ -8251,6 +7265,15 @@ ${request.method} ${request.origin}${request.ressource}`);
       };
     }
   };
+
+  if (stopOnInternalError) {
+    const unregister = requestHandlerTracker.add((nodeRequest, nodeResponse) => {
+      if (nodeResponse.statusCode === 500 && nodeResponse.statusMessage === STATUS_TEXT_INTERNAL_ERROR) {
+        stop(STOP_REASON_INTERNAL_ERROR);
+      }
+    });
+    registerCleanupCallback(unregister);
+  }
 
   return {
     getStatus: () => status,
@@ -9629,7 +8652,7 @@ const createBabePluginMapForBundle = ({
   };
 };
 
-const startsWithWindowsDriveLetter$3 = string => {
+const startsWithWindowsDriveLetter$1 = string => {
   const firstChar = string[0];
   if (!/[a-zA-Z]/.test(firstChar)) return false;
   const secondChar = string[1];
@@ -9697,7 +8720,7 @@ const writeOrUpdateSourceMappingURL = (source, location) => {
   return writeSourceMappingURL(source, location);
 };
 
-const isWindows$c = process.platform === "win32";
+const isWindows$4 = process.platform === "win32";
 const transformResultToCompilationResult = async ({
   code,
   map,
@@ -9751,7 +8774,7 @@ const transformResultToCompilationResult = async ({
         // be careful here we might received C:/Directory/file.js path from babel
         // also in case we receive relative path like directory\file.js we replace \ with slash
         // for url resolution
-        const sourceFileUrl = isWindows$c && startsWithWindowsDriveLetter$3(source) ? windowsFilePathToUrl(source) : ensureWindowsDriveLetter(resolveUrl$1(isWindows$c ? replaceBackSlashesWithSlashes$1(source) : source, sourcemapFileUrl), sourcemapFileUrl);
+        const sourceFileUrl = isWindows$4 && startsWithWindowsDriveLetter$1(source) ? windowsFilePathToUrl(source) : ensureWindowsDriveLetter(resolveUrl$1(isWindows$4 ? replaceBackSlashesWithSlashes$1(source) : source, sourcemapFileUrl), sourcemapFileUrl);
 
         if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
           // do not track dependency outside project
@@ -9818,24 +8841,6 @@ const transformResultToCompilationResult = async ({
 const stringifyMap = object => JSON.stringify(object, null, "  ");
 
 const stringifyCoverage = object => JSON.stringify(object, null, "  ");
-
-const EMPTY_ID = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
-const bufferToEtag$1 = buffer => {
-  if (!Buffer.isBuffer(buffer)) {
-    throw new TypeError(`buffer expected, got ${buffer}`);
-  }
-
-  if (buffer.length === 0) {
-    return EMPTY_ID;
-  }
-
-  const hash = crypto.createHash("sha1");
-  hash.update(buffer, "utf8");
-  const hashBase64String = hash.digest("base64");
-  const hashBase64StringSubset = hashBase64String.slice(0, 27);
-  const length = buffer.length;
-  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
-};
 
 const resolveAssetFileUrl = ({
   asset,
@@ -9959,7 +8964,7 @@ const validateCompiledFile = async ({
     const compiledSource = await readFile(compiledFileUrl);
 
     if (ifEtagMatch) {
-      const compiledEtag = bufferToEtag$1(Buffer.from(compiledSource));
+      const compiledEtag = bufferToEtag(Buffer.from(compiledSource));
 
       if (ifEtagMatch !== compiledEtag) {
         logger.debug(`etag changed for ${urlToFileSystemPath(compiledFileUrl)}`);
@@ -10038,7 +9043,7 @@ const validateSource = async ({
 
   try {
     const sourceContent = await readFile(sourceFileUrl);
-    const sourceETag = bufferToEtag$1(Buffer.from(sourceContent));
+    const sourceETag = bufferToEtag(Buffer.from(sourceContent));
 
     if (sourceETag !== eTag) {
       logger.debug(`etag changed for ${urlToFileSystemPath(sourceFileUrl)}`);
@@ -10110,7 +9115,7 @@ const validateAsset = async ({
 
   try {
     const assetContent = await readFile(assetFileUrl);
-    const assetContentETag = bufferToEtag$1(Buffer.from(assetContent));
+    const assetContentETag = bufferToEtag(Buffer.from(assetContent));
 
     if (eTag !== assetContentETag) {
       logger.debug(`etag changed for ${urlToFileSystemPath(assetFileUrl)}`);
@@ -10231,9 +9236,9 @@ const updateMeta = async ({
       latestMeta = {
         contentType,
         sources,
-        sourcesEtag: sourcesContent.map(sourceContent => bufferToEtag$1(Buffer.from(sourceContent))),
+        sourcesEtag: sourcesContent.map(sourceContent => bufferToEtag(Buffer.from(sourceContent))),
         assets,
-        assetsEtag: assetsContent.map(assetContent => bufferToEtag$1(Buffer.from(assetContent))),
+        assetsEtag: assetsContent.map(assetContent => bufferToEtag(Buffer.from(assetContent))),
         createdMs: Number(Date.now()),
         lastModifiedMs: Number(Date.now()),
         ...(cacheHitTracking ? {
@@ -10244,9 +9249,9 @@ const updateMeta = async ({
     } else if (isUpdated) {
       latestMeta = { ...meta,
         sources,
-        sourcesEtag: sourcesContent.map(sourceContent => bufferToEtag$1(Buffer.from(sourceContent))),
+        sourcesEtag: sourcesContent.map(sourceContent => bufferToEtag(Buffer.from(sourceContent))),
         assets,
-        assetsEtag: assetsContent.map(assetContent => bufferToEtag$1(Buffer.from(assetContent))),
+        assetsEtag: assetsContent.map(assetContent => bufferToEtag(Buffer.from(assetContent))),
         lastModifiedMs: Number(Date.now()),
         ...(cacheHitTracking ? {
           matchCount: meta.matchCount + 1,
@@ -10636,7 +9641,7 @@ const serveCompiledFile = async ({
         headers: {
           "content-length": Buffer.byteLength(compiledSource),
           "content-type": contentType,
-          "eTag": bufferToEtag$1(Buffer.from(compiledSource))
+          "eTag": bufferToEtag(Buffer.from(compiledSource))
         },
         body: compiledSource
       };
@@ -11253,6 +10258,7 @@ const generateBundleUsingRollup = async ({
   browser,
   babelPluginMap,
   format,
+  formatInputOptions,
   formatOutputOptions,
   minify,
   minifyJsOptions,
@@ -11291,6 +10297,7 @@ const generateBundleUsingRollup = async ({
     browser,
     jsenvRollupPlugin,
     format,
+    formatInputOptions,
     formatOutputOptions,
     bundleDirectoryUrl,
     sourcemapExcludeSources,
@@ -11310,6 +10317,7 @@ const useRollup = async ({
   browser,
   jsenvRollupPlugin,
   format,
+  formatInputOptions,
   formatOutputOptions,
   bundleDirectoryUrl,
   sourcemapExcludeSources,
@@ -11350,7 +10358,8 @@ ${JSON.stringify(entryPointMap, null, "  ")}
       },
       input: entryPointMap,
       external: id => nativeModulePredicate(id),
-      plugins: [jsenvRollupPlugin]
+      plugins: [jsenvRollupPlugin],
+      ...formatInputOptions
     })
   });
 
@@ -11396,6 +10405,7 @@ const formatToRollupFormat = format => {
   if (format === "global") return "iife";
   if (format === "commonjs") return "cjs";
   if (format === "systemjs") return "system";
+  if (format === "esm") return "esm";
   throw new Error(`unexpected format, got ${format}`);
 };
 
@@ -12678,7 +11688,7 @@ const promiseTrackRace = promiseArray => {
 };
 
 const execute = async ({
-  cancellationToken = createCancellationTokenForProcessSIGINT(),
+  cancellationToken = createCancellationTokenForProcess(),
   logLevel = "warn",
   compileServerLogLevel = logLevel,
   launchLogLevel = logLevel,
@@ -12698,9 +11708,10 @@ const execute = async ({
   launch,
   mirrorConsole = true,
   stopPlatformAfterExecute = true,
+  updateProcessExitCode = true,
   ...rest
 }) => {
-  return wrapAsyncFunction(async () => {
+  return catchCancellation(async () => {
     const launchLogger = createLogger({
       logLevel: launchLogLevel
     });
@@ -12742,7 +11753,7 @@ const execute = async ({
       ip,
       port
     });
-    const result = await launchAndExecute({
+    return launchAndExecute({
       cancellationToken,
       launchLogger,
       executeLogger,
@@ -12757,12 +11768,24 @@ const execute = async ({
       stopPlatformAfterExecute,
       ...rest
     });
-
+  }).then(result => {
     if (result.status === "errored") {
+      // unexpected execution error
+      // -> update process.exitCode by default
+      // (we can disable this for testing)
+      if (updateProcessExitCode) {
+        process.exitCode = 1;
+      }
+
       throw result.error;
     }
 
     return result;
+  }, e => {
+    // unexpected internal error
+    // -> always updates process.exitCode
+    process.exitCode = 1;
+    throw e;
   });
 };
 
@@ -13092,6 +12115,80 @@ const executionReportToCoverageMap = report => {
   return executionCoverageMap;
 };
 
+const memoize$1 = compute => {
+  let memoized = false;
+  let memoizedValue;
+
+  const fnWithMemoization = (...args) => {
+    if (memoized) {
+      return memoizedValue;
+    } // if compute is recursive wait for it to be fully done before storing the lockValue
+    // so set locked later
+
+
+    memoizedValue = compute(...args);
+    memoized = true;
+    return memoizedValue;
+  };
+
+  fnWithMemoization.forget = () => {
+    const value = memoizedValue;
+    memoized = false;
+    memoizedValue = undefined;
+    return value;
+  };
+
+  return fnWithMemoization;
+};
+
+const stringWidth = require$1("string-width");
+
+const writeLog = (string, {
+  stream = process.stdout
+} = {}) => {
+  stream.write(`${string}
+`);
+  const remove = memoize$1(() => {
+    const {
+      columns = 80
+    } = stream;
+    const logLines = string.split(/\r\n|\r|\n/);
+    let visualLineCount = 0;
+    logLines.forEach(logLine => {
+      const width = stringWidth(logLine);
+      visualLineCount += width === 0 ? 1 : Math.ceil(width / columns);
+    });
+
+    while (visualLineCount--) {
+      readline.cursorTo(stream, 0);
+      readline.clearLine(stream, 0);
+      readline.moveCursor(stream, 0, -1);
+    }
+  });
+  let updated = false;
+
+  const update = newString => {
+    if (updated) {
+      throw new Error(`cannot update twice`);
+    }
+
+    updated = true;
+
+    {
+      remove();
+    }
+
+    return writeLog(newString, {
+      stream
+    });
+  };
+
+  return {
+    remove,
+    update
+  };
+};
+
 const cross = "☓"; // "\u2613"
 
 const checkmark = "✔"; // "\u2714"
@@ -13331,6 +12428,9 @@ error: ${error.stack}`;
 };
 
 /* eslint-disable import/max-dependencies */
+
+const wrapAnsi = require$1("wrap-ansi");
+
 const executeConcurrently = async (executionSteps, {
   cancellationToken,
   logger,
@@ -13469,22 +12569,30 @@ ${fileRelativeUrl}`));
         completedCount++;
       }
 
-      if (completedExecutionLogMerging && previousExecutionResult && previousExecutionResult.status === "completed" && executionResult.status === "completed") {
-        if (loggerToLevels(logger).info) {
-          readline.moveCursor(process.stdout, 0, -previousExecutionLog.split(/\r\n|\r|\n/).length);
-          readline.cursorTo(process.stdout, 0);
+      if (loggerToLevels(logger).info) {
+        let log = createExecutionResultLog(afterExecutionInfo, {
+          completedExecutionLogAbbreviation,
+          executionCount,
+          disconnectedCount,
+          timedoutCount,
+          erroredCount,
+          completedCount
+        });
+        const {
+          columns = 80
+        } = process.stdout;
+        log = wrapAnsi(log, columns, {
+          trim: false,
+          hard: true,
+          wordWrap: false
+        });
+
+        if (previousExecutionLog && completedExecutionLogMerging && previousExecutionResult && previousExecutionResult.status === "completed" && executionResult.status === "completed") {
+          previousExecutionLog = previousExecutionLog.update(log);
+        } else {
+          previousExecutionLog = writeLog(log);
         }
       }
-
-      const log = createExecutionResultLog(afterExecutionInfo, {
-        completedExecutionLogAbbreviation,
-        executionCount,
-        disconnectedCount,
-        timedoutCount,
-        erroredCount,
-        completedCount
-      });
-      logger.info(log);
 
       if (fileRelativeUrl in report === false) {
         report[fileRelativeUrl] = {};
@@ -13492,7 +12600,6 @@ ${fileRelativeUrl}`));
 
       report[fileRelativeUrl][name] = executionResult;
       previousExecutionResult = executionResult;
-      previousExecutionLog = log;
     }
   }); // tell everyone we are done
   // (used to stop potential chrome browser still opened to be reused)
@@ -13742,9 +12849,8 @@ const jsenvCoverageConfig = {
 
 };
 
-/* eslint-disable import/max-dependencies */
 const executeTestPlan = async ({
-  cancellationToken = createCancellationTokenForProcessSIGINT(),
+  cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
   launchLogLevel = "warn",
@@ -13766,8 +12872,8 @@ const executeTestPlan = async ({
   // you can still pass false to debug what happens
   // meaning all node process and browsers launched stays opened
   stopPlatformAfterExecute = true,
-  completedExecutionLogMerging = false,
   completedExecutionLogAbbreviation = false,
+  completedExecutionLogMerging = false,
   logSummary = true,
   updateProcessExitCode = true,
   coverage = process.argv.includes("--coverage"),
@@ -13782,7 +12888,7 @@ const executeTestPlan = async ({
   coverageHtmlDirectoryRelativeUrl = "./coverage",
   coverageHtmlDirectoryIndexLog = true
 }) => {
-  return wrapAsyncFunction(async () => {
+  return catchCancellation(async () => {
     const logger = createLogger({
       logLevel
     });
@@ -13894,12 +13000,15 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`);
 
     await Promise.all(promises);
     return result;
+  }).catch(e => {
+    process.exitCode = 1;
+    throw e;
   });
 };
 
 /* eslint-disable import/max-dependencies */
 const generateBundle = async ({
-  cancellationToken = createCancellationTokenForProcessSIGINT(),
+  cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
   logger,
@@ -13923,6 +13032,7 @@ const generateBundle = async ({
   bundleDirectoryRelativeUrl,
   bundleDirectoryClean = false,
   format,
+  formatInputOptions = {},
   formatOutputOptions = {},
   minify = false,
   minifyJsOptions = {},
@@ -13941,10 +13051,9 @@ const generateBundle = async ({
   // when asking them to the compile server
   // (to fix that sourcemap could be inlined)
   filesystemCache = true,
-  updateProcessExitCode,
   ...rest
 }) => {
-  return wrapAsyncFunction(async () => {
+  return catchCancellation(async () => {
     logger = logger || createLogger({
       logLevel
     });
@@ -14037,6 +13146,7 @@ const generateBundle = async ({
         minifyCssOptions,
         minifyHtmlOptions,
         format,
+        formatInputOptions,
         formatOutputOptions,
         writeOnFileSystem,
         sourcemapExcludeSources,
@@ -14059,6 +13169,7 @@ const generateBundle = async ({
       node,
       browser,
       format,
+      formatInputOptions,
       formatOutputOptions,
       minify,
       writeOnFileSystem,
@@ -14079,14 +13190,16 @@ const generateBundle = async ({
       node,
       browser,
       format,
+      formatInputOptions,
       formatOutputOptions,
       minify,
       writeOnFileSystem,
       sourcemapExcludeSources,
       manifestFile
     })]);
-  }, {
-    updateProcessExitCode
+  }).catch(e => {
+    process.exitCode = 1;
+    throw e;
   });
 };
 
@@ -14215,6 +13328,15 @@ const decideNodeMinimumVersion = () => {
   return process.version.slice(1);
 };
 
+const generateEsModuleBundle = ({
+  bundleDirectoryRelativeUrl = "./dist/esmodule",
+  ...rest
+}) => generateBundle({
+  format: "esm",
+  bundleDirectoryRelativeUrl,
+  ...rest
+});
+
 const generateGlobalBundle = async ({
   bundleDirectoryRelativeUrl = "./dist/global",
   globalName,
@@ -14285,217 +13407,6 @@ callback: ${callback}`);
   };
 };
 
-const addCallback$7 = callback => {
-  const triggerHangUpOrDeath = () => callback(); // SIGHUP http://man7.org/linux/man-pages/man7/signal.7.html
-
-
-  process.once("SIGUP", triggerHangUpOrDeath);
-  return () => {
-    process.removeListener("SIGUP", triggerHangUpOrDeath);
-  };
-};
-
-const SIGUPSignal = {
-  addCallback: addCallback$7
-};
-
-const addCallback$8 = callback => {
-  // SIGINT is CTRL+C from keyboard also refered as keyboard interruption
-  // http://man7.org/linux/man-pages/man7/signal.7.html
-  // may also be sent by vscode https://github.com/Microsoft/vscode-node-debug/issues/1#issuecomment-405185642
-  process.once("SIGINT", callback);
-  return () => {
-    process.removeListener("SIGINT", callback);
-  };
-};
-
-const SIGINTSignal = {
-  addCallback: addCallback$8
-};
-
-const addCallback$9 = callback => {
-  if (process.platform === "win32") {
-    console.warn(`SIGTERM is not supported on windows`);
-    return () => {};
-  }
-
-  const triggerTermination = () => callback(); // SIGTERM http://man7.org/linux/man-pages/man7/signal.7.html
-
-
-  process.once("SIGTERM", triggerTermination);
-  return () => {
-    process.removeListener("SIGTERM", triggerTermination);
-  };
-};
-
-const SIGTERMSignal = {
-  addCallback: addCallback$9
-};
-
-let beforeExitCallbackArray$1 = [];
-let uninstall$2;
-
-const addCallback$a = callback => {
-  if (beforeExitCallbackArray$1.length === 0) uninstall$2 = install$2();
-  beforeExitCallbackArray$1 = [...beforeExitCallbackArray$1, callback];
-  return () => {
-    if (beforeExitCallbackArray$1.length === 0) return;
-    beforeExitCallbackArray$1 = beforeExitCallbackArray$1.filter(beforeExitCallback => beforeExitCallback !== callback);
-    if (beforeExitCallbackArray$1.length === 0) uninstall$2();
-  };
-};
-
-const install$2 = () => {
-  const onBeforeExit = () => {
-    return beforeExitCallbackArray$1.reduce(async (previous, callback) => {
-      await previous;
-      return callback();
-    }, Promise.resolve());
-  };
-
-  process.once("beforeExit", onBeforeExit);
-  return () => {
-    process.removeListener("beforeExit", onBeforeExit);
-  };
-};
-
-const beforeExitSignal$1 = {
-  addCallback: addCallback$a
-};
-
-const addCallback$b = (callback, {
-  collectExceptions = false
-} = {}) => {
-  if (!collectExceptions) {
-    const exitCallback = () => {
-      callback();
-    };
-
-    process.on("exit", exitCallback);
-    return () => {
-      process.removeListener("exit", exitCallback);
-    };
-  }
-
-  const {
-    getExceptions,
-    stop
-  } = trackExceptions$1();
-
-  const exitCallback = () => {
-    process.removeListener("exit", exitCallback);
-    stop();
-    callback({
-      exceptionArray: getExceptions().map(({
-        exception,
-        origin
-      }) => {
-        return {
-          exception,
-          origin
-        };
-      })
-    });
-  };
-
-  process.on("exit", exitCallback);
-  return () => {
-    process.removeListener("exit", exitCallback);
-  };
-};
-
-const trackExceptions$1 = () => {
-  let exceptionArray = [];
-
-  const unhandledRejectionCallback = (unhandledRejection, promise) => {
-    exceptionArray = [...exceptionArray, {
-      origin: "unhandledRejection",
-      exception: unhandledRejection,
-      promise
-    }];
-  };
-
-  const rejectionHandledCallback = promise => {
-    exceptionArray = exceptionArray.filter(exceptionArray => exceptionArray.promise !== promise);
-  };
-
-  const uncaughtExceptionCallback = (uncaughtException, origin) => {
-    // since node 12.4 https://nodejs.org/docs/latest-v12.x/api/process.html#process_event_uncaughtexception
-    if (origin === "unhandledRejection") return;
-    exceptionArray = [...exceptionArray, {
-      origin: "uncaughtException",
-      exception: uncaughtException
-    }];
-  };
-
-  process.on("unhandledRejection", unhandledRejectionCallback);
-  process.on("rejectionHandled", rejectionHandledCallback);
-  process.on("uncaughtException", uncaughtExceptionCallback);
-  return {
-    getExceptions: () => exceptionArray,
-    stop: () => {
-      process.removeListener("unhandledRejection", unhandledRejectionCallback);
-      process.removeListener("rejectionHandled", rejectionHandledCallback);
-      process.removeListener("uncaughtException", uncaughtExceptionCallback);
-    }
-  };
-};
-
-const exitSignal$1 = {
-  addCallback: addCallback$b
-};
-
-const addCallback$c = callback => {
-  return eventRace$1({
-    SIGHUP: {
-      register: SIGUPSignal.addCallback,
-      callback: () => callback("SIGHUP")
-    },
-    SIGINT: {
-      register: SIGINTSignal.addCallback,
-      callback: () => callback("SIGINT")
-    },
-    ...(process.paltform === "win32" ? {} : {
-      SIGTERM: {
-        register: SIGTERMSignal.addCallback,
-        callback: () => callback("SIGTERM")
-      }
-    }),
-    beforeExit: {
-      register: beforeExitSignal$1.addCallback,
-      callback: () => callback("beforeExit")
-    },
-    exit: {
-      register: exitSignal$1.addCallback,
-      callback: () => callback("exit")
-    }
-  });
-};
-
-const eventRace$1 = eventMap => {
-  const unregisterMap = {};
-
-  const unregisterAll = reason => {
-    return Object.keys(unregisterMap).map(name => unregisterMap[name](reason));
-  };
-
-  Object.keys(eventMap).forEach(name => {
-    const {
-      register,
-      callback
-    } = eventMap[name];
-    unregisterMap[name] = register((...args) => {
-      unregisterAll();
-      callback(...args);
-    });
-  });
-  return unregisterAll;
-};
-
-const teardownSignal$1 = {
-  addCallback: addCallback$c
-};
-
 /* eslint-disable import/max-dependencies */
 /**
  * Be very careful whenever updating puppeteer
@@ -14561,7 +13472,7 @@ const launchPuppeteer = async ({
   } = browserOperation;
 
   if (stopOnExit) {
-    const unregisterProcessTeadown = teardownSignal$1.addCallback(reason => {
+    const unregisterProcessTeadown = teardownSignal.addCallback(reason => {
       stop(`process ${reason}`);
     });
     registerCleanupCallback(unregisterProcessTeadown);
@@ -15902,33 +14813,7 @@ function safeDefineProperty(object, propertyNameOrSymbol, descriptor) {
   return source;
 };
 
-const memoize = compute => {
-  let memoized = false;
-  let memoizedValue;
-
-  const fnWithMemoization = (...args) => {
-    if (memoized) {
-      return memoizedValue;
-    } // if compute is recursive wait for it to be fully done before storing the lockValue
-    // so set locked later
-
-
-    memoizedValue = compute(...args);
-    memoized = true;
-    return memoizedValue;
-  };
-
-  fnWithMemoization.forget = () => {
-    const value = memoizedValue;
-    memoized = false;
-    memoizedValue = undefined;
-    return value;
-  };
-
-  return fnWithMemoization;
-};
-
-const supportsDynamicImport = memoize(async () => {
+const supportsDynamicImport = memoize$1(async () => {
   const fileUrl = resolveUrl$1("./src/internal/dynamicImportSource.js", jsenvCoreDirectoryUrl);
   const filePath = urlToFileSystemPath(fileUrl);
   const fileAsString = String(fs.readFileSync(filePath));
@@ -15989,8 +14874,8 @@ const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debu
 const createChildExecArgv = async ({
   cancellationToken = createCancellationToken(),
   // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
-  processExecArgv,
-  processDebugPort,
+  processExecArgv = process.execArgv,
+  processDebugPort = process.debugPort,
   debugPort = 0,
   debugMode = "inherit",
   debugModeInheritBreak = true,
@@ -16195,8 +15080,6 @@ const launchNode = async ({
   await assertFilePresence(nodeControllableFileUrl);
   const execArgv = await createChildExecArgv({
     cancellationToken,
-    processExecArgv: process.execArgv,
-    processDebugPort: process.debugPort,
     debugPort,
     debugMode,
     debugModeInheritBreak,
@@ -16295,7 +15178,7 @@ const launchNode = async ({
     return disconnectedPromise;
   };
 
-  const gracefulStop = () => {
+  const gracefulStop = async () => {
     if (!child.connected) {
       return Promise.resolve();
     }
@@ -16306,7 +15189,18 @@ const launchNode = async ({
         resolve();
       });
     });
-    sendToChild(child, "gracefulStop");
+
+    try {
+      await sendToChild(child, "gracefulStop");
+    } catch (e) {
+      // cannot comunicate with the child (child killed itself ?)
+      if (e.code === "EPIPE") {
+        return disconnectedPromise;
+      }
+
+      throw e;
+    }
+
     return disconnectedPromise;
   };
 
@@ -16732,7 +15626,7 @@ const stringHasConcecutiveSlashes = string => {
 
 /* eslint-disable import/max-dependencies */
 const startExploring = async ({
-  cancellationToken = createCancellationTokenForProcessSIGINT(),
+  cancellationToken = createCancellationTokenForProcess(),
   logLevel,
   compileServerLogLevel = logLevel,
   htmlFileRelativeUrl,
@@ -16762,7 +15656,7 @@ const startExploring = async ({
   // random available port
   forcePort = false
 }) => {
-  return wrapAsyncFunction(async () => {
+  return catchCancellation(async () => {
     const logger = createLogger({
       logLevel
     });
@@ -17096,6 +15990,9 @@ const startExploring = async ({
       exploringServer,
       compileServer
     };
+  }).catch(e => {
+    process.exitCode = 1;
+    throw e;
   });
 };
 
@@ -17105,6 +16002,7 @@ exports.execute = execute;
 exports.executeTestPlan = executeTestPlan;
 exports.generateCommonJsBundle = generateCommonJsBundle;
 exports.generateCommonJsBundleForNode = generateCommonJsBundleForNode;
+exports.generateEsModuleBundle = generateEsModuleBundle;
 exports.generateGlobalBundle = generateGlobalBundle;
 exports.generateSystemJsBundle = generateSystemJsBundle;
 exports.jsenvBabelPluginCompatMap = jsenvBabelPluginCompatMap;

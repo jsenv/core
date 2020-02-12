@@ -2,12 +2,14 @@
 
 - [Presentation](#Presentation)
   - [File structure](#File-structure)
+    - [Esmodule format](#esmodule-format)
     - [Systemjs format](#systemjs-format)
     - [Global format](#global-format)
     - [Commonjs format](#commonjs-format)
 - [Concrete example](#concrete-example)
   - [1 - Setup basic project](#1---setup-basic-project)
   - [2 - Generate bundles](#2---generate-bundles)
+- [generateEsModuleBundle](#generateEsModuleBundle)
 - [generateSystemJsBundle](#generateSystemJsBundle)
 - [generateGlobalBundle](#generateglobalbundle)
   - [globalName](#globalName)
@@ -45,6 +47,22 @@ dependency.js
 
 ```js
 export default 42
+```
+
+### Esmodule format
+
+Things to know about esmodule format:
+
+- Cannot use top level await because browsers and Node.js does not support top level await for now
+- Cannot be used in old browsers or node < 13.7
+
+Here is the generated bundle using esmodule format for the [file structure](#File-structure)
+
+```js
+var index = 42
+
+export default index
+//# sourceMappingURL=main.js.map
 ```
 
 ### Systemjs format
@@ -169,6 +187,20 @@ Or you can use the preconfigured script from package.json.
 npm run generate-systemjs-bundle
 ```
 
+# generateEsModuleBundle
+
+`generateEsModuleBundle` is an async function generating an esmodule bundle for your project.
+
+```js
+import { generateEsModuleBundle } from "@jsenv/core"
+
+generateEsModuleBundle({
+  projectDirectoryUrl: new URL("./", import.meta.url),
+})
+```
+
+— source code at [src/generateEsModuleBundle.js](../../src/generateEsModuleBundle.js).
+
 # generateSystemJsBundle
 
 `generateSystemJsBundle` is an async function generating a systemjs bundle for your project.
@@ -243,10 +275,16 @@ This section present parameters available to every function generating a bundle.
 
 `bundleDirectoryRelativeUrl` parameter is a string leading to a directory where bundle files are written. This parameter is optional with a default value specific to each bundling function:
 
-- Default for `generateGlobalBundle`:
+- Default for `generateEsModuleBundle`:
 
   ```js
-  "./dist/global/"
+  "./dist/esmodule/"
+  ```
+
+- Default for `generateSystemJsBundle`:
+
+  ```js
+  "./dist/systemjs/"
   ```
 
 - Default for `generateCommonJsBundle` and `generateCommonJsBundleForNode`:
@@ -255,10 +293,10 @@ This section present parameters available to every function generating a bundle.
   "./dist/commonjs/"
   ```
 
-- Default for `generateSystemJsBundle`:
+- Default for `generateGlobalBundle`:
 
   ```js
-  "./dist/systemjs/"
+  "./dist/global/"
   ```
 
 ## entryPointMap
