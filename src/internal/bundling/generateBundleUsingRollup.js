@@ -23,6 +23,7 @@ export const generateBundleUsingRollup = async ({
   browser,
   babelPluginMap,
   format,
+  formatInputOptions,
   formatOutputOptions,
   minify,
   minifyJsOptions,
@@ -63,6 +64,7 @@ export const generateBundleUsingRollup = async ({
     jsenvRollupPlugin,
 
     format,
+    formatInputOptions,
     formatOutputOptions,
     bundleDirectoryUrl,
     sourcemapExcludeSources,
@@ -85,6 +87,7 @@ const useRollup = async ({
   jsenvRollupPlugin,
 
   format,
+  formatInputOptions,
   formatOutputOptions,
   bundleDirectoryUrl,
   sourcemapExcludeSources,
@@ -127,6 +130,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}
         input: entryPointMap,
         external: (id) => nativeModulePredicate(id),
         plugins: [jsenvRollupPlugin],
+        ...formatInputOptions,
       }),
   })
 
@@ -176,5 +180,6 @@ const formatToRollupFormat = (format) => {
   if (format === "global") return "iife"
   if (format === "commonjs") return "cjs"
   if (format === "systemjs") return "system"
+  if (format === "esm") return "esm"
   throw new Error(`unexpected format, got ${format}`)
 }

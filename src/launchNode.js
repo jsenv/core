@@ -61,8 +61,6 @@ export const launchNode = async ({
 
   const execArgv = await createChildExecArgv({
     cancellationToken,
-    processExecArgv: process.execArgv,
-    processDebugPort: process.debugPort,
     debugPort,
     debugMode,
     debugModeInheritBreak,
