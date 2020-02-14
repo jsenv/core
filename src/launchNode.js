@@ -11,6 +11,13 @@ import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCha
 import { createChildExecArgv } from "./internal/node-launcher/createChildExecArgv.js"
 
 const EVALUATION_STATUS_OK = "evaluation-ok"
+
+// https://nodejs.org/api/process.html#process_signal_events
+const SIGINT_SIGNAL_NUMBER = 2
+const SIGTERM_SIGNAL_NUMBER = 15
+const SIGINT_EXIT_CODE = 128 + SIGINT_SIGNAL_NUMBER
+const SIGTERM_EXIT_CODE = 128 + SIGTERM_SIGNAL_NUMBER
+
 const nodeJsFileUrl = resolveUrl(
   "./src/internal/node-launcher/node-js-file.js",
   jsenvCoreDirectoryUrl,
@@ -126,7 +133,7 @@ export const launchNode = async ({
   })
   // process.exit(1) from child
   const exitErrorRegistration = registerChildEvent(child, "exit", (code) => {
-    if (code !== 0 && code !== null) {
+    if (code !== null && code !== 0 && code !== SIGINT_EXIT_CODE && code !== SIGTERM_EXIT_CODE) {
       errorEventRegistration.unregister()
       exitErrorRegistration.unregister()
       emitError(createExitWithFailureCodeError(code))
