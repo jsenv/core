@@ -59,17 +59,19 @@ ${url}
 ${importerUrl}`)
   }
 
-  if (status === 500 && statusText === "parse error") {
-    const parsingError = JSON.parse(body)
-    const error = new Error(`imported module parsing error.
+  if (status === 500 && headers["content-type"] === "application/json") {
+    const bodyObject = JSON.parse(body)
+    if (bodyObject.message && bodyObject.filename && "columnNumber" in bodyObject) {
+      const error = new Error(`imported module parsing error.
 --- parsing error message ---
-${parsingError.message}
+${bodyObject.message}
 --- url ---
 ${url}
 --- importer url ---
 ${importerUrl}`)
-    error.parsingError = parsingError
-    throw error
+      error.parsingError = bodyObject
+      throw error
+    }
   }
 
   if (status < 200 || status >= 300) {

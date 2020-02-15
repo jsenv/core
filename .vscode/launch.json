@@ -66,6 +66,7 @@
         "<node_internals>/**/*.js",
         // "node_modules/**",
         "node_modules/@babel/template/**",
+        "node_modules/@babel/core/**",
         // "node_modules/@jsenv/core/**",
         // "node_modules/@jsenv/cancellation/**",
         "node_modules/@rollup/**",

@@ -22,7 +22,7 @@ export const execute = async ({
   convertMap,
   compileGroupCount = 2,
 
-  protocol = "http",
+  protocol = "https",
   ip = "127.0.0.1",
   port = 0,
 
