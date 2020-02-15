@@ -13,7 +13,9 @@ export const scriptLoadGlobalBundle = async ({
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
     startTestServer({ bundleDirectoryUrl }),
-    puppeteer.launch(),
+    puppeteer.launch({
+      ignoreHTTPSErrors: true,
+    }),
   ])
 
   const page = await browser.newPage()
@@ -42,6 +44,7 @@ export const scriptLoadGlobalBundle = async ({
 const startTestServer = ({ bundleDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
+    protocol: "https",
     requestToResponse: (request) =>
       firstService(
         () => serveIndexPage({ request }),

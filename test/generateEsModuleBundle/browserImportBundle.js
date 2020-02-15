@@ -14,6 +14,7 @@ export const browserImportBundle = async ({
   const [server, browser] = await Promise.all([
     startTestServer({ bundleDirectoryUrl }),
     puppeteer.launch({
+      ignoreHTTPSErrors: true,
       // headless: false,
       // handleSIGINT: false,
       // handleSIGTERM: false,
@@ -45,6 +46,7 @@ export const browserImportBundle = async ({
 const startTestServer = ({ bundleDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
+    protocol: "https",
     requestToResponse: (request) =>
       firstService(
         () => serveIndexPage({ request }),

@@ -57,7 +57,7 @@ export const startCompileServer = async ({
   convertMap = {},
 
   // options related to the server itself
-  protocol = "http",
+  protocol = "https",
   privateKey,
   certificate,
   ip = "127.0.0.1",

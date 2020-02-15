@@ -49,7 +49,7 @@ export const startExploring = async ({
 
   keepProcessAlive = true,
   cors = true,
-  protocol = "http",
+  protocol = "https",
   privateKey,
   certificate,
   ip = "127.0.0.1",

@@ -18,6 +18,7 @@ export const browserImportSystemJsBundle = async ({
     startTestServer({ testDirectoryUrl }),
     puppeteer.launch({
       headless,
+      ignoreHTTPSErrors: true,
     }),
   ])
 
@@ -47,6 +48,7 @@ export const browserImportSystemJsBundle = async ({
 const startTestServer = ({ testDirectoryUrl }) => {
   return startServer({
     logLevel: "off",
+    protocol: "https",
     requestToResponse: (request) =>
       firstService(
         () => serveSystemJS({ request }),

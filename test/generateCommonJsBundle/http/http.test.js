@@ -18,7 +18,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const mainFilename = `${testDirectoryname}.js`
 const server = await startServer({
-  protocol: "http",
+  protocol: "https",
   ip: "127.0.0.1",
   port: 9999,
   requestToResponse: () => {

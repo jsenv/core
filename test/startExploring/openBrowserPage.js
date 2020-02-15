@@ -16,6 +16,7 @@ export const openBrowserPage = async (
 ) => {
   const browser = await puppeteer.launch({
     headless,
+    ignoreHTTPSErrors: true,
   })
   const page = await browser.newPage()
 
