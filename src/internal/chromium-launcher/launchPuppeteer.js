@@ -82,7 +82,10 @@ export const launchPuppeteer = async ({
     const webSocketEndpoint = browser.wsEndpoint()
     const webSocketUrl = new URL(webSocketEndpoint)
     const browserEndpoint = `http://${webSocketUrl.host}/json/version`
-    const browserResponse = await fetchUrl(browserEndpoint, { cancellationToken })
+    const browserResponse = await fetchUrl(browserEndpoint, {
+      cancellationToken,
+      ignoreHttpsError: true,
+    })
     const { valid, message } = validateResponseStatusIsOk(browserResponse)
     if (!valid) {
       throw new Error(message)

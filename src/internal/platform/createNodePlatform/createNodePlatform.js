@@ -108,7 +108,7 @@ export const createNodePlatform = async ({
 }
 
 const importJson = async (url) => {
-  const response = await fetchUrl(url, { simplified: false })
+  const response = await fetchUrl(url, { simplified: false, ignoreHttpsError: true })
   const object = await response.json()
   return object
 }

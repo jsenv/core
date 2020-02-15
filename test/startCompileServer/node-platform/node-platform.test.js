@@ -18,7 +18,9 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
   })
   const compiledFileRelativeUrl = `${outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodePlatform.js`
   const fileServerUrl = `${compileServerOrigin}/${compiledFileRelativeUrl}`
-  const { url, status, statusText, headers } = await fetchUrl(fileServerUrl)
+  const { url, status, statusText, headers } = await fetchUrl(fileServerUrl, {
+    ignoreHttpsError: true,
+  })
   {
     const actual = {
       url,

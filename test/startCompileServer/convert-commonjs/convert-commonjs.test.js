@@ -24,7 +24,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   },
 })
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/${fileRelativeUrl}`
-const { status, statusText, headers } = await fetchUrl(fileServerUrl)
+const { status, statusText, headers } = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
 const actual = {
   status,
   statusText,
