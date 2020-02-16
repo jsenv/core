@@ -22,9 +22,9 @@ export const execute = async ({
   convertMap,
   compileGroupCount = 2,
 
-  protocol = "https",
-  ip = "127.0.0.1",
-  port = 0,
+  compileServerProtocol = "https",
+  compileServerIp = "127.0.0.1",
+  compileServerPort = 0,
 
   launch,
   mirrorConsole = true,
@@ -61,9 +61,9 @@ export const execute = async ({
       convertMap,
       compileGroupCount,
 
-      protocol,
-      ip,
-      port,
+      compileServerProtocol,
+      compileServerIp,
+      compileServerPort,
     })
 
     return launchAndExecute({
