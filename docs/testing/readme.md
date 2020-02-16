@@ -409,6 +409,12 @@ To avoid duplication some parameter are linked to a generic documentation.
 - [convertMap](../shared-parameters.md#convertMap)
 - [importMapFileRelativeUrl](../shared-parameters.md#importMapFileRelativeUrl)
 - [importDefaultExtension](../shared-parameters.md#importDefaultExtension)
+- [compileServerLogLevel](../shared-parameters.md#compileServerLogLevel)
+- [compileServerProtocol](../shared-parameters.md#compileServerProtocol)
+- [compileServerPrivateKey](../shared-parameters.md#compileServerPrivateKey)
+- [compileServerCertificate](../shared-parameters.md#compileServerCertificate)
+- [compileServerIp](../shared-parameters.md#compileServerIp)
+- [compileServerPort](../shared-parameters.md#compileServerPort)
 
 # executeTestPlan return value
 

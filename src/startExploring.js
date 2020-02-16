@@ -101,11 +101,11 @@ export const startExploring = async ({
       convertMap,
 
       cors,
-      protocol,
-      privateKey,
-      certificate,
-      ip,
-      port: compileServerPort,
+      compileServerProtocol: protocol,
+      compileServerPrivateKey: privateKey,
+      compileServerCertificate: certificate,
+      compileServerIp: ip,
+      compileServerPort,
       projectFileRequestedCallback: (value) => {
         // just to allow projectFileRequestedCallback to be redefined
         projectFileRequestedCallback(value)

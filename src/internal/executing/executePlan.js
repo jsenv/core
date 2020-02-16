@@ -22,6 +22,11 @@ export const executePlan = async ({
   importMapFileUrl,
   importDefaultExtension,
 
+  compileServerProtocol,
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp,
+  compileServerPort,
   babelPluginMap,
   convertMap,
   compileGroupCount,
@@ -80,9 +85,14 @@ export const executePlan = async ({
       importMapFileUrl,
       importDefaultExtension,
 
-      compileGroupCount,
+      compileServerProtocol,
+      compileServerPrivateKey,
+      compileServerCertificate,
+      compileServerIp,
+      compileServerPort,
       babelPluginMap,
       convertMap,
+      compileGroupCount,
     }),
   ])
 
