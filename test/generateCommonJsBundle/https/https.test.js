@@ -18,9 +18,11 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv`
 const bundleDirectoryRelativeUrl = `${testDirectoryRelativeUrl}dist/commonjs/`
 const mainFilename = `${testDirectoryname}.js`
 const server = await startServer({
-  protocol: "http",
+  logLevel: "warn",
+  protocol: "https",
   ip: "127.0.0.1",
   port: 9999,
+  keepProcessAlive: false,
   requestToResponse: () => {
     const body = `export default 42`
 
@@ -33,7 +35,6 @@ const server = await startServer({
       body,
     }
   },
-  logLevel: "off",
 })
 
 const bundle = await generateCommonJsBundle({
@@ -66,7 +67,7 @@ const compilationResult = bundleToCompilationResult(bundle, {
   const expected = {
     version: actual.version,
     file: "main.cjs",
-    sources: ["http://127.0.0.1:9999/file.js"],
+    sources: [`${server.origin}/file.js`],
     sourcesContent: null,
     names: actual.names,
     mappings: actual.mappings,
@@ -81,5 +82,3 @@ const compilationResult = bundleToCompilationResult(bundle, {
   const expected = 42
   assert({ actual, expected })
 }
-
-server.stop()

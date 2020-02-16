@@ -153,8 +153,8 @@ The following parameter controls the exploring server:
 
 The following parameter controls the compile server:
 
-- [compileServerPort](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port)
-- [compileServerLogLevel](https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#logLevel)
+- [compileServerLogLevel](../shared-parameters.md#compileServerLogLevel)
+- [compileServerPort](../shared-parameters.md#compileServerPort)
 
 # Shared parameters
 

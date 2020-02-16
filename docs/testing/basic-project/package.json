@@ -11,6 +11,6 @@
     "test-with-coverage": "node ./execute-test-plan.cjs --cover"
   },
   "devDependencies": {
-    "@jsenv/core": "11.0.1"
+    "@jsenv/core": "11.8.0"
   }
 }

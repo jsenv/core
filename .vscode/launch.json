@@ -30,7 +30,7 @@
       "runtimeArgs": [
         "--unhandled-rejections=strict",
         "--experimental-json-modules",
-        // this is to disabled experimental warning
+        // this is to disable experimental warning
         "--no-warnings"
       ],
       // "args": ["--coverage"],
@@ -52,8 +52,13 @@
       "type": "node",
       "request": "launch",
       "protocol": "inspector",
-      "program": "${workspaceFolder}/script/run-node/run-node.js",
-      "runtimeArgs": ["--unhandled-rejections=strict"],
+      // "program": "${workspaceFolder}/script/run-node/run-node.js",
+      "program": "${workspaceFolder}/script/run-node/run-node.common.js",
+      "runtimeArgs": [
+        "--unhandled-rejections=strict",
+        // this is to disable experimental warning
+        "--no-warnings"
+      ],
       "args": ["${relativeFile}"],
       "autoAttachChildProcesses": true,
       // "sourceMaps": false,
@@ -62,6 +67,7 @@
         "<node_internals>/**/*.js",
         // "node_modules/**",
         "node_modules/@babel/template/**",
+        "node_modules/@babel/core/**",
         // "node_modules/@jsenv/core/**",
         // "node_modules/@jsenv/cancellation/**",
         "node_modules/@rollup/**",

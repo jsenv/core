@@ -15,6 +15,7 @@ export const startCompileServerForExecutingPlan = async ({
     promises.push(
       fetchUrl(
         `${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`,
+        { ignoreHttpsError: true },
       ),
     )
   }
@@ -22,6 +23,7 @@ export const startCompileServerForExecutingPlan = async ({
     promises.push(
       fetchUrl(
         `${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodePlatform.js`,
+        { ignoreHttpsError: true },
       ),
     )
   }

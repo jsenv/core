@@ -4,15 +4,34 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
+function _interopNamespace(e) {
+  if (e && e.__esModule) { return e; } else {
+    var n = {};
+    if (e) {
+      Object.keys(e).forEach(function (k) {
+        var d = Object.getOwnPropertyDescriptor(e, k);
+        Object.defineProperty(n, k, d.get ? d : {
+          enumerable: true,
+          get: function () {
+            return e[k];
+          }
+        });
+      });
+    }
+    n['default'] = e;
+    return n;
+  }
+}
+
 var module$1 = require('module');
 var url$1 = require('url');
 var fs = require('fs');
 var crypto = require('crypto');
 var path = require('path');
 var util = require('util');
+var https = require('https');
 var net = require('net');
 var http = require('http');
-var https = require('https');
 var stream = require('stream');
 var os = require('os');
 var readline = _interopDefault(require('readline'));
@@ -6372,6 +6391,7 @@ const {
 const fetchUrl = async (url, {
   cancellationToken = createCancellationToken(),
   simplified = false,
+  ignoreHttpsError = false,
   canReadDirectory,
   contentTypeMap,
   cacheStrategy,
@@ -6417,6 +6437,11 @@ const fetchUrl = async (url, {
   try {
     response = await nodeFetch(url, {
       signal: abortController.signal,
+      ...(ignoreHttpsError && url.startsWith("https") ? {
+        agent: new https.Agent({
+          rejectUnauthorized: false
+        })
+      } : {}),
       ...options
     });
   } catch (e) {
@@ -6592,30 +6617,95 @@ q4DB6OgAEzkytbKtcgPlhY0GDbim8ELCpO1JNDn/jUXH74VJElwXMZqan5VaQ5c+
 qsCeVUdw8QsfIZH6XbkvhCswh4k=
 -----END CERTIFICATE-----`;
 
+const createTracker = () => {
+  const callbackArray = [];
+
+  const registerCleanupCallback = callback => {
+    if (typeof callback !== "function") throw new TypeError(`callback must be a function
+callback: ${callback}`);
+    callbackArray.push(callback);
+  };
+
+  const cleanup = async reason => {
+    const localCallbackArray = callbackArray.slice();
+    await Promise.all(localCallbackArray.map(callback => callback(reason)));
+  };
+
+  return {
+    registerCleanupCallback,
+    cleanup
+  };
+};
+
 const urlToOrigin$1 = url => {
   return new URL(url).origin;
 };
 
-const trackConnections = (nodeServer, {
+const createServer = async ({
+  http2,
+  http1Allowed,
+  protocol,
+  privateKey,
+  certificate
+}) => {
+  if (protocol === "http") {
+    if (http2) {
+      const {
+        createServer
+      } = await new Promise(function (resolve) { resolve(_interopNamespace(require('http2'))); });
+      return createServer();
+    }
+
+    const {
+      createServer
+    } = await new Promise(function (resolve) { resolve(_interopNamespace(require('http'))); });
+    return createServer();
+  }
+
+  if (protocol === "https") {
+    if (http2) {
+      const {
+        createSecureServer
+      } = await new Promise(function (resolve) { resolve(_interopNamespace(require('http2'))); });
+      return createSecureServer({
+        key: privateKey,
+        cert: certificate,
+        allowHTTP1: http1Allowed
+      });
+    }
+
+    const {
+      createServer
+    } = await new Promise(function (resolve) { resolve(_interopNamespace(require('https'))); });
+    return createServer({
+      key: privateKey,
+      cert: certificate
+    });
+  }
+
+  throw new Error(`unsupported protocol ${protocol}`);
+};
+
+const trackServerPendingConnections = (nodeServer, {
   onConnectionError
 }) => {
-  const connections = new Set();
+  const pendingConnections = new Set();
 
   const connectionListener = connection => {
     connection.on("close", () => {
-      connections.delete(connection);
+      pendingConnections.delete(connection);
     });
     connection.on("error", onConnectionError);
-    connections.add(connection);
+    pendingConnections.add(connection);
   };
 
   nodeServer.on("connection", connectionListener);
 
   const stop = async reason => {
     nodeServer.removeListener("connection", connectionListener);
-    await Promise.all(Array.from(connections).map(connection => {
+    await Promise.all(Array.from(pendingConnections).map(pendingConnection => {
       return new Promise((resolve, reject) => {
-        connection.destroy(reason, error => {
+        pendingConnection.destroy(reason, error => {
           if (error) {
             if (error === reason || error.code === "ENOTCONN") {
               resolve();
@@ -6635,71 +6725,51 @@ const trackConnections = (nodeServer, {
   };
 };
 
-const trackClients = nodeServer => {
-  const clients = new Set();
+const trackServerPendingRequests = nodeServer => {
+  const pendingClients = new Set();
 
-  const clientListener = (nodeRequest, nodeResponse) => {
+  const requestListener = (nodeRequest, nodeResponse) => {
     const client = {
       nodeRequest,
       nodeResponse
     };
-    clients.add(client);
-    nodeResponse.on("finish", () => {
-      clients.delete(client);
+    pendingClients.add(client);
+    nodeResponse.on("close", () => {
+      pendingClients.delete(client);
     });
   };
 
-  nodeServer.on("request", clientListener);
+  nodeServer.on("request", requestListener);
 
   const stop = ({
     status,
     reason
   }) => {
-    nodeServer.removeListener("request", clientListener);
-    return Promise.all(Array.from(clients).map(({
+    nodeServer.removeListener("request", requestListener);
+    return Promise.all(Array.from(pendingClients).map(({
       nodeResponse
     }) => {
       if (nodeResponse.headersSent === false) {
         nodeResponse.writeHead(status, reason);
       }
 
-      return new Promise(resolve => {
-        if (nodeResponse.finished) {
+      return new Promise((resolve, reject) => {
+        if (nodeResponse.closed) {
           resolve();
         } else {
-          nodeResponse.on("finish", resolve);
-          nodeResponse.on("error", resolve);
-          nodeResponse.destroy(reason);
+          nodeResponse.close(error => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve();
+            }
+          });
         }
       });
     }));
   };
 
   return {
-    stop
-  };
-};
-
-const trackRequestHandlers = nodeServer => {
-  const requestHandlers = [];
-
-  const add = handler => {
-    requestHandlers.push(handler);
-    nodeServer.on("request", handler);
-    return () => {
-      nodeServer.removeListener("request", handler);
-    };
-  };
-
-  const stop = () => {
-    requestHandlers.forEach(requestHandler => {
-      nodeServer.removeListener("request", requestHandler);
-    });
-    requestHandlers.length = 0;
-  };
-
-  return {
-    add,
     stop
   };
 };
@@ -6721,14 +6791,14 @@ const nodeStreamToObservable = nodeStream => {
         nodeStream.removeListener("error", error);
         nodeStream.removeListener("end", complete);
 
-        if (nodeStreamIsNodeRequest(nodeStream)) {
+        if (typeof nodeStream.abort === "function") {
           nodeStream.abort();
         } else {
           nodeStream.destroy();
         }
       };
 
-      if (nodeStreamIsNodeRequest(nodeStream)) {
+      if (typeof nodeStream.once === "function") {
         nodeStream.once("abort", unsubscribe);
       }
 
@@ -6738,8 +6808,6 @@ const nodeStreamToObservable = nodeStream => {
     }
   });
 };
-
-const nodeStreamIsNodeRequest = nodeStream => "abort" in nodeStream && "flushHeaders" in nodeStream;
 
 const normalizeHeaderName = headerName => {
   headerName = String(headerName);
@@ -6762,25 +6830,51 @@ https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
 const headersFromObject = headersObject => {
   const headers = {};
   Object.keys(headersObject).forEach(headerName => {
+    if (headerName[0] === ":") {
+      // exclude http2 headers
+      return;
+    }
+
     headers[normalizeHeaderName(headerName)] = normalizeHeaderValue(headersObject[headerName]);
   });
   return headers;
 };
 
-const nodeRequestToRequest = (nodeRequest, origin) => {
-  const ressource = nodeRequest.url;
+const nodeRequestToRequest = (nodeRequest, {
+  serverCancellationToken,
+  serverOrigin
+}) => {
   const {
     method
+  } = nodeRequest;
+  const {
+    url: ressource
   } = nodeRequest;
   const headers = headersFromObject(nodeRequest.headers);
   const body = method === "POST" || method === "PUT" || method === "PATCH" ? nodeStreamToObservable(nodeRequest) : undefined;
   return Object.freeze({
-    origin,
+    // the node request is considered as cancelled if client cancels or server cancels.
+    // in case of server cancellation from a client perspective request is not cancelled
+    // because client still wants a response. But from a server perspective the production
+    // of a response for this request is cancelled
+    cancellationToken: composeCancellationToken(serverCancellationToken, nodeRequestToCancellationToken(nodeRequest)),
+    origin: serverOrigin,
     ressource,
     method,
     headers,
     body
   });
+};
+
+const nodeRequestToCancellationToken = nodeRequest => {
+  const {
+    cancel,
+    token
+  } = createCancellationSource();
+  nodeRequest.on("abort", () => {
+    cancel("request aborted");
+  });
+  return token;
 };
 
 const valueToObservable = value => {
@@ -6805,12 +6899,13 @@ const populateNodeResponse = (nodeResponse, {
   body,
   bodyEncoding
 }, {
-  ignoreBody
-}) => {
+  ignoreBody,
+  ignoreStatusTest
+} = {}) => {
   const nodeHeaders = headersToNodeHeaders(headers); // nodejs strange signature for writeHead force this
   // https://nodejs.org/api/http.html#http_response_writehead_statuscode_statusmessage_headers
 
-  if (statusText === undefined) {
+  if (statusText === undefined || ignoreStatusTest) {
     nodeResponse.writeHead(status, nodeHeaders);
   } else {
     nodeResponse.writeHead(status, statusText, nodeHeaders);
@@ -6941,12 +7036,13 @@ const require$3 = module$1.createRequire(url);
 
 const killPort = require$3("kill-port");
 
-const STATUS_TEXT_INTERNAL_ERROR = "Internal error";
 const startServer = async ({
   cancellationToken = createCancellationToken(),
   logLevel,
   serverName = "server",
   protocol = "http",
+  http2 = protocol === "https",
+  http1Allowed = true,
   ip = "127.0.0.1",
   port = 0,
   // assign a random available port
@@ -6956,8 +7052,8 @@ const startServer = async ({
   stopOnSIGINT = true,
   // auto close the server when the process exits
   stopOnExit = true,
-  // auto close when server respond with a 500
-  stopOnInternalError = false,
+  // auto close when requestToResponse throw an error
+  stopOnInternalError = true,
   // auto close the server when an uncaughtException happens
   stopOnCrash = false,
   keepProcessAlive = true,
@@ -6992,365 +7088,306 @@ const startServer = async ({
     };
   },
   startedCallback = () => {},
-  stoppedCallback = () => {}
+  stoppedCallback = () => {},
+  errorIsCancellation = () => false
 } = {}) => {
-  if (port === 0 && forcePort) {
-    throw new Error(`no need to pass forcePort when port is 0`);
-  }
-
-  if (protocol !== "http" && protocol !== "https") {
-    throw new Error(`protocol must be http or https, got ${protocol}`);
-  } // https://github.com/nodejs/node/issues/14900
-
-
-  if (ip === "0.0.0.0" && process.platform === "win32") {
-    throw new Error(`listening ${ip} not available on window`);
-  }
-
-  const logger = createLogger({
-    logLevel
-  });
-  const internalCancellationSource = createCancellationSource();
-  cancellationToken = composeCancellationToken(cancellationToken, internalCancellationSource.token);
-  const {
-    registerCleanupCallback,
-    cleanup
-  } = createTracker();
-
-  if (stopOnCrash) {
-    const unregister = unadvisedCrashSignal.addCallback(reason => {
-      internalCancellationSource.cancel(reason.value);
-    });
-    registerCleanupCallback(unregister);
-  }
-
-  if (stopOnExit) {
-    const unregister = teardownSignal.addCallback(tearDownReason => {
-      if (!stopOnSIGINT && tearDownReason === "SIGINT") {
-        return;
-      }
-
-      internalCancellationSource.cancel({
-        SIGHUP: STOP_REASON_PROCESS_SIGHUP,
-        SIGTERM: STOP_REASON_PROCESS_SIGTERM,
-        SIGINT: STOP_REASON_PROCESS_SIGINT,
-        beforeExit: STOP_REASON_PROCESS_BEFORE_EXIT,
-        exit: STOP_REASON_PROCESS_EXIT
-      }[tearDownReason]);
-    });
-    registerCleanupCallback(unregister);
-  } else if (stopOnSIGINT) {
-    const unregister = SIGINTSignal.addCallback(() => {
-      internalCancellationSource.cancel(STOP_REASON_PROCESS_SIGINT);
-    });
-    registerCleanupCallback(unregister);
-  }
-
-  if (forcePort) {
-    await createOperation({
-      cancellationToken,
-      start: () => killPort(port)
-    });
-  }
-
-  const {
-    nodeServer,
-    agent
-  } = getNodeServerAndAgent({
-    protocol,
-    privateKey,
-    certificate
-  }); // https://nodejs.org/api/net.html#net_server_unref
-
-  if (!keepProcessAlive) {
-    nodeServer.unref();
-  }
-
-  let status = "starting";
-
-  let onConnectionError = () => {};
-
-  const connectionTracker = trackConnections(nodeServer, {
-    onConnectionError
-  }); // opened connection must be shutdown before the close event is emitted
-
-  registerCleanupCallback(connectionTracker.stop);
-  const clientTracker = trackClients(nodeServer);
-  registerCleanupCallback(reason => {
-    let responseStatus;
-
-    if (reason === STOP_REASON_INTERNAL_ERROR) {
-      responseStatus = 500; // reason = 'shutdown because error'
-    } else {
-      responseStatus = 503; // reason = 'unavailable because stopping'
+  return catchCancellation(async () => {
+    if (port === 0 && forcePort) {
+      throw new Error(`no need to pass forcePort when port is 0`);
     }
 
-    clientTracker.stop({
-      status: responseStatus,
-      reason
+    if (protocol !== "http" && protocol !== "https") {
+      throw new Error(`protocol must be http or https, got ${protocol}`);
+    } // https://github.com/nodejs/node/issues/14900
+
+
+    if (ip === "0.0.0.0" && process.platform === "win32") {
+      throw new Error(`listening ${ip} not available on window`);
+    }
+
+    if (protocol === "https") {
+      if (!privateKey) {
+        throw new Error(`missing privateKey for https server`);
+      }
+
+      if (!certificate) {
+        throw new Error(`missing certificate for https server`);
+      }
+
+      if (privateKey !== jsenvPrivateKey && certificate === jsenvCertificate) {
+        throw new Error(`you passed a privateKey without certificate`);
+      }
+
+      if (certificate !== jsenvCertificate && privateKey === jsenvPrivateKey) {
+        throw new Error(`you passed a certificate without privateKey`);
+      }
+    }
+
+    const internalCancellationSource = createCancellationSource();
+    const externalCancellationToken = cancellationToken;
+    const internalCancellationToken = internalCancellationSource.token;
+    const serverCancellationToken = composeCancellationToken(externalCancellationToken, internalCancellationToken);
+    const logger = createLogger({
+      logLevel
     });
-  });
-  const requestHandlerTracker = trackRequestHandlers(nodeServer); // ensure we don't try to handle request while server is stopping
 
-  registerCleanupCallback(requestHandlerTracker.stop);
-  let stoppedResolve;
-  const stoppedPromise = new Promise(resolve => {
-    stoppedResolve = resolve;
-  });
-  const stop = memoize(async (reason = STOP_REASON_NOT_SPECIFIED) => {
-    status = "stopping";
-
-    onConnectionError = error => {
-      if (error === reason) {
-        return;
-      }
-
-      if (error && error.code === "ECONNRESET") {
-        return;
-      }
-
-      if (isCancelError(reason)) {
+    const onError = error => {
+      if (errorIsCancellation(error)) {
         return;
       }
 
       throw error;
     };
 
-    logger.info(`${serverName} stopped because ${reason}`);
-    await cleanup(reason);
-    await stopListening(nodeServer);
-    status = "stopped";
-    stoppedCallback({
-      reason
-    });
-    stoppedResolve(reason);
-  });
-  cancellationToken.register(stop);
-  const startOperation = createStoppableOperation({
-    cancellationToken,
-    start: () => listen({
-      cancellationToken,
-      server: nodeServer,
-      port,
-      ip
-    }),
-    stop: (_, reason) => stop(reason)
-  });
-  port = await startOperation;
-  status = "opened";
-  const origin = originAsString({
-    protocol,
-    ip,
-    port
-  });
-  logger.info(`${serverName} started at ${origin}`);
-  startedCallback({
-    origin
-  }); // nodeServer.on("upgrade", (request, socket, head) => {
-  //   // when being requested using a websocket
-  //   // we could also answr to the request ?
-  //   // socket.end([data][, encoding])
-  //   console.log("upgrade", { head, request })
-  //   console.log("socket", { connecting: socket.connecting, destroyed: socket.destroyed })
-  // })
-
-  requestHandlerTracker.add(async (nodeRequest, nodeResponse) => {
+    errorIsCancellation = composePredicate(errorIsCancellation, isCancelError);
     const {
-      request,
-      response,
-      error
-    } = await generateResponseDescription({
-      nodeRequest,
-      origin
-    });
+      registerCleanupCallback,
+      cleanup
+    } = createTracker();
 
-    if (request.method !== "HEAD" && response.headers["content-length"] > 0 && response.body === "") {
-      logger.error(createContentLengthMismatchError(`content-length header is ${response.headers["content-length"]} but body is empty`));
+    if (stopOnCrash) {
+      const unregister = unadvisedCrashSignal.addCallback(reason => {
+        internalCancellationSource.cancel(reason.value);
+      });
+      registerCleanupCallback(unregister);
     }
 
-    logger.info(`${request.method} ${request.origin}${request.ressource}`);
+    if (stopOnExit) {
+      const unregister = teardownSignal.addCallback(tearDownReason => {
+        if (!stopOnSIGINT && tearDownReason === "SIGINT") {
+          return;
+        }
 
-    if (error) {
-      logger.error(`internal error while handling request.
+        internalCancellationSource.cancel({
+          SIGHUP: STOP_REASON_PROCESS_SIGHUP,
+          SIGTERM: STOP_REASON_PROCESS_SIGTERM,
+          SIGINT: STOP_REASON_PROCESS_SIGINT,
+          beforeExit: STOP_REASON_PROCESS_BEFORE_EXIT,
+          exit: STOP_REASON_PROCESS_EXIT
+        }[tearDownReason]);
+      });
+      registerCleanupCallback(unregister);
+    } else if (stopOnSIGINT) {
+      const unregister = SIGINTSignal.addCallback(() => {
+        internalCancellationSource.cancel(STOP_REASON_PROCESS_SIGINT);
+      });
+      registerCleanupCallback(unregister);
+    }
+
+    if (forcePort) {
+      await createOperation({
+        cancellationToken: serverCancellationToken,
+        start: () => killPort(port)
+      });
+    }
+
+    const nodeServer = await createServer({
+      http2,
+      http1Allowed,
+      protocol,
+      privateKey,
+      certificate
+    }); // https://nodejs.org/api/net.html#net_server_unref
+
+    if (!keepProcessAlive) {
+      nodeServer.unref();
+    }
+
+    let status = "starting";
+    let stoppedResolve;
+    const stoppedPromise = new Promise(resolve => {
+      stoppedResolve = resolve;
+    });
+    const stop = memoize(async (reason = STOP_REASON_NOT_SPECIFIED) => {
+      status = "stopping";
+      errorIsCancellation = composePredicate(errorIsCancellation, error => error === reason);
+      errorIsCancellation = composePredicate(errorIsCancellation, error => error && error.code === "ECONNRESET");
+      logger.info(`${serverName} stopped because ${reason}`);
+      await cleanup(reason);
+      await stopListening(nodeServer);
+      status = "stopped";
+      stoppedCallback({
+        reason
+      });
+      stoppedResolve(reason);
+    });
+    serverCancellationToken.register(stop);
+    const startOperation = createStoppableOperation({
+      cancellationToken: serverCancellationToken,
+      start: () => listen({
+        cancellationToken: serverCancellationToken,
+        server: nodeServer,
+        port,
+        ip
+      }),
+      stop: (_, reason) => stop(reason)
+    });
+    port = await startOperation;
+    status = "opened";
+    const serverOrigin = originAsString({
+      protocol,
+      ip,
+      port
+    });
+    const connectionsTracker = trackServerPendingConnections(nodeServer, {
+      onConnectionError: onError
+    }); // opened connection must be shutdown before the close event is emitted
+
+    registerCleanupCallback(connectionsTracker.stop);
+    const pendingRequestsTracker = trackServerPendingRequests(nodeServer); // ensure pending requests got a response from the server
+
+    registerCleanupCallback(reason => {
+      pendingRequestsTracker.stop({
+        status: reason === STOP_REASON_INTERNAL_ERROR ? 500 : 503,
+        reason
+      });
+    });
+
+    const requestCallback = async (nodeRequest, nodeResponse) => {
+      const request = nodeRequestToRequest(nodeRequest, {
+        serverCancellationToken,
+        serverOrigin
+      });
+      nodeRequest.on("error", error => {
+        logger.error(`error on request.
+--- request ressource ---
+${request.ressource}
+--- error stack ---
+${error.stack}`);
+      });
+      const response = await getResponse(request);
+      populateNodeResponse(nodeResponse, response, {
+        ignoreBody: request.method === "HEAD",
+        // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L97
+        ignoreStatusTest: Boolean(nodeRequest.stream)
+      });
+    };
+
+    nodeServer.on("request", requestCallback); // ensure we don't try to handle new requests while server is stopping
+
+    registerCleanupCallback(() => {
+      nodeServer.removeListener("request", requestCallback);
+    });
+    logger.info(`${serverName} started at ${serverOrigin}`);
+    startedCallback({
+      origin: serverOrigin
+    });
+    const corsEnabled = accessControlAllowRequestOrigin || accessControlAllowedOrigins.length; // here we check access control options to throw or warn if we find strange values
+
+    const getResponse = async request => {
+      const {
+        response,
+        error
+      } = await generateResponseDescription(request);
+
+      if (request.method !== "HEAD" && response.headers["content-length"] > 0 && response.body === "") {
+        logger.error(createContentLengthMismatchError(`content-length header is ${response.headers["content-length"]} but body is empty`));
+      }
+
+      logger.info(`${request.method} ${request.origin}${request.ressource}`);
+
+      if (error) {
+        logger.error(`internal error while handling request.
 --- error stack ---
 ${error.stack}
 --- request ---
 ${request.method} ${request.origin}${request.ressource}`);
-    }
+      }
 
-    logger.info(`${colorizeResponseStatus(response.status)} ${response.statusText}`);
-    populateNodeResponse(nodeResponse, response, {
-      ignoreBody: request.method === "HEAD"
-    });
-  });
-  const corsEnabled = accessControlAllowRequestOrigin || accessControlAllowedOrigins.length; // here we check access control options to throw or warn if we find strange values
+      logger.info(`${colorizeResponseStatus(response.status)} ${response.statusText}`);
 
-  const generateResponseDescription = async ({
-    nodeRequest,
-    origin
-  }) => {
-    const request = nodeRequestToRequest(nodeRequest, origin);
-    nodeRequest.on("error", error => {
-      logger.error("error on", request.ressource, error);
-    });
+      if (stopOnInternalError && // stopOnInternalError stops server only if requestToResponse generated
+      // a non controlled error (internal error).
+      // if requestToResponse gracefully produced a 500 response (it did not throw)
+      // then we can assume we are still in control of what we are doing
+      error) {
+        // il faudrais pouvoir stop que les autres response ?
+        setTimeout(() => stop(STOP_REASON_INTERNAL_ERROR));
+      }
 
-    const responsePropertiesToResponse = ({
-      status = 501,
-      statusText = statusToStatusText(status),
-      headers = {},
-      body = "",
-      bodyEncoding
-    }) => {
-      if (corsEnabled) {
-        const accessControlHeaders = generateAccessControlHeaders({
-          request,
-          accessControlAllowedOrigins,
-          accessControlAllowRequestOrigin,
-          accessControlAllowedMethods,
-          accessControlAllowRequestMethod,
-          accessControlAllowedHeaders,
-          accessControlAllowRequestHeaders,
-          accessControlAllowCredentials,
-          accessControlMaxAge
-        });
+      return response;
+    };
+
+    const generateResponseDescription = async request => {
+      const responsePropertiesToResponse = ({
+        status = 501,
+        statusText = statusToStatusText(status),
+        headers = {},
+        body = "",
+        bodyEncoding
+      }) => {
+        if (corsEnabled) {
+          const accessControlHeaders = generateAccessControlHeaders({
+            request,
+            accessControlAllowedOrigins,
+            accessControlAllowRequestOrigin,
+            accessControlAllowedMethods,
+            accessControlAllowRequestMethod,
+            accessControlAllowedHeaders,
+            accessControlAllowRequestHeaders,
+            accessControlAllowCredentials,
+            accessControlMaxAge
+          });
+          return {
+            status,
+            statusText,
+            headers: composeResponseHeaders(headers, accessControlHeaders),
+            body,
+            bodyEncoding
+          };
+        }
+
         return {
           status,
           statusText,
-          headers: composeResponseHeaders(headers, accessControlHeaders),
+          headers,
           body,
           bodyEncoding
         };
-      }
-
-      return {
-        status,
-        statusText,
-        headers,
-        body,
-        bodyEncoding
       };
-    };
 
-    try {
-      if (corsEnabled && request.method === "OPTIONS") {
+      try {
+        if (corsEnabled && request.method === "OPTIONS") {
+          return {
+            response: responsePropertiesToResponse({
+              status: 200,
+              headers: {
+                "content-length": 0
+              }
+            })
+          };
+        }
+
+        const responseProperties = await requestToResponse(request);
         return {
-          request,
-          response: responsePropertiesToResponse({
-            status: 200,
+          response: responsePropertiesToResponse(responseProperties || {})
+        };
+      } catch (error) {
+        return {
+          response: composeResponse(responsePropertiesToResponse({
+            status: 500,
             headers: {
-              "content-length": 0
+              // ensure error are not cached
+              "cache-control": "no-store",
+              "content-type": "text/plain"
             }
-          })
+          }), internalErrorToResponseProperties(error)),
+          error
         };
       }
+    };
 
-      const responseProperties = await requestToResponse(request);
-      return {
-        request,
-        response: responsePropertiesToResponse(responseProperties || {})
-      };
-    } catch (error) {
-      return {
-        request,
-        response: composeResponse(responsePropertiesToResponse({
-          status: 500,
-          statusText: STATUS_TEXT_INTERNAL_ERROR,
-          headers: {
-            // ensure error are not cached
-            "cache-control": "no-store",
-            "content-type": "text/plain"
-          }
-        }), internalErrorToResponseProperties(error)),
-        error
-      };
-    }
-  };
-
-  if (stopOnInternalError) {
-    const unregister = requestHandlerTracker.add((nodeRequest, nodeResponse) => {
-      if (nodeResponse.statusCode === 500 && nodeResponse.statusMessage === STATUS_TEXT_INTERNAL_ERROR) {
-        stop(STOP_REASON_INTERNAL_ERROR);
-      }
-    });
-    registerCleanupCallback(unregister);
-  }
-
-  return {
-    getStatus: () => status,
-    origin,
-    nodeServer,
-    // TODO: remove agent
-    agent,
-    stop,
-    stoppedPromise
-  };
-};
-
-const createTracker = () => {
-  const callbackArray = [];
-
-  const registerCleanupCallback = callback => {
-    if (typeof callback !== "function") throw new TypeError(`callback must be a function
-callback: ${callback}`);
-    callbackArray.push(callback);
-  };
-
-  const cleanup = async reason => {
-    const localCallbackArray = callbackArray.slice();
-    await Promise.all(localCallbackArray.map(callback => callback(reason)));
-  };
-
-  return {
-    registerCleanupCallback,
-    cleanup
-  };
+    return {
+      getStatus: () => status,
+      origin: serverOrigin,
+      nodeServer,
+      stop,
+      stoppedPromise
+    };
+  });
 };
 
 const statusToStatusText = status => http.STATUS_CODES[status] || "not specified";
-
-const getNodeServerAndAgent = ({
-  protocol,
-  privateKey,
-  certificate
-}) => {
-  if (protocol === "http") {
-    return {
-      nodeServer: http.createServer(),
-      agent: global.Agent
-    };
-  }
-
-  if (protocol === "https") {
-    if (!privateKey) {
-      throw new Error(`missing privateKey for https server`);
-    }
-
-    if (!certificate) {
-      throw new Error(`missing certificate for https server`);
-    }
-
-    if (privateKey !== jsenvPrivateKey && certificate === jsenvCertificate) {
-      throw new Error(`you passed a privateKey without certificate`);
-    }
-
-    if (certificate !== jsenvCertificate && privateKey === jsenvPrivateKey) {
-      throw new Error(`you passed a certificate without privateKey`);
-    }
-
-    return {
-      nodeServer: https.createServer({
-        key: privateKey,
-        cert: certificate
-      }),
-      agent: new https.Agent({
-        rejectUnauthorized: false // allow self signed certificate
-
-      })
-    };
-  }
-
-  throw new Error(`unsupported protocol ${protocol}`);
-};
 
 const createContentLengthMismatchError = message => {
   const error = new Error(message);
@@ -7430,6 +7467,12 @@ const generateAccessControlHeaders = ({
     ...(vary.length ? {
       vary: vary.join(", ")
     } : {})
+  };
+};
+
+const composePredicate = (previousPredicate, predicate) => {
+  return value => {
+    return previousPredicate(value) || predicate(value);
   };
 };
 
@@ -9708,10 +9751,12 @@ const serveCompiledFile = async ({
 https.globalAgent.options.rejectUnauthorized = false;
 const fetchUrl$1 = async (url, {
   simplified = true,
+  ignoreHttpsError = true,
   ...rest
 } = {}) => {
   return fetchUrl(url, {
     simplified,
+    ignoreHttpsError,
     ...rest
   });
 };
@@ -9762,7 +9807,8 @@ const fetchSourcemap = async ({
 
   const sourcemapUrl = resolveUrl$1(sourcemapParsingResult.sourcemapURL, moduleUrl);
   const sourcemapResponse = await fetchUrl$1(sourcemapUrl, {
-    cancellationToken
+    cancellationToken,
+    ignoreHttpsError: true
   });
   const okValidation = validateResponseStatusIsOk(sourcemapResponse);
 
@@ -10134,7 +10180,8 @@ ${moduleUrl}`);
 
   const getModule = async moduleUrl => {
     const response = await fetchUrl$1(moduleUrl, {
-      cancellationToken
+      cancellationToken,
+      ignoreHttpsError: true
     });
     const okValidation = validateResponseStatusIsOk(response);
 
@@ -10850,11 +10897,11 @@ const startCompileServer = async ({
   babelPluginMap = jsenvBabelPluginMap,
   convertMap = {},
   // options related to the server itself
-  protocol = "http",
-  privateKey,
-  certificate,
-  ip = "127.0.0.1",
-  port = 0,
+  compileServerProtocol = "https",
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp = "127.0.0.1",
+  compileServerPort = 0,
   keepProcessAlive = false,
   stopOnPackageVersionChange = false,
   // this callback will be called each time a projectFile was
@@ -10976,11 +11023,11 @@ ${projectDirectoryUrl}`);
     cancellationToken,
     logLevel: compileServerLogLevel,
     serverName: "compile server",
-    protocol,
-    privateKey,
-    certificate,
-    ip,
-    port,
+    protocol: compileServerProtocol,
+    privateKey: compileServerPrivateKey,
+    certificate: compileServerCertificate,
+    ip: compileServerIp,
+    port: compileServerPort,
     sendInternalErrorStack: true,
     requestToResponse: request => {
       return firstService(() => {
@@ -11699,12 +11746,14 @@ const execute = async ({
   importMapFileRelativeUrl,
   importDefaultExtension,
   fileRelativeUrl,
+  compileServerProtocol,
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp,
+  compileServerPort,
   babelPluginMap,
   convertMap,
   compileGroupCount = 2,
-  protocol = "http",
-  ip = "127.0.0.1",
-  port = 0,
   launch,
   mirrorConsole = true,
   stopPlatformAfterExecute = true,
@@ -11746,12 +11795,14 @@ const execute = async ({
       jsenvDirectoryClean,
       importMapFileRelativeUrl,
       importDefaultExtension,
+      compileServerProtocol,
+      compileServerPrivateKey,
+      compileServerCertificate,
+      compileServerIp,
+      compileServerPort,
       babelPluginMap,
       convertMap,
-      compileGroupCount,
-      protocol,
-      ip,
-      port
+      compileGroupCount
     });
     return launchAndExecute({
       cancellationToken,
@@ -11934,11 +11985,15 @@ const startCompileServerForExecutingPlan = async ({
   const promises = [];
 
   if (browserPlatformAnticipatedGeneration) {
-    promises.push(fetchUrl$1(`${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`));
+    promises.push(fetchUrl$1(`${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`, {
+      ignoreHttpsError: true
+    }));
   }
 
   if (nodePlatformAnticipatedGeneration) {
-    promises.push(fetchUrl$1(`${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodePlatform.js`));
+    promises.push(fetchUrl$1(`${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodePlatform.js`, {
+      ignoreHttpsError: true
+    }));
   }
 
   await Promise.all(promises);
@@ -12693,6 +12748,11 @@ const executePlan = async ({
   jsenvDirectoryClean,
   importMapFileUrl,
   importDefaultExtension,
+  compileServerProtocol,
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp,
+  compileServerPort,
   babelPluginMap,
   convertMap,
   compileGroupCount,
@@ -12740,9 +12800,14 @@ const executePlan = async ({
     jsenvDirectoryClean,
     importMapFileUrl,
     importDefaultExtension,
-    compileGroupCount,
+    compileServerProtocol,
+    compileServerPrivateKey,
+    compileServerCertificate,
+    compileServerIp,
+    compileServerPort,
     babelPluginMap,
-    convertMap
+    convertMap,
+    compileGroupCount
   })]);
   const executionResult = await executeConcurrently(executionSteps, {
     cancellationToken,
@@ -12860,6 +12925,11 @@ const executeTestPlan = async ({
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
   importDefaultExtension,
+  compileServerProtocol,
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp,
+  compileServerPort,
   babelPluginMap,
   convertMap,
   compileGroupCount = 2,
@@ -12953,6 +13023,11 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`);
       jsenvDirectoryClean,
       importMapFileRelativeUrl,
       importDefaultExtension,
+      compileServerProtocol,
+      compileServerPrivateKey,
+      compileServerCertificate,
+      compileServerIp,
+      compileServerPort,
       babelPluginMap,
       convertMap,
       compileGroupCount,
@@ -13020,6 +13095,11 @@ const generateBundle = async ({
   env = {},
   browser = false,
   node = false,
+  compileServerProtocol,
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp,
+  compileServerPort,
   babelPluginMap = jsenvBabelPluginMap,
   compileGroupCount = 1,
   platformScoreMap = { ...jsenvBrowserScoreMap,
@@ -13115,6 +13195,11 @@ const generateBundle = async ({
       outDirectoryName: "out-bundle",
       importMapFileRelativeUrl,
       importDefaultExtension,
+      compileServerProtocol,
+      compileServerPrivateKey,
+      compileServerCertificate,
+      compileServerIp,
+      compileServerPort,
       env,
       babelPluginMap,
       compileGroupCount,
@@ -13487,7 +13572,8 @@ const launchPuppeteer = async ({
     const webSocketUrl = new URL(webSocketEndpoint);
     const browserEndpoint = `http://${webSocketUrl.host}/json/version`;
     const browserResponse = await fetchUrl$1(browserEndpoint, {
-      cancellationToken
+      cancellationToken,
+      ignoreHttpsError: true
     });
     const {
       valid,
@@ -13525,6 +13611,7 @@ const startChromiumServer = async ({
   return startServer({
     cancellationToken,
     logLevel,
+    protocol: "https",
     sendInternalErrorStack: true,
     requestToResponse: request => firstService(() => {
       if (request.ressource === "/.jsenv/browser-script.js") {
@@ -15038,7 +15125,12 @@ const getCommandDebugArgs = argv => {
 };
 
 /* eslint-disable import/max-dependencies */
-const EVALUATION_STATUS_OK = "evaluation-ok";
+const EVALUATION_STATUS_OK = "evaluation-ok"; // https://nodejs.org/api/process.html#process_signal_events
+
+const SIGINT_SIGNAL_NUMBER = 2;
+const SIGTERM_SIGNAL_NUMBER = 15;
+const SIGINT_EXIT_CODE = 128 + SIGINT_SIGNAL_NUMBER;
+const SIGTERM_EXIT_CODE = 128 + SIGTERM_SIGNAL_NUMBER;
 const nodeJsFileUrl = resolveUrl$1("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl);
 const launchNode = async ({
   cancellationToken = createCancellationToken(),
@@ -15143,7 +15235,7 @@ const launchNode = async ({
   }); // process.exit(1) from child
 
   const exitErrorRegistration = registerChildEvent(child, "exit", code => {
-    if (code !== 0 && code !== null) {
+    if (code !== null && code !== 0 && code !== SIGINT_EXIT_CODE && code !== SIGTERM_EXIT_CODE) {
       errorEventRegistration.unregister();
       exitErrorRegistration.unregister();
       emitError(createExitWithFailureCodeError(code));
@@ -15406,7 +15498,7 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`;
 
   const run = async () => {
     try {
-      await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)})
+      await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)}, { ignoreHttpsError: true })
     }
     catch(e) {
       console.log('error while fetching', e)
@@ -15647,7 +15739,7 @@ const startExploring = async ({
   compileGroupCount = 2,
   keepProcessAlive = true,
   cors = true,
-  protocol = "http",
+  protocol = "https",
   privateKey,
   certificate,
   ip = "127.0.0.1",
@@ -15700,11 +15792,11 @@ const startExploring = async ({
       babelPluginMap,
       convertMap,
       cors,
-      protocol,
-      privateKey,
-      certificate,
-      ip,
-      port: compileServerPort,
+      compileServerProtocol: protocol,
+      compileServerPrivateKey: privateKey,
+      compileServerCertificate: certificate,
+      compileServerIp: ip,
+      compileServerPort,
       projectFileRequestedCallback: value => {
         // just to allow projectFileRequestedCallback to be redefined
         projectFileRequestedCallback(value);

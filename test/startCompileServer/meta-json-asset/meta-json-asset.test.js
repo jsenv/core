@@ -19,8 +19,8 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-await fetchUrl(fileServerUrl)
-const response = await fetchUrl(`${fileServerUrl}__asset__/meta.json`)
+await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
+const response = await fetchUrl(`${fileServerUrl}__asset__/meta.json`, { ignoreHttpsError: true })
 const body = await response.json()
 const actual = {
   status: response.status,

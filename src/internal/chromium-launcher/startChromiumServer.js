@@ -23,6 +23,7 @@ export const startChromiumServer = async ({
     cancellationToken,
     logLevel,
 
+    protocol: "https",
     sendInternalErrorStack: true,
     requestToResponse: (request) =>
       firstService(

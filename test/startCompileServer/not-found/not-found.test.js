@@ -19,7 +19,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-const response = await fetchUrl(fileServerUrl)
+const response = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
 const actual = {
   status: response.status,
   statusText: response.statusText,

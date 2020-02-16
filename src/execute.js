@@ -18,13 +18,14 @@ export const execute = async ({
   importDefaultExtension,
   fileRelativeUrl,
 
+  compileServerProtocol,
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp,
+  compileServerPort,
   babelPluginMap,
   convertMap,
   compileGroupCount = 2,
-
-  protocol = "http",
-  ip = "127.0.0.1",
-  port = 0,
 
   launch,
   mirrorConsole = true,
@@ -57,13 +58,14 @@ export const execute = async ({
       importMapFileRelativeUrl,
       importDefaultExtension,
 
+      compileServerProtocol,
+      compileServerPrivateKey,
+      compileServerCertificate,
+      compileServerIp,
+      compileServerPort,
       babelPluginMap,
       convertMap,
       compileGroupCount,
-
-      protocol,
-      ip,
-      port,
     })
 
     return launchAndExecute({

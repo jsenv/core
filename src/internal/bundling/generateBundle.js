@@ -33,6 +33,11 @@ export const generateBundle = async ({
   browser = false,
   node = false,
 
+  compileServerProtocol,
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp,
+  compileServerPort,
   babelPluginMap = jsenvBabelPluginMap,
   compileGroupCount = 1,
   platformScoreMap = {
@@ -126,6 +131,11 @@ export const generateBundle = async ({
       importMapFileRelativeUrl,
       importDefaultExtension,
 
+      compileServerProtocol,
+      compileServerPrivateKey,
+      compileServerCertificate,
+      compileServerIp,
+      compileServerPort,
       env,
       babelPluginMap,
       compileGroupCount,

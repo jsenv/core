@@ -57,11 +57,11 @@ export const startCompileServer = async ({
   convertMap = {},
 
   // options related to the server itself
-  protocol = "http",
-  privateKey,
-  certificate,
-  ip = "127.0.0.1",
-  port = 0,
+  compileServerProtocol = "https",
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp = "127.0.0.1",
+  compileServerPort = 0,
   keepProcessAlive = false,
   stopOnPackageVersionChange = false,
 
@@ -172,11 +172,11 @@ ${projectDirectoryUrl}`)
       logLevel: compileServerLogLevel,
       serverName: "compile server",
 
-      protocol,
-      privateKey,
-      certificate,
-      ip,
-      port,
+      protocol: compileServerProtocol,
+      privateKey: compileServerPrivateKey,
+      certificate: compileServerCertificate,
+      ip: compileServerIp,
+      port: compileServerPort,
       sendInternalErrorStack: true,
       requestToResponse: (request) => {
         return firstService(

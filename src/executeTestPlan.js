@@ -27,6 +27,11 @@ export const executeTestPlan = async ({
   importMapFileRelativeUrl,
   importDefaultExtension,
 
+  compileServerProtocol,
+  compileServerPrivateKey,
+  compileServerCertificate,
+  compileServerIp,
+  compileServerPort,
   babelPluginMap,
   convertMap,
   compileGroupCount = 2,
@@ -125,6 +130,11 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       importMapFileRelativeUrl,
       importDefaultExtension,
 
+      compileServerProtocol,
+      compileServerPrivateKey,
+      compileServerCertificate,
+      compileServerIp,
+      compileServerPort,
       babelPluginMap,
       convertMap,
       compileGroupCount,

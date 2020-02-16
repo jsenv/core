@@ -49,7 +49,7 @@ export const startExploring = async ({
 
   keepProcessAlive = true,
   cors = true,
-  protocol = "http",
+  protocol = "https",
   privateKey,
   certificate,
   ip = "127.0.0.1",
@@ -101,11 +101,11 @@ export const startExploring = async ({
       convertMap,
 
       cors,
-      protocol,
-      privateKey,
-      certificate,
-      ip,
-      port: compileServerPort,
+      compileServerProtocol: protocol,
+      compileServerPrivateKey: privateKey,
+      compileServerCertificate: certificate,
+      compileServerIp: ip,
+      compileServerPort,
       projectFileRequestedCallback: (value) => {
         // just to allow projectFileRequestedCallback to be redefined
         projectFileRequestedCallback(value)

@@ -21,6 +21,7 @@ export const fetchSourcemap = async ({ cancellationToken, logger, moduleUrl, mod
   const sourcemapUrl = resolveUrl(sourcemapParsingResult.sourcemapURL, moduleUrl)
   const sourcemapResponse = await fetchUrl(sourcemapUrl, {
     cancellationToken,
+    ignoreHttpsError: true,
   })
   const okValidation = validateResponseStatusIsOk(sourcemapResponse)
 

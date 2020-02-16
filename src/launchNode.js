@@ -384,7 +384,7 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`
 
   const run = async () => {
     try {
-      await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)})
+      await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)}, { ignoreHttpsError: true })
     }
     catch(e) {
       console.log('error while fetching', e)

@@ -19,7 +19,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/${fileRelativeUrl}`
-const { status, statusText, headers } = await fetchUrl(fileServerUrl)
+const { status, statusText, headers } = await fetchUrl(fileServerUrl, { ignoreHttpsError: true })
 {
   const actual = {
     status,
@@ -36,6 +36,7 @@ const { status, statusText, headers } = await fetchUrl(fileServerUrl)
 // test the cache now
 {
   const { status, statusText } = await fetchUrl(fileServerUrl, {
+    ignoreHttpsError: true,
     headers: {
       "if-none-match": headers.get("etag"),
     },
