@@ -31,7 +31,18 @@
   - [completedExecutionLogAbbreviation](#completedExecutionLogAbbreviation)
   - [completedExecutionLogMerging](#completedExecutionLogMerging)
   - [concurrencyLimit](#concurrencyLimit)
-  - [coverage](#coverage)
+  - [coverage parameters](#coverage-parameters)
+    - [coverage](#coverage)
+    - [coverageConfig](#coverageConfig)
+    - [coverageIncludeMissing](#coverageIncludeMissing)
+    - [coverageAndExecutionAllowed](#coverageAndExecutionAllowed)
+    - [coverageTextLog](#coverageTextLog)
+    - [coverageJsonFile](#coverageJsonFile)
+    - [coverageJsonFileLog](#coverageJsonFileLog)
+    - [coverageJsonFileRelativeUrl](#coverageJsonFileRelativeUrl)
+    - [coverageHtmlDirectory](#coverageHtmlDirectory)
+    - [coverageHtmlDirectoryRelativeUrl](#coverageHtmlDirectoryRelativeUrl)
+    - [coverageHtmlDirectoryIndexLog](#coverageHtmlDirectoryIndexLog)
   - [Shared parameters](#shared-parameters)
 - [executeTestPlan return value](#executeTestPlan-return-value)
   - [testPlanSummary](#testPlanSummary)
@@ -121,7 +132,7 @@ If dynamic import resolves, execution is considered successfull.<br />
 If dynamic import rejects, execution is considered errored.<br />
 If dynamic import takes too long to settle, execution is considered timedout.<br />
 
-Once the execution becomes either successfull, errored or timedout jsenv stops the platform launched to execute the test. Inside a node process there is a special behaviour where jsenv sends `SIGINIT` signal to the node process executing your test. After 8s, if the node process has not exited by its own it is killed by force.
+Once the execution becomes either successfull, errored or timedout jsenv stops the platform launched to execute the test. Inside a node process there is a special behaviour where jsenv sends `SIGTERM` signal to the node process executing your test. After 8s, if the node process has not exited by its own it is killed by force.
 
 ## Execution error
 
@@ -140,7 +151,7 @@ await new Promise(() => {})
 ```
 
 Note: By default an execution is given 30s before being considered as a timeout.
-Check [executionDefaultOptions documentation](./api.md#executionDefaultOptions) to know how to configure this value.
+Check [executionDefaultOptions](#executionDefaultOptions) to know how to configure this value.
 
 ## Execution disconnection
 
@@ -395,9 +406,51 @@ Becomes
 
 `concurrencyLimit` parameter is a number representing the max amount of execution allowed to run simultaneously. This parameter is optional with a default value being the number of cpus available minus one. To ensure one execution at a time you can pass `1`.
 
-## coverage
+## coverage parameters
 
-TODO and all coverage params
+### coverage
+
+`coverage` parameter is a boolean used to enable coverage or not while executing test files. This parameter is enabled if node process args includes `--coverage`.
+
+#### coverageConfig
+
+`coverageConfig` parameter is an object used to configure which files must be covered. This parameter is optional with a default value exported by [src/jsenvCoverageConfig.js](../../src/jsenvCoverageConfig.js). Keys are specifiers as documented in [https://github.com/jsenv/jsenv-url-meta#specifier](https://github.com/jsenv/jsenv-url-meta#specifier).
+
+### coverageIncludeMissing
+
+`coverageIncludeMissing` parameter is a boolean used to controls if testPlanCoverageMap will generate empty coverage for file never imported by test files. This parameter is optional and enabled by default.
+
+### coverageAndExecutionAllowed
+
+`coverageAndExecutionAllowed` parameter is a boolean controlling if files can be both executed and instrumented for coverage. A test file should not appear in your coverage but if `coverageConfig` include your test files for coverage they would. This parameter should help to prevent this to happen in case you missconfigured `coverageConfig` or `testPlan`. This parameter is optional and enabled by default.
+
+### coverageTextLog
+
+`coverageTextLog` parameter is a boolean controlling if the coverage will be logged to the console after test plan is fully executed. This parameter is optional and enabled by default.
+
+### coverageJsonFile
+
+`coverageJsonFile` parameter is a boolean controlling if a json file containing your test plan coverage will be written after test plan is fully executed. This parameter is optional and enabled by default when `process.env.CI` is truthy.
+
+### coverageJsonFileLog
+
+`coverageJsonFileLog` parameter is a boolean controlling if the json file path for coverage will be logged to the console. This parameters is optional and enabled by default.
+
+### coverageJsonFileRelativeUrl
+
+`coverageJsonFileRelativeUrl` parameter is a string controlling where the json file for coverage will be written. This parameter is optional with a default value of `"./coverage/coverage-final.json"`.
+
+### coverageHtmlDirectory
+
+`coverageHtmlDirectory` parameter is a boolean controlling if a directory with html files showing your coverage will be generated. This parameter is optional and enabled by default when `process.env.CI` is falsy.
+
+### coverageHtmlDirectoryRelativeUrl
+
+`coverageHtmlDirectoryRelativeUrl` parameter is a string controlling where the directory with html files will be written. This parameter is optional with a default value of `./coverage/`.
+
+### coverageHtmlDirectoryIndexLog
+
+`coverageHtmlDirectoryIndexLog` parameter is a boolean controlling if the html coverage directory index file path will be logged to the console. This parameter is optional and enabled by default.
 
 ## Shared parameters
 
