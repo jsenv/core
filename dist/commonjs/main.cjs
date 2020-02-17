@@ -6900,12 +6900,12 @@ const populateNodeResponse = (nodeResponse, {
   bodyEncoding
 }, {
   ignoreBody,
-  ignoreStatusTest
+  ignoreStatusText
 } = {}) => {
   const nodeHeaders = headersToNodeHeaders(headers); // nodejs strange signature for writeHead force this
   // https://nodejs.org/api/http.html#http_response_writehead_statuscode_statusmessage_headers
 
-  if (statusText === undefined || ignoreStatusTest) {
+  if (statusText === undefined || ignoreStatusText) {
     nodeResponse.writeHead(status, nodeHeaders);
   } else {
     nodeResponse.writeHead(status, statusText, nodeHeaders);
@@ -7053,7 +7053,7 @@ const startServer = async ({
   // auto close the server when the process exits
   stopOnExit = true,
   // auto close when requestToResponse throw an error
-  stopOnInternalError = true,
+  stopOnInternalError = false,
   // auto close the server when an uncaughtException happens
   stopOnCrash = false,
   keepProcessAlive = true,
@@ -7259,7 +7259,7 @@ ${error.stack}`);
       populateNodeResponse(nodeResponse, response, {
         ignoreBody: request.method === "HEAD",
         // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L97
-        ignoreStatusTest: Boolean(nodeRequest.stream)
+        ignoreStatusText: Boolean(nodeRequest.stream)
       });
     };
 

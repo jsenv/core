@@ -5,37 +5,37 @@ const { uneval } = require("@jsenv/uneval")
 const killProcessTree = require("tree-kill")
 
 const makeProcessControllable = ({ evaluate }) => {
-  const { token, cancel } = createCancellationSource()
+  const processCancellationSource = createCancellationSource()
 
   const EVALUATION_STATUS_OK = "evaluation-ok"
   const EVALUATION_STATUS_ERROR = "evaluation-error"
 
-  const removeTerminateCallback = registerProcessTerminateCallback(() => {
+  const removeSIGTERMListener = onceSIGTERM(() => {
     // cancel will remove listener to process.on('message')
     // which is sufficient to let child process die
     // assuming nothing else keeps it alive
-    cancel("process received SIGTERM")
+    processCancellationSource.cancel("process received SIGTERM")
     terminate()
   })
-  token.register(removeTerminateCallback)
-  token.register(
+  processCancellationSource.token.register(removeSIGTERMListener)
+  processCancellationSource.token.register(
     // parent could just do child.kill("SIGTERM"), I am just not sure
     // it is supported on windows
     listenParentOnce("gracefulStop", () => {
-      removeTerminateCallback()
-      cancel("parent process asks gracefulStop")
+      removeSIGTERMListener()
+      processCancellationSource.cancel("parent process asks gracefulStop")
       // emit sigterm in case the code we are running is listening for it
       process.emit("SIGTERM")
       terminate()
     }),
   )
-  token.register(
+  processCancellationSource.token.register(
     listenParentOnce("stop", () => {
-      cancel("parent process asks stop")
+      processCancellationSource.cancel("parent process asks stop")
       kill()
     }),
   )
-  token.register(
+  processCancellationSource.token.register(
     listenParentOnce("evaluate", async (expressionString) => {
       try {
         const value = await evaluate(expressionString)
@@ -127,7 +127,7 @@ const listenParentOnce = (type, callback) => {
   return removeListener
 }
 
-const registerProcessTerminateCallback = (callback) => {
+const onceSIGTERM = (callback) => {
   process.once("SIGTERM", callback)
   return () => {
     process.removeListener("SIGTERM", callback)
