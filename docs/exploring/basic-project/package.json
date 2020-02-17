@@ -4,12 +4,12 @@
   "license": "MIT",
   "type": "module",
   "engines": {
-    "node": ">=13.7.0"
+    "node": ">=12.8.0"
   },
   "scripts": {
     "start-exploring": "node ./start-exploring.cjs"
   },
   "devDependencies": {
-    "@jsenv/core": "11.0.0"
+    "@jsenv/core": "11.8.0"
   }
 }

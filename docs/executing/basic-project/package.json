@@ -3,13 +3,13 @@
   "license": "MIT",
   "type": "module",
   "engines": {
-    "node": ">=13.7.0"
+    "node": ">=12.8.0"
   },
   "scripts": {
     "execute-on-chromium": "node ./execute-chromium.cjs index.js",
     "execute-on-node": "node ./execute-node.cjs index.js"
   },
   "devDependencies": {
-    "@jsenv/core": "11.0.0"
+    "@jsenv/core": "11.8.0"
   }
 }

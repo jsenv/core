@@ -3,7 +3,9 @@ System.register([], function (exports) {
 	return {
 		execute: function () {
 
-			var index = exports('default', 42);
+			var value = 42;
+
+			exports('default', value);
 
 		}
 	};

@@ -1,7 +1,7 @@
 var __whatever__ = function () {
   'use strict';
 
-  var index = 42;
-  return index;
+  var value = 42;
+  return value;
 }();
 //# sourceMappingURL=./main.js.map
