@@ -173,6 +173,11 @@ export const launchNode = async ({
             resolve()
             return
           }
+          // windows too
+          if (error.stack.includes("The operation attempted is not supported")) {
+            resolve()
+            return
+          }
 
           logger.error(`error while killing process tree with ${signal}
     --- error stack ---

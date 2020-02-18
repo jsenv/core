@@ -5919,7 +5919,9 @@ const subscribe = (observable, {
     error,
     complete
   });
-  return subscription;
+  return subscription || {
+    unsubscribe: () => {}
+  };
 };
 const isObservable = value => {
   if (value === null) return false;
@@ -6423,8 +6425,11 @@ const fetchUrl = async (url, {
       headers
     });
     return simplified ? standardResponseToSimplifiedResponse(response) : response;
-  } // https://github.com/bitinn/node-fetch#request-cancellation-with-abortsignal
+  } // cancellation might be requested early, abortController does not support that
+  // so we have to throw if requested right away
 
+
+  cancellationToken.throwIfRequested(); // https://github.com/bitinn/node-fetch#request-cancellation-with-abortsignal
 
   const abortController = new AbortController();
   let cancelError;
@@ -6781,7 +6786,7 @@ const nodeStreamToObservable = nodeStream => {
       error,
       complete
     }) => {
-      // should we do nodeStream.resume() in case the stream was paused
+      // should we do nodeStream.resume() in case the stream was paused ?
       nodeStream.on("data", next);
       nodeStream.once("error", error);
       nodeStream.once("end", complete);
@@ -6899,6 +6904,7 @@ const populateNodeResponse = (nodeResponse, {
   body,
   bodyEncoding
 }, {
+  cancellationToken,
   ignoreBody,
   ignoreStatusText
 } = {}) => {
@@ -6931,6 +6937,10 @@ const populateNodeResponse = (nodeResponse, {
     complete: () => {
       nodeResponse.end();
     }
+  });
+  cancellationToken.register(() => {
+    nodeResponse.destroy();
+    subscription.unsubscribe();
   });
   nodeResponse.once("close", () => {
     // close body in case nodeResponse is prematurely closed
@@ -7255,12 +7265,52 @@ ${request.ressource}
 --- error stack ---
 ${error.stack}`);
       });
-      const response = await getResponse(request);
+      const {
+        response,
+        error
+      } = await generateResponseDescription(request);
+      logger.info(`${request.method} ${request.origin}${request.ressource}`);
+
+      if (error && isCancelError(error) && internalCancellationToken.cancellationRequested) {
+        logger.info("ignored because server closing");
+        nodeResponse.destroy();
+        return;
+      }
+
+      if (request.aborted) {
+        logger.info(`request aborted by client`);
+        nodeResponse.destroy();
+        return;
+      }
+
+      if (request.method !== "HEAD" && response.headers["content-length"] > 0 && response.body === "") {
+        logger.error(createContentLengthMismatchError(`content-length header is ${response.headers["content-length"]} but body is empty`));
+      }
+
+      if (error) {
+        logger.error(`internal error while handling request.
+--- error stack ---
+${error.stack}
+--- request ---
+${request.method} ${request.origin}${request.ressource}`);
+      }
+
+      logger.info(`${colorizeResponseStatus(response.status)} ${response.statusText}`);
       populateNodeResponse(nodeResponse, response, {
+        cancellationToken: request.cancellationToken,
         ignoreBody: request.method === "HEAD",
         // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L97
         ignoreStatusText: Boolean(nodeRequest.stream)
       });
+
+      if (stopOnInternalError && // stopOnInternalError stops server only if requestToResponse generated
+      // a non controlled error (internal error).
+      // if requestToResponse gracefully produced a 500 response (it did not throw)
+      // then we can assume we are still in control of what we are doing
+      error) {
+        // il faudrais pouvoir stop que les autres response ?
+        stop(STOP_REASON_INTERNAL_ERROR);
+      }
     };
 
     nodeServer.on("request", requestCallback); // ensure we don't try to handle new requests while server is stopping
@@ -7273,40 +7323,6 @@ ${error.stack}`);
       origin: serverOrigin
     });
     const corsEnabled = accessControlAllowRequestOrigin || accessControlAllowedOrigins.length; // here we check access control options to throw or warn if we find strange values
-
-    const getResponse = async request => {
-      const {
-        response,
-        error
-      } = await generateResponseDescription(request);
-
-      if (request.method !== "HEAD" && response.headers["content-length"] > 0 && response.body === "") {
-        logger.error(createContentLengthMismatchError(`content-length header is ${response.headers["content-length"]} but body is empty`));
-      }
-
-      logger.info(`${request.method} ${request.origin}${request.ressource}`);
-
-      if (error) {
-        logger.error(`internal error while handling request.
---- error stack ---
-${error.stack}
---- request ---
-${request.method} ${request.origin}${request.ressource}`);
-      }
-
-      logger.info(`${colorizeResponseStatus(response.status)} ${response.statusText}`);
-
-      if (stopOnInternalError && // stopOnInternalError stops server only if requestToResponse generated
-      // a non controlled error (internal error).
-      // if requestToResponse gracefully produced a 500 response (it did not throw)
-      // then we can assume we are still in control of what we are doing
-      error) {
-        // il faudrais pouvoir stop que les autres response ?
-        setTimeout(() => stop(STOP_REASON_INTERNAL_ERROR));
-      }
-
-      return response;
-    };
 
     const generateResponseDescription = async request => {
       const responsePropertiesToResponse = ({
@@ -11514,7 +11530,7 @@ const computeExecutionResult = async ({
   platformDisconnectCallback,
   ...rest
 }) => {
-  launchLogger.debug(`start a platform to execute a file.`);
+  launchLogger.debug(`start a platform to execute ${fileRelativeUrl}`);
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
@@ -11538,6 +11554,8 @@ const computeExecutionResult = async ({
       let gracefulStop;
 
       if (platform.gracefulStop && gracefulStopAllocatedMs) {
+        launchLogger.debug(`${fileRelativeUrl} platform.gracefulStop() because ${reason}`);
+
         const gracefulStopPromise = (async () => {
           await platform.gracefulStop({
             reason
@@ -11546,7 +11564,7 @@ const computeExecutionResult = async ({
         })();
 
         const stopPromise = (async () => {
-          await new Promise(async resolve => {
+          const gracefulStop = await new Promise(async resolve => {
             const timeoutId = setTimeout(resolve, gracefulStopAllocatedMs);
 
             try {
@@ -11555,6 +11573,12 @@ const computeExecutionResult = async ({
               clearTimeout(timeoutId);
             }
           });
+
+          if (gracefulStop) {
+            return gracefulStop;
+          }
+
+          launchLogger.debug(`${fileRelativeUrl} platform.gracefulStop() pending after ${gracefulStopAllocatedMs}ms, use platform.stop()`);
           await platform.stop({
             reason,
             gracefulFailed: true
@@ -11574,7 +11598,7 @@ const computeExecutionResult = async ({
       platformStoppedCallback({
         gracefulStop
       });
-      launchLogger.debug(`platform stopped.`);
+      launchLogger.debug(`${fileRelativeUrl} platform stopped`);
     }
   });
   const {
@@ -11584,7 +11608,7 @@ const computeExecutionResult = async ({
     executeFile,
     registerErrorCallback,
     registerConsoleCallback,
-    registerDisconnectCallback
+    disconnected
   } = await launchOperation;
   launchLogger.debug(`${platformName}@${platformVersion} started.
 --- options ---
@@ -11595,13 +11619,10 @@ options: ${JSON.stringify(options, null, "  ")}`);
     cancellationToken,
     start: async () => {
       let timing = TIMING_BEFORE_EXECUTION;
-      const disconnected = new Promise(resolve => {
-        registerDisconnectCallback(() => {
-          executeLogger.debug(`platform disconnected.`);
-          platformDisconnectCallback({
-            timing
-          });
-          resolve();
+      disconnected.then(() => {
+        executeLogger.debug(`${fileRelativeUrl} platform disconnected.`);
+        platformDisconnectCallback({
+          timing
         });
       });
       const executed = executeFile(fileRelativeUrl, rest);
@@ -11645,7 +11666,7 @@ ${executionResult.error.stack}`);
         return createErroredExecutionResult(executionResult, rest);
       }
 
-      executeLogger.debug(`execution completed.`);
+      executeLogger.debug(`${fileRelativeUrl} execution completed.`);
       return createCompletedExecutionResult(executionResult, rest);
     }
   });
@@ -11756,7 +11777,8 @@ const execute = async ({
   compileGroupCount = 2,
   launch,
   mirrorConsole = true,
-  stopPlatformAfterExecute = true,
+  stopPlatformAfterExecute = false,
+  gracefulStopAllocatedMs,
   updateProcessExitCode = true,
   ...rest
 }) => {
@@ -11817,6 +11839,7 @@ const execute = async ({
       }),
       mirrorConsole,
       stopPlatformAfterExecute,
+      gracefulStopAllocatedMs,
       ...rest
     });
   }).then(result => {
@@ -12170,32 +12193,6 @@ const executionReportToCoverageMap = report => {
   return executionCoverageMap;
 };
 
-const memoize$1 = compute => {
-  let memoized = false;
-  let memoizedValue;
-
-  const fnWithMemoization = (...args) => {
-    if (memoized) {
-      return memoizedValue;
-    } // if compute is recursive wait for it to be fully done before storing the lockValue
-    // so set locked later
-
-
-    memoizedValue = compute(...args);
-    memoized = true;
-    return memoizedValue;
-  };
-
-  fnWithMemoization.forget = () => {
-    const value = memoizedValue;
-    memoized = false;
-    memoizedValue = undefined;
-    return value;
-  };
-
-  return fnWithMemoization;
-};
-
 const stringWidth = require$1("string-width");
 
 const writeLog = (string, {
@@ -12203,7 +12200,7 @@ const writeLog = (string, {
 } = {}) => {
   stream.write(`${string}
 `);
-  const remove = memoize$1(() => {
+  const remove = memoize(() => {
     const {
       columns = 80
     } = stream;
@@ -13454,20 +13451,6 @@ const jsenvExplorableConfig = {
   "./test/**/*.js": true
 };
 
-const closePage = async page => {
-  try {
-    if (!page.isClosed()) {
-      await page.close();
-    }
-  } catch (e) {
-    if (e.message.match(/^Protocol error \(.*?\): Target closed/)) {
-      return;
-    }
-
-    throw e;
-  }
-};
-
 const trackRessources$1 = () => {
   const callbackArray = [];
 
@@ -13481,15 +13464,28 @@ callback: ${callback}`);
     };
   };
 
-  const cleanup = async reason => {
+  const cleanup = memoize(async reason => {
     const localCallbackArray = callbackArray.slice();
     await Promise.all(localCallbackArray.map(callback => callback(reason)));
-  };
-
+  });
   return {
     registerCleanupCallback,
     cleanup
   };
+};
+
+const closePage = async page => {
+  try {
+    if (!page.isClosed()) {
+      await page.close();
+    }
+  } catch (e) {
+    if (e.message.match(/^Protocol error \(.*?\): Target closed/)) {
+      return;
+    }
+
+    throw e;
+  }
 };
 
 /* eslint-disable import/max-dependencies */
@@ -14119,15 +14115,13 @@ const launchChromium = async ({
   const {
     browser
   } = await browserPromise;
-
-  const registerDisconnectCallback = callback => {
+  const disconnected = new Promise(resolve => {
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
-    browser.on("disconnected", callback);
+    browser.on("disconnected", resolve);
     registerCleanupCallback(() => {
-      browser.removeListener("disconnected", callback);
+      browser.removeListener("disconnected", resolve);
     });
-  };
-
+  });
   const errorCallbackArray = [];
 
   const registerErrorCallback = callback => {
@@ -14240,7 +14234,7 @@ const launchChromium = async ({
       headless
     },
     stop: cleanup,
-    registerDisconnectCallback,
+    disconnected,
     registerErrorCallback,
     registerConsoleCallback,
     executeFile
@@ -14900,7 +14894,7 @@ function safeDefineProperty(object, propertyNameOrSymbol, descriptor) {
   return source;
 };
 
-const supportsDynamicImport = memoize$1(async () => {
+const supportsDynamicImport = memoize(async () => {
   const fileUrl = resolveUrl$1("./src/internal/dynamicImportSource.js", jsenvCoreDirectoryUrl);
   const filePath = urlToFileSystemPath(fileUrl);
   const fileAsString = String(fs.readFileSync(filePath));
@@ -15125,12 +15119,22 @@ const getCommandDebugArgs = argv => {
 };
 
 /* eslint-disable import/max-dependencies */
+
+const killProcessTree = require$1("tree-kill");
+
 const EVALUATION_STATUS_OK = "evaluation-ok"; // https://nodejs.org/api/process.html#process_signal_events
 
 const SIGINT_SIGNAL_NUMBER = 2;
 const SIGTERM_SIGNAL_NUMBER = 15;
 const SIGINT_EXIT_CODE = 128 + SIGINT_SIGNAL_NUMBER;
-const SIGTERM_EXIT_CODE = 128 + SIGTERM_SIGNAL_NUMBER;
+const SIGTERM_EXIT_CODE = 128 + SIGTERM_SIGNAL_NUMBER; // http://man7.org/linux/man-pages/man7/signal.7.html
+// https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
+
+const GRACEFUL_STOP_SIGNAL = "SIGTERM";
+const STOP_SIGNAL = "SIGKILL"; // it would be more correct if GRACEFUL_STOP_FAILED_SIGNAL was SIGHUP instead of SIGKILL.
+// but I'm not sure and it changes nothing so just use SIGKILL
+
+const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL";
 const nodeJsFileUrl = resolveUrl$1("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl);
 const launchNode = async ({
   cancellationToken = createCancellationToken(),
@@ -15180,120 +15184,136 @@ const launchNode = async ({
     jsonModules
   });
   env.COVERAGE_ENABLED = collectCoverage;
-  const child = child_process.fork(urlToFileSystemPath(nodeControllableFileUrl), {
+  const childProcess = child_process.fork(urlToFileSystemPath(nodeControllableFileUrl), {
     execArgv,
     // silent: true
     stdio: "pipe",
     env
   });
   logger.info(`${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(nodeControllableFileUrl)}`);
-  const childReadyPromise = new Promise(resolve => {
-    registerChildMessage(child, "ready", resolve);
+  const childProcessReadyPromise = new Promise(resolve => {
+    onceProcessMessage(childProcess, "ready", resolve);
   });
   const consoleCallbackArray = [];
 
   const registerConsoleCallback = callback => {
     consoleCallbackArray.push(callback);
-  }; // beware that we may receive ansi output here, should not be a problem but keep that in mind
+  };
 
-
-  child.stdout.on("data", chunk => {
-    const text = String(chunk);
+  installProcessOutputListener(childProcess, ({
+    type,
+    text
+  }) => {
     consoleCallbackArray.forEach(callback => {
       callback({
-        type: "log",
+        type,
         text
       });
     });
-  });
-  child.stderr.on("data", chunk => {
-    const text = String(chunk);
-    consoleCallbackArray.forEach(callback => {
-      callback({
-        type: "error",
-        text
-      });
-    });
-  });
+  }); // keep listening process outputs while child process is killed to catch
+  // outputs until it's actually disconnected
+  // registerCleanupCallback(removeProcessOutputListener)
+
   const errorCallbackArray = [];
 
   const registerErrorCallback = callback => {
     errorCallbackArray.push(callback);
   };
 
-  const emitError = error => {
+  installProcessErrorListener(childProcess, error => {
     errorCallbackArray.forEach(callback => {
       callback(error);
     });
-  }; // https://nodejs.org/api/child_process.html#child_process_event_error
+  }); // keep listening process errors while child process is killed to catch
+  // errors until it's actually disconnected
+  // registerCleanupCallback(removeProcessErrorListener)
+  // https://nodejs.org/api/child_process.html#child_process_event_disconnect
 
-
-  const errorEventRegistration = registerChildEvent(child, "error", error => {
-    errorEventRegistration.unregister();
-    exitErrorRegistration.unregister();
-    emitError(error);
-  }); // process.exit(1) from child
-
-  const exitErrorRegistration = registerChildEvent(child, "exit", code => {
-    if (code !== null && code !== 0 && code !== SIGINT_EXIT_CODE && code !== SIGTERM_EXIT_CODE) {
-      errorEventRegistration.unregister();
-      exitErrorRegistration.unregister();
-      emitError(createExitWithFailureCodeError(code));
-    }
-  }); // https://nodejs.org/api/child_process.html#child_process_event_disconnect
-
-  const registerDisconnectCallback = callback => {
-    const registration = registerChildEvent(child, "disconnect", () => {
-      callback();
+  let resolveDisconnect;
+  const disconnected = new Promise(resolve => {
+    resolveDisconnect = resolve;
+    onceProcessMessage(childProcess, "disconnect", () => {
+      resolve();
     });
-    return () => {
-      registration.unregister();
-    };
-  };
+  }); // child might exit without disconnect apparently, exit is disconnect for us
 
-  const stop = () => {
-    if (!child.connected) {
-      return Promise.resolve();
-    } // { gracefulFailed } = {}
+  childProcess.once("exit", () => {
+    disconnectChildProcess();
+  });
 
-
-    const disconnectedPromise = new Promise(resolve => {
-      const unregister = registerDisconnectCallback(() => {
-        unregister();
-        resolve();
-      });
-    }); // http://man7.org/linux/man-pages/man7/signal.7.html
-    // const signal = gracefulFailed ? "SIGHUP" : "SIGKILL"
-    // https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
-
-    child.kill("SIGKILL");
-    return disconnectedPromise;
-  };
-
-  const gracefulStop = async () => {
-    if (!child.connected) {
-      return Promise.resolve();
-    }
-
-    const disconnectedPromise = new Promise(resolve => {
-      const unregister = registerDisconnectCallback(() => {
-        unregister();
-        resolve();
-      });
-    });
-
+  const disconnectChildProcess = () => {
     try {
-      await sendToChild(child, "gracefulStop");
+      childProcess.disconnect();
     } catch (e) {
-      // cannot comunicate with the child (child killed itself ?)
-      if (e.code === "EPIPE") {
-        return disconnectedPromise;
+      if (e.code === "ERR_IPC_DISCONNECTED") {
+        resolveDisconnect();
+      } else {
+        throw e;
       }
-
-      throw e;
     }
 
-    return disconnectedPromise;
+    return disconnected;
+  };
+
+  const killChildProcess = async ({
+    signal
+  }) => {
+    logger.debug(`send ${signal} to child process with pid ${childProcess.pid}`);
+    await new Promise(resolve => {
+      killProcessTree(childProcess.pid, signal, error => {
+        if (error) {
+          // on windows: process with pid cannot be found
+          if (error.stack.includes(`The process "${childProcess.pid}" not found`)) {
+            resolve();
+            return;
+          } // on windows: child process with a pid cannot be found
+
+
+          if (error.stack.includes("Reason: There is no running instance of the task")) {
+            resolve();
+            return;
+          } // windows too
+
+
+          if (error.stack.includes("The operation attempted is not supported")) {
+            resolve();
+            return;
+          }
+
+          logger.error(`error while killing process tree with ${signal}
+    --- error stack ---
+    ${error.stack}
+    --- process.pid ---
+    ${childProcess.pid}`); // even if we could not kill the child
+          // we will ask it to disconnect
+
+          resolve();
+          return;
+        }
+
+        resolve();
+      });
+    }); // in case the child process did not disconnect by itself at this point
+    // something is keeping it alive and it cannot be propely killed
+    // disconnect it manually.
+    // something inside makeProcessControllable.cjs ensure process.exit()
+    // when the child process is disconnected.
+
+    return disconnectChildProcess();
+  };
+
+  const stop = ({
+    gracefulFailed
+  } = {}) => {
+    return killChildProcess({
+      signal: gracefulFailed ? GRACEFUL_STOP_FAILED_SIGNAL : STOP_SIGNAL
+    });
+  };
+
+  const gracefulStop = () => {
+    return killChildProcess({
+      signal: GRACEFUL_STOP_SIGNAL
+    });
   };
 
   const executeFile = async (fileRelativeUrl, {
@@ -15303,7 +15323,7 @@ const launchNode = async ({
   }) => {
     const execute = async () => {
       return new Promise(async (resolve, reject) => {
-        const evaluationResultRegistration = registerChildMessage(child, "evaluate-result", ({
+        onceProcessMessage(childProcess, "evaluate-result", ({
           status,
           value
         }) => {
@@ -15312,7 +15332,6 @@ const launchNode = async ({
 ${status}
 --- value ---
 ${value}`);
-          evaluationResultRegistration.unregister();
           if (status === EVALUATION_STATUS_OK) resolve(value);else reject(value);
         });
         const executeParams = {
@@ -15337,10 +15356,10 @@ ${value}`);
         logger.debug(`ask child process to evaluate
 --- source ---
 ${source}`);
-        await childReadyPromise;
+        await childProcessReadyPromise;
 
         try {
-          await sendToChild(child, "evaluate", source);
+          await sendToProcess(childProcess, "evaluate", source);
         } catch (e) {
           logger.error(`error while sending message to child
 --- error stack ---
@@ -15389,10 +15408,8 @@ ${e.stack}`);
       env
     },
     gracefulStop,
-    // child.kill('SIGINT') does not work on windows
-    // ...(process.platform === "win32" ? {} : { gracefulStop }),
     stop,
-    registerDisconnectCallback,
+    disconnected,
     registerErrorCallback,
     registerConsoleCallback,
     executeFile
@@ -15420,12 +15437,12 @@ const evalException$1 = (exceptionSource, {
   return error;
 };
 
-const sendToChild = async (child, type, data) => {
+const sendToProcess = async (childProcess, type, data) => {
   const source = uneval(data, {
     functionAllowed: true
   });
   return new Promise((resolve, reject) => {
-    child.send({
+    childProcess.send({
       type,
       data: source
     }, error => {
@@ -15438,26 +15455,53 @@ const sendToChild = async (child, type, data) => {
   });
 };
 
-const registerChildMessage = (child, type, callback) => {
-  return registerChildEvent(child, "message", message => {
-    if (message.type === type) {
-      // eslint-disable-next-line no-eval
-      callback(message.data ? eval(`(${message.data})`) : "");
-    }
-  });
+const installProcessOutputListener = (childProcess, callback) => {
+  // beware that we may receive ansi output here, should not be a problem but keep that in mind
+  const stdoutDataCallback = chunk => {
+    callback({
+      type: "log",
+      text: String(chunk)
+    });
+  };
+
+  childProcess.stdout.on("data", stdoutDataCallback);
+
+  const stdErrorDataCallback = chunk => {
+    callback({
+      type: "error",
+      text: String(chunk)
+    });
+  };
+
+  childProcess.stderr.on("data", stdErrorDataCallback);
+  return () => {
+    childProcess.stdout.removeListener("data", stdoutDataCallback);
+    childProcess.stderr.removeListener("data", stdoutDataCallback);
+  };
 };
 
-const registerChildEvent = (child, type, callback) => {
-  child.on(type, callback);
+const installProcessErrorListener = (childProcess, callback) => {
+  // https://nodejs.org/api/child_process.html#child_process_event_error
+  const errorListener = error => {
+    removeExitListener(); // if an error occured we ignore the child process exitCode
 
-  const unregister = () => {
-    child.removeListener(type, callback);
+    callback(error);
+    onceProcessMessage(childProcess, "error", errorListener);
   };
 
-  const registration = {
-    unregister
+  const removeErrorListener = onceProcessMessage(childProcess, "error", errorListener); // process.exit(1) in child process or process.exitCode = 1 + process.exit()
+  // means there was an error even if we don't know exactly what.
+
+  const removeExitListener = onceProcessEvent(childProcess, "exit", code => {
+    if (code !== null && code !== 0 && code !== SIGINT_EXIT_CODE && code !== SIGTERM_EXIT_CODE) {
+      removeErrorListener();
+      callback(createExitWithFailureCodeError(code));
+    }
+  });
+  return () => {
+    removeErrorListener();
+    removeExitListener();
   };
-  return registration;
 };
 
 const createExitWithFailureCodeError = code => {
@@ -15466,6 +15510,22 @@ const createExitWithFailureCodeError = code => {
   }
 
   return new Error(`child exited with ${code}`);
+};
+
+const onceProcessMessage = (childProcess, type, callback) => {
+  return onceProcessEvent(childProcess, "message", message => {
+    if (message.type === type) {
+      // eslint-disable-next-line no-eval
+      callback(message.data ? eval(`(${message.data})`) : "");
+    }
+  });
+};
+
+const onceProcessEvent = (childProcess, type, callback) => {
+  childProcess.on(type, callback);
+  return () => {
+    childProcess.removeListener(type, callback);
+  };
 };
 
 const generateSourceToEvaluate = async ({
