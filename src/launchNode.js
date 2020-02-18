@@ -164,7 +164,7 @@ export const launchNode = async ({
       killProcessTree(childProcess.pid, signal, (error) => {
         if (error) {
           // this error message occurs on windows
-          if (error.message === `The process "${childProcess.pid}" not found`) {
+          if (error.stack.includes(`The process "${childProcess.pid}" not found`)) {
             resolve()
           } else {
             logger.error(`error while killing process tree with ${signal}
