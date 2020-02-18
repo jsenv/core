@@ -14,6 +14,10 @@ const removeExperimentalWarnings = (consoleCalls) => {
 // Debugger attached.
 const removeDebuggerLogs = (consoleCalls) => {
   return consoleCalls.filter(({ text }) => {
-    return !text.includes(`Debugger listening on`) && !text.includes("Debugger attached")
+    return (
+      !text.includes(`Debugger listening on`) &&
+      !text.includes("Debugger attached") &&
+      !text.includes("Waiting for the debugger")
+    )
   })
 }

@@ -42,7 +42,7 @@ const makeProcessControllable = ({ evaluate }) => {
     // https://nodejs.org/api/process.html#process_process_connected
     // not connected anymore, cannot communicate with parent
     if (!process.connected) {
-      throw new Error("cannot send response because process not connected to parent")
+      return
     }
 
     // this can keep process alive longer than expected
