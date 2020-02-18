@@ -19,24 +19,7 @@ const makeProcessControllable = ({ evaluate }) => {
   })
   processCancellationSource.token.register(removeSIGTERMListener)
   processCancellationSource.token.register(
-    // parent could just do child.kill("SIGTERM"), I am just not sure
-    // it is supported on windows
-    listenParentOnce("gracefulStop", () => {
-      removeSIGTERMListener()
-      processCancellationSource.cancel("parent process asks gracefulStop")
-      // emit sigterm in case the code we are running is listening for it
-      process.emit("SIGTERM")
-      terminate()
-    }),
-  )
-  processCancellationSource.token.register(
-    listenParentOnce("stop", () => {
-      processCancellationSource.cancel("parent process asks stop")
-      kill()
-    }),
-  )
-  processCancellationSource.token.register(
-    listenParentOnce("evaluate", async (expressionString) => {
+    onceProcessMessage("evaluate", async (expressionString) => {
       try {
         const value = await evaluate(expressionString)
         sendToParent(
@@ -96,20 +79,20 @@ ${process.pid}`)
   })
 }
 
-const kill = () => {
-  killProcessTree(process.pid, "SIGKILL", (error) => {
-    if (error) {
-      console.error(`error while killing process tree with SIGKILL
---- error stack ---
-${error.stack}
---- process.pid ---
-${process.pid}`)
-    }
-  })
-  process.exit()
-}
+// const kill = () => {
+//   killProcessTree(process.pid, "SIGKILL", (error) => {
+//     if (error) {
+//       console.error(`error while killing process tree with SIGKILL
+// --- error stack ---
+// ${error.stack}
+// --- process.pid ---
+// ${process.pid}`)
+//     }
+//   })
+//   process.exit()
+// }
 
-const listenParentOnce = (type, callback) => {
+const onceProcessMessage = (type, callback) => {
   const listener = (event) => {
     if (event.type === type) {
       // commenting line below keep this process alive

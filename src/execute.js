@@ -29,7 +29,7 @@ export const execute = async ({
 
   launch,
   mirrorConsole = true,
-  stopPlatformAfterExecute = true,
+  stopPlatformAfterExecute = false,
   updateProcessExitCode = true,
   ...rest
 }) => {
