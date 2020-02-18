@@ -1,3 +1,5 @@
+import { memoize } from "@jsenv/util"
+
 export const trackRessources = () => {
   const callbackArray = []
 
@@ -12,10 +14,10 @@ callback: ${callback}`)
     }
   }
 
-  const cleanup = async (reason) => {
+  const cleanup = memoize(async (reason) => {
     const localCallbackArray = callbackArray.slice()
     await Promise.all(localCallbackArray.map((callback) => callback(reason)))
-  }
+  })
 
   return { registerCleanupCallback, cleanup }
 }
