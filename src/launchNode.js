@@ -3,7 +3,6 @@ import { Script } from "vm"
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
-import { trackRessources } from "./internal/trackRessources.js"
 import { supportsDynamicImport } from "./internal/supportsDynamicImport.js"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "./internal/CONSTANTS.js"
 import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
@@ -64,8 +63,6 @@ export const launchNode = async ({
   } else if (typeof env !== "object") {
     throw new TypeError(`env must be an object, got ${env}`)
   }
-
-  const { registerCleanupCallback, cleanup } = trackRessources()
 
   const dynamicImportSupported = await supportsDynamicImport()
   const nodeControllableFileUrl = resolveUrl(
@@ -136,22 +133,22 @@ export const launchNode = async ({
     onceProcessMessage(childProcess, "disconnect", resolve)
   })
 
-  registerCleanupCallback(({ signal }) => {
+  const killChildProcess = ({ signal }) => {
     if (!childProcess.connected) {
       return Promise.resolve()
     }
     childProcess.kill(signal)
     return disconnected
-  })
+  }
 
   const stop = ({ gracefulFailed }) => {
-    return cleanup({
+    return killChildProcess({
       signal: gracefulFailed ? GRACEFUL_STOP_FAILED_SIGNAL : STOP_SIGNAL,
     })
   }
 
   const gracefulStop = () => {
-    return cleanup({ signal: GRACEFUL_STOP_SIGNAL })
+    return killChildProcess({ signal: GRACEFUL_STOP_SIGNAL })
   }
 
   const executeFile = async (
