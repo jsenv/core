@@ -246,13 +246,15 @@ const computeExecutionResult = async ({
       let gracefulStop
 
       if (platform.gracefulStop && gracefulStopAllocatedMs) {
+        launchLogger.debug(`platform.gracefulStop() because ${reason}`)
+
         const gracefulStopPromise = (async () => {
           await platform.gracefulStop({ reason })
           return true
         })()
 
         const stopPromise = (async () => {
-          await new Promise(async (resolve) => {
+          const gracefulStop = await new Promise(async (resolve) => {
             const timeoutId = setTimeout(resolve, gracefulStopAllocatedMs)
             try {
               await gracefulStopPromise
@@ -260,6 +262,13 @@ const computeExecutionResult = async ({
               clearTimeout(timeoutId)
             }
           })
+          if (gracefulStop) {
+            return gracefulStop
+          }
+
+          launchLogger.debug(
+            `platform.gracefulStop() pending after ${gracefulStopAllocatedMs}ms, use platform.stop()`,
+          )
           await platform.stop({ reason, gracefulFailed: true })
           return false
         })()
@@ -271,7 +280,7 @@ const computeExecutionResult = async ({
       }
 
       platformStoppedCallback({ gracefulStop })
-      launchLogger.debug(`platform stopped.`)
+      launchLogger.debug(`platform stopped`)
     },
   })
 

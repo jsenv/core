@@ -3,12 +3,15 @@ import { Script } from "vm"
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
+import { require } from "./internal/require.js"
 import { supportsDynamicImport } from "./internal/supportsDynamicImport.js"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "./internal/CONSTANTS.js"
 import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createChildExecArgv } from "./internal/node-launcher/createChildExecArgv.js"
+
+const killProcessTree = require("tree-kill")
 
 const EVALUATION_STATUS_OK = "evaluation-ok"
 
@@ -133,11 +136,34 @@ export const launchNode = async ({
     onceProcessMessage(childProcess, "disconnect", resolve)
   })
 
-  const killChildProcess = ({ signal }) => {
-    if (!childProcess.connected) {
-      return Promise.resolve()
-    }
-    childProcess.kill(signal)
+  const killChildProcess = async ({ signal }) => {
+    // if (!childProcess.connected) {
+    //  logger.debug(`send ${signal} to child process with pid ${childProcess.pid}`)
+    //   return Promise.resolve()
+    // }
+
+    logger.debug(`send ${signal} to child process with pid ${childProcess.pid}`)
+
+    await new Promise((resolve) => {
+      killProcessTree(childProcess.pid, signal, (error) => {
+        if (error) {
+          logger.error(`error while killing process tree with ${signal}
+--- error stack ---
+${error.stack}
+--- process.pid ---
+${childProcess.pid}`)
+        } else {
+          resolve()
+        }
+      })
+    })
+    // in case the child process did not disconnect by itself at this point
+    // something is keeping it alive and it cannot be propely killed
+    // disconnect it manually.
+    // something inside makeProcessControllable.cjs ensure process.exit()
+    // when the child process is disconnected.
+    childProcess.disconnect()
+
     return disconnected
   }
 

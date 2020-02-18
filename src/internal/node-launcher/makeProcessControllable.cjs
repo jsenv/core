@@ -2,7 +2,6 @@
 
 const { createCancellationSource } = require("@jsenv/cancellation")
 const { uneval } = require("@jsenv/uneval")
-const killProcessTree = require("tree-kill")
 
 const makeProcessControllable = ({ evaluate }) => {
   const processCancellationSource = createCancellationSource()
@@ -15,37 +14,42 @@ const makeProcessControllable = ({ evaluate }) => {
     // which is sufficient to let child process die
     // assuming nothing else keeps it alive
     processCancellationSource.cancel("process received SIGTERM")
-    terminate()
   })
+
+  // ensure this process does not stay alive when it is disconnected
+  onceProcessDisconnect(() => {
+    processCancellationSource.cancel("process disconnected")
+    process.exit()
+  })
+
   processCancellationSource.token.register(removeSIGTERMListener)
-  processCancellationSource.token.register(
-    onceProcessMessage("evaluate", async (expressionString) => {
-      try {
-        const value = await evaluate(expressionString)
-        sendToParent(
-          "evaluate-result",
-          // here we use JSON.stringify because we should not
-          // have non enumerable value (unlike there is on Error objects)
-          // otherwise uneval is quite slow to turn a giant object
-          // into a string (and value can be giant when using coverage)
-          JSON.stringify({
-            status: EVALUATION_STATUS_OK,
-            value,
-          }),
-        )
-      } catch (e) {
-        sendToParent(
-          "evaluate-result",
-          // process.send algorithm does not send non enumerable values
-          // because it works with JSON.stringify I guess so use uneval
-          uneval({
-            status: EVALUATION_STATUS_ERROR,
-            value: e,
-          }),
-        )
-      }
-    }),
-  )
+  const removeEvaluateRequestListener = onceProcessMessage("evaluate", async (expressionString) => {
+    try {
+      const value = await evaluate(expressionString)
+      sendToParent(
+        "evaluate-result",
+        // here we use JSON.stringify because we should not
+        // have non enumerable value (unlike there is on Error objects)
+        // otherwise uneval is quite slow to turn a giant object
+        // into a string (and value can be giant when using coverage)
+        JSON.stringify({
+          status: EVALUATION_STATUS_OK,
+          value,
+        }),
+      )
+    } catch (e) {
+      sendToParent(
+        "evaluate-result",
+        // process.send algorithm does not send non enumerable values
+        // because it works with JSON.stringify I guess so use uneval
+        uneval({
+          status: EVALUATION_STATUS_ERROR,
+          value: e,
+        }),
+      )
+    }
+  })
+  processCancellationSource.token.register(removeEvaluateRequestListener)
 
   const sendToParent = (type, data) => {
     // https://nodejs.org/api/process.html#process_process_connected
@@ -66,31 +70,6 @@ const makeProcessControllable = ({ evaluate }) => {
 
   setTimeout(() => sendToParent("ready"))
 }
-
-const terminate = () => {
-  killProcessTree(process.pid, "SIGTERM", (error) => {
-    if (error) {
-      console.error(`error while killing process tree with SIGTERM
---- error stack ---
-${error.stack}
---- process.pid ---
-${process.pid}`)
-    }
-  })
-}
-
-// const kill = () => {
-//   killProcessTree(process.pid, "SIGKILL", (error) => {
-//     if (error) {
-//       console.error(`error while killing process tree with SIGKILL
-// --- error stack ---
-// ${error.stack}
-// --- process.pid ---
-// ${process.pid}`)
-//     }
-//   })
-//   process.exit()
-// }
 
 const onceProcessMessage = (type, callback) => {
   const listener = (event) => {
@@ -114,6 +93,13 @@ const onceSIGTERM = (callback) => {
   process.once("SIGTERM", callback)
   return () => {
     process.removeListener("SIGTERM", callback)
+  }
+}
+
+const onceProcessDisconnect = (callback) => {
+  process.once("disconnect", callback)
+  return () => {
+    process.removeListener("disconnect", callback)
   }
 }
 
