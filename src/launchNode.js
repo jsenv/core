@@ -163,22 +163,30 @@ export const launchNode = async ({
     await new Promise((resolve) => {
       killProcessTree(childProcess.pid, signal, (error) => {
         if (error) {
-          // this error message occurs on windows
+          // on windows: process with pid cannot be found
           if (error.stack.includes(`The process "${childProcess.pid}" not found`)) {
             resolve()
-          } else {
-            logger.error(`error while killing process tree with ${signal}
+            return
+          }
+          // on windows: child process with a pid cannot be found
+          if (error.stack.includes("Reason: There is no running instance of the task")) {
+            resolve()
+            return
+          }
+
+          logger.error(`error while killing process tree with ${signal}
     --- error stack ---
     ${error.stack}
     --- process.pid ---
     ${childProcess.pid}`)
-          }
+
           // even if we could not kill the child
           // we will ask it to disconnect
           resolve()
-        } else {
-          resolve()
+          return
         }
+
+        resolve()
       })
     })
 
