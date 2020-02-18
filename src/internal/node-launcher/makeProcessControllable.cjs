@@ -1,27 +1,11 @@
 /* global require */
 
-const { createCancellationSource } = require("@jsenv/cancellation")
 const { uneval } = require("@jsenv/uneval")
 
 const makeProcessControllable = ({ evaluate }) => {
-  const processCancellationSource = createCancellationSource()
-
   const EVALUATION_STATUS_OK = "evaluation-ok"
   const EVALUATION_STATUS_ERROR = "evaluation-error"
 
-  const removeSIGTERMListener = onceSIGTERM(() => {
-    // cancel will remove listener to process.on('message')
-    // which is sufficient to let child process die
-    // assuming nothing else keeps it alive
-    processCancellationSource.cancel("process received SIGTERM")
-  })
-
-  // ensure this process does not stay alive when it is disconnected
-  onceProcessDisconnect(() => {
-    processCancellationSource.cancel("process disconnected")
-  })
-
-  processCancellationSource.token.register(removeSIGTERMListener)
   const removeEvaluateRequestListener = onceProcessMessage("evaluate", async (expressionString) => {
     try {
       const value = await evaluate(expressionString)
@@ -48,7 +32,11 @@ const makeProcessControllable = ({ evaluate }) => {
       )
     }
   })
-  processCancellationSource.token.register(removeEvaluateRequestListener)
+
+  // remove listener to process.on('message')
+  // which is sufficient to let child process die
+  // assuming nothing else keeps it alive
+  onceSIGTERM(removeEvaluateRequestListener)
 
   const sendToParent = (type, data) => {
     // https://nodejs.org/api/process.html#process_process_connected
@@ -92,13 +80,6 @@ const onceSIGTERM = (callback) => {
   process.once("SIGTERM", callback)
   return () => {
     process.removeListener("SIGTERM", callback)
-  }
-}
-
-const onceProcessDisconnect = (callback) => {
-  process.once("disconnect", callback)
-  return () => {
-    process.removeListener("disconnect", callback)
   }
 }
 

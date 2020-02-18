@@ -135,8 +135,27 @@ export const launchNode = async ({
   let resolveDisconnect
   const disconnected = new Promise((resolve) => {
     resolveDisconnect = resolve
-    onceProcessMessage(childProcess, "disconnect", resolve)
+    onceProcessMessage(childProcess, "disconnect", () => {
+      resolve()
+    })
   })
+  // child might exit without disconnect apparently, exit is disconnect for us
+  childProcess.once("exit", () => {
+    disconnectChildProcess()
+  })
+
+  const disconnectChildProcess = () => {
+    try {
+      childProcess.disconnect()
+    } catch (e) {
+      if (e.code === "ERR_IPC_DISCONNECTED") {
+        resolveDisconnect()
+      } else {
+        throw e
+      }
+    }
+    return disconnected
+  }
 
   const killChildProcess = async ({ signal }) => {
     logger.debug(`send ${signal} to child process with pid ${childProcess.pid}`)
@@ -160,17 +179,7 @@ export const launchNode = async ({
     // disconnect it manually.
     // something inside makeProcessControllable.cjs ensure process.exit()
     // when the child process is disconnected.
-    try {
-      childProcess.disconnect()
-    } catch (e) {
-      if (e.code === "ERR_IPC_DISCONNECTED") {
-        resolveDisconnect()
-      } else {
-        throw e
-      }
-    }
-
-    return disconnected
+    return disconnectChildProcess()
   }
 
   const stop = ({ gracefulFailed } = {}) => {
@@ -335,7 +344,7 @@ const installProcessErrorListener = (childProcess, callback) => {
   const removeErrorListener = onceProcessMessage(childProcess, "error", errorListener)
   // process.exit(1) in child process or process.exitCode = 1 + process.exit()
   // means there was an error even if we don't know exactly what.
-  const removeExitListener = onceProcessMessage(childProcess, "exit", (code) => {
+  const removeExitListener = onceProcessEvent(childProcess, "exit", (code) => {
     if (code !== null && code !== 0 && code !== SIGINT_EXIT_CODE && code !== SIGTERM_EXIT_CODE) {
       removeErrorListener()
       callback(createExitWithFailureCodeError(code))
