@@ -227,7 +227,7 @@ const computeExecutionResult = async ({
 
   ...rest
 }) => {
-  launchLogger.debug(`start a platform to execute a file.`)
+  launchLogger.debug(`start a platform to execute ${fileRelativeUrl}`)
 
   const launchOperation = createStoppableOperation({
     cancellationToken,
@@ -246,7 +246,7 @@ const computeExecutionResult = async ({
       let gracefulStop
 
       if (platform.gracefulStop && gracefulStopAllocatedMs) {
-        launchLogger.debug(`platform.gracefulStop() because ${reason}`)
+        launchLogger.debug(`${fileRelativeUrl} platform.gracefulStop() because ${reason}`)
 
         const gracefulStopPromise = (async () => {
           await platform.gracefulStop({ reason })
@@ -267,7 +267,7 @@ const computeExecutionResult = async ({
           }
 
           launchLogger.debug(
-            `platform.gracefulStop() pending after ${gracefulStopAllocatedMs}ms, use platform.stop()`,
+            `${fileRelativeUrl} platform.gracefulStop() pending after ${gracefulStopAllocatedMs}ms, use platform.stop()`,
           )
           await platform.stop({ reason, gracefulFailed: true })
           return false
@@ -280,7 +280,7 @@ const computeExecutionResult = async ({
       }
 
       platformStoppedCallback({ gracefulStop })
-      launchLogger.debug(`platform stopped`)
+      launchLogger.debug(`${fileRelativeUrl} platform stopped`)
     },
   })
 
@@ -307,7 +307,7 @@ options: ${JSON.stringify(options, null, "  ")}`)
       let timing = TIMING_BEFORE_EXECUTION
 
       disconnected.then(() => {
-        executeLogger.debug(`platform disconnected.`)
+        executeLogger.debug(`${fileRelativeUrl} platform disconnected.`)
         platformDisconnectCallback({ timing })
       })
 
@@ -347,7 +347,7 @@ ${executionResult.error.stack}`)
         return createErroredExecutionResult(executionResult, rest)
       }
 
-      executeLogger.debug(`execution completed.`)
+      executeLogger.debug(`${fileRelativeUrl} execution completed.`)
       return createCompletedExecutionResult(executionResult, rest)
     },
   })

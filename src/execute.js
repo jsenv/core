@@ -30,6 +30,7 @@ export const execute = async ({
   launch,
   mirrorConsole = true,
   stopPlatformAfterExecute = false,
+  gracefulStopAllocatedMs,
   updateProcessExitCode = true,
   ...rest
 }) => {
@@ -83,6 +84,7 @@ export const execute = async ({
         }),
       mirrorConsole,
       stopPlatformAfterExecute,
+      gracefulStopAllocatedMs,
       ...rest,
     })
   }).then(

@@ -19,7 +19,6 @@ const makeProcessControllable = ({ evaluate }) => {
   // ensure this process does not stay alive when it is disconnected
   onceProcessDisconnect(() => {
     processCancellationSource.cancel("process disconnected")
-    process.exit()
   })
 
   processCancellationSource.token.register(removeSIGTERMListener)

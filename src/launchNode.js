@@ -132,42 +132,48 @@ export const launchNode = async ({
   // registerCleanupCallback(removeProcessErrorListener)
 
   // https://nodejs.org/api/child_process.html#child_process_event_disconnect
+  let resolveDisconnect
   const disconnected = new Promise((resolve) => {
+    resolveDisconnect = resolve
     onceProcessMessage(childProcess, "disconnect", resolve)
   })
 
   const killChildProcess = async ({ signal }) => {
-    // if (!childProcess.connected) {
-    //  logger.debug(`send ${signal} to child process with pid ${childProcess.pid}`)
-    //   return Promise.resolve()
-    // }
-
     logger.debug(`send ${signal} to child process with pid ${childProcess.pid}`)
 
     await new Promise((resolve) => {
       killProcessTree(childProcess.pid, signal, (error) => {
         if (error) {
           logger.error(`error while killing process tree with ${signal}
---- error stack ---
-${error.stack}
---- process.pid ---
-${childProcess.pid}`)
+    --- error stack ---
+    ${error.stack}
+    --- process.pid ---
+    ${childProcess.pid}`)
         } else {
           resolve()
         }
       })
     })
+
     // in case the child process did not disconnect by itself at this point
     // something is keeping it alive and it cannot be propely killed
     // disconnect it manually.
     // something inside makeProcessControllable.cjs ensure process.exit()
     // when the child process is disconnected.
-    childProcess.disconnect()
+    try {
+      childProcess.disconnect()
+    } catch (e) {
+      if (e.code === "ERR_IPC_DISCONNECTED") {
+        resolveDisconnect()
+      } else {
+        throw e
+      }
+    }
 
     return disconnected
   }
 
-  const stop = ({ gracefulFailed }) => {
+  const stop = ({ gracefulFailed } = {}) => {
     return killChildProcess({
       signal: gracefulFailed ? GRACEFUL_STOP_FAILED_SIGNAL : STOP_SIGNAL,
     })
