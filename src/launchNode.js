@@ -163,11 +163,19 @@ export const launchNode = async ({
     await new Promise((resolve) => {
       killProcessTree(childProcess.pid, signal, (error) => {
         if (error) {
-          logger.error(`error while killing process tree with ${signal}
+          // this error message occurs on windows
+          if (error.message === `The process "${childProcess.pid}" not found`) {
+            resolve()
+          } else {
+            logger.error(`error while killing process tree with ${signal}
     --- error stack ---
     ${error.stack}
     --- process.pid ---
     ${childProcess.pid}`)
+          }
+          // even if we could not kill the child
+          // we will ask it to disconnect
+          resolve()
         } else {
           resolve()
         }
