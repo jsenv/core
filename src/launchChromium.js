@@ -2,8 +2,8 @@
 
 /* eslint-disable import/max-dependencies */
 import { createCancellationToken } from "@jsenv/cancellation"
+import { trackRessources } from "./internal/trackRessources.js"
 import { closePage } from "./internal/chromium-launcher/closePage.js"
-import { trackRessources } from "./internal/chromium-launcher/trackRessources.js"
 import { launchPuppeteer } from "./internal/chromium-launcher/launchPuppeteer.js"
 import { startChromiumServer } from "./internal/chromium-launcher/startChromiumServer.js"
 import { trackPageTargetsToClose } from "./internal/chromium-launcher/trackPageTargetsToClose.js"
@@ -64,13 +64,13 @@ export const launchChromium = async ({
   })
   const { browser } = await browserPromise
 
-  const registerDisconnectCallback = (callback) => {
+  const disconnected = new Promise((resolve) => {
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
-    browser.on("disconnected", callback)
+    browser.on("disconnected", resolve)
     registerCleanupCallback(() => {
-      browser.removeListener("disconnected", callback)
+      browser.removeListener("disconnected", resolve)
     })
-  }
+  })
 
   const errorCallbackArray = []
   const registerErrorCallback = (callback) => {
@@ -185,7 +185,7 @@ export const launchChromium = async ({
     version: "79.0.3942.0",
     options: { headless },
     stop: cleanup,
-    registerDisconnectCallback,
+    disconnected,
     registerErrorCallback,
     registerConsoleCallback,
     executeFile,

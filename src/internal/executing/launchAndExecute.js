@@ -282,7 +282,7 @@ const computeExecutionResult = async ({
     executeFile,
     registerErrorCallback,
     registerConsoleCallback,
-    registerDisconnectCallback,
+    disconnected,
   } = await launchOperation
 
   launchLogger.debug(`${platformName}@${platformVersion} started.
@@ -297,12 +297,9 @@ options: ${JSON.stringify(options, null, "  ")}`)
     start: async () => {
       let timing = TIMING_BEFORE_EXECUTION
 
-      const disconnected = new Promise((resolve) => {
-        registerDisconnectCallback(() => {
-          executeLogger.debug(`platform disconnected.`)
-          platformDisconnectCallback({ timing })
-          resolve()
-        })
+      disconnected.then(() => {
+        executeLogger.debug(`platform disconnected.`)
+        platformDisconnectCallback({ timing })
       })
 
       const executed = executeFile(fileRelativeUrl, rest)
