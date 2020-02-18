@@ -11,6 +11,7 @@ import env from "/.jsenv/out/env.json"
 import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
+// do not use memoize form @jsenv/util to avoid pulling @jsenv/util code into the browser bundle
 import { memoize } from "../../memoize.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"
 import { resolveBrowserGroup } from "../resolveBrowserGroup.js"

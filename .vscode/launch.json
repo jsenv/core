@@ -52,8 +52,8 @@
       "type": "node",
       "request": "launch",
       "protocol": "inspector",
-      // "program": "${workspaceFolder}/script/run-node/run-node.js",
-      "program": "${workspaceFolder}/script/run-node/run-node.common.js",
+      "program": "${workspaceFolder}/script/run-node/run-node.js",
+      // "program": "${workspaceFolder}/script/run-node/run-node.common.js",
       "runtimeArgs": [
         "--unhandled-rejections=strict",
         // this is to disable experimental warning

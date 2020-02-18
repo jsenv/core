@@ -3,12 +3,15 @@ import { Script } from "vm"
 import { fork as forkChildProcess } from "child_process"
 import { uneval } from "@jsenv/uneval"
 import { createCancellationToken } from "@jsenv/cancellation"
+import { require } from "./internal/require.js"
 import { supportsDynamicImport } from "./internal/supportsDynamicImport.js"
 import { COMPILE_ID_COMMONJS_BUNDLE } from "./internal/CONSTANTS.js"
 import { urlToFileSystemPath, resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "./internal/jsenvCoreDirectoryUrl.js"
 import { escapeRegexpSpecialCharacters } from "./internal/escapeRegexpSpecialCharacters.js"
 import { createChildExecArgv } from "./internal/node-launcher/createChildExecArgv.js"
+
+const killProcessTree = require("tree-kill")
 
 const EVALUATION_STATUS_OK = "evaluation-ok"
 
@@ -17,6 +20,13 @@ const SIGINT_SIGNAL_NUMBER = 2
 const SIGTERM_SIGNAL_NUMBER = 15
 const SIGINT_EXIT_CODE = 128 + SIGINT_SIGNAL_NUMBER
 const SIGTERM_EXIT_CODE = 128 + SIGTERM_SIGNAL_NUMBER
+// http://man7.org/linux/man-pages/man7/signal.7.html
+// https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
+const GRACEFUL_STOP_SIGNAL = "SIGTERM"
+const STOP_SIGNAL = "SIGKILL"
+// it would be more correct if GRACEFUL_STOP_FAILED_SIGNAL was SIGHUP instead of SIGKILL.
+// but I'm not sure and it changes nothing so just use SIGKILL
+const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL"
 
 const nodeJsFileUrl = resolveUrl(
   "./src/internal/node-launcher/node-js-file.js",
@@ -78,7 +88,7 @@ export const launchNode = async ({
 
   env.COVERAGE_ENABLED = collectCoverage
 
-  const child = forkChildProcess(urlToFileSystemPath(nodeControllableFileUrl), {
+  const childProcess = forkChildProcess(urlToFileSystemPath(nodeControllableFileUrl), {
     execArgv,
     // silent: true
     stdio: "pipe",
@@ -88,106 +98,98 @@ export const launchNode = async ({
     `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(nodeControllableFileUrl)}`,
   )
 
-  const childReadyPromise = new Promise((resolve) => {
-    registerChildMessage(child, "ready", resolve)
+  const childProcessReadyPromise = new Promise((resolve) => {
+    onceProcessMessage(childProcess, "ready", resolve)
   })
 
   const consoleCallbackArray = []
   const registerConsoleCallback = (callback) => {
     consoleCallbackArray.push(callback)
   }
-  // beware that we may receive ansi output here, should not be a problem but keep that in mind
-  child.stdout.on("data", (chunk) => {
-    const text = String(chunk)
+  installProcessOutputListener(childProcess, ({ type, text }) => {
     consoleCallbackArray.forEach((callback) => {
       callback({
-        type: "log",
+        type,
         text,
       })
     })
   })
-  child.stderr.on("data", (chunk) => {
-    const text = String(chunk)
-    consoleCallbackArray.forEach((callback) => {
-      callback({
-        type: "error",
-        text,
-      })
-    })
-  })
+  // keep listening process outputs while child process is killed to catch
+  // outputs until it's actually disconnected
+  // registerCleanupCallback(removeProcessOutputListener)
 
   const errorCallbackArray = []
   const registerErrorCallback = (callback) => {
     errorCallbackArray.push(callback)
   }
-  const emitError = (error) => {
+  installProcessErrorListener(childProcess, (error) => {
     errorCallbackArray.forEach((callback) => {
       callback(error)
     })
-  }
-  // https://nodejs.org/api/child_process.html#child_process_event_error
-  const errorEventRegistration = registerChildEvent(child, "error", (error) => {
-    errorEventRegistration.unregister()
-    exitErrorRegistration.unregister()
-    emitError(error)
   })
-  // process.exit(1) from child
-  const exitErrorRegistration = registerChildEvent(child, "exit", (code) => {
-    if (code !== null && code !== 0 && code !== SIGINT_EXIT_CODE && code !== SIGTERM_EXIT_CODE) {
-      errorEventRegistration.unregister()
-      exitErrorRegistration.unregister()
-      emitError(createExitWithFailureCodeError(code))
-    }
-  })
+  // keep listening process errors while child process is killed to catch
+  // errors until it's actually disconnected
+  // registerCleanupCallback(removeProcessErrorListener)
 
   // https://nodejs.org/api/child_process.html#child_process_event_disconnect
-  const registerDisconnectCallback = (callback) => {
-    const registration = registerChildEvent(child, "disconnect", () => {
-      callback()
+  let resolveDisconnect
+  const disconnected = new Promise((resolve) => {
+    resolveDisconnect = resolve
+    onceProcessMessage(childProcess, "disconnect", () => {
+      resolve()
     })
-    return () => {
-      registration.unregister()
-    }
-  }
+  })
+  // child might exit without disconnect apparently, exit is disconnect for us
+  childProcess.once("exit", () => {
+    disconnectChildProcess()
+  })
 
-  const stop = () => {
-    if (!child.connected) {
-      return Promise.resolve()
-    }
-    // { gracefulFailed } = {}
-    const disconnectedPromise = new Promise((resolve) => {
-      const unregister = registerDisconnectCallback(() => {
-        unregister()
-        resolve()
-      })
-    })
-    // http://man7.org/linux/man-pages/man7/signal.7.html
-    // const signal = gracefulFailed ? "SIGHUP" : "SIGKILL"
-    // https:// github.com/nodejs/node/blob/1d9511127c419ec116b3ddf5fc7a59e8f0f1c1e4/lib/internal/child_process.js#L472
-    child.kill("SIGKILL")
-    return disconnectedPromise
-  }
-
-  const gracefulStop = async () => {
-    if (!child.connected) {
-      return Promise.resolve()
-    }
-    const disconnectedPromise = new Promise((resolve) => {
-      const unregister = registerDisconnectCallback(() => {
-        unregister()
-        resolve()
-      })
-    })
+  const disconnectChildProcess = () => {
     try {
-      await sendToChild(child, "gracefulStop")
+      childProcess.disconnect()
     } catch (e) {
-      // cannot comunicate with the child (child killed itself ?)
-      if (e.code === "EPIPE") {
-        return disconnectedPromise
+      if (e.code === "ERR_IPC_DISCONNECTED") {
+        resolveDisconnect()
+      } else {
+        throw e
       }
-      throw e
     }
-    return disconnectedPromise
+    return disconnected
+  }
+
+  const killChildProcess = async ({ signal }) => {
+    logger.debug(`send ${signal} to child process with pid ${childProcess.pid}`)
+
+    await new Promise((resolve) => {
+      killProcessTree(childProcess.pid, signal, (error) => {
+        if (error) {
+          logger.error(`error while killing process tree with ${signal}
+    --- error stack ---
+    ${error.stack}
+    --- process.pid ---
+    ${childProcess.pid}`)
+        } else {
+          resolve()
+        }
+      })
+    })
+
+    // in case the child process did not disconnect by itself at this point
+    // something is keeping it alive and it cannot be propely killed
+    // disconnect it manually.
+    // something inside makeProcessControllable.cjs ensure process.exit()
+    // when the child process is disconnected.
+    return disconnectChildProcess()
+  }
+
+  const stop = ({ gracefulFailed } = {}) => {
+    return killChildProcess({
+      signal: gracefulFailed ? GRACEFUL_STOP_FAILED_SIGNAL : STOP_SIGNAL,
+    })
+  }
+
+  const gracefulStop = () => {
+    return killChildProcess({ signal: GRACEFUL_STOP_SIGNAL })
   }
 
   const executeFile = async (
@@ -196,20 +198,15 @@ export const launchNode = async ({
   ) => {
     const execute = async () => {
       return new Promise(async (resolve, reject) => {
-        const evaluationResultRegistration = registerChildMessage(
-          child,
-          "evaluate-result",
-          ({ status, value }) => {
-            logger.debug(`child process sent the following evaluation result.
+        onceProcessMessage(childProcess, "evaluate-result", ({ status, value }) => {
+          logger.debug(`child process sent the following evaluation result.
 --- status ---
 ${status}
 --- value ---
 ${value}`)
-            evaluationResultRegistration.unregister()
-            if (status === EVALUATION_STATUS_OK) resolve(value)
-            else reject(value)
-          },
-        )
+          if (status === EVALUATION_STATUS_OK) resolve(value)
+          else reject(value)
+        })
 
         const executeParams = {
           jsenvCoreDirectoryUrl,
@@ -237,9 +234,9 @@ ${value}`)
 --- source ---
 ${source}`)
 
-        await childReadyPromise
+        await childProcessReadyPromise
         try {
-          await sendToChild(child, "evaluate", source)
+          await sendToProcess(childProcess, "evaluate", source)
         } catch (e) {
           logger.error(`error while sending message to child
 --- error stack ---
@@ -274,10 +271,8 @@ ${e.stack}`)
     version: process.version.slice(1),
     options: { execArgv, env },
     gracefulStop,
-    // child.kill('SIGINT') does not work on windows
-    // ...(process.platform === "win32" ? {} : { gracefulStop }),
     stop,
-    registerDisconnectCallback,
+    disconnected,
     registerErrorCallback,
     registerConsoleCallback,
     executeFile,
@@ -307,11 +302,11 @@ const evalException = (exceptionSource, { compileServerOrigin, projectDirectoryU
   return error
 }
 
-const sendToChild = async (child, type, data) => {
+const sendToProcess = async (childProcess, type, data) => {
   const source = uneval(data, { functionAllowed: true })
 
   return new Promise((resolve, reject) => {
-    child.send({ type, data: source }, (error) => {
+    childProcess.send({ type, data: source }, (error) => {
       if (error) {
         reject(error)
       } else {
@@ -321,26 +316,44 @@ const sendToChild = async (child, type, data) => {
   })
 }
 
-const registerChildMessage = (child, type, callback) => {
-  return registerChildEvent(child, "message", (message) => {
-    if (message.type === type) {
-      // eslint-disable-next-line no-eval
-      callback(message.data ? eval(`(${message.data})`) : "")
-    }
-  })
+const installProcessOutputListener = (childProcess, callback) => {
+  // beware that we may receive ansi output here, should not be a problem but keep that in mind
+  const stdoutDataCallback = (chunk) => {
+    callback({ type: "log", text: String(chunk) })
+  }
+  childProcess.stdout.on("data", stdoutDataCallback)
+
+  const stdErrorDataCallback = (chunk) => {
+    callback({ type: "error", text: String(chunk) })
+  }
+  childProcess.stderr.on("data", stdErrorDataCallback)
+
+  return () => {
+    childProcess.stdout.removeListener("data", stdoutDataCallback)
+    childProcess.stderr.removeListener("data", stdoutDataCallback)
+  }
 }
 
-const registerChildEvent = (child, type, callback) => {
-  child.on(type, callback)
-
-  const unregister = () => {
-    child.removeListener(type, callback)
+const installProcessErrorListener = (childProcess, callback) => {
+  // https://nodejs.org/api/child_process.html#child_process_event_error
+  const errorListener = (error) => {
+    removeExitListener() // if an error occured we ignore the child process exitCode
+    callback(error)
+    onceProcessMessage(childProcess, "error", errorListener)
   }
-
-  const registration = {
-    unregister,
+  const removeErrorListener = onceProcessMessage(childProcess, "error", errorListener)
+  // process.exit(1) in child process or process.exitCode = 1 + process.exit()
+  // means there was an error even if we don't know exactly what.
+  const removeExitListener = onceProcessEvent(childProcess, "exit", (code) => {
+    if (code !== null && code !== 0 && code !== SIGINT_EXIT_CODE && code !== SIGTERM_EXIT_CODE) {
+      removeErrorListener()
+      callback(createExitWithFailureCodeError(code))
+    }
+  })
+  return () => {
+    removeErrorListener()
+    removeExitListener()
   }
-  return registration
 }
 
 const createExitWithFailureCodeError = (code) => {
@@ -350,6 +363,23 @@ const createExitWithFailureCodeError = (code) => {
     )
   }
   return new Error(`child exited with ${code}`)
+}
+
+const onceProcessMessage = (childProcess, type, callback) => {
+  return onceProcessEvent(childProcess, "message", (message) => {
+    if (message.type === type) {
+      // eslint-disable-next-line no-eval
+      callback(message.data ? eval(`(${message.data})`) : "")
+    }
+  })
+}
+
+const onceProcessEvent = (childProcess, type, callback) => {
+  childProcess.on(type, callback)
+
+  return () => {
+    childProcess.removeListener(type, callback)
+  }
 }
 
 const generateSourceToEvaluate = async ({

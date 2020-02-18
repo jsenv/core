@@ -3,10 +3,10 @@
 
 import { createCancellationToken, createStoppableOperation } from "@jsenv/cancellation"
 import { teardownSignal } from "@jsenv/node-signals"
+import { trackRessources } from "../trackRessources.js"
 import { require } from "../require.js"
 import { fetchUrl } from "../fetchUrl.js"
 import { validateResponseStatusIsOk } from "../validateResponseStatusIsOk.js"
-import { trackRessources } from "./trackRessources.js"
 
 /**
  * Be very careful whenever updating puppeteer

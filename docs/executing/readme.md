@@ -197,7 +197,13 @@ If you want to know more about launch internals or write your own check [platfor
 
 ## stopPlatformAfterExecute
 
-`stopPlatformAfterExecute` parameter is a boolean controlling if the platform will be stopped once the file execution is done. This parameter is optional with a default value of `true`. This parameter kills the browser or node process when the file execution is done. This parameter is used by unit tests for instance that does not want to keep things alive.
+`stopPlatformAfterExecute` parameter is a boolean controlling if the platform will be stopped once the file execution is done. This parameter is optional and disabled by default.
+
+Stopping a platform means killing the browser or node process when the file execution is done. Jsenv keeps platform process by default so that you decide when to stop it. When executing a test file jsenv stops platform once execution result is known to avoid keeping things alive once the test is done.
+
+For execution inside a browser it means you can see the output in the browser instance launched assuming it was launched in non-headless mode.
+
+For node execution launched process is kept alive as long as the code uses api that keeps it alive such as setTimeout, setInterval or an http server listening.
 
 ## Shared parameters
 

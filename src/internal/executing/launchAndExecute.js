@@ -227,7 +227,7 @@ const computeExecutionResult = async ({
 
   ...rest
 }) => {
-  launchLogger.debug(`start a platform to execute a file.`)
+  launchLogger.debug(`start a platform to execute ${fileRelativeUrl}`)
 
   const launchOperation = createStoppableOperation({
     cancellationToken,
@@ -246,13 +246,15 @@ const computeExecutionResult = async ({
       let gracefulStop
 
       if (platform.gracefulStop && gracefulStopAllocatedMs) {
+        launchLogger.debug(`${fileRelativeUrl} platform.gracefulStop() because ${reason}`)
+
         const gracefulStopPromise = (async () => {
           await platform.gracefulStop({ reason })
           return true
         })()
 
         const stopPromise = (async () => {
-          await new Promise(async (resolve) => {
+          const gracefulStop = await new Promise(async (resolve) => {
             const timeoutId = setTimeout(resolve, gracefulStopAllocatedMs)
             try {
               await gracefulStopPromise
@@ -260,6 +262,13 @@ const computeExecutionResult = async ({
               clearTimeout(timeoutId)
             }
           })
+          if (gracefulStop) {
+            return gracefulStop
+          }
+
+          launchLogger.debug(
+            `${fileRelativeUrl} platform.gracefulStop() pending after ${gracefulStopAllocatedMs}ms, use platform.stop()`,
+          )
           await platform.stop({ reason, gracefulFailed: true })
           return false
         })()
@@ -271,7 +280,7 @@ const computeExecutionResult = async ({
       }
 
       platformStoppedCallback({ gracefulStop })
-      launchLogger.debug(`platform stopped.`)
+      launchLogger.debug(`${fileRelativeUrl} platform stopped`)
     },
   })
 
@@ -282,7 +291,7 @@ const computeExecutionResult = async ({
     executeFile,
     registerErrorCallback,
     registerConsoleCallback,
-    registerDisconnectCallback,
+    disconnected,
   } = await launchOperation
 
   launchLogger.debug(`${platformName}@${platformVersion} started.
@@ -297,12 +306,9 @@ options: ${JSON.stringify(options, null, "  ")}`)
     start: async () => {
       let timing = TIMING_BEFORE_EXECUTION
 
-      const disconnected = new Promise((resolve) => {
-        registerDisconnectCallback(() => {
-          executeLogger.debug(`platform disconnected.`)
-          platformDisconnectCallback({ timing })
-          resolve()
-        })
+      disconnected.then(() => {
+        executeLogger.debug(`${fileRelativeUrl} platform disconnected.`)
+        platformDisconnectCallback({ timing })
       })
 
       const executed = executeFile(fileRelativeUrl, rest)
@@ -341,7 +347,7 @@ ${executionResult.error.stack}`)
         return createErroredExecutionResult(executionResult, rest)
       }
 
-      executeLogger.debug(`execution completed.`)
+      executeLogger.debug(`${fileRelativeUrl} execution completed.`)
       return createCompletedExecutionResult(executionResult, rest)
     },
   })
