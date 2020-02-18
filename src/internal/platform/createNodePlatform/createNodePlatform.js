@@ -1,6 +1,7 @@
 import { uneval } from "@jsenv/uneval"
 import { normalizeImportMap } from "@jsenv/import-map/src/normalizeImportMap.js"
 import { resolveImport } from "@jsenv/import-map/src/resolveImport.js"
+// do not use memoize form @jsenv/util to avoid pulling @jsenv/util code into the node bundle
 import { memoize } from "../../memoize.js"
 import { fetchUrl } from "../../fetchUrl.js"
 import { computeCompileIdFromGroupId } from "../computeCompileIdFromGroupId.js"

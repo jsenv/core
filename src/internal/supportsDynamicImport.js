@@ -1,8 +1,7 @@
 import { Script } from "vm"
 import { readFileSync } from "fs"
-import { resolveUrl, urlToFileSystemPath } from "@jsenv/util"
+import { resolveUrl, urlToFileSystemPath, memoize } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "./jsenvCoreDirectoryUrl.js"
-import { memoize } from "./memoize.js"
 
 export const supportsDynamicImport = memoize(async () => {
   const fileUrl = resolveUrl("./src/internal/dynamicImportSource.js", jsenvCoreDirectoryUrl)

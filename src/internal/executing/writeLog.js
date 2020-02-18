@@ -1,6 +1,6 @@
 import readline from "readline"
+import { memoize } from "@jsenv/util"
 import { require } from "../require.js"
-import { memoize } from "../memoize.js"
 
 const stringWidth = require("string-width")
 
