@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "11.9.2",
+  "version": "12.0.0",
   "description": "Execute JavaScript on multiple environments for testing.",
   "license": "MIT",
   "repository": {
@@ -54,6 +54,9 @@
     "prepublishOnly": "node ./script/transform-package/remove-postinstall.js && npm run dist",
     "postpublish": "node ./script/transform-package/restore-postinstall.js",
     "git-hook-pre-commit": "npm run prettier-format-stage"
+  },
+  "peerDeoendencies": {
+    "puppeteer": "2.0.0"
   },
   "dependencies": {
     "@babel/core": "7.8.3",
@@ -119,7 +122,6 @@
     "istanbul-reports": "3.0.0-alpha.1",
     "node-notifier": "6.0.0",
     "proper-lockfile": "4.1.1",
-    "puppeteer": "2.0.0",
     "regenerator-runtime": "0.13.3",
     "rollup": "1.31.0",
     "rollup-plugin-node-builtins": "2.1.2",
@@ -145,6 +147,7 @@
     "babel-eslint": "11.0.0-beta.0",
     "eslint": "6.8.0",
     "prettier": "1.19.1",
+    "puppeteer": "2.0.0",
     "react": "16.12.0"
   }
 }
