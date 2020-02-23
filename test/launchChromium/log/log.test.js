@@ -30,10 +30,12 @@ const actual = await launchAndExecute({
       ...options,
       outDirectoryRelativeUrl,
       compileServerOrigin,
+      // headless: false,
     }),
   fileRelativeUrl,
   captureConsole: true,
   collectNamespace: false,
+  // stopPlatformAfterExecute: false,
 })
 const expected = {
   status: "completed",

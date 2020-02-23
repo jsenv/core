@@ -50,7 +50,7 @@ export const launchChromium = async ({
           // https://github.com/GoogleChrome/puppeteer/issues/1834
           // https://github.com/GoogleChrome/puppeteer/blob/master/docs/troubleshooting.md#tips
           // "--disable-dev-shm-usage",
-          `--remote-debugging-port=${debugPort}`,
+          ...(debug ? [`--remote-debugging-port=${debugPort}`] : []),
         ],
       },
       stopOnExit,
@@ -92,7 +92,7 @@ export const launchChromium = async ({
     // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#puppeteer-api-tip-of-tree
     // https://github.com/GoogleChrome/puppeteer#q-why-doesnt-puppeteer-vxxx-work-with-chromium-vyyy
     // to keep in sync when updating puppeteer
-    version: "79.0.3942.0",
+    version: "82.0.4057.0",
     stop: ressourceTracker.cleanup,
     ...browserToPlatformHooks(browser, {
       cancellationToken,
@@ -132,8 +132,6 @@ const launchBrowser = async (
     start: () =>
       browserClass.launch({
         ...options,
-        // because we use a self signed certificate
-        ignoreHTTPSErrors: true,
         // let's handle them to close properly browser, remove listener
         // and so on, instead of relying on puppetter
         handleSIGINT: false,
@@ -196,11 +194,12 @@ const browserToPlatformHooks = (
     fileRelativeUrl,
     {
       htmlFileRelativeUrl,
-      incognito = false,
       collectNamespace,
       collectCoverage,
       executionId,
       errorStackRemapping = true,
+      // because we use a self signed certificate
+      ignoreHTTPSErrors = true,
     },
   ) => {
     const sharingToken = executionServerSharing.getSharingToken()
@@ -223,14 +222,10 @@ const browserToPlatformHooks = (
     const executionServer = await executionServerPromise
 
     // open a tab to execute to the file
-    const browserContext = incognito ? browser.newContext() : browser.context()[0]
+    const browserContext = await browser.newContext({ ignoreHTTPSErrors })
     const page = await browserContext.newPage()
     ressourceTracker.registerCleanupCallback(async () => {
-      if (incognito) {
-        await browserContext.close()
-      } else {
-        await page.close()
-      }
+      await browserContext.close()
     })
     // track tab error and console
     const stopTrackingToNotify = trackPageToNotify(page, {
@@ -245,7 +240,7 @@ const browserToPlatformHooks = (
         })
       },
     })
-    ressourceTracker.register(stopTrackingToNotify)
+    ressourceTracker.registerCleanupCallback(stopTrackingToNotify)
     // import the file
     return evaluateImportExecution({
       cancellationToken,
