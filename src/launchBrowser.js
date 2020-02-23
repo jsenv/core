@@ -3,14 +3,14 @@
 
 import { createCancellationToken, createStoppableOperation } from "@jsenv/cancellation"
 import { teardownSignal } from "@jsenv/node-signals"
-import { trackRessources } from "../trackRessources.js"
-import { require } from "../require.js"
-import { fetchUrl } from "../fetchUrl.js"
-import { validateResponseStatusIsOk } from "../validateResponseStatusIsOk.js"
-import { trackPageToNotify } from "./trackPageToNotify.js"
-import { createSharing } from "./createSharing.js"
-import { startBrowserServer } from "./startBrowserServer.js"
-import { evaluateImportExecution } from "./evaluateImportExecution.js"
+import { trackRessources } from "./internal/trackRessources.js"
+import { require } from "./internal/require.js"
+import { fetchUrl } from "./internal/fetchUrl.js"
+import { validateResponseStatusIsOk } from "./internal/validateResponseStatusIsOk.js"
+import { trackPageToNotify } from "./internal/browser-launcher/trackPageToNotify.js"
+import { createSharing } from "./internal/browser-launcher/createSharing.js"
+import { startBrowserServer } from "./internal/browser-launcher/startBrowserServer.js"
+import { evaluateImportExecution } from "./internal/browser-launcher/evaluateImportExecution.js"
 
 const {
   chromium,
@@ -87,12 +87,12 @@ export const launchChromium = async ({
   }
 
   return {
+    browser,
     name: "chromium",
     // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#puppeteer-api-tip-of-tree
     // https://github.com/GoogleChrome/puppeteer#q-why-doesnt-puppeteer-vxxx-work-with-chromium-vyyy
     // to keep in sync when updating puppeteer
     version: "79.0.3942.0",
-    // browser,
     stop: ressourceTracker.cleanup,
     ...browserToPlatformHooks(browser, {
       cancellationToken,
@@ -105,6 +105,8 @@ export const launchChromium = async ({
     }),
   }
 }
+
+export const launchChromiumTab = (namedArgs) => launchChromium({ share: true, ...namedArgs })
 
 // export const launchFirefox = ({
 //   cancellationToken = createCancellationToken(),
