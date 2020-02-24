@@ -17,6 +17,7 @@ await Promise.all(
       jsenvDirectoryRelativeUrl,
       launch: launchBrowser,
       fileRelativeUrl,
+      stopPlatformAfterExecute: true,
     })
     const expected = {
       status: "completed",

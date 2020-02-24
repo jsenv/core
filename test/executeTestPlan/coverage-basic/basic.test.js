@@ -1,7 +1,13 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
-import { executeTestPlan, launchNode } from "../../../index.js"
+import {
+  executeTestPlan,
+  launchNode,
+  launchChromium,
+  launchFirefox,
+  launchWebkit,
+} from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -15,6 +21,15 @@ const testPlan = {
     },
     node2: {
       launch: launchNode,
+    },
+    chromium: {
+      launch: launchChromium,
+    },
+    firefox: {
+      launch: launchFirefox,
+    },
+    webkit: {
+      launch: launchWebkit,
     },
   },
 }
@@ -33,7 +48,7 @@ const expected = {
   [`${testDirectoryRelativeUrl}file.js`]: {
     ...coverageMap[`${testDirectoryRelativeUrl}file.js`],
     path: `./${testDirectoryRelativeUrl}file.js`,
-    s: { 0: 2, 1: 0, 2: 2, 3: 2, 4: 0 },
+    s: { 0: 5, 1: 3, 2: 2, 3: 2, 4: 0 },
   },
 }
 assert({ actual, expected })
