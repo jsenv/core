@@ -23,80 +23,42 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 
-// chromium
-// {
-//   const result = await launchAndExecute({
-//     ...EXECUTION_TEST_PARAMS,
-//     // sets executeLogger to off to avoid seeing an expected error in logs
-//     executeLogger: createLogger({ logLevel: "off" }),
-//     // stopPlatformAfterExecute: false,
-//     fileRelativeUrl,
-//     launch: (options) =>
-//       launchChromium({
-//         ...LAUNCH_TEST_PARAMS,
-//         ...options,
-//         outDirectoryRelativeUrl,
-//         compileServerOrigin,
-//         // headless: false,
-//       }),
-//     captureConsole: true,
-//     mirrorConsole: true,
-//   })
+await Promise.all(
+  [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
+    const result = await launchAndExecute({
+      ...EXECUTION_TEST_PARAMS,
+      // sets executeLogger to off to avoid seeing an expected error in logs
+      executeLogger: createLogger({ logLevel: "off" }),
+      // stopPlatformAfterExecute: false,
+      fileRelativeUrl,
+      launch: (options) =>
+        launchBrowser({
+          ...LAUNCH_TEST_PARAMS,
+          ...options,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+          // headless: false,
+        }),
+      captureConsole: true,
+      mirrorConsole: true,
+    })
 
-//   const stack = result.error.stack
-//   const expected = `Error: error
-//   at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
-//   at Object.triggerError (${testDirectoryUrl}error-stack.js:3:1)`
-//   const actual = stack.slice(0, expected.length)
-//   assert({ actual, expected })
-// }
-// // firefox
-// {
-//   const result = await launchAndExecute({
-//     ...EXECUTION_TEST_PARAMS,
-//     // sets executeLogger to off to avoid seeing an expected error in logs
-//     executeLogger: createLogger({ logLevel: "off" }),
-//     // stopPlatformAfterExecute: false,
-//     fileRelativeUrl,
-//     launch: (options) =>
-//       launchFirefox({
-//         ...LAUNCH_TEST_PARAMS,
-//         ...options,
-//         outDirectoryRelativeUrl,
-//         compileServerOrigin,
-//         // headless: false,
-//       }),
-//     captureConsole: true,
-//     mirrorConsole: true,
-//   })
+    const stack = result.error.stack
 
-//   const stack = result.error.stack
-//   const expected = `Error: error`
-//   const actual = stack.slice(0, expected.length)
-//   assert({ actual, expected })
-// }
-// webkit
-{
-  const result = await launchAndExecute({
-    ...EXECUTION_TEST_PARAMS,
-    // sets executeLogger to off to avoid seeing an expected error in logs
-    executeLogger: createLogger({ logLevel: "off" }),
-    stopPlatformAfterExecute: false,
-    fileRelativeUrl,
-    launch: (options) =>
-      launchWebkit({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        headless: false,
-      }),
-    captureConsole: true,
-    mirrorConsole: true,
-  })
-
-  // const stack = result.error.stack
-  // const expected = `Error: error`
-  // const actual = stack.slice(0, expected.length)
-  // assert({ actual, expected })
-}
+    if (launchBrowser === launchChromium) {
+      const expected = `Error: error
+  at triggerError (${testDirectoryUrl}trigger-error.js:2:9)
+  at Object.triggerError (${testDirectoryUrl}error-stack.js:3:1)`
+      const actual = stack.slice(0, expected.length)
+      assert({ actual, expected })
+    } else if (launchBrowser === launchFirefox) {
+      const expected = `Error: error`
+      const actual = stack.slice(0, expected.length)
+      assert({ actual, expected })
+    } else {
+      const actual = typeof stack
+      const expected = `string`
+      assert({ actual, expected })
+    }
+  }),
+)

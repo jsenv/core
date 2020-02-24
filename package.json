@@ -39,7 +39,7 @@
     "test-commonjs-bundling": "node ./script/test/test-commonjs-bundling.js",
     "test-global-bundling": "node ./script/test/test-global-bundling.js",
     "test-systemjs-bundling": "node ./script/test/test-systemjs-bundling.js",
-    "test-launch-chromium": "node --no-warnings ./script/test/test-launch-chromium.js",
+    "test-launch-browser": "node --no-warnings ./script/test/test-launch-browser.js",
     "test-launch-node": "node ./script/test/test-launch-node.js",
     "eslint-check": "eslint .",
     "prettier-format": "node ./script/prettier-format/prettier-format.js",
