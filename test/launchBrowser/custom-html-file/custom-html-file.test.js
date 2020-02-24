@@ -23,79 +23,29 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 
-// chromium
-{
-  const actual = await launchAndExecute({
-    ...EXECUTION_TEST_PARAMS,
-    fileRelativeUrl,
-    launch: (options) =>
-      launchChromium({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        // headless: false,
-      }),
-    // stopPlatformAfterExecute: false,
-    collectNamespace: true,
-    htmlFileRelativeUrl,
-  })
-  const expected = {
-    status: "completed",
-    namespace: {
-      default: 42,
-    },
-  }
-  assert({ actual, expected })
-}
-// firefox
-{
-  const actual = await launchAndExecute({
-    ...EXECUTION_TEST_PARAMS,
-    fileRelativeUrl,
-    launch: (options) =>
-      launchFirefox({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        // headless: false,
-      }),
-    // stopPlatformAfterExecute: false,
-    collectNamespace: true,
-    htmlFileRelativeUrl,
-  })
-  const expected = {
-    status: "completed",
-    namespace: {
-      default: 42,
-    },
-  }
-  assert({ actual, expected })
-}
-
-// webkit
-{
-  const actual = await launchAndExecute({
-    ...EXECUTION_TEST_PARAMS,
-    fileRelativeUrl,
-    launch: (options) =>
-      launchWebkit({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        // headless: false,
-      }),
-    // stopPlatformAfterExecute: false,
-    collectNamespace: true,
-    htmlFileRelativeUrl,
-  })
-  const expected = {
-    status: "completed",
-    namespace: {
-      default: 42,
-    },
-  }
-  assert({ actual, expected })
-}
+await Promise.all(
+  [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
+    const actual = await launchAndExecute({
+      ...EXECUTION_TEST_PARAMS,
+      fileRelativeUrl,
+      launch: (options) =>
+        launchBrowser({
+          ...LAUNCH_TEST_PARAMS,
+          ...options,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+          // headless: false,
+        }),
+      // stopPlatformAfterExecute: false,
+      collectNamespace: true,
+      htmlFileRelativeUrl,
+    })
+    const expected = {
+      status: "completed",
+      namespace: {
+        default: 42,
+      },
+    }
+    assert({ actual, expected })
+  }),
+)

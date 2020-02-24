@@ -13474,326 +13474,46 @@ callback: ${callback}`);
   };
 };
 
-const closePage = async page => {
-  try {
-    if (!page.isClosed()) {
-      await page.close();
-    }
-  } catch (e) {
-    if (e.message.match(/^Protocol error \(.*?\): Target closed/)) {
-      return;
-    }
-
-    throw e;
-  }
-};
-
-/* eslint-disable import/max-dependencies */
-/**
- * Be very careful whenever updating puppeteer
- * For instance version 2.1.0 introduced a subtle problem:
- * browser is not properly destroyed when calling stop
- * meaning process can never exit properly.
- *
- * That bug hapenned only on windows (and could reproduce only in github workflow...)
- */
-
-const puppeteer = require$1("puppeteer");
-
-const launchPuppeteer = async ({
-  cancellationToken = createCancellationToken(),
-  headless = true,
-  debug = false,
-  debugPort = 9222,
-  stopOnExit = true
-}) => {
-  const options = {
-    headless,
-    ...(debug ? {
-      devtools: true
-    } : {}),
-    // because we use a self signed certificate
-    ignoreHTTPSErrors: true,
-    args: [// https://github.com/GoogleChrome/puppeteer/issues/1834
-    // https://github.com/GoogleChrome/puppeteer/blob/master/docs/troubleshooting.md#tips
-    // "--disable-dev-shm-usage",
-    `--remote-debugging-port=${debugPort}`]
-  };
-  const {
-    registerCleanupCallback,
-    cleanup
-  } = trackRessources$1();
-  const browserOperation = createStoppableOperation({
-    cancellationToken,
-    start: () => puppeteer.launch({ ...options,
-      // let's handle them to close properly browser, remove listener
-      // and so on, instead of relying on puppetter
-      handleSIGINT: false,
-      handleSIGTERM: false,
-      handleSIGHUP: false
-    }),
-    stop: async (browser, reason) => {
-      await cleanup(reason);
-      await browser.close();
-
-      if (browser.isConnected()) {
-        await new Promise(resolve => {
-          const disconnectedCallback = () => {
-            browser.removeListener("disconnected", disconnectedCallback);
-            resolve();
-          };
-
-          browser.on("disconnected", disconnectedCallback);
-        });
-      }
-    }
-  });
-  const {
-    stop
-  } = browserOperation;
-
-  if (stopOnExit) {
-    const unregisterProcessTeadown = teardownSignal.addCallback(reason => {
-      stop(`process ${reason}`);
-    });
-    registerCleanupCallback(unregisterProcessTeadown);
-  }
-
-  const browser = await browserOperation;
-
-  if (debug) {
-    // https://github.com/puppeteer/puppeteer/blob/v2.0.0/docs/api.md#browserwsendpoint
-    // https://chromedevtools.github.io/devtools-protocol/#how-do-i-access-the-browser-target
-    const webSocketEndpoint = browser.wsEndpoint();
-    const webSocketUrl = new URL(webSocketEndpoint);
-    const browserEndpoint = `http://${webSocketUrl.host}/json/version`;
-    const browserResponse = await fetchUrl$1(browserEndpoint, {
-      cancellationToken,
-      ignoreHttpsError: true
-    });
-    const {
-      valid,
-      message
-    } = validateResponseStatusIsOk(browserResponse);
-
-    if (!valid) {
-      throw new Error(message);
-    }
-
-    const browserResponseObject = JSON.parse(browserResponse.body);
-    const {
-      webSocketDebuggerUrl
-    } = browserResponseObject;
-    console.log(`Debugger listening on ${webSocketDebuggerUrl}`);
-  }
-
-  return {
-    browser,
-    stopBrowser: stop
-  };
-};
-
-const startChromiumServer = async ({
-  cancellationToken,
-  logLevel = "off",
-  projectDirectoryUrl,
-  outDirectoryRelativeUrl,
-  compileServerOrigin
-}) => {
-  const chromiumJsFileUrl = resolveUrl$1("./src/internal/chromium-launcher/chromium-js-file.js", jsenvCoreDirectoryUrl);
-  const chromiumJsFileRelativeUrl = urlToRelativeUrl(chromiumJsFileUrl, projectDirectoryUrl);
-  const chromiumBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${chromiumJsFileRelativeUrl}`;
-  const chromiumBundledJsFileRemoteUrl = `${compileServerOrigin}/${chromiumBundledJsFileRelativeUrl}`;
-  return startServer({
-    cancellationToken,
-    logLevel,
-    protocol: "https",
-    sendInternalErrorStack: true,
-    requestToResponse: request => firstService(() => {
-      if (request.ressource === "/.jsenv/browser-script.js") {
-        return {
-          status: 307,
-          headers: {
-            location: chromiumBundledJsFileRemoteUrl
-          }
-        };
-      }
-
-      return null;
-    }, () => {
-      return serveFile(`${projectDirectoryUrl}${request.ressource.slice(1)}`, {
-        method: request.method,
-        headers: request.headers
-      });
-    })
-  });
-};
-
-const trackPageTargets = (page, callback) => {
-  let allDestroyedRegistrationArray = [];
-  const pendingDestroyedPromiseArray = [];
-  const targetArray = [];
-
-  const trackContextTargets = browserContext => {
-    // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#class-target
-    browserContext.on("targetcreated", targetcreatedCallback);
-    browserContext.on("targetdestroyed", targetdestroyedCallback);
-    return async () => {
-      browserContext.removeListener("targetcreated", targetcreatedCallback);
-      browserContext.removeListener("targetdestroyed", targetdestroyedCallback);
-      await Promise.all(pendingDestroyedPromiseArray);
-    };
-  };
-
-  const targetcreatedCallback = async target => {
-    targetArray.push(target);
-    const type = target.type();
-
-    if (type === "browser") {
-      registerTargetDestroyed(target, trackContextTargets(target.browserContext()));
-    }
-
-    const returnValue = await callback({
-      target,
-      type
-    });
-
-    if (typeof returnValue === "function") {
-      registerTargetDestroyed(target, returnValue);
-    }
-  };
-
-  const registerTargetDestroyed = (target, callback) => {
-    allDestroyedRegistrationArray.push({
-      target,
-      callback
-    });
-  };
-
-  const targetdestroyedCallback = async target => {
-    const targetIndex = targetArray.indexOf(target);
-
-    if (targetIndex === -1) {
-      console.warn("untracked target destroyed");
-    } else {
-      const destroyedRegistrationArray = [];
-      const otherDestroyedRegistrationArray = [];
-      destroyedRegistrationArray.forEach(destroyedRegistration => {
-        if (destroyedRegistration.target === target) {
-          destroyedRegistrationArray.push(destroyedRegistration);
-        } else {
-          otherDestroyedRegistrationArray.push(destroyedRegistration);
-        }
-      });
-      allDestroyedRegistrationArray = otherDestroyedRegistrationArray;
-      const pendingDestroyedPromise = Promise.all(destroyedRegistrationArray.map(destroyedRegistration => destroyedRegistration.callback()));
-      pendingDestroyedPromiseArray.push(pendingDestroyedPromise);
-      await pendingDestroyedPromise;
-      pendingDestroyedPromiseArray.splice(pendingDestroyedPromiseArray.indexOf(pendingDestroyedPromise), 1);
-    }
-  };
-
-  return trackContextTargets(page.browserContext());
-};
-
-const trackPageTargetsToClose = page => {
-  return trackPageTargets(page, ({
-    target,
-    type
-  }) => {
-    if (type === "browser") return null;
-
-    if (type === "page" || type === "background_page") {
-      // in case of bug do not forget https://github.com/GoogleChrome/puppeteer/issues/2269
-      return async () => {
-        const page = await target.page();
-        return closePage(page);
-      };
-    }
-
-    return null;
-  });
-};
-
-const trackPageTargetsToNotify = (page, {
+const trackPageToNotify = (page, {
   onError,
-  onConsole,
-  trackOtherPages = false
+  onConsole
 }) => {
-  const trackEvents = page => {
-    // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
-    const removeErrorListener = registerEvent({
-      object: page,
-      eventType: "error",
-      callback: onError
-    }); // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
+  // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-error
+  const removeErrorListener = registerEvent({
+    object: page,
+    eventType: "error",
+    callback: onError
+  }); // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-pageerror
 
-    const removePageErrorListener = registerEvent({
-      object: page,
-      eventType: "pageerror",
-      callback: onError
-    }); // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
+  const removePageErrorListener = registerEvent({
+    object: page,
+    eventType: "pageerror",
+    callback: onError
+  }); // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-console
 
-    const removeConsoleListener = registerEvent({
-      object: page,
-      eventType: "console",
-      callback: async message => {
-        onConsole({
-          type: message.type(),
-          text: appendNewLine((await extractTextFromPuppeteerMessage(message)))
-        });
-      }
-    });
-    return () => {
-      removeErrorListener();
-      removePageErrorListener();
-      removeConsoleListener();
-    };
-  };
-
-  const stopEventTracking = trackEvents(page);
-
-  if (!trackOtherPages) {
-    return stopEventTracking;
-  }
-
-  const stopPageTracking = trackPageTargets(page, async ({
-    target,
-    type
-  }) => {
-    if (type === "browser") return null;
-
-    if (type === "page" || type === "background_page") {
-      const page = await target.page();
-      return trackEvents(page);
+  const removeConsoleListener = registerEvent({
+    object: page,
+    eventType: "console",
+    // https://github.com/microsoft/playwright/blob/master/docs/api.md#event-console
+    callback: async consoleMessage => {
+      onConsole({
+        type: consoleMessage.type(),
+        text: appendNewLine(extractTextFromConsoleMessage(consoleMessage))
+      });
     }
-
-    return null;
   });
-  return async () => {
-    await stopEventTracking();
-    await stopPageTracking();
-  };
-};
-
-const registerEvent = ({
-  object,
-  eventType,
-  callback
-}) => {
-  object.on(eventType, callback);
   return () => {
-    object.removeListener(eventType, callback);
+    removeErrorListener();
+    removePageErrorListener();
+    removeConsoleListener();
   };
 };
 
 const appendNewLine = string => `${string}
-`; // https://github.com/GoogleChrome/puppeteer/issues/3397#issuecomment-434970058
-// https://github.com/GoogleChrome/puppeteer/issues/2083
+`;
 
-
-const extractTextFromPuppeteerMessage = async message => {
-  return message.text(); // ensure we use a string so that istanbul won't try
+const extractTextFromConsoleMessage = consoleMessage => {
+  return consoleMessage.text(); // ensure we use a string so that istanbul won't try
   // to put any coverage statement inside it
   // ideally we should use uneval no ?
   // eslint-disable-next-line no-new-func
@@ -13822,6 +13542,132 @@ const extractTextFromPuppeteerMessage = async message => {
   //     return `${previous} ${string}`
   //   }, "")
   //   return text
+};
+
+const registerEvent = ({
+  object,
+  eventType,
+  callback
+}) => {
+  object.on(eventType, callback);
+  return () => {
+    object.removeListener(eventType, callback);
+  };
+};
+
+const createSharing = ({
+  argsToId = argsToIdFallback
+} = {}) => {
+  const tokenMap = {};
+
+  const getSharingToken = (...args) => {
+    const id = argsToId(args);
+
+    if (id in tokenMap) {
+      return tokenMap[id];
+    }
+
+    const sharingToken = createSharingToken({
+      unusedCallback: () => {
+        delete tokenMap[id];
+      }
+    });
+    tokenMap[id] = sharingToken;
+    return sharingToken;
+  };
+
+  const getUniqueSharingToken = () => {
+    return createSharingToken();
+  };
+
+  return {
+    getSharingToken,
+    getUniqueSharingToken
+  };
+};
+
+const createSharingToken = ({
+  unusedCallback = () => {}
+} = {}) => {
+  let useCount = 0;
+  let sharedValue;
+  let cleanup;
+  const sharingToken = {
+    isUsed: () => useCount > 0,
+    setSharedValue: (value, cleanupFunction = () => {}) => {
+      sharedValue = value;
+      cleanup = cleanupFunction;
+    },
+    useSharedValue: () => {
+      useCount++;
+      let stopped = false;
+      let stopUsingReturnValue;
+
+      const stopUsing = () => {
+        // ensure if stopUsing is called many times
+        // it returns the same value and does not decrement useCount more than once
+        if (stopped) {
+          return stopUsingReturnValue;
+        }
+
+        stopped = true;
+        useCount--;
+
+        if (useCount === 0) {
+          unusedCallback();
+          sharedValue = undefined;
+          stopUsingReturnValue = cleanup();
+        } else {
+          stopUsingReturnValue = undefined;
+        }
+
+        return stopUsingReturnValue;
+      };
+
+      return [sharedValue, stopUsing];
+    }
+  };
+  return sharingToken;
+};
+
+const argsToIdFallback = args => JSON.stringify(args);
+
+const startBrowserServer = async ({
+  cancellationToken,
+  logLevel = "off",
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
+  compileServerOrigin
+}) => {
+  const browserJsFileUrl = resolveUrl$1("./src/internal/browser-launcher/browser-js-file.js", jsenvCoreDirectoryUrl);
+  const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl);
+  const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`;
+  const browserBundledJsFileRemoteUrl = `${compileServerOrigin}/${browserBundledJsFileRelativeUrl}`;
+  return startServer({
+    cancellationToken,
+    logLevel,
+    // should be reuse compileServerOrigin protocol ?
+    // should we reuse compileServer privateKey/certificate ?
+    protocol: "https",
+    sendInternalErrorStack: true,
+    requestToResponse: request => firstService(() => {
+      if (request.ressource === "/.jsenv/browser-script.js") {
+        return {
+          status: 307,
+          headers: {
+            location: browserBundledJsFileRemoteUrl
+          }
+        };
+      }
+
+      return null;
+    }, () => {
+      return serveFile(`${projectDirectoryUrl}${request.ressource.slice(1)}`, {
+        method: request.method,
+        headers: request.headers
+      });
+    })
+  });
 };
 
 const jsenvHtmlFileUrl = resolveUrl$1("./src/internal/jsenv-html-file.html", jsenvCoreDirectoryUrl);
@@ -13976,151 +13822,269 @@ const createBrowserIIFEString = data => `(() => {
   return window.execute(${JSON.stringify(data, null, "    ")})
 })()`;
 
-const createSharing = ({
-  argsToId = argsToIdFallback
-} = {}) => {
-  const tokenMap = {};
-
-  const getSharingToken = (...args) => {
-    const id = argsToId(args);
-
-    if (id in tokenMap) {
-      return tokenMap[id];
-    }
-
-    const sharingToken = createSharingToken({
-      unusedCallback: () => {
-        delete tokenMap[id];
-      }
-    });
-    tokenMap[id] = sharingToken;
-    return sharingToken;
-  };
-
-  const getUniqueSharingToken = () => {
-    return createSharingToken();
-  };
-
-  return {
-    getSharingToken,
-    getUniqueSharingToken
-  };
-};
-
-const createSharingToken = ({
-  unusedCallback = () => {}
-} = {}) => {
-  let useCount = 0;
-  let sharedValue;
-  let cleanup;
-  const sharingToken = {
-    isUsed: () => useCount > 0,
-    setSharedValue: (value, cleanupFunction = () => {}) => {
-      sharedValue = value;
-      cleanup = cleanupFunction;
-    },
-    useSharedValue: () => {
-      useCount++;
-      let stopped = false;
-      let stopUsingReturnValue;
-
-      const stopUsing = () => {
-        // ensure if stopUsing is called many times
-        // it returns the same value and does not decrement useCount more than once
-        if (stopped) {
-          return stopUsingReturnValue;
-        }
-
-        stopped = true;
-        useCount--;
-
-        if (useCount === 0) {
-          unusedCallback();
-          sharedValue = undefined;
-          stopUsingReturnValue = cleanup();
-        } else {
-          stopUsingReturnValue = undefined;
-        }
-
-        return stopUsingReturnValue;
-      };
-
-      return [sharedValue, stopUsing];
-    }
-  };
-  return sharingToken;
-};
-
-const argsToIdFallback = args => JSON.stringify(args);
-
-// https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md
-const browserSharing = createSharing();
-const executionServerSharing = createSharing();
+/* eslint-disable import/max-dependencies */
+const chromiumSharing = createSharing();
 const launchChromium = async ({
   cancellationToken = createCancellationToken(),
-  clientServerLogLevel,
+  browserServerLogLevel,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
   headless = true,
-  shareBrowser = false,
   debug = false,
-  debugPort
+  debugPort = 0,
+  stopOnExit = true,
+  share = false
 }) => {
-  if (typeof projectDirectoryUrl !== "string") {
-    throw new TypeError(`projectDirectoryUrl must be a string, got ${projectDirectoryUrl}`);
-  }
-
-  if (typeof compileServerOrigin !== "string") {
-    throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`);
-  }
-
-  const {
-    registerCleanupCallback,
-    cleanup
-  } = trackRessources$1();
-  const sharingToken = shareBrowser ? browserSharing.getSharingToken({
+  const ressourceTracker = trackRessources$1();
+  const sharingToken = share ? chromiumSharing.getSharingToken({
     headless,
     debug,
     debugPort
-  }) : browserSharing.getUniqueSharingToken();
+  }) : chromiumSharing.getUniqueSharingToken();
 
   if (!sharingToken.isUsed()) {
-    const value = launchPuppeteer({
+    const launchOperation = launchBrowser("chromium", {
       cancellationToken,
-      headless,
-      debug,
-      debugPort
+      ressourceTracker,
+      options: {
+        headless,
+        ...(debug ? {
+          devtools: true
+        } : {}),
+        args: [// https://github.com/GoogleChrome/puppeteer/issues/1834
+        // https://github.com/GoogleChrome/puppeteer/blob/master/docs/troubleshooting.md#tips
+        // "--disable-dev-shm-usage",
+        ...(debug ? [`--remote-debugging-port=${debugPort}`] : [])]
+      },
+      stopOnExit
     });
-    sharingToken.setSharedValue(value, async () => {
-      const {
-        stopBrowser
-      } = await value;
-      await stopBrowser();
-    });
+    sharingToken.setSharedValue(launchOperation);
   }
 
-  const [browserPromise, stopUsingBrowser] = sharingToken.useSharedValue();
-  registerCleanupCallback(reason => {
-    if (shareBrowser && reason === "intermediate-execution-done") {
-      // keep the browser except if this is the last execution
-      // don't worry browser will also be killed if it's not the last execution
-      // thanks to a dedicated cancellation source inside executeConcurrently
-      // that is cancelling everything related to execution when execution are done
-      return;
+  const [launchOperation, stopUsingBrowser] = sharingToken.useSharedValue();
+  ressourceTracker.registerCleanupCallback(stopUsingBrowser);
+  const browser = await launchOperation;
+
+  if (debug) {
+    // https://github.com/puppeteer/puppeteer/blob/v2.0.0/docs/api.md#browserwsendpoint
+    // https://chromedevtools.github.io/devtools-protocol/#how-do-i-access-the-browser-target
+    const webSocketEndpoint = browser.wsEndpoint();
+    const webSocketUrl = new URL(webSocketEndpoint);
+    const browserEndpoint = `http://${webSocketUrl.host}/json/version`;
+    const browserResponse = await fetchUrl$1(browserEndpoint, {
+      cancellationToken,
+      ignoreHttpsError: true
+    });
+    const {
+      valid,
+      message
+    } = validateResponseStatusIsOk(browserResponse);
+
+    if (!valid) {
+      throw new Error(message);
     }
 
-    stopUsingBrowser();
+    const browserResponseObject = JSON.parse(browserResponse.body);
+    const {
+      webSocketDebuggerUrl
+    } = browserResponseObject;
+    console.log(`Debugger listening on ${webSocketDebuggerUrl}`);
+  }
+
+  return {
+    browser,
+    name: "chromium",
+    version: "82.0.4057.0",
+    stop: ressourceTracker.cleanup,
+    ...browserToPlatformHooks(browser, {
+      cancellationToken,
+      ressourceTracker,
+      browserServerLogLevel,
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+      compileServerOrigin
+    })
+  };
+};
+const launchChromiumTab = namedArgs => launchChromium({
+  share: true,
+  ...namedArgs
+});
+const firefoxSharing = createSharing();
+const launchFirefox = async ({
+  cancellationToken = createCancellationToken(),
+  browserServerLogLevel,
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
+  compileServerOrigin,
+  headless = true,
+  stopOnExit = true,
+  share = false
+}) => {
+  const ressourceTracker = trackRessources$1();
+  const sharingToken = share ? firefoxSharing.getSharingToken({
+    headless
+  }) : firefoxSharing.getUniqueSharingToken();
+
+  if (!sharingToken.isUsed()) {
+    const launchOperation = launchBrowser("firefox", {
+      cancellationToken,
+      ressourceTracker,
+      options: {
+        headless
+      },
+      stopOnExit
+    });
+    sharingToken.setSharedValue(launchOperation);
+  }
+
+  const [launchOperation, stopUsingBrowser] = sharingToken.useSharedValue();
+  ressourceTracker.registerCleanupCallback(stopUsingBrowser);
+  const browser = await launchOperation;
+  return {
+    browser,
+    name: "firefox",
+    version: "73.0b13",
+    stop: ressourceTracker.cleanup,
+    ...browserToPlatformHooks(browser, {
+      cancellationToken,
+      ressourceTracker,
+      browserServerLogLevel,
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+      compileServerOrigin
+    })
+  };
+};
+const launchFirefoxTab = namedArgs => launchFirefox({
+  share: true,
+  ...namedArgs
+});
+const webkitSharing = createSharing();
+const launchWebkit = async ({
+  cancellationToken = createCancellationToken(),
+  browserServerLogLevel,
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
+  compileServerOrigin,
+  headless = true,
+  stopOnExit = true,
+  share = false
+}) => {
+  const ressourceTracker = trackRessources$1();
+  const sharingToken = share ? webkitSharing.getSharingToken({
+    headless
+  }) : webkitSharing.getUniqueSharingToken();
+
+  if (!sharingToken.isUsed()) {
+    const launchOperation = launchBrowser("webkit", {
+      cancellationToken,
+      ressourceTracker,
+      options: {
+        headless
+      },
+      stopOnExit
+    });
+    sharingToken.setSharedValue(launchOperation);
+  }
+
+  const [launchOperation, stopUsingBrowser] = sharingToken.useSharedValue();
+  ressourceTracker.registerCleanupCallback(stopUsingBrowser);
+  const browser = await launchOperation;
+  return {
+    browser,
+    name: "webkit",
+    version: "13.0.4",
+    stop: ressourceTracker.cleanup,
+    ...browserToPlatformHooks(browser, {
+      cancellationToken,
+      ressourceTracker,
+      browserServerLogLevel,
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+      compileServerOrigin
+    })
+  };
+};
+const launchWebkitTab = namedArgs => launchWebkit({
+  share: true,
+  ...namedArgs
+});
+
+const launchBrowser = async (browserName, {
+  cancellationToken,
+  ressourceTracker,
+  options,
+  stopOnExit
+}) => {
+  let playwright;
+
+  try {
+    playwright = require$1("playwright");
+  } catch (e) {
+    if (e.code === "MODULE_NOT_FOUND") {
+      throw new Error(`playwright module not found.
+Please note playwright is a peer dependency of @jsenv/core.
+It means you must have playwright in your dependencies/devDependencies.
+You can install playwright using the following command:
+
+npm install playwright`);
+    }
+
+    throw e;
+  }
+
+  const browserClass = playwright[browserName];
+  const launchOperation = createStoppableOperation({
+    cancellationToken,
+    start: () => browserClass.launch({ ...options,
+      // let's handle them to close properly browser, remove listener
+      // and so on, instead of relying on puppetter
+      handleSIGINT: false,
+      handleSIGTERM: false,
+      handleSIGHUP: false
+    }),
+    stop: async browser => {
+      await browser.close();
+
+      if (browser.isConnected()) {
+        await new Promise(resolve => {
+          const disconnectedCallback = () => {
+            browser.removeListener("disconnected", disconnectedCallback);
+            resolve();
+          };
+
+          browser.on("disconnected", disconnectedCallback);
+        });
+      }
+    }
   });
-  const {
-    browser
-  } = await browserPromise;
+  ressourceTracker.registerCleanupCallback(launchOperation.stop);
+
+  if (stopOnExit) {
+    const unregisterProcessTeadown = teardownSignal.addCallback(reason => {
+      launchOperation.stop(`process ${reason}`);
+    });
+    ressourceTracker.registerCleanupCallback(unregisterProcessTeadown);
+  }
+
+  return launchOperation;
+};
+
+const browserServerSharing = createSharing();
+
+const browserToPlatformHooks = (browser, {
+  cancellationToken,
+  ressourceTracker,
+  browserServerLogLevel,
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
+  compileServerOrigin
+}) => {
   const disconnected = new Promise(resolve => {
     // https://github.com/GoogleChrome/puppeteer/blob/v1.4.0/docs/api.md#event-disconnected
     browser.on("disconnected", resolve);
-    registerCleanupCallback(() => {
-      browser.removeListener("disconnected", resolve);
-    });
   });
   const errorCallbackArray = [];
 
@@ -14136,56 +14100,54 @@ const launchChromium = async ({
 
   const executeFile = async (fileRelativeUrl, {
     htmlFileRelativeUrl,
-    incognito = false,
     collectNamespace,
     collectCoverage,
     executionId,
-    errorStackRemapping = true
+    errorStackRemapping = true,
+    // because we use a self signed certificate
+    ignoreHTTPSErrors = true
   }) => {
-    const sharingToken = executionServerSharing.getSharingToken();
+    const sharingToken = browserServerSharing.getSharingToken();
 
     if (!sharingToken.isUsed()) {
-      const executionServerPromise = startChromiumServer({
+      const browserServerPromise = startBrowserServer({
         cancellationToken,
-        logLevel: clientServerLogLevel,
+        logLevel: browserServerLogLevel,
         projectDirectoryUrl,
         outDirectoryRelativeUrl,
         compileServerOrigin
       });
-      sharingToken.setSharedValue(executionServerPromise, async () => {
-        const server = await executionServerPromise;
+      sharingToken.setSharedValue(browserServerPromise, async () => {
+        const server = await browserServerPromise;
         await server.stop();
       });
     }
 
-    const [executionServerPromise, stopUsingExecutionServer] = sharingToken.useSharedValue();
-    registerCleanupCallback(stopUsingExecutionServer);
-    const executionServer = await executionServerPromise; // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#browsercreateincognitobrowsercontext
+    const [browserServerPromise, stopUsingServer] = sharingToken.useSharedValue();
+    ressourceTracker.registerCleanupCallback(stopUsingServer);
+    const executionServer = await browserServerPromise; // open a tab to execute to the file
 
-    const browserContextPromise = incognito ? browser.createIncognitoBrowserContext() : browser.defaultBrowserContext();
-    const browserContext = await browserContextPromise;
+    const browserContext = await browser.newContext({
+      ignoreHTTPSErrors
+    });
     const page = await browserContext.newPage();
+    ressourceTracker.registerCleanupCallback(async () => {
+      try {
+        await browserContext.close();
+      } catch (e) {
+        if (e.message.match(/^Protocol error \(.*?\): Target closed/)) {
+          return;
+        }
 
-    if (incognito || !shareBrowser) {
-      // in incognito mode, browser context is not shared by tabs
-      // it means if a tab open an other page/tab we'll know
-      // it comes form that tab and not an other one
-      // when browser is not shared we know an opened page comes from
-      // that execution
-      const stopTrackingToClose = trackPageTargetsToClose(page);
-      registerCleanupCallback(stopTrackingToClose);
-      registerCleanupCallback(() => closePage(page));
-    } else {
-      // when browser is shared and execution happens in the default
-      // browser context (not incognito)
-      // we'll only try to close the tab we created
-      // otherwise we might kill tab opened by potential parallel execution.
-      // A consequence might be to leave opened tab alive
-      // (it means js execution opens an other tab, not supposed to happen a lot)
-      registerCleanupCallback(() => closePage(page));
-    }
+        if (e.message.match(/^Protocol error \(.*?\): Browser has been closed/)) {
+          return;
+        }
 
-    const stopTrackingToNotify = trackPageTargetsToNotify(page, {
+        throw e;
+      }
+    }); // track tab error and console
+
+    const stopTrackingToNotify = trackPageToNotify(page, {
       onError: error => {
         errorCallbackArray.forEach(callback => {
           callback(error);
@@ -14201,13 +14163,10 @@ const launchChromium = async ({
             text
           });
         });
-      },
-      // we track other pages only in incognito mode because
-      // we know for sure opened tabs comes from this one
-      // and not from a potential parallel execution
-      trackOtherPages: incognito || !shareBrowser
+      }
     });
-    registerCleanupCallback(stopTrackingToNotify);
+    ressourceTracker.registerCleanupCallback(stopTrackingToNotify); // import the file
+
     return evaluateImportExecution({
       cancellationToken,
       projectDirectoryUrl,
@@ -14225,26 +14184,12 @@ const launchChromium = async ({
   };
 
   return {
-    name: "chromium",
-    // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#puppeteer-api-tip-of-tree
-    // https://github.com/GoogleChrome/puppeteer#q-why-doesnt-puppeteer-vxxx-work-with-chromium-vyyy
-    // to keep in sync when updating puppeteer
-    version: "79.0.3942.0",
-    options: {
-      headless
-    },
-    stop: cleanup,
     disconnected,
     registerErrorCallback,
     registerConsoleCallback,
     executeFile
   };
 };
-
-const launchChromiumTab = namedArgs => launchChromium({
-  shareBrowser: true,
-  ...namedArgs
-});
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Primitive
 const isComposite = value => {
@@ -14278,6 +14223,13 @@ const visitGlobalObject = value => {
           }
 
           throw e;
+        }
+
+        if (!descriptor) {
+          // it's apparently possible to have getOwnPropertyNames returning
+          // a property that later returns a null descriptor
+          // for instance window.showModalDialog in webkit 13.0
+          return;
         } // do not trigger getter/setter
 
 
@@ -16166,6 +16118,10 @@ exports.jsenvNodeVersionScoreMap = jsenvNodeVersionScoreMap;
 exports.jsenvPluginCompatMap = jsenvPluginCompatMap;
 exports.launchChromium = launchChromium;
 exports.launchChromiumTab = launchChromiumTab;
+exports.launchFirefox = launchFirefox;
+exports.launchFirefoxTab = launchFirefoxTab;
 exports.launchNode = launchNode;
+exports.launchWebkit = launchWebkit;
+exports.launchWebkitTab = launchWebkitTab;
 exports.startExploring = startExploring;
 //# sourceMappingURL=main.cjs.map
