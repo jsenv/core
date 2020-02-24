@@ -114,10 +114,14 @@ It reduces chances that a file execution have a side effect on an other file exe
 For instance executing code with an infinite loop crashes browser or node.js process. In that scenario that file would not prevent other file executions.<br />
 It also allows to execute files concurrently increasing speed on machine with mutiple processors.
 
-Currently jsenv provides 3 possible test execution environments, called `platforms`:
+Currently jsenv provides 3 possible test execution environments, called `platforms`
 
 - A chromium browser per test
 - A chromium browser tab per test
+- A firefox browser per test
+- A firefox tab per test
+- A webkit browser per test
+- A webkit tab per test
 - A node process per test
 
 ## How test is executed

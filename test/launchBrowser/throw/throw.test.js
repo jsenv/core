@@ -5,7 +5,7 @@ import { resolveDirectoryUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
-import { launchChromium } from "../../../index.js"
+import { launchChromium, launchFirefox, launchWebkit } from "../../../index.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTION_TEST_PARAMS,
@@ -22,30 +22,37 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   ...START_COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
 })
-const actual = await launchAndExecute({
-  ...EXECUTION_TEST_PARAMS,
-  executeLogger: createLogger({ logLevel: "off" }),
-  fileRelativeUrl,
-  launch: (options) =>
-    launchChromium({
-      ...LAUNCH_TEST_PARAMS,
-      ...options,
-      outDirectoryRelativeUrl,
-      compileServerOrigin,
-    }),
-  captureConsole: true,
-})
-const expected = {
-  status: "errored",
-  error: new Error("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
-  consoleCalls: actual.consoleCalls,
-}
-assert({ actual, expected })
 
-{
-  const actual = actual.consoleCalls.some(({ text }) =>
-    text.includes("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
-  )
-  const expected = false
-  assert({ actual, expected })
-}
+await Promise.all(
+  [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
+    const result = await launchAndExecute({
+      ...EXECUTION_TEST_PARAMS,
+      executeLogger: createLogger({ logLevel: "off" }),
+      fileRelativeUrl,
+      launch: (options) =>
+        launchBrowser({
+          ...LAUNCH_TEST_PARAMS,
+          ...options,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+        }),
+      captureConsole: true,
+    })
+    const actual = {
+      status: result.status,
+      errorMessage: result.error.message,
+    }
+    const expected = {
+      status: "errored",
+      errorMessage: "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
+    }
+    assert({ actual, expected })
+    {
+      const actual = result.consoleCalls.some(({ text }) =>
+        text.includes("SPECIAL_STRING_UNLIKELY_TO_COLLIDE"),
+      )
+      const expected = false
+      assert({ actual, expected })
+    }
+  }),
+)

@@ -54,7 +54,7 @@ ${filePath}: Unexpected token (1:17)
 > 1 | const browser = (
     |                  ^
 --- url ---
-${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out/best/${fileRelativeUrl}
+${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out/otherwise/${fileRelativeUrl}
 --- importer url ---
 undefined`,
       errorParsingErrror: {
