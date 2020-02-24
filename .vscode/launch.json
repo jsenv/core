@@ -16,7 +16,7 @@
         // "node_modules/**",
         "node_modules/@babel/template/**",
         "node_modules/@dmail/cancellation/**",
-        "node_modules/puppeteer/**",
+        "node_modules/playwright/**",
         "<node_internals>/**"
       ]
     },
@@ -43,7 +43,7 @@
         "node_modules/@babel/template/**",
         "node_modules/@dmail/cancellation/**",
         "node_modules/@rollup/**",
-        "node_modules/puppeteer/**",
+        "node_modules/playwright/**",
         "<node_internals>/**"
       ]
     },
@@ -71,7 +71,7 @@
         "node_modules/@jsenv/core/**",
         // "node_modules/@jsenv/cancellation/**",
         "node_modules/@rollup/**",
-        "node_modules/puppeteer/**",
+        "node_modules/playwright/**",
         "node_modules/rollup/**",
         "src/internal/supportsDynamicImport.js",
         "src/internal/dynamicImportSource.js",
@@ -89,7 +89,7 @@
         // "node_modules/**",
         "node_modules/@babel/template/**",
         "node_modules/@dmail/cancellation/**",
-        "node_modules/puppeteer/**",
+        "node_modules/playwright/**",
         "node_modules/rollup/**",
         "node_modules/@rollup/**",
         "<node_internals>/**/*.js"
@@ -106,7 +106,7 @@
         // "node_modules/**",
         "node_modules/@babel/template/**",
         "node_modules/@dmail/cancellation/**",
-        "node_modules/puppeteer/**",
+        "node_modules/playwright/**",
         "node_modules/rollup/**",
         "node_modules/@rollup/**",
         "<node_internals>/**/*.js"

@@ -3,7 +3,7 @@ import { composeCoverageMap } from "../../src/internal/executing/coverage/compos
 import { evalSource } from "../../src/internal/platform/createNodePlatform/evalSource.js"
 import { coverageIsEnabled } from "../coverageIsEnabled.js"
 
-const puppeteer = require("puppeteer")
+const { chromium } = require("playwright")
 
 export const openBrowserPage = async (
   url,
@@ -14,7 +14,7 @@ export const openBrowserPage = async (
     collectErrors = true,
   } = {},
 ) => {
-  const browser = await puppeteer.launch({
+  const browser = await chromium.launch({
     headless,
     ignoreHTTPSErrors: true,
   })

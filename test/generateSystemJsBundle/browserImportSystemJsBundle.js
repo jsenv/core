@@ -2,7 +2,7 @@ import { startServer, firstService, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl, readFile } from "@jsenv/util"
 import { require } from "../../src/internal/require.js"
 
-const puppeteer = require("puppeteer")
+const { chromium } = require("playwright")
 
 const SYSTEM_PATH = require.resolve("systemjs/dist/system.js")
 
@@ -16,7 +16,7 @@ export const browserImportSystemJsBundle = async ({
   const testDirectoryUrl = resolveDirectoryUrl(testDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
     startTestServer({ testDirectoryUrl }),
-    puppeteer.launch({
+    chromium.launch({
       headless,
       ignoreHTTPSErrors: true,
     }),
