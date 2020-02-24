@@ -22,105 +22,38 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   jsenvDirectoryRelativeUrl,
 })
 
-// chromium
-{
-  const actual = await launchAndExecute({
-    ...EXECUTION_TEST_PARAMS,
-    launch: (options) =>
-      launchChromium({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        // headless: false,
-      }),
-    fileRelativeUrl,
-    captureConsole: true,
-    collectNamespace: false,
-    // stopPlatformAfterExecute: false,
-  })
-  const expected = {
-    status: "completed",
-    consoleCalls: [
-      {
-        type: "log",
-        text: `foo
+await Promise.all(
+  [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
+    const actual = await launchAndExecute({
+      ...EXECUTION_TEST_PARAMS,
+      launch: (options) =>
+        launchBrowser({
+          ...LAUNCH_TEST_PARAMS,
+          ...options,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+          // headless: false,
+        }),
+      fileRelativeUrl,
+      captureConsole: true,
+      collectNamespace: false,
+      // stopPlatformAfterExecute: false,
+    })
+    const expected = {
+      status: "completed",
+      consoleCalls: [
+        {
+          type: "log",
+          text: `foo
 `,
-      },
-      {
-        type: "log",
-        text: `bar
+        },
+        {
+          type: "log",
+          text: `bar
 `,
-      },
-    ],
-  }
-  assert({ actual, expected })
-}
-// firefox
-{
-  const actual = await launchAndExecute({
-    ...EXECUTION_TEST_PARAMS,
-    launch: (options) =>
-      launchFirefox({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        // headless: false,
-      }),
-    fileRelativeUrl,
-    captureConsole: true,
-    collectNamespace: false,
-    // stopPlatformAfterExecute: false,
-  })
-  const expected = {
-    status: "completed",
-    consoleCalls: [
-      {
-        type: "log",
-        text: `foo
-`,
-      },
-      {
-        type: "log",
-        text: `bar
-`,
-      },
-    ],
-  }
-  assert({ actual, expected })
-}
-// webkit
-{
-  const actual = await launchAndExecute({
-    ...EXECUTION_TEST_PARAMS,
-    launch: (options) =>
-      launchWebkit({
-        ...LAUNCH_TEST_PARAMS,
-        ...options,
-        outDirectoryRelativeUrl,
-        compileServerOrigin,
-        // headless: false,
-      }),
-    fileRelativeUrl,
-    captureConsole: true,
-    collectNamespace: false,
-    // stopPlatformAfterExecute: false,
-  })
-  const expected = {
-    status: "completed",
-    consoleCalls: [
-      {
-        type: "log",
-        text: `foo
-`,
-      },
-      {
-        type: "log",
-        text: `bar
-`,
-      },
-    ],
-  }
-  assert({ actual, expected })
-}
+        },
+      ],
+    }
+    assert({ actual, expected })
+  }),
+)
