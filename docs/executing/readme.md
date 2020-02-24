@@ -182,10 +182,18 @@ Each parameter got a dedicated section to shortly explain what it does and if it
 
 ## launch
 
-`launch` parameter is a function capable to launch a platform to execute a file in it. This parameter is **required**, the available launch functions are `launchNode`, `launchChromium`, `launchChromiumTab`.
+`launch` parameter is a function capable to launch a platform to execute a file in it. This parameter is **required**, the available launch functions are:
+
+- `launchNode`
+- `launchChromium`
+- `launchChromiumTab`
+- `launchFirefox`
+- `launchFirefoxTab`
+- `launchWebkit`
+- `launchWebkitTab`
 
 You're not likely going to write your own `launch` function, jsenv provides them.
-If you want to know more about launch internals or write your own check [platform launcher](../platform-launcher/platform-launcher.md)
+If you want to know more about launch internals or write your own check [launcher](../launcher/launcher.md)
 
 ## fileRelativeUrl
 

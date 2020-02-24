@@ -5,7 +5,7 @@ import { resolveUrl, urlToRelativeUrl, urlToFileSystemPath } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "../../../src/internal/executing/launchAndExecute.js"
-import { launchChromium } from "../../../index.js"
+import { launchChromium, launchFirefox, launchWebkit } from "../../../index.js"
 import {
   START_COMPILE_SERVER_TEST_PARAMS,
   EXECUTION_TEST_PARAMS,
@@ -23,45 +23,54 @@ const filePath = urlToFileSystemPath(fileUrl)
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
+  compileGroupCount: 1,
 })
 
-const actual = await launchAndExecute({
-  ...EXECUTION_TEST_PARAMS,
-  executeLogger: createLogger({ logLevel: "off" }),
-  launch: (options) =>
-    launchChromium({
-      ...LAUNCH_TEST_PARAMS,
-      ...options,
-      outDirectoryRelativeUrl,
-      compileServerOrigin,
-    }),
-  fileRelativeUrl,
-})
-const expectedError = new Error(`imported module parsing error.
+await Promise.all(
+  [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
+    const result = await launchAndExecute({
+      ...EXECUTION_TEST_PARAMS,
+      executeLogger: createLogger({ logLevel: "off" }),
+      launch: (options) =>
+        launchBrowser({
+          ...LAUNCH_TEST_PARAMS,
+          ...options,
+          outDirectoryRelativeUrl,
+          compileServerOrigin,
+        }),
+      fileRelativeUrl,
+    })
+    const actual = {
+      status: result.status,
+      errorMessage: result.error.message,
+      errorParsingErrror: result.error.parsingError,
+    }
+    const expected = {
+      status: "errored",
+      errorMessage: `imported module parsing error.
 --- parsing error message ---
 ${filePath}: Unexpected token (1:17)
 
 > 1 | const browser = (
     |                  ^
 --- url ---
-${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out/best/${fileRelativeUrl}
+${jsenvCoreDirectoryUrl}${jsenvDirectoryRelativeUrl}out/otherwise/${fileRelativeUrl}
 --- importer url ---
-undefined`)
-expectedError.parsingError = {
-  message: `${filePath}: Unexpected token (1:17)
+undefined`,
+      errorParsingErrror: {
+        message: `${filePath}: Unexpected token (1:17)
 
 > 1 | const browser = (
     |                  ^`,
-  messageHTML: `${filePath}: Unexpected token (1:17)
+        messageHTML: `${filePath}: Unexpected token (1:17)
 
 > 1 | const browser = (
     |                  ^`,
-  filename: filePath,
-  lineNumber: 1,
-  columnNumber: 17,
-}
-const expected = {
-  status: "errored",
-  error: expectedError,
-}
-assert({ actual, expected })
+        filename: filePath,
+        lineNumber: 1,
+        columnNumber: 17,
+      },
+    }
+    assert({ actual, expected })
+  }),
+)

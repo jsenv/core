@@ -1,7 +1,13 @@
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
-import { executeTestPlan, launchNode, launchChromium } from "../../../index.js"
+import {
+  executeTestPlan,
+  launchNode,
+  launchChromium,
+  launchFirefox,
+  launchWebkit,
+} from "../../../index.js"
 import { EXECUTE_TEST_PARAMS } from "../TEST_PARAMS.js"
 
 const testDirectoryUrl = resolveUrl("./", import.meta.url)
@@ -16,6 +22,12 @@ const testPlan = {
     chromium: {
       launch: launchChromium,
     },
+    firefox: {
+      launch: launchFirefox,
+    },
+    webkit: {
+      launch: launchWebkit,
+    },
   },
 }
 
@@ -24,14 +36,17 @@ const actual = await executeTestPlan({
   jsenvDirectoryRelativeUrl,
   testPlan,
   compileGroupCount: 1,
+  // collectPlatformVersion: {
+  //   collectPlatformVersion: false,
+  // },
 })
 const expected = {
   summary: {
-    executionCount: 2,
+    executionCount: 4,
     disconnectedCount: 0,
     timedoutCount: 0,
     erroredCount: 0,
-    completedCount: 2,
+    completedCount: 4,
     startMs: actual.summary.startMs,
     endMs: actual.summary.endMs,
   },
@@ -52,6 +67,22 @@ const expected = {
         },
         platformName: "chromium",
         platformVersion: actual.report[fileRelativeUrl].chromium.platformVersion,
+      },
+      firefox: {
+        status: "completed",
+        namespace: {
+          default: "browser",
+        },
+        platformName: "firefox",
+        platformVersion: actual.report[fileRelativeUrl].firefox.platformVersion,
+      },
+      webkit: {
+        status: "completed",
+        namespace: {
+          default: "browser",
+        },
+        platformName: "webkit",
+        platformVersion: actual.report[fileRelativeUrl].webkit.platformVersion,
       },
     },
   },

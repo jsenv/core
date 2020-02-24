@@ -13,7 +13,7 @@ window.execute = async ({
   executionId,
   // do not log in the console
   // because error handling becomes responsability
-  // of node code launching puppetteer
+  // of node code launching the browser
   // it avoids seeing error in platform logs during testing
   errorExposureInConsole = false,
   errorExposureInNotification = false,
@@ -28,14 +28,27 @@ window.execute = async ({
   })
   const compiledFileRemoteUrl = `${compileDirectoryRemoteUrl}${fileRelativeUrl}`
 
-  await fetchAndEvalUsingXHR(`${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`)
-  const { SourceMapConsumer } = window.sourceMap
-  SourceMapConsumer.initialize({
-    "lib/mappings.wasm": `${compileServerOrigin}/${sourcemapMappingFileRelativeUrl}`,
-  })
-  const { getErrorOriginalStackString } = installBrowserErrorStackRemapping({
-    SourceMapConsumer,
-  })
+  let errorTransform = (error) => error
+  if (Error.captureStackTrace) {
+    await fetchAndEvalUsingXHR(`${compileServerOrigin}/${sourcemapMainFileRelativeUrl}`)
+    const { SourceMapConsumer } = window.sourceMap
+    SourceMapConsumer.initialize({
+      "lib/mappings.wasm": `${compileServerOrigin}/${sourcemapMappingFileRelativeUrl}`,
+    })
+    const { getErrorOriginalStackString } = installBrowserErrorStackRemapping({
+      SourceMapConsumer,
+    })
+
+    errorTransform = async (error) => {
+      // code can throw something else than an error
+      // in that case return it unchanged
+      if (!error || !(error instanceof Error)) return error
+
+      const originalStack = await getErrorOriginalStackString(error)
+      error.stack = originalStack
+      return error
+    }
+  }
 
   return executeFile(compiledFileRemoteUrl, {
     collectNamespace,
@@ -44,14 +57,6 @@ window.execute = async ({
     errorExposureInConsole,
     errorExposureInNotification,
     errorExposureInDocument,
-    errorTransform: async (error) => {
-      // code can throw something else than an error
-      // in that case return it unchanged
-      if (!error || !(error instanceof Error)) return error
-
-      const originalStack = await getErrorOriginalStackString(error)
-      error.stack = originalStack
-      return error
-    },
+    errorTransform,
   })
 }

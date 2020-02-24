@@ -3,7 +3,7 @@ import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
 
-export const startChromiumServer = async ({
+export const startBrowserServer = async ({
   cancellationToken,
   logLevel = "off",
 
@@ -11,18 +11,20 @@ export const startChromiumServer = async ({
   outDirectoryRelativeUrl,
   compileServerOrigin,
 }) => {
-  const chromiumJsFileUrl = resolveUrl(
-    "./src/internal/chromium-launcher/chromium-js-file.js",
+  const browserJsFileUrl = resolveUrl(
+    "./src/internal/browser-launcher/browser-js-file.js",
     jsenvCoreDirectoryUrl,
   )
-  const chromiumJsFileRelativeUrl = urlToRelativeUrl(chromiumJsFileUrl, projectDirectoryUrl)
-  const chromiumBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${chromiumJsFileRelativeUrl}`
-  const chromiumBundledJsFileRemoteUrl = `${compileServerOrigin}/${chromiumBundledJsFileRelativeUrl}`
+  const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl)
+  const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`
+  const browserBundledJsFileRemoteUrl = `${compileServerOrigin}/${browserBundledJsFileRelativeUrl}`
 
   return startServer({
     cancellationToken,
     logLevel,
 
+    // should be reuse compileServerOrigin protocol ?
+    // should we reuse compileServer privateKey/certificate ?
     protocol: "https",
     sendInternalErrorStack: true,
     requestToResponse: (request) =>
@@ -32,7 +34,7 @@ export const startChromiumServer = async ({
             return {
               status: 307,
               headers: {
-                location: chromiumBundledJsFileRemoteUrl,
+                location: browserBundledJsFileRemoteUrl,
               },
             }
           }

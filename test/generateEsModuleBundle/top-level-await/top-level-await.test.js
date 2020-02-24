@@ -46,11 +46,14 @@ if (SourceMap) {
       bundleDirectoryRelativeUrl,
     })
     throw new Error("should throw")
-  } catch (actual) {
+  } catch (error) {
+    const actual = {
+      name: error.name,
+      message: error.message,
+    }
     const expected = {
       name: "SyntaxError",
       message: "Unexpected reserved word",
-      stack: actual.stack,
     }
     assert({ actual, expected })
   }

@@ -10,6 +10,6 @@
     "start-exploring": "node ./start-exploring.cjs"
   },
   "devDependencies": {
-    "@jsenv/core": "11.8.0"
+    "@jsenv/core": "12.0.0"
   }
 }
