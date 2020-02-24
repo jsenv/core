@@ -12,13 +12,9 @@ import { createSharing } from "./internal/browser-launcher/createSharing.js"
 import { startBrowserServer } from "./internal/browser-launcher/startBrowserServer.js"
 import { evaluateImportExecution } from "./internal/browser-launcher/evaluateImportExecution.js"
 
-const {
-  chromium,
-  // firefox, webkit
-} = require("playwright")
+const { chromium, firefox, webkit } = require("playwright")
 
 const chromiumSharing = createSharing()
-const executionServerSharing = createSharing()
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
@@ -55,10 +51,7 @@ export const launchChromium = async ({
       },
       stopOnExit,
     })
-    sharingToken.setSharedValue(launchOperation, async () => {
-      const { stop } = await launchOperation
-      await stop()
-    })
+    sharingToken.setSharedValue(launchOperation)
   }
 
   const [launchOperation, stopUsingBrowser] = sharingToken.useSharedValue()
@@ -89,9 +82,6 @@ export const launchChromium = async ({
   return {
     browser,
     name: "chromium",
-    // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#puppeteer-api-tip-of-tree
-    // https://github.com/GoogleChrome/puppeteer#q-why-doesnt-puppeteer-vxxx-work-with-chromium-vyyy
-    // to keep in sync when updating puppeteer
     version: "82.0.4057.0",
     stop: ressourceTracker.cleanup,
     ...browserToPlatformHooks(browser, {
@@ -106,22 +96,129 @@ export const launchChromium = async ({
   }
 }
 
-export const launchChromiumTab = (namedArgs) => launchChromium({ share: true, ...namedArgs })
+export const launchChromiumTab = (namedArgs) =>
+  launchChromium({
+    share: true,
+    ...namedArgs,
+  })
 
-// export const launchFirefox = ({
-//   cancellationToken = createCancellationToken(),
-//   headless = true,
-//   debug = false,
-//   stopOnExit = true,
-// }) => {}
+const firefoxSharing = createSharing()
 
-// export const launchWebkit = ({
-//   cancellationToken = createCancellationToken(),
-//   headless = true,
-//   debug = false,
-//   debugPort = 9222,
-//   stopOnExit = true,
-// }) => {}
+export const launchFirefox = async ({
+  cancellationToken = createCancellationToken(),
+  browserServerLogLevel,
+
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
+  compileServerOrigin,
+
+  headless = true,
+  stopOnExit = true,
+  share = false,
+}) => {
+  const ressourceTracker = trackRessources()
+  const sharingToken = share
+    ? firefoxSharing.getSharingToken({ headless })
+    : firefoxSharing.getUniqueSharingToken()
+
+  if (!sharingToken.isUsed()) {
+    const launchOperation = launchBrowser(firefox, {
+      cancellationToken,
+      ressourceTracker,
+      options: {
+        headless,
+      },
+      stopOnExit,
+    })
+    sharingToken.setSharedValue(launchOperation)
+  }
+
+  const [launchOperation, stopUsingBrowser] = sharingToken.useSharedValue()
+  ressourceTracker.registerCleanupCallback(stopUsingBrowser)
+
+  const browser = await launchOperation
+
+  return {
+    browser,
+    name: "firefox",
+    version: "73.0b13",
+    stop: ressourceTracker.cleanup,
+    ...browserToPlatformHooks(browser, {
+      cancellationToken,
+      ressourceTracker,
+      browserServerLogLevel,
+
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+      compileServerOrigin,
+    }),
+  }
+}
+
+export const launchFirefoxTab = (namedArgs) =>
+  launchFirefox({
+    share: true,
+    ...namedArgs,
+  })
+
+const webkitSharing = createSharing()
+
+export const launchWebkit = async ({
+  cancellationToken = createCancellationToken(),
+  browserServerLogLevel,
+
+  projectDirectoryUrl,
+  outDirectoryRelativeUrl,
+  compileServerOrigin,
+
+  headless = true,
+  stopOnExit = true,
+  share = false,
+}) => {
+  const ressourceTracker = trackRessources()
+  const sharingToken = share
+    ? webkitSharing.getSharingToken({ headless })
+    : webkitSharing.getUniqueSharingToken()
+
+  if (!sharingToken.isUsed()) {
+    const launchOperation = launchBrowser(webkit, {
+      cancellationToken,
+      ressourceTracker,
+      options: {
+        headless,
+      },
+      stopOnExit,
+    })
+    sharingToken.setSharedValue(launchOperation)
+  }
+
+  const [launchOperation, stopUsingBrowser] = sharingToken.useSharedValue()
+  ressourceTracker.registerCleanupCallback(stopUsingBrowser)
+
+  const browser = await launchOperation
+
+  return {
+    browser,
+    name: "webkit",
+    version: "13.0.4",
+    stop: ressourceTracker.cleanup,
+    ...browserToPlatformHooks(browser, {
+      cancellationToken,
+      ressourceTracker,
+      browserServerLogLevel,
+
+      projectDirectoryUrl,
+      outDirectoryRelativeUrl,
+      compileServerOrigin,
+    }),
+  }
+}
+
+export const launchWebkitTab = (namedArgs) =>
+  launchWebkit({
+    share: true,
+    ...namedArgs,
+  })
 
 const launchBrowser = async (
   browserClass,
@@ -163,6 +260,8 @@ const launchBrowser = async (
   return launchOperation
 }
 
+const browserServerSharing = createSharing()
+
 const browserToPlatformHooks = (
   browser,
   {
@@ -202,9 +301,9 @@ const browserToPlatformHooks = (
       ignoreHTTPSErrors = true,
     },
   ) => {
-    const sharingToken = executionServerSharing.getSharingToken()
+    const sharingToken = browserServerSharing.getSharingToken()
     if (!sharingToken.isUsed()) {
-      const executionServerPromise = startBrowserServer({
+      const browserServerPromise = startBrowserServer({
         cancellationToken,
         logLevel: browserServerLogLevel,
 
@@ -212,14 +311,14 @@ const browserToPlatformHooks = (
         outDirectoryRelativeUrl,
         compileServerOrigin,
       })
-      sharingToken.setSharedValue(executionServerPromise, async () => {
-        const server = await executionServerPromise
+      sharingToken.setSharedValue(browserServerPromise, async () => {
+        const server = await browserServerPromise
         await server.stop()
       })
     }
-    const [executionServerPromise, stopUsingExecutionServer] = sharingToken.useSharedValue()
-    ressourceTracker.registerCleanupCallback(stopUsingExecutionServer)
-    const executionServer = await executionServerPromise
+    const [browserServerPromise, stopUsingServer] = sharingToken.useSharedValue()
+    ressourceTracker.registerCleanupCallback(stopUsingServer)
+    const executionServer = await browserServerPromise
 
     // open a tab to execute to the file
     const browserContext = await browser.newContext({ ignoreHTTPSErrors })

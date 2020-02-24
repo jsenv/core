@@ -14,6 +14,13 @@ export { jsenvCoverageConfig } from "./src/jsenvCoverageConfig.js"
 export { jsenvExplorableConfig } from "./src/jsenvExplorableConfig.js"
 export { jsenvNodeVersionScoreMap } from "./src/jsenvNodeVersionScoreMap.js"
 export { jsenvPluginCompatMap } from "./src/jsenvPluginCompatMap.js"
-export { launchChromium, launchChromiumTab } from "./src/launchBrowser.js"
+export {
+  launchChromium,
+  launchChromiumTab,
+  launchFirefox,
+  launchFirefoxTab,
+  launchWebkit,
+  launchWebkitTab,
+} from "./src/launchBrowser.js"
 export { launchNode } from "./src/launchNode.js"
 export { startExploring } from "./src/startExploring.js"

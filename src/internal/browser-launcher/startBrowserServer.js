@@ -23,6 +23,8 @@ export const startBrowserServer = async ({
     cancellationToken,
     logLevel,
 
+    // should be reuse compileServerOrigin protocol ?
+    // should we reuse compileServer privateKey/certificate ?
     protocol: "https",
     sendInternalErrorStack: true,
     requestToResponse: (request) =>
