@@ -13,8 +13,8 @@ let nodePlatformHooks
 {
   const actual = await execute({
     ...EXECUTE_TEST_PARAMS,
-    launchLogLevel: "debug",
-    executeLogLevel: "debug",
+    // launchLogLevel: "debug",
+    // executeLogLevel: "debug",
     jsenvDirectoryRelativeUrl,
     launch: async (options) => {
       nodePlatformHooks = await launchNode({ ...options, debugPort: 40001 })
