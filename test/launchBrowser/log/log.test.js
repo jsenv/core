@@ -19,94 +19,25 @@ const filename = `${testDirectoryname}.js`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}${filename}`
 const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startCompileServer({
   ...START_COMPILE_SERVER_TEST_PARAMS,
-  protocol: "http",
   jsenvDirectoryRelativeUrl,
 })
 
 // chromium
-// {
-//   const actual = await launchAndExecute({
-//     ...EXECUTION_TEST_PARAMS,
-//     launch: (options) =>
-//       launchChromium({
-//         ...LAUNCH_TEST_PARAMS,
-//         ...options,
-//         outDirectoryRelativeUrl,
-//         compileServerOrigin,
-//         // headless: false,
-//       }),
-//     fileRelativeUrl,
-//     captureConsole: true,
-//     collectNamespace: false,
-//     // stopPlatformAfterExecute: false,
-//   })
-//   const expected = {
-//     status: "completed",
-//     consoleCalls: [
-//       {
-//         type: "log",
-//         text: `foo
-// `,
-//       },
-//       {
-//         type: "log",
-//         text: `bar
-// `,
-//       },
-//     ],
-//   }
-//   assert({ actual, expected })
-// }
-// firefox
-// {
-//   const actual = await launchAndExecute({
-//     ...EXECUTION_TEST_PARAMS,
-//     launch: (options) =>
-//       launchFirefox({
-//         ...LAUNCH_TEST_PARAMS,
-//         ...options,
-//         outDirectoryRelativeUrl,
-//         compileServerOrigin,
-//         // headless: false,
-//       }),
-//     fileRelativeUrl,
-//     captureConsole: true,
-//     collectNamespace: false,
-//     // stopPlatformAfterExecute: false,
-//   })
-//   const expected = {
-//     status: "completed",
-//     consoleCalls: [
-//       {
-//         type: "log",
-//         text: `foo
-// `,
-//       },
-//       {
-//         type: "log",
-//         text: `bar
-// `,
-//       },
-//     ],
-//   }
-//   assert({ actual, expected })
-// }
-// webkit
 {
   const actual = await launchAndExecute({
     ...EXECUTION_TEST_PARAMS,
     launch: (options) =>
-      launchWebkit({
+      launchChromium({
         ...LAUNCH_TEST_PARAMS,
         ...options,
         outDirectoryRelativeUrl,
         compileServerOrigin,
-        headless: false,
+        // headless: false,
       }),
     fileRelativeUrl,
     captureConsole: true,
     collectNamespace: false,
-    stopPlatformAfterExecute: false,
+    // stopPlatformAfterExecute: false,
   })
   const expected = {
     status: "completed",
@@ -123,5 +54,73 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
       },
     ],
   }
-  // assert({ actual, expected })
+  assert({ actual, expected })
+}
+// firefox
+{
+  const actual = await launchAndExecute({
+    ...EXECUTION_TEST_PARAMS,
+    launch: (options) =>
+      launchFirefox({
+        ...LAUNCH_TEST_PARAMS,
+        ...options,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+        // headless: false,
+      }),
+    fileRelativeUrl,
+    captureConsole: true,
+    collectNamespace: false,
+    // stopPlatformAfterExecute: false,
+  })
+  const expected = {
+    status: "completed",
+    consoleCalls: [
+      {
+        type: "log",
+        text: `foo
+`,
+      },
+      {
+        type: "log",
+        text: `bar
+`,
+      },
+    ],
+  }
+  assert({ actual, expected })
+}
+// webkit
+{
+  const actual = await launchAndExecute({
+    ...EXECUTION_TEST_PARAMS,
+    launch: (options) =>
+      launchWebkit({
+        ...LAUNCH_TEST_PARAMS,
+        ...options,
+        outDirectoryRelativeUrl,
+        compileServerOrigin,
+        // headless: false,
+      }),
+    fileRelativeUrl,
+    captureConsole: true,
+    collectNamespace: false,
+    // stopPlatformAfterExecute: false,
+  })
+  const expected = {
+    status: "completed",
+    consoleCalls: [
+      {
+        type: "log",
+        text: `foo
+`,
+      },
+      {
+        type: "log",
+        text: `bar
+`,
+      },
+    ],
+  }
+  assert({ actual, expected })
 }
