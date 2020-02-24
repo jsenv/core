@@ -13,12 +13,10 @@ export const scriptLoadGlobalBundle = async ({
   const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl)
   const [server, browser] = await Promise.all([
     startTestServer({ bundleDirectoryUrl }),
-    chromium.launch({
-      ignoreHTTPSErrors: true,
-    }),
+    chromium.launch(),
   ])
 
-  const page = await browser.newPage()
+  const page = await browser.newPage({ ignoreHTTPSErrors: true })
   await page.goto(`${server.origin}/`)
   // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
   await page.addScriptTag({

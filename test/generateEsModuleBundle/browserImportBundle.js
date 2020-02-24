@@ -14,7 +14,6 @@ export const browserImportBundle = async ({
   const [server, browser] = await Promise.all([
     startTestServer({ bundleDirectoryUrl }),
     chromium.launch({
-      ignoreHTTPSErrors: true,
       // headless: false,
       // handleSIGINT: false,
       // handleSIGTERM: false,
@@ -22,7 +21,7 @@ export const browserImportBundle = async ({
     }),
   ])
 
-  const page = await browser.newPage()
+  const page = await browser.newPage({ ignoreHTTPSErrors: true })
   await page.goto(`${server.origin}/`)
 
   try {

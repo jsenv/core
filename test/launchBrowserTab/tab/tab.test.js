@@ -32,9 +32,9 @@ const actual = await launchAndExecute({
       ...options,
       outDirectoryRelativeUrl,
       compileServerOrigin,
-      headless: false,
+      // headless: false,
     }),
-  stopPlatformAfterExecute: false,
+  // stopPlatformAfterExecute: false,
 })
 const expected = {
   status: "completed",

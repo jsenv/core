@@ -18,11 +18,10 @@ export const browserImportSystemJsBundle = async ({
     startTestServer({ testDirectoryUrl }),
     chromium.launch({
       headless,
-      ignoreHTTPSErrors: true,
     }),
   ])
 
-  const page = await browser.newPage()
+  const page = await browser.newPage({ ignoreHTTPSErrors: true })
   await page.goto(resolveUrl(htmlFileRelativeUrl, server.origin))
 
   try {

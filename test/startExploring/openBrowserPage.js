@@ -16,9 +16,8 @@ export const openBrowserPage = async (
 ) => {
   const browser = await chromium.launch({
     headless,
-    ignoreHTTPSErrors: true,
   })
-  const page = await browser.newPage()
+  const page = await browser.newPage({ ignoreHTTPSErrors: true })
 
   const pageLogs = []
   if (collectConsole) {
