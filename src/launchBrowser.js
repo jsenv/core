@@ -339,7 +339,14 @@ const browserToPlatformHooks = (
     const browserContext = await browser.newContext({ ignoreHTTPSErrors })
     const page = await browserContext.newPage()
     ressourceTracker.registerCleanupCallback(async () => {
-      await browserContext.close()
+      try {
+        await browserContext.close()
+      } catch (e) {
+        if (e.message.match(/^Protocol error \(.*?\): Target closed/)) {
+          return
+        }
+        throw e
+      }
     })
     // track tab error and console
     const stopTrackingToNotify = trackPageToNotify(page, {
