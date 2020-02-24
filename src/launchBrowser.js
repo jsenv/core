@@ -12,8 +12,6 @@ import { createSharing } from "./internal/browser-launcher/createSharing.js"
 import { startBrowserServer } from "./internal/browser-launcher/startBrowserServer.js"
 import { evaluateImportExecution } from "./internal/browser-launcher/evaluateImportExecution.js"
 
-const { chromium, firefox, webkit } = require("playwright")
-
 const chromiumSharing = createSharing()
 
 export const launchChromium = async ({
@@ -36,7 +34,7 @@ export const launchChromium = async ({
     : chromiumSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
-    const launchOperation = launchBrowser(chromium, {
+    const launchOperation = launchBrowser("chromium", {
       cancellationToken,
       ressourceTracker,
       options: {
@@ -122,7 +120,7 @@ export const launchFirefox = async ({
     : firefoxSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
-    const launchOperation = launchBrowser(firefox, {
+    const launchOperation = launchBrowser("firefox", {
       cancellationToken,
       ressourceTracker,
       options: {
@@ -181,7 +179,7 @@ export const launchWebkit = async ({
     : webkitSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
-    const launchOperation = launchBrowser(webkit, {
+    const launchOperation = launchBrowser("webkit", {
       cancellationToken,
       ressourceTracker,
       options: {
@@ -221,9 +219,26 @@ export const launchWebkitTab = (namedArgs) =>
   })
 
 const launchBrowser = async (
-  browserClass,
+  browserName,
   { cancellationToken, ressourceTracker, options, stopOnExit },
 ) => {
+  let playwright
+  try {
+    playwright = require("playwright")
+  } catch (e) {
+    if (e.code === "MODULE_NOT_FOUND") {
+      throw new Error(`playwright module not found.
+Please note playwright is a peer dependency of @jsenv/core.
+It means you must have playwright in your dependencies/devDependencies.
+You can install playwright using the following command:
+
+npm install playwright`)
+    }
+    throw e
+  }
+
+  const browserClass = playwright[browserName]
+
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: () =>
