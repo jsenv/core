@@ -345,6 +345,9 @@ const browserToPlatformHooks = (
         if (e.message.match(/^Protocol error \(.*?\): Target closed/)) {
           return
         }
+        if (e.message.match(/^Protocol error \(.*?\): Browser has been closed/)) {
+          return
+        }
         throw e
       }
     })
