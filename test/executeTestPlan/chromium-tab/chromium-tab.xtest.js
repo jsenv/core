@@ -8,16 +8,17 @@ const testDirectoryUrl = resolveDirectoryUrl("./", import.meta.url)
 const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDirectoryUrl)
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}file.js`
+const headless = false
 const testPlan = {
   [fileRelativeUrl]: {
     tab1: {
-      launch: launchChromiumTab,
+      launch: (options) => launchChromiumTab({ ...options, headless }),
     },
     chromium: {
-      launch: launchChromium,
+      launch: (options) => launchChromium({ ...options, headless }),
     },
     tab2: {
-      launch: launchChromiumTab,
+      launch: (options) => launchChromiumTab({ ...options, headless }),
     },
     node: {
       launch: launchNode,
