@@ -227,7 +227,7 @@ const computeExecutionResult = async ({
 
   ...rest
 }) => {
-  launchLogger.debug(`start a platform to execute ${fileRelativeUrl}`)
+  launchLogger.debug(`launch execution for ${fileRelativeUrl}`)
 
   const launchOperation = createStoppableOperation({
     cancellationToken,
@@ -246,7 +246,7 @@ const computeExecutionResult = async ({
       let gracefulStop
 
       if (platform.gracefulStop && gracefulStopAllocatedMs) {
-        launchLogger.debug(`${fileRelativeUrl} platform.gracefulStop() because ${reason}`)
+        launchLogger.debug(`${fileRelativeUrl} gracefulStop() because ${reason}`)
 
         const gracefulStopPromise = (async () => {
           await platform.gracefulStop({ reason })
@@ -267,7 +267,7 @@ const computeExecutionResult = async ({
           }
 
           launchLogger.debug(
-            `${fileRelativeUrl} platform.gracefulStop() pending after ${gracefulStopAllocatedMs}ms, use platform.stop()`,
+            `${fileRelativeUrl} gracefulStop() pending after ${gracefulStopAllocatedMs}ms, use stop()`,
           )
           await platform.stop({ reason, gracefulFailed: true })
           return false
@@ -299,7 +299,7 @@ const computeExecutionResult = async ({
 options: ${JSON.stringify(options, null, "  ")}`)
 
   registerConsoleCallback(platformConsoleCallback)
-  executeLogger.debug(`execute file ${fileRelativeUrl}`)
+  executeLogger.debug(`${fileRelativeUrl} ${platformName}: start execution`)
 
   const executeOperation = createOperation({
     cancellationToken,
@@ -307,7 +307,7 @@ options: ${JSON.stringify(options, null, "  ")}`)
       let timing = TIMING_BEFORE_EXECUTION
 
       disconnected.then(() => {
-        executeLogger.debug(`${fileRelativeUrl} platform disconnected.`)
+        executeLogger.debug(`${fileRelativeUrl} ${platformName}: disconnected ${timing}.`)
         platformDisconnectCallback({ timing })
       })
 
@@ -315,15 +315,9 @@ options: ${JSON.stringify(options, null, "  ")}`)
       timing = TIMING_DURING_EXECUTION
 
       registerErrorCallback((error) => {
-        if (timing === "after-execution") {
-          executeLogger.error(`error after execution
+        executeLogger.error(`${fileRelativeUrl} ${platformName}: error ${timing}.
 --- error stack ---
 ${error.stack}`)
-        } else {
-          executeLogger.error(`error during execution
---- error stack ---
-${error.stack}`)
-        }
         platformErrorCallback({ error, timing })
       })
 
@@ -341,13 +335,13 @@ ${error.stack}`)
       const executionResult = raceResult.value
       const { status } = executionResult
       if (status === "errored") {
-        executeLogger.error(`execution errored.
+        executeLogger.error(`${fileRelativeUrl} ${platformName}: error ${timing}.
 --- error stack ---
 ${executionResult.error.stack}`)
         return createErroredExecutionResult(executionResult, rest)
       }
 
-      executeLogger.debug(`${fileRelativeUrl} execution completed.`)
+      executeLogger.debug(`${fileRelativeUrl} ${platformName}: execution completed.`)
       return createCompletedExecutionResult(executionResult, rest)
     },
   })
