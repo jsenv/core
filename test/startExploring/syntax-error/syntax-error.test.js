@@ -51,7 +51,7 @@ const expected = {
   pageLogs: [
     {
       type: "error",
-      text: "Failed to load resource: the server responded with a status of 500 ()",
+      text: "Failed to load resource: the server responded with a status of 500 (parse error)",
     },
     { type: "error", text: "JSHandle@error" },
   ],
