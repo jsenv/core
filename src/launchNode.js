@@ -123,6 +123,9 @@ export const launchNode = async ({
     errorCallbackArray.push(callback)
   }
   installProcessErrorListener(childProcess, (error) => {
+    if (!childProcess.connected && error.code === "ERR_IPC_DISCONNECTED") {
+      return
+    }
     errorCallbackArray.forEach((callback) => {
       callback(error)
     })
