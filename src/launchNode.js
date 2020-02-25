@@ -434,14 +434,7 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`
   const { fetchUrl } = require("@jsenv/server")
 
   const run = async () => {
-    try {
-      await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)}, { ignoreHttpsError: true })
-    }
-    catch(e) {
-      console.log('error while fetching', e)
-      debugger
-      return null
-    }
+    await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)}, { ignoreHttpsError: true })
 
     const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
     const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}

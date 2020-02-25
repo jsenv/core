@@ -69,7 +69,7 @@ export const executePlan = async ({
 
   const [
     executionSteps,
-    { origin: compileServerOrigin, outDirectoryRelativeUrl },
+    { origin: compileServerOrigin, outDirectoryRelativeUrl, stop },
   ] = await Promise.all([
     generateExecutionSteps(plan, {
       cancellationToken,
@@ -90,6 +90,7 @@ export const executePlan = async ({
       compileServerCertificate,
       compileServerIp,
       compileServerPort,
+      keepProcessAlive: true, // to be sure it stays alive
       babelPluginMap,
       convertMap,
       compileGroupCount,
@@ -121,6 +122,8 @@ export const executePlan = async ({
     coverageConfig,
     coverageIncludeMissing,
   })
+
+  stop("all execution done")
 
   return executionResult
 }

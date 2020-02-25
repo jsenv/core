@@ -218,9 +218,7 @@ ${fileRelativeUrl}`),
 
   // tell everyone we are done
   // (used to stop potential chrome browser still opened to be reused)
-  if (stopPlatformAfterExecute) {
-    allExecutionDoneCancellationSource.cancel("all execution done")
-  }
+  allExecutionDoneCancellationSource.cancel("all execution done")
 
   const summary = reportToSummary(report)
   summary.startMs = startMs

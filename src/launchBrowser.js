@@ -23,6 +23,7 @@ export const launchChromium = async ({
   compileServerOrigin,
 
   headless = true,
+  // about debug check https://github.com/microsoft/playwright/blob/master/docs/api.md#browsertypelaunchserveroptions
   debug = false,
   debugPort = 0,
   stopOnExit = true,
