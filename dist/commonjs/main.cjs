@@ -7067,7 +7067,7 @@ const startServer = async ({
   logLevel,
   serverName = "server",
   protocol = "http",
-  http2 = protocol === "https",
+  http2 = false,
   http1Allowed = true,
   ip = "127.0.0.1",
   port = 0,
@@ -11546,7 +11546,7 @@ const computeExecutionResult = async ({
   platformDisconnectCallback,
   ...rest
 }) => {
-  launchLogger.debug(`start a platform to execute ${fileRelativeUrl}`);
+  launchLogger.debug(`launch execution for ${fileRelativeUrl}`);
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
@@ -11570,7 +11570,7 @@ const computeExecutionResult = async ({
       let gracefulStop;
 
       if (platform.gracefulStop && gracefulStopAllocatedMs) {
-        launchLogger.debug(`${fileRelativeUrl} platform.gracefulStop() because ${reason}`);
+        launchLogger.debug(`${fileRelativeUrl} gracefulStop() because ${reason}`);
 
         const gracefulStopPromise = (async () => {
           await platform.gracefulStop({
@@ -11594,7 +11594,7 @@ const computeExecutionResult = async ({
             return gracefulStop;
           }
 
-          launchLogger.debug(`${fileRelativeUrl} platform.gracefulStop() pending after ${gracefulStopAllocatedMs}ms, use platform.stop()`);
+          launchLogger.debug(`${fileRelativeUrl} gracefulStop() pending after ${gracefulStopAllocatedMs}ms, use stop()`);
           await platform.stop({
             reason,
             gracefulFailed: true
@@ -11630,13 +11630,13 @@ const computeExecutionResult = async ({
 --- options ---
 options: ${JSON.stringify(options, null, "  ")}`);
   registerConsoleCallback(platformConsoleCallback);
-  executeLogger.debug(`execute file ${fileRelativeUrl}`);
+  executeLogger.debug(`${fileRelativeUrl} ${platformName}: start execution`);
   const executeOperation = createOperation({
     cancellationToken,
     start: async () => {
       let timing = TIMING_BEFORE_EXECUTION;
       disconnected.then(() => {
-        executeLogger.debug(`${fileRelativeUrl} platform disconnected.`);
+        executeLogger.debug(`${fileRelativeUrl} ${platformName}: disconnected ${timing}.`);
         platformDisconnectCallback({
           timing
         });
@@ -11644,16 +11644,9 @@ options: ${JSON.stringify(options, null, "  ")}`);
       const executed = executeFile(fileRelativeUrl, rest);
       timing = TIMING_DURING_EXECUTION;
       registerErrorCallback(error => {
-        if (timing === "after-execution") {
-          executeLogger.error(`error after execution
+        executeLogger.error(`${fileRelativeUrl} ${platformName}: error ${timing}.
 --- error stack ---
 ${error.stack}`);
-        } else {
-          executeLogger.error(`error during execution
---- error stack ---
-${error.stack}`);
-        }
-
         platformErrorCallback({
           error,
           timing
@@ -11676,13 +11669,13 @@ ${error.stack}`);
       } = executionResult;
 
       if (status === "errored") {
-        executeLogger.error(`execution errored.
+        executeLogger.error(`${fileRelativeUrl} ${platformName}: error ${timing}.
 --- error stack ---
 ${executionResult.error.stack}`);
         return createErroredExecutionResult(executionResult, rest);
       }
 
-      executeLogger.debug(`${fileRelativeUrl} execution completed.`);
+      executeLogger.debug(`${fileRelativeUrl} ${platformName}: execution completed.`);
       return createCompletedExecutionResult(executionResult, rest);
     }
   });
@@ -12616,7 +12609,7 @@ ${fileRelativeUrl}`));
         captureConsole,
         gracefulStopAllocatedMs,
         stopPlatformAfterExecute,
-        stopPlatformAfterExecuteReason: executionIndex === executionCount - 1 ? "last-execution-done" : "intermediate-execution-done",
+        stopPlatformAfterExecuteReason: "execution-done",
         executionId,
         fileRelativeUrl,
         collectCoverage,
@@ -12672,10 +12665,7 @@ ${fileRelativeUrl}`));
   }); // tell everyone we are done
   // (used to stop potential chrome browser still opened to be reused)
 
-  if (stopPlatformAfterExecute) {
-    allExecutionDoneCancellationSource.cancel("all execution done");
-  }
-
+  allExecutionDoneCancellationSource.cancel("all execution done");
   const summary = reportToSummary(report);
   summary.startMs = startMs;
   summary.endMs = Date.now();
@@ -12801,7 +12791,8 @@ const executePlan = async ({
 
   const [executionSteps, {
     origin: compileServerOrigin,
-    outDirectoryRelativeUrl
+    outDirectoryRelativeUrl,
+    stop
   }] = await Promise.all([generateExecutionSteps(plan, {
     cancellationToken,
     projectDirectoryUrl
@@ -12818,6 +12809,8 @@ const executePlan = async ({
     compileServerCertificate,
     compileServerIp,
     compileServerPort,
+    keepProcessAlive: true,
+    // to be sure it stays alive
     babelPluginMap,
     convertMap,
     compileGroupCount
@@ -12843,6 +12836,7 @@ const executePlan = async ({
     coverageConfig,
     coverageIncludeMissing
   });
+  stop("all execution done");
   return executionResult;
 };
 
@@ -13650,7 +13644,7 @@ const argsToIdFallback = args => JSON.stringify(args);
 
 const startBrowserServer = async ({
   cancellationToken,
-  logLevel = "off",
+  logLevel = "warn",
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin
@@ -13662,9 +13656,8 @@ const startBrowserServer = async ({
   return startServer({
     cancellationToken,
     logLevel,
-    // should be reuse compileServerOrigin protocol ?
     // should we reuse compileServer privateKey/certificate ?
-    protocol: "https",
+    protocol: compileServerOrigin.startsWith("http:") ? "http" : "https",
     sendInternalErrorStack: true,
     requestToResponse: request => firstService(() => {
       if (request.ressource === "/.jsenv/browser-script.js") {
@@ -13847,6 +13840,7 @@ const launchChromium = async ({
   outDirectoryRelativeUrl,
   compileServerOrigin,
   headless = true,
+  // about debug check https://github.com/microsoft/playwright/blob/master/docs/api.md#browsertypelaunchserveroptions
   debug = false,
   debugPort = 0,
   stopOnExit = true,
@@ -15189,6 +15183,10 @@ const launchNode = async ({
   };
 
   installProcessErrorListener(childProcess, error => {
+    if (!childProcess.connected && error.code === "ERR_IPC_DISCONNECTED") {
+      return;
+    }
+
     errorCallbackArray.forEach(callback => {
       callback(error);
     });
@@ -15525,14 +15523,7 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`;
   const { fetchUrl } = require("@jsenv/server")
 
   const run = async () => {
-    try {
-      await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)}, { ignoreHttpsError: true })
-    }
-    catch(e) {
-      console.log('error while fetching', e)
-      debugger
-      return null
-    }
+    await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)}, { ignoreHttpsError: true })
 
     const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
     const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
