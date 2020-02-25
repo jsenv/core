@@ -5,7 +5,7 @@ import { COMPILE_ID_GLOBAL_BUNDLE } from "../CONSTANTS.js"
 
 export const startBrowserServer = async ({
   cancellationToken,
-  logLevel = "off",
+  logLevel = "warn",
 
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
@@ -23,9 +23,8 @@ export const startBrowserServer = async ({
     cancellationToken,
     logLevel,
 
-    // should be reuse compileServerOrigin protocol ?
     // should we reuse compileServer privateKey/certificate ?
-    protocol: "https",
+    protocol: compileServerOrigin.startsWith("http:") ? "http" : "https",
     sendInternalErrorStack: true,
     requestToResponse: (request) =>
       firstService(

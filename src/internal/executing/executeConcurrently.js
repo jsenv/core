@@ -154,10 +154,7 @@ ${fileRelativeUrl}`),
         captureConsole,
         gracefulStopAllocatedMs,
         stopPlatformAfterExecute,
-        stopPlatformAfterExecuteReason:
-          executionIndex === executionCount - 1
-            ? "last-execution-done"
-            : "intermediate-execution-done",
+        stopPlatformAfterExecuteReason: "execution-done",
         executionId,
         fileRelativeUrl,
         collectCoverage,
