@@ -6700,7 +6700,13 @@ const trackServerPendingConnections = (nodeServer, {
     connection.on("close", () => {
       pendingConnections.delete(connection);
     });
-    connection.on("error", onConnectionError);
+
+    if (onConnectionError) {
+      connection.on("error", error => {
+        onConnectionError(error, connection);
+      });
+    }
+
     pendingConnections.add(connection);
   };
 
@@ -6756,19 +6762,34 @@ const trackServerPendingRequests = nodeServer => {
     }) => {
       if (nodeResponse.headersSent === false) {
         nodeResponse.writeHead(status, reason);
-      }
+      } // http2
 
-      return new Promise((resolve, reject) => {
-        if (nodeResponse.closed) {
+
+      if (nodeResponse.close) {
+        return new Promise((resolve, reject) => {
+          if (nodeResponse.closed) {
+            resolve();
+          } else {
+            nodeResponse.close(error => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve();
+              }
+            });
+          }
+        });
+      } // http
+
+
+      return new Promise(resolve => {
+        if (nodeResponse.destroyed) {
           resolve();
         } else {
-          nodeResponse.close(error => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve();
-            }
+          nodeResponse.once("close", () => {
+            resolve();
           });
+          nodeResponse.destroy();
         }
       });
     }));
@@ -7256,7 +7277,11 @@ const startServer = async ({
       port
     });
     const connectionsTracker = trackServerPendingConnections(nodeServer, {
-      onConnectionError: onError
+      onConnectionError: (error, connection) => {
+        if (!connection.destroyed) {
+          onError(error);
+        }
+      }
     }); // opened connection must be shutdown before the close event is emitted
 
     registerCleanupCallback(connectionsTracker.stop);
