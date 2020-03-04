@@ -25,7 +25,7 @@ const { outDirectoryRelativeUrl, importDefaultExtension } = env
 
 export const createBrowserRuntime = ({ compileServerOrigin }) => {
   const compileId = computeCompileIdFromGroupId({
-    groupId: resolveBrowserGroup({ groupMap }),
+    groupId: resolveBrowserGroup(groupMap),
     groupMap,
   })
   const compileDirectoryRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${compileId}/`

@@ -11,7 +11,7 @@ const { chunkId } = env
 globalThis.System.register([], (_export, _context) => {
   const execute = async () => {
     const compileId = computeCompileIdFromGroupId({
-      groupId: resolveRuntimeGroup({ groupMap }),
+      groupId: resolveRuntimeGroup(groupMap),
       groupMap,
     })
 

@@ -28,7 +28,7 @@ export const createNodeRuntime = async ({
   ])
 
   const compileId = computeCompileIdFromGroupId({
-    groupId: resolveNodeGroup({ groupMap }),
+    groupId: resolveNodeGroup(groupMap),
     groupMap,
   })
   const outDirectoryRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}`

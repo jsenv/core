@@ -8,7 +8,7 @@ import { resolveRuntimeGroup } from "../runtime/resolveRuntimeGroup.js"
 
 const { chunkId } = env
 const compileId = computeCompileIdFromGroupId({
-  groupId: resolveRuntimeGroup({ groupMap }),
+  groupId: resolveRuntimeGroup(groupMap),
   groupMap,
 })
 // eslint-disable-next-line import/no-dynamic-require
