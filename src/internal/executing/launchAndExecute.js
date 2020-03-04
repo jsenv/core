@@ -294,12 +294,14 @@ const computeExecutionResult = async ({
     disconnected,
   } = await launchOperation
 
-  launchLogger.debug(`${runtimeName}@${runtimeVersion} started.
+  const runtime = `${runtimeName}/${runtimeVersion}`
+
+  launchLogger.debug(`${runtime} started.
 --- options ---
 options: ${JSON.stringify(options, null, "  ")}`)
 
   registerConsoleCallback(runtimeConsoleCallback)
-  executeLogger.debug(`${fileRelativeUrl} ${runtimeName}: start execution`)
+  executeLogger.debug(`${fileRelativeUrl} ${runtime}: start execution`)
 
   const executeOperation = createOperation({
     cancellationToken,
@@ -307,7 +309,7 @@ options: ${JSON.stringify(options, null, "  ")}`)
       let timing = TIMING_BEFORE_EXECUTION
 
       disconnected.then(() => {
-        executeLogger.debug(`${fileRelativeUrl} ${runtimeName}: disconnected ${timing}.`)
+        executeLogger.debug(`${fileRelativeUrl} ${runtime}: disconnected ${timing}.`)
         runtimeDisconnectCallback({ timing })
       })
 
@@ -315,7 +317,7 @@ options: ${JSON.stringify(options, null, "  ")}`)
       timing = TIMING_DURING_EXECUTION
 
       registerErrorCallback((error) => {
-        executeLogger.error(`${fileRelativeUrl} ${runtimeName}: error ${timing}.
+        executeLogger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
 --- error stack ---
 ${error.stack}`)
         runtimeErrorCallback({ error, timing })
@@ -335,13 +337,13 @@ ${error.stack}`)
       const executionResult = raceResult.value
       const { status } = executionResult
       if (status === "errored") {
-        executeLogger.error(`${fileRelativeUrl} ${runtimeName}: error ${timing}.
+        executeLogger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
 --- error stack ---
 ${executionResult.error.stack}`)
         return createErroredExecutionResult(executionResult, rest)
       }
 
-      executeLogger.debug(`${fileRelativeUrl} ${runtimeName}: execution completed.`)
+      executeLogger.debug(`${fileRelativeUrl} ${runtime}: execution completed.`)
       return createCompletedExecutionResult(executionResult, rest)
     },
   })
