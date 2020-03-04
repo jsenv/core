@@ -1,4 +1,4 @@
-import { computeBabelPluginMapForPlatform } from "./internal/generateGroupMap/computeBabelPluginMapForPlatform.js"
+import { computeBabelPluginMapForRuntime } from "./internal/generateGroupMap/computeBabelPluginMapForRuntime.js"
 import { generateCommonJsBundle } from "./generateCommonJsBundle.js"
 import { jsenvBabelPluginMap } from "./jsenvBabelPluginMap.js"
 
@@ -9,10 +9,10 @@ export const generateCommonJsBundleForNode = ({
   cjsExtension,
   ...rest
 }) => {
-  const babelPluginMapForNode = computeBabelPluginMapForPlatform({
+  const babelPluginMapForNode = computeBabelPluginMapForRuntime({
     babelPluginMap,
-    platformName: "node",
-    platformVersion: nodeMinimumVersion,
+    runtimeName: "node",
+    runtimeVersion: nodeMinimumVersion,
   })
 
   return generateCommonJsBundle({

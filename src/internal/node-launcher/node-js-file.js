@@ -1,6 +1,6 @@
 import { resolveUrl } from "@jsenv/util"
 import { installNodeErrorStackRemapping } from "../error-stack-remapping/installNodeErrorStackRemapping.js"
-import { nodePlatform } from "../../nodePlatform.js"
+import { nodeRuntime } from "../../nodeRuntime.js"
 
 export const execute = async ({
   projectDirectoryUrl,
@@ -14,7 +14,7 @@ export const execute = async ({
   // do not log in the console
   // because error handling becomes responsability
   // of node code launching node process
-  // it avoids seeing error in platform logs during testing
+  // it avoids seeing error in runtime logs during testing
   errorExposureInConsole = false,
 }) => {
   // should we ignore cancellation error ?
@@ -22,7 +22,7 @@ export const execute = async ({
   //   throw valueRejected
   // })
 
-  const { compileDirectoryRemoteUrl, executeFile } = await nodePlatform.create({
+  const { compileDirectoryRemoteUrl, executeFile } = await nodeRuntime.create({
     projectDirectoryUrl,
     compileServerOrigin,
     outDirectoryRelativeUrl,

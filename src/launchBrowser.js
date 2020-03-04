@@ -83,7 +83,7 @@ export const launchChromium = async ({
     name: "chromium",
     version: "82.0.4057.0",
     stop: ressourceTracker.cleanup,
-    ...browserToPlatformHooks(browser, {
+    ...browserToRuntimeHooks(browser, {
       cancellationToken,
       ressourceTracker,
       browserServerLogLevel,
@@ -142,7 +142,7 @@ export const launchFirefox = async ({
     name: "firefox",
     version: "73.0b13",
     stop: ressourceTracker.cleanup,
-    ...browserToPlatformHooks(browser, {
+    ...browserToRuntimeHooks(browser, {
       cancellationToken,
       ressourceTracker,
       browserServerLogLevel,
@@ -201,7 +201,7 @@ export const launchWebkit = async ({
     name: "webkit",
     version: "13.0.4",
     stop: ressourceTracker.cleanup,
-    ...browserToPlatformHooks(browser, {
+    ...browserToRuntimeHooks(browser, {
       cancellationToken,
       ressourceTracker,
       browserServerLogLevel,
@@ -278,7 +278,7 @@ npm install playwright`)
 
 const browserServerSharing = createSharing()
 
-const browserToPlatformHooks = (
+const browserToRuntimeHooks = (
   browser,
   {
     cancellationToken,

@@ -1,6 +1,6 @@
 /* eslint-disable import/max-dependencies */
 
-// we might want to reuse fetchUrl approach used by nodePlatform
+// we might want to reuse fetchUrl approach used by nodeRuntime
 // eslint-disable-next-line import/no-unresolved
 import groupMap from "/.jsenv/out/groupMap.json"
 // eslint-disable-next-line import/no-unresolved
@@ -23,7 +23,7 @@ const GLOBAL_SPECIFIER = "global"
 const memoizedCreateBrowserSystem = memoize(createBrowserSystem)
 const { outDirectoryRelativeUrl, importDefaultExtension } = env
 
-export const createBrowserPlatform = ({ compileServerOrigin }) => {
+export const createBrowserRuntime = ({ compileServerOrigin }) => {
   const compileId = computeCompileIdFromGroupId({
     groupId: resolveBrowserGroup({ groupMap }),
     groupMap,

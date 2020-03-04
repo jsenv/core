@@ -1,15 +1,15 @@
 import { findHighestVersion } from "../semantic-versioning/index.js"
 
-export const composePlatformCompatMap = (platformCompatMap, secondPlatformCompatMap) => {
+export const composeRuntimeCompatMap = (runtimeCompatMap, secondRuntimeCompatMap) => {
   return objectComposeValue(
-    normalizePlatformCompatMapVersions(platformCompatMap),
-    normalizePlatformCompatMapVersions(secondPlatformCompatMap),
+    normalizeRuntimeCompatMapVersions(runtimeCompatMap),
+    normalizeRuntimeCompatMapVersions(secondRuntimeCompatMap),
     (version, secondVersion) => findHighestVersion(version, secondVersion),
   )
 }
 
-const normalizePlatformCompatMapVersions = (platformCompatibility) => {
-  return objectMapValue(platformCompatibility, (version) => String(version))
+const normalizeRuntimeCompatMapVersions = (runtimeCompatibility) => {
+  return objectMapValue(runtimeCompatibility, (version) => String(version))
 }
 
 const objectMapValue = (object, callback) => {

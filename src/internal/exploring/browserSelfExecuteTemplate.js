@@ -48,17 +48,17 @@ const fileRelativeUrl = new URLSearchParams(location.search).get("file")
     credentials: "include",
   })
   const {
-    browserPlatformFileRelativeUrl,
+    browserRuntimeFileRelativeUrl,
     sourcemapMainFileRelativeUrl,
     sourcemapMappingFileRelativeUrl,
     compileServerOrigin,
   } = JSON.parse(body)
 
-  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserPlatformFileRelativeUrl}`
-  await fetchAndEvalUsingScript(browserPlatformCompiledFileRemoteUrl)
-  const { __browserPlatform__ } = window
+  const browserRuntimeCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserRuntimeFileRelativeUrl}`
+  await fetchAndEvalUsingScript(browserRuntimeCompiledFileRemoteUrl)
+  const { __browserRuntime__ } = window
 
-  const { compileDirectoryRemoteUrl, executeFile } = __browserPlatform__.create({
+  const { compileDirectoryRemoteUrl, executeFile } = __browserRuntime__.create({
     compileServerOrigin,
   })
   const compiledFileRemoteUrl = `${compileDirectoryRemoteUrl}${fileRelativeUrl}`

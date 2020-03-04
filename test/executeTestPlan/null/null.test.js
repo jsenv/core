@@ -31,8 +31,8 @@ const actual = await executeTestPlan({
   compileGroupCount: 1,
   executionDefaultOptions: {
     ...EXECUTE_TEST_PARAMS.executionDefaultOptions,
-    collectPlatformName: false,
-    collectPlatformVersion: false,
+    collectRuntimeName: false,
+    collectRuntimeVersion: false,
   },
 })
 const expected = {

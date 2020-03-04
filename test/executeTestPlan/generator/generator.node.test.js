@@ -36,8 +36,8 @@ const expected = {
     [fileRelativeUrl]: {
       node: {
         status: "completed",
-        platformName: "node",
-        platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
+        runtimeName: "node",
+        runtimeVersion: actual.report[fileRelativeUrl].node.runtimeVersion,
       },
     },
   },

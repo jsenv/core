@@ -10,9 +10,9 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}alive-after-execution.js`
 
 // node child process outlives execution if something keeps it alive
-// and stopPlatformAfterExecute is false (default value)
+// and stopAfterExecute is false (default value)
 {
-  let nodePlatformHooks
+  let nodeRuntimeHooks
   {
     const actual = await execute({
       ...EXECUTE_TEST_PARAMS,
@@ -20,8 +20,8 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}alive-after-execution.js`
       // executeLogLevel: "debug",
       jsenvDirectoryRelativeUrl,
       launch: async (options) => {
-        nodePlatformHooks = await launchNode({ ...options, debugPort: 40001 })
-        return nodePlatformHooks
+        nodeRuntimeHooks = await launchNode({ ...options, debugPort: 40001 })
+        return nodeRuntimeHooks
       },
       fileRelativeUrl,
     })
@@ -34,7 +34,7 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}alive-after-execution.js`
     // to ensure the child process is still alive let's wait enought
     // and check for disconnected promise, disconnected must still be pending
     const actual = await Promise.race([
-      nodePlatformHooks.disconnected,
+      nodeRuntimeHooks.disconnected,
       new Promise((resolve) => {
         setTimeout(() => resolve("timeout"), 2000)
       }),
@@ -43,12 +43,12 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}alive-after-execution.js`
     assert({ actual, expected })
   }
   // now kill it properly
-  await nodePlatformHooks.stop()
+  await nodeRuntimeHooks.stop()
 }
 
-// now if we redo the experiment with stopPlatformAfterExecute child process should be killed
+// now if we redo the experiment with stopAfterExecute child process should be killed
 {
-  let nodePlatformHooks
+  let nodeRuntimeHooks
   {
     const actual = await execute({
       ...EXECUTE_TEST_PARAMS,
@@ -56,11 +56,11 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}alive-after-execution.js`
       // executeLogLevel: "debug",
       jsenvDirectoryRelativeUrl,
       launch: async (options) => {
-        nodePlatformHooks = await launchNode({ ...options, debugPort: 40001 })
-        return nodePlatformHooks
+        nodeRuntimeHooks = await launchNode({ ...options, debugPort: 40001 })
+        return nodeRuntimeHooks
       },
       fileRelativeUrl,
-      stopPlatformAfterExecute: true,
+      stopAfterExecute: true,
       gracefulStopAllocatedMs: 100,
     })
     const expected = {
@@ -70,7 +70,7 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}alive-after-execution.js`
   }
   {
     const actual = await Promise.race([
-      nodePlatformHooks.disconnected.then(() => "disconnected"),
+      nodeRuntimeHooks.disconnected.then(() => "disconnected"),
       new Promise((resolve) => {
         setTimeout(() => resolve("timeout"), 2000)
       }),

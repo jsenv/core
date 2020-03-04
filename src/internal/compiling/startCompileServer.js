@@ -77,7 +77,7 @@ export const startCompileServer = async ({
   babelCompatMap = jsenvBabelPluginCompatMap,
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
-  platformAlwaysInsidePlatformScoreMap = false,
+  runtimeAlwaysInsideRuntimeScoreMap = false,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
@@ -116,9 +116,9 @@ ${projectDirectoryUrl}`)
   const groupMap = generateGroupMap({
     babelPluginMap,
     babelCompatMap,
-    platformScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
+    runtimeScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
     groupCount: compileGroupCount,
-    platformAlwaysInsidePlatformScoreMap,
+    runtimeAlwaysInsideRuntimeScoreMap,
   })
 
   const outDirectoryMeta = {

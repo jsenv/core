@@ -29,7 +29,7 @@ await Promise.all(
       ...EXECUTION_TEST_PARAMS,
       // sets executeLogger to off to avoid seeing an expected error in logs
       executeLogger: createLogger({ logLevel: "off" }),
-      // stopPlatformAfterExecute: false,
+      // stopAfterExecute: false,
       fileRelativeUrl,
       launch: (options) =>
         launchBrowser({

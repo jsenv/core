@@ -12,7 +12,7 @@ import { createNodeSystem } from "./createNodeSystem.js"
 const GLOBAL_SPECIFIER = "global"
 const memoizedCreateNodeSystem = memoize(createNodeSystem)
 
-export const createNodePlatform = async ({
+export const createNodeRuntime = async ({
   projectDirectoryUrl,
   compileServerOrigin,
   outDirectoryRelativeUrl,

@@ -34,7 +34,7 @@ export const executePlan = async ({
   plan,
   concurrencyLimit,
   executionDefaultOptions,
-  stopPlatformAfterExecute,
+  stopAfterExecute,
   completedExecutionLogMerging,
   completedExecutionLogAbbreviation,
   logSummary,
@@ -111,7 +111,7 @@ export const executePlan = async ({
 
     babelPluginMap,
 
-    stopPlatformAfterExecute,
+    stopAfterExecute,
     concurrencyLimit,
     executionDefaultOptions,
     completedExecutionLogMerging,

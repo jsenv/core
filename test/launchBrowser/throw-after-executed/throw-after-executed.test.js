@@ -36,8 +36,8 @@ const actual = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
-  stopPlatformAfterExecute: false,
-  platformErrorCallback: (argValue) => {
+  stopAfterExecute: false,
+  runtimeErrorCallback: (argValue) => {
     errorCallbackArg = argValue
     cancel("error") // kill chromium browser to let process end
   },

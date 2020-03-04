@@ -425,8 +425,8 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`
   const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`
   const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`
 
-  // The compiled nodePlatform file will be somewhere else in the filesystem
-  // than the original nodePlatform file.
+  // The compiled nodeRuntime file will be somewhere else in the filesystem
+  // than the original nodeRuntime file.
   // It is important for the compiled file to be able to require
   // node modules that original file could access
   // hence the requireCompiledFileAsOriginalFile

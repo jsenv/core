@@ -16,7 +16,7 @@ import {
 import { startServer, firstService, serveFile, createSSERoom } from "@jsenv/server"
 import { createLogger } from "@jsenv/logger"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
-import { getBrowserExecutionDynamicData } from "./internal/platform/getBrowserExecutionDynamicData.js"
+import { getBrowserExecutionDynamicData } from "./internal/runtime/getBrowserExecutionDynamicData.js"
 import { serveExploringIndex } from "./internal/exploring/serveExploringIndex.js"
 import { serveBrowserSelfExecute } from "./internal/exploring/serveBrowserSelfExecute.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"

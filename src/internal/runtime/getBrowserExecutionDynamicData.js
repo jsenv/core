@@ -3,10 +3,10 @@ import { require } from "../require.js"
 import { jsenvCoreDirectoryUrl } from "../jsenvCoreDirectoryUrl.js"
 
 export const getBrowserExecutionDynamicData = ({ projectDirectoryUrl, compileServerOrigin }) => {
-  const browserPlatformFileRelativeUrl =
+  const browserRuntimeFileRelativeUrl =
     projectDirectoryUrl === jsenvCoreDirectoryUrl
-      ? "src/browserPlatform.js"
-      : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/browserPlatform.js`
+      ? "src/browserRuntime.js"
+      : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/browserRuntime.js`
 
   const sourcemapMainFileUrl = fileSystemPathToUrl(require.resolve("source-map/dist/source-map.js"))
   const sourcemapMappingFileUrl = fileSystemPathToUrl(
@@ -19,7 +19,7 @@ export const getBrowserExecutionDynamicData = ({ projectDirectoryUrl, compileSer
   )
 
   return {
-    browserPlatformFileRelativeUrl,
+    browserRuntimeFileRelativeUrl,
     sourcemapMainFileRelativeUrl,
     sourcemapMappingFileRelativeUrl,
     compileServerOrigin,

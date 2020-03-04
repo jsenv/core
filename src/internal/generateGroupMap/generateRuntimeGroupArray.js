@@ -1,23 +1,23 @@
 import { findHighestVersion, versionCompare } from "../semantic-versioning/index.js"
 import { jsenvBabelPluginCompatMap } from "../../jsenvBabelPluginCompatMap.js"
 import { jsenvPluginCompatMap as jsenvPluginCompatMapFallback } from "../../jsenvPluginCompatMap.js"
-import { computeBabelPluginMapForPlatform } from "./computeBabelPluginMapForPlatform.js"
-import { computeJsenvPluginMapForPlatform } from "./computeJsenvPluginMapForPlatform.js"
+import { computeBabelPluginMapForRuntime } from "./computeBabelPluginMapForRuntime.js"
+import { computeJsenvPluginMapForRuntime } from "./computeJsenvPluginMapForRuntime.js"
 import { groupHaveSameRequirements } from "./groupHaveSameRequirements.js"
 
-export const generatePlatformGroupArray = ({
+export const generateRuntimeGroupArray = ({
   babelPluginMap,
   jsenvPluginMap,
   babelPluginCompatMap = jsenvBabelPluginCompatMap,
   jsenvPluginCompatMap = jsenvPluginCompatMapFallback,
-  platformName,
+  runtimeName,
 }) => {
   const versionArray = []
   Object.keys(babelPluginMap).forEach((babelPluginKey) => {
     if (babelPluginKey in babelPluginCompatMap) {
       const babelPluginCompat = babelPluginCompatMap[babelPluginKey]
-      if (platformName in babelPluginCompat) {
-        const version = String(babelPluginCompat[platformName])
+      if (runtimeName in babelPluginCompat) {
+        const version = String(babelPluginCompat[runtimeName])
         if (!versionArray.includes(version)) {
           versionArray.push(version)
         }
@@ -27,8 +27,8 @@ export const generatePlatformGroupArray = ({
   Object.keys(jsenvPluginMap).forEach((jsenvPluginKey) => {
     if (jsenvPluginKey in jsenvPluginCompatMap) {
       const jsenvPluginCompat = jsenvPluginCompatMap[jsenvPluginKey]
-      if (platformName in jsenvPluginCompat) {
-        const version = String(jsenvPluginCompat[platformName])
+      if (runtimeName in jsenvPluginCompat) {
+        const version = String(jsenvPluginCompat[runtimeName])
         if (!versionArray.includes(version)) {
           versionArray.push(version)
         }
@@ -38,49 +38,49 @@ export const generatePlatformGroupArray = ({
   versionArray.push("0.0.0")
   versionArray.sort(versionCompare)
 
-  const platformGroupArray = []
+  const runtimeGroupArray = []
 
   versionArray.forEach((version) => {
-    const babelPluginMapForPlatform = computeBabelPluginMapForPlatform({
+    const babelPluginMapForRuntime = computeBabelPluginMapForRuntime({
       babelPluginMap,
       babelPluginCompatMap,
-      platformName,
-      platformVersion: version,
+      runtimeName,
+      runtimeVersion: version,
     })
     const babelPluginRequiredNameArray = Object.keys(babelPluginMap)
-      .filter((babelPluginKey) => babelPluginKey in babelPluginMapForPlatform)
+      .filter((babelPluginKey) => babelPluginKey in babelPluginMapForRuntime)
       .sort()
-    const jsenvPluginMapForPlatform = computeJsenvPluginMapForPlatform({
+    const jsenvPluginMapForRuntime = computeJsenvPluginMapForRuntime({
       jsenvPluginMap,
       jsenvPluginCompatMap,
-      platformName,
-      platformVersion: version,
+      runtimeName,
+      runtimeVersion: version,
     })
     const jsenvPluginRequiredNameArray = Object.keys(jsenvPluginMap)
-      .filter((jsenvPluginKey) => jsenvPluginKey in jsenvPluginMapForPlatform)
+      .filter((jsenvPluginKey) => jsenvPluginKey in jsenvPluginMapForRuntime)
       .sort()
 
     const group = {
       babelPluginRequiredNameArray,
       jsenvPluginRequiredNameArray,
-      platformCompatMap: {
-        [platformName]: version,
+      runtimeCompatMap: {
+        [runtimeName]: version,
       },
     }
 
-    const groupWithSameRequirements = platformGroupArray.find((platformGroupCandidate) =>
-      groupHaveSameRequirements(platformGroupCandidate, group),
+    const groupWithSameRequirements = runtimeGroupArray.find((runtimeGroupCandidate) =>
+      groupHaveSameRequirements(runtimeGroupCandidate, group),
     )
 
     if (groupWithSameRequirements) {
-      groupWithSameRequirements.platformCompatMap[platformName] = findHighestVersion(
-        groupWithSameRequirements.platformCompatMap[platformName],
+      groupWithSameRequirements.runtimeCompatMap[runtimeName] = findHighestVersion(
+        groupWithSameRequirements.runtimeCompatMap[runtimeName],
         version,
       )
     } else {
-      platformGroupArray.push(group)
+      runtimeGroupArray.push(group)
     }
   })
 
-  return platformGroupArray
+  return runtimeGroupArray
 }

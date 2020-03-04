@@ -16,7 +16,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
 })
-const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`
+const fileServerUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/src/browserRuntime.js`
 const { url, status, statusText, headers } = await fetchUrl(fileServerUrl, {
   ignoreHttpsError: true,
 })

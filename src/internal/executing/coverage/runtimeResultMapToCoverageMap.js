@@ -1,10 +1,10 @@
 import { composeCoverageMap } from "./composeCoverageMap.js"
 
-export const platformResultMapToCoverageMap = (platformResultMap) => {
+export const runtimeResultMapToCoverageMap = (runtimeResultMap) => {
   const coverageMapList = []
 
-  Object.keys(platformResultMap).forEach((platformName) => {
-    const fileResultMap = platformResultMap[platformName]
+  Object.keys(runtimeResultMap).forEach((runtimeName) => {
+    const fileResultMap = runtimeResultMap[runtimeName]
     Object.keys(fileResultMap).forEach((file) => {
       const fileResult = fileResultMap[file]
       const fileCoverageMap = fileResult.coverageMap

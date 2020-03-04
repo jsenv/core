@@ -8,19 +8,19 @@ import { jsenvBabelPluginMap } from "../../index.js"
   const babelPluginMap = { "transform-block-scoping": true }
   const actual = generateGroupMap({
     babelPluginMap,
-    platformScoreMap: { node: jsenvNodeVersionScoreMap },
+    runtimeScoreMap: { node: jsenvNodeVersionScoreMap },
     groupCount: 2,
   })
   const expected = {
     best: {
       babelPluginRequiredNameArray: [],
       jsenvPluginRequiredNameArray: [],
-      platformCompatMap: { node: "6" },
+      runtimeCompatMap: { node: "6" },
     },
     otherwise: {
       babelPluginRequiredNameArray: Object.keys(babelPluginMap),
       jsenvPluginRequiredNameArray: [],
-      platformCompatMap: {},
+      runtimeCompatMap: {},
     },
   }
   assert({ actual, expected })
@@ -30,14 +30,14 @@ import { jsenvBabelPluginMap } from "../../index.js"
   const babelPluginMap = { "transform-block-scoping": true }
   const actual = generateGroupMap({
     babelPluginMap,
-    platformScoreMap: jsenvBrowserScoreMap,
+    runtimeScoreMap: jsenvBrowserScoreMap,
     groupCount: 2,
   })
   const expected = {
     best: {
       babelPluginRequiredNameArray: [],
       jsenvPluginRequiredNameArray: [],
-      platformCompatMap: {
+      runtimeCompatMap: {
         chrome: "49",
         firefox: "51",
         edge: "14",
@@ -50,7 +50,7 @@ import { jsenvBabelPluginMap } from "../../index.js"
     otherwise: {
       babelPluginRequiredNameArray: Object.keys(babelPluginMap),
       jsenvPluginRequiredNameArray: [],
-      platformCompatMap: {},
+      runtimeCompatMap: {},
     },
   }
   assert({ actual, expected })
@@ -63,14 +63,14 @@ import { jsenvBabelPluginMap } from "../../index.js"
   }
   const actual = generateGroupMap({
     babelPluginMap,
-    platformScoreMap: jsenvBrowserScoreMap,
+    runtimeScoreMap: jsenvBrowserScoreMap,
     groupCount: 2,
   })
   const expected = {
     best: {
       babelPluginRequiredNameArray: ["transform-modules-systemjs"],
       jsenvPluginRequiredNameArray: [],
-      platformCompatMap: {
+      runtimeCompatMap: {
         chrome: "49",
         firefox: "51",
         edge: "14",
@@ -83,7 +83,7 @@ import { jsenvBabelPluginMap } from "../../index.js"
     otherwise: {
       babelPluginRequiredNameArray: Object.keys(babelPluginMap),
       jsenvPluginRequiredNameArray: [],
-      platformCompatMap: {},
+      runtimeCompatMap: {},
     },
   }
   assert({ actual, expected })
@@ -92,7 +92,7 @@ import { jsenvBabelPluginMap } from "../../index.js"
 {
   const actual = generateGroupMap({
     babelPluginMap: jsenvBabelPluginMap,
-    platformScoreMap: { ...jsenvBrowserScoreMap, node: jsenvNodeVersionScoreMap },
+    runtimeScoreMap: { ...jsenvBrowserScoreMap, node: jsenvNodeVersionScoreMap },
     groupCount: 2,
   })
   const expected = {
@@ -106,7 +106,7 @@ import { jsenvBabelPluginMap } from "../../index.js"
         "transform-dotall-regex",
       ],
       jsenvPluginRequiredNameArray: [],
-      platformCompatMap: {
+      runtimeCompatMap: {
         chrome: "60",
         firefox: "55",
         electron: "2.1",
@@ -117,7 +117,7 @@ import { jsenvBabelPluginMap } from "../../index.js"
     otherwise: {
       babelPluginRequiredNameArray: Object.keys(jsenvBabelPluginMap),
       jsenvPluginRequiredNameArray: [],
-      platformCompatMap: {},
+      runtimeCompatMap: {},
     },
   }
   assert({ actual, expected })

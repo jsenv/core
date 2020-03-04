@@ -42,8 +42,8 @@ const expected = {
     [fileRelativeUrl]: {
       node: {
         status: "timedout",
-        platformName: "node",
-        platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
+        runtimeName: "node",
+        runtimeVersion: actual.report[fileRelativeUrl].node.runtimeVersion,
       },
     },
   },

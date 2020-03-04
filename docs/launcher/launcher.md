@@ -1,7 +1,7 @@
 # launcher
 
-A launcher is a function capable to launch a platform to execute a file.<br />
-You can use them to tell on which platform to execute a file.<br />
+A launcher is a function capable to launch a runtime environment to execute a file.<br />
+You can use them to tell on which runtime to execute a file.<br />
 
 For instance the following code would execute `/Users/you/directory/index.js` on chromium.
 
@@ -17,7 +17,7 @@ execute({
 
 ## Passing options to a launcher
 
-You can pass option to a platform launcher but you have to be sure you forward the options it receives.<br />
+You can pass option to a runtime launcher but you have to be sure you forward the options it receives.<br />
 By default `launchChromium` execute a file inside a headless chromium, but you can make it launch a chromium with a UI like this:
 
 ```js

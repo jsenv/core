@@ -1,20 +1,20 @@
-import { generatePlatformGroupArray } from "./generatePlatformGroupArray.js"
+import { generateRuntimeGroupArray } from "./generateRuntimeGroupArray.js"
 import { composeGroupArray } from "./composeGroupArray.js"
 
-export const generateAllPlatformGroupArray = ({
+export const generateAllRuntimeGroupArray = ({
   babelPluginMap,
   jsenvPluginMap,
   babelPluginCompatMap,
   jsenvPluginCompatMap,
-  platformNames,
+  runtimeNames,
 }) => {
-  const arrayOfGroupArray = platformNames.map((platformName) =>
-    generatePlatformGroupArray({
+  const arrayOfGroupArray = runtimeNames.map((runtimeName) =>
+    generateRuntimeGroupArray({
       babelPluginMap,
       jsenvPluginMap,
       babelPluginCompatMap,
       jsenvPluginCompatMap,
-      platformName,
+      runtimeName,
     }),
   )
   const groupArray = composeGroupArray(...arrayOfGroupArray)

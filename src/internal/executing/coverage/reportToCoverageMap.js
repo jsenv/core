@@ -73,9 +73,9 @@ const executionReportToCoverageMap = (report) => {
   Object.keys(report).forEach((file) => {
     const executionResultForFile = report[file]
     Object.keys(executionResultForFile).forEach((executionName) => {
-      const executionResultForFileOnPlatform = executionResultForFile[executionName]
+      const executionResultForFileOnRuntime = executionResultForFile[executionName]
 
-      const { coverageMap } = executionResultForFileOnPlatform
+      const { coverageMap } = executionResultForFileOnRuntime
       if (!coverageMap) {
         // several reasons not to have coverageMap here:
         // 1. the file we executed did not import an instrumented file.

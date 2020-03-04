@@ -14,7 +14,7 @@
   - [launch](#launch)
   - [fileRelativeUrl](#fileRelativeUrl)
   - [mirrorConsole](#mirrorConsole)
-  - [stopPlatformAfterExecute](#stopPlatformAfterExecute)
+  - [stopAfterExecute](#stopAfterExecute)
   - [shared parameters](#shared-parameters)
 - [execute return value](#execute-return-value)
   - [status](#status)
@@ -22,8 +22,8 @@
   - [namespace](#namespace)
   - [consoleCalls](#consoleCalls)
   - [startMs + endMs](#startMs-+-endMs)
-  - [platformName](#platformName)
-  - [platformVersion](#platformVersion)
+  - [runtimeName](#runtimeName)
+  - [runtimeVersion](#runtimeVersion)
 
 # Execute concrete example
 
@@ -160,7 +160,7 @@ To do that you can add an other configuration in your `launch.json`.
 
 # execute example
 
-`execute` is an async function executing a file on a platform and returning the result of that execution.
+`execute` is an async function launching a runtime, executing a file in it and returning the result of that execution.
 
 ```js
 import { execute, launchNode } from "@jsenv/core"
@@ -182,7 +182,7 @@ Each parameter got a dedicated section to shortly explain what it does and if it
 
 ## launch
 
-`launch` parameter is a function capable to launch a platform to execute a file in it. This parameter is **required**, the available launch functions are:
+`launch` parameter is a function capable to launch a runtime environment to execute a file in it. This parameter is **required**, the available launch functions are:
 
 - `launchNode`
 - `launchChromium`
@@ -201,13 +201,13 @@ If you want to know more about launch internals or write your own check [launche
 
 ## mirrorConsole
 
-`mirrorConsole` parameter is a boolean controlling if the platform logs will appear in your terminal. This parameter is optional with a default value of `true`.
+`mirrorConsole` parameter is a boolean controlling if the runtime environment logs will appear in your terminal. This parameter is optional with a default value of `true`.
 
-## stopPlatformAfterExecute
+## stopAfterExecute
 
-`stopPlatformAfterExecute` parameter is a boolean controlling if the platform will be stopped once the file execution is done. This parameter is optional and disabled by default.
+`stopAfterExecute` parameter is a boolean controlling if the runtime environment will be stopped once the file execution is done. This parameter is optional and disabled by default.
 
-Stopping a platform means killing the browser or node process when the file execution is done. Jsenv keeps platform process by default so that you decide when to stop it. When executing a test file jsenv stops platform once execution result is known to avoid keeping things alive once the test is done.
+Stopping a runtime means killing the browser or node process when the file execution is done. Jsenv does nothing by default so that you decide when to stop it. When executing a test file jsenv stops runtime once execution result is known to avoid keeping things alive once the test is done.
 
 For execution inside a browser it means you can see the output in the browser instance launched assuming it was launched in non-headless mode.
 
@@ -242,8 +242,8 @@ To avoid duplication some parameter are linked to a generic documentation.
   consoleCalls,
   startMs,
   endMs,
-  platformName,
-  platformVersion,
+  runtimeName,
+  runtimeVersion,
 }
 ```
 
@@ -289,7 +289,7 @@ const { namespace } = await execute({
 
 ## consoleCalls
 
-`consoleCalls` is an array describing all calls made to platform console during the file execution. It is returned only when `captureConsole` is enabled.
+`consoleCalls` is an array describing all calls made to runtime console during the file execution. It is returned only when `captureConsole` is enabled.
 
 ```js
 import { execute } from "@jsenv/core"
@@ -329,28 +329,28 @@ const { startMs, endMs } = await execute({
 })
 ```
 
-## platformName
+## runtimeName
 
-`platformName` is a string describing the platform used to execute the file. It is returned only when `collectPlatformName` is enabled. For now the possible platformName values are `"chromium"` or `"node"`.
+`runtimeName` is a string describing the runtime used to execute the file. It is returned only when `collectRuntimeName` is enabled. For now the possible runtimeName values are `"chromium"`, `"node"`, `"firefox"`, `"webkit"`.
 
 ```js
 const { execute } = require("@jsenv/core")
 
-const { platformName } = await execute({
+const { runtimeName } = await execute({
   projectDirectoryUrl: __dirname,
   fileRelativeUrl: "./index.js",
-  collectPlatformName: true, // without this platformName is undefined
+  collectRuntimeName: true, // without this runtimeName is undefined
 })
 ```
 
-## platformVersion
+## runtimeVersion
 
-`platformVersion` is a string describing the platform version used to execute the file. Use this to know the node version or browser version used to execute the file. It is returned only when `collectPlatformVersion` is enabled.
+`runtimeVersion` is a string describing the runtime version used to execute the file. Use this to know the node version or browser version used to execute the file. It is returned only when `collectRuntimeVersion` is enabled.
 
 ```js
-const { platformVersion } = await execute({
+const { runtimeVersion } = await execute({
   projectDirectoryUrl: __dirname,
   fileRelativeUrl: "./index.js",
-  collectPlatformVersion: true, // without this platformVersion is undefined
+  collectRuntimeVersion: true, // without this runtimeVersion is undefined
 })
 ```

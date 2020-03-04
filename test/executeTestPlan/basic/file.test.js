@@ -36,9 +36,6 @@ const actual = await executeTestPlan({
   jsenvDirectoryRelativeUrl,
   testPlan,
   compileGroupCount: 1,
-  // collectPlatformVersion: {
-  //   collectPlatformVersion: false,
-  // },
 })
 const expected = {
   summary: {
@@ -57,32 +54,32 @@ const expected = {
         namespace: {
           default: "node",
         },
-        platformName: "node",
-        platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
+        runtimeName: "node",
+        runtimeVersion: actual.report[fileRelativeUrl].node.runtimeVersion,
       },
       chromium: {
         status: "completed",
         namespace: {
           default: "browser",
         },
-        platformName: "chromium",
-        platformVersion: actual.report[fileRelativeUrl].chromium.platformVersion,
+        runtimeName: "chromium",
+        runtimeVersion: actual.report[fileRelativeUrl].chromium.runtimeVersion,
       },
       firefox: {
         status: "completed",
         namespace: {
           default: "browser",
         },
-        platformName: "firefox",
-        platformVersion: actual.report[fileRelativeUrl].firefox.platformVersion,
+        runtimeName: "firefox",
+        runtimeVersion: actual.report[fileRelativeUrl].firefox.runtimeVersion,
       },
       webkit: {
         status: "completed",
         namespace: {
           default: "browser",
         },
-        platformName: "webkit",
-        platformVersion: actual.report[fileRelativeUrl].webkit.platformVersion,
+        runtimeName: "webkit",
+        runtimeVersion: actual.report[fileRelativeUrl].webkit.runtimeVersion,
       },
     },
   },

@@ -25,7 +25,7 @@ executeTestPlan({
   },
   coverage: process.argv.includes("--cover"),
   coverageConfig: {
-    "./getPlatformName.js": true,
+    "./getRuntimeName.js": true,
   },
   coverageHtmlDirectory: true,
   coverageHtmlDirectoryRelativeUrl: "./coverage/",

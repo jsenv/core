@@ -7,8 +7,8 @@ export const createExecutionResultLog = (
     status,
     fileRelativeUrl,
     allocatedMs,
-    platformName,
-    platformVersion,
+    runtimeName,
+    runtimeVersion,
     consoleCalls,
     startMs,
     endMs,
@@ -33,6 +33,8 @@ export const createExecutionResultLog = (
     completedCount,
   })})`
 
+  const runtime = `${runtimeName}/${runtimeVersion}`
+
   if (status === "completed") {
     if (completedExecutionLogAbbreviation) {
       return `
@@ -42,7 +44,7 @@ ${green}${checkmark} execution ${executionNumber} of ${executionCount} completed
     return `
 ${green}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
-platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
+runtime: ${runtime}${appendDuration({
       startMs,
       endMs,
     })}${appendConsole(consoleCalls)}${appendError(error)}`
@@ -52,7 +54,7 @@ platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     return `
 ${magenta}${cross} execution ${executionNumber} of ${executionCount} disconnected${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
-platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
+runtime: ${runtime}${appendDuration({
       startMs,
       endMs,
     })}${appendConsole(consoleCalls)}${appendError(error)}`
@@ -62,7 +64,7 @@ platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
     return `
 ${yellow}${cross} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
-platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
+runtime: ${runtime}${appendDuration({
       startMs,
       endMs,
     })}${appendConsole(consoleCalls)}${appendError(error)}`
@@ -71,13 +73,11 @@ platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
   return `
 ${red}${cross} execution ${executionNumber} of ${executionCount} error${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
-platform: ${formatPlatform({ platformName, platformVersion })}${appendDuration({
+runtime: ${runtime}${appendDuration({
     startMs,
     endMs,
   })}${appendConsole(consoleCalls)}${appendError(error)}`
 }
-
-const formatPlatform = ({ platformName, platformVersion }) => `${platformName}/${platformVersion}`
 
 const appendDuration = ({ endMs, startMs }) => {
   if (!endMs) return ""

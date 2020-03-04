@@ -1,4 +1,4 @@
-import { composePlatformCompatMap } from "./composePlatformCompatMap.js"
+import { composeRuntimeCompatMap } from "./composeRuntimeCompatMap.js"
 
 const compositionMappingToComposeStrict = (compositionMapping, createInitial = () => ({})) => {
   const reducer = compositionMappingToStrictReducer(compositionMapping)
@@ -18,12 +18,12 @@ export const composeGroup = compositionMappingToComposeStrict(
   {
     babelPluginRequiredNameArray: composeBabelPluginRequiredNameArray,
     jsenvPluginRequiredNameArray: composeJsenvPluginRequiredNameArray,
-    platformCompatMap: composePlatformCompatMap,
+    runtimeCompatMap: composeRuntimeCompatMap,
   },
   () => ({
     babelPluginRequiredNameArray: [],
     jsenvPluginRequiredNameArray: [],
-    platformCompatMap: {},
+    runtimeCompatMap: {},
   }),
 )
 

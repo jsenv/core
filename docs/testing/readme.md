@@ -114,7 +114,7 @@ It reduces chances that a file execution have a side effect on an other file exe
 For instance executing code with an infinite loop crashes browser or node.js process. In that scenario that file would not prevent other file executions.<br />
 It also allows to execute files concurrently increasing speed on machine with mutiple processors.
 
-Currently jsenv provides 3 possible test execution environments, called `platforms`
+Currently jsenv provides 3 possible test execution environments, called `runtime`.
 
 - A chromium browser per test
 - A chromium browser tab per test
@@ -136,7 +136,7 @@ If dynamic import resolves, execution is considered successfull.<br />
 If dynamic import rejects, execution is considered errored.<br />
 If dynamic import takes too long to settle, execution is considered timedout.<br />
 
-Once the execution becomes either successfull, errored or timedout jsenv stops the platform launched to execute the test. Inside a node process there is a special behaviour where jsenv sends `SIGTERM` signal to the node process executing your test. After 8s, if the node process has not exited by its own it is killed by force.
+Once the execution becomes either successfull, errored or timedout jsenv stops the runtime launched to execute the test. Inside a node process there is a special behaviour where jsenv sends `SIGTERM` signal to the node process executing your test. After 8s, if the node process has not exited by its own it is killed by force.
 
 ## Execution error
 
@@ -159,13 +159,13 @@ Check [executionDefaultOptions](#executionDefaultOptions) to know how to configu
 
 ## Execution disconnection
 
-Platform disconnected during file execution sets execution status to disconnected and test is considered as failed.
+Runtime disconnected during file execution sets execution status to disconnected and test is considered as failed.
 
 ```js
 while (true) {}
 ```
 
-Note: There is, fortunately, no way to crash a browser during execution so this code might either crash the platform or result in a timeout. Inside node however you could write code resulting in a disconnected execution.
+Note: There is, fortunately, no way to crash a browser during execution so this code might either crash the runtime or result in a timeout. Inside node however you could write code resulting in a disconnected execution.
 
 ```js
 process.exit()
@@ -216,11 +216,11 @@ execution end
 test done
 ```
 
-If jsenv executed that code, platform would be stopped after `execution end` logs and `test done` would never happen.
+If jsenv executed that code, runtime would be stopped after `execution end` logs and `test done` would never happen.
 
 # executeTestPlan example
 
-`executeTestPlan` is an async function executing test files in one or several platforms logging progression and optionnaly generating associated coverage.
+`executeTestPlan` is an async function executing test files in one or several runtime environments logging progression and optionnaly generating associated coverage.
 To integrate it properly in your own project, take inspiration from the [basic project](./basic-project) files.
 
 ```js
@@ -322,7 +322,7 @@ It exists to prevent an execution planified by a previous specifier.
 
 #### launch
 
-A function capable to launch a platform. This parameter is **required**
+A function capable to launch a runtime. This parameter is **required**
 
 #### allocatedMs
 
@@ -523,8 +523,8 @@ const { report } = await executeTestPlan({
 {
   "./test/file.test.js": {
     "node": {
-      "platformName": "node",
-      "platformVersion": "8.9.0",
+      "runtimeName": "node",
+      "runtimeVersion": "8.9.0",
       "status": "completed",
       "startMs": 1560355699946,
       "endMs": 1560355699950,

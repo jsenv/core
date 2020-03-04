@@ -1,8 +1,8 @@
 import { resolveUrl, urlToRelativeUrl, assertFilePresence } from "@jsenv/util"
 import { jsenvHtmlFileUrl } from "../jsenvHtmlFileUrl.js"
-import { evalSource } from "../platform/createNodePlatform/evalSource.js"
+import { evalSource } from "../runtime/createNodeRuntime/evalSource.js"
 import { escapeRegexpSpecialCharacters } from "../escapeRegexpSpecialCharacters.js"
-import { getBrowserExecutionDynamicData } from "../platform/getBrowserExecutionDynamicData.js"
+import { getBrowserExecutionDynamicData } from "../runtime/getBrowserExecutionDynamicData.js"
 
 export const evaluateImportExecution = async ({
   cancellationToken,

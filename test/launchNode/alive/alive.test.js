@@ -32,7 +32,7 @@ const actual = await launchAndExecute({
       outDirectoryRelativeUrl,
       compileServerOrigin,
     }),
-  stopPlatformAfterExecute: true,
+  stopAfterExecute: true,
   collectNamespace: false,
 })
 const expected = {

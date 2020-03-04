@@ -16,7 +16,7 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
     compileServerLogLevel: "warn",
     jsenvDirectoryRelativeUrl,
   })
-  const compiledFileRelativeUrl = `${outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodePlatform.js`
+  const compiledFileRelativeUrl = `${outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodeRuntime.js`
   const fileServerUrl = `${compileServerOrigin}/${compiledFileRelativeUrl}`
   const { url, status, statusText, headers } = await fetchUrl(fileServerUrl, {
     ignoreHttpsError: true,
@@ -38,15 +38,15 @@ const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
   }
   {
     const compiledFileUrl = resolveUrl(
-      "./.jsenv/out/otherwise-commonjs-bundle/src/nodePlatform.js",
+      "./.jsenv/out/otherwise-commonjs-bundle/src/nodeRuntime.js",
       testDirectoryUrl,
     )
 
     // note the require below would fail on node 13+
-    // (but we would not build a node platform file in that case)
+    // (but we would not build a node runtime file in that case)
     // eslint-disable-next-line import/no-dynamic-require
-    const { nodePlatform } = require(urlToFileSystemPath(compiledFileUrl))
-    const actual = typeof nodePlatform.create
+    const { nodeRuntime } = require(urlToFileSystemPath(compiledFileUrl))
+    const actual = typeof nodeRuntime.create
     const expected = "function"
     assert({ actual, expected })
   }

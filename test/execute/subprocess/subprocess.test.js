@@ -14,7 +14,7 @@ const actual = await execute({
   jsenvDirectoryRelativeUrl,
   launch: (options) => launchNode({ ...options, debugPort: 40001 }),
   fileRelativeUrl,
-  stopPlatformAfterExecute: true,
+  stopAfterExecute: true,
 })
 const expected = {
   status: "completed",

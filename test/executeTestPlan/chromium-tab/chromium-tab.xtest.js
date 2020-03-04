@@ -32,11 +32,11 @@ const actual = await executeTestPlan({
   compileGroupCount: 1,
   // this test exists to ensure launchChromiumTab actually shares
   // the chromium browser and opens tab inside it
-  // by passing stopPlatformAfterExecute: false,
+  // by passing stopAfterExecute: false,
   // I can manually ensure that after executeTestPlan
   // two chromium are opened (not three)
   // and one of them has two tabs
-  // stopPlatformAfterExecute: false,
+  // stopAfterExecute: false,
 })
 const expected = {
   summary: {
@@ -53,32 +53,32 @@ const expected = {
         namespace: {
           default: 42,
         },
-        platformName: "chromium",
-        platformVersion: actual.report[fileRelativeUrl].chromium.platformVersion,
+        runtimeName: "chromium",
+        runtimeVersion: actual.report[fileRelativeUrl].chromium.runtimeVersion,
       },
       chromium: {
         status: "completed",
         namespace: {
           default: 42,
         },
-        platformName: "chromium",
-        platformVersion: actual.report[fileRelativeUrl].chromium.platformVersion,
+        runtimeName: "chromium",
+        runtimeVersion: actual.report[fileRelativeUrl].chromium.runtimeVersion,
       },
       tab2: {
         status: "completed",
         namespace: {
           default: 42,
         },
-        platformName: "chromium",
-        platformVersion: actual.report[fileRelativeUrl].chromium.platformVersion,
+        runtimeName: "chromium",
+        runtimeVersion: actual.report[fileRelativeUrl].chromium.runtimeVersion,
       },
       node: {
         status: "completed",
         namespace: {
           default: 42,
         },
-        platformName: "node",
-        platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
+        runtimeName: "node",
+        runtimeVersion: actual.report[fileRelativeUrl].node.runtimeVersion,
       },
     },
   },
