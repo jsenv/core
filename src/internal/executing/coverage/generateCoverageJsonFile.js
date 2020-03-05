@@ -1,6 +1,7 @@
 import { resolveUrl, urlToFileSystemPath, writeFile } from "@jsenv/util"
 
 export const generateCoverageJsonFile = async ({
+  logger,
   projectDirectoryUrl,
   coverageJsonFileRelativeUrl,
   coverageJsonFileLog,
@@ -10,6 +11,6 @@ export const generateCoverageJsonFile = async ({
 
   await writeFile(coverageJsonFileUrl, JSON.stringify(coverageMap, null, "  "))
   if (coverageJsonFileLog) {
-    console.log(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`)
+    logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`)
   }
 }

@@ -6,6 +6,7 @@ const reports = require("istanbul-reports")
 const { createCoverageMap } = require("istanbul-lib-coverage")
 
 export const generateCoverageHtmlDirectory = async ({
+  logger,
   projectDirectoryUrl,
   coverageHtmlDirectoryRelativeUrl,
   coverageHtmlDirectoryIndexLog,
@@ -33,6 +34,6 @@ export const generateCoverageHtmlDirectory = async ({
     const htmlCoverageDirectoryIndexFilePath = urlToFileSystemPath(
       htmlCoverageDirectoryIndexFileUrl,
     )
-    console.log(`-> ${htmlCoverageDirectoryIndexFilePath}`)
+    logger.info(`-> ${htmlCoverageDirectoryIndexFilePath}`)
   }
 }

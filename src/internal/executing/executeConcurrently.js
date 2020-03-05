@@ -41,7 +41,7 @@ export const executeConcurrently = async (
     coverage,
     coverageConfig,
     coverageIncludeMissing,
-    
+
     ...rest
   },
 ) => {

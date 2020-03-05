@@ -172,6 +172,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
     if (coverage && coverageJsonFile) {
       promises.push(
         generateCoverageJsonFile({
+          logger,
           projectDirectoryUrl,
           coverageJsonFileRelativeUrl,
           coverageJsonFileLog,
@@ -182,6 +183,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
     if (coverage && coverageHtmlDirectory) {
       promises.push(
         generateCoverageHtmlDirectory({
+          logger,
           coverageMap: result.coverageMap,
           projectDirectoryUrl,
           coverageHtmlDirectoryRelativeUrl,
