@@ -78,6 +78,8 @@ export const startCompileServer = async ({
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
   runtimeAlwaysInsideRuntimeScoreMap = false,
+
+  coverageConfig,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
@@ -125,6 +127,7 @@ ${projectDirectoryUrl}`)
     babelPluginMap,
     convertMap,
     groupMap,
+    coverageConfig,
   }
   if (jsenvDirectoryClean) {
     logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`)

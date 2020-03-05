@@ -96,6 +96,8 @@ export const executePlan = async ({
       babelPluginMap,
       convertMap,
       compileGroupCount,
+
+      coverageConfig,
     }),
   ])
 
