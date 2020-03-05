@@ -3,8 +3,13 @@ import {
   createCancellationTokenForProcess,
   metaMapToSpecifierMetaMap,
   normalizeSpecifierMetaMap,
+  urlToFileSystemPath,
+  ensureEmptyDirectory,
+  resolveDirectoryUrl,
   urlToMeta,
+  resolveUrl,
 } from "@jsenv/util"
+
 import { createLogger } from "@jsenv/logger"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { executePlan } from "./internal/executing/executePlan.js"
@@ -59,7 +64,7 @@ export const executeTestPlan = async ({
   coverageJsonFileLog = true,
   coverageJsonFileRelativeUrl = "./coverage/coverage-final.json",
   coverageHtmlDirectory = !process.env.CI,
-  coverageHtmlDirectoryRelativeUrl = "./coverage",
+  coverageHtmlDirectoryRelativeUrl = "./coverage/",
   coverageHtmlDirectoryIndexLog = true,
 
   // for chromiumExecutablePath, firefoxExecutablePath and webkitExecutablePath
@@ -169,34 +174,35 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
     }
 
     const promises = []
-    if (coverage && coverageJsonFile) {
+    // keep this one first because it does ensureEmptyDirectory
+    // and in case coverage json file gets written in the same directory
+    // it must be done before
+    if (coverage && coverageHtmlDirectory) {
+      const coverageHtmlDirectoryUrl = resolveDirectoryUrl(
+        coverageHtmlDirectoryRelativeUrl,
+        projectDirectoryUrl,
+      )
+      await ensureEmptyDirectory(coverageHtmlDirectoryUrl)
+      if (coverageHtmlDirectoryIndexLog) {
+        const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`
+        const htmlCoverageDirectoryIndexFilePath = urlToFileSystemPath(
+          htmlCoverageDirectoryIndexFileUrl,
+        )
+        logger.info(`-> ${htmlCoverageDirectoryIndexFilePath}`)
+      }
       promises.push(
-        generateCoverageJsonFile({
-          logger,
-          projectDirectoryUrl,
-          coverageJsonFileRelativeUrl,
-          coverageJsonFileLog,
-          coverageMap: result.coverageMap,
-        }),
+        generateCoverageHtmlDirectory(coverageHtmlDirectoryUrl, coverageHtmlDirectoryUrl),
       )
     }
-    if (coverage && coverageHtmlDirectory) {
-      promises.push(
-        generateCoverageHtmlDirectory({
-          logger,
-          coverageMap: result.coverageMap,
-          projectDirectoryUrl,
-          coverageHtmlDirectoryRelativeUrl,
-          coverageHtmlDirectoryIndexLog,
-        }),
-      )
+    if (coverage && coverageJsonFile) {
+      const coverageJsonFileUrl = resolveUrl(coverageJsonFileRelativeUrl, projectDirectoryUrl)
+      if (coverageJsonFileLog) {
+        logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`)
+      }
+      promises.push(generateCoverageJsonFile(result.coverageMap, coverageJsonFileUrl))
     }
     if (coverage && coverageTextLog) {
-      promises.push(
-        generateCoverageTextLog({
-          coverageMap: result.coverageMap,
-        }),
-      )
+      promises.push(generateCoverageTextLog(result.coverageMap))
     }
     await Promise.all(promises)
 

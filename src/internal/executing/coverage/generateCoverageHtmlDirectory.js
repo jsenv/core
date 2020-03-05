@@ -1,22 +1,11 @@
-import { resolveDirectoryUrl, urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/util"
+import { urlToFileSystemPath } from "@jsenv/util"
 import { require } from "../../require.js"
 
 const libReport = require("istanbul-lib-report")
 const reports = require("istanbul-reports")
 const { createCoverageMap } = require("istanbul-lib-coverage")
 
-export const generateCoverageHtmlDirectory = async ({
-  logger,
-  projectDirectoryUrl,
-  coverageHtmlDirectoryRelativeUrl,
-  coverageHtmlDirectoryIndexLog,
-  coverageMap,
-}) => {
-  const htmlDirectoryUrl = resolveDirectoryUrl(
-    coverageHtmlDirectoryRelativeUrl,
-    projectDirectoryUrl,
-  )
-  await ensureEmptyDirectory(htmlDirectoryUrl)
+export const generateCoverageHtmlDirectory = async (coverageMap, htmlDirectoryUrl) => {
   const htmlDirectoryPath = urlToFileSystemPath(htmlDirectoryUrl)
   const context = libReport.createContext({
     dir: htmlDirectoryPath,
@@ -26,14 +15,7 @@ export const generateCoverageHtmlDirectory = async ({
   const report = reports.create("html", {
     skipEmpty: true,
     skipFull: true,
+    // subdir: 'whatever'
   })
   report.execute(context)
-
-  if (coverageHtmlDirectoryIndexLog) {
-    const htmlCoverageDirectoryIndexFileUrl = `${htmlDirectoryUrl}index.html`
-    const htmlCoverageDirectoryIndexFilePath = urlToFileSystemPath(
-      htmlCoverageDirectoryIndexFileUrl,
-    )
-    logger.info(`-> ${htmlCoverageDirectoryIndexFilePath}`)
-  }
 }
