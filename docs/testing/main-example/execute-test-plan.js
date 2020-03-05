@@ -1,9 +1,10 @@
 import { executeTestPlan, launchNode, launchChromiumTab } from "@jsenv/core"
 
 executeTestPlan({
-  projectDirectoryUrl: new URL("./", import.meta.url),
+  logLevel: "debug",
+  projectDirectoryUrl: new URL("../../../", import.meta.url),
   testPlan: {
-    "./*.test.js": {
+    "./docs/testing/main-example/*.test.js": {
       browser: {
         launch: launchChromiumTab,
       },
