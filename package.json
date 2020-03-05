@@ -53,6 +53,7 @@
     "postinstall": "npm run generate-import-map && npm run install-git-hooks",
     "prepublishOnly": "node ./script/transform-package/remove-postinstall.js && npm run dist",
     "postpublish": "node ./script/transform-package/restore-postinstall.js",
+    "publish-package": "node --no-warnings --experimental-json-modules ./.github/publish-package.js",
     "git-hook-pre-commit": "npm run prettier-format-stage"
   },
   "peerDependencies": {

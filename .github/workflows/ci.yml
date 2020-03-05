@@ -55,7 +55,7 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - name: publish package
         if: github.event_name == 'push' && runner.os == 'Linux' # runner check to run it once
-        run: node ./.github/publish-package.js
+        run: npm run publish-package
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
