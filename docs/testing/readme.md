@@ -95,10 +95,10 @@ It will execute tests and generate `./coverage/` directory with files correspond
 
 ### coverage/index.html
 
-The gif below shows how you can explore your test coverage by opening `coverage/index.html` in your browser.
+You can explore your test coverage by opening `coverage/index.html` in your browser.
 
-![browsing coverage recording](./coverage-browsing-recording.gif)<br />
-— gif generated from [./coverage-browsing-recording.mp4](./coverage-browsing-recording.mp4)
+![browsing coverage index](./coverage-index.png)
+![browsing coverage file](./coverage-file.png)
 
 ### coverage/coverage.json
 

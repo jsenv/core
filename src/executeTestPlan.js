@@ -61,9 +61,9 @@ export const executeTestPlan = async ({
   coverageTextLog = true,
   coverageJsonFile = Boolean(process.env.CI),
   coverageJsonFileLog = true,
-  coverageJsonFileRelativeUrl = "./coverage/coverage-final.json",
+  coverageJsonFileRelativeUrl = "./coverage/coverage.json",
   coverageHtmlDirectory = !process.env.CI,
-  coverageHtmlDirectoryRelativeUrl = "./coverage/",
+  coverageHtmlDirectoryRelativeUrl = "./coverage",
   coverageHtmlDirectoryIndexLog = true,
 
   // for chromiumExecutablePath, firefoxExecutablePath and webkitExecutablePath
