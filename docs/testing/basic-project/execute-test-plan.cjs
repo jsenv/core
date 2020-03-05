@@ -23,7 +23,6 @@ executeTestPlan({
       },
     },
   },
-  coverage: process.argv.includes("--cover"),
   coverageConfig: {
     "./getRuntimeName.js": true,
   },

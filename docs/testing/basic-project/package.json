@@ -11,7 +11,7 @@
     "test-with-coverage": "node --no-warnings ./execute-test-plan.cjs --coverage"
   },
   "devDependencies": {
-    "@jsenv/core": "12.1.0-alpha.3",
+    "@jsenv/core": "12.1.0-alpha.4",
     "playwright-chromium": "0.11.1"
   }
 }
