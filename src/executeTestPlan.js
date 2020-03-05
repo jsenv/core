@@ -71,8 +71,10 @@ export const executeTestPlan = async ({
     const launchLogger = createLogger({ logLevel: launchLogLevel })
     const executeLogger = createLogger({ logLevel: executeLogLevel })
 
-    cancellationToken.register((reason) => {
-      logger.info(`cancellation requested ${reason}`)
+    cancellationToken.register((cancelError) => {
+      if (cancelError.reason === "process SIGINT") {
+        logger.info(`process SIGINT -> cancelling test execution`)
+      }
     })
 
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
