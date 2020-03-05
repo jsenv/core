@@ -1,11 +1,11 @@
-import { resolveDirectoryUrl, urlToFileSystemPath } from "@jsenv/util"
+import { resolveDirectoryUrl, urlToFileSystemPath, ensureEmptyDirectory } from "@jsenv/util"
 import { require } from "../../require.js"
 
 const libReport = require("istanbul-lib-report")
 const reports = require("istanbul-reports")
 const { createCoverageMap } = require("istanbul-lib-coverage")
 
-export const generateCoverageHtmlDirectory = ({
+export const generateCoverageHtmlDirectory = async ({
   projectDirectoryUrl,
   coverageHtmlDirectoryRelativeUrl,
   coverageHtmlDirectoryIndexLog,
@@ -15,6 +15,7 @@ export const generateCoverageHtmlDirectory = ({
     coverageHtmlDirectoryRelativeUrl,
     projectDirectoryUrl,
   )
+  await ensureEmptyDirectory(htmlDirectoryUrl)
   const htmlDirectoryPath = urlToFileSystemPath(htmlDirectoryUrl)
   const context = libReport.createContext({
     dir: htmlDirectoryPath,
