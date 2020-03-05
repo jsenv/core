@@ -10972,7 +10972,8 @@ const startCompileServer = async ({
   babelCompatMap = jsenvBabelPluginCompatMap,
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
-  runtimeAlwaysInsideRuntimeScoreMap = false
+  runtimeAlwaysInsideRuntimeScoreMap = false,
+  coverageConfig
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`);
@@ -11026,7 +11027,8 @@ ${projectDirectoryUrl}`);
   const outDirectoryMeta = {
     babelPluginMap,
     convertMap,
-    groupMap
+    groupMap,
+    coverageConfig
   };
 
   if (jsenvDirectoryClean) {
@@ -11155,20 +11157,20 @@ ${projectDirectoryUrl}`);
 
   const envToString = () => JSON.stringify(env, null, "  ");
 
-  const jsenvImportMapFileUrl = resolveUrl$1("./importMap.json", outDirectoryUrl);
-  const jsenvGroupMapFileUrl = resolveUrl$1("./groupMap.json", outDirectoryUrl);
-  const jsenvEnvFileUrl = resolveUrl$1("./env.json", outDirectoryUrl);
-  await Promise.all([writeFile(jsenvImportMapFileUrl, importMapToString()), writeFile(jsenvGroupMapFileUrl, groupMapToString()), writeFile(jsenvEnvFileUrl, envToString())]);
+  const importMapOutFileUrl = resolveUrl$1("./importMap.json", outDirectoryUrl);
+  const groupMapOutFileUrl = resolveUrl$1("./groupMap.json", outDirectoryUrl);
+  const envOutFileUrl = resolveUrl$1("./env.json", outDirectoryUrl);
+  await Promise.all([writeFile(importMapOutFileUrl, importMapToString()), writeFile(groupMapOutFileUrl, groupMapToString()), writeFile(envOutFileUrl, envToString())]);
 
   if (!writeOnFilesystem) {
     compileServer.stoppedPromise.then(() => {
-      removeFileSystemNode(jsenvImportMapFileUrl, {
+      removeFileSystemNode(importMapOutFileUrl, {
         allowUseless: true
       });
-      removeFileSystemNode(jsenvGroupMapFileUrl, {
+      removeFileSystemNode(groupMapOutFileUrl, {
         allowUseless: true
       });
-      removeFileSystemNode(jsenvEnvFileUrl);
+      removeFileSystemNode(envOutFileUrl);
     });
   }
 
@@ -12519,7 +12521,8 @@ const executeConcurrently = async (executionSteps, {
   completedExecutionLogAbbreviation,
   coverage,
   coverageConfig,
-  coverageIncludeMissing
+  coverageIncludeMissing,
+  ...rest
 }) => {
   if (typeof compileServerOrigin !== "string") {
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`);
@@ -12623,7 +12626,8 @@ ${fileRelativeUrl}`));
         executionId,
         fileRelativeUrl,
         collectCoverage,
-        collectNamespace
+        collectNamespace,
+        ...rest
       });
       const afterExecutionInfo = { ...beforeExecutionInfo,
         ...executionResult
@@ -12779,7 +12783,8 @@ const executePlan = async ({
   // coverage parameters
   coverage,
   coverageConfig,
-  coverageIncludeMissing
+  coverageIncludeMissing,
+  ...rest
 } = {}) => {
   if (coverage) {
     const specifierMetaMapForCover = normalizeSpecifierMetaMap(metaMapToSpecifierMetaMap({
@@ -12823,7 +12828,8 @@ const executePlan = async ({
     // to be sure it stays alive
     babelPluginMap,
     convertMap,
-    compileGroupCount
+    compileGroupCount,
+    coverageConfig
   })]);
   const executionResult = await executeConcurrently(executionSteps, {
     cancellationToken,
@@ -12844,7 +12850,8 @@ const executePlan = async ({
     logSummary,
     coverage,
     coverageConfig,
-    coverageIncludeMissing
+    coverageIncludeMissing,
+    ...rest
   });
   stop("all execution done");
   return executionResult;
@@ -12854,19 +12861,13 @@ const executionIsPassed = ({
   summary
 }) => summary.executionCount === summary.completedCount;
 
-const generateCoverageJsonFile = async ({
-  projectDirectoryUrl,
-  coverageJsonFileRelativeUrl,
-  coverageJsonFileLog,
-  coverageMap
-}) => {
-  const coverageJsonFileUrl = resolveUrl$1(coverageJsonFileRelativeUrl, projectDirectoryUrl);
+const generateCoverageJsonFile = async (coverageMap, coverageJsonFileUrl) => {
   await writeFile(coverageJsonFileUrl, JSON.stringify(coverageMap, null, "  "));
-
-  if (coverageJsonFileLog) {
-    console.log(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`);
-  }
 };
+
+const {
+  readFileSync
+} = require$1("fs");
 
 const libReport = require$1("istanbul-lib-report");
 
@@ -12876,29 +12877,20 @@ const {
   createCoverageMap
 } = require$1("istanbul-lib-coverage");
 
-const generateCoverageHtmlDirectory = ({
-  projectDirectoryUrl,
-  coverageHtmlDirectoryRelativeUrl,
-  coverageHtmlDirectoryIndexLog,
-  coverageMap
-}) => {
-  const htmlDirectoryUrl = resolveDirectoryUrl(coverageHtmlDirectoryRelativeUrl, projectDirectoryUrl);
-  const htmlDirectoryPath = urlToFileSystemPath(htmlDirectoryUrl);
+const generateCoverageHtmlDirectory = async (coverageMap, htmlDirectoryRelativeUrl, projectDirectoryUrl) => {
   const context = libReport.createContext({
-    dir: htmlDirectoryPath,
-    coverageMap: createCoverageMap(coverageMap)
+    dir: urlToFileSystemPath(projectDirectoryUrl),
+    coverageMap: createCoverageMap(coverageMap),
+    sourceFinder: path => {
+      return readFileSync(urlToFileSystemPath(resolveUrl$1(path, projectDirectoryUrl)), "utf8");
+    }
   });
   const report = reports.create("html", {
     skipEmpty: true,
-    skipFull: true
+    skipFull: true,
+    subdir: htmlDirectoryRelativeUrl
   });
   report.execute(context);
-
-  if (coverageHtmlDirectoryIndexLog) {
-    const htmlCoverageDirectoryIndexFileUrl = `${htmlDirectoryUrl}index.html`;
-    const htmlCoverageDirectoryIndexFilePath = urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl);
-    console.log(`-> ${htmlCoverageDirectoryIndexFilePath}`);
-  }
 };
 
 const libReport$1 = require$1("istanbul-lib-report");
@@ -12909,9 +12901,7 @@ const {
   createCoverageMap: createCoverageMap$1
 } = require$1("istanbul-lib-coverage");
 
-const generateCoverageTextLog = ({
-  coverageMap
-}) => {
+const generateCoverageTextLog = coverageMap => {
   const context = libReport$1.createContext({
     coverageMap: createCoverageMap$1(coverageMap)
   });
@@ -12963,7 +12953,7 @@ const executeTestPlan = async ({
   completedExecutionLogMerging = false,
   logSummary = true,
   updateProcessExitCode = true,
-  coverage = process.argv.includes("--coverage"),
+  coverage = process.argv.includes("--cover") || process.argv.includes("--coverage"),
   coverageConfig = jsenvCoverageConfig,
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
@@ -12972,8 +12962,11 @@ const executeTestPlan = async ({
   coverageJsonFileLog = true,
   coverageJsonFileRelativeUrl = "./coverage/coverage-final.json",
   coverageHtmlDirectory = !process.env.CI,
-  coverageHtmlDirectoryRelativeUrl = "./coverage",
-  coverageHtmlDirectoryIndexLog = true
+  coverageHtmlDirectoryRelativeUrl = "./coverage/",
+  coverageHtmlDirectoryIndexLog = true,
+  // for chromiumExecutablePath, firefoxExecutablePath and webkitExecutablePath
+  // but we need something angostic that just forward the params hence using ...rest
+  ...rest
 }) => {
   return catchCancellation(async () => {
     const logger = createLogger({
@@ -12984,6 +12977,11 @@ const executeTestPlan = async ({
     });
     const executeLogger = createLogger({
       logLevel: executeLogLevel
+    });
+    cancellationToken.register(cancelError => {
+      if (cancelError.reason === "process SIGINT") {
+        logger.info(`process SIGINT -> cancelling test execution`);
+      }
     });
     projectDirectoryUrl = assertProjectDirectoryUrl({
       projectDirectoryUrl
@@ -13057,37 +13055,42 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`);
       logSummary,
       coverage,
       coverageConfig,
-      coverageIncludeMissing
+      coverageIncludeMissing,
+      ...rest
     });
 
     if (updateProcessExitCode && !executionIsPassed(result)) {
       process.exitCode = 1;
     }
 
-    const promises = [];
-
-    if (coverage && coverageJsonFile) {
-      promises.push(generateCoverageJsonFile({
-        projectDirectoryUrl,
-        coverageJsonFileRelativeUrl,
-        coverageJsonFileLog,
-        coverageMap: result.coverageMap
-      }));
-    }
+    const promises = []; // keep this one first because it does ensureEmptyDirectory
+    // and in case coverage json file gets written in the same directory
+    // it must be done before
 
     if (coverage && coverageHtmlDirectory) {
-      promises.push(generateCoverageHtmlDirectory({
-        coverageMap: result.coverageMap,
-        projectDirectoryUrl,
-        coverageHtmlDirectoryRelativeUrl,
-        coverageHtmlDirectoryIndexLog
-      }));
+      const coverageHtmlDirectoryUrl = resolveDirectoryUrl(coverageHtmlDirectoryRelativeUrl, projectDirectoryUrl);
+      await ensureEmptyDirectory(coverageHtmlDirectoryUrl);
+
+      if (coverageHtmlDirectoryIndexLog) {
+        const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`;
+        logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
+      }
+
+      promises.push(generateCoverageHtmlDirectory(result.coverageMap, coverageHtmlDirectoryRelativeUrl, projectDirectoryUrl));
+    }
+
+    if (coverage && coverageJsonFile) {
+      const coverageJsonFileUrl = resolveUrl$1(coverageJsonFileRelativeUrl, projectDirectoryUrl);
+
+      if (coverageJsonFileLog) {
+        logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`);
+      }
+
+      promises.push(generateCoverageJsonFile(result.coverageMap, coverageJsonFileUrl));
     }
 
     if (coverage && coverageTextLog) {
-      promises.push(generateCoverageTextLog({
-        coverageMap: result.coverageMap
-      }));
+      promises.push(generateCoverageTextLog(result.coverageMap));
     }
 
     await Promise.all(promises);
@@ -13842,9 +13845,13 @@ const createBrowserIIFEString = data => `(() => {
 })()`;
 
 /* eslint-disable import/max-dependencies */
+
+const playwright = require$1("playwright-core");
+
 const chromiumSharing = createSharing();
 const launchChromium = async ({
   cancellationToken = createCancellationToken(),
+  chromiumExecutablePath,
   browserServerLogLevel,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
@@ -13858,6 +13865,7 @@ const launchChromium = async ({
 }) => {
   const ressourceTracker = trackRessources$1();
   const sharingToken = share ? chromiumSharing.getSharingToken({
+    chromiumExecutablePath,
     headless,
     debug,
     debugPort
@@ -13869,6 +13877,7 @@ const launchChromium = async ({
       ressourceTracker,
       options: {
         headless,
+        executablePath: chromiumExecutablePath,
         ...(debug ? {
           devtools: true
         } : {}),
@@ -13934,6 +13943,7 @@ const launchChromiumTab = namedArgs => launchChromium({
 const firefoxSharing = createSharing();
 const launchFirefox = async ({
   cancellationToken = createCancellationToken(),
+  firefoxExecutablePath,
   browserServerLogLevel,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
@@ -13944,6 +13954,7 @@ const launchFirefox = async ({
 }) => {
   const ressourceTracker = trackRessources$1();
   const sharingToken = share ? firefoxSharing.getSharingToken({
+    firefoxExecutablePath,
     headless
   }) : firefoxSharing.getUniqueSharingToken();
 
@@ -13952,7 +13963,8 @@ const launchFirefox = async ({
       cancellationToken,
       ressourceTracker,
       options: {
-        headless
+        headless,
+        executablePath: firefoxExecutablePath
       },
       stopOnExit
     });
@@ -13984,6 +13996,7 @@ const launchFirefoxTab = namedArgs => launchFirefox({
 const webkitSharing = createSharing();
 const launchWebkit = async ({
   cancellationToken = createCancellationToken(),
+  webkitExecutablePath,
   browserServerLogLevel,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
@@ -13994,6 +14007,7 @@ const launchWebkit = async ({
 }) => {
   const ressourceTracker = trackRessources$1();
   const sharingToken = share ? webkitSharing.getSharingToken({
+    webkitExecutablePath,
     headless
   }) : webkitSharing.getUniqueSharingToken();
 
@@ -14002,7 +14016,8 @@ const launchWebkit = async ({
       cancellationToken,
       ressourceTracker,
       options: {
-        headless
+        headless,
+        executablePath: webkitExecutablePath
       },
       stopOnExit
     });
@@ -14038,23 +14053,6 @@ const launchBrowser = async (browserName, {
   options,
   stopOnExit
 }) => {
-  let playwright;
-
-  try {
-    playwright = require$1("playwright");
-  } catch (e) {
-    if (e.code === "MODULE_NOT_FOUND") {
-      throw new Error(`playwright module not found.
-Please note playwright is a peer dependency of @jsenv/core.
-It means you must have playwright in your dependencies/devDependencies.
-You can install playwright using the following command:
-
-npm install playwright`);
-    }
-
-    throw e;
-  }
-
   const browserClass = playwright[browserName];
   const launchOperation = createStoppableOperation({
     cancellationToken,

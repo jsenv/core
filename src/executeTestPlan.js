@@ -186,7 +186,13 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
         const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`
         logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`)
       }
-      promises.push(generateCoverageHtmlDirectory(result.coverageMap, coverageHtmlDirectoryUrl))
+      promises.push(
+        generateCoverageHtmlDirectory(
+          result.coverageMap,
+          coverageHtmlDirectoryRelativeUrl,
+          projectDirectoryUrl,
+        ),
+      )
     }
     if (coverage && coverageJsonFile) {
       const coverageJsonFileUrl = resolveUrl(coverageJsonFileRelativeUrl, projectDirectoryUrl)

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "12.1.0-alpha.4",
+  "version": "12.1.0-alpha.6",
   "description": "Execute JavaScript on multiple environments for testing.",
   "license": "MIT",
   "repository": {
@@ -114,10 +114,10 @@
     "eventsource": "1.0.7",
     "html-minifier": "4.0.0",
     "humanize-duration": "3.21.0",
-    "istanbul-lib-coverage": "3.0.0-alpha.0",
-    "istanbul-lib-instrument": "4.0.0-alpha.0",
-    "istanbul-lib-report": "3.0.0-alpha.0",
-    "istanbul-reports": "3.0.0-alpha.1",
+    "istanbul-lib-coverage": "3.0.0",
+    "istanbul-lib-instrument": "4.0.0",
+    "istanbul-lib-report": "3.0.0",
+    "istanbul-reports": "3.0.0",
     "node-notifier": "6.0.0",
     "playwright-core": "0.11.1",
     "proper-lockfile": "4.1.1",
