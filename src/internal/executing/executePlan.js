@@ -43,6 +43,8 @@ export const executePlan = async ({
   coverage,
   coverageConfig,
   coverageIncludeMissing,
+
+  ...rest
 } = {}) => {
   if (coverage) {
     const specifierMetaMapForCover = normalizeSpecifierMetaMap(
@@ -121,6 +123,8 @@ export const executePlan = async ({
     coverage,
     coverageConfig,
     coverageIncludeMissing,
+
+    ...rest,
   })
 
   stop("all execution done")

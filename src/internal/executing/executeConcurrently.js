@@ -41,6 +41,8 @@ export const executeConcurrently = async (
     coverage,
     coverageConfig,
     coverageIncludeMissing,
+    
+    ...rest
   },
 ) => {
   if (typeof compileServerOrigin !== "string") {
@@ -159,6 +161,8 @@ ${fileRelativeUrl}`),
         fileRelativeUrl,
         collectCoverage,
         collectNamespace,
+
+        ...rest,
       })
       const afterExecutionInfo = {
         ...beforeExecutionInfo,

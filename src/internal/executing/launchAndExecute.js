@@ -146,6 +146,7 @@ export const launchAndExecute = async ({
     runtimeStartedCallback,
     runtimeStoppedCallback,
     collectCoverage,
+
     ...rest,
   })
 
@@ -232,7 +233,11 @@ const computeExecutionResult = async ({
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
-      const value = await launch({ cancellationToken, logger: launchLogger, ...rest })
+      const value = await launch({
+        cancellationToken,
+        logger: launchLogger,
+        ...rest,
+      })
       runtimeStartedCallback({ name: value.name, version: value.version })
       return value
     },

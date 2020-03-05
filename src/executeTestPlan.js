@@ -61,6 +61,10 @@ export const executeTestPlan = async ({
   coverageHtmlDirectory = !process.env.CI,
   coverageHtmlDirectoryRelativeUrl = "./coverage",
   coverageHtmlDirectoryIndexLog = true,
+
+  // for chromiumExecutablePath, firefoxExecutablePath and webkitExecutablePath
+  // but we need something angostic that just forward the params hence using ...rest
+  ...rest
 }) => {
   return catchCancellation(async () => {
     const logger = createLogger({ logLevel })
@@ -154,6 +158,8 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       coverage,
       coverageConfig,
       coverageIncludeMissing,
+
+      ...rest,
     })
 
     if (updateProcessExitCode && !executionIsPassed(result)) {
