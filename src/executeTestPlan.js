@@ -67,6 +67,10 @@ export const executeTestPlan = async ({
     const launchLogger = createLogger({ logLevel: launchLogLevel })
     const executeLogger = createLogger({ logLevel: executeLogLevel })
 
+    cancellationToken.register((reason) => {
+      logger.info(`cancellation requested ${reason}`)
+    })
+
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
