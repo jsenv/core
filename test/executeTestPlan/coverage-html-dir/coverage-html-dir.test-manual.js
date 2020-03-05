@@ -15,7 +15,7 @@ const testPlan = {
   },
 }
 
-await executeTestPlan({
+executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
   logLevel: "info",
   jsenvDirectoryRelativeUrl,
@@ -28,5 +28,5 @@ await executeTestPlan({
   coverageJsonFile: true,
   coverageJsonFileRelativeUrl: `${testDirectoryRelativeUrl}coverage/coverage-final.json`,
   coverageHtmlDirectory: true,
-  coverageHtmlDirectoryRelativeUrl: `${testDirectoryRelativeUrl}coverage/`,
+  coverageHtmlDirectoryRelativeUrl: `${testDirectoryRelativeUrl}coverage`,
 })

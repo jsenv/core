@@ -2,11 +2,12 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "node",
+      "name": "node 12",
       "type": "node",
       "request": "launch",
       "protocol": "inspector",
       "program": "${file}",
+      "runtimeVersion": "12.8.0",
       "runtimeArgs": ["--unhandled-rejections=strict"],
       "autoAttachChildProcesses": true,
       // "sourceMaps": false,

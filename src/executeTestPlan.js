@@ -9,7 +9,6 @@ import {
   urlToMeta,
   resolveUrl,
 } from "@jsenv/util"
-
 import { createLogger } from "@jsenv/logger"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { executePlan } from "./internal/executing/executePlan.js"
@@ -185,14 +184,9 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       await ensureEmptyDirectory(coverageHtmlDirectoryUrl)
       if (coverageHtmlDirectoryIndexLog) {
         const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`
-        const htmlCoverageDirectoryIndexFilePath = urlToFileSystemPath(
-          htmlCoverageDirectoryIndexFileUrl,
-        )
-        logger.info(`-> ${htmlCoverageDirectoryIndexFilePath}`)
+        logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`)
       }
-      promises.push(
-        generateCoverageHtmlDirectory(coverageHtmlDirectoryUrl, coverageHtmlDirectoryUrl),
-      )
+      promises.push(generateCoverageHtmlDirectory(result.coverageMap, coverageHtmlDirectoryUrl))
     }
     if (coverage && coverageJsonFile) {
       const coverageJsonFileUrl = resolveUrl(coverageJsonFileRelativeUrl, projectDirectoryUrl)

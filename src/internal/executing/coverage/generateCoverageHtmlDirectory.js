@@ -6,9 +6,8 @@ const reports = require("istanbul-reports")
 const { createCoverageMap } = require("istanbul-lib-coverage")
 
 export const generateCoverageHtmlDirectory = async (coverageMap, htmlDirectoryUrl) => {
-  const htmlDirectoryPath = urlToFileSystemPath(htmlDirectoryUrl)
   const context = libReport.createContext({
-    dir: htmlDirectoryPath,
+    dir: urlToFileSystemPath(htmlDirectoryUrl),
     coverageMap: createCoverageMap(coverageMap),
   })
 
