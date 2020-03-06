@@ -83,7 +83,9 @@ npm install
 node ./execute-test-plan.js
 ```
 
-It will execute all your tests as shown in [Test execution recorded](#Test-execution-recorded)
+It will execute all your tests.
+
+![basic project test execution terminal screenshot](./basic-project-terminal-screenshot.png)
 
 ## 3 - Generate test coverage
 
@@ -137,6 +139,8 @@ If dynamic import rejects, execution is considered errored.<br />
 If dynamic import takes too long to settle, execution is considered timedout.<br />
 
 Once the execution becomes either successfull, errored or timedout jsenv stops the runtime launched to execute the test. Inside a node process there is a special behaviour where jsenv sends `SIGTERM` signal to the node process executing your test. After 8s, if the node process has not exited by its own it is killed by force.
+
+![test execution all status terminal screenshot](./all-status-terminal-screenshot.png)
 
 ## Execution error
 
@@ -386,11 +390,11 @@ executeTestPlan({
 
 `completedExecutionLogAbbreviation` parameter is a boolean controlling verbosity of completed execution logs. This parameter is optional and disabled by default.
 
-![test execution mixed full terminal screenshot](./test-execution-mixed-full-terminal.png)
+![test execution mixed full terminal screenshot](./mixed-full-terminal-screenshot.png)
 
 Becomes
 
-![test execution mixed short terminal screenshot](./test-execution-mixed-short-terminal.png)
+![test execution mixed short terminal screenshot](./mixed-short-terminal-screenshot.png)
 
 > Note how completed executions are shorter. The idea is that you don't need additional information for completed executions.
 
@@ -398,11 +402,11 @@ Becomes
 
 `completedExecutionLogMerging` parameter is a boolean controlling if completed execution logs will be merged together when adjacent. This parameter is optional and disabled by default.
 
-![test execution mixed short terminal screenshot](./test-execution-mixed-short-terminal.png)
+![test execution mixed short terminal screenshot](./mixed-short-terminal-screenshot.png)
 
 Becomes
 
-![test execution mixed short and merge terminal screenshot](./test-execution-mixed-short-merge-terminal.png)
+![test execution mixed short and merge terminal screenshot](./mixed-short-merge-terminal-screenshot.png)
 
 > Note how the first two completed execution got merged into one line. The idea is to reduce output length as long as execution are completed.
 
