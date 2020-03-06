@@ -12,6 +12,9 @@
 - [compileServerCertificate](#compileServerCertificate)
 - [compileServerIp](#compileServerIp)
 - [compileServerPort](#compileServerPort)
+- [chromiumExecutablePath](#chromiumExecutablePath)
+- [firefoxExecutablePath](#firefoxExecutablePath)
+- [webkitExecutablePath](#webkitExecutablePath)
 
 # projectDirectoryUrl
 
@@ -120,3 +123,21 @@ This parameter only adds an extension on extensionless import, it cannot try dif
 # compileServerPort
 
 `compileServerPort` parameter is a number controlling the port jsenv compile server will listen to. This parameter is optional with a default value of `0` meaning a random available port will be used. For more information check https://github.com/jsenv/jsenv-server/blob/master/docs/start-server.md#port.
+
+# chromiumExecutablePath
+
+`chromiumExecutablePath` is a string leading to a chromium executable file. It is used internally by playwright to launch a chromium browser.
+
+It's easier to let `playwright-chromium` decide this value for you by adding it to your dependencies as documented in [Browser launchers](./launcher.md#Browser-launchers).
+
+# firefoxExecutablePath
+
+`firefoxExecutablePath` is a string leading to a firefox executable file. It is used internally by playwright to launch a firefox browser.
+
+It's easier to let `playwright-firefox` decide this value for you by adding it to your dependencies as documented in [Browser launchers](./launcher.md#Browser-launchers).
+
+# webkitExecutablePath
+
+`webkitExecutablePath` is a string leading to a webkit executable file. It is used internally by playwright to launch a webkit browser.
+
+It's easier to let `playwright-webkit` decide this value for you by adding it to your dependencies as documented in [Browser launchers](./launcher.md#Browser-launchers).

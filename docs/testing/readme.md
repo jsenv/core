@@ -326,7 +326,7 @@ It exists to prevent an execution planified by a previous specifier.
 
 #### launch
 
-A function capable to launch a runtime. This parameter is **required**
+A function capable to launch a runtime. This parameter is **required**, the available launch functions are documented in [launcher](../launcher.md) documentation.
 
 #### allocatedMs
 
