@@ -34,7 +34,7 @@ const actual = await launchAndExecute({
       compileServerOrigin,
     }),
   collectNamespace: false,
-  platformErrorCallback: (value) => {
+  runtimeErrorCallback: (value) => {
     errorCallbackArgValue = value
   },
 })

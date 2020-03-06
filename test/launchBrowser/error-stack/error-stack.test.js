@@ -1,5 +1,4 @@
 import { basename } from "path"
-import { createLogger } from "@jsenv/logger"
 import { assert } from "@jsenv/assert"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
@@ -27,9 +26,9 @@ await Promise.all(
   [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
     const result = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
-      // sets executeLogger to off to avoid seeing an expected error in logs
-      executeLogger: createLogger({ logLevel: "off" }),
-      // stopPlatformAfterExecute: false,
+      // sets exectionLogLevel to off to avoid seeing an expected error in logs
+      exectionLogLevel: "off",
+      // stopAfterExecute: false,
       fileRelativeUrl,
       launch: (options) =>
         launchBrowser({

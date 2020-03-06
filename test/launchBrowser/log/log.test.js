@@ -37,7 +37,7 @@ await Promise.all(
       fileRelativeUrl,
       captureConsole: true,
       collectNamespace: false,
-      // stopPlatformAfterExecute: false,
+      stopAfterExecute: true,
     })
     const expected = {
       status: "completed",

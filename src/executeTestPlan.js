@@ -3,7 +3,11 @@ import {
   createCancellationTokenForProcess,
   metaMapToSpecifierMetaMap,
   normalizeSpecifierMetaMap,
+  urlToFileSystemPath,
+  ensureEmptyDirectory,
+  resolveDirectoryUrl,
   urlToMeta,
+  resolveUrl,
 } from "@jsenv/util"
 import { createLogger } from "@jsenv/logger"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
@@ -18,8 +22,7 @@ export const executeTestPlan = async ({
   cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
-  launchLogLevel = "warn",
-  executeLogLevel = "off",
+  executionLogLevel = "warn",
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -39,33 +42,42 @@ export const executeTestPlan = async ({
   testPlan,
   concurrencyLimit,
   executionDefaultOptions = {},
-  // stopPlatformAfterExecute: true to ensure platform is stopped once executed
+  // stopAfterExecute: true to ensure runtime is stopped once executed
   // because we have what we wants: execution is completed and
   // we have associated coverageMap and capturedConsole
   // you can still pass false to debug what happens
   // meaning all node process and browsers launched stays opened
-  stopPlatformAfterExecute = true,
+  stopAfterExecute = true,
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   logSummary = true,
   updateProcessExitCode = true,
 
-  coverage = process.argv.includes("--coverage"),
+  coverage = process.argv.includes("--cover") || process.argv.includes("--coverage"),
   coverageConfig = jsenvCoverageConfig,
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
   coverageTextLog = true,
   coverageJsonFile = Boolean(process.env.CI),
   coverageJsonFileLog = true,
-  coverageJsonFileRelativeUrl = "./coverage/coverage-final.json",
+  coverageJsonFileRelativeUrl = "./coverage/coverage.json",
   coverageHtmlDirectory = !process.env.CI,
   coverageHtmlDirectoryRelativeUrl = "./coverage",
   coverageHtmlDirectoryIndexLog = true,
+
+  // for chromiumExecutablePath, firefoxExecutablePath and webkitExecutablePath
+  // but we need something angostic that just forward the params hence using ...rest
+  ...rest
 }) => {
   return catchCancellation(async () => {
     const logger = createLogger({ logLevel })
-    const launchLogger = createLogger({ logLevel: launchLogLevel })
-    const executeLogger = createLogger({ logLevel: executeLogLevel })
+    const executionLogger = createLogger({ logLevel: executionLogLevel })
+
+    cancellationToken.register((cancelError) => {
+      if (cancelError.reason === "process SIGINT") {
+        logger.info(`process SIGINT -> cancelling test execution`)
+      }
+    })
 
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
@@ -121,8 +133,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       cancellationToken,
       compileServerLogLevel,
       logger,
-      launchLogger,
-      executeLogger,
+      executionLogger,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
@@ -142,7 +153,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       plan: testPlan,
       concurrencyLimit,
       executionDefaultOptions,
-      stopPlatformAfterExecute,
+      stopAfterExecute,
       completedExecutionLogMerging,
       completedExecutionLogAbbreviation,
       logSummary,
@@ -150,6 +161,8 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       coverage,
       coverageConfig,
       coverageIncludeMissing,
+
+      ...rest,
     })
 
     if (updateProcessExitCode && !executionIsPassed(result)) {
@@ -157,32 +170,36 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
     }
 
     const promises = []
-    if (coverage && coverageJsonFile) {
+    // keep this one first because it does ensureEmptyDirectory
+    // and in case coverage json file gets written in the same directory
+    // it must be done before
+    if (coverage && coverageHtmlDirectory) {
+      const coverageHtmlDirectoryUrl = resolveDirectoryUrl(
+        coverageHtmlDirectoryRelativeUrl,
+        projectDirectoryUrl,
+      )
+      await ensureEmptyDirectory(coverageHtmlDirectoryUrl)
+      if (coverageHtmlDirectoryIndexLog) {
+        const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`
+        logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`)
+      }
       promises.push(
-        generateCoverageJsonFile({
+        generateCoverageHtmlDirectory(
+          result.coverageMap,
+          coverageHtmlDirectoryRelativeUrl,
           projectDirectoryUrl,
-          coverageJsonFileRelativeUrl,
-          coverageJsonFileLog,
-          coverageMap: result.coverageMap,
-        }),
+        ),
       )
     }
-    if (coverage && coverageHtmlDirectory) {
-      promises.push(
-        generateCoverageHtmlDirectory({
-          coverageMap: result.coverageMap,
-          projectDirectoryUrl,
-          coverageHtmlDirectoryRelativeUrl,
-          coverageHtmlDirectoryIndexLog,
-        }),
-      )
+    if (coverage && coverageJsonFile) {
+      const coverageJsonFileUrl = resolveUrl(coverageJsonFileRelativeUrl, projectDirectoryUrl)
+      if (coverageJsonFileLog) {
+        logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`)
+      }
+      promises.push(generateCoverageJsonFile(result.coverageMap, coverageJsonFileUrl))
     }
     if (coverage && coverageTextLog) {
-      promises.push(
-        generateCoverageTextLog({
-          coverageMap: result.coverageMap,
-        }),
-      )
+      promises.push(generateCoverageTextLog(result.coverageMap))
     }
     await Promise.all(promises)
 

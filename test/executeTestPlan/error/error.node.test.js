@@ -20,7 +20,7 @@ const actual = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
   jsenvDirectoryRelativeUrl,
   testPlan,
-  executeLogLevel: "off",
+  executionLogLevel: "off",
 })
 const expected = {
   summary: {
@@ -38,8 +38,8 @@ const expected = {
         status: "errored",
         error: new Error(`ask() should return 42, got 40`),
         consoleCalls: actual.report[fileRelativeUrl].node.consoleCalls,
-        platformName: "node",
-        platformVersion: actual.report[fileRelativeUrl].node.platformVersion,
+        runtimeName: "node",
+        runtimeVersion: actual.report[fileRelativeUrl].node.runtimeVersion,
       },
     },
   },

@@ -4,7 +4,7 @@ const libReport = require("istanbul-lib-report")
 const reports = require("istanbul-reports")
 const { createCoverageMap } = require("istanbul-lib-coverage")
 
-export const generateCoverageTextLog = ({ coverageMap }) => {
+export const generateCoverageTextLog = (coverageMap) => {
   const context = libReport.createContext({
     coverageMap: createCoverageMap(coverageMap),
   })

@@ -1,37 +1,28 @@
-import { resolveDirectoryUrl, urlToFileSystemPath } from "@jsenv/util"
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/util"
 import { require } from "../../require.js"
 
+const { readFileSync } = require("fs")
 const libReport = require("istanbul-lib-report")
 const reports = require("istanbul-reports")
 const { createCoverageMap } = require("istanbul-lib-coverage")
 
-export const generateCoverageHtmlDirectory = ({
-  projectDirectoryUrl,
-  coverageHtmlDirectoryRelativeUrl,
-  coverageHtmlDirectoryIndexLog,
+export const generateCoverageHtmlDirectory = async (
   coverageMap,
-}) => {
-  const htmlDirectoryUrl = resolveDirectoryUrl(
-    coverageHtmlDirectoryRelativeUrl,
-    projectDirectoryUrl,
-  )
-  const htmlDirectoryPath = urlToFileSystemPath(htmlDirectoryUrl)
+  htmlDirectoryRelativeUrl,
+  projectDirectoryUrl,
+) => {
   const context = libReport.createContext({
-    dir: htmlDirectoryPath,
+    dir: urlToFileSystemPath(projectDirectoryUrl),
     coverageMap: createCoverageMap(coverageMap),
+    sourceFinder: (path) => {
+      return readFileSync(urlToFileSystemPath(resolveUrl(path, projectDirectoryUrl)), "utf8")
+    },
   })
 
   const report = reports.create("html", {
     skipEmpty: true,
     skipFull: true,
+    subdir: htmlDirectoryRelativeUrl,
   })
   report.execute(context)
-
-  if (coverageHtmlDirectoryIndexLog) {
-    const htmlCoverageDirectoryIndexFileUrl = `${htmlDirectoryUrl}index.html`
-    const htmlCoverageDirectoryIndexFilePath = urlToFileSystemPath(
-      htmlCoverageDirectoryIndexFileUrl,
-    )
-    console.log(`-> ${htmlCoverageDirectoryIndexFilePath}`)
-  }
 }

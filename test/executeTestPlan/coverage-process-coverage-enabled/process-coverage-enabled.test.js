@@ -28,8 +28,8 @@ const expected = {
       status: "completed",
       namespace: { COVERAGE_ENABLED: "true" },
       coverageMap: undefined,
-      platformName: "node",
-      platformVersion: actual[fileRelativeUrl].node.platformVersion,
+      runtimeName: "node",
+      runtimeVersion: actual[fileRelativeUrl].node.runtimeVersion,
     },
   },
 }

@@ -4,7 +4,7 @@ import { fetchAndEvalUsingXHR } from "../fetchAndEvalUsingXHR.js"
 window.execute = async ({
   outDirectoryRelativeUrl,
   fileRelativeUrl,
-  browserPlatformFileRelativeUrl,
+  browserRuntimeFileRelativeUrl,
   sourcemapMainFileRelativeUrl,
   sourcemapMappingFileRelativeUrl,
   compileServerOrigin,
@@ -14,16 +14,16 @@ window.execute = async ({
   // do not log in the console
   // because error handling becomes responsability
   // of node code launching the browser
-  // it avoids seeing error in platform logs during testing
+  // it avoids seeing error in runtime logs during testing
   errorExposureInConsole = false,
   errorExposureInNotification = false,
   errorExposureInDocument = true,
 }) => {
-  const browserPlatformCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/${browserPlatformFileRelativeUrl}`
-  await fetchAndEvalUsingXHR(browserPlatformCompiledFileRemoteUrl)
-  const { __browserPlatform__ } = window
+  const browserRuntimeCompiledFileRemoteUrl = `${compileServerOrigin}/${outDirectoryRelativeUrl}otherwise-global-bundle/${browserRuntimeFileRelativeUrl}`
+  await fetchAndEvalUsingXHR(browserRuntimeCompiledFileRemoteUrl)
+  const { __browserRuntime__ } = window
 
-  const { compileDirectoryRemoteUrl, executeFile } = __browserPlatform__.create({
+  const { compileDirectoryRemoteUrl, executeFile } = __browserRuntime__.create({
     compileServerOrigin,
   })
   const compiledFileRemoteUrl = `${compileDirectoryRemoteUrl}${fileRelativeUrl}`

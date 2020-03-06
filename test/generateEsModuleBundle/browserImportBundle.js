@@ -2,7 +2,7 @@ import { startServer, firstService, serveFile } from "@jsenv/server"
 import { resolveDirectoryUrl, resolveUrl, urlToFileSystemPath } from "@jsenv/util"
 import { require } from "../../src/internal/require.js"
 
-const { chromium } = require("playwright")
+const { chromium } = require("playwright-chromium")
 
 export const browserImportBundle = async ({
   projectDirectoryUrl,

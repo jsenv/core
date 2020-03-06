@@ -36,7 +36,7 @@ await Promise.all(
           compileServerOrigin,
           // headless: false,
         }),
-      // stopPlatformAfterExecute: false,
+      // stopAfterExecute: false,
       collectNamespace: true,
       htmlFileRelativeUrl,
     })

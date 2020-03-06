@@ -22,8 +22,7 @@ export const executeConcurrently = async (
   {
     cancellationToken,
     logger,
-    launchLogger,
-    executeLogger,
+    executionLogLevel,
 
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
@@ -33,7 +32,7 @@ export const executeConcurrently = async (
 
     concurrencyLimit = Math.max(cpus.length - 1, 1),
     executionDefaultOptions = {},
-    stopPlatformAfterExecute,
+    stopAfterExecute,
     logSummary,
     completedExecutionLogMerging,
     completedExecutionLogAbbreviation,
@@ -41,6 +40,8 @@ export const executeConcurrently = async (
     coverage,
     coverageConfig,
     coverageIncludeMissing,
+
+    ...rest
   },
 ) => {
   if (typeof compileServerOrigin !== "string") {
@@ -54,8 +55,8 @@ export const executeConcurrently = async (
     // so log would be a mess to read
     mirrorConsole: false,
     captureConsole: true,
-    collectPlatformName: true,
-    collectPlatformVersion: true,
+    collectRuntimeName: true,
+    collectRuntimeVersion: true,
     collectNamespace: false,
     collectCoverage: coverage,
 
@@ -108,8 +109,8 @@ ${fileRelativeUrl}`),
         measureDuration,
         mirrorConsole,
         captureConsole,
-        collectPlatformName,
-        collectPlatformVersion,
+        collectRuntimeName,
+        collectRuntimeVersion,
         collectCoverage,
         collectNamespace,
 
@@ -137,8 +138,7 @@ ${fileRelativeUrl}`),
       beforeExecutionCallback(beforeExecutionInfo)
       const executionResult = await launchAndExecute({
         cancellationToken: executionCancellationToken,
-        launchLogger,
-        executeLogger,
+        logLevel: executionLogLevel,
         launch: (params) =>
           launch({
             projectDirectoryUrl,
@@ -148,17 +148,19 @@ ${fileRelativeUrl}`),
           }),
         allocatedMs,
         measureDuration,
-        collectPlatformName,
-        collectPlatformVersion,
+        collectRuntimeName,
+        collectRuntimeVersion,
         mirrorConsole,
         captureConsole,
         gracefulStopAllocatedMs,
-        stopPlatformAfterExecute,
-        stopPlatformAfterExecuteReason: "execution-done",
+        stopAfterExecute,
+        stopAfterExecuteReason: "execution-done",
         executionId,
         fileRelativeUrl,
         collectCoverage,
         collectNamespace,
+
+        ...rest,
       })
       const afterExecutionInfo = {
         ...beforeExecutionInfo,
@@ -270,8 +272,8 @@ const reportToSummary = (report) => {
       return (
         previous +
         Object.keys(fileExecutionResult).filter((executionName) => {
-          const fileExecutionResultForPlatform = fileExecutionResult[executionName]
-          return predicate(fileExecutionResultForPlatform)
+          const fileExecutionResultForRuntime = fileExecutionResult[executionName]
+          return predicate(fileExecutionResultForRuntime)
         }).length
       )
     }, 0)

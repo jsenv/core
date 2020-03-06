@@ -6,4 +6,5 @@ execute({
   projectDirectoryUrl: __dirname,
   launch: launchChromium,
   fileRelativeUrl: process.argv[2],
+  stopAfterExecute: true,
 })

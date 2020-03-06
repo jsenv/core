@@ -8055,11 +8055,11 @@ const jsenvBabelPluginCompatMap = {
 // to the generated bundle
 const jsenvPluginCompatMap = {};
 
-const computeBabelPluginMapForPlatform = ({
+const computeBabelPluginMapForRuntime = ({
   babelPluginMap,
   babelPluginCompatMap = jsenvBabelPluginCompatMap,
-  platformName,
-  platformVersion
+  runtimeName,
+  runtimeVersion
 }) => {
   if (typeof babelPluginMap !== "object") {
     throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`);
@@ -8069,54 +8069,54 @@ const computeBabelPluginMapForPlatform = ({
     throw new TypeError(`babelPluginCompatMap must be an object, got ${babelPluginCompatMap}`);
   }
 
-  if (typeof platformName !== "string") {
-    throw new TypeError(`platformName must be a string, got ${platformName}`);
+  if (typeof runtimeName !== "string") {
+    throw new TypeError(`runtimeName must be a string, got ${runtimeName}`);
   }
 
-  if (typeof platformVersion !== "string") {
-    throw new TypeError(`platformVersion must be a string, got ${platformVersion}`);
+  if (typeof runtimeVersion !== "string") {
+    throw new TypeError(`runtimeVersion must be a string, got ${runtimeVersion}`);
   }
 
-  const babelPluginMapForPlatform = {};
+  const babelPluginMapForRuntime = {};
   Object.keys(babelPluginMap).forEach(key => {
-    const compatible = platformIsCompatibleWithFeature({
-      platformName,
-      platformVersion,
-      platformCompatMap: key in babelPluginCompatMap ? babelPluginCompatMap[key] : {}
+    const compatible = runtimeIsCompatibleWithFeature({
+      runtimeName,
+      runtimeVersion,
+      runtimeCompatMap: key in babelPluginCompatMap ? babelPluginCompatMap[key] : {}
     });
 
     if (!compatible) {
-      babelPluginMapForPlatform[key] = babelPluginMap[key];
+      babelPluginMapForRuntime[key] = babelPluginMap[key];
     }
   });
-  return babelPluginMapForPlatform;
+  return babelPluginMapForRuntime;
 };
 
-const platformIsCompatibleWithFeature = ({
-  platformName,
-  platformVersion,
-  platformCompatMap
+const runtimeIsCompatibleWithFeature = ({
+  runtimeName,
+  runtimeVersion,
+  runtimeCompatMap
 }) => {
-  const platformCompatibleVersion = computePlatformCompatibleVersion({
-    platformCompatMap,
-    platformName
+  const runtimeCompatibleVersion = computeRuntimeCompatibleVersion({
+    runtimeCompatMap,
+    runtimeName
   });
-  const highestVersion = findHighestVersion(platformVersion, platformCompatibleVersion);
-  return highestVersion === platformVersion;
+  const highestVersion = findHighestVersion(runtimeVersion, runtimeCompatibleVersion);
+  return highestVersion === runtimeVersion;
 };
 
-const computePlatformCompatibleVersion = ({
-  platformCompatMap,
-  platformName
+const computeRuntimeCompatibleVersion = ({
+  runtimeCompatMap,
+  runtimeName
 }) => {
-  return platformName in platformCompatMap ? platformCompatMap[platformName] : "Infinity";
+  return runtimeName in runtimeCompatMap ? runtimeCompatMap[runtimeName] : "Infinity";
 };
 
-const computeJsenvPluginMapForPlatform = ({
+const computeJsenvPluginMapForRuntime = ({
   jsenvPluginMap,
   jsenvPluginCompatMap: jsenvPluginCompatMap$1 = jsenvPluginCompatMap,
-  platformName,
-  platformVersion
+  runtimeName,
+  runtimeVersion
 }) => {
   if (typeof jsenvPluginMap !== "object") {
     throw new TypeError(`jsenvPluginMap must be a object, got ${jsenvPluginMap}`);
@@ -8126,67 +8126,67 @@ const computeJsenvPluginMapForPlatform = ({
     throw new TypeError(`jsenvPluginCompatMap must be a string, got ${jsenvPluginCompatMap$1}`);
   }
 
-  if (typeof platformName !== "string") {
-    throw new TypeError(`platformName must be a string, got ${platformName}`);
+  if (typeof runtimeName !== "string") {
+    throw new TypeError(`runtimeName must be a string, got ${runtimeName}`);
   }
 
-  if (typeof platformVersion !== "string") {
-    throw new TypeError(`platformVersion must be a string, got ${platformVersion}`);
+  if (typeof runtimeVersion !== "string") {
+    throw new TypeError(`runtimeVersion must be a string, got ${runtimeVersion}`);
   }
 
-  const jsenvPluginMapForPlatform = {};
+  const jsenvPluginMapForRuntime = {};
   Object.keys(jsenvPluginMap).forEach(key => {
-    const compatible = platformIsCompatibleWithFeature$1({
-      platformName,
-      platformVersion,
+    const compatible = runtimeIsCompatibleWithFeature$1({
+      runtimeName,
+      runtimeVersion,
       featureCompat: key in jsenvPluginCompatMap$1 ? jsenvPluginCompatMap$1[key] : {}
     });
 
     if (!compatible) {
-      jsenvPluginMapForPlatform[key] = jsenvPluginMap[key];
+      jsenvPluginMapForRuntime[key] = jsenvPluginMap[key];
     }
   });
-  return jsenvPluginMapForPlatform;
+  return jsenvPluginMapForRuntime;
 };
 
-const platformIsCompatibleWithFeature$1 = ({
-  platformName,
-  platformVersion,
+const runtimeIsCompatibleWithFeature$1 = ({
+  runtimeName,
+  runtimeVersion,
   featureCompat
 }) => {
-  const platformCompatibleVersion = computePlatformCompatibleVersion$1({
+  const runtimeCompatibleVersion = computeRuntimeCompatibleVersion$1({
     featureCompat,
-    platformName
+    runtimeName
   });
-  const highestVersion = findHighestVersion(platformVersion, platformCompatibleVersion);
-  return highestVersion === platformVersion;
+  const highestVersion = findHighestVersion(runtimeVersion, runtimeCompatibleVersion);
+  return highestVersion === runtimeVersion;
 };
 
-const computePlatformCompatibleVersion$1 = ({
+const computeRuntimeCompatibleVersion$1 = ({
   featureCompat,
-  platformName
+  runtimeName
 }) => {
-  return platformName in featureCompat ? featureCompat[platformName] : "Infinity";
+  return runtimeName in featureCompat ? featureCompat[runtimeName] : "Infinity";
 };
 
 const groupHaveSameRequirements = (leftGroup, rightGroup) => {
   return leftGroup.babelPluginRequiredNameArray.join("") === rightGroup.babelPluginRequiredNameArray.join("") && leftGroup.jsenvPluginRequiredNameArray.join("") === rightGroup.jsenvPluginRequiredNameArray.join("");
 };
 
-const generatePlatformGroupArray = ({
+const generateRuntimeGroupArray = ({
   babelPluginMap,
   jsenvPluginMap,
   babelPluginCompatMap = jsenvBabelPluginCompatMap,
   jsenvPluginCompatMap: jsenvPluginCompatMap$1 = jsenvPluginCompatMap,
-  platformName
+  runtimeName
 }) => {
   const versionArray = [];
   Object.keys(babelPluginMap).forEach(babelPluginKey => {
     if (babelPluginKey in babelPluginCompatMap) {
       const babelPluginCompat = babelPluginCompatMap[babelPluginKey];
 
-      if (platformName in babelPluginCompat) {
-        const version = String(babelPluginCompat[platformName]);
+      if (runtimeName in babelPluginCompat) {
+        const version = String(babelPluginCompat[runtimeName]);
 
         if (!versionArray.includes(version)) {
           versionArray.push(version);
@@ -8198,8 +8198,8 @@ const generatePlatformGroupArray = ({
     if (jsenvPluginKey in jsenvPluginCompatMap$1) {
       const jsenvPluginCompat = jsenvPluginCompatMap$1[jsenvPluginKey];
 
-      if (platformName in jsenvPluginCompat) {
-        const version = String(jsenvPluginCompat[platformName]);
+      if (runtimeName in jsenvPluginCompat) {
+        const version = String(jsenvPluginCompat[runtimeName]);
 
         if (!versionArray.includes(version)) {
           versionArray.push(version);
@@ -8209,46 +8209,46 @@ const generatePlatformGroupArray = ({
   });
   versionArray.push("0.0.0");
   versionArray.sort(versionCompare);
-  const platformGroupArray = [];
+  const runtimeGroupArray = [];
   versionArray.forEach(version => {
-    const babelPluginMapForPlatform = computeBabelPluginMapForPlatform({
+    const babelPluginMapForRuntime = computeBabelPluginMapForRuntime({
       babelPluginMap,
       babelPluginCompatMap,
-      platformName,
-      platformVersion: version
+      runtimeName,
+      runtimeVersion: version
     });
-    const babelPluginRequiredNameArray = Object.keys(babelPluginMap).filter(babelPluginKey => babelPluginKey in babelPluginMapForPlatform).sort();
-    const jsenvPluginMapForPlatform = computeJsenvPluginMapForPlatform({
+    const babelPluginRequiredNameArray = Object.keys(babelPluginMap).filter(babelPluginKey => babelPluginKey in babelPluginMapForRuntime).sort();
+    const jsenvPluginMapForRuntime = computeJsenvPluginMapForRuntime({
       jsenvPluginMap,
       jsenvPluginCompatMap: jsenvPluginCompatMap$1,
-      platformName,
-      platformVersion: version
+      runtimeName,
+      runtimeVersion: version
     });
-    const jsenvPluginRequiredNameArray = Object.keys(jsenvPluginMap).filter(jsenvPluginKey => jsenvPluginKey in jsenvPluginMapForPlatform).sort();
+    const jsenvPluginRequiredNameArray = Object.keys(jsenvPluginMap).filter(jsenvPluginKey => jsenvPluginKey in jsenvPluginMapForRuntime).sort();
     const group = {
       babelPluginRequiredNameArray,
       jsenvPluginRequiredNameArray,
-      platformCompatMap: {
-        [platformName]: version
+      runtimeCompatMap: {
+        [runtimeName]: version
       }
     };
-    const groupWithSameRequirements = platformGroupArray.find(platformGroupCandidate => groupHaveSameRequirements(platformGroupCandidate, group));
+    const groupWithSameRequirements = runtimeGroupArray.find(runtimeGroupCandidate => groupHaveSameRequirements(runtimeGroupCandidate, group));
 
     if (groupWithSameRequirements) {
-      groupWithSameRequirements.platformCompatMap[platformName] = findHighestVersion(groupWithSameRequirements.platformCompatMap[platformName], version);
+      groupWithSameRequirements.runtimeCompatMap[runtimeName] = findHighestVersion(groupWithSameRequirements.runtimeCompatMap[runtimeName], version);
     } else {
-      platformGroupArray.push(group);
+      runtimeGroupArray.push(group);
     }
   });
-  return platformGroupArray;
+  return runtimeGroupArray;
 };
 
-const composePlatformCompatMap = (platformCompatMap, secondPlatformCompatMap) => {
-  return objectComposeValue(normalizePlatformCompatMapVersions(platformCompatMap), normalizePlatformCompatMapVersions(secondPlatformCompatMap), (version, secondVersion) => findHighestVersion(version, secondVersion));
+const composeRuntimeCompatMap = (runtimeCompatMap, secondRuntimeCompatMap) => {
+  return objectComposeValue(normalizeRuntimeCompatMapVersions(runtimeCompatMap), normalizeRuntimeCompatMapVersions(secondRuntimeCompatMap), (version, secondVersion) => findHighestVersion(version, secondVersion));
 };
 
-const normalizePlatformCompatMapVersions = platformCompatibility => {
-  return objectMapValue(platformCompatibility, version => String(version));
+const normalizeRuntimeCompatMapVersions = runtimeCompatibility => {
+  return objectMapValue(runtimeCompatibility, version => String(version));
 };
 
 const objectMapValue = (object, callback) => {
@@ -8281,7 +8281,7 @@ const groupArrayReducer = (previousGroupArray, groupArray) => {
     const groupWithSameRequirements = reducedGroupArray.find(existingGroupCandidate => groupHaveSameRequirements(group, existingGroupCandidate));
 
     if (groupWithSameRequirements) {
-      groupWithSameRequirements.platformCompatMap = composePlatformCompatMap(groupWithSameRequirements.platformCompatMap, group.platformCompatMap);
+      groupWithSameRequirements.runtimeCompatMap = composeRuntimeCompatMap(groupWithSameRequirements.runtimeCompatMap, group.runtimeCompatMap);
     } else {
       reducedGroupArray.push(copyGroup(group));
     }
@@ -8292,51 +8292,51 @@ const groupArrayReducer = (previousGroupArray, groupArray) => {
 const copyGroup = ({
   babelPluginRequiredNameArray,
   jsenvPluginRequiredNameArray,
-  platformCompatMap
+  runtimeCompatMap
 }) => {
   return {
     babelPluginRequiredNameArray: babelPluginRequiredNameArray.slice(),
     jsenvPluginRequiredNameArray: jsenvPluginRequiredNameArray.slice(),
-    platformCompatMap: { ...platformCompatMap
+    runtimeCompatMap: { ...runtimeCompatMap
     }
   };
 };
 
-const generateAllPlatformGroupArray = ({
+const generateAllRuntimeGroupArray = ({
   babelPluginMap,
   jsenvPluginMap,
   babelPluginCompatMap,
   jsenvPluginCompatMap,
-  platformNames
+  runtimeNames
 }) => {
-  const arrayOfGroupArray = platformNames.map(platformName => generatePlatformGroupArray({
+  const arrayOfGroupArray = runtimeNames.map(runtimeName => generateRuntimeGroupArray({
     babelPluginMap,
     jsenvPluginMap,
     babelPluginCompatMap,
     jsenvPluginCompatMap,
-    platformName
+    runtimeName
   }));
   const groupArray = composeGroupArray(...arrayOfGroupArray);
   return groupArray;
 };
 
-const platformCompatMapToScore = (platformCompatMap, platformScoreMap) => {
-  return Object.keys(platformCompatMap).reduce((previous, platformName) => {
-    const platformVersion = platformCompatMap[platformName];
-    return previous + platformToScore(platformName, platformVersion, platformScoreMap);
+const runtimeCompatMapToScore = (runtimeCompatMap, runtimeScoreMap) => {
+  return Object.keys(runtimeCompatMap).reduce((previous, runtimeName) => {
+    const runtimeVersion = runtimeCompatMap[runtimeName];
+    return previous + runtimeToScore(runtimeName, runtimeVersion, runtimeScoreMap);
   }, 0);
 };
 
-const platformToScore = (platformName, platformVersion, platformScoreMap) => {
-  if (platformName in platformScoreMap === false) return platformScoreMap.other || 0;
-  const versionUsageMap = platformScoreMap[platformName];
+const runtimeToScore = (runtimeName, runtimeVersion, runtimeScoreMap) => {
+  if (runtimeName in runtimeScoreMap === false) return runtimeScoreMap.other || 0;
+  const versionUsageMap = runtimeScoreMap[runtimeName];
   const versionArray = Object.keys(versionUsageMap);
-  if (versionArray.length === 0) return platformScoreMap.other || 0;
+  if (versionArray.length === 0) return runtimeScoreMap.other || 0;
   const versionArrayAscending = versionArray.sort(versionCompare);
   const highestVersion = versionArrayAscending[versionArray.length - 1];
-  if (findHighestVersion(platformVersion, highestVersion) === platformVersion) return versionUsageMap[highestVersion];
-  const closestVersion = versionArrayAscending.reverse().find(version => findHighestVersion(platformVersion, version) === platformVersion);
-  if (!closestVersion) return platformScoreMap.other || 0;
+  if (findHighestVersion(runtimeVersion, highestVersion) === runtimeVersion) return versionUsageMap[highestVersion];
+  const closestVersion = versionArrayAscending.reverse().find(version => findHighestVersion(runtimeVersion, version) === runtimeVersion);
+  if (!closestVersion) return runtimeScoreMap.other || 0;
   return versionUsageMap[closestVersion];
 };
 
@@ -8349,11 +8349,11 @@ const platformToScore = (platformName, platformVersion, platformScoreMap) => {
 { ┌──────────┴────────────┐
   "transform-block-scoping": {─┐
     "chrome": "10",            │
-    "safari": "3.0",           platformCompatMap
+    "safari": "3.0",           runTimeCompatMap
     "firefox": "5.1"           │
-}────┼─────────┼─────────────┘
-}      │         └─────┐
-  platformName  platformVersion
+}────┼─────────┼───────────────┘
+}    │         └─────┐
+  runtimeName  runtimeVersion
 
 # group legend
 
@@ -8362,7 +8362,7 @@ const platformToScore = (platformName, platformVersion, platformScoreMap) => {
     "babelPluginRequiredNameArray" : [
       "transform-block-scoping",
     ],
-    "platformCompatMap": {
+    "runtimeCompatMap": {
       "chrome": "10",
       "firefox": "6"
     }
@@ -8379,14 +8379,14 @@ const generateGroupMap = ({
   jsenvPluginMap = {},
   babelPluginCompatMap,
   jsenvPluginCompatMap,
-  platformScoreMap,
+  runtimeScoreMap,
   groupCount = 1,
   // pass this to true if you don't care if someone tries to run your code
-  // on a platform which is not inside platformScoreMap.
-  platformAlwaysInsidePlatformScoreMap = false,
+  // on a runtime which is not inside runtimeScoreMap.
+  runtimeAlwaysInsideRuntimeScoreMap = false,
   // pass this to true if you think you will always be able to detect
-  // the platform or that if you fail to do so you don't care.
-  platformWillAlwaysBeKnown = false
+  // the runtime or that if you fail to do so you don't care.
+  runtimeWillAlwaysBeKnown = false
 }) => {
   if (typeof babelPluginMap !== "object") {
     throw new TypeError(`babelPluginMap must be an object, got ${babelPluginMap}`);
@@ -8396,8 +8396,8 @@ const generateGroupMap = ({
     throw new TypeError(`jsenvPluginMap must be an object, got ${jsenvPluginMap}`);
   }
 
-  if (typeof platformScoreMap !== "object") {
-    throw new TypeError(`platformScoreMap must be an object, got ${platformScoreMap}`);
+  if (typeof runtimeScoreMap !== "object") {
+    throw new TypeError(`runtimeScoreMap must be an object, got ${runtimeScoreMap}`);
   }
 
   if (typeof groupCount < 1) {
@@ -8407,49 +8407,49 @@ const generateGroupMap = ({
   const groupWithoutFeature = {
     babelPluginRequiredNameArray: Object.keys(babelPluginMap),
     jsenvPluginRequiredNameArray: Object.keys(jsenvPluginMap),
-    platformCompatMap: {}
+    runtimeCompatMap: {}
   }; // when we create one group and we cannot ensure
-  // code will be runned on a platform inside platformScoreMap
+  // code will be runned on a runtime inside runtimeScoreMap
   // then we return otherwise group to be safe
 
-  if (groupCount === 1 && !platformAlwaysInsidePlatformScoreMap) {
+  if (groupCount === 1 && !runtimeAlwaysInsideRuntimeScoreMap) {
     return {
       [COMPILE_ID_OTHERWISE]: groupWithoutFeature
     };
   }
 
-  const allPlatformGroupArray = generateAllPlatformGroupArray({
+  const allRuntimeGroupArray = generateAllRuntimeGroupArray({
     babelPluginMap,
     babelPluginCompatMap,
     jsenvPluginMap,
     jsenvPluginCompatMap,
-    platformNames: arrayWithoutValue(Object.keys(platformScoreMap), "other")
+    runtimeNames: arrayWithoutValue(Object.keys(runtimeScoreMap), "other")
   });
 
-  if (allPlatformGroupArray.length === 0) {
+  if (allRuntimeGroupArray.length === 0) {
     return {
       [COMPILE_ID_OTHERWISE]: groupWithoutFeature
     };
   }
 
   const groupToScore = ({
-    platformCompatMap
-  }) => platformCompatMapToScore(platformCompatMap, platformScoreMap);
+    runtimeCompatMap
+  }) => runtimeCompatMapToScore(runtimeCompatMap, runtimeScoreMap);
 
-  const allPlatformGroupArraySortedByScore = allPlatformGroupArray.sort((a, b) => groupToScore(b) - groupToScore(a));
-  const length = allPlatformGroupArraySortedByScore.length; // if we arrive here and want a single group
+  const allRuntimeGroupArraySortedByScore = allRuntimeGroupArray.sort((a, b) => groupToScore(b) - groupToScore(a));
+  const length = allRuntimeGroupArraySortedByScore.length; // if we arrive here and want a single group
   // we take the worst group and consider it's our best group
-  // because it's the lowest platform we want to support
+  // because it's the lowest runtime we want to support
 
   if (groupCount === 1) {
     return {
-      [COMPILE_ID_BEST]: allPlatformGroupArraySortedByScore[length - 1]
+      [COMPILE_ID_BEST]: allRuntimeGroupArraySortedByScore[length - 1]
     };
   }
 
-  const addOtherwiseToBeSafe = !platformAlwaysInsidePlatformScoreMap || !platformWillAlwaysBeKnown;
+  const addOtherwiseToBeSafe = !runtimeAlwaysInsideRuntimeScoreMap || !runtimeWillAlwaysBeKnown;
   const lastGroupIndex = addOtherwiseToBeSafe ? groupCount - 1 : groupCount;
-  const groupArray = length + 1 > groupCount ? allPlatformGroupArraySortedByScore.slice(0, lastGroupIndex) : allPlatformGroupArraySortedByScore;
+  const groupArray = length + 1 > groupCount ? allRuntimeGroupArraySortedByScore.slice(0, lastGroupIndex) : allRuntimeGroupArraySortedByScore;
   const groupMap = {};
   groupArray.forEach((group, index) => {
     if (index === 0) {
@@ -10972,7 +10972,8 @@ const startCompileServer = async ({
   babelCompatMap = jsenvBabelPluginCompatMap,
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
-  platformAlwaysInsidePlatformScoreMap = false
+  runtimeAlwaysInsideRuntimeScoreMap = false,
+  coverageConfig
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`);
@@ -11017,16 +11018,17 @@ ${projectDirectoryUrl}`);
   const groupMap = generateGroupMap({
     babelPluginMap,
     babelCompatMap,
-    platformScoreMap: { ...browserScoreMap,
+    runtimeScoreMap: { ...browserScoreMap,
       node: nodeVersionScoreMap
     },
     groupCount: compileGroupCount,
-    platformAlwaysInsidePlatformScoreMap
+    runtimeAlwaysInsideRuntimeScoreMap
   });
   const outDirectoryMeta = {
     babelPluginMap,
     convertMap,
-    groupMap
+    groupMap,
+    coverageConfig
   };
 
   if (jsenvDirectoryClean) {
@@ -11155,20 +11157,20 @@ ${projectDirectoryUrl}`);
 
   const envToString = () => JSON.stringify(env, null, "  ");
 
-  const jsenvImportMapFileUrl = resolveUrl$1("./importMap.json", outDirectoryUrl);
-  const jsenvGroupMapFileUrl = resolveUrl$1("./groupMap.json", outDirectoryUrl);
-  const jsenvEnvFileUrl = resolveUrl$1("./env.json", outDirectoryUrl);
-  await Promise.all([writeFile(jsenvImportMapFileUrl, importMapToString()), writeFile(jsenvGroupMapFileUrl, groupMapToString()), writeFile(jsenvEnvFileUrl, envToString())]);
+  const importMapOutFileUrl = resolveUrl$1("./importMap.json", outDirectoryUrl);
+  const groupMapOutFileUrl = resolveUrl$1("./groupMap.json", outDirectoryUrl);
+  const envOutFileUrl = resolveUrl$1("./env.json", outDirectoryUrl);
+  await Promise.all([writeFile(importMapOutFileUrl, importMapToString()), writeFile(groupMapOutFileUrl, groupMapToString()), writeFile(envOutFileUrl, envToString())]);
 
   if (!writeOnFilesystem) {
     compileServer.stoppedPromise.then(() => {
-      removeFileSystemNode(jsenvImportMapFileUrl, {
+      removeFileSystemNode(importMapOutFileUrl, {
         allowUseless: true
       });
-      removeFileSystemNode(jsenvGroupMapFileUrl, {
+      removeFileSystemNode(groupMapOutFileUrl, {
         allowUseless: true
       });
-      removeFileSystemNode(jsenvEnvFileUrl);
+      removeFileSystemNode(envOutFileUrl);
     });
   }
 
@@ -11366,26 +11368,26 @@ const launchAndExecute = async ({
   executeLogger,
   fileRelativeUrl,
   launch,
-  // stopPlatformAfterExecute false by default because you want to keep browser alive
+  // stopAfterExecute false by default because you want to keep browser alive
   // or nodejs process
   // however unit test will pass true because they want to move on
-  stopPlatformAfterExecute = false,
-  stopPlatformAfterExecuteReason = "stop after execute",
-  // when launchPlatform returns { disconnected, gracefulStop, stop }
-  // the launched platform have that amount of ms for disconnected to resolve
+  stopAfterExecute = false,
+  stopAfterExecuteReason = "stop after execute",
+  // when launch returns { disconnected, gracefulStop, stop }
+  // the launched runtime have that amount of ms for disconnected to resolve
   // before we call stop
   gracefulStopAllocatedMs = 4000,
-  platformConsoleCallback = () => {},
-  platformStartedCallback = () => {},
-  platformStoppedCallback = () => {},
-  platformErrorCallback = () => {},
-  platformDisconnectCallback = () => {},
+  runtimeConsoleCallback = () => {},
+  runtimeStartedCallback = () => {},
+  runtimeStoppedCallback = () => {},
+  runtimeErrorCallback = () => {},
+  runtimeDisconnectCallback = () => {},
   measureDuration = false,
   mirrorConsole = false,
   captureConsole = false,
   // rename collectConsole ?
-  collectPlatformName = false,
-  collectPlatformVersion = false,
+  collectRuntimeName = false,
+  collectRuntimeVersion = false,
   inheritCoverage = false,
   collectCoverage = false,
   ...rest
@@ -11411,7 +11413,7 @@ const launchAndExecute = async ({
   }
 
   if (mirrorConsole) {
-    platformConsoleCallback = composeCallback(platformConsoleCallback, ({
+    runtimeConsoleCallback = composeCallback(runtimeConsoleCallback, ({
       type,
       text
     }) => {
@@ -11425,7 +11427,7 @@ const launchAndExecute = async ({
 
   if (captureConsole) {
     const consoleCalls = [];
-    platformConsoleCallback = composeCallback(platformConsoleCallback, ({
+    runtimeConsoleCallback = composeCallback(runtimeConsoleCallback, ({
       type,
       text
     }) => {
@@ -11440,23 +11442,23 @@ const launchAndExecute = async ({
     });
   }
 
-  if (collectPlatformName) {
-    platformStartedCallback = composeCallback(platformStartedCallback, ({
+  if (collectRuntimeName) {
+    runtimeStartedCallback = composeCallback(runtimeStartedCallback, ({
       name
     }) => {
       executionResultTransformer = composeTransformer(executionResultTransformer, executionResult => {
-        executionResult.platformName = name;
+        executionResult.runtimeName = name;
         return executionResult;
       });
     });
   }
 
-  if (collectPlatformVersion) {
-    platformStartedCallback = composeCallback(platformStartedCallback, ({
+  if (collectRuntimeVersion) {
+    runtimeStartedCallback = composeCallback(runtimeStartedCallback, ({
       version
     }) => {
       executionResultTransformer = composeTransformer(executionResultTransformer, executionResult => {
-        executionResult.platformVersion = version;
+        executionResult.runtimeVersion = version;
         return executionResult;
       });
     });
@@ -11483,14 +11485,14 @@ const launchAndExecute = async ({
     executeLogger,
     fileRelativeUrl,
     launch,
-    stopPlatformAfterExecute,
-    stopPlatformAfterExecuteReason,
+    stopAfterExecute,
+    stopAfterExecuteReason,
     gracefulStopAllocatedMs,
-    platformConsoleCallback,
-    platformErrorCallback,
-    platformDisconnectCallback,
-    platformStartedCallback,
-    platformStoppedCallback,
+    runtimeConsoleCallback,
+    runtimeErrorCallback,
+    runtimeDisconnectCallback,
+    runtimeStartedCallback,
+    runtimeStoppedCallback,
     collectCoverage,
     ...rest
   });
@@ -11561,14 +11563,14 @@ const computeExecutionResult = async ({
   executeLogger,
   fileRelativeUrl,
   launch,
-  stopPlatformAfterExecute,
-  stopPlatformAfterExecuteReason,
+  stopAfterExecute,
+  stopAfterExecuteReason,
   gracefulStopAllocatedMs,
-  platformStartedCallback,
-  platformStoppedCallback,
-  platformConsoleCallback,
-  platformErrorCallback,
-  platformDisconnectCallback,
+  runtimeStartedCallback,
+  runtimeStoppedCallback,
+  runtimeConsoleCallback,
+  runtimeErrorCallback,
+  runtimeDisconnectCallback,
   ...rest
 }) => {
   launchLogger.debug(`launch execution for ${fileRelativeUrl}`);
@@ -11580,25 +11582,25 @@ const computeExecutionResult = async ({
         logger: launchLogger,
         ...rest
       });
-      platformStartedCallback({
+      runtimeStartedCallback({
         name: value.name,
         version: value.version
       });
       return value;
     },
-    stop: async (platform, reason) => {
+    stop: async (runtime, reason) => {
       // external code can cancel using cancellationToken at any time.
-      // (hotreloading note: we would do that and listen for stoppedCallback before restarting an operation)
+      // (livereloading note: we would do that and listen for stoppedCallback before restarting an operation)
       // it is important to keep the code inside this stop function because once cancelled
       // all code after the operation won't execute because it will be rejected with
       // the cancellation error
       let gracefulStop;
 
-      if (platform.gracefulStop && gracefulStopAllocatedMs) {
+      if (runtime.gracefulStop && gracefulStopAllocatedMs) {
         launchLogger.debug(`${fileRelativeUrl} gracefulStop() because ${reason}`);
 
         const gracefulStopPromise = (async () => {
-          await platform.gracefulStop({
+          await runtime.gracefulStop({
             reason
           });
           return true;
@@ -11620,7 +11622,7 @@ const computeExecutionResult = async ({
           }
 
           launchLogger.debug(`${fileRelativeUrl} gracefulStop() pending after ${gracefulStopAllocatedMs}ms, use stop()`);
-          await platform.stop({
+          await runtime.stop({
             reason,
             gracefulFailed: true
           });
@@ -11629,50 +11631,51 @@ const computeExecutionResult = async ({
 
         gracefulStop = await Promise.race([gracefulStopPromise, stopPromise]);
       } else {
-        await platform.stop({
+        await runtime.stop({
           reason,
           gracefulFailed: false
         });
         gracefulStop = false;
       }
 
-      platformStoppedCallback({
+      runtimeStoppedCallback({
         gracefulStop
       });
-      launchLogger.debug(`${fileRelativeUrl} platform stopped`);
+      launchLogger.debug(`${fileRelativeUrl} runtime stopped`);
     }
   });
   const {
-    name: platformName,
-    version: platformVersion,
+    name: runtimeName,
+    version: runtimeVersion,
     options,
     executeFile,
     registerErrorCallback,
     registerConsoleCallback,
     disconnected
   } = await launchOperation;
-  launchLogger.debug(`${platformName}@${platformVersion} started.
+  const runtime = `${runtimeName}/${runtimeVersion}`;
+  launchLogger.debug(`${runtime} started.
 --- options ---
 options: ${JSON.stringify(options, null, "  ")}`);
-  registerConsoleCallback(platformConsoleCallback);
-  executeLogger.debug(`${fileRelativeUrl} ${platformName}: start execution`);
+  registerConsoleCallback(runtimeConsoleCallback);
+  executeLogger.debug(`${fileRelativeUrl} ${runtime}: start execution`);
   const executeOperation = createOperation({
     cancellationToken,
     start: async () => {
       let timing = TIMING_BEFORE_EXECUTION;
       disconnected.then(() => {
-        executeLogger.debug(`${fileRelativeUrl} ${platformName}: disconnected ${timing}.`);
-        platformDisconnectCallback({
+        executeLogger.debug(`${fileRelativeUrl} ${runtime}: disconnected ${timing}.`);
+        runtimeDisconnectCallback({
           timing
         });
       });
       const executed = executeFile(fileRelativeUrl, rest);
       timing = TIMING_DURING_EXECUTION;
       registerErrorCallback(error => {
-        executeLogger.error(`${fileRelativeUrl} ${platformName}: error ${timing}.
+        executeLogger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
 --- error stack ---
 ${error.stack}`);
-        platformErrorCallback({
+        runtimeErrorCallback({
           error,
           timing
         });
@@ -11684,8 +11687,8 @@ ${error.stack}`);
         return createDisconnectedExecutionResult();
       }
 
-      if (stopPlatformAfterExecute) {
-        launchOperation.stop(stopPlatformAfterExecuteReason);
+      if (stopAfterExecute) {
+        launchOperation.stop(stopAfterExecuteReason);
       }
 
       const executionResult = raceResult.value;
@@ -11694,13 +11697,13 @@ ${error.stack}`);
       } = executionResult;
 
       if (status === "errored") {
-        executeLogger.error(`${fileRelativeUrl} ${platformName}: error ${timing}.
+        executeLogger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
 --- error stack ---
 ${executionResult.error.stack}`);
         return createErroredExecutionResult(executionResult, rest);
       }
 
-      executeLogger.debug(`${fileRelativeUrl} ${platformName}: execution completed.`);
+      executeLogger.debug(`${fileRelativeUrl} ${runtime}: execution completed.`);
       return createCompletedExecutionResult(executionResult, rest);
     }
   });
@@ -11811,7 +11814,7 @@ const execute = async ({
   compileGroupCount = 2,
   launch,
   mirrorConsole = true,
-  stopPlatformAfterExecute = false,
+  stopAfterExecute = false,
   gracefulStopAllocatedMs,
   updateProcessExitCode = true,
   ...rest
@@ -11872,7 +11875,7 @@ const execute = async ({
         ...params
       }),
       mirrorConsole,
-      stopPlatformAfterExecute,
+      stopAfterExecute,
       gracefulStopAllocatedMs,
       ...rest
     });
@@ -12034,21 +12037,21 @@ const generateExecutionSteps = async (plan, {
 const startCompileServerForExecutingPlan = async ({
   // false because don't know if user is going
   // to use both node and browser
-  browserPlatformAnticipatedGeneration = false,
-  nodePlatformAnticipatedGeneration = false,
+  browserRuntimeAnticipatedGeneration = false,
+  nodeRuntimeAnticipatedGeneration = false,
   ...rest
 }) => {
   const compileServer = await startCompileServer(rest);
   const promises = [];
 
-  if (browserPlatformAnticipatedGeneration) {
-    promises.push(fetchUrl$1(`${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-global-bundle/src/browserPlatform.js`, {
+  if (browserRuntimeAnticipatedGeneration) {
+    promises.push(fetchUrl$1(`${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-global-bundle/src/browserRuntime.js`, {
       ignoreHttpsError: true
     }));
   }
 
-  if (nodePlatformAnticipatedGeneration) {
-    promises.push(fetchUrl$1(`${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodePlatform.js`, {
+  if (nodeRuntimeAnticipatedGeneration) {
+    promises.push(fetchUrl$1(`${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodeRuntime.js`, {
       ignoreHttpsError: true
     }));
   }
@@ -12197,10 +12200,10 @@ const executionReportToCoverageMap = report => {
   Object.keys(report).forEach(file => {
     const executionResultForFile = report[file];
     Object.keys(executionResultForFile).forEach(executionName => {
-      const executionResultForFileOnPlatform = executionResultForFile[executionName];
+      const executionResultForFileOnRuntime = executionResultForFile[executionName];
       const {
         coverageMap
-      } = executionResultForFileOnPlatform;
+      } = executionResultForFileOnRuntime;
 
       if (!coverageMap) {
         // several reasons not to have coverageMap here:
@@ -12398,8 +12401,8 @@ const createExecutionResultLog = ({
   status,
   fileRelativeUrl,
   allocatedMs,
-  platformName,
-  platformVersion,
+  runtimeName,
+  runtimeVersion,
   consoleCalls,
   startMs,
   endMs,
@@ -12421,6 +12424,7 @@ const createExecutionResultLog = ({
     erroredCount,
     completedCount
   })})`;
+  const runtime = `${runtimeName}/${runtimeVersion}`;
 
   if (status === "completed") {
     if (completedExecutionLogAbbreviation) {
@@ -12431,10 +12435,7 @@ ${green$1}${checkmark} execution ${executionNumber} of ${executionCount} complet
     return `
 ${green$1}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
-platform: ${formatPlatform({
-      platformName,
-      platformVersion
-    })}${appendDuration({
+runtime: ${runtime}${appendDuration({
       startMs,
       endMs
     })}${appendConsole(consoleCalls)}${appendError(error)}`;
@@ -12444,10 +12445,7 @@ platform: ${formatPlatform({
     return `
 ${magenta$1}${cross} execution ${executionNumber} of ${executionCount} disconnected${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
-platform: ${formatPlatform({
-      platformName,
-      platformVersion
-    })}${appendDuration({
+runtime: ${runtime}${appendDuration({
       startMs,
       endMs
     })}${appendConsole(consoleCalls)}${appendError(error)}`;
@@ -12457,10 +12455,7 @@ platform: ${formatPlatform({
     return `
 ${yellow$1}${cross} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
-platform: ${formatPlatform({
-      platformName,
-      platformVersion
-    })}${appendDuration({
+runtime: ${runtime}${appendDuration({
       startMs,
       endMs
     })}${appendConsole(consoleCalls)}${appendError(error)}`;
@@ -12469,19 +12464,11 @@ platform: ${formatPlatform({
   return `
 ${red$1}${cross} execution ${executionNumber} of ${executionCount} error${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
-platform: ${formatPlatform({
-    platformName,
-    platformVersion
-  })}${appendDuration({
+runtime: ${runtime}${appendDuration({
     startMs,
     endMs
   })}${appendConsole(consoleCalls)}${appendError(error)}`;
 };
-
-const formatPlatform = ({
-  platformName,
-  platformVersion
-}) => `${platformName}/${platformVersion}`;
 
 const appendDuration = ({
   endMs,
@@ -12528,13 +12515,14 @@ const executeConcurrently = async (executionSteps, {
   babelPluginMap,
   concurrencyLimit = Math.max(os.cpus.length - 1, 1),
   executionDefaultOptions = {},
-  stopPlatformAfterExecute,
+  stopAfterExecute,
   logSummary,
   completedExecutionLogMerging,
   completedExecutionLogAbbreviation,
   coverage,
   coverageConfig,
-  coverageIncludeMissing
+  coverageIncludeMissing,
+  ...rest
 }) => {
   if (typeof compileServerOrigin !== "string") {
     throw new TypeError(`compileServerOrigin must be a string, got ${compileServerOrigin}`);
@@ -12547,8 +12535,8 @@ const executeConcurrently = async (executionSteps, {
     // so log would be a mess to read
     mirrorConsole: false,
     captureConsole: true,
-    collectPlatformName: true,
-    collectPlatformVersion: true,
+    collectRuntimeName: true,
+    collectRuntimeVersion: true,
     collectNamespace: false,
     collectCoverage: coverage,
     mainFileNotFoundCallback: ({
@@ -12591,8 +12579,8 @@ ${fileRelativeUrl}`));
         measureDuration,
         mirrorConsole,
         captureConsole,
-        collectPlatformName,
-        collectPlatformVersion,
+        collectRuntimeName,
+        collectRuntimeVersion,
         collectCoverage,
         collectNamespace,
         mainFileNotFoundCallback,
@@ -12628,17 +12616,18 @@ ${fileRelativeUrl}`));
         }),
         allocatedMs,
         measureDuration,
-        collectPlatformName,
-        collectPlatformVersion,
+        collectRuntimeName,
+        collectRuntimeVersion,
         mirrorConsole,
         captureConsole,
         gracefulStopAllocatedMs,
-        stopPlatformAfterExecute,
-        stopPlatformAfterExecuteReason: "execution-done",
+        stopAfterExecute,
+        stopAfterExecuteReason: "execution-done",
         executionId,
         fileRelativeUrl,
         collectCoverage,
-        collectNamespace
+        collectNamespace,
+        ...rest
       });
       const afterExecutionInfo = { ...beforeExecutionInfo,
         ...executionResult
@@ -12738,8 +12727,8 @@ const reportToSummary = report => {
     return fileNames.reduce((previous, fileName) => {
       const fileExecutionResult = report[fileName];
       return previous + Object.keys(fileExecutionResult).filter(executionName => {
-        const fileExecutionResultForPlatform = fileExecutionResult[executionName];
-        return predicate(fileExecutionResultForPlatform);
+        const fileExecutionResultForRuntime = fileExecutionResult[executionName];
+        return predicate(fileExecutionResultForRuntime);
       }).length;
     }, 0);
   };
@@ -12787,14 +12776,15 @@ const executePlan = async ({
   plan,
   concurrencyLimit,
   executionDefaultOptions,
-  stopPlatformAfterExecute,
+  stopAfterExecute,
   completedExecutionLogMerging,
   completedExecutionLogAbbreviation,
   logSummary,
   // coverage parameters
   coverage,
   coverageConfig,
-  coverageIncludeMissing
+  coverageIncludeMissing,
+  ...rest
 } = {}) => {
   if (coverage) {
     const specifierMetaMapForCover = normalizeSpecifierMetaMap(metaMapToSpecifierMetaMap({
@@ -12838,7 +12828,8 @@ const executePlan = async ({
     // to be sure it stays alive
     babelPluginMap,
     convertMap,
-    compileGroupCount
+    compileGroupCount,
+    coverageConfig
   })]);
   const executionResult = await executeConcurrently(executionSteps, {
     cancellationToken,
@@ -12851,7 +12842,7 @@ const executePlan = async ({
     importMapFileUrl,
     importDefaultExtension,
     babelPluginMap,
-    stopPlatformAfterExecute,
+    stopAfterExecute,
     concurrencyLimit,
     executionDefaultOptions,
     completedExecutionLogMerging,
@@ -12859,7 +12850,8 @@ const executePlan = async ({
     logSummary,
     coverage,
     coverageConfig,
-    coverageIncludeMissing
+    coverageIncludeMissing,
+    ...rest
   });
   stop("all execution done");
   return executionResult;
@@ -12869,19 +12861,13 @@ const executionIsPassed = ({
   summary
 }) => summary.executionCount === summary.completedCount;
 
-const generateCoverageJsonFile = async ({
-  projectDirectoryUrl,
-  coverageJsonFileRelativeUrl,
-  coverageJsonFileLog,
-  coverageMap
-}) => {
-  const coverageJsonFileUrl = resolveUrl$1(coverageJsonFileRelativeUrl, projectDirectoryUrl);
+const generateCoverageJsonFile = async (coverageMap, coverageJsonFileUrl) => {
   await writeFile(coverageJsonFileUrl, JSON.stringify(coverageMap, null, "  "));
-
-  if (coverageJsonFileLog) {
-    console.log(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`);
-  }
 };
+
+const {
+  readFileSync
+} = require$1("fs");
 
 const libReport = require$1("istanbul-lib-report");
 
@@ -12891,29 +12877,20 @@ const {
   createCoverageMap
 } = require$1("istanbul-lib-coverage");
 
-const generateCoverageHtmlDirectory = ({
-  projectDirectoryUrl,
-  coverageHtmlDirectoryRelativeUrl,
-  coverageHtmlDirectoryIndexLog,
-  coverageMap
-}) => {
-  const htmlDirectoryUrl = resolveDirectoryUrl(coverageHtmlDirectoryRelativeUrl, projectDirectoryUrl);
-  const htmlDirectoryPath = urlToFileSystemPath(htmlDirectoryUrl);
+const generateCoverageHtmlDirectory = async (coverageMap, htmlDirectoryRelativeUrl, projectDirectoryUrl) => {
   const context = libReport.createContext({
-    dir: htmlDirectoryPath,
-    coverageMap: createCoverageMap(coverageMap)
+    dir: urlToFileSystemPath(projectDirectoryUrl),
+    coverageMap: createCoverageMap(coverageMap),
+    sourceFinder: path => {
+      return readFileSync(urlToFileSystemPath(resolveUrl$1(path, projectDirectoryUrl)), "utf8");
+    }
   });
   const report = reports.create("html", {
     skipEmpty: true,
-    skipFull: true
+    skipFull: true,
+    subdir: htmlDirectoryRelativeUrl
   });
   report.execute(context);
-
-  if (coverageHtmlDirectoryIndexLog) {
-    const htmlCoverageDirectoryIndexFileUrl = `${htmlDirectoryUrl}index.html`;
-    const htmlCoverageDirectoryIndexFilePath = urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl);
-    console.log(`-> ${htmlCoverageDirectoryIndexFilePath}`);
-  }
 };
 
 const libReport$1 = require$1("istanbul-lib-report");
@@ -12924,9 +12901,7 @@ const {
   createCoverageMap: createCoverageMap$1
 } = require$1("istanbul-lib-coverage");
 
-const generateCoverageTextLog = ({
-  coverageMap
-}) => {
+const generateCoverageTextLog = coverageMap => {
   const context = libReport$1.createContext({
     coverageMap: createCoverageMap$1(coverageMap)
   });
@@ -12968,17 +12943,17 @@ const executeTestPlan = async ({
   testPlan,
   concurrencyLimit,
   executionDefaultOptions = {},
-  // stopPlatformAfterExecute: true to ensure platform is stopped once executed
+  // stopAfterExecute: true to ensure runtime is stopped once executed
   // because we have what we wants: execution is completed and
   // we have associated coverageMap and capturedConsole
   // you can still pass false to debug what happens
   // meaning all node process and browsers launched stays opened
-  stopPlatformAfterExecute = true,
+  stopAfterExecute = true,
   completedExecutionLogAbbreviation = false,
   completedExecutionLogMerging = false,
   logSummary = true,
   updateProcessExitCode = true,
-  coverage = process.argv.includes("--coverage"),
+  coverage = process.argv.includes("--cover") || process.argv.includes("--coverage"),
   coverageConfig = jsenvCoverageConfig,
   coverageIncludeMissing = true,
   coverageAndExecutionAllowed = false,
@@ -12987,8 +12962,11 @@ const executeTestPlan = async ({
   coverageJsonFileLog = true,
   coverageJsonFileRelativeUrl = "./coverage/coverage-final.json",
   coverageHtmlDirectory = !process.env.CI,
-  coverageHtmlDirectoryRelativeUrl = "./coverage",
-  coverageHtmlDirectoryIndexLog = true
+  coverageHtmlDirectoryRelativeUrl = "./coverage/",
+  coverageHtmlDirectoryIndexLog = true,
+  // for chromiumExecutablePath, firefoxExecutablePath and webkitExecutablePath
+  // but we need something angostic that just forward the params hence using ...rest
+  ...rest
 }) => {
   return catchCancellation(async () => {
     const logger = createLogger({
@@ -12999,6 +12977,11 @@ const executeTestPlan = async ({
     });
     const executeLogger = createLogger({
       logLevel: executeLogLevel
+    });
+    cancellationToken.register(cancelError => {
+      if (cancelError.reason === "process SIGINT") {
+        logger.info(`process SIGINT -> cancelling test execution`);
+      }
     });
     projectDirectoryUrl = assertProjectDirectoryUrl({
       projectDirectoryUrl
@@ -13066,43 +13049,48 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`);
       plan: testPlan,
       concurrencyLimit,
       executionDefaultOptions,
-      stopPlatformAfterExecute,
+      stopAfterExecute,
       completedExecutionLogMerging,
       completedExecutionLogAbbreviation,
       logSummary,
       coverage,
       coverageConfig,
-      coverageIncludeMissing
+      coverageIncludeMissing,
+      ...rest
     });
 
     if (updateProcessExitCode && !executionIsPassed(result)) {
       process.exitCode = 1;
     }
 
-    const promises = [];
-
-    if (coverage && coverageJsonFile) {
-      promises.push(generateCoverageJsonFile({
-        projectDirectoryUrl,
-        coverageJsonFileRelativeUrl,
-        coverageJsonFileLog,
-        coverageMap: result.coverageMap
-      }));
-    }
+    const promises = []; // keep this one first because it does ensureEmptyDirectory
+    // and in case coverage json file gets written in the same directory
+    // it must be done before
 
     if (coverage && coverageHtmlDirectory) {
-      promises.push(generateCoverageHtmlDirectory({
-        coverageMap: result.coverageMap,
-        projectDirectoryUrl,
-        coverageHtmlDirectoryRelativeUrl,
-        coverageHtmlDirectoryIndexLog
-      }));
+      const coverageHtmlDirectoryUrl = resolveDirectoryUrl(coverageHtmlDirectoryRelativeUrl, projectDirectoryUrl);
+      await ensureEmptyDirectory(coverageHtmlDirectoryUrl);
+
+      if (coverageHtmlDirectoryIndexLog) {
+        const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`;
+        logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
+      }
+
+      promises.push(generateCoverageHtmlDirectory(result.coverageMap, coverageHtmlDirectoryRelativeUrl, projectDirectoryUrl));
+    }
+
+    if (coverage && coverageJsonFile) {
+      const coverageJsonFileUrl = resolveUrl$1(coverageJsonFileRelativeUrl, projectDirectoryUrl);
+
+      if (coverageJsonFileLog) {
+        logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`);
+      }
+
+      promises.push(generateCoverageJsonFile(result.coverageMap, coverageJsonFileUrl));
     }
 
     if (coverage && coverageTextLog) {
-      promises.push(generateCoverageTextLog({
-        coverageMap: result.coverageMap
-      }));
+      promises.push(generateCoverageTextLog(result.coverageMap));
     }
 
     await Promise.all(promises);
@@ -13134,7 +13122,7 @@ const generateBundle = async ({
   compileServerPort,
   babelPluginMap = jsenvBabelPluginMap,
   compileGroupCount = 1,
-  platformScoreMap = { ...jsenvBrowserScoreMap,
+  runtimeScoreMap = { ...jsenvBrowserScoreMap,
     node: jsenvNodeVersionScoreMap
   },
   balancerTemplateFileUrl,
@@ -13235,7 +13223,7 @@ const generateBundle = async ({
       env,
       babelPluginMap,
       compileGroupCount,
-      platformScoreMap,
+      runtimeScoreMap,
       writeOnFilesystem: filesystemCache,
       useFilesystemAsCache: filesystemCache,
       // override with potential custom options
@@ -13427,10 +13415,10 @@ const generateCommonJsBundleForNode = ({
   cjsExtension,
   ...rest
 }) => {
-  const babelPluginMapForNode = computeBabelPluginMapForPlatform({
+  const babelPluginMapForNode = computeBabelPluginMapForRuntime({
     babelPluginMap,
-    platformName: "node",
-    platformVersion: nodeMinimumVersion
+    runtimeName: "node",
+    runtimeVersion: nodeMinimumVersion
   });
   return generateCommonJsBundle({
     bundleDirectoryRelativeUrl,
@@ -13736,13 +13724,13 @@ const getBrowserExecutionDynamicData = ({
   projectDirectoryUrl,
   compileServerOrigin
 }) => {
-  const browserPlatformFileRelativeUrl = projectDirectoryUrl === jsenvCoreDirectoryUrl ? "src/browserPlatform.js" : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/browserPlatform.js`;
+  const browserRuntimeFileRelativeUrl = projectDirectoryUrl === jsenvCoreDirectoryUrl ? "src/browserRuntime.js" : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/browserRuntime.js`;
   const sourcemapMainFileUrl = fileSystemPathToUrl(require$1.resolve("source-map/dist/source-map.js"));
   const sourcemapMappingFileUrl = fileSystemPathToUrl(require$1.resolve("source-map/lib/mappings.wasm"));
   const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl);
   const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(sourcemapMappingFileUrl, projectDirectoryUrl);
   return {
-    browserPlatformFileRelativeUrl,
+    browserRuntimeFileRelativeUrl,
     sourcemapMainFileRelativeUrl,
     sourcemapMappingFileRelativeUrl,
     compileServerOrigin
@@ -13857,9 +13845,13 @@ const createBrowserIIFEString = data => `(() => {
 })()`;
 
 /* eslint-disable import/max-dependencies */
+
+const playwright = require$1("playwright-core");
+
 const chromiumSharing = createSharing();
 const launchChromium = async ({
   cancellationToken = createCancellationToken(),
+  chromiumExecutablePath,
   browserServerLogLevel,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
@@ -13873,6 +13865,7 @@ const launchChromium = async ({
 }) => {
   const ressourceTracker = trackRessources$1();
   const sharingToken = share ? chromiumSharing.getSharingToken({
+    chromiumExecutablePath,
     headless,
     debug,
     debugPort
@@ -13884,6 +13877,7 @@ const launchChromium = async ({
       ressourceTracker,
       options: {
         headless,
+        executablePath: chromiumExecutablePath,
         ...(debug ? {
           devtools: true
         } : {}),
@@ -13932,7 +13926,7 @@ const launchChromium = async ({
     name: "chromium",
     version: "82.0.4057.0",
     stop: ressourceTracker.cleanup,
-    ...browserToPlatformHooks(browser, {
+    ...browserToRuntimeHooks(browser, {
       cancellationToken,
       ressourceTracker,
       browserServerLogLevel,
@@ -13949,6 +13943,7 @@ const launchChromiumTab = namedArgs => launchChromium({
 const firefoxSharing = createSharing();
 const launchFirefox = async ({
   cancellationToken = createCancellationToken(),
+  firefoxExecutablePath,
   browserServerLogLevel,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
@@ -13959,6 +13954,7 @@ const launchFirefox = async ({
 }) => {
   const ressourceTracker = trackRessources$1();
   const sharingToken = share ? firefoxSharing.getSharingToken({
+    firefoxExecutablePath,
     headless
   }) : firefoxSharing.getUniqueSharingToken();
 
@@ -13967,7 +13963,8 @@ const launchFirefox = async ({
       cancellationToken,
       ressourceTracker,
       options: {
-        headless
+        headless,
+        executablePath: firefoxExecutablePath
       },
       stopOnExit
     });
@@ -13982,7 +13979,7 @@ const launchFirefox = async ({
     name: "firefox",
     version: "73.0b13",
     stop: ressourceTracker.cleanup,
-    ...browserToPlatformHooks(browser, {
+    ...browserToRuntimeHooks(browser, {
       cancellationToken,
       ressourceTracker,
       browserServerLogLevel,
@@ -13999,6 +13996,7 @@ const launchFirefoxTab = namedArgs => launchFirefox({
 const webkitSharing = createSharing();
 const launchWebkit = async ({
   cancellationToken = createCancellationToken(),
+  webkitExecutablePath,
   browserServerLogLevel,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
@@ -14009,6 +14007,7 @@ const launchWebkit = async ({
 }) => {
   const ressourceTracker = trackRessources$1();
   const sharingToken = share ? webkitSharing.getSharingToken({
+    webkitExecutablePath,
     headless
   }) : webkitSharing.getUniqueSharingToken();
 
@@ -14017,7 +14016,8 @@ const launchWebkit = async ({
       cancellationToken,
       ressourceTracker,
       options: {
-        headless
+        headless,
+        executablePath: webkitExecutablePath
       },
       stopOnExit
     });
@@ -14032,7 +14032,7 @@ const launchWebkit = async ({
     name: "webkit",
     version: "13.0.4",
     stop: ressourceTracker.cleanup,
-    ...browserToPlatformHooks(browser, {
+    ...browserToRuntimeHooks(browser, {
       cancellationToken,
       ressourceTracker,
       browserServerLogLevel,
@@ -14053,23 +14053,6 @@ const launchBrowser = async (browserName, {
   options,
   stopOnExit
 }) => {
-  let playwright;
-
-  try {
-    playwright = require$1("playwright");
-  } catch (e) {
-    if (e.code === "MODULE_NOT_FOUND") {
-      throw new Error(`playwright module not found.
-Please note playwright is a peer dependency of @jsenv/core.
-It means you must have playwright in your dependencies/devDependencies.
-You can install playwright using the following command:
-
-npm install playwright`);
-    }
-
-    throw e;
-  }
-
   const browserClass = playwright[browserName];
   const launchOperation = createStoppableOperation({
     cancellationToken,
@@ -14109,7 +14092,7 @@ npm install playwright`);
 
 const browserServerSharing = createSharing();
 
-const browserToPlatformHooks = (browser, {
+const browserToRuntimeHooks = (browser, {
   cancellationToken,
   ressourceTracker,
   browserServerLogLevel,
@@ -15535,8 +15518,8 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`;
   const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl);
   const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`;
   const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`;
-  const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`; // The compiled nodePlatform file will be somewhere else in the filesystem
-  // than the original nodePlatform file.
+  const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`; // The compiled nodeRuntime file will be somewhere else in the filesystem
+  // than the original nodeRuntime file.
   // It is important for the compiled file to be able to require
   // node modules that original file could access
   // hence the requireCompiledFileAsOriginalFile

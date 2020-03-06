@@ -34,7 +34,7 @@ const actual = await launchAndExecute({
       outDirectoryRelativeUrl,
     }),
   collectNamespace: false,
-  platformDisconnectCallback: (argValue) => {
+  runtimeDisconnectCallback: (argValue) => {
     disconnectCallbackArg = argValue
   },
 })

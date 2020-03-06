@@ -34,7 +34,7 @@ const actual = await launchAndExecute({
       compileServerOrigin,
       // headless: false,
     }),
-  // stopPlatformAfterExecute: false,
+  // stopAfterExecute: false,
 })
 const expected = {
   status: "completed",

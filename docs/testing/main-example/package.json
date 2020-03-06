@@ -7,9 +7,10 @@
     "node": ">=13.7.0"
   },
   "scripts": {
-    "test": "node ./execute-test-plan.js"
+    "test": "node --no-warnings ./execute-test-plan.js"
   },
   "devDependencies": {
-    "@jsenv/core": "11.5.0-alpha.1"
+    "@jsenv/core": "12.1.0-alpha.6",
+    "playwright-chromium": "0.11.1"
   }
 }

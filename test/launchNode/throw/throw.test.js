@@ -1,6 +1,5 @@
 import { basename } from "path"
 import { assert } from "@jsenv/assert"
-import { createLogger } from "@jsenv/logger"
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/util"
 import { jsenvCoreDirectoryUrl } from "../../../src/internal/jsenvCoreDirectoryUrl.js"
 import { startCompileServer } from "../../../src/internal/compiling/startCompileServer.js"
@@ -25,7 +24,7 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 
 const actual = await launchAndExecute({
   ...EXECUTE_TEST_PARAMS,
-  executeLogger: createLogger({ logLevel: "off" }),
+  exectionLogLevel: "off",
   launch: (options) =>
     launchNode({
       ...LAUNCH_TEST_PARAMS,

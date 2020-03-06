@@ -1,9 +1,9 @@
 import { require } from "../../src/internal/require.js"
 import { composeCoverageMap } from "../../src/internal/executing/coverage/composeCoverageMap.js"
-import { evalSource } from "../../src/internal/platform/createNodePlatform/evalSource.js"
+import { evalSource } from "../../src/internal/runtime/createNodeRuntime/evalSource.js"
 import { coverageIsEnabled } from "../coverageIsEnabled.js"
 
-const { chromium } = require("playwright")
+const { chromium } = require("playwright-chromium")
 
 export const openBrowserPage = async (
   url,

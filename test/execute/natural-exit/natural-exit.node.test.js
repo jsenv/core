@@ -9,16 +9,15 @@ const testDirectoryRelativeUrl = urlToRelativeUrl(testDirectoryUrl, jsenvCoreDir
 const jsenvDirectoryRelativeUrl = `${testDirectoryRelativeUrl}.jsenv/`
 const fileRelativeUrl = `${testDirectoryRelativeUrl}natural-exit.js`
 
-let nodePlatformHooks
+let nodeRuntimeHooks
 {
   const actual = await execute({
     ...EXECUTE_TEST_PARAMS,
-    // launchLogLevel: "debug",
-    // executeLogLevel: "debug",
+    // executionLogLevel: "debug",
     jsenvDirectoryRelativeUrl,
     launch: async (options) => {
-      nodePlatformHooks = await launchNode({ ...options, debugPort: 40001 })
-      return nodePlatformHooks
+      nodeRuntimeHooks = await launchNode({ ...options, debugPort: 40001 })
+      return nodeRuntimeHooks
     },
     fileRelativeUrl,
   })
@@ -29,7 +28,7 @@ let nodePlatformHooks
 }
 {
   const actual = await Promise.race([
-    nodePlatformHooks.disconnected.then(() => "disconnected"),
+    nodeRuntimeHooks.disconnected.then(() => "disconnected"),
     new Promise((resolve) => {
       setTimeout(() => resolve("timeout"), 5000)
     }),

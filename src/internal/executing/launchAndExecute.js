@@ -6,6 +6,7 @@ import {
   composeCancellationToken,
   errorToCancelReason,
 } from "@jsenv/cancellation"
+import { createLogger } from "@jsenv/logger"
 import { composeCoverageMap } from "./coverage/composeCoverageMap.js"
 
 const TIMING_BEFORE_EXECUTION = "before-execution"
@@ -14,36 +15,37 @@ const TIMING_AFTER_EXECUTION = "after-execution"
 
 export const launchAndExecute = async ({
   cancellationToken = createCancellationToken(),
-  launchLogger,
-  executeLogger,
+  logLevel,
 
   fileRelativeUrl,
   launch,
 
-  // stopPlatformAfterExecute false by default because you want to keep browser alive
+  // stopAfterExecute false by default because you want to keep browser alive
   // or nodejs process
   // however unit test will pass true because they want to move on
-  stopPlatformAfterExecute = false,
-  stopPlatformAfterExecuteReason = "stop after execute",
-  // when launchPlatform returns { disconnected, gracefulStop, stop }
-  // the launched platform have that amount of ms for disconnected to resolve
+  stopAfterExecute = false,
+  stopAfterExecuteReason = "stop after execute",
+  // when launch returns { disconnected, gracefulStop, stop }
+  // the launched runtime have that amount of ms for disconnected to resolve
   // before we call stop
   gracefulStopAllocatedMs = 4000,
-  platformConsoleCallback = () => {},
-  platformStartedCallback = () => {},
-  platformStoppedCallback = () => {},
-  platformErrorCallback = () => {},
-  platformDisconnectCallback = () => {},
+  runtimeConsoleCallback = () => {},
+  runtimeStartedCallback = () => {},
+  runtimeStoppedCallback = () => {},
+  runtimeErrorCallback = () => {},
+  runtimeDisconnectCallback = () => {},
 
   measureDuration = false,
   mirrorConsole = false,
   captureConsole = false, // rename collectConsole ?
-  collectPlatformName = false,
-  collectPlatformVersion = false,
+  collectRuntimeName = false,
+  collectRuntimeVersion = false,
   inheritCoverage = false,
   collectCoverage = false,
   ...rest
 } = {}) => {
+  const logger = createLogger({ logLevel })
+
   if (typeof fileRelativeUrl !== "string") {
     throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`)
   }
@@ -67,7 +69,7 @@ export const launchAndExecute = async ({
   }
 
   if (mirrorConsole) {
-    platformConsoleCallback = composeCallback(platformConsoleCallback, ({ type, text }) => {
+    runtimeConsoleCallback = composeCallback(runtimeConsoleCallback, ({ type, text }) => {
       if (type === "error") {
         process.stderr.write(text)
       } else {
@@ -78,7 +80,7 @@ export const launchAndExecute = async ({
 
   if (captureConsole) {
     const consoleCalls = []
-    platformConsoleCallback = composeCallback(platformConsoleCallback, ({ type, text }) => {
+    runtimeConsoleCallback = composeCallback(runtimeConsoleCallback, ({ type, text }) => {
       consoleCalls.push({ type, text })
     })
     executionResultTransformer = composeTransformer(
@@ -90,24 +92,24 @@ export const launchAndExecute = async ({
     )
   }
 
-  if (collectPlatformName) {
-    platformStartedCallback = composeCallback(platformStartedCallback, ({ name }) => {
+  if (collectRuntimeName) {
+    runtimeStartedCallback = composeCallback(runtimeStartedCallback, ({ name }) => {
       executionResultTransformer = composeTransformer(
         executionResultTransformer,
         (executionResult) => {
-          executionResult.platformName = name
+          executionResult.runtimeName = name
           return executionResult
         },
       )
     })
   }
 
-  if (collectPlatformVersion) {
-    platformStartedCallback = composeCallback(platformStartedCallback, ({ version }) => {
+  if (collectRuntimeVersion) {
+    runtimeStartedCallback = composeCallback(runtimeStartedCallback, ({ version }) => {
       executionResultTransformer = composeTransformer(
         executionResultTransformer,
         (executionResult) => {
-          executionResult.platformVersion = version
+          executionResult.runtimeVersion = version
           return executionResult
         },
       )
@@ -131,21 +133,21 @@ export const launchAndExecute = async ({
 
   const executionResult = await computeRawExecutionResult({
     cancellationToken,
-    launchLogger,
-    executeLogger,
+    logger,
 
     fileRelativeUrl,
     launch,
 
-    stopPlatformAfterExecute,
-    stopPlatformAfterExecuteReason,
+    stopAfterExecute,
+    stopAfterExecuteReason,
     gracefulStopAllocatedMs,
-    platformConsoleCallback,
-    platformErrorCallback,
-    platformDisconnectCallback,
-    platformStartedCallback,
-    platformStoppedCallback,
+    runtimeConsoleCallback,
+    runtimeErrorCallback,
+    runtimeDisconnectCallback,
+    runtimeStartedCallback,
+    runtimeStoppedCallback,
     collectCoverage,
+
     ...rest,
   })
 
@@ -210,83 +212,92 @@ const computeRawExecutionResult = async ({ cancellationToken, allocatedMs, ...re
 
 const computeExecutionResult = async ({
   cancellationToken,
-  launchLogger,
-  executeLogger,
+  logger,
 
   fileRelativeUrl,
   launch,
 
-  stopPlatformAfterExecute,
-  stopPlatformAfterExecuteReason,
+  stopAfterExecute,
+  stopAfterExecuteReason,
   gracefulStopAllocatedMs,
-  platformStartedCallback,
-  platformStoppedCallback,
-  platformConsoleCallback,
-  platformErrorCallback,
-  platformDisconnectCallback,
+  runtimeStartedCallback,
+  runtimeStoppedCallback,
+  runtimeConsoleCallback,
+  runtimeErrorCallback,
+  runtimeDisconnectCallback,
 
   ...rest
 }) => {
-  launchLogger.debug(`launch execution for ${fileRelativeUrl}`)
+  logger.debug(`launch runtime environment for ${fileRelativeUrl}`)
 
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
-      const value = await launch({ cancellationToken, logger: launchLogger, ...rest })
-      platformStartedCallback({ name: value.name, version: value.version })
+      const value = await launch({
+        cancellationToken,
+        logger,
+        ...rest,
+      })
+      runtimeStartedCallback({ name: value.name, version: value.version })
       return value
     },
-    stop: async (platform, reason) => {
+    stop: async ({ runtimeName, runtimeVersion, gracefulStop, stop }, reason) => {
+      const runtime = `${runtimeName}/${runtimeVersion}`
+
       // external code can cancel using cancellationToken at any time.
-      // (hotreloading note: we would do that and listen for stoppedCallback before restarting an operation)
       // it is important to keep the code inside this stop function because once cancelled
       // all code after the operation won't execute because it will be rejected with
       // the cancellation error
 
-      let gracefulStop
+      let stoppedGracefully
 
-      if (platform.gracefulStop && gracefulStopAllocatedMs) {
-        launchLogger.debug(`${fileRelativeUrl} gracefulStop() because ${reason}`)
+      if (gracefulStop && gracefulStopAllocatedMs) {
+        logger.debug(`${fileRelativeUrl} ${runtime}: runtime.gracefulStop() because ${reason}`)
 
         const gracefulStopPromise = (async () => {
-          await platform.gracefulStop({ reason })
+          await gracefulStop({ reason })
           return true
         })()
 
         const stopPromise = (async () => {
-          const gracefulStop = await new Promise(async (resolve) => {
-            const timeoutId = setTimeout(resolve, gracefulStopAllocatedMs)
+          stoppedGracefully = await new Promise(async (resolve) => {
+            const timeoutId = setTimeout(() => {
+              resolve(false)
+            }, gracefulStopAllocatedMs)
             try {
               await gracefulStopPromise
+              resolve(true)
             } finally {
               clearTimeout(timeoutId)
             }
           })
-          if (gracefulStop) {
-            return gracefulStop
+          if (stoppedGracefully) {
+            return stoppedGracefully
           }
 
-          launchLogger.debug(
-            `${fileRelativeUrl} gracefulStop() pending after ${gracefulStopAllocatedMs}ms, use stop()`,
+          logger.debug(
+            `${fileRelativeUrl} ${runtime}: runtime.stop() because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
           )
-          await platform.stop({ reason, gracefulFailed: true })
+          await stop({ reason, gracefulFailed: true })
           return false
         })()
 
-        gracefulStop = await Promise.race([gracefulStopPromise, stopPromise])
+        stoppedGracefully = await Promise.race([gracefulStopPromise, stopPromise])
       } else {
-        await platform.stop({ reason, gracefulFailed: false })
-        gracefulStop = false
+        await stop({ reason, gracefulFailed: false })
+        stoppedGracefully = false
       }
 
-      platformStoppedCallback({ gracefulStop })
-      launchLogger.debug(`${fileRelativeUrl} platform stopped`)
+      runtimeStoppedCallback({ stoppedGracefully })
+      logger.debug(
+        `${fileRelativeUrl} ${runtime}: runtime stopped${stoppedGracefully ? " gracefully" : ""}`,
+      )
     },
   })
 
   const {
-    name: platformName,
-    version: platformVersion,
+    name: runtimeName,
+    version: runtimeVersion,
     options,
     executeFile,
     registerErrorCallback,
@@ -294,12 +305,14 @@ const computeExecutionResult = async ({
     disconnected,
   } = await launchOperation
 
-  launchLogger.debug(`${platformName}@${platformVersion} started.
+  const runtime = `${runtimeName}/${runtimeVersion}`
+
+  logger.debug(`${fileRelativeUrl} ${runtime}: runtime launched.
 --- options ---
 options: ${JSON.stringify(options, null, "  ")}`)
 
-  registerConsoleCallback(platformConsoleCallback)
-  executeLogger.debug(`${fileRelativeUrl} ${platformName}: start execution`)
+  logger.debug(`${fileRelativeUrl} ${runtime}: start file execution.`)
+  registerConsoleCallback(runtimeConsoleCallback)
 
   const executeOperation = createOperation({
     cancellationToken,
@@ -307,18 +320,18 @@ options: ${JSON.stringify(options, null, "  ")}`)
       let timing = TIMING_BEFORE_EXECUTION
 
       disconnected.then(() => {
-        executeLogger.debug(`${fileRelativeUrl} ${platformName}: disconnected ${timing}.`)
-        platformDisconnectCallback({ timing })
+        logger.debug(`${fileRelativeUrl} ${runtime}: runtime disconnected ${timing}.`)
+        runtimeDisconnectCallback({ timing })
       })
 
       const executed = executeFile(fileRelativeUrl, rest)
       timing = TIMING_DURING_EXECUTION
 
       registerErrorCallback((error) => {
-        executeLogger.error(`${fileRelativeUrl} ${platformName}: error ${timing}.
+        logger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
 --- error stack ---
 ${error.stack}`)
-        platformErrorCallback({ error, timing })
+        runtimeErrorCallback({ error, timing })
       })
 
       const raceResult = await promiseTrackRace([disconnected, executed])
@@ -328,20 +341,20 @@ ${error.stack}`)
         return createDisconnectedExecutionResult({})
       }
 
-      if (stopPlatformAfterExecute) {
-        launchOperation.stop(stopPlatformAfterExecuteReason)
+      if (stopAfterExecute) {
+        launchOperation.stop(stopAfterExecuteReason)
       }
 
       const executionResult = raceResult.value
       const { status } = executionResult
       if (status === "errored") {
-        executeLogger.error(`${fileRelativeUrl} ${platformName}: error ${timing}.
+        logger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
 --- error stack ---
 ${executionResult.error.stack}`)
         return createErroredExecutionResult(executionResult, rest)
       }
 
-      executeLogger.debug(`${fileRelativeUrl} ${platformName}: execution completed.`)
+      logger.debug(`${fileRelativeUrl} ${runtime}: execution completed.`)
       return createCompletedExecutionResult(executionResult, rest)
     },
   })

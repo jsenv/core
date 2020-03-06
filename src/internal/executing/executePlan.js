@@ -13,8 +13,7 @@ export const executePlan = async ({
   cancellationToken,
   compileServerLogLevel,
   logger,
-  launchLogger,
-  executeLogger,
+  executionLogLevel,
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -34,7 +33,7 @@ export const executePlan = async ({
   plan,
   concurrencyLimit,
   executionDefaultOptions,
-  stopPlatformAfterExecute,
+  stopAfterExecute,
   completedExecutionLogMerging,
   completedExecutionLogAbbreviation,
   logSummary,
@@ -43,6 +42,8 @@ export const executePlan = async ({
   coverage,
   coverageConfig,
   coverageIncludeMissing,
+
+  ...rest
 } = {}) => {
   if (coverage) {
     const specifierMetaMapForCover = normalizeSpecifierMetaMap(
@@ -94,14 +95,15 @@ export const executePlan = async ({
       babelPluginMap,
       convertMap,
       compileGroupCount,
+
+      coverageConfig,
     }),
   ])
 
   const executionResult = await executeConcurrently(executionSteps, {
     cancellationToken,
     logger,
-    launchLogger,
-    executeLogger,
+    executionLogLevel,
 
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
@@ -111,7 +113,7 @@ export const executePlan = async ({
 
     babelPluginMap,
 
-    stopPlatformAfterExecute,
+    stopAfterExecute,
     concurrencyLimit,
     executionDefaultOptions,
     completedExecutionLogMerging,
@@ -121,6 +123,8 @@ export const executePlan = async ({
     coverage,
     coverageConfig,
     coverageIncludeMissing,
+
+    ...rest,
   })
 
   stop("all execution done")

@@ -11,7 +11,8 @@
     "execute-on-node": "node ./execute-node.cjs index.js"
   },
   "devDependencies": {
-    "@jsenv/core": "12.0.0",
-    "playwright": "0.11.1"
+    "@jsenv/core": "12.1.0-alpha.6",
+    "playwright-chromium": "0.11.1",
+    "playwright-firefox": "0.11.1"
   }
 }

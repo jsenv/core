@@ -3,12 +3,12 @@
 import groupMap from "/.jsenv/out/groupMap.json"
 // eslint-disable-next-line import/no-unresolved
 import env from "/.jsenv/out/env.json"
-import { computeCompileIdFromGroupId } from "../platform/computeCompileIdFromGroupId.js"
-import { resolvePlatformGroup } from "../platform/resolvePlatformGroup.js"
+import { computeCompileIdFromGroupId } from "../runtime/computeCompileIdFromGroupId.js"
+import { resolveRuntimeGroup } from "../runtime/resolveRuntimeGroup.js"
 
 const { chunkId } = env
 const compileId = computeCompileIdFromGroupId({
-  groupId: resolvePlatformGroup({ groupMap }),
+  groupId: resolveRuntimeGroup(groupMap),
   groupMap,
 })
 // eslint-disable-next-line import/no-dynamic-require

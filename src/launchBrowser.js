@@ -12,10 +12,13 @@ import { createSharing } from "./internal/browser-launcher/createSharing.js"
 import { startBrowserServer } from "./internal/browser-launcher/startBrowserServer.js"
 import { evaluateImportExecution } from "./internal/browser-launcher/evaluateImportExecution.js"
 
+const playwright = require("playwright-core")
+
 const chromiumSharing = createSharing()
 
 export const launchChromium = async ({
   cancellationToken = createCancellationToken(),
+  chromiumExecutablePath,
   browserServerLogLevel,
 
   projectDirectoryUrl,
@@ -31,7 +34,7 @@ export const launchChromium = async ({
 }) => {
   const ressourceTracker = trackRessources()
   const sharingToken = share
-    ? chromiumSharing.getSharingToken({ headless, debug, debugPort })
+    ? chromiumSharing.getSharingToken({ chromiumExecutablePath, headless, debug, debugPort })
     : chromiumSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
@@ -40,6 +43,7 @@ export const launchChromium = async ({
       ressourceTracker,
       options: {
         headless,
+        executablePath: chromiumExecutablePath,
         ...(debug ? { devtools: true } : {}),
         args: [
           // https://github.com/GoogleChrome/puppeteer/issues/1834
@@ -83,7 +87,7 @@ export const launchChromium = async ({
     name: "chromium",
     version: "82.0.4057.0",
     stop: ressourceTracker.cleanup,
-    ...browserToPlatformHooks(browser, {
+    ...browserToRuntimeHooks(browser, {
       cancellationToken,
       ressourceTracker,
       browserServerLogLevel,
@@ -105,6 +109,7 @@ const firefoxSharing = createSharing()
 
 export const launchFirefox = async ({
   cancellationToken = createCancellationToken(),
+  firefoxExecutablePath,
   browserServerLogLevel,
 
   projectDirectoryUrl,
@@ -117,7 +122,7 @@ export const launchFirefox = async ({
 }) => {
   const ressourceTracker = trackRessources()
   const sharingToken = share
-    ? firefoxSharing.getSharingToken({ headless })
+    ? firefoxSharing.getSharingToken({ firefoxExecutablePath, headless })
     : firefoxSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
@@ -126,6 +131,7 @@ export const launchFirefox = async ({
       ressourceTracker,
       options: {
         headless,
+        executablePath: firefoxExecutablePath,
       },
       stopOnExit,
     })
@@ -142,7 +148,7 @@ export const launchFirefox = async ({
     name: "firefox",
     version: "73.0b13",
     stop: ressourceTracker.cleanup,
-    ...browserToPlatformHooks(browser, {
+    ...browserToRuntimeHooks(browser, {
       cancellationToken,
       ressourceTracker,
       browserServerLogLevel,
@@ -164,6 +170,7 @@ const webkitSharing = createSharing()
 
 export const launchWebkit = async ({
   cancellationToken = createCancellationToken(),
+  webkitExecutablePath,
   browserServerLogLevel,
 
   projectDirectoryUrl,
@@ -176,7 +183,7 @@ export const launchWebkit = async ({
 }) => {
   const ressourceTracker = trackRessources()
   const sharingToken = share
-    ? webkitSharing.getSharingToken({ headless })
+    ? webkitSharing.getSharingToken({ webkitExecutablePath, headless })
     : webkitSharing.getUniqueSharingToken()
 
   if (!sharingToken.isUsed()) {
@@ -185,6 +192,7 @@ export const launchWebkit = async ({
       ressourceTracker,
       options: {
         headless,
+        executablePath: webkitExecutablePath,
       },
       stopOnExit,
     })
@@ -201,7 +209,7 @@ export const launchWebkit = async ({
     name: "webkit",
     version: "13.0.4",
     stop: ressourceTracker.cleanup,
-    ...browserToPlatformHooks(browser, {
+    ...browserToRuntimeHooks(browser, {
       cancellationToken,
       ressourceTracker,
       browserServerLogLevel,
@@ -223,23 +231,7 @@ const launchBrowser = async (
   browserName,
   { cancellationToken, ressourceTracker, options, stopOnExit },
 ) => {
-  let playwright
-  try {
-    playwright = require("playwright")
-  } catch (e) {
-    if (e.code === "MODULE_NOT_FOUND") {
-      throw new Error(`playwright module not found.
-Please note playwright is a peer dependency of @jsenv/core.
-It means you must have playwright in your dependencies/devDependencies.
-You can install playwright using the following command:
-
-npm install playwright`)
-    }
-    throw e
-  }
-
   const browserClass = playwright[browserName]
-
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: () =>
@@ -278,7 +270,7 @@ npm install playwright`)
 
 const browserServerSharing = createSharing()
 
-const browserToPlatformHooks = (
+const browserToRuntimeHooks = (
   browser,
   {
     cancellationToken,

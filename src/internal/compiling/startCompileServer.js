@@ -77,7 +77,9 @@ export const startCompileServer = async ({
   babelCompatMap = jsenvBabelPluginCompatMap,
   browserScoreMap = jsenvBrowserScoreMap,
   nodeVersionScoreMap = jsenvNodeVersionScoreMap,
-  platformAlwaysInsidePlatformScoreMap = false,
+  runtimeAlwaysInsideRuntimeScoreMap = false,
+
+  coverageConfig,
 }) => {
   if (typeof projectDirectoryUrl !== "string") {
     throw new TypeError(`projectDirectoryUrl must be a string. got ${projectDirectoryUrl}`)
@@ -116,15 +118,16 @@ ${projectDirectoryUrl}`)
   const groupMap = generateGroupMap({
     babelPluginMap,
     babelCompatMap,
-    platformScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
+    runtimeScoreMap: { ...browserScoreMap, node: nodeVersionScoreMap },
     groupCount: compileGroupCount,
-    platformAlwaysInsidePlatformScoreMap,
+    runtimeAlwaysInsideRuntimeScoreMap,
   })
 
   const outDirectoryMeta = {
     babelPluginMap,
     convertMap,
     groupMap,
+    coverageConfig,
   }
   if (jsenvDirectoryClean) {
     logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`)
@@ -253,21 +256,21 @@ ${projectDirectoryUrl}`)
   const groupMapToString = () => JSON.stringify(groupMap, null, "  ")
   const envToString = () => JSON.stringify(env, null, "  ")
 
-  const jsenvImportMapFileUrl = resolveUrl("./importMap.json", outDirectoryUrl)
-  const jsenvGroupMapFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
-  const jsenvEnvFileUrl = resolveUrl("./env.json", outDirectoryUrl)
+  const importMapOutFileUrl = resolveUrl("./importMap.json", outDirectoryUrl)
+  const groupMapOutFileUrl = resolveUrl("./groupMap.json", outDirectoryUrl)
+  const envOutFileUrl = resolveUrl("./env.json", outDirectoryUrl)
 
   await Promise.all([
-    writeFile(jsenvImportMapFileUrl, importMapToString()),
-    writeFile(jsenvGroupMapFileUrl, groupMapToString()),
-    writeFile(jsenvEnvFileUrl, envToString()),
+    writeFile(importMapOutFileUrl, importMapToString()),
+    writeFile(groupMapOutFileUrl, groupMapToString()),
+    writeFile(envOutFileUrl, envToString()),
   ])
 
   if (!writeOnFilesystem) {
     compileServer.stoppedPromise.then(() => {
-      removeFileSystemNode(jsenvImportMapFileUrl, { allowUseless: true })
-      removeFileSystemNode(jsenvGroupMapFileUrl, { allowUseless: true })
-      removeFileSystemNode(jsenvEnvFileUrl)
+      removeFileSystemNode(importMapOutFileUrl, { allowUseless: true })
+      removeFileSystemNode(groupMapOutFileUrl, { allowUseless: true })
+      removeFileSystemNode(envOutFileUrl)
     })
   }
 

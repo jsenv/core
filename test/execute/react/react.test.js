@@ -17,7 +17,7 @@ const actual = await execute({
       convertCommonJsWithRollup({ ...options, processEnvNodeEnv: "production" }),
   },
   launch: launchChromium,
-  stopPlatformAfterExecute: true,
+  stopAfterExecute: true,
   fileRelativeUrl,
   collectNamespace: true,
 })

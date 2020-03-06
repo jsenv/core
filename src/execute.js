@@ -1,5 +1,4 @@
 import { catchCancellation, createCancellationTokenForProcess } from "@jsenv/util"
-import { createLogger } from "@jsenv/logger"
 import { assertProjectDirectoryUrl, assertProjectDirectoryExists } from "./internal/argUtils.js"
 import { startCompileServer } from "./internal/compiling/startCompileServer.js"
 import { launchAndExecute } from "./internal/executing/launchAndExecute.js"
@@ -8,8 +7,7 @@ export const execute = async ({
   cancellationToken = createCancellationTokenForProcess(),
   logLevel = "warn",
   compileServerLogLevel = logLevel,
-  launchLogLevel = logLevel,
-  executeLogLevel = logLevel,
+  executionLogLevel = logLevel,
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -29,15 +27,12 @@ export const execute = async ({
 
   launch,
   mirrorConsole = true,
-  stopPlatformAfterExecute = false,
+  stopAfterExecute = false,
   gracefulStopAllocatedMs,
   updateProcessExitCode = true,
   ...rest
 }) => {
   return catchCancellation(async () => {
-    const launchLogger = createLogger({ logLevel: launchLogLevel })
-    const executeLogger = createLogger({ logLevel: executeLogLevel })
-
     projectDirectoryUrl = assertProjectDirectoryUrl({ projectDirectoryUrl })
     await assertProjectDirectoryExists({ projectDirectoryUrl })
 
@@ -71,8 +66,7 @@ export const execute = async ({
 
     return launchAndExecute({
       cancellationToken,
-      launchLogger,
-      executeLogger,
+      logLevel: executionLogLevel,
 
       fileRelativeUrl,
       launch: (params) =>
@@ -83,7 +77,7 @@ export const execute = async ({
           ...params,
         }),
       mirrorConsole,
-      stopPlatformAfterExecute,
+      stopAfterExecute,
       gracefulStopAllocatedMs,
       ...rest,
     })

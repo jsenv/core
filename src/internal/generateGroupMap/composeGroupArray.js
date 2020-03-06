@@ -1,4 +1,4 @@
-import { composePlatformCompatMap } from "./composePlatformCompatMap.js"
+import { composeRuntimeCompatMap } from "./composeRuntimeCompatMap.js"
 import { groupHaveSameRequirements } from "./groupHaveSameRequirements.js"
 
 export const composeGroupArray = (...arrayOfGroupArray) => {
@@ -17,9 +17,9 @@ const groupArrayReducer = (previousGroupArray, groupArray) => {
       groupHaveSameRequirements(group, existingGroupCandidate),
     )
     if (groupWithSameRequirements) {
-      groupWithSameRequirements.platformCompatMap = composePlatformCompatMap(
-        groupWithSameRequirements.platformCompatMap,
-        group.platformCompatMap,
+      groupWithSameRequirements.runtimeCompatMap = composeRuntimeCompatMap(
+        groupWithSameRequirements.runtimeCompatMap,
+        group.runtimeCompatMap,
       )
     } else {
       reducedGroupArray.push(copyGroup(group))
@@ -32,11 +32,11 @@ const groupArrayReducer = (previousGroupArray, groupArray) => {
 const copyGroup = ({
   babelPluginRequiredNameArray,
   jsenvPluginRequiredNameArray,
-  platformCompatMap,
+  runtimeCompatMap,
 }) => {
   return {
     babelPluginRequiredNameArray: babelPluginRequiredNameArray.slice(),
     jsenvPluginRequiredNameArray: jsenvPluginRequiredNameArray.slice(),
-    platformCompatMap: { ...platformCompatMap },
+    runtimeCompatMap: { ...runtimeCompatMap },
   }
 }

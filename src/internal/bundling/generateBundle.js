@@ -40,7 +40,7 @@ export const generateBundle = async ({
   compileServerPort,
   babelPluginMap = jsenvBabelPluginMap,
   compileGroupCount = 1,
-  platformScoreMap = {
+  runtimeScoreMap = {
     ...jsenvBrowserScoreMap,
     node: jsenvNodeVersionScoreMap,
   },
@@ -139,7 +139,7 @@ export const generateBundle = async ({
       env,
       babelPluginMap,
       compileGroupCount,
-      platformScoreMap,
+      runtimeScoreMap,
       writeOnFilesystem: filesystemCache,
       useFilesystemAsCache: filesystemCache,
 

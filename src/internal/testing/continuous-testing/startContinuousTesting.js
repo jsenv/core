@@ -249,8 +249,7 @@ export const startContinuousTesting = async ({
           testingResult = await executeConcurrently(toRun, {
             cancellationToken: externalOrFileChangedCancellationToken,
             logLevel,
-            launchLogLevel: "off",
-            executeLogLevel: "off",
+            executionLogLevel: "off",
 
             projectDirectoryUrl,
             jsenvDirectoryRelativeUrl,
@@ -350,8 +349,7 @@ export const startContinuousTesting = async ({
     testingResult = await executeConcurrently(executionSteps, {
       cancellationToken,
       logLevel,
-      launchLogLevel: "off",
-      executeLogLevel: "off",
+      executionLogLevel: "off",
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
