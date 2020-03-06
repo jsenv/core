@@ -1,9 +1,8 @@
-/* global require, __dirname */
 /* eslint-disable import/no-unresolved */
-const { execute, launchChromium } = require("@jsenv/core")
+import { execute, launchChromium } from "@jsenv/core"
 
 execute({
-  projectDirectoryUrl: __dirname,
+  projectDirectoryUrl: new URL("./", import.meta.url),
   launch: launchChromium,
   fileRelativeUrl: process.argv[2],
   stopAfterExecute: true,

@@ -52,6 +52,8 @@ node ./execute-chromium.js index.js
 
 `browser` will be logged in your terminal.
 
+![chromium execution terminal screenshot](./chromium-terminal-screenshot.png)
+
 ## 3 - Executing file on Node.js
 
 ```console
@@ -59,6 +61,8 @@ node ./execute-node.js index.js
 ```
 
 `node` will be logged in your terminal.
+
+![node execution terminal screenshot](./node-terminal-screenshot.png)
 
 ## 4 - Debug file from vscode
 
