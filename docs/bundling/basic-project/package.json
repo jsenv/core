@@ -7,12 +7,12 @@
     "node": ">=12.8.0"
   },
   "scripts": {
-    "generate-commonjs-bundle": "node ./generate-commonjs-bundle.cjs",
-    "generate-esmodule-bundle": "node ./generate-esmodule-bundle.cjs",
-    "generate-global-bundle": "node ./generate-global-bundle.cjs",
-    "generate-systemjs-bundle": "node ./generate-systemjs-bundle.cjs"
+    "generate-commonjs-bundle": "node --no-warnings ./generate-commonjs-bundle.js",
+    "generate-esmodule-bundle": "node --no-warnings ./generate-esmodule-bundle.js",
+    "generate-global-bundle": "node --no-warnings ./generate-global-bundle.js",
+    "generate-systemjs-bundle": "node --no-warnings ./generate-systemjs-bundle.js"
   },
   "devDependencies": {
-    "@jsenv/core": "12.0.0"
+    "@jsenv/core": "12.1.0-alpha.6"
   }
 }
