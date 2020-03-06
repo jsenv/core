@@ -22,8 +22,7 @@ export const executeConcurrently = async (
   {
     cancellationToken,
     logger,
-    launchLogger,
-    executeLogger,
+    executionLogLevel,
 
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
@@ -139,8 +138,7 @@ ${fileRelativeUrl}`),
       beforeExecutionCallback(beforeExecutionInfo)
       const executionResult = await launchAndExecute({
         cancellationToken: executionCancellationToken,
-        launchLogger,
-        executeLogger,
+        logLevel: executionLogLevel,
         launch: (params) =>
           launch({
             projectDirectoryUrl,

@@ -13,8 +13,7 @@ export const executePlan = async ({
   cancellationToken,
   compileServerLogLevel,
   logger,
-  launchLogger,
-  executeLogger,
+  executionLogLevel,
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -104,8 +103,7 @@ export const executePlan = async ({
   const executionResult = await executeConcurrently(executionSteps, {
     cancellationToken,
     logger,
-    launchLogger,
-    executeLogger,
+    executionLogLevel,
 
     projectDirectoryUrl,
     outDirectoryRelativeUrl,

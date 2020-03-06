@@ -16,8 +16,7 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}alive-after-execution.js`
   {
     const actual = await execute({
       ...EXECUTE_TEST_PARAMS,
-      // launchLogLevel: "debug",
-      // executeLogLevel: "debug",
+      // executionLogLevel: "debug",
       jsenvDirectoryRelativeUrl,
       launch: async (options) => {
         nodeRuntimeHooks = await launchNode({ ...options, debugPort: 40001 })
@@ -52,8 +51,7 @@ const fileRelativeUrl = `${testDirectoryRelativeUrl}alive-after-execution.js`
   {
     const actual = await execute({
       ...EXECUTE_TEST_PARAMS,
-      // launchLogLevel: "debug",
-      // executeLogLevel: "debug",
+      // executionLogLevel: "debug",
       jsenvDirectoryRelativeUrl,
       launch: async (options) => {
         nodeRuntimeHooks = await launchNode({ ...options, debugPort: 40001 })

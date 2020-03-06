@@ -13,8 +13,7 @@ let nodeRuntimeHooks
 {
   const actual = await execute({
     ...EXECUTE_TEST_PARAMS,
-    // launchLogLevel: "debug",
-    // executeLogLevel: "debug",
+    // executionLogLevel: "debug",
     jsenvDirectoryRelativeUrl,
     launch: async (options) => {
       nodeRuntimeHooks = await launchNode({ ...options, debugPort: 40001 })

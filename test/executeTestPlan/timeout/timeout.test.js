@@ -24,7 +24,7 @@ const testPlan = {
 
 const actual = await executeTestPlan({
   ...EXECUTE_TEST_PARAMS,
-  executeLogLevel: "error",
+  executionLogLevel: "error",
   jsenvDirectoryRelativeUrl,
   testPlan,
 })

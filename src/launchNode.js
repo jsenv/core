@@ -293,7 +293,12 @@ ${e.stack}`)
   return {
     name: "node",
     version: process.version.slice(1),
-    options: { execArgv, env },
+    options: {
+      execArgv,
+      // for now do not pass env, it make debug logs to verbose
+      // because process.env is very big
+      // env,
+    },
     gracefulStop,
     stop,
     disconnected,

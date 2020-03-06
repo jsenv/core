@@ -1,4 +1,3 @@
-import { createLogger } from "@jsenv/logger"
 import { jsenvCoreDirectoryUrl } from "../../src/internal/jsenvCoreDirectoryUrl.js"
 import { testBabelPluginMap } from "../testBabelPluginMap.js"
 import { coverageIsEnabled } from "../coverageIsEnabled.js"
@@ -12,8 +11,7 @@ export const START_COMPILE_SERVER_TEST_PARAMS = {
 }
 
 export const EXECUTION_TEST_PARAMS = {
-  launchLogger: createLogger({ logLevel: "info" }),
-  executeLogger: createLogger({ logLevel: "info" }),
+  logLevel: "info",
   stopAfterExecute: true,
   collectNamespace: true,
   inheritCoverage: coverageIsEnabled(),

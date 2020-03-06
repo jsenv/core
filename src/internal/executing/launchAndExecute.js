@@ -6,6 +6,7 @@ import {
   composeCancellationToken,
   errorToCancelReason,
 } from "@jsenv/cancellation"
+import { createLogger } from "@jsenv/logger"
 import { composeCoverageMap } from "./coverage/composeCoverageMap.js"
 
 const TIMING_BEFORE_EXECUTION = "before-execution"
@@ -14,8 +15,7 @@ const TIMING_AFTER_EXECUTION = "after-execution"
 
 export const launchAndExecute = async ({
   cancellationToken = createCancellationToken(),
-  launchLogger,
-  executeLogger,
+  logLevel,
 
   fileRelativeUrl,
   launch,
@@ -44,6 +44,8 @@ export const launchAndExecute = async ({
   collectCoverage = false,
   ...rest
 } = {}) => {
+  const logger = createLogger({ logLevel })
+
   if (typeof fileRelativeUrl !== "string") {
     throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`)
   }
@@ -131,8 +133,7 @@ export const launchAndExecute = async ({
 
   const executionResult = await computeRawExecutionResult({
     cancellationToken,
-    launchLogger,
-    executeLogger,
+    logger,
 
     fileRelativeUrl,
     launch,
@@ -211,8 +212,7 @@ const computeRawExecutionResult = async ({ cancellationToken, allocatedMs, ...re
 
 const computeExecutionResult = async ({
   cancellationToken,
-  launchLogger,
-  executeLogger,
+  logger,
 
   fileRelativeUrl,
   launch,
@@ -228,64 +228,70 @@ const computeExecutionResult = async ({
 
   ...rest
 }) => {
-  launchLogger.debug(`launch execution for ${fileRelativeUrl}`)
+  logger.debug(`launch runtime environment for ${fileRelativeUrl}`)
 
   const launchOperation = createStoppableOperation({
     cancellationToken,
     start: async () => {
       const value = await launch({
         cancellationToken,
-        logger: launchLogger,
+        logger,
         ...rest,
       })
       runtimeStartedCallback({ name: value.name, version: value.version })
       return value
     },
-    stop: async (runtime, reason) => {
+    stop: async ({ runtimeName, runtimeVersion, gracefulStop, stop }, reason) => {
+      const runtime = `${runtimeName}/${runtimeVersion}`
+
       // external code can cancel using cancellationToken at any time.
-      // (livereloading note: we would do that and listen for stoppedCallback before restarting an operation)
       // it is important to keep the code inside this stop function because once cancelled
       // all code after the operation won't execute because it will be rejected with
       // the cancellation error
 
-      let gracefulStop
+      let stoppedGracefully
 
-      if (runtime.gracefulStop && gracefulStopAllocatedMs) {
-        launchLogger.debug(`${fileRelativeUrl} gracefulStop() because ${reason}`)
+      if (gracefulStop && gracefulStopAllocatedMs) {
+        logger.debug(`${fileRelativeUrl} ${runtime}: runtime.gracefulStop() because ${reason}`)
 
         const gracefulStopPromise = (async () => {
-          await runtime.gracefulStop({ reason })
+          await gracefulStop({ reason })
           return true
         })()
 
         const stopPromise = (async () => {
-          const gracefulStop = await new Promise(async (resolve) => {
-            const timeoutId = setTimeout(resolve, gracefulStopAllocatedMs)
+          stoppedGracefully = await new Promise(async (resolve) => {
+            const timeoutId = setTimeout(() => {
+              resolve(false)
+            }, gracefulStopAllocatedMs)
             try {
               await gracefulStopPromise
+              resolve(true)
             } finally {
               clearTimeout(timeoutId)
             }
           })
-          if (gracefulStop) {
-            return gracefulStop
+          if (stoppedGracefully) {
+            return stoppedGracefully
           }
 
-          launchLogger.debug(
-            `${fileRelativeUrl} gracefulStop() pending after ${gracefulStopAllocatedMs}ms, use stop()`,
+          logger.debug(
+            `${fileRelativeUrl} ${runtime}: runtime.stop() because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`,
           )
-          await runtime.stop({ reason, gracefulFailed: true })
+          await stop({ reason, gracefulFailed: true })
           return false
         })()
 
-        gracefulStop = await Promise.race([gracefulStopPromise, stopPromise])
+        stoppedGracefully = await Promise.race([gracefulStopPromise, stopPromise])
       } else {
-        await runtime.stop({ reason, gracefulFailed: false })
-        gracefulStop = false
+        await stop({ reason, gracefulFailed: false })
+        stoppedGracefully = false
       }
 
-      runtimeStoppedCallback({ gracefulStop })
-      launchLogger.debug(`${fileRelativeUrl} runtime stopped`)
+      runtimeStoppedCallback({ stoppedGracefully })
+      logger.debug(
+        `${fileRelativeUrl} ${runtime}: runtime stopped${stoppedGracefully ? " gracefully" : ""}`,
+      )
     },
   })
 
@@ -301,12 +307,12 @@ const computeExecutionResult = async ({
 
   const runtime = `${runtimeName}/${runtimeVersion}`
 
-  launchLogger.debug(`${runtime} started.
+  logger.debug(`${fileRelativeUrl} ${runtime}: runtime launched.
 --- options ---
 options: ${JSON.stringify(options, null, "  ")}`)
 
+  logger.debug(`${fileRelativeUrl} ${runtime}: start file execution.`)
   registerConsoleCallback(runtimeConsoleCallback)
-  executeLogger.debug(`${fileRelativeUrl} ${runtime}: start execution`)
 
   const executeOperation = createOperation({
     cancellationToken,
@@ -314,7 +320,7 @@ options: ${JSON.stringify(options, null, "  ")}`)
       let timing = TIMING_BEFORE_EXECUTION
 
       disconnected.then(() => {
-        executeLogger.debug(`${fileRelativeUrl} ${runtime}: disconnected ${timing}.`)
+        logger.debug(`${fileRelativeUrl} ${runtime}: runtime disconnected ${timing}.`)
         runtimeDisconnectCallback({ timing })
       })
 
@@ -322,7 +328,7 @@ options: ${JSON.stringify(options, null, "  ")}`)
       timing = TIMING_DURING_EXECUTION
 
       registerErrorCallback((error) => {
-        executeLogger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
+        logger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
 --- error stack ---
 ${error.stack}`)
         runtimeErrorCallback({ error, timing })
@@ -342,13 +348,13 @@ ${error.stack}`)
       const executionResult = raceResult.value
       const { status } = executionResult
       if (status === "errored") {
-        executeLogger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
+        logger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
 --- error stack ---
 ${executionResult.error.stack}`)
         return createErroredExecutionResult(executionResult, rest)
       }
 
-      executeLogger.debug(`${fileRelativeUrl} ${runtime}: execution completed.`)
+      logger.debug(`${fileRelativeUrl} ${runtime}: execution completed.`)
       return createCompletedExecutionResult(executionResult, rest)
     },
   })

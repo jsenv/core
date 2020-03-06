@@ -22,8 +22,7 @@ export const executeTestPlan = async ({
   cancellationToken = createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
-  launchLogLevel = "warn",
-  executeLogLevel = "off",
+  executionLogLevel = "warn",
 
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
@@ -72,8 +71,7 @@ export const executeTestPlan = async ({
 }) => {
   return catchCancellation(async () => {
     const logger = createLogger({ logLevel })
-    const launchLogger = createLogger({ logLevel: launchLogLevel })
-    const executeLogger = createLogger({ logLevel: executeLogLevel })
+    const executionLogger = createLogger({ logLevel: executionLogLevel })
 
     cancellationToken.register((cancelError) => {
       if (cancelError.reason === "process SIGINT") {
@@ -135,8 +133,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       cancellationToken,
       compileServerLogLevel,
       logger,
-      launchLogger,
-      executeLogger,
+      executionLogger,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
