@@ -94,7 +94,7 @@ export const launchNode = async ({
     stdio: "pipe",
     env,
   })
-  logger.info(
+  logger.debug(
     `${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(nodeControllableFileUrl)}`,
   )
 

@@ -45,6 +45,10 @@ export const writeLog = (string, { stream = process.stdout } = {}) => {
   }
 }
 
+// maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
+// the problem with listening data on stdout
+// is that node.js will later throw error if stream gets closed
+// while something listening data on it
 const spyConsoleModification = () => {
   const modified = false
 
