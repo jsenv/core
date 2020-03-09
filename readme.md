@@ -49,7 +49,7 @@ executeTestPlan({
 })
 ```
 
-![test execution terminal screenshot](./docs/testing/test-execution-terminal-screenshot.png)
+![test execution terminal screenshot](./docs/testing/main-example-terminal-screenshot.png)
 
 There is a detailed documentation about testing at [./docs/testing/readme.md](./docs/testing/readme.md). `@jsenv/core` can also bring you more as shown in the [Documentation](#Documentation) part.
 
