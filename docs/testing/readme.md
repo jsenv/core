@@ -116,7 +116,7 @@ It reduces chances that a file execution have a side effect on an other file exe
 For instance executing code with an infinite loop crashes browser or node.js process. In that scenario that file would not prevent other file executions.<br />
 It also allows to execute files concurrently increasing speed on machine with mutiple processors.
 
-Currently jsenv provides 3 possible test execution environments, called `runtime`.
+jsenv provides several test execution environments, called `runtime`.
 
 - A chromium browser per test
 - A chromium browser tab per test
