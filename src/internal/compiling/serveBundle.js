@@ -16,6 +16,7 @@ export const serveBundle = async ({
   compileServerOrigin,
   compileServerImportMap,
   importDefaultExtension,
+  externalImportSpecifiers = {},
 
   format,
   formatOutputOptions = {},
@@ -49,6 +50,7 @@ export const serveBundle = async ({
       compileServerOrigin,
       compileServerImportMap,
       importDefaultExtension,
+      externalImportSpecifiers,
 
       node,
       browser,
