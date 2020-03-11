@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "12.2.0",
+  "version": "12.2.0-alpha.0",
   "description": "Execute JavaScript on multiple environments for testing.",
   "license": "MIT",
   "repository": {
@@ -136,7 +136,7 @@
     "@babel/plugin-transform-react-jsx": "7.8.3",
     "@jsenv/assert": "2.0.2",
     "@jsenv/codecov-upload": "3.3.0",
-    "@jsenv/core": "12.1.0-alpha.6",
+    "@jsenv/core": "12.2.0-alpha.0",
     "@jsenv/eslint-config": "12.3.1",
     "@jsenv/git-hooks": "1.3.3",
     "@jsenv/github-release-package": "1.2.1",
