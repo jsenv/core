@@ -16,7 +16,7 @@ export const serveBundle = async ({
   compileServerOrigin,
   compileServerImportMap,
   importDefaultExtension,
-  externalImportSpecifiers = {},
+  externalImportSpecifiers = [],
 
   format,
   formatOutputOptions = {},

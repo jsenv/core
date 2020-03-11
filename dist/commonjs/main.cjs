@@ -3760,7 +3760,7 @@ const createJsenvRollupPlugin = async ({
       const manifestFileUrl = util.resolveUrl("manifest.json", bundleDirectoryUrl);
       await util.writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "));
     },
-    writeBundle: async bundle => {
+    writeBundle: async (options, bundle) => {
       if (detectAndTransformIfNeededAsyncInsertedByRollup) {
         await transformAsyncInsertedByRollup({
           projectDirectoryUrl,
@@ -4041,8 +4041,6 @@ const generateBundleUsingRollup = async ({
   };
 
   const external = id => {
-    console.log("is external", id);
-
     if (externalImportSpecifiers.includes(id)) {
       return true;
     }
@@ -4326,6 +4324,7 @@ const serveBundle = async ({
   compileServerOrigin,
   compileServerImportMap,
   importDefaultExtension,
+  externalImportSpecifiers = [],
   format,
   formatOutputOptions = {},
   node = format === "commonjs",
@@ -4355,6 +4354,7 @@ const serveBundle = async ({
       compileServerOrigin,
       compileServerImportMap,
       importDefaultExtension,
+      externalImportSpecifiers,
       node,
       browser,
       babelPluginMap,
@@ -6754,6 +6754,7 @@ const generateBundle = async ({
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
   importDefaultExtension,
+  externalImportSpecifiers = [],
   env = {},
   browser = false,
   node = false,
@@ -6774,7 +6775,6 @@ const generateBundle = async ({
   bundleDirectoryRelativeUrl,
   bundleDirectoryClean = false,
   format,
-  externalImportSpecifiers = {},
   formatInputOptions = {},
   formatOutputOptions = {},
   minify = false,

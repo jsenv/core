@@ -187,7 +187,7 @@ export const createJsenvRollupPlugin = async ({
       await writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "))
     },
 
-    writeBundle: async (bundle) => {
+    writeBundle: async (options, bundle) => {
       if (detectAndTransformIfNeededAsyncInsertedByRollup) {
         await transformAsyncInsertedByRollup({
           projectDirectoryUrl,
