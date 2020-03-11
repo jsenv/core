@@ -66,7 +66,7 @@ export const execute = async ({
 
     return launchAndExecute({
       cancellationToken,
-      logLevel: executionLogLevel,
+      executionLogLevel,
 
       fileRelativeUrl,
       launch: (params) =>
