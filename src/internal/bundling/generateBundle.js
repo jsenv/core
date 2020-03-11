@@ -52,6 +52,7 @@ export const generateBundle = async ({
   bundleDirectoryRelativeUrl,
   bundleDirectoryClean = false,
   format,
+  externalImportSpecifiers = {},
   formatInputOptions = {},
   formatOutputOptions = {},
   minify = false,
@@ -161,6 +162,7 @@ export const generateBundle = async ({
         compileServerOrigin,
         compileServerImportMap,
         importDefaultExtension,
+        externalImportSpecifiers,
 
         babelPluginMap,
         node,
@@ -190,6 +192,7 @@ export const generateBundle = async ({
         compileServerOrigin,
         compileServerImportMap,
         importDefaultExtension,
+        externalImportSpecifiers,
 
         babelPluginMap,
         compileServerGroupMap,
@@ -215,6 +218,7 @@ export const generateBundle = async ({
         compileServerOrigin,
         compileServerImportMap,
         importDefaultExtension,
+        externalImportSpecifiers,
 
         babelPluginMap,
         node,

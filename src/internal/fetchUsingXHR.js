@@ -1,7 +1,3 @@
-// explicitely get the file to pull exactly what is required
-// to get hrefToOrigin
-import { hrefToOrigin } from "@jsenv/href/src/hrefToOrigin/hrefToOrigin.js"
-
 export const fetchUsingXHR = (url, { credentials = "same-origin", headers = {} } = {}) => {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
@@ -123,4 +119,28 @@ const getHeadersFromXHR = (xhr) => {
   })
 
   return headerMap
+}
+
+const hrefToOrigin = (href) => {
+  const scheme = hrefToScheme(href)
+
+  if (scheme === "file") {
+    return "file://"
+  }
+
+  if (scheme === "http" || scheme === "https") {
+    const secondProtocolSlashIndex = scheme.length + "://".length
+    const pathnameSlashIndex = href.indexOf("/", secondProtocolSlashIndex)
+
+    if (pathnameSlashIndex === -1) return href
+    return href.slice(0, pathnameSlashIndex)
+  }
+
+  return href.slice(0, scheme.length + 1)
+}
+
+const hrefToScheme = (href) => {
+  const colonIndex = href.indexOf(":")
+  if (colonIndex === -1) return ""
+  return href.slice(0, colonIndex)
 }

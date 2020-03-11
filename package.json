@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "12.1.2",
+  "version": "12.2.0",
   "description": "Execute JavaScript on multiple environments for testing.",
   "license": "MIT",
   "repository": {
@@ -94,7 +94,6 @@
     "@babel/plugin-transform-typeof-symbol": "7.8.3",
     "@babel/plugin-transform-unicode-regex": "7.8.3",
     "@jsenv/cancellation": "1.4.1",
-    "@jsenv/href": "1.2.0",
     "@jsenv/import-map": "6.7.2",
     "@jsenv/logger": "3.3.1",
     "@jsenv/node-module-import-map": "11.0.1",
