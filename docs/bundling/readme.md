@@ -19,6 +19,7 @@
 - [Bundling parameters](#bundling-parameters)
   - [bundleDirectoryRelativeUrl](#bundleDirectoryRelativeUrl)
   - [entryPointMap](#entryPointMap)
+  - [externalImportSpecifiers](#externalImportSpecifiers)
   - [minify](#minify)
 - [Shared parameters](#Shared-parameters)
 - [Balancing](#balancing)
@@ -308,6 +309,82 @@ This section present parameters available to every function generating a bundle.
   "main": "./index.js"
 }
 ```
+
+## externalImportSpecifiers
+
+`externalImportSpecifiers` parameter is an array of string repsenting import that will be ignored whle generating the bundle. This parameter is optional with a default value being an empty array. This parameter can be used to avoid bundling some dependencies.
+
+To better understand this let's assume your source files contains the following import.
+
+```js
+import { answer } from "foo"
+
+export const ask = () => answer
+```
+
+If `externalImportSpecifiers` contains `foo` the generated bundle will keep that import untouched and still try to load this file resulting in a bundle as below:
+
+- For bundle using `esmodule` format:
+
+  ```js
+  import { answer } from "foo"
+
+  export const ask = () => answer
+  ```
+
+- For bundle using `systemjs` format
+
+  ```js
+  System.register(["foo"], function(exports) {
+    var answer
+    return {
+      setters: [
+        function(module) {
+          answer = module.answer
+        },
+      ],
+      execute: function() {
+        exports("ask", function ask() {
+          return answer
+        })
+      },
+    }
+  })
+  ```
+
+- For bundle using `commonjs` format
+
+  ```js
+  const { answer } = require("foo")
+
+  module.exports.ask = () => answer
+  ```
+
+- For bundle using `global` format:
+
+  ```js
+  ;(function(exports, foo) {
+    var ask = function ask() {
+      return foo.answer
+    }
+
+    exports.ask = ask
+    return exports
+  })({}, foo)
+  ```
+
+  It means bundle using `global` format expect `window.foo` or `global.foo` to exists. You can control the expected global variable name using `globals`.
+
+  ```js
+  import { generateGlobalBundle } from "@jsenv/core"
+
+  generateGlobalBundle({
+    externalImportSpecifiers: ["foo"],
+    globals: {
+      foo: "bar",
+    },
+  })
+  ```
 
 ## minify
 

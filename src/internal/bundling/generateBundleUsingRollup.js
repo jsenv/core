@@ -3,7 +3,6 @@ import { rollup } from "rollup"
 import { createOperation } from "@jsenv/cancellation"
 import { urlToFileSystemPath } from "@jsenv/util"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin/createJsenvRollupPlugin.js"
-import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 
 export const generateBundleUsingRollup = async ({
   cancellationToken,
@@ -43,7 +42,10 @@ export const generateBundleUsingRollup = async ({
     compileServerOrigin,
     compileServerImportMap,
     importDefaultExtension,
+    externalImportSpecifiers,
 
+    node,
+    browser,
     babelPluginMap,
     format,
     minify,
@@ -53,24 +55,6 @@ export const generateBundleUsingRollup = async ({
     manifestFile,
   })
 
-  const nativeModulePredicate = (specifier) => {
-    if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
-    // for now browser have no native module
-    // and we don't know how we will handle that
-    if (browser) return false
-    return false
-  }
-
-  const external = (id) => {
-    if (externalImportSpecifiers.includes(id)) {
-      return true
-    }
-    if (nativeModulePredicate(id)) {
-      return true
-    }
-    return false
-  }
-
   const rollupBundle = await useRollup({
     cancellationToken,
     logger,
@@ -79,10 +63,7 @@ export const generateBundleUsingRollup = async ({
     jsenvRollupPlugin,
 
     format,
-    formatInputOptions: {
-      external,
-      ...formatInputOptions,
-    },
+    formatInputOptions,
     formatOutputOptions,
     bundleDirectoryUrl,
     sourcemapExcludeSources,

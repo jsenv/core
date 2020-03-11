@@ -15,6 +15,7 @@ import { validateResponseStatusIsOk } from "../../validateResponseStatusIsOk.js"
 import { transformJs } from "../../compiling/js-compilation-service/transformJs.js"
 import { findAsyncPluginNameInBabelPluginMap } from "../../compiling/js-compilation-service/findAsyncPluginNameInBabelPluginMap.js"
 
+import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
 import { fetchSourcemap } from "./fetchSourcemap.js"
 import { minifyHtml } from "./minifyHtml.js"
 import { minifyJs } from "./minifyJs.js"
@@ -32,6 +33,9 @@ export const createJsenvRollupPlugin = async ({
   compileServerImportMap,
   importDefaultExtension,
 
+  externalImportSpecifiers,
+  node,
+  browser,
   babelPluginMap,
   format,
   minify,
@@ -54,10 +58,28 @@ export const createJsenvRollupPlugin = async ({
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`
   const importMap = normalizeImportMap(compileServerImportMap, compileDirectoryRemoteUrl)
 
+  const nativeModulePredicate = (specifier) => {
+    if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
+    // for now browser have no native module
+    // and we don't know how we will handle that
+    if (browser) return false
+    return false
+  }
+
   const jsenvRollupPlugin = {
     name: "jsenv",
 
     resolveId: (specifier, importer = compileDirectoryRemoteUrl) => {
+      if (nativeModulePredicate(specifier)) {
+        logger.debug(`${specifier} is native module -> marked as external`)
+        return false
+      }
+
+      if (externalImportSpecifiers.includes(specifier)) {
+        logger.debug(`${specifier} verifies externalImportSpecifiers  -> marked as external`)
+        return { id: specifier, external: true }
+      }
+
       if (isFileSystemPath(importer)) {
         importer = fileSystemPathToUrl(importer)
       }
