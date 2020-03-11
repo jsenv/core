@@ -5014,7 +5014,7 @@ const TIMING_DURING_EXECUTION = "during-execution";
 const TIMING_AFTER_EXECUTION = "after-execution";
 const launchAndExecute = async ({
   cancellationToken = cancellation.createCancellationToken(),
-  logLevel,
+  executionLogLevel,
   fileRelativeUrl,
   launch,
   // stopAfterExecute false by default because you want to keep browser alive
@@ -5042,7 +5042,7 @@ const launchAndExecute = async ({
   ...rest
 } = {}) => {
   const logger$1 = logger.createLogger({
-    logLevel
+    logLevel: executionLogLevel
   });
 
   if (typeof fileRelativeUrl !== "string") {
@@ -5517,7 +5517,7 @@ const execute = async ({
     });
     return launchAndExecute({
       cancellationToken,
-      logLevel: executionLogLevel,
+      executionLogLevel,
       fileRelativeUrl,
       launch: params => launch({
         projectDirectoryUrl,
@@ -6256,7 +6256,7 @@ ${fileRelativeUrl}`));
       beforeExecutionCallback(beforeExecutionInfo);
       const executionResult = await launchAndExecute({
         cancellationToken: executionCancellationToken,
-        logLevel: executionLogLevel,
+        executionLogLevel,
         launch: params => launch({
           projectDirectoryUrl,
           outDirectoryRelativeUrl,
@@ -6618,9 +6618,6 @@ const executeTestPlan = async ({
     const logger$1 = logger.createLogger({
       logLevel
     });
-    const executionLogger = logger.createLogger({
-      logLevel: executionLogLevel
-    });
     cancellationToken.register(cancelError => {
       if (cancelError.reason === "process SIGINT") {
         logger$1.info(`process SIGINT -> cancelling test execution`);
@@ -6674,7 +6671,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`);
       cancellationToken,
       compileServerLogLevel,
       logger: logger$1,
-      executionLogger,
+      executionLogLevel,
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,

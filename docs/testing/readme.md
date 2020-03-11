@@ -446,7 +446,7 @@ Becomes
 
 ### coverageJsonFileRelativeUrl
 
-`coverageJsonFileRelativeUrl` parameter is a string controlling where the json file for coverage will be written. This parameter is optional with a default value of `"./coverage/coverage-final.json"`.
+`coverageJsonFileRelativeUrl` parameter is a string controlling where the json file for coverage will be written. This parameter is optional with a default value of `"./coverage/coverage.json"`.
 
 ### coverageHtmlDirectory
 

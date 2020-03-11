@@ -26,7 +26,7 @@ executeTestPlan({
   },
   coverageTextLog: true,
   coverageJsonFile: true,
-  coverageJsonFileRelativeUrl: `${testDirectoryRelativeUrl}coverage/coverage-final.json`,
+  coverageJsonFileRelativeUrl: `${testDirectoryRelativeUrl}coverage/coverage.json`,
   coverageHtmlDirectory: true,
   coverageHtmlDirectoryRelativeUrl: `${testDirectoryRelativeUrl}coverage`,
 })
