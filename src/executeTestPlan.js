@@ -71,7 +71,6 @@ export const executeTestPlan = async ({
 }) => {
   return catchCancellation(async () => {
     const logger = createLogger({ logLevel })
-    const executionLogger = createLogger({ logLevel: executionLogLevel })
 
     cancellationToken.register((cancelError) => {
       if (cancelError.reason === "process SIGINT") {
@@ -133,7 +132,7 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`)
       cancellationToken,
       compileServerLogLevel,
       logger,
-      executionLogger,
+      executionLogLevel,
 
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
