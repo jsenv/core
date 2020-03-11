@@ -348,7 +348,7 @@ ${error.stack}`)
       const executionResult = raceResult.value
       const { status } = executionResult
       if (status === "errored") {
-        logger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
+        logger.error(`${fileRelativeUrl} ${runtime}: error ${TIMING_DURING_EXECUTION}.
 --- error stack ---
 ${executionResult.error.stack}`)
         return createErroredExecutionResult(executionResult, rest)
