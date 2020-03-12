@@ -3,7 +3,7 @@ import { composeCoverageMap } from "../../src/internal/executing/coverage/compos
 import { evalSource } from "../../src/internal/runtime/createNodeRuntime/evalSource.js"
 import { coverageIsEnabled } from "../coverageIsEnabled.js"
 
-const { chromium } = require("playwright-chromium")
+const { chromium } = require("playwright-core")
 
 export const openBrowserPage = async (
   url,
