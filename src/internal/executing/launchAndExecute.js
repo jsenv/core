@@ -15,7 +15,7 @@ const TIMING_AFTER_EXECUTION = "after-execution"
 
 export const launchAndExecute = async ({
   cancellationToken = createCancellationToken(),
-  logLevel,
+  executionLogLevel,
 
   fileRelativeUrl,
   launch,
@@ -44,7 +44,7 @@ export const launchAndExecute = async ({
   collectCoverage = false,
   ...rest
 } = {}) => {
-  const logger = createLogger({ logLevel })
+  const logger = createLogger({ logLevel: executionLogLevel })
 
   if (typeof fileRelativeUrl !== "string") {
     throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`)
@@ -348,7 +348,7 @@ ${error.stack}`)
       const executionResult = raceResult.value
       const { status } = executionResult
       if (status === "errored") {
-        logger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
+        logger.error(`${fileRelativeUrl} ${runtime}: error ${TIMING_DURING_EXECUTION}.
 --- error stack ---
 ${executionResult.error.stack}`)
         return createErroredExecutionResult(executionResult, rest)

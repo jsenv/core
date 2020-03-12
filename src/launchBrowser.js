@@ -234,15 +234,24 @@ const launchBrowser = async (
   const browserClass = playwright[browserName]
   const launchOperation = createStoppableOperation({
     cancellationToken,
-    start: () =>
-      browserClass.launch({
-        ...options,
-        // let's handle them to close properly browser, remove listener
-        // and so on, instead of relying on puppetter
-        handleSIGINT: false,
-        handleSIGTERM: false,
-        handleSIGHUP: false,
-      }),
+    start: async () => {
+      try {
+        const result = await browserClass.launch({
+          ...options,
+          // let's handle them to close properly browser, remove listener
+          // and so on, instead of relying on puppetter
+          handleSIGINT: false,
+          handleSIGTERM: false,
+          handleSIGHUP: false,
+        })
+        return result
+      } catch (e) {
+        if (cancellationToken.cancellationRequested && isTargetClosedError(e)) {
+          return e
+        }
+        throw e
+      }
+    },
     stop: async (browser) => {
       await browser.close()
       if (browser.isConnected()) {
@@ -335,10 +344,7 @@ const browserToRuntimeHooks = (
       try {
         await browserContext.close()
       } catch (e) {
-        if (e.message.match(/^Protocol error \(.*?\): Target closed/)) {
-          return
-        }
-        if (e.message.match(/^Protocol error \(.*?\): Browser has been closed/)) {
+        if (isTargetClosedError(e)) {
           return
         }
         throw e
@@ -384,4 +390,14 @@ const browserToRuntimeHooks = (
     registerConsoleCallback,
     executeFile,
   }
+}
+
+const isTargetClosedError = (error) => {
+  if (error.message.match(/^Protocol error \(.*?\): Target closed/)) {
+    return true
+  }
+  if (error.message.match(/^Protocol error \(.*?\): Browser has been closed/)) {
+    return true
+  }
+  return false
 }

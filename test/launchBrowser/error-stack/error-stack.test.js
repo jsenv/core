@@ -26,8 +26,8 @@ await Promise.all(
   [launchChromium, launchFirefox, launchWebkit].map(async (launchBrowser) => {
     const result = await launchAndExecute({
       ...EXECUTION_TEST_PARAMS,
-      // sets exectionLogLevel to off to avoid seeing an expected error in logs
-      exectionLogLevel: "off",
+      // sets executionLogLevel to off to avoid seeing an expected error in logs
+      executionLogLevel: "off",
       // stopAfterExecute: false,
       fileRelativeUrl,
       launch: (options) =>

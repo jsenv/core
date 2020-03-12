@@ -29,6 +29,7 @@ export const generateBundle = async ({
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
   importDefaultExtension,
+  externalImportSpecifiers = [],
   env = {},
   browser = false,
   node = false,
@@ -161,6 +162,7 @@ export const generateBundle = async ({
         compileServerOrigin,
         compileServerImportMap,
         importDefaultExtension,
+        externalImportSpecifiers,
 
         babelPluginMap,
         node,
@@ -190,6 +192,7 @@ export const generateBundle = async ({
         compileServerOrigin,
         compileServerImportMap,
         importDefaultExtension,
+        externalImportSpecifiers,
 
         babelPluginMap,
         compileServerGroupMap,
@@ -215,6 +218,7 @@ export const generateBundle = async ({
         compileServerOrigin,
         compileServerImportMap,
         importDefaultExtension,
+        externalImportSpecifiers,
 
         babelPluginMap,
         node,

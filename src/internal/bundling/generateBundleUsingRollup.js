@@ -1,11 +1,8 @@
 import { extname } from "path"
+import { rollup } from "rollup"
 import { createOperation } from "@jsenv/cancellation"
 import { urlToFileSystemPath } from "@jsenv/util"
-import { require } from "../require.js"
 import { createJsenvRollupPlugin } from "./createJsenvRollupPlugin/createJsenvRollupPlugin.js"
-import { isBareSpecifierForNativeNodeModule } from "./isBareSpecifierForNativeNodeModule.js"
-
-const { rollup } = require("rollup")
 
 export const generateBundleUsingRollup = async ({
   cancellationToken,
@@ -18,6 +15,7 @@ export const generateBundleUsingRollup = async ({
   compileServerOrigin,
   compileServerImportMap,
   importDefaultExtension,
+  externalImportSpecifiers,
 
   node,
   browser,
@@ -44,7 +42,10 @@ export const generateBundleUsingRollup = async ({
     compileServerOrigin,
     compileServerImportMap,
     importDefaultExtension,
+    externalImportSpecifiers,
 
+    node,
+    browser,
     babelPluginMap,
     format,
     minify,
@@ -59,8 +60,6 @@ export const generateBundleUsingRollup = async ({
     logger,
 
     entryPointMap,
-    node,
-    browser,
     jsenvRollupPlugin,
 
     format,
@@ -82,8 +81,6 @@ const useRollup = async ({
   logger,
 
   entryPointMap,
-  node,
-  browser,
   jsenvRollupPlugin,
 
   format,
@@ -98,14 +95,6 @@ parse bundle
 --- entry point map ---
 ${JSON.stringify(entryPointMap, null, "  ")}
 `)
-
-  const nativeModulePredicate = (specifier) => {
-    if (node && isBareSpecifierForNativeNodeModule(specifier)) return true
-    // for now browser have no native module
-    // and we don't know how we will handle that
-    if (browser) return false
-    return false
-  }
 
   const rollupBundle = await createOperation({
     cancellationToken,
@@ -128,7 +117,6 @@ ${JSON.stringify(entryPointMap, null, "  ")}
           warn(warning)
         },
         input: entryPointMap,
-        external: (id) => nativeModulePredicate(id),
         plugins: [jsenvRollupPlugin],
         ...formatInputOptions,
       }),

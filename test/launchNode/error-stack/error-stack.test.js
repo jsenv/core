@@ -24,8 +24,8 @@ const { origin: compileServerOrigin, outDirectoryRelativeUrl } = await startComp
 
 const result = await launchAndExecute({
   ...EXECUTE_TEST_PARAMS,
-  // sets exectionLogLevel to off to avoid seeing an expected error in logs
-  exectionLogLevel: "off",
+  // sets executionLogLevel to off to avoid seeing an expected error in logs
+  executionLogLevel: "off",
   fileRelativeUrl,
   launch: (options) =>
     launchNode({

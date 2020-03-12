@@ -138,7 +138,7 @@ ${fileRelativeUrl}`),
       beforeExecutionCallback(beforeExecutionInfo)
       const executionResult = await launchAndExecute({
         cancellationToken: executionCancellationToken,
-        logLevel: executionLogLevel,
+        executionLogLevel,
         launch: (params) =>
           launch({
             projectDirectoryUrl,

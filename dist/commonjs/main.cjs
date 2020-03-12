@@ -4,596 +4,23 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-function _interopNamespace(e) {
-  if (e && e.__esModule) { return e; } else {
-    var n = {};
-    if (e) {
-      Object.keys(e).forEach(function (k) {
-        var d = Object.getOwnPropertyDescriptor(e, k);
-        Object.defineProperty(n, k, d.get ? d : {
-          enumerable: true,
-          get: function () {
-            return e[k];
-          }
-        });
-      });
-    }
-    n['default'] = e;
-    return n;
-  }
-}
-
 var module$1 = require('module');
-var url$1 = require('url');
+var util = require('@jsenv/util');
+var rollup = require('rollup');
 var fs = require('fs');
-var crypto = require('crypto');
+var cancellation = require('@jsenv/cancellation');
+var importMap = require('@jsenv/import-map');
+var nodeModuleImportMap = require('@jsenv/node-module-import-map');
+var server = require('@jsenv/server');
+var logger = require('@jsenv/logger');
 var path = require('path');
-var util = require('util');
 var https = require('https');
-var net = require('net');
-var http = require('http');
-var stream = require('stream');
 var os = require('os');
 var readline = _interopDefault(require('readline'));
+var nodeSignals = require('@jsenv/node-signals');
 var vm = require('vm');
 var child_process = require('child_process');
-
-const assertImportMap = value => {
-  if (value === null) {
-    throw new TypeError(`an importMap must be an object, got null`);
-  }
-
-  const type = typeof value;
-
-  if (type !== "object") {
-    throw new TypeError(`an importMap must be an object, received ${value}`);
-  }
-
-  if (Array.isArray(value)) {
-    throw new TypeError(`an importMap must be an object, received array ${value}`);
-  }
-};
-
-const hasScheme = string => {
-  return /^[a-zA-Z]{2,}:/.test(string);
-};
-
-const urlToScheme = urlString => {
-  const colonIndex = urlString.indexOf(":");
-  if (colonIndex === -1) return "";
-  return urlString.slice(0, colonIndex);
-};
-
-const urlToPathname = urlString => {
-  return ressourceToPathname(urlToRessource(urlString));
-};
-
-const urlToRessource = urlString => {
-  const scheme = urlToScheme(urlString);
-
-  if (scheme === "file") {
-    return urlString.slice("file://".length);
-  }
-
-  if (scheme === "https" || scheme === "http") {
-    // remove origin
-    const afterProtocol = urlString.slice(scheme.length + "://".length);
-    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
-    return afterProtocol.slice(pathnameSlashIndex);
-  }
-
-  return urlString.slice(scheme.length + 1);
-};
-
-const ressourceToPathname = ressource => {
-  const searchSeparatorIndex = ressource.indexOf("?");
-  return searchSeparatorIndex === -1 ? ressource : ressource.slice(0, searchSeparatorIndex);
-};
-
-const urlToOrigin = urlString => {
-  const scheme = urlToScheme(urlString);
-
-  if (scheme === "file") {
-    return "file://";
-  }
-
-  if (scheme === "http" || scheme === "https") {
-    const secondProtocolSlashIndex = scheme.length + "://".length;
-    const pathnameSlashIndex = urlString.indexOf("/", secondProtocolSlashIndex);
-    if (pathnameSlashIndex === -1) return urlString;
-    return urlString.slice(0, pathnameSlashIndex);
-  }
-
-  return urlString.slice(0, scheme.length + 1);
-};
-
-const pathnameToDirectoryPathname = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-  if (slashLastIndex === -1) return "";
-  return pathname.slice(0, slashLastIndex);
-};
-
-// could be useful: https://url.spec.whatwg.org/#url-miscellaneous
-const resolveUrl = (specifier, baseUrl) => {
-  if (baseUrl) {
-    if (typeof baseUrl !== "string") {
-      throw new TypeError(writeBaseUrlMustBeAString({
-        baseUrl,
-        specifier
-      }));
-    }
-
-    if (!hasScheme(baseUrl)) {
-      throw new Error(writeBaseUrlMustBeAbsolute({
-        baseUrl,
-        specifier
-      }));
-    }
-  }
-
-  if (hasScheme(specifier)) {
-    return specifier;
-  }
-
-  if (!baseUrl) {
-    throw new Error(writeBaseUrlRequired({
-      baseUrl,
-      specifier
-    }));
-  } // scheme relative
-
-
-  if (specifier.slice(0, 2) === "//") {
-    return `${urlToScheme(baseUrl)}:${specifier}`;
-  } // origin relative
-
-
-  if (specifier[0] === "/") {
-    return `${urlToOrigin(baseUrl)}${specifier}`;
-  }
-
-  const baseOrigin = urlToOrigin(baseUrl);
-  const basePathname = urlToPathname(baseUrl);
-
-  if (specifier === ".") {
-    const baseDirectoryPathname = pathnameToDirectoryPathname(basePathname);
-    return `${baseOrigin}${baseDirectoryPathname}/`;
-  } // pathname relative inside
-
-
-  if (specifier.slice(0, 2) === "./") {
-    const baseDirectoryPathname = pathnameToDirectoryPathname(basePathname);
-    return `${baseOrigin}${baseDirectoryPathname}/${specifier.slice(2)}`;
-  } // pathname relative outside
-
-
-  if (specifier.slice(0, 3) === "../") {
-    let unresolvedPathname = specifier;
-    const importerFolders = basePathname.split("/");
-    importerFolders.pop();
-
-    while (unresolvedPathname.slice(0, 3) === "../") {
-      unresolvedPathname = unresolvedPathname.slice(3); // when there is no folder left to resolved
-      // we just ignore '../'
-
-      if (importerFolders.length) {
-        importerFolders.pop();
-      }
-    }
-
-    const resolvedPathname = `${importerFolders.join("/")}/${unresolvedPathname}`;
-    return `${baseOrigin}${resolvedPathname}`;
-  } // bare
-
-
-  if (basePathname === "") {
-    return `${baseOrigin}/${specifier}`;
-  }
-
-  if (basePathname[basePathname.length] === "/") {
-    return `${baseOrigin}${basePathname}${specifier}`;
-  }
-
-  return `${baseOrigin}${pathnameToDirectoryPathname(basePathname)}/${specifier}`;
-};
-
-const writeBaseUrlMustBeAString = ({
-  baseUrl,
-  specifier
-}) => `baseUrl must be a string.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const writeBaseUrlMustBeAbsolute = ({
-  baseUrl,
-  specifier
-}) => `baseUrl must be absolute.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const writeBaseUrlRequired = ({
-  baseUrl,
-  specifier
-}) => `baseUrl required to resolve relative specifier.
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const tryUrlResolution = (string, url) => {
-  const result = resolveUrl(string, url);
-  return hasScheme(result) ? result : null;
-};
-
-const resolveSpecifier = (specifier, importer) => {
-  if (specifier[0] === "/" || specifier.startsWith("./") || specifier.startsWith("../")) {
-    return resolveUrl(specifier, importer);
-  }
-
-  if (hasScheme(specifier)) {
-    return specifier;
-  }
-
-  return null;
-};
-
-const sortImportMap = importMap => {
-  assertImportMap(importMap);
-  const {
-    imports,
-    scopes
-  } = importMap;
-  return {
-    imports: imports ? sortImports(imports) : undefined,
-    scopes: scopes ? sortScopes(scopes) : undefined
-  };
-};
-const sortImports = imports => {
-  const importsSorted = {};
-  Object.keys(imports).sort(compareLengthOrLocaleCompare).forEach(name => {
-    importsSorted[name] = imports[name];
-  });
-  return importsSorted;
-};
-const sortScopes = scopes => {
-  const scopesSorted = {};
-  Object.keys(scopes).sort(compareLengthOrLocaleCompare).forEach(scopeName => {
-    scopesSorted[scopeName] = sortImports(scopes[scopeName]);
-  });
-  return scopesSorted;
-};
-
-const compareLengthOrLocaleCompare = (a, b) => {
-  return b.length - a.length || a.localeCompare(b);
-};
-
-const normalizeImportMap = (importMap, baseUrl) => {
-  assertImportMap(importMap);
-
-  if (typeof baseUrl !== "string") {
-    throw new TypeError(formulateBaseUrlMustBeAString({
-      baseUrl
-    }));
-  }
-
-  const {
-    imports,
-    scopes
-  } = importMap;
-  return {
-    imports: imports ? normalizeImports(imports, baseUrl) : undefined,
-    scopes: scopes ? normalizeScopes(scopes, baseUrl) : undefined
-  };
-};
-
-const normalizeImports = (imports, baseUrl) => {
-  const importsNormalized = {};
-  Object.keys(imports).forEach(specifier => {
-    const address = imports[specifier];
-
-    if (typeof address !== "string") {
-      console.warn(formulateAddressMustBeAString({
-        address,
-        specifier
-      }));
-      return;
-    }
-
-    const specifierResolved = resolveSpecifier(specifier, baseUrl) || specifier;
-    const addressUrl = tryUrlResolution(address, baseUrl);
-
-    if (addressUrl === null) {
-      console.warn(formulateAdressResolutionFailed({
-        address,
-        baseUrl,
-        specifier
-      }));
-      return;
-    }
-
-    if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
-      console.warn(formulateAddressUrlRequiresTrailingSlash({
-        addressUrl,
-        address,
-        specifier
-      }));
-      return;
-    }
-
-    importsNormalized[specifierResolved] = addressUrl;
-  });
-  return sortImports(importsNormalized);
-};
-
-const normalizeScopes = (scopes, baseUrl) => {
-  const scopesNormalized = {};
-  Object.keys(scopes).forEach(scope => {
-    const scopeValue = scopes[scope];
-    const scopeUrl = tryUrlResolution(scope, baseUrl);
-
-    if (scopeUrl === null) {
-      console.warn(formulateScopeResolutionFailed({
-        scope,
-        baseUrl
-      }));
-      return;
-    }
-
-    const scopeValueNormalized = normalizeImports(scopeValue, baseUrl);
-    scopesNormalized[scopeUrl] = scopeValueNormalized;
-  });
-  return sortScopes(scopesNormalized);
-};
-
-const formulateBaseUrlMustBeAString = ({
-  baseUrl
-}) => `baseUrl must be a string.
---- base url ---
-${baseUrl}`;
-
-const formulateAddressMustBeAString = ({
-  specifier,
-  address
-}) => `Address must be a string.
---- address ---
-${address}
---- specifier ---
-${specifier}`;
-
-const formulateAdressResolutionFailed = ({
-  address,
-  baseUrl,
-  specifier
-}) => `Address url resolution failed.
---- address ---
-${address}
---- base url ---
-${baseUrl}
---- specifier ---
-${specifier}`;
-
-const formulateAddressUrlRequiresTrailingSlash = ({
-  addressURL,
-  address,
-  specifier
-}) => `Address must end with /.
---- address url ---
-${addressURL}
---- address ---
-${address}
---- specifier ---
-${specifier}`;
-
-const formulateScopeResolutionFailed = ({
-  scope,
-  baseUrl
-}) => `Scope url resolution failed.
---- scope ---
-${scope}
---- base url ---
-${baseUrl}`;
-
-const pathnameToExtension = pathname => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-
-  if (slashLastIndex !== -1) {
-    pathname = pathname.slice(slashLastIndex + 1);
-  }
-
-  const dotLastIndex = pathname.lastIndexOf(".");
-  if (dotLastIndex === -1) return ""; // if (dotLastIndex === pathname.length - 1) return ""
-
-  return pathname.slice(dotLastIndex);
-};
-
-const applyImportMap = ({
-  importMap,
-  specifier,
-  importer
-}) => {
-  assertImportMap(importMap);
-
-  if (typeof specifier !== "string") {
-    throw new TypeError(writeSpecifierMustBeAString({
-      specifier,
-      importer
-    }));
-  }
-
-  if (importer) {
-    if (typeof importer !== "string") {
-      throw new TypeError(writeImporterMustBeAString({
-        importer,
-        specifier
-      }));
-    }
-
-    if (!hasScheme(importer)) {
-      throw new Error(writeImporterMustBeAbsolute({
-        importer,
-        specifier
-      }));
-    }
-  }
-
-  const specifierUrl = resolveSpecifier(specifier, importer);
-  const specifierNormalized = specifierUrl || specifier;
-  const {
-    scopes
-  } = importMap;
-
-  if (scopes && importer) {
-    const scopeKeyMatching = Object.keys(scopes).find(scopeKey => {
-      return scopeKey === importer || specifierIsPrefixOf(scopeKey, importer);
-    });
-
-    if (scopeKeyMatching) {
-      const scopeValue = scopes[scopeKeyMatching];
-      const remappingFromScopeImports = applyImports(specifierNormalized, scopeValue);
-
-      if (remappingFromScopeImports !== null) {
-        return remappingFromScopeImports;
-      }
-    }
-  }
-
-  const {
-    imports
-  } = importMap;
-
-  if (imports) {
-    const remappingFromImports = applyImports(specifierNormalized, imports);
-
-    if (remappingFromImports !== null) {
-      return remappingFromImports;
-    }
-  }
-
-  if (specifierUrl) {
-    return specifierUrl;
-  }
-
-  throw new Error(writeBareSpecifierMustBeRemapped({
-    specifier,
-    importer
-  }));
-};
-
-const applyImports = (specifier, imports) => {
-  const importKeyArray = Object.keys(imports);
-  let i = 0;
-
-  while (i < importKeyArray.length) {
-    const importKey = importKeyArray[i];
-    i++;
-
-    if (importKey === specifier) {
-      const importValue = imports[importKey];
-      return importValue;
-    }
-
-    if (specifierIsPrefixOf(importKey, specifier)) {
-      const importValue = imports[importKey];
-      const afterImportKey = specifier.slice(importKey.length);
-      return tryUrlResolution(afterImportKey, importValue);
-    }
-  }
-
-  return null;
-};
-
-const specifierIsPrefixOf = (specifierHref, href) => {
-  return specifierHref[specifierHref.length - 1] === "/" && href.startsWith(specifierHref);
-};
-
-const writeSpecifierMustBeAString = ({
-  specifier,
-  importer
-}) => `specifier must be a string.
---- specifier ---
-${specifier}
---- importer ---
-${importer}`;
-
-const writeImporterMustBeAString = ({
-  importer,
-  specifier
-}) => `importer must be a string.
---- importer ---
-${importer}
---- specifier ---
-${specifier}`;
-
-const writeImporterMustBeAbsolute = ({
-  importer,
-  specifier
-}) => `importer must be an absolute url.
---- importer ---
-${importer}
---- specifier ---
-${specifier}`;
-
-const writeBareSpecifierMustBeRemapped = ({
-  specifier,
-  importer
-}) => `Unmapped bare specifier.
---- specifier ---
-${specifier}
---- importer ---
-${importer}`;
-
-const resolveImport = ({
-  specifier,
-  importer,
-  importMap,
-  defaultExtension = true
-}) => {
-  return applyDefaultExtension({
-    url: importMap ? applyImportMap({
-      importMap,
-      specifier,
-      importer
-    }) : resolveUrl(specifier, importer),
-    importer,
-    defaultExtension
-  });
-};
-
-const applyDefaultExtension = ({
-  url,
-  importer,
-  defaultExtension
-}) => {
-  if (urlToPathname(url).endsWith("/")) {
-    return url;
-  }
-
-  if (typeof defaultExtension === "string") {
-    const extension = pathnameToExtension(url);
-
-    if (extension === "") {
-      return `${url}${defaultExtension}`;
-    }
-
-    return url;
-  }
-
-  if (defaultExtension === true) {
-    const extension = pathnameToExtension(url);
-
-    if (extension === "" && importer) {
-      const importerPathname = urlToPathname(importer);
-      const importerExtension = pathnameToExtension(importerPathname);
-      return `${url}${importerExtension}`;
-    }
-  }
-
-  return url;
-};
+var _uneval = require('@jsenv/uneval');
 
 /* global require, __filename */
 const nodeRequire = require;
@@ -601,2852 +28,6 @@ const filenameContainsBackSlashes = __filename.indexOf("\\") > -1;
 const url = filenameContainsBackSlashes ? `file:///${__filename.replace(/\\/g, "/")}` : `file://${__filename}`;
 
 const require$1 = module$1.createRequire(url);
-
-const assertUrlLike = (value, name = "url") => {
-  if (typeof value !== "string") {
-    throw new TypeError(`${name} must be a url string, got ${value}`);
-  }
-
-  if (isWindowsPathnameSpecifier(value)) {
-    throw new TypeError(`${name} must be a url but looks like a windows pathname, got ${value}`);
-  }
-
-  if (!hasScheme$1(value)) {
-    throw new TypeError(`${name} must be a url and no scheme found, got ${value}`);
-  }
-};
-
-const isWindowsPathnameSpecifier = specifier => {
-  const firstChar = specifier[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = specifier[1];
-  if (secondChar !== ":") return false;
-  const thirdChar = specifier[2];
-  return thirdChar === "/" || thirdChar === "\\";
-};
-
-const hasScheme$1 = specifier => /^[a-zA-Z]+:/.test(specifier);
-
-// https://git-scm.com/docs/gitignore
-const applySpecifierPatternMatching = ({
-  specifier,
-  url,
-  ...rest
-} = {}) => {
-  assertUrlLike(specifier, "specifier");
-  assertUrlLike(url, "url");
-
-  if (Object.keys(rest).length) {
-    throw new Error(`received more parameters than expected.
---- name of unexpected parameters ---
-${Object.keys(rest)}
---- name of expected parameters ---
-specifier, url`);
-  }
-
-  return applyPatternMatching(specifier, url);
-};
-
-const applyPatternMatching = (pattern, string) => {
-  let patternIndex = 0;
-  let index = 0;
-  let remainingPattern = pattern;
-  let remainingString = string; // eslint-disable-next-line no-constant-condition
-
-  while (true) {
-    // pattern consumed and string consumed
-    if (remainingPattern === "" && remainingString === "") {
-      // pass because string fully matched pattern
-      return pass({
-        patternIndex,
-        index
-      });
-    } // pattern consumed, string not consumed
-
-
-    if (remainingPattern === "" && remainingString !== "") {
-      // fails because string longer than expected
-      return fail({
-        patternIndex,
-        index
-      });
-    } // from this point pattern is not consumed
-    // string consumed, pattern not consumed
-
-
-    if (remainingString === "") {
-      // pass because trailing "**" is optional
-      if (remainingPattern === "**") {
-        return pass({
-          patternIndex: patternIndex + 2,
-          index
-        });
-      } // fail because string shorted than expected
-
-
-      return fail({
-        patternIndex,
-        index
-      });
-    } // from this point pattern and string are not consumed
-    // fast path trailing slash
-
-
-    if (remainingPattern === "/") {
-      // pass because trailing slash matches remaining
-      if (remainingString[0] === "/") {
-        return pass({
-          patternIndex: patternIndex + 1,
-          index: string.length
-        });
-      }
-
-      return fail({
-        patternIndex,
-        index
-      });
-    } // fast path trailing '**'
-
-
-    if (remainingPattern === "**") {
-      // pass because trailing ** matches remaining
-      return pass({
-        patternIndex: patternIndex + 2,
-        index: string.length
-      });
-    } // pattern leading **
-
-
-    if (remainingPattern.slice(0, 2) === "**") {
-      // consumes "**"
-      remainingPattern = remainingPattern.slice(2);
-      patternIndex += 2;
-
-      if (remainingPattern[0] === "/") {
-        // consumes "/"
-        remainingPattern = remainingPattern.slice(1);
-        patternIndex += 1;
-      } // pattern ending with ** always match remaining string
-
-
-      if (remainingPattern === "") {
-        return pass({
-          patternIndex,
-          index: string.length
-        });
-      }
-
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString
-      });
-
-      if (!skipResult.matched) {
-        return fail({
-          patternIndex: patternIndex + skipResult.patternIndex,
-          index: index + skipResult.index
-        });
-      }
-
-      return pass({
-        patternIndex: pattern.length,
-        index: string.length
-      });
-    }
-
-    if (remainingPattern[0] === "*") {
-      // consumes "*"
-      remainingPattern = remainingPattern.slice(1);
-      patternIndex += 1; // la c'est plus délicat, il faut que remainingString
-      // ne soit composé que de truc !== '/'
-
-      if (remainingPattern === "") {
-        const slashIndex = remainingString.indexOf("/");
-
-        if (slashIndex > -1) {
-          return fail({
-            patternIndex,
-            index: index + slashIndex
-          });
-        }
-
-        return pass({
-          patternIndex,
-          index: string.length
-        });
-      } // the next char must not the one expected by remainingPattern[0]
-      // because * is greedy and expect to skip one char
-
-
-      if (remainingPattern[0] === remainingString[0]) {
-        return fail({
-          patternIndex: patternIndex - "*".length,
-          index
-        });
-      }
-
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString,
-        skippablePredicate: remainingString => remainingString[0] !== "/"
-      });
-
-      if (!skipResult.matched) {
-        return fail({
-          patternIndex: patternIndex + skipResult.patternIndex,
-          index: index + skipResult.index
-        });
-      }
-
-      return pass({
-        patternIndex: pattern.length,
-        index: string.length
-      });
-    }
-
-    if (remainingPattern[0] !== remainingString[0]) {
-      return fail({
-        patternIndex,
-        index
-      });
-    } // consumes next char
-
-
-    remainingPattern = remainingPattern.slice(1);
-    remainingString = remainingString.slice(1);
-    patternIndex += 1;
-    index += 1;
-    continue;
-  }
-};
-
-const skipUntilMatch = ({
-  pattern,
-  string,
-  skippablePredicate = () => true
-}) => {
-  let index = 0;
-  let remainingString = string;
-  let bestMatch = null; // eslint-disable-next-line no-constant-condition
-
-  while (true) {
-    const matchAttempt = applyPatternMatching(pattern, remainingString);
-
-    if (matchAttempt.matched) {
-      bestMatch = matchAttempt;
-      break;
-    }
-
-    const skippable = skippablePredicate(remainingString);
-    bestMatch = fail({
-      patternIndex: bestMatch ? Math.max(bestMatch.patternIndex, matchAttempt.patternIndex) : matchAttempt.patternIndex,
-      index: index + matchAttempt.index
-    });
-
-    if (!skippable) {
-      break;
-    } // search against the next unattempted string
-
-
-    remainingString = remainingString.slice(matchAttempt.index + 1);
-    index += matchAttempt.index + 1;
-
-    if (remainingString === "") {
-      bestMatch = { ...bestMatch,
-        index: string.length
-      };
-      break;
-    }
-
-    continue;
-  }
-
-  return bestMatch;
-};
-
-const pass = ({
-  patternIndex,
-  index
-}) => {
-  return {
-    matched: true,
-    index,
-    patternIndex
-  };
-};
-
-const fail = ({
-  patternIndex,
-  index
-}) => {
-  return {
-    matched: false,
-    index,
-    patternIndex
-  };
-};
-
-const isPlainObject = value => {
-  if (value === null) {
-    return false;
-  }
-
-  if (typeof value === "object") {
-    if (Array.isArray(value)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  return false;
-};
-
-const metaMapToSpecifierMetaMap = (metaMap, ...rest) => {
-  if (!isPlainObject(metaMap)) {
-    throw new TypeError(`metaMap must be a plain object, got ${metaMap}`);
-  }
-
-  if (rest.length) {
-    throw new Error(`received more arguments than expected.
---- number of arguments received ---
-${1 + rest.length}
---- number of arguments expected ---
-1`);
-  }
-
-  const specifierMetaMap = {};
-  Object.keys(metaMap).forEach(metaKey => {
-    const specifierValueMap = metaMap[metaKey];
-
-    if (!isPlainObject(specifierValueMap)) {
-      throw new TypeError(`metaMap value must be plain object, got ${specifierValueMap} for ${metaKey}`);
-    }
-
-    Object.keys(specifierValueMap).forEach(specifier => {
-      const metaValue = specifierValueMap[specifier];
-      const meta = {
-        [metaKey]: metaValue
-      };
-      specifierMetaMap[specifier] = specifier in specifierMetaMap ? { ...specifierMetaMap[specifier],
-        ...meta
-      } : meta;
-    });
-  });
-  return specifierMetaMap;
-};
-
-const assertSpecifierMetaMap = (value, checkComposition = true) => {
-  if (!isPlainObject(value)) {
-    throw new TypeError(`specifierMetaMap must be a plain object, got ${value}`);
-  }
-
-  if (checkComposition) {
-    const plainObject = value;
-    Object.keys(plainObject).forEach(key => {
-      assertUrlLike(key, "specifierMetaMap key");
-      const value = plainObject[key];
-
-      if (value !== null && !isPlainObject(value)) {
-        throw new TypeError(`specifierMetaMap value must be a plain object or null, got ${value} under key ${key}`);
-      }
-    });
-  }
-};
-
-const normalizeSpecifierMetaMap = (specifierMetaMap, url, ...rest) => {
-  assertSpecifierMetaMap(specifierMetaMap, false);
-  assertUrlLike(url, "url");
-
-  if (rest.length) {
-    throw new Error(`received more arguments than expected.
---- number of arguments received ---
-${2 + rest.length}
---- number of arguments expected ---
-2`);
-  }
-
-  const specifierMetaMapNormalized = {};
-  Object.keys(specifierMetaMap).forEach(specifier => {
-    const specifierResolved = String(new URL(specifier, url));
-    specifierMetaMapNormalized[specifierResolved] = specifierMetaMap[specifier];
-  });
-  return specifierMetaMapNormalized;
-};
-
-const urlCanContainsMetaMatching = ({
-  url,
-  specifierMetaMap,
-  predicate,
-  ...rest
-}) => {
-  assertUrlLike(url, "url"); // the function was meants to be used on url ending with '/'
-
-  if (!url.endsWith("/")) {
-    throw new Error(`url should end with /, got ${url}`);
-  }
-
-  assertSpecifierMetaMap(specifierMetaMap);
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-
-  if (Object.keys(rest).length) {
-    throw new Error(`received more parameters than expected.
---- name of unexpected parameters ---
-${Object.keys(rest)}
---- name of expected parameters ---
-url, specifierMetaMap, predicate`);
-  } // for full match we must create an object to allow pattern to override previous ones
-
-
-  let fullMatchMeta = {};
-  let someFullMatch = false; // for partial match, any meta satisfying predicate will be valid because
-  // we don't know for sure if pattern will still match for a file inside pathname
-
-  const partialMatchMetaArray = [];
-  Object.keys(specifierMetaMap).forEach(specifier => {
-    const meta = specifierMetaMap[specifier];
-    const {
-      matched,
-      index
-    } = applySpecifierPatternMatching({
-      specifier,
-      url
-    });
-
-    if (matched) {
-      someFullMatch = true;
-      fullMatchMeta = { ...fullMatchMeta,
-        ...meta
-      };
-    } else if (someFullMatch === false && index >= url.length) {
-      partialMatchMetaArray.push(meta);
-    }
-  });
-
-  if (someFullMatch) {
-    return Boolean(predicate(fullMatchMeta));
-  }
-
-  return partialMatchMetaArray.some(partialMatchMeta => predicate(partialMatchMeta));
-};
-
-const urlToMeta = ({
-  url,
-  specifierMetaMap,
-  ...rest
-} = {}) => {
-  assertUrlLike(url);
-  assertSpecifierMetaMap(specifierMetaMap);
-
-  if (Object.keys(rest).length) {
-    throw new Error(`received more parameters than expected.
---- name of unexpected parameters ---
-${Object.keys(rest)}
---- name of expected parameters ---
-url, specifierMetaMap`);
-  }
-
-  return Object.keys(specifierMetaMap).reduce((previousMeta, specifier) => {
-    const {
-      matched
-    } = applySpecifierPatternMatching({
-      specifier,
-      url
-    });
-
-    if (matched) {
-      return { ...previousMeta,
-        ...specifierMetaMap[specifier]
-      };
-    }
-
-    return previousMeta;
-  }, {});
-};
-
-const ensureUrlTrailingSlash = url => {
-  return url.endsWith("/") ? url : `${url}/`;
-};
-
-const isFileSystemPath = value => {
-  if (typeof value !== "string") {
-    throw new TypeError(`isFileSystemPath first arg must be a string, got ${value}`);
-  }
-
-  if (value[0] === "/") return true;
-  return startsWithWindowsDriveLetter(value);
-};
-
-const startsWithWindowsDriveLetter = string => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-  return true;
-};
-
-const fileSystemPathToUrl = value => {
-  if (!isFileSystemPath(value)) {
-    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
-  }
-
-  return String(url$1.pathToFileURL(value));
-};
-
-const assertAndNormalizeDirectoryUrl = value => {
-  let urlString;
-
-  if (value instanceof URL) {
-    urlString = value.href;
-  } else if (typeof value === "string") {
-    if (isFileSystemPath(value)) {
-      urlString = fileSystemPathToUrl(value);
-    } else {
-      try {
-        urlString = String(new URL(value));
-      } catch (e) {
-        throw new TypeError(`directoryUrl must be a valid url, received ${value}`);
-      }
-    }
-  } else {
-    throw new TypeError(`directoryUrl must be a string or an url, received ${value}`);
-  }
-
-  if (!urlString.startsWith("file://")) {
-    throw new Error(`directoryUrl must starts with file://, received ${value}`);
-  }
-
-  return ensureUrlTrailingSlash(urlString);
-};
-
-const assertAndNormalizeFileUrl = (value, baseUrl) => {
-  let urlString;
-
-  if (value instanceof URL) {
-    urlString = value.href;
-  } else if (typeof value === "string") {
-    if (isFileSystemPath(value)) {
-      urlString = fileSystemPathToUrl(value);
-    } else {
-      try {
-        urlString = String(new URL(value, baseUrl));
-      } catch (e) {
-        throw new TypeError(`fileUrl must be a valid url, received ${value}`);
-      }
-    }
-  } else {
-    throw new TypeError(`fileUrl must be a string or an url, received ${value}`);
-  }
-
-  if (!urlString.startsWith("file://")) {
-    throw new Error(`fileUrl must starts with file://, received ${value}`);
-  }
-
-  return urlString;
-};
-
-const statsToType = stats => {
-  if (stats.isFile()) return "file";
-  if (stats.isDirectory()) return "directory";
-  if (stats.isSymbolicLink()) return "symbolic-link";
-  if (stats.isFIFO()) return "fifo";
-  if (stats.isSocket()) return "socket";
-  if (stats.isCharacterDevice()) return "character-device";
-  if (stats.isBlockDevice()) return "block-device";
-  return undefined;
-};
-
-const urlToFileSystemPath = fileUrl => {
-  if (fileUrl[fileUrl.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    fileUrl = fileUrl.slice(0, -1);
-  }
-
-  const fileSystemPath = url$1.fileURLToPath(fileUrl);
-  return fileSystemPath;
-};
-
-// https://github.com/coderaiser/cloudcmd/issues/63#issuecomment-195478143
-// https://nodejs.org/api/fs.html#fs_file_modes
-// https://github.com/TooTallNate/stat-mode
-// cannot get from fs.constants because they are not available on windows
-const S_IRUSR = 256;
-/* 0000400 read permission, owner */
-
-const S_IWUSR = 128;
-/* 0000200 write permission, owner */
-
-const S_IXUSR = 64;
-/* 0000100 execute/search permission, owner */
-
-const S_IRGRP = 32;
-/* 0000040 read permission, group */
-
-const S_IWGRP = 16;
-/* 0000020 write permission, group */
-
-const S_IXGRP = 8;
-/* 0000010 execute/search permission, group */
-
-const S_IROTH = 4;
-/* 0000004 read permission, others */
-
-const S_IWOTH = 2;
-/* 0000002 write permission, others */
-
-const S_IXOTH = 1;
-const permissionsToBinaryFlags = ({
-  owner,
-  group,
-  others
-}) => {
-  let binaryFlags = 0;
-  if (owner.read) binaryFlags |= S_IRUSR;
-  if (owner.write) binaryFlags |= S_IWUSR;
-  if (owner.execute) binaryFlags |= S_IXUSR;
-  if (group.read) binaryFlags |= S_IRGRP;
-  if (group.write) binaryFlags |= S_IWGRP;
-  if (group.execute) binaryFlags |= S_IXGRP;
-  if (others.read) binaryFlags |= S_IROTH;
-  if (others.write) binaryFlags |= S_IWOTH;
-  if (others.execute) binaryFlags |= S_IXOTH;
-  return binaryFlags;
-};
-
-const writeFileSystemNodePermissions = async (source, permissions) => {
-  const sourceUrl = assertAndNormalizeFileUrl(source);
-  const sourcePath = urlToFileSystemPath(sourceUrl);
-  let binaryFlags;
-
-  if (typeof permissions === "object") {
-    permissions = {
-      owner: {
-        read: getPermissionOrComputeDefault("read", "owner", permissions),
-        write: getPermissionOrComputeDefault("write", "owner", permissions),
-        execute: getPermissionOrComputeDefault("execute", "owner", permissions)
-      },
-      group: {
-        read: getPermissionOrComputeDefault("read", "group", permissions),
-        write: getPermissionOrComputeDefault("write", "group", permissions),
-        execute: getPermissionOrComputeDefault("execute", "group", permissions)
-      },
-      others: {
-        read: getPermissionOrComputeDefault("read", "others", permissions),
-        write: getPermissionOrComputeDefault("write", "others", permissions),
-        execute: getPermissionOrComputeDefault("execute", "others", permissions)
-      }
-    };
-    binaryFlags = permissionsToBinaryFlags(permissions);
-  } else {
-    binaryFlags = permissions;
-  }
-
-  return chmodNaive(sourcePath, binaryFlags);
-};
-
-const chmodNaive = (fileSystemPath, binaryFlags) => {
-  return new Promise((resolve, reject) => {
-    fs.chmod(fileSystemPath, binaryFlags, error => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
-};
-
-const actionLevels = {
-  read: 0,
-  write: 1,
-  execute: 2
-};
-const subjectLevels = {
-  others: 0,
-  group: 1,
-  owner: 2
-};
-
-const getPermissionOrComputeDefault = (action, subject, permissions) => {
-  if (subject in permissions) {
-    const subjectPermissions = permissions[subject];
-
-    if (action in subjectPermissions) {
-      return subjectPermissions[action];
-    }
-
-    const actionLevel = actionLevels[action];
-    const actionFallback = Object.keys(actionLevels).find(actionFallbackCandidate => actionLevels[actionFallbackCandidate] > actionLevel && actionFallbackCandidate in subjectPermissions);
-
-    if (actionFallback) {
-      return subjectPermissions[actionFallback];
-    }
-  }
-
-  const subjectLevel = subjectLevels[subject]; // do we have a subject with a stronger level (group or owner)
-  // where we could read the action permission ?
-
-  const subjectFallback = Object.keys(subjectLevels).find(subjectFallbackCandidate => subjectLevels[subjectFallbackCandidate] > subjectLevel && subjectFallbackCandidate in permissions);
-
-  if (subjectFallback) {
-    const subjectPermissions = permissions[subjectFallback];
-    return action in subjectPermissions ? subjectPermissions[action] : getPermissionOrComputeDefault(action, subjectFallback, permissions);
-  }
-
-  return false;
-};
-
-const isWindows = process.platform === "win32";
-const readFileSystemNodeStat = async (source, {
-  nullIfNotFound = false,
-  followLink = true
-} = {}) => {
-  if (source.endsWith("/")) source = source.slice(0, -1);
-  const sourceUrl = assertAndNormalizeFileUrl(source);
-  const sourcePath = urlToFileSystemPath(sourceUrl);
-  const handleNotFoundOption = nullIfNotFound ? {
-    handleNotFoundError: () => null
-  } : {};
-  return readStat(sourcePath, {
-    followLink,
-    ...handleNotFoundOption,
-    ...(isWindows ? {
-      // Windows can EPERM on stat
-      handlePermissionDeniedError: async error => {
-        // unfortunately it means we mutate the permissions
-        // without being able to restore them to the previous value
-        // (because reading current permission would also throw)
-        try {
-          await writeFileSystemNodePermissions(sourceUrl, 0o666);
-          const stats = await readStat(sourcePath, {
-            followLink,
-            ...handleNotFoundOption,
-            // could not fix the permission error, give up and throw original error
-            handlePermissionDeniedError: () => {
-              throw error;
-            }
-          });
-          return stats;
-        } catch (e) {
-          // failed to write permission or readState, throw original error as well
-          throw error;
-        }
-      }
-    } : {})
-  });
-};
-
-const readStat = (sourcePath, {
-  followLink,
-  handleNotFoundError = null,
-  handlePermissionDeniedError = null
-} = {}) => {
-  const nodeMethod = followLink ? fs.stat : fs.lstat;
-  return new Promise((resolve, reject) => {
-    nodeMethod(sourcePath, (error, statsObject) => {
-      if (error) {
-        if (handlePermissionDeniedError && (error.code === "EPERM" || error.code === "EACCES")) {
-          resolve(handlePermissionDeniedError(error));
-        } else if (handleNotFoundError && error.code === "ENOENT") {
-          resolve(handleNotFoundError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(statsObject);
-      }
-    });
-  });
-};
-
-const assertDirectoryPresence = async source => {
-  const sourceUrl = assertAndNormalizeFileUrl(source);
-  const sourcePath = urlToFileSystemPath(sourceUrl);
-  const sourceStats = await readFileSystemNodeStat(sourceUrl, {
-    nullIfNotFound: true
-  });
-
-  if (!sourceStats) {
-    throw new Error(`directory not found at ${sourcePath}`);
-  }
-
-  if (!sourceStats.isDirectory()) {
-    throw new Error(`directory expected at ${sourcePath} and found ${statsToType(sourceStats)} instead`);
-  }
-};
-
-const assertFilePresence = async source => {
-  const sourceUrl = assertAndNormalizeFileUrl(source);
-  const sourcePath = urlToFileSystemPath(sourceUrl);
-  const sourceStats = await readFileSystemNodeStat(sourceUrl, {
-    nullIfNotFound: true
-  });
-
-  if (!sourceStats) {
-    throw new Error(`file not found at ${sourcePath}`);
-  }
-
-  if (!sourceStats.isFile()) {
-    throw new Error(`file expected at ${sourcePath} and found ${statsToType(sourceStats)} instead`);
-  }
-};
-
-const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
-const bufferToEtag = buffer => {
-  if (!Buffer.isBuffer(buffer)) {
-    throw new TypeError(`buffer expected, got ${buffer}`);
-  }
-
-  if (buffer.length === 0) {
-    return ETAG_FOR_EMPTY_CONTENT;
-  }
-
-  const hash = crypto.createHash("sha1");
-  hash.update(buffer, "utf8");
-  const hashBase64String = hash.digest("base64");
-  const hashBase64StringSubset = hashBase64String.slice(0, 27);
-  const length = buffer.length;
-  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
-};
-
-const createCancellationToken = () => {
-  const register = callback => {
-    if (typeof callback !== "function") {
-      throw new Error(`callback must be a function, got ${callback}`);
-    }
-
-    return {
-      callback,
-      unregister: () => {}
-    };
-  };
-
-  const throwIfRequested = () => undefined;
-
-  return {
-    register,
-    cancellationRequested: false,
-    throwIfRequested
-  };
-};
-
-const memoizeOnce = compute => {
-  let locked = false;
-  let lockValue;
-
-  const memoized = (...args) => {
-    if (locked) return lockValue; // if compute is recursive wait for it to be fully done before storing the lockValue
-    // so set locked later
-
-    lockValue = compute(...args);
-    locked = true;
-    return lockValue;
-  };
-
-  memoized.deleteCache = () => {
-    const value = lockValue;
-    locked = false;
-    lockValue = undefined;
-    return value;
-  };
-
-  return memoized;
-};
-
-const createOperation = ({
-  cancellationToken = createCancellationToken(),
-  start,
-  ...rest
-}) => {
-  const unknownArgumentNames = Object.keys(rest);
-
-  if (unknownArgumentNames.length) {
-    throw new Error(`createOperation called with unknown argument names.
---- unknown argument names ---
-${unknownArgumentNames}
---- possible argument names ---
-cancellationToken
-start`);
-  }
-
-  cancellationToken.throwIfRequested();
-  const promise = new Promise(resolve => {
-    resolve(start());
-  });
-  const cancelPromise = new Promise((resolve, reject) => {
-    const cancelRegistration = cancellationToken.register(cancelError => {
-      cancelRegistration.unregister();
-      reject(cancelError);
-    });
-    promise.then(cancelRegistration.unregister, () => {});
-  });
-  const operationPromise = Promise.race([promise, cancelPromise]);
-  return operationPromise;
-};
-
-/*
-We could pick from array like this
-
-maxParallelExecution: 2
-array: [a, b, c, d]
-
-We could start [a,b]
-And immediatly after a or b finish, start c
-And immediatly after any finishes, start d
-
-This approach try to maximize maxParallelExecution.
-But it has one hidden disadvantage.
-
-If the tasks can queue each other there is a chance that
-a task gets constantly delayed by other started task
-giving the false feeling that the task takes a long time
-to be done.
-
-To avoid this I prefer to start them chunk by chunk
-so it means [a,b] and then [c,d] that will wait for a and b to complete
-
-*/
-const createConcurrentOperations = async ({
-  cancellationToken = createCancellationToken(),
-  concurrencyLimit = 5,
-  array,
-  start,
-  ...rest
-}) => {
-  if (typeof concurrencyLimit !== "number") {
-    throw new TypeError(`concurrencyLimit must be a number, got ${concurrencyLimit}`);
-  }
-
-  if (concurrencyLimit < 1) {
-    throw new Error(`concurrencyLimit must be 1 or more, got ${concurrencyLimit}`);
-  }
-
-  if (typeof array !== "object") {
-    throw new TypeError(`array must be an array, got ${array}`);
-  }
-
-  if (typeof start !== "function") {
-    throw new TypeError(`start must be a function, got ${start}`);
-  }
-
-  const unknownArgumentNames = Object.keys(rest);
-
-  if (unknownArgumentNames.length) {
-    throw new Error(`createConcurrentOperations called with unknown argument names.
---- unknown argument names ---
-${unknownArgumentNames}
---- possible argument names ---
-cancellationToken
-concurrencyLimit
-array
-start`);
-  }
-
-  const outputArray = [];
-  let progressionIndex = 0;
-  let remainingExecutionCount = array.length;
-
-  const nextChunk = async () => {
-    await createOperation({
-      cancellationToken,
-      start: async () => {
-        const outputPromiseArray = [];
-
-        while (remainingExecutionCount > 0 && outputPromiseArray.length < concurrencyLimit) {
-          remainingExecutionCount--;
-          const outputPromise = executeOne(progressionIndex);
-          progressionIndex++;
-          outputPromiseArray.push(outputPromise);
-        }
-
-        if (outputPromiseArray.length) {
-          await Promise.all(outputPromiseArray);
-
-          if (remainingExecutionCount > 0) {
-            await nextChunk();
-          }
-        }
-      }
-    });
-  };
-
-  const executeOne = async index => {
-    return createOperation({
-      cancellationToken,
-      start: async () => {
-        const input = array[index];
-        const output = await start(input);
-        outputArray[index] = output;
-      }
-    });
-  };
-
-  await nextChunk();
-  return outputArray;
-};
-
-const createStoppableOperation = ({
-  cancellationToken = createCancellationToken(),
-  start,
-  stop,
-  ...rest
-}) => {
-  if (typeof stop !== "function") {
-    throw new TypeError(`stop must be a function. got ${stop}`);
-  }
-
-  const unknownArgumentNames = Object.keys(rest);
-
-  if (unknownArgumentNames.length) {
-    throw new Error(`createStoppableOperation called with unknown argument names.
---- unknown argument names ---
-${unknownArgumentNames}
---- possible argument names ---
-cancellationToken
-start
-stop`);
-  }
-
-  cancellationToken.throwIfRequested();
-  const promise = new Promise(resolve => {
-    resolve(start());
-  });
-  const cancelPromise = new Promise((resolve, reject) => {
-    const cancelRegistration = cancellationToken.register(cancelError => {
-      cancelRegistration.unregister();
-      reject(cancelError);
-    });
-    promise.then(cancelRegistration.unregister, () => {});
-  });
-  const operationPromise = Promise.race([promise, cancelPromise]);
-  const stopInternal = memoizeOnce(async reason => {
-    const value = await promise;
-    return stop(value, reason);
-  });
-  cancellationToken.register(stopInternal);
-  operationPromise.stop = stopInternal;
-  return operationPromise;
-};
-
-const firstOperationMatching = ({
-  array,
-  start,
-  predicate
-}) => {
-  if (typeof array !== "object") {
-    throw new TypeError(`array must be an object, got ${array}`);
-  }
-
-  if (typeof start !== "function") {
-    throw new TypeError(`start must be a function, got ${start}`);
-  }
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-
-  return new Promise((resolve, reject) => {
-    const visit = index => {
-      if (index >= array.length) {
-        return resolve();
-      }
-
-      const input = array[index];
-      const returnValue = start(input);
-      return Promise.resolve(returnValue).then(output => {
-        if (predicate(output)) {
-          return resolve(output);
-        }
-
-        return visit(index + 1);
-      }, reject);
-    };
-
-    visit(0);
-  });
-};
-
-const createCancelError = reason => {
-  const cancelError = new Error(`canceled because ${reason}`);
-  cancelError.name = "CANCEL_ERROR";
-  cancelError.reason = reason;
-  return cancelError;
-};
-const isCancelError = value => {
-  return value && typeof value === "object" && value.name === "CANCEL_ERROR";
-};
-const errorToCancelReason = error => {
-  if (!isCancelError(error)) return "";
-  return error.reason;
-};
-
-const composeCancellationToken = (...tokens) => {
-  const register = callback => {
-    if (typeof callback !== "function") {
-      throw new Error(`callback must be a function, got ${callback}`);
-    }
-
-    const registrationArray = [];
-
-    const visit = i => {
-      const token = tokens[i];
-      const registration = token.register(callback);
-      registrationArray.push(registration);
-    };
-
-    let i = 0;
-
-    while (i < tokens.length) {
-      visit(i++);
-    }
-
-    const compositeRegistration = {
-      callback,
-      unregister: () => {
-        registrationArray.forEach(registration => registration.unregister());
-        registrationArray.length = 0;
-      }
-    };
-    return compositeRegistration;
-  };
-
-  let requested = false;
-  let cancelError;
-  const internalRegistration = register(parentCancelError => {
-    requested = true;
-    cancelError = parentCancelError;
-    internalRegistration.unregister();
-  });
-
-  const throwIfRequested = () => {
-    if (requested) {
-      throw cancelError;
-    }
-  };
-
-  return {
-    register,
-
-    get cancellationRequested() {
-      return requested;
-    },
-
-    throwIfRequested
-  };
-};
-
-const arrayWithout = (array, item) => {
-  const arrayWithoutItem = [];
-  let i = 0;
-
-  while (i < array.length) {
-    const value = array[i];
-    i++;
-
-    if (value === item) {
-      continue;
-    }
-
-    arrayWithoutItem.push(value);
-  }
-
-  return arrayWithoutItem;
-};
-
-// https://github.com/tc39/proposal-cancellation/tree/master/stage0
-const createCancellationSource = () => {
-  let requested = false;
-  let cancelError;
-  let registrationArray = [];
-
-  const cancel = reason => {
-    if (requested) return;
-    requested = true;
-    cancelError = createCancelError(reason);
-    const registrationArrayCopy = registrationArray.slice();
-    registrationArray.length = 0;
-    registrationArrayCopy.forEach(registration => {
-      registration.callback(cancelError); // const removedDuringCall = registrationArray.indexOf(registration) === -1
-    });
-  };
-
-  const register = callback => {
-    if (typeof callback !== "function") {
-      throw new Error(`callback must be a function, got ${callback}`);
-    }
-
-    const existingRegistration = registrationArray.find(registration => {
-      return registration.callback === callback;
-    }); // don't register twice
-
-    if (existingRegistration) {
-      return existingRegistration;
-    }
-
-    const registration = {
-      callback,
-      unregister: () => {
-        registrationArray = arrayWithout(registrationArray, registration);
-      }
-    };
-    registrationArray = [registration, ...registrationArray];
-    return registration;
-  };
-
-  const throwIfRequested = () => {
-    if (requested) {
-      throw cancelError;
-    }
-  };
-
-  return {
-    token: {
-      register,
-
-      get cancellationRequested() {
-        return requested;
-      },
-
-      throwIfRequested
-    },
-    cancel
-  };
-};
-
-const catchCancellation = asyncFn => {
-  return asyncFn().catch(error => {
-    if (isCancelError(error)) {
-      // it means consume of the function will resolve with a cancelError
-      // but when you cancel it means you're not interested in the result anymore
-      // thanks to this it avoid unhandledRejection
-      return error;
-    }
-
-    throw error;
-  });
-};
-
-const readDirectory = async (url, {
-  emfileMaxWait = 1000
-} = {}) => {
-  const directoryUrl = assertAndNormalizeDirectoryUrl(url);
-  const directoryPath = urlToFileSystemPath(directoryUrl);
-  const startMs = Date.now();
-  let attemptCount = 0;
-
-  const attempt = () => {
-    return readdirNaive(directoryPath, {
-      handleTooManyFilesOpenedError: async error => {
-        attemptCount++;
-        const nowMs = Date.now();
-        const timeSpentWaiting = nowMs - startMs;
-
-        if (timeSpentWaiting > emfileMaxWait) {
-          throw error;
-        }
-
-        return new Promise(resolve => {
-          setTimeout(() => {
-            resolve(attempt());
-          }, attemptCount);
-        });
-      }
-    });
-  };
-
-  return attempt();
-};
-
-const readdirNaive = (directoryPath, {
-  handleTooManyFilesOpenedError = null
-} = {}) => {
-  return new Promise((resolve, reject) => {
-    fs.readdir(directoryPath, (error, names) => {
-      if (error) {
-        // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
-        if (handleTooManyFilesOpenedError && (error.code === "EMFILE" || error.code === "ENFILE")) {
-          resolve(handleTooManyFilesOpenedError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(names);
-      }
-    });
-  });
-};
-
-const getCommonPathname = (pathname, otherPathname) => {
-  const firstDifferentCharacterIndex = findFirstDifferentCharacterIndex(pathname, otherPathname); // pathname and otherpathname are exactly the same
-
-  if (firstDifferentCharacterIndex === -1) {
-    return pathname;
-  }
-
-  const commonString = pathname.slice(0, firstDifferentCharacterIndex + 1); // the first different char is at firstDifferentCharacterIndex
-
-  if (pathname.charAt(firstDifferentCharacterIndex) === "/") {
-    return commonString;
-  }
-
-  if (otherPathname.charAt(firstDifferentCharacterIndex) === "/") {
-    return commonString;
-  }
-
-  const firstDifferentSlashIndex = commonString.lastIndexOf("/");
-  return pathname.slice(0, firstDifferentSlashIndex + 1);
-};
-
-const findFirstDifferentCharacterIndex = (string, otherString) => {
-  const maxCommonLength = Math.min(string.length, otherString.length);
-  let i = 0;
-
-  while (i < maxCommonLength) {
-    const char = string.charAt(i);
-    const otherChar = otherString.charAt(i);
-
-    if (char !== otherChar) {
-      return i;
-    }
-
-    i++;
-  }
-
-  if (string.length === otherString.length) {
-    return -1;
-  } // they differ at maxCommonLength
-
-
-  return maxCommonLength;
-};
-
-const pathnameToDirectoryPathname$1 = pathname => {
-  if (pathname.endsWith("/")) {
-    return pathname;
-  }
-
-  const slashLastIndex = pathname.lastIndexOf("/");
-
-  if (slashLastIndex === -1) {
-    return "";
-  }
-
-  return pathname.slice(0, slashLastIndex + 1);
-};
-
-const urlToRelativeUrl = (urlArg, baseUrlArg) => {
-  const url = new URL(urlArg);
-  const baseUrl = new URL(baseUrlArg);
-
-  if (url.protocol !== baseUrl.protocol) {
-    return urlArg;
-  }
-
-  if (url.username !== baseUrl.username || url.password !== baseUrl.password) {
-    return urlArg.slice(url.protocol.length);
-  }
-
-  if (url.host !== baseUrl.host) {
-    return urlArg.slice(url.protocol.length);
-  }
-
-  const {
-    pathname,
-    hash,
-    search
-  } = url;
-
-  if (pathname === "/") {
-    return baseUrl.pathname.slice(1);
-  }
-
-  const {
-    pathname: basePathname
-  } = baseUrl;
-  const commonPathname = getCommonPathname(pathname, basePathname);
-
-  if (!commonPathname) {
-    return urlArg;
-  }
-
-  const specificPathname = pathname.slice(commonPathname.length);
-  const baseSpecificPathname = basePathname.slice(commonPathname.length);
-  const baseSpecificDirectoryPathname = pathnameToDirectoryPathname$1(baseSpecificPathname);
-  const relativeDirectoriesNotation = baseSpecificDirectoryPathname.replace(/.*?\//g, "../");
-  const relativePathname = `${relativeDirectoriesNotation}${specificPathname}`;
-  return `${relativePathname}${search}${hash}`;
-};
-
-const comparePathnames = (leftPathame, rightPathname) => {
-  const leftPartArray = leftPathame.split("/");
-  const rightPartArray = rightPathname.split("/");
-  const leftLength = leftPartArray.length;
-  const rightLength = rightPartArray.length;
-  const maxLength = Math.max(leftLength, rightLength);
-  let i = 0;
-
-  while (i < maxLength) {
-    const leftPartExists = i in leftPartArray;
-    const rightPartExists = i in rightPartArray; // longer comes first
-
-    if (!leftPartExists) return +1;
-    if (!rightPartExists) return -1;
-    const leftPartIsLast = i === leftPartArray.length - 1;
-    const rightPartIsLast = i === rightPartArray.length - 1; // folder comes first
-
-    if (leftPartIsLast && !rightPartIsLast) return +1;
-    if (!leftPartIsLast && rightPartIsLast) return -1;
-    const leftPart = leftPartArray[i];
-    const rightPart = rightPartArray[i];
-    i++; // local comparison comes first
-
-    const comparison = leftPart.localeCompare(rightPart);
-    if (comparison !== 0) return comparison;
-  }
-
-  if (leftLength < rightLength) return +1;
-  if (leftLength > rightLength) return -1;
-  return 0;
-};
-
-const collectFiles = async ({
-  cancellationToken = createCancellationToken(),
-  directoryUrl,
-  specifierMetaMap,
-  predicate,
-  matchingFileOperation = () => null
-}) => {
-  const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
-
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-
-  if (typeof matchingFileOperation !== "function") {
-    throw new TypeError(`matchingFileOperation must be a function, got ${matchingFileOperation}`);
-  }
-
-  const specifierMetaMapNormalized = normalizeSpecifierMetaMap(specifierMetaMap, rootDirectoryUrl);
-  const matchingFileResultArray = [];
-
-  const visitDirectory = async directoryUrl => {
-    const directoryItems = await createOperation({
-      cancellationToken,
-      start: () => readDirectory(directoryUrl)
-    });
-    await Promise.all(directoryItems.map(async directoryItem => {
-      const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`;
-      const directoryChildNodeStats = await createOperation({
-        cancellationToken,
-        start: () => readFileSystemNodeStat(directoryChildNodeUrl, {
-          // we ignore symlink because recursively traversed
-          // so symlinked file will be discovered.
-          // Moreover if they lead outside of directoryPath it can become a problem
-          // like infinite recursion of whatever.
-          // that we could handle using an object of pathname already seen but it will be useless
-          // because directoryPath is recursively traversed
-          followLink: false
-        })
-      });
-
-      if (directoryChildNodeStats.isDirectory()) {
-        const subDirectoryUrl = `${directoryChildNodeUrl}/`;
-
-        if (!urlCanContainsMetaMatching({
-          url: subDirectoryUrl,
-          specifierMetaMap: specifierMetaMapNormalized,
-          predicate
-        })) {
-          return;
-        }
-
-        await visitDirectory(subDirectoryUrl);
-        return;
-      }
-
-      if (directoryChildNodeStats.isFile()) {
-        const meta = urlToMeta({
-          url: directoryChildNodeUrl,
-          specifierMetaMap: specifierMetaMapNormalized
-        });
-        if (!predicate(meta)) return;
-        const relativeUrl = urlToRelativeUrl(directoryChildNodeUrl, rootDirectoryUrl);
-        const operationResult = await createOperation({
-          cancellationToken,
-          start: () => matchingFileOperation({
-            cancellationToken,
-            relativeUrl,
-            meta,
-            fileStats: directoryChildNodeStats
-          })
-        });
-        matchingFileResultArray.push({
-          relativeUrl,
-          meta,
-          fileStats: directoryChildNodeStats,
-          operationResult
-        });
-        return;
-      }
-    }));
-  };
-
-  await visitDirectory(rootDirectoryUrl); // When we operate on thoose files later it feels more natural
-  // to perform operation in the same order they appear in the filesystem.
-  // It also allow to get a predictable return value.
-  // For that reason we sort matchingFileResultArray
-
-  matchingFileResultArray.sort((leftFile, rightFile) => {
-    return comparePathnames(leftFile.relativeUrl, rightFile.relativeUrl);
-  });
-  return matchingFileResultArray;
-};
-
-const {
-  mkdir
-} = fs.promises;
-const writeDirectory = async (destination, {
-  recursive = true,
-  allowUseless = false
-} = {}) => {
-  const destinationUrl = assertAndNormalizeDirectoryUrl(destination);
-  const destinationPath = urlToFileSystemPath(destinationUrl);
-  const destinationStats = await readFileSystemNodeStat(destinationUrl, {
-    nullIfNotFound: true,
-    followLink: false
-  });
-
-  if (destinationStats) {
-    if (destinationStats.isDirectory()) {
-      if (allowUseless) {
-        return;
-      }
-
-      throw new Error(`directory already exists at ${destinationPath}`);
-    }
-
-    const destinationType = statsToType(destinationStats);
-    throw new Error(`cannot write directory at ${destinationPath} because there is a ${destinationType}`);
-  }
-
-  try {
-    await mkdir(destinationPath, {
-      recursive
-    });
-  } catch (error) {
-    if (allowUseless && error.code === "EEXIST") {
-      return;
-    }
-
-    throw error;
-  }
-};
-
-const resolveUrl$1 = (specifier, baseUrl) => {
-  if (typeof baseUrl === "undefined") {
-    throw new TypeError(`baseUrl missing to resolve ${specifier}`);
-  }
-
-  return String(new URL(specifier, baseUrl));
-};
-
-const removeFileSystemNode = async (source, {
-  allowUseless = false,
-  recursive = false,
-  maxRetries = 3,
-  retryDelay = 100,
-  onlyContent = false
-} = {}) => {
-  const sourceUrl = assertAndNormalizeFileUrl(source);
-  const sourceStats = await readFileSystemNodeStat(sourceUrl, {
-    nullIfNotFound: true,
-    followLink: false
-  });
-
-  if (!sourceStats) {
-    if (allowUseless) {
-      return;
-    }
-
-    throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
-  } // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
-  // FIFO and socket are ignored, not sure what they are exactly and what to do with them
-  // other libraries ignore them, let's do the same.
-
-
-  if (sourceStats.isFile() || sourceStats.isSymbolicLink() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
-    await removeNonDirectory(sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl, {
-      maxRetries,
-      retryDelay
-    });
-  } else if (sourceStats.isDirectory()) {
-    await removeDirectory(ensureUrlTrailingSlash(sourceUrl), {
-      recursive,
-      maxRetries,
-      retryDelay,
-      onlyContent
-    });
-  }
-};
-
-const removeNonDirectory = (sourceUrl, {
-  maxRetries,
-  retryDelay
-}) => {
-  const sourcePath = urlToFileSystemPath(sourceUrl);
-  let retryCount = 0;
-
-  const attempt = () => {
-    return unlinkNaive(sourcePath, { ...(retryCount >= maxRetries ? {} : {
-        handleTemporaryError: async () => {
-          retryCount++;
-          return new Promise(resolve => {
-            setTimeout(() => {
-              resolve(attempt());
-            }, retryCount * retryDelay);
-          });
-        }
-      })
-    });
-  };
-
-  return attempt();
-};
-
-const unlinkNaive = (sourcePath, {
-  handleTemporaryError = null
-} = {}) => {
-  return new Promise((resolve, reject) => {
-    fs.unlink(sourcePath, error => {
-      if (error) {
-        if (error.code === "ENOENT") {
-          resolve();
-        } else if (handleTemporaryError && (error.code === "EBUSY" || error.code === "EMFILE" || error.code === "ENFILE" || error.code === "ENOENT")) {
-          resolve(handleTemporaryError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve();
-      }
-    });
-  });
-};
-
-const removeDirectory = async (rootDirectoryUrl, {
-  maxRetries,
-  retryDelay,
-  recursive,
-  onlyContent
-}) => {
-  const visit = async sourceUrl => {
-    const sourceStats = await readFileSystemNodeStat(sourceUrl, {
-      nullIfNotFound: true,
-      followLink: false
-    }); // file/directory not found
-
-    if (sourceStats === null) {
-      return;
-    }
-
-    if (sourceStats.isFile() || sourceStats.isCharacterDevice() || sourceStats.isBlockDevice()) {
-      await visitFile(sourceUrl);
-    } else if (sourceStats.isSymbolicLink()) {
-      await visitSymbolicLink(sourceUrl);
-    } else if (sourceStats.isDirectory()) {
-      await visitDirectory(`${sourceUrl}/`);
-    }
-  };
-
-  const visitDirectory = async directoryUrl => {
-    const directoryPath = urlToFileSystemPath(directoryUrl);
-    const optionsFromRecursive = recursive ? {
-      handleNotEmptyError: async () => {
-        await removeDirectoryContent(directoryUrl);
-        await visitDirectory(directoryUrl);
-      }
-    } : {};
-    await removeDirectoryNaive(directoryPath, { ...optionsFromRecursive,
-      // Workaround for https://github.com/joyent/node/issues/4337
-      ...(process.platform === "win32" ? {
-        handlePermissionError: async error => {
-          let openOrCloseError;
-
-          try {
-            const fd = fs.openSync(directoryPath);
-            fs.closeSync(fd);
-          } catch (e) {
-            openOrCloseError = e;
-          }
-
-          if (openOrCloseError) {
-            if (openOrCloseError.code === "ENOENT") {
-              return;
-            }
-
-            console.error(`error while trying to fix windows EPERM: ${openOrCloseError.stack}`);
-            throw error;
-          }
-
-          await removeDirectoryNaive(directoryPath, { ...optionsFromRecursive
-          });
-        }
-      } : {})
-    });
-  };
-
-  const removeDirectoryContent = async directoryUrl => {
-    const names = await readDirectory(directoryUrl);
-    await Promise.all(names.map(async name => {
-      const url = resolveUrl$1(name, directoryUrl);
-      await visit(url);
-    }));
-  };
-
-  const visitFile = async fileUrl => {
-    await removeNonDirectory(fileUrl, {
-      maxRetries,
-      retryDelay
-    });
-  };
-
-  const visitSymbolicLink = async symbolicLinkUrl => {
-    await removeNonDirectory(symbolicLinkUrl, {
-      maxRetries,
-      retryDelay
-    });
-  };
-
-  if (onlyContent) {
-    await removeDirectoryContent(rootDirectoryUrl);
-  } else {
-    await visitDirectory(rootDirectoryUrl);
-  }
-};
-
-const removeDirectoryNaive = (directoryPath, {
-  handleNotEmptyError = null,
-  handlePermissionError = null
-} = {}) => {
-  return new Promise((resolve, reject) => {
-    fs.rmdir(directoryPath, (error, lstatObject) => {
-      if (error) {
-        if (handlePermissionError && error.code === "EPERM") {
-          resolve(handlePermissionError(error));
-        } else if (error.code === "ENOENT") {
-          resolve();
-        } else if (handleNotEmptyError && ( // linux os
-        error.code === "ENOTEMPTY" || // SunOS
-        error.code === "EEXIST")) {
-          resolve(handleNotEmptyError(error));
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve(lstatObject);
-      }
-    });
-  });
-};
-
-const ensureEmptyDirectory = async source => {
-  const stats = await readFileSystemNodeStat(source, {
-    nullIfNotFound: true,
-    followLink: false
-  });
-
-  if (stats === null) {
-    // if there is nothing, create a directory
-    return writeDirectory(source);
-  }
-
-  if (stats.isDirectory()) {
-    // if there is a directory remove its content and done
-    return removeFileSystemNode(source, {
-      allowUseless: true,
-      recursive: true,
-      onlyContent: true
-    });
-  }
-
-  const sourceType = statsToType(stats);
-  const sourcePath = urlToFileSystemPath(assertAndNormalizeFileUrl(source));
-  throw new Error(`ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`);
-};
-
-const isWindows$1 = process.platform === "win32";
-const baseUrlFallback = fileSystemPathToUrl(process.cwd());
-/**
- * Some url might be resolved or remapped to url without the windows drive letter.
- * For instance
- * new URL('/foo.js', 'file:///C:/dir/file.js')
- * resolves to
- * 'file:///foo.js'
- *
- * But on windows it becomes a problem because we need the drive letter otherwise
- * url cannot be converted to a filesystem path.
- *
- * ensureWindowsDriveLetter ensure a resolved url still contains the drive letter.
- */
-
-const ensureWindowsDriveLetter = (url, baseUrl) => {
-  try {
-    url = String(new URL(url));
-  } catch (e) {
-    throw new Error(`absolute url expected but got ${url}`);
-  }
-
-  if (!isWindows$1) {
-    return url;
-  }
-
-  try {
-    baseUrl = String(new URL(baseUrl));
-  } catch (e) {
-    throw new Error(`absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`);
-  }
-
-  if (!url.startsWith("file://")) {
-    return url;
-  }
-
-  const afterProtocol = url.slice("file://".length); // we still have the windows drive letter
-
-  if (extractDriveLetter(afterProtocol)) {
-    return url;
-  } // drive letter was lost, restore it
-
-
-  const baseUrlOrFallback = baseUrl.startsWith("file://") ? baseUrl : baseUrlFallback;
-  const driveLetter = extractDriveLetter(baseUrlOrFallback.slice("file://".length));
-
-  if (!driveLetter) {
-    throw new Error(`drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`);
-  }
-
-  return `file:///${driveLetter}:${afterProtocol}`;
-};
-
-const extractDriveLetter = ressource => {
-  // we still have the windows drive letter
-  if (/[a-zA-Z]/.test(ressource[1]) && ressource[2] === ":") {
-    return ressource[1];
-  }
-
-  return null;
-};
-
-const ensureParentDirectories = async destination => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationPath = urlToFileSystemPath(destinationUrl);
-  const destinationParentPath = path.dirname(destinationPath);
-  return writeDirectory(destinationParentPath, {
-    recursive: true,
-    allowUseless: true
-  });
-};
-
-const replaceBackSlashesWithSlashes = string => string.replace(/\\/g, "/");
-
-const isWindows$2 = process.platform === "win32";
-
-const urlIsInsideOf = (urlValue, otherUrlValue) => {
-  const url = new URL(urlValue);
-  const otherUrl = new URL(otherUrlValue);
-
-  if (url.origin !== otherUrl.origin) {
-    return false;
-  }
-
-  const urlPathname = url.pathname;
-  const otherUrlPathname = otherUrl.pathname;
-
-  if (urlPathname === otherUrlPathname) {
-    return false;
-  }
-
-  return urlPathname.startsWith(otherUrlPathname);
-};
-
-const addCallback = callback => {
-  const triggerHangUpOrDeath = () => callback(); // SIGHUP http://man7.org/linux/man-pages/man7/signal.7.html
-
-
-  process.once("SIGUP", triggerHangUpOrDeath);
-  return () => {
-    process.removeListener("SIGUP", triggerHangUpOrDeath);
-  };
-};
-
-const SIGUPSignal = {
-  addCallback
-};
-
-const addCallback$1 = callback => {
-  // SIGINT is CTRL+C from keyboard also refered as keyboard interruption
-  // http://man7.org/linux/man-pages/man7/signal.7.html
-  // may also be sent by vscode https://github.com/Microsoft/vscode-node-debug/issues/1#issuecomment-405185642
-  process.once("SIGINT", callback);
-  return () => {
-    process.removeListener("SIGINT", callback);
-  };
-};
-
-const SIGINTSignal = {
-  addCallback: addCallback$1
-};
-
-const addCallback$2 = callback => {
-  if (process.platform === "win32") {
-    console.warn(`SIGTERM is not supported on windows`);
-    return () => {};
-  }
-
-  const triggerTermination = () => callback(); // SIGTERM http://man7.org/linux/man-pages/man7/signal.7.html
-
-
-  process.once("SIGTERM", triggerTermination);
-  return () => {
-    process.removeListener("SIGTERM", triggerTermination);
-  };
-};
-
-const SIGTERMSignal = {
-  addCallback: addCallback$2
-};
-
-let beforeExitCallbackArray = [];
-let uninstall;
-
-const addCallback$3 = callback => {
-  if (beforeExitCallbackArray.length === 0) uninstall = install();
-  beforeExitCallbackArray = [...beforeExitCallbackArray, callback];
-  return () => {
-    if (beforeExitCallbackArray.length === 0) return;
-    beforeExitCallbackArray = beforeExitCallbackArray.filter(beforeExitCallback => beforeExitCallback !== callback);
-    if (beforeExitCallbackArray.length === 0) uninstall();
-  };
-};
-
-const install = () => {
-  const onBeforeExit = () => {
-    return beforeExitCallbackArray.reduce(async (previous, callback) => {
-      await previous;
-      return callback();
-    }, Promise.resolve());
-  };
-
-  process.once("beforeExit", onBeforeExit);
-  return () => {
-    process.removeListener("beforeExit", onBeforeExit);
-  };
-};
-
-const beforeExitSignal = {
-  addCallback: addCallback$3
-};
-
-const addCallback$4 = (callback, {
-  collectExceptions = false
-} = {}) => {
-  if (!collectExceptions) {
-    const exitCallback = () => {
-      callback();
-    };
-
-    process.on("exit", exitCallback);
-    return () => {
-      process.removeListener("exit", exitCallback);
-    };
-  }
-
-  const {
-    getExceptions,
-    stop
-  } = trackExceptions();
-
-  const exitCallback = () => {
-    process.removeListener("exit", exitCallback);
-    stop();
-    callback({
-      exceptionArray: getExceptions().map(({
-        exception,
-        origin
-      }) => {
-        return {
-          exception,
-          origin
-        };
-      })
-    });
-  };
-
-  process.on("exit", exitCallback);
-  return () => {
-    process.removeListener("exit", exitCallback);
-  };
-};
-
-const trackExceptions = () => {
-  let exceptionArray = [];
-
-  const unhandledRejectionCallback = (unhandledRejection, promise) => {
-    exceptionArray = [...exceptionArray, {
-      origin: "unhandledRejection",
-      exception: unhandledRejection,
-      promise
-    }];
-  };
-
-  const rejectionHandledCallback = promise => {
-    exceptionArray = exceptionArray.filter(exceptionArray => exceptionArray.promise !== promise);
-  };
-
-  const uncaughtExceptionCallback = (uncaughtException, origin) => {
-    // since node 12.4 https://nodejs.org/docs/latest-v12.x/api/process.html#process_event_uncaughtexception
-    if (origin === "unhandledRejection") return;
-    exceptionArray = [...exceptionArray, {
-      origin: "uncaughtException",
-      exception: uncaughtException
-    }];
-  };
-
-  process.on("unhandledRejection", unhandledRejectionCallback);
-  process.on("rejectionHandled", rejectionHandledCallback);
-  process.on("uncaughtException", uncaughtExceptionCallback);
-  return {
-    getExceptions: () => exceptionArray,
-    stop: () => {
-      process.removeListener("unhandledRejection", unhandledRejectionCallback);
-      process.removeListener("rejectionHandled", rejectionHandledCallback);
-      process.removeListener("uncaughtException", uncaughtExceptionCallback);
-    }
-  };
-};
-
-const exitSignal = {
-  addCallback: addCallback$4
-};
-
-const addCallback$5 = callback => {
-  return eventRace({
-    SIGHUP: {
-      register: SIGUPSignal.addCallback,
-      callback: () => callback("SIGHUP")
-    },
-    SIGINT: {
-      register: SIGINTSignal.addCallback,
-      callback: () => callback("SIGINT")
-    },
-    ...(process.platform === "win32" ? {} : {
-      SIGTERM: {
-        register: SIGTERMSignal.addCallback,
-        callback: () => callback("SIGTERM")
-      }
-    }),
-    beforeExit: {
-      register: beforeExitSignal.addCallback,
-      callback: () => callback("beforeExit")
-    },
-    exit: {
-      register: exitSignal.addCallback,
-      callback: () => callback("exit")
-    }
-  });
-};
-
-const eventRace = eventMap => {
-  const unregisterMap = {};
-
-  const unregisterAll = reason => {
-    return Object.keys(unregisterMap).map(name => unregisterMap[name](reason));
-  };
-
-  Object.keys(eventMap).forEach(name => {
-    const {
-      register,
-      callback
-    } = eventMap[name];
-    unregisterMap[name] = register((...args) => {
-      unregisterAll();
-      callback(...args);
-    });
-  });
-  return unregisterAll;
-};
-
-const teardownSignal = {
-  addCallback: addCallback$5
-};
-
-const firstOperationMatching$1 = ({
-  array,
-  start,
-  predicate
-}) => {
-  if (typeof array !== "object") throw new TypeError(createArrayErrorMessage({
-    array
-  }));
-  if (typeof start !== "function") throw new TypeError(createStartErrorMessage({
-    start
-  }));
-  if (typeof predicate !== "function") throw new TypeError(createPredicateErrorMessage({
-    predicate
-  }));
-  return new Promise((resolve, reject) => {
-    const visit = index => {
-      if (index >= array.length) {
-        return resolve();
-      }
-
-      const input = array[index];
-      const returnValue = start(input);
-      return Promise.resolve(returnValue).then(output => {
-        if (predicate(output)) {
-          return resolve(output);
-        }
-
-        return visit(index + 1);
-      }, reject);
-    };
-
-    visit(0);
-  });
-};
-
-const createArrayErrorMessage = ({
-  array
-}) => `array must be an object.
-array: ${array}`;
-
-const createStartErrorMessage = ({
-  start
-}) => `start must be a function.
-start: ${start}`;
-
-const createPredicateErrorMessage = ({
-  predicate
-}) => `predicate must be a function.
-predicate: ${predicate}`;
-
-/*
-why unadvised ?
-- First because you should not do anything when a process uncaughtException
-or unhandled rejection happens.
-You cannot assume assume or trust the state of your process so you're
-likely going to throw an other error trying to handle the first one.
-- Second because the error stack trace will be modified making it harder
-to reach back what cause the error
-
-Instead you should monitor your process with an other one
-and when the monitored process die, here you can do what you want
-like analysing logs to find what cause process to die, ping a log server, ...
-*/
-let recoverCallbackArray = [];
-let uninstall$1;
-
-const addCallback$6 = callback => {
-  if (recoverCallbackArray.length === 0) uninstall$1 = install$1();
-  recoverCallbackArray = [...recoverCallbackArray, callback];
-  return () => {
-    if (recoverCallbackArray.length === 0) return;
-    recoverCallbackArray = recoverCallbackArray.filter(recoverCallback => recoverCallback !== callback);
-    if (recoverCallbackArray.length === 0) uninstall$1();
-  };
-};
-
-const install$1 = () => {
-  const onUncaughtException = error => triggerUncaughtException(error);
-
-  const onUnhandledRejection = (value, promise) => triggerUnhandledRejection(value, promise);
-
-  const onRejectionHandled = promise => recoverExceptionMatching(exception => exception.promise === promise);
-
-  process.on("unhandledRejection", onUnhandledRejection);
-  process.on("rejectionHandled", onRejectionHandled);
-  process.on("uncaughtException", onUncaughtException);
-  return () => {
-    process.removeListener("unhandledRejection", onUnhandledRejection);
-    process.removeListener("rejectionHandled", onRejectionHandled);
-    process.removeListener("uncaughtException", onRejectionHandled);
-  };
-};
-
-const triggerUncaughtException = error => crash({
-  type: "uncaughtException",
-  value: error
-});
-
-const triggerUnhandledRejection = (value, promise) => crash({
-  type: "unhandledRejection",
-  value,
-  promise
-});
-
-let isCrashing = false;
-let crashReason;
-let resolveRecovering;
-
-const crash = async reason => {
-  if (isCrashing) {
-    console.log(`cannot recover due to ${crashReason.type} during recover`);
-    console.error(crashReason.value);
-    resolveRecovering(false);
-    return;
-  }
-
-  console.log(`process starts crashing due to ${crashReason.type}`);
-  console.log(`trying to recover`);
-  isCrashing = true;
-  crashReason = reason;
-  const externalRecoverPromise = new Promise(resolve => {
-    resolveRecovering = resolve;
-  });
-  const callbackRecoverPromise = firstOperationMatching$1({
-    array: recoverCallbackArray,
-    start: recoverCallback => recoverCallback(reason),
-    predicate: recovered => typeof recovered === "boolean"
-  });
-  const recoverPromise = Promise.race([externalRecoverPromise, callbackRecoverPromise]);
-
-  try {
-    const recovered = await recoverPromise;
-    if (recovered) return;
-  } catch (error) {
-    console.error(`cannot recover due to internal recover error`);
-    console.error(error);
-  }
-
-  crashReason = undefined; // uninstall() prevent catching of the next throw
-  // else the following would create an infinite loop
-  // process.on('uncaughtException', function() {
-  //     setTimeout(function() {
-  //         throw 'yo';
-  //     });
-  // });
-
-  uninstall$1();
-  throw reason.value; // this mess up the stack trace :'(
-};
-
-const recoverExceptionMatching = predicate => {
-  if (isCrashing && predicate(crashReason)) {
-    resolveRecovering(true);
-  }
-};
-
-const unadvisedCrashSignal = {
-  addCallback: addCallback$6
-};
-
-const createCancellationTokenForProcess = () => {
-  const teardownCancelSource = createCancellationSource();
-  teardownSignal.addCallback(reason => teardownCancelSource.cancel(`process ${reason}`));
-  return teardownCancelSource.token;
-};
-
-const memoize = compute => {
-  let memoized = false;
-  let memoizedValue;
-
-  const fnWithMemoization = (...args) => {
-    if (memoized) {
-      return memoizedValue;
-    } // if compute is recursive wait for it to be fully done before storing the value
-    // so set memoized boolean after the call
-
-
-    memoizedValue = compute(...args);
-    memoized = true;
-    return memoizedValue;
-  };
-
-  fnWithMemoization.forget = () => {
-    const value = memoizedValue;
-    memoized = false;
-    memoizedValue = undefined;
-    return value;
-  };
-
-  return fnWithMemoization;
-};
-
-const readFilePromisified = util.promisify(fs.readFile);
-const readFile = async value => {
-  const fileUrl = assertAndNormalizeFileUrl(value);
-  const filePath = urlToFileSystemPath(fileUrl);
-  const buffer = await readFilePromisified(filePath);
-  return buffer.toString();
-};
-
-const readFileSystemNodeModificationTime = async source => {
-  const stats = await readFileSystemNodeStat(source);
-  return Math.floor(stats.mtimeMs);
-};
-
-const fileSystemNodeToTypeOrNull = url => {
-  const path = urlToFileSystemPath(url);
-
-  try {
-    const stats = fs.statSync(path);
-    return statsToType(stats);
-  } catch (e) {
-    if (e.code === "ENOENT") {
-      return null;
-    }
-
-    throw e;
-  }
-};
-
-const isWindows$3 = process.platform === "win32";
-const createWatcher = (sourcePath, options) => {
-  const watcher = fs.watch(sourcePath, options);
-
-  if (isWindows$3) {
-    watcher.on("error", async error => {
-      // https://github.com/joyent/node/issues/4337
-      if (error.code === "EPERM") {
-        try {
-          const fd = fs.openSync(sourcePath, "r");
-          fs.closeSync(fd);
-        } catch (e) {
-          if (e.code === "ENOENT") {
-            return;
-          }
-
-          console.error(`error while fixing windows eperm: ${e.stack}`);
-          throw error;
-        }
-      } else {
-        throw error;
-      }
-    });
-  }
-
-  return watcher;
-};
-
-const trackRessources = () => {
-  const callbackArray = [];
-
-  const registerCleanupCallback = callback => {
-    if (typeof callback !== "function") throw new TypeError(`callback must be a function
-callback: ${callback}`);
-    callbackArray.push(callback);
-    return () => {
-      const index = callbackArray.indexOf(callback);
-      if (index > -1) callbackArray.splice(index, 1);
-    };
-  };
-
-  const cleanup = async reason => {
-    const localCallbackArray = callbackArray.slice();
-    await Promise.all(localCallbackArray.map(callback => callback(reason)));
-  };
-
-  return {
-    registerCleanupCallback,
-    cleanup
-  };
-};
-
-/* eslint-disable import/max-dependencies */
-const isLinux = process.platform === "linux"; // linux does not support recursive option
-
-const fsWatchSupportsRecursive = !isLinux;
-const registerDirectoryLifecycle = (source, {
-  added,
-  updated,
-  removed,
-  watchDescription = {
-    "./**/*": true
-  },
-  notifyExistent = false,
-  keepProcessAlive = true,
-  recursive = false
-}) => {
-  const sourceUrl = ensureUrlTrailingSlash(assertAndNormalizeFileUrl(source));
-
-  if (!undefinedOrFunction(added)) {
-    throw new TypeError(`added must be a function or undefined, got ${added}`);
-  }
-
-  if (!undefinedOrFunction(updated)) {
-    throw new TypeError(`updated must be a function or undefined, got ${updated}`);
-  }
-
-  if (!undefinedOrFunction(removed)) {
-    throw new TypeError(`removed must be a function or undefined, got ${removed}`);
-  }
-
-  const specifierMetaMap = normalizeSpecifierMetaMap(metaMapToSpecifierMetaMap({
-    watch: watchDescription
-  }), sourceUrl);
-
-  const entryShouldBeWatched = ({
-    relativeUrl,
-    type
-  }) => {
-    const entryUrl = resolveUrl$1(relativeUrl, sourceUrl);
-
-    if (type === "directory") {
-      const canContainEntryToWatch = urlCanContainsMetaMatching({
-        url: `${entryUrl}/`,
-        specifierMetaMap,
-        predicate: ({
-          watch
-        }) => watch
-      });
-      return canContainEntryToWatch;
-    }
-
-    const entryMeta = urlToMeta({
-      url: entryUrl,
-      specifierMetaMap
-    });
-    return entryMeta.watch;
-  };
-
-  const tracker = trackRessources();
-  const contentMap = {};
-
-  const handleDirectoryEvent = ({
-    directoryRelativeUrl,
-    filename,
-    eventType
-  }) => {
-    if (filename) {
-      if (directoryRelativeUrl) {
-        handleChange(`${directoryRelativeUrl}/${filename}`);
-      } else {
-        handleChange(`${filename}`);
-      }
-    } else if ((removed || added) && eventType === "rename") {
-      // we might receive `rename` without filename
-      // in that case we try to find ourselves which file was removed.
-      let relativeUrlCandidateArray = Object.keys(contentMap);
-
-      if (recursive && !fsWatchSupportsRecursive) {
-        relativeUrlCandidateArray = relativeUrlCandidateArray.filter(relativeUrlCandidate => {
-          if (!directoryRelativeUrl) {
-            // ensure entry is top level
-            if (relativeUrlCandidate.includes("/")) return false;
-            return true;
-          } // entry not inside this directory
-
-
-          if (!relativeUrlCandidate.startsWith(directoryRelativeUrl)) return false;
-          const afterDirectory = relativeUrlCandidate.slice(directoryRelativeUrl.length + 1); // deep inside this directory
-
-          if (afterDirectory.includes("/")) return false;
-          return true;
-        });
-      }
-
-      const removedEntryRelativeUrl = relativeUrlCandidateArray.find(relativeUrlCandidate => {
-        const entryUrl = resolveUrl$1(relativeUrlCandidate, sourceUrl);
-        const type = fileSystemNodeToTypeOrNull(entryUrl);
-        return type === null;
-      });
-
-      if (removedEntryRelativeUrl) {
-        handleEntryLost({
-          relativeUrl: removedEntryRelativeUrl,
-          type: contentMap[removedEntryRelativeUrl]
-        });
-      }
-    }
-  };
-
-  const handleChange = relativeUrl => {
-    const entryUrl = resolveUrl$1(relativeUrl, sourceUrl);
-    const previousType = contentMap[relativeUrl];
-    const type = fileSystemNodeToTypeOrNull(entryUrl);
-
-    if (!entryShouldBeWatched({
-      relativeUrl,
-      type
-    })) {
-      return;
-    } // it's something new
-
-
-    if (!previousType) {
-      if (type !== null) {
-        handleEntryFound({
-          relativeUrl,
-          type,
-          existent: false
-        });
-      }
-
-      return;
-    } // it existed but now it's not here anymore
-
-
-    if (type === null) {
-      handleEntryLost({
-        relativeUrl,
-        type: previousType
-      });
-      return;
-    } // it existed but was replaced by something else
-    // it's not really an update
-
-
-    if (previousType !== type) {
-      handleEntryLost({
-        relativeUrl,
-        type: previousType
-      });
-      handleEntryFound({
-        relativeUrl,
-        type
-      });
-      return;
-    } // a directory cannot really be updated in way that matters for us
-    // filesystem is trying to tell us the directory content have changed
-    // but we don't care about that
-    // we'll already be notified about what has changed
-
-
-    if (type === "directory") {
-      return;
-    } // right same type, and the file existed and was not deleted
-    // it's likely an update ?
-    // but are we sure it's an update ?
-
-
-    if (updated) {
-      updated({
-        relativeUrl,
-        type
-      });
-    }
-  };
-
-  const handleEntryFound = ({
-    relativeUrl,
-    type,
-    existent
-  }) => {
-    if (!entryShouldBeWatched({
-      relativeUrl,
-      type
-    })) {
-      return;
-    }
-
-    contentMap[relativeUrl] = type;
-    const entryUrl = resolveUrl$1(relativeUrl, sourceUrl);
-
-    if (type === "directory") {
-      visitDirectory({
-        directoryUrl: `${entryUrl}/`,
-        entryFound: entry => {
-          handleEntryFound({
-            relativeUrl: `${relativeUrl}/${entry.relativeUrl}`,
-            type: entry.type,
-            existent
-          });
-        }
-      });
-    }
-
-    if (added) {
-      if (existent) {
-        if (notifyExistent) {
-          added({
-            relativeUrl,
-            type,
-            existent: true
-          });
-        }
-      } else {
-        added({
-          relativeUrl,
-          type
-        });
-      }
-    } // we must watch manually every directory we find
-
-
-    if (!fsWatchSupportsRecursive && type === "directory") {
-      const watcher = createWatcher(urlToFileSystemPath(entryUrl), {
-        persistent: keepProcessAlive
-      });
-      tracker.registerCleanupCallback(() => {
-        watcher.close();
-      });
-      watcher.on("change", (eventType, filename) => {
-        handleDirectoryEvent({
-          directoryRelativeUrl: relativeUrl,
-          filename: filename ? replaceBackSlashesWithSlashes(filename) : "",
-          eventType
-        });
-      });
-    }
-  };
-
-  const handleEntryLost = ({
-    relativeUrl,
-    type
-  }) => {
-    delete contentMap[relativeUrl];
-
-    if (removed) {
-      removed({
-        relativeUrl,
-        type
-      });
-    }
-  };
-
-  visitDirectory({
-    directoryUrl: sourceUrl,
-    entryFound: ({
-      relativeUrl,
-      type
-    }) => {
-      handleEntryFound({
-        relativeUrl,
-        type,
-        existent: true
-      });
-    }
-  });
-  const watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
-    recursive: recursive && fsWatchSupportsRecursive,
-    persistent: keepProcessAlive
-  });
-  tracker.registerCleanupCallback(() => {
-    watcher.close();
-  });
-  watcher.on("change", (eventType, fileSystemPath) => {
-    handleDirectoryEvent({ ...fileSystemPathToDirectoryRelativeUrlAndFilename(fileSystemPath),
-      eventType
-    });
-  });
-  return tracker.cleanup;
-};
-
-const undefinedOrFunction = value => typeof value === "undefined" || typeof value === "function";
-
-const visitDirectory = ({
-  directoryUrl,
-  entryFound
-}) => {
-  const directoryPath = urlToFileSystemPath(directoryUrl);
-  fs.readdirSync(directoryPath).forEach(entry => {
-    const entryUrl = resolveUrl$1(entry, directoryUrl);
-    const type = fileSystemNodeToTypeOrNull(entryUrl);
-
-    if (type === null) {
-      return;
-    }
-
-    const relativeUrl = urlToRelativeUrl(entryUrl, directoryUrl);
-    entryFound({
-      relativeUrl,
-      type
-    });
-  });
-};
-
-const fileSystemPathToDirectoryRelativeUrlAndFilename = path => {
-  if (!path) {
-    return {
-      directoryRelativeUrl: "",
-      filename: ""
-    };
-  }
-
-  const normalizedPath = replaceBackSlashesWithSlashes(path);
-  const slashLastIndex = normalizedPath.lastIndexOf("/");
-
-  if (slashLastIndex === -1) {
-    return {
-      directoryRelativeUrl: "",
-      filename: normalizedPath
-    };
-  }
-
-  const directoryRelativeUrl = normalizedPath.slice(0, slashLastIndex);
-  const filename = normalizedPath.slice(slashLastIndex + 1);
-  return {
-    directoryRelativeUrl,
-    filename
-  };
-};
-
-const registerFileLifecycle = (source, {
-  added,
-  updated,
-  removed,
-  notifyExistent = false,
-  keepProcessAlive = true
-}) => {
-  const sourceUrl = assertAndNormalizeFileUrl(source);
-
-  if (!undefinedOrFunction$1(added)) {
-    throw new TypeError(`added must be a function or undefined, got ${added}`);
-  }
-
-  if (!undefinedOrFunction$1(updated)) {
-    throw new TypeError(`updated must be a function or undefined, got ${updated}`);
-  }
-
-  if (!undefinedOrFunction$1(removed)) {
-    throw new TypeError(`removed must be a function or undefined, got ${removed}`);
-  }
-
-  const tracker = trackRessources();
-
-  const handleFileFound = ({
-    existent
-  }) => {
-    const fileMutationStopWatching = watchFileMutation(sourceUrl, {
-      updated,
-      removed: () => {
-        fileMutationStopTracking();
-        watchFileAdded();
-
-        if (removed) {
-          removed();
-        }
-      },
-      keepProcessAlive
-    });
-    const fileMutationStopTracking = tracker.registerCleanupCallback(fileMutationStopWatching);
-
-    if (added) {
-      if (existent) {
-        if (notifyExistent) {
-          added({
-            existent: true
-          });
-        }
-      } else {
-        added({});
-      }
-    }
-  };
-
-  const watchFileAdded = () => {
-    const fileCreationStopWatching = watchFileCreation(sourceUrl, () => {
-      fileCreationgStopTracking();
-      handleFileFound({
-        existent: false
-      });
-    }, keepProcessAlive);
-    const fileCreationgStopTracking = tracker.registerCleanupCallback(fileCreationStopWatching);
-  };
-
-  const sourceType = fileSystemNodeToTypeOrNull(sourceUrl);
-
-  if (sourceType === null) {
-    if (added) {
-      watchFileAdded();
-    } else {
-      throw new Error(`${urlToFileSystemPath(sourceUrl)} must lead to a file, found nothing`);
-    }
-  } else if (sourceType === "file") {
-    handleFileFound({
-      existent: true
-    });
-  } else {
-    throw new Error(`${urlToFileSystemPath(sourceUrl)} must lead to a file, type found instead`);
-  }
-
-  return tracker.cleanup;
-};
-
-const undefinedOrFunction$1 = value => typeof value === "undefined" || typeof value === "function";
-
-const watchFileCreation = (source, callback, keepProcessAlive) => {
-  const sourcePath = urlToFileSystemPath(source);
-  const sourceFilename = path.basename(sourcePath);
-  const directoryPath = path.dirname(sourcePath);
-  let directoryWatcher = createWatcher(directoryPath, {
-    persistent: keepProcessAlive
-  });
-  directoryWatcher.on("change", (eventType, filename) => {
-    if (filename && filename !== sourceFilename) return;
-    const type = fileSystemNodeToTypeOrNull(source); // ignore if something else with that name gets created
-    // we are only interested into files
-
-    if (type !== "file") return;
-    directoryWatcher.close();
-    directoryWatcher = undefined;
-    callback();
-  });
-  return () => {
-    if (directoryWatcher) {
-      directoryWatcher.close();
-    }
-  };
-};
-
-const watchFileMutation = (sourceUrl, {
-  updated,
-  removed,
-  keepProcessAlive
-}) => {
-  let watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
-    persistent: keepProcessAlive
-  });
-  watcher.on("change", () => {
-    const sourceType = fileSystemNodeToTypeOrNull(sourceUrl);
-
-    if (sourceType === null) {
-      watcher.close();
-      watcher = undefined;
-
-      if (removed) {
-        removed();
-      }
-    } else if (sourceType === "file") {
-      if (updated) {
-        updated();
-      }
-    }
-  });
-  return () => {
-    if (watcher) {
-      watcher.close();
-    }
-  };
-};
-
-const resolveDirectoryUrl = (specifier, baseUrl) => {
-  const url = resolveUrl$1(specifier, baseUrl);
-  return ensureUrlTrailingSlash(url);
-};
-
-const {
-  writeFile: writeFileNode
-} = fs.promises;
-const writeFile = async (destination, content = "") => {
-  const destinationUrl = assertAndNormalizeFileUrl(destination);
-  const destinationPath = urlToFileSystemPath(destinationUrl);
-
-  try {
-    await writeFileNode(destinationPath, content);
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      await ensureParentDirectories(destinationUrl);
-      await writeFileNode(destinationPath, content);
-      return;
-    }
-
-    throw error;
-  }
-};
 
 /* eslint-disable */
 
@@ -3960,7 +541,7 @@ const babelHelperNameToImportSpecifier = babelHelperName => {
   return `${babelHelperAbstractScope}${babelHelperName}/${babelHelperName}.js`;
 };
 const filePathToBabelHelperName = filePath => {
-  const fileUrl = fileSystemPathToUrl(filePath);
+  const fileUrl = util.fileSystemPathToUrl(filePath);
   const babelHelperPrefix = "core/helpers/babel/";
 
   if (fileUrl.includes(babelHelperPrefix)) {
@@ -4256,12 +837,12 @@ const computeInputCodeAndInputMap = async ({
   remap,
   allowTopLevelAwait
 }) => {
-  const specifierMetaMap = normalizeSpecifierMetaMap(metaMapToSpecifierMetaMap({
+  const specifierMetaMap = util.normalizeSpecifierMetaMap(util.metaMapToSpecifierMetaMap({
     convert: convertMap
   }), projectDirectoryUrl);
   const {
     convert
-  } = urlToMeta({
+  } = util.urlToMeta({
     url,
     specifierMetaMap
   });
@@ -4307,7 +888,7 @@ const computeInputCodeAndInputMap = async ({
 
 const computeInputPath = url => {
   if (url.startsWith("file://")) {
-    return urlToFileSystemPath(url);
+    return util.urlToFileSystemPath(url);
   }
 
   return url;
@@ -4315,7 +896,7 @@ const computeInputPath = url => {
 
 const computeInputRelativePath = (url, projectDirectoryUrl) => {
   if (url.startsWith(projectDirectoryUrl)) {
-    return urlToRelativeUrl(url, projectDirectoryUrl);
+    return util.urlToRelativeUrl(url, projectDirectoryUrl);
   }
 
   return undefined;
@@ -4489,10 +1070,6 @@ const createNodeGlobalRollupPlugin = require$1("rollup-plugin-node-globals");
 
 const createReplaceRollupPlugin = require$1("@rollup/plugin-replace");
 
-const {
-  rollup
-} = require$1("rollup");
-
 const convertCommonJsWithRollup = async ({
   url,
   urlAfterTransform,
@@ -4514,7 +1091,7 @@ const convertCommonJsWithRollup = async ({
     throw new Error(`compatible only with file:// protocol, got ${url}`);
   }
 
-  const filePath = urlToFileSystemPath(url);
+  const filePath = util.urlToFileSystemPath(url);
   const nodeBuiltinsRollupPlugin = builtins();
   const nodeResolveRollupPlugin = nodeResolve({
     mainFields: ["main"]
@@ -4531,7 +1108,7 @@ const convertCommonJsWithRollup = async ({
     buffer: replaceBuffer
   });
   const commonJsRollupPlugin = commonjs();
-  const rollupBundle = await rollup({
+  const rollupBundle = await rollup.rollup({
     input: filePath,
     inlineDynamicImports: true,
     external,
@@ -4558,7 +1135,7 @@ const convertCommonJsWithRollup = async ({
     sourcemap: true,
     sourcemapExcludeSources: true,
     ...(urlAfterTransform ? {
-      dir: urlToFileSystemPath(resolveUrl$1("./", urlAfterTransform))
+      dir: util.urlToFileSystemPath(util.resolveUrl("./", urlAfterTransform))
     } : {})
   };
   const result = await rollupBundle.generate(generateOptions);
@@ -4567,113 +1144,15 @@ const convertCommonJsWithRollup = async ({
 const __filenameReplacement$1 = `import.meta.url.slice('file:///'.length)`;
 const __dirnameReplacement$1 = `import.meta.url.slice('file:///'.length).replace(/[\\\/\\\\][^\\\/\\\\]*$/, '')`;
 
-const LOG_LEVEL_OFF = "off";
-const LOG_LEVEL_DEBUG = "debug";
-const LOG_LEVEL_INFO = "info";
-const LOG_LEVEL_WARN = "warn";
-const LOG_LEVEL_ERROR = "error";
-
-const createLogger = ({
-  logLevel = LOG_LEVEL_INFO
-} = {}) => {
-  if (logLevel === LOG_LEVEL_DEBUG) {
-    return {
-      debug,
-      info,
-      warn,
-      error
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_INFO) {
-    return {
-      debug: debugDisabled,
-      info,
-      warn,
-      error
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_WARN) {
-    return {
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn,
-      error
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_ERROR) {
-    return {
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error
-    };
-  }
-
-  if (logLevel === LOG_LEVEL_OFF) {
-    return {
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error: errorDisabled
-    };
-  }
-
-  throw new Error(`unexpected logLevel.
---- logLevel ---
-${logLevel}
---- allowed log levels ---
-${LOG_LEVEL_OFF}
-${LOG_LEVEL_ERROR}
-${LOG_LEVEL_WARN}
-${LOG_LEVEL_INFO}
-${LOG_LEVEL_DEBUG}`);
-};
-const debug = console.debug;
-
-const debugDisabled = () => {};
-
-const info = console.info;
-
-const infoDisabled = () => {};
-
-const warn = console.warn;
-
-const warnDisabled = () => {};
-
-const error = console.error;
-
-const errorDisabled = () => {};
-
-const disabledMethods = {
-  debug: debugDisabled,
-  info: infoDisabled,
-  warn: warnDisabled,
-  error: errorDisabled
-};
-const loggerIsMethodEnabled = (logger, methodName) => {
-  return logger[methodName] !== disabledMethods[methodName];
-};
-const loggerToLevels = logger => {
-  return {
-    debug: loggerIsMethodEnabled(logger, "debug"),
-    info: loggerIsMethodEnabled(logger, "info"),
-    warn: loggerIsMethodEnabled(logger, "warn"),
-    error: loggerIsMethodEnabled(logger, "error")
-  };
-};
-
 const assertProjectDirectoryUrl = ({
   projectDirectoryUrl
 }) => {
-  return assertAndNormalizeDirectoryUrl(projectDirectoryUrl);
+  return util.assertAndNormalizeDirectoryUrl(projectDirectoryUrl);
 };
 const assertProjectDirectoryExists = ({
   projectDirectoryUrl
 }) => {
-  assertDirectoryPresence(projectDirectoryUrl);
+  util.assertDirectoryPresence(projectDirectoryUrl);
 };
 const assertImportMapFileRelativeUrl = ({
   importMapFileRelativeUrl
@@ -4686,7 +1165,7 @@ const assertImportMapFileInsideProject = ({
   importMapFileUrl,
   projectDirectoryUrl
 }) => {
-  if (!urlIsInsideOf(importMapFileUrl, projectDirectoryUrl)) {
+  if (!util.urlIsInsideOf(importMapFileUrl, projectDirectoryUrl)) {
     throw new Error(`importmap file must be inside project directory
 --- import map file url ---
 ${importMapFileUrl}
@@ -4695,2851 +1174,13 @@ ${projectDirectoryUrl}`);
   }
 };
 
-// https://github.com/systemjs/systemjs/blob/89391f92dfeac33919b0223bbf834a1f4eea5750/src/common.js#L136
-const composeTwoImportMaps = (leftImportMap, rightImportMap) => {
-  assertImportMap(leftImportMap);
-  assertImportMap(rightImportMap);
-  return {
-    imports: composeTwoImports(leftImportMap.imports, rightImportMap.imports),
-    scopes: composeTwoScopes(leftImportMap.scopes, rightImportMap.scopes)
-  };
-};
-
-const composeTwoImports = (leftImports = {}, rightImports = {}) => {
-  return { ...leftImports,
-    ...rightImports
-  };
-};
-
-const composeTwoScopes = (leftScopes = {}, rightScopes = {}) => {
-  const scopes = { ...leftScopes
-  };
-  Object.keys(rightScopes).forEach(scopeKey => {
-    if (scopes.hasOwnProperty(scopeKey)) {
-      scopes[scopeKey] = { ...scopes[scopeKey],
-        ...rightScopes[scopeKey]
-      };
-    } else {
-      scopes[scopeKey] = { ...rightScopes[scopeKey]
-      };
-    }
-  });
-  return scopes;
-};
-
-const readPackageFile = async (packageFileUrl, manualOverrides) => {
-  const packageFileString = await readFile(packageFileUrl);
-  const packageJsonObject = JSON.parse(packageFileString);
-  const {
-    name,
-    version
-  } = packageJsonObject;
-  const overrideKey = Object.keys(manualOverrides).find(overrideKeyCandidate => {
-    if (name === overrideKeyCandidate) return true;
-    if (`${name}@${version}` === overrideKeyCandidate) return true;
-    return false;
-  });
-
-  if (overrideKey) {
-    return composeObject(packageJsonObject, manualOverrides[overrideKey]);
-  }
-
-  return packageJsonObject;
-};
-
-const composeObject = (leftObject, rightObject) => {
-  const composedObject = { ...leftObject
-  };
-  Object.keys(rightObject).forEach(key => {
-    const rightValue = rightObject[key];
-
-    if (rightValue === null || typeof rightValue !== "object" || key in leftObject === false) {
-      composedObject[key] = rightValue;
-    } else {
-      const leftValue = leftObject[key];
-
-      if (leftValue === null || typeof leftValue !== "object") {
-        composedObject[key] = rightValue;
-      } else {
-        composedObject[key] = composeObject(leftValue, rightValue);
-      }
-    }
-  });
-  return composedObject;
-};
-
-const resolveNodeModule = async ({
-  logger,
-  rootProjectDirectoryUrl,
-  manualOverrides,
-  packageFileUrl,
-  packageJsonObject,
-  dependencyName,
-  dependencyVersionPattern,
-  dependencyType
-}) => {
-  const packageDirectoryUrl = resolveUrl$1("./", packageFileUrl);
-  const nodeModuleCandidateArray = [...computeNodeModuleCandidateArray(packageDirectoryUrl, rootProjectDirectoryUrl), `node_modules/`];
-  const result = await firstOperationMatching({
-    array: nodeModuleCandidateArray,
-    start: async nodeModuleCandidate => {
-      const packageFileUrl = `${rootProjectDirectoryUrl}${nodeModuleCandidate}${dependencyName}/package.json`;
-
-      try {
-        const packageJsonObject = await readPackageFile(packageFileUrl, manualOverrides);
-        return {
-          packageFileUrl,
-          packageJsonObject
-        };
-      } catch (e) {
-        if (e.code === "ENOENT") {
-          return {};
-        }
-
-        if (e.name === "SyntaxError") {
-          logger.error(`
-error while parsing dependency package.json.
---- parsing error message ---
-${e.message}
---- package.json path ---
-${urlToFileSystemPath(packageFileUrl)}
-`);
-          return {};
-        }
-
-        throw e;
-      }
-    },
-    predicate: ({
-      packageJsonObject
-    }) => Boolean(packageJsonObject)
-  });
-
-  if (!result) {
-    logger.warn(`
-cannot find a ${dependencyType}.
---- ${dependencyType} ---
-${dependencyName}@${dependencyVersionPattern}
---- required by ---
-${packageJsonObject.name}@${packageJsonObject.version}
---- package.json path ---
-${urlToFileSystemPath(packageFileUrl)}
-    `);
-  }
-
-  return result;
-};
-
-const computeNodeModuleCandidateArray = (packageDirectoryUrl, rootProjectDirectoryUrl) => {
-  if (packageDirectoryUrl === rootProjectDirectoryUrl) {
-    return [];
-  }
-
-  const packageDirectoryRelativeUrl = urlToRelativeUrl(packageDirectoryUrl, rootProjectDirectoryUrl);
-  const candidateArray = [];
-  const relativeNodeModuleDirectoryArray = `./${packageDirectoryRelativeUrl}`.split("/node_modules/"); // remove the first empty string
-
-  relativeNodeModuleDirectoryArray.shift();
-  let i = relativeNodeModuleDirectoryArray.length;
-
-  while (i--) {
-    candidateArray.push(`node_modules/${relativeNodeModuleDirectoryArray.slice(0, i + 1).join("/node_modules/")}node_modules/`);
-  }
-
-  return candidateArray;
-};
-
-const resolvePackageMain = ({
-  logger,
-  packageFileUrl,
-  packageJsonObject
-}) => {
-  if ("module" in packageJsonObject) {
-    return resolveMainFile({
-      logger,
-      packageFileUrl,
-      packageMainFieldName: "module",
-      packageMainFieldValue: packageJsonObject.module
-    });
-  }
-
-  if ("jsnext:main" in packageJsonObject) {
-    return resolveMainFile({
-      logger,
-      packageFileUrl,
-      packageMainFieldName: "jsnext:main",
-      packageMainFieldValue: packageJsonObject["jsnext:main"]
-    });
-  }
-
-  if ("main" in packageJsonObject) {
-    return resolveMainFile({
-      logger,
-      packageFileUrl,
-      packageMainFieldName: "main",
-      packageMainFieldValue: packageJsonObject.main
-    });
-  }
-
-  return resolveMainFile({
-    logger,
-    packageFileUrl,
-    packageMainFieldName: "default",
-    packageMainFieldValue: "index"
-  });
-};
-const extensionCandidateArray = ["js", "json", "node"];
-
-const resolveMainFile = async ({
-  logger,
-  packageFileUrl,
-  packageMainFieldName,
-  packageMainFieldValue
-}) => {
-  // main is explicitely empty meaning
-  // it is assumed that we should not find a file
-  if (packageMainFieldValue === "") {
-    return null;
-  }
-
-  const packageFilePath = urlToFileSystemPath(packageFileUrl);
-  const packageDirectoryUrl = resolveUrl$1("./", packageFileUrl);
-  const mainFileRelativeUrl = packageMainFieldValue.endsWith("/") ? `${packageMainFieldValue}index` : packageMainFieldValue;
-  const mainFileUrlFirstCandidate = resolveUrl$1(mainFileRelativeUrl, packageFileUrl);
-
-  if (!mainFileUrlFirstCandidate.startsWith(packageDirectoryUrl)) {
-    logger.warn(`
-${packageMainFieldName} field in package.json must be inside package.json folder.
---- ${packageMainFieldName} ---
-${packageMainFieldValue}
---- package.json path ---
-${packageFilePath}
-`);
-    return null;
-  }
-
-  const mainFileUrl = await findMainFileUrlOrNull(mainFileUrlFirstCandidate);
-
-  if (mainFileUrl === null) {
-    // we know in advance this remapping does not lead to an actual file.
-    // we only warn because we have no guarantee this remapping will actually be used
-    // in the codebase.
-    // warn only if there is actually a main field
-    // otherwise the package.json is missing the main field
-    // it certainly means it's not important
-    if (packageMainFieldName !== "default") {
-      const extensionTried = path.extname(urlToFileSystemPath(mainFileUrlFirstCandidate)) === "" ? `--- extensions tried ---
-${extensionCandidateArray.join(`,`)}
-` : `
-`;
-      logger.warn(`
-cannot find file for package.json ${packageMainFieldName} field
---- ${packageMainFieldName} ---
-${packageMainFieldValue}
---- file path ---
-${urlToFileSystemPath(mainFileUrlFirstCandidate)}
---- package.json path ---
-${packageFilePath}
-${extensionTried}`);
-    }
-
-    return mainFileUrlFirstCandidate;
-  }
-
-  return mainFileUrl;
-};
-
-const findMainFileUrlOrNull = async mainFileUrl => {
-  const mainStats = await readFileSystemNodeStat(mainFileUrl, {
-    nullIfNotFound: true
-  });
-
-  if (mainStats && mainStats.isFile()) {
-    return mainFileUrl;
-  }
-
-  if (mainStats && mainStats.isDirectory()) {
-    const indexFileUrl = resolveUrl$1("./index", mainFileUrl.endsWith("/") ? mainFileUrl : `${mainFileUrl}/`);
-    const extensionLeadingToAFile = await findExtension(indexFileUrl);
-
-    if (extensionLeadingToAFile === null) {
-      return null;
-    }
-
-    return `${indexFileUrl}.${extensionLeadingToAFile}`;
-  }
-
-  const mainFilePath = urlToFileSystemPath(mainFileUrl);
-  const extension = path.extname(mainFilePath);
-
-  if (extension === "") {
-    const extensionLeadingToAFile = await findExtension(mainFileUrl);
-
-    if (extensionLeadingToAFile === null) {
-      return null;
-    }
-
-    return `${mainFileUrl}.${extensionLeadingToAFile}`;
-  }
-
-  return null;
-};
-
-const findExtension = async fileUrl => {
-  const filePath = urlToFileSystemPath(fileUrl);
-  const fileDirname = path.dirname(filePath);
-  const fileBasename = path.basename(filePath);
-  const extensionLeadingToFile = await firstOperationMatching({
-    array: extensionCandidateArray,
-    start: async extensionCandidate => {
-      const filePathCandidate = `${fileDirname}/${fileBasename}.${extensionCandidate}`;
-      const stats = await readFileSystemNodeStat(filePathCandidate, {
-        nullIfNotFound: true
-      });
-      return stats && stats.isFile() ? extensionCandidate : null;
-    },
-    predicate: extension => Boolean(extension)
-  });
-  return extensionLeadingToFile || null;
-};
-
-const specifierIsRelative = specifier => {
-  if (specifier.startsWith("//")) {
-    return false;
-  }
-
-  if (specifier.startsWith("../")) {
-    return false;
-  } // starts with http:// or file:// or ftp: for instance
-
-
-  if (/^[a-zA-Z]+\:/.test(specifier)) {
-    return false;
-  }
-
-  return true;
-};
-
-const visitPackageImports = ({
-  logger,
-  packageFileUrl,
-  packageJsonObject
-}) => {
-  const importsForPackageImports = {};
-  const packageFilePath = urlToFileSystemPath(packageFileUrl);
-  const {
-    imports: packageImports
-  } = packageJsonObject;
-
-  if (typeof packageImports !== "object" || packageImports === null) {
-    logger.warn(`
-imports of package.json must be an object.
---- package.json imports ---
-${packageImports}
---- package.json path ---
-${packageFilePath}
-`);
-    return importsForPackageImports;
-  }
-
-  Object.keys(packageImports).forEach(specifier => {
-    if (!specifierIsRelative(specifier)) {
-      logger.warn(`
-found unexpected specifier in imports of package.json, it must be relative to package.json.
---- specifier ---
-${specifier}
---- package.json path ---
-${packageFilePath}
-`);
-      return;
-    }
-
-    const address = packageImports[specifier];
-
-    if (typeof address !== "string") {
-      logger.warn(`
-found unexpected address in imports of package.json, it must be a string.
---- address ---
-${address}
---- specifier ---
-${specifier}
---- package.json path ---
-${packageFilePath}
-`);
-      return;
-    }
-
-    if (!specifierIsRelative(address)) {
-      logger.warn(`
-found unexpected address in imports of package.json, it must be relative to package.json.
---- address ---
-${address}
---- specifier ---
-${specifier}
---- package.json path ---
-${packageFilePath}
-`);
-      return;
-    }
-
-    let from;
-
-    if (specifier[0] === "/") {
-      from = specifier;
-    } else if (specifier.startsWith("./")) {
-      from = specifier;
-    } else {
-      from = specifier;
-    }
-
-    const to = address;
-    importsForPackageImports[from] = to;
-  });
-  return importsForPackageImports;
-};
-
-// https://nodejs.org/dist/latest-v13.x/docs/api/esm.html#esm_package_exports
-const visitPackageExports = ({
-  logger,
-  packageFileUrl,
-  packageName,
-  packageJsonObject,
-  packageInfo: {
-    packageDirectoryRelativeUrl
-  },
-  favoredExports
-}) => {
-  const importsForPackageExports = {};
-  const packageFilePath = urlToFileSystemPath(packageFileUrl);
-  const {
-    exports: packageExports
-  } = packageJsonObject; // false is allowed as laternative to exports: {}
-
-  if (packageExports === false) return importsForPackageExports;
-
-  const addressToDestination = address => {
-    if (address[0] === "/") {
-      return address;
-    }
-
-    if (address.startsWith("./")) {
-      return `./${packageDirectoryRelativeUrl}${address.slice(2)}`;
-    }
-
-    return `./${packageDirectoryRelativeUrl}${address}`;
-  }; // exports used to indicate the main file
-
-
-  if (typeof packageExports === "string") {
-    const from = packageName;
-    const to = addressToDestination(packageExports);
-    importsForPackageExports[from] = to;
-    return importsForPackageExports;
-  }
-
-  if (typeof packageExports !== "object" || packageExports === null) {
-    logger.warn(`
-exports of package.json must be an object.
---- package.json exports ---
-${packageExports}
---- package.json path ---
-${packageFilePath}
-`);
-    return importsForPackageExports;
-  }
-
-  const packageExportsKeys = Object.keys(packageExports);
-  const someSpecifierStartsWithDot = packageExportsKeys.some(key => key.startsWith("."));
-
-  if (someSpecifierStartsWithDot) {
-    const someSpecifierDoesNotStartsWithDot = packageExportsKeys.some(key => !key.startsWith("."));
-
-    if (someSpecifierDoesNotStartsWithDot) {
-      // see https://nodejs.org/dist/latest-v13.x/docs/api/esm.html#esm_exports_sugar
-      logger.error(`
-exports of package.json mixes conditional exports and direct exports.
---- package.json path ---
-${packageFilePath}
-`);
-      return importsForPackageExports;
-    }
-  }
-
-  packageExportsKeys.forEach(specifier => {
-    if (!specifierIsRelative(specifier)) {
-      logger.warn(`
-found unexpected specifier in exports of package.json, it must be relative to package.json.
---- specifier ---
-${specifier}
---- package.json path ---
-${packageFilePath}
-`);
-      return;
-    }
-
-    const value = packageExports[specifier];
-    let address;
-
-    if (typeof value === "object") {
-      const favoredExport = favoredExports.find(key => key in value);
-
-      if (favoredExport) {
-        address = value[favoredExport];
-      } else if ("default" in value) {
-        address = value.default;
-      } else {
-        return;
-      }
-    } else if (typeof value === "string") {
-      address = value;
-    } else {
-      logger.warn(`
-found unexpected address in exports of package.json, it must be a string.
---- address ---
-${address}
---- specifier ---
-${specifier}
---- package.json path ---
-${packageFilePath}
-`);
-      return;
-    }
-
-    if (!specifierIsRelative(address)) {
-      logger.warn(`
-found unexpected address in exports of package.json, it must be relative to package.json.
---- address ---
-${address}
---- specifier ---
-${specifier}
---- package.json path ---
-${packageFilePath}
-`);
-      return;
-    }
-
-    let from;
-
-    if (specifier === ".") {
-      from = packageName;
-    } else if (specifier[0] === "/") {
-      from = specifier;
-    } else if (specifier.startsWith("./")) {
-      from = `${packageName}${specifier.slice(1)}`;
-    } else {
-      from = `${packageName}/${specifier}`;
-    }
-
-    const to = addressToDestination(address);
-    importsForPackageExports[from] = to;
-  });
-  return importsForPackageExports;
-};
-
-/* eslint-disable import/max-dependencies */
-const generateImportMapForPackage = async ({
-  logger,
-  projectDirectoryUrl,
-  rootProjectDirectoryUrl,
-  manualOverrides = {},
-  includeDevDependencies = false,
-  includeExports = true,
-  // pass ['browser', 'default'] to read browser first then 'default' if defined
-  // in package exports field
-  favoredExports = ["import", "node", "require"],
-  includeImports = true,
-  // this is not yet standard, should be false by default
-  selfImport = false
-}) => {
-  projectDirectoryUrl = assertAndNormalizeDirectoryUrl(projectDirectoryUrl);
-
-  if (typeof rootProjectDirectoryUrl === "undefined") {
-    rootProjectDirectoryUrl = projectDirectoryUrl;
-  } else {
-    rootProjectDirectoryUrl = assertAndNormalizeDirectoryUrl(rootProjectDirectoryUrl);
-  }
-
-  const projectPackageFileUrl = resolveUrl$1("./package.json", projectDirectoryUrl);
-  const rootProjectPackageFileUrl = resolveUrl$1("./package.json", rootProjectDirectoryUrl);
-  const imports = {};
-  const scopes = {};
-  const seen = {};
-
-  const markPackageAsSeen = (packageFileUrl, importerPackageFileUrl) => {
-    if (packageFileUrl in seen) {
-      seen[packageFileUrl].push(importerPackageFileUrl);
-    } else {
-      seen[packageFileUrl] = [importerPackageFileUrl];
-    }
-  };
-
-  const packageIsSeen = (packageFileUrl, importerPackageFileUrl) => {
-    return packageFileUrl in seen && seen[packageFileUrl].includes(importerPackageFileUrl);
-  };
-
-  const visit = async ({
-    packageFileUrl,
-    packageName,
-    packageJsonObject,
-    importerPackageFileUrl,
-    importerPackageJsonObject,
-    includeDevDependencies
-  }) => {
-    await visitPackage({
-      packageFileUrl,
-      packageName,
-      packageJsonObject,
-      importerPackageFileUrl,
-      importerPackageJsonObject
-    });
-    await visitDependencies({
-      packageFileUrl,
-      packageJsonObject,
-      includeDevDependencies
-    });
-  };
-
-  const visitPackage = async ({
-    packageFileUrl,
-    packageName,
-    packageJsonObject,
-    importerPackageFileUrl,
-    importerPackageJsonObject
-  }) => {
-    const packageInfo = computePackageInfo({
-      packageFileUrl,
-      packageName,
-      importerPackageFileUrl
-    });
-    await visitPackageMain({
-      packageFileUrl,
-      packageName,
-      packageJsonObject,
-      packageInfo
-    });
-
-    if (includeImports && "imports" in packageJsonObject) {
-      const importsForPackageImports = visitPackageImports({
-        logger,
-        packageFileUrl,
-        packageName,
-        packageJsonObject,
-        packageInfo
-      });
-      const {
-        packageIsRoot,
-        packageDirectoryRelativeUrl
-      } = packageInfo;
-      Object.keys(importsForPackageImports).forEach(from => {
-        const to = importsForPackageImports[from];
-
-        if (packageIsRoot) {
-          addImportMapping({
-            from,
-            to
-          });
-        } else {
-          const toScoped = to[0] === "/" ? to : `./${packageDirectoryRelativeUrl}${to.startsWith("./") ? to.slice(2) : to}`;
-          addScopedImportMapping({
-            scope: `./${packageDirectoryRelativeUrl}`,
-            from,
-            to: toScoped
-          }); // when a package says './' maps to './'
-          // we must add something to say if we are already inside the package
-          // no need to ensure leading slash are scoped to the package
-
-          if (from === "./" && to === "./") {
-            addScopedImportMapping({
-              scope: `./${packageDirectoryRelativeUrl}`,
-              from: `./${packageDirectoryRelativeUrl}`,
-              to: `./${packageDirectoryRelativeUrl}`
-            });
-          } else if (from === "/" && to === "/") {
-            addScopedImportMapping({
-              scope: `./${packageDirectoryRelativeUrl}`,
-              from: `./${packageDirectoryRelativeUrl}`,
-              to: `./${packageDirectoryRelativeUrl}`
-            });
-          }
-        }
-      });
-    }
-
-    if (selfImport) {
-      const {
-        packageIsRoot,
-        packageDirectoryRelativeUrl
-      } = packageInfo; // allow import 'package-name/dir/file.js' in package-name files
-
-      if (packageIsRoot) {
-        addImportMapping({
-          from: `${packageName}/`,
-          to: `./${packageDirectoryRelativeUrl}`
-        });
-      } // scoped allow import 'package-name/dir/file.js' in package-name files
-      else {
-          addScopedImportMapping({
-            scope: `./${packageDirectoryRelativeUrl}`,
-            from: `${packageName}/`,
-            to: `./${packageDirectoryRelativeUrl}`
-          });
-        }
-    }
-
-    if (includeExports && "exports" in packageJsonObject) {
-      const importsForPackageExports = visitPackageExports({
-        logger,
-        packageFileUrl,
-        packageName,
-        packageJsonObject,
-        packageInfo,
-        favoredExports
-      });
-      const {
-        importerIsRoot,
-        importerRelativeUrl,
-        packageIsRoot,
-        packageDirectoryRelativeUrl // packageDirectoryUrl,
-        // packageDirectoryUrlExpected,
-
-      } = packageInfo;
-
-      if (packageIsRoot && selfImport) {
-        Object.keys(importsForPackageExports).forEach(from => {
-          const to = importsForPackageExports[from];
-          addImportMapping({
-            from,
-            to
-          });
-        });
-      } else if (packageIsRoot) ; else {
-        Object.keys(importsForPackageExports).forEach(from => {
-          const to = importsForPackageExports[from]; // own package exports available to himself
-
-          if (importerIsRoot) {
-            // importer is the package himself, keep exports scoped
-            // otherwise the dependency exports would override the package exports.
-            if (importerPackageJsonObject.name === packageName) {
-              addScopedImportMapping({
-                scope: `./${packageDirectoryRelativeUrl}`,
-                from,
-                to
-              });
-
-              if (from === packageName || from in imports === false) {
-                addImportMapping({
-                  from,
-                  to
-                });
-              }
-            } else {
-              addImportMapping({
-                from,
-                to
-              });
-            }
-          } else {
-            addScopedImportMapping({
-              scope: `./${packageDirectoryRelativeUrl}`,
-              from,
-              to
-            });
-          } // now make package exports available to the importer
-          // if importer is root no need because the top level remapping does it
-
-
-          if (importerIsRoot) {
-            return;
-          } // now make it available to the importer
-          // here if the importer is himself we could do stuff
-          // we should even handle the case earlier to prevent top level remapping
-
-
-          addScopedImportMapping({
-            scope: `./${importerRelativeUrl}`,
-            from,
-            to
-          });
-        });
-      }
-    }
-  };
-
-  const visitPackageMain = async ({
-    packageFileUrl,
-    packageName,
-    packageJsonObject,
-    packageInfo: {
-      importerIsRoot,
-      importerRelativeUrl,
-      packageIsRoot,
-      packageIsProject,
-      packageDirectoryUrl,
-      packageDirectoryUrlExpected
-    }
-  }) => {
-    if (packageIsRoot) return;
-    if (packageIsProject) return;
-    const mainFileUrl = await resolvePackageMain({
-      packageFileUrl,
-      packageJsonObject,
-      logger
-    }); // it's possible to have no main
-    // like { main: "" } in package.json
-    // or a main that does not lead to an actual file
-
-    if (mainFileUrl === null) return;
-    const mainFileRelativeUrl = urlToRelativeUrl(mainFileUrl, rootProjectDirectoryUrl);
-    const from = packageName;
-    const to = `./${mainFileRelativeUrl}`;
-
-    if (importerIsRoot) {
-      addImportMapping({
-        from,
-        to
-      });
-    } else {
-      addScopedImportMapping({
-        scope: `./${importerRelativeUrl}`,
-        from,
-        to
-      });
-    }
-
-    if (packageDirectoryUrl !== packageDirectoryUrlExpected) {
-      addScopedImportMapping({
-        scope: `./${importerRelativeUrl}`,
-        from,
-        to
-      });
-    }
-  };
-
-  const visitDependencies = async ({
-    packageFileUrl,
-    packageJsonObject,
-    includeDevDependencies
-  }) => {
-    const dependencyMap = {};
-    const {
-      dependencies = {}
-    } = packageJsonObject;
-    Object.keys(dependencies).forEach(dependencyName => {
-      dependencyMap[dependencyName] = {
-        type: "dependency",
-        versionPattern: dependencies[dependencyName]
-      };
-    });
-    const {
-      peerDependencies = {}
-    } = packageJsonObject;
-    Object.keys(peerDependencies).forEach(dependencyName => {
-      dependencyMap[dependencyName] = {
-        type: "peerDependency",
-        versionPattern: peerDependencies[dependencyName]
-      };
-    });
-    const isProjectPackage = packageFileUrl === projectPackageFileUrl;
-
-    if (includeDevDependencies && isProjectPackage) {
-      const {
-        devDependencies = {}
-      } = packageJsonObject;
-      Object.keys(devDependencies).forEach(dependencyName => {
-        if (!dependencyMap.hasOwnProperty(dependencyName)) {
-          dependencyMap[dependencyName] = {
-            type: "devDependency",
-            versionPattern: devDependencies[dependencyName]
-          };
-        }
-      });
-    }
-
-    await Promise.all(Object.keys(dependencyMap).map(async dependencyName => {
-      const dependency = dependencyMap[dependencyName];
-      await visitDependency({
-        packageFileUrl,
-        packageJsonObject,
-        dependencyName,
-        dependencyType: dependency.type,
-        dependencyVersionPattern: dependency.versionPattern
-      });
-    }));
-  };
-
-  const visitDependency = async ({
-    packageFileUrl,
-    packageJsonObject,
-    dependencyName,
-    dependencyType,
-    dependencyVersionPattern
-  }) => {
-    const dependencyData = await findDependency({
-      packageFileUrl,
-      packageJsonObject,
-      dependencyName,
-      dependencyType,
-      dependencyVersionPattern
-    });
-
-    if (!dependencyData) {
-      return;
-    }
-
-    const {
-      packageFileUrl: dependencyPackageFileUrl,
-      packageJsonObject: dependencyPackageJsonObject
-    } = dependencyData;
-
-    if (packageIsSeen(dependencyPackageFileUrl, packageFileUrl)) {
-      return;
-    }
-
-    markPackageAsSeen(dependencyPackageFileUrl, packageFileUrl);
-    await visit({
-      packageFileUrl: dependencyPackageFileUrl,
-      packageName: dependencyName,
-      packageJsonObject: dependencyPackageJsonObject,
-      importerPackageFileUrl: packageFileUrl,
-      importerPackageJsonObject: packageJsonObject
-    });
-  };
-
-  const computePackageInfo = ({
-    packageFileUrl,
-    packageName,
-    importerPackageFileUrl
-  }) => {
-    const importerIsRoot = importerPackageFileUrl === rootProjectPackageFileUrl;
-    const importerIsProject = importerPackageFileUrl === projectPackageFileUrl;
-    const importerPackageDirectoryUrl = resolveUrl$1("./", importerPackageFileUrl);
-    const importerRelativeUrl = importerIsRoot ? `${path.basename(rootProjectDirectoryUrl)}/` : urlToRelativeUrl(importerPackageDirectoryUrl, rootProjectDirectoryUrl);
-    const packageIsRoot = packageFileUrl === rootProjectPackageFileUrl;
-    const packageIsProject = packageFileUrl === projectPackageFileUrl;
-    const packageDirectoryUrl = resolveUrl$1("./", packageFileUrl);
-    let packageDirectoryUrlExpected;
-
-    if (packageIsProject && !packageIsRoot) {
-      packageDirectoryUrlExpected = importerPackageDirectoryUrl;
-    } else {
-      packageDirectoryUrlExpected = `${importerPackageDirectoryUrl}node_modules/${packageName}/`;
-    }
-
-    const packageDirectoryRelativeUrl = urlToRelativeUrl(packageDirectoryUrl, rootProjectDirectoryUrl);
-    return {
-      importerIsRoot,
-      importerIsProject,
-      importerRelativeUrl,
-      packageIsRoot,
-      packageIsProject,
-      packageDirectoryUrl,
-      packageDirectoryUrlExpected,
-      packageDirectoryRelativeUrl
-    };
-  };
-
-  const addImportMapping = ({
-    from,
-    to
-  }) => {
-    // we could think it's useless to remap from with to
-    // however it can be used to ensure a weaker remapping
-    // does not win over this specific file or folder
-    if (from === to) {
-      /**
-       * however remapping '/' to '/' is truly useless
-       * moreover it would make wrapImportMap create something like
-       * {
-       *   imports: {
-       *     "/": "/.dist/best/"
-       *   }
-       * }
-       * that would append the wrapped folder twice
-       * */
-      if (from === "/") return;
-    }
-
-    imports[from] = to;
-  };
-
-  const addScopedImportMapping = ({
-    scope,
-    from,
-    to
-  }) => {
-    scopes[scope] = { ...(scopes[scope] || {}),
-      [from]: to
-    };
-  };
-
-  const dependenciesCache = {};
-
-  const findDependency = ({
-    packageFileUrl,
-    packageJsonObject,
-    dependencyName,
-    dependencyType,
-    dependencyVersionPattern
-  }) => {
-    if (packageFileUrl in dependenciesCache === false) {
-      dependenciesCache[packageFileUrl] = {};
-    }
-
-    if (dependencyName in dependenciesCache[packageFileUrl]) {
-      return dependenciesCache[packageFileUrl][dependencyName];
-    }
-
-    const dependencyPromise = resolveNodeModule({
-      rootProjectDirectoryUrl,
-      manualOverrides,
-      packageFileUrl,
-      packageJsonObject,
-      dependencyName,
-      dependencyType,
-      dependencyVersionPattern,
-      logger
-    });
-    dependenciesCache[packageFileUrl][dependencyName] = dependencyPromise;
-    return dependencyPromise;
-  };
-
-  const projectPackageJsonObject = await readPackageFile(projectPackageFileUrl, manualOverrides);
-  const packageFileUrl = projectPackageFileUrl;
-  const importerPackageFileUrl = projectPackageFileUrl;
-  markPackageAsSeen(packageFileUrl, importerPackageFileUrl);
-  const packageName = projectPackageJsonObject.name;
-
-  if (typeof packageName === "string") {
-    await visit({
-      packageFileUrl,
-      packageName: projectPackageJsonObject.name,
-      packageJsonObject: projectPackageJsonObject,
-      importerPackageFileUrl,
-      importerPackageJsonObject: null,
-      includeDevDependencies
-    });
-  } else {
-    logger.warn(`package name field must be a string
---- package name field ---
-${packageName}
---- package.json file path ---
-${packageFileUrl}`);
-  } // remove useless duplicates (scoped key+value already defined on imports)
-
-
-  Object.keys(scopes).forEach(key => {
-    const scopedImports = scopes[key];
-    Object.keys(scopedImports).forEach(scopedImportKey => {
-      if (scopedImportKey in imports && imports[scopedImportKey] === scopedImports[scopedImportKey]) {
-        delete scopedImports[scopedImportKey];
-      }
-    });
-
-    if (Object.keys(scopedImports).length === 0) {
-      delete scopes[key];
-    }
-  });
-  return sortImportMap({
-    imports,
-    scopes
-  });
-};
-
-const compositionMappingToComposeStrict = (compositionMapping, createInitial = () => ({})) => {
-  const reducer = compositionMappingToStrictReducer(compositionMapping);
-  return (...objects) => objects.reduce(reducer, createInitial());
-};
-
-const compositionMappingToStrictReducer = compositionMapping => {
-  const propertyComposeStrict = (key, previous, current) => {
-    const propertyExistInCurrent = key in current;
-    if (!propertyExistInCurrent) return previous[key];
-    const propertyExistInPrevious = key in previous;
-    if (!propertyExistInPrevious) return current[key];
-    const composeProperty = compositionMapping[key];
-    return composeProperty(previous[key], current[key]);
-  };
-
-  return (previous, current) => {
-    if (typeof current !== "object" || current === null) return previous;
-    const composed = {};
-    Object.keys(compositionMapping).forEach(key => {
-      composed[key] = propertyComposeStrict(key, previous, current);
-    });
-    return composed;
-  };
-};
-
-const compositionMappingToCompose = (compositionMapping, createInitial = () => ({})) => {
-  const reducer = compositionMappingToReducer(compositionMapping);
-  return (...objects) => objects.reduce(reducer, createInitial());
-};
-
-const compositionMappingToReducer = compositionMapping => {
-  const composeProperty = (key, previous, current) => {
-    const propertyExistInCurrent = key in current;
-    if (!propertyExistInCurrent) return previous[key];
-    const propertyExistInPrevious = key in previous;
-    if (!propertyExistInPrevious) return current[key];
-    const propertyHasComposer = key in compositionMapping;
-    if (!propertyHasComposer) return current[key];
-    const composerForProperty = compositionMapping[key];
-    return composerForProperty(previous[key], current[key]);
-  };
-
-  return (previous, current) => {
-    if (typeof current !== "object" || current === null) return previous;
-    const composed = { ...previous
-    };
-    Object.keys(current).forEach(key => {
-      composed[key] = composeProperty(key, previous, current);
-    });
-    return composed;
-  };
-};
-
-const composeHeaderValues = (value, nextValue) => {
-  const headerValues = value.split(", ");
-  nextValue.split(", ").forEach(value => {
-    if (!headerValues.includes(value)) {
-      headerValues.push(value);
-    }
-  });
-  return headerValues.join(", ");
-};
-
-const headerCompositionMapping = {
-  "accept": composeHeaderValues,
-  "accept-charset": composeHeaderValues,
-  "accept-language": composeHeaderValues,
-  "access-control-allow-headers": composeHeaderValues,
-  "access-control-allow-methods": composeHeaderValues,
-  "access-control-allow-origin": composeHeaderValues,
-  // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
-  "vary": composeHeaderValues
-};
-const composeResponseHeaders = compositionMappingToCompose(headerCompositionMapping);
-
-const responseCompositionMapping = {
-  status: (prevStatus, status) => status,
-  statusText: (prevStatusText, statusText) => statusText,
-  headers: composeResponseHeaders,
-  body: (prevBody, body) => body,
-  bodyEncoding: (prevEncoding, encoding) => encoding
-};
-const composeResponse = compositionMappingToComposeStrict(responseCompositionMapping);
-
-const convertFileSystemErrorToResponseProperties = error => {
-  // https://iojs.org/api/errors.html#errors_eacces_permission_denied
-  if (isErrorWithCode(error, "EACCES")) {
-    return {
-      status: 403,
-      statusText: "no permission to read file"
-    };
-  }
-
-  if (isErrorWithCode(error, "EPERM")) {
-    return {
-      status: 403,
-      statusText: "no permission to read file"
-    };
-  }
-
-  if (isErrorWithCode(error, "ENOENT")) {
-    return {
-      status: 404,
-      statusText: "file not found"
-    };
-  } // file access may be temporarily blocked
-  // (by an antivirus scanning it because recently modified for instance)
-
-
-  if (isErrorWithCode(error, "EBUSY")) {
-    return {
-      status: 503,
-      statusText: "file is busy",
-      headers: {
-        "retry-after": 0.01 // retry in 10ms
-
-      }
-    };
-  } // emfile means there is too many files currently opened
-
-
-  if (isErrorWithCode(error, "EMFILE")) {
-    return {
-      status: 503,
-      statusText: "too many file opened",
-      headers: {
-        "retry-after": 0.1 // retry in 100ms
-
-      }
-    };
-  }
-
-  if (isErrorWithCode(error, "EISDIR")) {
-    return {
-      status: 500,
-      statusText: "Unexpected directory operation"
-    };
-  }
-
-  return Promise.reject(error);
-};
-
-const isErrorWithCode = (error, code) => {
-  return typeof error === "object" && error.code === code;
-};
-
-if ("observable" in Symbol === false) {
-  Symbol.observable = Symbol.for("observable");
-}
-
-const createObservable = ({
-  subscribe
-}) => {
-  const observable = {
-    [Symbol.observable]: () => observable,
-    subscribe
-  };
-  return observable;
-};
-const subscribe = (observable, {
-  next = () => {},
-  error = value => {
-    throw value;
-  },
-  complete = () => {}
-}) => {
-  const {
-    subscribe
-  } = observable[Symbol.observable]();
-  const subscription = subscribe({
-    next,
-    error,
-    complete
-  });
-  return subscription || {
-    unsubscribe: () => {}
-  };
-};
-const isObservable = value => {
-  if (value === null) return false;
-  if (value === undefined) return false;
-  if (typeof value === "object") return Symbol.observable in value;
-  if (typeof value === "function") return Symbol.observable in value;
-  return false;
-};
-
-const createSSERoom = ({
-  logLevel,
-  keepaliveDuration = 30 * 1000,
-  retryDuration = 1 * 1000,
-  historyLength = 1 * 1000,
-  maxConnectionAllowed = 100 // max 100 users accepted
-
-} = {}) => {
-  const logger = createLogger({
-    logLevel
-  });
-  const connections = new Set(); // what about history that keeps growing ?
-  // we should add some limit
-  // one limit could be that an event older than 24h is be deleted
-
-  const history = createEventHistory(historyLength);
-  let previousEventId;
-  let state = "closed";
-  let interval;
-
-  const connect = lastKnownId => {
-    if (connections.size > maxConnectionAllowed) {
-      return {
-        status: 503
-      };
-    }
-
-    if (state === "closed") {
-      return {
-        status: 204
-      };
-    }
-
-    const joinEvent = {
-      id: previousEventId === undefined ? 0 : previousEventId + 1,
-      retry: retryDuration,
-      type: "join",
-      data: new Date().toLocaleTimeString()
-    };
-    previousEventId = joinEvent.id;
-    history.add(joinEvent);
-    const events = [joinEvent, // send events which occured between lastKnownId & now
-    ...(lastKnownId === undefined ? [] : history.since(lastKnownId))];
-    const body = createObservable({
-      subscribe: ({
-        next
-      }) => {
-        events.forEach(event => {
-          logger.debug(`send ${event.type} event to this new client`);
-          next(stringifySourceEvent(event));
-        });
-        const connection = {
-          write: next
-        };
-
-        const unsubscribe = () => {
-          connections.delete(connection);
-          logger.debug(`connection closed by us, number of client connected to event source: ${connections.size}`);
-        };
-
-        connection.unsubscribe = unsubscribe;
-        connections.add(connection);
-        return {
-          unsubscribe
-        };
-      }
-    });
-    logger.debug(`client joined, number of client connected to event source: ${connections.size}, max allowed: ${maxConnectionAllowed}`);
-    return {
-      status: 200,
-      headers: {
-        "content-type": "text/event-stream",
-        "cache-control": "no-cache",
-        "connection": "keep-alive"
-      },
-      body
-    };
-  };
-
-  const write = data => {
-    connections.forEach(connection => {
-      connection.write(data);
-    });
-  };
-
-  const sendEvent = event => {
-    if (event.type !== "comment") {
-      logger.debug(`send ${event.type} event, number of client listening event source: ${connections.size}`);
-      event.id = previousEventId === undefined ? 0 : previousEventId + 1;
-      previousEventId = event.id;
-      history.add(event);
-    }
-
-    write(stringifySourceEvent(event));
-  };
-
-  const keepAlive = () => {
-    // maybe that, when an event occurs, we can delay the keep alive event
-    logger.debug(`send keep alive event, number of client listening event source: ${connections.size}`);
-    sendEvent({
-      type: "comment",
-      data: new Date().toLocaleTimeString()
-    });
-  };
-
-  const start = () => {
-    state = "started";
-    interval = setInterval(keepAlive, keepaliveDuration);
-  };
-
-  const stop = () => {
-    logger.debug(`stopping, number of client to close: ${connections.size}`);
-    connections.forEach(connection => connection.unsubscribe());
-    clearInterval(interval);
-    history.reset();
-    state = "stopped";
-  };
-
-  return {
-    start,
-    stop,
-    connect,
-    sendEvent
-  };
-}; // https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
-// https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
-// https://github.com/dmail-old/http-eventsource/blob/master/lib/event-source.js
-// http://html5doctor.com/server-sent-events/
-
-const stringifySourceEvent = ({
-  data,
-  type = "message",
-  id,
-  retry
-}) => {
-  let string = "";
-
-  if (id !== undefined) {
-    string += `id:${id}\n`;
-  }
-
-  if (retry) {
-    string += `retry:${retry}\n`;
-  }
-
-  if (type !== "message") {
-    string += `event:${type}\n`;
-  }
-
-  string += `data:${data}\n\n`;
-  return string;
-};
-
-const createEventHistory = ({
-  limit
-} = {}) => {
-  const events = [];
-  let removedCount = 0;
-
-  const add = data => {
-    events.push(data);
-
-    if (events.length >= limit) {
-      events.shift();
-      removedCount++;
-    }
-  };
-
-  const since = index => {
-    index = parseInt(index);
-
-    if (isNaN(index)) {
-      throw new TypeError("history.since() expect a number");
-    }
-
-    index -= removedCount;
-    return index < 0 ? [] : events.slice(index);
-  };
-
-  const reset = () => {
-    events.length = 0;
-    removedCount = 0;
-  };
-
-  return {
-    add,
-    since,
-    reset
-  };
-};
-
-const jsenvContentTypeMap = {
-  "application/javascript": {
-    extensions: ["js", "cjs", "mjs", "ts", "jsx"]
-  },
-  "application/json": {
-    extensions: ["json"]
-  },
-  "application/octet-stream": {},
-  "application/pdf": {
-    extensions: ["pdf"]
-  },
-  "application/xml": {
-    extensions: ["xml"]
-  },
-  "application/x-gzip": {
-    extensions: ["gz"]
-  },
-  "application/wasm": {
-    extensions: ["wasm"]
-  },
-  "application/zip": {
-    extensions: ["zip"]
-  },
-  "audio/basic": {
-    extensions: ["au", "snd"]
-  },
-  "audio/mpeg": {
-    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"]
-  },
-  "audio/midi": {
-    extensions: ["midi", "mid", "kar", "rmi"]
-  },
-  "audio/mp4": {
-    extensions: ["m4a", "mp4a"]
-  },
-  "audio/ogg": {
-    extensions: ["oga", "ogg", "spx"]
-  },
-  "audio/webm": {
-    extensions: ["weba"]
-  },
-  "audio/x-wav": {
-    extensions: ["wav"]
-  },
-  "font/ttf": {
-    extensions: ["ttf"]
-  },
-  "font/woff": {
-    extensions: ["woff"]
-  },
-  "font/woff2": {
-    extensions: ["woff2"]
-  },
-  "image/png": {
-    extensions: ["png"]
-  },
-  "image/gif": {
-    extensions: ["gif"]
-  },
-  "image/jpeg": {
-    extensions: ["jpg"]
-  },
-  "image/svg+xml": {
-    extensions: ["svg", "svgz"]
-  },
-  "text/plain": {
-    extensions: ["txt"]
-  },
-  "text/html": {
-    extensions: ["html"]
-  },
-  "text/css": {
-    extensions: ["css"]
-  },
-  "text/cache-manifest": {
-    extensions: ["appcache"]
-  },
-  "video/mp4": {
-    extensions: ["mp4", "mp4v", "mpg4"]
-  },
-  "video/mpeg": {
-    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"]
-  },
-  "video/ogg": {
-    extensions: ["ogv"]
-  },
-  "video/webm": {
-    extensions: ["webm"]
-  }
-};
-
-// https://github.com/jshttp/mime-db/blob/master/src/apache-types.json
-const urlToContentType = (url, contentTypeMap = jsenvContentTypeMap, contentTypeDefault = "application/octet-stream") => {
-  if (typeof contentTypeMap !== "object") {
-    throw new TypeError(`contentTypeMap must be an object, got ${contentTypeMap}`);
-  }
-
-  const pathname = new URL(url).pathname;
-  const extensionWithDot = path.extname(pathname);
-
-  if (!extensionWithDot || extensionWithDot === ".") {
-    return contentTypeDefault;
-  }
-
-  const extension = extensionWithDot.slice(1);
-  const availableContentTypes = Object.keys(contentTypeMap);
-  const contentTypeForExtension = availableContentTypes.find(contentTypeName => {
-    const contentType = contentTypeMap[contentTypeName];
-    return contentType.extensions && contentType.extensions.indexOf(extension) > -1;
-  });
-  return contentTypeForExtension || contentTypeDefault;
-};
-
-const {
-  readFile: readFile$1
-} = fs.promises;
-const serveFile = async (source, {
-  cancellationToken = createCancellationToken(),
-  method = "GET",
-  headers = {},
-  canReadDirectory = false,
-  cacheStrategy = "etag",
-  contentTypeMap = jsenvContentTypeMap
-} = {}) => {
-  if (method !== "GET" && method !== "HEAD") {
-    return {
-      status: 501
-    };
-  }
-
-  const sourceUrl = assertAndNormalizeFileUrl(source);
-  const clientCacheDisabled = headers["cache-control"] === "no-cache";
-
-  try {
-    const cacheWithMtime = !clientCacheDisabled && cacheStrategy === "mtime";
-    const cacheWithETag = !clientCacheDisabled && cacheStrategy === "etag";
-    const cachedDisabled = clientCacheDisabled || cacheStrategy === "none";
-    const sourceStat = await createOperation({
-      cancellationToken,
-      start: () => readFileSystemNodeStat(sourceUrl)
-    });
-
-    if (sourceStat.isDirectory()) {
-      if (canReadDirectory === false) {
-        return {
-          status: 403,
-          statusText: "not allowed to read directory",
-          headers: { ...(cachedDisabled ? {
-              "cache-control": "no-store"
-            } : {})
-          }
-        };
-      }
-
-      const directoryContentArray = await createOperation({
-        cancellationToken,
-        start: () => readDirectory(sourceUrl)
-      });
-      const directoryContentJson = JSON.stringify(directoryContentArray);
-      return {
-        status: 200,
-        headers: { ...(cachedDisabled ? {
-            "cache-control": "no-store"
-          } : {}),
-          "content-type": "application/json",
-          "content-length": directoryContentJson.length
-        },
-        body: directoryContentJson
-      };
-    } // not a file, give up
-
-
-    if (!sourceStat.isFile()) {
-      return {
-        status: 404,
-        headers: { ...(cachedDisabled ? {
-            "cache-control": "no-store"
-          } : {})
-        }
-      };
-    }
-
-    if (cacheWithETag) {
-      const fileContentAsBuffer = await createOperation({
-        cancellationToken,
-        start: () => readFile$1(urlToFileSystemPath(sourceUrl))
-      });
-      const fileContentEtag = bufferToEtag(fileContentAsBuffer);
-
-      if ("if-none-match" in headers && headers["if-none-match"] === fileContentEtag) {
-        return {
-          status: 304,
-          headers: { ...(cachedDisabled ? {
-              "cache-control": "no-store"
-            } : {})
-          }
-        };
-      }
-
-      return {
-        status: 200,
-        headers: { ...(cachedDisabled ? {
-            "cache-control": "no-store"
-          } : {}),
-          "content-length": sourceStat.size,
-          "content-type": urlToContentType(sourceUrl, contentTypeMap),
-          "etag": fileContentEtag
-        },
-        body: fileContentAsBuffer
-      };
-    }
-
-    if (cacheWithMtime && "if-modified-since" in headers) {
-      let cachedModificationDate;
-
-      try {
-        cachedModificationDate = new Date(headers["if-modified-since"]);
-      } catch (e) {
-        return {
-          status: 400,
-          statusText: "if-modified-since header is not a valid date"
-        };
-      }
-
-      const actualModificationDate = dateToSecondsPrecision(sourceStat.mtime);
-
-      if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
-        return {
-          status: 304
-        };
-      }
-    }
-
-    return {
-      status: 200,
-      headers: { ...(cachedDisabled ? {
-          "cache-control": "no-store"
-        } : {}),
-        ...(cacheWithMtime ? {
-          "last-modified": dateToUTCString(sourceStat.mtime)
-        } : {}),
-        "content-length": sourceStat.size,
-        "content-type": urlToContentType(sourceUrl, contentTypeMap)
-      },
-      body: fs.createReadStream(urlToFileSystemPath(sourceUrl))
-    };
-  } catch (e) {
-    return convertFileSystemErrorToResponseProperties(e);
-  }
-}; // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toUTCString
-
-const dateToUTCString = date => date.toUTCString();
-
-const dateToSecondsPrecision = date => {
-  const dateWithSecondsPrecision = new Date(date);
-  dateWithSecondsPrecision.setMilliseconds(0);
-  return dateWithSecondsPrecision;
-};
-
-const require$2 = module$1.createRequire(url);
-
-const nodeFetch = require$2("node-fetch");
-
-const AbortController = require$2("abort-controller");
-
-const {
-  Response
-} = nodeFetch;
-const fetchUrl = async (url, {
-  cancellationToken = createCancellationToken(),
-  simplified = false,
-  ignoreHttpsError = false,
-  canReadDirectory,
-  contentTypeMap,
-  cacheStrategy,
-  ...options
-} = {}) => {
-  try {
-    url = String(new URL(url));
-  } catch (e) {
-    throw new Error(`fetchUrl first argument must be an absolute url, received ${url}`);
-  }
-
-  if (url.startsWith("file://")) {
-    const {
-      status,
-      statusText,
-      headers,
-      body
-    } = await serveFile(url, {
-      cancellationToken,
-      cacheStrategy,
-      canReadDirectory,
-      contentTypeMap,
-      ...options
-    });
-    const response = new Response(typeof body === "string" ? Buffer.from(body) : body, {
-      url,
-      status,
-      statusText,
-      headers
-    });
-    return simplified ? standardResponseToSimplifiedResponse(response) : response;
-  } // cancellation might be requested early, abortController does not support that
-  // so we have to throw if requested right away
-
-
-  cancellationToken.throwIfRequested(); // https://github.com/bitinn/node-fetch#request-cancellation-with-abortsignal
-
-  const abortController = new AbortController();
-  let cancelError;
-  cancellationToken.register(reason => {
-    cancelError = reason;
-    abortController.abort(reason);
-  });
-  let response;
-
-  try {
-    response = await nodeFetch(url, {
-      signal: abortController.signal,
-      ...(ignoreHttpsError && url.startsWith("https") ? {
-        agent: new https.Agent({
-          rejectUnauthorized: false
-        })
-      } : {}),
-      ...options
-    });
-  } catch (e) {
-    if (cancelError && e.name === "AbortError") {
-      throw cancelError;
-    }
-
-    throw e;
-  }
-
-  return simplified ? standardResponseToSimplifiedResponse(response) : response;
-};
-
-const standardResponseToSimplifiedResponse = async response => {
-  const text = await response.text();
-  return {
-    url: response.url,
-    status: response.status,
-    statusText: response.statusText,
-    headers: responseToHeaders(response),
-    body: text
-  };
-};
-
-const responseToHeaders = response => {
-  const headers = {};
-  response.headers.forEach((value, name) => {
-    headers[name] = value;
-  });
-  return headers;
-};
-
-const listen = ({
-  cancellationToken,
-  server,
-  port,
-  ip
-}) => {
-  return createStoppableOperation({
-    cancellationToken,
-    start: () => startListening(server, port, ip),
-    stop: () => stopListening(server)
-  });
-};
-const startListening = (server, port, ip) => new Promise((resolve, reject) => {
-  server.on("error", reject);
-  server.on("listening", () => {
-    // in case port is 0 (randomly assign an available port)
-    // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-    resolve(server.address().port);
-  });
-  server.listen(port, ip);
-});
-const stopListening = server => new Promise((resolve, reject) => {
-  server.on("error", reject);
-  server.on("close", resolve);
-  server.close();
-});
-
-const findFreePort = async (initialPort = 1, {
-  cancellationToken = createCancellationToken(),
-  ip = "127.0.0.1",
-  min = 1,
-  max = 65534,
-  next = port => port + 1
-} = {}) => {
-  const testUntil = async (port, ip) => {
-    const free = await portIsFree({
-      cancellationToken,
-      port,
-      ip
-    });
-
-    if (free) {
-      return port;
-    }
-
-    const nextPort = next(port);
-
-    if (nextPort > max) {
-      throw new Error(`${ip} has no available port between ${min} and ${max}`);
-    }
-
-    return testUntil(nextPort, ip);
-  };
-
-  return testUntil(initialPort, ip);
-};
-
-const portIsFree = async ({
-  cancellationToken,
-  port,
-  ip
-}) => {
-  const server = net.createServer();
-  const listenOperation = listen({
-    cancellationToken,
-    server,
-    port,
-    ip
-  });
-  return listenOperation.then(() => {
-    const stopPromise = listenOperation.stop(); // cancellation must wait for server to be closed before considering
-    // cancellation as done
-
-    cancellationToken.register(() => stopPromise);
-    return stopPromise.then(() => true);
-  }, error => {
-    if (error && error.code === "EADDRINUSE") {
-      return false;
-    }
-
-    if (error && error.code === "EACCES") {
-      return false;
-    }
-
-    return Promise.reject(error);
-  });
-};
-
-const firstService = (...callbacks) => {
-  return firstOperationMatching({
-    array: callbacks,
-    start: callback => callback(),
-    predicate: serviceGeneratedResponsePredicate
-  });
-};
-
-const serviceGeneratedResponsePredicate = value => {
-  if (value === null) {
-    return false;
-  }
-
-  return typeof value === "object";
-};
-
-const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
-
-const jsenvAccessControlAllowedMethods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"];
-
-const jsenvPrivateKey = `-----BEGIN RSA PRIVATE KEY-----
-MIICXAIBAAKBgQCll1gJkJqB+KRZsyepQ7gs81UO+73aKPaNbjp/dwo9XfqvNdDp
-Ki4zfTwzzJyFXkoN+NGihfQHI+VqRGITc+XzmBPcGu9XIvYy52lV3zjG4sldz+r8
-iNBzFwFSdUGmaHfkcm0YhvcjdRhyKalDaLMc3pVX4dq9rRzqm+pkbzVfVQIDAQAB
-AoGAImSo2HO8Y7ptCGR5nGKAYnW3+QC4khNoAkAezlK/Qbe/VZzr40Hrjq44Ttn0
-uI64+uXvRL5lzQXbpJLHfBraa8J6Vstf2Kwadmg+FyrqBcet6gidqZ6S1LBTfXII
-eSUcMIqkourv7LWOs8BfWQQiCf0Em0shGK1qf1lgiOQxoJECQQD+dSJOPqKbdZfJ
-/JcsInf5dPkfTNZMhBxpxqiYOvU3684W3LHB1g6BXjHmIF/CIrxcAHsxxXwTGWu9
-23Ffu+xPAkEApphOt+CzGdYq+Ygjj6Hq+hx3hkUwKUHSEOcNXG0Eb90m2sCEkXgz
-xH7fKYXaohFtis7IFJR4UfYD8pkGYVmdGwJAJf/iFqM9709ZUp25CatAFW3Fgkoc
-OqMEBzvWk51CX46EYV+l4BeSZPlnJEGzay96x5Z+z0j5pXSHZXvu62gJ+wJACci+
-LsxymFzcr0UQmZnv2/qaBne/yVyFQtrfDQOWFB/P7V8LKiP+Hlc5Mg4bdhNB9LoK
-RDMoEeA6ASB9oHAL6wJBAJcYLOICBVQrTil6DroEkrIxQY/S+arKc42uFpj98S+w
-k3doJf8KKDrclaRnKfMXxGYhXPUWFpa5fFr1hvcprEo=
------END RSA PRIVATE KEY-----`;
-const jsenvCertificate = `-----BEGIN CERTIFICATE-----
-MIIDEDCCAnmgAwIBAgIQd9Gto4GPGwXcLk0flq7bsjANBgkqhkiG9w0BAQsFADCB
-kTEuMCwGA1UEAxMlaHR0cHM6Ly9naXRodWIuY29tL2pzZW52L2pzZW52LXNlcnZl
-cjELMAkGA1UEBhMCRlIxGDAWBgNVBAgTD0FscGVzIE1hcml0aW1lczERMA8GA1UE
-BxMIVmFsYm9ubmUxDjAMBgNVBAoTBWpzZW52MRUwEwYDVQQLEwxqc2VudiBzZXJ2
-ZXIwHhcNMTkwNzA5MTQ1MzU4WhcNMjgwNzA5MTQ1MzU5WjCBkTEuMCwGA1UEAxMl
-aHR0cHM6Ly9naXRodWIuY29tL2pzZW52L2pzZW52LXNlcnZlcjELMAkGA1UEBhMC
-RlIxGDAWBgNVBAgTD0FscGVzIE1hcml0aW1lczERMA8GA1UEBxMIVmFsYm9ubmUx
-DjAMBgNVBAoTBWpzZW52MRUwEwYDVQQLEwxqc2VudiBzZXJ2ZXIwgZ8wDQYJKoZI
-hvcNAQEBBQADgY0AMIGJAoGBAKWXWAmQmoH4pFmzJ6lDuCzzVQ77vdoo9o1uOn93
-Cj1d+q810OkqLjN9PDPMnIVeSg340aKF9Acj5WpEYhNz5fOYE9wa71ci9jLnaVXf
-OMbiyV3P6vyI0HMXAVJ1QaZod+RybRiG9yN1GHIpqUNosxzelVfh2r2tHOqb6mRv
-NV9VAgMBAAGjZzBlMAwGA1UdEwEB/wQCMAAwDgYDVR0PAQH/BAQDAgWgMBMGA1Ud
-JQQMMAoGCCsGAQUFBwMBMB8GA1UdIwQYMBaAFOQhJA9S7idbpNIbvKMyeRWbwyad
-MA8GA1UdEQQIMAaHBH8AAAEwDQYJKoZIhvcNAQELBQADgYEAUKPupneUl1bdjbbf
-QvUqAExIK0Nv2u54X8l0EJvkdPMNQEer7Npzg5RQWExtvamfEZI1EPOeVfPVu5sz
-q4DB6OgAEzkytbKtcgPlhY0GDbim8ELCpO1JNDn/jUXH74VJElwXMZqan5VaQ5c+
-qsCeVUdw8QsfIZH6XbkvhCswh4k=
------END CERTIFICATE-----`;
-
-const createTracker = () => {
-  const callbackArray = [];
-
-  const registerCleanupCallback = callback => {
-    if (typeof callback !== "function") throw new TypeError(`callback must be a function
-callback: ${callback}`);
-    callbackArray.push(callback);
-  };
-
-  const cleanup = async reason => {
-    const localCallbackArray = callbackArray.slice();
-    await Promise.all(localCallbackArray.map(callback => callback(reason)));
-  };
-
-  return {
-    registerCleanupCallback,
-    cleanup
-  };
-};
-
-const urlToOrigin$1 = url => {
-  return new URL(url).origin;
-};
-
-const createServer = async ({
-  http2,
-  http1Allowed,
-  protocol,
-  privateKey,
-  certificate
-}) => {
-  if (protocol === "http") {
-    if (http2) {
-      const {
-        createServer
-      } = await new Promise(function (resolve) { resolve(_interopNamespace(require('http2'))); });
-      return createServer();
-    }
-
-    const {
-      createServer
-    } = await new Promise(function (resolve) { resolve(_interopNamespace(require('http'))); });
-    return createServer();
-  }
-
-  if (protocol === "https") {
-    if (http2) {
-      const {
-        createSecureServer
-      } = await new Promise(function (resolve) { resolve(_interopNamespace(require('http2'))); });
-      return createSecureServer({
-        key: privateKey,
-        cert: certificate,
-        allowHTTP1: http1Allowed
-      });
-    }
-
-    const {
-      createServer
-    } = await new Promise(function (resolve) { resolve(_interopNamespace(require('https'))); });
-    return createServer({
-      key: privateKey,
-      cert: certificate
-    });
-  }
-
-  throw new Error(`unsupported protocol ${protocol}`);
-};
-
-const trackServerPendingConnections = (nodeServer, {
-  onConnectionError
-}) => {
-  const pendingConnections = new Set();
-
-  const connectionListener = connection => {
-    connection.on("close", () => {
-      pendingConnections.delete(connection);
-    });
-
-    if (onConnectionError) {
-      connection.on("error", error => {
-        onConnectionError(error, connection);
-      });
-    }
-
-    pendingConnections.add(connection);
-  };
-
-  nodeServer.on("connection", connectionListener);
-
-  const stop = async reason => {
-    nodeServer.removeListener("connection", connectionListener);
-    await Promise.all(Array.from(pendingConnections).map(pendingConnection => {
-      return new Promise((resolve, reject) => {
-        pendingConnection.destroy(reason, error => {
-          if (error) {
-            if (error === reason || error.code === "ENOTCONN") {
-              resolve();
-            } else {
-              reject(error);
-            }
-          } else {
-            resolve();
-          }
-        });
-      });
-    }));
-  };
-
-  return {
-    stop
-  };
-};
-
-const trackServerPendingRequests = nodeServer => {
-  const pendingClients = new Set();
-
-  const requestListener = (nodeRequest, nodeResponse) => {
-    const client = {
-      nodeRequest,
-      nodeResponse
-    };
-    pendingClients.add(client);
-    nodeResponse.on("close", () => {
-      pendingClients.delete(client);
-    });
-  };
-
-  nodeServer.on("request", requestListener);
-
-  const stop = ({
-    status,
-    reason
-  }) => {
-    nodeServer.removeListener("request", requestListener);
-    return Promise.all(Array.from(pendingClients).map(({
-      nodeResponse
-    }) => {
-      if (nodeResponse.headersSent === false) {
-        nodeResponse.writeHead(status, reason);
-      } // http2
-
-
-      if (nodeResponse.close) {
-        return new Promise((resolve, reject) => {
-          if (nodeResponse.closed) {
-            resolve();
-          } else {
-            nodeResponse.close(error => {
-              if (error) {
-                reject(error);
-              } else {
-                resolve();
-              }
-            });
-          }
-        });
-      } // http
-
-
-      return new Promise(resolve => {
-        if (nodeResponse.destroyed) {
-          resolve();
-        } else {
-          nodeResponse.once("close", () => {
-            resolve();
-          });
-          nodeResponse.destroy();
-        }
-      });
-    }));
-  };
-
-  return {
-    stop
-  };
-};
-
-const nodeStreamToObservable = nodeStream => {
-  return createObservable({
-    subscribe: ({
-      next,
-      error,
-      complete
-    }) => {
-      // should we do nodeStream.resume() in case the stream was paused ?
-      nodeStream.on("data", next);
-      nodeStream.once("error", error);
-      nodeStream.once("end", complete);
-
-      const unsubscribe = () => {
-        nodeStream.removeListener("data", next);
-        nodeStream.removeListener("error", error);
-        nodeStream.removeListener("end", complete);
-
-        if (typeof nodeStream.abort === "function") {
-          nodeStream.abort();
-        } else {
-          nodeStream.destroy();
-        }
-      };
-
-      if (typeof nodeStream.once === "function") {
-        nodeStream.once("abort", unsubscribe);
-      }
-
-      return {
-        unsubscribe
-      };
-    }
-  });
-};
-
-const normalizeHeaderName = headerName => {
-  headerName = String(headerName);
-
-  if (/[^a-z0-9\-#$%&'*+.\^_`|~]/i.test(headerName)) {
-    throw new TypeError("Invalid character in header field name");
-  }
-
-  return headerName.toLowerCase();
-};
-
-const normalizeHeaderValue = headerValue => {
-  return String(headerValue);
-};
-
-/*
-https://developer.mozilla.org/en-US/docs/Web/API/Headers
-https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-*/
-const headersFromObject = headersObject => {
-  const headers = {};
-  Object.keys(headersObject).forEach(headerName => {
-    if (headerName[0] === ":") {
-      // exclude http2 headers
-      return;
-    }
-
-    headers[normalizeHeaderName(headerName)] = normalizeHeaderValue(headersObject[headerName]);
-  });
-  return headers;
-};
-
-const nodeRequestToRequest = (nodeRequest, {
-  serverCancellationToken,
-  serverOrigin
-}) => {
-  const {
-    method
-  } = nodeRequest;
-  const {
-    url: ressource
-  } = nodeRequest;
-  const headers = headersFromObject(nodeRequest.headers);
-  const body = method === "POST" || method === "PUT" || method === "PATCH" ? nodeStreamToObservable(nodeRequest) : undefined;
-  return Object.freeze({
-    // the node request is considered as cancelled if client cancels or server cancels.
-    // in case of server cancellation from a client perspective request is not cancelled
-    // because client still wants a response. But from a server perspective the production
-    // of a response for this request is cancelled
-    cancellationToken: composeCancellationToken(serverCancellationToken, nodeRequestToCancellationToken(nodeRequest)),
-    origin: serverOrigin,
-    ressource,
-    method,
-    headers,
-    body
-  });
-};
-
-const nodeRequestToCancellationToken = nodeRequest => {
-  const {
-    cancel,
-    token
-  } = createCancellationSource();
-  nodeRequest.on("abort", () => {
-    cancel("request aborted");
-  });
-  return token;
-};
-
-const valueToObservable = value => {
-  return createObservable({
-    subscribe: ({
-      next,
-      complete
-    }) => {
-      next(value);
-      complete();
-      return {
-        unsubscribe: () => {}
-      };
-    }
-  });
-};
-
-const populateNodeResponse = (nodeResponse, {
-  status,
-  statusText,
-  headers,
-  body,
-  bodyEncoding
-}, {
-  cancellationToken,
-  ignoreBody,
-  ignoreStatusText
-} = {}) => {
-  const nodeHeaders = headersToNodeHeaders(headers); // nodejs strange signature for writeHead force this
-  // https://nodejs.org/api/http.html#http_response_writehead_statuscode_statusmessage_headers
-
-  if (statusText === undefined || ignoreStatusText) {
-    nodeResponse.writeHead(status, nodeHeaders);
-  } else {
-    nodeResponse.writeHead(status, statusText, nodeHeaders);
-  }
-
-  if (ignoreBody) {
-    nodeResponse.end();
-    return;
-  }
-
-  if (bodyEncoding) {
-    nodeResponse.setEncoding(bodyEncoding);
-  }
-
-  const observable = bodyToObservable(body);
-  const subscription = subscribe(observable, {
-    next: data => {
-      try {
-        nodeResponse.write(data);
-      } catch (e) {
-        // Something inside Node.js sometimes puts stream
-        // in a state where .write() throw despites nodeResponse.destroyed
-        // being undefined and "close" event not being emitted.
-        // I have tested if we are the one calling destroy
-        // (I have commented every .destroy() call)
-        // but issue still occurs
-        // For the record it's "hard" to reproduce but can be by running
-        // a lot of tests against a browser in the context of @jsenv/core testing
-        if (e.code === "ERR_HTTP2_INVALID_STREAM") {
-          return;
-        }
-
-        throw e;
-      }
-    },
-    error: value => {
-      nodeResponse.emit("error", value);
-    },
-    complete: () => {
-      nodeResponse.end();
-    }
-  });
-  cancellationToken.register(() => {
-    subscription.unsubscribe();
-    nodeResponse.destroy();
-  });
-  nodeResponse.once("close", () => {
-    // close body in case nodeResponse is prematurely closed
-    // while body is writing
-    // it may happen in case of server sent event
-    // where body is kept open to write to client
-    // and the browser is reloaded or closed for instance
-    subscription.unsubscribe();
-  });
-};
-const mapping = {// "content-type": "Content-Type",
-  // "last-modified": "Last-Modified",
-};
-
-const headersToNodeHeaders = headers => {
-  const nodeHeaders = {};
-  Object.keys(headers).forEach(name => {
-    const nodeHeaderName = name in mapping ? mapping[name] : name;
-    nodeHeaders[nodeHeaderName] = headers[name];
-  });
-  return nodeHeaders;
-};
-
-const bodyToObservable = body => {
-  if (isObservable(body)) return body;
-  if (isNodeStream(body)) return nodeStreamToObservable(body);
-  return valueToObservable(body);
-};
-
-const isNodeStream = value => {
-  if (value === undefined) return false;
-  if (value instanceof stream.Stream) return true;
-  if (value instanceof stream.Writable) return true;
-  if (value instanceof stream.Readable) return true;
-  return false;
-};
-
-// https://github.com/Marak/colors.js/blob/b63ef88e521b42920a9e908848de340b31e68c9d/lib/styles.js#L29
-const close = "\x1b[0m";
-const red = "\x1b[31m";
-const green = "\x1b[32m";
-const yellow = "\x1b[33m"; // const blue = "\x1b[34m"
-
-const magenta = "\x1b[35m";
-const cyan = "\x1b[36m"; // const white = "\x1b[37m"
-
-const colorizeResponseStatus = status => {
-  const statusType = statusToType(status);
-  if (statusType === "information") return `${cyan}${status}${close}`;
-  if (statusType === "success") return `${green}${status}${close}`;
-  if (statusType === "redirection") return `${magenta}${status}${close}`;
-  if (statusType === "client-error") return `${yellow}${status}${close}`;
-  if (statusType === "server-error") return `${red}${status}${close}`;
-  return status;
-}; // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
-
-const statusToType = status => {
-  if (statusIsInformation(status)) return "information";
-  if (statusIsSuccess(status)) return "success";
-  if (statusIsRedirection(status)) return "redirection";
-  if (statusIsClientError(status)) return "client-error";
-  if (statusIsServerError(status)) return "server-error";
-  return "unknown";
-};
-
-const statusIsInformation = status => status >= 100 && status < 200;
-
-const statusIsSuccess = status => status >= 200 && status < 300;
-
-const statusIsRedirection = status => status >= 300 && status < 400;
-
-const statusIsClientError = status => status >= 400 && status < 500;
-
-const statusIsServerError = status => status >= 500 && status < 600;
-
-const originAsString = ({
-  protocol,
-  ip,
-  port
-}) => {
-  const url = new url$1.URL("https://127.0.0.1:80");
-  url.protocol = protocol;
-  url.hostname = ip;
-  url.port = port;
-  return url.origin;
-};
-
-const createReason = reasonString => {
-  return {
-    toString: () => reasonString
-  };
-};
-
-const STOP_REASON_INTERNAL_ERROR = createReason("Internal error");
-const STOP_REASON_PROCESS_SIGHUP = createReason("process SIGHUP");
-const STOP_REASON_PROCESS_SIGTERM = createReason("process SIGTERM");
-const STOP_REASON_PROCESS_SIGINT = createReason("process SIGINT");
-const STOP_REASON_PROCESS_BEFORE_EXIT = createReason("process before exit");
-const STOP_REASON_PROCESS_EXIT = createReason("process exit");
-const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
-
-const require$3 = module$1.createRequire(url);
-
-const killPort = require$3("kill-port");
-
-const startServer = async ({
-  cancellationToken = createCancellationToken(),
-  logLevel,
-  serverName = "server",
-  protocol = "http",
-  http2 = false,
-  http1Allowed = true,
-  ip = "127.0.0.1",
-  port = 0,
-  // assign a random available port
-  forcePort = false,
-  privateKey = jsenvPrivateKey,
-  certificate = jsenvCertificate,
-  stopOnSIGINT = true,
-  // auto close the server when the process exits
-  stopOnExit = true,
-  // auto close when requestToResponse throw an error
-  stopOnInternalError = false,
-  // auto close the server when an uncaughtException happens
-  stopOnCrash = false,
-  keepProcessAlive = true,
-  requestToResponse = () => null,
-  accessControlAllowedOrigins = [],
-  accessControlAllowedMethods = jsenvAccessControlAllowedMethods,
-  accessControlAllowedHeaders = jsenvAccessControlAllowedHeaders,
-  accessControlAllowRequestOrigin = false,
-  accessControlAllowRequestMethod = false,
-  accessControlAllowRequestHeaders = false,
-  accessControlAllowCredentials = false,
-  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
-  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
-  accessControlMaxAge = 600,
-  sendInternalErrorStack = false,
-  internalErrorToResponseProperties = error => {
-    const body = error ? JSON.stringify({
-      code: error.code || "UNKNOWN_ERROR",
-      ...(sendInternalErrorStack ? {
-        stack: error.stack
-      } : {})
-    }) : JSON.stringify({
-      code: "VALUE_THROWED",
-      value: error
-    });
-    return {
-      headers: {
-        "content-type": "application/json",
-        "content-length": Buffer.byteLength(body)
-      },
-      body
-    };
-  },
-  startedCallback = () => {},
-  stoppedCallback = () => {},
-  errorIsCancellation = () => false
-} = {}) => {
-  return catchCancellation(async () => {
-    if (port === 0 && forcePort) {
-      throw new Error(`no need to pass forcePort when port is 0`);
-    }
-
-    if (protocol !== "http" && protocol !== "https") {
-      throw new Error(`protocol must be http or https, got ${protocol}`);
-    } // https://github.com/nodejs/node/issues/14900
-
-
-    if (ip === "0.0.0.0" && process.platform === "win32") {
-      throw new Error(`listening ${ip} not available on window`);
-    }
-
-    if (protocol === "https") {
-      if (!privateKey) {
-        throw new Error(`missing privateKey for https server`);
-      }
-
-      if (!certificate) {
-        throw new Error(`missing certificate for https server`);
-      }
-
-      if (privateKey !== jsenvPrivateKey && certificate === jsenvCertificate) {
-        throw new Error(`you passed a privateKey without certificate`);
-      }
-
-      if (certificate !== jsenvCertificate && privateKey === jsenvPrivateKey) {
-        throw new Error(`you passed a certificate without privateKey`);
-      }
-    }
-
-    const internalCancellationSource = createCancellationSource();
-    const externalCancellationToken = cancellationToken;
-    const internalCancellationToken = internalCancellationSource.token;
-    const serverCancellationToken = composeCancellationToken(externalCancellationToken, internalCancellationToken);
-    const logger = createLogger({
-      logLevel
-    });
-
-    const onError = error => {
-      if (errorIsCancellation(error)) {
-        return;
-      }
-
-      throw error;
-    };
-
-    errorIsCancellation = composePredicate(errorIsCancellation, isCancelError);
-    const {
-      registerCleanupCallback,
-      cleanup
-    } = createTracker();
-
-    if (stopOnCrash) {
-      const unregister = unadvisedCrashSignal.addCallback(reason => {
-        internalCancellationSource.cancel(reason.value);
-      });
-      registerCleanupCallback(unregister);
-    }
-
-    if (stopOnExit) {
-      const unregister = teardownSignal.addCallback(tearDownReason => {
-        if (!stopOnSIGINT && tearDownReason === "SIGINT") {
-          return;
-        }
-
-        internalCancellationSource.cancel({
-          SIGHUP: STOP_REASON_PROCESS_SIGHUP,
-          SIGTERM: STOP_REASON_PROCESS_SIGTERM,
-          SIGINT: STOP_REASON_PROCESS_SIGINT,
-          beforeExit: STOP_REASON_PROCESS_BEFORE_EXIT,
-          exit: STOP_REASON_PROCESS_EXIT
-        }[tearDownReason]);
-      });
-      registerCleanupCallback(unregister);
-    } else if (stopOnSIGINT) {
-      const unregister = SIGINTSignal.addCallback(() => {
-        internalCancellationSource.cancel(STOP_REASON_PROCESS_SIGINT);
-      });
-      registerCleanupCallback(unregister);
-    }
-
-    if (forcePort) {
-      await createOperation({
-        cancellationToken: serverCancellationToken,
-        start: () => killPort(port)
-      });
-    }
-
-    const nodeServer = await createServer({
-      http2,
-      http1Allowed,
-      protocol,
-      privateKey,
-      certificate
-    }); // https://nodejs.org/api/net.html#net_server_unref
-
-    if (!keepProcessAlive) {
-      nodeServer.unref();
-    }
-
-    let status = "starting";
-    let stoppedResolve;
-    const stoppedPromise = new Promise(resolve => {
-      stoppedResolve = resolve;
-    });
-    const stop = memoize(async (reason = STOP_REASON_NOT_SPECIFIED) => {
-      status = "stopping";
-      errorIsCancellation = composePredicate(errorIsCancellation, error => error === reason);
-      errorIsCancellation = composePredicate(errorIsCancellation, error => error && error.code === "ECONNRESET");
-      logger.info(`${serverName} stopped because ${reason}`);
-      await cleanup(reason);
-      await stopListening(nodeServer);
-      status = "stopped";
-      stoppedCallback({
-        reason
-      });
-      stoppedResolve(reason);
-    });
-    serverCancellationToken.register(stop);
-    const startOperation = createStoppableOperation({
-      cancellationToken: serverCancellationToken,
-      start: () => listen({
-        cancellationToken: serverCancellationToken,
-        server: nodeServer,
-        port,
-        ip
-      }),
-      stop: (_, reason) => stop(reason)
-    });
-    port = await startOperation;
-    status = "opened";
-    const serverOrigin = originAsString({
-      protocol,
-      ip,
-      port
-    });
-    const connectionsTracker = trackServerPendingConnections(nodeServer, {
-      onConnectionError: (error, connection) => {
-        if (!connection.destroyed) {
-          onError(error);
-        }
-      }
-    }); // opened connection must be shutdown before the close event is emitted
-
-    registerCleanupCallback(connectionsTracker.stop);
-    const pendingRequestsTracker = trackServerPendingRequests(nodeServer); // ensure pending requests got a response from the server
-
-    registerCleanupCallback(reason => {
-      pendingRequestsTracker.stop({
-        status: reason === STOP_REASON_INTERNAL_ERROR ? 500 : 503,
-        reason
-      });
-    });
-
-    const requestCallback = async (nodeRequest, nodeResponse) => {
-      const request = nodeRequestToRequest(nodeRequest, {
-        serverCancellationToken,
-        serverOrigin
-      });
-      nodeRequest.on("error", error => {
-        logger.error(`error on request.
---- request ressource ---
-${request.ressource}
---- error stack ---
-${error.stack}`);
-      });
-      const {
-        response,
-        error
-      } = await generateResponseDescription(request);
-      logger.info(`${request.method} ${request.origin}${request.ressource}`);
-
-      if (error && isCancelError(error) && internalCancellationToken.cancellationRequested) {
-        logger.info("ignored because server closing");
-        nodeResponse.destroy();
-        return;
-      }
-
-      if (request.aborted) {
-        logger.info(`request aborted by client`);
-        nodeResponse.destroy();
-        return;
-      }
-
-      if (request.method !== "HEAD" && response.headers["content-length"] > 0 && response.body === "") {
-        logger.error(createContentLengthMismatchError(`content-length header is ${response.headers["content-length"]} but body is empty`));
-      }
-
-      if (error) {
-        logger.error(`internal error while handling request.
---- error stack ---
-${error.stack}
---- request ---
-${request.method} ${request.origin}${request.ressource}`);
-      }
-
-      logger.info(`${colorizeResponseStatus(response.status)} ${response.statusText}`);
-      populateNodeResponse(nodeResponse, response, {
-        cancellationToken: request.cancellationToken,
-        ignoreBody: request.method === "HEAD",
-        // https://github.com/nodejs/node/blob/79296dc2d02c0b9872bbfcbb89148ea036a546d0/lib/internal/http2/compat.js#L97
-        ignoreStatusText: Boolean(nodeRequest.stream)
-      });
-
-      if (stopOnInternalError && // stopOnInternalError stops server only if requestToResponse generated
-      // a non controlled error (internal error).
-      // if requestToResponse gracefully produced a 500 response (it did not throw)
-      // then we can assume we are still in control of what we are doing
-      error) {
-        // il faudrais pouvoir stop que les autres response ?
-        stop(STOP_REASON_INTERNAL_ERROR);
-      }
-    };
-
-    nodeServer.on("request", requestCallback); // ensure we don't try to handle new requests while server is stopping
-
-    registerCleanupCallback(() => {
-      nodeServer.removeListener("request", requestCallback);
-    });
-    logger.info(`${serverName} started at ${serverOrigin}`);
-    startedCallback({
-      origin: serverOrigin
-    });
-    const corsEnabled = accessControlAllowRequestOrigin || accessControlAllowedOrigins.length; // here we check access control options to throw or warn if we find strange values
-
-    const generateResponseDescription = async request => {
-      const responsePropertiesToResponse = ({
-        status = 501,
-        statusText = statusToStatusText(status),
-        headers = {},
-        body = "",
-        bodyEncoding
-      }) => {
-        if (corsEnabled) {
-          const accessControlHeaders = generateAccessControlHeaders({
-            request,
-            accessControlAllowedOrigins,
-            accessControlAllowRequestOrigin,
-            accessControlAllowedMethods,
-            accessControlAllowRequestMethod,
-            accessControlAllowedHeaders,
-            accessControlAllowRequestHeaders,
-            accessControlAllowCredentials,
-            accessControlMaxAge
-          });
-          return {
-            status,
-            statusText,
-            headers: composeResponseHeaders(headers, accessControlHeaders),
-            body,
-            bodyEncoding
-          };
-        }
-
-        return {
-          status,
-          statusText,
-          headers,
-          body,
-          bodyEncoding
-        };
-      };
-
-      try {
-        if (corsEnabled && request.method === "OPTIONS") {
-          return {
-            response: responsePropertiesToResponse({
-              status: 200,
-              headers: {
-                "content-length": 0
-              }
-            })
-          };
-        }
-
-        const responseProperties = await requestToResponse(request);
-        return {
-          response: responsePropertiesToResponse(responseProperties || {})
-        };
-      } catch (error) {
-        return {
-          response: composeResponse(responsePropertiesToResponse({
-            status: 500,
-            headers: {
-              // ensure error are not cached
-              "cache-control": "no-store",
-              "content-type": "text/plain"
-            }
-          }), internalErrorToResponseProperties(error)),
-          error
-        };
-      }
-    };
-
-    return {
-      getStatus: () => status,
-      origin: serverOrigin,
-      nodeServer,
-      stop,
-      stoppedPromise
-    };
-  });
-};
-
-const statusToStatusText = status => http.STATUS_CODES[status] || "not specified";
-
-const createContentLengthMismatchError = message => {
-  const error = new Error(message);
-  error.code = "CONTENT_LENGTH_MISMATCH";
-  error.name = error.code;
-  return error;
-}; // https://www.w3.org/TR/cors/
-// https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
-
-
-const generateAccessControlHeaders = ({
-  request: {
-    headers
-  },
-  accessControlAllowedOrigins,
-  accessControlAllowRequestOrigin,
-  accessControlAllowedMethods,
-  accessControlAllowRequestMethod,
-  accessControlAllowedHeaders,
-  accessControlAllowRequestHeaders,
-  accessControlAllowCredentials,
-  // by default OPTIONS request can be cache for a long time, it's not going to change soon ?
-  // we could put a lot here, see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
-  accessControlMaxAge = 600
-} = {}) => {
-  const vary = [];
-  const allowedOriginArray = [...accessControlAllowedOrigins];
-
-  if (accessControlAllowRequestOrigin) {
-    if ("origin" in headers && headers.origin !== "null") {
-      allowedOriginArray.push(headers.origin);
-      vary.push("origin");
-    } else if ("referer" in headers) {
-      allowedOriginArray.push(urlToOrigin$1(headers.referer));
-      vary.push("referer");
-    } else {
-      allowedOriginArray.push("*");
-    }
-  }
-
-  const allowedMethodArray = [...accessControlAllowedMethods];
-
-  if (accessControlAllowRequestMethod && "access-control-request-method" in headers) {
-    const requestMethodName = headers["access-control-request-method"];
-
-    if (!allowedMethodArray.includes(requestMethodName)) {
-      allowedMethodArray.push(requestMethodName);
-      vary.push("access-control-request-method");
-    }
-  }
-
-  const allowedHeaderArray = [...accessControlAllowedHeaders];
-
-  if (accessControlAllowRequestHeaders && "access-control-request-headers" in headers) {
-    const requestHeaderNameArray = headers["access-control-request-headers"].split(", ");
-    requestHeaderNameArray.forEach(headerName => {
-      const headerNameLowerCase = headerName.toLowerCase();
-
-      if (!allowedHeaderArray.includes(headerNameLowerCase)) {
-        allowedHeaderArray.push(headerNameLowerCase);
-
-        if (!vary.includes("access-control-request-headers")) {
-          vary.push("access-control-request-headers");
-        }
-      }
-    });
-  }
-
-  return {
-    "access-control-allow-origin": allowedOriginArray.join(", "),
-    "access-control-allow-methods": allowedMethodArray.join(", "),
-    "access-control-allow-headers": allowedHeaderArray.join(", "),
-    ...(accessControlAllowCredentials ? {
-      "access-control-allow-credentials": true
-    } : {}),
-    "access-control-max-age": accessControlMaxAge,
-    ...(vary.length ? {
-      vary: vary.join(", ")
-    } : {})
-  };
-};
-
-const composePredicate = (previousPredicate, predicate) => {
-  return value => {
-    return previousPredicate(value) || predicate(value);
-  };
-};
-
 let jsenvCoreDirectoryUrl;
 
 if (typeof __filename === "string") {
-  jsenvCoreDirectoryUrl = resolveUrl$1( // get ride of dist/commonjs/main.js
-  "../../", fileSystemPathToUrl(__filename));
+  jsenvCoreDirectoryUrl = util.resolveUrl( // get ride of dist/commonjs/main.js
+  "../../", util.fileSystemPathToUrl(__filename));
 } else {
-  jsenvCoreDirectoryUrl = resolveUrl$1( // get ride of src/internal/jsenvCoreDirectoryUrl.js
+  jsenvCoreDirectoryUrl = util.resolveUrl( // get ride of src/internal/jsenvCoreDirectoryUrl.js
   "../../", url);
 }
 
@@ -8618,7 +2259,7 @@ const readProjectImportMap = async ({
     importMapFileRelativeUrl
   }) : null;
   const jsenvCoreImportKey = "@jsenv/core/";
-  const jsenvCoreRelativeUrlForJsenvProject = projectDirectoryUrl === jsenvCoreDirectoryUrl ? "./" : urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl);
+  const jsenvCoreRelativeUrlForJsenvProject = projectDirectoryUrl === jsenvCoreDirectoryUrl ? "./" : util.urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl);
   const importsForJsenvCore = {
     [jsenvCoreImportKey]: jsenvCoreRelativeUrlForJsenvProject
   };
@@ -8636,7 +2277,7 @@ const readProjectImportMap = async ({
       importsForJsenvCore
     })
   };
-  return composeTwoImportMaps(importMapForJsenvCore, importMapForProject);
+  return importMap.composeTwoImportMaps(importMapForJsenvCore, importMapForProject);
 };
 
 const generateJsenvCoreScopes = ({
@@ -8669,8 +2310,8 @@ const getProjectImportMap = async ({
   projectDirectoryUrl,
   importMapFileRelativeUrl
 }) => {
-  const importMapFileUrl = resolveUrl$1(importMapFileRelativeUrl, projectDirectoryUrl);
-  const importMapFilePath = urlToFileSystemPath(importMapFileUrl);
+  const importMapFileUrl = util.resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
+  const importMapFilePath = util.urlToFileSystemPath(importMapFileUrl);
   return new Promise((resolve, reject) => {
     fs.readFile(importMapFilePath, (error, buffer) => {
       if (error) {
@@ -8752,7 +2393,7 @@ const createBabePluginMapForBundle = ({
   };
 };
 
-const startsWithWindowsDriveLetter$1 = string => {
+const startsWithWindowsDriveLetter = string => {
   const firstChar = string[0];
   if (!/[a-zA-Z]/.test(firstChar)) return false;
   const secondChar = string[1];
@@ -8760,9 +2401,9 @@ const startsWithWindowsDriveLetter$1 = string => {
   return true;
 };
 const windowsFilePathToUrl = windowsFilePath => {
-  return `file:///${replaceBackSlashesWithSlashes$1(windowsFilePath)}`;
+  return `file:///${replaceBackSlashesWithSlashes(windowsFilePath)}`;
 };
-const replaceBackSlashesWithSlashes$1 = string => string.replace(/\\/g, "/");
+const replaceBackSlashesWithSlashes = string => string.replace(/\\/g, "/");
 
 const writeSourceMappingURL = (source, location) => `${source}
 ${"//#"} sourceMappingURL=${location}`;
@@ -8820,7 +2461,7 @@ const writeOrUpdateSourceMappingURL = (source, location) => {
   return writeSourceMappingURL(source, location);
 };
 
-const isWindows$4 = process.platform === "win32";
+const isWindows = process.platform === "win32";
 const transformResultToCompilationResult = async ({
   code,
   map,
@@ -8867,14 +2508,14 @@ const transformResultToCompilationResult = async ({
       // may happen in some cases where babel returns a wrong sourcemap
       // there is at least one case where it happens
       // a file with only import './whatever.js' inside
-      sources.push(urlToRelativeUrl(originalFileUrl, metaJsonFileUrl));
+      sources.push(util.urlToRelativeUrl(originalFileUrl, metaJsonFileUrl));
       sourcesContent.push(originalFileContent);
     } else {
       await Promise.all(map.sources.map(async (source, index) => {
         // be careful here we might received C:/Directory/file.js path from babel
         // also in case we receive relative path like directory\file.js we replace \ with slash
         // for url resolution
-        const sourceFileUrl = isWindows$4 && startsWithWindowsDriveLetter$1(source) ? windowsFilePathToUrl(source) : ensureWindowsDriveLetter(resolveUrl$1(isWindows$4 ? replaceBackSlashesWithSlashes$1(source) : source, sourcemapFileUrl), sourcemapFileUrl);
+        const sourceFileUrl = isWindows && startsWithWindowsDriveLetter(source) ? windowsFilePathToUrl(source) : util.ensureWindowsDriveLetter(util.resolveUrl(isWindows ? replaceBackSlashesWithSlashes(source) : source, sourcemapFileUrl), sourcemapFileUrl);
 
         if (!sourceFileUrl.startsWith(projectDirectoryUrl)) {
           // do not track dependency outside project
@@ -8882,13 +2523,13 @@ const transformResultToCompilationResult = async ({
           return;
         }
 
-        map.sources[index] = urlToRelativeUrl(sourceFileUrl, sourcemapFileUrl);
-        sources[index] = urlToRelativeUrl(sourceFileUrl, metaJsonFileUrl);
+        map.sources[index] = util.urlToRelativeUrl(sourceFileUrl, sourcemapFileUrl);
+        sources[index] = util.urlToRelativeUrl(sourceFileUrl, metaJsonFileUrl);
 
         if (map.sourcesContent && map.sourcesContent[index]) {
           sourcesContent[index] = map.sourcesContent[index];
         } else {
-          const sourceFileContent = await readFile(sourceFileUrl);
+          const sourceFileContent = await util.readFile(sourceFileUrl);
           sourcesContent[index] = sourceFileContent;
         }
       }));
@@ -8908,14 +2549,14 @@ const transformResultToCompilationResult = async ({
       const mapAsBase64 = Buffer.from(JSON.stringify(map)).toString("base64");
       output = writeSourceMappingURL(output, `data:application/json;charset=utf-8;base64,${mapAsBase64}`);
     } else if (remapMethod === "comment") {
-      const sourcemapFileRelativePathForModule = urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl);
+      const sourcemapFileRelativePathForModule = util.urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl);
       output = writeSourceMappingURL(output, sourcemapFileRelativePathForModule);
-      const sourcemapFileRelativePathForAsset = urlToRelativeUrl(sourcemapFileUrl, `${compiledFileUrl}__asset__/`);
+      const sourcemapFileRelativePathForAsset = util.urlToRelativeUrl(sourcemapFileUrl, `${compiledFileUrl}__asset__/`);
       assets.push(sourcemapFileRelativePathForAsset);
       assetsContent.push(stringifyMap(map));
     }
   } else {
-    sources.push(urlToRelativeUrl(originalFileUrl, metaJsonFileUrl));
+    sources.push(util.urlToRelativeUrl(originalFileUrl, metaJsonFileUrl));
     sourcesContent.push(originalFileContent);
   }
 
@@ -8945,7 +2586,7 @@ const stringifyCoverage = object => JSON.stringify(object, null, "  ");
 const resolveAssetFileUrl = ({
   asset,
   compiledFileUrl
-}) => resolveUrl$1(asset, `${compiledFileUrl}__asset__/`);
+}) => util.resolveUrl(asset, `${compiledFileUrl}__asset__/`);
 const resolveMetaJsonFileUrl = ({
   compiledFileUrl
 }) => resolveAssetFileUrl({
@@ -8955,7 +2596,7 @@ const resolveMetaJsonFileUrl = ({
 const resolveSourceFileUrl = ({
   source,
   compiledFileUrl
-}) => resolveUrl$1(source, resolveMetaJsonFileUrl({
+}) => util.resolveUrl(source, resolveMetaJsonFileUrl({
   compiledFileUrl
 }));
 
@@ -8968,7 +2609,7 @@ const readMeta = async ({
   });
 
   try {
-    const metaJsonString = await readFile(metaJsonFileUrl);
+    const metaJsonString = await util.readFile(metaJsonFileUrl);
     const metaJsonObject = JSON.parse(metaJsonString);
     return metaJsonObject;
   } catch (error) {
@@ -8995,7 +2636,7 @@ const createCacheSyntaxErrorMessage = ({
 --- syntax error stack ---
 ${syntaxError.stack}
 --- meta.json path ---
-${urlToFileSystemPath(metaJsonFileUrl)}`;
+${util.urlToFileSystemPath(metaJsonFileUrl)}`;
 
 const validateMeta = async ({
   logger,
@@ -9061,13 +2702,13 @@ const validateCompiledFile = async ({
   ifModifiedSinceDate
 }) => {
   try {
-    const compiledSource = await readFile(compiledFileUrl);
+    const compiledSource = await util.readFile(compiledFileUrl);
 
     if (ifEtagMatch) {
-      const compiledEtag = bufferToEtag(Buffer.from(compiledSource));
+      const compiledEtag = util.bufferToEtag(Buffer.from(compiledSource));
 
       if (ifEtagMatch !== compiledEtag) {
-        logger.debug(`etag changed for ${urlToFileSystemPath(compiledFileUrl)}`);
+        logger.debug(`etag changed for ${util.urlToFileSystemPath(compiledFileUrl)}`);
         return {
           code: "COMPILED_FILE_ETAG_MISMATCH",
           valid: false,
@@ -9080,10 +2721,10 @@ const validateCompiledFile = async ({
     }
 
     if (ifModifiedSinceDate) {
-      const compiledMtime = await readFileSystemNodeModificationTime(compiledFileUrl);
+      const compiledMtime = await util.readFileSystemNodeModificationTime(compiledFileUrl);
 
-      if (ifModifiedSinceDate < dateToSecondsPrecision$1(compiledMtime)) {
-        logger.debug(`mtime changed for ${urlToFileSystemPath(compiledFileUrl)}`);
+      if (ifModifiedSinceDate < dateToSecondsPrecision(compiledMtime)) {
+        logger.debug(`mtime changed for ${util.urlToFileSystemPath(compiledFileUrl)}`);
         return {
           code: "COMPILED_FILE_MTIME_OUTDATED",
           valid: false,
@@ -9103,7 +2744,7 @@ const validateCompiledFile = async ({
     };
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.debug(`compiled file not found at ${urlToFileSystemPath(compiledFileUrl)}`);
+      logger.debug(`compiled file not found at ${util.urlToFileSystemPath(compiledFileUrl)}`);
       return {
         code: "COMPILED_FILE_NOT_FOUND",
         valid: false,
@@ -9142,11 +2783,11 @@ const validateSource = async ({
   });
 
   try {
-    const sourceContent = await readFile(sourceFileUrl);
-    const sourceETag = bufferToEtag(Buffer.from(sourceContent));
+    const sourceContent = await util.readFile(sourceFileUrl);
+    const sourceETag = util.bufferToEtag(Buffer.from(sourceContent));
 
     if (sourceETag !== eTag) {
-      logger.debug(`etag changed for ${urlToFileSystemPath(sourceFileUrl)}`);
+      logger.debug(`etag changed for ${util.urlToFileSystemPath(sourceFileUrl)}`);
       return {
         code: "SOURCE_ETAG_MISMATCH",
         valid: false,
@@ -9214,11 +2855,11 @@ const validateAsset = async ({
   });
 
   try {
-    const assetContent = await readFile(assetFileUrl);
-    const assetContentETag = bufferToEtag(Buffer.from(assetContent));
+    const assetContent = await util.readFile(assetFileUrl);
+    const assetContentETag = util.bufferToEtag(Buffer.from(assetContent));
 
     if (eTag !== assetContentETag) {
-      logger.debug(`etag changed for ${urlToFileSystemPath(assetFileUrl)}`);
+      logger.debug(`etag changed for ${util.urlToFileSystemPath(assetFileUrl)}`);
       return {
         code: "ASSET_ETAG_MISMATCH",
         valid: false,
@@ -9240,7 +2881,7 @@ const validateAsset = async ({
     };
   } catch (error) {
     if (error && error.code === "ENOENT") {
-      logger.debug(`asset not found at ${urlToFileSystemPath(assetFileUrl)}`);
+      logger.debug(`asset not found at ${util.urlToFileSystemPath(assetFileUrl)}`);
       return {
         code: "ASSET_FILE_NOT_FOUND",
         valid: false,
@@ -9255,7 +2896,7 @@ const validateAsset = async ({
   }
 };
 
-const dateToSecondsPrecision$1 = date => {
+const dateToSecondsPrecision = date => {
   const dateWithSecondsPrecision = new Date(date);
   dateWithSecondsPrecision.setMilliseconds(0);
   return dateWithSecondsPrecision;
@@ -9288,7 +2929,7 @@ const updateMeta = async ({
       source,
       compiledFileUrl
     });
-    const sourceStats = await readFileSystemNodeStat(sourceFileUrl, {
+    const sourceStats = await util.readFileSystemNodeStat(sourceFileUrl, {
       nullIfNotFound: true
     });
 
@@ -9313,8 +2954,8 @@ const updateMeta = async ({
     } = compileResult;
 
     if (writeCompiledSourceFile) {
-      logger.debug(`write compiled file at ${urlToFileSystemPath(compiledFileUrl)}`);
-      promises.push(writeFile(compiledFileUrl, compiledSource));
+      logger.debug(`write compiled file at ${util.urlToFileSystemPath(compiledFileUrl)}`);
+      promises.push(util.writeFile(compiledFileUrl, compiledSource));
     }
 
     if (writeAssetsFile) {
@@ -9323,8 +2964,8 @@ const updateMeta = async ({
           compiledFileUrl,
           asset
         });
-        logger.debug(`write compiled file asset at ${urlToFileSystemPath(assetFileUrl)}`);
-        return writeFile(assetFileUrl, assetsContent[index]);
+        logger.debug(`write compiled file asset at ${util.urlToFileSystemPath(assetFileUrl)}`);
+        return util.writeFile(assetFileUrl, assetsContent[index]);
       }));
     }
   }
@@ -9336,9 +2977,9 @@ const updateMeta = async ({
       latestMeta = {
         contentType,
         sources,
-        sourcesEtag: sourcesContent.map(sourceContent => bufferToEtag(Buffer.from(sourceContent))),
+        sourcesEtag: sourcesContent.map(sourceContent => util.bufferToEtag(Buffer.from(sourceContent))),
         assets,
-        assetsEtag: assetsContent.map(assetContent => bufferToEtag(Buffer.from(assetContent))),
+        assetsEtag: assetsContent.map(assetContent => util.bufferToEtag(Buffer.from(assetContent))),
         createdMs: Number(Date.now()),
         lastModifiedMs: Number(Date.now()),
         ...(cacheHitTracking ? {
@@ -9349,9 +2990,9 @@ const updateMeta = async ({
     } else if (isUpdated) {
       latestMeta = { ...meta,
         sources,
-        sourcesEtag: sourcesContent.map(sourceContent => bufferToEtag(Buffer.from(sourceContent))),
+        sourcesEtag: sourcesContent.map(sourceContent => util.bufferToEtag(Buffer.from(sourceContent))),
         assets,
-        assetsEtag: assetsContent.map(assetContent => bufferToEtag(Buffer.from(assetContent))),
+        assetsEtag: assetsContent.map(assetContent => util.bufferToEtag(Buffer.from(assetContent))),
         lastModifiedMs: Number(Date.now()),
         ...(cacheHitTracking ? {
           matchCount: meta.matchCount + 1,
@@ -9370,8 +3011,8 @@ const updateMeta = async ({
     const metaJsonFileUrl = resolveMetaJsonFileUrl({
       compiledFileUrl
     });
-    logger.debug(`write compiled file meta at ${urlToFileSystemPath(metaJsonFileUrl)}`);
-    promises.push(writeFile(metaJsonFileUrl, JSON.stringify(latestMeta, null, "  ")));
+    logger.debug(`write compiled file meta at ${util.urlToFileSystemPath(metaJsonFileUrl)}`);
+    promises.push(util.writeFile(metaJsonFileUrl, JSON.stringify(latestMeta, null, "  ")));
   }
 
   return Promise.all(promises);
@@ -9610,7 +3251,7 @@ const startAsap = async (fn, {
   const metaJsonFileUrl = resolveMetaJsonFileUrl({
     compiledFileUrl
   });
-  const metaJsonFilePath = urlToFileSystemPath(metaJsonFileUrl);
+  const metaJsonFilePath = util.urlToFileSystemPath(metaJsonFileUrl);
   logger.debug(`lock ${metaJsonFilePath}`); // in case this process try to concurrently access meta we wait for previous to be done
 
   const unlockLocal = await lockForRessource(metaJsonFilePath);
@@ -9621,7 +3262,7 @@ const startAsap = async (fn, {
     // after that we use a lock pathnameRelative to be sure we don't conflict with other process
     // trying to do the same (mapy happen when spawining multiple server for instance)
     // https://github.com/moxystudio/node-proper-lockfile/issues/69
-    await ensureParentDirectories(metaJsonFilePath); // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
+    await util.ensureParentDirectories(metaJsonFilePath); // https://github.com/moxystudio/node-proper-lockfile#lockfile-options
 
     unlockInterProcessLock = await lockfile.lock(metaJsonFilePath, {
       realpath: false,
@@ -9714,13 +3355,13 @@ const serveCompiledFile = async ({
       compile
     });
     projectFileRequestedCallback({
-      relativeUrl: urlToRelativeUrl(originalFileUrl, projectDirectoryUrl),
+      relativeUrl: util.urlToRelativeUrl(originalFileUrl, projectDirectoryUrl),
       request
     });
     compileResult.sources.forEach(source => {
-      const sourceFileUrl = resolveUrl$1(source, `${compiledFileUrl}__asset__/`);
+      const sourceFileUrl = util.resolveUrl(source, `${compiledFileUrl}__asset__/`);
       projectFileRequestedCallback({
-        relativeUrl: urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl),
+        relativeUrl: util.urlToRelativeUrl(sourceFileUrl, projectDirectoryUrl),
         request
       });
     });
@@ -9741,7 +3382,7 @@ const serveCompiledFile = async ({
         headers: {
           "content-length": Buffer.byteLength(compiledSource),
           "content-type": contentType,
-          "eTag": bufferToEtag(Buffer.from(compiledSource))
+          "eTag": util.bufferToEtag(Buffer.from(compiledSource))
         },
         body: compiledSource
       };
@@ -9776,7 +3417,7 @@ const serveCompiledFile = async ({
     };
   } catch (error) {
     if (error && error.code === "PARSE_ERROR") {
-      const relativeUrl = urlToRelativeUrl(fileSystemPathToUrl(error.data.filename), projectDirectoryUrl);
+      const relativeUrl = util.urlToRelativeUrl(util.fileSystemPathToUrl(error.data.filename), projectDirectoryUrl);
       projectFileRequestedCallback({
         relativeUrl,
         request
@@ -9801,17 +3442,17 @@ const serveCompiledFile = async ({
       };
     }
 
-    return convertFileSystemErrorToResponseProperties(error);
+    return server.convertFileSystemErrorToResponseProperties(error);
   }
 };
 
 https.globalAgent.options.rejectUnauthorized = false;
-const fetchUrl$1 = async (url, {
+const fetchUrl = async (url, {
   simplified = true,
   ignoreHttpsError = true,
   ...rest
 } = {}) => {
-  return fetchUrl(url, {
+  return server.fetchUrl(url, {
     simplified,
     ignoreHttpsError,
     ...rest
@@ -9862,8 +3503,8 @@ const fetchSourcemap = async ({
     });
   }
 
-  const sourcemapUrl = resolveUrl$1(sourcemapParsingResult.sourcemapURL, moduleUrl);
-  const sourcemapResponse = await fetchUrl$1(sourcemapUrl, {
+  const sourcemapUrl = util.resolveUrl(sourcemapParsingResult.sourcemapURL, moduleUrl);
+  const sourcemapResponse = await fetchUrl(sourcemapUrl, {
     cancellationToken,
     ignoreHttpsError: true
   });
@@ -9981,20 +3622,20 @@ const createJsenvRollupPlugin = async ({
 }) => {
   const moduleContentMap = {};
   const redirectionMap = {};
-  const compileDirectoryRemoteUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, compileServerOrigin);
+  const compileDirectoryRemoteUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, compileServerOrigin);
   const chunkId = `${Object.keys(entryPointMap)[0]}.js`;
-  const importMap = normalizeImportMap(compileServerImportMap, compileDirectoryRemoteUrl);
+  const importMap$1 = importMap.normalizeImportMap(compileServerImportMap, compileDirectoryRemoteUrl);
   const jsenvRollupPlugin = {
     name: "jsenv",
     resolveId: (specifier, importer = compileDirectoryRemoteUrl) => {
-      if (isFileSystemPath(importer)) {
-        importer = fileSystemPathToUrl(importer);
+      if (util.isFileSystemPath(importer)) {
+        importer = util.fileSystemPathToUrl(importer);
       }
 
-      const importUrl = resolveImport({
+      const importUrl = importMap.resolveImport({
         specifier,
         importer,
-        importMap,
+        importMap: importMap$1,
         defaultExtension: importDefaultExtension
       }); // const rollupId = urlToRollupId(importUrl, { projectDirectoryUrl, compileServerOrigin })
 
@@ -10036,10 +3677,10 @@ const createJsenvRollupPlugin = async ({
     // transform: async (moduleContent, rollupId) => {}
     outputOptions: options => {
       // rollup does not expects to have http dependency in the mix
-      const bundleSourcemapFileUrl = resolveUrl$1(`./${chunkId}.map`, bundleDirectoryUrl); // options.sourcemapFile = bundleSourcemapFileUrl
+      const bundleSourcemapFileUrl = util.resolveUrl(`./${chunkId}.map`, bundleDirectoryUrl); // options.sourcemapFile = bundleSourcemapFileUrl
 
       const relativePathToUrl = relativePath => {
-        const rollupUrl = resolveUrl$1(relativePath, bundleSourcemapFileUrl);
+        const rollupUrl = util.resolveUrl(relativePath, bundleSourcemapFileUrl);
         let url; // fix rollup not supporting source being http
 
         const httpIndex = rollupUrl.indexOf(`http:/`);
@@ -10069,7 +3710,7 @@ const createJsenvRollupPlugin = async ({
         if (url.startsWith(compileServerOrigin)) {
           const relativeUrl = url.slice(`${compileServerOrigin}/`.length);
           const fileUrl = `${projectDirectoryUrl}${relativeUrl}`;
-          relativePath = urlToRelativeUrl(fileUrl, bundleSourcemapFileUrl);
+          relativePath = util.urlToRelativeUrl(fileUrl, bundleSourcemapFileUrl);
           return relativePath;
         }
 
@@ -10111,15 +3752,15 @@ const createJsenvRollupPlugin = async ({
         const chunk = bundle[key];
         mappings[`${chunk.name}.js`] = chunk.fileName;
       });
-      const mappingKeysSorted = Object.keys(mappings).sort(comparePathnames);
+      const mappingKeysSorted = Object.keys(mappings).sort(util.comparePathnames);
       const manifest = {};
       mappingKeysSorted.forEach(key => {
         manifest[key] = mappings[key];
       });
-      const manifestFileUrl = resolveUrl$1("manifest.json", bundleDirectoryUrl);
-      await writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "));
+      const manifestFileUrl = util.resolveUrl("manifest.json", bundleDirectoryUrl);
+      await util.writeFile(manifestFileUrl, JSON.stringify(manifest, null, "  "));
     },
-    writeBundle: async bundle => {
+    writeBundle: async (options, bundle) => {
       if (detectAndTransformIfNeededAsyncInsertedByRollup) {
         await transformAsyncInsertedByRollup({
           projectDirectoryUrl,
@@ -10236,7 +3877,7 @@ ${moduleUrl}`);
   };
 
   const getModule = async moduleUrl => {
-    const response = await fetchUrl$1(moduleUrl, {
+    const response = await fetchUrl(moduleUrl, {
       cancellationToken,
       ignoreHttpsError: true
     });
@@ -10312,7 +3953,7 @@ const transformAsyncInsertedByRollup = async ({
 
   await Promise.all(Object.keys(bundle).map(async bundleFilename => {
     const bundleInfo = bundle[bundleFilename];
-    const bundleFileUrl = resolveUrl$1(bundleFilename, bundleDirectoryUrl);
+    const bundleFileUrl = util.resolveUrl(bundleFilename, bundleDirectoryUrl);
     const {
       code,
       map
@@ -10330,7 +3971,7 @@ const transformAsyncInsertedByRollup = async ({
       // already done
       transformGlobalThis: false
     });
-    await Promise.all([writeFile(bundleFileUrl, writeSourceMappingURL(code, `./${bundleFilename}.map`)), writeFile(`${bundleFileUrl}.map`, JSON.stringify(map))]);
+    await Promise.all([util.writeFile(bundleFileUrl, writeSourceMappingURL(code, `./${bundleFilename}.map`)), util.writeFile(`${bundleFileUrl}.map`, JSON.stringify(map))]);
   }));
 };
 
@@ -10344,10 +3985,6 @@ const isBareSpecifierForNativeNodeModule = specifier => {
   return NATIVE_NODE_MODULE_SPECIFIER_ARRAY.includes(specifier);
 };
 
-const {
-  rollup: rollup$1
-} = require$1("rollup");
-
 const generateBundleUsingRollup = async ({
   cancellationToken,
   logger,
@@ -10358,6 +3995,7 @@ const generateBundleUsingRollup = async ({
   compileServerOrigin,
   compileServerImportMap,
   importDefaultExtension,
+  externalImportSpecifiers,
   node,
   browser,
   babelPluginMap,
@@ -10393,15 +4031,37 @@ const generateBundleUsingRollup = async ({
     minifyHtmlOptions,
     manifestFile
   });
+
+  const nativeModulePredicate = specifier => {
+    if (node && isBareSpecifierForNativeNodeModule(specifier)) return true; // for now browser have no native module
+    // and we don't know how we will handle that
+
+    if (browser) return false;
+    return false;
+  };
+
+  const external = id => {
+    if (externalImportSpecifiers.includes(id)) {
+      return true;
+    }
+
+    if (nativeModulePredicate(id)) {
+      return true;
+    }
+
+    return false;
+  };
+
   const rollupBundle = await useRollup({
     cancellationToken,
     logger,
     entryPointMap,
-    node,
-    browser,
     jsenvRollupPlugin,
     format,
-    formatInputOptions,
+    formatInputOptions: {
+      external,
+      ...formatInputOptions
+    },
     formatOutputOptions,
     bundleDirectoryUrl,
     sourcemapExcludeSources,
@@ -10417,8 +4077,6 @@ const useRollup = async ({
   cancellationToken,
   logger,
   entryPointMap,
-  node,
-  browser,
   jsenvRollupPlugin,
   format,
   formatInputOptions,
@@ -10432,18 +4090,9 @@ parse bundle
 --- entry point map ---
 ${JSON.stringify(entryPointMap, null, "  ")}
 `);
-
-  const nativeModulePredicate = specifier => {
-    if (node && isBareSpecifierForNativeNodeModule(specifier)) return true; // for now browser have no native module
-    // and we don't know how we will handle that
-
-    if (browser) return false;
-    return false;
-  };
-
-  const rollupBundle = await createOperation({
+  const rollupBundle = await cancellation.createOperation({
     cancellationToken,
-    start: () => rollup$1({
+    start: () => rollup.rollup({
       // about cache here, we should/could reuse previous rollup call
       // to get the cache from the entryPointMap
       // as shown here: https://rollupjs.org/guide/en#cache
@@ -10461,7 +4110,6 @@ ${JSON.stringify(entryPointMap, null, "  ")}
         warn(warning);
       },
       input: entryPointMap,
-      external: id => nativeModulePredicate(id),
       plugins: [jsenvRollupPlugin],
       ...formatInputOptions
     })
@@ -10482,7 +4130,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     // presence in babelPluginMap
     preferConst: false,
     // https://rollupjs.org/guide/en#output-dir
-    dir: urlToFileSystemPath(bundleDirectoryUrl),
+    dir: util.urlToFileSystemPath(bundleDirectoryUrl),
     // https://rollupjs.org/guide/en#output-format
     format: formatToRollupFormat(format),
     // https://rollupjs.org/guide/en#output-sourcemap
@@ -10490,7 +4138,7 @@ ${JSON.stringify(entryPointMap, null, "  ")}
     sourcemapExcludeSources,
     ...formatOutputOptions
   };
-  const rollupOutputArray = await createOperation({
+  const rollupOutputArray = await cancellation.createOperation({
     cancellationToken,
     start: () => {
       if (writeOnFileSystem) {
@@ -10551,7 +4199,7 @@ const bundleToCompilationResult = ({
         return;
       }
 
-      const relativeUrl = urlToRelativeUrl(moduleUrl, `${compiledFileUrl}__asset__/meta.json`);
+      const relativeUrl = util.urlToRelativeUrl(moduleUrl, `${compiledFileUrl}__asset__/meta.json`);
 
       if (!sources.includes(relativeUrl)) {
         sources.push(relativeUrl);
@@ -10565,18 +4213,18 @@ const bundleToCompilationResult = ({
   const mainChunk = parseRollupChunk(rollupBundle.output[0], {
     moduleContentMap,
     sourcemapFileUrl,
-    sourcemapFileRelativeUrlForModule: urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl)
+    sourcemapFileRelativeUrlForModule: util.urlToRelativeUrl(sourcemapFileUrl, compiledFileUrl)
   }); // mainChunk.sourcemap.file = fileUrlToRelativePath(originalFileUrl, sourcemapFileUrl)
 
   trackDependencies(mainChunk.dependencyMap);
-  assets.push(urlToRelativeUrl(sourcemapFileUrl, `${compiledFileUrl}__asset__/`));
+  assets.push(util.urlToRelativeUrl(sourcemapFileUrl, `${compiledFileUrl}__asset__/`));
   assetsContent.push(JSON.stringify(mainChunk.sourcemap, null, "  "));
   rollupBundle.output.slice(1).forEach(rollupChunk => {
     const chunkFileName = rollupChunk.fileName;
     const chunk = parseRollupChunk(rollupChunk, {
       moduleContentMap,
       compiledFileUrl,
-      sourcemapFileUrl: resolveUrl$1(rollupChunk.map.file, compiledFileUrl)
+      sourcemapFileUrl: util.resolveUrl(rollupChunk.map.file, compiledFileUrl)
     });
     trackDependencies(chunk.dependencyMap);
     assets.push(chunkFileName);
@@ -10602,7 +4250,7 @@ const parseRollupChunk = (rollupChunk, {
   const dependencyMap = {};
   const mainModuleSourcemap = rollupChunk.map;
   mainModuleSourcemap.sources.forEach((source, index) => {
-    const moduleUrl = resolveUrl$1(source, sourcemapFileUrl);
+    const moduleUrl = util.resolveUrl(source, sourcemapFileUrl);
     dependencyMap[moduleUrl] = getModuleContent({
       moduleContentMap,
       mainModuleSourcemap,
@@ -10642,7 +4290,7 @@ const getModuleContent = ({
 
 
   if (moduleUrl.startsWith("file:///")) {
-    const moduleFilePath = urlToFileSystemPath(moduleUrl); // this could be async but it's ok for now
+    const moduleFilePath = util.urlToFileSystemPath(moduleUrl); // this could be async but it's ok for now
     // making it async could be harder than it seems
     // because sourcesContent must be in sync with sources
 
@@ -10676,6 +4324,7 @@ const serveBundle = async ({
   compileServerOrigin,
   compileServerImportMap,
   importDefaultExtension,
+  externalImportSpecifiers = [],
   format,
   formatOutputOptions = {},
   node = format === "commonjs",
@@ -10685,7 +4334,7 @@ const serveBundle = async ({
   babelPluginMap
 }) => {
   const compile = async () => {
-    const originalFileRelativeUrl = urlToRelativeUrl(originalFileUrl, projectDirectoryUrl);
+    const originalFileRelativeUrl = util.urlToRelativeUrl(originalFileUrl, projectDirectoryUrl);
     const entryExtname = path.extname(originalFileRelativeUrl);
     const entryBasename = path.basename(originalFileRelativeUrl, entryExtname);
     const entryName = entryBasename;
@@ -10700,11 +4349,12 @@ const serveBundle = async ({
       entryPointMap,
       // bundleDirectoryUrl is just theorical because of writeOnFileSystem: false
       // but still important to know where the files will be written
-      bundleDirectoryUrl: resolveDirectoryUrl("./", compiledFileUrl),
+      bundleDirectoryUrl: util.resolveDirectoryUrl("./", compiledFileUrl),
       compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
       compileServerOrigin,
       compileServerImportMap,
       importDefaultExtension,
+      externalImportSpecifiers,
       node,
       browser,
       babelPluginMap,
@@ -10759,7 +4409,7 @@ const serveCompiledJs = async ({
     headers
   } = request;
   const requestUrl = `${origin}${ressource}`;
-  const outDirectoryRemoteUrl = resolveDirectoryUrl(outDirectoryRelativeUrl, origin); // not inside compile directory -> nothing to compile
+  const outDirectoryRemoteUrl = util.resolveDirectoryUrl(outDirectoryRelativeUrl, origin); // not inside compile directory -> nothing to compile
 
   if (!requestUrl.startsWith(outDirectoryRemoteUrl)) {
     return null;
@@ -10770,7 +4420,7 @@ const serveCompiledJs = async ({
   // if asked by the client
 
   if (!afterOutDirectory.includes("/") || afterOutDirectory[0] === "/") {
-    return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
+    return server.serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
       method,
       headers
     });
@@ -10809,21 +4459,21 @@ const serveCompiledJs = async ({
   // mais ça ça vient plutot du bundle
   // qui doit gérer content/contentRaw
 
-  const contentType = urlToContentType(requestUrl);
+  const contentType = server.urlToContentType(requestUrl);
 
   if (contentType !== "application/javascript") {
     return {
       status: 307,
       headers: {
-        location: resolveUrl$1(originalFileRelativeUrl, origin)
+        location: util.resolveUrl(originalFileRelativeUrl, origin)
       }
     };
   }
 
   const originalFileUrl = `${projectDirectoryUrl}${originalFileRelativeUrl}`;
   const compileDirectoryRelativeUrl = `${outDirectoryRelativeUrl}${compileId}/`;
-  const compileDirectoryUrl = resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl);
-  const compiledFileUrl = resolveUrl$1(originalFileRelativeUrl, compileDirectoryUrl);
+  const compileDirectoryUrl = util.resolveDirectoryUrl(compileDirectoryRelativeUrl, projectDirectoryUrl);
+  const compiledFileUrl = util.resolveUrl(originalFileRelativeUrl, compileDirectoryUrl);
 
   if (compileId === COMPILE_ID_GLOBAL_BUNDLE || compileId === COMPILE_ID_COMMONJS_BUNDLE) {
     return serveBundle({
@@ -10854,7 +4504,7 @@ const serveCompiledJs = async ({
     projectFileRequestedCallback,
     request,
     compile: async () => {
-      const code = await readFile(originalFileUrl);
+      const code = await util.readFile(originalFileUrl);
       let compiledIdForGroupMap;
       let babelPluginMapForGroupMap;
 
@@ -10937,7 +4587,7 @@ const urlIsAsset = url => {
 
 /* eslint-disable import/max-dependencies */
 const startCompileServer = async ({
-  cancellationToken = createCancellationToken(),
+  cancellationToken = cancellation.createCancellationToken(),
   compileServerLogLevel,
   // js compile options
   transformTopLevelAwait = true,
@@ -10982,21 +4632,21 @@ const startCompileServer = async ({
   assertImportMapFileRelativeUrl({
     importMapFileRelativeUrl
   });
-  const importMapFileUrl = resolveUrl$1(importMapFileRelativeUrl, projectDirectoryUrl);
+  const importMapFileUrl = util.resolveUrl(importMapFileRelativeUrl, projectDirectoryUrl);
   assertImportMapFileInsideProject({
     importMapFileUrl,
     projectDirectoryUrl
   }); // importMapFileRelativeUrl normalization
 
-  importMapFileRelativeUrl = urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl);
+  importMapFileRelativeUrl = util.urlToRelativeUrl(importMapFileUrl, projectDirectoryUrl);
 
   if (typeof jsenvDirectoryRelativeUrl !== "string") {
     throw new TypeError(`jsenvDirectoryRelativeUrl must be a string. got ${jsenvDirectoryRelativeUrl}`);
   }
 
-  const jsenvDirectoryUrl = resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl); // jsenvDirectoryRelativeUrl normalization
+  const jsenvDirectoryUrl = util.resolveDirectoryUrl(jsenvDirectoryRelativeUrl, projectDirectoryUrl); // jsenvDirectoryRelativeUrl normalization
 
-  jsenvDirectoryRelativeUrl = urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl);
+  jsenvDirectoryRelativeUrl = util.urlToRelativeUrl(jsenvDirectoryUrl, projectDirectoryUrl);
 
   if (!jsenvDirectoryUrl.startsWith(projectDirectoryUrl)) {
     throw new TypeError(`jsenv directory must be inside project directory
@@ -11010,9 +4660,9 @@ ${projectDirectoryUrl}`);
     throw new TypeError(`outDirectoryName must be a string. got ${outDirectoryName}`);
   }
 
-  const outDirectoryUrl = resolveDirectoryUrl(outDirectoryName, jsenvDirectoryUrl);
-  const outDirectoryRelativeUrl = urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl);
-  const logger = createLogger({
+  const outDirectoryUrl = util.resolveDirectoryUrl(outDirectoryName, jsenvDirectoryUrl);
+  const outDirectoryRelativeUrl = util.urlToRelativeUrl(outDirectoryUrl, projectDirectoryUrl);
+  const logger$1 = logger.createLogger({
     logLevel: compileServerLogLevel
   });
   const groupMap = generateGroupMap({
@@ -11032,20 +4682,20 @@ ${projectDirectoryUrl}`);
   };
 
   if (jsenvDirectoryClean) {
-    logger.info(`clean jsenv directory at ${jsenvDirectoryUrl}`);
-    await ensureEmptyDirectory(jsenvDirectoryUrl);
+    logger$1.info(`clean jsenv directory at ${jsenvDirectoryUrl}`);
+    await util.ensureEmptyDirectory(jsenvDirectoryUrl);
   }
 
   if (useFilesystemAsCache) {
     await cleanOutDirectoryIfObsolete({
-      logger,
+      logger: logger$1,
       outDirectoryUrl,
       outDirectoryMeta
     });
   }
 
-  const packageFileUrl = resolveUrl$1("./package.json", jsenvCoreDirectoryUrl);
-  const packageFilePath = urlToFileSystemPath(packageFileUrl);
+  const packageFileUrl = util.resolveUrl("./package.json", jsenvCoreDirectoryUrl);
+  const packageFilePath = util.urlToFileSystemPath(packageFileUrl);
   const packageVersion = readPackage(packageFilePath).version;
 
   if (projectFileRequestedCallback) {
@@ -11078,7 +4728,7 @@ ${projectDirectoryUrl}`);
     projectFileRequestedCallback = () => {};
   }
 
-  const [compileServer, importMapForCompileServer] = await Promise.all([startServer({
+  const [compileServer, importMapForCompileServer] = await Promise.all([server.startServer({
     cancellationToken,
     logLevel: compileServerLogLevel,
     serverName: "compile server",
@@ -11089,7 +4739,7 @@ ${projectDirectoryUrl}`);
     port: compileServerPort,
     sendInternalErrorStack: true,
     requestToResponse: request => {
-      return firstService(() => {
+      return server.firstService(() => {
         const {
           origin,
           ressource,
@@ -11099,8 +4749,8 @@ ${projectDirectoryUrl}`);
         const requestUrl = `${origin}${ressource}`; // serve asset files directly
 
         if (urlIsAsset(requestUrl)) {
-          const fileUrl = resolveUrl$1(ressource.slice(1), projectDirectoryUrl);
-          return serveFile(fileUrl, {
+          const fileUrl = util.resolveUrl(ressource.slice(1), projectDirectoryUrl);
+          return server.serveFile(fileUrl, {
             method,
             headers
           });
@@ -11110,7 +4760,7 @@ ${projectDirectoryUrl}`);
       }, () => {
         return serveCompiledJs({
           cancellationToken,
-          logger,
+          logger: logger$1,
           projectDirectoryUrl,
           outDirectoryRelativeUrl,
           compileServerImportMap: importMapForCompileServer,
@@ -11136,11 +4786,11 @@ ${projectDirectoryUrl}`);
     accessControlAllowRequestOrigin: true,
     accessControlAllowRequestMethod: true,
     accessControlAllowRequestHeaders: true,
-    accessControlAllowedRequestHeaders: [...jsenvAccessControlAllowedHeaders, "x-jsenv-execution-id"],
+    accessControlAllowedRequestHeaders: [...server.jsenvAccessControlAllowedHeaders, "x-jsenv-execution-id"],
     accessControlAllowCredentials: true,
     keepProcessAlive
   }), generateImportMapForCompileServer({
-    logger,
+    logger: logger$1,
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
     importMapFileRelativeUrl
@@ -11157,20 +4807,20 @@ ${projectDirectoryUrl}`);
 
   const envToString = () => JSON.stringify(env, null, "  ");
 
-  const importMapOutFileUrl = resolveUrl$1("./importMap.json", outDirectoryUrl);
-  const groupMapOutFileUrl = resolveUrl$1("./groupMap.json", outDirectoryUrl);
-  const envOutFileUrl = resolveUrl$1("./env.json", outDirectoryUrl);
-  await Promise.all([writeFile(importMapOutFileUrl, importMapToString()), writeFile(groupMapOutFileUrl, groupMapToString()), writeFile(envOutFileUrl, envToString())]);
+  const importMapOutFileUrl = util.resolveUrl("./importMap.json", outDirectoryUrl);
+  const groupMapOutFileUrl = util.resolveUrl("./groupMap.json", outDirectoryUrl);
+  const envOutFileUrl = util.resolveUrl("./env.json", outDirectoryUrl);
+  await Promise.all([util.writeFile(importMapOutFileUrl, importMapToString()), util.writeFile(groupMapOutFileUrl, groupMapToString()), util.writeFile(envOutFileUrl, envToString())]);
 
   if (!writeOnFilesystem) {
     compileServer.stoppedPromise.then(() => {
-      removeFileSystemNode(importMapOutFileUrl, {
+      util.removeFileSystemNode(importMapOutFileUrl, {
         allowUseless: true
       });
-      removeFileSystemNode(groupMapOutFileUrl, {
+      util.removeFileSystemNode(groupMapOutFileUrl, {
         allowUseless: true
       });
-      removeFileSystemNode(envOutFileUrl);
+      util.removeFileSystemNode(envOutFileUrl);
     });
   }
 
@@ -11195,7 +4845,7 @@ ${projectDirectoryUrl}`);
       }
     };
 
-    const unregister = registerFileLifecycle(packageFilePath, {
+    const unregister = util.registerFileLifecycle(packageFilePath, {
       added: checkPackageVersion,
       updated: checkPackageVersion,
       keepProcessAlive: false
@@ -11240,9 +4890,9 @@ const serveProjectFiles = async ({
     relativeUrl,
     request
   });
-  const fileUrl = resolveUrl$1(relativeUrl, projectDirectoryUrl);
-  const filePath = urlToFileSystemPath(fileUrl);
-  const responsePromise = serveFile(filePath, {
+  const fileUrl = util.resolveUrl(relativeUrl, projectDirectoryUrl);
+  const filePath = util.urlToFileSystemPath(fileUrl);
+  const responsePromise = server.serveFile(filePath, {
     method,
     headers
   });
@@ -11274,7 +4924,7 @@ const generateImportMapForCompileServer = async ({
   outDirectoryRelativeUrl,
   importMapFileRelativeUrl
 }) => {
-  const importMapForJsenvCore = await generateImportMapForPackage({
+  const importMapForJsenvCore = await nodeModuleImportMap.generateImportMapForPackage({
     logger,
     projectDirectoryUrl: jsenvCoreDirectoryUrl,
     rootProjectDirectoryUrl: projectDirectoryUrl,
@@ -11300,8 +4950,8 @@ const generateImportMapForCompileServer = async ({
     projectDirectoryUrl,
     importMapFileRelativeUrl
   });
-  const importMap = [importMapForJsenvCore, importMapInternal, importMapForProject].reduce((previous, current) => composeTwoImportMaps(previous, current), {});
-  return importMap;
+  const importMap$1 = [importMapForJsenvCore, importMapInternal, importMapForProject].reduce((previous, current) => importMap.composeTwoImportMaps(previous, current), {});
+  return importMap$1;
 };
 
 const cleanOutDirectoryIfObsolete = async ({
@@ -11309,17 +4959,17 @@ const cleanOutDirectoryIfObsolete = async ({
   outDirectoryUrl,
   outDirectoryMeta
 }) => {
-  const jsenvCorePackageFileUrl = resolveUrl$1("./package.json", jsenvCoreDirectoryUrl);
-  const jsenvCorePackageFilePath = urlToFileSystemPath(jsenvCorePackageFileUrl);
+  const jsenvCorePackageFileUrl = util.resolveUrl("./package.json", jsenvCoreDirectoryUrl);
+  const jsenvCorePackageFilePath = util.urlToFileSystemPath(jsenvCorePackageFileUrl);
   const jsenvCorePackageVersion = readPackage(jsenvCorePackageFilePath).version;
   outDirectoryMeta = { ...outDirectoryMeta,
     jsenvCorePackageVersion
   };
-  const metaFileUrl = resolveUrl$1("./meta.json", outDirectoryUrl);
+  const metaFileUrl = util.resolveUrl("./meta.json", outDirectoryUrl);
   let previousOutDirectoryMeta;
 
   try {
-    const source = await readFile(metaFileUrl);
+    const source = await util.readFile(metaFileUrl);
     previousOutDirectoryMeta = JSON.parse(source);
   } catch (e) {
     if (e && e.code === "ENOENT") {
@@ -11330,11 +4980,11 @@ const cleanOutDirectoryIfObsolete = async ({
   }
 
   if (previousOutDirectoryMeta !== null && JSON.stringify(previousOutDirectoryMeta) !== JSON.stringify(outDirectoryMeta)) {
-    logger.info(`clean out directory at ${urlToFileSystemPath(outDirectoryUrl)}`);
-    await ensureEmptyDirectory(outDirectoryUrl);
+    logger.info(`clean out directory at ${util.urlToFileSystemPath(outDirectoryUrl)}`);
+    await util.ensureEmptyDirectory(outDirectoryUrl);
   }
 
-  await writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "));
+  await util.writeFile(metaFileUrl, JSON.stringify(outDirectoryMeta, null, "  "));
 };
 
 const {
@@ -11363,9 +5013,8 @@ const TIMING_BEFORE_EXECUTION = "before-execution";
 const TIMING_DURING_EXECUTION = "during-execution";
 const TIMING_AFTER_EXECUTION = "after-execution";
 const launchAndExecute = async ({
-  cancellationToken = createCancellationToken(),
-  launchLogger,
-  executeLogger,
+  cancellationToken = cancellation.createCancellationToken(),
+  executionLogLevel,
   fileRelativeUrl,
   launch,
   // stopAfterExecute false by default because you want to keep browser alive
@@ -11392,6 +5041,10 @@ const launchAndExecute = async ({
   collectCoverage = false,
   ...rest
 } = {}) => {
+  const logger$1 = logger.createLogger({
+    logLevel: executionLogLevel
+  });
+
   if (typeof fileRelativeUrl !== "string") {
     throw new TypeError(`fileRelativeUrl must be a string, got ${fileRelativeUrl}`);
   }
@@ -11481,8 +5134,7 @@ const launchAndExecute = async ({
 
   const executionResult = await computeRawExecutionResult({
     cancellationToken,
-    launchLogger,
-    executeLogger,
+    logger: logger$1,
     fileRelativeUrl,
     launch,
     stopAfterExecute,
@@ -11538,8 +5190,8 @@ const computeRawExecutionResult = async ({
   const timeoutCancel = () => clearTimeout(id);
 
   cancellationToken.register(timeoutCancel);
-  const timeoutCancellationSource = createCancellationSource();
-  const externalOrTimeoutCancellationToken = composeCancellationToken(cancellationToken, timeoutCancellationSource.token);
+  const timeoutCancellationSource = cancellation.createCancellationSource();
+  const externalOrTimeoutCancellationToken = cancellation.composeCancellationToken(cancellationToken, timeoutCancellationSource.token);
 
   try {
     const executionResult = await computeExecutionResult({
@@ -11549,7 +5201,7 @@ const computeRawExecutionResult = async ({
     timeoutCancel();
     return executionResult;
   } catch (e) {
-    if (errorToCancelReason(e) === TIMEOUT_CANCEL_REASON) {
+    if (cancellation.errorToCancelReason(e) === TIMEOUT_CANCEL_REASON) {
       return createTimedoutExecutionResult();
     }
 
@@ -11559,8 +5211,7 @@ const computeRawExecutionResult = async ({
 
 const computeExecutionResult = async ({
   cancellationToken,
-  launchLogger,
-  executeLogger,
+  logger,
   fileRelativeUrl,
   launch,
   stopAfterExecute,
@@ -11573,13 +5224,13 @@ const computeExecutionResult = async ({
   runtimeDisconnectCallback,
   ...rest
 }) => {
-  launchLogger.debug(`launch execution for ${fileRelativeUrl}`);
-  const launchOperation = createStoppableOperation({
+  logger.debug(`launch runtime environment for ${fileRelativeUrl}`);
+  const launchOperation = cancellation.createStoppableOperation({
     cancellationToken,
     start: async () => {
       const value = await launch({
         cancellationToken,
-        logger: launchLogger,
+        logger,
         ...rest
       });
       runtimeStartedCallback({
@@ -11588,60 +5239,68 @@ const computeExecutionResult = async ({
       });
       return value;
     },
-    stop: async (runtime, reason) => {
-      // external code can cancel using cancellationToken at any time.
-      // (livereloading note: we would do that and listen for stoppedCallback before restarting an operation)
+    stop: async ({
+      runtimeName,
+      runtimeVersion,
+      gracefulStop,
+      stop
+    }, reason) => {
+      const runtime = `${runtimeName}/${runtimeVersion}`; // external code can cancel using cancellationToken at any time.
       // it is important to keep the code inside this stop function because once cancelled
       // all code after the operation won't execute because it will be rejected with
       // the cancellation error
-      let gracefulStop;
 
-      if (runtime.gracefulStop && gracefulStopAllocatedMs) {
-        launchLogger.debug(`${fileRelativeUrl} gracefulStop() because ${reason}`);
+      let stoppedGracefully;
+
+      if (gracefulStop && gracefulStopAllocatedMs) {
+        logger.debug(`${fileRelativeUrl} ${runtime}: runtime.gracefulStop() because ${reason}`);
 
         const gracefulStopPromise = (async () => {
-          await runtime.gracefulStop({
+          await gracefulStop({
             reason
           });
           return true;
         })();
 
         const stopPromise = (async () => {
-          const gracefulStop = await new Promise(async resolve => {
-            const timeoutId = setTimeout(resolve, gracefulStopAllocatedMs);
+          stoppedGracefully = await new Promise(async resolve => {
+            const timeoutId = setTimeout(() => {
+              resolve(false);
+            }, gracefulStopAllocatedMs);
 
             try {
               await gracefulStopPromise;
+              resolve(true);
             } finally {
               clearTimeout(timeoutId);
             }
           });
 
-          if (gracefulStop) {
-            return gracefulStop;
+          if (stoppedGracefully) {
+            return stoppedGracefully;
           }
 
-          launchLogger.debug(`${fileRelativeUrl} gracefulStop() pending after ${gracefulStopAllocatedMs}ms, use stop()`);
-          await runtime.stop({
+          logger.debug(`${fileRelativeUrl} ${runtime}: runtime.stop() because gracefulStop still pending after ${gracefulStopAllocatedMs}ms`);
+          await stop({
             reason,
             gracefulFailed: true
           });
           return false;
         })();
 
-        gracefulStop = await Promise.race([gracefulStopPromise, stopPromise]);
+        stoppedGracefully = await Promise.race([gracefulStopPromise, stopPromise]);
       } else {
-        await runtime.stop({
+        await stop({
           reason,
           gracefulFailed: false
         });
-        gracefulStop = false;
+        stoppedGracefully = false;
       }
 
       runtimeStoppedCallback({
-        gracefulStop
+        stoppedGracefully
       });
-      launchLogger.debug(`${fileRelativeUrl} runtime stopped`);
+      logger.debug(`${fileRelativeUrl} ${runtime}: runtime stopped${stoppedGracefully ? " gracefully" : ""}`);
     }
   });
   const {
@@ -11654,17 +5313,17 @@ const computeExecutionResult = async ({
     disconnected
   } = await launchOperation;
   const runtime = `${runtimeName}/${runtimeVersion}`;
-  launchLogger.debug(`${runtime} started.
+  logger.debug(`${fileRelativeUrl} ${runtime}: runtime launched.
 --- options ---
 options: ${JSON.stringify(options, null, "  ")}`);
+  logger.debug(`${fileRelativeUrl} ${runtime}: start file execution.`);
   registerConsoleCallback(runtimeConsoleCallback);
-  executeLogger.debug(`${fileRelativeUrl} ${runtime}: start execution`);
-  const executeOperation = createOperation({
+  const executeOperation = cancellation.createOperation({
     cancellationToken,
     start: async () => {
       let timing = TIMING_BEFORE_EXECUTION;
       disconnected.then(() => {
-        executeLogger.debug(`${fileRelativeUrl} ${runtime}: disconnected ${timing}.`);
+        logger.debug(`${fileRelativeUrl} ${runtime}: runtime disconnected ${timing}.`);
         runtimeDisconnectCallback({
           timing
         });
@@ -11672,7 +5331,7 @@ options: ${JSON.stringify(options, null, "  ")}`);
       const executed = executeFile(fileRelativeUrl, rest);
       timing = TIMING_DURING_EXECUTION;
       registerErrorCallback(error => {
-        executeLogger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
+        logger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
 --- error stack ---
 ${error.stack}`);
         runtimeErrorCallback({
@@ -11697,13 +5356,13 @@ ${error.stack}`);
       } = executionResult;
 
       if (status === "errored") {
-        executeLogger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
+        logger.error(`${fileRelativeUrl} ${runtime}: error ${timing}.
 --- error stack ---
 ${executionResult.error.stack}`);
         return createErroredExecutionResult(executionResult, rest);
       }
 
-      executeLogger.debug(`${fileRelativeUrl} ${runtime}: execution completed.`);
+      logger.debug(`${fileRelativeUrl} ${runtime}: execution completed.`);
       return createCompletedExecutionResult(executionResult, rest);
     }
   });
@@ -11793,11 +5452,10 @@ const promiseTrackRace = promiseArray => {
 };
 
 const execute = async ({
-  cancellationToken = createCancellationTokenForProcess(),
+  cancellationToken = util.createCancellationTokenForProcess(),
   logLevel = "warn",
   compileServerLogLevel = logLevel,
-  launchLogLevel = logLevel,
-  executeLogLevel = logLevel,
+  executionLogLevel = logLevel,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
@@ -11819,13 +5477,7 @@ const execute = async ({
   updateProcessExitCode = true,
   ...rest
 }) => {
-  return catchCancellation(async () => {
-    const launchLogger = createLogger({
-      logLevel: launchLogLevel
-    });
-    const executeLogger = createLogger({
-      logLevel: executeLogLevel
-    });
+  return util.catchCancellation(async () => {
     projectDirectoryUrl = assertProjectDirectoryUrl({
       projectDirectoryUrl
     });
@@ -11865,8 +5517,7 @@ const execute = async ({
     });
     return launchAndExecute({
       cancellationToken,
-      launchLogger,
-      executeLogger,
+      executionLogLevel,
       fileRelativeUrl,
       launch: params => launch({
         projectDirectoryUrl,
@@ -12009,10 +5660,10 @@ const generateExecutionSteps = async (plan, {
   cancellationToken,
   projectDirectoryUrl
 }) => {
-  const specifierMetaMap = metaMapToSpecifierMetaMap({
+  const specifierMetaMap = util.metaMapToSpecifierMetaMap({
     filePlan: plan
   });
-  const fileResultArray = await collectFiles({
+  const fileResultArray = await util.collectFiles({
     cancellationToken,
     directoryUrl: projectDirectoryUrl,
     specifierMetaMap,
@@ -12045,13 +5696,13 @@ const startCompileServerForExecutingPlan = async ({
   const promises = [];
 
   if (browserRuntimeAnticipatedGeneration) {
-    promises.push(fetchUrl$1(`${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-global-bundle/src/browserRuntime.js`, {
+    promises.push(fetchUrl(`${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-global-bundle/src/browserRuntime.js`, {
       ignoreHttpsError: true
     }));
   }
 
   if (nodeRuntimeAnticipatedGeneration) {
-    promises.push(fetchUrl$1(`${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodeRuntime.js`, {
+    promises.push(fetchUrl(`${compileServer.origin}/${compileServer.outDirectoryRelativeUrl}otherwise-commonjs-bundle/src/nodeRuntime.js`, {
       ignoreHttpsError: true
     }));
   }
@@ -12079,10 +5730,10 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
   projectDirectoryUrl,
   babelPluginMap
 }) => {
-  const fileUrl = resolveUrl$1(relativeUrl, projectDirectoryUrl);
-  const source = await createOperation({
+  const fileUrl = util.resolveUrl(relativeUrl, projectDirectoryUrl);
+  const source = await cancellation.createOperation({
     cancellationToken,
-    start: () => readFile(fileUrl)
+    start: () => util.readFile(fileUrl)
   }); // we must compile to get the coverage object
   // without evaluating the file because it would increment coverage
   // and execute code that can be doing anything
@@ -12090,10 +5741,10 @@ const relativeUrlToEmptyCoverage = async (relativeUrl, {
   try {
     const {
       metadata
-    } = await createOperation({
+    } = await cancellation.createOperation({
       cancellationToken,
       start: () => transformAsync$1(source, {
-        filename: urlToFileSystemPath(fileUrl),
+        filename: util.urlToFileSystemPath(fileUrl),
         filenameRelative: relativeUrl,
         configFile: false,
         babelrc: false,
@@ -12179,10 +5830,10 @@ const listRelativeFileUrlToCover = async ({
   projectDirectoryUrl,
   coverageConfig
 }) => {
-  const specifierMetaMapForCoverage = metaMapToSpecifierMetaMap({
+  const specifierMetaMapForCoverage = util.metaMapToSpecifierMetaMap({
     cover: coverageConfig
   });
-  const matchingFileResultArray = await collectFiles({
+  const matchingFileResultArray = await util.collectFiles({
     cancellationToken,
     directoryUrl: projectDirectoryUrl,
     specifierMetaMap: specifierMetaMapForCoverage,
@@ -12237,7 +5888,7 @@ const writeLog = (string, {
 } = {}) => {
   stream.write(`${string}
 `);
-  const remove = memoize(() => {
+  const remove = util.memoize(() => {
     const {
       columns = 80
     } = stream;
@@ -12276,16 +5927,16 @@ const writeLog = (string, {
     remove,
     update
   };
-};
+}; // maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
 
 const cross = "☓"; // "\u2613"
 
 const checkmark = "✔"; // "\u2714"
 
-const yellow$1 = "\x1b[33m";
-const magenta$1 = "\x1b[35m";
-const red$1 = "\x1b[31m";
-const green$1 = "\x1b[32m";
+const yellow = "\x1b[33m";
+const magenta = "\x1b[35m";
+const red = "\x1b[31m";
+const green = "\x1b[32m";
 const grey = "\x1b[39m";
 const ansiResetSequence = "\x1b[0m";
 
@@ -12353,13 +6004,13 @@ const createSummaryDetails = ({
   });
 };
 
-const createAllDisconnectedDetails = () => `all ${magenta$1}disconnected${ansiResetSequence}`;
+const createAllDisconnectedDetails = () => `all ${magenta}disconnected${ansiResetSequence}`;
 
-const createAllTimedoutDetails = () => `all ${yellow$1}timedout${ansiResetSequence}`;
+const createAllTimedoutDetails = () => `all ${yellow}timedout${ansiResetSequence}`;
 
-const createAllErroredDetails = () => `all ${red$1}errored${ansiResetSequence}`;
+const createAllErroredDetails = () => `all ${red}errored${ansiResetSequence}`;
 
-const createAllCompletedDetails = () => `all ${green$1}completed${ansiResetSequence}`;
+const createAllCompletedDetails = () => `all ${green}completed${ansiResetSequence}`;
 
 const createMixedDetails = ({
   disconnectedCount,
@@ -12370,19 +6021,19 @@ const createMixedDetails = ({
   const parts = [];
 
   if (disconnectedCount) {
-    parts.push(`${disconnectedCount} ${magenta$1}disconnected${ansiResetSequence}`);
+    parts.push(`${disconnectedCount} ${magenta}disconnected${ansiResetSequence}`);
   }
 
   if (timedoutCount) {
-    parts.push(`${timedoutCount} ${yellow$1}timed out${ansiResetSequence}`);
+    parts.push(`${timedoutCount} ${yellow}timed out${ansiResetSequence}`);
   }
 
   if (erroredCount) {
-    parts.push(`${erroredCount} ${red$1}errored${ansiResetSequence}`);
+    parts.push(`${erroredCount} ${red}errored${ansiResetSequence}`);
   }
 
   if (completedCount) {
-    parts.push(`${completedCount} ${green$1}completed${ansiResetSequence}`);
+    parts.push(`${completedCount} ${green}completed${ansiResetSequence}`);
   }
 
   return `${parts.join(", ")}`;
@@ -12429,11 +6080,11 @@ const createExecutionResultLog = ({
   if (status === "completed") {
     if (completedExecutionLogAbbreviation) {
       return `
-${green$1}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.`;
+${green}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.`;
     }
 
     return `
-${green$1}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.
+${green}${checkmark} execution ${executionNumber} of ${executionCount} completed${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
 runtime: ${runtime}${appendDuration({
       startMs,
@@ -12443,7 +6094,7 @@ runtime: ${runtime}${appendDuration({
 
   if (status === "disconnected") {
     return `
-${magenta$1}${cross} execution ${executionNumber} of ${executionCount} disconnected${ansiResetSequence} ${summary}.
+${magenta}${cross} execution ${executionNumber} of ${executionCount} disconnected${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
 runtime: ${runtime}${appendDuration({
       startMs,
@@ -12453,7 +6104,7 @@ runtime: ${runtime}${appendDuration({
 
   if (status === "timedout") {
     return `
-${yellow$1}${cross} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms${ansiResetSequence} ${summary}.
+${yellow}${cross} execution ${executionNumber} of ${executionCount} timeout after ${allocatedMs}ms${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
 runtime: ${runtime}${appendDuration({
       startMs,
@@ -12462,7 +6113,7 @@ runtime: ${runtime}${appendDuration({
   }
 
   return `
-${red$1}${cross} execution ${executionNumber} of ${executionCount} error${ansiResetSequence} ${summary}.
+${red}${cross} execution ${executionNumber} of ${executionCount} error${ansiResetSequence} ${summary}.
 file: ${fileRelativeUrl}
 runtime: ${runtime}${appendDuration({
     startMs,
@@ -12506,9 +6157,8 @@ const wrapAnsi = require$1("wrap-ansi");
 
 const executeConcurrently = async (executionSteps, {
   cancellationToken,
-  logger,
-  launchLogger,
-  executeLogger,
+  logger: logger$1,
+  executionLogLevel,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
   compileServerOrigin,
@@ -12542,7 +6192,7 @@ const executeConcurrently = async (executionSteps, {
     mainFileNotFoundCallback: ({
       fileRelativeUrl
     }) => {
-      logger.error(new Error(`an execution main file does not exists.
+      logger$1.error(new Error(`an execution main file does not exists.
 --- file relative path ---
 ${fileRelativeUrl}`));
     },
@@ -12551,8 +6201,8 @@ ${fileRelativeUrl}`));
     ...executionDefaultOptions
   };
   const startMs = Date.now();
-  const allExecutionDoneCancellationSource = createCancellationSource();
-  const executionCancellationToken = composeCancellationToken(cancellationToken, allExecutionDoneCancellationSource.token);
+  const allExecutionDoneCancellationSource = cancellation.createCancellationSource();
+  const executionCancellationToken = cancellation.composeCancellationToken(cancellationToken, allExecutionDoneCancellationSource.token);
   const report = {};
   const executionCount = executionSteps.length;
   let previousExecutionResult;
@@ -12561,7 +6211,7 @@ ${fileRelativeUrl}`));
   let timedoutCount = 0;
   let erroredCount = 0;
   let completedCount = 0;
-  await createConcurrentOperations({
+  await cancellation.createConcurrentOperations({
     cancellationToken,
     concurrencyLimit,
     array: executionSteps,
@@ -12595,7 +6245,7 @@ ${fileRelativeUrl}`));
         fileRelativeUrl,
         executionIndex
       };
-      const filePath = urlToFileSystemPath(`${projectDirectoryUrl}${fileRelativeUrl}`);
+      const filePath = util.urlToFileSystemPath(`${projectDirectoryUrl}${fileRelativeUrl}`);
       const fileExists = await pathLeadsToFile(filePath);
 
       if (!fileExists) {
@@ -12606,8 +6256,7 @@ ${fileRelativeUrl}`));
       beforeExecutionCallback(beforeExecutionInfo);
       const executionResult = await launchAndExecute({
         cancellationToken: executionCancellationToken,
-        launchLogger,
-        executeLogger,
+        executionLogLevel,
         launch: params => launch({
           projectDirectoryUrl,
           outDirectoryRelativeUrl,
@@ -12644,7 +6293,7 @@ ${fileRelativeUrl}`));
         completedCount++;
       }
 
-      if (loggerToLevels(logger).info) {
+      if (logger.loggerToLevels(logger$1).info) {
         let log = createExecutionResultLog(afterExecutionInfo, {
           completedExecutionLogAbbreviation,
           executionCount,
@@ -12685,7 +6334,7 @@ ${fileRelativeUrl}`));
   summary.endMs = Date.now();
 
   if (logSummary) {
-    logger.info(createSummaryLog(summary));
+    logger$1.info(createSummaryLog(summary));
   }
 
   return {
@@ -12758,8 +6407,7 @@ const executePlan = async ({
   cancellationToken,
   compileServerLogLevel,
   logger,
-  launchLogger,
-  executeLogger,
+  executionLogLevel,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
@@ -12787,7 +6435,7 @@ const executePlan = async ({
   ...rest
 } = {}) => {
   if (coverage) {
-    const specifierMetaMapForCover = normalizeSpecifierMetaMap(metaMapToSpecifierMetaMap({
+    const specifierMetaMapForCover = util.normalizeSpecifierMetaMap(util.metaMapToSpecifierMetaMap({
       cover: coverageConfig
     }), projectDirectoryUrl);
     babelPluginMap = { ...babelPluginMap,
@@ -12795,8 +6443,8 @@ const executePlan = async ({
         predicate: ({
           relativeUrl
         }) => {
-          return urlToMeta({
-            url: resolveUrl$1(relativeUrl, projectDirectoryUrl),
+          return util.urlToMeta({
+            url: util.resolveUrl(relativeUrl, projectDirectoryUrl),
             specifierMetaMap: specifierMetaMapForCover
           }).cover;
         }
@@ -12834,8 +6482,7 @@ const executePlan = async ({
   const executionResult = await executeConcurrently(executionSteps, {
     cancellationToken,
     logger,
-    launchLogger,
-    executeLogger,
+    executionLogLevel,
     projectDirectoryUrl,
     outDirectoryRelativeUrl,
     compileServerOrigin,
@@ -12862,7 +6509,7 @@ const executionIsPassed = ({
 }) => summary.executionCount === summary.completedCount;
 
 const generateCoverageJsonFile = async (coverageMap, coverageJsonFileUrl) => {
-  await writeFile(coverageJsonFileUrl, JSON.stringify(coverageMap, null, "  "));
+  await util.writeFile(coverageJsonFileUrl, JSON.stringify(coverageMap, null, "  "));
 };
 
 const {
@@ -12879,10 +6526,10 @@ const {
 
 const generateCoverageHtmlDirectory = async (coverageMap, htmlDirectoryRelativeUrl, projectDirectoryUrl) => {
   const context = libReport.createContext({
-    dir: urlToFileSystemPath(projectDirectoryUrl),
+    dir: util.urlToFileSystemPath(projectDirectoryUrl),
     coverageMap: createCoverageMap(coverageMap),
     sourceFinder: path => {
-      return readFileSync(urlToFileSystemPath(resolveUrl$1(path, projectDirectoryUrl)), "utf8");
+      return readFileSync(util.urlToFileSystemPath(util.resolveUrl(path, projectDirectoryUrl)), "utf8");
     }
   });
   const report = reports.create("html", {
@@ -12922,11 +6569,10 @@ const jsenvCoverageConfig = {
 };
 
 const executeTestPlan = async ({
-  cancellationToken = createCancellationTokenForProcess(),
+  cancellationToken = util.createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
-  launchLogLevel = "warn",
-  executeLogLevel = "off",
+  executionLogLevel = "warn",
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
@@ -12960,27 +6606,21 @@ const executeTestPlan = async ({
   coverageTextLog = true,
   coverageJsonFile = Boolean(process.env.CI),
   coverageJsonFileLog = true,
-  coverageJsonFileRelativeUrl = "./coverage/coverage-final.json",
+  coverageJsonFileRelativeUrl = "./coverage/coverage.json",
   coverageHtmlDirectory = !process.env.CI,
-  coverageHtmlDirectoryRelativeUrl = "./coverage/",
+  coverageHtmlDirectoryRelativeUrl = "./coverage",
   coverageHtmlDirectoryIndexLog = true,
   // for chromiumExecutablePath, firefoxExecutablePath and webkitExecutablePath
   // but we need something angostic that just forward the params hence using ...rest
   ...rest
 }) => {
-  return catchCancellation(async () => {
-    const logger = createLogger({
+  return util.catchCancellation(async () => {
+    const logger$1 = logger.createLogger({
       logLevel
-    });
-    const launchLogger = createLogger({
-      logLevel: launchLogLevel
-    });
-    const executeLogger = createLogger({
-      logLevel: executeLogLevel
     });
     cancellationToken.register(cancelError => {
       if (cancelError.reason === "process SIGINT") {
-        logger.info(`process SIGINT -> cancelling test execution`);
+        logger$1.info(`process SIGINT -> cancelling test execution`);
       }
     });
     projectDirectoryUrl = assertProjectDirectoryUrl({
@@ -13000,18 +6640,18 @@ const executeTestPlan = async ({
       }
 
       if (Object.keys(coverageConfig).length === 0) {
-        logger.warn(`coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`);
+        logger$1.warn(`coverageConfig is an empty object. Nothing will be instrumented for coverage so your coverage will be empty`);
       }
 
       if (!coverageAndExecutionAllowed) {
-        const fileSpecifierMapForExecute = normalizeSpecifierMetaMap(metaMapToSpecifierMetaMap({
+        const fileSpecifierMapForExecute = util.normalizeSpecifierMetaMap(util.metaMapToSpecifierMetaMap({
           execute: testPlan
         }), "file:///");
-        const fileSpecifierMapForCover = normalizeSpecifierMetaMap(metaMapToSpecifierMetaMap({
+        const fileSpecifierMapForCover = util.normalizeSpecifierMetaMap(util.metaMapToSpecifierMetaMap({
           cover: coverageConfig
         }), "file:///");
         const fileSpecifierMatchingCoverAndExecuteArray = Object.keys(fileSpecifierMapForExecute).filter(fileUrl => {
-          return urlToMeta({
+          return util.urlToMeta({
             url: fileUrl,
             specifierMetaMap: fileSpecifierMapForCover
           }).cover;
@@ -13030,9 +6670,8 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`);
     const result = await executePlan({
       cancellationToken,
       compileServerLogLevel,
-      logger,
-      launchLogger,
-      executeLogger,
+      logger: logger$1,
+      executionLogLevel,
       projectDirectoryUrl,
       jsenvDirectoryRelativeUrl,
       jsenvDirectoryClean,
@@ -13068,22 +6707,22 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`);
     // it must be done before
 
     if (coverage && coverageHtmlDirectory) {
-      const coverageHtmlDirectoryUrl = resolveDirectoryUrl(coverageHtmlDirectoryRelativeUrl, projectDirectoryUrl);
-      await ensureEmptyDirectory(coverageHtmlDirectoryUrl);
+      const coverageHtmlDirectoryUrl = util.resolveDirectoryUrl(coverageHtmlDirectoryRelativeUrl, projectDirectoryUrl);
+      await util.ensureEmptyDirectory(coverageHtmlDirectoryUrl);
 
       if (coverageHtmlDirectoryIndexLog) {
         const htmlCoverageDirectoryIndexFileUrl = `${coverageHtmlDirectoryUrl}index.html`;
-        logger.info(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
+        logger$1.info(`-> ${util.urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
       }
 
       promises.push(generateCoverageHtmlDirectory(result.coverageMap, coverageHtmlDirectoryRelativeUrl, projectDirectoryUrl));
     }
 
     if (coverage && coverageJsonFile) {
-      const coverageJsonFileUrl = resolveUrl$1(coverageJsonFileRelativeUrl, projectDirectoryUrl);
+      const coverageJsonFileUrl = util.resolveUrl(coverageJsonFileRelativeUrl, projectDirectoryUrl);
 
       if (coverageJsonFileLog) {
-        logger.info(`-> ${urlToFileSystemPath(coverageJsonFileUrl)}`);
+        logger$1.info(`-> ${util.urlToFileSystemPath(coverageJsonFileUrl)}`);
       }
 
       promises.push(generateCoverageJsonFile(result.coverageMap, coverageJsonFileUrl));
@@ -13103,15 +6742,16 @@ ${fileSpecifierMatchingCoverAndExecuteArray.join("\n")}`);
 
 /* eslint-disable import/max-dependencies */
 const generateBundle = async ({
-  cancellationToken = createCancellationTokenForProcess(),
+  cancellationToken = util.createCancellationTokenForProcess(),
   logLevel = "info",
   compileServerLogLevel = "warn",
-  logger,
+  logger: logger$1,
   projectDirectoryUrl,
   jsenvDirectoryRelativeUrl,
   jsenvDirectoryClean,
   importMapFileRelativeUrl,
   importDefaultExtension,
+  externalImportSpecifiers = [],
   env = {},
   browser = false,
   node = false,
@@ -13153,8 +6793,8 @@ const generateBundle = async ({
   filesystemCache = true,
   ...rest
 }) => {
-  return catchCancellation(async () => {
-    logger = logger || createLogger({
+  return util.catchCancellation(async () => {
+    logger$1 = logger$1 || logger.createLogger({
       logLevel
     });
     projectDirectoryUrl = assertProjectDirectoryUrl({
@@ -13169,14 +6809,14 @@ const generateBundle = async ({
     assertBundleDirectoryRelativeUrl({
       bundleDirectoryRelativeUrl
     });
-    const bundleDirectoryUrl = resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl);
+    const bundleDirectoryUrl = util.resolveDirectoryUrl(bundleDirectoryRelativeUrl, projectDirectoryUrl);
     assertBundleDirectoryInsideProject({
       bundleDirectoryUrl,
       projectDirectoryUrl
     });
 
     if (bundleDirectoryClean) {
-      await ensureEmptyDirectory(bundleDirectoryUrl);
+      await util.ensureEmptyDirectory(bundleDirectoryUrl);
     }
 
     const extension = formatOutputOptions && formatOutputOptions.entryFileNames ? path.extname(formatOutputOptions.entryFileNames) : ".js";
@@ -13198,7 +6838,7 @@ const generateBundle = async ({
         throw new Error(`${format} format not compatible with balancing.`);
       }
 
-      await assertFilePresence(balancerTemplateFileUrl);
+      await util.assertFilePresence(balancerTemplateFileUrl);
     }
 
     const {
@@ -13235,7 +6875,7 @@ const generateBundle = async ({
     if (compileGroupCount === 1) {
       return generateBundleUsingRollup({
         cancellationToken,
-        logger,
+        logger: logger$1,
         projectDirectoryUrl,
         entryPointMap,
         bundleDirectoryUrl,
@@ -13243,6 +6883,7 @@ const generateBundle = async ({
         compileServerOrigin,
         compileServerImportMap,
         importDefaultExtension,
+        externalImportSpecifiers,
         babelPluginMap,
         node,
         browser,
@@ -13261,7 +6902,7 @@ const generateBundle = async ({
 
     return await Promise.all([generateEntryPointsDirectories({
       cancellationToken,
-      logger,
+      logger: logger$1,
       projectDirectoryUrl,
       outDirectoryRelativeUrl,
       bundleDirectoryUrl,
@@ -13269,6 +6910,7 @@ const generateBundle = async ({
       compileServerOrigin,
       compileServerImportMap,
       importDefaultExtension,
+      externalImportSpecifiers,
       babelPluginMap,
       compileServerGroupMap,
       node,
@@ -13282,7 +6924,7 @@ const generateBundle = async ({
       manifestFile
     }), generateEntryPointsBalancerFiles({
       cancellationToken,
-      logger,
+      logger: logger$1,
       projectDirectoryUrl,
       balancerTemplateFileUrl,
       outDirectoryRelativeUrl,
@@ -13291,6 +6933,7 @@ const generateBundle = async ({
       compileServerOrigin,
       compileServerImportMap,
       importDefaultExtension,
+      externalImportSpecifiers,
       babelPluginMap,
       node,
       browser,
@@ -13367,7 +7010,7 @@ const generateEntryPointsDirectories = ({
   outDirectoryRelativeUrl,
   ...rest
 }) => Promise.all(Object.keys(compileServerGroupMap).map(compileId => generateBundleUsingRollup({
-  bundleDirectoryUrl: resolveDirectoryUrl(compileId, bundleDirectoryUrl),
+  bundleDirectoryUrl: util.resolveDirectoryUrl(compileId, bundleDirectoryUrl),
   compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${compileId}/`,
   ...rest
 })));
@@ -13382,7 +7025,7 @@ const generateEntryPointsBalancerFiles = ({
   projectDirectoryUrl,
   compileDirectoryRelativeUrl: `${outDirectoryRelativeUrl}${COMPILE_ID_OTHERWISE}/`,
   entryPointMap: {
-    [entryPointName]: `./${urlToRelativeUrl(balancerTemplateFileUrl, projectDirectoryUrl)}`
+    [entryPointName]: `./${util.urlToRelativeUrl(balancerTemplateFileUrl, projectDirectoryUrl)}`
   },
   sourcemapExcludeSources: true,
   ...rest,
@@ -13404,7 +7047,7 @@ const generateCommonJsBundle = async ({
       chunkFileNames: `[name]-[hash].cjs`
     } : {})
   },
-  balancerTemplateFileUrl: resolveUrl$1("./src/internal/bundling/commonjs-balancer-template.js", jsenvCoreDirectoryUrl),
+  balancerTemplateFileUrl: util.resolveUrl("./src/internal/bundling/commonjs-balancer-template.js", jsenvCoreDirectoryUrl),
   ...rest
 });
 
@@ -13463,7 +7106,7 @@ const generateSystemJsBundle = async ({
   ...rest
 }) => generateBundle({
   format: "systemjs",
-  balancerTemplateFileUrl: resolveUrl$1("./src/internal/bundling/systemjs-balancer-template.js", jsenvCoreDirectoryUrl),
+  balancerTemplateFileUrl: util.resolveUrl("./src/internal/bundling/systemjs-balancer-template.js", jsenvCoreDirectoryUrl),
   bundleDirectoryRelativeUrl,
   ...rest
 });
@@ -13474,7 +7117,7 @@ const jsenvExplorableConfig = {
   "./test/**/*.js": true
 };
 
-const trackRessources$1 = () => {
+const trackRessources = () => {
   const callbackArray = [];
 
   const registerCleanupCallback = callback => {
@@ -13487,7 +7130,7 @@ callback: ${callback}`);
     };
   };
 
-  const cleanup = memoize(async reason => {
+  const cleanup = util.memoize(async reason => {
     const localCallbackArray = callbackArray.slice();
     await Promise.all(localCallbackArray.map(callback => callback(reason)));
   });
@@ -13662,17 +7305,17 @@ const startBrowserServer = async ({
   outDirectoryRelativeUrl,
   compileServerOrigin
 }) => {
-  const browserJsFileUrl = resolveUrl$1("./src/internal/browser-launcher/browser-js-file.js", jsenvCoreDirectoryUrl);
-  const browserjsFileRelativeUrl = urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl);
+  const browserJsFileUrl = util.resolveUrl("./src/internal/browser-launcher/browser-js-file.js", jsenvCoreDirectoryUrl);
+  const browserjsFileRelativeUrl = util.urlToRelativeUrl(browserJsFileUrl, projectDirectoryUrl);
   const browserBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_GLOBAL_BUNDLE}/${browserjsFileRelativeUrl}`;
   const browserBundledJsFileRemoteUrl = `${compileServerOrigin}/${browserBundledJsFileRelativeUrl}`;
-  return startServer({
+  return server.startServer({
     cancellationToken,
     logLevel,
     // should we reuse compileServer privateKey/certificate ?
     protocol: compileServerOrigin.startsWith("http:") ? "http" : "https",
     sendInternalErrorStack: true,
-    requestToResponse: request => firstService(() => {
+    requestToResponse: request => server.firstService(() => {
       if (request.ressource === "/.jsenv/browser-script.js") {
         return {
           status: 307,
@@ -13684,7 +7327,7 @@ const startBrowserServer = async ({
 
       return null;
     }, () => {
-      return serveFile(`${projectDirectoryUrl}${request.ressource.slice(1)}`, {
+      return server.serveFile(`${projectDirectoryUrl}${request.ressource.slice(1)}`, {
         method: request.method,
         headers: request.headers
       });
@@ -13692,7 +7335,7 @@ const startBrowserServer = async ({
   });
 };
 
-const jsenvHtmlFileUrl = resolveUrl$1("./src/internal/jsenv-html-file.html", jsenvCoreDirectoryUrl);
+const jsenvHtmlFileUrl = util.resolveUrl("./src/internal/jsenv-html-file.html", jsenvCoreDirectoryUrl);
 
 const evalSource = (code, filePath) => {
   const script = new vm.Script(code, {
@@ -13724,11 +7367,11 @@ const getBrowserExecutionDynamicData = ({
   projectDirectoryUrl,
   compileServerOrigin
 }) => {
-  const browserRuntimeFileRelativeUrl = projectDirectoryUrl === jsenvCoreDirectoryUrl ? "src/browserRuntime.js" : `${urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/browserRuntime.js`;
-  const sourcemapMainFileUrl = fileSystemPathToUrl(require$1.resolve("source-map/dist/source-map.js"));
-  const sourcemapMappingFileUrl = fileSystemPathToUrl(require$1.resolve("source-map/lib/mappings.wasm"));
-  const sourcemapMainFileRelativeUrl = urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl);
-  const sourcemapMappingFileRelativeUrl = urlToRelativeUrl(sourcemapMappingFileUrl, projectDirectoryUrl);
+  const browserRuntimeFileRelativeUrl = projectDirectoryUrl === jsenvCoreDirectoryUrl ? "src/browserRuntime.js" : `${util.urlToRelativeUrl(jsenvCoreDirectoryUrl, projectDirectoryUrl)}src/browserRuntime.js`;
+  const sourcemapMainFileUrl = util.fileSystemPathToUrl(require$1.resolve("source-map/dist/source-map.js"));
+  const sourcemapMappingFileUrl = util.fileSystemPathToUrl(require$1.resolve("source-map/lib/mappings.wasm"));
+  const sourcemapMainFileRelativeUrl = util.urlToRelativeUrl(sourcemapMainFileUrl, projectDirectoryUrl);
+  const sourcemapMappingFileRelativeUrl = util.urlToRelativeUrl(sourcemapMappingFileUrl, projectDirectoryUrl);
   return {
     browserRuntimeFileRelativeUrl,
     sourcemapMainFileRelativeUrl,
@@ -13752,17 +7395,17 @@ const evaluateImportExecution = async ({
   errorStackRemapping,
   executionExposureOnWindow
 }) => {
-  const fileUrl = resolveUrl$1(fileRelativeUrl, projectDirectoryUrl);
-  await assertFilePresence(fileUrl);
+  const fileUrl = util.resolveUrl(fileRelativeUrl, projectDirectoryUrl);
+  await util.assertFilePresence(fileUrl);
 
   if (typeof htmlFileRelativeUrl === "undefined") {
-    htmlFileRelativeUrl = urlToRelativeUrl(jsenvHtmlFileUrl, projectDirectoryUrl);
+    htmlFileRelativeUrl = util.urlToRelativeUrl(jsenvHtmlFileUrl, projectDirectoryUrl);
   } else if (typeof htmlFileRelativeUrl !== "string") {
     throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`);
   }
 
-  const htmlFileUrl = resolveUrl$1(htmlFileRelativeUrl, projectDirectoryUrl);
-  await assertFilePresence(htmlFileUrl);
+  const htmlFileUrl = util.resolveUrl(htmlFileRelativeUrl, projectDirectoryUrl);
+  await util.assertFilePresence(htmlFileUrl);
   const htmlFileClientUrl = `${executionServerOrigin}/${htmlFileRelativeUrl}`;
   await page.goto(htmlFileClientUrl); // https://github.com/GoogleChrome/puppeteer/blob/v1.14.0/docs/api.md#pageevaluatepagefunction-args
   // yes evaluate supports passing a function directly
@@ -13850,7 +7493,7 @@ const playwright = require$1("playwright-core");
 
 const chromiumSharing = createSharing();
 const launchChromium = async ({
-  cancellationToken = createCancellationToken(),
+  cancellationToken = cancellation.createCancellationToken(),
   chromiumExecutablePath,
   browserServerLogLevel,
   projectDirectoryUrl,
@@ -13863,7 +7506,7 @@ const launchChromium = async ({
   stopOnExit = true,
   share = false
 }) => {
-  const ressourceTracker = trackRessources$1();
+  const ressourceTracker = trackRessources();
   const sharingToken = share ? chromiumSharing.getSharingToken({
     chromiumExecutablePath,
     headless,
@@ -13901,7 +7544,7 @@ const launchChromium = async ({
     const webSocketEndpoint = browser.wsEndpoint();
     const webSocketUrl = new URL(webSocketEndpoint);
     const browserEndpoint = `http://${webSocketUrl.host}/json/version`;
-    const browserResponse = await fetchUrl$1(browserEndpoint, {
+    const browserResponse = await fetchUrl(browserEndpoint, {
       cancellationToken,
       ignoreHttpsError: true
     });
@@ -13942,7 +7585,7 @@ const launchChromiumTab = namedArgs => launchChromium({
 });
 const firefoxSharing = createSharing();
 const launchFirefox = async ({
-  cancellationToken = createCancellationToken(),
+  cancellationToken = cancellation.createCancellationToken(),
   firefoxExecutablePath,
   browserServerLogLevel,
   projectDirectoryUrl,
@@ -13952,7 +7595,7 @@ const launchFirefox = async ({
   stopOnExit = true,
   share = false
 }) => {
-  const ressourceTracker = trackRessources$1();
+  const ressourceTracker = trackRessources();
   const sharingToken = share ? firefoxSharing.getSharingToken({
     firefoxExecutablePath,
     headless
@@ -13995,7 +7638,7 @@ const launchFirefoxTab = namedArgs => launchFirefox({
 });
 const webkitSharing = createSharing();
 const launchWebkit = async ({
-  cancellationToken = createCancellationToken(),
+  cancellationToken = cancellation.createCancellationToken(),
   webkitExecutablePath,
   browserServerLogLevel,
   projectDirectoryUrl,
@@ -14005,7 +7648,7 @@ const launchWebkit = async ({
   stopOnExit = true,
   share = false
 }) => {
-  const ressourceTracker = trackRessources$1();
+  const ressourceTracker = trackRessources();
   const sharingToken = share ? webkitSharing.getSharingToken({
     webkitExecutablePath,
     headless
@@ -14054,7 +7697,7 @@ const launchBrowser = async (browserName, {
   stopOnExit
 }) => {
   const browserClass = playwright[browserName];
-  const launchOperation = createStoppableOperation({
+  const launchOperation = cancellation.createStoppableOperation({
     cancellationToken,
     start: () => browserClass.launch({ ...options,
       // let's handle them to close properly browser, remove listener
@@ -14081,7 +7724,7 @@ const launchBrowser = async (browserName, {
   ressourceTracker.registerCleanupCallback(launchOperation.stop);
 
   if (stopOnExit) {
-    const unregisterProcessTeadown = teardownSignal.addCallback(reason => {
+    const unregisterProcessTeadown = nodeSignals.teardownSignal.addCallback(reason => {
       launchOperation.stop(`process ${reason}`);
     });
     ressourceTracker.registerCleanupCallback(unregisterProcessTeadown);
@@ -14209,664 +7852,9 @@ const browserToRuntimeHooks = (browser, {
   };
 };
 
-// https://developer.mozilla.org/en-US/docs/Glossary/Primitive
-const isComposite = value => {
-  if (value === null) return false;
-  const type = typeof value;
-  if (type === "object") return true;
-  if (type === "function") return true;
-  return false;
-};
-
-const compositeWellKnownMap = new WeakMap();
-const primitiveWellKnownMap = new Map();
-const getCompositeGlobalPath = value => compositeWellKnownMap.get(value);
-const getPrimitiveGlobalPath = value => primitiveWellKnownMap.get(value);
-
-const visitGlobalObject = value => {
-  const visitValue = (value, path) => {
-    if (isComposite(value)) {
-      if (compositeWellKnownMap.has(value)) return; // prevent infinite recursion
-
-      compositeWellKnownMap.set(value, path);
-
-      const visitProperty = property => {
-        let descriptor;
-
-        try {
-          descriptor = Object.getOwnPropertyDescriptor(value, property);
-        } catch (e) {
-          if (e.name === "SecurityError") {
-            return;
-          }
-
-          throw e;
-        }
-
-        if (!descriptor) {
-          // it's apparently possible to have getOwnPropertyNames returning
-          // a property that later returns a null descriptor
-          // for instance window.showModalDialog in webkit 13.0
-          return;
-        } // do not trigger getter/setter
-
-
-        if ("value" in descriptor) {
-          const propertyValue = descriptor.value;
-          visitValue(propertyValue, [...path, property]);
-        }
-      };
-
-      Object.getOwnPropertyNames(value).forEach(name => visitProperty(name));
-      Object.getOwnPropertySymbols(value).forEach(symbol => visitProperty(symbol));
-    }
-
-    primitiveWellKnownMap.set(value, path);
-    return;
-  };
-
-  visitValue(value, []);
-};
-
-if (typeof window === "object") visitGlobalObject(window);
-if (typeof global === "object") visitGlobalObject(global);
-
-/**
- * transforms a javascript value into an object describing it.
- *
- */
-const decompose = (mainValue, {
-  functionAllowed,
-  prototypeStrict
-}) => {
-  const valueMap = {};
-  const recipeArray = [];
-
-  const valueToIdentifier = (value, path = []) => {
-    if (!isComposite(value)) {
-      const existingIdentifier = identifierForPrimitive(value);
-      if (existingIdentifier !== undefined) return existingIdentifier;
-      const identifier = identifierForNewValue(value);
-      recipeArray[identifier] = primitiveToRecipe(value);
-      return identifier;
-    }
-
-    if (typeof Promise === "function" && value instanceof Promise) throw new Error(createPromiseAreNotSupportedMessage({
-      path
-    }));
-    if (typeof WeakSet === "function" && value instanceof WeakSet) throw new Error(createWeakSetAreNotSupportedMessage({
-      path
-    }));
-    if (typeof WeakMap === "function" && value instanceof WeakMap) throw new Error(createWeakMapAreNotSupportedMessage({
-      path
-    }));
-    if (typeof value === "function" && !functionAllowed) throw new Error(createForbiddenFunctionMessage({
-      path
-    }));
-    const existingIdentifier = identifierForComposite(value);
-    if (existingIdentifier !== undefined) return existingIdentifier;
-    const identifier = identifierForNewValue(value);
-    const compositeGlobalPath = getCompositeGlobalPath(value);
-
-    if (compositeGlobalPath) {
-      recipeArray[identifier] = createGlobalReferenceRecipe(compositeGlobalPath);
-      return identifier;
-    }
-
-    const propertyDescriptionArray = [];
-    Object.getOwnPropertyNames(value).forEach(propertyName => {
-      const propertyDescriptor = Object.getOwnPropertyDescriptor(value, propertyName);
-      const propertyNameIdentifier = valueToIdentifier(propertyName, [...path, propertyName]);
-      const propertyDescription = computePropertyDescription(propertyDescriptor, propertyName, path);
-      propertyDescriptionArray.push({
-        propertyNameIdentifier,
-        propertyDescription
-      });
-    });
-    const symbolDescriptionArray = [];
-    Object.getOwnPropertySymbols(value).forEach(symbol => {
-      const propertyDescriptor = Object.getOwnPropertyDescriptor(value, symbol);
-      const symbolIdentifier = valueToIdentifier(symbol, [...path, `[${symbol.toString()}]`]);
-      const propertyDescription = computePropertyDescription(propertyDescriptor, symbol, path);
-      symbolDescriptionArray.push({
-        symbolIdentifier,
-        propertyDescription
-      });
-    });
-    const methodDescriptionArray = computeMethodDescriptionArray(value, path);
-    const extensible = Object.isExtensible(value);
-    recipeArray[identifier] = createCompositeRecipe({
-      propertyDescriptionArray,
-      symbolDescriptionArray,
-      methodDescriptionArray,
-      extensible
-    });
-    return identifier;
-  };
-
-  const computePropertyDescription = (propertyDescriptor, propertyNameOrSymbol, path) => {
-    if (propertyDescriptor.set && !functionAllowed) throw new Error(createForbiddenPropertySetterMessage({
-      path,
-      propertyNameOrSymbol
-    }));
-    if (propertyDescriptor.get && !functionAllowed) throw new Error(createForbiddenPropertyGetterMessage({
-      path,
-      propertyNameOrSymbol
-    }));
-    return {
-      configurable: propertyDescriptor.configurable,
-      writable: propertyDescriptor.writable,
-      enumerable: propertyDescriptor.enumerable,
-      getIdentifier: "get" in propertyDescriptor ? valueToIdentifier(propertyDescriptor.get, [...path, String(propertyNameOrSymbol), "[[descriptor:get]]"]) : undefined,
-      setIdentifier: "set" in propertyDescriptor ? valueToIdentifier(propertyDescriptor.set, [...path, String(propertyNameOrSymbol), "[[descriptor:set]]"]) : undefined,
-      valueIdentifier: "value" in propertyDescriptor ? valueToIdentifier(propertyDescriptor.value, [...path, String(propertyNameOrSymbol), "[[descriptor:value]]"]) : undefined
-    };
-  };
-
-  const computeMethodDescriptionArray = (value, path) => {
-    const methodDescriptionArray = [];
-
-    if (typeof Set === "function" && value instanceof Set) {
-      const callArray = [];
-      value.forEach((entryValue, index) => {
-        const entryValueIdentifier = valueToIdentifier(entryValue, [...path, `[[SetEntryValue]]`, index]);
-        callArray.push([entryValueIdentifier]);
-      });
-      methodDescriptionArray.push({
-        methodNameIdentifier: valueToIdentifier("add"),
-        callArray
-      });
-    }
-
-    if (typeof Map === "function" && value instanceof Map) {
-      const callArray = [];
-      value.forEach((entryValue, entryKey) => {
-        const entryKeyIdentifier = valueToIdentifier(entryKey, [...path, "[[MapEntryKey]]", entryKey]);
-        const entryValueIdentifier = valueToIdentifier(entryValue, [...path, "[[MapEntryValue]]", entryValue]);
-        callArray.push([entryKeyIdentifier, entryValueIdentifier]);
-      });
-      methodDescriptionArray.push({
-        methodNameIdentifier: valueToIdentifier("set"),
-        callArray
-      });
-    }
-
-    return methodDescriptionArray;
-  };
-
-  const identifierForPrimitive = value => {
-    return Object.keys(valueMap).find(existingIdentifier => {
-      const existingValue = valueMap[existingIdentifier];
-      if (Object.is(value, existingValue)) return true;
-      return value === existingValue;
-    });
-  };
-
-  const identifierForComposite = value => {
-    return Object.keys(valueMap).find(existingIdentifier => {
-      const existingValue = valueMap[existingIdentifier];
-      return value === existingValue;
-    });
-  };
-
-  const identifierForNewValue = value => {
-    const identifier = nextIdentifier();
-    valueMap[identifier] = value;
-    return identifier;
-  };
-
-  let currentIdentifier = -1;
-
-  const nextIdentifier = () => {
-    const identifier = String(parseInt(currentIdentifier) + 1);
-    currentIdentifier = identifier;
-    return identifier;
-  };
-
-  const mainIdentifier = valueToIdentifier(mainValue); // prototype, important to keep after the whole structure was visited
-  // so that we discover if any prototype is part of the value
-
-  const prototypeValueToIdentifier = prototypeValue => {
-    // prototype is null
-    if (prototypeValue === null) return valueToIdentifier(prototypeValue); // prototype found somewhere already
-
-    const prototypeExistingIdentifier = identifierForComposite(prototypeValue);
-    if (prototypeExistingIdentifier !== undefined) return prototypeExistingIdentifier; // mark prototype as visited
-
-    const prototypeIdentifier = identifierForNewValue(prototypeValue); // prototype is a global reference ?
-
-    const prototypeGlobalPath = getCompositeGlobalPath(prototypeValue);
-
-    if (prototypeGlobalPath) {
-      recipeArray[prototypeIdentifier] = createGlobalReferenceRecipe(prototypeGlobalPath);
-      return prototypeIdentifier;
-    } // otherwise prototype is unknown
-
-
-    if (prototypeStrict) {
-      throw new Error(createUnknownPrototypeMessage({
-        prototypeValue
-      }));
-    }
-
-    return prototypeValueToIdentifier(Object.getPrototypeOf(prototypeValue));
-  };
-
-  const identifierForValueOf = (value, path = []) => {
-    if (value instanceof Array) return valueToIdentifier(value.length, [...path, "length"]);
-    if ("valueOf" in value === false) return undefined;
-    if (typeof value.valueOf !== "function") return undefined;
-    const valueOfReturnValue = value.valueOf();
-    if (!isComposite(valueOfReturnValue)) return valueToIdentifier(valueOfReturnValue, [...path, "valueOf()"]);
-    if (valueOfReturnValue === value) return undefined;
-    throw new Error(createUnexpectedValueOfReturnValueMessage());
-  };
-
-  recipeArray.slice().forEach((recipe, index) => {
-    if (recipe.type === "composite") {
-      const value = valueMap[index];
-
-      if (typeof value === "function") {
-        const valueOfIdentifier = nextIdentifier();
-        recipeArray[valueOfIdentifier] = {
-          type: "primitive",
-          value
-        };
-        recipe.valueOfIdentifier = valueOfIdentifier;
-        return;
-      }
-
-      if (value instanceof RegExp) {
-        const valueOfIdentifier = nextIdentifier();
-        recipeArray[valueOfIdentifier] = {
-          type: "primitive",
-          value
-        };
-        recipe.valueOfIdentifier = valueOfIdentifier;
-        return;
-      } // valueOf, mandatory to uneval new Date(10) for instance.
-
-
-      recipe.valueOfIdentifier = identifierForValueOf(value);
-      const prototypeValue = Object.getPrototypeOf(value);
-      recipe.prototypeIdentifier = prototypeValueToIdentifier(prototypeValue);
-    }
-  });
-  return {
-    recipeArray,
-    mainIdentifier,
-    valueMap
-  };
-};
-
-const primitiveToRecipe = value => {
-  if (typeof value === "symbol") return symbolToRecipe(value);
-  return createPimitiveRecipe(value);
-};
-
-const symbolToRecipe = symbol => {
-  const globalSymbolKey = Symbol.keyFor(symbol);
-  if (globalSymbolKey !== undefined) return createGlobalSymbolRecipe(globalSymbolKey);
-  const symbolGlobalPath = getPrimitiveGlobalPath(symbol);
-  if (!symbolGlobalPath) throw new Error(createUnknownSymbolMessage({
-    symbol
-  }));
-  return createGlobalReferenceRecipe(symbolGlobalPath);
-};
-
-const createPimitiveRecipe = value => {
-  return {
-    type: "primitive",
-    value
-  };
-};
-
-const createGlobalReferenceRecipe = path => {
-  const recipe = {
-    type: "global-reference",
-    path
-  };
-  return recipe;
-};
-
-const createGlobalSymbolRecipe = key => {
-  return {
-    type: "global-symbol",
-    key
-  };
-};
-
-const createCompositeRecipe = ({
-  prototypeIdentifier,
-  valueOfIdentifier,
-  propertyDescriptionArray,
-  symbolDescriptionArray,
-  methodDescriptionArray,
-  extensible
-}) => {
-  return {
-    type: "composite",
-    prototypeIdentifier,
-    valueOfIdentifier,
-    propertyDescriptionArray,
-    symbolDescriptionArray,
-    methodDescriptionArray,
-    extensible
-  };
-};
-
-const createPromiseAreNotSupportedMessage = ({
-  path
-}) => {
-  if (path.length === 0) return `promise are not supported.`;
-  return `promise are not supported.
-promise found at: ${path.join("")}`;
-};
-
-const createWeakSetAreNotSupportedMessage = ({
-  path
-}) => {
-  if (path.length === 0) return `weakSet are not supported.`;
-  return `weakSet are not supported.
-weakSet found at: ${path.join("")}`;
-};
-
-const createWeakMapAreNotSupportedMessage = ({
-  path
-}) => {
-  if (path.length === 0) return `weakMap are not supported.`;
-  return `weakMap are not supported.
-weakMap found at: ${path.join("")}`;
-};
-
-const createForbiddenFunctionMessage = ({
-  path
-}) => {
-  if (path.length === 0) return `function are not allowed.`;
-  return `function are not allowed.
-function found at: ${path.join("")}`;
-};
-
-const createForbiddenPropertyGetterMessage = ({
-  path,
-  propertyNameOrSymbol
-}) => `property getter are not allowed.
-getter found on property: ${String(propertyNameOrSymbol)}
-at: ${path.join("")}`;
-
-const createForbiddenPropertySetterMessage = ({
-  path,
-  propertyNameOrSymbol
-}) => `property setter are not allowed.
-setter found on property: ${String(propertyNameOrSymbol)}
-at: ${path.join("")}`;
-
-const createUnexpectedValueOfReturnValueMessage = () => `valueOf() must return a primitive of the object itself.`;
-
-const createUnknownSymbolMessage = ({
-  symbol
-}) => `symbol must be global, like Symbol.iterator, or created using Symbol.for().
-symbol: ${symbol.toString()}`;
-
-const createUnknownPrototypeMessage = ({
-  prototypeValue
-}) => `prototype must be global, like Object.prototype, or somewhere in the value.
-prototype constructor name: ${prototypeValue.constructor.name}`;
-
-// be carefull because this function is mutating recipe objects inside the recipeArray.
-// this is not an issue because each recipe object is not accessible from the outside
-// when used internally by uneval
-const sortRecipe = recipeArray => {
-  const findInRecipePrototypeChain = (recipe, callback) => {
-    let currentRecipe = recipe; // eslint-disable-next-line no-constant-condition
-
-    while (true) {
-      if (currentRecipe.type !== "composite") break;
-      const prototypeIdentifier = currentRecipe.prototypeIdentifier;
-      if (prototypeIdentifier === undefined) break;
-      currentRecipe = recipeArray[prototypeIdentifier];
-      if (callback(currentRecipe, prototypeIdentifier)) return prototypeIdentifier;
-    }
-
-    return undefined;
-  };
-
-  const recipeArrayOrdered = recipeArray.slice();
-  recipeArrayOrdered.sort((leftRecipe, rightRecipe) => {
-    const leftType = leftRecipe.type;
-    const rightType = rightRecipe.type;
-
-    if (leftType === "composite" && rightType === "composite") {
-      const rightRecipeIsInLeftRecipePrototypeChain = findInRecipePrototypeChain(leftRecipe, recipeCandidate => recipeCandidate === rightRecipe); // if left recipe requires right recipe, left must be after right
-
-      if (rightRecipeIsInLeftRecipePrototypeChain) return 1;
-      const leftRecipeIsInRightRecipePrototypeChain = findInRecipePrototypeChain(rightRecipe, recipeCandidate => recipeCandidate === leftRecipe); // if right recipe requires left recipe, right must be after left
-
-      if (leftRecipeIsInRightRecipePrototypeChain) return -1;
-    }
-
-    if (leftType !== rightType) {
-      // if left is a composite, left must be after right
-      if (leftType === "composite") return 1; // if right is a composite, right must be after left
-
-      if (rightType === "composite") return -1;
-    }
-
-    const leftIndex = recipeArray.indexOf(leftRecipe);
-    const rightIndex = recipeArray.indexOf(rightRecipe); // left was before right, don't change that
-
-    if (leftIndex < rightIndex) return -1; // right was after left, don't change that
-
-    return 1;
-  });
-  return recipeArrayOrdered;
-};
-
-// https://github.com/joliss/js-string-escape/blob/master/index.js
-// http://javascript.crockford.com/remedial.html
-const escapeString = value => {
-  const string = String(value);
-  let i = 0;
-  const j = string.length;
-  var escapedString = "";
-
-  while (i < j) {
-    const char = string[i];
-    let escapedChar;
-
-    if (char === '"' || char === "'" || char === "\\") {
-      escapedChar = `\\${char}`;
-    } else if (char === "\n") {
-      escapedChar = "\\n";
-    } else if (char === "\r") {
-      escapedChar = "\\r";
-    } else if (char === "\u2028") {
-      escapedChar = "\\u2028";
-    } else if (char === "\u2029") {
-      escapedChar = "\\u2029";
-    } else {
-      escapedChar = char;
-    }
-
-    escapedString += escapedChar;
-    i++;
-  }
-
-  return escapedString;
-};
-
-const uneval = (value, {
-  functionAllowed = false,
-  prototypeStrict = false
-} = {}) => {
-  const {
-    recipeArray,
-    mainIdentifier,
-    valueMap
-  } = decompose(value, {
-    functionAllowed,
-    prototypeStrict
-  });
-  const recipeArraySorted = sortRecipe(recipeArray);
-  let source = `(function () {
-Object.defineProperty(Object.prototype, "__global__", {
-  get: function () { return this },
-  configurable: true,
-});
-var globalObject = __global__;
-delete Object.prototype.__global__;
-
-function safeDefineProperty(object, propertyNameOrSymbol, descriptor) {
-  var currentDescriptor = Object.getOwnPropertyDescriptor(object, propertyNameOrSymbol);
-  if (currentDescriptor && !currentDescriptor.configurable) return
-  Object.defineProperty(object, propertyNameOrSymbol, descriptor)
-};
-`;
-  const variableNameMap = {};
-  recipeArray.forEach((recipe, index) => {
-    const indexSorted = recipeArraySorted.indexOf(recipe);
-    variableNameMap[index] = `_${indexSorted}`;
-  });
-
-  const identifierToVariableName = identifier => variableNameMap[identifier];
-
-  const recipeToSetupSource = recipe => {
-    if (recipe.type === "primitive") return primitiveRecipeToSetupSource(recipe);
-    if (recipe.type === "global-symbol") return globalSymbolRecipeToSetupSource(recipe);
-    if (recipe.type === "global-reference") return globalReferenceRecipeToSetupSource(recipe);
-    return compositeRecipeToSetupSource(recipe);
-  };
-
-  const primitiveRecipeToSetupSource = ({
-    value
-  }) => {
-    if (typeof value === "string") return `"${escapeString(value)}";`;
-    if (Object.is(value, -0)) return "-0;";
-    return `${String(value)};`;
-  };
-
-  const globalSymbolRecipeToSetupSource = recipe => {
-    return `Symbol.for("${escapeString(recipe.key)}");`;
-  };
-
-  const globalReferenceRecipeToSetupSource = recipe => {
-    const pathSource = recipe.path.map(part => `["${escapeString(part)}"]`).join("");
-    return `globalObject${pathSource};`;
-  };
-
-  const compositeRecipeToSetupSource = ({
-    prototypeIdentifier,
-    valueOfIdentifier
-  }) => {
-    if (prototypeIdentifier === undefined) return identifierToVariableName(valueOfIdentifier);
-    const prototypeValue = valueMap[prototypeIdentifier];
-    if (prototypeValue === null) return `Object.create(null);`;
-    const prototypeConstructor = prototypeValue.constructor;
-    if (prototypeConstructor === Object) return `Object.create(${identifierToVariableName(prototypeIdentifier)});`;
-    if (valueOfIdentifier === undefined) return `new ${prototypeConstructor.name}();`;
-    return `new ${prototypeConstructor.name}(${identifierToVariableName(valueOfIdentifier)});`;
-  };
-
-  recipeArraySorted.forEach(recipe => {
-    const recipeVariableName = identifierToVariableName(recipeArray.indexOf(recipe));
-    source += `var ${recipeVariableName} = ${recipeToSetupSource(recipe)}
-`;
-  });
-
-  const recipeToMutateSource = (recipe, recipeVariableName) => {
-    if (recipe.type === "composite") return compositeRecipeToMutateSource(recipe, recipeVariableName);
-    return ``;
-  };
-
-  const compositeRecipeToMutateSource = ({
-    propertyDescriptionArray,
-    symbolDescriptionArray,
-    methodDescriptionArray,
-    extensible
-  }, recipeVariableName) => {
-    let mutateSource = ``;
-    propertyDescriptionArray.forEach(({
-      propertyNameIdentifier,
-      propertyDescription
-    }) => {
-      mutateSource += generateDefinePropertySource(recipeVariableName, propertyNameIdentifier, propertyDescription);
-    });
-    symbolDescriptionArray.forEach(({
-      symbolIdentifier,
-      propertyDescription
-    }) => {
-      mutateSource += generateDefinePropertySource(recipeVariableName, symbolIdentifier, propertyDescription);
-    });
-    methodDescriptionArray.forEach(({
-      methodNameIdentifier,
-      callArray
-    }) => {
-      mutateSource += generateMethodCallSource(recipeVariableName, methodNameIdentifier, callArray);
-    });
-
-    if (!extensible) {
-      mutateSource += generatePreventExtensionSource(recipeVariableName);
-    }
-
-    return mutateSource;
-  };
-
-  const generateDefinePropertySource = (recipeVariableName, propertyNameOrSymbolIdentifier, propertyDescription) => {
-    const propertyOrSymbolVariableName = identifierToVariableName(propertyNameOrSymbolIdentifier);
-    const propertyDescriptorSource = generatePropertyDescriptorSource(propertyDescription);
-    return `safeDefineProperty(${recipeVariableName}, ${propertyOrSymbolVariableName}, ${propertyDescriptorSource});`;
-  };
-
-  const generatePropertyDescriptorSource = ({
-    configurable,
-    writable,
-    enumerable,
-    getIdentifier,
-    setIdentifier,
-    valueIdentifier
-  }) => {
-    if (valueIdentifier === undefined) {
-      return `{
-  configurable: ${configurable},
-  enumerable: ${enumerable},
-  get: ${getIdentifier === undefined ? undefined : identifierToVariableName(getIdentifier)},
-  set: ${setIdentifier === undefined ? undefined : identifierToVariableName(setIdentifier)},
-}`;
-    }
-
-    return `{
-  configurable: ${configurable},
-  writable: ${writable},
-  enumerable: ${enumerable},
-  value: ${valueIdentifier === undefined ? undefined : identifierToVariableName(valueIdentifier)}
-}`;
-  };
-
-  const generateMethodCallSource = (recipeVariableName, methodNameIdentifier, callArray) => {
-    let methodCallSource = ``;
-    const methodVariableName = identifierToVariableName(methodNameIdentifier);
-    callArray.forEach(argumentIdentifiers => {
-      const argumentVariableNames = argumentIdentifiers.map(argumentIdentifier => identifierToVariableName(argumentIdentifier));
-      methodCallSource += `${recipeVariableName}[${methodVariableName}](${argumentVariableNames.join(",")});`;
-    });
-    return methodCallSource;
-  };
-
-  const generatePreventExtensionSource = recipeVariableName => {
-    return `Object.preventExtensions(${recipeVariableName});`;
-  };
-
-  recipeArraySorted.forEach(recipe => {
-    const recipeVariableName = identifierToVariableName(recipeArray.indexOf(recipe));
-    source += `${recipeToMutateSource(recipe, recipeVariableName)}`;
-  });
-  source += `return ${identifierToVariableName(mainIdentifier)}; })()`;
-  return source;
-};
-
-const supportsDynamicImport = memoize(async () => {
-  const fileUrl = resolveUrl$1("./src/internal/dynamicImportSource.js", jsenvCoreDirectoryUrl);
-  const filePath = urlToFileSystemPath(fileUrl);
+const supportsDynamicImport = util.memoize(async () => {
+  const fileUrl = util.resolveUrl("./src/internal/dynamicImportSource.js", jsenvCoreDirectoryUrl);
+  const filePath = util.urlToFileSystemPath(fileUrl);
   const fileAsString = String(fs.readFileSync(filePath));
 
   try {
@@ -14923,7 +7911,7 @@ const removeCommandArgument = (argv, name) => {
 
 const AVAILABLE_DEBUG_MODE = ["none", "inherit", "inspect", "inspect-brk", "debug", "debug-brk"];
 const createChildExecArgv = async ({
-  cancellationToken = createCancellationToken(),
+  cancellationToken = cancellation.createCancellationToken(),
   // https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_automatically-attach-debugger-to-nodejs-subprocesses
   processExecArgv = process.execArgv,
   processDebugPort = process.debugPort,
@@ -14976,7 +7964,7 @@ ${AVAILABLE_DEBUG_MODE}`);
   } else {
     // this is required because vscode does not
     // support assigning a child spwaned without a specific port
-    const childDebugPort = debugPort === 0 ? await findFreePort(processDebugPort + 1, {
+    const childDebugPort = debugPort === 0 ? await server.findFreePort(processDebugPort + 1, {
       cancellationToken
     }) : debugPort; // remove process debugMode, it will be replaced with the child debugMode
 
@@ -15105,9 +8093,9 @@ const STOP_SIGNAL = "SIGKILL"; // it would be more correct if GRACEFUL_STOP_FAIL
 // but I'm not sure and it changes nothing so just use SIGKILL
 
 const GRACEFUL_STOP_FAILED_SIGNAL = "SIGKILL";
-const nodeJsFileUrl = resolveUrl$1("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl);
+const nodeJsFileUrl = util.resolveUrl("./src/internal/node-launcher/node-js-file.js", jsenvCoreDirectoryUrl);
 const launchNode = async ({
-  cancellationToken = createCancellationToken(),
+  cancellationToken = cancellation.createCancellationToken(),
   logger,
   projectDirectoryUrl,
   outDirectoryRelativeUrl,
@@ -15142,8 +8130,8 @@ const launchNode = async ({
   }
 
   const dynamicImportSupported = await supportsDynamicImport();
-  const nodeControllableFileUrl = resolveUrl$1(dynamicImportSupported ? "./src/internal/node-launcher/nodeControllableFile.js" : "./src/internal/node-launcher/nodeControllableFile.cjs", jsenvCoreDirectoryUrl);
-  await assertFilePresence(nodeControllableFileUrl);
+  const nodeControllableFileUrl = util.resolveUrl(dynamicImportSupported ? "./src/internal/node-launcher/nodeControllableFile.js" : "./src/internal/node-launcher/nodeControllableFile.cjs", jsenvCoreDirectoryUrl);
+  await util.assertFilePresence(nodeControllableFileUrl);
   const execArgv = await createChildExecArgv({
     cancellationToken,
     debugPort,
@@ -15154,13 +8142,13 @@ const launchNode = async ({
     jsonModules
   });
   env.COVERAGE_ENABLED = collectCoverage;
-  const childProcess = child_process.fork(urlToFileSystemPath(nodeControllableFileUrl), {
+  const childProcess = child_process.fork(util.urlToFileSystemPath(nodeControllableFileUrl), {
     execArgv,
     // silent: true
     stdio: "pipe",
     env
   });
-  logger.info(`${process.argv[0]} ${execArgv.join(" ")} ${urlToFileSystemPath(nodeControllableFileUrl)}`);
+  logger.debug(`${process.argv[0]} ${execArgv.join(" ")} ${util.urlToFileSystemPath(nodeControllableFileUrl)}`);
   const childProcessReadyPromise = new Promise(resolve => {
     onceProcessMessage(childProcess, "ready", resolve);
   });
@@ -15378,8 +8366,10 @@ ${e.stack}`);
     name: "node",
     version: process.version.slice(1),
     options: {
-      execArgv,
-      env
+      execArgv // for now do not pass env, it make debug logs to verbose
+      // because process.env is very big
+      // env,
+
     },
     gracefulStop,
     stop,
@@ -15412,7 +8402,7 @@ const evalException$1 = (exceptionSource, {
 };
 
 const sendToProcess = async (childProcess, type, data) => {
-  const source = uneval(data, {
+  const source = _uneval.uneval(data, {
     functionAllowed: true
   });
   return new Promise((resolve, reject) => {
@@ -15515,7 +8505,7 @@ const generateSourceToEvaluate = async ({
 export default execute(${JSON.stringify(executeParams, null, "    ")})`;
   }
 
-  const nodeJsFileRelativeUrl = urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl);
+  const nodeJsFileRelativeUrl = util.urlToRelativeUrl(nodeJsFileUrl, projectDirectoryUrl);
   const nodeBundledJsFileRelativeUrl = `${outDirectoryRelativeUrl}${COMPILE_ID_COMMONJS_BUNDLE}/${nodeJsFileRelativeUrl}`;
   const nodeBundledJsFileUrl = `${projectDirectoryUrl}${nodeBundledJsFileRelativeUrl}`;
   const nodeBundledJsFileRemoteUrl = `${compileServerOrigin}/${nodeBundledJsFileRelativeUrl}`; // The compiled nodeRuntime file will be somewhere else in the filesystem
@@ -15533,8 +8523,8 @@ export default execute(${JSON.stringify(executeParams, null, "    ")})`;
   const run = async () => {
     await fetchUrl(${JSON.stringify(nodeBundledJsFileRemoteUrl)}, { ignoreHttpsError: true })
 
-    const nodeFilePath = ${JSON.stringify(urlToFileSystemPath(nodeJsFileUrl))}
-    const nodeBundledJsFilePath = ${JSON.stringify(urlToFileSystemPath(nodeBundledJsFileUrl))}
+    const nodeFilePath = ${JSON.stringify(util.urlToFileSystemPath(nodeJsFileUrl))}
+    const nodeBundledJsFilePath = ${JSON.stringify(util.urlToFileSystemPath(nodeBundledJsFileUrl))}
     const { execute } = requireCompiledFileAsOriginalFile(nodeBundledJsFilePath, nodeFilePath)
 
     return execute(${JSON.stringify(executeParams, null, "    ")})
@@ -15566,10 +8556,10 @@ const serveExploringIndex = async ({
   htmlFileRelativeUrl,
   explorableConfig
 }) => {
-  const specifierMetaMap = metaMapToSpecifierMetaMap({
+  const specifierMetaMap = util.metaMapToSpecifierMetaMap({
     explorable: explorableConfig
   });
-  const matchingFileResultArray = await collectFiles({
+  const matchingFileResultArray = await util.collectFiles({
     directoryUrl: projectDirectoryUrl,
     specifierMetaMap,
     predicate: ({
@@ -15632,10 +8622,10 @@ const serveBrowserSelfExecute = async ({
   request,
   babelPluginMap
 }) => {
-  const browserSelfExecuteTemplateFileUrl = resolveUrl$1("./src/internal/exploring/browserSelfExecuteTemplate.js", jsenvCoreDirectoryUrl);
+  const browserSelfExecuteTemplateFileUrl = util.resolveUrl("./src/internal/exploring/browserSelfExecuteTemplate.js", jsenvCoreDirectoryUrl);
   const browserSelfExecuteDirectoryRelativeUrl = `${jsenvDirectoryRelativeUrl}browser-self-execute/`;
-  const browserSelfExecuteDirectoryRemoteUrl = resolveDirectoryUrl(browserSelfExecuteDirectoryRelativeUrl, request.origin);
-  return firstService(() => {
+  const browserSelfExecuteDirectoryRemoteUrl = util.resolveDirectoryUrl(browserSelfExecuteDirectoryRelativeUrl, request.origin);
+  return server.firstService(() => {
     const {
       ressource,
       headers,
@@ -15691,7 +8681,7 @@ const serveBrowserSelfExecute = async ({
     const requestUrl = `${origin}${ressource}`;
 
     if (urlIsAsset(requestUrl)) {
-      return serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
+      return server.serveFile(`${projectDirectoryUrl}${ressource.slice(1)}`, {
         method,
         headers
       });
@@ -15745,7 +8735,7 @@ const stringHasConcecutiveSlashes = string => {
 
 /* eslint-disable import/max-dependencies */
 const startExploring = async ({
-  cancellationToken = createCancellationTokenForProcess(),
+  cancellationToken = util.createCancellationTokenForProcess(),
   logLevel,
   compileServerLogLevel = logLevel,
   htmlFileRelativeUrl,
@@ -15775,8 +8765,8 @@ const startExploring = async ({
   // random available port
   forcePort = false
 }) => {
-  return catchCancellation(async () => {
-    const logger = createLogger({
+  return util.catchCancellation(async () => {
+    const logger$1 = logger.createLogger({
       logLevel
     });
     projectDirectoryUrl = assertProjectDirectoryUrl({
@@ -15787,15 +8777,15 @@ const startExploring = async ({
     });
 
     if (typeof htmlFileRelativeUrl === "undefined") {
-      htmlFileRelativeUrl = urlToRelativeUrl(jsenvHtmlFileUrl, projectDirectoryUrl);
+      htmlFileRelativeUrl = util.urlToRelativeUrl(jsenvHtmlFileUrl, projectDirectoryUrl);
     } else if (typeof htmlFileRelativeUrl !== "string") {
       throw new TypeError(`htmlFileRelativeUrl must be a string, received ${htmlFileRelativeUrl}`);
     }
 
-    const htmlFileUrl = resolveUrl$1(htmlFileRelativeUrl, projectDirectoryUrl);
-    await assertFilePresence(htmlFileUrl);
-    const stopExploringCancellationSource = createCancellationSource();
-    cancellationToken = composeCancellationToken(cancellationToken, stopExploringCancellationSource.token);
+    const htmlFileUrl = util.resolveUrl(htmlFileRelativeUrl, projectDirectoryUrl);
+    await util.assertFilePresence(htmlFileUrl);
+    const stopExploringCancellationSource = cancellation.createCancellationSource();
+    cancellationToken = cancellation.composeCancellationToken(cancellationToken, stopExploringCancellationSource.token);
 
     let livereloadServerSentEventService = () => {
       return {
@@ -15831,13 +8821,13 @@ const startExploring = async ({
       stopOnPackageVersionChange: true,
       keepProcessAlive
     });
-    const specifierMetaMapRelativeForExplorable = metaMapToSpecifierMetaMap({
+    const specifierMetaMapRelativeForExplorable = util.metaMapToSpecifierMetaMap({
       explorable: explorableConfig
     });
-    const specifierMetaMapForExplorable = normalizeSpecifierMetaMap(specifierMetaMapRelativeForExplorable, projectDirectoryUrl);
+    const specifierMetaMapForExplorable = util.normalizeSpecifierMetaMap(specifierMetaMapRelativeForExplorable, projectDirectoryUrl);
 
     if (livereloading) {
-      const unregisterDirectoryLifecyle = registerDirectoryLifecycle(projectDirectoryUrl, {
+      const unregisterDirectoryLifecyle = util.registerDirectoryLifecycle(projectDirectoryUrl, {
         watchDescription: { ...watchConfig,
           [compileServer.jsenvDirectoryRelativeUrl]: false
         },
@@ -15944,11 +8934,11 @@ const startExploring = async ({
             referer
           } = headers;
 
-          if (referer === origin || urlIsInsideOf(referer, origin)) {
-            const refererRelativeUrl = urlToRelativeUrl(referer, origin);
+          if (referer === origin || util.urlIsInsideOf(referer, origin)) {
+            const refererRelativeUrl = util.urlToRelativeUrl(referer, origin);
             const refererFileUrl = `${projectDirectoryUrl}${refererRelativeUrl}`;
 
-            if (urlToMeta({
+            if (util.urlToMeta({
               url: refererFileUrl,
               specifierMetaMap: specifierMetaMapForExplorable
             }).explorable) {
@@ -16006,7 +8996,7 @@ const startExploring = async ({
 
       const getOrCreateRoomForRelativeUrl = relativeUrl => {
         if (roomMap.hasOwnProperty(relativeUrl)) return roomMap[relativeUrl];
-        const room = createSSERoom();
+        const room = server.createSSERoom();
         room.start();
         cancellationToken.register(room.stop);
         roomMap[relativeUrl] = room;
@@ -16023,14 +9013,14 @@ const startExploring = async ({
     // that can be dynamic
     // otherwise the cached bundles would still target the previous compile server origin
 
-    const jsenvDirectoryUrl = resolveUrl$1(compileServerJsenvDirectoryRelativeUrl, projectDirectoryUrl);
-    const browserDynamicDataFileUrl = resolveUrl$1("./browser-execute-dynamic-data.json", jsenvDirectoryUrl);
-    await writeFile(browserDynamicDataFileUrl, JSON.stringify(getBrowserExecutionDynamicData({
+    const jsenvDirectoryUrl = util.resolveUrl(compileServerJsenvDirectoryRelativeUrl, projectDirectoryUrl);
+    const browserDynamicDataFileUrl = util.resolveUrl("./browser-execute-dynamic-data.json", jsenvDirectoryUrl);
+    await util.writeFile(browserDynamicDataFileUrl, JSON.stringify(getBrowserExecutionDynamicData({
       projectDirectoryUrl,
       compileServerOrigin
     }), null, "  "));
 
-    const service = request => firstService(() => {
+    const service = request => server.firstService(() => {
       const {
         accept = ""
       } = request.headers;
@@ -16056,7 +9046,7 @@ const startExploring = async ({
     }, () => {
       return serveBrowserSelfExecute({
         cancellationToken,
-        logger,
+        logger: logger$1,
         projectDirectoryUrl,
         jsenvDirectoryRelativeUrl: compileServerJsenvDirectoryRelativeUrl,
         outDirectoryRelativeUrl,
@@ -16074,14 +9064,14 @@ const startExploring = async ({
         relativeUrl,
         request
       });
-      return serveFile(fileUrl, {
+      return server.serveFile(fileUrl, {
         method: request.method,
         headers: request.headers,
         cacheStrategy: "etag"
       });
     });
 
-    const exploringServer = await startServer({
+    const exploringServer = await server.startServer({
       cancellationToken,
       logLevel,
       serverName: "exploring server",

@@ -70,7 +70,7 @@ Please note that if you have a `.babelrc` file, jsenv will not read it. jsenv ne
 But if your code or some of your dependencies use an other format you need to convert it using this parameter. For instance, the following code makes jsenv compatible with `react`.
 
 ```js
-const { convertCommonJsWithRollup } = require("@jsenv/core")
+import { convertCommonJsWithRollup } from "@jsenv/core"
 
 const convertMap = {
   "./node_modules/react/index.js": convertCommonJsWithRollup,
