@@ -348,7 +348,11 @@ ${error.stack}`)
       const executionResult = raceResult.value
       const { status } = executionResult
       if (status === "errored") {
-        logger.error(`${fileRelativeUrl} ${runtime}: error ${TIMING_DURING_EXECUTION}.
+        // debug log level because this error happens during execution
+        // there is no need to log it.
+        // the code will know the execution errored because it receives
+        // an errored execution result
+        logger.debug(`${fileRelativeUrl} ${runtime}: error ${TIMING_DURING_EXECUTION}.
 --- error stack ---
 ${executionResult.error.stack}`)
         return createErroredExecutionResult(executionResult, rest)
