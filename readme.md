@@ -56,10 +56,10 @@ There is a detailed documentation about testing at [./docs/testing/readme.md](./
 # Installation
 
 ```console
-npm install --save-dev @jsenv/core@12.2.0
+npm install --save-dev @jsenv/core
 ```
 
-`@jsenv/core` is tested on mac, linux and windows on Node.js 12.8.0 and 13.7.0. Other operating systems and Node.js versions are not tested.
+`@jsenv/core` is tested on Mac, Windows, Linux on Node.js 13.7.0 and 12.8.0. Other operating systems and Node.js versions are not tested.
 
 # Documentation
 

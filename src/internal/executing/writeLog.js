@@ -5,13 +5,22 @@ import { require } from "../require.js"
 const stringWidth = require("string-width")
 
 export const writeLog = (string, { stream = process.stdout } = {}) => {
-  stream.write(`${string}
-`)
+  string = `${string}
+`
+  stream.write(string)
 
   const consoleModified = spyConsoleModification()
 
+  const moveCursorToLineAbove = () => {
+    readline.moveCursor(stream, 0, -1)
+  }
+
+  const clearCursorLine = () => {
+    readline.clearLine(stream, 0)
+  }
+
   const remove = memoize(() => {
-    const { columns = 80 } = stream
+    const { columns = 80, rows = 24 } = stream
     const logLines = string.split(/\r\n|\r|\n/)
     let visualLineCount = 0
     logLines.forEach((logLine) => {
@@ -19,11 +28,24 @@ export const writeLog = (string, { stream = process.stdout } = {}) => {
       visualLineCount += width === 0 ? 1 : Math.ceil(width / columns)
     })
 
-    while (visualLineCount--) {
-      readline.cursorTo(stream, 0)
-      readline.clearLine(stream, 0)
-      readline.moveCursor(stream, 0, -1)
+    if (visualLineCount > rows) {
+      // the whole log cannot be cleared because it's vertically to long
+      // (longer than terminal height)
+      // readline.moveCursor cannot move cursor higher than screen height
+      // it means we would only clear the visible part of the log
+      // better keep the log untouched
+      return
     }
+
+    while (visualLineCount--) {
+      clearCursorLine()
+      if (visualLineCount > 0) {
+        moveCursorToLineAbove()
+      }
+    }
+    // an other version of the while above could the code below
+    // readline.moveCursor(stream, 0, -visualLineCount)
+    // readline.clearScreenDown(stream)
   })
 
   let updated = false
@@ -50,29 +72,28 @@ export const writeLog = (string, { stream = process.stdout } = {}) => {
 // is that node.js will later throw error if stream gets closed
 // while something listening data on it
 const spyConsoleModification = () => {
-  const modified = false
+  const { stdout, stderr } = process
+  const originalStdoutWrite = stdout.write
+  const originalStdErrWrite = stderr.write
 
-  // const dataListener = () => {
-  //   modified = true
-  // }
-  // process.stdout.once("data", dataListener)
-  // process.stdout.on("error", (error) => {
-  //   if (error.code === "ENOTCONN") {
-  //     return
-  //   }
-  //   throw error
-  // })
-  // process.stderr.once("data", dataListener)
-  // process.stderr.on("error", (error) => {
-  //   if (error.code === "ENOTCONN") {
-  //     return
-  //   }
-  //   throw error
-  // })
+  let modified = false
+
+  stdout.write = (chunk, encoding, callback) => {
+    modified = true
+    return originalStdoutWrite.call(stdout, chunk, encoding, callback)
+  }
+  stderr.write = (chunk, encoding, callback) => {
+    modified = true
+    return originalStdErrWrite.call(stderr, chunk, encoding, callback)
+  }
+
+  const uninstall = () => {
+    stdout.write = originalStdoutWrite
+    stderr.write = originalStdErrWrite
+  }
 
   return () => {
-    // process.stdout.removeListener("data", dataListener)
-    // process.stderr.removeListener("data", dataListener)
+    uninstall()
     return modified
   }
 }
