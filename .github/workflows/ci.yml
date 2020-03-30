@@ -9,17 +9,17 @@ on:
       - master
 
 jobs:
-  ci:
+  test:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        node: [13.7.0]
+        node: [13.12.0]
     runs-on: ${{ matrix.os }}
-    name: node ${{ matrix.node }} on ${{ matrix.os }}
+    name: test on ${{ matrix.os }} and node ${{ matrix.node }}
     env:
       CI: true
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node }}
@@ -53,20 +53,6 @@ jobs:
         run: npm run upload-coverage
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      - name: publish package
-        if: github.event_name == 'push' && runner.os == 'Linux' # runner check to run it once
-        run: npm run publish-package
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: ensure github release
-        if: github.event_name == 'push' && runner.os == 'Linux' # runner check to run it once
-        run: node ./.github/ensure-github-release-for-package.js
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # for now keep it after publish package even if it means
-      # package will be published at least we know if there is a regression
-      # Otherwise we would have to reswitch to 13.7 before publishing the package
       - name: Non regression test for node 12.8
         if: runner.os == 'Linux'
         run: |
@@ -76,3 +62,30 @@ jobs:
           nvm install 12.8.0
           nvm use 12.8.0
           node ./script/test/test.cjs
+
+  release:
+    needs: [test]
+    if: success()
+    runs-on: ubuntu-latest
+    name: release
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "13.x"
+      - name: npm install
+        run: |
+          npm config set //npm.pkg.github.com/:_authToken ${{ secrets.GITHUB_TOKEN }}
+          cd ./.github/release
+          npm install
+      - name: publish package
+        if: github.event_name == 'push'
+        run: node --no-warnings ./.github/release/publish-package.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: ensure github release
+        if: github.event_name == 'push'
+        run: node --no-warnings ./.github/release/ensure-github-release-for-package.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
