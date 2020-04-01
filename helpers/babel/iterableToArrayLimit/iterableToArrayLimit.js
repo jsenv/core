@@ -8,13 +8,7 @@ export default (arr, i) => {
   // _e = _iteratorError
   // _i = _iterator
   // _s = _step
-  if (
-    !(
-      Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]"
-    )
-  ) {
-    return
-  }
+  if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return
   var _arr = []
   var _n = true
   var _d = false
